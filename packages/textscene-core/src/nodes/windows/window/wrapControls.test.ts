@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../parser/types';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
-import { controlNode, solveNode } from '../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../r3f/controls/native/testing/solveNode';
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import { heading } from '../../../parser/testing/parserKit';
 import '../../../r3f/controls/index';
@@ -21,7 +21,7 @@ function windowNode(type: string, properties: Record<string, string>, children: 
     children: [],
     properties: parseWindow(heading(type, { name: 'Dialog' }), properties),
   };
-  return { ...solveNode(), path: 'Dialog', node: node as unknown as TscnNode, children };
+  return withThemeItems({ ...solveNode(), path: 'Dialog', node: node as unknown as TscnNode, children });
 }
 
 /** A Control at (x, y) with a custom minimum size, its own anchors at the top-left. */

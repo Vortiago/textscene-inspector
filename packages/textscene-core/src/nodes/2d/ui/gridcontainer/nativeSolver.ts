@@ -14,7 +14,7 @@ import type { ControlProperties } from '../control/types';
 import type { GridContainerProperties } from './types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import {
   controlSolverRegistry,
   type ContainerLayoutFn,
@@ -40,8 +40,8 @@ function columnsOf(n: SolveNode): number {
   return Math.max(1, (n.node.properties as GridContainerProperties).columns ?? 1);
 }
 
-function separationOf(n: SolveNode, key: 'h_separation' | 'v_separation', theme: NativeTheme): number {
-  return n.constants[key] ?? theme.separation;
+function separationOf(n: SolveNode, key: 'h_separation' | 'v_separation'): number {
+  return requiredThemeItem(n.constants, key);
 }
 
 // --- get_minimum_size ---------------------------------------------------------
@@ -80,8 +80,8 @@ const gridContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   let height = 0;
   for (const h of rowMinH.values()) height += h;
 
-  width += separationOf(n, 'h_separation', ctx.theme) * maxColIndex;
-  height += separationOf(n, 'v_separation', ctx.theme) * maxRowIndex;
+  width += separationOf(n, 'h_separation') * maxColIndex;
+  height += separationOf(n, 'v_separation') * maxRowIndex;
 
   return { x: width, y: height };
 };
@@ -146,11 +146,11 @@ function remainingPixelIndex(
  * used one expands too ("consider all empty columns expanded", `:79-82`); rows
  * have no fixed count, so none do. Then `evictUnfittable`, then `fit_child_in_rect`.
  */
-const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
+const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect) => {
   const columns = columnsOf(n);
   const rtl = n.rtl;
-  const hSep = separationOf(n, 'h_separation', ctx.theme);
-  const vSep = separationOf(n, 'v_separation', ctx.theme);
+  const hSep = separationOf(n, 'h_separation');
+  const vSep = separationOf(n, 'v_separation');
 
   const sortable = children.filter(({ node }) => isSortableControl(node));
   const validCount = sortable.length;

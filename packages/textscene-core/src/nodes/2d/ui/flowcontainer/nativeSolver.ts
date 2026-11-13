@@ -15,7 +15,7 @@ import type { ControlProperties } from '../control/types';
 import type { FlowContainerProperties } from './types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import {
   controlSolverRegistry,
   type ContainerLayoutFn,
@@ -61,8 +61,8 @@ function orientationOf(n: SolveNode): boolean {
   return props(n).vertical === true;
 }
 
-function separationOf(n: SolveNode, key: 'h_separation' | 'v_separation', theme: NativeTheme): number {
-  return n.constants[key] ?? theme.separation;
+function separationOf(n: SolveNode, key: 'h_separation' | 'v_separation'): number {
+  return requiredThemeItem(n.constants, key);
 }
 
 // The shared line-wrap pass (flow_container.cpp:65-129).
@@ -184,8 +184,8 @@ const flowContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const sortable = n.children.filter(isSortableControl);
   if (sortable.length === 0) return { x: 0, y: 0 };
 
-  const hSep = separationOf(n, 'h_separation', ctx.theme);
-  const vSep = separationOf(n, 'v_separation', ctx.theme);
+  const hSep = separationOf(n, 'h_separation');
+  const vSep = separationOf(n, 'v_separation');
 
   let mainAxisMax = 0;
   const childMscs: ChildMsc[] = [];
@@ -278,10 +278,10 @@ function alignmentOffset(
  * share, `reverse_fill` and `fit_child_in_rect`. `contentRect` is the real rect on
  * both solve passes, so no size needs a stand-in.
  */
-const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
+const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect) => {
   const vertical = orientationOf(n);
-  const hSep = separationOf(n, 'h_separation', ctx.theme);
-  const vSep = separationOf(n, 'v_separation', ctx.theme);
+  const hSep = separationOf(n, 'h_separation');
+  const vSep = separationOf(n, 'v_separation');
   const alignment = props(n).alignment ?? ContainerAlignment.ALIGNMENT_BEGIN;
   const lastWrapAlignment = props(n).lastWrapAlignment ?? LAST_WRAP_ALIGNMENT_INHERIT;
   const reverseFill = props(n).reverseFill === true;

@@ -56,33 +56,6 @@ describe('nativeTheme', () => {
       expect(nativeTheme(1.5).widgets.button.focus.borderWidth.left).toBe(3);
     });
 
-    it('Panel: make_flat_stylebox(style_normal_color, 0, 0, 0, 0) — default_theme.cpp:134', () => {
-      const theme = nativeTheme(1);
-      expect(theme.widgets.panel).toEqual({
-        bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 },
-        borderColor: DEFAULT_BORDER_COLOR,
-        borderWidth: ZERO_SIDES,
-        cornerRadius: uniformCorners(3), // default_corner_radius, Math.round(3*1)
-        expandMargin: ZERO_SIDES,
-        contentMargin: ZERO_SIDES,
-        drawCenter: true,
-        borderBlend: false,
-        antiAliased: true, // StyleBoxFlat's own untouched default (style_box_flat.h:49)
-        aaSize: 1,
-        cornerDetail: 5,
-        skew: { x: 0, y: 0 },
-        shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-        shadowSize: 0,
-        shadowOffset: { x: 0, y: 0 }, // StyleBoxFlat's own untouched default (style_box_flat.h:54)
-      });
-    });
-
-    it('PopupPanel: make_flat_stylebox(style_normal_color) with the default margin — default_theme.cpp:726', () => {
-      const { popupPanel } = nativeTheme(1).widgets;
-      expect(popupPanel.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
-      expect(popupPanel.contentMargin).toEqual({ left: 4, top: 4, right: 4, bottom: 4 });
-    });
-
     it('Button normal/hover/pressed/disabled: make_flat_stylebox(color) with every default arg — default_theme.cpp:138-141', () => {
       const theme = nativeTheme(1);
       const shared = {
@@ -115,7 +88,6 @@ describe('nativeTheme', () => {
 
     it("scales widget geometry (margins, corner radii) at scale 2, per make_flat_stylebox's Math.round(x * scale)", () => {
       const theme = nativeTheme(2);
-      expect(theme.widgets.panel.cornerRadius).toEqual(uniformCorners(6));
       expect(theme.widgets.button.normal.contentMargin).toEqual(uniform(8));
       expect(theme.widgets.button.normal.cornerRadius).toEqual(uniformCorners(6));
     });
@@ -223,9 +195,6 @@ describe('nativeTheme', () => {
     ])('gives each widget the detail of its radius at scale %i', (scale, defaultRadius, none) => {
       const { widgets } = nativeTheme(scale);
       expect({
-        panel: widgets.panel.cornerDetail,
-        popupPanel: widgets.popupPanel.cornerDetail,
-        tooltipPanel: widgets.tooltipPanel.cornerDetail,
         popupMenuPanel: widgets.popupMenuPanel.cornerDetail,
         buttonNormal: widgets.button.normal.cornerDetail,
         buttonFocus: widgets.button.focus.cornerDetail,
@@ -233,9 +202,6 @@ describe('nativeTheme', () => {
         dialogPanel: widgets.dialogPanel.cornerDetail,
         flatMenuButton: widgets.flatMenuButton.normal.cornerDetail,
       }).toEqual({
-        panel: defaultRadius,
-        popupPanel: defaultRadius,
-        tooltipPanel: defaultRadius,
         popupMenuPanel: defaultRadius,
         buttonNormal: defaultRadius,
         buttonFocus: defaultRadius,

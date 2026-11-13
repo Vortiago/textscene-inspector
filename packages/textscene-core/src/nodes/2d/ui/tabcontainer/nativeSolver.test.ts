@@ -1,3 +1,5 @@
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import { describe, expect, it } from 'vitest';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -24,6 +26,9 @@ import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts'
 import { ROOT_TEXTURE_SAMPLER } from '../../../../r3f/canvasItemTextureSampler';
 import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 
+/** Panel's `panel` box in the default theme table at scale 1 (`default_theme.cpp:134`). */
+const TABLE_PANEL = defaultStyleBoxesOf(defaultThemeAt(1)).Panel!.panel!;
+
 const tabContainerLayout = controlSolverRegistry.containerLayout('TabContainer')!;
 const tabContainerMinimumSize = controlSolverRegistry.minimumSize('TabContainer')!;
 
@@ -49,7 +54,7 @@ function page(name: string, props: Partial<ControlProperties> = {}): SolveNode {
 
 /** A `theme_override_styles/tabbar_background` carrying `TABBAR_MARGIN`, everything else the default-theme panel's. */
 function tabbarBackgroundStyleBoxes(): SolveNode['styleBoxes'] {
-  return { tabbar_background: { ...nativeTheme(1).widgets.panel, contentMargin: TABBAR_MARGIN } };
+  return { tabbar_background: { ...TABLE_PANEL, contentMargin: TABBAR_MARGIN } };
 }
 
 function tabContainer(
@@ -411,7 +416,7 @@ describe('the page band under RTL', () => {
   /** A `theme_override_styles/panel` whose left and right content margins differ. */
   function panelStyleBoxes(): SolveNode['styleBoxes'] {
     return {
-      panel: { ...nativeTheme(1).widgets.panel, contentMargin: { left: 6, top: 3, right: 26, bottom: 3 } },
+      panel: { ...TABLE_PANEL, contentMargin: { left: 6, top: 3, right: 26, bottom: 3 } },
     };
   }
 
@@ -438,7 +443,7 @@ describe('the page band under RTL', () => {
   it('leaves a symmetric panel margin in the same place either way', () => {
     const p = page('Only');
     const symmetric: SolveNode['styleBoxes'] = {
-      panel: { ...nativeTheme(1).widgets.panel, contentMargin: { left: 8, top: 3, right: 8, bottom: 3 } },
+      panel: { ...TABLE_PANEL, contentMargin: { left: 8, top: 3, right: 8, bottom: 3 } },
     };
     const child = [{ node: p, minSize: { x: 0, y: 0 } }];
     const rect: Rect2 = { x: 0, y: 0, w: 300, h: 120 };

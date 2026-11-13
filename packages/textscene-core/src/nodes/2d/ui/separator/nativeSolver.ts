@@ -4,18 +4,17 @@
  */
 
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { SeparatorOrientation } from './styleBoxLine';
 import type { Vector2 } from '../../../../godot/math/vector';
 
 /**
  * `Size2 ms(3, 3)` with the cross axis replaced by the `separation` constant (`separator.cpp:34-39`).
- * The `3` is a bare C++ literal, never scaled. `theme.separation` is `Math.round(4 * scale)`, the
- * formula `default_theme.cpp` uses for the separators' own `separation` (`default_theme.cpp:1068-1069`),
- * a distinct constant that shares BoxContainer's literal `4`.
+ * The `3` is a bare C++ literal, never scaled.
  */
 export function separatorMinimumSize(orientation: SeparatorOrientation): MinimumSizeFn {
-  return (n, ctx): Vector2 => {
-    const separation = n.constants.separation ?? ctx.theme.separation;
+  return (n): Vector2 => {
+    const separation = requiredThemeItem(n.constants, 'separation');
     return orientation === 'vertical' ? { x: separation, y: 3 } : { x: 3, y: separation };
   };
 }
