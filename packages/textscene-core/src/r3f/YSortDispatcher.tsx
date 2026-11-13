@@ -5,7 +5,7 @@
  * (`ySortRows`), each interleaving with sibling CanvasItems.
  */
 
-import { memo, useId, useLayoutEffect, useMemo } from 'react';
+import { memo, useId, useLayoutEffect, useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import type { TileSetModel } from '../resources/tileset/types.js';
 import { ySortRows } from '../resources/tileset/tileYSort.js';
@@ -23,14 +23,14 @@ import { YSortLayerGroup } from './YSortLayerGroup.js';
 import { compareYSortItems } from './ySortOrder.js';
 import { useLiveYSort } from './useLiveYSort.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
+import { type PaintRange, isTopLevelItem, packPaintRanges, paintRangeSize } from './canvasPaintOrder.js';
 import {
-  allocateNodePaintRange,
-  type PaintRange,
-  isTopLevelItem,
-  packPaintRanges,
-  paintRangeSize,
-} from './canvasPaintOrder.js';
-import { PaintRangeProvider, useCanvasRootRanges, usePaintRange } from './contexts/PaintOrderContext.js';
+  IN_TREE_ORDER,
+  PaintFrameProvider,
+  useChildPaintFrames,
+  useNodePaint,
+  useRepackedFrame,
+} from './canvasItemPass/nodePaint.js';
 import { joinPath } from '../utils/nodePath.js';
 import { TRANSFORM2D_IDENTITY, transform2DXform } from '../godot/math/transform2d.js';
 // Sorted children go back through the one dispatcher, so instances, selection,
@@ -90,13 +90,12 @@ const SortedChildren = memo(function SortedChildren({
   const basePath = useNodePath() ?? node.name;
   // The sorted items draw after this node's own sequence, as Godot appends the
   // y-sorted node before descending (`_collect_ysort_children`).
-  const paintRange = usePaintRange();
-  const allocated = useMemo(() => allocateNodePaintRange(paintRange, node), [paintRange, node]);
-  const ownSequence = allocated.self;
+  const paint = useNodePaint(node, basePath);
+  const { own: ownSequence, range: paintRange } = paint;
   // A top_level child is no `child_item` of this node, so the sort skipped it
-  // (`ySortItems.ts`) and it draws here, by the same predicate. The canvas root
-  // index is absent inside an `instance=` subtree.
-  const canvasRoots = useCanvasRootRanges();
+  // (`ySortItems.ts`) and it draws here, by the same predicate, at the run the
+  // canvas root index gives it, which no sort moves.
+  const childFrames = useChildPaintFrames(node, basePath, paint);
   const topLevelChildren = useMemo(
     () =>
       node.children.map((child, index) => ({ child, index })).filter(({ child }) => isTopLevelItem(child)),
@@ -163,12 +162,9 @@ const SortedChildren = memo(function SortedChildren({
         )
       )}
       {topLevelChildren.map(({ child, index }) => (
-        <PaintRangeProvider
-          key={`tl-${child.name}`}
-          value={canvasRoots.get(child) ?? allocated.children[index]!}
-        >
+        <PaintFrameProvider key={`tl-${child.name}`} value={childFrames?.children[index] ?? IN_TREE_ORDER}>
           <DispatchedNode node={child} path={joinPath(basePath, child.name)} />
-        </PaintRangeProvider>
+        </PaintFrameProvider>
       ))}
     </>
   );
@@ -239,12 +235,13 @@ function inCollectionRuns(packed: readonly PackedItem[]): CollectionRun[] {
 /** One sorted node, dispatched back through the one dispatcher at the sequence the sort gave it. */
 function NodeItem({ entry: { item, range }, basePath }: { entry: PackedItem; basePath: string }) {
   const node = item.node!;
+  const path = liftedPath(basePath, item.liftedPast, node.name);
   return (
-    <PaintRangeProvider value={range}>
+    <RepackedFrame path={path} range={range}>
       <LiftedAncestors liftedPast={item.liftedPast} basePath={basePath}>
-        <DispatchedNode node={node} path={liftedPath(basePath, item.liftedPast, node.name)} />
+        <DispatchedNode node={node} path={path} />
       </LiftedAncestors>
-    </PaintRangeProvider>
+    </RepackedFrame>
   );
 }
 
@@ -254,14 +251,15 @@ function NodeItem({ entry: { item, range }, basePath }: { entry: PackedItem; bas
  */
 function RootRows({ entry: { item, range }, basePath }: { entry: PackedItem; basePath: string }) {
   const Renderer = nodeComponentRegistry.getYSortGroup(item.node!.type)!.Renderer;
+  const path = liftedPath(basePath, item.liftedPast, item.node!.name);
   return (
-    <PaintRangeProvider value={range}>
+    <RepackedFrame path={path} range={range}>
       <LiftedAncestors liftedPast={item.liftedPast} basePath={basePath}>
-        <NodePathProvider path={liftedPath(basePath, item.liftedPast, item.node!.name)}>
+        <NodePathProvider path={path}>
           <Renderer item={item} node={item.node!} />
         </NodePathProvider>
       </LiftedAncestors>
-    </PaintRangeProvider>
+    </RepackedFrame>
   );
 }
 
@@ -276,13 +274,18 @@ function LayerRows({ entries, basePath }: { entries: readonly PackedItem[]; base
         {entries.map(({ item, range }) => (
           // The row's whole draw position rides its group as one paint sequence. Its meshes order
           // within it by their own `renderOrder`, a batching artifact, not a draw position.
-          <PaintRangeProvider key={ySortItemId(item)} value={range}>
+          <RepackedFrame key={ySortItemId(item)} path={path} range={range}>
             <NodePathProvider path={path}>
               <Renderer item={item} node={item.node!} />
             </NodePathProvider>
-          </PaintRangeProvider>
+          </RepackedFrame>
         ))}
       </YSortLayerGroup>
     </LiftedAncestors>
   );
+}
+
+/** `children` at the run `range` the sort gave the item at `path`. */
+function RepackedFrame({ path, range, children }: { path: string; range: PaintRange; children: ReactNode }) {
+  return <PaintFrameProvider value={useRepackedFrame(path, range)}>{children}</PaintFrameProvider>;
 }

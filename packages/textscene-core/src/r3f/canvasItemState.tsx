@@ -11,7 +11,8 @@ import { useCanvasItemTint, type CanvasItemTint } from './canvasItemModulate';
 import { useCanvasModulateFor } from './canvasModulate';
 import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import { canvasKeyAtZ, canvasRenderOrder } from './canvasPaintOrder';
-import { useLayerRank, useNodePaintSequence, usePaintRange } from './contexts/PaintOrderContext';
+import { useLayerRank } from './contexts/PaintOrderContext';
+import { useNodePaint } from './canvasItemPass/nodePaint';
 import type { TscnNode } from '../parser/types';
 import { useNodePath } from './contexts/NodePathContext';
 import { useInheritedCanvasState } from './canvasItemPass/inheritedCanvasState';
@@ -89,7 +90,7 @@ export function useCanvasItemState(fields: CanvasItemFields): CanvasItemState {
  * gizmo, from its node and its own z step.
  */
 export function useCanvasKeyOfNode(node: TscnNode, own: CanvasItemZStep): number {
-  return useCanvasKeyAt(useNodeZFinal(own))(useNodePaintSequence(node));
+  return useCanvasKeyAt(useNodeZFinal(own))(useNodePaint(node, useNodePath()).own);
 }
 
 /** The keys a canvas item's run spans, `[from, to)`, at its layer and `z_final`, and its own key. */
@@ -105,9 +106,8 @@ export interface CanvasRunKeys {
  */
 export function useCanvasRunKeysOfNode(node: TscnNode, own: CanvasItemZStep): CanvasRunKeys {
   const keyAt = useCanvasKeyAt(useNodeZFinal(own));
-  const sequence = useNodePaintSequence(node);
-  const { base, size } = usePaintRange();
-  return useMemo(() => runKeysOf(keyAt, keyAt(sequence), { base, size }), [keyAt, sequence, base, size]);
+  const { own: sequence, range } = useNodePaint(node, useNodePath());
+  return useMemo(() => runKeysOf(keyAt, keyAt(sequence), range), [keyAt, sequence, range]);
 }
 
 /** The keys of the run `range`, around the item keyed `own`. */

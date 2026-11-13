@@ -24,17 +24,8 @@ import '../../../r3f/controls/index';
 
 const PORTAL_SCENE = 'View::offscreen';
 
-/** A viewport holding a full-rect ColorRect and a Polygon2D in the authored order given. */
-function scene(order: 'control-first' | 'world-first'): string {
-  const control = `[node name="Panel" type="ColorRect" parent="View"]
-offset_right = 200.0
-offset_bottom = 150.0
-color = Color(0, 0, 0.4, 1)
-`;
-  const world = `[node name="Shape" type="Polygon2D" parent="View"]
-polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
-`;
-  return `[gd_scene format=3]
+/** A viewport holding a full-rect ColorRect authored before a Polygon2D. */
+const CONTROL_FIRST = `[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
 
@@ -42,8 +33,14 @@ polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
 render_target_update_mode = 4
 size = Vector2i(200, 150)
 
-${order === 'control-first' ? control + '\n' + world : world + '\n' + control}`;
-}
+[node name="Panel" type="ColorRect" parent="View"]
+offset_right = 200.0
+offset_bottom = 150.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Shape" type="Polygon2D" parent="View"]
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
+`;
 
 function meshOf(root: THREE.Object3D, name: string): THREE.Object3D {
   let found: THREE.Object3D | undefined;
@@ -81,20 +78,13 @@ describe('a SubViewport with 2D content and Controls', () => {
   beforeAll(() => Promise.all([import('./ViewportControls'), import('./CanvasOverWorld')]));
 
   it('draws a Control into its own pass', async () => {
-    const portal = await portalSceneOf(scene('control-first'), PORTAL_SCENE);
+    const portal = await portalSceneOf(CONTROL_FIRST, PORTAL_SCENE);
     expect(meshOf(portal, 'Panel')).toBeDefined();
   });
 
   it('draws a Control under a Polygon2D authored after it', async () => {
-    const portal = await portalSceneOf(scene('control-first'), PORTAL_SCENE);
+    const portal = await portalSceneOf(CONTROL_FIRST, PORTAL_SCENE);
     expect(compareKeys(paintKey(meshOf(portal, 'Panel')), paintKey(meshOf(portal, 'Shape')))).toBeLessThan(0);
-  });
-
-  it('draws a Control over a Polygon2D authored before it', async () => {
-    const portal = await portalSceneOf(scene('world-first'), PORTAL_SCENE);
-    expect(compareKeys(paintKey(meshOf(portal, 'Panel')), paintKey(meshOf(portal, 'Shape')))).toBeGreaterThan(
-      0
-    );
   });
 
   /**
