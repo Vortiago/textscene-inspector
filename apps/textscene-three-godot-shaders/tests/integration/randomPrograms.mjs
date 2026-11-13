@@ -6,20 +6,22 @@
 
 import { recordEntry } from '../../../../scripts/godot-probes/record.mjs';
 import { runProbesInGodot } from '../../../../scripts/godot-probes/godotProject.mjs';
+import { KNOWN_DIFFERENCES } from '../random/knownDifferences.mjs';
 import { reduceProgram } from '../random/reduce.mjs';
 import { compareProbe } from './compare.mjs';
 import { runOnPage } from './pageRun.mjs';
 
 /**
  * The verdict of each of `programs` against `entries`, Godot's answers by program name, with a
- * reduced program for each that differs. A refusal by the transpiler is a failure here: the
+ * reduced program for each that differs and is not a known difference. A refusal by the transpiler is a failure here: the
  * generator uses translated rows only.
  */
 export async function compareRandomPrograms(page, programs, entries) {
   const results = [];
   for (const program of programs) {
     const verdict = compareProbe(entries[program.name], await runOnPage(page, program));
-    const reduced = verdict.passed ? undefined : await reduceAgainstGodot(page, program);
+    const isNew = !verdict.passed && !(program.name in KNOWN_DIFFERENCES);
+    const reduced = isNew ? await reduceAgainstGodot(page, program) : undefined;
     results.push({ program, verdict, reduced });
   }
   return results;
@@ -29,9 +31,11 @@ export async function compareRandomPrograms(page, programs, entries) {
 async function reduceAgainstGodot(page, program) {
   try {
     return await reduceProgram(program, async (candidates) => {
-      const { pixels } = runProbesInGodot(candidates);
+      // One name each: Godot's output names each probe's pixels by its name.
+      const named = candidates.map((candidate, index) => ({ ...candidate, name: `reduce-${index}` }));
+      const { pixels } = runProbesInGodot(named);
       const differs = [];
-      for (const candidate of candidates) {
+      for (const candidate of named) {
         const entry = recordEntry(candidate, pixels.get(candidate.name));
         differs.push(!compareProbe(entry, await runOnPage(page, candidate)).passed);
       }
@@ -44,21 +48,30 @@ async function reduceAgainstGodot(page, program) {
   }
 }
 
-/** One line: the programs generated, equal, different and refused, and the largest difference. */
+/**
+ * One line: the programs generated, equal, different and refused, the largest difference, and
+ * how many of the differences are known with an owner.
+ */
 export function randomSummary(results) {
   const refused = results.filter(({ verdict }) => verdict.lanes === 0 && !verdict.passed).length;
   const differ = results.filter(({ verdict }) => verdict.lanes > 0 && !verdict.passed);
+  const known = differ.filter(({ program }) => program.name in KNOWN_DIFFERENCES).length;
   const equal = results.length - refused - differ.length;
   const maxUlp = Math.max(0, ...differ.map(({ verdict }) => verdict.maxUlp));
-  return `${results.length} random programs against Godot: ${equal} equal bit for bit, ${differ.length} differ (largest ${maxUlp} ULP), ${refused} refused.`;
+  return `${equal} of ${results.length} random programs bit-equal with Godot: ${differ.length} differ (${known} known with an owner, largest ${maxUlp} ULP), ${refused} refused.`;
 }
 
-/** One line per program that is not equal: its name, the reduced program and the detail. */
+/**
+ * One line per failure: a program that is not equal and not known, with its reduced program,
+ * or a known one that is equal now and must leave the list.
+ */
 export function randomFailures(results) {
-  return results
-    .filter(({ verdict }) => !verdict.passed)
-    .map(({ program, verdict, reduced }) => {
-      const smallest = reduced ?? program;
-      return `${program.name} differs: ${verdict.detail}\n  reduced: ${smallest.source}`;
-    });
+  return results.flatMap(({ program, verdict, reduced }) => {
+    const known = KNOWN_DIFFERENCES[program.name];
+    if (verdict.passed)
+      return known ? [`${program.name} equals Godot now: remove it from knownDifferences.mjs`] : [];
+    if (known) return [];
+    const smallest = reduced ?? program;
+    return [`${program.name} differs: ${verdict.detail}\n  reduced: ${smallest.source}`];
+  });
 }

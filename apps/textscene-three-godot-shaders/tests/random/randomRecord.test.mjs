@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { hex } from '../../../../scripts/godot-probes/record.mjs';
 import { parameterBits } from '../../../../scripts/godot-probes/probeShader.mjs';
+import { KNOWN_DIFFERENCES } from './knownDifferences.mjs';
 import { RANDOM_PROGRAMS } from './randomSet.mjs';
 
 const RECORD = JSON.parse(readFileSync(join(import.meta.dirname, 'godot-record.json'), 'utf8'));
@@ -34,5 +35,13 @@ describe("Godot's record of the random programs", () => {
         (program) => program.name
       )
     ).toEqual([]);
+  });
+
+  it('lists as known differences only programs of the fixed set, each with an owner', () => {
+    const names = new Set(RANDOM_PROGRAMS.map((program) => program.name));
+    const unowned = Object.entries(KNOWN_DIFFERENCES).filter(
+      ([name, known]) => !names.has(name) || !/^#\d+$/.test(known.owner)
+    );
+    expect(unowned.map(([name]) => name)).toEqual([]);
   });
 });
