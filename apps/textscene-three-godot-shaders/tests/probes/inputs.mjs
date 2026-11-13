@@ -40,9 +40,16 @@ export function pairs() {
 /** A lane offset that is prime to the input count, so the lanes of a row hold different values. */
 const LANE_STRIDE = 5;
 
+/**
+ * The argument offsets of the two blocks of rows, apart from the lane offsets and from each other,
+ * so the second block pairs each value with other partners than the first.
+ */
+const ARGUMENT_STRIDES = [7, 11];
+
 /** The value of lane `lane` of argument `argument` in row `row`. */
 function valueAt(row, argument, lane) {
-  const index = (row + argument * 7 + lane * LANE_STRIDE) % FLOAT_VALUES.length;
+  const stride = ARGUMENT_STRIDES[Math.floor(row / FLOAT_VALUES.length)];
+  const index = (row + argument * stride + lane * LANE_STRIDE) % FLOAT_VALUES.length;
   return FLOAT_VALUES[index];
 }
 
@@ -51,12 +58,22 @@ export function vectors(size) {
   return FLOAT_VALUES.map((_, row) => [lanes(row, 0, size)]);
 }
 
-/** Rows of arguments of the given sizes, a float for size 1 and a vector otherwise. */
+/**
+ * Rows of arguments of the given sizes, a float for size 1 and a vector otherwise: one block of
+ * rows per argument offset, with a row that repeats an earlier one left out.
+ */
 export function pairedVectors(sizes) {
-  const rowCount = FLOAT_VALUES.length * 2;
-  return Array.from({ length: rowCount }, (_, row) =>
+  const rowCount = FLOAT_VALUES.length * ARGUMENT_STRIDES.length;
+  const rows = Array.from({ length: rowCount }, (_, row) =>
     sizes.map((size, argument) => lanes(row, argument, size))
   );
+  const seen = new Set();
+  return rows.filter((row) => {
+    const key = JSON.stringify(row.map((argument) => [argument].flat().map(floatBits)));
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function lanes(row, argument, size) {

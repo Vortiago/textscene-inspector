@@ -5,13 +5,13 @@
  * shading language, so it runs in Godot unchanged.
  */
 
+import { LANE_COUNT } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { pairedVectors, pairs, scalars, vectors } from './inputs.mjs';
 
 /** The float vector types of this slice. */
 const VECTORS = ['vec2', 'vec3', 'vec4'];
-const SIZE = { float: 1, vec2: 2, vec3: 3, vec4: 4 };
 
-/** Godot's operator enumerator and the shading language token of each arithmetic operator. */
+/** Each arithmetic operator: Godot's enumerator, the shading language token and the word a probe name uses. */
 const ARITHMETIC = [
   ['OP_ADD', '+', 'add'],
   ['OP_SUB', '-', 'sub'],
@@ -22,8 +22,8 @@ const ARITHMETIC = [
 /** The inputs of a function of `types`: each scalar pair, or vectors whose lanes differ. */
 function inputsFor(types) {
   if (types.every((type) => type === 'float')) return types.length === 1 ? scalars() : pairs();
-  if (types.length === 1) return vectors(SIZE[types[0]]);
-  return pairedVectors(types.map((type) => SIZE[type]));
+  if (types.length === 1) return vectors(LANE_COUNT[types[0]]);
+  return pairedVectors(types.map((type) => LANE_COUNT[type]));
 }
 
 /** The result type of `left op right` for float operands: the vector, when one side is one. */
@@ -86,7 +86,7 @@ function constructorProbes() {
       name: `construct-${type}-${args.join('-')}`,
       rows: [`${type}(${args.join(',')})`],
       source: `${type} probe(${args.map((arg, index) => `${arg} ${names[index]}`).join(', ')}) { return ${type}(${names.join(', ')}); }`,
-      inputs: pairedVectors(args.map((arg) => SIZE[arg])),
+      inputs: pairedVectors(args.map((arg) => LANE_COUNT[arg])),
     };
   });
 }
@@ -111,7 +111,7 @@ function swizzleProbes() {
         name: `swizzle-${type}-${set}`,
         rows: [`${type}.${set}`],
         source: `vec4 probe(${type} a) { return vec4(a.${one}, 0.0, 0.0, 0.0) + vec4(a.${two}, 0.0, 0.0) * 2.0 + vec4(a.${three}, 0.0) * 4.0 + a.${four} * 8.0; }`,
-        inputs: vectors(SIZE[type]),
+        inputs: vectors(LANE_COUNT[type]),
       };
     })
   );

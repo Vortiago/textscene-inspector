@@ -16,17 +16,19 @@ export const LANE_COUNT = { float: 1, vec2: 2, vec3: 3, vec4: 4 };
  */
 export const SENTINEL_BITS = 0xc0ffee01;
 
-/** The return type and the parameter types of the probe's `probe` function. */
+/** The return type, the parameter types and the parameter names of the probe's `probe` function. */
 export function probeSignature(source) {
   const match = /^(\w+) probe\(([^)]*)\)/.exec(source);
   if (!match) throw new Error(`expected a probe source that starts with "<type> probe(", got ${source}`);
-  const parameters =
-    match[2].trim() === '' ? [] : match[2].split(',').map((parameter) => parameter.trim().split(/\s+/)[0]);
+  const declarations =
+    match[2].trim() === '' ? [] : match[2].split(',').map((parameter) => parameter.trim().split(/\s+/));
+  const parameters = declarations.map(([type]) => type);
+  const names = declarations.map(([, name]) => name);
   for (const type of [match[1], ...parameters]) {
     if (!(type in LANE_COUNT))
       throw new Error(`expected a probe type of ${Object.keys(LANE_COUNT).join(', ')}, got ${type}`);
   }
-  return { returns: match[1], parameters };
+  return { returns: match[1], parameters, names };
 }
 
 /** The pixel count of a probe: one per result lane of each row, and the sentinel. */
