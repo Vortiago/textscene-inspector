@@ -68,13 +68,19 @@ interface Decoded {
  */
 const slotsOf = perObject((_kind: ResourceKind<unknown>) => new Map<string, Decoded>());
 
-/** A snapshot over `files`, the loader's answer for each file path: undefined while it loads, null once it failed. */
-export function snapshotOver(files: CacheSource<ParsedResource>): ResourceSnapshot {
+/** The loader's answer for each file path, undefined while it loads and null once it failed. */
+export interface FileSource extends CacheSource<ParsedResource> {
+  /** Hears each `file::id` address a read found in a loaded file: the file, or null when it declares no such id. */
+  readonly onAddress?: (address: string, file: ParsedResource | null) => void;
+}
+
+/** A snapshot over `files`. */
+export function snapshotOver(files: FileSource): ResourceSnapshot {
   return { read: (reference, kind) => readAt(files, reference, kind, []) };
 }
 
 /** The loader's answer before any file loads, which `mayName` reads against. */
-const NOTHING_LOADED: CacheSource<ParsedResource> = { getCached: () => undefined };
+const NOTHING_LOADED: FileSource = { getCached: () => undefined };
 
 /**
  * Whether `reference` can name a `kind` before any file loads: false for an unknown id and for a
@@ -87,7 +93,7 @@ export function mayName(reference: ScopedReference, kind: ResourceKind<unknown>)
 }
 
 function readAt<T>(
-  files: CacheSource<ParsedResource>,
+  files: FileSource,
   reference: ScopedReference,
   kind: ResourceKind<T>,
   stack: readonly string[]
@@ -99,7 +105,7 @@ function readAt<T>(
   return decoded(files, found, kind, [...stack, found.key]);
 }
 
-function locate(files: CacheSource<ParsedResource>, reference: ScopedReference): Located | Read<never> {
+function locate(files: FileSource, reference: ScopedReference): Located | Read<never> {
   const { ref, resources } = reference;
   if (!holdsResource(ref)) return NONE;
   const parsed = parseResourceReference(ref!);
@@ -128,6 +134,7 @@ function locate(files: CacheSource<ParsedResource>, reference: ScopedReference):
   if (file === null) return UNAVAILABLE['missing-file'];
   // Scoped per parse, so the tables keep their identity while the file holds.
   const section = scopedSection(file, path);
+  if (path !== filePath) files.onAddress?.(path, section ? file : null);
   if (!section) return UNAVAILABLE['unknown-id'];
   const { type, data } = section.resource;
   return {
@@ -183,7 +190,7 @@ function nestedReference(holder: Located, ref: string | undefined): ScopedRefere
 }
 
 function decoded<T>(
-  files: CacheSource<ParsedResource>,
+  files: FileSource,
   located: Located,
   kind: ResourceKind<T>,
   stack: readonly string[]
@@ -240,12 +247,7 @@ function decodeOnce<T>(kind: ResourceKind<T>, held: HeldResource, follow: Follow
  * strings, since each parse of the scene allocates it anew. A file resource is confirmed by the
  * object its parse holds, so a reload gives a new value. The slot already names the class.
  */
-function stillHolds(
-  kept: Decoded,
-  located: Located,
-  files: CacheSource<ParsedResource>,
-  stack: readonly string[]
-): boolean {
+function stillHolds(kept: Decoded, located: Located, files: FileSource, stack: readonly string[]): boolean {
   const { held } = located;
   const sameProperties = kept.isBuiltIn
     ? sameData(kept.properties, held.properties)

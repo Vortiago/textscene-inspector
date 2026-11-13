@@ -98,4 +98,19 @@ describe('a snapshot over the loader', () => {
     expect(whileReloading).toBe('loaded');
     expect(stale).toBeGreaterThan(0);
   });
+
+  it('answers each address into a loaded file with the file, or null for an id it does not declare', async () => {
+    const loader = loaderServing({ [A_FILE]: resourceFile('', '[sub_resource type="Resource" id="here"]') });
+    await loaded(loader, A_FILE);
+    const source = loaderSnapshots(loader);
+    const { kind } = namedKind();
+    const read = (path: string) => source.current().read(nodeReference(path, sceneTables('')), kind);
+    read(`${A_FILE}::here`);
+    read(`${A_FILE}::gone`);
+
+    const files = source.files();
+
+    expect(files.get(`${A_FILE}::here`)).toBe(files.get(A_FILE));
+    expect(files.get(`${A_FILE}::gone`)).toBeNull();
+  });
 });

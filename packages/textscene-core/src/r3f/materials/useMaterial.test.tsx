@@ -149,6 +149,52 @@ describe('useMaterial', () => {
     expect(rows).toEqual([TRES_PATH]);
   });
 
+  it('reports a sub-resource the loaded file does not declare as a missing row', () => {
+    const rows = missingRows(parseTresFile(PAINT_TRES), [`${TRES_PATH}::Missing`]);
+
+    expect(rows).toEqual([`${TRES_PATH}::Missing`]);
+  });
+
+  it('marks an undeclared sub-resource uploaded once a new file declares it', () => {
+    const fake = createFakeResourceLoader();
+    fake.resources.seed(TRES_PATH, parseTresFile(PAINT_TRES));
+    const { result } = renderHook(
+      () => {
+        useMaterial(fileMaterial(`${TRES_PATH}::Late_mat`));
+        return useMissingResources();
+      },
+      { wrapper: missingResourcesWrapper(fake.loader) }
+    );
+
+    const declaring = PAINT_TRES.replace('id="Inner_mat"', 'id="Late_mat"');
+    act(() => {
+      fake.resources.clearCache(TRES_PATH);
+      fake.resources._resolve(TRES_PATH, parseTresFile(declaring));
+    });
+
+    expect(result.current.missingPaths.size).toBe(0);
+    expect([...result.current.uploadedPaths]).toEqual([TRES_PATH]);
+  });
+
+  it('reports the address once a failed file loads without the sub-resource', () => {
+    const fake = createFakeResourceLoader();
+    fake.resources.seed(TRES_PATH, null);
+    const { result } = renderHook(
+      () => {
+        useMaterial(fileMaterial(`${TRES_PATH}::Late_mat`));
+        return useMissingResources().missingPaths;
+      },
+      { wrapper: missingResourcesWrapper(fake.loader) }
+    );
+
+    act(() => {
+      fake.resources.clearCache(TRES_PATH);
+      fake.resources._resolve(TRES_PATH, parseTresFile(PAINT_TRES));
+    });
+
+    expect([...result.current]).toEqual([`${TRES_PATH}::Late_mat`]);
+  });
+
   it('reports no row for a file that loads', () => {
     expect(missingRows(parseTresFile(PAINT_TRES), [`${TRES_PATH}::Inner_mat`])).toEqual([]);
   });
