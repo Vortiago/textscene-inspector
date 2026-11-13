@@ -1550,6 +1550,21 @@ describe('useBuildSolveTree — theme resolution', () => {
         properties: { spacing_glyph: '2' },
       });
     });
+
+    it("reads the default theme at the project's new scale when project.godot changes it", async () => {
+      const scaled = (scale: string) => `config_version=5\n\n[gui]\n\ntheme/default_theme_scale=${scale}\n`;
+      const files: Record<string, string> = { 'res://project.godot': scaled('1.0') };
+      const { loader, result } = renderPlainLabel(files);
+      await settle();
+      expect(result.current.tree[0]?.constants.line_spacing).toBe(3);
+
+      files['res://project.godot'] = scaled('1.5');
+      loader.fileEventBus!.invalidate('res://project.godot');
+      await settle();
+
+      // `Math::round(3 * scale)` (`default_theme.cpp:392`).
+      expect(result.current.tree[0]?.constants.line_spacing).toBe(5);
+    });
   });
 });
 

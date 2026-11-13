@@ -25,13 +25,9 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
-import { internalChildThemeItems } from '../../../../r3f/controls/native/themeItems';
+import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { layoutLabelLines, LABEL_LINE_SPACING_PX, LABEL_PARAGRAPH_SEPARATOR } from '../label/nativeSolver';
 import type { Rgba } from '../../../../godot/math/math';
-import {
-  defaultLabelFontColorInChain,
-  LABEL_NORMAL_BOX,
-} from '../../../../r3f/controls/native/defaultThemeItems';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** `title_label`'s real Godot class: both variations are declared `set_type_variation("Label")`. */
@@ -63,12 +59,11 @@ export function resolveTitleFontTheme(
   const fontResource = resolveThemeFontIn(scope, 'font', undefined);
   const fontMetrics = peekSceneFontMetrics(fontResource, n.path);
   const items = internalChildThemeItems(n, TITLE_LABEL_NATIVE_TYPE, typeVariation);
-  // The title's chain always reaches Label, so the walk always finds a colour.
   return {
     fontSizePx,
-    color: items.colors.font_color ?? defaultLabelFontColorInChain(scope.typeChain)!,
+    color: requiredThemeItem(items.colors, 'font_color'),
     fontMetrics,
-    box: items.styleBoxes.normal ?? LABEL_NORMAL_BOX,
+    box: requiredThemeItem(items.styleBoxes, 'normal'),
   };
 }
 

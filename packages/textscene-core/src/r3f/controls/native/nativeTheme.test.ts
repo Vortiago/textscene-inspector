@@ -4,7 +4,7 @@
  * `scaledGodotTheme` unchanged while colours are not scaled.
  */
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_THEME_VARIATIONS, scaledGodotTheme } from '../../../godot/scene/theme';
+import { scaledGodotTheme } from '../../../godot/scene/theme';
 import { nativeTheme } from './nativeTheme';
 
 describe('nativeTheme', () => {
@@ -313,7 +313,6 @@ describe('nativeTheme', () => {
           popupMenuPanel: widgets.popupMenuPanel.cornerDetail,
           buttonNormal: widgets.button.normal.cornerDetail,
           buttonFocus: widgets.button.focus.cornerDetail,
-          optionButton: widgets.optionButton.pressed.cornerDetail,
           lineEdit: widgets.lineEdit.normal.cornerDetail,
           sliderTrack: widgets.slider.track.cornerDetail,
           sliderFill: widgets.slider.fill.cornerDetail,
@@ -330,7 +329,6 @@ describe('nativeTheme', () => {
           popupMenuPanel: defaultRadius,
           buttonNormal: defaultRadius,
           buttonFocus: defaultRadius,
-          optionButton: defaultRadius,
           lineEdit: defaultRadius,
           sliderTrack: slider,
           sliderFill: slider,
@@ -346,11 +344,6 @@ describe('nativeTheme', () => {
   });
 
   describe('the default type variations it models', () => {
-    it('registers FlatMenuButton with a base type, as widgets.flatMenuButton holds its boxes', () => {
-      expect(DEFAULT_THEME_VARIATIONS.FlatMenuButton).toBeTruthy();
-      expect(nativeTheme(1).widgets.flatMenuButton).toBeDefined();
-    });
-
     it('gives the FlatMenuButton boxes the margins of the Button box and no fill (default_theme.cpp:360-375)', () => {
       const { widgets } = nativeTheme(1);
       expect(widgets.flatMenuButton.normal.contentMargin).toEqual(widgets.button.normal.contentMargin);

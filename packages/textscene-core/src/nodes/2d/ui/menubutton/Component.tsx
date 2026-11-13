@@ -1,11 +1,11 @@
 /**
  * `<MenuButton>`, the native painter. `menu_button.cpp` has no `_notification(NOTIFICATION_DRAW)`, so it
- * paints as `<Button>` does, with MenuButton's own `font_disabled_color` (`nativeSolver.ts`).
+ * paints as `<Button>` does, with the items of its own theme type.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ButtonPainter } from '../button/Component';
-import { MENU_BUTTON_CLASS } from './nativeSolver';
+import { BUTTON_CLASS } from '../button/nativeSolver';
 
 export function MenuButton(props: NativeControlComponentProps) {
-  return <ButtonPainter {...props} buttonClass={MENU_BUTTON_CLASS} />;
+  return <ButtonPainter {...props} buttonClass={BUTTON_CLASS} />;
 }

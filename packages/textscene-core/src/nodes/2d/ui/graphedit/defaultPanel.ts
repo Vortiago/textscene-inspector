@@ -1,11 +1,8 @@
 /** The `panel` box of a GraphEdit in Godot's default theme. */
 import { DEFAULT_CORNER_RADIUS } from '../../../../godot/scene/theme';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import {
-  flatCornerDetail,
-  flatStyleBox,
-  type StyleBoxFlatData,
-} from '../../../../r3f/controls/native/styleBoxFlat';
+import { flatStyleBox, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { flatCornerDetail } from '../../../../godot/scene/defaultTheme/styleBoxes';
 
 /** `default_theme.cpp:1287`: `make_flat_stylebox(style_normal_color, 4, 4, 4, 5)`, with a larger bottom margin. */
 export function graphEditDefaultPanel(theme: NativeTheme): StyleBoxFlatData {

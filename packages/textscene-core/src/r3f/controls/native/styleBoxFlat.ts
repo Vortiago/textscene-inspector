@@ -56,7 +56,7 @@ type Sides = { left: number; top: number; right: number; bottom: number };
 
 const NO_SIDES: Sides = { left: 0, top: 0, right: 0, bottom: 0 };
 
-/** Every field `make_flat_stylebox` (`default_theme.cpp:57-70`) leaves at `StyleBoxFlat`'s own default. */
+/** The fields a box sets. Each one left out keeps `StyleBoxFlat`'s own default. */
 interface FlatStyleBoxOptions {
   contentMargin?: Sides;
   cornerRadius?: number | StyleBoxFlatData['cornerRadius'];
@@ -65,29 +65,13 @@ interface FlatStyleBoxOptions {
   expandMargin?: Sides;
   /** The detail of the theme builder (`flatCornerDetail`). Left out, the box keeps `StyleBoxFlat`'s 8. */
   cornerDetail?: number;
-}
-
-/** `StyleBoxFlat::set_corner_detail` clamps to 1..20 (`style_box_flat.cpp:129-130`). */
-export const CORNER_DETAIL_MIN = 1;
-export const CORNER_DETAIL_MAX = 20;
-/** `MIN(ceil(1.5 * radius), 6)` in `make_flat_stylebox`: a corner never needs more than six steps at scale 1. */
-const MAX_UNSCALED_CORNER_DETAIL = 6;
-
-/**
- * The `corner_detail` `make_flat_stylebox` sets (`default_theme.cpp:65`):
- * `MIN(ceil(1.5 * radius), 6) * scale`. `radius` is the radius before the theme scale.
- * `set_corner_detail` takes an `int`, so the product truncates, then clamps to 1..20
- * (`style_box_flat.cpp:129-130`).
- */
-export function flatCornerDetail(radius: number, scale: number): number {
-  const detail = Math.trunc(Math.min(Math.ceil(1.5 * radius), MAX_UNSCALED_CORNER_DETAIL) * scale);
-  return Math.min(Math.max(detail, CORNER_DETAIL_MIN), CORNER_DETAIL_MAX);
+  /** Left out, the box draws its centre, as `StyleBoxFlat` does. */
+  drawCenter?: boolean;
 }
 
 /**
- * `make_flat_stylebox` (`default_theme.cpp:57-70`) for the fields `StyleBoxFlatData`
- * models. An option left out keeps `StyleBoxFlat`'s constructed default, as the
- * theme builder assigns only a colour, the margins and a corner radius.
+ * A `StyleBoxFlat` with the fields `options` sets, every length already scaled. An option left out keeps
+ * `StyleBoxFlat`'s constructed default.
  */
 export function flatStyleBox(bgColor: Rgba, options: FlatStyleBoxOptions = {}): StyleBoxFlatData {
   const { contentMargin = NO_SIDES, cornerRadius = 0, borderWidth = 0 } = options;
@@ -110,7 +94,7 @@ export function flatStyleBox(bgColor: Rgba, options: FlatStyleBoxOptions = {}): 
     cornerRadius: corners,
     expandMargin: options.expandMargin ?? NO_SIDES,
     contentMargin,
-    drawCenter: true,
+    drawCenter: options.drawCenter ?? true,
     borderBlend: false,
     antiAliased: true,
     aaSize: 1,

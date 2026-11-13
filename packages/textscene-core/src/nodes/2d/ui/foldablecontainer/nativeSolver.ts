@@ -11,10 +11,8 @@
  */
 import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import {
-  flatCornerDetail,
-  flatStyleBox as makeFlatStyleBox,
-} from '../../../../r3f/controls/native/styleBoxFlat';
+import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
+import { flatCornerDetail } from '../../../../godot/scene/defaultTheme/styleBoxes';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {

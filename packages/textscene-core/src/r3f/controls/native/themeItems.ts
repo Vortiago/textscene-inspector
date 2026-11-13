@@ -6,7 +6,6 @@ import type { TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Rgba } from '../../../godot/math/math.js';
 import { perObject } from '../../../utils/perObject';
-import { NO_DEFAULT_FONTS } from '../../../resources/fonts/font/defaultFont';
 import { isThemeLocalToScene } from '../../../resources/styles/theme/isThemeLocalToScene';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import {
@@ -17,18 +16,13 @@ import {
 import type { SceneScope } from '../../liveSceneTree';
 import type { SolveNode, ThemedIconRef } from './solveTree';
 import { parseStyleBox, type ResolvedStyleBox } from './parseStyleBox';
+import { defaultColorsOf, defaultConstantsOf, defaultStyleBoxesOf } from './defaultThemeRecords';
 
 /** A node's own override is held by the node, not by a theme (`NODE_PROPERTY` in `useTexture2D.ts`, which a pure module cannot import). */
 const IS_HELD_BY_NODE = true;
 
-/** No ancestor or project theme: `mergeThemedRecord` returns the seed unchanged. */
-const NO_THEME_SCOPE: ThemeResolutionScope = {
-  typeChain: [],
-  searchOrder: [],
-  variation: undefined,
-  projectDefaultFont: null,
-  defaultFonts: NO_DEFAULT_FONTS,
-};
+/** Default icons are not in the table: `themeIcons.ts` draws them. */
+const NO_DEFAULT_ICONS: Readonly<Record<string, Readonly<Record<string, ThemedIconRef>>>> = {};
 
 /**
  * A theme's `styles` refs, resolved against that theme's own sub-resource pool,
@@ -55,13 +49,13 @@ const resolvedStylesOfTheme = perObject(
 /**
  * Every StyleBox slot, keyed as `Control::get_theme_stylebox` keys them. A
  * `theme_override_styles/*`, resolved in the node's own `scope`, wins over the
- * theme chain. An unresolvable ref is omitted, and all four StyleBox kinds are
+ * theme chain, and the default theme answers last. An unresolvable ref is omitted, and all four StyleBox kinds are
  * kept: each wraps a `StyleBoxFlatData` core with its own `contentMargin`.
  */
 export function resolveStyleBoxes(
   node: TscnNode,
   scope: SceneScope,
-  themeScope: ThemeResolutionScope = NO_THEME_SCOPE
+  themeScope: ThemeResolutionScope
 ): Readonly<Record<string, ResolvedStyleBox>> {
   const overrides = (node.properties as ControlProperties).themeOverrideStyles;
   const local: Record<string, ResolvedStyleBox> = {};
@@ -71,7 +65,7 @@ export function resolveStyleBoxes(
       if (resolved) local[key] = resolved;
     }
   }
-  return mergeThemedRecord(themeScope, local, resolvedStylesOfTheme);
+  return mergeThemedRecord(themeScope, local, resolvedStylesOfTheme, defaultStyleBoxesOf);
 }
 
 /**
@@ -83,7 +77,7 @@ export function resolveThemedColors(
   themeScope: ThemeResolutionScope
 ): Readonly<Record<string, Rgba>> {
   const local = (node.properties as ControlProperties).themeOverrideColors ?? {};
-  return mergeThemedRecord(themeScope, local, (theme) => theme.colors);
+  return mergeThemedRecord(themeScope, local, (theme) => theme.colors, defaultColorsOf);
 }
 
 /**
@@ -96,7 +90,7 @@ export function resolveThemedConstants(
   themeScope: ThemeResolutionScope
 ): Readonly<Record<string, number>> {
   const local = (node.properties as ControlProperties).themeOverrideConstants ?? {};
-  return mergeThemedRecord(themeScope, local, (theme) => theme.constants);
+  return mergeThemedRecord(themeScope, local, (theme) => theme.constants, defaultConstantsOf);
 }
 
 /**
@@ -134,7 +128,19 @@ export function resolveThemedIcons(
       local[key] = { ref, resources: scope, isHeldLocally: IS_HELD_BY_NODE };
     }
   }
-  return mergeThemedRecord(themeScope, local, iconRefsOfTheme);
+  return mergeThemedRecord(themeScope, local, iconRefsOfTheme, () => NO_DEFAULT_ICONS);
+}
+
+/**
+ * `items[name]` for an item the default theme sets for the type: the table answers every such name, so a
+ * miss is a missing table entry, never a gap a theme left.
+ */
+export function requiredThemeItem<V>(items: Readonly<Record<string, V>>, name: string): V {
+  const found = items[name];
+  if (found === undefined) {
+    throw new Error(`expected the default theme to hold the theme item "${name}", found none`);
+  }
+  return found;
 }
 
 export type InternalThemeItems = Pick<SolveNode, 'styleBoxes' | 'colors' | 'constants' | 'icons'>;

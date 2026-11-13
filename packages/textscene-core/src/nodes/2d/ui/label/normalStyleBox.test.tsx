@@ -12,7 +12,11 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { Label } from './Component';
 import { labelMinimumSize, labelShapingWidthPx, layoutLabelLines } from './nativeSolver';
@@ -28,12 +32,12 @@ const MARGINS = {
 const BOX = drawnStyleBox(MARGINS);
 const MARGIN = { left: 10, top: 6, right: 14, bottom: 4 };
 function label(props: Partial<LabelProperties>, withBox = true): SolveNode {
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: 'L',
     node: controlNode('L', 'Label', { name: 'L', ...props }),
     styleBoxes: withBox ? { normal: BOX } : {},
-  };
+  });
 }
 
 const ctx = { theme: nativeTheme(1), measureText, combinedMinimumSize: () => ({ x: 0, y: 0 }) };

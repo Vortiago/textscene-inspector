@@ -19,7 +19,7 @@ import { createSolveContext, solveControlTree } from './controlRectSolver';
 import { nativeTheme } from './nativeTheme';
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { SolveNode } from './solveTree';
-import { solveNode } from './testing/solveNode';
+import { solveNode, withThemeItems } from './testing/solveNode';
 
 /**
  * The registered Godot `Container` subclasses: the types whose children a
@@ -67,7 +67,7 @@ const THEME = nativeTheme(1);
 
 function bareSolveNode(type: string): SolveNode {
   const node = parseBareNode(type);
-  return { ...solveNode(), path: node.name, node };
+  return withThemeItems({ ...solveNode(), path: node.name, node });
 }
 
 /**

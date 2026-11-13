@@ -10,7 +10,8 @@
  */
 
 import type { Rgba } from '../../../godot/math/math';
-import { flatCornerDetail, flatStyleBox, freezeStyleBox, type FrozenStyleBoxData } from './styleBoxFlat';
+import { flatStyleBox, freezeStyleBox, type FrozenStyleBoxData } from './styleBoxFlat';
+import { flatCornerDetail } from '../../../godot/scene/defaultTheme/styleBoxes';
 
 /** `Color(1, 1, 1, 0.75)`: `style_focus_color` (`default_theme.cpp:117`), `style_tab_selected`'s top border (`:975-976`). */
 const TAB_SELECTED_BORDER_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 0.75 };

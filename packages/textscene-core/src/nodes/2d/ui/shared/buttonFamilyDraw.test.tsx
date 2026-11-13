@@ -12,7 +12,11 @@ import type { Rgba } from '../../../../godot/math/math';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   findIconMeshes,
   findTextMesh,
@@ -58,22 +62,28 @@ const FAMILY: FamilyCase[] = [
   },
 ];
 
-function familyNode(c: FamilyCase, properties: Record<string, unknown>, colors: SolveNode['colors']) {
-  return {
+/** `fields` stand in for what the tree build gives the node before the default theme fills it. */
+function familyNode(c: FamilyCase, properties: Record<string, unknown>, fields: Partial<SolveNode>) {
+  return withThemeItems({
     ...emptySolveNode(),
     path: 'N',
     node: controlNode('N', c.name, { name: 'N', ...c.shown, ...properties }),
     resources: OWN_ICON_SCOPE,
     textureSize: ICON_SIZE,
     textureSlots: { icon: ICON_SIZE },
-    colors,
-  } satisfies SolveNode;
+    ...fields,
+  } satisfies SolveNode);
 }
 
 async function drawn(c: FamilyCase, properties: Record<string, unknown>, colors: SolveNode['colors'] = {}) {
   const { Component } = c;
   const rendered = await renderWithOwnIcon(
-    <Component {...painterEnv()} solveNode={familyNode(c, properties, colors)} rect={RECT} renderOrder={0} />,
+    <Component
+      {...painterEnv()}
+      solveNode={familyNode(c, properties, { colors })}
+      rect={RECT}
+      renderOrder={0}
+    />,
     { w: ICON_SIZE.x, h: ICON_SIZE.y }
   );
   const icons = findIconMeshes(rendered.scene);
@@ -155,7 +165,7 @@ describe.each(SUBCLASSES_WITH_AN_OVERLAY)(
   (c) => {
     it('draws over the label, outline included, and under the next Control', async () => {
       const { Component } = c;
-      const outlined = { ...familyNode(c, {}, {}), constants: { outline_size: 4 } };
+      const outlined = familyNode(c, {}, { constants: { outline_size: 4 } });
       const rendered = await renderWithOwnIcon(
         <Component {...painterEnv()} solveNode={outlined} rect={RECT} renderOrder={7} />,
         { w: ICON_SIZE.x, h: ICON_SIZE.y }

@@ -22,10 +22,10 @@ import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { DEFAULT_CORNER_RADIUS, STYLE_FILL } from '../../../../godot/scene/theme';
 import {
   contentMarginSize,
-  flatCornerDetail,
   flatStyleBox,
   type StyleBoxFlatData,
 } from '../../../../r3f/controls/native/styleBoxFlat';
+import { flatCornerDetail } from '../../../../godot/scene/defaultTheme/styleBoxes';
 import { perObject } from '../../../../utils/perObject';
 import {
   resolveTextTheme,

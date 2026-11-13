@@ -9,6 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type {
   MinimumSizeFn,
   SolveContext,
@@ -33,7 +34,6 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import type { OptionButtonProperties, OptionItem } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import {
-  BUTTON_DEFAULT_FONT_COLORS,
   BUTTON_THEME_FONT_KEY,
   buttonContentFacts,
   buttonHSeparation,
@@ -76,7 +76,6 @@ function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>, theme: Native
  * (`:423-424`), and the arrow is the internal margin of the trailing side (`:83-89,139-147`).
  */
 export const OPTION_BUTTON_CLASS: ReservingButtonClass = {
-  fontColors: BUTTON_DEFAULT_FONT_COLORS,
   textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
   shown: (props) => {
     const selected = selectedOptionItem(props);
@@ -111,7 +110,7 @@ const buttonMinimumSize = buttonMinimumSizeOf(OPTION_BUTTON_CLASS);
 function longestItemMinimumSize(n: SolveNode, ctx: SolveContext): Vector2 {
   const props = n.node.properties as OptionButtonProperties;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
-  const { fontSizePx } = buttonTextTheme(n, props, state, ctx, OPTION_BUTTON_CLASS);
+  const { fontSizePx } = buttonTextTheme(n, props, state, ctx);
   const fontMetrics = resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY);
 
   // The facts only an item's text and icon change, and equal texts measure alike.
@@ -130,7 +129,7 @@ function longestItemMinimumSize(n: SolveNode, ctx: SolveContext): Vector2 {
     return size;
   };
 
-  const longest = contentMarginSize(buttonNormalBox(n, ctx.theme));
+  const longest = contentMarginSize(buttonNormalBox(n));
   for (const [index, { text }] of (props.items ?? []).entries()) {
     // `paragraph->get_size()` is ceiled (`text_paragraph.cpp:601-608` -> `text_server_adv.cpp:7524-7537`),
     // so the max is over whole-pixel widths. `clip_text`, a trimming overrun or autowrap zeroes the
@@ -165,9 +164,9 @@ export function isOptionButtonSizeDependent(n: SolveNode): boolean {
  */
 export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const minimumSize = fitsToLongestItem(n) ? longestItemMinimumSize(n, ctx) : buttonMinimumSize(n, ctx);
-  const padding = sidesSize(buttonLargestMargin(n, ctx.theme));
+  const padding = sidesSize(buttonLargestMargin(n));
   const arrow = optionButtonArrowSize(n, ctx.theme);
-  const hSeparation = Math.max(0, buttonHSeparation(n, ctx.theme));
+  const hSeparation = Math.max(0, buttonHSeparation(n));
   return {
     x: minimumSize.x + arrow.x + hSeparation,
     y: Math.max(minimumSize.y - padding.y, arrow.y) + padding.y,
@@ -181,7 +180,7 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
  */
 export function optionButtonArrowRect(n: ShareNode, theme: NativeTheme, rectSize: Vector2): Rect2 {
   const arrowSize = optionButtonArrowSize(n, theme);
-  const arrowMargin = n.constants.arrow_margin ?? theme.separation;
+  const arrowMargin = requiredThemeItem(n.constants, 'arrow_margin');
   return {
     x: Math.floor(n.rtl ? arrowMargin : rectSize.x - arrowSize.x - arrowMargin),
     y: Math.floor(Math.abs((rectSize.y - arrowSize.y) / 2)),
@@ -198,5 +197,5 @@ export function optionButtonArrowColor(n: ShareNode, theme: NativeTheme): Rgba {
   if (!n.constants.modulate_arrow) return WHITE_MODULATE;
   const props = n.node.properties as OptionButtonProperties;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
-  return buttonTextTheme(n, props, state, { theme }, OPTION_BUTTON_CLASS).color;
+  return buttonTextTheme(n, props, state, { theme }).color;
 }

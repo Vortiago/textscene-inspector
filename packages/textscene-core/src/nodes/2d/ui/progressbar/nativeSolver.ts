@@ -18,10 +18,10 @@ import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   contentMarginSize,
-  flatCornerDetail,
   ZERO_SIDES,
   type StyleBoxFlatData,
 } from '../../../../r3f/controls/native/styleBoxFlat';
+import { flatCornerDetail } from '../../../../godot/scene/defaultTheme/styleBoxes';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
