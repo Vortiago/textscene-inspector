@@ -5,29 +5,25 @@
 
 import { useMemo } from 'react';
 import type * as THREE from 'three';
-import type { TscnInternalResource } from '../parser/types.js';
-import {
-  resolveAtlasTexture,
-  type AtlasTextureReference,
-} from './textures/atlastexture/resolveAtlasTexture.js';
+import { resolveAtlasTexture } from './textures/atlastexture/resolveAtlasTexture.js';
+import type { AtlasTextureData } from './textures/atlastexture/types.js';
 import { useProceduralTexturePins } from './useProceduralTexture.js';
 import { isLiveTarget } from '../r3f/liveTargets.js';
 import { useDisposeOnRelease } from '../r3f/useDisposeOnRelease.js';
 
 /**
- * Null while the sheet is loading or the region has no area. Keyed on the tables the atlas sits in,
- * so a re-parse invalidates it, and on whether the sheet is live, which picks the crop.
+ * Null while the sheet is loading or the region has no area. Keyed on the decoded atlas, which a
+ * changed resource replaces, and on whether the sheet is live, which picks the crop.
  */
 export function useAtlasTextureCrop(
-  atlas: AtlasTextureReference | null,
-  sheet: THREE.Texture | null,
-  atlasResources: readonly TscnInternalResource[]
+  atlas: AtlasTextureData | null,
+  sheet: THREE.Texture | null
 ): THREE.Texture | null {
   const isLiveSheet = sheet !== null && isLiveTarget(sheet);
   const cropped = useMemo(
-    () => (atlas ? resolveAtlasTexture(atlas, sheet, atlasResources) : null),
+    () => (atlas ? resolveAtlasTexture(atlas, sheet) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the resolver reads whether the sheet is live.
-    [atlas, sheet, atlasResources, isLiveSheet]
+    [atlas, sheet, isLiveSheet]
   );
   useProceduralTexturePins(cropped?.key ? [cropped.key] : []);
   useDisposeOnRelease(cropped?.key === null ? cropped.texture : null);

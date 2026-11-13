@@ -10,6 +10,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
+import { useNodeReference } from '../../../../resources/reading';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
@@ -170,11 +171,7 @@ function ItemListRow({
     selectedRect,
   } = geometry;
 
-  const { texture: iconSource } = useTexture2D(
-    item.icon,
-    resources.externalResources,
-    resources.internalResources
-  );
+  const { texture: iconSource } = useTexture2D(useNodeReference(item.icon, resources));
   const ownIconTexture = useOwnerCanvas2DTexture(iconSource);
   const themedTexture = useNodeIcon(
     item.themedIcon && icons[item.themedIcon.name],

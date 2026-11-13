@@ -3,20 +3,14 @@ import { canvasTextureSpecular, decodeCanvasTexture } from './decode';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../godot/scene/canvasItem';
 
 describe('decodeCanvasTexture', () => {
-  it('reads the three texture references, the shading parameters and the sampler', () => {
+  it('reads the shading parameters and the sampler', () => {
     const texture = decodeCanvasTexture({
-      diffuse_texture: 'SubResource("Diffuse")',
-      normal_texture: 'ExtResource("2_normal")',
-      specular_texture: 'SubResource("Specular")',
       specular_color: 'Color(0.5, 0.25, 1, 1)',
       specular_shininess: '0.5',
       texture_filter: '1',
       texture_repeat: '2',
     });
     expect(texture).toEqual({
-      diffuseTexture: 'SubResource("Diffuse")',
-      normalTexture: 'ExtResource("2_normal")',
-      specularTexture: 'SubResource("Specular")',
       specularColor: { r: 0.5, g: 0.25, b: 1, a: 1 },
       specularShininess: 0.5,
       textureFilter: CanvasItemTextureFilter.NEAREST,
@@ -27,9 +21,6 @@ describe('decodeCanvasTexture', () => {
   it("gives Godot's member defaults for a block that names nothing", () => {
     // `canvas_item.h:433-442`: white specular, shininess 1, both sampler slots inheriting.
     expect(decodeCanvasTexture({})).toEqual({
-      diffuseTexture: null,
-      normalTexture: null,
-      specularTexture: null,
       specularColor: { r: 1, g: 1, b: 1, a: 1 },
       specularShininess: 1,
       textureFilter: CanvasItemTextureFilter.PARENT_NODE,

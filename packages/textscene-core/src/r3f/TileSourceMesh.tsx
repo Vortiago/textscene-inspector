@@ -7,14 +7,14 @@ import { useMemo, useState } from 'react';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
 import * as THREE from 'three';
 import { useCanvasItemTextureSampledBy } from './canvasItemTexture';
-import { NO_RESOURCES } from './SceneResourcesContext';
+import { referenceHeldBy, type ScopedReference } from '../resources/reading';
 import {
   buildPaddedStandInGeometryArrays,
   buildTileGeometryArrays,
   buildTileOrientations,
 } from '../resources/tileset/tileGeometry';
 import type { DrawableCell } from '../resources/tileset/drawableCell';
-import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
+import type { AtlasSourceModel, TileGrid, TileTexture } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
 import { useCanvas2DTexture } from './canvas2DTextureDecode';
 import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
@@ -51,14 +51,7 @@ export function TileSourceMesh({
   name,
   sampler: layerSampler,
 }: TileSourceMeshProps) {
-  const slot = source.texture;
-  const texResult = useCanvasItemTextureSampledBy(
-    layerSampler,
-    slot?.ref,
-    slot?.externalResources ?? NO_RESOURCES.externalResources,
-    slot?.internalResources ?? NO_RESOURCES.internalResources,
-    slot?.isHeldLocally
-  );
+  const texResult = useCanvasItemTextureSampledBy(layerSampler, useTileTextureReference(source.texture));
   const standIn = usePaddedAtlasStandIn(texResult, source);
   const isStandIn = standIn !== null;
   const tex = useCanvas2DTexture(standIn ?? texResult.texture, texResult.sampler);
@@ -67,7 +60,7 @@ export function TileSourceMesh({
   const texH = image?.height;
 
   const { canvasTexture } = texResult;
-  const hasNormalMap = Boolean(canvasTexture?.slot.texture.normalTexture);
+  const hasNormalMap = Boolean(canvasTexture?.slot.normalTexture);
   const arrays = useMemo(() => {
     if (!texW || !texH) return null;
     return isStandIn
@@ -93,10 +86,10 @@ export function TileSourceMesh({
   // The run's own maps, so runs of one tile item from different sources each light with theirs.
   const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
   // A source with no texture draws nothing (`tile_map_layer.cpp:724`), nor does a pending or failed one.
-  const isDrawn = slot !== undefined && !texResult.missing && tex !== null && geometry !== null;
+  const isDrawn = source.texture !== null && !texResult.missing && tex !== null && geometry !== null;
   const pixelMaterial = useSurfacePixelMaterial(surface, isDrawn);
 
-  if (!slot) return null;
+  if (!source.texture) return null;
   // A failed load gets one placeholder for the whole source (the panel row comes from the
   // resolver's missing report).
   if (texResult.missing) {
@@ -171,4 +164,18 @@ function tintedColors(colors: Float32Array, vertexTint: Rgba): Float32Array {
   const { r, g, b } = vertexTint;
   const factors = [r, g, b, 1];
   return colors.map((value, index) => value * (factors[index % 4] ?? 1));
+}
+
+/** The atlas source's texture, held by the TileSet and the atlas source. */
+function useTileTextureReference(texture: TileTexture | null): ScopedReference | null {
+  return useMemo(
+    () =>
+      texture &&
+      referenceHeldBy(
+        texture.ref,
+        { externalResources: texture.externalResources, internalResources: texture.internalResources },
+        texture.isHeldLocally
+      ),
+    [texture]
+  );
 }

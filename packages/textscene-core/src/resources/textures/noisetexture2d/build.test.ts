@@ -16,7 +16,7 @@ import { noiseTexture2DLevels } from './pixels';
 import type { MipLevel } from '../../processing/mipChain';
 import { levelHashes, NOISE_PIXEL_CASES, PINNED_LEVEL_HASHES } from './pixelCases.testkit';
 import type { NoiseTexture2DData } from './types';
-import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
+import { fastNoiseLiteOf } from '../../noise/fastnoiselite/fastNoiseLite.testkit';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
 import { type Gradient } from '../gradienttexture2d/types';
 import { IMAGE_MAX_PIXELS } from '../../../godot/project/image.js';
@@ -64,9 +64,9 @@ describe('noiseImage', () => {
   it('samples through the generator offset', () => {
     // fastnoise_lite.cpp:318-325 adds `offset` before generating, so an offset
     // field equals the plain field read further along.
-    const data = decodeFastNoiseLite({ offset: 'Vector3(5, 0, 0)' });
+    const data = fastNoiseLiteOf({ offset: 'Vector3(5, 0, 0)' });
     const shifted = noiseSampler(data);
-    const plain = noiseSampler(decodeFastNoiseLite({}));
+    const plain = noiseSampler(fastNoiseLiteOf({}));
     expect(shifted(0, 0)).toBeCloseTo(plain(5, 0), 10);
   });
 });
@@ -98,7 +98,7 @@ describe('seamlessNoiseImage', () => {
   it('produces edges that match across the wrap', () => {
     // Column 0 and column width-1 are neighbours once the texture tiles, so the
     // blend skirt keeps them close.
-    const sample = noiseSampler(decodeFastNoiseLite({ frequency: '0.05' }));
+    const sample = noiseSampler(fastNoiseLiteOf({ frequency: '0.05' }));
     const width = 64;
     const height = 64;
     const seamless = seamlessNoiseImage(sample, width, height, false, true, 0.1);
@@ -117,13 +117,13 @@ describe('seamlessNoiseImage', () => {
   });
 
   it('returns exactly the requested size, not the skirted source size', () => {
-    const sample = noiseSampler(decodeFastNoiseLite({}));
+    const sample = noiseSampler(fastNoiseLiteOf({}));
     expect(seamlessNoiseImage(sample, 32, 16, false, true, 0.1)).toHaveLength(32 * 16);
   });
 
   it('keeps a minimum one-pixel skirt for a zero blend skirt', () => {
     // noise.h:106-107: `MAX(1, p_width * p_blend_skirt)`.
-    const sample = noiseSampler(decodeFastNoiseLite({}));
+    const sample = noiseSampler(fastNoiseLiteOf({}));
     expect(seamlessNoiseImage(sample, 8, 8, false, true, 0)).toHaveLength(64);
   });
 });
@@ -179,7 +179,7 @@ describe('bumpMapToNormalMap', () => {
 });
 
 describe('noiseTexture2DLevels in a noiseDataTexture', () => {
-  const noise = decodeFastNoiseLite({ frequency: '0.05' });
+  const noise = fastNoiseLiteOf({ frequency: '0.05' });
 
   /** The levels a worker job computes, wrapped as the main thread wraps them. */
   function rasterized(
@@ -274,7 +274,7 @@ describe('noiseTexture2DLevels in a noiseDataTexture', () => {
   it('produces a different field for a different seed', () => {
     const tex = decodeNoiseTexture2D({ width: '8', height: '8' });
     const a = rasterized(tex, noise, null).image.data as Uint8Array;
-    const b = rasterized(tex, decodeFastNoiseLite({ frequency: '0.05', seed: '99' }), null).image
+    const b = rasterized(tex, fastNoiseLiteOf({ frequency: '0.05', seed: '99' }), null).image
       .data as Uint8Array;
     expect([...a]).not.toEqual([...b]);
   });

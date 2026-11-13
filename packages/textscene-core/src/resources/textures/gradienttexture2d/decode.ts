@@ -6,7 +6,6 @@
  */
 
 import { enumOr, settableIntOr, vec2Or, type SetterRange } from '../../../parser/valueParsers';
-import type { TscnInternalResource } from '../../../parser/types';
 import type { ResourceKind } from '../../reading';
 import {
   GRADIENT_TEXTURE_MAX_SIZE,
@@ -62,11 +61,6 @@ function decodeGradient(data: Readonly<Record<string, string>>): Gradient {
       'Gradient.interpolation_mode'
     ),
   };
-}
-
-/** The `Gradient` a resource holds, or null for no resource or one of another type. */
-export function decodeGradientResource(resource: TscnInternalResource | null): Gradient | null {
-  return resource?.type === 'Gradient' ? decodeGradient(resource.data) : null;
 }
 
 /** A `Gradient` from any origin: the ramp of a particle emitter. Another class draws nothing. */

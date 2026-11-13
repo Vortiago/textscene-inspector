@@ -7,7 +7,7 @@
  */
 
 import type { Node2DProperties } from '../nodes/base/node2d/types';
-import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
+import type { ScopedReference } from '../resources/reading';
 import { useTexture2D, type CanvasTextureSlot, type Texture2DResult } from '../resources/useTexture2D';
 import {
   useCanvasTextureSampler,
@@ -30,36 +30,18 @@ interface CanvasItemTextureResult extends Omit<Texture2DResult, 'canvasTexture'>
 
 export function useCanvasItemTexture(
   props: Pick<Node2DProperties, 'texture_filter' | 'texture_repeat'>,
-  ref: string | undefined,
-  externalResources: readonly TscnExternalResource[],
-  internalResources: readonly TscnInternalResource[],
-  isHeldLocally?: boolean
+  reference: ScopedReference | null
 ): CanvasItemTextureResult {
-  return useCanvasItemTextureSampledBy(
-    useNode2DTextureSampler(props),
-    ref,
-    externalResources,
-    internalResources,
-    isHeldLocally
-  );
+  return useCanvasItemTextureSampledBy(useNode2DTextureSampler(props), reference);
 }
 
 /** `useCanvasItemTexture` for an item whose effective sampler is already resolved, as a tile layer's is. */
 export function useCanvasItemTextureSampledBy(
   itemSampler: CanvasItemTextureSampler,
-  ref: string | undefined,
-  externalResources: readonly TscnExternalResource[],
-  internalResources: readonly TscnInternalResource[],
-  isHeldLocally?: boolean
+  reference: ScopedReference | null
 ): CanvasItemTextureResult {
   // No view: the slot samples the view of its canvas's colour space.
-  const { canvasTexture: slot, ...drawn } = useTexture2D(
-    ref,
-    externalResources,
-    internalResources,
-    undefined,
-    isHeldLocally
-  );
+  const { canvasTexture: slot, ...drawn } = useTexture2D(reference);
   const sampler = useCanvasTextureSampler(itemSampler, slot?.texture);
   return { ...drawn, sampler, canvasTexture: slot && { slot, sampler } };
 }

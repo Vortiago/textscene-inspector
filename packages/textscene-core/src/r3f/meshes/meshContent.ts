@@ -22,7 +22,6 @@ import { useResolvableMesh } from '../../resources/meshes/useResolvableMesh';
 import type { ScopedResource } from '../../resources/scopedResource';
 import type { ArrayMeshResource } from '../../resources/processors/createArrayMeshProcessor';
 import { useResource } from '../../resources/useResource';
-import { NODE_PROPERTY } from '../../resources/useTexture2D';
 import type { ResourceResolution } from '../../resources/useSubOrExtResource';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { fileMaterialSources, resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
@@ -91,10 +90,7 @@ export function arrayMeshPath({ scoped, resourcePath }: ResourceResolution): str
  *
  * @canonical Mesh content and its disposal
  */
-export function useMeshContent(
-  resolution: ResourceResolution,
-  isHeldLocally: boolean = NODE_PROPERTY
-): MeshContent {
+export function useMeshContent(resolution: ResourceResolution, isHeldLocally = true): MeshContent {
   const { scoped, status, resourcePath } = resolution;
   const kind = scoped ? meshKind(scoped.resource.type) : null;
   const isMaterialHeldLocally = scoped ? isHeldLocally && isLocalToScene(scoped.resource) : isHeldLocally;

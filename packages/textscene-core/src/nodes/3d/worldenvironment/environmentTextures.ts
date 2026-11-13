@@ -13,6 +13,7 @@ import type { EnvironmentSettings } from '../../../resources/environment/types';
 import type { Sky } from '../../../resources/sky/types';
 import type { ScopedResource } from '../../../resources/scopedResource';
 import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext';
+import { referenceHeldBy } from '../../../resources/reading';
 import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene';
 
 /**
@@ -27,8 +28,8 @@ export function usePanorama(
   isHeldLocally: boolean
 ): THREE.Texture | null {
   const ref = sky?.material.kind === 'panorama' ? sky.material.panorama : undefined;
-  const { externalResources, internalResources } = material?.resources ?? NO_RESOURCES;
-  return useTexture2D(ref, externalResources, internalResources, 'decoding', isHeldLocally).texture;
+  const resources = material?.resources ?? NO_RESOURCES;
+  return useTexture2D(referenceHeldBy(ref, resources, isHeldLocally), 'decoding').texture;
 }
 
 /**
@@ -44,7 +45,7 @@ export function useGlowMap(
     const glow = settings && glowParamsFor(settings);
     return glow && samplesGlowMap(glow) ? glow.map : undefined;
   }, [settings]);
-  const { externalResources, internalResources } = environment?.resources ?? NO_RESOURCES;
   const isHeldLocally = !!environment && isLocalToScene(environment.resource);
-  return useTexture2D(ref, externalResources, internalResources, 'plain', isHeldLocally).texture;
+  const reference = referenceHeldBy(ref, environment?.resources ?? NO_RESOURCES, isHeldLocally);
+  return useTexture2D(reference, 'plain').texture;
 }

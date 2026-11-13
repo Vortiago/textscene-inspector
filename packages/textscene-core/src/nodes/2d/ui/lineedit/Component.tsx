@@ -22,6 +22,7 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useTexture2D } from '../../../../resources/useTexture2D';
+import { useNodeReference } from '../../../../resources/reading';
 import { lineEditDisplayText } from './displayText';
 import { LINE_EDIT_CLEAR_ICON } from './icons';
 import {
@@ -170,12 +171,8 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // Both hooks run in a fixed order and each shows nothing on an absent input (`useNodeIcon`).
   // `right_icon` loads in its own scope and is retagged `NoColorSpace` for the 2D canvas
   // (`useOwnerCanvas2DTexture`). `useNodeIcon` prefers a themed `"clear"` and applies the same tag.
-  const { externalResources, internalResources } = solveNode.resources;
-  const { texture: rightIconRawTexture } = useTexture2D(
-    props.rightIcon,
-    externalResources,
-    internalResources
-  );
+  const scope = solveNode.resources;
+  const { texture: rightIconRawTexture } = useTexture2D(useNodeReference(props.rightIcon, scope));
   const rightIconTexture = useOwnerCanvas2DTexture(rightIconRawTexture);
   const clearIconTexture = useNodeIcon(solveNode.icons['clear'], LINE_EDIT_CLEAR_ICON);
   const activeIconTexture =

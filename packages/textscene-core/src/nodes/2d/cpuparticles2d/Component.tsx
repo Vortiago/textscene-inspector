@@ -14,6 +14,7 @@ import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResou
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { useCanvasItemTexture } from '../../../r3f/canvasItemTexture';
+import { useNodeReference } from '../../../resources/reading';
 import { threeMatrixFromTransform2D } from '../../../r3f/node2dTransform';
 import { instanceColorDefines, useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
@@ -34,14 +35,14 @@ const UNTEXTURED_QUAD = { width: 1, height: 1 };
 
 export function CPUParticles2D({ node, children }: NodeComponentProps) {
   const props = node.properties as CPUParticles2DProperties;
-  const { externalResources, internalResources } = useSceneResources();
+  const scope = useSceneResources();
   const {
     texture: resolvedTexture,
     size,
     missing,
     sampler,
     canvasTexture,
-  } = useCanvasItemTexture(props, props.texture, externalResources, internalResources);
+  } = useCanvasItemTexture(props, useNodeReference(props.texture, scope));
   // An emitter that is not emitting draws nothing, so it uploads no view and loads no maps.
   const texture = useCanvas2DTexture(props.emitting ? resolvedTexture : null, sampler);
 

@@ -7,7 +7,8 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { useTexture2D, NODE_PROPERTY, useTexture2DRid } from './useTexture2D';
+import { useTexture2D, useTexture2DRid } from './useTexture2D';
+import { referenceIn } from './reading/scopedReference.testkit';
 import { extResourceTexture2DSize, inlineTexture2DSize } from './texture2DSize';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { parseTresFile, type ParsedResource } from '../parser/parsedResource';
@@ -188,7 +189,7 @@ describe('useTexture2D — reference forms', () => {
 
   it('rasterises an inline GradientTexture2D with no file round trip', () => {
     const { result } = renderHook(
-      () => useTexture2D('SubResource("GradientTexture2D_a")', [], gradientResources),
+      () => useTexture2D(referenceIn('SubResource("GradientTexture2D_a")', [], gradientResources)),
       { wrapper: withLoader() }
     );
 
@@ -199,7 +200,7 @@ describe('useTexture2D — reference forms', () => {
 
   it("reports the texture's image size", () => {
     const { result } = renderHook(
-      () => useTexture2D('SubResource("GradientTexture2D_a")', [], gradientResources),
+      () => useTexture2D(referenceIn('SubResource("GradientTexture2D_a")', [], gradientResources)),
       { wrapper: withLoader() }
     );
     expect(result.current.size).toEqual({ width: 16, height: 16 });
@@ -209,7 +210,7 @@ describe('useTexture2D — reference forms', () => {
     const noGradient: TscnInternalResource[] = [
       { id: 'T', type: 'GradientTexture2D', data: { width: '200', height: '120' } },
     ];
-    const { result } = renderHook(() => useTexture2D('SubResource("T")', [], noGradient), {
+    const { result } = renderHook(() => useTexture2D(referenceIn('SubResource("T")', [], noGradient)), {
       wrapper: withLoader(),
     });
     expect(result.current.texture).toBe(texture2DPlaceholder());
@@ -218,7 +219,7 @@ describe('useTexture2D — reference forms', () => {
   });
 
   it('reports no size for no texture (edge case)', () => {
-    const { result } = renderHook(() => useTexture2D(undefined, [], gradientResources), {
+    const { result } = renderHook(() => useTexture2D(referenceIn(undefined, [], gradientResources)), {
       wrapper: withLoader(),
     });
     expect(result.current.size).toBeUndefined();
@@ -231,7 +232,7 @@ describe('useTexture2D — reference forms', () => {
     ];
 
     const { result } = renderHook(
-      () => useTexture2D('ExtResource("1")', externalResources, gradientResources),
+      () => useTexture2D(referenceIn('ExtResource("1")', externalResources, gradientResources)),
       { wrapper: withLoader({ path: 'res://cookie.png', texture: image }) }
     );
 
@@ -251,16 +252,19 @@ describe('useTexture2D — reference forms', () => {
       },
     ];
 
-    const { result } = renderHook(() => useTexture2D('SubResource("CanvasTexture_a")', [], wrapped), {
-      wrapper: withLoader(),
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('SubResource("CanvasTexture_a")', [], wrapped)),
+      {
+        wrapper: withLoader(),
+      }
+    );
 
     expect(result.current.texture).toBeInstanceOf(THREE.DataTexture);
     expect((result.current.texture as THREE.DataTexture).image.width).toBe(16);
     expect(result.current.missing).toBe(false);
   });
 
-  it('hands back the CanvasTexture it peeled, with the tables its references resolve in', () => {
+  it('hands back the CanvasTexture it peeled, with its maps as references in its tables', () => {
     const wrapped: TscnInternalResource[] = [
       ...gradientResources,
       {
@@ -274,14 +278,20 @@ describe('useTexture2D — reference forms', () => {
       },
     ];
 
-    const { result } = renderHook(() => useTexture2D('SubResource("CanvasTexture_a")', [], wrapped), {
-      wrapper: withLoader(),
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('SubResource("CanvasTexture_a")', [], wrapped)),
+      {
+        wrapper: withLoader(),
+      }
+    );
 
     expect(result.current.canvasTexture).toMatchObject({
-      texture: { normalTexture: 'SubResource("GradientTexture2D_a")', specularShininess: 0.5 },
-      externalResources: [],
-      internalResources: wrapped,
+      texture: { specularShininess: 0.5 },
+      normalTexture: {
+        ref: 'SubResource("GradientTexture2D_a")',
+        resources: { externalResources: [], internalResources: wrapped },
+      },
+      specularTexture: null,
     });
   });
 
@@ -304,20 +314,28 @@ describe('useTexture2D — reference forms', () => {
       },
     ];
 
-    const { result } = renderHook(() => useTexture2D('SubResource("AtlasTexture_a")', [], atlased), {
-      wrapper: withLoader(),
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('SubResource("AtlasTexture_a")', [], atlased)),
+      {
+        wrapper: withLoader(),
+      }
+    );
 
     expect(result.current.canvasTexture).toMatchObject({
-      texture: { normalTexture: 'SubResource("GradientTexture2D_a")' },
-      internalResources: atlased,
-      atlas: { reference: { id: 'AtlasTexture_a' }, sheetSize: { width: 16, height: 16 } },
+      normalTexture: {
+        ref: 'SubResource("GradientTexture2D_a")',
+        resources: { externalResources: [], internalResources: atlased },
+      },
+      atlas: {
+        texture: { region: { x: 0, y: 0, width: 8, height: 8 } },
+        sheetSize: { width: 16, height: 16 },
+      },
     });
   });
 
   it('hands back no CanvasTexture for a plain texture', () => {
     const { result } = renderHook(
-      () => useTexture2D('SubResource("GradientTexture2D_a")', [], gradientResources),
+      () => useTexture2D(referenceIn('SubResource("GradientTexture2D_a")', [], gradientResources)),
       { wrapper: withLoader() }
     );
     expect(result.current.canvasTexture).toBeUndefined();
@@ -344,7 +362,7 @@ describe('useTexture2D — reference forms', () => {
     ];
 
     const { result } = renderHook(
-      () => useTexture2D('SubResource("CanvasTexture_atlas")', externalResources, nested),
+      () => useTexture2D(referenceIn('SubResource("CanvasTexture_atlas")', externalResources, nested)),
       { wrapper: withLoader({ path: 'res://sheet.png', texture: sheet }) }
     );
 
@@ -355,16 +373,19 @@ describe('useTexture2D — reference forms', () => {
   });
 
   it('reports a reference it cannot resolve as missing', () => {
-    const { result } = renderHook(() => useTexture2D('ExtResource("404")', [], gradientResources), {
-      wrapper: withLoader(),
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('ExtResource("404")', [], gradientResources)),
+      {
+        wrapper: withLoader(),
+      }
+    );
 
     expect(result.current.texture).toBeNull();
     expect(result.current.missing).toBe(true);
   });
 
   it('treats an absent reference as nothing to show, not as missing', () => {
-    const { result } = renderHook(() => useTexture2D(undefined, [], gradientResources), {
+    const { result } = renderHook(() => useTexture2D(referenceIn(undefined, [], gradientResources)), {
       wrapper: withLoader(),
     });
 
@@ -406,9 +427,12 @@ describe('useTexture2D — a NoiseTexture2D that builds as a job', () => {
   it('is not missing, and asks the file pipeline for nothing, while it builds', () => {
     const { runner } = fakeJobRunner();
     const { Wrapper, requested } = withRunner(runner);
-    const { result } = renderHook(() => useTexture2D('SubResource("NoiseTexture2D_a")', [], noiseResources), {
-      wrapper: Wrapper,
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('SubResource("NoiseTexture2D_a")', [], noiseResources)),
+      {
+        wrapper: Wrapper,
+      }
+    );
 
     expect(result.current).toEqual({ texture: null, missing: false, isArriving: true });
     expect(requested).toEqual([]);
@@ -417,9 +441,12 @@ describe('useTexture2D — a NoiseTexture2D that builds as a job', () => {
   it('gives the built texture once the build lands', async () => {
     const { runner, runs } = fakeJobRunner();
     const { Wrapper } = withRunner(runner);
-    const { result } = renderHook(() => useTexture2D('SubResource("NoiseTexture2D_a")', [], noiseResources), {
-      wrapper: Wrapper,
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('SubResource("NoiseTexture2D_a")', [], noiseResources)),
+      {
+        wrapper: Wrapper,
+      }
+    );
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
@@ -436,7 +463,7 @@ describe('useTexture2D — a NoiseTexture2D that builds as a job', () => {
     const { runner } = fakeJobRunner();
     const { Wrapper } = withRunner(runner);
     const { result } = renderHook(
-      () => useTexture2D('SubResource("AtlasTexture_cell")', [], noiseResources),
+      () => useTexture2D(referenceIn('SubResource("AtlasTexture_cell")', [], noiseResources)),
       { wrapper: Wrapper }
     );
 
@@ -708,7 +735,7 @@ describe('useTexture2D — inline AtlasTexture', () => {
 
   it('crops the sheet to the region, at the region size', () => {
     const { result } = renderHook(
-      () => useTexture2D('SubResource("AtlasTexture_cell")', externalResources, resources),
+      () => useTexture2D(referenceIn('SubResource("AtlasTexture_cell")', externalResources, resources)),
       { wrapper: withLoader({ path: 'res://sheet.png', texture: sheet() }) }
     );
 
@@ -719,11 +746,11 @@ describe('useTexture2D — inline AtlasTexture', () => {
   it('shares ONE crop between consumers of the same cell', () => {
     const wrapper = withLoader({ path: 'res://sheet.png', texture: sheet() });
     const first = renderHook(
-      () => useTexture2D('SubResource("AtlasTexture_cell")', externalResources, resources),
+      () => useTexture2D(referenceIn('SubResource("AtlasTexture_cell")', externalResources, resources)),
       { wrapper }
     );
     const second = renderHook(
-      () => useTexture2D('SubResource("AtlasTexture_cell")', externalResources, resources),
+      () => useTexture2D(referenceIn('SubResource("AtlasTexture_cell")', externalResources, resources)),
       { wrapper }
     );
 
@@ -733,7 +760,7 @@ describe('useTexture2D — inline AtlasTexture', () => {
 
   it('shows nothing — not a placeholder — while the sheet is still loading', () => {
     const { result } = renderHook(
-      () => useTexture2D('SubResource("AtlasTexture_cell")', externalResources, resources),
+      () => useTexture2D(referenceIn('SubResource("AtlasTexture_cell")', externalResources, resources)),
       { wrapper: withLoader() }
     );
 
@@ -744,11 +771,12 @@ describe('useTexture2D — inline AtlasTexture', () => {
   it('reports an unresolvable or absent sheet as missing', () => {
     const wrapper = withLoader();
     const unknown = renderHook(
-      () => useTexture2D('SubResource("AtlasTexture_unknownsheet")', externalResources, resources),
+      () =>
+        useTexture2D(referenceIn('SubResource("AtlasTexture_unknownsheet")', externalResources, resources)),
       { wrapper }
     );
     const orphan = renderHook(
-      () => useTexture2D('SubResource("AtlasTexture_orphan")', externalResources, resources),
+      () => useTexture2D(referenceIn('SubResource("AtlasTexture_orphan")', externalResources, resources)),
       { wrapper }
     );
 
@@ -761,11 +789,8 @@ describe('useTexture2D — inline AtlasTexture', () => {
     const { result } = renderHook(
       () =>
         useTexture2DRid(
-          'SubResource("AtlasTexture_cell")',
-          externalResources,
-          resources,
-          'plain',
-          NODE_PROPERTY
+          referenceIn('SubResource("AtlasTexture_cell")', externalResources, resources),
+          'plain'
         ),
       { wrapper: withLoader({ path: 'res://sheet.png', texture: whole }) }
     );
@@ -781,7 +806,7 @@ describe('useTexture2D — inline AtlasTexture', () => {
   it('gives a slot read by RID a plain image as it is (edge case)', () => {
     const image = sheet();
     const { result } = renderHook(
-      () => useTexture2DRid('ExtResource("1_sheet")', externalResources, resources, 'plain', NODE_PROPERTY),
+      () => useTexture2DRid(referenceIn('ExtResource("1_sheet")', externalResources, resources), 'plain'),
       {
         wrapper: withLoader({ path: 'res://sheet.png', texture: image }),
       }
@@ -799,11 +824,8 @@ describe('useTexture2D — inline AtlasTexture', () => {
     const { result } = renderHook(
       () =>
         useTexture2DRid(
-          'SubResource("AtlasTexture_unknownsheet")',
-          externalResources,
-          resources,
-          'plain',
-          NODE_PROPERTY
+          referenceIn('SubResource("AtlasTexture_unknownsheet")', externalResources, resources),
+          'plain'
         ),
       { wrapper: withLoader() }
     );
@@ -815,7 +837,7 @@ describe('useTexture2D — inline AtlasTexture', () => {
     'gives a slot read by RID no texture for %s, whose RID names a CanvasTexture',
     (id) => {
       const { result } = renderHook(
-        () => useTexture2DRid(`SubResource("${id}")`, externalResources, resources, 'plain', NODE_PROPERTY),
+        () => useTexture2DRid(referenceIn(`SubResource("${id}")`, externalResources, resources), 'plain'),
         { wrapper: withLoader({ path: 'res://sheet.png', texture: sheet() }) }
       );
 
@@ -882,9 +904,12 @@ region = Rect2(32, 32, 64, 64)
     fake.resources.seed('res://icons/keyboard_arrow_left.tres', atlasTres);
     fake.textures.seed('res://sheet.png', sheet());
 
-    const { result } = renderHook(() => useTexture2D('ExtResource("1_atlas")', externalResources, []), {
-      wrapper: Wrapper,
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('ExtResource("1_atlas")', externalResources, [])),
+      {
+        wrapper: Wrapper,
+      }
+    );
 
     expect(cropOf(result.current.texture)).toEqual({ size: [64, 64], topLeft: [32, 32] });
     expect(result.current.missing).toBe(false);
@@ -894,9 +919,12 @@ region = Rect2(32, 32, 64, 64)
     // Nothing seeded: the resource-bus request stays pending.
     const { Wrapper } = withLoader();
 
-    const { result } = renderHook(() => useTexture2D('ExtResource("1_atlas")', externalResources, []), {
-      wrapper: Wrapper,
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('ExtResource("1_atlas")', externalResources, [])),
+      {
+        wrapper: Wrapper,
+      }
+    );
 
     expect(result.current.texture).toBeNull();
     expect(result.current.missing).toBe(false);
@@ -906,9 +934,12 @@ region = Rect2(32, 32, 64, 64)
     const { fake, Wrapper } = withLoader();
     fake.resources.seed('res://icons/keyboard_arrow_left.tres', null);
 
-    const { result } = renderHook(() => useTexture2D('ExtResource("1_atlas")', externalResources, []), {
-      wrapper: Wrapper,
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('ExtResource("1_atlas")', externalResources, [])),
+      {
+        wrapper: Wrapper,
+      }
+    );
 
     expect(result.current.texture).toBeNull();
     expect(result.current.missing).toBe(true);
@@ -923,9 +954,12 @@ region = Rect2(32, 32, 64, 64)
       subResources: [],
     });
 
-    const { result } = renderHook(() => useTexture2D('ExtResource("1_atlas")', externalResources, []), {
-      wrapper: Wrapper,
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('ExtResource("1_atlas")', externalResources, [])),
+      {
+        wrapper: Wrapper,
+      }
+    );
 
     expect(result.current.texture).toBeNull();
     expect(result.current.missing).toBe(true);
@@ -937,7 +971,7 @@ region = Rect2(32, 32, 64, 64)
     const { Wrapper } = withLoader();
     const otherType: TscnExternalResource[] = [{ id: '1_box', type: 'StyleBoxFlat', path: 'res://box.tres' }];
 
-    const { result } = renderHook(() => useTexture2D('ExtResource("1_box")', otherType, []), {
+    const { result } = renderHook(() => useTexture2D(referenceIn('ExtResource("1_box")', otherType, [])), {
       wrapper: Wrapper,
     });
 
@@ -955,9 +989,12 @@ region = Rect2(0, 0, 8, 8)
 `)
     );
 
-    const { result } = renderHook(() => useTexture2D('ExtResource("1_atlas")', externalResources, []), {
-      wrapper: Wrapper,
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('ExtResource("1_atlas")', externalResources, [])),
+      {
+        wrapper: Wrapper,
+      }
+    );
 
     expect(result.current.texture).toBeNull();
     expect(result.current.missing).toBe(true);
@@ -1010,9 +1047,12 @@ noise = SubResource("FastNoiseLite_huop3")
     const { fake, Wrapper, requested } = withLoader();
     fake.resources.seed('res://textures/procedural.tres', GRADIENT_TRES);
 
-    const { result } = renderHook(() => useTexture2D('ExtResource("1_tex")', externalResources, []), {
-      wrapper: Wrapper,
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('ExtResource("1_tex")', externalResources, [])),
+      {
+        wrapper: Wrapper,
+      }
+    );
 
     expect(result.current.texture).toBeInstanceOf(THREE.DataTexture);
     expect(result.current.texture!.image).toMatchObject({ width: 8, height: 4 });
@@ -1025,9 +1065,12 @@ noise = SubResource("FastNoiseLite_huop3")
     const { fake, Wrapper } = withLoader(runner);
     fake.resources.seed('res://textures/procedural.tres', NOISE_TRES);
 
-    const { result } = renderHook(() => useTexture2D('ExtResource("1_tex")', externalResources, []), {
-      wrapper: Wrapper,
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('ExtResource("1_tex")', externalResources, [])),
+      {
+        wrapper: Wrapper,
+      }
+    );
     expect(result.current).toEqual({ texture: null, missing: false, isArriving: true });
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -1052,9 +1095,12 @@ width = 64
 `)
     );
 
-    const { result } = renderHook(() => useTexture2D('ExtResource("1_tex")', externalResources, []), {
-      wrapper: Wrapper,
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('ExtResource("1_tex")', externalResources, [])),
+      {
+        wrapper: Wrapper,
+      }
+    );
 
     expect(result.current).toEqual({ texture: null, missing: true, isArriving: false });
   });

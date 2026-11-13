@@ -5,7 +5,8 @@
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useEffect, type ReactNode } from 'react';
-import { useTexture2D, NODE_PROPERTY, useTexture2DRid } from './useTexture2D';
+import { useTexture2D, useTexture2DRid } from './useTexture2D';
+import { referenceIn } from './reading/scopedReference.testkit';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { parseTresFile } from '../parser/parsedResource';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
@@ -99,7 +100,9 @@ function CyclicPasses() {
 
 describe('useTexture2D with a ViewportTexture', () => {
   it("samples the target's plain view, as a canvas item does", () => {
-    const { result } = renderHook(() => useTexture2D(VIEWPORT_REF, [], RESOURCES), { wrapper: wrapper() });
+    const { result } = renderHook(() => useTexture2D(referenceIn(VIEWPORT_REF, [], RESOURCES)), {
+      wrapper: wrapper(),
+    });
     expect(result.current).toEqual({
       texture: plain,
       size: { width: 32, height: 32 },
@@ -109,9 +112,12 @@ describe('useTexture2D with a ViewportTexture', () => {
   });
 
   it('peels a CanvasTexture down to the ViewportTexture it wraps', () => {
-    const { result } = renderHook(() => useTexture2D('SubResource("CanvasTexture_1")', [], RESOURCES), {
-      wrapper: wrapper(),
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('SubResource("CanvasTexture_1")', [], RESOURCES)),
+      {
+        wrapper: wrapper(),
+      }
+    );
     expect(result.current.texture).toBe(plain);
   });
 
@@ -127,14 +133,14 @@ viewport_path = NodePath("SubViewport")
 `)
     );
     const external: TscnExternalResource[] = [{ id: '1', type: 'Texture2D', path: 'res://viewport.tres' }];
-    const { result } = renderHook(() => useTexture2D('ExtResource("1")', external, []), {
+    const { result } = renderHook(() => useTexture2D(referenceIn('ExtResource("1")', external, [])), {
       wrapper: wrapper({ fake }),
     });
     expect(result.current.texture).toBe(plain);
   });
 
   it('draws nothing, and reports nothing missing, before the target publishes (edge case)', () => {
-    const { result } = renderHook(() => useTexture2D(VIEWPORT_REF, [], RESOURCES), {
+    const { result } = renderHook(() => useTexture2D(referenceIn(VIEWPORT_REF, [], RESOURCES)), {
       wrapper: wrapper({ isPublished: false }),
     });
     expect(result.current).toEqual({ texture: null, missing: false, isArriving: false });
@@ -142,7 +148,7 @@ viewport_path = NodePath("SubViewport")
 
   it('reports a target in an unrenderable pass cycle as missing, so the slot draws its placeholder', () => {
     const Inner = wrapper();
-    const { result } = renderHook(() => useTexture2D(VIEWPORT_REF, [], RESOURCES), {
+    const { result } = renderHook(() => useTexture2D(referenceIn(VIEWPORT_REF, [], RESOURCES)), {
       wrapper: ({ children }) => (
         <ViewportPassProvider>
           <CyclicPasses />
@@ -162,54 +168,72 @@ viewport_path = NodePath("SubViewport")
  */
 describe('a ViewportTexture Godot never sets up for the scene', () => {
   it('draws the placeholder under a CanvasTexture that is not local to scene', () => {
-    const { result } = renderHook(() => useTexture2D('SubResource("SharedCanvasTexture")', [], RESOURCES), {
-      wrapper: wrapper(),
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('SubResource("SharedCanvasTexture")', [], RESOURCES)),
+      {
+        wrapper: wrapper(),
+      }
+    );
     expect(result.current.texture).toBe(texture2DPlaceholder());
   });
 
   it('gives the placeholder as the sheet of an AtlasTexture that is not local to scene', () => {
     const { result } = renderHook(
-      () => useTexture2DRid('SubResource("SharedAtlasTexture")', [], RESOURCES, 'plain', NODE_PROPERTY),
+      () => useTexture2DRid(referenceIn('SubResource("SharedAtlasTexture")', [], RESOURCES), 'plain'),
       { wrapper: wrapper() }
     );
     expect(result.current.texture).toBe(texture2DPlaceholder());
   });
 
   it('draws the placeholder for a ViewportTexture authored as not local to scene', () => {
-    const { result } = renderHook(() => useTexture2D('SubResource("SharedViewportTexture")', [], RESOURCES), {
-      wrapper: wrapper(),
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('SubResource("SharedViewportTexture")', [], RESOURCES)),
+      {
+        wrapper: wrapper(),
+      }
+    );
     expect(result.current.texture).toBe(texture2DPlaceholder());
   });
 
   it('draws the placeholder for a holder the caller names as not local to scene', () => {
-    const { result } = renderHook(() => useTexture2DRid(VIEWPORT_REF, [], RESOURCES, 'plain', false), {
-      wrapper: wrapper(),
-    });
+    const { result } = renderHook(
+      () => useTexture2DRid(referenceIn(VIEWPORT_REF, [], RESOURCES, false), 'plain'),
+      {
+        wrapper: wrapper(),
+      }
+    );
     expect(result.current.texture).toBe(texture2DPlaceholder());
   });
 
   it('reports no image for an AtlasTexture that windows it, as `get_image()` gives none', () => {
-    const { result } = renderHook(() => useTexture2D('SubResource("SharedAtlasTexture")', [], RESOURCES), {
-      wrapper: wrapper(),
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('SubResource("SharedAtlasTexture")', [], RESOURCES)),
+      {
+        wrapper: wrapper(),
+      }
+    );
     expect(result.current.hasNoImage).toBe(true);
   });
 
   /** `ViewportTexture::get_size` answers an empty size while no viewport is set (`viewport.cpp:156-160`). */
   it('reports 0 by 0 for it, though it samples the placeholder', () => {
-    const { result } = renderHook(() => useTexture2D('SubResource("SharedViewportTexture")', [], RESOURCES), {
-      wrapper: wrapper(),
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('SubResource("SharedViewportTexture")', [], RESOURCES)),
+      {
+        wrapper: wrapper(),
+      }
+    );
     expect(result.current.size).toEqual({ width: 0, height: 0 });
   });
 
   /** An AtlasTexture reports its region whatever its sheet reports (`atlas_texture.cpp:32-52`). */
   it("reports the region's size for an AtlasTexture that windows it", () => {
-    const { result } = renderHook(() => useTexture2D('SubResource("SharedAtlasTexture")', [], RESOURCES), {
-      wrapper: wrapper(),
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('SubResource("SharedAtlasTexture")', [], RESOURCES)),
+      {
+        wrapper: wrapper(),
+      }
+    );
     expect(result.current.size).toEqual({ width: 16, height: 16 });
   });
 
@@ -229,15 +253,18 @@ describe('a ViewportTexture Godot never sets up for the scene', () => {
 
 describe('an AtlasTexture over a ViewportTexture', () => {
   it('reports the image of a target Godot sets up', () => {
-    const { result } = renderHook(() => useTexture2D('SubResource("AtlasTexture_1")', [], RESOURCES), {
-      wrapper: wrapper(),
-    });
+    const { result } = renderHook(
+      () => useTexture2D(referenceIn('SubResource("AtlasTexture_1")', [], RESOURCES)),
+      {
+        wrapper: wrapper(),
+      }
+    );
     expect(result.current.hasNoImage).toBeUndefined();
   });
 
   it("draws a live crop of the target, at the region's size, which the pass fills", () => {
     const { result, unmount } = renderHook(
-      () => useTexture2D('SubResource("AtlasTexture_1")', [], RESOURCES),
+      () => useTexture2D(referenceIn('SubResource("AtlasTexture_1")', [], RESOURCES)),
       { wrapper: wrapper() }
     );
     const crop = result.current.texture!;
@@ -248,7 +275,7 @@ describe('an AtlasTexture over a ViewportTexture', () => {
 
   it('crops the target live once its views go live after the slot first resolves', () => {
     const { result, rerender, unmount } = renderHook(
-      () => useTexture2D('SubResource("AtlasTexture_1")', [], RESOURCES),
+      () => useTexture2D(referenceIn('SubResource("AtlasTexture_1")', [], RESOURCES)),
       { wrapper: wrapper({ isLive: false }) }
     );
     const withdraw = publishLiveTargets([plain], null, false);
@@ -259,9 +286,12 @@ describe('an AtlasTexture over a ViewportTexture', () => {
   });
 
   it('frees the crop once the slot unmounts', async () => {
-    const { unmount } = renderHook(() => useTexture2D('SubResource("AtlasTexture_1")', [], RESOURCES), {
-      wrapper: wrapper(),
-    });
+    const { unmount } = renderHook(
+      () => useTexture2D(referenceIn('SubResource("AtlasTexture_1")', [], RESOURCES)),
+      {
+        wrapper: wrapper(),
+      }
+    );
     unmount();
     await Promise.resolve();
     expect(copiesFilledFrom(plain)).toEqual([]);
@@ -269,7 +299,7 @@ describe('an AtlasTexture over a ViewportTexture', () => {
 
   it('gives a slot read by RID the whole live target, as Godot names the sheet', () => {
     const { result } = renderHook(
-      () => useTexture2DRid('SubResource("AtlasTexture_1")', [], RESOURCES, 'plain', NODE_PROPERTY),
+      () => useTexture2DRid(referenceIn('SubResource("AtlasTexture_1")', [], RESOURCES), 'plain'),
       {
         wrapper: wrapper(),
       }
@@ -281,7 +311,7 @@ describe('an AtlasTexture over a ViewportTexture', () => {
 describe('useTexture2DRid with a ViewportTexture', () => {
   it('samples the view the slot asks for: the decoding view for a source_color slot', () => {
     const { result } = renderHook(
-      () => useTexture2DRid(VIEWPORT_REF, [], RESOURCES, 'decoding', NODE_PROPERTY),
+      () => useTexture2DRid(referenceIn(VIEWPORT_REF, [], RESOURCES), 'decoding'),
       {
         wrapper: wrapper(),
       }

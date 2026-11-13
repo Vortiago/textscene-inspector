@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { useTexture2D } from '../../../resources/useTexture2D';
+import { useNodeReference } from '../../../resources/reading';
 import type { ViewSampler } from '../../../resources/textures/textureView';
 import { useTextureView } from '../../../r3f/useTextureView';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -47,11 +48,11 @@ const COOKIE_SAMPLER: ViewSampler = { colorSpace: THREE.NoColorSpace, wrap: THRE
 
 export function PointLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as PointLight2DProperties;
-  const { externalResources, internalResources } = useSceneResources();
 
   // `useTexture2D` resolves a GradientTexture2D, a gradient-less one to Godot's placeholder at its
   // own size (`renderer_viewport.cpp:455-460`). The plain view, as `COOKIE_SAMPLER` reads texels raw.
-  const slot = useTexture2D(props.texture, externalResources, internalResources, 'plain');
+  const scope = useSceneResources();
+  const slot = useTexture2D(useNodeReference(props.texture, scope), 'plain');
   // A light that draws no quad makes no view: it would clone and upload a cookie nothing draws.
   const cookie = useTextureView(props.enabled && !slot.missing ? slot.texture : null, COOKIE_SAMPLER);
 

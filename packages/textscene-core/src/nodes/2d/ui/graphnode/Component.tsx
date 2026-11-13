@@ -19,6 +19,7 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
+import { useNodeReference } from '../../../../resources/reading';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -81,8 +82,7 @@ function GraphNodePort({
   y,
   renderOrder,
 }: PortProps) {
-  const { externalResources, internalResources } = solveNode.resources;
-  const custom = useTexture2D(iconRef, externalResources, internalResources);
+  const custom = useTexture2D(useNodeReference(iconRef, solveNode.resources));
   const defaultTexture = useNodeIcon(solveNode.icons.port, GRAPH_PORT_ICON);
   const texture = custom.texture ?? defaultTexture;
   const size = custom.size ? { x: custom.size.width, y: custom.size.height } : defaultSize;
