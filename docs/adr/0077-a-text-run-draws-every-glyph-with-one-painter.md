@@ -37,6 +37,15 @@ it** (`GlyphPainter` in `glyphPainter.ts`).
 - A user's font draws in its own glyphs or not at all, wherever the previewer reads its outlines.
 - A font whose outlines the previewer cannot read still draws in the browser, with the browser's
   hinting and anti-aliasing. The notes of ADR-0040 on Skia and the canvas stroke hold for it.
-- A colour glyph over an empty `glyf` entry (COLR v0 and v1 emoji) draws nothing. Godot draws its
-  layers in their own colours (`text_server_adv.cpp:1286-1290`, `:4044-4046`). The browser drew a
-  silhouette in the font colour, further from Godot by pixel count. #1876 ports Godot's colour glyph.
+- A glyph with a colour form draws it in the fill pass, in the order FreeType loads it
+  (`ttgload.c:2385-2540`): the strike's bitmap, then the `SVG ` document, then the `COLR` v0 layers
+  (`ftobjs.c:4743-4810`), then the contour. The auto-hinter's load takes the `SVG ` document before
+  the strike (`ftobjs.c:1019-1050`). A `COLR` v1 glyph draws its contour, as `FT_Render_Glyph`
+  blends v0 layers only. The outline pass loads no colour (`text_server_adv.cpp:1286-1290`), so it
+  strokes the contour.
+- A `CBDT` or `sbix` face is a bitmap face, as FreeType makes it (`sfobjs.c:903-906,1103-1110`): a
+  glyph its strike lacks, and its outline pass, draw nothing.
+- The browser draws an `SVG ` glyph's document, at the size and corner Godot's ThorVG hook gives it
+  (`thorvg_svg_in_ot.cpp:218-300`). The draw is async: the glyph draws nothing until its bitmap
+  lands, and the run then paints again. A shape's rim differs from ThorVG's by the browser's
+  antialiasing. #1884 owns ThorVG's raster.
