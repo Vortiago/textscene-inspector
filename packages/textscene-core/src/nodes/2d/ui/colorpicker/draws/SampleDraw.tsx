@@ -30,7 +30,7 @@ export interface SampleDrawProperties {
   pickColor: Rgba;
 }
 
-const OVERBRIGHT_SIZE = { x: COLOR_PICKER_OVERBRIGHT_ICON_SIZE, y: COLOR_PICKER_OVERBRIGHT_ICON_SIZE };
+const OVERBRIGHT_ICON_SIZE = { x: COLOR_PICKER_OVERBRIGHT_ICON_SIZE, y: COLOR_PICKER_OVERBRIGHT_ICON_SIZE };
 
 /** `rect_new`'s height: 95% of the sample's (`color_picker.cpp:1383`). */
 const SAMPLE_HEIGHT_FRACTION = 0.95;
@@ -44,7 +44,7 @@ export function SampleDraw({ solveNode, rect, tint, theme, renderOrder }: Native
   const overbright = themedIconSize(
     solveNode.textureSlots,
     'overbright_indicator',
-    OVERBRIGHT_SIZE,
+    OVERBRIGHT_ICON_SIZE,
     theme.scale
   );
   return (
