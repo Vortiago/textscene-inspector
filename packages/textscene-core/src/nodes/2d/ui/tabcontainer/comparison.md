@@ -11,8 +11,11 @@ renders_as: a panel StyleBox behind the current page, topped by an internal TabB
 
 TabContainer arranges its children into a tabbed view, showing only the active tab's
 child. The previewer draws the `panel` StyleBox behind the content band and positions the
-current page below (or above) the strip. It draws the strip through the same painter
-TabBar uses.
+current page below (or above) the strip. The strip is an internal TabBar (`tab_container.cpp:1280-1282`),
+which the TabBar solver sizes and the TabBar painter draws. The container pushes its tab styles, scroll
+icons, colours, font, font size and four constants onto the bar (`:314-344`).
+The bar is always in front mode. The constructor adds it in front mode (`:1282`), the setter re-adds it in
+front mode for `all_tabs_in_front = true` (`:876`), and it returns early for the default `false` (`:869-871`).
 `self_modulate` tints the panel and the header band. The tab strip is a child TabBar and draws without it (`tab_container.cpp:247`, `tab_bar.cpp:1282`).
 
 ## Linting
