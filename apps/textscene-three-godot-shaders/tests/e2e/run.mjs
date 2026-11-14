@@ -60,13 +60,19 @@ function writePng(path, { width, height }, pixels) {
 }
 
 /**
- * The guide image's staleness against a render: nothing when every byte matches. A guide image is
- * a baseline, so it takes no tolerance. The 2/255 tolerance is for Godot against the transpilation.
+ * The steps a render moves between two machines: lavapipe rounds `exp` and `pow` one step apart
+ * with and without AVX, as the sun scatter of `sky-fog-sun` shows on the CI runner.
+ */
+const MACHINE_STEPS = 1;
+
+/**
+ * The guide image's staleness against a render: nothing when no byte moves more than a machine
+ * moves it. The 2/255 tolerance is for Godot against the transpilation.
  */
 function staleImage(path, pixels) {
   if (!existsSync(path)) return `${path} is missing`;
   const { maxSteps } = compareImages(PNG.sync.read(readFileSync(path)).data, pixels);
-  return maxSteps === 0 ? undefined : `${path} differs from the render by up to ${maxSteps}/255`;
+  return maxSteps <= MACHINE_STEPS ? undefined : `${path} differs from the render by up to ${maxSteps}/255`;
 }
 
 function resultTable(results) {

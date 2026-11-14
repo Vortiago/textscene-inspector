@@ -52,6 +52,134 @@ void sky() {
 | --- | --- |
 | <img src="showcase/sky-fog-sun-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-fog-sun-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `sky-fog-energy-0`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(0.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-fog-energy-0-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-fog-energy-0-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-fog-energy-3`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(0.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-fog-energy-3-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-fog-energy-3-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-fog-affect-0`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(0.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-fog-affect-0-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-fog-affect-0-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-fog-affect-half`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(0.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-fog-affect-half-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-fog-affect-half-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-sun-coloured`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(0.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-sun-coloured-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-sun-coloured-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-sun-below`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(0.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-sun-below-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-sun-below-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-sun-energy-0`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(0.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-sun-energy-0-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-sun-energy-0-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-camera-wide`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(0.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-camera-wide-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-camera-wide-three.png" width="256" alt="Transpilation"> |
+
 ## The shader head
 
 `shader_type sky;` opens the shader and names its type. Godot refuses a type it does not have, with the valid ones, and a head with no `;`, at the line of the type. The shader node holds the type, the structs and the functions.
