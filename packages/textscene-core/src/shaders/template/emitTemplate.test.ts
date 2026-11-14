@@ -1,4 +1,5 @@
 import { screenCoordinate, uv, vec2 } from 'three/tsl';
+import type { Node } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { generatedFragmentShader } from '../generatedShader.testkit';
 import { parse } from '../language/parse.js';
@@ -12,11 +13,11 @@ const DEFAULT_SKY = 'shader_type sky;\n\nvoid sky() {\n\tCOLOR = vec3(0.0);\n}\n
 function skyFragment() {
   const material = compileMaterial(parse(tokenize(DEFAULT_SKY, 'user.gdshader')), MODE_TABLES.sky!);
   const stage = linkTemplateStage('environment/sky.glsl', 'fragment', '', material);
-  const inputs = new Map([
-    ['uv_interp', vec2(uv())],
-    ['gl_FragCoord', screenCoordinate],
+  const inputs = new Map<string, Node>([
+    ['uv_interp', vec2(uv()) as unknown as Node],
+    ['gl_FragCoord', screenCoordinate as unknown as Node],
   ]);
-  return emitTemplateStage(stage, inputs as never, { name: 'frag_color', type: 'vec4' });
+  return emitTemplateStage(stage, inputs, { name: 'frag_color', type: 'vec4' });
 }
 
 describe('emitTemplateStage', () => {
