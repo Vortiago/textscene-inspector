@@ -5,9 +5,8 @@
  * every flow statement stands where Godot allows it.
  */
 
-import { assignmentRefusal } from './assignment.js';
+import { assignmentRefusal, isWriteOperator } from './assignment.js';
 import { signatureInstruction } from './instructions.js';
-import { isAssignOperator } from './operators.js';
 import { arraySizeOf, typeName } from './parseExpression.js';
 import type {
   BlockNode,
@@ -286,13 +285,6 @@ class FunctionCheck {
   }
 }
 
-const STEP_OPERATORS: ReadonlySet<string> = new Set([
-  'OP_INCREMENT',
-  'OP_DECREMENT',
-  'OP_POST_INCREMENT',
-  'OP_POST_DECREMENT',
-]);
-
 function operatorFault(expression: OperatorNode): string | undefined {
   const { op, operands, row, type } = expression;
   const types = operands.map((operand) => operand.type);
@@ -306,7 +298,7 @@ function operatorFault(expression: OperatorNode): string | undefined {
   } else if (signatureInstruction(op, types) !== row || row.returns !== type) {
     return `the row ${row.id} over ${types.join(', ')}`;
   }
-  const isWrite = isAssignOperator(op) || STEP_OPERATORS.has(op);
+  const isWrite = isWriteOperator(op);
   if (isWrite && assignmentRefusal(operands[0]!) !== undefined) return `a write to ${operands[0]!.kind}`;
   return undefined;
 }
