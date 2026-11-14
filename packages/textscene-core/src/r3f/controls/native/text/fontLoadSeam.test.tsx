@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
+import type { FontFileResource } from '../../../../resources/fonts/font/types';
 import { labelFontState } from '../../../../nodes/2d/ui/label/nativeSolver';
 import { useLabel3DFont } from '../../../../nodes/3d/label3d/useLabel3DFont';
 import { FONT_PATH, trueTypeFontFile } from '../../../../resources/meshes/textmesh/textMeshFont.testkit';
@@ -24,6 +25,7 @@ import { solveNode } from '../testing/solveNode';
 import type { RegisteredCanvasFontMetrics } from './runtimeFontMetrics';
 import { peekSceneFontMetrics } from './sceneFontLoader';
 import { handLoader } from './settledFonts.testkit';
+import { useWatchedSettledFonts } from './useSettledFont';
 import '../../../../nodes/3d/csg/csgbox3d/index.r3f';
 import '../../../../nodes/3d/csg/csgmesh3d/index.r3f';
 
@@ -63,50 +65,63 @@ function previewOf(fake: FakeResourceLoader) {
   };
 }
 
-/** Whether each reader of the font draws: a Label3D, a TextMesh, a CSG text shape and a Label's settings font. */
-function useReaders(fake: FakeResourceLoader) {
-  const label3D = useLabel3DFont('ExtResource("font")');
-  const textMesh = useResolvableMesh({
+const useLabel3DDraws = () => useLabel3DFont('ExtResource("font")') !== undefined;
+
+const useTextMeshDraws = () =>
+  useResolvableMesh({
     resource: TEXT,
     resources: { ...NO_RESOURCES, externalResources: [FONT_REFERENCE] },
+  }).mesh !== null;
+
+const useCsgDraws = () => !useCsgGeometryContext(CSG_TEXT).isLoading;
+
+/** A Label's solve reads its settings font through the fonts its solve tree watches. */
+function useLabelDraws(font: FontFileResource): boolean {
+  const settledFonts = useWatchedSettledFonts();
+  const label = labelFontState({
+    ...solveNode(),
+    path: 'Label',
+    node: node('Label'),
+    labelSettingsFont: font,
+    settledFonts,
   });
-  const csg = useCsgGeometryContext(CSG_TEXT);
-  const font = fake.fonts.getCached(FONT_PATH);
-  const label =
-    font &&
-    labelFontState({
-      ...solveNode(),
-      path: 'Label',
-      node: node('Label'),
-      labelSettingsFont: font,
-      settledFonts: fake.loader.settledFonts,
-    });
-  return {
-    label3D: label3D !== undefined,
-    textMesh: textMesh.mesh !== null,
-    csg: !csg.isLoading,
-    label: !!label && !label.isLoading,
-  };
+  return !label.isLoading;
 }
 
-type Reader = keyof ReturnType<typeof useReaders>;
+/**
+ * Each reader of the font, mounted alone so that only its own wake re-renders it: a Label3D, a
+ * TextMesh, a CSG text shape and a Label's settings font.
+ */
+const READERS = {
+  label3D: useLabel3DDraws,
+  textMesh: useTextMeshDraws,
+  csg: useCsgDraws,
+  label: useLabelDraws,
+};
+
+type Reader = keyof typeof READERS;
+
+/** Whether `reader` draws: the hook of one reader, picked once for the whole test. */
+function useReaderDraws(reader: Reader, font: FontFileResource): boolean {
+  return READERS[reader](font);
+}
 
 describe('a face loader that stays pending', () => {
-  it.each<Reader>(['label3D', 'textMesh', 'csg', 'label'])(
+  it.each(Object.keys(READERS) as Reader[])(
     'draws nothing in a %s while the face loads, then draws once it settles',
     async (reader) => {
       const loader = handLoader();
       const fake = createFakeResourceLoader({ loadFace: loader.load });
       const font = trueTypeFontFile();
-      const { result } = renderHook(() => useReaders(fake), { wrapper: previewOf(fake) });
+      const { result } = renderHook(() => useReaderDraws(reader, font), { wrapper: previewOf(fake) });
 
       act(() => fake.fonts._resolve(FONT_PATH, font));
       await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
-      expect(result.current[reader]).toBe(false);
+      expect(result.current).toBe(false);
 
       await act(() => loader.settle(font.bytes!, FACE));
 
-      await waitFor(() => expect(result.current[reader]).toBe(true));
+      await waitFor(() => expect(result.current).toBe(true));
     }
   );
 });
