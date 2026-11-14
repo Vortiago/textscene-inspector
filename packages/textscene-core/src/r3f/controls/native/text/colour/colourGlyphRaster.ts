@@ -9,10 +9,13 @@ import type { BitmapGrid } from '../ftGrays';
 import type { ByteColour, GlyphBitmap } from '../glyphCoverage';
 import type { ColourBitmap } from './colourBitmap';
 
-/** The colours of a run: the font colour of a coverage glyph, and the colour that tints a colour glyph's texels. */
+/** A factor for each colour channel, over 1 where a modulate is: a shader multiplies by it unclamped. */
+export type ColourTint = readonly [red: number, green: number, blue: number];
+
+/** The colours of a run: the font colour of a coverage glyph, and the tint of a colour glyph's texels. */
 export interface RunColours {
   readonly text: ByteColour;
-  readonly colourGlyphs: ByteColour;
+  readonly colourGlyphs: ColourTint;
 }
 
 /**
@@ -50,7 +53,7 @@ export function mixedGlyphRaster(
   for (const glyph of drawn) {
     if ('coverage' in glyph) layCoverage(image, premultiplied, glyph.coverage, colours.text);
     else if ('colour' in glyph) layColourBitmap(image, premultiplied, glyph.colour, colours.colourGlyphs);
-    else layColourBitmap(image, premultiplied, glyph.coverageQuad, colours.text);
+    else layColourBitmap(image, premultiplied, glyph.coverageQuad, byteTint(colours.text));
   }
   straightColours(image, premultiplied, colours.text);
   return image;
@@ -109,8 +112,13 @@ function layCoverage(
   }
 }
 
+function byteTint([red, green, blue]: ByteColour): ColourTint {
+  return [red / 255, green / 255, blue / 255];
+}
+
 /**
- * Lays a bitmap, each texel tinted by `tint`, at its origin. Godot's quad spans the bitmap and a
+ * Lays a bitmap, each texel tinted by `tint`, at its origin. The render target clamps each tinted
+ * channel to 1 before it blends. Godot's quad spans the bitmap and a
  * margin of one empty texel on each side (`text_server_adv.cpp:1223-1225`), each `scale` px, sampled
  * at each pixel centre inside it. A whole-pixel origin at scale 1 lands each texel on one pixel.
  */
@@ -118,7 +126,7 @@ function layColourBitmap(
   image: ImageData,
   premultiplied: Float32Array,
   { bitmap, originX, originY, scale }: PlacedColourBitmap,
-  tint: ByteColour
+  tint: ColourTint
 ): void {
   const { left, top, width, height } = placedQuad(bitmap.grid, originX, originY, scale);
   const firstColumn = Math.max(0, Math.ceil(left - 0.5));
@@ -138,9 +146,9 @@ function layColourBitmap(
         image,
         premultiplied,
         pixel,
-        (texel[0]! * tint[0]) / 255,
-        (texel[1]! * tint[1]) / 255,
-        (texel[2]! * tint[2]) / 255,
+        Math.min(255, texel[0]! * tint[0]),
+        Math.min(255, texel[1]! * tint[1]),
+        Math.min(255, texel[2]! * tint[2]),
         texel[3]!
       );
     }

@@ -207,7 +207,7 @@ export interface CanvasTextPaintOptions {
   /**
    * The colour that tints a colour glyph's texels in place of the tint's colour. Godot keeps only the
    * alpha of the font colour for one (`text_server_adv.cpp:4044-4046`), so a canvas item's modulate
-   * alone tints it. White by default.
+   * alone tints it. A channel over 1 brightens the texel up to the clamp. White by default.
    */
   colourGlyphTint?: Pick<Rgba, 'r' | 'g' | 'b'>;
 }
@@ -252,7 +252,10 @@ export function paintSceneFontCanvas(
 ): ImageData | null {
   const frame = rasterFrame(layout, fontSizePx, skew, canvasLayout, glyphDrawer, strokeWidthPx);
   const glyphs = placeGlyphs(layout, frame, glyphDrawer, originPhasePx);
-  const colours = { text: opaqueByteColour(tint), colourGlyphs: opaqueByteColour(colourGlyphTint) };
+  const colours = {
+    text: opaqueByteColour(tint),
+    colourGlyphs: [colourGlyphTint.r, colourGlyphTint.g, colourGlyphTint.b] as const,
+  };
   return painterOf(frame.metrics).paint(glyphs, frame, colours);
 }
 

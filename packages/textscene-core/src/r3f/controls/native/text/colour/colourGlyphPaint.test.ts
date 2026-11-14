@@ -100,6 +100,11 @@ describe('a COLR colour glyph in the canvas paint', () => {
     expect(opaqueColours(paint('A', { colourGlyphTint: { r: 1, g: 0.5, b: 0 } }))).toEqual(['255,64,0']);
   });
 
+  // A shader multiplies the texel by the modulate unclamped, and the target clamps the product.
+  it('multiplies its colour by a tint over 1 before it clamps the product', () => {
+    expect(opaqueColours(paint('A', { colourGlyphTint: { r: 2, g: 1.5, b: 0 } }))).toEqual(['255,192,0']);
+  });
+
   it('leaves a plain glyph of the same run in the font colour', () => {
     const colours = opaqueColours(paint('Ab'));
 
