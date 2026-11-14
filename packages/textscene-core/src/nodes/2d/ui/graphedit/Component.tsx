@@ -28,17 +28,7 @@ import {
 } from './grid';
 import { resolveGraphEditConnections } from './connectionEndpoints';
 import { ConnectionLine } from './ConnectionLine';
-import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
-import {
-  shapedTextSizeWidthPx,
-  type TextLayoutResult,
-} from '../../../../r3f/controls/native/text/textLayout';
-import { formatGodotNumber, rangeStepDecimals } from '../spinbox/nativeSolver';
-import { graphEditSnappingArrowStates, graphEditToolbar, zoomLabelText } from './toolbar';
-import { GraphEditToolbarChrome } from './ToolbarChrome';
-import { graphEditToolbarTheme } from './toolbarTheme';
+import { graphEditTopLayerSlots } from './internalControls';
 import {
   CONSTRUCTOR_SCROLL_BOUNDS,
   graphEditElements,
@@ -52,18 +42,11 @@ import { minimapConnectionsOf } from './minimapConnections';
 import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import { graphEditConstructorScrollBars, graphEditScrollBars, hasUpdatedScrollBars } from './scrollBars';
 import { ScrollBarChrome } from '../shared/ScrollChrome';
-import { canvasSubOrders } from '../../../../r3f/canvasItemState';
 import type { GraphEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import { themeItemsOfType, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { useStableVector2 } from '../../../../r3f/hooks/useStableVector2';
 import { shaderLineWidth } from './connectionStroke';
-
-/** Every internal Label and LineEdit reads the plain "font" theme key, as `Label` and `Button` do. */
-const GRAPH_EDIT_THEME_FONT_KEY = 'font';
-
-/** `snapping_distance_spinbox->set_step(1)` (`graph_edit.cpp:3292`): the digit budget of `_update_text`. */
-const SNAPPING_SPINBOX_STEP = 1;
 
 /** `graph_edit.cpp:1945,1957`: `Rect2(x - 1, y - 1, 3, 3)`. */
 const DOT_SIZE_PX = 3;
@@ -121,12 +104,6 @@ function GridDotQuad({
     </CanvasItemGroup>
   );
 }
-
-/**
- * The pieces of `top_layer`, an `INTERNAL_MODE_BACK` child drawn after every GraphElement
- * (`graph_edit.cpp:3183`), in its child order (`:3211-3329`).
- */
-const GRAPH_EDIT_TOP_LAYER = ['scrollBars', 'toolbar', 'minimap'] as const;
 
 export function GraphEdit({
   solveNode,
@@ -193,31 +170,6 @@ export function GraphEdit({
     [showGrid, gridPattern, rectSize, scrollOffset, zoom, snappingDistance]
   );
 
-  // Read in the render body, not a `useMemo` (`Label`'s `Component.tsx` says why).
-  const fontMetrics = resolveNodeFontMetrics(solveNode, GRAPH_EDIT_THEME_FONT_KEY);
-  const layoutCache = useMemo(() => new Map<string, TextLayoutResult>(), []);
-  const shape = (text: string): TextLayoutResult => {
-    let layout = layoutCache.get(text);
-    if (!layout) {
-      layout = shapeButtonLabel(text, { fontSizePx: theme.fontSize, fontMetrics });
-      layoutCache.set(text, layout);
-    }
-    return layout;
-  };
-  const toolbarTheme = graphEditToolbarTheme(solveNode, theme);
-  const toolbar = graphEditToolbar(props, theme, toolbarTheme, {
-    measure: (text) => {
-      const l = shape(text);
-      return { x: shapedTextSizeWidthPx(l.widthPx), y: l.heightPx };
-    },
-    emSpaceWidthPx: shape('W').widthPx,
-    fontHeightPx: getFontLinePitchPx(fontMetrics, theme.fontSize, 0),
-  });
-  const toolbarText = {
-    zoomLabel: zoomLabelText(zoom),
-    snappingDistance: formatGodotNumber(snappingDistance, rangeStepDecimals(SNAPPING_SPINBOX_STEP)),
-  };
-
   const minimapEnabled = isMinimapEnabled(props);
   const graphEditSize = rectSize;
   const elements = graphEditElements(solveNode, childRects, zoom, graphEditSize);
@@ -235,7 +187,7 @@ export function GraphEdit({
   const scrollBars = hasUpdatedBars
     ? graphEditScrollBars(graphEditSize, bounds, scrollOffset, scrollBarBoxes)
     : graphEditConstructorScrollBars(graphEditSize, scrollBarBoxes);
-  const topLayer = canvasSubOrders(chromeSlot, GRAPH_EDIT_TOP_LAYER);
+  const topLayer = graphEditTopLayerSlots(chromeSlot);
   const minimapPanelRect = minimapRect(graphEditSize, props);
   const minimapXform = minimapTransform({ x: minimapPanelRect.w, y: minimapPanelRect.h }, bounds);
 
@@ -248,7 +200,7 @@ export function GraphEdit({
 
   return (
     <CanvasItemGroup ref={anchorRef}>
-      {/* The panel and the grid are the item's own pixels. The connections, the bars, the toolbar and the minimap are child Controls (`graph_edit.cpp:3183-3329`): no `self_modulate`. */}
+      {/* The panel and the grid are the item's own pixels. The connections, the bars and the minimap are child Controls, and the toolbar an internal Control (`graph_edit.cpp:3183-3329`): no `self_modulate`. */}
       <ControlClipProvider value={clip}>
         <StyleBoxQuad
           styleBox={panelStyle}
@@ -307,21 +259,6 @@ export function GraphEdit({
           chromeSlot={topLayer.scrollBars}
           snapToPixels={snapToPixels}
         />
-
-        {toolbar && (
-          <GraphEditToolbarChrome
-            toolbar={toolbar}
-            items={toolbarTheme}
-            icons={solveNode.icons}
-            theme={theme}
-            tint={childTint}
-            text={toolbarText}
-            snappingArrows={graphEditSnappingArrowStates(snappingDistance)}
-            shape={shape}
-            rtl={solveNode.rtl}
-            slot={topLayer.toolbar}
-          />
-        )}
 
         {minimapEnabled && (
           <GraphEditMinimapChrome
