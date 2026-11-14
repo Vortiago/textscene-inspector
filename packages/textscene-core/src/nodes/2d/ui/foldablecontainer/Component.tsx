@@ -26,7 +26,7 @@ import {
 import { FOLDABLE_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { TITLE_POSITION_TOP, type FoldableContainerProperties } from './types';
-import { FlippableStyleBox } from './FlippableStyleBox';
+import { FlippableStyleBox } from '../../../../r3f/controls/native/FlippableStyleBox';
 
 const ARROW_ICON_URL: Record<FoldableContainerArrow, string> = {
   expanded: FOLDABLE_CONTAINER_ICONS.expandedArrow,

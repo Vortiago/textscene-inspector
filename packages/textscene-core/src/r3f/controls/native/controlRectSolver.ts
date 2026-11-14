@@ -413,10 +413,10 @@ function dispatchInternalControls(
   ctx: SolveContext,
   out: Map<string, SolvedControl>
 ): void {
-  for (const { node, rect: assigned } of placeInternalControls(n, rect, ctx)) {
+  for (const { node, rect: assigned, meta } of placeInternalControls(n, rect, ctx)) {
     const minSize = ctx.combinedMinimumSize(node);
     const internalRect = setRect(node, assigned, minSize, rect.w, ctx);
-    out.set(node.path, { rect: internalRect, minSize });
+    out.set(node.path, { rect: internalRect, minSize, meta });
     const internalOrigin = { x: origin.x + internalRect.x, y: origin.y + internalRect.y };
     dispatchChildren(node, internalRect, internalOrigin, viewport, ctx, out);
   }

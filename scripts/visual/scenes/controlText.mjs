@@ -201,6 +201,7 @@ export const CONTROL_TEXT_SCENES = [
     file: 'unit-rich-text-label-visible-characters-follow.tscn',
   },
   { name: 'rich-text-label-hr', file: 'unit-rich-text-label-hr.tscn' },
+  { name: 'rich-text-label-object-advance', file: 'unit-rich-text-label-object-advance.tscn' },
   { name: 'rich-text-label-font-size-outline', file: 'unit-rich-text-label-font-size-outline.tscn' },
   { name: 'rich-text-label-paragraph-justification', file: 'unit-rich-text-label-paragraph-justification.tscn' },
   { name: 'rich-text-label-paragraph-tab-stops', file: 'unit-rich-text-label-paragraph-tab-stops.tscn' },
