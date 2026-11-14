@@ -1417,10 +1417,10 @@ describe('layoutRichTextRuns', () => {
 });
 
 describe('the underline metrics of a placement', () => {
-  // -(-100 - 50/2)*size/2048 and 50*size/2048: a paragraph's upos/uthk at 16px and 18px. The
-  // -thickness/2 term is FreeType's top-edge-to-centre conversion (sfobjs.c:1424-1425).
-  const METRICS_16 = { positionPx: 0.9765625, thicknessPx: 0.390625 };
-  const METRICS_18 = { positionPx: 1.0986328125, thicknessPx: 0.439453125 };
+  // Open Sans's upos/uthk at 16px and 18px, as Godot 4.6.3 measures them
+  // (`ThemeDB.fallback_font.get_underline_position`): 125 and 50 units, rounded to 1/64 px.
+  const METRICS_16 = { positionPx: 0.984375, thicknessPx: 0.390625 };
+  const METRICS_18 = { positionPx: 1.09375, thicknessPx: 0.4375 };
 
   const underlinesOf = (runs: StyledTextRun[]) =>
     layoutRichTextRuns(runs, shapeRuns(runs)).flatMap((placement) =>
@@ -1462,6 +1462,24 @@ describe('the underline metrics of a placement', () => {
       }),
     ];
     expect(underlinesOf(runs)[0]).toEqual(METRICS_16);
+  });
+
+  // `_font_get_underline_position` of each span's own font (`text_server_adv.cpp:1517-1518`).
+  it("takes a scene font's own underline, not the bundled font's", () => {
+    const bold = {
+      ...OPEN_SANS_FONT_METRICS,
+      unitsPerEm: 1000,
+      underlinePosition: -250,
+      underlineThickness: 100,
+    };
+    const runs = [
+      textRun({ text: 'plain ', fontSizePx: 16 }),
+      textRun({ text: 'bold', bold: true, underline: true, fontSizePx: 16 }),
+    ];
+    const placements = layoutRichTextRuns(runs, shapeRuns(runs, { faces: { ...ALL_FACES, bold } }));
+    expect(placements.flatMap((placement) => placement.underline ?? [])).toEqual([
+      { positionPx: 4, thicknessPx: 1.59375 },
+    ]);
   });
 });
 

@@ -22,12 +22,10 @@ import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBid
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   shapedTextSizeWidthPx,
+  withGlyphFaceAscent,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import {
-  getUnderlinePositionPx,
-  getUnderlineThicknessPx,
-} from '../../../../r3f/controls/native/text/openSansMetrics';
+import type { UnderlinePx } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { LinkButtonProperties } from './types';
 import { LinkButtonUnderlineMode } from '../../../../godot/scene/gui';
 import { FALLBACK_THEME_COLOR } from '../../../../godot/scene/theme';
@@ -88,18 +86,17 @@ interface UnderlineGeometry {
 
 /**
  * `link_button.cpp:306-308`: `underline_spacing` (int) plus `text_buf->get_line_underline_position()`
- * (float), narrowed to `int`, which truncates toward zero. `y` adds the line ascent, the whole-pixel
- * value `getFontAscentPx` gives. Thickness is `MAX(1, ...)` narrowed the same way (`:308`), with the MAX
- * applied here, as `getUnderlineThicknessPx` requires.
+ * (float), narrowed to `int`, which truncates toward zero. `y` adds `get_line_ascent()`, the layout's
+ * whole-pixel baseline. Thickness is `MAX(1, ...)` narrowed the same way (`:308`).
  */
 export function linkButtonUnderlineGeometry(
-  fontSizePx: number,
+  underline: UnderlinePx,
   underlineSpacingConstant: number,
   ascentPx: number
 ): UnderlineGeometry {
-  const spacing = Math.trunc(underlineSpacingConstant + getUnderlinePositionPx(fontSizePx));
+  const spacing = Math.trunc(underlineSpacingConstant + underline.positionPx);
   const y = ascentPx + spacing;
-  const thickness = Math.trunc(Math.max(1, getUnderlineThicknessPx(fontSizePx)));
+  const thickness = Math.trunc(Math.max(1, underline.thicknessPx));
   return { y, thickness };
 }
 
@@ -128,7 +125,7 @@ export function linkButtonTextPlacement(
 // Minimum size
 
 /**
- * LinkButton's shaped label, null for empty text: the solve-handoff share
+ * LinkButton's shaped label at its line's own ascent, null for empty text: the solve-handoff share
  * (`r3f/controls/native/solveHandoff.ts`) of `linkButtonMinimumSize` and `Component.tsx`. The painter's
  * overrun trimming is not part of it, since it reads the solved rect.
  */
@@ -138,11 +135,12 @@ export const linkButtonLabelShape = defineShare<TextLayoutResult | null>((n) => 
   if (text.length === 0) return null;
   const state = resolveLinkButtonDrawState(props);
   const { fontSizePx } = linkButtonTextTheme(n, props, state);
-  return shapeButtonLabel(text, {
+  const layout = shapeButtonLabel(text, {
     fontSizePx,
     fontMetrics: resolveNodeFontMetrics(n, LINKBUTTON_THEME_FONT_KEY),
     bidi: controlBidiOptions(props, n),
   });
+  return withGlyphFaceAscent(layout);
 });
 
 /**

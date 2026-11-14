@@ -11,6 +11,7 @@ import { sfntGlyphIndex, sfntHasGlyph } from './sfntCmap';
 import { sfntFaceGlyphs } from './sfntFaceGlyphs';
 import { glyphMetricsReader } from './sfntGlyphMetrics';
 import { sfntFileOfTables, type SfntFile } from './sfntTables';
+import { freeTypeUnderlinePosition } from './sfntUnderline';
 
 /** Written once, by the first read of the baked tables. */
 let sfnt: SfntFile | undefined;
@@ -81,6 +82,12 @@ export const OPEN_SANS_FONT_METRICS: FontMetrics = {
   getKerningAdjustmentUnits,
   get averageAdvanceUnits() {
     return OPEN_SANS_METRICS.averageAdvanceUnits;
+  },
+  get underlinePosition() {
+    return freeTypeUnderlinePosition(OPEN_SANS_METRICS.underlinePosition, OPEN_SANS_METRICS.underlineThickness);
+  },
+  get underlineThickness() {
+    return OPEN_SANS_METRICS.underlineThickness;
   },
   get shaping() {
     return openSansGlyphs().shaping;

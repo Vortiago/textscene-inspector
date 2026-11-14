@@ -457,6 +457,7 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
       ...mod,
       ttf: () => freshFontFile(fixtureFontBytes('open-sans-semibold-subset.ttf')),
       recursive: () => freshFontFile(fixtureFontBytes('recursive-vf-subset.woff2')),
+      unparsed: () => freshFontFile(new Uint8Array(64).fill(7).buffer),
     };
   }
 
@@ -517,6 +518,31 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
 
     expect(face.drawnOpentype).toBeUndefined();
     expect(getFontRunGlyphAdvancePx(face, { char: 'm' }, 10)).toBe(5);
+  });
+
+  it("carries the underline FreeType reads from the font's post table", async () => {
+    const { peekSettledSceneFontMetrics: peek, ttf } = await loaderWithFontDoor();
+    const font = ttf();
+
+    peek(font, 'Root/Underline');
+    await vi.waitFor(() => expect(peek(font, 'Root/Underline')).not.toBeNull(), OUTLINE_LOAD_TIMEOUT_MS);
+
+    // Open Sans: post -100 and 50, the position moved to the centre of the stroke.
+    expect(peek(font, 'Root/Underline')).toMatchObject({ underlinePosition: -125, underlineThickness: 50 });
+  });
+
+  it("gives a font whose tables do not parse the bundled font's underline in proportion", async () => {
+    const { peekSettledSceneFontMetrics: peek, unparsed } = await loaderWithFontDoor();
+    const font = unparsed();
+
+    peek(font, 'Root/Unparsed');
+    await vi.waitFor(() => expect(peek(font, 'Root/Unparsed')).not.toBeNull(), OUTLINE_LOAD_TIMEOUT_MS);
+
+    // Open Sans: -125 and 50 over 2048 units, here over the 1000 units of a face with no head.
+    const face = peek(font, 'Root/Unparsed')!;
+    expect([face.unitsPerEm, face.underlinePosition, face.underlineThickness]).toEqual([
+      1000, -61.03515625, 24.4140625,
+    ]);
   });
 
   it('settles a plain canvas face at once, with no outlines to wait for', async () => {

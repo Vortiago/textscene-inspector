@@ -77,7 +77,7 @@ const MAXP_VERSION_1_LENGTH = 32;
 /**
  * The tables the scene-font loader reads: this module's, the `cmap` and `maxp` that tell which
  * characters have a glyph, the `GPOS`, `GDEF` and `hmtx` that place the marks of a decomposed character,
- * and the `GSUB` of the glyphs a run shapes into.
+ * the `GSUB` of the glyphs a run shapes into, and the `post` that holds the underline.
  * A compressed container decompresses these and no others.
  */
 export const SCENE_FONT_TABLE_TAGS: readonly string[] = [
@@ -91,6 +91,7 @@ export const SCENE_FONT_TABLE_TAGS: readonly string[] = [
   'GDEF',
   'hmtx',
   'GSUB',
+  'post',
 ];
 
 /** The tables the fallback mark placement reads of a font with no `GPOS` script (`fallbackMarkPositioning.ts`). */
