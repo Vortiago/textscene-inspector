@@ -96,7 +96,7 @@ async function main() {
     [OPERATOR_RECORD, operatorRecord],
     [CORPUS_RECORD, corpusRecord],
   ];
-  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${printed.length - lowered.length} printed texts, ${lowered.length} of them lowered`;
+  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${printed.length - lowered.length} printed texts as parsed and ${lowered.length} as lowered`;
   const options = { tool: 'godot-probes', summary };
   if (process.argv.includes('--check')) check(outputs, options);
   else writeGenerated(outputs, options);
