@@ -11,7 +11,7 @@
  */
 
 import * as THREE from 'three';
-import { accumulationState, shadowColorUniform } from './lightQuad.js';
+import { accumulationState } from './lightQuad.js';
 import { FULL_SCREEN_VERTEX, multipleTargetPass } from '../fullScreenPass.js';
 import { LIGHT_OUTPUTS } from './lightQuadShaders.js';
 import { shadowMapUniforms } from './shadowMap/shadowMapTexture.js';
@@ -20,6 +20,7 @@ import {
   DIRECTIONAL_SHADOW_VERTEX,
   SHADOWED_LIGHT_GLSL,
   shadowSampleGlsl,
+  shadowedLightUniforms,
 } from './shadowMap/shadowShader.js';
 import type { Rgba } from '../../godot/math/math.js';
 import type { Light2DShadowFilter } from '../../godot/scene/light2d.js';
@@ -82,7 +83,7 @@ function shadowUniforms(shadow: DirectionalShadowSampling): Record<string, THREE
     ...shadowMapUniforms(shadow.map),
     uShadowSmooth: { value: shadow.smooth },
     uNdcToShadow: { value: shadow.ndcToShadow },
-    uShadowColor: { value: shadowColorUniform(shadow.shadowColor) },
+    ...shadowedLightUniforms(shadow.shadowColor),
   };
 }
 

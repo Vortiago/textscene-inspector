@@ -24,6 +24,8 @@ export type ShadowMapEdge = 'repeat' | 'clamp';
  * A map of `bins` texels, all zero: Godot's `R32_SFLOAT` atlas row behind a nearest sampler. Float32,
  * since `texture_shadow` compares texel by texel and a half float rounds a depth near 1 by 1/2048 of
  * `z_far`, which moves the shadow edge.
+ *
+ * @canonical A 2D light's one-row shadow map texture
  */
 export function createShadowMapTexture(bins: number, edge: ShadowMapEdge): THREE.DataTexture {
   const texture = new THREE.DataTexture(new Float32Array(bins), bins, 1, THREE.RedFormat, THREE.FloatType);
@@ -36,7 +38,11 @@ export function createShadowMapTexture(bins: number, edge: ShadowMapEdge): THREE
   return texture;
 }
 
-/** Uploads `bins`, exactly as many as the texture holds. */
+/**
+ * Uploads `bins`, exactly as many as the texture holds.
+ *
+ * @canonical Upload the bins of a 2D light's shadow map
+ */
 export function writeShadowMap(texture: THREE.DataTexture, bins: Float32Array): void {
   const data = texture.image.data as Float32Array;
   // `set` accepts a shorter source and keeps the old bins past its end.

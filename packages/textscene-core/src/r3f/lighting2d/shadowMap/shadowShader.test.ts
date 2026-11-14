@@ -6,7 +6,10 @@ function collapsed(glsl: string): string {
   return glsl.replace(/\s+/g, ' ').trim();
 }
 
-/** The bins and taps both sample blocks shared before one join owned them. */
+/**
+ * The sample blocks the goldens and the Godot measurements of both light kinds were taken with.
+ * A change to the GLSL moves pixels, so it must change these copies too, and show in review.
+ */
 const BINS = `
 uniform float uShadowBins;
 float shadowBins() { return uShadowBins; }
@@ -36,7 +39,7 @@ float shadowTaps(float u, float depth) {
 }
 `;
 
-/** The PointLight2D's sample block as `lightQuadShaders.ts` wrote it out by hand. */
+/** The PointLight2D's sample block. */
 const POLAR_SAMPLE = `
 uniform sampler2D uShadowMap;
 uniform mat3 uWorldToLight;
@@ -81,7 +84,7 @@ float shadowFraction() {
 }
 `;
 
-/** The DirectionalLight2D's sample block as `directionalLightQuad.ts` wrote it out by hand. */
+/** The DirectionalLight2D's sample block. */
 const DIRECTIONAL_SAMPLE = `
 uniform sampler2D uShadowMap;
 varying vec2 vShadow;
@@ -112,11 +115,11 @@ describe('shadowSampleGlsl', () => {
     expect(taps).toBeGreaterThan(texel);
   });
 
-  it('joins the polar lookup into the block the PointLight2D sampled with', () => {
+  it('joins the polar lookup into the block the PointLight2D samples with', () => {
     expect(collapsed(shadowSampleGlsl(POLAR_LOOKUP))).toBe(collapsed(POLAR_SAMPLE));
   });
 
-  it('joins the directional lookup into the block the DirectionalLight2D sampled with', () => {
+  it('joins the directional lookup into the block the DirectionalLight2D samples with', () => {
     expect(collapsed(shadowSampleGlsl(DIRECTIONAL_LOOKUP))).toBe(collapsed(DIRECTIONAL_SAMPLE));
   });
 });

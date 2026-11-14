@@ -10,6 +10,8 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
+import * as THREE from 'three';
+import type { Rgba } from '../../../godot/math/math.js';
 import { SHADOW_MAP_FAR } from './shadowPolarMap.js';
 import type { ShadowMapEdge } from './shadowMapTexture.js';
 
@@ -103,6 +105,8 @@ float shadowTaps(float u, float depth) {
  * The whole sample block, joined in the one legal order: the map uniform, the lookup's
  * declarations, the bins, the texel rule, the taps, the fraction. The taps call `shadowBins` and
  * `shadowTexel`, so each must come before them.
+ *
+ * @canonical The GLSL a 2D light samples its shadow map with
  */
 export function shadowSampleGlsl({ edge, declarations, fraction }: ShadowLookup): string {
   return [MAP_UNIFORM, declarations, SHADOW_BINS, SHADOW_TEXEL[edge], SHADOW_TAPS, fraction].join('');
@@ -211,3 +215,8 @@ void writeShadowedLight(vec3 rgb, float a, float s) {
   writeLight(vec4(rgb * lit, alpha), vec4(uShadowColor.rgb * s, alpha));
 }
 `;
+
+/** `Light2D.shadow_color` as the `uShadowColor` that `SHADOWED_LIGHT_GLSL` declares. */
+export function shadowedLightUniforms({ r, g, b, a }: Rgba): { uShadowColor: THREE.IUniform<THREE.Vector4> } {
+  return { uShadowColor: { value: new THREE.Vector4(r, g, b, a) } };
+}
