@@ -1,7 +1,8 @@
 /**
- * The body every Node2D mesh drawer draws through: the CanvasItem ritual of `CanvasItem2D`, the
+ * The body a Node2D mesh drawer draws through: the CanvasItem ritual of `CanvasItem2D`, the
  * texture's load state, the placeholder, the lighting hand-back and one material for each surface.
  * A drawer states its texture (`useCanvasMeshTexture`) and its surfaces, and nothing else.
+ * CPUParticles2D, the tile mesh and CanvasGroup still draw their own (#1546).
  */
 
 import { useMemo, type ReactNode } from 'react';
@@ -24,6 +25,8 @@ type CanvasSurfaces = readonly CanvasSurface[] | null;
 /**
  * The surfaces of a drawer whose geometry reads the CanvasItemMaterial in force, as a particles
  * flipbook does: a hook of `input` and the material, which the body calls in one component.
+ * `CanvasItem2D` resolves that material, so the drawer cannot. Pass a module-level function: the
+ * body calls it as a hook, so a new function each render breaks the hook order.
  */
 export interface MaterialSurfaces<Input> {
   readonly input: Input;
@@ -48,6 +51,7 @@ interface CanvasMeshBodyProps<Input> {
   children?: ReactNode;
 }
 
+/** @canonical The draw of a Node2D canvas mesh drawer */
 export function CanvasMeshBody<Input>({
   node,
   props,
@@ -125,7 +129,7 @@ function SurfaceMesh({ surface, map, tint, pixelMaterial }: DrawnSurfaces & { su
   const primitive = geometryPrimitive(geometry);
   const Draw = drawnTag(primitive);
   return (
-    <Draw ref={meshRef as never} position={position} scale={scale}>
+    <Draw ref={meshRef} position={position} scale={scale}>
       <primitive object={geometry} attach="geometry" />
       <CanvasSurfaceMaterial
         map={map}

@@ -5,7 +5,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodeReference } from '../../../resources/reading';
 import type { ImageSize } from '../../../resources/formats/image/imagePixels';
@@ -64,7 +64,9 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
     // `canvas_item_add_mesh` gets a bare `Color(1, 1, 1)` (`polygon_2d.cpp:401`). `color` is
     // quantized first, as Godot's 8-bit mesh upload stores it (`vertexColorQuantize.ts`).
     const arrayColor = geometry.hasAttribute('color') ? undefined : quantizeVertexColor(props.color);
-    return [{ geometry, arrayColor, meshRef: setMesh }];
+    // A polygon's geometry draws triangles, so its object is a mesh.
+    const meshRef = (drawn: THREE.Object3D | null) => setMesh(drawn instanceof THREE.Mesh ? drawn : null);
+    return [{ geometry, arrayColor, meshRef }];
   }, [geometry, props.color]);
 
   return (

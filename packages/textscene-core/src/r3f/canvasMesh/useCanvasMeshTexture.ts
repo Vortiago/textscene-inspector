@@ -12,17 +12,7 @@ import type { ImageSize } from '../../resources/formats/image/imagePixels';
 import { useCanvasItemTexture, type CanvasItemTexture } from '../canvasItemTexture';
 import { useWindowedCanvas2DTexture } from '../canvas2DTextureDecode';
 import type { UvWindow } from '../uvWindow';
-
-/** What a texture slot holds now. */
-export type CanvasMeshTextureState =
-  /** The slot names no texture. */
-  | 'none'
-  /** The slot names a texture that is not here yet. */
-  | 'arriving'
-  /** The slot names a texture that never draws. */
-  | 'missing'
-  /** The texture draws. */
-  | 'ready';
+import { textureState, type CanvasMeshTextureState } from './canvasMeshTextureState';
 
 /** The texture as it loaded, for a window that depends on it. */
 export interface LoadedCanvasMeshTexture {
@@ -53,6 +43,7 @@ export interface CanvasMeshTexture {
   };
 }
 
+/** @canonical The texture of a Node2D canvas mesh drawer, with its load state */
 export function useCanvasMeshTexture(
   props: Pick<Node2DProperties, 'texture_filter' | 'texture_repeat'>,
   { reference, windowOf }: CanvasMeshTextureSlot
@@ -71,7 +62,7 @@ export function useCanvasMeshTexture(
     [windowOf, source, size, hasNoImage]
   );
   const view = useWindowedCanvas2DTexture(source, sampler, window);
-  const state = textureState(missing, view !== null, isArriving);
+  const state = textureState({ missing, hasView: view !== null, isArriving, hasSource: source !== null });
   return useMemo(
     () => ({
       state,
@@ -80,10 +71,4 @@ export function useCanvasMeshTexture(
     }),
     [state, size, view, canvasTexture]
   );
-}
-
-function textureState(missing: boolean, hasView: boolean, isArriving: boolean): CanvasMeshTextureState {
-  if (missing) return 'missing';
-  if (hasView) return 'ready';
-  return isArriving ? 'arriving' : 'none';
 }

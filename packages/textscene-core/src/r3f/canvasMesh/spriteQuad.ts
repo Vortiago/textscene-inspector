@@ -17,6 +17,7 @@ export interface SpritePlacement {
   flip_v: boolean;
 }
 
+/** @canonical The quad of a 2D sprite frame */
 export function useSpriteQuad(
   { offset, centered, flip_h, flip_v }: SpritePlacement,
   { width, height }: { width: number; height: number }

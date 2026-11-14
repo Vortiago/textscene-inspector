@@ -40,20 +40,23 @@ export async function renderWithTexture(drawer: ReactElement, file: FileLoadStat
   // A request that never answers keeps the texture arriving.
   else fake.textures.setRequestImpl(() => {});
   const registerItem = vi.fn((_placement: ItemPlacement, _read: LitItemRead) => () => {});
-  const renderer = await ReactThreeTestRenderer.create(
+  const onCanvas = (drawn: ReactElement) => (
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider
         internalResources={READY_TEXTURE}
         externalResources={[{ id: '1', type: 'Texture2D', path: TEXTURE_PATH }]}
       >
         <CanvasLighting2DContext.Provider value={{ ...INERT_CANVAS_LIGHTING, registerItem }}>
-          {drawer}
+          {drawn}
         </CanvasLighting2DContext.Provider>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+  const renderer = await ReactThreeTestRenderer.create(onCanvas(drawer));
   await ReactThreeTestRenderer.act(async () => {});
-  return { renderer, registerItem };
+  /** Renders `next` in place of the drawer, on the same canvas. */
+  const update = (next: ReactElement) => renderer.update(onCanvas(next));
+  return { renderer, registerItem, update };
 }
 
 type Rendered = Awaited<ReturnType<typeof renderWithTexture>>['renderer'];

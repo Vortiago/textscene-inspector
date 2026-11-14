@@ -121,6 +121,18 @@ describe('CanvasMeshBody texture states', () => {
   });
 });
 
+describe('CanvasMeshBody texture swap', () => {
+  it('mounts a new material with the map when a texture is set on an item drawn without one', async () => {
+    const { renderer, update } = await renderWithTexture(<TestDrawer />);
+    const mapless = material(renderer);
+
+    await update(<TestDrawer texture={READY_REFERENCE} />);
+
+    expect(material(renderer)).not.toBe(mapless);
+    expect(material(renderer).map).not.toBeNull();
+  });
+});
+
 describe('CanvasMeshBody light reads', () => {
   it('asks for a light read while a surface draws', async () => {
     const { registerItem } = await render({ texture: READY_REFERENCE });

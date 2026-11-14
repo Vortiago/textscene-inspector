@@ -24,8 +24,8 @@ export interface CanvasSurface {
   vertexColors?: CanvasVertexColors;
   position?: [number, number, number];
   scale?: [number, number, number];
-  /** Receives the mesh that draws the surface, for a skin that bends it. */
-  meshRef?: (mesh: THREE.Mesh | null) => void;
+  /** Receives the object that draws the surface: a mesh, points or line segments, by the geometry. */
+  meshRef?: (drawn: THREE.Object3D | null) => void;
 }
 
 /** A surface's vertices in Godot's 2D space: +Y down, and V down from the top of the image. */
@@ -42,6 +42,8 @@ export interface CanvasSurfaceArrays {
 /**
  * The geometry of `arrays` in three's frame: Y negated, V flipped, and colours four wide, so three
  * defines `USE_COLOR_ALPHA` and an authored alpha draws.
+ *
+ * @canonical The geometry of a canvas surface from Godot-space arrays
  */
 export function canvasSurfaceGeometry({
   positions,
