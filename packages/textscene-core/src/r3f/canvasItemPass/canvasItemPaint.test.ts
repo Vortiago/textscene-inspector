@@ -65,7 +65,7 @@ show_behind_parent = true
     expect(inPaintOrder(paint)).toEqual(['Root', 'Root/Group/A', 'Root/Group/B', 'Root/Group']);
   });
 
-  it('holds a TileMap front room for its layers before its authored children', () => {
+  it('holds the runs of the layers of a TileMap before its authored children', () => {
     const paint = paintOver(
       parsed(`[node name="Map" type="TileMap"]
 layer_0/name = "a"
@@ -76,7 +76,9 @@ layer_2/name = "c"
 `)
     );
     const map = paintAt(paint, 'Map');
-    expect(map.front).toEqual({ base: map.own + 1, size: 3 });
+    const layers = [0, 1, 2].map((index) => paintAt(paint, `Map/@TileMapLayer@${index}`).range);
+    expect(layers[0]!.base).toBe(map.front.base);
+    expect(map.front.size).toBe(layers.reduce((room, layer) => room + layer.size, 0));
     expect(paintAt(paint, 'Map/Child').own).toBe(map.front.base + map.front.size);
   });
 

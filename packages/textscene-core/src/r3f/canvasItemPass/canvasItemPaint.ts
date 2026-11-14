@@ -16,6 +16,8 @@ import {
   canvasRootRanges,
   hostsOwnCanvas,
   lastPaintSequence,
+  packPaintRanges,
+  paintRangeSize,
   paintLayoutOf,
   WHOLE_CANVAS_RANGE,
   type PaintRange,
@@ -105,8 +107,9 @@ function paintOf(tree: LiveTree, start: PaintRange): ReadonlyMap<string, CanvasI
     const inline = step.groups.filter(isAuthored).flatMap((group) => group.children);
     const allocated = allocatePaintRange(basis, inline, paintLayoutOf(node, inline));
     // Internal front children draw in the front room, before every authored child (`node.h:585-600`).
+    // Packed, not allocated: the room has no item of its own to draw first.
     const front = step.groups.filter((group) => group.origin === 'front').flatMap((group) => group.children);
-    const frontRanges = allocatePaintRange(allocated.front, front).children;
+    const frontRanges = packPaintRanges(allocated.front, front.map(paintRangeSize), allocated.front.base);
     // Injected content draws after the authored children, in the room `reservesRoom` holds back.
     const injected = step.groups.filter(isInjected).flatMap((group) => group.children);
     const injectedRanges = allocatePaintRange(allocated.tail, injected).children;

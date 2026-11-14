@@ -141,7 +141,8 @@ function reservesRoom(node: TscnNode): boolean {
 
 /** How many values the internal children Godot adds at the front of `node` take (`node.h:585-600`). */
 function internalFrontRoom(node: TscnNode): number {
-  return paintRoomOf(node.type).frontRoom?.(node) ?? 0;
+  const children = paintRoomOf(node.type).frontChildren?.(node) ?? [];
+  return children.reduce((room, child) => room + paintRangeSize(child), 0);
 }
 
 /** How many values the internal children Godot adds at the back of `node` take, after every authored child's. */

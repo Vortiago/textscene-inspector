@@ -19,6 +19,7 @@ import {
   WHOLE_CANVAS_RANGE,
 } from './canvasPaintOrder';
 // Side effect: the parser slices register the paint room each type holds.
+import { DYNAMIC_CHILD_RESERVE } from './canvasItemPass/paintRoom';
 import '../parser/TscnParser';
 
 function node(name: string, type: string, children: TscnNode[] = [], properties = {}): TscnNode {
@@ -159,12 +160,13 @@ describe('paintRangeSize', () => {
     expect(paintRangeSize(node('Tiles', 'TileMapLayer'))).toBeGreaterThan(1000);
   });
 
-  it('counts one value per TileMap layer, however many layers there are', () => {
-    // Each layer is an internal child CanvasItem (`tile_map.cpp:279`), so it
-    // needs a value of its own. A fixed reserve runs out past its size.
+  it('counts the whole run of each TileMap layer, however many layers there are', () => {
+    // Each layer is an internal child TileMapLayer (`tile_map.cpp:279`), which holds a reserve for
+    // its rows and scene tiles. The TileMap holds one more for its own scene tiles.
     const children = [node('Marker', 'Sprite2D')];
-    // A TileMap also holds back a reserve of 4096 values for its scene tile instances, after its children.
-    expect(paintRangeSize(tileMap(5000, children))).toBe(1 + 5000 + 4096);
+    expect(paintRangeSize(tileMap(5000, children))).toBe(
+      1 + 5000 * DYNAMIC_CHILD_RESERVE + DYNAMIC_CHILD_RESERVE
+    );
   });
 });
 
@@ -393,11 +395,11 @@ describe('allocatePaintRange', () => {
   it("puts a TileMap's layers after the TileMap and before its authored children", () => {
     // `add_child(new_layer, false, INTERNAL_MODE_FRONT)` (`tile_map.cpp:279`)
     // gives the layers draw indices 0..L-1 (`node.h:585-600`), so every authored
-    // child draws after them.
+    // child draws after the runs of all of them.
     const map = tileMap(3, [node('Marker', 'Sprite2D')]);
     const allocated = allocateNodePaintRange(WHOLE_CANVAS_RANGE, map);
 
-    expect(allocated.front).toEqual({ base: allocated.self + 1, size: 3 });
+    expect(allocated.front).toEqual({ base: allocated.self + 1, size: 3 * DYNAMIC_CHILD_RESERVE });
     expect(allocated.children[0]!.base).toBe(allocated.front.base + allocated.front.size);
   });
 
