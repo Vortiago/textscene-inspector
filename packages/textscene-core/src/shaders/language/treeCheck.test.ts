@@ -1,6 +1,7 @@
 /** The tree check finds a node that breaks a fact of the tree. */
 
 import { describe, expect, it } from 'vitest';
+import { instruction } from './instructions.js';
 import { treeOf } from './parsedTree.testkit.js';
 import type { CallNode, Expression, FunctionNode, OperatorNode, ShaderNode } from './shaderTree.js';
 import { treeFault } from './treeCheck.js';
@@ -98,6 +99,42 @@ describe('treeFault', () => {
       expect(
         treeFault(withCall((call) => ({ ...call, operands: [{ ...call.operands[0]!, ...constant }] })))
       ).toMatch(/a int for the argument x of twice/);
+    });
+  });
+
+  describe('a call of a built-in function', () => {
+    const builtIn = (change: (call: CallNode) => Expression) =>
+      withReturn(treeOf('vec2 f(vec2 a) { return clamp(a, 0.0, 1.0); }'), (value) =>
+        change(value as CallNode)
+      );
+
+    it('finds no fault in a parsed call', () => {
+      expect(treeFault(builtIn((call) => call))).toBeUndefined();
+    });
+
+    it('finds a call typed otherwise than its row returns', () => {
+      const row = instruction('clamp(vec3,float,float)')!;
+      expect(treeFault(builtIn((call) => ({ ...call, row })))).toMatch(
+        /a call of clamp\(vec3,float,float\) typed vec2/
+      );
+    });
+
+    it('finds an argument of another type than its row takes', () => {
+      const constant = { kind: 'constant', type: 'int', values: [1] } as const;
+      const changed = (call: CallNode) => ({
+        ...call,
+        operands: [call.operands[0]!, { ...call.operands[1]!, ...constant }, call.operands[2]!],
+      });
+      expect(treeFault(builtIn(changed))).toMatch(/a int for argument 2 of clamp\(vec2,float,float\)/);
+    });
+
+    it('finds an out argument that is no place', () => {
+      const constant = { kind: 'constant', type: 'float', values: [1] } as const;
+      const tree = withReturn(treeOf('float f(float a) { float w = 0.0; return modf(a, w); }'), (value) => {
+        const call = value as CallNode;
+        return { ...call, operands: [call.operands[0]!, { ...call.operands[1]!, ...constant }] };
+      });
+      expect(treeFault(tree)).toMatch(/a constant for the out argument 2 of modf\(float,float\)/);
     });
   });
 });

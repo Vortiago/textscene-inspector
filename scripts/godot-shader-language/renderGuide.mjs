@@ -293,7 +293,7 @@ function renderIndex(placed, rows, probes, record, version) {
   );
   return `# The shading language transpiler
 
-\`@textscene/three-godot-shaders\` transpiles Godot ${version}'s shading language to three.js TSL nodes, instruction by instruction. This guide explains each instruction the transpiler reads, with the values Godot gave for it. A text that uses an instruction not transpiled yet fails with an error that names the instruction and the issue that transpiles it.
+\`@textscene/three-godot-shaders\` transpiles Godot ${version}'s shading language to three.js TSL nodes, instruction by instruction. It builds TSL node objects and writes no GLSL or WGSL text, and \`shaderTextRule.test.ts\` enforces that rule. This guide explains each instruction the transpiler reads, with the values Godot gave for it. A text that uses an instruction not transpiled yet fails with an error that names the instruction and the issue that transpiles it.
 
 One Godot version: the previewer draws every project as Godot ${version} draws it. The transpiler reads every shader with the rules of Godot ${version}, not of the version a project's \`project.godot\` names.
 

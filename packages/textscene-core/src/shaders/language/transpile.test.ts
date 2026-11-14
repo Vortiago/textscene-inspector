@@ -75,8 +75,8 @@ describe('transpileShadingLanguage', () => {
   );
 
   it('refuses a row that is not transpiled before it reaches the emitter', () => {
-    expect(() => transpileShadingLanguage('float probe(float a) { return sin(a); }')).toThrow(
-      "'sin(float)' is not transpiled yet (#1826)"
+    expect(() => transpileShadingLanguage('int probe(float a) { return floatBitsToInt(a); }')).toThrow(
+      "'floatBitsToInt(float)' is not transpiled yet (#1827)"
     );
   });
 

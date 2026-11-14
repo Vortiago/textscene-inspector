@@ -31,6 +31,9 @@ chain as text, as Godot's own materials do.
   emitter walks the typed tree and calls TSL functions. It builds node objects, never JavaScript
   text, so a page with no `unsafe-eval` runs it. three's GLSL transpiler is not used: it writes
   text and drops constructs with no error.
+  The emitter writes no GLSL or WGSL text either: `shaders/shaderTextRule.test.ts` fails on a
+  text escape of three, a Node subclass that defines `generate()` outside its allow-list, or a
+  literal of shader source in a file that imports three.
 - **A probe proves an instruction.** A probe is a shading language function that applies one
   instruction to a table of inputs: signed zeros, subnormals, large values, the infinities and NaN.
   `pnpm godot:probes` records Godot's answers as float bits. The real-GL test runs the transpilation

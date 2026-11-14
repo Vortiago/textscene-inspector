@@ -3,14 +3,16 @@
  * The integration layer of the shader package: `pnpm test:shaders:gpu`. Each probe's transpiled
  * function runs on a real GL context in the browser that measures against Godot, from the packed
  * tarball and three.js alone, and its result bits are compared with Godot's live answers. The
- * run fails without a live run of `pnpm godot:probes`, when a transpiled row has no answer or a
- * probe of it fails, and it prints the count of transpiled instructions.
+ * run fails without a live run of `pnpm godot:probes`, when a transpiled row has no answer, or a
+ * probe of it fails other than as `knownProbeDifferences.mjs` lists, and it prints the count of
+ * transpiled instructions.
  */
 
 import { join } from 'node:path';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { withConsumerPage, writeJobSummary } from '../consumer.mjs';
 import { liveGodotAnswers } from '../godotAnswers.mjs';
+import { KNOWN_PROBE_DIFFERENCES } from '../probes/knownProbeDifferences.mjs';
 import { PROBES } from '../probes/probes.mjs';
 import { KNOWN_DIFFERENCE_CASES } from '../random/knownDifferences.mjs';
 import { RANDOM_PROGRAMS } from '../random/randomSet.mjs';
@@ -33,7 +35,9 @@ const RANDOM_RECORD = ANSWERS.random;
 function verdictTable(verdicts) {
   const lines = PROBES.map((probe) => {
     const verdict = verdicts.get(probe.name);
-    const result = verdict.passed ? 'equal' : `FAILS: ${verdict.detail}`;
+    const known = KNOWN_PROBE_DIFFERENCES[probe.name];
+    const listed = known && !verdict.passed ? `listed (${known.cause}): ${verdict.detail}` : undefined;
+    const result = verdict.passed ? 'equal' : (listed ?? `FAILS: ${verdict.detail}`);
     const ulp = verdict.mismatches === 0 ? '0' : String(verdict.maxUlp);
     return `| \`${probe.name}\` | ${verdict.lanes} | ${verdict.mismatches} | ${ulp} | ${result} |`;
   });
@@ -63,7 +67,7 @@ async function main() {
     })
   );
   const transpiled = new Set(PROBES.flatMap((probe) => probe.rows));
-  const failures = coverageFailures(PROBES, verdicts);
+  const failures = coverageFailures(PROBES, verdicts, KNOWN_PROBE_DIFFERENCES);
   const count = `${transpiled.size} of ${INSTRUCTION_TABLE.length} instructions transpiled`;
   const table = verdictTable(verdicts);
   console.log(table);

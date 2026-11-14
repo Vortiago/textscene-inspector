@@ -10,6 +10,10 @@ const operatorRows = (op) => (row) => row.id.startsWith(`${op}(`);
 /** The rows of any of the operators `ops`. */
 const anyOperatorRows = (ops) => (row) => ops.some((op) => row.id.startsWith(`${op}(`));
 
+/** The rows of the built-in functions `names`, `sin(vec2)` and the rest. */
+const functionRows = (names) => (row) =>
+  row.family === 'function' && names.some((name) => row.id.startsWith(`${name}(`));
+
 const VALUE_TYPES = new Set([
   'bool',
   'bvec2',
@@ -213,6 +217,12 @@ const CONSTRUCTORS_CHAPTER = {
       tsl: 'int(a)',
     },
     {
+      heading: 'Vector and matrix conversions',
+      rows: (row) => row.family === 'function' && /^(?:[biu]?vec\d|mat\d)\(/.test(row.id),
+      what: '`ivec3(a)` converts each lane of a vector of the same size, as the scalar conversions do. `mat3(m)` takes the upper left of a larger matrix, or puts a smaller one in the upper left of the identity matrix.',
+      tsl: 'ivec3(a), mat3(m)',
+    },
+    {
       heading: 'The constructor operator',
       rows: (row) => row.id === 'OP_CONSTRUCT',
       what: 'Godot holds every constructor and conversion as one operator node, `OP_CONSTRUCT`, with the overload row that matched.',
@@ -371,6 +381,102 @@ const FUNCTIONS_CHAPTER = {
   ],
 };
 
+const BUILT_IN_FUNCTIONS_CHAPTER = {
+  file: 'built-in-functions.md',
+  title: 'Built-in functions',
+  intro: `The built-in functions of every shader type that compute on values: the trigonometric, hyperbolic, exponential, common, geometric, matrix and vector relational functions of Godot's \`builtin_func_defs\`. Godot writes each call into its GLSL as the GLSL function of the same name. The transpiler builds the three/tsl node of the same function, and a composite of TSL nodes for the seven forms three/tsl has no function for: \`roundEven\`, \`modf\`, \`isnan\`, \`isinf\`, \`matrixCompMult\`, \`outerProduct\` and \`mix\` with a \`bvec\` blend. A probe of each overload draws it on zero, negative, large, NaN and infinite inputs, and \`pnpm test:shaders:gpu\` compares the bits with Godot's.
+
+Godot picks the first overload in its table whose argument types fit. A scalar constant converts to the argument type where Godot converts it: \`max(a, 1)\` with a \`float\` \`a\` is \`max(a, 1.0)\`. Godot refuses a whole array as an argument and arguments of no overload, with the message \`Invalid arguments for the built-in function\`. A built-in name calls the built-in, before any function of the shader. The out argument of \`modf\` must be a variable, an array element or a member that is not of a constant.
+
+Three forms differ from Godot, each with its cause in \`tests/probes/knownProbeDifferences.mjs\` and \`tests/random/knownDifferences.mjs\`. \`min\`, \`max\` and \`clamp\` of a vector and a float give +0 for a -0 or a subnormal lane where Godot keeps it, in 1 to 3 lanes of a probe. Godot leaves the out argument of \`modf\` unwritten when nothing reads the call's value. glslang folds a call of constants alone, such as \`sin(vec2(1.5))\`, in double precision on the CPU, and the transpiler leaves that call to the GPU in float.`,
+  sections: [
+    {
+      heading: 'Angles and trigonometry',
+      rows: functionRows(['radians', 'degrees', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan']),
+      what: '`radians` and `degrees` convert an angle, and `sin`, `cos`, `tan`, `asin`, `acos` and `atan` work in radians, lane by lane. `atan(y, x)` gives the angle of the point `(x, y)`, from -π to π.',
+      tsl: 'sin(a)',
+    },
+    {
+      heading: 'Hyperbolic functions',
+      rows: functionRows(['sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh']),
+      what: '`sinh`, `cosh`, `tanh` and their inverses `asinh`, `acosh` and `atanh`, lane by lane.',
+      tsl: 'sinh(a)',
+    },
+    {
+      heading: 'Exponential functions',
+      rows: functionRows(['pow', 'exp', 'log', 'exp2', 'log2', 'sqrt', 'inversesqrt']),
+      what: '`pow(x, y)`, `exp`, `log`, `exp2`, `log2`, `sqrt` and `inversesqrt`, lane by lane. GLSL leaves the result of `pow` of a negative `x`, `log` of a negative value and `sqrt` of a negative value undefined, so the probe shows what the GPU gives.',
+      tsl: 'pow(a, b)',
+    },
+    {
+      heading: 'Rounding and the parts of a float',
+      rows: functionRows([
+        'abs',
+        'sign',
+        'floor',
+        'trunc',
+        'round',
+        'roundEven',
+        'ceil',
+        'fract',
+        'mod',
+        'modf',
+      ]),
+      what: '`abs` and `sign` of a float or an int, and `floor`, `trunc`, `round`, `roundEven`, `ceil` and `fract`. `mod(x, y)` is `x - y * floor(x / y)`. `modf(x, whole)` returns the fraction of `x` and writes its whole part to `whole`, a place the call writes as an `out` argument. three/tsl has neither, so the transpiler builds `roundEven` lane by lane as `floor(x) + mod(floor(x), 2)` at a half and `round(x)` elsewhere, and `modf` as `trunc(x)` into the place and `x - trunc(x)` as the result.',
+      tsl: 'floor(a)',
+    },
+    {
+      heading: 'Limits and blends',
+      rows: functionRows(['min', 'max', 'clamp', 'mix', 'step', 'smoothstep']),
+      what: "`min`, `max` and `clamp` of floats, ints and uints, with a scalar second and third argument for a vector. `mix(a, b, t)` blends by a float or a vector `t`, and by a `bvec` `t` picks each lane of `b` where `t` is true. three's `mix` casts a `bvec` to a float, so the transpiler builds that form as a `select` for each lane. `step(edge, x)` is 0 under the edge and 1 from it, and `smoothstep` blends between two edges on a cubic curve.",
+      tsl: 'clamp(a, b, c)',
+    },
+    {
+      heading: 'NaN and infinity',
+      rows: functionRows(['isnan', 'isinf']),
+      what: '`isnan(x)` is true for a NaN lane, and `isinf(x)` for an infinite lane. three/tsl has neither, so the transpiler builds `isnan(x)` as `notEqual(x, x)` and `isinf(x)` as `equal(abs(x), infinity)`.',
+      tsl: 'notEqual(x, x)',
+    },
+    {
+      heading: 'Geometric functions',
+      rows: functionRows([
+        'length',
+        'distance',
+        'dot',
+        'cross',
+        'normalize',
+        'reflect',
+        'refract',
+        'faceforward',
+      ]),
+      what: '`length`, `distance`, `dot` and `cross` of vectors, `normalize`, and the reflection of a direction from a normal, `reflect(i, n)`, its refraction by a ratio, `refract(i, n, eta)`, and `faceforward(n, i, nref)`, `n` turned to face away from `i`.',
+      tsl: 'dot(a, b)',
+    },
+    {
+      heading: 'Matrix functions',
+      rows: functionRows(['matrixCompMult', 'outerProduct', 'transpose', 'determinant', 'inverse']),
+      what: '`matrixCompMult(a, b)` multiplies element by element, `outerProduct(c, r)` gives the matrix whose column `j` is `c * r[j]`, and `transpose`, `determinant` and `inverse` of a square matrix. GLSL leaves the inverse of a singular matrix undefined. three/tsl has no `matrixCompMult` or `outerProduct`, so the transpiler builds each column from TSL nodes.',
+      tsl: 'inverse(m)',
+    },
+    {
+      heading: 'Vector relational functions',
+      rows: functionRows([
+        'lessThan',
+        'greaterThan',
+        'lessThanEqual',
+        'greaterThanEqual',
+        'equal',
+        'notEqual',
+        'any',
+        'all',
+        'not',
+      ]),
+      what: '`lessThan`, `greaterThan`, `lessThanEqual`, `greaterThanEqual`, `equal` and `notEqual` compare lane by lane and give a `bvec`. `any` is true when a lane is true, `all` when every lane is, and `not` inverts each lane.',
+      tsl: 'lessThan(a, b)',
+    },
+  ],
+};
+
 const SKY_CHAPTER = {
   file: 'sky.md',
   title: 'Sky shaders',
@@ -402,5 +508,6 @@ export const GUIDE_CHAPTERS = [
   ASSIGNMENT_CHAPTER,
   STATEMENTS_CHAPTER,
   FUNCTIONS_CHAPTER,
+  BUILT_IN_FUNCTIONS_CHAPTER,
   SKY_CHAPTER,
 ];

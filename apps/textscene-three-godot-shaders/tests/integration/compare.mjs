@@ -66,13 +66,20 @@ const failed = (detail) => ({ passed: false, lanes: 0, mismatches: 0, maxUlp: 0,
 
 /**
  * The coverage verdict: a transpiled row is one a probe names, and each probe must have a record
- * and pass. Answers one line for each failing probe, with the rows it leaves unproven.
+ * and pass, or differ exactly as its entry in `known` lists: the count of lanes off and the first.
+ * A listed probe that equals Godot fails too, so the change that fixes it removes its entry.
  */
-export function coverageFailures(probes, verdicts) {
-  return probes
-    .filter((probe) => !verdicts.get(probe.name)?.passed)
-    .map((probe) => {
-      const rows = probe.rows.length === 0 ? 'no row of its own' : probe.rows.join(', ');
-      return `${probe.name} (${rows}): ${verdicts.get(probe.name)?.detail ?? 'not run'}`;
-    });
+export function coverageFailures(probes, verdicts, known) {
+  return probes.flatMap((probe) => {
+    const verdict = verdicts.get(probe.name);
+    const listed = known[probe.name];
+    if (verdict?.passed)
+      return listed ? [`${probe.name} equals Godot now: remove it from knownProbeDifferences.mjs`] : [];
+    if (listed && verdict?.mismatches === listed.lanesOff && verdict.detail === listed.first) return [];
+    const rows = probe.rows.length === 0 ? 'no row of its own' : probe.rows.join(', ');
+    const failure = `${probe.name} (${rows}): ${verdict?.detail ?? 'not run'}`;
+    if (!listed) return [failure];
+    const lanes = `${listed.lanesOff} ${listed.lanesOff === 1 ? 'lane' : 'lanes'}`;
+    return [`${failure}, where knownProbeDifferences.mjs lists ${lanes} off from ${listed.first}`];
+  });
 }

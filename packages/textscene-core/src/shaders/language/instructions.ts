@@ -20,11 +20,6 @@ export function signatureInstruction(name: string, types: readonly string[]): In
   return ROWS_BY_ID.get(`${name}(${types.join(',')})`);
 }
 
-/** The first row whose id starts with `prefix`, for an instruction the parser refuses before it types it. */
-export function firstInstruction(prefix: string): InstructionRow | undefined {
-  return INSTRUCTION_TABLE.find((row) => row.id.startsWith(prefix));
-}
-
 /** The first built-in variable row of each name, in the table's order. */
 const BUILT_INS_BY_NAME: ReadonlyMap<string, InstructionRow> = new Map(
   INSTRUCTION_TABLE.filter((row) => row.family.startsWith('built-in'))

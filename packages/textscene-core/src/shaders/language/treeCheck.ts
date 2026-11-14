@@ -295,6 +295,7 @@ class FunctionCheck {
   private call(call: CallNode, isStatement: boolean): string | undefined {
     const { line, column } = call.position;
     if (!(line >= 1 && column >= 1)) return `a call of ${call.function} at no line and column`;
+    if (call.row.id !== 'OP_CALL') return this.builtInCall(call);
     const callee = this.callable.find((candidate) => candidate.name === call.function);
     if (!callee) return `a call of ${call.function}, which no function before ${this.definition.name} is`;
     if (call.type !== callee.returnType || (call.arraySize ?? 0) !== (callee.returnArraySize ?? 0))
@@ -310,6 +311,23 @@ class FunctionCheck {
         return `the qualifier ${call.qualifiers[index]} for the argument ${argument.name} of ${call.function}`;
       if (argument.qualifier !== 'in' && !PLACE_KINDS.has(operand.kind))
         return `a ${operand.kind} for the ${argument.qualifier} argument ${argument.name} of ${call.function}`;
+      return this.expression(operand);
+    });
+  }
+
+  /** A call of a built-in: its row's name, return type and argument types, and a place for each out argument. */
+  private builtInCall(call: CallNode): string | undefined {
+    const { row } = call;
+    if (!row.id.startsWith(`${call.function}(`)) return `a call of ${call.function} with the row ${row.id}`;
+    if (call.type !== row.returns || (call.arraySize ?? 0) !== 0)
+      return `a call of ${row.id} typed ${call.type}`;
+    if (call.operands.length !== row.args!.length)
+      return `a call of ${row.id} with ${call.operands.length} arguments`;
+    return firstFault(call.operands, (operand, index) => {
+      if (operand.type !== row.args![index] || arraySizeOf(operand) !== 0)
+        return `a ${operand.type} for argument ${index + 1} of ${row.id}`;
+      if (call.qualifiers[index] !== 'in' && !PLACE_KINDS.has(operand.kind))
+        return `a ${operand.kind} for the out argument ${index + 1} of ${row.id}`;
       return this.expression(operand);
     });
   }

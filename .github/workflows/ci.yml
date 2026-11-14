@@ -251,6 +251,7 @@ jobs:
       - run: pnpm godot:templates --check
       - run: pnpm test:shaders:templates
       - run: pnpm vitest run apps/textscene-three-godot-shaders
+      - run: pnpm vitest run packages/textscene-core/src/shaders/shaderTextRule.test.ts
       - run: pnpm test:shaders:gpu
       - run: pnpm test:shaders:e2e
 

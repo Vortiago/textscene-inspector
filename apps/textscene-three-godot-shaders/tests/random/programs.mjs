@@ -111,8 +111,30 @@ function producersByType(rows) {
 /** How each family of rows with operands is written. */
 const PRODUCER_KINDS = { operator: 'operator', constructor: 'call', function: 'call' };
 
-/** Whether `row` is an operator that writes its first operand, which must be a parameter. */
-const writesOperand = (row) => row.family === 'operator' && WRITES_OPERAND.has(operatorOf(row));
+/**
+ * The arguments each built-in function writes, by index: Godot's `builtin_func_out_args`
+ * (`shader_language.cpp:3543`).
+ */
+const OUT_ARGUMENTS = {
+  modf: 1,
+  umulExtended: 2,
+  imulExtended: 2,
+  uaddCarry: 2,
+  usubBorrow: 2,
+  ldexp: 1,
+  frexp: 1,
+};
+
+/**
+ * The index of the operand `row` writes, which must be a parameter: the first of an operator that
+ * writes it, the first out argument of a built-in function, or nothing for a row that writes none.
+ */
+function writtenOperand(row) {
+  if (row.family === 'operator') return WRITES_OPERAND.has(operatorOf(row)) ? 0 : undefined;
+  return row.family === 'function' ? OUT_ARGUMENTS[operatorOf(row)] : undefined;
+}
+
+const writesOperand = (row) => writtenOperand(row) !== undefined;
 
 export const PRODUCERS = producersByType(TRANSPILED_ROWS);
 const PRODUCED_ROWS = new Set([...PRODUCERS.values()].flat().map((producer) => producer.row));
@@ -171,7 +193,8 @@ export class ProgramWriter {
     );
     // The first parameter feeds the root: the operand it writes, or the last, so a divisor or a
     // vector can be a parameter that Godot gives values for.
-    if (rootRow?.args?.length) parameters[0] = writesOperand(rootRow) ? rootRow.args[0] : rootRow.args.at(-1);
+    if (rootRow?.args?.length)
+      parameters[0] = rootRow.args[writtenOperand(rootRow) ?? rootRow.args.length - 1];
     this.parameters = parameters;
     const tree = this.answerableTree(() =>
       rootRow ? this.rooted(rootRow, returns) : this.expression(returns, DEPTH_AT_MOST)
@@ -243,11 +266,13 @@ export class ProgramWriter {
   /**
    * Whether `producer`'s inputs can be built in `depth - 1`, and its operand can be written. A
    * row that writes its operand stands only at the root: Godot writes an assignment or a step
-   * without brackets, which the GPU compiler reads another way inside a larger expression.
+   * without brackets, which the GPU compiler reads another way inside a larger expression, and a
+   * call's out argument would be read elsewhere in the tree in an order GLSL leaves open.
    */
   fits(producer, depth) {
     if (writesOperand(producer.row)) {
-      if (depth < DEPTH_AT_MOST || !this.parameters.includes(producer.args[0])) return false;
+      const written = producer.args[writtenOperand(producer.row)];
+      if (depth < DEPTH_AT_MOST || !this.parameters.includes(written)) return false;
     }
     return producer.inputs.every(
       (input) => (this.minDepth.get(input) ?? Infinity) <= depth - 1 || this.leaf(input)
@@ -270,8 +295,9 @@ export class ProgramWriter {
       };
     }
     const op = operatorOf(row);
+    const written = writtenOperand(row);
     const children = producer.args.map((arg, index) =>
-      index === 0 && WRITES_OPERAND.has(op) ? this.parameter(arg) : this.expression(arg, depth - 1)
+      index === written ? this.parameter(arg) : this.expression(arg, depth - 1)
     );
     if (producer.kind === 'operator')
       return { kind: 'operator', type: row.returns, row, op, operands: children };

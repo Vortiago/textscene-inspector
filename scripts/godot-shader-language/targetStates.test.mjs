@@ -35,4 +35,26 @@ describe('targetStates', () => {
       targetStates({ id: 'mat2(float)', family: 'constructor', returns: 'mat2', args: ['float'] }).webgpu
     ).toBe('lowered: diagonal of columns');
   });
+
+  it('names a built-in function three/tsl has native on both targets', () => {
+    expect(targetStates({ id: 'sin(vec2)', family: 'function', returns: 'vec2', args: ['vec2'] })).toEqual({
+      webgl2: 'native',
+      webgpu: 'native',
+    });
+  });
+
+  it.each([
+    ['roundEven(vec2)', ['vec2'], 'lowered: floor(x) + mod(floor(x), 2) at a half'],
+    ['isnan(vec2)', ['vec2'], 'lowered: x != x'],
+    ['isinf(float)', ['float'], 'lowered: abs(x) == infinity'],
+    ['matrixCompMult(mat2,mat2)', ['mat2', 'mat2'], 'lowered: column by column'],
+    ['outerProduct(vec3,vec3)', ['vec3', 'vec3'], 'lowered: column by column'],
+    ['modf(vec2,vec2)', ['vec2', 'vec2'], 'lowered: trunc(x) and x - trunc(x)'],
+    ['mix(vec3,vec3,bvec3)', ['vec3', 'vec3', 'bvec3'], 'lowered: select by lane'],
+  ])('names the composite of %s on both targets', (id, args, state) => {
+    expect(targetStates({ id, family: 'function', returns: args[0], args })).toEqual({
+      webgl2: state,
+      webgpu: state,
+    });
+  });
 });
