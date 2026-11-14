@@ -17,7 +17,12 @@ import { graphNodeDrawRows, rightPortX } from './nativeSolver';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties } from './types';
 import { SizeFlags } from '../../../../godot/scene/control';
-import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
+import {
+  createSolveContext,
+  normalizeContainerLayoutResult,
+} from '../../../../r3f/controls/native/controlRectSolver';
+import { measureText } from '../../../../r3f/controls/native/text/measurer';
+import '../../../../r3f/controls/index';
 
 const graphNodeLayout = controlSolverRegistry.containerLayout('GraphNode')!;
 const graphNodeMinimumSize = controlSolverRegistry.minimumSize('GraphNode')!;
@@ -61,11 +66,15 @@ function graphNode(
   });
 }
 
+/** The real solve for the titlebar the element builds, and each authored child's `customMinimumSize`. */
 function ctx(): SolveContext {
+  const solve = createSolveContext(nativeTheme(1), measureText);
   return {
-    theme: nativeTheme(1),
-    measureText: null,
-    combinedMinimumSize: (n) => (n.node.properties as ControlProperties).customMinimumSize ?? { x: 0, y: 0 },
+    ...solve,
+    combinedMinimumSize: (n) =>
+      n.path.endsWith('/@titlebar_hbox')
+        ? solve.combinedMinimumSize(n)
+        : ((n.node.properties as ControlProperties).customMinimumSize ?? { x: 0, y: 0 }),
   };
 }
 

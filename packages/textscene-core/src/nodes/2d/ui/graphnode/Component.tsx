@@ -1,7 +1,7 @@
 /**
  * `<GraphNode>`, the native (WebGL canvas) painter for `GraphNode::_notification(NOTIFICATION_DRAW)`
- * (`scene/gui/graph_node.cpp:621-703`) in source order: body panel, titlebar, title text, per-row
- * ports and slot boxes, resizer. Each colour composes with the walker's `tint` in sRGB, as in
+ * (`scene/gui/graph_node.cpp:621-703`) in source order: body panel, titlebar, per-row ports and slot
+ * boxes, resizer. The title is an internal Label (`../graphelement/graphTitlebar.ts`). Each colour composes with the walker's `tint` in sRGB, as in
  * `PanelChrome`, and `ControlCanvasWalker` owns `visible`, `children` and the transform.
  *
  * Portions ported from Godot Engine (MIT).
@@ -14,23 +14,14 @@ import type * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { PositionedStyleBox } from '../../../../r3f/controls/native/PositionedStyleBox';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useNodeReference } from '../../../../resources/reading';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import {
-  resolveTitleFontTheme,
-  shapeTitleText,
-  layoutLabelLines,
-  titlebarGeometry,
-} from '../graphelement/graphTitlebar';
-import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { titlebarBandHeightChannel, titlebarRect } from '../graphelement/graphTitlebar';
 import {
   GRAPH_PORT_ICON,
   GRAPH_PORT_ICON_SIZE,
@@ -39,14 +30,7 @@ import {
 } from '../graphelement/graphIcons';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
-import {
-  GRAPH_NODE_TITLE_VARIATION,
-  graphNodeDrawRows,
-  graphNodeStyles,
-  graphNodeTitleTextMin,
-  portHOffsetOf,
-  rightPortX,
-} from './nativeSolver';
+import { graphNodeDrawRows, graphNodeStyles, portHOffsetOf, rightPortX } from './nativeSolver';
 import type { GraphNodeProperties } from './types';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { Rgba } from '../../../../godot/math/math';
@@ -103,16 +87,13 @@ function GraphNodePort({
 export function GraphNode({
   solveNode,
   tint,
-  childTint,
   rect,
   theme,
   renderOrder,
   childRects,
+  meta,
 }: NativeControlComponentProps) {
   const props = painterView<GraphNodeProperties>(solveNode);
-  // `<TextRun>` builds its own material, so it takes the ambient planes as a
-  // prop rather than reading them (`nativeClipCoverage.test.tsx`'s own doc).
-  const clippingPlanes = useControlClipPlanes();
   const selected = props.selected === true;
   const styles = graphNodeStyles(solveNode);
   const portSize = scaledIconSizeOf(GRAPH_PORT_ICON_SIZE, theme.scale);
@@ -120,43 +101,8 @@ export function GraphNode({
   const panelStyle = selected ? styles.panelSelected : styles.panel;
   const titlebarStyle = selected ? styles.titlebarSelected : styles.titlebar;
 
-  const textMin = graphNodeTitleTextMin(solveNode);
-  const titlebarBand = useMemo(
-    () => titlebarGeometry(rect.w, textMin.y, styles.titlebar),
-    [rect.w, textMin.y, styles.titlebar]
-  );
-  const bodyRect = {
-    x: 0,
-    y: titlebarBand.rect.h,
-    w: rect.w,
-    h: Math.max(0, rect.h - titlebarBand.rect.h),
-  };
-
-  const title = props.title ?? '';
-  const fontTheme = useMemo(() => resolveTitleFontTheme(solveNode, GRAPH_NODE_TITLE_VARIATION), [solveNode]);
-  const titleLayout = useMemo(
-    () => (title.length > 0 ? shapeTitleText(title, fontTheme) : null),
-    [title, fontTheme]
-  );
-  const titlePlacements = useMemo(
-    () =>
-      titleLayout
-        ? layoutLabelLines(
-            titleLayout,
-            titlebarBand.contentRect.w,
-            titlebarBand.contentRect.h,
-            undefined,
-            undefined,
-            undefined,
-            { contentMargin: fontTheme.box.contentMargin, lineSpacingPx: fontTheme.lineSpacingPx }
-          )
-        : [],
-    [titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h, fontTheme]
-  );
-  const titleLineLayouts = useMemo(
-    () => (titleLayout ? titlePlacements.map((p) => soloLineLayout(p.line, titleLayout)) : []),
-    [titlePlacements, titleLayout]
-  );
+  const titlebar = titlebarRect(rect.w, titlebarBandHeightChannel.open(meta) ?? 0);
+  const bodyRect = { x: 0, y: titlebar.h, w: rect.w, h: Math.max(0, rect.h - titlebar.h) };
 
   // `selected_slot` has no `ADD_PROPERTY` and only input changes it (`graph_node.cpp:409-538`), so
   // it stays -1 on load and the `slot_index == selected_slot` branch (`:670-683`) never draws.
@@ -173,12 +119,6 @@ export function GraphNode({
   );
   const portHOffset = portHOffsetOf(solveNode.constants);
 
-  // The title is a Label child (`graph_node.cpp:1325-1330`, `graph_frame.cpp:351-357`): no `self_modulate`.
-  const titleTintColor = useMemo(
-    () => multiplyModulate(childTint.own, fontTheme.color),
-    [childTint.own, fontTheme.color]
-  );
-
   const resizerTexture = useNodeIcon(
     props.resizable === true ? solveNode.icons.resizer : undefined,
     props.resizable === true ? RESIZER_SE_ICON : null
@@ -193,38 +133,7 @@ export function GraphNode({
       <CanvasItemGroup position={[bodyRect.x, -bodyRect.y, 0]}>
         <StyleBoxQuad styleBox={panelStyle} color={tint.own} rect={bodyRect} renderOrder={renderOrder} />
       </CanvasItemGroup>
-      <StyleBoxQuad
-        styleBox={titlebarStyle}
-        color={tint.own}
-        rect={titlebarBand.rect}
-        renderOrder={renderOrder}
-      />
-
-      <PositionedStyleBox
-        box={fontTheme.box}
-        rect={titlebarBand.contentRect}
-        tint={childTint}
-        renderOrder={renderOrder}
-      />
-      {titleLayout &&
-        titlePlacements.map((placement, i) => (
-          <CanvasItemGroup
-            key={i}
-            position={[
-              titlebarBand.contentRect.x + placement.x,
-              -(titlebarBand.contentRect.y + placement.y),
-              0,
-            ]}
-          >
-            <TextRun
-              layout={titleLineLayouts[i]!}
-              fontSizePx={fontTheme.fontSizePx}
-              tint={titleTintColor}
-              clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder}
-            />
-          </CanvasItemGroup>
-        ))}
+      <StyleBoxQuad styleBox={titlebarStyle} color={tint.own} rect={titlebar} renderOrder={renderOrder} />
 
       {rows.map((row) => (
         <Fragment key={row.rawIndex}>

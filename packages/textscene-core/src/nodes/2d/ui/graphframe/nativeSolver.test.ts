@@ -14,7 +14,12 @@ import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import './nativeSolver';
 import type { GraphFrameProperties } from './types';
-import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
+import {
+  createSolveContext,
+  normalizeContainerLayoutResult,
+} from '../../../../r3f/controls/native/controlRectSolver';
+import { measureText } from '../../../../r3f/controls/native/text/measurer';
+import '../../../../r3f/controls/index';
 
 const graphFrameLayout = controlSolverRegistry.containerLayout('GraphFrame')!;
 const graphFrameMinimumSize = controlSolverRegistry.minimumSize('GraphFrame')!;
@@ -40,11 +45,15 @@ function graphFrame(name: string, props: Partial<GraphFrameProperties>, children
   });
 }
 
+/** The real solve for the titlebar the element builds, and each authored child's `customMinimumSize`. */
 function ctx(): SolveContext {
+  const solve = createSolveContext(nativeTheme(1), measureText);
   return {
-    theme: nativeTheme(1),
-    measureText: null,
-    combinedMinimumSize: (n) => (n.node.properties as ControlProperties).customMinimumSize ?? { x: 0, y: 0 },
+    ...solve,
+    combinedMinimumSize: (n) =>
+      n.path.endsWith('/@titlebar_hbox')
+        ? solve.combinedMinimumSize(n)
+        : ((n.node.properties as ControlProperties).customMinimumSize ?? { x: 0, y: 0 }),
   };
 }
 

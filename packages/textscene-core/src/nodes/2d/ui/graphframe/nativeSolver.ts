@@ -19,13 +19,17 @@ import {
   type MinimumSizeFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
-import { resolveTitleFontTheme, titleTextMinimumSize, titlebarGeometry } from '../graphelement/graphTitlebar';
+import { registerInternalControls } from '../../../../r3f/controls/native/internalControls';
+import {
+  GRAPH_FRAME_TITLE_LABEL,
+  titlebarBandHeightChannel,
+  titlebarInternalControls,
+  titlebarInternalLayout,
+  titlebarMinimumSize,
+  titlebarResortHeight,
+} from '../graphelement/graphTitlebar';
 import type { GraphFrameProperties } from './types';
-import type { Vector2 } from '../../../../godot/math/vector';
 import { DEFAULT_SIZE_FLAGS } from '../../../../godot/scene/control';
-
-/** `graph_frame.cpp` theme type variation for its internal title Label: `graph_frame.cpp:354`. */
-export const GRAPH_FRAME_TITLE_VARIATION = 'GraphFrameTitleLabel';
 
 function hFlagsOf(n: SolveNode): number {
   return (n.node.properties as GraphFrameProperties).sizeFlagsHorizontal ?? DEFAULT_SIZE_FLAGS;
@@ -34,20 +38,11 @@ function vFlagsOf(n: SolveNode): number {
   return (n.node.properties as GraphFrameProperties).sizeFlagsVertical ?? DEFAULT_SIZE_FLAGS;
 }
 
-export function graphFrameTitleTextMin(n: SolveNode): Vector2 {
-  const props = n.node.properties as GraphFrameProperties;
-  const fontTheme = resolveTitleFontTheme(n, GRAPH_FRAME_TITLE_VARIATION);
-  return titleTextMinimumSize(props.title ?? '', fontTheme);
-}
-
 // --- get_minimum_size ---------------------------------------------------------
 
 const graphFrameMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const { panel, titlebar } = graphElementStyles(n);
-  const textMin = graphFrameTitleTextMin(n);
-
-  let width = textMin.x + titlebar.contentMargin.left + titlebar.contentMargin.right;
-  let height = textMin.y + titlebar.contentMargin.top + titlebar.contentMargin.bottom;
+  const { panel } = graphElementStyles(n);
+  let { x: width, y: height } = titlebarMinimumSize(n, ctx);
 
   for (const child of n.children) {
     if (!isSortableControl(child)) continue;
@@ -64,21 +59,22 @@ const graphFrameMinimumSize: MinimumSizeFn = (n, ctx) => {
 };
 
 controlSolverRegistry.registerMinimumSize('GraphFrame', graphFrameMinimumSize);
+registerInternalControls(
+  'GraphFrame',
+  titlebarInternalControls(GRAPH_FRAME_TITLE_LABEL),
+  titlebarInternalLayout
+);
 
 // --- _resort -------------------------------------------------------------------
 
-const graphFrameLayout: ContainerLayoutFn = (n, children, contentRect) => {
-  const { panel, titlebar } = graphElementStyles(n);
-  const textMin = graphFrameTitleTextMin(n);
-  const titlebarBand = titlebarGeometry(contentRect.w, textMin.y, titlebar);
+const graphFrameLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
+  const { panel } = graphElementStyles(n);
+  const bandHeight = titlebarResortHeight(n, ctx);
 
-  const offset = { x: panel.contentMargin.left, y: panel.contentMargin.top + titlebarBand.rect.h };
+  const offset = { x: panel.contentMargin.left, y: panel.contentMargin.top + bandHeight };
   const size = {
     w: Math.max(0, contentRect.w - panel.contentMargin.left - panel.contentMargin.right),
-    h: Math.max(
-      0,
-      contentRect.h - panel.contentMargin.top - panel.contentMargin.bottom - titlebarBand.rect.h
-    ),
+    h: Math.max(0, contentRect.h - panel.contentMargin.top - panel.contentMargin.bottom - bandHeight),
   };
   const rawRect: Rect2 = { x: offset.x, y: offset.y, w: size.w, h: size.h };
 
@@ -88,7 +84,7 @@ const graphFrameLayout: ContainerLayoutFn = (n, children, contentRect) => {
     // `graph_frame.cpp` has no RTL branch; `fit_child_in_rect` reads the flag itself.
     rects.set(child.path, fitChildInRect(rawRect, minSize, hFlagsOf(child), vFlagsOf(child), n.rtl));
   }
-  return rects;
+  return { rects, meta: titlebarBandHeightChannel.seal(titlebarMinimumSize(n, ctx).y) };
 };
 
 controlSolverRegistry.registerContainerLayout('GraphFrame', graphFrameLayout);
