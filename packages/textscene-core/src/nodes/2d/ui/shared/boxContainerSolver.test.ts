@@ -20,9 +20,8 @@ import {
   boxContainerMinimumSize,
   makeBoxContainerLayout,
   makeBoxContainerMinimumSize,
-  resortBoxContainer,
-  type BoxChildInput,
 } from './boxContainerSolver';
+import { resortBoxContainer, type BoxChildInput } from './boxContainerResort';
 import {
   controlNode,
   solveNode as emptySolveNode,

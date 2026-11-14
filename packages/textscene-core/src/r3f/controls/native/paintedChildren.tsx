@@ -8,16 +8,31 @@ import { ClipMaskProvider } from '../../canvasGroup/ClipMaskContext';
 import { controlComponentRegistry } from '../ControlComponentRegistry';
 
 export interface PaintedChildren {
-  /** The painter's `children` prop: the children of a wrapping type, else `undefined`. */
+  /** The painter's `children` prop: the children of a wrapping type, its internal Controls included, else `undefined`. */
   inPainter: ReactNode | undefined;
   /** What follows the painter: the children of every other type. */
   afterPainter: ReactNode | undefined;
+  /** The internal Controls of a type that does not wrap, drawn beside its painter. */
+  besidePainter: ReactNode | undefined;
 }
 
-/** The children of a Control of `typeName`, placed by its registration. */
-export function placeChildren(typeName: string, children: ReactNode): PaintedChildren {
+/**
+ * The children and the internal Controls of a Control of `typeName`, placed by its registration. A
+ * wrapping painter clips its subtree (`set_clip_contents`), and Godot clips the internal children with
+ * the authored ones, so they draw inside it too.
+ */
+export function placeChildren(typeName: string, children: ReactNode, internals?: ReactNode): PaintedChildren {
   if (!controlComponentRegistry.wrapsChildren(typeName))
-    return { inPainter: undefined, afterPainter: children };
+    return { inPainter: undefined, afterPainter: children, besidePainter: internals };
   // The wrapping painter publishes its own clip, so its children start outside any clip mask.
-  return { inPainter: <ClipMaskProvider value={null}>{children}</ClipMaskProvider>, afterPainter: undefined };
+  return {
+    inPainter: (
+      <ClipMaskProvider value={null}>
+        {children}
+        {internals}
+      </ClipMaskProvider>
+    ),
+    afterPainter: undefined,
+    besidePainter: undefined,
+  };
 }

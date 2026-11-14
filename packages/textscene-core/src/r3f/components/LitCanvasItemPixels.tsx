@@ -66,6 +66,10 @@ interface LitItemScope {
 const LitItemScopeContext = createContext<LitItemScope | undefined>(undefined);
 LitItemScopeContext.displayName = 'LitItemScopeContext';
 
+/** The `z_final` of the lit item around a mesh, 0 outside one. */
+const ItemZFinalContext = createContext(0);
+ItemZFinalContext.displayName = 'ItemZFinalContext';
+
 function blendModeOf(material: CanvasItemMaterialProperties | null) {
   return material?.blendMode ?? CanvasItemMaterialBlendMode.MIX;
 }
@@ -104,7 +108,9 @@ export function LitCanvasItem({ material, lightMask, zFinal, children }: LitCanv
   // An `object3D`, not a group: three takes a group's `renderOrder` as the draw key.
   return (
     <object3D ref={item.geometryRef} userData={LIT_ITEM_USER_DATA}>
-      <LitItemScopeContext.Provider value={scope}>{children}</LitItemScopeContext.Provider>
+      <ItemZFinalContext.Provider value={zFinal}>
+        <LitItemScopeContext.Provider value={scope}>{children}</LitItemScopeContext.Provider>
+      </ItemZFinalContext.Provider>
     </object3D>
   );
 }
@@ -144,9 +150,25 @@ export function LitCanvasItemPixels({
   const pixelMaterial = usePixelMaterial(item, blendModeOf(material), surface, isDrawn);
   return (
     <object3D ref={item.geometryRef} userData={LIT_ITEM_USER_DATA}>
-      <CanvasItemPixelMaterialContext.Provider value={pixelMaterial}>
-        {typeof children === 'function' ? children(pixelMaterial) : children}
-      </CanvasItemPixelMaterialContext.Provider>
+      <ItemZFinalContext.Provider value={zFinal}>
+        <CanvasItemPixelMaterialContext.Provider value={pixelMaterial}>
+          {typeof children === 'function' ? children(pixelMaterial) : children}
+        </CanvasItemPixelMaterialContext.Provider>
+      </ItemZFinalContext.Provider>
     </object3D>
+  );
+}
+
+/**
+ * The pixels of a Control its owner builds and draws itself, such as a scroll bar: a canvas item of its
+ * own with the constructor's defaults, no material and `light_mask` 1 (`renderer_canvas_cull.cpp:319-324`).
+ * At relative z 0 it shares the owner's `z_final`.
+ */
+export function BuiltControlPixels({ children }: { children: ReactNode }) {
+  const zFinal = useContext(ItemZFinalContext);
+  return (
+    <LitCanvasItemPixels material={null} lightMask={undefined} zFinal={zFinal}>
+      {children}
+    </LitCanvasItemPixels>
   );
 }

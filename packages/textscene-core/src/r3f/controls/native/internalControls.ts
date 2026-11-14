@@ -20,6 +20,7 @@ import type { ButtonProperties } from '../../../nodes/2d/ui/button/types';
 import type { NativeTheme } from './nativeTheme';
 import { sortableView, type SolveNode, type ThemedIconRef } from './solveTree';
 import type { SealedHandoff } from './solveHandoff';
+import type { CanvasSlot } from '../../canvasItemState';
 import {
   themedSlotRequest,
   type BuiltIconsFn,
@@ -124,9 +125,16 @@ function normalizedLayout(result: ReturnType<InternalLayoutFn>): InternalLayoutR
   return 'rects' in result ? result : { rects: result, meta: NO_META };
 }
 
+/**
+ * The piece of a parent's back slot its `INTERNAL_MODE_BACK` Controls draw in, where its painter draws
+ * pieces of that slot too, such as the scroll bars and the minimap beside GraphEdit's toolbar.
+ */
+export type InternalBackSlotFn = (backSlot: CanvasSlot) => CanvasSlot;
+
 interface Registration {
   build: InternalControlsFn;
   layout: InternalLayoutFn;
+  backSlot?: InternalBackSlotFn;
 }
 
 /** Written only by `registerInternalControls`, at module load. Matches one type name exactly, as the solver registry does. */
@@ -135,9 +143,10 @@ const registrations = new Map<string, Registration>();
 export function registerInternalControls(
   typeName: string,
   build: InternalControlsFn,
-  layout: InternalLayoutFn
+  layout: InternalLayoutFn,
+  backSlot?: InternalBackSlotFn
 ): void {
-  registrations.set(typeName, { build, layout });
+  registrations.set(typeName, { build, layout, backSlot });
 }
 
 const NONE: readonly InternalControl[] = Object.freeze([]);
@@ -154,6 +163,11 @@ const builtByParent = perObject(
 /** What `parent`'s class registers, or `undefined` when it registers no internal Controls. */
 function registrationOf(parent: SolveNode) {
   return registrations.get(parent.node.type);
+}
+
+/** The slot `parent`'s back internal Controls draw in: the whole back slot unless its class names a piece. */
+export function internalBackSlotOf(parent: SolveNode, backSlot: CanvasSlot): CanvasSlot {
+  return registrationOf(parent)?.backSlot?.(backSlot) ?? backSlot;
 }
 
 /**
