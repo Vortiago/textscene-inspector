@@ -73,6 +73,21 @@ describe('lowerSideEffects', () => {
     );
   });
 
+  it('keeps an index that reads before a value that writes, as GLSL reads the place first', () => {
+    expect(lowered('int f(int i) { int a[3] = int[3](0, 0, 0); a[i] = 10 + i++; return a[0]; }')).toBe(
+      text(
+        'int f(int i) {',
+        [
+          'int a[3] = {0, 0, 0};',
+          'int lowered_value_1 = i;',
+          '(a[lowered_value_1] = (10 + i++));',
+          'return a[0];',
+        ],
+        '}'
+      )
+    );
+  });
+
   it('splits a declaration, so a value that writes runs after the names before it', () => {
     expect(lowered('int f(int a) { int b = 1, c = b + a++; return c; }')).toBe(
       text(
