@@ -8,9 +8,15 @@ import * as THREE from 'three';
 import { maxEmboldenGrowthPx } from './canvasVariation';
 import type { ByteColour } from './glyphCoverage';
 import { canvasGlyphPenXPx, faceStrikeSize, subpixelHalfStepPx, type FontMetrics } from './fontMetrics';
-import type { TextLayoutResult } from './textLayout';
+import type { GlyphPlacement, TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics, type CanvasFontMetrics } from './runtimeFontMetrics';
-import { hasOwnGlyph, type GlyphPainter, type PlacedGlyph, type RasterFrame } from './glyphPainter';
+import {
+  hasOwnGlyph,
+  type GlyphPainter,
+  type GlyphReach,
+  type PlacedGlyph,
+  type RasterFrame,
+} from './glyphPainter';
 import { hasOutlines, outlineGlyphPainter } from './outlineGlyphPainter';
 import { browserTextPainter } from './browserTextPainter';
 import { blankGlyphPainter } from './blankGlyphPainter';
@@ -101,7 +107,8 @@ const INK_SLACK_RIGHT_PX = 1;
 
 /**
  * The span of the ink of the glyphs at `skew` as the painter draws them, pen boxes, pen snap and
- * hinting included: Godot draws a glyph quad whole past its side bearing. A fallback face's run keeps
+ * hinting included: Godot draws a glyph quad whole past its side bearing. A space, a line break or a
+ * control draws no ink, so it spans its pen box on every painter. A fallback face's run keeps
  * its glyphs at their places on the line (`faceLayouts.ts`), so its raster spans them alone. A layout
  * with no glyph spans its width.
  */
@@ -111,13 +118,17 @@ function drawnExtentPx(layout: TextLayoutResult, skew: number): { startPx: numbe
   const reachOf = painterOf(canvasFaceOf(layout)).reachReader(skew, layout.baselineOffsetPx);
   for (const { glyphs } of layout.lines) {
     for (const glyph of glyphs) {
-      const { leftPx, rightPx } = reachOf(glyph);
+      const { leftPx, rightPx } = hasOwnGlyph(glyph) ? reachOf(glyph) : penBoxOf(glyph);
       const originX = glyph.x + (glyph.xOffset ?? 0);
       startPx = Math.min(startPx, originX - leftPx - INK_SLACK_LEFT_PX);
       endPx = Math.max(endPx, originX + rightPx + INK_SLACK_RIGHT_PX);
     }
   }
   return startPx === Infinity ? { startPx: 0, endPx: layout.widthPx } : { startPx, endPx };
+}
+
+function penBoxOf(glyph: GlyphPlacement): GlyphReach {
+  return { leftPx: 0, rightPx: glyph.advance };
 }
 
 /** The vertex, UV and index buffers of the one quad of a raster. */

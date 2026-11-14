@@ -234,6 +234,25 @@ describe('computeCanvasTextCanvasLayout', () => {
     expect(canvasLayout.canvasWidthPx).toBe(19);
   });
 
+  // A space, a line break or a hex-code box draws no glyph of its own on any painter, so the
+  // browser painter's ascent reach is not its reach.
+  it.each([
+    ['a space', ' ', CANVAS_METRICS],
+    ['a hex-code box', 'A', { ...CANVAS_METRICS, hasGlyph: () => false }],
+  ])('spans the pen box alone for %s on a face the browser draws', (_, text, fontMetrics) => {
+    const layout = shapeText(text, {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      fontMetrics,
+      lineSpacingPx: 0,
+    });
+    const [glyph] = layout.lines[0]!.glyphs;
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
+    expect(canvasLayout.offsetXPx).toBe(2);
+    expect(canvasLayout.canvasWidthPx).toBe(Math.ceil(glyph!.advance) + 3);
+  });
+
   // The rows above the baseline run up to the vertical pad, and shear furthest there. A stroke
   // widens that pad past `CANVAS_TEXT_VERTICAL_PAD_PX`, so its top row shears further.
   it('pads a sheared raster by the shear of its top row', () => {
