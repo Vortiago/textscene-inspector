@@ -47,7 +47,10 @@ import {
   godotTextureFilterState,
   type TextureFilterState,
 } from '../../../../resources/textures/godotTextureFilter';
-import { useItemLinearColor, WHITE_MODULATE } from '../../../canvasItemModulate';
+import { useItemLinearColor, useOwnModulate, WHITE_MODULATE } from '../../../canvasItemModulate';
+import { drawsColourGlyphs } from './colour/colourGlyphs';
+import { useSvgGlyphLandings } from './svg/useSvgGlyphLandings';
+import type { FontMetrics } from './fontMetrics';
 import { useCanvasColorSpace } from '../../../canvasColorSpace';
 import type { SurfaceBlend } from '../../../materials/surfaceBlend';
 import type { FadeVariants } from '../../../materials/fadeVariants';
@@ -430,6 +433,21 @@ function buildTextRun(
   throw new Error(`expected a canvas or bitmap face, got a ${fontMetrics.kind} face, which TextRun draws`);
 }
 
+/**
+ * The colour that tints a colour glyph of a run in `tint`: the Control's own modulate, as Godot
+ * drops the font colour for one, unless the drawer or the font tints it in full (`glyphDrawer.ts`).
+ */
+function colourGlyphTintOf(
+  glyphDrawer: GlyphDrawer,
+  fontMetrics: FontMetrics,
+  tint: Rgba,
+  ownModulate: Rgba
+): Rgba {
+  const isTintedInFull =
+    GLYPH_DRAWER_RULES[glyphDrawer].tintsColourGlyphs || fontMetrics.outlines?.modulatesColourGlyphs === true;
+  return isTintedInFull ? tint : ownModulate;
+}
+
 /** Draws `props.layout` on the painter its face's `kind` names. `TextRun.tsx` routes a run here. */
 export function TextRunMesh({
   layout,
@@ -467,11 +485,18 @@ export function TextRunMesh({
   // Godot's glyph is a white coverage mask that the rect modulate tints (`text_server_adv.cpp`
   // `rasterize_bitmap`). A linear canvas converts that modulate unclamped, so a white raster takes
   // the tint on its material, and a tint change repaints nothing.
-  const rasterColor = isCanvasFontMetrics(fontMetrics) && isLinearCanvas ? linearTint : null;
+  // A colour glyph takes its own colour, so a raster that holds one has every colour baked in.
+  const rasterColor =
+    isCanvasFontMetrics(fontMetrics) && isLinearCanvas && !drawsColourGlyphs(fontMetrics.outlines)
+      ? linearTint
+      : null;
+  const colourGlyphTint = colourGlyphTintOf(glyphDrawer, fontMetrics, tint, useOwnModulate());
   const builtTint = rasterColor ? { ...WHITE_MODULATE, a: tint.a } : tint;
   const meshTint = isCanvasFontMetrics(fontMetrics) ? null : linearTint;
   if (blends && !swapped)
     throw new Error('expected blends only inside a GeometryInstance3D drawer, got none');
+  // A glyph the browser has not drawn yet paints nothing, so each bitmap that lands repaints the run.
+  const svgGlyphLandings = useSvgGlyphLandings(fontMetrics);
 
   const run = useMemo(
     () =>
@@ -479,7 +504,7 @@ export function TextRunMesh({
         layout,
         fontSizePx,
         { tint: builtTint, clippingPlanes, depthTest, side, pixelMaterial, linearTint },
-        { strokeWidthPx, glyphDrawer, originPhasePx: { x: phaseX, y: phaseY } },
+        { strokeWidthPx, glyphDrawer, originPhasePx: { x: phaseX, y: phaseY }, colourGlyphTint },
         { textureFilter, mipmapped }
       ),
     // `tint` is compared by its fields, not by identity: a caller that re-creates an equal
@@ -492,6 +517,9 @@ export function TextRunMesh({
       builtTint.g,
       builtTint.b,
       builtTint.a,
+      colourGlyphTint.r,
+      colourGlyphTint.g,
+      colourGlyphTint.b,
       meshTint,
       clippingPlanes,
       depthTest,
@@ -503,6 +531,7 @@ export function TextRunMesh({
       phaseY,
       textureFilter,
       mipmapped,
+      svgGlyphLandings,
     ]
   );
   // Apart from the run, so a label that gains or loses an instance material keeps its raster.

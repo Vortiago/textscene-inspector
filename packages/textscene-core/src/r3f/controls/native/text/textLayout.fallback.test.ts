@@ -5,7 +5,7 @@
  * hides a wrong face.
  */
 import { describe, expect, it } from 'vitest';
-import { shapeText } from './textLayout';
+import { shapeText, withGlyphFaceAscent } from './textLayout';
 import type { FontMetrics } from './fontMetrics';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { glyphsOf } from './textLayout.testkit';
@@ -174,5 +174,42 @@ describe('shapeText — a character the face draws as a base and marks', () => {
   it('keeps the font line for a mark inside the ascent', () => {
     const layout = shapedLine(withMark(0, 6));
     expect([layout.baselineOffsetPx, layout.linePitchPx]).toEqual([12, 16]);
+  });
+});
+
+describe('withGlyphFaceAscent', () => {
+  /** A 2048-unit face that draws only `←`, at `ascent` and `descent` units. */
+  const tallFace = (ascent: number, descent: number): FontMetrics => ({
+    ...faceOf({ '←': 1024 }),
+    ascent,
+    descent,
+  });
+  const lineOf = (text: string, face: FontMetrics) =>
+    shapeText(text, {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      fontMetrics: face,
+    });
+
+  it('lowers the baseline to the ascent of a fallback face a glyph draws in (text_server_adv.cpp:5161)', () => {
+    const layout = withGlyphFaceAscent(lineOf('A←', { ...LATIN, fallbacks: [tallFace(2048, 512)] }));
+    expect(layout.baselineOffsetPx).toBe(16);
+  });
+
+  it('grows the height to the fallback ascent and descent', () => {
+    const layout = withGlyphFaceAscent(lineOf('A←', { ...LATIN, fallbacks: [tallFace(2048, 1024)] }));
+    expect(layout.heightPx).toBe(24);
+  });
+
+  it('keeps the layout of a line whose glyphs draw in the face', () => {
+    const layout = lineOf('A A', { ...LATIN, fallbacks: [tallFace(2048, 512)] });
+    expect(withGlyphFaceAscent(layout)).toBe(layout);
+  });
+
+  it('keeps the baseline where a fallback face is shorter', () => {
+    const layout = withGlyphFaceAscent(lineOf('A←', { ...LATIN, fallbacks: [tallFace(1024, 256)] }));
+    expect([layout.baselineOffsetPx, layout.heightPx]).toEqual([12, 16]);
   });
 });

@@ -12,11 +12,8 @@ import { createSolveContext } from '../../../../r3f/controls/native/controlRectS
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SpinBoxProperties } from './types';
-import { spinBoxRangeButtonState } from './nativeSolver';
 import {
-  spinBoxButtonsBlockWidth,
   spinBoxLayout,
-  rangeStepDecimals,
   formatGodotNumber,
   spinBoxUpButtonState,
   spinBoxDownButtonState,
@@ -55,16 +52,6 @@ function ctx(withMeasurer = true): SolveContext {
   return createSolveContext(nativeTheme(1), withMeasurer ? measureText : null);
 }
 
-describe('spinBoxButtonsBlockWidth', () => {
-  it('is buttons_width(16) + field_and_buttons_separation(2), unscaled (happy path)', () => {
-    expect(spinBoxButtonsBlockWidth(16)).toBe(18);
-  });
-
-  it('widens when the icon-enforced width exceeds buttons_width (spin_box.cpp:389: MAX(icon_enforced, wanted))', () => {
-    expect(spinBoxButtonsBlockWidth(30)).toBe(32);
-  });
-});
-
 describe('spinBoxWidestButtonIconWidth (spin_box.cpp:411-424, restricted to up/down)', () => {
   it('is the vendored 16 when neither icon is themed', () => {
     expect(spinBoxWidestButtonIconWidth({ textureSlots: {} }, 1)).toBe(16);
@@ -86,6 +73,10 @@ describe('spinBoxLayout', () => {
     expect(layout.upRect).toEqual({ x: 84, y: 0, w: 16, h: 15 });
     expect(layout.downRect).toEqual({ x: 84, y: 15, w: 16, h: 15 });
     expect(layout.fieldAndButtonsSeparatorRect).toEqual({ x: 82, y: 0, w: 2, h: 30 });
+  });
+
+  it('widens the buttons block to an icon wider than buttons_width (spin_box.cpp:389)', () => {
+    expect(spinBoxLayout({ x: 100, y: 30 }, 30).fieldRect.w).toBe(100 - 30 - 2);
   });
 
   it('floors the field width at 0 when the rect is narrower than the buttons block (error path)', () => {
@@ -134,21 +125,6 @@ describe('spinBoxLayout', () => {
   });
 });
 
-describe('rangeStepDecimals', () => {
-  it('reads the fractional digits a step needs (happy path)', () => {
-    expect(rangeStepDecimals(0.25)).toBe(1);
-    expect(rangeStepDecimals(0.01)).toBe(2);
-  });
-
-  it('returns 16 for a step under the 1e-13 floor (error path — an unset/zero step)', () => {
-    expect(rangeStepDecimals(0)).toBe(16);
-  });
-
-  it('returns 0 for a whole-number step (edge case)', () => {
-    expect(rangeStepDecimals(1)).toBe(0);
-  });
-});
-
 describe('formatGodotNumber', () => {
   it('trims trailing zeroes but keeps exactly one digit after the point (happy path)', () => {
     expect(formatGodotNumber(5.5, 1)).toBe('5.5');
@@ -171,6 +147,14 @@ describe("the field's text", () => {
 
   it('omits an absent prefix/suffix entirely, not as an empty wrap (error path)', () => {
     expect(fieldText({ value: 5 })).toBe('5');
+  });
+
+  it('prints the digits the step needs (Math::range_step_decimals)', () => {
+    expect(fieldText({ step: 0.01, value: 0.25 })).toBe('0.25');
+  });
+
+  it('prints every digit for a zero step, under the 1e-13 floor', () => {
+    expect(fieldText({ step: 0, value: 0.123 })).toBe('0.123');
   });
 
   it('falls back to step=1 (Range default) when unset (edge case)', () => {
@@ -301,16 +285,5 @@ describe('the inner LineEdit reads its items through the ancestor Theme chain', 
     const result = spinBoxMinimumSize(themed, ctx(false));
     expect(result.x).toBe(20 + 18);
     expect(result.y).toBe(18 + FONT_HEIGHT);
-  });
-});
-
-describe('spinBoxRangeButtonState (spin_box.cpp:635-646)', () => {
-  it('disables a button at its bound unless the range allows going past it', () => {
-    expect(spinBoxRangeButtonState(100, 100, false)).toBe('disabled');
-    expect(spinBoxRangeButtonState(100, 100, true)).toBe('normal');
-  });
-
-  it('keeps a button enabled away from its bound', () => {
-    expect(spinBoxRangeButtonState(99, 100, false)).toBe('normal');
   });
 });

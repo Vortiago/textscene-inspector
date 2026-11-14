@@ -12,6 +12,7 @@ export const LONG_LOCA_FORMAT = 1;
 /** A glyph's header: numberOfContours(2), then xMin, yMin, xMax and yMax(2 each). */
 export const GLYPH_HEADER_SIZE = 10;
 export const GLYPH_X_MIN_OFFSET = 2;
+export const GLYPH_Y_MIN_OFFSET = 4;
 export const GLYPH_Y_MAX_OFFSET = 8;
 
 /** The `glyf` offset of `loca` entry `index`: a long entry, or a short one, which counts words. */

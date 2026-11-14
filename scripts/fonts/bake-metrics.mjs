@@ -92,9 +92,7 @@ function bakeMetrics(font, kerning) {
     lineGap: font.lineGap,
     kerning,
     // Raw `post` table values, design units (fontkit's `src/TTFFont.js:189-201`),
-    // which FreeType exposes as `face->underline_*` and
-    // `text_server_adv.cpp:1517-1518` scales (`getUnderlinePositionPx` and
-    // `getUnderlineThicknessPx` below).
+    // which `openSansFontMetrics.ts` turns into FreeType's `face->underline_*`.
     underlinePosition: font.underlinePosition,
     underlineThickness: font.underlineThickness,
     // OS/2 `xAvgCharWidth`, design units: the font's typical glyph width, not a
@@ -141,8 +139,8 @@ interface OpenSansMetrics {
    * This is the RAW table value, NOT FreeType's \`face->underline_position\`:
    * FreeType re-bases it from that top edge onto the stroke's CENTRE before
    * publishing it (\`freetype/src/sfnt/sfobjs.c:1424-1425\`), which is the
-   * value \`text_server_adv.cpp:1517\` then scales. \`getUnderlinePositionPx\`
-   * applies that conversion; nothing should read this field without it.
+   * value \`text_server_adv.cpp:1517\` then scales. \`openSansFontMetrics.ts\`
+   * applies that conversion (\`freeTypeUnderlinePosition\`).
    */
   underlinePosition: number;
   /** \`post\` table \`underlineThickness\`, design units — FreeType publishes it unchanged (\`sfobjs.c:1426\`); scaled by \`text_server_adv.cpp:1518\`. */
@@ -160,57 +158,6 @@ export const OPEN_SANS_METRICS: OpenSansMetrics = ${JSON.stringify(metrics)};
 /** \`OPEN_SANS_METRICS.kerning[a + b] ?? 0\` — design-unit advance adjustment for a glyph pair. */
 export function getKerningAdjustmentUnits(a: string, b: string): number {
   return OPEN_SANS_METRICS.kerning[a + b] ?? 0;
-}
-
-/**
- * Downward pixel offset from a line's baseline to the CENTRE of its underline
- * stroke — Godot's \`shaped_text_get_underline_position\`, which a stroke
- * drawer (\`rich_text_label.cpp:1242-1244\`'s \`y_off = upos\`) adds straight
- * onto the baseline y with no further sign flip.
- *
- * Two conversions sit between the \`post\` table and that number, and dropping
- * either moves the rule a whole pixel row at UI sizes:
- *
- * 1. \`freetype/src/sfnt/sfobjs.c:1424-1425\` — FreeType re-bases the table's
- *    TOP-EDGE convention onto the stroke's centre before publishing
- *    \`face->underline_position\`:
- *    \`post.underlinePosition - post.underlineThickness / 2\`, an integer
- *    division on \`FT_Short\`. Half a stroke is only a fraction of a pixel at
- *    a UI size, but the rule is snapped to whole rows downstream, so it is
- *    the fraction that decides which row.
- * 2. \`text_server_adv.cpp:1517\` — \`(-FT_MulFix(face->underline_position,
- *    size->metrics.y_scale) / 64.0) * fd->scale\`, a plain proportional scale
- *    (NOT ceiling-rounded like ascent/descent), NEGATED so a below-baseline
- *    (negative) table value becomes a positive DOWNWARD offset.
- *
- * FreeType's own scale quantizes to 26.6 fixed point, which this does not
- * reproduce — the same approximation \`getFontAscentPx\` already makes, and
- * bounded by 1/64 px (0.016), well under the half-pixel that would move a
- * snapped row at any size.
- *
- * At size 16: -(-100 - 50/2) * 16/2048 = 0.9765625.
- */
-export function getUnderlinePositionPx(fontSizePx: number): number {
-  const scale = fontSizePx / OPEN_SANS_METRICS.unitsPerEm;
-  const centreUnits =
-    OPEN_SANS_METRICS.underlinePosition - Math.trunc(OPEN_SANS_METRICS.underlineThickness / 2);
-  return -centreUnits * scale;
-}
-
-/**
- * \`text_server_adv.cpp:1518\`, scaled the same way as \`getUnderlinePositionPx\`
- * (no negation — a thickness has no sign to flip). The MINIMUM 1px stroke
- * width (\`rich_text_label.cpp:1243\`: \`MAX(1.0, uth * theme_cache.base_scale)\`)
- * is the CALLER's job, not baked in here — \`base_scale\` is a UI content-scale
- * factor this renderer does not thread through text metrics, and every fixture
- * renders at its default (1.0), where the max is a no-op
- * unless the font's own thickness already exceeds 1px.
- *
- * At size 16: 50 * 16/2048 = 0.390625.
- */
-export function getUnderlineThicknessPx(fontSizePx: number): number {
-  const scale = fontSizePx / OPEN_SANS_METRICS.unitsPerEm;
-  return OPEN_SANS_METRICS.underlineThickness * scale;
 }
 `;
 }
