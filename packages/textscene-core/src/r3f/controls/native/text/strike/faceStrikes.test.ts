@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { faceStrikesOf, MAX_KEPT_BITMAPS } from './faceStrikes';
+import { faceStrikesOf } from './faceStrikes';
 import { encodePng } from './png.testkit';
 import { bigMetrics, locatorTables, pngImage, strikeFont } from './sbit.testkit';
 
@@ -20,7 +20,8 @@ describe('faceStrikesOf', () => {
 
   it('keeps the bitmaps of the glyphs read most recently, and reads a dropped one again', async () => {
     const pixel = pngImage(encodePng({ width: 1, height: 1, colourType: 6, samples: [255, 0, 0, 255] }));
-    const glyphCount = MAX_KEPT_BITMAPS + 1;
+    // One glyph past the 256 a strike keeps.
+    const glyphCount = 257;
     const subtable = {
       first: 1,
       last: glyphCount,

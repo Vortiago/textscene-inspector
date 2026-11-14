@@ -33,7 +33,7 @@ export interface FaceStrikes {
 const MAX_KEPT_SIZES = 8;
 
 /** A colour strike's bitmap can be 136 px square, so the bitmaps of this many glyphs a strike are kept. */
-export const MAX_KEPT_BITMAPS = 256;
+const MAX_KEPT_BITMAPS = 256;
 
 /**
  * The strikes of `sfnt`, or null for a face that draws none: one with no strike, or with grey strikes
