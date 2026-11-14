@@ -20,7 +20,7 @@ import { NO_FACE_METRICS } from './noFaceMetrics';
 import { perObject } from '../../../../utils/perObject';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { warnOnce } from '../../../../utils/warnOnce';
-import type { SettledChainFace, SettledFont, SettledFonts } from './settledFonts';
+import type { ComposedFont, SettledChainFace, SettledFont, SettledFonts } from './settledFonts';
 import { drawLoad, peekOutlines } from './sceneFontOutlines';
 
 /** One `BitmapFontMetrics` for each decoded BMFont, so a layout memoised on its identity keeps its hits. */
@@ -59,25 +59,37 @@ export function readSettledFont(
   nodePath: string
 ): SettledFont {
   if (!font) return NO_FONT;
-  const kept = fonts.settled.get(font);
-  if (kept) return kept;
-  const { value: chain, pending } = fonts.pendingLoadsOf(() => settledChainFaces(fonts, font, nodePath));
-  if (!chain) {
-    fonts.awaitFont(font, pending);
-    return LOADING;
-  }
+  let pending: ReadonlySet<object> = NO_LOADS;
+  const composed = fonts.keep(font, () => {
+    const read = fonts.pendingLoadsOf(() => settledChainFaces(fonts, font, nodePath));
+    pending = read.pending;
+    return read.value && composedFont(read.value);
+  });
+  if (composed) return composed;
+  fonts.awaitFont(font, pending);
+  return LOADING;
+}
+
+const NO_LOADS: ReadonlySet<object> = new Set();
+
+/** The face `chain` draws: its first face, with the others as its fallbacks. */
+function composedFont(chain: readonly SettledChainFace[]): ComposedFont {
   const [face, ...fallbacks] = chain.map(({ metrics }) => metrics);
-  const settled = { status: 'settled', face: withFallbacks(face!, fallbacks), chain } as const;
-  fonts.settled.set(font, settled);
-  return settled;
+  return { status: 'settled', face: withFallbacks(face!, fallbacks), chain };
 }
 
 /** What no font draws: the bundled font's face, alone in its chain. */
-export const BUNDLED_SETTLED_FONT: SettledFont & { status: 'settled' } = {
+const BUNDLED_SETTLED_FONT: ComposedFont = {
   status: 'settled',
   face: OPEN_SANS_FONT_METRICS,
   chain: [{ font: null, metrics: OPEN_SANS_FONT_METRICS }],
 };
+
+/** The font a settled answer draws, the bundled font for no font, and undefined while it loads. */
+export function settledOrBundled(settled: SettledFont): ComposedFont | undefined {
+  if (settled.status === 'settled') return settled;
+  return settled.status === 'none' ? BUNDLED_SETTLED_FONT : undefined;
+}
 
 /**
  * The metrics of `font` once its whole chain has settled, and null while a load is in flight. No
@@ -89,9 +101,7 @@ export function peekSettledSceneFontMetrics(
   font: FontResource | null | undefined,
   nodePath: string
 ): FontMetrics | null {
-  const settled = readSettledFont(fonts, font, nodePath);
-  if (settled.status === 'none') return BUNDLED_SETTLED_FONT.face;
-  return settled.status === 'settled' ? settled.face : null;
+  return settledOrBundled(readSettledFont(fonts, font, nodePath))?.face ?? null;
 }
 
 /**
@@ -104,9 +114,7 @@ export function peekSettledChainFaces(
   font: FontResource | null | undefined,
   nodePath: string
 ): readonly SettledChainFace[] | null {
-  const settled = readSettledFont(fonts, font, nodePath);
-  if (settled.status === 'none') return BUNDLED_SETTLED_FONT.chain;
-  return settled.status === 'settled' ? settled.chain : null;
+  return settledOrBundled(readSettledFont(fonts, font, nodePath))?.chain ?? null;
 }
 
 /** The faces of the chain of `font` once each has settled, as `readSettledFont` composes them. */

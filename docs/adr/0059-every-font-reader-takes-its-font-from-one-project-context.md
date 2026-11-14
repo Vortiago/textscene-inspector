@@ -33,8 +33,8 @@ said. A font in a WOFF or WOFF2 file had metrics for the 2D text and no outlines
   solve tree hands each node a view of the settled fonts that records each font its solve and its
   painters await, and rebuilds when one of those settles. A mesh build reads the `settledFonts`
   its context carries, and re-renders on a settle of its preview only.
-- The face loader is injected through `ResourceLoaderOptions.loadFace`, with the `FontFace` loader
-  as the default. A test gives a loader that answers a stand-in face, or one that stays pending.
+- A host gives the face loader through `ResourceLoaderOptions.loadFace`. Without one, the loader
+  registers a `FontFace`. A test gives a loader that answers a stand-in face, or one that stays pending.
 
 ## Consequences
 

@@ -11,8 +11,16 @@ import { subscribeToNothing } from '../../../../utils/subscribeToNothing';
 import { readSettledFont } from './sceneFontLoader';
 import { createSettledFonts, type AwaitedFonts, type SettledFont, type SettledFonts } from './settledFonts';
 
-/** Written once, by the first reader with no resource loader: only a test renders a tree without one. */
+/**
+ * Written by the first reader with no resource loader: only a test renders a tree without one.
+ * Cleared by `resetLoaderlessFonts`, which the test setup runs before each test.
+ */
 let loaderlessFonts: SettledFonts | null = null;
+
+/** Drops the settled fonts of a tree with no loader, so the next test starts from an empty store. */
+export function resetLoaderlessFonts(): void {
+  loaderlessFonts = null;
+}
 
 /** The settled fonts of `loader`'s preview, or of a tree with no loader. */
 export function settledFontsOf(loader: ResourceLoader | null): SettledFonts {

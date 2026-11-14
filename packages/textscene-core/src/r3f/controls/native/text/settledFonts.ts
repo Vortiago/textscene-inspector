@@ -32,6 +32,9 @@ export type SettledFont =
   | { readonly status: 'loading' }
   | { readonly status: 'settled'; readonly face: FontMetrics; readonly chain: readonly SettledChainFace[] };
 
+/** A font whose whole chain has settled, composed into the face it draws. */
+export type ComposedFont = SettledFont & { readonly status: 'settled' };
+
 /** The fonts a forest read while they loaded, each with its {@link SettledFonts.fontVersion} then. */
 export type AwaitedFonts = ReadonlyMap<object, number>;
 
@@ -41,10 +44,11 @@ export interface SettledFonts {
   /** The outlines of a load of a font's bytes, keyed by `loadKey`: undefined while `read` runs. */
   peekOutlines(loadKey: object, read: () => Promise<SfntOutlines | null>): SfntOutlines | null | undefined;
   /**
-   * The settled answer of each font, kept once its whole chain has settled: a settled load never
-   * changes, so the chain composes once and keeps its identity for a reader that compares it.
+   * The composed answer of `font`: the one kept, else what `compose` answers, kept when it is not null.
+   * A settled load never changes, so the chain composes once and keeps its identity for a reader
+   * that compares it.
    */
-  readonly settled: WeakMap<FontResource, SettledFont & { status: 'settled' }>;
+  keep(font: FontResource, compose: () => ComposedFont | null): ComposedFont | null;
   /**
    * Runs `read` and answers with the loads still in flight that it peeked: the loads a font whose
    * answer `read` gives waits on.
@@ -113,11 +117,19 @@ export function createSettledFonts(loadFace: FaceLoader = loadSceneFontMetrics):
   const peekFaceOf = createSettledPeek<ArrayBuffer, RegisteredCanvasFontMetrics | null>(notePending, wake);
   const peekOutlinesOf = createSettledPeek<object, SfntOutlines | null>(notePending, wake);
   const fontVersion = (font: object) => fontSettles(font).get();
+  /** Written only by `keep`, once for each font whose chain has settled. */
+  const composed = new WeakMap<FontResource, ComposedFont>();
 
   const fonts: SettledFonts = {
     peekFace: (bytes, nodePath) => peekFaceOf(bytes, () => loadFace(bytes, nodePath)),
     peekOutlines: peekOutlinesOf,
-    settled: new WeakMap(),
+    keep(font, compose) {
+      const kept = composed.get(font);
+      if (kept) return kept;
+      const answer = compose();
+      if (answer) composed.set(font, answer);
+      return answer;
+    },
     pendingLoadsOf(read) {
       const outer = pendingRead;
       const pending = new Set<object>();

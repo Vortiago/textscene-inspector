@@ -18,9 +18,9 @@ import {
   isCanvasFontMetrics,
   type CanvasFontMetrics,
 } from '../../../r3f/controls/native/text/runtimeFontMetrics';
-import type { SettledChainFace, SettledFont } from '../../../r3f/controls/native/text/settledFonts';
+import type { SettledChainFace } from '../../../r3f/controls/native/text/settledFonts';
 import { withFallbacks, type FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
-import { BUNDLED_SETTLED_FONT } from '../../../r3f/controls/native/text/sceneFontLoader';
+import { settledOrBundled } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { fontGeneratesMipmaps } from '../../../r3f/controls/native/text/sceneFontResolution';
 import { usePreviewFontSettles, useSettledFont } from '../../../r3f/controls/native/text/useSettledFont';
 import { resolveFontReference } from '../../../resources/fonts/font/resolveFontReference';
@@ -61,7 +61,7 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | null 
 
   /** The font the label draws with: undefined while its chain or the bundled canvas face loads. */
   const label3DFont = (): Label3DFont | null | undefined => {
-    const drawn = drawnFont(settled);
+    const drawn = settledOrBundled(settled);
     if (!drawn) return undefined;
     const projectMipmaps = projectDefaultFontGeneratesMipmaps(settings);
     const generatesMipmaps = fontGeneratesMipmaps(font ?? null) ?? projectMipmaps;
@@ -82,12 +82,6 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | null 
   // The bundled canvas face loads apart from the font: listen to this preview's settles while it does.
   usePreviewFontSettles(!isLoading && drawn === undefined && settled.status !== 'loading');
   return drawn;
-}
-
-/** The face and chain a settled font draws with, the bundled font's for no font; undefined while it loads. */
-function drawnFont(settled: SettledFont): (SettledFont & { status: 'settled' }) | undefined {
-  if (settled.status === 'settled') return settled;
-  return settled.status === 'none' ? BUNDLED_SETTLED_FONT : undefined;
 }
 
 const NO_FALLBACK_MIPMAPS: ReadonlyMap<FontMetrics, boolean> = new Map();
