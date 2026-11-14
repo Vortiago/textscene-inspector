@@ -36,7 +36,10 @@ export function useCanvas2DTexture(
   return useOwnedTextureView(texture, useCanvasItemViewSampler(sampler));
 }
 
-/** `useCanvas2DTexture` that shows `window`, as `useWindowedTextureView` does. Null shows the whole texture. */
+/**
+ * `useCanvas2DTexture` that shows `window`, as `useWindowedTextureView` does. Null shows the whole
+ * texture.
+ */
 export function useWindowedCanvas2DTexture(
   texture: THREE.Texture | null | undefined,
   sampler: CanvasItemTextureSampler,

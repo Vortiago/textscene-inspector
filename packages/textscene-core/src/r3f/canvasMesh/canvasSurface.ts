@@ -36,7 +36,7 @@ export interface CanvasSurfaceArrays {
   uvs?: ArrayLike<number> | null;
   /** r, g, b, a for each vertex. */
   colors?: Float32Array | null;
-  indices?: ArrayLike<number>;
+  indices?: number[];
 }
 
 /**
@@ -59,7 +59,7 @@ export function canvasSurfaceGeometry({
   geometry.setAttribute('position', new THREE.BufferAttribute(position, 3));
   if (uvs) geometry.setAttribute('uv', new THREE.BufferAttribute(threeUvs(uvs), 2));
   if (colors) geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4));
-  if (indices) geometry.setIndex(Array.from(indices));
+  if (indices) geometry.setIndex(indices);
   return geometry;
 }
 

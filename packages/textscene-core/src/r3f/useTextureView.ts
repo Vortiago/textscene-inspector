@@ -18,7 +18,7 @@ import { useTiledUpload } from './tiledUpload/useTiledUpload';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
 import { isLiveTarget } from './liveTargets';
 import { useUvWindow } from './useUvWindow';
-import { FULL_UV_WINDOW, type UvWindow } from './uvWindow';
+import type { UvWindow } from './uvWindow';
 
 /**
  * `source` as `sampler` samples it: the source itself when it already does, else one clone. Null
@@ -62,7 +62,7 @@ export function useWindowedTextureView(
 ): THREE.Texture | null {
   const isLive = source ? isLiveTarget(source) : false;
   const view = useOwnedTextureView(source, sampler && isLive && window ? { ...sampler, window } : sampler);
-  useUvWindow(isLive || !window ? null : view, window ?? FULL_UV_WINDOW);
+  useUvWindow(isLive ? null : view, window);
   return view;
 }
 

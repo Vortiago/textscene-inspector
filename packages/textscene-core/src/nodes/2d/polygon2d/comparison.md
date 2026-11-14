@@ -10,9 +10,8 @@ renders_as: a filled, optionally textured mesh
 
 Polygon2D fills an outline on the canvas. The previewer triangulates it with Godot's ear
 clipping into an unlit mesh with one vertex per point and tints it with `color`. `texture` is
-sampled through the per-vertex `uv` with Godot's own UV formula. A texture that is set but fails to load draws a
-placeholder. With `skeleton` and `bones`,
-each vertex moves with its four heaviest bones of the Skeleton2D. An AnimationPlayer or the
+sampled through the per-vertex `uv` with Godot's own UV formula. A texture that is set but fails to
+load draws a placeholder. With `skeleton` and `bones`, each vertex moves with its four heaviest bones of the Skeleton2D. An AnimationPlayer or the
 modification stack of the skeleton poses those bones.
 
 The skin follows the Forward+ and Mobile renderers. They weight the corner of each bone matrix too

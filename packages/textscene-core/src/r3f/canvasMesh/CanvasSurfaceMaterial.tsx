@@ -50,6 +50,8 @@ export function CanvasSurfaceMaterial({
       injection: point?.injection,
       userData: point?.userData,
     },
+    // The facing in `pixelMaterial` draws one pass whatever the winding, so a bent skin's
+    // triangles and per-vertex alpha keep their index order.
     merge: [pixelMaterial],
   });
   return <meshBasicMaterial key={program.key} {...program.props} />;

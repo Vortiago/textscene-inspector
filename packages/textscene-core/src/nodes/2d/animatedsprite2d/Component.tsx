@@ -132,8 +132,9 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const frameRef = currentAnim?.frames[frame] ?? null;
 
   // A frame's ids are scoped to its SpriteFrames' home, so the frame resolves
-  // in those tables: the scene's, or the .tres's. The body's view clones each frame texture with
-  // the item's sampler and disposes the clone once it no longer draws, so playback leaks no GPU texture.
+  // in those tables: the scene's, or the .tres's. `useCanvasMeshTexture` clones each frame texture
+  // with the item's sampler and disposes the clone once it no longer draws, so playback leaks no GPU
+  // texture.
   const texture = useCanvasMeshTexture(props, { reference: useFrameReference(resolved, frameRef) });
   const frameSize = useMemo(() => frameSizePx(texture.size, WHOLE_FRAME), [texture.size]);
   const surfaces = useSpriteQuad(props, frameSize);

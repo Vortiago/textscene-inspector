@@ -27,8 +27,8 @@ import { canvasSurfaceGeometry, type CanvasSurface } from '../../../r3f/canvasMe
 export function Polygon2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Polygon2DProperties;
 
-  // Either an image file or an inline procedural texture; the body hides which, and owns the
-  // lifetime of the procedural one it rasterises.
+  // Either an image file or an inline procedural texture. `useCanvasMeshTexture` hides which, and
+  // owns the lifetime of the procedural one it rasterises.
   const scope = useSceneResources();
   const texture = useCanvasMeshTexture(props, { reference: useNodeReference(props.texture, scope) });
 

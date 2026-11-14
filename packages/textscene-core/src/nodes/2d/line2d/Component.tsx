@@ -93,7 +93,10 @@ export function Line2D({ node, children }: NodeComponentProps) {
   );
 }
 
-/** The strip's geometry. Without UVs a textured line's vertices all read UV (0, 0), the top-left texel (`texture_mode` NONE). */
+/**
+ * The strip's geometry. Without UVs a textured line's vertices all read UV (0, 0), the top-left
+ * texel (`texture_mode` NONE).
+ */
 function strokeGeometry({ vertices, colors, uvs, indices }: LineStroke, hasTexture: boolean) {
   const textureUvs = uvs ?? (hasTexture ? new Float32Array(vertices.length) : null);
   return canvasSurfaceGeometry({ positions: vertices, uvs: textureUvs, colors, indices });
