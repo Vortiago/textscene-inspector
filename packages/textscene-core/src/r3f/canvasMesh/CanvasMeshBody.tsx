@@ -51,7 +51,7 @@ interface CanvasMeshBodyProps<Input> {
    * sprite does (`sprite_2d.cpp:159-161`).
    */
   withoutTexture: 'white' | 'nothing';
-  /** The surfaces in draw order, or null to draw nothing. Its children still draw. */
+  /** The surfaces in draw order, or null to draw nothing and load no maps. Its children still draw. */
   surfaces: CanvasSurfaces | MaterialSurfaces<Input>;
   /**
    * Wraps the surfaces in a group, as CPUParticles2D samples its emission transform from one. The
@@ -83,7 +83,7 @@ export function CanvasMeshBody<Input>({
     <CanvasItem2D
       node={node}
       props={props}
-      canvasTexture={canvasTexture}
+      canvasTexture={surfaces === null ? undefined : canvasTexture}
       isDrawn={isDrawn}
       body={(tint, material, pixelMaterial) => {
         if (isCyclic) return <MissingResourcePlaceholder shape="plane" name={node.name} />;

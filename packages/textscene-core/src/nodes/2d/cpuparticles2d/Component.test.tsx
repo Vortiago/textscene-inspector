@@ -25,12 +25,15 @@ import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { MissingResourcesProvider } from '../../../r3f/contexts/MissingResourcesContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode, TscnInternalResource } from '../../../parser/types';
+import { subResource } from '../../../testing/subResource';
 
 const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 const TEX = 'res://ball.png';
+const NORMAL_MAP = 'res://ball_normal.png';
 const nodeHeading = { type: 'node' as const, attributes: { type: 'CPUParticles2D', name: 'Fx' } };
 
 /** Pinned so every pose below is a pure function of the fixture text. */
@@ -63,9 +66,11 @@ async function render(
     texture?: THREE.Texture;
     internalResources?: TscnInternalResource[];
     space?: CanvasColorSpace;
+    onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
+    fake?: ReturnType<typeof createFakeResourceLoader>;
   } = {}
 ) {
-  const fake = createFakeResourceLoader();
+  const fake = options.fake ?? createFakeResourceLoader();
   if (options.texture) {
     fake.textures.seed(TEX, options.texture);
   } else if (options.seedTexture !== false) {
@@ -80,18 +85,23 @@ async function render(
   }
 
   return ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace="2d">
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={options.internalResources ?? []}
-          externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
-        >
-          <CanvasColorSpaceProvider value={options.space ?? canvasColorSpaceOf(false)}>
-            <CPUParticles2D node={rootNode} />
-          </CanvasColorSpaceProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <MissingResourcesProvider onMissingPathsChange={options.onMissingPathsChange}>
+      <CanvasWorkspaceProvider workspace="2d">
+        <ResourceLoaderProvider loader={fake.loader}>
+          <SceneResourcesProvider
+            internalResources={options.internalResources ?? []}
+            externalResources={[
+              { id: '1', type: 'Texture2D', path: TEX },
+              { id: '2', type: 'Texture2D', path: NORMAL_MAP },
+            ]}
+          >
+            <CanvasColorSpaceProvider value={options.space ?? canvasColorSpaceOf(false)}>
+              <CPUParticles2D node={rootNode} />
+            </CanvasColorSpaceProvider>
+          </SceneResourcesProvider>
+        </ResourceLoaderProvider>
+      </CanvasWorkspaceProvider>
+    </MissingResourcesProvider>
   );
 }
 
@@ -174,6 +184,40 @@ describe('<CPUParticles2D>', () => {
   it('renders NO mesh when `emitting = false` (error path for the six dormant emitters)', async () => {
     const renderer = await render(node({ emitting: 'false' }));
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('lists a texture that failed in the Resources panel when it is not emitting', async () => {
+    let missing: readonly string[] = [];
+    await render(node({ emitting: 'false' }), {
+      seedTexture: false,
+      onMissingPathsChange: (paths) => (missing = [...paths]),
+    });
+    expect(missing).toEqual([TEX]);
+  });
+
+  describe('with a normal-mapped CanvasTexture', () => {
+    const wrapper = subResource('CanvasTexture', 'CanvasTexture_1', {
+      diffuse_texture: 'ExtResource("1")',
+      normal_texture: 'ExtResource("2")',
+    });
+
+    async function normalMapPins(emitting: string) {
+      const fake = createFakeResourceLoader();
+      fake.textures.seed(NORMAL_MAP, new THREE.Texture());
+      await render(node({ emitting, texture: 'SubResource("CanvasTexture_1")' }), {
+        fake,
+        internalResources: [wrapper],
+      });
+      return fake.textures.pinCounts.get(NORMAL_MAP) ?? 0;
+    }
+
+    it('loads the normal map while it emits', async () => {
+      expect(await normalMapPins('true')).toBeGreaterThan(0);
+    });
+
+    it('loads no normal map while it is not emitting', async () => {
+      expect(await normalMapPins('false')).toBe(0);
+    });
   });
 
   it('still positions its children when it is not emitting', async () => {

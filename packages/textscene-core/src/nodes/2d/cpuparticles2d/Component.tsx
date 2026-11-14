@@ -40,8 +40,9 @@ interface ParticleInput {
 export function CPUParticles2D({ node, children }: NodeComponentProps) {
   const props = node.properties as CPUParticles2DProperties;
   const scope = useSceneResources();
-  // An emitter that is not emitting draws nothing, so it loads no texture and no maps.
-  const reference = useNodeReference(props.emitting ? props.texture : undefined, scope);
+  // The texture loads even while the emitter is not emitting, so the Resources panel lists one that
+  // fails. The body loads no maps for it, since it draws no surface.
+  const reference = useNodeReference(props.texture, scope);
   const texture = useCanvasMeshTexture(props, { reference });
   // A callback ref, not useRef: the emission-transform sample runs once the
   // container is in the tree, since its world matrix does not exist before.
