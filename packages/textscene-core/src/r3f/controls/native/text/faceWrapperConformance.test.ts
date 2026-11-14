@@ -13,8 +13,13 @@ const CORE_SOURCE_ROOT = join(import.meta.dirname, '../../../..');
 /** Lines of an `Object.create` whose properties define `getGlyphAdvanceUnits` and no `drawsApart`. */
 function undeclaredAdvanceLines(source: string): number[] {
   return callSites(source, /\bObject\.create\(/)
-    .filter(({ args }) => /\bgetGlyphAdvanceUnits\b/.test(args[1] ?? '') && !/\bdrawsApart\b/.test(args[1]!))
+    .filter(({ args: [, properties = ''] }) => changesUndeclaredAdvance(properties))
     .map(({ line }) => line);
+}
+
+/** Whether the property map `properties` changes `getGlyphAdvanceUnits` and declares no `drawsApart`. */
+function changesUndeclaredAdvance(properties: string): boolean {
+  return /\bgetGlyphAdvanceUnits\b/.test(properties) && !/\bdrawsApart\b/.test(properties);
 }
 
 describe('face wrapper conformance', () => {
@@ -42,7 +47,7 @@ describe('face wrapper conformance', () => {
     const offenders = reportOffenders(sources, undeclaredAdvanceLines);
     expect(
       offenders,
-      `these wrappers change an advance the run shaping ignores; declare the characters in \`drawsApart\`: ${offenders.join(', ')}`
+      `these wrappers change an advance the run shaping ignores. Declare the characters in \`drawsApart\`: ${offenders.join(', ')}`
     ).toEqual([]);
   });
 });

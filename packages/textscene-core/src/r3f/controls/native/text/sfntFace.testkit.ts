@@ -17,8 +17,12 @@ export function sfntFace(sfnt: SfntFile): FontMetrics {
   const metricsOf = glyphMetricsReader(sfnt);
   const advanceUnits = (ch: string) => metricsOf(glyphIndexOf(ch.codePointAt(0)!), 0).horizontal.advance;
   // One kerning reader, built at the first pair: `getKerningAdjustmentUnits` and `sfntFaceGlyphs` share it.
+  // Undefined, not null, until then: null is a font with no pair kerning, which is not read again.
   let kerning: ReturnType<typeof defaultKerningReader> | undefined;
-  const kerningOf = () => (kerning ??= defaultKerningReader(sfnt));
+  const kerningOf = () => {
+    if (kerning === undefined) kerning = defaultKerningReader(sfnt);
+    return kerning;
+  };
   const lookupGlyph = (ch: string) => {
     const codePoint = ch.codePointAt(0)!;
     return { glyph: glyphIndexOf(codePoint), codePoint };
