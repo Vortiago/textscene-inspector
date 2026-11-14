@@ -1,6 +1,7 @@
 /**
- * One batched mesh for a run of tile cells that draw from one atlas source, with the
- * 2D material of Sprite2D. It resolves the source's texture as any Texture2D slot is resolved.
+ * One batched mesh for a run of tile cells that draw from one atlas source, with the material
+ * of the canvas mesh body (`CanvasSurfaceMaterial`). It resolves the source's texture as any
+ * Texture2D slot is resolved.
  */
 
 import { useMemo, useState } from 'react';
