@@ -3,7 +3,7 @@ import { printShader } from '../../../../packages/textscene-core/src/shaders/lan
 import { treeFault } from '../../../../packages/textscene-core/src/shaders/language/treeCheck.ts';
 import { probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { transpilerVerdict } from '../verdicts/judge.mjs';
-import { loweredFault, loweredTreeOf, shapeOf, treeOf } from '../verdicts/trees.mjs';
+import { loweredFault, loweredTreeOf, shapeOf, treeOf } from '../verdicts/trees.testkit.mjs';
 import { generatePrograms, ROOT_ROWS, TRANSPILED_ROWS } from './programs.mjs';
 import { RANDOM_PROGRAMS } from './randomSet.mjs';
 

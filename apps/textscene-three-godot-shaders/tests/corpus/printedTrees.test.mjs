@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { printShader } from '../../../../packages/textscene-core/src/shaders/language/printer.ts';
 import { transpilerVerdict } from '../verdicts/judge.mjs';
-import { treeOf } from '../verdicts/trees.mjs';
+import { treeOf } from '../verdicts/trees.testkit.mjs';
 import { CORPUS } from './corpus.mjs';
 
 const TREES_DIR = join(import.meta.dirname, 'trees');

@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { treeFault } from '../../../../packages/textscene-core/src/shaders/language/treeCheck.ts';
-import { loweredFault, loweredTreeOf, treeOf } from './trees.mjs';
+import { loweredFault, loweredTreeOf, treeOf } from './trees.testkit.mjs';
 
 /** `tree` with the value of its first function's last `return` replaced by `change(value)`. */
 function withReturnedValue(tree, change) {
