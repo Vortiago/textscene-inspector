@@ -42,7 +42,13 @@ const ANSWERS_SECTION = `## Godot's answers
 
 lavapipe compiles each shader for the CPU it runs on, and the job prints the CPU model, its vector flags and the Mesa and LLVM packages on every run. A float lane that is NaN agrees with any NaN, in the digest and in the comparison on a real GL context alike (\`scripts/godot-probes/laneAgreement.mjs\`). GLSL ES 3.00 section 4.5.1 leaves the sign and payload of a NaN to the device, and lavapipe on the same Mesa 25.2.8 and LLVM 20.1.2 gives some matrix products a NaN of the other sign on an AMD EPYC 7763 (AVX2) than on an Intel Xeon with AVX-512. A NaN against a number, against an infinity, and -0 against +0 still differ, and an int, uint or bool lane agrees bit for bit.`;
 
-function randomSection({ programs, seed, transpiledRows, knownDifferences }) {
+/** The keywords of the flows the lowering removes, as `a`, `b` or `c`. */
+function keywordList(loweredAway) {
+  const keywords = Object.values(loweredAway).map(({ keyword }) => `\`${keyword}\``);
+  return keywords.length === 1 ? keywords[0] : `${keywords.slice(0, -1).join(', ')} or ${keywords.at(-1)}`;
+}
+
+function randomSection({ programs, seed, transpiledRows, knownDifferences, loweredAway }) {
   const cases = Object.keys(knownDifferences).length;
   const known = Object.values(knownDifferences).filter((each) => each.program !== undefined).length;
   return `## Random programs against Godot
@@ -52,6 +58,8 @@ A generator writes random functions that are correct by type, from the signature
 The fixed set has seed ${seed}: ${programs.length} programs, one rooted at each of the ${transpiledRows} transpiled rows, and the rest with random roots. Godot accepts every one. \`pnpm godot:probes\` asks Godot for its result bits, and \`pnpm test:shaders:gpu\` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN in a float lane.
 
 **${programs.length - known} of ${programs.length} random programs bit-equal with Godot, NaN lanes compared as NaN. The others are the ${cases} listed known-difference ${cases === 1 ? 'case' : 'cases'}, each with its cause: a float rewrite by the probe GPU's driver on one side only, or a result GLSL leaves undefined.** A program that differs is reduced against a live Godot to a small program that still differs. Each known difference is a fixed case: its reduced program and its inputs, run on every pass whatever the seed, the set size or the generator. The list only shrinks: a case leaves it only when its own program equals Godot. A program of the set that differs and is no case's program fails the run.
+
+Every program of the set also passes the tree check before and after lowering, and prints as text that parses to the same tree (\`tests/random/programs.test.mjs\`). After lowering, the tree holds no ${keywordList(loweredAway)}, its one loop is \`while (true)\`, and no \`return\` stands before a function's last statement. Hand-broken trees show that each check fails (\`tests/verdicts/trees.test.mjs\`).
 
 | Case | Reduced program | Program of the set | First lane that differs | Cause | Owner |
 | --- | --- | --- | --- | --- | --- |
@@ -65,6 +73,15 @@ function stateCounts(states) {
   const byState = new Map();
   for (const state of Object.values(states)) byState.set(state, (byState.get(state) ?? 0) + 1);
   return [...byState].sort((a, b) => b[1] - a[1]);
+}
+
+/** The printed trees of the corpus, which exist only once a shader transpiles. */
+function printedTreesParagraph(transpiled) {
+  const files =
+    transpiled === 0
+      ? 'No shader transpiles yet, so the folder holds no file yet.'
+      : `It holds ${transpiled} ${transpiled === 1 ? 'file' : 'files'}.`;
+  return `The printed tree of each shader the transpiler accepts is a checked-in file under \`tests/corpus/trees/\`, so a review shows how a change moves a real shader's tree. ${files} \`vitest -u\` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.`;
 }
 
 function corpusSection({ corpus, corpusRecord, states, knownMismatches }) {
@@ -94,6 +111,8 @@ The instruction count says how much of the language is transpiled, not how many 
 ${sourceLines.join('\n')}
 
 **${transpiled} of ${accepted.length} real shaders transpile.** Godot rejects the other ${corpus.length - accepted.length}. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
+
+${printedTreesParagraph(transpiled)}
 
 | State | Shaders |
 | --- | --- |

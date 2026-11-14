@@ -1,8 +1,6 @@
 /**
  * The printed tree of each corpus shader the transpiler accepts, as a checked-in file in
- * `trees/`, so a review shows how a change moves a real shader's tree. `vitest -u` writes a
- * moved tree. The generated GLSL gets no file: three writes it, and each upgrade of three would
- * change every file.
+ * `trees/`. The testing chapter of the user guide says why, and why the GLSL gets no file.
  */
 
 import { existsSync, readdirSync } from 'node:fs';

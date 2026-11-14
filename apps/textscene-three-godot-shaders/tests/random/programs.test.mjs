@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { printShader } from '../../../../packages/textscene-core/src/shaders/language/printer.ts';
 import { treeFault } from '../../../../packages/textscene-core/src/shaders/language/treeCheck.ts';
 import { probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { transpilerVerdict } from '../verdicts/judge.mjs';
-import { loweredFault, loweredTreeOf, shapeOf, treeOf } from '../verdicts/trees.testkit.mjs';
+import { loweredFault, loweredTreeOf, printsBack, treeOf } from '../verdicts/trees.testkit.mjs';
 import { generatePrograms, ROOT_ROWS, TRANSPILED_ROWS } from './programs.mjs';
 import { RANDOM_PROGRAMS } from './randomSet.mjs';
 
@@ -50,11 +49,6 @@ const faults = (programs, fault) =>
     const found = fault(program.source);
     return found === undefined ? [] : [`${program.name}: ${found}`];
   });
-
-const printsBack = (tree) =>
-  JSON.stringify(shapeOf(treeOf(printShader(tree)))) === JSON.stringify(shapeOf(tree))
-    ? undefined
-    : 'its printed text parses to another tree';
 
 describe('the trees of the fixed-seed set', () => {
   it('pass the tree check', () => {

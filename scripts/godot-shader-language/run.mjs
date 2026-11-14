@@ -25,6 +25,7 @@ import { KNOWN_MISMATCHES } from '../../apps/textscene-three-godot-shaders/tests
 import { OPERATOR_CASES } from '../../apps/textscene-three-godot-shaders/tests/operators/operatorCases.mjs';
 import { KNOWN_DIFFERENCES } from '../../apps/textscene-three-godot-shaders/tests/random/knownDifferences.mjs';
 import { TRANSPILED_ROWS } from '../../apps/textscene-three-godot-shaders/tests/random/programs.mjs';
+import { LOWERED_AWAY } from '../../apps/textscene-three-godot-shaders/tests/verdicts/loweredAway.mjs';
 import {
   FIXED_SEED,
   RANDOM_PROGRAMS,
@@ -52,6 +53,7 @@ function testingChapter(answers) {
       seed: FIXED_SEED,
       transpiledRows: TRANSPILED_ROWS.length,
       knownDifferences: KNOWN_DIFFERENCES,
+      loweredAway: LOWERED_AWAY,
     },
     corpus: {
       corpus: CORPUS,

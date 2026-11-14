@@ -11,7 +11,7 @@ const KNOWN = {
   },
 };
 
-const GUIDE = renderTestingGuide({
+const INPUT = {
   operators: {
     cases: [{ id: 'OP_ADD(float,float)', row: {} }],
     record: { godot: '4.6.3-stable', cases: { 'OP_ADD(float,float)': 'accepted' } },
@@ -21,6 +21,7 @@ const GUIDE = renderTestingGuide({
     seed: 1,
     transpiledRows: 2,
     knownDifferences: KNOWN,
+    loweredAway: { FLOW_OP_FOR: { keyword: 'for' }, FLOW_OP_SWITCH: { keyword: 'switch' } },
   },
   corpus: {
     corpus: [
@@ -34,7 +35,9 @@ const GUIDE = renderTestingGuide({
     },
     knownMismatches: {},
   },
-});
+};
+
+const GUIDE = renderTestingGuide(INPUT);
 
 describe('the chapter on the tests against Godot', () => {
   it('counts the random programs bit-equal with Godot, less those a case names, and the listed cases', () => {
@@ -45,6 +48,16 @@ describe('the chapter on the tests against Godot', () => {
 
   it('counts the real shaders that transpile, of those Godot accepts', () => {
     expect(GUIDE).toContain('**0 of 1 real shaders transpile.** Godot rejects the other 1.');
+  });
+
+  it('names the flows the lowering removes from the list the tree check reads', () => {
+    expect(GUIDE).toContain(
+      'After lowering, the tree holds no `for` or `switch`, its one loop is `while (true)`'
+    );
+  });
+
+  it('names the folder of the printed corpus trees', () => {
+    expect(GUIDE).toContain('is a checked-in file under `tests/corpus/trees/`');
   });
 
   it('says a missing Godot fails the job instead of passing on the smoke subset', () => {
@@ -64,6 +77,7 @@ describe('the table of known differences', () => {
         programs: [{}],
         seed: 1,
         transpiledRows: 1,
+        loweredAway: { FLOW_OP_FOR: { keyword: 'for' } },
         knownDifferences: {
           'random-1-0': {
             source: 'bool probe(bool a0) { return a0 || a0; }',
@@ -76,5 +90,15 @@ describe('the table of known differences', () => {
       corpus: { corpus: [], corpusRecord: { cases: {} }, states: {}, knownMismatches: {} },
     });
     expect(guide).toContain('`bool probe(bool a0) { return a0 \\|\\| a0; }`');
+  });
+
+  it('says the folder of printed trees is empty while no shader transpiles', () => {
+    expect(GUIDE).toContain('No shader transpiles yet, so the folder holds no file yet.');
+  });
+
+  it('counts the printed tree files once a shader transpiles', () => {
+    const states = { ...INPUT.corpus.states, 'demos/a.gdshader': 'transpiled' };
+    const guide = renderTestingGuide({ ...INPUT, corpus: { ...INPUT.corpus, states } });
+    expect(guide).toContain('It holds 1 file.');
   });
 });
