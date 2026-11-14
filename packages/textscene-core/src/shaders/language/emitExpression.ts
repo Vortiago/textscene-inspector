@@ -38,7 +38,7 @@ const STEPS: Readonly<Record<string, { readonly operator: string; readonly gives
 };
 
 /** Whether `expression` writes a variable: an assignment or a step anywhere in it. */
-export const writes = (expression: Expression): boolean =>
+const writes = (expression: Expression): boolean =>
   [...everyExpression(expression)].some(
     (part) =>
       part.kind === 'whole assign' ||

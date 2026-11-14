@@ -6,7 +6,7 @@
 import type { BlockNode, Expression, Statement } from './shaderTree.js';
 
 /** The expressions `expression` holds. */
-export function subExpressions(expression: Expression): readonly Expression[] {
+function subExpressions(expression: Expression): readonly Expression[] {
   switch (expression.kind) {
     case 'constant':
     case 'variable':

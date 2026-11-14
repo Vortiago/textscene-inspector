@@ -12,7 +12,7 @@ export function rewriteFunction(definition: FunctionNode, rewrite: StatementRewr
   return { ...definition, body: rewriteBlock(definition.body, rewrite) };
 }
 
-export function rewriteBlock(block: BlockNode, rewrite: StatementRewrite): BlockNode {
+function rewriteBlock(block: BlockNode, rewrite: StatementRewrite): BlockNode {
   return {
     ...block,
     statements: block.statements.flatMap((statement) => rewrite(withBlocksRewritten(statement, rewrite))),

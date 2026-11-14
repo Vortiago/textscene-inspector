@@ -27,7 +27,7 @@ export async function loadPrinter() {
   });
   try {
     const load = (file) => server.ssrLoadModule(`${LANGUAGE}${file}`);
-    const [{ tokenize }, { parse }, { printShader }, { ShadingLanguageError }, { lowerShader }] =
+    const [{ tokenize }, { parse }, { printShader }, { ShadingLanguageError }, { lowerFunction }] =
       await Promise.all(
         ['tokenizer.ts', 'parse.ts', 'printer.ts', 'shadingLanguageError.ts', 'lowering/lower.ts'].map(load)
       );
@@ -42,7 +42,7 @@ export async function loadPrinter() {
     return {
       print: unlessRefused(printShader),
       lower: unlessRefused((tree) => {
-        const lowered = printShader(lowerShader(tree));
+        const lowered = printShader({ ...tree, functions: tree.functions.map(lowerFunction) });
         return lowered === printShader(tree) ? undefined : lowered;
       }),
     };

@@ -82,7 +82,7 @@ function glslStatementExpression(expression: Expression): Expression {
 }
 
 /** The tree GLSL reads from Godot's text of `expression`. */
-export function glslExpression(expression: Expression): Expression {
+function glslExpression(expression: Expression): Expression {
   switch (expression.kind) {
     case 'constant':
     case 'variable':
