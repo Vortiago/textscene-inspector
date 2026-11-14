@@ -20,22 +20,33 @@ import {
   type Value,
   variablesOf,
 } from './emitValue.js';
+import type { CalledFunctions } from './emitCall.js';
 import type { GlslangFolding } from './glslangFolding.js';
 import { isAssignOperator } from './operators.js';
 import { STEPS } from './assignment.js';
-import { arraySizeOf } from './parseExpression.js';
-import type { Expression, OperatorNode } from './shaderTree.js';
+import { arraySizeOf, isCall } from './treeWalk.js';
+import type { CallNode, Expression, OperatorNode } from './shaderTree.js';
 import { swizzleLanes } from './swizzle.js';
 import { shapeOf } from './types.js';
 
 const LANE_LETTERS = 'xyzw';
 
+/** What every function of a shader emits with: its structs and the functions it calls. */
+export interface EmitContext {
+  readonly structOf: StructOf;
+  readonly functions: CalledFunctions;
+}
+
 export class ExpressionEmitter {
+  private readonly structOf: StructOf;
+
   constructor(
     private readonly scope: EmitScope,
     private readonly folding: GlslangFolding,
-    private readonly structOf: StructOf
-  ) {}
+    private readonly context: EmitContext
+  ) {
+    this.structOf = context.structOf;
+  }
 
   /** The node of an expression of a value type. */
   node(expression: Expression): Node {
@@ -92,6 +103,7 @@ export class ExpressionEmitter {
 
   private operator(expression: OperatorNode): Value {
     const { op, operands } = expression;
+    if (isCall(expression)) return this.called(expression);
     if (op === 'OP_STRUCT') return this.structConstruct(expression);
     if (op === 'OP_SELECT_IF') return this.selected(expression);
     if (op === 'OP_AND' || op === 'OP_OR') return this.shortCircuit(expression);
@@ -102,6 +114,20 @@ export class ExpressionEmitter {
     if (op === 'OP_CONSTRUCT') return constructed(expression.type, nodes, types);
     if (op === 'OP_INDEX') return element(nodes[0]!, nodes[1]!);
     return OPERATIONS[op]!(nodes, types);
+  }
+
+  /**
+   * A call: the value of each argument but an `out` one, then each `out` and `inout` place
+   * written from what the call gives back, in the order of the arguments.
+   */
+  private called(call: CallNode): Value {
+    const passed = call.operands.map((operand, index) =>
+      call.qualifiers[index] === 'out' ? undefined : this.value(operand)
+    );
+    const { result, written } = this.context.functions.call(call.function, passed);
+    const places = call.operands.filter((_, index) => call.qualifiers[index] !== 'in');
+    places.forEach((place, index) => copyInto(this.value(place), written[index]!));
+    return result;
   }
 
   /** `Pair(a, b)`: each member's value, kept in the struct's own variables. */

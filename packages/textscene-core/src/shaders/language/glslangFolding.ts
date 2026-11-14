@@ -4,7 +4,7 @@
  * arithmetic gives: a shift by 85 folds as a shift by 21, where the GPU gives zero.
  */
 
-import { arraySizeOf } from './parseExpression.js';
+import { arraySizeOf } from './treeWalk.js';
 import { binaryLane, convertedLane, unaryLane } from './glslangArithmetic.js';
 import { godotConstantDouble } from './godotNumber.js';
 import type { Expression, OperatorNode, Scalar } from './shaderTree.js';
@@ -50,7 +50,10 @@ export class GlslangFolding {
         return owner && swizzleLanes(expression).map((lane) => owner[lane]!);
       }
       case 'operator':
-        return expression.op === 'OP_STRUCT' ? undefined : this.foldOperator(expression);
+        // glslang folds no struct and no call of a function the shader declares.
+        return expression.op === 'OP_STRUCT' || expression.op === 'OP_CALL'
+          ? undefined
+          : this.foldOperator(expression);
       default:
         return undefined;
     }

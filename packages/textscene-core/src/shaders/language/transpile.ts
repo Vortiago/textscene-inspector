@@ -3,13 +3,13 @@
  * TSL out. A text Godot refuses, or a construct not transpiled yet, throws `ShadingLanguageError`.
  */
 
-import { emitFunction, type TranspiledFunction } from './emitter.js';
+import { emitShader, type TranspiledFunction } from './emitter.js';
 import { parse } from './parse.js';
 import { tokenize } from './tokenizer.js';
 import { checkTranspiled } from './transpiledRows.js';
 
 export interface TranspiledShader {
-  /** Each function of the text, by name. */
+  /** Each function of the text, by Godot's name: `f`, then `f@2` for its first overload. */
   readonly functions: ReadonlyMap<string, TranspiledFunction>;
 }
 
@@ -17,7 +17,5 @@ export interface TranspiledShader {
 export function transpileShadingLanguage(source: string, file = ''): TranspiledShader {
   const tree = parse(tokenize(source, file));
   checkTranspiled(tree);
-  return {
-    functions: new Map(tree.functions.map((definition) => [definition.name, emitFunction(definition, tree)])),
-  };
+  return { functions: emitShader(tree) };
 }

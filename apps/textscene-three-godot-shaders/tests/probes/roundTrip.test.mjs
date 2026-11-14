@@ -31,6 +31,7 @@ const REFUSED_AFTER_PARSE = [
   'index-folded-write-past-end',
   'unbracketed-operator-before',
   'unbracketed-negated',
+  'function-out-swizzle-twice',
 ];
 
 /** Each probe's tree that `make` gives, made once, as `[name, tree]`. */

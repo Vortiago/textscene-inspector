@@ -74,7 +74,9 @@ describe('transpileShadingLanguage', () => {
   );
 
   it('refuses a row that is not transpiled before it reaches the emitter', () => {
-    expect(() => transpileShadingLanguage('void probe() {}')).toThrow("'void' is not transpiled yet (#1825)");
+    expect(() => transpileShadingLanguage('float probe(float a) { return sin(a); }')).toThrow(
+      "'sin(float)' is not transpiled yet (#1826)"
+    );
   });
 
   it('refuses a text Godot refuses', () => {
@@ -94,5 +96,60 @@ describe('transpileShadingLanguage', () => {
   it('refuses the wrong count of arguments to a transpiled function', () => {
     const probe = transpileShadingLanguage('float probe(float a) { return a; }').functions.get('probe')!;
     expect(() => probe.call([])).toThrow('expected 1 arguments for probe, got 0');
+  });
+
+  describe('a call', () => {
+    it('calls one GLSL function from each place, as Godot GLSL does', () => {
+      const glsl = glslOf(
+        'float twice(float x) { return x * 2.0; } float probe(float a) { return twice(a) + twice(1.5); }',
+        [uniform(1)]
+      );
+      expect(glsl).toContain('float sl0_twice ( float p0 )');
+      expect(glsl.match(/sl0_twice\( /g)).toHaveLength(2);
+    });
+
+    it('gives each overload a GLSL function of its own', () => {
+      const glsl = glslOf(
+        'float f(float x) { return x; } vec2 f(vec2 x) { return x; } float probe(float a) { return f(a) + f(vec2(a)).y; }',
+        [uniform(1)]
+      );
+      expect(glsl).toMatch(/float sl0_f \( float p0 \)[\s\S]*vec2 sl1_f \( vec2 p0 \)/);
+    });
+
+    it('gives back the out values in one struct and writes them to their places', () => {
+      const glsl = glslOf(
+        'void halves(float v, out float h, out float q) { h = v * 0.5; q = v * 0.25; } float probe(float a) { float h; float q; halves(a, h, q); return h - q; }',
+        [uniform(1)]
+      );
+      expect(glsl).toMatch(/struct sl0_halves_results \{\s*float m0;\s*float m1;\s*\}/);
+      expect(glsl).toMatch(
+        /(nodeVar\d+) = sl0_halves\( [^)]+\);\s*nodeVar\d+ = \1\.m0;\s*nodeVar\d+ = \1\.m1;/
+      );
+    });
+
+    it('passes an inout value and an array, and gives back an array in a struct', () => {
+      const glsl = glslOf(
+        'int[2] swap(inout int n, int v[2]) { n++; return int[2](v[1], v[0]); } int probe(int a) { int v[2] = int[2](a, 1); v = swap(a, v); return v[0] + a; }',
+        [uniform(1)]
+      );
+      expect(glsl).toContain('sl0_swap_results sl0_swap ( int p0, int[2] p1 )');
+      expect(glsl).toMatch(/struct sl0_swap_results \{\s*int\[2\] m0;\s*int m1;\s*\}/);
+    });
+
+    it('stands a call of a function that gives back nothing as a statement', () => {
+      const glsl = glslOf(
+        'void stop(float x) { if (x < 0.0) discard; } float probe(float a) { stop(a); return a; }',
+        [uniform(1)]
+      );
+      expect(glsl).toMatch(/nodeVar\d+ = sl0_stop\( /);
+    });
+
+    it('refuses an out argument whose swizzle repeats a letter, as the GPU compiler does', () => {
+      expect(() =>
+        transpileShadingLanguage(
+          'void h(out float x) { x = 1.0; } float probe(vec2 a) { h(a.xx.x); return a.x; }'
+        )
+      ).toThrow('glslang refuses a swizzle that repeats a letter as a place to write');
+    });
   });
 });
