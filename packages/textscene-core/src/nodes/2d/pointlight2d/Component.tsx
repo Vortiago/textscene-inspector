@@ -4,7 +4,7 @@
  * (`r3f/lighting2d/CanvasLighting2D`). CanvasItem2D supplies transform, `visible` and z.
  */
 
-import { useLayoutEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
@@ -15,26 +15,18 @@ import { useTextureView } from '../../../r3f/useTextureView';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { PointLight2DProperties } from './types';
-import {
-  updateShadowPolarTexture,
-  shadowColorContributes,
-  type ShadowSampling,
-} from '../../../r3f/lighting2d/lightQuad';
-import { buildShadowPolarMap } from '../../../r3f/lighting2d/shadowMap/shadowPolarMap';
-import { useShadowAtlasSize } from '../../../r3f/lighting2d/shadowMap/useShadowAtlasSize';
-import { createShadowPoseUniforms, writeShadowPose } from '../../../r3f/lighting2d/shadowMap/shadowSampling';
+import { shadowColorContributes } from '../../../r3f/lighting2d/lightQuad';
+import { usePointShadow } from '../../../r3f/lighting2d/shadowMap/usePointShadow';
 import { useLightSequence } from '../../../r3f/lighting2d/useLightSequence';
 import { lightDrawSequence } from '../../../r3f/lighting2d/lightSequence';
 import { usePassMeshRef, useRegisterCanvasLight2D } from '../../../r3f/lighting2d/CanvasLighting2D';
 import type { PassMeshRole } from '../../../r3f/lighting2d/itemLightList';
 import { DEFAULT_LIGHT_CULL_KEY, type LightCullKey } from '../../../r3f/lighting2d/lightCullKey';
 import { useLightShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
-import { useShadowLightPose } from '../../../r3f/lighting2d/shadowMap/shadowLightPose';
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { useLightQuadMaterials } from './useLightQuadMaterials';
 import { placePositionalLight, useApartLightOrigin } from '../../../r3f/lighting2d/apartLight';
 import type { Rgba } from '../../../godot/math/math';
-import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { Light2DBlendMode, type Light2DShadowFilter } from '../../../godot/scene/light2d.js';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
@@ -215,48 +207,11 @@ function QuadMesh({
   // A callback ref, not useRef, so the pose sampler starts once the quad is in
   // the tree: the world matrix it needs does not exist before that.
   const [quad, setQuad] = useState<THREE.Mesh | null>(null);
-  const light = useShadowLightPose(quad, casters.length > 0);
-  const atlasSize = useShadowAtlasSize();
-
-  // A pure function of the pose, the casters and the atlas size, so it rebuilds exactly when one moves.
-  const bins = useMemo(
-    () => (light && casters.length > 0 ? buildShadowPolarMap(light, casters, atlasSize) : null),
-    [light, casters, atlasSize]
-  );
-
-  // The texture outlives each rebuild: both quad materials hold its identity in
-  // `uShadowMap`, so an occluder settling during load refills it rather than
-  // rebuilding two ShaderMaterials. The refill runs at commit, since a write from
-  // a render React discards would reach the materials already on screen.
-  const [shadowMap, setShadowMap] = useState<THREE.DataTexture | null>(null);
-  useLayoutEffect(() => {
-    if (!bins) {
-      setShadowMap(null);
-      return;
-    }
-    const next = updateShadowPolarTexture(shadowMap, bins);
-    if (next !== shadowMap) setShadowMap(next);
-  }, [bins, shadowMap]);
-
-  // Keyed on the texture, not on mount, so a light that stops being shadowed
-  // (its occluders hidden, or the sub-scene carrying them swapped out) gives
-  // the GL object back instead of holding it for the session.
-  useDisposeOnRelease(shadowMap);
-
-  // Written at commit beside the map refill, so a moving light updates the uniforms its
-  // materials already hold instead of rebuilding them.
-  const [pose] = useState(createShadowPoseUniforms);
-  useLayoutEffect(() => {
-    if (light) writeShadowPose(pose, light);
-  }, [pose, light]);
-
-  const sampling = useMemo<ShadowSampling | undefined>(
-    () =>
-      shadowMap
-        ? { map: shadowMap, filter: shadowFilter, smooth: shadowFilterSmooth, pose, shadowColor }
-        : undefined,
-    [shadowMap, shadowFilter, shadowFilterSmooth, pose, shadowColor]
-  );
+  const sampling = usePointShadow(quad, casters, {
+    filter: shadowFilter,
+    smooth: shadowFilterSmooth,
+    shadowColor,
+  });
 
   const materials = useLightQuadMaterials({
     cookie,

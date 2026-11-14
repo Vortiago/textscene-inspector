@@ -3,7 +3,7 @@
 - Status: Accepted
 - Supersedes: ADR-0030's gate, its tap kernel and its texture state. ADR-0030's CPU map build
   and its `shadow_color` split stay.
-- Related: `r3f/lighting2d/shadowMap/shadowTaps.ts`, `r3f/lighting2d/shadowMap/shadowSampling.ts`,
+- Related: `r3f/lighting2d/shadowMap/shadowShader.ts`, `r3f/lighting2d/shadowMap/shadowSampling.ts`,
   `r3f/lighting2d/shadowMap/shadowPolarMap.ts`, `nodes/2d/pointlight2d/`.
 
 ## Context
@@ -34,8 +34,8 @@ pixels more than 1/255 apart.
 **Every shadowed PointLight2D builds the polar map and reads it per fragment with
 renderer_rd's taps.** The stencil path, its volumes and its stencil buffer are gone.
 
-- `shadowTaps.ts` holds the taps once. PointLight2D and DirectionalLight2D each declare how
-  to read one bin, since their maps differ only past their ends: the point map wraps, and the
+- `shadowShader.ts` holds the taps once, and `shadowSampleGlsl` joins them with the bin rule of
+  each light kind, since the maps differ only past their ends: the point map wraps, and the
   directional map clamps and reads an empty bin as lit.
 - A map holds `rendering/2d/shadow_atlas/size` bins, 2048 by default. The project setting
   reaches the CPU build and the texture, and the shader reads the bin count from the texture's

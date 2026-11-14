@@ -1,6 +1,6 @@
 /**
  * Godot's per-light 2D shadow map, a 1D polar depth buffer, built on the CPU. Every shadowed
- * PointLight2D samples it per fragment with Godot's taps (`shadowTaps.ts`).
+ * PointLight2D samples it per fragment with Godot's taps (`shadowShader.ts`).
  */
 
 /*

@@ -1,7 +1,7 @@
 /**
  * What a shadowed PointLight2D hands its quads so each fragment evaluates its own shadow fraction:
  * the polar map as a texture, the light-local transform, and the taps the `SHADOW_FILTER` define
- * selects (`shadowTaps.ts`).
+ * selects (`shadowShader.ts`).
  */
 
 /*
@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import type { Rgba } from '../../../godot/math/math.js';
 import type { Light2DShadowFilter } from '../../../godot/scene/light2d.js';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
-import { shadowMapUniforms } from './shadowTaps.js';
+import { createShadowMapTexture, shadowMapUniforms, writeShadowMap } from './shadowMapTexture.js';
 import { shadowMapZFarInv, type ShadowPolarLight } from './shadowPolarMap.js';
 
 /**
@@ -53,35 +53,6 @@ export interface ShadowSampling {
 }
 
 /**
- * One light's polar map as a texture: Godot's `R32_SFLOAT` atlas row behind a nearest sampler that
- * repeats on u (`renderer_canvas_render_rd.cpp:975-980,1930-1934`), so a tap at bin −1 reads the
- * last bin. A half float rounds the stored depth, and a fragment on the occluder line then reads
- * as shadowed where Godot lights it.
- */
-function createShadowPolarTexture(bins: Float32Array): THREE.DataTexture {
-  const texture = new THREE.DataTexture(
-    new Float32Array(bins.length),
-    bins.length,
-    1,
-    THREE.RedFormat,
-    THREE.FloatType
-  );
-  texture.minFilter = THREE.NearestFilter;
-  texture.magFilter = THREE.NearestFilter;
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.colorSpace = THREE.NoColorSpace;
-  texture.generateMipmaps = false;
-  fillShadowPolarTexture(texture, bins);
-  return texture;
-}
-
-function fillShadowPolarTexture(texture: THREE.DataTexture, bins: Float32Array): void {
-  (texture.image.data as Float32Array).set(bins);
-  texture.needsUpdate = true;
-}
-
-/**
  * `existing` refilled from `bins` where it can be, a fresh texture otherwise. The
  * map rebuilds whenever an occluder settles or moves, and the materials hold the
  * texture's identity in `uShadowMap`, so keeping it makes a rebuild a
@@ -92,9 +63,10 @@ export function updateShadowPolarTexture(
   bins: Float32Array
 ): THREE.DataTexture {
   const data = existing?.image.data as ArrayLike<number> | undefined;
-  if (!existing || data?.length !== bins.length) return createShadowPolarTexture(bins);
-  fillShadowPolarTexture(existing, bins);
-  return existing;
+  const texture =
+    existing && data?.length === bins.length ? existing : createShadowMapTexture(bins.length, 'repeat');
+  writeShadowMap(texture, bins);
+  return texture;
 }
 
 export function shadowSamplingParameters(shadow: ShadowSampling): Pick<

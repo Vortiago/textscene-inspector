@@ -12,13 +12,14 @@
 
 import * as THREE from 'three';
 import { canvasItemFacing } from '../canvasItemFacing.js';
-import { FRAGMENT, SHADOW_SAMPLE, SHADOW_VERTEX, SHADOWED_FRAGMENT, VERTEX } from './lightQuadShaders.js';
+import { FRAGMENT, SHADOWED_FRAGMENT, VERTEX } from './lightQuadShaders.js';
+import { POLAR_SHADOW_VERTEX } from './shadowMap/shadowShader.js';
 import { multipleTargetPass } from '../fullScreenPass.js';
 import { shadowSamplingParameters, type ShadowSampling } from './shadowMap/shadowSampling.js';
 import type { Rgba } from '../../godot/math/math.js';
 import { Light2DBlendMode, Light2DShadowFilter } from '../../godot/scene/light2d.js';
 
-export { updateShadowPolarTexture, type ShadowSampling } from './shadowMap/shadowSampling.js';
+export type { ShadowSampling } from './shadowMap/shadowSampling.js';
 
 /**
  * `light_blend_compute`'s modes are one fixed-function blend each: ADD is SrcAlpha/One with add,
@@ -96,8 +97,8 @@ export function createLightQuadMaterial({
   return multipleTargetPass(
     new THREE.ShaderMaterial({
       ...(sampling ? { defines: sampling.defines } : {}),
-      vertexShader: sampling ? SHADOW_VERTEX : VERTEX,
-      fragmentShader: sampling ? SHADOW_SAMPLE + SHADOWED_FRAGMENT : FRAGMENT,
+      vertexShader: sampling ? POLAR_SHADOW_VERTEX : VERTEX,
+      fragmentShader: sampling ? SHADOWED_FRAGMENT : FRAGMENT,
       uniforms: {
         uCookie: { value: cookie },
         uCookieEdgeFade: { value: edgeFade(cookie) },
