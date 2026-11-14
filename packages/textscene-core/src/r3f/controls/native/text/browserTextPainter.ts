@@ -34,7 +34,7 @@ export const browserTextPainter: GlyphPainter = {
  * the instance `measureText` measures. Else the larger of `lineAscentPx` and its face's own ascent
  * on each side: an ascent bounds the reach of any glyph.
  */
-export function textReachPx(glyph: GlyphPlacement, lineAscentPx: number): GlyphReach {
+function textReachPx(glyph: GlyphPlacement, lineAscentPx: number): GlyphReach {
   const face = glyph.fontMetrics;
   const ink =
     isCanvasFontMetrics(face) && !face.drawnOpentype ? face.getGlyphInkUnits?.(glyph.char) : undefined;
