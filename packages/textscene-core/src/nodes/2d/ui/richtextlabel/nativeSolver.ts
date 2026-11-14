@@ -742,7 +742,7 @@ export interface RichTextRunPlacement {
   color: Rgba;
   /** The run's outline ring, in the run's own colour space before the control tint: its size and colour. */
   outline: TextOutlineTheme;
-  /** The run's font size, px, for its glyphs. The baseline is the line's: `layout.baselineOffsetPx`. */
+  /** The run's font size, px, for its glyphs. The baseline is the line's: `layout.lines[0].ascentPx`. */
   fontSizePx: number;
   /** A single-line layout of only this run's glyphs from the line, `glyph.x` already line-relative. */
   layout: TextLayoutResult;
