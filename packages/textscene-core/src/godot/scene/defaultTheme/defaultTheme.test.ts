@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import measured from '../defaultTheme.godot.json';
 import type { Rgba } from '../../math/math.js';
-import { defaultThemeAt, type DefaultStyleBox, type DefaultThemeType, type Sides } from './defaultTheme.js';
+import {
+  defaultConstant,
+  defaultThemeAt,
+  type DefaultStyleBox,
+  type DefaultThemeType,
+  type Sides,
+} from './defaultTheme.js';
+import { typeItems } from './typeItems.js';
 import { DEFAULT_THEME_VARIATION_BASES } from './variations.js';
 
 /**
@@ -22,53 +29,8 @@ interface MeasuredTheme {
   types: Record<string, MeasuredType>;
 }
 
-/** The types the table holds. A type joins this list when its Controls read the table (ADR-0073). */
-const MIGRATED_TYPES = [
-  'BoxContainer',
-  'Button',
-  'CheckBox',
-  'CheckButton',
-  'ColorPickerButton',
-  'FlatButton',
-  'FlatMenuButton',
-  'FlowContainer',
-  'FoldableContainer',
-  'GraphFrameTitleLabel',
-  'GraphNodeTitleLabel',
-  'GridContainer',
-  'HBoxContainer',
-  'HFlowContainer',
-  'HScrollBar',
-  'HSeparator',
-  'HSlider',
-  'HSplitContainer',
-  'HeaderLarge',
-  'HeaderMedium',
-  'HeaderSmall',
-  'Label',
-  'LinkButton',
-  'MarginContainer',
-  'MenuBar',
-  'MenuButton',
-  'OptionButton',
-  'Panel',
-  'PanelContainer',
-  'PopupPanel',
-  'ProgressBar',
-  'ScrollContainer',
-  'SpinBox',
-  'SplitContainer',
-  'TabBar',
-  'TabContainer',
-  'TooltipLabel',
-  'TooltipPanel',
-  'VBoxContainer',
-  'VFlowContainer',
-  'VScrollBar',
-  'VSeparator',
-  'VSlider',
-  'VSplitContainer',
-];
+/** A type the table leaves out, such as `Icons`, holds only icons, which the table does not hold. */
+const ICONS_ONLY = typeItems({});
 
 /** A 32-bit float colour channel holds about seven digits. */
 const COLOUR_DIGITS = 6;
@@ -120,13 +82,12 @@ function expectSameItems(table: DefaultThemeType, godot: MeasuredType): void {
 describe.each(themes)('defaultThemeAt(%s)', (_scale, godot) => {
   const table = defaultThemeAt(godot.scale);
 
-  it.each(MIGRATED_TYPES)('holds every item of %s as Godot does', (type) => {
-    expect(table.types[type]).toBeDefined();
-    expectSameItems(table.types[type]!, godot.types[type]!);
+  it.each(Object.keys(godot.types))('holds every item of %s as Godot does', (type) => {
+    expectSameItems(table.types[type] ?? ICONS_ONLY, godot.types[type]!);
   });
 
-  it('holds no type that the list of migrated types lacks', () => {
-    expect(Object.keys(table.types).sort()).toEqual([...MIGRATED_TYPES].sort());
+  it('holds no type that the capture lacks', () => {
+    expect(Object.keys(table.types).filter((type) => !(type in godot.types))).toEqual([]);
   });
 
   it('scales default_font_size as Godot does', () => {
@@ -159,5 +120,23 @@ describe('defaultThemeAt', () => {
     expect(() => {
       margin.left = 0;
     }).toThrow(TypeError);
+  });
+});
+
+describe('defaultConstant', () => {
+  it('reads a constant of the table at scale 1', () => {
+    expect(defaultConstant('SpinBox', 'buttons_width')).toBe(16);
+  });
+
+  it('names the type and the constant it misses', () => {
+    expect(() => defaultConstant('SpinBox', 'no_such_constant')).toThrow(
+      'expected SpinBox to hold the constant no_such_constant, found '
+    );
+  });
+
+  it('throws for a type the table leaves out', () => {
+    expect(() => defaultConstant('Icons', 'anything')).toThrow(
+      'expected the default theme to hold the type Icons'
+    );
   });
 });

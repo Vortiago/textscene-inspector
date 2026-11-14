@@ -9,7 +9,8 @@ follows Godot. `NOTIFICATION_ENTER_CANVAS` climbs `CanvasItem` parents for a Con
 ## The climb
 
 - A `Node2D` is a `CanvasItem`, so the Control is promoted to the nearest real Control. The
-  Node2D's transform, `modulate` and `z_index` ride along in `SolveNode.skippedAncestors`. As a
+  Node2D's transform rides along in `SolveNode.skippedTransform`, and the rest it hands down in
+  `SolveNode.inheritance`. As a
   grandchild it anchors against a zero rect, and no Container above lays it out
   (`controlRectSolver.ts`).
 - A `Node3D` or raw `Node` breaks the climb: the Control is a canvas root, hoisted to the nearest
@@ -19,7 +20,7 @@ follows Godot. `NOTIFICATION_ENTER_CANVAS` climbs `CanvasItem` parents for a Con
   hoisted Controls land there.
 - `top_level` ends the climb wherever it appears: the loop is
   `while (!node->is_set_as_top_level())` (`control.cpp:3876`). On the Control itself it strips
-  `skippedAncestors`, since `get_parent_item()` returns nullptr first
+  `skippedTransform`, since `get_parent_item()` returns nullptr first
   (`canvas_item.cpp:565-571`). No Container lays it out (`container.cpp:144-146`).
 
 ## Visibility
@@ -27,4 +28,4 @@ follows Godot. `NOTIFICATION_ENTER_CANVAS` climbs `CanvasItem` parents for a Con
 Visibility is a scene-tree rule, not a canvas one. `NOTIFICATION_ENTER_TREE` casts the direct
 parent with no `top_level` test (`canvas_item.cpp:311-316`), and `_handle_visibility_change`
 reaches top_level children too (`canvas_item.cpp:103-108`). So visibility crosses both breaks on
-`SolveNode.parentVisibleInTree`, and resets only where `childParentVisibleInTree` does.
+`SolveNode.parentVisibleInTree`, which the walk reads from the canvas item pass (`parentVisibleInTree`).

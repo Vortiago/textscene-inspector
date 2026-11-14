@@ -11,7 +11,11 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { GraphNodeSlot } from '../graphnode/types';
 import '../graphnode/nativeSolver.js'; // registers GraphNode's MinimumSizeFn/ContainerLayoutFn
@@ -51,7 +55,7 @@ function graphEdit(properties: Partial<GraphEditProperties> = {}, children: Solv
       ...properties,
     } as GraphEditProperties,
   };
-  return { ...emptySolveNode(), path: 'G', node, children };
+  return withThemeItems({ ...emptySolveNode(), path: 'G', node, children });
 }
 
 function fullSlot(overrides: Partial<GraphNodeSlot>): GraphNodeSlot {
@@ -81,12 +85,12 @@ function graphNode(
   children: SolveNode[],
   positionOffset: Vector2 = { x: 0, y: 0 }
 ): SolveNode {
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: name,
     node: controlNode(name, 'GraphNode', { name, title: '', positionOffset, slots }),
     children,
-  };
+  });
 }
 
 /**

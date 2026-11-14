@@ -11,7 +11,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext, ContainerLayoutResult } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { marginContainerMinimumSize, marginContainerLayout } from './nativeSolver';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { SizeFlags } from '../../../../godot/scene/control';
 import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 
@@ -29,15 +29,15 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
 }
 
 function container(name: string, props: Partial<ControlProperties>, children: SolveNode[]): SolveNode {
-  return {
+  // A local theme_override_constants/* reaches `marginsOf` through `n.constants`, merged over the
+  // default theme's items as the walker merges them.
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'MarginContainer', { name, ...props }),
     children,
-    // A local theme_override_constants/* reaches `marginsOf` through `n.constants`, which the walker
-    // fills unconditionally, not through props.
     constants: props.themeOverrideConstants ?? {},
-  };
+  });
 }
 
 /** No registered per-type minimum size in these tests: only `custom_minimum_size` floors. */
@@ -68,8 +68,8 @@ describe('marginContainerMinimumSize', () => {
       sizeFlagsVertical: 8,
     });
     const n = container('M', {}, [a, b]);
-    // No theme_override_constants: default_theme.cpp:1252-1255 sets all four margins to 0, unscaled, so
-    // the container's minimum is the componentwise max of its children.
+    // No theme_override_constants: the default theme's `MarginContainer/margin_*` are all 0, so the
+    // container's minimum is the componentwise max of its children.
     expect(marginContainerMinimumSize(n, ctx())).toEqual({ x: 90, y: 80 });
   });
 

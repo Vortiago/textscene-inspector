@@ -10,12 +10,13 @@
  */
 
 import type { TscnNode } from '../parser/types';
-import { descendsFromClass } from '../godot/classdb/classBaseTypes';
-import { ruleInt } from '../godot/variant/intSlots';
 import { CanvasItemClipChildrenMode } from '../godot/scene/canvasItem';
 import { DEFAULT_CANVAS_LAYER, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
 import { clampCanvasItemZ, WORLD_CANVAS_LAYER } from './lighting2d/canvasItemPlacement';
+import { canvasItemFieldsOf, type CanvasItemNodeFields } from './canvasItemPass/canvasItemFields';
+import { isCanvasItem, isCanvasLayerType } from './canvasItemClass';
+import { DYNAMIC_CHILD_RESERVE, LISTED_LAYER, paintRoomOf } from './canvasItemPass/paintRoom';
 
 /** How many distinct `z_final` buckets one canvas has. */
 const Z_BUCKET_COUNT = CANVAS_ITEM_Z_MAX - CANVAS_ITEM_Z_MIN + 1;
@@ -27,13 +28,6 @@ const Z_BUCKET_COUNT = CANVAS_ITEM_Z_MAX - CANVAS_ITEM_Z_MIN + 1;
  * of magnitude under `Number.MAX_SAFE_INTEGER`.
  */
 const PAINT_SEQUENCE_STRIDE = 2 ** 24;
-
-/**
- * Room held back inside a node whose drawn pieces the tree does not list
- * (`reservesRoom`). It keeps the allocation a pure function of the tree, so the
- * world walk and the Control walk agree without waiting on a resource.
- */
-const DYNAMIC_CHILD_RESERVE = 4096;
 
 /** A contiguous run of draw-sequence values owned by one node and its subtree. */
 export interface PaintRange {
@@ -114,16 +108,6 @@ export function layerRankOf(declared: readonly number[], layer: number): number 
   return isDeclared ? below * 2 + 1 : below * 2;
 }
 
-/**
- * Whether this type starts a canvas of its own: `_enter_canvas` climbs to
- * `Object::cast_to<CanvasLayer>(n)` (`canvas_item.cpp:246-252`). Derived from
- * ClassDB, so a subclass such as `ParallaxBackground` (`parallax_background.h:34`)
- * counts. `controls/canvasBoundary.driftguard.test.ts` holds the Control walk to it.
- */
-export function isCanvasLayerType(type: string): boolean {
-  return descendsFromClass(type, 'CanvasLayer');
-}
-
 /** The `layer` a canvas-layer node declares, or Godot's own default of 1. */
 export function canvasLayerOf(node: TscnNode): number {
   const layer = (node.properties as { layer?: number }).layer;
@@ -147,76 +131,31 @@ export function canvasLayerRanks(nodes: readonly TscnNode[]): readonly number[] 
 }
 
 /**
- * Whether a node draws pieces the tree does not list: a tile layer, which a
- * y-sort pass splits into one group per tile row once the tileset loads and which instantiates its
- * scene tiles after its children (a TileMap does the same), and an `instance=` node, whose sub-scene
- * roots arrive once the PackedScene loads.
+ * Whether a node draws pieces the tree does not list: a node whose room declares a tail, and an
+ * `instance=` node, whose sub-scene roots arrive once the PackedScene loads.
  */
 function reservesRoom(node: TscnNode): boolean {
-  return node.type === 'TileMapLayer' || node.type === 'TileMap' || node.instance !== undefined;
+  return node.instance !== undefined || paintRoomOf(node.type).reservesTail?.(node) === true;
 }
 
-/**
- * How many values the internal children Godot adds at the front of `node` take:
- * one per TileMap layer, each added with `INTERNAL_MODE_FRONT` (`tile_map.cpp:279`).
- * Their draw indices come before every authored child's (`node.h:585-600`).
- */
-export function internalFrontRoom(node: TscnNode): number {
-  if (node.type !== 'TileMap') return 0;
-  const { layers, y_sort_enabled: ySorted } = node.properties as {
-    layers?: readonly unknown[];
-    y_sort_enabled?: boolean;
-  };
-  // A y-sorted layer splits into a group per tile row once its tileset loads, so it draws from
-  // a reserve, as `reservesRoom` gives a TileMapLayer.
-  return (layers?.length ?? 0) * (ySorted ? DYNAMIC_CHILD_RESERVE : 1);
+/** How many values the internal children Godot adds at the front of `node` take (`node.h:585-600`). */
+function internalFrontRoom(node: TscnNode): number {
+  return paintRoomOf(node.type).frontRoom?.(node) ?? 0;
 }
 
-/**
- * How many values the internal children Godot adds at the back of `node` take: one for a
- * Control's chrome, such as a ScrollContainer's bars, each added with `INTERNAL_MODE_BACK`
- * (`scroll_container.cpp:919,924`). Their draw indices come after every authored child's.
- */
-export function internalBackRoom(node: TscnNode): number {
-  return isControlType(node.type) ? 1 : 0;
+/** How many values the internal children Godot adds at the back of `node` take, after every authored child's. */
+function internalBackRoom(node: TscnNode): number {
+  return paintRoomOf(node.type).backRoom?.(node) ?? 0;
 }
 
-/**
- * How many values a listed child the parent adds itself takes: one for GraphEdit's
- * `connections_layer` (`graph_edit.cpp:3189-3190`). `listedChildOrder` places it.
- */
+/** The order `parent` draws `children` in, with `LISTED_LAYER` where its own layer draws, or undefined for scene order. */
+function listedChildOrder(parent: TscnNode, children: readonly TscnNode[]): number[] | undefined {
+  return paintRoomOf(parent.type).listedOrder?.(parent, children);
+}
+
+/** How many values the parent's own listed layer takes: one where its listed order places it. */
 function internalLayerRoom(node: TscnNode): number {
-  return node.type === 'GraphEdit' ? 1 : 0;
-}
-
-/** Marks the parent's own listed layer in a `listedChildOrder`. */
-const LISTED_LAYER = -1;
-
-/**
- * The order `parent` draws `children` in, as indices into `children`, with `LISTED_LAYER` where its
- * own layer draws, or `undefined` for scene order. GraphEdit moves each GraphFrame to index 0 and
- * `connections_layer` to the index after the frames (`graph_edit.cpp:714-717`). So the frames draw
- * in reverse scene order, then the connections, then the other children in scene order.
- */
-export function listedChildOrder(parent: TscnNode, children: readonly TscnNode[]): number[] | undefined {
-  if (internalLayerRoom(parent) === 0) return undefined;
-  const isFrame = children.map((child) => descendsFromClass(child.type, 'GraphFrame'));
-  const indices = children.map((_, index) => index);
-  const frames = indices.filter((index) => isFrame[index]).reverse();
-  return [...frames, LISTED_LAYER, ...indices.filter((index) => !isFrame[index])];
-}
-
-/** Filled by `isControlType` and never cleared: a class's chain is fixed. */
-const controlTypes = new Map<string, boolean>();
-
-/** Cached, since every allocation sizes each subtree again and the chain walk is per call. */
-export function isControlType(type: string): boolean {
-  let isControl = controlTypes.get(type);
-  if (isControl === undefined) {
-    isControl = descendsFromClass(type, 'Control');
-    controlTypes.set(type, isControl);
-  }
-  return isControl;
+  return listedChildOrder(node, node.children)?.includes(LISTED_LAYER) ? 1 : 0;
 }
 
 /**
@@ -240,21 +179,13 @@ export function paintRangeSize(node: TscnNode): number {
 }
 
 /**
- * Whether `Object::cast_to<CanvasItem>` accepts this node. `get_parent_item()`
- * applies it to the direct parent (`canvas_item.cpp:565-571`) to decide whether
- * an item nests under it or parents at the canvas.
- */
-export function isCanvasItem(node: TscnNode): boolean {
-  return descendsFromClass(node.type, 'CanvasItem');
-}
-
-/**
- * `top_level`, under either casing: `Node2DProperties` keeps the `.tscn`
- * snake_case, and `ControlProperties` is camelCase.
+ * `top_level`. A Node3D has one too (`node_3d.cpp:1044`), which the CanvasItem reader does not read, so
+ * it is read here under the Node3D's snake case.
  */
 export function isTopLevelItem(node: TscnNode): boolean {
-  const props = node.properties as { top_level?: boolean; topLevel?: boolean };
-  return props.top_level === true || props.topLevel === true;
+  return (
+    canvasItemFieldsOf(node)?.isTopLevel ?? (node.properties as { top_level?: boolean }).top_level === true
+  );
 }
 
 /**
@@ -367,15 +298,13 @@ interface AllocatedPaintRange {
   tail: PaintRange;
 }
 
-/** `show_behind_parent`, under either casing the two parsers produce. */
+/** `show_behind_parent`, as the CanvasItem fields read it for a Control and a Node2D alike. */
 function drawsBehindParent(node: TscnNode): boolean {
-  const props = node.properties as { show_behind_parent?: boolean; showBehindParent?: boolean };
-  // A Control, whose properties are camelCase, honours the flag as a Node2D does.
-  return props.show_behind_parent === true || props.showBehindParent === true;
+  return canvasItemFieldsOf(node)?.showsBehindParent === true;
 }
 
 /** How a parent's own children split its range. */
-interface PaintRangeLayout {
+export interface PaintRangeLayout {
   /** `y_sort_enabled`: the children are re-packed in sort order after the parent. */
   sortsChildren?: boolean;
   /**
@@ -459,50 +388,52 @@ export function allocatePaintRange(
  * it. A y-sorted item's children draw in the sort order, outside its group.
  */
 function drawsClipped(node: TscnNode): boolean {
-  const mode = ruleInt(node.rawProperties.clip_children ?? '0');
-  const isClipping = mode === CanvasItemClipChildrenMode.ONLY || mode === CanvasItemClipChildrenMode.AND_DRAW;
-  return isClipping && !ysortsChildren(node);
+  const fields = canvasItemFieldsOf(node);
+  return fields !== null && clipsChildren(fields);
 }
 
 /**
- * Whether `node` re-orders its children by `y_sort_enabled`, so the behind/ahead split does not
- * apply. Under either casing: a Control's properties are camelCase.
+ * Whether an item with `fields` clips its children to its own pixels. A y-sorted owner clips
+ * nothing: its children are culled beside it, after its group closes (`renderer_canvas_cull.cpp:437-458`).
  */
+export function clipsChildren(fields: CanvasItemNodeFields): boolean {
+  const mode = fields.clipChildren;
+  const isClipping = mode === CanvasItemClipChildrenMode.ONLY || mode === CanvasItemClipChildrenMode.AND_DRAW;
+  return isClipping && !fields.ySortEnabled;
+}
+
+/** Whether `node` re-orders its children by `y_sort_enabled`, so the behind/ahead split does not apply. */
 export function ysortsChildren(node: TscnNode): boolean {
-  const props = node.properties as { y_sort_enabled?: boolean; ySortEnabled?: boolean };
-  return props.y_sort_enabled === true || props.ySortEnabled === true;
+  return canvasItemFieldsOf(node)?.ySortEnabled === true;
 }
 
 /**
  * A CanvasGroup draws its composite rect over the buffer its children fill, and a clipping item
  * draws its mask over it, so each child draws first (`renderer_canvas_cull.cpp:471-484`).
  */
-export function drawsEveryChildFirst(node: TscnNode): boolean {
+function drawsEveryChildFirst(node: TscnNode): boolean {
   return node.type === 'CanvasGroup' || drawsClipped(node);
 }
 
-/**
- * The ranges of the children of `node` that draw behind it, in child order. A clipping item that
- * draws nothing has no group, so these draw before its other children.
- */
-export function behindParentRanges(range: PaintRange, node: TscnNode): PaintRange[] {
-  return behindRangesOf(node.children, allocateNodePaintRange(range, node).children);
-}
-
-/** The `ranges` of the `show_behind_parent` `children`, for a caller that allocated the ranges itself. */
+/** The `ranges` of the `show_behind_parent` `children`, in child order, whatever the parent type. */
 export function behindRangesOf(children: readonly TscnNode[], ranges: readonly PaintRange[]): PaintRange[] {
   return ranges.filter((_, index) => drawsBehindParent(children[index]!));
 }
 
 /** `allocatePaintRange` for `node`'s own children, with the layout the node declares. */
 export function allocateNodePaintRange(range: PaintRange, node: TscnNode): AllocatedPaintRange {
-  return allocatePaintRange(range, node.children, {
+  return allocatePaintRange(range, node.children, paintLayoutOf(node, node.children));
+}
+
+/** The layout `node` declares for `children`, the children it draws in its own run. */
+export function paintLayoutOf(node: TscnNode, children: readonly TscnNode[]): PaintRangeLayout {
+  return {
     sortsChildren: ysortsChildren(node),
     drawsChildrenFirst: drawsEveryChildFirst(node),
     frontRoom: internalFrontRoom(node),
     backRoom: internalBackRoom(node),
-    listedOrder: listedChildOrder(node, node.children),
-  });
+    listedOrder: listedChildOrder(node, children),
+  };
 }
 
 /**

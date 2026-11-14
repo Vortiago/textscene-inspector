@@ -58,7 +58,7 @@ describe('menuButtonMinimumSize', () => {
 
 describe('the text theme of a MenuButton', () => {
   const disabledTextTheme = (n: SolveNode) =>
-    buttonTextTheme(n, n.node.properties as MenuButtonProperties, 'disabled', { theme: nativeTheme(1) });
+    buttonTextTheme(n, n.node.properties as MenuButtonProperties, 'disabled');
 
   it("resolves MenuButton's OWN disabled font colour, not Button's control_font_disabled_color", () => {
     const n = node({ disabled: true });

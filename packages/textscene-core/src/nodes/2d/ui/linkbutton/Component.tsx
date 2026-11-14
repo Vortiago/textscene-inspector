@@ -40,7 +40,7 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
   // `tint.own` (`self_modulate` on the inherited `modulate`) multiplies the font colour before its one
   // sRGB-to-linear conversion. The underline reuses that colour, as Godot's `draw_line` does
   // (`link_button.cpp:311,313`). `renderOrder` reaches the text and the underline alike.
-  const { fontSizePx, color: baseFontColor } = linkButtonTextTheme(solveNode, props, state, { theme });
+  const { fontSizePx, color: baseFontColor } = linkButtonTextTheme(solveNode, props, state);
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
   const textOutline = useTintedTextOutline(solveNode, tint.own);
 

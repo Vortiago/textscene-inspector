@@ -7,20 +7,25 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import type { Rect2 } from '../../../godot/math/rect2';
+import { TRANSFORM2D_IDENTITY } from '../../../godot/math/transform2d';
 import type { SolveNode } from './solveTree';
 import { nativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type ContainerLayoutFn } from './solverRegistry';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../../canvasPaintOrder';
 import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
-import { controlNode, withPaintRanges } from './testing/solveNode';
+import { controlNode, linkedTree, withPaintRanges } from './testing/solveNode';
 import { controlComponentRegistry, type NativeControlComponent } from '../ControlComponentRegistry';
-import { CanvasLayerIndexProvider, useEffectiveZ } from '../../lighting2d/canvasItemPlacement';
+import { CanvasLayerIndexProvider } from '../../lighting2d/canvasItemPlacement';
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../../godot/rendering/rendering';
-import { Modulate2DContext, useParentModulate } from '../../canvasItemModulate';
-import { ROOT_TEXTURE_SAMPLER, useResolvedTextureSampler } from '../../canvasItemTextureSampler';
+import { useResolvedTextureSampler } from '../../canvasItemTextureSampler';
+import { useEnclosingCanvasState, type CanvasItemLink } from '../../canvasItemPass/inheritedCanvasState';
+import { canvasItemFieldsOf, type CanvasItemNodeFields } from '../../canvasItemPass/canvasItemFields';
+import { InheritedFrom, inheritedState } from '../../testing/inheritedFrom';
 import { solveNode as emptySolveNode } from './testing/solveNode';
 import { controlProps } from '../../../nodes/2d/ui/control/testing/controlProps';
+// Side effect: the parser slices register the paint room each type holds.
+import '../../../parser/TscnParser';
 
 /** The world canvas's rank, derived, never hardcoded: only a rank's order means
  * anything, and the spacing for undeclared layers moves the value. */
@@ -58,6 +63,32 @@ function solveNode(
   const tscnNode: TscnNode = controlNode(name, type, controlProps({ name, ...properties }));
   return { ...emptySolveNode(), path, node: tscnNode, children };
 }
+
+/** The walker over the one root `root`. */
+function walked(root: SolveNode) {
+  return (
+    <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+  );
+}
+
+/** A skipped Node2D at `path` that states `own` of itself, and nothing else. */
+function skippedNode2D(path: string, own: Partial<CanvasItemNodeFields> = {}): CanvasItemLink {
+  const name = path.split('/').pop()!;
+  const node2D: TscnNode = { name, type: 'Node2D', properties: {}, rawProperties: {}, children: [] };
+  return {
+    fields: { ...canvasItemFieldsOf(node2D)!, ...own },
+    resources: emptySolveNode().resources,
+    path,
+  };
+}
+
+/** `subject` promoted past the skipped Node2D items `links`, outermost first. */
+function promotedPastLinks(subject: SolveNode, links: CanvasItemLink[]): SolveNode {
+  return linkedTree({ ...subject, skippedTransform: TRANSFORM2D_IDENTITY }, { links, startsChain: false });
+}
+
+/** A Control class a probe registers under, so the canvas item pass reads its node as a Control. */
+const PROBE_TYPE = 'ColorRect';
 
 interface WrapperInstance {
   name: string;
@@ -231,7 +262,7 @@ describe('<ControlCanvasWalker>', () => {
     expect(groups.some((g) => Math.abs(g.rotation.z - -(Math.PI / 2)) < 1e-9)).toBe(true);
   });
 
-  it('composes a promoted Control’s OWN rotation with its `skippedAncestors` transform — never double-applying, never disagreeing on direction/origin', async () => {
+  it('composes a promoted Control’s OWN rotation with its `skippedTransform` transform — never double-applying, never disagreeing on direction/origin', async () => {
     // Node2D ancestor: rotation=PI/2 at (100,0). core/math/transform_2d.h:
     // 249-254 (rot=PI/2, scale=(1,1), skew=0): a=0,b=1,c=-1,d=0.
     const ancestorTransform = {
@@ -257,13 +288,7 @@ describe('<ControlCanvasWalker>', () => {
         offsetBottom: 20,
         rotation: Math.PI / 2,
       }),
-      skippedAncestors: {
-        transform: ancestorTransform,
-        modulate: { r: 1, g: 1, b: 1, a: 1 },
-        z: [],
-        sampler: ROOT_TEXTURE_SAMPLER,
-        material: { kind: 'none' },
-      },
+      skippedTransform: ancestorTransform,
     };
 
     const renderer = await ReactThreeTestRenderer.create(
@@ -510,7 +535,7 @@ describe('<ControlCanvasWalker>', () => {
     };
 
     async function resolvedSampler(promoted: SolveNode): Promise<string> {
-      controlComponentRegistry.register({ typeName: 'SamplerProbe', Component: SamplerProbe });
+      controlComponentRegistry.register({ typeName: PROBE_TYPE, Component: SamplerProbe });
       const renderer = await ReactThreeTestRenderer.create(
         <ControlCanvasWalker
           tree={[promoted]}
@@ -527,39 +552,29 @@ describe('<ControlCanvasWalker>', () => {
       return probe.name.slice('sampler:'.length);
     }
 
-    function promotedPast(
-      sampler: { filter: number | undefined; repeat: number | undefined },
-      own = {}
-    ): SolveNode {
-      return {
-        ...solveNode('N/Promoted', 'SamplerProbe', { anchorsPreset: 15, ...own }),
-        skippedAncestors: {
-          transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
-          modulate: { r: 1, g: 1, b: 1, a: 1 },
-          z: [],
-          sampler,
-          material: { kind: 'none' },
-        },
-      };
+    function promotedPastNearest(own = {}): SolveNode {
+      return promotedPastLinks(solveNode('N/Promoted', PROBE_TYPE, { anchorsPreset: 15, ...own }), [
+        skippedNode2D('N', { textureFilter: NEAREST }),
+      ]);
     }
 
     it('inherits the filter a skipped Node2D ancestor names, where it names none itself', async () => {
-      const reading = await resolvedSampler(promotedPast({ filter: NEAREST, repeat: undefined }));
+      const reading = await resolvedSampler(promotedPastNearest());
       expect(reading).toBe('filter=1,repeat=1');
     });
 
     it('lets its own filter beat the skipped ancestor', async () => {
-      const reading = await resolvedSampler(
-        promotedPast({ filter: NEAREST, repeat: undefined }, { textureFilter: LINEAR })
-      );
+      const reading = await resolvedSampler(promotedPastNearest({ textureFilter: LINEAR }));
       expect(reading).toBe('filter=2,repeat=1');
     });
   });
 
-  describe('EffectiveZProvider (Light2D culling z_final)', () => {
-    // Names its group after the ambient `useEffectiveZ()`, the `z_final` its
-    // parent published: a hook runs only inside a real component.
-    const ZProbe: NativeControlComponent = () => <group name={`ZProbe:z=${useEffectiveZ()}`} />;
+  describe('the z_final a Control hands down (Light2D culling)', () => {
+    // Names its group after the `z_final` its enclosing item hands down: a hook runs only inside a
+    // real component.
+    const ZProbe: NativeControlComponent = () => (
+      <group name={`ZProbe:z=${useEnclosingCanvasState().zFinal}`} />
+    );
 
     function zProbeReading(renderer: {
       scene: { findAllByType: (t: string) => { instance: { name: string } }[] };
@@ -572,119 +587,93 @@ describe('<ControlCanvasWalker>', () => {
     }
 
     it("gives a bare Control's child an ambient z of 0 — no ancestor z_index, no CanvasLayer", async () => {
-      controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
-      const probe = solveNode('Root/Probe', 'ZProbe', {});
-      const root = solveNode('Root', 'TestType', { anchorsPreset: 15 }, [probe]);
+      controlComponentRegistry.register({ typeName: PROBE_TYPE, Component: ZProbe });
+      const probe = solveNode('Root/Probe', PROBE_TYPE, {});
+      const root = solveNode('Root', 'Control', { anchorsPreset: 15 }, [probe]);
 
-      const renderer = await ReactThreeTestRenderer.create(
-        <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
-      );
+      const renderer = await ReactThreeTestRenderer.create(walked(linkedTree(root)));
 
       expect(zProbeReading(renderer)).toBe(0);
     });
 
     it("accumulates a Control's own authored z_index onto the ambient for its child", async () => {
-      controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
-      const probe = solveNode('Root/Probe', 'ZProbe', {});
-      const root = solveNode('Root', 'TestType', { anchorsPreset: 15, zIndex: 7 }, [probe]);
+      controlComponentRegistry.register({ typeName: PROBE_TYPE, Component: ZProbe });
+      const probe = solveNode('Root/Probe', PROBE_TYPE, {});
+      const root = solveNode('Root', 'Control', { anchorsPreset: 15, zIndex: 7 }, [probe]);
 
-      const renderer = await ReactThreeTestRenderer.create(
-        <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
-      );
+      const renderer = await ReactThreeTestRenderer.create(walked(linkedTree(root)));
 
       expect(zProbeReading(renderer)).toBe(7);
     });
 
     it('accumulates z_index down a nested Control chain, exactly like Node2D (accumulateCanvasItemZ)', async () => {
-      controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
-      const probe = solveNode('A/B/Probe', 'ZProbe', {});
-      const b = solveNode('A/B', 'TestType', { anchorsPreset: 15, zIndex: 3 }, [probe]);
-      const a = solveNode('A', 'TestType', { anchorsPreset: 15, zIndex: 5 }, [b]);
+      controlComponentRegistry.register({ typeName: PROBE_TYPE, Component: ZProbe });
+      const probe = solveNode('A/B/Probe', PROBE_TYPE, {});
+      const b = solveNode('A/B', 'Control', { anchorsPreset: 15, zIndex: 3 }, [probe]);
+      const a = solveNode('A', 'Control', { anchorsPreset: 15, zIndex: 5 }, [b]);
 
-      const renderer = await ReactThreeTestRenderer.create(
-        <ControlCanvasWalker tree={[a]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
-      );
+      const renderer = await ReactThreeTestRenderer.create(walked(linkedTree(a)));
 
       expect(zProbeReading(renderer)).toBe(8);
     });
 
     it("restarts the chain at a Control's own z_index when z_as_relative is false (renderer_canvas_cull.cpp:433)", async () => {
-      controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
-      const probe = solveNode('A/B/Probe', 'ZProbe', {});
-      const b = solveNode('A/B', 'TestType', { anchorsPreset: 15, zIndex: 3, zAsRelative: false }, [probe]);
-      const a = solveNode('A', 'TestType', { anchorsPreset: 15, zIndex: 5 }, [b]);
+      controlComponentRegistry.register({ typeName: PROBE_TYPE, Component: ZProbe });
+      const probe = solveNode('A/B/Probe', PROBE_TYPE, {});
+      const b = solveNode('A/B', 'Control', { anchorsPreset: 15, zIndex: 3, zAsRelative: false }, [probe]);
+      const a = solveNode('A', 'Control', { anchorsPreset: 15, zIndex: 5 }, [b]);
 
-      const renderer = await ReactThreeTestRenderer.create(
-        <ControlCanvasWalker tree={[a]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
-      );
+      const renderer = await ReactThreeTestRenderer.create(walked(linkedTree(a)));
 
       expect(zProbeReading(renderer)).toBe(3);
     });
 
     it('reaches a Control nested inside a wrapsChildren painter (e.g. CanvasLayer) without losing accumulation', async () => {
-      controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
+      controlComponentRegistry.register({ typeName: PROBE_TYPE, Component: ZProbe });
       controlComponentRegistry.register({
         typeName: 'CanvasLayer',
         Component: StubCanvasLayerNative,
         wrapsChildren: true,
       });
-      const probe = solveNode('Layer/Child/Probe', 'ZProbe', {});
-      const child = solveNode('Layer/Child', 'TestType', { anchorsPreset: 15, zIndex: 4 }, [probe]);
+      const probe = solveNode('Layer/Child/Probe', PROBE_TYPE, {});
+      const child = solveNode('Layer/Child', 'Control', { anchorsPreset: 15, zIndex: 4 }, [probe]);
       const layer = solveNode('Layer', 'CanvasLayer', { layer: 5 }, [child]);
 
-      const renderer = await ReactThreeTestRenderer.create(
-        <ControlCanvasWalker
-          tree={[layer]}
-          generation={0}
-          viewport={VIEWPORT}
-          theme={THEME}
-          measurer={null}
-        />
-      );
+      const renderer = await ReactThreeTestRenderer.create(walked(linkedTree(layer)));
 
       expect(zProbeReading(renderer)).toBe(4);
     });
 
     it("clamps the accumulated z_final to Godot's canvas-item range while the authored z_index property itself stays unclamped", async () => {
-      controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
-      const highProbe = solveNode('High/Probe', 'ZProbe', {});
-      const high = solveNode('High', 'TestType', { anchorsPreset: 15, zIndex: 9000 }, [highProbe]);
+      controlComponentRegistry.register({ typeName: PROBE_TYPE, Component: ZProbe });
+      const highProbe = solveNode('High/Probe', PROBE_TYPE, {});
+      const high = solveNode('High', 'Control', { anchorsPreset: 15, zIndex: 9000 }, [highProbe]);
 
-      const highRenderer = await ReactThreeTestRenderer.create(
-        <ControlCanvasWalker tree={[high]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
-      );
+      const highRenderer = await ReactThreeTestRenderer.create(walked(linkedTree(high)));
       expect(zProbeReading(highRenderer)).toBe(CANVAS_ITEM_Z_MAX);
       // `PROPERTY_HINT_RANGE` is a slider clamp, not a setter guard:
       // `CanvasItem::set_z_index` clamps nothing, so the authored value stays.
       expect((high.node.properties as { zIndex?: number }).zIndex).toBe(9000);
 
-      const lowProbe = solveNode('Low/Probe', 'ZProbe', {});
-      const low = solveNode('Low', 'TestType', { anchorsPreset: 15, zIndex: -9000 }, [lowProbe]);
+      const lowProbe = solveNode('Low/Probe', PROBE_TYPE, {});
+      const low = solveNode('Low', 'Control', { anchorsPreset: 15, zIndex: -9000 }, [lowProbe]);
 
-      const lowRenderer = await ReactThreeTestRenderer.create(
-        <ControlCanvasWalker tree={[low]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
-      );
+      const lowRenderer = await ReactThreeTestRenderer.create(walked(linkedTree(low)));
       expect(zProbeReading(lowRenderer)).toBe(CANVAS_ITEM_Z_MIN);
     });
 
     it('folds a SKIPPED Node2D ancestor\u2019s own z_index in — `p_z` accumulates down the SAME chain as modulate', async () => {
       // `p_z = CLAMP(p_z + ci->z_index, \u2026)` for every item the cull walk
       // descends through (`renderer_canvas_cull.cpp:430-434`), and a skipped
-      // Node2D IS one of them: it mounts no group in this walk, so without
-      // `skippedAncestors.z` a Control promoted past it reads the ambient z.
-      controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
-      const promoted: SolveNode = {
-        ...solveNode('N/Promoted', 'TestType', { anchorsPreset: 15, zIndex: 2 }, [
-          solveNode('N/Promoted/Probe', 'ZProbe', {}),
+      // Node2D IS one of them: it mounts no group in this walk, so without its link a Control
+      // promoted past it reads the enclosing z.
+      controlComponentRegistry.register({ typeName: PROBE_TYPE, Component: ZProbe });
+      const promoted = promotedPastLinks(
+        solveNode('N/Promoted', 'Control', { anchorsPreset: 15, zIndex: 2 }, [
+          solveNode('N/Promoted/Probe', PROBE_TYPE, {}),
         ]),
-        skippedAncestors: {
-          transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
-          modulate: { r: 1, g: 1, b: 1, a: 1 },
-          z: [{ zIndex: 5, zAsRelative: true }],
-          sampler: ROOT_TEXTURE_SAMPLER,
-          material: { kind: 'none' },
-        },
-      };
+        [skippedNode2D('N', { zIndex: 5 })]
+      );
 
       const renderer = await ReactThreeTestRenderer.create(
         <ControlCanvasWalker
@@ -703,22 +692,13 @@ describe('<ControlCanvasWalker>', () => {
       // `z_relative == false` takes `p_z = ci->z_index` outright
       // (`renderer_canvas_cull.cpp:433`), which a pre-summed total could not
       // express.
-      controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
-      const promoted: SolveNode = {
-        ...solveNode('N/Promoted', 'TestType', { anchorsPreset: 15 }, [
-          solveNode('N/Promoted/Probe', 'ZProbe', {}),
+      controlComponentRegistry.register({ typeName: PROBE_TYPE, Component: ZProbe });
+      const promoted = promotedPastLinks(
+        solveNode('M/N/Promoted', 'Control', { anchorsPreset: 15 }, [
+          solveNode('M/N/Promoted/Probe', PROBE_TYPE, {}),
         ]),
-        skippedAncestors: {
-          transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
-          modulate: { r: 1, g: 1, b: 1, a: 1 },
-          z: [
-            { zIndex: 50, zAsRelative: true },
-            { zIndex: 3, zAsRelative: false },
-          ],
-          sampler: ROOT_TEXTURE_SAMPLER,
-          material: { kind: 'none' },
-        },
-      };
+        [skippedNode2D('M', { zIndex: 50 }), skippedNode2D('M/N', { zIndex: 3, zAsRelative: false })]
+      );
 
       const renderer = await ReactThreeTestRenderer.create(
         <ControlCanvasWalker
@@ -734,13 +714,11 @@ describe('<ControlCanvasWalker>', () => {
     });
 
     it("puts a painter in its own z_final, which a light's z window tests (renderer_canvas_cull.cpp:468)", async () => {
-      controlComponentRegistry.register({ typeName: 'ZProbe', Component: ZProbe });
-      const probe = solveNode('Root/Probe', 'ZProbe', { zIndex: 4 });
-      const root = solveNode('Root', 'TestType', { anchorsPreset: 15, zIndex: 5 }, [probe]);
+      controlComponentRegistry.register({ typeName: PROBE_TYPE, Component: ZProbe });
+      const probe = solveNode('Root/Probe', PROBE_TYPE, { zIndex: 4 });
+      const root = solveNode('Root', 'Control', { anchorsPreset: 15, zIndex: 5 }, [probe]);
 
-      const renderer = await ReactThreeTestRenderer.create(
-        <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
-      );
+      const renderer = await ReactThreeTestRenderer.create(walked(linkedTree(root)));
 
       expect(zProbeReading(renderer)).toBe(9);
     });
@@ -750,7 +728,9 @@ describe('<ControlCanvasWalker>', () => {
     // Names its group after the tint it was given and the ambient it could read,
     // as `zprop:` does above.
     const TintProbe: NativeControlComponent = ({ tint }) => (
-      <group name={`tint:own=${tint.own.r},alpha=${tint.own.a},ambient=${useParentModulate().r}`} />
+      <group
+        name={`tint:own=${tint.own.r},alpha=${tint.own.a},ambient=${useEnclosingCanvasState().modulate.r}`}
+      />
     );
 
     function tintReading(renderer: {
@@ -766,13 +746,15 @@ describe('<ControlCanvasWalker>', () => {
       properties: Record<string, unknown>,
       ambient?: { r: number; g: number; b: number; a: number }
     ) {
-      controlComponentRegistry.register({ typeName: 'TintProbe', Component: TintProbe });
-      const root = solveNode('Root', 'TintProbe', { anchorsPreset: 15, ...properties });
-      const walker = (
-        <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
-      );
+      controlComponentRegistry.register({ typeName: PROBE_TYPE, Component: TintProbe });
+      const root = solveNode('Root', PROBE_TYPE, { anchorsPreset: 15, ...properties });
+      const walker = walked(linkedTree(root));
       return ReactThreeTestRenderer.create(
-        ambient ? <Modulate2DContext.Provider value={ambient}>{walker}</Modulate2DContext.Provider> : walker
+        ambient ? (
+          <InheritedFrom state={inheritedState({ modulate: ambient })}>{walker}</InheritedFrom>
+        ) : (
+          walker
+        )
       );
     }
 
@@ -780,15 +762,13 @@ describe('<ControlCanvasWalker>', () => {
       const ChildTintProbe: NativeControlComponent = ({ tint, childTint }) => (
         <group name={`tint:own=${tint.own.r},child=${childTint.own.r}`} />
       );
-      controlComponentRegistry.register({ typeName: 'TintProbe', Component: ChildTintProbe });
-      const root = solveNode('Root', 'TintProbe', {
+      controlComponentRegistry.register({ typeName: PROBE_TYPE, Component: ChildTintProbe });
+      const root = solveNode('Root', PROBE_TYPE, {
         anchorsPreset: 15,
         modulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
         selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
       });
-      const renderer = await ReactThreeTestRenderer.create(
-        <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
-      );
+      const renderer = await ReactThreeTestRenderer.create(walked(linkedTree(root)));
       expect(tintReading(renderer)).toBe('tint:own=0.25,child=0.5');
     });
 

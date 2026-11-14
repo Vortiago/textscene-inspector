@@ -10,11 +10,10 @@
  */
 
 import type { Rgba } from '../../../godot/math/math';
-import { POPUP_MENU_DEFAULTS } from '../../../godot/scene/popupMenu';
-import { CONTROL_FONT_COLOR, scaledPx } from '../../../godot/scene/theme';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
-import { styleBoxLineBox, type ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
+import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../r3f/controls/native/themeItems';
 import { scaledIconSizeOf } from '../../../r3f/controls/native/scaledSvgIcon';
 import {
   CHECKBOX_ICON_NATURAL_SIZE,
@@ -33,7 +32,6 @@ import {
   resolveNodeFontSizePx,
 } from '../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { WindowProperties } from '../window/types';
-import { defaultSeparatorStyleBoxLine } from '../../2d/ui/separator/styleBoxLine';
 import { internalScrollBarBoxes } from '../../2d/ui/shared/scrollBarBoxes';
 import type { ScrollBarBoxes } from '../../2d/ui/shared/scrollBarSolver';
 
@@ -67,11 +65,11 @@ export interface PopupMenuTheme {
   separatorOutline: TextOutlineTheme;
 }
 
-function menuFont(n: SolveNode, theme: NativeTheme, fontKey: string, sizeKey: string): MenuFont {
+function menuFont(n: SolveNode, fontKey: string, sizeKey: string): MenuFont {
   const { themeOverrideFontSizes } = n.node.properties as WindowProperties;
   return {
     metrics: resolveNodeFontMetrics(n, fontKey),
-    sizePx: resolveNodeFontSizePx(n, sizeKey, themeOverrideFontSizes?.[sizeKey], theme.fontSize),
+    sizePx: resolveNodeFontSizePx(n, sizeKey, themeOverrideFontSizes?.[sizeKey]),
   };
 }
 
@@ -85,30 +83,25 @@ function checkIconSizesOf(n: SolveNode, theme: NativeTheme): PopupMenuTheme['che
 }
 
 export function popupMenuTheme(n: SolveNode, theme: NativeTheme): PopupMenuTheme {
-  const defaults = POPUP_MENU_DEFAULTS;
-  const styleBoxes = n.styleBoxes;
-  // Built once, and only when a separator box is not themed: the three separator items share it.
-  let sharedSeparator: ResolvedStyleBox | undefined;
-  const defaultSeparator = () =>
-    (sharedSeparator ??= styleBoxLineBox(defaultSeparatorStyleBoxLine('horizontal', theme)));
+  const { styleBoxes, constants, colors } = n;
   return {
-    panel: styleBoxes.panel ?? theme.widgets.popupMenuPanel,
-    separator: styleBoxes.separator ?? defaultSeparator(),
-    labeledSeparatorLeft: styleBoxes.labeled_separator_left ?? defaultSeparator(),
-    labeledSeparatorRight: styleBoxes.labeled_separator_right ?? defaultSeparator(),
-    vSeparation: n.constants.v_separation ?? scaledPx(defaults.vSeparation, theme.scale),
-    hSeparation: n.constants.h_separation ?? scaledPx(defaults.hSeparation, theme.scale),
-    itemStartPadding: n.constants.item_start_padding ?? scaledPx(defaults.itemStartPadding, theme.scale),
-    itemEndPadding: n.constants.item_end_padding ?? scaledPx(defaults.itemEndPadding, theme.scale),
-    iconMaxWidth: n.constants.icon_max_width ?? defaults.iconMaxWidth,
-    isGutterCompact: (n.constants.gutter_compact ?? defaults.gutterCompact) !== 0,
+    panel: requiredThemeItem(styleBoxes, 'panel'),
+    separator: requiredThemeItem(styleBoxes, 'separator'),
+    labeledSeparatorLeft: requiredThemeItem(styleBoxes, 'labeled_separator_left'),
+    labeledSeparatorRight: requiredThemeItem(styleBoxes, 'labeled_separator_right'),
+    vSeparation: requiredThemeItem(constants, 'v_separation'),
+    hSeparation: requiredThemeItem(constants, 'h_separation'),
+    itemStartPadding: requiredThemeItem(constants, 'item_start_padding'),
+    itemEndPadding: requiredThemeItem(constants, 'item_end_padding'),
+    iconMaxWidth: requiredThemeItem(constants, 'icon_max_width'),
+    isGutterCompact: requiredThemeItem(constants, 'gutter_compact') !== 0,
     scrollBar: internalScrollBarBoxes(n).vertical,
     checkIconSizes: checkIconSizesOf(n, theme),
-    font: menuFont(n, theme, 'font', 'font_size'),
-    separatorFont: menuFont(n, theme, 'font_separator', 'font_separator_size'),
-    fontColor: n.colors.font_color ?? CONTROL_FONT_COLOR,
-    fontDisabledColor: n.colors.font_disabled_color ?? defaults.fontDisabledColor,
-    fontSeparatorColor: n.colors.font_separator_color ?? CONTROL_FONT_COLOR,
+    font: menuFont(n, 'font', 'font_size'),
+    separatorFont: menuFont(n, 'font_separator', 'font_separator_size'),
+    fontColor: requiredThemeItem(colors, 'font_color'),
+    fontDisabledColor: requiredThemeItem(colors, 'font_disabled_color'),
+    fontSeparatorColor: requiredThemeItem(colors, 'font_separator_color'),
     outline: resolveTextOutline(n),
     separatorOutline: resolveTextOutline(n, SEPARATOR_OUTLINE_NAMES),
   };

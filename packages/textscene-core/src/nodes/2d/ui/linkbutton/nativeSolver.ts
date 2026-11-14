@@ -1,7 +1,7 @@
 /**
  * LinkButton's native rect solver, draw state and underline math: `LinkButton::get_minimum_size` and
- * `_notification` (`scene/gui/link_button.cpp`), with the defaults `scene/theme/default_theme.cpp:196-210`
- * registers for "LinkButton". It has no StyleBox but `focus`, which a static preview never draws, so
+ * `_notification` (`scene/gui/link_button.cpp`), with the table's `LinkButton`
+ * items as defaults. It has no StyleBox but `focus`, which a static preview never draws, so
  * `Component.tsx` draws only text and an underline stroke.
  *
  * Portions ported from Godot Engine (MIT).
@@ -10,13 +10,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
-import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
-  type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
@@ -33,7 +32,7 @@ import type { LinkButtonProperties } from './types';
 import { LinkButtonUnderlineMode } from '../../../../godot/scene/gui';
 import { FALLBACK_THEME_COLOR } from '../../../../godot/scene/theme';
 
-/** `SceneStringName(font)`, registered for "LinkButton" at `default_theme.cpp:200`. */
+/** `SceneStringName(font)`, which the default theme registers under LinkButton. */
 export const LINKBUTTON_THEME_FONT_KEY = 'font';
 
 // Draw state
@@ -61,16 +60,12 @@ const LINKBUTTON_THEME_KEYS: Record<LinkButtonDrawState, TextThemeKeys> = {
 export function linkButtonTextTheme(
   n: ShareNode,
   props: LinkButtonProperties,
-  state: LinkButtonDrawState,
-  ctx: Pick<SolveContext, 'theme'>
+  state: LinkButtonDrawState
 ): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = {
-    fontSizePx: ctx.theme.fontSize,
-    // The default theme table answers `font_color` and `font_pressed_color`. No theme sets LinkButton a
-    // `font_disabled_color` (`default_theme.cpp:196-210`), so the fallback theme answers it.
-    ...(state === 'disabled' && { color: FALLBACK_THEME_COLOR }),
-  };
-  return resolveTextTheme(n, props, LINKBUTTON_THEME_KEYS[state], defaults);
+  // The default theme table answers `font_color` and `font_pressed_color`. The table's `LinkButton`
+  // colours hold no `font_disabled_color`, so `FALLBACK_THEME_COLOR` answers it.
+  const defaultColor = state === 'disabled' ? FALLBACK_THEME_COLOR : undefined;
+  return resolveTextTheme(n, props, LINKBUTTON_THEME_KEYS[state], defaultColor);
 }
 
 /**
@@ -137,12 +132,12 @@ export function linkButtonTextPlacement(
  * (`r3f/controls/native/solveHandoff.ts`) of `linkButtonMinimumSize` and `Component.tsx`. The painter's
  * overrun trimming is not part of it, since it reads the solved rect.
  */
-export const linkButtonLabelShape = defineShare<TextLayoutResult | null>((n, theme) => {
+export const linkButtonLabelShape = defineShare<TextLayoutResult | null>((n) => {
   const props = n.node.properties as LinkButtonProperties;
   const text = props.text ?? '';
   if (text.length === 0) return null;
   const state = resolveLinkButtonDrawState(props);
-  const { fontSizePx } = linkButtonTextTheme(n, props, state, { theme });
+  const { fontSizePx } = linkButtonTextTheme(n, props, state);
   return shapeButtonLabel(text, {
     fontSizePx,
     fontMetrics: resolveNodeFontMetrics(n, LINKBUTTON_THEME_FONT_KEY),

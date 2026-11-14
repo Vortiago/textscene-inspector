@@ -7,8 +7,6 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { ControlCanvasLayer } from './ControlCanvasLayer';
-import { NodeDispatcher } from '../../NodeDispatcher';
-import { ControlYSortProvider } from '../../contexts/ControlYSortContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
 import { compareKeys, paintKey } from '../../testing/paintOrder';
@@ -16,6 +14,8 @@ import { SceneStack } from '../../testing/SceneStack';
 
 import '../../nodes/index';
 import '../index';
+import { DispatchedScene } from '../../testing/DispatchedScene';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 
 /** A 40 px square ColorRect whose top edge sits at `top`. */
 function rect(name: string, top: number, extra = ''): string {
@@ -31,16 +31,23 @@ async function paintKeysOf(tscn: string, names: readonly string[], hasWorldSort 
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      {hasWorldSort ? (
-        <ControlYSortProvider>
-          <NodeDispatcher nodes={parsed.nodes} />
-          <ControlCanvasLayer nodes={parsed.nodes} />
-        </ControlYSortProvider>
-      ) : (
+    hasWorldSort ? (
+      <DispatchedScene
+        sceneGraph={createSceneGraphFromTscnScene(parsed)}
+        workspace="2d"
+        loader={fake.loader}
+        around={(nodes) => (
+          <>
+            {nodes}
+            <ControlCanvasLayer nodes={parsed.nodes} />
+          </>
+        )}
+      />
+    ) : (
+      <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
         <ControlCanvasLayer nodes={parsed.nodes} />
-      )}
-    </SceneStack>
+      </SceneStack>
+    )
   );
   // No settle: the first committed frame already has the order. The test renderer flushes passive
   // effects too, so this does not prove the layout-effect timing.
@@ -185,5 +192,28 @@ z_index = 5
     const keys = await paintKeysOf(tscn, ['B1', 'B2', 'C'], false);
     expect(compareKeys(keys.C!, keys.B2!)).toBeLessThan(0);
     expect(compareKeys(keys.B2!, keys.B1!)).toBeLessThan(0);
+  });
+});
+
+describe('a Control at the root of the walk, inside an entry the world sort moved', () => {
+  it('draws with the Node2D entry it hangs under, over a sibling that sorts above it', async () => {
+    const tscn = `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Holder" type="Node2D" parent="."]
+position = Vector2(0, 200)
+
+[node name="Low" type="ColorRect" parent="Holder"]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Ball" type="Polygon2D" parent="."]
+position = Vector2(0, 100)
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+`;
+    const keys = await paintKeysOf(tscn, ['Ball', 'Low']);
+    expect(compareKeys(keys.Ball!, keys.Low!)).toBeLessThan(0);
   });
 });

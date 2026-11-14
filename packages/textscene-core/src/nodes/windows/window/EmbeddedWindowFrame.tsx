@@ -22,15 +22,16 @@ import {
   type CanvasSlot,
 } from '../../../r3f/canvasItemState';
 import { WHITE_MODULATE } from '../../../r3f/canvasItemModulate';
-import { useInheritedTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { useTextureSamplerOver } from '../../../r3f/canvasItemTextureSampler';
+import { CHAIN_START } from '../../../r3f/canvasItemPass/canvasItemPass';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { useViewportTargetSlot } from '../../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { InitialPosition, centredWindowPosition } from '../../../godot/scene/window';
 import { imageSize } from '../../../resources/formats/image/imagePixels';
 import { closeIconOrigin } from './decoration';
+import { requiredThemeItem } from '../../../r3f/controls/native/themeItems';
 import { windowContentScale } from './contentScale';
 import { WindowTitle } from './WindowTitle';
-import { windowThemeDefaults, type WindowThemeDefaults } from './theme';
 import type { WindowProperties } from './types';
 
 interface EmbeddedWindowFrameProps {
@@ -74,16 +75,16 @@ export function EmbeddedWindowFrame({
 }: EmbeddedWindowFrameProps) {
   const props = solveNode.node.properties as WindowProperties;
   const rect = useWindowRect(solveNode, path, embedderSize);
-  const defaults = useMemo(() => windowThemeDefaults(theme), [theme]);
-  // The subwindow canvas item: no modulate, z 0, and the draw index as its sequence.
+  // The subwindow canvas item starts a chain: no modulate, z 0, and the draw index as its sequence.
   const { key } = useCanvasItemState({
+    inherited: CHAIN_START,
     modulate: WHITE_MODULATE,
     selfModulate: WHITE_MODULATE,
     zIndex: 0,
     zAsRelative: true,
     material: null,
     // The viewport's default filter and repeat: the subwindow canvas item names neither.
-    sampler: useInheritedTextureSampler(undefined, undefined),
+    sampler: useTextureSamplerOver(undefined, undefined, CHAIN_START.sampler),
     lightMask: undefined,
     sequence: drawIndex,
   });
@@ -109,7 +110,6 @@ export function EmbeddedWindowFrame({
             solveNode={solveNode}
             size={{ x: rect.w, y: rect.h }}
             isFocused={isFocused}
-            defaults={defaults}
             theme={theme}
             borderKey={key}
             titleSlot={slots.title}
@@ -146,7 +146,6 @@ interface WindowDecorationProps {
   solveNode: SolveNode;
   size: Vector2;
   isFocused: boolean;
-  defaults: WindowThemeDefaults;
   theme: NativeTheme;
   borderKey: number;
   titleSlot: CanvasSlot;
@@ -164,21 +163,18 @@ function WindowDecoration({
   solveNode,
   size,
   isFocused,
-  defaults,
   theme,
   borderKey,
   titleSlot,
   closeKey,
 }: WindowDecorationProps) {
   const { styleBoxes, constants } = solveNode;
-  const border = isFocused
-    ? (styleBoxes.embedded_border ?? defaults.embeddedBorder)
-    : (styleBoxes.embedded_unfocused_border ?? defaults.embeddedUnfocusedBorder);
+  const border = requiredThemeItem(styleBoxes, isFocused ? 'embedded_border' : 'embedded_unfocused_border');
   const offsets = {
-    closeHOffset: constants.close_h_offset ?? defaults.closeHOffset,
-    closeVOffset: constants.close_v_offset ?? defaults.closeVOffset,
+    closeHOffset: requiredThemeItem(constants, 'close_h_offset'),
+    closeVOffset: requiredThemeItem(constants, 'close_v_offset'),
   };
-  // `close` and the TabBar's `close` are one default icon, `icons["close"]` (`default_theme.cpp:685,1039`).
+  // `close` and the TabBar's `close` are one default icon, `icons["close"]`.
   const closeTexture = useNodeIcon(solveNode.icons.close, TAB_BAR_ICONS.close);
   const closeSize = iconSize(closeTexture, theme.scale);
   const rect: Rect2 = { x: 0, y: 0, w: size.x, h: size.y };
@@ -192,8 +188,6 @@ function WindowDecoration({
         width={size.x}
         border={border}
         closeHOffset={offsets.closeHOffset}
-        defaults={defaults}
-        theme={theme}
         slot={titleSlot}
       />
       {closeTexture ? (

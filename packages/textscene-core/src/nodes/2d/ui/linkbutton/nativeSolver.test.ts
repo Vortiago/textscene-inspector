@@ -61,7 +61,7 @@ describe('resolveLinkButtonDrawState', () => {
 describe('linkButtonTextTheme', () => {
   it('resolves control_font_color for the normal state', () => {
     // default_theme.cpp:101,203: control_font_color.
-    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'normal', ctx()).color).toEqual({
+    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'normal').color).toEqual({
       r: 0.875,
       g: 0.875,
       b: 0.875,
@@ -71,7 +71,7 @@ describe('linkButtonTextTheme', () => {
 
   it('resolves control_font_pressed_color (opaque white) for the pressed state', () => {
     // default_theme.cpp:108,204: control_font_pressed_color.
-    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'pressed', ctx()).color).toEqual({
+    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'pressed').color).toEqual({
       r: 1,
       g: 1,
       b: 1,
@@ -81,7 +81,7 @@ describe('linkButtonTextTheme', () => {
 
   it('resolves OPAQUE BLACK for the disabled state — no font_disabled_color anywhere in its ClassDB chain', () => {
     // default_theme.cpp:196-210 sets no font_disabled_color, so the fallback is Color(), opaque black.
-    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'disabled', ctx()).color).toEqual({
+    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'disabled').color).toEqual({
       r: 0,
       g: 0,
       b: 0,
@@ -98,7 +98,7 @@ describe('linkButtonTextTheme', () => {
       structuredTextBidiOverrideOptions: [],
       themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
     });
-    expect(linkButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({
+    expect(linkButtonTextTheme(node(props), props, 'normal').color).toEqual({
       r: 1,
       g: 0,
       b: 0,

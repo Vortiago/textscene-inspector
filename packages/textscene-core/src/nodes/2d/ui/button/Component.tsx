@@ -63,7 +63,7 @@ export function ButtonPainter({
 
   // `tint.own` is raw sRGB. It goes to the chrome as is, and multiplies into the font
   // and icon colours before each one's single sRGB-to-linear conversion.
-  const { fontSizePx, color: baseFontColor } = buttonTextTheme(solveNode, props, state, { theme });
+  const { fontSizePx, color: baseFontColor } = buttonTextTheme(solveNode, props, state);
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
   const textOutline = useTintedTextOutline(solveNode, tint.own);
 
@@ -73,8 +73,8 @@ export function ButtonPainter({
   const wraps = isButtonAutowrapped(props);
   const needsUnwrapped = !wraps || props.expandIcon === true;
   const unwrapped = useMemo(
-    () => (needsUnwrapped ? buttonLabelShape(solveNode, theme, buttonClass) : null),
-    [needsUnwrapped, solveNode, theme, buttonClass]
+    () => (needsUnwrapped ? buttonLabelShape(solveNode, buttonClass) : null),
+    [needsUnwrapped, solveNode, buttonClass]
   );
 
   const ownIcon = buttonShown(buttonClass, props).icon;
@@ -101,8 +101,8 @@ export function ButtonPainter({
   // with the text. Godot reaches the same state over two frames.
   const wrapWidthPx = wraps ? wrappedLabelWidthPx(facts, unwrapped) : 0;
   const layout = useMemo(
-    () => (wraps ? buttonLabelShape(solveNode, theme, buttonClass, wrapWidthPx) : unwrapped),
-    [wraps, solveNode, theme, buttonClass, wrapWidthPx, unwrapped]
+    () => (wraps ? buttonLabelShape(solveNode, buttonClass, wrapWidthPx) : unwrapped),
+    [wraps, solveNode, buttonClass, wrapWidthPx, unwrapped]
   );
   const content = useMemo(
     () =>

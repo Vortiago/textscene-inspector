@@ -18,7 +18,6 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { HAIRLINE_THICKNESS_PX, hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
-import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
 import {
   computeGridDots,
   computeGridLines,
@@ -54,15 +53,11 @@ import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import { graphEditConstructorScrollBars, graphEditScrollBars, hasUpdatedScrollBars } from './scrollBars';
 import { ScrollBarChrome } from '../shared/ScrollChrome';
 import { canvasSubOrders } from '../../../../r3f/canvasItemState';
-import { graphEditDefaultPanel } from './defaultPanel';
 import type { GraphEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
+import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { useStableVector2 } from '../../../../r3f/hooks/useStableVector2';
-
-/** `default_theme.cpp:1293`: `Color(1, 1, 1, 0.05)`. */
-const GRID_MINOR_DEFAULT: Rgba = { r: 1, g: 1, b: 1, a: 0.05 };
-/** `default_theme.cpp:1294`: `Color(1, 1, 1, 0.2)`. */
-const GRID_MAJOR_DEFAULT: Rgba = { r: 1, g: 1, b: 1, a: 0.2 };
+import { shaderLineWidth } from './connectionStroke';
 
 /** Every internal Label and LineEdit reads the plain "font" theme key, as `Label` and `Button` do. */
 const GRAPH_EDIT_THEME_FONT_KEY = 'font';
@@ -148,7 +143,7 @@ export function GraphEdit({
   children,
 }: NativeControlComponentProps) {
   const props = painterView<GraphEditProperties>(solveNode);
-  const panelStyle = solveNode.styleBoxes.panel ?? graphEditDefaultPanel(theme);
+  const panelStyle = requiredThemeItem(solveNode.styleBoxes, 'panel');
 
   const showGrid = props.showGrid !== false;
   const gridPattern = props.gridPattern ?? GRID_PATTERN_LINES;
@@ -164,12 +159,8 @@ export function GraphEdit({
   // `graph_edit.h:253`/`:252`: `lines_curvature = 0.5f`, `lines_thickness = 4.0f`.
   const curvature = props.connectionLinesCurvature ?? 0.5;
   const thickness = props.connectionLinesThickness ?? 4;
-  // `_get_shader_line_width` (`graph_edit.cpp:2632-2634`): `lines_thickness * base_scale + 4.0`,
-  // with `base_scale` recovered from `theme.contentMargin`.
-  const lineWidth = thickness * (theme.contentMargin / DEFAULT_CONTENT_MARGIN) + 4;
-  // The default `connection_rim_color` is `style_normal_color` (`default_theme.cpp:1301`),
-  // which `theme.styleFill.normal` holds.
-  const rimColor = solveNode.colors.connection_rim_color ?? theme.styleFill.normal;
+  const lineWidth = shaderLineWidth(thickness, theme.scale);
+  const rimColor = requiredThemeItem(solveNode.colors, 'connection_rim_color');
   // An endpoint keeps the full `* zoom` (`connectionEndpoints.ts`), as the walker scales each
   // GraphElement child by `zoom`.
   const connections = useMemo(
@@ -177,8 +168,8 @@ export function GraphEdit({
     [solveNode, childRects, props, theme, measureText]
   );
 
-  const majorColor = useColorQuad(solveNode.colors.grid_major ?? GRID_MAJOR_DEFAULT, tint.own);
-  const minorColor = useColorQuad(solveNode.colors.grid_minor ?? GRID_MINOR_DEFAULT, tint.own);
+  const majorColor = useColorQuad(requiredThemeItem(solveNode.colors, 'grid_major'), tint.own);
+  const minorColor = useColorQuad(requiredThemeItem(solveNode.colors, 'grid_minor'), tint.own);
   // `transparent_grid_minor.a *= CLAMP(1.0 * (zoom - 0.4), 0, 1)` (graph_edit.cpp:1932).
   const minorDotAlphaFactor = Math.min(1, Math.max(0, zoom - 0.4));
   const minorDotColor = useMemo(
@@ -229,7 +220,7 @@ export function GraphEdit({
 
   const minimapEnabled = isMinimapEnabled(props);
   const graphEditSize = rectSize;
-  const elements = graphEditElements(solveNode, childRects, zoom, graphEditSize, theme);
+  const elements = graphEditElements(solveNode, childRects, zoom, graphEditSize);
   const { hasPositionedChild, minimapElements } = elements;
   // Until `_update_scrollbars` runs, both bars keep the constructor range and the minimap reads
   // zero bounds (`scrollBars.ts`).
@@ -346,6 +337,7 @@ export function GraphEdit({
             curvature={curvature}
             connectionLinesAntialiased={props.connectionLinesAntialiased !== false}
             icons={solveNode.icons}
+            items={internalChildThemeItems(solveNode, 'GraphEditMinimap')}
             theme={theme}
             tint={childTint}
             slot={topLayer.minimap}

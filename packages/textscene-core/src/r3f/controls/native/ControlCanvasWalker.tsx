@@ -9,49 +9,57 @@ import { ZERO_RECT, type Rect2 } from '../../../godot/math/rect2';
 import { VECTOR2_ZERO, type Vector2 } from '../../../godot/math/vector';
 import { controlProps, type SolveNode } from './solveTree';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
-import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { threeMatrixFromTransform2D } from '../../node2dTransform';
 import type { NativeTheme } from './nativeTheme';
 import type { TextMeasurer } from './solverRegistry';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
-import { controlComponentRegistry } from '../ControlComponentRegistry';
+import { controlComponentRegistry, NO_PIECE_SLOTS } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
 import { OwnCanvasModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
-import { useInheritedTextureSampler } from '../../canvasItemTextureSampler';
+import { useTextureSamplerOver } from '../../canvasItemTextureSampler';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
 import { ClipChildrenScope } from '../../canvasGroup/ClipChildrenScope';
 import { ClipMaskProvider } from '../../canvasGroup/ClipMaskContext';
+import { useResolvedCanvasItemMaterial } from '../../components/canvasItemMaterial';
 import {
-  useCanvasAncestorMaterial,
-  useResolvedCanvasItemMaterial,
-} from '../../components/canvasItemMaterialContext';
-import { INHERIT_PARENT_MATERIAL } from '../../canvasItemPass/canvasAncestors';
-import { isCanvasLayerType, ysortsChildren } from '../../canvasPaintOrder';
+  CanvasParentProvider,
+  inheritedAlong,
+  useEnclosingCanvasState,
+  useHandedDownParent,
+} from '../../canvasItemPass/inheritedCanvasState';
+import type { InheritedCanvasItemState } from '../../canvasItemPass/canvasItemPass';
+import type { CanvasItemPaint } from '../../canvasItemPass/canvasItemPaint';
+import { ysortsChildren, type PaintRange } from '../../canvasPaintOrder';
+import { isCanvasLayerType } from '../../canvasItemClass';
 import { CanvasRootScope } from '../../canvasRootScope';
 import { CanvasItemGroup, CanvasItemProvider } from '../../components/CanvasItemGroup';
 import { NodePathProvider } from '../../contexts/NodePathContext';
+import { ControlClipProvider, useInheritedControlClip } from './controlClipping';
 import { snapControlsToPixelsEnabled, snappedControlOriginUnder } from './controlPixelSnap';
-import { localYSortShifts } from './localYSort';
 import {
-  applyYSortShifts,
   controlTransformsOf,
-  shiftsOfForest,
+  forestInCanvasSort,
+  forestBackPiecesOf,
+  forestInOwnSort,
+  isInSharedTree,
+  piecesAtLivePaths,
   solvedDrawTransformOf,
   transformsAtLivePaths,
+  type ForestSort,
 } from './controlYSort';
 import {
   usePublishControlLocalTransforms,
   usePublishControlTransforms,
-  useYSortShifts,
-} from '../../contexts/ControlYSortContext';
+  usePublishSortExtras,
+  useSortedRunsAndPaints,
+} from '../../contexts/YSortContext';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import {
-  CanvasItemChildScope,
-  SkippedCanvasItemsScope,
   useCanvasItemState,
   ownAndBackSlots,
   wholeKeySlot,
   type CanvasItemState,
+  type CanvasSlot,
 } from '../../canvasItemState';
 
 interface ControlCanvasWalkerProps {
@@ -73,12 +81,6 @@ interface ControlCanvasWalkerProps {
    * the first root and each root promoted past the placement chain; a `top_level` root sits at it.
    */
   rootOffset?: Vector2;
-  /**
-   * The walk sorts its own y-sorted Controls, since no `YSortDispatcher` draws their parents: an
-   * unowned scene-tile root and the Controls of a Control-only sub-viewport. A walk outside any
-   * `ControlYSortProvider` does so without the flag.
-   */
-  sortsLocally?: boolean;
   /** The live path of the viewport the forest's paths hang below, for the world sort that keys by live path. */
   livePath?: string;
   /** Called after each solve, with the solved controls keyed by tree path. */
@@ -93,7 +95,6 @@ export function ControlCanvasWalker({
   measurer,
   snapToPixels,
   rootOffset,
-  sortsLocally = false,
   livePath = '',
   onSolved,
 }: ControlCanvasWalkerProps) {
@@ -113,10 +114,13 @@ export function ControlCanvasWalker({
   useEffect(() => {
     onSolved?.(solved);
   }, [solved, onSolved]);
-  // A y-sort in the world sorts the Controls on where this solve puts them, and moves their runs.
-  // A layout effect, so the sort and this walk settle before the first paint.
-  const publishToWorld = usePublishControlTransforms();
-  const publishTransforms = sortsLocally ? null : publishToWorld;
+  // The one sort of the canvas sorts the Controls on where this solve puts them. A forest the shared
+  // live tree does not hold, such as an unowned scene-tile root, sorts its own Controls instead, and
+  // publishes nothing its paths could confuse. A layout effect, so the sort settles before the first paint.
+  const canvasSort = useSortedRunsAndPaints();
+  const isSortedByCanvas = isInSharedTree(tree, livePath, canvasSort.paints);
+  const publishToCanvas = usePublishControlTransforms();
+  const publishTransforms = isSortedByCanvas ? publishToCanvas : null;
   const owner = useId();
   useLayoutEffect(() => {
     publishTransforms?.(
@@ -125,6 +129,13 @@ export function ControlCanvasWalker({
     );
   }, [publishTransforms, owner, tree, solved, snapEnabled, livePath]);
   useLayoutEffect(() => () => publishTransforms?.(owner, null), [publishTransforms, owner]);
+  const pieces = useMemo(() => forestBackPiecesOf(tree, solved), [tree, solved]);
+  const publishToSort = usePublishSortExtras();
+  const publishPieces = isSortedByCanvas ? publishToSort : null;
+  useLayoutEffect(() => {
+    publishPieces?.(owner, piecesAtLivePaths(livePath, pieces));
+  }, [publishPieces, owner, pieces, livePath]);
+  useLayoutEffect(() => () => publishPieces?.(owner, null), [publishPieces, owner]);
   // Read by the live scene passes, which compose through a Control. Every walk publishes them, sorted or not.
   const publishLocalTransforms = usePublishControlLocalTransforms();
   useLayoutEffect(() => {
@@ -134,25 +145,23 @@ export function ControlCanvasWalker({
     );
   }, [publishLocalTransforms, owner, tree, solved, livePath]);
   useLayoutEffect(() => () => publishLocalTransforms?.(owner, null), [publishLocalTransforms, owner]);
-  // With no world sort to join, the walk sorts its own Control items.
-  const worldShifts = useYSortShifts();
-  const shifts = useMemo(
+  const sort = useMemo(
     () =>
-      publishTransforms
-        ? shiftsOfForest(livePath, worldShifts)
-        : localYSortShifts(tree, controlTransformsOf(tree, solved, snapEnabled)),
-    [publishTransforms, worldShifts, tree, solved, snapEnabled, livePath]
+      isSortedByCanvas
+        ? forestInCanvasSort(tree, livePath, canvasSort, pieces)
+        : forestInOwnSort(tree, controlTransformsOf(tree, solved, snapEnabled), pieces),
+    [isSortedByCanvas, canvasSort, tree, solved, snapEnabled, livePath, pieces]
   );
-  const drawn = useMemo(() => applyYSortShifts(tree, shifts), [tree, shifts]);
 
   return (
     <>
-      {drawn.map((n) => (
+      {tree.map((n) => (
         <WalkRoot
           key={n.path}
           solveNode={n}
-          isFirst={n === drawn[0]}
+          isFirst={n === tree[0]}
           solved={solved}
+          sort={sort}
           theme={theme}
           measureText={measurer}
           snapToPixels={snapEnabled}
@@ -172,13 +181,16 @@ function WalkRoot({
   isFirst,
   rootOffset,
   ...group
-}: Omit<ControlNodeGroupProps, 'rootOffset'> & { isFirst: boolean; rootOffset: Vector2 | undefined }) {
+}: Omit<ControlNodeGroupProps, 'rootOffset' | 'walkEnclosing'> & {
+  isFirst: boolean;
+  rootOffset: Vector2 | undefined;
+}) {
   const { solveNode } = group;
-  const hasSkippedAncestors = solveNode.skippedAncestors !== null;
+  const hasSkippedTransform = solveNode.skippedTransform !== null;
   const content = (
-    <ControlNodeGroup {...group} rootOffset={isFirst || hasSkippedAncestors ? rootOffset : undefined} />
+    <RootControlNodeGroup {...group} rootOffset={isFirst || hasSkippedTransform ? rootOffset : undefined} />
   );
-  if (!rootOffset || hasSkippedAncestors) return content;
+  if (!rootOffset || hasSkippedTransform) return content;
   return (
     <CanvasRootScope node={solveNode.node} parentIsCanvasItem={false}>
       {isFirst ? (
@@ -190,35 +202,35 @@ function WalkRoot({
   );
 }
 
+/** A root of the walk's tree, below the drawn item the walk sits in. */
+function RootControlNodeGroup(props: Omit<ControlNodeGroupProps, 'walkEnclosing'>) {
+  return <ControlNodeGroup {...props} walkEnclosing={useEnclosingCanvasState()} />;
+}
+
 interface ControlNodeGroupProps {
   solveNode: SolveNode;
   solved: ReadonlyMap<string, SolvedControl>;
+  /** How the walk draws each Control after the y-sort of its canvas. */
+  sort: ForestSort;
   theme: NativeTheme;
   measureText: TextMeasurer | null;
   /** `Viewport::is_snap_controls_to_pixels_enabled()` (`controlPixelSnap.ts`). */
   snapToPixels: boolean;
   /** `ControlCanvasWalkerProps.rootOffset`, set on the roots `WalkRoot` chooses only. */
   rootOffset?: Vector2;
+  /**
+   * What the drawn item the walk's root sits in hands down. Each Control's `inheritance` holds every
+   * link up to that root, so the whole walk folds over this one state.
+   */
+  walkEnclosing: InheritedCanvasItemState;
 }
 
-/**
- * A Control's `CanvasItemMaterial`: its own, or with `use_parent_material` the parent item's. A
- * skipped Node2D chain above a promoted Control is that parent item, so it decides unless every
- * skipped ancestor defers to the Control above. Each reference resolves in the scope of the node
- * that names it: an instanced sub-scene names its materials in its file.
- */
-function useControlMaterial(
-  solveNode: SolveNode,
-  props: ControlProperties
-): CanvasItemMaterialProperties | null {
-  const useParentMaterial = props.useParentMaterial;
-  const skipped = solveNode.skippedAncestors?.material;
-  const ownOrAmbient = useResolvedCanvasItemMaterial(
-    { ref: props.materialPath, useParentMaterial },
-    solveNode.resources
-  );
-  const fromSkippedAncestors = useCanvasAncestorMaterial(skipped ?? INHERIT_PARENT_MATERIAL);
-  return useParentMaterial && skipped ? fromSkippedAncestors : ownOrAmbient;
+/** What a Control inherits along the walk's tree, below the drawn item that hands down `walkEnclosing`. */
+function useControlInheritance(
+  { inheritance }: SolveNode,
+  walkEnclosing: InheritedCanvasItemState
+): InheritedCanvasItemState {
+  return useMemo(() => inheritedAlong(inheritance, walkEnclosing), [inheritance, walkEnclosing]);
 }
 
 /**
@@ -226,38 +238,56 @@ function useControlMaterial(
  * runs both child loops with one `p_z` (`renderer_canvas_cull.cpp:471-490`). The draw sequence counts
  * all live siblings, so Controls interleave with Node2D items.
  */
-function useControlState(solveNode: SolveNode, props: ControlProperties): CanvasItemState {
+function useControlState(
+  solveNode: SolveNode,
+  paint: CanvasItemPaint,
+  props: ControlProperties,
+  inherited: InheritedCanvasItemState
+): CanvasItemState {
   return useCanvasItemState({
+    inherited,
     modulate: props.modulate ?? WHITE_MODULATE,
     selfModulate: props.selfModulate ?? WHITE_MODULATE,
     zIndex: props.zIndex,
     zAsRelative: props.zAsRelative,
-    material: useControlMaterial(solveNode, props),
-    // Own-or-ambient, not multiplicative: neither property has a self-only layer,
-    // so one fold serves this painter and the descendants.
-    sampler: useInheritedTextureSampler(
-      props.textureFilter,
-      props.textureRepeat,
-      solveNode.skippedAncestors?.sampler
+    // Each reference resolves in the scope of the node that names it: an instanced sub-scene names
+    // its materials in its file.
+    material: useResolvedCanvasItemMaterial(
+      { ref: props.materialPath, useParentMaterial: props.useParentMaterial },
+      solveNode.resources,
+      inherited.material
     ),
+    // Own-or-inherited, not multiplicative: neither property has a self-only layer,
+    // so one fold serves this painter and the descendants.
+    sampler: useTextureSamplerOver(props.textureFilter, props.textureRepeat, inherited.sampler),
     lightMask: props.lightMask,
-    sequence: solveNode.paintSequence,
+    sequence: paint.own,
   });
 }
 
+/** The slot of each internal back piece a sort placed, by name, at the z of the Control that draws it. */
+function usePieceSlots(
+  runs: ReadonlyMap<string, PaintRange> | undefined,
+  state: Pick<CanvasItemState, 'keyAt'>
+): ReadonlyMap<string, CanvasSlot> {
+  const { keyAt } = state;
+  return useMemo(() => {
+    if (!runs) return NO_PIECE_SLOTS;
+    return new Map([...runs].map(([name, run]) => [name, wholeKeySlot(keyAt(run.base))]));
+  }, [runs, keyAt]);
+}
+
 /**
- * One Control, under the skipped Node2D chain it promoted past (`SolveNode.skippedAncestors`), when
+ * One Control, under the skipped Node2D chain it promoted past (`SolveNode.skippedTransform`), when
  * there is one. A product of ancestors can shear, so the chain's transform goes in as a whole matrix.
  */
 function ControlNodeGroup(props: ControlNodeGroupProps) {
-  const skipped = props.solveNode.skippedAncestors;
+  const skipped = props.solveNode.skippedTransform;
   if (!skipped) return <ControlItemGroup {...props} />;
   // paint-order-safe: outside the keyed item group, never between it and a mesh.
   return (
-    <group matrix={threeMatrixFromTransform2D(skipped.transform)} matrixAutoUpdate={false}>
-      <SkippedCanvasItemsScope skipped={skipped}>
-        <ControlItemGroup {...props} />
-      </SkippedCanvasItemsScope>
+    <group matrix={threeMatrixFromTransform2D(skipped)} matrixAutoUpdate={false}>
+      <ControlItemGroup {...props} />
     </group>
   );
 }
@@ -265,19 +295,27 @@ function ControlNodeGroup(props: ControlNodeGroupProps) {
 function ControlItemGroup({
   solveNode,
   solved,
+  sort,
   theme,
   measureText,
   snapToPixels,
   rootOffset,
+  walkEnclosing,
 }: ControlNodeGroupProps) {
   const props = controlProps(solveNode);
-  const state = useControlState(solveNode, props);
+  const inherited = useControlInheritance(solveNode, walkEnclosing);
+  const paint = sort.paints.get(solveNode.path) ?? solveNode.paint;
+  // The clip this Control took, which it hands on to children that are entries of an outer sort.
+  const takenClip = useInheritedControlClip();
+  const state = useControlState(solveNode, paint, props, inherited);
+  const handedDown = useHandedDownParent(solveNode.node, solveNode.path, solveNode.resources, inherited);
   const { key: renderOrder, tint } = state;
   // For chrome drawn after the whole subtree (Godot's `INTERNAL_MODE_BACK`), from the
   // sequence value the allocator holds after it (`internalBackRoom`).
-  const backKey = state.keyAt(solveNode.backSequence);
+  const backKey = state.keyAt(paint.back.base);
   const { slot, chromeSlot } = useMemo(() => ownAndBackSlots(renderOrder, backKey), [renderOrder, backKey]);
-  const layerKey = state.keyAt(solveNode.layerSequence);
+  const pieceSlots = usePieceSlots(sort.pieceRuns.get(solveNode.path), state);
+  const layerKey = state.keyAt(paint.layer);
   const layerSlot = useMemo(() => wholeKeySlot(layerKey), [layerKey]);
   // `is_visible_in_tree()` is `visible && parent_visible_in_tree` (`canvas_item.cpp:62-64`).
   // Both halves come from the solve, which read `hiddenNodePaths`: a skipped
@@ -302,16 +340,24 @@ function ControlItemGroup({
   const origin = snappedControlOriginUnder(rect, rootOffset ?? VECTOR2_ZERO, transform, snapToPixels);
 
   const Painter = controlComponentRegistry.get(solveNode.node.type) ?? ControlFallback;
-  const childElements = solveNode.children.map((child) => (
+  const ownChildren = solveNode.children.map((child) => (
     <ControlNodeGroup
       key={child.path}
       solveNode={child}
       solved={solved}
+      sort={sort}
       theme={theme}
       measureText={measureText}
       snapToPixels={snapToPixels}
+      walkEnclosing={walkEnclosing}
     />
   ));
+  // Godot culls each entry of a sort with the clip of the sort root (`renderer_canvas_cull.cpp:458`).
+  const childElements = sort.mergedSorters.has(solveNode.path) ? (
+    <ControlClipProvider value={takenClip}>{ownChildren}</ControlClipProvider>
+  ) : (
+    ownChildren
+  );
 
   // Only this node's DIRECT children, so a painter cannot reach across the tree.
   const childRects = useMemo(() => {
@@ -338,6 +384,7 @@ function ControlItemGroup({
         tint={tint}
         childTint={tint.internalChild}
         chromeSlot={chromeSlot}
+        pieceSlots={pieceSlots}
         layerSlot={layerSlot}
         theme={theme}
         measureText={measureText}
@@ -358,8 +405,8 @@ function ControlItemGroup({
       mode={props.clipChildren}
       isYSorted={ysortsChildren(solveNode.node)}
       state={state}
-      behindRanges={solveNode.behindRanges}
-      range={solveNode.paintRange}
+      behindRanges={paint.behind}
+      range={paint.range}
     >
       <LitCanvasItemPixels material={state.material} lightMask={state.lightMask} zFinal={state.zFinal}>
         {painter}
@@ -385,9 +432,9 @@ function ControlItemGroup({
       renderOrder={renderOrder}
     >
       <CanvasItemProvider value={renderOrder}>
-        {/* The painter sits in the scope too: Godot tests an item's light window against its
-            own `z_final`, and its descendants start from that value. */}
-        <CanvasItemChildScope state={state}>
+        {/* The painter sits inside too: it samples with the sampler the Control hands down,
+            which is the Control's own. */}
+        <CanvasParentProvider value={handedDown}>
           <OwnCanvasModulateProvider value={state.tint.canvasModulate}>
             {hasOwnTransform ? (
               <CanvasItemGroup
@@ -401,7 +448,7 @@ function ControlItemGroup({
               content
             )}
           </OwnCanvasModulateProvider>
-        </CanvasItemChildScope>
+        </CanvasParentProvider>
       </CanvasItemProvider>
     </group>
   );

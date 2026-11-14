@@ -3,13 +3,16 @@ import { describe, expect, it } from 'vitest';
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { themeResource } from '../../../../r3f/controls/native/testing/themeResource';
 import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 import type { TscnInternalResource } from '../../../../parser/types';
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import { pickerChildTheme } from './pickerChildTheme';
 
 const THEME = nativeTheme(1);
+const DEFAULT_BOXES = defaultStyleBoxesOf(defaultThemeAt(1));
 const RED = { r: 1, g: 0, b: 0, a: 1 };
 const GREEN = { r: 0, g: 1, b: 0, a: 1 };
 const BLUE = { r: 0, g: 0, b: 1, a: 1 };
@@ -20,7 +23,12 @@ function themeWithColors(colors: Record<string, Record<string, typeof RED>>): Th
 }
 
 function pickerUnder(...themeChain: ThemeResource[]): SolveNode {
-  return { ...solveNode(), path: 'Picker', node: controlNode('Picker', 'ColorPicker'), themeChain };
+  return withThemeItems({
+    ...solveNode(),
+    path: 'Picker',
+    node: controlNode('Picker', 'ColorPicker'),
+    themeChain,
+  });
 }
 
 describe('pickerChildTheme', () => {
@@ -97,13 +105,13 @@ describe('pickerChildTheme', () => {
         themed({ Button: { normal: 'SubResource("box")', disabled: 'SubResource("box")' } }),
         THEME
       );
-      expect(child.theme.widgets.button.normal.contentMargin).toEqual({
+      expect(child.theme.button.normal.contentMargin).toEqual({
         left: 10,
         top: 9,
         right: 10,
         bottom: 9,
       });
-      expect(child.theme.widgets.button.disabled.contentMargin).toEqual({
+      expect(child.theme.button.disabled.contentMargin).toEqual({
         left: 10,
         top: 9,
         right: 10,
@@ -116,8 +124,8 @@ describe('pickerChildTheme', () => {
         themed({ LineEdit: { normal: 'SubResource("box")', read_only: 'SubResource("box")' } }),
         THEME
       );
-      expect(child.theme.widgets.lineEdit.normal.contentMargin.left).toBe(10);
-      expect(child.theme.widgets.lineEdit.readOnly.contentMargin.left).toBe(10);
+      expect(child.theme.lineEdit.normal.contentMargin.left).toBe(10);
+      expect(child.theme.lineEdit.readOnly.contentMargin.left).toBe(10);
     });
 
     it('gives the shape, mode and menu buttons the normal and disabled styleboxes of FlatMenuButton', () => {
@@ -125,9 +133,9 @@ describe('pickerChildTheme', () => {
         themed({ FlatMenuButton: { normal: 'SubResource("box")', disabled: 'SubResource("box")' } }),
         THEME
       );
-      expect(child.theme.widgets.flatMenuButton.normal.contentMargin.left).toBe(10);
-      expect(child.theme.widgets.flatMenuButton.disabled.contentMargin.top).toBe(9);
-      expect(child.theme.widgets.button.normal).toBe(THEME.widgets.button.normal);
+      expect(child.theme.flatMenuButton.normal.contentMargin.left).toBe(10);
+      expect(child.theme.flatMenuButton.disabled.contentMargin.top).toBe(9);
+      expect(child.theme.button.normal).toBe(DEFAULT_BOXES.Button!.normal);
     });
 
     it('gives the mode buttons the tab_unselected and tab_selected styleboxes of TabContainer', () => {
@@ -152,8 +160,8 @@ describe('pickerChildTheme', () => {
 
     it('keeps the default styleboxes without an override', () => {
       const child = pickerChildTheme(themed({}), THEME);
-      expect(child.theme.widgets.button.normal).toBe(THEME.widgets.button.normal);
-      expect(child.theme.widgets.flatMenuButton.normal).toBe(THEME.widgets.flatMenuButton.normal);
+      expect(child.theme.button.normal).toBe(DEFAULT_BOXES.Button!.normal);
+      expect(child.theme.flatMenuButton.normal).toBe(DEFAULT_BOXES.FlatMenuButton!.normal);
     });
   });
 });

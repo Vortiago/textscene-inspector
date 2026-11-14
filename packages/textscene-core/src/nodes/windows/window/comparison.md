@@ -151,5 +151,6 @@ as an unset key does, and no diagnostic comes from the lenient path.
 
 - **Approximated** The title glyph edges differ from Godot's by the same amount as a Label's in the
   default font.
+- **Approximated** At theme scale 1.5 the title text of a dialog sits 1 px right of Godot's.
 - **Not drawn** A window that holds `force_native`, or one that no viewport embeds, draws nothing, as
   it opens as a system window in a running game.

@@ -9,6 +9,7 @@ import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls
 import { TAB_ALIGNMENT_CENTER, TAB_ALIGNMENT_LEFT, TAB_ALIGNMENT_RIGHT } from '../tabbar/nativeSolver';
 import type { ControlProperties } from '../control/types';
 import type { TabContainerProperties } from './types';
+import { tabContainerChildVisibility } from './childVisibility';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import {
   TABS_POSITION_TOP,
@@ -23,7 +24,6 @@ import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import type { TabBarProperties } from '../tabbar/types';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts';
-import { ROOT_TEXTURE_SAMPLER } from '../../../../r3f/canvasItemTextureSampler';
 import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 
 /** Panel's `panel` box in the default theme table at scale 1 (`default_theme.cpp:134`). */
@@ -113,13 +113,7 @@ describe('deriveTabContainerTabs', () => {
     const promoted: SolveNode = {
       ...page('Promoted'),
       path: 'Holder/Promoted',
-      skippedAncestors: {
-        transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
-        modulate: { r: 1, g: 1, b: 1, a: 1 },
-        z: [],
-        sampler: ROOT_TEXTURE_SAMPLER,
-        material: { kind: 'none' },
-      },
+      skippedTransform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
     };
     const tabs = deriveTabContainerTabs(
       { children: [page('General'), promoted, page('Advanced')] },
@@ -180,12 +174,13 @@ describe('tabContentBand', () => {
 });
 
 describe('the page a TabContainer shows', () => {
-  const childVisibility = controlSolverRegistry.childVisibility('TabContainer')!;
   const pages = [page('A'), page('B'), page('C')];
 
   function visiblePages(props: Partial<TabContainerProperties>): string[] {
     const container = tabContainer('T', props, pages).node;
-    return pages.filter((p, i) => childVisibility(container, p.node, i, pages.length)).map((p) => p.path);
+    return pages
+      .filter((p, i) => tabContainerChildVisibility(container, p.node, i, pages.length))
+      .map((p) => p.path);
   }
 
   it('is the first page when no current_tab is authored (the first add_tab selects it, tab_bar.cpp:1324-1331)', () => {
@@ -519,14 +514,14 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
   }
 
   function barFontSize(n: SolveNode): number | undefined {
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
+    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties);
     return (bar.node.properties as TabBarProperties).themeOverrideFontSizes?.font_size;
   }
 
   it('hands the bar the current page and leaves scroll_to_selected at the bar default, so the strip scrolls to it', () => {
     const n = container({ currentTab: 3 });
     const tabs = ['A', 'B', 'C', 'D'].map((title) => ({ title, tooltip: '', disabled: false }));
-    const bar = buildInternalTabBarNode(n, tabs, n.node.properties as TabContainerProperties, THEME);
+    const bar = buildInternalTabBarNode(n, tabs, n.node.properties as TabContainerProperties);
     const props = bar.node.properties as TabBarProperties;
     expect(props.currentTab).toBe(3);
     expect(props.scrollToSelected).toBeUndefined();
@@ -535,7 +530,7 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
   it("resolves the bar's own theme items the container does not push, such as TabBar/icons/close", () => {
     const projectTheme = themeResource({ icons: { TabBar: { close: 'ExtResource("1")' } } });
     const n = container({}, projectTheme);
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
+    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties);
     expect(bar.icons.close?.ref).toBe('ExtResource("1")');
   });
 
@@ -544,7 +539,7 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
       colors: { TabBar: { font_selected_color: { r: 1, g: 0, b: 0, a: 1 } } },
     });
     const n = container({}, projectTheme);
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
+    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties);
     expect(bar.colors.font_selected_color).toEqual(n.colors.font_selected_color);
     expect(bar.colors.font_selected_color).not.toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
@@ -552,7 +547,7 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
   it("keeps the bar's own close button box over a container override of that name (tab_container.cpp:312-318)", () => {
     const containerBox = { ...TABLE_PANEL, contentMargin: TABBAR_MARGIN };
     const n = tabContainer('Tabs', {}, [], { button_highlight: containerBox });
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
+    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties);
     expect(bar.styleBoxes.button_highlight).toEqual(
       defaultStyleBoxesOf(defaultThemeAt(1)).TabBar!.button_highlight
     );
@@ -592,7 +587,7 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
       fonts: { TabContainer: { font: containerFont }, TabBar: { font: barFont } },
     });
     const n = container({}, projectTheme);
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
+    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties);
     expect(bar.fontOverrides.font).toBe(containerFont);
   });
 });

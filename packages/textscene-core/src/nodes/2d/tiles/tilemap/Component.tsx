@@ -11,12 +11,13 @@ import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { multiplyModulate, type CanvasItemTint } from '../../../../r3f/canvasItemModulate';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import { allocateNodePaintRange, packPaintRanges } from '../../../../r3f/canvasPaintOrder';
-import { usePaintRange } from '../../../../r3f/contexts/PaintOrderContext';
+import { packPaintRanges } from '../../../../r3f/canvasPaintOrder';
+import { useNodePaint } from '../../../../r3f/canvasItemPass/nodePaint';
+import { useNodePath } from '../../../../r3f/contexts/NodePathContext';
 import { childCanvasPlace } from '../../../../r3f/canvasItemState';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel, type TileSetStatus } from '../../../../r3f/useTileSetModel';
-import { YSortDispatcher } from '../../../../r3f/YSortDispatcher';
+import { YSortExtraChildrenProvider } from '../../../../r3f/ySortExtraChildren';
 import type { TscnNode } from '../../../../parser/types';
 import type { TileMapLayerProperties } from '../tilemaplayer/types';
 import type { TileSetModel } from '../../../../resources/tileset/types';
@@ -42,8 +43,9 @@ export function TileMap({ node, children }: NodeComponentProps) {
     );
   }
   return (
-    // The sort of the world walk in `children` is left out: this one sorts the layers with the children.
-    <YSortedTileMap node={node} model={model} sceneTiles={sceneTiles} />
+    <YSortedTileMap node={node} model={model} sceneTiles={sceneTiles}>
+      {children}
+    </YSortedTileMap>
   );
 }
 
@@ -52,13 +54,16 @@ function enabledLayerCells(layers: readonly TileMapLayerData[]): PlacedCell[] {
   return layers.flatMap((layer) => (layer.enabled ? (layer.cells ?? []) : []));
 }
 
+/** A y-sorted TileMap: the sort in `children` takes its layers and scene tiles with its child nodes. */
 function YSortedTileMap({
   node,
   model,
   sceneTiles,
+  children,
 }: { model: TileSetModel | null; sceneTiles: SceneTileDrawing } & NodeComponentProps) {
   const props = node.properties as TileMapProperties;
-  const withLayers = useMemo(() => withLayerNodes(node, sceneTiles.instances), [node, sceneTiles.instances]);
+  const path = useNodePath() ?? node.name;
+  const layers = useMemo(() => layerNodesOf(node), [node]);
   return (
     <CanvasItem2D
       node={node}
@@ -74,20 +79,22 @@ function YSortedTileMap({
         )
       }
     >
-      <YSortDispatcher node={withLayers} />
+      <YSortExtraChildrenProvider path={path} leading={layers} trailing={sceneTiles.instances}>
+        {children}
+      </YSortExtraChildrenProvider>
     </CanvasItem2D>
   );
 }
 
 /**
- * The TileMap with its layers in front of its child nodes, as Godot's internal front children are.
- * A layer node is named `@TileMapLayer@<index>`, as Godot names a generated node, so no authored
- * child shares its path. The scene tile instances come last, as `add_child` appends them, and the
- * layers leave them to the TileMap.
+ * The TileMap's layers as nodes, which sort in front of its child nodes as Godot's internal front
+ * children do. A layer node is named `@TileMapLayer@<index>`, as Godot names a generated node, so no
+ * authored child shares its path. The scene tile instances come after the child nodes, as
+ * `add_child` appends them, and the layers leave them to the TileMap.
  */
-function withLayerNodes(map: TscnNode, sceneTiles: readonly TscnNode[]): TscnNode {
+function layerNodesOf(map: TscnNode): TscnNode[] {
   const { layers, ...props } = map.properties as TileMapProperties;
-  const layerNodes = layers.map((layer, index): TscnNode => ({
+  return layers.map((layer, index): TscnNode => ({
     name: `@TileMapLayer@${index}`,
     type: 'TileMapLayer',
     parent: '.',
@@ -106,7 +113,6 @@ function withLayerNodes(map: TscnNode, sceneTiles: readonly TscnNode[]): TscnNod
     rawProperties: {},
     children: [],
   }));
-  return { ...map, children: [...layerNodes, ...map.children, ...sceneTiles] };
 }
 
 interface LayeredTileMapProps extends NodeComponentProps {
@@ -117,18 +123,19 @@ interface LayeredTileMapProps extends NodeComponentProps {
 
 function LayeredTileMap({ node, model, status, sceneTiles, children }: LayeredTileMapProps) {
   const props = node.properties as TileMapProperties;
-  const paintRange = usePaintRange();
   // The layers are internal front children in Godot, in no `.tscn` child list,
   // so they draw from the `front` run, between this node and its authored
   // children. Packed, so a squeezed run clamps them inside it.
-  const layerSequences = useMemo(() => {
-    const { front } = allocateNodePaintRange(paintRange, node);
-    return packPaintRanges(
-      front,
-      props.layers.map(() => 1),
-      front.base
-    ).map((run) => run.base);
-  }, [paintRange, node, props.layers]);
+  const { front } = useNodePaint(node, useNodePath());
+  const layerSequences = useMemo(
+    () =>
+      packPaintRanges(
+        front,
+        props.layers.map(() => 1),
+        front.base
+      ).map((run) => run.base),
+    [front, props.layers]
+  );
 
   // Parsed layers never change identity, so the batched geometries survive unrelated re-renders.
   // The quadrants depend on no paint-order input, so a move in the canvas keeps them too.

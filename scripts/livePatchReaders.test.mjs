@@ -63,6 +63,10 @@ const NEEDS_NO_OVERLAY = new Map([
     'Reads the type of each node to classify the content, never a pose.',
   ],
   [
+    'r3f/canvasItemPass/writtenVisibility.ts',
+    'Reads the type and `top_level` of each child and the container properties that pick its pages, which no pass patches.',
+  ],
+  [
     'r3f/components/SceneTreeViewer/useLiveStep.ts',
     'Shows the merged instance root in the tree, which no pass patches.',
   ],

@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../parser/types';
 import {
   allocateNodePaintRange,
-  behindParentRanges,
+  behindRangesOf,
   allocatePaintRange,
   canvasKeyAtZ,
   canvasRenderOrder,
@@ -18,6 +18,8 @@ import {
   paintRangeSize,
   WHOLE_CANVAS_RANGE,
 } from './canvasPaintOrder';
+// Side effect: the parser slices register the paint room each type holds.
+import '../parser/TscnParser';
 
 function node(name: string, type: string, children: TscnNode[] = [], properties = {}): TscnNode {
   // The raw text of each property, as the parser keeps it beside the parsed value.
@@ -142,8 +144,12 @@ describe('paintRangeSize', () => {
   });
 
   it("counts one more value for a Control's back pieces", () => {
+    expect(paintRangeSize(node('Box', 'Control', [node('Body', 'ColorRect')]))).toBe(1 + 1 + 1 + 1);
+  });
+
+  it("counts one value for each of a ScrollContainer's hints and bars, which a y-sort places apart", () => {
     expect(paintRangeSize(node('Scroll', 'ScrollContainer', [node('Body', 'ColorRect')]))).toBe(
-      1 + 1 + 1 + 1
+      1 + 1 + 4 + 1
     );
   });
 
@@ -204,7 +210,7 @@ describe('canvasRootRanges', () => {
     // so it parents at the canvas and takes the canvas's sort counter
     // (`_top_level_raise_self`, canvas_item.cpp:222-232): the tail of the root it
     // hangs under, as a broken CanvasItem chain gives.
-    const detached = node('Detached', 'ColorRect', [], { top_level: true });
+    const detached = node('Detached', 'ColorRect', [], { topLevel: true });
     const root = node('Root', 'Node2D', [detached, node('Later', 'Sprite2D')]);
     const ranges = allocatePaintRange(WHOLE_CANVAS_RANGE, [root]).children;
     const roots = canvasRootRanges([root], ranges);
@@ -280,7 +286,7 @@ describe('allocatePaintRange', () => {
 
   it.each([
     ['a Node2D', 'Polygon2D', { clip_children: 1 }],
-    ['a Control', 'ColorRect', { clip_children: 2 }],
+    ['a Control', 'ColorRect', { clipChildren: 2 }],
   ])('draws %s with clip_children after every child, as a CanvasGroup', (_, type, properties) => {
     // A clipping item groups its children as a CanvasGroup does, so it culls them before itself.
     const clipping = node(
@@ -486,7 +492,7 @@ describe("GraphEdit's listed children", () => {
   });
 });
 
-describe('behindParentRanges', () => {
+describe('behindRangesOf', () => {
   it('lists the show_behind_parent children in child order, whatever the parent type', () => {
     const parent = node('Clip', 'Node2D', [
       node('Front', 'Sprite2D'),
@@ -494,6 +500,7 @@ describe('behindParentRanges', () => {
     ]);
     const range = { base: 0, size: paintRangeSize(parent) };
 
-    expect(behindParentRanges(range, parent)).toEqual([allocateNodePaintRange(range, parent).children[1]]);
+    const { children } = allocateNodePaintRange(range, parent);
+    expect(behindRangesOf(parent.children, children)).toEqual([children[1]]);
   });
 });

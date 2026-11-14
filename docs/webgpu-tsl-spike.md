@@ -19,7 +19,7 @@ changes no decision: ADR-0055 stays as it is until its owner decides.
   ceiling by 20,897 B.
 
 The recommendation is a port of the lit surface to TSL node materials under the handler, behind a
-switch, and a move to `WebGPURenderer` as a later and separate project.
+switch, and a move to `WebGPURenderer` as a later and separate project (#1788).
 
 ## What the prototype is
 
@@ -414,13 +414,17 @@ step 5, or when group 3 lands first and the port follows.
 
 ## Decisions
 
-The owner decided these on 2026-11-11. ADR-0055 still needs its own change for the first.
+The owner decided these on 2026-11-11. ADR-0055 records the first.
 
 | Question | Decision |
 | --- | --- |
 | The form of the port | TSL node materials, in place of ADR-0055's `ShaderMaterial` |
-| The first target | The handler on today's `WebGLRenderer`. `WebGPURenderer` is a later project |
+| The first target | The handler on today's `WebGLRenderer`. `WebGPURenderer` is a later project (#1788) |
 | The bundle ceiling while both material kinds ship | 1,150,000 B |
 | A golden that moves at the switch | It may move by at most 1/255, and its comparison with Godot must not get worse |
 | The order | The port runs first, with group 7 beside it. Group 3 waits for the node lit surface |
 | The prototype | It stays on the branch `spike/tsl-lit-surface` |
+
+On 2026-11-13 the owner widened the port from the lit surface to all of Godot's shaders, with the
+passes in the package and a translator of Godot's shading language first. ADR-0055, ADR-0072 and
+ADR-0075 record it.

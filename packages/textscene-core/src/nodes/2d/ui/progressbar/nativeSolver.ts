@@ -8,11 +8,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import {
-  controlSolverRegistry,
-  type MinimumSizeFn,
-  type SolveContext,
-} from '../../../../r3f/controls/native/solverRegistry';
+import { controlSolverRegistry, type MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -33,19 +29,15 @@ import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { formatControlPercent, type Numerals } from '../../../../godot/text/numberFormat';
 import { ProgressBarFillMode } from '../../../../godot/scene/gui';
 
-/** ProgressBar reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color` (`default_theme.cpp:283,285`). */
+/** ProgressBar reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const PROGRESS_BAR_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
 
-/** `SceneStringName(font)` = `"font"` (`default_theme.cpp:283`: `BIND_THEME_ITEM(Theme::DATA_TYPE_FONT, ProgressBar, font)`). */
+/** `SceneStringName(font)` = `"font"`, which the default theme registers under ProgressBar. */
 export const PROGRESS_BAR_THEME_FONT_KEY = 'font';
 
 /** Resolves the percent label's font size and colour: the override, else the ancestor Theme chain, else the default theme table. */
-export function progressBarTextTheme(
-  n: SolveNode,
-  props: ProgressBarProperties,
-  ctx: Pick<SolveContext, 'theme'>
-): ResolvedTextTheme {
-  return resolveTextTheme(n, props, PROGRESS_BAR_THEME_KEYS, { fontSizePx: ctx.theme.fontSize });
+export function progressBarTextTheme(n: SolveNode, props: ProgressBarProperties): ResolvedTextTheme {
+  return resolveTextTheme(n, props, PROGRESS_BAR_THEME_KEYS);
 }
 
 /**
@@ -63,7 +55,7 @@ const progressBarMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const showPercentage = props.showPercentage ?? true;
   if (showPercentage && ctx.measureText) {
-    const { fontSizePx } = progressBarTextTheme(n, props, ctx);
+    const { fontSizePx } = progressBarTextTheme(n, props);
     const fontMetrics = resolveNodeFontMetrics(n, PROGRESS_BAR_THEME_FONT_KEY);
     const layout = shapeText('100%', {
       fontSizePx,

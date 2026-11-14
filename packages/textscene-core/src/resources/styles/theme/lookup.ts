@@ -189,7 +189,7 @@ export function themeResolutionScope(
 /**
  * The font a theme or an override defines for `name`, or `undefined` where none does. A caller
  * with its own last rung uses this: RichTextLabel's `bold_font` ends at a bold built over the
- * default font, not at the default font itself (`default_theme.cpp:1195`).
+ * default font, not at the default font itself, as the default theme registers it.
  *
  * @param override The node's own `theme_override_fonts/<name>`, which wins once
  *   declared with no validity check (`control.cpp:3089-3093`). `undefined` means
@@ -228,8 +228,8 @@ export function resolveThemeFontIn(
   override: FontResource | null | undefined
 ): FontResource | null {
   const found = findThemeFontIn(scope, name, override);
-  // The default theme's `default_font`, which the project font replaces
-  // (`default_theme.cpp:1371-1373`), is the last rung (`theme_owner.cpp:227-254`).
+  // The default theme's `default_font`, which the project font replaces in
+  // `make_default_theme`, is the last rung (`theme_owner.cpp:227-254`).
   return found === undefined ? scope.projectDefaultFont : found;
 }
 
@@ -263,17 +263,13 @@ export function fontForNode(
  * The font-size counterpart of `resolveThemeFontIn` (`Control::get_theme_font_size`,
  * `control.cpp:3107-3129`). Always returns a positive size.
  *
+ * The default theme answers last, with its own size for `name` or its `default_font_size`
+ * (`Theme::has_theme_item`, `theme.cpp:1009-1030`), so the fallback size of `ThemeDB` is never read.
+ *
  * @param override Wins only when `> 0` (`if (font_size && (*font_size) > 0)`,
  *   `control.cpp:3114-3117`). A `0` falls through like an unauthored one.
- * @param builtInDefaultPx Stands in for `ThemeDB::get_fallback_font_size()`:
- *   `DEFAULT_FONT_SIZE` (`godot/scene/theme.ts`), scaled.
  */
-export function resolveThemeFontSizeIn(
-  scope: ThemeResolutionScope,
-  name: string,
-  override: number | undefined,
-  builtInDefaultPx: number
-): number {
+export function resolveThemeFontSizeIn(scope: ThemeResolutionScope, name: string, override?: number): number {
   if (override !== undefined && override > 0) return override;
 
   for (const theme of scope.searchOrder) {
@@ -282,7 +278,7 @@ export function resolveThemeFontSizeIn(
       if (found !== undefined) return found;
     }
   }
-  return explicitDefaultFontSize(scope, name) ?? builtInDefaultPx;
+  return explicitDefaultFontSize(scope, name) ?? scope.defaultTheme.defaultFontSize;
 }
 
 /**

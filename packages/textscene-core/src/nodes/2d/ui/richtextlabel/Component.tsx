@@ -26,7 +26,7 @@ import { clampAutowrapMode } from '../../../../r3f/controls/native/text/textLayo
 import { OutlinedTextRun } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { ScrollBarChrome } from '../shared/ScrollChrome';
 import {
-  RICH_TEXT_LABEL_UNDERLINE_ALPHA,
+  richTextLabelUnderlineAlpha,
   RICH_TEXT_LABEL_DEFAULT_AUTOWRAP,
   layoutRichTextRuns,
   richTextLabelTextTheme,
@@ -45,7 +45,6 @@ import type { RichTextLabelProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { ResolvedTextTheme, TextOutlineTheme } from '../../../../r3f/controls/native/textTheme';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 
@@ -173,13 +172,12 @@ function useShapedRichText(
   solveNode: SolveNode,
   props: RichTextLabelProperties,
   rect: Rect2,
-  theme: NativeTheme,
   textTheme: ResolvedTextTheme
 ) {
   const runsAt = useCallback(
     (wrapWidthPx: number) =>
-      styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize, wrapWidthPx),
-    [solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize]
+      styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, wrapWidthPx),
+    [solveNode, props, textTheme.color, textTheme.fontSizePx]
   );
   // RichTextLabel's own default is WORD_SMART (`rich_text_label.h:557`), not Label's OFF.
   const autowrapMode = clampAutowrapMode(props.autowrapMode, RICH_TEXT_LABEL_DEFAULT_AUTOWRAP);
@@ -278,16 +276,14 @@ function RichTextBody({
   rect,
   renderOrder,
   slot,
-  theme,
   snapToPixels,
   clippingPlanes,
+  theme,
 }: RichTextBodyProps) {
   const props = painterView<RichTextLabelProperties>(solveNode);
   const toItemLinear = useItemLinearColorOf();
-  const textTheme = useMemo(
-    () => richTextLabelTextTheme(solveNode, props, { theme }),
-    [solveNode, props, theme]
-  );
+  const textTheme = useMemo(() => richTextLabelTextTheme(solveNode, props), [solveNode, props]);
+  const underlineAlpha = richTextLabelUnderlineAlpha(solveNode);
 
   const {
     runs,
@@ -300,7 +296,7 @@ function RichTextBody({
     textOriginXPx,
     scrollOffsetPx,
     scrollBar,
-  } = useShapedRichText(solveNode, props, rect, theme, textTheme);
+  } = useShapedRichText(solveNode, props, rect, textTheme);
 
   // The alignment property and the `[center]`/`[right]`/`[left]`/`[fill]` tags
   // (`rich_text_label.cpp:5681-5696`) resolve through one `_find_alignment`
@@ -365,7 +361,8 @@ function RichTextBody({
             ? underlineRectPx(
                 placement.layout.lines[0]!.glyphs,
                 placement.layout.baselineOffsetPx,
-                placement.underline
+                placement.underline,
+                theme.scale
               )
             : null;
           return (
@@ -384,7 +381,7 @@ function RichTextBody({
                     width={underline.x1 - underline.x0}
                     height={underline.heightPx}
                     color={toItemLinear(runTint)}
-                    opacity={runTint.a * RICH_TEXT_LABEL_UNDERLINE_ALPHA}
+                    opacity={runTint.a * underlineAlpha}
                     renderOrder={renderOrder}
                   />
                 </CanvasItemGroup>

@@ -13,8 +13,7 @@
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { contentMarginSize, contentRect, flatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
-import { flatCornerDetail } from '../../../../godot/scene/defaultTheme/styleBoxes';
+import { contentMarginSize, contentRect } from '../../../../r3f/controls/native/styleBoxFlat';
 import { resolveToggleDrawState, type ToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import {
   boxContainerMinimumSize,
@@ -31,7 +30,6 @@ import type { GraphEditToolbarTheme } from './toolbarTheme';
 import type { GraphEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
-import { DEFAULT_CORNER_RADIUS } from '../../../../godot/scene/theme';
 
 /** `menu_panel->set_position(Vector2(10, 10))` (`graph_edit.cpp:3232`): unscaled. */
 const GRAPH_EDIT_MENU_POSITION: Vector2 = { x: 10, y: 10 };
@@ -95,27 +93,6 @@ export interface ToolbarTextMetrics {
 }
 
 /**
- * `graph_toolbar_style` (`default_theme.cpp:1290-1291`):
- * `make_flat_stylebox(Color(0.24, 0.24, 0.24, 0.6), 4, 2, 4, 2)`.
- */
-export function graphEditMenuPanelStyleBox(theme: NativeTheme): StyleBoxFlatData {
-  const { scale } = theme;
-  return flatStyleBox(
-    { r: 0.24, g: 0.24, b: 0.24, a: 0.6 },
-    {
-      contentMargin: {
-        left: Math.round(4 * scale),
-        top: Math.round(2 * scale),
-        right: Math.round(4 * scale),
-        bottom: Math.round(2 * scale),
-      },
-      cornerRadius: theme.cornerRadius,
-      cornerDetail: flatCornerDetail(DEFAULT_CORNER_RADIUS, scale),
-    }
-  );
-}
-
-/**
  * One icon-only `FlatButton`'s minimum size: `Button::get_minimum_size_for_text_and_icon`
  * (`button.cpp:481-526`) with empty text, plus the margins of the box its draw state reads.
  */
@@ -135,15 +112,15 @@ function toolbarButtonMinSize(
  * (`line_edit.cpp:2443-2477`).
  */
 function toolbarSpinBoxMinSize(
-  fieldBoxes: GraphEditToolbarTheme['fieldBoxes'],
+  field: GraphEditToolbarTheme['field'],
   metrics: ToolbarTextMetrics,
   scale: number
 ): Vector2 {
-  const styleMin = lineEditStyleMinSize(fieldBoxes.normal, fieldBoxes.readOnly);
+  const styleMin = lineEditStyleMinSize(field);
   return {
     x:
       styleMin.x +
-      lineEditTextMinimumWidth(metrics.emSpaceWidthPx) +
+      lineEditTextMinimumWidth(field, metrics.emSpaceWidthPx) +
       spinBoxButtonsBlockWidth(spinBoxArrowIconSize(scale).x),
     y: styleMin.y + metrics.fontHeightPx,
   };
@@ -234,7 +211,7 @@ export function graphEditToolbar(
       pressed: false,
       disabled: false,
       box: {
-        minSize: toolbarSpinBoxMinSize(items.fieldBoxes, metrics, theme.scale),
+        minSize: toolbarSpinBoxMinSize(items.field, metrics, theme.scale),
         hSizeFlags: SizeFlags.FILL,
         vSizeFlags: SizeFlags.FILL,
         stretchRatio: 1,
@@ -246,10 +223,10 @@ export function graphEditToolbar(
 
   const hboxMin = boxContainerMinimumSize(
     false,
-    theme.separation,
+    items.separation,
     entries.map((e) => e.box.minSize)
   );
-  const panelStyle = graphEditMenuPanelStyleBox(theme);
+  const panelStyle = items.menuPanel;
   const panelMargin = contentMarginSize(panelStyle);
   const panelRect: Rect2 = {
     x: GRAPH_EDIT_MENU_POSITION.x,
@@ -268,7 +245,7 @@ export function graphEditToolbar(
   const laid = resortBoxContainer(
     false,
     { width: contentRect.w, height: contentRect.h },
-    theme.separation,
+    items.separation,
     0,
     false,
     entries.map((e) => e.box)

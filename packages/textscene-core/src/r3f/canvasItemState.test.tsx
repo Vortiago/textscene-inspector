@@ -1,15 +1,13 @@
 /**
- * The CanvasItem state of one canvas item, through `useCanvasItemState` and `CanvasItemChildScope`:
- * the tint, `z_final`, draw-order key and child scope that `CanvasItem2D` and `ControlCanvasWalker`
- * both take from it. `canvasItemModulate.test.ts` covers the modulate product's arithmetic.
+ * The CanvasItem state of one canvas item, through `useCanvasItemState`: the tint, `z_final` and
+ * draw-order key that `CanvasItem2D` and `ControlCanvasWalker` both take from it.
+ * `canvasItemModulate.test.ts` covers the modulate product's arithmetic.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import {
-  CanvasItemChildScope,
-  SkippedCanvasItemsScope,
   canvasPieceSlot,
   canvasSubOrder,
   canvasSubOrders,
@@ -18,25 +16,21 @@ import {
   useCanvasItemState,
   useCanvasRunKeysOfNode,
   type CanvasItemFields,
-  type SkippedCanvasItems,
 } from './canvasItemState';
-import { Modulate2DContext, useParentModulate } from './canvasItemModulate';
 import { CanvasModulateContext } from './canvasModulate';
+import { inheritedState } from './testing/inheritedFrom';
 import { WHOLE_CANVAS_RANGE, canvasRenderOrder, layerRankOf, layerRanks } from './canvasPaintOrder';
-import { PaintRangeProvider } from './contexts/PaintOrderContext';
-import { EffectiveZProvider, useEffectiveZ } from './lighting2d/canvasItemPlacement';
-import { useResolvedTextureSampler } from './canvasItemTextureSampler';
+import { PaintRun } from './testing/PaintRun';
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
 import { CanvasItemMaterialLightMode } from '../godot/scene/canvasItemMaterial';
 import { canvasItemMaterial } from './testing/canvasItemMaterial';
 import type { Rgba } from '../godot/math/math';
-import { useResolvedCanvasItemMaterial } from './components/canvasItemMaterialContext';
 
 const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 const HALF: Rgba = { r: 0.5, g: 0.5, b: 0.5, a: 0.5 };
 const WORLD_RANK = layerRankOf(layerRanks([]), 0);
 
-function fields(overrides: Partial<CanvasItemFields> = {}): CanvasItemFields {
+function fields(overrides: Partial<CanvasItemFields> = {}): Omit<CanvasItemFields, 'inherited'> {
   return {
     modulate: WHITE,
     selfModulate: WHITE,
@@ -56,18 +50,17 @@ interface Ambient {
   z?: number;
 }
 
-function ambient({ modulate = WHITE, canvasModulate = WHITE, z = 0 }: Ambient) {
-  return ({ children }: { children: ReactNode }) => (
-    <CanvasModulateContext.Provider value={canvasModulate}>
-      <Modulate2DContext.Provider value={modulate}>
-        <EffectiveZProvider value={z}>{children}</EffectiveZProvider>
-      </Modulate2DContext.Provider>
-    </CanvasModulateContext.Provider>
-  );
-}
-
-function stateOf(item: CanvasItemFields, around: Ambient = {}) {
-  return renderHook(() => useCanvasItemState(item), { wrapper: ambient(around) }).result.current;
+/** `item` below a parent that hands it `modulate` and `z`, in a canvas tinted `canvasModulate`. */
+function stateOf(
+  item: Omit<CanvasItemFields, 'inherited'>,
+  { modulate = WHITE, canvasModulate = WHITE, z = 0 }: Ambient = {}
+) {
+  const inherited = inheritedState({ modulate, zFinal: z });
+  return renderHook(() => useCanvasItemState({ ...item, inherited }), {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <CanvasModulateContext.Provider value={canvasModulate}>{children}</CanvasModulateContext.Provider>
+    ),
+  }).result.current;
 }
 
 describe('the tint', () => {
@@ -77,7 +70,7 @@ describe('the tint', () => {
     expect(tint.inherited).toEqual(WHITE);
   });
 
-  it("passes the ambient times the item's own modulate to the descendants, never its self_modulate", () => {
+  it("passes the inherited modulate times the item's own to the descendants, never its self_modulate", () => {
     const { tint } = stateOf(fields({ modulate: HALF, selfModulate: { r: 0.1, g: 0.1, b: 0.1, a: 1 } }), {
       modulate: HALF,
     });
@@ -181,88 +174,11 @@ describe('ownAndBackSlots', () => {
   });
 });
 
-describe('SkippedCanvasItemsScope', () => {
-  function stateUnder(skipped: SkippedCanvasItems, item: CanvasItemFields, around: Ambient) {
-    const Around = ambient(around);
-    return renderHook(() => useCanvasItemState(item), {
-      wrapper: ({ children }) => (
-        <Around>
-          <SkippedCanvasItemsScope skipped={skipped}>{children}</SkippedCanvasItemsScope>
-        </Around>
-      ),
-    }).result.current;
-  }
-
-  it("folds skipped items' modulate between the ambient and the item's own", () => {
-    // Three distinct halves on one channel, so a fold that drops one or squares another
-    // cannot land on 0.125.
-    const red = { r: 0.5, g: 1, b: 1, a: 1 };
-    const { tint } = stateUnder({ modulate: red, z: [] }, fields({ modulate: red }), { modulate: red });
-    expect(tint.inherited.r).toBeCloseTo(0.125, 6);
-  });
-
-  it('folds skipped items one step at a time, so an absolute step restarts the chain', () => {
-    const z = [
-      { zIndex: 50, zAsRelative: true },
-      { zIndex: 3, zAsRelative: false },
-    ];
-    expect(stateUnder({ modulate: WHITE, z }, fields({ zIndex: 2 }), { z: 5 }).zFinal).toBe(5);
-  });
-});
-
-describe('CanvasItemChildScope', () => {
-  function readInside<T>(item: CanvasItemFields, read: () => T, around: Ambient = {}): T {
-    const Around = ambient(around);
-    function Scope({ children }: { children: ReactNode }) {
-      const state = useCanvasItemState(item);
-      return <CanvasItemChildScope state={state}>{children}</CanvasItemChildScope>;
-    }
-    return renderHook(read, {
-      wrapper: ({ children }) => (
-        <Around>
-          <Scope>{children}</Scope>
-        </Around>
-      ),
-    }).result.current;
-  }
-
-  it("hands descendants the inherited modulate, not the item's own pixels' tint", () => {
-    const inside = readInside(fields({ modulate: HALF, selfModulate: HALF }), useParentModulate, {
-      modulate: HALF,
-    });
-    expect(inside.r).toBeCloseTo(0.25, 6);
-  });
-
-  it("hands descendants the item's z_final", () => {
-    expect(readInside(fields({ zIndex: 4 }), useEffectiveZ, { z: 5 })).toBe(9);
-  });
-
-  it("hands descendants the item's sampler", () => {
-    expect(readInside(fields({ sampler: { filter: 0, repeat: 2 } }), useResolvedTextureSampler)).toEqual({
-      filter: 0,
-      repeat: 2,
-    });
-  });
-
-  it("hands a use_parent_material descendant the item's material", () => {
-    const own = canvasItemMaterial(CanvasItemMaterialLightMode.LIGHT_ONLY);
-    const inherited = readInside(fields({ material: own }), () =>
-      useResolvedCanvasItemMaterial(
-        { ref: undefined, useParentMaterial: true },
-        { internalResources: [], externalResources: [] }
-      )
-    );
-    expect(inherited).toBe(own);
-  });
-});
-
 describe('useCanvasRunKeysOfNode', () => {
   it('ends a run over the whole canvas past its last key, which the key encoding saturates at', () => {
     const node = { name: 'Group', type: 'CanvasGroup', properties: {}, rawProperties: {}, children: [] };
     const { result } = renderHook(() => useCanvasRunKeysOfNode(node, { zIndex: 0, zAsRelative: true }), {
-      wrapper: ({ children }) => (
-        <PaintRangeProvider value={WHOLE_CANVAS_RANGE}>{children}</PaintRangeProvider>
-      ),
+      wrapper: ({ children }) => <PaintRun value={WHOLE_CANVAS_RANGE}>{children}</PaintRun>,
     });
     const lastKey = canvasRenderOrder({
       layerRank: layerRankOf(layerRanks([]), 0),

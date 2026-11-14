@@ -50,7 +50,7 @@ function scaledSides(sides: Sides, scale: number): Sides {
  * scale`. `radius` is the radius before the theme scale. `set_corner_detail` takes an `int`, so the
  * product truncates, then clamps to 1..20 (`style_box_flat.cpp:129-130`).
  */
-export function flatCornerDetail(radius: number, scale: number): number {
+function flatCornerDetail(radius: number, scale: number): number {
   const detail = Math.trunc(Math.min(Math.ceil(1.5 * radius), MAX_UNSCALED_CORNER_DETAIL) * scale);
   return clamp(detail, CORNER_DETAIL_MIN, CORNER_DETAIL_MAX);
 }
@@ -103,6 +103,24 @@ export function withExpandMargin(
 /** `set_corner_radius` on the named corners, unscaled as Godot sets them: `corner_detail` stays. */
 export function withCornerRadius(box: DefaultFlatStyleBox, corners: Partial<Corners>): DefaultFlatStyleBox {
   return { ...box, cornerRadius: { ...box.cornerRadius, ...corners } };
+}
+
+/** `set_corner_radius_all` and `set_corner_detail`, already scaled at the call site, clamped as `set_corner_detail` clamps. */
+export function withCornerRadiusAll(
+  box: DefaultFlatStyleBox,
+  radius: number,
+  detail: number
+): DefaultFlatStyleBox {
+  return {
+    ...box,
+    cornerRadius: allCorners(radius),
+    cornerDetail: clamp(detail, CORNER_DETAIL_MIN, CORNER_DETAIL_MAX),
+  };
+}
+
+/** `set_border_color` alone: the border width stays as it is. */
+export function withBorderColor(box: DefaultFlatStyleBox, color: Rgba): DefaultFlatStyleBox {
+  return { ...box, borderColor: color };
 }
 
 /** `set_border_width` on each side, already scaled at the call site, and `set_border_color`. */

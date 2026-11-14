@@ -27,7 +27,7 @@ The workspaces follow the Godot editor (the `handles()` rules of CanvasItemEdito
 - **The workspace selects itself from the type of the scene root** (`WorkspaceAutoSelect` plus `workspaceForRoot`). A CanvasItem root selects 2D, a Node3D root selects 3D, and a plain `Node` root keeps the current workspace (in Godot no plugin claims it). A manual toggle holds until the next scene switch. This replaces the "no automatic switch" choice: a uniform 3D default surprised users on every 2D scene.
 - The hint predicate is the live-tree `useLiveSceneNodes` over `isClaimedByCanvasItemEditor`: UI **or** 2D world nodes, instanced sub-scenes included. It shows the `Has 2D content — switch to 2D` hint only in the 3D workspace and only for mixed scenes. Godot has no such affordance. It is a previewer convenience.
 
-Out of scope: viewport picking inside the 2D world canvas. The drag-to-pan of the stage owns pointer input, with `pointer-events: none` on the world layer.
+Out of scope: viewport picking inside the 2D world canvas (#1819). The drag-to-pan of the stage owns pointer input, with `pointer-events: none` on the world layer.
 
 `Camera2D`-driven framing has **one** consumer. The 2D pass of a **sub-viewport** frames through the current Camera2D in its own subtree (`selectViewportCamera2D` / `orthoFrameForCamera2D`, reusing `camera2DView`). The **stage** frames fit-to-content. There the pan/zoom pose belongs to the user, and a Camera2D must yield to a manual pan, which is a UX decision this ADR has not taken. So `userData.camera2d` is a live contract for the offscreen pass and a deferral for `Canvas2DStage`.
 

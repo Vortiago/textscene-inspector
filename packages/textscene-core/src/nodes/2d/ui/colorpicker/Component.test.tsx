@@ -11,7 +11,11 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { themeResource } from '../../../../r3f/controls/native/testing/themeResource';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import { ColorPicker } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
@@ -28,7 +32,7 @@ const THEME = nativeTheme(1);
 
 function node(properties: Record<string, unknown>, themeChain: ThemeResource[] = []): SolveNode {
   const tscnNode: TscnNode = controlNode('P', 'ColorPicker', properties);
-  return { ...emptySolveNode(), path: 'P', node: tscnNode, themeChain };
+  return withThemeItems({ ...emptySolveNode(), path: 'P', node: tscnNode, themeChain });
 }
 
 /** Hides every row the shape and sample tests are not about, so their mesh counts stay isolated. */
@@ -419,5 +423,30 @@ describe('<ColorPicker> — self_modulate', () => {
     const split = countTintSplit(renderer.scene);
     expect(split.own).toBe(0);
     expect(split.child).toBeGreaterThan(10);
+  });
+});
+
+describe('<ColorPicker> — value field arrows', () => {
+  it('draws each down arrow in SpinBox down_icon_modulate, apart from the up arrow (spin_box.cpp:441-442)', async () => {
+    const red = { r: 1, g: 0, b: 0, a: 1 };
+    const theme = themeResource({ colors: { SpinBox: { down_icon_modulate: red } } });
+    const renderer = await renderPicker({ ...ONLY_SLIDERS, colorMode: 0 }, { w: 400, h: 400 }, [theme]);
+    const redQuads = renderer.scene
+      .findAllByType('Mesh')
+      .map((mesh) => (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
+      .filter((material) => material.color?.r === 1 && material.color.g === 0 && material.color.b === 0);
+    // R, G, B, I and A: one down arrow each.
+    expect(redQuads).toHaveLength(5);
+  });
+});
+
+describe('<ColorPicker> — value field arrow alpha', () => {
+  it('draws a disabled arrow at the alpha of its modulate (spin_box.cpp:449): the A row at 255 has its up arrow at 0.5', async () => {
+    const renderer = await renderPicker({ ...ONLY_SLIDERS, colorMode: 0 });
+    const halfOpaque = renderer.scene
+      .findAllByType('Mesh')
+      .map((mesh) => (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
+      .filter((material) => material.opacity === 0.5);
+    expect(halfOpaque).toHaveLength(1);
   });
 });

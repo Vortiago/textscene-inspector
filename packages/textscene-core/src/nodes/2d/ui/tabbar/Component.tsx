@@ -4,6 +4,7 @@
  * current tab draws last at the same `renderOrder`, so it overlaps its neighbours as in the
  * source's two-pass draw.
  */
+import { isTabUnselectable, resolveTabBarCurrentTab } from './currentTab';
 import { useMemo } from 'react';
 import type { Plane } from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -36,8 +37,6 @@ import {
   layoutTabContent,
   pickTabStyleBox,
   resolveTabDrawState,
-  isTabUnselectable,
-  resolveTabBarCurrentTab,
   shapeTabLabel,
   tabBarFontColor,
   tabBarFontSizePx,
@@ -88,7 +87,7 @@ export function useTabBarModel(solveNode: SolveNode, theme: NativeControlCompone
   const fontMetrics = resolveNodeFontMetrics(solveNode, TAB_BAR_THEME_FONT_KEY);
   // Shaped here rather than carried over from the solver, so the internal bar
   // a TabContainer paints (never in the solve tree) takes the same arm.
-  const fontSizePx = tabBarFontSizePx(solveNode, props, theme);
+  const fontSizePx = tabBarFontSizePx(solveNode, props);
 
   const computed: ComputedTab[] = useMemo(
     () =>

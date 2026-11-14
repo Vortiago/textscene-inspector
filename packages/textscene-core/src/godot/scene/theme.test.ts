@@ -68,6 +68,7 @@ describe('default theme metrics', () => {
       popup: { r: 0.25, g: 0.25, b: 0.25, a: 1 },
       popupHover: { r: 0.4, g: 0.4, b: 0.4, a: 1 },
       progress: { r: 1, g: 1, b: 1, a: 0.4 },
+      hoverSelected: { r: 1, g: 1, b: 1, a: 0.4 },
       selected: { r: 1, g: 1, b: 1, a: 0.3 },
     });
   });
@@ -83,8 +84,6 @@ describe('scaledGodotTheme', () => {
     expect(scaledGodotTheme(1)).toEqual({
       scale: 1,
       fontSize: 16, // default_font_size, default_theme.cpp:50
-      cornerRadius: 3, // default_corner_radius, default_theme.cpp:55
-      contentMargin: 4, // default_margin, default_theme.cpp:54
       separation: 4, // Math::round(4 * scale), default_theme.cpp:1249
       sliderGrabberSize: 16, // the slider_grabber icon's 16x16 box
       sliderTickBox: 4, // the 4x8 canvas of hslider_tick.svg
@@ -96,8 +95,6 @@ describe('scaledGodotTheme', () => {
     expect(scaledGodotTheme(2)).toEqual({
       scale: 2,
       fontSize: 32,
-      cornerRadius: 6,
-      contentMargin: 8,
       separation: 8,
       // The grabber and tick grow because `generate_icon` rasterises each SVG at the scale.
       sliderGrabberSize: 32,
@@ -106,27 +103,22 @@ describe('scaledGodotTheme', () => {
   });
 
   it('rounds each metric independently, never the scale', () => {
-    // A pre-rounded scale (1 or 2) could produce neither 24 nor 5.
+    // A pre-rounded scale (1 or 2) could produce neither 24 nor 6.
     const theme = scaledGodotTheme(1.5);
     expect(theme.fontSize).toBe(24);
-    expect(theme.cornerRadius).toBe(5);
-    expect(theme.contentMargin).toBe(6);
     expect(theme.separation).toBe(6);
   });
 
   it('rounds a half up, as Godot’s Math::round does for a positive scale', () => {
-    // round(3 · 1.25) = round(3.75) = 4; round(4 · 1.25) = 5.
-    expect(scaledGodotTheme(1.25).cornerRadius).toBe(4);
-    expect(scaledGodotTheme(1.25).contentMargin).toBe(5);
+    // round(4 · 1.125) = round(4.5) = 5.
+    expect(scaledGodotTheme(1.125).separation).toBe(5);
   });
 
   it('shrinks at a scale below 1', () => {
-    // Godot's minimum is 0.5: round(16·0.5) = 8, round(3·0.5) = 2 (half up).
+    // Godot's minimum is 0.5: round(16·0.5) = 8, round(4·0.5) = 2.
     expect(scaledGodotTheme(0.5)).toEqual({
       scale: 0.5,
       fontSize: 8,
-      cornerRadius: 2,
-      contentMargin: 2,
       separation: 2,
       sliderGrabberSize: 8,
       sliderTickBox: 2,

@@ -84,7 +84,7 @@ function LayerRuns({ layer, placements, lineLayouts, ...run }: LayerRunsProps) {
 
 export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LabelProperties>(solveNode);
-  const themeResolved = useMemo(() => labelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
+  const themeResolved = useMemo(() => labelTextTheme(solveNode, props), [solveNode, props]);
   const labelSettings = solveNode.labelSettings;
   // A valid `label_settings` beats the theme outright: see its own doc.
   const textTheme = useMemo(

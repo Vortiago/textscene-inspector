@@ -7,13 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import {
-  CanvasLayerIndexProvider,
-  EffectiveZProvider,
-  accumulateCanvasItemZ,
-  useCanvasLayerIndex,
-  useEffectiveZ,
-} from './canvasItemPlacement';
+import { CanvasLayerIndexProvider, accumulateCanvasItemZ, useCanvasLayerIndex } from './canvasItemPlacement';
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../godot/rendering/rendering';
 
 describe('accumulateCanvasItemZ', () => {
@@ -50,59 +44,28 @@ describe('accumulateCanvasItemZ', () => {
   });
 });
 
-describe('the y-sort pass and the light cull agree on z', () => {
-  it('buckets y-sorted items by the very function the lights are culled against', async () => {
-    // Godot computes this once and reads it twice: to bucket y-sorted children, and as the
-    // `z_final` a light's window tests. One function here too, so the two cannot drift.
-    const { collectYSortedItems, Y_SORT_ROOT } = await import('../ySortItems');
-    const node = {
-      name: 'Root',
-      type: 'Node2D',
-      properties: {},
-      children: [
-        { name: 'Rel', type: 'Node2D', properties: { z_index: 3 }, children: [] },
-        {
-          name: 'Abs',
-          type: 'Node2D',
-          properties: { z_index: 3, z_as_relative: false },
-          children: [],
-        },
-      ],
-    } as unknown as Parameters<typeof collectYSortedItems>[0];
-
-    const items = collectYSortedItems(node, { ...Y_SORT_ROOT, effectiveZ: 2 }, 0);
-    expect(items.map((item) => item.effectiveZ)).toEqual([
-      accumulateCanvasItemZ(2, { zIndex: 3, zAsRelative: true }),
-      accumulateCanvasItemZ(2, { zIndex: 3, zAsRelative: false }),
-    ]);
-    expect(items.map((item) => item.effectiveZ)).toEqual([5, 3]);
-  });
-});
-
-/** Reports the placement a descendant sees. */
-function Probe({ seen }: { seen: { z: number; layer: number }[] }) {
-  seen.push({ z: useEffectiveZ(), layer: useCanvasLayerIndex() });
+/** Reports the canvas layer a descendant sees. */
+function Probe({ seen }: { seen: number[] }) {
+  seen.push(useCanvasLayerIndex());
   return null;
 }
 
-describe('the placement contexts', () => {
-  it('defaults to the world canvas at z 0', async () => {
+describe('the canvas layer context', () => {
+  it('defaults to the world canvas', async () => {
     // Every 3D scene and every bare unit-test mount reads this, and it has to be
-    // the value a light with Godot's default window reaches.
-    const seen: { z: number; layer: number }[] = [];
+    // the layer a light with Godot's default range reaches.
+    const seen: number[] = [];
     await ReactThreeTestRenderer.create(<Probe seen={seen} />);
-    expect(seen.at(-1)).toEqual({ z: 0, layer: 0 });
+    expect(seen.at(-1)).toBe(0);
   });
 
-  it('threads an accumulated z and a canvas layer to descendants', async () => {
-    const seen: { z: number; layer: number }[] = [];
+  it('threads a canvas layer to descendants', async () => {
+    const seen: number[] = [];
     await ReactThreeTestRenderer.create(
-      <EffectiveZProvider value={5}>
-        <CanvasLayerIndexProvider value={1}>
-          <Probe seen={seen} />
-        </CanvasLayerIndexProvider>
-      </EffectiveZProvider>
+      <CanvasLayerIndexProvider value={1}>
+        <Probe seen={seen} />
+      </CanvasLayerIndexProvider>
     );
-    expect(seen.at(-1)).toEqual({ z: 5, layer: 1 });
+    expect(seen.at(-1)).toBe(1);
   });
 });

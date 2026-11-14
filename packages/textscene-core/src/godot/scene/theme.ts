@@ -63,6 +63,8 @@ export const STYLE_FILL = {
   popupHover: { r: 0.4, g: 0.4, b: 0.4, a: 1 },
   /** `style_progress_color`. */
   progress: { r: 1, g: 1, b: 1, a: 0.4 },
+  /** `style_hover_selected_color`. A hovered selected row of an ItemList or Tree. */
+  hoverSelected: { r: 1, g: 1, b: 1, a: 0.4 },
   /** `style_selected_color`. The selected row of an ItemList, Tree or TabBar. */
   selected: { r: 1, g: 1, b: 1, a: 0.3 },
   /** `style_focus_color`. The outline of a focused Button. */
@@ -112,10 +114,6 @@ export interface ScaledGodotTheme {
   scale: number;
   /** `default_font_size` after scaling, in px. */
   fontSize: number;
-  /** Every default flat stylebox's corner radius, in px. */
-  cornerRadius: number;
-  /** The Button "normal" stylebox content margin (all sides), in px. */
-  contentMargin: number;
   /** The containers' scaled 4 px spacing: a stand-in where a Control spaces its own internal rows (ItemList, TextEdit, ColorPicker, GraphEdit). */
   separation: number;
   /** The `slider_grabber` icon's box, in px. */
@@ -132,7 +130,7 @@ export function scaledPx(base: number, scale: number): number {
 /**
  * Godot builds the default theme once at startup and rounds each product on its
  * own (`fill_default_theme`, `make_flat_stylebox`), so at 1.5 the font is 24 and
- * the corner radius 5. A node's theme override is never scaled: callers use these
+ * the separation 6. A node's theme override is never scaled: callers use these
  * only as the fallback.
  */
 export function scaledGodotTheme(scale: number): ScaledGodotTheme {
@@ -141,8 +139,6 @@ export function scaledGodotTheme(scale: number): ScaledGodotTheme {
   return {
     scale,
     fontSize: scaledPx(DEFAULT_FONT_SIZE, scale),
-    cornerRadius: scaledPx(DEFAULT_CORNER_RADIUS, scale),
-    contentMargin: scaledPx(DEFAULT_CONTENT_MARGIN, scale),
     // `Math::round(4 * scale)`, default_theme.cpp:1249-1251.
     separation: scaledPx(DEFAULT_SEPARATION, scale),
     sliderGrabberSize: scaledPx(SLIDER_GRABBER_SIZE, scale),

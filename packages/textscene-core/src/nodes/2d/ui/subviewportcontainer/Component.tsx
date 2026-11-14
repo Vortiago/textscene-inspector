@@ -5,7 +5,10 @@
  */
 import { useEffect, useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry.js';
+import {
+  NO_PIECE_SLOTS,
+  type NativeControlComponentProps,
+} from '../../../../r3f/controls/ControlComponentRegistry.js';
 import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree.js';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad.js';
 import { ControlFallback } from '../../../../r3f/controls/native/ControlFallback.js';
@@ -18,10 +21,11 @@ import { isSubViewport } from '../../../viewport/subviewport/viewportBoundary.js
 import type { SubViewportProperties } from '../../../viewport/subviewport/types.js';
 import { viewportSize } from '../../../viewport/subviewport/targetSize.js';
 import type { SubViewportContainerProperties } from './types.js';
-import { lastPaintSequence, WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPaintOrder.js';
+import { WHOLE_CANVAS_PAINT } from '../../../../r3f/canvasItemPass/canvasItemPaint.js';
 import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts.js';
 import { canvasPieceSlot, type CanvasSlot } from '../../../../r3f/canvasItemState';
 import { useCanvasColorSpace } from '../../../../r3f/canvasColorSpace';
+import { CHAIN_START_INHERITANCE } from '../../../../r3f/canvasItemPass/inheritedCanvasState';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
@@ -112,14 +116,11 @@ function ViewportSurfaceNative({
       node: viewport,
       children: [],
       // A SubViewport draws into its own render target, so no ancestor canvas item reaches in.
-      skippedAncestors: null,
+      skippedTransform: null,
+      inheritance: CHAIN_START_INHERITANCE,
       // A SubViewport draws into its own target, so this root orders nothing
       // against the enclosing canvas: it starts a fresh range.
-      paintRange: WHOLE_CANVAS_RANGE,
-      behindRanges: [],
-      paintSequence: WHOLE_CANVAS_RANGE.base,
-      backSequence: lastPaintSequence(WHOLE_CANVAS_RANGE),
-      layerSequence: WHOLE_CANVAS_RANGE.base,
+      paint: WHOLE_CANVAS_PAINT,
       // The SubViewport itself, not a scene node the outliner can hide.
       hidden: false,
       // A Viewport is neither a CanvasItem nor a CanvasLayer, so the `parent_visible_in_tree` climb
@@ -166,6 +167,7 @@ function ViewportSurfaceNative({
           // The cycle branch renders no subtree, so the fallback's chrome takes its own slot.
           chromeSlot={slot}
           layerSlot={slot}
+          pieceSlots={NO_PIECE_SLOTS}
           theme={theme}
           // Threaded for the contract; the outline is a diagnostic and
           // deliberately draws in its own colour, untinted.

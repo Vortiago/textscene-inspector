@@ -12,6 +12,7 @@ import type { SolveNode, ThemedIconRef } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import type { FontMetrics } from './text/fontMetrics';
 import type { SealedHandoff } from './solveHandoff';
+import type { SolvedControl } from './controlRectSolver';
 import type { Vector2 } from '../../../godot/math/vector';
 import type { ParsedResource } from '../../../parser/parsedResource';
 import type { DirectoryListings } from '../../../resources/directoryListing';
@@ -187,22 +188,6 @@ export type TextureSlotsFn = (
 export type BuiltIconsFn = (type: string, variation?: string) => Readonly<Record<string, ThemedIconRef>>;
 
 /**
- * The `visible` a container writes onto one direct sortable Control child
- * while sorting. `undefined` leaves the authored flag alone. `index` and
- * `count` number the sortable children only (`tab_container.cpp:469-481`).
- */
-// Per child: `FoldableContainer` writes `c->set_visible(!folded)` to every child
-// (`scene/gui/foldable_container.cpp:376-386`), while `TabContainer` shows only the
-// current page (`scene/gui/tab_container.cpp:377-399`, and the same split at `:290-293`).
-// A promoted or `top_level` Control fails the sortable cast (`container.cpp:143-146`).
-export type ChildVisibilityFn = (
-  container: TscnNode,
-  child: TscnNode,
-  index: number,
-  count: number
-) => boolean | undefined;
-
-/**
  * How a type settles from the `res://` folders a host lists, such as a FileDialog's file list. `folders` names the folders to
  * ask for given the answers so far, since one answer can lead to the next. `resolve` gives the node with every answer in.
  */
@@ -211,20 +196,32 @@ export interface DirectoryResolver {
   resolve(node: TscnNode, listings: DirectoryListings): TscnNode;
 }
 
+/** An `INTERNAL_MODE_BACK` child a Control draws itself: its node name and its origin in the Control. */
+export interface InternalBackPiece {
+  readonly name: string;
+  readonly origin: Vector2;
+}
+
+/**
+ * The visible `INTERNAL_MODE_BACK` children of one solved Control, in the order Godot adds them. A
+ * y-sort collects each as an entry of its own (`renderer_canvas_cull.cpp:110-160`).
+ */
+export type InternalBackPiecesFn = (solved: SolvedControl) => readonly InternalBackPiece[];
+
 class ControlSolverRegistry {
   private readonly minimumSizeFns = createTypeRegistry<MinimumSizeFn>('controlSolverRegistry.minimumSize');
   private readonly containerLayoutFns = createTypeRegistry<ContainerLayoutFn>(
     'controlSolverRegistry.containerLayout'
   );
   private readonly textureSlotFns = createTypeRegistry<TextureSlotsFn>('controlSolverRegistry.textureSlots');
-  private readonly childVisibilityFns = createTypeRegistry<ChildVisibilityFn>(
-    'controlSolverRegistry.childVisibility'
-  );
   private readonly loadedMinimumSizeFns = createTypeRegistry<LoadedMinimumSizeFn>(
     'controlSolverRegistry.loadedMinimumSize'
   );
   private readonly directoryResolvers = createTypeRegistry<DirectoryResolver>(
     'controlSolverRegistry.directoryResolver'
+  );
+  private readonly internalBackPiecesFns = createTypeRegistry<InternalBackPiecesFn>(
+    'controlSolverRegistry.internalBackPieces'
   );
   private readonly canvasBoundaryTypes = new Set<string>();
   private readonly sizeDependentMinimumTypes = new Map<string, SizeDependentPredicate>();
@@ -282,22 +279,18 @@ class ControlSolverRegistry {
     this.directoryResolvers.register(typeName, resolver);
   }
 
+  registerInternalBackPieces(typeName: string, fn: InternalBackPiecesFn): void {
+    this.internalBackPiecesFns.register(typeName, fn);
+  }
+
+  /** This type's `InternalBackPiecesFn`, or `undefined` for a type that draws no such child itself. */
+  internalBackPieces(typeName: string): InternalBackPiecesFn | undefined {
+    return this.internalBackPiecesFns.get(typeName);
+  }
+
   /** This type's `DirectoryResolver`, or `undefined` for a type that lists no folder. */
   directoryResolver(typeName: string): DirectoryResolver | undefined {
     return this.directoryResolvers.get(typeName);
-  }
-
-  /** Declares a container that writes its children's `visible` (see `ChildVisibilityFn`). */
-  registerChildVisibility(typeName: string, fn: ChildVisibilityFn): void {
-    this.childVisibilityFns.register(typeName, fn);
-  }
-
-  /**
-   * This type's `ChildVisibilityFn`, or `undefined`. Returned, not invoked: the
-   * caller enumerates the sortable children first, and only for a registered type.
-   */
-  childVisibility(typeName: string): ChildVisibilityFn | undefined {
-    return this.childVisibilityFns.get(typeName);
   }
 
   /** This type's `TextureSlotsFn`, or `undefined` for a type that keeps the single-slot fallback. */
@@ -320,7 +313,7 @@ class ControlSolverRegistry {
     this.loadedMinimumSizeFns.clear();
     this.textureSlotFns.clear();
     this.directoryResolvers.clear();
-    this.childVisibilityFns.clear();
+    this.internalBackPiecesFns.clear();
     this.canvasBoundaryTypes.clear();
     this.sizeDependentMinimumTypes.clear();
   }

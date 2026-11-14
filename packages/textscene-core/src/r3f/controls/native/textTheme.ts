@@ -19,16 +19,6 @@ export interface TextThemeProps {
   themeOverrideFontSizes?: Record<string, number>;
 }
 
-export interface TextThemeDefaults {
-  /** The built-in default font size, px, scaled by `default_theme_scale`: the last rung when no override or theme resolves `sizeKey`. */
-  fontSizePx: number;
-  /**
-   * The type's default theme font colour, not always `control_font_color`: Label's is opaque white
-   * (`default_theme.cpp:383`). Absent for a type the default theme table holds, which answers it.
-   */
-  color?: Rgba;
-}
-
 export interface ResolvedTextTheme {
   fontSizePx: number;
   color: Rgba;
@@ -38,27 +28,23 @@ export interface ResolvedTextTheme {
  * Resolves size and colour independently, so one can be overridden while the other defaults. Size
  * walks `Control::get_theme_font_size` (`scene/gui/control.cpp:3107-3129`): an override of `0` falls
  * through (`:3114-3117`), and a theme's `default_font_size` answers when no entry matches
- * (`scene/resources/theme.cpp:658-666`).
+ * (`scene/resources/theme.cpp:658-666`). `defaultColor` answers a colour that no theme sets, such
+ * as LinkButton's `font_disabled_color`.
  */
 export function resolveTextTheme(
   n: ShareNode,
   props: TextThemeProps,
   keys: TextThemeKeys,
-  defaults: TextThemeDefaults
+  defaultColor?: Rgba
 ): ResolvedTextTheme {
   return {
-    fontSizePx: resolveNodeFontSizePx(
-      n,
-      keys.sizeKey,
-      props.themeOverrideFontSizes?.[keys.sizeKey],
-      defaults.fontSizePx
-    ),
-    color: n.colors[keys.colorKey] ?? defaults.color ?? requiredThemeItem(n.colors, keys.colorKey),
+    fontSizePx: resolveNodeFontSizePx(n, keys.sizeKey, props.themeOverrideFontSizes?.[keys.sizeKey]),
+    color: n.colors[keys.colorKey] ?? defaultColor ?? requiredThemeItem(n.colors, keys.colorKey),
   };
 }
 
 export interface TextOutlineTheme {
-  /** `font_outline_color`, sRGB. Godot's default is opaque black for most types (`default_theme.cpp:162` for Button). */
+  /** `font_outline_color`, sRGB. Godot's default is opaque black for most types, as the table's `Button/font_outline_color` is. */
   color: Rgba;
   /** `outline_size`, px. The default theme sets 0 for every type, so no outline draws until a scene sets it. */
   sizePx: number;

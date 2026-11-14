@@ -6,7 +6,7 @@ import { heading } from '../../../parser/testing/parserKit';
 import { createSolveContext } from '../../../r3f/controls/native/controlRectSolver';
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import { painterEnv } from '../../../r3f/controls/native/testing/painterProps';
-import { solveNode } from '../../../r3f/controls/native/testing/solveNode';
+import { solveNode, withThemeItems } from '../../../r3f/controls/native/testing/solveNode';
 import { measureText } from '../../../r3f/controls/native/text/measurer';
 import '../../../r3f/controls/index';
 import { wrappedWindowSize } from '../window/wrapControls';
@@ -20,7 +20,7 @@ const EMBEDDER = { x: 1152, y: 648 };
 function dialog(type: string) {
   const properties = parseDialog(heading(type, { name: 'Dialog' }), { dialog_text: '"Delete?"' });
   const node = { name: 'Dialog', type, children: [], properties } as unknown as TscnNode;
-  return { ...solveNode(), path: 'Dialog', node };
+  return withThemeItems({ ...solveNode(), path: 'Dialog', node });
 }
 
 async function buttonGroupPositions(type: string) {

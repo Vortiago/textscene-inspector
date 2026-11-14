@@ -3,12 +3,16 @@
  * (`Control::get_theme_stylebox`, `control.cpp:3078`): `FlatButton` over `Button`, `Label`, and the
  * SpinBox's `SpinBoxInnerLineEdit` over `LineEdit`.
  */
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { isDrawn } from '../../../../r3f/controls/native/styleBoxFlat';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 import { graphEditToolbarTheme } from './toolbarTheme';
 import { graphEditUnder } from './toolbarTheme.testkit';
+import { themeResource } from '../../../../r3f/controls/native/testing/themeResource';
+import { defaultLineEditField } from '../shared/testing/lineEditField';
 
 const THEME = nativeTheme(1);
 const RED = { r: 1, g: 0, b: 0, a: 1 };
@@ -31,7 +35,9 @@ describe('graphEditToolbarTheme', () => {
     it('draws no FlatButton box but the pressed one, and keeps the Button margins in every state', () => {
       const { normal, pressed, disabled } = items.buttonBoxes;
       expect([isDrawn(normal), isDrawn(pressed), isDrawn(disabled)]).toEqual([false, true, false]);
-      expect(normal.contentMargin).toEqual(THEME.widgets.button.normal.contentMargin);
+      expect(normal.contentMargin).toEqual(
+        defaultStyleBoxesOf(defaultThemeAt(1)).Button!.normal!.contentMargin
+      );
     });
 
     it('draws the zoom label and the field in their own default colours', () => {
@@ -39,9 +45,13 @@ describe('graphEditToolbarTheme', () => {
       expect(items.fieldColor).toEqual(CONTROL_FONT_COLOR);
     });
 
+    it("spaces the row by HBoxContainer's separation of 4 (default_theme.cpp:1250)", () => {
+      expect(items.separation).toBe(4);
+    });
+
     it("leaves the label's box empty and the field's boxes at LineEdit's", () => {
       expect(isDrawn(items.labelBox)).toBe(false);
-      expect(items.fieldBoxes).toEqual(THEME.widgets.lineEdit);
+      expect(items.field).toEqual(defaultLineEditField());
     });
   });
 
@@ -101,13 +111,22 @@ describe('graphEditToolbarTheme', () => {
       expect(items.spinBoxColors.up_icon_modulate).toEqual(GREEN);
     });
 
+    it("spaces the row by the Theme's HBoxContainer separation, not the GraphEdit's own", () => {
+      const graphEdit = graphEditUnder();
+      const themed = {
+        ...graphEdit,
+        themeChain: [themeResource({ constants: { HBoxContainer: { separation: 12 } } })],
+      };
+      expect(graphEditToolbarTheme(themed, THEME).separation).toBe(12);
+    });
+
     it("gives the field LineEdit's boxes", () => {
-      const { fieldBoxes } = graphEditToolbarTheme(
+      const { field } = graphEditToolbarTheme(
         graphEditUnder({ LineEdit: { normal: 12, read_only: 9 } }),
         THEME
       );
-      expect(fieldBoxes.normal.contentMargin.left).toBe(12);
-      expect(fieldBoxes.readOnly.contentMargin.left).toBe(9);
+      expect(field.normal.contentMargin.left).toBe(12);
+      expect(field.readOnly.contentMargin.left).toBe(9);
     });
   });
 });

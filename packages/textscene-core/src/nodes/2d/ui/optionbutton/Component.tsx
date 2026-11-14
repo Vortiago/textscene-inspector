@@ -19,7 +19,7 @@ function OptionButtonArrow({ solveNode, tint, rect, renderOrder, theme }: Native
     <ButtonOverlayIcon
       rect={arrowRect}
       texture={useNodeIcon(solveNode.icons.arrow, OPTION_BUTTON_ICONS.arrow)}
-      color={optionButtonArrowColor(solveNode, theme)}
+      color={optionButtonArrowColor(solveNode)}
       tint={tint.own}
       renderOrder={renderOrder}
     />

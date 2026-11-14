@@ -7,7 +7,6 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { FoldableContainer } from './Component';
 import {
-  foldableContainerChildVisibility,
   foldableContainerMinimumSize,
   foldableContainerLayout,
   foldableContainerTextureSlots,
@@ -17,4 +16,3 @@ controlComponentRegistry.register({ typeName: 'FoldableContainer', Component: Fo
 controlSolverRegistry.registerMinimumSize('FoldableContainer', foldableContainerMinimumSize);
 controlSolverRegistry.registerContainerLayout('FoldableContainer', foldableContainerLayout);
 controlSolverRegistry.registerTextureSlots('FoldableContainer', foldableContainerTextureSlots);
-controlSolverRegistry.registerChildVisibility('FoldableContainer', foldableContainerChildVisibility);

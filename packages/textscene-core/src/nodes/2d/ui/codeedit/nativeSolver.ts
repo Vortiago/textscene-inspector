@@ -12,21 +12,19 @@ import { formatControlNumber, type Numerals } from '../../../../godot/text/numbe
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
-  pickTextEditStyleBox,
   resolveTextEditStyleState,
   textEditTextTheme,
   textEditRowHeightPx,
   textEditMinimumSizeWith,
   TEXT_EDIT_THEME_FONT_KEY,
+  textEditLineSpacingPx,
 } from '../textedit/nativeSolver';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { CodeEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
-
-/** `default_theme.cpp:526`: `Color(0.67, 0.67, 0.67, 0.4)`, distinct from `font_color`. */
-export const CODE_EDIT_LINE_NUMBER_COLOR: Rgba = { r: 0.67, g: 0.67, b: 0.67, a: 0.4 };
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 /** `line_numbers_min_digits`'s own default (`code_edit.h:114`). */
 const CODE_EDIT_LINE_NUMBERS_MIN_DIGITS_DEFAULT = 3;
@@ -125,9 +123,9 @@ function codeEditFontMetrics(
   props: CodeEditProperties
 ): { rowHeightPx: number; charWidth0Px: number } {
   const state = resolveTextEditStyleState(props.editable);
-  const { fontSizePx } = textEditTextTheme(n, props, state, ctx);
+  const { fontSizePx } = textEditTextTheme(n, props, state);
   const fontMetrics = resolveNodeFontMetrics(n, TEXT_EDIT_THEME_FONT_KEY);
-  const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, ctx.theme.separation);
+  const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, textEditLineSpacingPx(n));
   const charWidth0Px = ctx.measureText ? ctx.measureText('0', fontSizePx, 0, fontMetrics).x : 0;
   return { rowHeightPx, charWidth0Px };
 }
@@ -184,18 +182,18 @@ export function codeEditGutterCellTextTopPx(
 export const codeEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as CodeEditProperties;
   const state = resolveTextEditStyleState(props.editable);
-  const styleBox = pickTextEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, state);
+  const styleBox = requiredThemeItem(n.styleBoxes, state);
   const { rowHeightPx, charWidth0Px } = codeEditFontMetrics(n, ctx, props);
   const lineCount = Math.max(1, (props.text ?? '').split('\n').length);
   const band = codeEditGutterBand(props, rowHeightPx, charWidth0Px, lineCount);
   return textEditMinimumSizeWith(n, ctx, props, styleBox, band.totalWidthPx, props.indentSize);
 };
 
-/** `code_folding_color` = `Color(0.8, 0.8, 0.8, 0.8)` (`default_theme.cpp:524`), the fold arrow's modulate. */
-export const CODE_EDIT_CODE_FOLDING_COLOR: Rgba = { r: 0.8, g: 0.8, b: 0.8, a: 0.8 };
-
-/** `folded_code_region_color` = `Color(0.68, 0.46, 0.77, 0.2)` (`default_theme.cpp:525`), with the alpha floored at 0.4 the way `_fold_gutter_draw_callback` floors it (`code_edit.cpp:1636-1637`). */
-export const CODE_EDIT_CODE_REGION_ICON_COLOR: Rgba = { r: 0.68, g: 0.46, b: 0.77, a: 0.4 };
+/** `folded_code_region_color` with its alpha floored at 0.4, as `_fold_gutter_draw_callback` floors it (`code_edit.cpp:1636-1637`). */
+export function codeEditRegionIconColor(colors: SolveNode['colors']): Rgba {
+  const color = requiredThemeItem(colors, 'folded_code_region_color');
+  return { ...color, a: Math.max(color.a, 0.4) };
+}
 
 /**
  * The icon rect inside one fold-gutter cell, after `_fold_gutter_draw_callback`'s padding
@@ -211,9 +209,6 @@ export function codeEditFoldIconRect(cell: Rect2): Rect2 {
     h: cell.h - vertical * 2,
   };
 }
-
-/** `line_length_guideline_color` = `Color(0.3, 0.5, 0.8, 0.1)` (`default_theme.cpp:531`). */
-export const CODE_EDIT_LINE_LENGTH_GUIDELINE_COLOR: Rgba = { r: 0.3, g: 0.5, b: 0.8, a: 0.1 };
 
 /** One drawn `line_length_guidelines` rule. */
 interface CodeEditGuideline {

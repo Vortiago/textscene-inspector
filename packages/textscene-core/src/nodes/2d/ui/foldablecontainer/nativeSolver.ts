@@ -1,7 +1,7 @@
 /**
  * FoldableContainer's native rect solver: `get_minimum_size` (`scene/gui/foldable_container.cpp:36-51`),
  * `_update_title_min_size` (`:441-478`) and `NOTIFICATION_SORT_CHILDREN` (`:329-386`), with the
- * "FoldableContainer" entries of `scene/theme/default_theme.cpp:1302-1336`. No `.tscn` sets hover or
+ * table's `FoldableContainer` type. No `.tscn` sets hover or
  * focus, so `folded` alone picks the title style and icon.
  *
  * Portions ported from Godot Engine (MIT).
@@ -14,7 +14,6 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {
-  ChildVisibilityFn,
   ContainerLayoutFn,
   MinimumSizeFn,
   SolveContext,
@@ -142,9 +141,7 @@ function foldableContainerTitleMetrics(
   const arrow = titleArrow(folded, titlePosition, n.rtl);
 
   const stateKey = folded ? 'folded' : 'expanded';
-  const { fontSizePx, color } = resolveTextTheme(n, props, FOLDABLE_CONTAINER_TITLE_THEME_KEYS[stateKey], {
-    fontSizePx: ctx.theme.fontSize,
-  });
+  const { fontSizePx, color } = resolveTextTheme(n, props, FOLDABLE_CONTAINER_TITLE_THEME_KEYS[stateKey]);
 
   const title = props.title ?? '';
   const hasTitle = title.length > 0;
@@ -205,14 +202,6 @@ export const foldableContainerTitleShape = defineShare<FoldableContainerTitleMet
 );
 
 /**
- * `c->set_visible(!folded)` in `NOTIFICATION_SORT_CHILDREN` (`foldable_container.cpp:376-386`)
- * writes `visible` on each sortable child, so it overrides the authored flag both ways.
- * Every child gets the same value, so the per-child arguments of {@link ChildVisibilityFn} go unread.
- */
-export const foldableContainerChildVisibility: ChildVisibilityFn = (node) =>
-  (node.properties as FoldableContainerProperties).folded !== true;
-
-/**
  * The title bar as the solve sees it: the share once `ctx.measureText` exists,
  * and the unshaped variant before.
  */
@@ -249,7 +238,7 @@ export const foldableContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
 /**
  * The content half of `NOTIFICATION_SORT_CHILDREN` (`foldable_container.cpp:329-386`).
  * Folded, Godot skips `fit_child_in_rect`, so the map is empty. The hidden children
- * ({@link foldableContainerChildVisibility}) make an absent rect unobservable.
+ * (`foldableContainerChildVisibility`) make an absent rect unobservable.
  */
 export const foldableContainerLayout: ContainerLayoutFn = (n, children, rect, ctx) => {
   const title = foldableContainerTitle(n, ctx);

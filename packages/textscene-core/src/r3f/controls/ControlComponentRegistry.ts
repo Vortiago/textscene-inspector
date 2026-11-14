@@ -82,6 +82,12 @@ export interface NativeControlComponentProps {
    */
   chromeSlot: CanvasSlot;
   /**
+   * The slot of each `INTERNAL_MODE_BACK` child the painter draws itself that a y-sort collects as
+   * an entry of its own, by the name its `InternalBackPiecesFn` gives. Every other such child draws
+   * in `chromeSlot`.
+   */
+  pieceSlots: ReadonlyMap<string, CanvasSlot>;
+  /**
    * The slot of the listed layer the Control adds itself: GraphEdit's `connections_layer`, which
    * draws after the GraphFrames and before the GraphNodes (`graph_edit.cpp:714-717`). Every other
    * Control gets its own `slot`.
@@ -101,6 +107,9 @@ export interface NativeControlComponentProps {
    */
   children?: ReactNode;
 }
+
+/** The `pieceSlots` of a painter no y-sort collects pieces from. */
+export const NO_PIECE_SLOTS: ReadonlyMap<string, CanvasSlot> = new Map();
 
 export type NativeControlComponent = React.ComponentType<NativeControlComponentProps>;
 

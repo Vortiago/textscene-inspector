@@ -11,13 +11,12 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { graphNodeDrawRows, rightPortX } from './nativeSolver';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties } from './types';
 import { SizeFlags } from '../../../../godot/scene/control';
-import { ROOT_TEXTURE_SAMPLER } from '../../../../r3f/canvasItemTextureSampler';
 import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 
 const graphNodeLayout = controlSolverRegistry.containerLayout('GraphNode')!;
@@ -28,11 +27,11 @@ function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): Read
 }
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'Control', { name, ...props }),
-  };
+  });
 }
 
 function hiddenLeaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
@@ -43,13 +42,7 @@ function hiddenLeaf(name: string, props: Partial<ControlProperties> = {}): Solve
 function promotedLeaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...leaf(name, props),
-    skippedAncestors: {
-      transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
-      modulate: { r: 1, g: 1, b: 1, a: 1 },
-      z: [],
-      sampler: ROOT_TEXTURE_SAMPLER,
-      material: { kind: 'none' },
-    },
+    skippedTransform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
   };
 }
 
@@ -59,13 +52,13 @@ function graphNode(
   children: SolveNode[],
   styleBoxes: Readonly<Record<string, StyleBoxFlatData>> = {}
 ): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'GraphNode', { name, slots: new Map(), ...props }),
     children,
     styleBoxes,
-  };
+  });
 }
 
 function ctx(): SolveContext {

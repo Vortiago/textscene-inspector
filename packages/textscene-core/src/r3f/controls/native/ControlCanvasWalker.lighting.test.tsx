@@ -11,7 +11,7 @@ import { nativeTheme } from './nativeTheme';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import { controlNode, solveNode as solveNodeDefaults } from './testing/solveNode';
 import type { SceneScope } from '../../../parser/types';
-import { ROOT_TEXTURE_SAMPLER } from '../../canvasItemTextureSampler';
+import { InheritedFrom, inheritedState } from '../../testing/inheritedFrom';
 import type { SolveNode } from './solveTree';
 import { controlComponentRegistry, type NativeControlComponent } from '../ControlComponentRegistry';
 import { ControlQuad } from './controlQuad';
@@ -98,24 +98,20 @@ describe('<ControlCanvasWalker> lighting', () => {
     expect(placements).toEqual([]);
   });
 
-  it("takes the material of a skipped Node2D ancestor for a Control that uses its parent's material", async () => {
+  it("takes the material the parent item hands down for a Control that uses its parent's material", async () => {
     controlComponentRegistry.register({ typeName: 'TestRect', Component: QuadPainter });
     const additive: SceneScope = {
       internalResources: [{ id: 'add', type: 'CanvasItemMaterial', data: { blend_mode: '1' } }],
       externalResources: [],
     };
-    const promoted: SolveNode = {
-      ...control({ anchorsPreset: 15, useParentMaterial: true }),
-      skippedAncestors: {
-        transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
-        modulate: { r: 1, g: 1, b: 1, a: 1 },
-        z: [],
-        sampler: ROOT_TEXTURE_SAMPLER,
-        material: { kind: 'own', ref: 'SubResource("add")', resources: additive },
-      },
-    };
+    const promoted = control({ anchorsPreset: 15, useParentMaterial: true });
+    const parent = inheritedState({
+      material: { kind: 'own', ref: 'SubResource("add")', resources: additive },
+    });
 
-    const renderer = await ReactThreeTestRenderer.create(walk(promoted));
+    const renderer = await ReactThreeTestRenderer.create(
+      <InheritedFrom state={parent}>{walk(promoted)}</InheritedFrom>
+    );
 
     const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
     expect(material.blendDst).toBe(THREE.OneFactor);

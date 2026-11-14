@@ -9,7 +9,7 @@ import { createSolveContext } from '../../../r3f/controls/native/controlRectSolv
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { measureText } from '../../../r3f/controls/native/text/measurer';
-import { solveNode } from '../../../r3f/controls/native/testing/solveNode';
+import { solveNode, withThemeItems } from '../../../r3f/controls/native/testing/solveNode';
 import '../../../parser/TscnParser';
 import '../../../r3f/controls/index';
 import { dialogGeometry } from '../acceptdialog/dialogLayout';
@@ -118,7 +118,7 @@ function fileDialog(lines: Record<string, string>): SolveNode {
     children: [],
     properties: parseFileDialog(heading('FileDialog', { name: 'Dialog' }), lines),
   };
-  return { ...solveNode(), path: 'Dialog', node: node as unknown as TscnNode };
+  return withThemeItems({ ...solveNode(), path: 'Dialog', node: node as unknown as TscnNode });
 }
 
 interface OracleRow {

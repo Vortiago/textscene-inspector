@@ -11,10 +11,15 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { TextEdit } from './Component';
+import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { TextEditProperties } from './types';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   bundledRunOf,
   bundledRunMeshes,
@@ -38,12 +43,12 @@ function solveNode(
   internalResources: readonly TscnInternalResource[] = []
 ): SolveNode {
   const node: TscnNode = controlNode('MyTextEdit', 'TextEdit', { name: 'MyTextEdit', ...properties });
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: 'MyTextEdit',
     node,
     resources: { externalResources: [], internalResources },
-  };
+  });
 }
 
 /** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute; text/icon quads do not. */
@@ -335,12 +340,12 @@ describe('<TextEdit> — syntax_highlighter', () => {
       const renderer = await ReactThreeTestRenderer.create(
         <TextEdit
           {...painterEnv()}
-          solveNode={{
+          solveNode={withThemeItems({
             ...solveNode({ text: 'if x', editable, syntaxHighlighter: 'SubResource("CH")' }, [
               CODE_HIGHLIGHTER,
             ]),
             colors: { font_readonly_color: { r: 0, g: 0, b: 1, a: 1 } },
-          }}
+          })}
           rect={RECT}
           renderOrder={0}
         />
@@ -623,5 +628,37 @@ describe('<TextEdit> — self_modulate', () => {
       />
     );
     expect(countTintSplit(renderer.scene)).toEqual({ own: 1, child: 3 });
+  });
+});
+
+describe('<TextEdit> — caret', () => {
+  async function renderCaret(caretWidth: number, scale: number, drawnWidthPx: number, rect: Rect2 = RECT) {
+    const base = solveNode({ text: 'hello', caretDrawWhenEditableDisabled: true, editable: false });
+    const node = { ...base, constants: { ...base.constants, caret_width: caretWidth } };
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit {...painterEnv()} theme={nativeTheme(scale)} solveNode={node} rect={rect} renderOrder={0} />
+    );
+    const caret = renderer.scene
+      .findAllByType('Mesh')
+      .map((found) => found.instance as THREE.Mesh)
+      .find((mesh) => (mesh.geometry as THREE.PlaneGeometry).parameters?.width === drawnWidthPx);
+    return { caret, run: bundledRunMeshes(renderer.scene)[0] };
+  }
+
+  it('sorts the caret after the row text, over its first glyph (text_edit.cpp:1764)', async () => {
+    const { caret, run } = await renderCaret(4, 1, 4);
+    expect(caret!.renderOrder).toBeGreaterThan(run!.renderOrder);
+  });
+
+  it('scales caret_width by the theme scale (text_edit.cpp:1766): 3 at scale 2 draws 6 px', async () => {
+    const { caret } = await renderCaret(3, 2, 6);
+    expect(caret).toBeDefined();
+  });
+
+  it('clips the caret to the node rect, as `text_ci` clips it (text_edit.cpp:932-936)', async () => {
+    const { caret } = await renderCaret(4, 1, 4, { x: 0, y: 0, w: 200, h: 10 });
+    const planes = (caret!.material as THREE.Material).clippingPlanes ?? [];
+    const belowTheNode = new THREE.Vector3(10, -15, 0);
+    expect(planes.some((plane) => plane.distanceToPoint(belowTheNode) < 0)).toBe(true);
   });
 });

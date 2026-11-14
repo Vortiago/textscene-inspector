@@ -27,7 +27,7 @@ import { subscribeToNothing } from '../utils/subscribeToNothing.js';
 import { NOTHING_CACHED } from './cacheSources.js';
 import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
 import { projectTreeSettings, type ProjectTreeSettings } from '../parser/projectSettingsParser.js';
-import { useControlLocalTransforms, type ControlLocalTransforms } from './contexts/ControlYSortContext.js';
+import { useControlLocalTransforms, type ControlLocalTransforms } from './contexts/YSortContext.js';
 
 /** The live-tree roots and the snapshot of the loader's caches they are walked over. */
 export interface SharedLiveTree {

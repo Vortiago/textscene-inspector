@@ -1,9 +1,10 @@
 # Shader patches stay until a trigger says port
 
 - Status: Accepted. Amended on 2026-11-11: the port form is TSL node materials, and the owner started the
-  port.
+  port. Amended on 2026-11-13 by the scope amendment below. A new ADR for the port of Godot's
+  shading language will supersede this one.
 - Related: ADR-0038 (one owner for every program input), ADR-0039, ADR-0072 (the module the node
-  materials live in).
+  materials live in), ADR-0075 (the goal that sets the scope of the port).
 
 ## Context
 
@@ -59,3 +60,18 @@ While the port runs:
 
 The anchor test does not catch three changing code next to an anchor that it keeps. The goldens
 catch that. The port has its own issues. It is not a change inside another pull request.
+
+## Amendment: the port is Godot's shaders, not the lit surface alone
+
+On 2026-11-13 the owner widened the port (ADR-0075). This ADR took the scope of the port from the
+patches of the lit surface, and that scope is too narrow.
+
+- The port covers every Godot shader the renderer draws with, and the passes that feed them: the
+  shadow passes and the sky bake are part of it (#1451).
+- The port follows Godot's shading language. A translator turns that language into TSL, and Godot's
+  own shaders and a user's shaders both run through it. It is not a port of one feature at a time.
+- The sentence "The port owns Godot's lighting model, a light node and a shadow node for each light
+  kind, and the surface inputs" names a part of the port, not its limit.
+
+The form (TSL node materials), the switch, the golden rule and the bundle ceiling above still hold.
+The plan for the translator is not accepted yet. Its ADR will record the structure.

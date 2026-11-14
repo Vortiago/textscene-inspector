@@ -5,6 +5,8 @@
 
 export const CANVAS_2D_SCENES = [
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn' },
+  // The one variable: a hidden CanvasLayer, which hides the Polygon2D and the Control below it. Godot 4.6.3 `--mode 2d`: 1/255.
+  { name: 'canvas-layer-hidden', file: 'unit-node2d-below-hidden-canvas-layer.tscn', mode: '2d' },
   // An INT component past int32 wraps as Godot stores it. Godot probes: (260,160) red, the square at
   // (200,100), and (660,360) blue, the square at (600,300). Refused, both sit at the origin.
   { name: 'int-wrap-position', file: 'edge-int-wrap-position.tscn' },
@@ -26,6 +28,9 @@ export const CANVAS_2D_SCENES = [
   // (700,330) blue, the blue block over the bar. Without the body the first is
   // red, which no other golden notices.
   { name: 'ysort-own-body', file: 'unit-ysort-own-body.tscn' },
+  // A Polygon2D with y_sort_enabled sorts its children, as every CanvasItem does: A, first in the tree
+  // at y 200, draws over B at y 100. Godot probe: (400,250) orange (229,76,25), A on top.
+  { name: 'ysort-root-polygon2d', file: 'unit-ysort-root-polygon2d.tscn' },
   // A NavigationPolygon's vertices are Godot canvas pixels (+Y down). Without
   // the negation, the navmesh draws above the region origin instead of below.
   { name: 'navigation-region-2d', file: 'unit-navigation-region-2d.tscn' },
@@ -582,7 +587,7 @@ export const CANVAS_2D_SCENES = [
   { name: 'window-theme-scale', file: 'window-theme-scale/unit-window-theme-scale.tscn', mode: '2d' },
   // The same title as a Label at theme scale 1.5: max 155, mean 0.346.
   { name: 'window-theme-scale-label', file: 'window-theme-scale/unit-window-theme-scale-label.tscn', mode: '2d' },
-  // Every default-theme icon at theme scale 1, drawn from Godot's own raster. Max 86, mean 0.080.
+  // Every default-theme icon at theme scale 1, drawn from Godot's own raster. Max 78, mean 0.078.
   { name: 'default-theme-icons', file: 'unit-default-theme-icons.tscn', mode: '2d' },
   // The same Controls at theme scale 1.5: icons and minimum sizes scale. Max 128, mean 0.113.
   { name: 'default-icons-theme-scale', file: 'default-icons-theme-scale/unit-default-icons-theme-scale.tscn', mode: '2d' },

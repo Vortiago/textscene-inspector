@@ -10,6 +10,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { isTabUnselectable, resolveTabBarCurrentTab } from './currentTab';
 import type {
   SolveContext,
   TextureSlotRequest,
@@ -18,7 +19,6 @@ import type {
 import { controlSolverRegistry, themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
@@ -33,42 +33,12 @@ import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { TAB_BAR_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-import {
-  CONTROL_FONT_DISABLED_COLOR,
-  CONTROL_FONT_HOVER_COLOR,
-  CONTROL_FONT_LOW_COLOR,
-} from '../../../../godot/scene/theme';
 import { AutowrapMode, TextDirection } from '../../../../godot/text/textServerEnums';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
   controlBidiOptions,
   type ControlTextEnv,
 } from '../../../../r3f/controls/native/text/textBidiOptions';
-
-/**
- * `TabBar::current` once tabs load: `set_tab_count` moves the `-1` default to 0 unless the bar can
- * deselect, and `set_current_tab` refuses an index past the last tab (`tab_bar.cpp:763-767,795-805`).
- * `_can_deselect` is `deselect_enabled`, or every tab disabled or hidden (`:1324-1331,1862-1873`).
- */
-export function resolveTabBarCurrentTab(
-  authored: number | undefined,
-  deselectEnabled: boolean | undefined,
-  tabCount: number,
-  isUnselectable: (index: number) => boolean
-): number {
-  if (tabCount === 0) return -1;
-  if (authored !== undefined && authored >= 0 && authored < tabCount) return authored;
-  if (deselectEnabled === true) return -1;
-  for (let i = 0; i < tabCount; i++) {
-    if (!isUnselectable(i)) return 0;
-  }
-  return -1;
-}
-
-/** Whether a tab can never be the current one: disabled or hidden (`tab_bar.cpp:1862-1873`). */
-export function isTabUnselectable(tab: Pick<TabBarTabProperties, 'disabled' | 'hidden'>): boolean {
-  return tab.disabled || tab.hidden === true;
-}
 
 export type TabDrawState = 'selected' | 'unselected' | 'disabled';
 
@@ -111,27 +81,14 @@ export function tabWidthStyleMinWidth(styleBoxes: SolveNode['styleBoxes'], state
 
 export const TAB_BAR_THEME_FONT_KEY = 'font';
 
-/** `BIND_THEME_ITEM(Theme::DATA_TYPE_FONT_SIZE, TabBar, font_size)` (`tab_bar.cpp:2179`): one size item for every state, `default_theme.cpp:1041`. */
+/** `BIND_THEME_ITEM(Theme::DATA_TYPE_FONT_SIZE, TabBar, font_size)` (`tab_bar.cpp:2179`): one size item for every state. */
 export const TAB_BAR_THEME_FONT_SIZE_KEY = 'font_size';
 
-/** `default_theme.cpp:1044-1047`: one colour key per state, unlike the single size key. */
+/** One colour key per state, unlike the single size key. */
 const TAB_BAR_FONT_COLOR_KEYS: Record<TabDrawState, string> = {
   selected: 'font_selected_color',
   unselected: 'font_unselected_color',
   disabled: 'font_disabled_color',
-};
-
-/** TabBar's `font_selected_color` default (`default_theme.cpp:1044`). */
-const TAB_BAR_SELECTED_FONT_COLOR = CONTROL_FONT_HOVER_COLOR;
-/** TabBar's `font_unselected_color` default (`default_theme.cpp:1046`). */
-const TAB_BAR_UNSELECTED_FONT_COLOR = CONTROL_FONT_LOW_COLOR;
-/** TabBar's `font_disabled_color` default (`default_theme.cpp:1047`). */
-const TAB_BAR_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
-
-const TAB_BAR_FONT_DEFAULTS: Record<TabDrawState, Rgba> = {
-  selected: TAB_BAR_SELECTED_FONT_COLOR,
-  unselected: TAB_BAR_UNSELECTED_FONT_COLOR,
-  disabled: TAB_BAR_DISABLED_FONT_COLOR,
 };
 
 /**
@@ -142,20 +99,18 @@ const TAB_BAR_FONT_DEFAULTS: Record<TabDrawState, Rgba> = {
  */
 export function tabBarFontSizePx(
   n: SolveNode,
-  props: Pick<TabBarProperties, 'themeOverrideFontSizes'>,
-  theme: Pick<NativeTheme, 'fontSize'>
+  props: Pick<TabBarProperties, 'themeOverrideFontSizes'>
 ): number {
   return resolveNodeFontSizePx(
     n,
     TAB_BAR_THEME_FONT_SIZE_KEY,
-    props.themeOverrideFontSizes?.[TAB_BAR_THEME_FONT_SIZE_KEY],
-    theme.fontSize
+    props.themeOverrideFontSizes?.[TAB_BAR_THEME_FONT_SIZE_KEY]
   );
 }
 
-/** This tab state's font colour: the resolved `font_<state>_color` (`n.colors`), else the default theme's literal. */
+/** This tab state's font colour: the resolved `font_<state>_color` (`n.colors`). */
 export function tabBarFontColor(colors: SolveNode['colors'], state: TabDrawState): Rgba {
-  return colors[TAB_BAR_FONT_COLOR_KEYS[state]] ?? TAB_BAR_FONT_DEFAULTS[state];
+  return requiredThemeItem(colors, TAB_BAR_FONT_COLOR_KEYS[state]);
 }
 
 const TAB_BAR_ICON_COLOR_KEYS: Record<TabDrawState, string> = {
@@ -164,11 +119,9 @@ const TAB_BAR_ICON_COLOR_KEYS: Record<TabDrawState, string> = {
   disabled: 'icon_disabled_color',
 };
 
-/** `default_theme.cpp:1051-1054`: all four icon-colour states default to `Color(1, 1, 1, 1)`, so no state dims the icon. */
-const TAB_BAR_DEFAULT_ICON_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-
+/** The table's four `TabBar/icon_*_color` are opaque white, so no state dims the icon by default. */
 export function tabBarIconColor(colors: SolveNode['colors'], state: TabDrawState): Rgba {
-  return colors[TAB_BAR_ICON_COLOR_KEYS[state]] ?? TAB_BAR_DEFAULT_ICON_COLOR;
+  return requiredThemeItem(colors, TAB_BAR_ICON_COLOR_KEYS[state]);
 }
 
 /** TabBar's themeable icons: `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, TabBar, <field>, "<name>")` (`tab_bar.cpp:2160-2182`). */
@@ -298,7 +251,7 @@ export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vector2 => {
   );
 
   const fontMetrics = resolveNodeFontMetrics(n, TAB_BAR_THEME_FONT_KEY);
-  const fontSizePx = tabBarFontSizePx(n, props, ctx.theme);
+  const fontSizePx = tabBarFontSizePx(n, props);
   const closeIconSize = tabBarThemeIconSize(n, 'close', ctx.theme.scale);
 
   let width = 0;

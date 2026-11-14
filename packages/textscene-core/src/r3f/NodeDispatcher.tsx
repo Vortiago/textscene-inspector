@@ -10,25 +10,17 @@ import type { ReactNode } from 'react';
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import type { LiveNode } from '../resources/liveNode.js';
 import { belowRoot, joinPath } from '../utils/nodePath.js';
-import {
-  allocateNodePaintRange,
-  allocatePaintRange,
-  canvasRootRanges,
-  isCanvasLayerType,
-  canvasLayerRanks,
-  hostsOwnCanvas,
-  WHOLE_CANVAS_RANGE,
-  ysortsChildren,
-} from './canvasPaintOrder.js';
+import { canvasLayerRanks, ysortsChildren } from './canvasPaintOrder.js';
+import { isCanvasLayerType } from './canvasItemClass.js';
 import { YSortDispatcher } from './YSortDispatcher.js';
-import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
+import { LayerRanksProvider } from './contexts/PaintOrderContext.js';
 import {
-  CanvasRootRangesProvider,
-  LayerRanksProvider,
-  PaintRangeProvider,
-  useCanvasRootRanges,
-  usePaintRange,
-} from './contexts/PaintOrderContext.js';
+  PaintFrameProvider,
+  useChildPaintFrames,
+  useNodePaint,
+  useRootPaintFrames,
+  type PaintFrame,
+} from './canvasItemPass/nodePaint.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
@@ -75,7 +67,6 @@ import { loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
 import { spaceFamilyOf } from '../godot/scene/parentSpace.js';
-import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 
 // Lazy, as the 2D stage's own Control layer is: a canvas with no unowned Control loads none.
 const UnownedNodeControls = lazy(() => import('./controls/native/UnownedNodeControls.js'));
@@ -92,14 +83,15 @@ export interface NodeDispatcherProps {
 }
 
 /**
- * Whether Godot hides `node` itself: a Node3D whose `visible` is false hides its Node3D descendants
- * too (`node_3d.cpp:1132-1143`). A descendant of another family escapes to the world root first
- * (`parentSpaceScope.tsx`), so the wrapper hides only what Godot hides. `animatedVisible` is the
- * value an AnimationPlayer track pushes, null when none does.
+ * Whether Godot hides `node` and its subtree, which no component of its own hides: a Node3D whose
+ * `visible` is false hides its Node3D descendants (`node_3d.cpp:1132-1143`), and a hidden CanvasLayer
+ * hides its canvas items (`canvas_layer.cpp:49-64`, `canvas_item.cpp:325-329`). A descendant of another
+ * family escapes to the world root first (`parentSpaceScope.tsx`), so the wrapper hides only what
+ * Godot hides. `animatedVisible` is the value an AnimationPlayer track pushes, null when none does.
  */
-function isHiddenNode3D(node: TscnNode, animatedVisible: boolean | null): boolean {
-  if (spaceFamilyOf(node.type) !== 'Node3D') return false;
-  return !(animatedVisible ?? (node.properties as Node3DProperties).visible !== false);
+function hidesSubtree(node: TscnNode, animatedVisible: boolean | null): boolean {
+  if (spaceFamilyOf(node.type) !== 'Node3D' && !isCanvasLayerType(node.type)) return false;
+  return !(animatedVisible ?? (node.properties as { visible?: boolean }).visible !== false);
 }
 
 export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
@@ -115,12 +107,8 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
   const canvasModulate = useCanvasModulateColor(nodes);
   // Pure functions of the tree, so the Control walk derives the same numbers on its own.
   const ranks = useMemo(() => canvasLayerRanks(nodes), [nodes]);
-  const rootRanges = useMemo(() => allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children, [nodes]);
-  // Where each canvas root of the viewport's own canvas draws: an item whose
-  // parent is not a CanvasItem is drawn in its pre-order rank among the
-  // canvas's roots, not at the slot its nesting gives it (`canvasRootRanges`).
-  const canvasRoots = useMemo(() => canvasRootRanges(nodes, rootRanges), [nodes, rootRanges]);
   const rootOrders = useMemo(() => childOrders([], nodes.length), [nodes.length]);
+  const rootFrames = useRootPaintFrames(nodes);
 
   return (
     // paint-order-safe: the delegated pointer root, above every canvas item.
@@ -137,18 +125,16 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
           Unshaded item skips it, as Godot's base pass does. */}
       <CanvasModulateContext.Provider value={canvasModulate}>
         <LayerRanksProvider value={ranks}>
-          <CanvasRootRangesProvider value={canvasRoots}>
-            {/* Inside the pointer root, so a click on a node that escaped its parent reaches it. */}
-            <WorldRoot>
-              {nodes.map((node, i) => (
-                <PaintRangeProvider key={node.name} value={canvasRoots.get(node) ?? rootRanges[i]!}>
-                  <TreeOrderProvider order={rootOrders[i]!}>
-                    <DispatchedNode node={node} path={node.name} />
-                  </TreeOrderProvider>
-                </PaintRangeProvider>
-              ))}
-            </WorldRoot>
-          </CanvasRootRangesProvider>
+          {/* Inside the pointer root, so a click on a node that escaped its parent reaches it. */}
+          <WorldRoot>
+            {nodes.map((node, i) => (
+              <InPaintFrame key={node.name} frame={rootFrames?.[i]}>
+                <TreeOrderProvider order={rootOrders[i]!}>
+                  <DispatchedNode node={node} path={node.name} />
+                </TreeOrderProvider>
+              </InPaintFrame>
+            ))}
+          </WorldRoot>
         </LayerRanksProvider>
       </CanvasModulateContext.Provider>
     </group>
@@ -281,26 +267,15 @@ function PlainNode({
   );
   const { hiddenNodePaths } = useSelection();
   const workspace = useCanvasWorkspace();
-  const paintRange = usePaintRange();
-  // Before the early returns, for rules-of-hooks. Memoized: `allocateNodePaintRange`
-  // walks each child's whole subtree, which on every render is quadratic in depth.
-  // A sub-viewport is a canvas of its own, whose runs start at the beginning, as its Control walk's do.
-  const allocated = useMemo(
-    () => allocateNodePaintRange(isViewportBoundary(node.type) ? WHOLE_CANVAS_RANGE : paintRange, node),
-    [paintRange, node]
-  );
+  // Before the early returns, for rules-of-hooks. A node of the shared live tree reads its paint by
+  // path, and its children read theirs, so only a node drawn outside that tree hands down runs.
+  const paint = useNodePaint(node, path);
+  const childFrames = useChildPaintFrames(node, path, paint);
   // A pushed `visible` takes the place of the authored one, as a GLB node's does.
   const animatedVisible = useAnimatedValueAt(path, 'visible', (value) => value[0] !== 0);
-  const isHidden = hiddenNodePaths.has(path) || isHiddenNode3D(node, animatedVisible);
-  const inheritedCanvasRoots = useCanvasRootRanges();
-  // A CanvasLayer is a canvas of its own, so the roots below it are indexed by
-  // its counter over its children (`canvas_layer.cpp:261-267`). So is a sub-viewport.
+  const isHidden = hiddenNodePaths.has(path) || hidesSubtree(node, animatedVisible);
+  // A CanvasLayer is a canvas of its own, which `<CanvasLayerScope>` draws (`canvas_layer.cpp:261-267`).
   const startsCanvas = isCanvasLayerType(node.type);
-  const hostsCanvas = hostsOwnCanvas(node);
-  const canvasRoots = useMemo(
-    () => (hostsCanvas ? canvasRootRanges(node.children, allocated.children) : inheritedCanvasRoots),
-    [hostsCanvas, node.children, allocated.children, inheritedCanvasRoots]
-  );
 
   // Whether `Object::cast_to<CanvasItem>(get_parent())` succeeds for this node.
   const parentIsCanvasItem = useParentSpaceFamily() === 'CanvasItem';
@@ -309,18 +284,15 @@ function PlainNode({
 
   if (!drawsInWorkspace(node.type, workspace)) return null;
 
-  // Each child gets its own run of draw-sequence values in Godot's walk order:
-  // `show_behind_parent` children before this node, the rest after it. A run
-  // covers the child's whole subtree, so nothing reaches a sibling's sequence.
   const sortsChildren = ysortsChildren(node);
   const inlineChildren = sortsChildren
     ? []
     : node.children.map((child, i) => (
-        <PaintRangeProvider key={child.name} value={canvasRoots.get(child) ?? allocated.children[i]!}>
+        <InPaintFrame key={child.name} frame={childFrames?.children[i]}>
           <TreeOrderProvider order={inlineOrders[i]!}>
             <DispatchedNode node={child} path={joinPath(path, child.name)} />
           </TreeOrderProvider>
-        </PaintRangeProvider>
+        </InPaintFrame>
       ));
 
   const children: ReactNode[] = [];
@@ -329,9 +301,9 @@ function PlainNode({
   if (editorIcon) {
     children.push(<NodeEditorIcon key="__icon" node={node} registration={editorIcon} />);
   }
-  if (node.children.length > 0) {
+  if (node.children.length > 0 || sortsChildren) {
     // The world walk sorts the children of any `y_sort_enabled` item, as `CanvasItem` does
-    // (`canvas_item.cpp:706-709`). A TileMap or TileMapLayer sorts its own rows with them instead.
+    // (`canvas_item.cpp:706-709`), with the rows and children a TileMap or TileMapLayer adds.
     children.push(
       <Fragment key="__inline">{sortsChildren ? <YSortDispatcher node={node} /> : inlineChildren}</Fragment>
     );
@@ -340,9 +312,9 @@ function PlainNode({
     // Injected sub-scene roots draw after the authored children, in the room
     // `reservesRoom` holds back for them.
     children.push(
-      <PaintRangeProvider key="__extra" value={allocated.tail}>
+      <InPaintFrame key="__extra" frame={childFrames?.tail}>
         {extraChildren}
-      </PaintRangeProvider>
+      </InPaintFrame>
     );
   }
 
@@ -378,16 +350,8 @@ function PlainNode({
                               `CanvasLayer` painter. A canvas root below draws on this
                               layer's canvas (`canvas_item.cpp:246-252`), so a node that
                               escapes inside it stays under the layer's own group. */}
-                              <WorldRoot>
-                                <CanvasRootRangesProvider value={canvasRoots}>
-                                  {children}
-                                </CanvasRootRangesProvider>
-                              </WorldRoot>
+                              <WorldRoot>{children}</WorldRoot>
                             </CanvasLayerScope>
-                          ) : hostsCanvas ? (
-                            <CanvasRootRangesProvider value={canvasRoots}>
-                              {children}
-                            </CanvasRootRangesProvider>
                           ) : (
                             <>{children}</>
                           )}
@@ -424,7 +388,6 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const ambientScope = useSceneResources();
   const { externalResources } = ambientScope;
   const enclosingScenePaths = useInstancedScenePaths();
-  const paintRange = usePaintRange();
   const instanceRef = node.instance ?? '';
   const scenePath = resolveInstancePath(instanceRef, externalResources);
   const isCyclic = scenePath !== null && enclosingScenePaths.includes(scenePath);
@@ -477,14 +440,6 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const held = useMemo(() => withoutDeepChildren(withoutOverrideSubtrees(node)), [node]);
   const order = useTreeOrder();
   const groupOrders = useMemo(() => childOrders(order, 2), [order]);
-  // The GLB root draws from the tail of `shallow`'s range, as an authored child gets a run of its own.
-  const glbRange = useMemo(
-    () =>
-      allocatePaintRange(allocateNodePaintRange(paintRange, shallow).tail, loadedScene?.nodes ?? [])
-        .children[0],
-    [paintRange, shallow, loadedScene?.nodes]
-  );
-
   // Unresolvable ref, cycle, refused scene or failed load: keep the node visible with a magenta
   // placeholder child, matching the missing-texture UX. Godot's editor makes a `MissingNode` here
   // (`packed_scene.cpp:267-269`), which the host's own children hang below.
@@ -524,15 +479,24 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
             externalResources={loadedScene.externalResources}
           >
             <InstancedScenePathsProvider paths={contentScenePaths}>
-              <PaintRangeProvider value={glbRange!}>
-                <TreeOrderProvider order={[...groupOrders[GLB_OBJECTS]!, 0]}>
-                  <GlbRootNode node={loadedScene.nodes[0]!} />
-                </TreeOrderProvider>
-              </PaintRangeProvider>
+              <TreeOrderProvider order={[...groupOrders[GLB_OBJECTS]!, 0]}>
+                <GlbRootNode node={loadedScene.nodes[0]!} />
+              </TreeOrderProvider>
             </InstancedScenePathsProvider>
           </SceneResourcesProvider>
         </PlainNode>
       </GlbInstanceProvider>
     </InstanceOwnerProvider>
   );
+}
+
+/** `children` in `frame`, or as they are where they read the paint pass themselves. */
+function InPaintFrame({
+  frame,
+  children,
+}: {
+  frame: PaintFrame | undefined;
+  children: ReactNode;
+}): ReactNode {
+  return frame ? <PaintFrameProvider value={frame}>{children}</PaintFrameProvider> : children;
 }

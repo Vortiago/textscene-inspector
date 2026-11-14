@@ -30,13 +30,10 @@ import {
 } from '../graphelement/graphTitlebar';
 import { RESIZER_SE_ICON, RESIZER_SE_ICON_SIZE } from '../graphelement/graphIcons';
 import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
-import {
-  GRAPH_FRAME_RESIZER_COLOR,
-  GRAPH_FRAME_TITLE_VARIATION,
-  graphFrameStyles,
-  graphFrameTitleTextMin,
-} from './nativeSolver';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+import { GRAPH_FRAME_TITLE_VARIATION, graphFrameTitleTextMin } from './nativeSolver';
 import type { GraphFrameProperties } from './types';
+import { graphElementStyles } from '../graphelement/graphElementStyles';
 import { lightened } from '../../../../godot/math/color';
 import type { Rgba } from '../../../../godot/math/math';
 
@@ -70,7 +67,7 @@ export function GraphFrame({
   // prop rather than reading them (`nativeClipCoverage.test.tsx`'s own doc).
   const clippingPlanes = useControlClipPlanes();
   const selected = props.selected === true;
-  const styles = graphFrameStyles(solveNode, theme);
+  const styles = graphElementStyles(solveNode);
   const resizerSize = scaledIconSizeOf(RESIZER_SE_ICON_SIZE, theme.scale);
   const basePanel = selected ? styles.panelSelected : styles.panel;
   // `:126`: the untinted arm draws `sb_panel_flat` alone, so a texture panel
@@ -82,7 +79,7 @@ export function GraphFrame({
   const drawsPanel = tinted || !isStyleBoxTexture(panelStyle);
   const titlebarStyle = styles.titlebar;
 
-  const textMin = graphFrameTitleTextMin(solveNode, theme);
+  const textMin = graphFrameTitleTextMin(solveNode);
   const titlebarBand = useMemo(
     () => titlebarGeometry(rect.w, textMin.y, styles.titlebar),
     [rect.w, textMin.y, styles.titlebar]
@@ -95,10 +92,7 @@ export function GraphFrame({
   };
 
   const title = props.title ?? '';
-  const fontTheme = useMemo(
-    () => resolveTitleFontTheme(solveNode, GRAPH_FRAME_TITLE_VARIATION, theme.fontSize),
-    [solveNode, theme.fontSize]
-  );
+  const fontTheme = useMemo(() => resolveTitleFontTheme(solveNode, GRAPH_FRAME_TITLE_VARIATION), [solveNode]);
   const titleLayout = useMemo(
     () => (title.length > 0 ? shapeTitleText(title, fontTheme) : null),
     [title, fontTheme]
@@ -139,7 +133,10 @@ export function GraphFrame({
     showResizer ? solveNode.icons.resizer : undefined,
     showResizer ? RESIZER_SE_ICON : null
   );
-  const resizerCombined = useMemo(() => multiplyModulate(tint.own, GRAPH_FRAME_RESIZER_COLOR), [tint.own]);
+  const resizerCombined = useMemo(
+    () => multiplyModulate(tint.own, requiredThemeItem(solveNode.colors, 'resizer_color')),
+    [tint.own, solveNode.colors]
+  );
   const resizerColor = useItemLinearColor(resizerCombined);
 
   return (

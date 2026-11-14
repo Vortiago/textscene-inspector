@@ -137,4 +137,6 @@ string against `true`, so an absent property or any other value silently resolve
 - **Approximated** Only a subset of BBCode tags is styled, and a tag outside it renders as
   plain text.
 - **Approximated** A base drawn with marks shows or hides whole under the glyph budget, where Godot reveals each mark glyph apart.
+- **Approximated** The `line_separation` and `paragraph_separation` theme constants stay 0, so
+  an override of either has no effect.
 - **Not drawn** The loading bar's right-to-left fill (:2580-2588), since the loading bar is not drawn.

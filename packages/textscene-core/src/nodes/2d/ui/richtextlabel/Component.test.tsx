@@ -19,11 +19,15 @@ import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFont
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
-import { RICH_TEXT_LABEL_UNDERLINE_ALPHA, richTextLabelMinimumSize } from './nativeSolver';
+import { richTextLabelMinimumSize } from './nativeSolver';
 import { RichTextLabel } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { wholeKeySlot } from '../../../../r3f/canvasItemState';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   bundledRunOf,
   bundledRuns,
@@ -54,7 +58,7 @@ function solveNode(
     scrollFollowingVisibleCharacters: false,
   };
   const tscnNode: TscnNode = controlNode(name, 'RichTextLabel', { name, ...parsedDefaults, ...properties });
-  return { ...emptySolveNode(), path, node: tscnNode, ...overrides };
+  return withThemeItems({ ...emptySolveNode(), path, node: tscnNode, ...overrides });
 }
 
 function expectedLinear(r: number, g: number, b: number): THREE.Color {
@@ -162,7 +166,7 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
 
   it(
     "the underline stroke's material carries the run's own colour (ControlQuad's meshBasicMaterial, sRGB-space " +
-      'same as every other native chrome quad) at RICH_TEXT_LABEL_UNDERLINE_ALPHA times its opacity ' +
+      'same as every other native chrome quad) at half its opacity ' +
       "(default_theme.cpp:1231's underline_alpha=50, rich_text_label.cpp:1237), same RGB as the text",
     async () => {
       const renderer = await render({ text: '[color=#e0a030][u]AB[/u][/color]', bbcodeEnabled: true });
@@ -176,7 +180,7 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
       expect(strokeMat.color.g).toBeCloseTo(expected.g, 5);
       expect(strokeMat.color.b).toBeCloseTo(expected.b, 5);
       expect(tint.r).toBeCloseTo(0xe0 / 255, 5);
-      expect(strokeMat.opacity).toBeCloseTo(tint.a * RICH_TEXT_LABEL_UNDERLINE_ALPHA, 6);
+      expect(strokeMat.opacity).toBeCloseTo(tint.a * 0.5, 6);
     }
   );
 

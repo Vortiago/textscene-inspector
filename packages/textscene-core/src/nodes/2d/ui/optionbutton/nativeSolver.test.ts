@@ -378,17 +378,17 @@ describe('optionButtonArrowColor (option_button.cpp:98-118)', () => {
     node({ ...props, themeOverrideColors, themeOverrideConstants: { modulate_arrow: 1 } });
 
   it('is white while modulate_arrow is off, the default (default_theme.cpp:251)', () => {
-    expect(optionButtonArrowColor(node({ themeOverrideColors }), THEME)).toEqual(WHITE);
+    expect(optionButtonArrowColor(node({ themeOverrideColors }))).toEqual(WHITE);
   });
 
   it("is the label's font colour of the draw state under modulate_arrow", () => {
-    expect(optionButtonArrowColor(modulated({}), THEME)).toEqual(RED);
-    expect(optionButtonArrowColor(modulated({ disabled: true }), THEME)).toEqual(GREEN);
+    expect(optionButtonArrowColor(modulated({}))).toEqual(RED);
+    expect(optionButtonArrowColor(modulated({ disabled: true }))).toEqual(GREEN);
   });
 
   it('is font_focus_color for a focused button in the normal draw mode (option_button.cpp:112-116)', () => {
-    expect(optionButtonArrowColor(modulated({ hasFocus: true }), THEME)).toEqual(BLUE);
-    expect(optionButtonArrowColor(modulated({ hasFocus: true, disabled: true }), THEME)).toEqual(GREEN);
+    expect(optionButtonArrowColor(modulated({ hasFocus: true }))).toEqual(BLUE);
+    expect(optionButtonArrowColor(modulated({ hasFocus: true, disabled: true }))).toEqual(GREEN);
   });
 });
 

@@ -13,24 +13,15 @@ import type { TscnNode } from '../../../../parser/types';
 import {
   controlSolverRegistry,
   type MinimumSizeFn,
-  type SolveContext,
   type TextureSlotRequest,
   type TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { DEFAULT_CORNER_RADIUS, STYLE_FILL } from '../../../../godot/scene/theme';
-import {
-  contentMarginSize,
-  flatStyleBox,
-  type StyleBoxFlatData,
-} from '../../../../r3f/controls/native/styleBoxFlat';
-import { flatCornerDetail } from '../../../../godot/scene/defaultTheme/styleBoxes';
-import { perObject } from '../../../../utils/perObject';
+import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
-  type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -51,7 +42,6 @@ import { scrollBarThicknesses } from '../shared/scrollBarSolver';
 import type { ItemListRuntimeItem, ItemListRuntimeProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_LOWER_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 import { AutowrapMode, OverrunBehavior, TextDirection } from '../../../../godot/text/textServerEnums';
 import { isDrawnRtl, textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
@@ -65,22 +55,14 @@ export { ICON_MODE_LEFT };
 
 // --- Theme font ----------------------------------------------------------
 
-/** ItemList's own theme font key: `SceneStringName(font)` (`default_theme.cpp:951`). */
+/** ItemList's own theme font key, `SceneStringName(font)`, which the default theme registers under ItemList. */
 export const ITEM_LIST_THEME_FONT_KEY = 'font';
-
-/** ItemList's own `font_color` default (`default_theme.cpp:954`). */
-const ITEM_LIST_DEFAULT_FONT_COLOR = CONTROL_FONT_LOWER_COLOR;
 
 const ITEM_LIST_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
 
 /** Resolves ItemList's own theme font size/colour (overrides, else the ancestor Theme chain / theme default). */
-export function itemListTextTheme(
-  n: SolveNode,
-  props: ItemListRuntimeProperties,
-  ctx: Pick<SolveContext, 'theme'>
-): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: ITEM_LIST_DEFAULT_FONT_COLOR };
-  return resolveTextTheme(n, props, ITEM_LIST_THEME_KEYS, defaults);
+export function itemListTextTheme(n: SolveNode, props: ItemListRuntimeProperties): ResolvedTextTheme {
+  return resolveTextTheme(n, props, ITEM_LIST_THEME_KEYS);
 }
 
 // --- Texture slots: one per item icon ------------------------------------
@@ -113,58 +95,13 @@ export interface ItemListSpacing {
   lineSeparation: number;
 }
 
-/**
- * `default_theme.cpp:945-948`: h_separation, v_separation and icon_margin are `round(4 * scale)`,
- * which `theme.separation` holds, and line_separation is `round(2 * scale)`.
- */
-export function itemListSpacing(
-  constants: SolveNode['constants'],
-  theme: Pick<NativeTheme, 'separation' | 'scale'>
-): ItemListSpacing {
+export function itemListSpacing(constants: SolveNode['constants']): ItemListSpacing {
   return {
-    hSeparation: constants.h_separation ?? theme.separation,
-    vSeparation: constants.v_separation ?? theme.separation,
-    iconMargin: constants.icon_margin ?? theme.separation,
-    lineSeparation: constants.line_separation ?? Math.round(2 * theme.scale),
+    hSeparation: requiredThemeItem(constants, 'h_separation'),
+    vSeparation: requiredThemeItem(constants, 'v_separation'),
+    iconMargin: requiredThemeItem(constants, 'icon_margin'),
+    lineSeparation: requiredThemeItem(constants, 'line_separation'),
   };
-}
-
-/** The theme fields the default boxes read. */
-type ItemListTheme = Pick<NativeTheme, 'contentMargin' | 'cornerRadius' | 'scale'>;
-
-/** `make_flat_stylebox(color)` (`default_theme.cpp:944,964`): margin 4 and corner radius 3, both scaled. */
-function itemListFlatStyleBox(theme: ItemListTheme, bgColor: Rgba): StyleBoxFlatData {
-  const m = theme.contentMargin;
-  return flatStyleBox(bgColor, {
-    contentMargin: { left: m, top: m, right: m, bottom: m },
-    cornerRadius: theme.cornerRadius,
-    cornerDetail: flatCornerDetail(DEFAULT_CORNER_RADIUS, theme.scale),
-  });
-}
-
-/**
- * The default `panel` and `selected` boxes of one theme. `StyleBoxQuad` and the scrollbar memo key on box
- * identity, so a repaint must hand them the box it built before.
- */
-const defaultBoxes = perObject((theme: ItemListTheme) => ({
-  panel: itemListFlatStyleBox(theme, STYLE_FILL.normal),
-  selected: itemListFlatStyleBox(theme, STYLE_FILL.selected),
-}));
-
-/** This node's own `theme_override_styles/panel` if authored, else the default box. */
-export function pickItemListPanelStyleBox(
-  overrides: Readonly<Record<string, StyleBoxFlatData>>,
-  theme: ItemListTheme
-): StyleBoxFlatData {
-  return overrides.panel ?? defaultBoxes(theme).panel;
-}
-
-/** The `selected` box (`default_theme.cpp:964`). `selected_focus` is the same box in the default theme. */
-export function pickItemListSelectedStyleBox(
-  styleBoxes: Readonly<Record<string, StyleBoxFlatData>>,
-  theme: ItemListTheme
-): StyleBoxFlatData {
-  return styleBoxes.selected ?? defaultBoxes(theme).selected;
 }
 
 // --- Icon geometry ---------------------------------------------------------
@@ -542,13 +479,13 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
   const minSize = { x: 0, y: 0 };
   if (!props.autoWidth && !props.autoHeight) return minSize;
 
-  const { fontSizePx } = itemListTextTheme(n, props, ctx);
+  const { fontSizePx } = itemListTextTheme(n, props);
   const fontMetrics = resolveNodeFontMetrics(n, ITEM_LIST_THEME_FONT_KEY);
   const iconMode = props.iconMode ?? ICON_MODE_LEFT;
   const maxTextLines = props.maxTextLines ?? 1;
   const fixedColumnWidth = props.fixedColumnWidth ?? 0;
   const iconScale = props.iconScale ?? 1;
-  const spacing = itemListSpacing(n.constants, ctx.theme);
+  const spacing = itemListSpacing(n.constants);
 
   const itemSizes: Vector2[] = items.map((item, i) => {
     const hasIcon = itemHasIcon(item);
@@ -584,7 +521,7 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const { hSeparation } = spacing;
   const maxColumnWidth = itemListMaxColumnWidth(itemSizes, hSeparation);
-  const panelMin = contentMarginSize(pickItemListPanelStyleBox(n.styleBoxes, ctx.theme));
+  const panelMin = contentMarginSize(requiredThemeItem(n.styleBoxes, 'panel'));
   const tentative = ctx.tentativeRect?.(n);
   const barMinimums = scrollBarThicknesses(internalScrollBarBoxes(n));
   const packed = packItemListRows({
@@ -700,25 +637,12 @@ export function itemIconColor(disabled: boolean, tint: Rgba = WHITE): Rgba {
   return disabled ? { ...tint, a: tint.a * 0.5 } : tint;
 }
 
-/** `font_selected_color` (`item_list.cpp:1610-1611`), else the default theme's `control_font_pressed_color` (`default_theme.cpp:957`). */
-export function itemListSelectedFontColor(n: Pick<SolveNode, 'colors'>): Rgba {
-  return n.colors.font_selected_color ?? CONTROL_FONT_PRESSED_COLOR;
-}
-
 /** `custom_fg` is likewise never authorable, so `txt_modulate` always resolves to `font_color`, dimmed on `disabled` (`item_list.cpp:1614-1622`). */
 export function itemTextColor(baseColor: Rgba, disabled: boolean): Rgba {
   return disabled ? { ...baseColor, a: baseColor.a * 0.5 } : baseColor;
 }
 
 // --- Row/column guide lines: item_list.cpp:1446-1459 -----------------------
-
-/** `default_theme.cpp:959`: `theme->set_color("guide_color", "ItemList", Color(0.7, 0.7, 0.7, 0.25))`. */
-const ITEM_LIST_DEFAULT_GUIDE_COLOR: Rgba = { r: 0.7, g: 0.7, b: 0.7, a: 0.25 };
-
-/** This node's own `theme_override_colors/guide_color` (already folded onto `n.colors` by the walker), else the built-in default. */
-export function itemListGuideColor(n: Pick<SolveNode, 'colors'>): Rgba {
-  return n.colors.guide_color ?? ITEM_LIST_DEFAULT_GUIDE_COLOR;
-}
 
 interface ItemListGuideLine {
   /**
@@ -886,12 +810,4 @@ export function itemListCursorRect(input: {
   rtl: boolean;
 }): Rect2 {
   return itemListSelectedRect({ ...input, panelMarginLeft: 0, panelMarginRight: 0 });
-}
-
-/** The `cursor_unfocused` box (`item_list.cpp:2455`): the default theme binds it to its `focus` box (`default_theme.cpp:967`). */
-export function pickItemListCursorStyleBox(
-  styleBoxes: Readonly<Record<string, StyleBoxFlatData>>,
-  theme: Pick<NativeTheme, 'widgets'>
-): StyleBoxFlatData {
-  return styleBoxes.cursor_unfocused ?? theme.widgets.button.focus;
 }

@@ -20,7 +20,7 @@ import type { ScrollBarBoxes, ScrollBarPlacement, ScrollHintPlacement } from './
 
 /**
  * `scroll_hint_vertical_color` and `scroll_hint_horizontal_color`: `Color(0, 0, 0)`
- * (`default_theme.cpp:669-670`), set as the hint's `modulate`
+ * in the table, set as the hint's `modulate`
  * (`scroll_container.cpp:622,631,640,650`). Only the texture's alpha ramp shows.
  */
 export const SCROLL_HINT_MODULATE = new THREE.Color(0, 0, 0);
@@ -108,6 +108,8 @@ interface ScrollBarChromeProps {
   chromeSlot: CanvasSlot;
   /** The walker's `gui/common/snap_controls_to_pixels`, the only value correct inside a SubViewport. */
   snapToPixels: boolean;
+  /** The bar's node name, such as ScrollContainer's `_h_scroll` (`scroll_container.cpp:917`). */
+  name?: string;
 }
 
 /** The draw-order keys of a bar's track and of its grabber, which paints over the track. */
@@ -122,7 +124,7 @@ function scrollBarRenderOrders(chromeSlot: CanvasSlot): { track: number; grabber
  * `snappedControlOrigin` apart from the container, while `bar.rect` stays at
  * full precision for the reservation arithmetic.
  */
-export function ScrollBarChrome({ bar, boxes, color, chromeSlot, snapToPixels }: ScrollBarChromeProps) {
+export function ScrollBarChrome({ bar, boxes, color, chromeSlot, snapToPixels, name }: ScrollBarChromeProps) {
   if (!bar.visible) return null;
   const { track: trackKey, grabber: grabberKey } = scrollBarRenderOrders(chromeSlot);
   const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
@@ -130,7 +132,7 @@ export function ScrollBarChrome({ bar, boxes, color, chromeSlot, snapToPixels }:
   // The grabber is no node (`scene/gui/scroll_bar.cpp:326-344`): it draws
   // unrounded inside the bar's canvas item and inherits the bar's snap.
   return (
-    <CanvasItemGroup position={[origin.x, -origin.y, 0]} renderOrder={trackKey}>
+    <CanvasItemGroup name={name} position={[origin.x, -origin.y, 0]} renderOrder={trackKey}>
       <StyleBoxQuad styleBox={boxes.scroll} color={color} rect={bar.rect} renderOrder={trackKey} />
       <CanvasItemGroup position={[bar.grabberRect.x, -bar.grabberRect.y, 0]} renderOrder={grabberKey}>
         <StyleBoxQuad
