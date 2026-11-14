@@ -4,7 +4,7 @@
  */
 // Not asserted: a hit rate, or that a share ran once. `presetTimeMinimumSize` mints nodes
 // no painter sees. A miss is a recompute, never a wrong answer.
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   isCommentLine,
@@ -32,20 +32,16 @@ const UI_ROOT = join(import.meta.dirname, '../../../nodes/2d/ui');
 const WINDOWS_ROOT = join(import.meta.dirname, '../../../nodes/windows');
 const SOURCE_ROOT = join(import.meta.dirname, '../../..');
 
-/**
- * The file kinds a solve handoff can be spelled in: the producers (a solver, the layout of a class's
- * internal Controls, a share's module) and the consumer.
- */
-const HANDOFF_FILES = [
-  'nativeSolver.ts',
-  'internalControls.ts',
-  'tabBarModel.ts',
-  'tabBarLayout.ts',
-  'Component.tsx',
-];
+/** The file kinds a solve handoff can be spelled in: a solver, the layout of a class's internal Controls, and the consumer. */
+const HANDOFF_FILES = ['nativeSolver.ts', 'internalControls.ts', 'Component.tsx'];
+
+/** A share's own module, under any name: it declares a share. */
+const DECLARES_SHARE = /\bdefine(?:Rect)?Share\s*(?:<[^>]*>)?\s*\(/;
 
 /** Read once: the tree cannot change mid-run, and each scan reads all of it. */
-const HANDOFF_SOURCES: SourceFile[] = walkSources([UI_ROOT], (name) => HANDOFF_FILES.includes(name));
+const HANDOFF_SOURCES: SourceFile[] = walkSources([UI_ROOT], isProductionSource).filter(
+  ({ file, source }) => HANDOFF_FILES.includes(basename(file)) || DECLARES_SHARE.test(source)
+);
 
 /** Code only: a match inside prose is not a read, on its own line or trailing one. */
 function codeLines(source: string): (string | null)[] {
@@ -184,12 +180,12 @@ function opensThroughAChannel(meta: unknown): boolean {
 /** The painters on a rect share, and the values each may take from a layout module. */
 const RECT_SHARE_PAINTERS: Record<string, readonly string[]> = {
   [join('button', 'Component.tsx')]: ['BUTTON_CLASS', 'buttonLayoutOf', 'tintColor'],
-  [join('tabbar', 'Component.tsx')]: ['tabBarLayout', 'tintColor'],
+  [join('tabbar', 'Component.tsx')]: ['tabBarLayout', 'tabBarLoadedOffset', 'tintColor'],
+  [join('itemlist', 'Component.tsx')]: ['itemListDraw', 'tintColor'],
 };
 
-/** The slice's solver files, and the shared modules that shape text or lay out a Button. */
-const LAYOUT_MODULE =
-  /(?:^\.\/(?:nativeSolver|tabBarModel|tabBarLayout)|\/buttonBase|\/text\/textLayout|\/text\/textOverrun)$/;
+/** Every module of the painter's own slice, and the shared modules that shape text or lay out a Button. */
+const LAYOUT_MODULE = /^\.\/|(?:\/buttonBase|\/text\/textLayout|\/text\/textOverrun)$/;
 
 /** The values (not the types) a source imports from a layout module. */
 function layoutValueImports(source: string): string[] {
@@ -221,9 +217,9 @@ describe('solve handoff conformance', () => {
     const shares = HANDOFF_SOURCES.flatMap(({ file, source }) =>
       shareCallbacks(source).map(({ line }) => `${repoPath(file)}:${line}`)
     );
-    // FoldableContainer, Label, LinkButton and MenuBar declare one share each, Button two and
-    // TabBar three. A Button subclass reads Button's shares with its own class.
-    expect(shares.length).toBeGreaterThanOrEqual(9);
+    // FoldableContainer, Label, LinkButton and MenuBar declare one share each, Button two, and
+    // TabBar and ItemList three each. A Button subclass reads Button's shares with its own class.
+    expect(shares.length).toBeGreaterThanOrEqual(12);
   });
 
   it('opens `meta` only through a channel — no painter hand-rolls a shape guard', () => {
@@ -294,6 +290,9 @@ describe('solve handoff conformance', () => {
       layoutValueImports("import { layoutTabContent, type TabLayoutItem } from './nativeSolver';")
     ).toEqual(['layoutTabContent']);
     expect(layoutValueImports("import type { ScrollArrowsLayout } from './nativeSolver';")).toEqual([]);
+    expect(layoutValueImports("import { packItemListRows } from './itemListPack';")).toEqual([
+      'packItemListRows',
+    ]);
     expect(
       layoutValueImports("import { wrappedLabelWidthPx } from '../../../../r3f/controls/native/buttonBase';")
     ).toEqual(['wrappedLabelWidthPx']);

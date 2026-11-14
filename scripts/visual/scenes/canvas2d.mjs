@@ -587,9 +587,9 @@ export const CANVAS_2D_SCENES = [
   { name: 'window-theme-scale', file: 'window-theme-scale/unit-window-theme-scale.tscn', mode: '2d' },
   // The same title as a Label at theme scale 1.5: max 155, mean 0.346.
   { name: 'window-theme-scale-label', file: 'window-theme-scale/unit-window-theme-scale-label.tscn', mode: '2d' },
-  // Every default-theme icon at theme scale 1, drawn from Godot's own raster. Max 78, mean 0.078.
+  // Every default-theme icon at theme scale 1, drawn from Godot's own raster. Max 25, mean 0.073.
   { name: 'default-theme-icons', file: 'unit-default-theme-icons.tscn', mode: '2d' },
-  // The same Controls at theme scale 1.5: icons and minimum sizes scale. Max 128, mean 0.113.
+  // The same Controls at theme scale 1.5: icons and minimum sizes scale. Max 128, mean 0.110.
   { name: 'default-icons-theme-scale', file: 'default-icons-theme-scale/unit-default-icons-theme-scale.tscn', mode: '2d' },
   // A window under a SubViewport that never updates draws in the root, which does. Max 92, mean 0.383.
   { name: 'window-under-disabled-viewport', file: 'unit-window-under-disabled-viewport.tscn', mode: '2d' },

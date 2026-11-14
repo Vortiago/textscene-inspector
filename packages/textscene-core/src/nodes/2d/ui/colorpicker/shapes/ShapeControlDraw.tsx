@@ -1,21 +1,21 @@
 /**
- * `<ShapeRow>`: paints one `ShapeDrawing` in the picker's content frame, in Godot's draw order: the
- * shader fill, the SV square, the cursors, then the slider, which a cursor at the area's edge passes under.
+ * What a shape Control's `draw` callback draws on it, at its own rect, in Godot's draw order: the
+ * shader fill, the SV square, the cursors, then the slider (`color_picker_shape.cpp`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { scaledIconSize } from '../../../../../r3f/controls/native/scaledSvgIcon';
+import { themedIconSize } from '../../../../../r3f/controls/native/scaledSvgIcon';
 import { useMemo } from 'react';
-import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../../r3f/components/CanvasItemGroup';
 import { ControlQuad } from '../../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../../r3f/controls/native/useIconTexture';
 import { PositionedIcon } from '../../../../../r3f/controls/native/PositionedIcon';
-import { useControlClipPlanes } from '../../../../../r3f/controls/native/controlClipping';
-import type { SolveNode } from '../../../../../r3f/controls/native/solveTree';
+import { painterView, type SolveNode } from '../../../../../r3f/controls/native/solveTree';
+import type { NativeControlComponentProps } from '../../../../../r3f/controls/ControlComponentRegistry';
+import type { ControlProperties } from '../../control/types';
 import {
   COLOR_PICKER_CURSOR_BG_ICON,
   COLOR_PICKER_CURSOR_ICON,
@@ -25,27 +25,28 @@ import { HAIRLINE_THICKNESS_PX, hairlineQuadStartPx } from '../../../../../r3f/c
 import {
   multiplyModulate,
   useItemLinearColor,
-  useVertexColorTint,
   type OwnPixelTint,
 } from '../../../../../r3f/canvasItemModulate';
 import type { Rgba } from '../../../../../godot/math/math';
-import { GradientMesh, buildGeometry, tintVertexColors } from '../GradientMesh';
-import { svSquareBaseLayer, svSquareHueLayer, verticalStripGeometry, type QuadGeometry } from '../svGradient';
+import { TintedGradient } from '../GradientMesh';
+import { svSquareBaseLayer, svSquareHueLayer, verticalStripGeometry } from '../svGradient';
 import { ShapeShaderQuad } from './ShapeShaderQuad';
-import type { ShapeCursor, ShapeDrawing, ShapeSlider, SvSquare } from './shapeDrawing';
+import type { PickerShapeColor, ShapeCursor, ShapeDraw, ShapeSlider, SvSquare } from './shapeDrawing';
 
-interface ShapeRowProps {
-  drawing: ShapeDrawing;
-  /** The pick colour, `color_picker->color`: the cursor background takes it opaque. */
+/** A shape Control's properties: its callback and what the callback reads of the picker. */
+export interface ShapeControlDrawProperties {
+  shapeDraw: ShapeDraw;
+  shapeColor: PickerShapeColor;
+  /** The picker's `color`: a cursor's background takes it opaque. */
   pickColor: Rgba;
-  solveNode: SolveNode;
-  tint: OwnPixelTint;
-  /** The theme scale: the default theme rasterises the cursor icons at it. */
-  scale: number;
-  renderOrder: number;
 }
 
-export function ShapeRow({ drawing, pickColor, solveNode, tint, scale, renderOrder }: ShapeRowProps) {
+export function ShapeControlDraw({ solveNode, rect, tint, theme, renderOrder }: NativeControlComponentProps) {
+  const { shapeDraw, shapeColor, pickColor } = painterView<ControlProperties & ShapeControlDrawProperties>(
+    solveNode
+  );
+  const { w, h } = rect;
+  const drawing = useMemo(() => shapeDraw({ x: 0, y: 0, w, h }, shapeColor), [shapeDraw, w, h, shapeColor]);
   return (
     <>
       {drawing.fill && (
@@ -61,38 +62,12 @@ export function ShapeRow({ drawing, pickColor, solveNode, tint, scale, renderOrd
           pickColor={pickColor}
           solveNode={solveNode}
           tint={tint}
-          size={scaledIconSize(COLOR_PICKER_CURSOR_SIZE, scale)}
+          scale={theme.scale}
           renderOrder={renderOrder}
         />
       ))}
       {drawing.slider && <Slider slider={drawing.slider} tint={tint} renderOrder={renderOrder} />}
     </>
-  );
-}
-
-/** One vertex-coloured mesh at local (0, 0), with the item's tint in its colours. */
-function TintedGradient({
-  layer,
-  tint,
-  renderOrder,
-}: {
-  layer: QuadGeometry;
-  tint: OwnPixelTint;
-  renderOrder: number;
-}) {
-  const clippingPlanes = useControlClipPlanes() as THREE.Plane[];
-  const vertexTint = useVertexColorTint(tint.own);
-  const geometry = useMemo(
-    () => buildGeometry({ ...layer, colors: tintVertexColors(layer.colors, vertexTint.vertex) }),
-    [layer, vertexTint.vertex]
-  );
-  return (
-    <GradientMesh
-      geometry={geometry}
-      renderOrder={renderOrder}
-      clippingPlanes={clippingPlanes}
-      tint={vertexTint}
-    />
   );
 }
 
@@ -117,20 +92,25 @@ function SvSquareLayers({
   );
 }
 
-/** `draw_cursor` (`color_picker_shape.cpp:269-275`). */
+const CURSOR_SIZE = { x: COLOR_PICKER_CURSOR_SIZE, y: COLOR_PICKER_CURSOR_SIZE };
+
+/**
+ * `draw_cursor` (`color_picker_shape.cpp:268-274`): both icons start where the ring centres on the
+ * cursor, and `draw_texture` draws each at its own size.
+ */
 function Cursor({
   cursor,
   pickColor,
   solveNode,
   tint,
-  size,
+  scale,
   renderOrder,
 }: {
   cursor: ShapeCursor;
   pickColor: Rgba;
   solveNode: SolveNode;
   tint: OwnPixelTint;
-  size: number;
+  scale: number;
   renderOrder: number;
 }) {
   const backgroundTexture = useNodeIcon(
@@ -140,12 +120,15 @@ function Cursor({
   const ringTexture = useNodeIcon(solveNode.icons.picker_cursor, COLOR_PICKER_CURSOR_ICON);
   const background = useMemo(() => multiplyModulate(tint.own, { ...pickColor, a: 1 }), [tint.own, pickColor]);
   const backgroundColor = useItemLinearColor(background);
-  const rect = { x: cursor.centre.x - size / 2, y: cursor.centre.y - size / 2, w: size, h: size };
+  const ringSize = themedIconSize(solveNode.textureSlots, 'picker_cursor', CURSOR_SIZE, scale);
+  const backgroundSize = themedIconSize(solveNode.textureSlots, 'picker_cursor_bg', CURSOR_SIZE, scale);
+  const x = cursor.centre.x - ringSize.x / 2;
+  const y = cursor.centre.y - ringSize.y / 2;
   return (
     <>
       {cursor.hasBackground && (
         <PositionedIcon
-          rect={rect}
+          rect={{ x, y, w: backgroundSize.x, h: backgroundSize.y }}
           texture={backgroundTexture}
           color={backgroundColor}
           opacity={background.a}
@@ -153,7 +136,7 @@ function Cursor({
         />
       )}
       <PositionedIcon
-        rect={rect}
+        rect={{ x, y, w: ringSize.x, h: ringSize.y }}
         texture={ringTexture}
         color={tint.color}
         opacity={tint.opacity}

@@ -14,14 +14,13 @@ import type { TextMeasurer } from './solverRegistry';
 import { childRectsOf, createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
 import { controlComponentRegistry, NO_PIECE_SLOTS } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
-import { useCanvasModulateFor } from '../../canvasModulate';
 import { internalControlsOf } from './internalControls';
 import { InternalControls } from './InternalControlGroup';
+import { placeChildren } from './paintedChildren';
 import { OwnCanvasModulateProvider, OwnModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
 import { useTextureSamplerOver } from '../../canvasItemTextureSampler';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
 import { ClipChildrenScope } from '../../canvasGroup/ClipChildrenScope';
-import { ClipMaskProvider } from '../../canvasGroup/ClipMaskContext';
 import { useResolvedCanvasItemMaterial } from '../../components/canvasItemMaterial';
 import {
   CanvasParentProvider,
@@ -312,16 +311,15 @@ function ControlItemGroup({
   const childRects = useMemo(() => childRectsOf(solveNode.children, solved), [solveNode.children, solved]);
 
   const internals = internalControlsOf(solveNode, theme);
-  const canvasModulate = useCanvasModulateFor(state.material);
   const internalEnv = useMemo(
-    () => ({ theme, measureText, snapToPixels, inheritedModulate: tint.inherited, canvasModulate }),
-    [theme, measureText, snapToPixels, tint.inherited, canvasModulate]
+    () => ({ theme, measureText, snapToPixels, inheritedModulate: tint.inherited, zFinal: state.zFinal }),
+    [theme, measureText, snapToPixels, tint.inherited, state.zFinal]
   );
 
   // A canvas boundary such as `CanvasLayer` wraps its descendants in fresh
   // context, so they must be its React children. The registration declares it,
   // so a second such type adds no branch here.
-  const wrapsChildren = controlComponentRegistry.wrapsChildren(solveNode.node.type);
+  const children = placeChildren(solveNode.node.type, childElements);
   // The painter's own path, as `NodeDispatcher` gives a node's: a ViewportTexture's `viewport_path`
   // counts from the painter's local scene.
   const painter = (
@@ -343,7 +341,7 @@ function ControlItemGroup({
           childRects={childRects}
           meta={solvedEntry?.meta}
         >
-          {wrapsChildren ? <ClipMaskProvider value={null}>{childElements}</ClipMaskProvider> : undefined}
+          {children.inPainter}
         </Painter>
       </OwnModulateProvider>
       {internals.length > 0 && (
@@ -374,12 +372,10 @@ function ControlItemGroup({
       </LitCanvasItemPixels>
     </ClipChildrenScope>
   );
-  const content = wrapsChildren ? (
-    litPainter
-  ) : (
+  const content = (
     <>
       {litPainter}
-      {childElements}
+      {children.afterPainter}
     </>
   );
 

@@ -3,7 +3,7 @@
  * `scene/theme/default_theme.cpp:357-358`, `:394-401`, `:814`, `:845`, `:1167`, `:1171`). The bases do not
  * depend on the theme scale.
  */
-export const DEFAULT_THEME_VARIATION_BASES: Readonly<Record<string, string>> = {
+const DEFAULT_THEME_VARIATION_BASES: Readonly<Record<string, string>> = {
   FlatButton: 'Button',
   FlatMenuButton: 'MenuButton',
   GraphFrameTitleLabel: 'Label',
