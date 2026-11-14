@@ -1,122 +1,62 @@
 /**
- * Tests that the legacy TileMap draws each enabled layer's cells in order: a rank
- * over (layer z_index, layer index, atlas source), on each batch mesh's `renderOrder`.
+ * Tests that the legacy TileMap draws each enabled layer's cells in order. Godot adds each layer
+ * as an internal TileMapLayer child at the front (`scene/2d/tile_map.cpp:277-279`), so the layers
+ * draw before the TileMap's authored children, and a layer's `z_index` is its own.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { isInZBucket, nearestGroupOrder, worldCanvasKey } from '../../../../r3f/testing/paintOrder';
-import { WHOLE_CANVAS_RANGE, type PaintRange } from '../../../../r3f/canvasPaintOrder';
-import { PaintRun } from '../../../../r3f/testing/PaintRun';
-import { parseTileMap } from './parser';
-import { TileMap } from './Component';
-import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
-import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
+import { isInZBucket, nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
+import { polygonMeshes, renderTileMap, tileMeshes } from './tileMap.testkit';
 
-const heading = { type: 'node', attributes: { type: 'TileMap', name: 'Map' } };
-const TEX = 'res://tiles.png';
-
-const externals: TscnExternalResource[] = [{ id: '2', type: 'Texture2D', path: TEX }];
-const internals: TscnInternalResource[] = [
-  {
-    id: 'atlas1',
-    type: 'TileSetAtlasSource',
-    data: { texture: 'ExtResource("2")', texture_region_size: 'Vector2i(16, 16)', '0:0/0': '0' },
-  },
-  { id: 'ts', type: 'TileSet', data: { 'sources/0': 'SubResource("atlas1")' } },
-];
-
-function makeNode(raw: Record<string, string>): TscnNode {
-  return {
-    rawProperties: {},
-    name: 'Map',
-    type: 'TileMap',
-    children: [],
-    properties: parseTileMap(heading, { tile_set: 'SubResource("ts")', format: '2', ...raw }),
-  };
-}
-
-async function render(node: TscnNode, paintRange: PaintRange = WHOLE_CANVAS_RANGE) {
-  const fake = createFakeResourceLoader();
-  const tex = new THREE.Texture();
-  (tex as unknown as { image: { width: number; height: number } }).image = { width: 32, height: 32 };
-  fake.textures.seed(TEX, tex);
-  return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider internalResources={internals} externalResources={externals}>
-        <PaintRun value={paintRange}>
-          <TileMap node={node} />
-        </PaintRun>
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
-  );
-}
+const withTileSet = (...lines: string[]) => ['tile_set = SubResource("ts")', ...lines].join('\n');
 
 describe('TileMap render parity', () => {
   it('renders enabled layers in order with the layer z rule; disabled layers are skipped', async () => {
-    const r = await render(
-      makeNode({
-        'layer_0/tile_data': 'PackedInt32Array(0, 0, 0)',
-        'layer_1/z_index': '1',
-        'layer_1/tile_data': 'PackedInt32Array(1, 0, 0)',
-        'layer_2/enabled': 'false',
-        'layer_2/tile_data': 'PackedInt32Array(2, 0, 0)',
-      })
+    const renderer = await renderTileMap(
+      withTileSet(
+        'layer_0/tile_data = PackedInt32Array(0, 0, 0)',
+        'layer_1/z_index = 1',
+        'layer_1/tile_data = PackedInt32Array(1, 0, 0)',
+        'layer_2/enabled = false',
+        'layer_2/tile_data = PackedInt32Array(2, 0, 0)'
+      )
     );
-
-    const meshes = r.scene.findAllByType('Mesh');
-    expect(meshes).toHaveLength(2);
-    const [layer0, layer1] = meshes.map((m) => m.instance as THREE.Object3D);
-    // Godot's TileMap `add_child`s a real `TileMapLayer` CanvasItem per layer
-    // and forwards `set_z_index` to it (`scene/2d/tile_map.cpp:279,376`), so a
-    // layer is a canvas item in its own right: its key rides its group, which
-    // is what three reads a drawn object's position from.
-    expect(nearestGroupOrder(layer0!)).toBeLessThan(nearestGroupOrder(layer1!));
-    // …and `layer_1/z_index = 1` puts that layer a whole z bucket up, which is
-    // what lets it interleave with the TileMap's siblings rather than only with
-    // the other layers. A rank shared across one canvas item cannot express it.
-    expect(isInZBucket(nearestGroupOrder(layer0!), 0)).toBe(true);
-    expect(isInZBucket(nearestGroupOrder(layer1!), 1)).toBe(true);
+    const [layer0, layer1] = tileMeshes(renderer).map(nearestGroupOrder);
+    expect(tileMeshes(renderer)).toHaveLength(2);
+    expect(layer0).toBeLessThan(layer1!);
+    expect(isInZBucket(layer0!, 0)).toBe(true);
+    expect(isInZBucket(layer1!, 1)).toBe(true);
   });
 
-  it('keeps every layer inside a paint range too small to give each its own value', async () => {
-    // A layer past the range's end would draw inside the next sibling's range.
-    const range = { base: 100, size: 2 };
-    const r = await render(
-      makeNode({
-        'layer_0/tile_data': 'PackedInt32Array(0, 0, 0)',
-        'layer_1/tile_data': 'PackedInt32Array(1, 0, 0)',
-        'layer_2/tile_data': 'PackedInt32Array(2, 0, 0)',
-      }),
-      range
+  it("draws every layer before the TileMap's authored child, and that before the next sibling", async () => {
+    const renderer = await renderTileMap(
+      withTileSet(
+        'layer_0/tile_data = PackedInt32Array(0, 0, 0)',
+        'layer_1/tile_data = PackedInt32Array(1, 0, 0)',
+        'layer_2/tile_data = PackedInt32Array(2, 0, 0)'
+      )
     );
-
-    const keys = r.scene.findAllByType('Mesh').map((m) => nearestGroupOrder(m.instance as THREE.Object3D));
-    expect(keys).toHaveLength(3);
-    const first = worldCanvasKey(0, range.base);
-    const pastLast = worldCanvasKey(0, range.base + range.size);
-    for (const key of keys) {
-      expect(key).toBeGreaterThanOrEqual(first);
-      expect(key).toBeLessThan(pastLast);
-    }
+    const layers = tileMeshes(renderer).map(nearestGroupOrder);
+    const [child, after] = polygonMeshes(renderer).map(nearestGroupOrder);
+    expect(layers).toHaveLength(3);
+    expect(layers).toEqual([...layers].sort((a, b) => a - b));
+    expect(Math.max(...layers)).toBeLessThan(child!);
+    expect(child).toBeLessThan(after!);
   });
 
-  it('renders an empty group for a TileMap with a tile_set but zero layers', async () => {
-    const r = await render(makeNode({}));
-    expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
-    expect(r.scene.findByProps({ name: 'Map' })).toBeDefined();
+  it('draws no tile for a TileMap with a tile_set but zero layers', async () => {
+    const renderer = await renderTileMap(withTileSet());
+    expect(tileMeshes(renderer)).toHaveLength(0);
   });
 
   it("applies layer_N/modulate to that layer's pixels (composed in sRGB, like the CanvasItem chain)", async () => {
-    const r = await render(
-      makeNode({
-        'layer_0/tile_data': 'PackedInt32Array(0, 0, 0)',
-        'layer_0/modulate': 'Color(0.5, 0.5, 0.5, 0.5)',
-      })
+    const renderer = await renderTileMap(
+      withTileSet(
+        'layer_0/tile_data = PackedInt32Array(0, 0, 0)',
+        'layer_0/modulate = Color(0.5, 0.5, 0.5, 0.5)'
+      )
     );
-    const material = (r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const material = tileMeshes(renderer)[0]!.material as THREE.MeshBasicMaterial;
     const srgbToLinear = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
     expect(material.color.r).toBeCloseTo(srgbToLinear(0.5), 4);
     expect(material.opacity).toBeCloseTo(0.5, 5);
