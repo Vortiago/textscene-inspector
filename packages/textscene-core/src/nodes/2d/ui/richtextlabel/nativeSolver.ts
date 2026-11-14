@@ -29,7 +29,7 @@ import {
   type ShapeTextOptions,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import type { LineExtentPx } from '../../../../r3f/controls/native/text/lineExtent';
+import { shapedLineHeightPx, type LineExtentPx } from '../../../../r3f/controls/native/text/lineExtent';
 import { justifyParagraphs } from '../../../../r3f/controls/native/text/textJustify';
 import { faceOfStyle, resolveRichTextFaces, type RichTextFaces } from './styleFaces';
 import {
@@ -822,7 +822,7 @@ function richTextLineTopsPx(
   let paragraphTopPx = 0;
   let inParagraphPx = 0;
   let paragraphHeightPx = 0;
-  lines.forEach(({ ascentPx, descentPx }, lineIndex) => {
+  lines.forEach((line, lineIndex) => {
     const paragraphIndex = layout.lines[lineIndex]!.paragraphIndex;
     if (lineIndex > 0 && paragraphIndex !== layout.lines[lineIndex - 1]!.paragraphIndex) {
       paragraphTopPx += paragraphHeightPx;
@@ -830,8 +830,8 @@ function richTextLineTopsPx(
       paragraphHeightPx = 0;
     }
     topsPx.push(paragraphTopPx + inParagraphPx);
-    inParagraphPx += ascentPx + descentPx + spacingPx;
-    paragraphHeightPx += Math.ceil(ascentPx + descentPx) + spacingPx;
+    inParagraphPx += line.ascentPx + line.descentPx + spacingPx;
+    paragraphHeightPx += shapedLineHeightPx(line) + spacingPx;
   });
   return { topsPx, contentHeightPx: paragraphTopPx + paragraphHeightPx };
 }
@@ -861,8 +861,6 @@ function lineMetricsOf(
   styledRuns: readonly StyledTextRun[],
   layout: TextLayoutResult
 ): RichTextLineMetrics[] {
-  const paragraphAscentPx = layout.baselineOffsetPx;
-  const paragraphDescentPx = layout.linePitchPx - layout.lineSpacingPx - layout.baselineOffsetPx;
   const zeroHeightParagraphs = zeroHeightParagraphsOf(styledRuns);
 
   const extents = perLine.map((segments, lineIndex) => {
@@ -871,11 +869,8 @@ function lineMetricsOf(
       return { ascentPx: 0, descentPx: 0, textAscentPx: 0, textDescentPx: 0 };
     }
     // Text first: `_realign` measures every image against these values, and an
-    // image adds nothing to them. A blank line shapes its break in the paragraph font.
-    const line = layout.lines[lineIndex]!;
-    const isBlank = segments.length === 0;
-    const textAscentPx = isBlank ? paragraphAscentPx : line.ascentPx;
-    const textDescentPx = isBlank ? paragraphDescentPx : line.descentPx;
+    // image adds nothing to them.
+    const { ascentPx: textAscentPx, descentPx: textDescentPx } = layout.lines[lineIndex]!;
     let ascentPx = textAscentPx;
     let descentPx = textDescentPx;
 
