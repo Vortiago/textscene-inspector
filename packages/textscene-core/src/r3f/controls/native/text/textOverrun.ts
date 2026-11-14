@@ -355,8 +355,8 @@ function trimmedWidthPx({ cut, ellipsisWidthPx }: OverrunTrim): number {
 }
 
 /**
- * `line` with the glyphs of a placement in place of its own, and without the `outlineGlyphs` of an earlier trim. A trim
- * does not reshape, so every other field, the underline among them, stays the line's.
+ * `line` with the glyphs of a placement in place of its own, and without the `outlineGlyphs` of an
+ * earlier trim. A trim does not reshape, so every other field, the underline among them, stays the line's.
  */
 function trimmedLine(
   line: TextLineLayout,
