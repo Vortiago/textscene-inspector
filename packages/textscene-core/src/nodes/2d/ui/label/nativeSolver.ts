@@ -62,7 +62,6 @@ import {
 } from '../../../../godot/text/textServerEnums';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { FALLBACK_THEME_CONSTANT } from '../../../../godot/scene/theme';
-import { defaultConstant } from '../../../../godot/scene/defaultTheme/defaultTheme';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
@@ -72,12 +71,6 @@ const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_
  * which {@link labelFontState} falls back to.
  */
 const LABEL_THEME_FONT_KEY = 'font';
-
-/**
- * The table's `Label/line_spacing` at theme scale 1: the spacing `layoutLabelLines` assumes when its
- * caller passes none. A Label reads its own from `n.constants`.
- */
-const LABEL_LINE_SPACING_PX = defaultConstant('Label', 'line_spacing');
 
 /** Label's `paragraph_spacing`: the default theme sets none, so a lookup ends at the fallback theme. */
 const LABEL_PARAGRAPH_SPACING_PX = FALLBACK_THEME_CONSTANT;
@@ -497,10 +490,10 @@ interface LineDirection {
   isAutowrapped: boolean;
 }
 
-interface LabelLayoutOptions extends Partial<LabelSpacing> {
+interface LabelLayoutOptions extends Partial<Pick<LabelSpacing, 'paragraphSpacingPx'>> {
   /** The margins of the `normal` box (`style->get_offset()` and `get_margin`, `label.cpp:491-512,591-616`). Defaults to none. */
   contentMargin?: LabelMargin;
-  // The spacings default to Label's theme defaults, which the Graph titlebar's title Label uses.
+  // The paragraph spacing defaults to Label's theme default. The line spacing is the one the text was shaped with.
   /** `is_layout_rtl()` (`SolveNode.rtl`). Defaults `false`. */
   rtl?: boolean;
   /** `autowrap_mode != AUTOWRAP_OFF`, the gate of FILL's RTL arm (`label.cpp:473`). Defaults `false`. */
@@ -562,7 +555,6 @@ export function layoutLabelLines(
     isAutowrapped = false,
     trim,
     contentMargin = ZERO_SIDES,
-    lineSpacingPx = LABEL_LINE_SPACING_PX,
     paragraphSpacingPx = LABEL_PARAGRAPH_SPACING_PX,
   } = options;
   const lineCount = layout.lines.length;
@@ -570,7 +562,7 @@ export function layoutLabelLines(
 
   // label.cpp:599: `total_h - line_spacing - paragraph_spacing`. `labelMinimumSize` applies the same correction.
   const contentHeightPx =
-    layout.heightPx - lineSpacingPx - paragraphSpacingPx + contentMargin.top + contentMargin.bottom;
+    layout.heightPx - layout.lineSpacingPx - paragraphSpacingPx + contentMargin.top + contentMargin.bottom;
 
   // `get_layout_data` declares `int vbegin = 0, vsep = 0` (`label.cpp:591`), so each offset
   // truncates toward zero to a whole pixel, negative when the box is shorter than the text. The
@@ -623,7 +615,7 @@ export function layoutLabelLines(
       paragraphGapsAbovePx += paragraphSpacingPx;
     }
     const y = contentMargin.top + vbeginPx + lineTopPx + paragraphGapsAbovePx;
-    lineTopPx += lineHeightPx(line, lineSpacingPx) + vsepPx;
+    lineTopPx += lineHeightPx(line, layout.lineSpacingPx) + vsepPx;
     // `_get_line_rect` aligns against the ceiled `TS->shaped_text_get_size(rid)` (`label.cpp:478`),
     // not the raw pen advance the fit needs.
     const direction = { rtl, isRtlParagraph: line.isRtl === true, isAutowrapped };

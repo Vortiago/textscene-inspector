@@ -252,7 +252,6 @@ function LabelText({
           isAutowrapped: autowrapMode !== AutowrapMode.AUTOWRAP_OFF,
           trim,
           contentMargin,
-          lineSpacingPx: textTheme.lineSpacingPx,
           paragraphSpacingPx: textTheme.paragraphSpacingPx,
         }
       ),
@@ -263,7 +262,6 @@ function LabelText({
       props.horizontalAlignment,
       props.verticalAlignment,
       effectiveJustificationFlags,
-      textTheme.lineSpacingPx,
       textTheme.paragraphSpacingPx,
       contentMargin,
       solveNode.rtl,

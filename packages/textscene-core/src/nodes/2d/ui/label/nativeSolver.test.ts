@@ -431,6 +431,17 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
     return shapeText(text, { fontSizePx: FONT_SIZE, boxWidthPx, autowrapMode, lineSpacingPx: 3 });
   }
 
+  it('steps each line by the line spacing the text was shaped with', () => {
+    const layout = shapeText('A\nA', {
+      fontSizePx: FONT_SIZE,
+      boxWidthPx: 0,
+      autowrapMode: 0,
+      lineSpacingPx: 10,
+    });
+    const placements = layoutLabelLines(layout, 200, 200, undefined, undefined);
+    expect(placements.map((p) => p.y)).toEqual([0, PITCH - 3 + 10]);
+  });
+
   it('left alignment (default/undefined): every line starts at x=0', () => {
     const layout = layoutFor('A\nAB'); // two lines, different widths
     const placements = layoutLabelLines(layout, 200, 200, undefined, undefined);
@@ -1489,10 +1500,7 @@ describe('Label paragraph_spacing and the theme spacing constants (label.cpp:344
       undefined,
       props.verticalAlignment,
       undefined,
-      {
-        lineSpacingPx: theme.lineSpacingPx,
-        paragraphSpacingPx: theme.paragraphSpacingPx,
-      }
+      { paragraphSpacingPx: theme.paragraphSpacingPx }
     ).map((p) => p.y);
   }
 
