@@ -60,6 +60,8 @@ const CONTAINER_TYPES = new Set([
   'AcceptDialog',
   'ConfirmationDialog',
   'FileDialog',
+  // A VBoxContainer that stacks `internal_margin` over its authored children (`color_picker.h:82`).
+  'ColorPicker',
 ]);
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
