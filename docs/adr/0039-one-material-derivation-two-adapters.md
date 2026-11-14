@@ -219,8 +219,9 @@ reason. Its fourth union member, `invalid_key`, is the same constructor sentinel
   (`canvas_item_material.cpp:118-137`). Here it is answered **on the CPU, in the
   geometry**: `r3f/particlesFlipbook.ts` transcribes the shader's `floor` / `clamp` /
   `mod` chain as `flipbookCell`. `r3f/meshes/canvasMeshInstances.ts` builds each
-  CPUParticles2D quad and each mesh instance at the cell's size and offsets its UVs. So it is not a material term here, and cannot be a key term of a
-  material that never learns about it.
+  CPUParticles2D quad and each mesh instance at the cell's size and offsets its UVs.
+  So it is not a material term here, and cannot be a key term of a material that never
+  learns about it.
 
 ## Cast shadows are instance state, not material state
 

@@ -18,6 +18,9 @@ import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { useCanvas2DTexture } from './canvas2DTextureDecode';
 import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import { WHITE_MODULATE, type VertexColorTint } from './canvasItemModulate';
+
+/** A tile run's tint. `CanvasSurfaceMaterial` takes its defines from the canvas space, not the tint. */
+export type TileTint = Omit<VertexColorTint, 'defines'>;
 import type { Rgba } from '../godot/math/math';
 import { TILE_TEXTURE_PADDING, TILE_UV_BOUNDS_ATTRIBUTE } from './tileTexturePadding';
 import { TILE_NORMAL_ORIENTATION, TILE_NORMAL_ORIENTATION_ATTRIBUTE } from './tileNormalOrientation';
@@ -34,7 +37,7 @@ interface TileSourceMeshProps {
   /** The run's place among the layer's runs. three compares the group's order first. */
   renderOrder: number;
   /** The tile canvas item's tint, split between the vertex colours and the material. */
-  tint: VertexColorTint;
+  tint: TileTint;
   /** The layer's effective filter and repeat, which a source's CanvasTexture may override. */
   sampler: CanvasItemTextureSampler;
 }
@@ -82,7 +85,8 @@ export function TileSourceMesh({
   // The run's own maps, so runs of one tile item from different sources each light with theirs.
   const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
   // A source with no texture draws nothing (`tile_map_layer.cpp:724`), nor does a pending one. A
-  // failed one draws nothing too: Godot's loader leaves the texture null (`tile_map_layer.cpp:2676-2677`).
+  // failed one in a TileSet file draws nothing too: the loader leaves the texture null
+  // (`resource_format_text.cpp:146-154`), and the draw skips it (`tile_map_layer.cpp:2676-2677`).
   const isDrawn = source.texture !== null && !texResult.missing && tex !== null && geometry !== null;
   const pixelMaterial = useSurfacePixelMaterial(surface, isDrawn);
   if (!isDrawn) return null;
