@@ -364,7 +364,7 @@ describe('TileMapLayer degradation (ADR-0008)', () => {
     expect(r.scene.findAllByType('Mesh')).toHaveLength(1);
   });
 
-  it('a missing texture degrades only its atlas source: placeholder there, other sources render', async () => {
+  it('a missing texture degrades only its atlas source: no tile there, other sources render', async () => {
     // Cells from source 0 (texture missing) and source 1 (texture present).
     const twoSources =
       'PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0)';
@@ -372,11 +372,7 @@ describe('TileMapLayer degradation (ADR-0008)', () => {
       missingTextures: [TEX],
     });
     const meshes = r.scene.findAllByType('Mesh');
-    expect(meshes).toHaveLength(2);
-    const colors = meshes.map((m) =>
-      ((m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color.getHexString()
-    );
-    expect(colors).toContain('ff00ff'); // the magenta per-source placeholder
+    expect(meshes).toHaveLength(1);
     const tiled = meshes.find(
       (m) => ((m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).map !== null
     );

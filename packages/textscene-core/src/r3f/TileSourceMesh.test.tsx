@@ -124,10 +124,10 @@ describe('TileSourceMesh without a usable texture', () => {
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
-  it('draws the placeholder when the texture is set but fails to load', async () => {
+  // Godot's loader leaves the texture null, and a tile draws only from a texture (`tile_map_layer.cpp:2676-2677`).
+  it('draws nothing when the texture is set but fails to load', async () => {
     const renderer = await render(sourceOf(false), null);
-    const material = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    expect((material.material as THREE.MeshBasicMaterial).color.getHexString()).toBe('ff00ff');
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 });
 

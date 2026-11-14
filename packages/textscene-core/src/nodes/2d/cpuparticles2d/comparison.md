@@ -10,7 +10,9 @@ renders_as: one merged quad mesh holding a frozen particle pose
 
 CPUParticles2D is Godot's CPU-simulated emitter. The previewer runs a port of the
 engine's own simulation once, PCG32 generator included. It draws the result as one
-merged quad mesh that holds a frozen pose.
+merged quad mesh that holds a frozen pose. A texture that is set but fails to load draws white
+quads of 1 by 1 pixel, as Godot does (`cpu_particles_2d.cpp:1288-1291`). Godot's loader leaves
+a property that names a missing file null (`resource_format_text.cpp:146-154`, `:288-289`).
 
 ## Emission shapes
 <!-- compare: image=unit-cpuparticles2d-emission-shapes status=done fixture=unit-cpuparticles2d-emission-shapes.tscn -->

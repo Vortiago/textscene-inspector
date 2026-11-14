@@ -29,21 +29,28 @@ function withoutComments(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 }
 
-const canvasItems = sourceFiles(SRC)
-  .map((path) => ({
-    name: relative(SRC, path).split(sep).join('/'),
-    text: withoutComments(readFileSync(path, 'utf8')),
-  }))
-  .filter(({ text }) => /<(?:CanvasItem2D|CanvasItemSurfaceSource|CanvasMeshBody)\b/.test(text));
+const sources = sourceFiles(SRC).map((path) => ({
+  name: relative(SRC, path).split(sep).join('/'),
+  text: withoutComments(readFileSync(path, 'utf8')),
+}));
+const canvasItems = sources.filter(({ text }) =>
+  /<(?:CanvasItem2D|CanvasItemSurfaceSource|CanvasMeshBody)\b/.test(text)
+);
 
 const LOADS_THROUGH_HOOK = /\buse(?:CanvasItemTexture(?:SampledBy)?|CanvasMeshTexture)\(/;
 const LOADS_DIRECTLY = /\buseTexture2D\s*\(/;
 const PASSES_CANVAS_TEXTURE = /\bcanvasTexture\s*=\s*\{|\bcanvasTexture\.slot\b|<CanvasMeshBody\b/;
 
 /** The drawers whose texture, tint and material `CanvasMeshBody` holds. */
-const CANVAS_MESH_DRAWERS = ['animatedsprite2d', 'line2d', 'polygon2d', 'sprite2d'].map(
+const CANVAS_MESH_DRAWERS = ['animatedsprite2d', 'cpuparticles2d', 'line2d', 'polygon2d', 'sprite2d'].map(
   (folder) => `nodes/2d/${folder}/Component.tsx`
 );
+/** The drawers that mount `CanvasSurfaceMaterial` with a draw of their own, as a tile run and a CanvasGroup rect. */
+const CANVAS_SURFACE_ADAPTERS = ['r3f/TileSourceMesh.tsx', 'nodes/2d/canvasgroup/Component.tsx'];
+const BUILDS_ITS_OWN_MATERIAL = /<meshBasicMaterial\b|\bmaterialProgramInputs\(/;
+/** What only `CanvasMeshBody` hands `CanvasItem2D`, and `CanvasItem2D` hands on inside itself. */
+const PASSES_BODY_PROPS = /<CanvasItem2D\b[^>]*\b(?:canvasTexture|isDrawn)=/;
+const BODY_PROP_OWNERS = ['r3f/canvasMesh/CanvasMeshBody.tsx', 'r3f/components/CanvasItem2D.tsx'];
 const BUILDS_ITS_OWN_DRAW = /<meshBasicMaterial\b|\bmaterialProgramInputs\(|\buseCanvasItemTexture\(/;
 
 describe('a texture-drawing canvas item', () => {
@@ -75,6 +82,26 @@ describe('a texture-drawing canvas item', () => {
       .map(({ name }) => name);
     expect(canvasItems.map(({ name }) => name)).toEqual(expect.arrayContaining(CANVAS_MESH_DRAWERS));
     expect(buildsItsOwn).toEqual([]);
+  });
+
+  it('leaves a tile run and a CanvasGroup rect no material of their own', () => {
+    const buildsItsOwn = sources
+      .filter(
+        ({ name, text }) => CANVAS_SURFACE_ADAPTERS.includes(name) && BUILDS_ITS_OWN_MATERIAL.test(text)
+      )
+      .map(({ name }) => name);
+    expect(sources.map(({ name }) => name)).toEqual(expect.arrayContaining(CANVAS_SURFACE_ADAPTERS));
+    expect(buildsItsOwn).toEqual([]);
+  });
+
+  it('lets only the canvas mesh body hand CanvasItem2D a canvasTexture or isDrawn', () => {
+    const passes = sources
+      .filter(({ name, text }) => !BODY_PROP_OWNERS.includes(name) && PASSES_BODY_PROPS.test(text))
+      .map(({ name }) => name);
+    expect(sources.some(({ name, text }) => name === BODY_PROP_OWNERS[0] && /\bisDrawn=/.test(text))).toBe(
+      true
+    );
+    expect(passes).toEqual([]);
   });
 
   it('passes the CanvasTexture on to the lighting', () => {

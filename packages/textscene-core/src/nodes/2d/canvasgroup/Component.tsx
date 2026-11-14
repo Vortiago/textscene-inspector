@@ -16,7 +16,7 @@ import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasI
 import { node2dZStep, useCanvasRunKeysOfNode } from '../../../r3f/canvasItemState';
 import type { CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { canvasNumbersOf, useCanvasColorSpace, type CanvasColorSpace } from '../../../r3f/canvasColorSpace';
-import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
+import { CanvasSurfaceMaterial } from '../../../r3f/canvasMesh/CanvasSurfaceMaterial';
 import { createCanvasFrame } from '../../../r3f/components/Canvas2DStage/canvasFrame';
 import { registerCanvasGroup } from '../../../r3f/canvasGroup/canvasGroupPass';
 import { canvasGroupRectTag } from '../../../r3f/canvasGroup/keyedScene';
@@ -113,16 +113,6 @@ function GroupRect({ window, tint, material, pixelMaterial, fitMargin, clearMarg
     });
   }, [scene, window, buffer, readsBuffer, fitRect]);
 
-  const program = materialProgramInputs({
-    props: {
-      color: tint.color,
-      opacity: tint.opacity,
-      transparent: true,
-      depthWrite: false,
-      defines: space.defines,
-    },
-    merge: [pixelMaterial],
-  });
   // Hidden until the pass fits them: a canvas drawn without the pass shows no unit square.
   return (
     <>
@@ -134,7 +124,14 @@ function GroupRect({ window, tint, material, pixelMaterial, fitMargin, clearMarg
         userData={canvasGroupRectTag()}
       />
       <mesh ref={plain} visible={false} geometry={UNIT_SQUARE} userData={canvasGroupRectTag()}>
-        <meshBasicMaterial key={program.key} {...program.props} />
+        <CanvasSurfaceMaterial
+          map={null}
+          color={tint.color}
+          opacity={tint.opacity}
+          vertexColors={null}
+          drawsPoints={false}
+          pixelMaterial={pixelMaterial}
+        />
       </mesh>
     </>
   );
