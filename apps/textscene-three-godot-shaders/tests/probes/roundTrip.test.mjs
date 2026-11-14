@@ -1,47 +1,66 @@
 /**
- * Every probe source Godot accepts gives a tree that passes the tree check, and the printer
- * writes that tree as text the parser reads as the same tree. The lowered tree holds both too.
+ * Every probe source the parser reads gives a tree that passes the tree check, and the printer
+ * writes that tree as text the parser reads as the same tree. The tree the emitter walks holds
+ * both too, for every probe the transpiler does not refuse. The parser refuses what Godot's front
+ * end refuses (`languageRefusals.test.mjs`), so this needs no answer from Godot.
  */
 
 import { describe, expect, it } from 'vitest';
-import { parse } from '../../../../packages/textscene-core/src/shaders/language/parse.ts';
-import { lowerFunction } from '../../../../packages/textscene-core/src/shaders/language/lowering/lower.ts';
 import { printShader } from '../../../../packages/textscene-core/src/shaders/language/printer.ts';
-import { tokenize } from '../../../../packages/textscene-core/src/shaders/language/tokenizer.ts';
+import { ShadingLanguageError } from '../../../../packages/textscene-core/src/shaders/language/shadingLanguageError.ts';
 import { treeFault } from '../../../../packages/textscene-core/src/shaders/language/treeCheck.ts';
+import { loweredFault, loweredTreeOf, shapeOf, treeOf } from '../verdicts/trees.testkit.mjs';
 import { PROBES } from './probes.mjs';
 
-const RECORD = (await import('./godot-record.json', { with: { type: 'json' } })).default;
+/** The tree `make` gives of `source`, or nothing for the transpiler's refusal. */
+function treeOrRefusal(make, source) {
+  try {
+    return make(source);
+  } catch (error) {
+    if (error instanceof ShadingLanguageError) return undefined;
+    throw error;
+  }
+}
 
-const accepted = PROBES.filter((probe) => !RECORD.probes[probe.name]?.rejected);
+/**
+ * The probes the transpiler parses and then refuses to lower: Godot's GLSL of each is refused by
+ * the GPU compiler. A new refusal fails here, so no probe leaves the lowered set unseen.
+ */
+const REFUSED_AFTER_PARSE = [
+  'index-folded-past-end',
+  'index-folded-write-past-end',
+  'unbracketed-operator-before',
+  'unbracketed-negated',
+];
 
-const treeOf = (source) => parse(tokenize(source));
+/** Each probe's tree that `make` gives, made once, as `[name, tree]`. */
+const treesOf = (make) =>
+  PROBES.map((probe) => [probe.name, treeOrRefusal(make, probe.source)]).filter(([, tree]) => tree);
 
-const loweredTreeOf = (source) => {
-  const tree = treeOf(source);
-  return { ...tree, functions: tree.functions.map(lowerFunction) };
-};
+const PARSED = treesOf(treeOf);
+const LOWERED = treesOf(loweredTreeOf);
 
-/** `tree` without the positions, which differ between a text and its printed form. */
-const shapeOf = (tree) =>
-  JSON.parse(JSON.stringify(tree, (key, value) => (key === 'position' ? undefined : value)));
-
-describe.each(accepted.map((probe) => [probe.name, probe.source]))('probe %s', (_, source) => {
+describe.each(PARSED)('the parsed tree of probe %s', (_, tree) => {
   it('passes the tree check', () => {
-    expect(treeFault(treeOf(source))).toBeUndefined();
+    expect(treeFault(tree)).toBeUndefined();
   });
 
   it('prints as text that parses to the same tree', () => {
-    const tree = treeOf(source);
     expect(shapeOf(treeOf(printShader(tree)))).toEqual(shapeOf(tree));
   });
+});
 
-  it('lowers to a tree that passes the tree check', () => {
-    expect(treeFault(loweredTreeOf(source))).toBeUndefined();
+it('lowers every parsed probe but those whose GLSL the GPU compiler refuses', () => {
+  const lowered = new Set(LOWERED.map(([name]) => name));
+  expect(PARSED.map(([name]) => name).filter((name) => !lowered.has(name))).toEqual(REFUSED_AFTER_PARSE);
+});
+
+describe.each(LOWERED)('the lowered tree of probe %s', (_, lowered) => {
+  it('passes the tree check and holds only what the emitter reads', () => {
+    expect(loweredFault(lowered)).toBeUndefined();
   });
 
-  it('lowers to a tree that prints as text that parses to the same tree', () => {
-    const lowered = loweredTreeOf(source);
+  it('prints as text that parses to the same tree', () => {
     expect(shapeOf(treeOf(printShader(lowered)))).toEqual(shapeOf(lowered));
   });
 });

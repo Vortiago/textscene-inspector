@@ -7,14 +7,12 @@
 
 import { Break, Continue, Discard, Fn, If, Loop } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import { bindConstantReads } from './constantReads.js';
 import { EmitScope } from './emitScope.js';
-import { ExpressionEmitter, writtenNames } from './emitExpression.js';
+import { writtenNames } from './assignment.js';
+import { ExpressionEmitter } from './emitExpression.js';
+import { emittedTree } from './emittedTree.js';
 import { declareVariables, inVar, type StructOf, type Value, variablesOf } from './emitValue.js';
-import { refuseFoldedIndexOutOfRange } from './foldedIndex.js';
-import { GlslangFolding } from './glslangFolding.js';
-import { glslBlock } from './godotText.js';
-import { lowerFunction } from './lowering/lower.js';
+import type { GlslangFolding } from './glslangFolding.js';
 import type {
   Argument,
   BlockNode,
@@ -44,11 +42,7 @@ export interface TranspiledFunction {
 
 /** `definition` of `shader` as TSL. The tree holds only rows the transpiler transpiles (`checkTranspiled`). */
 export function emitFunction(definition: FunctionNode, shader: ShaderNode): TranspiledFunction {
-  const folding = new GlslangFolding();
-  const glsl = { ...definition, body: glslBlock(definition.body) };
-  bindConstantReads(glsl.body, folding);
-  refuseFoldedIndexOutOfRange(glsl.body, folding);
-  const lowered = lowerFunction(glsl);
+  const { lowered, folding } = emittedTree(definition);
   const structOf: StructOf = (type) => shader.structs.find((struct) => struct.name === type);
   // An argument the function never writes is read from its node, as Godot's GLSL reads its
   // parameter. A copy into a `Var` lets the driver fold the arithmetic otherwise, one unit apart.

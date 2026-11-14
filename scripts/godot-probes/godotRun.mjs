@@ -65,19 +65,45 @@ export function runGodotScriptToExit(mainScript, files) {
       ...files,
     };
     for (const [name, text] of Object.entries(project)) writeFileSync(join(directory, name), text);
-    const plan = godotSpawnPlan(['--path', directory], { display: true });
-    const result = spawnSync(plan.command, plan.argv, {
-      encoding: 'utf8',
-      env: plan.env,
-      timeout: plan.timeoutMs,
-      maxBuffer: OUTPUT_BYTES_AT_MOST,
-    });
+    const first = spawnGodot(directory);
+    const result = failedToStart(first) ? spawnGodot(directory) : first;
+    if (result.error?.code === 'ENOENT') {
+      throw new Error(
+        `run godot: ${result.error.message}. Godot ${GODOT_VERSION} and xvfb-run must be on the path, as in the CI image`
+      );
+    }
+    if (result.error?.code === 'ETIMEDOUT')
+      throw new Error(`run godot: no exit within ${result.timeoutMs} ms`);
     if (result.error) throw new Error(`run godot: ${result.error.message}`);
     return { status: result.status, stdout: result.stdout, stderr: result.stderr };
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
 }
+
+function spawnGodot(directory) {
+  const plan = godotSpawnPlan(['--path', directory], { display: true });
+  const result = spawnSync(plan.command, plan.argv, {
+    encoding: 'utf8',
+    env: plan.env,
+    timeout: plan.timeoutMs,
+    maxBuffer: OUTPUT_BYTES_AT_MOST,
+  });
+  return { ...result, timeoutMs: plan.timeoutMs };
+}
+
+/** The spawn errors of a Godot or xvfb that did not start, which one more start may clear. */
+const START_ERRORS = new Set(['ENOENT', 'EAGAIN']);
+
+/**
+ * Whether a run ended before the project printed anything: Godot or xvfb did not start. One
+ * more start is allowed. A probe that ends Godot prints its crash report, and a run that times
+ * out or overflows its output has started, so neither is such a run.
+ */
+const failedToStart = (result) =>
+  result.error === undefined
+    ? result.status !== 0 && result.stdout.trim() === ''
+    : START_ERRORS.has(result.error.code);
 
 /** The text after the first `prefix` line of Godot's `stdout`. Throws when Godot printed none. */
 export function printedField(stdout, prefix) {

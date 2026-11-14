@@ -1,19 +1,19 @@
 /**
  * The static half of the coverage test: each transpiled row is a row of Godot's instruction
- * table, each probe has a current record of Godot's answers, and the list of open rows only
- * shrinks. The real-GL half, that each probe's transpilation equals the record, runs in
+ * table, each probe has a current answer from Godot, and the list of open rows only shrinks.
+ * The real-GL half, that each probe's transpilation equals Godot's answer, runs in
  * `pnpm test:shaders:gpu`.
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
-import { hex, recordEntry } from '../../../../scripts/godot-probes/record.mjs';
-import { parameterBits, SENTINEL_BITS } from '../../../../scripts/godot-probes/probeShader.mjs';
+import { isStaleEntry, recordEntry } from '../../../../scripts/godot-probes/record.mjs';
+import { SENTINEL_BITS } from '../../../../scripts/godot-probes/probeShader.mjs';
+import { godotAnswers } from '../godotAnswers.mjs';
 import { PROBES } from './probes.mjs';
 
-const RECORD = JSON.parse(readFileSync(join(import.meta.dirname, 'godot-record.json'), 'utf8'));
+const ANSWERS = godotAnswers();
+const RECORD = ANSWERS.probes;
 
 /**
  * The most rows that may stay open. A slice that transpiles rows lowers it, and a change that
@@ -38,22 +38,21 @@ describe('the instruction table coverage', () => {
     expect(INSTRUCTION_TABLE.length - transpiledRows.size).toBeLessThanOrEqual(OPEN_ROWS_AT_MOST);
   });
 
-  it('has a record from Godot for every probe', () => {
+  it.runIf(ANSWERS.live)('has an answer from Godot for every probe', () => {
     expect(
       PROBES.filter((probe) => RECORD.probes[probe.name] === undefined).map((probe) => probe.name)
     ).toEqual([]);
   });
 
-  it('records the source and inputs each probe has now', () => {
+  it('holds the source and inputs each probe has now', () => {
     const stale = PROBES.filter((probe) => {
       const entry = RECORD.probes[probe.name];
-      const inputs = parameterBits(probe).map((bits) => bits.map(hex));
-      return entry.source !== probe.source || JSON.stringify(entry.inputs) !== JSON.stringify(inputs);
+      return entry !== undefined && isStaleEntry(entry, probe);
     });
     expect(stale.map((probe) => probe.name)).toEqual([]);
   });
 
-  it('has Godot values, not only a rejection, for every transpiled row', () => {
+  it.runIf(ANSWERS.live)('has Godot values, not only a rejection, for every transpiled row', () => {
     const withValues = new Set(
       PROBES.filter((probe) => RECORD.probes[probe.name].results !== undefined).flatMap((probe) => probe.rows)
     );

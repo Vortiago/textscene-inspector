@@ -1,12 +1,12 @@
 /**
  * A lowering's walk: every block of a function rebuilt from the inside out, each statement
- * replaced by the statement a rewrite gives for it.
+ * replaced by the statement or the statements a rewrite gives for it.
  */
 
 import type { BlockNode, FunctionNode, Statement } from '../shaderTree.js';
 
-/** What a statement becomes, its own blocks already rewritten. */
-export type StatementRewrite = (statement: Statement) => Statement;
+/** What a statement becomes, its own blocks already rewritten: one statement, or several in order. */
+export type StatementRewrite = (statement: Statement) => Statement | readonly Statement[];
 
 export function rewriteFunction(definition: FunctionNode, rewrite: StatementRewrite): FunctionNode {
   return { ...definition, body: rewriteBlock(definition.body, rewrite) };
@@ -15,7 +15,7 @@ export function rewriteFunction(definition: FunctionNode, rewrite: StatementRewr
 function rewriteBlock(block: BlockNode, rewrite: StatementRewrite): BlockNode {
   return {
     ...block,
-    statements: block.statements.map((statement) => rewrite(withBlocksRewritten(statement, rewrite))),
+    statements: block.statements.flatMap((statement) => rewrite(withBlocksRewritten(statement, rewrite))),
   };
 }
 

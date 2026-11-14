@@ -73,8 +73,8 @@ export function verdictOfText(text) {
   return { accepted: false, message: match[2], line: Number(match[1]) };
 }
 
-/** The JSON text of a verdict record: Godot's version and each case's verdict by its id. */
-export function renderVerdictRecord(godot, ids, verdicts) {
+/** A verdict record: Godot's version and each case's verdict by its id. */
+export function verdictRecord(godot, ids, verdicts) {
   const cases = Object.fromEntries(ids.map((id, index) => [id, verdictText(verdicts[index])]));
-  return `${JSON.stringify({ godot, cases }, null, 1)}\n`;
+  return { godot, cases };
 }

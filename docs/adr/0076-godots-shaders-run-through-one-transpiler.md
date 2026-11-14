@@ -65,7 +65,7 @@ are the default. The anchor checks of the shader patches stay until the last pat
 
 - The first lit surface on the node path comes after the language and the scene template, not in
   the second slice of the old plan.
-- A Godot upgrade is a regeneration of the table, the probe record and the guide, and the diff
-  shows what changed in the language (#1835).
+- A Godot upgrade is a regeneration of the table, the digests of Godot's answers and the guide,
+  and the diff shows what changed in the language (#1835).
 - The **Surface outputs** stop being a seam when the scene template runs, because the template
   reads the names Godot's compiler gives.

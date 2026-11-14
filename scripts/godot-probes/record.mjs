@@ -1,7 +1,7 @@
 /**
- * The record of Godot's answers to the probes: for each probe its source, the bits of its inputs
- * and the bits of each result lane, or Godot's reason when it rejects it. The real-GL test
- * compares the transpilation with this checked-in record, so it runs without Godot.
+ * The record of Godot's answers to the probes, as a live run writes it: for each probe its
+ * source, the bits of its inputs and the bits of each result lane, or Godot's reason when it
+ * rejects it. The real-GL test compares the transpilation with this record.
  */
 
 import { LANE_COUNT, SENTINEL_BITS, parameterBits, probeSignature, probeWidth } from './probeShader.mjs';
@@ -38,15 +38,21 @@ export function recordEntry(probe, viewportPixels, rejection = NO_REASON) {
 }
 
 /**
- * The record of every probe, in probe order, as the JSON text the file holds. `rejections` holds
- * Godot's reason for each probe it draws nothing for, by name.
+ * The record of every probe, in probe order. `rejections` holds Godot's reason for each probe it
+ * draws nothing for, by name.
  */
-export function renderRecord({ godot, adapter, pixels }, probes, rejections) {
+export function probeRecord({ godot, adapter, pixels }, probes, rejections) {
   const entries = Object.fromEntries(
     probes.map((probe) => [
       probe.name,
       recordEntry(probe, pixels.get(probe.name), rejections.get(probe.name)),
     ])
   );
-  return `${JSON.stringify({ godot, adapter, probes: entries }, null, 1)}\n`;
+  return { godot, adapter, probes: entries };
+}
+
+/** Whether `entry` holds another source or other inputs than `probe` has now. */
+export function isStaleEntry(entry, probe) {
+  const inputs = parameterBits(probe).map((bits) => bits.map(hex));
+  return entry.source !== probe.source || JSON.stringify(entry.inputs) !== JSON.stringify(inputs);
 }

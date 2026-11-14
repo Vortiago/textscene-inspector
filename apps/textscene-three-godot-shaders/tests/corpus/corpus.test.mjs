@@ -1,5 +1,5 @@
 /**
- * The transpiler on a corpus of real shaders, with Godot's recorded verdict on each. Every shader
+ * The transpiler on a corpus of real shaders, with Godot's verdict on each. Every shader
  * ends in one of three states: transpiled, refused as Godot refuses, or not transpiled yet with
  * the owner of the open row. `states.json` holds each state: a shader that leaves a settled state
  * fails, and a forward move is written with `vitest -u`. The count goes to the CI summary.
@@ -10,17 +10,19 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { verdictOfText } from '../../../../scripts/godot-probes/shaderVerdicts.mjs';
 import { writeJobSummary } from '../consumer.mjs';
+import { godotAnswers } from '../godotAnswers.mjs';
 import { judge, transpilerVerdict } from '../verdicts/judge.mjs';
 import { CORPUS } from './corpus.mjs';
 import { KNOWN_MISMATCHES } from './knownMismatches.mjs';
 
-const RECORD = JSON.parse(readFileSync(join(import.meta.dirname, 'godot-verdicts.json'), 'utf8'));
+const ANSWERS = godotAnswers();
+const RECORD = ANSWERS.corpus;
 const STATES_FILE = join(import.meta.dirname, 'states.json');
 const COMMITTED_STATES = existsSync(STATES_FILE) ? JSON.parse(readFileSync(STATES_FILE, 'utf8')) : {};
 
 const SHADER_TYPES = ['spatial', 'canvas_item', 'particles', 'sky', 'fog'];
 
-const OUTCOMES = CORPUS.map((shader) => {
+const OUTCOMES = CORPUS.filter((shader) => RECORD.cases[shader.id] !== undefined).map((shader) => {
   const godot = verdictOfText(RECORD.cases[shader.id]);
   return { shader, godot, outcome: judge(godot, transpilerVerdict(shader.text)) };
 });
@@ -37,7 +39,7 @@ describe('the corpus of real shaders', () => {
     );
   });
 
-  it('holds shaders of all five types that Godot accepts and that Godot rejects', () => {
+  it.runIf(ANSWERS.live)('holds shaders of all five types that Godot accepts and that Godot rejects', () => {
     const kinds = (accepted) =>
       new Set(
         OUTCOMES.filter(({ godot }) => godot.accepted === accepted).map(({ shader }) => shader.shaderType)
@@ -46,11 +48,14 @@ describe('the corpus of real shaders', () => {
     expect(SHADER_TYPES.filter((type) => !kinds(false).has(type))).toEqual([]);
   });
 
-  it("has Godot's verdict on every shader, and on no shader the corpus has not", () => {
-    const ids = new Set(CORPUS.map((shader) => shader.id));
+  it.runIf(ANSWERS.live)("has Godot's verdict on every shader", () => {
     expect(
       CORPUS.filter((shader) => RECORD.cases[shader.id] === undefined).map((shader) => shader.id)
     ).toEqual([]);
+  });
+
+  it("has Godot's verdict on no shader the corpus has not", () => {
+    const ids = new Set(CORPUS.map((shader) => shader.id));
     expect(Object.keys(RECORD.cases).filter((id) => !ids.has(id))).toEqual([]);
   });
 
@@ -65,28 +70,32 @@ describe('the corpus of real shaders', () => {
     expect(mismatches).toEqual([]);
   });
 
-  it('lists as known mismatches only shaders that still disagree, each with an owner', () => {
-    const stale = Object.entries(KNOWN_MISMATCHES).filter(
-      ([id, known]) => STATES[id] !== 'mismatch' || !/^#\d+$/.test(known.owner)
-    );
-    expect(stale.map(([id]) => `${id}: ${STATES[id] ?? 'not in the corpus'}`)).toEqual([]);
-  });
+  it.runIf(ANSWERS.live)(
+    'lists as known mismatches only shaders that still disagree, each with an owner',
+    () => {
+      const stale = Object.entries(KNOWN_MISMATCHES).filter(
+        ([id, known]) => STATES[id] !== 'mismatch' || !/^#\d+$/.test(known.owner)
+      );
+      expect(stale.map(([id]) => `${id}: ${STATES[id] ?? 'not in the corpus'}`)).toEqual([]);
+    }
+  );
 
   // So the shaders not transpiled yet only grow fewer.
   it('moves no shader back from transpiled or from refused as Godot refuses', () => {
     const settled = new Set(['transpiled', 'refused as Godot refuses']);
     const back = Object.entries(COMMITTED_STATES).filter(
-      ([id, state]) => settled.has(state) && STATES[id] !== state
+      ([id, state]) => settled.has(state) && (id in STATES || ANSWERS.live) && STATES[id] !== state
     );
     expect(back.map(([id]) => `${id}: ${STATES[id] ?? 'left the corpus'}`)).toEqual([]);
   });
 
-  it('holds the state of every shader in states.json', async () => {
+  it.runIf(ANSWERS.live)('holds the state of every shader in states.json', async () => {
     await expect(`${JSON.stringify(STATES, null, 1)}\n`).toMatchFileSnapshot(STATES_FILE);
   });
 });
 
 afterAll(() => {
+  if (!ANSWERS.live) return;
   const accepted = OUTCOMES.filter(({ godot }) => godot.accepted);
   const transpiled = accepted.filter(({ outcome }) => outcome.state === 'transpiled').length;
   const refused = OUTCOMES.filter(({ outcome }) => outcome.state === 'refused as Godot refuses').length;

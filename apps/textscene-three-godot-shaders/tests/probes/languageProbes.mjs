@@ -51,6 +51,11 @@ function indexProbes() {
     ['folded-write', 'vec3 probe(vec3 a, float b) { a[1 + 1] = b; return a; }'],
     ['folded-past-end', 'float probe(vec2 a) { return a[1 + 5]; }'],
     ['folded-write-past-end', 'vec2 probe(vec2 a, float b) { a[1 + 5] = b; return a; }'],
+    ['write-before-value', 'ivec3 probe(ivec3 a, int i) { int k = i & 1; a[k] = 10 + k++; return a; }'],
+    [
+      'compound-before-value',
+      'ivec3 probe(ivec3 a, int i) { int k = i & 1; a[k] += (k = 2) + 10; return a; }',
+    ],
   ];
   return cases.map(([word, source]) => probeOf(`index-${word}`, ['OP_INDEX'], source));
 }

@@ -193,34 +193,38 @@ jobs:
       # The image holds all three.
       - run: pnpm test:godot-ref
 
-  # The shader package's own layers, in the image, which holds Godot's binary and source. The
-  # instruction table and the probe record are checked against both, the probes run on a real GL
-  # context, and the showcases compare a plain three.js page with a live Godot render.
+  # The shader package's own layers, in the image, which holds Godot's binary and source. Godot
+  # answers every probe, random program, operator case and corpus shader live, and the committed
+  # digests of those answers, the guide, the tests and the real-GL run are checked against them.
+  # SHADER_ANSWERS=live makes every reader of the answers fail when the live run is missing.
   shaders:
     name: Shader package
     runs-on: ubuntu-latest
     needs: image
     container: *ci-image
     timeout-minutes: 25
+    env:
+      SHADER_ANSWERS: live
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
-      - run: pnpm godot:shader-language --check
-      # lavapipe compiles each shader for the runner's CPU. One runner once gave other Godot bits
-      # for two probes, so every run prints the CPU, its vector flags and the driver's packages.
+      # lavapipe compiles each shader for the runner's CPU, so every run prints the CPU, its
+      # vector flags and the driver's packages.
       - name: Print the CPU and the driver
         run: |
           grep -m1 'model name' /proc/cpuinfo
           grep -m1 '^flags' /proc/cpuinfo | grep -o -w 'avx512f\|avx2\|fma\|sse4_2' | sort -u | tr '\n' ' '
           echo
           dpkg-query -W mesa-vulkan-drivers mesa-libgallium 'libllvm*'
-      - run: pnpm godot:probes --check --keep-stale probe-values
+      - run: pnpm godot:probes --check
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: stale-probe-values
-          path: probe-values/
+          name: godot-answers
+          path: apps/textscene-three-godot-shaders/tests/.godot-answers/
           if-no-files-found: ignore
+      - run: pnpm godot:shader-language --check
+      - run: pnpm vitest run apps/textscene-three-godot-shaders
       - run: pnpm test:shaders:gpu
       - run: pnpm test:shaders:e2e
 
