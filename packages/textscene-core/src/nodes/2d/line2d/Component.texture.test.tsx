@@ -4,6 +4,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import './index';
+import { parsedNode } from '../../../parser/testing/parserKit';
+import {
+  CANVAS_TEXTURE_REF,
+  itHandsTheBodyItsCanvasTexture,
+  renderLitItem,
+} from '../../../r3f/testing/canvasTextureLighting';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Line2D } from './Component';
@@ -13,7 +20,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import type { ParsedHeading } from '../../../parser/utils';
-import type { TscnNode } from '../../../parser/types';
+import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import {
   UNSET_VIEWPORT_TEXTURE,
   UNSET_VIEWPORT_TEXTURE_REF,
@@ -139,5 +146,15 @@ describe('<Line2D> texture', () => {
     );
     await settleLoads();
     expect(endU(renderer.scene.findByType('Mesh').instance as THREE.Mesh)).toBeNaN();
+  });
+});
+
+describe('Line2D with a CanvasTexture', () => {
+  itHandsTheBodyItsCanvasTexture((wrapper: TscnInternalResource) => {
+    const line = parsedNode(
+      { type: 'Line2D', name: 'L' },
+      { texture: CANVAS_TEXTURE_REF, points: 'PackedVector2Array(0, 0, 0, 32)', width: '8.0' }
+    );
+    return renderLitItem(<Line2D node={line} />, [wrapper]);
   });
 });
