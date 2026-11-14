@@ -148,3 +148,46 @@ describe('SettledFonts wake', () => {
     expect(onOtherPreview).not.toHaveBeenCalled();
   });
 });
+
+describe('SettledFonts loads of the page', () => {
+  it('loads the face of bytes once for every preview that peeks them', async () => {
+    const bytes = new ArrayBuffer(4);
+    const load = vi.fn(() => Promise.resolve(FACE));
+    const previews = [createSettledFonts(load), createSettledFonts(load)];
+
+    previews.forEach((preview) => preview.peekFace(bytes, 'Label'));
+    await vi.waitFor(() =>
+      expect(previews.map((preview) => preview.peekFace(bytes, 'Label'))).toEqual([FACE, FACE])
+    );
+
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads the outlines of a load once for every preview that peeks it', async () => {
+    const loadKey = {};
+    const read = vi.fn(() => Promise.resolve(null));
+    const previews = [createSettledFonts(loader.load), createSettledFonts(loader.load)];
+
+    previews.forEach((preview) => preview.peekOutlines(loadKey, read));
+    await vi.waitFor(() =>
+      expect(previews.map((preview) => preview.peekOutlines(loadKey, read))).toEqual([null, null])
+    );
+
+    expect(read).toHaveBeenCalledTimes(1);
+  });
+
+  it('wakes the readers of each preview that awaited the shared load', async () => {
+    const bytes = new ArrayBuffer(4);
+    const font = fontFile(bytes);
+    const otherPreview = createSettledFonts(loader.load);
+    const onEachPreview = [vi.fn(), vi.fn()];
+    [fonts, otherPreview].forEach((preview, i) => {
+      preview.subscribeFont(font, onEachPreview[i]!);
+      readSettledFont(preview, font, 'Label');
+    });
+
+    await loader.settle(bytes, FACE);
+
+    onEachPreview.forEach((onSettle) => expect(onSettle).toHaveBeenCalled());
+  });
+});

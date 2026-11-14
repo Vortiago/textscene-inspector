@@ -77,6 +77,27 @@ export interface SettledFonts {
   version(): number;
 }
 
+/** A load on the page, shared by every preview that peeks its key: the first peek starts it. */
+interface PageLoad<T> {
+  promise?: Promise<T>;
+}
+
+/**
+ * The load of each key on the page, so a font decodes and registers its `FontFace` once for each
+ * page while the wake of each load stays per preview. Written by the first peek of a key in any
+ * preview, and never cleared: a key nothing holds goes with its load.
+ */
+const pageOutlineLoads = perObject((_loadKey: object): PageLoad<SfntOutlines | null> => ({}));
+/** The same for faces, for each face loader: a test that passes its own loader shares no face with another. */
+const pageFaceLoads = perObject((_loadFace: FaceLoader) =>
+  perObject((_bytes: ArrayBuffer): PageLoad<RegisteredCanvasFontMetrics | null> => ({}))
+);
+
+/** The promise of `shared`, which `load` starts on the first call. */
+function pageLoad<T>(shared: PageLoad<T>, load: () => Promise<T>): Promise<T> {
+  return (shared.promise ??= load());
+}
+
 /** `answer`, after it marks the load `key` as awaited through `fonts` while the load is in flight. */
 function awaitedIfPending<T>(fonts: SettledFonts, key: object, answer: T | undefined): T | undefined {
   if (answer === undefined) fonts.awaitFont(key, new Set([key]));
@@ -132,8 +153,9 @@ export function createSettledFonts(loadFace: FaceLoader = loadSceneFontMetrics):
   const composed = new WeakMap<FontResource, ComposedFont>();
 
   const fonts: SettledFonts = {
-    peekFace: (bytes, nodePath) => peekFaceOf(bytes, () => loadFace(bytes, nodePath)),
-    peekOutlines: peekOutlinesOf,
+    peekFace: (bytes, nodePath) =>
+      peekFaceOf(bytes, () => pageLoad(pageFaceLoads(loadFace)(bytes), () => loadFace(bytes, nodePath))),
+    peekOutlines: (loadKey, read) => peekOutlinesOf(loadKey, () => pageLoad(pageOutlineLoads(loadKey), read)),
     keep(font, compose) {
       const kept = composed.get(font);
       if (kept) return kept;
