@@ -30,11 +30,6 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'shaders/language/printer.ts#printShader',
   // The tree check proves each parsed tree has Godot's node types and positions, in tests only.
   'shaders/language/treeCheck.ts#treeFault',
-  // The link step ships before its one reader, the sky draw of the shaders package, which the
-  // next commit of this slice adds. The same holds for the mode tables.
-  'shaders/template/link.ts#compileMaterial',
-  'shaders/template/link.ts#linkTemplateStage',
-  'shaders/template/modeTables.generated.ts#MODE_TABLES',
   // The template check prints each parsed template stage back to text, which no draw needs.
   'shaders/template/printTemplate.ts#printTemplateStage',
 ];

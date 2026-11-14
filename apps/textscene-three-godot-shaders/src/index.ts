@@ -8,6 +8,17 @@ export {
   GODOT_VERSION,
   installNodesHandler,
   ShadingLanguageError,
+  SKY_BINDINGS,
   transpileShadingLanguage,
+  transpileSky,
+  writeSkyBindings,
 } from '@textscene/core/shaders';
-export type { NodeOutput, TranspiledFunction, TranspiledShader } from '@textscene/core/shaders';
+export type {
+  NodeOutput,
+  SkyFog,
+  SkyLight,
+  SkyScene,
+  TranspiledFunction,
+  TranspiledShader,
+  TranspiledSky,
+} from '@textscene/core/shaders';

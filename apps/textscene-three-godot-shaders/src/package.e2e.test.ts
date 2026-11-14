@@ -20,11 +20,22 @@ const bundleKey = 'dist/index.js';
 /** What a three.js app needs from the shader module. Core's internals stay out. */
 const PUBLIC_VALUE_EXPORTS = [
   'GODOT_VERSION',
+  'SKY_BINDINGS',
   'ShadingLanguageError',
   'installNodesHandler',
   'transpileShadingLanguage',
+  'transpileSky',
+  'writeSkyBindings',
 ];
-const PUBLIC_TYPE_EXPORTS = ['NodeOutput', 'TranspiledFunction', 'TranspiledShader'];
+const PUBLIC_TYPE_EXPORTS = [
+  'NodeOutput',
+  'SkyFog',
+  'SkyLight',
+  'SkyScene',
+  'TranspiledFunction',
+  'TranspiledShader',
+  'TranspiledSky',
+];
 
 /** The entry's value names, and the handler it gives a renderer with no GL context. */
 const CONSUMER_SCRIPT = `

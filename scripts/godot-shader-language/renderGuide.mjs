@@ -165,7 +165,8 @@ function statesText(rows) {
 
 function renderSection(section, rows, probes, record) {
   const ids = new Set(rows.map((row) => row.id));
-  const sectionProbes = probes.filter((probe) => probe.rows.some((id) => ids.has(id)));
+  // A sky scene has a camera and proves its rows in a showcase of its own, with no table of inputs.
+  const sectionProbes = probes.filter((probe) => !probe.camera && probe.rows.some((id) => ids.has(id)));
   const rowList = rows.map((row) => `\`${row.id}\``).join(', ');
   return `## ${section.heading}
 
@@ -211,15 +212,21 @@ function chapterSections(chapters, rows, probes) {
 /** The width the guide shows a showcase image at: four screen pixels to each image pixel. */
 const SHOWCASE_SCALE = 4;
 
+/** What the page draws of a showcase: a function of UV, or a sky scene's sky as the background. */
+const showcaseText = (showcase) =>
+  showcase.camera
+    ? "Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values."
+    : 'Godot draws this shader. A plain three.js page draws the transpilation of its function `pattern` with the same UV.';
+
 function renderShowcase(showcase) {
   const image = (side, label) =>
     `<img src="showcase/${showcase.name}-${side}.png" width="${showcase.width * SHOWCASE_SCALE}" alt="${label}">`;
   return `## Showcase \`${showcase.name}\`
 
-Godot draws this shader. A plain three.js page draws the transpilation of its function \`pattern\` with the same UV. \`pnpm test:shaders:e2e\` draws both again and fails on any pixel over 2/255 apart.
+${showcaseText(showcase)} \`pnpm test:shaders:e2e\` draws both again and fails on any pixel over 2/255 apart.
 
 \`\`\`glsl
-${godotShader(showcase).trim()}
+${(showcase.camera ? showcase.source : godotShader(showcase)).trim()}
 \`\`\`
 
 | Godot | Transpilation on three.js |

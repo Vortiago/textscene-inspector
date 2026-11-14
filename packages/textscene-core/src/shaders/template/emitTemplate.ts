@@ -38,14 +38,15 @@ export interface EmittedStage {
   readonly textures: ReadonlyMap<string, TextureNode>;
 }
 
+/** The TSL of `stage`. The stages of one program share `uniforms`. */
 export function emitTemplateStage(
   stage: TemplateStageNode,
   inputs: StageInputs,
-  result: StageResult
+  result: StageResult,
+  uniforms = new TemplateUniforms()
 ): EmittedStage {
   const structs = new Map<string, StructNode>();
   const structOf: StructOf = (type) => structs.get(type);
-  const uniforms = new TemplateUniforms(structOf);
   const textures = new Map<string, TextureNode>();
   const globals = new Map<string, Value>(inputs);
   const trees = new Map<string, EmittedTree>();
@@ -53,7 +54,7 @@ export function emitTemplateStage(
     if (declaration.kind === 'struct') structs.set(declaration.name, declaration);
     else if (declaration.kind === 'function') trees.set(declaration.name, emittedGlslTree(declaration));
     else if (declaration.kind === 'interface block' && declaration.qualifiers.words.includes('uniform'))
-      globals.set(declaration.instanceName!, uniforms.block(declaration));
+      globals.set(declaration.instanceName!, uniforms.block(declaration, structOf));
     else if (declaration.kind === 'global') uniformGlobals(declaration, globals, textures);
   }
   const body: BodyEmitter = (tree, names) =>

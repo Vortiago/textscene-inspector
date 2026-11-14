@@ -11,25 +11,26 @@ import type { ArrayValue, StructOf, StructValue, Value } from '../language/emitV
 import type { StructMember } from '../language/shaderTree.js';
 import type { InterfaceBlockNode } from './templateTree.js';
 
-/** The uniforms of the blocks of a stage, by `instance.member`, and each block's value by its instance name. */
+/**
+ * The uniforms of the blocks of a program's stages, by `instance.member`. The stages of one
+ * program share them, so a block both stages declare is one set of uniforms.
+ */
 export class TemplateUniforms {
-  /** Written only by `uniformOf`, while a block's value is built. */
+  /** Written only by `array` and `uniformOf`, at a member's first block. */
   readonly byName = new Map<string, UniformNode<unknown>>();
 
-  constructor(private readonly structOf: StructOf) {}
-
   /** The value of a uniform block's instance: a struct of its members' uniforms. */
-  block(block: InterfaceBlockNode): StructValue {
+  block(block: InterfaceBlockNode, structOf: StructOf): StructValue {
     const members = new Map<string, Value>();
     for (const member of block.members) {
       if (member.kind === 'slot') continue;
-      members.set(member.name, this.member(`${block.instanceName}.${member.name}`, member));
+      members.set(member.name, this.member(`${block.instanceName}.${member.name}`, member, structOf));
     }
     return { kind: 'struct', members };
   }
 
-  private member(name: string, member: StructMember): Value {
-    const struct = this.structOf(member.type);
+  private member(name: string, member: StructMember, structOf: StructOf): Value {
+    const struct = structOf(member.type);
     const count = member.arraySize ?? 0;
     if (struct) return this.structArray(name, struct.members, count);
     if (count > 0) return this.array(name, member.type, count);
@@ -52,7 +53,9 @@ export class TemplateUniforms {
   }
 
   private array(name: string, type: string, count: number): ArrayValue {
-    const node = uniformArray(Array.from({ length: count }, () => initialValue(type)) as never[], type);
+    const node =
+      this.byName.get(name) ??
+      uniformArray(Array.from({ length: count }, () => initialValue(type)) as never[], type);
     this.byName.set(name, node as unknown as UniformNode<unknown>);
     return {
       kind: 'array',
@@ -62,7 +65,9 @@ export class TemplateUniforms {
   }
 
   private uniformOf(name: string, type: string): Node {
-    const node = (uniform as unknown as (value: unknown, type: string) => Node)(initialValue(type), type);
+    const node =
+      (this.byName.get(name) as unknown as Node | undefined) ??
+      (uniform as unknown as (value: unknown, type: string) => Node)(initialValue(type), type);
     this.byName.set(name, node as unknown as UniformNode<unknown>);
     return node as unknown as Node;
   }

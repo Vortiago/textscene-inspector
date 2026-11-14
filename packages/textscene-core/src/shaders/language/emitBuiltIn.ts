@@ -17,7 +17,7 @@ const call =
   (operands) =>
     tsl(operation)(...operands);
 
-export const BUILT_IN_CALLS: Readonly<Record<string, BuiltIn>> = {
+const BUILT_IN_CALLS: Readonly<Record<string, BuiltIn>> = {
   abs: call(abs),
   dot: call(dot),
   fract: call(fract),

@@ -56,4 +56,3 @@ function topRowFirst(pixels, width, height) {
 }
 
 globalThis.drawShowcase = drawShowcase;
-globalThis.pageReady = true;

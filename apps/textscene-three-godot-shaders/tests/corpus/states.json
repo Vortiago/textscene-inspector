@@ -182,7 +182,7 @@
  "docs/tutorials/shaders/your_first_shader/your_first_2d_shader.rst#0": "not transpiled yet (#1794)",
  "docs/tutorials/shaders/your_first_shader/your_first_3d_shader.rst#10": "not transpiled yet (#1829)",
  "scenes/fixtures/fog-volume-spatial.gdshader": "not transpiled yet (#1794)",
- "scenes/fixtures/sky-shader-stub.gdshader": "not transpiled yet (#1830)",
+ "scenes/fixtures/sky-shader-stub.gdshader": "transpiled",
  "rejected/generator/StandardMaterial3D/defaults": "not transpiled yet (#1794)",
  "rejected/generator/StandardMaterial3D/transparency=2": "not transpiled yet (#1794)",
  "rejected/generator/StandardMaterial3D/blend_mode=3": "not transpiled yet (#1794)",
