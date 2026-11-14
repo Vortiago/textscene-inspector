@@ -6,11 +6,17 @@
 import { describe, expect, it } from 'vitest';
 import {
   channelToByte,
-  linearChannelToSRGBF32,
+  linearColorToSRGBF32,
   sRGBChannelToLinear,
-  sRGBChannelToLinearF32,
+  sRGBColorToLinearF32,
   sRGBToLinearRGB,
 } from './colorSpace';
+
+/** The red channel of a grey colour through the float conversion: each channel converts on its own. */
+const sRGBChannelToLinearF32 = (channel: number) =>
+  sRGBColorToLinearF32({ r: channel, g: channel, b: channel, a: 1 }).r;
+const linearChannelToSRGBF32 = (channel: number) =>
+  linearColorToSRGBF32({ r: channel, g: channel, b: channel, a: 1 }).r;
 
 const BYTES = Array.from({ length: 256 }, (_, byte) => byte);
 
@@ -35,7 +41,7 @@ describe('sRGBChannelToLinear', () => {
   });
 });
 
-describe('linearChannelToSRGBF32', () => {
+describe('linearColorToSRGBF32', () => {
   it('keeps the linear segment below 0.0031308, as Color::linear_to_srgb does', () => {
     expect(linearChannelToSRGBF32(0.003)).toBe(Math.fround(Math.fround(12.92) * Math.fround(0.003)));
   });
@@ -100,18 +106,24 @@ describe('channelToByte', () => {
 
 // Measured: Godot 4.6.3 prints `Color(0.5, 0.02, 1.5).srgb_to_linear()` and
 // `Color(0.2, 0.001, 2.0).linear_to_srgb()` with these channels, to the last float bit.
-describe('sRGBChannelToLinearF32', () => {
+describe('sRGBColorToLinearF32', () => {
   it("matches Godot's float Color::srgb_to_linear on the curve, the linear segment and above 1", () => {
-    expect([0.5, 0.02, 1.5].map(sRGBChannelToLinearF32)).toEqual([
-      0.21404114365577698, 0.0015479875728487968, 2.5371556282043457,
-    ]);
+    expect(sRGBColorToLinearF32({ r: 0.5, g: 0.02, b: 1.5, a: 0.25 })).toEqual({
+      r: 0.21404114365577698,
+      g: 0.0015479875728487968,
+      b: 2.5371556282043457,
+      a: 0.25,
+    });
   });
 });
 
-describe('linearChannelToSRGBF32', () => {
+describe('linearColorToSRGBF32', () => {
   it("matches Godot's float Color::linear_to_srgb on the curve, the linear segment and above 1", () => {
-    expect([0.2, 0.001, 2.0].map(linearChannelToSRGBF32)).toEqual([
-      0.4845292568206787, 0.012920000590384007, 1.3532559871673584,
-    ]);
+    expect(linearColorToSRGBF32({ r: 0.2, g: 0.001, b: 2.0, a: 0.25 })).toEqual({
+      r: 0.4845292568206787,
+      g: 0.012920000590384007,
+      b: 1.3532559871673584,
+      a: 0.25,
+    });
   });
 });

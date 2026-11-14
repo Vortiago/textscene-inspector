@@ -23,7 +23,7 @@ const { fround } = Math;
  * {@link sRGBChannelToLinear} with the float rounding of each step that Godot's `float` maths
  * takes, for a result whose float noise Godot's own output shows.
  */
-export function sRGBChannelToLinearF32(channel: number): number {
+function sRGBChannelToLinearF32(channel: number): number {
   const c = fround(channel);
   return c < fround(0.04045)
     ? fround(c * fround(1 / 12.92))
@@ -34,7 +34,7 @@ export function sRGBChannelToLinearF32(channel: number): number {
  * Godot's `Color::linear_to_srgb` (`core/math/color.h:199-204`) for one channel, unclamped and in
  * float steps: the inverse of {@link sRGBChannelToLinearF32}, so an HDR channel above 1 stays above 1.
  */
-export function linearChannelToSRGBF32(channel: number): number {
+function linearChannelToSRGBF32(channel: number): number {
   const c = fround(channel);
   return c < fround(0.0031308)
     ? fround(fround(12.92) * c)
