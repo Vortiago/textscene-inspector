@@ -137,6 +137,20 @@ export const OUTLINE_TABLE_TAGS: readonly string[] = [
   'SVG ',
 ];
 
+/**
+ * Whether FreeType reads outlines from the face (`sfobjs.c:865-906`): a `glyf`, `CFF ` or `CFF2`
+ * table, in a face with no `CBLC` or `CBDT`, whose outlines it ignores.
+ */
+export function hasFreeTypeOutlines({ tables }: Pick<SfntFile, 'tables'>): boolean {
+  const hasOutlineTable = tables.has('glyf') || tables.has('CFF ') || tables.has('CFF2');
+  return hasOutlineTable && !tables.has('CBLC') && !tables.has('CBDT');
+}
+
+/** Whether FreeType scales the face (`sfobjs.c:1103-1110`): it has outlines, and no `sbix`, which makes it a bitmap face. */
+export function isScalableFace(sfnt: Pick<SfntFile, 'tables'>): boolean {
+  return hasFreeTypeOutlines(sfnt) && !sfnt.tables.has('sbix');
+}
+
 export interface TableRecord {
   offset: number;
   length: number;

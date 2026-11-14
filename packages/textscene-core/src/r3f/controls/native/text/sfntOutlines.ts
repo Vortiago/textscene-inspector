@@ -28,7 +28,13 @@ import { glyfAdvanceReader, glyphOutlineReader } from './sfntGlyf';
 import { variedContours } from './glyphVariation';
 import { isTrickyFont } from './trickyFont';
 import { openFontContainer } from './fontContainer';
-import { OUTLINE_TABLE_TAGS, readHeadUnitsPerEm, type SfntFile } from './sfntTables';
+import {
+  hasFreeTypeOutlines,
+  isScalableFace,
+  OUTLINE_TABLE_TAGS,
+  readHeadUnitsPerEm,
+  type SfntFile,
+} from './sfntTables';
 import { fontInstanceOf, type FontInstance } from './variation/fontInstance';
 import type { RunCluster } from './glyphRun';
 import type { LookupGlyph } from './autofit/openTypeGdef';
@@ -141,8 +147,10 @@ export async function openFontOutlines(
     ),
     variationReaderOf(sfnt, ['GSUB', 'fvar'], () => import('./variation/instanceGlyph')),
   ]);
-  // A face of strikes alone has no outline, and draws each glyph from its strike.
-  const glyphOutlineOf = outlineOf ?? (strikes ? NO_OUTLINE : null);
+  // A face of strikes or SVG documents alone has no outline, and draws each glyph from those.
+  const drawsWithoutOutlines = strikes !== null || svgGlyphs !== null;
+  const glyphOutlineOf =
+    hasFreeTypeOutlines(sfnt) && outlineOf ? outlineOf : drawsWithoutOutlines ? NO_OUTLINE : null;
   const outlines = readSfntOutlines(sfnt, glyphOutlineOf, kerningReader, glyphReaders);
   return (
     outlines && {
@@ -170,8 +178,7 @@ async function outlineReaderOf(sfnt: SfntFile, load: GlyphLoad): Promise<GlyphOu
 
 /** Whether `FT_Load_Glyph` takes the auto-hinter's load for `load` (`ftobjs.c:976-1016`). */
 function isAutoHinted(sfnt: SfntFile, load: GlyphLoad): boolean {
-  const isScalable = ['glyf', 'CFF ', 'CFF2'].some((tag) => sfnt.tables.has(tag));
-  if (!isScalable || isTrickyFont(sfnt) || load.hinting === Hinting.NONE) return false;
+  if (!isScalableFace(sfnt) || isTrickyFont(sfnt) || load.hinting === Hinting.NONE) return false;
   const isTrueType = sfnt.tables.has('glyf');
   return (
     load.isAutohinterForced || (isTrueType && (load.hinting === Hinting.LIGHT || !isNativelyHinted(sfnt)))

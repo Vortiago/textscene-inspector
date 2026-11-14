@@ -7,7 +7,7 @@
 import { perObject } from '../../../../../utils/perObject';
 import { orOnRangeError } from '../sfntCmap';
 import { contourBoxReader } from '../sfntGlyf';
-import { parseSfntScalars, readGlyphCount, type SfntFile } from '../sfntTables';
+import { isScalableFace, parseSfntScalars, readGlyphCount, type SfntFile } from '../sfntTables';
 import { readLocatorGlyph } from './locatorGlyph';
 import type { ZlibInflate } from './png';
 import { readSbitTables, type SbitStrike, type SbitTables } from './sbitStrikes';
@@ -37,7 +37,7 @@ export async function faceStrikesOf(sfnt: SfntFile, hasColourTable: boolean): Pr
   if (!tables || !(hasColourTable || tables.kind !== 'EBLC')) return null;
   const { unzlibSync } = await import('three/addons/libs/fflate.module.js');
   const inflate: ZlibInflate = (stream) => unzlibSync(stream);
-  const isScalable = hasOutlines(sfnt) && tables.kind !== 'sbix';
+  const isScalable = isScalableFace(sfnt);
   const extent = isScalable ? scalableExtentOf(sfnt) : null;
   const readGlyph = glyphReaderOf(sfnt, tables, inflate);
   const bitmaps = perObject((_strike: SbitStrike) => new Map<number, StrikeBitmap | null>());
@@ -50,11 +50,6 @@ export async function faceStrikesOf(sfnt: SfntFile, hasColourTable: boolean): Pr
     },
     isScalable,
   };
-}
-
-/** Whether FreeType reads outlines from the face: `glyf`, `CFF ` or `CFF2` (`sfobjs.c:1053-1060`). */
-function hasOutlines({ tables }: SfntFile): boolean {
-  return tables.has('glyf') || tables.has('CFF ') || tables.has('CFF2');
 }
 
 /** The face's ascender and descender in design units, which `FT_Select_Metrics` scales to a strike. */
