@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import type { LightRect } from './shadowCasterEdges';
+import type { LightRect } from '../shadowCasterEdges';
 import type { ShadowPolarLight } from './shadowPolarMap';
 
 /** Reused across the sample so a per-frame read allocates nothing. */

@@ -12,16 +12,16 @@
  */
 
 import { SHADOW_MAP_FAR } from './shadowPolarMap';
-import { coveredPixelRange } from '../../utils/coveredPixelRange';
+import { coveredPixelRange } from '../../../utils/coveredPixelRange';
 import {
   convexBoundsTest,
   edgeNormals,
   type OccluderCullMode,
   type Quad2,
   type ShadowCasterEdges,
-} from './shadowCasterEdges';
-import { normalizedVector2, type Vector2 } from '../../godot/math/vector.js';
-import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
+} from '../shadowCasterEdges';
+import { normalizedVector2, type Vector2 } from '../../../godot/math/vector.js';
+import { OccluderPolygon2DCullMode } from '../../../godot/scene/lightOccluder2d';
 
 /** What the map is built from, all in the previewer's 2D world space (Y up). */
 export interface DirectionalShadowView {

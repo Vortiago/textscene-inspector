@@ -11,13 +11,13 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { useDirectionalShadow, type DirectionalShadowSampler } from './directionalShadowView';
 import { buildDirectionalShadowMap, type DirectionalShadowView } from './directionalShadowMap';
-import { CanvasLighting2DProvider } from './CanvasLighting2D';
-import { CanvasLightPass } from './CanvasLightPass';
-import { fakeLightPassHost } from './testing/fakeLightPassHost';
-import type { CanvasClip, LightPassHost } from './lightPassHost';
-import type { Quad2, ShadowCasterEdges } from './shadowCasterEdges';
-import { canvasColorSpaceOf } from '../canvasColorSpace';
-import { canvasShadowAtlasSize } from '../../godot/rendering/canvasShadowAtlas';
+import { CanvasLighting2DProvider } from '../CanvasLighting2D';
+import { CanvasLightPass } from '../CanvasLightPass';
+import { fakeLightPassHost } from '../testing/fakeLightPassHost';
+import type { CanvasClip, LightPassHost } from '../lightPassHost';
+import type { Quad2, ShadowCasterEdges } from '../shadowCasterEdges';
+import { canvasColorSpaceOf } from '../../canvasColorSpace';
+import { canvasShadowAtlasSize } from '../../../godot/rendering/canvasShadowAtlas';
 
 /** The size Godot uses when the project sets none. */
 const DEFAULT_ATLAS_SIZE = canvasShadowAtlasSize(undefined);
@@ -27,8 +27,8 @@ const projectSettingsMock = vi.hoisted(() => ({
   viewportSize: { width: 1152, height: 648 },
 }));
 
-vi.mock('../contexts/ProjectSettingsContext', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../contexts/ProjectSettingsContext')>()),
+vi.mock('../../contexts/ProjectSettingsContext', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../contexts/ProjectSettingsContext')>()),
   useProjectSettings: () => projectSettingsMock,
 }));
 
