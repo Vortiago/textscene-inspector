@@ -11,7 +11,7 @@ renders_as: a THREE.Mesh, THREE.Points or THREE.LineSegments per surface kind
 
 MeshInstance2D draws a Mesh on the canvas, textured through `texture`. The previewer draws each
 surface at its vertices' x and y, with y down, and multiplies the texel, the vertex colour and the
-modulate. The surfaces' own materials never apply. A texture that is set but fails to load draws the untextured mesh, as Godot does: Godot's loader
+modulate. The surfaces' own materials never apply. A texture that is set but fails to load draws the untextured mesh, as Godot does. Godot's loader
 leaves a property that names a missing file null (`resource_format_text.cpp:146-154`, `:288-289`). With a CanvasItemMaterial that sets
 `particles_animation`, the mesh shrinks to one cell and shows cell 0.
 
