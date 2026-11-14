@@ -14,7 +14,7 @@ A generator writes random functions that are correct by type, from the signature
 
 The fixed set has seed 1847: 1399 programs, one rooted at each of the 1166 transpiled rows, the rest with random roots, and 100 that declare functions of their own. Such a program declares one to three functions, and each may call an earlier one. They hold `in`, `const in`, `out` and `inout` parameters, struct and array arguments and results, `void` functions, and an early `return` in a branch or a loop. A written argument is a variable, a member, an element or a swizzle, and an element's index may be a variable that another argument of the call writes. Godot accepts every one. `pnpm godot:probes` asks Godot for its result bits, and `pnpm test:shaders:gpu` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN in a float lane.
 
-**1397 of 1399 random programs bit-equal with Godot, NaN lanes compared as NaN. The others are the 13 listed known-difference cases, each with its cause: a float rewrite by the probe GPU's driver on one side only, or a result GLSL leaves undefined.** A program that differs is reduced against a live Godot to a small program that still differs, and a program with functions of its own prints whole. Each known difference is a fixed case: its reduced program and its inputs, run on every pass whatever the seed, the set size or the generator. The list only shrinks: a case leaves it only when its own program equals Godot. A program of the set that differs and is no case's program fails the run.
+**1399 of 1399 random programs bit-equal with Godot, NaN lanes compared as NaN. The others are the 13 listed known-difference cases, each with its cause: a float rewrite by the probe GPU's driver on one side only, or a result GLSL leaves undefined.** A program that differs is reduced against a live Godot to a small program that still differs, and a program with functions of its own prints whole. Each known difference is a fixed case: its reduced program and its inputs, run on every pass whatever the seed, the set size or the generator. The list only shrinks: a case leaves it only when its own program equals Godot. A program of the set that differs and is no case's program fails the run.
 
 Every program of the set also passes the tree check before and after lowering, and prints as text that parses to the same tree (`tests/random/programs.test.mjs`). After lowering, the tree holds no `for`, `do` or `switch`, its one loop is `while (true)`, and no `return` stands before a function's last statement. Hand-broken trees show that each check fails (`tests/verdicts/trees.test.mjs`).
 
@@ -22,10 +22,10 @@ Every program of the set also passes the tree check before and after lowering, a
 | --- | --- | --- | --- | --- | --- |
 | `mat4-difference-product` | `mat4 probe(float a0, ivec3 a1) { return ((mat4(a0)) - a0) * mat4(vec4(a0, .98, a0, 11.744f), vec4(a0, .467, 61.588e+2, 13.97), vec4(a0), (vec4(3.910f, 56.755, a0, a0))) - .98; }` | none | lane 32: Godot c31f9469, transpilation c31f9468 | driver rewrite (Mesa lavapipe) on one side only: a listed case, not reshaped | #1823 |
 | `vec4-sum-swizzle-difference` | `vec2 probe(float a0) { return (vec4(a0, vec2(.463, 55.562e3), 0.679e+1) + vec4(a0)).ss - .463; }` | none | lane 0: Godot 488d8493, transpilation 488d8494 | driver rewrite (Mesa lavapipe) on one side only: a listed case, not reshaped | #1823 |
-| `mat2-double-sum` | `mat2 probe(mat2 a0, uint a1, uint a2) { return a0 + a0 + 98.400; }` | `random-1847-143` | lane 2: Godot 45eee9ef, transpilation 45eee9f1 | driver rewrite (Mesa lavapipe) on one side only: a listed case, not reshaped | #1823 |
+| `mat2-double-sum` | `mat2 probe(mat2 a0, uint a1, uint a2) { return a0 + a0 + 98.400; }` | none | lane 2: Godot 45eee9ef, transpilation 45eee9f1 | driver rewrite (Mesa lavapipe) on one side only: a listed case, not reshaped | #1823 |
 | `vec4-sum-lane-difference` | `float probe(float a0, bvec4 a1) { return (a0 + vec4(a0, 97.874e2, 50.459f, a0)).r - 75.440f; }` | none | lane 0: Godot 45bf5bf9, transpilation 45bf5bf7 | driver rewrite (Mesa lavapipe) on one side only: a listed case, not reshaped | #1823 |
 | `vec4-product-of-matrix-product` | `vec4 probe(float a0, uint a1) { return vec4(a0, .530, vec2(.530)) * vec4(vec2(a0, a0), (vec2(6.650f, a0) * mat2(a0))).p; }` | none | lane 13: Godot c51f3e50, transpilation c51f3e4f | driver rewrite (Mesa lavapipe) on one side only: a listed case, not reshaped | #1823 |
-| `scalar-plus-mat2-sum` | `mat2 probe(mat2 a0) { return 56.407 + (a0 + a0); }` | `random-1847-217` | lane 2: Godot c362cf09, transpilation c362cf08 | driver rewrite (Mesa lavapipe) on one side only: a listed case, not reshaped | #1823 |
+| `scalar-plus-mat2-sum` | `mat2 probe(mat2 a0) { return 56.407 + (a0 + a0); }` | none | lane 2: Godot c362cf09, transpilation c362cf08 | driver rewrite (Mesa lavapipe) on one side only: a listed case, not reshaped | #1823 |
 | `shift-right-by-minus-six` | `ivec4 probe(ivec4 a0, vec4 a1, uint a2) { return a0 >>= (-6); }` | none | lane 1: Godot ffffffff, transpilation fffff546 | shift count out of range at runtime, which GLSL leaves undefined: the drivers differ | #1823 |
 | `shift-left-by-not-eighteen` | `int probe(int a0, bvec4 a1) { return a0 << ~18; }` | none | lane 0: Godot 00000000, transpilation ffffffac | shift count out of range at runtime, which GLSL leaves undefined: the drivers differ | #1823 |
 | `swizzle-product` | `vec3 probe(float a0, float a1) { return (vec4(41.779e+1, 2.450e+3, 96.675, a1) * vec3(.917, 55.526, a1).yyyz).aar * vec4(71.250f).aar; }` | none | lane 9: Godot 2b488d09, transpilation 2b488d0a | driver rewrite (Mesa lavapipe) on one side only: a listed case, not reshaped | #1823 |
@@ -63,11 +63,10 @@ The printed tree of each shader the transpiler accepts is a checked-in file unde
 
 | State | Shaders |
 | --- | --- |
-| not transpiled yet (#1794) | 268 |
-| not transpiled yet (#1829) | 75 |
-| refused as Godot refuses | 14 |
+| not transpiled yet (#1794) | 271 |
+| not transpiled yet (#1829) | 72 |
+| refused as Godot refuses | 16 |
 | not transpiled yet (#1828) | 8 |
-| not transpiled yet (#1826) | 2 |
 | transpiled | 1 |
 
 The mismatches below are known, each with its owner. The list only shrinks, as for the random programs.
@@ -76,7 +75,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | --- | --- | --- |
 
 
-<details><summary>The 353 shaders not transpiled yet, with their owners</summary>
+<details><summary>The 351 shaders not transpiled yet, with their owners</summary>
 
 | Shader | Owner |
 | --- | --- |
@@ -195,7 +194,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `demos/2d/sprite_shaders/shaders/offsetshadow.gdshader` | #1794 |
 | `demos/2d/sprite_shaders/shaders/outline.gdshader` | #1829 |
 | `demos/2d/sprite_shaders/shaders/silouette.gdshader` | #1794 |
-| `demos/3d/labels_and_texts/curvature.gdshader` | #1826 |
+| `demos/3d/labels_and_texts/curvature.gdshader` | #1794 |
 | `demos/3d/platformer/stage/skybox.gdshader` | #1829 |
 | `demos/3d/procedural_materials/shaders/plasma.gdshader` | #1829 |
 | `demos/3d/sky_shaders/sky_volumetric_clouds.gdshader` | #1794 |
@@ -206,7 +205,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `demos/3d/sprites/shaders/paper_rainbow.gdshader` | #1794 |
 | `demos/3d/tonemap_color_correction/gradients/gradient_steps.gdshader` | #1794 |
 | `demos/3d/tonemap_color_correction/gradients/hues.gdshader` | #1794 |
-| `demos/3d/variable_rate_shading/vrs_texture.gdshader` | #1829 |
+| `demos/3d/variable_rate_shading/vrs_texture.gdshader` | #1794 |
 | `demos/compute/texture/water_plane/water_shader.gdshader` | #1794 |
 | `demos/misc/hdr_output/color_sweep/color_sweep.gdshader` | #1794 |
 | `demos/misc/noise_viewer/noise_viewer.gdshader` | #1829 |
@@ -251,7 +250,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#39` | #1829 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#43` | #1829 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#44` | #1829 |
-| `docs/tutorials/shaders/shader_reference/sky_shader.rst#1` | #1829 |
+| `docs/tutorials/shaders/shader_reference/sky_shader.rst#1` | #1794 |
 | `docs/tutorials/shaders/shader_reference/sky_shader.rst#2` | #1794 |
 | `docs/tutorials/shaders/shader_reference/spatial_shader.rst#0` | #1794 |
 | `docs/tutorials/shaders/shaders_style_guide.rst#0` | #1829 |
@@ -374,7 +373,6 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `rejected/demos/2d/sprite_shaders/shaders/offsetshadow.gdshader` | #1794 |
 | `rejected/demos/2d/sprite_shaders/shaders/outline.gdshader` | #1829 |
 | `rejected/demos/2d/sprite_shaders/shaders/silouette.gdshader` | #1794 |
-| `rejected/demos/3d/labels_and_texts/curvature.gdshader` | #1826 |
 | `rejected/demos/3d/platformer/stage/skybox.gdshader` | #1829 |
 | `rejected/demos/3d/procedural_materials/shaders/plasma.gdshader` | #1829 |
 | `rejected/demos/3d/sky_shaders/sky_volumetric_clouds.gdshader` | #1794 |
@@ -385,7 +383,6 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `rejected/demos/3d/sprites/shaders/paper_rainbow.gdshader` | #1794 |
 | `rejected/demos/3d/tonemap_color_correction/gradients/gradient_steps.gdshader` | #1794 |
 | `rejected/demos/3d/tonemap_color_correction/gradients/hues.gdshader` | #1794 |
-| `rejected/demos/3d/variable_rate_shading/vrs_texture.gdshader` | #1829 |
 | `rejected/demos/compute/texture/water_plane/water_shader.gdshader` | #1794 |
 | `rejected/demos/misc/hdr_output/color_sweep/color_sweep.gdshader` | #1794 |
 | `rejected/demos/misc/noise_viewer/noise_viewer.gdshader` | #1829 |
