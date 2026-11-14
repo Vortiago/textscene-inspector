@@ -13,9 +13,9 @@ function load(body: string) {
 
 const types = (node: SvgNode): string[] => node.child.map((child) => child.type);
 
-describe('loadSvg', () => {
+describe('readSvgHeader', () => {
   it('answers null for text with no svg element', () => {
-    expect(loadSvg('<g><rect width="1" height="1"/></g>')).toBeNull();
+    expect(readSvgHeader('<g><rect width="1" height="1"/></g>')).toBeNull();
   });
 
   it('builds the element tree under the document', () => {
