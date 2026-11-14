@@ -131,16 +131,26 @@ describe('shouldUnderline (link_button.cpp:249-278)', () => {
 });
 
 describe('linkButtonUnderlineGeometry (link_button.cpp:306-308)', () => {
-  it('at size 16: spacing=trunc(2+0.9765625)=2, y=ascent(18)+2=20, thickness=1', () => {
-    const { y, thickness } = linkButtonUnderlineGeometry(16, 2, 18);
+  /** Open Sans SemiBold at 16 px, as Godot 4.6.3 measures it (`get_underline_position(16)`). */
+  const OPEN_SANS_16 = { positionPx: 0.984375, thicknessPx: 0.390625 };
+
+  it('at Open Sans 16: spacing=trunc(2+0.984375)=2, y=ascent(18)+2=20, thickness=1', () => {
+    const { y, thickness } = linkButtonUnderlineGeometry(OPEN_SANS_16, 2, 18);
     expect(y).toBe(20);
     expect(thickness).toBe(1);
   });
 
   it('a larger underline_spacing constant shifts y down by the same amount', () => {
-    const { y } = linkButtonUnderlineGeometry(16, 10, 18);
-    // spacing = trunc(10+0.9765625) = 10; y = 18+10 = 28.
+    const { y } = linkButtonUnderlineGeometry(OPEN_SANS_16, 10, 18);
+    // spacing = trunc(10+0.984375) = 10; y = 18+10 = 28.
     expect(y).toBe(28);
+  });
+
+  it("truncates the line's own position and thickness: 2.9 down and 3.9 thick give 2 and 3", () => {
+    expect(linkButtonUnderlineGeometry({ positionPx: 2.9, thicknessPx: 3.9 }, 2, 18)).toEqual({
+      y: 22,
+      thickness: 3,
+    });
   });
 });
 

@@ -40,16 +40,14 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import {
-  getUnderlinePositionPx,
-  getUnderlineThicknessPx,
-} from '../../../../r3f/controls/native/text/openSansMetrics';
-import {
   getFontAscentPx,
   getFontDescentPx,
   getFontTabStopsPx,
   withVariation,
   type FontMetrics,
+  type UnderlinePx,
 } from '../../../../r3f/controls/native/text/fontMetrics';
+import { NO_UNDERLINE } from '../../../../r3f/controls/native/text/paragraphUnderline';
 import { resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { RichTextLabelProperties } from './types';
 import {
@@ -742,7 +740,7 @@ export interface RichTextRunPlacement {
   /** The line's left offset, per line since each aligns by its own width (`richTextHorizontalOffsetPx`). */
   lineOffsetXPx: number;
   /** The paragraph's underline position and thickness for an `[u]` run, else null. */
-  underline: RichTextUnderlineMetrics | null;
+  underline: UnderlinePx | null;
   color: Rgba;
   /** The run's outline ring, in the run's own colour space before the control tint: its size and colour. */
   outline: TextOutlineTheme;
@@ -905,50 +903,6 @@ function lineMetricsOf(
     topPx += ascentPx + descentPx;
     return metrics;
   });
-}
-
-/** The paragraph's `[u]`/`[s]` stroke geometry, `sd->upos`/`sd->uthk`, before `rich_text_label.cpp:1243`'s 1px floor. */
-interface RichTextUnderlineMetrics {
-  /** Downward offset from the line's baseline to the stroke's CENTRE, px (`shaped_text_get_underline_position`). */
-  positionPx: number;
-  /** The font's stroke thickness, px, unfloored (`shaped_text_get_underline_thickness`): `underlineRectPx` applies `MAX(1.0, uth * base_scale)`. */
-  thicknessPx: number;
-}
-
-/**
- * Each paragraph's underline position and thickness, by the source index of a character in it: a
- * max over the sizes of the paragraph's font spans. `_shape_substr` (`text_server_adv.cpp:5310-5311`)
- * copies the paragraph's `upos`/`uthk` into each line that `rich_text_label.cpp:1053-1054` reads,
- * and `:7174-7175` accumulates them from the spans' fonts only, so an `[img]` adds nothing.
- */
-function richTextUnderlineMetrics(
-  styledRuns: readonly StyledTextRun[]
-): (sourceIndex: number) => RichTextUnderlineMetrics {
-  const paragraphs: RichTextUnderlineMetrics[] = [{ positionPx: 0, thicknessPx: 0 }];
-  const paragraphStarts: number[] = [0];
-  let runStart = 0;
-  for (const run of styledRuns) {
-    let segmentStart = runStart;
-    run.text.split('\n').forEach((segment, i) => {
-      if (i > 0) {
-        paragraphStarts.push(segmentStart);
-        paragraphs.push({ positionPx: 0, thicknessPx: 0 });
-      }
-      if (segment.length > 0 && !run.image)
-        widenUnderline(paragraphs[paragraphs.length - 1]!, run.fontSizePx);
-      segmentStart += segment.length + 1;
-    });
-    runStart += run.text.length;
-  }
-  return (index) => paragraphs[countAtOrBelow(paragraphStarts, index) - 1]!;
-}
-
-/** Widens `metrics` to a span at `fontSizePx`. Both scale monotonically with the size. */
-function widenUnderline(metrics: RichTextUnderlineMetrics, fontSizePx: number): void {
-  // Open Sans's `post` table (`openSansMetrics.ts`): `fontMetrics.ts` has no
-  // underline fields, so a scene font keeps Open Sans proportions.
-  metrics.positionPx = Math.max(metrics.positionPx, getUnderlinePositionPx(fontSizePx));
-  metrics.thicknessPx = Math.max(metrics.thicknessPx, getUnderlineThicknessPx(fontSizePx));
 }
 
 /** One line's share of one style run. */
@@ -1129,7 +1083,6 @@ export function layoutRichTextRuns(
   const boxWidthPx = alignment?.boxWidthPx ?? 0;
   // Every line of a paragraph aligns as its first item does (`rich_text_label.cpp:598-599`).
   const runAt = runAtFromRuns(styledRuns);
-  const underlineAt = richTextUnderlineMetrics(styledRuns);
   const paragraphRunOf = (lineIndex: number): StyledTextRun | undefined =>
     runAt(unfittedLayout.lines[lineIndex]?.paragraphStart ?? 0);
   const alignmentOfLine = (lineIndex: number): number =>
@@ -1205,7 +1158,7 @@ export function layoutRichTextRuns(
         lineIndex,
         lineTopPx,
         lineOffsetXPx,
-        underline: run.underline ? underlineAt(layout.lines[lineIndex]?.paragraphStart ?? 0) : null,
+        underline: run.underline ? (line.underline ?? NO_UNDERLINE) : null,
         color: run.color,
         outline: run.outline,
         fontSizePx: run.fontSizePx,
@@ -1254,7 +1207,7 @@ interface UnderlineRectPx {
 export function underlineRectPx(
   glyphs: readonly GlyphPlacement[],
   lineAscentPx: number,
-  metrics: RichTextUnderlineMetrics,
+  metrics: UnderlinePx,
   baseScale: number
 ): UnderlineRectPx | null {
   if (glyphs.length === 0) return null;

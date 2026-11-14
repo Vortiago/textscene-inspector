@@ -9,17 +9,13 @@ import {
   createRuntimeFontMetrics,
   type DesignUnitWidthFn,
   type RegisteredCanvasFontMetrics,
+  type RuntimeFontMetricsInput,
 } from './runtimeFontMetrics';
 import { faceDescriptors } from './sceneFontFace';
 import { sfntHasGlyph } from './sfntCmap';
 import { sfntFaceGlyphs } from './sfntFaceGlyphs';
-import {
-  FALLBACK_MARK_TABLE_TAGS,
-  parseSfntScalars,
-  readAxisDefaults,
-  type SfntFile,
-  type SfntScalars,
-} from './sfntTables';
+import { FALLBACK_MARK_TABLE_TAGS, parseSfntScalars, readAxisDefaults, type SfntFile } from './sfntTables';
+import { readSfntUnderline } from './sfntUnderline';
 import * as logger from '../../../../logger';
 
 /**
@@ -69,9 +65,9 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Re
   ctx.font = `${measurementUnitsPerEm}px "${family}"`;
   const measureWidthUnits: DesignUnitWidthFn = (text) => ctx.measureText(text).width;
 
-  let scalars: SfntScalars;
-  if (tableScalars) {
-    scalars = tableScalars;
+  let scalars: RuntimeFontMetricsInput['scalars'];
+  if (sfnt && tableScalars) {
+    scalars = { ...tableScalars, ...readSfntUnderline(sfnt) };
   } else {
     // Chromium's font bounding box, not `hhea`: a font that pads its box beyond `hhea` carries the
     // padded box here. Advances and kerning are canvas-measured either way.

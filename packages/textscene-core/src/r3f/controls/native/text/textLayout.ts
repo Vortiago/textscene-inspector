@@ -24,11 +24,13 @@ import {
   fallbackChainOf,
   type FontMetrics,
   type KernGlyph,
+  type UnderlinePx,
 } from './fontMetrics';
 import type { SizedClusterOffsets } from './fallbackMarkPositioning';
 import { getFontRunShaping, type RunCluster } from './glyphRun';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { tabAlignAdvances } from './textTabStops';
+import { paragraphUnderline } from './paragraphUnderline';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { localeLanguage } from '../../../../godot/text/textServer';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
@@ -240,6 +242,11 @@ export interface TextLineLayout {
    * Label hides an ellipsis by it, as the ellipsis glyph has no source character of its own.
    */
   paragraphStart?: number;
+  /**
+   * The paragraph's underline, `shaped_text_get_underline_position` and `_thickness`
+   * (`paragraphUnderline.ts`). `shapeText` sets it. A hand-built line has none, which is 0.
+   */
+  underline?: UnderlinePx;
   /** The paragraph's left inset, px, from `paragraphIndentPx`. Absent for none. */
   indentPx?: number;
   /**
@@ -1316,6 +1323,11 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       hasUndrawnGlyph: !spansDraw,
     };
     const breakGlyphs = toBreakGlyphs(chars, runStyle, preserveControl, hasEndGlyph);
+    const underline = paragraphUnderline({
+      chars,
+      ...runStyle,
+      isUndrawn: (i) => breakGlyphs[i]?.controlCodepoint !== undefined,
+    });
     // First tab pass: the aligned advance must be in place before line breaking measures it.
     if (hasTabStops) {
       // One entry per UTF-16 unit, as `breakGlyphs` holds them: a code-point walk shifts every
@@ -1373,6 +1385,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
         widthPx: penX,
         paragraphIndex,
         paragraphStart: para.offset,
+        underline,
         ...(indentPx > 0 && { indentPx }),
         isRtl: bidi.isRtl,
       });

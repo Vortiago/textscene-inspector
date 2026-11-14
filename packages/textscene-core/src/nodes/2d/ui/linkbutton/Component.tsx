@@ -14,6 +14,7 @@ import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { NO_UNDERLINE } from '../../../../r3f/controls/native/text/paragraphUnderline';
 import { isDrawnRtl } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -78,9 +79,8 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
     // own ascent, and the underline sits relative to it, not to Open Sans's.
     const ascentPx = getFontAscentPx(fontMetrics, fontSizePx);
     const spacingConstant = requiredThemeItem(solveNode.constants, 'underline_spacing');
-    // The stroke's position and thickness stay Open Sans's `post`-table values whatever `fontMetrics`
-    // is: no scene font this engine loads carries underline metrics.
-    const { y, thickness } = linkButtonUnderlineGeometry(fontSizePx, spacingConstant, ascentPx);
+    const lineUnderline = layout.lines[0]?.underline ?? NO_UNDERLINE;
+    const { y, thickness } = linkButtonUnderlineGeometry(lineUnderline, spacingConstant, ascentPx);
     return { top: y - thickness / 2, thickness, width: placement.lineWidthPx };
   }, [layout, state, props, fontSizePx, fontMetrics, solveNode.constants, placement]);
 
