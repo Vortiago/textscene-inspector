@@ -270,8 +270,8 @@ interface ResolvedImageRun {
 }
 
 /**
- * Makes `shapeText` advance `IMAGE_OBJECT_CHAR` by the image width, carried in
- * as its font size. Godot sets `gl.advance = rect.size.x` (`text_server_adv.cpp:7370-7383`).
+ * Makes `shapeText` draw `IMAGE_OBJECT_CHAR` apart from the run shaping and advance it by the image
+ * width, carried in as its font size. Godot sets `gl.advance = rect.size.x` (`text_server_adv.cpp:7370-7383`).
  * At `unitsPerEm` units the advance chain returns that size rounded to 1/64px,
  * exact for whole and half pixels and within 1/128px otherwise.
  */
@@ -291,6 +291,11 @@ function wrapForImageObject(base: FontMetrics): FontMetrics {
     hasGlyph: {
       value(ch: string): boolean {
         return ch === IMAGE_OBJECT_CHAR || plain.hasGlyph(ch);
+      },
+    },
+    drawsApart: {
+      value(ch: string): boolean {
+        return ch === IMAGE_OBJECT_CHAR;
       },
     },
     getGlyphAdvanceUnits: {
