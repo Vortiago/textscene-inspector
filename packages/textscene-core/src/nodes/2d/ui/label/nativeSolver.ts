@@ -312,6 +312,12 @@ function labelMinimumHeightPx(
   return Math.max(extentPx, fontHeightPx);
 }
 
+/** Whether a Label wraps its text, so its minimum height reads the width a first pass gives (`label.cpp:983-996`). */
+export function isLabelAutowrapped(n: SolveNode): boolean {
+  const props = n.node.properties as LabelProperties;
+  return clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF) !== AutowrapMode.AUTOWRAP_OFF;
+}
+
 /**
  * `Label::get_minimum_size` (`:973-998`). Autowrap off (`:992-996`): {@link labelUnwrappedShape}'s widest
  * line (`:252-257`) by `_update_visible`'s height, plus the `min_style` of its `normal` box

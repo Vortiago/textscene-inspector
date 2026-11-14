@@ -39,6 +39,27 @@ describe('parseDialog', () => {
     }
   );
 
+  it('keeps the unwrapped minimum through a min_size line that leaves min_size as it is', () => {
+    const properties = { visible: 'true', min_size: 'Vector2i(0, 0)', dialog_text: '"Hi"' };
+    expect(parse(properties).has_unwrapped_message_minimum).toBe(true);
+  });
+
+  it('keeps the unwrapped minimum through a max_size line that leaves max_size as it is', () => {
+    const properties = { visible: 'true', max_size: 'Vector2i(0, 0)', dialog_text: '"Hi"' };
+    expect(parse(properties).has_unwrapped_message_minimum).toBe(true);
+  });
+
+  it('wraps the message when a max_size line that changes max_size comes first', () => {
+    const properties = { visible: 'true', max_size: 'Vector2i(400, 300)', dialog_text: '"Hi"' };
+    expect(parse(properties).has_unwrapped_message_minimum).toBe(false);
+  });
+
+  it('wraps the message of a ConfirmationDialog, whose constructor sets min_size', () => {
+    const properties = { visible: 'true', dialog_text: '"Hi"' };
+    const confirmation = parseDialog(heading('ConfirmationDialog', { name: 'Dialog' }), properties);
+    expect(confirmation.has_unwrapped_message_minimum).toBe(false);
+  });
+
   it('wraps the message when dialog_text comes before visible, or the dialog is hidden', () => {
     expect(parse({ dialog_text: '"Hi"', visible: 'true' }).has_unwrapped_message_minimum).toBe(false);
     expect(parse({ dialog_text: '"Hi"' }).has_unwrapped_message_minimum).toBe(false);

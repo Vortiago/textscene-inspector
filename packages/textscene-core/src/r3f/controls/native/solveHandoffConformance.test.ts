@@ -10,6 +10,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   isCommentLine,
+  isProductionSource,
+  offendingLines,
   repoPath,
   reportOffenders,
   walkSources,
@@ -27,6 +29,8 @@ import { splitContainerBoundaryChannel } from '../../../nodes/2d/ui/shared/split
 import '../index';
 
 const UI_ROOT = join(import.meta.dirname, '../../../nodes/2d/ui');
+const WINDOWS_ROOT = join(import.meta.dirname, '../../../nodes/windows');
+const SOURCE_ROOT = join(import.meta.dirname, '../../..');
 
 /** The two file kinds a solve handoff can be spelled in: the producer and the consumer. */
 const HANDOFF_FILES = ['nativeSolver.ts', 'Component.tsx'];
@@ -255,5 +259,25 @@ describe('solve handoff conformance', () => {
     // Prose, and the one unrelated `meta` every scan file carries.
     expect(handRolledOpenerLines(' * reads `meta` when the solver attached one')).toEqual([]);
     expect(handRolledOpenerLines("const UI = join(import.meta.dirname, 'ui');")).toEqual([]);
+  });
+});
+
+// Guard: a Window class solves its Controls once. Its internal Controls are part of that solve
+// (`internalControls.ts`), so a painter that builds its own context solves them a second time.
+describe('one solve per Window', () => {
+  const windowSources = walkSources([WINDOWS_ROOT], isProductionSource).filter(
+    ({ file }) => !file.endsWith(join('window', 'wrapControls.ts'))
+  );
+
+  it('calls createSolveContext and solveControlTree only in wrapControls.ts', () => {
+    const offenders = reportOffenders(windowSources, (source) =>
+      offendingLines(source, /\b(createSolveContext|solveControlTree)\(/)
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it('keeps no SolveNode.syntheticDraw: a built Control carries its runtime state in its properties', () => {
+    const sources = walkSources([SOURCE_ROOT], isProductionSource);
+    expect(reportOffenders(sources, (source) => offendingLines(source, /syntheticDraw/))).toEqual([]);
   });
 });

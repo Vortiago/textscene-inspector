@@ -81,7 +81,7 @@ export function ButtonPainter({
   const ownIconTexture = useIconRefTexture(solveNode, ownIcon);
   // A theme icon the Control gave this Button: the vendored default is a 16x16 SVG whose size
   // `textureSize` already holds, since the loader returns a blank texture before the decode.
-  const givenIcon = solveNode.syntheticDraw?.themedIcon;
+  const givenIcon = props.themeIcon;
   // Without either, the theme icon `icon` stands in for the property (`button.cpp:224-227`).
   const themedIconName = givenIcon?.name ?? (ownIcon ? undefined : 'icon');
   const themedIconTexture = useNodeIcon(
