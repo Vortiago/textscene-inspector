@@ -16,6 +16,8 @@ function written(expression: Expression): string {
       return `${written(expression.owner)}.${expression.name}`;
     case 'operator':
       return `${expression.op}(${expression.operands.map(written).join(', ')})`;
+    default:
+      throw new Error(`expected an expression of the operator chapters, got a ${expression.kind}`);
   }
 }
 
