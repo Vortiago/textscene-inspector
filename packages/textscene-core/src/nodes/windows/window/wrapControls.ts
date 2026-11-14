@@ -41,13 +41,13 @@ function scaledContentsMinimumSize(window: SolveNode, ctx: SolveContext): Vector
 }
 
 /**
- * The size the loaded `size` line gives: `set_size` clamps it to the minimum the window's own
- * properties set so far, which a registered type reads without the height limit of a window in the tree.
- * Only a wrapping window clamps to its contents (`Window::_get_clamped_minimum_size`, `window.cpp`).
+ * The size the loaded lines give: a size write while `wrap_controls` is on clamps the size to the
+ * minimum the window's own properties set so far, which a registered type reads without the height
+ * limit of a window in the tree (`Window::get_clamped_minimum_size`, `window.cpp:2244-2251`).
  */
 function sizeAtLoad(window: SolveNode, ctx: SolveContext): Vector2 {
-  const { size, content_scale, wrap_controls } = window.node.properties as WindowProperties;
-  if (!wrap_controls) return size;
+  const { size, content_scale, keeps_load_clamp } = window.node.properties as WindowProperties;
+  if (!keeps_load_clamp) return size;
   const minimum = controlSolverRegistry.loadedMinimumSize(window.node.type)?.(window, ctx);
   if (!minimum) return size;
   const { canvasScale: factor } = windowContentScale(size, content_scale);
