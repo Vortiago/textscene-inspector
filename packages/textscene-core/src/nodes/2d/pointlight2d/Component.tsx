@@ -41,7 +41,7 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
       node={node}
       props={props}
       body={() =>
-        props.enabled && cookie ? (
+        cookie ? (
           <CanvasLight2D
             term={{
               kind: 'point',
