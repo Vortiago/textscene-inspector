@@ -9,7 +9,7 @@ export interface SfntUnderline {
   readonly underlineThickness: number;
 }
 
-const NO_UNDERLINE: SfntUnderline = { underlinePosition: 0, underlineThickness: 0 };
+const NO_SFNT_UNDERLINE: SfntUnderline = { underlinePosition: 0, underlineThickness: 0 };
 
 /** `tt_face_load_post` reads a 32-byte frame whole or not at all, and keeps a zeroed one (`ttload.c:1331-1361`). */
 const POST_FRAME_LENGTH = 32;
@@ -28,7 +28,8 @@ const STRIKE_TAGS = ['EBLC', 'CBLC', 'bloc', 'sbix'];
  */
 export function readSfntUnderline(sfnt: SfntFile): SfntUnderline {
   const post = sfnt.tables.get('post');
-  if (!post || !tableFits(sfnt.dv, post, POST_FRAME_LENGTH) || !hasScaledMetrics(sfnt)) return NO_UNDERLINE;
+  if (!post || !tableFits(sfnt.dv, post, POST_FRAME_LENGTH) || !hasScaledMetrics(sfnt))
+    return NO_SFNT_UNDERLINE;
   const position = sfnt.dv.getInt16(post.offset + POST_UNDERLINE_POSITION_OFFSET, false);
   const thickness = sfnt.dv.getInt16(post.offset + POST_UNDERLINE_THICKNESS_OFFSET, false);
   return { underlinePosition: freeTypeUnderlinePosition(position, thickness), underlineThickness: thickness };

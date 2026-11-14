@@ -366,17 +366,13 @@ function trimmedWidthPx({ cut, ellipsisWidthPx }: OverrunTrim): number {
   return cut.keptWidthPx + (cut.ellipsisPos !== -1 ? ellipsisWidthPx : 0);
 }
 
-/** `line` with `glyphs` in place of its own, and without the `outlineGlyphs` of an earlier trim. */
+/**
+ * `line` with `glyphs` in place of its own, and without the `outlineGlyphs` of an earlier trim. A trim
+ * does not reshape, so every other field, the underline among them, stays the line's.
+ */
 function trimmedLine(line: TextLineLayout, trim: OverrunTrim, glyphs: GlyphPlacement[]): TextLineLayout {
-  return {
-    text: line.text,
-    glyphs,
-    widthPx: trimmedWidthPx(trim),
-    paragraphIndex: line.paragraphIndex,
-    paragraphStart: line.paragraphStart,
-    ...(line.indentPx !== undefined && { indentPx: line.indentPx }),
-    isRtl: line.isRtl,
-  };
+  const { outlineGlyphs: _earlierTrim, ...kept } = line;
+  return { ...kept, glyphs, widthPx: trimmedWidthPx(trim) };
 }
 
 /**

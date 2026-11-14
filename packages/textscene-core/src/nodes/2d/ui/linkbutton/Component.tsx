@@ -13,7 +13,7 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { NO_UNDERLINE } from '../../../../r3f/controls/native/text/paragraphUnderline';
+import { NO_UNDERLINE_PX } from '../../../../r3f/controls/native/text/paragraphUnderline';
 import { isDrawnRtl } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -75,7 +75,7 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
   const underline = useMemo(() => {
     if (!layout || !shouldUnderline(state, props.underline)) return null;
     const spacingConstant = requiredThemeItem(solveNode.constants, 'underline_spacing');
-    const lineUnderline = layout.lines[0]?.underline ?? NO_UNDERLINE;
+    const lineUnderline = layout.lines[0]?.underline ?? NO_UNDERLINE_PX;
     const { y, thickness } = linkButtonUnderlineGeometry(
       lineUnderline,
       spacingConstant,

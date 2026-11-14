@@ -531,6 +531,17 @@ describe('trimSoloLine', () => {
     expect(trimmed.lines).toEqual([trimLineToWidth(layout.lines[0]!, 40, flags, SOLO_OPTIONS)]);
     expect(trimmed.widthPx).toBe(trimmed.lines[0]!.widthPx);
   });
+
+  it("keeps the line's underline, which a trim does not reshape", () => {
+    const layout = shaped('AAAAAAAA');
+    const trimmed = trimSoloLine(
+      layout,
+      overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
+      40,
+      SOLO_OPTIONS
+    );
+    expect(trimmed.lines[0]!.underline).toEqual({ positionPx: 0.984375, thicknessPx: 0.390625 });
+  });
 });
 
 describe('isTextWidthClipped', () => {

@@ -16,7 +16,8 @@ export interface ParagraphFaces {
   readonly isUndrawn: (index: number) => boolean;
 }
 
-export const NO_UNDERLINE: UnderlinePx = { positionPx: 0, thicknessPx: 0 };
+/** The underline of a line with none: a face with no `post`, or a BMFont. A caller that draws a stroke applies its own 1 px floor. */
+export const NO_UNDERLINE_PX: UnderlinePx = { positionPx: 0, thicknessPx: 0 };
 
 /**
  * The largest underline of every face `_shape_run` shapes the paragraph in: a span's own face and
@@ -38,19 +39,28 @@ export function paragraphUnderline({
     thicknessPx = Math.max(thicknessPx, underline.thicknessPx);
   };
   let lastSpanFace: FontMetrics | undefined;
-  let lastSize: number | undefined;
+  let lastDrawnFace: FontMetrics | undefined;
+  let lastSize = 0;
+  let wasUndrawn = false;
   for (let i = 0; i < chars.length; i++) {
     const ch = chars[i]!;
     const spanFace = spanFaces[i]!;
+    const drawnFace = faces[i]!;
     const fontSizePx = sizes[i]!;
     if (ch === '' || spanFace.drawsApart?.(ch)) continue;
-    const isInSpanFace = faces[i] === spanFace && !isUndrawn(i);
-    // Most units draw in the face of the unit before them, which widens nothing more.
-    if (isInSpanFace && spanFace === lastSpanFace && fontSizePx === lastSize) continue;
-    for (const face of facesShaped(spanFace, faces[i]!, isInSpanFace)) widen(face, fontSizePx);
-    [lastSpanFace, lastSize] = isInSpanFace ? [spanFace, fontSizePx] : [undefined, undefined];
+    const isUnitUndrawn = isUndrawn(i);
+    // Most units shape like the unit before them, in the same faces, which widen nothing more.
+    const isRepeat =
+      spanFace === lastSpanFace &&
+      drawnFace === lastDrawnFace &&
+      fontSizePx === lastSize &&
+      isUnitUndrawn === wasUndrawn;
+    if (isRepeat) continue;
+    const isInSpanFace = drawnFace === spanFace && !isUnitUndrawn;
+    for (const face of facesShaped(spanFace, drawnFace, isInSpanFace)) widen(face, fontSizePx);
+    [lastSpanFace, lastDrawnFace, lastSize, wasUndrawn] = [spanFace, drawnFace, fontSizePx, isUnitUndrawn];
   }
-  return positionPx === 0 && thicknessPx === 0 ? NO_UNDERLINE : { positionPx, thicknessPx };
+  return positionPx === 0 && thicknessPx === 0 ? NO_UNDERLINE_PX : { positionPx, thicknessPx };
 }
 
 /** The faces of the chain of `spanFace` that a unit drawn in `drawnFace` is shaped in, in order. */

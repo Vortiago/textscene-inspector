@@ -15,7 +15,8 @@ import { faceDescriptors } from './sceneFontFace';
 import { sfntHasGlyph } from './sfntCmap';
 import { sfntFaceGlyphs } from './sfntFaceGlyphs';
 import { FALLBACK_MARK_TABLE_TAGS, parseSfntScalars, readAxisDefaults, type SfntFile } from './sfntTables';
-import { readSfntUnderline } from './sfntUnderline';
+import { readSfntUnderline, type SfntUnderline } from './sfntUnderline';
+import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import * as logger from '../../../../logger';
 
 /**
@@ -24,6 +25,16 @@ import * as logger from '../../../../logger';
  * `.woff2` matched its `hhea` ascent and descent exactly, and at 16 px the ascent was 12.5 units off.
  */
 const SYNTHETIC_UNITS_PER_EM = 1000;
+
+/**
+ * The bundled font's underline over `SYNTHETIC_UNITS_PER_EM`, for a face whose `head` does not parse.
+ * Its `post` units then have no em to scale by, and a canvas measures no underline.
+ */
+function bundledUnderlineInProportion(): SfntUnderline {
+  const { unitsPerEm, underlinePosition = 0, underlineThickness = 0 } = OPEN_SANS_FONT_METRICS;
+  const scale = SYNTHETIC_UNITS_PER_EM / unitsPerEm;
+  return { underlinePosition: underlinePosition * scale, underlineThickness: underlineThickness * scale };
+}
 
 /** Written only by `loadRuntimeFont`, never cleared: a suffix per load, so two scene fonts never collide in `document.fonts`. */
 let familyCounter = 0;
@@ -76,6 +87,7 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Re
       unitsPerEm: SYNTHETIC_UNITS_PER_EM,
       ascent: boxMetrics.fontBoundingBoxAscent,
       descent: boxMetrics.fontBoundingBoxDescent,
+      ...bundledUnderlineInProportion(),
     };
     logger.info(
       `[SceneFont] Node "${nodePath}": font bytes did not open into readable head and hhea tables; using canvas fontBoundingBoxAscent/Descent as a measured approximation for ascent/descent.`

@@ -47,7 +47,7 @@ import {
   type FontMetrics,
   type UnderlinePx,
 } from '../../../../r3f/controls/native/text/fontMetrics';
-import { NO_UNDERLINE } from '../../../../r3f/controls/native/text/paragraphUnderline';
+import { NO_UNDERLINE_PX } from '../../../../r3f/controls/native/text/paragraphUnderline';
 import { resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { RichTextLabelProperties } from './types';
 import {
@@ -1158,7 +1158,7 @@ export function layoutRichTextRuns(
         lineIndex,
         lineTopPx,
         lineOffsetXPx,
-        underline: run.underline ? (line.underline ?? NO_UNDERLINE) : null,
+        underline: run.underline ? (line.underline ?? NO_UNDERLINE_PX) : null,
         color: run.color,
         outline: run.outline,
         fontSizePx: run.fontSizePx,
