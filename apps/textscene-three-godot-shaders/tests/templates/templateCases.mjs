@@ -59,11 +59,12 @@ export class StageVariants {
     return coveringSets(this.names, (set) => this.takenBranches(set)).map((set) => this.caseOf(set));
   }
 
-  /** The cases of `set` and one more name, for each that takes branch `key`. */
-  widenedCases(set, key) {
+  /** `set` with one more name, for each name that makes it take branch `key`. */
+  widenedSets(set, key) {
     return this.names
-      .filter((name) => !set.includes(name) && this.takenBranches([...set, name].sort())?.includes(key))
-      .map((name) => this.caseOf([...set, name].sort()));
+      .filter((name) => !set.includes(name))
+      .map((name) => [...set, name].sort())
+      .filter((wider) => this.takenBranches(wider)?.includes(key));
   }
 
   /** The keys of the branches a variant with `set` takes, or nothing when the preprocessor refuses it. */

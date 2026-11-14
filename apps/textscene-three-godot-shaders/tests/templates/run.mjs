@@ -126,18 +126,31 @@ function untakenBranches(stageList, results) {
   return untaken;
 }
 
-/** The cases that widen each refused set taking an untaken branch, without a set judged before. */
+/**
+ * How many wider sets the check tries for one untaken branch in a round. Godot compiles each, and
+ * a template of 60 names gives thousands of them.
+ */
+const WIDENED_PER_BRANCH = 2;
+
+/** The cases that widen a refused set taking an untaken branch, a few for each branch, none judged before. */
 function widenedCases(results, untaken) {
   const seen = new Set(results.map((entry) => `${entry.stages.key} ${entry.set.join(' ')}`));
   const cases = [];
-  for (const refused of results.filter((entry) => !entry.isCompiled))
-    for (const key of refused.branches)
-      if (untaken.get(refused.stages.key).has(key))
-        for (const entry of refused.stages.widenedCases(refused.set, key)) {
-          const id = `${entry.stages.key} ${entry.set.join(' ')}`;
-          if (!seen.has(id)) cases.push(entry);
+  for (const [stageKey, keys] of untaken)
+    for (const key of keys) {
+      const refused = results.filter(
+        (entry) => entry.stages.key === stageKey && !entry.isCompiled && entry.branches.has(key)
+      );
+      let chosen = 0;
+      for (const entry of refused)
+        for (const set of entry.stages.widenedSets(entry.set, key)) {
+          const id = `${stageKey} ${set.join(' ')}`;
+          if (chosen >= WIDENED_PER_BRANCH || seen.has(id)) continue;
           seen.add(id);
+          cases.push(entry.stages.caseOf(set));
+          chosen += 1;
         }
+    }
   return cases;
 }
 
