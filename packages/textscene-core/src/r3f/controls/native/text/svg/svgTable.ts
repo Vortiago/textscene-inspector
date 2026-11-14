@@ -2,6 +2,7 @@
  * The `SVG ` table as FreeType reads it (`ttsvg.c`): its document list, and the document that holds
  * a glyph, inflated where it is gzip-compressed.
  */
+import { bytesView } from '../../../../../utils/bytesView';
 import { perObject } from '../../../../../utils/perObject';
 import { tableBytes, type SfntFile } from '../sfntTables';
 
@@ -39,7 +40,7 @@ export type GzipInflate = (stream: Uint8Array) => Uint8Array;
 export function readSvgTable(sfnt: SfntFile): SvgTable | null {
   const table = tableBytes(sfnt, 'SVG ');
   if (table.length < HEADER_SIZE + LIST_MINIMUM_SIZE) return null;
-  const view = new DataView(table.buffer, table.byteOffset, table.length);
+  const view = bytesView(table);
   const listOffset = view.getUint32(2);
   if (listOffset < HEADER_SIZE || listOffset > table.length - LIST_MINIMUM_SIZE) return null;
   const entryCount = view.getUint16(listOffset);
@@ -79,7 +80,7 @@ interface SvgRecord {
 }
 
 function recordAt({ list }: SvgTable, index: number): SvgRecord {
-  const view = new DataView(list.buffer, list.byteOffset, list.length);
+  const view = bytesView(list);
   const at = 2 + index * RECORD_SIZE;
   return {
     startGlyph: view.getUint16(at),
@@ -119,7 +120,7 @@ function isGzip(stored: Uint8Array): boolean {
 
 /** The inflated document, or null for one whose stated size is too large or that does not inflate. */
 function inflated(stored: Uint8Array, inflate: GzipInflate): Uint8Array | null {
-  const view = new DataView(stored.buffer, stored.byteOffset, stored.length);
+  const view = bytesView(stored);
   if (view.getUint32(stored.length - 4, true) >= MAX_SVG_SIZE) return null;
   try {
     return inflate(stored);

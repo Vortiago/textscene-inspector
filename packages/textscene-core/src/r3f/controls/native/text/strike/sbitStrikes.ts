@@ -6,6 +6,7 @@
  * Portions ported from FreeType (FreeType License).
  * Copyright (c) 1996-2024 David Turner, Robert Wilhelm and Werner Lemberg.
  */
+import { bytesView } from '../../../../../utils/bytesView';
 import { ftDivFix, ftMulFix } from '../fontMetrics';
 import {
   HHEA_ASCENDER_OFFSET,
@@ -103,7 +104,7 @@ function dataTableOf(sfnt: SfntFile): Uint8Array {
 
 /** The strikes of a locator whose records fit, or null for a version FreeType does not know (`ttsbit.c:104-121`). */
 function locatorStrikeCount(locator: Uint8Array): number | null {
-  const view = viewOf(locator);
+  const view = bytesView(locator);
   const version = view.getUint32(0);
   const count = view.getUint32(4);
   const isKnown =
@@ -117,7 +118,7 @@ function locatorStrikeCount(locator: Uint8Array): number | null {
 
 /** The strikes of an `sbix` table whose offsets fit, or null for a version or flags FreeType refuses (`ttsbit.c:150-183`). */
 function sbixStrikeCount(sbix: Uint8Array): number | null {
-  const view = viewOf(sbix);
+  const view = bytesView(sbix);
   const version = view.getUint16(0);
   const flags = view.getUint16(2);
   const count = view.getUint32(4);
@@ -168,7 +169,7 @@ function sbixStrikeMetrics(
   tableIndex: number,
   unitsPerEm: number
 ): StrikeMetrics | null {
-  const view = viewOf(sbix);
+  const view = bytesView(sbix);
   const offset = view.getUint32(SBIX_HEADER_SIZE + 4 * tableIndex);
   if (offset + 4 > sbix.length) return null;
   const ppem = view.getUint16(offset);
@@ -206,8 +207,4 @@ function averageWidthOf(
   if (unitsPerEm === 0 || !os2 || !tableFits(dv, os2, OS2_TABLE_MIN_LENGTH))
     return { averageWidth: 1, emSize: 1 };
   return { averageWidth: dv.getInt16(os2.offset + OS2_AVERAGE_WIDTH_OFFSET), emSize: unitsPerEm };
-}
-
-function viewOf(bytes: Uint8Array): DataView {
-  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 }

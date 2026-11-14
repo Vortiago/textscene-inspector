@@ -32,6 +32,9 @@ export interface FaceStrikes {
 /** A font size animation passes through many sizes, so the strike picks of this many sizes are kept. */
 const MAX_KEPT_SIZES = 8;
 
+/** A colour strike's bitmap can be 136 px square, so the bitmaps of this many glyphs a strike are kept. */
+export const MAX_KEPT_BITMAPS = 256;
+
 /**
  * The strikes of `sfnt`, or null for a face that draws none: one with no strike, or with grey strikes
  * alone and no other colour table. `hasColourTable` tells whether its `COLR` or `SVG ` loads.
@@ -44,16 +47,14 @@ export async function faceStrikesOf(sfnt: SfntFile, hasColourTable: boolean): Pr
   const isScalable = isScalableFace(sfnt);
   const extent = isScalable ? scalableExtentOf(sfnt) : null;
   const readGlyph = glyphReaderOf(sfnt, tables, inflate);
-  const bitmaps = perObject((_strike: SbitStrike) => new Map<number, StrikeBitmap | null>());
+  const bitmaps = perObject((_strike: SbitStrike) =>
+    recentlyRead<number, StrikeBitmap | null>(MAX_KEPT_BITMAPS)
+  );
   // Layout and paint ask for the size of each glyph and pair, so each size's pick is kept.
   const sizes = recentlyRead<number, StrikeSize>(MAX_KEPT_SIZES);
   return {
     sizeAt: (fontSizePx) => sizes(fontSizePx, () => strikeSizeAt(tables.strikes, fontSizePx, extent)),
-    bitmapOf: (strike, glyph) => {
-      const byGlyph = bitmaps(strike);
-      if (!byGlyph.has(glyph)) byGlyph.set(glyph, readGlyph(strike, glyph));
-      return byGlyph.get(glyph)!;
-    },
+    bitmapOf: (strike, glyph) => bitmaps(strike)(glyph, () => readGlyph(strike, glyph)),
     isScalable,
   };
 }

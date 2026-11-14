@@ -6,6 +6,7 @@
  * Portions ported from FreeType (FreeType License).
  * Copyright (c) 1996-2024 David Turner, Robert Wilhelm and Werner Lemberg.
  */
+import { bytesView } from '../../../../../utils/bytesView';
 import { toInt8 } from '../../../../../godot/variant/intWidth';
 import { orOnRangeError } from '../sfntCmap';
 import { decodePng, type ZlibInflate } from './png';
@@ -79,7 +80,7 @@ function decoderOf(
   inflate: ZlibInflate
 ): Decoder | null {
   if (8 + 48 * tableIndex + 3 * 4 + 34 + 1 > locator.length) return null;
-  const view = viewOf(locator);
+  const view = bytesView(locator);
   const record = 8 + 48 * tableIndex;
   const indexArray = view.getUint32(record);
   const indexCount = view.getUint32(record + 8);
@@ -101,7 +102,7 @@ function decoderOf(
 function loadImage(decoder: Decoder, glyph: number, x: number, y: number, depth: number): void {
   if (depth > MAX_RECURSION) throw new NoBitmap();
   const { locator, indexArray } = decoder;
-  const view = viewOf(locator);
+  const view = bytesView(locator);
   let range = indexArray;
   let first = -1;
   for (let left = decoder.indexCount; left > 0; left--, range += 8) {
@@ -134,7 +135,7 @@ function imageSpan(
   glyph: number
 ): { start: number; end: number } {
   const { locator } = decoder;
-  const view = viewOf(locator);
+  const view = bytesView(locator);
   const limit = locator.length;
   switch (indexFormat) {
     case 1: {
@@ -385,7 +386,7 @@ function loadCompound(decoder: Decoder, image: Uint8Array, x: number, y: number,
   const { metrics } = decoder;
   const own = { ...metrics };
   if (image.length < 2) throw new NoBitmap();
-  const view = viewOf(image);
+  const view = bytesView(image);
   const count = view.getUint16(0);
   if (2 + 4 * count > image.length) throw new NoBitmap();
   for (let i = 0; i < count; i++) {
@@ -402,7 +403,7 @@ function loadCompound(decoder: Decoder, image: Uint8Array, x: number, y: number,
  */
 function loadPng(decoder: Decoder, image: Uint8Array, x: number, y: number): void {
   if (image.length < 4) throw new NoBitmap();
-  const length = viewOf(image).getUint32(0);
+  const length = bytesView(image).getUint32(0);
   if (image.length - 4 < length) throw new NoBitmap();
   const bitmap = decoder.bitmap!;
   const { width, height } = decoder.metrics;
@@ -423,8 +424,4 @@ function loadPng(decoder: Decoder, image: Uint8Array, x: number, y: number): voi
       (y + row) * bitmap.pitch + x * 4
     );
   }
-}
-
-function viewOf(bytes: Uint8Array): DataView {
-  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 }

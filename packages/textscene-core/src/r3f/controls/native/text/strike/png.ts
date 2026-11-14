@@ -6,6 +6,7 @@
  * Portions ported from FreeType (FreeType License).
  * Copyright (c) 1996-2024 David Turner, Robert Wilhelm and Werner Lemberg.
  */
+import { bytesView } from '../../../../../utils/bytesView';
 import type { EnumValue } from '../../../../../godot/classdb/enumNames';
 
 /** A decoded image: blue, green, red and alpha of each pixel, row by row from the top, the colour premultiplied. */
@@ -105,7 +106,7 @@ function decodeStraight(
 /** The chunks of `bytes`, or null for a file libpng stops on. */
 function readChunks(bytes: Uint8Array): Chunks | null {
   if (bytes.length < SIGNATURE.length || SIGNATURE.some((byte, i) => bytes[i] !== byte)) return null;
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const view = bytesView(bytes);
   let header: Header | null = null;
   let palette: Palette | null = null;
   let transparency: Uint8Array | null = null;
@@ -151,7 +152,7 @@ function readChunks(bytes: Uint8Array): Chunks | null {
 
 function readHeader(body: Uint8Array): Header | null {
   if (body.length !== 13) return null;
-  const view = new DataView(body.buffer, body.byteOffset, body.byteLength);
+  const view = bytesView(body);
   const width = view.getUint32(0);
   const height = view.getUint32(4);
   const bitDepth = body[8]!;

@@ -6,6 +6,7 @@
  * Portions ported from FreeType (FreeType License).
  * Copyright (c) 1996-2024 David Turner, Robert Wilhelm and Werner Lemberg.
  */
+import { bytesView } from '../../../../../utils/bytesView';
 import { ftMulFix } from '../fontMetrics';
 import { orOnRangeError } from '../sfntCmap';
 import { decodePng, type ZlibInflate } from './png';
@@ -57,7 +58,7 @@ function sbixImage(
   glyph: number,
   { glyphCount, inflate }: SbixGlyphSource
 ): StrikeBitmap | null {
-  const view = new DataView(sbix.buffer, sbix.byteOffset, sbix.byteLength);
+  const view = bytesView(sbix);
   const strikeOffset = view.getUint32(8 + 4 * tableIndex);
   let isFlipped = false;
   for (let references = 0; ; references++) {
