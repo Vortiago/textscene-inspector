@@ -5,6 +5,7 @@
  * the strike has one, and draws at the strike's scale.
  */
 import { perObject } from '../../../../../utils/perObject';
+import { recentlyRead } from '../../../../../utils/recentlyRead';
 import { orOnRangeError } from '../sfntCmap';
 import { contourBoxReader } from '../sfntGlyf';
 import { isScalableFace, parseSfntScalars, readGlyphCount, type SfntFile } from '../sfntTables';
@@ -28,6 +29,9 @@ export interface FaceStrikes {
   readonly isScalable: boolean;
 }
 
+/** A font size animation passes through many sizes, so the strike picks of this many sizes are kept. */
+const MAX_KEPT_SIZES = 8;
+
 /**
  * The strikes of `sfnt`, or null for a face that draws none: one with no strike, or with grey strikes
  * alone and no other colour table. `hasColourTable` tells whether its `COLR` or `SVG ` loads.
@@ -41,8 +45,10 @@ export async function faceStrikesOf(sfnt: SfntFile, hasColourTable: boolean): Pr
   const extent = isScalable ? scalableExtentOf(sfnt) : null;
   const readGlyph = glyphReaderOf(sfnt, tables, inflate);
   const bitmaps = perObject((_strike: SbitStrike) => new Map<number, StrikeBitmap | null>());
+  // Layout and paint ask for the size of each glyph and pair, so each size's pick is kept.
+  const sizes = recentlyRead<number, StrikeSize>(MAX_KEPT_SIZES);
   return {
-    sizeAt: (fontSizePx) => strikeSizeAt(tables.strikes, fontSizePx, extent),
+    sizeAt: (fontSizePx) => sizes(fontSizePx, () => strikeSizeAt(tables.strikes, fontSizePx, extent)),
     bitmapOf: (strike, glyph) => {
       const byGlyph = bitmaps(strike);
       if (!byGlyph.has(glyph)) byGlyph.set(glyph, readGlyph(strike, glyph));

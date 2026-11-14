@@ -112,6 +112,30 @@ function firstPartialPixel(raster: ImageData): number[] | undefined {
   return undefined;
 }
 
+/** The layout of `text` with every glyph's origin moved `xOffset` px. */
+function offsetLayout(text: string, face: StrikeFace, fontSizePx: number, xOffset: number) {
+  const shaped = layoutFor(text, face, fontSizePx);
+  const lines = shaped.lines.map((line) => ({
+    ...line,
+    glyphs: line.glyphs.map((glyph) => ({ ...glyph, xOffset })),
+  }));
+  return { ...shaped, lines };
+}
+
+/** The alpha-weighted mean column of a Label3D raster of `text` with each glyph moved `xOffset` px. */
+function label3DInkCentreX(text: string, face: StrikeFace, fontSizePx: number, xOffset: number): number {
+  const layout = offsetLayout(text, face, fontSizePx, xOffset);
+  const canvasLayout = computeCanvasTextCanvasLayout(layout, 0, 0);
+  const raster = paintSceneFontCanvas(layout, fontSizePx, TEAL, 0, canvasLayout, { glyphDrawer: 'label3D' })!;
+  let weighted = 0;
+  let total = 0;
+  for (let at = 3; at < raster.data.length; at += 4) {
+    weighted += raster.data[at]! * (((at - 3) / 4) % raster.width);
+    total += raster.data[at]!;
+  }
+  return weighted / total;
+}
+
 describe('a strike face in the layout', () => {
   it('takes its ascent from the strike at the strike scale', () => {
     expect(getFontAscentPx(strikeFace(), 40)).toBe(36);
@@ -145,6 +169,16 @@ describe('a strike glyph in the canvas paint', () => {
     expect(inkedPixelCount(raster)).toBe(4);
   });
 
+  it('paints a grey bitmap at a glyph origin a Label3D keeps between pixels', () => {
+    const shaped = layoutFor('A', strikeFace({ pixelMode: 'gray' }), 20);
+    const [line] = shaped.lines;
+    const glyphs = line!.glyphs.map((glyph) => ({ ...glyph, xOffset: 0.4 }));
+    const layout = { ...shaped, lines: [{ ...line!, glyphs }] };
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0, 0);
+    const raster = paintSceneFontCanvas(layout, 20, TEAL, 0, canvasLayout, { glyphDrawer: 'label3D' })!;
+    expect(inkedPixelCount(raster)).toBeGreaterThan(0);
+  });
+
   it('paints a 1-bit bitmap in the font colour', () => {
     expect(inkedPixelCount(paint('A', strikeFace({ pixelMode: 'mono' }), 20))).toBe(4);
   });
@@ -173,6 +207,13 @@ describe('a strike glyph in the canvas paint', () => {
 
   it('draws the outline of a glyph the strike lacks in a scalable face', () => {
     expect(inkedPixelCount(paint('b', strikeFace({ isScalable: true }), 20))).toBeGreaterThan(0);
+  });
+
+  it("moves a Label3D's scaled outline glyph with its origin, with no subpixel step of a quarter pixel more", () => {
+    const face = strikeFace({ isScalable: true });
+    const movedPx = label3DInkCentreX('b', face, 16, 0.25) - label3DInkCentreX('b', face, 16, 0);
+    // A quarter pixel moved by its origin, sampled through a filtered quad; a subpixel step would double it.
+    expect(movedPx).toBeLessThan(0.4);
   });
 
   it('draws nothing for a glyph the strike lacks in a face of bitmaps alone', () => {

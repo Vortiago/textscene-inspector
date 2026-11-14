@@ -4,6 +4,7 @@
  * no view box by, and the content drawn into that box at the glyph's size. The rim of a shape differs
  * from ThorVG's by the browser's own antialiasing.
  */
+import { parsedSvg } from './parsedSvg';
 import type { SvgGlyphPlacement } from './svgGlyphPlacement';
 
 /** A box in the document's own units. */
@@ -33,12 +34,11 @@ export interface SvgPictureDrawer {
   picture(xml: string): SvgPicture | null;
 }
 
-const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
-
 /** The browser's drawer, or null outside a document, where nothing draws an SVG. */
 export function browserSvgPictureDrawer(): SvgPictureDrawer | null {
   const document = globalThis.document;
-  if (!document?.body || typeof DOMParser === 'undefined') return null;
+  if (!document?.body || typeof DOMParser === 'undefined' || typeof OffscreenCanvas === 'undefined')
+    return null;
   // One canvas for every draw: each draw resizes it and reads it back before the next can start.
   const canvas = new OffscreenCanvas(1, 1);
   return { picture: (xml) => browserPicture(document, canvas, xml) };
@@ -49,16 +49,6 @@ function browserPicture(document: Document, canvas: OffscreenCanvas, xml: string
   if (!root) return null;
   const box = measuredContentBox(document, root);
   return { box, draw: (placement) => drawnPicture(canvas, root, box, placement) };
-}
-
-/** The document's root `svg` element, or null for text that does not parse as one. */
-function parsedSvg(xml: string): SVGSVGElement | null {
-  const parsed = new DOMParser().parseFromString(xml, 'image/svg+xml');
-  const root = parsed.documentElement;
-  if (parsed.getElementsByTagName('parsererror').length > 0) return null;
-  return root.namespaceURI === SVG_NAMESPACE && root.localName === 'svg'
-    ? (root as unknown as SVGSVGElement)
-    : null;
 }
 
 /** `getBBox` measures only an element in a rendered document, so a copy of the root joins the page unseen for the read. */

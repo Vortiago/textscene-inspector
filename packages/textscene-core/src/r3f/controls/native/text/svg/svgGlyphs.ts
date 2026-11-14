@@ -19,10 +19,10 @@ import { fontWork } from '../settledChannel';
 import { glyphMetricsReader } from '../sfntGlyphMetrics';
 import { parseSfntScalars, readHeadIsPpemRounded, type SfntFile } from '../sfntTables';
 import type { StrikeSize } from '../strike/strikeSize';
-import { browserSvgPictureDrawer, type SvgPictureDrawer } from './browserSvgPicture';
-import { svgGlyphDocumentReader, type SvgGlyphDocument } from './svgGlyphDocument';
+import { browserSvgPictureDrawer, type SvgPicture, type SvgPictureDrawer } from './browserSvgPicture';
+import { svgGlyphDocumentReader, type Embox, type SvgGlyphDocumentReader } from './svgGlyphDocument';
 import { svgGlyphPlacement, type SvgGlyphPlacement, type SvgGlyphSize } from './svgGlyphPlacement';
-import { readSvgTable, svgDocumentOf, type GzipInflate } from './svgTable';
+import { readSvgTable, svgDocumentOf, type GzipInflate, type SvgTable } from './svgTable';
 
 /** The FreeType size a face loads its SVG glyphs at: its size metrics, and `x_scale` in 16.16 for the advance. */
 export interface SvgLoadSize extends SvgGlyphSize {
@@ -46,45 +46,58 @@ export interface SvgGlyphs {
   readonly version: number;
 }
 
-/** A font size animation passes through many sizes, so the SVG glyphs of this many sizes of one face are kept. */
-const MAX_KEPT_SIZES = 8;
+/**
+ * The SVG glyphs of this many sizes of one face are kept: more than a scene draws at once, as a size
+ * that drops out draws again on its next read, blank until it lands.
+ */
+const MAX_KEPT_SIZES = 64;
+/** A size and glyph lands with a repaint only once, so sizes that drop out of a full cache cannot repaint without end. */
+const MAX_LANDED_KEYS = 4096;
 
 /** The SVG glyphs of `sfnt`, or null for a face whose `SVG ` table FreeType does not load. */
 export async function svgGlyphsOf(
   sfnt: SfntFile,
-  drawer: SvgPictureDrawer | null = browserSvgPictureDrawer()
+  givenDrawer?: SvgPictureDrawer | null
 ): Promise<SvgGlyphs | null> {
   const table = readSvgTable(sfnt);
   const scalars = parseSfntScalars(sfnt);
   if (!table || !scalars) return null;
+  const drawer = givenDrawer === undefined ? browserSvgPictureDrawer() : givenDrawer;
   const { gunzipSync } = await import('three/addons/libs/fflate.module.js');
   const inflate: GzipInflate = (stream) => gunzipSync(stream);
-  const documentOf = svgGlyphDocumentReader();
+  const pictureOf = glyphPictureReader(table, inflate, svgGlyphDocumentReader(), scalars.unitsPerEm, drawer);
   const advanceOf = glyphMetricsReader(sfnt);
-  const { unitsPerEm } = scalars;
   const drawnAt = recentlyRead<string, Map<number, ColourBitmap | null | undefined>>(MAX_KEPT_SIZES);
   const landings = batchedLandings();
+  /** Written only by the draws as they land. Cleared when full, which lets each key repaint once more. */
+  const landedKeys = new Set<string>();
+  const land = (
+    key: string,
+    drawn: Map<number, ColourBitmap | null | undefined>,
+    glyph: number,
+    bitmap: ColourBitmap | null
+  ) => {
+    drawn.set(glyph, bitmap);
+    if (!bitmap || landedKeys.has(`${key}#${glyph}`)) return;
+    if (landedKeys.size >= MAX_LANDED_KEYS) landedKeys.clear();
+    landedKeys.add(`${key}#${glyph}`);
+    landings.land();
+  };
   return {
-    sizeAt: scalableSizeReader(sfnt, unitsPerEm, scalars.ascent, -scalars.descent),
+    sizeAt: scalableSizeReader(sfnt, scalars.unitsPerEm, scalars.ascent, -scalars.descent),
     readerAt: (size) => {
-      const drawn = drawnAt(sizeKey(size), () => new Map());
+      const key = sizeKey(size);
+      const drawn = drawnAt(key, () => new Map());
       return (glyph) => {
         if (drawn.has(glyph)) return drawn.get(glyph);
-        const document = svgDocumentOf(table, glyph, inflate);
-        if (!document) {
-          drawn.set(glyph, undefined);
-          return undefined;
-        }
-        drawn.set(glyph, null);
+        const picture = pictureOf(glyph);
+        drawn.set(glyph, picture === undefined ? undefined : null);
+        if (!picture) return picture;
         const horiAdvance26_6 = ftMulFix(advanceOf(glyph, 0).horizontal.advance, size.xScale);
-        const glyphDocument = documentOf(document, glyph, unitsPerEm);
         // Counted as font work, so a capture waits for the glyph to land.
         const endWork = fontWork.begin();
-        void drawnBitmap(drawer, glyphDocument, size, horiAdvance26_6)
-          .then((bitmap) => {
-            drawn.set(glyph, bitmap);
-            if (bitmap) landings.land();
-          })
+        void drawnBitmap(picture, size, horiAdvance26_6)
+          .then((bitmap) => land(key, drawn, glyph, bitmap))
           .finally(endWork);
         return null;
       };
@@ -118,16 +131,46 @@ function batchedLandings(): Pick<ExternalStore<number>, 'get' | 'subscribe'> & {
   };
 }
 
-/** The bitmap of a glyph's document, or null where the browser draws nothing or no browser is there to draw. */
+/**
+ * The picture of each glyph's document, parsed once for every size: undefined for a glyph with no
+ * document, and null where the browser draws nothing or no browser is there to draw.
+ */
+function glyphPictureReader(
+  table: SvgTable,
+  inflate: GzipInflate,
+  documentOf: SvgGlyphDocumentReader,
+  unitsPerEm: number,
+  drawer: SvgPictureDrawer | null
+): (glyph: number) => GlyphPicture | null | undefined {
+  const pictures = new Map<number, GlyphPicture | null | undefined>();
+  return (glyph) => {
+    if (pictures.has(glyph)) return pictures.get(glyph);
+    const document = svgDocumentOf(table, glyph, inflate);
+    const glyphDocument = document && documentOf(document, glyph, unitsPerEm);
+    const picture = glyphDocument && drawer?.picture(glyphDocument.xml);
+    const glyphPicture = glyphDocument
+      ? picture
+        ? { picture, embox: glyphDocument.embox }
+        : null
+      : undefined;
+    pictures.set(glyph, glyphPicture);
+    return glyphPicture;
+  };
+}
+
+/** A glyph's parsed picture, and the em box of its document. */
+interface GlyphPicture {
+  readonly picture: SvgPicture;
+  readonly embox: Embox;
+}
+
+/** The bitmap of a glyph's picture at `size`, or null where the browser draws nothing. */
 async function drawnBitmap(
-  drawer: SvgPictureDrawer | null,
-  document: SvgGlyphDocument,
+  { picture, embox }: GlyphPicture,
   size: SvgGlyphSize,
   horiAdvance26_6: number
 ): Promise<ColourBitmap | null> {
-  const picture = drawer?.picture(document.xml);
-  if (!picture) return null;
-  const placement = svgGlyphPlacement(picture.box, document.embox, size, horiAdvance26_6);
+  const placement = svgGlyphPlacement(picture.box, embox, size, horiAdvance26_6);
   if (!placement) return null;
   const texels = await picture.draw(placement);
   return texels && colourBitmapOf(placement, texels);

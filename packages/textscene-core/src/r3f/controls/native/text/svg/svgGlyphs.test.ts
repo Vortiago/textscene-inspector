@@ -72,6 +72,25 @@ async function landed(drawer: SvgPictureDrawer | null, glyph: number) {
   return { first, bitmap: read(glyph), landings, version: svg.version };
 }
 
+/** Reads `RED_GLYPH` at `sizeCount` sizes on each landing, as a repaint of a label at each size does. */
+async function repaintedSizes(sizeCount: number) {
+  const svg = (await svgGlyphsOf(svgFace(), squareDrawer([255, 0, 0, 255])))!;
+  const readAll = () =>
+    Array.from({ length: sizeCount }, (_, i) => svg.readerAt(svg.sizeAt(10 + i))(RED_GLYPH));
+  let landings = 0;
+  svg.subscribe(() => {
+    landings++;
+    readAll();
+  });
+  readAll();
+  const counts: number[] = [];
+  for (let tick = 0; tick <= 10; tick++) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    counts.push(landings);
+  }
+  return { bitmaps: readAll(), landingsAfter: (tick: number) => counts[tick] };
+}
+
 describe('svgGlyphsOf', () => {
   it('rounds the ascender to the nearest pixel at the whole ppem where the face rounds its ppem', async () => {
     // 800 units at 13 px are 665.6/64 px: 10 px to the nearest pixel, 11 px up.
@@ -107,6 +126,16 @@ describe('svgGlyphsOf', () => {
     svg.readerAt(svg.sizeAt(20))(RED_GLYPH);
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect([landings, svg.version]).toEqual([1, 2]);
+  });
+
+  it('draws every glyph of a repaint that reads nine sizes', async () => {
+    const { bitmaps } = await repaintedSizes(9);
+    expect(bitmaps.every((bitmap) => bitmap !== null)).toBe(true);
+  });
+
+  it('stops repainting where a repaint reads more sizes than it keeps', async () => {
+    const { landingsAfter } = await repaintedSizes(70);
+    expect(landingsAfter(5)).toBe(landingsAfter(10));
   });
 
   it('places the bitmap on the advance, raised by its height times the line over the ascender', async () => {

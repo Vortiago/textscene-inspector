@@ -272,6 +272,7 @@ function rasterFrame(
     skew,
     canvasLayout,
     snapsGlyphs: snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, metrics),
+    roundsPen: GLYPH_DRAWER_RULES[glyphDrawer].roundsPen,
     strokeWidthPx,
   };
 }

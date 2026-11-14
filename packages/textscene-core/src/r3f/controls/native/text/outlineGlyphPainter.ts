@@ -254,7 +254,7 @@ function drawnGlyph(
 ): DrawnGlyph | null {
   if (load.scale === 1) {
     if ('colour' in form) return { colour: { bitmap: form.colour, ...bitmapOrigin(glyph, frame), scale: 1 } };
-    if ('coverage' in form) return { coverage: movedBitmap(form.coverage, bitmapOrigin(glyph, frame)) };
+    if ('coverage' in form) return coverageAt(form.coverage, bitmapOrigin(glyph, frame), frame);
     const coverage = placedGlyphBitmap(form.contours, glyph.penX, glyph.baselineY, outlineRadiusPx);
     return coverage && { coverage };
   }
@@ -268,17 +268,30 @@ function drawnGlyph(
 /**
  * The bitmap of a scaled face's contours at its glyph origin, moved by the pen's subpixel step:
  * Godot shifts the outline by the step of the pen before its half step (`text_server_adv.cpp:
- * 4022-4028,1297-1303`), and draws the quad at the pen unfloored.
+ * 4022-4028,1297-1303`), and draws the quad at the pen unfloored. Label3D draws the unshifted outline.
  */
 function scaledContourBitmap(
   contours: GlyphContours,
   { penX }: PlacedGlyph,
-  { fontSizePx, snapsGlyphs }: RasterFrame,
+  { fontSizePx, roundsPen }: RasterFrame,
   outlineRadiusPx: number
 ): GlyphBitmap | null {
-  const stepsPerPx = snapsGlyphs ? 1 : subpixelStepsPerPx(fontSizePx);
+  const stepsPerPx = roundsPen ? subpixelStepsPerPx(fontSizePx) : 1;
   const shiftPx = Math.floor(stepsPerPx * penX) / stepsPerPx - Math.floor(penX);
   return placedGlyphBitmap(contours, shiftPx, 0, outlineRadiusPx);
+}
+
+/**
+ * A strike's coverage bitmap at scale 1: laid on the pixels where the drawer snaps the pen, and
+ * sampled as its quad where the pen stays between pixels, as Label3D's does.
+ */
+function coverageAt(
+  coverage: GlyphBitmap,
+  origin: { originX: number; originY: number },
+  { snapsGlyphs }: RasterFrame
+): DrawnGlyph {
+  if (snapsGlyphs) return { coverage: movedBitmap(coverage, origin) };
+  return { coverageQuad: { bitmap: coverageTexels(coverage), ...origin, scale: 1 } };
 }
 
 /** A coverage bitmap as Godot's `FORMAT_LA8` texels: white, with the coverage in alpha. */

@@ -47,6 +47,7 @@ import { readCpal } from './colour/cpal';
 import { colrLayersReader, type ColrLayersReader } from './colour/colr';
 import { faceStrikesOf, type FaceStrikes } from './strike/faceStrikes';
 import { svgGlyphsOf, type SvgGlyphs } from './svg/svgGlyphs';
+import { readSvgTable } from './svg/svgTable';
 
 type InstanceKerningReader = typeof instanceKerningReader;
 /** The readers of the glyphs at an instance, which load with a font that has `GSUB` and `fvar`. */
@@ -138,7 +139,7 @@ export async function openFontOutlines(
   const colourLayers = colourLayersOf(sfnt);
   const [outlineOf, strikes, svgGlyphs, kerningReader, glyphReaders] = await Promise.all([
     outlineReaderOf(sfnt, load),
-    faceStrikesOf(sfnt, colourLayers !== undefined || sfnt.tables.has('SVG ')),
+    faceStrikesOf(sfnt, colourLayers !== undefined || readSvgTable(sfnt) !== null),
     svgGlyphsOf(sfnt),
     variationReaderOf(
       sfnt,

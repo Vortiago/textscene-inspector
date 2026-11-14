@@ -23,6 +23,8 @@ export interface RasterFrame {
   readonly canvasLayout: CanvasTextCanvasLayout;
   /** Whether the glyphs snap to whole item pixels (`snapsGlyphsToItemPixels`). */
   readonly snapsGlyphs: boolean;
+  /** Whether the drawer rounds the pen, as a canvas item does and Label3D does not (`glyphDrawer.ts`). */
+  readonly roundsPen: boolean;
   /** A positive width paints the outline ring instead of the fill. */
   readonly strokeWidthPx: number;
 }
