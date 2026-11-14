@@ -659,6 +659,39 @@ describe('soloLineLayout — re-wrapping one line of an already-shaped result', 
     const solo = soloLineLayout(parent.lines[0]!, parent, parent.baselineOffsetPx, bold);
     expect(solo.fontMetrics).toBe(bold);
   });
+
+  describe('heightPx', () => {
+    const shapeAB = () =>
+      shapeText('AB', {
+        fontSizePx: 16,
+        boxWidthPx: 0,
+        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+        fontMetrics: FAKE_SCENE_FONT_METRICS,
+        lineSpacingPx: 0,
+      });
+
+    it('is the pitch for a line of the parent face', () => {
+      const parent = shapeAB();
+      // ceil(800 * 16/1000) + ceil(200 * 16/1000) = 13 + 4.
+      expect(soloLineLayout(parent.lines[0]!, parent).heightPx).toBe(17);
+    });
+
+    // A glyph of a fallback face with a deeper descent is cut at the bottom of a raster one pitch high.
+    it('reaches the deepest descent of a glyph on the line, below the baseline', () => {
+      const parent = shapeAB();
+      const deep: CanvasFontMetrics = { ...FAKE_SCENE_FONT_METRICS, descent: 600 };
+      const line = parent.lines[0]!;
+      const withDeepGlyph = { ...line, glyphs: [line.glyphs[0]!, { ...line.glyphs[1]!, fontMetrics: deep }] };
+      // The baseline 13 plus ceil(600 * 16/1000) = 10.
+      expect(soloLineLayout(withDeepGlyph, parent).heightPx).toBe(23);
+    });
+
+    it('is the pitch for a line with no glyph', () => {
+      const parent = shapeAB();
+      const empty = { ...parent.lines[0]!, glyphs: [] };
+      expect(soloLineLayout(empty, parent).heightPx).toBe(17);
+    });
+  });
 });
 
 /**
