@@ -5,6 +5,7 @@
  */
 
 import type { TscnNode } from '../parser/types.js';
+import type { LiveNode } from '../resources/liveNode.js';
 import { isTopLevelItem, ysortsChildren } from './canvasPaintOrder.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { DrawableCell } from '../resources/tileset/drawableCell.js';
@@ -18,7 +19,6 @@ import { NO_PATCHES, patchedNode, type NodePatches } from './nodePatch.js';
 import { joinPath } from '../utils/nodePath.js';
 import { perObject } from '../utils/perObject.js';
 import { isControlType } from './canvasItemClass.js';
-import type { LiveNode } from '../resources/liveNode.js';
 import type { ControlTransforms } from './contexts/YSortContext.js';
 
 /** What `_collect_ysort_children` threads down to the children of one y-sorted item. */
@@ -101,24 +101,6 @@ function toSortRootOf(
   return local ? multiplyTransform2D(parent.toSortRoot, local) : parent.toSortRoot;
 }
 
-/**
- * A child's sort y, the y of its origin in the sort root's space (`renderer_canvas_cull.h:115-123`),
- * and what it threads to its own children: its transform there. A TileMapLayer's
- * `y_sort_origin` moves only its rows (`tile_map_layer.cpp:547`), never the layer's own origin.
- */
-function itemSortKey(
-  child: TscnNode,
-  parent: YSortParent,
-  controlTransform: Transform2DColumns | undefined
-): YSortParent & { sortY: number } {
-  const fields = canvasItemFieldsOf(child);
-  const toSortRoot = toSortRootOf(fields, parent, controlTransform);
-  // A scene tile sorts as its instance root, which sits inside the placement node that stands for it.
-  const root = (child as LiveNode).ySortRoot;
-  const sortY = root ? multiplyTransform2D(toSortRoot, root.pose).ty : toSortRoot.ty;
-  return { toSortRoot, sortY };
-}
-
 /** The y-sort group of a y_sort_enabled canvas item that draws per tile row, or undefined. */
 function ySortTileGroup(node: TscnNode) {
   if (!ysortsChildren(node)) return undefined;
@@ -184,22 +166,27 @@ export function collectYSortedItems(
     const childPoses = { ...live, path: joinPath(live.path, child.name) };
     // Godot sorts on the transform it draws (`renderer_canvas_cull.cpp:131`), such as the pose a
     // RemoteTransform2D pushes.
-    const key = itemSortKey(
-      patchedNode(child, live.patches.get(childPoses.path)),
-      parent,
-      live.controlTransforms?.get(childPoses.path)
-    );
+    // A child sorts on the y of its origin in the sort root's space (`renderer_canvas_cull.h:115-123`).
+    // A TileMapLayer's `y_sort_origin` moves only its rows (`tile_map_layer.cpp:547`), never this origin.
+    const placedPose = (child as LiveNode).placedPose;
+    const toSortRoot = placedPose
+      ? multiplyTransform2D(parent.toSortRoot, placedPose)
+      : toSortRootOf(
+          canvasItemFieldsOf(patchedNode(child, live.patches.get(childPoses.path))),
+          parent,
+          live.controlTransforms?.get(childPoses.path)
+        );
     // A y-sorted child, a Control included, merges its own children into this sort.
     const isYSort = ysortsChildren(child);
 
     const group = ySortTileGroup(child);
     const isTileGroup = group !== undefined;
     items.push({
-      sortY: key.sortY,
+      sortY: toSortRoot.ty,
       treeOrder: order++,
       kind: isTileGroup ? 'tileGroup' : 'node',
       ...(isTileGroup && {
-        tileData: { tileSetRef: group.describe(child).tileSetRef, toSortRoot: key.toSortRoot },
+        tileData: { tileSetRef: group.describe(child).tileSetRef, toSortRoot },
       }),
       // A y_sort_enabled node draws only its body: its children are items of their own below.
       node: isYSort && !isTileGroup ? ownBodyOf(child) : child,
@@ -208,7 +195,7 @@ export function collectYSortedItems(
     if (!isYSort) continue;
     // Godot appends a y_sort_enabled node first, then merges its subtree into this sort. The
     // descendants sort against the child's `ysort_xform` and `abs_z`, not the sort root's.
-    const subItems = collectYSortedItems(child, key, order, [...liftedPast, child], childPoses);
+    const subItems = collectYSortedItems(child, { toSortRoot }, order, [...liftedPast, child], childPoses);
     items.push(...subItems);
     order += subItems.length;
   }

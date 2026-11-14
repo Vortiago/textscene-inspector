@@ -11,7 +11,7 @@ import { liveScenePassResults } from '../liveScenePass';
 import { canvasItemPass } from './canvasItemPass';
 import { canvasPaintPass } from './canvasItemPaint';
 import type { PaintRange } from '../canvasPaintOrder';
-import { NO_SORT_INPUTS, sortedPaintOf, ySortedPaint, type ExtraSortItems, type SortOrigins } from './ySort';
+import { sortedPaintOf, ySortedPaint, type ExtraSortItems, type SortInputs, type SortOrigins } from './ySort';
 import '../nodes/index';
 import '../controls/index';
 
@@ -19,6 +19,7 @@ function parsed(body: string): TscnScene {
   return new TscnParser().parse(`[gd_scene format=3]\n\n${body}`);
 }
 
+const NO_SORT_INPUTS: SortInputs = { origins: new Map(), extras: new Map(), liveYs: new Map() };
 const NO_ORIGINS: SortOrigins = NO_SORT_INPUTS.origins;
 const NO_EXTRAS: ExtraSortItems = NO_SORT_INPUTS.extras;
 

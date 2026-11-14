@@ -70,11 +70,11 @@ interface Above {
 
 /**
  * Written only by {@link canvasPaintPassFrom}: one pass for each start, so a tree's results stay
- * cached for each run a caller starts from. The starts are the runs scene tiles and viewports take.
+ * cached for each run a caller starts from. The starts are the runs that Control forests take.
  */
 const passesByStart = new Map<string, LiveScenePass<CanvasItemPaint>>();
 
-/** The paint pass whose roots share `start`, as a tile layer's scene tiles share its tail. */
+/** The paint pass whose roots share `start`, as the roots of a Control forest do. */
 export function canvasPaintPassFrom(start: PaintRange): LiveScenePass<CanvasItemPaint> {
   const key = `${start.base}:${start.size}`;
   let pass = passesByStart.get(key);

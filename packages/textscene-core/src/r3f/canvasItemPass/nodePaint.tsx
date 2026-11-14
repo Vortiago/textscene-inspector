@@ -1,7 +1,7 @@
 /**
  * Where a drawn node's pixels and subtree sit in its canvas's draw sequence. A node of the shared
  * live tree reads the paint pass by live path (`canvasItemPaint.ts`). A node drawn outside that
- * tree, such as a scene tile's instance, takes its run from the node that draws it.
+ * tree, such as a tile row, takes its run from the node that draws it.
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
@@ -41,7 +41,7 @@ const NO_CANVAS_ROOTS: ReadonlyMap<TscnNode, PaintRange> = new Map();
 const PaintFrameContext = createContext<PaintFrame>(IN_TREE_ORDER);
 PaintFrameContext.displayName = 'PaintFrameContext';
 
-/** Written where a subtree leaves the shared live tree: a scene tile, a tile row. */
+/** Written where a subtree leaves the shared live tree, such as a tile row. */
 export function PaintFrameProvider({ value, children }: { value: PaintFrame; children: ReactNode }) {
   return <PaintFrameContext.Provider value={value}>{children}</PaintFrameContext.Provider>;
 }
@@ -111,11 +111,6 @@ export function useRootPaintFrames(roots: readonly TscnNode[]): readonly PaintFr
       canvasRoots,
     }));
   }, [hasTree, roots]);
-}
-
-/** The frames of `content`, drawn one after another from `run`, as scene tiles draw after the layer's children. */
-export function contentFrames(run: PaintRange, content: readonly TscnNode[]): PaintFrame[] {
-  return allocatePaintRange(run, content).children.map((range) => runFrame(range));
 }
 
 /** The frame of a subtree outside the shared live tree whose root owns `range`, where `canvasRoots` take theirs. */

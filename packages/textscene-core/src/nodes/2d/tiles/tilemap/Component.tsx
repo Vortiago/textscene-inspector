@@ -23,8 +23,8 @@ import type { TileMapLayerProperties } from '../tilemaplayer/types';
 import type { TileSetModel } from '../../../../resources/tileset/types';
 import { SceneTileInstances } from '../shared/SceneTileInstances';
 import { LayerPlaceholders } from './LayerPlaceholders';
-import { useSceneTileNodes, type SceneTileDrawing } from '../shared/useSceneTileNodes';
-import type { PlacedCell } from '../shared/tileData';
+import { useSceneTiles } from '../shared/useSceneTiles';
+import type { SceneTiles } from '../../../../r3f/liveSceneTiles';
 import { childCanvasItemProperties } from '../shared/childCanvasItem';
 import type { TileMapLayerData, TileMapProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
@@ -33,8 +33,7 @@ export function TileMap({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapProperties;
   const { model, status } = useTileSetModel(props.tile_set);
   // The TileMap, not a layer, holds the instances of every layer (`tile_map_layer.cpp:1645-1652`).
-  const enabledCells = useMemo(() => enabledLayerCells(props.layers), [props.layers]);
-  const sceneTiles = useSceneTileNodes(model, enabledCells);
+  const sceneTiles = useSceneTiles(node);
   if (!props.y_sort_enabled) {
     return (
       <LayeredTileMap node={node} model={model} status={status} sceneTiles={sceneTiles}>
@@ -49,18 +48,13 @@ export function TileMap({ node, children }: NodeComponentProps) {
   );
 }
 
-/** The cells of the layers that are enabled, layer by layer: the order the TileMap adds their instances in. */
-function enabledLayerCells(layers: readonly TileMapLayerData[]): PlacedCell[] {
-  return layers.flatMap((layer) => (layer.enabled ? (layer.cells ?? []) : []));
-}
-
 /** A y-sorted TileMap: the sort in `children` takes its layers and scene tiles with its child nodes. */
 function YSortedTileMap({
   node,
   model,
   sceneTiles,
   children,
-}: { model: TileSetModel | null; sceneTiles: SceneTileDrawing } & NodeComponentProps) {
+}: { model: TileSetModel | null; sceneTiles: SceneTiles } & NodeComponentProps) {
   const props = node.properties as TileMapProperties;
   const path = useNodePath() ?? node.name;
   const layers = useMemo(() => layerNodesOf(node), [node]);
@@ -79,7 +73,7 @@ function YSortedTileMap({
         )
       }
     >
-      <YSortExtraChildrenProvider path={path} leading={layers} trailing={sceneTiles.instances}>
+      <YSortExtraChildrenProvider path={path} leading={layers} trailing={sceneTiles.children}>
         {children}
       </YSortExtraChildrenProvider>
     </CanvasItem2D>
@@ -118,7 +112,7 @@ function layerNodesOf(map: TscnNode): TscnNode[] {
 interface LayeredTileMapProps extends NodeComponentProps {
   model: TileSetModel | null;
   status: TileSetStatus;
-  sceneTiles: SceneTileDrawing;
+  sceneTiles: SceneTiles;
 }
 
 function LayeredTileMap({ node, model, status, sceneTiles, children }: LayeredTileMapProps) {
@@ -197,7 +191,7 @@ function LayeredTileMap({ node, model, status, sceneTiles, children }: LayeredTi
       )}
     >
       {children}
-      <SceneTileInstances node={node} instances={sceneTiles.instances} />
+      <SceneTileInstances node={node} instances={sceneTiles.children} />
     </CanvasItem2D>
   );
 }
