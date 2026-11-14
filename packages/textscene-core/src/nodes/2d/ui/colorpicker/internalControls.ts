@@ -12,8 +12,8 @@
 import { parseNodeWithRegistry } from '../../../../core/NodeRegistry';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { Rgba } from '../../../../godot/math/math';
+import { ZERO_RECT, type Rect2 } from '../../../../godot/math/rect2';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { VECTOR2_ZERO } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
 import { ContainerAlignment } from '../../../../godot/scene/container';
 import { ColorPickerColorMode } from '../../../../godot/scene/gui';
@@ -27,10 +27,12 @@ import {
   type PushedThemeItems,
 } from '../../../../r3f/controls/native/internalControls';
 import { themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { isLaidOutChild, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   themedSlotRequests,
+  type ContainerLayoutFn,
   type MinimumSizeFn,
+  type SolveContext,
   type TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { requiredThemeItem, themeItemsOfType } from '../../../../r3f/controls/native/themeItems';
@@ -45,6 +47,8 @@ import {
   FOLDABLE_CONTAINER_ICONS,
 } from '../../../../r3f/controls/native/themeIcons';
 import { parseColor } from '../../../../utils/colorParser';
+import { boxContainerMinimumSize, makeBoxContainerLayout } from '../shared/boxContainerSolver';
+import { isSortableControl } from '../shared/fitChildInRect';
 import {
   COLOR_MODE_NAMES,
   MODE_BUTTON_COUNT,
@@ -103,6 +107,13 @@ type ButtonIconName = keyof typeof BUTTON_ICON_URLS;
 
 /** The icons the picker's own `draw` callbacks read, which its theme gives the Control they draw on. */
 type DrawnIconName = 'sample_bg' | 'overbright_indicator' | 'picker_cursor' | 'picker_cursor_bg';
+
+/** The drawn icons `draw_texture` draws at their own size. `sample_bg` tiles at the size its texture loads with. */
+const SIZED_DRAWN_ICONS: readonly DrawnIconName[] = [
+  'overbright_indicator',
+  'picker_cursor',
+  'picker_cursor_bg',
+];
 
 /** Every icon of `BUTTON_ICON_URLS` and `bar_arrow` is 16x16 (`themeIcons.ts`). */
 const PICKER_ICON_SIZE: Vector2 = { x: COLOR_PICKER_BUTTON_ICON_SIZE, y: COLOR_PICKER_BUTTON_ICON_SIZE };
@@ -275,7 +286,7 @@ interface SliderRow {
 function sliderRows({ props, color, normalized, mode }: Picker): SliderRow[] {
   const step = colorModeStep(mode);
   const allowGreater = colorModeAllowsGreater(mode);
-  const channels = colorModeChannels(mode, color).map((channel, index): SliderRow => ({
+  const channels = colorModeChannels(mode, normalized).map((channel, index): SliderRow => ({
     index,
     label: channel.label,
     range: { minValue: 0, maxValue: channel.max, step, value: channel.value, allowGreater },
@@ -504,10 +515,17 @@ function build(picker: Picker, spec: Widget): InternalControlSpec {
     variation: spec.variation,
     icons: themedPickerIcons(picker.node, [...(icon ? [icon] : []), ...(spec.drawnIcons ?? [])]),
     textureSize: icon && pickerIconSize(picker.node, icon, picker.scale),
-    textureSlots: spec.textureSlots,
+    textureSlots: { ...drawnIconSlots(picker.node, spec.drawnIcons), ...spec.textureSlots },
     pushed: spec.pushed,
     draws: spec.draws,
   };
+}
+
+/** The picker's sizes of the icons a `draw` callback draws at their own size (`draw_texture`), where a Theme gives them. */
+function drawnIconSlots(picker: SolveNode, names: readonly DrawnIconName[] = []): SolveNode['textureSlots'] {
+  return Object.fromEntries(
+    names.flatMap((name) => (picker.textureSlots[name] ? [[name, picker.textureSlots[name]]] : []))
+  );
 }
 
 /** The one internal Control, `internal_margin`, added `INTERNAL_MODE_FRONT` (`:2072`). */
@@ -526,23 +544,55 @@ export const colorPickerInternalControls: InternalControlsFn = (node, theme) => 
   return [{ mode: 'front', spec: build(picker, internalMargin(picker)) }];
 };
 
-/**
- * ColorPicker is a VBoxContainer, so it lays `internal_margin` out as its first child: the full width
- * and its minimum height, at the top (`box_container.cpp`).
- */
-export const colorPickerInternalLayout: InternalLayoutFn = (_picker, internals, rect, ctx) =>
-  new Map(
-    internals.map(({ node }) => [node.path, { x: 0, y: 0, w: rect.w, h: ctx.combinedMinimumSize(node).y }])
-  );
+/** The picker's Controls as `_resort` sorts them: `get_child_count` counts the internal ones, so `internal_margin` comes first. */
+type StackEntry = { node: SolveNode; minSize: Vector2 };
 
-/** ColorPicker sets no `get_minimum_size`: a VBoxContainer's minimum is its child's, `internal_margin`'s. */
-export const colorPickerMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const [margin] = internalControlsOf(n, ctx.theme);
-  return margin ? ctx.combinedMinimumSize(margin.node) : VECTOR2_ZERO;
+const stackVertically = makeBoxContainerLayout(true);
+
+function marginEntry(picker: SolveNode, ctx: SolveContext): StackEntry[] {
+  const [margin] = internalControlsOf(picker, ctx.theme);
+  return margin ? [{ node: margin.node, minSize: ctx.combinedMinimumSize(margin.node) }] : [];
+}
+
+function authoredEntries(picker: SolveNode, ctx: SolveContext): StackEntry[] {
+  return picker.children
+    .filter((child) => isLaidOutChild(picker, child))
+    .map((child) => ({ node: child, minSize: ctx.combinedMinimumSize(child) }));
+}
+
+/**
+ * ColorPicker is a VBoxContainer (`color_picker.h:82`): it stacks `internal_margin`, then each
+ * authored child, `separation` apart (`box_container.cpp`).
+ */
+function stackedRects(picker: SolveNode, authored: readonly StackEntry[], rect: Rect2, ctx: SolveContext) {
+  return stackVertically(picker, [...marginEntry(picker, ctx), ...authored], rect, ctx) as ReadonlyMap<
+    string,
+    Rect2
+  >;
+}
+
+export const colorPickerInternalLayout: InternalLayoutFn = (picker, internals, rect, ctx) => {
+  const rects = stackedRects(picker, authoredEntries(picker, ctx), rect, ctx);
+  return new Map(internals.map(({ node }) => [node.path, rects.get(node.path) ?? ZERO_RECT]));
 };
+
+export const colorPickerContainerLayout: ContainerLayoutFn = (picker, children, rect, ctx) => {
+  const rects = stackedRects(picker, children, rect, ctx);
+  return new Map(children.map(({ node }) => [node.path, rects.get(node.path) ?? ZERO_RECT]));
+};
+
+/** ColorPicker sets no `get_minimum_size`: a VBoxContainer's minimum stacks `internal_margin` and the authored children. */
+export const colorPickerMinimumSize: MinimumSizeFn = (picker, ctx) =>
+  boxContainerMinimumSize(
+    true,
+    requiredThemeItem(picker.constants, 'separation'),
+    [...marginEntry(picker, ctx), ...authoredEntries(picker, ctx)]
+      .filter(({ node }) => isSortableControl(node))
+      .map(({ minSize }) => minSize)
+  );
 
 /** One slot for each Button and grabber icon a Theme gives the picker, then the slots of the Buttons it builds without one. */
 export const colorPickerTextureSlots: TextureSlotsFn = (_node, themedIcons = {}, builtIcons) => [
-  ...themedSlotRequests([...Object.keys(BUTTON_ICON_URLS), 'bar_arrow'], themedIcons),
+  ...themedSlotRequests([...Object.keys(BUTTON_ICON_URLS), 'bar_arrow', ...SIZED_DRAWN_ICONS], themedIcons),
   ...builtButtonIconRequests(['Button'], builtIcons),
 ];

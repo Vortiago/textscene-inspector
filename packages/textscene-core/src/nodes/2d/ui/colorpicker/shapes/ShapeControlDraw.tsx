@@ -7,7 +7,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { scaledIconSize } from '../../../../../r3f/controls/native/scaledSvgIcon';
+import { themedIconSize } from '../../../../../r3f/controls/native/scaledSvgIcon';
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../../r3f/components/CanvasItemGroup';
 import { ControlQuad } from '../../../../../r3f/controls/native/controlQuad';
@@ -62,7 +62,7 @@ export function ShapeControlDraw({ solveNode, rect, tint, theme, renderOrder }: 
           pickColor={pickColor}
           solveNode={solveNode}
           tint={tint}
-          size={scaledIconSize(COLOR_PICKER_CURSOR_SIZE, theme.scale)}
+          scale={theme.scale}
           renderOrder={renderOrder}
         />
       ))}
@@ -92,20 +92,25 @@ function SvSquareLayers({
   );
 }
 
-/** `draw_cursor` (`color_picker_shape.cpp:269-275`). */
+const CURSOR_SIZE = { x: COLOR_PICKER_CURSOR_SIZE, y: COLOR_PICKER_CURSOR_SIZE };
+
+/**
+ * `draw_cursor` (`color_picker_shape.cpp:268-274`): both icons start where the ring centres on the
+ * cursor, and `draw_texture` draws each at its own size.
+ */
 function Cursor({
   cursor,
   pickColor,
   solveNode,
   tint,
-  size,
+  scale,
   renderOrder,
 }: {
   cursor: ShapeCursor;
   pickColor: Rgba;
   solveNode: SolveNode;
   tint: OwnPixelTint;
-  size: number;
+  scale: number;
   renderOrder: number;
 }) {
   const backgroundTexture = useNodeIcon(
@@ -115,12 +120,15 @@ function Cursor({
   const ringTexture = useNodeIcon(solveNode.icons.picker_cursor, COLOR_PICKER_CURSOR_ICON);
   const background = useMemo(() => multiplyModulate(tint.own, { ...pickColor, a: 1 }), [tint.own, pickColor]);
   const backgroundColor = useItemLinearColor(background);
-  const rect = { x: cursor.centre.x - size / 2, y: cursor.centre.y - size / 2, w: size, h: size };
+  const ringSize = themedIconSize(solveNode.textureSlots, 'picker_cursor', CURSOR_SIZE, scale);
+  const backgroundSize = themedIconSize(solveNode.textureSlots, 'picker_cursor_bg', CURSOR_SIZE, scale);
+  const x = cursor.centre.x - ringSize.x / 2;
+  const y = cursor.centre.y - ringSize.y / 2;
   return (
     <>
       {cursor.hasBackground && (
         <PositionedIcon
-          rect={rect}
+          rect={{ x, y, w: backgroundSize.x, h: backgroundSize.y }}
           texture={backgroundTexture}
           color={backgroundColor}
           opacity={background.a}
@@ -128,7 +136,7 @@ function Cursor({
         />
       )}
       <PositionedIcon
-        rect={rect}
+        rect={{ x, y, w: ringSize.x, h: ringSize.y }}
         texture={ringTexture}
         color={tint.color}
         opacity={tint.opacity}

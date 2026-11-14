@@ -16,15 +16,21 @@ import { CanvasItemGroup } from '../../../../../r3f/components/CanvasItemGroup';
 import { ControlQuad } from '../../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../../r3f/controls/native/useIconTexture';
 import { painterView } from '../../../../../r3f/controls/native/solveTree';
-import { COLOR_PICKER_OVERBRIGHT_ICON } from '../../../../../r3f/controls/native/themeIcons';
+import {
+  COLOR_PICKER_OVERBRIGHT_ICON,
+  COLOR_PICKER_OVERBRIGHT_ICON_SIZE,
+} from '../../../../../r3f/controls/native/themeIcons';
+import { themedIconSize } from '../../../../../r3f/controls/native/scaledSvgIcon';
 import { multiplyModulate, useItemLinearColor } from '../../../../../r3f/canvasItemModulate';
 import { AlphaCheckerboardQuad } from '../../shared/AlphaCheckerboardQuad';
-import { isColorOverbright, overbrightIconSize } from '../../shared/colorOverbright';
+import { isColorOverbright } from '../../shared/colorOverbright';
 
 /** The `sample` TextureRect's properties: the picker's `color`, which no scene line of `sample` carries. */
 export interface SampleDrawProperties {
   pickColor: Rgba;
 }
+
+const OVERBRIGHT_SIZE = { x: COLOR_PICKER_OVERBRIGHT_ICON_SIZE, y: COLOR_PICKER_OVERBRIGHT_ICON_SIZE };
 
 /** `rect_new`'s height: 95% of the sample's (`color_picker.cpp:1383`). */
 const SAMPLE_HEIGHT_FRACTION = 0.95;
@@ -35,7 +41,12 @@ export function SampleDraw({ solveNode, rect, tint, theme, renderOrder }: Native
   const fillColor = useItemLinearColor(fill);
   const overbrightTexture = useNodeIcon(solveNode.icons.overbright_indicator, COLOR_PICKER_OVERBRIGHT_ICON);
   const height = rect.h * SAMPLE_HEIGHT_FRACTION;
-  const overbrightSide = overbrightIconSize(theme.scale);
+  const overbright = themedIconSize(
+    solveNode.textureSlots,
+    'overbright_indicator',
+    OVERBRIGHT_SIZE,
+    theme.scale
+  );
   return (
     <>
       {pickColor.a < 1 && (
@@ -58,8 +69,8 @@ export function SampleDraw({ solveNode, rect, tint, theme, renderOrder }: Native
       {isColorOverbright(pickColor) && (
         <CanvasItemGroup position={[rect.w * 0.5, 0, 0]}>
           <ControlQuad
-            width={overbrightSide}
-            height={overbrightSide}
+            width={overbright.x}
+            height={overbright.y}
             color={tint.color}
             opacity={tint.opacity}
             map={overbrightTexture}

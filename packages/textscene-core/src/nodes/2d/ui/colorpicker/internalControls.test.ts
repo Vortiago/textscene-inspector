@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { internalControlsOf } from '../../../../r3f/controls/native/internalControls';
-import { createSolveContext } from '../../../../r3f/controls/native/controlRectSolver';
+import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -255,6 +255,11 @@ describe('the slider grid', () => {
     }
   });
 
+  it("hands the sample its theme's overbright_indicator size, which draw_texture reads (:1413)", () => {
+    const n = { ...picker(), textureSlots: { overbright_indicator: { x: 24, y: 20 } } };
+    expect(at(n, 'sample_hbc', 'sample').textureSlots.overbright_indicator).toEqual({ x: 24, y: 20 });
+  });
+
   it('truncates the scaled grabber_offset, as add_theme_constant_override takes an int (control.h:682)', () => {
     const [margin] = internalControlsOf(picker(), nativeTheme(1.1));
     const sliders = margin!.node.children[0]!.children.find((c) => c.node.name === 'slider_gc')!;
@@ -358,5 +363,38 @@ describe("the ColorPicker's minimum size", () => {
     ['OKHSL mode', { colorMode: ColorPickerColorMode.MODE_OKHSL }, { x: 298, y: 607 }],
   ])('is what Godot measures for %s', (_case, props, size) => {
     expect(minimumOf(props)).toEqual(size);
+  });
+});
+
+describe("the ColorPicker's authored children", () => {
+  /** A ColorPicker at (8, 8), 300 by 200, presets hidden, with a 40 px ColorRect and an expanding one. */
+  function pickerWithChildren(): SolveNode {
+    const child = (name: string, properties: object): SolveNode =>
+      withThemeItems({
+        ...solveNode(),
+        path: `Picker/${name}`,
+        node: controlNode(name, 'ColorRect', properties),
+      });
+    return {
+      ...picker({ presetsVisible: false, offsetLeft: 8, offsetTop: 8, offsetRight: 308, offsetBottom: 208 }),
+      children: [
+        child('Below', { layoutMode: 2, customMinimumSize: { x: 0, y: 40 } }),
+        child('Grow', { layoutMode: 2, sizeFlagsVertical: 3 }),
+      ],
+    };
+  }
+
+  // Godot 4.6.3: ColorPicker is a VBoxContainer, so `_resort` stacks `internal_margin`, then each
+  // authored child, `separation` 4 apart: `get_combined_minimum_size()` (298, 585), `Below` at y 541.
+  it('stacks them below internal_margin and grows the minimum by them', () => {
+    const n = pickerWithChildren();
+    const solved = solveControlTree(
+      [n],
+      { x: 0, y: 0, w: 1152, h: 648 },
+      createSolveContext(THEME, measureText)
+    );
+    expect(solved.get('Picker')?.minSize).toEqual({ x: 298, y: 585 });
+    expect(solved.get('Picker/Below')?.rect).toEqual({ x: 0, y: 541, w: 300, h: 40 });
+    expect(solved.get('Picker/Grow')?.rect).toEqual({ x: 0, y: 585, w: 300, h: 0 });
   });
 });

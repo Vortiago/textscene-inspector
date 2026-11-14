@@ -98,9 +98,8 @@ export interface ColorModeChannel {
  */
 export function colorModeChannels(
   mode: number,
-  color: Rgba
+  normalized: Rgba
 ): [ColorModeChannel, ColorModeChannel, ColorModeChannel] {
-  const normalized = colorNormalized(color);
   switch (mode) {
     case ColorPickerColorMode.MODE_HSV: {
       const { h, s, v } = extractHsv(normalized);

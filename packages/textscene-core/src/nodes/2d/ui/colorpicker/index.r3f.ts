@@ -7,6 +7,7 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import { registerInternalControls } from '../../../../r3f/controls/native/internalControls';
 import { VBoxContainer } from '../vboxcontainer/Component';
 import {
+  colorPickerContainerLayout,
   colorPickerInternalControls,
   colorPickerInternalLayout,
   colorPickerMinimumSize,
@@ -15,6 +16,7 @@ import {
 
 controlSolverRegistry.registerMinimumSize('ColorPicker', colorPickerMinimumSize);
 controlSolverRegistry.registerTextureSlots('ColorPicker', colorPickerTextureSlots);
+controlSolverRegistry.registerContainerLayout('ColorPicker', colorPickerContainerLayout);
 registerInternalControls('ColorPicker', colorPickerInternalControls, colorPickerInternalLayout);
 
 controlComponentRegistry.register({ typeName: 'ColorPicker', Component: VBoxContainer });

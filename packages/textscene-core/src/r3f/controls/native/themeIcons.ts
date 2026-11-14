@@ -434,7 +434,7 @@ const ADD_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZD0ibTcgMXY2aC02djJoNnY2aDJ2LTZoNnYtMmgtNnYtNnoiLz48L3N2Zz4K';
 export const COLOR_PICKER_ADD_PRESET_ICON = vendoredIcon('add', ADD_B64);
 
-/** Every one of the six icons just above shares this authored size: 16x16, scaled by the project theme scale at each read (`scaledIconSize`). */
+/** The size every ColorPicker button icon above shares, `add` included: 16x16, scaled by the project theme scale at each read (`scaledIconSize`). */
 export const COLOR_PICKER_BUTTON_ICON_SIZE = 16;
 
 /** The cursor icons' own natural size: both 12x12. */

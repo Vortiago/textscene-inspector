@@ -33,7 +33,7 @@ describe('colorNormalized', () => {
 
 describe('colorModeChannels', () => {
   it('ColorPickerColorMode.MODE_RGB reads color_normalized.components * 255: color_mode.cpp:46-49', () => {
-    const [r, g, b] = colorModeChannels(ColorPickerColorMode.MODE_RGB, RED);
+    const [r, g, b] = colorModeChannels(ColorPickerColorMode.MODE_RGB, colorNormalized(RED));
     expect(r.value).toBeCloseTo(255, 9);
     expect(g.value).toBeCloseTo(0, 9);
     expect(b.value).toBeCloseTo(0, 9);
@@ -42,7 +42,7 @@ describe('colorModeChannels', () => {
   });
 
   it('ColorPickerColorMode.MODE_HSV reads h*360/s*100/v*100 off color_normalized: color_mode.cpp:151-172', () => {
-    const [h, s, v] = colorModeChannels(ColorPickerColorMode.MODE_HSV, RED);
+    const [h, s, v] = colorModeChannels(ColorPickerColorMode.MODE_HSV, colorNormalized(RED));
     expect(h.value).toBeCloseTo(0, 9);
     expect(s.value).toBeCloseTo(100, 9);
     expect(v.value).toBeCloseTo(100, 9);
@@ -51,7 +51,7 @@ describe('colorModeChannels', () => {
   });
 
   it('ColorPickerColorMode.MODE_LINEAR reads srgb_to_linear(color_normalized): color_mode.cpp:234-238', () => {
-    expect(colorModeChannels(ColorPickerColorMode.MODE_LINEAR, RED)).toEqual([
+    expect(colorModeChannels(ColorPickerColorMode.MODE_LINEAR, colorNormalized(RED))).toEqual([
       { label: 'R', value: 1, max: 1 },
       { label: 'G', value: 0, max: 1 },
       { label: 'B', value: 0, max: 1 },
@@ -59,7 +59,7 @@ describe('colorModeChannels', () => {
   });
 
   it('ColorPickerColorMode.MODE_OKHSL reads get_ok_hsl_h/s/l * 360/100/100 off color_normalized: color_mode.cpp:349-370', () => {
-    const [h, s, l] = colorModeChannels(ColorPickerColorMode.MODE_OKHSL, RED);
+    const [h, s, l] = colorModeChannels(ColorPickerColorMode.MODE_OKHSL, colorNormalized(RED));
     // ok_color.h's srgb_to_okhsl for sRGB red: h=0.0812052366, s=1, l=0.5680846525
     // (from a separate Python transcription of the same algorithm).
     expect(h.value).toBeCloseTo(29.2338852, 4);
