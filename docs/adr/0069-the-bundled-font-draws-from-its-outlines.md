@@ -40,7 +40,7 @@ that has ink lacks a contour.
 - A run of the bundled face draws nothing while its outlines load, and counts as a pending load
   for that time. Outlines that cannot be read leave the run empty, with no pending load. The
   outline reader warns once.
-- A canvas face with no `cssFontFamily` asks nothing of the browser's text rasteriser. A glyph
+- A canvas face with outlines asks nothing of the browser's text rasteriser (ADR-0077). A glyph
   with no contour draws as nothing. So the bundled font cannot draw in a host font.
 - `FontMetrics.kind` is `'bundled' | 'canvas' | 'bitmap'`. A scene font stays `'canvas'` with its
   own `FontFace`, and a BMFont stays `'bitmap'` (ADR-0064).
@@ -51,16 +51,16 @@ port of `ftstroke.c`, and each ring is its own surface below the fill.
 ## The ink box
 
 The canvas painter sizes the raster of a run from the ink of each glyph, and one rule gives that
-ink for every font: the reach of what the paint draws for the glyph (`glyphReachReader` in
-`canvasTextPainter.ts`).
+ink for every font: the reach of what the paint draws for the glyph (`GlyphPainter.reachReader`,
+ADR-0077).
 
 - A glyph drawn from an outline reaches as far as the control box of its contours. The painter
   reads the contours it rasterises, so the box holds the size, the hinting, the shear, the embolden
   and the variation instance.
-- A glyph the browser draws as text, which is a glyph with no contour on a scene font, reaches as
-  far as the ink `measureText` gives. It takes one ascent on each side where that ink is of
-  another instance.
-- A glyph with no contour on a face with no `FontFace` draws nothing, and spans its pen box.
+- A glyph the browser draws as text, which is a glyph of a face whose outlines the previewer cannot
+  read, reaches as far as the ink `measureText` gives. It takes one ascent on each side where that
+  ink is of another instance.
+- A glyph with no contour on a face with outlines draws nothing, and spans its pen box.
 
 No table holds an ink box for one font. The bundled font, a scene font and a fallback face all
 take the first rule, in a Control run as in a Label3D.

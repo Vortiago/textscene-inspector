@@ -19,6 +19,15 @@ export function toUint8(value: number): number {
 }
 
 /**
+ * `(int8_t)` of an 8-bit field, such as a font's `FT_Char`.
+ *
+ * @canonical the C cast of an integer to int8_t
+ */
+export function toInt8(value: number): number {
+  return ((value & 0xff) << 24) >> 24;
+}
+
+/**
  * `(int16_t)` of a 16-bit field, for the packed cell streams (`variant.h:437`) and a font's
  * 16-bit values.
  *

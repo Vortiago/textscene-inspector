@@ -5,6 +5,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
+import { BuiltControlPixels } from '../../../../r3f/components/LitCanvasItemPixels';
 import { canvasSubOrder, canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
 import {
   snappedControlOrigin,
@@ -71,14 +72,16 @@ export function ScrollHintChrome({
   if (!hint || !texture) return null;
   const renderOrder = scrollChromeOrders(chromeSlot).hints.key;
   return (
-    <PositionedIcon
-      rect={hint.rect}
-      texture={texture}
-      color={color}
-      opacity={opacity}
-      renderOrder={renderOrder}
-      canvasKey={renderOrder}
-    />
+    <BuiltControlPixels>
+      <PositionedIcon
+        rect={hint.rect}
+        texture={texture}
+        color={color}
+        opacity={opacity}
+        renderOrder={renderOrder}
+        canvasKey={renderOrder}
+      />
+    </BuiltControlPixels>
   );
 }
 
@@ -133,15 +136,17 @@ export function ScrollBarChrome({ bar, boxes, color, chromeSlot, snapToPixels, n
   // unrounded inside the bar's canvas item and inherits the bar's snap.
   return (
     <CanvasItemGroup name={name} position={[origin.x, -origin.y, 0]} renderOrder={trackKey}>
-      <StyleBoxQuad styleBox={boxes.scroll} color={color} rect={bar.rect} renderOrder={trackKey} />
-      <CanvasItemGroup position={[bar.grabberRect.x, -bar.grabberRect.y, 0]} renderOrder={grabberKey}>
-        <StyleBoxQuad
-          styleBox={boxes.grabber}
-          color={color}
-          rect={bar.grabberRect}
-          renderOrder={grabberKey}
-        />
-      </CanvasItemGroup>
+      <BuiltControlPixels>
+        <StyleBoxQuad styleBox={boxes.scroll} color={color} rect={bar.rect} renderOrder={trackKey} />
+        <CanvasItemGroup position={[bar.grabberRect.x, -bar.grabberRect.y, 0]} renderOrder={grabberKey}>
+          <StyleBoxQuad
+            styleBox={boxes.grabber}
+            color={color}
+            rect={bar.grabberRect}
+            renderOrder={grabberKey}
+          />
+        </CanvasItemGroup>
+      </BuiltControlPixels>
     </CanvasItemGroup>
   );
 }

@@ -18,6 +18,7 @@ import {
 } from '../shared/scrollBarSolver';
 import type { GraphScrollBounds } from './minimap';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { mirrorRectRtl } from '../../../../r3f/controls/native/controlRectSolver';
 
 interface GraphEditScrollBars {
   horizontal: ScrollBarPlacement;
@@ -140,5 +141,17 @@ export function graphEditScrollBars(
       ratioOf(scrollOffset.y, bounds.min.y, bounds.max.y),
       vVisible
     ),
+  };
+}
+
+/**
+ * The bars of a right-to-left GraphEdit: `Control::_size_changed` mirrors each anchored bar inside
+ * `top_layer` (`control.cpp:1785-1787`). A grabber keeps its place in its bar, since
+ * `scroll_bar.cpp` never reads the layout direction.
+ */
+export function mirroredScrollBars(bars: GraphEditScrollBars, graphEditWidth: number): GraphEditScrollBars {
+  return {
+    horizontal: { ...bars.horizontal, rect: mirrorRectRtl(bars.horizontal.rect, graphEditWidth) },
+    vertical: { ...bars.vertical, rect: mirrorRectRtl(bars.vertical.rect, graphEditWidth) },
   };
 }

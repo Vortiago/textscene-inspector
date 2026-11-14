@@ -20,14 +20,19 @@ import {
   type MinimumSizeFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
-import { resolveTitleFontTheme, titleTextMinimumSize, titlebarGeometry } from '../graphelement/graphTitlebar';
+import { registerInternalControls } from '../../../../r3f/controls/native/internalControls';
+import {
+  GRAPH_NODE_TITLE_LABEL,
+  titlebarBandHeightChannel,
+  titlebarInternalControls,
+  titlebarInternalLayout,
+  titlebarMinimumSize,
+  titlebarHeights,
+} from '../graphelement/graphTitlebar';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties, GraphNodeSlot } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { DEFAULT_SIZE_FLAGS, SizeFlags } from '../../../../godot/scene/control';
-
-/** `graph_node.cpp` theme type variation for its internal title Label: `graph_node.cpp:1328`. */
-export const GRAPH_NODE_TITLE_VARIATION = 'GraphNodeTitleLabel';
 
 export function graphNodeStyles(n: SolveNode) {
   return { ...graphElementStyles(n), slot: requiredThemeItem(n.styleBoxes, 'slot') };
@@ -57,22 +62,14 @@ function graphNodeEffectiveSlot(slots: Map<number, GraphNodeSlot>, rawIndex: num
   return slots.get(rawIndex) ?? defaultGraphNodeSlot();
 }
 
-export function graphNodeTitleTextMin(n: SolveNode): Vector2 {
-  const props = n.node.properties as GraphNodeProperties;
-  const fontTheme = resolveTitleFontTheme(n, GRAPH_NODE_TITLE_VARIATION);
-  return titleTextMinimumSize(props.title ?? '', fontTheme);
-}
-
 // --- get_minimum_size ---------------------------------------------------------
 
 const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as GraphNodeProperties;
-  const { panel, titlebar, slot } = graphNodeStyles(n);
-  const textMin = graphNodeTitleTextMin(n);
+  const { panel, slot } = graphNodeStyles(n);
   const separation = requiredThemeItem(n.constants, 'separation');
 
-  let width = textMin.x + titlebar.contentMargin.left + titlebar.contentMargin.right;
-  let height = textMin.y + titlebar.contentMargin.top + titlebar.contentMargin.bottom;
+  let { x: width, y: height } = titlebarMinimumSize(n, ctx);
 
   n.children.forEach((child, i) => {
     if (!isSortableControl(child)) return;
@@ -96,6 +93,11 @@ const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
 };
 
 controlSolverRegistry.registerMinimumSize('GraphNode', graphNodeMinimumSize);
+registerInternalControls(
+  'GraphNode',
+  titlebarInternalControls(GRAPH_NODE_TITLE_LABEL),
+  titlebarInternalLayout
+);
 
 // --- _resort -------------------------------------------------------------------
 
@@ -111,13 +113,11 @@ interface StretchEntry {
   minSize: Vector2;
 }
 
-const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect) => {
+const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const props = n.node.properties as GraphNodeProperties;
-  const { panel, titlebar, slot } = graphNodeStyles(n);
+  const { panel, slot } = graphNodeStyles(n);
   const separation = requiredThemeItem(n.constants, 'separation');
-  const textMin = graphNodeTitleTextMin(n);
-  const titlebarBand = titlebarGeometry(contentRect.w, textMin.y, titlebar);
-  const titlebarBandHeight = titlebarBand.rect.h;
+  const band = titlebarHeights(n, ctx);
 
   const entries: StretchEntry[] = [];
   let stretchMin = 0;
@@ -128,7 +128,8 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect) => {
     if (!isSortableControl(child)) return;
     const eff = graphNodeEffectiveSlot(props.slots, i);
     const extra = eff.drawStylebox ? slot.contentMargin.top + slot.contentMargin.bottom : 0;
-    const minHeight = minSize.y + extra;
+    // `Size2i size`: the row's minimum is whole pixels.
+    const minHeight = Math.trunc(minSize.y + extra);
     stretchMin += minHeight;
     const willStretch = hasFlag(vFlagsOf(child), SizeFlags.EXPAND);
     const stretchRatio = stretchRatioOf(child);
@@ -150,9 +151,12 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect) => {
   });
 
   const childrenCount = entries.length;
-  const stretchMax = contentRect.h - (childrenCount - 1) * separation;
+  // `stretch_max`, `available_stretch_space` and `ofs_y` are ints, so each assignment truncates.
+  const stretchMax = Math.trunc(contentRect.h - (childrenCount - 1) * separation);
   const stretchDiff = Math.max(stretchMax - stretchMin, 0);
-  availableStretch += stretchDiff - panel.contentMargin.bottom - panel.contentMargin.top - titlebarBandHeight;
+  availableStretch = Math.trunc(
+    availableStretch + stretchDiff - panel.contentMargin.bottom - panel.contentMargin.top - band.resort
+  );
 
   while (stretchRatioTotal > 0) {
     let refitSuccessful = true;
@@ -172,8 +176,8 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect) => {
     if (refitSuccessful) break;
   }
 
-  let ofsY = panel.contentMargin.top + titlebarBandHeight;
-  const width = contentRect.w - panel.contentMargin.left - panel.contentMargin.right;
+  let ofsY = Math.trunc(panel.contentMargin.top + band.resort);
+  const width = Math.trunc(contentRect.w - panel.contentMargin.left - panel.contentMargin.right);
   const rects = new Map<string, Rect2>();
 
   entries.forEach((entry, validIdx) => {
@@ -181,7 +185,7 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect) => {
     const fromY = ofsY;
     let toY = ofsY + entry.finalSize;
     if (entry.willStretch && validIdx === childrenCount - 1) {
-      toY = contentRect.h - panel.contentMargin.bottom;
+      toY = Math.trunc(contentRect.h - panel.contentMargin.bottom);
     }
     const height = toY - fromY;
     const eff = graphNodeEffectiveSlot(props.slots, entry.rawIndex);
@@ -193,7 +197,7 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect) => {
     ofsY = toY;
   });
 
-  return rects;
+  return { rects, meta: titlebarBandHeightChannel.seal(band.drawn) };
 };
 
 controlSolverRegistry.registerContainerLayout('GraphNode', graphNodeLayout);

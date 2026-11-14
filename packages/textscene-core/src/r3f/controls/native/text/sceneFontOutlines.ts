@@ -13,6 +13,7 @@ import {
   findDrawnFace,
   fontForcesAutohinter,
   fontHinting,
+  fontModulatesColourGlyphs,
   hasBitmap,
   type DrawnFace,
   type FileWithBytes,
@@ -36,9 +37,9 @@ const BUNDLED = {};
 const loadKeys = perObject((_bytes: object) => new Map<string, object>());
 
 /** The cache key of `bytes` as `load` loads them. */
-function loadKey(bytes: object, { hinting, isAutohinterForced }: GlyphLoad): object {
+function loadKey(bytes: object, { hinting, isAutohinterForced, modulatesColourGlyphs }: GlyphLoad): object {
   const keys = loadKeys(bytes);
-  const name = `${hinting},${isAutohinterForced}`;
+  const name = `${hinting},${isAutohinterForced},${modulatesColourGlyphs === true}`;
   let key = keys.get(name);
   if (!key) keys.set(name, (key = {}));
   return key;
@@ -96,10 +97,15 @@ function contourLoad(face: DrawnFace): GlyphLoad {
 
 /**
  * The load of the glyphs a canvas face of a font file draws, as Godot loads its glyph bitmaps: at
- * the font's `hinting` (`text_server_adv.cpp:1270-1285`).
+ * the font's `hinting` (`text_server_adv.cpp:1270-1285`), with its colour glyphs tinted as the
+ * font asks.
  */
 export function drawLoad(face: FileWithBytes): GlyphLoad {
-  return { hinting: fontHinting(face), isAutohinterForced: fontForcesAutohinter(face) };
+  return {
+    hinting: fontHinting(face),
+    isAutohinterForced: fontForcesAutohinter(face),
+    modulatesColourGlyphs: fontModulatesColourGlyphs(face),
+  };
 }
 
 /**

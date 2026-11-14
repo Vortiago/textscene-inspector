@@ -29,7 +29,7 @@ export function HScrollBar({ solveNode, tint, rect, renderOrder }: NativeControl
 
   const trackRect = scrollBarTrackRect(size);
   const grabber = scrollBarGrabberGeometry(false, size.x, boxes, min, max, page, ratio);
-  const grabberRect = scrollBarGrabberRect(false, size, grabber);
+  const grabberRect = scrollBarGrabberRect(false, size, grabber, boxes);
 
   return (
     <>
