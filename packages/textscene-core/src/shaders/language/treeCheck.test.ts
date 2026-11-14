@@ -84,9 +84,9 @@ describe('treeFault', () => {
     });
 
     it('finds a call at no line and column', () => {
-      expect(treeFault(withCall((call) => ({ ...call, position: { line: 0, column: 0 } })))).toMatch(
-        /a call of twice at no line and column/
-      );
+      expect(
+        treeFault(withCall((call) => ({ ...call, position: { ...call.position, line: 0, column: 0 } })))
+      ).toMatch(/a call of twice at no line and column/);
     });
 
     it('finds a call typed otherwise than its function returns', () => {
