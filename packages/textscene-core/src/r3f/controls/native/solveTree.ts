@@ -200,11 +200,13 @@ export type ShareNode = Omit<SolveNode, 'children'>;
  * (`container.cpp:143-155`, `box_container.cpp:58`, `tab_container.cpp:469-481`),
  * so a type that indexes children by position numbers them alike in each.
  */
-// Returns `n` itself when nothing is promoted, so no caller sees a fresh object per call.
-export function sortableView(n: SolveNode): SolveNode {
-  if (!n.children.some(isPromotedControl)) return n;
-  return { ...n, children: n.children.filter((child) => !isPromotedControl(child)) };
-}
+// One view per node, `n` itself when nothing is promoted, so a cache keyed by the node it hands on,
+// such as `internalControlsOf`'s, holds across calls.
+export const sortableView: (n: SolveNode) => SolveNode = perObject((n) =>
+  n.children.some(isPromotedControl)
+    ? { ...n, children: n.children.filter((child) => !isPromotedControl(child)) }
+    : n
+);
 
 /**
  * This node's properties as the Control base type: the one cast every solver

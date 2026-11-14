@@ -15,7 +15,9 @@ import { controlSolverRegistry } from './solverRegistry';
 import type { SolveNode } from './solveTree';
 import { nativeTheme } from './nativeTheme';
 import { measureText } from './text/measurer';
-import { solveNode, withThemeItems } from './testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from './testing/solveNode';
+import { registerInternalControls } from './internalControls';
+import { defineChannel } from './solveHandoff';
 import './../../controls/index';
 
 const THEME = nativeTheme(1);
@@ -102,5 +104,24 @@ describe('the passes of a dialog solve', () => {
 
   it('solves a dialog whose message wraps in a second pass, at the width the first gave', () => {
     expect(passesOverDialog({ dialog_text: '"Delete?"', dialog_autowrap: 'true' })).toBe(2);
+  });
+});
+
+const placedAt = defineChannel<string>('placedAt');
+
+registerInternalControls(
+  'HostThatSeals',
+  () => [{ mode: 'front', spec: { type: 'Control', name: 'Inner', properties: { name: 'Inner' } } }],
+  (host, [inner]) => ({
+    rects: new Map([[inner!.node.path, rect(1, 2, 3, 4)]]),
+    meta: new Map([[inner!.node.path, placedAt.seal(host.path)]]),
+  })
+);
+
+describe('the solve of an internal Control its class hands a value', () => {
+  it('records the value its class seals on its solved entry', () => {
+    const host = { ...solveNode(), path: 'Host', node: controlNode('Host', 'HostThatSeals') };
+    const solved = solveControlTree([host], rect(0, 0, 100, 100), createSolveContext(THEME, measureText));
+    expect(placedAt.open(solved.get('Host/@Inner')?.meta)).toBe('Host');
   });
 });

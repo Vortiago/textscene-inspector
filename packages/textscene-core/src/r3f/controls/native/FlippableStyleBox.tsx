@@ -1,24 +1,24 @@
 /**
- * `FoldableContainer::_draw_flippable_stylebox` (`scene/gui/foldable_container.cpp:523-532`): a box
- * of a bottom-title container draws mirrored on the Y axis, so one box, authored for the top title,
- * puts its square edge against the panel at either `title_position`.
+ * A StyleBox drawn mirrored on the Y axis about its draw rect, so one box authored for the top puts its
+ * square edge against the other side: `FoldableContainer::_draw_flippable_stylebox`
+ * (`scene/gui/foldable_container.cpp:523-532`) and `TabBar::_draw_tab` (`scene/gui/tab_bar.cpp:648-654`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { Rect2 } from '../../../../godot/math/rect2';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
-import { PositionedStyleBox } from '../../../../r3f/controls/native/PositionedStyleBox';
-import { styleBoxDrawRect } from '../../../../r3f/controls/native/styleBoxDrawRect';
+import type { Rect2 } from '../../../godot/math/rect2';
+import { CanvasItemGroup } from '../../components/CanvasItemGroup';
+import type { NativeControlComponentProps } from '../ControlComponentRegistry';
+import type { ResolvedStyleBox } from './parseStyleBox';
+import { PositionedStyleBox } from './PositionedStyleBox';
+import { styleBoxDrawRect } from './styleBoxDrawRect';
 
 interface FlippableStyleBoxProps {
   box: ResolvedStyleBox;
   rect: Rect2;
-  /** `title_position == POSITION_BOTTOM`. */
+  /** FoldableContainer's `title_position == POSITION_BOTTOM`, TabBar's `tab_style_v_flip`. */
   isFlipped: boolean;
   tint: NativeControlComponentProps['tint'];
   renderOrder: number;

@@ -593,7 +593,7 @@ A visible Window, Popup or PopupPanel that a viewport draws on its own canvas in
 _Avoid_: "dialog" for the base case. "native window", which Godot draws through the system.
 
 **Internal Control** (`r3f/controls/native/internalControls.ts`):
-A Control a class's constructor `memnew`s and adds with `INTERNAL_MODE_FRONT` or `INTERNAL_MODE_BACK`, which no scene serialises, such as a dialog's message label and button row. The class declares a spec tree once. The one rect solve places it and **ControlCanvasWalker** paints it. Its path is `parent/@Name`, and it has no live node.
+A Control a class's constructor `memnew`s and adds with `INTERNAL_MODE_FRONT` or `INTERNAL_MODE_BACK`, which no scene serialises, such as a dialog's message label and button row. The class declares a spec tree once. The one rect solve places it and **ControlCanvasWalker** paints it. Its path is `parent/@Name`, and it has no live node. The items its parent sets on it with `add_theme_*_override` are its **pushed** items, and they win over its own Theme lookup. It draws as a child canvas item: the parent's inherited modulate without the parent's `self_modulate`.
 _Avoid_: "synthetic Control", "fake node". A second solve or walker in a painter.
 
 **Dialog body** (`nodes/windows/filedialog/body.ts`):
