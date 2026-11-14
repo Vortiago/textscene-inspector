@@ -78,7 +78,8 @@ async function sfntFaceOf(font: string): Promise<FontMetrics> {
     descent,
     hasGlyph: sfntHasGlyph(sfnt),
     getGlyphAdvanceUnits: advanceUnits,
-    getKerningAdjustmentUnits: (a, b) => kerningOf?.(lookupGlyph(a), lookupGlyph(b)) ?? 0,
+    getKerningAdjustmentUnits: (a, b) =>
+      (kerningOf?.(lookupGlyph(a), lookupGlyph(b)) ?? []).reduce((units, value) => units + value.units, 0),
     averageAdvanceUnits: advanceUnits('n'),
     ...sfntFaceGlyphs(sfnt, () => sfnt, defaultKerningReader),
   };

@@ -17,7 +17,7 @@ import { controlValuesOf } from '../truetype/controlValues';
 import { designCoordinates, normalizedCoordinates } from './axisCoordinates';
 import { readAvar, type AxisVariations } from './avar';
 import { variedControlValues } from './cvar';
-import { readFvarAxes, type FvarAxis } from './fvar';
+import { fvarAxesOf, type FvarAxis } from './fvar';
 import { readGlyphVariations, type AdjustedAdvances, type GlyphVariations } from './gvar';
 import {
   itemDelta,
@@ -77,7 +77,7 @@ function readAdvanceVariations(sfnt: SfntFile, tag: string, axisCount: number): 
 
 /** The variation data of the font, once for each font, or null for a font FreeType does not take for a variation font. */
 const variationFaceOf = perObject((sfnt: SfntFile): VariationFace | null => {
-  const axes = readFvarAxes(sfnt);
+  const axes = fvarAxesOf(sfnt);
   if (!axes) return null;
   return {
     axes,

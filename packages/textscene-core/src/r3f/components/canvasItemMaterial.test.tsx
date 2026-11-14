@@ -16,7 +16,7 @@ import {
 } from '../../resources/testing/createFakeResourceLoader';
 
 import { useSceneResources } from '../SceneResourcesContext';
-import { useCanvasItemMaterialFile, useResolvedCanvasItemMaterial } from './canvasItemMaterial';
+import { useResolvedCanvasItemMaterial } from './canvasItemMaterial';
 import '../../resources/formats/binaryresource/index';
 import { CanvasItemMaterialBlendMode } from '../../godot/scene/canvasItemMaterial';
 
@@ -34,6 +34,9 @@ const SHADER_TRES = parseTresFile(`[gd_resource type="ShaderMaterial" format=3]
 const SCENE_EXT: TscnExternalResource[] = [
   { id: 'm', type: 'Material', path: 'res://add.tres' },
   { id: 'bin', type: 'Material', path: 'res://add.res' },
+  { id: 'shader', type: 'Material', path: 'res://shader.tres' },
+  { id: 'gone', type: 'Material', path: 'res://gone.tres' },
+  { id: 'png', type: 'Material', path: 'res://add.png' },
 ];
 const SCENE_SUB: TscnInternalResource[] = [
   { id: 'sub', type: 'CanvasItemMaterial', data: { blend_mode: '2' } },
@@ -61,31 +64,6 @@ function seededLoader(): FakeResourceLoader {
   return fake;
 }
 
-const materialFile = (path: string | null) =>
-  renderHook(() => useCanvasItemMaterialFile(path), { wrapper: wrapper(seededLoader()) }).result.current;
-
-describe('useCanvasItemMaterialFile', () => {
-  it('reads a CanvasItemMaterial .tres to its properties', () => {
-    expect(materialFile('res://add.tres')?.blendMode).toBe(CanvasItemMaterialBlendMode.ADD);
-  });
-
-  it('gives null for a file that failed to load', () => {
-    expect(materialFile('res://gone.tres')).toBeNull();
-  });
-
-  it('gives null for another material type, which draws with plain canvas blending', () => {
-    expect(materialFile('res://shader.tres')).toBeNull();
-  });
-
-  it('reads a CanvasItemMaterial saved as a binary .res', () => {
-    expect(materialFile('res://add.res')?.blendMode).toBe(CanvasItemMaterialBlendMode.ADD);
-  });
-
-  it('gives null for a path no resource file has, such as an image (edge case)', () => {
-    expect(materialFile('res://add.png')).toBeNull();
-  });
-});
-
 /** The material a node naming `ref` resolves to in the scene, below a parent that hands down none. */
 const nodeMaterial = (ref: string) =>
   renderHook(
@@ -109,5 +87,17 @@ describe('useResolvedCanvasItemMaterial', () => {
 
   it('gives null for an ExtResource id the scene does not declare', () => {
     expect(nodeMaterial('ExtResource("missing")')).toBeNull();
+  });
+
+  it('gives null for a material file that failed to load', () => {
+    expect(nodeMaterial('ExtResource("gone")')).toBeNull();
+  });
+
+  it('gives null for another material type, which draws with plain canvas blending', () => {
+    expect(nodeMaterial('ExtResource("shader")')).toBeNull();
+  });
+
+  it('gives null for a path no resource file has, such as an image', () => {
+    expect(nodeMaterial('ExtResource("png")')).toBeNull();
   });
 });

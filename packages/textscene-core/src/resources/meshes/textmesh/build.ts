@@ -15,7 +15,6 @@ import { blockStartY, lineStartOffset } from '../../../godot/math/alignment';
 import { isZeroApprox, remapf } from '../../../godot/math/math';
 import { normalizedVector2, type Vector2 } from '../../../godot/math/vector';
 import {
-  drawnOpentype,
   variationKey,
   withFallbacks,
   type FontMetrics,
@@ -126,7 +125,7 @@ function glyphMeshes(properties: TextMeshProperties, face: TextMeshFace): FaceGl
   const variation: GlyphVariation = {
     embolden: face.embolden,
     skew: face.skew,
-    opentype: drawnOpentype(face),
+    opentype: face.drawnOpentype,
   };
   const meshes = cachedGlyphMeshes(
     outlines,

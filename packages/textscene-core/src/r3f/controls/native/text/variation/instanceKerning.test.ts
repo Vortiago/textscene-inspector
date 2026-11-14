@@ -30,9 +30,6 @@ const RECURSIVE = 'recursive-vf-subset.woff2';
 /** A measured kerning no pair here has, so a test sees which face answered. */
 const MEASURED_KERNING_UNITS = 99;
 
-/** HarfBuzz scales a `GPOS` value to whole 1/64 px, where this shaper keeps the scaled float. */
-const HARFBUZZ_STEP_PX = 1 / 64;
-
 const UNITS_PER_EM = 1000;
 /** At the face's units per em, a kerning in px equals the kerning in design units. */
 const UNIT_SIZE_PX = UNITS_PER_EM;
@@ -60,7 +57,7 @@ describe('the kerning of a variable font at an instance', () => {
       });
       for (const [pair, kerningPx] of Object.entries(row.kerning)) {
         const ours = getFontKerningAdjustmentPx(face, { char: pair[0]! }, { char: pair[1]! }, row.sizePx);
-        expect(Math.abs(ours - kerningPx), pair).toBeLessThanOrEqual(HARFBUZZ_STEP_PX);
+        expect(ours, pair).toBe(kerningPx);
       }
     }
   );
