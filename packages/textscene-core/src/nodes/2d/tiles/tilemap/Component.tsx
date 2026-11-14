@@ -1,8 +1,8 @@
 /**
  * Draws a TileMap, the deprecated multi-layer node. Each layer is a TileMapLayer child of the TileMap
  * in the live tree (`r3f/liveTileMapLayers.ts`), which draws its own quadrants. The TileMap draws the
- * placeholder discs of its scene tiles. A y-sorted TileMap hands its layers and scene tiles to
- * <YSortDispatcher>, which sorts them with its child nodes.
+ * placeholder discs of its scene tiles. A y-sorted TileMap states its layers and scene tiles through
+ * <YSortExtraChildrenProvider>, so its one YSortDispatcher sorts them with its child nodes.
  */
 
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';

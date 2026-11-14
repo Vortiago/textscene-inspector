@@ -167,11 +167,19 @@ describe('paintRangeSize', () => {
     expect(paintRangeSize(tileMap(5000, children))).toBe(DYNAMIC_CHILD_RESERVE + 5000 + 1);
   });
 
-  it('counts a reserve for the rows of each y-sorted TileMap layer', () => {
+  it('counts a reserve for the rows of each y-sorted layer of a TileMap that sorts nothing', () => {
     const children = [node('Marker', 'Sprite2D')];
     expect(paintRangeSize(tileMap(2, children, true))).toBe(
       DYNAMIC_CHILD_RESERVE + 2 * DYNAMIC_CHILD_RESERVE + 1
     );
+  });
+
+  it('counts one value for each layer that sorts nothing of a y-sorted TileMap', () => {
+    // Each layer keeps a y-sort of its own (`tile_map.cpp:357-358`). The TileMap's own flag only
+    // sorts the TileMap's children (`tile_map.cpp:449-453`).
+    const map = tileMap(2, [node('Marker', 'Sprite2D')]);
+    const sortedMap = { ...map, properties: { ...map.properties, y_sort_enabled: true } };
+    expect(paintRangeSize(sortedMap)).toBe(DYNAMIC_CHILD_RESERVE + 2 + 1);
   });
 });
 
