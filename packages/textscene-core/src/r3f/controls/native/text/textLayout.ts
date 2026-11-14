@@ -361,14 +361,19 @@ export function soloLineLayout(
 }
 
 /**
- * The largest descent of a face on `line` at its size, 0 for no glyph. A canvas raster reaches this
+ * The largest descent of a glyph on `line`, from its face at its size or its downward `yOffset`
+ * (`text_server_adv.cpp:5146-5172`), 0 for no glyph. A canvas raster reaches this
  * far below the baseline, so a glyph of a fallback face with a deeper descent is not cut at the
  * bottom. The raster grows only downwards: the baseline stays.
  */
 function deepestDescentPx({ glyphs }: TextLineLayout): number {
   let deepestPx = 0;
   for (const glyph of glyphs)
-    deepestPx = Math.max(deepestPx, getFontDescentPx(glyph.fontMetrics, glyph.fontSizePx));
+    deepestPx = Math.max(
+      deepestPx,
+      getFontDescentPx(glyph.fontMetrics, glyph.fontSizePx),
+      glyph.yOffset ?? 0
+    );
   return deepestPx;
 }
 

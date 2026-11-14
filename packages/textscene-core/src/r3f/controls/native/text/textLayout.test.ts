@@ -744,6 +744,15 @@ describe('soloLineLayout — re-wrapping one line of an already-shaped result', 
       expect(soloLineLayout(withDeepGlyph, parent).heightPx).toBe(23);
     });
 
+    // `_shape_substr` grows the line's descent by a glyph's downward `y_off`, past any face descent.
+    it('reaches a glyph offset down past the face descent, below the baseline', () => {
+      const parent = shapeAB();
+      const line = parent.lines[0]!;
+      const withLoweredGlyph = { ...line, glyphs: [line.glyphs[0]!, { ...line.glyphs[1]!, yOffset: 9 }] };
+      // The baseline 13 plus the offset 9, over the face descent 4.
+      expect(soloLineLayout(withLoweredGlyph, parent).heightPx).toBe(22);
+    });
+
     it('is the pitch for a line with no glyph', () => {
       const parent = shapeAB();
       const empty = { ...parent.lines[0]!, glyphs: [] };
