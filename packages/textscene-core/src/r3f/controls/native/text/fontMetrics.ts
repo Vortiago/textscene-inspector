@@ -343,7 +343,7 @@ export function canvasGlyphPenXPx(
  * (`text_server_adv.cpp:7077`). A missing glyph takes `averageAdvanceUnits`,
  * so the line does not collapse around it.
  */
-function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSizePx: number): number {
+export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSizePx: number): number {
   const units = metrics.getGlyphAdvanceUnits(ch) ?? metrics.averageAdvanceUnits;
   return advancePx(metrics, units, { char: ch }, fontSizePx);
 }

@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import reference from './decomposedMarks.godot.json';
+import type { FontMetrics } from './fontMetrics';
 import { sfntFace } from './sfntFace.testkit';
 import { fixtureSfnt } from './sfntOutlines.testkit';
 import { glyphsOf } from './textLayout.testkit';
@@ -17,6 +18,11 @@ interface ReferenceCharacter {
   readonly glyphs: readonly { advance: number; offset: readonly [number, number] }[];
 }
 
+/** The face of each fixture font, read once: the rows share four fonts. */
+const faces = new Map<string, FontMetrics>();
+const faceOf = (font: string): FontMetrics =>
+  faces.get(font) ?? faces.set(font, sfntFace(fixtureSfnt(font))).get(font)!;
+
 // The JSON module types an offset as number[], not as the pair it holds.
 const references = reference as unknown as ReferenceCharacter[];
 
@@ -24,7 +30,7 @@ describe('shapeText — the marks of a decomposed character against Godot', () =
   it.each(references.map((row) => [`${row.char} at ${row.sizePx} px in ${row.font}`, row] as const))(
     'places %s',
     (_, { font, char, sizePx, glyphs }) => {
-      const placed = glyphsOf(char, sfntFace(fixtureSfnt(font)), sizePx);
+      const placed = glyphsOf(char, faceOf(font), sizePx);
       // Adding zero turns the layout's -0 into the 0 of the reference.
       expect(
         placed.map(({ advance, xOffset = 0, yOffset = 0 }) => ({

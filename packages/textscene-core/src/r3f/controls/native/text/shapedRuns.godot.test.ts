@@ -54,13 +54,8 @@ async function sfntOf(font: string): Promise<SfntFile> {
   return sfnt;
 }
 
-/** The face of `font` that reads every number from its tables. */
-async function sfntFaceOf(font: string): Promise<FontMetrics> {
-  return sfntFace(await sfntOf(font));
-}
-
 async function faceAt(row: ReferenceRun): Promise<FontMetrics> {
-  const face = await sfntFaceOf(row.font);
+  const face = sfntFace(await sfntOf(row.font));
   const opentype = opentypeOf(row.opentype);
   if (!opentype?.size) return face;
   const outlines = await openFontOutlines(bytesOf(row.font));

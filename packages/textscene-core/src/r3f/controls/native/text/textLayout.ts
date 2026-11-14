@@ -19,6 +19,7 @@ import {
   getFontExtraAdvancePx,
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
+  getFontGlyphAdvancePx,
   getFontRunGlyphAdvancePx,
   fallbackChainOf,
   type FontMetrics,
@@ -645,7 +646,7 @@ function specialGlyph(
 
 /** The glyph of character `ch` at `i` that `face` draws apart, at its character advance. */
 function drawnApartGlyph(ch: string, i: number, face: FontMetrics, size: number): BreakGlyph {
-  return { ...zeroWidthGlyph(ch, i), advance: getFontRunGlyphAdvancePx(face, { char: ch }, size) };
+  return { ...zeroWidthGlyph(ch, i), advance: getFontGlyphAdvancePx(face, ch, size) };
 }
 
 /** The glyph of character `ch` at `i` with no advance. */

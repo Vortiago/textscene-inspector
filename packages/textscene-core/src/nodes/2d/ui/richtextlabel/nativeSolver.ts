@@ -277,6 +277,8 @@ interface ResolvedImageRun {
  */
 const imageObjectFontMetrics = perObject(wrapForImageObject);
 
+const isImageObject = (ch: string): boolean => ch === IMAGE_OBJECT_CHAR;
+
 /**
  * One wrapper per face, so `shapeText` sees the same face on every call and its memo keeps hits. An
  * image has no outline, so it draws in the face with its outlines and no variation: no embolden,
@@ -290,23 +292,19 @@ function wrapForImageObject(base: FontMetrics): FontMetrics {
   return Object.create(plain, {
     hasGlyph: {
       value(ch: string): boolean {
-        return ch === IMAGE_OBJECT_CHAR || plain.hasGlyph(ch);
+        return isImageObject(ch) || plain.hasGlyph(ch);
       },
     },
-    drawsApart: {
-      value(ch: string): boolean {
-        return ch === IMAGE_OBJECT_CHAR;
-      },
-    },
+    drawsApart: { value: isImageObject },
     getGlyphAdvanceUnits: {
       value(ch: string): number | null {
-        if (ch === IMAGE_OBJECT_CHAR) return plain.unitsPerEm;
+        if (isImageObject(ch)) return plain.unitsPerEm;
         return plain.getGlyphAdvanceUnits(ch);
       },
     },
     getKerningAdjustmentUnits: {
       value(a: string, b: string): number {
-        if (a === IMAGE_OBJECT_CHAR || b === IMAGE_OBJECT_CHAR) return 0;
+        if (isImageObject(a) || isImageObject(b)) return 0;
         return plain.getKerningAdjustmentUnits(a, b);
       },
     },

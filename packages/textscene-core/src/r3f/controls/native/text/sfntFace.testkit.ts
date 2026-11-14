@@ -16,7 +16,9 @@ export function sfntFace(sfnt: SfntFile): FontMetrics {
   const glyphIndexOf = sfntGlyphIndex(sfnt)!;
   const metricsOf = glyphMetricsReader(sfnt);
   const advanceUnits = (ch: string) => metricsOf(glyphIndexOf(ch.codePointAt(0)!), 0).horizontal.advance;
-  const kerningOf = defaultKerningReader(sfnt);
+  // One kerning reader, built at the first pair: `getKerningAdjustmentUnits` and `sfntFaceGlyphs` share it.
+  let kerning: ReturnType<typeof defaultKerningReader> | undefined;
+  const kerningOf = () => (kerning ??= defaultKerningReader(sfnt));
   const lookupGlyph = (ch: string) => {
     const codePoint = ch.codePointAt(0)!;
     return { glyph: glyphIndexOf(codePoint), codePoint };
@@ -29,8 +31,8 @@ export function sfntFace(sfnt: SfntFile): FontMetrics {
     hasGlyph: sfntHasGlyph(sfnt),
     getGlyphAdvanceUnits: advanceUnits,
     getKerningAdjustmentUnits: (a, b) =>
-      (kerningOf?.(lookupGlyph(a), lookupGlyph(b)) ?? []).reduce((units, value) => units + value.units, 0),
+      (kerningOf()?.(lookupGlyph(a), lookupGlyph(b)) ?? []).reduce((units, value) => units + value.units, 0),
     averageAdvanceUnits: advanceUnits('n'),
-    ...sfntFaceGlyphs(sfnt, () => sfnt, defaultKerningReader),
+    ...sfntFaceGlyphs(sfnt, () => sfnt, kerningOf),
   };
 }
