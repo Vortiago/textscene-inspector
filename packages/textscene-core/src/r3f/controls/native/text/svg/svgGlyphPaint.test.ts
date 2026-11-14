@@ -30,6 +30,8 @@ const SVG_GLYPHS: SvgGlyphs = {
     if (glyph === SVG_GLYPH) return squareBitmap([0, 255, 0]);
     return glyph === FAILING_GLYPH ? null : undefined;
   },
+  subscribe: () => () => undefined,
+  version: 0,
 };
 
 const SCALE_AT_20_PPEM = Math.round((20 * 64 * 65536) / 1000);

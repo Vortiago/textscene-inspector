@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { ByteWriter } from '../sfntOutlines.testkit';
 import { sfntFileOfTables } from '../sfntTables';
 import { svgBytes, svgTable } from './svg.testkit';
+import type { SvgPictureDrawer } from './browserSvgPicture';
 import { svgGlyphsOf } from './svgGlyphs';
 
 const RED_GLYPH = 1;
-const EMPTY_GLYPH = 2;
 const PLAIN_GLYPH = 3;
 
 /** `head` of a 1000-unit face, with `TT_HEAD_FLAG_INTEGER_PPEM` where `isPpemRounded`. */
@@ -32,13 +32,9 @@ function hheaTable(): Uint8Array {
 const HMTX = new Uint8Array(new ByteWriter().u16(1000).u16(0).toBytes());
 
 const RED_SQUARE = `<svg xmlns="http://www.w3.org/2000/svg"><rect id="glyph${RED_GLYPH}" x="0" y="-800" width="1000" height="1000" fill="#ff0000"/></svg>`;
-const NO_SHAPE = `<svg xmlns="http://www.w3.org/2000/svg"><g id="glyph${EMPTY_GLYPH}"/></svg>`;
 
 function svgFace(isPpemRounded = true) {
-  const documents = [
-    { startGlyph: RED_GLYPH, endGlyph: RED_GLYPH, bytes: svgBytes(RED_SQUARE) },
-    { startGlyph: EMPTY_GLYPH, endGlyph: EMPTY_GLYPH, bytes: svgBytes(NO_SHAPE) },
-  ];
+  const documents = [{ startGlyph: RED_GLYPH, endGlyph: RED_GLYPH, bytes: svgBytes(RED_SQUARE) }];
   return sfntFileOfTables(
     new Map([
       ['head', headTable(isPpemRounded)],
@@ -50,42 +46,71 @@ function svgFace(isPpemRounded = true) {
   );
 }
 
+/** A drawer that measures the red square's box and paints every pixel `texel`, or nothing where `texel` is null. */
+function squareDrawer(texel: readonly number[] | null): SvgPictureDrawer {
+  return {
+    contentBox: () => ({ x: 0, y: -800, width: 1000, height: 1000 }),
+    draw: async (_xml, _box, { width, rows }) => {
+      if (!texel) return null;
+      const texels = new Uint8ClampedArray(width * rows * 4);
+      for (let at = 0; at < texels.length; at += 4) texels.set(texel, at);
+      return texels;
+    },
+  };
+}
+
+/** The bitmap of `glyph` at 16 px once its draw has landed, and how many times the glyphs told their subscribers. */
+async function landed(drawer: SvgPictureDrawer | null, glyph: number) {
+  const svg = (await svgGlyphsOf(svgFace(), drawer))!;
+  let landings = 0;
+  svg.subscribe(() => landings++);
+  const read = svg.readerAt(svg.sizeAt(16));
+  const first = read(glyph);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  return { first, bitmap: read(glyph), landings, version: svg.version };
+}
+
 describe('svgGlyphsOf', () => {
   it('rounds the ascender to the nearest pixel at the whole ppem where the face rounds its ppem', async () => {
     // 800 units at 13 px are 665.6/64 px: 10 px to the nearest pixel, 11 px up.
-    const size = (await svgGlyphsOf(svgFace(true)))!.sizeAt(13);
+    const size = (await svgGlyphsOf(svgFace(true), null))!.sizeAt(13);
     expect(size).toEqual({ xPpem: 13, yPpem: 13, ascender: 640, descender: -192, xScale: 54526 });
   });
 
   it('takes the ascender up and the descender down to whole pixels where the face does not round', async () => {
-    const size = (await svgGlyphsOf(svgFace(false)))!.sizeAt(13);
+    const size = (await svgGlyphsOf(svgFace(false), null))!.sizeAt(13);
     expect(size).toMatchObject({ ascender: 704, descender: -192 });
   });
 
-  it('copies the bitmap as red, green, blue and alpha', async () => {
-    const svg = (await svgGlyphsOf(svgFace()))!;
-    const bitmap = svg.readerAt(svg.sizeAt(16))(RED_GLYPH)!;
-    expect([...bitmap.texels.subarray(0, 4)]).toEqual([255, 0, 0, 255]);
+  it('draws nothing on the first read, while the browser draws the glyph', async () => {
+    expect((await landed(squareDrawer([255, 0, 0, 255]), RED_GLYPH)).first).toBeNull();
+  });
+
+  it('keeps the drawn red, green, blue and alpha once the draw lands', async () => {
+    const { bitmap } = await landed(squareDrawer([255, 0, 0, 255]), RED_GLYPH);
+    expect([...bitmap!.texels.subarray(0, 4)]).toEqual([255, 0, 0, 255]);
+  });
+
+  it('tells its subscribers once for each bitmap that lands', async () => {
+    const { landings, version } = await landed(squareDrawer([255, 0, 0, 255]), RED_GLYPH);
+    expect([landings, version]).toEqual([1, 1]);
   });
 
   it('places the bitmap on the advance, raised by its height times the line over the ascender', async () => {
-    const svg = (await svgGlyphsOf(svgFace()))!;
-    expect(svg.readerAt(svg.sizeAt(16))(RED_GLYPH)!.grid).toEqual({
-      left: 0,
-      top: -13,
-      width: 16,
-      height: 16,
-    });
+    const { bitmap } = await landed(squareDrawer([255, 0, 0, 255]), RED_GLYPH);
+    expect(bitmap!.grid).toEqual({ left: 0, top: -13, width: 16, height: 16 });
   });
 
-  it('draws one clear pixel for a document with no shape, which ThorVG sizes 1 unit by 1', async () => {
-    const svg = (await svgGlyphsOf(svgFace()))!;
-    const bitmap = svg.readerAt(svg.sizeAt(16))(EMPTY_GLYPH)!;
-    expect([bitmap.grid.width, bitmap.grid.height, bitmap.texels[3]]).toEqual([1, 1, 0]);
+  it('draws nothing, and tells no one, where the browser draws nothing', async () => {
+    const { bitmap, landings } = await landed(squareDrawer(null), RED_GLYPH);
+    expect([bitmap, landings]).toEqual([null, 0]);
+  });
+
+  it('draws nothing outside a browser', async () => {
+    expect((await landed(null, RED_GLYPH)).bitmap).toBeNull();
   });
 
   it('gives no SVG form to a glyph no document covers', async () => {
-    const svg = (await svgGlyphsOf(svgFace()))!;
-    expect(svg.readerAt(svg.sizeAt(16))(PLAIN_GLYPH)).toBeUndefined();
+    expect((await landed(squareDrawer([255, 0, 0, 255]), PLAIN_GLYPH)).bitmap).toBeUndefined();
   });
 });

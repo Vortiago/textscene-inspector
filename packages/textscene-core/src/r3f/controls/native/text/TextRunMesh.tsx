@@ -49,6 +49,7 @@ import {
 } from '../../../../resources/textures/godotTextureFilter';
 import { useItemLinearColor, useOwnModulate, WHITE_MODULATE } from '../../../canvasItemModulate';
 import { drawsColourGlyphs } from './colour/colourGlyphs';
+import { useSvgGlyphLandings } from './svg/useSvgGlyphLandings';
 import type { FontMetrics } from './fontMetrics';
 import { useCanvasColorSpace } from '../../../canvasColorSpace';
 import type { SurfaceBlend } from '../../../materials/surfaceBlend';
@@ -494,6 +495,8 @@ export function TextRunMesh({
   const meshTint = isCanvasFontMetrics(fontMetrics) ? null : linearTint;
   if (blends && !swapped)
     throw new Error('expected blends only inside a GeometryInstance3D drawer, got none');
+  // A glyph the browser has not drawn yet paints nothing, so each bitmap that lands repaints the run.
+  const svgGlyphLandings = useSvgGlyphLandings(fontMetrics);
 
   const run = useMemo(
     () =>
@@ -528,6 +531,7 @@ export function TextRunMesh({
       phaseY,
       textureFilter,
       mipmapped,
+      svgGlyphLandings,
     ]
   );
   // Apart from the run, so a label that gains or loses an instance material keeps its raster.

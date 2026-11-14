@@ -1,7 +1,8 @@
 /**
  * The SVG glyphs of a face, as FreeType loads them with `FT_LOAD_COLOR` (`ttgload.c:2482-2532`) and
- * Godot's OT-SVG hook draws them (`svgGlyphRaster.ts`): the glyph's document, drawn at the face's
- * FreeType size into the BGRA bitmap Godot copies into its glyph texture.
+ * Godot's OT-SVG hook draws them: the glyph's document, placed at the face's FreeType size
+ * (`svgGlyphPlacement.ts`) and drawn by the browser (`browserSvgPicture.ts`). The draw is async: a
+ * glyph draws nothing until its bitmap lands, and each landing tells the subscribers to repaint.
  */
 import { recentlyRead } from '../../../../../utils/recentlyRead';
 import type { ColourBitmap } from '../colour/colourBitmap';
@@ -16,11 +17,10 @@ import {
 import { glyphMetricsReader } from '../sfntGlyphMetrics';
 import { parseSfntScalars, tableBytes, type SfntFile } from '../sfntTables';
 import type { StrikeSize } from '../strike/strikeSize';
-import { svgGlyphDocumentReader } from './svgGlyphDocument';
-import type { SvgGlyphSize } from './svgGlyphPlacement';
-import { drawSvgGlyph } from './svgGlyphRaster';
+import { browserSvgPictureDrawer, type SvgPictureDrawer } from './browserSvgPicture';
+import { svgGlyphDocumentReader, type SvgGlyphDocument } from './svgGlyphDocument';
+import { svgGlyphPlacement, type SvgGlyphPlacement, type SvgGlyphSize } from './svgGlyphPlacement';
 import { readSvgTable, svgDocumentOf, type GzipInflate } from './svgTable';
-import type { PictureDecoders } from './thorvg/pictureLoader';
 
 /** The FreeType size a face loads its SVG glyphs at: its size metrics, and `x_scale` in 16.16 for the advance. */
 export interface SvgLoadSize extends SvgGlyphSize {
@@ -29,15 +29,19 @@ export interface SvgLoadSize extends SvgGlyphSize {
 
 /**
  * The colour bitmap of a glyph at the glyph origin: undefined for a glyph with no document, which
- * loads its outline instead, and null where Godot's hook draws nothing.
+ * loads its outline instead, and null where the glyph draws nothing, for now or for good.
  */
 export type SvgGlyphReader = (glyph: number) => ColourBitmap | null | undefined;
 
 export interface SvgGlyphs {
   /** The FreeType size of the scalable face at `fontSizePx`. */
   sizeAt(fontSizePx: number): SvgLoadSize;
-  /** The reader of each glyph's SVG form at `size`. */
+  /** The reader of each glyph's SVG form at `size`. A read of a glyph not yet drawn starts its draw. */
   readerAt(size: SvgLoadSize): SvgGlyphReader;
+  /** Calls `listener` each time a glyph's bitmap lands, until the returned call unsubscribes. */
+  subscribe(listener: () => void): () => void;
+  /** A count that grows with each bitmap that lands, so a painter knows its raster is stale. */
+  readonly version: number;
 }
 
 /** A font size animation passes through many sizes, so the SVG glyphs of this many sizes of one face are kept. */
@@ -47,36 +51,76 @@ const HEAD_FLAGS_OFFSET = 16;
 const HEAD_FLAG_PPEM_ROUNDED = 0x8;
 
 /** The SVG glyphs of `sfnt`, or null for a face whose `SVG ` table FreeType does not load. */
-export async function svgGlyphsOf(sfnt: SfntFile): Promise<SvgGlyphs | null> {
+export async function svgGlyphsOf(
+  sfnt: SfntFile,
+  drawer: SvgPictureDrawer | null = browserSvgPictureDrawer()
+): Promise<SvgGlyphs | null> {
   const table = readSvgTable(sfnt);
   const scalars = parseSfntScalars(sfnt);
   if (!table || !scalars) return null;
-  const { gunzipSync, unzlibSync } = await import('three/addons/libs/fflate.module.js');
+  const { gunzipSync } = await import('three/addons/libs/fflate.module.js');
   const inflate: GzipInflate = (stream) => gunzipSync(stream);
-  const decoders: PictureDecoders = { inflate: (stream) => unzlibSync(stream) };
   const documentOf = svgGlyphDocumentReader();
   const advanceOf = glyphMetricsReader(sfnt);
   const { unitsPerEm } = scalars;
-  const sizeAt = scalableSizeReader(sfnt, unitsPerEm, scalars.ascent, -scalars.descent);
   const drawnAt = recentlyRead<string, Map<number, ColourBitmap | null | undefined>>(MAX_KEPT_SIZES);
+  const listeners = new Set<() => void>();
+  /** Written only by `land`, which then calls every listener. */
+  let version = 0;
+  const land = (
+    drawn: Map<number, ColourBitmap | null | undefined>,
+    glyph: number,
+    bitmap: ColourBitmap | null
+  ) => {
+    drawn.set(glyph, bitmap);
+    if (!bitmap) return;
+    version++;
+    for (const listener of listeners) listener();
+  };
   return {
-    sizeAt,
+    sizeAt: scalableSizeReader(sfnt, unitsPerEm, scalars.ascent, -scalars.descent),
     readerAt: (size) => {
       const drawn = drawnAt(sizeKey(size), () => new Map());
       return (glyph) => {
         if (drawn.has(glyph)) return drawn.get(glyph);
         const document = svgDocumentOf(table, glyph, inflate);
+        if (!document) {
+          drawn.set(glyph, undefined);
+          return undefined;
+        }
+        drawn.set(glyph, null);
         const horiAdvance26_6 = ftMulFix(advanceOf(glyph, 0).horizontal.advance, size.xScale);
-        const bitmap = document
-          ? colourBitmapOf(
-              drawSvgGlyph(documentOf(document, glyph, unitsPerEm), size, horiAdvance26_6, decoders)
-            )
-          : undefined;
-        drawn.set(glyph, bitmap);
-        return bitmap;
+        const glyphDocument = documentOf(document, glyph, unitsPerEm);
+        void drawnBitmap(drawer, glyphDocument, size, horiAdvance26_6).then((bitmap) =>
+          land(drawn, glyph, bitmap)
+        );
+        return null;
       };
     },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    get version() {
+      return version;
+    },
   };
+}
+
+/** The bitmap of a glyph's document, or null where the browser draws nothing or no browser is there to draw. */
+async function drawnBitmap(
+  drawer: SvgPictureDrawer | null,
+  document: SvgGlyphDocument,
+  size: SvgGlyphSize,
+  horiAdvance26_6: number
+): Promise<ColourBitmap | null> {
+  const box = drawer?.contentBox(document.xml);
+  if (!drawer || !box) return null;
+  const embox = { x: document.emboxX, y: document.emboxY };
+  const placement = svgGlyphPlacement(box, embox, size, horiAdvance26_6);
+  if (!placement) return null;
+  const texels = await drawer.draw(document.xml, box, placement);
+  return texels && colourBitmapOf(placement, texels);
 }
 
 /** The size of a face drawn from `strike`, whose size metrics `FT_Select_Size` sets. */
@@ -127,20 +171,10 @@ function scalableSizeReader(
 }
 
 /**
- * The bitmap as Godot copies FreeType's BGRA into its RGBA texture (`text_server_adv.cpp:1176-1182`).
- * ThorVG's straight ARGB words lie in memory as B, G, R and A.
+ * The bitmap as Godot copies FreeType's BGRA into its RGBA texture (`text_server_adv.cpp:1176-1182`),
+ * at the corner the placement gives.
  */
-function colourBitmapOf(bitmap: ReturnType<typeof drawSvgGlyph>): ColourBitmap | null {
-  if (!bitmap) return null;
-  const { placement, pixels } = bitmap;
-  const texels = new Uint8Array(pixels.length * 4);
-  for (let i = 0; i < pixels.length; i++) {
-    const word = pixels[i]!;
-    texels[i * 4] = (word >>> 16) & 0xff;
-    texels[i * 4 + 1] = (word >>> 8) & 0xff;
-    texels[i * 4 + 2] = word & 0xff;
-    texels[i * 4 + 3] = word >>> 24;
-  }
+function colourBitmapOf(placement: SvgGlyphPlacement, texels: Uint8ClampedArray): ColourBitmap {
   const grid = { left: placement.left, top: -placement.top, width: placement.width, height: placement.rows };
-  return { grid, texels };
+  return { grid, texels: new Uint8Array(texels.buffer, texels.byteOffset, texels.byteLength) };
 }

@@ -74,11 +74,7 @@ interface Chunks {
  * (`pngshim.c:318-323`).
  */
 export function decodePng(bytes: Uint8Array, inflate: ZlibInflate): PngImage | null {
-  const decoded = decodeStraight(
-    bytes,
-    inflate,
-    (header) => header.width <= 0x7fff && header.height <= 0x7fff
-  );
+  const decoded = decodeStraight(bytes, inflate);
   if (!decoded) return null;
   const { header } = decoded.chunks;
   return {
@@ -88,31 +84,13 @@ export function decodePng(bytes: Uint8Array, inflate: ZlibInflate): PngImage | n
   };
 }
 
-/** A decoded image as straight 8-bit RGBA, row by row from the top. */
-export interface StraightImage {
-  readonly width: number;
-  readonly height: number;
-  readonly rgba: Uint8Array;
-}
-
-/**
- * The image of `bytes` as libpng's simplified read gives it for 8-bit sRGB RGBA, or null where
- * libpng fails the read. A 16-bit image strips to its high byte, and a `gAMA` chunk is not applied.
- */
-export function decodePngStraight(bytes: Uint8Array, inflate: ZlibInflate): StraightImage | null {
-  const decoded = decodeStraight(bytes, inflate, () => true);
-  if (!decoded) return null;
-  const { header } = decoded.chunks;
-  return { width: header.width, height: header.height, rgba: decoded.rgba };
-}
-
+/** The straight RGBA of `bytes`, top row first, and the chunks it read. */
 function decodeStraight(
   bytes: Uint8Array,
-  inflate: ZlibInflate,
-  isSizeTaken: (header: Header) => boolean
+  inflate: ZlibInflate
 ): { chunks: Chunks; rgba: Uint8Array } | null {
   const chunks = readChunks(bytes);
-  if (!chunks || !isSizeTaken(chunks.header)) return null;
+  if (!chunks || chunks.header.width > 0x7fff || chunks.header.height > 0x7fff) return null;
   let filtered: Uint8Array;
   try {
     filtered = inflate(chunks.imageData);
