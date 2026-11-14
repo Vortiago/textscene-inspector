@@ -27,13 +27,13 @@ import { isTopLevelItem, pieceSize } from './canvasPaintOrder.js';
 import {
   IN_TREE_ORDER,
   PaintFrameProvider,
+  detachedPaint,
   extraFrame,
   useChildPaintFrames,
   useNodePaint,
   type ChildPaintFrames,
   type PaintFrame,
 } from './canvasItemPass/nodePaint.js';
-import { requireDetachedPaint } from './canvasItemPass/detachedPaintSlot.js';
 import { canvasPaintPass, type CanvasItemPaint } from './canvasItemPass/canvasItemPaint.js';
 import type { ExtraSortItem, LiveSortY } from './canvasItemPass/ySort.js';
 import type { Vector2 } from '../godot/math/vector.js';
@@ -237,7 +237,7 @@ function usePieceFrames(
 ): ReadonlyMap<YSortItem, PaintFrame> {
   const sortedRuns = useSortedRunsAndPaints().runs;
   return useMemo(() => {
-    if (childFrames) return requireDetachedPaint().sortFrames(liveItems, paint, childFrames.tail);
+    if (childFrames) return detachedPaint().sortFrames(liveItems, paint, childFrames.tail);
     return new Map(
       liveItems.map((live, i): [YSortItem, PaintFrame] => {
         const piece = pieces.get(items[i]!)!;

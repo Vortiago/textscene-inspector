@@ -28,15 +28,17 @@ export interface DetachedPaint {
 }
 
 /** Written only by `installDetachedPaint`, from the test setup. Null in the preview. */
-let detachedPaint: DetachedPaint | null = null;
+let installed: DetachedPaint | null = null;
 
-/** Installs the paint of a subtree with no shared live tree, for a test that mounts a node bare. */
-export function installDetachedPaint(paint: DetachedPaint): void {
-  detachedPaint = paint;
+/**
+ * Installs the paint of a subtree with no shared live tree, for a test that mounts a node bare.
+ * Null restores the preview, which installs none.
+ */
+export function installDetachedPaint(paint: DetachedPaint | null): void {
+  installed = paint;
 }
 
-/** The installed detached paint. Throws in the preview, which always mounts the shared live tree. */
-export function requireDetachedPaint(): DetachedPaint {
-  if (detachedPaint) return detachedPaint;
-  throw new Error('expected a shared live tree above the drawn nodes, got none: mount them in a scene graph');
+/** The installed detached paint, or null in the preview. */
+export function installedDetachedPaint(): DetachedPaint | null {
+  return installed;
 }
