@@ -6,12 +6,11 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { NodeDispatcher } from './NodeDispatcher';
 import { ControlCanvasLayer } from './controls/native/ControlCanvasLayer';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../parser/TscnParser';
-import { ControlYSortProvider } from './contexts/ControlYSortContext';
-import { SceneStack } from './testing/SceneStack';
+import { DispatchedScene } from './testing/DispatchedScene';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 
 import './nodes/index';
 import './controls/index';
@@ -27,12 +26,17 @@ async function settledGroup(tscn: string, name: string) {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      <ControlYSortProvider>
-        <NodeDispatcher nodes={parsed.nodes} />
-        <ControlCanvasLayer nodes={parsed.nodes} />
-      </ControlYSortProvider>
-    </SceneStack>
+    <DispatchedScene
+      sceneGraph={createSceneGraphFromTscnScene(parsed)}
+      workspace="2d"
+      loader={fake.loader}
+      around={(nodes) => (
+        <>
+          {nodes}
+          <ControlCanvasLayer nodes={parsed.nodes} />
+        </>
+      )}
+    />
   );
   await renderer.advanceFrames(2, 0.016);
   const root = renderer.scene.children[0]!.instance.parent!;

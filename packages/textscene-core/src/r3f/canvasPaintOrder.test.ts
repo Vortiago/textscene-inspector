@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../parser/types';
 import {
   allocateNodePaintRange,
-  behindParentRanges,
+  behindRangesOf,
   allocatePaintRange,
   canvasKeyAtZ,
   canvasRenderOrder,
@@ -18,6 +18,8 @@ import {
   paintRangeSize,
   WHOLE_CANVAS_RANGE,
 } from './canvasPaintOrder';
+// Side effect: the parser slices register the paint room each type holds.
+import '../parser/TscnParser';
 
 function node(name: string, type: string, children: TscnNode[] = [], properties = {}): TscnNode {
   // The raw text of each property, as the parser keeps it beside the parsed value.
@@ -142,8 +144,12 @@ describe('paintRangeSize', () => {
   });
 
   it("counts one more value for a Control's back pieces", () => {
+    expect(paintRangeSize(node('Box', 'Control', [node('Body', 'ColorRect')]))).toBe(1 + 1 + 1 + 1);
+  });
+
+  it("counts one value for each of a ScrollContainer's hints and bars, which a y-sort places apart", () => {
     expect(paintRangeSize(node('Scroll', 'ScrollContainer', [node('Body', 'ColorRect')]))).toBe(
-      1 + 1 + 1 + 1
+      1 + 1 + 4 + 1
     );
   });
 
@@ -486,7 +492,7 @@ describe("GraphEdit's listed children", () => {
   });
 });
 
-describe('behindParentRanges', () => {
+describe('behindRangesOf', () => {
   it('lists the show_behind_parent children in child order, whatever the parent type', () => {
     const parent = node('Clip', 'Node2D', [
       node('Front', 'Sprite2D'),
@@ -494,6 +500,7 @@ describe('behindParentRanges', () => {
     ]);
     const range = { base: 0, size: paintRangeSize(parent) };
 
-    expect(behindParentRanges(range, parent)).toEqual([allocateNodePaintRange(range, parent).children[1]]);
+    const { children } = allocateNodePaintRange(range, parent);
+    expect(behindRangesOf(parent.children, children)).toEqual([children[1]]);
   });
 });

@@ -3,14 +3,15 @@
  * load here unless a test stubs both. These tests cover the fallback decisions, the warn-once
  * dedupe and the peek contract. `fontFaceDoor.test.ts` reaches the shared door for real.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { windowLoaded } from './fakeFontFace.testkit';
 import { fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
 import { peekSceneFontMetrics, peekSettledSceneFontMetrics } from './sceneFontLoader';
 import { fontWork, onSceneFontSettled, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { FACELESS_FONT } from './sceneFontResolution';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
-import { drawnOpentype, getFontAscentPx, getFontRunGlyphAdvancePx, getFontLinePitchPx } from './fontMetrics';
+import { getFontAscentPx, getFontRunGlyphAdvancePx, getFontLinePitchPx } from './fontMetrics';
 import * as logger from '../../../../logger';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 
@@ -24,6 +25,8 @@ const OUTLINE_LOAD_TIMEOUT_MS = 15_000;
 function settleLoads(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
+
+beforeAll(windowLoaded);
 
 describe('peekSceneFontMetrics', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -504,7 +507,7 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
   it('settles a variable font at an instance on its outlines, which its text and advances follow', async () => {
     const face = await settledAtMono(1);
 
-    expect(drawnOpentype(face)).toEqual(new Map([[1297043023, 1]]));
+    expect(face.drawnOpentype).toEqual(new Map([[1297043023, 1]]));
     // Recursive's `MONO` instance advances every glyph 600 of 1000 units, where `m` measures 500 at the default.
     expect(getFontRunGlyphAdvancePx(face, { char: 'm' }, 10)).toBe(6);
   });
@@ -512,7 +515,7 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
   it('keeps a variable font at its default instance on the measured advances', async () => {
     const face = await settledAtMono(0);
 
-    expect(drawnOpentype(face)).toBeUndefined();
+    expect(face.drawnOpentype).toBeUndefined();
     expect(getFontRunGlyphAdvancePx(face, { char: 'm' }, 10)).toBe(5);
   });
 

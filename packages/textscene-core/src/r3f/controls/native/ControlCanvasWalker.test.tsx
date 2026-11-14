@@ -24,6 +24,8 @@ import { canvasItemFieldsOf, type CanvasItemNodeFields } from '../../canvasItemP
 import { InheritedFrom, inheritedState } from '../../testing/inheritedFrom';
 import { solveNode as emptySolveNode } from './testing/solveNode';
 import { controlProps } from '../../../nodes/2d/ui/control/testing/controlProps';
+// Side effect: the parser slices register the paint room each type holds.
+import '../../../parser/TscnParser';
 
 /** The world canvas's rank, derived, never hardcoded: only a rank's order means
  * anything, and the spacing for undeclared layers moves the value. */

@@ -12,6 +12,11 @@ export interface ButtonProperties extends ControlProperties, TextDirectionProper
    * no focus, so only a Control that grabs it for its own button, an AcceptDialog's OK, sets it.
    */
   hasFocus?: boolean;
+  /**
+   * The theme icon a Control that builds this Button sets on it (`set_button_icon`), by name, and the
+   * vendored icon it stands in for. Not a scene property, as `hasFocus` is not.
+   */
+  themeIcon?: { name: string; vendoredUrl: string };
   /** The toggle is on: `toggle_mode` and `button_pressed` (`BaseButton::set_pressed` refuses a button that is no toggle, `base_button.cpp`). */
   buttonPressed?: boolean;
   /** Flat buttons drop the default background/border chrome. */

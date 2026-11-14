@@ -20,7 +20,7 @@ import {
 import { CanvasModulateContext } from './canvasModulate';
 import { inheritedState } from './testing/inheritedFrom';
 import { WHOLE_CANVAS_RANGE, canvasRenderOrder, layerRankOf, layerRanks } from './canvasPaintOrder';
-import { PaintRangeProvider } from './contexts/PaintOrderContext';
+import { PaintRun } from './testing/PaintRun';
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
 import { CanvasItemMaterialLightMode } from '../godot/scene/canvasItemMaterial';
 import { canvasItemMaterial } from './testing/canvasItemMaterial';
@@ -178,9 +178,7 @@ describe('useCanvasRunKeysOfNode', () => {
   it('ends a run over the whole canvas past its last key, which the key encoding saturates at', () => {
     const node = { name: 'Group', type: 'CanvasGroup', properties: {}, rawProperties: {}, children: [] };
     const { result } = renderHook(() => useCanvasRunKeysOfNode(node, { zIndex: 0, zAsRelative: true }), {
-      wrapper: ({ children }) => (
-        <PaintRangeProvider value={WHOLE_CANVAS_RANGE}>{children}</PaintRangeProvider>
-      ),
+      wrapper: ({ children }) => <PaintRun value={WHOLE_CANVAS_RANGE}>{children}</PaintRun>,
     });
     const lastKey = canvasRenderOrder({
       layerRank: layerRankOf(layerRanks([]), 0),

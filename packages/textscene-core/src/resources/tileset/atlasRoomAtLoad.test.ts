@@ -3,17 +3,14 @@
  * ViewportTexture is not yet set up.
  */
 import { describe, it, expect } from 'vitest';
-import { tileSetFromScene } from './decode';
-import { withTilesSizedAtLoad } from './sizedAtLoad';
+import { tileSetInScene } from './testing/readTileSet';
 import type { TscnInternalResource } from '../../parser/types';
 
-const NO_FILE = () => undefined;
-
 function sizedAtLoad(internalResources: TscnInternalResource[]) {
-  return withTilesSizedAtLoad(tileSetFromScene('SubResource("ts")', internalResources, [])!, NO_FILE);
+  return tileSetInScene('SubResource("ts")', internalResources, [])!;
 }
 
-describe('withTilesSizedAtLoad', () => {
+describe('the tiles of an atlas source at load', () => {
   /**
    * `create_tile` needs room in the atlas grid of the texture's size (`tile_set.cpp:4985`, `:5200-5211`),
    * and a ViewportTexture reports size 0 while the scene loads (`viewport.cpp:156-160`).

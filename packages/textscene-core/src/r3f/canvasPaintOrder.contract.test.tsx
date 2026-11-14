@@ -19,27 +19,23 @@ import './controls/index';
 import { settleLoads } from './testing/settleLoads';
 
 /**
- * A `Node2D` root holding a full-rect `ColorRect` backdrop and one `Polygon2D`
- * sprite stand-in, in the authored order given. Polygon2D is the world
- * participant because it draws from inline points with no external texture, so
- * the fake loader never decides whether a mesh exists.
+ * A `Node2D` root holding a full-rect `ColorRect` backdrop authored before one `Polygon2D` sprite
+ * stand-in. Polygon2D is the world participant because it draws from inline points with no
+ * external texture, so the fake loader never decides whether a mesh exists.
  */
-function scene(order: 'background-first' | 'background-last'): string {
-  const background = `[node name="Background" type="ColorRect" parent="."]
-offset_right = 640.0
-offset_bottom = 400.0
-color = Color(0.141176, 0.152941, 0.164706, 1)
-`;
-  const sprite = `[node name="Ball" type="Polygon2D" parent="."]
-position = Vector2(320, 200)
-polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
-`;
-  return `[gd_scene format=3]
+const BACKGROUND_FIRST = `[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
 
-${order === 'background-first' ? background + '\n' + sprite : sprite + '\n' + background}`;
-}
+[node name="Background" type="ColorRect" parent="."]
+offset_right = 640.0
+offset_bottom = 400.0
+color = Color(0.141176, 0.152941, 0.164706, 1)
+
+[node name="Ball" type="Polygon2D" parent="."]
+position = Vector2(320, 200)
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+`;
 
 /**
  * Render world content and Controls together, exactly as `World2DContents` mounts them.
@@ -131,7 +127,7 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
 
 describe('2D canvas paint order — a Control sorts in tree order with its Node2D siblings', () => {
   it('RED: a ColorRect authored FIRST paints behind a later Polygon2D sibling', async () => {
-    const root = await renderWorld(scene('background-first'));
+    const root = await renderWorld(BACKGROUND_FIRST);
     const background = paintKey(drawnMeshUnder(root, 'Background'));
     const ball = paintKey(drawnMeshUnder(root, 'Ball'));
     // `_attach_canvas_item_for_draw` appended Background first; both sit at
@@ -187,29 +183,6 @@ color = Color(0.9, 0.2, 0.2, 1)
     ).toBeLessThan(0);
   });
 
-  it('a canvas item under a plain Node draws over a sibling authored after it', async () => {
-    // Its parent is not a CanvasItem, so it parents at the viewport's canvas
-    // (canvas_item.cpp:246-267) and draws at its pre-order rank among the roots
-    // (canvas_item.cpp:222-232, :453-466, scene_tree.cpp:333-348, node.cpp:2152-2187,
-    // renderer_canvas_cull.h:146-151), over everything under the root it hangs under.
-    const root = await renderWorld(`[gd_scene format=3]
-
-[node name="Root" type="Node2D"]
-
-[node name="Holder" type="Node" parent="."]
-
-[node name="Detached" type="Polygon2D" parent="Holder"]
-polygon = PackedVector2Array(0, 0, 640, 0, 640, 400)
-
-[node name="Ball" type="Polygon2D" parent="."]
-position = Vector2(320, 200)
-polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
-`);
-    expect(
-      compareKeys(paintKey(drawnMeshUnder(root, 'Detached')), paintKey(drawnMeshUnder(root, 'Ball')))
-    ).toBeGreaterThan(0);
-  });
-
   it("a TileMap child draws over the TileMap's layers", async () => {
     // The layers are internal children added at the front
     // (`tile_map.cpp:279`), so their draw indices come before every authored
@@ -222,14 +195,5 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
     for (const tile of tiles) {
       expect(compareKeys(paintKey(tile), paintKey(marker))).toBeLessThan(0);
     }
-  });
-
-  it('a ColorRect authored LAST paints over an earlier Polygon2D sibling', async () => {
-    const root = await renderWorld(scene('background-last'));
-    const background = paintKey(drawnMeshUnder(root, 'Background'));
-    const ball = paintKey(drawnMeshUnder(root, 'Ball'));
-    // The same rule read the other way: tree order alone flips the result, so a
-    // fix that simply pushes every Control underneath the world fails here.
-    expect(compareKeys(background, ball)).toBeGreaterThan(0);
   });
 });

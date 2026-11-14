@@ -27,3 +27,12 @@ export function fontFaceRecorder(): { FontFace: typeof FakeFontFace; faces: Fake
   }
   return { FontFace: RecordedFontFace, faces };
 }
+
+/**
+ * Resolves once happy-dom's window has loaded. Until then a later tick calls
+ * `document.dispatchEvent`, so a test that swaps `document` for a stub first throws an unhandled rejection.
+ */
+export function windowLoaded(): Promise<void> {
+  if (document.readyState === 'complete') return Promise.resolve();
+  return new Promise((resolve) => window.addEventListener('load', () => resolve(), { once: true }));
+}

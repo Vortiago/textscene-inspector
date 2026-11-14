@@ -15,7 +15,7 @@ import { InheritedFrom, inheritedState } from './testing/inheritedFrom';
 import { parseNode2D } from '../nodes/base/node2d/parser';
 import type { TscnNode } from '../parser/types';
 import { useCanvasSpace } from './canvasRootScope';
-import { ControlYSortProvider, usePublishControlTransforms } from './contexts/ControlYSortContext';
+import { YSortProvider, usePublishControlTransforms } from './contexts/YSortContext';
 import { transform2DFromParts } from '../godot/math/transform2d';
 
 const NEAREST = 1;
@@ -81,12 +81,12 @@ describe('LiftedAncestors canvas space', () => {
       return null;
     }
     await ReactThreeTestRenderer.create(
-      <ControlYSortProvider>
+      <YSortProvider>
         <SolvedControl path="Root/Box" x={100} />
         <LiftedAncestors liftedPast={[box]} basePath="Root">
           <SpaceProbe />
         </LiftedAncestors>
-      </ControlYSortProvider>
+      </YSortProvider>
     );
     expect(space!.elements[12]).toBe(100);
   });

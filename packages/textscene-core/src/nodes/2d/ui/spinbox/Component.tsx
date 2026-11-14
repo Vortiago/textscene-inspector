@@ -1,35 +1,22 @@
 /**
  * `<SpinBox>`: the native painter for `SpinBox::_notification(NOTIFICATION_DRAW)`
- * (`scene/gui/spin_box.cpp:429-500`) without hover, pressed or drag state: the field's LineEdit
- * chrome, the glyphs of the text that end inside `ofs_max` and the stepper arrows. `ControlCanvasWalker` owns `visible`,
- * children and the transform.
+ * (`scene/gui/spin_box.cpp:429-500`) without hover, pressed or drag state: the stepper arrows and
+ * their boxes. The internal LineEdit draws the field (`nativeSolver.ts`). `ControlCanvasWalker` owns
+ * `visible`, children and the transform.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
-import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { PositionedStyleBox } from '../../../../r3f/controls/native/PositionedStyleBox';
-import {
-  resolveLineEditStyleState,
-  layoutLineEditContent,
-  lineEditDrawnLayout,
-} from '../lineedit/nativeSolver';
 import { resolveRangeValue } from '../shared/range';
 import { SPIN_BOX_ICONS } from './icons';
 import {
   spinBoxArrowPosition,
   spinBoxLayout,
-  spinBoxDisplayText,
-  shapeSpinBoxFieldText,
-  spinBoxFieldTextTheme,
-  spinBoxFieldThemeItems,
   spinBoxUpButtonState,
   spinBoxDownButtonState,
   spinBoxIconColor,
@@ -37,20 +24,11 @@ import {
   spinBoxWidestButtonIconWidth,
 } from './nativeSolver';
 import type { SpinBoxProperties } from './types';
-import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
-export function SpinBox({
-  solveNode,
-  tint,
-  childTint,
-  rect,
-  renderOrder,
-  theme,
-}: NativeControlComponentProps) {
+export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<SpinBoxProperties>(solveNode);
-  const editable = props.editable !== false;
 
   const widestIconWidth = spinBoxWidestButtonIconWidth(solveNode, theme.scale);
   const layout = useMemo(
@@ -58,53 +36,7 @@ export function SpinBox({
     [rect.w, rect.h, widestIconWidth, solveNode.rtl]
   );
 
-  const styleState = resolveLineEditStyleState(props.editable);
-  const fieldBox = requiredThemeItem(spinBoxFieldThemeItems(solveNode).styleBoxes, styleState);
-
-  const orderedKeys = controlLayoutOrder(solveNode);
-  const resolvedValue = resolveRangeValue(props, orderedKeys);
-  const text = spinBoxDisplayText(props, resolvedValue, solveNode.locale);
-
-  const { fontSizePx, fontMetrics, color: baseFontColor } = spinBoxFieldTextTheme(solveNode, editable);
-  // `tint.own` is raw sRGB, `self_modulate` folded onto `modulate`: it feeds the arrows and their boxes.
-  // The field is the internal LineEdit (`spin_box.cpp:431`, `line_edit.cpp:726`), so its box and its
-  // text take `childTint`, which has no `self_modulate`. Each multiplies in before one sRGB-to-linear conversion.
-  const tintedFontColor = useMemo(
-    () => tintColor(baseFontColor, childTint.own),
-    [baseFontColor, childTint.own]
-  );
-
-  const textLayout: TextLayoutResult = useMemo(
-    () => shapeSpinBoxFieldText(text, { fontSizePx, fontMetrics }, solveNode.locale),
-    [text, fontSizePx, fontMetrics, solveNode.locale]
-  );
-
-  const content = useMemo(
-    () =>
-      layoutLineEditContent({
-        rectSize: { x: layout.fieldRect.w, y: layout.fieldRect.h },
-        styleMargin: fieldBox.contentMargin,
-        alignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
-        textWidthPx: textLayout.widthPx,
-        textHeightPx: textLayout.heightPx,
-        rtl: solveNode.rtl,
-      }),
-    [
-      layout.fieldRect.w,
-      layout.fieldRect.h,
-      fieldBox.contentMargin,
-      props.alignment,
-      textLayout,
-      solveNode.rtl,
-    ]
-  );
-
-  // The field's LineEdit draws no clip: it drops each glyph that ends past `ofs_max` (`line_edit.cpp:1512-1545`).
-  const clippingPlanes = useControlClipPlanes();
-  const drawnLayout: TextLayoutResult = useMemo(
-    () => lineEditDrawnLayout(textLayout, content.textOffset.x, content.ofsMaxPx),
-    [textLayout, content.textOffset.x, content.ofsMaxPx]
-  );
+  const resolvedValue = resolveRangeValue(props, controlLayoutOrder(solveNode));
 
   const upState = spinBoxUpButtonState(props, resolvedValue);
   const downState = spinBoxDownButtonState(props, resolvedValue);
@@ -141,25 +73,6 @@ export function SpinBox({
 
   return (
     <CanvasItemGroup>
-      <CanvasItemGroup position={[layout.fieldRect.x, -layout.fieldRect.y, 0]}>
-        <StyleBoxQuad
-          styleBox={fieldBox}
-          color={childTint.own}
-          rect={{ x: 0, y: 0, w: layout.fieldRect.w, h: layout.fieldRect.h }}
-          renderOrder={renderOrder}
-        />
-        {textLayout.lines.length > 0 && text.length > 0 && (
-          <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
-            <TextRun
-              layout={drawnLayout}
-              fontSizePx={fontSizePx}
-              tint={tintedFontColor}
-              clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder}
-            />
-          </CanvasItemGroup>
-        )}
-      </CanvasItemGroup>
       <PositionedStyleBox
         box={fieldSeparatorBox}
         rect={layout.fieldAndButtonsSeparatorRect}

@@ -55,12 +55,31 @@ export interface FontMetrics {
    */
   readonly markOffsets?: SizedClusterOffsets;
   /**
-   * The `GPOS` kerning of a pair of shaped glyphs at the default instance, design units. Absent for a
-   * face with no `GPOS` to read.
+   * The `GPOS` kerning of a pair of glyphs at the face's instance. Absent for a face with no `GPOS`
+   * to read.
    */
-  readonly getGlyphKerningUnits?: GlyphKerningReader;
-  /** A character's own advance width, design units, or `null` if this font has no glyph for it (a shaper falls back to `averageAdvanceUnits`). */
+  readonly getGlyphKerning?: GlyphKerningReader;
+  /**
+   * A character's own advance at the default instance, design units, or `null` for no glyph (a shaper
+   * then takes `averageAdvanceUnits`). The layout reads it only for a character the run shaping did
+   * not read: a face with no `shaping`, or a character the face draws apart (`drawsApart`). A
+   * wrapper that changes it for a shaped character changes nothing. FreeType takes the advance of a
+   * font with no `HVAR` from its phantom points at a size, so an instance has none in design units:
+   * `getInstanceAdvance26_6`.
+   */
   getGlyphAdvanceUnits(ch: string): number | null;
+  /**
+   * Whether the layout draws `ch` apart from the run shaping, as a glyph of its own whose advance is
+   * `getGlyphAdvanceUnits`: Godot's embedded object, whose glyph takes the object's width and no
+   * HarfBuzz glyph (`text_server_adv.cpp:7368-7387`). Absent is none.
+   */
+  readonly drawsApart?: (ch: string) => boolean;
+  /**
+   * The advance in 26.6 of a glyph at `fontSizePx`, at the face's instance: the shaped glyph, else
+   * the glyph of its character there. Null for no glyph, and where the glyph keeps the default
+   * advance. Present exactly where the face has `drawnOpentype`.
+   */
+  readonly getInstanceAdvance26_6?: (glyph: KernGlyph, fontSizePx: number) => number | null;
   /**
    * The rest of the face's **Fallback chain**, in order. A character the face lacks draws from the
    * first of them that has it. The list is flat: the `fallbacks` of an entry are not read. Absent is none.
@@ -84,6 +103,12 @@ export interface FontMetrics {
    */
   readonly opentype?: OpentypeCoordinates;
   /**
+   * The axis values that the `outlines` draw as an instance other than the default, else absent: at
+   * the default, FreeType and HarfBuzz draw the font itself, so the face draws as it does without a
+   * variation.
+   */
+  readonly drawnOpentype?: OpentypeCoordinates;
+  /**
    * The glyph outlines that the text of an emboldened, sheared or varied canvas face follows. Absent
    * for a face that needs none. Null for a font whose outlines this previewer cannot read: its text
    * stays on `fillText` and `strokeText`.
@@ -91,11 +116,26 @@ export interface FontMetrics {
   readonly outlines?: SfntOutlines | null;
 }
 
-/** The kerning of a pair of glyphs, design units. Null, not zero, where the kerning of their characters stands. */
-export type GlyphKerningReader = (left: LookupGlyph, right: LookupGlyph) => number | null;
+/** The kerning of a pair of glyphs. Null, not no kerning, where the kerning of their characters stands. */
+export type GlyphKerningReader = (left: LookupGlyph, right: LookupGlyph) => PairKerning | null;
+
+/**
+ * The x advance one `GPOS` value record adds to a pair: its own in design units, and the delta of
+ * its variation device table. HarfBuzz scales and rounds each apart (`ValueFormat.hh:108,140`).
+ */
+export interface KerningValue {
+  readonly units: number;
+  readonly deltaUnits: number;
+}
+
+/** The value records that kern a pair of glyphs, in the order HarfBuzz applies them. */
+export type PairKerning = readonly KerningValue[];
+
+/** A pair that no value record kerns. */
+export const NO_KERNING: PairKerning = Object.freeze([]);
 
 /** The fields of a face whose glyphs this previewer reads from its font file (`sfntFaceGlyphs.ts`). */
-export type FaceGlyphs = Pick<FontMetrics, 'shaping' | 'markOffsets' | 'getGlyphKerningUnits'>;
+export type FaceGlyphs = Pick<FontMetrics, 'shaping' | 'markOffsets' | 'getGlyphKerning'>;
 
 /**
  * `units` scaled to `fontSizePx` as `units * (fontSizePx / unitsPerEm)`, which `units * fontSizePx
@@ -303,19 +343,17 @@ export function canvasGlyphPenXPx(
  * (`text_server_adv.cpp:7077`). A missing glyph takes `averageAdvanceUnits`,
  * so the line does not collapse around it.
  */
-// A face at a variable-font instance takes its advance from `SfntOutlines.advanceAtInstance` instead.
-function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSizePx: number): number {
+export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSizePx: number): number {
   const units = metrics.getGlyphAdvanceUnits(ch) ?? metrics.averageAdvanceUnits;
-  const { outlines, opentype } = metrics;
-  const glyphAtInstance =
-    outlines && isInstanced(opentype) ? outlines.glyphIndex(ch.codePointAt(0)!, opentype) : 0;
-  return advancePx(metrics, units, glyphAtInstance, fontSizePx);
+  return advancePx(metrics, units, { char: ch }, fontSizePx);
 }
 
 /**
- * The advance in px of a glyph of a shaped run: the `hmtx` advance of the glyph, as HarfBuzz reads
- * it, where the run shaping read one, else `getFontGlyphAdvancePx` of its character. A canvas face
- * measures a character as the browser shapes it alone, which a `GSUB` lookup of one glyph changes.
+ * The advance in px of a glyph of a shaped run. The run shaping is the one source of the advance of
+ * a glyph it read: HarfBuzz reads the advance by glyph (`hb-ft.cc:519,523`) and Godot takes its
+ * `x_advance` (`text_server_adv.cpp:7077`), so a character advance cannot serve a substituted glyph
+ * or a ligature. Only a glyph the run shaping did not read takes `getFontGlyphAdvancePx` of its
+ * character. The instance advance of a varied face comes before both (`advancePx`).
  */
 export function getFontRunGlyphAdvancePx(
   metrics: FontMetrics,
@@ -324,19 +362,16 @@ export function getFontRunGlyphAdvancePx(
 ): number {
   if (glyph.glyph === undefined || glyph.advanceUnits === undefined)
     return getFontGlyphAdvancePx(metrics, glyph.char, fontSizePx);
-  return advancePx(metrics, glyph.advanceUnits, glyph.glyph, fontSizePx);
+  return advancePx(metrics, glyph.advanceUnits, glyph, fontSizePx);
 }
 
-/**
- * The advance of a glyph of `units`, or of glyph `glyphAtInstance` at the face's instance. Glyph 0
- * is none, so the default advance stands.
- */
-function advancePx(metrics: FontMetrics, units: number, glyphAtInstance: number, fontSizePx: number): number {
+/** The advance of `glyph` at the face's instance, else its default advance of `units`. */
+function advancePx(metrics: FontMetrics, units: number, glyph: KernGlyph, fontSizePx: number): number {
   // A bitmap font's advance reaches HarfBuzz in 26.6 as `advance * 64` and leaves as
   // `advance * scale` (`text_server_adv.cpp:130,7077`): no FreeType chain.
   if (metrics.pxPerUnit) return unitsToPx(units, metrics, fontSizePx);
-  const advanceAtInstance = instanceGlyphAdvance26_6(metrics, glyphAtInstance, fontSizePx);
-  if (advanceAtInstance !== null) return advanceAtInstance / FIXED_26_6_ONE;
+  const advanceAtInstance = metrics.getInstanceAdvance26_6?.(glyph, fontSizePx);
+  if (advanceAtInstance != null) return advanceAtInstance / FIXED_26_6_ONE;
   // The error only adds width, so a run of odd advances can push
   // `shapedTextSizeWidthPx`'s ceil a whole pixel wider, as in Godot.
   return glyphAdvance26_6(units, metrics.unitsPerEm, fontSizePx) / FIXED_26_6_ONE;
@@ -359,21 +394,6 @@ export function glyphAdvance26_6(units: number, unitsPerEm: number, fontSizePx: 
  */
 export function glyphOffsetPx(units: number, unitsPerEm: number, fontSizePx: number): number {
   return (Math.sign(units) * glyphAdvance26_6(Math.abs(units), unitsPerEm, fontSizePx)) / FIXED_26_6_ONE;
-}
-
-/**
- * The advance in 26.6 of glyph `glyphAtInstance`, at the axis values of the face's
- * `variation_opentype`, or null for a face at its default instance and for no glyph: the default
- * advance stands.
- */
-function instanceGlyphAdvance26_6(
-  metrics: FontMetrics,
-  glyphAtInstance: number,
-  fontSizePx: number
-): number | null {
-  const { outlines, opentype } = metrics;
-  if (!outlines || !isInstanced(opentype) || glyphAtInstance === 0) return null;
-  return outlines.advanceAtInstance?.(glyphAtInstance, fontSizePx, opentype) ?? null;
 }
 
 /**
@@ -424,14 +444,65 @@ const variationsOf = perObject((_face: FontMetrics) =>
 
 const newWrappersByOutlines = (): Map<FontMetrics['outlines'], FontMetrics> => new Map();
 
+/** The face each wrapper of `withVariation` varies. Written only by `withVariation`, and collected with the wrapper. */
+// eslint-disable-next-line no-restricted-syntax -- perObject builds from its key, and only withVariation knows the face below a wrapper.
+const unvariedFaces = new WeakMap<FontMetrics, FontMetrics>();
+
 /**
- * `metrics` with a `FontVariation`'s `embolden`, `skew` and `opentype` set, and the `outlines` its text follows.
- * The wrapper reads every other field through the face, so a live getter stays live. With no variation
- * and no outlines, it is the face itself. Two fonts that share a face and a variation keep
- * their own outlines, each on its own wrapper. The advances and the kerning follow the instance
- * that the axis values name, and the glyphs draw it where `drawnOpentype` gives them.
- * A variation of a wrapper replaces its variation and keeps its outlines, as a `FontVariation` over
- * another finds its face at its own values alone (`font.cpp:3120-3131`).
+ * The face that the nearest wrapper of `withVariation` on the prototype chain of `metrics` varies,
+ * else `metrics`. A wrapper over a fallback wrapper of an instance finds the face below the instance.
+ */
+function unvariedFaceOf(metrics: FontMetrics): FontMetrics {
+  for (
+    let face: FontMetrics | null = metrics;
+    face;
+    face = Object.getPrototypeOf(face) as FontMetrics | null
+  ) {
+    const unvaried = unvariedFaces.get(face);
+    if (unvaried) return unvaried;
+  }
+  return metrics;
+}
+
+/**
+ * The readers of a wrapper at the instance that `opentype` names on `outlines`. Each falls back to
+ * the reader of `unvaried`, read at the call so that a live getter stays live.
+ */
+function instanceReaders(
+  unvaried: FontMetrics,
+  outlines: SfntOutlines,
+  opentype: OpentypeCoordinates
+): PropertyDescriptorMap {
+  const glyphAt = (codePoint: number) => outlines.glyphIndex(codePoint, opentype);
+  return {
+    getGlyphKerning: {
+      value: (left: LookupGlyph, right: LookupGlyph): PairKerning | null =>
+        outlines.kerningAtInstance?.(left, right, opentype) ??
+        unvaried.getGlyphKerning?.(left, right) ??
+        null,
+    },
+    getInstanceAdvance26_6: {
+      value: (glyph: KernGlyph, fontSizePx: number): number | null => {
+        const index = glyph.glyph ?? glyphAt(glyph.char.codePointAt(0)!);
+        return index === 0 ? null : (outlines.advanceAtInstance?.(index, fontSizePx, opentype) ?? null);
+      },
+    },
+  };
+}
+
+/** The readers of a wrapper at the default instance: those of `unvaried`, so none of an instance below passes through. */
+function defaultReaders(unvaried: FontMetrics): PropertyDescriptorMap {
+  return {
+    getGlyphKerning: { get: () => unvaried.getGlyphKerning },
+    getInstanceAdvance26_6: { value: undefined },
+  };
+}
+
+/**
+ * `metrics` with a `FontVariation`'s `embolden`, `skew` and `opentype`, and the `outlines` its text
+ * follows, read through the face for every other field: the face itself where neither changes it.
+ * It is the only writer of the instance readers. A variation of a wrapper replaces its variation
+ * and keeps its outlines, as a `FontVariation` over another does (`font.cpp:3120-3131`).
  */
 export function withVariation<Metrics extends FontMetrics>(
   metrics: Metrics,
@@ -442,28 +513,37 @@ export function withVariation<Metrics extends FontMetrics>(
     outlines = metrics.outlines,
   }: GlyphVariation & Pick<FontMetrics, 'outlines'>
 ): Metrics {
-  if (!outlines && !isGlyphVaried({ embolden, skew, opentype })) return metrics;
+  if (!outlines && !isGlyphVaried({ embolden, skew, opentype }) && !isGlyphVaried(metrics)) return metrics;
   const byOutlines = variationsOf(metrics)(variationKey({ embolden, skew, opentype }), newWrappersByOutlines);
   let wrapped = byOutlines.get(outlines);
   if (!wrapped) {
+    const unvaried = unvariedFaceOf(metrics);
+    const drawnOpentype = outlines ? drawnInstanceOf(outlines, opentype) : undefined;
     wrapped = Object.create(metrics, {
       embolden: { value: embolden },
       skew: { value: skew },
       opentype: { value: opentype },
+      drawnOpentype: { value: drawnOpentype },
       ...(outlines !== undefined && { outlines: { value: outlines } }),
+      ...(outlines && drawnOpentype
+        ? instanceReaders(unvaried, outlines, drawnOpentype)
+        : defaultReaders(unvaried)),
     }) as FontMetrics;
+    unvariedFaces.set(wrapped, unvaried);
     byOutlines.set(outlines, wrapped);
   }
   return wrapped as Metrics;
 }
 
 /**
- * The axis values of `metrics` where its outlines draw them as an instance other than the default,
- * else undefined: at the default, FreeType and HarfBuzz draw the font itself, so the face draws as
- * the font does without a variation.
+ * `opentype` where `outlines` draw it as an instance other than the default, else undefined. Every
+ * instance reader of `outlines` answers null elsewhere, so the default readers stand there.
  */
-export function drawnOpentype({ opentype, outlines }: FontMetrics): OpentypeCoordinates | undefined {
-  return isInstanced(opentype) && outlines?.drawsInstance?.(opentype) ? opentype : undefined;
+function drawnInstanceOf(
+  outlines: SfntOutlines,
+  opentype: OpentypeCoordinates | undefined
+): OpentypeCoordinates | undefined {
+  return isInstanced(opentype) && outlines.drawsInstance?.(opentype) ? opentype : undefined;
 }
 
 /** `metrics` carrying `outlines`, keeping its own variation. */
@@ -574,10 +654,9 @@ function lookupGlyphOf({ char, glyph }: KernGlyph, cmapGlyph: (codePoint: number
 }
 
 /**
- * The kerning of `a` and `b` scaled to `fontSizePx`: the `GPOS` kerning of the instance at the face's
- * `variation_opentype`, else the default `GPOS` kerning of a pair of shaped glyphs, else
- * `metrics.getKerningAdjustmentUnits`. HarfBuzz positions a glyph in the 26.6 units of the FreeType
- * size Godot's `hb_font` takes (`text_server_adv.cpp:1513`), so the kerning lands on a 1/64 pixel.
+ * The kerning of `a` and `b` scaled to `fontSizePx`: the `GPOS` kerning of a pair of glyphs, else
+ * `metrics.getKerningAdjustmentUnits` of their characters. HarfBuzz positions a glyph in the 26.6
+ * units of the size Godot's `hb_font` takes (`text_server_adv.cpp:1513`): a 1/64 pixel.
  */
 export function getFontKerningAdjustmentPx(
   metrics: FontMetrics,
@@ -585,34 +664,74 @@ export function getFontKerningAdjustmentPx(
   b: KernGlyph,
   fontSizePx: number
 ): number {
-  const units =
-    instanceKerningUnits(metrics, a, b) ??
-    glyphKerningUnits(metrics, a, b) ??
-    metrics.getKerningAdjustmentUnits(a.char, b.char);
+  const kerning = glyphKerning(metrics, a, b);
+  if (kerning && !metrics.pxPerUnit)
+    return pairKerning26_6(kerning, metrics.unitsPerEm, fontSizePx) / FIXED_26_6_ONE;
+  const units = kerning ? kerningUnitsOf(kerning) : metrics.getKerningAdjustmentUnits(a.char, b.char);
   if (units === 0) return 0;
   return Math.round(unitsToPx(units, metrics, fontSizePx) * FIXED_26_6_ONE) / FIXED_26_6_ONE;
 }
 
 /**
- * The kerning in design units of `a` and `b` at the axis values of the face's `variation_opentype`,
- * or null for a face at its default instance and a glyph it lacks: the default kerning stands.
+ * The `GPOS` kerning of a pair of glyphs, or null where the face has no glyph kerning: the kerning of
+ * the characters stands. At the default instance both glyphs come from the run shaping. At an
+ * instance a glyph the shaping did not read is the glyph of its character there.
  */
-function instanceKerningUnits(metrics: FontMetrics, a: KernGlyph, b: KernGlyph): number | null {
-  const { outlines, opentype } = metrics;
-  if (!outlines?.kerningAtInstance || !isInstanced(opentype)) return null;
-  const glyphAt = (codePoint: number) => outlines.glyphIndex(codePoint, opentype);
-  return outlines.kerningAtInstance(lookupGlyphOf(a, glyphAt), lookupGlyphOf(b, glyphAt), opentype);
-}
-
-/**
- * The default `GPOS` kerning of a pair of glyphs the run shaping read, or null where it read none or
- * the face has no glyph kerning: the kerning of the characters stands.
- */
-function glyphKerningUnits(metrics: FontMetrics, a: KernGlyph, b: KernGlyph): number | null {
-  const kerningOf = metrics.getGlyphKerningUnits;
-  if (!kerningOf || a.glyph === undefined || b.glyph === undefined) return null;
+function glyphKerning(metrics: FontMetrics, a: KernGlyph, b: KernGlyph): PairKerning | null {
+  const kerningOf = metrics.getGlyphKerning;
+  if (!kerningOf) return null;
+  const { outlines, drawnOpentype } = metrics;
+  if (outlines && drawnOpentype) {
+    const glyphAt = (codePoint: number) => outlines.glyphIndex(codePoint, drawnOpentype);
+    const left = lookupGlyphOf(a, glyphAt);
+    const right = lookupGlyphOf(b, glyphAt);
+    return left.glyph === 0 || right.glyph === 0 ? null : kerningOf(left, right);
+  }
+  if (a.glyph === undefined || b.glyph === undefined) return null;
   return kerningOf(
     { glyph: a.glyph, codePoint: a.char.codePointAt(0)! },
     { glyph: b.glyph, codePoint: b.char.codePointAt(0)! }
   );
+}
+
+/**
+ * `kerning` in 26.6 at `fontSizePx`, as HarfBuzz adds it to a glyph's advance: each value record's own
+ * advance through `em_mult`, and its delta through `em_multf`, each rounded apart
+ * (`OT/Layout/GPOS/ValueFormat.hh:108,140`, `hb-font.hh:1145-1148,1164-1166`).
+ */
+function pairKerning26_6(kerning: PairKerning, unitsPerEm: number, fontSizePx: number): number {
+  const { xMult, xMultf } = harfBuzzScale(unitsPerEm, fontSizePx);
+  let kerning26_6 = 0;
+  for (const { units, deltaUnits } of kerning) {
+    kerning26_6 += Math.floor((units * xMult + 32768) / FIXED_16_16_ONE);
+    if (deltaUnits !== 0) kerning26_6 += roundHalfAwayFromZero(Math.fround(Math.fround(deltaUnits) * xMultf));
+  }
+  return kerning26_6;
+}
+
+/**
+ * The 16.16 and the float multipliers of `hb_font_t` for Godot's FreeType size: `hb_ft_font_create`
+ * sets the scale from FreeType's `x_scale` (`hb-ft.cc:1361-1363`), and `changed` derives both
+ * (`hb-font.hh:1145-1148`).
+ */
+function harfBuzzScale(unitsPerEm: number, fontSizePx: number): { xMult: number; xMultf: number } {
+  const xScale = Math.floor(
+    (getFontOutlineScale(unitsPerEm, fontSizePx) * unitsPerEm + 32768) / FIXED_16_16_ONE
+  );
+  return {
+    xMult: Math.trunc((xScale * FIXED_16_16_ONE) / unitsPerEm),
+    xMultf: Math.fround(xScale / unitsPerEm),
+  };
+}
+
+/** C's `roundf`: to the nearest whole number, a half away from zero. */
+function roundHalfAwayFromZero(value: number): number {
+  return Math.sign(value) * Math.round(Math.abs(value));
+}
+
+/** The design units of `kerning` with its deltas, for a face that scales by its own `pxPerUnit`. */
+function kerningUnitsOf(kerning: PairKerning): number {
+  let units = 0;
+  for (const value of kerning) units += value.units + value.deltaUnits;
+  return units;
 }

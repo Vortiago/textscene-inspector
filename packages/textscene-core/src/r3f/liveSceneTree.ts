@@ -31,7 +31,7 @@ import { sameElements } from '../utils/sameElements.js';
 import { perObject } from '../utils/perObject.js';
 import { NOTHING_CACHED, answeredOnce, keptWhileAnswered, type CacheSource } from './cacheSources.js';
 import type { ParsedResource } from '../parser/parsedResource.js';
-import type { ControlLocalTransforms } from './contexts/ControlYSortContext.js';
+import type { ControlLocalTransforms } from './contexts/YSortContext.js';
 import {
   nodeReference,
   snapshotOver,

@@ -1,12 +1,13 @@
 /**
  * The root scene of a scene graph mounted through the dispatcher, as the preview mounts it: the
- * graph's hierarchy, the scene stack over `loader`, then the nodes. Test-only, like the rest of `testing/`.
+ * graph's hierarchy, the scene stack over `loader`, the y-sort of the canvas, then the nodes. Test-only, like the rest of `testing/`.
  */
 
 import type { ReactNode } from 'react';
 import type { SceneGraph } from '../../core/SceneGraph';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { NodeDispatcher } from '../NodeDispatcher';
+import { YSortProvider } from '../contexts/YSortContext';
 import { SceneStack, type SceneStackProps } from './SceneStack';
 
 export interface DispatchedSceneProps extends Pick<
@@ -24,7 +25,7 @@ export function DispatchedScene({ sceneGraph, around = (nodes) => nodes, ...stac
   return (
     <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
       <SceneStack {...stack} scene={root}>
-        {around(<NodeDispatcher nodes={root.nodes} />)}
+        <YSortProvider>{around(<NodeDispatcher nodes={root.nodes} />)}</YSortProvider>
       </SceneStack>
     </HierarchyProvider>
   );
