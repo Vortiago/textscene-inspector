@@ -4,7 +4,8 @@
  * to the checked-in records: the result bits, or Godot's message and line for a probe it draws
  * nothing for, and Godot's verdict on each operator case and corpus shader:
  * `pnpm godot:probes [--check]`. `--check` writes nothing and exits 1 when a new run differs from
- * a record. It needs `godot` on the path and `xvfb-run`, and renders on lavapipe as
+ * a record. A result entry that agrees with its record by the lane rule (`laneAgreement.mjs`)
+ * keeps its recorded bits. It needs `godot` on the path and `xvfb-run`, and renders on lavapipe as
  * `pnpm ref:godot` does. The CI image has both, so the "Shader package" job runs `--check`. Each
  * probe the transpiler parses also runs as its printed text, and as its lowered text where the
  * lowerings change it, and the run fails when Godot answers either otherwise than the original
@@ -13,7 +14,7 @@
  * `<dir>/recorded` and `<dir>/this-run`, so a job can keep both value sets.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/corpus.mjs';
@@ -28,6 +29,7 @@ import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { runProbesInGodot } from './godotProject.mjs';
 import { requireGodotVersion } from './godotRun.mjs';
+import { recordKeepingAgreeingEntries } from './laneAgreement.mjs';
 import { isDrawn, renderRecord } from './record.mjs';
 import { loadPrinter, printedProbes, printedRejection, printedTextFaults } from './printedText.mjs';
 import { godotRejection } from './rejection.mjs';
@@ -89,8 +91,8 @@ async function main() {
     CORPUS
   );
   const outputs = [
-    [RECORD, renderRecord(output, PROBES, reasons)],
-    [RANDOM_RECORD, renderRecord(output, randomProbes, reasons)],
+    [RECORD, keptRecord(RECORD, renderRecord(output, PROBES, reasons))],
+    [RANDOM_RECORD, keptRecord(RANDOM_RECORD, renderRecord(output, randomProbes, reasons))],
     [OPERATOR_RECORD, operatorRecord],
     [CORPUS_RECORD, corpusRecord],
   ];
@@ -100,6 +102,10 @@ async function main() {
   else writeGenerated(outputs, options);
   failOnPrintedText(printedTextFaults(printed, output, reasons));
 }
+
+/** This run's record for `path`, with each entry that agrees with the recorded one kept as recorded. */
+const keptRecord = (path, runText) =>
+  recordKeepingAgreeingEntries(existsSync(path) ? readFileSync(path, 'utf8') : undefined, runText);
 
 function check(outputs, options) {
   checkGenerated(outputs, { ...options, command: 'pnpm godot:probes' });
