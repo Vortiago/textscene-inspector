@@ -26,7 +26,7 @@ import {
   titlebarInternalControls,
   titlebarInternalLayout,
   titlebarMinimumSize,
-  titlebarResortHeight,
+  titlebarHeights,
 } from '../graphelement/graphTitlebar';
 import type { GraphFrameProperties } from './types';
 import { DEFAULT_SIZE_FLAGS } from '../../../../godot/scene/control';
@@ -69,12 +69,12 @@ registerInternalControls(
 
 const graphFrameLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const { panel } = graphElementStyles(n);
-  const bandHeight = titlebarResortHeight(n, ctx);
+  const band = titlebarHeights(n, ctx);
 
-  const offset = { x: panel.contentMargin.left, y: panel.contentMargin.top + bandHeight };
+  const offset = { x: panel.contentMargin.left, y: panel.contentMargin.top + band.resort };
   const size = {
     w: Math.max(0, contentRect.w - panel.contentMargin.left - panel.contentMargin.right),
-    h: Math.max(0, contentRect.h - panel.contentMargin.top - panel.contentMargin.bottom - bandHeight),
+    h: Math.max(0, contentRect.h - panel.contentMargin.top - panel.contentMargin.bottom - band.resort),
   };
   const rawRect: Rect2 = { x: offset.x, y: offset.y, w: size.w, h: size.h };
 
@@ -84,7 +84,7 @@ const graphFrameLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
     // `graph_frame.cpp` has no RTL branch; `fit_child_in_rect` reads the flag itself.
     rects.set(child.path, fitChildInRect(rawRect, minSize, hFlagsOf(child), vFlagsOf(child), n.rtl));
   }
-  return { rects, meta: titlebarBandHeightChannel.seal(titlebarMinimumSize(n, ctx).y) };
+  return { rects, meta: titlebarBandHeightChannel.seal(band.drawn) };
 };
 
 controlSolverRegistry.registerContainerLayout('GraphFrame', graphFrameLayout);

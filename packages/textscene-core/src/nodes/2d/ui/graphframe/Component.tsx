@@ -19,7 +19,7 @@ import { isStyleBoxTexture, type ResolvedStyleBox } from '../../../../r3f/contro
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
-import { titlebarBandHeightChannel, titlebarRect } from '../graphelement/graphTitlebar';
+import { titlebarAndBodyRects, titlebarBandHeightChannel } from '../graphelement/graphTitlebar';
 import { RESIZER_SE_ICON, RESIZER_SE_ICON_SIZE } from '../graphelement/graphIcons';
 import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
@@ -60,8 +60,7 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder, meta }: 
   const drawsPanel = tinted || !isStyleBoxTexture(panelStyle);
   const titlebarStyle = styles.titlebar;
 
-  const titlebar = titlebarRect(rect.w, titlebarBandHeightChannel.open(meta) ?? 0);
-  const bodyRect = { x: 0, y: titlebar.h, w: rect.w, h: Math.max(0, rect.h - titlebar.h) };
+  const { titlebar, body: bodyRect } = titlebarAndBodyRects(rect, titlebarBandHeightChannel.open(meta) ?? 0);
 
   // `resizable && !autoshrink_enabled` (graph_frame.cpp:133, and `get_cursor_shape` at `:84`):
   // `autoshrink_enabled` defaults true, so `resizable = true` alone shows no handle.

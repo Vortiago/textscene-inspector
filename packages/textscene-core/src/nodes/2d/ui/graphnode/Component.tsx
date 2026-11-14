@@ -21,7 +21,7 @@ import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useNodeReference } from '../../../../resources/reading';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { titlebarBandHeightChannel, titlebarRect } from '../graphelement/graphTitlebar';
+import { titlebarAndBodyRects, titlebarBandHeightChannel } from '../graphelement/graphTitlebar';
 import {
   GRAPH_PORT_ICON,
   GRAPH_PORT_ICON_SIZE,
@@ -101,8 +101,7 @@ export function GraphNode({
   const panelStyle = selected ? styles.panelSelected : styles.panel;
   const titlebarStyle = selected ? styles.titlebarSelected : styles.titlebar;
 
-  const titlebar = titlebarRect(rect.w, titlebarBandHeightChannel.open(meta) ?? 0);
-  const bodyRect = { x: 0, y: titlebar.h, w: rect.w, h: Math.max(0, rect.h - titlebar.h) };
+  const { titlebar, body: bodyRect } = titlebarAndBodyRects(rect, titlebarBandHeightChannel.open(meta) ?? 0);
 
   // `selected_slot` has no `ADD_PROPERTY` and only input changes it (`graph_node.cpp:409-538`), so
   // it stays -1 on load and the `slot_index == selected_slot` branch (`:670-683`) never draws.

@@ -12,6 +12,17 @@ import { parseTscnContent } from '../../../../r3f/hooks/useParsedScene';
 import { DispatchedScene } from '../../../../r3f/testing/DispatchedScene';
 import { settleLoads } from '../../../../r3f/testing/settleLoads';
 import { V_SCROLL } from '../scrollcontainer/internalBackPieces';
+import { LitCanvasItemPixels } from '../../../../r3f/components/LitCanvasItemPixels';
+import { CanvasLighting2DContext } from '../../../../r3f/lighting2d/lightPassContext';
+import { recordedItems } from '../../../../r3f/lighting2d/testing/recordedItems';
+import { canvasItemMaterial } from '../../../../r3f/testing/canvasItemMaterial';
+import { wholeKeySlot } from '../../../../r3f/canvasItemState';
+import {
+  CanvasItemMaterialBlendMode,
+  CanvasItemMaterialLightMode,
+} from '../../../../godot/scene/canvasItemMaterial';
+import { ScrollBarChrome } from './ScrollChrome';
+import { defaultScrollBarBoxes } from './testing/scrollBarBoxes';
 import '../../../../r3f/nodes/index';
 import '../../../../r3f/controls/index';
 
@@ -69,5 +80,38 @@ layout_mode = 2
     const blendings = blendingsBelow(root, V_SCROLL);
     expect(blendings.length).toBeGreaterThan(0);
     expect(new Set(blendings)).toEqual(new Set([THREE.NormalBlending]));
+  });
+});
+
+describe('the canvas item of a scroll bar', () => {
+  const ADD = {
+    ...canvasItemMaterial(CanvasItemMaterialLightMode.NORMAL),
+    blendMode: CanvasItemMaterialBlendMode.ADD,
+  };
+  const BAR = {
+    visible: true,
+    rect: { x: 92, y: 0, w: 8, h: 100 },
+    grabberRect: { x: 0, y: 10, w: 8, h: 20 },
+  };
+
+  it("declares itself to the light pass at light_mask 1 and the host's z_final (canvas_item.h:98)", async () => {
+    const { lighting, placements } = recordedItems();
+    await ReactThreeTestRenderer.create(
+      <CanvasLighting2DContext.Provider value={lighting}>
+        <LitCanvasItemPixels material={ADD} lightMask={2} zFinal={3}>
+          <ScrollBarChrome
+            bar={BAR}
+            boxes={defaultScrollBarBoxes(1).vertical}
+            color={{ r: 1, g: 1, b: 1, a: 1 }}
+            chromeSlot={wholeKeySlot(9)}
+            snapToPixels
+          />
+        </LitCanvasItemPixels>
+      </CanvasLighting2DContext.Provider>
+    );
+    expect(placements.map((p) => [p.lightMask, p.z]).sort()).toEqual([
+      [1, 3],
+      [2, 3],
+    ]);
   });
 });

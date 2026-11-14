@@ -12,7 +12,7 @@
 
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
-import { SizeFlags } from '../../../../godot/scene/control';
+import { SIZE_EXPAND_FILL } from '../../../../godot/scene/control';
 import {
   internalControlsOf,
   type InternalControlsFn,
@@ -27,9 +27,6 @@ import type { LabelProperties } from '../label/types';
 // The band is an HBoxContainer that holds a Label, so its solve needs both classes' solvers.
 import '../hboxcontainer/nativeSolver';
 import '../label/solverRegistration';
-
-/** `SIZE_EXPAND_FILL` (`control.h:85`), which both Controls set on themselves. */
-const EXPAND_FILL = SizeFlags.EXPAND | SizeFlags.FILL;
 
 /** How one GraphElement class builds its `title_label`. */
 interface TitleLabelSpec {
@@ -54,7 +51,7 @@ export function titlebarInternalControls(label: TitleLabelSpec): InternalControl
     const title = (owner.node.properties as { title?: string }).title ?? '';
     const labelProperties: Partial<LabelProperties> = {
       text: title,
-      sizeFlagsHorizontal: EXPAND_FILL,
+      sizeFlagsHorizontal: SIZE_EXPAND_FILL,
       ...(label.horizontalAlignment !== undefined && { horizontalAlignment: label.horizontalAlignment }),
     };
     return [
@@ -63,7 +60,7 @@ export function titlebarInternalControls(label: TitleLabelSpec): InternalControl
         spec: {
           type: 'HBoxContainer',
           name: 'titlebar_hbox',
-          properties: { sizeFlagsHorizontal: EXPAND_FILL },
+          properties: { sizeFlagsHorizontal: SIZE_EXPAND_FILL },
           children: [
             { type: 'Label', name: 'title_label', variation: label.variation, properties: labelProperties },
           ],
@@ -94,28 +91,40 @@ export function titlebarMinimumSize(owner: SolveNode, ctx: SolveContext) {
 /** The height the titlebar StyleBox draws at (`graph_node.cpp:634`, `graph_frame.cpp:106`), sealed for the painter. */
 export const titlebarBandHeightChannel = defineChannel<number>('GraphElement.titlebarBandHeight');
 
-/**
- * The band height `_resort` lays the body out below (`graph_node.cpp:165,252`, `graph_frame.cpp:157-160`).
- * It reads the hbox's minimum as a `Size2i`, so the height truncates to whole pixels.
- */
-export function titlebarResortHeight(owner: SolveNode, ctx: SolveContext): number {
-  const hbox = titlebarHboxMinimumSize(owner, ctx);
-  return Math.trunc(hbox.y) + sidesSize(titlebarStyleOf(owner).contentMargin).y;
+/** The two heights of the band one `_resort` reads. */
+interface TitlebarHeights {
+  /**
+   * The height `_resort` lays the body out below (`graph_node.cpp:165,252`, `graph_frame.cpp:157-160`).
+   * It reads the hbox's minimum as a `Size2i`, so the height truncates to whole pixels.
+   */
+  resort: number;
+  /** The height the box draws at, sealed with {@link titlebarBandHeightChannel}. */
+  drawn: number;
 }
 
-/** The rect the titlebar StyleBox draws in, relative to the owner's top-left. */
-export function titlebarRect(ownerWidth: number, bandHeight: number): Rect2 {
-  return { x: 0, y: 0, w: ownerWidth, h: bandHeight };
+export function titlebarHeights(owner: SolveNode, ctx: SolveContext): TitlebarHeights {
+  const hbox = titlebarHboxMinimumSize(owner, ctx);
+  const margins = sidesSize(titlebarStyleOf(owner).contentMargin).y;
+  return { resort: Math.trunc(hbox.y) + margins, drawn: hbox.y + margins };
+}
+
+/** The titlebar's rect and the body's below it, relative to the owner's top-left, for the band height the solve sealed. */
+export function titlebarAndBodyRects(rect: Rect2, bandHeight: number): { titlebar: Rect2; body: Rect2 } {
+  return {
+    titlebar: { x: 0, y: 0, w: rect.w, h: bandHeight },
+    body: { x: 0, y: bandHeight, w: rect.w, h: Math.max(0, rect.h - bandHeight) },
+  };
 }
 
 /**
  * `fit_child_in_rect(titlebar_hbox, Rect2(sb_titlebar->get_offset(), titlebar_size))` (`graph_node.cpp:159-162`,
  * `graph_frame.cpp:150-154`): the owner's width less the box's margins, at the box's offset. The solve
- * floors the height at the hbox's minimum, as `set_rect` does, and a right-to-left layout mirrors the
- * position (`control.cpp:1773-1797`).
+ * floors the height at the hbox's minimum, as `set_rect` does (`control.cpp:1773-1797`). `set_rect`
+ * mirrors the offsets it writes and `_size_changed` mirrors them back, so the offset holds in a
+ * right-to-left layout too (`control.cpp:904-915`).
  */
 export const titlebarInternalLayout: InternalLayoutFn = (owner, internals, rect) => {
   const { left, top, right } = titlebarStyleOf(owner).contentMargin;
-  const hboxRect = { x: owner.rtl ? right : left, y: top, w: Math.max(0, rect.w - left - right), h: 0 };
+  const hboxRect = { x: left, y: top, w: Math.max(0, rect.w - left - right), h: 0 };
   return new Map(internals.map(({ node }) => [node.path, hboxRect]));
 };

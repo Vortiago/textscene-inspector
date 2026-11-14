@@ -66,16 +66,8 @@ function graphNode(
   });
 }
 
-/** The real solve for the titlebar the element builds, and each authored child's `customMinimumSize`. */
 function ctx(): SolveContext {
-  const solve = createSolveContext(nativeTheme(1), measureText);
-  return {
-    ...solve,
-    combinedMinimumSize: (n) =>
-      n.path.endsWith('/@titlebar_hbox')
-        ? solve.combinedMinimumSize(n)
-        : ((n.node.properties as ControlProperties).customMinimumSize ?? { x: 0, y: 0 }),
-  };
+  return createSolveContext(nativeTheme(1), measureText);
 }
 
 /** A fully-populated `StyleBoxFlatData` with only `contentMargin` set: for a `theme_override_styles/slot` fixture. */

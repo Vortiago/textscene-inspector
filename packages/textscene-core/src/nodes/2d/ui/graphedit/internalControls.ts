@@ -9,7 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { parseNodeWithRegistry } from '../../../../core/NodeRegistry';
+import { parsedSceneLines, shownIf } from '../../../../r3f/controls/native/sceneLines';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
@@ -21,6 +21,7 @@ import {
   type InternalControlsFn,
   type InternalLayoutFn,
 } from '../../../../r3f/controls/native/internalControls';
+import { mirrorX } from '../../../../r3f/controls/native/controlRectSolver';
 import { themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { themedSlotRequests, type TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
@@ -74,9 +75,6 @@ interface Widget {
   pushed?: InternalControlSpec['pushed'];
   children?: readonly Widget[];
 }
-
-const HIDDEN = { visible: 'false' };
-const shownIf = (isShown: boolean): Record<string, string> => (isShown ? {} : HIDDEN);
 
 /** `GraphEdit::_update_zoom_label` (`graph_edit.cpp:2620-2624`). */
 function zoomLabelText(zoom: number): string {
@@ -149,24 +147,14 @@ function menuRow(props: GraphEditProperties, scale: number): Widget[] {
   ];
 }
 
-/** The size of the toolbar icon `name`: its theme's texture once known, else the vendored 16x16 at `scale`. */
-function toolbarIconSize(graph: SolveNode, name: string, scale: number): Vector2 {
-  return themedIconSize(graph.textureSlots, name, TOOLBAR_ICON_SIZE, scale);
-}
-
 function build(graph: SolveNode, scale: number, spec: Widget): InternalControlSpec {
-  const parsed = parseNodeWithRegistry(
-    { type: 'node', attributes: { name: spec.name, type: spec.type } },
-    spec.raw ?? {}
-  );
-  if (!parsed) throw new Error(`expected a parser for ${spec.type}, got none`);
   const { icon } = spec;
   const themedIcon = icon && graph.icons[icon];
   return {
     type: spec.type,
     name: spec.name,
     properties: {
-      ...parsed.properties,
+      ...parsedSceneLines(spec.type, spec.name, spec.raw),
       ...spec.properties,
       ...(spec.variation && { themeTypeVariation: spec.variation }),
       ...(icon && { themeIcon: { name: icon, vendoredUrl: BUTTON_ICON_URLS[icon] } }),
@@ -174,7 +162,7 @@ function build(graph: SolveNode, scale: number, spec: Widget): InternalControlSp
     children: (spec.children ?? []).map((child) => build(graph, scale, child)),
     variation: spec.variation,
     icons: themedIcon ? { [icon]: themedIcon } : undefined,
-    textureSize: icon && toolbarIconSize(graph, icon, scale),
+    textureSize: icon && themedIconSize(graph.textureSlots, icon, TOOLBAR_ICON_SIZE, scale),
     pushed: spec.pushed,
   };
 }
@@ -194,13 +182,14 @@ export const graphEditInternalControls: InternalControlsFn = (graph, theme) => {
 
 /**
  * `menu_panel` sits at `(10, 10)` of `top_layer`, which spans the GraphEdit, at its combined minimum
- * size. A right-to-left layout mirrors the position (`Control::_size_changed`, `control.cpp:1785-1787`).
+ * size. The constructor sets the position before the panel has a layout direction, so a right-to-left
+ * layout mirrors it (`Control::_size_changed`, `control.cpp:1785-1787`).
  */
 export const graphEditInternalLayout: InternalLayoutFn = (graph, internals, rect, ctx) =>
   new Map(
     internals.map(({ node }) => {
       const size = ctx.combinedMinimumSize(node);
-      const x = graph.rtl ? rect.w - MENU_POSITION.x - size.x : MENU_POSITION.x;
+      const x = graph.rtl ? mirrorX(MENU_POSITION.x, size.x, rect.w) : MENU_POSITION.x;
       return [node.path, { x, y: MENU_POSITION.y, w: size.x, h: size.y }];
     })
   );

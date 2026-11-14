@@ -12,7 +12,8 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { themeResource } from '../../../../r3f/controls/native/testing/themeResource';
 import type { LabelProperties } from '../label/types';
-import { titlebarMinimumSize, titlebarResortHeight } from './graphTitlebar';
+import type { ControlProperties } from '../control/types';
+import { titlebarHeights, titlebarMinimumSize } from './graphTitlebar';
 import '../../../../parser/TscnParser';
 import '../../../../r3f/controls/index';
 
@@ -49,7 +50,9 @@ describe('the titlebar a GraphElement builds', () => {
     (type) => {
       const box = hbox(element(type));
       expect([box.node.type, box.path]).toEqual(['HBoxContainer', 'E/@titlebar_hbox']);
-      expect(box.node.properties.sizeFlagsHorizontal).toBe(SizeFlags.EXPAND | SizeFlags.FILL);
+      expect((box.node.properties as ControlProperties).sizeFlagsHorizontal).toBe(
+        SizeFlags.EXPAND | SizeFlags.FILL
+      );
       expect(box.children.map((c) => [c.node.type, c.node.name])).toEqual([['Label', 'title_label']]);
     }
   );
@@ -124,30 +127,36 @@ describe('the titlebar size', () => {
     }
   );
 
-  it('lays the body out below a whole-pixel band (Size2i, graph_node.cpp:165)', () => {
+  it('draws the band at its minimum height, and lays the body out below it in whole pixels (Size2i, graph_node.cpp:165)', () => {
     const n = element('GraphNode');
-    expect(titlebarResortHeight(n, ctx())).toBe(Math.trunc(titlebarMinimumSize(n, ctx()).y));
+    const { resort, drawn } = titlebarHeights(n, ctx());
+    expect(drawn).toBe(titlebarMinimumSize(n, ctx()).y);
+    expect(resort).toBe(Math.trunc(drawn));
   });
 });
 
 describe('where the titlebar sits', () => {
+  /** A titlebar box with different side margins, so a mirrored offset shows. */
+  const MARGINS = { left: 3, top: 4, right: 9, bottom: 4 };
+
   function solvedHbox(rtl: boolean) {
-    const n = { ...element('GraphNode', { offsetRight: 300, offsetBottom: 200 }), rtl };
+    const plain = element('GraphNode', { offsetRight: 300, offsetBottom: 200 });
+    const titlebar = { ...plain.styleBoxes.titlebar!, contentMargin: MARGINS };
+    const n = { ...plain, rtl, styleBoxes: { ...plain.styleBoxes, titlebar } };
     const solved = solveControlTree(
       [n],
       { x: 0, y: 0, w: 600, h: 400 },
       createSolveContext(THEME, measureText)
     );
-    return { margins: n.styleBoxes.titlebar!.contentMargin, rect: solved.get(hbox(n).path)!.rect };
+    return solved.get(hbox(n).path)!.rect;
   }
 
   it('places titlebar_hbox at the titlebar box offset, across the width less its margins (:159-162)', () => {
-    const { margins, rect } = solvedHbox(false);
-    expect([rect.x, rect.y, rect.w]).toEqual([margins.left, margins.top, 300 - margins.left - margins.right]);
+    const rect = solvedHbox(false);
+    expect([rect.x, rect.y, rect.w]).toEqual([3, 4, 300 - 3 - 9]);
   });
 
-  it('mirrors the position in a right-to-left layout (control.cpp:1785-1787)', () => {
-    const { margins, rect } = solvedHbox(true);
-    expect(rect.x).toBe(margins.right);
+  it('keeps the offset in a right-to-left layout: set_rect writes mirrored offsets (control.cpp:904-915)', () => {
+    expect(solvedHbox(true).x).toBe(3);
   });
 });

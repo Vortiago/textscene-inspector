@@ -9,12 +9,12 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { parseNodeWithRegistry } from '../../../../core/NodeRegistry';
+import { HIDDEN_LINE, parsedSceneLines, shownIf } from '../../../../r3f/controls/native/sceneLines';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { Rgba } from '../../../../godot/math/math';
 import { ZERO_RECT, type Rect2 } from '../../../../godot/math/rect2';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { SizeFlags } from '../../../../godot/scene/control';
+import { SIZE_EXPAND_FILL, SizeFlags } from '../../../../godot/scene/control';
 import { ContainerAlignment } from '../../../../godot/scene/container';
 import { ColorPickerColorMode } from '../../../../godot/scene/gui';
 import type { NativeControlComponent } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -71,13 +71,12 @@ import { pickerShapeColor, type ShapeControl, type ShapeVariant } from './shapes
 import type { ColorPickerProperties } from './types';
 
 /** `SIZE_EXPAND_FILL`, `SIZE_SHRINK_CENTER` and `SIZE_SHRINK_BEGIN` (no flag set), as a scene line writes them. */
-const EXPAND_FILL = String(SizeFlags.EXPAND | SizeFlags.FILL);
+const EXPAND_FILL = String(SIZE_EXPAND_FILL);
 const SHRINK_CENTER = String(SizeFlags.SHRINK_CENTER);
 const SHRINK_BEGIN = '0';
 
 const ICON_CENTRED = { icon_alignment: String(HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER) };
 const TEXT_LEFT = { alignment: String(HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT) };
-const HIDDEN = { visible: 'false' };
 const FLAT_TOGGLE = { flat: 'true', toggle_mode: 'true' };
 /** `set_anchors_and_offsets_preset(PRESET_FULL_RECT)`: the Control covers its parent. */
 const FULL_RECT = { anchor_right: '1.0', anchor_bottom: '1.0' };
@@ -156,9 +155,6 @@ const widget = (type: string, name: string, more: Omit<Widget, 'type' | 'name'> 
 });
 
 const quoted = (text: string) => `"${text}"`;
-
-/** A scene line set for a Control that the picker shows only while `isShown`. A flag left out is on. */
-const shownIf = (isShown: boolean | undefined): Record<string, string> => (isShown === false ? HIDDEN : {});
 
 const minimumSize = (w: number, h = 0) => ({ custom_minimum_size: `Vector2(${w}, ${h})` });
 
@@ -444,23 +440,25 @@ function swatches(picker: Picker): Widget {
           menuButton('menu_btn', 'menu_option'),
         ],
       }),
-      widget('Label', 'palette_name', { raw: HIDDEN }),
+      widget('Label', 'palette_name', { raw: HIDDEN_LINE }),
       widget('GridContainer', 'preset_container', {
-        raw: { columns: String(PRESET_COLUMN_COUNT), size_flags_horizontal: EXPAND_FILL, ...HIDDEN },
+        raw: { columns: String(PRESET_COLUMN_COUNT), size_flags_horizontal: EXPAND_FILL, ...HIDDEN_LINE },
         children: [widget('Button', 'btn_add_preset', { icon: 'add_preset', raw: ICON_CENTRED })],
       }),
       widget('Button', 'btn_recent_preset', {
         icon: 'folded_arrow',
         raw: { text: quoted('Recent Colors'), ...FLAT_TOGGLE, ...TEXT_LEFT },
       }),
-      widget('HBoxContainer', 'recent_preset_hbc', { raw: { size_flags_vertical: SHRINK_BEGIN, ...HIDDEN } }),
+      widget('HBoxContainer', 'recent_preset_hbc', {
+        raw: { size_flags_vertical: SHRINK_BEGIN, ...HIDDEN_LINE },
+      }),
     ],
   });
 }
 
 /** `perm_hb` (`:2294-2304`): the screen recording notice, shown only on macOS without the permission. */
 const permissionRow = widget('HBoxContainer', 'perm_hb', {
-  raw: { alignment: String(ContainerAlignment.ALIGNMENT_CENTER), ...HIDDEN },
+  raw: { alignment: String(ContainerAlignment.ALIGNMENT_CENTER), ...HIDDEN_LINE },
   children: [
     widget('LinkButton', 'perm_link', { raw: { text: quoted('Screen Recording permission missing!') } }),
   ],
@@ -496,17 +494,12 @@ function themedPickerIcons(picker: SolveNode, names: readonly string[]): SolveNo
 }
 
 function build(picker: Picker, spec: Widget): InternalControlSpec {
-  const parsed = parseNodeWithRegistry(
-    { type: 'node', attributes: { name: spec.name, type: spec.type } },
-    spec.raw ?? {}
-  );
-  if (!parsed) throw new Error(`expected a parser for ${spec.type}, got none`);
   const { icon } = spec;
   return {
     type: spec.type,
     name: spec.name,
     properties: {
-      ...parsed.properties,
+      ...parsedSceneLines(spec.type, spec.name, spec.raw),
       ...spec.properties,
       ...(spec.variation && { themeTypeVariation: spec.variation }),
       ...(icon && { themeIcon: { name: icon, vendoredUrl: BUTTON_ICON_URLS[icon] } }),

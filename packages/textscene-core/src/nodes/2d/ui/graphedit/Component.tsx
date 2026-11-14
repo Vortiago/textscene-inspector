@@ -195,7 +195,7 @@ export function GraphEdit({
     : graphEditConstructorScrollBars(graphEditSize, scrollBarBoxes);
   // `top_layer`'s anchored children mirror in a right-to-left layout (`control.cpp:1785-1787`).
   const scrollBars = solveNode.rtl ? mirroredScrollBars(ltrScrollBars, graphEditSize.x) : ltrScrollBars;
-  const topLayer = graphEditTopLayerSlots(chromeSlot);
+  const topLayer = useMemo(() => graphEditTopLayerSlots(chromeSlot), [chromeSlot]);
   const ltrMinimapRect = minimapRect(graphEditSize, props);
   const minimapPanelRect = solveNode.rtl ? mirrorRectRtl(ltrMinimapRect, graphEditSize.x) : ltrMinimapRect;
   const minimapXform = minimapTransform({ x: minimapPanelRect.w, y: minimapPanelRect.h }, bounds);

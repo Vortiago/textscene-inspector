@@ -329,16 +329,7 @@ function ControlItemGroup({
       env={internalEnv}
     />
   );
-  // A wrapping painter clips its subtree (`set_clip_contents`), and Godot clips the internal
-  // children with the authored ones, so they draw inside it too.
-  const wrapsChildren = controlComponentRegistry.wrapsChildren(solveNode.node.type);
-  const children = placeChildren(
-    solveNode.node.type,
-    <>
-      {childElements}
-      {wrapsChildren && internalElements}
-    </>
-  );
+  const children = placeChildren(solveNode.node.type, childElements, internalElements);
   // The painter's own path, as `NodeDispatcher` gives a node's: a ViewportTexture's `viewport_path`
   // counts from the painter's local scene.
   const painter = (
@@ -361,7 +352,7 @@ function ControlItemGroup({
       >
         {children.inPainter}
       </Painter>
-      {!wrapsChildren && internalElements}
+      {children.besidePainter}
     </NodePathProvider>
   );
   // The leaf meshes of a painter read the lit pixel material through context. A CanvasLayer is no

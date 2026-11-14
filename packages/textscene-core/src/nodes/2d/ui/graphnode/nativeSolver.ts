@@ -27,7 +27,7 @@ import {
   titlebarInternalControls,
   titlebarInternalLayout,
   titlebarMinimumSize,
-  titlebarResortHeight,
+  titlebarHeights,
 } from '../graphelement/graphTitlebar';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties, GraphNodeSlot } from './types';
@@ -117,7 +117,7 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const props = n.node.properties as GraphNodeProperties;
   const { panel, slot } = graphNodeStyles(n);
   const separation = requiredThemeItem(n.constants, 'separation');
-  const bandHeight = titlebarResortHeight(n, ctx);
+  const band = titlebarHeights(n, ctx);
 
   const entries: StretchEntry[] = [];
   let stretchMin = 0;
@@ -152,7 +152,7 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const childrenCount = entries.length;
   const stretchMax = contentRect.h - (childrenCount - 1) * separation;
   const stretchDiff = Math.max(stretchMax - stretchMin, 0);
-  availableStretch += stretchDiff - panel.contentMargin.bottom - panel.contentMargin.top - bandHeight;
+  availableStretch += stretchDiff - panel.contentMargin.bottom - panel.contentMargin.top - band.resort;
 
   while (stretchRatioTotal > 0) {
     let refitSuccessful = true;
@@ -172,7 +172,7 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
     if (refitSuccessful) break;
   }
 
-  let ofsY = panel.contentMargin.top + bandHeight;
+  let ofsY = panel.contentMargin.top + band.resort;
   const width = contentRect.w - panel.contentMargin.left - panel.contentMargin.right;
   const rects = new Map<string, Rect2>();
 
@@ -193,7 +193,7 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
     ofsY = toY;
   });
 
-  return { rects, meta: titlebarBandHeightChannel.seal(titlebarMinimumSize(n, ctx).y) };
+  return { rects, meta: titlebarBandHeightChannel.seal(band.drawn) };
 };
 
 controlSolverRegistry.registerContainerLayout('GraphNode', graphNodeLayout);
