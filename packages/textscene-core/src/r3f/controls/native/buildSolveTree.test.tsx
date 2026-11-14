@@ -1087,8 +1087,8 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
     expect(hoisted!.path).toBe('Root/Holder/Detached');
     const later = root!.children[0]!;
     expect(later.path).toBe('Root/Later');
-    expect(hoisted!.paintSequence).toBeGreaterThan(later.paintSequence);
-    expect(hoisted!.paintSequence).toBeGreaterThanOrEqual(root!.paintRange.base + root!.paintRange.size);
+    expect(hoisted!.paint.own).toBeGreaterThan(later.paint.own);
+    expect(hoisted!.paint.own).toBeGreaterThanOrEqual(root!.paint.range.base + root!.paint.range.size);
   });
 
   it('draws the children of a clip_children Control before it, as the world walk does', () => {
@@ -1100,7 +1100,7 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
 
     const { result } = renderHook(() => useBuildSolveTree([clipping], [], []));
     const [owner] = result.current.tree;
-    expect(owner!.children[0]!.paintSequence).toBeLessThan(owner!.paintSequence);
+    expect(owner!.children[0]!.paint.own).toBeLessThan(owner!.paint.own);
   });
 
   it('hands a clip_children Control the ranges of its show_behind_parent children', () => {
@@ -1114,7 +1114,7 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
     const { result } = renderHook(() => useBuildSolveTree([clipping], [], []));
     const [owner] = result.current.tree;
     const solvedBehind = owner!.children.find((child) => child.path === 'Clip/Behind');
-    expect(owner!.behindRanges).toEqual([solvedBehind!.paintRange]);
+    expect(owner!.paint.behind).toEqual([solvedBehind!.paint.range]);
   });
 
   it('orders a Control hoisted to a CanvasLayer against THAT layer’s own roots', () => {
@@ -1133,10 +1133,10 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
     const solvedLayer = result.current.tree[0]!.children[0]!;
     const [solvedFirst, solvedSecond, hoisted] = solvedLayer.children;
     expect(hoisted!.path).toBe('Root/Layer/First/Holder/Detached');
-    expect(hoisted!.paintSequence).toBeGreaterThanOrEqual(
-      solvedFirst!.paintRange.base + solvedFirst!.paintRange.size
+    expect(hoisted!.paint.own).toBeGreaterThanOrEqual(
+      solvedFirst!.paint.range.base + solvedFirst!.paint.range.size
     );
-    expect(hoisted!.paintSequence).toBeLessThan(solvedSecond!.paintSequence);
+    expect(hoisted!.paint.own).toBeLessThan(solvedSecond!.paint.own);
   });
 
   it('still carries the eye toggle of every ancestor it was hoisted past', () => {

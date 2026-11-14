@@ -3,8 +3,8 @@
  * its `fvar` defaults. Each test imports the loader fresh, with a `FontFace` that records. happy-dom
  * has no 2D canvas, so the load stops after the registration these tests read.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fontFaceRecorder, type FakeFontFace } from './fakeFontFace.testkit';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { fontFaceRecorder, windowLoaded, type FakeFontFace } from './fakeFontFace.testkit';
 import { faceDescriptors } from './sceneFontFace';
 import { fixtureFontBytes, fontFile } from './sfntOutlines.testkit';
 
@@ -30,6 +30,8 @@ async function registeredFaceOf(bytes: ArrayBuffer): Promise<FakeFontFace> {
 }
 
 describe('scene font registration', () => {
+  beforeAll(windowLoaded);
+
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();

@@ -7,11 +7,11 @@ import { describe, expect, it } from 'vitest';
 import { fixtureSfnt } from '../sfntOutlines.testkit';
 import { designCoordinates, normalizedCoordinates } from './axisCoordinates';
 import { readAvar } from './avar';
-import { readFvarAxes } from './fvar';
+import { fvarAxesOf } from './fvar';
 
 const WGHT = 2003265652;
 const sfnt = fixtureSfnt('cascadia-code-subset.ttf');
-const axes = readFvarAxes(sfnt)!;
+const axes = fvarAxesOf(sfnt)!;
 const avar = readAvar(sfnt, axes.length);
 
 const normalizedAt = (weight: number): number =>

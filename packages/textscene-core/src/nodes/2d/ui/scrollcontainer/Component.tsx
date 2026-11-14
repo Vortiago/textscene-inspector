@@ -12,12 +12,14 @@ import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/control
 import { ScrollBarChrome, ScrollHintChrome, SCROLL_HINT_MODULATE } from '../shared/ScrollChrome';
 import { scrollContainerScrollBars, scrollContainerLayoutChannel } from './nativeSolver';
 import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
+import { H_SCROLL, SCROLL_HINT_BOTTOM_RIGHT, SCROLL_HINT_TOP_LEFT, V_SCROLL } from './internalBackPieces';
 
 export function ScrollContainer({
   solveNode,
   childTint,
   rect,
   chromeSlot,
+  pieceSlots,
   theme,
   snapToPixels,
   children,
@@ -54,27 +56,30 @@ export function ScrollContainer({
           hint={layout.hints.topLeft}
           color={hintColor}
           opacity={childTint.opacity}
-          chromeSlot={chromeSlot}
+          chromeSlot={pieceSlots.get(SCROLL_HINT_TOP_LEFT) ?? chromeSlot}
         />
         <ScrollHintChrome
           hint={layout.hints.bottomRight}
           color={hintColor}
           opacity={childTint.opacity}
-          chromeSlot={chromeSlot}
+          chromeSlot={pieceSlots.get(SCROLL_HINT_BOTTOM_RIGHT) ?? chromeSlot}
         />
-        {/* `INTERNAL_MODE_BACK` children (`scroll_container.cpp:919,924`): the bars paint after every descendant. */}
+        {/* `INTERNAL_MODE_BACK` children (`scroll_container.cpp:919,924`): the bars paint after every
+            descendant, or each at its own place in a y-sort that collects them. */}
         <ScrollBarChrome
+          name={H_SCROLL}
           bar={layout.horizontal}
           boxes={scrollBarBoxes.horizontal}
           color={childTint.own}
-          chromeSlot={chromeSlot}
+          chromeSlot={pieceSlots.get(H_SCROLL) ?? chromeSlot}
           snapToPixels={snapToPixels}
         />
         <ScrollBarChrome
+          name={V_SCROLL}
           bar={layout.vertical}
           boxes={scrollBarBoxes.vertical}
           color={childTint.own}
-          chromeSlot={chromeSlot}
+          chromeSlot={pieceSlots.get(V_SCROLL) ?? chromeSlot}
           snapToPixels={snapToPixels}
         />
         {children}

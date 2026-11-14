@@ -11,7 +11,6 @@ import { quadrantCanvasItems, type TileCanvasItem } from '../resources/tileset/t
 import type { CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
 import { LitCanvasItem } from './components/LitCanvasItemPixels';
 import { CanvasItemGroup, useCanvasItemKey } from './components/CanvasItemGroup';
-import { useCanvasItemMaterialFile } from './components/canvasItemMaterial';
 import type * as THREE from 'three';
 import { foldOwnPixelTint, WHITE_MODULATE, type VertexColorTint } from './canvasItemModulate';
 import { useCanvasModulateFor } from './canvasModulate';
@@ -84,7 +83,7 @@ function tileTint(
 }
 
 function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
-  const material = useTileItemMaterial(item.material, layer.material);
+  const material = tileItemMaterial(item.material, layer.material);
   const { key: canvasKey, zFinal } = childCanvasPlace(
     { key: useCanvasItemKey(), zFinal: layer.zFinal },
     item.zIndex
@@ -119,11 +118,9 @@ function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
 }
 
 /** A tile's own material replaces the layer's: the item stops `use_parent_material` (`:350`). */
-function useTileItemMaterial(
+function tileItemMaterial(
   own: TileMaterial | null,
   layerMaterial: CanvasItemMaterialProperties | null
 ): CanvasItemMaterialProperties | null {
-  const fromFile = useCanvasItemMaterialFile(own && 'path' in own ? own.path : null);
-  if (!own) return layerMaterial;
-  return 'path' in own ? fromFile : own.properties;
+  return own ? own.properties : layerMaterial;
 }

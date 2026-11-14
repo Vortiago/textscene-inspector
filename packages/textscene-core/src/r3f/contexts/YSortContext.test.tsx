@@ -6,18 +6,12 @@ import { describe, it, expect } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { transform2DFromParts } from '../../godot/math/transform2d';
-import {
-  ControlYSortProvider,
-  useControlTransformsUnder,
-  usePublishControlTransforms,
-} from './ControlYSortContext';
+import { YSortProvider, useControlTransformsUnder, usePublishControlTransforms } from './YSortContext';
 
 const at = (y: number) => transform2DFromParts(0, { x: 1, y: 1 }, 0, { x: 0, y });
 
 function mountReaders() {
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <ControlYSortProvider>{children}</ControlYSortProvider>
-  );
+  const wrapper = ({ children }: { children: ReactNode }) => <YSortProvider>{children}</YSortProvider>;
   return renderHook(
     () => ({
       publish: usePublishControlTransforms()!,

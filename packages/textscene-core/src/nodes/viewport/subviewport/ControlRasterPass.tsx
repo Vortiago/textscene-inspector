@@ -132,7 +132,6 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
             inheritedRtl={inheritedRtl}
             themeOwners={themeOwners}
             enclosingViewportSize={enclosingViewportSize}
-            sortsLocally
           />
         </SubViewportCanvasScope>
       </World2DLightingBoundary>

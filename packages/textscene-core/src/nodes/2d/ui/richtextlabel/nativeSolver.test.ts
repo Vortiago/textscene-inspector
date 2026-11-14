@@ -4,13 +4,18 @@
  * `descent=600`, bake 42) worked by hand, never from the implementation.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
+import { fixtureSfnt, fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
+import { sfntFace } from '../../../../r3f/controls/native/text/sfntFace.testkit';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { shapeText, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { getFontAscentPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
+import {
+  getFontAscentPx,
+  withVariation,
+  type FontMetrics,
+} from '../../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
@@ -977,15 +982,25 @@ describe('shapeRichText — an [img] placeholder', () => {
     }
   );
 
+  it.each(['montserrat-semibold-subset.ttf', 'noto-sans-regular-subset.ttf'])(
+    'advances by the image width in %s, whose run shaping maps no glyph to the placeholder',
+    (font) => {
+      const faces = { ...ALL_FACES, normal: sfntFace(fixtureSfnt(font)) };
+      const glyphs = shapeRuns([textRun({ text: 'a', fontSizePx: FONT_SIZE }), bareImageRun(40)], { faces })
+        .lines[0]!.glyphs;
+      expect(glyphs[1]!.advance).toBe(40);
+    }
+  );
+
   it('takes the normal face without embolden or skew, even beside a bold run', () => {
     const glyphs = shapeRuns([textRun({ text: 'b', bold: true, fontSizePx: FONT_SIZE }), bareImageRun(24)])
       .lines[0]!.glyphs;
     const faces = ALL_FACES;
-    expect([glyphs[0]!.fontMetrics, glyphs[1]!.fontMetrics?.embolden, glyphs[1]!.fontMetrics?.skew]).toEqual([
-      faces.bold,
-      0,
-      0,
-    ]);
+    expect([
+      glyphs[0]!.fontMetrics,
+      glyphs[1]!.fontMetrics?.embolden ?? 0,
+      glyphs[1]!.fontMetrics?.skew ?? 0,
+    ]).toEqual([faces.bold, 0, 0]);
   });
 
   it('advances by the image width in a face at a variable-font instance', () => {
@@ -994,13 +1009,26 @@ describe('shapeRichText — an [img] placeholder', () => {
       glyphIndex: () => 5,
       advanceAtInstance: () => 999 * 64,
     } as unknown as FontMetrics['outlines'];
-    const instanced: FontMetrics = {
-      ...OPEN_SANS_FONT_METRICS,
+    const instanced = withVariation(OPEN_SANS_FONT_METRICS, {
       opentype: new Map([[WGHT_TAG, 700]]),
       outlines,
-    };
+    });
     const faces = { ...ALL_FACES, normal: instanced };
     expect(shapeRuns([bareImageRun(24)], { faces }).lines[0]!.glyphs[0]!.advance).toBe(24);
+  });
+
+  it('draws the placeholder in the face with its outlines and no variation', () => {
+    const outlines = { glyphIndex: () => 5, glyphContours: () => null };
+    const instanced = withVariation(OPEN_SANS_FONT_METRICS, {
+      embolden: 1.2,
+      skew: 0.2,
+      opentype: new Map([[0x77676874, 700]]),
+      outlines,
+    });
+    const faces = { ...ALL_FACES, normal: instanced };
+    const placeholder = shapeRuns([bareImageRun(24)], { faces }).lines[0]!.glyphs[0]!.fontMetrics!;
+    expect(['opentype', 'embolden', 'skew'].filter((field) => Object.hasOwn(placeholder, field))).toEqual([]);
+    expect(placeholder).toMatchObject({ embolden: 0, skew: 0, opentype: undefined, outlines });
   });
 
   it('suppresses kerning on either side of the placeholder', () => {
@@ -1086,14 +1114,14 @@ describe('layoutRichTextRuns', () => {
     expect(placements[1]!.layout.lines[0]!.glyphs.map((g) => g.char)).toEqual(['B', 'O', 'L', 'D']);
   });
 
-  it("gives a run beside a larger one the line's height, so a canvas raster holds the line's ascent", () => {
+  it("gives a run beside a larger one a raster from the line's ascent down to the run's own descent", () => {
     const runs = [
       textRun({ text: 'small', fontSizePx: FONT_SIZE }),
       textRun({ text: 'BOLD', bold: true, fontSizePx: FONT_SIZE * 3 }),
     ];
     const [small, bold] = layoutRichTextRuns(runs, shapeRuns(runs));
-    // ceil(2189*48/2048) + ceil(600*48/2048) = 52 + 15 at 48 px, against 23 at 16 px.
-    expect([small!.layout.heightPx, bold!.layout.heightPx]).toEqual([67, 67]);
+    // The line's ascent ceil(2189*48/2048) = 52, plus ceil(600*16/2048) = 5 or ceil(600*48/2048) = 15.
+    expect([small!.layout.heightPx, bold!.layout.heightPx]).toEqual([57, 67]);
   });
 
   it("draws each placement in the face its glyphs were shaped in: the run's bold or italics face, not the paragraph's", () => {

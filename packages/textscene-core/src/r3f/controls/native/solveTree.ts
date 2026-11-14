@@ -12,7 +12,7 @@ import type { ProjectFonts } from '../../../resources/fonts/font/projectFonts';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
-import type { PaintRange } from '../../canvasPaintOrder';
+import type { CanvasItemPaint } from '../../canvasItemPass/canvasItemPaint';
 import type { Transform2DColumns } from '../../../godot/math/transform2d';
 import type { CanvasInheritance } from '../../canvasItemPass/inheritedCanvasState';
 import type { StyleBoxFlatData } from './styleBoxFlat';
@@ -37,17 +37,6 @@ export interface ThemedIconRef {
 }
 
 /**
- * What a Control a dialog builds draws that no scene line carries, which its painter reads beside its parsed
- * properties: a theme icon for its Button (`set_button_icon`) and the characters selected in its LineEdit.
- */
-export interface SyntheticDraw {
-  /** The theme icon `SolveNode.icons[name]` resolves and `vendoredUrl` stands in for. */
-  themedIcon?: { name: string; vendoredUrl: string };
-  /** The selected character range `[begin, end)` (`LineEdit::select`). */
-  selection?: { begin: number; end: number };
-}
-
-/**
  * One Control or 2D-UI node in the live, collapsed scene tree (instance roots
  * merged, sub-scene scope resolved), ready for the solver.
  */
@@ -63,28 +52,11 @@ export interface SolveNode {
    */
   children: readonly SolveNode[];
   /**
-   * The run of canvas draw-sequence values this node's subtree owns
-   * (`canvasPaintOrder.ts`), from its place among all live siblings, Node2Ds
-   * included, so a `ColorRect` authored first draws under the sprites after it.
+   * Where this node and its subtree draw in tree order (`canvasItemPaint.ts`), from its place among
+   * all live siblings, Node2Ds included, so a `ColorRect` authored first draws under the sprites
+   * after it. The walker draws it at the run the y-sort of its canvas gives.
    */
-  paintRange: PaintRange;
-  /** The ranges of the children that draw behind this node, in child order, as the walk allocated them. */
-  behindRanges: readonly PaintRange[];
-  /**
-   * The draw-sequence value of this node's own pixels: after any
-   * `show_behind_parent` children and before the rest.
-   */
-  paintSequence: number;
-  /**
-   * The draw-sequence value of this node's back pieces, such as a ScrollContainer's bars: after
-   * its whole subtree, which Godot's `INTERNAL_MODE_BACK` children follow (`internalBackRoom`).
-   */
-  backSequence: number;
-  /**
-   * The draw-sequence value of the listed layer this node adds itself, GraphEdit's connections
-   * (`listedChildOrder`), or `paintSequence` with none.
-   */
-  layerSequence: number;
+  paint: CanvasItemPaint;
   /**
    * The composed `Transform2D` of the non-Control `CanvasItem` ancestors this node promoted past,
    * outermost first (`transform_2d.cpp:198-218`), or `null` for none. Never decomposed: composed
@@ -124,8 +96,6 @@ export interface SolveNode {
   styleBoxes: Readonly<Record<string, StyleBoxFlatData>>;
   /** `null` until the node's texture (if any) has loaded. */
   textureSize: Vector2 | null;
-  /** Set only on a Control a dialog builds. */
-  syntheticDraw?: SyntheticDraw;
   /**
    * Every Texture2D-valued slot the type registers (`registerTextureSlots`), by
    * its key: `null` until loaded, empty for a type that registers none. Resolved
@@ -230,11 +200,13 @@ export type ShareNode = Omit<SolveNode, 'children'>;
  * (`container.cpp:143-155`, `box_container.cpp:58`, `tab_container.cpp:469-481`),
  * so a type that indexes children by position numbers them alike in each.
  */
-// Returns `n` itself when nothing is promoted, so no caller sees a fresh object per call.
-export function sortableView(n: SolveNode): SolveNode {
-  if (!n.children.some(isPromotedControl)) return n;
-  return { ...n, children: n.children.filter((child) => !isPromotedControl(child)) };
-}
+// One view per node, `n` itself when nothing is promoted, so a cache keyed by the node it hands on,
+// such as `internalControlsOf`'s, holds across calls.
+export const sortableView: (n: SolveNode) => SolveNode = perObject((n) =>
+  n.children.some(isPromotedControl)
+    ? { ...n, children: n.children.filter((child) => !isPromotedControl(child)) }
+    : n
+);
 
 /**
  * This node's properties as the Control base type: the one cast every solver

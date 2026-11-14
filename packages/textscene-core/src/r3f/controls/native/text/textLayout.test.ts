@@ -9,6 +9,9 @@ import { OPEN_SANS_METRICS } from './openSansMetrics';
 import { withVariation, type FontMetrics } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
+import { fixtureSfnt } from './sfntOutlines.testkit';
+import { sfntFace } from './sfntFace.testkit';
+import { glyphsOf, unshapedFace } from './textLayout.testkit';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 
@@ -504,6 +507,39 @@ describe('shapeText — a face for each character', () => {
   });
 });
 
+describe('shapeText — a character its face draws apart', () => {
+  const OBJECT = '\ufffc';
+  // Montserrat maps no glyph to U+FFFC, so its run shaping reads glyph 0 there.
+  const shaped = sfntFace(fixtureSfnt('montserrat-semibold-subset.ttf'));
+
+  /** `face` that draws `OBJECT` apart from its runs, one em wide. */
+  function objectFace(face: FontMetrics): FontMetrics {
+    return Object.create(face, {
+      hasGlyph: { value: (ch: string) => ch === OBJECT || face.hasGlyph(ch) },
+      drawsApart: { value: (ch: string) => ch === OBJECT },
+      getGlyphAdvanceUnits: {
+        value: (ch: string) => (ch === OBJECT ? face.unitsPerEm : face.getGlyphAdvanceUnits(ch)),
+      },
+    });
+  }
+
+  it('advances by its character advance in a face with run shaping, as in a face with none', () => {
+    const [inShapedFace] = glyphsOf(OBJECT, objectFace(shaped), 40);
+    const [inUnshapedFace] = glyphsOf(OBJECT, objectFace(unshapedFace(shaped)), 40);
+    expect([inShapedFace!.advance, inUnshapedFace!.advance]).toEqual([40, 40]);
+  });
+
+  it('takes no glyph of the font', () => {
+    const [glyph] = glyphsOf(OBJECT, objectFace(shaped), 40);
+    expect(glyph!.glyphIndex).toBeUndefined();
+  });
+
+  it('leaves the shaped glyphs on either side of it in the run shaping', () => {
+    const glyphs = glyphsOf(`a${OBJECT}b`, objectFace(shaped), 40);
+    expect(glyphs.map((glyph) => glyph.glyphIndex !== undefined)).toEqual([true, false, true]);
+  });
+});
+
 // Ascent and descent are FreeType's pixel-quantised values, each ceiled before summing
 // (modules/text_server_adv/text_server_adv.cpp:1515-1516).
 describe('shapeText — line pitch', () => {
@@ -658,6 +694,39 @@ describe('soloLineLayout — re-wrapping one line of an already-shaped result', 
     const bold = withVariation(OPEN_SANS_FONT_METRICS, { embolden: 1.2 });
     const solo = soloLineLayout(parent.lines[0]!, parent, parent.baselineOffsetPx, bold);
     expect(solo.fontMetrics).toBe(bold);
+  });
+
+  describe('heightPx', () => {
+    const shapeAB = () =>
+      shapeText('AB', {
+        fontSizePx: 16,
+        boxWidthPx: 0,
+        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+        fontMetrics: FAKE_SCENE_FONT_METRICS,
+        lineSpacingPx: 0,
+      });
+
+    it('is the pitch for a line of the parent face', () => {
+      const parent = shapeAB();
+      // ceil(800 * 16/1000) + ceil(200 * 16/1000) = 13 + 4.
+      expect(soloLineLayout(parent.lines[0]!, parent).heightPx).toBe(17);
+    });
+
+    // A glyph of a fallback face with a deeper descent is cut at the bottom of a raster one pitch high.
+    it('reaches the deepest descent of a glyph on the line, below the baseline', () => {
+      const parent = shapeAB();
+      const deep: CanvasFontMetrics = { ...FAKE_SCENE_FONT_METRICS, descent: 600 };
+      const line = parent.lines[0]!;
+      const withDeepGlyph = { ...line, glyphs: [line.glyphs[0]!, { ...line.glyphs[1]!, fontMetrics: deep }] };
+      // The baseline 13 plus ceil(600 * 16/1000) = 10.
+      expect(soloLineLayout(withDeepGlyph, parent).heightPx).toBe(23);
+    });
+
+    it('is the pitch for a line with no glyph', () => {
+      const parent = shapeAB();
+      const empty = { ...parent.lines[0]!, glyphs: [] };
+      expect(soloLineLayout(empty, parent).heightPx).toBe(17);
+    });
   });
 });
 

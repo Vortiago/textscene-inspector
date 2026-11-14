@@ -11,7 +11,7 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import { CanvasGroup } from './Component';
 import { parseCanvasGroup } from './parser';
 import { useEnclosingCanvasState } from '../../../r3f/canvasItemPass/inheritedCanvasState';
-import { PaintRangeProvider } from '../../../r3f/contexts/PaintOrderContext';
+import { PaintRun } from '../../../r3f/testing/PaintRun';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../../../r3f/canvasPaintOrder';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import {
@@ -81,12 +81,12 @@ async function renderGroup(
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={[MATERIAL]} externalResources={[]}>
       <CanvasLighting2DContext.Provider value={lighting}>
-        <PaintRangeProvider value={RUN}>
+        <PaintRun value={RUN}>
           <CanvasGroup node={groupNode(props)}>
             {child}
             <ModulateReader />
           </CanvasGroup>
-        </PaintRangeProvider>
+        </PaintRun>
       </CanvasLighting2DContext.Provider>
     </SceneResourcesProvider>
   );
