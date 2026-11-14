@@ -77,8 +77,12 @@ export function defineRectShare<T>(compute: RectShare<T>): RectShare<T> {
   const entriesOf = defineShare((): SizedEntry<T>[] => []);
   return (n, size, theme) => {
     const entries = entriesOf(n, theme);
-    const hit = entries.find((entry) => entry.size.x === size.x && entry.size.y === size.y);
-    if (hit) return hit.value;
+    const hitAt = entries.findIndex((entry) => entry.size.x === size.x && entry.size.y === size.y);
+    if (hitAt >= 0) {
+      const [hit] = entries.splice(hitAt, 1);
+      entries.push(hit!);
+      return hit!.value;
+    }
     const value = compute(n, size, theme);
     entries.push({ size: { x: size.x, y: size.y }, value });
     if (entries.length > RECT_SHARE_SIZES) entries.shift();

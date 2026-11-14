@@ -44,7 +44,7 @@ const NO_TABS: readonly TabBarTabProperties[] = [];
 
 /** One tab as its theme and properties give it, before its title is shaped. */
 export interface TabFacts {
-  tab: TabBarTabProperties;
+  properties: TabBarTabProperties;
   state: TabDrawState;
   /** The `tab_<state>` box the tab draws. */
   style: StyleBoxFlatData;
@@ -111,7 +111,7 @@ export const tabBarFacts = defineShare((solveNode, theme): TabBarFacts => {
       const colourState = i === currentTab ? 'selected' : state;
       const iconNatural = tabIconNaturalSize(solveNode, i);
       return {
-        tab,
+        properties: tab,
         state,
         style: pickTabStyleBox(styleBoxes, state),
         naturalStyleWidth: tabWidthStyleMinWidth(styleBoxes, state),
@@ -148,23 +148,30 @@ export const tabBarFacts = defineShare((solveNode, theme): TabBarFacts => {
   };
 });
 
-/** Both widths of tab `facts` with a title `textWidthPx` wide, by the one formula of `tabContentWidth`. */
-export function tabWidths(bar: TabBarFacts, facts: TabFacts, textWidthPx: number): TabWidths {
-  const widthAt = (styleMinWidth: number) =>
-    tabContentWidth({
-      styleMinWidth,
-      iconWidth: facts.iconSize ? facts.iconSize.x : null,
-      hSeparation: bar.hSeparation,
-      textWidthPx,
-      hasText: facts.tab.title.length > 0,
-      closeVisible: facts.closeVisible,
-      closeIconWidth: bar.closeIconSize.x,
-      closeButtonMarginLeft: bar.closeButtonMargin.left,
-    });
+/** Tab `facts` with a title `textWidthPx` wide on a style `styleMinWidth` wide, by the one formula of `tabContentWidth`. */
+function tabWidthAt(bar: TabBarFacts, facts: TabFacts, styleMinWidth: number, textWidthPx: number): number {
+  return tabContentWidth({
+    styleMinWidth,
+    iconWidth: facts.iconSize ? facts.iconSize.x : null,
+    hSeparation: bar.hSeparation,
+    textWidthPx,
+    hasText: facts.properties.title.length > 0,
+    closeVisible: facts.closeVisible,
+    closeIconWidth: bar.closeIconSize.x,
+    closeButtonMarginLeft: bar.closeButtonMargin.left,
+  });
+}
+
+/** The width `get_minimum_size` gives tab `facts` with a title `textWidthPx` wide. */
+export function tabMinimumWidth(bar: TabBarFacts, facts: TabFacts, textWidthPx: number): number {
   const { left, right } = facts.style.contentMargin;
+  return tabWidthAt(bar, facts, left + right, textWidthPx);
+}
+
+function tabWidths(bar: TabBarFacts, facts: TabFacts, textWidthPx: number): TabWidths {
   return {
-    minimumWidth: widthAt(left + right),
-    naturalWidth: widthAt(facts.naturalStyleWidth),
+    minimumWidth: tabMinimumWidth(bar, facts, textWidthPx),
+    naturalWidth: tabWidthAt(bar, facts, facts.naturalStyleWidth, textWidthPx),
   };
 }
 
@@ -173,7 +180,7 @@ export const tabBarModel = defineShare((solveNode, theme): TabBarModel => {
   const bar = tabBarFacts(solveNode, theme);
   const font = { fontSizePx: bar.fontSizePx, fontMetrics: bar.fontMetrics };
   const computed = bar.tabs.map((facts): ComputedTab => {
-    const layout = shapeTabLabel(facts.tab.title, solveNode, font);
+    const layout = shapeTabLabel(facts.properties.title, solveNode, font);
     const naturalTextWidth = shapedTextSizeWidthPx(layout.widthPx);
     return {
       ...facts,
@@ -185,9 +192,9 @@ export const tabBarModel = defineShare((solveNode, theme): TabBarModel => {
   return {
     ...bar,
     computed,
-    drawInputs: computed.map(({ tab, naturalWidth, naturalTextWidth }) => ({
-      disabled: tab.disabled,
-      hidden: tab.hidden === true,
+    drawInputs: computed.map(({ properties, naturalWidth, naturalTextWidth }) => ({
+      disabled: properties.disabled,
+      hidden: properties.hidden === true,
       naturalWidth,
       naturalTextWidth,
     })),

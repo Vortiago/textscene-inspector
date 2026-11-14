@@ -94,7 +94,7 @@ function TabBarTabChrome({
   isStyleFlipped,
 }: TabBarTabChromeProps) {
   const { tab, label, content } = drawn;
-  const iconTexture = useIconRefTexture(solveNode, tab.tab.icon);
+  const iconTexture = useIconRefTexture(solveNode, tab.properties.icon);
   // `tint`, `self_modulate` folded onto `modulate`, composes into every colour before its
   // sRGB-to-linear conversion, as in `PanelChrome.tsx`.
   const tintedFontColor = tintColor(tab.fontColor, tint.own);

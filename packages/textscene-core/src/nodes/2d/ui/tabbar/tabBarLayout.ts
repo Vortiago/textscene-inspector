@@ -78,7 +78,7 @@ function drawnTab(model: TabBarModel, item: TabLayoutItem, size: Vector2, rtl: b
       tabWidthPx: item.width,
       rtl,
       iconSize: tab.iconSize,
-      hasText: tab.tab.title.length > 0,
+      hasText: tab.properties.title.length > 0,
       textNaturalHeightPx: label.heightPx,
       textAdvanceWidthPx: item.textBudgetPx,
       hSeparation: model.hSeparation,

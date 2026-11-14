@@ -179,22 +179,24 @@ function opensThroughAChannel(meta: unknown): boolean {
 }
 
 // Guard 4: a painter whose layout depends on its size reads that layout from a rect share, and
-// takes nothing else from its solver files that would let it lay out again.
+// takes nothing else from a layout module that would let it lay out again.
 
-/** The painters on a rect share, and the values each may take from its solver files. */
+/** The painters on a rect share, and the values each may take from a layout module. */
 const RECT_SHARE_PAINTERS: Record<string, readonly string[]> = {
-  [join('button', 'Component.tsx')]: ['BUTTON_CLASS', 'buttonLayoutOf'],
-  [join('tabbar', 'Component.tsx')]: ['tabBarLayout'],
+  [join('button', 'Component.tsx')]: ['BUTTON_CLASS', 'buttonLayoutOf', 'tintColor'],
+  [join('tabbar', 'Component.tsx')]: ['tabBarLayout', 'tintColor'],
 };
 
-const SOLVER_FILE = /^\.\/(?:nativeSolver|tabBarModel|tabBarLayout)$/;
+/** The slice's solver files, and the shared modules that shape text or lay out a Button. */
+const LAYOUT_MODULE =
+  /(?:^\.\/(?:nativeSolver|tabBarModel|tabBarLayout)|\/buttonBase|\/text\/textLayout|\/text\/textOverrun)$/;
 
-/** The values (not the types) a source imports from its solver files. */
-function solverValueImports(source: string): string[] {
+/** The values (not the types) a source imports from a layout module. */
+function layoutValueImports(source: string): string[] {
   const names: string[] = [];
   for (const match of source.matchAll(/^import\s+(type\s+)?\{([^}]*)\}\s+from\s+'([^']+)';/gm)) {
     const [, typeOnly, list, from] = match;
-    if (typeOnly || !SOLVER_FILE.test(from!)) continue;
+    if (typeOnly || !LAYOUT_MODULE.test(from!)) continue;
     for (const entry of list!.split(',').map((name) => name.trim())) {
       if (entry && !entry.startsWith('type ')) names.push(entry);
     }
@@ -279,21 +281,27 @@ describe('solve handoff conformance', () => {
   });
 
   it.each(Object.entries(RECT_SHARE_PAINTERS))(
-    'takes only its layout share from its solver files: %s',
+    'takes only its layout share from a layout module: %s',
     (painter, allowed) => {
       const source = HANDOFF_SOURCES.find(({ file }) => file.endsWith(join(UI_ROOT, painter)))?.source;
       expect(source, `${painter} is not among the scanned sources`).toBeDefined();
-      expect(solverValueImports(source!)).toEqual([...allowed].sort());
+      expect(layoutValueImports(source!)).toEqual([...allowed].sort());
     }
   );
 
   it('would catch a painter importing a layout step — the check is not vacuous', () => {
     expect(
-      solverValueImports("import { layoutTabContent, type TabLayoutItem } from './nativeSolver';")
+      layoutValueImports("import { layoutTabContent, type TabLayoutItem } from './nativeSolver';")
     ).toEqual(['layoutTabContent']);
-    expect(solverValueImports("import type { ScrollArrowsLayout } from './nativeSolver';")).toEqual([]);
+    expect(layoutValueImports("import type { ScrollArrowsLayout } from './nativeSolver';")).toEqual([]);
     expect(
-      solverValueImports("import { tintColor } from '../../../../r3f/controls/native/buttonBase';")
+      layoutValueImports("import { wrappedLabelWidthPx } from '../../../../r3f/controls/native/buttonBase';")
+    ).toEqual(['wrappedLabelWidthPx']);
+    expect(
+      layoutValueImports("import { shapeText } from '../../../../r3f/controls/native/text/textLayout';")
+    ).toEqual(['shapeText']);
+    expect(
+      layoutValueImports("import { TextRun } from '../../../../r3f/controls/native/text/TextRun';")
     ).toEqual([]);
   });
 

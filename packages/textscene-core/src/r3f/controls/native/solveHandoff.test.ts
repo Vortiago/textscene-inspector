@@ -139,6 +139,18 @@ describe('defineRectShare', () => {
     expect(counter.calls).toBe(4);
   });
 
+  it('keeps a size asked for again over an older one', () => {
+    const { share, counter } = countingShare();
+    const n = node();
+    const theme = nativeTheme(1);
+    share(n, { x: 1, y: 1 }, theme);
+    share(n, { x: 2, y: 1 }, theme);
+    share(n, { x: 1, y: 1 }, theme);
+    share(n, { x: 3, y: 1 }, theme);
+    share(n, { x: 1, y: 1 }, theme);
+    expect(counter.calls).toBe(3);
+  });
+
   it('recomputes for a second theme at the same size', () => {
     const { share, counter } = countingShare();
     const n = node();

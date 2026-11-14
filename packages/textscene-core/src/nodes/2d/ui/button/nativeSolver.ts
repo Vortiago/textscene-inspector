@@ -285,7 +285,7 @@ export interface ButtonLayout {
   content: ButtonContentLayout;
   /** `_get_current_stylebox` (`button.cpp:101-147`). */
   box: StyleBoxFlatData;
-  text: ResolvedTextTheme;
+  textTheme: ResolvedTextTheme;
   iconColor: Rgba;
   /** The icon property the class shows: a raw Texture2D ref. */
   icon: string | undefined;
@@ -310,15 +310,17 @@ const buttonUnwrappedLabelOf = perButtonClass((buttonClass) =>
 );
 
 /**
- * A Button's label wrapped at each wrap width it is asked for. The width alone is the key: a
- * wrapping Button whose height follows its minimum is laid out at two heights and one width.
+ * A Button's label wrapped at the last wrap width asked for. The width alone is the key: a wrapping
+ * Button whose height follows its minimum is laid out at two heights and one width.
  */
 const buttonWrappedLabelsOf = perButtonClass((buttonClass) =>
   defineShare((n) => {
-    const byWidth = new Map<number, TextLayoutResult | null>();
+    let last: { wrapWidthPx: number; label: TextLayoutResult | null } | null = null;
     return (wrapWidthPx: number) => {
-      if (!byWidth.has(wrapWidthPx)) byWidth.set(wrapWidthPx, buttonLabelShape(n, buttonClass, wrapWidthPx));
-      return byWidth.get(wrapWidthPx)!;
+      if (last?.wrapWidthPx !== wrapWidthPx) {
+        last = { wrapWidthPx, label: buttonLabelShape(n, buttonClass, wrapWidthPx) };
+      }
+      return last.label;
     };
   })
 );
@@ -350,7 +352,7 @@ export const buttonLayoutOf = perButtonClass((buttonClass): RectShare<ButtonLayo
         isTextRtl: infersRtl(label),
       }),
       box,
-      text: buttonTextTheme(n, props, state),
+      textTheme: buttonTextTheme(n, props, state),
       iconColor: buttonIconColor(n.colors, state, props),
       icon: buttonShown(buttonClass, props).icon,
     };

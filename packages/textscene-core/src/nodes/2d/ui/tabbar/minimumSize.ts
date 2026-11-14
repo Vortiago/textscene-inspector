@@ -8,7 +8,7 @@
  */
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
-import { tabBarFacts, tabBarModel, tabWidths, type TabBarFacts, type TabBarModel } from './tabBarModel';
+import { tabBarFacts, tabBarModel, tabMinimumWidth, type TabBarFacts, type TabBarModel } from './tabBarModel';
 
 /** What one tab gives the minimum size. */
 interface TabMinimum {
@@ -27,8 +27,8 @@ function tabMinimums(bar: TabBarFacts, model: TabBarModel | null): TabMinimum[] 
   return bar.tabs.map((facts, i) => {
     const shaped = model?.computed[i];
     return {
-      isHidden: facts.tab.hidden === true,
-      width: shaped ? shaped.minimumWidth : tabWidths(bar, facts, 0).minimumWidth,
+      isHidden: facts.properties.hidden === true,
+      width: shaped ? shaped.minimumWidth : tabMinimumWidth(bar, facts, 0),
       iconHeight: facts.iconSize?.y ?? null,
       closeVisible: facts.closeVisible,
       textHeightPx: shaped ? shaped.layout.heightPx : 0,

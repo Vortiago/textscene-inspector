@@ -38,7 +38,7 @@ export function ButtonPainter({
   buttonClass,
 }: ButtonPainterProps) {
   const props = painterView<ButtonProperties>(solveNode);
-  const { box, label, isWrapped, content, text, iconColor, icon } = buttonLayoutOf(buttonClass)(
+  const { box, label, isWrapped, content, textTheme, iconColor, icon } = buttonLayoutOf(buttonClass)(
     solveNode,
     { x: rect.w, y: rect.h },
     theme
@@ -51,7 +51,7 @@ export function ButtonPainter({
 
   // `tint.own` is raw sRGB. It goes to the chrome as is, and multiplies into the font
   // and icon colours before each one's single sRGB-to-linear conversion.
-  const tintedFontColor = useMemo(() => tintColor(text.color, tint.own), [text.color, tint.own]);
+  const tintedFontColor = useMemo(() => tintColor(textTheme.color, tint.own), [textTheme.color, tint.own]);
   const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   const ownIconTexture = useIconRefTexture(solveNode, icon);
@@ -96,7 +96,7 @@ export function ButtonPainter({
           bidi={bidi}
           isWrapped={isWrapped}
           box={content.labelBox}
-          fontSizePx={text.fontSizePx}
+          fontSizePx={textTheme.fontSizePx}
           tint={tintedFontColor}
           outline={textOutline}
           clippingPlanes={clippingPlanes}
