@@ -5,6 +5,7 @@
  * glyph draws nothing until its bitmap lands, and each landing tells the subscribers to repaint.
  */
 import { recentlyRead } from '../../../../../utils/recentlyRead';
+import { createExternalStore, type ExternalStore } from '../../../../hooks/createExternalStore';
 import type { ColourBitmap } from '../colour/colourBitmap';
 import {
   freeTypeTrueTypeSize,
@@ -14,8 +15,9 @@ import {
   pixFloor,
   pixRound,
 } from '../fontMetrics';
+import { fontWork } from '../settledChannel';
 import { glyphMetricsReader } from '../sfntGlyphMetrics';
-import { parseSfntScalars, tableBytes, type SfntFile } from '../sfntTables';
+import { parseSfntScalars, readHeadIsPpemRounded, type SfntFile } from '../sfntTables';
 import type { StrikeSize } from '../strike/strikeSize';
 import { browserSvgPictureDrawer, type SvgPictureDrawer } from './browserSvgPicture';
 import { svgGlyphDocumentReader, type SvgGlyphDocument } from './svgGlyphDocument';
@@ -46,9 +48,6 @@ export interface SvgGlyphs {
 
 /** A font size animation passes through many sizes, so the SVG glyphs of this many sizes of one face are kept. */
 const MAX_KEPT_SIZES = 8;
-/** `TT_HEAD_FLAG_INTEGER_PPEM` of `head`'s flags, at offset 16: the face scales by the whole-pixel ppem. */
-const HEAD_FLAGS_OFFSET = 16;
-const HEAD_FLAG_PPEM_ROUNDED = 0x8;
 
 /** The SVG glyphs of `sfnt`, or null for a face whose `SVG ` table FreeType does not load. */
 export async function svgGlyphsOf(
@@ -64,19 +63,7 @@ export async function svgGlyphsOf(
   const advanceOf = glyphMetricsReader(sfnt);
   const { unitsPerEm } = scalars;
   const drawnAt = recentlyRead<string, Map<number, ColourBitmap | null | undefined>>(MAX_KEPT_SIZES);
-  const listeners = new Set<() => void>();
-  /** Written only by `land`, which then calls every listener. */
-  let version = 0;
-  const land = (
-    drawn: Map<number, ColourBitmap | null | undefined>,
-    glyph: number,
-    bitmap: ColourBitmap | null
-  ) => {
-    drawn.set(glyph, bitmap);
-    if (!bitmap) return;
-    version++;
-    for (const listener of listeners) listener();
-  };
+  const landings = batchedLandings();
   return {
     sizeAt: scalableSizeReader(sfnt, unitsPerEm, scalars.ascent, -scalars.descent),
     readerAt: (size) => {
@@ -91,18 +78,42 @@ export async function svgGlyphsOf(
         drawn.set(glyph, null);
         const horiAdvance26_6 = ftMulFix(advanceOf(glyph, 0).horizontal.advance, size.xScale);
         const glyphDocument = documentOf(document, glyph, unitsPerEm);
-        void drawnBitmap(drawer, glyphDocument, size, horiAdvance26_6).then((bitmap) =>
-          land(drawn, glyph, bitmap)
-        );
+        // Counted as font work, so a capture waits for the glyph to land.
+        const endWork = fontWork.begin();
+        void drawnBitmap(drawer, glyphDocument, size, horiAdvance26_6)
+          .then((bitmap) => {
+            drawn.set(glyph, bitmap);
+            if (bitmap) landings.land();
+          })
+          .finally(endWork);
         return null;
       };
     },
-    subscribe: (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
+    subscribe: landings.subscribe,
     get version() {
-      return version;
+      return landings.get();
+    },
+  };
+}
+
+/**
+ * The count of bitmaps that have landed, told to the subscribers once per microtask: a label of
+ * many emoji repaints once for the glyphs that land together, not once for each.
+ */
+function batchedLandings(): Pick<ExternalStore<number>, 'get' | 'subscribe'> & { land(): void } {
+  const store = createExternalStore(0);
+  /** Written only by `land`, and cleared by the microtask that tells the subscribers. */
+  let untold = 0;
+  return {
+    get: store.get,
+    subscribe: store.subscribe,
+    land: () => {
+      if (untold++ > 0) return;
+      queueMicrotask(() => {
+        const count = store.get() + untold;
+        untold = 0;
+        store.set(count);
+      });
     },
   };
 }
@@ -114,12 +125,11 @@ async function drawnBitmap(
   size: SvgGlyphSize,
   horiAdvance26_6: number
 ): Promise<ColourBitmap | null> {
-  const box = drawer?.contentBox(document.xml);
-  if (!drawer || !box) return null;
-  const embox = { x: document.emboxX, y: document.emboxY };
-  const placement = svgGlyphPlacement(box, embox, size, horiAdvance26_6);
+  const picture = drawer?.picture(document.xml);
+  if (!picture) return null;
+  const placement = svgGlyphPlacement(picture.box, document.embox, size, horiAdvance26_6);
   if (!placement) return null;
-  const texels = await drawer.draw(document.xml, box, placement);
+  const texels = await picture.draw(placement);
   return texels && colourBitmapOf(placement, texels);
 }
 
@@ -143,29 +153,16 @@ function scalableSizeReader(
   ascender: number,
   descender: number
 ): (fontSizePx: number) => SvgLoadSize {
-  const head = tableBytes(sfnt, 'head');
-  const isPpemRounded =
-    sfnt.tables.has('glyf') &&
-    head.length >= HEAD_FLAGS_OFFSET + 2 &&
-    (((head[HEAD_FLAGS_OFFSET]! << 8) | head[HEAD_FLAGS_OFFSET + 1]!) & HEAD_FLAG_PPEM_ROUNDED) !== 0;
+  const isPpemRounded = sfnt.tables.has('glyf') && readHeadIsPpemRounded(sfnt);
   return (fontSizePx) => {
-    const requestScale = getFontOutlineScale(unitsPerEm, fontSizePx);
-    const { scale, ppem } = freeTypeTrueTypeSize(unitsPerEm, fontSizePx, isPpemRounded);
-    if (isPpemRounded) {
-      return {
-        xPpem: ppem,
-        yPpem: ppem,
-        ascender: pixRound(ftMulFix(ascender, scale)),
-        descender: pixRound(ftMulFix(descender, scale)),
-        xScale: scale,
-      };
-    }
+    const { scale: roundedScale, ppem } = freeTypeTrueTypeSize(unitsPerEm, fontSizePx, isPpemRounded);
+    const scale = isPpemRounded ? roundedScale : getFontOutlineScale(unitsPerEm, fontSizePx);
     return {
       xPpem: ppem,
       yPpem: ppem,
-      ascender: pixCeil(ftMulFix(ascender, requestScale)),
-      descender: pixFloor(ftMulFix(descender, requestScale)),
-      xScale: requestScale,
+      ascender: (isPpemRounded ? pixRound : pixCeil)(ftMulFix(ascender, scale)),
+      descender: (isPpemRounded ? pixRound : pixFloor)(ftMulFix(descender, scale)),
+      xScale: scale,
     };
   };
 }

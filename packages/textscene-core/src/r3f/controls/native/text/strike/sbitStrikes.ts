@@ -11,6 +11,7 @@ import {
   HHEA_ASCENDER_OFFSET,
   HHEA_DESCENDER_OFFSET,
   OS2_TABLE_MIN_LENGTH,
+  readHeadUnitsPerEm,
   tableBytes,
   tableFits,
   type SfntFile,
@@ -53,8 +54,7 @@ const LOCATOR_HEADER_SIZE = 8;
 const STRIKE_RECORD_SIZE = 48;
 /** `sbix`: version(2) flags(2) numStrikes(4), then a 4-byte offset per strike. */
 const SBIX_HEADER_SIZE = 8;
-/** `head.unitsPerEm` and `OS/2.xAvgCharWidth`. */
-const HEAD_UNITS_PER_EM_OFFSET = 18;
+/** `OS/2.xAvgCharWidth`. */
 const OS2_AVERAGE_WIDTH_OFFSET = 2;
 
 /**
@@ -62,7 +62,7 @@ const OS2_AVERAGE_WIDTH_OFFSET = 2;
  * it has no fixed sizes. FreeType looks for `CBLC`, then `EBLC` and `bloc`, then `sbix`.
  */
 export function readSbitTables(sfnt: SfntFile): SbitTables | null {
-  const unitsPerEm = headUnitsPerEm(sfnt);
+  const unitsPerEm = readHeadUnitsPerEm(sfnt);
   const located = locatorOf(sfnt);
   if (!located || located.locator.length < LOCATOR_HEADER_SIZE) return null;
   const { kind, locator } = located;
@@ -206,13 +206,6 @@ function averageWidthOf(
   if (unitsPerEm === 0 || !os2 || !tableFits(dv, os2, OS2_TABLE_MIN_LENGTH))
     return { averageWidth: 1, emSize: 1 };
   return { averageWidth: dv.getInt16(os2.offset + OS2_AVERAGE_WIDTH_OFFSET), emSize: unitsPerEm };
-}
-
-function headUnitsPerEm({ dv, tables }: SfntFile): number {
-  const head = tables.get('head');
-  return head && tableFits(dv, head, HEAD_UNITS_PER_EM_OFFSET + 2)
-    ? dv.getUint16(head.offset + HEAD_UNITS_PER_EM_OFFSET)
-    : 0;
 }
 
 function viewOf(bytes: Uint8Array): DataView {

@@ -49,13 +49,15 @@ function svgFace(isPpemRounded = true) {
 /** A drawer that measures the red square's box and paints every pixel `texel`, or nothing where `texel` is null. */
 function squareDrawer(texel: readonly number[] | null): SvgPictureDrawer {
   return {
-    contentBox: () => ({ x: 0, y: -800, width: 1000, height: 1000 }),
-    draw: async (_xml, _box, { width, rows }) => {
-      if (!texel) return null;
-      const texels = new Uint8ClampedArray(width * rows * 4);
-      for (let at = 0; at < texels.length; at += 4) texels.set(texel, at);
-      return texels;
-    },
+    picture: () => ({
+      box: { x: 0, y: -800, width: 1000, height: 1000 },
+      draw: async ({ width, rows }) => {
+        if (!texel) return null;
+        const texels = new Uint8ClampedArray(width * rows * 4);
+        for (let at = 0; at < texels.length; at += 4) texels.set(texel, at);
+        return texels;
+      },
+    }),
   };
 }
 
@@ -94,6 +96,17 @@ describe('svgGlyphsOf', () => {
   it('tells its subscribers once for each bitmap that lands', async () => {
     const { landings, version } = await landed(squareDrawer([255, 0, 0, 255]), RED_GLYPH);
     expect([landings, version]).toEqual([1, 1]);
+  });
+
+  it('tells its subscribers once for the bitmaps that land together', async () => {
+    const svg = (await svgGlyphsOf(svgFace(), squareDrawer([255, 0, 0, 255])))!;
+    let landings = 0;
+    svg.subscribe(() => landings++);
+    const read = svg.readerAt(svg.sizeAt(16));
+    read(RED_GLYPH);
+    svg.readerAt(svg.sizeAt(20))(RED_GLYPH);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect([landings, svg.version]).toEqual([1, 2]);
   });
 
   it('places the bitmap on the advance, raised by its height times the line over the ascender', async () => {

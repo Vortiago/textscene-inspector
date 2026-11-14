@@ -57,15 +57,20 @@ import {
   locaEntry,
 } from './glyfFormat';
 import { glyphMetricsReader, metricsAtInstance, type GlyphMetrics } from './sfntGlyphMetrics';
-import { readGlyphCount, readIndexToLocFormat, readUnitsPerEm, tableFits, type SfntFile } from './sfntTables';
+import {
+  readGlyphCount,
+  readHeadIsPpemRounded,
+  readIndexToLocFormat,
+  readUnitsPerEm,
+  tableFits,
+  type SfntFile,
+} from './sfntTables';
 import type { FontInstance } from './variation/fontInstance';
 import type { ContourBox } from './strike/sbixGlyph';
 import { variedGlyphPoints, type GlyphPoints, type VariedPoints } from './variation/gvar';
 import { InvalidTupleVariationsError } from './variation/tupleVariations';
 
-/** `head`: flags(2) at 16, whose bit 3 rounds the ppem, and the table through indexToLocFormat. */
-const HEAD_FLAGS_OFFSET = 16;
-const HEAD_FLAG_PPEM_ROUNDED = 0x8;
+/** `head` through indexToLocFormat. */
 const HEAD_TABLE_MIN_LENGTH = 52;
 
 /** FreeType's arbitrary limit on nested composites. */
@@ -600,7 +605,7 @@ function glyfFont(sfnt: SfntFile): GlyfFont | null {
     dv,
     bytes: new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength),
     unitsPerEm,
-    isPpemRounded: (dv.getUint16(head.offset + HEAD_FLAGS_OFFSET, false) & HEAD_FLAG_PPEM_ROUNDED) !== 0,
+    isPpemRounded: readHeadIsPpemRounded(sfnt),
     glyfOffset: glyf.offset,
     glyfLength: glyf.length,
     locaOffset: loca.offset,

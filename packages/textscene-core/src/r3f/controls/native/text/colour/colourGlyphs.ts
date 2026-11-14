@@ -13,9 +13,12 @@ import { perObject } from '../../../../../utils/perObject';
 import { recentlyRead } from '../../../../../utils/recentlyRead';
 import { blendColrLayers, type ColourBitmap } from './colourBitmap';
 
-/** Whether `outlines` hold a glyph with a colour form, so a run of them may need colour in its raster. */
+/**
+ * Whether `outlines` hold a glyph with a colour form, so a run of them may need colour in its raster.
+ * A face has strikes only where it has colour glyphs (`strike/faceStrikes.ts`).
+ */
 export function drawsColourGlyphs(outlines: SfntOutlines | null | undefined): boolean {
-  return outlines?.colourLayers !== undefined;
+  return Boolean(outlines?.colourLayers ?? outlines?.strikes ?? outlines?.svgGlyphs);
 }
 
 /**

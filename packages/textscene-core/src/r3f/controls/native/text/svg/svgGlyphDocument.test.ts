@@ -35,12 +35,12 @@ describe('svgGlyphDocumentReader', () => {
       1,
       UNITS_PER_EM
     );
-    expect(read).toEqual({ xml: '<svg xmlns="ns"><g id="glyph1"/></svg>', emboxX: 50, emboxY: 300 });
+    expect(read).toEqual({ xml: '<svg xmlns="ns"><g id="glyph1"/></svg>', embox: { x: 50, y: 300 } });
   });
 
   it('takes the em box of the face where the svg element gives none', () => {
     const read = svgGlyphDocumentReader()(documentOf('<svg><g id="glyph1"/></svg> '), 1, UNITS_PER_EM);
-    expect([read.emboxX, read.emboxY]).toEqual([UNITS_PER_EM, UNITS_PER_EM]);
+    expect([read.embox.x, read.embox.y]).toEqual([UNITS_PER_EM, UNITS_PER_EM]);
   });
 
   it('drops comments, CDATA and definitions, and writes text and attributes unescaped', () => {

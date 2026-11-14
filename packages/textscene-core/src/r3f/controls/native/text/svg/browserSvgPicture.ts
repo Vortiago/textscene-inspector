@@ -14,17 +14,23 @@ export interface ContentBox {
   readonly height: number;
 }
 
-export interface SvgPictureDrawer {
+/** A glyph's parsed document, ready to draw. */
+export interface SvgPicture {
   /**
    * The box of the document's shapes, strokes left out, as ThorVG measures a document whose view box
-   * Godot drops (`tvgSvgSceneBuilder.cpp:885-903`), or null for a document that does not parse.
+   * Godot drops (`tvgSvgSceneBuilder.cpp:885-903`).
    */
-  contentBox(xml: string): ContentBox | null;
+  readonly box: ContentBox;
   /**
    * The straight RGBA of the content of `box` stretched over the picture's size, on a bitmap of
    * `placement.width` by `placement.rows`, or null where the browser draws nothing.
    */
-  draw(xml: string, box: ContentBox, placement: SvgGlyphPlacement): Promise<Uint8ClampedArray | null>;
+  draw(placement: SvgGlyphPlacement): Promise<Uint8ClampedArray | null>;
+}
+
+export interface SvgPictureDrawer {
+  /** The picture of a glyph's document, or null for a document that does not parse. */
+  picture(xml: string): SvgPicture | null;
 }
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
@@ -33,7 +39,16 @@ const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 export function browserSvgPictureDrawer(): SvgPictureDrawer | null {
   const document = globalThis.document;
   if (!document?.body || typeof DOMParser === 'undefined') return null;
-  return { contentBox: (xml) => measuredContentBox(document, xml), draw: drawnPicture };
+  // One canvas for every draw: each draw resizes it and reads it back before the next can start.
+  const canvas = new OffscreenCanvas(1, 1);
+  return { picture: (xml) => browserPicture(document, canvas, xml) };
+}
+
+function browserPicture(document: Document, canvas: OffscreenCanvas, xml: string): SvgPicture | null {
+  const root = parsedSvg(xml);
+  if (!root) return null;
+  const box = measuredContentBox(document, root);
+  return { box, draw: (placement) => drawnPicture(canvas, root, box, placement) };
 }
 
 /** The document's root `svg` element, or null for text that does not parse as one. */
@@ -46,10 +61,8 @@ function parsedSvg(xml: string): SVGSVGElement | null {
     : null;
 }
 
-/** `getBBox` measures only an element in a rendered document, so the root joins the page unseen for the read. */
-function measuredContentBox(document: Document, xml: string): ContentBox | null {
-  const root = parsedSvg(xml);
-  if (!root) return null;
+/** `getBBox` measures only an element in a rendered document, so a copy of the root joins the page unseen for the read. */
+function measuredContentBox(document: Document, root: SVGSVGElement): ContentBox {
   const svg = document.importNode(root, true);
   svg.setAttribute('style', 'position:absolute;left:0;top:0;visibility:hidden;pointer-events:none');
   document.body.appendChild(svg);
@@ -63,25 +76,30 @@ function measuredContentBox(document: Document, xml: string): ContentBox | null 
 
 /** The content of `box` stretched over the picture's size, as ThorVG's `Picture::size` scales each axis apart. */
 async function drawnPicture(
-  xml: string,
+  canvas: OffscreenCanvas,
+  root: SVGSVGElement,
   box: ContentBox,
   placement: SvgGlyphPlacement
 ): Promise<Uint8ClampedArray | null> {
-  const root = parsedSvg(xml);
-  if (!root) return null;
   root.setAttribute('viewBox', `${box.x} ${box.y} ${box.width} ${box.height}`);
   root.setAttribute('width', String(placement.pictureWidth));
   root.setAttribute('height', String(placement.pictureHeight));
   root.setAttribute('preserveAspectRatio', 'none');
+  const url = URL.createObjectURL(
+    new Blob([new XMLSerializer().serializeToString(root)], { type: 'image/svg+xml' })
+  );
   const image = new Image();
-  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(root))}`;
+  image.src = url;
   try {
     await image.decode();
   } catch {
     // A document the browser cannot draw leaves the glyph blank, as a failed ThorVG render does.
     return null;
+  } finally {
+    URL.revokeObjectURL(url);
   }
-  const canvas = new OffscreenCanvas(placement.width, placement.rows);
+  canvas.width = placement.width;
+  canvas.height = placement.rows;
   const context = canvas.getContext('2d');
   if (!context) return null;
   context.drawImage(image, 0, 0, placement.pictureWidth, placement.pictureHeight);

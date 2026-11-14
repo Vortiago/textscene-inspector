@@ -11,6 +11,7 @@ import { perObject } from '../../../../utils/perObject';
 import { recentlyRead } from '../../../../utils/recentlyRead';
 import { glyphContoursReader, variedGlyphContoursReader } from './canvasVariation';
 import { faceStrikeSize, subpixelStepsPerPx, type GlyphVariation } from './fontMetrics';
+import type { BitmapGrid } from './ftGrays';
 import type { GlyphContours } from './glyphContours';
 import { blendGlyphBitmap, colourRaster, placedGlyphBitmap, type GlyphBitmap } from './glyphCoverage';
 import {
@@ -174,17 +175,12 @@ function svgFormReader(outlines: SfntOutlines, { loadSizePx, strike }: FaceLoad)
 function strikeFormReader(face: OutlineFace, { strike }: FaceLoad, isFillPass: boolean): GlyphFormOf | null {
   const strikes = face.outlines.strikes;
   if (!strike || !strikes) return null;
-  if (strikes.isScalable) {
-    if (!isFillPass || face.drawnOpentype) return null;
-    return (glyph) => {
-      const bitmap = strikes.bitmapOf(strike.strike, glyph);
-      return bitmap ? strikeBitmapForm(bitmap) : undefined;
-    };
-  }
-  if (!isFillPass || face.drawnOpentype) return () => null;
+  const { isScalable } = strikes;
+  if (!isFillPass || face.drawnOpentype) return isScalable ? null : () => null;
+  const miss = isScalable ? undefined : null;
   return (glyph) => {
     const bitmap = strikes.bitmapOf(strike.strike, glyph);
-    return bitmap && strikeBitmapForm(bitmap);
+    return bitmap ? strikeBitmapForm(bitmap) : miss;
   };
 }
 
@@ -203,25 +199,28 @@ const strikeBitmapForm = perObject((bitmap: StrikeBitmap): GlyphForm | null => {
       for (let row = 0; row < bitmap.rows; row++) {
         for (let column = 0; column < bitmap.width; column++) {
           const from = row * pitch + column * 4;
-          texels.set(
-            [buffer[from + 2]!, buffer[from + 1]!, buffer[from]!, buffer[from + 3]!],
-            (row * bitmap.width + column) * 4
-          );
+          const to = (row * bitmap.width + column) * 4;
+          texels[to] = buffer[from + 2]!;
+          texels[to + 1] = buffer[from + 1]!;
+          texels[to + 2] = buffer[from]!;
+          texels[to + 3] = buffer[from + 3]!;
         }
       }
       return { colour: { grid, texels } };
     }
-    case 'gray':
+    case 'gray': {
+      const coverage = new Uint8Array(pixels);
+      for (let row = 0; row < bitmap.rows; row++) {
+        coverage.set(buffer.subarray(row * pitch, row * pitch + bitmap.width), row * bitmap.width);
+      }
+      return { coverage: { grid, coverage } };
+    }
     case 'mono': {
       const coverage = new Uint8Array(pixels);
       for (let row = 0; row < bitmap.rows; row++) {
         for (let column = 0; column < bitmap.width; column++) {
-          coverage[row * bitmap.width + column] =
-            bitmap.pixelMode === 'gray'
-              ? buffer[row * pitch + column]!
-              : buffer[row * pitch + (column >> 3)]! & (0x80 >> (column & 7))
-                ? 255
-                : 0;
+          const isSet = (buffer[row * pitch + (column >> 3)]! & (0x80 >> (column & 7))) !== 0;
+          coverage[row * bitmap.width + column] = isSet ? 255 : 0;
         }
       }
       return { coverage: { grid, coverage } };
@@ -300,33 +299,32 @@ function movedBitmap(
 /** How far a form reaches past the pen box: a quad by its margin at `scale`, which a linear filter spreads a pixel. */
 function formReachPx(form: GlyphForm, scale: number, advancePx: number): GlyphReach {
   if ('contours' in form && scale === 1) return contourReachPx(form.contours, advancePx);
-  const grid =
-    'colour' in form
-      ? form.colour.grid
-      : 'coverage' in form
-        ? form.coverage.grid
-        : contourGrid(form.contours);
-  const { left, width } = placedQuad(grid, 0, 0, scale);
+  const { left, width } = placedQuad(formGrid(form), 0, 0, scale);
   return { leftPx: Math.max(0, 1 - left), rightPx: Math.max(advancePx, left + width + 1) };
 }
 
+/** The pixel box of a form at the glyph origin. */
+function formGrid(form: GlyphForm): BitmapGrid {
+  if ('colour' in form) return form.colour.grid;
+  if ('coverage' in form) return form.coverage.grid;
+  return contourGrid(form.contours);
+}
+
 /** The pixel box of `contours` at the glyph origin, from its control points. */
-function contourGrid({ points }: GlyphContours): {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-} {
-  const xs = points.map((p) => p.x);
-  const ys = points.map((p) => p.y);
-  const left = Math.floor(Math.min(0, ...xs));
-  const top = Math.floor(Math.min(0, ...ys));
-  return {
-    left,
-    top,
-    width: Math.ceil(Math.max(0, ...xs)) - left,
-    height: Math.ceil(Math.max(0, ...ys)) - top,
-  };
+function contourGrid({ points }: GlyphContours): BitmapGrid {
+  let minX = 0;
+  let minY = 0;
+  let maxX = 0;
+  let maxY = 0;
+  for (const { x, y } of points) {
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  }
+  const left = Math.floor(minX);
+  const top = Math.floor(minY);
+  return { left, top, width: Math.ceil(maxX) - left, height: Math.ceil(maxY) - top };
 }
 
 /** The rectangle of the quad Godot draws for a glyph, or null for a glyph that draws no pixel. */

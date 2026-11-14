@@ -147,10 +147,7 @@ export async function openFontOutlines(
     ),
     variationReaderOf(sfnt, ['GSUB', 'fvar'], () => import('./variation/instanceGlyph')),
   ]);
-  // A face of strikes or SVG documents alone has no outline, and draws each glyph from those.
-  const drawsWithoutOutlines = strikes !== null || svgGlyphs !== null;
-  const glyphOutlineOf =
-    hasFreeTypeOutlines(sfnt) && outlineOf ? outlineOf : drawsWithoutOutlines ? NO_OUTLINE : null;
+  const glyphOutlineOf = drawnOutlineReader(sfnt, outlineOf, strikes !== null || svgGlyphs !== null);
   const outlines = readSfntOutlines(sfnt, glyphOutlineOf, kerningReader, glyphReaders);
   return (
     outlines && {
@@ -162,6 +159,19 @@ export async function openFontOutlines(
       ...(load.modulatesColourGlyphs && { modulatesColourGlyphs: true }),
     }
   );
+}
+
+/**
+ * The outline reader of a face, or null for a face that draws nothing. A face of strikes or SVG
+ * documents alone has no outline, and draws each glyph from those.
+ */
+function drawnOutlineReader(
+  sfnt: SfntFile,
+  outlineOf: GlyphOutlineReader | null,
+  drawsWithoutOutlines: boolean
+): GlyphOutlineReader | null {
+  if (hasFreeTypeOutlines(sfnt) && outlineOf) return outlineOf;
+  return drawsWithoutOutlines ? NO_OUTLINE : null;
 }
 
 /**

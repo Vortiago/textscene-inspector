@@ -11,8 +11,7 @@ import type { SvgDocument } from './svgTable';
 /** The document of one glyph, and the em box of its `svg` element. */
 export interface SvgGlyphDocument {
   readonly xml: string;
-  readonly emboxX: number;
-  readonly emboxY: number;
+  readonly embox: Embox;
 }
 
 /** Builds the document of `glyph` from the document that holds it, in a face of `unitsPerEm`. */
@@ -31,13 +30,12 @@ interface GlyphNodePlace {
 /** A parsed document (`TVG_DocumentCache`): its content outside the glyph elements, its em box and each glyph's places. */
 interface DocumentCache {
   body: string;
-  emboxX: number;
-  emboxY: number;
+  embox: Embox;
   readonly places: Map<number, GlyphNodePlace[]>;
 }
 
 /** The em box of a document as its `svg` element sets it. */
-interface Embox {
+export interface Embox {
   x: number;
   y: number;
 }
@@ -50,15 +48,16 @@ const GLYPH_ID_PREFIX = 'glyph';
  * document parses it whole, and every later read builds from that parse.
  */
 export function svgGlyphDocumentReader(): SvgGlyphDocumentReader {
-  const caches = new Map<object, DocumentCache>();
+  // A WeakMap frees the parse of an inflated document, whose key lives only as long as its read.
+  const caches = new WeakMap<object, DocumentCache>();
   return (document, glyph, unitsPerEm) => {
     let cache = caches.get(document.key);
-    if (!cache) caches.set(document.key, (cache = { body: '', emboxX: 0, emboxY: 0, places: new Map() }));
+    if (!cache) caches.set(document.key, (cache = { body: '', embox: { x: 0, y: 0 }, places: new Map() }));
     const embox = { x: unitsPerEm, y: unitsPerEm };
     const xml = cache.body
       ? documentFromCache(document.bytes, cache, glyph, embox)
       : parsedDocument(document.bytes, cache, glyph, embox);
-    return { xml, emboxX: embox.x, emboxY: embox.y };
+    return { xml, embox };
   };
 }
 
@@ -66,6 +65,7 @@ export function svgGlyphDocumentReader(): SvgGlyphDocumentReader {
 function parsedDocument(bytes: Uint8Array, cache: DocumentCache, glyph: number, embox: Embox): string {
   const parser = new XmlParser(bytes);
   let body = '';
+  let content = '';
   let node = '';
   // -1 while the parse writes the content, else how deep it is inside the glyph's element, never below 0.
   let depth = -1;
@@ -77,7 +77,7 @@ function parsedDocument(bytes: Uint8Array, cache: DocumentCache, glyph: number, 
     const glyphOfNode = isInDefs ? null : glyphOfId(parser);
     if (glyphOfNode !== null) {
       const places = cache.places.get(glyphOfNode) ?? [];
-      places.push({ documentOffset: parser.nodeOffset, bodyOffset: cache.body.length });
+      places.push({ documentOffset: parser.nodeOffset, bodyOffset: content.length });
       cache.places.set(glyphOfNode, places);
       if (glyphOfNode !== glyph) {
         parser.skipSection();
@@ -89,7 +89,7 @@ function parsedDocument(bytes: Uint8Array, cache: DocumentCache, glyph: number, 
     const written = nodeXml(parser, embox);
     if (depth < 0) {
       body += written.xml;
-      cache.body += written.xml;
+      content += written.xml;
       continue;
     }
     node += written.xml;
@@ -99,15 +99,14 @@ function parsedDocument(bytes: Uint8Array, cache: DocumentCache, glyph: number, 
       body += node;
     }
   }
-  cache.emboxX = embox.x;
-  cache.emboxY = embox.y;
+  cache.body = content;
+  cache.embox = { ...embox };
   return body;
 }
 
 /** A later read of a document (`thorvg_svg_in_ot.cpp:137-162`): the cached content with the glyph's elements put back. */
 function documentFromCache(bytes: Uint8Array, cache: DocumentCache, glyph: number, embox: Embox): string {
-  embox.x = cache.emboxX;
-  embox.y = cache.emboxY;
+  Object.assign(embox, cache.embox);
   let body = cache.body;
   let inserted = 0;
   for (const { documentOffset, bodyOffset } of cache.places.get(glyph) ?? []) {

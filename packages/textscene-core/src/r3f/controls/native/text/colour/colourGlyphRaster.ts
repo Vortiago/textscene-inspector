@@ -151,12 +151,7 @@ function layColourBitmap(
 const GLYPH_RECT_MARGIN = 1;
 
 /** The rectangle of the quad Godot draws for `grid` at its origin, `scale` px a texel, margin included. */
-export function placedQuad(
-  grid: BitmapGrid,
-  originX: number,
-  originY: number,
-  scale: number
-): { left: number; top: number; width: number; height: number } {
+export function placedQuad(grid: BitmapGrid, originX: number, originY: number, scale: number): BitmapGrid {
   return {
     left: originX + (grid.left - GLYPH_RECT_MARGIN) * scale,
     top: originY + (grid.top - GLYPH_RECT_MARGIN) * scale,
@@ -176,26 +171,30 @@ function sampleLinear({ grid, texels }: ColourBitmap, u: number, v: number, out:
   const fu = u - column;
   const fv = v - row;
   out.fill(0);
-  for (const [dc, dr, weight] of [
-    [0, 0, (1 - fu) * (1 - fv)],
-    [1, 0, fu * (1 - fv)],
-    [0, 1, (1 - fu) * fv],
-    [1, 1, fu * fv],
-  ] as const) {
-    if (weight === 0) continue;
-    const c = column + dc;
-    const r = row + dr;
-    const isOnBitmap = c >= 0 && r >= 0 && c < grid.width && r < grid.height;
-    const at = (r * grid.width + c) * 4;
-    for (let channel = 0; channel < 4; channel++) {
-      const value = isOnBitmap ? texels[at + channel]! : EMPTY_TEXEL[channel]!;
-      out[channel] = out[channel]! + value * weight;
-    }
-  }
+  addTexel(grid, texels, column, row, (1 - fu) * (1 - fv), out);
+  addTexel(grid, texels, column + 1, row, fu * (1 - fv), out);
+  addTexel(grid, texels, column, row + 1, (1 - fu) * fv, out);
+  addTexel(grid, texels, column + 1, row + 1, fu * fv, out);
+}
+
+/** Adds the texel at `column`, `row` times `weight` to `out`, the empty texel where it is off the bitmap. */
+function addTexel(
+  grid: BitmapGrid,
+  texels: Uint8Array,
+  column: number,
+  row: number,
+  weight: number,
+  out: number[]
+): void {
+  if (weight === 0) return;
+  const isOnBitmap = column >= 0 && row >= 0 && column < grid.width && row < grid.height;
+  const from = isOnBitmap ? texels : EMPTY_TEXEL;
+  const at = isOnBitmap ? (row * grid.width + column) * 4 : 0;
+  for (let channel = 0; channel < 4; channel++) out[channel] = out[channel]! + from[at + channel]! * weight;
 }
 
 /** The texel of Godot's glyph texture where no glyph lies. */
-const EMPTY_TEXEL = [255, 255, 255, 0] as const;
+const EMPTY_TEXEL = Uint8Array.of(255, 255, 255, 0);
 
 /** Divides each pixel's colour by its alpha, and gives a pixel no glyph reaches the font colour. */
 function straightColours(image: ImageData, premultiplied: Float32Array, text: ByteColour): void {
