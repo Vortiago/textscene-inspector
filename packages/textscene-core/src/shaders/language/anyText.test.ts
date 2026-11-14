@@ -1,6 +1,6 @@
 /**
- * Any text gets an answer: random characters, random tokens and valid shaders with one change each
- * end with a transpiled shader or a `ShadingLanguageError`, within a time limit. A tree the parser
+ * Any text gets an answer: random characters, random tokens, valid shaders with one change and long
+ * repeats each end with a transpiled shader or a `ShadingLanguageError`, within a time limit. A tree the parser
  * gives passes the tree check and prints as text that parses to the same tree.
  */
 
@@ -139,6 +139,15 @@ function changedShader(random: () => number): string {
   return characters.join('');
 }
 
+/**
+ * One character or token repeated thousands of times, then a random token: the shape of text
+ * that makes a backtracking pattern slow, as a run of zeros or of `case` labels does.
+ */
+function longRepeat(random: () => number): string {
+  const unit = random() < 0.5 ? pick(random, CHARACTERS) : `${pick(random, TOKENS)} `;
+  return unit.repeat(1_000 + Math.floor(random() * 19_000)) + pick(random, TOKENS);
+}
+
 /** The answer to `text`: `accepted`, or Godot's or the transpiler's reason. Any other error throws. */
 function answer(text: string): string {
   try {
@@ -170,6 +179,7 @@ describe.each([
   ['random characters', randomCharacters, 1],
   ['random tokens', randomTokens, 2],
   ['valid shaders with one change', changedShader, 3],
+  ['long repeats of one character or token', longRepeat, 4],
 ] as const)('%s', (_, generate, seed) => {
   it('each get an answer in time, and each tree they give is sound', () => {
     const random = randomSource(seed);

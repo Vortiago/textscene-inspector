@@ -36,6 +36,13 @@ export function operatorSignatures({ header, language }, types) {
 }
 
 /**
+ * A new pattern for one group of `case` labels and the `{` that opens its body, a comment
+ * allowed after each label. Each part matches one way, so a run of labels with no `{` fails in
+ * linear time.
+ */
+export const caseGroupPattern = () => /((?:case (OP_\w+):(?:\s*\/\/[^\n]*\n)?\s*)+)\{/g;
+
+/**
  * The case groups of `_validate_operator`'s switch: for each operator the body of its group and
  * the line of its first label.
  */
@@ -46,7 +53,7 @@ function operatorCases(cpp) {
   const switchEnd = matchingBrace(cpp, cpp.indexOf('{', switchStart));
   const body = cpp.slice(cpp.indexOf('{', switchStart) + 1, switchEnd);
   const byOperator = new Map();
-  const groupPattern = /((?:case (OP_\w+):(?:\s*\/\/[^\n]*\n)?\s*)+)\{/g;
+  const groupPattern = caseGroupPattern();
   let match;
   while ((match = groupPattern.exec(body)) !== null) {
     const open = match.index + match[0].length - 1;
