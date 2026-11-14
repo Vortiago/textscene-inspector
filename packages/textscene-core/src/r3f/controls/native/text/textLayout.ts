@@ -19,6 +19,7 @@ import {
   getFontExtraAdvancePx,
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
+  getFontGlyphAdvancePx,
   getFontRunGlyphAdvancePx,
   fallbackChainOf,
   type FontMetrics,
@@ -617,8 +618,8 @@ function clusterTail(start: number, end: number): BreakGlyph {
 }
 
 /**
- * The glyph of character `i` where it takes no shaping: a break, a control, a tab or a hex-code box.
- * Undefined for a character its face shapes.
+ * The glyph of character `i` where it takes no shaping: a break, a control, a tab, a character its
+ * face draws apart or a hex-code box. Undefined for a character its face shapes.
  */
 function specialGlyph(
   chars: ArrayLike<string>,
@@ -637,8 +638,15 @@ function specialGlyph(
     // Without `preserve_invalid` or `preserve_control`, a control pushes no `Glyph` (`:6844`).
     return preserveControl ? hexCodeBox(ch, i, style.sizes[i]!) : zeroWidthGlyph(ch, i);
   }
-  if (!lacksGlyph(style.faces[i]!, ch, style.hasUndrawnGlyph)) return undefined;
+  const face = style.faces[i]!;
+  if (face.drawsApart?.(ch)) return drawnApartGlyph(ch, i, face, style.sizes[i]!);
+  if (!lacksGlyph(face, ch, style.hasUndrawnGlyph)) return undefined;
   return hexCodeBox(ch, i, style.sizes[i]!);
+}
+
+/** The glyph of character `ch` at `i` that `face` draws apart, at its character advance. */
+function drawnApartGlyph(ch: string, i: number, face: FontMetrics, size: number): BreakGlyph {
+  return { ...zeroWidthGlyph(ch, i), advance: getFontGlyphAdvancePx(face, ch, size) };
 }
 
 /** The glyph of character `ch` at `i` with no advance. */

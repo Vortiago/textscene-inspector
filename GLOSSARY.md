@@ -162,13 +162,17 @@ _Avoid_: "fallback font" for the bundled Open Sans, which is the **Project defau
 The characters of a run that draw as one unit: a base and the marks typed after it, or the characters of a **Shaped glyph**. The layout places each cluster once, with the cluster's text as its `char`. A line break and a reveal step fall only at the edge of a cluster, as Godot's glyph `start` and `end` set them.
 _Avoid_: "grapheme", which Unicode segments by other rules.
 
-**Shaped glyph** (`SubstitutedCluster` in `r3f/controls/native/text/glyphRun.ts`):
+**Shaped glyph** (`RunCluster` in `r3f/controls/native/text/glyphRun.ts`):
 A glyph the `GSUB` lookups of a run give a **Cluster** in place of the `cmap` glyph of each character: a ligature, or a glyph a contextual lookup swaps by its neighbours. Godot shapes each span's run whole (`text_server_adv.cpp:7401`), so a lookup reads every character of the run. The cluster takes the glyph's own advance and draws by its glyph id.
 _Avoid_: "ligature" for a swap of one character, which joins nothing.
 
-**Decomposed glyph** (`DecomposedGlyph` in `r3f/controls/native/text/sfntDecomposition.ts`):
+**Decomposed glyph** (`normalisedCharacters` in `r3f/controls/native/text/canonicalGlyphs.ts`):
 A **Cluster** that HarfBuzz's normalisation draws as other characters of the face: a character the face lacks splits into a base and marks by its canonical decomposition, the marks sort by combining class, and a typed base and mark join into the composite the face has (`canonicalGlyphs.ts`). Each mark sits at the offset of the face's `GPOS` mark lookups (`markPositioning.ts`), or against the ink of the base where the face has no `GPOS` script (`fallbackMarkPositioning.ts`). The face then counts as having the character, so its cluster stays in the face and out of the **Fallback chain**.
 _Avoid_: "composed glyph", which names one step of it.
+
+**Drawn-apart character** (`FontMetrics.drawsApart` in `r3f/controls/native/text/fontMetrics.ts`):
+A character the layout draws as a glyph of its own, outside the run shaping, at the advance its face gives the character: the `[img]` and `[hr]` placeholder of a RichTextLabel. Godot gives an embedded object such a glyph, as wide as the object (`text_server_adv.cpp:7368-7387`). The run shaping is the one source of the advance of every other glyph, so a face wrapper changes an advance only through this.
+_Avoid_: "image glyph", which names one use of it.
 
 **Project fonts** (`resources/fonts/font/projectFonts.ts`):
 The two files the **Project settings** name for every font lookup, the project theme (`gui/theme/custom`) and the **Project default font**, with the **Default theme table** at the project's `gui/theme/default_theme_scale`. The Control solve tree, TextMesh and Label3D each resolve them from one source.

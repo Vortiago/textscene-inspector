@@ -4,7 +4,8 @@
  * `descent=600`, bake 42) worked by hand, never from the implementation.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
+import { fixtureSfnt, fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
+import { sfntFace } from '../../../../r3f/controls/native/text/sfntFace.testkit';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -978,6 +979,16 @@ describe('shapeRichText — an [img] placeholder', () => {
     (width) => {
       const [glyph] = shapeRuns([bareImageRun(width)]).lines[0]!.glyphs;
       expect(glyph!.advance).toBe(width);
+    }
+  );
+
+  it.each(['montserrat-semibold-subset.ttf', 'noto-sans-regular-subset.ttf'])(
+    'advances by the image width in %s, whose run shaping maps no glyph to the placeholder',
+    (font) => {
+      const faces = { ...ALL_FACES, normal: sfntFace(fixtureSfnt(font)) };
+      const glyphs = shapeRuns([textRun({ text: 'a', fontSizePx: FONT_SIZE }), bareImageRun(40)], { faces })
+        .lines[0]!.glyphs;
+      expect(glyphs[1]!.advance).toBe(40);
     }
   );
 

@@ -9,6 +9,9 @@ import { OPEN_SANS_METRICS } from './openSansMetrics';
 import { withVariation, type FontMetrics } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
+import { fixtureSfnt } from './sfntOutlines.testkit';
+import { sfntFace } from './sfntFace.testkit';
+import { glyphsOf, unshapedFace } from './textLayout.testkit';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 
@@ -501,6 +504,39 @@ describe('shapeText — a face for each character', () => {
       fontMetrics: wideFace,
     });
     expect(plain.lines[0]!.glyphs[0]!.fontMetrics).toBe(wideFace);
+  });
+});
+
+describe('shapeText — a character its face draws apart', () => {
+  const OBJECT = '\ufffc';
+  // Montserrat maps no glyph to U+FFFC, so its run shaping reads glyph 0 there.
+  const shaped = sfntFace(fixtureSfnt('montserrat-semibold-subset.ttf'));
+
+  /** `face` that draws `OBJECT` apart from its runs, one em wide. */
+  function objectFace(face: FontMetrics): FontMetrics {
+    return Object.create(face, {
+      hasGlyph: { value: (ch: string) => ch === OBJECT || face.hasGlyph(ch) },
+      drawsApart: { value: (ch: string) => ch === OBJECT },
+      getGlyphAdvanceUnits: {
+        value: (ch: string) => (ch === OBJECT ? face.unitsPerEm : face.getGlyphAdvanceUnits(ch)),
+      },
+    });
+  }
+
+  it('advances by its character advance in a face with run shaping, as in a face with none', () => {
+    const [inShapedFace] = glyphsOf(OBJECT, objectFace(shaped), 40);
+    const [inUnshapedFace] = glyphsOf(OBJECT, objectFace(unshapedFace(shaped)), 40);
+    expect([inShapedFace!.advance, inUnshapedFace!.advance]).toEqual([40, 40]);
+  });
+
+  it('takes no glyph of the font', () => {
+    const [glyph] = glyphsOf(OBJECT, objectFace(shaped), 40);
+    expect(glyph!.glyphIndex).toBeUndefined();
+  });
+
+  it('leaves the shaped glyphs on either side of it in the run shaping', () => {
+    const glyphs = glyphsOf(`a${OBJECT}b`, objectFace(shaped), 40);
+    expect(glyphs.map((glyph) => glyph.glyphIndex !== undefined)).toEqual([true, false, true]);
   });
 });
 

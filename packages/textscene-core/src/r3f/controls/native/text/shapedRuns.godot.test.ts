@@ -11,16 +11,14 @@ import { withVariation, type FontMetrics } from './fontMetrics';
 import { openFontContainer } from './fontContainer';
 import { opentypeOf } from './glyphVariation.testkit';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
-import { sfntGlyphIndex, sfntHasGlyph } from './sfntCmap';
-import { sfntFaceGlyphs } from './sfntFaceGlyphs';
-import { glyphMetricsReader } from './sfntGlyphMetrics';
+import { sfntGlyphIndex } from './sfntCmap';
+import { sfntFace } from './sfntFace.testkit';
 import { openFontOutlines } from './sfntOutlines';
 import { bundledFontBytes } from './bundledFontBytes';
 import { fixtureFontBytes } from './sfntOutlines.testkit';
-import { OUTLINE_TABLE_TAGS, parseSfntScalars, type SfntFile } from './sfntTables';
+import { OUTLINE_TABLE_TAGS, type SfntFile } from './sfntTables';
 import type { GlyphPlacement } from './textLayout';
 import { glyphsOf } from './textLayout.testkit';
-import { defaultKerningReader } from './variation/instanceKerning';
 
 interface ReferenceGlyph {
   readonly index: number;
@@ -56,37 +54,8 @@ async function sfntOf(font: string): Promise<SfntFile> {
   return sfnt;
 }
 
-/**
- * A face that reads every number of `font` from its tables. The scene-font loader's face measures its
- * kerning on a canvas, which carries the same `GPOS` pairs.
- */
-async function sfntFaceOf(font: string): Promise<FontMetrics> {
-  const sfnt = await sfntOf(font);
-  const { unitsPerEm, ascent, descent } = parseSfntScalars(sfnt)!;
-  const glyphIndexOf = sfntGlyphIndex(sfnt)!;
-  const metricsOf = glyphMetricsReader(sfnt);
-  const advanceUnits = (ch: string) => metricsOf(glyphIndexOf(ch.codePointAt(0)!), 0).horizontal.advance;
-  const kerningOf = defaultKerningReader(sfnt);
-  const lookupGlyph = (ch: string) => {
-    const codePoint = ch.codePointAt(0)!;
-    return { glyph: glyphIndexOf(codePoint), codePoint };
-  };
-  return {
-    kind: 'canvas',
-    unitsPerEm,
-    ascent,
-    descent,
-    hasGlyph: sfntHasGlyph(sfnt),
-    getGlyphAdvanceUnits: advanceUnits,
-    getKerningAdjustmentUnits: (a, b) =>
-      (kerningOf?.(lookupGlyph(a), lookupGlyph(b)) ?? []).reduce((units, value) => units + value.units, 0),
-    averageAdvanceUnits: advanceUnits('n'),
-    ...sfntFaceGlyphs(sfnt, () => sfnt, defaultKerningReader),
-  };
-}
-
 async function faceAt(row: ReferenceRun): Promise<FontMetrics> {
-  const face = await sfntFaceOf(row.font);
+  const face = sfntFace(await sfntOf(row.font));
   const opentype = opentypeOf(row.opentype);
   if (!opentype?.size) return face;
   const outlines = await openFontOutlines(bytesOf(row.font));
