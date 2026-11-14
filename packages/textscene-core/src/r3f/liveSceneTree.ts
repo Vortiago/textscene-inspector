@@ -42,6 +42,7 @@ import {
 import type { SceneResources } from './SceneResourcesContext.js';
 import { TILE_SET } from '../resources/tileset/kind.js';
 import { isCanvasItem } from './canvasItemClass.js';
+import { paintRoomOf } from './canvasItemPass/paintRoom.js';
 import type { SceneTileCell } from '../resources/tileset/sceneTileCells.js';
 import {
   placedSceneTileRoot,
@@ -362,10 +363,10 @@ export function rootScope(ctx: LiveTreeContext): SceneScope {
 
 /**
  * One group of live children. `origin` is the React key namespace. `merged`
- * children resolve in the sub-scene's scope, `inline`, `glb` and `tiles` children in the outer scope.
+ * children resolve in the sub-scene's scope, `front`, `inline`, `glb` and `tiles` children in the outer scope.
  */
 export interface LiveChildGroup {
-  origin: 'merged' | 'inline' | 'glb' | 'tiles';
+  origin: 'front' | 'merged' | 'inline' | 'glb' | 'tiles';
   children: readonly LiveNode[];
   /** Both pools this group's children resolve their own refs against, as a {@link SceneScope}. */
   scope: SceneScope;
@@ -506,22 +507,24 @@ function liveStep(node: LiveNode, groupScope: SceneScope, sources: TreeSources):
   const instanced = loadedInstance(lookup, own, sceneCache);
   const merged = collapseInstance(node, own, instanced, sceneCache);
   return withSceneTiles(
-    merged === node
-      ? {
-          node,
-          isMerged: false,
-          instancePath,
-          scope: own,
-          isRefusedInstance: instanced?.isRefused ?? false,
-          isFailedInstance: lookup.scenePath !== null && lookup.cached === null,
-          groups: liveChildGroups(node, own, instanced, glbCache),
-        }
-      : mergedStep(
-          node.sceneTile ? placedSceneTileRoot(merged, node.sceneTile) : merged,
-          own,
-          instancePath,
-          sources
-        ),
+    withFrontChildren(
+      merged === node
+        ? {
+            node,
+            isMerged: false,
+            instancePath,
+            scope: own,
+            isRefusedInstance: instanced?.isRefused ?? false,
+            isFailedInstance: lookup.scenePath !== null && lookup.cached === null,
+            groups: liveChildGroups(node, own, instanced, glbCache),
+          }
+        : mergedStep(
+            node.sceneTile ? placedSceneTileRoot(merged, node.sceneTile) : merged,
+            own,
+            instancePath,
+            sources
+          )
+    ),
     sources
   );
 }
@@ -543,6 +546,17 @@ function mergedStep(
     isFailedInstance: false,
     groups,
   };
+}
+
+/**
+ * `step` with the internal front children its node type registers (`PaintRoom.frontChildren`) as a
+ * `front` group before the others, as `INTERNAL_MODE_FRONT` places them (`node.h:585-600`).
+ */
+function withFrontChildren(step: LiveStep): LiveStep {
+  const children = paintRoomOf(step.node.type).frontChildren?.(step.node) ?? [];
+  if (children.length === 0) return step;
+  const group: LiveChildGroup = { origin: 'front', children, scope: step.scope };
+  return { ...step, groups: [group, ...step.groups] };
 }
 
 /**

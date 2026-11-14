@@ -2,14 +2,12 @@
  * A TileMap draws its layers through the tile path of a TileMapLayer (`tile_map.cpp:277-279`), so
  * one whose atlas source draws a CanvasTexture lights through the CanvasTexture's maps alike.
  */
-import './index.r3f';
-import { TileMap } from './Component';
 import { parseTileMap } from './parser';
 import { subResource } from '../../../../testing/subResource';
 import {
   CANVAS_TEXTURE_REF,
   describeCanvasTextureItem,
-  renderLitItem,
+  renderLitScene,
 } from '../../../../r3f/testing/canvasTextureLighting';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 
@@ -38,7 +36,7 @@ function tileMapNode(): TscnNode {
 }
 
 function render(wrapper: TscnInternalResource) {
-  return renderLitItem(<TileMap node={tileMapNode()} />, [...TILE_SET, wrapper]);
+  return renderLitScene(tileMapNode(), [...TILE_SET, wrapper]);
 }
 
 describeCanvasTextureItem('TileMap', render);

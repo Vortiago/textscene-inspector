@@ -15,7 +15,7 @@ import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel, type TileSetStatus } from '../../../../r3f/useTileSetModel';
 import { YSortExtraChildrenProvider } from '../../../../r3f/ySortExtraChildren';
 import { useNodePath } from '../../../../r3f/contexts/NodePathContext';
-import { SceneTileInstances } from '../shared/SceneTileInstances';
+import { TailChildren } from '../shared/InternalChildren';
 import { ScenePlaceholders } from '../shared/ScenePlaceholders';
 import { useSceneTiles } from '../shared/useSceneTiles';
 import type { SceneTiles } from '../../../../r3f/liveSceneTiles';
@@ -105,7 +105,7 @@ function QuadrantLayer({ node, model, status, sceneTiles, children }: QuadrantLa
       )}
     >
       {children}
-      <SceneTileInstances node={node} instances={sceneTiles.children} />
+      <TailChildren node={node} internals={sceneTiles.children} />
     </CanvasItem2D>
   );
 }

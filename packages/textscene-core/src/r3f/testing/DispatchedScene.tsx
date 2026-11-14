@@ -4,6 +4,10 @@
  */
 
 import type { ReactNode } from 'react';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import type { ResourceLoader } from '../../resources/ResourceLoader';
+import { CanvasLighting2DContext, type CanvasLighting2D } from '../lighting2d/lightPassContext';
+import { settleLoads } from './settleLoads';
 import type { SceneGraph } from '../../core/SceneGraph';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { NodeDispatcher } from '../NodeDispatcher';
@@ -40,4 +44,24 @@ export function DispatchedScene({
       </SceneStack>
     </HierarchyProvider>
   );
+}
+
+/** Mounts `sceneGraph` on a 2D canvas lit by `lighting`, and waits for the loads it starts. */
+export async function renderDispatched2D(
+  sceneGraph: SceneGraph,
+  loader: ResourceLoader,
+  lighting: CanvasLighting2D
+) {
+  const renderer = await ReactThreeTestRenderer.create(
+    <DispatchedScene
+      sceneGraph={sceneGraph}
+      loader={loader}
+      workspace="2d"
+      around={(nodes) => (
+        <CanvasLighting2DContext.Provider value={lighting}>{nodes}</CanvasLighting2DContext.Provider>
+      )}
+    />
+  );
+  await settleLoads();
+  return renderer;
 }
