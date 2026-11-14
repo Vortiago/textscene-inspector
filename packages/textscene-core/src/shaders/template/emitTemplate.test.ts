@@ -1,0 +1,38 @@
+import { screenCoordinate, uv, vec2 } from 'three/tsl';
+import { describe, expect, it } from 'vitest';
+import { generatedFragmentShader } from '../generatedShader.testkit';
+import { parse } from '../language/parse.js';
+import { tokenize } from '../language/tokenizer.js';
+import { emitTemplateStage } from './emitTemplate.js';
+import { compileMaterial, linkTemplateStage } from './link.js';
+import { MODE_TABLES } from './modeTables.generated.js';
+
+const DEFAULT_SKY = 'shader_type sky;\n\nvoid sky() {\n\tCOLOR = vec3(0.0);\n}\n';
+
+function skyFragment() {
+  const material = compileMaterial(parse(tokenize(DEFAULT_SKY, 'user.gdshader')), MODE_TABLES.sky!);
+  const stage = linkTemplateStage('environment/sky.glsl', 'fragment', '', material);
+  const inputs = new Map([
+    ['uv_interp', vec2(uv())],
+    ['gl_FragCoord', screenCoordinate],
+  ]);
+  return emitTemplateStage(stage, inputs as never, { name: 'frag_color', type: 'vec4' });
+}
+
+describe('emitTemplateStage', () => {
+  it("builds the sky's fragment stage as one program", () => {
+    expect(generatedFragmentShader(skyFragment().result)).toContain('pow(');
+  });
+
+  it('gives each member of a uniform block a uniform by its name', () => {
+    expect(skyFragment().uniforms.has('params.time')).toBe(true);
+  });
+
+  it('gives each member of an array of structs an array', () => {
+    expect(skyFragment().uniforms.has('directional_lights.data.direction_energy')).toBe(true);
+  });
+
+  it('gives each texture a node to bind', () => {
+    expect([...skyFragment().textures.keys()]).toContain('volumetric_fog_texture');
+  });
+});

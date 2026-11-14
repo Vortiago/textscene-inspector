@@ -7,6 +7,7 @@
 
 import { select } from 'three/tsl';
 import type { Node } from 'three/webgpu';
+import { builtInCall } from './emitBuiltIn.js';
 import { constantNode } from './emitConstant.js';
 import { assignedOperator, constructed, element, OPERATIONS } from './emitOperation.js';
 import type { EmitScope } from './emitScope.js';
@@ -123,6 +124,11 @@ export class ExpressionEmitter {
 
   /** A call in an expression, and its result. */
   private called(call: CallNode): Value {
+    if (call.row.id !== 'OP_CALL')
+      return builtInCall(
+        call.function,
+        call.operands.map((operand) => this.node(operand))
+      );
     const called = this.context.functions.call(call.function, this.passed(call));
     this.writeBack(call, called);
     return called.result;

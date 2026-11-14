@@ -5,6 +5,7 @@
  * positions, so an error names the user's line.
  */
 
+import { glslBlock } from '../language/godotText.js';
 import { INSTRUCTION_TABLE } from '../language/instructionTable.generated.js';
 import type { BlockNode, FunctionNode, ShaderNode, StructNode } from '../language/shaderTree.js';
 import { everyExpressionIn } from '../language/treeWalk.js';
@@ -36,7 +37,9 @@ export function compileMaterial(shader: ShaderNode, table: ModeTable): CompiledM
   const stages = stageFunctionsOf(shader.shaderType ?? '');
   const code = new Map<string, BlockNode>();
   const functions: FunctionNode[] = [];
-  for (const definition of shader.functions) {
+  for (const parsed of shader.functions) {
+    // GLSL reads the material as the text Godot writes for it, so its tree is the one GLSL reads.
+    const definition = { ...parsed, body: glslBlock(parsed.body) };
     if (stages.has(definition.rname)) code.set(definition.rname.toUpperCase(), ids.block(definition.body));
     else functions.push(ids.function(definition));
   }

@@ -148,6 +148,8 @@ export function constructed(
   operands: readonly Node[],
   operandTypes: readonly ValueType[]
 ): Node {
+  // A template's `sampler3D(texture, sampler)`: three keeps the sampler state on the texture.
+  if (type.startsWith('sampler')) return operands[0]!;
   const columns = shapeOf(type)!.columns;
   if (columns === undefined || operandTypes.length !== 1 || operandTypes[0] !== 'float')
     return CONSTRUCTORS[type]!(...operands);
