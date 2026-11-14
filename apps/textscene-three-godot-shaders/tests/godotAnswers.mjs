@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /** The families of answers, each a record file of the live run. */
-export const FAMILIES = ['probes', 'random', 'operators', 'corpus'];
+const FAMILIES = ['probes', 'random', 'operators', 'corpus'];
 
 /** Written only by `pnpm godot:probes`, and left out of the repository. */
 export const LIVE_DIR = join(import.meta.dirname, '.godot-answers');
@@ -51,4 +51,15 @@ export function godotAnswers() {
     operators: { godot, cases: smoke.operators },
     corpus: { godot, cases: smoke.corpus },
   };
+}
+
+/** Godot's live answers, for a reader that needs every case. Throws on the smoke subset. */
+export function liveGodotAnswers() {
+  const answers = godotAnswers();
+  if (!answers.live) {
+    throw new Error(
+      `expected Godot's live answers in ${LIVE_DIR}, found the smoke subset only: run \`pnpm godot:probes\` first`
+    );
+  }
+  return answers;
 }

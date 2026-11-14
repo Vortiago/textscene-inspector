@@ -19,7 +19,7 @@ import type {
 import { subExpressions, withSubExpressions } from '../treeWalk.js';
 import { shapeOf } from '../types.js';
 import type { FreshNames } from './freshNames.js';
-import { flow, flowBody, not, operator } from './nodes.js';
+import { assign, declaration, flow, flowBody, ifStatement, not, variable } from './nodes.js';
 import { rewriteFunction } from './rewrite.js';
 
 export function lowerSideEffects(definition: FunctionNode, names: FreshNames): FunctionNode {
@@ -137,8 +137,7 @@ class Hoist {
     if (!writes(second)) return { ...expression, operands: [test, second] };
     const result = this.declared(expression, test);
     const runsSecond = expression.op === 'OP_AND' ? result : not(result);
-    const body = flowBody(this.assignedIn(result, second), second.position);
-    this.statements.push(flow('FLOW_OP_IF', [runsSecond], [body], expression.position));
+    this.statements.push(ifStatement(runsSecond, this.assignedIn(result, second), expression.position));
     return result;
   }
 
@@ -159,14 +158,8 @@ class Hoist {
     const arraySize = arraySizeOf(expression);
     const name = this.names.next('value');
     const { type, position } = expression;
-    this.statements.push({
-      kind: 'declaration',
-      type,
-      isConst: false,
-      declarators: [{ name, position, ...(arraySize > 0 ? { arraySize } : {}), ...(value ? { value } : {}) }],
-      position,
-    });
-    return { kind: 'variable', type, name, position, ...(arraySize > 0 ? { arraySize } : {}) };
+    this.statements.push(declaration(name, type, value, position, arraySize));
+    return variable(name, type, position, arraySize);
   }
 }
 
@@ -178,8 +171,7 @@ function rebuilt(expression: Expression, parts: readonly Expression[]): Expressi
 
 /** `target = value`: an operator for a value type, a whole assignment for a struct or an array. */
 function write(target: VariableNode, value: Expression): Statement {
-  if (shapeOf(target.type) && arraySizeOf(target) === 0)
-    return operator('OP_ASSIGN', [target, value], target.position);
+  if (shapeOf(target.type) && arraySizeOf(target) === 0) return assign(target, value);
   return {
     kind: 'whole assign',
     type: target.type,

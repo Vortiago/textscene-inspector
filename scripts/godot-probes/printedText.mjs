@@ -13,9 +13,9 @@ const LANGUAGE = '/packages/textscene-core/src/shaders/language/';
 
 /**
  * The transpiler's printer as two functions from text to printed text: `print` of the parsed
- * tree, and `lower` of the tree the emitter walks (`emittedTree.ts`) where it differs. Each gives nothing for a
- * text the transpiler refuses. Vite compiles the TypeScript sources, since this script runs in
- * plain Node.
+ * tree, and `lower` of the tree the emitter walks (`emittedTree.ts`) where it
+ * differs. Each gives nothing for a text the transpiler refuses. Vite compiles the TypeScript
+ * sources, since this script runs in plain Node.
  */
 export async function loadPrinter() {
   const server = await createServer({
@@ -27,7 +27,7 @@ export async function loadPrinter() {
   });
   try {
     const load = (file) => server.ssrLoadModule(`${LANGUAGE}${file}`);
-    const [{ tokenize }, { parse }, { printShader }, { ShadingLanguageError }, { emittedTree }] =
+    const [{ tokenize }, { parse }, { printShader }, { ShadingLanguageError }, { emittedShader }] =
       await Promise.all(
         ['tokenizer.ts', 'parse.ts', 'printer.ts', 'shadingLanguageError.ts', 'emittedTree.ts'].map(load)
       );
@@ -42,10 +42,7 @@ export async function loadPrinter() {
     return {
       print: unlessRefused(printShader),
       lower: unlessRefused((tree) => {
-        const lowered = printShader({
-          ...tree,
-          functions: tree.functions.map((definition) => emittedTree(definition).lowered),
-        });
+        const lowered = printShader(emittedShader(tree));
         return lowered === printShader(tree) ? undefined : lowered;
       }),
     };

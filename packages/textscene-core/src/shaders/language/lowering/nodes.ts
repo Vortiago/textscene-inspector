@@ -16,12 +16,13 @@ import type {
   VariableNode,
 } from '../shaderTree.js';
 
-export const variable = (name: string, type: string, position: SourcePosition): VariableNode => ({
-  kind: 'variable',
-  type,
-  name,
-  position,
-});
+/** A read of `name`, an array of `arraySize` elements when it is above zero. */
+export const variable = (
+  name: string,
+  type: string,
+  position: SourcePosition,
+  arraySize = 0
+): VariableNode => ({ kind: 'variable', type, name, position, ...(arraySize > 0 ? { arraySize } : {}) });
 
 export const boolean = (value: boolean, position: SourcePosition): Expression => ({
   kind: 'constant',
@@ -47,18 +48,20 @@ export const assign = (target: VariableNode, value: Expression): OperatorNode =>
 
 export const not = (value: Expression): OperatorNode => operator('OP_NOT', [value], value.position);
 
-/** `type name = value;`, or `type name;` with no value. */
+/** `type name = value;`, or `type name;` with no value, and `type name[arraySize]` for an array. */
 export function declaration(
   name: string,
   type: string,
   value: Expression | undefined,
-  position: SourcePosition
+  position: SourcePosition,
+  arraySize = 0
 ): DeclarationNode {
+  const sized = arraySize > 0 ? { arraySize } : {};
   return {
     kind: 'declaration',
     type,
     isConst: false,
-    declarators: [{ name, position, ...(value ? { value } : {}) }],
+    declarators: [{ name, position, ...sized, ...(value ? { value } : {}) }],
     position,
   };
 }

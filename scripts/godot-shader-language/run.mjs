@@ -20,7 +20,7 @@ import { godotVersion, instructionRows, SOURCE_FILES } from './readSource.mjs';
 import { renderGuide } from './renderGuide.mjs';
 import { renderTestingGuide, TESTING_FILE } from './renderTestingGuide.mjs';
 import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/corpus.mjs';
-import { godotAnswers } from '../../apps/textscene-three-godot-shaders/tests/godotAnswers.mjs';
+import { liveGodotAnswers } from '../../apps/textscene-three-godot-shaders/tests/godotAnswers.mjs';
 import { KNOWN_MISMATCHES } from '../../apps/textscene-three-godot-shaders/tests/corpus/knownMismatches.mjs';
 import { OPERATOR_CASES } from '../../apps/textscene-three-godot-shaders/tests/operators/operatorCases.mjs';
 import { KNOWN_DIFFERENCES } from '../../apps/textscene-three-godot-shaders/tests/random/knownDifferences.mjs';
@@ -39,17 +39,6 @@ const READABLE_TABLE = join(REPO_ROOT, 'apps/textscene-three-godot-shaders/INSTR
 const GUIDE_DIR = join(REPO_ROOT, 'apps/textscene-three-godot-shaders/guide');
 const TESTS = join(REPO_ROOT, 'apps/textscene-three-godot-shaders/tests');
 const readJson = (path) => JSON.parse(readFileSync(join(TESTS, path), 'utf8'));
-
-/** Godot's live answers, which the guide quotes. Throws on the smoke subset, which a guide cannot use. */
-function liveAnswers() {
-  const answers = godotAnswers();
-  if (!answers.live) {
-    throw new Error(
-      "expected Godot's live answers for the guide, found the smoke subset only: run `pnpm godot:probes` first"
-    );
-  }
-  return answers;
-}
 
 /**
  * The chapter on the tests, from Godot's operator and corpus verdicts and the corpus states that
@@ -87,7 +76,7 @@ function readSources(sourceDir) {
 function main() {
   const sources = readSources(godotSourceDir(process.argv));
   const rows = instructionRows(sources);
-  const answers = liveAnswers();
+  const answers = liveGodotAnswers();
   const guide = renderGuide({
     chapters: GUIDE_CHAPTERS,
     rows,

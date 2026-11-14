@@ -7,8 +7,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
-import { hex, recordEntry } from '../../../../scripts/godot-probes/record.mjs';
-import { parameterBits, SENTINEL_BITS } from '../../../../scripts/godot-probes/probeShader.mjs';
+import { isStaleEntry, recordEntry } from '../../../../scripts/godot-probes/record.mjs';
+import { SENTINEL_BITS } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { godotAnswers } from '../godotAnswers.mjs';
 import { PROBES } from './probes.mjs';
 
@@ -47,9 +47,7 @@ describe('the instruction table coverage', () => {
   it('holds the source and inputs each probe has now', () => {
     const stale = PROBES.filter((probe) => {
       const entry = RECORD.probes[probe.name];
-      if (entry === undefined) return false;
-      const inputs = parameterBits(probe).map((bits) => bits.map(hex));
-      return entry.source !== probe.source || JSON.stringify(entry.inputs) !== JSON.stringify(inputs);
+      return entry !== undefined && isStaleEntry(entry, probe);
     });
     expect(stale.map((probe) => probe.name)).toEqual([]);
   });

@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { emittedTree } from '../../../../packages/textscene-core/src/shaders/language/emittedTree.ts';
+import { emittedShader } from '../../../../packages/textscene-core/src/shaders/language/emittedTree.ts';
 import { parse } from '../../../../packages/textscene-core/src/shaders/language/parse.ts';
 import { printShader } from '../../../../packages/textscene-core/src/shaders/language/printer.ts';
 import { ShadingLanguageError } from '../../../../packages/textscene-core/src/shaders/language/shadingLanguageError.ts';
@@ -16,47 +16,61 @@ import { PROBES } from './probes.mjs';
 
 const treeOf = (source) => parse(tokenize(source));
 
-const loweredTreeOf = (source) => {
-  const tree = treeOf(source);
-  return { ...tree, functions: tree.functions.map((definition) => emittedTree(definition).lowered) };
-};
+const loweredTreeOf = (source) => emittedShader(treeOf(source));
 
-/** Whether `make` gives a tree of `source`, not the transpiler's refusal. */
-function gives(make, source) {
+/** The tree `make` gives of `source`, or nothing for the transpiler's refusal. */
+function treeOrRefusal(make, source) {
   try {
-    make(source);
-    return true;
+    return make(source);
   } catch (error) {
-    if (error instanceof ShadingLanguageError) return false;
+    if (error instanceof ShadingLanguageError) return undefined;
     throw error;
   }
 }
 
-const sourcesWhere = (make) =>
-  PROBES.filter((probe) => gives(make, probe.source)).map((probe) => [probe.name, probe.source]);
+/**
+ * The probes the transpiler parses and then refuses to lower: Godot's GLSL of each is refused by
+ * the GPU compiler. A new refusal fails here, so no probe leaves the lowered set unseen.
+ */
+const REFUSED_AFTER_PARSE = [
+  'index-folded-past-end',
+  'index-folded-write-past-end',
+  'unbracketed-operator-before',
+  'unbracketed-negated',
+];
+
+/** Each probe's tree that `make` gives, made once, as `[name, tree]`. */
+const treesOf = (make) =>
+  PROBES.map((probe) => [probe.name, treeOrRefusal(make, probe.source)]).filter(([, tree]) => tree);
 
 /** `tree` without the positions, which differ between a text and its printed form. */
 const shapeOf = (tree) =>
   JSON.parse(JSON.stringify(tree, (key, value) => (key === 'position' ? undefined : value)));
 
-describe.each(sourcesWhere(treeOf))('the parsed tree of probe %s', (_, source) => {
+const PARSED = treesOf(treeOf);
+const LOWERED = treesOf(loweredTreeOf);
+
+describe.each(PARSED)('the parsed tree of probe %s', (_, tree) => {
   it('passes the tree check', () => {
-    expect(treeFault(treeOf(source))).toBeUndefined();
+    expect(treeFault(tree)).toBeUndefined();
   });
 
   it('prints as text that parses to the same tree', () => {
-    const tree = treeOf(source);
     expect(shapeOf(treeOf(printShader(tree)))).toEqual(shapeOf(tree));
   });
 });
 
-describe.each(sourcesWhere(loweredTreeOf))('the lowered tree of probe %s', (_, source) => {
+it('lowers every parsed probe but those whose GLSL the GPU compiler refuses', () => {
+  const lowered = new Set(LOWERED.map(([name]) => name));
+  expect(PARSED.map(([name]) => name).filter((name) => !lowered.has(name))).toEqual(REFUSED_AFTER_PARSE);
+});
+
+describe.each(LOWERED)('the lowered tree of probe %s', (_, lowered) => {
   it('passes the tree check', () => {
-    expect(treeFault(loweredTreeOf(source))).toBeUndefined();
+    expect(treeFault(lowered)).toBeUndefined();
   });
 
   it('prints as text that parses to the same tree', () => {
-    const lowered = loweredTreeOf(source);
     expect(shapeOf(treeOf(printShader(lowered)))).toEqual(shapeOf(lowered));
   });
 });

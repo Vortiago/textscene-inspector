@@ -12,7 +12,7 @@ import { writtenNames } from './assignment.js';
 import { ExpressionEmitter } from './emitExpression.js';
 import { emittedTree } from './emittedTree.js';
 import { declareVariables, inVar, type StructOf, type Value, variablesOf } from './emitValue.js';
-import { GlslangFolding } from './glslangFolding.js';
+import type { GlslangFolding } from './glslangFolding.js';
 import type {
   Argument,
   BlockNode,

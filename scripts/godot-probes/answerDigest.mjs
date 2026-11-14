@@ -43,7 +43,8 @@ const canonicalProbes = (entries) =>
   Object.fromEntries(Object.entries(entries).map(([name, entry]) => [name, canonicalEntry(entry)]));
 
 /** The JSON text of `answers`, with each answer on one line so the file stays short. */
-function renderEntries(answers, indent) {
+function renderEntries(answers) {
+  const indent = '  ';
   const lines = Object.entries(answers).map(
     ([id, answer]) => `${indent} ${JSON.stringify(id)}: ${JSON.stringify(answer)}`
   );
@@ -65,7 +66,7 @@ export function renderAnswersFile({ probes, random, operators, corpus }) {
     Object.entries(families).map(([family, answers]) => [family, familyDigest(answers)])
   );
   const smoke = Object.entries(families).map(
-    ([family, answers]) => `  ${JSON.stringify(family)}: ${renderEntries(smokeOf(answers), '  ')}`
+    ([family, answers]) => `  ${JSON.stringify(family)}: ${renderEntries(smokeOf(answers))}`
   );
   return [
     '{',

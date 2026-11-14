@@ -30,10 +30,10 @@ import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { runProbesInGodot } from './godotProject.mjs';
 import { requireGodotVersion } from './godotRun.mjs';
 import { renderAnswersFile } from './answerDigest.mjs';
-import { isDrawn, renderRecord } from './record.mjs';
+import { isDrawn, probeRecord } from './record.mjs';
 import { loadPrinter, printedProbes, printedRejection, printedTextFaults } from './printedText.mjs';
 import { godotRejection } from './rejection.mjs';
-import { godotVerdicts, renderVerdictRecord } from './shaderVerdicts.mjs';
+import { godotVerdicts, verdictRecord } from './shaderVerdicts.mjs';
 
 /** The record of Godot's verdict on each case of each set, `{ id, text }`, from one Godot run. */
 function verdictRecords(...sets) {
@@ -43,7 +43,7 @@ function verdictRecords(...sets) {
   let next = 0;
   return sets.map((set) => {
     const ofSet = verdicts.slice(next, (next += set.length));
-    return renderVerdictRecord(
+    return verdictRecord(
       godot,
       set.map((each) => each.id),
       ofSet
@@ -85,15 +85,13 @@ async function main() {
     CORPUS
   );
   const records = {
-    probes: renderRecord(output, PROBES, reasons),
-    random: renderRecord(output, randomProbes, reasons),
+    probes: probeRecord(output, PROBES, reasons),
+    random: probeRecord(output, randomProbes, reasons),
     operators: operatorRecord,
     corpus: corpusRecord,
   };
   writeLiveAnswers(records);
-  const answersFile = renderAnswersFile(
-    Object.fromEntries(Object.entries(records).map(([family, text]) => [family, JSON.parse(text)]))
-  );
+  const answersFile = renderAnswersFile(records);
   const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${printed.length - lowered.length} printed texts as parsed and ${lowered.length} as lowered`;
   const options = { tool: 'godot-probes', summary };
   const outputs = [[ANSWERS_FILE, answersFile]];
@@ -105,7 +103,8 @@ async function main() {
 /** Writes each family's record of this run to the ignored live directory. */
 function writeLiveAnswers(records) {
   mkdirSync(LIVE_DIR, { recursive: true });
-  for (const [family, text] of Object.entries(records)) writeFileSync(livePath(family), text);
+  for (const [family, record] of Object.entries(records))
+    writeFileSync(livePath(family), `${JSON.stringify(record, null, 1)}\n`);
 }
 
 /** Fails the run on each probe whose printed or lowered text Godot answers otherwise than the original. */

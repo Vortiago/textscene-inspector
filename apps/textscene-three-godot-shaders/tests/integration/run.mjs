@@ -10,7 +10,7 @@
 import { join } from 'node:path';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { withConsumerPage, writeJobSummary } from '../consumer.mjs';
-import { godotAnswers } from '../godotAnswers.mjs';
+import { liveGodotAnswers } from '../godotAnswers.mjs';
 import { PROBES } from '../probes/probes.mjs';
 import { KNOWN_DIFFERENCE_CASES } from '../random/knownDifferences.mjs';
 import { RANDOM_PROGRAMS } from '../random/randomSet.mjs';
@@ -26,12 +26,7 @@ import {
   staleKnownPrograms,
 } from './randomPrograms.mjs';
 
-const ANSWERS = godotAnswers();
-if (!ANSWERS.live) {
-  throw new Error(
-    "expected Godot's live answers, found the smoke subset only: run `pnpm godot:probes` first"
-  );
-}
+const ANSWERS = liveGodotAnswers();
 const RECORD = ANSWERS.probes;
 const RANDOM_RECORD = ANSWERS.random;
 

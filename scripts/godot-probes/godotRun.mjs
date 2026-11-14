@@ -67,6 +67,7 @@ export function runGodotScriptToExit(mainScript, files) {
     for (const [name, text] of Object.entries(project)) writeFileSync(join(directory, name), text);
     const first = spawnGodot(directory);
     const result = failedToStart(first) ? spawnGodot(directory) : first;
+    if (isTimeout(result)) throw new Error(`run godot: no exit within ${result.timeoutMs} ms`);
     if (result.error) {
       throw new Error(
         `run godot twice: ${result.error.message}. Godot ${GODOT_VERSION} and xvfb-run must be on the path, as in the CI image`
@@ -80,20 +81,24 @@ export function runGodotScriptToExit(mainScript, files) {
 
 function spawnGodot(directory) {
   const plan = godotSpawnPlan(['--path', directory], { display: true });
-  return spawnSync(plan.command, plan.argv, {
+  const result = spawnSync(plan.command, plan.argv, {
     encoding: 'utf8',
     env: plan.env,
     timeout: plan.timeoutMs,
     maxBuffer: OUTPUT_BYTES_AT_MOST,
   });
+  return { ...result, timeoutMs: plan.timeoutMs };
 }
+
+const isTimeout = (result) => result.error?.code === 'ETIMEDOUT';
 
 /**
  * Whether a run ended before the project printed anything: Godot or xvfb did not start. One
- * more start is allowed. A probe that ends Godot prints its crash report, so it is no such run.
+ * more start is allowed. A probe that ends Godot prints its crash report, and a run that times
+ * out has started, so neither is such a run: a second hung run would double the job's wait.
  */
 const failedToStart = (result) =>
-  result.error !== undefined || (result.status !== 0 && result.stdout.trim() === '');
+  !isTimeout(result) && (result.error !== undefined || (result.status !== 0 && result.stdout.trim() === ''));
 
 /** The text after the first `prefix` line of Godot's `stdout`. Throws when Godot printed none. */
 export function printedField(stdout, prefix) {

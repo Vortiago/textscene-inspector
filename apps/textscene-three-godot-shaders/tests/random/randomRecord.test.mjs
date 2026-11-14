@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { hex } from '../../../../scripts/godot-probes/record.mjs';
+import { hex, isStaleEntry } from '../../../../scripts/godot-probes/record.mjs';
 import { parameterBits } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { godotAnswers } from '../godotAnswers.mjs';
 import { KNOWN_DIFFERENCE_CASES, KNOWN_DIFFERENCES, recordedRandomProbes } from './knownDifferences.mjs';
@@ -28,9 +28,7 @@ describe("Godot's answers to the random programs", () => {
   it('hold the source and inputs each program and fixed case has now', () => {
     const stale = RECORDED.filter((program) => {
       const entry = RECORD.probes[program.name];
-      if (entry === undefined) return false;
-      const inputs = parameterBits(program).map((bits) => bits.map(hex));
-      return entry.source !== program.source || JSON.stringify(entry.inputs) !== JSON.stringify(inputs);
+      return entry !== undefined && isStaleEntry(entry, program);
     });
     expect(stale.map((program) => program.name)).toEqual([]);
   });

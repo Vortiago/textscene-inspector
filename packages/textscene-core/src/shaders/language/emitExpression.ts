@@ -22,20 +22,13 @@ import {
 } from './emitValue.js';
 import type { GlslangFolding } from './glslangFolding.js';
 import { isAssignOperator } from './operators.js';
+import { STEPS } from './assignment.js';
 import { arraySizeOf } from './parseExpression.js';
 import type { Expression, OperatorNode } from './shaderTree.js';
 import { swizzleLanes } from './swizzle.js';
 import { shapeOf } from './types.js';
 
 const LANE_LETTERS = 'xyzw';
-
-/** The `++` and `--` operators: whether each adds or takes one, and whether it gives the new value. */
-const STEPS: Readonly<Record<string, { readonly operator: string; readonly givesNew: boolean }>> = {
-  OP_INCREMENT: { operator: 'OP_ADD', givesNew: true },
-  OP_DECREMENT: { operator: 'OP_SUB', givesNew: true },
-  OP_POST_INCREMENT: { operator: 'OP_ADD', givesNew: false },
-  OP_POST_DECREMENT: { operator: 'OP_SUB', givesNew: false },
-};
 
 export class ExpressionEmitter {
   constructor(
@@ -81,7 +74,7 @@ export class ExpressionEmitter {
       case 'array length':
         return constantNode('int', [arraySizeOf(expression.array)]);
       case 'whole assign': {
-        const target = this.place(expression.target)();
+        const target = this.value(expression.target);
         copyInto(target, this.value(expression.value));
         return target;
       }
@@ -111,10 +104,7 @@ export class ExpressionEmitter {
     return OPERATIONS[op]!(nodes, types);
   }
 
-  /**
-   * `Pair(a, b)`: each member's value in order, kept in the struct's own variables. Each member is
-   * written before the next value runs, so `Pair(a, a++)` keeps the `a` before the step.
-   */
+  /** `Pair(a, b)`: each member's value, kept in the struct's own variables. */
   private structConstruct(expression: OperatorNode): Value {
     const struct = this.structOf(expression.type)!;
     const variables = declareVariables(expression.type, 0, this.structOf);
@@ -138,36 +128,29 @@ export class ExpressionEmitter {
     return op === 'OP_AND' ? choose(test, second, decided) : choose(test, decided, second);
   }
 
-  /** `a = b` or `a op= b`: the target's indices first, then `b`, then the target's value. */
+  /** `a = b` or `a op= b`. The target is a fresh node at each read, so no node is read twice. */
   private assigned(expression: OperatorNode): Node {
     const [target, source] = expression.operands as [Expression, Expression];
-    const place = this.place(target);
     const value = this.node(source);
     const operator = assignedOperator(expression.op);
     const result =
       operator === undefined
         ? value
-        : OPERATIONS[operator]!([place() as Node, value], [target.type, source.type]);
-    (place() as Node).assign(result);
-    return place() as Node;
+        : OPERATIONS[operator]!([this.node(target), value], [target.type, source.type]);
+    this.node(target).assign(result);
+    return this.node(target);
   }
 
   /** `++a`, `--a`, `a++` and `a--`: one of the target's type added or taken. */
   private stepped(expression: OperatorNode): Node {
     const target = expression.operands[0]!;
     const step = STEPS[expression.op]!;
-    const place = this.place(target);
-    const old = inVar(place() as Node);
+    const old = inVar(this.node(target));
     const scalar = shapeOf(target.type)!.scalar;
-    (place() as Node).assign(
+    this.node(target).assign(
       OPERATIONS[step.operator]!([old, constantNode(scalar, [1])], [target.type, scalar])
     );
-    return step.givesNew ? (place() as Node) : old;
-  }
-
-  /** The place `target` names, as a function that gives a fresh node of it each call, so no node is read twice. */
-  private place(target: Expression): () => Value {
-    return () => this.value(target);
+    return step.givesNew ? this.node(target) : old;
   }
 }
 

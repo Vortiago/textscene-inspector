@@ -7,15 +7,16 @@ import { isAssignOperator } from './operators.js';
 import type { BlockNode, Expression } from './shaderTree.js';
 import { everyExpressionIn, subExpressions } from './treeWalk.js';
 
-const STEP_OPERATORS: ReadonlySet<string> = new Set([
-  'OP_INCREMENT',
-  'OP_DECREMENT',
-  'OP_POST_INCREMENT',
-  'OP_POST_DECREMENT',
-]);
+/** The `++` and `--` operators: whether each adds or takes one, and whether it gives the new value. */
+export const STEPS: Readonly<Record<string, { readonly operator: string; readonly givesNew: boolean }>> = {
+  OP_INCREMENT: { operator: 'OP_ADD', givesNew: true },
+  OP_DECREMENT: { operator: 'OP_SUB', givesNew: true },
+  OP_POST_INCREMENT: { operator: 'OP_ADD', givesNew: false },
+  OP_POST_DECREMENT: { operator: 'OP_SUB', givesNew: false },
+};
 
 /** Whether `op` writes its first operand: an assignment, or `++` or `--` either side. */
-export const isWriteOperator = (op: string): boolean => isAssignOperator(op) || STEP_OPERATORS.has(op);
+export const isWriteOperator = (op: string): boolean => isAssignOperator(op) || op in STEPS;
 
 /** The place `expression` itself writes, or nothing for an expression that writes no place. */
 function writtenTarget(expression: Expression): Expression | undefined {
