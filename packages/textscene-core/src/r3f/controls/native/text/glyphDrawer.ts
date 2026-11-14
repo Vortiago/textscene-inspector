@@ -69,7 +69,7 @@ export function snapsPen(glyphDrawer: GlyphDrawer, fontSizePx: number, metrics: 
  * at 1, or an outline face drawn from a canvas raster at a whole size of its strike. The bundled face
  * draws off the canvas painter, which reads no pen phase, so it counts as scaled.
  */
-export function isUnscaledAt(metrics: FontMetrics, fontSizePx: number): boolean {
+function isUnscaledAt(metrics: FontMetrics, fontSizePx: number): boolean {
   if (isBitmapFontMetrics(metrics)) return metrics.pxPerUnit(fontSizePx) === 1;
   if (isCanvasFontMetrics(metrics)) return !fontIsScaled(fontSizePx, metrics);
   return false;
