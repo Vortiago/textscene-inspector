@@ -71,7 +71,7 @@ function placement(
   return {
     visible: range.visible,
     rect,
-    grabberRect: scrollBarGrabberRect(vertical, { x: rect.w, y: rect.h }, grabber),
+    grabberRect: scrollBarGrabberRect(vertical, { x: rect.w, y: rect.h }, grabber, boxes),
   };
 }
 
