@@ -91,9 +91,10 @@ describe('a texture-drawing canvas item', () => {
   });
 
   it('loads a CanvasTexture outside the body only where it hands it back', () => {
-    const loadsElsewhere = canvasItems
-      .filter(({ name, text }) => LOADS_CANVAS_ITEM_TEXTURE.test(text) && !(name in HANDS_BACK))
-      .map(({ name }) => name);
+    const loaders = canvasItems.filter(({ text }) => LOADS_CANVAS_ITEM_TEXTURE.test(text));
+    const loadsElsewhere = loaders.filter(({ name }) => !(name in HANDS_BACK)).map(({ name }) => name);
+    // A pattern or a scan that stopped matching would read as no loader outside the list.
+    expect(loaders.map(({ name }) => name)).toContain('r3f/TileSourceMesh.tsx');
     expect(loadsElsewhere).toEqual([]);
   });
 
