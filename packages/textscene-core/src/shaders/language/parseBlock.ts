@@ -7,7 +7,7 @@
 
 import { godotIntegerConstant } from './godotNumber.js';
 import { keywordInstruction } from './instructions.js';
-import type { ExpressionParser } from './parseExpression.js';
+import { arraySizeOf, type ExpressionParser } from './parseExpression.js';
 import { parseDeclaration } from './parseDeclaration.js';
 import { type BlockKind, BlockScope } from './scope.js';
 import type { Argument, BlockNode, ControlFlowNode, Expression, Flow, Statement } from './shaderTree.js';
@@ -145,8 +145,7 @@ export class StatementParser {
     return keywordInstruction(token.type)?.family === 'data type' && token.type !== 'TK_TYPE_VOID';
   }
 
-  /** A `for` initialiser must declare a variable (`shader_language.cpp:9073`). */
-  /** A statement other than a declaration, which a `for` initialiser refuses. */
+  /** A statement other than a declaration, which a `for` initialiser refuses (`shader_language.cpp:9073`). */
   private refuseInForInit(): Outcome {
     if (this.holder.current.kind === 'for init')
       this.tokens.fail('The left expression is expected to be a variable declaration.');
@@ -340,7 +339,7 @@ export class StatementParser {
     if (returnType === 'void') this.tokens.fail("'void' function cannot return a value.");
     this.tokens.reset(mark);
     const expression = this.expressions.expression();
-    if (expression.type !== returnType || isArray(expression))
+    if (expression.type !== returnType || arraySizeOf(expression) > 0)
       this.tokens.fail(`Expected return with an expression of type '${returnType}'.`);
     if (this.tokens.next().type !== 'TK_SEMICOLON') this.tokens.fail("Expected a ';' after 'return'.");
     return flowNode('FLOW_OP_RETURN', [expression], [], token.position);
@@ -387,7 +386,3 @@ const flowNode = (
   blocks: readonly BlockNode[],
   position: SourcePosition
 ): ControlFlowNode => ({ kind: 'control flow', flow, expressions, blocks, position });
-
-/** Whether a returned value is an array, which a function of a value type cannot return. */
-const isArray = (expression: Expression) =>
-  (expression.kind === 'variable' || expression.kind === 'field') && (expression.arraySize ?? 0) > 0;

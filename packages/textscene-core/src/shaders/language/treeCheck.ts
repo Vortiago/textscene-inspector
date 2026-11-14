@@ -8,7 +8,7 @@
 import { assignmentRefusal } from './assignment.js';
 import { signatureInstruction } from './instructions.js';
 import { isAssignOperator } from './operators.js';
-import { arraySizeOf } from './parseExpression.js';
+import { arraySizeOf, typeName } from './parseExpression.js';
 import type {
   BlockNode,
   ConstantNode,
@@ -126,8 +126,9 @@ class FunctionCheck {
 
   private flow(flow: ControlFlowNode, place: Place): string | undefined {
     const [value] = flow.expressions;
-    if (flow.flow === 'FLOW_OP_RETURN' && (value?.type ?? 'void') !== this.definition.returnType)
-      return `a return of ${value?.type ?? 'void'} in a function of ${this.definition.returnType}`;
+    const returned = value ? typeName(value.type, arraySizeOf(value)) : 'void';
+    if (flow.flow === 'FLOW_OP_RETURN' && returned !== this.definition.returnType)
+      return `a return of ${returned} in a function of ${this.definition.returnType}`;
     const fault = firstFault(flow.expressions, (expression) => this.expression(expression));
     if (fault !== undefined) return fault;
     switch (flow.flow) {

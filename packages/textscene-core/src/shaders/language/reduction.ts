@@ -8,6 +8,7 @@ import { assignmentRefusal } from './assignment.js';
 import { evaluationRefusal } from './evaluation.js';
 import { signatureInstruction } from './instructions.js';
 import { OPERATOR_RULES, isAssignOperator, operatorText } from './operators.js';
+import { arraySizeOf, typeName } from './parseExpression.js';
 import type { SourcePosition } from './shadingLanguageError.js';
 import type { Expression, OperatorNode } from './shaderTree.js';
 import { shapeOf } from './types.js';
@@ -87,7 +88,8 @@ function reduceBinary(entries: Entry[], next: number, fail: Fail): void {
   // Unary operators reduce first, so no operator follows a binary one in a list Godot builds.
   const right = nodeOf(entries[next + 1]!, fail);
   if (op === 'OP_ASSIGN' && isStruct(left.type)) {
-    if (right.type !== left.type) fail(`Invalid arguments to operator '=': '${typeList([left, right])}'.`);
+    if (right.type !== left.type || arraySizeOf(right) !== arraySizeOf(left))
+      fail(`Invalid arguments to operator '=': '${typeList([left, right])}'.`);
     const node = {
       kind: 'whole assign',
       type: left.type,
@@ -110,6 +112,7 @@ function operatorNode(
   operands: Expression[],
   position: SourcePosition
 ): OperatorNode | undefined {
+  if (!takesArrays(op, operands)) return undefined;
   const row = signatureInstruction(
     op,
     operands.map((operand) => operand.type)
@@ -121,7 +124,19 @@ function operatorNode(
 /** Whether `type` names a struct: a type with a name that holds no value shape. */
 const isStruct = (type: string) => type !== 'void' && shapeOf(type) === undefined;
 
-const typeList = (operands: readonly Expression[]) => operands.map((operand) => operand.type).join(', ');
+/**
+ * Whether `op` takes the whole arrays among `operands` (`_validate_operator`): `=` and `?:` take
+ * two sides of one size, and every other operator takes no whole array.
+ */
+function takesArrays(op: string, operands: readonly Expression[]): boolean {
+  const sizes = operands.map(arraySizeOf);
+  if (op === 'OP_ASSIGN') return sizes[0] === sizes[1];
+  if (op === 'OP_SELECT_IF') return sizes[1] === sizes[2];
+  return sizes.every((size) => size === 0);
+}
+
+const typeList = (operands: readonly Expression[]) =>
+  operands.map((operand) => typeName(operand.type, arraySizeOf(operand))).join(', ');
 
 function failOnRefusal(refusal: string | undefined, fail: Fail): void {
   if (refusal !== undefined) fail(refusal);

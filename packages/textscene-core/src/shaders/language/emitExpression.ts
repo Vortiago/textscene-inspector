@@ -173,13 +173,17 @@ export class ExpressionEmitter {
     return nodes;
   }
 
-  /** `Pair(a, b)`: each member's value in order, kept in the struct's own variables. */
+  /**
+   * `Pair(a, b)`: each member's value in order, kept in the struct's own variables. Each member is
+   * written before the next value runs, so `Pair(a, a++)` keeps the `a` before the step.
+   */
   private structConstruct(expression: OperatorNode): Value {
     const struct = this.structOf(expression.type)!;
     const variables = declareVariables(expression.type, 0, this.structOf);
     if (!isStructValue(variables)) throw new Error(`expected the struct ${struct.name}`);
-    const values = expression.operands.map((operand) => this.value(operand));
-    struct.members.forEach((member, index) => copyInto(variables.members.get(member.name)!, values[index]!));
+    struct.members.forEach((member, index) =>
+      copyInto(variables.members.get(member.name)!, this.value(expression.operands[index]!))
+    );
     return variables;
   }
 

@@ -286,7 +286,7 @@ export class ExpressionParser {
   private arrayCall(name: string, token: Token): Expression {
     if (name !== 'length') this.tokens.fail(`Unknown identifier in expression: '${name}'.`);
     if (this.argumentList().length > 0)
-      this.tokens.fail(`Invalid arguments for the built-in function: '${name}(${''})'.`);
+      this.tokens.fail(`Invalid arguments for the built-in function: '${name}()'.`);
     return { kind: 'array length', type: 'int', array: this.arrayOfCall!, position: token.position };
   }
 

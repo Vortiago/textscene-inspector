@@ -20,6 +20,8 @@ import type {
   BlockNode,
   ControlFlowNode,
   DeclarationNode,
+  Declarator,
+  Expression,
   FunctionNode,
   ShaderNode,
   Statement,
@@ -110,15 +112,17 @@ class StatementEmitter {
 
   /** Each name's variables, which take its value, then the name. A value reads no name it declares. */
   private declaration(declaration: DeclarationNode, scope: EmitScope): void {
-    for (const declarator of declaration.declarators) {
-      const arraySize = declarator.arraySize ?? 0;
-      const value = declarator.value && this.expressions(scope).value(declarator.value);
-      const variables =
-        value === undefined
-          ? declareVariables(declaration.type, arraySize, this.structOf)
-          : variablesOf(value, declaration.type, arraySize, this.structOf);
-      scope.declare(declarator.name, variables);
-    }
+    for (const declarator of declaration.declarators)
+      scope.declare(declarator.name, this.declared(declaration.type, declarator, scope));
+  }
+
+  /** The variables of one name: new ones, or the ones a constructor of its value built already. */
+  private declared(type: ValueType, declarator: Declarator, scope: EmitScope): Value {
+    const arraySize = declarator.arraySize ?? 0;
+    const { value } = declarator;
+    if (value === undefined) return declareVariables(type, arraySize, this.structOf);
+    const built = this.expressions(scope).value(value);
+    return buildsVariables(value) ? built : variablesOf(built, type, arraySize, this.structOf);
   }
 
   private flow(flow: ControlFlowNode, scope: EmitScope): void {
@@ -161,3 +165,7 @@ class StatementEmitter {
     return new ExpressionEmitter(scope, this.folding, this.structOf);
   }
 }
+
+/** Whether `value` gives new variables that nothing else reads: an array or a struct constructor. */
+const buildsVariables = (value: Expression) =>
+  value.kind === 'array construct' || (value.kind === 'operator' && value.op === 'OP_STRUCT');

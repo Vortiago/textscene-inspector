@@ -112,11 +112,7 @@ function flatIndex(outer: Node | number, size: number, inner: Node | number): No
 const indexNode = (index: Node | number): Node =>
   typeof index === 'number' ? (int(index) as unknown as Node) : index;
 
-/**
- * Writes `source` into the places of `target`, element by element and member by member. A source
- * that was built from values is kept in its own variables first, so no write changes what a
- * later one reads.
- */
+/** Writes `source` into the places of `target`, element by element and member by member. */
 export function copyInto(target: Value, source: Value): void {
   if (isArrayValue(target) && isArrayValue(source)) {
     for (let index = 0; index < target.count; index++) copyInto(target.element(index), source.element(index));
