@@ -18,6 +18,7 @@ import {
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import { liveInstancePath, type LiveNode } from '../resources/liveNode.js';
 import { glbPathOf } from '../resources/glbSceneRoot.js';
+import { hasSceneTileCells } from './liveSceneTiles.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { ResourceType } from '../resources/ResourceEventBus.js';
@@ -344,32 +345,14 @@ const loaderTreesOf = perObject((project: ProjectTreeSettings) =>
 export function useLiveStepOf(node: LiveNode, scope: SceneScope): LiveStep {
   const loader = useResourceLoader();
   const project = useProjectTreeSettings();
-  const readsCaches = liveInstancePath(node, scope) !== null || glbPathOf(node) !== undefined;
+  const readsCaches =
+    liveInstancePath(node, scope) !== null || glbPathOf(node) !== undefined || hasSceneTileCells(node);
   const watched = readsCaches ? loader : null;
   const readAt = useCallback(
     (version: number) => loaderTreesOf(project)(watched, version).stepOf(node, scope),
     [project, watched, node, scope]
   );
   return useReadAtLoadTick(watched, readAt, Object.is);
-}
-
-/**
- * {@link useLiveStepOf} for several nodes of one scope, read together at each load tick: a reader
- * with a list of instances calls one hook, not one per item. `nodes` and `scope` must be stable.
- */
-export function useLiveStepsOf(nodes: readonly LiveNode[], scope: SceneScope): readonly LiveStep[] {
-  const loader = useResourceLoader();
-  const project = useProjectTreeSettings();
-  // No nodes read no cache, so such a reader watches no load, as `useLiveStepOf` does for a plain node.
-  const watched = nodes.length > 0 ? loader : null;
-  const readAt = useCallback(
-    (version: number) => {
-      const tree = loaderTreesOf(project)(watched, version);
-      return nodes.map((node) => tree.stepOf(node, scope));
-    },
-    [project, watched, nodes, scope]
-  );
-  return useReadAtLoadTick(watched, readAt, sameElements);
 }
 
 /** The live nodes matching `predicate`. Pass a stable `predicate` (module-level or memoised), or the memo recomputes every render. */

@@ -40,6 +40,16 @@ import {
   type ResourceSnapshot,
 } from '../resources/reading';
 import type { SceneResources } from './SceneResourcesContext.js';
+import { TILE_SET } from '../resources/tileset/kind.js';
+import { isCanvasItem } from './canvasItemClass.js';
+import type { SceneTileCell } from '../resources/tileset/sceneTileCells.js';
+import {
+  placedSceneTileRoot,
+  sceneTileLayerCells,
+  sceneTilesOf,
+  type JudgedRoot,
+  type SceneTileRoot,
+} from './liveSceneTiles.js';
 
 /**
  * Read surface for the loader's PackedScene cache. `undefined` means never
@@ -352,10 +362,10 @@ export function rootScope(ctx: LiveTreeContext): SceneScope {
 
 /**
  * One group of live children. `origin` is the React key namespace. `merged`
- * children resolve in the sub-scene's scope, `inline` and `glb` children in the outer scope.
+ * children resolve in the sub-scene's scope, `inline`, `glb` and `tiles` children in the outer scope.
  */
 export interface LiveChildGroup {
-  origin: 'merged' | 'inline' | 'glb';
+  origin: 'merged' | 'inline' | 'glb' | 'tiles';
   children: readonly LiveNode[];
   /** Both pools this group's children resolve their own refs against, as a {@link SceneScope}. */
   scope: SceneScope;
@@ -479,6 +489,8 @@ export interface LiveStep {
   readonly isFailedInstance: boolean;
   /** What is below the node, in the order the tree shows it. */
   readonly groups: readonly LiveChildGroup[];
+  /** For a tile layer: the scene tiles the editor marks with a disc, which add no child. */
+  readonly placeholderTiles?: readonly SceneTileCell[];
 }
 
 /**
@@ -486,32 +498,44 @@ export interface LiveStep {
  * here, so no reader merges a second time. Readers take it through {@link LiveTree.stepOf}, which
  * keeps it.
  */
-function liveStep(
-  node: LiveNode,
-  groupScope: SceneScope,
-  sceneCache: CachedSceneSource,
-  glbCache?: CachedGlbSource
-): LiveStep {
+function liveStep(node: LiveNode, groupScope: SceneScope, sources: TreeSources): LiveStep {
+  const { scenes: sceneCache, glbs: glbCache } = sources;
   const instancePath = liveInstancePath(node, groupScope);
   const own = scopeOf(node, groupScope);
   const lookup = lookupInstance(node, own, sceneCache);
   const instanced = loadedInstance(lookup, own, sceneCache);
   const merged = collapseInstance(node, own, instanced, sceneCache);
-  if (merged === node) {
-    const groups = liveChildGroups(node, own, instanced, glbCache);
-    return {
-      node,
-      isMerged: false,
-      instancePath,
-      scope: own,
-      isRefusedInstance: instanced?.isRefused ?? false,
-      isFailedInstance: lookup.scenePath !== null && lookup.cached === null,
-      groups,
-    };
-  }
-  const groups = mergedGroups(merged, own, sceneCache, glbCache);
+  return withSceneTiles(
+    merged === node
+      ? {
+          node,
+          isMerged: false,
+          instancePath,
+          scope: own,
+          isRefusedInstance: instanced?.isRefused ?? false,
+          isFailedInstance: lookup.scenePath !== null && lookup.cached === null,
+          groups: liveChildGroups(node, own, instanced, glbCache),
+        }
+      : mergedStep(
+          node.sceneTile ? placedSceneTileRoot(merged, node.sceneTile) : merged,
+          own,
+          instancePath,
+          sources
+        ),
+    sources
+  );
+}
+
+/** The step of an instance that merged into `root`, the root of the scene it instances. */
+function mergedStep(
+  root: LiveNode,
+  own: SceneScope,
+  instancePath: string | null,
+  { scenes, glbs }: TreeSources
+): LiveStep {
+  const groups = mergedGroups(root, own, scenes, glbs);
   return {
-    node: merged,
+    node: root,
     isMerged: true,
     instancePath,
     scope: groups[0]!.scope,
@@ -521,9 +545,36 @@ function liveStep(
   };
 }
 
-/** Whether `group` holds GLB objects, which draw after the node's authored children. */
+/**
+ * `step` with the scene tiles of its tile layer as a `tiles` group after the others, as
+ * `add_child` appends them (`tile_map_layer.cpp:1646-1651`). A TileSet still loading adds none yet.
+ */
+function withSceneTiles(step: LiveStep, sources: TreeSources): LiveStep {
+  const cells = sceneTileLayerCells(step.node);
+  if (!cells?.length) return step;
+  const tileSetRef = (step.node.properties as { tile_set?: string }).tile_set;
+  const read = snapshotOver(sources.resources).read(nodeReference(tileSetRef, step.scope), TILE_SET);
+  if (read.status !== 'loaded') return step;
+  const rootOf = (instance: LiveNode): JudgedRoot => {
+    const judged = liveStep(instance, step.scope, sources);
+    return { root: sceneTileRoot(judged), rootNode: judged.isMerged ? judged.node : null };
+  };
+  const tiles = sceneTilesOf(read.value, cells, step.scope, rootOf);
+  const group: LiveChildGroup = { origin: 'tiles', children: tiles.children, scope: step.scope };
+  return { ...step, groups: [...step.groups, group], placeholderTiles: tiles.placeholderTiles };
+}
+
+/** What the step of a tile's instance says of its scene. A GLB root is a Node3D, so no CanvasItem. */
+function sceneTileRoot(step: LiveStep): SceneTileRoot {
+  if (step.isFailedInstance) return 'failed';
+  if (step.isRefusedInstance) return 'refused';
+  if (step.isMerged) return isCanvasItem(step.node) ? 'canvas-item' : 'no-canvas-item';
+  return step.groups.some((group) => group.origin === 'glb') ? 'no-canvas-item' : 'pending';
+}
+
+/** Whether `group` holds GLB objects or scene tiles, which draw after the node's authored children. */
 export function isInjected(group: LiveChildGroup): boolean {
-  return group.origin === 'glb';
+  return group.origin === 'glb' || group.origin === 'tiles';
 }
 
 /** Whether `group` is what the node instances, which the instance node owns as the root of it. */
@@ -609,7 +660,7 @@ export class LiveTree {
   private readonly links = new Map<string, LiveLink | null>();
   private readonly scenes: CachedSceneSource;
   private readonly resourceSnapshot: ResourceSnapshot;
-  private readonly sources: { scenes: CachedSceneSource; glbs: CachedGlbSource };
+  private readonly sources: TreeSources;
 
   constructor(
     readonly roots: readonly TscnNode[],
@@ -617,7 +668,11 @@ export class LiveTree {
   ) {
     this.scenes = snapshotScenes(ctx);
     this.resourceSnapshot = snapshotOver(ctx.resourceCache ?? NOTHING_CACHED);
-    this.sources = { scenes: this.scenes, glbs: ctx.glbCache ?? NOTHING_CACHED };
+    this.sources = {
+      scenes: this.scenes,
+      glbs: ctx.glbCache ?? NOTHING_CACHED,
+      resources: ctx.resourceCache ?? NOTHING_CACHED,
+    };
     const scope = rootScope(ctx);
     this.seatedRoots = seatedFile(roots, scope, this.scenes, roots);
     this.rootGroups = [inlineGroup(this.seatedRoots, scope)];
@@ -671,8 +726,8 @@ export class LiveTree {
    * step read is unchanged.
    */
   stepOf(node: LiveNode, scope: SceneScope): LiveStep {
-    return stepsByNode(node, scopeOf(node, scope), this.sources, ({ scenes, glbs }) =>
-      liveStep(node, scope, scenes, glbs)
+    return stepsByNode(node, scopeOf(node, scope), this.sources, (recording) =>
+      liveStep(node, scope, recording)
     );
   }
 
@@ -707,12 +762,17 @@ export class LiveTree {
  * scope it was asked in: an evicting limit would take the step again at each load. The scopes are
  * the scenes' own and finite, and the entries clear when nothing holds the node any more.
  */
-const stepsByNode = keptWhileAnswered<
-  LiveNode,
-  SceneScope,
-  { scenes: CachedSceneSource; glbs: CachedGlbSource },
-  LiveStep
->({ sameVariant: sameScope, perVariant: 1 });
+const stepsByNode = keptWhileAnswered<LiveNode, SceneScope, TreeSources, LiveStep>({
+  sameVariant: sameScope,
+  perVariant: 1,
+});
+
+/** The loader's caches a step reads: the scenes it merges, the GLBs it mounts, and a tile layer's TileSet files. */
+type TreeSources = {
+  scenes: CachedSceneSource;
+  glbs: CachedGlbSource;
+  resources: CacheSource<ParsedResource>;
+};
 
 /** What a fold of the live tree does at each node. */
 type FoldVisit<Inherited, Result> = (
@@ -788,6 +848,8 @@ export function resolveLiveEntry(
 
 /**
  * Depth-first walk of the live tree, calling `visit` with each collapsed node and its full path.
+ * It skips a scene tile's instance and what it holds, which the edited scene does not own, so no
+ * panel lists them, as Godot's Scene dock lists none.
  *
  * @canonical A walk of the Live scene tree
  */
@@ -797,7 +859,8 @@ export function walkLiveTree(
   visit: (entry: LiveTreeEntry) => void,
   descend?: (node: LiveNode) => boolean
 ): void {
-  liveTreeOf(roots, ctx).fold<void, void>(undefined, ({ step, path }, _, descendInto) => {
+  liveTreeOf(roots, ctx).fold<void, void>(undefined, ({ raw, step, path }, _, descendInto) => {
+    if (raw.isUnowned) return;
     visit({ node: step.node, path });
     // `descend` prunes only the children, so a consumer can count a boundary
     // without counting what is behind it.

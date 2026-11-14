@@ -39,8 +39,8 @@ const NEEDS_NO_OVERLAY = new Map([
     'Asks whether the node a body path names is a Node3D, by type. The pose comes from the drawn objects.',
   ],
   [
-    'nodes/2d/tiles/shared/useSceneTileNodes.ts',
-    'Reads the type and the offset of the loaded root of a tile scene, which no pass patches. The scene is not a node of the edited tree.',
+    'nodes/2d/tiles/shared/useSceneTiles.ts',
+    'Hands the scene tile children of a layer to the dispatcher, which lays the patches over each node it draws.',
   ],
   [
     'nodes/windows/window/themeOwners.ts',
