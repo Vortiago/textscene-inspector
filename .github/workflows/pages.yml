@@ -20,7 +20,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The repository holds no copy of Godot's template files: this writes them from the CI image.
+  godot-templates:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    uses: ./.github/workflows/godot-templates.yml
+
   build:
+    needs: godot-templates
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
@@ -51,6 +60,8 @@ jobs:
 
       - if: steps.passed.outputs.is-passed-commit == 'true'
         uses: ./.github/actions/setup
+        with:
+          template-files: artifact
 
       - name: Build and check the public site
         if: steps.passed.outputs.is-passed-commit == 'true'

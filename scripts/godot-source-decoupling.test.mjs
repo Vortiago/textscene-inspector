@@ -39,7 +39,12 @@ const CHECKOUT_RE = new RegExp(
   ].join('|')
 );
 const URL_RE = /https?:\/\//;
-const CHECKOUT_ALLOWED = new Set(['REFERENCES.md', 'scripts/godot-source-decoupling.controls.mjs']);
+// `godotSource.mjs` names the thread container's source, a known place a generator may read.
+const CHECKOUT_ALLOWED = new Set([
+  'REFERENCES.md',
+  'scripts/godot-source-decoupling.controls.mjs',
+  'scripts/godotSource.mjs',
+]);
 
 /** The CI image's source path, which only the module that resolves it and the image name. */
 const IMAGE_SOURCE_RE = /\/opt\/godot-source\b/;
@@ -50,6 +55,7 @@ const GODOT_SOURCE_READERS = new Set([
   'apps/textscene-three-godot-shaders/tests/templates/run.mjs',
   'scripts/godot-shader-language/run.mjs',
   'scripts/godot-templates/run.mjs',
+  'scripts/godot-templates/templateFiles.mjs',
 ]);
 const SOURCE_IMPORT_RE = /from\s+['"][./]*(?:scripts\/)?godotSource\.mjs['"]/;
 

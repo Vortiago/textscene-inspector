@@ -11,7 +11,12 @@ permissions:
   contents: read
 
 jobs:
+  # The repository holds no copy of Godot's template files: this writes them from the CI image.
+  godot-templates:
+    uses: ./.github/workflows/godot-templates.yml
+
   validate:
+    needs: godot-templates
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
@@ -55,6 +60,8 @@ jobs:
           PREVIOUS_TAG: ${{ steps.tag.outputs.previous_tag }}
 
       - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
       # `fonts:combining-classes --check` reads Unicode 15.1.0, which only Python 3.13 ships.
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
@@ -64,7 +71,7 @@ jobs:
 
   release-vscode:
     name: Release the extension on GitHub
-    needs: validate
+    needs: [godot-templates, validate]
     if: needs.validate.outputs.kind == 'extension'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -83,6 +90,8 @@ jobs:
         run: git fetch --no-tags origin '+refs/tags/*:refs/tags/*'
 
       - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
 
       - name: Set the version from the tag
         run: npm pkg set version="$VERSION" --prefix "$DIRECTORY"
@@ -123,9 +132,12 @@ jobs:
   # Each npm package ships the same way: a tarball on GitHub and on npm.
   release-npm-package:
     name: Release ${{ needs.validate.outputs.package }} on GitHub
-    needs: validate
+    needs: [godot-templates, validate]
     if: needs.validate.outputs.kind == 'npm'
     runs-on: ubuntu-latest
+    # In the CI image, whose Godot source the build reads for the shader package's templates.
+    container:
+      image: ${{ needs.godot-templates.outputs.image }}
     timeout-minutes: 15
     permissions:
       contents: write

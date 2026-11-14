@@ -1,0 +1,48 @@
+name: Godot's template files
+
+# The repository holds no copy of Godot's template files (scripts/godot-templates/templateFiles.mjs).
+# This workflow writes them from the CI image's Godot source and uploads them as the
+# godot-template-files artifact, which a job outside the image downloads through the setup
+# action's `template-files: artifact`. CI writes its own in the godot-templates job of ci.yml,
+# after its image job publishes the image this one only names.
+on:
+  workflow_call:
+    outputs:
+      image:
+        description: The CI image that holds Godot's source.
+        value: ${{ jobs.image.outputs.ref }}
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    name: Name the CI image
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ref: ${{ steps.image.outputs.ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: image
+        run: node scripts/ci/ciImage.mjs >> "$GITHUB_OUTPUT"
+
+  files:
+    name: Write Godot's template files
+    needs: image
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ needs.image.outputs.ref }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: godot-template-files
+          path: packages/textscene-core/src/shaders/template/templateFiles.generated.ts
+          if-no-files-found: error

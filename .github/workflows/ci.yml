@@ -127,10 +127,13 @@ jobs:
   static:
     name: Lint, type check and generated files
     runs-on: ubuntu-latest
+    needs: godot-templates
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
 
       # First: it needs no build and fails in seconds.
       - run: pnpm format:check
@@ -159,6 +162,7 @@ jobs:
   unit:
     name: Unit tests (${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
+    needs: godot-templates
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -167,6 +171,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
 
       # Before the tests: loadCoreLinter.test.mjs skips itself when core's dist is absent.
       - run: pnpm --filter @textscene/core build
@@ -197,6 +203,24 @@ jobs:
   # answers every probe, random program, operator case and corpus shader live, and the committed
   # digests of those answers, the guide, the tests and the real-GL run are checked against them.
   # SHADER_ANSWERS=live makes every reader of the answers fail when the live run is missing.
+  # The repository holds no copy of Godot's template files, so this job writes them from the
+  # image's Godot source for the jobs that build core outside the image (the setup action's
+  # `template-files: artifact`).
+  godot-templates:
+    name: Godot's template files
+    runs-on: ubuntu-latest
+    needs: image
+    container: *ci-image
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: godot-template-files
+          path: packages/textscene-core/src/shaders/template/templateFiles.generated.ts
+          if-no-files-found: error
+
   shaders:
     name: Shader package
     runs-on: ubuntu-latest
@@ -233,10 +257,13 @@ jobs:
   build:
     name: Build and package
     runs-on: ubuntu-latest
+    needs: godot-templates
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
 
       # The prebuild hook builds @textscene/core.
       - run: pnpm build:linter
@@ -275,12 +302,14 @@ jobs:
   web-previewer:
     name: Build the web previewer
     runs-on: ubuntu-latest
-    needs: changes
+    needs: [changes, godot-templates]
     if: needs.changes.outputs.shader-only != 'true'
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
 
       # The prebuild hook builds @textscene/core.
       - run: pnpm --filter @textscene/web-previewer build
@@ -372,7 +401,7 @@ jobs:
   integration:
     name: Integration tests (${{ matrix.os }}, VS Code ${{ matrix.vscode }})
     runs-on: ${{ matrix.os }}
-    needs: changes
+    needs: [changes, godot-templates]
     if: needs.changes.outputs.shader-only != 'true'
     timeout-minutes: 20
     strategy:
@@ -392,6 +421,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
 
       # textscene-inspector is the VS Code extension package (apps/textscene-vscode).
       - if: runner.os == 'Linux'
@@ -451,7 +482,7 @@ jobs:
   installed:
     name: Installed package (VS Code ${{ matrix.vscode }})
     runs-on: ubuntu-latest
-    needs: [build, changes]
+    needs: [build, changes, godot-templates]
     if: needs.changes.outputs.shader-only != 'true'
     timeout-minutes: 20
     strategy:
@@ -464,6 +495,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
 
       # The runner reads the package beside the extension manifest, where `vsce package` writes it.
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -509,6 +542,7 @@ jobs:
       [
         changes,
         image,
+        godot-templates,
         static,
         unit,
         godot-ref,

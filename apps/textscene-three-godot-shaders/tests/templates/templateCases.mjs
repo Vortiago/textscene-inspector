@@ -6,7 +6,11 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { glslFiles, TEMPLATE_DIR, WAITS_FOR_FSR } from '../../../../scripts/godot-templates/run.mjs';
+import {
+  glslFiles,
+  TEMPLATE_DIR,
+  WAITS_FOR_FSR,
+} from '../../../../scripts/godot-templates/templateFiles.mjs';
 import { coveringSets, definedNames, isMaterialName, testedNames, variantText } from './defineSets.mjs';
 
 /**
