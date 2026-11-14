@@ -32,11 +32,11 @@ async function freshTextModules() {
       import('./runtimeFontMetrics'),
     ]);
   /** Hands the outlines over, and wakes every waiting run. */
+  const loader = new ResourceLoader();
   const loadOutlines = () => {
     outlines = TRIANGLE_OUTLINES;
-    return settleUnrelatedFontLoad();
+    return settleUnrelatedFontLoad(loader.settledFonts);
   };
-  const loader = new ResourceLoader();
   const mount = (fontMetrics?: ReturnType<typeof runtime.createRuntimeFontMetrics>) => {
     const layout = shapeText('AB', {
       fontSizePx: 16,

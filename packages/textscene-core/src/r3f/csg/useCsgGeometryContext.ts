@@ -7,7 +7,7 @@
 
 import { useCallback, useMemo } from 'react';
 import type { TscnNode } from '../../parser/types';
-import { useSceneFontSettleCount } from '../controls/native/text/useSceneFontSettleCount';
+import { usePreviewFontSettles, useSettledFonts } from '../controls/native/text/useSettledFont';
 import { useLayoutDirectionEnv } from '../contexts/useLayoutDirectionEnv';
 import type { ProjectFonts } from '../../resources/fonts/font/projectFonts';
 import type { LoadedFile, LoadedFont } from '../../resources/scopedResource';
@@ -34,10 +34,11 @@ export function useCsgGeometryContext(root: TscnNode | null): CsgGeometrySetup {
   // A plan with no shape that can read a font names no font bus, so it listens to none.
   const readsFonts = shapes.some(({ shape }) => shape.readsFonts);
   const locale = useLayoutDirectionEnv().applicationLocale;
+  const settledFonts = useSettledFonts();
   const fontsPlan = useCallback(
     (loadedFont: LoadedFont, loadedFile: LoadedFile, projectFonts: ProjectFonts) =>
-      subtreeFontFiles(shapes, { ...pools, loadedFile, loadedFont, projectFonts, locale }),
-    [shapes, pools, locale]
+      subtreeFontFiles(shapes, { ...pools, loadedFile, loadedFont, projectFonts, settledFonts, locale }),
+    [shapes, pools, settledFonts, locale]
   );
   const { loadedFile, loadedFont, projectFonts, isLoading, isLoadingFonts } = useLoadedFilesAndFonts(
     filesPlan,
@@ -46,11 +47,11 @@ export function useCsgGeometryContext(root: TscnNode | null): CsgGeometrySetup {
   );
 
   const loaded = useMemo(
-    (): CsgGeometryContext => ({ ...pools, loadedFile, loadedFont, projectFonts, locale }),
-    [pools, loadedFile, loadedFont, projectFonts, locale]
+    (): CsgGeometryContext => ({ ...pools, loadedFile, loadedFont, projectFonts, settledFonts, locale }),
+    [pools, loadedFile, loadedFont, projectFonts, settledFonts, locale]
   );
   const isAwaitingFont = shapes.some(({ properties, shape }) => shape.awaitsFont?.(properties, loaded));
-  useSceneFontSettleCount(isAwaitingFont);
+  usePreviewFontSettles(isAwaitingFont);
   // The meshes of a context hold the metrics they read, so a context that read them before they
   // settled gives way to a copy, with meshes of its own, when they have.
   const context = useMemo(

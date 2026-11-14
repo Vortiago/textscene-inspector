@@ -158,6 +158,10 @@ _Avoid_: "sprite font", "pixel font".
 The faces a font tries for each glyph, in order: its own face, then each of its `fallbacks` and theirs, depth first (`Font::_update_rids`). The shaper draws a character from the first face that has it. A character no face has stays in the first face.
 _Avoid_: "fallback font" for the bundled Open Sans, which is the **Project default font**'s last resort.
 
+**Settled font** (`SettledFont` in `r3f/controls/native/text/settledFonts.ts`, `readSettledFont` in `sceneFontLoader.ts`, `useSettledFont`):
+A font of the scene once the face of each font of its **Fallback chain** has loaded: its face, with the chain's faces as its fallbacks, and the chain. Each preview loads its fonts through the settled fonts its `ResourceLoader` holds (`settledFonts.ts`). A settle there wakes the readers of that font in that preview, and no reader of another preview. Until then the font is loading and draws nothing. No font set is none, and draws the bundled font.
+_Avoid_: "the font metrics" for the whole answer, which holds the chain too.
+
 **Cluster** (`GlyphPlacement.char` and `sourceIndex` in `r3f/controls/native/text/textLayout.ts`):
 The characters of a run that draw as one unit: a base and the marks typed after it, or the characters of a **Shaped glyph**. The layout places each cluster once, with the cluster's text as its `char`. A line break and a reveal step fall only at the edge of a cluster, as Godot's glyph `start` and `end` set them.
 _Avoid_: "grapheme", which Unicode segments by other rules.

@@ -7,7 +7,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { windowLoaded } from './fakeFontFace.testkit';
 import { fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
 import { peekSceneFontMetrics, peekSettledSceneFontMetrics } from './sceneFontLoader';
-import { fontWork, onSceneFontSettled, sceneFontSettleCount } from './settledChannel';
+import { fontWork } from './settledChannel';
+import { createSettledFonts, type SettledFonts } from './settledFonts';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { FACELESS_FONT } from './sceneFontResolution';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
@@ -28,6 +29,12 @@ function settleLoads(): Promise<void> {
 
 beforeAll(windowLoaded);
 
+/** A preview's settled fonts, new for each test, so no load of one test settles in another. */
+let fonts: SettledFonts;
+beforeEach(() => {
+  fonts = createSettledFonts();
+});
+
 describe('peekSceneFontMetrics', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
 
@@ -40,20 +47,20 @@ describe('peekSceneFontMetrics', () => {
   });
 
   it('no font authored (undefined/null): falls back to the bundled default with NO warning -- this is not a failure', () => {
-    expect(peekSceneFontMetrics(undefined, 'Root/Label')).toBe(OPEN_SANS_FONT_METRICS);
-    expect(peekSceneFontMetrics(null, 'Root/Label')).toBe(OPEN_SANS_FONT_METRICS);
+    expect(peekSceneFontMetrics(fonts, undefined, 'Root/Label')).toBe(OPEN_SANS_FONT_METRICS);
+    expect(peekSceneFontMetrics(fonts, null, 'Root/Label')).toBe(OPEN_SANS_FONT_METRICS);
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it('a SystemFont draws the bundled default with no warning, as Godot does when no OS font matches its names', () => {
     const font = systemFont();
-    expect(peekSceneFontMetrics(font, 'Root/MyLabel')).toBe(OPEN_SANS_FONT_METRICS);
+    expect(peekSceneFontMetrics(fonts, font, 'Root/MyLabel')).toBe(OPEN_SANS_FONT_METRICS);
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it('a bytes-less FontFile with no resolvable fallback warns with the node path and falls back', () => {
     const wrapper = fontFile(undefined, []);
-    const metrics = peekSceneFontMetrics(wrapper, 'Root/B');
+    const metrics = peekSceneFontMetrics(fonts, wrapper, 'Root/B');
     expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy.mock.calls[0]![0]).toContain('Root/B');
@@ -61,15 +68,15 @@ describe('peekSceneFontMetrics', () => {
 
   it('warns at most once for the SAME unresolvable resource object across repeated peeks -- no per-frame warning spam', () => {
     const wrapper = fontFile(undefined, []);
-    peekSceneFontMetrics(wrapper, 'Root/A');
-    peekSceneFontMetrics(wrapper, 'Root/A');
-    peekSceneFontMetrics(wrapper, 'Root/A');
+    peekSceneFontMetrics(fonts, wrapper, 'Root/A');
+    peekSceneFontMetrics(fonts, wrapper, 'Root/A');
+    peekSceneFontMetrics(fonts, wrapper, 'Root/A');
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('peekSceneFontMetrics returns the bundled default synchronously while a real load would still be in flight, and never throws', () => {
     const leaf = fontFile(new ArrayBuffer(4));
-    const metrics = peekSceneFontMetrics(leaf, 'Root/D');
+    const metrics = peekSceneFontMetrics(fonts, leaf, 'Root/D');
     expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
   });
 });
@@ -77,16 +84,16 @@ describe('peekSceneFontMetrics', () => {
 describe('peekSettledSceneFontMetrics — a font with no face', () => {
   // `text_server_adv.cpp:6894-6895`: the line holds a hex-code box, 15 cells of `round(size / 15)` px.
   it('holds a hex-code box line: 0.85 of the box above the baseline, 0.15 below', () => {
-    const metrics = peekSettledSceneFontMetrics(FACELESS_FONT, 'Label')!;
+    const metrics = peekSettledSceneFontMetrics(fonts, FACELESS_FONT, 'Label')!;
     expect([getFontAscentPx(metrics, 56), getFontLinePitchPx(metrics, 56, 0)]).toEqual([51, 60]);
   });
 
   it('has a glyph for no character, so each draws as a hex-code box', () => {
-    expect(peekSettledSceneFontMetrics(FACELESS_FONT, 'Label')!.getGlyphAdvanceUnits('H')).toBeNull();
+    expect(peekSettledSceneFontMetrics(fonts, FACELESS_FONT, 'Label')!.getGlyphAdvanceUnits('H')).toBeNull();
   });
 
   it('keeps a cell of 1 px at a size whose cell rounds to 0', () => {
-    expect(getFontAscentPx(peekSettledSceneFontMetrics(FACELESS_FONT, 'Label')!, 6)).toBe(12.75);
+    expect(getFontAscentPx(peekSettledSceneFontMetrics(fonts, FACELESS_FONT, 'Label')!, 6)).toBe(12.75);
   });
 });
 
@@ -100,31 +107,35 @@ describe('peekSettledSceneFontMetrics', () => {
   });
 
   it('answers the bundled default at once for no font and for a font that cannot load, which settle by themselves', () => {
-    expect(peekSettledSceneFontMetrics(undefined, 'Root/Mesh')).toBe(OPEN_SANS_FONT_METRICS);
-    expect(peekSettledSceneFontMetrics(fontFile(undefined, []), 'Root/Mesh')).toBe(OPEN_SANS_FONT_METRICS);
+    expect(peekSettledSceneFontMetrics(fonts, undefined, 'Root/Mesh')).toBe(OPEN_SANS_FONT_METRICS);
+    expect(peekSettledSceneFontMetrics(fonts, fontFile(undefined, []), 'Root/Mesh')).toBe(
+      OPEN_SANS_FONT_METRICS
+    );
   });
 
   it('answers null while the load a peek starts is in flight, then the metrics it settles on', async () => {
     const leaf = fontFile(new ArrayBuffer(4));
-    expect(peekSettledSceneFontMetrics(leaf, 'Root/Mesh')).toBeNull();
+    expect(peekSettledSceneFontMetrics(fonts, leaf, 'Root/Mesh')).toBeNull();
     await settleLoads();
-    expect(peekSettledSceneFontMetrics(leaf, 'Root/Mesh')).toBe(OPEN_SANS_FONT_METRICS);
+    expect(peekSettledSceneFontMetrics(fonts, leaf, 'Root/Mesh')).toBe(OPEN_SANS_FONT_METRICS);
   });
 
   it('shares the load with peekSceneFontMetrics, which answers the default meanwhile', async () => {
     const leaf = fontFile(new ArrayBuffer(4));
-    expect(peekSceneFontMetrics(leaf, 'Root/Label')).toBe(OPEN_SANS_FONT_METRICS);
-    expect(peekSettledSceneFontMetrics(leaf, 'Root/Mesh')).toBeNull();
+    expect(peekSceneFontMetrics(fonts, leaf, 'Root/Label')).toBe(OPEN_SANS_FONT_METRICS);
+    expect(peekSettledSceneFontMetrics(fonts, leaf, 'Root/Mesh')).toBeNull();
     await settleLoads();
-    expect(peekSettledSceneFontMetrics(leaf, 'Root/Mesh')).toBe(peekSceneFontMetrics(leaf, 'Root/Label'));
+    expect(peekSettledSceneFontMetrics(fonts, leaf, 'Root/Mesh')).toBe(
+      peekSceneFontMetrics(fonts, leaf, 'Root/Label')
+    );
   });
 
   it('settles the bundled face with no outlines, since the canvas face it draws as reads them', async () => {
     const font = fontFile(fixtureFontBytes('open-sans-semibold-subset.ttf'));
-    peekSettledSceneFontMetrics(font, 'Root/Bundled');
-    await vi.waitFor(() => expect(peekSettledSceneFontMetrics(font, 'Root/Bundled')).not.toBeNull());
+    peekSettledSceneFontMetrics(fonts, font, 'Root/Bundled');
+    await vi.waitFor(() => expect(peekSettledSceneFontMetrics(fonts, font, 'Root/Bundled')).not.toBeNull());
     await settleLoads();
-    expect(peekSettledSceneFontMetrics(font, 'Root/Bundled')?.outlines).toBeUndefined();
+    expect(peekSettledSceneFontMetrics(fonts, font, 'Root/Bundled')?.outlines).toBeUndefined();
   });
 
   it('carries the embolden of a variation over a settled face', async () => {
@@ -135,9 +146,9 @@ describe('peekSettledSceneFontMetrics', () => {
       fallbacks: [],
       properties: { variation_embolden: '0.5' },
     };
-    expect(peekSettledSceneFontMetrics(variation, 'Root/Mesh')).toBeNull();
+    expect(peekSettledSceneFontMetrics(fonts, variation, 'Root/Mesh')).toBeNull();
     await settleLoads();
-    expect(peekSettledSceneFontMetrics(variation, 'Root/Mesh')?.embolden).toBe(0.5);
+    expect(peekSettledSceneFontMetrics(fonts, variation, 'Root/Mesh')?.embolden).toBe(0.5);
   });
 });
 
@@ -149,9 +160,9 @@ describe('peekSceneFontMetrics — FontVariation embolden', () => {
   }
 
   async function settledPeek(font: FontResource) {
-    peekSceneFontMetrics(font, 'Root/Label');
+    peekSceneFontMetrics(fonts, font, 'Root/Label');
     await settleLoads();
-    return peekSceneFontMetrics(font, 'Root/Label');
+    return peekSceneFontMetrics(fonts, font, 'Root/Label');
   }
 
   it("carries the variation's variation_embolden on the metrics of its base face", async () => {
@@ -165,8 +176,10 @@ describe('peekSceneFontMetrics — FontVariation embolden', () => {
     const face = fontFile(bytes);
     const first = variation(face, { variation_embolden: '1.2' });
     const settled = await settledPeek(first);
-    expect(peekSceneFontMetrics(first, 'Root/Label')).toBe(settled);
-    expect(peekSceneFontMetrics(variation(face, { variation_embolden: '1.2' }), 'Root/Other')).toBe(settled);
+    expect(peekSceneFontMetrics(fonts, first, 'Root/Label')).toBe(settled);
+    expect(peekSceneFontMetrics(fonts, variation(face, { variation_embolden: '1.2' }), 'Root/Other')).toBe(
+      settled
+    );
   });
 
   it('leaves the base face untouched when the variation has no embolden, or an embolden of 0', async () => {
@@ -179,7 +192,11 @@ describe('peekSceneFontMetrics — FontVariation embolden', () => {
   it('wraps the bundled face, silently and at once, for a variation with no base_font (#955)', () => {
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     try {
-      const metrics = peekSceneFontMetrics(variation(null, { variation_embolden: '1.2' }), 'Root/Bare');
+      const metrics = peekSceneFontMetrics(
+        fonts,
+        variation(null, { variation_embolden: '1.2' }),
+        'Root/Bare'
+      );
       expect(metrics.embolden).toBe(1.2);
       expect(metrics.kind).toBe(OPEN_SANS_FONT_METRICS.kind);
       expect(warnSpy).not.toHaveBeenCalled();
@@ -191,27 +208,28 @@ describe('peekSceneFontMetrics — FontVariation embolden', () => {
   it('wraps the bundled face for a variation over a SystemFont, as for a variation with no base_font', () => {
     const system = systemFont();
     const embolden = { variation_embolden: '1.2' };
-    expect(peekSceneFontMetrics(variation(system, embolden), 'Root/OverSystem')).toBe(
-      peekSceneFontMetrics(variation(null, embolden), 'Root/Bare')
+    expect(peekSceneFontMetrics(fonts, variation(system, embolden), 'Root/OverSystem')).toBe(
+      peekSceneFontMetrics(fonts, variation(null, embolden), 'Root/Bare')
     );
   });
 
   it("takes the outer variation's embolden over a bare variation, and the bundled face with none", () => {
     const bare = variation(null, { variation_embolden: '2.0' });
-    expect(peekSceneFontMetrics(variation(bare, { variation_embolden: '1.2' }), 'Root/Over').embolden).toBe(
-      1.2
-    );
-    expect(peekSceneFontMetrics(variation(null, {}), 'Root/Plain')).toBe(OPEN_SANS_FONT_METRICS);
+    expect(
+      peekSceneFontMetrics(fonts, variation(bare, { variation_embolden: '1.2' }), 'Root/Over').embolden
+    ).toBe(1.2);
+    expect(peekSceneFontMetrics(fonts, variation(null, {}), 'Root/Plain')).toBe(OPEN_SANS_FONT_METRICS);
   });
 
   it("carries the variation's variation_transform skew, on a settled face and on the bundled one", async () => {
     const transform = { variation_transform: 'Transform2D(1, 0.2, 0, 1, 0, 0)' };
     expect((await settledPeek(variation(fontFile(bytes), transform))).skew).toBe(0.2);
-    expect(peekSceneFontMetrics(variation(null, transform), 'Root/Bare').skew).toBe(0.2);
+    expect(peekSceneFontMetrics(fonts, variation(null, transform), 'Root/Bare').skew).toBe(0.2);
   });
 
   it('draws the bundled face with no embolden while the base face is still loading', () => {
     const metrics = peekSceneFontMetrics(
+      fonts,
       variation(fontFile(new ArrayBuffer(4)), { variation_embolden: '1.2' }),
       'Root/L'
     );
@@ -219,12 +237,12 @@ describe('peekSceneFontMetrics — FontVariation embolden', () => {
   });
 });
 
-describe('onSceneFontSettled', () => {
+describe('SettledFonts.subscribe', () => {
   it('(happy) fires once the load a peek starts for a resolvable resource settles', async () => {
     const listener = vi.fn();
-    const off = onSceneFontSettled(listener);
+    const off = fonts.subscribe(listener);
     try {
-      peekSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/E');
+      peekSceneFontMetrics(fonts, fontFile(new ArrayBuffer(4)), 'Root/E');
       await settleLoads();
       expect(listener).toHaveBeenCalledTimes(1);
     } finally {
@@ -234,10 +252,11 @@ describe('onSceneFontSettled', () => {
 
   it('(edge) does NOT fire for a font that short-circuits synchronously (nothing to later change value)', async () => {
     const listener = vi.fn();
-    const off = onSceneFontSettled(listener);
+    const off = fonts.subscribe(listener);
     try {
-      peekSceneFontMetrics(undefined, 'Root/F');
+      peekSceneFontMetrics(fonts, undefined, 'Root/F');
       peekSceneFontMetrics(
+        fonts,
         { kind: 'system', fontNames: [], baseFont: null, fallbacks: [], properties: {} },
         'Root/G'
       );
@@ -250,9 +269,9 @@ describe('onSceneFontSettled', () => {
 
   it('(edge) an unsubscribed listener is never called again', async () => {
     const listener = vi.fn();
-    const off = onSceneFontSettled(listener);
+    const off = fonts.subscribe(listener);
     off();
-    peekSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/H');
+    peekSceneFontMetrics(fonts, fontFile(new ArrayBuffer(4)), 'Root/H');
     await settleLoads();
     expect(listener).not.toHaveBeenCalled();
   });
@@ -260,10 +279,10 @@ describe('onSceneFontSettled', () => {
   it('notifies every subscribed listener, not just the first', async () => {
     const a = vi.fn();
     const b = vi.fn();
-    const offA = onSceneFontSettled(a);
-    const offB = onSceneFontSettled(b);
+    const offA = fonts.subscribe(a);
+    const offB = fonts.subscribe(b);
     try {
-      peekSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/I');
+      peekSceneFontMetrics(fonts, fontFile(new ArrayBuffer(4)), 'Root/I');
       await settleLoads();
       expect(a).toHaveBeenCalledTimes(1);
       expect(b).toHaveBeenCalledTimes(1);
@@ -278,7 +297,7 @@ describe('fontWork', () => {
   it('counts a font load from the peek that starts it until it settles, so a capture waits for it', async () => {
     const leaf = fontFile(new ArrayBuffer(4));
 
-    peekSceneFontMetrics(leaf, 'Root/K');
+    peekSceneFontMetrics(fonts, leaf, 'Root/K');
     expect(fontWork.pending()).toBe(1);
     await settleLoads();
 
@@ -288,8 +307,8 @@ describe('fontWork', () => {
   it('counts one load for two peeks of one font, which share it', async () => {
     const leaf = fontFile(new ArrayBuffer(4));
 
-    peekSceneFontMetrics(leaf, 'Root/L');
-    peekSettledSceneFontMetrics(leaf, 'Root/M');
+    peekSceneFontMetrics(fonts, leaf, 'Root/L');
+    peekSettledSceneFontMetrics(fonts, leaf, 'Root/M');
     expect(fontWork.pending()).toBe(1);
     await settleLoads();
 
@@ -300,8 +319,8 @@ describe('fontWork', () => {
     const leaf = fontFile(new ArrayBuffer(4));
     const copy = { ...leaf, fallbacks: [systemFont()] };
 
-    peekSettledSceneFontMetrics(leaf, 'Root/N');
-    peekSettledSceneFontMetrics(copy, 'Root/O');
+    peekSettledSceneFontMetrics(fonts, leaf, 'Root/N');
+    peekSettledSceneFontMetrics(fonts, copy, 'Root/O');
     expect(fontWork.pending()).toBe(1);
     await settleLoads();
 
@@ -309,14 +328,14 @@ describe('fontWork', () => {
   });
 
   it('ends the work of a load whose settled listener throws, so a capture is not held for good', async () => {
-    const off = onSceneFontSettled(() => {
+    const off = fonts.subscribe(() => {
       throw new Error('listener failed');
     });
     // The load runs unawaited, so its rejection is the listener's error and nothing else.
     const swallow = () => undefined;
     process.on('unhandledRejection', swallow);
     try {
-      peekSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/P');
+      peekSceneFontMetrics(fonts, fontFile(new ArrayBuffer(4)), 'Root/P');
       await settleLoads();
       expect(fontWork.pending()).toBe(0);
     } finally {
@@ -326,8 +345,9 @@ describe('fontWork', () => {
   });
 
   it('counts no work for a font that settles by itself on the bundled default', () => {
-    peekSceneFontMetrics(undefined, 'Root/N');
+    peekSceneFontMetrics(fonts, undefined, 'Root/N');
     peekSceneFontMetrics(
+      fonts,
       { kind: 'system', fontNames: [], baseFont: null, fallbacks: [], properties: {} },
       'Root/O'
     );
@@ -336,15 +356,15 @@ describe('fontWork', () => {
   });
 });
 
-describe('sceneFontSettleCount', () => {
+describe('SettledFonts.version', () => {
   it('rises by one for each load that settles, so a subscriber that missed the event still sees it', async () => {
-    const before = sceneFontSettleCount();
+    const before = fonts.version();
 
-    peekSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/J');
-    expect(sceneFontSettleCount()).toBe(before);
+    peekSceneFontMetrics(fonts, fontFile(new ArrayBuffer(4)), 'Root/J');
+    expect(fonts.version()).toBe(before);
     await settleLoads();
 
-    expect(sceneFontSettleCount()).toBe(before + 1);
+    expect(fonts.version()).toBe(before + 1);
   });
 });
 
@@ -363,18 +383,19 @@ describe('scene font in an environment with no font door', () => {
     const logger = await import('../../../../logger');
     vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const mod = await import('./sceneFontLoader');
+    const { createSettledFonts: freshFonts } = await import('./settledFonts');
     // From the same fresh graph: the static import above is a different module instance.
     const { OPEN_SANS_FONT_METRICS: bundled } = await import('./openSansFontMetrics');
-    return { ...mod, logger, bundled };
+    return { ...mod, fonts: freshFonts(), logger, bundled };
   }
 
   it('falls back to the bundled default and names the absent environment when there is no FontFace', async () => {
-    const { peekSceneFontMetrics: peek, logger, bundled } = await freshLoader();
+    const { fonts, peekSceneFontMetrics: peek, logger, bundled } = await freshLoader();
 
     const font = fontFile(new ArrayBuffer(4));
-    peek(font, 'Root/NoDom');
+    peek(fonts, font, 'Root/NoDom');
     await settleLoads();
-    expect(peek(font, 'Root/NoDom')).toBe(bundled);
+    expect(peek(fonts, font, 'Root/NoDom')).toBe(bundled);
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('no FontFace/document.fonts in this environment')
     );
@@ -390,29 +411,29 @@ describe('scene font in an environment with no font door', () => {
       }
     );
     vi.stubGlobal('document', undefined);
-    const { peekSceneFontMetrics: peek, logger, bundled } = await freshLoader();
+    const { fonts, peekSceneFontMetrics: peek, logger, bundled } = await freshLoader();
 
     const font = fontFile(new ArrayBuffer(4));
-    peek(font, 'Root/NoDocument');
+    peek(fonts, font, 'Root/NoDocument');
     await settleLoads();
-    expect(peek(font, 'Root/NoDocument')).toBe(bundled);
+    expect(peek(fonts, font, 'Root/NoDocument')).toBe(bundled);
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('no FontFace/document.fonts in this environment')
     );
   });
 
   it('draws the bundled default for a face that fails to load, and drops a fallback that fails', async () => {
-    const { peekSettledChainFaces: peekChain, bundled } = await freshLoader();
+    const { fonts, peekSettledChainFaces: peekChain, bundled } = await freshLoader();
 
     const fallback = fontFile(new ArrayBuffer(4));
     const font = fontFile(new ArrayBuffer(4), [fallback]);
-    peekChain(font, 'Root/NoDom');
+    peekChain(fonts, font, 'Root/NoDom');
     await settleLoads();
-    expect(peekChain(font, 'Root/NoDom')).toEqual([{ font, metrics: bundled, isStandIn: true }]);
+    expect(peekChain(fonts, font, 'Root/NoDom')).toEqual([{ font, metrics: bundled, isStandIn: true }]);
   });
 
   it('keeps the embolden of a FontVariation over a face that fails to load', async () => {
-    const { peekSceneFontMetrics: peek } = await freshLoader();
+    const { fonts, peekSceneFontMetrics: peek } = await freshLoader();
 
     const font: FontResource = {
       kind: 'variation',
@@ -420,9 +441,9 @@ describe('scene font in an environment with no font door', () => {
       fallbacks: [],
       properties: { variation_embolden: '1.2' },
     };
-    peek(font, 'Root/NoDom');
+    peek(fonts, font, 'Root/NoDom');
     await settleLoads();
-    expect(peek(font, 'Root/NoDom').embolden).toBe(1.2);
+    expect(peek(fonts, font, 'Root/NoDom').embolden).toBe(1.2);
   });
 });
 
@@ -453,8 +474,10 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
     });
     const { fontFile: freshFontFile, fixtureFontBytes } = await import('./sfntOutlines.testkit');
     const mod = await import('./sceneFontLoader');
+    const { createSettledFonts: freshFonts } = await import('./settledFonts');
     return {
       ...mod,
+      fonts: freshFonts(),
       ttf: () => freshFontFile(fixtureFontBytes('open-sans-semibold-subset.ttf')),
       recursive: () => freshFontFile(fixtureFontBytes('recursive-vf-subset.woff2')),
     };
@@ -468,40 +491,42 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
   });
 
   it('answers null while the outlines load, then the face carrying them', async () => {
-    const { peekSettledSceneFontMetrics: peek, ttf } = await loaderWithFontDoor();
+    const { fonts, peekSettledSceneFontMetrics: peek, ttf } = await loaderWithFontDoor();
     const font = emboldened(ttf());
+    // The first settle is the face's, which starts the load of its outlines.
+    const answersAtSettle: unknown[] = [];
+    fonts.subscribe(() => answersAtSettle.push(peek(fonts, font, 'Root/Bold')));
 
-    peek(font, 'Root/Bold');
-    await settleLoads();
-    expect(peek(font, 'Root/Bold')).toBeNull();
+    peek(fonts, font, 'Root/Bold');
+    await vi.waitFor(() => expect(peek(fonts, font, 'Root/Bold')).not.toBeNull(), OUTLINE_LOAD_TIMEOUT_MS);
 
-    await vi.waitFor(() => expect(peek(font, 'Root/Bold')).not.toBeNull(), OUTLINE_LOAD_TIMEOUT_MS);
-    expect(peek(font, 'Root/Bold')?.outlines?.glyphIndex(0x48)).toBeGreaterThan(0);
+    expect(answersAtSettle[0]).toBeNull();
+    expect(peek(fonts, font, 'Root/Bold')?.outlines?.glyphIndex(0x48)).toBeGreaterThan(0);
   });
 
   it("measures each glyph's ink box with the canvas that measures its advance", async () => {
-    const { peekSettledSceneFontMetrics: peek, ttf } = await loaderWithFontDoor();
+    const { fonts, peekSettledSceneFontMetrics: peek, ttf } = await loaderWithFontDoor();
     const font = ttf();
 
-    peek(font, 'Root/Ink');
-    await vi.waitFor(() => expect(peek(font, 'Root/Ink')).not.toBeNull(), OUTLINE_LOAD_TIMEOUT_MS);
+    peek(fonts, font, 'Root/Ink');
+    await vi.waitFor(() => expect(peek(fonts, font, 'Root/Ink')).not.toBeNull(), OUTLINE_LOAD_TIMEOUT_MS);
 
-    const face = peek(font, 'Root/Ink') as CanvasFontMetrics;
+    const face = peek(fonts, font, 'Root/Ink') as CanvasFontMetrics;
     expect(face.getGlyphInkUnits?.('A')).toEqual({ left: 30, right: 470 });
   });
 
   /** Recursive's face under a `FontVariation` at `MONO` = `mono`, once its outlines settle. */
   async function settledAtMono(mono: number) {
-    const { peekSettledSceneFontMetrics: peek, recursive } = await loaderWithFontDoor();
+    const { fonts, peekSettledSceneFontMetrics: peek, recursive } = await loaderWithFontDoor();
     const font: FontResource = {
       kind: 'variation',
       baseFont: recursive(),
       fallbacks: [],
       properties: { variation_opentype: `{\n1297043023: ${mono}\n}` },
     };
-    peek(font, 'Root/Label');
-    await vi.waitFor(() => expect(peek(font, 'Root/Label')).not.toBeNull(), OUTLINE_LOAD_TIMEOUT_MS);
-    return peek(font, 'Root/Label')!;
+    peek(fonts, font, 'Root/Label');
+    await vi.waitFor(() => expect(peek(fonts, font, 'Root/Label')).not.toBeNull(), OUTLINE_LOAD_TIMEOUT_MS);
+    return peek(fonts, font, 'Root/Label')!;
   }
 
   it('settles a variable font at an instance on its outlines, which its text and advances follow', async () => {
@@ -519,13 +544,14 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
     expect(getFontRunGlyphAdvancePx(face, { char: 'm' }, 10)).toBe(5);
   });
 
-  it('settles a plain canvas face at once, with no outlines to wait for', async () => {
-    const { peekSettledSceneFontMetrics: peek, ttf } = await loaderWithFontDoor();
+  it('settles a plain canvas face on its outlines, with no variation on top', async () => {
+    const { fonts, peekSettledSceneFontMetrics: peek, ttf } = await loaderWithFontDoor();
     const font = ttf();
 
-    peek(font, 'Root/Plain');
-    await settleLoads();
+    peek(fonts, font, 'Root/Plain');
+    await vi.waitFor(() => expect(peek(fonts, font, 'Root/Plain')).not.toBeNull(), OUTLINE_LOAD_TIMEOUT_MS);
 
-    expect(peek(font, 'Root/Plain')?.outlines).toBeUndefined();
+    expect(peek(fonts, font, 'Root/Plain')).toMatchObject({ embolden: 0, skew: 0 });
+    expect(peek(fonts, font, 'Root/Plain')?.outlines?.glyphIndex(0x48)).toBeGreaterThan(0);
   });
 });

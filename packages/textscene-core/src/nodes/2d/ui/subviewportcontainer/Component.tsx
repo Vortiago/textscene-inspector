@@ -26,6 +26,7 @@ import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts.
 import { canvasPieceSlot, type CanvasSlot } from '../../../../r3f/canvasItemState';
 import { useCanvasColorSpace } from '../../../../r3f/canvasColorSpace';
 import { CHAIN_START_INHERITANCE } from '../../../../r3f/canvasItemPass/inheritedCanvasState';
+import { useWatchedSettledFonts } from '../../../../r3f/controls/native/text/useSettledFont';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
@@ -110,6 +111,7 @@ function ViewportSurfaceNative({
     [viewportWidth, viewportHeight]
   );
 
+  const settledFonts = useWatchedSettledFonts();
   const fallbackSolveNode = useMemo<SolveNode>(
     () => ({
       path,
@@ -141,6 +143,7 @@ function ViewportSurfaceNative({
       labelSettingsFont: null,
       themeChain: [],
       projectFonts: NO_PROJECT_FONTS,
+      settledFonts,
       colors: {},
       constants: {},
       icons: {},
@@ -148,7 +151,7 @@ function ViewportSurfaceNative({
       // child of this node, so its refs name the same pools.
       resources: { externalResources, internalResources },
     }),
-    [path, viewport, rtl, locale, externalResources, internalResources]
+    [path, viewport, rtl, locale, externalResources, internalResources, settledFonts]
   );
 
   // With `stretch` on, the viewport draws over the container's whole rect (`:142`). With it off, it

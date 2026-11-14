@@ -25,8 +25,19 @@ said. A font in a WOFF or WOFF2 file had metrics for the 2D text and no outlines
   to a plain `glyf` and `loca`. No container has an outline path of its own.
 - A font that is still loading draws nothing. The bundled font is the answer for an unset or a
   failed font only, so a loading font never flashes the bundled one.
+- A font loads in two stages. The font bus carries its file. The settled fonts of the preview
+  (`settledFonts.ts`, held by the preview's `ResourceLoader`) then load the face of each font of
+  its **Fallback chain**. A reader gets one answer, a **Settled font**: none, loading, or the face
+  with its chain. A component reads it through `useSettledFont`, which re-renders it when that font
+  settles. A settle wakes the readers of the fonts it settles, and of no other font. The Control
+  solve tree hands each node a view of the settled fonts that records each font its solve and its
+  painters await, and rebuilds when one of those settles. A mesh build reads the `settledFonts`
+  its context carries, and re-renders on a settle of its preview only.
+- The face loader is injected through `ResourceLoaderOptions.loadFace`, with the `FontFace` loader
+  as the default. A test gives a loader that answers a stand-in face, or one that stays pending.
 
 ## Consequences
 
 A project font reaches a TextMesh and a Label3D with no change to the scene. A new container adds a
-decoder that returns tables, and no reader changes.
+decoder that returns tables, and no reader changes. A font that settles in one preview wakes no
+reader of another. Two previews that draw one font load its face once each.

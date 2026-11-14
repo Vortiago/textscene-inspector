@@ -10,6 +10,8 @@ import type { CanvasFontMetrics } from './runtimeFontMetrics';
 import { peekOutlines } from './sceneFontOutlines';
 import { BUNDLED_FACE } from './sceneFontResolution';
 import { useProjectSettings } from '../../../contexts/ProjectSettingsContext';
+import type { SettledFonts } from './settledFonts';
+import { useSettledFonts } from './useSettledFont';
 import type { FontHinting } from '../../../../godot/text/textServerEnums';
 
 /**
@@ -26,17 +28,19 @@ export type PeekBundledCanvasFace = (bundledFace: FontMetrics) => CanvasFontMetr
  */
 export function useBundledCanvasFace(): PeekBundledCanvasFace {
   const { defaultFontHinting, isSettled } = useProjectSettings();
+  const fonts = useSettledFonts();
   return useCallback(
-    (bundledFace) => (isSettled ? peekBundledCanvasFace(bundledFace, defaultFontHinting) : undefined),
-    [defaultFontHinting, isSettled]
+    (bundledFace) => (isSettled ? peekBundledCanvasFace(fonts, bundledFace, defaultFontHinting) : undefined),
+    [fonts, defaultFontHinting, isSettled]
   );
 }
 
 function peekBundledCanvasFace(
+  fonts: SettledFonts,
   bundledFace: FontMetrics,
   hinting: FontHinting
 ): CanvasFontMetrics | null | undefined {
-  const outlines = peekOutlines(BUNDLED_FACE, { hinting, isAutohinterForced: false });
+  const outlines = peekOutlines(fonts, BUNDLED_FACE, { hinting, isAutohinterForced: false });
   if (!outlines) return outlines;
   return withVariation(OPEN_SANS_CANVAS_FONT_METRICS, {
     embolden: bundledFace.embolden,

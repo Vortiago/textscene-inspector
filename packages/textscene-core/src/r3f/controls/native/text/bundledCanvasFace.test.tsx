@@ -47,7 +47,7 @@ function mountPeekIn(projectFile: string) {
   );
 }
 
-const requestedHintings = () => new Set(vi.mocked(peekOutlines).mock.calls.map(([, load]) => load.hinting));
+const requestedHintings = () => new Set(vi.mocked(peekOutlines).mock.calls.map(([, , load]) => load.hinting));
 
 describe('useBundledCanvasFace', () => {
   afterEach(() => vi.mocked(peekOutlines).mockClear());

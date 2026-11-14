@@ -59,6 +59,7 @@ function readMesh(meshRef: string, ctx: CsgGeometryContext): CsgMesh | null {
     loadedFile: ctx.loadedFile,
     loadedFont: ctx.loadedFont,
     projectFonts: ctx.projectFonts,
+    settledFonts: ctx.settledFonts,
     locale: ctx.locale,
     file: path && parsed ? { path, parsed } : null,
   };

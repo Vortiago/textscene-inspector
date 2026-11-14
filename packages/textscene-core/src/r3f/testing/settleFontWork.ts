@@ -1,4 +1,5 @@
 /** Test-only: waits until every font load a peek started has settled and woken its listeners. */
+import type { SettledFonts } from '../controls/native/text/settledFonts';
 
 /**
  * Resolves when the work count a capture waits on reaches zero, with no wall-clock limit but the
@@ -17,13 +18,9 @@ export async function settleFontWork(): Promise<void> {
   });
 }
 
-/**
- * Settles a font load that nothing reads, which wakes every reader of the font settle count. The
- * channel is imported here for the same reason as above.
- */
-export async function settleUnrelatedFontLoad(): Promise<void> {
-  const { createSettledPeek } = await import('../controls/native/text/settledChannel');
-  createSettledPeek<object, null>()({}, () => Promise.resolve(null));
+/** Settles a font load that nothing reads in the preview of `fonts`: it wakes the readers there that watch every settle, and no reader of one font. */
+export async function settleUnrelatedFontLoad(fonts: SettledFonts): Promise<void> {
+  fonts.peekOutlines({}, () => Promise.resolve(null));
   await settleFontWork();
 }
 

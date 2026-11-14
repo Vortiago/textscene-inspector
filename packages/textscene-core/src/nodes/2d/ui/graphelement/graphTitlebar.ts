@@ -54,7 +54,7 @@ export function resolveTitleFontTheme(n: SolveNode, typeVariation: string): Titl
   const scope = themeResolutionScope(TITLE_LABEL_NATIVE_TYPE, typeVariation, n.themeChain, n.projectFonts);
   const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size');
   const fontResource = resolveThemeFontIn(scope, 'font', undefined);
-  const fontMetrics = peekSceneFontMetrics(fontResource, n.path);
+  const fontMetrics = peekSceneFontMetrics(n.settledFonts, fontResource, n.path);
   const items = internalChildThemeItems(n, TITLE_LABEL_NATIVE_TYPE, typeVariation);
   return {
     fontSizePx,

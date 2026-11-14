@@ -4,6 +4,7 @@ import { NO_RESOURCES } from '../../r3f/SceneResourcesContext';
 import type { ResolvableResource, ScopedResource } from '../scopedResource';
 import { NO_FILES, NO_FONTS } from '../testing/loadedFiles';
 import { NO_PROJECT_FONTS } from '../fonts/font/projectFonts';
+import { settledFontsOf } from '../../r3f/controls/native/text/useSettledFont';
 import { undrawnMeshType } from './meshSource';
 import { FONT_PATH, readyTextMesh, textMeshWith } from './textmesh/textMeshFont.testkit';
 
@@ -23,6 +24,7 @@ function resolvedOf(type: string): ResolvableResource {
     loadedFile: NO_FILES,
     loadedFont: NO_FONTS,
     projectFonts: NO_PROJECT_FONTS,
+    settledFonts: settledFontsOf(null),
     locale: '',
   };
 }
