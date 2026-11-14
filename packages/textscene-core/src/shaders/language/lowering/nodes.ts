@@ -14,7 +14,9 @@ import type {
   OperatorNode,
   Statement,
   VariableNode,
+  WholeAssignNode,
 } from '../shaderTree.js';
+import { shapeOf } from '../types.js';
 
 /** A read of `name`, an array of `arraySize` elements when it is above zero. */
 export const variable = (
@@ -43,8 +45,16 @@ export function operator(
   return { kind: 'operator', type: row.returns!, op, row, operands, position };
 }
 
-export const assign = (target: VariableNode, value: Expression): OperatorNode =>
-  operator('OP_ASSIGN', [target, value], target.position);
+/**
+ * `target = value`. A struct or an array is set whole, as Godot holds it apart from the
+ * operators, whose rows are of value types.
+ */
+export function assign(target: VariableNode, value: Expression): OperatorNode | WholeAssignNode {
+  const isWhole = (target.arraySize ?? 0) > 0 || shapeOf(target.type) === undefined;
+  if (!isWhole) return operator('OP_ASSIGN', [target, value], target.position);
+  const sized = target.arraySize ? { arraySize: target.arraySize } : {};
+  return { kind: 'whole assign', type: target.type, ...sized, target, value, position: target.position };
+}
 
 export const not = (value: Expression): OperatorNode => operator('OP_NOT', [value], value.position);
 

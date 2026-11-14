@@ -19,7 +19,6 @@ import type {
   VariableNode,
 } from '../shaderTree.js';
 import { arraySizeOf, isCall, subExpressions, withSubExpressions } from '../treeWalk.js';
-import { shapeOf } from '../types.js';
 import type { FreshNames } from './freshNames.js';
 import { assign, declaration, flow, flowBody, ifStatement, not, variable } from './nodes.js';
 import { rewriteFunction } from './rewrite.js';
@@ -174,7 +173,7 @@ class Hoist {
   private assignedIn(result: VariableNode, part: Expression): Statement[] {
     const inner = new Hoist(this.names);
     const value = inner.expression(part);
-    return [...inner.statements, write(result, value)];
+    return [...inner.statements, assign(result, value)];
   }
 
   /** `value` kept in a variable declared now, or `value` itself when no write can change it. */
@@ -196,17 +195,4 @@ class Hoist {
 function rebuilt(expression: Expression, parts: readonly Expression[]): Expression {
   let next = 0;
   return withSubExpressions(expression, () => parts[next++]!);
-}
-
-/** `target = value`: an operator for a value type, a whole assignment for a struct or an array. */
-function write(target: VariableNode, value: Expression): Statement {
-  if (shapeOf(target.type) && arraySizeOf(target) === 0) return assign(target, value);
-  return {
-    kind: 'whole assign',
-    type: target.type,
-    target,
-    value,
-    position: target.position,
-    ...(target.arraySize ? { arraySize: target.arraySize } : {}),
-  };
 }

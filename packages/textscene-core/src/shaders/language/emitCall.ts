@@ -8,6 +8,7 @@
 import { Fn, int, property, struct } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import type { EmittedTree } from './emittedTree.js';
+import { isArrayType, wholeArrays } from './wholeArray.js';
 import {
   copyInto,
   inVar,
@@ -125,8 +126,8 @@ class GlslFunction {
     this.type = outputs ? structName : (outputTypes[0] ?? UNREAD_TYPE);
     // Two parameters, so TSL hands the inputs to a function of none too.
     const jsFunc = (inputs: Iterable<Node>, _builder: unknown) => {
-      const leaves = this.output(body, [...inputs]);
-      if (outputs) return outputs(...(leaves as never[]));
+      const leaves = this.output(body, wholeArrays([...inputs], inputTypes));
+      if (outputs) return outputs(...(wholeArrays(leaves, outputTypes) as never[]));
       return leaves[0] ?? int(0);
     };
     this.fn = Fn(jsFunc as never).setLayout({
@@ -252,8 +253,6 @@ function splitLeaves(leaves: readonly Node[], parameters: readonly Parameter[]):
 const UNREAD_TYPE = 'int';
 
 const memberName = (index: number) => `m${index}`;
-
-const isArrayType = (type: string) => type.endsWith(']');
 
 const membersOf = (types: readonly string[]) =>
   Object.fromEntries(types.map((type, index) => [memberName(index), type]));

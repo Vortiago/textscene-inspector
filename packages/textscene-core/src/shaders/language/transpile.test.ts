@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { mat2, uniform, vec2, vec4 } from 'three/tsl';
+import { Vector2 } from 'three';
 import type { Node } from 'three/webgpu';
 import { generatedFragmentShader } from '../generatedShader.testkit.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
@@ -134,6 +135,22 @@ describe('transpileShadingLanguage', () => {
       );
       expect(glsl).toContain('sl0_swap_results sl0_swap ( int p0, int[2] p1 )');
       expect(glsl).toMatch(/struct sl0_swap_results \{\s*int\[2\] m0;\s*int m1;\s*\}/);
+    });
+
+    it('passes and gives back a vector array whole, with no array constructor around it', () => {
+      const glsl = glslOf(
+        'void fill(vec2 v[2], out vec2 w[2]) { w = v; } vec2 probe(vec2 a) { vec2 v[2] = vec2[2](a, a); vec2 w[2]; fill(v, w); return w[1]; }',
+        [uniform(new Vector2(1, 2))]
+      );
+      expect(glsl).not.toMatch(/vec2\[2\]\( nodeVar\d+ \)/);
+    });
+
+    it('reads an element of a vector array parameter as the vector', () => {
+      const glsl = glslOf(
+        'int second(ivec4 v[2]) { return v[1].y; } int probe(int a) { ivec4 v[2] = ivec4[2](ivec4(a), ivec4(a)); return second(v); }',
+        [uniform(1)]
+      );
+      expect(glsl).toContain('return p0[ 1 ].y;');
     });
 
     it('stands a call of a function that gives back nothing as a statement', () => {

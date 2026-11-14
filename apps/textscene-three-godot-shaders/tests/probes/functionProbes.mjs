@@ -70,6 +70,31 @@ function callProbes() {
       'struct Pair { float a; float b; }; Pair kept(float x) { if (x < 0.0) discard; return Pair(x, x); } float probe(float a) { kept(a); return a; }',
     ],
     [
+      'struct-return-in-branch',
+      [CALL],
+      'struct P { float x; float y; }; P f(float a) { if (a < 0.0) return P(-a, a); return P(a, 2.0 * a); } float probe(float a) { P p = f(a); return p.x + p.y * 3.0; }',
+    ],
+    [
+      'array-return-in-loop',
+      [CALL],
+      'float[2] f(float a) { for (int i = 0; i < 3; i++) { if (a < float(i)) return float[2](a, float(i)); } return float[2](a, a); } float probe(float a) { float v[2] = f(a); return v[0] + v[1] * 10.0; }',
+    ],
+    [
+      'vector-array-result',
+      [CALL],
+      'vec2[2] pair(vec2 a) { return vec2[2](a, -a); } vec2 probe(vec2 a) { vec2 p[2] = pair(a); return p[1] * 3.0 + p[0]; }',
+    ],
+    [
+      'vector-array-out',
+      OUT,
+      'void fill(vec2 a, out vec2 v[2]) { v[0] = a; v[1] = a + 1.0; } vec2 probe(vec2 a) { vec2 v[2]; fill(a, v); return v[0] * v[1]; }',
+    ],
+    [
+      'vector-array-argument',
+      [CALL],
+      'int second(ivec4 v[2]) { return v[1].y; } int probe(int a) { ivec4 v[2] = ivec4[2](ivec4(a), ivec4(a, a + 1, a, a)); return second(v); }',
+    ],
+    [
       'array-call-as-statement',
       [CALL],
       'float[2] kept(float x) { if (x < 0.0) discard; return float[2](x, x); } float probe(float a) { kept(a); return a; }',

@@ -31,10 +31,12 @@ export function lowerReturns(definition: FunctionNode, names: FreshNames): Funct
     variable(names.next('returned'), 'bool', position),
     definition.returnType === 'void'
       ? undefined
-      : variable(names.next('result'), definition.returnType, position)
+      : variable(names.next('result'), definition.returnType, position, definition.returnArraySize)
   );
   const head = [
-    ...(exit.result ? [declaration(exit.result.name, exit.result.type, undefined, position)] : []),
+    ...(exit.result
+      ? [declaration(exit.result.name, exit.result.type, undefined, position, exit.result.arraySize)]
+      : []),
     declaration(exit.returned.name, 'bool', boolean(false, position), position),
   ];
   const tail = exit.result ? [flow('FLOW_OP_RETURN', [exit.result], [], position)] : [];
