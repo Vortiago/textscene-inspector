@@ -7,6 +7,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { perObject } from '../../../../../utils/perObject';
 import { tableFits, type SfntFile } from '../sfntTables';
 
 /** One axis: its tag as the 32-bit integer HarfBuzz makes of four characters, and its range in 16.16. */
@@ -35,7 +36,7 @@ export function tagString(tag: number): string {
  * table, a version other than 1.0, axes or named instances that the table does not hold.
  * An axis whose default lies outside its range is fixed to the default.
  */
-export function readFvarAxes(sfnt: SfntFile): readonly FvarAxis[] | null {
+function readFvarAxes(sfnt: SfntFile): readonly FvarAxis[] | null {
   const { dv } = sfnt;
   const fvar = sfnt.tables.get('fvar');
   if (!fvar || !tableFits(dv, fvar, FVAR_HEADER_SIZE)) return null;
@@ -66,3 +67,6 @@ export function readFvarAxes(sfnt: SfntFile): readonly FvarAxis[] | null {
       : { tag, minimum, defaultValue, maximum };
   });
 }
+
+/** `readFvarAxes`, read once for each font: every reader of the variations of a font reads these axes. */
+export const fvarAxesOf = perObject(readFvarAxes);

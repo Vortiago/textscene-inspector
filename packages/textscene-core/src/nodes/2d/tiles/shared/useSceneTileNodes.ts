@@ -10,7 +10,8 @@ import type { LiveNode, YSortRoot } from '../../../../resources/liveNode';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes';
 import { sceneTileCells, type SceneTileCell } from '../../../../resources/tileset/sceneTileCells';
 import { sceneTilePlacement, type SceneRootKind } from '../../../../resources/tileset/sceneTilePlacement';
-import type { TileGrid, TileScene, TileSetModel } from '../../../../resources/tileset/types';
+import type { TileGrid, TileSetModel } from '../../../../resources/tileset/types';
+import type { SceneFile } from '../../../../resources/formats/packedscene/kind';
 import { perObject } from '../../../../utils/perObject';
 import { useInstancedScenePaths } from '../../../../r3f/contexts/InstancedScenePathsContext';
 import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
@@ -97,8 +98,8 @@ export function useSceneTileNodes(
     // Each scene is judged once. A scene that failed to load, or whose root is no CanvasItem, has no
     // scene and gets a disc (`tile_map_layer.cpp:1683-1699`). One Godot refuses to instantiate is
     // valid (`:1631`) but `instantiate()` returns null (`:1632`), so it draws nothing.
-    const placeable = new Map<TileScene, PlaceableScene>();
-    const sceneless = new Set<TileScene>();
+    const placeable = new Map<SceneFile, PlaceableScene>();
+    const sceneless = new Set<SceneFile>();
     scenes.forEach((scene, index) => {
       const step = sceneSteps[index]!;
       // A scene not yet loaded has no root to judge: its tile draws nothing and shows no disc.
@@ -115,7 +116,7 @@ export function useSceneTileNodes(
     const placed: LiveNode[] = [];
     const names = new TileNames();
     // Every tile of a scene solves the same root, so the first tile reports it for all.
-    const reporting = new Set<TileScene>();
+    const reporting = new Set<SceneFile>();
     for (const sceneTile of tiles) {
       const tileScene = sceneTile.tile.scene!;
       const scene = placeable.get(tileScene);
@@ -164,24 +165,20 @@ const NO_DRAWING: SceneTileDrawing = { instances: [], placeholderTiles: [] };
 
 /** A cell edit keeps the node of a scene it still draws, so the instances mounted below it keep their memos. */
 const instanceNodesOf = perObject((scope: SceneScope) =>
-  perObject((scene: TileScene) => instanceNode(scene, scope))
+  perObject((scene: SceneFile) => instanceNode(scene, scope))
 );
 
-/** The instance, resolved in the tables of the file that holds the TileSet, not the scene's. */
-function instanceNode(scene: TileScene, ambient: SceneScope): LiveNode {
+/** The instance of the scene file a tile names. The reading module resolved the file. */
+function instanceNode(scene: SceneFile, scope: SceneScope): LiveNode {
   return {
     name: INSTANCE_NAME,
     type: 'Node',
     parent: '.',
     children: [],
-    properties: { name: INSTANCE_NAME, parent: '.', instance: scene.ref },
+    properties: { name: INSTANCE_NAME, parent: '.', instance: scene.path },
     rawProperties: {},
-    instance: scene.ref,
-    scope: {
-      externalResources: scene.externalResources,
-      internalResources: scene.internalResources,
-      instancedScenePaths: ambient.instancedScenePaths,
-    },
+    instance: scene.path,
+    scope,
   };
 }
 

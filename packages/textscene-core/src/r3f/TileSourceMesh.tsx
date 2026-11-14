@@ -7,14 +7,13 @@ import { useMemo, useState } from 'react';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
 import * as THREE from 'three';
 import { useCanvasItemTextureSampledBy } from './canvasItemTexture';
-import { referenceHeldBy, type ScopedReference } from '../resources/reading';
 import {
   buildPaddedStandInGeometryArrays,
   buildTileGeometryArrays,
   buildTileOrientations,
 } from '../resources/tileset/tileGeometry';
 import type { DrawableCell } from '../resources/tileset/drawableCell';
-import type { AtlasSourceModel, TileGrid, TileTexture } from '../resources/tileset/types';
+import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
 import { useCanvas2DTexture } from './canvas2DTextureDecode';
 import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
@@ -51,7 +50,7 @@ export function TileSourceMesh({
   name,
   sampler: layerSampler,
 }: TileSourceMeshProps) {
-  const texResult = useCanvasItemTextureSampledBy(layerSampler, useTileTextureReference(source.texture));
+  const texResult = useCanvasItemTextureSampledBy(layerSampler, source.texture);
   const standIn = usePaddedAtlasStandIn(texResult, source);
   const isStandIn = standIn !== null;
   const tex = useCanvas2DTexture(standIn ?? texResult.texture, texResult.sampler);
@@ -164,18 +163,4 @@ function tintedColors(colors: Float32Array, vertexTint: Rgba): Float32Array {
   const { r, g, b } = vertexTint;
   const factors = [r, g, b, 1];
   return colors.map((value, index) => value * (factors[index % 4] ?? 1));
-}
-
-/** The atlas source's texture, held by the TileSet and the atlas source. */
-function useTileTextureReference(texture: TileTexture | null): ScopedReference | null {
-  return useMemo(
-    () =>
-      texture &&
-      referenceHeldBy(
-        texture.ref,
-        { externalResources: texture.externalResources, internalResources: texture.internalResources },
-        texture.isHeldLocally
-      ),
-    [texture]
-  );
 }
