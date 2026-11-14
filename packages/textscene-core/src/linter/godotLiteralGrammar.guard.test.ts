@@ -236,10 +236,13 @@ const ARITIES: ReadonlyArray<readonly [string, number]> = [
 describe('Godot composite literal grammar', () => {
   // Read, comment-stripped and labelled once for every assertion. Comments go because
   // a docblock's opening and closing delimiters pair into false regexes around prose.
-  const files = allSourceFiles().map((file) => {
-    const src = readFileSync(file, 'utf8');
-    return { rel: srcLabel(file), src, bare: stripComments(src) };
-  });
+  // A generated file holds Godot's own text, a GLSL template or a table row, as data.
+  const files = allSourceFiles()
+    .filter((file) => !file.endsWith('.generated.ts'))
+    .map((file) => {
+      const src = readFileSync(file, 'utf8');
+      return { rel: srcLabel(file), src, bare: stripComments(src) };
+    });
 
   it('is spelled by the two canonical builders, never by a regex literal', () => {
     const offenders = files

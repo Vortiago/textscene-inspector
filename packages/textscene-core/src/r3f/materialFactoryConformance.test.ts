@@ -200,6 +200,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'one material per group buffer, its shaders fixed at construction; a render moves only its colour uniform',
   'packages/textscene-core/src/r3f/opaqueSentinel.ts':
     "an opaque-list sentinel's material, which writes nothing and is never mutated",
+  'packages/textscene-core/src/shaders/sky/transpileSky.ts':
+    'the shader package draws a sky for a plain three.js app with no React: one material per transpiled sky, its nodes fixed at construction, and the caller moves only uniforms',
   'packages/textscene-core/src/r3f/controls/native/text/canvasTextPainter.ts':
     'one material per built text run, replaced and disposed together with its geometry; its single `defines` write happens before the material has ever been rendered',
   'packages/textscene-core/src/r3f/materials/useOneSurfaceStartingMaterial.ts':
@@ -296,6 +298,8 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'an opaque-list sentinel: its material writes nothing and is never mutated, and its owner removes it with its scene',
   'packages/textscene-core/src/resources/sky/build.ts':
     'the sky cube: built once, consumed by a single cube render, disposed with the environment',
+  'packages/textscene-core/src/shaders/sky/transpileSky.ts':
+    'the sky triangle of the shader package, which a plain three.js app with no React adds to its scene; the caller owns and disposes it',
   'packages/textscene-core/src/r3f/surfacedMeshDrawer/ClonedExtraDraws.tsx':
     'the next_pass chain sibling: the effect builds the draw beside a long-lived clone of the loader’s mesh and removes it when the link unmounts, so the material never passes through React',
 };

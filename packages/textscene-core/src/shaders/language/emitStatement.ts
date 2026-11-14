@@ -50,6 +50,8 @@ export class StatementEmitter {
         return this.declaration(statement, scope);
       case 'control flow':
         return this.flow(statement, scope);
+      case 'slot':
+        throw new Error(`expected the material's ${statement.name} code in the slot, found an empty slot`);
       default:
         if (isCall(statement)) this.expressions(scope).callStatement(statement);
         else if (!isEmpty(statement)) this.expressions(scope).value(statement);

@@ -15,6 +15,13 @@ import { godotSourceDir } from '../godotSource.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { SHOWCASES } from '../../apps/textscene-three-godot-shaders/tests/e2e/showcases.mjs';
 import { PROBES } from '../../apps/textscene-three-godot-shaders/tests/probes/probes.mjs';
+import { SKY_SCENES } from '../../apps/textscene-three-godot-shaders/tests/e2e/skyScenes.mjs';
+
+/**
+ * What makes a row transpiled: a probe that names it, or a sky scene that names it, which the end
+ * to end run draws against Godot, as no probe runs a sky shader.
+ */
+const ROW_PROOFS = [...PROBES, ...SKY_SCENES];
 import { GUIDE_CHAPTERS } from './guideChapters.mjs';
 import { godotVersion, instructionRows, SOURCE_FILES } from './readSource.mjs';
 import { renderGuide } from './renderGuide.mjs';
@@ -82,14 +89,14 @@ function main() {
   const guide = renderGuide({
     chapters: GUIDE_CHAPTERS,
     rows,
-    probes: PROBES,
+    probes: ROW_PROOFS,
     record: answers.probes,
     version: sources.version,
-    showcases: SHOWCASES,
+    showcases: [...SHOWCASES, ...SKY_SCENES],
   });
   const outputs = [
-    [TABLE_MODULE, renderTableModule(rows, PROBES, sources.version)],
-    [READABLE_TABLE, renderReadableTable(rows, PROBES, sources.version)],
+    [TABLE_MODULE, renderTableModule(rows, ROW_PROOFS, sources.version)],
+    [READABLE_TABLE, renderReadableTable(rows, ROW_PROOFS, sources.version)],
     ...guide.map(([file, text]) => [join(GUIDE_DIR, file), text]),
     [join(GUIDE_DIR, TESTING_FILE), testingChapter(answers)],
   ];

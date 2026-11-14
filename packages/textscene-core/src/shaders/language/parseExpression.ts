@@ -257,6 +257,7 @@ export class ExpressionParser {
       position: token.position,
       ...(found.arraySize > 0 ? { arraySize: found.arraySize } : {}),
       ...(found.isConst ? { isConst: true } : {}),
+      ...(found.kind === 'built-in' ? { builtIn: found.row } : {}),
     } as const;
     return found.arraySize > 0 ? this.arrayAccess(variable) : variable;
   }

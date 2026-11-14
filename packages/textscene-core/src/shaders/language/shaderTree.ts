@@ -38,6 +38,8 @@ export interface VariableNode {
   readonly arraySize?: number;
   /** A `const` local: Godot refuses a write to it. */
   readonly isConst?: boolean;
+  /** The row of a built-in of the shader type, `sky.sky.COLOR`, which the link step renames. */
+  readonly builtIn?: string;
   readonly position: SourcePosition;
 }
 
@@ -47,6 +49,8 @@ export interface ArrayElementNode {
   readonly type: ValueType;
   readonly array: Expression;
   readonly index: Expression;
+  /** The size of an element that is an array itself: only GLSL has arrays of arrays. */
+  readonly arraySize?: number;
   readonly position: SourcePosition;
 }
 
@@ -173,6 +177,8 @@ export interface ControlFlowNode {
   readonly flow: Flow;
   readonly expressions: readonly Expression[];
   readonly blocks: readonly BlockNode[];
+  /** A template's attributes before the statement, `[[dont_unroll]]`. Godot's own text has none. */
+  readonly attributes?: readonly string[];
   readonly position: SourcePosition;
 }
 
@@ -191,10 +197,23 @@ export interface DeclarationNode {
   readonly type: ValueType;
   readonly isConst: boolean;
   readonly declarators: readonly Declarator[];
+  /** A template's precision words before the type, `highp`. Godot's own text has none here. */
+  readonly words?: readonly string[];
   readonly position: SourcePosition;
 }
 
-export type Statement = Expression | ControlFlowNode | DeclarationNode | BlockNode;
+/**
+ * Where a template takes the body of a material's stage function, `#CODE : SKY`
+ * (`shader_rd.cpp:77`). The link step puts the material's statements in its place.
+ */
+export interface SlotStatementNode {
+  readonly kind: 'slot';
+  /** The stage function, upper case: `SKY`. */
+  readonly name: string;
+  readonly position: SourcePosition;
+}
+
+export type Statement = Expression | ControlFlowNode | DeclarationNode | BlockNode | SlotStatementNode;
 
 /**
  * NODE_TYPE_BLOCK: statements in order, with a scope. The `for` blocks keep Godot's kinds: the
@@ -232,6 +251,8 @@ export interface Argument {
   /** A `const` parameter: Godot refuses a write to it. */
   readonly isConst?: boolean;
   readonly arraySize?: number;
+  /** A template parameter's other qualifier words: `readonly`, `highp`. */
+  readonly words?: readonly string[];
   readonly position: SourcePosition;
 }
 
@@ -253,6 +274,10 @@ export interface FunctionNode {
 /** NODE_TYPE_SHADER: its structs and functions, each in the order of the text. */
 export interface ShaderNode {
   readonly kind: 'shader';
+  /** The type `shader_type` names: `sky`, `spatial`. Nothing for a text with no head, as a probe's. */
+  readonly shaderType?: string;
+  /** Where the `shader_type` head is, when the text has one. */
+  readonly headPosition?: SourcePosition;
   readonly structs: readonly StructNode[];
   readonly functions: readonly FunctionNode[];
 }

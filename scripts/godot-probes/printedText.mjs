@@ -4,10 +4,9 @@
  * answers the original, with the same verdict and the same result bits.
  */
 
-import { createServer } from 'vite';
-import { REPO_ROOT } from '../repoRoot.mjs';
 import { recordEntry } from './record.mjs';
 import { godotRejection } from './rejection.mjs';
+import { sourceServer } from '../sourceServer.mjs';
 
 const LANGUAGE = '/packages/textscene-core/src/shaders/language/';
 
@@ -21,13 +20,7 @@ const TREES = '/apps/textscene-three-godot-shaders/tests/verdicts/trees.testkit.
  * sources, since this script runs in plain Node.
  */
 export async function loadPrinter() {
-  const server = await createServer({
-    root: REPO_ROOT,
-    appType: 'custom',
-    logLevel: 'error',
-    server: { middlewareMode: true, hmr: false },
-    optimizeDeps: { noDiscovery: true, include: [] },
-  });
+  const server = await sourceServer();
   try {
     const load = (file) => server.ssrLoadModule(`${LANGUAGE}${file}`);
     const [{ printShader }, { ShadingLanguageError }, { treeOf, loweredTreeOf }] = await Promise.all([

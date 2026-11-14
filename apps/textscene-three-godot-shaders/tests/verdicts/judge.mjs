@@ -5,7 +5,13 @@
  */
 
 import { ShadingLanguageError } from '../../../../packages/textscene-core/src/shaders/language/shadingLanguageError.ts';
+import { parse } from '../../../../packages/textscene-core/src/shaders/language/parse.ts';
+import { tokenize } from '../../../../packages/textscene-core/src/shaders/language/tokenizer.ts';
 import { transpileShadingLanguage } from '../../../../packages/textscene-core/src/shaders/language/transpile.ts';
+import { transpileSky } from '../../../../packages/textscene-core/src/shaders/sky/transpileSky.ts';
+
+/** The entry of each shader type that links into a template of Godot's, as a user calls it. */
+const TEMPLATE_ENTRIES = { sky: transpileSky };
 
 /**
  * The transpiler's verdict on `text`: `{ accepted: true }`, `{ accepted: false, message, line }`,
@@ -13,7 +19,8 @@ import { transpileShadingLanguage } from '../../../../packages/textscene-core/sr
  */
 export function transpilerVerdict(text) {
   try {
-    transpileShadingLanguage(text);
+    const entry = TEMPLATE_ENTRIES[parse(tokenize(text)).shaderType] ?? transpileShadingLanguage;
+    entry(text);
     return { accepted: true };
   } catch (error) {
     if (!(error instanceof ShadingLanguageError)) return { crashed: String(error?.stack ?? error) };

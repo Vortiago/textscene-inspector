@@ -7,6 +7,7 @@
 
 import { select } from 'three/tsl';
 import type { Node } from 'three/webgpu';
+import { builtInCall } from './emitBuiltIn.js';
 import { constantNode } from './emitConstant.js';
 import { assignedOperator, constructed, element, OPERATIONS } from './emitOperation.js';
 import type { EmitScope } from './emitScope.js';
@@ -116,13 +117,22 @@ export class ExpressionEmitter {
     return OPERATIONS[op]!(nodes, types);
   }
 
-  /** A call that stands as a statement. */
+  /** A call that stands as a statement. A built-in the emitter writes has no effect but its value, which the statement drops. */
   callStatement(call: CallNode): void {
+    if (call.row.id !== 'OP_CALL') {
+      this.called(call);
+      return;
+    }
     this.writeBack(call, this.context.functions.callAsStatement(call.function, this.passed(call)));
   }
 
   /** A call in an expression, and its result. */
   private called(call: CallNode): Value {
+    if (call.row.id !== 'OP_CALL')
+      return builtInCall(
+        call.function,
+        call.operands.map((operand) => this.node(operand))
+      );
     const called = this.context.functions.call(call.function, this.passed(call));
     this.writeBack(call, called);
     return called.result;

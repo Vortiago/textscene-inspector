@@ -26,7 +26,15 @@ export type Identifier =
       readonly arraySize: number;
       readonly isConst: boolean;
     }
-  | { readonly kind: 'function' };
+  | { readonly kind: 'function' }
+  | {
+      readonly kind: 'built-in';
+      readonly type: ValueType;
+      readonly arraySize: number;
+      /** A read-only built-in: Godot refuses a write to it. */
+      readonly isConst: boolean;
+      readonly row: string;
+    };
 
 /**
  * A block and its variables. The function's body is the block whose `functionArguments` are set:

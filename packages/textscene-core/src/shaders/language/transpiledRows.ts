@@ -14,6 +14,8 @@ import { shapeOf } from './types.js';
 const isTranspiled = (row: InstructionRow) => row.webgl2 !== undefined;
 
 export function checkTranspiled(shader: ShaderNode): void {
+  if (shader.shaderType && shader.headPosition)
+    checkRow(instruction(`shader_type ${shader.shaderType}`)!, shader.headPosition);
   for (const struct of shader.structs) {
     checkRow(instruction('NODE_TYPE_STRUCT')!, struct.position);
     for (const member of struct.members) checkType(member.type, struct.position);
@@ -54,6 +56,7 @@ function checkExpression(expression: Expression): void {
     case 'constant':
       return checkRow(literalRow(expression.type), expression.position);
     case 'variable':
+      if (expression.builtIn) checkRow(instruction(expression.builtIn)!, expression.position);
       if ((expression.arraySize ?? 0) > 0) checkRow(instruction('NODE_TYPE_ARRAY')!, expression.position);
       return;
     case 'member':

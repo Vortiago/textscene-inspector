@@ -17,8 +17,13 @@ permissions:
   contents: read
 
 jobs:
+  # The repository holds no copy of Godot's template files: this writes them from the CI image.
+  godot-templates:
+    uses: ./.github/workflows/godot-templates.yml
+
   integration:
     name: Integration tests (${{ matrix.fork }})
+    needs: godot-templates
     runs-on: ubuntu-latest
     timeout-minutes: 25
     continue-on-error: ${{ matrix.fork != 'vscodium' }}
@@ -34,6 +39,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
 
       - name: Download the fork
         id: fork

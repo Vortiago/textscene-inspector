@@ -37,6 +37,7 @@ class Hoist {
   statement(statement: Statement): Statement | readonly Statement[] {
     switch (statement.kind) {
       case 'block':
+      case 'slot':
         return statement;
       case 'declaration':
         return this.declaration(statement);

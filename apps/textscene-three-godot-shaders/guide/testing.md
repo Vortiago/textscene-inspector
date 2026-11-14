@@ -57,14 +57,18 @@ The instruction count says how much of the language is transpiled, not how many 
 | docs | 37 | 37 | spatial, canvas_item, sky |
 | scenes | 2 | 2 | spatial, sky |
 
-**0 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
+**1 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
 
-The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. No shader transpiles yet, so the folder holds no file yet. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.
+The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. It holds 1 file. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.
 
 | State | Shaders |
 | --- | --- |
-| not transpiled yet (#1794) | 360 |
+| not transpiled yet (#1794) | 268 |
+| not transpiled yet (#1829) | 75 |
+| refused as Godot refuses | 14 |
 | not transpiled yet (#1828) | 8 |
+| not transpiled yet (#1826) | 2 |
+| transpiled | 1 |
 
 The mismatches below are known, each with its owner. The list only shrinks, as for the random programs.
 
@@ -72,7 +76,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | --- | --- | --- |
 
 
-<details><summary>The 368 shaders not transpiled yet, with their owners</summary>
+<details><summary>The 353 shaders not transpiled yet, with their owners</summary>
 
 | Shader | Owner |
 | --- | --- |
@@ -165,23 +169,23 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `generator/ParticleProcessMaterial/sub_emitter_mode=1` | #1794 |
 | `generator/ParticleProcessMaterial/sub_emitter_mode=3` | #1794 |
 | `generator/ProceduralSkyMaterial/defaults` | #1794 |
-| `generator/ProceduralSkyMaterial/use_debanding=false` | #1794 |
-| `generator/PanoramaSkyMaterial/defaults` | #1794 |
-| `generator/PanoramaSkyMaterial/filter=false` | #1794 |
+| `generator/ProceduralSkyMaterial/use_debanding=false` | #1829 |
+| `generator/PanoramaSkyMaterial/defaults` | #1829 |
+| `generator/PanoramaSkyMaterial/filter=false` | #1829 |
 | `generator/PhysicalSkyMaterial/defaults` | #1794 |
-| `generator/PhysicalSkyMaterial/use_debanding=false` | #1794 |
-| `generator/FogMaterial/defaults` | #1794 |
-| `demos/2d/screen_space_shaders/shaders/BCS.gdshader` | #1794 |
-| `demos/2d/screen_space_shaders/shaders/blur.gdshader` | #1794 |
-| `demos/2d/screen_space_shaders/shaders/contrasted.gdshader` | #1794 |
-| `demos/2d/screen_space_shaders/shaders/mirage.gdshader` | #1794 |
-| `demos/2d/screen_space_shaders/shaders/negative.gdshader` | #1794 |
-| `demos/2d/screen_space_shaders/shaders/normalized.gdshader` | #1794 |
-| `demos/2d/screen_space_shaders/shaders/old_film.gdshader` | #1794 |
-| `demos/2d/screen_space_shaders/shaders/pixelize.gdshader` | #1794 |
-| `demos/2d/screen_space_shaders/shaders/sepia.gdshader` | #1794 |
-| `demos/2d/screen_space_shaders/shaders/vignette.gdshader` | #1794 |
-| `demos/2d/screen_space_shaders/shaders/whirl.gdshader` | #1794 |
+| `generator/PhysicalSkyMaterial/use_debanding=false` | #1829 |
+| `generator/FogMaterial/defaults` | #1829 |
+| `demos/2d/screen_space_shaders/shaders/BCS.gdshader` | #1829 |
+| `demos/2d/screen_space_shaders/shaders/blur.gdshader` | #1829 |
+| `demos/2d/screen_space_shaders/shaders/contrasted.gdshader` | #1829 |
+| `demos/2d/screen_space_shaders/shaders/mirage.gdshader` | #1829 |
+| `demos/2d/screen_space_shaders/shaders/negative.gdshader` | #1829 |
+| `demos/2d/screen_space_shaders/shaders/normalized.gdshader` | #1829 |
+| `demos/2d/screen_space_shaders/shaders/old_film.gdshader` | #1829 |
+| `demos/2d/screen_space_shaders/shaders/pixelize.gdshader` | #1829 |
+| `demos/2d/screen_space_shaders/shaders/sepia.gdshader` | #1829 |
+| `demos/2d/screen_space_shaders/shaders/vignette.gdshader` | #1829 |
+| `demos/2d/screen_space_shaders/shaders/whirl.gdshader` | #1829 |
 | `demos/2d/sprite_shaders/shaders/aura.gdshader` | #1794 |
 | `demos/2d/sprite_shaders/shaders/blur.gdshader` | #1794 |
 | `demos/2d/sprite_shaders/shaders/dissintegrate.gdshader` | #1794 |
@@ -189,11 +193,11 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `demos/2d/sprite_shaders/shaders/fatty.gdshader` | #1794 |
 | `demos/2d/sprite_shaders/shaders/glow.gdshader` | #1794 |
 | `demos/2d/sprite_shaders/shaders/offsetshadow.gdshader` | #1794 |
-| `demos/2d/sprite_shaders/shaders/outline.gdshader` | #1794 |
+| `demos/2d/sprite_shaders/shaders/outline.gdshader` | #1829 |
 | `demos/2d/sprite_shaders/shaders/silouette.gdshader` | #1794 |
-| `demos/3d/labels_and_texts/curvature.gdshader` | #1794 |
-| `demos/3d/platformer/stage/skybox.gdshader` | #1794 |
-| `demos/3d/procedural_materials/shaders/plasma.gdshader` | #1794 |
+| `demos/3d/labels_and_texts/curvature.gdshader` | #1826 |
+| `demos/3d/platformer/stage/skybox.gdshader` | #1829 |
+| `demos/3d/procedural_materials/shaders/plasma.gdshader` | #1829 |
 | `demos/3d/sky_shaders/sky_volumetric_clouds.gdshader` | #1794 |
 | `demos/3d/sprites/shaders/negative.gdshader` | #1794 |
 | `demos/3d/sprites/shaders/paper.gdshader` | #1794 |
@@ -202,16 +206,16 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `demos/3d/sprites/shaders/paper_rainbow.gdshader` | #1794 |
 | `demos/3d/tonemap_color_correction/gradients/gradient_steps.gdshader` | #1794 |
 | `demos/3d/tonemap_color_correction/gradients/hues.gdshader` | #1794 |
-| `demos/3d/variable_rate_shading/vrs_texture.gdshader` | #1794 |
+| `demos/3d/variable_rate_shading/vrs_texture.gdshader` | #1829 |
 | `demos/compute/texture/water_plane/water_shader.gdshader` | #1794 |
 | `demos/misc/hdr_output/color_sweep/color_sweep.gdshader` | #1794 |
-| `demos/misc/noise_viewer/noise_viewer.gdshader` | #1794 |
+| `demos/misc/noise_viewer/noise_viewer.gdshader` | #1829 |
 | `demos/viewport/dynamic_split_screen/split_screen.gdshader` | #1794 |
 | `demos/xr/openxr_character_centric_movement/objects/black_out.gdshader` | #1794 |
-| `demos/xr/openxr_composition_layers/cursor.gdshader` | #1794 |
-| `demos/xr/openxr_composition_layers/pointer.gdshader` | #1794 |
+| `demos/xr/openxr_composition_layers/cursor.gdshader` | #1829 |
+| `demos/xr/openxr_composition_layers/pointer.gdshader` | #1829 |
 | `demos/xr/openxr_passthrough/holepunch.gdshader` | #1794 |
-| `demos/xr/openxr_spectator_view/shaders/color.gdshader` | #1794 |
+| `demos/xr/openxr_spectator_view/shaders/color.gdshader` | #1829 |
 | `demos/xr/openxr_spectator_view/shaders/color_unshaded.gdshader` | #1794 |
 | `demos/xr/openxr_spectator_view/shaders/eye_output.gdshader` | #1828 |
 | `demos/xr/openxr_spectator_view/shaders/textured.gdshader` | #1794 |
@@ -219,47 +223,42 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `demos/2d/platformer/level/props/wind_sway.tres#0` | #1794 |
 | `demos/3d/antialiasing/anti_aliasing.tscn#0` | #1794 |
 | `demos/3d/antialiasing/anti_aliasing.tscn#1` | #1794 |
-| `demos/3d/volumetric_fog/volumetric_fog.tscn#0` | #1794 |
+| `demos/3d/volumetric_fog/volumetric_fog.tscn#0` | #1829 |
 | `demos/xr/openxr_hand_tracking_demo/shaders/highlight_shader.tres#0` | #1794 |
 | `docs/tutorials/shaders/advanced_postprocessing.rst#0` | #1794 |
 | `docs/tutorials/shaders/advanced_postprocessing.rst#7` | #1794 |
-| `docs/tutorials/shaders/custom_postprocessing.rst#0` | #1794 |
-| `docs/tutorials/shaders/custom_postprocessing.rst#1` | #1794 |
-| `docs/tutorials/shaders/custom_postprocessing.rst#2` | #1794 |
-| `docs/tutorials/shaders/introduction_to_shaders.rst#0` | #1794 |
+| `docs/tutorials/shaders/custom_postprocessing.rst#0` | #1829 |
+| `docs/tutorials/shaders/custom_postprocessing.rst#1` | #1829 |
+| `docs/tutorials/shaders/custom_postprocessing.rst#2` | #1829 |
 | `docs/tutorials/shaders/introduction_to_shaders.rst#1` | #1794 |
 | `docs/tutorials/shaders/introduction_to_shaders.rst#2` | #1794 |
 | `docs/tutorials/shaders/making_trees.rst#0` | #1794 |
-| `docs/tutorials/shaders/screen-reading_shaders.rst#0` | #1794 |
-| `docs/tutorials/shaders/screen-reading_shaders.rst#1` | #1794 |
+| `docs/tutorials/shaders/screen-reading_shaders.rst#0` | #1829 |
+| `docs/tutorials/shaders/screen-reading_shaders.rst#1` | #1829 |
 | `docs/tutorials/shaders/shader_reference/canvas_item_shader.rst#0` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#1` | #1828 |
 | `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#13` | #1828 |
 | `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#18` | #1828 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#14` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#18` | #1794 |
-| `docs/tutorials/shaders/shader_reference/shading_language.rst#24` | #1794 |
-| `docs/tutorials/shaders/shader_reference/shading_language.rst#25` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#32` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#33` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#34` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#35` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#36` | #1794 |
-| `docs/tutorials/shaders/shader_reference/shading_language.rst#37` | #1794 |
-| `docs/tutorials/shaders/shader_reference/shading_language.rst#38` | #1794 |
-| `docs/tutorials/shaders/shader_reference/shading_language.rst#39` | #1794 |
-| `docs/tutorials/shaders/shader_reference/shading_language.rst#43` | #1794 |
-| `docs/tutorials/shaders/shader_reference/shading_language.rst#44` | #1794 |
-| `docs/tutorials/shaders/shader_reference/sky_shader.rst#0` | #1794 |
-| `docs/tutorials/shaders/shader_reference/sky_shader.rst#1` | #1794 |
+| `docs/tutorials/shaders/shader_reference/shading_language.rst#37` | #1829 |
+| `docs/tutorials/shaders/shader_reference/shading_language.rst#38` | #1829 |
+| `docs/tutorials/shaders/shader_reference/shading_language.rst#39` | #1829 |
+| `docs/tutorials/shaders/shader_reference/shading_language.rst#43` | #1829 |
+| `docs/tutorials/shaders/shader_reference/shading_language.rst#44` | #1829 |
+| `docs/tutorials/shaders/shader_reference/sky_shader.rst#1` | #1829 |
 | `docs/tutorials/shaders/shader_reference/sky_shader.rst#2` | #1794 |
 | `docs/tutorials/shaders/shader_reference/spatial_shader.rst#0` | #1794 |
-| `docs/tutorials/shaders/shaders_style_guide.rst#0` | #1794 |
+| `docs/tutorials/shaders/shaders_style_guide.rst#0` | #1829 |
 | `docs/tutorials/shaders/using_viewport_as_texture.rst#0` | #1794 |
 | `docs/tutorials/shaders/your_first_shader/your_first_2d_shader.rst#0` | #1794 |
-| `docs/tutorials/shaders/your_first_shader/your_first_3d_shader.rst#10` | #1794 |
+| `docs/tutorials/shaders/your_first_shader/your_first_3d_shader.rst#10` | #1829 |
 | `scenes/fixtures/fog-volume-spatial.gdshader` | #1794 |
-| `scenes/fixtures/sky-shader-stub.gdshader` | #1794 |
 | `rejected/generator/StandardMaterial3D/defaults` | #1794 |
 | `rejected/generator/StandardMaterial3D/transparency=2` | #1794 |
 | `rejected/generator/StandardMaterial3D/blend_mode=3` | #1794 |
@@ -349,23 +348,23 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `rejected/generator/ParticleProcessMaterial/sub_emitter_mode=1` | #1794 |
 | `rejected/generator/ParticleProcessMaterial/sub_emitter_mode=3` | #1794 |
 | `rejected/generator/ProceduralSkyMaterial/defaults` | #1794 |
-| `rejected/generator/ProceduralSkyMaterial/use_debanding=false` | #1794 |
-| `rejected/generator/PanoramaSkyMaterial/defaults` | #1794 |
-| `rejected/generator/PanoramaSkyMaterial/filter=false` | #1794 |
+| `rejected/generator/ProceduralSkyMaterial/use_debanding=false` | #1829 |
+| `rejected/generator/PanoramaSkyMaterial/defaults` | #1829 |
+| `rejected/generator/PanoramaSkyMaterial/filter=false` | #1829 |
 | `rejected/generator/PhysicalSkyMaterial/defaults` | #1794 |
-| `rejected/generator/PhysicalSkyMaterial/use_debanding=false` | #1794 |
-| `rejected/generator/FogMaterial/defaults` | #1794 |
-| `rejected/demos/2d/screen_space_shaders/shaders/BCS.gdshader` | #1794 |
-| `rejected/demos/2d/screen_space_shaders/shaders/blur.gdshader` | #1794 |
-| `rejected/demos/2d/screen_space_shaders/shaders/contrasted.gdshader` | #1794 |
-| `rejected/demos/2d/screen_space_shaders/shaders/mirage.gdshader` | #1794 |
-| `rejected/demos/2d/screen_space_shaders/shaders/negative.gdshader` | #1794 |
-| `rejected/demos/2d/screen_space_shaders/shaders/normalized.gdshader` | #1794 |
-| `rejected/demos/2d/screen_space_shaders/shaders/old_film.gdshader` | #1794 |
-| `rejected/demos/2d/screen_space_shaders/shaders/pixelize.gdshader` | #1794 |
-| `rejected/demos/2d/screen_space_shaders/shaders/sepia.gdshader` | #1794 |
-| `rejected/demos/2d/screen_space_shaders/shaders/vignette.gdshader` | #1794 |
-| `rejected/demos/2d/screen_space_shaders/shaders/whirl.gdshader` | #1794 |
+| `rejected/generator/PhysicalSkyMaterial/use_debanding=false` | #1829 |
+| `rejected/generator/FogMaterial/defaults` | #1829 |
+| `rejected/demos/2d/screen_space_shaders/shaders/BCS.gdshader` | #1829 |
+| `rejected/demos/2d/screen_space_shaders/shaders/blur.gdshader` | #1829 |
+| `rejected/demos/2d/screen_space_shaders/shaders/contrasted.gdshader` | #1829 |
+| `rejected/demos/2d/screen_space_shaders/shaders/mirage.gdshader` | #1829 |
+| `rejected/demos/2d/screen_space_shaders/shaders/negative.gdshader` | #1829 |
+| `rejected/demos/2d/screen_space_shaders/shaders/normalized.gdshader` | #1829 |
+| `rejected/demos/2d/screen_space_shaders/shaders/old_film.gdshader` | #1829 |
+| `rejected/demos/2d/screen_space_shaders/shaders/pixelize.gdshader` | #1829 |
+| `rejected/demos/2d/screen_space_shaders/shaders/sepia.gdshader` | #1829 |
+| `rejected/demos/2d/screen_space_shaders/shaders/vignette.gdshader` | #1829 |
+| `rejected/demos/2d/screen_space_shaders/shaders/whirl.gdshader` | #1829 |
 | `rejected/demos/2d/sprite_shaders/shaders/aura.gdshader` | #1794 |
 | `rejected/demos/2d/sprite_shaders/shaders/blur.gdshader` | #1794 |
 | `rejected/demos/2d/sprite_shaders/shaders/dissintegrate.gdshader` | #1794 |
@@ -373,11 +372,11 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `rejected/demos/2d/sprite_shaders/shaders/fatty.gdshader` | #1794 |
 | `rejected/demos/2d/sprite_shaders/shaders/glow.gdshader` | #1794 |
 | `rejected/demos/2d/sprite_shaders/shaders/offsetshadow.gdshader` | #1794 |
-| `rejected/demos/2d/sprite_shaders/shaders/outline.gdshader` | #1794 |
+| `rejected/demos/2d/sprite_shaders/shaders/outline.gdshader` | #1829 |
 | `rejected/demos/2d/sprite_shaders/shaders/silouette.gdshader` | #1794 |
-| `rejected/demos/3d/labels_and_texts/curvature.gdshader` | #1794 |
-| `rejected/demos/3d/platformer/stage/skybox.gdshader` | #1794 |
-| `rejected/demos/3d/procedural_materials/shaders/plasma.gdshader` | #1794 |
+| `rejected/demos/3d/labels_and_texts/curvature.gdshader` | #1826 |
+| `rejected/demos/3d/platformer/stage/skybox.gdshader` | #1829 |
+| `rejected/demos/3d/procedural_materials/shaders/plasma.gdshader` | #1829 |
 | `rejected/demos/3d/sky_shaders/sky_volumetric_clouds.gdshader` | #1794 |
 | `rejected/demos/3d/sprites/shaders/negative.gdshader` | #1794 |
 | `rejected/demos/3d/sprites/shaders/paper.gdshader` | #1794 |
@@ -386,16 +385,16 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `rejected/demos/3d/sprites/shaders/paper_rainbow.gdshader` | #1794 |
 | `rejected/demos/3d/tonemap_color_correction/gradients/gradient_steps.gdshader` | #1794 |
 | `rejected/demos/3d/tonemap_color_correction/gradients/hues.gdshader` | #1794 |
-| `rejected/demos/3d/variable_rate_shading/vrs_texture.gdshader` | #1794 |
+| `rejected/demos/3d/variable_rate_shading/vrs_texture.gdshader` | #1829 |
 | `rejected/demos/compute/texture/water_plane/water_shader.gdshader` | #1794 |
 | `rejected/demos/misc/hdr_output/color_sweep/color_sweep.gdshader` | #1794 |
-| `rejected/demos/misc/noise_viewer/noise_viewer.gdshader` | #1794 |
+| `rejected/demos/misc/noise_viewer/noise_viewer.gdshader` | #1829 |
 | `rejected/demos/viewport/dynamic_split_screen/split_screen.gdshader` | #1794 |
 | `rejected/demos/xr/openxr_character_centric_movement/objects/black_out.gdshader` | #1794 |
-| `rejected/demos/xr/openxr_composition_layers/cursor.gdshader` | #1794 |
-| `rejected/demos/xr/openxr_composition_layers/pointer.gdshader` | #1794 |
+| `rejected/demos/xr/openxr_composition_layers/cursor.gdshader` | #1829 |
+| `rejected/demos/xr/openxr_composition_layers/pointer.gdshader` | #1829 |
 | `rejected/demos/xr/openxr_passthrough/holepunch.gdshader` | #1794 |
-| `rejected/demos/xr/openxr_spectator_view/shaders/color.gdshader` | #1794 |
+| `rejected/demos/xr/openxr_spectator_view/shaders/color.gdshader` | #1829 |
 | `rejected/demos/xr/openxr_spectator_view/shaders/color_unshaded.gdshader` | #1794 |
 | `rejected/demos/xr/openxr_spectator_view/shaders/eye_output.gdshader` | #1828 |
 | `rejected/demos/xr/openxr_spectator_view/shaders/textured.gdshader` | #1794 |
@@ -403,46 +402,36 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `rejected/demos/2d/platformer/level/props/wind_sway.tres#0` | #1794 |
 | `rejected/demos/3d/antialiasing/anti_aliasing.tscn#0` | #1794 |
 | `rejected/demos/3d/antialiasing/anti_aliasing.tscn#1` | #1794 |
-| `rejected/demos/3d/volumetric_fog/volumetric_fog.tscn#0` | #1794 |
+| `rejected/demos/3d/volumetric_fog/volumetric_fog.tscn#0` | #1829 |
 | `rejected/demos/xr/openxr_hand_tracking_demo/shaders/highlight_shader.tres#0` | #1794 |
 | `rejected/docs/tutorials/shaders/advanced_postprocessing.rst#0` | #1794 |
 | `rejected/docs/tutorials/shaders/advanced_postprocessing.rst#7` | #1794 |
-| `rejected/docs/tutorials/shaders/custom_postprocessing.rst#0` | #1794 |
-| `rejected/docs/tutorials/shaders/custom_postprocessing.rst#1` | #1794 |
-| `rejected/docs/tutorials/shaders/custom_postprocessing.rst#2` | #1794 |
-| `rejected/docs/tutorials/shaders/introduction_to_shaders.rst#0` | #1794 |
-| `rejected/docs/tutorials/shaders/introduction_to_shaders.rst#1` | #1794 |
+| `rejected/docs/tutorials/shaders/custom_postprocessing.rst#0` | #1829 |
+| `rejected/docs/tutorials/shaders/custom_postprocessing.rst#1` | #1829 |
+| `rejected/docs/tutorials/shaders/custom_postprocessing.rst#2` | #1829 |
 | `rejected/docs/tutorials/shaders/introduction_to_shaders.rst#2` | #1794 |
 | `rejected/docs/tutorials/shaders/making_trees.rst#0` | #1794 |
-| `rejected/docs/tutorials/shaders/screen-reading_shaders.rst#0` | #1794 |
-| `rejected/docs/tutorials/shaders/screen-reading_shaders.rst#1` | #1794 |
+| `rejected/docs/tutorials/shaders/screen-reading_shaders.rst#0` | #1829 |
+| `rejected/docs/tutorials/shaders/screen-reading_shaders.rst#1` | #1829 |
 | `rejected/docs/tutorials/shaders/shader_reference/canvas_item_shader.rst#0` | #1794 |
 | `rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#1` | #1828 |
 | `rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#13` | #1828 |
 | `rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#18` | #1828 |
 | `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#14` | #1794 |
 | `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#18` | #1794 |
-| `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#24` | #1794 |
-| `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#25` | #1794 |
 | `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#32` | #1794 |
 | `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#33` | #1794 |
 | `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#34` | #1794 |
 | `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#35` | #1794 |
 | `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#36` | #1794 |
-| `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#37` | #1794 |
-| `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#38` | #1794 |
-| `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#39` | #1794 |
-| `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#43` | #1794 |
-| `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#44` | #1794 |
-| `rejected/docs/tutorials/shaders/shader_reference/sky_shader.rst#0` | #1794 |
-| `rejected/docs/tutorials/shaders/shader_reference/sky_shader.rst#1` | #1794 |
+| `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#37` | #1829 |
+| `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#38` | #1829 |
+| `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#39` | #1829 |
+| `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#43` | #1829 |
+| `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#44` | #1829 |
 | `rejected/docs/tutorials/shaders/shader_reference/sky_shader.rst#2` | #1794 |
 | `rejected/docs/tutorials/shaders/shader_reference/spatial_shader.rst#0` | #1794 |
-| `rejected/docs/tutorials/shaders/shaders_style_guide.rst#0` | #1794 |
-| `rejected/docs/tutorials/shaders/using_viewport_as_texture.rst#0` | #1794 |
-| `rejected/docs/tutorials/shaders/your_first_shader/your_first_2d_shader.rst#0` | #1794 |
-| `rejected/docs/tutorials/shaders/your_first_shader/your_first_3d_shader.rst#10` | #1794 |
-| `rejected/scenes/fixtures/fog-volume-spatial.gdshader` | #1794 |
-| `rejected/scenes/fixtures/sky-shader-stub.gdshader` | #1794 |
+| `rejected/docs/tutorials/shaders/shaders_style_guide.rst#0` | #1829 |
+| `rejected/docs/tutorials/shaders/your_first_shader/your_first_3d_shader.rst#10` | #1829 |
 
 </details>

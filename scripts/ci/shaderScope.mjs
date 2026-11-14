@@ -16,7 +16,7 @@ export const SHADER_BRANCH = 'feature/shader-translator';
  * so the previewer's jobs cannot see a change to them.
  */
 const TRANSPILER_PATHS =
-  /^(?:packages\/textscene-core\/src\/shaders\/language\/|apps\/textscene-three-godot-shaders\/|scripts\/godot-shader-language\/|scripts\/godot-probes\/)/;
+  /^(?:packages\/textscene-core\/src\/shaders\/(?:language|sky|template)\/|apps\/textscene-three-godot-shaders\/|scripts\/godot-shader-language\/|scripts\/godot-templates\/|scripts\/godot-probes\/)/;
 
 /**
  * @param {string[]} changedPaths - repo-relative paths, as `git diff --name-only` prints them.

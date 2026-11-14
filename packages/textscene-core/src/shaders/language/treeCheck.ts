@@ -101,6 +101,8 @@ class FunctionCheck {
         return this.declaration(statement);
       case 'control flow':
         return this.flow(statement, place);
+      case 'slot':
+        return undefined;
       default:
         if (isEmpty(statement)) return undefined;
         return isCall(statement) ? this.call(statement, true) : this.expression(statement);
@@ -181,7 +183,12 @@ class FunctionCheck {
   }
 
   private forCondition(condition: Statement): string | undefined {
-    if (condition.kind === 'control flow' || condition.kind === 'declaration' || condition.kind === 'block')
+    if (
+      condition.kind === 'control flow' ||
+      condition.kind === 'declaration' ||
+      condition.kind === 'block' ||
+      condition.kind === 'slot'
+    )
       return `a ${statementName(condition)} as a for condition`;
     if (isEmpty(condition)) return undefined;
     return condition.type === 'bool' ? this.expression(condition) : `a for condition of ${condition.type}`;
