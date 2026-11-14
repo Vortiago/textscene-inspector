@@ -105,11 +105,14 @@ function paintOf(tree: LiveTree, start: PaintRange): ReadonlyMap<string, CanvasI
     // A sub-viewport is a canvas of its own, whose runs start at the beginning.
     const basis = isViewportBoundary(node.type) ? WHOLE_CANVAS_RANGE : range;
     const inline = step.groups.filter(isAuthored).flatMap((group) => group.children);
-    const allocated = allocatePaintRange(basis, inline, paintLayoutOf(node, inline));
     // Internal front children draw in the front room, before every authored child (`node.h:585-600`).
-    // Packed, not allocated: the room has no item of its own to draw first.
+    // The step's front group sizes the room and the runs packed into it, so the two always agree.
     const front = step.groups.filter((group) => group.origin === 'front').flatMap((group) => group.children);
-    const frontRanges = packPaintRanges(allocated.front, front.map(paintRangeSize), allocated.front.base);
+    const frontSizes = front.map(paintRangeSize);
+    const frontRoom = frontSizes.reduce((room, size) => room + size, 0);
+    const allocated = allocatePaintRange(basis, inline, { ...paintLayoutOf(node, inline), frontRoom });
+    // Packed, not allocated: the room has no item of its own to draw first.
+    const frontRanges = packPaintRanges(allocated.front, frontSizes, allocated.front.base);
     // Injected content draws after the authored children, in the room `reservesRoom` holds back.
     const injected = step.groups.filter(isInjected).flatMap((group) => group.children);
     const injectedRanges = allocatePaintRange(allocated.tail, injected).children;
