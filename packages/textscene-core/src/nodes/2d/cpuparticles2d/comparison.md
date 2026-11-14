@@ -172,7 +172,9 @@ A bound that is `inf` or `nan` is not read: the previewer keeps the default for 
   `preprocess` moment or else at the substituted window described above.
 - **Approximated** An emitter without `use_fixed_seed` takes a fixed constant seed, so its
   particles sit in plausible places where Godot randomises them on every run.
-- **Approximated** With more than one point in `emission_points`, the previewer picks from
-  the same set as Godot's unsaved process-wide RNG, but in another order.
-- **Approximated** A RING emitter fills the same ring as Godot, in other places: Godot's
-  unsaved process-wide RNG places each particle.
+- **Needs runtime** A RING emitter, and an emitter with more than one point in
+  `emission_points`, place each particle with Godot's process-wide generator, not the
+  emitter's seed (`scene/2d/cpu_particles_2d.cpp:936`, `:953-956`). `SceneTree` seeds
+  that generator from the clock at start (`scene/main/scene_tree.cpp:2038`), so no two
+  Godot runs agree. The previewer fills the same ring, or picks from the same points, in
+  other places.
