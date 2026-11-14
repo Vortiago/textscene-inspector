@@ -23,7 +23,6 @@ import {
 import type { GlyphContours } from './glyphContours';
 import {
   canvasGlyphPenXPx,
-  drawnOpentype,
   fontIsScaled,
   getFontAscentPx,
   getFontLinePitchPx,
@@ -189,7 +188,7 @@ function contourReachPx({ points }: GlyphContours, advancePx: number): GlyphReac
 function textReachPx(glyph: GlyphPlacement, lineAscentPx: number): GlyphReach {
   const face = glyph.fontMetrics;
   const ink =
-    isCanvasFontMetrics(face) && !drawnOpentype(face) ? face.getGlyphInkUnits?.(glyph.char) : undefined;
+    isCanvasFontMetrics(face) && !face.drawnOpentype ? face.getGlyphInkUnits?.(glyph.char) : undefined;
   if (!ink) {
     const reachPx = Math.max(lineAscentPx, getFontAscentPx(face, glyph.fontSizePx));
     return { leftPx: reachPx, rightPx: glyph.advance + reachPx };
@@ -397,7 +396,7 @@ function placementContoursReader(
   const variation: GlyphVariation = {
     embolden: metrics.embolden ?? 0,
     skew,
-    opentype: drawnOpentype(metrics),
+    opentype: metrics.drawnOpentype,
   };
   const contoursOfGlyph = variedGlyphContoursReader(outlines, fontSizePx, variation);
   const contoursOfChar = glyphContoursReader(outlines, contoursOfGlyph, variation.opentype);

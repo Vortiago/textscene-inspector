@@ -303,25 +303,35 @@ export function infersRtl(layout: TextLayoutResult | null): boolean {
  * Re-wraps one shaped line as a one-line result drawn from y = 0; the caller's `<group>` supplies
  * the cumulative Y. It bypasses `shapeText`, so it echoes the parent's `fontMetrics` and baseline.
  * Override `baselineOffsetPx` and `fontMetrics` for a RichTextLabel `[b]`/`[i]` run shaped at its own
- * size, in its own face. Override `heightPx` where the line is taller than the parent's pitch, so a
- * canvas raster holds the line's ascent. `linePitchPx` stays the parent's.
+ * size, in its own face. `linePitchPx` stays the parent's.
  */
 export function soloLineLayout(
   line: TextLineLayout,
   parent: TextLayoutResult,
   baselineOffsetPx: number = parent.baselineOffsetPx,
-  fontMetrics: FontMetrics = parent.fontMetrics,
-  heightPx: number = parent.linePitchPx
+  fontMetrics: FontMetrics = parent.fontMetrics
 ): TextLayoutResult {
   return {
     shapedText: parent.shapedText,
     lines: [line],
     linePitchPx: parent.linePitchPx,
     widthPx: line.widthPx,
-    heightPx,
+    heightPx: Math.max(parent.linePitchPx, baselineOffsetPx + deepestDescentPx(line)),
     baselineOffsetPx,
     fontMetrics,
   };
+}
+
+/**
+ * The largest descent of a face on `line` at its size, 0 for no glyph. A canvas raster reaches this
+ * far below the baseline, so a glyph of a fallback face with a deeper descent is not cut at the
+ * bottom. The raster grows only downwards: the baseline stays.
+ */
+function deepestDescentPx({ glyphs }: TextLineLayout): number {
+  let deepestPx = 0;
+  for (const glyph of glyphs)
+    deepestPx = Math.max(deepestPx, getFontDescentPx(glyph.fontMetrics, glyph.fontSizePx));
+  return deepestPx;
 }
 
 /**
