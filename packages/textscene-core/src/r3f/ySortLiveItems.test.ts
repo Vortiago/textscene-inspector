@@ -10,6 +10,9 @@ import { TRANSFORM2D_IDENTITY } from '../godot/math/transform2d';
 import type { LiveNode } from '../resources/liveNode';
 import type { YSortItem } from './ySortItems';
 import type { TscnNode } from '../parser/types';
+import { TscnParser } from '../parser/TscnParser';
+import { tileMapLayerChildren } from './liveTileMapLayers';
+import './nodes/index';
 
 const layer = {
   name: 'Layer',
@@ -46,6 +49,19 @@ describe('the live group chain', () => {
   it('reads no group for a scene tile whose root is a Control, which the Control walk places', () => {
     const tile = { ...layer, name: '@SceneTile@0_0', isUnowned: true } as LiveNode;
     expect(liveGroupChain(itemOf(tile, [layer]), 'Root', () => new Object3D())).toBeNull();
+  });
+
+  it('reads the group of the TileMap for a row of one of its layers, which registers none', () => {
+    const [map] = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Map" type="TileMap"]
+format = 2
+layer_0/y_sort_enabled = true
+`).nodes;
+    const row = { ...itemOf(tileMapLayerChildren(map!)[0]!, [map!]), kind: 'tileGroup' } as YSortItem;
+    const paths: string[] = [];
+    liveGroupChain(row, 'Root', (path) => (paths.push(path), new Object3D()));
+    expect(paths).toEqual(['Root/Map']);
   });
 
   it('reads no group for a Control, which the Control walk places', () => {

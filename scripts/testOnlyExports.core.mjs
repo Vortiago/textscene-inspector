@@ -18,6 +18,9 @@ const OUTSIDE_CORE = ['apps', 'packages/textscene-dev-kit', 'scripts'].map((dir)
 export const KEPT_TEST_ONLY_EXPORTS = [
   // `@react-three/test-renderer` cannot wrap a real `<Canvas>`, so a scene test mounts its contents.
   'r3f/TscnCanvas.tsx#TscnSceneContents',
+  // The preview always mounts the shared live tree, so only the test setup installs the paint of a
+  // subtree that a component test mounts bare (`r3f/testing/detachedPaint.ts`).
+  'r3f/canvasItemPass/detachedPaintSlot.ts#installDetachedPaint',
   // No runtime code lists the vendored icons, and the icon test checks each one against its raster.
   'r3f/controls/native/themeIcons.ts#vendoredIconSvgUrls',
   // The switch of the TSL port ships before its one reader, the pick of a lit surface's material,

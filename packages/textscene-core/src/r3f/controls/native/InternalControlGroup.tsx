@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 import { ZERO_RECT } from '../../../godot/math/rect2';
 import type { Rgba } from '../../../godot/math/math';
 import { snappedControlOrigin } from './controlPixelSnap';
-import { solvedDrawTransformOf } from './forestSort';
+import { solvedDrawTransformOf } from './solvedSortInputs';
 import { CanvasItemGroup } from '../../components/CanvasItemGroup';
 import { canvasHalves, canvasPieceSlot, type CanvasSlot } from '../../canvasItemState';
 import { useCanvasItemTint, WHITE_MODULATE } from '../../canvasItemModulate';

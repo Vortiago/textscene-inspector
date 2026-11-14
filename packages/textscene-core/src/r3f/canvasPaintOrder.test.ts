@@ -7,7 +7,6 @@
 import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../parser/types';
 import {
-  allocateNodePaintRange,
   behindRangesOf,
   allocatePaintRange,
   canvasKeyAtZ,
@@ -19,6 +18,8 @@ import {
   WHOLE_CANVAS_RANGE,
 } from './canvasPaintOrder';
 // Side effect: the parser slices register the paint room each type holds.
+import { DYNAMIC_CHILD_RESERVE } from './canvasItemPass/paintRoom';
+import { allocateNodePaintRange } from './testing/detachedPaint';
 import '../parser/TscnParser';
 
 function node(name: string, type: string, children: TscnNode[] = [], properties = {}): TscnNode {
@@ -30,9 +31,9 @@ function node(name: string, type: string, children: TscnNode[] = [], properties 
 }
 
 /** A parsed TileMap holding `layerCount` layers, as `parseTileMap` shapes it. */
-function tileMap(layerCount: number, children: TscnNode[] = []): TscnNode {
+function tileMap(layerCount: number, children: TscnNode[] = [], ySortEnabled = false): TscnNode {
   return node('Map', 'TileMap', children, {
-    layers: Array.from({ length: layerCount }, (_, index) => ({ index })),
+    layers: Array.from({ length: layerCount }, (_, index) => ({ index, ySortEnabled })),
   });
 }
 
@@ -159,12 +160,26 @@ describe('paintRangeSize', () => {
     expect(paintRangeSize(node('Tiles', 'TileMapLayer'))).toBeGreaterThan(1000);
   });
 
-  it('counts one value per TileMap layer, however many layers there are', () => {
-    // Each layer is an internal child CanvasItem (`tile_map.cpp:279`), so it
-    // needs a value of its own. A fixed reserve runs out past its size.
+  it('counts one value for each TileMap layer that sorts nothing, however many layers there are', () => {
+    // Each layer is an internal child TileMapLayer (`tile_map.cpp:279`). Its scene tiles go to the
+    // TileMap (`tile_map_layer.cpp:1646`), whose run is a reserve for them, then the layers, then the marker.
     const children = [node('Marker', 'Sprite2D')];
-    // A TileMap also holds back a reserve of 4096 values for its scene tile instances, after its children.
-    expect(paintRangeSize(tileMap(5000, children))).toBe(1 + 5000 + 4096);
+    expect(paintRangeSize(tileMap(5000, children))).toBe(DYNAMIC_CHILD_RESERVE + 5000 + 1);
+  });
+
+  it('counts a reserve for the rows of each y-sorted layer of a TileMap that sorts nothing', () => {
+    const children = [node('Marker', 'Sprite2D')];
+    expect(paintRangeSize(tileMap(2, children, true))).toBe(
+      DYNAMIC_CHILD_RESERVE + 2 * DYNAMIC_CHILD_RESERVE + 1
+    );
+  });
+
+  it('counts one value for each layer that sorts nothing of a y-sorted TileMap', () => {
+    // Each layer keeps a y-sort of its own (`tile_map.cpp:357-358`). The TileMap's own flag only
+    // sorts the TileMap's children (`tile_map.cpp:449-453`).
+    const map = tileMap(2, [node('Marker', 'Sprite2D')]);
+    const sortedMap = { ...map, properties: { ...map.properties, y_sort_enabled: true } };
+    expect(paintRangeSize(sortedMap)).toBe(DYNAMIC_CHILD_RESERVE + 2 + 1);
   });
 });
 

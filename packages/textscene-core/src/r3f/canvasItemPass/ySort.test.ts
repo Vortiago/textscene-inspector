@@ -304,6 +304,29 @@ y_sort_enabled = true
   });
 });
 
+describe('sortedPaintOf: a sorted entry whose front room holds child runs', () => {
+  it("keeps a y-sorted TileMap's layer room out of its body", () => {
+    // The layers are internal front children (`tile_map.cpp:277-279`), so they take runs of their own in the sort.
+    const scene = parsed(`[node name="Root" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Map" type="TileMap" parent="."]
+y_sort_enabled = true
+format = 2
+layer_0/y_sort_enabled = true
+layer_1/y_sort_enabled = true
+
+[node name="Child" type="Polygon2D" parent="Map"]
+polygon = PackedVector2Array(0, 0, 10, 0, 10, 10)
+`);
+    const tree = liveTreeOf(scene.nodes, contextOver(scene, {}));
+    const paints = liveScenePassResults(canvasPaintPass, tree);
+    const runs = ySortedPaint(liveScenePassResults(canvasItemPass, tree), paints, NO_SORT_INPUTS);
+    const drawn = sortedPaintOf('Root/Map', paints.get('Root/Map')!, runs, paints);
+    expect(drawn.front.size).toBe(0);
+  });
+});
+
 describe('ySortedPaint: a live y', () => {
   it('reads a live y in the space of the node that gave it', () => {
     const extras: ExtraSortItems = new Map([

@@ -15,8 +15,11 @@ import {
   type CanvasLighting2D,
 } from '../lighting2d/lightPassContext';
 import type { ItemPlacement, LitItemRead } from '../lighting2d/itemLightList';
-import type { TscnInternalResource } from '../../parser/types';
+import type { TscnInternalResource, TscnNode } from '../../parser/types';
 import { subResource } from '../../testing/subResource';
+import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
+import { renderDispatched2D } from './DispatchedScene';
+import '../nodes/index';
 
 /** `SubResource("CanvasTexture_1")`, the CanvasTexture `canvasTexture` builds. */
 export const CANVAS_TEXTURE_REF = 'SubResource("CanvasTexture_1")';
@@ -67,9 +70,36 @@ export async function renderOnLitCanvas(
 /** `renderOnLitCanvas` for an item that draws one mesh, which it returns with its map. */
 export async function renderLitItem(item: ReactElement, resources: readonly TscnInternalResource[]) {
   const canvas = await renderOnLitCanvas(item, resources);
-  const mesh = canvas.renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+  return { ...canvas, ...onlyMeshOf(canvas.renderer) };
+}
+
+/**
+ * `renderLitItem` for a node that mounts through the dispatcher, as a node with internal children
+ * does: the node is the root of a scene with the flat grey texture and `resources`.
+ */
+export async function renderLitScene(node: TscnNode, resources: readonly TscnInternalResource[]) {
+  const registerItem = vi.fn((_placement: ItemPlacement, _read: LitItemRead) => () => {});
+  const lighting: CanvasLighting2D = { ...INERT_CANVAS_LIGHTING, registerItem };
+  const sceneGraph = createSceneGraphFromTscnScene({
+    nodes: [node],
+    internalResources: [...FLAT_GREY, ...resources],
+  });
+  const renderer = await renderDispatched2D(sceneGraph, createFakeResourceLoader().loader, lighting);
+  return { renderer, registerItem, ...onlyMeshOf(renderer) };
+}
+
+type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
+
+function onlyMeshOf(renderer: Renderer) {
+  const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
   const map = (mesh.material as THREE.MeshBasicMaterial).map!;
-  return { ...canvas, mesh, map };
+  return { mesh, map };
+}
+
+/** What `describeCanvasTextureItem` reads of a lit render. */
+interface LitRender {
+  registerItem: ReturnType<typeof vi.fn>;
+  map: THREE.Texture;
 }
 
 /**
@@ -79,7 +109,7 @@ export async function renderLitItem(item: ReactElement, resources: readonly Tscn
  */
 export function describeCanvasTextureItem(
   title: string,
-  render: (wrapper: TscnInternalResource) => ReturnType<typeof renderLitItem>
+  render: (wrapper: TscnInternalResource) => Promise<LitRender>
 ): void {
   describe(`${title} with a CanvasTexture`, () => {
     it('declares itself normal-mapped while the CanvasTexture names a normal map', async () => {
