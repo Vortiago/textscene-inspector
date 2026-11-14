@@ -3,7 +3,7 @@
  * quadrants, each a lit canvas item of batched textured quads. The TileSet resolves from the
  * scene's SubResources. An unresolvable TileSet or undecodable tile data degrades to the
  * transform-only group with children intact (ADR-0008). A y-sorted layer draws no quadrants of
- * its own: <YSortDispatcher> sorts its rows with its child nodes.
+ * its own: the sort in `children` sorts its rows and scene tiles with its child nodes.
  */
 
 import { useMemo } from 'react';
@@ -13,7 +13,8 @@ import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel, type TileSetStatus } from '../../../../r3f/useTileSetModel';
-import { YSortDispatcher } from '../../../../r3f/YSortDispatcher';
+import { YSortExtraChildrenProvider } from '../../../../r3f/ySortExtraChildren';
+import { useNodePath } from '../../../../r3f/contexts/NodePathContext';
 import { SceneTileInstances } from '../shared/SceneTileInstances';
 import { ScenePlaceholders } from '../shared/ScenePlaceholders';
 import { useSceneTileNodes, type SceneTileDrawing } from '../shared/useSceneTileNodes';
@@ -26,12 +27,7 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
     model,
     props.enabled && props.drawsSceneTiles !== false ? props.cells : null
   );
-  // A scene tile is a child canvas item of the layer, so a y-sorted layer sorts it with its rows and
-  // children. An unsorted layer draws them through <SceneTileInstances>, so it builds no copy.
-  const withSceneTiles = useMemo(
-    () => (props.y_sort_enabled ? { ...node, children: [...node.children, ...sceneTiles.instances] } : node),
-    [node, props.y_sort_enabled, sceneTiles.instances]
-  );
+  const path = useNodePath() ?? node.name;
   if (!props.y_sort_enabled) {
     return (
       <QuadrantLayer node={node} model={model} status={status} sceneTiles={sceneTiles}>
@@ -53,8 +49,10 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
         )
       }
     >
-      {/* The sort of the world walk in `children` is left out: this one sorts the rows with the children. */}
-      <YSortDispatcher node={withSceneTiles} />
+      {/* A scene tile is a child canvas item of the layer, so the sort takes it with the rows and children. */}
+      <YSortExtraChildrenProvider path={path} trailing={sceneTiles.instances}>
+        {children}
+      </YSortExtraChildrenProvider>
     </CanvasItem2D>
   );
 }

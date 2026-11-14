@@ -24,7 +24,7 @@ import { SubViewportCanvasScope } from './SubViewportCanvasScope';
 import { useViewportContent } from './useViewportContent';
 import { useInheritedRtl } from './useInheritedRtl';
 import { useViewportThemeOwners } from '../../windows/window/useViewportThemeOwners';
-import { ControlYSortProvider } from '../../../r3f/contexts/ControlYSortContext';
+import { YSortProvider } from '../../../r3f/contexts/YSortContext';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
@@ -59,7 +59,6 @@ function MixedViewportControls({
       inheritedRtl={inheritedRtl}
       themeOwners={themeOwners}
       enclosingViewportSize={null}
-      sortsLocally={false}
     />
   );
 }
@@ -121,14 +120,14 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
   // The viewport's own exchange between its y-sorts and its Control walk: its Controls are not the
   // root canvas's, so their runs and origins stay out of that canvas's sort.
   const canvasContents = inViewport(
-    <ControlYSortProvider>
+    <YSortProvider>
       {holdsCanvasItems ? children : null}
       {holdsControls ? (
         <PendingSuspense>
           <MixedViewportControls path={path} viewport={node} size={layoutSize} />
         </PendingSuspense>
       ) : null}
-    </ControlYSortProvider>
+    </YSortProvider>
   );
   const contents = kind === '2d' ? canvasContents : inViewport(children);
   const drawsCanvasOverWorld = kind === '3d' && (holdsControls || holdsCanvasItems);

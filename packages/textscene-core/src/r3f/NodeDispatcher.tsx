@@ -301,9 +301,9 @@ function PlainNode({
   if (editorIcon) {
     children.push(<NodeEditorIcon key="__icon" node={node} registration={editorIcon} />);
   }
-  if (node.children.length > 0) {
+  if (node.children.length > 0 || sortsChildren) {
     // The world walk sorts the children of any `y_sort_enabled` item, as `CanvasItem` does
-    // (`canvas_item.cpp:706-709`). A TileMap or TileMapLayer sorts its own rows with them instead.
+    // (`canvas_item.cpp:706-709`), with the rows and children a TileMap or TileMapLayer adds.
     children.push(
       <Fragment key="__inline">{sortsChildren ? <YSortDispatcher node={node} /> : inlineChildren}</Fragment>
     );

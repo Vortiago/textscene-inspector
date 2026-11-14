@@ -30,7 +30,9 @@ const LIGHT_MODES = [
   CanvasItemMaterialLightMode.LIGHT_ONLY,
 ] as const;
 
-function decodeCanvasItemMaterial(properties: Record<string, string>): CanvasItemMaterialProperties {
+function decodeCanvasItemMaterial(
+  properties: Readonly<Record<string, string>>
+): CanvasItemMaterialProperties {
   return {
     blendMode: enumOr(
       properties.blend_mode,
@@ -57,7 +59,7 @@ function decodeCanvasItemMaterial(properties: Record<string, string>): CanvasIte
  */
 export function canvasItemMaterialOf(resource: {
   type: string;
-  data: Record<string, string>;
+  data: Readonly<Record<string, string>>;
 }): CanvasItemMaterialProperties | null {
   return resource.type === 'CanvasItemMaterial' ? decodeCanvasItemMaterial(resource.data) : null;
 }

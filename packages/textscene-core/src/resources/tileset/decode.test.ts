@@ -5,7 +5,9 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as logger from '../../logger';
-import { tileSetFromScene, tileSetFromFile } from './decode';
+import { tileSetInFile, tileSetInScene } from './testing/readTileSet';
+import { referenceKey } from '../reading';
+import { CanvasItemMaterialBlendMode } from '../../godot/scene/canvasItemMaterial';
 import { TscnParser } from '../../parser/TscnParser';
 import { parseTresFile } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
@@ -39,26 +41,22 @@ const internals: TscnInternalResource[] = [
   },
 ];
 
-describe('tileSetFromScene', () => {
+describe('tileSetInScene', () => {
   it('resolves an embedded TileSet: grid defaults plus an atlas source with texture path and region size', () => {
-    const model = tileSetFromScene('SubResource("ts")', internals, externals);
+    const model = tileSetInScene('SubResource("ts")', internals, externals);
     expect(model).not.toBeNull();
     expect(model!.tileSize).toEqual({ x: 16, y: 16 }); // Godot default
     const source = model!.sources.get(0);
     expect(source).toBeDefined();
-    expect(source!.texture).toEqual({
-      ref: 'ExtResource("2")',
-      externalResources: externals,
-      internalResources: internals,
-      isHeldLocally: false,
-    });
+    expect(source!.texture).toMatchObject({ ref: 'ExtResource("2")', isHeldLocally: false });
+    expect(referenceKey(source!.texture!)).toBe('res://tiles.png');
     expect(source!.textureRegionSize).toEqual({ x: 32, y: 24 });
     expect(source!.margins).toEqual({ x: 0, y: 0 });
     expect(source!.separation).toEqual({ x: 0, y: 0 });
   });
 
   it('pads the atlas by default, as TileSetAtlasSource does (tile_set.h use_texture_padding = true)', () => {
-    const source = tileSetFromScene('SubResource("ts")', internals, externals)!.sources.get(0)!;
+    const source = tileSetInScene('SubResource("ts")', internals, externals)!.sources.get(0)!;
     expect(source.usesTexturePadding).toBe(true);
   });
 
@@ -66,7 +64,7 @@ describe('tileSetFromScene', () => {
     const unpadded = internals.map((r) =>
       r.id === 'atlas1' ? { ...r, data: { ...r.data, use_texture_padding: 'false' } } : r
     );
-    const source = tileSetFromScene('SubResource("ts")', unpadded, externals)!.sources.get(0)!;
+    const source = tileSetInScene('SubResource("ts")', unpadded, externals)!.sources.get(0)!;
     expect(source.usesTexturePadding).toBe(false);
   });
 
@@ -74,7 +72,7 @@ describe('tileSetFromScene', () => {
     const odd = internals.map((r) =>
       r.id === 'atlas1' ? { ...r, data: { ...r.data, use_texture_padding: 'maybe' } } : r
     );
-    const source = tileSetFromScene('SubResource("ts")', odd, externals)!.sources.get(0)!;
+    const source = tileSetInScene('SubResource("ts")', odd, externals)!.sources.get(0)!;
     expect(source.usesTexturePadding).toBe(true);
   });
 
@@ -98,7 +96,7 @@ describe('tileSetFromScene', () => {
       },
       { id: 'ts', type: 'TileSet', data: { 'sources/0': 'SubResource("atlas1")' } },
     ];
-    const model = tileSetFromScene('SubResource("ts")', richInternals, externals);
+    const model = tileSetInScene('SubResource("ts")', richInternals, externals);
     const source = model!.sources.get(0)!;
 
     expect(source.tiles.get('0:0')!.alternatives.get(1)).toMatchObject({
@@ -130,7 +128,7 @@ describe('tileSetFromScene', () => {
       },
       { id: 'ts', type: 'TileSet', data: { 'sources/+3': 'SubResource("atlas1")' } },
     ];
-    const model = tileSetFromScene('SubResource("ts")', signedInternals, externals);
+    const model = tileSetInScene('SubResource("ts")', signedInternals, externals);
     const source = model!.sources.get(3)!;
 
     expect(source).toBeDefined();
@@ -153,7 +151,7 @@ describe('tileSetFromScene', () => {
       },
       { id: 'ts', type: 'TileSet', data: { 'sources/4294967299': 'SubResource("atlas1")' } },
     ];
-    const model = tileSetFromScene('SubResource("ts")', wrappedInternals, externals);
+    const model = tileSetInScene('SubResource("ts")', wrappedInternals, externals);
 
     expect([...model!.sources.keys()]).toEqual([3]);
     expect(model!.sources.get(3)!.tiles.get('0:2')!.alternatives.get(1)!.flipH).toBe(true);
@@ -168,7 +166,7 @@ describe('tileSetFromScene', () => {
       internals[0]!,
       { id: 'ts', type: 'TileSet', data: { 'sources/-1': 'SubResource("atlas1")' } },
     ];
-    const model = tileSetFromScene('SubResource("ts")', negativeInternals, externals);
+    const model = tileSetInScene('SubResource("ts")', negativeInternals, externals);
 
     expect(model!.sources.size).toBe(0);
     expect([...model!.sources.keys()]).toEqual([]);
@@ -203,7 +201,7 @@ describe('tileSetFromScene', () => {
         },
       },
     ];
-    const model = tileSetFromScene('SubResource("ts")', dupInternals, externals);
+    const model = tileSetInScene('SubResource("ts")', dupInternals, externals);
 
     expect([...model!.sources.keys()]).toEqual([1]);
     expect(model!.sources.size).toBe(1);
@@ -228,7 +226,7 @@ describe('tileSetFromScene', () => {
         },
       },
     ];
-    const model = tileSetFromScene('SubResource("ts")', mixedInternals, externals);
+    const model = tileSetInScene('SubResource("ts")', mixedInternals, externals);
 
     expect([...model!.sources.keys()]).toEqual([7, 2]);
     expect(model!.sources.get(7)!.textureRegionSize).toEqual({ x: 8, y: 8 });
@@ -247,13 +245,13 @@ describe('tileSetFromScene', () => {
         },
       },
     ];
-    const model = tileSetFromScene('SubResource("ts")', manyInternals, externals);
+    const model = tileSetInScene('SubResource("ts")', manyInternals, externals);
 
     expect([...model!.sources.keys()]).toEqual([5, 0, 3]);
   });
 
   it('seats a lone source once', () => {
-    const model = tileSetFromScene('SubResource("ts")', internals, externals);
+    const model = tileSetInScene('SubResource("ts")', internals, externals);
     expect([...model!.sources.keys()]).toEqual([0]);
   });
 
@@ -271,7 +269,7 @@ describe('tileSetFromScene', () => {
         },
       },
     ];
-    const model = tileSetFromScene('SubResource("ts")', isoInternals, externals);
+    const model = tileSetInScene('SubResource("ts")', isoInternals, externals);
     expect(model!.shape).toBe(1);
     expect(model!.layout).toBe(5);
     expect(model!.offsetAxis).toBe(0); // Absent: the horizontal default.
@@ -289,7 +287,7 @@ describe('tileSetFromScene', () => {
           data: { tile_shape: shape, 'sources/0': 'SubResource("atlas1")' },
         },
       ];
-      const model = tileSetFromScene('SubResource("ts")', hexInternals, externals);
+      const model = tileSetInScene('SubResource("ts")', hexInternals, externals);
       expect(model!.shape).toBe(Number(shape));
       const shapeWarns = warnSpy.mock.calls.filter((c: unknown[]) => String(c[0]).includes('tile_shape'));
       expect(shapeWarns).toHaveLength(0);
@@ -305,13 +303,13 @@ describe('tileSetFromScene', () => {
         data: { tile_shape: '99', 'sources/0': 'SubResource("atlas1")' },
       },
     ];
-    tileSetFromScene('SubResource("ts")', oddInternals, externals);
+    tileSetInScene('SubResource("ts")', oddInternals, externals);
     const shapeWarns = warnSpy.mock.calls.filter((c: unknown[]) => String(c[0]).includes('tile_shape'));
     expect(shapeWarns).toHaveLength(1);
   });
 });
 
-describe('tileSetFromFile', () => {
+describe('tileSetInFile', () => {
   const TILESET_TRES = `[gd_resource type="TileSet" load_steps=3 format=3]
 
 [ext_resource type="Texture2D" path="res://tileset/isotiles.png" id="1"]
@@ -332,7 +330,7 @@ sources/0 = SubResource("TileSetAtlasSource_a")
 `;
 
   it('resolves a TileSet .tres against its own ext/sub resources', () => {
-    const model = tileSetFromFile(parseTresFile(TILESET_TRES), TILESET_PATH);
+    const model = tileSetInFile(parseTresFile(TILESET_TRES), TILESET_PATH);
     expect(model).not.toBeNull();
     expect(model!.shape).toBe(1);
     expect(model!.tileSize).toEqual({ x: 128, y: 64 });
@@ -349,14 +347,14 @@ sources/0 = SubResource("TileSetAtlasSource_a")
         '[sub_resource type="TileSet" id="TileSet_1"]\ntile_size = Vector2i(32, 32)\n\n' +
         '[resource]\n'
     );
-    expect(tileSetFromFile(library, 'res://library.tres::TileSet_1')?.tileSize).toEqual({ x: 32, y: 32 });
+    expect(tileSetInFile(library, 'res://library.tres::TileSet_1')?.tileSize).toEqual({ x: 32, y: 32 });
   });
 
   it('returns null for a .tres that is not a TileSet', () => {
     const material = parseTresFile(
       '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nmetallic = 0.5\n'
     );
-    expect(tileSetFromFile(material, TILESET_PATH)).toBeNull();
+    expect(tileSetInFile(material, TILESET_PATH)).toBeNull();
   });
 });
 
@@ -373,7 +371,7 @@ describe('a TileSet Vector2i slot follows the composite type, not the token', ()
         data: { tile_size: 'Vector2(4294967295, 16)', 'sources/0': 'SubResource("atlas1")' },
       },
     ];
-    const model = tileSetFromScene('SubResource("ts")', wide, externals);
+    const model = tileSetInScene('SubResource("ts")', wide, externals);
     expect(model!.tileSize).toEqual({ x: 16, y: 16 }); // Godot's default
     expect(warnSpy).toHaveBeenCalled();
   });
@@ -384,7 +382,7 @@ describe('a TileSet Vector2i slot follows the composite type, not the token', ()
       ['Vector2(128, 64)', { x: 128, y: 64 }],
     ];
     for (const [literal, expected] of cases) {
-      const model = tileSetFromScene(
+      const model = tileSetInScene(
         'SubResource("ts")',
         [
           internals[0]!,
@@ -405,7 +403,7 @@ describe('a TileSet enum Godot reads differently from `parseInt`', () => {
   it('reads the layout the exponent spelling names', () => {
     // Godot's tokenizer types `1e1` as FLOAT and stores 10, where `parseInt`
     // would stop at the `e` and read 1 (STACKED_OFFSET).
-    const model = tileSetFromFile(
+    const model = tileSetInFile(
       parseTresFile('[gd_resource type="TileSet"]\n\n[resource]\ntile_layout = 1e1\n')!,
       TILESET_PATH
     );
@@ -436,7 +434,7 @@ describe('TileSet source lookups', () => {
       ...atlasSources(),
       { id: 'ts', type: 'TileSet', data: { ...tileSetBody() } },
     ]);
-    const model = tileSetFromScene('SubResource("ts")', table, externals);
+    const model = tileSetInScene('SubResource("ts")', table, externals);
 
     expect([...model!.sources.keys()]).toEqual([0, 1, 2, 3]);
     expect(entryReads()).toBe(table.length);
@@ -444,7 +442,7 @@ describe('TileSet source lookups', () => {
 
   it('reads each entry of a .tres table once, however many sources it names', () => {
     const { table, entryReads } = countedTable(atlasSources());
-    const model = tileSetFromFile(
+    const model = tileSetInFile(
       {
         resourceType: 'TileSet',
         properties: tileSetBody(),
@@ -462,7 +460,7 @@ describe('TileSet source lookups', () => {
     const { table } = countedTable([
       { id: 'ts', type: 'TileSet', data: { 'sources/0': 'SubResource("gone")' } },
     ]);
-    expect([...tileSetFromScene('SubResource("ts")', table, externals)!.sources.keys()]).toEqual([]);
+    expect([...tileSetInScene('SubResource("ts")', table, externals)!.sources.keys()]).toEqual([]);
   });
 });
 
@@ -471,7 +469,7 @@ describe('a Godot-3 texture_offset', () => {
     const scene = new TscnParser().parse(
       '[gd_scene format=3]\n\n[sub_resource type="TileSetAtlasSource" id="a"]\n0:0/0 = 0\n0:0/0/texture_offset = Vector2i(3, 4)\n\n[sub_resource type="TileSet" id="ts"]\nsources/0 = SubResource("a")\n\n[node name="R" type="Node"]\n'
     );
-    const model = tileSetFromScene('SubResource("ts")', scene.internalResources, []);
+    const model = tileSetInScene('SubResource("ts")', scene.internalResources, []);
     expect(model!.sources.get(0)!.tiles.get('0:0')!.alternatives.get(0)!.textureOrigin).toEqual({
       x: 3,
       y: 4,
@@ -481,7 +479,7 @@ describe('a Godot-3 texture_offset', () => {
 
 describe('per-tile TileData that changes a frame (tile_set.cpp:7174-7177)', () => {
   function alternativeOf(atlas: Record<string, string>, extra: TscnInternalResource[] = []) {
-    const model = tileSetFromScene(
+    const model = tileSetInScene(
       'SubResource("ts")',
       [
         { id: 'atlas', type: 'TileSetAtlasSource', data: { '0:0/0': '0', ...atlas } },
@@ -559,8 +557,8 @@ describe('per-tile TileData that changes a frame (tile_set.cpp:7174-7177)', () =
 });
 
 describe('a tile material outside the TileSet file', () => {
-  it('keeps an ExtResource material as the path the draw loads', () => {
-    const model = tileSetFromScene(
+  it('reads an ExtResource material from its file', () => {
+    const model = tileSetInScene(
       'SubResource("ts")',
       [
         {
@@ -570,17 +568,59 @@ describe('a tile material outside the TileSet file', () => {
         },
         { id: 'ts', type: 'TileSet', data: { 'sources/0': 'SubResource("atlas")' } },
       ],
-      [{ id: 'm', type: 'Material', path: 'res://tile.tres' }]
+      [{ id: 'm', type: 'Material', path: 'res://tile.tres' }],
+      {
+        'res://tile.tres': '[gd_resource type="CanvasItemMaterial" format=3]\n\n[resource]\nblend_mode = 1\n',
+      }
+    );
+    const material = model!.sources.get(0)!.tiles.get('0:0')!.alternatives.get(0)!.material;
+    expect(material?.properties?.blendMode).toBe(CanvasItemMaterialBlendMode.ADD);
+  });
+
+  it('warns once for a material that names nothing, however many tiles name it', () => {
+    tileSetInScene(
+      'SubResource("ts")',
+      [
+        {
+          id: 'atlas',
+          type: 'TileSetAtlasSource',
+          data: {
+            '0:0/0': '0',
+            '0:0/0/material': 'SubResource("gone")',
+            '1:0/0': '0',
+            '1:0/0/material': 'SubResource("gone")',
+          },
+        },
+        { id: 'ts', type: 'TileSet', data: { 'sources/0': 'SubResource("atlas")' } },
+      ],
+      externals
+    );
+    const materialWarns = warnSpy.mock.calls.filter((c: unknown[]) => String(c[0]).includes('names nothing'));
+    expect(materialWarns).toHaveLength(1);
+  });
+
+  it('draws a material file it cannot load with plain blending', () => {
+    const model = tileSetInScene(
+      'SubResource("ts")',
+      [
+        {
+          id: 'atlas',
+          type: 'TileSetAtlasSource',
+          data: { '0:0/0': '0', '0:0/0/material': 'ExtResource("m")' },
+        },
+        { id: 'ts', type: 'TileSet', data: { 'sources/0': 'SubResource("atlas")' } },
+      ],
+      [{ id: 'm', type: 'Material', path: 'res://missing.tres' }]
     );
     expect(model!.sources.get(0)!.tiles.get('0:0')!.alternatives.get(0)!.material).toEqual({
-      path: 'res://tile.tres',
+      properties: null,
     });
   });
 });
 
 describe('the base tile of an atlas tile', () => {
   const sourceOf = (atlas: Record<string, string>) =>
-    tileSetFromScene(
+    tileSetInScene(
       'SubResource("ts")',
       [
         { id: 'atlas', type: 'TileSetAtlasSource', data: atlas },

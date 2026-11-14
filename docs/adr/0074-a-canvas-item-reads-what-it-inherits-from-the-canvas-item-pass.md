@@ -46,7 +46,23 @@ walks cannot give one item two sequences.
   `index.r3f.ts`. The Control renderers load lazily, so a room registered with them would change the
   numbers once they load.
 - A subtree outside the shared live tree, such as a scene tile's instance, takes a paint frame: a run
-  it allocates from with the same rule. A y-sort hands its rows a frame that shifts the pass's run.
+  it allocates from with the same rule.
+
+## Y-sort
+
+One sort, `ySortedPaint` (`canvasItemPass/ySort.ts`), orders the children of every `y_sort_enabled`
+canvas item, as `_cull_canvas_item` sorts a `sort_y` item (`renderer_canvas_cull.cpp:437-469`).
+`YSortProvider` runs it over the shared live tree, and both walks read its runs by live path.
+
+- The sort root is entry 0 at y 0. A `sort_y` child merges its children into the same list, and any
+  other child is one entry with its whole subtree.
+- The comparator is `ItemYSort`: y, then collection order. z places each entry through its draw key.
+- What the tree does not hold reaches the sort as input: the solved transform of each Control, the
+  tile rows, TileMap layers and scene tiles a dispatcher hands it, and the ys a mixer pose gives.
+- A child of a merged `sort_y` item takes the clip of the sort root, not of that item
+  (`renderer_canvas_cull.cpp:458`).
+- A Control forest that the shared tree does not hold, a Control-only viewport or an unowned scene
+  tile, runs the same sort over its own Controls.
 
 ## Measurement
 
