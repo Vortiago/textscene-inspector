@@ -12,7 +12,7 @@ import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts'
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { LineEditProperties } from '../lineedit/types';
 import type { SpinBoxProperties } from './types';
-import { SPIN_BOX_FIELD_VARIATION, spinBoxLayout } from './nativeSolver';
+import { spinBoxLayout } from './nativeSolver';
 import '../lineedit/index.r3f';
 
 const THEME = nativeTheme(1);
@@ -51,7 +51,7 @@ describe('the LineEdit a SpinBox builds', () => {
   });
 
   it('carries the SpinBoxInnerLineEdit variation (spin_box.cpp:728)', () => {
-    expect(fieldProps(spinBox()).themeTypeVariation).toBe(SPIN_BOX_FIELD_VARIATION);
+    expect(fieldProps(spinBox()).themeTypeVariation).toBe('SpinBoxInnerLineEdit');
   });
 
   it('shows the text _update_text writes, with prefix and suffix (spin_box.cpp:88-114)', () => {

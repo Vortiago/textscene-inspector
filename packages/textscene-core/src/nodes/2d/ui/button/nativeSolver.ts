@@ -145,7 +145,7 @@ function isButtonFocusStyled(props: Pick<ButtonProperties, 'hasFocus'>, state: T
  * A Button's icon modulate in `state` (`button.cpp:280-330`). A focused Button in the normal draw mode
  * reads `icon_focus_color`, never `icon_normal_color` (`:286-288`).
  */
-export function buttonIconColor(
+function buttonIconColor(
   colors: SolveNode['colors'],
   state: ToggleDrawState,
   props: Pick<ButtonProperties, 'hasFocus'> = {}

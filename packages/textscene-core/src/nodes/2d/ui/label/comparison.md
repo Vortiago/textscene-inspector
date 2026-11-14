@@ -32,6 +32,11 @@ shadows. Each glyph and ring draw from FreeType's bitmap at the font's `hinting`
 An embolden over the bundled font draws on the canvas painter, which emboldens the outline as
 FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0069).
 
+A colour font draws its glyphs as FreeType loads them with `FT_LOAD_COLOR`. A glyph draws a `CBDT`,
+`EBDT` or `sbix` bitmap from the strike Godot picks (`text_server_adv.cpp:1480-1497`). Otherwise it
+draws a `COLR` v0 glyph's layers or an `SVG ` glyph document. A colour glyph keeps only the alpha of the font colour, and
+the canvas item's modulate tints it, a channel over 1 included (`text_server_adv.cpp:4044-4046`).
+
 A `label_settings.font` resolves in the file that wrote the settings. A font that is loading draws
 nothing (`label.cpp:112`, ADR-0059).
 
@@ -210,6 +215,11 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 - **Approximated** At an instance, the `GPOS` kerning pairs adjacent characters only, where Godot also kerns across a glyph that a lookup flag skips.
 - **Approximated** A font the previewer cannot read outlines from draws with the browser's
   rasteriser and hinting, so a cap can sit 1 px lower here.
+- **Approximated** An `SVG ` colour glyph is drawn by the browser, where Godot draws it with ThorVG,
+  so the antialiased rim of each shape differs.
+- **Approximated** A colour strike scaled far down, such as a 136 px strike at 12 px, differs in
+  scattered pixels.
+- **Approximated** A `COLR` glyph's layers at the default light hinting can sit up to 0.4 px off.
 - **Approximated** A wrapping Label inside a ScrollContainer can read one line short when
   the wrap is what makes the scrollbar appear.
 - **Not drawn** `BREAK_TRIM_INDENT` (an `autowrap_trim_flags` bit): a wrapped

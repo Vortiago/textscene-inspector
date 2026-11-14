@@ -162,6 +162,11 @@ export function fontHinting(font: FontFileResource): FontHinting {
   return fontHintingOf(parseOptionalInt(font.properties['hinting']));
 }
 
+/** `FontFile.modulate_color_glyphs` of `font`, which tints its colour glyphs by the font colour. */
+export function fontModulatesColourGlyphs(font: FontFileResource): boolean {
+  return boolSlotValue(font.properties['modulate_color_glyphs']) ?? false;
+}
+
 /** `FontFile.force_autohinter` of `font`, which loads its glyphs through FreeType's auto-hinter. */
 export function fontForcesAutohinter(font: FontFileResource): boolean {
   return boolSlotValue(font.properties['force_autohinter']) ?? false;
