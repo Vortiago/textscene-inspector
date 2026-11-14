@@ -80,6 +80,68 @@ function LayerRuns({ layer, placements, lineLayouts, ...run }: LayerRunsProps) {
 
 export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LabelProperties>(solveNode);
+  const style = labelStyleBox(solveNode);
+  const inheritedClippingPlanes = useControlClipPlanes();
+  // `clip_text` scissors this Label's own drawn ink to its rect
+  // (`label.cpp:733-734`'s `canvas_item_set_clip`): always called (hooks run
+  // unconditionally) but only consumed below when `props.clipText` is set.
+  const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
+  const { anchorRef, clippingPlanes: ownClippingPlanes } = useWorldClipPlanes(ownRect);
+  const clippingPlanes = props.clipText ? ownClippingPlanes : inheritedClippingPlanes;
+  // Read in the render body, not a `useMemo`: `peekSceneFontMetrics` reads a WeakMap cache
+  // that a later async load fills in place, so each render must look.
+  const { metrics: fontMetrics, isLoading: isFontLoading } = labelFontState(solveNode);
+
+  // `Label::_notification` draws the box before any text, so a loading font leaves it drawn.
+  // The default `normal` box is empty: mounting no quad for it spares every Label its hooks.
+  const box = mayDrawStyleBox(style) ? (
+    <StyleBoxQuad styleBox={style} color={tint.own} rect={ownRect} renderOrder={renderOrder} />
+  ) : null;
+
+  // A settings font that is still loading draws nothing, never the theme font (ADR-0059).
+  // The text is its own component, so a loading font runs none of its layout.
+  return (
+    <CanvasItemGroup ref={anchorRef}>
+      {box}
+      {!isFontLoading && (
+        <LabelText
+          solveNode={solveNode}
+          props={props}
+          tint={tint}
+          rect={rect}
+          renderOrder={renderOrder}
+          theme={theme}
+          contentMargin={style.contentMargin}
+          fontMetrics={fontMetrics}
+          clippingPlanes={clippingPlanes}
+        />
+      )}
+    </CanvasItemGroup>
+  );
+}
+
+type LabelTextProps = Pick<
+  NativeControlComponentProps,
+  'solveNode' | 'tint' | 'rect' | 'renderOrder' | 'theme'
+> & {
+  props: LabelProperties;
+  contentMargin: ReturnType<typeof labelStyleBox>['contentMargin'];
+  fontMetrics: ReturnType<typeof labelFontState>['metrics'];
+  clippingPlanes: TextRunProps['clippingPlanes'];
+};
+
+/** The Label's text, laid out, trimmed, placed, revealed and drawn in its effect layers. */
+function LabelText({
+  solveNode,
+  props,
+  tint,
+  rect,
+  renderOrder,
+  theme,
+  contentMargin,
+  fontMetrics,
+  clippingPlanes,
+}: LabelTextProps) {
   const themeResolved = useMemo(() => labelTextTheme(solveNode, props), [solveNode, props]);
   const labelSettings = solveNode.labelSettings;
   // A valid `label_settings` beats the theme outright: see its own doc.
@@ -104,15 +166,6 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     ],
     [effectLayers, tint.own, tintColor]
   );
-  const style = labelStyleBox(solveNode);
-  const { contentMargin } = style;
-  const inheritedClippingPlanes = useControlClipPlanes();
-  // `clip_text` scissors this Label's own drawn ink to its rect
-  // (`label.cpp:733-734`'s `canvas_item_set_clip`): always called (hooks run
-  // unconditionally) but only consumed below when `props.clipText` is set.
-  const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
-  const { anchorRef, clippingPlanes: ownClippingPlanes } = useWorldClipPlanes(ownRect);
-  const clippingPlanes = props.clipText ? ownClippingPlanes : inheritedClippingPlanes;
 
   // VC_CHARS_BEFORE_SHAPING (the default) truncates before shaping: see
   // `labelPreShapeText`'s own doc; every other behaviour trims at draw time,
@@ -125,15 +178,10 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // is already windowed to lines_skipped/max_lines_visible, so it is not windowed again.
   const sharedLayout =
     autowrapMode === AutowrapMode.AUTOWRAP_OFF ? labelUnwrappedShape(solveNode, theme) : null;
-  // Read in the render body, not the `useMemo`: `peekSceneFontMetrics` reads a
-  // WeakMap cache that a later async load fills in place, so each render must look.
-  // The `useMemo` dependency on `fontMetrics` limits re-shaping to an identity change.
-  const { metrics: fontMetrics, isLoading: isFontLoading } = labelFontState(solveNode);
   const bidiOptions = useControlBidiOptions(props, solveNode);
   const layout = useMemo(() => {
     if (sharedLayout) return sharedLayout;
-    // A loading font draws nothing, so its layout shapes no text.
-    const shaped = shapeText(isFontLoading ? '' : text, {
+    const shaped = shapeText(text, {
       fontSizePx: textTheme.fontSizePx,
       boxWidthPx: labelShapingWidthPx(rect.w, contentMargin),
       autowrapMode,
@@ -149,7 +197,6 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     return windowLabelLines(shaped, range, textTheme.paragraphSpacingPx);
   }, [
     sharedLayout,
-    isFontLoading,
     text,
     textTheme.fontSizePx,
     textTheme.lineSpacingPx,
@@ -256,32 +303,18 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
 
   const lineLayouts = useSoloLineLayouts(revealedPlacements, layout);
 
-  // `Label::_notification` draws the box before any text, so a loading font leaves it drawn.
-  // The default `normal` box is empty: mounting no quad for it spares every Label its hooks.
-  const box = mayDrawStyleBox(style) ? (
-    <StyleBoxQuad styleBox={style} color={tint.own} rect={ownRect} renderOrder={renderOrder} />
-  ) : null;
-
-  // A settings font that is still loading draws nothing, never the theme font (ADR-0059).
-  if (isFontLoading) return <CanvasItemGroup ref={anchorRef}>{box}</CanvasItemGroup>;
-
   // Each run takes `renderOrder` itself, since three never inherits it, and sits in a
   // `<CanvasItemGroup>`, since three reads the nearest group's order first and a bare `<group>`
   // resets it to zero (`r3f/canvasPaintOrder.ts`).
-  return (
-    <CanvasItemGroup ref={anchorRef}>
-      {box}
-      {layers.map((layer, layerIndex) => (
-        <LayerRuns
-          key={layerIndex}
-          layer={layer}
-          placements={revealedPlacements}
-          lineLayouts={lineLayouts}
-          fontSizePx={textTheme.fontSizePx}
-          clippingPlanes={clippingPlanes}
-          renderOrder={textLayerRenderOrder(renderOrder, layerIndex, layers.length)}
-        />
-      ))}
-    </CanvasItemGroup>
-  );
+  return layers.map((layer, layerIndex) => (
+    <LayerRuns
+      key={layerIndex}
+      layer={layer}
+      placements={revealedPlacements}
+      lineLayouts={lineLayouts}
+      fontSizePx={textTheme.fontSizePx}
+      clippingPlanes={clippingPlanes}
+      renderOrder={textLayerRenderOrder(renderOrder, layerIndex, layers.length)}
+    />
+  ));
 }
