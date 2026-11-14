@@ -96,7 +96,7 @@ export class ExpressionEmitter {
     if (op === 'OP_SELECT_IF') return this.selected(expression);
     if (op === 'OP_AND' || op === 'OP_OR') return this.shortCircuit(expression);
     if (isAssignOperator(op)) return this.assigned(expression);
-    if (STEPS[op]) return this.stepped(expression);
+    if (Object.hasOwn(STEPS, op)) return this.stepped(expression);
     const nodes = operands.map((operand) => this.node(operand));
     const types = operands.map((operand) => operand.type);
     if (op === 'OP_CONSTRUCT') return constructed(expression.type, nodes, types);

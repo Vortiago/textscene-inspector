@@ -1,6 +1,6 @@
 {
  "godot": "4.6.3-stable (official)",
- "adapter": "llvmpipe (LLVM 20.1.2, 256 bits)",
+ "adapter": "llvmpipe (LLVM 20.1.2)",
  "digests": {
   "probes": "0a757ccc328aabe58317dcb114db254c39778d7bb95798c036f2dcdeb7886bec",
   "random": "23db48b6caa76e120900cd03bd076f962a9035ed97a2b607014e8c32172c057b",

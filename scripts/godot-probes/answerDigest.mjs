@@ -14,8 +14,8 @@ import { isNaNBits, returnsFloat } from './laneAgreement.mjs';
 const SMOKE_BYTE_BELOW = 8;
 
 /**
- * The bits every NaN of a float lane takes in the digest and the smoke subset: GLSL ES 3.00
- * section 4.5.1 leaves a NaN's bits to the device, and lavapipe's differ by CPU.
+ * The bits every NaN of a float lane takes for every reader: GLSL ES 3.00 section 4.5.1 leaves a
+ * NaN's bits to the device, and lavapipe's differ by CPU.
  */
 const CANONICAL_NAN = '7fc00000';
 
@@ -25,7 +25,7 @@ export const isSmokeId = (id) => sha256(id)[0] < SMOKE_BYTE_BELOW;
 
 const isNaNLane = (lane) => isNaNBits(Number.parseInt(lane, 16));
 
-/** `entry` with each NaN lane of a float result as one value, so the file is the same on every CPU. */
+/** `entry` with each NaN lane of a float result as one value. */
 function canonicalEntry(entry) {
   if (entry.results === undefined || !returnsFloat(entry.source)) return entry;
   return {
@@ -39,8 +39,39 @@ const familyDigest = (answers) => sha256(JSON.stringify(Object.entries(answers))
 
 const smokeOf = (answers) => Object.fromEntries(Object.entries(answers).filter(([id]) => isSmokeId(id)));
 
-const canonicalProbes = (entries) =>
-  Object.fromEntries(Object.entries(entries).map(([name, entry]) => [name, canonicalEntry(entry)]));
+const canonicalProbes = (record) => ({
+  ...record,
+  adapter: adapterWithoutWidth(record.adapter),
+  probes: Object.fromEntries(
+    Object.entries(record.probes).map(([name, entry]) => [name, canonicalEntry(entry)])
+  ),
+});
+
+/** `llvmpipe (LLVM 20.1.2, 256 bits)` as `llvmpipe (LLVM 20.1.2)`: lavapipe names the CPU's vector width. */
+const adapterWithoutWidth = (adapter) => adapter.replace(/, \d+ bits\)$/, ')');
+
+/**
+ * The records of one live run as every reader sees them, the same on every CPU: each NaN lane of
+ * a float result as one value, and the adapter without its vector width.
+ */
+export function canonicalAnswers({ probes, random, operators, corpus }) {
+  return { probes: canonicalProbes(probes), random: canonicalProbes(random), operators, corpus };
+}
+
+/** Each family's answers, `{ id: answer }`: probes and random by name, operators and corpus by id. */
+const familiesOf = ({ probes, random, operators, corpus }) => ({
+  probes: probes.probes,
+  random: random.probes,
+  operators: operators.cases,
+  corpus: corpus.cases,
+});
+
+/** The families of canonical `answers` whose digest is not the one `committed` holds. */
+export function staleFamilies(answers, committed) {
+  return Object.entries(familiesOf(answers))
+    .filter(([family, entries]) => familyDigest(entries) !== committed.digests[family])
+    .map(([family]) => family);
+}
 
 /** The JSON text of `answers`, with each answer on one line so the file stays short. */
 function renderEntries(answers) {
@@ -55,23 +86,19 @@ function renderEntries(answers) {
  * The text of the committed answers file, from the live records of one run: `probes` and
  * `random` keyed by probe name, `operators` and `corpus` by case id.
  */
-export function renderAnswersFile({ probes, random, operators, corpus }) {
-  const families = {
-    probes: canonicalProbes(probes.probes),
-    random: canonicalProbes(random.probes),
-    operators: operators.cases,
-    corpus: corpus.cases,
-  };
+export function renderAnswersFile(records) {
+  const answers = canonicalAnswers(records);
+  const families = familiesOf(answers);
   const digests = Object.fromEntries(
-    Object.entries(families).map(([family, answers]) => [family, familyDigest(answers)])
+    Object.entries(families).map(([family, entries]) => [family, familyDigest(entries)])
   );
   const smoke = Object.entries(families).map(
-    ([family, answers]) => `  ${JSON.stringify(family)}: ${renderEntries(smokeOf(answers))}`
+    ([family, entries]) => `  ${JSON.stringify(family)}: ${renderEntries(smokeOf(entries))}`
   );
   return [
     '{',
-    ` "godot": ${JSON.stringify(probes.godot)},`,
-    ` "adapter": ${JSON.stringify(probes.adapter)},`,
+    ` "godot": ${JSON.stringify(answers.probes.godot)},`,
+    ` "adapter": ${JSON.stringify(answers.probes.adapter)},`,
     ` "digests": ${JSON.stringify(digests, null, 1).replace(/\n/g, '\n ')},`,
     ` "smoke": {\n${smoke.join(',\n')}\n }`,
     '}',

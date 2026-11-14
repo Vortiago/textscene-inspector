@@ -16,7 +16,7 @@ export const STEPS: Readonly<Record<string, { readonly operator: string; readonl
 };
 
 /** Whether `op` writes its first operand: an assignment, or `++` or `--` either side. */
-export const isWriteOperator = (op: string): boolean => isAssignOperator(op) || op in STEPS;
+export const isWriteOperator = (op: string): boolean => isAssignOperator(op) || Object.hasOwn(STEPS, op);
 
 /** The place `expression` itself writes, or nothing for an expression that writes no place. */
 function writtenTarget(expression: Expression): Expression | undefined {
@@ -25,6 +25,7 @@ function writtenTarget(expression: Expression): Expression | undefined {
   return undefined;
 }
 
+/** Written only by `writes`. An entry goes when its node is collected. */
 // eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
 const writing = new WeakMap<Expression, boolean>();
 

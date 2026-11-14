@@ -7,6 +7,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { canonicalAnswers, staleFamilies } from '../../../scripts/godot-probes/answerDigest.mjs';
 
 /** The families of answers, each a record file of the live run. */
 const FAMILIES = ['probes', 'random', 'operators', 'corpus'];
@@ -26,24 +27,38 @@ const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
 
 /**
  * Every family's answers, `{ live, probes, random, operators, corpus }`, each in its record
- * shape. `live` is false when no live run exists, and each family then holds the smoke subset
- * only: a test that needs every case runs when `live` is true. Throws without a live run when
- * `GODOT_ANSWERS` is `live`, so a job without Godot fails instead of passing on the subset.
+ * shape and the same on every CPU (`canonicalAnswers`). `live` is false when no live run exists,
+ * and each family then holds the smoke subset only: a test that needs every case runs when `live`
+ * is true. Throws without a live run when `GODOT_ANSWERS` is `live`, so a job without Godot fails
+ * instead of passing on the subset, and throws on a live run the committed digests do not match.
  */
 export function godotAnswers() {
   const isLive = FAMILIES.every((family) => existsSync(livePath(family)));
-  if (isLive) {
-    return {
-      live: true,
-      ...Object.fromEntries(FAMILIES.map((family) => [family, readJson(livePath(family))])),
-    };
-  }
+  if (isLive) return { live: true, ...currentLiveAnswers() };
   if (process.env.GODOT_ANSWERS === LIVE_REQUIRED) {
     throw new Error(
       `expected Godot's live answers in ${LIVE_DIR}, found none: run \`pnpm godot:probes\` in the CI image first`
     );
   }
   const { smoke, godot, adapter } = readJson(ANSWERS_FILE);
+  return smokeAnswers(smoke, godot, adapter);
+}
+
+/** The live run's answers. Throws when a family's digest is not the committed one: the run is stale. */
+function currentLiveAnswers() {
+  const answers = canonicalAnswers(
+    Object.fromEntries(FAMILIES.map((family) => [family, readJson(livePath(family))]))
+  );
+  const stale = staleFamilies(answers, readJson(ANSWERS_FILE));
+  if (stale.length > 0) {
+    throw new Error(
+      `expected the live answers in ${LIVE_DIR} to match the digests of ${ANSWERS_FILE}, found ${stale.join(', ')} differ: run \`pnpm godot:probes\` again`
+    );
+  }
+  return answers;
+}
+
+function smokeAnswers(smoke, godot, adapter) {
   return {
     live: false,
     probes: { godot, adapter, probes: smoke.probes },
