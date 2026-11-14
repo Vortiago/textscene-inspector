@@ -26,11 +26,68 @@ export interface ConstantNode {
   readonly position: SourcePosition;
 }
 
-/** NODE_TYPE_VARIABLE: a read of a function argument. */
+/**
+ * NODE_TYPE_VARIABLE: a read of a function argument or a local variable, or NODE_TYPE_ARRAY for
+ * a whole array, whose `arraySize` is its element count. A struct value has its struct's name as
+ * its type.
+ */
 export interface VariableNode {
   readonly kind: 'variable';
   readonly type: ValueType;
   readonly name: string;
+  readonly arraySize?: number;
+  /** A `const` local: Godot refuses a write to it. */
+  readonly isConst?: boolean;
+  readonly position: SourcePosition;
+}
+
+/** NODE_TYPE_ARRAY with an index: an element of an array variable or of an array member. */
+export interface ArrayElementNode {
+  readonly kind: 'array element';
+  readonly type: ValueType;
+  readonly array: Expression;
+  readonly index: Expression;
+  readonly position: SourcePosition;
+}
+
+/** NODE_TYPE_ARRAY_CONSTRUCT: `float[3](a, b, c)` or `{a, b, c}`, its elements in order. */
+export interface ArrayConstructNode {
+  readonly kind: 'array construct';
+  /** The element type. */
+  readonly type: ValueType;
+  readonly arraySize: number;
+  readonly elements: readonly Expression[];
+  readonly position: SourcePosition;
+}
+
+/** `v.length()`: the element count of an array, an `int` (`shader_language.cpp:3400`). */
+export interface ArrayLengthNode {
+  readonly kind: 'array length';
+  readonly type: 'int';
+  readonly array: Expression;
+  readonly position: SourcePosition;
+}
+
+/** NODE_TYPE_MEMBER on a struct: the member `name` of `owner`. */
+export interface FieldNode {
+  readonly kind: 'field';
+  readonly type: ValueType;
+  readonly arraySize?: number;
+  readonly owner: Expression;
+  readonly name: string;
+  readonly position: SourcePosition;
+}
+
+/**
+ * `a = b` where both are arrays or structs. Godot holds it apart from the operators, whose rows
+ * are of value types: an array's in its ArrayNode, a struct's as `OP_ASSIGN` on struct types.
+ */
+export interface WholeAssignNode {
+  readonly kind: 'whole assign';
+  readonly type: ValueType;
+  readonly arraySize?: number;
+  readonly target: Expression;
+  readonly value: Expression;
   readonly position: SourcePosition;
 }
 
@@ -62,22 +119,88 @@ export interface MemberNode {
   readonly position: SourcePosition;
 }
 
-export type Expression = ConstantNode | VariableNode | OperatorNode | MemberNode;
+export type Expression =
+  | ConstantNode
+  | VariableNode
+  | OperatorNode
+  | MemberNode
+  | ArrayElementNode
+  | ArrayConstructNode
+  | ArrayLengthNode
+  | FieldNode
+  | WholeAssignNode;
 
-/** NODE_TYPE_CONTROL_FLOW: a `return` of one expression. */
+/** A flow operation of Godot's (`FlowOperation`, `shader_language.h:306`). */
+export type Flow =
+  | 'FLOW_OP_IF'
+  | 'FLOW_OP_RETURN'
+  | 'FLOW_OP_FOR'
+  | 'FLOW_OP_WHILE'
+  | 'FLOW_OP_DO'
+  | 'FLOW_OP_BREAK'
+  | 'FLOW_OP_SWITCH'
+  | 'FLOW_OP_CASE'
+  | 'FLOW_OP_DEFAULT'
+  | 'FLOW_OP_CONTINUE'
+  | 'FLOW_OP_DISCARD';
+
+/**
+ * NODE_TYPE_CONTROL_FLOW, with Godot's layout. `if`: the condition, and the then block and an
+ * optional else block. `while` and `do`: the condition, and the body. `for`: the blocks of the
+ * initialiser, the conditions and the steps, then the body. `switch`: the value, and one block of
+ * its `case` and `default` nodes. `case`: the label, and the body. `default`: the body. `return`:
+ * the value, if any. `break`, `continue` and `discard`: nothing.
+ */
 export interface ControlFlowNode {
   readonly kind: 'control flow';
-  readonly flow: 'FLOW_OP_RETURN';
+  readonly flow: Flow;
   readonly expressions: readonly Expression[];
+  readonly blocks: readonly BlockNode[];
   readonly position: SourcePosition;
 }
 
-export type Statement = Expression | ControlFlowNode;
+/** One name of a declaration, its array size, and its value. */
+export interface Declarator {
+  readonly name: string;
+  /** The element count of an array, or nothing for one value. */
+  readonly arraySize?: number;
+  readonly value?: Expression;
+  readonly position: SourcePosition;
+}
 
-/** NODE_TYPE_BLOCK: the statements of a function body, in order. */
+/** NODE_TYPE_VARIABLE_DECLARATION: `float a = b, c;`, or `const` with a value for each name. */
+export interface DeclarationNode {
+  readonly kind: 'declaration';
+  readonly type: ValueType;
+  readonly isConst: boolean;
+  readonly declarators: readonly Declarator[];
+  readonly position: SourcePosition;
+}
+
+export type Statement = Expression | ControlFlowNode | DeclarationNode | BlockNode;
+
+/**
+ * NODE_TYPE_BLOCK: statements in order, with a scope. The `for` blocks keep Godot's kinds: the
+ * initialiser holds one statement, and the conditions and the steps hold expressions.
+ */
 export interface BlockNode {
   readonly kind: 'block';
   readonly statements: readonly Statement[];
+  readonly position: SourcePosition;
+}
+
+/** A member of a struct, with its array size. */
+export interface StructMember {
+  readonly name: string;
+  readonly type: ValueType;
+  readonly arraySize?: number;
+}
+
+/** NODE_TYPE_STRUCT: `struct Pair { float x; vec2 y; };`. */
+export interface StructNode {
+  readonly kind: 'struct';
+  readonly name: string;
+  readonly members: readonly StructMember[];
   readonly position: SourcePosition;
 }
 
@@ -97,8 +220,9 @@ export interface FunctionNode {
   readonly position: SourcePosition;
 }
 
-/** NODE_TYPE_SHADER. */
+/** NODE_TYPE_SHADER: its structs and functions, each in the order of the text. */
 export interface ShaderNode {
   readonly kind: 'shader';
+  readonly structs: readonly StructNode[];
   readonly functions: readonly FunctionNode[];
 }

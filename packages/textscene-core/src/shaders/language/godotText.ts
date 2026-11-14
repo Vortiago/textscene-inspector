@@ -9,8 +9,9 @@ import { assignmentRefusal } from './assignment.js';
 import { signatureInstruction } from './instructions.js';
 import { isAssignOperator } from './operators.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
-import type { Expression, OperatorNode } from './shaderTree.js';
+import type { BlockNode, Expression, OperatorNode, Statement } from './shaderTree.js';
 import { swizzled } from './swizzle.js';
+import { statementBlocks, withSubExpressions } from './treeWalk.js';
 import { elementType, shapeOf } from './types.js';
 
 /** The operators Godot writes as their sign before their operand's text (`shader_compiler.cpp:1134`). */
@@ -32,7 +33,53 @@ const TEXT_LEADS_WITH_OPERAND: ReadonlySet<string> = new Set([
 ]);
 
 /** Godot writes a binary operator in brackets, and these in their own forms. */
-const OWN_FORM_OPERATORS: ReadonlySet<string> = new Set(['OP_CONSTRUCT', 'OP_SELECT_IF', 'OP_EMPTY']);
+const OWN_FORM_OPERATORS: ReadonlySet<string> = new Set([
+  'OP_CONSTRUCT',
+  'OP_STRUCT',
+  'OP_SELECT_IF',
+  'OP_EMPTY',
+]);
+
+/** The block GLSL reads from Godot's text of `block`. */
+export function glslBlock(block: BlockNode): BlockNode {
+  return { ...block, statements: block.statements.map(glslStatement) };
+}
+
+function glslStatement(statement: Statement): Statement {
+  switch (statement.kind) {
+    case 'block':
+      return glslBlock(statement);
+    case 'declaration':
+      return {
+        ...statement,
+        declarators: statement.declarators.map((declarator) =>
+          declarator.value ? { ...declarator, value: glslStatementExpression(declarator.value) } : declarator
+        ),
+      };
+    case 'control flow':
+      return {
+        ...statement,
+        expressions: statement.expressions.map(glslExpression),
+        blocks: statementBlocks(statement).map(glslBlock),
+      };
+    default:
+      return glslStatementExpression(statement);
+  }
+}
+
+/**
+ * The expression a statement or a declaration holds. Godot writes an array's or a struct's
+ * assignment as `a=b` (`shader_compiler.cpp:1078`), which GLSL reads as Godot means only where
+ * no operator, swizzle or index stands beside it.
+ */
+function glslStatementExpression(expression: Expression): Expression {
+  if (expression.kind !== 'whole assign') return glslExpression(expression);
+  return {
+    ...expression,
+    target: glslExpression(expression.target),
+    value: glslStatementExpression(expression.value),
+  };
+}
 
 /** The tree GLSL reads from Godot's text of `expression`. */
 export function glslExpression(expression: Expression): Expression {
@@ -40,6 +87,13 @@ export function glslExpression(expression: Expression): Expression {
     case 'constant':
     case 'variable':
       return expression;
+    case 'whole assign':
+      return refuse(expression);
+    case 'array element':
+    case 'array construct':
+    case 'array length':
+    case 'field':
+      return withSubExpressions(expression, glslExpression);
     case 'member':
       return glslMember(glslExpression(expression.owner), expression.name, expression);
     case 'operator':
@@ -142,14 +196,14 @@ function textStartsWithMinus(expression: Expression): boolean {
   switch (expression.kind) {
     case 'constant':
       return shapeOf(expression.type)!.lanes === 1 && signBit(expression.values[0] as number);
-    case 'variable':
-      return false;
     case 'member':
       return textStartsWithMinus(expression.owner);
     case 'operator':
       if (expression.op === 'OP_NEGATE' || expression.op === 'OP_DECREMENT') return true;
       if (TEXT_LEADS_WITH_OPERAND.has(expression.op) || isAssignOperator(expression.op))
         return textStartsWithMinus(expression.operands[0]!);
+      return false;
+    default:
       return false;
   }
 }

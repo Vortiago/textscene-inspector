@@ -4,6 +4,7 @@
  * arithmetic gives: a shift by 85 folds as a shift by 21, where the GPU gives zero.
  */
 
+import { arraySizeOf } from './parseExpression.js';
 import { binaryLane, convertedLane, unaryLane } from './glslangArithmetic.js';
 import { godotConstantDouble } from './godotNumber.js';
 import type { Expression, OperatorNode, Scalar } from './shaderTree.js';
@@ -37,14 +38,16 @@ export class GlslangFolding {
         return shapeOf(expression.type)!.scalar === 'float'
           ? expression.values.map((value) => godotConstantDouble(value as number))
           : expression.values;
-      case 'variable':
-        return undefined;
+      case 'array length':
+        return [arraySizeOf(expression.array)];
       case 'member': {
         const owner = this.lanesOf(expression.owner);
         return owner && swizzleLanes(expression).map((lane) => owner[lane]!);
       }
       case 'operator':
-        return this.foldOperator(expression);
+        return expression.op === 'OP_STRUCT' ? undefined : this.foldOperator(expression);
+      default:
+        return undefined;
     }
   }
 

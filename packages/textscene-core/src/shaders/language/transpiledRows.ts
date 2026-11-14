@@ -7,44 +7,72 @@ import { instruction, keywordInstruction, notTranspiled } from './instructions.j
 import type { InstructionRow } from './instructionTable.generated.js';
 import type { SourcePosition } from './shadingLanguageError.js';
 import type { Expression, FunctionNode, ShaderNode, Statement } from './shaderTree.js';
+import { everyExpression, everyStatement, statementExpressions } from './treeWalk.js';
 import { shapeOf } from './types.js';
 
 /** A row the emitter emits has a state on each target, which a probe against Godot backs. */
 const isTranspiled = (row: InstructionRow) => row.webgl2 !== undefined;
 
 export function checkTranspiled(shader: ShaderNode): void {
+  for (const struct of shader.structs) {
+    checkRow(instruction('NODE_TYPE_STRUCT')!, struct.position);
+    for (const member of struct.members) checkType(member.type, struct.position);
+  }
   for (const definition of shader.functions) checkFunction(definition);
 }
 
 function checkFunction(definition: FunctionNode): void {
   checkType(definition.returnType, definition.position);
   for (const argument of definition.arguments) checkType(argument.type, argument.position);
-  for (const statement of definition.body.statements) checkStatement(statement);
+  for (const statement of everyStatement(definition.body)) {
+    checkStatement(statement);
+    for (const expression of statementExpressions(statement))
+      for (const part of everyExpression(expression)) checkExpression(part);
+  }
 }
 
 function checkStatement(statement: Statement): void {
-  if (statement.kind === 'control flow') statement.expressions.forEach(checkExpression);
-  else if (statement.kind !== 'operator' || statement.op !== 'OP_EMPTY') checkExpression(statement);
+  switch (statement.kind) {
+    case 'block':
+      return checkRow(instruction('NODE_TYPE_BLOCK')!, statement.position);
+    case 'declaration':
+      checkRow(instruction('NODE_TYPE_VARIABLE_DECLARATION')!, statement.position);
+      return checkType(statement.type, statement.position);
+    case 'control flow':
+      checkRow(instruction('NODE_TYPE_CONTROL_FLOW')!, statement.position);
+      return checkRow(instruction(statement.flow)!, statement.position);
+  }
 }
 
 function checkExpression(expression: Expression): void {
   switch (expression.kind) {
     case 'constant':
-      checkRow(literalRow(expression.type), expression.position);
-      return;
+      return checkRow(literalRow(expression.type), expression.position);
     case 'variable':
+      if ((expression.arraySize ?? 0) > 0) checkRow(instruction('NODE_TYPE_ARRAY')!, expression.position);
       return;
     case 'member':
-      checkRow(expression.row, expression.position);
-      return checkExpression(expression.owner);
     case 'operator':
-      expression.operands.forEach(checkExpression);
-      checkRow(expression.row, expression.position);
+      return checkRow(expression.row, expression.position);
+    case 'array element':
+      return checkRow(instruction('NODE_TYPE_ARRAY')!, expression.position);
+    case 'array construct':
+      return checkRow(instruction('NODE_TYPE_ARRAY_CONSTRUCT')!, expression.position);
+    case 'array length':
+      return checkRow(instruction('length[array]()')!, expression.position);
+    case 'field':
+      return checkRow(instruction('NODE_TYPE_MEMBER')!, expression.position);
+    case 'whole assign':
+      return checkRow(
+        instruction(expression.arraySize ? 'NODE_TYPE_ARRAY' : 'NODE_TYPE_STRUCT')!,
+        expression.position
+      );
   }
 }
 
+/** A value type's row, or the struct type's row for a struct's name. */
 function checkType(type: string, position: SourcePosition): void {
-  checkRow(instruction(type)!, position);
+  checkRow(instruction(shapeOf(type) || type === 'void' ? type : 'struct type')!, position);
 }
 
 function checkRow(row: InstructionRow, position: SourcePosition): void {

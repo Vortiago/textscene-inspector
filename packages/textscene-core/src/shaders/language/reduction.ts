@@ -10,6 +10,7 @@ import { signatureInstruction } from './instructions.js';
 import { OPERATOR_RULES, isAssignOperator, operatorText } from './operators.js';
 import type { SourcePosition } from './shadingLanguageError.js';
 import type { Expression, OperatorNode } from './shaderTree.js';
+import { shapeOf } from './types.js';
 
 export type Entry =
   | { readonly isOperator: false; readonly node: Expression }
@@ -85,6 +86,18 @@ function reduceBinary(entries: Entry[], next: number, fail: Fail): void {
   if (isAssignOperator(op)) failOnRefusal(assignmentRefusal(left), fail);
   // Unary operators reduce first, so no operator follows a binary one in a list Godot builds.
   const right = nodeOf(entries[next + 1]!, fail);
+  if (op === 'OP_ASSIGN' && isStruct(left.type)) {
+    if (right.type !== left.type) fail(`Invalid arguments to operator '=': '${typeList([left, right])}'.`);
+    const node = {
+      kind: 'whole assign',
+      type: left.type,
+      target: left,
+      value: right,
+      position: left.position,
+    } as const;
+    entries.splice(next - 1, 3, { isOperator: false, node });
+    return;
+  }
   const node = operatorNode(op, [left, right], left.position);
   if (!node) fail(`Invalid arguments to operator '${operatorText(op)}': '${typeList([left, right])}'.`);
   failOnRefusal(evaluationRefusal(node), fail);
@@ -104,6 +117,9 @@ function operatorNode(
   if (!row) return undefined;
   return { kind: 'operator', type: row.returns!, op, row, operands, position };
 }
+
+/** Whether `type` names a struct: a type with a name that holds no value shape. */
+const isStruct = (type: string) => type !== 'void' && shapeOf(type) === undefined;
 
 const typeList = (operands: readonly Expression[]) => operands.map((operand) => operand.type).join(', ');
 
