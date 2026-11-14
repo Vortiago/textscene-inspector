@@ -16,7 +16,8 @@ arithmetic. The previewer samples the cookie clamped at its quad edge. Godot res
 canvas item's default repeat to the viewport's disabled default (`viewport.h:419-420`,
 `viewport.cpp:4009`, `renderer_canvas_render_rd.cpp:2344`), and the light tap uses that
 item sampler (`canvas.glsl:774-782`). A light with no `texture` lights nothing and draws no
-placeholder, as `pnpm ref:godot` measures. A `texture` that is set but fails to load draws a placeholder.
+placeholder, as `pnpm ref:godot` measures. A `texture` that is set but fails to load lights nothing too,
+as Godot does: its loader leaves the property null (`resource_format_text.cpp:146-154`).
 A `GradientTexture2D` with no `gradient` holds no image, so the light draws Godot's 4 by 4 magenta and
 black placeholder at its own size (`gradient_texture.cpp:229-233`, `texture_storage.cpp:588-595`).
 In a `use_hdr_2d` canvas the light adds to the linear albedo with no clamp, and its colour and cookie

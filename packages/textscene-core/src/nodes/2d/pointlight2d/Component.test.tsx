@@ -320,9 +320,9 @@ describe('PointLight2D Component', () => {
       });
     });
 
-    it('draws the placeholder when the texture is set but does not resolve', async () => {
+    it('draws nothing when the texture file fails to load, as Godot leaves the property null', async () => {
       const r = await render(node({ texture: 'ExtResource("missing")' }));
-      expect(r.scene.findAllByType('Mesh').filter(isPlaceholder)).toHaveLength(1);
+      expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
     });
   });
 });
