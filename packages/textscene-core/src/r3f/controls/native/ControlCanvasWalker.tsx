@@ -17,7 +17,7 @@ import { controlComponentRegistry, NO_PIECE_SLOTS } from '../ControlComponentReg
 import { ControlFallback } from './ControlFallback';
 import { internalControlsOf, type InternalControl } from './internalControls';
 import { InternalControlGroup, internalControlSlots, type InternalPainterEnv } from './InternalControlGroup';
-import { OwnCanvasModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
+import { OwnCanvasModulateProvider, OwnModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
 import { useTextureSamplerOver } from '../../canvasItemTextureSampler';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
 import { ClipChildrenScope } from '../../canvasGroup/ClipChildrenScope';
@@ -398,24 +398,26 @@ function ControlItemGroup({
   // counts from the painter's local scene.
   const painter = (
     <NodePathProvider path={solveNode.path}>
-      <Painter
-        solveNode={solveNode}
-        rect={rect}
-        renderOrder={renderOrder}
-        slot={slot}
-        tint={tint}
-        childTint={tint.internalChild}
-        chromeSlot={chromeSlot}
-        pieceSlots={pieceSlots}
-        layerSlot={layerSlot}
-        theme={theme}
-        measureText={measureText}
-        snapToPixels={snapToPixels}
-        childRects={childRects}
-        meta={solvedEntry?.meta}
-      >
-        {wrapsChildren ? <ClipMaskProvider value={null}>{childElements}</ClipMaskProvider> : undefined}
-      </Painter>
+      <OwnModulateProvider value={tint.own}>
+        <Painter
+          solveNode={solveNode}
+          rect={rect}
+          renderOrder={renderOrder}
+          slot={slot}
+          tint={tint}
+          childTint={tint.internalChild}
+          chromeSlot={chromeSlot}
+          pieceSlots={pieceSlots}
+          layerSlot={layerSlot}
+          theme={theme}
+          measureText={measureText}
+          snapToPixels={snapToPixels}
+          childRects={childRects}
+          meta={solvedEntry?.meta}
+        >
+          {wrapsChildren ? <ClipMaskProvider value={null}>{childElements}</ClipMaskProvider> : undefined}
+        </Painter>
+      </OwnModulateProvider>
       {internals.length > 0 && (
         <InternalControls
           internals={internals}

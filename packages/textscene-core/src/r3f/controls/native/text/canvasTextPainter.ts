@@ -27,6 +27,7 @@ import { fposmodp } from '../../../../godot/math/math';
 import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { channelToByte } from '../../../../utils/colorSpace';
+import { WHITE_MODULATE } from '../../../canvasItemModulate';
 
 /** Fixed vertical pad, CSS px, on every raster edge: anti-aliased ink can overshoot a glyph's ascent/descent box. The quad is this much taller than `layout.heightPx` on both edges. */
 const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
@@ -183,6 +184,12 @@ export interface CanvasTextPaintOptions {
   glyphDrawer?: GlyphDrawer;
   /** The `originPhase` of the run's place in its canvas item, which the pen and the baseline include. Zero by default. */
   originPhasePx?: Readonly<Vector2>;
+  /**
+   * The colour that tints a colour glyph's texels in place of the tint's colour. Godot keeps only the
+   * alpha of the font colour for one (`text_server_adv.cpp:4044-4046`), so a canvas item's modulate
+   * alone tints it. White by default.
+   */
+  colourGlyphTint?: Pick<Rgba, 'r' | 'g' | 'b'>;
 }
 
 /**
@@ -216,11 +223,17 @@ export function paintSceneFontCanvas(
   tint: Rgba,
   skew: number,
   canvasLayout: CanvasTextCanvasLayout,
-  { strokeWidthPx = 0, glyphDrawer = 'canvasItem', originPhasePx = VECTOR2_ZERO }: CanvasTextPaintOptions = {}
+  {
+    strokeWidthPx = 0,
+    glyphDrawer = 'canvasItem',
+    originPhasePx = VECTOR2_ZERO,
+    colourGlyphTint = WHITE_MODULATE,
+  }: CanvasTextPaintOptions = {}
 ): ImageData | null {
   const frame = rasterFrame(layout, fontSizePx, skew, canvasLayout, glyphDrawer, strokeWidthPx);
   const glyphs = placeGlyphs(layout, frame, originPhasePx);
-  return painterOf(frame.metrics).paint(glyphs, frame, opaqueByteColour(tint));
+  const colours = { text: opaqueByteColour(tint), colourGlyphs: opaqueByteColour(colourGlyphTint) };
+  return painterOf(frame.metrics).paint(glyphs, frame, colours);
 }
 
 /** The frame of the raster `canvasLayout` sizes for `layout`, which a canvas face shaped. */

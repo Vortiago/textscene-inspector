@@ -18,9 +18,10 @@ import type { GlyphPlacement } from './textLayout';
 export function browserTextPainter(face: RegisteredCanvasFontMetrics): GlyphPainter {
   return {
     reachReader: (_skew, lineAscentPx) => (glyph) => textReachPx(glyph, lineAscentPx),
-    paint: (glyphs, frame, colour) => {
+    paint: (glyphs, frame, colours) => {
       // A run of spaces alone draws no text, so it needs no 2D context.
-      if (glyphs.length === 0) return blankGlyphPainter.paint(glyphs, frame, colour);
+      if (glyphs.length === 0) return blankGlyphPainter.paint(glyphs, frame, colours);
+      const colour = colours.text;
       const { fontSizePx, skew, canvasLayout, strokeWidthPx } = frame;
       const ctx = textContext(canvasLayout, face.cssFontFamily, fontSizePx);
       if (!ctx) return null;

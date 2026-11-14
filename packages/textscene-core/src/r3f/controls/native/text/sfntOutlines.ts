@@ -37,6 +37,8 @@ import type { instanceKerningReader, PairKerningReader } from './variation/insta
 import { keptPairs } from './keptPairs';
 import { perObject } from '../../../../utils/perObject';
 import { recentlyRead } from '../../../../utils/recentlyRead';
+import { readCpal } from './colour/cpal';
+import { colrLayersReader, type ColrLayersReader } from './colour/colr';
 
 type InstanceKerningReader = typeof instanceKerningReader;
 /** The readers of the glyphs at an instance, which load with a font that has `GSUB` and `fvar`. */
@@ -78,12 +80,24 @@ export interface SfntOutlines {
    * for outlines with no `GSUB` variation to read.
    */
   shapingAt?(chars: readonly string[], opentype: OpentypeCoordinates): readonly RunCluster[] | null;
+  /**
+   * The `COLR` layers of a glyph in the default palette (`colour/colr.ts`). Absent for a font with
+   * no `COLR` and `CPAL` that FreeType reads.
+   */
+  readonly colourLayers?: ColrLayersReader;
+  /** `FontFile.modulate_color_glyphs` of the load: the font colour tints a colour glyph. */
+  readonly modulatesColourGlyphs?: boolean;
 }
 
-/** How a font's glyphs load: its `hinting` (`text_server_adv.cpp:1270-1282`), and `force_autohinter`. */
+/**
+ * How a font's glyphs load: its `hinting` (`text_server_adv.cpp:1270-1282`) and `force_autohinter`,
+ * and how its colour glyphs draw: `modulate_color_glyphs`.
+ */
 export interface GlyphLoad {
   hinting: FontHinting;
   isAutohinterForced: boolean;
+  /** Whether the font colour tints a colour glyph, which Godot leaves untinted by default (`text_server_adv.cpp:4044`). */
+  modulatesColourGlyphs?: boolean;
 }
 
 /** The load of `font_get_glyph_contours`, which a TextMesh extrudes: the normal target (`text_server_adv.cpp:3613`). */
@@ -110,7 +124,8 @@ export async function openFontOutlines(
     ),
     variationReaderOf(sfnt, ['GSUB', 'fvar'], () => import('./variation/instanceGlyph')),
   ]);
-  return readSfntOutlines(sfnt, outlineOf, kerningReader, glyphReaders);
+  const outlines = readSfntOutlines(sfnt, outlineOf, kerningReader, glyphReaders);
+  return outlines && load.modulatesColourGlyphs ? { ...outlines, modulatesColourGlyphs: true } : outlines;
 }
 
 /**
@@ -300,5 +315,13 @@ function readSfntOutlines(
         const instance = instanceAt(opentype);
         return instance && shapingOf(instance)(chars);
       }),
+    colourLayers: colourLayersOf(sfnt),
   };
+}
+
+/** The reader of each glyph's `COLR` layers, or undefined for a font with none that FreeType reads. */
+function colourLayersOf(sfnt: SfntFile): ColrLayersReader | undefined {
+  const palette = orOnRangeError(() => readCpal(sfnt), null);
+  const layersOf = palette && orOnRangeError(() => colrLayersReader(sfnt, palette), null);
+  return layersOf ? (glyph) => orOnRangeError(() => layersOf(glyph), null) : undefined;
 }

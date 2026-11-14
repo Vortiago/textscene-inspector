@@ -4,7 +4,7 @@
  * `browserTextPainter.ts` draws each glyph as browser text, and `blankGlyphPainter.ts` draws none.
  */
 import type { Rect2 } from '../../../../godot/math/rect2';
-import type { ByteColour } from './glyphCoverage';
+import type { RunColours } from './colour/colourGlyphRaster';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
 import type { CanvasTextCanvasLayout } from './canvasTextPainter';
 import type { GlyphPlacement } from './textLayout';
@@ -40,8 +40,8 @@ export interface GlyphPainter {
    * line whose ascent is `lineAscentPx`.
    */
   reachReader(skew: number, lineAscentPx: number): (glyph: GlyphPlacement) => GlyphReach;
-  /** The raster of `glyphs` in `colour`. Null where the painter needs a 2D context and the document has none. */
-  paint(glyphs: readonly PlacedGlyph[], frame: RasterFrame, colour: ByteColour): ImageData | null;
+  /** The raster of `glyphs` in `colours`. Null where the painter needs a 2D context and the document has none. */
+  paint(glyphs: readonly PlacedGlyph[], frame: RasterFrame, colours: RunColours): ImageData | null;
   /** Reads the rectangle of the quad Godot draws for a glyph, in raster px, or null for a glyph that draws none. */
   rectReader(frame: RasterFrame): (glyph: PlacedGlyph) => Rect2 | null;
 }

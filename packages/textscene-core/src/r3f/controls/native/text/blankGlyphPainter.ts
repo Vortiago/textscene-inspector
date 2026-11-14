@@ -9,9 +9,9 @@ import type { GlyphPainter } from './glyphPainter';
 export const blankGlyphPainter: GlyphPainter = {
   reachReader: () => (glyph) => ({ leftPx: 0, rightPx: glyph.advance }),
   // Coloured as every raster is: a texel at alpha 0 keeps the tint, as `colourRaster` says.
-  paint: (_glyphs, { canvasLayout }, colour) => {
+  paint: (_glyphs, { canvasLayout }, colours) => {
     const image = new ImageData(canvasLayout.canvasWidthPx, canvasLayout.canvasHeightPx);
-    colourRaster(image, colour);
+    colourRaster(image, colours.text);
     return image;
   },
   rectReader: () => () => null,
