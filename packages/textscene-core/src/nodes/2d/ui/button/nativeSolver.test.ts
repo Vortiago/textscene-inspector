@@ -23,7 +23,7 @@ import {
   buttonTextTheme,
   buttonIconColor,
   BUTTON_CLASS,
-  buttonLabelShape,
+  buttonLayoutOf,
   buttonTextureSlots,
 } from './nativeSolver';
 import { resolveToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
@@ -57,6 +57,18 @@ function node(
     colors: props.themeOverrideColors ?? {},
     constants: props.themeOverrideConstants ?? {},
   });
+}
+
+const DEFAULT_MARGIN = contentMarginSize(defaultStyleBoxesOf(defaultThemeAt(1)).Button!.normal!);
+
+/** The label a Button lays out at `size`, as the solver and the painter read it. */
+function labelAt(n: SolveNode, size: { x: number; y: number } = { x: 120, y: 40 }): TextLayoutResult | null {
+  return buttonLayoutOf(BUTTON_CLASS)(n, size, nativeTheme(1)).label;
+}
+
+/** The label a wrapping Button with no icon shapes at a wrap width of `wrapWidthPx`. */
+function labelWrappedAt(props: Partial<ButtonProperties>, wrapWidthPx: number): TextLayoutResult | null {
+  return labelAt(node(props), { x: wrapWidthPx + DEFAULT_MARGIN.x, y: 40 });
 }
 
 function styleBoxWithMargin(contentMargin: StyleBoxFlatData['contentMargin']): StyleBoxFlatData {
@@ -243,9 +255,8 @@ describe('buttonMinimumSize: icon contribution (!expand_icon && icon present)', 
   });
 });
 
-describe('buttonLabelShape: the one shaping the solver and the painter share', () => {
-  const shape = (props: Partial<ButtonProperties>): TextLayoutResult | null =>
-    buttonLabelShape(node(props), BUTTON_CLASS);
+describe('buttonLayoutOf: the one label the solver and the painter share', () => {
+  const shape = (props: Partial<ButtonProperties>): TextLayoutResult | null => labelAt(node(props));
 
   it('shapes the label', () => {
     const layout = shape({ text: 'AB' })!;
@@ -258,25 +269,22 @@ describe('buttonLabelShape: the one shaping the solver and the painter share', (
     expect(shape({})).toBeNull();
   });
 
-  it('shapes at boxWidthPx 0 / autowrap OFF / lineSpacingPx 0: Button never wraps', () => {
-    // Single line ('AB' has no hard break), so widthPx/heightPx alone prove
-    // this: an autowrap-constrained shape of 'AB' at a 0-width box would
-    // have broken onto multiple lines instead.
-    const layout = shape({ text: 'AB' })!;
+  it('keeps one row at AUTOWRAP_OFF in a box narrower than the label', () => {
+    const layout = labelAt(node({ text: 'AB' }), { x: 10, y: 40 })!;
     expect(layout.lines).toHaveLength(1);
     expect(layout.heightPx).toBe(FONT_HEIGHT);
   });
 
   it('ignores the readiness gate: that lives in the solver, and the painter shapes unconditionally', () => {
     expect(minSize(node({ text: 'AB' }), ctx(false))).toEqual(minSize(node({}), ctx(false)));
-    expect(buttonLabelShape(node({ text: 'AB' }), BUTTON_CLASS)).not.toBeNull();
+    expect(shape({ text: 'AB' })).not.toBeNull();
   });
 });
 
-describe('buttonLabelShape: direction and language (button.cpp:564-569)', () => {
+describe('buttonLayoutOf: the label direction and language (button.cpp:564-569)', () => {
   /** The shaped line's glyph characters, left to right. */
   function visual(props: Partial<ButtonProperties>, overrides: Partial<SolveNode> = {}): string {
-    const layout = buttonLabelShape({ ...node(props), ...overrides }, BUTTON_CLASS)!;
+    const layout = labelAt({ ...node(props), ...overrides })!;
     return visualChars(layout.lines[0]!);
   }
 
@@ -452,9 +460,8 @@ describe('Button.autowrap_mode (button.cpp:493,546-561)', () => {
   });
 });
 
-describe('buttonLabelShape at AUTOWRAP_OFF keeps one row per hard-break line (no end glyph)', () => {
-  const rows = (text: string) =>
-    (buttonLabelShape(node({ text }), BUTTON_CLASS)?.lines ?? []).map((l) => l.text);
+describe('buttonLayoutOf at AUTOWRAP_OFF keeps one row per hard-break line (no end glyph)', () => {
+  const rows = (text: string) => (labelAt(node({ text }))?.lines ?? []).map((l) => l.text);
 
   it('keeps a trailing space on its row', () => {
     expect(rows('ab ')).toEqual(['ab ']);
@@ -468,15 +475,13 @@ describe('buttonLabelShape at AUTOWRAP_OFF keeps one row per hard-break line (no
 describe('Button.expand_icon under autowrap shapes at the drawn width (button.cpp:332-345,428-432)', () => {
   it('wraps the minimum at the width the expanded icon leaves, as the painter does', () => {
     const theme = nativeTheme(1);
-    const { x: marginX, y: marginY } = contentMarginSize(
-      defaultStyleBoxesOf(defaultThemeAt(1)).Button!.normal!
-    );
+    const { x: marginX, y: marginY } = DEFAULT_MARGIN;
     const rect = { x: 0, y: 0, w: 130, h: 40 };
     // `is_clipped` keeps the text's width out of the icon's, so a square icon takes the box height.
     const iconWidth = Math.round(rect.h - marginY);
     const wrapWidth = Math.ceil(Math.max(1, rect.w - marginX - iconWidth - theme.separation));
     const props = { text: 'alpha bravo charlie delta', autowrapMode: 2, expandIcon: true };
-    const expected = buttonLabelShape(node(props), BUTTON_CLASS, wrapWidth)!.heightPx;
+    const expected = labelWrappedAt(props, wrapWidth)!.heightPx;
 
     const size = buttonMinimumSize(node(props, {}, { x: 16, y: 16 }), {
       ...ctx(),
@@ -487,9 +492,9 @@ describe('Button.expand_icon under autowrap shapes at the drawn width (button.cp
   });
 });
 
-describe('buttonLabelShape: the wrap width and trim flags reach the shaper (button.cpp:428-432,546-561)', () => {
-  function rows(props: Partial<ButtonProperties>, boxWidthPx: number): string[] {
-    return (buttonLabelShape(node(props), BUTTON_CLASS, boxWidthPx)?.lines ?? []).map((l) => l.text);
+describe('buttonLayoutOf: the wrap width and trim flags reach the shaper (button.cpp:428-432,546-561)', () => {
+  function rows(props: Partial<ButtonProperties>, wrapWidthPx: number): string[] {
+    return (labelWrappedAt(props, wrapWidthPx)?.lines ?? []).map((l) => l.text);
   }
 
   it('keeps one row at AUTOWRAP_OFF however narrow the box', () => {

@@ -477,6 +477,7 @@ _Avoid_: "the painter's props" for this.
 **Solve handoff** (`r3f/controls/native/solveHandoff.ts`):
 What a Control's solver computes and hands to its painter, so neither computes it twice.
 A **share** reads only the node and `theme` and is memoised per `(SolveNode, theme)`, and a **channel** is solve output sealed by a `ContainerLayoutFn`.
+A **rect share** is a share that also reads the node's size, memoised for the last two sizes of each node and theme: the second solve pass and the painted rect.
 _Avoid_: "meta" for either form. "cache" for a share.
 
 **Canvas paint order** (`r3f/canvasPaintOrder.ts`):
