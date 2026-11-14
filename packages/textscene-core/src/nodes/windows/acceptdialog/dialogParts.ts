@@ -28,7 +28,6 @@ import {
 import { requiredThemeItem } from '../../../r3f/controls/native/themeItems';
 import { perObject } from '../../../utils/perObject';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
-import { parseControlCanvasItem } from '../../2d/ui/control/parser';
 import type { ButtonProperties } from '../../2d/ui/button/types';
 import type { LabelProperties } from '../../2d/ui/label/types';
 import type { ConfirmationDialogProperties } from '../confirmationdialog/parser';
@@ -78,11 +77,6 @@ function isMessageLabel(n: SolveNode): boolean {
   return n.node.name === MESSAGE_LABELS.wrapping || n.node.name === MESSAGE_LABELS.unwrapped;
 }
 
-/** The properties a Control named `name` parses to with no scene line, then `own`. */
-function builtProperties(name: string, own: object): object {
-  return { name, ...parseControlCanvasItem({}, name), ...own };
-}
-
 /** `message_label` (`dialogs.cpp:480-484`). `dialog_autowrap` picks `AUTOWRAP_WORD` (`:196-198`). */
 function messageLabelSpec(dialog: SolveNode, wraps: boolean): InternalControlSpec {
   const name = wraps ? MESSAGE_LABELS.wrapping : MESSAGE_LABELS.unwrapped;
@@ -90,7 +84,7 @@ function messageLabelSpec(dialog: SolveNode, wraps: boolean): InternalControlSpe
     text: (dialog.node.properties as DialogProperties).dialog_text,
     autowrapMode: wraps ? AutowrapMode.AUTOWRAP_WORD : AutowrapMode.AUTOWRAP_OFF,
   };
-  return { type: 'Label', name, properties: builtProperties(name, properties) };
+  return { type: 'Label', name, properties };
 }
 
 /** Written only by `cachedMessageLabelNode`. A dialog node is replaced when the scene changes it. */
@@ -134,14 +128,14 @@ function dialogButtonSpec(dialog: SolveNode, role: DialogButtonRole): InternalCo
     hasFocus: role === 'ok',
     disabled: role === 'ok' && (dialog.node.properties as DialogProperties).ok_button_disabled === true,
   };
-  return { type: 'Button', name, properties: builtProperties(name, properties) };
+  return { type: 'Button', name, properties };
 }
 
 /** `BoxContainer::add_spacer` (`box_container.cpp:322-336`): a plain Control that takes the width the buttons leave. */
 function spacerSpec(index: number): InternalControlSpec {
   const name = `Spacer${index}`;
   const properties = { sizeFlagsHorizontal: SizeFlags.EXPAND | SizeFlags.FILL };
-  return { type: 'Control', name, properties: builtProperties(name, properties) };
+  return { type: 'Control', name, properties };
 }
 
 /**
@@ -154,7 +148,7 @@ function buttonRowSpec(dialog: SolveNode): InternalControlSpec {
   dialogButtonRoles(dialog.node.type).forEach((role, index) => {
     children.push(dialogButtonSpec(dialog, role), spacerSpec(index + 1));
   });
-  return { type: 'HBoxContainer', name: BUTTON_ROW, properties: builtProperties(BUTTON_ROW, {}), children };
+  return { type: 'HBoxContainer', name: BUTTON_ROW, properties: {}, children };
 }
 
 /**

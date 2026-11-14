@@ -4,14 +4,17 @@ category: 2D
 status: unreviewed
 fixture: unit-spin-box.tscn
 # image: unit-spin-box
-renders_as: a LineEdit-style field plus two arrow stepper icons
+renders_as: an internal LineEdit field plus two arrow stepper icons
 ---
 
 # SpinBox
 
 SpinBox is a numeric text input over a Range, with prefix, suffix and arrow-button
-stepping. The previewer draws the internal field's chrome and its formatted value
-(`value` snapped to `step`, wrapped in `prefix`/`suffix`), and the up/down arrow icons.
+stepping. The field is an internal LineEdit of the `SpinBoxInnerLineEdit` variation (`spin_box.cpp:724-731`),
+which the LineEdit solver sizes and the LineEdit painter draws. It shows the formatted value (`value`
+snapped to `step`, wrapped in `prefix`/`suffix`). The SpinBox painter draws the up/down arrow icons.
+A Theme entry of `SpinBoxInnerLineEdit` reaches the field only when a Theme declares the variation's
+base type, as for any variation (`theme_owner.cpp:201`).
 An arrow is dimmed once the value sits at its bound without `allow_greater`/
 `allow_lesser`, and both are dimmed once `editable` is false. While `localize_numeral_system` is true, its
 default, the value is written in the digits of the project locale. The prefix and suffix stay as written
@@ -61,6 +64,3 @@ keys `value`/`min_value`/`max_value`/`step`/`page`/`exp_edit`/`rounded`/`allow_g
 - **Not drawn** `up_down_buttons_separator`, whose rect takes the zero
   `buttons_vertical_separation` theme constant (`default_theme.cpp:646`) because no
   per-node override for it is modelled.
-- **Approximated** The internal field draws the default-theme LineEdit StyleBox even where
-  a project Theme styles its `"SpinBoxInnerLineEdit"` type variation, which still sets its
-  font.

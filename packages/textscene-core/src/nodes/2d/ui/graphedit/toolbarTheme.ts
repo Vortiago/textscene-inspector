@@ -12,7 +12,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { lineEditField, type LineEditField } from '../lineedit/nativeSolver';
-import { spinBoxFieldThemeItems } from '../spinbox/nativeSolver';
+import { SPIN_BOX_FIELD_VARIATION } from '../spinbox/nativeSolver';
 
 /** `zoom_minus_button->set_theme_type_variation(SceneStringName(FlatButton))` (`graph_edit.cpp:3250`). */
 const TOOLBAR_BUTTON_VARIATION = 'FlatButton';
@@ -46,7 +46,7 @@ export const graphEditToolbarTheme = (n: SolveNode, theme: NativeTheme): GraphEd
 function buildToolbarTheme(n: SolveNode, theme: NativeTheme): GraphEditToolbarTheme {
   const button = internalChildThemeItems(n, 'Button', TOOLBAR_BUTTON_VARIATION);
   const label = internalChildThemeItems(n, 'Label');
-  const field = spinBoxFieldThemeItems(n);
+  const field = internalChildThemeItems(n, 'LineEdit', SPIN_BOX_FIELD_VARIATION);
   const buttonBox = (state: ToggleDrawState) => pickButtonStyleBox(button.styleBoxes, state, n.rtl);
   const result: GraphEditToolbarTheme = {
     menuPanel: requiredThemeItem(n.styleBoxes, 'menu_panel'),
