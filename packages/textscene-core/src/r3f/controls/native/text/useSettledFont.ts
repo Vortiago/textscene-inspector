@@ -29,7 +29,7 @@ export function settledFontsOf(loader: ResourceLoader | null): SettledFonts {
 }
 
 /** The settled fonts of the preview this component renders in. */
-export function useSettledFonts(): SettledFonts {
+function useSettledFonts(): SettledFonts {
   return settledFontsOf(useResourceLoader());
 }
 
