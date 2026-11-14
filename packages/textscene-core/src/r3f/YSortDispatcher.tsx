@@ -1,8 +1,8 @@
 /**
  * Draws the children of a y_sort_enabled node at the runs the one sort of its canvas gives them
  * (`canvasItemPass/ySort.ts`). A y-sorted TileMapLayer splits into one item per tile row
- * (`ySortRows`), and the dispatcher hands the sort each row, scene tile and TileMap layer the pass
- * does not list, with the ys a mixer pose gives its items.
+ * (`ySortRows`), and the dispatcher hands the sort each row and TileMap layer the pass does not
+ * list, with the ys a mixer pose gives its items.
  */
 
 import { memo, useId, useLayoutEffect, useMemo } from 'react';
@@ -148,7 +148,7 @@ const SortedChildren = memo(function SortedChildren({
 
 /**
  * Each item's id in the sort of the canvas item pass: its live path for a node the pass holds, or an
- * extra id for a piece the pass does not list, such as a tile row, a TileMap's layer or a scene tile.
+ * extra id for a piece the pass does not list, such as a tile row or a TileMap's layer.
  */
 function useSortPieces(items: readonly YSortItem[], basePath: string): ReadonlyMap<YSortItem, SortPiece> {
   const paths = useMemo(() => items.map((item) => itemPath(item, basePath)), [items, basePath]);
@@ -225,8 +225,8 @@ function usePublishSortInputs(
 
 /**
  * The frame each item draws in. Inside the shared live tree, a node reads its sorted paint by path
- * and an extra takes the run the sort gave its id. A subtree outside that tree, such as a scene
- * tile's instance, has no pass to sort, so it packs its own run here in the same order.
+ * and an extra takes the run the sort gave its id. A subtree outside that tree, such as a
+ * component test that mounts no live tree, has no pass to sort, so it packs its own run here in the same order.
  */
 function usePieceFrames(
   items: readonly YSortItem[],

@@ -13,7 +13,7 @@ import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { perObject } from '../../../../utils/perObject';
-import { spinBoxFieldThemeItems } from '../spinbox/nativeSolver';
+import { SPIN_BOX_FIELD_VARIATION } from '../spinbox/nativeSolver';
 import { lineEditField, type LineEditField } from '../lineedit/nativeSolver';
 
 /**
@@ -110,7 +110,7 @@ function buildPickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildThe
     'FlatMenuButton'
   );
   const lineEdit = internalChildThemeItems(n, 'LineEdit');
-  const valueField = spinBoxFieldThemeItems(n);
+  const valueField = internalChildThemeItems(n, 'LineEdit', SPIN_BOX_FIELD_VARIATION);
   const tabs = internalChildThemeItems(n, 'TabContainer');
   const slider = internalChildThemeItems(n, 'HSlider');
   const withBoxes: PickerTheme = {

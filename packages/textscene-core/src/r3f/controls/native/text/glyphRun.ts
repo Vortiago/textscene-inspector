@@ -31,7 +31,11 @@ export interface RunGlyph {
   readonly char: string;
   /** Whether the glyph is a mark, which takes no advance and sits over the glyph before it. */
   readonly isMark: boolean;
-  /** The glyph's advance at the default instance, design units, where the face reads it. */
+  /**
+   * The glyph's `hmtx` advance at the default instance, design units, where the face reads it. It is
+   * the one source of the glyph's advance, as HarfBuzz reads the advance by glyph (`hb-ft.cc:519,523`):
+   * `getFontRunGlyphAdvancePx`.
+   */
   readonly advanceUnits?: number;
 }
 
@@ -46,7 +50,7 @@ export interface RunCluster {
 
 /**
  * The clusters of `chars`, in run order. An empty string in `chars` holds no character: the second
- * unit of a surrogate pair, or a character the caller draws apart, which no cluster takes.
+ * unit of a surrogate pair, which no cluster takes.
  */
 export type RunShaping = (chars: readonly string[]) => readonly RunCluster[];
 

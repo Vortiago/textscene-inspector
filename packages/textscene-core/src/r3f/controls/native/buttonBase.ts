@@ -282,7 +282,7 @@ export interface ButtonLabelBox {
   alignment: number;
 }
 
-interface ButtonContentLayout {
+export interface ButtonContentLayout {
   /** The icon to draw, `null` for no icon or an `expand_icon` one with no room left. */
   icon: ButtonIconLayout | null;
   text: ButtonTextLayout | null;
@@ -515,22 +515,6 @@ export function wrappedLabelWidthPx(input: ButtonContentFacts, unwrapped: TextLa
     isTextRtl: infersRtl(unwrapped),
   });
   return buttonTextBufWidthPx(drawableSize.x);
-}
-
-/**
- * The width a wrapping label shapes at while a solver measures: what `layoutButtonContent` leaves in the
- * node's tentative rect (`button.cpp:428-432`). The first pass has no rect and shapes unwrapped, as does
- * AUTOWRAP_OFF, so the width is 0. Only an expanded icon reads the unwrapped label (its height), so
- * `unwrapped` runs only then.
- */
-export function tentativeWrapWidthPx(
-  props: ButtonWrapProperties & { expandIcon?: boolean },
-  rect: Rect2 | undefined,
-  contentAt: (rectSize: Vector2) => ButtonContentFacts,
-  unwrapped: () => TextLayoutResult | null
-): number {
-  if (rect === undefined || !isButtonAutowrapped(props)) return 0;
-  return wrappedLabelWidthPx(contentAt({ x: rect.w, y: rect.h }), props.expandIcon ? unwrapped() : null);
 }
 
 /** A shaped label's contribution to a minimum size: its text width ({@link textMinimumWidthPx}) and height, or none without a layout. */

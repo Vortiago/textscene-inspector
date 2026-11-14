@@ -9,25 +9,38 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { MinimumSizeFn, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
-import type { ShareNode } from '../../../../r3f/controls/native/solveHandoff';
+import type {
+  MinimumSizeFn,
+  SolveContext,
+  TextureSlotsFn,
+} from '../../../../r3f/controls/native/solverRegistry';
+import {
+  defineRectShare,
+  defineShare,
+  type RectShare,
+  type ShareNode,
+} from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { Vector2 } from '../../../../godot/math/vector';
+import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
 import {
   buttonContentMinimumSize,
   buttonIconSlotRequest,
   fitIconSize,
   internalMarginAt,
   BUTTON_THEME_KEYS,
+  isButtonAutowrapped,
   isButtonTextClipped,
+  labelNaturalSize,
   largestStyleBoxMargins,
   largestThemedIconSize,
+  layoutButtonContent,
   pickButtonStyleBox,
   resolveToggleDrawState,
   shapeWrappedButtonLabel,
-  tentativeWrapWidthPx,
   withReservedElementSize,
+  wrappedLabelWidthPx,
   type ButtonContentFacts,
+  type ButtonContentLayout,
   type ToggleDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -40,7 +53,7 @@ import {
   type ResolvedTextTheme,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
-import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { infersRtl, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ButtonProperties } from './types';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
@@ -197,7 +210,7 @@ export function fittedThemedIconSize(
 }
 
 /** The boxes of `n` by its own class and `theme_type_variation`, for the draw state its properties give. */
-export function buttonStyle(n: ShareNode): ButtonStyle {
+function buttonStyle(n: ShareNode): ButtonStyle {
   const props = n.node.properties as ButtonProperties;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
   const box = pickButtonStyleBox(n.styleBoxes, state, n.rtl);
@@ -206,16 +219,10 @@ export function buttonStyle(n: ShareNode): ButtonStyle {
 }
 
 /**
- * A Button's shaped label, the **solve handoff** share (`r3f/controls/native/solveHandoff.ts`) that
- * the minimum-size solver and `ButtonPainter` both call. `null` for empty text, which neither draws.
- * A plain function, not a `defineShare` memo: the memo's `(node, theme)` key cannot hold
- * `boxWidthPx`, and would answer the painter with the rows of the solver's tentative width.
+ * A Button's label shaped at `boxWidthPx`, 0 for no wrap. `null` for empty text, which neither the
+ * solver nor the painter draws. Only the shares below call it, so one shaping serves both.
  */
-export function buttonLabelShape(
-  n: ShareNode,
-  buttonClass: ButtonClass,
-  boxWidthPx = 0
-): TextLayoutResult | null {
+function buttonLabelShape(n: ShareNode, buttonClass: ButtonClass, boxWidthPx = 0): TextLayoutResult | null {
   const props = n.node.properties as ButtonProperties;
   const { text } = buttonShown(buttonClass, props);
   // Resolved for empty text too: an unresolvable font then warns whatever the button shows.
@@ -269,39 +276,128 @@ export function buttonContentFacts(
   };
 }
 
+/** What a Button draws at one size: the **solve handoff** of its solver and its painter. */
+export interface ButtonLayout {
+  facts: ButtonContentFacts;
+  /** The label as drawn: wrapped at the width {@link layoutButtonContent} leaves, or unwrapped. */
+  label: TextLayoutResult | null;
+  isWrapped: boolean;
+  content: ButtonContentLayout;
+  /** `_get_current_stylebox` (`button.cpp:101-147`). */
+  box: StyleBoxFlatData;
+  textTheme: ResolvedTextTheme;
+  iconColor: Rgba;
+  /** The icon property the class shows: a raw Texture2D ref. */
+  icon: string | undefined;
+}
+
+/** One share per class: the class is a third input that the `(node, theme)` key cannot hold. */
+function perButtonClass<T>(define: (buttonClass: ButtonClass) => T): (buttonClass: ButtonClass) => T {
+  const byClass = new Map<ButtonClass, T>();
+  return (buttonClass) => {
+    let share = byClass.get(buttonClass);
+    if (share === undefined) {
+      share = define(buttonClass);
+      byClass.set(buttonClass, share);
+    }
+    return share;
+  };
+}
+
+/** A Button's label shaped with no wrap: the first solve pass, and the label of a Button that does not wrap. */
+const buttonUnwrappedLabelOf = perButtonClass((buttonClass) =>
+  defineShare((n) => buttonLabelShape(n, buttonClass))
+);
+
 /**
- * `Button::get_minimum_size` for a Button of `buttonClass` (`button.cpp:481-526`), shaped by
- * {@link buttonLabelShape}. `n.rtl` reaches only the stylebox pick (`:525`, `<state>_mirrored`): the icon
- * terms test `horizontal_icon_alignment` unswapped against CENTER, so the side swap cannot move a minimum
- * size. The internal margin is not in it: a subclass adds what it reserves ({@link reservingMinimumSizeOf}).
+ * A Button's label wrapped at the last wrap width asked for. The width alone is the key: a wrapping
+ * Button whose height follows its minimum is laid out at two heights and one width.
+ */
+const buttonWrappedLabelsOf = perButtonClass((buttonClass) =>
+  defineShare((n) => {
+    let last: { wrapWidthPx: number; label: TextLayoutResult | null } | null = null;
+    return (wrapWidthPx: number) => {
+      if (last?.wrapWidthPx !== wrapWidthPx) {
+        last = { wrapWidthPx, label: buttonLabelShape(n, buttonClass, wrapWidthPx) };
+      }
+      return last.label;
+    };
+  })
+);
+
+/**
+ * A Button's layout at `size`. `button.cpp:428-432` re-shapes a wrapping label at the width the
+ * unwrapped pass measured: `is_clipped` is true under autowrap (`:332`), so the icon's reservation
+ * does not move with the text. Godot reaches the same state over two frames.
+ */
+export const buttonLayoutOf = perButtonClass((buttonClass): RectShare<ButtonLayout> =>
+  defineRectShare((n, size, theme) => {
+    const props = n.node.properties as ButtonProperties;
+    const facts = buttonContentFacts(n, theme, buttonClass, size);
+    const isWrapped = isButtonAutowrapped(props);
+    // A wrapping label reads the unwrapped one only for an expanded icon's height.
+    const unwrapped =
+      !isWrapped || props.expandIcon === true ? buttonUnwrappedLabelOf(buttonClass)(n, theme) : null;
+    const label = isWrapped
+      ? buttonWrappedLabelsOf(buttonClass)(n, theme)(wrappedLabelWidthPx(facts, unwrapped))
+      : unwrapped;
+    const { state, box } = buttonStyle(n);
+    return {
+      facts,
+      label,
+      isWrapped,
+      content: layoutButtonContent({
+        ...facts,
+        textNaturalSize: labelNaturalSize(label),
+        isTextRtl: infersRtl(label),
+      }),
+      box,
+      textTheme: buttonTextTheme(n, props, state),
+      iconColor: buttonIconColor(n.colors, state, props),
+      icon: buttonShown(buttonClass, props).icon,
+    };
+  })
+);
+
+/**
+ * `Button::get_minimum_size` for a Button of `buttonClass` (`button.cpp:481-526`). `n.rtl` reaches only
+ * the stylebox pick (`:525`, `<state>_mirrored`): the icon terms test `horizontal_icon_alignment`
+ * unswapped against CENTER, so the side swap cannot move a minimum size. The internal margin is not in
+ * it: a subclass adds what it reserves ({@link reservingMinimumSizeOf}).
  */
 export function buttonMinimumSizeOf(buttonClass: ButtonClass): MinimumSizeFn {
   return (n, ctx) => {
     const props = n.node.properties as ButtonProperties;
-    // Only `rectSize` moves with the rect, so the boxes and the reserved element resolve once.
-    const facts = buttonContentFacts(n, ctx.theme, buttonClass, { x: 0, y: 0 });
-    const factsAt = (rectSize: Vector2): ButtonContentFacts => ({ ...facts, rectSize });
-    // Pass 2 (`tentativeRect`) knows this node's width, which a wrapping label's height depends on.
-    // Pass 1 shapes unwrapped. The label wraps at what the painter's layout leaves beside the icon.
-    const wrapWidthPx = tentativeWrapWidthPx(
-      props,
-      ctx.measureText ? ctx.tentativeRect?.(n) : undefined,
-      factsAt,
-      () => (ctx.measureText ? buttonLabelShape(n, buttonClass) : null)
-    );
-    // An absent `ctx.measureText` means the text contributes nothing, while the margin and
-    // the icon still count (`solverRegistry.ts`'s contract).
-    const layout: TextLayoutResult | null = ctx.measureText
-      ? buttonLabelShape(n, buttonClass, wrapWidthPx)
-      : null;
+    const { facts, label } = buttonMinimumInputs(buttonClass, n, ctx);
     // `minsize` starts from `paragraph->get_size()` (`button.cpp:492`), a max
     // over `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`):
     // the ceiled extent, not the raw pen advance. Its width drops under `clip_text`, a trimming
     // overrun behaviour or autowrap, since a narrower box trims or wraps it (`button.cpp:493-495`).
-    const content = buttonContentMinimumSize(facts, layout, props);
+    const content = buttonContentMinimumSize(facts, label, props);
     const padding = sidesSize(facts.styleMargin);
-
     return { x: padding.x + content.x, y: padding.y + content.y };
+  };
+}
+
+/**
+ * The facts and the label a minimum size reads. Pass 2 (`tentativeRect`) knows a wrapping label's
+ * width, so it reads the layout at that size, which the painter reads again at the final rect.
+ * Pass 1 shapes unwrapped. An absent `ctx.measureText` means the text contributes nothing, while the
+ * margin and the icon still count (`solverRegistry.ts`'s contract).
+ */
+function buttonMinimumInputs(
+  buttonClass: ButtonClass,
+  n: SolveNode,
+  ctx: SolveContext
+): Pick<ButtonLayout, 'facts' | 'label'> {
+  const props = n.node.properties as ButtonProperties;
+  const tentative = ctx.measureText ? ctx.tentativeRect?.(n) : undefined;
+  if (tentative && isButtonAutowrapped(props)) {
+    return buttonLayoutOf(buttonClass)(n, { x: tentative.w, y: tentative.h }, ctx.theme);
+  }
+  return {
+    facts: buttonContentFacts(n, ctx.theme, buttonClass, VECTOR2_ZERO),
+    label: ctx.measureText ? buttonUnwrappedLabelOf(buttonClass)(n, ctx.theme) : null,
   };
 }
 

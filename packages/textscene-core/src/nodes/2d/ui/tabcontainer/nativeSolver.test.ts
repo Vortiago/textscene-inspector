@@ -18,13 +18,12 @@ import {
   tabContentBand,
   tabHeaderBand,
   tabHeaderHeight,
-  buildInternalTabBarNode,
-} from './nativeSolver';
-import type { ThemeResource } from '../../../../resources/styles/theme/types';
-import type { TabBarProperties } from '../tabbar/types';
-import type { FontResource } from '../../../../resources/fonts/font/types';
-import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts';
-import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
+} from './tabLayout';
+import './nativeSolver';
+import {
+  createSolveContext,
+  normalizeContainerLayoutResult,
+} from '../../../../r3f/controls/native/controlRectSolver';
 
 /** Panel's `panel` box in the default theme table at scale 1 (`default_theme.cpp:134`). */
 const TABLE_PANEL = defaultStyleBoxesOf(defaultThemeAt(1)).Panel!.panel!;
@@ -73,12 +72,7 @@ function tabContainer(
 }
 
 function ctx(): SolveContext {
-  const theme = nativeTheme(1);
-  return {
-    theme,
-    measureText: null,
-    combinedMinimumSize: (n) => (n.node.properties as ControlProperties).customMinimumSize ?? { x: 0, y: 0 },
-  };
+  return createSolveContext(nativeTheme(1), null);
 }
 
 describe('deriveTabContainerTabs', () => {
@@ -476,118 +470,5 @@ describe('the page band under RTL', () => {
       tabContainerLayout(n, [{ node: p, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 200, h: 100 }, ctx())
     );
     expect(rects.get('Floating')!.y).toBe(0);
-  });
-});
-
-describe('buildInternalTabBarNode — the theme items TabContainer pushes onto its bar', () => {
-  // `_on_theme_changed` resolves `tab_font`/`tab_font_size` on the container (bound as "font"
-  // and "font_size", `tab_container.cpp:1264-1265`) and pushes both onto the internal bar as
-  // overrides (`tab_container.cpp:338-339`), so the bar never runs its `TabBar` type chain.
-  const THEME = nativeTheme(1);
-
-  function themeResource(overrides: Partial<ThemeResource>): ThemeResource {
-    return {
-      defaultFont: null,
-      defaultFontSize: undefined,
-      fonts: {},
-      fontSizes: {},
-      styles: {},
-      colors: {},
-      constants: {},
-      typeVariations: {},
-      properties: {},
-      resources: { externalResources: [], internalResources: [] },
-      ...overrides,
-    };
-  }
-
-  function container(
-    props: Partial<TabContainerProperties>,
-    projectTheme: ThemeResource | null = null
-  ): SolveNode {
-    return withThemeItems({
-      ...solveNode(),
-      path: 'Tabs',
-      node: controlNode('Tabs', 'TabContainer', { name: 'Tabs', ...props }),
-      projectFonts: { ...NO_PROJECT_FONTS, projectTheme },
-    });
-  }
-
-  function barFontSize(n: SolveNode): number | undefined {
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties);
-    return (bar.node.properties as TabBarProperties).themeOverrideFontSizes?.font_size;
-  }
-
-  it('hands the bar the current page and leaves scroll_to_selected at the bar default, so the strip scrolls to it', () => {
-    const n = container({ currentTab: 3 });
-    const tabs = ['A', 'B', 'C', 'D'].map((title) => ({ title, tooltip: '', disabled: false }));
-    const bar = buildInternalTabBarNode(n, tabs, n.node.properties as TabContainerProperties);
-    const props = bar.node.properties as TabBarProperties;
-    expect(props.currentTab).toBe(3);
-    expect(props.scrollToSelected).toBeUndefined();
-  });
-
-  it("resolves the bar's own theme items the container does not push, such as TabBar/icons/close", () => {
-    const projectTheme = themeResource({ icons: { TabBar: { close: 'ExtResource("1")' } } });
-    const n = container({}, projectTheme);
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties);
-    expect(bar.icons.close?.ref).toBe('ExtResource("1")');
-  });
-
-  it('ignores a TabBar theme entry for a key the container pushes (tab_container.cpp:306-337)', () => {
-    const projectTheme = themeResource({
-      colors: { TabBar: { font_selected_color: { r: 1, g: 0, b: 0, a: 1 } } },
-    });
-    const n = container({}, projectTheme);
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties);
-    expect(bar.colors.font_selected_color).toEqual(n.colors.font_selected_color);
-    expect(bar.colors.font_selected_color).not.toEqual({ r: 1, g: 0, b: 0, a: 1 });
-  });
-
-  it("keeps the bar's own close button box over a container override of that name (tab_container.cpp:312-318)", () => {
-    const containerBox = { ...TABLE_PANEL, contentMargin: TABBAR_MARGIN };
-    const n = tabContainer('Tabs', {}, [], { button_highlight: containerBox });
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties);
-    expect(bar.styleBoxes.button_highlight).toEqual(
-      defaultStyleBoxesOf(defaultThemeAt(1)).TabBar!.button_highlight
-    );
-  });
-
-  it("pushes the container's own theme_override_font_sizes/font_size", () => {
-    expect(barFontSize(container({ themeOverrideFontSizes: { font_size: 28 } }))).toBe(28);
-  });
-
-  it("pushes a theme entry addressed to TabContainer, which the bar's own type chain would never find", () => {
-    const projectTheme = themeResource({
-      fontSizes: { TabContainer: { font_size: 22 }, TabBar: { font_size: 9 } },
-    });
-    expect(barFontSize(container({}, projectTheme))).toBe(22);
-  });
-
-  it('falls back to the built-in default size when nothing resolves', () => {
-    expect(barFontSize(container({}))).toBe(THEME.fontSize);
-  });
-
-  it('pushes the FONT the same way, off a TabContainer-addressed theme entry (tab_container.cpp:338)', () => {
-    const containerFont: FontResource = {
-      kind: 'system',
-      fontNames: ['Container Face'],
-      baseFont: null,
-      fallbacks: [],
-      properties: {},
-    };
-    const barFont: FontResource = {
-      kind: 'system',
-      fontNames: ['Bar Face'],
-      baseFont: null,
-      fallbacks: [],
-      properties: {},
-    };
-    const projectTheme = themeResource({
-      fonts: { TabContainer: { font: containerFont }, TabBar: { font: barFont } },
-    });
-    const n = container({}, projectTheme);
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties);
-    expect(bar.fontOverrides.font).toBe(containerFont);
   });
 });

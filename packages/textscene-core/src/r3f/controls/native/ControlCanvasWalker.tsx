@@ -4,9 +4,8 @@
  * never shears. A registered painter draws the chrome, `<ControlFallback>` otherwise.
  * Children render beside the painter, since the solve has already placed them.
  */
-import { useEffect, useId, useLayoutEffect, useMemo } from 'react';
+import { useId, useLayoutEffect, useMemo } from 'react';
 import { ZERO_RECT, type Rect2 } from '../../../godot/math/rect2';
-import { VECTOR2_ZERO, type Vector2 } from '../../../godot/math/vector';
 import { controlProps, type SolveNode } from './solveTree';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import { threeMatrixFromTransform2D } from '../../node2dTransform';
@@ -15,8 +14,9 @@ import type { TextMeasurer } from './solverRegistry';
 import { childRectsOf, createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
 import { controlComponentRegistry, NO_PIECE_SLOTS } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
-import { internalControlsOf, type InternalControl } from './internalControls';
-import { InternalControlGroup, internalControlSlots, type InternalPainterEnv } from './InternalControlGroup';
+import { useCanvasModulateFor } from '../../canvasModulate';
+import { internalControlsOf } from './internalControls';
+import { InternalControls } from './InternalControlGroup';
 import { OwnCanvasModulateProvider, OwnModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
 import { useTextureSamplerOver } from '../../canvasItemTextureSampler';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
@@ -33,22 +33,20 @@ import type { InheritedCanvasItemState } from '../../canvasItemPass/canvasItemPa
 import type { CanvasItemPaint } from '../../canvasItemPass/canvasItemPaint';
 import { ysortsChildren, type PaintRange } from '../../canvasPaintOrder';
 import { isCanvasLayerType } from '../../canvasItemClass';
-import { CanvasRootScope } from '../../canvasRootScope';
 import { CanvasItemGroup, CanvasItemProvider } from '../../components/CanvasItemGroup';
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import { ControlClipProvider, useInheritedControlClip } from './controlClipping';
-import { snapControlsToPixelsEnabled, snappedControlOriginUnder } from './controlPixelSnap';
+import { snapControlsToPixelsEnabled, snappedControlOrigin } from './controlPixelSnap';
 import {
   controlTransformsOf,
   forestInCanvasSort,
   forestBackPiecesOf,
-  forestInOwnSort,
   isInSharedTree,
   piecesAtLivePaths,
   solvedDrawTransformOf,
   transformsAtLivePaths,
   type ForestSort,
-} from './controlYSort';
+} from './forestSort';
 import {
   usePublishControlLocalTransforms,
   usePublishControlTransforms,
@@ -77,16 +75,8 @@ interface ControlCanvasWalkerProps {
    * that owns another viewport must state it.
    */
   snapToPixels?: boolean;
-  /**
-   * A position the root Controls' parent adds before the snap. Godot sets a scene tile root's position
-   * to `map_to_local + position`, so the snap rounds the sum (`tile_map_layer.cpp:1636`). It reaches
-   * the first root and each root promoted past the placement chain; a `top_level` root sits at it.
-   */
-  rootOffset?: Vector2;
   /** The live path of the viewport the forest's paths hang below, for the world sort that keys by live path. */
   livePath?: string;
-  /** Called after each solve, with the solved controls keyed by tree path. */
-  onSolved?: (solved: ReadonlyMap<string, SolvedControl>) => void;
 }
 
 export function ControlCanvasWalker({
@@ -96,9 +86,7 @@ export function ControlCanvasWalker({
   theme,
   measurer,
   snapToPixels,
-  rootOffset,
   livePath = '',
-  onSolved,
 }: ControlCanvasWalkerProps) {
   // Per viewport in Godot (`Viewport::snap_controls_to_pixels`,
   // `scene/main/viewport.h`). `main/main.cpp` applies the project setting to the
@@ -113,12 +101,9 @@ export function ControlCanvasWalker({
     // `tree` can change while `tree` keeps its reference.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tree, generation, measurer, viewport, theme]);
-  useEffect(() => {
-    onSolved?.(solved);
-  }, [solved, onSolved]);
   // The one sort of the canvas sorts the Controls on where this solve puts them. A forest the shared
-  // live tree does not hold, such as an unowned scene-tile root, sorts its own Controls instead, and
-  // publishes nothing its paths could confuse. A layout effect, so the sort settles before the first paint.
+  // live tree does not hold publishes nothing its paths could confuse, and draws in tree order.
+  // A layout effect, so the sort settles before the first paint.
   const canvasSort = useSortedRunsAndPaints();
   const isSortedByCanvas = isInSharedTree(tree, livePath, canvasSort.paints);
   const publishToCanvas = usePublishControlTransforms();
@@ -148,59 +133,24 @@ export function ControlCanvasWalker({
   }, [publishLocalTransforms, owner, tree, solved, livePath]);
   useLayoutEffect(() => () => publishLocalTransforms?.(owner, null), [publishLocalTransforms, owner]);
   const sort = useMemo(
-    () =>
-      isSortedByCanvas
-        ? forestInCanvasSort(tree, livePath, canvasSort, pieces)
-        : forestInOwnSort(tree, controlTransformsOf(tree, solved, snapEnabled), pieces),
-    [isSortedByCanvas, canvasSort, tree, solved, snapEnabled, livePath, pieces]
+    () => forestInCanvasSort(tree, livePath, canvasSort, pieces),
+    [canvasSort, tree, livePath, pieces]
   );
 
   return (
     <>
       {tree.map((n) => (
-        <WalkRoot
+        <RootControlNodeGroup
           key={n.path}
           solveNode={n}
-          isFirst={n === tree[0]}
           solved={solved}
           sort={sort}
           theme={theme}
           measureText={measurer}
           snapToPixels={snapEnabled}
-          rootOffset={rootOffset}
         />
       ))}
     </>
-  );
-}
-
-/**
- * A root of a walk. `rootOffset` reaches the first root and a root promoted past the placement chain.
- * A root with no skipped ancestors parents at the canvas, so it ignores the transform above the walk
- * and the first one sits at the offset.
- */
-function WalkRoot({
-  isFirst,
-  rootOffset,
-  ...group
-}: Omit<ControlNodeGroupProps, 'rootOffset' | 'walkEnclosing'> & {
-  isFirst: boolean;
-  rootOffset: Vector2 | undefined;
-}) {
-  const { solveNode } = group;
-  const hasSkippedTransform = solveNode.skippedTransform !== null;
-  const content = (
-    <RootControlNodeGroup {...group} rootOffset={isFirst || hasSkippedTransform ? rootOffset : undefined} />
-  );
-  if (!rootOffset || hasSkippedTransform) return content;
-  return (
-    <CanvasRootScope node={solveNode.node} parentIsCanvasItem={false}>
-      {isFirst ? (
-        <CanvasItemGroup position={[rootOffset.x, -rootOffset.y, 0]}>{content}</CanvasItemGroup>
-      ) : (
-        content
-      )}
-    </CanvasRootScope>
   );
 }
 
@@ -218,8 +168,6 @@ interface ControlNodeGroupProps {
   measureText: TextMeasurer | null;
   /** `Viewport::is_snap_controls_to_pixels_enabled()` (`controlPixelSnap.ts`). */
   snapToPixels: boolean;
-  /** `ControlCanvasWalkerProps.rootOffset`, set on the roots `WalkRoot` chooses only. */
-  rootOffset?: Vector2;
   /**
    * What the drawn item the walk's root sits in hands down. Each Control's `inheritance` holds every
    * link up to that root, so the whole walk folds over this one state.
@@ -294,30 +242,6 @@ function ControlNodeGroup(props: ControlNodeGroupProps) {
   );
 }
 
-interface InternalControlsProps {
-  internals: readonly InternalControl[];
-  solved: ReadonlyMap<string, SolvedControl>;
-  slot: CanvasSlot;
-  chromeSlot: CanvasSlot;
-  env: InternalPainterEnv;
-}
-
-/** The internal Controls of one Control, mounted only for a class that builds some. */
-function InternalControls({ internals, solved, slot, chromeSlot, env }: InternalControlsProps) {
-  const { theme, measureText, snapToPixels, tint, childTint } = env;
-  const slots = useMemo(
-    () => internalControlSlots(internals, slot, chromeSlot),
-    [internals, slot, chromeSlot]
-  );
-  const painterEnv = useMemo(
-    () => ({ theme, measureText, snapToPixels, tint, childTint }),
-    [theme, measureText, snapToPixels, tint, childTint]
-  );
-  return internals.map(({ node }) => (
-    <InternalControlGroup key={node.path} node={node} solved={solved} slots={slots} env={painterEnv} />
-  ));
-}
-
 function ControlItemGroup({
   solveNode,
   solved,
@@ -325,7 +249,6 @@ function ControlItemGroup({
   theme,
   measureText,
   snapToPixels,
-  rootOffset,
   walkEnclosing,
 }: ControlNodeGroupProps) {
   const props = controlProps(solveNode);
@@ -363,7 +286,7 @@ function ControlItemGroup({
   // Godot snaps the canvas item, leaving `get_rect()` at full precision. The inner
   // pivot groups add their own translation, so this is the outer half of one
   // snapped origin.
-  const origin = snappedControlOriginUnder(rect, rootOffset ?? VECTOR2_ZERO, transform, snapToPixels);
+  const origin = snappedControlOrigin(rect, transform, snapToPixels);
 
   const Painter = controlComponentRegistry.get(solveNode.node.type) ?? ControlFallback;
   const ownChildren = solveNode.children.map((child) => (
@@ -389,6 +312,11 @@ function ControlItemGroup({
   const childRects = useMemo(() => childRectsOf(solveNode.children, solved), [solveNode.children, solved]);
 
   const internals = internalControlsOf(solveNode, theme);
+  const canvasModulate = useCanvasModulateFor(state.material);
+  const internalEnv = useMemo(
+    () => ({ theme, measureText, snapToPixels, inheritedModulate: tint.inherited, canvasModulate }),
+    [theme, measureText, snapToPixels, tint.inherited, canvasModulate]
+  );
 
   // A canvas boundary such as `CanvasLayer` wraps its descendants in fresh
   // context, so they must be its React children. The registration declares it,
@@ -424,8 +352,7 @@ function ControlItemGroup({
           solved={solved}
           slot={slot}
           chromeSlot={chromeSlot}
-          // The parent's tint, not the one a child item inherits.
-          env={{ theme, measureText, snapToPixels, tint, childTint: tint.internalChild }}
+          env={internalEnv}
         />
       )}
     </NodePathProvider>

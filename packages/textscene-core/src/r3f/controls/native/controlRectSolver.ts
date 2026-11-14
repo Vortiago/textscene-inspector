@@ -11,6 +11,7 @@
  */
 
 import { ZERO_RECT, type Rect2 } from '../../../godot/math/rect2';
+import type { LiveNode } from '../../../resources/liveNode';
 import { controlLayoutOrder, controlProps, isLaidOutChild, sortableView, type SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import {
@@ -82,7 +83,17 @@ function computeAnchoredRect(
  * applied preset or `layout_mode` reset, never runs twice for one node.
  */
 function resolveNodeLayout(n: SolveNode, ctx: SolveContext, orderedKeys: ControlLayoutOrder) {
-  return resolveControlLayout(controlProps(n), orderedKeys, () => presetTimeMinimumSize(n, ctx));
+  const layout = resolveControlLayout(controlProps(n), orderedKeys, () => presetTimeMinimumSize(n, ctx));
+  const shift = (n.node as LiveNode).controlPositionShift;
+  return shift ? { ...layout, offsets: shiftedOffsets(layout.offsets, shift) } : layout;
+}
+
+/**
+ * `set_position` keeps the size (`control.cpp:1436-1453`), so every offset moves by the same amount.
+ * A scene tile's layer moves its Control root after the file sets it, before the minimum-size floor.
+ */
+function shiftedOffsets([left, top, right, bottom]: readonly number[], { x, y }: Vector2) {
+  return [left! + x, top! + y, right! + x, bottom! + y] as [number, number, number, number];
 }
 
 // --- Minimum-size floor + grow direction ------------------------------------
@@ -413,10 +424,10 @@ function dispatchInternalControls(
   ctx: SolveContext,
   out: Map<string, SolvedControl>
 ): void {
-  for (const { node, rect: assigned } of placeInternalControls(n, rect, ctx)) {
+  for (const { node, rect: assigned, meta } of placeInternalControls(n, rect, ctx)) {
     const minSize = ctx.combinedMinimumSize(node);
     const internalRect = setRect(node, assigned, minSize, rect.w, ctx);
-    out.set(node.path, { rect: internalRect, minSize });
+    out.set(node.path, { rect: internalRect, minSize, meta });
     const internalOrigin = { x: origin.x + internalRect.x, y: origin.y + internalRect.y };
     dispatchChildren(node, internalRect, internalOrigin, viewport, ctx, out);
   }
