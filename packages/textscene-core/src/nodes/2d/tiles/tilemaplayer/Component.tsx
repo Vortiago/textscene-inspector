@@ -15,18 +15,16 @@ import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel, type TileSetStatus } from '../../../../r3f/useTileSetModel';
 import { YSortExtraChildrenProvider } from '../../../../r3f/ySortExtraChildren';
 import { useNodePath } from '../../../../r3f/contexts/NodePathContext';
-import { SceneTileInstances } from '../shared/SceneTileInstances';
+import { TailChildren } from '../shared/InternalChildren';
 import { ScenePlaceholders } from '../shared/ScenePlaceholders';
-import { useSceneTileNodes, type SceneTileDrawing } from '../shared/useSceneTileNodes';
+import { useSceneTiles } from '../shared/useSceneTiles';
+import type { SceneTiles } from '../../../../r3f/liveSceneTiles';
 import type { TileMapLayerProperties } from './types';
 
 export function TileMapLayer({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapLayerProperties;
   const { model, status } = useTileSetModel(props.tile_set);
-  const sceneTiles = useSceneTileNodes(
-    model,
-    props.enabled && props.drawsSceneTiles !== false ? props.cells : null
-  );
+  const sceneTiles = useSceneTiles(node);
   const path = useNodePath() ?? node.name;
   if (!props.y_sort_enabled) {
     return (
@@ -50,7 +48,7 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
       }
     >
       {/* A scene tile is a child canvas item of the layer, so the sort takes it with the rows and children. */}
-      <YSortExtraChildrenProvider path={path} trailing={sceneTiles.instances}>
+      <YSortExtraChildrenProvider path={path} trailing={sceneTiles.children}>
         {children}
       </YSortExtraChildrenProvider>
     </CanvasItem2D>
@@ -60,7 +58,7 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
 interface QuadrantLayerProps extends NodeComponentProps {
   model: TileSetModel | null;
   status: TileSetStatus;
-  sceneTiles: SceneTileDrawing;
+  sceneTiles: SceneTiles;
 }
 
 function QuadrantLayer({ node, model, status, sceneTiles, children }: QuadrantLayerProps) {
@@ -107,7 +105,7 @@ function QuadrantLayer({ node, model, status, sceneTiles, children }: QuadrantLa
       )}
     >
       {children}
-      <SceneTileInstances node={node} instances={sceneTiles.instances} />
+      <TailChildren node={node} internals={sceneTiles.children} />
     </CanvasItem2D>
   );
 }

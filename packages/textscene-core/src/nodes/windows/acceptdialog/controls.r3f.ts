@@ -9,7 +9,12 @@ import { registerWindowControls } from '../window/registerWindowControls.r3f';
 import { controlSolverRegistry, type TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry';
 import { registerInternalControls } from '../../../r3f/controls/native/internalControls';
 import { DialogChrome } from './DialogChrome';
-import { dialogContentsMinimumSize, dialogInternalLayout, dialogLayout } from './dialogLayout';
+import {
+  dialogContentsMinimumSize,
+  dialogInternalLayout,
+  dialogLayout,
+  dialogLoadedMinimumSize,
+} from './dialogLayout';
 import { dialogInternalControls, dialogTextureSlots } from './dialogParts';
 
 /**
@@ -27,6 +32,7 @@ export function registerDialogControls(
     Component: DialogChrome,
     minimumSize: dialogContentsMinimumSize,
     layout: dialogLayout,
+    loadedMinimumSize: dialogLoadedMinimumSize,
   });
 }
 

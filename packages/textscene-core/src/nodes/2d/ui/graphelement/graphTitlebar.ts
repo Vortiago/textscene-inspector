@@ -25,7 +25,7 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
-import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+import { themeItemsOfType, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { layoutLabelLines, LABEL_PARAGRAPH_SEPARATOR } from '../label/nativeSolver';
 import type { Rgba } from '../../../../godot/math/math';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
@@ -55,7 +55,7 @@ export function resolveTitleFontTheme(n: SolveNode, typeVariation: string): Titl
   const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size');
   const fontResource = resolveThemeFontIn(scope, 'font', undefined);
   const fontMetrics = peekSceneFontMetrics(n.settledFonts, fontResource, n.path);
-  const items = internalChildThemeItems(n, TITLE_LABEL_NATIVE_TYPE, typeVariation);
+  const items = themeItemsOfType(n, TITLE_LABEL_NATIVE_TYPE, typeVariation);
   return {
     fontSizePx,
     color: requiredThemeItem(items.colors, 'font_color'),

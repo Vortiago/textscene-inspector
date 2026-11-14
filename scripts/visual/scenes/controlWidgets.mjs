@@ -299,7 +299,7 @@ export const CONTROL_WIDGET_SCENES = [
   // The one variable is `color_mode = 1` (HSV rainbow row) and, in the second scene, an HDR `color`
   // (the `script` icon of `text_type`).
   { name: 'color-picker-hsv-rows', file: 'unit-color-picker-hsv-rows.tscn', mode: '2d' },
-  // The SpinBox arrows draw dimmed at a bound of the range: ColorPicker rows and the GraphEdit snapping box. Max 63, mean 0.695.
+  // The SpinBox arrows draw dimmed at a bound of the range: ColorPicker rows and the GraphEdit snapping box. Max 28, mean 0.687.
   { name: 'color-picker-spin-arrows', file: 'unit-color-picker-spin-arrows.tscn', mode: '2d' },
   { name: 'color-picker-hdr-hex', file: 'unit-color-picker-hdr-hex.tscn', mode: '2d' },
   // The one variable is `picker_shape`: the wheel, the circles and the OK rectangles.
@@ -354,7 +354,7 @@ export const CONTROL_WIDGET_SCENES = [
   },
   { name: 'control-y-sort-scene-tile', file: 'unit-control-y-sort-scene-tile.tscn', mode: '2d' },
   // self_modulate on Controls with internal children: it tints only the item's own parts (a TextEdit box, SpinBox
-  // arrows), never the child Controls. Max 55, mean 0.172.
+  // arrows), never the child Controls. Max 28, mean 0.167.
   { name: 'control-self-modulate-internal', file: 'unit-control-self-modulate-internal.tscn', mode: '2d' },
   // A connection of a tinted GraphEdit keeps its colour: it draws on a child Control. Max 115, mean 0.276.
   { name: 'control-self-modulate-graph-connection', file: 'unit-control-self-modulate-graph-connection.tscn', mode: '2d' },

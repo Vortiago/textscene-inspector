@@ -122,7 +122,7 @@ describe('TileMapLayer scene tile placeholders', () => {
   });
 
   it.each([
-    ['a scene id the source lacks', cell(0, 0, 20)],
+    ['a scene id the source lacks', cell(0, 0, 99)],
     ['a source the TileSet lacks', cell(0, 0, 6, 5)],
   ])('draws no disc for %s', async (_name, placed) => {
     expect(drawnBoxes(await renderLayer([placed], { showGizmos: true }))).toEqual([]);

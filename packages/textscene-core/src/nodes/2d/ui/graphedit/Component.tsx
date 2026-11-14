@@ -55,7 +55,7 @@ import { ScrollBarChrome } from '../shared/ScrollChrome';
 import { canvasSubOrders } from '../../../../r3f/canvasItemState';
 import type { GraphEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
-import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+import { themeItemsOfType, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { useStableVector2 } from '../../../../r3f/hooks/useStableVector2';
 import { shaderLineWidth } from './connectionStroke';
 
@@ -337,7 +337,7 @@ export function GraphEdit({
             curvature={curvature}
             connectionLinesAntialiased={props.connectionLinesAntialiased !== false}
             icons={solveNode.icons}
-            items={internalChildThemeItems(solveNode, 'GraphEditMinimap')}
+            items={themeItemsOfType(solveNode, 'GraphEditMinimap')}
             theme={theme}
             tint={childTint}
             slot={topLayer.minimap}

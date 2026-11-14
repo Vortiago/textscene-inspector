@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import {
-  buttonContentSize,
+  buttonContentMinimumSize,
   buttonDrawnLabel,
   fitIconSize,
   iconOnlyButtonIconRectIn,
@@ -21,7 +21,7 @@ import {
   type ButtonContentInput,
 } from './buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
-import { shapeText, type TextLineLayout } from './text/textLayout';
+import { shapeText, type TextLayoutResult, type TextLineLayout } from './text/textLayout';
 import { visualChars } from './text/textLayout.testkit';
 import { OPEN_SANS_FONT_METRICS } from './text/openSansFontMetrics';
 import { AutowrapMode, OverrunBehavior } from '../../../godot/text/textServerEnums';
@@ -779,50 +779,42 @@ describe('iconOnlyButtonIconRect: an icon with no text sits at the left margin a
   });
 });
 
-describe('buttonContentSize', () => {
+describe('buttonContentMinimumSize: the text and icon terms (button.cpp:492-523)', () => {
   const left = HORIZONTAL_ALIGNMENT_LEFT;
   const center = HORIZONTAL_ALIGNMENT_CENTER;
-  const base = {
-    textSize: { x: 50, y: 20 },
-    lineHeightPx: 20,
-    hasText: true,
-    hSeparation: 4,
-    verticalIconAlignment: VERTICAL_ALIGNMENT_CENTER,
-  };
+  /** The content size of a label `textSize` big whose line pitch is `linePitchPx`, beside an icon of `iconNaturalSize`. */
+  const contentSize = (facts: Partial<ButtonContentInput>, textSize = { x: 50, y: 20 }, linePitchPx = 20) =>
+    buttonContentMinimumSize(
+      { ...BASE_INPUT, ...facts },
+      { widthPx: textSize.x, heightPx: textSize.y, linePitchPx } as TextLayoutResult,
+      {}
+    );
 
   it('adds a side icon and the separation to the text width and floors the height on the icon', () => {
-    const size = buttonContentSize({ ...base, iconSize: { x: 16, y: 24 }, iconAlignment: left });
-    expect(size).toEqual({ x: 70, y: 24 });
+    expect(contentSize({ iconNaturalSize: { x: 16, y: 24 }, iconAlignment: left })).toEqual({ x: 70, y: 24 });
   });
 
   it('takes the wider of the text and a centred icon', () => {
-    const size = buttonContentSize({ ...base, iconSize: { x: 80, y: 16 }, iconAlignment: center });
-    expect(size).toEqual({ x: 80, y: 20 });
+    expect(contentSize({ iconNaturalSize: { x: 80, y: 16 }, iconAlignment: center })).toEqual({
+      x: 80,
+      y: 20,
+    });
   });
 
   it('is the text alone without an icon', () => {
-    expect(buttonContentSize({ ...base, iconSize: null, iconAlignment: left })).toEqual({ x: 50, y: 20 });
+    expect(contentSize({ iconNaturalSize: null })).toEqual({ x: 50, y: 20 });
   });
 
   it('stacks a TOP icon between the whole paragraph and ONE more line height (button.cpp:497-502,517-521)', () => {
-    const size = buttonContentSize({
-      ...base,
-      textSize: { x: 50, y: 60 },
-      iconSize: { x: 16, y: 16 },
-      iconAlignment: left,
-      verticalIconAlignment: VERTICAL_ALIGNMENT_TOP,
-    });
+    const size = contentSize(
+      { iconNaturalSize: { x: 16, y: 16 }, verticalIconAlignment: VERTICAL_ALIGNMENT_TOP },
+      { x: 50, y: 60 }
+    );
     // 60 (three rows) + 16 (icon) + 20 (one line, `font->get_height`), not another 60.
     expect(size.y).toBe(96);
   });
 
   it('floors a CENTRED icon on the line height too, so a one-row paragraph never drops below it', () => {
-    const size = buttonContentSize({
-      ...base,
-      textSize: { x: 50, y: 10 },
-      iconSize: null,
-      iconAlignment: left,
-    });
-    expect(size.y).toBe(20);
+    expect(contentSize({ iconNaturalSize: null }, { x: 50, y: 10 }).y).toBe(20);
   });
 });

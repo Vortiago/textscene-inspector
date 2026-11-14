@@ -39,6 +39,10 @@ A `transparent` window clears its target to no colour, so the embedder shows thr
 With `wrap_controls`, the window grows to hold its Controls. A centred window centres the size it
 loaded with, so it grows to the right and down.
 
+A size line also clamps the size to the contents minimum while `wrap_controls` is on at that line.
+So a dialog whose `size` comes before `wrap_controls = false` still grows. That minimum reads each
+Control as it was when it first computed its minimum, because a Control outside the tree keeps it.
+
 ## Theme overrides
 <!-- compare: image=unit-window-theme status=done fixture=unit-window-theme.tscn -->
 

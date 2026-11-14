@@ -647,7 +647,7 @@ interface ButtonContentSizeInput {
  * The text and icon terms of `Button::get_minimum_size_for_text_and_icon` (`button.cpp:492-523`),
  * without the stylebox margin, for any control that draws a Button.
  */
-export function buttonContentSize(input: ButtonContentSizeInput): Vector2 {
+function buttonContentSize(input: ButtonContentSizeInput): Vector2 {
   const { textSize, lineHeightPx, hasText, iconSize, iconAlignment, verticalIconAlignment, hSeparation } =
     input;
   const isVerticallyCentred = verticalIconAlignment === VerticalAlignment.VERTICAL_ALIGNMENT_CENTER;
