@@ -333,7 +333,7 @@ export function soloLineLayout(
 /**
  * A one-line `layout` with its baseline at the largest ascent of the faces its glyphs draw in, and
  * its height grown to their descent: Godot's one-line text buffer (`text_server_adv.cpp:5161-5162`).
- * A layout of several lines is returned as it is: one pitch serves them all (#1324).
+ * A layout of several lines is returned as it is: one pitch serves every line of it.
  */
 export function withGlyphFaceAscent(layout: TextLayoutResult): TextLayoutResult {
   const [line] = layout.lines;
