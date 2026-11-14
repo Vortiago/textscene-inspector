@@ -32,7 +32,7 @@ import { requireGodotVersion } from './godotRun.mjs';
 import { renderAnswersFile } from './answerDigest.mjs';
 import { isDrawn, probeRecord } from './record.mjs';
 import { loadPrinter, printedProbes, printedRejection, printedTextFaults } from './printedText.mjs';
-import { godotRejection } from './rejection.mjs';
+import { frontEndRejections, godotRejection } from './rejection.mjs';
 import { godotVerdicts, verdictRecord } from './shaderVerdicts.mjs';
 
 /** The record of Godot's verdict on each case of each set, `{ id, text }`, from one Godot run. */
@@ -52,13 +52,18 @@ function verdictRecords(...sets) {
 }
 
 /**
- * Godot's reason for each probe it draws nothing for, by name, from a run of each alone. A probe
- * that ends Godot runs alone from the start, since it would end the run of every probe.
+ * Godot's reason for each probe it draws nothing for, by name. One verdict run gives the reason of
+ * every probe the front end refuses, and each other probe runs alone. A probe that ends Godot runs
+ * alone from the start, since it would end the run of every probe.
  */
 function rejections(probes, { pixels }) {
   const rejected = probes.filter((probe) => probe.endsGodot || !isDrawn(probe, pixels.get(probe.name)));
+  const frontEnd = frontEndRejections(rejected.filter((probe) => !probe.endsGodot));
   return new Map(
-    rejected.map((probe) => [probe.name, probe.original ? printedRejection(probe) : endingRejection(probe)])
+    rejected.map((probe) => [
+      probe.name,
+      frontEnd.get(probe.name) ?? (probe.original ? printedRejection(probe) : endingRejection(probe)),
+    ])
   );
 }
 
