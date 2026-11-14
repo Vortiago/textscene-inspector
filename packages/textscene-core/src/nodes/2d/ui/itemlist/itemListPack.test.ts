@@ -5,13 +5,6 @@
 import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
 import { defaultConstantsOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import { describe, expect, it } from 'vitest';
-import {} from '../../../../r3f/controls/native/nativeTheme';
-import {} from '../../../../r3f/controls/native/text/measurer';
-import type {} from '../../../../r3f/controls/native/solveTree';
-import type {} from '../../../../r3f/controls/native/solverRegistry';
-import type {} from './types';
-import {} from '../../../../r3f/controls/native/solverRegistry';
-import { ICON_MODE_LEFT } from './nativeSolver';
 import {
   itemIconPackedSize,
   itemListMaxColumnWidth,
@@ -21,6 +14,8 @@ import {
 } from './itemListPack';
 import { ItemListIconMode } from '../../../../godot/scene/gui';
 import type { Vector2 } from '../../../../godot/math/vector';
+
+const { ICON_MODE_LEFT } = ItemListIconMode;
 
 /** One text-only item, TOP mode, one line: its minsize y is text + line_separation + v_separation. */
 function topTextItem(textHeight: number) {
@@ -352,5 +347,3 @@ describe('itemListMaxColumnWidth', () => {
     expect(itemListMaxColumnWidth([], 4)).toBe(0);
   });
 });
-
-// item_list.cpp:1624: only TOP mode with max_text_lines above 0 draws the wrapped paragraph.

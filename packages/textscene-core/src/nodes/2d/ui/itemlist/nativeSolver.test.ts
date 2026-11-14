@@ -4,8 +4,6 @@
  * inline (`:1743-1796`), `_adjust_to_max_size` (`:1186-1197`) and
  * `ItemList::get_minimum_size` (`:2136-2146`).
  */
-import {} from '../../../../godot/scene/defaultTheme/defaultTheme';
-import {} from '../../../../r3f/controls/native/defaultThemeRecords';
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
@@ -14,8 +12,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { ItemListProperties } from './types';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
-import {} from './nativeSolver';
-import {} from '../../../../godot/scene/gui';
+import { itemListIconSlotKey } from './nativeSolver';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { ITEM_LIST_CASES, ITEM_LIST_SIZES, type ItemListCase } from './valueList.testkit';
 
@@ -96,7 +93,7 @@ describe('itemListMinimumSize', () => {
 });
 
 describe('itemListMinimumSize across the value list, at each size the solve asks for', () => {
-  /** Each case's minimum at (inf, inf), (200, 100) and (60, 40), measured before the layout share existed. */
+  /** Each case's minimum at (inf, inf), (200, 100) and (60, 40) on main, which the layout must keep. */
   const EXPECTED: Record<string, readonly (readonly [number, number])[]> = {
     'no item': [
       [8, 8],
@@ -192,7 +189,7 @@ describe('itemListMinimumSize across the value list, at each size the solve asks
 
   function caseNode(c: ItemListCase): SolveNode {
     const textureSlots = Object.fromEntries(
-      Object.entries(c.icons ?? {}).map(([index, size]) => [`item_${index}`, size])
+      Object.entries(c.icons ?? {}).map(([index, size]) => [itemListIconSlotKey(Number(index)), size])
     );
     return { ...node(c.props), rtl: c.rtl === true, textureSlots };
   }

@@ -97,15 +97,11 @@ export function itemTextDrawOffset(
   hSeparation: number,
   vSeparation: number
 ): Vector2 {
-  if (isWrapped) {
-    return {
-      x: iconOffset.x + Math.max(hSeparation, 0) / 2,
-      y: iconOffset.y + Math.max(vSeparation, 0) / 2,
-    };
-  }
   return {
     x: iconOffset.x + Math.max(hSeparation, 0) / 2,
-    y: iconOffset.y + (itemRectSize.y - textLineHeightTotal) / 2,
+    y: isWrapped
+      ? iconOffset.y + Math.max(vSeparation, 0) / 2
+      : iconOffset.y + (itemRectSize.y - textLineHeightTotal) / 2,
   };
 }
 
@@ -166,9 +162,9 @@ export function itemListDrawClip(
   return { x: -panelOffset.x, y: -panelOffset.y, w: size.x + scrollSpan, h: size.y };
 }
 
-/** The rows `NOTIFICATION_DRAW` draws: each must intersect `clip` (`item_list.cpp:1493-1500`). */
-export function itemListRowsInClip<Row extends { rect: Rect2 }>(rows: readonly Row[], clip: Rect2): Row[] {
-  return rows.filter((row) => rect2Intersects(clip, row.rect));
+/** Whether `NOTIFICATION_DRAW` draws the row at `rowRect`: it must intersect `clip` (`item_list.cpp:1493-1500`). */
+export function isItemListRowInClip(rowRect: Rect2, clip: Rect2): boolean {
+  return rect2Intersects(clip, rowRect);
 }
 
 /** The separators `NOTIFICATION_DRAW` draws: it stops at the first one below `clip` (`item_list.cpp:1451`). */

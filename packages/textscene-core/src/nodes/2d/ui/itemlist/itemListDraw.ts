@@ -9,20 +9,16 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { Rgba } from '../../../../godot/math/math';
-import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import { defineRectShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { soloLineLayout, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import type { ScrollBarPairBoxes } from '../shared/scrollBarSolver';
 import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
-import {
-  isItemListTextWrapped,
-  itemListMinimumShapeWidthPx,
-  shapeItemListText,
-  trimItemListLine,
-} from './itemText';
+import { shapeItemListText, trimItemListLine } from './itemText';
 import {
   itemIconColor,
   itemIconDraw,
@@ -31,7 +27,7 @@ import {
   itemListDrawsCursor,
   itemListGuideLines,
   itemListLineTextWidthPx,
-  itemListRowsInClip,
+  isItemListRowInClip,
   itemListRowTextX,
   itemListSelectedRect,
   itemListSeparatorsInClip,
@@ -43,14 +39,8 @@ import {
 } from './itemListGeometry';
 import { isItemListLabelFillDrawn, itemListDrawnLabel } from './labelDraw';
 import { itemListMirrorX } from './mirrorX';
-import {
-  ICON_MODE_LEFT,
-  itemListIconSlotKey,
-  itemListLayout,
-  itemListTextTheme,
-  type ItemListLayout,
-  type ItemListRow,
-} from './nativeSolver';
+import { hasFixedIconSize } from './itemListPack';
+import { itemListIconSlotKey, itemListLayout, type ItemListLayout, type ItemListRow } from './nativeSolver';
 import { itemListScrollBars, type ItemListScrollBars } from './scrollBars';
 import type { ItemListRuntimeItem, ItemListRuntimeProperties } from './types';
 
@@ -98,6 +88,9 @@ export interface ItemListDraw {
   scrollBarBoxes: ScrollBarPairBoxes;
   /** The label font size: the theme's or the node's override. */
   fontSizePx: number;
+  /** The `panel` box, and the `selected` and `cursor_unfocused` boxes a row draws (`item_list.cpp:1502-1531,2455`). */
+  boxes: { panel: ResolvedStyleBox; selected: ResolvedStyleBox; cursor: ResolvedStyleBox };
+  guideColor: Rgba;
 }
 
 /** What every row of one draw shares. */
@@ -107,23 +100,32 @@ interface DrawFrame {
   layout: ItemListLayout;
   size: Vector2;
   origin: Vector2;
+  /** The width of the vertical bar, 0 while it is hidden. */
+  barWidth: number;
   /** The draw `width` (`item_list.cpp:1385-1389`): a visible vertical bar takes its width off. */
   contentWidth: number;
+  wraparoundItems: boolean;
   panelMargins: StyleBoxFlatData['contentMargin'];
+  /** `font_selected_color` (`item_list.cpp:1610-1611`). */
+  selectedTextColor: Rgba;
 }
 
 /** `base_ofs = panel_style->get_offset()` (`item_list.cpp:1429`): the left and top margins, not their sums (`style_box.cpp:87-89`). */
 function drawFrame(n: ShareNode, size: Vector2, layout: ItemListLayout): DrawFrame {
-  const panelMargins = requiredThemeItem(n.styleBoxes, 'panel').contentMargin;
+  const props = n.node.properties as ItemListRuntimeProperties;
+  const panelMargins = layout.panelBox.contentMargin;
   const barWidth = layout.packed.vertical.visible ? layout.bars.verticalWidth : 0;
   return {
     n,
-    props: n.node.properties as ItemListRuntimeProperties,
+    props,
     layout,
     size,
     origin: { x: panelMargins.left, y: panelMargins.top },
+    barWidth,
     contentWidth: size.x - layout.panelMinimum.x - barWidth,
+    wraparoundItems: props.wraparoundItems !== false,
     panelMargins,
+    selectedTextColor: requiredThemeItem(n.colors, 'font_selected_color'),
   };
 }
 
@@ -132,11 +134,11 @@ function drawFrame(n: ShareNode, size: Vector2, layout: ItemListLayout): DrawFra
  * since its lines break at the width (`item_list.cpp:1629-1632`), unless the width is the minimum's.
  */
 function labelAt(frame: DrawFrame, row: ItemListRow, widthPx: number): TextLayoutResult | null {
-  const shape = { ...frame.layout.content.textShape, text: row.item.text ?? '' };
-  if (row.untrimmedLine) return trimItemListLine(row.untrimmedLine, shape, widthPx);
-  const minimumWidthPx = itemListMinimumShapeWidthPx(frame.props.fixedColumnWidth ?? 0);
+  const { textShape, minimumWidthPx } = frame.layout.content;
+  const text = row.item.text ?? '';
+  if (row.untrimmedLine) return trimItemListLine(row.untrimmedLine, { ...textShape, text }, widthPx);
   if (widthPx === minimumWidthPx || !row.minimumLabel) return row.minimumLabel;
-  return shapeItemListText({ ...shape, widthPx });
+  return shapeItemListText({ ...textShape, text, widthPx });
 }
 
 function drawnLabel(layout: TextLayoutResult | null, widthPx: number, wrapped: boolean, rtl: boolean) {
@@ -152,10 +154,7 @@ function drawnLabel(layout: TextLayoutResult | null, widthPx: number, wrapped: b
 }
 
 function rowColour(frame: DrawFrame, item: ItemListRuntimeItem): Rgba {
-  // `font_selected_color` (`item_list.cpp:1610-1611`).
-  const base = item.isSelected
-    ? requiredThemeItem(frame.n.colors, 'font_selected_color')
-    : itemListTextTheme(frame.n, frame.props).color;
+  const base = item.isSelected ? frame.selectedTextColor : frame.layout.content.textColor;
   return itemTextColor(base, item.disabled === true);
 }
 
@@ -177,28 +176,24 @@ function rowBoxes(frame: DrawFrame, row: ItemListRow, rowRect: Rect2) {
   };
 }
 
-function drawnRow(frame: DrawFrame, row: ItemListRow, index: number): ItemListDrawnRow {
-  const { n, props, origin, contentWidth, size } = frame;
-  const { hSeparation, vSeparation, iconMargin } = frame.layout.content.spacing;
-  const iconMode = props.iconMode ?? ICON_MODE_LEFT;
-  const wraparoundItems = props.wraparoundItems !== false;
+function drawnRow(frame: DrawFrame, row: ItemListRow, index: number, rect: Rect2): ItemListDrawnRow {
+  const { n, props, origin, contentWidth, size, wraparoundItems } = frame;
+  const { spacing, textShape, isWrapped: wrapped } = frame.layout.content;
+  const { hSeparation, vSeparation, iconMargin } = spacing;
   const fixedColumnWidth = props.fixedColumnWidth ?? 0;
-  const rect = frame.layout.packed.items[index]!.rect;
   // Both centring passes read `rect_cache.size` (`item_list.cpp:1553,1556,1649`), never its position.
   const rowSize: Vector2 = { x: rect.w, y: rect.h };
-  const fixedIconSize = props.fixedIconSize;
   const iconDraw = itemIconDraw(
     row.hasIcon,
-    iconMode,
+    textShape.iconMode,
     row.iconSize,
     n.textureSlots[itemListIconSlotKey(index)] ?? null,
-    !!(fixedIconSize && fixedIconSize.x > 0 && fixedIconSize.y > 0),
+    hasFixedIconSize(props.fixedIconSize),
     rowSize,
     hSeparation,
     vSeparation,
     iconMargin
   );
-  const wrapped = isItemListTextWrapped(iconMode, props.maxTextLines ?? 1);
   const textOffset = itemTextDrawOffset(
     wrapped,
     iconDraw.textOffsetContribution,
@@ -253,24 +248,33 @@ function drawnRow(frame: DrawFrame, row: ItemListRow, index: number): ItemListDr
   };
 }
 
+/** The rows that reach into `clip` (`item_list.cpp:1493-1500`), in list order. */
+function drawnRowsIn(frame: DrawFrame, clip: Rect2): ItemListDrawnRow[] {
+  const { rows } = frame.layout.content;
+  const { items } = frame.layout.packed;
+  const drawn: ItemListDrawnRow[] = [];
+  for (let index = 0; index < rows.length; index++) {
+    const rect = items[index]!.rect;
+    if (isItemListRowInClip(rect, clip)) drawn.push(drawnRow(frame, rows[index]!, index, rect));
+  }
+  return drawn;
+}
+
 function drawAt(n: ShareNode, size: Vector2, layout: ItemListLayout): ItemListDraw {
   const frame = drawFrame(n, size, layout);
-  const { props, origin, contentWidth } = frame;
+  const { props, origin, contentWidth, barWidth, wraparoundItems } = frame;
   const { packed } = layout;
-  const wraparoundItems = props.wraparoundItems !== false;
   const clip = itemListDrawClip(size, origin, packed.horizontal, wraparoundItems);
-  const barWidth = packed.vertical.visible ? layout.bars.verticalWidth : 0;
   const scrollBarBoxes = internalScrollBarBoxes(n);
-  const rows = layout.content.rows.map((row, index) => ({ row, index, rect: packed.items[index]!.rect }));
   return {
     origin,
     guideLines: itemListGuideLines(
-      props.iconMode ?? ICON_MODE_LEFT,
+      layout.content.textShape.iconMode,
       itemListSeparatorsInClip(packed.separators, clip),
       contentWidth,
       n.rtl ? barWidth : 0
     ),
-    rows: itemListRowsInClip(rows, clip).map(({ row, index }) => drawnRow(frame, row, index)),
+    rows: drawnRowsIn(frame, clip),
     scrollBars: itemListScrollBars({
       size,
       margins: frame.panelMargins,
@@ -278,10 +282,18 @@ function drawAt(n: ShareNode, size: Vector2, layout: ItemListLayout): ItemListDr
       horizontal: packed.horizontal,
       rtl: n.rtl,
       boxes: scrollBarBoxes,
+      bars: layout.bars,
       scrollHintMode: props.scrollHintMode ?? 0,
     }),
     scrollBarBoxes,
     fontSizePx: layout.content.textShape.fontSizePx,
+    boxes: {
+      panel: layout.panelBox,
+      // `selected_focus` is the same box as `selected` in the table's `ItemList` type.
+      selected: requiredThemeItem(n.styleBoxes, 'selected'),
+      cursor: requiredThemeItem(n.styleBoxes, 'cursor_unfocused'),
+    },
+    guideColor: requiredThemeItem(n.colors, 'guide_color'),
   };
 }
 

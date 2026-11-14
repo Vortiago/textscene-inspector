@@ -3,16 +3,12 @@
  * and `_adjust_to_max_size` (`:1186-1197`).
  */
 import { describe, expect, it } from 'vitest';
-import type {} from '../../../../r3f/controls/native/solveTree';
-import type {} from '../../../../r3f/controls/native/solverRegistry';
-import type {} from './types';
-import { ICON_MODE_LEFT } from './nativeSolver';
 import {
   itemIconColor,
   itemIconDraw,
   itemListDrawClip,
   itemListGuideLines,
-  itemListRowsInClip,
+  isItemListRowInClip,
   itemListCursorRect,
   itemListSelectedRect,
   itemListSeparatorsInClip,
@@ -25,6 +21,8 @@ import {
 import { ItemListIconMode } from '../../../../godot/scene/gui';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { ItemListScrollRange } from './itemListPack';
+
+const { ICON_MODE_LEFT } = ItemListIconMode;
 
 describe('itemIconDraw with fixed_icon_size (_adjust_to_max_size, item_list.cpp:1186-1197)', () => {
   /** A LEFT-mode icon in a 24px-tall row: the packed box sits at (h_separation / 2, 0). */
@@ -123,12 +121,12 @@ describe('itemListDrawClip and what it keeps (item_list.cpp:1431-1441,1451,1493-
 
   it('keeps the rows that reach into the clip and drops the rest, a row that only touches its edge included (error path)', () => {
     const clip = { x: -4, y: -4, w: 120, h: 80 }; // content space: the list ends at y 76
-    const rows = [
-      { rect: { x: 0, y: 0, w: 100, h: 23 } },
-      { rect: { x: 0, y: 69, w: 100, h: 23 } },
-      { rect: { x: 0, y: 76, w: 100, h: 23 } },
+    const rowRects = [
+      { x: 0, y: 0, w: 100, h: 23 },
+      { x: 0, y: 69, w: 100, h: 23 },
+      { x: 0, y: 76, w: 100, h: 23 },
     ];
-    expect(itemListRowsInClip(rows, clip)).toEqual([rows[0], rows[1]]);
+    expect(rowRects.map((rect) => isItemListRowInClip(rect, clip))).toEqual([true, true, false]);
   });
 
   it('keeps the separators up to the clip bottom, one on it included', () => {
@@ -190,10 +188,6 @@ describe('itemListLineTextWidthPx / itemListWrappedTextWidthPx', () => {
   });
 });
 
-/**
- * `max_column_width` is the widest minimum width before `h_separation` joins it (`item_list.cpp:1786-1790`),
- * and `same_column_width` adds the separation once (`:1826`).
- */
 describe('itemListSelectedRect (item_list.cpp:1502-1517)', () => {
   const input = {
     rowRect: { x: 0, y: 20, w: 50, h: 18 },

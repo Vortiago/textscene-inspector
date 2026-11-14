@@ -19,13 +19,14 @@ import {
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { ItemList } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { ItemListIconMode } from '../../../../godot/scene/gui';
-import { ICON_MODE_LEFT } from './nativeSolver';
+import { itemListLayout } from './nativeSolver';
+
+const { ICON_MODE_LEFT } = ItemListIconMode;
 import { shapeItemListText } from './itemText';
 
 import type { ItemListRuntimeProperties } from './types';
@@ -316,7 +317,7 @@ describe('<ItemList> — RTL', () => {
     const shaped = shapeItemListText({
       text: 'Sword',
       fontSizePx: nativeTheme(1).fontSize,
-      fontMetrics: resolveNodeFontMetrics(node, 'font'),
+      fontMetrics: itemListLayout(node, { x: 200, y: 100 }, nativeTheme(1)).content.textShape.fontMetrics,
       iconMode: ICON_MODE_LEFT,
       locale: '',
       maxTextLines: 1,

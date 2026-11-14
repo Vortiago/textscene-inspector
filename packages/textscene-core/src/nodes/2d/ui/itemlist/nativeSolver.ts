@@ -18,16 +18,14 @@ import {
 import { defineRectShare, defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
-import {
-  resolveTextTheme,
-  type ResolvedTextTheme,
-  type TextThemeKeys,
-} from '../../../../r3f/controls/native/textTheme';
+import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
+import { resolveTextTheme, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import type { Rgba } from '../../../../godot/math/math';
 import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
 import { ItemListIconMode } from '../../../../godot/scene/gui';
 import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
@@ -53,23 +51,16 @@ import {
 } from './itemListPack';
 import type { ItemListRuntimeItem, ItemListRuntimeProperties } from './types';
 
-// --- Enum literals ------------------------------------------------------
-
 /** `ItemList::IconMode` (`item_list.h:43-44`). */
 const { ICON_MODE_LEFT } = ItemListIconMode;
-export { ICON_MODE_LEFT };
 
 // --- Theme font ----------------------------------------------------------
 
 /** ItemList's own theme font key, `SceneStringName(font)`, which the default theme registers under ItemList. */
 const ITEM_LIST_THEME_FONT_KEY = 'font';
 
+/** ItemList's own label size and colour keys: an override, else the Theme chain, else the default theme. */
 const ITEM_LIST_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
-
-/** Resolves ItemList's own theme font size/colour (overrides, else the ancestor Theme chain / theme default). */
-export function itemListTextTheme(n: ShareNode, props: ItemListRuntimeProperties): ResolvedTextTheme {
-  return resolveTextTheme(n, props, ITEM_LIST_THEME_KEYS);
-}
 
 // --- Texture slots: one per item icon ------------------------------------
 
@@ -109,6 +100,12 @@ export interface ItemListContent {
   rows: readonly ItemListRow[];
   /** The shaping inputs of every label but its text and width. */
   textShape: Omit<ItemTextShape, 'text'>;
+  /** TOP mode with `max_text_lines > 0`: every label wraps (`item_list.cpp:49,1766`). */
+  isWrapped: boolean;
+  /** The width every label is shaped at for the minimum size (`item_list.cpp:1763-1766`). */
+  minimumWidthPx: number;
+  /** `font_color`, the colour of a row that is not selected. */
+  textColor: Rgba;
   spacing: ItemListSpacing;
   maxColumnWidth: number;
 }
@@ -117,6 +114,8 @@ export interface ItemListContent {
 export interface ItemListLayout {
   content: ItemListContent;
   packed: ItemListPackResult;
+  /** The `panel` StyleBox. */
+  panelBox: ResolvedStyleBox;
   /** `panel_style->get_minimum_size()`, the panel's summed content margins. */
   panelMinimum: Vector2;
   bars: { verticalWidth: number; horizontalHeight: number };
@@ -135,16 +134,20 @@ const NO_LABELS: ItemLabels = { minimumLabel: null, untrimmedLine: null };
  */
 function shapedLabels(input: ItemTextShape, minimumWidthPx: number): ItemLabels {
   if (input.text.length === 0) return NO_LABELS;
-  if (isItemListTextWrapped(input.iconMode, input.maxTextLines)) {
+  if (isItemListTextWrapped(input)) {
     return { minimumLabel: shapeItemListText({ ...input, widthPx: minimumWidthPx }), untrimmedLine: null };
   }
   const untrimmedLine = shapeItemListLine(input);
   return { minimumLabel: trimItemListLine(untrimmedLine, input, minimumWidthPx), untrimmedLine };
 }
 
-function itemListTextShape(n: ShareNode, props: ItemListRuntimeProperties): Omit<ItemTextShape, 'text'> {
+function itemListTextShape(
+  n: ShareNode,
+  props: ItemListRuntimeProperties,
+  fontSizePx: number
+): Omit<ItemTextShape, 'text'> {
   return {
-    fontSizePx: itemListTextTheme(n, props).fontSizePx,
+    fontSizePx,
     fontMetrics: resolveNodeFontMetrics(n, ITEM_LIST_THEME_FONT_KEY),
     iconMode: props.iconMode ?? ICON_MODE_LEFT,
     maxTextLines: props.maxTextLines ?? 1,
@@ -156,6 +159,7 @@ function itemListTextShape(n: ShareNode, props: ItemListRuntimeProperties): Omit
 function rowOf(
   n: ShareNode,
   props: ItemListRuntimeProperties,
+  textShape: Omit<ItemTextShape, 'text'>,
   item: ItemListRuntimeItem,
   index: number,
   labels: ItemLabels,
@@ -172,8 +176,8 @@ function rowOf(
       iconSize,
       hasText: (item.text ?? '').length > 0,
       textSize,
-      iconMode: props.iconMode ?? ICON_MODE_LEFT,
-      maxTextLines: props.maxTextLines ?? 1,
+      iconMode: textShape.iconMode,
+      maxTextLines: textShape.maxTextLines,
       fixedColumnWidth: props.fixedColumnWidth ?? 0,
     },
     spacing
@@ -188,13 +192,23 @@ function contentWith(
 ): ItemListContent {
   const props = n.node.properties as ItemListRuntimeProperties;
   const spacing = itemListSpacing(n.constants);
-  const textShape = itemListTextShape(n, props);
+  const textTheme = resolveTextTheme(n, props, ITEM_LIST_THEME_KEYS);
+  const textShape = itemListTextShape(n, props, textTheme.fontSizePx);
   const minimumWidthPx = itemListMinimumShapeWidthPx(props.fixedColumnWidth ?? 0);
-  const rows = (props.items ?? []).map((item, index) =>
-    rowOf(n, props, item, index, labelsOf({ ...textShape, text: item.text ?? '' }, minimumWidthPx), spacing)
-  );
+  const rows = (props.items ?? []).map((item, index) => {
+    const labels = labelsOf({ ...textShape, text: item.text ?? '' }, minimumWidthPx);
+    return rowOf(n, props, textShape, item, index, labels, spacing);
+  });
   const sizes = rows.map((row) => row.minimumSize);
-  return { rows, textShape, spacing, maxColumnWidth: itemListMaxColumnWidth(sizes, spacing.hSeparation) };
+  return {
+    rows,
+    textShape,
+    isWrapped: isItemListTextWrapped(textShape),
+    minimumWidthPx,
+    textColor: textTheme.color,
+    spacing,
+    maxColumnWidth: itemListMaxColumnWidth(sizes, spacing.hSeparation),
+  };
 }
 
 /** The content with every label shaped once. */
@@ -208,7 +222,8 @@ function unmeasuredContent(n: ShareNode): ItemListContent {
 /** The list packed at `size`, its Control's size. An `Infinity` component packs unbounded on that axis. */
 function layoutAt(n: ShareNode, size: Vector2, content: ItemListContent): ItemListLayout {
   const props = n.node.properties as ItemListRuntimeProperties;
-  const panelMinimum = contentMarginSize(requiredThemeItem(n.styleBoxes, 'panel'));
+  const panelBox = requiredThemeItem(n.styleBoxes, 'panel');
+  const panelMinimum = contentMarginSize(panelBox);
   const bars = scrollBarThicknesses(internalScrollBarBoxes(n));
   const packed = packItemListRows({
     itemSizes: content.rows.map((row) => row.minimumSize),
@@ -223,7 +238,7 @@ function layoutAt(n: ShareNode, size: Vector2, content: ItemListContent): ItemLi
     hSeparation: content.spacing.hSeparation,
     availableHeight: Math.max(0, size.y - panelMinimum.y),
   });
-  return { content, packed, panelMinimum, bars };
+  return { content, packed, panelBox, panelMinimum, bars };
 }
 
 /** The list at its size, which its minimum size and its painter both read. */

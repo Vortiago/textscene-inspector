@@ -12,7 +12,6 @@ import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useNodeReference } from '../../../../resources/reading';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
-import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -145,12 +144,9 @@ export function ItemList({
     scrollBars,
     scrollBarBoxes,
     fontSizePx,
+    boxes,
+    guideColor,
   } = itemListDraw(solveNode, { x: rect.w, y: rect.h }, theme);
-  const panelBox = requiredThemeItem(solveNode.styleBoxes, 'panel');
-  // `selected_focus` is the same box as `selected` in the table's `ItemList` type.
-  const selectedBox = requiredThemeItem(solveNode.styleBoxes, 'selected');
-  // `cursor_unfocused` (`item_list.cpp:2455`).
-  const cursorBox = requiredThemeItem(solveNode.styleBoxes, 'cursor_unfocused');
 
   // `set_clip_contents(true)` (`item_list.cpp:2482`) clips to the list rect, scrollbars aside.
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
@@ -160,10 +156,7 @@ export function ItemList({
 
   // Both scroll bars and the hint are child Controls: no `self_modulate` (`item_list.cpp:2472,2476`).
   const hintColor = useMemo(() => childTint.color.clone().multiply(SCROLL_HINT_MODULATE), [childTint.color]);
-  const guideColorSrgb = useMemo(
-    () => tintColor(requiredThemeItem(solveNode.colors, 'guide_color'), tint.own),
-    [solveNode, tint.own]
-  );
+  const guideColorSrgb = useMemo(() => tintColor(guideColor, tint.own), [guideColor, tint.own]);
   const guideColorLinear = useItemLinearColor(guideColorSrgb);
 
   const rowsAndChildren = (
@@ -192,7 +185,7 @@ export function ItemList({
           renderOrder={renderOrder}
           fontSizePx={fontSizePx}
           resources={solveNode.resources}
-          selectedBox={selectedBox}
+          selectedBox={boxes.selected}
           icons={solveNode.icons}
         />
       ))}
@@ -204,7 +197,7 @@ export function ItemList({
               position={[origin.x + geometry.rect.x, -(origin.y + geometry.rect.y), 0]}
             >
               <StyleBoxQuad
-                styleBox={cursorBox}
+                styleBox={boxes.cursor}
                 color={tint.own}
                 rect={geometry.cursorRect}
                 renderOrder={renderOrder}
@@ -238,7 +231,7 @@ export function ItemList({
 
   return (
     <CanvasItemGroup ref={anchorRef}>
-      <StyleBoxQuad styleBox={panelBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
+      <StyleBoxQuad styleBox={boxes.panel} color={tint.own} rect={rect} renderOrder={renderOrder} />
       {clipsContents ? (
         <ControlClipProvider value={clip}>{rowsAndChildren}</ControlClipProvider>
       ) : (

@@ -4,16 +4,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
-import type {} from '../../../../r3f/controls/native/solveTree';
-import type {} from '../../../../r3f/controls/native/solverRegistry';
-import type {} from './types';
-import { ICON_MODE_LEFT } from './nativeSolver';
 import { isItemListTextWrapped, shapeItemListText } from './itemText';
 import { ItemListIconMode } from '../../../../godot/scene/gui';
-import type {} from '../../../../godot/math/vector';
-import type {} from './nativeSolver';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
+
+const { ICON_MODE_LEFT } = ItemListIconMode;
 
 describe('shapeItemListText — direction (item_list.h:73-74)', () => {
   it('takes the direction of neutral text from the locale (`item_list.cpp:45`)', () => {
@@ -374,14 +370,14 @@ describe('shapeItemListText — against TextParagraph (text_paragraph.cpp:225-26
 
 describe('isItemListTextWrapped', () => {
   it('wraps TOP-mode text with max_text_lines above 0', () => {
-    expect(isItemListTextWrapped(ItemListIconMode.ICON_MODE_TOP, 2)).toBe(true);
+    expect(isItemListTextWrapped({ iconMode: ItemListIconMode.ICON_MODE_TOP, maxTextLines: 2 })).toBe(true);
   });
 
   it('draws TOP-mode text with max_text_lines 0 as a single line', () => {
-    expect(isItemListTextWrapped(ItemListIconMode.ICON_MODE_TOP, 0)).toBe(false);
+    expect(isItemListTextWrapped({ iconMode: ItemListIconMode.ICON_MODE_TOP, maxTextLines: 0 })).toBe(false);
   });
 
   it('draws LEFT-mode text as a single line', () => {
-    expect(isItemListTextWrapped(ICON_MODE_LEFT, 2)).toBe(false);
+    expect(isItemListTextWrapped({ iconMode: ICON_MODE_LEFT, maxTextLines: 2 })).toBe(false);
   });
 });

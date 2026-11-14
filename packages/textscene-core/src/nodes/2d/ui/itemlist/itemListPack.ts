@@ -43,6 +43,11 @@ export function itemListSpacing(constants: ShareNode['constants']): ItemListSpac
 
 // --- Icon geometry ---------------------------------------------------------
 
+/** `fixed_icon_size` with both sides above 0: the only size that replaces an icon's own (`item_list.cpp:1746-1750`). */
+export function hasFixedIconSize(fixedIconSize: Vector2 | undefined): boolean {
+  return !!fixedIconSize && fixedIconSize.x > 0 && fixedIconSize.y > 0;
+}
+
 /**
  * `Item::get_icon_size() * icon_scale`, or `fixed_icon_size * icon_scale`
  * when `fixed_icon_size` is set on both axes (`item_list.cpp:1538-1542,1746-1750`).
@@ -56,7 +61,7 @@ export function itemIconPackedSize(
   iconScale: number
 ): Vector2 {
   if (!hasIcon) return { x: 0, y: 0 };
-  if (fixedIconSize && fixedIconSize.x > 0 && fixedIconSize.y > 0) {
+  if (fixedIconSize && hasFixedIconSize(fixedIconSize)) {
     return { x: fixedIconSize.x * iconScale, y: fixedIconSize.y * iconScale };
   }
   const nat = naturalSize ?? { x: 0, y: 0 };

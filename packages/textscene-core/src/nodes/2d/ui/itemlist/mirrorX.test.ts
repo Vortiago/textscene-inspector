@@ -1,11 +1,6 @@
 /** The RTL mirror of ItemList's icon rect and wrapped text box (`scene/gui/item_list.cpp:1582-1584,1639-1641`). */
 import { describe, expect, it } from 'vitest';
-import type {} from '../../../../r3f/controls/native/solveTree';
-import type {} from '../../../../r3f/controls/native/solverRegistry';
-import type {} from './types';
 import { itemListMirrorX } from './mirrorX';
-import type {} from '../../../../godot/math/vector';
-import type {} from './nativeSolver';
 
 describe('itemListMirrorX', () => {
   // item_list.cpp:1582-1584 (icon) and :1639-1641 (wrapped text box) both
