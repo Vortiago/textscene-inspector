@@ -1,8 +1,6 @@
 /**
  * The scene lines a constructor's setters stand for, when a class builds its internal Controls from
  * them: one parse through each class's own parser, so a built Control reads what an authored one would.
- *
- * @canonical Parse the scene lines of a built internal Control
  */
 import { parseNodeWithRegistry } from '../../../core/NodeRegistry';
 
@@ -14,7 +12,11 @@ export function shownIf(isShown: boolean | undefined): Record<string, string> {
   return isShown === false ? { ...HIDDEN_LINE } : {};
 }
 
-/** What a Control of `type` named `name` parses to from `lines`. */
+/**
+ * What a Control of `type` named `name` parses to from `lines`.
+ *
+ * @canonical Parse the scene lines of a built internal Control
+ */
 export function parsedSceneLines(type: string, name: string, lines: Record<string, string> = {}): object {
   const parsed = parseNodeWithRegistry({ type: 'node', attributes: { name, type } }, lines);
   if (!parsed) throw new Error(`expected a parser for ${type}, got none`);
