@@ -16,7 +16,7 @@ import { ControlFallback } from './ControlFallback';
 import { internalControlsOf } from './internalControls';
 import { InternalControls } from './InternalControlGroup';
 import { placeChildren } from './paintedChildren';
-import { OwnCanvasModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
+import { OwnCanvasModulateProvider, OwnModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
 import { useTextureSamplerOver } from '../../canvasItemTextureSampler';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
 import { ClipChildrenScope } from '../../canvasGroup/ClipChildrenScope';
@@ -324,24 +324,26 @@ function ControlItemGroup({
   // counts from the painter's local scene.
   const painter = (
     <NodePathProvider path={solveNode.path}>
-      <Painter
-        solveNode={solveNode}
-        rect={rect}
-        renderOrder={renderOrder}
-        slot={slot}
-        tint={tint}
-        childTint={tint.internalChild}
-        chromeSlot={chromeSlot}
-        pieceSlots={pieceSlots}
-        layerSlot={layerSlot}
-        theme={theme}
-        measureText={measureText}
-        snapToPixels={snapToPixels}
-        childRects={childRects}
-        meta={solvedEntry?.meta}
-      >
-        {children.inPainter}
-      </Painter>
+      <OwnModulateProvider value={tint.own}>
+        <Painter
+          solveNode={solveNode}
+          rect={rect}
+          renderOrder={renderOrder}
+          slot={slot}
+          tint={tint}
+          childTint={tint.internalChild}
+          chromeSlot={chromeSlot}
+          pieceSlots={pieceSlots}
+          layerSlot={layerSlot}
+          theme={theme}
+          measureText={measureText}
+          snapToPixels={snapToPixels}
+          childRects={childRects}
+          meta={solvedEntry?.meta}
+        >
+          {children.inPainter}
+        </Painter>
+      </OwnModulateProvider>
       {internals.length > 0 && (
         <InternalControls
           internals={internals}

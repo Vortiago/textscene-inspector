@@ -21,11 +21,29 @@ interface GlyphDrawerRules {
    * `source_color` albedo and sRGB vertex colour (`material.cpp:969,1218`). A canvas item multiplies in sRGB.
    */
   multipliesInLinear: boolean;
+  /**
+   * The full modulate tints a colour glyph. A canvas item keeps only the alpha of the font colour for
+   * one (`text_server_adv.cpp:4044-4046`). Label3D puts its modulate in every vertex colour
+   * (`label_3d.cpp:428`).
+   */
+  tintsColourGlyphs: boolean;
 }
 
 export const GLYPH_DRAWER_RULES: Readonly<Record<GlyphDrawer, GlyphDrawerRules>> = {
-  canvasItem: { roundsPen: true, maxSkippedRectPx: 0, drawsHexCodeBoxes: true, multipliesInLinear: false },
-  label3D: { roundsPen: false, maxSkippedRectPx: 2, drawsHexCodeBoxes: false, multipliesInLinear: true },
+  canvasItem: {
+    roundsPen: true,
+    maxSkippedRectPx: 0,
+    drawsHexCodeBoxes: true,
+    multipliesInLinear: false,
+    tintsColourGlyphs: false,
+  },
+  label3D: {
+    roundsPen: false,
+    maxSkippedRectPx: 2,
+    drawsHexCodeBoxes: false,
+    multipliesInLinear: true,
+    tintsColourGlyphs: true,
+  },
 };
 
 /** Whether `drawer` draws a glyph whose rectangle in its page is `width` by `height` px. */

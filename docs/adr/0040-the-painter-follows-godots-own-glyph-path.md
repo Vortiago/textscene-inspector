@@ -9,12 +9,13 @@
   (`BundledCanvasRun.tsx`, `OutlinedTextRun`). Painter A draws the fill only where the bundled
   canvas face cannot register. A Label draws a ring for each outline and stacked outline, and for
   each shadow outline.
-- Amended for glyph coverage: painter B draws each glyph that has an outline as FreeType draws it,
-  not through the browser's text rasteriser. It loads the outline at the font's `hinting`
+- Amended for glyph coverage: painter B draws each glyph of a face with outlines as FreeType draws
+  it, not through the browser's text rasteriser. It loads the outline at the font's `hinting`
   (`gui/theme/default_font_hinting` for the bundled font, `text_server_adv.cpp:1270-1285`). It
   strokes the ring with a port of `ftstroke.c` and covers each pixel with a port of `ftgrays.c`
   (`glyphCoverage.ts`). Both match Godot's glyph bitmaps to the level. The browser rasterises only
-  a glyph with no outline, so the Skia and canvas-stroke notes below hold for that glyph alone.
+  a face whose outlines the previewer cannot read, so the Skia and canvas-stroke notes below hold
+  for that face alone (ADR-0077).
 - Amended for embolden: an embolden over the bundled font draws on painter B at every value, with
   the bundled font's baked advances and its emboldened outlines (`BundledCanvasRun.tsx`). Godot
   has no MSDF cutoff: its default font is not MSDF (`text_server.cpp:2386`), so FreeType grows

@@ -102,6 +102,21 @@ OwnCanvasModulateContext.displayName = 'OwnCanvasModulateContext';
 export const OwnCanvasModulateProvider = OwnCanvasModulateContext.Provider;
 
 /**
+ * Written around one Control's painter by its group: its sRGB own-pixel product
+ * (`OwnPixelTint.own`). A colour glyph takes it in place of the font colour, which Godot drops
+ * for one (`text_server_adv.cpp:4044-4046`). White outside a Control.
+ */
+const OwnModulateContext = createContext<Rgba>(WHITE_MODULATE);
+OwnModulateContext.displayName = 'OwnModulateContext';
+
+export const OwnModulateProvider = OwnModulateContext.Provider;
+
+/** The sRGB own-pixel product of the Control that draws, white outside one. */
+export function useOwnModulate(): Rgba {
+  return useContext(OwnModulateContext);
+}
+
+/**
  * The linear colour the item's own pixels draw an sRGB colour `c` with: `c` composed from the
  * tint's `own`, converted, times the canvas modulate of a linear canvas. Memoised on the values.
  *
