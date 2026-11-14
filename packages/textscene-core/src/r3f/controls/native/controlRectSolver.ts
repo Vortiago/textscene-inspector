@@ -131,7 +131,7 @@ function floorAtMinimumSize(
  * only the parent's width appears. It runs after the floor: the height arm between
  * them (`:1775-1797`) touches neither `x` nor `w`.
  */
-function mirrorRectRtl(rect: Rect2, parentWidth: number): Rect2 {
+export function mirrorRectRtl(rect: Rect2, parentWidth: number): Rect2 {
   return { ...rect, x: mirrorX(rect.x, rect.w, parentWidth) };
 }
 

@@ -40,7 +40,13 @@ import {
 import { GraphEditMinimapChrome } from './MinimapChrome';
 import { minimapConnectionsOf } from './minimapConnections';
 import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
-import { graphEditConstructorScrollBars, graphEditScrollBars, hasUpdatedScrollBars } from './scrollBars';
+import {
+  graphEditConstructorScrollBars,
+  graphEditScrollBars,
+  hasUpdatedScrollBars,
+  mirroredScrollBars,
+} from './scrollBars';
+import { mirrorRectRtl } from '../../../../r3f/controls/native/controlRectSolver';
 import { ScrollBarChrome } from '../shared/ScrollChrome';
 import type { GraphEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
@@ -184,11 +190,14 @@ export function GraphEdit({
   });
   const bounds = hasUpdatedBars ? elements.bounds : CONSTRUCTOR_SCROLL_BOUNDS;
   const scrollBarBoxes = internalScrollBarBoxes(solveNode);
-  const scrollBars = hasUpdatedBars
+  const ltrScrollBars = hasUpdatedBars
     ? graphEditScrollBars(graphEditSize, bounds, scrollOffset, scrollBarBoxes)
     : graphEditConstructorScrollBars(graphEditSize, scrollBarBoxes);
+  // `top_layer`'s anchored children mirror in a right-to-left layout (`control.cpp:1785-1787`).
+  const scrollBars = solveNode.rtl ? mirroredScrollBars(ltrScrollBars, graphEditSize.x) : ltrScrollBars;
   const topLayer = graphEditTopLayerSlots(chromeSlot);
-  const minimapPanelRect = minimapRect(graphEditSize, props);
+  const ltrMinimapRect = minimapRect(graphEditSize, props);
+  const minimapPanelRect = solveNode.rtl ? mirrorRectRtl(ltrMinimapRect, graphEditSize.x) : ltrMinimapRect;
   const minimapXform = minimapTransform({ x: minimapPanelRect.w, y: minimapPanelRect.h }, bounds);
 
   // The constructor calls `set_clip_contents(true)` (`graph_edit.cpp:3342`), so every GraphEdit

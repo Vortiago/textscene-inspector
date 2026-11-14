@@ -5,7 +5,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import { defaultScrollBarBoxes } from '../shared/testing/scrollBarBoxes';
-import { graphEditConstructorScrollBars, graphEditScrollBars, hasUpdatedScrollBars } from './scrollBars';
+import {
+  graphEditConstructorScrollBars,
+  graphEditScrollBars,
+  hasUpdatedScrollBars,
+  mirroredScrollBars,
+} from './scrollBars';
 
 const boxes = defaultScrollBarBoxes(1);
 // One 120x64 GraphNode at (40, 56), zoom 1, in a 400x320 GraphEdit: the same
@@ -104,5 +109,20 @@ describe('graphEditConstructorScrollBars (graph_edit.cpp:3218-3222, :841-852)', 
     // The grabber is the 8 px minimum: area = 500 - 8 = 492, offset = 492 / 2 = 246.
     expect(bars.horizontal.grabberRect).toEqual({ x: 246, y: 0, w: 8, h: 8 });
     expect(bars.vertical.grabberRect).toEqual({ x: 0, y: 136, w: 8, h: 8 });
+  });
+});
+
+describe('mirroredScrollBars (control.cpp:1785-1787)', () => {
+  const bars = mirroredScrollBars(graphEditScrollBars(size, bounds, { x: 0, y: 0 }, boxes), size.x);
+
+  it('puts the vertical bar on the left edge and starts the horizontal bar after it', () => {
+    expect(bars.vertical.rect).toEqual({ x: 0, y: 0, w: 8, h: 312 });
+    expect(bars.horizontal.rect).toEqual({ x: 8, y: 312, w: 392, h: 8 });
+  });
+
+  it('keeps each grabber where it is inside its bar: scroll_bar.cpp never reads the direction', () => {
+    const ltr = graphEditScrollBars(size, bounds, { x: 0, y: 0 }, boxes);
+    expect(bars.horizontal.grabberRect).toEqual(ltr.horizontal.grabberRect);
+    expect(bars.vertical.grabberRect).toEqual(ltr.vertical.grabberRect);
   });
 });
