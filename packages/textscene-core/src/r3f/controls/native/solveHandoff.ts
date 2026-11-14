@@ -1,9 +1,11 @@
 /**
  * What a Control's solver hands its painter. A computation that reads only the
- * node and the theme is a share ({@link defineShare}) that both call. Solve
+ * node and the theme is a share ({@link defineShare}) that both call, and one that
+ * also reads the node's size is a rect share ({@link defineRectShare}). Solve
  * output is a channel ({@link defineChannel}) the solver seals and the painter
- * opens. `solveHandoffConformance.test.ts` guards both.
+ * opens. `solveHandoffConformance.test.ts` guards all three.
  */
+import type { Vector2 } from '../../../godot/math/vector';
 import type { NativeTheme } from './nativeTheme';
 import type { ShareNode } from './solveTree';
 
@@ -49,6 +51,46 @@ export function defineShare<T>(compute: Share<T>): Share<T> {
     if (hit) return hit.value;
     const value = compute(n, theme);
     byTheme.set(theme, { value });
+    return value;
+  };
+}
+
+/** One layout of a node at a size, called by a slice's solver and by its painter. */
+export type RectShare<T> = (n: ShareNode, size: Vector2, theme: NativeTheme) => T;
+
+interface SizedEntry<T> extends Memoised<T> {
+  readonly size: Vector2;
+}
+
+/**
+ * The sizes a rect share keeps for one node and theme: the tentative size of the second solve
+ * pass and the final rect, which the painter asks for too.
+ */
+const RECT_SHARE_SIZES = 2;
+
+/**
+ * Declares a rect share: `compute` runs at most once per `(node, theme, size)` while the size is
+ * one of the last {@link RECT_SHARE_SIZES} asked for that node and theme. It gets no `SolveContext`,
+ * for the reason {@link Share} gives.
+ */
+export function defineRectShare<T>(compute: RectShare<T>): RectShare<T> {
+  const byNode = new WeakMap<ShareNode, WeakMap<NativeTheme, SizedEntry<T>[]>>();
+  return (n, size, theme) => {
+    let byTheme = byNode.get(n);
+    if (!byTheme) {
+      byTheme = new WeakMap<NativeTheme, SizedEntry<T>[]>();
+      byNode.set(n, byTheme);
+    }
+    let entries = byTheme.get(theme);
+    if (!entries) {
+      entries = [];
+      byTheme.set(theme, entries);
+    }
+    const hit = entries.find((entry) => entry.size.x === size.x && entry.size.y === size.y);
+    if (hit) return hit.value;
+    const value = compute(n, size, theme);
+    entries.push({ size: { x: size.x, y: size.y }, value });
+    if (entries.length > RECT_SHARE_SIZES) entries.shift();
     return value;
   };
 }
