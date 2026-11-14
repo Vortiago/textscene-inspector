@@ -2,7 +2,7 @@
  * The body a Node2D mesh drawer draws through: the CanvasItem ritual of `CanvasItem2D`, the
  * texture's load state, the placeholder, the lighting hand-back and one material for each surface.
  * A drawer states its texture (`useCanvasMeshTexture`) and its surfaces, and nothing else.
- * CPUParticles2D, the tile mesh and CanvasGroup still draw their own (#1546).
+ * CPUParticles2D, the tile mesh and CanvasGroup still draw their own.
  */
 
 import { useMemo, type ReactNode } from 'react';
