@@ -19,6 +19,12 @@ describe('the shader head', () => {
     expect(() => treeOf('shader_type sky\nvoid sky() {}')).toThrow("Expected a ';' after 'shader_type sky'.");
   });
 
+  it("names the line of the type in a head with no ';', as Godot does", () => {
+    expect(() => treeOf('shader_type sky\nvoid sky() {}')).toThrow(
+      expect.objectContaining({ position: expect.objectContaining({ line: 1 }) })
+    );
+  });
+
   it("reads a built-in of the type's stage function as a variable that names its row", () => {
     const [sky] = treeOf('shader_type sky;\nvoid sky() {\n\tCOLOR = vec3(0.0);\n}').functions;
     const [assignment] = sky!.body.statements;

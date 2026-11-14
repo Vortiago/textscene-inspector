@@ -126,8 +126,10 @@ class ShaderParser implements ExpressionScope {
         `Expected an identifier after 'shader_type', indicating the type of shader. ${valid}.`
       );
     if (!SHADER_TYPES.includes(name.text!)) this.tokens.fail(`Invalid shader type. ${valid}`);
-    if (this.tokens.next().type !== 'TK_SEMICOLON')
+    // Peeked, not read: Godot names the line of the type, not of the token after it.
+    if (this.tokens.peek().type !== 'TK_SEMICOLON')
       this.tokens.fail(`Expected a ';' after 'shader_type ${name.text}'.`);
+    this.tokens.next();
     return name.text;
   }
 
