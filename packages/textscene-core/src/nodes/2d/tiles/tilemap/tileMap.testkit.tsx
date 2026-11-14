@@ -1,26 +1,27 @@
 /**
  * Test fixtures for a TileMap mounted through the dispatcher, as the preview mounts it: a root
- * Node2D holds the TileMap, whose atlas draws a 32 px texture, then a sibling polygon after it. The
+ * Node2D holds the TileMap, whose atlas draws the seeded atlas texture, then a sibling polygon after it. The
  * TileMap holds one authored polygon child.
  */
 import * as THREE from 'three';
-import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { createSceneGraphFromTscnScene } from '../../../../core/SceneGraph.testkit';
 import { TscnParser } from '../../../../parser/TscnParser';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
-import { DispatchedScene } from '../../../../r3f/testing/DispatchedScene';
-import { settleLoads } from '../../../../r3f/testing/settleLoads';
-import {
-  CanvasLighting2DContext,
-  INERT_CANVAS_LIGHTING,
-  type CanvasLighting2D,
-} from '../../../../r3f/lighting2d/lightPassContext';
+import { renderDispatched2D } from '../../../../r3f/testing/DispatchedScene';
+import { firstMeshUnder } from '../../../../r3f/testing/paintOrder';
+import { seedAtlasTexture } from '../../../../r3f/testing/seedAtlasTexture';
+import { INERT_CANVAS_LIGHTING, type CanvasLighting2D } from '../../../../r3f/lighting2d/lightPassContext';
 import '../../../../r3f/nodes/index';
 
 const TEXTURE = 'res://tiles.png';
 
 /** A 4 px polygon on light mask 2, so a test tells its lit item from a layer's on mask 1. */
 const POLYGON = 'polygon = PackedVector2Array(0, 0, 4, 0, 4, 4, 0, 4)\nlight_mask = 2';
+
+/** `lines` below the line that gives the TileMap the scene's tile set. */
+export function withTileSet(...lines: string[]): string {
+  return ['tile_set = SubResource("ts")', ...lines].join('\n');
+}
 
 /** The light mask of every tile layer: the TileMap's default. */
 export const LAYER_LIGHT_MASK = 1;
@@ -59,22 +60,9 @@ export async function renderTileMap(
   lighting: CanvasLighting2D = INERT_CANVAS_LIGHTING
 ) {
   const fake = createFakeResourceLoader();
-  const texture = new THREE.Texture();
-  (texture as unknown as { image: { width: number; height: number } }).image = { width: 32, height: 32 };
-  fake.textures.seed(TEXTURE, texture);
+  seedAtlasTexture(fake);
   const scene = new TscnParser().parse(tileMapScene(tileMapLines));
-  const renderer = await ReactThreeTestRenderer.create(
-    <DispatchedScene
-      sceneGraph={createSceneGraphFromTscnScene(scene)}
-      loader={fake.loader}
-      workspace="2d"
-      around={(nodes) => (
-        <CanvasLighting2DContext.Provider value={lighting}>{nodes}</CanvasLighting2DContext.Provider>
-      )}
-    />
-  );
-  await settleLoads();
-  return renderer;
+  return renderDispatched2D(createSceneGraphFromTscnScene(scene), fake.loader, lighting);
 }
 
 type Renderer = Awaited<ReturnType<typeof renderTileMap>>;
@@ -92,13 +80,7 @@ export function tileMeshes(renderer: Renderer): THREE.Mesh[] {
 
 /** The authored child's mesh, then the sibling's. */
 export function polygonMeshes(renderer: Renderer): THREE.Mesh[] {
-  return ['Child', 'After'].map((name) => {
-    const group = renderer.scene.findByProps({ name }).instance as THREE.Object3D;
-    let found: THREE.Mesh | undefined;
-    group.traverse((object) => {
-      if (!found && (object as THREE.Mesh).isMesh) found = object as THREE.Mesh;
-    });
-    if (!found) throw new Error(`expected a mesh under ${name}, got none`);
-    return found;
-  });
+  return ['Child', 'After'].map(
+    (name) => firstMeshUnder(renderer.scene.findByProps({ name }).instance as THREE.Object3D) as THREE.Mesh
+  );
 }

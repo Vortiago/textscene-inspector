@@ -30,7 +30,7 @@ import {
 } from '../../canvasItemPass/inheritedCanvasState';
 import type { InheritedCanvasItemState } from '../../canvasItemPass/canvasItemPass';
 import type { CanvasItemPaint } from '../../canvasItemPass/canvasItemPaint';
-import { ysortsChildren } from '../../canvasPaintOrder';
+import { ysortsChildren, type PaintRange } from '../../canvasPaintOrder';
 import { joinPath } from '../../../utils/nodePath';
 import { controlSolverRegistry, type TextMeasurer } from './solverRegistry';
 import { isCanvasLayerType } from '../../canvasItemClass';
@@ -205,11 +205,12 @@ function usePieceSlots(
   solveNode: SolveNode,
   solved: SolvedControl | undefined,
   live: string,
-  state: Pick<CanvasItemState, 'keyAt'>
+  runs: ReadonlyMap<string, PaintRange>,
+  keyAt: CanvasItemState['keyAt']
 ): ReadonlyMap<string, CanvasSlot> {
-  const { keyAt } = state;
-  const { runs } = useSortedRunsAndPaints();
-  const piecesOf = controlSolverRegistry.internalBackPieces(solveNode.node.type);
+  const piecesOf = ysortsChildren(solveNode.node)
+    ? controlSolverRegistry.internalBackPieces(solveNode.node.type)
+    : undefined;
   return useMemo(() => {
     if (!piecesOf || !solved) return NO_PIECE_SLOTS;
     const slots = new Map<string, CanvasSlot>();
@@ -263,7 +264,7 @@ function ControlItemGroup({
   const backKey = state.keyAt(paint.back.base);
   const { slot, chromeSlot } = useMemo(() => ownAndBackSlots(renderOrder, backKey), [renderOrder, backKey]);
   const solvedEntry = solved.get(solveNode.path);
-  const pieceSlots = usePieceSlots(solveNode, solvedEntry, live, state);
+  const pieceSlots = usePieceSlots(solveNode, solvedEntry, live, sort.runs, state.keyAt);
   const layerKey = state.keyAt(paint.layer);
   const layerSlot = useMemo(() => wholeKeySlot(layerKey), [layerKey]);
   // `is_visible_in_tree()` is `visible && parent_visible_in_tree` (`canvas_item.cpp:62-64`).

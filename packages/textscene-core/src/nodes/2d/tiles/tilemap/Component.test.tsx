@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { INERT_CANVAS_LIGHTING } from '../../../../r3f/lighting2d/lightPassContext';
 import type { CappedItem } from '../../../../r3f/lighting2d/itemLightCap';
-import { LAYER_LIGHT_MASK, polygonMeshes, renderTileMap, tileMeshes } from './tileMap.testkit';
+import { LAYER_LIGHT_MASK, polygonMeshes, renderTileMap, tileMeshes, withTileSet } from './tileMap.testkit';
 
 describe('<TileMap>', () => {
   it('mounts the TileMap with its authored child', async () => {
-    const renderer = await renderTileMap('tile_set = SubResource("ts")');
+    const renderer = await renderTileMap(withTileSet());
     expect(renderer.scene.findByProps({ name: 'Map' })).toBeDefined();
     expect(polygonMeshes(renderer)).toHaveLength(2);
   });
@@ -29,11 +29,10 @@ describe('TileMap degradation (ADR-0008)', () => {
     // Not a whole number of int32 triplets, so decodeLegacyTileData returns
     // null and the layer is skipped, with no partial geometry.
     const renderer = await renderTileMap(
-      [
-        'tile_set = SubResource("ts")',
+      withTileSet(
         'layer_0/tile_data = PackedInt32Array(0, 0, 0)',
-        'layer_1/tile_data = PackedInt32Array(1, 0)',
-      ].join('\n')
+        'layer_1/tile_data = PackedInt32Array(1, 0)'
+      )
     );
     expect(tileMeshes(renderer)).toHaveLength(1);
   });
@@ -41,7 +40,7 @@ describe('TileMap degradation (ADR-0008)', () => {
   /** Renders `lines` with a lighting pass that spies on the capped items the layers declare. */
   async function renderLit(lines: string[]) {
     const registerCappedItem = vi.fn((_item: CappedItem) => () => {});
-    await renderTileMap(['tile_set = SubResource("ts")', ...lines].join('\n'), {
+    await renderTileMap(withTileSet(...lines), {
       ...INERT_CANVAS_LIGHTING,
       registerCappedItem,
     });

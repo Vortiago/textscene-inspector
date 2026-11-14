@@ -18,8 +18,7 @@ import type { ItemPlacement, LitItemRead } from '../lighting2d/itemLightList';
 import type { TscnInternalResource, TscnNode } from '../../parser/types';
 import { subResource } from '../../testing/subResource';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
-import { DispatchedScene } from './DispatchedScene';
-import { settleLoads } from './settleLoads';
+import { renderDispatched2D } from './DispatchedScene';
 import '../nodes/index';
 
 /** `SubResource("CanvasTexture_1")`, the CanvasTexture `canvasTexture` builds. */
@@ -85,17 +84,7 @@ export async function renderLitScene(node: TscnNode, resources: readonly TscnInt
     nodes: [node],
     internalResources: [...FLAT_GREY, ...resources],
   });
-  const renderer = await ReactThreeTestRenderer.create(
-    <DispatchedScene
-      sceneGraph={sceneGraph}
-      loader={createFakeResourceLoader().loader}
-      workspace="2d"
-      around={(nodes) => (
-        <CanvasLighting2DContext.Provider value={lighting}>{nodes}</CanvasLighting2DContext.Provider>
-      )}
-    />
-  );
-  await settleLoads();
+  const renderer = await renderDispatched2D(sceneGraph, createFakeResourceLoader().loader, lighting);
   return { renderer, registerItem, ...onlyMeshOf(renderer) };
 }
 

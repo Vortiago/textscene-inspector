@@ -1,8 +1,8 @@
 /**
  * Where a drawn node's pixels and subtree sit in its canvas's draw sequence. A node of the shared
  * live tree reads the paint pass by live path (`canvasItemPaint.ts`). An extra of the sort, such
- * as a row of a y-sorted tile layer, reads the run the sort of the pass gave its id. A subtree with no shared live tree, which only
- * a component test mounts, reads the paint the installed `DetachedPaint` gives.
+ * as a row of a y-sorted tile layer, reads the run the sort of the pass gave its id. A subtree with
+ * no shared live tree, which only a component test mounts, reads the installed `DetachedPaint`.
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
@@ -17,8 +17,8 @@ import { requireDetachedPaint } from './detachedPaintSlot';
 /**
  * How a subtree finds its paint. `tree`: each node reads the pass at its live path, moved by the
  * y-sort of its canvas (`YSortContext`). `extra`: a piece the sort places by id, such as a tile
- * row, which draws one value, the first of `range`. `detached`: the subtree has no shared live tree, and its root owns
- * `range`, where the roots of `canvasRoots` take theirs.
+ * row, which draws one value, the first of `range`. `detached`: the subtree has no shared live
+ * tree, and its root owns `range`, where the roots of `canvasRoots` take theirs.
  */
 export type PaintFrame =
   | { readonly kind: 'tree' }

@@ -6,9 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { isInZBucket, nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
-import { polygonMeshes, renderTileMap, tileMeshes } from './tileMap.testkit';
-
-const withTileSet = (...lines: string[]) => ['tile_set = SubResource("ts")', ...lines].join('\n');
+import { polygonMeshes, renderTileMap, tileMeshes, withTileSet } from './tileMap.testkit';
 
 describe('TileMap render parity', () => {
   it('renders enabled layers in order with the layer z rule; disabled layers are skipped', async () => {
@@ -21,8 +19,9 @@ describe('TileMap render parity', () => {
         'layer_2/tile_data = PackedInt32Array(2, 0, 0)'
       )
     );
-    const [layer0, layer1] = tileMeshes(renderer).map(nearestGroupOrder);
-    expect(tileMeshes(renderer)).toHaveLength(2);
+    const tiles = tileMeshes(renderer);
+    expect(tiles).toHaveLength(2);
+    const [layer0, layer1] = tiles.map(nearestGroupOrder);
     expect(layer0).toBeLessThan(layer1!);
     expect(isInZBucket(layer0!, 0)).toBe(true);
     expect(isInZBucket(layer1!, 1)).toBe(true);
