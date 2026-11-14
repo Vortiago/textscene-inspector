@@ -47,16 +47,11 @@ export function WindowTitle({ solveNode, width, border, closeHOffset, slot }: Wi
 
   const layout = useMemo(() => {
     if (space <= 0) return null;
-    const isRtl = solveNode.rtl;
     return trimSoloLine(
-      shapeTitle(props.title, { fontSizePx, fontMetrics, isRtl }),
+      shapeTitle(props.title, { fontSizePx, fontMetrics, isRtl: solveNode.rtl }),
       TEXT_LINE_DEFAULT_OVERRUN,
       space,
-      {
-        fontMetrics,
-        fontSizePx,
-        isDrawnRtl: isRtl,
-      }
+      { fontMetrics, fontSizePx }
     );
   }, [props.title, fontSizePx, fontMetrics, space, solveNode.rtl]);
 

@@ -8,7 +8,14 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
+import {
+  filledPlacement,
+  inferredPlacement,
+  isTextWidthClipped,
+  trimLine,
+  type OverrunTrimFlags,
+  type OverrunTrimOptions,
+} from '../../../../r3f/controls/native/text/textOverrun';
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { defineShare } from '../../../../r3f/controls/native/solveHandoff';
 import {
@@ -466,12 +473,11 @@ interface LabelLayoutOptions extends Partial<LabelSpacing> {
   trim?: LineTrim;
 }
 
-/** The two overrun trims of `_shape` with autowrap off (`label.cpp:319-330`). */
+/** The overrun trim of `_shape` with autowrap off (`label.cpp:319-330`): its width, behaviour and ellipsis. */
 export interface LineTrim {
-  /** Trims a line that FILL did not fit first. */
-  line: (line: TextLineLayout) => TextLineLayout;
-  /** Trims a line FILL fitted, then fits it again with `justificationFlags` (`label.cpp:325`). */
-  filledLine: (line: TextLineLayout, justificationFlags: number) => TextLineLayout;
+  widthPx: number;
+  flags: OverrunTrimFlags;
+  options: OverrunTrimOptions;
 }
 
 /**
@@ -550,8 +556,13 @@ export function layoutLabelLines(
   const lines = trim
     ? fitted.map((line, index) => {
         const shaped = layout.lines[index]!;
-        if (!isTrimJustificationAware || line === shaped) return trim.line(line);
-        return isFitAboveMinimum(line, shapingWidthPx) ? line : trim.filledLine(line, justificationFlags);
+        const { widthPx, flags, options } = trim;
+        if (!isTrimJustificationAware || line === shaped) {
+          return trimLine(line, widthPx, flags, options, inferredPlacement);
+        }
+        if (isFitAboveMinimum(line, shapingWidthPx)) return line;
+        // `label.cpp:325`: a line FILL fitted is trimmed, then fitted again.
+        return trimLine(line, widthPx, flags, options, filledPlacement(justificationFlags));
       })
     : fitted;
 

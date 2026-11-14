@@ -14,8 +14,6 @@ import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { NO_UNDERLINE_PX } from '../../../../r3f/controls/native/text/paragraphUnderline';
-import { isDrawnRtl } from '../../../../r3f/controls/native/text/textBidiOptions';
-import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { overrunFlagsForBehavior, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
 import {
@@ -52,16 +50,14 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
   // link_button.cpp:286-289: `text_buf->set_width(MAX(1, size.width))` for any `overrun_behavior` but
   // NO_TRIMMING, at the control's own rect, with no style margin.
   const overrunFlags = useMemo(() => overrunFlagsForBehavior(props.overrunBehavior), [props.overrunBehavior]);
-  const isLineDrawnRtl = isDrawnRtl(useControlBidiOptions(props, solveNode));
   const layout: TextLayoutResult | null = useMemo(() => {
     if (!unshapedLayout) return null;
     return trimSoloLine(unshapedLayout, overrunFlags, Math.max(1, rect.w), {
       fontMetrics,
       fontSizePx,
       ellipsisChar: props.ellipsisChar,
-      isDrawnRtl: isLineDrawnRtl,
     });
-  }, [unshapedLayout, overrunFlags, rect.w, fontMetrics, fontSizePx, props.ellipsisChar, isLineDrawnRtl]);
+  }, [unshapedLayout, overrunFlags, rect.w, fontMetrics, fontSizePx, props.ellipsisChar]);
 
   // `link_button.cpp:289-303`: the paragraph origin, which RTL moves to the far edge. The underline
   // starts from the same x.

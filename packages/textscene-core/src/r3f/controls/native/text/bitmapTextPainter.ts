@@ -15,7 +15,7 @@ import * as THREE from 'three';
 import type { FillSheet } from '../../../../resources/fonts/font/types';
 import type { BitmapFontMetrics } from './bitmapFontMetrics';
 import type { CanvasTextPaintOptions } from './canvasTextPainter';
-import { drawsGlyphRect, GLYPH_DRAWER_RULES, type GlyphDrawer } from './glyphDrawer';
+import { drawsGlyphRect, snapsPen, type GlyphDrawer } from './glyphDrawer';
 import type { GlyphPlacement, TextLayoutResult } from './textLayout';
 import { VECTOR2_ZERO } from '../../../../godot/math/vector';
 
@@ -61,21 +61,8 @@ function inkedGlyph(
 }
 
 /**
- * Whether a BMFont glyph at `fontSizePx` floors its pen and baseline at their canvas position. A canvas
- * item floors at scale 1.0 (`text_server_adv.cpp:4082-4084`), and truncates the size to an integer
- * first, so a fractional size at the fixed size floors too. A Label3D mesh floors neither (`glyphDrawer.ts`).
- */
-export function bitmapFloorsPen(
-  glyphDrawer: GlyphDrawer,
-  fontSizePx: number,
-  metrics: Pick<BitmapFontMetrics, 'pxPerUnit'>
-): boolean {
-  return GLYPH_DRAWER_RULES[glyphDrawer].roundsPen && metrics.pxPerUnit(fontSizePx) === 1;
-}
-
-/**
  * The quads of `layout`, drawn at `fontSizePx` over `sheet`: the glyph sheet, or the outline sheet
- * for an outline pass. When `bitmapFloorsPen`, its pen and baseline floor at their canvas
+ * for an outline pass. When `snapsPen`, its pen and baseline floor at their canvas
  * position, `originPhasePx` past the run's whole item pixel (`originPhase`).
  * A BMFont adds no subpixel shift: `FontFile::reset_state` sets
  * `SUBPIXEL_POSITIONING_DISABLED` (`font.cpp:1433`) and `_load_bitmap_font` starts with it.
@@ -97,7 +84,7 @@ export function buildBitmapQuads(
   const uvs = new Float32Array(inked.length * 4 * 2);
   const indices = new Uint32Array(inked.length * 6);
   const scale = metrics.pxPerUnit(fontSizePx);
-  const floorsPen = bitmapFloorsPen(glyphDrawer, fontSizePx, metrics);
+  const floorsPen = snapsPen(glyphDrawer, fontSizePx, metrics);
   const sheetWidthInverse = 1 / sheet.width;
   const sheetHeightInverse = 1 / sheet.height;
 

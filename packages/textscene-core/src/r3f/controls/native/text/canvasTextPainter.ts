@@ -7,13 +7,7 @@
 import * as THREE from 'three';
 import { maxEmboldenGrowthPx } from './canvasVariation';
 import type { ByteColour } from './glyphCoverage';
-import {
-  canvasGlyphPenXPx,
-  faceStrikeSize,
-  fontIsScaled,
-  subpixelHalfStepPx,
-  type FontMetrics,
-} from './fontMetrics';
+import { canvasGlyphPenXPx, faceStrikeSize, subpixelHalfStepPx, type FontMetrics } from './fontMetrics';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics, type CanvasFontMetrics } from './runtimeFontMetrics';
 import { hasOwnGlyph, type GlyphPainter, type PlacedGlyph, type RasterFrame } from './glyphPainter';
@@ -28,7 +22,7 @@ import { passBlendMaterialProps, type SurfaceBlend } from '../../../materials/su
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
 import type { SurfaceShading } from '../../../materialFor2d';
 import type { Rgba } from '../../../../godot/math/math';
-import { GLYPH_DRAWER_RULES, drawsGlyphRect, type GlyphDrawer } from './glyphDrawer';
+import { GLYPH_DRAWER_RULES, drawsGlyphRect, snapsPen, type GlyphDrawer } from './glyphDrawer';
 import { fposmodp } from '../../../../godot/math/math';
 import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
 import type { Rect2 } from '../../../../godot/math/rect2';
@@ -150,19 +144,6 @@ export function buildCanvasTextQuadArrays(
 }
 
 /**
- * Whether a run places its glyphs as a canvas item draws a glyph at scale 1: the pen on its subpixel
- * step and the baseline floored (`text_server_adv.cpp:4082-4084`). A scaled face (`fontIsScaled`)
- * draws off that branch, as Label3D's mesh does.
- */
-export function snapsGlyphsToItemPixels(
-  glyphDrawer: GlyphDrawer,
-  fontSizePx: number,
-  metrics: Pick<FontMetrics, 'pxPerUnit' | 'outlines'>
-): boolean {
-  return GLYPH_DRAWER_RULES[glyphDrawer].roundsPen && !fontIsScaled(fontSizePx, metrics);
-}
-
-/**
  * How far a canvas item moves the pen of a face drawn off its strike's width, which it does not
  * floor: the half step alone (`text_server_adv.cpp:4074-4079`). Label3D adds no step.
  */
@@ -274,7 +255,7 @@ function rasterFrame(
     fontSizePx,
     skew,
     canvasLayout,
-    snapsGlyphs: snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, metrics),
+    snapsGlyphs: snapsPen(glyphDrawer, fontSizePx, metrics),
     roundsPen: GLYPH_DRAWER_RULES[glyphDrawer].roundsPen,
     strokeWidthPx,
   };

@@ -15,11 +15,7 @@ import {
   soloLineLayout,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import {
-  overrunFlagsForBehavior,
-  trimFilledLineToWidth,
-  trimLineToWidth,
-} from '../../../../r3f/controls/native/text/textOverrun';
+import { overrunFlagsForBehavior } from '../../../../r3f/controls/native/text/textOverrun';
 import { OutlineRingRun, textLayerRenderOrder } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { TextRun, type TextRunProps } from '../../../../r3f/controls/native/text/TextRun';
@@ -187,11 +183,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     if (autowrapMode !== AutowrapMode.AUTOWRAP_OFF || !overrunFlags.trim) return undefined;
     const widthPx = labelShapingWidthPx(rect.w, contentMargin);
     const options = { fontMetrics, fontSizePx: textTheme.fontSizePx, ellipsisChar: props.ellipsisChar };
-    return {
-      line: (line) => trimLineToWidth(line, widthPx, overrunFlags, options),
-      filledLine: (line, justificationFlags) =>
-        trimFilledLineToWidth(line, widthPx, overrunFlags, { ...options, justificationFlags }),
-    };
+    return { widthPx, flags: overrunFlags, options };
   }, [
     autowrapMode,
     overrunFlags,
