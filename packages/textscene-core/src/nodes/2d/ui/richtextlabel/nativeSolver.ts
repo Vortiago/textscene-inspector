@@ -47,6 +47,7 @@ import {
   getFontAscentPx,
   getFontDescentPx,
   getFontTabStopsPx,
+  withVariation,
   type FontMetrics,
 } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -276,31 +277,32 @@ interface ResolvedImageRun {
  */
 const imageObjectFontMetrics = perObject(wrapForImageObject);
 
-/** One wrapper per face, so `shapeText` sees the same face on every call and its memo keeps hits. */
+/**
+ * One wrapper per face, so `shapeText` sees the same face on every call and its memo keeps hits. An
+ * image has no outline, so it draws in the face with its outlines and no variation: no embolden,
+ * skew or instance advance replaces the image width.
+ */
 function wrapForImageObject(base: FontMetrics): FontMetrics {
   // A fractional width skips the whole-pixel round, and the size change at each
   // edge resets the remainder and kerning, as a separate shaped run would.
-  // `Object.create` keeps the rest of the face live. An image has no outline, so no embolden, skew
-  // or variable-font instance, whose advance would replace the image width.
-  return Object.create(base, {
-    embolden: { value: 0 },
-    skew: { value: 0 },
+  // `Object.create` keeps the rest of the face live.
+  const plain = withVariation(base, {});
+  return Object.create(plain, {
     hasGlyph: {
       value(ch: string): boolean {
-        return ch === IMAGE_OBJECT_CHAR || base.hasGlyph(ch);
+        return ch === IMAGE_OBJECT_CHAR || plain.hasGlyph(ch);
       },
     },
-    opentype: { value: undefined },
     getGlyphAdvanceUnits: {
       value(ch: string): number | null {
-        if (ch === IMAGE_OBJECT_CHAR) return base.unitsPerEm;
-        return base.getGlyphAdvanceUnits(ch);
+        if (ch === IMAGE_OBJECT_CHAR) return plain.unitsPerEm;
+        return plain.getGlyphAdvanceUnits(ch);
       },
     },
     getKerningAdjustmentUnits: {
       value(a: string, b: string): number {
         if (a === IMAGE_OBJECT_CHAR || b === IMAGE_OBJECT_CHAR) return 0;
-        return base.getKerningAdjustmentUnits(a, b);
+        return plain.getKerningAdjustmentUnits(a, b);
       },
     },
   });
@@ -752,14 +754,13 @@ export interface RichTextRunPlacement {
  * Keeps the parent's `linePitchPx` (`soloLineLayout`) and takes the face of the run's first glyph,
  * since `TextRun` picks the painter, and the shear, from `layout.fontMetrics`. `baselineOffsetPx` is
  * the line's ascent, applied once per line (`rich_text_label.cpp:1055`'s `off.y += l_ascent`),
- * so mixed sizes share it. `heightPx` is the line's own height: a canvas raster of the parent's
- * pitch would cut off the top of a run beside a larger one.
+ * so mixed sizes share it, and `soloLineLayout` grows the raster from it to the deepest descent of
+ * the run's faces.
  */
 function soloRunLayout(
   segment: RunLineSegment,
   parentLayout: TextLayoutResult,
-  lineAscentPx: number,
-  lineHeightPx: number
+  lineAscentPx: number
 ): TextLayoutResult {
   const { text, glyphs } = segment;
   // The right edge from the line origin, not the run's own span: the glyphs keep their line-relative
@@ -771,8 +772,7 @@ function soloRunLayout(
     parentLayout,
     lineAscentPx,
     // A segment holds a glyph at least. `faceLayouts` splits off a glyph of another face.
-    glyphs[0]!.fontMetrics,
-    Math.max(parentLayout.linePitchPx, lineHeightPx)
+    glyphs[0]!.fontMetrics
   );
 }
 
@@ -1206,7 +1206,7 @@ export function layoutRichTextRuns(
         color: run.color,
         outline: run.outline,
         fontSizePx: run.fontSizePx,
-        layout: soloRunLayout(segment, layout, ascentPx, ascentPx + descentPx),
+        layout: soloRunLayout(segment, layout, ascentPx),
         image: run.image
           ? {
               spec: run.image.spec,

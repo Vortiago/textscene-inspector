@@ -1,21 +1,19 @@
 /** The order of one flat y-sort. */
 
 import { isEqualApprox } from '../godot/math/math.js';
-import type { YSortItem } from './ySortItems.js';
 
 /**
  * `ItemYSort` (`renderer_canvas_cull.h:115-123`) for two sort ys: negative when `a` draws first, and
  * zero when they are equal within `is_equal_approx`, where the caller keeps the collection order.
  */
-export function compareSortY(a: number, b: number): number {
+function compareSortY(a: number, b: number): number {
   return isEqualApprox(a, b) ? 0 : a - b;
 }
 
 /**
- * Godot's order for one flat sort: the z bucket, then the sort y, and items whose y is equal
- * within `is_equal_approx` keep their collection order (`renderer_canvas_cull.h:115-123`).
+ * `items` in the order a sort draws them. `Array.prototype.sort` is stable, so equal ys keep
+ * collection order, as `ysort_index` breaks a tie in Godot's unstable `SortArray`.
  */
-export function compareYSortItems(a: YSortItem, b: YSortItem): number {
-  if (a.effectiveZ !== b.effectiveZ) return a.effectiveZ - b.effectiveZ;
-  return compareSortY(a.sortY, b.sortY);
+export function inSortOrder<T>(items: readonly T[], sortYOf: (item: T) => number): T[] {
+  return [...items].sort((a, b) => compareSortY(sortYOf(a), sortYOf(b)));
 }

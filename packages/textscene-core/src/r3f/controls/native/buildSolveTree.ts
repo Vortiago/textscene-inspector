@@ -61,7 +61,6 @@ import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useLayoutDirectionEnv } from '../../contexts/useLayoutDirectionEnv';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import {
-  isInjected,
   liveTreeOf,
   type CachedSceneSource,
   type LiveTreeContext,
@@ -98,20 +97,8 @@ import {
   type ThemedIconRef,
 } from './solveTree';
 import { liveScenePassResults } from '../../liveScenePass';
-import {
-  allocatePaintRange,
-  behindRangesOf,
-  ysortsChildren,
-  drawsEveryChildFirst,
-  canvasRootRanges,
-  internalBackRoom,
-  listedChildOrder,
-  internalFrontRoom,
-  isTopLevelItem,
-  WHOLE_CANVAS_RANGE,
-  type PaintRange,
-} from '../../canvasPaintOrder';
-import { isCanvasLayerType } from '../../canvasItemClass';
+import { isTopLevelItem, WHOLE_CANVAS_RANGE, type PaintRange } from '../../canvasPaintOrder';
+import { canvasPaintPassFrom, WINDOW_CANVAS_PAINT } from '../../canvasItemPass/canvasItemPaint';
 import {
   builtControlIcons,
   resolveStyleBoxes,
@@ -180,8 +167,6 @@ function joinWalked(results: readonly WalkResult[]): WalkResult {
 /** What a node hands the walk of its children, who each read the part that concerns them. */
 interface Ancestry {
   themeChain: readonly ThemeResource[];
-  /** Where each child draws, by the child as authored. */
-  paintRanges: ReadonlyMap<TscnNode, PaintRange>;
   /** The skipped canvas items above the children, which a Control child puts back. */
   skippedChain: SkippedChain;
   /**
@@ -197,12 +182,6 @@ interface Ancestry {
    */
   ancestorHidden: boolean;
   /**
-   * Where each root of the enclosing canvas draws: its pre-order rank among the
-   * roots, not its nesting slot (`canvasRootRanges`). A node in the map takes
-   * that run instead of its parent's.
-   */
-  canvasRoots: ReadonlyMap<TscnNode, PaintRange>;
-  /**
    * The nearest ancestor Control's `is_layout_rtl()`, or `null` off the top of
    * the tree (`scene/gui/control.cpp:3584-3608`). Other types pass it through: the
    * climb steps over them. No `Window`, the one other stop, is drawn here.
@@ -215,19 +194,6 @@ interface Ancestry {
   windowsOnly: boolean;
   /** The forest's window root (`ForestStart.viewport`): a Control here, never a viewport boundary. */
   isContentRoot: boolean;
-}
-
-/**
- * Where each child draws, by the child, from the allocations that numbered the lists in order.
- * One parent never lists a node object twice: the parser builds an object for each heading.
- */
-function paintRangesOf(...numbered: readonly (readonly [readonly TscnNode[], readonly PaintRange[]])[]) {
-  const ranges = new Map<TscnNode, PaintRange>();
-  for (const [children, allocated] of numbered) {
-    for (const [index, child] of children.entries())
-      ranges.set(child, allocated[index] ?? WHOLE_CANVAS_RANGE);
-  }
-  return ranges;
 }
 
 interface ForestResult {
@@ -354,6 +320,13 @@ function buildForest(
     project: projectTreeSettings(projectSettings),
   };
   const tree = liveTreeOf(nodes, ctx);
+  // The paint pass numbers the world walk's draws too, so the two walks' sequences compare.
+  const paints = liveScenePassResults(canvasPaintPassFrom(rootRange), tree);
+  const paintAt = (path: string) => {
+    const paint = paints.get(path);
+    if (!paint) throw new Error(`expected the paint pass to hold ${path}, got none`);
+    return paint;
+  };
   const embedsWindows = embedsSubwindows(tree, viewport);
 
   /**
@@ -703,11 +676,7 @@ function buildForest(
       path,
       node: withListedFolders(window),
       children: [],
-      paintRange: WHOLE_CANVAS_RANGE,
-      behindRanges: [],
-      paintSequence: WHOLE_CANVAS_RANGE.base,
-      backSequence: WHOLE_CANVAS_RANGE.base,
-      layerSequence: WHOLE_CANVAS_RANGE.base,
+      paint: WINDOW_CANVAS_PAINT,
       skippedTransform: null,
       parentVisibleInTree: true,
       // A Window is no CanvasItem, so its content starts a chain.
@@ -733,13 +702,12 @@ function buildForest(
     descend: (ancestry: Ancestry) => WalkResult[]
   ): WalkResult {
     const { raw: node, step, path, group } = link;
-    const { themeChain, skippedChain, canvasChainBroken, ancestorHidden, canvasRoots, inheritedRtl } =
-      ancestry;
+    const { themeChain, skippedChain, canvasChainBroken, ancestorHidden, inheritedRtl } = ancestry;
     const { isContentRoot } = ancestry;
     // A viewport owns its own World2D (ADR-0033): its Control subtree draws in its own target. The
     // collapsed type, since an instance's own node has none when its sub-scene root is the viewport.
     if (isViewportBoundary(step.node.type) && !isContentRoot) return walkViewport(link, ancestry, descend);
-    const paintRange = canvasRoots.get(node) ?? ancestry.paintRanges.get(node) ?? WHOLE_CANVAS_RANGE;
+    const paint = paintAt(path);
 
     // A grafted node's instance ref names an id in the file that authored it.
     const authored = scopeOf(node, group.scope);
@@ -785,21 +753,6 @@ function buildForest(
       });
     }
 
-    // The world walk's allocation, from the same function, so the two walks'
-    // sequences compare. `NodeDispatcher` numbers authored children from the
-    // node's run and injected sub-scene roots from `allocated.tail`, and this
-    // walk makes the same split.
-    const inlineChildren = groups.filter((g) => !isInjected(g)).flatMap((g) => g.children);
-    const allocated = allocatePaintRange(paintRange, inlineChildren, {
-      sortsChildren: ysortsChildren(collapsed),
-      drawsChildrenFirst: drawsEveryChildFirst(collapsed),
-      frontRoom: internalFrontRoom(collapsed),
-      backRoom: internalBackRoom(collapsed),
-      listedOrder: listedChildOrder(collapsed, inlineChildren),
-    });
-    const injectedChildren = groups.filter(isInjected).flatMap((g) => g.children);
-    const injectedRanges = allocatePaintRange(allocated.tail, injectedChildren).children;
-
     // A real Control's descendants start a fresh chain. A skipped canvas item joins the chain.
     const childSkippedChain: SkippedChain = isControl
       ? { above: path, parent: null }
@@ -812,24 +765,14 @@ function buildForest(
     const childCanvasChainBroken = isControl
       ? false
       : !isCanvasItem(collapsed) || topLevel || canvasChainBroken;
-    // A CanvasLayer is a canvas of its own, so its roots are indexed by its
-    // own counter (`canvas_layer.cpp:261-267`) over its own children.
-    const childCanvasRoots = isCanvasLayerType(collapsed.type)
-      ? canvasRootRanges(inlineChildren, allocated.children)
-      : canvasRoots;
 
     const { nodes: children, hoisted: childHoisted } = groups.some((g) => g.children.length > 0)
       ? joinWalked(
           descend({
             themeChain: nodeThemeChain,
-            paintRanges: paintRangesOf(
-              [inlineChildren, allocated.children],
-              [injectedChildren, injectedRanges]
-            ),
             skippedChain: childSkippedChain,
             canvasChainBroken: childCanvasChainBroken,
             ancestorHidden: hidden,
-            canvasRoots: childCanvasRoots,
             inheritedRtl: rtl,
             windowsOnly: false,
             isContentRoot: false,
@@ -864,11 +807,7 @@ function buildForest(
       path,
       node: withListedFolders(live),
       children: isBoundary ? [...children, ...childHoisted] : children,
-      paintRange,
-      behindRanges: behindRangesOf(inlineChildren, allocated.children),
-      paintSequence: allocated.self,
-      backSequence: allocated.back.base,
-      layerSequence: allocated.layer,
+      paint,
       // A CanvasLayer draws on its own canvas (`canvas_item.cpp:263-267`), and a
       // top_level Control's item parents at the canvas (`canvas_item.cpp:565-571`),
       // so no skipped ancestor composes onto either. A merely hoisted Control's
@@ -897,17 +836,14 @@ function buildForest(
       : { nodes: [solved], hoisted: hoistedBelow };
   }
 
-  const rootRanges = allocatePaintRange(rootRange, nodes).children;
   const ownerThemeChain = themeOwners.flatMap(({ node, scope }) => withOwnTheme(node, scope, []));
   const walked = joinWalked(
     tree.fold(
       {
         themeChain: ownerThemeChain,
-        paintRanges: paintRangesOf([nodes, rootRanges]),
         skippedChain: NOTHING_SKIPPED,
         canvasChainBroken: false,
         ancestorHidden: false,
-        canvasRoots: canvasRootRanges(nodes, rootRanges),
         inheritedRtl,
         windowsOnly: false,
         isContentRoot: viewport !== null && isEmbeddedWindow(viewport.type),

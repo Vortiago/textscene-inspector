@@ -7,7 +7,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import { CanvasItemClipChildrenMode } from '../../godot/scene/canvasItem';
-import { behindParentRanges, ysortsChildren } from '../canvasPaintOrder';
+import { ysortsChildren } from '../canvasPaintOrder';
 import type { TscnNode } from '../../parser/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from '../node2dTransform';
@@ -17,7 +17,7 @@ import { useTextureSamplerOver } from '../canvasItemTextureSampler';
 import { CanvasItemSurfaceSource } from '../canvasItemSurface';
 import type { CanvasItemTexture } from '../canvasItemTexture';
 import { LitCanvasItemPixels, type CanvasItemPixelMaterial } from './LitCanvasItemPixels';
-import { useNodePaintSequence, usePaintRange } from '../contexts/PaintOrderContext';
+import { useNodePaint } from '../canvasItemPass/nodePaint';
 import { useAnimatedValue } from '../contexts/AnimatedValueContext';
 import { CanvasItemProvider } from './CanvasItemGroup';
 import { useResolvedCanvasItemMaterial } from './canvasItemMaterial';
@@ -28,6 +28,10 @@ import { node2dZStep, useCanvasItemState, type CanvasItemState } from '../canvas
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
 import { ClipChildrenScope } from '../canvasGroup/ClipChildrenScope';
+import type { PaintRange } from '../canvasPaintOrder';
+
+/** No behind ranges: an item that clips nothing draws its behind children outside its group. */
+const NO_RANGES: readonly PaintRange[] = [];
 
 interface CanvasItem2DProps {
   node: TscnNode;
@@ -83,6 +87,7 @@ export function CanvasItem2D({
   // node's component takes before this group exists, so it repeats the call on its own properties.
   const sampler = useTextureSamplerOver(props.texture_filter, props.texture_repeat, inherited.sampler);
   const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
+  const paint = useNodePaint(node, path);
   const state = useCanvasItemState({
     inherited,
     modulate: props.modulate,
@@ -95,14 +100,10 @@ export function CanvasItem2D({
     ),
     sampler,
     lightMask: props.light_mask,
-    sequence: useNodePaintSequence(node),
+    sequence: paint.own,
   });
-  const paintRange = usePaintRange();
   const clips = props.clip_children !== CanvasItemClipChildrenMode.DISABLED;
-  const behindRanges = useMemo(
-    () => (clips ? behindParentRanges(paintRange, node) : []),
-    [clips, paintRange, node]
-  );
+  const behindRanges = clips ? paint.behind : NO_RANGES;
   const { key, zFinal, tint, material } = state;
   // A pushed `visible` takes the place of the authored one, as for a Node3D.
   const animatedVisible = useAnimatedValue('visible', (value) => value[0] !== 0);
@@ -124,7 +125,7 @@ export function CanvasItem2D({
             isYSorted={ysortsChildren(node)}
             state={state}
             behindRanges={behindRanges}
-            range={paintRange}
+            range={paint.range}
           >
             {body && (
               <LitCanvasItemPixels

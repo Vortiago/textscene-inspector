@@ -44,37 +44,6 @@ describe('accumulateCanvasItemZ', () => {
   });
 });
 
-describe('the y-sort pass and the light cull agree on z', () => {
-  it('buckets y-sorted items by the very function the lights are culled against', async () => {
-    // Godot computes this once and reads it twice: to bucket y-sorted children, and as the
-    // `z_final` a light's window tests. One function here too, so the two cannot drift.
-    const { collectYSortedItems, Y_SORT_ROOT } = await import('../ySortItems');
-    const node = {
-      name: 'Root',
-      type: 'Node2D',
-      properties: {},
-      rawProperties: {},
-      children: [
-        { name: 'Rel', type: 'Node2D', properties: { z_index: 3 }, rawProperties: {}, children: [] },
-        {
-          name: 'Abs',
-          type: 'Node2D',
-          properties: { z_index: 3, z_as_relative: false },
-          rawProperties: {},
-          children: [],
-        },
-      ],
-    } as unknown as Parameters<typeof collectYSortedItems>[0];
-
-    const items = collectYSortedItems(node, { ...Y_SORT_ROOT, effectiveZ: 2 }, 0);
-    expect(items.map((item) => item.effectiveZ)).toEqual([
-      accumulateCanvasItemZ(2, { zIndex: 3, zAsRelative: true }),
-      accumulateCanvasItemZ(2, { zIndex: 3, zAsRelative: false }),
-    ]);
-    expect(items.map((item) => item.effectiveZ)).toEqual([5, 3]);
-  });
-});
-
 /** Reports the canvas layer a descendant sees. */
 function Probe({ seen }: { seen: number[] }) {
   seen.push(useCanvasLayerIndex());
