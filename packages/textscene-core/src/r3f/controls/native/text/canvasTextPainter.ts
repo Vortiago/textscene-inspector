@@ -1,36 +1,17 @@
 /**
  * The canvas glyph painter: one raster and one quad for a run of a scene font file or of the
- * bundled font, each glyph as FreeType's bitmap of its outline. It runs for
- * `TextLayoutResult.fontMetrics.kind === 'canvas'`.
+ * bundled font. It runs for `TextLayoutResult.fontMetrics.kind === 'canvas'`, and chooses one
+ * painter for the run (`glyphPainter.ts`): the contours of a face with outlines, else browser text.
  */
-// Each glyph draws at the pen `x` `textLayout.ts` computed, so a whole-string `fillText` cannot
-// re-shape it with the ligatures or kerning the measurer folded in (`runtimeFontMetrics.ts`).
 import * as THREE from 'three';
-import {
-  glyphContoursReader,
-  variedGlyphContoursReader,
-  maxEmboldenGrowthPx,
-  paintEmboldenedFill,
-  shearAboutBaseline,
-} from './canvasVariation';
-import {
-  blendGlyphBitmap,
-  colourRaster,
-  placedGlyphBitmap,
-  type ByteColour,
-  type GlyphBitmap,
-} from './glyphCoverage';
-import type { GlyphContours } from './glyphContours';
-import {
-  canvasGlyphPenXPx,
-  fontIsScaled,
-  getFontAscentPx,
-  getFontLinePitchPx,
-  type FontMetrics,
-  type GlyphVariation,
-} from './fontMetrics';
-import type { GlyphPlacement, TextLayoutResult } from './textLayout';
+import { maxEmboldenGrowthPx } from './canvasVariation';
+import type { ByteColour } from './glyphCoverage';
+import { canvasGlyphPenXPx, fontIsScaled, type FontMetrics } from './fontMetrics';
+import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics, type CanvasFontMetrics } from './runtimeFontMetrics';
+import { hasOwnGlyph, type GlyphPainter, type PlacedGlyph, type RasterFrame } from './glyphPainter';
+import { hasOutlines, outlineGlyphPainter } from './outlineGlyphPainter';
+import { browserTextPainter } from './browserTextPainter';
 import { canvasItemFacing } from '../../../canvasItemFacing';
 import type { CanvasItemPixelMaterial } from '../../../components/LitCanvasItemPixels';
 import { injectProgram, injectViewportProgram } from '../../../materialProgramInputs';
@@ -115,22 +96,18 @@ export function computeCanvasTextCanvasLayout(
 const INK_SLACK_LEFT_PX = 2;
 const INK_SLACK_RIGHT_PX = 1;
 
-/** How far the ink of a glyph reaches left of its pen and right of it, px, its pen box included. */
-interface GlyphReach {
-  leftPx: number;
-  rightPx: number;
-}
-
 /**
- * The span of the ink of the glyphs at `skew`, their pen boxes, the pen snap and the hinting
- * included. Godot draws each glyph quad whole wherever its side bearing reaches, which a raster of
+ * The span of the ink of the glyphs at `skew`, read from what the painter draws for each, their pen
+ * boxes, the pen snap and the hinting included. Godot draws each glyph quad whole wherever its side bearing reaches, which a raster of
  * the line box would clip. The run of a fallback face keeps its glyphs at their places on the line
  * (`faceLayouts.ts`), so its raster spans them alone. A layout with no glyph spans its width.
  */
 function drawnExtentPx(layout: TextLayoutResult, skew: number): { startPx: number; endPx: number } {
   let startPx = Infinity;
   let endPx = -Infinity;
-  const reachOf = glyphReachReader(layout, skew);
+  const face = layout.fontMetrics;
+  const painter = isCanvasFontMetrics(face) ? painterOf(face) : browserTextPainter;
+  const reachOf = painter.reachReader(layout, skew);
   for (const { glyphs } of layout.lines) {
     for (const glyph of glyphs) {
       const { leftPx, rightPx } = reachOf(glyph);
@@ -140,64 +117,6 @@ function drawnExtentPx(layout: TextLayoutResult, skew: number): { startPx: numbe
     }
   }
   return startPx === Infinity ? { startPx: 0, endPx: layout.widthPx } : { startPx, endPx };
-}
-
-/**
- * Reads the reach of each glyph of `layout` from what the paint draws for it, one rule for every
- * font: the box of its contours, or the browser's ink for a glyph the browser draws as text. A
- * glyph with neither draws nothing, and spans its pen box.
- */
-function glyphReachReader(layout: TextLayoutResult, skew: number): (glyph: GlyphPlacement) => GlyphReach {
-  const face = layout.fontMetrics;
-  if (!isCanvasFontMetrics(face)) return (glyph) => textReachPx(glyph, layout.baselineOffsetPx);
-  const contoursOf = perFontSize((fontSizePx) => placementContoursReader(face, fontSizePx, skew));
-  const drawsText = face.cssFontFamily !== undefined;
-  return (glyph) => {
-    const contours = hasOwnGlyph(glyph) ? contoursOf(glyph.fontSizePx)(glyph) : null;
-    if (contours) return contourReachPx(contours, glyph.advance);
-    return drawsText ? textReachPx(glyph, layout.baselineOffsetPx) : { leftPx: 0, rightPx: glyph.advance };
-  };
-}
-
-/** `read`, kept for each font size it has read: a run holds one size, and a RichTextLabel line a few. */
-function perFontSize<T>(read: (fontSizePx: number) => T): (fontSizePx: number) => T {
-  const bySize = new Map<number, T>();
-  return (fontSizePx) => {
-    let value = bySize.get(fontSizePx);
-    if (value === undefined) bySize.set(fontSizePx, (value = read(fontSizePx)));
-    return value;
-  };
-}
-
-/** The reach of the control box of `contours`, which bounds every curve of the outline. */
-function contourReachPx({ points }: GlyphContours, advancePx: number): GlyphReach {
-  let leftPx = 0;
-  let rightPx = advancePx;
-  for (const { x } of points) {
-    leftPx = Math.max(leftPx, -x);
-    rightPx = Math.max(rightPx, x);
-  }
-  return { leftPx, rightPx };
-}
-
-/**
- * The reach of a glyph the browser draws as text: the ink its face measured, where the face draws
- * the instance `measureText` measures. Else the larger of `lineAscentPx` and its face's own ascent
- * on each side: an ascent bounds the reach of any glyph.
- */
-function textReachPx(glyph: GlyphPlacement, lineAscentPx: number): GlyphReach {
-  const face = glyph.fontMetrics;
-  const ink =
-    isCanvasFontMetrics(face) && !face.drawnOpentype ? face.getGlyphInkUnits?.(glyph.char) : undefined;
-  if (!ink) {
-    const reachPx = Math.max(lineAscentPx, getFontAscentPx(face, glyph.fontSizePx));
-    return { leftPx: reachPx, rightPx: glyph.advance + reachPx };
-  }
-  const pxPerUnit = glyph.fontSizePx / face.unitsPerEm;
-  return {
-    leftPx: Math.max(0, ink.left * pxPerUnit),
-    rightPx: Math.max(glyph.advance, ink.right * pxPerUnit),
-  };
 }
 
 /** The vertex, UV and index buffers of the one quad of a raster. */
@@ -254,79 +173,6 @@ function opaqueByteColour(tint: Pick<Rgba, 'r' | 'g' | 'b'>): ByteColour {
   return [channelToByte(tint.r), channelToByte(tint.g), channelToByte(tint.b)];
 }
 
-/**
- * `image` with each glyph bitmap laid over it, in `colour`. The image is returned, not put on the
- * canvas, as a canvas keeps no colour under alpha 0 (`colourRaster`).
- */
-function glyphRaster(image: ImageData, bitmaps: readonly GlyphBitmap[], colour: ByteColour): ImageData {
-  for (const bitmap of bitmaps) blendGlyphBitmap(image, bitmap);
-  colourRaster(image, colour);
-  return image;
-}
-
-/**
- * Whether a placement draws a glyph of its own. A hex-code box draws as quads (`TextRunMesh`), so the
- * text the font lacks never reaches a host font.
- */
-function hasOwnGlyph(gp: GlyphPlacement): boolean {
-  if (gp.char === ' ' || gp.char === '\n' || gp.char === '\r') return false;
-  return gp.controlCodepoint === undefined;
-}
-
-/**
- * A CPU canvas the size of the raster, set to the font `cssFontFamily` names: the CPU rasteriser
- * covers by exact area where the GPU raster thins small glyphs (`textRun.md`). Null where the
- * document has no 2D context.
- */
-function textContext(
-  { canvasWidthPx, canvasHeightPx }: CanvasTextCanvasLayout,
-  cssFontFamily: string,
-  fontSizePx: number
-): CanvasRenderingContext2D | null {
-  const canvas = document.createElement('canvas');
-  canvas.width = canvasWidthPx;
-  canvas.height = canvasHeightPx;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return null;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-  ctx.font = `${fontSizePx}px "${cssFontFamily}"`;
-  return ctx;
-}
-
-/**
- * Sets `ctx` to stroke the outline ring of each glyph. A glyph with no contour strokes its text:
- * FreeType's `FT_Glyph_Stroke` exports both borders, an annulus a centred canvas stroke of the same
- * width paints (`text_server_adv.cpp:1383-1390`). `LINEJOIN_ROUND`/`LINECAP_BUTT` are that
- * stroker's settings (`:1383`).
- */
-function setStrokeStyle(ctx: CanvasRenderingContext2D, cssColour: string, strokeWidthPx: number): void {
-  ctx.strokeStyle = cssColour;
-  ctx.lineWidth = strokeWidthPx;
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'butt';
-}
-
-/**
- * Sets `ctx` to fill each glyph. The stroke of an emboldened fill (`paintEmboldenedFill`) is the
- * fill's colour, mitred as `FT_Outline_Embolden` mitres its corners.
- */
-function setFillStyle(ctx: CanvasRenderingContext2D, cssColour: string): void {
-  ctx.fillStyle = cssColour;
-  ctx.strokeStyle = cssColour;
-  ctx.lineJoin = 'miter';
-}
-
-/** A glyph at its place in the raster, with the contours it draws, or null where it draws as text. */
-interface PlacedGlyph {
-  char: string;
-  penX: number;
-  baselineY: number;
-  advancePx: number;
-  emboldenGrowthPx: number | undefined;
-  contours: GlyphContours | null;
-}
-
 export interface CanvasTextPaintOptions {
   /** A positive width paints the outline ring instead of the fill, as Godot's separate outline surface (`label_3d.cpp:610-615`). */
   strokeWidthPx?: number;
@@ -339,13 +185,15 @@ export interface CanvasTextPaintOptions {
   originPhasePx?: Readonly<Vector2>;
 }
 
+/** The painter of a run on `face`: the contours of a face with outlines, else browser text. */
+function painterOf(face: CanvasFontMetrics): GlyphPainter {
+  return hasOutlines(face) ? outlineGlyphPainter(face) : browserTextPainter;
+}
+
 /**
- * Draws `layout`, shaped against a `'canvas'`-kind `FontMetrics`, glyph by glyph
- * at each `GlyphPlacement.x`.
- * `skew` shears each glyph's ink about its own baseline. With the `outlines` its metrics carry, each
- * glyph draws as FreeType's bitmap of its contour, or of the ring round it (`glyphCoverage.ts`). The
- * contour carries the embolden and the shear, so a shear does not shear the ring's width. Null where
- * a glyph draws as text and the document has no 2D context.
+ * Draws `layout`, shaped against a `'canvas'`-kind `FontMetrics`, glyph by glyph at each
+ * `GlyphPlacement.x`, by the one painter its face takes. `skew` shears each glyph's ink about its
+ * own baseline. Null where the browser text painter runs and the document has no 2D context.
  */
 // Happy-dom has no 2D context, so a unit test gives the canvas a recording one and reads its calls
 // and the raster it returns.
@@ -358,59 +206,8 @@ export function paintSceneFontCanvas(
   { strokeWidthPx = 0, glyphDrawer = 'canvasItem', originPhasePx = VECTOR2_ZERO }: CanvasTextPaintOptions = {}
 ): ImageData | null {
   const frame = rasterFrame(layout, fontSizePx, skew, canvasLayout, glyphDrawer, originPhasePx);
-  const { metrics } = frame;
   const glyphs = placeGlyphs(layout, frame);
-  const textGlyphs = glyphs.filter((glyph) => !glyph.contours);
-  const colour = opaqueByteColour(tint);
-  const { canvasWidthPx, canvasHeightPx } = canvasLayout;
-  const { cssFontFamily } = metrics;
-  // Only a paint with a glyph drawn as text needs a canvas: a bitmap lays on the raster alone. A
-  // face with no family draws no text, as `fillText` paints a host font for an unregistered family.
-  let image: ImageData;
-  if (cssFontFamily !== undefined && textGlyphs.length > 0) {
-    const ctx = textContext(canvasLayout, cssFontFamily, fontSizePx);
-    if (!ctx) return null;
-    paintGlyphTexts(ctx, textGlyphs, `rgb(${colour.join(', ')})`, skew, strokeWidthPx);
-    image = ctx.getImageData(0, 0, canvasWidthPx, canvasHeightPx);
-  } else image = new ImageData(canvasWidthPx, canvasHeightPx);
-  const outlineRadiusPx = strokeWidthPx / 2;
-  const bitmaps = glyphs.flatMap(({ contours, penX, baselineY }) => {
-    const bitmap = contours && placedGlyphBitmap(contours, penX, baselineY, outlineRadiusPx);
-    return bitmap ? [bitmap] : [];
-  });
-  return glyphRaster(image, bitmaps, colour);
-}
-
-/**
- * The contours each placement of `layout` draws, or null for a glyph that draws as text: every
- * glyph of a face with no outlines, and a glyph with no contour. Each contour carries the shear and
- * the embolden, as Godot's FreeType draws it.
- */
-function placementContoursReader(
-  metrics: CanvasFontMetrics,
-  fontSizePx: number,
-  skew: number
-): (gp: GlyphPlacement) => GlyphContours | null {
-  const outlines = metrics.outlines;
-  if (!outlines) return () => null;
-  const variation: GlyphVariation = {
-    embolden: metrics.embolden ?? 0,
-    skew,
-    opentype: metrics.drawnOpentype,
-  };
-  const contoursOfGlyph = variedGlyphContoursReader(outlines, fontSizePx, variation);
-  const contoursOfChar = glyphContoursReader(outlines, contoursOfGlyph, variation.opentype);
-  return (gp) => (gp.glyphIndex === undefined ? contoursOfChar(gp.char) : contoursOfGlyph(gp.glyphIndex));
-}
-
-/** Where a raster sits against the run origin, and whether its glyphs snap to whole item pixels. */
-interface RasterFrame {
-  readonly metrics: CanvasFontMetrics;
-  readonly fontSizePx: number;
-  readonly canvasLayout: CanvasTextCanvasLayout;
-  readonly originPhasePx: Readonly<Vector2>;
-  readonly snapsGlyphs: boolean;
-  readonly contoursOf: (gp: GlyphPlacement) => GlyphContours | null;
+  return painterOf(frame.metrics).paint(glyphs, frame, opaqueByteColour(tint), strokeWidthPx);
 }
 
 /** The frame of the raster `canvasLayout` sizes for `layout`, which a canvas face shaped. */
@@ -429,48 +226,37 @@ function rasterFrame(
   return {
     metrics,
     fontSizePx,
+    skew,
     canvasLayout,
     originPhasePx,
     snapsGlyphs: snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, metrics),
-    contoursOf: placementContoursReader(metrics, fontSizePx, skew),
   };
 }
 
 /** Each glyph of `layout` that draws, at its pen and baseline in the raster. */
 function placeGlyphs(
   layout: TextLayoutResult,
-  { metrics, fontSizePx, canvasLayout, originPhasePx, snapsGlyphs, contoursOf }: RasterFrame
+  { metrics, fontSizePx, canvasLayout, originPhasePx, snapsGlyphs }: RasterFrame
 ): PlacedGlyph[] {
   // The raster starts at the whole item pixel at or before the run origin, where its quad sits.
   return layout.lines.flatMap((line, lineIndex) => {
     const lineBaselinePx = lineIndex * layout.linePitchPx + layout.baselineOffsetPx;
     const baselineY =
       canvasLayout.offsetYPx + (snapsGlyphs ? Math.floor(originPhasePx.y + lineBaselinePx) : lineBaselinePx);
-    return line.glyphs.filter(hasOwnGlyph).map((gp) => {
+    return line.glyphs.filter(hasOwnGlyph).map((placement) => {
       // Godot snaps the glyph's origin, the pen plus its offset (`shaped_text_draw`).
-      const originX = gp.x + (gp.xOffset ?? 0);
+      const originX = placement.x + (placement.xOffset ?? 0);
       const penX =
         canvasLayout.offsetXPx +
         (snapsGlyphs ? canvasGlyphPenXPx(originPhasePx.x + originX, fontSizePx, metrics) : originX);
-      return {
-        char: gp.char,
-        penX,
-        baselineY: baselineY + (gp.yOffset ?? 0),
-        advancePx: gp.advance,
-        emboldenGrowthPx: gp.emboldenGrowthPx,
-        contours: contoursOf(gp),
-      };
+      return { placement, penX, baselineY: baselineY + (placement.yOffset ?? 0) };
     });
   });
 }
 
-/** How far Godot's glyph rectangle reaches past the bitmap on each side (`rect_range`, `text_server_adv.h:187`). */
-const GLYPH_RECT_MARGIN_PX = 1;
-
 /**
- * The rectangle of the quad Godot draws for each glyph of `layout`, in raster px: the bitmap grid of
- * the glyph, or of its ring for an outline pass, widened by the margin
- * (`text_server_adv.cpp:1223-1225`). A glyph `glyphDrawer` skips has none (`glyphDrawer.ts`).
+ * The rectangle of the quad Godot draws for each glyph of `layout`, in raster px, as its painter
+ * reads it. A glyph `glyphDrawer` skips has none (`glyphDrawer.ts`).
  */
 export function canvasGlyphRects(
   layout: TextLayoutResult,
@@ -480,59 +266,10 @@ export function canvasGlyphRects(
   { strokeWidthPx = 0, glyphDrawer = 'canvasItem', originPhasePx = VECTOR2_ZERO }: CanvasTextPaintOptions = {}
 ): Rect2[] {
   const frame = rasterFrame(layout, fontSizePx, skew, canvasLayout, glyphDrawer, originPhasePx);
-  const outlineRadiusPx = strokeWidthPx / 2;
-  const textBoxOf = textGlyphBoxReader(frame, outlineRadiusPx);
+  const rectOf = painterOf(frame.metrics).rectReader(frame, strokeWidthPx / 2);
   return placeGlyphs(layout, frame).flatMap((glyph) => {
-    const rect = glyph.contours
-      ? glyphBitmapRect(glyph, glyph.contours, frame.snapsGlyphs, outlineRadiusPx)
-      : textBoxOf(glyph);
+    const rect = rectOf(glyph);
     return rect && drawsGlyphRect(glyphDrawer, rect.w, rect.h) ? [rect] : [];
-  });
-}
-
-/**
- * The bitmap grid of a glyph widened by the margin, or null for a glyph that draws no pixel. A
- * drawer that keeps the pen draws the bitmap of the whole pen and moves its quad by the rest
- * (`label_3d.cpp:345-349`). A drawer that snaps the pen draws the bitmap of its subpixel step.
- */
-function glyphBitmapRect(
-  { penX, baselineY }: PlacedGlyph,
-  contours: GlyphContours,
-  snapsGlyphs: boolean,
-  outlineRadiusPx: number
-): Rect2 | null {
-  const [bitmapPenX, bitmapBaselineY] = snapsGlyphs
-    ? [penX, baselineY]
-    : [Math.floor(penX), Math.floor(baselineY)];
-  const bitmap = placedGlyphBitmap(contours, bitmapPenX, bitmapBaselineY, outlineRadiusPx);
-  if (!bitmap) return null;
-  const { left, top, width, height } = bitmap.grid;
-  return {
-    x: left + (penX - bitmapPenX) - GLYPH_RECT_MARGIN_PX,
-    y: top + (baselineY - bitmapBaselineY) - GLYPH_RECT_MARGIN_PX,
-    w: width + 2 * GLYPH_RECT_MARGIN_PX,
-    h: height + 2 * GLYPH_RECT_MARGIN_PX,
-  };
-}
-
-/**
- * Reads the box of a glyph the browser draws as text, which has no bitmap grid: from its pen to its
- * advance, between the ascent and the descent of the face, grown by `outlineRadiusPx` on each side
- * as the ring of an outline pass reaches. Godot's rectangle for it is not known. Null on a face that
- * draws no text.
- */
-function textGlyphBoxReader(
-  { metrics, fontSizePx }: RasterFrame,
-  outlineRadiusPx: number
-): (glyph: PlacedGlyph) => Rect2 | null {
-  if (metrics.cssFontFamily === undefined) return () => null;
-  const ascentPx = getFontAscentPx(metrics, fontSizePx);
-  const heightPx = getFontLinePitchPx(metrics, fontSizePx, 0);
-  return ({ penX, baselineY, advancePx }) => ({
-    x: penX - outlineRadiusPx,
-    y: baselineY - ascentPx - outlineRadiusPx,
-    w: advancePx + 2 * outlineRadiusPx,
-    h: heightPx + 2 * outlineRadiusPx,
   });
 }
 
@@ -566,40 +303,6 @@ export function buildCanvasGlyphQuadArrays(
     indices.set([vertex + 2, vertex + 3, vertex, vertex + 3, vertex + 1, vertex], quad * 6);
   });
   return { positions, uvs, indices };
-}
-
-/** Paints each glyph of `glyphs` as text, sheared about its own origin as Godot shears a glyph. */
-function paintGlyphTexts(
-  ctx: CanvasRenderingContext2D,
-  glyphs: readonly PlacedGlyph[],
-  cssColour: string,
-  skew: number,
-  strokeWidthPx: number
-): void {
-  const isStroked = strokeWidthPx > 0;
-  if (isStroked) setStrokeStyle(ctx, cssColour, strokeWidthPx);
-  else setFillStyle(ctx, cssColour);
-  for (const glyph of glyphs) {
-    if (skew === 0) {
-      paintGlyphText(ctx, glyph, isStroked);
-      continue;
-    }
-    ctx.save();
-    shearAboutBaseline(ctx, skew, glyph.baselineY);
-    paintGlyphText(ctx, glyph, isStroked);
-    ctx.restore();
-  }
-}
-
-/** Paints `glyph` as text in the style `ctx` holds. */
-function paintGlyphText(
-  ctx: CanvasRenderingContext2D,
-  { char, penX, baselineY, emboldenGrowthPx }: PlacedGlyph,
-  isStroked: boolean
-): void {
-  if (isStroked) ctx.strokeText(char, penX, baselineY);
-  else if (emboldenGrowthPx) paintEmboldenedFill(ctx, char, penX, baselineY, emboldenGrowthPx);
-  else ctx.fillText(char, penX, baselineY);
 }
 
 interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {

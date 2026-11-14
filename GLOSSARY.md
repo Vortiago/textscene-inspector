@@ -186,6 +186,10 @@ _Avoid_: "style variant". "scene variation" for one a scene Theme registers, whi
 The font a RichTextLabel draws a `[b]`, `[i]` or `[b][i]` span in: the theme's `bold_font`, `italics_font` or `bold_italics_font`. Where no theme sets the key, it is a `FontVariation` over the **Project default font** with embolden 1.2, skew 0.2, or both.
 _Avoid_: "synthetic bold" for a face a theme sets.
 
+**Glyph painter** (`GlyphPainter` in `r3f/controls/native/text/glyphPainter.ts`):
+The one rasteriser that draws every glyph of a canvas text run. The run takes it by its face: a face with outlines takes the outline painter (`outlineGlyphPainter.ts`), which draws each glyph from its contours and a glyph with no contour as nothing. A face whose outlines the previewer cannot read takes the browser text painter (`browserTextPainter.ts`), the only code that calls `fillText` or `strokeText`. The painter also gives the reach and the quad rectangle of each glyph (ADR-0077).
+_Avoid_: "the text path" or "the bitmap path" for one glyph of a run: a run never mixes the two.
+
 **Glyph hinting** (`r3f/controls/native/text/sfntOutlines.ts`):
 How a glyph's outline is fitted to the pixel grid at its font size before TextMesh tessellates it, as FreeType does when Godot loads it. A TrueType font with its own hinting programs runs them, a CFF font uses its charstring hints, and any other TrueType font goes through the **Auto-hinter**.
 _Avoid_: "font smoothing" or "antialiasing", which act on the rasterised glyph.
