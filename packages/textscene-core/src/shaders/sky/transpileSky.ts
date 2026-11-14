@@ -13,13 +13,20 @@ import { tokenize } from '../language/tokenizer.js';
 import { checkTranspiled } from '../language/transpiledRows.js';
 import { emitTemplateStage } from '../template/emitTemplate.js';
 import { compileMaterial, linkTemplateStage } from '../template/link.js';
+import { GODOT_VERSION } from '../language/instructionTable.generated.js';
 import { MODE_TABLES } from '../template/modeTables.generated.js';
+import type { StageName } from '../template/stages.js';
+import type { TemplateStageNode } from '../template/templateTree.js';
 import { TemplateUniforms } from '../template/templateUniforms.js';
+import { TRANSPILER_VERSION, TreeMemo } from '../template/treeMemo.js';
 
 const SKY_TEMPLATE = 'environment/sky.glsl';
 
 /** The variant of the sky background, `SKY_VERSION_BACKGROUND` (`sky.cpp:746`): no defines. */
 const BACKGROUND_VARIANT = '';
+
+/** The linked sky stages of every sky this page transpiles. It lives as long as the page. */
+const linkedStages = new TreeMemo();
 
 export interface TranspiledSky {
   /** The triangle that draws the sky. It writes no depth, and draws before the scene. */
@@ -43,11 +50,25 @@ export function transpileSky(source: string, file = ''): TranspiledSky {
       }
     );
   checkTranspiled(tree);
-  const material = compileMaterial(tree, MODE_TABLES.sky!);
+  const linked = (stage: StageName): TemplateStageNode =>
+    linkedStages.tree(
+      {
+        source,
+        file,
+        shaderType: 'sky',
+        template: SKY_TEMPLATE,
+        stage,
+        defines: BACKGROUND_VARIANT,
+        godotVersion: GODOT_VERSION,
+        transpilerVersion: TRANSPILER_VERSION,
+      },
+      () =>
+        linkTemplateStage(SKY_TEMPLATE, stage, BACKGROUND_VARIANT, compileMaterial(tree, MODE_TABLES.sky!))
+    );
   const uniforms = new TemplateUniforms();
   const uvInterp = varyingProperty('vec2', 'uv_interp') as unknown as Node;
   const vertex = emitTemplateStage(
-    linkTemplateStage(SKY_TEMPLATE, 'vertex', BACKGROUND_VARIANT, material),
+    linked('vertex'),
     new Map([
       ['gl_VertexIndex', int(vertexIndex) as unknown as Node],
       ['uv_interp', uvInterp],
@@ -56,7 +77,7 @@ export function transpileSky(source: string, file = ''): TranspiledSky {
     uniforms
   );
   const fragment = emitTemplateStage(
-    linkTemplateStage(SKY_TEMPLATE, 'fragment', BACKGROUND_VARIANT, material),
+    linked('fragment'),
     new Map([
       ['uv_interp', uvInterp],
       ['gl_FragCoord', vec4(screenCoordinate, 0, 1) as unknown as Node],
