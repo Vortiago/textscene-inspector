@@ -170,7 +170,9 @@ function returnProbes() {
       SWITCH,
       'int probe(int a) { switch (a & 3) { case 1: return 10; case 2: a = 0; break; } return a; }',
     ],
-    ['return-missing-path', IF, 'int probe(int a) { if (a > 0) { return 1; } }'],
+    // Every input reaches the return: the result of a path past the end is undefined in GLSL, and
+    // WebGL sets it to zero where lavapipe in Godot picks the one value returned.
+    ['return-missing-path', IF, 'int probe(int a) { if (a > 0 || a <= 0) { return 1; } }'],
   ];
   return cases.map(([word, rows, source]) => probeOf(`statement-${word}`, rows, source));
 }

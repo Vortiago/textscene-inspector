@@ -7,9 +7,9 @@ Godot 4.6.3-stable (official), probed on llvmpipe (LLVM 20.1.2, 256 bits). Each 
 
 ## `return`
 
-`return a;` ends the function with the value `a`, of the function's return type. Godot refuses a non-void function with no `return`. A statement after the first `return` never runs.
+`return a;` ends the function with the value `a`, of the function's return type. Godot refuses a non-void function with no `return`. A `return` inside a branch or a loop is lowered to a write of the result, a flag and a `break` from each loop around it.
 
-The transpiler emits `the value of the first return`. Rows: `return`, `FLOW_OP_RETURN`. Godot source: `servers/rendering/shader_language.cpp:361`.
+The transpiler emits `the `Fn`'s value: the lowered function's one `return`, the last statement`. Rows: `return`, `FLOW_OP_RETURN`. Godot source: `servers/rendering/shader_language.cpp:361`.
 
 Every row is native on WebGL 2 and on WebGPURenderer.
 
@@ -319,7 +319,7 @@ float probe(float a) { ; return a; }
 
 `float b = a;` declares a local variable, and `int b = a, c = 2;` declares several. A variable without a value holds what GLSL leaves undefined until a write. `const float k = 2.5;` declares a constant, which Godot refuses to write. Godot refuses a name declared twice in one function, an argument's name included, and a variable read in its own initialiser.
 
-The transpiler emits `a TSL variable, `toVar()``. Rows: `NODE_TYPE_VARIABLE_DECLARATION`. Godot source: `servers/rendering/shader_language.h:377`.
+The transpiler emits `a TSL `Var` that starts at its value`. Rows: `NODE_TYPE_VARIABLE_DECLARATION`. Godot source: `servers/rendering/shader_language.h:377`.
 
 Every row is native on WebGL 2 and on WebGPURenderer.
 
@@ -1120,7 +1120,7 @@ int probe(int a) { switch (a & 3) { case 1: return 10; case 2: a = 0; break; } r
 ### Probe `statement-return-missing-path`, 16 input rows
 
 ```glsl
-int probe(int a) { if (a > 0) { return 1; } }
+int probe(int a) { if (a > 0 || a <= 0) { return 1; } }
 ```
 
 | `a` | Godot gives |
@@ -1325,7 +1325,7 @@ int probe(int a) { int v[5]; for (int i = 0; i < 5; i++) v[i] = a + i * i; retur
 
 `for (init; c; step) s`, `while (c) s` and `do s while (c);` run `s` while `c` holds: `do` runs it once before the first test. A variable declared in `init` is gone after the loop. Each part of `for` may be empty, and an empty condition holds.
 
-The transpiler emits ``Loop(true, ...)` over the lowered `while (true)``. Rows: `for`, `while`, `do`, `FLOW_OP_FOR`, `FLOW_OP_WHILE`, `FLOW_OP_DO`. Godot source: `servers/rendering/shader_language.cpp:353`.
+The transpiler emits ``Loop(...)` over the lowered `while (true)`, with `if (!c) break;` inside`. Rows: `for`, `while`, `do`, `FLOW_OP_FOR`, `FLOW_OP_WHILE`, `FLOW_OP_DO`. Godot source: `servers/rendering/shader_language.cpp:353`.
 
 Every row is native on WebGL 2 and on WebGPURenderer.
 
@@ -1846,7 +1846,7 @@ Godot does not compile this shader: Godot refuses it at line 1, `Expected at lea
 
 `switch (a)` runs from the `case` whose integer constant equals `a`, or from `default`, until a `break`: a case without one falls through to the next. In Godot 4.6.3 a case without `break` that ends the `switch` takes the statements after the `switch` too, so Godot refuses such a function for its missing `return`.
 
-The transpiler emits `an `if` chain over the lowered `switch``. Rows: `switch`, `case`, `default`, `FLOW_OP_SWITCH`, `FLOW_OP_CASE`, `FLOW_OP_DEFAULT`. Godot source: `servers/rendering/shader_language.cpp:356`.
+The transpiler emits ``If` chain in a `Loop` that runs once, over the lowered `switch``. Rows: `switch`, `case`, `default`, `FLOW_OP_SWITCH`, `FLOW_OP_CASE`, `FLOW_OP_DEFAULT`. Godot source: `servers/rendering/shader_language.cpp:356`.
 
 Every row is native on WebGL 2 and on WebGPURenderer.
 
@@ -2055,7 +2055,7 @@ int probe(int a) { for (int i = 0; i < 4; i++) { if (a == i) discard; } return a
 
 `float v[3]` and `float[3] v` declare an array, `float[3](a, b, c)` and `float[](a, b, c)` construct one, and `{a, b, c}` initialises one. `v.length()` is the size. An index Godot folds out of range is refused.
 
-The transpiler emits ``array(...)` in a variable, its elements by `element(i)``. Rows: `NODE_TYPE_ARRAY`, `NODE_TYPE_ARRAY_CONSTRUCT`, `length[array]()`. Godot source: `servers/rendering/shader_language.h:382`.
+The transpiler emits ``array(...)` in a `Var`, its elements by `element(i)``. Rows: `NODE_TYPE_ARRAY`, `NODE_TYPE_ARRAY_CONSTRUCT`, `length[array]()`. Godot source: `servers/rendering/shader_language.h:382`.
 
 Every row is native on WebGL 2 and on WebGPURenderer.
 
@@ -2264,21 +2264,21 @@ Godot does not compile this shader: Godot refuses it at line 1, `Unknown identif
 
 `struct Pair { float x; vec2 y; };` declares a struct before the functions. `Pair(a, b)` constructs one from a value of each member, in order, and `p.x` reads or writes a member.
 
-The transpiler emits `a `struct(...)` layout and its members`. Rows: `struct type`, `OP_STRUCT`, `NODE_TYPE_STRUCT`. Godot source: `servers/rendering/shader_language.h:242`.
+The transpiler emits `one `Var` per member, and one array per member for an array of structs`. Rows: `struct type`, `OP_STRUCT`, `NODE_TYPE_STRUCT`. Godot source: `servers/rendering/shader_language.h:242`.
 
 Every row is native on WebGL 2 and on WebGPURenderer.
 
 ### Probe `statement-struct`, 16 input rows
 
 ```glsl
-struct Pair { float x; vec2 y; }; vec2 probe(float a) { Pair p = Pair(a, vec2(a, 1.0)); return p.y * p.x; }
+struct Pair { float x; vec2 y; }; vec2 probe(float a) { Pair p = Pair(a, vec2(a, 2.0)); return p.y * p.x; }
 ```
 
 | `a` | Godot gives |
 | --- | --- |
 | `0.0` | `(0.0, 0.0)` |
 | `-0.0` | `(0.0, -0.0)` |
-| `1.0` | `(1.0, 1.0)` |
+| `1.0` | `(1.0, 2.0)` |
 | `1e-40` | `(0.0, 0.0)` |
 | `inf` | `(inf, inf)` |
 | `-inf` | `(inf, -inf)` |

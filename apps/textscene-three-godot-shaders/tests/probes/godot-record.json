@@ -42219,7 +42219,7 @@
    ]
   },
   "statement-return-missing-path": {
-   "source": "int probe(int a) { if (a > 0) { return 1; } }",
+   "source": "int probe(int a) { if (a > 0 || a <= 0) { return 1; } }",
    "inputs": [
     [
      "00000000",
@@ -43966,7 +43966,7 @@
    ]
   },
   "statement-struct": {
-   "source": "struct Pair { float x; vec2 y; }; vec2 probe(float a) { Pair p = Pair(a, vec2(a, 1.0)); return p.y * p.x; }",
+   "source": "struct Pair { float x; vec2 y; }; vec2 probe(float a) { Pair p = Pair(a, vec2(a, 2.0)); return p.y * p.x; }",
    "inputs": [
     [
      "00000000",
@@ -43998,43 +43998,43 @@
     ],
     [
      "3f800000",
-     "3f800000"
+     "40000000"
     ],
     [
      "3f800000",
-     "bf800000"
+     "c0000000"
     ],
     [
      "3e800000",
-     "3f000000"
+     "3f800000"
     ],
     [
      "40f20000",
-     "c0300000"
+     "c0b00000"
     ],
     [
      "3de38e3a",
-     "3eaaaaab"
+     "3f2aaaab"
     ],
     [
      "283424dc",
-     "33d6bf95"
+     "3456bf95"
     ],
     [
      "50631e02",
-     "47f12065"
+     "48712065"
     ],
     [
      "57800000",
-     "4b800000"
+     "4c000000"
     ],
     [
      "7f800000",
-     "7f61b1e6"
+     "7f800000"
     ],
     [
      "7f800000",
-     "ff61b1e6"
+     "ff800000"
     ],
     [
      "00000000",
