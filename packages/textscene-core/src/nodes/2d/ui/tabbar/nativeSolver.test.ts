@@ -15,7 +15,9 @@ import {
   pickTabStyleBox,
   resolveTabDrawState,
   tabBarThemeIconSize,
+  tabBarFontColor,
   tabBarFontSizePx,
+  tabBarIconColor,
   tabContentWidth,
   tabDrawX,
   tabWidthStyleMinWidth,
@@ -23,6 +25,8 @@ import {
 } from './nativeSolver';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry, type SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import './solverRegistration';
+import { tabBarModel } from './tabBarModel';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import type { TabBarProperties } from './types';
@@ -537,6 +541,36 @@ describe('tabDrawX', () => {
   });
 });
 
+describe('layoutTabContent truncates each drawn position (tab_bar.cpp:662,668,676,734)', () => {
+  // An odd leftover height centres every element on a half pixel.
+  const out = layoutTabContent({
+    barHeightPx: 31,
+    style: { ...TABLE_BOXES.tab_selected!, contentMargin: { left: 10.5, top: 4, right: 10, bottom: 4 } },
+    tabWidthPx: 120,
+    iconSize: { x: 16, y: 16 },
+    hasText: true,
+    textNaturalHeightPx: 18,
+    textAdvanceWidthPx: 40,
+    hSeparation: 4,
+    closeVisible: true,
+    closeIconSize: { x: 16, y: 16 },
+    buttonHlMargin: { left: 3, top: 2, right: 3, bottom: 2 },
+    rtl: false,
+  });
+
+  it('draws the icon at a whole pixel', () => {
+    expect(out.icon?.rect).toMatchObject({ x: 10, y: 7 });
+  });
+
+  it('draws the title at a whole pixel', () => {
+    expect(out.text?.offset).toEqual({ x: 30, y: 6 });
+  });
+
+  it('draws the close icon at a whole pixel', () => {
+    expect(out.close?.iconOffset).toEqual({ x: 77, y: 7 });
+  });
+});
+
 describe('layoutTabContent under RTL', () => {
   const style = {
     ...TABLE_BOXES.tab_selected!,
@@ -653,5 +687,68 @@ describe('shapeTabLabel direction', () => {
 
   it('draws the title as written under an LTR layout', () => {
     expect(visual(false)).toBe('Hello!');
+  });
+});
+
+describe('the two widths of a tab when tab_hovered is wider than tab_unselected', () => {
+  const widerHovered = {
+    ...TABLE_BOXES.tab_hovered!,
+    contentMargin: { left: 50, top: 4, right: 50, bottom: 4 },
+  };
+  const { left, right } = TABLE_BOXES.tab_unselected!.contentMargin;
+
+  function unselectedTab() {
+    const props: TabBarProperties = controlProps({
+      name: 'T',
+      currentTab: 0,
+      tabs: [
+        { title: '', tooltip: '', disabled: false },
+        { title: '', tooltip: '', disabled: false },
+      ],
+    });
+    const n = withThemeItems({
+      ...solveNode(),
+      path: 'T',
+      node: controlNode('T', 'TabBar', props),
+      styleBoxes: { tab_hovered: widerHovered },
+    });
+    return tabBarModel(n, nativeTheme(1)).computed[1]!;
+  }
+
+  it('sizes the minimum by the box of the tab state (tab_bar.cpp:60-70)', () => {
+    expect(unselectedTab().minimumWidth).toBe(left + right);
+  });
+
+  it('sizes the drawn tab by the wider of tab_hovered and tab_unselected (tab_bar.cpp:1757-1768)', () => {
+    expect(unselectedTab().naturalWidth).toBe(100);
+  });
+});
+
+describe('the colours of a disabled current tab (tab_bar.cpp:556-561)', () => {
+  function currentTab() {
+    const props: TabBarProperties = controlProps({
+      name: 'T',
+      currentTab: 0,
+      tabs: [{ title: 'A', tooltip: '', disabled: true }],
+    });
+    // The two icon colours are equal in the default theme, so a theme sets them apart.
+    const themed = withThemeItems({ ...solveNode(), path: 'T', node: controlNode('T', 'TabBar', props) });
+    const n = { ...themed, colors: { ...themed.colors, icon_disabled_color: { r: 1, g: 0, b: 0, a: 1 } } };
+    return { n, tab: tabBarModel(n, nativeTheme(1)).computed[0]! };
+  }
+
+  it('draws the disabled box', () => {
+    const { n, tab } = currentTab();
+    expect(tab.style).toBe(pickTabStyleBox(n.styleBoxes, 'disabled'));
+  });
+
+  it('draws the title in font_selected_color', () => {
+    const { n, tab } = currentTab();
+    expect(tab.fontColor).toEqual(tabBarFontColor(n.colors, 'selected'));
+  });
+
+  it('draws the icon in icon_selected_color', () => {
+    const { n, tab } = currentTab();
+    expect(tab.iconColor).toEqual(tabBarIconColor(n.colors, 'selected'));
   });
 });

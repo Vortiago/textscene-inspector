@@ -1,6 +1,6 @@
 /**
- * Drift guard: the three promises of `solveHandoff.ts` that neither the type
- * checker nor a per-slice test can see.
+ * Drift guard: the promises of `solveHandoff.ts` that neither the type checker nor a
+ * per-slice test can see.
  */
 // Not asserted: a hit rate, or that a share ran once. `presetTimeMinimumSize` mints nodes
 // no painter sees. A miss is a recompute, never a wrong answer.
@@ -36,7 +36,13 @@ const SOURCE_ROOT = join(import.meta.dirname, '../../..');
  * The file kinds a solve handoff can be spelled in: the producers (a solver, the layout of a class's
  * internal Controls, a share's module) and the consumer.
  */
-const HANDOFF_FILES = ['nativeSolver.ts', 'internalControls.ts', 'tabBarModel.ts', 'Component.tsx'];
+const HANDOFF_FILES = [
+  'nativeSolver.ts',
+  'internalControls.ts',
+  'tabBarModel.ts',
+  'tabBarLayout.ts',
+  'Component.tsx',
+];
 
 /** Read once: the tree cannot change mid-run, and each scan reads all of it. */
 const HANDOFF_SOURCES: SourceFile[] = walkSources([UI_ROOT], (name) => HANDOFF_FILES.includes(name));
@@ -48,18 +54,18 @@ function codeLines(source: string): (string | null)[] {
     .map((line) => (isCommentLine(line) ? null : line.replace(/\/\/.*$/, '').replace(/\/\*.*?\*\//g, '')));
 }
 
-// Guard 1: a share's callback reads only the node and the theme. The scan closes
+// Guard 1: a share's callback reads only the node, the theme and, in a rect share, the size. The scan closes
 // the ways around `ShareNode`: a cast back to `SolveNode`, and a captured `ctx`.
 // The memo is safe only while this holds, since the painter reuses the solver's value.
 
 /**
- * Every `defineShare(` callback's source, paired with the 1-based line it
+ * Every `defineShare(` and `defineRectShare(` callback's source, paired with the 1-based line it
  * starts on. Read to its own closing paren by depth, so a long callback is
  * scanned whole and the code after it is not.
  */
 function shareCallbacks(source: string): { line: number; body: string }[] {
   const found: { line: number; body: string }[] = [];
-  const opener = /\bdefineShare\s*(?:<[^>]*>)?\s*\(/g;
+  const opener = /\bdefine(?:Rect)?Share\s*(?:<[^>]*>)?\s*\(/g;
   let match: RegExpExecArray | null;
   while ((match = opener.exec(source)) !== null) {
     const start = match.index + match[0].length;
@@ -172,6 +178,32 @@ function opensThroughAChannel(meta: unknown): boolean {
   );
 }
 
+// Guard 4: a painter whose layout depends on its size reads that layout from a rect share, and
+// takes nothing else from a layout module that would let it lay out again.
+
+/** The painters on a rect share, and the values each may take from a layout module. */
+const RECT_SHARE_PAINTERS: Record<string, readonly string[]> = {
+  [join('button', 'Component.tsx')]: ['BUTTON_CLASS', 'buttonLayoutOf', 'tintColor'],
+  [join('tabbar', 'Component.tsx')]: ['tabBarLayout', 'tintColor'],
+};
+
+/** The slice's solver files, and the shared modules that shape text or lay out a Button. */
+const LAYOUT_MODULE =
+  /(?:^\.\/(?:nativeSolver|tabBarModel|tabBarLayout)|\/buttonBase|\/text\/textLayout|\/text\/textOverrun)$/;
+
+/** The values (not the types) a source imports from a layout module. */
+function layoutValueImports(source: string): string[] {
+  const names: string[] = [];
+  for (const match of source.matchAll(/^import\s+(type\s+)?\{([^}]*)\}\s+from\s+'([^']+)';/gm)) {
+    const [, typeOnly, list, from] = match;
+    if (typeOnly || !LAYOUT_MODULE.test(from!)) continue;
+    for (const entry of list!.split(',').map((name) => name.trim())) {
+      if (entry && !entry.startsWith('type ')) names.push(entry);
+    }
+  }
+  return names.sort();
+}
+
 describe('solve handoff conformance', () => {
   it('reads every 2D-UI solver and painter, so a new slice cannot escape unnoticed', () => {
     expect(HANDOFF_SOURCES.length).toBeGreaterThanOrEqual(45);
@@ -189,11 +221,9 @@ describe('solve handoff conformance', () => {
     const shares = HANDOFF_SOURCES.flatMap(({ file, source }) =>
       shareCallbacks(source).map(({ line }) => `${repoPath(file)}:${line}`)
     );
-    // Button's label shaping is not a share: its wrap width is a third input the
-    // `(node, theme)` key cannot express. Its solver and painter still call one
-    // function, just not a memoised one. MenuButton sizes through `buttonMinimumSize`
-    // and shapes with Button's function, so it declares no share either.
-    expect(shares.length).toBeGreaterThanOrEqual(4);
+    // FoldableContainer, Label, LinkButton and MenuBar declare one share each, Button two and
+    // TabBar three. A Button subclass reads Button's shares with its own class.
+    expect(shares.length).toBeGreaterThanOrEqual(9);
   });
 
   it('opens `meta` only through a channel — no painter hand-rolls a shape guard', () => {
@@ -247,6 +277,31 @@ describe('solve handoff conformance', () => {
     // Code after the callback is out of scope.
     expect(
       shareInvariantOffenders('const s = defineShare((n) => n.path);\nconst m = ctx.measureText;')
+    ).toEqual([]);
+  });
+
+  it.each(Object.entries(RECT_SHARE_PAINTERS))(
+    'takes only its layout share from a layout module: %s',
+    (painter, allowed) => {
+      const source = HANDOFF_SOURCES.find(({ file }) => file.endsWith(join(UI_ROOT, painter)))?.source;
+      expect(source, `${painter} is not among the scanned sources`).toBeDefined();
+      expect(layoutValueImports(source!)).toEqual([...allowed].sort());
+    }
+  );
+
+  it('would catch a painter importing a layout step — the check is not vacuous', () => {
+    expect(
+      layoutValueImports("import { layoutTabContent, type TabLayoutItem } from './nativeSolver';")
+    ).toEqual(['layoutTabContent']);
+    expect(layoutValueImports("import type { ScrollArrowsLayout } from './nativeSolver';")).toEqual([]);
+    expect(
+      layoutValueImports("import { wrappedLabelWidthPx } from '../../../../r3f/controls/native/buttonBase';")
+    ).toEqual(['wrappedLabelWidthPx']);
+    expect(
+      layoutValueImports("import { shapeText } from '../../../../r3f/controls/native/text/textLayout';")
+    ).toEqual(['shapeText']);
+    expect(
+      layoutValueImports("import { TextRun } from '../../../../r3f/controls/native/text/TextRun';")
     ).toEqual([]);
   });
 

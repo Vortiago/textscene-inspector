@@ -29,6 +29,8 @@ import {
   TAB_BAR_THEME_FONT_SIZE_KEY,
 } from '../tabbar/nativeSolver';
 import { tabBarModel } from '../tabbar/tabBarModel';
+// The strip is a TabBar child, so its solve needs TabBar's solvers registered.
+import '../tabbar/solverRegistration';
 import { tabBarLoadedOffset } from '../tabbar/loadedOffset';
 import type { TabBarProperties, TabBarTabProperties } from '../tabbar/types';
 import { tabContainerCurrentTab } from './childVisibility';
