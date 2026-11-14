@@ -347,6 +347,33 @@ int stepUp(inout int x) { x += 1; return x * 10; } int probe(int a) { int b = a;
 | `1` | `22` |
 | `-1` | `0` |
 
+### Probe `function-inout-read-after-a-writing-argument`, 16 input rows
+
+```glsl
+void addTo(inout float x, float y) { x += y; } float probe(float a) { float b = a; addTo(b, b = 2.0); return b; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `4.0` |
+| `-0.0` | `4.0` |
+| `1.0` | `4.0` |
+| `1e-40` | `4.0` |
+| `inf` | `4.0` |
+| `-inf` | `4.0` |
+| `NaN` | `4.0` |
+
+### Probe `function-inout-read-after-a-writing-argument-of-a-value-call`, 16 input rows
+
+```glsl
+int addTo(inout int x, int y) { x += y; return x * 10; } int probe(int a) { int b = a; int c = addTo(b, b++) + b; return c; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0` | `11` |
+| `1` | `33` |
+
 ### Probe `function-inout-vector-lane`, 16 input rows
 
 ```glsl
@@ -754,6 +781,22 @@ void halves(float v, out float h) { h = v * 0.5; } float probe(vec2 a) { halves(
 
 Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'assign' :  l-value of swizzle cannot have duplicate components`. The transpiler refuses it too.
 
+### Probe `function-out-member-of-call`, 0 input rows
+
+```glsl
+void halves(float v, out float h) { h = v * 0.5; } vec2 pair(float a) { return vec2(a); } float probe(float a) { halves(a, pair(a).x); return a; }
+```
+
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'assign' :  l-value required`. The transpiler refuses it too.
+
+### Probe `function-inout-member-of-sum`, 0 input rows
+
+```glsl
+void half(inout float x) { x *= 0.5; } float probe(vec2 a) { half((a + a).x); return a.x; }
+```
+
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'assign' :  l-value required`. The transpiler refuses it too.
+
 ### Probe `function-const-out`, 0 input rows
 
 ```glsl
@@ -952,6 +995,33 @@ int stepUp(inout int x) { x += 1; return x * 10; } int probe(int a) { int b = a;
 | `1` | `22` |
 | `-1` | `0` |
 
+### Probe `function-inout-read-after-a-writing-argument`, 16 input rows
+
+```glsl
+void addTo(inout float x, float y) { x += y; } float probe(float a) { float b = a; addTo(b, b = 2.0); return b; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `4.0` |
+| `-0.0` | `4.0` |
+| `1.0` | `4.0` |
+| `1e-40` | `4.0` |
+| `inf` | `4.0` |
+| `-inf` | `4.0` |
+| `NaN` | `4.0` |
+
+### Probe `function-inout-read-after-a-writing-argument-of-a-value-call`, 16 input rows
+
+```glsl
+int addTo(inout int x, int y) { x += y; return x * 10; } int probe(int a) { int b = a; int c = addTo(b, b++) + b; return c; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0` | `11` |
+| `1` | `33` |
+
 ### Probe `function-inout-vector-lane`, 16 input rows
 
 ```glsl
@@ -1072,6 +1142,22 @@ void halves(float v, out float h) { h = v * 0.5; } float probe(vec2 a) { halves(
 
 Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'assign' :  l-value of swizzle cannot have duplicate components`. The transpiler refuses it too.
 
+### Probe `function-out-member-of-call`, 0 input rows
+
+```glsl
+void halves(float v, out float h) { h = v * 0.5; } vec2 pair(float a) { return vec2(a); } float probe(float a) { halves(a, pair(a).x); return a; }
+```
+
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'assign' :  l-value required`. The transpiler refuses it too.
+
+### Probe `function-inout-member-of-sum`, 0 input rows
+
+```glsl
+void half(inout float x) { x *= 0.5; } float probe(vec2 a) { half((a + a).x); return a.x; }
+```
+
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'assign' :  l-value required`. The transpiler refuses it too.
+
 ### Probe `function-const-out`, 0 input rows
 
 ```glsl
@@ -1168,6 +1254,22 @@ void addTo(inout int x, int d) { x += d; } int probe(int a) { int s = a; addTo(s
 | --- | --- |
 | `0` | `4` |
 | `1` | `6` |
+
+### Probe `function-inout-read-after-a-writing-argument`, 16 input rows
+
+```glsl
+void addTo(inout float x, float y) { x += y; } float probe(float a) { float b = a; addTo(b, b = 2.0); return b; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `4.0` |
+| `-0.0` | `4.0` |
+| `1.0` | `4.0` |
+| `1e-40` | `4.0` |
+| `inf` | `4.0` |
+| `-inf` | `4.0` |
+| `NaN` | `4.0` |
 
 ### Probe `function-inout-vector-lane`, 16 input rows
 
@@ -1296,6 +1398,22 @@ void halves(float v, out float h) { h = v * 0.5; } float probe(vec2 a) { halves(
 ```
 
 Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'assign' :  l-value of swizzle cannot have duplicate components`. The transpiler refuses it too.
+
+### Probe `function-out-member-of-call`, 0 input rows
+
+```glsl
+void halves(float v, out float h) { h = v * 0.5; } vec2 pair(float a) { return vec2(a); } float probe(float a) { halves(a, pair(a).x); return a; }
+```
+
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'assign' :  l-value required`. The transpiler refuses it too.
+
+### Probe `function-inout-member-of-sum`, 0 input rows
+
+```glsl
+void half(inout float x) { x *= 0.5; } float probe(vec2 a) { half((a + a).x); return a.x; }
+```
+
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'assign' :  l-value required`. The transpiler refuses it too.
 
 ### Probe `function-const-out`, 0 input rows
 

@@ -186,7 +186,7 @@ function printExpression(expression: Expression): string {
       if (op === 'OP_CONSTRUCT')
         return `${expression.row.id.slice(0, expression.row.id.indexOf('('))}(${texts.join(', ')})`;
       if (op === 'OP_STRUCT') return `${expression.type}(${texts.join(', ')})`;
-      if (isCall(expression)) return `${expression.function.replace(/@\d+$/, '')}(${texts.join(', ')})`;
+      if (isCall(expression)) return `${expression.rname}(${texts.join(', ')})`;
       if (op === 'OP_INDEX') return `${printOwner(operands[0]!)}[${texts[1]}]`;
       if (op === 'OP_SELECT_IF')
         return `(${texts[0]} ? ${printTernaryPart(operands[1]!)} : ${printTernaryPart(operands[2]!)})`;

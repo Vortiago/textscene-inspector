@@ -114,7 +114,10 @@ export interface OperatorNode {
  */
 export interface CallNode extends OperatorNode {
   readonly op: 'OP_CALL';
+  /** Godot's name of the function, which tells overloads apart. */
   readonly function: string;
+  /** The function's name in the text. */
+  readonly rname: string;
   /** The qualifier of each parameter, so a pass sees which operands the call writes. */
   readonly qualifiers: readonly Qualifier[];
   readonly arraySize?: number;

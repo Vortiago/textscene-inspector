@@ -156,6 +156,13 @@ describe('parse: calls', () => {
       'void n() { } float g(float a) { float b = n(); return a; }',
       "Invalid assignment of 'void' to 'float'.",
     ],
+    ['struct S { float a[n()]; }; int n() { return 2; }', "No matching function found for: 'n'."],
+    ['int n() { return 2; } struct S { float a[n()]; };', 'Expected a positive integer constant.'],
+    ['int n() { return 2; } float g(float a[n()]) { return a[0]; }', 'Expected a positive integer constant.'],
+    [
+      'int n() { return 2; } float[n()] g(float x) { float r[2]; return r; }',
+      'Expected a positive integer constant.',
+    ],
   ])('refuses %s with Godot message', (source, message) => {
     expect(refusal(source)).toThrow(message);
   });

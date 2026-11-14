@@ -286,6 +286,8 @@ class FunctionCheck {
    * A `void` call stands only as a statement.
    */
   private call(call: CallNode, isStatement: boolean): string | undefined {
+    const { line, column } = call.position;
+    if (!(line >= 1 && column >= 1)) return `a call of ${call.function} at no line and column`;
     const callee = this.callable.find((candidate) => candidate.name === call.function);
     if (!callee) return `a call of ${call.function}, which no function before ${this.definition.name} is`;
     if (call.type !== callee.returnType || (call.arraySize ?? 0) !== (callee.returnArraySize ?? 0))

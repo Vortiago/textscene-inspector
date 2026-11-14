@@ -35,7 +35,7 @@ class ShaderParser implements ExpressionScope {
   private readonly functions: FunctionNode[] = [];
   /** Each function declared so far by its name in the text, its own included while its body is read. */
   private readonly signatures = new Map<string, FunctionSignature[]>();
-  /** The function whose body is read. Set at each function's `(`...`)`, and kept after its body. */
+  /** The function whose body is read: set at its `{` and cleared at its `}`. */
   private current: FunctionSignature | undefined;
   /** The block a statement is read in. Outside a body, an empty one. */
   private readonly holder: ScopeHolder = { current: new BlockScope(undefined, 'plain', []) };
@@ -63,8 +63,8 @@ class ShaderParser implements ExpressionScope {
     return this.signatures.get(rname) ?? [];
   }
 
-  currentFunction(): string {
-    return this.current!.name;
+  currentFunction(): string | undefined {
+    return this.current?.name;
   }
 
   isLocal(name: string): boolean {
@@ -160,9 +160,10 @@ class ShaderParser implements ExpressionScope {
     if (isConst) this.tokens.fail("'const' qualifier cannot be used with a function return type.");
     const args = this.argumentList();
     const signature = this.declare({ rname, returnType, returnArraySize, arguments: args });
-    this.current = signature;
     this.tokens.expect('TK_CURLY_BRACKET_OPEN', "Expected a '{' to begin function.");
+    this.current = signature;
     const body = this.statements.body(args, this.tokens.lastPosition());
+    this.current = undefined;
     if (returnType !== 'void' && !hasReturn(body)) {
       this.tokens.fail("Expected at least one 'return' statement in a non-void function.");
     }

@@ -126,8 +126,8 @@ function spawnGodot(directory) {
  * caller still reads Godot's version.
  */
 export function inChunksAtOnce(items, run) {
-  const count = Math.max(1, Math.min(RUNS_AT_ONCE, items.length));
-  const size = Math.ceil(items.length / count);
+  const size = Math.max(1, Math.ceil(items.length / RUNS_AT_ONCE));
+  const count = Math.max(1, Math.ceil(items.length / size));
   const chunks = Array.from({ length: count }, (_, index) => items.slice(index * size, (index + 1) * size));
   return Promise.all(chunks.map(run));
 }

@@ -116,6 +116,12 @@ describe('lowerSideEffects', () => {
     );
   });
 
+  it('passes an inout place before an argument that writes it, as glslang reads it after the arguments', () => {
+    expect(
+      lowered('void s(inout float x, float y) { x += y; } float f(float b) { s(b, b = 2.0); return b; }')
+    ).toBe(text('float f(float b) {', ['s(b, (b = 2.0));', 'return b;'], '}'));
+  });
+
   it('leaves a statement whose write nothing reads around', () => {
     expect(lowered('int f(int a) { a++; return a; }')).toBe(
       text('int f(int a) {', ['a++;', 'return a;'], '}')

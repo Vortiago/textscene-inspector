@@ -21,10 +21,13 @@ export interface FunctionSignature {
   readonly arguments: readonly Argument[];
 }
 
-/** What a call needs of the parser: the functions of a name, the function being read, and the locals. */
+/**
+ * What a call needs of the parser: the functions of a name, the function whose body is read
+ * (nothing outside a body), and the locals.
+ */
 export interface CallScope {
   functionsNamed(rname: string): readonly FunctionSignature[];
-  currentFunction(): string;
+  currentFunction(): string | undefined;
   isLocal(name: string): boolean;
 }
 
@@ -43,7 +46,8 @@ export function resolvedCall(
   const candidates = scope.functionsNamed(rname);
   const convertsConstants = candidates.length === 1;
   const fitting = candidates.find((candidate) => fits(candidate, args, convertsConstants));
-  if ((fitting?.name ?? bestNamed(candidates, args, rname)) === scope.currentFunction())
+  const current = scope.currentFunction();
+  if (current !== undefined && (fitting?.name ?? bestNamed(candidates, args, rname)) === current)
     fail('Recursion is not allowed.');
   if (!fitting) fail(mismatch(rname, candidates, args, convertsConstants));
   const operands = args.map((arg, index) => converted(arg, fitting.arguments[index]!.type));
@@ -56,6 +60,7 @@ export function resolvedCall(
     op: 'OP_CALL',
     row: instruction('OP_CALL')!,
     function: fitting.name,
+    rname: fitting.rname,
     qualifiers: fitting.arguments.map((argument) => argument.qualifier),
     type: fitting.returnType,
     ...(fitting.returnArraySize > 0 ? { arraySize: fitting.returnArraySize } : {}),
@@ -168,7 +173,7 @@ function converted(arg: Expression, type: ValueType): Expression {
  * of a constant.
  */
 function argumentRefusal(argument: Argument, arg: Expression): string | undefined {
-  if (argument.qualifier === 'in' || argument.isConst) return undefined;
+  if (argument.qualifier === 'in') return undefined;
   return isConstantPlace(arg)
     ? `A constant value cannot be passed for the '${argument.qualifier}' parameter.`
     : undefined;

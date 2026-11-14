@@ -12,12 +12,15 @@ import { EmitScope } from './emitScope.js';
 import { StatementEmitter } from './emitStatement.js';
 import { emittedTree, type EmittedTree } from './emittedTree.js';
 import type { StructOf, Value } from './emitValue.js';
-import type { Argument, ShaderNode, ValueType } from './shaderTree.js';
+import type { Argument, FunctionNode, ShaderNode, ValueType } from './shaderTree.js';
+import { typeName } from './treeWalk.js';
+import { shapeOf } from './types.js';
 
 /**
  * A function of the shader as TSL. `call` builds a `Fn` from one node per argument: a value
  * function gives the node of its result, and a `void` function gives the call node, which the
- * caller puts on its own stack.
+ * caller puts on its own stack. It throws for a function whose argument or result is no one node:
+ * a struct, an array, or an `out` or `inout` argument.
  */
 export interface TranspiledFunction {
   readonly name: string;
@@ -50,6 +53,9 @@ function calledInPlace(tree: EmittedTree, body: BodyEmitter, structOf: StructOf)
           `expected ${definition.arguments.length} arguments for ${definition.name}, got ${args.length}`
         );
       }
+      const misfit = misfitForOneNode(definition);
+      if (misfit !== undefined)
+        throw new Error(`expected ${definition.name} to take and give one node each, but ${misfit}`);
       return Fn(() => {
         const names = new Map<string, Value>(
           definition.arguments.map((argument, index) => [
@@ -62,3 +68,21 @@ function calledInPlace(tree: EmittedTree, body: BodyEmitter, structOf: StructOf)
     },
   };
 }
+
+/**
+ * Why `definition` cannot be called with one node per argument and give one node back, or
+ * nothing: a struct or an array, or an argument the call writes, has no such node.
+ */
+function misfitForOneNode(definition: FunctionNode): string | undefined {
+  const argument = definition.arguments.find(
+    (candidate) => candidate.qualifier !== 'in' || !isOneValue(candidate.type, candidate.arraySize ?? 0)
+  );
+  if (argument)
+    return `its argument ${argument.name} is ${argument.qualifier} ${typeName(argument.type, argument.arraySize ?? 0)}`;
+  const { returnType, returnArraySize = 0 } = definition;
+  if (returnType !== 'void' && !isOneValue(returnType, returnArraySize))
+    return `it returns ${typeName(returnType, returnArraySize)}`;
+  return undefined;
+}
+
+const isOneValue = (type: ValueType, arraySize: number) => arraySize === 0 && shapeOf(type) !== undefined;

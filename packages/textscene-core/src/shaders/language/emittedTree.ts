@@ -7,7 +7,7 @@
 import { writtenNames } from './assignment.js';
 import { bindConstantReads } from './constantReads.js';
 import { refuseFoldedIndexOutOfRange } from './foldedIndex.js';
-import { refuseRepeatedLetterPlaces } from './repeatedLetterPlace.js';
+import { refuseOutArgumentsThatAreNoPlace } from './outArgumentPlace.js';
 import { GlslangFolding } from './glslangFolding.js';
 import { glslBlock } from './godotText.js';
 import { lowerFunction } from './lowering/lower.js';
@@ -28,7 +28,7 @@ export function emittedTree(definition: FunctionNode): EmittedTree {
   const glsl = { ...definition, body: glslBlock(definition.body) };
   bindConstantReads(glsl.body, folding);
   refuseFoldedIndexOutOfRange(glsl.body, folding);
-  refuseRepeatedLetterPlaces(glsl.body);
+  refuseOutArgumentsThatAreNoPlace(glsl.body);
   const lowered = lowerFunction(glsl);
   return { lowered, folding, written: writtenNames(lowered.body) };
 }

@@ -113,6 +113,16 @@ function qualifierProbes() {
       'int stepUp(inout int x) { x += 1; return x * 10; } int probe(int a) { int b = a; int c = stepUp(b) + b; return c; }',
     ],
     [
+      'inout-read-after-a-writing-argument',
+      INOUT,
+      'void addTo(inout float x, float y) { x += y; } float probe(float a) { float b = a; addTo(b, b = 2.0); return b; }',
+    ],
+    [
+      'inout-read-after-a-writing-argument-of-a-value-call',
+      ['inout', CALL],
+      'int addTo(inout int x, int y) { x += y; return x * 10; } int probe(int a) { int b = a; int c = addTo(b, b++) + b; return c; }',
+    ],
+    [
       'inout-vector-lane',
       INOUT,
       'void half(inout float x) { x *= 0.5; } vec2 probe(vec2 a) { vec2 v = a; half(v.y); return v; }',
@@ -258,6 +268,16 @@ function refusedProbes() {
       `${halves} float probe(float a) { const float k = 1.0; halves(a, k); return a; }`,
     ],
     ['out-swizzle-twice', OUT, `${halves} float probe(vec2 a) { halves(a.x, a.xx.x); return a.x; }`],
+    [
+      'out-member-of-call',
+      OUT,
+      `${halves} vec2 pair(float a) { return vec2(a); } float probe(float a) { halves(a, pair(a).x); return a; }`,
+    ],
+    [
+      'inout-member-of-sum',
+      INOUT,
+      'void half(inout float x) { x *= 0.5; } float probe(vec2 a) { half((a + a).x); return a.x; }',
+    ],
     ['const-out', OUT, 'void f(const out float x) { x = 1.0; } float probe(float a) { return a; }'],
     ['const-inout', INOUT, 'void f(const inout float x) { x = 1.0; } float probe(float a) { return a; }'],
     [

@@ -32,6 +32,8 @@ const REFUSED_AFTER_PARSE = [
   'unbracketed-operator-before',
   'unbracketed-negated',
   'function-out-swizzle-twice',
+  'function-out-member-of-call',
+  'function-inout-member-of-sum',
 ];
 
 /** Each probe's tree that `make` gives, made once, as `[name, tree]`. */

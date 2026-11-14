@@ -157,7 +157,34 @@ describe('transpileShadingLanguage', () => {
         transpileShadingLanguage(
           'void h(out float x) { x = 1.0; } float probe(vec2 a) { h(a.xx.x); return a.x; }'
         )
-      ).toThrow('glslang refuses a swizzle that repeats a letter as a place to write');
+      ).toThrow('glslang refuses a swizzle that repeats a letter as an out or inout argument');
+    });
+
+    it.each([
+      ['struct P { float a; }; float probe(P p) { return p.a; }', 'its argument p is in P'],
+      ['float probe(float v[2]) { return v[0]; }', 'its argument v is in float[2]'],
+      ['void probe(out float x) { x = 1.0; }', 'its argument x is out float'],
+      ['float[2] probe(float x) { return float[2](x, x); }', 'it returns float[2]'],
+    ])('refuses to call %s with one node per argument', (source, misfit) => {
+      const probe = transpileShadingLanguage(source).functions.get('probe')!;
+      expect(() => probe.call([uniform(1)])).toThrow(
+        `expected probe to take and give one node each, but ${misfit}`
+      );
+    });
+
+    it.each([
+      [
+        'a member of a call',
+        'vec2 g() { return vec2(1.0); } void h(out float x) { x = 1.0; } float probe(vec2 a) { h(g().x); return a.x; }',
+      ],
+      [
+        'a member of a sum',
+        'void h(inout float x) { x += 1.0; } float probe(vec2 a, vec2 b) { h((a + b).x); return a.x; }',
+      ],
+    ])('refuses %s as an out argument, as the GPU compiler does', (_, source) => {
+      expect(() => transpileShadingLanguage(source)).toThrow(
+        'glslang refuses a value that is no variable as an out or inout argument'
+      );
     });
   });
 });
