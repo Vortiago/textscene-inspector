@@ -14,8 +14,9 @@ child. The previewer draws the `panel` StyleBox behind the content band and posi
 current page below (or above) the strip. The strip is an internal TabBar (`tab_container.cpp:1280-1282`),
 which the TabBar solver sizes and the TabBar painter draws. The container pushes its tab styles, scroll
 icons, colours, font, font size and four constants onto the bar (`:314-344`).
-The bar is always in front mode. The constructor adds it in front mode (`:1282`), the setter re-adds it in
-front mode for `all_tabs_in_front = true` (`:876`), and it returns early for the default `false` (`:869-871`).
+The bar is always in front mode. The constructor adds it in front mode (`:1282`).
+The setter re-adds it in front mode for `all_tabs_in_front = true` (`:876`).
+It returns early for the default `false` (`:869-871`).
 `self_modulate` tints the panel and the header band. The tab strip is a child TabBar and draws without it (`tab_container.cpp:247`, `tab_bar.cpp:1282`).
 
 ## Linting
