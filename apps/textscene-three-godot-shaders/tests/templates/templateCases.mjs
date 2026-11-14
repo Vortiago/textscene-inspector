@@ -40,6 +40,11 @@ export function templateFiles(godotDir, { splitStages }) {
   return { templates, includes, waiting };
 }
 
+/** Whether a branch is Godot's disabled code: `#if 0`, or the `#elif` or `#else` of `#if 1`. */
+const isGodotDisabled = (text, head) =>
+  /^\s*#\s*if\s+0\s*$/.test(text) ||
+  (/^\s*#\s*(elif|else)\b/.test(text) && /^\s*#\s*if\s+1\s*$/.test(head ?? ''));
+
 /** The variants of one stage of a template, each made from the names its define set holds. */
 export class StageVariants {
   constructor(file, stage, lines, modules) {
@@ -129,7 +134,7 @@ export class StageVariants {
   /**
    * Every branch the preprocessor decides for some set tried, by `file:line`. A branch in a comment
    * or in a branch no set reads is decided for none. A branch whose directive tests what a material
-   * holds is left out, as the link step's tests take it, and so is Godot's disabled `#if 0`.
+   * holds is left out, as the link step's tests take it, and so is Godot's disabled code.
    */
   allBranches() {
     const keys = new Set();
@@ -140,7 +145,24 @@ export class StageVariants {
 
   isLeftOut(key) {
     const text = this.directiveText(key);
-    return (text.match(/\w+/g) ?? []).some(isMaterialName) || /^\s*#\s*if\s+0\s*$/.test(text);
+    return (
+      (text.match(/\w+/g) ?? []).some(isMaterialName) || isGodotDisabled(text, this.chainHeads().get(key))
+    );
+  }
+
+  /** The text of the `#if` that opens the chain of each branch, by the branch's key. */
+  chainHeads() {
+    if (this.heads) return this.heads;
+    this.heads = new Map();
+    const open = [];
+    for (const line of this.variantOf([])) {
+      const directive = /^\s*#\s*(\w+)/.exec(line.text)?.[1];
+      if (/^if(n?def)?$/.test(directive)) open.push(line.text);
+      if (/^(if(n?def)?|elif|else)$/.test(directive))
+        this.heads.set(`${line.file}:${line.line}`, open.at(-1));
+      if (directive === 'endif') open.pop();
+    }
+    return this.heads;
   }
 
   /** The tested names the directive of branch `key` holds. */

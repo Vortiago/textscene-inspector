@@ -16,6 +16,7 @@ import {
 } from '../../../../scripts/godot-probes/godotRun.mjs';
 import { REPO_ROOT } from '../../../../scripts/repoRoot.mjs';
 import { writeJobSummary } from '../consumer.mjs';
+import { KNOWN_UNTAKEN } from './knownUntaken.mjs';
 import { StageVariants, templateFiles } from './templateCases.mjs';
 
 const TEMPLATE = '/packages/textscene-core/src/shaders/template/';
@@ -164,7 +165,8 @@ function unseenWider(entries, key, seen) {
 }
 
 /** The first error of Godot's refusal of a case that takes `key`, for the report. */
-function refusalTaking(results, stageKey, key) {
+function refusalTaking(results, untakenKey) {
+  const [stageKey, key] = untakenKey.split(': ');
   const refused = results.find(
     (entry) => entry.stages.key === stageKey && !entry.isCompiled && entry.branches.has(key)
   );
@@ -187,21 +189,24 @@ async function main() {
     results.push(...(await judged(widened)));
   }
   const untaken = [...untakenBranches(stageList, results)].flatMap(([stageKey, keys]) =>
-    [...keys].map((key) => `${stageKey}: ${key} (${refusalTaking(results, stageKey, key)})`)
+    [...keys].map((key) => `${stageKey}: ${key}`)
   );
+  const unknown = untaken.filter((key) => !KNOWN_UNTAKEN.has(key));
+  const stale = [...KNOWN_UNTAKEN.keys()].filter((key) => !untaken.includes(key));
   const failures = results.filter((entry) => entry.failure);
   const compiled = results.filter((entry) => entry.isCompiled).length;
   const equal = compiled - failures.filter((entry) => entry.isCompiled).length;
   const report = [
     `${templates.length} templates with stages, ${includes.length} files only included, ${waiting.length} waiting for the third-party code: ${waiting.join(', ')}.`,
     `${results.length} variants: Godot compiles ${compiled}, and ${equal} of those give Godot's SPIR-V from the printed tree.`,
-    `${untaken.length} branches that no variant Godot compiles takes.`,
+    `${untaken.length} branches that no variant Godot compiles takes, ${untaken.length - unknown.length} of them listed with a cause.`,
     ...failures.map((entry) => `FAILS ${entry.name}: ${entry.failure}`),
-    ...untaken.map((line) => `UNTAKEN ${line}`),
+    ...unknown.map((key) => `UNTAKEN ${key} (${refusalTaking(results, key)})`),
+    ...stale.map((key) => `STALE ${key}: a variant takes it now, so its entry in knownUntaken.mjs goes`),
   ];
   console.log(report.join('\n'));
   writeJobSummary(['## Godot templates', '', ...report.map((line) => `- ${line}`)].join('\n'));
-  if (failures.length > 0 || untaken.length > 0) process.exitCode = 1;
+  if (failures.length + unknown.length + stale.length > 0) process.exitCode = 1;
 }
 
 await main();
