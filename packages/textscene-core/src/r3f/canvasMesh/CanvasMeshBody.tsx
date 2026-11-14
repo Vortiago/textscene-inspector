@@ -35,9 +35,10 @@ interface CanvasMeshBodyProps<Input> {
   props: Node2DProperties;
   texture: CanvasMeshTexture;
   /**
-   * What the item draws while its slot names no texture: 'white' draws the surfaces with no map,
-   * as Polygon2D, Line2D and a mesh do. 'nothing' draws nothing, as a sprite's draw returns early
-   * (`sprite_2d.cpp:159`, `animated_sprite_2d.cpp:270-278`).
+   * What the item draws with no image. 'white' draws the surfaces with no map, for a texture that
+   * is unset or failed, as Polygon2D, Line2D and a mesh do: Godot's loader leaves a property that
+   * names a missing file null (`resource_format_text.cpp:146-154`, `:288-289`). 'nothing' draws
+   * nothing while unset (`sprite_2d.cpp:159`) and the placeholder for a texture that failed.
    */
   withoutTexture: 'white' | 'nothing';
   /** The surfaces in draw order, or null to draw nothing. Its children still draw. */
@@ -57,10 +58,10 @@ export function CanvasMeshBody<Input>({
   children,
 }: CanvasMeshBodyProps<Input>) {
   const { view, canvasTexture } = texture[DRAWN_TEXTURE];
-  // The placeholder is for a texture that is set but never draws. One that is not here yet draws nothing.
-  const isMissing = showsPlaceholder || texture.state === 'missing';
-  const texturePermitsDraw =
-    texture.state === 'ready' || (texture.state === 'none' && withoutTexture === 'white');
+  // A texture that is not here yet draws nothing, whatever the item draws with no image.
+  const drawsWhite = withoutTexture === 'white';
+  const isMissing = showsPlaceholder || (texture.state === 'missing' && !drawsWhite);
+  const texturePermitsDraw = texture.state === 'ready' || (texture.state !== 'arriving' && drawsWhite);
   const isDrawn = !isMissing && texturePermitsDraw && surfaces !== null;
   return (
     <CanvasItem2D

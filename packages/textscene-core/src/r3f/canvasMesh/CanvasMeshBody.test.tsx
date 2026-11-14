@@ -107,14 +107,18 @@ describe('CanvasMeshBody texture states', () => {
     }
   );
 
-  it.each(['white', 'nothing'] as const)(
-    'with a failed texture and withoutTexture %s draws the placeholder',
-    async (withoutTexture) => {
-      const { renderer } = await render({ texture: TEXTURE_REFERENCE, withoutTexture }, 'failed');
+  it('with a failed texture and withoutTexture white draws the surface with no map', async () => {
+    const { renderer } = await render({ texture: TEXTURE_REFERENCE, withoutTexture: 'white' }, 'failed');
 
-      expect(placeholderMeshes(renderer)).toHaveLength(1);
-    }
-  );
+    expect(placeholderMeshes(renderer)).toHaveLength(0);
+    expect(material(renderer).map).toBeNull();
+  });
+
+  it('with a failed texture and withoutTexture nothing draws the placeholder', async () => {
+    const { renderer } = await render({ texture: TEXTURE_REFERENCE, withoutTexture: 'nothing' }, 'failed');
+
+    expect(placeholderMeshes(renderer)).toHaveLength(1);
+  });
 });
 
 describe('CanvasMeshBody light reads', () => {
@@ -126,7 +130,11 @@ describe('CanvasMeshBody light reads', () => {
 
   it.each([
     ['no texture that draws nothing', { withoutTexture: 'nothing' }, undefined],
-    ['a failed texture', { texture: TEXTURE_REFERENCE }, 'failed'],
+    [
+      'a failed texture that draws the placeholder',
+      { texture: TEXTURE_REFERENCE, withoutTexture: 'nothing' },
+      'failed',
+    ],
     ['an arriving texture', { texture: TEXTURE_REFERENCE }, 'arriving'],
   ] as const)('asks for none with %s', async (_case, props, file) => {
     const { registerItem } = await render(props, file);
