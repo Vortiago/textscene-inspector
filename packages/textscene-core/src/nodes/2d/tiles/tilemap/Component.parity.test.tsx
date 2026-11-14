@@ -44,6 +44,20 @@ describe('TileMap render parity', () => {
     expect(child).toBeLessThan(after!);
   });
 
+  it('gives each row of a y-sorted layer its own draw value under a TileMap that sorts nothing', async () => {
+    const renderer = await renderTileMap(
+      withTileSet(
+        'layer_0/y_sort_enabled = true',
+        'layer_0/tile_data = PackedInt32Array(0, 0, 0, 65536, 0, 0, 131072, 0, 0)'
+      )
+    );
+    const rows = tileMeshes(renderer).map(nearestGroupOrder);
+    expect(rows).toHaveLength(3);
+    expect(new Set(rows).size).toBe(3);
+    const [child] = polygonMeshes(renderer).map(nearestGroupOrder);
+    expect(Math.max(...rows)).toBeLessThan(child!);
+  });
+
   it('draws no tile for a TileMap with a tile_set but zero layers', async () => {
     const renderer = await renderTileMap(withTileSet());
     expect(tileMeshes(renderer)).toHaveLength(0);

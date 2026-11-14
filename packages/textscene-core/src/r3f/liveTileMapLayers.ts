@@ -11,13 +11,15 @@ import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/type
 import { childCanvasItemProperties } from '../nodes/2d/tiles/shared/childCanvasItem.js';
 import { perObject } from '../utils/perObject.js';
 
+const NO_LAYERS: readonly LiveNode[] = [];
+
 /**
- * The layer children of `node`, or null for a node that is no TileMap. A layer is named
+ * The layer children of `node`, none for a node that is no TileMap. A layer is named
  * `@TileMapLayer@<index>`, as Godot names a generated node, so no authored child shares its path. It
  * leaves the scene tiles to the TileMap, which holds the instances of every layer (`tile_map_layer.cpp:1646`).
  */
-export function tileMapLayerChildren(node: TscnNode): readonly LiveNode[] | null {
-  return node.type === 'TileMap' ? layerNodesOf(node) : null;
+export function tileMapLayerChildren(node: TscnNode): readonly LiveNode[] {
+  return node.type === 'TileMap' ? layerNodesOf(node) : NO_LAYERS;
 }
 
 /** By node, so a step built again hands back the same layer nodes. */
