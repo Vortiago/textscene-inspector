@@ -1,9 +1,8 @@
 /**
  * A Sprite2D with no texture draws nothing, as Godot's draw returns early (`sprite_2d.cpp:159`).
- * Only a texture that is set but cannot be loaded gets the missing-resource placeholder.
+ * A texture that fails to load draws nothing too: Godot's loader leaves the property null.
  */
 import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseSprite2D } from './parser';
 import { Sprite2D } from './Component';
@@ -41,13 +40,6 @@ async function render(node: TscnNode) {
   return renderer;
 }
 
-function placeholders(renderer: Awaited<ReturnType<typeof render>>) {
-  return renderer.scene.findAllByType('Mesh').filter((m) => {
-    const material = (m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
-    return material.color.getHex() === new THREE.Color('magenta').getHex();
-  });
-}
-
 describe('Sprite2D without a texture', () => {
   it('draws nothing when no texture is authored', async () => {
     const renderer = await render(spriteNode({}));
@@ -61,9 +53,9 @@ describe('Sprite2D without a texture', () => {
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
-  it('draws the missing-resource placeholder for a texture that cannot be loaded', async () => {
+  it('draws nothing for a texture that cannot be loaded', async () => {
     const renderer = await render(spriteNode({ texture: 'ExtResource("1")' }));
 
-    expect(placeholders(renderer)).toHaveLength(1);
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 });

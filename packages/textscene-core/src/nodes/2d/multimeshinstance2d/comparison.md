@@ -11,7 +11,8 @@ renders_as: a THREE.Mesh, THREE.Points or THREE.LineSegments per surface kind, w
 
 MultiMeshInstance2D draws the mesh of a MultiMesh once for each instance, on the canvas. The
 previewer draws each instance under its 2D transform, and multiplies the texel, the vertex colour,
-the instance colour and the modulate. With a CanvasItemMaterial that sets `particles_animation`,
+the instance colour and the modulate. A texture that is set but fails to load draws the untextured instances, as Godot does. Godot's loader
+leaves a property that names a missing file null (`resource_format_text.cpp:146-154`, `:288-289`). With a CanvasItemMaterial that sets `particles_animation`,
 each instance shows the cell its custom data picks. It draws nothing for a 3D transform format.
 
 ## Linting

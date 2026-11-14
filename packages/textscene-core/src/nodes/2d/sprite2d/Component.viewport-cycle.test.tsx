@@ -94,6 +94,7 @@ describe('<Sprite2D> ViewportTexture cycle fallback', () => {
     expect(sampling).toBeUndefined();
   });
 
+  // Godot draws a cycle's viewports in tree order (`renderer_viewport.cpp:91-126`). The previewer cannot.
   it('renders the missing-resource placeholder instead', async () => {
     const { renderer } = await renderCyclicSprite();
     const placeholder = renderer.scene

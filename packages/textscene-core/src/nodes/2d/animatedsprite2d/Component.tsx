@@ -8,12 +8,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
+import { CanvasMeshBody } from '../../../r3f/canvasMesh/CanvasMeshBody';
+import { useCanvasMeshTexture } from '../../../r3f/canvasMesh/useCanvasMeshTexture';
+import { useSpriteQuad } from '../../../r3f/canvasMesh/spriteQuad';
 import { frameSizePx, WHOLE_FRAME } from '../../../r3f/spriteFrame';
-import { useCanvasItemTexture } from '../../../r3f/canvasItemTexture';
-import { canvasMapProps, useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
-import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
-import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useAnimationTransport } from '../../../r3f/contexts/AnimationTransportContext';
 import { stepPlayback } from '../../../r3f/animation/stepPlayback';
 import { loopsUnderOverride } from '../../../r3f/animation/loopOverride';
@@ -22,14 +20,13 @@ import { useFrameReference, useSpriteFrames } from '../../../resources/textures/
 import { frameAtTime, clipDuration } from '../../../resources/textures/spriteframes/playback';
 import type { SpriteFramesAnimation } from '../../../resources/textures/spriteframes/types';
 import type { AnimatedSprite2DProperties } from './types';
-import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
 
 export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as AnimatedSprite2DProperties;
 
   // Every animation the SpriteFrames declares, not only the authored one: the
   // transport lets the user pick any clip.
-  const { spriteFrames: resolved, status: spriteFramesStatus } = useSpriteFrames(props.sprite_frames);
+  const { spriteFrames: resolved } = useSpriteFrames(props.sprite_frames);
   const spriteFrames = resolved?.animations ?? null;
   const clipNames = useMemo(() => (spriteFrames ? [...spriteFrames.keys()] : []), [spriteFrames]);
   const durations = useMemo(
@@ -134,64 +131,21 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const frame = frameCount > 0 ? Math.min(Math.max(rawFrame, 0), frameCount - 1) : 0;
   const frameRef = currentAnim?.frames[frame] ?? null;
 
-  const canvasSpace = useCanvasColorSpace();
   // A frame's ids are scoped to its SpriteFrames' home, so the frame resolves
-  // in those tables: the scene's, or the .tres's.
-  const frameReference = useFrameReference(resolved, frameRef);
-  const {
-    texture: frameTexture,
-    size: frameSize,
-    missing: frameMissing,
-    sampler,
-    canvasTexture,
-  } = useCanvasItemTexture(props, frameReference);
-
-  // `useCanvas2DTexture` clones each frame texture with the item's sampler and disposes the clone
-  // once it no longer draws, so playback leaks no GPU texture.
-  const displayedTexture = useCanvas2DTexture(frameTexture, sampler);
-  const { width, height } = useMemo(() => frameSizePx(frameSize, WHOLE_FRAME), [frameSize]);
+  // in those tables: the scene's, or the .tres's. `useCanvasMeshTexture` clones each frame texture
+  // with the item's sampler and disposes the clone once it no longer draws, so playback leaks no GPU
+  // texture.
+  const texture = useCanvasMeshTexture(props, { reference: useFrameReference(resolved, frameRef) });
+  const frameSize = useMemo(() => frameSizePx(texture.size, WHOLE_FRAME), [texture.size]);
+  const surfaces = useSpriteQuad(props, frameSize);
 
   // No SpriteFrames, no animation or no frame texture draws nothing (`animated_sprite_2d.cpp:270-278`),
-  // and so does a `.tres` still loading. The placeholder is for a resource that is set but failed.
-  const spriteFramesFailed = !!props.sprite_frames && spriteFramesStatus === 'unavailable';
-  const showPlaceholder = spriteFramesFailed || (!!frameRef && frameMissing);
-
-  const cgx = props.offset.x + (props.centered ? 0 : width / 2);
-  const cgy = props.offset.y + (props.centered ? 0 : height / 2);
-  const meshScale: [number, number, number] = [props.flip_h ? -1 : 1, props.flip_v ? -1 : 1, 1];
+  // and so does a SpriteFrames or frame texture that is loading or failed.
 
   return (
-    <CanvasItem2D
-      node={node}
-      props={props}
-      canvasTexture={canvasTexture}
-      body={({ color, opacity }, _material, pixelMaterial) => {
-        if (showPlaceholder) return <MissingResourcePlaceholder shape="plane" name={node.name} />;
-        if (!displayedTexture) return null;
-
-        // Constant while a clip plays, since each frame's clone decodes alike, so
-        // this remounts when the map appears, not per frame.
-        const program = materialProgramInputs({
-          props: {
-            ...canvasMapProps(displayedTexture, canvasSpace),
-            color,
-            opacity,
-            transparent: true,
-            depthWrite: false,
-          },
-          merge: [pixelMaterial],
-        });
-
-        return (
-          <mesh position={[cgx, -cgy, 0]} scale={meshScale}>
-            <planeGeometry args={[width, height]} />
-            <meshBasicMaterial key={program.key} {...program.props} />
-          </mesh>
-        );
-      }}
-    >
+    <CanvasMeshBody node={node} props={props} texture={texture} withoutTexture="nothing" surfaces={surfaces}>
       {children}
-    </CanvasItem2D>
+    </CanvasMeshBody>
   );
 }
 

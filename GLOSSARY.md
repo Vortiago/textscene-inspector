@@ -524,6 +524,14 @@ _Avoid_: "frame", which is a Sprite2D's `frame` of `hframes`.
 One of the instances a MultiMesh draws: the first `visible_instance_count`, or all of them for -1, each with its transform, its colour when `use_colors` and its custom data when `use_custom_data`.
 _Avoid_: "visible instance" for the record, which names only the count.
 
+**Canvas mesh body** (`CanvasMeshBody`, `r3f/canvasMesh/`):
+The module a Node2D mesh drawer draws through: Sprite2D, AnimatedSprite2D, Polygon2D, Line2D, MeshInstance2D and MultiMeshInstance2D. A drawer states its texture with `useCanvasMeshTexture` and hands over its **canvas surfaces**. The body holds the texture's load state, the placeholder for a ViewportTexture in a pass cycle, the CanvasTexture hand-back to the lighting, the light read, the material colour, the defines and the one material.
+_Avoid_: "canvas mesh item", "sprite material".
+
+**Canvas surface** (`CanvasSurface`, `r3f/canvasMesh/canvasSurface.ts`):
+One geometry a canvas mesh body draws, with the one array colour its draw carries (Polygon2D `color`, Line2D `default_color`) and what its `color` attribute holds: the authored sRGB numbers or colours decoded and times an instance colour.
+_Avoid_: "part", "tint shape".
+
 **Canvas frame** (`Canvas2DStage/canvasFrame.ts`):
 The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057). It stores sRGB numbers, or linear half floats in a linear canvas colour space, which the root's copy to the drawing buffer converts to sRGB. Under `render_target_clear_mode` NEVER it takes the bytes of the target first and draws over them.
 _Avoid_: "MSAA frame".

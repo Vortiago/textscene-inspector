@@ -10,7 +10,7 @@ renders_as: an unlit textured quad
 
 Sprite2D draws a texture as a flat quad on the canvas. The previewer renders it as an
 unlit plane at the texture's pixel size, tinted by `modulate`. A Sprite2D with no texture draws
-nothing, as Godot does (`sprite_2d.cpp:159`). It samples with the `texture_filter` and `texture_repeat` inherited from its ancestors (see Node2D), unless its CanvasTexture sets its own. A CanvasTexture's `normal_texture` and `specular_texture` shade the sprite under PointLight2D and DirectionalLight2D (see those sheets), also through an AtlasTexture that cuts a cell of the CanvasTexture. A frame or region of a ViewportTexture blends its edge texels with the texels past it, as Godot's filter does. A texture that is set but fails to load draws a placeholder.
+nothing, as Godot does (`sprite_2d.cpp:159`). It samples with the `texture_filter` and `texture_repeat` inherited from its ancestors (see Node2D), unless its CanvasTexture sets its own. A CanvasTexture's `normal_texture` and `specular_texture` shade the sprite under PointLight2D and DirectionalLight2D (see those sheets), also through an AtlasTexture that cuts a cell of the CanvasTexture. A frame or region of a ViewportTexture blends its edge texels with the texels past it, as Godot's filter does. A texture that is set but fails to load draws nothing, as Godot does. Godot's loader leaves a property that names a missing file null (`resource_format_text.cpp:146-154`, `:288-289`).
 
 ## A GradientTexture2D with no gradient
 

@@ -6,6 +6,7 @@
  * that loads its texture any other way, so a new one cannot forget the maps.
  */
 
+import { useMemo } from 'react';
 import type { Node2DProperties } from '../nodes/base/node2d/types';
 import type { ScopedReference } from '../resources/reading';
 import { useTexture2D, type CanvasTextureSlot, type Texture2DResult } from '../resources/useTexture2D';
@@ -43,5 +44,7 @@ export function useCanvasItemTextureSampledBy(
   // No view: the slot samples the view of its canvas's colour space.
   const { canvasTexture: slot, ...drawn } = useTexture2D(reference);
   const sampler = useCanvasTextureSampler(itemSampler, slot?.texture);
-  return { ...drawn, sampler, canvasTexture: slot && { slot, sampler } };
+  // Memoised, so a consumer that memoises on it holds across renders.
+  const canvasTexture = useMemo(() => slot && { slot, sampler }, [slot, sampler]);
+  return { ...drawn, sampler, canvasTexture };
 }
