@@ -11,17 +11,8 @@
  */
 import type { Rgba } from '../../../../godot/math/math';
 import { TAU } from '../../../../godot/math/math.js';
+import { linearSrgbToOklab, oklabToLinearSrgb } from '../../../../godot/math/okLab';
 
-interface Lab {
-  L: number;
-  a: number;
-  b: number;
-}
-interface RGB {
-  r: number;
-  g: number;
-  b: number;
-}
 interface LC {
   L: number;
   C: number;
@@ -38,54 +29,12 @@ function srgbTransferFunction(a: number): number {
 
 const f32 = Math.fround;
 
-/** `a * x + b * y + c * z`, each step rounded to float as `ok_color.h`'s `float` maths does. */
-function dotF32(a: number, x: number, b: number, y: number, c: number, z: number): number {
-  return f32(f32(f32(f32(a) * x) + f32(f32(b) * y)) + f32(f32(c) * z));
-}
-
 /** `srgb_transfer_function_inv` (`ok_color.h:62-65`), in float, of a `Color`'s float channel. */
 function srgbTransferFunctionInv(channel: number): number {
   const a = f32(channel);
   return f32(0.04045) < a
     ? f32(Math.pow(f32(f32(a + f32(0.055)) / f32(1.055)), f32(2.4)))
     : f32(a / f32(12.92));
-}
-
-/**
- * `linear_srgb_to_oklab` (`ok_color.h:67-82`), in float. A grey's `a` and `b` are float rounding
- * noise, and its hue is their angle, so only Godot's own float steps give Godot's hue.
- */
-function linearSrgbToOklab(c: RGB): Lab {
-  const l = dotF32(0.4122214708, c.r, 0.5363325363, c.g, 0.0514459929, c.b);
-  const m = dotF32(0.2119034982, c.r, 0.6806995451, c.g, 0.1073969566, c.b);
-  const s = dotF32(0.0883024619, c.r, 0.2817188376, c.g, 0.6299787005, c.b);
-
-  const l_ = f32(Math.cbrt(l));
-  const m_ = f32(Math.cbrt(m));
-  const s_ = f32(Math.cbrt(s));
-
-  return {
-    L: dotF32(0.2104542553, l_, 0.793617785, m_, -0.0040720468, s_),
-    a: dotF32(1.9779984951, l_, -2.428592205, m_, 0.4505937099, s_),
-    b: dotF32(0.0259040371, l_, 0.7827717662, m_, -0.808675766, s_),
-  };
-}
-
-/** `oklab_to_linear_srgb` (`ok_color.h:84-99`). */
-function oklabToLinearSrgb(c: Lab): RGB {
-  const l_ = c.L + 0.3963377774 * c.a + 0.2158037573 * c.b;
-  const m_ = c.L - 0.1055613458 * c.a - 0.0638541728 * c.b;
-  const s_ = c.L - 0.0894841775 * c.a - 1.291485548 * c.b;
-
-  const l = l_ * l_ * l_;
-  const m = m_ * m_ * m_;
-  const s = s_ * s_ * s_;
-
-  return {
-    r: 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-    g: -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-    b: -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
-  };
 }
 
 /** `compute_max_saturation` (`ok_color.h:104-166`). `a` and `b` are normalised so `a^2 + b^2 == 1`. */

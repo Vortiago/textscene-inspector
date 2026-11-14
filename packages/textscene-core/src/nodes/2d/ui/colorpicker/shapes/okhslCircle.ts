@@ -7,9 +7,8 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { circleCursorCentre, okLightnessSlider, type ShapeVariant } from './shapeDrawing';
+import { circleControls, okLightnessSlider, type ShapeVariant } from './shapeDrawing';
 import type { ShapeFragment } from './shapeFragment';
-import { CIRCLE_LAYOUT, type SliderRowLayout } from './shapeRowLayout';
 
 /** The OK colour HSL circle shader (`color_picker_shape.cpp:89-111`). */
 const OKHSL_CIRCLE_FRAGMENT: ShapeFragment = {
@@ -33,16 +32,11 @@ const OKHSL_CIRCLE_FRAGMENT: ShapeFragment = {
 	COLOR = vec4(col, (b + b2 + b3 + b4) / 4.00);`,
 };
 
-export const OKHSL_CIRCLE: ShapeVariant<SliderRowLayout> = {
+export const OKHSL_CIRCLE: ShapeVariant = {
   icon: 'shape_circle',
-  layout: CIRCLE_LAYOUT,
-  draw(split, { okhsl }) {
-    const { h, s, l } = okhsl;
-    return {
-      fill: { rect: split.area, fragment: OKHSL_CIRCLE_FRAGMENT, uniforms: { ok_hsl_l: l } },
-      svSquare: null,
-      cursors: [{ centre: circleCursorCentre(split.area, h, s), hasBackground: true }],
-      slider: okLightnessSlider(split.slider, okhsl),
-    };
-  },
+  controls: circleControls(
+    (rect, { okhsl }) => ({ rect, fragment: OKHSL_CIRCLE_FRAGMENT, uniforms: { ok_hsl_l: okhsl.l } }),
+    ({ okhsl }) => ({ hue: okhsl.h, saturation: okhsl.s }),
+    (rect, { okhsl }) => okLightnessSlider(rect, okhsl)
+  ),
 };

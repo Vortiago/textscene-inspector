@@ -175,7 +175,7 @@ export const LINK_BUTTON_UNDERLINE_MODE_NAMES = enumNamesByValue(LinkButtonUnder
  * `color_picker.cpp:1996`. `MODE_RAW` is a deprecated alias for 2, left out so 2 keeps the name
  * MODE_LINEAR.
  */
-const ColorPickerColorMode = {
+export const ColorPickerColorMode = {
   MODE_RGB: 0,
   MODE_HSV: 1,
   MODE_LINEAR: 2,
