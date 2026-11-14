@@ -33,6 +33,12 @@ export const OPEN_SANS_CANVAS_FONT_METRICS: OutlineCanvasFontMetrics = {
   get averageAdvanceUnits() {
     return OPEN_SANS_FONT_METRICS.averageAdvanceUnits;
   },
+  get underlinePosition() {
+    return OPEN_SANS_FONT_METRICS.underlinePosition;
+  },
+  get underlineThickness() {
+    return OPEN_SANS_FONT_METRICS.underlineThickness;
+  },
   get shaping() {
     return OPEN_SANS_FONT_METRICS.shaping;
   },
