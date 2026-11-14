@@ -10,6 +10,7 @@ import type { TileMapProperties } from '../nodes/2d/tiles/tilemap/types.js';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
 import { childCanvasItemProperties } from '../nodes/2d/tiles/shared/childCanvasItem.js';
 import { perObject } from '../utils/perObject.js';
+import { TRANSFORM2D_IDENTITY } from '../godot/math/transform2d.js';
 
 const NO_LAYERS: readonly LiveNode[] = [];
 
@@ -44,5 +45,7 @@ const layerNodesOf = perObject((map: TscnNode): readonly LiveNode[] => {
     rawProperties: {},
     children: [],
     isUnowned: true,
+    // A layer sits at the TileMap's origin and registers no group, so a live sort reads the TileMap's.
+    placedPose: TRANSFORM2D_IDENTITY,
   }));
 });
