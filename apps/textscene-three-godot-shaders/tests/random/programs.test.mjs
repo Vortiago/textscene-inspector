@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { printShader } from '../../../../packages/textscene-core/src/shaders/language/printer.ts';
+import { treeFault } from '../../../../packages/textscene-core/src/shaders/language/treeCheck.ts';
 import { probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { transpilerVerdict } from '../verdicts/judge.mjs';
+import { loweredFault, loweredTreeOf, shapeOf, treeOf } from '../verdicts/trees.testkit.mjs';
 import { generatePrograms, ROOT_ROWS, TRANSPILED_ROWS } from './programs.mjs';
+import { RANDOM_PROGRAMS } from './randomSet.mjs';
 
 const SET = generatePrograms({ seed: 7, count: 40 });
 
@@ -37,5 +41,31 @@ describe('the random program generator', () => {
 
   it('writes programs the probe harness runs', () => {
     for (const program of SET) expect(() => probeSignature(program.source)).not.toThrow();
+  });
+});
+
+/** One line for each program of `programs` whose tree `fault` finds a fault in. */
+const faults = (programs, fault) =>
+  programs.flatMap((program) => {
+    const found = fault(program.source);
+    return found === undefined ? [] : [`${program.name}: ${found}`];
+  });
+
+const printsBack = (tree) =>
+  JSON.stringify(shapeOf(treeOf(printShader(tree)))) === JSON.stringify(shapeOf(tree))
+    ? undefined
+    : 'its printed text parses to another tree';
+
+describe('the trees of the fixed-seed set', () => {
+  it('pass the tree check', () => {
+    expect(faults(RANDOM_PROGRAMS, (source) => treeFault(treeOf(source)))).toEqual([]);
+  });
+
+  it('pass the tree check after lowering, with no loop or switch the lowering removes', () => {
+    expect(faults(RANDOM_PROGRAMS, (source) => loweredFault(loweredTreeOf(source)))).toEqual([]);
+  });
+
+  it('print as text that parses to the same tree', () => {
+    expect(faults(RANDOM_PROGRAMS, (source) => printsBack(treeOf(source)))).toEqual([]);
   });
 });
