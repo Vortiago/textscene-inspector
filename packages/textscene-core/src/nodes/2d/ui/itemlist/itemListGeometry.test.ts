@@ -2,16 +2,10 @@
  * ItemList's draw geometry versus Godot 4.6.3: `NOTIFICATION_DRAW` (`scene/gui/item_list.cpp:1367-1729`)
  * and `_adjust_to_max_size` (`:1186-1197`).
  */
-import {} from '../../../../godot/scene/defaultTheme/defaultTheme';
-import {} from '../../../../r3f/controls/native/defaultThemeRecords';
 import { describe, expect, it } from 'vitest';
-import {} from '../../../../r3f/controls/native/nativeTheme';
-import {} from '../../../../r3f/controls/native/text/measurer';
-import {} from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type {} from '../../../../r3f/controls/native/solveTree';
 import type {} from '../../../../r3f/controls/native/solverRegistry';
 import type {} from './types';
-import {} from '../../../../r3f/controls/native/solverRegistry';
 import { ICON_MODE_LEFT } from './nativeSolver';
 import {
   itemIconColor,
@@ -27,13 +21,10 @@ import {
   itemListWrappedTextWidthPx,
   itemTextColor,
   itemTextDrawOffset,
-} from './itemListDraw';
-import {} from './mirrorX';
+} from './itemListGeometry';
 import { ItemListIconMode } from '../../../../godot/scene/gui';
 import type { Vector2 } from '../../../../godot/math/vector';
-import type { ItemListScrollRange } from './nativeSolver';
-import {} from '../../../../r3f/controls/native/text/textLayout';
-import {} from '../../../../r3f/controls/native/text/textLayout.testkit';
+import type { ItemListScrollRange } from './itemListPack';
 
 describe('itemIconDraw with fixed_icon_size (_adjust_to_max_size, item_list.cpp:1186-1197)', () => {
   /** A LEFT-mode icon in a 24px-tall row: the packed box sits at (h_separation / 2, 0). */

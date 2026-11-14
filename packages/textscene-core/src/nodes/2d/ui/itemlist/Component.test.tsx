@@ -25,7 +25,7 @@ import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/text
 import { ItemList } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { ItemListIconMode } from '../../../../godot/scene/gui';
-import { ICON_MODE_LEFT, ITEM_LIST_THEME_FONT_KEY } from './nativeSolver';
+import { ICON_MODE_LEFT } from './nativeSolver';
 import { shapeItemListText } from './itemText';
 
 import type { ItemListRuntimeProperties } from './types';
@@ -316,7 +316,7 @@ describe('<ItemList> — RTL', () => {
     const shaped = shapeItemListText({
       text: 'Sword',
       fontSizePx: nativeTheme(1).fontSize,
-      fontMetrics: resolveNodeFontMetrics(node, ITEM_LIST_THEME_FONT_KEY),
+      fontMetrics: resolveNodeFontMetrics(node, 'font'),
       iconMode: ICON_MODE_LEFT,
       locale: '',
       maxTextLines: 1,

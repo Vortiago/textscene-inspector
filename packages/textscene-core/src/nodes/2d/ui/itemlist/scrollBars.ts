@@ -23,7 +23,7 @@ import {
   scrollBarThicknesses,
 } from '../shared/scrollBarSolver';
 import { itemListMirrorX } from './mirrorX';
-import type { ItemListScrollRange } from './nativeSolver';
+import type { ItemListScrollRange } from './itemListPack';
 
 interface ItemListScrollBarsInput {
   /** The control's `get_size()`. */

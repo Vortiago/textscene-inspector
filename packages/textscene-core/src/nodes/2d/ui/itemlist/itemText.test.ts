@@ -2,18 +2,12 @@
  * ItemList item text shaping versus Godot 4.6.3: `_shape_text` (`scene/gui/item_list.cpp:37-55`)
  * and `TextParagraph::_shape_lines` (`text_paragraph.cpp:225-266`).
  */
-import {} from '../../../../godot/scene/defaultTheme/defaultTheme';
-import {} from '../../../../r3f/controls/native/defaultThemeRecords';
 import { describe, expect, it } from 'vitest';
-import {} from '../../../../r3f/controls/native/nativeTheme';
-import {} from '../../../../r3f/controls/native/text/measurer';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type {} from '../../../../r3f/controls/native/solveTree';
 import type {} from '../../../../r3f/controls/native/solverRegistry';
 import type {} from './types';
-import {} from '../../../../r3f/controls/native/solverRegistry';
 import { ICON_MODE_LEFT } from './nativeSolver';
-import {} from './mirrorX';
 import { isItemListTextWrapped, shapeItemListText } from './itemText';
 import { ItemListIconMode } from '../../../../godot/scene/gui';
 import type {} from '../../../../godot/math/vector';

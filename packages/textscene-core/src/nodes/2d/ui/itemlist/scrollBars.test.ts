@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { defaultScrollBarBoxes } from '../shared/testing/scrollBarBoxes';
 import { ItemListScrollHintMode } from '../../../../godot/scene/gui';
 import { itemListScrollBars } from './scrollBars';
-import type { ItemListScrollRange } from './nativeSolver';
+import type { ItemListScrollRange } from './itemListPack';
 
 const MARGINS = { left: 4, top: 4, right: 4, bottom: 4 };
 const HIDDEN: ItemListScrollRange = { visible: false, min: 0, max: 72, page: 72 };
