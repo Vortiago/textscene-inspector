@@ -1,8 +1,9 @@
 /**
  * `<GraphNode>`, the native (WebGL canvas) painter for `GraphNode::_notification(NOTIFICATION_DRAW)`
  * (`scene/gui/graph_node.cpp:621-703`) in source order: body panel, titlebar, per-row ports and slot
- * boxes, resizer. The title is an internal Label (`../graphelement/graphTitlebar.ts`). Each colour composes with the walker's `tint` in sRGB, as in
- * `PanelChrome`, and `ControlCanvasWalker` owns `visible`, `children` and the transform.
+ * boxes, resizer. The title is an internal Label (`../graphelement/graphTitlebar.ts`). Each colour
+ * composes with the walker's `tint` in sRGB, as in `PanelChrome`, and `ControlCanvasWalker` owns
+ * `visible`, `children` and the transform.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

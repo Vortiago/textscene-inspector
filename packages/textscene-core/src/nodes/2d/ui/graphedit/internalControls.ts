@@ -15,11 +15,10 @@ import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
 import type { CanvasSlot } from '../../../../r3f/canvasItemState';
 import { canvasSubOrders } from '../../../../r3f/canvasItemState';
-import {
-  builtButtonIconRequests,
-  type InternalControlSpec,
-  type InternalControlsFn,
-  type InternalLayoutFn,
+import type {
+  InternalControlSpec,
+  InternalControlsFn,
+  InternalLayoutFn,
 } from '../../../../r3f/controls/native/internalControls';
 import { mirrorX } from '../../../../r3f/controls/native/controlRectSolver';
 import { themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
@@ -194,8 +193,9 @@ export const graphEditInternalLayout: InternalLayoutFn = (graph, internals, rect
     })
   );
 
-/** One slot for each toolbar icon a Theme gives the GraphEdit, then the slots of the Buttons it builds without one. */
-export const graphEditTextureSlots: TextureSlotsFn = (_node, themedIcons = {}, builtIcons) => [
-  ...themedSlotRequests(Object.keys(BUTTON_ICON_URLS), themedIcons),
-  ...builtButtonIconRequests(['Button'], builtIcons),
-];
+/**
+ * One slot for each toolbar icon a Theme gives the GraphEdit. Every Button the toolbar builds sets its
+ * own icon and the `FlatButton` variation, so none reads the `icon` of the Button class.
+ */
+export const graphEditTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) =>
+  themedSlotRequests(Object.keys(BUTTON_ICON_URLS), themedIcons);

@@ -128,7 +128,8 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
     if (!isSortableControl(child)) return;
     const eff = graphNodeEffectiveSlot(props.slots, i);
     const extra = eff.drawStylebox ? slot.contentMargin.top + slot.contentMargin.bottom : 0;
-    const minHeight = minSize.y + extra;
+    // `Size2i size`: the row's minimum is whole pixels.
+    const minHeight = Math.trunc(minSize.y + extra);
     stretchMin += minHeight;
     const willStretch = hasFlag(vFlagsOf(child), SizeFlags.EXPAND);
     const stretchRatio = stretchRatioOf(child);
@@ -150,9 +151,12 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   });
 
   const childrenCount = entries.length;
-  const stretchMax = contentRect.h - (childrenCount - 1) * separation;
+  // `stretch_max`, `available_stretch_space` and `ofs_y` are ints, so each assignment truncates.
+  const stretchMax = Math.trunc(contentRect.h - (childrenCount - 1) * separation);
   const stretchDiff = Math.max(stretchMax - stretchMin, 0);
-  availableStretch += stretchDiff - panel.contentMargin.bottom - panel.contentMargin.top - band.resort;
+  availableStretch = Math.trunc(
+    availableStretch + stretchDiff - panel.contentMargin.bottom - panel.contentMargin.top - band.resort
+  );
 
   while (stretchRatioTotal > 0) {
     let refitSuccessful = true;
@@ -172,8 +176,8 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
     if (refitSuccessful) break;
   }
 
-  let ofsY = panel.contentMargin.top + band.resort;
-  const width = contentRect.w - panel.contentMargin.left - panel.contentMargin.right;
+  let ofsY = Math.trunc(panel.contentMargin.top + band.resort);
+  const width = Math.trunc(contentRect.w - panel.contentMargin.left - panel.contentMargin.right);
   const rects = new Map<string, Rect2>();
 
   entries.forEach((entry, validIdx) => {
@@ -181,7 +185,7 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
     const fromY = ofsY;
     let toY = ofsY + entry.finalSize;
     if (entry.willStretch && validIdx === childrenCount - 1) {
-      toY = contentRect.h - panel.contentMargin.bottom;
+      toY = Math.trunc(contentRect.h - panel.contentMargin.bottom);
     }
     const height = toY - fromY;
     const eff = graphNodeEffectiveSlot(props.slots, entry.rawIndex);

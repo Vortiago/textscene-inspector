@@ -317,9 +317,6 @@ function ControlItemGroup({
     [theme, measureText, snapToPixels, tint.inherited, state.zFinal]
   );
 
-  // A canvas boundary such as `CanvasLayer` wraps its descendants in fresh
-  // context, so they must be its React children. The registration declares it,
-  // so a second such type adds no branch here.
   const internalElements = internals.length > 0 && (
     <InternalControls
       internals={internals}
@@ -329,6 +326,9 @@ function ControlItemGroup({
       env={internalEnv}
     />
   );
+  // A canvas boundary such as `CanvasLayer` wraps its descendants in fresh
+  // context, so they must be its React children. The registration declares it,
+  // so a second such type adds no branch here.
   const children = placeChildren(solveNode.node.type, childElements, internalElements);
   // The painter's own path, as `NodeDispatcher` gives a node's: a ViewportTexture's `viewport_path`
   // counts from the painter's local scene.

@@ -147,6 +147,22 @@ describe('graphNodeLayout (graph_node.cpp:153-293)', () => {
     expect(rects.get('c')).toEqual({ x: 18, y: 43, w: 164, h: 20 });
   });
 
+  it('keeps each row in whole pixels: _resort stores its sizes and offsets in ints (graph_node.cpp:170-252)', () => {
+    const child = leaf('c', { customMinimumSize: { x: 50, y: 20.4 } });
+    const panel = marginBox({ left: 18, top: 12.5, right: 18, bottom: 12 });
+    const n = graphNode('N', {}, [child], { panel });
+    const rects = asMap(
+      graphNodeLayout(
+        n,
+        [{ node: child, minSize: { x: 50, y: 20.4 } }],
+        { x: 0, y: 0, w: 200, h: 100 },
+        ctx()
+      )
+    );
+    // ofs_y = int(12.5 + 23 + 8) = 43, and the row is `Size2i` high: int(20.4) = 20.
+    expect(rects.get('c')).toMatchObject({ y: 43, h: 20 });
+  });
+
   it('a SHRINK child (flags 0) shrinks to its own minimum at the row origin', () => {
     const child = leaf('c', {
       customMinimumSize: { x: 50, y: 20 },
