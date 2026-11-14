@@ -31,9 +31,9 @@ function node(name: string, type: string, children: TscnNode[] = [], properties 
 }
 
 /** A parsed TileMap holding `layerCount` layers, as `parseTileMap` shapes it. */
-function tileMap(layerCount: number, children: TscnNode[] = []): TscnNode {
+function tileMap(layerCount: number, children: TscnNode[] = [], ySortEnabled = false): TscnNode {
   return node('Map', 'TileMap', children, {
-    layers: Array.from({ length: layerCount }, (_, index) => ({ index })),
+    layers: Array.from({ length: layerCount }, (_, index) => ({ index, ySortEnabled })),
   });
 }
 
@@ -160,12 +160,17 @@ describe('paintRangeSize', () => {
     expect(paintRangeSize(node('Tiles', 'TileMapLayer'))).toBeGreaterThan(1000);
   });
 
-  it('counts the whole run of each TileMap layer, however many layers there are', () => {
-    // Each layer is an internal child TileMapLayer (`tile_map.cpp:279`), which holds a reserve for
-    // its rows and scene tiles. The TileMap holds one more for its own scene tiles.
+  it('counts one value for each TileMap layer that sorts nothing, however many layers there are', () => {
+    // Each layer is an internal child TileMapLayer (`tile_map.cpp:279`). Its scene tiles go to the
+    // TileMap (`tile_map_layer.cpp:1646`), whose run is a reserve for them, then the layers, then the marker.
     const children = [node('Marker', 'Sprite2D')];
-    expect(paintRangeSize(tileMap(5000, children))).toBe(
-      1 + 5000 * DYNAMIC_CHILD_RESERVE + DYNAMIC_CHILD_RESERVE
+    expect(paintRangeSize(tileMap(5000, children))).toBe(DYNAMIC_CHILD_RESERVE + 5000 + 1);
+  });
+
+  it('counts a reserve for the rows of each y-sorted TileMap layer', () => {
+    const children = [node('Marker', 'Sprite2D')];
+    expect(paintRangeSize(tileMap(2, children, true))).toBe(
+      DYNAMIC_CHILD_RESERVE + 2 * DYNAMIC_CHILD_RESERVE + 1
     );
   });
 });
@@ -395,11 +400,11 @@ describe('allocatePaintRange', () => {
   it("puts a TileMap's layers after the TileMap and before its authored children", () => {
     // `add_child(new_layer, false, INTERNAL_MODE_FRONT)` (`tile_map.cpp:279`)
     // gives the layers draw indices 0..L-1 (`node.h:585-600`), so every authored
-    // child draws after the runs of all of them.
+    // child draws after them.
     const map = tileMap(3, [node('Marker', 'Sprite2D')]);
     const allocated = allocateNodePaintRange(WHOLE_CANVAS_RANGE, map);
 
-    expect(allocated.front).toEqual({ base: allocated.self + 1, size: 3 * DYNAMIC_CHILD_RESERVE });
+    expect(allocated.front).toEqual({ base: allocated.self + 1, size: 3 });
     expect(allocated.children[0]!.base).toBe(allocated.front.base + allocated.front.size);
   });
 

@@ -148,7 +148,7 @@ const SortedChildren = memo(function SortedChildren({
 
 /**
  * Each item's id in the sort of the canvas item pass: its live path for a node the pass holds, or an
- * extra id for a piece the pass does not list, such as a tile row or a TileMap's layer.
+ * extra id for a piece the pass does not list, such as a tile row.
  */
 function useSortPieces(items: readonly YSortItem[], basePath: string): ReadonlyMap<YSortItem, SortPiece> {
   const paths = useMemo(() => items.map((item) => itemPath(item, basePath)), [items, basePath]);
