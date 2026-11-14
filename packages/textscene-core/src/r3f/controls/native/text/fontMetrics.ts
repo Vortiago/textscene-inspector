@@ -90,6 +90,14 @@ export interface FontMetrics {
   getKerningAdjustmentUnits(a: string, b: string): number;
   /** This font's typical glyph width (such as OS/2 `xAvgCharWidth`), design units: the fallback advance for a character outside its charset. */
   readonly averageAdvanceUnits: number;
+  /**
+   * FreeType's `underline_position`, design units, y up: the centre of the stroke, below the baseline
+   * when negative (`sfntUnderline.ts`). Absent is 0, as FreeType gives a face with no `post` and
+   * Godot a BMFont.
+   */
+  readonly underlinePosition?: number;
+  /** FreeType's `underline_thickness`, design units. Absent is 0. */
+  readonly underlineThickness?: number;
   /** `FontVariation.variation_embolden` of this face. Absent is 0, no embolden. */
   readonly embolden?: number;
   /**
@@ -206,6 +214,39 @@ export function getFontDescentPx(
   fontSizePx: number
 ): number {
   return getFontLinePitchPx(metrics, fontSizePx, 0) - getFontAscentPx(metrics, fontSizePx);
+}
+
+/** The underline stroke of a face or a shaped line, px. */
+export interface UnderlinePx {
+  /** Down from the baseline to the centre of the stroke. */
+  readonly positionPx: number;
+  /** Before a drawer's 1 px floor. */
+  readonly thicknessPx: number;
+}
+
+/**
+ * `_font_get_underline_position` and `_font_get_underline_thickness` at `fontSizePx`: FreeType's
+ * values scaled to 26.6 by `y_scale`, the position negated to point down (`text_server_adv.cpp:1517-1518`).
+ * A fixed-size face scales its own (`:2976-2981`).
+ */
+export function getFontUnderlinePx(
+  metrics: Pick<FontMetrics, 'underlinePosition' | 'underlineThickness' | 'unitsPerEm' | 'pxPerUnit'>,
+  fontSizePx: number
+): UnderlinePx {
+  const position = metrics.underlinePosition ?? 0;
+  const thickness = metrics.underlineThickness ?? 0;
+  if (metrics.pxPerUnit) {
+    return {
+      positionPx: unitsToPx(-position, metrics, fontSizePx),
+      thicknessPx: unitsToPx(thickness, metrics, fontSizePx),
+    };
+  }
+  // `y_scale` equals `x_scale`: Godot requests the same width and height.
+  const yScale = getFontOutlineScale(metrics.unitsPerEm, fontSizePx);
+  return {
+    positionPx: -ftMulFix(position, yScale) / FIXED_26_6_ONE,
+    thicknessPx: ftMulFix(thickness, yScale) / FIXED_26_6_ONE,
+  };
 }
 
 /**

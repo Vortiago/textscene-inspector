@@ -4,6 +4,7 @@
  */
 // Not asserted: a hit rate, or that a share ran once. `presetTimeMinimumSize` mints nodes
 // no painter sees. A miss is a recompute, never a wrong answer.
+import { titlebarBandHeightChannel } from '../../../nodes/2d/ui/graphelement/graphTitlebar';
 import { basename, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -27,6 +28,8 @@ import { tabHeaderHeightChannel } from '../../../nodes/2d/ui/tabcontainer/native
 import { tabBarLoadedOffset } from '../../../nodes/2d/ui/tabbar/loadedOffset';
 // Side-effect import: registers every Control slice's solvers and painters.
 import '../index';
+import '../../../parser/TscnParser';
+import { parsedSceneLines } from './sceneLines';
 
 const UI_ROOT = join(import.meta.dirname, '../../../nodes/2d/ui');
 const WINDOWS_ROOT = join(import.meta.dirname, '../../../nodes/windows');
@@ -145,7 +148,8 @@ function tscn(
  */
 function containerTree(type: string): SolveNode[] {
   const childNodes = ['A', 'B'].map((name) => tscn(name, 'Panel', { customMinimumSize: { x: 400, y: 400 } }));
-  const root = tscn('Root', type, {}, childNodes);
+  // The properties a scene with no line for the container parses to, such as GraphNode's empty `slots`.
+  const root = tscn('Root', type, parsedSceneLines(type, 'Root') as Record<string, unknown>, childNodes);
   const children = childNodes.map((node, i) =>
     withThemeItems({ ...solveNode(), path: `Root/${['A', 'B'][i]!}`, node })
   );
@@ -161,6 +165,8 @@ const CHANNEL_OF: Record<string, Channel<unknown>> = {
   VSplitContainer: splitContainerBoundaryChannel,
   SplitContainer: splitContainerBoundaryChannel,
   TabContainer: tabHeaderHeightChannel,
+  GraphNode: titlebarBandHeightChannel,
+  GraphFrame: titlebarBandHeightChannel,
 };
 const CHANNEL_TYPES = Object.keys(CHANNEL_OF);
 

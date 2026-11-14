@@ -12,11 +12,12 @@ import { applyUvWindow, type UvWindow } from './uvWindow';
  * `texture` is the consumer's own clone or copy, and may be the previous one while a new
  * clone uploads: that one shows the new window over its own pixels. Layout, not
  * passive: the window is set before the frame that first draws the texture. A render
- * target that no view copied is every reader's, so it keeps its own window.
+ * target that no view copied is every reader's, so it keeps its own window. A null `uvWindow`
+ * leaves the texture's window as it is.
  */
-export function useUvWindow(texture: THREE.Texture | null, uvWindow: UvWindow): void {
+export function useUvWindow(texture: THREE.Texture | null, uvWindow: UvWindow | null): void {
   useLayoutEffect(() => {
-    if (texture && !isSharedTarget(texture)) applyUvWindow(texture, uvWindow);
+    if (texture && uvWindow && !isSharedTarget(texture)) applyUvWindow(texture, uvWindow);
   }, [texture, uvWindow]);
 }
 

@@ -21,7 +21,6 @@ import type { ButtonProperties } from './types';
 import {
   buttonMinimumSize,
   buttonTextTheme,
-  buttonIconColor,
   BUTTON_CLASS,
   buttonLayoutOf,
   buttonTextureSlots,
@@ -57,6 +56,11 @@ function node(
     colors: props.themeOverrideColors ?? {},
     constants: props.themeOverrideConstants ?? {},
   });
+}
+
+/** The icon modulate the Button's layout carries for `props`. */
+function iconColorOf(props: Partial<ButtonProperties>) {
+  return buttonLayoutOf(BUTTON_CLASS)(node(props), { x: 100, y: 40 }, nativeTheme(1)).iconColor;
 }
 
 const DEFAULT_MARGIN = contentMarginSize(defaultStyleBoxesOf(defaultThemeAt(1)).Button!.normal!);
@@ -345,24 +349,18 @@ describe('buttonTextTheme: font_color / font_disabled_color key mapping', () => 
   });
 });
 
-describe('buttonIconColor: icon_normal_color / icon_disabled_color (default_theme.cpp:164,169)', () => {
-  const defaultColors = node({}).colors;
-
+describe('the icon colour: icon_normal_color / icon_disabled_color (default_theme.cpp:164,169)', () => {
   it('is opaque white for the normal state (icon_normal_color = Color(1,1,1,1))', () => {
-    expect(buttonIconColor(defaultColors, 'normal')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    expect(iconColorOf({})).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 
   it('is white at 0.4 alpha for the disabled state (icon_disabled_color = Color(1,1,1,0.4))', () => {
-    expect(buttonIconColor(defaultColors, 'disabled')).toEqual({ r: 1, g: 1, b: 1, a: 0.4 });
+    expect(iconColorOf({ disabled: true })).toEqual({ r: 1, g: 1, b: 1, a: 0.4 });
   });
 
-  it('a theme_override_colors/icon_disabled_color override (already folded into n.colors) wins over the default', () => {
-    expect(buttonIconColor({ icon_disabled_color: { r: 1, g: 0, b: 0, a: 1 } }, 'disabled')).toEqual({
-      r: 1,
-      g: 0,
-      b: 0,
-      a: 1,
-    });
+  it('takes a theme_override_colors/icon_disabled_color over the default', () => {
+    const red = { r: 1, g: 0, b: 0, a: 1 };
+    expect(iconColorOf({ disabled: true, themeOverrideColors: { icon_disabled_color: red } })).toEqual(red);
   });
 });
 
@@ -554,8 +552,9 @@ describe('a pressed toggle Button (base_button.cpp:326-352, button.cpp:303-312)'
 
   it('takes the icon_pressed_color override over the white default', () => {
     const red = { r: 1, g: 0, b: 0, a: 1 };
-    expect(buttonIconColor({ icon_pressed_color: red }, 'pressed')).toEqual(red);
-    expect(buttonIconColor(node({}).colors, 'pressed')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    const pressed = { buttonPressed: true };
+    expect(iconColorOf({ ...pressed, themeOverrideColors: { icon_pressed_color: red } })).toEqual(red);
+    expect(iconColorOf(pressed)).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 });
 

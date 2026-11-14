@@ -11,8 +11,12 @@ renders_as: a titled frame around its own content rect
 
 GraphFrame is a GraphElement that groups and auto-resizes around other elements inside a
 GraphEdit. The previewer draws its panel/titlebar StyleBoxes (tint-substituted when
-`tint_color_enabled`), the title text, and the resize handle in `resizer_color` (`graph_frame.cpp:137`) when `resizable` is set and
-`autoshrink_enabled` is not. A Theme that sets `font_color` or the `normal` StyleBox on Label colours and boxes the title. It draws the frame at its authored `size`/`position_offset`.
+`tint_color_enabled`) and the resize handle in `resizer_color` (`graph_frame.cpp:137`) when `resizable` is set and
+`autoshrink_enabled` is not.
+The title is a built Label, `title_label`, centred in the internal HBoxContainer `titlebar_hbox` (`graph_frame.cpp:150-154,348-360`).
+Its variation is `GraphFrameTitleLabel`.
+The Label solver and painter size and draw it.
+So a Theme that sets `font_color` or the `normal` StyleBox on Label colours and boxes the title. It draws the frame at its authored `size`/`position_offset`.
 That is the rect a freshly loaded scene shows. `attach_graph_element_to_frame` is a
 runtime call with no `.tscn` surface, so no auto-resize runs before a script calls it.
 Inside a GraphEdit it draws at the GraphEdit's `zoom` and behind the connections, in reverse

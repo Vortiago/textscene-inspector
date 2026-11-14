@@ -68,7 +68,7 @@ function scrollBarPlacement(
   return {
     visible: true,
     rect: { x: box.rtl ? 0 : box.w - widthPx, y: 0, w: size.x, h: size.y },
-    grabberRect: scrollBarGrabberRect(true, size, grabber),
+    grabberRect: scrollBarGrabberRect(true, size, grabber, boxes),
   };
 }
 
