@@ -5,6 +5,7 @@
  */
 
 import type { TscnNode } from '../../parser/types';
+import type { LiveNode } from '../../resources/liveNode';
 import { createTypeRegistry } from '../../core/createTypeRegistry';
 import { findInClassChain } from '../../godot/classdb/classBaseTypes';
 
@@ -24,7 +25,7 @@ export interface PaintRoom {
    */
   reservesTail?: (node: TscnNode) => boolean;
   /** Its internal front children, which draw before every authored child, each in a run of its own. */
-  frontChildren?: (node: TscnNode) => readonly TscnNode[];
+  frontChildren?: (node: TscnNode) => readonly LiveNode[];
   /** How many values its internal back children take, which draw after its whole subtree. */
   backRoom?: (node: TscnNode) => number;
   /**
