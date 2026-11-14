@@ -23,7 +23,7 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'r3f/canvasItemPass/detachedPaintSlot.ts#installDetachedPaint',
   // No runtime code lists the vendored icons, and the icon test checks each one against its raster.
   'r3f/controls/native/themeIcons.ts#vendoredIconSvgUrls',
-  // The TypeScript twins of a light's blend: the test holds both shader forms to them (#1580).
+  // The TypeScript twins of a light's blend: the test holds both shader forms to them.
   'r3f/lighting2d/lightBlend.ts#blendLayer',
   'r3f/lighting2d/lightBlend.ts#lightBlendCompute',
   'r3f/lighting2d/lightBlend.ts#shadowedLightTerms',
