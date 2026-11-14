@@ -8,15 +8,9 @@ import * as THREE from 'three';
 import { maxEmboldenGrowthPx } from './canvasVariation';
 import type { ByteColour } from './glyphCoverage';
 import { canvasGlyphPenXPx, faceStrikeSize, subpixelHalfStepPx, type FontMetrics } from './fontMetrics';
-import type { GlyphPlacement, TextLayoutResult } from './textLayout';
+import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics, type CanvasFontMetrics } from './runtimeFontMetrics';
-import {
-  hasOwnGlyph,
-  type GlyphPainter,
-  type GlyphReach,
-  type PlacedGlyph,
-  type RasterFrame,
-} from './glyphPainter';
+import { hasOwnGlyph, type GlyphPainter, type PlacedGlyph, type RasterFrame } from './glyphPainter';
 import { hasOutlines, outlineGlyphPainter } from './outlineGlyphPainter';
 import { browserTextPainter } from './browserTextPainter';
 import { blankGlyphPainter } from './blankGlyphPainter';
@@ -116,6 +110,7 @@ function drawnExtentPx(layout: TextLayoutResult, skew: number): { startPx: numbe
   let startPx = Infinity;
   let endPx = -Infinity;
   const reachOf = painterOf(canvasFaceOf(layout)).reachReader(skew, layout.baselineOffsetPx);
+  const penBoxOf = blankGlyphPainter.reachReader(skew, layout.baselineOffsetPx);
   for (const { glyphs } of layout.lines) {
     for (const glyph of glyphs) {
       const { leftPx, rightPx } = hasOwnGlyph(glyph) ? reachOf(glyph) : penBoxOf(glyph);
@@ -125,10 +120,6 @@ function drawnExtentPx(layout: TextLayoutResult, skew: number): { startPx: numbe
     }
   }
   return startPx === Infinity ? { startPx: 0, endPx: layout.widthPx } : { startPx, endPx };
-}
-
-function penBoxOf(glyph: GlyphPlacement): GlyphReach {
-  return { leftPx: 0, rightPx: glyph.advance };
 }
 
 /** The vertex, UV and index buffers of the one quad of a raster. */

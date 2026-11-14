@@ -334,7 +334,7 @@ describe('textBufferPlacement — an AUTO line whose paragraph resolved right-to
   const OPTIONS = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX };
 
   function trimBuffer(widthPx: number) {
-    return trimLine(line(HEBREW), widthPx, ELLIPSIS, OPTIONS, textBufferPlacement(false));
+    return trimLine(line(HEBREW), widthPx, ELLIPSIS, OPTIONS, textBufferPlacement);
   }
 
   it('draws the outline as the right-to-left trim keeps it, the ellipsis first', () => {
@@ -372,27 +372,27 @@ describe('textBufferPlacement — an AUTO line whose paragraph resolved right-to
 
   // A set RTL direction is the paragraph direction too, so the fill draws as the outline does.
   it('draws one glyph set for a line set RTL', () => {
-    const full = line(HEBREW);
-    const result = trimLine(full, full.widthPx * 0.75, ELLIPSIS, OPTIONS, textBufferPlacement(true));
+    const full = { ...line(HEBREW), isDrawnRtl: true };
+    const result = trimLine(full, full.widthPx * 0.75, ELLIPSIS, OPTIONS, textBufferPlacement);
     expect(result.outlineGlyphs).toBeUndefined();
     expect(result.glyphs[0]!.char).toBe('…');
     expect(result).toEqual(trimLine(full, full.widthPx * 0.75, ELLIPSIS, OPTIONS, inferredPlacement));
   });
 
   it('draws one glyph set for a left-to-right line', () => {
-    const result = trimLine(line('AAAAAAAAAAAA'), 100, ELLIPSIS, OPTIONS, textBufferPlacement(false));
+    const result = trimLine(line('AAAAAAAAAAAA'), 100, ELLIPSIS, OPTIONS, textBufferPlacement);
     expect(result.outlineGlyphs).toBeUndefined();
     expect(drawnText(result)).toBe('AAAAAAAA…');
   });
 
   it('keeps the paragraph indent of the line it trims', () => {
     const indented = { ...line('AAAAAAAAAAAA'), indentPx: 12 };
-    expect(trimLine(indented, 100, ELLIPSIS, OPTIONS, textBufferPlacement(false)).indentPx).toBe(12);
+    expect(trimLine(indented, 100, ELLIPSIS, OPTIONS, textBufferPlacement).indentPx).toBe(12);
   });
 
   it('leaves a line that fits unchanged', () => {
     const full = line(HEBREW);
-    expect(trimLine(full, full.widthPx + 1, ELLIPSIS, OPTIONS, textBufferPlacement(false))).toBe(full);
+    expect(trimLine(full, full.widthPx + 1, ELLIPSIS, OPTIONS, textBufferPlacement)).toBe(full);
   });
 });
 
@@ -602,7 +602,9 @@ describe("trimLayoutToWidth — the layout's drawn direction (text_server.cpp:17
 
   it('keeps the drawn direction of a solo line it trims', () => {
     const layout = shapedIn(TextDirection.TEXT_DIRECTION_RTL);
-    expect(trimSoloLine(layout, ELLIPSIS, layout.widthPx * 0.75, SOLO_OPTIONS).isDrawnRtl).toBe(true);
+    expect(trimSoloLine(layout, ELLIPSIS, layout.widthPx * 0.75, SOLO_OPTIONS).lines[0]!.isDrawnRtl).toBe(
+      true
+    );
   });
 });
 
@@ -611,8 +613,8 @@ describe('trimLine — the placement of what a trim keeps', () => {
   const OPTIONS = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX };
 
   it('places a text buffer set RTL as the inferred placement does', () => {
-    const full = line(HEBREW);
-    expect(trimLine(full, full.widthPx * 0.75, ELLIPSIS, OPTIONS, textBufferPlacement(true))).toEqual(
+    const full = { ...line(HEBREW), isDrawnRtl: true };
+    expect(trimLine(full, full.widthPx * 0.75, ELLIPSIS, OPTIONS, textBufferPlacement)).toEqual(
       trimLine(full, full.widthPx * 0.75, ELLIPSIS, OPTIONS, inferredPlacement)
     );
   });
@@ -626,6 +628,6 @@ describe('trimLine — the placement of what a trim keeps', () => {
 
   it('returns a line that fits as it is, whatever the placement', () => {
     const full = line(HEBREW);
-    expect(trimLine(full, full.widthPx + 1, ELLIPSIS, OPTIONS, textBufferPlacement(false))).toBe(full);
+    expect(trimLine(full, full.widthPx + 1, ELLIPSIS, OPTIONS, textBufferPlacement)).toBe(full);
   });
 });

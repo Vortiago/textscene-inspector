@@ -228,18 +228,9 @@ function LabelText({
   const overrunFlags = useMemo(() => overrunFlagsForBehavior(props.overrunBehavior), [props.overrunBehavior]);
   const trim = useMemo((): LineTrim | undefined => {
     if (autowrapMode !== AutowrapMode.AUTOWRAP_OFF || !overrunFlags.trim) return undefined;
-    const widthPx = labelShapingWidthPx(rect.w, contentMargin);
     const options = { fontMetrics, fontSizePx: textTheme.fontSizePx, ellipsisChar: props.ellipsisChar };
-    return { widthPx, flags: overrunFlags, options };
-  }, [
-    autowrapMode,
-    overrunFlags,
-    rect.w,
-    contentMargin,
-    fontMetrics,
-    textTheme.fontSizePx,
-    props.ellipsisChar,
-  ]);
+    return { flags: overrunFlags, options };
+  }, [autowrapMode, overrunFlags, fontMetrics, textTheme.fontSizePx, props.ellipsisChar]);
 
   // Godot aligns each line by its own width (`Label::_get_line_rect`), so each line
   // gets its own box top here, and `<TextRun>` anchors it at the baseline.

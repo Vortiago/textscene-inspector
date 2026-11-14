@@ -13,7 +13,7 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import {
   OutlinedTextRun,
-  textLayerRenderOrder,
+  aboveOutlinedRunRenderOrder,
   useTintedTextOutline,
 } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
@@ -33,14 +33,6 @@ import type { LinkButtonProperties } from './types';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
-/** The layers of an outlined run: its outline, then its fill. */
-const OUTLINED_RUN_LAYERS = 2;
-
-/** `link_button.cpp:292-313` draws the underline after the outline and the fill of its text. */
-function underlineRenderOrder(renderOrder: number): number {
-  return textLayerRenderOrder(renderOrder, OUTLINED_RUN_LAYERS, OUTLINED_RUN_LAYERS + 1);
-}
-
 export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LinkButtonProperties>(solveNode);
   const state = resolveLinkButtonDrawState(props);
@@ -49,7 +41,7 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
 
   // `tint.own` (`self_modulate` on the inherited `modulate`) multiplies the font colour before its one
   // sRGB-to-linear conversion. The underline reuses that colour, as Godot's `draw_line` does
-  // (`link_button.cpp:311,313`). The underline orders after the text (`underlineRenderOrder`).
+  // (`link_button.cpp:311,313`). The underline orders after the text (`aboveOutlinedRunRenderOrder`).
   const { fontSizePx, color: baseFontColor } = linkButtonTextTheme(solveNode, props, state);
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
   const textOutline = useTintedTextOutline(solveNode, tint.own);
@@ -109,7 +101,7 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
       {underline && underline.width > 0 && (
         <CanvasItemGroup position={[placement.originX, -underline.top, 0]}>
           <ControlQuad
-            renderOrder={underlineRenderOrder(renderOrder)}
+            renderOrder={aboveOutlinedRunRenderOrder(renderOrder)}
             width={underline.width}
             height={underline.thickness}
             color={underlineLinearColor}

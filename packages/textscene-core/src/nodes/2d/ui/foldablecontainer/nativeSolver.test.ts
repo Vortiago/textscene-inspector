@@ -327,6 +327,9 @@ describe('foldableContainerTitleShape direction', () => {
   it('draws right to left only when the title direction is RTL', () => {
     const rtl = titleShape(node({ title: 'Hello!', titleTextDirection: 2, language: '' }));
     const autoHebrew = titleShape(node({ title: 'שלום', titleTextDirection: 0, language: '' }));
-    expect([rtl.layout?.isDrawnRtl, autoHebrew.layout?.isDrawnRtl]).toEqual([true, undefined]);
+    expect([rtl.layout?.lines[0]?.isDrawnRtl, autoHebrew.layout?.lines[0]?.isDrawnRtl]).toEqual([
+      true,
+      undefined,
+    ]);
   });
 });

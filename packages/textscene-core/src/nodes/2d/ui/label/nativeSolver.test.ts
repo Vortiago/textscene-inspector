@@ -1300,8 +1300,8 @@ describe('layoutLabelLines — the overrun trim (label.cpp:302-332)', () => {
       autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
     });
-    const trim = { widthPx: 60, flags: ELLIPSIS_FLAGS, options: TRIM_OPTIONS };
-    const trimmed = trimLine(layout.lines[0]!, 60, ELLIPSIS_FLAGS, TRIM_OPTIONS, inferredPlacement);
+    const trim = { flags: ELLIPSIS_FLAGS, options: TRIM_OPTIONS };
+    const trimmed = trimLine(layout.lines[0]!, 100, ELLIPSIS_FLAGS, TRIM_OPTIONS, inferredPlacement);
     const [placement] = layoutLabelLines(layout, 100, 40, 2, undefined, undefined, { trim });
     expect(placement!.line.widthPx).toBe(trimmed.widthPx);
     expect(placement!.x).toBe(Math.floor(100 - trimmed.widthPx));
@@ -1318,7 +1318,7 @@ describe('layoutLabelLines — the justification-aware trim of FILL with autowra
   const naturalWidthPx = layout.lines[0]!.widthPx;
   const fillAt = (boxWidthPx: number) =>
     layoutLabelLines(layout, boxWidthPx, 40, 3, undefined, JustificationFlag.WORD_BOUND, {
-      trim: { widthPx: boxWidthPx, flags: ELLIPSIS_FLAGS, options: TRIM_OPTIONS },
+      trim: { flags: ELLIPSIS_FLAGS, options: TRIM_OPTIONS },
     })[0]!.line;
   const endsInEllipsis = (line: TextLineLayout) => line.glyphs.at(-1)!.char === '…';
 
@@ -1343,7 +1343,7 @@ describe('layoutLabelLines — the trimmed FILL line fitted again with CONSTRAIN
   const ELLIPSIS_WIDTH_PX = 13;
   const filledLineAt = (justificationFlags: number) =>
     layoutLabelLines(layout, BOX_WIDTH_PX, 40, 3, undefined, justificationFlags, {
-      trim: { widthPx: BOX_WIDTH_PX, flags: ELLIPSIS_FLAGS, options: TRIM_OPTIONS },
+      trim: { flags: ELLIPSIS_FLAGS, options: TRIM_OPTIONS },
     })[0]!.line;
 
   it('stretches the kept spaces so the ellipsis ends at the box width', () => {

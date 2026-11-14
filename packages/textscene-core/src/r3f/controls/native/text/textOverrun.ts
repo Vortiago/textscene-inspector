@@ -232,17 +232,15 @@ export function filledPlacement(justificationFlags: number): TrimPlacement {
 
 /**
  * The trim as a `TextLine` or `TextParagraph` draws it. The fill reads the set direction
- * (`text_server.cpp:1744`): `isDrawnRtl`. An AUTO line that infers RTL draws the glyphs before the cut
+ * (`text_server.cpp:1744`), the line's `isDrawnRtl`. An AUTO line that infers RTL draws the glyphs before the cut
  * from the visual left, stops at the first that crosses the width (`:1781-1786`), then draws the
  * ellipsis. The outline reads the inferred direction (`:1840`), so that line puts it in `outlineGlyphs`.
  */
-export function textBufferPlacement(isDrawnRtl: boolean): TrimPlacement {
-  return (line, trim, widthPx) => {
-    const outline = inferredDirectionGlyphs(line, line.glyphs, trim);
-    if (!line.isRtl || isDrawnRtl) return { glyphs: outline };
-    return { glyphs: leftToRightClippedGlyphs(line.glyphs, trim, widthPx), outlineGlyphs: outline };
-  };
-}
+export const textBufferPlacement: TrimPlacement = (line, trim, widthPx) => {
+  const outline = inferredDirectionGlyphs(line, line.glyphs, trim);
+  if (!line.isRtl || line.isDrawnRtl) return { glyphs: outline };
+  return { glyphs: leftToRightClippedGlyphs(line.glyphs, trim, widthPx), outlineGlyphs: outline };
+};
 
 /** The cut and ellipsis of `line` at `widthPx`, or null when Godot leaves the line whole (`:5958`, `:6122`). */
 function findOverrunTrim(
@@ -367,11 +365,6 @@ function trimmedLine(
   return { ...kept, ...placed, widthPx: trimmedWidthPx(trim) };
 }
 
-/** The placement of a text buffer drawn in the set direction of `layout`. */
-function layoutPlacement(layout: TextLayoutResult): TrimPlacement {
-  return textBufferPlacement(layout.isDrawnRtl === true);
-}
-
 /**
  * The first line of a paragraph trimmed to `widthPx` as a text buffer, as `TextLine::draw` or a
  * one-row `TextParagraph::draw` trims it. Godot draws one `TextLine` there, so a text with a line
@@ -385,7 +378,7 @@ export function trimSoloLine(
 ): TextLayoutResult {
   if (!flags.trim) return layout;
   const line = layout.lines[0]!;
-  const trimmedLine = trimLine(line, widthPx, flags, options, layoutPlacement(layout));
+  const trimmedLine = trimLine(line, widthPx, flags, options, textBufferPlacement);
   return trimmedLine === line && layout.lines.length === 1 ? layout : soloLineLayout(trimmedLine, layout);
 }
 
@@ -399,8 +392,7 @@ export function trimLayoutToWidth(
   flags: OverrunTrimFlags,
   options: OverrunTrimOptions
 ): TextLayoutResult {
-  const place = layoutPlacement(layout);
-  const lines = layout.lines.map((line) => trimLine(line, widthPx, flags, options, place));
+  const lines = layout.lines.map((line) => trimLine(line, widthPx, flags, options, textBufferPlacement));
   // `layout` itself when no row is cut, so a memo downstream holds.
   if (lines.every((line, index) => line === layout.lines[index])) return layout;
   return { ...layout, lines, widthPx: widestLineWidthPx(lines) };

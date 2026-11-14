@@ -135,7 +135,7 @@ function trimItemLine(
   flags: OverrunTrimFlags
 ): TextLineLayout {
   const options = { fontMetrics: layout.fontMetrics, fontSizePx: input.fontSizePx };
-  return trimLine(line, widthPx, flags, options, textBufferPlacement(layout.isDrawnRtl === true));
+  return trimLine(line, widthPx, flags, options, textBufferPlacement);
 }
 
 function withLines(layout: TextLayoutResult, lines: readonly TextLineLayout[]): TextLayoutResult {

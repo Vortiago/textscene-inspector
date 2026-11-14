@@ -39,7 +39,8 @@ export interface PlacedGlyph {
 export interface GlyphPainter {
   /**
    * Reads how far the ink of each glyph reaches at `skew`, from what the paint draws for it, on a
-   * line whose ascent is `lineAscentPx`.
+   * line whose ascent is `lineAscentPx`. The caller passes only a glyph `hasOwnGlyph` accepts: a
+   * space, a line break or a hex-code box spans its pen box (`drawnExtentPx`).
    */
   reachReader(skew: number, lineAscentPx: number): (glyph: GlyphPlacement) => GlyphReach;
   /** The raster of `glyphs` in `colours`. Null where the painter needs a 2D context and the document has none. */
