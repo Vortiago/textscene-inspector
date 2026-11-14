@@ -19,7 +19,7 @@ import type {
   Statement,
   ValueType,
 } from './shaderTree.js';
-import { isEmpty, isReturn } from './treeWalk.js';
+import { isCall, isEmpty, isReturn } from './treeWalk.js';
 
 export class StatementEmitter {
   constructor(
@@ -51,7 +51,8 @@ export class StatementEmitter {
       case 'control flow':
         return this.flow(statement, scope);
       default:
-        if (!isEmpty(statement)) this.expressions(scope).value(statement);
+        if (isCall(statement)) this.expressions(scope).callStatement(statement);
+        else if (!isEmpty(statement)) this.expressions(scope).value(statement);
     }
   }
 

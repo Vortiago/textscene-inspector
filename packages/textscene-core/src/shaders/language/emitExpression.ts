@@ -20,10 +20,10 @@ import {
   type Value,
   variablesOf,
 } from './emitValue.js';
-import type { CalledFunctions } from './emitCall.js';
+import type { CalledFunctions, CallResult } from './emitCall.js';
 import type { GlslangFolding } from './glslangFolding.js';
 import { isAssignOperator } from './operators.js';
-import { STEPS } from './assignment.js';
+import { STEPS, writtenTargets } from './assignment.js';
 import { arraySizeOf, isCall } from './treeWalk.js';
 import type { CallNode, Expression, OperatorNode } from './shaderTree.js';
 import { swizzleLanes } from './swizzle.js';
@@ -38,14 +38,14 @@ export interface EmitContext {
 }
 
 export class ExpressionEmitter {
-  private readonly structOf: StructOf;
-
   constructor(
     private readonly scope: EmitScope,
     private readonly folding: GlslangFolding,
     private readonly context: EmitContext
-  ) {
-    this.structOf = context.structOf;
+  ) {}
+
+  private get structOf(): StructOf {
+    return this.context.structOf;
   }
 
   /** The node of an expression of a value type. */
@@ -116,18 +116,28 @@ export class ExpressionEmitter {
     return OPERATIONS[op]!(nodes, types);
   }
 
-  /**
-   * A call: the value of each argument but an `out` one, then each `out` and `inout` place
-   * written from what the call gives back, in the order of the arguments.
-   */
+  /** A call that stands as a statement. */
+  callStatement(call: CallNode): void {
+    this.writeBack(call, this.context.functions.callAsStatement(call.function, this.passed(call)));
+  }
+
+  /** A call in an expression, and its result. */
   private called(call: CallNode): Value {
-    const passed = call.operands.map((operand, index) =>
+    const called = this.context.functions.call(call.function, this.passed(call));
+    this.writeBack(call, called);
+    return called.result;
+  }
+
+  /** The value of each argument of a call but an `out` one. */
+  private passed(call: CallNode): (Value | undefined)[] {
+    return call.operands.map((operand, index) =>
       call.qualifiers[index] === 'out' ? undefined : this.value(operand)
     );
-    const { result, written } = this.context.functions.call(call.function, passed);
-    const places = call.operands.filter((_, index) => call.qualifiers[index] !== 'in');
-    places.forEach((place, index) => copyInto(this.value(place), written[index]!));
-    return result;
+  }
+
+  /** Each `out` and `inout` place of a call written from what the call gives back, in order. */
+  private writeBack(call: CallNode, { written }: CallResult): void {
+    writtenTargets(call).forEach((place, index) => copyInto(this.value(place), written[index]!));
   }
 
   /** `Pair(a, b)`: each member's value, kept in the struct's own variables. */

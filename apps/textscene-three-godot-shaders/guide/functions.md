@@ -210,6 +210,38 @@ float clampUp(float x) { if (x < 0.0) return 0.0; return x * 2.0; } float probe(
 | `-inf` | `inf` |
 | `NaN` | `NaN` |
 
+### Probe `function-value-call-as-statement`, 16 input rows
+
+```glsl
+float kept(float x) { if (x < 0.0) discard; return x; } float probe(float a) { kept(a); return a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `0.0` |
+| `-0.0` | `-0.0` |
+| `1.0` | `1.0` |
+| `1e-40` | `1e-40` |
+| `inf` | `inf` |
+| `-inf` | `0.0` |
+| `NaN` | `NaN` |
+
+### Probe `function-void-call-discards`, 16 input rows
+
+```glsl
+void keep(float x) { if (x < 0.0) discard; } float probe(float a) { keep(a); return a * 2.0; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `0.0` |
+| `-0.0` | `-0.0` |
+| `1.0` | `2.0` |
+| `1e-40` | `0.0` |
+| `inf` | `inf` |
+| `-inf` | `0.0` |
+| `NaN` | `NaN` |
+
 ### Probe `function-void`, 16 input rows
 
 ```glsl
@@ -1071,6 +1103,22 @@ A `void` function returns no value: it acts through its `out` and `inout` parame
 The transpiler emits `a GLSL function of type `void`, or of the struct of its `out` and `inout` values`. Rows: `void`. Godot source: `servers/rendering/shader_language.h:210`.
 
 Every row is native on WebGL 2 and on WebGPURenderer.
+
+### Probe `function-void-call-discards`, 16 input rows
+
+```glsl
+void keep(float x) { if (x < 0.0) discard; } float probe(float a) { keep(a); return a * 2.0; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `0.0` |
+| `-0.0` | `-0.0` |
+| `1.0` | `2.0` |
+| `1e-40` | `0.0` |
+| `inf` | `inf` |
+| `-inf` | `0.0` |
+| `NaN` | `NaN` |
 
 ### Probe `function-void`, 16 input rows
 

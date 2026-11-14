@@ -59,6 +59,16 @@ function callProbes() {
       [CALL],
       'float clampUp(float x) { if (x < 0.0) return 0.0; return x * 2.0; } float probe(float a) { return clampUp(a) + clampUp(-a); }',
     ],
+    [
+      'value-call-as-statement',
+      [CALL],
+      'float kept(float x) { if (x < 0.0) discard; return x; } float probe(float a) { kept(a); return a; }',
+    ],
+    [
+      'void-call-discards',
+      VOID,
+      'void keep(float x) { if (x < 0.0) discard; } float probe(float a) { keep(a); return a * 2.0; }',
+    ],
   ];
   return cases.map(([word, rows, source]) => probeOf(`function-${word}`, rows, source));
 }
