@@ -26,7 +26,7 @@ Godot draws the probes and showcases on Vulkan over lavapipe (`llvmpipe (LLVM 20
 
 | Family | Transpiled | Open rows owned by |
 | --- | --- | --- |
-| data type | 20 of 33 | #1824, #1829 |
+| data type | 20 of 33 | #1825, #1829 |
 | literal | 5 of 5 | none |
 | qualifier | 3 of 8 | #1794, #1825 |
 | shader head | 0 of 13 | #1829, #1794 |

@@ -281,11 +281,6 @@ describe('parse: what the transpiler does not read yet', () => {
   it.each([
     ['shader_type canvas_item;', "'shader_type' is not transpiled yet (#1794)"],
     ['uniform float u;', "'uniform' is not transpiled yet (#1829)"],
-    ['float f(float a) { if (a) {} return a; }', "'if' is not transpiled yet (#1824)"],
-    [
-      'float f(float a) { float b = a; return b; }',
-      "'NODE_TYPE_VARIABLE_DECLARATION' is not transpiled yet (#1824)",
-    ],
     ['float f(out float a) { return a; }', "'out' is not transpiled yet (#1825)"],
     ['float f(float a) { return sin(a); }', "'sin(float)' is not transpiled yet (#1826)"],
     ['float f(float a) { return f(a); }', "'OP_CALL' is not transpiled yet (#1825)"],

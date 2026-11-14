@@ -42,7 +42,7 @@ describe('treeFault', () => {
       treeOf('float f(float a) { return a; }'),
       (value) => ({ ...value, name: 'b' }) as Expression
     );
-    expect(treeFault(tree)).toMatch(/the name b is no argument/);
+    expect(treeFault(tree)).toMatch(/the name b, which no block around the read declares/);
   });
 
   it('finds a constant lane outside its type', () => {

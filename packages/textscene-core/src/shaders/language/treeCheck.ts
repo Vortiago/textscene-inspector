@@ -124,9 +124,11 @@ class FunctionCheck {
   }
 
   private flow(flow: ControlFlowNode, place: Place): string | undefined {
+    const [value] = flow.expressions;
+    if (flow.flow === 'FLOW_OP_RETURN' && (value?.type ?? 'void') !== this.definition.returnType)
+      return `a return of ${value?.type ?? 'void'} in a function of ${this.definition.returnType}`;
     const fault = firstFault(flow.expressions, (expression) => this.expression(expression));
     if (fault !== undefined) return fault;
-    const [value] = flow.expressions;
     switch (flow.flow) {
       case 'FLOW_OP_IF':
         if (value?.type !== 'bool') return `an if of ${value?.type}`;
@@ -143,8 +145,6 @@ class FunctionCheck {
       case 'FLOW_OP_DEFAULT':
         return this.block(flow.blocks[0]!, { ...place, isInCase: true, isSwitchBlock: false });
       case 'FLOW_OP_RETURN':
-        if ((value?.type ?? 'void') !== this.definition.returnType)
-          return `a return of ${value?.type ?? 'void'} in a function of ${this.definition.returnType}`;
         return undefined;
       case 'FLOW_OP_BREAK':
         return place.isInLoop || place.isInCase ? undefined : 'a break outside a loop and a switch';

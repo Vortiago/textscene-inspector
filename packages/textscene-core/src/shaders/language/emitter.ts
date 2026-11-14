@@ -1,34 +1,54 @@
 /**
- * The emitter: the typed tree to three.js TSL nodes. Each node of the tree becomes the TSL node of
- * the same GLSL operation, so the GPU computes what Godot's GLSL computes. TSL nodes hold no
- * state, so the emitter keeps each argument's current value and writes an assignment there.
+ * The emitter: a function's lowered tree to a three.js TSL `Fn`, a plain walk. Each statement
+ * becomes the TSL statement of the same GLSL statement, in order on TSL's stack, so the GPU runs
+ * what Godot's GLSL runs. The tree it reads holds `while (true)` as its one loop, no `switch`, and
+ * one `return` as its last statement (`lowering/lower.ts`).
  */
 
-import { select } from 'three/tsl';
+import { Break, Continue, Discard, Fn, If, Loop } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import { CONSTRUCTORS, constantNode } from './emitConstant.js';
-import { assignedOperator, columnOf, constructed, element, OPERATIONS } from './emitOperation.js';
+import { bindConstantReads } from './constantReads.js';
+import { EmitScope } from './emitScope.js';
+import { ExpressionEmitter, writtenNames } from './emitExpression.js';
+import { declareVariables, inVar, type StructOf, type Value, variablesOf } from './emitValue.js';
 import { refuseFoldedIndexOutOfRange } from './foldedIndex.js';
 import { GlslangFolding } from './glslangFolding.js';
-import { glslExpression } from './godotText.js';
-import { isAssignOperator } from './operators.js';
-import type { Argument, Expression, FunctionNode, OperatorNode, Statement, ValueType } from './shaderTree.js';
-import { swizzleLanes } from './swizzle.js';
-import { shapeOf } from './types.js';
+import { glslBlock } from './godotText.js';
+import { lowerFunction } from './lowering/lower.js';
+import type {
+  Argument,
+  BlockNode,
+  ControlFlowNode,
+  DeclarationNode,
+  FunctionNode,
+  ShaderNode,
+  Statement,
+  ValueType,
+} from './shaderTree.js';
 
-/** A function of the shader as TSL: `call` builds its result from one node per argument. */
+/**
+ * A function of the shader as TSL. `call` builds a `Fn` from one node per argument: a value
+ * function gives the node of its result, and a `void` function gives the call node, which the
+ * caller puts on its own stack.
+ */
 export interface TranspiledFunction {
   readonly name: string;
+  /** A value type, or `void`. */
   readonly returnType: ValueType;
   readonly arguments: readonly Argument[];
   call(args: readonly Node[]): Node;
 }
 
-/** `definition` as TSL. The tree holds only rows the transpiler transpiles (`checkTranspiled`). */
-export function emitFunction(definition: FunctionNode): TranspiledFunction {
+/** `definition` of `shader` as TSL. The tree holds only rows the transpiler transpiles (`checkTranspiled`). */
+export function emitFunction(definition: FunctionNode, shader: ShaderNode): TranspiledFunction {
   const folding = new GlslangFolding();
-  const statements = definition.body.statements.map(glslStatement);
-  for (const statement of statements) refuseFoldedIndexOutOfRange(statement, folding);
+  const glsl = { ...definition, body: glslBlock(definition.body) };
+  bindConstantReads(glsl.body, folding);
+  refuseFoldedIndexOutOfRange(glsl.body, folding);
+  const lowered = lowerFunction(glsl);
+  const structOf: StructOf = (type) => shader.structs.find((struct) => struct.name === type);
+  // An argument the function never writes is read from its node, so its GLSL stays as T2 wrote it.
+  const written = writtenNames(lowered.body);
   return {
     name: definition.name,
     returnType: definition.returnType,
@@ -39,233 +59,103 @@ export function emitFunction(definition: FunctionNode): TranspiledFunction {
           `expected ${definition.arguments.length} arguments for ${definition.name}, got ${args.length}`
         );
       }
-      const values = new Map(definition.arguments.map((argument, index) => [argument.name, args[index]!]));
-      return new FunctionEmitter(values, folding).returned(statements);
+      return Fn(() => {
+        const names = new Map<string, Value>(
+          definition.arguments.map((argument, index) => [
+            argument.name,
+            written.has(argument.name) ? inVar(args[index]!) : args[index]!,
+          ])
+        );
+        return new StatementEmitter(folding, structOf).body(lowered.body, EmitScope.of(names));
+      })() as unknown as Node;
     },
   };
 }
 
-/** The statement GLSL reads from Godot's text of `statement`. */
-function glslStatement(statement: Statement): Statement {
-  if (statement.kind !== 'control flow') return glslExpression(statement);
-  return { ...statement, expressions: statement.expressions.map(glslExpression) };
-}
-
-/** A place an assignment writes: an argument, a swizzle of a place, or an element of a place. */
-interface Place {
-  read(): Node;
-  write(value: Node): void;
-}
-
-const LANE_LETTERS = 'xyzw';
-
-/** The `++` and `--` operators: whether each adds or takes one, and whether it gives the new value. */
-const STEPS: Readonly<Record<string, { readonly operator: string; readonly givesNew: boolean }>> = {
-  OP_INCREMENT: { operator: 'OP_ADD', givesNew: true },
-  OP_DECREMENT: { operator: 'OP_SUB', givesNew: true },
-  OP_POST_INCREMENT: { operator: 'OP_ADD', givesNew: false },
-  OP_POST_DECREMENT: { operator: 'OP_SUB', givesNew: false },
-};
-
-/** One call of a function: its arguments' current values, which its assignments change. */
-class FunctionEmitter {
+class StatementEmitter {
   constructor(
-    private values: Map<string, Node>,
-    private readonly folding: GlslangFolding
+    private readonly folding: GlslangFolding,
+    private readonly structOf: StructOf
   ) {}
 
-  /** The value of the first `return`, after the statements before it: the statements after it never run. */
-  returned(statements: readonly Statement[]): Node {
-    for (const statement of statements) {
-      if (statement.kind === 'control flow') return this.emit(statement.expressions[0]!);
-      if (statement.kind !== 'operator' || statement.op !== 'OP_EMPTY') this.emit(statement);
+  /** The body's statements, and the node of its last statement's `return`, if it has one. */
+  body(body: BlockNode, scope: EmitScope): Node | undefined {
+    const statements = body.statements;
+    const last = statements.at(-1);
+    const isReturn = last?.kind === 'control flow' && last.flow === 'FLOW_OP_RETURN';
+    for (const statement of isReturn ? statements.slice(0, -1) : statements) this.statement(statement, scope);
+    const value = isReturn ? (last as ControlFlowNode).expressions[0] : undefined;
+    return value && this.expressions(scope).node(value);
+  }
+
+  private block(block: BlockNode, scope: EmitScope): void {
+    for (const statement of block.statements) this.statement(statement, scope);
+  }
+
+  private statement(statement: Statement, scope: EmitScope): void {
+    switch (statement.kind) {
+      case 'block':
+        return this.block(statement, scope.child());
+      case 'declaration':
+        return this.declaration(statement, scope);
+      case 'control flow':
+        return this.flow(statement, scope);
+      default:
+        if (statement.kind !== 'operator' || statement.op !== 'OP_EMPTY')
+          this.expressions(scope).value(statement);
     }
-    throw new Error('expected a return statement in a function that returns a value');
   }
 
-  private emit(expression: Expression): Node {
-    const folded = this.folding.lanesOf(expression);
-    if (folded) return constantNode(expression.type, folded);
-    switch (expression.kind) {
-      case 'constant':
-        return constantNode(expression.type, expression.values);
-      case 'variable':
-        return this.values.get(expression.name)!;
-      case 'member':
-        return swizzle(this.emit(expression.owner), swizzleLanes(expression));
-      case 'operator':
-        return this.operator(expression);
+  /** Each name's variables, which take its value, then the name. A value reads no name it declares. */
+  private declaration(declaration: DeclarationNode, scope: EmitScope): void {
+    for (const declarator of declaration.declarators) {
+      const arraySize = declarator.arraySize ?? 0;
+      const value = declarator.value && this.expressions(scope).value(declarator.value);
+      const variables =
+        value === undefined
+          ? declareVariables(declaration.type, arraySize, this.structOf)
+          : variablesOf(value, declaration.type, arraySize, this.structOf);
+      scope.declare(declarator.name, variables);
     }
   }
 
-  private operator(expression: OperatorNode): Node {
-    const { op, operands } = expression;
-    if (op === 'OP_CONSTRUCT')
-      return constructed(
-        expression.type,
-        operands.map((operand) => this.emit(operand)),
-        operands.map((operand) => operand.type)
-      );
-    if (op === 'OP_SELECT_IF') return this.selected(operands);
-    if (op === 'OP_AND') return this.both(operands);
-    if (op === 'OP_OR') return this.either(operands);
-    if (op === 'OP_INDEX') return element(this.emit(operands[0]!), this.emit(operands[1]!));
-    if (isAssignOperator(op)) return this.assigned(expression);
-    if (STEPS[op]) return this.stepped(expression);
-    return this.applied(
-      op,
-      operands.map((operand) => this.emit(operand)),
-      operands.map((operand) => operand.type)
-    );
-  }
-
-  private applied(op: string, operands: readonly Node[], types: readonly ValueType[]): Node {
-    return OPERATIONS[op]!(operands, types);
-  }
-
-  /** `condition ? then : else`: GLSL runs one side, so each argument takes the value of the side that ran. */
-  private selected([condition, then, otherwise]: readonly Expression[]): Node {
-    const test = this.emit(condition!);
-    return this.branched(
-      test,
-      () => this.emit(then!),
-      () => this.emit(otherwise!)
-    );
-  }
-
-  /** `a && b`: GLSL runs `b` only when `a` holds. */
-  private both([first, second]: readonly Expression[]): Node {
-    const test = this.emit(first!);
-    return this.branched(
-      test,
-      () => this.emit(second!),
-      () => constantNode('bool', [false])
-    );
-  }
-
-  /** `a || b`: GLSL runs `b` only when `a` does not hold. */
-  private either([first, second]: readonly Expression[]): Node {
-    const test = this.emit(first!);
-    return this.branched(
-      test,
-      () => constantNode('bool', [true]),
-      () => this.emit(second!)
-    );
-  }
-
-  /** The value of the side `test` picks, and each argument's value after that side. */
-  private branched(test: Node, whenTrue: () => Node, whenFalse: () => Node): Node {
-    const before = this.values;
-    this.values = new Map(before);
-    const trueValue = whenTrue();
-    const afterTrue = this.values;
-    this.values = new Map(before);
-    const falseValue = whenFalse();
-    const afterFalse = this.values;
-    this.values = new Map(
-      [...before.keys()].map((name) => {
-        const [onTrue, onFalse] = [afterTrue.get(name)!, afterFalse.get(name)!];
-        return [name, onTrue === onFalse ? onTrue : choose(test, onTrue, onFalse)];
-      })
-    );
-    return choose(test, trueValue, falseValue);
-  }
-
-  /** `a = b` or `a op= b`: the target's places first, then `b`, then the target's value as `b` left it. */
-  private assigned(expression: OperatorNode): Node {
-    const [target, source] = expression.operands as [Expression, Expression];
-    const place = this.place(target);
-    const value = this.emit(source);
-    const operator = assignedOperator(expression.op);
-    const result =
-      operator === undefined
-        ? value
-        : this.applied(operator, [place.read(), value], [target.type, source.type]);
-    place.write(result);
-    return place.read();
-  }
-
-  /** `++a`, `--a`, `a++` and `a--`: one of the target's type added or taken. */
-  private stepped(expression: OperatorNode): Node {
-    const target = expression.operands[0]!;
-    const step = STEPS[expression.op]!;
-    const place = this.place(target);
-    const old = place.read();
-    const one = constantNode(shapeOf(target.type)!.scalar, [1]);
-    place.write(this.applied(step.operator, [old, one], [target.type, shapeOf(target.type)!.scalar]));
-    return step.givesNew ? place.read() : old;
-  }
-
-  /** The place `target` names. Godot assigns only to an argument, its swizzles and its elements. */
-  private place(target: Expression): Place {
-    if (target.kind === 'variable') {
-      return {
-        read: () => this.values.get(target.name)!,
-        write: (value) => this.values.set(target.name, value),
-      };
+  private flow(flow: ControlFlowNode, scope: EmitScope): void {
+    switch (flow.flow) {
+      case 'FLOW_OP_IF':
+        return this.ifStatement(flow, scope);
+      case 'FLOW_OP_WHILE':
+        Loop(this.inBlock(flow.blocks[0]!, scope) as never);
+        return;
+      case 'FLOW_OP_BREAK':
+        Break();
+        return;
+      case 'FLOW_OP_CONTINUE':
+        Continue();
+        return;
+      case 'FLOW_OP_DISCARD':
+        Discard();
+        return;
+      default:
+        throw new Error(`expected a lowered tree, got ${flow.flow} where the lowerings leave none`);
     }
-    if (target.kind === 'member') {
-      const owner = this.place(target.owner);
-      const lanes = swizzleLanes(target);
-      return {
-        read: () => swizzle(owner.read(), lanes),
-        write: (value) => owner.write(withLanes(owner.read(), target.owner.type, lanes, value)),
-      };
-    }
-    if (target.kind === 'operator' && target.op === 'OP_INDEX') {
-      const owner = this.place(target.operands[0]!);
-      const index = target.operands[1]!;
-      const indexNode = this.emit(index);
-      const known = this.folding.lanesOf(index)?.[0] as number | undefined;
-      const picked: ElementIndex = { node: indexNode, type: index.type, known };
-      return {
-        read: () => element(owner.read(), indexNode),
-        write: (value) => owner.write(withElement(owner.read(), target.operands[0]!.type, picked, value)),
-      };
-    }
-    throw new Error(`expected an argument, a swizzle or an element to assign to, got a ${target.kind}`);
   }
-}
 
-const choose = (test: Node, onTrue: Node, onFalse: Node) =>
-  (select as unknown as (...operands: Node[]) => Node)(test, onTrue, onFalse);
+  private ifStatement(flow: ControlFlowNode, scope: EmitScope): void {
+    const [then, otherwise] = flow.blocks;
+    const test = this.expressions(scope).node(flow.expressions[0]!);
+    const branch = If(test as never, this.inBlock(then!, scope) as never) as unknown as {
+      Else(method: () => void): unknown;
+    };
+    if (otherwise) branch.Else(this.inBlock(otherwise, scope));
+  }
 
-const swizzle = (owner: Node, lanes: readonly number[]) =>
-  (owner as unknown as Record<string, Node>)[lanes.map((lane) => LANE_LETTERS[lane]).join('')]!;
+  /** The statements of `block` as a TSL body, which TSL builds later, in a copy of the scope here. */
+  private inBlock(block: BlockNode, scope: EmitScope): () => void {
+    const here = scope.child();
+    return () => this.block(block, here.child());
+  }
 
-/** Lane `lane` of a value of `lanes` lanes: a scalar is its own one lane. */
-const laneOf = (value: Node, lanes: number, lane: number) => (lanes === 1 ? value : swizzle(value, [lane]));
-
-/** The vector `owner` of type `type` with the lanes `lanes` taken from `value`, one value lane each. */
-function withLanes(owner: Node, type: ValueType, lanes: readonly number[], value: Node): Node {
-  const count = shapeOf(type)!.lanes;
-  const components = Array.from({ length: count }, (_, lane) => {
-    const from = lanes.indexOf(lane);
-    return from === -1 ? swizzle(owner, [lane]) : laneOf(value, lanes.length, from);
-  });
-  return CONSTRUCTORS[type]!(...components);
-}
-
-/** An index of an element write: its node, its type, and its value when glslang folds it. */
-interface ElementIndex {
-  readonly node: Node;
-  readonly type: ValueType;
-  readonly known: number | undefined;
-}
-
-/**
- * The vector or matrix `owner` with element `index` replaced by `value`. A folded index picks
- * its element. Another picks each element by comparing, as GLSL reads it at run time.
- */
-function withElement(owner: Node, type: ValueType, index: ElementIndex, value: Node): Node {
-  const shape = shapeOf(type)!;
-  const count = shape.columns ?? shape.lanes;
-  const current = (position: number) =>
-    shape.columns === undefined ? swizzle(owner, [position]) : columnOf(owner, position);
-  const elements = Array.from({ length: count }, (_, position) => {
-    if (index.known !== undefined) return index.known === position ? value : current(position);
-    const isPicked = OPERATIONS.OP_EQUAL!([index.node, constantNode(index.type, [position])], [index.type]);
-    return choose(isPicked, value, current(position));
-  });
-  return CONSTRUCTORS[type]!(...elements);
+  private expressions(scope: EmitScope): ExpressionEmitter {
+    return new ExpressionEmitter(scope, this.folding, this.structOf);
+  }
 }

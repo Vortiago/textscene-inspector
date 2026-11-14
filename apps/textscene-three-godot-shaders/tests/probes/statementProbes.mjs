@@ -325,7 +325,7 @@ function arrayProbes() {
 function structProbes() {
   const pair = 'struct Pair { float x; vec2 y; };';
   const cases = [
-    ['struct', STRUCT, `${pair} vec2 probe(float a) { Pair p = Pair(a, vec2(a, 1.0)); return p.y * p.x; }`],
+    ['struct', STRUCT, `${pair} vec2 probe(float a) { Pair p = Pair(a, vec2(a, 2.0)); return p.y * p.x; }`],
     [
       'struct-member-write',
       STRUCT,

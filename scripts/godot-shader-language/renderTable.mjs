@@ -127,10 +127,14 @@ export function owningIssue(row) {
   }
 }
 
-/** Samplers are the uniforms slice's, a struct type and `void` the statements', the value types this slice's. */
+/**
+ * Samplers are the uniforms slice's, a struct type the statements', `void` the functions', whose
+ * call is the first that can probe it, and the value types this slice's.
+ */
 function dataTypeOwner(row) {
   if (/^[iu]?sampler|^samplerExternalOES$/.test(row.id)) return '#1829';
-  if (/^(struct type|void)$/.test(row.id)) return '#1824';
+  if (row.id === 'struct type') return '#1824';
+  if (row.id === 'void') return '#1825';
   return '#1823';
 }
 

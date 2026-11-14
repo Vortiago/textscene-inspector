@@ -18,6 +18,6 @@ export function transpileShadingLanguage(source: string, file = ''): TranspiledS
   const tree = parse(tokenize(source, file));
   checkTranspiled(tree);
   return {
-    functions: new Map(tree.functions.map((definition) => [definition.name, emitFunction(definition)])),
+    functions: new Map(tree.functions.map((definition) => [definition.name, emitFunction(definition, tree)])),
   };
 }

@@ -18,7 +18,7 @@ canvases draw on WebGPURenderer (#1788).
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `void` | open, #1824 | | | `servers/rendering/shader_language.h:210` |
+| `void` | open, #1825 | | | `servers/rendering/shader_language.h:210` |
 | `bool` | transpiled (`type-bool`) | native | native | `servers/rendering/shader_language.h:211` |
 | `bvec2` | transpiled (`type-bvec2`) | native | native | `servers/rendering/shader_language.h:212` |
 | `bvec3` | transpiled (`type-bvec3`) | native | native | `servers/rendering/shader_language.h:213` |

@@ -32,7 +32,7 @@ export interface InstructionRow {
  * args are a bracketed list, so a function of no arguments has `()`.
  */
 const ROWS = `
-void	data type	servers/rendering/shader_language.h:210	#1824	TK_TYPE_VOID				
+void	data type	servers/rendering/shader_language.h:210	#1825	TK_TYPE_VOID				
 bool	data type	servers/rendering/shader_language.h:211	#1823	TK_TYPE_BOOL			native	native
 bvec2	data type	servers/rendering/shader_language.h:212	#1823	TK_TYPE_BVEC2			native	native
 bvec3	data type	servers/rendering/shader_language.h:213	#1823	TK_TYPE_BVEC3			native	native

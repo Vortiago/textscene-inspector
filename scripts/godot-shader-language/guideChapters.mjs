@@ -272,8 +272,8 @@ const STATEMENTS_CHAPTER = {
     {
       heading: '`return`',
       rows: (row) => row.id === 'return' || row.id === 'FLOW_OP_RETURN',
-      what: "`return a;` ends the function with the value `a`, of the function's return type. Godot refuses a non-void function with no `return`. A statement after the first `return` never runs.",
-      tsl: 'the value of the first return',
+      what: "`return a;` ends the function with the value `a`, of the function's return type. Godot refuses a non-void function with no `return`. A `return` inside a branch or a loop is lowered to a write of the result, a flag and a `break` from each loop around it.",
+      tsl: "the `Fn`'s value: the lowered function's one `return`, the last statement",
     },
     {
       heading: 'Expression statements and `;`',
@@ -285,7 +285,7 @@ const STATEMENTS_CHAPTER = {
       heading: 'Local variables and `const`',
       rows: (row) => row.id === 'NODE_TYPE_VARIABLE_DECLARATION',
       what: "`float b = a;` declares a local variable, and `int b = a, c = 2;` declares several. A variable without a value holds what GLSL leaves undefined until a write. `const float k = 2.5;` declares a constant, which Godot refuses to write. Godot refuses a name declared twice in one function, an argument's name included, and a variable read in its own initialiser.",
-      tsl: 'a TSL variable, `toVar()`',
+      tsl: 'a TSL `Var` that starts at its value',
     },
     {
       heading: 'Blocks',
@@ -303,7 +303,7 @@ const STATEMENTS_CHAPTER = {
       heading: 'Loops',
       rows: (row) => /^(for|while|do|FLOW_OP_(FOR|WHILE|DO))$/.test(row.id),
       what: '`for (init; c; step) s`, `while (c) s` and `do s while (c);` run `s` while `c` holds: `do` runs it once before the first test. A variable declared in `init` is gone after the loop. Each part of `for` may be empty, and an empty condition holds.',
-      tsl: '`Loop(true, ...)` over the lowered `while (true)`',
+      tsl: '`Loop(...)` over the lowered `while (true)`, with `if (!c) break;` inside',
     },
     {
       heading: '`break` and `continue`',
@@ -315,7 +315,7 @@ const STATEMENTS_CHAPTER = {
       heading: '`switch`',
       rows: (row) => /^(switch|case|default|FLOW_OP_(SWITCH|CASE|DEFAULT))$/.test(row.id),
       what: '`switch (a)` runs from the `case` whose integer constant equals `a`, or from `default`, until a `break`: a case without one falls through to the next. In Godot 4.6.3 a case without `break` that ends the `switch` takes the statements after the `switch` too, so Godot refuses such a function for its missing `return`.',
-      tsl: 'an `if` chain over the lowered `switch`',
+      tsl: '`If` chain in a `Loop` that runs once, over the lowered `switch`',
     },
     {
       heading: '`discard`',
@@ -327,13 +327,13 @@ const STATEMENTS_CHAPTER = {
       heading: 'Arrays',
       rows: (row) => /^(NODE_TYPE_ARRAY|NODE_TYPE_ARRAY_CONSTRUCT|length\[array\]\(\))$/.test(row.id),
       what: '`float v[3]` and `float[3] v` declare an array, `float[3](a, b, c)` and `float[](a, b, c)` construct one, and `{a, b, c}` initialises one. `v.length()` is the size. An index Godot folds out of range is refused.',
-      tsl: '`array(...)` in a variable, its elements by `element(i)`',
+      tsl: '`array(...)` in a `Var`, its elements by `element(i)`',
     },
     {
       heading: 'Structs',
       rows: (row) => /^(struct type|OP_STRUCT|NODE_TYPE_STRUCT)$/.test(row.id),
       what: '`struct Pair { float x; vec2 y; };` declares a struct before the functions. `Pair(a, b)` constructs one from a value of each member, in order, and `p.x` reads or writes a member.',
-      tsl: 'a `struct(...)` layout and its members',
+      tsl: 'one `Var` per member, and one array per member for an array of structs',
     },
     {
       heading: 'Tree nodes',
