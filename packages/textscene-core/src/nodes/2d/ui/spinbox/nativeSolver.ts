@@ -29,7 +29,7 @@ import { resolveRangeValue } from '../shared/range';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SpinBoxProperties } from './types';
 import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
-import { scaledIconSizeOf, themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
+import { themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import type { Rgba } from '../../../../godot/math/math';
 
 /** `Range`'s default `step` (`scene/gui/range.h:42`). SpinBox's constructor never calls `set_step` (`spin_box.cpp:723-740`), so this is what an unauthored `step` resolves to. */
@@ -40,11 +40,6 @@ const SPIN_BOX_BUTTONS_WIDTH = defaultConstant('SpinBox', 'buttons_width');
 const SPIN_BOX_FIELD_BUTTONS_SEPARATION = defaultConstant('SpinBox', 'field_and_buttons_separation');
 /** `value_up.svg`/`value_down.svg` (`scene/theme/icons/`) declare `width="16" height="8"`. */
 const SPIN_BOX_ARROW_ICON_SIZE: Vector2 = { x: 16, y: 8 };
-
-/** The vendored arrows' size at the theme scale. */
-export function spinBoxArrowIconSize(scale: number): Vector2 {
-  return scaledIconSizeOf(SPIN_BOX_ARROW_ICON_SIZE, scale);
-}
 
 /** An arrow's top-left in its button's rect: `Point2i` centring, integer division (`spin_box.cpp:475-476`, `:490-491`). */
 export function spinBoxArrowPosition(button: Rect2, iconSize: Vector2): Vector2 {
@@ -82,7 +77,7 @@ export function spinBoxWidestButtonIconWidth(n: Pick<SolveNode, 'textureSlots'>,
  * `set_min_buttons_width_from_icons = 1`, since a SpinBox's per-node theme-constant overrides are
  * not modelled. `widestIconWidth` is `spinBoxWidestButtonIconWidth`'s.
  */
-export function spinBoxButtonsBlockWidth(widestIconWidth: number): number {
+function spinBoxButtonsBlockWidth(widestIconWidth: number): number {
   return Math.max(SPIN_BOX_BUTTONS_WIDTH, widestIconWidth) + SPIN_BOX_FIELD_BUTTONS_SEPARATION;
 }
 
@@ -154,7 +149,7 @@ function stepDecimals(step: number): number {
 }
 
 /** `Math::range_step_decimals` (`core/math/math_funcs.cpp:89-94`): `step < 1e-13` (an unset or zero step) leaves `String::num`'s digits unlimited. */
-export function rangeStepDecimals(step: number): number {
+function rangeStepDecimals(step: number): number {
   if (step < 0.0000000000001) return 16;
   return stepDecimals(step);
 }
@@ -198,17 +193,8 @@ function spinBoxFullyDisabled(props: SpinBoxProperties): boolean {
   return props.editable === false;
 }
 
-/**
- * `_update_buttons_state_for_current_value` (`spin_box.cpp:635-645`):
- * `value == max && !allow_greater` disables the up button;
- * `value == min && !allow_lesser` disables the down button.
- */
 /** `_update_buttons_state_for_current_value` (`spin_box.cpp:635-646`): a button disables at its bound unless the range lets the value go past it. */
-export function spinBoxRangeButtonState(
-  value: number,
-  bound: number,
-  allowsBeyond: boolean
-): SpinBoxButtonState {
+function spinBoxRangeButtonState(value: number, bound: number, allowsBeyond: boolean): SpinBoxButtonState {
   return value === bound && !allowsBeyond ? 'disabled' : 'normal';
 }
 
@@ -237,7 +223,7 @@ export function spinBoxIconColor(
 }
 
 /** `line_edit->set_theme_type_variation("SpinBoxInnerLineEdit")` (`spin_box.cpp:728`). */
-export const SPIN_BOX_FIELD_VARIATION = 'SpinBoxInnerLineEdit';
+const SPIN_BOX_FIELD_VARIATION = 'SpinBoxInnerLineEdit';
 
 /** The field's name, so its path is `<spin box>/@LineEdit`. */
 const SPIN_BOX_FIELD_NAME = 'LineEdit';
