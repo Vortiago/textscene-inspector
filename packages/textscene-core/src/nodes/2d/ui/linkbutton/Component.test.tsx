@@ -151,13 +151,29 @@ describe('<LinkButton> (isolated painter contract)', () => {
     expect(underlineMaterial.color.r).toBeCloseTo(sRGBChannelToLinear(0.4375), 4);
   });
 
-  it('forwards renderOrder to every mesh (text + underline)', async () => {
+  it('orders every mesh within its own item (text + underline)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <LinkButton {...painterEnv()} solveNode={solveNode({ text: 'Visit' })} rect={RECT} renderOrder={5} />
     );
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     expect(meshes.length).toBeGreaterThan(0);
-    for (const mesh of meshes) expect(mesh.renderOrder).toBe(5);
+    for (const mesh of meshes) {
+      expect(mesh.renderOrder).toBeGreaterThanOrEqual(5);
+      expect(mesh.renderOrder).toBeLessThan(6);
+    }
+  });
+
+  // `link_button.cpp:292-313`: the outline, then the text, then the underline over both.
+  it('draws the underline after the outline and the fill of its text', async () => {
+    const outlined = solveNode({ text: 'Visit' });
+    const node = { ...outlined, constants: { ...outlined.constants, outline_size: 4 } };
+    const renderer = await ReactThreeTestRenderer.create(
+      <LinkButton {...painterEnv()} solveNode={node} rect={RECT} renderOrder={5} />
+    );
+    const underline = findUnderlineMesh(renderer.scene)!;
+    const textOrders = bundledRunMeshes(renderer.scene).map((mesh) => mesh.renderOrder);
+    expect(textOrders).toHaveLength(2);
+    expect(underline.renderOrder).toBeGreaterThan(Math.max(...textOrders));
   });
 
   it("text_overrun_behavior trims the label to the control's own rect width (link_button.cpp:286-289)", async () => {
