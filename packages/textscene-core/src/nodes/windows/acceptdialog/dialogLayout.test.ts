@@ -5,7 +5,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../parser/types';
 import { heading } from '../../../parser/testing/parserKit';
-import { createSolveContext } from '../../../r3f/controls/native/controlRectSolver';
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import { flatStyleBox } from '../../../r3f/controls/native/styleBoxFlat';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
@@ -13,7 +12,7 @@ import { measureText } from '../../../r3f/controls/native/text/measurer';
 import { controlNode, solveNode, withThemeItems } from '../../../r3f/controls/native/testing/solveNode';
 import '../../../r3f/controls/index';
 import { wrappedWindowSize } from '../window/wrapControls';
-import { dialogGeometry } from './dialogLayout';
+import { solvedDialog } from './testing/solvedDialog';
 import { parseConfirmationDialog } from '../confirmationdialog/parser';
 import { parseDialog } from './parser';
 
@@ -59,9 +58,9 @@ function sizeOf(window: SolveNode) {
   return wrappedWindowSize(window, THEME, measureText, EMBEDDER);
 }
 
-/** A fresh context for each solve: it memoises minimum sizes by path. */
+/** The dialog solved at the size it wraps to. */
 function geometryOf(window: SolveNode) {
-  return dialogGeometry(window, sizeOf(window), createSolveContext(THEME, measureText));
+  return solvedDialog(window, sizeOf(window), THEME);
 }
 
 const rect = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });

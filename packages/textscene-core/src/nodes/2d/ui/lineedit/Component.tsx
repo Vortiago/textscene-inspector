@@ -2,7 +2,7 @@
  * `<LineEdit>`, the native painter: `normal` or `read_only` chrome unless `flat`, the glyphs of the text
  * `lineEditDisplayText` picks that end inside `ofs_max`, in its state's colour over its theme outline ring,
  * the active icon, and the caret while `caret_force_displayed`, since a static preview never focuses and
- * `_validate_caret_can_draw()`'s other branch never fires. It draws the selection a dialog sets in `syntheticDraw`, and no IME. `ControlCanvasWalker` owns `visible`, `children` and the transform.
+ * `_validate_caret_can_draw()`'s other branch never fires. It draws the selection a Control that builds it sets (`LineEditProperties.selection`), and no IME. `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
 import { caretDrawWidthPx } from '../shared/caretWidth';
 import { useMemo } from 'react';
@@ -139,7 +139,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
     [layout, content.textOffset.x, content.ofsMaxPx]
   );
 
-  const fieldSelection = solveNode.syntheticDraw?.selection;
+  const fieldSelection = props.selection;
   // The rect comes from the whole layout, so it reaches `ofs_max` where a glyph it covers is dropped.
   const selection = useMemo(() => {
     if (!layout || !fieldSelection) return null;

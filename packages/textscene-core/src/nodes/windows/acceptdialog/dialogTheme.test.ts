@@ -3,15 +3,15 @@ import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../parser/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import { heading } from '../../../parser/testing/parserKit';
-import { createSolveContext } from '../../../r3f/controls/native/controlRectSolver';
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { measureText } from '../../../r3f/controls/native/text/measurer';
 import { solveNode, withThemeItems } from '../../../r3f/controls/native/testing/solveNode';
 import '../../../r3f/controls/index';
 import { wrappedWindowSize } from '../window/wrapControls';
-import { dialogButtonNode, messageLabelNode } from './dialogParts';
-import { dialogGeometry } from './dialogLayout';
+import { internalControlsOf } from '../../../r3f/controls/native/internalControls';
+import { buttonRowNode } from './dialogParts';
+import { solvedDialog } from './testing/solvedDialog';
 import { parseConfirmationDialog } from '../confirmationdialog/parser';
 import { parseDialog } from './parser';
 
@@ -40,6 +40,14 @@ function dialog(themeChain: readonly ThemeResource[]): SolveNode {
   return withThemeItems({ ...solveNode(), path: 'Dialog', node, themeChain });
 }
 
+function okButton(window: SolveNode): SolveNode {
+  return buttonRowNode(window, THEME).children.find((child) => child.node.name === 'OkButton')!;
+}
+
+function messageLabel(window: SolveNode): SolveNode {
+  return internalControlsOf(window, THEME)[0]!.node;
+}
+
 describe('a dialog under a Theme', () => {
   const iconTheme = themeOf({ icons: { Button: { icon: 'ExtResource("1")' } } });
   const sizedDialog = (themeChain: readonly ThemeResource[]): SolveNode => ({
@@ -48,21 +56,21 @@ describe('a dialog under a Theme', () => {
   });
 
   it('sizes the OK button by the size the dialog holds for the theme icon of Button', () => {
-    expect(dialogButtonNode(sizedDialog([iconTheme]), 'ok').textureSize).toEqual(ICON_SIZE);
+    expect(okButton(sizedDialog([iconTheme])).textureSize).toEqual(ICON_SIZE);
   });
 
   it('leaves the OK button without an icon size when the theme has no icon', () => {
-    expect(dialogButtonNode(sizedDialog([]), 'ok').textureSize).toBeNull();
+    expect(okButton(sizedDialog([])).textureSize).toBeNull();
   });
 
   it('gives the OK button the theme colours of Button', () => {
     const themed = dialog([themeOf({ colors: { Button: { font_focus_color: RED } } })]);
-    expect(dialogButtonNode(themed, 'ok').colors.font_focus_color).toEqual(RED);
+    expect(okButton(themed).colors.font_focus_color).toEqual(RED);
   });
 
   it('gives the message label the theme constants of Label', () => {
     const themed = dialog([themeOf({ constants: { Label: { line_spacing: 20 } } })]);
-    expect(messageLabelNode(themed).constants.line_spacing).toBe(20);
+    expect(messageLabel(themed).constants.line_spacing).toBe(20);
   });
 
   it('makes the message taller with a larger Label line_spacing', () => {
@@ -71,11 +79,7 @@ describe('a dialog under a Theme', () => {
     const spaced = dialog([themeOf({ constants: { Label: { line_spacing: 20 } } })]);
     expect(heightOf(spaced)).toBeGreaterThan(heightOf(plain));
     const contentOf = (window: SolveNode) =>
-      dialogGeometry(
-        window,
-        wrappedWindowSize(window, THEME, measureText, EMBEDDER),
-        createSolveContext(THEME, measureText)
-      ).content;
+      solvedDialog(window, wrappedWindowSize(window, THEME, measureText, EMBEDDER), THEME).content;
     expect(contentOf(spaced).h).toBeGreaterThan(contentOf(plain).h);
   });
 
@@ -86,11 +90,7 @@ describe('a dialog under a Theme', () => {
       return { ...base, node: { ...base.node, type: 'ConfirmationDialog', properties } };
     };
     const gapOf = (window: SolveNode) => {
-      const [cancel, ok] = dialogGeometry(
-        window,
-        { x: 400, y: 200 },
-        createSolveContext(THEME, measureText)
-      ).buttons;
+      const [cancel, ok] = solvedDialog(window, { x: 400, y: 200 }, THEME).buttons;
       return ok!.rect.x - (cancel!.rect.x + cancel!.rect.w);
     };
     const spaced = confirmation([themeOf({ constants: { HBoxContainer: { separation: 40 } } })]);
