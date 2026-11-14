@@ -24,7 +24,10 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import { sidesSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { LabelProperties } from '../label/types';
-// The band is an HBoxContainer that holds a Label, so its solve needs both classes' solvers.
+import { parsedSceneLines } from '../../../../r3f/controls/native/sceneLines';
+// The band is an HBoxContainer that holds a Label: its build needs the Label parser, and its solve
+// needs both classes' solvers.
+import '../label/index';
 import '../hboxcontainer/nativeSolver';
 import '../label/solverRegistration';
 
@@ -45,14 +48,24 @@ export const GRAPH_FRAME_TITLE_LABEL: TitleLabelSpec = {
   horizontalAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
 };
 
+/** The scene lines `title_label`'s setters stand for, parsed by the Label parser for its constructor defaults. */
+function titleLabelLines(label: TitleLabelSpec): Record<string, string> {
+  return {
+    size_flags_horizontal: String(SIZE_EXPAND_FILL),
+    ...(label.horizontalAlignment !== undefined && {
+      horizontal_alignment: String(label.horizontalAlignment),
+    }),
+  };
+}
+
 /** `titlebar_hbox` holding `title_label`, whose text `set_title` writes. */
 export function titlebarInternalControls(label: TitleLabelSpec): InternalControlsFn {
   return (owner) => {
     const title = (owner.node.properties as { title?: string }).title ?? '';
+    // The title is set after the parse: it is already a value, not a scene-line literal to quote.
     const labelProperties: Partial<LabelProperties> = {
+      ...parsedSceneLines('Label', 'title_label', titleLabelLines(label)),
       text: title,
-      sizeFlagsHorizontal: SIZE_EXPAND_FILL,
-      ...(label.horizontalAlignment !== undefined && { horizontalAlignment: label.horizontalAlignment }),
     };
     return [
       {

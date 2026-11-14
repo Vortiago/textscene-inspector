@@ -57,6 +57,10 @@ describe('the titlebar a GraphElement builds', () => {
     }
   );
 
+  it("keeps the Label constructor's SIZE_SHRINK_CENTER, so the hbox centres the title (label.cpp)", () => {
+    expect(labelProps(element('GraphNode')).sizeFlagsVertical).toBe(SizeFlags.SHRINK_CENTER);
+  });
+
   it('writes the title into the Label (set_title)', () => {
     expect(labelProps(element('GraphNode', { title: 'Mix' })).text).toBe('Mix');
   });
