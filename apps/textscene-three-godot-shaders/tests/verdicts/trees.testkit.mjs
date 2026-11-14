@@ -6,6 +6,7 @@
 
 import { emittedShader } from '../../../../packages/textscene-core/src/shaders/language/emittedTree.ts';
 import { parse } from '../../../../packages/textscene-core/src/shaders/language/parse.ts';
+import { printShader } from '../../../../packages/textscene-core/src/shaders/language/printer.ts';
 import { tokenize } from '../../../../packages/textscene-core/src/shaders/language/tokenizer.ts';
 import { treeFault } from '../../../../packages/textscene-core/src/shaders/language/treeCheck.ts';
 
@@ -16,6 +17,12 @@ export const loweredTreeOf = (source) => emittedShader(treeOf(source));
 
 export const shapeOf = (tree) =>
   JSON.parse(JSON.stringify(tree, (key, value) => (key === 'position' ? undefined : value)));
+
+/** Nothing when the printed text of `tree` parses to the same tree, else the fault. */
+export const printsBack = (tree) =>
+  JSON.stringify(shapeOf(treeOf(printShader(tree)))) === JSON.stringify(shapeOf(tree))
+    ? undefined
+    : 'its printed text parses to another tree';
 
 /** The flows the lowering removes: the emitter reads `while (true)` as its one loop and no `switch`. */
 const LOWERED_AWAY = { FLOW_OP_FOR: 'a for loop', FLOW_OP_DO: 'a do loop', FLOW_OP_SWITCH: 'a switch' };

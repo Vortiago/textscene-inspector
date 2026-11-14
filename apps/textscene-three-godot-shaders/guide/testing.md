@@ -59,7 +59,7 @@ The instruction count says how much of the language is transpiled, not how many 
 
 **0 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
 
-The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three writes that text, and each upgrade of three would change every file.
+The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. No shader transpiles yet, so the folder holds no file yet. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three writes that text, and each upgrade of three would change every file.
 
 | State | Shaders |
 | --- | --- |

@@ -69,6 +69,15 @@ function stateCounts(states) {
   return [...byState].sort((a, b) => b[1] - a[1]);
 }
 
+/** The printed trees of the corpus, which exist only once a shader transpiles. */
+function printedTreesParagraph(transpiled) {
+  const files =
+    transpiled === 0
+      ? 'No shader transpiles yet, so the folder holds no file yet.'
+      : `It holds ${transpiled} ${transpiled === 1 ? 'file' : 'files'}.`;
+  return `The printed tree of each shader the transpiler accepts is a checked-in file under \`tests/corpus/trees/\`, so a review shows how a change moves a real shader's tree. ${files} \`vitest -u\` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three writes that text, and each upgrade of three would change every file.`;
+}
+
 function corpusSection({ corpus, corpusRecord, states, knownMismatches }) {
   const accepted = corpus.filter((shader) => corpusRecord.cases[shader.id] === 'accepted');
   const transpiled = count(accepted, (shader) => states[shader.id] === 'transpiled');
@@ -97,7 +106,7 @@ ${sourceLines.join('\n')}
 
 **${transpiled} of ${accepted.length} real shaders transpile.** Godot rejects the other ${corpus.length - accepted.length}. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
 
-The printed tree of each shader the transpiler accepts is a checked-in file under \`tests/corpus/trees/\`, so a review shows how a change moves a real shader's tree. \`vitest -u\` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three writes that text, and each upgrade of three would change every file.
+${printedTreesParagraph(transpiled)}
 
 | State | Shaders |
 | --- | --- |

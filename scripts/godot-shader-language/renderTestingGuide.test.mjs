@@ -11,7 +11,7 @@ const KNOWN = {
   },
 };
 
-const GUIDE = renderTestingGuide({
+const INPUT = {
   operators: {
     cases: [{ id: 'OP_ADD(float,float)', row: {} }],
     record: { godot: '4.6.3-stable', cases: { 'OP_ADD(float,float)': 'accepted' } },
@@ -34,7 +34,9 @@ const GUIDE = renderTestingGuide({
     },
     knownMismatches: {},
   },
-});
+};
+
+const GUIDE = renderTestingGuide(INPUT);
 
 describe('the chapter on the tests against Godot', () => {
   it('counts the random programs bit-equal with Godot, less those a case names, and the listed cases', () => {
@@ -81,5 +83,15 @@ describe('the table of known differences', () => {
       corpus: { corpus: [], corpusRecord: { cases: {} }, states: {}, knownMismatches: {} },
     });
     expect(guide).toContain('`bool probe(bool a0) { return a0 \\|\\| a0; }`');
+  });
+
+  it('says the folder of printed trees is empty while no shader transpiles', () => {
+    expect(GUIDE).toContain('No shader transpiles yet, so the folder holds no file yet.');
+  });
+
+  it('counts the printed tree files once a shader transpiles', () => {
+    const states = { ...INPUT.corpus.states, 'demos/a.gdshader': 'transpiled' };
+    const guide = renderTestingGuide({ ...INPUT, corpus: { ...INPUT.corpus, states } });
+    expect(guide).toContain('It holds 1 file.');
   });
 });

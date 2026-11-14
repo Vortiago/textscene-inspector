@@ -1,11 +1,11 @@
 /**
- * The tree checks the harness runs over the random programs fail on a broken tree: each case
- * breaks one fact by hand and names the message the check gives.
+ * The tree checks and the print check the harness runs over the random programs fail on a broken
+ * tree: each case breaks one fact by hand and names the message the check gives.
  */
 
 import { describe, expect, it } from 'vitest';
 import { treeFault } from '../../../../packages/textscene-core/src/shaders/language/treeCheck.ts';
-import { loweredFault, loweredTreeOf, treeOf } from './trees.testkit.mjs';
+import { loweredFault, loweredTreeOf, printsBack, treeOf } from './trees.testkit.mjs';
 
 /** `tree` with the value of its first function's last `return` replaced by `change(value)`. */
 function withReturnedValue(tree, change) {
@@ -39,13 +39,27 @@ describe('the tree check on a broken tree', () => {
   });
 });
 
+describe('the print check on a broken tree', () => {
+  it('passes the tree it is given whole', () => {
+    expect(printsBack(treeOf(SUM))).toBeUndefined();
+  });
+
+  it('finds an operator that prints as another row', () => {
+    const tree = withReturnedValue(treeOf(SUM), (sum) => ({ ...sum, op: 'OP_SUB' }));
+    expect(printsBack(tree)).toBe('its printed text parses to another tree');
+  });
+});
+
 describe('the lowered tree check', () => {
   const LOOPS = 'float f(float a) { for (int i = 0; i < 2; i++) { a += 1.0; } return a; }';
   const SWITCH = 'int f(int a) { switch (a) { case 1: return 2; default: return 3; } }';
   const WHILE = 'float f(float a) { while (a < 1.0) { a += 1.0; } return a; }';
+  const DO = 'float f(float a) { do { a += 1.0; } while (a < 1.0); return a; }';
+  const EARLY_RETURN = 'float f(float a) { if (a > 0.0) { return a; } return 0.0; }';
 
   it('passes a lowered tree', () => {
-    for (const source of [LOOPS, SWITCH, WHILE]) expect(loweredFault(loweredTreeOf(source))).toBeUndefined();
+    for (const source of [LOOPS, SWITCH, WHILE, DO, EARLY_RETURN])
+      expect(loweredFault(loweredTreeOf(source))).toBeUndefined();
   });
 
   it('finds a for loop the lowering should have removed', () => {
@@ -58,5 +72,13 @@ describe('the lowered tree check', () => {
 
   it('finds a while loop that still has its condition', () => {
     expect(loweredFault(treeOf(WHILE))).toBe('f: a while loop with a condition after lowering');
+  });
+
+  it('finds a do loop the lowering should have removed', () => {
+    expect(loweredFault(treeOf(DO))).toBe('f: a do loop after lowering');
+  });
+
+  it('finds a return before the last statement of its function', () => {
+    expect(loweredFault(treeOf(EARLY_RETURN))).toBe('f: a return before the last statement after lowering');
   });
 });
