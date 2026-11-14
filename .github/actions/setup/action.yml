@@ -33,7 +33,7 @@ runs:
           !scenes/isometric/previews
         key: godot-demos-${{ steps.demos.outputs.key }}
 
-    # The repository holds no copy of Godot's template files (scripts/godot-templates/templateFiles.mjs).
+    # The repository holds no copy of Godot's template files (scripts/godot-templates/install.mjs).
     - if: inputs.template-files == 'artifact'
       uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:

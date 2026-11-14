@@ -386,8 +386,9 @@ Licensed under the same Godot Engine MIT licence below.
 `packages/textscene-core/src/shaders/template/templateFiles.generated.ts` holds unmodified copies of
 Godot 4.6.3's renderer templates, the files under `servers/rendering/renderer_rd/shaders/`, so the
 shader package links a user's shader into the template Godot links it into. The repository holds no
-copy: `scripts/godot-templates/templateFiles.mjs` writes the file from Godot's source at install, and
-the shader package's bundle carries it.
+copy: `scripts/godot-templates/templateFiles.mjs` renders the file, `scripts/godot-templates/install.mjs`
+writes it at install from Godot's source, or on Cloudflare Pages from Godot's GitHub tree at the
+release tag, and the shader package's bundle carries it.
 `packages/textscene-core/src/shaders/template/modeTables.generated.ts` holds the mode tables those
 templates read, generated from the renderer's C++ (`environment/sky.cpp` and the other shader
 types). `scripts/godot-templates/run.mjs` writes it. Both files carry the Godot notice, and they are

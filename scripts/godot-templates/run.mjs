@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Writes the mode table of each shader type, and the template files of Godot's renderer, from
- * Godot's source (scripts/godotSource.mjs): `pnpm godot:templates [--check] [--godot-source <dir>]`.
- * `--check` writes nothing and exits 1 on a stale mode table. Git holds no template file to check.
+ * Writes the mode table of each shader type, the template files of Godot's renderer and their
+ * checksums, from Godot's source (scripts/godotSource.mjs):
+ * `pnpm godot:templates [--check] [--godot-source <dir>]`. `--check` writes nothing and exits 1 on a
+ * stale mode table or checksums file. Git holds no template file to check.
  */
 
 import { readFileSync } from 'node:fs';
@@ -13,6 +14,7 @@ import { godotSourceDir } from '../godotSource.mjs';
 import { godotVersion } from '../godot-shader-language/readSource.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { MODE_TABLE_SOURCES, modeTable } from './modeTables.mjs';
+import { CHECKSUMS_PATH, renderChecksums } from './templateDownload.mjs';
 import { GODOT_LICENCE, renderTemplateFiles, TEMPLATE_FILES_PATH } from './templateFiles.mjs';
 
 const OUT_DIR = join(REPO_ROOT, 'packages/textscene-core/src/shaders/template');
@@ -40,13 +42,16 @@ ${tables.join('\n')}
 function main() {
   const godotDir = godotSourceDir(process.argv);
   const version = godotVersion(readFileSync(join(godotDir, 'version.py'), 'utf8'));
-  const modeTables = [[join(OUT_DIR, 'modeTables.generated.ts'), renderModeTables(godotDir, version)]];
+  const committed = [
+    [join(OUT_DIR, 'modeTables.generated.ts'), renderModeTables(godotDir, version)],
+    [CHECKSUMS_PATH, renderChecksums(godotDir)],
+  ];
   const options = { tool: 'godot-templates' };
   if (process.argv.includes('--check')) {
-    checkGenerated(modeTables, { ...options, command: 'pnpm godot:templates' });
+    checkGenerated(committed, { ...options, command: 'pnpm godot:templates' });
     return;
   }
-  writeGenerated([...modeTables, [TEMPLATE_FILES_PATH, renderTemplateFiles(godotDir)]], options);
+  writeGenerated([...committed, [TEMPLATE_FILES_PATH, renderTemplateFiles(godotDir)]], options);
 }
 
 // `pathToFileURL`, not a `file://` template: on Windows `process.argv[1]` is a `C:\...` path.

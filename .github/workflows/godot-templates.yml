@@ -1,6 +1,6 @@
 name: Godot's template files
 
-# The repository holds no copy of Godot's template files (scripts/godot-templates/templateFiles.mjs).
+# The repository holds no copy of Godot's template files (scripts/godot-templates/install.mjs).
 # This workflow writes them from the CI image's Godot source and uploads them as the
 # godot-template-files artifact, which a job outside the image downloads through the setup
 # action's `template-files: artifact`. CI writes its own in the godot-templates job of ci.yml,

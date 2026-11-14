@@ -54,8 +54,8 @@ const IMAGE_SOURCE_ALLOWED = new Set(['scripts/godotSource.mjs', '.github/ci-ima
 const GODOT_SOURCE_READERS = new Set([
   'apps/textscene-three-godot-shaders/tests/templates/run.mjs',
   'scripts/godot-shader-language/run.mjs',
+  'scripts/godot-templates/install.mjs',
   'scripts/godot-templates/run.mjs',
-  'scripts/godot-templates/templateFiles.mjs',
 ]);
 const SOURCE_IMPORT_RE = /from\s+['"][./]*(?:scripts\/)?godotSource\.mjs['"]/;
 
