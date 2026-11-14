@@ -5,7 +5,9 @@ import { TEST_SCENE_FONT_METRICS } from '../testing/sceneFontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import type { RegisteredCanvasFontMetrics } from './runtimeFontMetrics';
 import { readSettledFont } from './sceneFontLoader';
-import { createSettledFonts, type SettledFonts } from './settledFonts';
+import { createSettledFonts, UNOPENED_FACE, type SettledFonts } from './settledFonts';
+import { NO_FACE_METRICS } from './noFaceMetrics';
+import { UNOPENED_FACE_METRICS } from './unopenedFaceMetrics';
 import { handLoader, type HandLoader } from './settledFonts.testkit';
 import { fontFile } from './sfntOutlines.testkit';
 import type { FontResource } from '../../../../resources/fonts/font/types';
@@ -79,6 +81,58 @@ describe('readSettledFont', () => {
       status: 'settled',
       face: { ascent: OPEN_SANS_FONT_METRICS.ascent },
       chain: [{ font, isStandIn: true }],
+    });
+  });
+
+  it('settles on a face that draws nothing for a face FreeType cannot open, in place of the bundled face', async () => {
+    const bytes = new ArrayBuffer(4);
+    const font = fontFile(bytes);
+    readSettledFont(fonts, font, 'Label');
+
+    await loader.settle(bytes, UNOPENED_FACE);
+
+    expect(readSettledFont(fonts, font, 'Label')).toMatchObject({
+      status: 'settled',
+      face: UNOPENED_FACE_METRICS,
+      chain: [{ font, metrics: UNOPENED_FACE_METRICS }],
+    });
+  });
+
+  it('keeps a fallback after a first face FreeType cannot open, which takes every character first', async () => {
+    const [ownBytes, fallbackBytes] = [new ArrayBuffer(4), new ArrayBuffer(4)];
+    const fallback = fontFile(fallbackBytes);
+    const font = fontFile(ownBytes, [fallback]);
+    readSettledFont(fonts, font, 'Label');
+
+    await loader.settle(ownBytes, UNOPENED_FACE);
+    await loader.settle(fallbackBytes, FACE);
+
+    const settled = await readOnceOutlinesSettle(font);
+    expect(settled.status === 'settled' && settled.chain.map(({ font: face }) => face)).toEqual([
+      font,
+      fallback,
+    ]);
+  });
+
+  it('keeps a fallback FreeType cannot open in its chain, where it takes what the faces before it lack', async () => {
+    const [ownBytes, fallbackBytes] = [new ArrayBuffer(4), new ArrayBuffer(4)];
+    const font = fontFile(ownBytes, [fontFile(fallbackBytes)]);
+    readSettledFont(fonts, font, 'Label');
+
+    await loader.settle(ownBytes, FACE);
+    await loader.settle(fallbackBytes, UNOPENED_FACE);
+
+    const settled = await readOnceOutlinesSettle(font);
+    expect(settled.status === 'settled' && settled.chain[1]?.metrics).toBe(UNOPENED_FACE_METRICS);
+  });
+
+  it('settles at once on a face with no glyphs for an empty font file, which loads nothing (edge case)', () => {
+    const font = fontFile(new ArrayBuffer(0));
+
+    expect(readSettledFont(fonts, font, 'Label')).toMatchObject({
+      status: 'settled',
+      face: NO_FACE_METRICS,
+      chain: [{ font, metrics: NO_FACE_METRICS }],
     });
   });
 

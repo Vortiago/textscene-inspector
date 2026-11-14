@@ -27,6 +27,14 @@ function settleLoads(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+/**
+ * The bytes of a font FreeType opens, new on each call. happy-dom has no `FontFace`, so they fail in
+ * the browser alone, which draws the bundled default in their place.
+ */
+function fontBytes(): ArrayBuffer {
+  return fixtureFontBytes('montserrat-semibold-subset.ttf').slice(0);
+}
+
 beforeAll(windowLoaded);
 
 /** A preview's settled fonts, new for each test, so no load of one test settles in another. */
@@ -75,7 +83,7 @@ describe('peekSceneFontMetrics', () => {
   });
 
   it('peekSceneFontMetrics returns the bundled default synchronously while a real load would still be in flight, and never throws', () => {
-    const leaf = fontFile(new ArrayBuffer(4));
+    const leaf = fontFile(fontBytes());
     const metrics = peekSceneFontMetrics(fonts, leaf, 'Root/D');
     expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
   });
@@ -114,14 +122,14 @@ describe('peekSettledSceneFontMetrics', () => {
   });
 
   it('answers null while the load a peek starts is in flight, then the metrics it settles on', async () => {
-    const leaf = fontFile(new ArrayBuffer(4));
+    const leaf = fontFile(fontBytes());
     expect(peekSettledSceneFontMetrics(fonts, leaf, 'Root/Mesh')).toBeNull();
     await settleLoads();
     expect(peekSettledSceneFontMetrics(fonts, leaf, 'Root/Mesh')).toBe(OPEN_SANS_FONT_METRICS);
   });
 
   it('shares the load with peekSceneFontMetrics, which answers the default meanwhile', async () => {
-    const leaf = fontFile(new ArrayBuffer(4));
+    const leaf = fontFile(fontBytes());
     expect(peekSceneFontMetrics(fonts, leaf, 'Root/Label')).toBe(OPEN_SANS_FONT_METRICS);
     expect(peekSettledSceneFontMetrics(fonts, leaf, 'Root/Mesh')).toBeNull();
     await settleLoads();
@@ -139,7 +147,7 @@ describe('peekSettledSceneFontMetrics', () => {
   });
 
   it('carries the embolden of a variation over a settled face', async () => {
-    const leaf = fontFile(new ArrayBuffer(4));
+    const leaf = fontFile(fontBytes());
     const variation: FontResource = {
       kind: 'variation',
       baseFont: leaf,
@@ -153,7 +161,7 @@ describe('peekSettledSceneFontMetrics', () => {
 });
 
 describe('peekSceneFontMetrics — FontVariation embolden', () => {
-  const bytes = new ArrayBuffer(8);
+  const bytes = fontBytes();
 
   function variation(baseFont: FontResource | null, properties: Record<string, string>): FontResource {
     return { kind: 'variation', baseFont, fallbacks: [], properties };
@@ -230,7 +238,7 @@ describe('peekSceneFontMetrics — FontVariation embolden', () => {
   it('draws the bundled face with no embolden while the base face is still loading', () => {
     const metrics = peekSceneFontMetrics(
       fonts,
-      variation(fontFile(new ArrayBuffer(4)), { variation_embolden: '1.2' }),
+      variation(fontFile(fontBytes()), { variation_embolden: '1.2' }),
       'Root/L'
     );
     expect(metrics.embolden).toBeUndefined();
@@ -242,7 +250,7 @@ describe('SettledFonts.subscribe', () => {
     const listener = vi.fn();
     const off = fonts.subscribe(listener);
     try {
-      peekSceneFontMetrics(fonts, fontFile(new ArrayBuffer(4)), 'Root/E');
+      peekSceneFontMetrics(fonts, fontFile(fontBytes()), 'Root/E');
       await settleLoads();
       expect(listener).toHaveBeenCalledTimes(1);
     } finally {
@@ -271,7 +279,7 @@ describe('SettledFonts.subscribe', () => {
     const listener = vi.fn();
     const off = fonts.subscribe(listener);
     off();
-    peekSceneFontMetrics(fonts, fontFile(new ArrayBuffer(4)), 'Root/H');
+    peekSceneFontMetrics(fonts, fontFile(fontBytes()), 'Root/H');
     await settleLoads();
     expect(listener).not.toHaveBeenCalled();
   });
@@ -282,7 +290,7 @@ describe('SettledFonts.subscribe', () => {
     const offA = fonts.subscribe(a);
     const offB = fonts.subscribe(b);
     try {
-      peekSceneFontMetrics(fonts, fontFile(new ArrayBuffer(4)), 'Root/I');
+      peekSceneFontMetrics(fonts, fontFile(fontBytes()), 'Root/I');
       await settleLoads();
       expect(a).toHaveBeenCalledTimes(1);
       expect(b).toHaveBeenCalledTimes(1);
@@ -295,7 +303,7 @@ describe('SettledFonts.subscribe', () => {
 
 describe('fontWork', () => {
   it('counts a font load from the peek that starts it until it settles, so a capture waits for it', async () => {
-    const leaf = fontFile(new ArrayBuffer(4));
+    const leaf = fontFile(fontBytes());
 
     peekSceneFontMetrics(fonts, leaf, 'Root/K');
     expect(fontWork.pending()).toBe(1);
@@ -305,7 +313,7 @@ describe('fontWork', () => {
   });
 
   it('counts one load for two peeks of one font, which share it', async () => {
-    const leaf = fontFile(new ArrayBuffer(4));
+    const leaf = fontFile(fontBytes());
 
     peekSceneFontMetrics(fonts, leaf, 'Root/L');
     peekSettledSceneFontMetrics(fonts, leaf, 'Root/M');
@@ -316,7 +324,7 @@ describe('fontWork', () => {
   });
 
   it('counts one load for a font and a copy of it with other fallbacks, which share its bytes', async () => {
-    const leaf = fontFile(new ArrayBuffer(4));
+    const leaf = fontFile(fontBytes());
     const copy = { ...leaf, fallbacks: [systemFont()] };
 
     peekSettledSceneFontMetrics(fonts, leaf, 'Root/N');
@@ -335,7 +343,7 @@ describe('fontWork', () => {
     const swallow = () => undefined;
     process.on('unhandledRejection', swallow);
     try {
-      peekSceneFontMetrics(fonts, fontFile(new ArrayBuffer(4)), 'Root/P');
+      peekSceneFontMetrics(fonts, fontFile(fontBytes()), 'Root/P');
       await settleLoads();
       expect(fontWork.pending()).toBe(0);
     } finally {
@@ -360,7 +368,7 @@ describe('SettledFonts.version', () => {
   it('rises by one for each load that settles, so a subscriber that missed the event still sees it', async () => {
     const before = fonts.version();
 
-    peekSceneFontMetrics(fonts, fontFile(new ArrayBuffer(4)), 'Root/J');
+    peekSceneFontMetrics(fonts, fontFile(fontBytes()), 'Root/J');
     expect(fonts.version()).toBe(before);
     await settleLoads();
 
@@ -392,7 +400,7 @@ describe('scene font in an environment with no font door', () => {
   it('falls back to the bundled default and names the absent environment when there is no FontFace', async () => {
     const { fonts, peekSceneFontMetrics: peek, logger, bundled } = await freshLoader();
 
-    const font = fontFile(new ArrayBuffer(4));
+    const font = fontFile(fontBytes());
     peek(fonts, font, 'Root/NoDom');
     await settleLoads();
     expect(peek(fonts, font, 'Root/NoDom')).toBe(bundled);
@@ -413,7 +421,7 @@ describe('scene font in an environment with no font door', () => {
     vi.stubGlobal('document', undefined);
     const { fonts, peekSceneFontMetrics: peek, logger, bundled } = await freshLoader();
 
-    const font = fontFile(new ArrayBuffer(4));
+    const font = fontFile(fontBytes());
     peek(fonts, font, 'Root/NoDocument');
     await settleLoads();
     expect(peek(fonts, font, 'Root/NoDocument')).toBe(bundled);
@@ -425,8 +433,8 @@ describe('scene font in an environment with no font door', () => {
   it('draws the bundled default for a face that fails to load, and drops a fallback that fails', async () => {
     const { fonts, peekSettledChainFaces: peekChain, bundled } = await freshLoader();
 
-    const fallback = fontFile(new ArrayBuffer(4));
-    const font = fontFile(new ArrayBuffer(4), [fallback]);
+    const fallback = fontFile(fontBytes());
+    const font = fontFile(fontBytes(), [fallback]);
     peekChain(fonts, font, 'Root/NoDom');
     await settleLoads();
     expect(peekChain(fonts, font, 'Root/NoDom')).toEqual([{ font, metrics: bundled, isStandIn: true }]);
@@ -437,7 +445,7 @@ describe('scene font in an environment with no font door', () => {
 
     const font: FontResource = {
       kind: 'variation',
-      baseFont: fontFile(new ArrayBuffer(4)),
+      baseFont: fontFile(fontBytes()),
       fallbacks: [],
       properties: { variation_embolden: '1.2' },
     };

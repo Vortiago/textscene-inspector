@@ -12,11 +12,17 @@ import { loadSceneFontMetrics } from './sceneFontLoad';
 import { createSettledPeek } from './settledChannel';
 import type { SfntOutlines } from './sfntOutlines';
 
-/** Turns the bytes of a font file into a face. Null is a load that failed: the face draws the bundled default. */
-export type FaceLoader = (
-  bytes: ArrayBuffer,
-  nodePath: string
-) => Promise<RegisteredCanvasFontMetrics | null>;
+/** A face whose bytes FreeType cannot open: Godot draws no text in it (`text_server_adv.cpp:1466-1476`). */
+export const UNOPENED_FACE = Symbol('unopened face');
+
+/**
+ * The face the bytes of a font file load as. Null is a load that failed only in the browser: the
+ * face draws the bundled default.
+ */
+export type LoadedFace = RegisteredCanvasFontMetrics | null | typeof UNOPENED_FACE;
+
+/** Turns the bytes of a font file into a face. */
+export type FaceLoader = (bytes: ArrayBuffer, nodePath: string) => Promise<LoadedFace>;
 
 /** A font of a **Fallback chain**, and the settled metrics of the face it draws. Null is the bundled font. */
 export interface SettledChainFace {
@@ -39,8 +45,8 @@ export type ComposedFont = SettledFont & { readonly status: 'settled' };
 export type AwaitedFonts = ReadonlyMap<object, number>;
 
 export interface SettledFonts {
-  /** The face of a font file's bytes: undefined while it loads, null for a load that failed. */
-  peekFace(bytes: ArrayBuffer, nodePath: string): RegisteredCanvasFontMetrics | null | undefined;
+  /** The face of a font file's bytes, as {@link LoadedFace} answers, and undefined while it loads. */
+  peekFace(bytes: ArrayBuffer, nodePath: string): LoadedFace | undefined;
   /** The outlines of a load of a font's bytes, keyed by `loadKey`: undefined while `read` runs. */
   peekOutlines(loadKey: object, read: () => Promise<SfntOutlines | null>): SfntOutlines | null | undefined;
   /**
@@ -90,7 +96,7 @@ interface PageLoad<T> {
 const pageOutlineLoads = perObject((_loadKey: object): PageLoad<SfntOutlines | null> => ({}));
 /** The same for faces, for each face loader: a test that passes its own loader shares no face with another. */
 const pageFaceLoads = perObject((_loadFace: FaceLoader) =>
-  perObject((_bytes: ArrayBuffer): PageLoad<RegisteredCanvasFontMetrics | null> => ({}))
+  perObject((_bytes: ArrayBuffer): PageLoad<LoadedFace> => ({}))
 );
 
 /** The promise of `shared`, which `load` starts on the first call. */
@@ -146,7 +152,7 @@ export function createSettledFonts(loadFace: FaceLoader = loadSceneFontMetrics):
   }
 
   const notePending = (load: object) => void pendingRead?.add(load);
-  const peekFaceOf = createSettledPeek<ArrayBuffer, RegisteredCanvasFontMetrics | null>(notePending, wake);
+  const peekFaceOf = createSettledPeek<ArrayBuffer, LoadedFace>(notePending, wake);
   const peekOutlinesOf = createSettledPeek<object, SfntOutlines | null>(notePending, wake);
   const fontVersion = (font: object) => fontSettles(font).get();
   /** Written only by `keep`, once for each font whose chain has settled. */

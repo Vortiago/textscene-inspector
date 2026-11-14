@@ -20,7 +20,14 @@ import { NO_FACE_METRICS } from './noFaceMetrics';
 import { perObject } from '../../../../utils/perObject';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { warnOnce } from '../../../../utils/warnOnce';
-import type { ComposedFont, SettledChainFace, SettledFont, SettledFonts } from './settledFonts';
+import {
+  UNOPENED_FACE,
+  type ComposedFont,
+  type SettledChainFace,
+  type SettledFont,
+  type SettledFonts,
+} from './settledFonts';
+import { UNOPENED_FACE_METRICS } from './unopenedFaceMetrics';
 import { drawLoad, peekOutlines } from './sceneFontOutlines';
 
 /** One `BitmapFontMetrics` for each decoded BMFont, so a layout memoised on its identity keeps its hits. */
@@ -50,8 +57,9 @@ const LOADING: SettledFont = { status: 'loading' };
 /**
  * `font` with the settled faces of its whole **Fallback chain**, each face with its `FontVariation`
  * embolden and skew on top. Loading while a load is in flight, which marks `font` so the settle
- * wakes its readers. A font that cannot load, or has no bytes to load, settles at once on the
- * bundled default, and a fallback that cannot load drops out. No font is `none`.
+ * wakes its readers. A font that resolves to no bytes settles at once on the bundled default, and
+ * so does one whose bytes only the browser cannot load, where such a fallback drops out. A face
+ * FreeType cannot open draws nothing, and no font is `none`.
  */
 export function readSettledFont(
   fonts: SettledFonts,
@@ -144,8 +152,8 @@ function settledChainFaces(
 }
 
 /**
- * A face with none of its own: none resolves, or its load failed. The first face of a chain draws the
- * bundled default in its place, and a fallback drops out of its chain.
+ * A face with none of its own: none resolves, or the browser cannot load bytes FreeType opens. The
+ * first face of a chain draws the bundled default in its place, and a fallback drops out of its chain.
  */
 const MISSING_FACE = Symbol('missing face');
 
@@ -172,9 +180,12 @@ function peekFace(
   if (hasBitmap(face))
     return withVariation(bitmapMetricsOf(face.bitmap), { embolden: fontVariationEmbolden(font) });
 
+  // No bytes, no FreeType face: the face has no glyphs, so each character falls to the chain (`text_server_adv.cpp:1433`).
+  if (face.bytes.byteLength === 0) return NO_FACE_METRICS;
   const metrics = fonts.peekFace(face.bytes, nodePath);
   if (metrics === undefined) return null;
   if (metrics === null) return MISSING_FACE;
+  if (metrics === UNOPENED_FACE) return UNOPENED_FACE_METRICS;
   const variation = fontVariation(font);
   // A canvas face draws every glyph from its outline.
   const outlines = peekOutlines(fonts, face, drawLoad(face));
