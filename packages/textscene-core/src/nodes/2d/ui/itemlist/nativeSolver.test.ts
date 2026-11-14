@@ -29,7 +29,7 @@ import type { Vector2 } from '../../../../godot/math/vector';
 import type {} from './nativeSolver';
 import {} from '../../../../r3f/controls/native/text/textLayout';
 import {} from '../../../../r3f/controls/native/text/textLayout.testkit';
-import { ITEM_LIST_CASES, ITEM_LIST_SIZES, type ItemListCase } from './valueList.testdata';
+import { ITEM_LIST_CASES, ITEM_LIST_SIZES, type ItemListCase } from './valueList.testkit';
 
 const itemListMinimumSize = controlSolverRegistry.minimumSize('ItemList')!;
 
