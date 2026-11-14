@@ -1,7 +1,7 @@
 /**
  * `CanvasMeshBody` through a test drawer: what each texture state draws, whether the item asks the
- * light pass for a read, the material colour with and without an array colour, and the defines of
- * each kind of vertex colours in an sRGB and a linear canvas.
+ * light pass for a read, the placement of a surface, the material colour with and without an array
+ * colour, and the defines of each kind of vertex colours in an sRGB and a linear canvas.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -36,6 +36,7 @@ interface DrawerProps {
   modulate?: string;
   arrayColor?: Rgba;
   vertexColors?: CanvasVertexColors | null;
+  matrix?: THREE.Matrix4;
 }
 
 /** A drawer of one triangle, with `vertexColors` naming what its `color` attribute holds, if any. */
@@ -45,6 +46,7 @@ function TestDrawer({
   modulate,
   arrayColor,
   vertexColors = null,
+  matrix,
 }: DrawerProps) {
   const node = useMemo((): TscnNode => {
     const properties = parseNode2D(heading('Node2D', { name: 'Item' }), modulate ? { modulate } : {});
@@ -58,8 +60,8 @@ function TestDrawer({
       uvs: new Float32Array([0, 0, 1, 0, 0, 1]),
       colors: vertexColors ? new Float32Array(12).fill(1) : null,
     });
-    return [{ geometry, arrayColor, vertexColors: vertexColors ?? undefined }];
-  }, [arrayColor, vertexColors]);
+    return [{ geometry, arrayColor, vertexColors: vertexColors ?? undefined, matrix }];
+  }, [arrayColor, vertexColors, matrix]);
   return (
     <CanvasMeshBody
       node={node}
@@ -130,6 +132,18 @@ describe('CanvasMeshBody texture swap', () => {
 
     expect(material(renderer)).not.toBe(mapless);
     expect(material(renderer).map).not.toBeNull();
+  });
+});
+
+describe('CanvasMeshBody placement', () => {
+  it('composes the matrix from the position again once a surface stops carrying a matrix', async () => {
+    const { renderer, update } = await renderWithTexture(<TestDrawer matrix={new THREE.Matrix4()} />);
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect(mesh.matrixAutoUpdate).toBe(false);
+
+    await update(<TestDrawer />);
+
+    expect(mesh.matrixAutoUpdate).toBe(true);
   });
 });
 
