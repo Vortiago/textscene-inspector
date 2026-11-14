@@ -11,10 +11,9 @@ import { useNodePath } from '../../../../r3f/contexts/NodePathContext';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
 import { YSortExtraChildrenProvider } from '../../../../r3f/ySortExtraChildren';
 import { tileMapLayerChildren } from '../../../../r3f/liveTileMapLayers';
-import { SceneTileInstances } from '../shared/SceneTileInstances';
+import { FrontChildren, TailChildren } from '../shared/InternalChildren';
 import { useSceneTiles } from '../shared/useSceneTiles';
 import { LayerPlaceholders } from './LayerPlaceholders';
-import { TileMapLayers } from './TileMapLayers';
 import type { TileMapProperties } from './types';
 
 export function TileMap({ node, children }: NodeComponentProps) {
@@ -41,16 +40,16 @@ export function TileMap({ node, children }: NodeComponentProps) {
       {props.y_sort_enabled ? (
         <YSortExtraChildrenProvider
           path={path}
-          leading={tileMapLayerChildren(node) ?? []}
+          leading={tileMapLayerChildren(node)}
           trailing={sceneTiles.children}
         >
           {children}
         </YSortExtraChildrenProvider>
       ) : (
         <>
-          <TileMapLayers node={node} />
+          <FrontChildren node={node} internals={tileMapLayerChildren(node)} />
           {children}
-          <SceneTileInstances node={node} instances={sceneTiles.children} />
+          <TailChildren node={node} internals={sceneTiles.children} />
         </>
       )}
     </CanvasItem2D>

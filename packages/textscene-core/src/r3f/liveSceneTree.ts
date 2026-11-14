@@ -506,23 +506,25 @@ function liveStep(node: LiveNode, groupScope: SceneScope, sources: TreeSources):
   const lookup = lookupInstance(node, own, sceneCache);
   const instanced = loadedInstance(lookup, own, sceneCache);
   const merged = collapseInstance(node, own, instanced, sceneCache);
-  return withInternalChildren(
-    merged === node
-      ? {
-          node,
-          isMerged: false,
-          instancePath,
-          scope: own,
-          isRefusedInstance: instanced?.isRefused ?? false,
-          isFailedInstance: lookup.scenePath !== null && lookup.cached === null,
-          groups: liveChildGroups(node, own, instanced, glbCache),
-        }
-      : mergedStep(
-          node.sceneTile ? placedSceneTileRoot(merged, node.sceneTile) : merged,
-          own,
-          instancePath,
-          sources
-        ),
+  return withSceneTiles(
+    withTileMapLayers(
+      merged === node
+        ? {
+            node,
+            isMerged: false,
+            instancePath,
+            scope: own,
+            isRefusedInstance: instanced?.isRefused ?? false,
+            isFailedInstance: lookup.scenePath !== null && lookup.cached === null,
+            groups: liveChildGroups(node, own, instanced, glbCache),
+          }
+        : mergedStep(
+            node.sceneTile ? placedSceneTileRoot(merged, node.sceneTile) : merged,
+            own,
+            instancePath,
+            sources
+          )
+    ),
     sources
   );
 }
@@ -546,22 +548,18 @@ function mergedStep(
   };
 }
 
-/**
- * `step` with the scene tiles of its tile layer as a `tiles` group after the others, as
- * `add_child` appends them (`tile_map_layer.cpp:1646-1651`). A TileSet still loading adds none yet.
- */
-function withInternalChildren(step: LiveStep, sources: TreeSources): LiveStep {
-  return withSceneTiles(withTileMapLayers(step), sources);
-}
-
 /** `step` with the layers of its TileMap as a `front` group before the others (`tile_map.cpp:277-279`). */
 function withTileMapLayers(step: LiveStep): LiveStep {
   const layers = tileMapLayerChildren(step.node);
-  if (!layers?.length) return step;
+  if (layers.length === 0) return step;
   const group: LiveChildGroup = { origin: 'front', children: layers, scope: step.scope };
   return { ...step, groups: [group, ...step.groups] };
 }
 
+/**
+ * `step` with the scene tiles of its tile layer as a `tiles` group after the others, as
+ * `add_child` appends them (`tile_map_layer.cpp:1646-1651`). A TileSet still loading adds none yet.
+ */
 function withSceneTiles(step: LiveStep, sources: TreeSources): LiveStep {
   const cells = sceneTileLayerCells(step.node);
   if (!cells?.length) return step;
