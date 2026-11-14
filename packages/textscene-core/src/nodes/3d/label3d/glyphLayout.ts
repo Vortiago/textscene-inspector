@@ -13,7 +13,7 @@ import {
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../r3f/controls/native/text/textLayout';
-import { lineTopsPx, shapedBlockHeightPx } from '../../../r3f/controls/native/text/lineExtent';
+import { lineTopsPx, shapedLineHeightPx } from '../../../r3f/controls/native/text/lineExtent';
 import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
 import { justifyLinesToWidth } from '../../../r3f/controls/native/text/textJustify';
 import type { TextBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
@@ -84,11 +84,7 @@ export function layoutLabel3DLines(
   layout: TextLayoutResult,
   properties: Label3DPlaceProperties
 ): Label3DLinePlacement[] {
-  const blockRisePx = blockStartY(
-    properties.vertical_alignment,
-    shapedBlockHeightPx(layout.lines, layout.lineSpacingPx),
-    properties.line_spacing
-  );
+  const blockRisePx = blockStartY(properties.vertical_alignment, layout.heightPx, properties.line_spacing);
   const topPx = -(blockRisePx + properties.offset.y);
   const lineTopsFromBlockPx = lineTopsPx(layout);
   return layout.lines.map((line, lineIndex) => ({
@@ -120,7 +116,7 @@ export function label3DAabb(
   }
   const topDown = placements[0]!.y;
   const last = placements[placements.length - 1]!;
-  const bottomDown = last.y + Math.ceil(last.line.ascentPx + last.line.descentPx) + lineSpacingPx;
+  const bottomDown = last.y + shapedLineHeightPx(last.line) + lineSpacingPx;
   return {
     position: { x: left * pixelSize, y: -bottomDown * pixelSize, z: 0 },
     size: { x: (right - left) * pixelSize, y: (bottomDown - topDown) * pixelSize, z: 0 },

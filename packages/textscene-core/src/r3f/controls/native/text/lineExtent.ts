@@ -79,12 +79,17 @@ export function linesHeightPx(lines: readonly TextLineLayout[], lineSpacingPx: n
   return lines.reduce((sumPx, line) => sumPx + lineHeightPx(line, lineSpacingPx), 0);
 }
 
+/** A line's `shaped_text_get_size().y`: its ascent plus descent, ceiled (`text_server_adv.cpp:7524-7537`). */
+export function shapedLineHeightPx(line: LineExtentPx): number {
+  return Math.ceil(line.ascentPx + line.descentPx);
+}
+
 /**
- * The size a text buffer reports: each line's `shaped_text_get_size().y`, its ascent plus descent
- * ceiled, plus the line spacing (`text_paragraph.cpp:601-611`, `label_3d.cpp:265`).
+ * The size a text buffer reports: each line's {@link shapedLineHeightPx} plus the line spacing
+ * (`text_paragraph.cpp:601-611`, `label_3d.cpp:265`).
  */
 export function shapedBlockHeightPx(lines: readonly LineExtentPx[], lineSpacingPx: number): number {
-  return lines.reduce((sumPx, line) => sumPx + Math.ceil(line.ascentPx + line.descentPx) + lineSpacingPx, 0);
+  return lines.reduce((sumPx, line) => sumPx + shapedLineHeightPx(line) + lineSpacingPx, 0);
 }
 
 /** The largest ascent of a line of `layout`, or the layout's own baseline for none. */

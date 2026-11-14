@@ -23,6 +23,7 @@ import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useC
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { useSubOrExtResource } from '../../../../resources/useSubOrExtResource';
 import { decodeCodeHighlighter } from '../../../../resources/styles/codehighlighter/decode';
+import { shapedLineHeightPx } from '../../../../r3f/controls/native/text/lineExtent';
 import {
   resolveLineColors,
   type CodeHighlighterColorSpan,
@@ -36,7 +37,6 @@ import {
   resolveTextEditStyleState,
   textEditTextTheme,
   textEditDrawnLines,
-  textEditRowTextHeightPx,
   layoutTextEditDrawBand,
   textEditCurrentLineXPx,
   textEditRowOriginXPx,
@@ -320,11 +320,7 @@ export function TextEditBody({
             : 0;
           return layout.lines.map((line, rowInLine) => {
             const row = startRow + rowInLine;
-            const rowTopPx = textEditRowTextTopPx(
-              rowBandTopPx(row),
-              rowHeightPx,
-              textEditRowTextHeightPx(line)
-            );
+            const rowTopPx = textEditRowTextTopPx(rowBandTopPx(row), rowHeightPx, shapedLineHeightPx(line));
             const rowStartIndex = rowStartIndices?.[rowInLine] ?? 0;
             const rowOriginXPx = textEditRowOriginXPx(
               band.xMarginBeginPx,

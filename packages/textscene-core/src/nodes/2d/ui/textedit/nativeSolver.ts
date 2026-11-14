@@ -29,7 +29,7 @@ import {
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
-import type { LineExtentPx } from '../../../../r3f/controls/native/text/lineExtent';
+import { shapedLineHeightPx, type LineExtentPx } from '../../../../r3f/controls/native/text/lineExtent';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -70,7 +70,7 @@ export function textEditRowHeightPx(
 ): number {
   let tallestPx = Math.trunc(getFontChainHeightPx(fontMetrics, fontSizePx));
   for (const { layout } of lineLayouts) {
-    for (const row of layout.lines) tallestPx = Math.max(tallestPx, textEditRowTextHeightPx(row));
+    for (const row of layout.lines) tallestPx = Math.max(tallestPx, shapedLineHeightPx(row));
   }
   return Math.max(tallestPx + themeLineSpacingPx, 1);
 }
@@ -85,11 +85,6 @@ export function textEditFontRowHeightPx(
   themeLineSpacingPx: number
 ): number {
   return textEditRowHeightPx([], fontMetrics, fontSizePx, themeLineSpacingPx);
-}
-
-/** `shaped_text_get_size(rid).y` of a row (`text_edit.cpp:1487`): its ascent plus descent, ceiled. */
-export function textEditRowTextHeightPx(row: LineExtentPx): number {
-  return Math.ceil(row.ascentPx + row.descentPx);
 }
 
 /** `text_edit.cpp:8614`: `content_size_cache = Vector2i(total_width + 10, ...)`, a second bare, unscaled `10`. */
