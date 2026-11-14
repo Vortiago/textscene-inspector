@@ -41,6 +41,7 @@ const HANDOFF_FILES = [
   'internalControls.ts',
   'tabBarModel.ts',
   'tabBarLayout.ts',
+  'itemListDraw.ts',
   'Component.tsx',
 ];
 
@@ -185,11 +186,12 @@ function opensThroughAChannel(meta: unknown): boolean {
 const RECT_SHARE_PAINTERS: Record<string, readonly string[]> = {
   [join('button', 'Component.tsx')]: ['BUTTON_CLASS', 'buttonLayoutOf', 'tintColor'],
   [join('tabbar', 'Component.tsx')]: ['tabBarLayout', 'tintColor'],
+  [join('itemlist', 'Component.tsx')]: ['itemListDraw', 'tintColor'],
 };
 
 /** The slice's solver files, and the shared modules that shape text or lay out a Button. */
 const LAYOUT_MODULE =
-  /(?:^\.\/(?:nativeSolver|tabBarModel|tabBarLayout)|\/buttonBase|\/text\/textLayout|\/text\/textOverrun)$/;
+  /(?:^\.\/(?:nativeSolver|tabBarModel|tabBarLayout|itemListDraw|itemText)|\/buttonBase|\/text\/textLayout|\/text\/textOverrun)$/;
 
 /** The values (not the types) a source imports from a layout module. */
 function layoutValueImports(source: string): string[] {
@@ -221,9 +223,9 @@ describe('solve handoff conformance', () => {
     const shares = HANDOFF_SOURCES.flatMap(({ file, source }) =>
       shareCallbacks(source).map(({ line }) => `${repoPath(file)}:${line}`)
     );
-    // FoldableContainer, Label, LinkButton and MenuBar declare one share each, Button two and
-    // TabBar three. A Button subclass reads Button's shares with its own class.
-    expect(shares.length).toBeGreaterThanOrEqual(9);
+    // FoldableContainer, Label, LinkButton and MenuBar declare one share each, Button two, and
+    // TabBar and ItemList three each. A Button subclass reads Button's shares with its own class.
+    expect(shares.length).toBeGreaterThanOrEqual(12);
   });
 
   it('opens `meta` only through a channel — no painter hand-rolls a shape guard', () => {

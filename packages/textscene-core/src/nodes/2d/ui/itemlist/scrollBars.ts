@@ -22,7 +22,8 @@ import {
   type ScrollHintPlacement,
   scrollBarThicknesses,
 } from '../shared/scrollBarSolver';
-import { itemListMirrorX, type ItemListScrollRange } from './nativeSolver';
+import { itemListMirrorX } from './mirrorX';
+import type { ItemListScrollRange } from './nativeSolver';
 
 interface ItemListScrollBarsInput {
   /** The control's `get_size()`. */
@@ -36,7 +37,7 @@ interface ItemListScrollBarsInput {
   scrollHintMode: number;
 }
 
-interface ItemListScrollBars {
+export interface ItemListScrollBars {
   vertical: ScrollBarPlacement;
   horizontal: ScrollBarPlacement;
   /** `null` where the hint is not drawn. */

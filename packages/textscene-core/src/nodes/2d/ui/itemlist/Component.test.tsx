@@ -25,7 +25,8 @@ import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/text
 import { ItemList } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { ItemListIconMode } from '../../../../godot/scene/gui';
-import { ICON_MODE_LEFT, ITEM_LIST_THEME_FONT_KEY, shapeItemListText } from './nativeSolver';
+import { ICON_MODE_LEFT, ITEM_LIST_THEME_FONT_KEY } from './nativeSolver';
+import { shapeItemListText } from './itemText';
 
 import type { ItemListRuntimeProperties } from './types';
 import {
