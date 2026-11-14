@@ -46,7 +46,7 @@ describe('transpileShadingLanguage', () => {
 
   it('writes a negation of a negation as Godot writes it: the inner one alone', () => {
     expect(glslOf('float probe(float a) { return -(-a); }', [uniform(2)])).toMatch(
-      /= \( - \w+ \)|\( - nodeUniform/
+      /vec4\( \( - nodeUniform0 \) \)/
     );
   });
 
@@ -72,6 +72,10 @@ describe('transpileShadingLanguage', () => {
       );
     }
   );
+
+  it('refuses a row that is not transpiled before it reaches the emitter', () => {
+    expect(() => transpileShadingLanguage('void probe() {}')).toThrow("'void' is not transpiled yet (#1825)");
+  });
 
   it('refuses a text Godot refuses', () => {
     expect(() => transpileShadingLanguage('vec3 probe(vec3 a) { return a.q; }')).toThrow(

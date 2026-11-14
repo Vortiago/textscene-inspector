@@ -26,6 +26,15 @@ describe("Godot's reason for a probe it draws nothing for", () => {
     });
   });
 
+  it("reads Godot's message and line where the shader has a path", () => {
+    const output = `SHADER ERROR: Constants cannot be modified.\n          at: (null) (res://probe_0.gdshader:6)\n`;
+    expect(parseRejection(output)).toEqual({
+      stage: 'shading language',
+      message: 'Constants cannot be modified.',
+      line: 6,
+    });
+  });
+
   it("reads the signal of Godot's crash report before any shader error", () => {
     const crash = `SHADER ERROR: Unknown.\n          at: (null) (:3)\nhandle_crash: Program crashed with signal 8\nEngine version: Godot Engine v4.6.3.stable.official\n`;
     expect(parseRejection(crash)).toEqual({ stage: 'Godot', message: 'Godot ends with signal 8' });

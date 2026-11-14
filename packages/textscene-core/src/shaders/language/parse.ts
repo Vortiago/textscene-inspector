@@ -1,24 +1,27 @@
 /**
  * The parser of Godot's shading language: tokens to the typed tree, as Godot's `_parse_shader`
- * reads functions (`shader_language.cpp:10258`) and `_parse_block` reads their statements
- * (`shader_language.cpp:7960`). A form the transpiler does not read yet is refused with the row
- * that names it and the issue that owns it.
+ * reads structs and functions (`shader_language.cpp:9314` and `:10258`) and `_parse_block` reads
+ * their statements (`parseBlock.ts`). A form the transpiler does not read yet is refused with the
+ * row that names it and the issue that owns it.
  */
 
 import { builtInInstruction, instruction, keywordInstruction, notTranspiled } from './instructions.js';
+import { StatementParser, type ScopeHolder } from './parseBlock.js';
 import { ExpressionParser, type ExpressionScope } from './parseExpression.js';
+import { BlockScope, type Identifier } from './scope.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
 import type {
   Argument,
   BlockNode,
-  ControlFlowNode,
   FunctionNode,
   ShaderNode,
-  Statement,
+  StructMember,
+  StructNode,
 } from './shaderTree.js';
 import { TokenCursor } from './tokenCursor.js';
 import type { Token } from './tokenizer.js';
 import { shapeOf } from './types.js';
+import { everyStatement, isReturn } from './treeWalk.js';
 
 /** The tree of the tokens of a shader text. */
 export function parse(tokens: readonly Token[]): ShaderNode {
@@ -26,36 +29,110 @@ export function parse(tokens: readonly Token[]): ShaderNode {
 }
 
 class ShaderParser implements ExpressionScope {
+  private readonly structs: StructNode[] = [];
   private readonly functions: FunctionNode[] = [];
   /** The argument types of each function declared so far, its own included while its body is read. */
   private readonly signatures: { readonly name: string; readonly types: string }[] = [];
-  private arguments: readonly Argument[] = [];
   private returnType = 'void';
+  /** The block a statement is read in. Outside a body, an empty one. */
+  private readonly holder: ScopeHolder = { current: new BlockScope(undefined, 'plain', []) };
   private readonly expressions: ExpressionParser;
+  private readonly statements: StatementParser;
 
   constructor(private readonly tokens: TokenCursor) {
     this.expressions = new ExpressionParser(tokens, this);
+    this.statements = new StatementParser(
+      tokens,
+      this.expressions,
+      this.holder,
+      (name) => this.struct(name) !== undefined,
+      () => this.returnType
+    );
   }
 
-  argument(name: string): Argument | undefined {
-    return this.arguments.find((argument) => argument.name === name);
+  identifier(name: string): Identifier | undefined {
+    const found = this.holder.current.find(name, false);
+    if (found) return found;
+    return this.signatures.some((declared) => declared.name === name) ? { kind: 'function' } : undefined;
   }
 
-  isFunction(name: string): boolean {
-    return this.signatures.some((declared) => declared.name === name);
+  struct(name: string): StructNode | undefined {
+    return this.structs.find((struct) => struct.name === name);
   }
 
   shader(): ShaderNode {
     for (;;) {
       const token = this.tokens.next();
-      if (token.type === 'TK_EOF') return { kind: 'shader', functions: this.functions };
-      this.functions.push(this.functionDefinition(token));
+      if (token.type === 'TK_EOF')
+        return { kind: 'shader', structs: this.structs, functions: this.functions };
+      if (token.type === 'TK_STRUCT') this.structs.push(this.structDefinition(token));
+      else this.functions.push(this.functionDefinition(token));
     }
+  }
+
+  /** `struct Name { members };` (`shader_language.cpp:9314`). */
+  private structDefinition(first: Token): StructNode {
+    const nameToken = this.tokens.next();
+    if (nameToken.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected a struct identifier.');
+    const name = nameToken.text!;
+    if (this.struct(name)) this.tokens.fail(`Redefinition of '${name}'.`);
+    if (this.tokens.next().type !== 'TK_CURLY_BRACKET_OPEN') this.tokens.fail("Expected a '{'.");
+    const members: StructMember[] = [];
+    for (;;) {
+      const token = this.tokens.next();
+      if (token.type === 'TK_CURLY_BRACKET_CLOSE') break;
+      members.push(...this.memberDeclaration(token, members));
+    }
+    if (members.length === 0) this.tokens.fail('Empty structs are not allowed.');
+    if (this.tokens.next().type !== 'TK_SEMICOLON') this.tokens.fail("Expected a ';'.");
+    return { kind: 'struct', name, members, position: first.position };
+  }
+
+  /** One line of members, `vec2 a, b[2];`, each name once in the struct. */
+  private memberDeclaration(first: Token, declared: readonly StructMember[]): StructMember[] {
+    if (first.type === 'TK_STRUCT') this.tokens.fail('Nested structs are not allowed.');
+    const typeToken = this.precededType(first, () => this.tokens.fail('Expected data type.'));
+    const type =
+      typeToken.type === 'TK_IDENTIFIER' && this.struct(typeToken.text!)
+        ? typeToken.text!
+        : this.memberValueType(typeToken);
+    const members: StructMember[] = [];
+    let typeSize: number | undefined;
+    for (;;) {
+      let token = this.tokens.next();
+      if (members.length === 0) {
+        if (token.type !== 'TK_IDENTIFIER' && token.type !== 'TK_BRACKET_OPEN')
+          this.tokens.fail("Expected an identifier or '['.");
+        if (token.type === 'TK_BRACKET_OPEN') {
+          typeSize = this.expressions.arrays.size(true);
+          token = this.tokens.next();
+        }
+      }
+      if (token.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected an identifier.');
+      const name = token.text!;
+      if ([...declared, ...members].some((member) => member.name === name))
+        this.tokens.fail(`Redefinition of '${name}'.`);
+      const arraySize = this.tokens.accept('TK_BRACKET_OPEN') ? this.expressions.arrays.size(true) : typeSize;
+      members.push({ name, type, ...(arraySize !== undefined ? { arraySize } : {}) });
+      const end = this.tokens.next();
+      if (end.type === 'TK_SEMICOLON') return members;
+      if (end.type !== 'TK_COMMA') this.tokens.fail("Expected a ',' or ';'.");
+    }
+  }
+
+  /** A member's value type: Godot refuses `void` and the samplers there. */
+  private memberValueType(token: Token): string {
+    const row = keywordInstruction(token.type);
+    if (row?.family !== 'data type') this.tokens.fail('Expected data type.');
+    if (shapeOf(row.id) === undefined) this.tokens.fail(`A '${row.id}' data type is not allowed here.`);
+    return row.id;
   }
 
   /** A function, from its return type (`shader_language.cpp:10258`). */
   private functionDefinition(first: Token): FunctionNode {
     const typeToken = this.precededType(first, () => this.refuseGlobal(first));
+    if (typeToken.type === 'TK_IDENTIFIER' && this.struct(typeToken.text!))
+      throw notTranspiled(instruction('OP_CALL')!, typeToken.position, `a function of ${typeToken.text}`);
     if (keywordInstruction(typeToken.type)?.family !== 'data type') this.refuseGlobal(typeToken);
     const returnType = this.dataType(typeToken);
     if (shapeOf(returnType) === undefined && returnType !== 'void') {
@@ -71,15 +148,15 @@ class ShaderParser implements ExpressionScope {
       if (returnType === 'void') this.tokens.fail("Expected '(' after function identifier.");
       throw notTranspiled(keywordInstruction('TK_CONST')!, nameToken.position);
     }
-    this.arguments = this.argumentList();
+    const args = this.argumentList();
     this.returnType = returnType;
-    this.declare(name, nameToken);
+    this.declare(name, args, nameToken);
     this.tokens.expect('TK_CURLY_BRACKET_OPEN', "Expected a '{' to begin function.");
-    const body = this.block(this.tokens.lastPosition());
-    if (returnType !== 'void' && !body.statements.some(isReturn)) {
+    const body = this.statements.body(args, this.tokens.lastPosition());
+    if (returnType !== 'void' && !hasReturn(body)) {
       this.tokens.fail("Expected at least one 'return' statement in a non-void function.");
     }
-    return { kind: 'function', name, returnType, arguments: this.arguments, body, position: first.position };
+    return { kind: 'function', name, returnType, arguments: args, body, position: first.position };
   }
 
   /**
@@ -127,6 +204,8 @@ class ShaderParser implements ExpressionScope {
     const typeToken = this.precededType(first, () =>
       this.tokens.fail('Expected a valid data type for argument.')
     );
+    if (typeToken.type === 'TK_IDENTIFIER' && this.struct(typeToken.text!))
+      throw notTranspiled(instruction('OP_CALL')!, typeToken.position, `an argument of ${typeToken.text}`);
     if (keywordInstruction(typeToken.type)?.family !== 'data type' || typeToken.type === 'TK_STRUCT') {
       this.tokens.fail('Expected a valid data type for argument.');
     }
@@ -150,8 +229,8 @@ class ShaderParser implements ExpressionScope {
    * same argument types (`shader_language.cpp:10921`). It accepts an overload, which the transpiler
    * refuses: it keys the functions it gives by name.
    */
-  private declare(name: string, token: Token): void {
-    const types = this.arguments.map((argument) => argument.type).join(',');
+  private declare(name: string, args: readonly Argument[], token: Token): void {
+    const types = args.map((argument) => argument.type).join(',');
     const overloads = this.signatures.filter((declared) => declared.name === name);
     if (overloads.some((declared) => declared.types === types))
       this.tokens.fail(`Redefinition of '${name}'.`);
@@ -165,66 +244,15 @@ class ShaderParser implements ExpressionScope {
     }
     this.signatures.push({ name, types });
   }
-
-  /** The statements up to `}` (`_parse_block`). */
-  private block(position: Token['position']): BlockNode {
-    const statements: Statement[] = [];
-    for (;;) {
-      const mark = this.tokens.mark();
-      const token = this.tokens.next();
-      if (token.type === 'TK_CURLY_BRACKET_CLOSE') return { kind: 'block', statements, position };
-      if (token.type === 'TK_CF_RETURN') statements.push(this.returnStatement(token));
-      else {
-        this.refuseStatement(token);
-        this.tokens.reset(mark);
-        statements.push(this.expressionStatement());
-      }
-    }
-  }
-
-  /** A declaration, a nested block or a flow keyword: the row that names it. */
-  private refuseStatement(token: Token): void {
-    const row = keywordInstruction(token.type);
-    if (
-      token.type === 'TK_CONST' ||
-      isPrecisionToken(token.type) ||
-      (row?.family === 'data type' && token.type !== 'TK_TYPE_VOID')
-    ) {
-      throw notTranspiled(instruction('NODE_TYPE_VARIABLE_DECLARATION')!, token.position);
-    }
-    if (token.type === 'TK_CURLY_BRACKET_OPEN')
-      throw notTranspiled(instruction('NODE_TYPE_BLOCK')!, token.position);
-    if (row?.family === 'statement keyword') throw notTranspiled(row, token.position);
-  }
-
-  /** `return`, with an expression of the function's type (`shader_language.cpp:8852`). */
-  private returnStatement(token: Token): ControlFlowNode {
-    const returnType = this.returnType;
-    const flow = { kind: 'control flow', flow: 'FLOW_OP_RETURN', position: token.position } as const;
-    const mark = this.tokens.mark();
-    if (this.tokens.next().type === 'TK_SEMICOLON') {
-      if (returnType !== 'void')
-        this.tokens.fail(`Expected 'return' with an expression of type '${returnType}'.`);
-      return { ...flow, expressions: [] };
-    }
-    if (returnType === 'void') this.tokens.fail("'void' function cannot return a value.");
-    this.tokens.reset(mark);
-    const expression = this.expressions.expression();
-    if (expression.type !== returnType)
-      this.tokens.fail(`Expected return with an expression of type '${returnType}'.`);
-    this.tokens.expect('TK_SEMICOLON', "Expected a ';' after 'return'.");
-    return { ...flow, expressions: [expression] };
-  }
-
-  /** An expression and its `;` (`shader_language.cpp:9016`). */
-  private expressionStatement(): Statement {
-    const expression = this.expressions.expression();
-    this.tokens.expect('TK_SEMICOLON', "Expected a ';'.");
-    return expression;
-  }
 }
 
 const isPrecisionToken = (type: string) => type.startsWith('TK_PRECISION_');
 
-const isReturn = (statement: Statement) =>
-  statement.kind === 'control flow' && statement.flow === 'FLOW_OP_RETURN';
+/**
+ * Whether a `return` stands anywhere in `block`, searched from its last statement into every
+ * flow's blocks, as `_find_last_flow_op_in_block` searches (`shader_language.cpp:11088`).
+ */
+function hasReturn(block: BlockNode): boolean {
+  for (const statement of everyStatement(block)) if (isReturn(statement)) return true;
+  return false;
+}

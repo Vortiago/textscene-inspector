@@ -16,7 +16,13 @@ const GUIDE = renderTestingGuide({
     cases: [{ id: 'OP_ADD(float,float)', row: {} }],
     record: { godot: '4.6.3-stable', cases: { 'OP_ADD(float,float)': 'accepted' } },
   },
-  random: { programs: [{}, {}, {}], seed: 1, transpiledRows: 2, knownDifferences: KNOWN },
+  random: {
+    programs: [{}, {}, {}],
+    seed: 1,
+    transpiledRows: 2,
+    knownDifferences: KNOWN,
+    runnerDependent: [{ probes: ['mul-a-b'], run: 'https://run', seen: 'other bits', owner: '#1' }],
+  },
   corpus: {
     corpus: [
       { id: 'demos/a.gdshader', shaderType: 'spatial' },
@@ -34,12 +40,16 @@ const GUIDE = renderTestingGuide({
 describe('the chapter on the tests against Godot', () => {
   it('counts the random programs bit-equal with Godot, less those a case names, and the fixed cases', () => {
     expect(GUIDE).toContain(
-      '**2 of 3 random programs bit-equal with Godot, and 1 fixed known-difference case.**'
+      '**2 of 3 random programs bit-equal with Godot, NaN lanes compared as NaN, and 1 fixed known-difference case.**'
     );
   });
 
   it('counts the real shaders that transpile, of those Godot accepts', () => {
     expect(GUIDE).toContain('**0 of 1 real shaders transpile.** Godot rejects the other 1.');
+  });
+
+  it('lists each runner-dependent result with the run that showed it', () => {
+    expect(GUIDE).toContain('| `mul-a-b` | [the job](https://run) | other bits | #1 |');
   });
 
   it('lists each shader not transpiled yet with its owner', () => {
@@ -55,6 +65,7 @@ describe('the table of known differences', () => {
         programs: [{}],
         seed: 1,
         transpiledRows: 1,
+        runnerDependent: [],
         knownDifferences: {
           'random-1-0': {
             source: 'bool probe(bool a0) { return a0 || a0; }',

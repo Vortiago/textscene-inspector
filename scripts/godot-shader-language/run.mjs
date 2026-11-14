@@ -22,7 +22,10 @@ import { renderTestingGuide, TESTING_FILE } from './renderTestingGuide.mjs';
 import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/corpus.mjs';
 import { KNOWN_MISMATCHES } from '../../apps/textscene-three-godot-shaders/tests/corpus/knownMismatches.mjs';
 import { OPERATOR_CASES } from '../../apps/textscene-three-godot-shaders/tests/operators/operatorCases.mjs';
-import { KNOWN_DIFFERENCES } from '../../apps/textscene-three-godot-shaders/tests/random/knownDifferences.mjs';
+import {
+  KNOWN_DIFFERENCES,
+  RUNNER_DEPENDENT_RESULTS,
+} from '../../apps/textscene-three-godot-shaders/tests/random/knownDifferences.mjs';
 import { TRANSPILED_ROWS } from '../../apps/textscene-three-godot-shaders/tests/random/programs.mjs';
 import {
   FIXED_SEED,
@@ -52,6 +55,7 @@ function testingChapter() {
       seed: FIXED_SEED,
       transpiledRows: TRANSPILED_ROWS.length,
       knownDifferences: KNOWN_DIFFERENCES,
+      runnerDependent: RUNNER_DEPENDENT_RESULTS,
     },
     corpus: {
       corpus: CORPUS,

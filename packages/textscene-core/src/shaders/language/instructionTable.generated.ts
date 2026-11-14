@@ -32,7 +32,7 @@ export interface InstructionRow {
  * args are a bracketed list, so a function of no arguments has `()`.
  */
 const ROWS = `
-void	data type	servers/rendering/shader_language.h:210	#1824	TK_TYPE_VOID				
+void	data type	servers/rendering/shader_language.h:210	#1825	TK_TYPE_VOID				
 bool	data type	servers/rendering/shader_language.h:211	#1823	TK_TYPE_BOOL			native	native
 bvec2	data type	servers/rendering/shader_language.h:212	#1823	TK_TYPE_BVEC2			native	native
 bvec3	data type	servers/rendering/shader_language.h:213	#1823	TK_TYPE_BVEC3			native	native
@@ -64,7 +64,7 @@ usampler3D	data type	servers/rendering/shader_language.h:238	#1829	TK_TYPE_USAMP
 samplerCube	data type	servers/rendering/shader_language.h:239	#1829	TK_TYPE_SAMPLERCUBE				
 samplerCubeArray	data type	servers/rendering/shader_language.h:240	#1829	TK_TYPE_SAMPLERCUBEARRAY				
 samplerExternalOES	data type	servers/rendering/shader_language.h:241	#1829	TK_TYPE_SAMPLEREXT				
-struct type	data type	servers/rendering/shader_language.h:242	#1824					
+struct type	data type	servers/rendering/shader_language.h:242	#1824				native	native
 float literal	literal	servers/rendering/shader_language.h:59	#1823				native	native
 int literal	literal	servers/rendering/shader_language.h:60	#1823				native	native
 uint literal	literal	servers/rendering/shader_language.h:61	#1823				native	native
@@ -85,18 +85,18 @@ render_mode	shader head	servers/rendering/shader_language.cpp:341	#1794	TK_RENDE
 stencil_mode	shader head	servers/rendering/shader_language.cpp:342	#1794	TK_STENCIL_MODE				
 instance	uniform	servers/rendering/shader_language.cpp:346	#1829	TK_INSTANCE				
 global	uniform	servers/rendering/shader_language.cpp:347	#1829	TK_GLOBAL				
-if	statement keyword	servers/rendering/shader_language.cpp:351	#1824	TK_CF_IF				
-else	statement keyword	servers/rendering/shader_language.cpp:352	#1824	TK_CF_ELSE				
-for	statement keyword	servers/rendering/shader_language.cpp:353	#1824	TK_CF_FOR				
-while	statement keyword	servers/rendering/shader_language.cpp:354	#1824	TK_CF_WHILE				
-do	statement keyword	servers/rendering/shader_language.cpp:355	#1824	TK_CF_DO				
-switch	statement keyword	servers/rendering/shader_language.cpp:356	#1824	TK_CF_SWITCH				
-case	statement keyword	servers/rendering/shader_language.cpp:357	#1824	TK_CF_CASE				
-default	statement keyword	servers/rendering/shader_language.cpp:358	#1824	TK_CF_DEFAULT				
-break	statement keyword	servers/rendering/shader_language.cpp:359	#1824	TK_CF_BREAK				
-continue	statement keyword	servers/rendering/shader_language.cpp:360	#1824	TK_CF_CONTINUE				
+if	statement keyword	servers/rendering/shader_language.cpp:351	#1824	TK_CF_IF			native	native
+else	statement keyword	servers/rendering/shader_language.cpp:352	#1824	TK_CF_ELSE			native	native
+for	statement keyword	servers/rendering/shader_language.cpp:353	#1824	TK_CF_FOR			native	native
+while	statement keyword	servers/rendering/shader_language.cpp:354	#1824	TK_CF_WHILE			native	native
+do	statement keyword	servers/rendering/shader_language.cpp:355	#1824	TK_CF_DO			native	native
+switch	statement keyword	servers/rendering/shader_language.cpp:356	#1824	TK_CF_SWITCH			native	native
+case	statement keyword	servers/rendering/shader_language.cpp:357	#1824	TK_CF_CASE			native	native
+default	statement keyword	servers/rendering/shader_language.cpp:358	#1824	TK_CF_DEFAULT			native	native
+break	statement keyword	servers/rendering/shader_language.cpp:359	#1824	TK_CF_BREAK			native	native
+continue	statement keyword	servers/rendering/shader_language.cpp:360	#1824	TK_CF_CONTINUE			native	native
 return	statement keyword	servers/rendering/shader_language.cpp:361	#1823	TK_CF_RETURN			native	native
-discard	statement keyword	servers/rendering/shader_language.cpp:362	#1824	TK_CF_DISCARD				
+discard	statement keyword	servers/rendering/shader_language.cpp:362	#1824	TK_CF_DISCARD			native	native
 in	qualifier	servers/rendering/shader_language.cpp:366	#1825	TK_ARG_IN				
 out	qualifier	servers/rendering/shader_language.cpp:367	#1825	TK_ARG_OUT				
 inout	qualifier	servers/rendering/shader_language.cpp:368	#1825	TK_ARG_INOUT				
@@ -712,32 +712,32 @@ OP_POST_DECREMENT(vec3)	operator	servers/rendering/shader_language.cpp:1614	#182
 OP_POST_DECREMENT(vec4)	operator	servers/rendering/shader_language.cpp:1614	#1823		vec4	(vec4)	lowered: written to the argument value	lowered: written to the argument value
 OP_CALL	operator	servers/rendering/shader_language.cpp:1558	#1825					
 OP_CONSTRUCT	operator	servers/rendering/shader_language.cpp:1558	#1823				native	native
-OP_STRUCT	operator	servers/rendering/shader_language.cpp:1558	#1824					
+OP_STRUCT	operator	servers/rendering/shader_language.cpp:1558	#1824				native	native
 OP_INDEX	operator	servers/rendering/shader_language.cpp:1558	#1823				native	native
 OP_EMPTY	operator	servers/rendering/shader_language.cpp:1558	#1823				native	native
-FLOW_OP_IF	statement	servers/rendering/shader_language.h:307	#1824					
+FLOW_OP_IF	statement	servers/rendering/shader_language.h:307	#1824				native	native
 FLOW_OP_RETURN	statement	servers/rendering/shader_language.h:308	#1823				native	native
-FLOW_OP_FOR	statement	servers/rendering/shader_language.h:309	#1824					
-FLOW_OP_WHILE	statement	servers/rendering/shader_language.h:310	#1824					
-FLOW_OP_DO	statement	servers/rendering/shader_language.h:311	#1824					
-FLOW_OP_BREAK	statement	servers/rendering/shader_language.h:312	#1824					
-FLOW_OP_SWITCH	statement	servers/rendering/shader_language.h:313	#1824					
-FLOW_OP_CASE	statement	servers/rendering/shader_language.h:314	#1824					
-FLOW_OP_DEFAULT	statement	servers/rendering/shader_language.h:315	#1824					
-FLOW_OP_CONTINUE	statement	servers/rendering/shader_language.h:316	#1824					
-FLOW_OP_DISCARD	statement	servers/rendering/shader_language.h:317	#1824					
+FLOW_OP_FOR	statement	servers/rendering/shader_language.h:309	#1824				native	native
+FLOW_OP_WHILE	statement	servers/rendering/shader_language.h:310	#1824				native	native
+FLOW_OP_DO	statement	servers/rendering/shader_language.h:311	#1824				native	native
+FLOW_OP_BREAK	statement	servers/rendering/shader_language.h:312	#1824				native	native
+FLOW_OP_SWITCH	statement	servers/rendering/shader_language.h:313	#1824				native	native
+FLOW_OP_CASE	statement	servers/rendering/shader_language.h:314	#1824				native	native
+FLOW_OP_DEFAULT	statement	servers/rendering/shader_language.h:315	#1824				native	native
+FLOW_OP_CONTINUE	statement	servers/rendering/shader_language.h:316	#1824				native	native
+FLOW_OP_DISCARD	statement	servers/rendering/shader_language.h:317	#1824				native	native
 NODE_TYPE_SHADER	tree node	servers/rendering/shader_language.h:373	#1794					
 NODE_TYPE_FUNCTION	tree node	servers/rendering/shader_language.h:374	#1794					
-NODE_TYPE_BLOCK	tree node	servers/rendering/shader_language.h:375	#1824					
+NODE_TYPE_BLOCK	tree node	servers/rendering/shader_language.h:375	#1824				native	native
 NODE_TYPE_VARIABLE	tree node	servers/rendering/shader_language.h:376	#1823				native	native
-NODE_TYPE_VARIABLE_DECLARATION	tree node	servers/rendering/shader_language.h:377	#1824					
+NODE_TYPE_VARIABLE_DECLARATION	tree node	servers/rendering/shader_language.h:377	#1824				native	native
 NODE_TYPE_CONSTANT	tree node	servers/rendering/shader_language.h:378	#1823				native	native
 NODE_TYPE_OPERATOR	tree node	servers/rendering/shader_language.h:379	#1823				native	native
-NODE_TYPE_CONTROL_FLOW	tree node	servers/rendering/shader_language.h:380	#1824					
+NODE_TYPE_CONTROL_FLOW	tree node	servers/rendering/shader_language.h:380	#1824				native	native
 NODE_TYPE_MEMBER	tree node	servers/rendering/shader_language.h:381	#1823				native	native
-NODE_TYPE_ARRAY	tree node	servers/rendering/shader_language.h:382	#1824					
-NODE_TYPE_ARRAY_CONSTRUCT	tree node	servers/rendering/shader_language.h:383	#1824					
-NODE_TYPE_STRUCT	tree node	servers/rendering/shader_language.h:384	#1824					
+NODE_TYPE_ARRAY	tree node	servers/rendering/shader_language.h:382	#1824				native	native
+NODE_TYPE_ARRAY_CONSTRUCT	tree node	servers/rendering/shader_language.h:383	#1824				native	native
+NODE_TYPE_STRUCT	tree node	servers/rendering/shader_language.h:384	#1824				native	native
 bvec2(bool)	constructor	servers/rendering/shader_language.cpp:2422	#1823		bvec2	(bool)	native	native
 bvec2(bool,bool)	constructor	servers/rendering/shader_language.cpp:2423	#1823		bvec2	(bool,bool)	native	native
 bvec3(bool)	constructor	servers/rendering/shader_language.cpp:2424	#1823		bvec3	(bool)	native	native
@@ -1402,7 +1402,7 @@ fwidthFine(float)	function (high_end)	servers/rendering/shader_language.cpp:3392
 fwidthFine(vec2)	function (high_end)	servers/rendering/shader_language.cpp:3393	#1827		vec2	(vec2)		
 fwidthFine(vec3)	function (high_end)	servers/rendering/shader_language.cpp:3394	#1827		vec3	(vec3)		
 fwidthFine(vec4)	function (high_end)	servers/rendering/shader_language.cpp:3395	#1827		vec4	(vec4)		
-length[array]()	function	servers/rendering/shader_language.cpp:3400	#1824		int	()		
+length[array]()	function	servers/rendering/shader_language.cpp:3400	#1824		int	()	native	native
 fma(float,float,float)	function (high_end)	servers/rendering/shader_language.cpp:3405	#1827		float	(float,float,float)		
 fma(vec2,vec2,vec2)	function (high_end)	servers/rendering/shader_language.cpp:3406	#1827		vec2	(vec2,vec2,vec2)		
 fma(vec3,vec3,vec3)	function (high_end)	servers/rendering/shader_language.cpp:3407	#1827		vec3	(vec3,vec3,vec3)		

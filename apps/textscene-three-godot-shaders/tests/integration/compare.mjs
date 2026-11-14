@@ -1,15 +1,14 @@
 /**
  * The verdict of one probe: the transpiled function's result bits on a real GL context against
- * Godot's record. A lane passes when its bits equal Godot's, or when both are NaN, whose payload
- * GLSL ES 3.00 leaves to the device (section 4.5.1). The tolerance is zero units in the last
- * place: Godot and the page render on the same lavapipe driver.
+ * Godot's record. A lane passes by the rule the record check keeps too (`laneAgreement.mjs`). The
+ * tolerance is zero units in the last place: Godot and the page render on the same lavapipe driver.
  */
 
-import { PROBE_TYPES, probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
+import { lanesAgree, returnsFloat } from '../../../../scripts/godot-probes/laneAgreement.mjs';
 import { hex } from '../../../../scripts/godot-probes/record.mjs';
 
-/** Whether `probe` returns floats, whose NaN lanes match whatever their payload. */
-export const isFloatResult = (probe) => PROBE_TYPES[probeSignature(probe.source).returns].scalar === 'float';
+/** Whether `probe` returns floats, whose NaN lanes agree whatever their bits. */
+export const isFloatResult = (probe) => returnsFloat(probe.source);
 
 /** The distance in units in the last place between two floats' bits, or Infinity across signs. */
 export function ulpDistance(a, b) {
@@ -23,10 +22,6 @@ export function ulpDistance(a, b) {
   return Math.abs(magnitudeA - magnitudeB);
 }
 
-function isNaNBits(bits) {
-  return (bits & 0x7f800000) === 0x7f800000 && (bits & 0x7fffff) !== 0;
-}
-
 /** The transpiler's refusal of an expression that ends Godot as Godot evaluates it. */
 const ABORT_REFUSAL = /aborts on this expression/;
 
@@ -34,8 +29,7 @@ const ABORT_REFUSAL = /aborts on this expression/;
  * The verdict of `actual` (the page's answer: `{ bits }` per lane, or `{ error, isRefusal }`)
  * against the record `entry`: `{ passed, lanes, mismatches, maxUlp, detail }`. A shader Godot
  * rejects passes only when the transpiler refuses it, and one that ends Godot only when the
- * refusal says so. Two NaN lanes match only where the result
- * is a float: an int or a bool lane matches bit for bit.
+ * refusal says so.
  */
 export function compareProbe(entry, actual, isFloatResult = true) {
   if (entry === undefined) return failed('no record from Godot');
@@ -59,7 +53,7 @@ export function compareProbe(entry, actual, isFloatResult = true) {
   let first = '';
   expected.forEach((want, index) => {
     const got = actual.bits[index];
-    if (want === got || (isFloatResult && isNaNBits(want) && isNaNBits(got))) return;
+    if (lanesAgree(want, got, isFloatResult)) return;
     mismatches += 1;
     maxUlp = Math.max(maxUlp, ulpDistance(want, got));
     if (!first) first = `lane ${index}: Godot ${hex(want)}, transpilation ${hex(got)}`;

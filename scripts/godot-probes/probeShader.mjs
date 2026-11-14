@@ -39,8 +39,9 @@ const PRECISION = /\b(?:lowp|mediump|highp)\s+/g;
 
 /** The return type, the parameter types and the parameter names of the probe's `probe` function. */
 export function probeSignature(source) {
-  const match = /^(\w+) probe\(([^)]*)\)/.exec(source.replace(PRECISION, ''));
-  if (!match) throw new Error(`expected a probe source that starts with "<type> probe(", got ${source}`);
+  const match = /(?:^|[;}]\s*)(\w+) probe\(([^)]*)\)/.exec(source.replace(PRECISION, ''));
+  if (!match)
+    throw new Error(`expected a probe source with "<type> probe(" first or after its structs, got ${source}`);
   const declarations =
     match[2].trim() === '' ? [] : match[2].split(',').map((parameter) => parameter.trim().split(/\s+/));
   const parameters = declarations.map(([type]) => type);
@@ -118,6 +119,12 @@ void fragment() {
 	COLOR = vec4(uvec4(bits & 255u, (bits >> 8u) & 255u, (bits >> 16u) & 255u, bits >> 24u)) / 255.0;
 }
 `;
+}
+
+/** How many lines of the probe's shader come before its source, whose first line is line 1. */
+export function probeSourceLineOffset(probe) {
+  const shader = probeShader(probe);
+  return shader.slice(0, shader.indexOf(probe.source)).split('\n').length - 1;
 }
 
 /** The shading language that reads a lane of each scalar kind from its uniform bits. */

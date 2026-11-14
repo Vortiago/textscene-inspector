@@ -1,8 +1,8 @@
 /** The tree GLSL reads from Godot's text, on parsed trees. */
 
 import { describe, expect, it } from 'vitest';
-import { returnedValue as resultOf } from './parsedTree.testkit.js';
-import { glslExpression } from './godotText.js';
+import { treeOf } from './parsedTree.testkit.js';
+import { glslBlock } from './godotText.js';
 import type { Expression } from './shaderTree.js';
 
 /** A tree as nested calls: `OP_ASSIGN(a, OP_MUL(b, a))`. */
@@ -16,12 +16,22 @@ function written(expression: Expression): string {
       return `${written(expression.owner)}.${expression.name}`;
     case 'operator':
       return `${expression.op}(${expression.operands.map(written).join(', ')})`;
+    default:
+      throw new Error(`expected an expression of the operator chapters, got a ${expression.kind}`);
   }
 }
 
-const glslOf = (source: string) => written(glslExpression(resultOf(source)));
+/** The value of the first `return` of `source`'s first function, as GLSL reads it. */
+function glslReturnOf(source: string): Expression {
+  const body = glslBlock(treeOf(source).functions[0]!.body);
+  const statement = body.statements.find((candidate) => candidate.kind === 'control flow');
+  if (statement?.kind !== 'control flow') throw new Error(`expected a return in ${source}`);
+  return statement.expressions[0]!;
+}
 
-describe('glslExpression', () => {
+const glslOf = (source: string) => written(glslReturnOf(source));
+
+describe('glslBlock', () => {
   it.each([
     ['a negation', 'float f(float a) { return -(-a); }', 'OP_NEGATE(a)'],
     ['a swizzle of a negation', 'float f(vec2 a) { return -((-a).y); }', 'OP_NEGATE(a).y'],
@@ -60,6 +70,6 @@ describe('glslExpression', () => {
     ['a negated assignment', 'float f(float a, float b) { return -(a = b); }'],
     ['an assignment whose value no longer fits', 'vec2 f(vec2 a, vec2 b) { return (a = b) == a ? a : b; }'],
   ])('refuses %s, whose text GLSL refuses', (_, source) => {
-    expect(() => glslExpression(resultOf(source))).toThrow(/without brackets/);
+    expect(() => glslReturnOf(source)).toThrow(/without brackets/);
   });
 });

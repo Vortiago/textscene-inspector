@@ -26,7 +26,9 @@ import { assignmentRefusal } from './assignment.js';
 import { BINARY_OPERATOR_OF_TOKEN, OPERATOR_TOKENS, UNARY_OPERATOR_OF_TOKEN } from './operators.js';
 import { type Entry, reducedEntries } from './reduction.js';
 import type { ShadingLanguageError } from './shadingLanguageError.js';
-import type { Argument, ConstantNode, Expression, OperatorNode, Scalar } from './shaderTree.js';
+import type { Identifier } from './scope.js';
+import type { ConstantNode, Expression, OperatorNode, Scalar, StructNode } from './shaderTree.js';
+import { ArrayParser } from './parseArray.js';
 import { swizzled } from './swizzle.js';
 import type { TokenCursor } from './tokenCursor.js';
 import type { Token } from './tokenizer.js';
@@ -39,10 +41,10 @@ import {
   MAX_LIST_ENTRIES,
 } from './expressionLimits.js';
 
-/** What an identifier names where the expression stands. */
+/** What a name stands for where the expression stands, and the structs of the shader. */
 export interface ExpressionScope {
-  argument(name: string): Argument | undefined;
-  isFunction(name: string): boolean;
+  identifier(name: string): Identifier | undefined;
+  struct(name: string): StructNode | undefined;
 }
 
 /**
@@ -55,10 +57,27 @@ interface TernaryPart {
 }
 
 export class ExpressionParser {
+  /** The array constructors, which read their elements with this parser. */
+  readonly arrays: ArrayParser;
+
   constructor(
     private readonly tokens: TokenCursor,
     private readonly scope: ExpressionScope
-  ) {}
+  ) {
+    this.arrays = new ArrayParser(tokens, this, scope);
+  }
+
+  /**
+   * Set while the value of a `const` declaration is read (Godot's `is_const_decl`): a variable it
+   * reads must be constant. Written by the declaration parser around each value.
+   */
+  isConstDeclaration = false;
+
+  /**
+   * The array whose `.` the expression being read follows (Godot's `TAG_ARRAY` block tag): there
+   * a call names an array method, `length()`, and any other name is unknown.
+   */
+  private arrayOfCall: Expression | undefined;
 
   /** How many lists `unreducedExpression` reads at once: brackets, arguments and ternary parts. */
   private nesting = 0;
@@ -66,6 +85,19 @@ export class ExpressionParser {
   /** `_parse_and_reduce_expression` (`shader_language.cpp:7949`). */
   expression(): Expression {
     return reduced(this.unreducedExpression());
+  }
+
+  /** Set while a step of a `for` is read, where a `)` stands for the empty expression. */
+  private isForStep = false;
+
+  /** A step of a `for`: an expression, or nothing before the `)` (`shader_language.cpp:6766`). */
+  forStepExpression(): Expression {
+    this.isForStep = true;
+    try {
+      return this.expression();
+    } finally {
+      this.isForStep = false;
+    }
   }
 
   private unreducedExpression(part?: TernaryPart): Expression {
@@ -143,7 +175,8 @@ export class ExpressionParser {
       case 'TK_TYPE_VOID':
         return this.tokens.fail('Void value not allowed in expression.');
       case 'TK_CURLY_BRACKET_OPEN':
-        throw notTranspiled(instruction('NODE_TYPE_ARRAY_CONSTRUCT')!, token.position);
+        this.tokens.reset(mark);
+        return this.arrays.constructed();
       case 'TK_IDENTIFIER':
         return this.identifier(token);
       case 'TK_OP_ADD':
@@ -151,8 +184,16 @@ export class ExpressionParser {
       case 'TK_SEMICOLON':
         this.tokens.reset(mark);
         return emptyExpression(token);
+      case 'TK_PARENTHESIS_CLOSE':
+        if (!this.isForStep) break;
+        this.tokens.reset(mark);
+        return emptyExpression(token);
     }
-    if (isDataTypeToken(token.type)) return this.construction(token);
+    if (isDataTypeToken(token.type)) {
+      if (this.tokens.peek().type !== 'TK_BRACKET_OPEN') return this.construction(token);
+      this.tokens.reset(mark);
+      return this.arrays.constructed();
+    }
     this.tokens.fail(`Expected expression, found: '${tokenText(token)}'.`);
   }
 
@@ -160,8 +201,6 @@ export class ExpressionParser {
   private construction(typeToken: Token): Expression {
     const type = keywordInstruction(typeToken.type)!.id;
     const token = this.tokens.next();
-    if (token.type === 'TK_BRACKET_OPEN')
-      throw notTranspiled(instruction('NODE_TYPE_ARRAY_CONSTRUCT')!, token.position);
     if (token.type !== 'TK_PARENTHESIS_OPEN') this.tokens.fail("Expected '(' after the type name.");
     const overload = matchedConstructor(type, this.argumentList());
     if (!overload) this.tokens.fail(`No matching constructor found for: '${type}'.`);
@@ -188,19 +227,128 @@ export class ExpressionParser {
     }
   }
 
-  /** A read of an argument, or the refusal of a call or a built-in the transpiler does not read yet. */
+  /**
+   * A struct's constructor, a call, or a read of a variable (`shader_language.cpp:6106`). Inside
+   * an array's call only `length()` is known.
+   */
   private identifier(token: Token): Expression {
     const name = token.text!;
+    const struct = this.scope.struct(name);
     if (this.tokens.peek().type === 'TK_PARENTHESIS_OPEN') {
       this.tokens.next();
+      if (struct) return this.structConstruction(struct, token);
+      if (this.arrayOfCall) return this.arrayCall(name, token);
       throw this.refusedCall(name, this.argumentList(), token);
     }
-    const argument = this.scope.argument(name);
-    if (argument) return { kind: 'variable', type: argument.type, name, position: token.position };
-    if (this.scope.isFunction(name)) this.tokens.fail(`Can't use function as identifier: '${name}'.`);
-    const builtIn = builtInInstruction(name);
-    if (builtIn) throw notTranspiled(builtIn, token.position, name);
-    this.tokens.fail(`Unknown identifier in expression: '${name}'.`);
+    if (this.arrayOfCall) this.tokens.fail(`Unknown identifier in expression: '${name}'.`);
+    const found = this.scope.identifier(name);
+    if (!found) {
+      const builtIn = builtInInstruction(name);
+      if (builtIn) throw notTranspiled(builtIn, token.position, name);
+      this.tokens.fail(`Unknown identifier in expression: '${name}'.`);
+    }
+    if (found.kind === 'function') this.tokens.fail(`Can't use function as identifier: '${name}'.`);
+    if (this.isConstDeclaration && !found.isConst) this.tokens.fail('Expected constant expression.');
+    const variable = {
+      kind: 'variable',
+      type: found.type,
+      name,
+      position: token.position,
+      ...(found.arraySize > 0 ? { arraySize: found.arraySize } : {}),
+      ...(found.isConst ? { isConst: true } : {}),
+    } as const;
+    return found.arraySize > 0 ? this.arrayAccess(variable) : variable;
+  }
+
+  /** `Pair(a, b)`: one value of each member's type, in order (`shader_language.cpp:6123`). */
+  private structConstruction(struct: StructNode, token: Token): Expression {
+    const operands = struct.members.map((member, index) => {
+      if (index > 0 && this.tokens.next().type !== 'TK_COMMA') this.tokens.fail("Expected a ','.");
+      const value =
+        member.arraySize !== undefined
+          ? this.arrays.typedConstructed(member.type, member.arraySize)
+          : this.expression();
+      this.requireType(member.type, member.arraySize, value);
+      return value;
+    });
+    if (this.tokens.next().type !== 'TK_PARENTHESIS_CLOSE') this.tokens.fail("Expected a ')'.");
+    return {
+      kind: 'operator',
+      type: struct.name,
+      op: 'OP_STRUCT',
+      row: instruction('OP_STRUCT')!,
+      operands,
+      position: token.position,
+    };
+  }
+
+  /** `length()` of the array before the `.`, the one method of an array (`shader_language.cpp:3400`). */
+  private arrayCall(name: string, token: Token): Expression {
+    if (name !== 'length') this.tokens.fail(`Unknown identifier in expression: '${name}'.`);
+    if (this.argumentList().length > 0)
+      this.tokens.fail(`Invalid arguments for the built-in function: '${name}()'.`);
+    return { kind: 'array length', type: 'int', array: this.arrayOfCall!, position: token.position };
+  }
+
+  /**
+   * What follows an array, an argument's or a struct member's (`shader_language.cpp:6657`): a whole
+   * new value after `=`, an expression of its methods after `.`, one element in `[]`, or nothing.
+   */
+  private arrayAccess(array: Expression & { readonly arraySize?: number }): Expression {
+    const mark = this.tokens.mark();
+    const token = this.tokens.next();
+    if (token.type === 'TK_OP_ASSIGN') {
+      const refusal = assignmentRefusal(array);
+      if (refusal !== undefined) this.tokens.fail(refusal);
+      const value = this.arrays.typedConstructed(array.type, array.arraySize!);
+      return {
+        kind: 'whole assign',
+        type: array.type,
+        arraySize: array.arraySize!,
+        target: array,
+        value,
+        position: array.position,
+      };
+    }
+    if (token.type === 'TK_PERIOD') return this.arrayMethods(array);
+    if (token.type === 'TK_BRACKET_OPEN') return this.arrayElement(array);
+    this.tokens.reset(mark);
+    return array;
+  }
+
+  /** The expression after an array's `.`, read where only the array's methods are known. */
+  private arrayMethods(array: Expression): Expression {
+    const outer = this.arrayOfCall;
+    this.arrayOfCall = array;
+    try {
+      return this.expression();
+    } finally {
+      this.arrayOfCall = outer;
+    }
+  }
+
+  /** `array[index]`: Godot refuses a constant index out of range, as a signed number. */
+  private arrayElement(array: Expression & { readonly arraySize?: number }): Expression {
+    const index = this.expression();
+    if (arraySizeOf(index) !== 0 || (index.type !== 'int' && index.type !== 'uint'))
+      this.tokens.fail('Only integer expressions are allowed for indexing.');
+    const size = array.arraySize!;
+    if (index.kind === 'constant') {
+      const value = index.values[0] as number | 0;
+      const signed = value | 0;
+      if (signed < 0 || signed >= size) this.tokens.fail(`Index [${signed}] out of range [0..${size - 1}].`);
+    }
+    if (this.tokens.next().type !== 'TK_BRACKET_CLOSE') this.tokens.fail("Expected a ']'.");
+    return { kind: 'array element', type: array.type, array, index, position: array.position };
+  }
+
+  /** Godot's `_compare_datatypes`: `value` must be of `type`, with `arraySize` elements. */
+  requireType(type: string, arraySize: number | undefined, value: Expression): void {
+    const valueSize = arraySizeOf(value);
+    if (value.type === type && valueSize === (arraySize ?? 0)) return;
+    this.tokens.fail(
+      `Invalid assignment of '${typeName(value.type, valueSize)}' to '${typeName(type, arraySize ?? 0)}'.`
+    );
   }
 
   /** A call: a built-in function's overload row, or `OP_CALL` for a function of the shader. */
@@ -212,7 +360,8 @@ export class ExpressionParser {
     if (overload) return notTranspiled(overload, token.position);
     const anyOverload = firstInstruction(`${name}(`);
     if (anyOverload) return notTranspiled(anyOverload, token.position, name);
-    if (this.scope.isFunction(name)) return notTranspiled(instruction('OP_CALL')!, token.position);
+    if (this.scope.identifier(name)?.kind === 'function')
+      return notTranspiled(instruction('OP_CALL')!, token.position);
     this.tokens.fail(`Unknown identifier in expression: '${name}'.`);
   }
 
@@ -236,12 +385,35 @@ export class ExpressionParser {
     }
   }
 
+  /**
+   * `.` after `owner`: the methods of an array that is not indexed, a struct's member, or a
+   * swizzle (`shader_language.cpp:6805`).
+   */
   private member(owner: Expression): Expression {
+    if (arraySizeOf(owner) > 0) return this.arrayMethods(owner);
     const token = this.tokens.next();
     if (token.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected an identifier as a member.');
+    const struct = this.scope.struct(owner.type);
+    if (struct) return this.field(owner, struct, token);
     const member = swizzled(owner, token.text!);
     if (typeof member === 'string') this.tokens.fail(member);
     return member;
+  }
+
+  /** The member `name` of a struct value, and what follows it when it is an array. */
+  private field(owner: Expression, struct: StructNode, token: Token): Expression {
+    const name = token.text!;
+    const member = struct.members.find((candidate) => candidate.name === name);
+    if (!member) this.tokens.fail(`Invalid member for '${struct.name}' expression: '.${name}'.`);
+    const field = {
+      kind: 'field',
+      type: member.type,
+      owner,
+      name,
+      position: owner.position,
+      ...(member.arraySize !== undefined ? { arraySize: member.arraySize } : {}),
+    } as const;
+    return member.arraySize !== undefined ? this.arrayAccess(field) : field;
   }
 
   /** `owner[index]` on a vector or a matrix (`shader_language.cpp:7180`). */
@@ -299,6 +471,17 @@ function ternaryOperand(node: Expression): Expression {
 }
 
 const isDataTypeToken = (type: string) => keywordInstruction(type)?.family === 'data type';
+
+/** The element count of an array value, or 0 for one value, as Godot's `get_array_size`. */
+export function arraySizeOf(expression: Expression): number {
+  if (expression.kind === 'array construct') return expression.arraySize;
+  if (expression.kind === 'variable' || expression.kind === 'field' || expression.kind === 'whole assign')
+    return expression.arraySize ?? 0;
+  return 0;
+}
+
+/** A type as Godot's messages name it: `float`, or `float[3]` for an array. */
+export const typeName = (type: string, arraySize: number) => (arraySize > 0 ? `${type}[${arraySize}]` : type);
 
 const constantOf = (token: Token, type: string, value: Scalar): ConstantNode => ({
   kind: 'constant',

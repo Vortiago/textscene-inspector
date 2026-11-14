@@ -191,3 +191,12 @@ export const KNOWN_PROGRAMS = new Set(
     .map((known) => known.program)
     .filter((program) => program !== undefined)
 );
+
+/**
+ * Records that went stale on one CI runner only, each with the run that showed it. Godot's bits
+ * changed and the transpilation was not compared, so these are no fixed cases: the "Shader
+ * package" job prints the CPU and the driver on every run and keeps both value sets on a stale
+ * record, and an entry stays until a second driver or a second runner answers its cause. A NaN
+ * of another sign is no entry: it agrees by the lane rule (`laneAgreement.mjs`).
+ */
+export const RUNNER_DEPENDENT_RESULTS = [];

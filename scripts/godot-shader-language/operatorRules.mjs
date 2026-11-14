@@ -35,6 +35,31 @@ export function operatorSignatures({ header, language }, types) {
   });
 }
 
+/** One `case` label and the space after it, a line comment allowed, read where it stands. */
+const CASE_LABEL = /case (OP_\w+):\s*(?:\/\/[^\n]*)?\s*/y;
+
+/**
+ * Each group of `case` labels in `body` that a `{` follows: its labels, where its first label
+ * starts, and where its `{` stands. Each label is read once, so the scan takes linear time.
+ */
+export function caseGroups(body) {
+  const groups = [];
+  let next = body.indexOf('case ');
+  while (next !== -1) {
+    const start = next;
+    const labels = [];
+    let end = start;
+    CASE_LABEL.lastIndex = start;
+    for (let label = CASE_LABEL.exec(body); label !== null; label = CASE_LABEL.exec(body)) {
+      labels.push(label[1]);
+      end = CASE_LABEL.lastIndex;
+    }
+    if (labels.length > 0 && body[end] === '{') groups.push({ labels, start, open: end });
+    next = body.indexOf('case ', Math.max(end, start + 1));
+  }
+  return groups;
+}
+
 /**
  * The case groups of `_validate_operator`'s switch: for each operator the body of its group and
  * the line of its first label.
@@ -43,19 +68,17 @@ function operatorCases(cpp) {
   const start = cpp.indexOf('bool ShaderLanguage::_validate_operator(');
   if (start === -1) throw new Error('expected _validate_operator in shader_language.cpp, found none');
   const switchStart = cpp.indexOf('switch (p_op->op) {', start);
-  const switchEnd = matchingBrace(cpp, cpp.indexOf('{', switchStart));
-  const body = cpp.slice(cpp.indexOf('{', switchStart) + 1, switchEnd);
+  const bodyStart = cpp.indexOf('{', switchStart) + 1;
+  const body = cpp.slice(bodyStart, matchingBrace(cpp, bodyStart - 1));
   const byOperator = new Map();
-  const groupPattern = /((?:case (OP_\w+):\s*(?:\/\/[^\n]*)?\s*)+)\{/g;
-  let match;
-  while ((match = groupPattern.exec(body)) !== null) {
-    const open = match.index + match[0].length - 1;
-    const close = matchingBrace(body, open);
-    const caseBody = body.slice(open + 1, close);
-    const line = lineAt(cpp, cpp.indexOf('{', switchStart) + 1 + match.index);
-    for (const label of match[1].matchAll(/case (OP_\w+):/g))
-      byOperator.set(label[1], { body: caseBody, line });
-    groupPattern.lastIndex = close;
+  let after = 0;
+  for (const group of caseGroups(body)) {
+    if (group.start < after) continue;
+    const close = matchingBrace(body, group.open);
+    const caseBody = body.slice(group.open + 1, close);
+    const line = lineAt(cpp, bodyStart + group.start);
+    for (const label of group.labels) byOperator.set(label, { body: caseBody, line });
+    after = close;
   }
   return { byOperator, functionLine: lineAt(cpp, start) };
 }

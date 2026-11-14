@@ -32,6 +32,33 @@ function knownDifferenceRows(knownDifferences) {
   );
 }
 
+const PRINTER_SECTION = `## The printer against Godot
+
+The printer writes a parsed tree back as shading language text. \`pnpm godot:probes\` prints the tree of each probe, random program and known-difference case that the transpiler parses, and runs each printed text in Godot beside its original. Godot must give the same verdict and the same result bits to both, or the same refusal at any line. A rewrite step that prints its tree is then checked by Godot itself. A probe the front end refuses has no tree, and a probe that ends Godot is refused by the front end.`;
+
+function runnerDependentRows(runnerDependent) {
+  return runnerDependent.map(
+    (result) =>
+      `| ${result.probes.map((name) => `\`${name}\``).join(', ')} | [the job](${result.run}) | ${cell(result.seen)} | ${result.owner} |`
+  );
+}
+
+function runnerSection(runnerDependent) {
+  const table =
+    runnerDependent.length === 0
+      ? 'No record depends on the runner now.'
+      : `| Probes | Run | What changed | Owner |
+| --- | --- | --- | --- |
+${runnerDependentRows(runnerDependent).join('\n')}`;
+  return `## Results that depend on the runner
+
+lavapipe compiles each shader for the CPU it runs on. The probe job prints the CPU model, its vector flags and the Mesa and LLVM packages on every run. When \`pnpm godot:probes --check\` finds a stale record, the job keeps the recorded and the new values as the \`stale-probe-values\` artifact.
+
+A float lane that is NaN agrees with any NaN, in the record check and in the comparison on a real GL context alike (\`scripts/godot-probes/laneAgreement.mjs\`). GLSL ES 3.00 section 4.5.1 leaves the sign and payload of a NaN to the device, and lavapipe on the same Mesa 25.2.8 and LLVM 20.1.2 gives some matrix products a NaN of the other sign on an AMD EPYC 7763 (AVX2) than on an Intel Xeon with AVX-512. A NaN against a number, against an infinity, and -0 against +0 still differ, and an int, uint or bool lane agrees bit for bit. A run that agrees keeps the recorded bits.
+
+${table}`;
+}
+
 function randomSection({ programs, seed, transpiledRows, knownDifferences }) {
   const cases = Object.keys(knownDifferences).length;
   const known = Object.values(knownDifferences).filter((each) => each.program !== undefined).length;
@@ -39,9 +66,9 @@ function randomSection({ programs, seed, transpiledRows, knownDifferences }) {
 
 A generator writes random functions that are correct by type, from the signatures of the transpiled rows only, so each slice that transpiles rows gets random programs over them with no change to the generator. Operators take only the brackets Godot's priorities need, so a program tests the order of evaluation as a user's shader does.
 
-The fixed set has seed ${seed}: ${programs.length} programs, one rooted at each of the ${transpiledRows} transpiled rows, and the rest with random roots. Godot accepts every one. \`pnpm godot:probes\` records Godot's result bits, and \`pnpm test:shaders:gpu\` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN.
+The fixed set has seed ${seed}: ${programs.length} programs, one rooted at each of the ${transpiledRows} transpiled rows, and the rest with random roots. Godot accepts every one. \`pnpm godot:probes\` records Godot's result bits, and \`pnpm test:shaders:gpu\` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN in a float lane.
 
-**${programs.length - known} of ${programs.length} random programs bit-equal with Godot, and ${cases} fixed known-difference ${cases === 1 ? 'case' : 'cases'}.** A program that differs is reduced against a live Godot to a small program that still differs. Each known difference is a fixed case: its reduced program and its inputs, run on every pass whatever the seed, the set size or the generator. The list only shrinks: a case leaves it only when its own program equals Godot. A program of the set that differs and is no case's program fails the run.
+**${programs.length - known} of ${programs.length} random programs bit-equal with Godot, NaN lanes compared as NaN, and ${cases} fixed known-difference ${cases === 1 ? 'case' : 'cases'}.** A program that differs is reduced against a live Godot to a small program that still differs. Each known difference is a fixed case: its reduced program and its inputs, run on every pass whatever the seed, the set size or the generator. The list only shrinks: a case leaves it only when its own program equals Godot. A program of the set that differs and is no case's program fails the run.
 
 | Case | Reduced program | Program of the set | First lane that differs | Cause | Owner |
 | --- | --- | --- | --- | --- | --- |
@@ -113,6 +140,10 @@ A probe checks one instruction on a table of inputs. Three more tests check what
 ${operatorSection(operators.cases, operators.record)}
 
 ${randomSection(random)}
+
+${runnerSection(random.runnerDependent)}
+
+${PRINTER_SECTION}
 
 ${corpusSection(corpus)}
 `;

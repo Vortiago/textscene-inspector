@@ -4,13 +4,14 @@
  * arithmetic gives: a shift by 85 folds as a shift by 21, where the GPU gives zero.
  */
 
+import { arraySizeOf } from './parseExpression.js';
 import { binaryLane, convertedLane, unaryLane } from './glslangArithmetic.js';
 import { godotConstantDouble } from './godotNumber.js';
 import type { Expression, OperatorNode, Scalar } from './shaderTree.js';
 import { swizzleLanes } from './swizzle.js';
 import { filledLanes, shapeOf, type ScalarKind, type TypeShape, type ValueType } from './types.js';
 
-type Lanes = readonly Scalar[];
+export type Lanes = readonly Scalar[];
 
 /**
  * The lanes of each expression glslang folds to a constant, a matrix's columns one after the
@@ -19,8 +20,13 @@ type Lanes = readonly Scalar[];
  * `58.656 + 74.377` is 0x43050873 in Godot, 0x43050872 so.
  */
 export class GlslangFolding {
-  /** Filled by `lanesOf` as it walks a function's tree, which never changes. */
+  /** Filled by `lanesOf` as it walks a function's tree, which never changes, and by `bindConstant`. */
   private readonly lanes = new WeakMap<Expression, Lanes | null>();
+
+  /** Gives the read of a `const` local the lanes glslang folds its value to. */
+  bindConstant(read: Expression, lanes: Lanes): void {
+    this.lanes.set(read, lanes);
+  }
 
   lanesOf(expression: Expression): Lanes | undefined {
     let lanes = this.lanes.get(expression);
@@ -37,14 +43,16 @@ export class GlslangFolding {
         return shapeOf(expression.type)!.scalar === 'float'
           ? expression.values.map((value) => godotConstantDouble(value as number))
           : expression.values;
-      case 'variable':
-        return undefined;
+      case 'array length':
+        return [arraySizeOf(expression.array)];
       case 'member': {
         const owner = this.lanesOf(expression.owner);
         return owner && swizzleLanes(expression).map((lane) => owner[lane]!);
       }
       case 'operator':
-        return this.foldOperator(expression);
+        return expression.op === 'OP_STRUCT' ? undefined : this.foldOperator(expression);
+      default:
+        return undefined;
     }
   }
 

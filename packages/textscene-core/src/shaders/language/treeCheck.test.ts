@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { treeOf } from './parsedTree.testkit.js';
-import type { Expression, ShaderNode } from './shaderTree.js';
+import type { Expression, OperatorNode, ShaderNode } from './shaderTree.js';
 import { treeFault } from './treeCheck.js';
 
 /** `shader` with the value of its first function's return replaced by `change(value)`. */
@@ -23,9 +23,17 @@ describe('treeFault', () => {
 
   it('finds an operator whose row does not fit its operand types', () => {
     const tree = withReturn(treeOf('vec2 f(vec2 a, vec2 b) { return a + b; }'), (value) => ({
-      ...value,
-      type: 'vec3',
+      ...(value as OperatorNode),
+      op: 'OP_SHIFT_LEFT',
     }));
+    expect(treeFault(tree)).toMatch(/the row OP_ADD\(vec2,vec2\) over vec2, vec2/);
+  });
+
+  it('finds a return of another type than its function', () => {
+    const tree = withReturn(
+      treeOf('vec2 f(vec2 a, vec2 b) { return a + b; }'),
+      (value) => ({ ...value, type: 'vec3' }) as Expression
+    );
     expect(treeFault(tree)).toMatch(/return of vec3 in a function of vec2/);
   });
 
@@ -42,7 +50,7 @@ describe('treeFault', () => {
       treeOf('float f(float a) { return a; }'),
       (value) => ({ ...value, name: 'b' }) as Expression
     );
-    expect(treeFault(tree)).toMatch(/the name b is no argument/);
+    expect(treeFault(tree)).toMatch(/the name b, which no block around the read declares/);
   });
 
   it('finds a constant lane outside its type', () => {
