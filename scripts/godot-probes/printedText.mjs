@@ -94,9 +94,9 @@ export function printedTextFaults(printedForms, { pixels }, rejections) {
  * Godot's reason for a printed text it draws nothing for. Godot may draw nothing and name no
  * error, as for `b * a = b`: that is the printer's fault, so the run reports it beside the others.
  */
-export function printedRejection(printed) {
+export async function printedRejection(printed) {
   try {
-    return godotRejection(printed);
+    return await godotRejection(printed);
   } catch (error) {
     return { stage: 'no reason', message: error.message.split('\n')[0] };
   }

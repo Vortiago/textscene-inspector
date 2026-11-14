@@ -22,7 +22,7 @@ const { values } = parseArgs({
 });
 const seed = Number(values.seed);
 const programs = generatePrograms({ seed, count: Number(values.count) });
-const { pixels } = runProbesInGodot(programs);
+const { pixels } = await runProbesInGodot(programs);
 const entries = Object.fromEntries(
   programs.map((program) => [program.name, recordEntry(program, pixels.get(program.name))])
 );

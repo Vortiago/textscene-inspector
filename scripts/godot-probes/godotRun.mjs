@@ -4,9 +4,9 @@
  * a main script that this module puts in a project of one scene.
  */
 
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { availableParallelism, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { godotSpawnPlan } from '../godot-ref/run.mjs';
 
@@ -14,10 +14,16 @@ import { godotSpawnPlan } from '../godot-ref/run.mjs';
 const GODOT_VERSION = '4.6.3';
 
 /**
- * The most output a run may print. Node's default of 1 MiB stops a run that reads the verdict on
- * twenty thousand shaders, each refusal about 600 bytes of standard error.
+ * The most output a run may print on each stream: a run that reads the verdict on twenty thousand
+ * shaders prints about 600 characters of standard error for each refusal.
  */
-const OUTPUT_BYTES_AT_MOST = 256 * 1024 * 1024;
+const OUTPUT_CHARACTERS_AT_MOST = 256 * 1024 * 1024;
+
+/**
+ * Godot runs at once. A run compiles its shaders on one core, so the probe step takes a quarter of
+ * the time on the 4 cores of the CI runner: 8 s against 29 s for 1,822 probes.
+ */
+const RUNS_AT_ONCE = availableParallelism();
 
 /** Frames a main script draws before it reads its viewports: the first frames compile the pipelines. */
 export const FRAMES_BEFORE_READ = 4;
@@ -45,8 +51,8 @@ script = ExtResource("1")
  * by their names in the project. Throws when Godot exits with an error.
  * @canonical A scratch Godot project run once, its standard output read
  */
-export function runGodotScript(mainScript, files) {
-  const { status, stdout, stderr } = runGodotScriptToExit(mainScript, files);
+export async function runGodotScript(mainScript, files) {
+  const { status, stdout, stderr } = await runGodotScriptToExit(mainScript, files);
   if (status !== 0) throw new Error(`godot exited with ${status}:\n${stderr}`);
   return stdout;
 }
@@ -55,25 +61,16 @@ export function runGodotScript(mainScript, files) {
  * The exit status and both outputs of a run of `mainScript`, for a run that may end Godot: Godot
  * prints its crash report on standard output and exits with 134.
  */
-export function runGodotScriptToExit(mainScript, files) {
-  const directory = mkdtempSync(join(tmpdir(), 'godot-project-'));
+export async function runGodotScriptToExit(mainScript, files) {
+  const directory = writeProject({ 'main.gd': mainScript, ...files });
   try {
-    const project = {
-      'project.godot': PROJECT_GODOT,
-      'main.tscn': MAIN_SCENE,
-      'main.gd': mainScript,
-      ...files,
-    };
-    for (const [name, text] of Object.entries(project)) writeFileSync(join(directory, name), text);
-    const first = spawnGodot(directory);
-    const result = failedToStart(first) ? spawnGodot(directory) : first;
+    const first = await spawnGodot(directory);
+    const result = failedToStart(first) ? await spawnGodot(directory) : first;
     if (result.error?.code === 'ENOENT') {
       throw new Error(
         `run godot: ${result.error.message}. Godot ${GODOT_VERSION} and xvfb-run must be on the path, as in the CI image`
       );
     }
-    if (result.error?.code === 'ETIMEDOUT')
-      throw new Error(`run godot: no exit within ${result.timeoutMs} ms`);
     if (result.error) throw new Error(`run godot: ${result.error.message}`);
     return { status: result.status, stdout: result.stdout, stderr: result.stderr };
   } finally {
@@ -81,15 +78,72 @@ export function runGodotScriptToExit(mainScript, files) {
   }
 }
 
+/** A scratch project directory of one scene with `files` beside it. The caller removes it. */
+function writeProject(files) {
+  const directory = mkdtempSync(join(tmpdir(), 'godot-project-'));
+  const project = { 'project.godot': PROJECT_GODOT, 'main.tscn': MAIN_SCENE, ...files };
+  for (const [name, text] of Object.entries(project)) writeFileSync(join(directory, name), text);
+  return directory;
+}
+
+/**
+ * One run of Godot on `directory`: its exit status and both outputs, or the `error` of a run
+ * that did not start, did not exit in time or printed more than a run may.
+ */
 function spawnGodot(directory) {
   const plan = godotSpawnPlan(['--path', directory], { display: true });
-  const result = spawnSync(plan.command, plan.argv, {
-    encoding: 'utf8',
-    env: plan.env,
-    timeout: plan.timeoutMs,
-    maxBuffer: OUTPUT_BYTES_AT_MOST,
+  return new Promise((resolve) => {
+    const child = spawn(plan.command, plan.argv, { env: plan.env });
+    const output = { stdout: '', stderr: '' };
+    let error;
+    const stop = (reason) => {
+      error ??= reason;
+      child.kill('SIGKILL');
+    };
+    const timer = setTimeout(() => stop(new Error(`no exit within ${plan.timeoutMs} ms`)), plan.timeoutMs);
+    for (const stream of ['stdout', 'stderr']) {
+      child[stream].setEncoding('utf8');
+      child[stream].on('data', (text) => {
+        output[stream] += text;
+        if (output[stream].length > OUTPUT_CHARACTERS_AT_MOST)
+          stop(new Error(`more than ${OUTPUT_CHARACTERS_AT_MOST} characters on ${stream}`));
+      });
+    }
+    child.on('error', (spawnError) => {
+      error ??= spawnError;
+    });
+    child.on('close', (status) => {
+      clearTimeout(timer);
+      resolve({ ...output, status, error });
+    });
   });
-  return { ...result, timeoutMs: plan.timeoutMs };
+}
+
+/**
+ * `items` in at most as many contiguous chunks as Godot runs at once, each chunk run by `run`,
+ * and each chunk's answer in the order of the chunks. No items make one empty chunk, so the
+ * caller still reads Godot's version.
+ */
+export function inChunksAtOnce(items, run) {
+  const size = Math.max(1, Math.ceil(items.length / RUNS_AT_ONCE));
+  const chunks = Array.from({ length: Math.max(1, Math.ceil(items.length / size)) }, (_, index) =>
+    items.slice(index * size, (index + 1) * size)
+  );
+  return Promise.all(chunks.map(run));
+}
+
+/** `run` of each of `items`, with at most as many runs at once as Godot runs at once. */
+export async function eachAtOnce(items, run) {
+  const answers = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const index = next++;
+      answers[index] = await run(items[index]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(RUNS_AT_ONCE, items.length) }, worker));
+  return answers;
 }
 
 /** The spawn errors of a Godot or xvfb that did not start, which one more start may clear. */

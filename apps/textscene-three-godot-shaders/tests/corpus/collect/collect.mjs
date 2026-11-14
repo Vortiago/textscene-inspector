@@ -77,8 +77,8 @@ function docsCorpus(root) {
   );
 }
 
-function generatorCorpus() {
-  return generatorShaders().map((shader) => {
+async function generatorCorpus() {
+  return (await generatorShaders()).map((shader) => {
     const setting = shader.property ? `${shader.property}=${shader.value}` : 'defaults';
     return {
       id: `generator/${shader.class}/${setting}`,
@@ -94,13 +94,13 @@ function generatorCorpus() {
 }
 
 /** The valid shaders, each text once: a text two sources hold stays with the first. */
-function validShaders() {
+async function validShaders() {
   const demos = checkout(REPOSITORIES.demos);
   const docs = checkout(REPOSITORIES.docs);
   try {
     const { url, commit, licence } = REPOSITORIES.demos;
     const shaders = [
-      ...generatorCorpus(),
+      ...(await generatorCorpus()),
       ...projectShaders(demos, 'demos', licence, { repository: url, commit }),
       ...docsCorpus(docs),
       ...FIXTURE_DIRS.flatMap((dir) => projectShaders(join(REPO_ROOT, dir), dir, FIXTURE_LICENCE, {})),
@@ -119,8 +119,8 @@ const shaderType = (text) => /^\s*shader_type\s+(\w+)\s*;/m.exec(text)?.[1] ?? '
 const fileOf = (id) =>
   `${id.replace(/\.(gdshader|tscn|tres|rst)(#|$)/, '$2').replace(/[#=]/g, '-')}.gdshader`;
 
-function main() {
-  const valid = validShaders();
+async function main() {
+  const valid = await validShaders();
   const typed = valid.map((shader) => ({ ...shader, shaderType: shaderType(shader.text) }));
   // A rejected shader keeps its origin's type: a change can break the `shader_type` line.
   const rejected = typed.map((shader, index) => {
@@ -146,4 +146,4 @@ function main() {
   );
 }
 
-main();
+await main();

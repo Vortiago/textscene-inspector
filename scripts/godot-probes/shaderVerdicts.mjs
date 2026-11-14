@@ -4,7 +4,7 @@
  * shader it refuses between two markers, so the parse of the output reads each verdict.
  */
 
-import { printedField, runGodotScript } from './godotRun.mjs';
+import { inChunksAtOnce, printedField, runGodotScript } from './godotRun.mjs';
 
 const MARKER = 'VERDICT ';
 const DONE = 'VERDICTS DONE';
@@ -31,11 +31,17 @@ func _ready() -> void:
 
 /**
  * Godot's version, and its verdict on each of `texts` in order: `{ accepted: true }` or its
- * message and line.
+ * message and line. The texts run in chunks at once, and every run must name the same Godot.
  */
-export function godotVerdicts(texts) {
-  const output = runGodotScript(VERDICT_SCRIPT, { 'shaders.json': JSON.stringify(texts) });
-  return { godot: printedField(output, 'GODOT '), verdicts: parseVerdictOutput(output, texts.length) };
+export async function godotVerdicts(texts) {
+  const runs = await inChunksAtOnce(texts, async (chunk) => {
+    const output = await runGodotScript(VERDICT_SCRIPT, { 'shaders.json': JSON.stringify(chunk) });
+    return { godot: printedField(output, 'GODOT '), verdicts: parseVerdictOutput(output, chunk.length) };
+  });
+  const [{ godot }] = runs;
+  const other = runs.find((run) => run.godot !== godot);
+  if (other) throw new Error(`expected one Godot, got ${godot} and ${other.godot}`);
+  return { godot, verdicts: runs.flatMap((run) => run.verdicts) };
 }
 
 /**

@@ -80,8 +80,8 @@ func _ready() -> void:
  * Each distinct text the generators write, with the class and the property value that first
  * wrote it: `{ class, property, value, code }`, `property` empty for a class's defaults.
  */
-export function generatorShaders() {
-  return parseGeneratorOutput(runGodotScript(GENERATOR_SCRIPT, {}));
+export async function generatorShaders() {
+  return parseGeneratorOutput(await runGodotScript(GENERATOR_SCRIPT, {}));
 }
 
 /** The generator lines of Godot's output, each distinct code once, in the order Godot wrote them. */

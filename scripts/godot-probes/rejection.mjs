@@ -38,8 +38,8 @@ export function parseRejection(output) {
  * Godot's reason for `probe`, from a run of that probe alone. A run may end Godot, which prints
  * its crash report on standard output. Any other failed run throws.
  */
-export function godotRejection(probe) {
-  const { status, stdout, stderr } = runGodotScriptToExit(MAIN_SCRIPT, probeProjectFiles([probe]));
+export async function godotRejection(probe) {
+  const { status, stdout, stderr } = await runGodotScriptToExit(MAIN_SCRIPT, probeProjectFiles([probe]));
   if (status !== 0 && !CRASH.test(stdout)) throw new Error(`godot exited with ${status}:\n${stderr}`);
   const rejection = parseRejection(stdout);
   if (rejection.line === undefined) return rejection;
@@ -47,12 +47,12 @@ export function godotRejection(probe) {
 }
 
 /**
- * Godot's front-end reason for each of `probes` it refuses, by name, from one verdict run of them
+ * Godot's front-end reason for each of `probes` it refuses, by name, from verdict runs of them
  * all. A probe the front end accepts is left out: its reason comes from the GPU compiler or a
  * crash, which only a run of that probe alone can show.
  */
-export function frontEndRejections(probes) {
-  const { verdicts } = godotVerdicts(probes.map(probeShader));
+export async function frontEndRejections(probes) {
+  const { verdicts } = await godotVerdicts(probes.map(probeShader));
   return new Map(
     probes.flatMap((probe, index) => {
       const verdict = verdicts[index];

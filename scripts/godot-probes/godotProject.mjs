@@ -6,6 +6,7 @@
 
 import {
   FRAMES_BEFORE_READ,
+  inChunksAtOnce,
   printedField,
   printedImages,
   requireGodotVersion,
@@ -84,9 +85,17 @@ function pixelBits(bytes) {
   return Array.from({ length: bytes.length / 4 }, (_, pixel) => view.getUint32(pixel * 4, true));
 }
 
-/** Godot's answers to `probes` from one run of the pinned release: its version, adapter and pixels. */
-export function runProbesInGodot(probes) {
-  const output = parseProbeOutput(runGodotScript(MAIN_SCRIPT, probeProjectFiles(probes)));
-  requireGodotVersion(output.godot);
-  return output;
+/**
+ * Godot's answers to `probes` from runs of the pinned release at once: its version, adapter and
+ * pixels. Every run must name the same Godot and adapter, or its pixels would mix two engines.
+ */
+export async function runProbesInGodot(probes) {
+  const outputs = await inChunksAtOnce(probes, async (chunk) =>
+    parseProbeOutput(await runGodotScript(MAIN_SCRIPT, probeProjectFiles(chunk)))
+  );
+  const [{ godot, adapter }] = outputs;
+  requireGodotVersion(godot);
+  const other = outputs.find((output) => output.godot !== godot || output.adapter !== adapter);
+  if (other) throw new Error(`expected one Godot on ${adapter}, got ${other.godot} on ${other.adapter} too`);
+  return { godot, adapter, pixels: new Map(outputs.flatMap((output) => [...output.pixels])) };
 }

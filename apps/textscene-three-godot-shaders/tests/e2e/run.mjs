@@ -20,8 +20,8 @@ const SHOWCASE_DIR = join(import.meta.dirname, '../../guide/showcase');
 
 const showcaseImage = (name, side) => join(SHOWCASE_DIR, `${name}-${side}.png`);
 
-function godotImages() {
-  const output = parseShowcaseOutput(runGodotScript(MAIN_SCRIPT, showcaseProjectFiles(SHOWCASES)));
+async function godotImages() {
+  const output = parseShowcaseOutput(await runGodotScript(MAIN_SCRIPT, showcaseProjectFiles(SHOWCASES)));
   requireGodotVersion(output.godot);
   return output.images;
 }
@@ -70,7 +70,7 @@ function resultTable(results) {
 }
 
 async function main() {
-  const godot = godotImages();
+  const godot = await godotImages();
   const transpilation = await transpiledImages();
   const update = process.argv.includes('--update');
   if (update) mkdirSync(SHOWCASE_DIR, { recursive: true });

@@ -28,7 +28,7 @@ import {
 import { RANDOM_PROGRAMS } from '../../apps/textscene-three-godot-shaders/tests/random/randomSet.mjs';
 import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { runProbesInGodot } from './godotProject.mjs';
-import { requireGodotVersion } from './godotRun.mjs';
+import { eachAtOnce, requireGodotVersion } from './godotRun.mjs';
 import { renderAnswersFile } from './answerDigest.mjs';
 import { isDrawn, probeRecord } from './record.mjs';
 import { loadPrinter, printedProbes, printedRejection, printedTextFaults } from './printedText.mjs';
@@ -36,9 +36,9 @@ import { frontEndRejections, godotRejection } from './rejection.mjs';
 import { godotVerdicts, verdictRecord } from './shaderVerdicts.mjs';
 
 /** The record of Godot's verdict on each case of each set, `{ id, text }`, from one Godot run. */
-function verdictRecords(...sets) {
+async function verdictRecords(...sets) {
   const cases = sets.flat();
-  const { godot, verdicts } = godotVerdicts(cases.map((each) => each.text));
+  const { godot, verdicts } = await godotVerdicts(cases.map((each) => each.text));
   requireGodotVersion(godot);
   let next = 0;
   return sets.map((set) => {
@@ -56,20 +56,19 @@ function verdictRecords(...sets) {
  * every probe the front end refuses, and each other probe runs alone. A probe that ends Godot runs
  * alone from the start, since it would end the run of every probe.
  */
-function rejections(probes, { pixels }) {
+async function rejections(probes, { pixels }) {
   const rejected = probes.filter((probe) => probe.endsGodot || !isDrawn(probe, pixels.get(probe.name)));
-  const frontEnd = frontEndRejections(rejected.filter((probe) => !probe.endsGodot));
-  return new Map(
-    rejected.map((probe) => [
-      probe.name,
-      frontEnd.get(probe.name) ?? (probe.original ? printedRejection(probe) : endingRejection(probe)),
-    ])
+  const frontEnd = await frontEndRejections(rejected.filter((probe) => !probe.endsGodot));
+  const alone = rejected.filter((probe) => !frontEnd.has(probe.name));
+  const reasons = await eachAtOnce(alone, (probe) =>
+    probe.original ? printedRejection(probe) : endingRejection(probe)
   );
+  return new Map([...frontEnd, ...alone.map((probe, index) => [probe.name, reasons[index]])]);
 }
 
 /** Godot's reason for `probe`, which must be a crash exactly when the probe says it ends Godot. */
-function endingRejection(probe) {
-  const rejection = godotRejection(probe);
+async function endingRejection(probe) {
+  const rejection = await godotRejection(probe);
   if ((rejection.stage === 'Godot') !== Boolean(probe.endsGodot))
     throw new Error(
       `expected ${probe.name} ${probe.endsGodot ? 'to end' : 'not to end'} Godot, got: ${rejection.message}`
@@ -83,9 +82,9 @@ async function main() {
   const lowered = printedProbes([...PROBES, ...randomProbes], printer.lower, 'lowered');
   const printed = [...printedProbes([...PROBES, ...randomProbes], printer.print), ...lowered];
   const probes = [...PROBES, ...randomProbes, ...printed];
-  const output = runProbesInGodot(probes.filter((probe) => !probe.endsGodot));
-  const reasons = rejections(probes, output);
-  const [operatorRecord, corpusRecord] = verdictRecords(
+  const output = await runProbesInGodot(probes.filter((probe) => !probe.endsGodot));
+  const reasons = await rejections(probes, output);
+  const [operatorRecord, corpusRecord] = await verdictRecords(
     OPERATOR_CASES.map(({ id, godotText }) => ({ id, text: godotText })),
     CORPUS
   );
