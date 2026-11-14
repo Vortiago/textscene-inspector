@@ -3,7 +3,8 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import type { GraphNodeSlot } from '../graphnode/types';
-import '../graphnode/nativeSolver.js'; // registers GraphNode's MinimumSizeFn/ContainerLayoutFn
+import '../../../../parser/TscnParser';
+import '../../../../r3f/controls/index';
 import { graphNodePorts } from './connectionPorts';
 
 const RED = { r: 1, g: 0, b: 0, a: 1 };

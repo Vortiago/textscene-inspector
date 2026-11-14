@@ -14,6 +14,9 @@ export const SizeFlags = {
   SHRINK_END: 8,
 } as const;
 
+/** `SIZE_EXPAND_FILL` (`control.h:85`), the flags a Control that takes its parent's free room sets. */
+export const SIZE_EXPAND_FILL = SizeFlags.EXPAND | SizeFlags.FILL;
+
 /** What both `size_flags_*` properties hold until a scene sets them (`control.h:229-230`). */
 export const DEFAULT_SIZE_FLAGS = SizeFlags.FILL;
 

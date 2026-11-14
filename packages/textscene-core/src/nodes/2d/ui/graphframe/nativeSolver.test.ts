@@ -14,7 +14,13 @@ import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import './nativeSolver';
 import type { GraphFrameProperties } from './types';
-import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
+import {
+  createSolveContext,
+  normalizeContainerLayoutResult,
+} from '../../../../r3f/controls/native/controlRectSolver';
+import { measureText } from '../../../../r3f/controls/native/text/measurer';
+import '../../../../parser/TscnParser';
+import '../../../../r3f/controls/index';
 
 const graphFrameLayout = controlSolverRegistry.containerLayout('GraphFrame')!;
 const graphFrameMinimumSize = controlSolverRegistry.minimumSize('GraphFrame')!;
@@ -41,11 +47,7 @@ function graphFrame(name: string, props: Partial<GraphFrameProperties>, children
 }
 
 function ctx(): SolveContext {
-  return {
-    theme: nativeTheme(1),
-    measureText: null,
-    combinedMinimumSize: (n) => (n.node.properties as ControlProperties).customMinimumSize ?? { x: 0, y: 0 },
-  };
+  return createSolveContext(nativeTheme(1), measureText);
 }
 
 describe('graphFrameMinimumSize (graph_frame.cpp:324-346)', () => {
