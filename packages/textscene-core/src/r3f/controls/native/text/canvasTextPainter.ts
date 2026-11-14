@@ -7,7 +7,13 @@
 import * as THREE from 'three';
 import { maxEmboldenGrowthPx } from './canvasVariation';
 import type { ByteColour } from './glyphCoverage';
-import { canvasGlyphPenXPx, fontIsScaled, type FontMetrics } from './fontMetrics';
+import {
+  canvasGlyphPenXPx,
+  faceStrikeSize,
+  fontIsScaled,
+  subpixelHalfStepPx,
+  type FontMetrics,
+} from './fontMetrics';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics, type CanvasFontMetrics } from './runtimeFontMetrics';
 import { hasOwnGlyph, type GlyphPainter, type PlacedGlyph, type RasterFrame } from './glyphPainter';
@@ -151,9 +157,23 @@ export function buildCanvasTextQuadArrays(
 export function snapsGlyphsToItemPixels(
   glyphDrawer: GlyphDrawer,
   fontSizePx: number,
-  metrics: Pick<FontMetrics, 'pxPerUnit'>
+  metrics: Pick<FontMetrics, 'pxPerUnit' | 'outlines'>
 ): boolean {
   return GLYPH_DRAWER_RULES[glyphDrawer].roundsPen && !fontIsScaled(fontSizePx, metrics);
+}
+
+/**
+ * How far a canvas item moves the pen of a face drawn off its strike's width, which it does not
+ * floor: the half step alone (`text_server_adv.cpp:4074-4079`). Label3D adds no step.
+ */
+function scaledPenShiftPx(
+  glyphDrawer: GlyphDrawer,
+  fontSizePx: number,
+  metrics: Pick<FontMetrics, 'outlines'>
+): number {
+  const strike = faceStrikeSize(metrics, fontSizePx);
+  if (!GLYPH_DRAWER_RULES[glyphDrawer].roundsPen || !strike || strike.scale === 1) return 0;
+  return subpixelHalfStepPx(fontSizePx);
 }
 
 /**
@@ -231,7 +251,7 @@ export function paintSceneFontCanvas(
   }: CanvasTextPaintOptions = {}
 ): ImageData | null {
   const frame = rasterFrame(layout, fontSizePx, skew, canvasLayout, glyphDrawer, strokeWidthPx);
-  const glyphs = placeGlyphs(layout, frame, originPhasePx);
+  const glyphs = placeGlyphs(layout, frame, glyphDrawer, originPhasePx);
   const colours = { text: opaqueByteColour(tint), colourGlyphs: opaqueByteColour(colourGlyphTint) };
   return painterOf(frame.metrics).paint(glyphs, frame, colours);
 }
@@ -263,8 +283,10 @@ function rasterFrame(
 function placeGlyphs(
   layout: TextLayoutResult,
   { metrics, fontSizePx, canvasLayout, snapsGlyphs }: RasterFrame,
+  glyphDrawer: GlyphDrawer,
   originPhasePx: Readonly<Vector2>
 ): PlacedGlyph[] {
+  const unsnappedPenShiftPx = scaledPenShiftPx(glyphDrawer, fontSizePx, metrics);
   // The raster starts at the whole item pixel at or before the run origin, where its quad sits.
   return layout.lines.flatMap((line, lineIndex) => {
     const lineBaselinePx = lineIndex * layout.linePitchPx + layout.baselineOffsetPx;
@@ -275,7 +297,9 @@ function placeGlyphs(
       const originX = placement.x + (placement.xOffset ?? 0);
       const penX =
         canvasLayout.offsetXPx +
-        (snapsGlyphs ? canvasGlyphPenXPx(originPhasePx.x + originX, fontSizePx, metrics) : originX);
+        (snapsGlyphs
+          ? canvasGlyphPenXPx(originPhasePx.x + originX, fontSizePx, metrics)
+          : originX + unsnappedPenShiftPx);
       return { placement, penX, baselineY: baselineY + (placement.yOffset ?? 0) };
     });
   });
@@ -294,7 +318,7 @@ export function canvasGlyphRects(
 ): Rect2[] {
   const frame = rasterFrame(layout, fontSizePx, skew, canvasLayout, glyphDrawer, strokeWidthPx);
   const rectOf = painterOf(frame.metrics).rectReader(frame);
-  return placeGlyphs(layout, frame, originPhasePx).flatMap((glyph) => {
+  return placeGlyphs(layout, frame, glyphDrawer, originPhasePx).flatMap((glyph) => {
     const rect = rectOf(glyph);
     return rect && drawsGlyphRect(glyphDrawer, rect.w, rect.h) ? [rect] : [];
   });

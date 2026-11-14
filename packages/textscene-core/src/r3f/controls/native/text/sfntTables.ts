@@ -97,7 +97,7 @@ export const FALLBACK_MARK_TABLE_TAGS: readonly string[] = [...SCENE_FONT_TABLE_
  * The tables an outline reader uses (`sfntOutlines.ts`), for the container readers to decompress:
  * the outlines, the metrics that place a TrueType glyph's phantom points, its hinting programs, the
  * layout tables the auto-hinter reads, the `GPOS` and `GDEF` tables of the kerning at an instance,
- * and the colour tables of a colour glyph.
+ * and the colour tables, bitmap strikes and SVG documents of a colour glyph.
  */
 export const OUTLINE_TABLE_TAGS: readonly string[] = [
   'head',
@@ -127,6 +127,14 @@ export const OUTLINE_TABLE_TAGS: readonly string[] = [
   'GDEF',
   'COLR',
   'CPAL',
+  'CBLC',
+  'CBDT',
+  'EBLC',
+  'EBDT',
+  'bloc',
+  'bdat',
+  'sbix',
+  'SVG ',
 ];
 
 export interface TableRecord {

@@ -46,6 +46,7 @@ import {
   COMPONENT_USE_MY_METRICS,
   GLYPH_HEADER_SIZE,
   GLYPH_Y_MAX_OFFSET,
+  GLYPH_Y_MIN_OFFSET,
   LONG_LOCA_FORMAT,
   SIMPLE_ON_CURVE,
   SIMPLE_REPEAT,
@@ -58,6 +59,7 @@ import {
 import { glyphMetricsReader, metricsAtInstance, type GlyphMetrics } from './sfntGlyphMetrics';
 import { readGlyphCount, readIndexToLocFormat, readUnitsPerEm, tableFits, type SfntFile } from './sfntTables';
 import type { FontInstance } from './variation/fontInstance';
+import type { ContourBox } from './strike/sbixGlyph';
 import { variedGlyphPoints, type GlyphPoints, type VariedPoints } from './variation/gvar';
 import { InvalidTupleVariationsError } from './variation/tupleVariations';
 
@@ -675,5 +677,25 @@ export function glyfAdvanceReader(
     const { scale } = freeTypeTrueTypeSize(font.unitsPerEm, fontSizePx, font.isPpemRounded);
     const load = loadedGlyph(font, glyphIndex, scale, null, instance, false);
     return load && load.phantoms.x[1]! - load.phantoms.x[0]!;
+  };
+}
+
+/**
+ * The `hmtx` bearing and the lowest point of each glyph with a contour, as the header-only load of an
+ * `sbix` glyph reads them (`ttgload.c:2412-2443`): null for a glyph with no contour, a composite one,
+ * and a font without `glyf`.
+ */
+export function contourBoxReader(sfnt: SfntFile): ((glyphIndex: number) => ContourBox | null) | null {
+  const font = glyfFont(sfnt);
+  if (!font) return null;
+  return (glyphIndex) => {
+    const { offset, length } = glyphLocation(font, glyphIndex);
+    if (length < GLYPH_HEADER_SIZE) return null;
+    const at = font.glyfOffset + offset;
+    if (at + GLYPH_HEADER_SIZE > font.dv.byteLength || font.dv.getInt16(at) <= 0) return null;
+    return {
+      leftBearing: font.metricsOf(glyphIndex, 0).horizontal.bearing,
+      yMin: font.dv.getInt16(at + GLYPH_Y_MIN_OFFSET),
+    };
   };
 }

@@ -39,6 +39,8 @@ import { perObject } from '../../../../utils/perObject';
 import { recentlyRead } from '../../../../utils/recentlyRead';
 import { readCpal } from './colour/cpal';
 import { colrLayersReader, type ColrLayersReader } from './colour/colr';
+import { faceStrikesOf, type FaceStrikes } from './strike/faceStrikes';
+import { svgGlyphsOf, type SvgGlyphs } from './svg/svgGlyphs';
 
 type InstanceKerningReader = typeof instanceKerningReader;
 /** The readers of the glyphs at an instance, which load with a font that has `GSUB` and `fvar`. */
@@ -85,6 +87,18 @@ export interface SfntOutlines {
    * no `COLR` and `CPAL` that FreeType reads.
    */
   readonly colourLayers?: ColrLayersReader;
+  /**
+   * The bitmap strikes a face with colour glyphs draws from (`strike/faceStrikes.ts`). Absent for a
+   * face that draws none.
+   */
+  readonly strikes?: FaceStrikes;
+  /** The `SVG ` glyphs of the face (`svg/svgGlyphs.ts`). Absent for a face with no `SVG ` FreeType reads. */
+  readonly svgGlyphs?: SvgGlyphs;
+  /**
+   * Whether a glyph loads its SVG form before its strike bitmap, as the auto-hinter's load does
+   * (`ftobjs.c:1019-1050`). The driver's own load takes the strike first (`ttgload.c:2385-2490`).
+   */
+  readonly loadsSvgBeforeStrike?: boolean;
   /** `FontFile.modulate_color_glyphs` of the load: the font colour tints a colour glyph. */
   readonly modulatesColourGlyphs?: boolean;
 }
@@ -105,8 +119,8 @@ export const CONTOUR_LOAD: GlyphLoad = { hinting: Hinting.NORMAL, isAutohinterFo
 
 /**
  * Reads the outlines of a TrueType or OpenType-CFF font in a plain, WOFF or WOFF2 file, or returns
- * `null`, never throws, for a font with no `glyf` or CFF table, no readable `cmap` or a table that
- * does not fit its buffer. The reader answers no glyph, not an error, for an offset a corrupt table
+ * `null`, never throws, for a font with no `glyf` or CFF table and no strike it draws, no readable
+ * `cmap` or a table that does not fit its buffer. The reader answers no glyph, not an error, for an offset a corrupt table
  * puts past the buffer. Each glyph loads as `load` asks.
  */
 export async function openFontOutlines(
@@ -115,8 +129,11 @@ export async function openFontOutlines(
 ): Promise<SfntOutlines | null> {
   const sfnt = await openFontContainer(bytes, OUTLINE_TABLE_TAGS);
   if (!sfnt) return null;
-  const [outlineOf, kerningReader, glyphReaders] = await Promise.all([
+  const colourLayers = colourLayersOf(sfnt);
+  const [outlineOf, strikes, svgGlyphs, kerningReader, glyphReaders] = await Promise.all([
     outlineReaderOf(sfnt, load),
+    faceStrikesOf(sfnt, colourLayers !== undefined || sfnt.tables.has('SVG ')),
+    svgGlyphsOf(sfnt),
     variationReaderOf(
       sfnt,
       ['GPOS', 'fvar'],
@@ -124,8 +141,19 @@ export async function openFontOutlines(
     ),
     variationReaderOf(sfnt, ['GSUB', 'fvar'], () => import('./variation/instanceGlyph')),
   ]);
-  const outlines = readSfntOutlines(sfnt, outlineOf, kerningReader, glyphReaders);
-  return outlines && load.modulatesColourGlyphs ? { ...outlines, modulatesColourGlyphs: true } : outlines;
+  // A face of strikes alone has no outline, and draws each glyph from its strike.
+  const glyphOutlineOf = outlineOf ?? (strikes ? NO_OUTLINE : null);
+  const outlines = readSfntOutlines(sfnt, glyphOutlineOf, kerningReader, glyphReaders);
+  return (
+    outlines && {
+      ...outlines,
+      ...(colourLayers && { colourLayers }),
+      ...(strikes && { strikes }),
+      ...(svgGlyphs && { svgGlyphs }),
+      ...(svgGlyphs && strikes && isAutoHinted(sfnt, load) && { loadsSvgBeforeStrike: true }),
+      ...(load.modulatesColourGlyphs && { modulatesColourGlyphs: true }),
+    }
+  );
 }
 
 /**
@@ -137,10 +165,17 @@ export async function openFontOutlines(
 async function outlineReaderOf(sfnt: SfntFile, load: GlyphLoad): Promise<GlyphOutlineReader | null> {
   if (isTrickyFont(sfnt)) return nativeReaderOf(sfnt);
   if (load.hinting === Hinting.NONE) return unhintedReaderOf(sfnt);
+  return isAutoHinted(sfnt, load) ? autoHintedReaderOf(sfnt, load.hinting) : nativeReaderOf(sfnt);
+}
+
+/** Whether `FT_Load_Glyph` takes the auto-hinter's load for `load` (`ftobjs.c:976-1016`). */
+function isAutoHinted(sfnt: SfntFile, load: GlyphLoad): boolean {
+  const isScalable = ['glyf', 'CFF ', 'CFF2'].some((tag) => sfnt.tables.has(tag));
+  if (!isScalable || isTrickyFont(sfnt) || load.hinting === Hinting.NONE) return false;
   const isTrueType = sfnt.tables.has('glyf');
-  const isAutoHinted =
-    load.isAutohinterForced || (isTrueType && (load.hinting === Hinting.LIGHT || !isNativelyHinted(sfnt)));
-  return isAutoHinted ? autoHintedReaderOf(sfnt, load.hinting) : nativeReaderOf(sfnt);
+  return (
+    load.isAutohinterForced || (isTrueType && (load.hinting === Hinting.LIGHT || !isNativelyHinted(sfnt)))
+  );
 }
 
 /** The reader of a font's outlines scaled with no hints, as `FT_LOAD_NO_HINTING` loads them. */
@@ -315,9 +350,11 @@ function readSfntOutlines(
         const instance = instanceAt(opentype);
         return instance && shapingOf(instance)(chars);
       }),
-    colourLayers: colourLayersOf(sfnt),
   };
 }
+
+/** The outline reader of a face with no outlines: no glyph has one. */
+const NO_OUTLINE: GlyphOutlineReader = () => null;
 
 /** The reader of each glyph's `COLR` layers, or undefined for a font with none that FreeType reads. */
 function colourLayersOf(sfnt: SfntFile): ColrLayersReader | undefined {
