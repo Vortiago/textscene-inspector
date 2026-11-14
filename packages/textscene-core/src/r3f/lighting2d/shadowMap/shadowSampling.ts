@@ -16,6 +16,7 @@ import type { Light2DShadowFilter } from '../../../godot/scene/light2d.js';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 import { createShadowMapTexture, shadowMapUniforms, writeShadowMap } from './shadowMapTexture.js';
 import { shadowMapZFarInv, type ShadowPolarLight } from './shadowPolarMap.js';
+import { POLAR_LOOKUP } from './shadowShader.js';
 
 /**
  * The light's pose as its quads read it. Every quad of one light shares these objects, and
@@ -64,7 +65,9 @@ export function updateShadowPolarTexture(
 ): THREE.DataTexture {
   const data = existing?.image.data as ArrayLike<number> | undefined;
   const texture =
-    existing && data?.length === bins.length ? existing : createShadowMapTexture(bins.length, 'repeat');
+    existing && data?.length === bins.length
+      ? existing
+      : createShadowMapTexture(bins.length, POLAR_LOOKUP.edge);
   writeShadowMap(texture, bins);
   return texture;
 }

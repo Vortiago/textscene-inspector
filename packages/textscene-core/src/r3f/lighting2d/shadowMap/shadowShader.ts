@@ -11,11 +11,18 @@
  */
 
 import { SHADOW_MAP_FAR } from './shadowPolarMap.js';
+import type { ShadowMapEdge } from './shadowMapTexture.js';
 
-/** The shadow lookup of one light kind: its texel rule and its mapping from the fragment to (u, depth). */
+/**
+ * The shadow lookup of one light kind: the edge of its map and its mapping from the fragment to
+ * (u, depth). The map's texture and its texel rule both read `edge`, so the two cannot disagree.
+ */
 export interface ShadowLookup {
-  /** How `shadowTexel` reads a bin: `ShadowMapEdge` in GLSL, plus the directional map's empty bins. */
-  readonly texel: 'repeat' | 'clampWithEmptyBins';
+  /**
+   * How a tap past an end of the row reads, in the texture and in `shadowTexel`. A clamped map is
+   * a DirectionalLight2D's, whose empty bins also read as lit.
+   */
+  readonly edge: ShadowMapEdge;
   /** The uniforms and varyings `fraction` reads. */
   readonly declarations: string;
   /** `float shadowFraction()`, which maps the fragment to `shadowTaps(u, depth)`. */
@@ -39,8 +46,8 @@ float shadowBins() { return uShadowBins; }
 /** The depth an empty bin compares as: past any fragment, so `step` leaves it lit. */
 const EMPTY_BIN_DEPTH = '1e30';
 
-/** `float shadowTexel(float texel)`, the depth of one bin, for each rule. */
-const SHADOW_TEXEL: Record<ShadowLookup['texel'], string> = {
+/** `float shadowTexel(float texel)`, the depth of one bin, for each edge. */
+const SHADOW_TEXEL: Record<ShadowMapEdge, string> = {
   repeat: /* glsl */ `
 // Godot also quantises the row by 1/shadow_pixel_size (canvas.glsl:394,508), so below size 512
 // with two shadowed lights a light reads another's row. Not modelled: each light has its own map.
@@ -48,7 +55,7 @@ float shadowTexel(float texel) {
   return texture2D(uShadowMap, vec2((texel + 0.5) / shadowBins(), 0.5)).r;
 }
 `,
-  clampWithEmptyBins: /* glsl */ `
+  clamp: /* glsl */ `
 // An empty bin never shadows. The camera can show past the viewport's far edge, where depth
 // exceeds SHADOW_MAP_FAR, and a bin left at SHADOW_MAP_FAR would shadow all of it.
 float shadowTexel(float texel) {
@@ -97,8 +104,8 @@ float shadowTaps(float u, float depth) {
  * declarations, the bins, the texel rule, the taps, the fraction. The taps call `shadowBins` and
  * `shadowTexel`, so each must come before them.
  */
-export function shadowSampleGlsl({ texel, declarations, fraction }: ShadowLookup): string {
-  return [MAP_UNIFORM, declarations, SHADOW_BINS, SHADOW_TEXEL[texel], SHADOW_TAPS, fraction].join('');
+export function shadowSampleGlsl({ edge, declarations, fraction }: ShadowLookup): string {
+  return [MAP_UNIFORM, declarations, SHADOW_BINS, SHADOW_TEXEL[edge], SHADOW_TAPS, fraction].join('');
 }
 
 /**
@@ -106,7 +113,7 @@ export function shadowSampleGlsl({ texel, declarations, fraction }: ShadowLookup
  * quadrant block. `vWorld` comes from `POLAR_SHADOW_VERTEX`.
  */
 export const POLAR_LOOKUP: ShadowLookup = {
-  texel: 'repeat',
+  edge: 'repeat',
   declarations: /* glsl */ `
 uniform mat3 uWorldToLight;
 uniform float uShadowZFarInv;
@@ -150,7 +157,7 @@ float shadowFraction() {
 
 /** A DirectionalLight2D's `(u, depth)`, which `DIRECTIONAL_SHADOW_VERTEX` already wrote to `vShadow`. */
 export const DIRECTIONAL_LOOKUP: ShadowLookup = {
-  texel: 'clampWithEmptyBins',
+  edge: 'clamp',
   declarations: /* glsl */ `
 varying vec2 vShadow;
 `,

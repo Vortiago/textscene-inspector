@@ -17,6 +17,7 @@ import {
 } from './directionalShadowMap';
 import { useShadowAtlasSize } from './useShadowAtlasSize';
 import { createShadowMapTexture, writeShadowMap } from './shadowMapTexture';
+import { DIRECTIONAL_LOOKUP } from './shadowShader';
 import { useDisposeOnRelease } from '../../useDisposeOnRelease';
 import { perObject } from '../../../utils/perObject.js';
 import type { Quad2, ShadowCasterEdges } from '../shadowCasterEdges';
@@ -131,7 +132,10 @@ export function useDirectionalShadow(
   const atlasSize = useShadowAtlasSize();
   // A new atlas size is a new texture: the old one has the wrong width.
   const sampler = useMemo<DirectionalShadowSampler>(
-    () => ({ map: createShadowMapTexture(atlasSize, 'clamp'), ndcToShadow: new THREE.Matrix3() }),
+    () => ({
+      map: createShadowMapTexture(atlasSize, DIRECTIONAL_LOOKUP.edge),
+      ndcToShadow: new THREE.Matrix3(),
+    }),
     [atlasSize]
   );
   useDisposeOnRelease(sampler.map);
