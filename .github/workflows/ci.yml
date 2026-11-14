@@ -196,7 +196,7 @@ jobs:
   # The shader package's own layers, in the image, which holds Godot's binary and source. Godot
   # answers every probe, random program, operator case and corpus shader live, and the committed
   # digests of those answers, the guide, the tests and the real-GL run are checked against them.
-  # GODOT_ANSWERS=live makes every reader of the answers fail when the live run is missing.
+  # SHADER_ANSWERS=live makes every reader of the answers fail when the live run is missing.
   shaders:
     name: Shader package
     runs-on: ubuntu-latest
@@ -204,7 +204,7 @@ jobs:
     container: *ci-image
     timeout-minutes: 25
     env:
-      GODOT_ANSWERS: live
+      SHADER_ANSWERS: live
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup

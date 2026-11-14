@@ -18,7 +18,7 @@ export const LIVE_DIR = join(import.meta.dirname, '.godot-answers');
 /** Written only by `pnpm godot:probes`: Godot's version, each family's digest and the smoke subset. */
 export const ANSWERS_FILE = join(import.meta.dirname, 'godot-answers.json');
 
-/** The value of `GODOT_ANSWERS` that makes a missing live run fail, as the Shader package job sets. */
+/** The value of `SHADER_ANSWERS` that makes a missing live run fail, as the Shader package job sets. */
 const LIVE_REQUIRED = 'live';
 
 export const livePath = (family) => join(LIVE_DIR, `${family}.json`);
@@ -29,13 +29,13 @@ const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
  * Every family's answers, `{ live, probes, random, operators, corpus }`, each in its record
  * shape and the same on every CPU (`canonicalAnswers`). `live` is false when no live run exists,
  * and each family then holds the smoke subset only: a test that needs every case runs when `live`
- * is true. Throws without a live run when `GODOT_ANSWERS` is `live`, so a job without Godot fails
+ * is true. Throws without a live run when `SHADER_ANSWERS` is `live`, so a job without Godot fails
  * instead of passing on the subset, and throws on a live run the committed digests do not match.
  */
 export function godotAnswers() {
   const isLive = FAMILIES.every((family) => existsSync(livePath(family)));
   if (isLive) return { live: true, ...currentLiveAnswers() };
-  if (process.env.GODOT_ANSWERS === LIVE_REQUIRED) {
+  if (process.env.SHADER_ANSWERS === LIVE_REQUIRED) {
     throw new Error(
       `expected Godot's live answers in ${LIVE_DIR}, found none: run \`pnpm godot:probes\` in the CI image first`
     );
