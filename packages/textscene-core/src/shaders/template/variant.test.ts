@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFINES_FILE, definesText, variantLines } from './variant.js';
+import { variantLines } from './variant.js';
 
 const DEFINES = {
   general: '\n#define G 1\n',
@@ -12,7 +12,8 @@ const line = (text: string, at: number) => ({ text, file: 't.glsl', line: at });
 
 describe('variantLines', () => {
   it('writes the defines where #VERSION_DEFINES stands, in Godot order', () => {
-    expect(definesText(DEFINES)).toBe(
+    const lines = variantLines([line('#VERSION_DEFINES', 1)], DEFINES).slice(0, -1);
+    expect(lines.map((each) => (each.slot ? '' : each.text)).join('\n') + '\n').toBe(
       '\n\n#define G 1\n\n#define MODE\n\n#define MATERIAL_UNIFORMS_USED\n#define SKY_CODE_USED\n' +
         '#define RENDER_DRIVER_VULKAN\n#define samplerExternalOES sampler2D\n#define textureExternalOES texture2D\n'
     );
@@ -20,7 +21,7 @@ describe('variantLines', () => {
 
   it('gives each line of the defines the defines file', () => {
     const lines = variantLines([line('#VERSION_DEFINES', 1)], DEFINES);
-    expect(lines.every((each) => each.file === DEFINES_FILE || (!each.slot && each.text === ''))).toBe(true);
+    expect(lines.every((each) => each.file === '<defines>' || (!each.slot && each.text === ''))).toBe(true);
   });
 
   it('makes a slot of each code section, named in upper case', () => {

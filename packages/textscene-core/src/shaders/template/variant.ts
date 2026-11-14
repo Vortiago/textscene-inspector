@@ -23,7 +23,7 @@ export type VariantLine =
   | { readonly slot: Slot; readonly file: string; readonly line: number };
 
 /** The file name a line of the defines carries, which no template file has. */
-export const DEFINES_FILE = '<defines>';
+const DEFINES_FILE = '<defines>';
 
 /**
  * What one variant of one material adds to a stage (`ShaderRD::Version` and the variant's text).
@@ -70,7 +70,7 @@ function slotOf(text: string): Slot | 'VERSION_DEFINES' | undefined {
 }
 
 /** The text `_build_variant_code` writes for `#VERSION_DEFINES` (`shader_rd.cpp:221-240`). */
-export function definesText(defines: VariantDefines): string {
+function definesText(defines: VariantDefines): string {
   return [
     '\n',
     defines.general,

@@ -32,10 +32,15 @@ async function loadFrontEnd() {
   });
   try {
     const load = (file) => server.ssrLoadModule(`${TEMPLATE}${file}`);
-    const [stages, variant, preprocess, parse, print] = await Promise.all(
-      ['stages.ts', 'variant.ts', 'preprocess.ts', 'parseTemplate.ts', 'printTemplate.ts'].map(load)
-    );
-    return { ...stages, ...variant, ...preprocess, ...parse, ...print };
+    const files = [
+      'stages.ts',
+      'variant.ts',
+      'generalDefines.ts',
+      'preprocess.ts',
+      'parseTemplate.ts',
+      'printTemplate.ts',
+    ];
+    return Object.assign({}, ...(await Promise.all(files.map(load))));
   } finally {
     await server.close();
   }

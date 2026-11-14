@@ -65,3 +65,7 @@ export function coveringSets(names, takenBranches) {
   }
   return sets;
 }
+
+/** The names of the defines `general` holds. */
+export const definedNames = (general) =>
+  new Set([...general.matchAll(/#define (\w+)/g)].map((match) => match[1]));

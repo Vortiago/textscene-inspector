@@ -20,7 +20,9 @@ import type {
   Statement,
   StructMember,
   StructNode,
+  VariableNode,
 } from '../language/shaderTree.js';
+import { withExpressionsMapped } from '../language/treeWalk.js';
 import { STAGE_VARIABLES } from './glslBuiltIns.js';
 import {
   arrayOf,
@@ -40,7 +42,8 @@ import {
   type TemplateVariable,
 } from './parseGlslExpression.js';
 import type { PpToken } from './ppScanner.js';
-import type { Preprocessed } from './preprocess.js';
+import type { CompiledMaterial } from './link.js';
+import { preprocess, type Preprocessed } from './preprocess.js';
 import type { StageName } from './stages.js';
 import { TemplateCursor } from './templateCursor.js';
 import type {
@@ -54,9 +57,17 @@ import type {
   TemplateStageNode,
 } from './templateTree.js';
 
-/** The tree of one stage of a preprocessed template variant. */
-export function parseTemplateStage(stage: StageName, preprocessed: Preprocessed): TemplateStageNode {
-  const declarations = new TemplateParser(stage, new TemplateCursor(preprocessed.tokens)).declarations();
+/**
+ * The tree of one stage of a preprocessed template variant, with `material` in its slots, or the
+ * slots kept for a template read on its own.
+ */
+export function parseTemplateStage(
+  stage: StageName,
+  preprocessed: Preprocessed,
+  material?: CompiledMaterial
+): TemplateStageNode {
+  const tokens = new TemplateCursor(preprocessed.tokens);
+  const declarations = new TemplateParser(stage, tokens, material).declarations();
   return { kind: 'template stage', stage, directives: preprocessed.directives, declarations };
 }
 
@@ -114,7 +125,8 @@ class TemplateParser implements TemplateScope {
 
   constructor(
     stage: StageName,
-    private readonly tokens: TemplateCursor
+    private readonly tokens: TemplateCursor,
+    private readonly material?: CompiledMaterial
   ) {
     for (const [name, variable] of Object.entries(STAGE_VARIABLES[stage]))
       this.globals.variables.set(name, variable);
@@ -142,7 +154,8 @@ class TemplateParser implements TemplateScope {
       const token = this.tokens.peek()!;
       if (token.kind === 'slot') {
         this.tokens.next();
-        declarations.push({ kind: 'slot', slot: token.slot!, position: token.position });
+        if (this.material && token.slot!.kind === 'GLOBALS') declarations.push(...this.material.globals);
+        else declarations.push({ kind: 'slot', slot: token.slot!, position: token.position });
         continue;
       }
       if (this.tokens.accept(';')) continue;
@@ -497,6 +510,36 @@ class TemplateParser implements TemplateScope {
     });
   }
 
+  /**
+   * A material's stage function body in the scope of its slot, each built-in read as its GLSL
+   * text there. A section the material does not fill is empty, as Godot's text is.
+   */
+  private linkedCode(body: BlockNode | undefined, position: SourcePosition): BlockNode {
+    if (!body) return { kind: 'block', statements: [], position };
+    return withExpressionsMapped(body, (expression) =>
+      expression.kind === 'variable' && expression.builtIn ? this.builtInText(expression) : expression
+    );
+  }
+
+  /** The GLSL text of the built-in `variable` reads, at the user's place in the text. */
+  private builtInText(variable: VariableNode): Expression {
+    const text = this.material!.renames[variable.name];
+    if (text === undefined)
+      this.tokens.fail(`'${variable.name}' has no GLSL text in the mode table`, variable.position);
+    const line = { text, file: variable.position.file, line: variable.position.line };
+    const tokens = new TemplateCursor(
+      preprocess([line]).tokens.map((token) => ({ ...token, position: variable.position }))
+    );
+    const expression = new GlslExpressionParser(tokens, this).expression();
+    if (!tokens.isAtEnd()) tokens.fail(`expected the end of the text of '${variable.name}'`);
+    if (expression.type !== variable.type)
+      tokens.fail(
+        `'${variable.name}' reads ${expression.type} in the template, not ${variable.type}`,
+        variable.position
+      );
+    return expression;
+  }
+
   private within<T>(read: () => T): T {
     const outer = this.scope;
     this.scope = new Scope(outer);
@@ -518,7 +561,8 @@ class TemplateParser implements TemplateScope {
     const token = this.tokens.peek()!;
     if (token.kind === 'slot') {
       this.tokens.next();
-      return { kind: 'slot', name: token.slot!.name, position: token.position };
+      if (!this.material) return { kind: 'slot', name: token.slot!.name, position: token.position };
+      return this.linkedCode(this.material.code.get(token.slot!.name), token.position);
     }
     const attributes = this.attributes();
     const position = this.tokens.position();

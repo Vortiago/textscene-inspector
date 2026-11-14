@@ -122,3 +122,35 @@ export function* everyExpression(expression: Expression): Generator<Expression> 
   yield expression;
   for (const part of subExpressions(expression)) yield* everyExpression(part);
 }
+
+/** `block` with each expression of its statements replaced by `map` of it, the parts first. */
+export function withExpressionsMapped(
+  block: BlockNode,
+  map: (expression: Expression) => Expression
+): BlockNode {
+  const deep = (expression: Expression): Expression => map(withSubExpressions(expression, deep));
+  const statement = (part: Statement): Statement => {
+    switch (part.kind) {
+      case 'block':
+        return withExpressionsMapped(part, map);
+      case 'control flow':
+        return {
+          ...part,
+          expressions: part.expressions.map(deep),
+          blocks: part.blocks.map((inner) => withExpressionsMapped(inner, map)),
+        };
+      case 'declaration':
+        return {
+          ...part,
+          declarators: part.declarators.map((declarator) =>
+            declarator.value ? { ...declarator, value: deep(declarator.value) } : declarator
+          ),
+        };
+      case 'slot':
+        return part;
+      default:
+        return deep(part);
+    }
+  };
+  return { ...block, statements: block.statements.map(statement) };
+}

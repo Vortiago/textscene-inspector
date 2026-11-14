@@ -5,7 +5,7 @@
  * and `OCTMAP_FORMAT` are a value of a mode, and every other name of a mode is a tested name.
  */
 
-const defines = (...entries) => entries.map((entry) => `\n#define ${entry}\n`).join('');
+const defines = (...entries: readonly string[]) => entries.map((entry) => `\n#define ${entry}\n`).join('');
 
 /** The directional lights of a scene and of a sky's light buffer (`renderer_scene_render.h:48`, `sky.cpp:707`). */
 const MAX_DIRECTIONAL_LIGHTS = 8;
@@ -20,7 +20,7 @@ const OCCLUSION_SIZE = 128 / 16;
 const SH_SIZE = 16;
 
 /** The forward renderers' lightmaps and material set (`render_forward_clustered.h:66-72`). */
-const forwardDefines = (...extra) =>
+const forwardDefines = (...extra: readonly string[]) =>
   defines(
     `MAX_ROUGHNESS_LOD ${MAX_ROUGHNESS_LOD}`,
     ...extra,
@@ -30,7 +30,7 @@ const forwardDefines = (...extra) =>
     'MATERIAL_UNIFORM_SET 3'
   );
 
-export const GENERAL_DEFINES = {
+export const GENERAL_DEFINES: Readonly<Record<string, string>> = {
   // sky.cpp:714-715, sky.h:58.
   'environment/sky.glsl': defines(
     `MAX_DIRECTIONAL_LIGHT_DATA_STRUCTS ${SKY_DIRECTIONAL_LIGHTS}`,
@@ -64,7 +64,3 @@ export const GENERAL_DEFINES = {
   'effects/octmap_filter.glsl': defines('OCTMAP_FORMAT rgba16f'),
   'effects/octmap_roughness.glsl': defines('OCTMAP_FORMAT rgba16f'),
 };
-
-/** The names of the defines `general` holds. */
-export const definedNames = (general) =>
-  new Set([...general.matchAll(/#define (\w+)/g)].map((match) => match[1]));

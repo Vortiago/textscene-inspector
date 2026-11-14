@@ -7,8 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { glslFiles, WAITS_FOR_FSR } from '../../../../scripts/godot-templates/run.mjs';
-import { coveringSets, isMaterialName, testedNames, variantText } from './defineSets.mjs';
-import { definedNames, GENERAL_DEFINES } from './generalDefines.mjs';
+import { coveringSets, definedNames, isMaterialName, testedNames, variantText } from './defineSets.mjs';
 
 /** Where the templates are in Godot's tree. */
 export const TEMPLATE_DIR = 'servers/rendering/renderer_rd/shaders';
@@ -49,7 +48,7 @@ const isGodotDisabled = (text, head) =>
 export class StageVariants {
   constructor(file, stage, lines, modules) {
     Object.assign(this, { file, stage, lines, modules });
-    this.general = GENERAL_DEFINES[file] ?? '';
+    this.general = modules.GENERAL_DEFINES[file] ?? '';
     this.names = testedNames(lines, definedNames(this.general));
     /** The branches the preprocessor decides for each set, by the set's names. Written only by `decidedBranches`. */
     this.decided = new Map();
