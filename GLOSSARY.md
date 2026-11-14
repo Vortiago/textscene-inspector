@@ -984,20 +984,64 @@ A render-only component with no parser and no linter (`GenericNodeFallback`, `GL
 _Avoid_: "default node".
 
 **Shader module** (`shaders/`, ADR-0072):
-Godot's shaders for a three.js `WebGLRenderer`, with no React: the scene shader as TSL node materials, the passes that feed it, and the translator that turns Godot's shading language into TSL for a user's shader. It imports only three.js, `godot/` and its own files, and `@textscene/three-godot-shaders` publishes it.
+Godot's shaders for a three.js `WebGLRenderer`, with no React: the scene shader as TSL node materials, the passes that feed it, and the transpiler that turns Godot's shading language into TSL for a user's shader. It imports only three.js, `godot/` and its own files, and `@textscene/three-godot-shaders` publishes it.
 _Avoid_: "TSL spike", "node materials folder". A node file under `r3f/`.
 
 **Lit surface form** (`LitSurfaceForm`, `r3f/litSurface/litSurfaceForm.ts`):
 Which materials draw a lit surface: `patched`, the classic materials with their shader patches, or `nodes`, the **Shader module**. One switch picks it, the page's `?litSurface=` parameter, read once.
 _Avoid_: "renderer mode", "TSL mode". A prop or a context that carries the form.
 
-**Surface outputs** (ADR-0072):
-The values Godot's `fragment()` writes, such as `ALBEDO`, `ROUGHNESS` and `NORMAL`. The lighting model of the **Shader module** reads only them, whatever surface fills them.
+**Surface outputs** (ADR-0072, ADR-0076):
+The values Godot's `fragment()` writes, such as `ALBEDO`, `ROUGHNESS` and `NORMAL`. The lighting model of the **Shader module** reads only them, whatever surface fills them, until the transpiled scene **Template** reads them under the names Godot's compiler gives.
 _Avoid_: "material inputs" for these.
 
 **Pipeline input** (ADR-0072):
 A value a pass makes and a node of the **Shader module** reads, such as the shadow atlas or the sky radiance. The pass belongs to the **Shader module** too. Each one is optional: without it, the surface draws what Godot draws without that feature.
 _Avoid_: a node that imports the owner of a value. "host input": the caller of the package must supply none.
+
+**Shading language** (ADR-0076):
+The language of a `.gdshader` file: Godot's GLSL-like text with `shader_type`, render modes, uniforms and stage functions. The transpiler of the **Shader module** reads it.
+_Avoid_: "GDShader language", "Godot GLSL".
+
+**Instruction** (`shaders/language/instructionTable.generated.ts`, ADR-0076):
+One row of the instruction table: a type, a keyword, an operator signature, a statement, a tree node, a built-in function overload, a built-in, a render mode, a hint or a preprocessor directive. `pnpm godot:shader-language` reads the rows from Godot's source. A row is transpiled when a **Probe** names it, and an open row names the issue that transpiles it.
+
+**Template** (ADR-0076):
+One of Godot's renderer GLSL files, such as `scene_forward_clustered.glsl` or `sky.glsl`, which the compiled **Shading language** code is linked into.
+_Avoid_: "base shader".
+
+**Slot** (ADR-0076):
+A place in a **Template** where compiled **Shading language** code goes, such as `#CODE : FRAGMENT`, `#GLOBALS` or `#MATERIAL_UNIFORMS`.
+
+**Variant** (ADR-0076):
+A **Template** with one define set.
+
+**Mode table** (ADR-0076):
+The renames and defines that link one shader type to its **Template**: `ALBEDO` to `albedo`, and a define for each used built-in and render mode.
+
+**Generator** (ADR-0076):
+A function that writes **Shading language** text for a built-in material, as `BaseMaterial3D::_update_shader` does. Its proof is text equal to Godot's.
+
+**Emitter** (`shaders/language/emitter.ts`, ADR-0076):
+The step that turns the typed tree of the parser into TSL node objects. It builds nodes, never JavaScript text.
+_Avoid_: "code generator", "transpiler".
+
+**Binding table** (ADR-0076):
+For one **Template**, the three value behind each block, texture, attribute and output.
+
+**Probe** (`apps/textscene-three-godot-shaders/tests/probes/`, ADR-0076):
+A **Shading language** function that applies one **Instruction** to a table of inputs. `pnpm godot:probes` records Godot's answers as float bits, and `pnpm test:shaders:gpu` compares the transpilation's bits with them.
+_Avoid_: "golden" for a probe: a probe holds values, not an image.
+
+**Random program** (`apps/textscene-three-godot-shaders/tests/random/`):
+A **Probe** function that a seeded generator writes from the signatures of the transpiled **Instruction** rows, correct by type. The fixed-seed set runs on each pull request, and a program that differs from Godot is reduced to a small one that still differs.
+_Avoid_: "fuzz case": the programs are correct by type, and Godot accepts each one.
+
+**Corpus shader** (`apps/textscene-three-godot-shaders/tests/corpus/`):
+A whole shader from Godot's generators, demo projects or documentation, or one made from such a shader by one change, with its source, its licence and Godot's verdict. The transpiler's answer puts it in one of three states: transpiled, refused as Godot refuses, or not transpiled yet with the owner of the open row.
+
+**Known difference** (`tests/random/knownDifferences.mjs`, `tests/corpus/knownMismatches.mjs`):
+A **Random program** or **Corpus shader** on which the transpiler disagrees with Godot now, listed with its owner. The list only shrinks: an unlisted disagreement fails the test, and so does a listed one that agrees.
 
 ### Shell & editing
 

@@ -4,5 +4,10 @@
  * become a promise to every consumer.
  */
 
-export { installNodesHandler } from '@textscene/core/shaders';
-export type { NodeOutput } from '@textscene/core/shaders';
+export {
+  GODOT_VERSION,
+  installNodesHandler,
+  ShadingLanguageError,
+  transpileShadingLanguage,
+} from '@textscene/core/shaders';
+export type { NodeOutput, TranspiledFunction, TranspiledShader } from '@textscene/core/shaders';
