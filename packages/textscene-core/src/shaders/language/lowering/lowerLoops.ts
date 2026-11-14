@@ -19,14 +19,15 @@ import {
   variable,
 } from './nodes.js';
 import { rewriteFunction } from './rewrite.js';
+import { isEmpty } from '../treeWalk.js';
 
 export function lowerLoops(definition: FunctionNode, names: FreshNames): FunctionNode {
   return rewriteFunction(definition, (statement) => {
-    if (statement.kind !== 'control flow') return [statement];
-    if (statement.flow === 'FLOW_OP_WHILE') return [whileLoop(statement)];
-    if (statement.flow === 'FLOW_OP_DO') return [doLoop(statement, names)];
-    if (statement.flow === 'FLOW_OP_FOR') return [forLoop(statement, names)];
-    return [statement];
+    if (statement.kind !== 'control flow') return statement;
+    if (statement.flow === 'FLOW_OP_WHILE') return whileLoop(statement);
+    if (statement.flow === 'FLOW_OP_DO') return doLoop(statement, names);
+    if (statement.flow === 'FLOW_OP_FOR') return forLoop(statement, names);
+    return statement;
   });
 }
 
@@ -87,5 +88,3 @@ function boolCondition(condition: Expression): Expression {
     condition.position
   );
 }
-
-const isEmpty = (statement: Statement) => statement.kind === 'operator' && statement.op === 'OP_EMPTY';

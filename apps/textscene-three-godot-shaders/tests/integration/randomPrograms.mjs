@@ -70,7 +70,7 @@ export function randomSummary(results) {
   const known = differ.filter(({ program }) => KNOWN_PROGRAMS.has(program.name)).length;
   const equal = results.length - refused - differ.length;
   const maxUlp = Math.max(0, ...differ.map(({ verdict }) => verdict.maxUlp));
-  return `${equal} of ${results.length} random programs bit-equal with Godot: ${differ.length} differ (${known} known with an owner, largest ${maxUlp} ULP), ${refused} refused.`;
+  return `${equal} of ${results.length} random programs bit-equal with Godot, NaN lanes compared as NaN: ${differ.length} differ (${known} known with an owner, largest ${maxUlp} ULP), ${refused} refused.`;
 }
 
 /** One line for each program that is not equal and not known, with its reduced program. */

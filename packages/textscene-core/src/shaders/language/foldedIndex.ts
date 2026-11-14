@@ -5,17 +5,15 @@
  */
 
 import type { GlslangFolding } from './glslangFolding.js';
-import { arraySizeOf } from './parseExpression.js';
+import { arraySizeOf, typeName } from './parseExpression.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
 import type { BlockNode, Expression } from './shaderTree.js';
-import { everyExpression, everyStatement, statementExpressions } from './treeWalk.js';
+import { everyExpressionIn } from './treeWalk.js';
 import { shapeOf } from './types.js';
 
 /** Throws for the first index in `block` that glslang folds past its owner's last element. */
 export function refuseFoldedIndexOutOfRange(block: BlockNode, folding: GlslangFolding): void {
-  for (const statement of everyStatement(block))
-    for (const expression of statementExpressions(statement))
-      for (const part of everyExpression(expression)) refuseIndex(part, folding);
+  for (const part of everyExpressionIn(block)) refuseIndex(part, folding);
 }
 
 function refuseIndex(expression: Expression, folding: GlslangFolding): void {
@@ -44,7 +42,4 @@ function elementCount(owner: Expression): number {
   return shape.columns ?? shape.lanes;
 }
 
-const ownerName = (owner: Expression) => {
-  const arraySize = arraySizeOf(owner);
-  return arraySize > 0 ? `${owner.type}[${arraySize}]` : owner.type;
-};
+const ownerName = (owner: Expression) => typeName(owner.type, arraySizeOf(owner));

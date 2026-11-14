@@ -15,13 +15,13 @@ import type {
   BlockNode,
   FunctionNode,
   ShaderNode,
-  Statement,
   StructMember,
   StructNode,
 } from './shaderTree.js';
 import { TokenCursor } from './tokenCursor.js';
 import type { Token } from './tokenizer.js';
 import { shapeOf } from './types.js';
+import { everyStatement, isReturn } from './treeWalk.js';
 
 /** The tree of the tokens of a shader text. */
 export function parse(tokens: readonly Token[]): ShaderNode {
@@ -253,9 +253,6 @@ const isPrecisionToken = (type: string) => type.startsWith('TK_PRECISION_');
  * flow's blocks, as `_find_last_flow_op_in_block` searches (`shader_language.cpp:11088`).
  */
 function hasReturn(block: BlockNode): boolean {
-  return block.statements.some((statement: Statement) => {
-    if (statement.kind === 'block') return hasReturn(statement);
-    if (statement.kind !== 'control flow') return false;
-    return statement.flow === 'FLOW_OP_RETURN' || statement.blocks.some(hasReturn);
-  });
+  for (const statement of everyStatement(block)) if (isReturn(statement)) return true;
+  return false;
 }

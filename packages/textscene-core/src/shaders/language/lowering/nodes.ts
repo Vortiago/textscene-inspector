@@ -83,16 +83,12 @@ export const flow = (
 export const flowBody = (statements: readonly Statement[], position: SourcePosition): BlockNode =>
   block(statements.length === 1 ? statements : [block(statements, position)], position);
 
-/** `if (condition) { then }`, with `otherwise` as its `else`. */
-export function ifStatement(
+/** `if (condition) { then }`. */
+export const ifStatement = (
   condition: Expression,
   then: readonly Statement[],
-  position: SourcePosition,
-  otherwise?: readonly Statement[]
-): ControlFlowNode {
-  const blocks = [flowBody(then, position), ...(otherwise ? [flowBody(otherwise, position)] : [])];
-  return flow('FLOW_OP_IF', [condition], blocks, position);
-}
+  position: SourcePosition
+): ControlFlowNode => flow('FLOW_OP_IF', [condition], [flowBody(then, position)], position);
 
 /** `while (true) { body }`, the one loop a lowered tree holds. */
 export const loop = (statements: readonly Statement[], position: SourcePosition): ControlFlowNode =>

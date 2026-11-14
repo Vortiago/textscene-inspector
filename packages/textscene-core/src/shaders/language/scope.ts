@@ -34,8 +34,6 @@ export type Identifier =
  */
 export class BlockScope {
   readonly variables = new Map<string, LocalVariable>();
-  /** The labels of a `switch` block's cases so far, as Godot's `BlockNode::constants`. */
-  readonly labels = new Set<number>();
 
   constructor(
     readonly parent: BlockScope | undefined,

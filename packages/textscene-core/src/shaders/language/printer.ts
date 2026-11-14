@@ -17,6 +17,7 @@ import type {
   StructNode,
 } from './shaderTree.js';
 import { shapeOf } from './types.js';
+import { isEmpty } from './treeWalk.js';
 
 /** The text of `shader`: its structs, then its functions, in order. */
 export function printShader(shader: ShaderNode): string {
@@ -141,8 +142,6 @@ function printCaseLabel(label: ConstantNode): string {
   const value = label.values[0] as number;
   return label.type === 'uint' ? `${value}u` : String(value);
 }
-
-const isEmpty = (statement: Statement) => statement.kind === 'operator' && statement.op === 'OP_EMPTY';
 
 const POSTFIX_OPERATORS = new Set(['OP_POST_INCREMENT', 'OP_POST_DECREMENT']);
 

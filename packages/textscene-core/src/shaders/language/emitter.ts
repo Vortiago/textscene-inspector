@@ -25,6 +25,7 @@ import type {
   Statement,
   ValueType,
 } from './shaderTree.js';
+import { isEmpty, isReturn } from './treeWalk.js';
 
 /**
  * A function of the shader as TSL. `call` builds a `Fn` from one node per argument: a value
@@ -47,7 +48,8 @@ export function emitFunction(definition: FunctionNode, shader: ShaderNode): Tran
   refuseFoldedIndexOutOfRange(glsl.body, folding);
   const lowered = lowerFunction(glsl);
   const structOf: StructOf = (type) => shader.structs.find((struct) => struct.name === type);
-  // An argument the function never writes is read from its node, so its GLSL stays as T2 wrote it.
+  // An argument the function never writes is read from its node, as Godot's GLSL reads its
+  // parameter. A copy into a `Var` lets the driver fold the arithmetic otherwise, one unit apart.
   const written = writtenNames(lowered.body);
   return {
     name: definition.name,
@@ -82,9 +84,10 @@ class StatementEmitter {
   body(body: BlockNode, scope: EmitScope): Node | undefined {
     const statements = body.statements;
     const last = statements.at(-1);
-    const isReturn = last?.kind === 'control flow' && last.flow === 'FLOW_OP_RETURN';
-    for (const statement of isReturn ? statements.slice(0, -1) : statements) this.statement(statement, scope);
-    const value = isReturn ? (last as ControlFlowNode).expressions[0] : undefined;
+    const endsInReturn = last !== undefined && isReturn(last);
+    for (const statement of endsInReturn ? statements.slice(0, -1) : statements)
+      this.statement(statement, scope);
+    const value = endsInReturn ? last.expressions[0] : undefined;
     return value && this.expressions(scope).node(value);
   }
 
@@ -101,8 +104,7 @@ class StatementEmitter {
       case 'control flow':
         return this.flow(statement, scope);
       default:
-        if (statement.kind !== 'operator' || statement.op !== 'OP_EMPTY')
-          this.expressions(scope).value(statement);
+        if (!isEmpty(statement)) this.expressions(scope).value(statement);
     }
   }
 

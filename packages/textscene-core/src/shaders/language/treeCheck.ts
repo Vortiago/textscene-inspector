@@ -23,6 +23,7 @@ import type {
 } from './shaderTree.js';
 import { swizzled } from './swizzle.js';
 import { elementType, shapeOf } from './types.js';
+import { isEmpty } from './treeWalk.js';
 
 /** The first fact `shader` breaks, or nothing when it holds them all. */
 export function treeFault(shader: ShaderNode): string | undefined {
@@ -325,8 +326,6 @@ function constantFault(constant: ConstantNode): string | undefined {
     return `a ${constant.type} constant ${constant.values.join(', ')}`;
   return undefined;
 }
-
-const isEmpty = (statement: Statement) => statement.kind === 'operator' && statement.op === 'OP_EMPTY';
 
 function statementName(statement: Statement): string {
   return statement.kind === 'control flow' ? statement.flow : statement.kind;

@@ -6,7 +6,7 @@
  */
 
 import type { BlockNode, ControlFlowNode, FunctionNode, Statement, VariableNode } from '../shaderTree.js';
-import { everyStatement } from '../treeWalk.js';
+import { everyStatement, isReturn } from '../treeWalk.js';
 import type { FreshNames } from './freshNames.js';
 import {
   assign,
@@ -99,9 +99,6 @@ class SingleExit {
     ];
   }
 }
-
-const isReturn = (statement: Statement): statement is ControlFlowNode =>
-  statement.kind === 'control flow' && statement.flow === 'FLOW_OP_RETURN';
 
 const isLoop = (statement: Statement) =>
   statement.kind === 'control flow' && statement.flow === 'FLOW_OP_WHILE';

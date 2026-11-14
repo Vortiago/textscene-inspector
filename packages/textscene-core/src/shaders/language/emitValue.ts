@@ -7,6 +7,7 @@
 import { array, int, property, Var } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { constantNode } from './emitConstant.js';
+import { element } from './emitOperation.js';
 import type { StructNode, ValueType } from './shaderTree.js';
 import { filledLanes, shapeOf } from './types.js';
 
@@ -91,7 +92,7 @@ function valueStorage(type: ValueType, count: number): Storage {
     return { at: () => variable };
   }
   const elements = inVar(array(Array.from({ length: count }, zero)));
-  return { at: (index) => (elements as unknown as { element(index: Node): Node }).element(indexNode(index)) };
+  return { at: (index) => element(elements, indexNode(index)) };
 }
 
 const arrayOf = (count: number, element: (index: Node | number) => Value): ArrayValue => ({

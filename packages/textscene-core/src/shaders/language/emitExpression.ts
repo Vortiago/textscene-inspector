@@ -24,7 +24,7 @@ import { isAssignOperator } from './operators.js';
 import { arraySizeOf } from './parseExpression.js';
 import type { BlockNode, Expression, OperatorNode, ValueType } from './shaderTree.js';
 import { swizzleLanes } from './swizzle.js';
-import { everyExpression, everyStatement, statementExpressions } from './treeWalk.js';
+import { everyExpression, everyExpressionIn, subExpressions } from './treeWalk.js';
 import { filledLanes, shapeOf } from './types.js';
 
 const LANE_LETTERS = 'xyzw';
@@ -37,23 +37,26 @@ const STEPS: Readonly<Record<string, { readonly operator: string; readonly gives
   OP_POST_DECREMENT: { operator: 'OP_SUB', givesNew: false },
 };
 
-/** Whether `expression` writes a variable: an assignment or a step anywhere in it. */
-const writes = (expression: Expression): boolean =>
-  [...everyExpression(expression)].some(
-    (part) =>
-      part.kind === 'whole assign' ||
-      (part.kind === 'operator' && (isAssignOperator(part.op) || STEPS[part.op] !== undefined))
-  );
+// eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
+const writing = new WeakMap<Expression, boolean>();
+
+/** Whether `expression` writes a variable: an assignment or a step anywhere in it, found once per node. */
+function writes(expression: Expression): boolean {
+  let isWriting = writing.get(expression);
+  if (isWriting === undefined) {
+    isWriting = writtenTarget(expression) !== undefined || subExpressions(expression).some(writes);
+    writing.set(expression, isWriting);
+  }
+  return isWriting;
+}
 
 /** The variables a block writes: the name at the root of each target it assigns or steps. */
 export function writtenNames(block: BlockNode): Set<string> {
   const names = new Set<string>();
-  for (const statement of everyStatement(block))
-    for (const expression of statementExpressions(statement))
-      for (const part of everyExpression(expression)) {
-        const target = writtenTarget(part);
-        if (target) names.add(rootName(target));
-      }
+  for (const part of everyExpressionIn(block)) {
+    const target = writtenTarget(part);
+    if (target) names.add(rootName(target));
+  }
   return names;
 }
 
@@ -116,14 +119,16 @@ export class ExpressionEmitter {
       case 'array element':
         return this.arrayElement(expression.array, expression.index);
       case 'array construct':
-        return this.kept(
+        // Kept in new variables, so no later write changes an element read here.
+        return variablesOf(
           {
             kind: 'array',
             count: expression.arraySize,
             element: (index) => this.value(expression.elements[index as number]!),
           },
           expression.type,
-          expression.arraySize
+          expression.arraySize,
+          this.structOf
         );
       case 'array length':
         return constantNode('int', [arraySizeOf(expression.array)]);
@@ -142,11 +147,6 @@ export class ExpressionEmitter {
     if (!isArrayValue(owner)) throw new Error('expected an array to index');
     const lane = this.folding.lanesOf(index)?.[0];
     return owner.element(lane === undefined ? this.node(index) : (lane as number) | 0);
-  }
-
-  /** `value` copied into new variables, which no later write changes. */
-  private kept(value: Value, type: ValueType, arraySize: number): Value {
-    return variablesOf(value, type, arraySize, this.structOf);
   }
 
   private operator(expression: OperatorNode): Value {
@@ -202,24 +202,23 @@ export class ExpressionEmitter {
         : choose(test, decided, this.node(second));
     const result = inVar(test);
     const run = op === 'OP_AND' ? result : OPERATIONS.OP_NOT!([result], ['bool']);
-    const scope = this.scope.child();
-    If(run as never, () => {
-      result.assign(new ExpressionEmitter(scope, this.folding, this.structOf).node(second));
-    });
+    If(run as never, this.assignedIn(result, second));
     return result;
   }
 
   /** The side `test` picks, run in an `If` and kept in a `Var`. */
   private branched(type: ValueType, test: Node, then: Expression, otherwise: Expression): Node {
     const result = inVar(constantNode(type, filledLanes(0, type)));
-    const side = (part: Expression) => {
-      const scope = this.scope.child();
-      return () => {
-        result.assign(new ExpressionEmitter(scope, this.folding, this.structOf).node(part));
-      };
-    };
-    If(test as never, side(then)).Else(side(otherwise));
+    If(test as never, this.assignedIn(result, then)).Else(this.assignedIn(result, otherwise));
     return result;
+  }
+
+  /** A TSL body that writes `part` into `result`. TSL builds it later, so it reads a copy of the scope here. */
+  private assignedIn(result: Node, part: Expression): () => void {
+    const scope = this.scope.child();
+    return () => {
+      result.assign(new ExpressionEmitter(scope, this.folding, this.structOf).node(part));
+    };
   }
 
   /** `a = b` or `a op= b`: the target's indices first, then `b`, then the target's value. */

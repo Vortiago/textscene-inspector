@@ -3,10 +3,17 @@
  * rebuilds every node names each kind once, here.
  */
 
-import type { BlockNode, Expression, Statement } from './shaderTree.js';
+import type { BlockNode, ControlFlowNode, Expression, Statement } from './shaderTree.js';
+
+/** Whether `statement` is the empty statement `;`. */
+export const isEmpty = (statement: Statement): boolean =>
+  statement.kind === 'operator' && statement.op === 'OP_EMPTY';
+
+export const isReturn = (statement: Statement): statement is ControlFlowNode =>
+  statement.kind === 'control flow' && statement.flow === 'FLOW_OP_RETURN';
 
 /** The expressions `expression` holds. */
-function subExpressions(expression: Expression): readonly Expression[] {
+export function subExpressions(expression: Expression): readonly Expression[] {
   switch (expression.kind) {
     case 'constant':
     case 'variable':
@@ -78,6 +85,12 @@ export function* everyStatement(block: BlockNode): Generator<Statement> {
     yield statement;
     for (const inner of statementBlocks(statement)) yield* everyStatement(inner);
   }
+}
+
+/** Every expression of each statement of `block` and of the blocks inside it. */
+export function* everyExpressionIn(block: BlockNode): Generator<Expression> {
+  for (const statement of everyStatement(block))
+    for (const expression of statementExpressions(statement)) yield* everyExpression(expression);
 }
 
 /** Every expression of `expression`, itself first. */

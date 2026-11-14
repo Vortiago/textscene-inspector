@@ -14,6 +14,7 @@ import type { Argument, BlockNode, ControlFlowNode, Expression, Flow, Statement 
 import type { SourcePosition } from './shadingLanguageError.js';
 import type { TokenCursor } from './tokenCursor.js';
 import type { Token } from './tokenizer.js';
+import { isEmpty } from './treeWalk.js';
 
 /** What a block may hold: `break` and `continue` allowed or not, and one statement or many. */
 interface BlockRules {
@@ -52,12 +53,19 @@ export class StatementParser {
   }
 
   private block(scope: BlockScope, position: SourcePosition, rules: BlockRules): BlockNode {
-    const outer = this.holder.current;
-    this.holder.current = scope;
-    try {
+    return this.within(scope, () => {
       const statements: Statement[] = [];
       this.statementsInto(statements, rules);
       return { kind: 'block', statements, position };
+    });
+  }
+
+  /** What `read` gives with `scope` as the current block, which is the outer one again after. */
+  private within<T>(scope: BlockScope, read: () => T): T {
+    const outer = this.holder.current;
+    this.holder.current = scope;
+    try {
+      return read();
     } finally {
       this.holder.current = outer;
     }
@@ -88,34 +96,34 @@ export class StatementParser {
       statements.push(
         parseDeclaration(token, this.tokens, this.expressions, this.holder.current, this.isStruct)
       );
-      return this.checkForInit(true);
+      return 'goes on';
     }
     switch (token.type) {
       case 'TK_CURLY_BRACKET_OPEN':
         statements.push(this.nested('plain', token.position, { ...rules, isJustOne: false }));
-        return this.checkForInit(false);
+        return this.refuseInForInit();
       case 'TK_CF_IF':
         statements.push(this.ifStatement(token, rules));
-        return this.checkForInit(false);
+        return this.refuseInForInit();
       case 'TK_CF_SWITCH':
         statements.push(this.switchStatement(token));
-        return this.checkForInit(false);
+        return this.refuseInForInit();
       case 'TK_CF_CASE':
       case 'TK_CF_DEFAULT':
         return this.label(token, mark, statements);
       case 'TK_CF_DO':
       case 'TK_CF_WHILE':
         statements.push(this.whileStatement(token));
-        return this.checkForInit(false);
+        return this.refuseInForInit();
       case 'TK_CF_FOR':
         statements.push(this.forStatement(token));
-        return this.checkForInit(false);
+        return this.refuseInForInit();
       case 'TK_CF_RETURN':
         statements.push(this.returnStatement(token));
         return this.endsCase();
       case 'TK_CF_DISCARD':
         statements.push(this.simpleFlow(token, 'FLOW_OP_DISCARD', 'discard'));
-        return this.checkForInit(false);
+        return this.refuseInForInit();
       case 'TK_CF_BREAK':
         if (!rules.canBreak)
           this.tokens.fail("'break' is not allowed outside of a loop or 'switch' statement.");
@@ -124,7 +132,7 @@ export class StatementParser {
       case 'TK_CF_CONTINUE':
         if (!rules.canContinue) this.tokens.fail("'continue' is not allowed outside of a loop.");
         statements.push(this.simpleFlow(token, 'FLOW_OP_CONTINUE', 'continue'));
-        return this.checkForInit(false);
+        return this.refuseInForInit();
     }
     this.tokens.reset(mark);
     return this.expressionStatement(statements);
@@ -138,8 +146,9 @@ export class StatementParser {
   }
 
   /** A `for` initialiser must declare a variable (`shader_language.cpp:9073`). */
-  private checkForInit(isDeclaration: boolean): Outcome {
-    if (this.holder.current.kind === 'for init' && !isDeclaration)
+  /** A statement other than a declaration, which a `for` initialiser refuses. */
+  private refuseInForInit(): Outcome {
+    if (this.holder.current.kind === 'for init')
       this.tokens.fail('The left expression is expected to be a variable declaration.');
     return 'goes on';
   }
@@ -147,7 +156,7 @@ export class StatementParser {
   /** A `break` or `return` inside a `case` or `default` ends that label's block. */
   private endsCase(): Outcome {
     const scope = this.holder.current;
-    return scope.isInside('case') || scope.isInside('default') ? 'block ends' : this.checkForInit(false);
+    return scope.isInside('case') || scope.isInside('default') ? 'block ends' : this.refuseInForInit();
   }
 
   /** `if (c) s` with an optional `else s` (`shader_language.cpp:8433`). */
@@ -176,9 +185,7 @@ export class StatementParser {
       this.tokens.fail("Expected a '{' after 'switch'.");
     const scope = new SwitchScope(this.holder.current, value.type);
     const labels: Statement[] = [];
-    const outer = this.holder.current;
-    this.holder.current = scope;
-    try {
+    this.within(scope, () => {
       const first = this.tokens.peek().type;
       if (first !== 'TK_CF_CASE' && first !== 'TK_CF_DEFAULT') {
         this.tokens.next();
@@ -196,9 +203,7 @@ export class StatementParser {
         if (next !== 'TK_CF_CASE' && next !== 'TK_CF_DEFAULT') break;
         this.tokens.reset(mark);
       }
-    } finally {
-      this.holder.current = outer;
-    }
+    });
     const block: BlockNode = { kind: 'block', statements: labels, position: token.position };
     return flowNode('FLOW_OP_SWITCH', [value], [block], token.position);
   }
@@ -235,7 +240,6 @@ export class StatementParser {
     const message =
       scope.valueType === 'uint' ? 'Expected an unsigned integer constant.' : 'Expected an integer constant.';
     if (token.type === 'TK_IDENTIFIER') return this.constantLabel(scope, token, message);
-    if (token.type !== 'TK_INT_CONSTANT' && token.type !== 'TK_UINT_CONSTANT') this.tokens.fail(message);
     if (token.type !== expected) this.tokens.fail(message);
     const literal = godotIntegerConstant(token.text!);
     const value = scope.valueType === 'uint' ? literal >>> 0 : (literal * sign) | 0;
@@ -276,27 +280,21 @@ export class StatementParser {
    */
   private forStatement(token: Token): ControlFlowNode {
     if (this.tokens.next().type !== 'TK_PARENTHESIS_OPEN') this.tokens.fail("Expected a '(' after 'for'.");
-    const outer = this.holder.current;
-    const initScope = new BlockScope(outer, 'for init');
+    const initScope = new BlockScope(this.holder.current, 'for init');
     const init = this.block(initScope, this.tokens.lastPosition(), FOR_PART);
-    this.holder.current = initScope;
-    try {
+    return this.within(initScope, () => {
       const conditions = this.forPart('for condition');
       const steps = this.forPart('for step');
       const body = this.nested('plain', this.tokens.lastPosition(), LOOP_BODY);
       return flowNode('FLOW_OP_FOR', [], [init, conditions, steps, body], token.position);
-    } finally {
-      this.holder.current = outer;
-    }
+    });
   }
 
   /** The conditions or the steps of a `for`, separated by `,`. */
   private forPart(kind: 'for condition' | 'for step'): BlockNode {
     const scope = new BlockScope(this.holder.current, kind);
     const position = this.tokens.lastPosition();
-    const outer = this.holder.current;
-    this.holder.current = scope;
-    try {
+    return this.within(scope, () => {
       const statements: Expression[] = [];
       for (;;) {
         const expression =
@@ -321,9 +319,7 @@ export class StatementParser {
         }
         return { kind: 'block', statements, position };
       }
-    } finally {
-      this.holder.current = outer;
-    }
+    });
   }
 
   /** After a `,` in a `for`, an expression must follow, not the end of the part. */
@@ -361,9 +357,7 @@ export class StatementParser {
     const expression = this.expressions.expression();
     statements.push(expression);
     if (this.tokens.next().type !== 'TK_SEMICOLON') this.tokens.fail("Expected a ';'.");
-    if (this.holder.current.kind === 'for init' && !isEmpty(expression))
-      this.tokens.fail('The left expression is expected to be a variable declaration.');
-    return 'goes on';
+    return isEmpty(expression) ? 'goes on' : this.refuseInForInit();
   }
 }
 
@@ -371,6 +365,9 @@ type Outcome = 'goes on' | 'block ends';
 
 /** A `switch` block: the type of its value and the labels read so far. */
 class SwitchScope extends BlockScope {
+  /** The labels of the cases so far, as Godot's `BlockNode::constants`. */
+  private readonly labels = new Set<number>();
+
   constructor(
     parent: BlockScope,
     readonly valueType: string
@@ -390,8 +387,6 @@ const flowNode = (
   blocks: readonly BlockNode[],
   position: SourcePosition
 ): ControlFlowNode => ({ kind: 'control flow', flow, expressions, blocks, position });
-
-const isEmpty = (expression: Expression) => expression.kind === 'operator' && expression.op === 'OP_EMPTY';
 
 /** Whether a returned value is an array, which a function of a value type cannot return. */
 const isArray = (expression: Expression) =>

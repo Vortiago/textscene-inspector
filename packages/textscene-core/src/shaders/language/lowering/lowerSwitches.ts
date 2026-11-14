@@ -23,8 +23,8 @@ import { rewriteFunction } from './rewrite.js';
 export function lowerSwitches(definition: FunctionNode, names: FreshNames): FunctionNode {
   return rewriteFunction(definition, (statement) =>
     statement.kind === 'control flow' && statement.flow === 'FLOW_OP_SWITCH'
-      ? [switchChain(statement, names)]
-      : [statement]
+      ? switchChain(statement, names)
+      : statement
   );
 }
 
