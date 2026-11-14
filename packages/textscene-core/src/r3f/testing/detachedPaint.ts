@@ -6,14 +6,15 @@
 
 import type { TscnNode } from '../../parser/types';
 import {
-  allocateNodePaintRange,
   allocatePaintRange,
   behindRangesOf,
   canvasRootRanges,
   hostsOwnCanvas,
   packPaintRanges,
   pieceSize,
+  paintLayoutOf,
   WHOLE_CANVAS_RANGE,
+  type AllocatedPaintRange,
   type PaintRange,
 } from '../canvasPaintOrder';
 import { isViewportBoundary } from '../../nodes/viewport/subviewport/viewportBoundary';
@@ -21,6 +22,11 @@ import type { CanvasItemPaint } from '../canvasItemPass/canvasItemPaint';
 import type { PaintFrame } from '../canvasItemPass/nodePaint';
 import type { DetachedPaint } from '../canvasItemPass/detachedPaintSlot';
 import { inSortOrder } from '../ySortOrder';
+
+/** `allocatePaintRange` for `node`'s own children, with the layout the node declares. */
+export function allocateNodePaintRange(range: PaintRange, node: TscnNode): AllocatedPaintRange {
+  return allocatePaintRange(range, node.children, paintLayoutOf(node, node.children));
+}
 
 const NO_CANVAS_ROOTS: ReadonlyMap<TscnNode, PaintRange> = new Map();
 

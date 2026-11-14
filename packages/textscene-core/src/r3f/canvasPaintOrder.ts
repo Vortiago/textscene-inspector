@@ -279,7 +279,7 @@ export function canvasRootRanges(
 }
 
 /** A parent's own sequence value, and the range each of its children owns. */
-interface AllocatedPaintRange {
+export interface AllocatedPaintRange {
   /** The sequence the parent itself draws at. */
   self: number;
   /** The run the parent's internal front children draw from (`internalFrontRoom`). */
@@ -420,11 +420,6 @@ function drawsEveryChildFirst(node: TscnNode): boolean {
 /** The `ranges` of the `show_behind_parent` `children`, in child order, whatever the parent type. */
 export function behindRangesOf(children: readonly TscnNode[], ranges: readonly PaintRange[]): PaintRange[] {
   return ranges.filter((_, index) => drawsBehindParent(children[index]!));
-}
-
-/** `allocatePaintRange` for `node`'s own children, with the layout the node declares. */
-export function allocateNodePaintRange(range: PaintRange, node: TscnNode): AllocatedPaintRange {
-  return allocatePaintRange(range, node.children, paintLayoutOf(node, node.children));
 }
 
 /** The layout `node` declares for `children`, the children it draws in its own run. */

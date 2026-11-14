@@ -7,7 +7,6 @@
 import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../parser/types';
 import {
-  allocateNodePaintRange,
   behindRangesOf,
   allocatePaintRange,
   canvasKeyAtZ,
@@ -20,6 +19,7 @@ import {
 } from './canvasPaintOrder';
 // Side effect: the parser slices register the paint room each type holds.
 import { DYNAMIC_CHILD_RESERVE } from './canvasItemPass/paintRoom';
+import { allocateNodePaintRange } from './testing/detachedPaint';
 import '../parser/TscnParser';
 
 function node(name: string, type: string, children: TscnNode[] = [], properties = {}): TscnNode {
