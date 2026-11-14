@@ -15,6 +15,7 @@ import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext.js';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext.js';
 import { SubViewportCanvasScope } from './SubViewportCanvasScope';
 import { ViewportControls } from './ViewportControls.js';
+import { YSortProvider } from '../../../r3f/contexts/YSortContext.js';
 import { viewportTransfer } from '../../../r3f/texelCopy.js';
 import {
   createCanvasTarget,
@@ -125,14 +126,17 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
     <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
       <World2DLightingBoundary canvasModulate={canvasModulate} space={canvasSpace}>
         <SubViewportCanvasScope properties={properties}>
-          <ViewportControls
-            path={path}
-            viewport={node}
-            size={controlsSize}
-            inheritedRtl={inheritedRtl}
-            themeOwners={themeOwners}
-            enclosingViewportSize={enclosingViewportSize}
-          />
+          {/* The viewport's canvas sorts its own y-sorted Controls, as a 2D viewport's does. */}
+          <YSortProvider>
+            <ViewportControls
+              path={path}
+              viewport={node}
+              size={controlsSize}
+              inheritedRtl={inheritedRtl}
+              themeOwners={themeOwners}
+              enclosingViewportSize={enclosingViewportSize}
+            />
+          </YSortProvider>
         </SubViewportCanvasScope>
       </World2DLightingBoundary>
     </SceneResourcesProvider>,

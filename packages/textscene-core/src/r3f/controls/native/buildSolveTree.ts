@@ -313,10 +313,13 @@ function buildForest(
   const readViewportSize = recordingSizes(viewportTargetSize, viewportSizeReads);
 
   const sceneCache: CachedSceneSource = loader ? recordingReads(loader.scenes, recordRead) : NOTHING_CACHED;
+  // The tree reads a tile layer's TileSet here too, for the scene tiles it adds as children.
+  const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
   const ctx: LiveTreeContext = {
     externalResources,
     internalResources,
     sceneCache,
+    resourceCache,
     project: projectTreeSettings(projectSettings),
   };
   const tree = liveTreeOf(nodes, ctx);
@@ -374,7 +377,6 @@ function buildForest(
     return folded;
   }
   const textureCache = loader ? recordingReads(loader.textures, recordRead) : NOTHING_CACHED;
-  const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
   const themeCache = loader ? recordingReads(loader.themes, recordRead) : NOTHING_CACHED;
   const fontCache: FontCacheReader = loader ? recordingReads(loader.fonts, recordRead) : NOTHING_CACHED;
   const directoryCache = loader ? recordingReads(loader.directories, recordRead) : NOTHING_CACHED;

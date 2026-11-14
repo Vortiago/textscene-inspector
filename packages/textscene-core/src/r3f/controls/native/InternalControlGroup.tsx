@@ -8,9 +8,8 @@
 import { useMemo } from 'react';
 import { ZERO_RECT } from '../../../godot/math/rect2';
 import type { Rgba } from '../../../godot/math/math';
-import { VECTOR2_ZERO } from '../../../godot/math/vector';
-import { snappedControlOriginUnder } from './controlPixelSnap';
-import { solvedDrawTransformOf } from './controlYSort';
+import { snappedControlOrigin } from './controlPixelSnap';
+import { solvedDrawTransformOf } from './forestSort';
 import { CanvasItemGroup } from '../../components/CanvasItemGroup';
 import { canvasHalves, canvasPieceSlot, type CanvasSlot } from '../../canvasItemState';
 import { useCanvasItemTint, WHITE_MODULATE } from '../../canvasItemModulate';
@@ -132,9 +131,8 @@ function InternalControlGroup({ node, solved, slots, env }: InternalControlGroup
   const entry = solved.get(node.path);
   const at = entry?.rect ?? ZERO_RECT;
   // The snap an authored Control's item takes (`ControlCanvasWalker.tsx`), from the same helpers.
-  const origin = snappedControlOriginUnder(
+  const origin = snappedControlOrigin(
     at,
-    VECTOR2_ZERO,
     solvedDrawTransformOf(node, entry ?? { rect: at }),
     env.snapToPixels
   );

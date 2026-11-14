@@ -14,7 +14,7 @@ import {
   type ThemeResolutionScope,
 } from '../../../resources/styles/theme/lookup';
 import type { SceneScope } from '../../liveSceneTree';
-import type { SolveNode, ThemedIconRef } from './solveTree';
+import type { ShareNode, SolveNode, ThemedIconRef } from './solveTree';
 import { parseStyleBox, type ResolvedStyleBox } from './parseStyleBox';
 import { defaultColorsOf, defaultConstantsOf, defaultStyleBoxesOf } from './defaultThemeRecords';
 
@@ -146,7 +146,7 @@ export function requiredThemeItem<V>(items: Readonly<Record<string, V>>, name: s
 export type InternalThemeItems = Pick<SolveNode, 'styleBoxes' | 'colors' | 'constants' | 'icons'>;
 
 /** Written only by `themeItemsOfType`: a parent node is replaced when the scene changes, so its internal Controls resolve once per type and variation. */
-const internalThemeItemsOf = perObject((_parent: SolveNode) => new Map<string, InternalThemeItems>());
+const internalThemeItemsOf = perObject((_parent: ShareNode) => new Map<string, InternalThemeItems>());
 
 /**
  * The theme items of a Control of `type` built inside `owner` and never serialised, such as a
@@ -154,7 +154,7 @@ const internalThemeItemsOf = perObject((_parent: SolveNode) => new Map<string, I
  * `scene/theme/theme_db.h`). The lookup walks `owner`'s theme chain by `type`'s class chain, and
  * `variation` is the `theme_type_variation` a constructor sets.
  */
-export function themeItemsOfType(owner: SolveNode, type: string, variation?: string): InternalThemeItems {
+export function themeItemsOfType(owner: ShareNode, type: string, variation?: string): InternalThemeItems {
   const byType = internalThemeItemsOf(owner);
   const key = variation === undefined ? type : `${type}/${variation}`;
   const known = byType.get(key);

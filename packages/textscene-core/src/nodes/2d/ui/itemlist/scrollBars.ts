@@ -20,9 +20,9 @@ import {
   type ScrollBarPairBoxes,
   type ScrollBarPlacement,
   type ScrollHintPlacement,
-  scrollBarThicknesses,
 } from '../shared/scrollBarSolver';
-import { itemListMirrorX, type ItemListScrollRange } from './nativeSolver';
+import { itemListMirrorX } from './mirrorX';
+import type { ItemListScrollRange } from './itemListPack';
 
 interface ItemListScrollBarsInput {
   /** The control's `get_size()`. */
@@ -33,10 +33,12 @@ interface ItemListScrollBarsInput {
   horizontal: ItemListScrollRange;
   rtl: boolean;
   boxes: ScrollBarPairBoxes;
+  /** The bar thicknesses the layout packed with (`scrollBarThicknesses`). */
+  bars: { verticalWidth: number; horizontalHeight: number };
   scrollHintMode: number;
 }
 
-interface ItemListScrollBars {
+export interface ItemListScrollBars {
   vertical: ScrollBarPlacement;
   horizontal: ScrollBarPlacement;
   /** `null` where the hint is not drawn. */
@@ -96,10 +98,9 @@ function bottomHintPlacement(
 }
 
 export function itemListScrollBars(input: ItemListScrollBarsInput): ItemListScrollBars {
-  const { size, margins, rtl, boxes } = input;
-  const minimums = scrollBarThicknesses(boxes);
-  const verticalWidth = input.vertical.visible ? minimums.verticalWidth : 0;
-  const horizontalHeight = input.horizontal.visible ? minimums.horizontalHeight : 0;
+  const { size, margins, rtl, boxes, bars } = input;
+  const verticalWidth = input.vertical.visible ? bars.verticalWidth : 0;
+  const horizontalHeight = input.horizontal.visible ? bars.horizontalHeight : 0;
 
   // Left-to-right anchors (`:1373-1379`). The margins swap under RTL (`:1368-1369`), then each
   // bar's rect mirrors whole, since `Control::_size_changed` mirrors an anchored child (`control.cpp:1785-1787`).
