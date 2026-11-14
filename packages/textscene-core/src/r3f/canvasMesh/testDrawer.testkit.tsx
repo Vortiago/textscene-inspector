@@ -1,8 +1,9 @@
 /**
  * A canvas mesh drawer of one triangle for the `CanvasMeshBody` tests: it states its texture, tint,
- * array colour and vertex colours, and draws through the body.
+ * array colour, vertex colours and placement matrix, and draws through the body.
  */
 import { useMemo } from 'react';
+import type * as THREE from 'three';
 import { heading } from '../../parser/testing/parserKit';
 import { parseNode2D } from '../../nodes/base/node2d/parser';
 import type { TscnNode } from '../../parser/types';
@@ -20,6 +21,7 @@ export interface DrawerProps {
   modulate?: string;
   arrayColor?: Rgba;
   vertexColors?: CanvasVertexColors | null;
+  matrix?: THREE.Matrix4;
 }
 
 /** A drawer of one triangle, with `vertexColors` naming what its `color` attribute holds, if any. */
@@ -29,6 +31,7 @@ export function TestDrawer({
   modulate,
   arrayColor,
   vertexColors = null,
+  matrix,
 }: DrawerProps) {
   const node = useMemo((): TscnNode => {
     const properties = parseNode2D(heading('Node2D', { name: 'Item' }), modulate ? { modulate } : {});
@@ -42,8 +45,8 @@ export function TestDrawer({
       uvs: new Float32Array([0, 0, 1, 0, 0, 1]),
       colors: vertexColors ? new Float32Array(12).fill(1) : null,
     });
-    return [{ geometry, arrayColor, vertexColors: vertexColors ?? undefined }];
-  }, [arrayColor, vertexColors]);
+    return [{ geometry, arrayColor, vertexColors: vertexColors ?? undefined, matrix }];
+  }, [arrayColor, vertexColors, matrix]);
   return (
     <CanvasMeshBody
       node={node}

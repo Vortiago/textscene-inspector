@@ -1,7 +1,7 @@
 /**
  * `CanvasMeshBody` through a test drawer: what each texture state draws, whether the item asks the
- * light pass for a read, the material colour with and without an array colour, and the defines of
- * each kind of vertex colours in an sRGB and a linear canvas.
+ * light pass for a read, the placement of a surface, the material colour with and without an array
+ * colour, and the defines of each kind of vertex colours in an sRGB and a linear canvas.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -79,6 +79,18 @@ describe('CanvasMeshBody texture swap', () => {
 
     expect(material(renderer)).not.toBe(mapless);
     expect(material(renderer).map).not.toBeNull();
+  });
+});
+
+describe('CanvasMeshBody placement', () => {
+  it('composes the matrix from the position again once a surface stops carrying a matrix', async () => {
+    const { renderer, update } = await renderWithTexture(<TestDrawer matrix={new THREE.Matrix4()} />);
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect(mesh.matrixAutoUpdate).toBe(false);
+
+    await update(<TestDrawer />);
+
+    expect(mesh.matrixAutoUpdate).toBe(true);
   });
 });
 

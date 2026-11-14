@@ -46,10 +46,13 @@ const CANVAS_MESH_DRAWERS = ['animatedsprite2d', 'cpuparticles2d', 'line2d', 'po
 /** The drawers that mount `CanvasSurfaceMaterial` with a draw of their own, as a tile run and a CanvasGroup rect. */
 const CANVAS_SURFACE_ADAPTERS = ['r3f/TileSourceMesh.tsx', 'nodes/2d/canvasgroup/Component.tsx'];
 const BUILDS_ITS_OWN_MATERIAL = /<meshBasicMaterial\b|\bmaterialProgramInputs\(/;
-/** What only `CanvasMeshBody` hands `CanvasItem2D`, and `CanvasItem2D` hands on inside itself. */
-const PASSES_BODY_PROPS = /<CanvasItem2D\b[^>]*\b(?:canvasTexture|isDrawn)=/;
+/**
+ * What only `CanvasMeshBody` hands `CanvasItem2D`, and `CanvasItem2D` hands on inside itself. Any
+ * such prop counts, on any tag: a tag's props can hold a `>` that ends a match of the tag early.
+ */
+const PASSES_BODY_PROPS = /\b(?:canvasTexture|isDrawn)=\{/;
 const BODY_PROP_OWNERS = ['r3f/canvasMesh/CanvasMeshBody.tsx', 'r3f/components/CanvasItem2D.tsx'];
-const BUILDS_ITS_OWN_DRAW = /<meshBasicMaterial\b|\bmaterialProgramInputs\(|\buseCanvasItemTexture\(/;
+const BUILDS_ITS_OWN_DRAW = new RegExp(`${BUILDS_ITS_OWN_MATERIAL.source}|\\buseCanvasItemTexture\\(`);
 
 describe('a texture-drawing canvas item', () => {
   it('loads its texture through useCanvasItemTexture', () => {

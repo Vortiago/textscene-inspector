@@ -111,6 +111,19 @@ function particleMesh(r: Rendered): THREE.Mesh | undefined {
   return r.scene.findAllByType('Mesh').map((o) => o.instance as THREE.Mesh)[0];
 }
 
+/** The width and height of each particle's quad, four vertices apiece, as `WxH`. */
+function quadExtents(position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute): Set<string> {
+  const extents = new Set<string>();
+  for (let first = 0; first < position.count; first += 4) {
+    const xs = [0, 1, 2, 3].map((corner) => position.getX(first + corner));
+    const ys = [0, 1, 2, 3].map((corner) => position.getY(first + corner));
+    const width = Math.max(...xs) - Math.min(...xs);
+    const height = Math.max(...ys) - Math.min(...ys);
+    extents.add(`${+width.toFixed(4)}x${+height.toFixed(4)}`);
+  }
+  return extents;
+}
+
 // The component loads this chunk lazily, so it lands before the first render.
 beforeAll(loadSimulate);
 
@@ -234,11 +247,12 @@ describe('<CPUParticles2D>', () => {
   });
 
   // Godot's loader leaves the texture null, and the multimesh draws with white (`cpu_particles_2d.cpp:1288-1291`).
-  it('draws untextured particles for a texture that failed', async () => {
-    const renderer = await render(node({ amount: '32' }), { seedTexture: false });
-    const material = particleMesh(renderer)!.material as THREE.MeshBasicMaterial;
+  it('draws white 1 by 1 particles for a texture that failed', async () => {
+    const mesh = particleMesh(await render(node({ amount: '32' }), { seedTexture: false }))!;
+    const material = mesh.material as THREE.MeshBasicMaterial;
     expect(material.map).toBeNull();
-    expect(material.color.getHexString()).not.toBe('ff00ff');
+    expect(material.color.getHexString()).toBe('ffffff');
+    expect(quadExtents(mesh.geometry.getAttribute('position'))).toEqual(new Set(['1x1']));
   });
 
   it('applies the CanvasItem modulate as the material tint', async () => {
