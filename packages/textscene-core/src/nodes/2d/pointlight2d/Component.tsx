@@ -40,6 +40,8 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
+      // A light draws no pixels of its own, so it reads no light and has no rect to cap.
+      isDrawn={false}
       body={() =>
         cookie ? (
           <CanvasLight2D
