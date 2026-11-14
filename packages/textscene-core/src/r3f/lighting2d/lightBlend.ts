@@ -18,9 +18,10 @@ export type Rgb = Pick<Rgba, 'r' | 'g' | 'b'>;
 
 /**
  * `light_blend_compute` (`canvas.glsl:549-563`): ADD adds the light by its alpha, SUB subtracts it,
- * and MIX mixes the colour towards it.
+ * and MIX mixes the colour towards it. The renderer blends through `accumulationState` and
+ * `BLEND_LAYER_GLSL`. This is the reference `lightBlend.test.ts` holds both to.
  *
- * @canonical Godot's blend of one 2D light into a canvas item's colour
+ * @canonical The test reference for Godot's blend of one 2D light, not called by the renderer
  */
 export function lightBlendCompute(mode: number, color: Rgb, light: Rgba): Rgb {
   const blend = (base: number, lightChannel: number) => {

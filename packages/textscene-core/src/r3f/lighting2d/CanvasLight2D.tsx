@@ -6,7 +6,7 @@
 import type * as THREE from 'three';
 import type { Rgba } from '../../godot/math/math';
 import type { Vector2 } from '../../godot/math/vector';
-import type { Light2DShadowFilter } from '../../godot/scene/light2d';
+import type { Light2DBlendMode, Light2DShadowFilter } from '../../godot/scene/light2d';
 import type { EnumValue } from '../../godot/classdb/enumNames';
 import { PointLightQuads } from './PointLightQuads';
 import { DirectionalLightQuads } from './DirectionalLightQuads';
@@ -24,7 +24,7 @@ export interface LightShadowTerm {
 interface LightTermBase {
   color: Rgba;
   energy: number;
-  blendMode: number;
+  blendMode: EnumValue<typeof Light2DBlendMode>;
   /** `Light2D.height`, which a normal-mapped item shades the light from. */
   height: number;
   shadow: LightShadowTerm;
@@ -57,8 +57,9 @@ export interface DirectionalLightTerm extends LightTermBase {
 export type LightTerm = PointLightTerm | DirectionalLightTerm;
 
 /**
- * Declares the light while mounted, and withdraws it on unmount. It renders inside the light node's
- * `CanvasItem2D` body, so it takes the node's transform.
+ * Declares the light while mounted, and withdraws it on unmount. A DirectionalLight2D stays
+ * undeclared while Godot leaves it off its directional list: hidden, or past the eighth on its
+ * canvas. It renders inside the light node's `CanvasItem2D` body, so it takes the node's transform.
  */
 export function CanvasLight2D({ term }: { term: LightTerm }) {
   return term.kind === 'point' ? <PointLightQuads term={term} /> : <DirectionalLightQuads term={term} />;

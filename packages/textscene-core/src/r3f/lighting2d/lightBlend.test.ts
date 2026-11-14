@@ -10,6 +10,7 @@ import { accumulationState } from './lightQuad';
 import { blendLayer, BLEND_LAYER_GLSL, lightBlendCompute, shadowedLightTerms, type Rgb } from './lightBlend';
 import { Light2DBlendMode } from '../../godot/scene/light2d';
 import type { Rgba } from '../../godot/math/math';
+import { SHADOWED_LIGHT_GLSL } from './shadowMap/shadowShader';
 
 const MODES = [Light2DBlendMode.ADD, Light2DBlendMode.SUB, Light2DBlendMode.MIX];
 const BASES: Rgb[] = [
@@ -168,6 +169,13 @@ describe("a normal-mapped item's layer blend", () => {
 });
 
 describe('shadowedLightTerms', () => {
+  it('is the split SHADOWED_LIGHT_GLSL writes, its twin', () => {
+    const glsl = SHADOWED_LIGHT_GLSL.replace(/\s+/g, ' ');
+    expect(glsl).toContain('float lit = 1.0 - s;');
+    expect(glsl).toContain('float alpha = a * (lit + s * uShadowColor.a);');
+    expect(glsl).toContain('writeLight(vec4(rgb * lit, alpha), vec4(uShadowColor.rgb * s, alpha));');
+  });
+
   it('puts the shadow_color under the light alpha, as SHADOWED_LIGHT_GLSL does', () => {
     const terms = shadowedLightTerms(
       { r: 1, g: 0.5, b: 0.25, a: 0.8 },

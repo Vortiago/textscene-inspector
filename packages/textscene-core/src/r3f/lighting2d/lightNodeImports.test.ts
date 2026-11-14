@@ -1,6 +1,7 @@
 /**
  * A light node declares its term through `CanvasLight2D` and builds none of the pass's parts: only
  * files under `r3f/lighting2d/` register a light, mount a pass mesh or build a light quad material.
+ * The scan covers every source file outside that folder.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -9,7 +10,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const src = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const nodesDir = resolve(src, 'nodes');
+const lightingDir = resolve(src, 'r3f/lighting2d');
 
 const PASS_PARTS = [
   'usePassMeshRef',
@@ -37,15 +38,16 @@ function importsOf(file: string): { clause: string; specifier: string }[] {
 }
 
 describe('a light node imports the light pass through CanvasLight2D alone', () => {
-  const files = sourceFiles(nodesDir);
+  const files = sourceFiles(src);
+  const outsideLighting = files.filter((file) => !resolve(src, file).startsWith(lightingDir + '/'));
 
   it('finds the light nodes, so the scan cannot pass vacuously', () => {
     expect(files).toContain('nodes/2d/pointlight2d/Component.tsx');
     expect(files).toContain('nodes/2d/directionallight2d/Component.tsx');
   });
 
-  it.each(PASS_PARTS)('imports %s in no file under nodes/', (part) => {
-    const importers = files.filter((file) =>
+  it.each(PASS_PARTS)('imports %s in no file outside r3f/lighting2d/', (part) => {
+    const importers = outsideLighting.filter((file) =>
       importsOf(file).some(({ clause }) => new RegExp(`\\b${part}\\b`).test(clause))
     );
     expect(importers).toEqual([]);
