@@ -1,8 +1,6 @@
 /**
- * ItemList native solver versus Godot 4.6.3: `ItemList::force_update_list_size`
- * (`scene/gui/item_list.cpp:1733-1912`), the per-item minsize it computes
- * inline (`:1743-1796`), `_adjust_to_max_size` (`:1186-1197`) and
- * `ItemList::get_minimum_size` (`:2136-2146`).
+ * ItemList's minimum size versus Godot 4.6.3: `ItemList::get_minimum_size` (`scene/gui/item_list.cpp:2136-2146`)
+ * over the layout of `force_update_list_size` (`:1733-1912`).
  */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -93,7 +91,7 @@ describe('itemListMinimumSize', () => {
 });
 
 describe('itemListMinimumSize across the value list, at each size the solve asks for', () => {
-  /** Each case's minimum at (inf, inf), (200, 100) and (60, 40) on main, which the layout must keep. */
+  /** Each case's minimum at (inf, inf), (200, 100) and (60, 40). */
   const EXPECTED: Record<string, readonly (readonly [number, number])[]> = {
     'no item': [
       [8, 8],

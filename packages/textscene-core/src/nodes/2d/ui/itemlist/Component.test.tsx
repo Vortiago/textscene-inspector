@@ -24,9 +24,7 @@ import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/text
 import { ItemList } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { ItemListIconMode } from '../../../../godot/scene/gui';
-import { itemListLayout } from './nativeSolver';
-
-const { ICON_MODE_LEFT } = ItemListIconMode;
+import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { shapeItemListText } from './itemText';
 
 import type { ItemListRuntimeProperties } from './types';
@@ -36,6 +34,8 @@ import {
   bundledRuns,
   runPenExtentPx,
 } from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+const { ICON_MODE_LEFT } = ItemListIconMode;
 
 // A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
 vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
@@ -317,7 +317,7 @@ describe('<ItemList> — RTL', () => {
     const shaped = shapeItemListText({
       text: 'Sword',
       fontSizePx: nativeTheme(1).fontSize,
-      fontMetrics: itemListLayout(node, { x: 200, y: 100 }, nativeTheme(1)).content.textShape.fontMetrics,
+      fontMetrics: resolveNodeFontMetrics(node, 'font'),
       iconMode: ICON_MODE_LEFT,
       locale: '',
       maxTextLines: 1,

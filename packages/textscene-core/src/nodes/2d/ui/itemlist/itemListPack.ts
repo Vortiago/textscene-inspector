@@ -44,7 +44,7 @@ export function itemListSpacing(constants: ShareNode['constants']): ItemListSpac
 // --- Icon geometry ---------------------------------------------------------
 
 /** `fixed_icon_size` with both sides above 0: the only size that replaces an icon's own (`item_list.cpp:1746-1750`). */
-export function hasFixedIconSize(fixedIconSize: Vector2 | undefined): boolean {
+export function hasFixedIconSize(fixedIconSize: Vector2 | undefined): fixedIconSize is Vector2 {
   return !!fixedIconSize && fixedIconSize.x > 0 && fixedIconSize.y > 0;
 }
 
@@ -61,7 +61,7 @@ export function itemIconPackedSize(
   iconScale: number
 ): Vector2 {
   if (!hasIcon) return { x: 0, y: 0 };
-  if (fixedIconSize && hasFixedIconSize(fixedIconSize)) {
+  if (hasFixedIconSize(fixedIconSize)) {
     return { x: fixedIconSize.x * iconScale, y: fixedIconSize.y * iconScale };
   }
   const nat = naturalSize ?? { x: 0, y: 0 };
@@ -70,7 +70,7 @@ export function itemIconPackedSize(
 
 // --- Per-item minimum size --------------------------------------------------
 
-export interface ItemContentInput {
+interface ItemContentInput {
   hasIcon: boolean;
   iconSize: Vector2;
   hasText: boolean;
@@ -139,7 +139,7 @@ export function itemMinimumSize(input: ItemContentInput, spacing: ItemListSpacin
 
 // --- Row packing: force_update_list_size's phase 2 (item_list.cpp:1798-1912) -
 
-export interface ItemListPackInput {
+interface ItemListPackInput {
   /** Per-item minsize, including h/v separation: `itemMinimumSize`'s own output. */
   itemSizes: readonly Vector2[];
   /** The widest item's own minsize.x, across every item (`item_list.cpp:1786`): only consumed when `sameColumnWidth`. */
@@ -164,7 +164,7 @@ export interface ItemListPackInput {
   availableHeight: number;
 }
 
-export interface ItemListPackedItem {
+interface ItemListPackedItem {
   /** Relative to the packed content origin: the caller adds `base_ofs` (`item_list.cpp:1429`, the panel's own offset minus scroll). */
   rect: Rect2;
   column: number;

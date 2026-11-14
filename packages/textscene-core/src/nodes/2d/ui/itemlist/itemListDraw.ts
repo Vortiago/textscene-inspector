@@ -47,7 +47,7 @@ import type { ItemListRuntimeItem, ItemListRuntimeProperties } from './types';
 // --- The draw at one size ---------------------------------------------------
 
 /** One drawn line of a row's label: its own layout, and the alignment shift `TextParagraph::draw` gave it. */
-export interface DrawnLabelLine {
+interface DrawnLabelLine {
   lineLayout: TextLayoutResult;
   shiftPx: number;
 }
@@ -108,9 +108,10 @@ interface DrawFrame {
   panelMargins: StyleBoxFlatData['contentMargin'];
   /** `font_selected_color` (`item_list.cpp:1610-1611`). */
   selectedTextColor: Rgba;
+  /** Whether the current row draws the `cursor` box (`itemListDrawsCursor`). */
+  drawsCursor: boolean;
 }
 
-/** `base_ofs = panel_style->get_offset()` (`item_list.cpp:1429`): the left and top margins, not their sums (`style_box.cpp:87-89`). */
 function drawFrame(n: ShareNode, size: Vector2, layout: ItemListLayout): DrawFrame {
   const props = n.node.properties as ItemListRuntimeProperties;
   const panelMargins = layout.panelBox.contentMargin;
@@ -120,12 +121,15 @@ function drawFrame(n: ShareNode, size: Vector2, layout: ItemListLayout): DrawFra
     props,
     layout,
     size,
+    // `base_ofs = panel_style->get_offset()` (`item_list.cpp:1429`): the left and top margins, not
+    // their sums (`style_box.cpp:87-89`).
     origin: { x: panelMargins.left, y: panelMargins.top },
     barWidth,
     contentWidth: size.x - layout.panelMinimum.x - barWidth,
     wraparoundItems: props.wraparoundItems !== false,
     panelMargins,
     selectedTextColor: requiredThemeItem(n.colors, 'font_selected_color'),
+    drawsCursor: itemListDrawsCursor(props.selectMode ?? 0),
   };
 }
 
@@ -158,7 +162,7 @@ function rowColour(frame: DrawFrame, item: ItemListRuntimeItem): Rgba {
   return itemTextColor(base, item.disabled === true);
 }
 
-function rowBoxes(frame: DrawFrame, row: ItemListRow, rowRect: Rect2) {
+function rowBoxes(frame: DrawFrame, item: ItemListRuntimeItem, rowRect: Rect2) {
   const { origin, contentWidth, size, layout, n } = frame;
   const box = {
     rowRect,
@@ -169,10 +173,9 @@ function rowBoxes(frame: DrawFrame, row: ItemListRow, rowRect: Rect2) {
     rtl: n.rtl,
   };
   const panel = { panelMarginLeft: frame.panelMargins.left, panelMarginRight: frame.panelMargins.right };
-  const drawsCursor = itemListDrawsCursor(frame.props.selectMode ?? 0);
   return {
-    selectedRect: row.item.isSelected ? itemListSelectedRect({ ...box, ...panel }) : null,
-    cursorRect: row.item.isCurrent && drawsCursor ? itemListCursorRect(box) : null,
+    selectedRect: item.isSelected ? itemListSelectedRect({ ...box, ...panel }) : null,
+    cursorRect: item.isCurrent && frame.drawsCursor ? itemListCursorRect(box) : null,
   };
 }
 
@@ -244,7 +247,7 @@ function drawnRow(frame: DrawFrame, row: ItemListRow, index: number, rect: Rect2
       : 0,
     rect,
     textColor: rowColour(frame, row.item),
-    ...rowBoxes(frame, row, rect),
+    ...rowBoxes(frame, row.item, rect),
   };
 }
 
