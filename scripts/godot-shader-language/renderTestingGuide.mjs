@@ -53,6 +53,8 @@ The fixed set has seed ${seed}: ${programs.length} programs, one rooted at each 
 
 **${programs.length - known} of ${programs.length} random programs bit-equal with Godot, NaN lanes compared as NaN. The others are the ${cases} listed known-difference ${cases === 1 ? 'case' : 'cases'}, each with its cause: a float rewrite by the probe GPU's driver on one side only, or a result GLSL leaves undefined.** A program that differs is reduced against a live Godot to a small program that still differs. Each known difference is a fixed case: its reduced program and its inputs, run on every pass whatever the seed, the set size or the generator. The list only shrinks: a case leaves it only when its own program equals Godot. A program of the set that differs and is no case's program fails the run.
 
+Every program of the set also passes the tree check before and after lowering, and prints as text that parses to the same tree (\`tests/random/programs.test.mjs\`). After lowering, the tree holds no \`for\`, \`do\` or \`switch\`, its one loop is \`while (true)\`, and each function's one \`return\` is its last statement. Hand-broken trees show that each check fails (\`tests/verdicts/trees.test.mjs\`).
+
 | Case | Reduced program | Program of the set | First lane that differs | Cause | Owner |
 | --- | --- | --- | --- | --- | --- |
 ${knownDifferenceRows(knownDifferences).join('\n')}
@@ -94,6 +96,8 @@ The instruction count says how much of the language is transpiled, not how many 
 ${sourceLines.join('\n')}
 
 **${transpiled} of ${accepted.length} real shaders transpile.** Godot rejects the other ${corpus.length - accepted.length}. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
+
+The printed tree of each shader the transpiler accepts is a checked-in file under \`tests/corpus/trees/\`, so a review shows how a change moves a real shader's tree. \`vitest -u\` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three writes that text, and each upgrade of three would change every file.
 
 | State | Shaders |
 | --- | --- |

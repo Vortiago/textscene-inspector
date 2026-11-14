@@ -47,6 +47,11 @@ describe('the chapter on the tests against Godot', () => {
     expect(GUIDE).toContain('**0 of 1 real shaders transpile.** Godot rejects the other 1.');
   });
 
+  it('names the tree check of the random programs and the printed trees of the corpus', () => {
+    expect(GUIDE).toContain('Every program of the set also passes the tree check before and after lowering');
+    expect(GUIDE).toContain('is a checked-in file under `tests/corpus/trees/`');
+  });
+
   it('says a missing Godot fails the job instead of passing on the smoke subset', () => {
     expect(GUIDE).toContain('It also fails when Godot is missing');
   });
