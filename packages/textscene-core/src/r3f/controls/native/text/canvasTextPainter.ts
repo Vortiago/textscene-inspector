@@ -1,7 +1,8 @@
 /**
  * The canvas glyph painter: one raster and one quad for a run of a scene font file or of the
  * bundled font. It runs for `TextLayoutResult.fontMetrics.kind === 'canvas'`, and chooses one
- * painter for the run (`glyphPainter.ts`): the contours of a face with outlines, else browser text.
+ * painter for the run (`glyphPainter.ts`): the contours of a face with outlines, else browser
+ * text, else nothing.
  */
 import * as THREE from 'three';
 import { maxEmboldenGrowthPx } from './canvasVariation';
@@ -98,10 +99,10 @@ const INK_SLACK_LEFT_PX = 2;
 const INK_SLACK_RIGHT_PX = 1;
 
 /**
- * The span of the ink of the glyphs at `skew`, read from what the painter draws for each, their pen
- * boxes, the pen snap and the hinting included. Godot draws each glyph quad whole wherever its side bearing reaches, which a raster of
- * the line box would clip. The run of a fallback face keeps its glyphs at their places on the line
- * (`faceLayouts.ts`), so its raster spans them alone. A layout with no glyph spans its width.
+ * The span of the ink of the glyphs at `skew` as the painter draws them, pen boxes, pen snap and
+ * hinting included: Godot draws a glyph quad whole past its side bearing. A fallback face's run keeps
+ * its glyphs at their places on the line (`faceLayouts.ts`), so its raster spans them alone. A layout
+ * with no glyph spans its width.
  */
 function drawnExtentPx(layout: TextLayoutResult, skew: number): { startPx: number; endPx: number } {
   let startPx = Infinity;

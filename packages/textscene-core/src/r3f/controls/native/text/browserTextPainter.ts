@@ -6,6 +6,7 @@
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { getFontAscentPx, getFontLinePitchPx } from './fontMetrics';
 import { colourRaster } from './glyphCoverage';
+import { blankGlyphPainter } from './blankGlyphPainter';
 import type { GlyphPainter, GlyphReach, PlacedGlyph, RasterFrame } from './glyphPainter';
 import { isCanvasFontMetrics, type RegisteredCanvasFontMetrics } from './runtimeFontMetrics';
 import type { CanvasTextCanvasLayout } from './canvasTextPainter';
@@ -17,7 +18,10 @@ import type { GlyphPlacement } from './textLayout';
 export function browserTextPainter(face: RegisteredCanvasFontMetrics): GlyphPainter {
   return {
     reachReader: (_skew, lineAscentPx) => (glyph) => textReachPx(glyph, lineAscentPx),
-    paint: (glyphs, { fontSizePx, skew, canvasLayout, strokeWidthPx }, colour) => {
+    paint: (glyphs, frame, colour) => {
+      // A run of spaces alone draws no text, so it needs no 2D context.
+      if (glyphs.length === 0) return blankGlyphPainter.paint(glyphs, frame, colour);
+      const { fontSizePx, skew, canvasLayout, strokeWidthPx } = frame;
       const ctx = textContext(canvasLayout, face.cssFontFamily, fontSizePx);
       if (!ctx) return null;
       paintGlyphTexts(ctx, glyphs, `rgb(${colour.join(', ')})`, skew, strokeWidthPx);

@@ -1,6 +1,6 @@
 /**
- * The font-variation half of `canvasTextPainter.ts`: the embolden padding and the contours of an
- * emboldened or sheared glyph. Godot emboldens the contour (`text_server_adv.cpp:1314`), shears it
+ * The font variation of a canvas text run: the embolden padding (`canvasTextPainter.ts`) and the
+ * contours of an emboldened or sheared glyph (`outlineGlyphPainter.ts`). Godot emboldens the contour (`text_server_adv.cpp:1314`), shears it
  * (`:1318`), then strokes the result (`:1383`).
  */
 import { variationKey, type GlyphVariation } from './fontMetrics';

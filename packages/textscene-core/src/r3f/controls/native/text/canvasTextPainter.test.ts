@@ -599,6 +599,21 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
     expect(raster!.data.some((byte, i) => i % 4 === 3 && byte !== 0)).toBe(false);
   });
 
+  it('makes no 2D context for a run of spaces on a face with no outlines it can read', () => {
+    const { calls } = paintRecording(layoutFor('  ', 0), 0);
+
+    expect(HTMLCanvasElement.prototype.getContext).not.toHaveBeenCalled();
+    expect(calls).toEqual([]);
+  });
+
+  // A texel at alpha 0 keeps the tint on every painter, so a filtered edge never pulls in black.
+  it('keeps the tint under alpha 0 on a face with no outlines and no CSS family', () => {
+    const layout = { ...layoutFor('AB', 0), fontMetrics: { ...CANVAS_METRICS, cssFontFamily: undefined } };
+    const { raster } = paintRecording(layout, 0);
+
+    expect(Array.from(raster!.data.subarray(0, 4))).toEqual([255, 255, 255, 0]);
+  });
+
   it('fills the text of every glyph of a face with no outlines it can read', () => {
     const { calls } = paintRecording(layoutFor('AB', 0), 0, { outlines: null });
 

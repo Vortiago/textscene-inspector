@@ -3,11 +3,16 @@
  * outlines load, or after they fail to read. It draws no glyph, as `fillText` would paint a host
  * font for an unregistered family, and each glyph spans its pen box.
  */
+import { colourRaster } from './glyphCoverage';
 import type { GlyphPainter } from './glyphPainter';
 
 export const blankGlyphPainter: GlyphPainter = {
   reachReader: () => (glyph) => ({ leftPx: 0, rightPx: glyph.advance }),
-  paint: (_glyphs, { canvasLayout }) =>
-    new ImageData(canvasLayout.canvasWidthPx, canvasLayout.canvasHeightPx),
+  // Coloured as every raster is: a texel at alpha 0 keeps the tint, as `colourRaster` says.
+  paint: (_glyphs, { canvasLayout }, colour) => {
+    const image = new ImageData(canvasLayout.canvasWidthPx, canvasLayout.canvasHeightPx);
+    colourRaster(image, colour);
+    return image;
+  },
   rectReader: () => () => null,
 };
