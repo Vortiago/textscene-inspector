@@ -226,6 +226,70 @@ float kept(float x) { if (x < 0.0) discard; return x; } float probe(float a) { k
 | `-inf` | `0.0` |
 | `NaN` | `NaN` |
 
+### Probe `function-struct-call-as-statement`, 16 input rows
+
+```glsl
+struct Pair { float a; float b; }; Pair kept(float x) { if (x < 0.0) discard; return Pair(x, x); } float probe(float a) { kept(a); return a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `0.0` |
+| `-0.0` | `-0.0` |
+| `1.0` | `1.0` |
+| `1e-40` | `1e-40` |
+| `inf` | `inf` |
+| `-inf` | `0.0` |
+| `NaN` | `NaN` |
+
+### Probe `function-array-call-as-statement`, 16 input rows
+
+```glsl
+float[2] kept(float x) { if (x < 0.0) discard; return float[2](x, x); } float probe(float a) { kept(a); return a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `0.0` |
+| `-0.0` | `-0.0` |
+| `1.0` | `1.0` |
+| `1e-40` | `1e-40` |
+| `inf` | `inf` |
+| `-inf` | `0.0` |
+| `NaN` | `NaN` |
+
+### Probe `function-out-index-read-before-another-out`, 16 input rows
+
+```glsl
+void f(out int i, out float x) { i = 1; x = 2.0; } float probe(float a) { float v[2] = float[2](a, a); int k = 0; f(k, v[k]); return v[0] * 10.0 + v[1]; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `20.0` |
+| `-0.0` | `20.0` |
+| `1.0` | `21.0` |
+| `1e-40` | `20.0` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
+
+### Probe `function-inout-index-read-before-an-out`, 16 input rows
+
+```glsl
+void g(inout float x, out int i) { x += 1.0; i = 1; } float probe(float a) { float v[2] = float[2](a, a); int k = 0; g(v[k], k); return v[0] * 10.0 + v[1]; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `10.0` |
+| `-0.0` | `10.0` |
+| `1.0` | `21.0` |
+| `1e-40` | `10.0` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
+
 ### Probe `function-void-call-discards`, 16 input rows
 
 ```glsl
@@ -901,6 +965,38 @@ The transpiler emits `the `out` and `inout` values in a struct the GLSL function
 
 Every row is native on WebGL 2 and on WebGPURenderer.
 
+### Probe `function-out-index-read-before-another-out`, 16 input rows
+
+```glsl
+void f(out int i, out float x) { i = 1; x = 2.0; } float probe(float a) { float v[2] = float[2](a, a); int k = 0; f(k, v[k]); return v[0] * 10.0 + v[1]; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `20.0` |
+| `-0.0` | `20.0` |
+| `1.0` | `21.0` |
+| `1e-40` | `20.0` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
+
+### Probe `function-inout-index-read-before-an-out`, 16 input rows
+
+```glsl
+void g(inout float x, out int i) { x += 1.0; i = 1; } float probe(float a) { float v[2] = float[2](a, a); int k = 0; g(v[k], k); return v[0] * 10.0 + v[1]; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `10.0` |
+| `-0.0` | `10.0` |
+| `1.0` | `21.0` |
+| `1e-40` | `10.0` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
+
 ### Probe `function-in`, 16 input rows
 
 ```glsl
@@ -1189,6 +1285,38 @@ A `void` function returns no value: it acts through its `out` and `inout` parame
 The transpiler emits `a GLSL function of type `void`, or of the struct of its `out` and `inout` values`. Rows: `void`. Godot source: `servers/rendering/shader_language.h:210`.
 
 Every row is native on WebGL 2 and on WebGPURenderer.
+
+### Probe `function-out-index-read-before-another-out`, 16 input rows
+
+```glsl
+void f(out int i, out float x) { i = 1; x = 2.0; } float probe(float a) { float v[2] = float[2](a, a); int k = 0; f(k, v[k]); return v[0] * 10.0 + v[1]; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `20.0` |
+| `-0.0` | `20.0` |
+| `1.0` | `21.0` |
+| `1e-40` | `20.0` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
+
+### Probe `function-inout-index-read-before-an-out`, 16 input rows
+
+```glsl
+void g(inout float x, out int i) { x += 1.0; i = 1; } float probe(float a) { float v[2] = float[2](a, a); int k = 0; g(v[k], k); return v[0] * 10.0 + v[1]; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `10.0` |
+| `-0.0` | `10.0` |
+| `1.0` | `21.0` |
+| `1e-40` | `10.0` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
 
 ### Probe `function-void-call-discards`, 16 input rows
 

@@ -65,6 +65,26 @@ function callProbes() {
       'float kept(float x) { if (x < 0.0) discard; return x; } float probe(float a) { kept(a); return a; }',
     ],
     [
+      'struct-call-as-statement',
+      [CALL],
+      'struct Pair { float a; float b; }; Pair kept(float x) { if (x < 0.0) discard; return Pair(x, x); } float probe(float a) { kept(a); return a; }',
+    ],
+    [
+      'array-call-as-statement',
+      [CALL],
+      'float[2] kept(float x) { if (x < 0.0) discard; return float[2](x, x); } float probe(float a) { kept(a); return a; }',
+    ],
+    [
+      'out-index-read-before-another-out',
+      OUT,
+      'void f(out int i, out float x) { i = 1; x = 2.0; } float probe(float a) { float v[2] = float[2](a, a); int k = 0; f(k, v[k]); return v[0] * 10.0 + v[1]; }',
+    ],
+    [
+      'inout-index-read-before-an-out',
+      ['inout', ...OUT],
+      'void g(inout float x, out int i) { x += 1.0; i = 1; } float probe(float a) { float v[2] = float[2](a, a); int k = 0; g(v[k], k); return v[0] * 10.0 + v[1]; }',
+    ],
+    [
       'void-call-discards',
       VOID,
       'void keep(float x) { if (x < 0.0) discard; } float probe(float a) { keep(a); return a * 2.0; }',

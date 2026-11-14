@@ -49,11 +49,12 @@ export class CalledFunctions {
 
   /**
    * The call as a statement. TSL drops the text of a call it builds as a statement, and of a
-   * variable nothing reads, so a call that holds no variable is assigned to one of its own.
+   * variable nothing reads, so a call whose variable no written place reads is assigned to one of
+   * its own.
    */
   callAsStatement(name: string, args: readonly (Value | undefined)[]): CallResult {
     const { called, node, isHeld, type } = this.functionNamed(name).call(args);
-    if (!isHeld) (property(type) as unknown as Node).assign(node);
+    if (!isHeld || called.written.length === 0) (property(type) as unknown as Node).assign(node);
     return called;
   }
 

@@ -144,6 +144,14 @@ describe('transpileShadingLanguage', () => {
       expect(glsl).toMatch(/nodeVar\d+ = sl0_stop\( /);
     });
 
+    it('keeps a call of a struct function that stands as a statement', () => {
+      const glsl = glslOf(
+        'struct P { float a; float b; }; P kept(float x) { if (x < 0.0) discard; return P(x, x); } float probe(float a) { kept(a); return a; }',
+        [uniform(1)]
+      );
+      expect(glsl).toMatch(/= sl0_kept\( /);
+    });
+
     it('keeps a call of a value function that stands as a statement', () => {
       const glsl = glslOf(
         'float kept(float x) { if (x < 0.0) discard; return x; } float probe(float a) { kept(a); return a; }',

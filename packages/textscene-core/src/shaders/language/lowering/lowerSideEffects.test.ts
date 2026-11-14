@@ -122,6 +122,26 @@ describe('lowerSideEffects', () => {
     ).toBe(text('float f(float b) {', ['s(b, (b = 2.0));', 'return b;'], '}'));
   });
 
+  it('keeps the indices of each place a call writes, when it writes more than one', () => {
+    expect(
+      lowered(
+        'void s(out int i, out float x) { i = 1; x = 2.0; } float f(float a) { float v[2]; int k = 0; s(k, v[k]); return v[0]; }'
+      )
+    ).toBe(
+      text(
+        'float f(float a) {',
+        [
+          'float v[2];',
+          'int k = 0;',
+          'int lowered_value_1 = k;',
+          's(k, v[lowered_value_1]);',
+          'return v[0];',
+        ],
+        '}'
+      )
+    );
+  });
+
   it('leaves a statement whose write nothing reads around', () => {
     expect(lowered('int f(int a) { a++; return a; }')).toBe(
       text('int f(int a) {', ['a++;', 'return a;'], '}')

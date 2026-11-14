@@ -86,10 +86,13 @@ class Hoist {
 
   /**
    * A call's arguments in order, as `inOrder` keeps them, but an `out` or `inout` argument is a
-   * place: before an argument that writes, its indices are kept, never its value.
+   * place: before an argument that writes, its indices are kept, never its value. GLSL reads each
+   * place's indices at the call, and the copy back writes one place after another, so a call
+   * that writes more than one place keeps the indices of all of them.
    */
   private called(call: CallNode): Expression {
     const operands: Expression[] = [];
+    const isWritingPlaces = call.qualifiers.filter((qualifier) => qualifier !== 'in').length > 1;
     let keptBefore = 0;
     for (const [at, operand] of call.operands.entries()) {
       if (writes(operand)) {
@@ -99,7 +102,9 @@ class Hoist {
         }
         keptBefore = operands.length;
       }
-      operands.push(call.qualifiers[at] === 'in' ? this.expression(operand) : this.place(operand, false));
+      operands.push(
+        call.qualifiers[at] === 'in' ? this.expression(operand) : this.place(operand, isWritingPlaces)
+      );
     }
     return { ...call, operands };
   }
