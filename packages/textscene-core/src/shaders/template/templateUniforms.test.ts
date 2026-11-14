@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import type { StructMember } from '../language/shaderTree.js';
+import type { StructNode } from '../language/shaderTree.js';
 import { parseTemplateStage } from './parseTemplate.js';
 import { preprocess } from './preprocess.js';
 import type { InterfaceBlockNode } from './templateTree.js';
@@ -13,15 +13,12 @@ const NO_DEFINES = { general: '', variant: '', custom: [], hasUniforms: false, c
 function uniformsOf(text: string): TemplateUniforms {
   const lines = text.split('\n').map((line, index) => ({ text: line, file: 't.glsl', line: index + 1 }));
   const stage = parseTemplateStage('fragment', preprocess(variantLines(lines, NO_DEFINES)));
-  const structs = new Map<string, readonly StructMember[]>();
+  const structs = new Map<string, StructNode>();
   for (const declaration of stage.declarations)
-    if (declaration.kind === 'struct') structs.set(declaration.name, declaration.members);
+    if (declaration.kind === 'struct') structs.set(declaration.name, declaration);
   const block = stage.declarations.find((declaration) => declaration.kind === 'interface block');
   const uniforms = new TemplateUniforms();
-  uniforms.block(block as InterfaceBlockNode, (type) => {
-    const members = structs.get(type);
-    return members && { members };
-  });
+  uniforms.block(block as InterfaceBlockNode, (type) => structs.get(type));
   return uniforms;
 }
 
