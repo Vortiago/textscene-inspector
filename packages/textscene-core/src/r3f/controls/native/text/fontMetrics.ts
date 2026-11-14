@@ -61,10 +61,19 @@ export interface FontMetrics {
   readonly getGlyphKerning?: GlyphKerningReader;
   /**
    * A character's own advance at the default instance, design units, or `null` for no glyph (a shaper
-   * then takes `averageAdvanceUnits`). FreeType takes the advance of a font with no `HVAR` from its
-   * phantom points at a size, so an instance has none in design units: `getInstanceAdvance26_6`.
+   * then takes `averageAdvanceUnits`). The layout reads it only for a character the run shaping did
+   * not read: a face with no `shaping`, or a character the face draws apart (`drawsApart`). A
+   * wrapper that changes it for a shaped character changes nothing. FreeType takes the advance of a
+   * font with no `HVAR` from its phantom points at a size, so an instance has none in design units:
+   * `getInstanceAdvance26_6`.
    */
   getGlyphAdvanceUnits(ch: string): number | null;
+  /**
+   * Whether the layout draws `ch` apart from the run shaping, as a glyph of its own whose advance is
+   * `getGlyphAdvanceUnits`: Godot's embedded object, whose glyph takes the object's width and no
+   * HarfBuzz glyph (`text_server_adv.cpp:7368-7387`). Absent is none.
+   */
+  readonly drawsApart?: (ch: string) => boolean;
   /**
    * The advance in 26.6 of a glyph at `fontSizePx`, at the face's instance: the shaped glyph, else
    * the glyph of its character there. Null for no glyph, and where the glyph keeps the default
@@ -334,15 +343,17 @@ export function canvasGlyphPenXPx(
  * (`text_server_adv.cpp:7077`). A missing glyph takes `averageAdvanceUnits`,
  * so the line does not collapse around it.
  */
-function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSizePx: number): number {
+export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSizePx: number): number {
   const units = metrics.getGlyphAdvanceUnits(ch) ?? metrics.averageAdvanceUnits;
   return advancePx(metrics, units, { char: ch }, fontSizePx);
 }
 
 /**
- * The advance in px of a glyph of a shaped run: the `hmtx` advance of the glyph, as HarfBuzz reads
- * it, where the run shaping read one, else `getFontGlyphAdvancePx` of its character. A canvas face
- * measures a character as the browser shapes it alone, which a `GSUB` lookup of one glyph changes.
+ * The advance in px of a glyph of a shaped run. The run shaping is the one source of the advance of
+ * a glyph it read: HarfBuzz reads the advance by glyph (`hb-ft.cc:519,523`) and Godot takes its
+ * `x_advance` (`text_server_adv.cpp:7077`), so a character advance cannot serve a substituted glyph
+ * or a ligature. Only a glyph the run shaping did not read takes `getFontGlyphAdvancePx` of its
+ * character. The instance advance of a varied face comes before both (`advancePx`).
  */
 export function getFontRunGlyphAdvancePx(
   metrics: FontMetrics,

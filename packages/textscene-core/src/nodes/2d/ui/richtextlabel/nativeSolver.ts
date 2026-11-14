@@ -270,12 +270,14 @@ interface ResolvedImageRun {
 }
 
 /**
- * Makes `shapeText` advance `IMAGE_OBJECT_CHAR` by the image width, carried in
- * as its font size. Godot sets `gl.advance = rect.size.x` (`text_server_adv.cpp:7370-7383`).
+ * Makes `shapeText` draw `IMAGE_OBJECT_CHAR` apart from the run shaping and advance it by the image
+ * width, carried in as its font size. Godot sets `gl.advance = rect.size.x` (`text_server_adv.cpp:7370-7383`).
  * At `unitsPerEm` units the advance chain returns that size rounded to 1/64px,
  * exact for whole and half pixels and within 1/128px otherwise.
  */
 const imageObjectFontMetrics = perObject(wrapForImageObject);
+
+const isImageObject = (ch: string): boolean => ch === IMAGE_OBJECT_CHAR;
 
 /**
  * One wrapper per face, so `shapeText` sees the same face on every call and its memo keeps hits. An
@@ -290,18 +292,19 @@ function wrapForImageObject(base: FontMetrics): FontMetrics {
   return Object.create(plain, {
     hasGlyph: {
       value(ch: string): boolean {
-        return ch === IMAGE_OBJECT_CHAR || plain.hasGlyph(ch);
+        return isImageObject(ch) || plain.hasGlyph(ch);
       },
     },
+    drawsApart: { value: isImageObject },
     getGlyphAdvanceUnits: {
       value(ch: string): number | null {
-        if (ch === IMAGE_OBJECT_CHAR) return plain.unitsPerEm;
+        if (isImageObject(ch)) return plain.unitsPerEm;
         return plain.getGlyphAdvanceUnits(ch);
       },
     },
     getKerningAdjustmentUnits: {
       value(a: string, b: string): number {
-        if (a === IMAGE_OBJECT_CHAR || b === IMAGE_OBJECT_CHAR) return 0;
+        if (isImageObject(a) || isImageObject(b)) return 0;
         return plain.getKerningAdjustmentUnits(a, b);
       },
     },
