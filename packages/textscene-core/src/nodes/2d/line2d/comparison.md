@@ -11,7 +11,7 @@ renders_as: a stroked mesh polyline
 Line2D strokes a chain of points. The previewer builds the stroke as Godot's `LineBuilder`
 does. That gives the joints, the cap modes, the `gradient`, the `width_curve` and the UVs of the
 `texture`. The texture samples with the `texture_filter` and `texture_repeat` of the item, or with those
-of its CanvasTexture where it sets them. `antialiased` has no effect in Godot 4.6.3, since
+of its CanvasTexture where it sets them. A texture that is set but fails to load draws a placeholder. `antialiased` has no effect in Godot 4.6.3, since
 `Line2D::_draw` never reads it.
 
 ## Normal map

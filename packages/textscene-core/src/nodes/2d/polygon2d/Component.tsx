@@ -1,24 +1,18 @@
 /**
- * Draws a Polygon2D as a CanvasItem2D whose body keeps one vertex per `polygon`
- * point, triangulated by index: `uv` and `vertex_colors` pair with points by
- * position, so a renumbering mesh such as `ShapeGeometry` would mismatch them.
+ * Draws a Polygon2D as a canvas mesh whose one surface keeps one vertex per `polygon` point,
+ * triangulated by index: `uv` and `vertex_colors` pair with points by position, so a renumbering
+ * mesh such as `ShapeGeometry` would mismatch them.
  */
 
 import { useMemo, useState } from 'react';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
-import { useArrayColorOf, useItemLinearColorOf, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
-import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
-import { useCanvasItemTexture } from '../../../r3f/canvasItemTexture';
 import { useNodeReference } from '../../../resources/reading';
-import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import type { ImageSize } from '../../../resources/formats/image/imagePixels';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { Polygon2DProperties } from './types';
 import { polygonRings, type PolygonRings } from './polygonShapes';
 import { quantizeVertexColor } from './vertexColorQuantize';
-import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import type { Vector2 } from '../../../godot/math/vector';
 import { triangulatePolygon } from '../../../godot/math/triangulate';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
@@ -26,21 +20,17 @@ import { useLiveScenePass } from '../../../r3f/liveScenePass';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { bindPolygonsToSkeletons, namesSkeletonToBind } from './skeletonBinding';
 import { useSkeletonSkin } from './useSkeletonSkin';
-import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
+import { CanvasMeshBody } from '../../../r3f/canvasMesh/CanvasMeshBody';
+import { useCanvasMeshTexture } from '../../../r3f/canvasMesh/useCanvasMeshTexture';
+import { canvasSurfaceGeometry, type CanvasSurface } from '../../../r3f/canvasMesh/canvasSurface';
 
 export function Polygon2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Polygon2DProperties;
 
-  // Either an image file or an inline procedural texture; `useCanvasItemTexture` hides
-  // which, and owns the lifetime of the procedural one it rasterises.
+  // Either an image file or an inline procedural texture; the body hides which, and owns the
+  // lifetime of the procedural one it rasterises.
   const scope = useSceneResources();
-  const {
-    texture: resolvedTexture,
-    size,
-    sampler,
-    canvasTexture,
-  } = useCanvasItemTexture(props, useNodeReference(props.texture, scope));
-  const texture = useCanvas2DTexture(resolvedTexture, sampler);
+  const texture = useCanvasMeshTexture(props, { reference: useNodeReference(props.texture, scope) });
 
   const rings = useMemo(
     () =>
@@ -56,9 +46,10 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
 
   // Godot divides the transformed UV by the texture's size, so the geometry rebuilds when a late
   // load changes the dimensions.
-  const uvSpace = texture ? (size ?? null) : null;
-
-  const geometry = useMemo(() => buildPolygonGeometry(rings, props, uvSpace), [rings, props, uvSpace]);
+  const geometry = useMemo(
+    () => buildPolygonGeometry(rings, props, texture.size),
+    [rings, props, texture.size]
+  );
   // R3F does not dispose a geometry passed through `attach`, so release it on rebuild.
   useDisposeOnRelease(geometry);
   const [mesh, setMesh] = useState<THREE.Mesh | null>(null);
@@ -66,99 +57,20 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
   const binding = useLiveScenePass(bindPolygonsToSkeletons, namesSkeletonToBind(props) ? nodePath : null);
   useSkeletonSkin(mesh, geometry, binding);
 
+  const surfaces = useMemo((): readonly CanvasSurface[] | null => {
+    if (!geometry) return null;
+    // Godot's draw picks one: `vertex_colors[i]` when the sizes match, else `color`
+    // (`polygon_2d.cpp:310-314`). The vertex colours replace `color` whole, alpha included, and
+    // `canvas_item_add_mesh` gets a bare `Color(1, 1, 1)` (`polygon_2d.cpp:401`). `color` is
+    // quantized first, as Godot's 8-bit mesh upload stores it (`vertexColorQuantize.ts`).
+    const arrayColor = geometry.hasAttribute('color') ? undefined : quantizeVertexColor(props.color);
+    return [{ geometry, arrayColor, meshRef: setMesh }];
+  }, [geometry, props.color]);
+
   return (
-    <CanvasItem2D
-      node={node}
-      props={props}
-      canvasTexture={canvasTexture}
-      body={(tint, _material, pixelMaterial) =>
-        geometry ? (
-          <FilledPolygon
-            geometry={geometry}
-            tint={tint}
-            color={props.color}
-            texture={texture}
-            vertexColors={geometry.hasAttribute('color')}
-            pixelMaterial={pixelMaterial}
-            meshRef={setMesh}
-          />
-        ) : null
-      }
-    >
+    <CanvasMeshBody node={node} props={props} texture={texture} withoutTexture="white" surfaces={surfaces}>
       {children}
-    </CanvasItem2D>
-  );
-}
-
-function FilledPolygon({
-  geometry,
-  tint,
-  color,
-  texture,
-  vertexColors,
-  pixelMaterial,
-  meshRef,
-}: {
-  geometry: THREE.BufferGeometry;
-  tint: CanvasItemTint;
-  color: Polygon2DProperties['color'];
-  texture: THREE.Texture | null;
-  vertexColors: boolean;
-  pixelMaterial: CanvasItemPixelMaterial;
-  meshRef: (mesh: THREE.Mesh | null) => void;
-}) {
-  // `color` is quantized first, as Godot's 8-bit mesh upload stores it
-  // (`vertexColorQuantize.ts`). The inherited tint (`tint.own`) is an
-  // unquantized per-draw multiply, so it composes after. An sRGB canvas multiplies
-  // fill × modulate × self_modulate in sRGB, then converts once. A linear canvas
-  // converts the stored colour apart from the tint (`canvas.glsl:176-178`).
-  const canvasSpace = useCanvasColorSpace();
-  const toItemLinear = useItemLinearColorOf();
-  const arrayColor = useArrayColorOf();
-  const { fill, tintOnlyFill, opacity, tintOnlyOpacity } = useMemo(() => {
-    const stored = quantizeVertexColor(color);
-    return {
-      fill: arrayColor(tint.own, stored),
-      // The same tint without the node's own `color`, for the per-vertex path
-      // where Godot replaces `color` rather than combining with it.
-      tintOnlyFill: toItemLinear(tint.own),
-      opacity: tint.own.a * stored.a,
-      // `color` drops whole, alpha included, on the vertex-colour path:
-      // `polygon_2d.cpp:310-314` assigns the vertex Color outright, and
-      // `canvas_item_add_mesh` gets a bare `Color(1, 1, 1)` (`polygon_2d.cpp:401`).
-      tintOnlyOpacity: tint.own.a,
-    };
-  }, [tint.own, color, arrayColor, toItemLinear]);
-
-  // `USE_MAP` is baked into the program source, so without
-  // `materialProgramInputs` a texture resolving after the first compile would
-  // never reach the shader.
-  const program = materialProgramInputs({
-    props: {
-      // Godot's draw picks one: `vertex_colors[i]` when the sizes match, else
-      // `color`. three multiplies this into vColor, so passing the fill too would
-      // render `color x vertexColor`. The node tint still applies.
-      color: vertexColors ? tintOnlyFill : fill,
-      map: texture,
-      vertexColors,
-      opacity: vertexColors ? tintOnlyOpacity : opacity,
-      transparent: true,
-      depthWrite: false,
-      // The map and the sRGB vertex colours, which an sRGB canvas multiplies as stored
-      // (`canvas.glsl:631`) and a linear canvas decodes.
-      defines: canvasSpace.defines,
-    },
-    // The one canvas mesh where a facing split would be visible, since every
-    // vertex carries its own colour and alpha. The facing in `pixelMaterial`
-    // draws one pass, so a bent skin's triangles keep their index order.
-    merge: [pixelMaterial],
-  });
-
-  return (
-    <mesh ref={meshRef}>
-      <primitive object={geometry} attach="geometry" />
-      <meshBasicMaterial key={program.key} {...program.props} />
-    </mesh>
+    </CanvasMeshBody>
   );
 }
 
@@ -170,7 +82,7 @@ function FilledPolygon({
 function buildPolygonGeometry(
   rings: PolygonRings,
   props: Polygon2DProperties,
-  uvSpace: ImageSize | null
+  uvSpace: ImageSize | undefined
 ): THREE.BufferGeometry | null {
   if (rings.outlines.length === 0) return null;
 
@@ -185,24 +97,12 @@ function buildPolygonGeometry(
   for (const outline of rings.outlines) triangulateRing(points, outline, index);
   if (index.length === 0) return null;
 
-  const geometry = new THREE.BufferGeometry();
-  const positions = new Float32Array(points.length * 3);
-  for (let i = 0; i < points.length; i++) {
-    positions[i * 3] = points[i]!.x;
-    positions[i * 3 + 1] = -points[i]!.y;
-    positions[i * 3 + 2] = 0;
-  }
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geometry.setIndex(index);
-
-  if (uvSpace) {
-    geometry.setAttribute('uv', new THREE.BufferAttribute(buildUvs(points, props, uvSpace), 2));
-  }
-
-  const colors = buildVertexColors(points.length, props.vertexColors);
-  if (colors) geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4));
-
-  return geometry;
+  return canvasSurfaceGeometry({
+    positions: Float32Array.from(points.flatMap((p) => [p.x, p.y])),
+    uvs: uvSpace && buildUvs(points, props, uvSpace),
+    colors: buildVertexColors(points.length, props.vertexColors),
+    indices: index,
+  });
 }
 
 /**
@@ -210,9 +110,9 @@ function buildPolygonGeometry(
  * tex_size`, with `texmat = Transform2D(tex_rot, tex_ofs).scale(tex_scale)`.
  * `scale` scales the origin too, which the expanded form keeps visible.
  */
-function buildUvs(points: Vector2[], props: Polygon2DProperties, uvSpace: ImageSize): Float32Array {
+function buildUvs(points: Vector2[], props: Polygon2DProperties, uvSpace: ImageSize): Float64Array {
   // Godot divides by a size 0 (`polygon_2d.cpp:224-237`), and its draw samples the top-left texel.
-  if (uvSpace.width === 0 || uvSpace.height === 0) return topLeftUvs(points.length);
+  if (uvSpace.width === 0 || uvSpace.height === 0) return new Float64Array(points.length * 2);
   const cos = Math.cos(props.textureRotation);
   const sin = Math.sin(props.textureRotation);
   const { x: sx, y: sy } = props.textureScale;
@@ -222,15 +122,12 @@ function buildUvs(points: Vector2[], props: Polygon2DProperties, uvSpace: ImageS
   // otherwise Godot texture-maps the point coordinates themselves.
   const authored = props.uv.length / 2 === points.length ? props.uv : null;
 
-  const out = new Float32Array(points.length * 2);
+  const out = new Float64Array(points.length * 2);
   for (let i = 0; i < points.length; i++) {
     const vx = authored ? authored[i * 2]! : points[i]!.x;
     const vy = authored ? authored[i * 2 + 1]! : points[i]!.y;
     out[i * 2] = (sx * (cos * vx - sin * vy + ox)) / uvSpace.width;
-    // Godot's texel space runs +Y down from the top-left, and three samples a
-    // `flipY` texture with v = 1 at the top row. The flip comes after the whole
-    // Godot-side transform, never inside it, to keep the image upright.
-    out[i * 2 + 1] = 1 - (sy * (sin * vx + cos * vy + oy)) / uvSpace.height;
+    out[i * 2 + 1] = (sy * (sin * vx + cos * vy + oy)) / uvSpace.height;
   }
   return out;
 }
@@ -267,11 +164,4 @@ function buildVertexColors(vertexCount: number, vertexColors: Float32Array): Flo
  */
 function triangulateRing(points: Vector2[], outline: number[], index: number[]): void {
   for (const local of triangulatePolygon(outline.map((i) => points[i]!))) index.push(outline[local]!);
-}
-
-/** The top-left texel's UV, u 0 and v 1, at every vertex. */
-function topLeftUvs(vertexCount: number): Float32Array {
-  const out = new Float32Array(vertexCount * 2);
-  for (let i = 0; i < vertexCount; i++) out[i * 2 + 1] = 1;
-  return out;
 }
