@@ -6,8 +6,9 @@
  * `pnpm godot:probes [--check]`. `--check` writes nothing and exits 1 when a new run differs from
  * a record. It needs `godot` on the path and `xvfb-run`, and renders on lavapipe as
  * `pnpm ref:godot` does. The CI image has both, so the "Shader package" job runs `--check`. Each
- * probe the transpiler parses also runs as its printed text, and the run fails when Godot answers
- * that text otherwise than the original (`printedText.mjs`).
+ * probe the transpiler parses also runs as its printed text, and as its lowered text where the
+ * lowerings change it, and the run fails when Godot answers either otherwise than the original
+ * (`printedText.mjs`).
  * `--keep-stale <dir>` with `--check` copies each stale record and this run's text for it into
  * `<dir>/recorded` and `<dir>/this-run`, so a job can keep both value sets.
  */
@@ -77,7 +78,9 @@ function endingRejection(probe) {
 
 async function main() {
   const randomProbes = recordedRandomProbes(RANDOM_PROGRAMS);
-  const printed = printedProbes([...PROBES, ...randomProbes], await loadPrinter());
+  const printer = await loadPrinter();
+  const lowered = printedProbes([...PROBES, ...randomProbes], printer.lower, 'lowered');
+  const printed = [...printedProbes([...PROBES, ...randomProbes], printer.print), ...lowered];
   const probes = [...PROBES, ...randomProbes, ...printed];
   const output = runProbesInGodot(probes.filter((probe) => !probe.endsGodot));
   const reasons = rejections(probes, output);
@@ -91,7 +94,7 @@ async function main() {
     [OPERATOR_RECORD, operatorRecord],
     [CORPUS_RECORD, corpusRecord],
   ];
-  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${printed.length} printed texts`;
+  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${printed.length - lowered.length} printed texts, ${lowered.length} of them lowered`;
   const options = { tool: 'godot-probes', summary };
   if (process.argv.includes('--check')) check(outputs, options);
   else writeGenerated(outputs, options);
@@ -104,7 +107,7 @@ function check(outputs, options) {
   if (keepDir) keepStaleRecords(outputs, keepDir);
 }
 
-/** Fails the run on each probe whose printed text Godot answers otherwise than the original. */
+/** Fails the run on each probe whose printed or lowered text Godot answers otherwise than the original. */
 function failOnPrintedText(faults) {
   for (const fault of faults) console.error(`[godot-probes] ${fault}`);
   if (faults.length > 0) process.exitCode = 1;

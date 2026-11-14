@@ -1,8 +1,7 @@
 /**
- * Godot's check of the printer: each probe the transpiler parses is printed back to shading
- * language text, and Godot must answer the printed text as it answers the original, with the same
- * verdict and the same result bits. A rewrite step that prints its tree is then checked by Godot
- * itself.
+ * Godot's check of the printer and the lowerings: each probe the transpiler parses is printed
+ * back to shading language text, as parsed and as lowered, and Godot must answer each text as it
+ * answers the original, with the same verdict and the same result bits.
  */
 
 import { createServer } from 'vite';
@@ -13,8 +12,10 @@ import { godotRejection } from './rejection.mjs';
 const LANGUAGE = '/packages/textscene-core/src/shaders/language/';
 
 /**
- * The transpiler's printer as a function from text to printed text, or nothing for a text the
- * front end refuses. Vite compiles the TypeScript sources, since this script runs in plain Node.
+ * The transpiler's printer as two functions from text to printed text: `print` of the parsed
+ * tree, and `lower` of the lowered tree where the lowerings change it. Each gives nothing for a
+ * text the transpiler refuses. Vite compiles the TypeScript sources, since this script runs in
+ * plain Node.
  */
 export async function loadPrinter() {
   const server = await createServer({
@@ -26,16 +27,24 @@ export async function loadPrinter() {
   });
   try {
     const load = (file) => server.ssrLoadModule(`${LANGUAGE}${file}`);
-    const [{ tokenize }, { parse }, { printShader }, { ShadingLanguageError }] = await Promise.all(
-      ['tokenizer.ts', 'parse.ts', 'printer.ts', 'shadingLanguageError.ts'].map(load)
-    );
-    return (source) => {
+    const [{ tokenize }, { parse }, { printShader }, { ShadingLanguageError }, { lowerShader }] =
+      await Promise.all(
+        ['tokenizer.ts', 'parse.ts', 'printer.ts', 'shadingLanguageError.ts', 'lowering/lower.ts'].map(load)
+      );
+    const unlessRefused = (print) => (source) => {
       try {
-        return printShader(parse(tokenize(source)));
+        return print(parse(tokenize(source)));
       } catch (error) {
         if (error instanceof ShadingLanguageError) return undefined;
         throw error;
       }
+    };
+    return {
+      print: unlessRefused(printShader),
+      lower: unlessRefused((tree) => {
+        const lowered = printShader(lowerShader(tree));
+        return lowered === printShader(tree) ? undefined : lowered;
+      }),
     };
   } finally {
     await server.close();
@@ -43,14 +52,14 @@ export async function loadPrinter() {
 }
 
 /**
- * The printed form of each probe the front end parses, under its own name and with its `original`.
- * A probe that ends Godot has no tree, since the front end refuses it, so it has no printed form.
+ * The printed form of each probe `print` prints, named `<form>-<name>`, with its `original`. A
+ * probe that ends Godot has no tree, since the front end refuses it, so it has no printed form.
  */
-export function printedProbes(probes, print) {
+export function printedProbes(probes, print, form = 'printed') {
   return probes.flatMap((original) => {
     const printed = original.endsGodot ? undefined : print(original.source);
     if (printed === undefined) return [];
-    return [{ ...original, name: `printed-${original.name}`, source: printed, original }];
+    return [{ ...original, name: `${form}-${original.name}`, source: printed, original }];
   });
 }
 
