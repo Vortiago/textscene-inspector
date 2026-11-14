@@ -265,7 +265,9 @@ function driversNote(record) {
   return (
     `Godot draws the probes and showcases on Vulkan over lavapipe (\`${record.adapter}\`). ` +
     `The transpilation draws in headless Chromium, WebGL 2 through ANGLE on Vulkan over the same lavapipe, ` +
-    `and the run stops when the browser reports another renderer. "Bit-equal" is a claim about that pair.`
+    `and the run stops when the browser reports another renderer. "Bit-equal" is a claim about that pair. ` +
+    `Every probe is bit-equal with Godot. The random programs are bit-equal with Godot except the listed ` +
+    `driver and undefined-behaviour cases, each with its cause in [testing.md](testing.md).`
   );
 }
 

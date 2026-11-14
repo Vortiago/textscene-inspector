@@ -8,7 +8,7 @@ One Godot version: the previewer draws every project as Godot 4.6.3 draws it. Th
 
 A row is one typed form of an instruction, so a name has many rows: 588 operator signatures of 43 operators, 689 overloads of 128 built-in functions, 62 constructor overloads of 15 types, and 302 built-ins, one per shader type and stage that has it.
 
-Godot draws the probes and showcases on Vulkan over lavapipe (`llvmpipe (LLVM 20.1.2)`). The transpilation draws in headless Chromium, WebGL 2 through ANGLE on Vulkan over the same lavapipe, and the run stops when the browser reports another renderer. "Bit-equal" is a claim about that pair.
+Godot draws the probes and showcases on Vulkan over lavapipe (`llvmpipe (LLVM 20.1.2)`). The transpilation draws in headless Chromium, WebGL 2 through ANGLE on Vulkan over the same lavapipe, and the run stops when the browser reports another renderer. "Bit-equal" is a claim about that pair. Every probe is bit-equal with Godot. The random programs are bit-equal with Godot except the listed driver and undefined-behaviour cases, each with its cause in [testing.md](testing.md).
 
 ## Chapters
 
