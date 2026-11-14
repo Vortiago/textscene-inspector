@@ -114,10 +114,10 @@ describe('CanvasMeshBody texture states', () => {
     expect(material(renderer).map).toBeNull();
   });
 
-  it('with a failed texture and withoutTexture nothing draws the placeholder', async () => {
+  it('with a failed texture and withoutTexture nothing draws nothing', async () => {
     const { renderer } = await render({ texture: TEXTURE_REFERENCE, withoutTexture: 'nothing' }, 'failed');
 
-    expect(placeholderMeshes(renderer)).toHaveLength(1);
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 });
 
@@ -143,7 +143,7 @@ describe('CanvasMeshBody light reads', () => {
   it.each([
     ['no texture that draws nothing', { withoutTexture: 'nothing' }, undefined],
     [
-      'a failed texture that draws the placeholder',
+      'a failed texture that draws nothing',
       { texture: TEXTURE_REFERENCE, withoutTexture: 'nothing' },
       'failed',
     ],

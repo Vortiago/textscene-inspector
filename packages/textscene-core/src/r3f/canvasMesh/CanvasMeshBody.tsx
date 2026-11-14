@@ -1,6 +1,6 @@
 /**
  * The body a Node2D mesh drawer draws through: the CanvasItem ritual of `CanvasItem2D`, the
- * texture's load state, the placeholder, the lighting hand-back and one material for each surface.
+ * texture's load state, the lighting hand-back and one material for each surface.
  * A drawer states its texture (`useCanvasMeshTexture`) and its surfaces, and nothing else.
  * CPUParticles2D, the tile mesh and CanvasGroup still draw their own.
  */
@@ -15,7 +15,6 @@ import { drawnTag } from '../meshes/meshContent';
 import { useArrayColorOf, type CanvasItemTint } from '../canvasItemModulate';
 import { CanvasItem2D } from '../components/CanvasItem2D';
 import type { CanvasItemPixelMaterial } from '../components/LitCanvasItemPixels';
-import { MissingResourcePlaceholder } from '../components/MissingResourcePlaceholder';
 import { CanvasSurfaceMaterial } from './CanvasSurfaceMaterial';
 import { DRAWN_TEXTURE, type CanvasMeshTexture } from './useCanvasMeshTexture';
 import type { CanvasSurface } from './canvasSurface';
@@ -38,16 +37,14 @@ interface CanvasMeshBodyProps<Input> {
   props: Node2DProperties;
   texture: CanvasMeshTexture;
   /**
-   * What the item draws with no image. 'white' draws the surfaces with no map, for a texture that
-   * is unset or failed, as Polygon2D, Line2D and a mesh do: Godot's loader leaves a property that
-   * names a missing file null (`resource_format_text.cpp:146-154`, `:288-289`). 'nothing' draws
-   * nothing while unset (`sprite_2d.cpp:159`) and the placeholder for a texture that failed.
+   * What the item draws for a texture that is unset or failed: Godot's loader leaves a property
+   * that names a missing file null (`resource_format_text.cpp:146-154`, `:288-289`). 'white' draws
+   * the surfaces with no map, as Polygon2D, Line2D and a mesh do. 'nothing' draws nothing, as a
+   * sprite does (`sprite_2d.cpp:159-161`).
    */
   withoutTexture: 'white' | 'nothing';
   /** The surfaces in draw order, or null to draw nothing. Its children still draw. */
   surfaces: CanvasSurfaces | MaterialSurfaces<Input>;
-  /** True shows the placeholder whatever the texture's state, as for a SpriteFrames that failed. */
-  showsPlaceholder?: boolean;
   children?: ReactNode;
 }
 
@@ -58,15 +55,13 @@ export function CanvasMeshBody<Input>({
   texture,
   withoutTexture,
   surfaces,
-  showsPlaceholder = false,
   children,
 }: CanvasMeshBodyProps<Input>) {
   const { view, canvasTexture } = texture[DRAWN_TEXTURE];
   // A texture that is not here yet draws nothing, whatever the item draws with no image.
-  const drawsWhite = withoutTexture === 'white';
-  const isMissing = showsPlaceholder || (texture.state === 'missing' && !drawsWhite);
-  const texturePermitsDraw = texture.state === 'ready' || (texture.state !== 'arriving' && drawsWhite);
-  const isDrawn = !isMissing && texturePermitsDraw && surfaces !== null;
+  const texturePermitsDraw =
+    texture.state === 'ready' || (texture.state !== 'arriving' && withoutTexture === 'white');
+  const isDrawn = texturePermitsDraw && surfaces !== null;
   return (
     <CanvasItem2D
       node={node}
@@ -74,7 +69,6 @@ export function CanvasMeshBody<Input>({
       canvasTexture={canvasTexture}
       isDrawn={isDrawn}
       body={(tint, material, pixelMaterial) => {
-        if (isMissing) return <MissingResourcePlaceholder shape="plane" name={node.name} />;
         if (!isDrawn) return null;
         const drawn = { map: view, tint, pixelMaterial };
         return isMaterialSurfaces(surfaces) ? (

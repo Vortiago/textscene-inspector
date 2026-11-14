@@ -1,6 +1,6 @@
 /**
  * A Sprite2D with no texture draws nothing, as Godot's draw returns early (`sprite_2d.cpp:159`).
- * Only a texture that is set but cannot be loaded gets the missing-resource placeholder.
+ * A texture that fails to load draws nothing too: Godot's loader leaves the property null.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -11,7 +11,6 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { heading } from '../../../parser/testing/parserKit';
 import type { TscnNode } from '../../../parser/types';
-import { placeholderMeshes } from '../../../r3f/canvasMesh/textureLoadStates.testkit';
 
 function spriteNode(raw: Record<string, string>): TscnNode {
   return {
@@ -54,9 +53,9 @@ describe('Sprite2D without a texture', () => {
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
-  it('draws the missing-resource placeholder for a texture that cannot be loaded', async () => {
+  it('draws nothing for a texture that cannot be loaded', async () => {
     const renderer = await render(spriteNode({ texture: 'ExtResource("1")' }));
 
-    expect(placeholderMeshes(renderer)).toHaveLength(1);
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 });

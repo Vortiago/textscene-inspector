@@ -26,7 +26,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
 
   // Every animation the SpriteFrames declares, not only the authored one: the
   // transport lets the user pick any clip.
-  const { spriteFrames: resolved, status: spriteFramesStatus } = useSpriteFrames(props.sprite_frames);
+  const { spriteFrames: resolved } = useSpriteFrames(props.sprite_frames);
   const spriteFrames = resolved?.animations ?? null;
   const clipNames = useMemo(() => (spriteFrames ? [...spriteFrames.keys()] : []), [spriteFrames]);
   const durations = useMemo(
@@ -140,18 +140,10 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const surfaces = useSpriteQuad(props, frameSize);
 
   // No SpriteFrames, no animation or no frame texture draws nothing (`animated_sprite_2d.cpp:270-278`),
-  // and so does a `.tres` still loading. The placeholder is for a resource that is set but failed.
-  const spriteFramesFailed = !!props.sprite_frames && spriteFramesStatus === 'unavailable';
+  // and so does a SpriteFrames or frame texture that is loading or failed.
 
   return (
-    <CanvasMeshBody
-      node={node}
-      props={props}
-      texture={texture}
-      withoutTexture="nothing"
-      surfaces={surfaces}
-      showsPlaceholder={spriteFramesFailed}
-    >
+    <CanvasMeshBody node={node} props={props} texture={texture} withoutTexture="nothing" surfaces={surfaces}>
       {children}
     </CanvasMeshBody>
   );

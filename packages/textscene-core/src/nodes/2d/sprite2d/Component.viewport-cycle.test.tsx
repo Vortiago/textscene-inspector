@@ -94,20 +94,9 @@ describe('<Sprite2D> ViewportTexture cycle fallback', () => {
     expect(sampling).toBeUndefined();
   });
 
-  it('renders the missing-resource placeholder instead', async () => {
+  it('draws nothing instead, as for a texture that fails to load', async () => {
     const { renderer } = await renderCyclicSprite();
-    const placeholder = renderer.scene
-      .findAll(() => true)
-      .map((n) => n.instance as THREE.Mesh)
-      .find((m) => {
-        const material = m.material as THREE.MeshBasicMaterial | undefined;
-        return (
-          material?.color?.getHex() === new THREE.Color('magenta').getHex() &&
-          material.opacity === 0.6 &&
-          (m.geometry as THREE.PlaneGeometry)?.type === 'PlaneGeometry'
-        );
-      });
-    expect(placeholder).toBeDefined();
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
   it('logs a warning naming the consuming Sprite2D node path', async () => {
