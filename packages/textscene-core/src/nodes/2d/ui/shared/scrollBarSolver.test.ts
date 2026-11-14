@@ -10,7 +10,9 @@ import {
   scrollBarGrabberRect,
   scrollBarMinimumSize,
   scrollBarTrackRect,
+  type ScrollBarBoxes,
 } from './scrollBarSolver';
+import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 
 const BOXES = defaultScrollBarBoxes(1);
 const GRABBER_MIN = 8; // 2 * contentMargin (scroll_bar.cpp:473-477, default_theme.cpp:545).
@@ -88,13 +90,39 @@ describe('scrollBarTrackRect (scroll_bar.cpp:295-317)', () => {
 });
 
 describe('scrollBarGrabberRect (scroll_bar.cpp:326-344)', () => {
+  const grabber = { size: 50, offset: 20 };
+
   it('lays the grabber out along X for HORIZONTAL, spanning the full cross-axis height', () => {
-    const grabber = { size: 50, offset: 20 };
-    expect(scrollBarGrabberRect(false, { x: 300, y: 40 }, grabber)).toEqual({ x: 20, y: 0, w: 50, h: 40 });
+    expect(scrollBarGrabberRect(false, { x: 300, y: 40 }, grabber, BOXES.horizontal)).toEqual({
+      x: 20,
+      y: 0,
+      w: 50,
+      h: 40,
+    });
   });
 
   it('lays the grabber out along Y for VERTICAL, spanning the full cross-axis width', () => {
-    const grabber = { size: 50, offset: 20 };
-    expect(scrollBarGrabberRect(true, { x: 40, y: 300 }, grabber)).toEqual({ x: 0, y: 20, w: 40, h: 50 });
+    expect(scrollBarGrabberRect(true, { x: 40, y: 300 }, grabber, BOXES.vertical)).toEqual({
+      x: 0,
+      y: 20,
+      w: 40,
+      h: 50,
+    });
+  });
+
+  /** The bar's boxes with a `scroll` track whose content margins are `margin`. */
+  function withTrackMargin(boxes: ScrollBarBoxes, margin: StyleBoxFlatData['contentMargin']): ScrollBarBoxes {
+    return { ...boxes, scroll: { ...boxes.scroll, contentMargin: margin } };
+  }
+  const MARGIN = { left: 6, top: 5, right: 3, bottom: 2 };
+
+  it("moves a HORIZONTAL grabber right by the track's left margin", () => {
+    const boxes = withTrackMargin(BOXES.horizontal, MARGIN);
+    expect(scrollBarGrabberRect(false, { x: 300, y: 40 }, grabber, boxes).x).toBe(26);
+  });
+
+  it("moves a VERTICAL grabber down by the track's top margin", () => {
+    const boxes = withTrackMargin(BOXES.vertical, MARGIN);
+    expect(scrollBarGrabberRect(true, { x: 40, y: 300 }, grabber, boxes).y).toBe(25);
   });
 });

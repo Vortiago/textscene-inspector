@@ -126,7 +126,11 @@ export function scrollBarRangePlacement(
 ): ScrollBarPlacement {
   const length = vertical ? rect.h : rect.w;
   const grabber = scrollBarGrabberGeometry(vertical, length, boxes, range.min, range.max, range.page, ratio);
-  return { visible, rect, grabberRect: scrollBarGrabberRect(vertical, { x: rect.w, y: rect.h }, grabber) };
+  return {
+    visible,
+    rect,
+    grabberRect: scrollBarGrabberRect(vertical, { x: rect.w, y: rect.h }, grabber, boxes),
+  };
 }
 
 /**
@@ -156,20 +160,21 @@ export function scrollBarTrackRect(size: Vector2): Rect2 {
 }
 
 /**
- * The `grabber` StyleBox rect (`scroll_bar.cpp:326-344`). `padding_*` is 0 (`scroll_bar.h`'s `ThemeCache`,
- * not in the table, per-node override not modelled), and the table's `scroll`
- * StyleBoxes pad only the cross axis, so the grabber starts
- * at its offset and spans the bar across.
+ * The `grabber` StyleBox rect (`scroll_bar.cpp:326-344`): the grabber offset past the `scroll` track's
+ * leading margin, and the bar's whole cross axis. `padding_*` is 0 (`scroll_bar.h`'s `ThemeCache`, not
+ * in the table, per-node override not modelled).
  */
 export function scrollBarGrabberRect(
   vertical: boolean,
   size: Vector2,
-  grabber: ScrollBarGrabberGeometry
+  grabber: ScrollBarGrabberGeometry,
+  boxes: ScrollBarBoxes
 ): Rect2 {
+  const { left, top } = boxes.scroll.contentMargin;
   if (vertical) {
-    return { x: 0, y: grabber.offset, w: size.x, h: grabber.size };
+    return { x: 0, y: grabber.offset + top, w: size.x, h: grabber.size };
   }
-  return { x: grabber.offset, y: 0, w: grabber.size, h: size.y };
+  return { x: grabber.offset + left, y: 0, w: grabber.size, h: size.y };
 }
 
 /**

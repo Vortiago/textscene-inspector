@@ -1,8 +1,9 @@
 /**
  * A canvas item that draws a texture loads it through `useCanvasItemTexture` and hands the result's
  * `canvasTexture` to `CanvasItem2D`, or to `CanvasItemSurfaceSource` where it lights its own meshes.
- * Loading it any other way leaves its CanvasTexture maps out of the lighting, which is how Line2D
- * drew a normal-mapped texture flat.
+ * A canvas mesh drawer loads it through `useCanvasMeshTexture` and draws through `CanvasMeshBody`,
+ * which does both. Loading it any other way leaves its CanvasTexture maps out of the lighting, which
+ * is how Line2D drew a normal-mapped texture flat.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
@@ -33,11 +34,17 @@ const canvasItems = sourceFiles(SRC)
     name: relative(SRC, path).split(sep).join('/'),
     text: withoutComments(readFileSync(path, 'utf8')),
   }))
-  .filter(({ text }) => text.includes('<CanvasItem2D') || text.includes('<CanvasItemSurfaceSource'));
+  .filter(({ text }) => /<(?:CanvasItem2D|CanvasItemSurfaceSource|CanvasMeshBody)\b/.test(text));
 
-const LOADS_THROUGH_HOOK = /\buseCanvasItemTexture(?:SampledBy)?\(/;
+const LOADS_THROUGH_HOOK = /\buse(?:CanvasItemTexture(?:SampledBy)?|CanvasMeshTexture)\(/;
 const LOADS_DIRECTLY = /\buseTexture2D\s*\(/;
-const PASSES_CANVAS_TEXTURE = /\bcanvasTexture\s*=\s*\{|\bcanvasTexture\.slot\b/;
+const PASSES_CANVAS_TEXTURE = /\bcanvasTexture\s*=\s*\{|\bcanvasTexture\.slot\b|<CanvasMeshBody\b/;
+
+/** The drawers whose texture, tint and material `CanvasMeshBody` holds. */
+const CANVAS_MESH_DRAWERS = ['animatedsprite2d', 'line2d', 'polygon2d', 'sprite2d'].map(
+  (folder) => `nodes/2d/${folder}/Component.tsx`
+);
+const BUILDS_ITS_OWN_DRAW = /<meshBasicMaterial\b|\bmaterialProgramInputs\(|\buseCanvasItemTexture\(/;
 
 describe('a texture-drawing canvas item', () => {
   it('finds the canvas items that draw a texture', () => {
@@ -60,6 +67,14 @@ describe('a texture-drawing canvas item', () => {
       .filter(({ name, text }) => LOADS_DIRECTLY.test(text) && !(name in LOADS_NO_DRAWN_TEXTURE))
       .map(({ name }) => name);
     expect(loadsDirectly).toEqual([]);
+  });
+
+  it('leaves a canvas mesh drawer no material and no texture load of its own', () => {
+    const buildsItsOwn = canvasItems
+      .filter(({ name, text }) => CANVAS_MESH_DRAWERS.includes(name) && BUILDS_ITS_OWN_DRAW.test(text))
+      .map(({ name }) => name);
+    expect(canvasItems.map(({ name }) => name)).toEqual(expect.arrayContaining(CANVAS_MESH_DRAWERS));
+    expect(buildsItsOwn).toEqual([]);
   });
 
   it('passes the CanvasTexture on to the lighting', () => {

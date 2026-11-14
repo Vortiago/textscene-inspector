@@ -12,7 +12,10 @@ export type DesignUnitWidthFn = (text: string) => number;
 const AVERAGE_ADVANCE_SAMPLE = 'ABCXYZabcxyz0123456789';
 
 export interface RuntimeFontMetricsInput {
-  readonly scalars: Pick<FontMetrics, 'unitsPerEm' | 'ascent' | 'descent'>;
+  readonly scalars: Pick<
+    FontMetrics,
+    'unitsPerEm' | 'ascent' | 'descent' | 'underlinePosition' | 'underlineThickness'
+  >;
   /** Measured at `fontSizePx === unitsPerEm`, so canvas px and design units coincide. */
   readonly measureWidthUnits: DesignUnitWidthFn;
   /** The unique CSS font family the font was registered under, which a canvas-2D painter sets `ctx.font` to. */
@@ -92,6 +95,8 @@ export function createRuntimeFontMetrics(input: RuntimeFontMetricsInput): Regist
     unitsPerEm: scalars.unitsPerEm,
     ascent: scalars.ascent,
     descent: scalars.descent,
+    underlinePosition: scalars.underlinePosition,
+    underlineThickness: scalars.underlineThickness,
     hasGlyph,
     ...glyphs,
 
