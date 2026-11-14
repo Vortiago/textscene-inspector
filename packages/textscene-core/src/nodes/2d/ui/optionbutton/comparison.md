@@ -47,7 +47,7 @@ Strict parsing format-checks these `OptionButton` properties, plus 13 inherited 
 |  | `optionbutton-item-index-out-of-range` | error |
 <!-- lint:end -->
 
-An absent or unparseable `selected` becomes `undefined`, and the control draws its own `text`
+An absent or unparseable `selected` becomes `undefined`. The control then draws its own `text`
 and `icon` rather than item 0, as Godot does when no item is selected. An invalid `popup/item_N/id` falls back to the item's own
 index. `linter.ts` warns when `selected` names an index `item_count` never provides, and errors on a
 `popup/item_N/…` key at or past `item_count`, which the popup drops.
