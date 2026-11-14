@@ -56,7 +56,5 @@ export const renderStroke = (): RenderStroke => ({
 /** `MULTIPLY`: a channel scaled by an alpha, both 0 to 255, rounded up as ThorVG rounds it. */
 export const multiplyAlpha = (c: number, a: number): number => (c * a + 0xff) >> 8;
 
-export const strokeWidthOf = (shape: RenderShape): number => shape.stroke?.width ?? 0;
-
 /** Half a stroke, which the bounds of a stroked shape grow by on each side. */
 export const halfStroke = (width: number): number => f32(width * 0.5);

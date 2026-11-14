@@ -147,9 +147,6 @@ export function atan2(y: number, x: number): number {
   return y < 0 ? -r : r;
 }
 
-/** `length(const Point&)`. */
-export const pointLength = (p: Point): number => f32(Math.sqrt(f32(f32(p.x * p.x) + f32(p.y * p.y))));
-
 /** `length(a, b)`: alpha max plus beta min, within 7% of the true length. */
 export function approximateLength(a: Point, b: Point): number {
   const x = Math.abs(f32(b.x - a.x));

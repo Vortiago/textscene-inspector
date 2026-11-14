@@ -108,7 +108,7 @@ export function toOffset(text: string): number {
 }
 
 /** `lrint`: the nearest integer, a tie to even. */
-export function lrint(value: number): number {
+function lrint(value: number): number {
   const floor = Math.floor(value);
   const fraction = value - floor;
   if (fraction !== 0.5) return Math.round(value);
@@ -331,7 +331,7 @@ function hslColour(text: string): SvgColor | null {
 }
 
 /** `_hslToRgb`, in single precision. */
-export function hslToRgb(hue: number, saturation: number, brightness: number): SvgColor {
+function hslToRgb(hue: number, saturation: number, brightness: number): SvgColor {
   while (hue < 0) hue = f32(hue + 360);
   hue = f32(hue % 360);
   saturation = saturation > 0 ? Math.min(saturation, 1) : 0;

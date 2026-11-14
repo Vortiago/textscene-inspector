@@ -120,7 +120,7 @@ function readCommon(gradient: SvgStyleGradient, key: string, value: string): boo
 }
 
 /** `_createLinearGradient`: x2 defaults to 100%. */
-export function createLinearGradient(global: ViewGlobal, attributes: string): SvgStyleGradient {
+function createLinearGradient(global: ViewGlobal, attributes: string): SvgStyleGradient {
   const gradient = newGradient('Linear');
   const linear: SvgLinearGradient = {
     x1: 0,
@@ -147,7 +147,7 @@ export function createLinearGradient(global: ViewGlobal, attributes: string): Sv
 }
 
 /** `_createRadialGradient`: the centre, focus and radius default to 50%, and the focus follows the centre until it is set. */
-export function createRadialGradient(global: ViewGlobal, attributes: string): SvgStyleGradient {
+function createRadialGradient(global: ViewGlobal, attributes: string): SvgStyleGradient {
   const gradient = newGradient('Radial');
   const radial: SvgRadialGradient = {
     cx: 0.5,

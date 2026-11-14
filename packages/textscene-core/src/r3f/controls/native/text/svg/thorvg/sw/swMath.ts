@@ -9,7 +9,7 @@ import { atan2, f32, MATH_PI, type Matrix, type Point } from '../math';
 
 /** `SW_ANGLE_PI` and its multiples: degrees in 16.16. */
 export const SW_ANGLE_PI = 180 * 65536;
-export const SW_ANGLE_2PI = SW_ANGLE_PI * 2;
+const SW_ANGLE_2PI = SW_ANGLE_PI * 2;
 export const SW_ANGLE_PI2 = SW_ANGLE_PI / 2;
 
 export interface SwPoint {
@@ -37,7 +37,7 @@ export const shiftRight = (a: number, bits: number): number => Math.floor(a / 2 
 export const toSwCoord = (value: number): number => Math.trunc(f32(value * 64));
 
 /** `TO_FLOAT`: 26.6 to a float in pixels. */
-export const toFloat = (value: number): number => f32(f32(value) / 64);
+const toFloat = (value: number): number => f32(f32(value) / 64);
 
 /** `nearbyint` in the default rounding mode: the nearest integer, a tie to even. */
 export function nearbyint(value: number): number {
@@ -49,13 +49,13 @@ export function nearbyint(value: number): number {
 }
 
 /** C's `round`: the nearest integer, a tie away from zero. */
-export const roundAway = (value: number): number => Math.sign(value) * Math.round(Math.abs(value));
+const roundAway = (value: number): number => Math.sign(value) * Math.round(Math.abs(value));
 
 export const isSmall = (pt: SwPoint): boolean => Math.abs(pt.x) < 2 && Math.abs(pt.y) < 2;
 
 export const isZeroPoint = (pt: SwPoint): boolean => pt.x === 0 && pt.y === 0;
 
-export const toPoint = (pt: SwPoint): Point => ({ x: toFloat(pt.x), y: toFloat(pt.y) });
+const toPoint = (pt: SwPoint): Point => ({ x: toFloat(pt.x), y: toFloat(pt.y) });
 
 const cosf = (radian: number): number => f32(Math.cos(radian));
 const sinf = (radian: number): number => f32(Math.sin(radian));
@@ -225,7 +225,7 @@ export function mathTransform(to: Point, m: Matrix): SwPoint {
 }
 
 /** `mathClipBBox`: `clippee` cut to `clipper`, and whether anything is left. */
-export function mathClipBBox(clipper: SwBBox, clippee: SwBBox): boolean {
+function mathClipBBox(clipper: SwBBox, clippee: SwBBox): boolean {
   clippee.max.x = Math.min(clippee.max.x, clipper.max.x);
   clippee.max.y = Math.min(clippee.max.y, clipper.max.y);
   clippee.min.x = Math.max(clippee.min.x, clipper.min.x);

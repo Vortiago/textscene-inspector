@@ -20,7 +20,7 @@ import {
 import type { FillSpread } from '../svgNode';
 import { alphaBlend, argbJoin, interpolate, multiply } from './swPixel';
 
-export const SW_COLOR_TABLE = 1024;
+const SW_COLOR_TABLE = 1024;
 const RADIAL_A_THRESHOLD = f32(0.0005);
 const FIXPT_BITS = 8;
 const FIXPT_SIZE = 1 << FIXPT_BITS;
@@ -291,7 +291,7 @@ const pixel = (fill: SwFill, pos: number): number =>
   fill.ctable[clamp(fill, toInt32(f32(f32(pos * (SW_COLOR_TABLE - 1)) + 0.5)))]!;
 
 /** The table colours of `len` pixels from (`x`, `y`) into `out`, through a linear gradient. */
-export function linearColours(fill: SwFill, y: number, x: number, len: number, out: Uint32Array): void {
+function linearColours(fill: SwFill, y: number, x: number, len: number, out: Uint32Array): void {
   const { dx, dy, offset } = fill.linear;
   const rx = f32(x + 0.5);
   const ry = f32(y + 0.5);
@@ -312,7 +312,7 @@ export function linearColours(fill: SwFill, y: number, x: number, len: number, o
 }
 
 /** The table colours of `len` pixels from (`x`, `y`) into `out`, through a radial gradient. */
-export function radialColours(fill: SwFill, y: number, x: number, len: number, out: Uint32Array): void {
+function radialColours(fill: SwFill, y: number, x: number, len: number, out: Uint32Array): void {
   const radial = fill.radial;
   if (radial.a < RADIAL_A_THRESHOLD) {
     let rx = f32(

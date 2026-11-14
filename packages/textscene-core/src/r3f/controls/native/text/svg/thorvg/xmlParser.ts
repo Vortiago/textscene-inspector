@@ -60,13 +60,13 @@ function findWhiteSpace(text: string, at: number, end: number): number {
   return at;
 }
 
-export function skipWhiteSpace(text: string, at: number, end: number): number {
+function skipWhiteSpace(text: string, at: number, end: number): number {
   while (at < end && isSpace(text[at])) at++;
   return at;
 }
 
 /** `_simpleXmlUnskipWhiteSpace`: the end of the text before the white space that ends at `at`. */
-export function unskipWhiteSpace(text: string, at: number, start: number): number {
+function unskipWhiteSpace(text: string, at: number, start: number): number {
   for (at--; at > start; at--) if (!isSpace(text[at])) break;
   return at + 1;
 }

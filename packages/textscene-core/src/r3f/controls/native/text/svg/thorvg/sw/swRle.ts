@@ -358,20 +358,6 @@ export function rleRender(outline: SwOutline, renderRegion: SwBBox, isAntiAliase
   return { spans: rw.spans };
 }
 
-/** `rleRender(const SwBBox*)`: a rectangle's spans at full coverage. */
-export function rleOfBox(bbox: SwBBox): SwRle {
-  const width = (bbox.max.x - bbox.min.x) & 0xffff;
-  const height = (bbox.max.y - bbox.min.y) & 0xffff;
-  return {
-    spans: Array.from({ length: height }, (_, i) => ({
-      x: bbox.min.x,
-      y: bbox.min.y + i,
-      len: width,
-      coverage: 255,
-    })),
-  };
-}
-
 /** `_intersectSpansRegion`: the spans of `target` where `clip` covers them, the coverages multiplied. */
 function intersectSpansRegion(clip: SwRle, target: SwRle, capacity: number): SwSpan[] {
   const out: SwSpan[] = [];

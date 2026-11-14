@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lrint, parseTransform, toColour, toLength, toOffset, toOpacity, type ViewGlobal } from './svgValues';
+import { parseTransform, toColour, toLength, toOffset, toOpacity, type ViewGlobal } from './svgValues';
 
 const VIEW: ViewGlobal = { x: 0, y: 0, w: 200, h: 100 };
 
@@ -26,12 +26,10 @@ describe('toOffset', () => {
 });
 
 describe('toOpacity', () => {
-  it('scales a number or a percentage to 255, a tie rounded to even', () => {
+  it('scales a number or a percentage to 255', () => {
     expect(toOpacity('0.5')).toBe(128);
     expect(toOpacity('50%')).toBe(128);
     expect(toOpacity('half')).toBe(255);
-    expect(lrint(126.5)).toBe(126);
-    expect(lrint(-2.5)).toBe(-2);
   });
 });
 

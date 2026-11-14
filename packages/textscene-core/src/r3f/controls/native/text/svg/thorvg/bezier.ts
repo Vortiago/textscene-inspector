@@ -82,7 +82,7 @@ export function bezierLength(b: Bezier): number {
 const lerp = (a: number, b: number, t: number): number => f32(a + f32(t * f32(b - a)));
 
 /** `Bezier::split(t, left)`: the curve before `t`, and the curve after it. */
-export function splitAtParameter(b: Bezier, t: number): { left: Bezier; right: Bezier } {
+function splitAtParameter(b: Bezier, t: number): { left: Bezier; right: Bezier } {
   const axis = (key: 'x' | 'y') => {
     const leftCtrl1 = lerp(b.start[key], b.ctrl1[key], t);
     const hold = lerp(b.ctrl1[key], b.ctrl2[key], t);

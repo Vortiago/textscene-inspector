@@ -137,12 +137,6 @@ export function readSvgBody({ text, doc, state }: SvgHeader): SvgDocument | null
   return { doc, defs: doc.node.doc.defs, gradients: state.gradients, global: state.global };
 }
 
-/** Both reads of a document: its tree, or null where it has no `svg` element or does not parse. */
-export function loadSvg(text: string): SvgDocument | null {
-  const header = readSvgHeader(text);
-  return header && readSvgBody(header);
-}
-
 /** The passes after the tags are read (`SvgLoader::run`). */
 function resolve(state: LoaderState, doc: SvgNode): void {
   const defs = doc.node.doc.defs;

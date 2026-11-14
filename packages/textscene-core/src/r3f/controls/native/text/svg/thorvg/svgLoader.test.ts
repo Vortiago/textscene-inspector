@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { loadSvg } from './svgLoader';
+import { readSvgBody, readSvgHeader } from './svgLoader';
 import type { SvgNode } from './svgNode';
 
 const svg = (body: string): string => `<svg xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
 
 function load(body: string) {
-  const document = loadSvg(svg(body));
+  const header = readSvgHeader(svg(body));
+  const document = header && readSvgBody(header);
   if (!document) throw new Error(`expected a document for ${body}`);
   return document;
 }
