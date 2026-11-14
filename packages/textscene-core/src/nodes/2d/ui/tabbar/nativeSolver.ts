@@ -493,20 +493,23 @@ export function layoutTabContent(input: {
   rtl: boolean;
 }): TabContentLayout {
   const { style, barHeightPx, hSeparation, rtl } = input;
-  const innerHeight = barHeightPx - (style.contentMargin.top + style.contentMargin.bottom);
+  // `sb_ms` is a `Size2i` (`tab_bar.cpp:662`), and the icon, the title and the close icon draw at a
+  // `Point2i` (`:668,676,734`): Godot truncates each position, so none lands on a half pixel.
+  const innerHeight = barHeightPx - Math.trunc(style.contentMargin.top + style.contentMargin.bottom);
 
   let x = rtl ? input.tabWidthPx - style.contentMargin.left : style.contentMargin.left;
   let icon: TabContentLayout['icon'] = null;
   if (input.iconSize) {
     const y = style.contentMargin.top + (innerHeight - input.iconSize.y) / 2;
-    icon = { rect: { x: rtl ? x - input.iconSize.x : x, y, w: input.iconSize.x, h: input.iconSize.y } };
+    const iconX = rtl ? x - input.iconSize.x : x;
+    icon = { rect: { x: Math.trunc(iconX), y: Math.trunc(y), w: input.iconSize.x, h: input.iconSize.y } };
     x = rtl ? x - input.iconSize.x - hSeparation : x + input.iconSize.x + hSeparation;
   }
 
   let text: TabContentLayout['text'] = null;
   if (input.hasText) {
     const y = style.contentMargin.top + (innerHeight - input.textNaturalHeightPx) / 2;
-    text = { offset: { x: rtl ? x - input.textAdvanceWidthPx : x, y } };
+    text = { offset: { x: Math.trunc(rtl ? x - input.textAdvanceWidthPx : x), y: Math.trunc(y) } };
     x = rtl ? x - input.textAdvanceWidthPx - hSeparation : x + input.textAdvanceWidthPx + hSeparation;
   }
 
@@ -518,7 +521,10 @@ export function layoutTabContent(input: {
     const cbX = rtl ? x - w : x;
     close = {
       rect: { x: cbX, y, w, h },
-      iconOffset: { x: cbX + input.buttonHlMargin.left, y: y + input.buttonHlMargin.top },
+      iconOffset: {
+        x: Math.trunc(cbX + input.buttonHlMargin.left),
+        y: Math.trunc(y + input.buttonHlMargin.top),
+      },
     };
   }
 

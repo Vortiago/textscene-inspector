@@ -541,6 +541,36 @@ describe('tabDrawX', () => {
   });
 });
 
+describe('layoutTabContent truncates each drawn position (tab_bar.cpp:662,668,676,734)', () => {
+  // An odd leftover height centres every element on a half pixel.
+  const out = layoutTabContent({
+    barHeightPx: 31,
+    style: { ...TABLE_BOXES.tab_selected!, contentMargin: { left: 10.5, top: 4, right: 10, bottom: 4 } },
+    tabWidthPx: 120,
+    iconSize: { x: 16, y: 16 },
+    hasText: true,
+    textNaturalHeightPx: 18,
+    textAdvanceWidthPx: 40,
+    hSeparation: 4,
+    closeVisible: true,
+    closeIconSize: { x: 16, y: 16 },
+    buttonHlMargin: { left: 3, top: 2, right: 3, bottom: 2 },
+    rtl: false,
+  });
+
+  it('draws the icon at a whole pixel', () => {
+    expect(out.icon?.rect).toMatchObject({ x: 10, y: 7 });
+  });
+
+  it('draws the title at a whole pixel', () => {
+    expect(out.text?.offset).toEqual({ x: 30, y: 6 });
+  });
+
+  it('draws the close icon at a whole pixel', () => {
+    expect(out.close?.iconOffset).toEqual({ x: 77, y: 7 });
+  });
+});
+
 describe('layoutTabContent under RTL', () => {
   const style = {
     ...TABLE_BOXES.tab_selected!,
