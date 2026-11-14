@@ -46,33 +46,57 @@ tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0)
 tile_set = ExtResource("ts")
 `;
 
+/** One TileMap whose layer 0 holds a crate scene tile at cell (0, 0), with no authored child. */
+const OLD_LEVEL = `[gd_scene format=3]
+
+[ext_resource type="TileSet" path="res://tiles.tres" id="ts"]
+
+[node name="Level" type="Node2D"]
+
+[node name="Map" type="TileMap" parent="."]
+tile_set = ExtResource("ts")
+format = 2
+layer_0/tile_data = PackedInt32Array(0, 0, 65536)
+`;
+
+/** Renders the panel over `level`, with the crate scene and the TileSet file loaded, and expands the root. */
+async function renderPanel(level: string) {
+  const parser = new TscnParser();
+  const fake = createFakeResourceLoader();
+  fake.scenes.seed('res://crate.tscn', parser.parse(CRATE));
+  fake.resources.seed('res://tiles.tres', parseTresFile(TILE_SET));
+  const sceneGraph = createSceneGraphFromTscnScene(parser.parse(level));
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
+      <SelectionProvider>
+        <ResourceLoaderProvider loader={fake.loader}>
+          <MissingResourcesProvider>{children}</MissingResourcesProvider>
+        </ResourceLoaderProvider>
+      </SelectionProvider>
+    </HierarchyProvider>
+  );
+  render(<SceneTreeViewer />, { wrapper });
+  await settle();
+  await userEvent.click(screen.getByRole('button', { name: 'Expand' }));
+  await settle();
+}
+
+async function settle() {
+  await act(async () => {
+    await new Promise<void>((resolve) => setTimeout(resolve));
+  });
+}
+
 describe('<SceneTreeViewer> scene tiles', () => {
-  it('lists no row for the scene tile instances of a layer', async () => {
-    const parser = new TscnParser();
-    const fake = createFakeResourceLoader();
-    fake.scenes.seed('res://crate.tscn', parser.parse(CRATE));
-    fake.resources.seed('res://tiles.tres', parseTresFile(TILE_SET));
-    const sceneGraph = createSceneGraphFromTscnScene(parser.parse(LEVEL));
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
-        <SelectionProvider>
-          <ResourceLoaderProvider loader={fake.loader}>
-            <MissingResourcesProvider>{children}</MissingResourcesProvider>
-          </ResourceLoaderProvider>
-        </SelectionProvider>
-      </HierarchyProvider>
-    );
-
-    render(<SceneTreeViewer />, { wrapper });
-    await act(async () => {
-      await new Promise<void>((resolve) => setTimeout(resolve));
-    });
-    await userEvent.click(screen.getByRole('button', { name: 'Expand' }));
-    await act(async () => {
-      await new Promise<void>((resolve) => setTimeout(resolve));
-    });
-
+  it('lists no row for the scene tile instances of a TileMapLayer', async () => {
+    await renderPanel(LEVEL);
     expect(screen.getByText('Layer')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Expand' })).toBeNull();
+  });
+
+  it('lists no row for the scene tile instances of a TileMap', async () => {
+    await renderPanel(OLD_LEVEL);
+    expect(screen.getByText('Map')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Expand' })).toBeNull();
   });
 });
