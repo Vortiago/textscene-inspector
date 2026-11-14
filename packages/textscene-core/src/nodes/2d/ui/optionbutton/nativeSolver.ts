@@ -77,9 +77,12 @@ function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>, theme: Native
  */
 export const OPTION_BUTTON_CLASS: ReservingButtonClass = {
   textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+  // With no item selected, `_select` never runs and Button keeps its own text and icon
+  // (`option_button.cpp:432-442`).
   shown: (props) => {
     const selected = selectedOptionItem(props);
-    return { text: selected?.text ?? '', icon: selected?.icon };
+    if (!selected) return { text: props.text ?? '', icon: props.icon };
+    return { text: selected.text, icon: selected.icon };
   },
   reservedElement: (n, theme) => ({ side: n.rtl ? 'left' : 'right', size: optionButtonArrowSize(n, theme) }),
 };

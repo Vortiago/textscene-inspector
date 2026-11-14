@@ -19,6 +19,7 @@ import {
   getFontExtraAdvancePx,
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
+  getFontGlyphAdvancePx,
   getFontRunGlyphAdvancePx,
   fallbackChainOf,
   type FontMetrics,
@@ -303,25 +304,35 @@ export function infersRtl(layout: TextLayoutResult | null): boolean {
  * Re-wraps one shaped line as a one-line result drawn from y = 0; the caller's `<group>` supplies
  * the cumulative Y. It bypasses `shapeText`, so it echoes the parent's `fontMetrics` and baseline.
  * Override `baselineOffsetPx` and `fontMetrics` for a RichTextLabel `[b]`/`[i]` run shaped at its own
- * size, in its own face. Override `heightPx` where the line is taller than the parent's pitch, so a
- * canvas raster holds the line's ascent. `linePitchPx` stays the parent's.
+ * size, in its own face. `linePitchPx` stays the parent's.
  */
 export function soloLineLayout(
   line: TextLineLayout,
   parent: TextLayoutResult,
   baselineOffsetPx: number = parent.baselineOffsetPx,
-  fontMetrics: FontMetrics = parent.fontMetrics,
-  heightPx: number = parent.linePitchPx
+  fontMetrics: FontMetrics = parent.fontMetrics
 ): TextLayoutResult {
   return {
     shapedText: parent.shapedText,
     lines: [line],
     linePitchPx: parent.linePitchPx,
     widthPx: line.widthPx,
-    heightPx,
+    heightPx: Math.max(parent.linePitchPx, baselineOffsetPx + deepestDescentPx(line)),
     baselineOffsetPx,
     fontMetrics,
   };
+}
+
+/**
+ * The largest descent of a face on `line` at its size, 0 for no glyph. A canvas raster reaches this
+ * far below the baseline, so a glyph of a fallback face with a deeper descent is not cut at the
+ * bottom. The raster grows only downwards: the baseline stays.
+ */
+function deepestDescentPx({ glyphs }: TextLineLayout): number {
+  let deepestPx = 0;
+  for (const glyph of glyphs)
+    deepestPx = Math.max(deepestPx, getFontDescentPx(glyph.fontMetrics, glyph.fontSizePx));
+  return deepestPx;
 }
 
 /**
@@ -607,8 +618,8 @@ function clusterTail(start: number, end: number): BreakGlyph {
 }
 
 /**
- * The glyph of character `i` where it takes no shaping: a break, a control, a tab or a hex-code box.
- * Undefined for a character its face shapes.
+ * The glyph of character `i` where it takes no shaping: a break, a control, a tab, a character its
+ * face draws apart or a hex-code box. Undefined for a character its face shapes.
  */
 function specialGlyph(
   chars: ArrayLike<string>,
@@ -627,8 +638,15 @@ function specialGlyph(
     // Without `preserve_invalid` or `preserve_control`, a control pushes no `Glyph` (`:6844`).
     return preserveControl ? hexCodeBox(ch, i, style.sizes[i]!) : zeroWidthGlyph(ch, i);
   }
-  if (!lacksGlyph(style.faces[i]!, ch, style.hasUndrawnGlyph)) return undefined;
+  const face = style.faces[i]!;
+  if (face.drawsApart?.(ch)) return drawnApartGlyph(ch, i, face, style.sizes[i]!);
+  if (!lacksGlyph(face, ch, style.hasUndrawnGlyph)) return undefined;
   return hexCodeBox(ch, i, style.sizes[i]!);
+}
+
+/** The glyph of character `ch` at `i` that `face` draws apart, at its character advance. */
+function drawnApartGlyph(ch: string, i: number, face: FontMetrics, size: number): BreakGlyph {
+  return { ...zeroWidthGlyph(ch, i), advance: getFontGlyphAdvancePx(face, ch, size) };
 }
 
 /** The glyph of character `ch` at `i` with no advance. */

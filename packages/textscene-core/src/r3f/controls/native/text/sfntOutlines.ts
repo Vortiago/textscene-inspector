@@ -15,7 +15,13 @@ import { Hinting, type FontHinting } from '../../../../godot/text/textServerEnum
 import { orOnRangeError, sfntGlyphIndex } from './sfntCmap';
 import { glyphMetricsReader, metricsAtInstance } from './sfntGlyphMetrics';
 import type { GlyphContours, GlyphOutlineReader } from './glyphContours';
-import { glyphAdvance26_6, isInstanced, type GlyphVariation, type OpentypeCoordinates } from './fontMetrics';
+import {
+  glyphAdvance26_6,
+  isInstanced,
+  type GlyphVariation,
+  type OpentypeCoordinates,
+  type PairKerning,
+} from './fontMetrics';
 import { cffOutlineReader, unhintedCffOutlineReader } from './sfntCff';
 import { isNativelyHinted, type GlyphHinting } from './glyphHinting';
 import { glyfAdvanceReader, glyphOutlineReader } from './sfntGlyf';
@@ -55,11 +61,15 @@ export interface SfntOutlines {
    */
   advanceAtInstance?(glyphIndex: number, fontSizePx: number, opentype: OpentypeCoordinates): number | null;
   /**
-   * The `GPOS` kerning in design units of a pair of glyphs, as HarfBuzz shapes it at the axis values
-   * of `opentype`: null where they draw the default instance, where the font has no `kern` feature
-   * to read, and for glyph 0. Absent for outlines with no `GPOS` variation to read.
+   * The `GPOS` kerning of a pair of glyphs, as HarfBuzz shapes it at the axis values of `opentype`:
+   * null where they draw the default instance, where the font has no `kern` feature to read, and for
+   * glyph 0. Absent for outlines with no `GPOS` variation to read.
    */
-  kerningAtInstance?(left: LookupGlyph, right: LookupGlyph, opentype: OpentypeCoordinates): number | null;
+  kerningAtInstance?(
+    left: LookupGlyph,
+    right: LookupGlyph,
+    opentype: OpentypeCoordinates
+  ): PairKerning | null;
   /** Whether the axis values of `opentype` draw an instance other than the default. */
   drawsInstance?(opentype: OpentypeCoordinates): boolean;
   /**

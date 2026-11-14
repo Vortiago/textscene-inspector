@@ -29,12 +29,6 @@ RUN apt-get update \
     mesa-vulkan-drivers xvfb xauth libxcursor1 libxinerama1 \
   && rm -rf /var/lib/apt/lists/*
 
-# No job runs these two in the image. The Claude review job copies them and libwrap, a library of
-# socat, onto its runner.
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends bubblewrap socat \
-  && rm -rf /var/lib/apt/lists/*
-
 ARG ENGINE_VERSION=4.6.3-stable
 # Of the Linux x86_64 binary inside the release zip.
 ARG ENGINE_SHA256=f64d4ed19fc9df9440321653fcc80df8c6e365ba7b6de0a29e2cfa9fa71bfeb3

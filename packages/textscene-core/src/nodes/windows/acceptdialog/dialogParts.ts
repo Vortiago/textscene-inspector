@@ -1,8 +1,8 @@
 /**
- * The Controls an AcceptDialog builds in its constructor and never serialises: the message `Label`
- * and the OK and Cancel `Button`s (`scene/gui/dialogs.cpp:472-497,533`). Each is a synthetic
- * `SolveNode` carrying the dialog's scope, so the Label and Button solvers and painters measure and
- * draw them as they draw any scene node.
+ * The Controls an AcceptDialog builds in its constructor and never serialises
+ * (`scene/gui/dialogs.cpp:468-497`): the message `Label`, the class's body, and the button row
+ * `buttons_hbox` with its spacers and Buttons. They are internal Controls (`internalControls.ts`),
+ * so the Label, HBoxContainer and Button solvers and painters lay them out and draw them.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -11,25 +11,23 @@
  */
 
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
+import { SizeFlags } from '../../../godot/scene/control';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
-import type { TscnNode } from '../../../parser/types';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
+import type { TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry';
 import {
-  themedSlotRequest,
-  type BuiltIconsFn,
-  type TextureSlotRequest,
-  type TextureSlotsFn,
-} from '../../../r3f/controls/native/solverRegistry';
-import {
-  internalChildThemeItems,
-  requiredThemeItem,
-  type InternalThemeItems,
-} from '../../../r3f/controls/native/themeItems';
+  builtButtonIconRequests,
+  internalControlNode,
+  internalControlsOf,
+  type InternalControl,
+  type InternalControlEntry,
+  type InternalControlSpec,
+  type InternalControlsFn,
+} from '../../../r3f/controls/native/internalControls';
+import { requiredThemeItem } from '../../../r3f/controls/native/themeItems';
 import { perObject } from '../../../utils/perObject';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
-import { parseControlCanvasItem } from '../../2d/ui/control/parser';
-import type { ControlProperties } from '../../2d/ui/control/types';
 import type { ButtonProperties } from '../../2d/ui/button/types';
 import type { LabelProperties } from '../../2d/ui/label/types';
 import type { ConfirmationDialogProperties } from '../confirmationdialog/parser';
@@ -38,7 +36,7 @@ import type { DialogProperties } from './parser';
 export type DialogButtonRole = 'ok' | 'cancel';
 
 /** The dialog's buttons, left to right as the row lays them out. Only a ConfirmationDialog has Cancel. */
-export function dialogButtonRoles(dialogType: string): readonly DialogButtonRole[] {
+function dialogButtonRoles(dialogType: string): readonly DialogButtonRole[] {
   return descendsFromClass(dialogType, 'ConfirmationDialog') ? ['cancel', 'ok'] : ['ok'];
 }
 
@@ -52,14 +50,11 @@ export function buttonsSeparation(n: SolveNode): number {
   return requiredThemeItem(n.constants, 'buttons_separation');
 }
 
-/** Written only by `internalControl`. A dialog node is replaced when the scene changes it, so each internal Control is built once per dialog node. */
-const internalNodes = perObject((_dialog: SolveNode) => new Map<string, SolveNode>());
-
 /**
- * The Controls a dialog class's constructor builds above its message and buttons, as one tree whose root fills
- * the content rect. A class registers one, so the dialog solver and painter stay free of its types.
+ * The Controls a dialog class's constructor builds above its message and buttons, as one tree whose
+ * root fills the content rect. A class registers one, so the dialog solver and painter stay free of its types.
  */
-export type DialogBody = (dialog: SolveNode, theme: NativeTheme) => SolveNode;
+export type DialogBody = (dialog: SolveNode, theme: NativeTheme) => InternalControlSpec;
 
 /** Written only by `registerDialogBody`, at module load. */
 const dialogBodies = new Map<string, DialogBody>();
@@ -68,163 +63,123 @@ export function registerDialogBody(typeName: string, body: DialogBody): void {
   dialogBodies.set(typeName, body);
 }
 
-/** The body `dialog`'s class builds, or `null` for a class that builds none. */
-export function dialogBodyOf(dialog: SolveNode, theme: NativeTheme): SolveNode | null {
-  return dialogBodies.get(dialog.node.type)?.(dialog, theme) ?? null;
-}
-
-/** What a dialog's constructor `memnew`s: a Control the scene never serialises. */
-export interface SyntheticControl {
-  type: string;
-  name: string;
-  /** Where it sits in the dialog's tree: the path of its parent, which a container lays its children out by. The dialog's own by default. */
-  parentPath?: string;
-  /** The Control's parsed properties, defaults included. */
-  properties: object;
-  children?: readonly SolveNode[];
-  /** The `theme_type_variation` its constructor sets. */
-  variation?: string;
-  /** Icons its dialog's theme gives it, by name. Any the dialog's theme chain gives its type override them. */
-  icons?: SolveNode['icons'];
-  textureSize?: SolveNode['textureSize'];
-  /** What it draws that a scene line cannot carry. */
-  syntheticDraw?: SolveNode['syntheticDraw'];
-}
-
-/** The `textureSlots` key of the theme icon `icon` that a Control of `type`, built inside a dialog with no variation, resolves. */
-function builtButtonIconKey(type: string): string {
-  return `built:${type}`;
-}
-
-/** One request for the theme icon `icon` of each Button class in `types`, for those the theme chain gives one. */
-export function builtButtonIconRequests(
-  types: readonly string[],
-  builtIcons?: BuiltIconsFn
-): TextureSlotRequest[] {
-  const requests: TextureSlotRequest[] = [];
-  for (const type of types) {
-    const themed = builtIcons?.(type).icon;
-    if (themed) requests.push(themedSlotRequest(builtButtonIconKey(type), themed));
-  }
-  return requests;
-}
-
 /** The slots a dialog needs for its own OK and Cancel buttons: both are plain Buttons (`dialogs.cpp:339-340,489`). */
 export const dialogTextureSlots: TextureSlotsFn = (_node, _themedIcons, builtIcons) =>
   builtButtonIconRequests(['Button'], builtIcons);
 
-/** The path a synthetic Control gets: its parent's, then its own name. A container lays its children out by this link. */
-export function syntheticPath(parentPath: string, name: string): string {
-  return `${parentPath}/@${name}`;
+/** The name of `buttons_hbox`. */
+const BUTTON_ROW = 'ButtonsHBox';
+
+/** The two message labels differ only in their wrap, so each carries it in its name, and so in its path. */
+const MESSAGE_LABELS = { wrapping: 'WrappingMessageLabel', unwrapped: 'MessageLabel' } as const;
+
+function isMessageLabel(n: SolveNode): boolean {
+  return n.node.name === MESSAGE_LABELS.wrapping || n.node.name === MESSAGE_LABELS.unwrapped;
 }
 
-/**
- * The size of the theme icon `icon` a built Button draws, for one that sets no icon of its own. A variation is
- * null: its slot is not requested, and its own `icon` entry would size it.
- */
-function builtButtonTextureSize(
-  dialog: SolveNode,
-  { type, variation, properties }: SyntheticControl,
-  items: InternalThemeItems
-): SolveNode['textureSize'] {
-  if ((properties as ButtonProperties).icon || !items.icons.icon) return null;
-  if (variation !== undefined || !descendsFromClass(type, 'Button')) return null;
-  return dialog.textureSlots[builtButtonIconKey(type)] ?? null;
-}
-
-/**
- * A Control `memnew`d inside `dialog` as a `SolveNode` in the dialog's scope. It has no scene node, so
- * none of the dialog's own theme items (`panel`, `buttons_separation`) apply to it. Its own come through
- * the dialog's theme chain. The default theme's items for its variation are the painter's to add.
- */
-export function syntheticControl(dialog: SolveNode, spec: SyntheticControl): SolveNode {
-  const { type, name, variation } = spec;
-  const node: TscnNode = {
-    name,
-    type,
-    children: [],
-    properties: spec.properties as ControlProperties,
-    rawProperties: {},
+/** `message_label` (`dialogs.cpp:480-484`). `dialog_autowrap` picks `AUTOWRAP_WORD` (`:196-198`). */
+function messageLabelSpec(dialog: SolveNode, wraps: boolean): InternalControlSpec {
+  const name = wraps ? MESSAGE_LABELS.wrapping : MESSAGE_LABELS.unwrapped;
+  const properties: Partial<LabelProperties> = {
+    text: (dialog.node.properties as DialogProperties).dialog_text,
+    autowrapMode: wraps ? AutowrapMode.AUTOWRAP_WORD : AutowrapMode.AUTOWRAP_OFF,
   };
-  const items = internalChildThemeItems(dialog, type, variation);
-  const textureSize =
-    spec.textureSize !== undefined ? spec.textureSize : builtButtonTextureSize(dialog, spec, items);
-  return {
-    ...dialog,
-    path: syntheticPath(spec.parentPath ?? dialog.path, name),
-    node,
-    children: spec.children ?? [],
-    styleBoxes: items.styleBoxes,
-    colors: items.colors,
-    constants: items.constants,
-    icons: { ...spec.icons, ...items.icons },
-    fontOverrides: {},
-    textureSize,
-    syntheticDraw: spec.syntheticDraw,
-    textureSlots: {},
-    labelSettings: null,
-    labelSettingsFont: null,
-  };
+  return { type: 'Label', name, properties };
 }
 
-/** The Control for `name`, built once per dialog node. */
-function internalControl(
-  dialog: SolveNode,
-  type: string,
-  name: string,
-  makeProperties: () => object
-): SolveNode {
-  const byName = internalNodes(dialog);
-  const built = byName.get(name);
-  if (built) return built;
-  const properties = { name, ...parseControlCanvasItem({}, name), ...makeProperties() };
-  const control = syntheticControl(dialog, { type, name, properties });
-  byName.set(name, control);
-  return control;
-}
-
-/** `message_label` (`dialogs.cpp:474-479`): `dialog_autowrap` picks `AUTOWRAP_WORD` (`:196-198`). */
-export function messageLabelNode(dialog: SolveNode): SolveNode {
+/** Written only by `cachedMessageLabelNode`. A dialog node is replaced when the scene changes it. */
+const cachedMessageLabels = perObject((dialog: SolveNode) => {
   const props = dialog.node.properties as DialogProperties;
-  return messageLabel(dialog, props.dialog_autowrap);
-}
+  const wraps = props.dialog_autowrap && !props.has_unwrapped_message_minimum;
+  return internalControlNode(dialog, messageLabelSpec(dialog, wraps));
+});
 
 /**
  * The message label with the wrap its minimum size was cached with
  * (`DialogProperties.has_unwrapped_message_minimum`).
  */
 export function cachedMessageLabelNode(dialog: SolveNode): SolveNode {
-  const props = dialog.node.properties as DialogProperties;
-  return messageLabel(dialog, props.dialog_autowrap && !props.has_unwrapped_message_minimum);
+  return cachedMessageLabels(dialog);
 }
 
-/** One cached Label per wrap setting: the name carries `wraps`, which is the only thing the two differ by. */
-function messageLabel(dialog: SolveNode, wraps: boolean): SolveNode {
-  const properties = (): Partial<LabelProperties> => ({
-    text: (dialog.node.properties as DialogProperties).dialog_text,
-    autowrapMode: wraps ? AutowrapMode.AUTOWRAP_WORD : AutowrapMode.AUTOWRAP_OFF,
-  });
-  return internalControl(dialog, 'Label', wraps ? 'WrappingMessageLabel' : 'MessageLabel', properties);
+/** The name a button of `role` carries in the row, and so in its path. */
+function dialogButtonName(role: DialogButtonRole): string {
+  return role === 'ok' ? 'OkButton' : 'CancelButton';
 }
 
 /** The label of a button: the OK text, or the Cancel text only a ConfirmationDialog carries. */
-export function dialogButtonText(dialog: SolveNode, role: DialogButtonRole): string {
+function dialogButtonText(dialog: SolveNode, role: DialogButtonRole): string {
   const props = dialog.node.properties as DialogProperties & Partial<ConfirmationDialogProperties>;
   return (role === 'ok' ? props.ok_button_text : props.cancel_button_text) ?? '';
 }
 
 /**
  * A dialog button, floored at the theme's `buttons_min_width` and `buttons_min_height`
- * (`dialogs.cpp:239-246`). The OK button holds the dialog's focus (`dialogs.cpp:60-68`).
+ * (`dialogs.cpp:228-235`). The OK button holds the dialog's focus (`dialogs.cpp:60-68`).
  */
-export function dialogButtonNode(dialog: SolveNode, role: DialogButtonRole): SolveNode {
-  const buttonsMinWidth = dialog.constants.buttons_min_width ?? 0;
-  const buttonsMinHeight = dialog.constants.buttons_min_height ?? 0;
-  const properties = (): Partial<ButtonProperties> => ({
+function dialogButtonSpec(dialog: SolveNode, role: DialogButtonRole): InternalControlSpec {
+  const name = dialogButtonName(role);
+  const properties: Partial<ButtonProperties> = {
     text: dialogButtonText(dialog, role),
-    customMinimumSize: { x: buttonsMinWidth, y: buttonsMinHeight },
+    customMinimumSize: {
+      x: dialog.constants.buttons_min_width ?? 0,
+      y: dialog.constants.buttons_min_height ?? 0,
+    },
     hasFocus: role === 'ok',
     disabled: role === 'ok' && (dialog.node.properties as DialogProperties).ok_button_disabled === true,
+  };
+  return { type: 'Button', name, properties };
+}
+
+/** `BoxContainer::add_spacer` (`box_container.cpp:322-336`): a plain Control that takes the width the buttons leave. */
+function spacerSpec(index: number): InternalControlSpec {
+  const name = `Spacer${index}`;
+  const properties = { sizeFlagsHorizontal: SizeFlags.EXPAND | SizeFlags.FILL };
+  return { type: 'Control', name, properties };
+}
+
+/**
+ * `buttons_hbox` (`dialogs.cpp:478,486-493`): a spacer on each side of every button. A
+ * ConfirmationDialog's Cancel comes first, since `add_button` with `right` false moves it to the
+ * front with a spacer before it (`:337-352`).
+ */
+function buttonRowSpec(dialog: SolveNode): InternalControlSpec {
+  const children = [spacerSpec(0)];
+  dialogButtonRoles(dialog.node.type).forEach((role, index) => {
+    children.push(dialogButtonSpec(dialog, role), spacerSpec(index + 1));
   });
-  return internalControl(dialog, 'Button', role === 'ok' ? 'OkButton' : 'CancelButton', properties);
+  return { type: 'HBoxContainer', name: BUTTON_ROW, properties: {}, children };
+}
+
+/**
+ * What `AcceptDialog::AcceptDialog` adds, in order (`dialogs.cpp:475-493`): the message label and
+ * the class's body under every authored Control, then the button row over them. `bg_panel` is the
+ * dialog painter's own box.
+ */
+export const dialogInternalControls: InternalControlsFn = (dialog, theme) => {
+  const props = dialog.node.properties as DialogProperties;
+  const body = dialogBodies.get(dialog.node.type)?.(dialog, theme);
+  const entries: InternalControlEntry[] = [
+    { mode: 'front', spec: messageLabelSpec(dialog, props.dialog_autowrap) },
+  ];
+  if (body) entries.push({ mode: 'front', spec: body });
+  entries.push({ mode: 'back', spec: buttonRowSpec(dialog) });
+  return entries;
+};
+
+/** The button row, the one internal Control a dialog builds in back mode. */
+export function buttonRowNode(dialog: SolveNode, theme: NativeTheme): SolveNode {
+  return internalControlsOf(dialog, theme).find(({ mode }) => mode === 'back')!.node;
+}
+
+/** Whether an internal Control takes the content rect (`dialogs.cpp:248-259`): all but the button row, built in back mode, do. */
+export function takesContentRect({ mode }: InternalControl): boolean {
+  return mode === 'front';
+}
+
+/** The internal Controls whose minimum the contents minimum reads as it reads an authored one's: all but the row and the message. */
+export function dialogBodyNodes(dialog: SolveNode, theme: NativeTheme): readonly SolveNode[] {
+  return internalControlsOf(dialog, theme)
+    .filter((internal) => takesContentRect(internal) && !isMessageLabel(internal.node))
+    .map(({ node }) => node);
 }

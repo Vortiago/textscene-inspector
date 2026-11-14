@@ -7,10 +7,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
-import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
-import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { compareKeys, paintKey } from '../../../r3f/testing/paintOrder';
@@ -18,6 +16,8 @@ import { ViewportPassStack } from './viewportPasses.testkit';
 
 import '../../../r3f/nodes/index';
 import '../../../r3f/controls/index';
+import { DispatchedScene } from '../../../r3f/testing/DispatchedScene';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 
 const PORTAL_SCENE = 'View::offscreen';
 
@@ -27,11 +27,12 @@ async function portalSceneOf(tscn: string): Promise<THREE.Object3D> {
   const fake = createFakeResourceLoader();
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      <ViewportPassStack captured={captured}>
-        <NodeDispatcher nodes={parsed.nodes} />
-      </ViewportPassStack>
-    </SceneStack>
+    <DispatchedScene
+      sceneGraph={createSceneGraphFromTscnScene(parsed)}
+      workspace="2d"
+      loader={fake.loader}
+      around={(nodes) => <ViewportPassStack captured={captured}>{nodes}</ViewportPassStack>}
+    />
   );
   await settleLoads();
   let portal: THREE.Object3D | undefined;
@@ -114,5 +115,42 @@ describe('a y-sorted Control in a SubViewport that also holds 2D content', () =>
   it('draws a Node2D child under the Control below it', async () => {
     const { low, sprite } = await keys();
     expect(compareKeys(sprite, low)).toBeLessThan(0);
+  });
+});
+
+/** `Holder` (a Node2D at y 50) holds `Low`, and `Mid` (y 30) comes after it, in a Control-only viewport. */
+const PROMOTED_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="View" type="SubViewport" parent="."]
+render_target_update_mode = 4
+size = Vector2i(400, 300)
+
+[node name="Panel" type="Control" parent="View"]
+y_sort_enabled = true
+layout_mode = 3
+anchors_preset = 0
+
+[node name="Holder" type="Node2D" parent="View/Panel"]
+position = Vector2(0, 50)
+
+[node name="Low" type="ColorRect" parent="View/Panel/Holder"]
+offset_top = -40.0
+offset_right = 100.0
+offset_bottom = 100.0
+
+[node name="Mid" type="ColorRect" parent="View/Panel"]
+offset_top = 30.0
+offset_right = 100.0
+offset_bottom = 130.0
+`;
+
+describe('a y-sorted Control in a Control-only SubViewport', () => {
+  beforeAll(() => Promise.all([import('./ViewportControls'), import('./CanvasOverWorld')]));
+
+  it('sorts a Control below a Node2D child at the Node2D child, not at its own y', async () => {
+    const portal = await portalSceneOf(PROMOTED_SCENE);
+    expect(compareKeys(paintKey(meshOf(portal, 'Mid')), paintKey(meshOf(portal, 'Low')))).toBeLessThan(0);
   });
 });

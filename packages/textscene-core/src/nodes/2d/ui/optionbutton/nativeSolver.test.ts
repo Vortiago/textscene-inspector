@@ -117,6 +117,20 @@ describe('the item OPTION_BUTTON_CLASS shows as Button text (option_button.cpp:4
     expect(shownText({})).toBe('');
     expect(shownText({ selected: 0 })).toBe('');
   });
+
+  it("keeps the button's own text with no item selected (option_button.cpp:432-442)", () => {
+    expect(shownText({ text: 'Choose one' })).toBe('Choose one');
+    expect(shownText({ text: 'Choose one', items, selected: 5 })).toBe('Choose one');
+  });
+
+  it("keeps the button's own icon with no item selected", () => {
+    const shown = OPTION_BUTTON_CLASS.shown!({ icon: 'res://own.png', items } as OptionButtonProperties);
+    expect(shown.icon).toBe('res://own.png');
+  });
+
+  it('shows the selected item over the own text', () => {
+    expect(shownText({ text: 'Choose one', items, selected: 0 })).toBe('Easy');
+  });
 });
 
 describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=true, the engine default)', () => {

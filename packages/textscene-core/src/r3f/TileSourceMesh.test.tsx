@@ -159,7 +159,7 @@ describe('TileSourceMesh texture slot', () => {
   it('draws an atlas texture the TileSet holds as a procedural texture, as any Texture2D slot does', async () => {
     const source = {
       ...sourceOf(false),
-      texture: { ...tileTextureAt('SubResource("Ramp")'), internalResources: GRADIENT_TABLES },
+      texture: tileTextureAt('SubResource("Ramp")', GRADIENT_TABLES),
     };
     const renderer = await render(source, null);
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
@@ -197,11 +197,7 @@ function viewportWindowSource(
   const tileSet = { id: 'TileSet_1', type: 'TileSet', data: { resource_local_to_scene: isTileSetLocal } };
   return {
     ...sourceOf(usesTexturePadding),
-    texture: {
-      ...tileTextureAt('SubResource("Window")'),
-      internalResources: tables,
-      isHeldLocally: isLocalToScene(tileSet),
-    },
+    texture: tileTextureAt('SubResource("Window")', tables, isLocalToScene(tileSet)),
   };
 }
 
@@ -294,11 +290,7 @@ describe('TileSourceMesh padding a normal-mapped CanvasTexture over a live targe
   const tileSet = { id: 'TileSet_1', type: 'TileSet', data: { resource_local_to_scene: 'true' } };
   const source: AtlasSourceModel = {
     ...sourceOf(true),
-    texture: {
-      ...tileTextureAt('SubResource("Mapped")'),
-      internalResources: tables,
-      isHeldLocally: isLocalToScene(tileSet),
-    },
+    texture: tileTextureAt('SubResource("Mapped")', tables, isLocalToScene(tileSet)),
   };
 
   it('draws the unrendered target through the stand-in', async () => {

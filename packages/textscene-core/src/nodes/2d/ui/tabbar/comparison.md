@@ -11,7 +11,7 @@ renders_as: a row of per-tab StyleBox quads with icon/title/close-icon content
 
 TabBar is the bare strip of tab headers, without the page switching a TabContainer adds.
 The previewer draws each tab's own `tab_selected`/`tab_unselected`/`tab_disabled` StyleBox,
-its icon and its title. It adds the close icon where `tab_close_display_policy` calls for it.
+its icon and its title. A disabled current tab draws its disabled box in the selected colours, as Godot does. It adds the close icon where `tab_close_display_policy` calls for it.
 It adds the scroll arrows once the tabs overflow a clipped bar. A clipped strip starts at the
 tab that brings the current tab into view, as `ensure_tab_visible` does. TabContainer's strip
 does the same, after its hidden pages and its `side_margin` reclaim. A tab that `max_tab_width`

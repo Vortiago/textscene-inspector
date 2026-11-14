@@ -39,13 +39,13 @@ ControlClipContext.displayName = 'ControlClipContext';
 export const ControlClipProvider = ControlClipContext.Provider;
 
 /** The whole accumulated clip: planes, and the rect a nested clipper intersects against. */
-function useControlClip(): ControlClip {
+export function useInheritedControlClip(): ControlClip {
   return useContext(ControlClipContext);
 }
 
 /** The clip planes of every enclosing Control, empty outside any provider. */
 export function useControlClipPlanes(): readonly THREE.Plane[] {
-  return useControlClip().planes;
+  return useInheritedControlClip().planes;
 }
 
 /** 4 planes × (normal.x, normal.y, normal.z, constant), plus a has-rect flag. */
@@ -80,7 +80,7 @@ export function useWorldClipPlanes(localRect: Rect2): {
   clippingPlanes: readonly THREE.Plane[];
   clip: ControlClip;
 } {
-  const inherited = useControlClip();
+  const inherited = useInheritedControlClip();
   const anchorRef = useRef<THREE.Group>(null);
   const [own, setOwn] = useState<ControlClip>(NO_CONTROL_CLIP);
   const previousFloats = useRef<Float64Array | null>(null);
