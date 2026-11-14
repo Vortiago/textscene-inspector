@@ -12,7 +12,7 @@
 import type { Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { defineShare } from '../../../../r3f/controls/native/solveHandoff';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
@@ -92,10 +92,6 @@ export interface TabBarModel extends TabBarFacts {
   drawInputs: readonly TabLayoutInput[];
 }
 
-function boxHeight(box: StyleBoxFlatData): number {
-  return box.contentMargin.top + box.contentMargin.bottom;
-}
-
 export const tabBarFacts = defineShare((solveNode, theme): TabBarFacts => {
   const props = solveNode.node.properties as TabBarProperties;
   const tabs = props.tabs ?? NO_TABS;
@@ -132,8 +128,8 @@ export const tabBarFacts = defineShare((solveNode, theme): TabBarFacts => {
     incrementIconSize,
     decrementIconSize,
     yMargin: Math.max(
-      ...(['unselected', 'selected', 'disabled', 'hovered'] as const).map((state) =>
-        boxHeight(pickTabStyleBox(styleBoxes, state))
+      ...(['unselected', 'selected', 'disabled', 'hovered'] as const).map(
+        (state) => contentMarginSize(pickTabStyleBox(styleBoxes, state)).y
       )
     ),
     fontSizePx: tabBarFontSizePx(solveNode, props),

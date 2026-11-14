@@ -12,7 +12,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { TextureSlotRequest, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
-import { controlSolverRegistry, themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import type { ShareNode, SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -126,7 +126,7 @@ type TabBarThemeIconName = (typeof TAB_BAR_THEME_ICON_NAMES)[number];
  * themed close/increment/decrement icon in `SolveNode.icons`. `buildSolveTree.ts`'s
  * generic path models one texture property per node and cannot see an indexed family.
  */
-const tabBarTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
+export const tabBarTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
   const tabs = (node.properties as TabBarProperties).tabs ?? [];
   const requests: TextureSlotRequest[] = [];
   tabs.forEach((tab, i) => {
@@ -211,8 +211,6 @@ export function shapeTabLabel(
     lineSpacingPx: 0,
   });
 }
-
-controlSolverRegistry.registerTextureSlots('TabBar', tabBarTextureSlots);
 
 export interface TabLayoutInput {
   disabled: boolean;

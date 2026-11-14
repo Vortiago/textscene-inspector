@@ -21,7 +21,7 @@ import {
   type ShareNode,
 } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { Vector2 } from '../../../../godot/math/vector';
+import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
 import {
   buttonContentMinimumSize,
   buttonIconSlotRequest,
@@ -210,7 +210,7 @@ export function fittedThemedIconSize(
 }
 
 /** The boxes of `n` by its own class and `theme_type_variation`, for the draw state its properties give. */
-export function buttonStyle(n: ShareNode): ButtonStyle {
+function buttonStyle(n: ShareNode): ButtonStyle {
   const props = n.node.properties as ButtonProperties;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
   const box = pickButtonStyleBox(n.styleBoxes, state, n.rtl);
@@ -310,6 +310,20 @@ const buttonUnwrappedLabelOf = perButtonClass((buttonClass) =>
 );
 
 /**
+ * A Button's label wrapped at each wrap width it is asked for. The width alone is the key: a
+ * wrapping Button whose height follows its minimum is laid out at two heights and one width.
+ */
+const buttonWrappedLabelsOf = perButtonClass((buttonClass) =>
+  defineShare((n) => {
+    const byWidth = new Map<number, TextLayoutResult | null>();
+    return (wrapWidthPx: number) => {
+      if (!byWidth.has(wrapWidthPx)) byWidth.set(wrapWidthPx, buttonLabelShape(n, buttonClass, wrapWidthPx));
+      return byWidth.get(wrapWidthPx)!;
+    };
+  })
+);
+
+/**
  * A Button's layout at `size`. `button.cpp:428-432` re-shapes a wrapping label at the width the
  * unwrapped pass measured: `is_clipped` is true under autowrap (`:332`), so the icon's reservation
  * does not move with the text. Godot reaches the same state over two frames.
@@ -323,7 +337,7 @@ export const buttonLayoutOf = perButtonClass((buttonClass): RectShare<ButtonLayo
     const unwrapped =
       !isWrapped || props.expandIcon === true ? buttonUnwrappedLabelOf(buttonClass)(n, theme) : null;
     const label = isWrapped
-      ? buttonLabelShape(n, buttonClass, wrappedLabelWidthPx(facts, unwrapped))
+      ? buttonWrappedLabelsOf(buttonClass)(n, theme)(wrappedLabelWidthPx(facts, unwrapped))
       : unwrapped;
     const { state, box } = buttonStyle(n);
     return {
@@ -380,7 +394,7 @@ function buttonMinimumInputs(
     return buttonLayoutOf(buttonClass)(n, { x: tentative.w, y: tentative.h }, ctx.theme);
   }
   return {
-    facts: buttonContentFacts(n, ctx.theme, buttonClass, { x: 0, y: 0 }),
+    facts: buttonContentFacts(n, ctx.theme, buttonClass, VECTOR2_ZERO),
     label: ctx.measureText ? buttonUnwrappedLabelOf(buttonClass)(n, ctx.theme) : null,
   };
 }

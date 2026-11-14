@@ -74,18 +74,9 @@ const RECT_SHARE_SIZES = 2;
  * for the reason {@link Share} gives.
  */
 export function defineRectShare<T>(compute: RectShare<T>): RectShare<T> {
-  const byNode = new WeakMap<ShareNode, WeakMap<NativeTheme, SizedEntry<T>[]>>();
+  const entriesOf = defineShare((): SizedEntry<T>[] => []);
   return (n, size, theme) => {
-    let byTheme = byNode.get(n);
-    if (!byTheme) {
-      byTheme = new WeakMap<NativeTheme, SizedEntry<T>[]>();
-      byNode.set(n, byTheme);
-    }
-    let entries = byTheme.get(theme);
-    if (!entries) {
-      entries = [];
-      byTheme.set(theme, entries);
-    }
+    const entries = entriesOf(n, theme);
     const hit = entries.find((entry) => entry.size.x === size.x && entry.size.y === size.y);
     if (hit) return hit.value;
     const value = compute(n, size, theme);

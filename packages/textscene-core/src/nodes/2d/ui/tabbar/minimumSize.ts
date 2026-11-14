@@ -1,5 +1,5 @@
 /**
- * `TabBar::get_minimum_size` (`tab_bar.cpp:44-122`) from the TabBar shares, registered for the solve.
+ * `TabBar::get_minimum_size` (`tab_bar.cpp:44-122`) from the TabBar shares.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -7,8 +7,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { Vector2 } from '../../../../godot/math/vector';
-import { controlSolverRegistry, type SolveContext } from '../../../../r3f/controls/native/solverRegistry';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import { tabBarFacts, tabBarModel, tabWidths, type TabBarFacts, type TabBarModel } from './tabBarModel';
 
 /** What one tab gives the minimum size. */
@@ -20,26 +19,21 @@ interface TabMinimum {
   textHeightPx: number;
 }
 
-/** Each tab with no text measured: a title adds its height 0 and width 0, and its separation stays. */
-function unmeasuredTabs(bar: TabBarFacts): TabMinimum[] {
-  return bar.tabs.map((facts) => ({
-    isHidden: facts.tab.hidden === true,
-    width: tabWidths(bar, facts, 0).minimumWidth,
-    iconHeight: facts.iconSize?.y ?? null,
-    closeVisible: facts.closeVisible,
-    textHeightPx: 0,
-  }));
-}
-
-/** Each tab with its title shaped. */
-function measuredTabs(model: TabBarModel): TabMinimum[] {
-  return model.computed.map((tab) => ({
-    isHidden: tab.tab.hidden === true,
-    width: tab.minimumWidth,
-    iconHeight: tab.iconSize?.y ?? null,
-    closeVisible: tab.closeVisible,
-    textHeightPx: tab.layout.heightPx,
-  }));
+/**
+ * Each tab, with its title shaped when `model` is given. Without one a title adds its height 0 and
+ * its width 0, and its separation stays.
+ */
+function tabMinimums(bar: TabBarFacts, model: TabBarModel | null): TabMinimum[] {
+  return bar.tabs.map((facts, i) => {
+    const shaped = model?.computed[i];
+    return {
+      isHidden: facts.tab.hidden === true,
+      width: shaped ? shaped.minimumWidth : tabWidths(bar, facts, 0).minimumWidth,
+      iconHeight: facts.iconSize?.y ?? null,
+      closeVisible: facts.closeVisible,
+      textHeightPx: shaped ? shaped.layout.heightPx : 0,
+    };
+  });
 }
 
 /**
@@ -68,9 +62,7 @@ function sizeOf(bar: TabBarFacts, tabs: readonly TabMinimum[]): Vector2 {
 }
 
 /** Only `_update_cache` reads `max_tab_width`, so the minimum ignores it. */
-const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vector2 => {
+export const tabBarMinimumSize: MinimumSizeFn = (n, ctx) => {
   const bar = tabBarFacts(n, ctx.theme);
-  return sizeOf(bar, ctx.measureText ? measuredTabs(tabBarModel(n, ctx.theme)) : unmeasuredTabs(bar));
+  return sizeOf(bar, tabMinimums(bar, ctx.measureText ? tabBarModel(n, ctx.theme) : null));
 };
-
-controlSolverRegistry.registerMinimumSize('TabBar', tabBarMinimumSize);

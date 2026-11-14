@@ -9,7 +9,6 @@
  */
 import type { Vector2 } from '../../../../godot/math/vector';
 import { defineRectShare } from '../../../../r3f/controls/native/solveHandoff';
-import type { ShareNode } from '../../../../r3f/controls/native/solveTree';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { TEXT_LINE_DEFAULT_OVERRUN, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
 import {
@@ -108,7 +107,7 @@ function scrollArrows(model: TabBarModel, placed: TabBarDrawLayout, size: Vector
   });
 }
 
-function drawAt(n: ShareNode, model: TabBarModel, size: Vector2, offset: number | undefined): TabBarDraw {
+function drawAt(model: TabBarModel, size: Vector2, rtl: boolean, offset: number | undefined): TabBarDraw {
   const placed = computeTabBarDrawLayout(model.drawInputs, {
     ...model.layoutInput,
     barWidthPx: size.x,
@@ -116,9 +115,9 @@ function drawAt(n: ShareNode, model: TabBarModel, size: Vector2, offset: number 
   });
   return {
     tabs: drawOrder(placed.items, model.layoutInput.currentTab).map((item) =>
-      drawnTab(model, item, size, n.rtl)
+      drawnTab(model, item, size, rtl)
     ),
-    arrows: scrollArrows(model, placed, size, n.rtl),
+    arrows: scrollArrows(model, placed, size, rtl),
   };
 }
 
@@ -131,7 +130,7 @@ export const tabBarLayout = defineRectShare((n, size, theme): TabBarLayout => {
     at: (offset) => {
       let draw = byOffset.get(offset);
       if (!draw) {
-        draw = drawAt(n, model, size, offset);
+        draw = drawAt(model, size, n.rtl, offset);
         byOffset.set(offset, draw);
       }
       return draw;

@@ -50,4 +50,9 @@ describe('the shapings of one Button label across a solve and a paint', () => {
   it('shapes a wrapping label twice: unwrapped, then at the width the layout leaves', async () => {
     expect(await shapingsOf(button({ autowrapMode: AutowrapMode.AUTOWRAP_WORD }))).toBe(2);
   });
+
+  it('shapes a wrapping label twice when its height grows to the wrapped minimum', async () => {
+    const grows = button({ autowrapMode: AutowrapMode.AUTOWRAP_WORD, offsetRight: 60, offsetBottom: 0 });
+    expect(await shapingsOf(grows)).toBe(2);
+  });
 });
