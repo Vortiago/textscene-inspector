@@ -5,14 +5,17 @@
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../parser/types';
 import { heading } from '../../../parser/testing/parserKit';
-import { createSolveContext } from '../../../r3f/controls/native/controlRectSolver';
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { measureText } from '../../../r3f/controls/native/text/measurer';
 import { solveNode, withThemeItems } from '../../../r3f/controls/native/testing/solveNode';
 import '../../../parser/TscnParser';
 import '../../../r3f/controls/index';
-import { dialogGeometry } from '../acceptdialog/dialogLayout';
+import { solvedDialog } from '../acceptdialog/testing/solvedDialog';
+import { internalControlNode } from '../../../r3f/controls/native/internalControls';
+import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
+import type { ButtonProperties } from '../../2d/ui/button/types';
+import type { LineEditProperties } from '../../2d/ui/lineedit/types';
 import { themeResource } from '../../../r3f/controls/native/testing/themeResource';
 import { wrappedWindowSize } from '../window/wrapControls';
 import oracle from './testing/fileDialogGeometry/oracle.out.json';
@@ -23,6 +26,11 @@ import { parseFileDialog } from './parser';
 import type { ItemListRuntimeProperties } from '../../2d/ui/itemlist/types';
 
 const THEME = nativeTheme(1);
+
+/** The body `dialog` builds, as the internal Controls its spec becomes. */
+function bodyTree(dialog: SolveNode, theme: NativeTheme): SolveNode {
+  return internalControlNode(dialog, fileDialogBody(dialog, theme));
+}
 const EMBEDDER = { x: 1152, y: 648 };
 const PNG = 'PackedStringArray("*.png ; PNG Image")';
 
@@ -179,14 +187,14 @@ describe.each(Object.keys(CASES))('FileDialog %s', (name) => {
   });
 
   it('places every visible Control of the body where Godot does', () => {
-    const { body } = dialogGeometry(window, size, createSolveContext(THEME, measureText));
+    const { body } = solvedDialog(window, size, THEME);
     const placed = body.map(({ control, rect }) => ({ type: control.node.type, rect }));
     const wanted = oracleBody(expected.nodes).map((row) => ({ type: row.type, rect: rectOf(row.rect) }));
     expect(placed).toEqual(wanted);
   });
 
   it('shows the text, the disabled state and the pressed state Godot shows', () => {
-    const { body } = dialogGeometry(window, size, createSolveContext(THEME, measureText));
+    const { body } = solvedDialog(window, size, THEME);
     const wanted = oracleBody(expected.nodes).map(({ type, text = '', disabled, pressed }) => ({
       type,
       text: text === ORACLE_LISTED_FILE ? '' : text,
@@ -200,8 +208,7 @@ describe.each(Object.keys(CASES))('FileDialog %s', (name) => {
 describe('FileDialog toolbar icon sizes', () => {
   const themedIcon = { ref: 'ExtResource("1")', resources: solveNode().resources, isHeldLocally: true };
   const prevWidth = (dialog: SolveNode) => {
-    const ctx = createSolveContext(THEME, measureText);
-    const prev = dialogGeometry(dialog, { x: 640, y: 360 }, ctx).body.find(
+    const prev = solvedDialog(dialog, { x: 640, y: 360 }, THEME).body.find(
       ({ control }) => control.node.name === 'DirPrev'
     );
     return prev!.rect.w;
@@ -239,9 +246,7 @@ describe('FileDialog toolbar icon sizes', () => {
       textureSlots: Object.fromEntries(names.map((name) => [name, null])),
     };
     const rects = (dialog: SolveNode) =>
-      dialogGeometry(dialog, { x: 640, y: 360 }, createSolveContext(THEME, measureText)).body.map(
-        ({ rect }) => rect
-      );
+      solvedDialog(dialog, { x: 640, y: 360 }, THEME).body.map(({ rect }) => rect);
     expect(rects(pending)).toEqual(rects(base));
   });
 
@@ -263,7 +268,7 @@ describe('FileDialog built Button icon sizes', () => {
   };
   const bodyControl = (name: string) => {
     const size = wrappedWindowSize(themed, THEME, measureText, EMBEDDER);
-    const { body } = dialogGeometry(themed, size, createSolveContext(THEME, measureText));
+    const { body } = solvedDialog(themed, size, THEME);
     return body.find(({ control }) => control.node.name === name)!.control;
   };
 
@@ -279,7 +284,9 @@ describe('FileDialog built Button icon sizes', () => {
 describe('FileDialog built Button classes', () => {
   const themedIcon = { ref: 'ExtResource("1")', resources: solveNode().resources, isHeldLocally: true };
   const withoutOwnIcon = (node: SolveNode): SolveNode[] => [
-    ...(descendsFromClass(node.node.type, 'Button') && !node.syntheticDraw?.themedIcon ? [node] : []),
+    ...(descendsFromClass(node.node.type, 'Button') && !(node.node.properties as ButtonProperties).themeIcon
+      ? [node]
+      : []),
     ...node.children.flatMap(withoutOwnIcon),
   ];
 
@@ -290,34 +297,35 @@ describe('FileDialog built Button classes', () => {
       const requested = fileDialogTextureSlots(dialog.node, {}, () => ({ icon: themedIcon })).map(
         ({ key }) => key
       );
-      const built = withoutOwnIcon(fileDialogBody(dialog, THEME)).map(({ node }) => `built:${node.type}`);
+      const built = withoutOwnIcon(bodyTree(dialog, THEME)).map(({ node }) => `built:${node.type}`);
       expect(requested).toEqual(expect.arrayContaining(built));
     }
   );
 
   it('gives no built Button without an icon a theme_type_variation, which has no icon slot', () => {
-    const variations = withoutOwnIcon(fileDialogBody(fileDialog(CASES.options!), THEME)).map(
+    const variations = withoutOwnIcon(bodyTree(fileDialog(CASES.options!), THEME)).map(
       ({ node }) => (node.properties as { themeTypeVariation?: string }).themeTypeVariation
     );
     expect(variations.filter((variation) => variation !== undefined)).toEqual([]);
   });
 });
 
-describe('FileDialog synthetic drawing', () => {
+describe('FileDialog runtime state of the built Controls', () => {
   const bodyControl = (lines: Record<string, string>, name: string) => {
     const dialog = fileDialog(lines);
     const size = wrappedWindowSize(dialog, THEME, measureText, EMBEDDER);
-    const { body } = dialogGeometry(dialog, size, createSolveContext(THEME, measureText));
+    const { body } = solvedDialog(dialog, size, THEME);
     return body.find(({ control }) => control.node.name === name)!.control;
   };
 
   it('gives the previous-folder button its theme icon', () => {
-    expect(bodyControl(CASES.open!, 'DirPrev').syntheticDraw?.themedIcon?.name).toBe('back_folder');
+    const prev = bodyControl(CASES.open!, 'DirPrev').node.properties as ButtonProperties;
+    expect(prev.themeIcon?.name).toBe('back_folder');
   });
 
   it('selects the file name before its dot', () => {
     const field = bodyControl({ ...CASES.open!, current_file: '"a.png"' }, 'FilenameEdit');
-    expect(field.syntheticDraw?.selection).toEqual({ begin: 0, end: 1 });
+    expect((field.node.properties as LineEditProperties).selection).toEqual({ begin: 0, end: 1 });
   });
 });
 
@@ -332,9 +340,7 @@ describe('FileDialog file list', () => {
     const props = { ...(dialog.node.properties as object), file_rows: ROWS, selected_row: 1, ...extra };
     const found = (node: SolveNode): SolveNode | undefined =>
       node.node.name === 'FileList' ? node : node.children.map(found).find(Boolean);
-    return found(
-      fileDialogBody({ ...dialog, node: { ...dialog.node, properties: props } as TscnNode }, THEME)
-    )!;
+    return found(bodyTree({ ...dialog, node: { ...dialog.node, properties: props } as TscnNode }, THEME))!;
   };
   const listProps = (list: SolveNode) => list.node.properties as ItemListRuntimeProperties;
 
@@ -412,10 +418,7 @@ describe('FileDialog file list', () => {
     const dialog = fileDialog(CASES.open!);
     const themed = { ...dialog, colors: { folder_icon_color: red, file_icon_color: green } };
     const props = { ...(dialog.node.properties as object), file_rows: ROWS, selected_row: null };
-    const body = fileDialogBody(
-      { ...themed, node: { ...dialog.node, properties: props } as TscnNode },
-      THEME
-    );
+    const body = bodyTree({ ...themed, node: { ...dialog.node, properties: props } as TscnNode }, THEME);
     const list = (function find(node: SolveNode): SolveNode | undefined {
       return node.node.name === 'FileList' ? node : node.children.map(find).find(Boolean);
     })(body)!;
@@ -423,7 +426,7 @@ describe('FileDialog file list', () => {
   });
 
   it('sizes a toolbar icon by the theme scale', () => {
-    const body = fileDialogBody(fileDialog(CASES.open!), nativeTheme(1.5));
+    const body = bodyTree(fileDialog(CASES.open!), nativeTheme(1.5));
     const dirPrev = (function find(node: SolveNode): SolveNode | undefined {
       return node.node.name === 'DirPrev' ? node : node.children.map(find).find(Boolean);
     })(body)!;

@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rect2 } from '../../../godot/math/rect2';
+import { ZERO_RECT, type Rect2 } from '../../../godot/math/rect2';
 import { controlLayoutOrder, controlProps, isLaidOutChild, sortableView, type SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import {
@@ -20,6 +20,7 @@ import {
   type TextMeasurer,
 } from './solverRegistry';
 import type { SealedHandoff } from './solveHandoff';
+import { internalControlsOf, placeInternalControls } from './internalControls';
 import { resolveControlLayout, type ControlLayoutOrder } from '../controlAnchors.js';
 import { type Vector2, vector2Max } from '../../../godot/math/vector.js';
 import { GrowDirection } from '../../../godot/scene/control.js';
@@ -41,6 +42,14 @@ export interface SolvedControl {
    * `Container::fit_child_in_rect` does.
    */
   resetsChildTransform?: boolean;
+}
+
+/** The solved rect of each of `children`, by path, for the painter of their parent. Zero for one the solve missed. */
+export function childRectsOf(
+  children: readonly SolveNode[],
+  solved: ReadonlyMap<string, SolvedControl>
+): ReadonlyMap<string, Rect2> {
+  return new Map(children.map((child) => [child.path, solved.get(child.path)?.rect ?? ZERO_RECT]));
 }
 
 // --- Anchors ---------------------------------------------------------------
@@ -234,12 +243,15 @@ export function createSolveContext(
 
 /**
  * Whether any node's minimum size reads `tentativeRect` (`registerSizeDependentMinimum`),
- * which alone makes `solveControlTree` run its second pass.
+ * which alone makes `solveControlTree` run its second pass. Internal Controls count too.
  */
-function hasSizeDependentMinimum(roots: readonly SolveNode[]): boolean {
+function hasSizeDependentMinimum(roots: readonly SolveNode[], theme: NativeTheme): boolean {
   for (const node of roots) {
     if (controlSolverRegistry.readsTentativeRect(node)) return true;
-    if (hasSizeDependentMinimum(node.children)) return true;
+    if (hasSizeDependentMinimum(node.children, theme)) return true;
+    for (const internal of internalControlsOf(node, theme)) {
+      if (hasSizeDependentMinimum([internal.node], theme)) return true;
+    }
   }
   return false;
 }
@@ -279,12 +291,26 @@ function solveFree(
   dispatchChildren(n, rect, { x: origin.x + rect.x, y: origin.y + rect.y }, viewport, ctx, out);
 }
 
+/** Gives `n`'s authored children, then its internal Controls, their rects. */
+function dispatchChildren(
+  n: SolveNode,
+  rect: Rect2,
+  /** `n`'s own top-left in viewport coordinates, for `canvasBoundaryRect`. */
+  origin: Vector2,
+  viewport: Rect2,
+  ctx: SolveContext,
+  out: Map<string, SolvedControl>
+): void {
+  dispatchAuthoredChildren(n, rect, origin, viewport, ctx, out);
+  dispatchInternalControls(n, rect, origin, viewport, ctx, out);
+}
+
 /**
- * Gives `n`'s children their rects. A registered `ContainerLayoutFn` overrides
+ * Gives `n`'s authored children their rects. A registered `ContainerLayoutFn` overrides
  * their anchors, as `layout_mode = 2` children ignore theirs. Otherwise each child
  * solves free against `n`'s rect. Grandchildren recurse off the child's rect.
  */
-function dispatchChildren(
+function dispatchAuthoredChildren(
   n: SolveNode,
   rect: Rect2,
   /** `n`'s own top-left in viewport coordinates, for `canvasBoundaryRect`. */
@@ -335,24 +361,9 @@ function dispatchChildren(
     // (control.cpp:1531-1541,1760-1797) re-floors at the child's full-precision
     // minimum, whatever a cell rounded to. It lives here, not in each port:
     // `container.cpp` never names it.
-    let childRect: Rect2;
-    if (controlSolverRegistry.isCanvasBoundary(child.node.type)) {
-      childRect = canvasBoundaryRect(origin.x, origin.y, viewport);
-    } else {
-      const childLayout = resolveNodeLayout(child, ctx, controlLayoutOrder(child));
-      // `fit_child_in_rect` ends at `set_rect`, whose `_compute_offsets`
-      // un-mirrors the x it was handed (`control.cpp:906-909`) so that the
-      // mirror above puts a fitting child straight back. Only a child that
-      // outgrows its cell moves, and then its grow direction is mirrored too.
-      const unmirrored = child.rtl ? mirrorRectRtl(assigned, rect.w) : assigned;
-      const floored = floorAtMinimumSize(
-        unmirrored,
-        minSize,
-        childLayout.growHorizontal,
-        childLayout.growVertical
-      );
-      childRect = child.rtl ? mirrorRectRtl(floored, rect.w) : floored;
-    }
+    const childRect = controlSolverRegistry.isCanvasBoundary(child.node.type)
+      ? canvasBoundaryRect(origin.x, origin.y, viewport)
+      : setRect(child, assigned, minSize, rect.w, ctx);
     out.set(child.path, {
       rect: childRect,
       minSize,
@@ -367,6 +378,47 @@ function dispatchChildren(
       ctx,
       out
     );
+  }
+}
+
+/**
+ * `Control::set_rect` with `assigned`, in a parent `parentWidth` wide: its `_compute_offsets`
+ * un-mirrors the x it was handed (`control.cpp:906-909`), so the mirror of `_size_changed` puts a
+ * fitting child straight back. Only a child that outgrows its rect moves, and then its grow
+ * direction is mirrored too.
+ */
+function setRect(
+  child: SolveNode,
+  assigned: Rect2,
+  minSize: Vector2,
+  parentWidth: number,
+  ctx: SolveContext
+): Rect2 {
+  const layout = resolveNodeLayout(child, ctx, controlLayoutOrder(child));
+  const unmirrored = child.rtl ? mirrorRectRtl(assigned, parentWidth) : assigned;
+  const floored = floorAtMinimumSize(unmirrored, minSize, layout.growHorizontal, layout.growVertical);
+  return child.rtl ? mirrorRectRtl(floored, parentWidth) : floored;
+}
+
+/**
+ * Gives `n`'s internal Controls their rects. Its class places the top-level ones, as
+ * `AcceptDialog::_update_child_rects` does with `set_position` and `set_size`, which end in the
+ * same floor. The Controls below them solve as any Control's children do.
+ */
+function dispatchInternalControls(
+  n: SolveNode,
+  rect: Rect2,
+  origin: Vector2,
+  viewport: Rect2,
+  ctx: SolveContext,
+  out: Map<string, SolvedControl>
+): void {
+  for (const { node, rect: assigned } of placeInternalControls(n, rect, ctx)) {
+    const minSize = ctx.combinedMinimumSize(node);
+    const internalRect = setRect(node, assigned, minSize, rect.w, ctx);
+    out.set(node.path, { rect: internalRect, minSize });
+    const internalOrigin = { x: origin.x + internalRect.x, y: origin.y + internalRect.y };
+    dispatchChildren(node, internalRect, internalOrigin, viewport, ctx, out);
   }
 }
 
@@ -389,7 +441,7 @@ export function solveControlTree(
     solveFree(root, viewport, rootOrigin, viewport, ctx, out);
   }
 
-  if (!hasSizeDependentMinimum(roots)) return out;
+  if (!hasSizeDependentMinimum(roots, ctx.theme)) return out;
 
   // One pass, not a loop: the axis a node reads is never downstream of the axis
   // it drives. Godot's `_size_changed`/`update_minimum_size` are reactive too, so

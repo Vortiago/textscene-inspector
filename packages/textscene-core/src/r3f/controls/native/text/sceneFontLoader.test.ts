@@ -3,7 +3,8 @@
  * load here unless a test stubs both. These tests cover the fallback decisions, the warn-once
  * dedupe and the peek contract. `fontFaceDoor.test.ts` reaches the shared door for real.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { windowLoaded } from './fakeFontFace.testkit';
 import { fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
 import { peekSceneFontMetrics, peekSettledSceneFontMetrics } from './sceneFontLoader';
 import { fontWork, onSceneFontSettled, sceneFontSettleCount } from './settledChannel';
@@ -24,6 +25,8 @@ const OUTLINE_LOAD_TIMEOUT_MS = 15_000;
 function settleLoads(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
+
+beforeAll(windowLoaded);
 
 describe('peekSceneFontMetrics', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
