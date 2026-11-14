@@ -57,8 +57,14 @@ export function parseVerdictOutput(output, count) {
   return blocks.map(verdictOf);
 }
 
+/**
+ * Godot's error on a shader set from a string: its message, which may hold several lines, as the
+ * candidates of an overload do, then the empty path and the line.
+ */
+const SHADER_ERROR = /SHADER ERROR: ([\s\S]*?)\n\s*at: .*\(:(\d+)\)/;
+
 function verdictOf(block) {
-  const error = /SHADER ERROR: (.*)\n\s*at: .*\(:(\d+)\)/.exec(block);
+  const error = SHADER_ERROR.exec(block);
   if (!error && block.includes('SHADER ERROR')) {
     throw new Error(`expected "at: (null) (:<line>)" after Godot's shader error, got:\n${block}`);
   }

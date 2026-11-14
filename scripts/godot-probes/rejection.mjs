@@ -14,8 +14,11 @@ import { godotVerdicts } from './shaderVerdicts.mjs';
 /** Godot's crash handler: `Program crashed with signal <n>`, before its backtrace. */
 const CRASH = /Program crashed with signal (\d+)/;
 
-/** The front end's form: the message, then the shader's path, which may be empty, and its line. */
-const LANGUAGE_ERROR = /SHADER ERROR: (.*)\n\s*at: .*\(\S*:(\d+)\)/;
+/**
+ * The front end's form: the message, which may hold several lines, then the shader's path, which
+ * may be empty, and its line.
+ */
+const LANGUAGE_ERROR = /SHADER ERROR: ([\s\S]*?)\n\s*at: .*\(\S*:(\d+)\)/;
 
 /** glslang's form: `ERROR: 0:<line>: <message>`, the first of which names the fault. */
 const GLSL_ERROR = /^ERROR: \d+:\d+: (.*)$/m;
