@@ -331,6 +331,22 @@ export function soloLineLayout(
 }
 
 /**
+ * A one-line `layout` with its baseline at the largest ascent of the faces its glyphs draw in, and
+ * its height grown to their descent: Godot's one-line text buffer (`text_server_adv.cpp:5161-5162`).
+ * A layout of several lines is returned as it is: one pitch serves them all (#1324).
+ */
+export function withGlyphFaceAscent(layout: TextLayoutResult): TextLayoutResult {
+  const [line] = layout.lines;
+  if (!line || layout.lines.length > 1) return layout;
+  let ascentPx = layout.baselineOffsetPx;
+  for (const glyph of line.glyphs)
+    ascentPx = Math.max(ascentPx, getFontAscentPx(glyph.fontMetrics, glyph.fontSizePx));
+  const heightPx = Math.max(layout.heightPx, ascentPx + deepestDescentPx(line));
+  if (ascentPx === layout.baselineOffsetPx && heightPx === layout.heightPx) return layout;
+  return { ...layout, baselineOffsetPx: ascentPx, heightPx };
+}
+
+/**
  * The largest descent of a face on `line` at its size, 0 for no glyph. A canvas raster reaches this
  * far below the baseline, so a glyph of a fallback face with a deeper descent is not cut at the
  * bottom. The raster grows only downwards: the baseline stays.

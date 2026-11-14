@@ -13,7 +13,6 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { NO_UNDERLINE } from '../../../../r3f/controls/native/text/paragraphUnderline';
 import { isDrawnRtl } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
@@ -75,14 +74,15 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
   const underlineLinearColor = useItemLinearColor(tintedFontColor);
   const underline = useMemo(() => {
     if (!layout || !shouldUnderline(state, props.underline)) return null;
-    // The ascent of the font the text draws in: a `theme_override_fonts/font` scene font shapes at its
-    // own ascent, and the underline sits relative to it, not to Open Sans's.
-    const ascentPx = getFontAscentPx(fontMetrics, fontSizePx);
     const spacingConstant = requiredThemeItem(solveNode.constants, 'underline_spacing');
     const lineUnderline = layout.lines[0]?.underline ?? NO_UNDERLINE;
-    const { y, thickness } = linkButtonUnderlineGeometry(lineUnderline, spacingConstant, ascentPx);
+    const { y, thickness } = linkButtonUnderlineGeometry(
+      lineUnderline,
+      spacingConstant,
+      layout.baselineOffsetPx
+    );
     return { top: y - thickness / 2, thickness, width: placement.lineWidthPx };
-  }, [layout, state, props, fontSizePx, fontMetrics, solveNode.constants, placement]);
+  }, [layout, state, props, solveNode.constants, placement]);
 
   return (
     <>
