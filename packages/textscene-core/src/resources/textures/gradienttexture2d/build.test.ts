@@ -8,6 +8,7 @@ import { sourceColorSpace } from '../sourceColorSpace';
 import type { Gradient, GradientTexture2D } from './types';
 import {
   GradientTexture2DFill,
+  GradientColorSpace,
   GradientInterpolationMode,
   GradientTexture2DRepeat,
 } from '../../../godot/scene/gradientTexture';
@@ -43,6 +44,7 @@ describe('rasterizeGradientTexture2D', () => {
     const tex: GradientTexture2D = { ...decodeGradientTexture2D({ width: '1', height: '1' }), useHdr: true };
     const gradient: Gradient = {
       interpolationMode: GradientInterpolationMode.CONSTANT,
+      interpolationColorSpace: GradientColorSpace.SRGB,
       stops: [{ offset: 0, color: { r: 2, g: 0.5, b: 0, a: 1 } }],
     };
     const texture = rasterizeGradientTexture2D(tex, gradient);
@@ -76,6 +78,7 @@ describe('rasterizeGradientTexture2D', () => {
     // Black at Godot's top (offset 0), white at Godot's bottom (offset 1).
     const gradient: Gradient = {
       interpolationMode: GradientInterpolationMode.LINEAR,
+      interpolationColorSpace: GradientColorSpace.SRGB,
       stops: [
         { offset: 0, color: { r: 0, g: 0, b: 0, a: 1 } },
         { offset: 1, color: { r: 1, g: 1, b: 1, a: 1 } },
@@ -106,5 +109,21 @@ describe('rasterizeGradientTexture2D', () => {
     const corner = at(0, 0);
     expect(corner.r).toBe(255);
     expect(corner.a).toBe(0);
+  });
+});
+
+describe('rasterizeGradientTexture2D in a colour space', () => {
+  it('matches the RGBA8 row Godot 4.6.3 bakes for an OKLab red-to-blue gradient (gradient_texture.cpp:120-128)', () => {
+    const gradient = gradientOf({
+      interpolation_color_space: '2',
+      colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)',
+    });
+    const texture = rasterizeGradientTexture2D(
+      decodeGradientTexture2D({ width: '5', height: '1' }),
+      gradient
+    );
+    expect([...(texture.image.data as Uint8Array)]).toEqual([
+      255, 0, 0, 255, 198, 73, 109, 255, 140, 83, 162, 255, 81, 71, 210, 255, 0, 0, 255, 255,
+    ]);
   });
 });

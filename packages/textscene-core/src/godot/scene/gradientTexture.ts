@@ -14,6 +14,13 @@ export const GradientInterpolationMode = {
   CUBIC: 2,
 } as const;
 
+/** `Gradient::ColorSpace` (`scene/resources/gradient.h:48-52`), each member without `GRADIENT_COLOR_SPACE_`. */
+export const GradientColorSpace = {
+  SRGB: 0,
+  LINEAR_SRGB: 1,
+  OKLAB: 2,
+} as const;
+
 /** `GradientTexture2D::Fill` (`scene/resources/gradient_texture.h:77-81`), each member without `FILL_`. */
 export const GradientTexture2DFill = {
   LINEAR: 0,

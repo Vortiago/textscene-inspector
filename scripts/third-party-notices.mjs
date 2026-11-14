@@ -136,13 +136,14 @@ function isNamespacedInput(input) {
 }
 
 /**
- * The package's own TypeScript has no source map and is its own source, as is a file of an
- * installed package. Any other file without a map would put a `dist/` path in the notices, so it
- * fails the build.
+ * TypeScript has no source map and is its own source: the package's own, and core's that a worker
+ * bundle reads. So is a file of an installed package. Any other file without a map would put a
+ * `dist/` path in the notices, so it fails the build.
  */
 function sourceOf(compiled, ownSourceDir) {
   const isOwnSource = !relative(ownSourceDir, compiled).startsWith('..');
-  if (isOwnSource || compiled.split(sep).includes('node_modules')) return compiled;
+  const isTypeScript = /\.tsx?$/.test(compiled);
+  if (isOwnSource || isTypeScript || compiled.split(sep).includes('node_modules')) return compiled;
   const mapPath = `${compiled}.map`;
   if (!existsSync(mapPath)) throw new Error(`expected a source map at ${mapPath}, found none`);
   const [source] = JSON.parse(readFileSync(mapPath, 'utf8')).sources;
