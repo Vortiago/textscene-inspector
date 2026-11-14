@@ -19,7 +19,7 @@ const RECORD = ANSWERS.probes;
  * The most rows that may stay open. A slice that transpiles rows lowers it, and a change that
  * opens a transpiled row again fails here.
  */
-const OPEN_ROWS_AT_MOST = 1821;
+const OPEN_ROWS_AT_MOST = 1816;
 
 const transpiledRows = new Set(PROBES.flatMap((probe) => probe.rows));
 
