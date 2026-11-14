@@ -1,7 +1,7 @@
 /**
  * The glyph outlines of a scene font as far as they have loaded, which a TextMesh extrudes and the
- * canvas painter draws: the counterpart of the metrics peek in `sceneFontLoader.ts`, and it answers
- * a settled load through the same channel. A WOFF2 decompresses with Brotli and rebuilds its `glyf`,
+ * canvas painter draws: the counterpart of the metrics peek in `sceneFontLoader.ts`, and it loads
+ * through the settled fonts of the same preview (`settledFonts.ts`). A WOFF2 decompresses with Brotli and rebuilds its `glyf`,
  * so the answer is never there on the first peek. It never throws.
  */
 import type { FontResource } from '../../../../resources/fonts/font/types';
@@ -18,25 +18,22 @@ import {
   type DrawnFace,
   type FileWithBytes,
 } from './sceneFontResolution';
-import { createSettledPeek } from './settledChannel';
+import type { SettledFonts } from './settledFonts';
 import { perObject } from '../../../../utils/perObject';
 import { CONTOUR_LOAD, openFontOutlines, type GlyphLoad, type SfntOutlines } from './sfntOutlines';
 
 /** Undefined while the load runs. Null is a font that holds no outlines this reader opens. */
 type PeekedOutlines = SfntOutlines | null | undefined;
 
-/**
- * The outlines of each load of a font's bytes (`loadKey`): a TextMesh extrudes the contours
- * `font_get_glyph_contours` loads, and the canvas draws the glyphs its font's `hinting` loads. Keyed
- * by the bytes, as the metrics are, so a reloaded file is read again, and a shared one or a copy of
- * it (`withDefaultFonts`) once.
- */
-const peekSettledOutlines = createSettledPeek<object, SfntOutlines | null>();
-
 /** The cache key of the bundled font's bytes, which have no resource. */
 const BUNDLED = {};
 
-/** The key of each load of a font's bytes, built on the first ask: the bytes alone do not tell two loads apart. */
+/**
+ * The key of each load of a font's bytes, built on the first ask: the bytes alone do not tell two
+ * loads apart. A TextMesh extrudes the contours `font_get_glyph_contours` loads, and the canvas draws
+ * the glyphs its font's `hinting` loads. Keyed by the bytes, as the metrics are, so a reloaded file
+ * is read again, and a shared one or a copy of it (`withDefaultFonts`) once.
+ */
 const loadKeys = perObject((_bytes: object) => new Map<string, object>());
 
 /** The cache key of `bytes` as `load` loads them. */
@@ -50,11 +47,12 @@ function loadKey(bytes: object, { hinting, isAutohinterForced, modulatesColourGl
 
 /** The outlines of the font `readBytes` gives, keyed by `font`, as `load` loads them, starting the load on the first peek. */
 function peekLoadedOutlines(
+  fonts: SettledFonts,
   font: object,
   readBytes: () => ArrayBuffer | Promise<ArrayBuffer>,
   load: GlyphLoad
 ): PeekedOutlines {
-  return peekSettledOutlines(loadKey(font, load), () =>
+  return fonts.peekOutlines(loadKey(font, load), () =>
     settledOutlines(async () => openFontOutlines(await readBytes(), load))
   );
 }
@@ -78,13 +76,13 @@ function settledOutlines(read: () => Promise<SfntOutlines | null>): Promise<Sfnt
  *
  * @canonical Glyph outlines of a drawn face, at the glyph load the caller picks
  */
-export function peekOutlines(face: DrawnFace, load: GlyphLoad): PeekedOutlines {
-  if (face === BUNDLED_FACE) return peekLoadedOutlines(BUNDLED, readBundledBytes, load);
+export function peekOutlines(fonts: SettledFonts, face: DrawnFace, load: GlyphLoad): PeekedOutlines {
+  if (face === BUNDLED_FACE) return peekLoadedOutlines(fonts, BUNDLED, readBundledBytes, load);
   if (face === NO_FACE) return NO_OUTLINES;
   if (face && hasBitmap(face)) return bitmapFontOutlines(face.bitmap);
   const bytes = face?.bytes;
   if (!face || !bytes) return null;
-  return peekLoadedOutlines(bytes, () => bytes, load);
+  return peekLoadedOutlines(fonts, bytes, () => bytes, load);
 }
 
 async function readBundledBytes(): Promise<ArrayBuffer> {
@@ -114,7 +112,10 @@ export function drawLoad(face: FileWithBytes): GlyphLoad {
  * The outlines of `font` that a TextMesh extrudes. A chain of fonts with no glyphs, and bytes that
  * hold no outlines this reader opens, are null.
  */
-export function peekSceneFontOutlines(font: FontResource | null | undefined): PeekedOutlines {
+export function peekSceneFontOutlines(
+  fonts: SettledFonts,
+  font: FontResource | null | undefined
+): PeekedOutlines {
   const face = findDrawnFace(font);
-  return peekOutlines(face, contourLoad(face));
+  return peekOutlines(fonts, face, contourLoad(face));
 }

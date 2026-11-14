@@ -1390,42 +1390,50 @@ describe('useBuildSolveTree — theme resolution', () => {
     expect(result.current.tree[0]?.fontOverrides).toEqual({ font: FONT_A });
   });
 
-  it('generation bumps once a runtime scene-font metrics load settles (text/sceneFontLoader.ts, not the loader.eventBus)', async () => {
-    const loader = createFakeResourceLoader();
-    const nodes = [label('Title')];
+  /** A font file whose face loads in the settled fonts that read it. */
+  const loadingFont = (): FontResource => ({
+    kind: 'file',
+    bytes: new ArrayBuffer(4),
+    mimeType: 'font/ttf',
+    fallbacks: [],
+    properties: {},
+  });
 
-    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []), {
+  const settleLoads = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+
+  it('generation bumps once a font a node of the forest read settles', async () => {
+    const loader = createFakeResourceLoader();
+    const { result } = renderHook(() => useBuildSolveTree([label('Title')], [], []), {
       wrapper: wrapperFor(loader.loader),
     });
-
     const initialGeneration = result.current.generation;
 
-    await act(async () => {
-      // `peekSceneFontMetrics`'s async pipeline, as the solve itself starts it,
-      // outside `loader` and its event bus.
-      peekSceneFontMetrics(
-        { kind: 'file', bytes: new ArrayBuffer(4), mimeType: 'font/ttf', fallbacks: [], properties: {} },
-        'Root/Title'
-      );
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    // A painter reads the font through its node, as the solve does.
+    peekSceneFontMetrics(result.current.tree[0]!.settledFonts, loadingFont(), 'Root/Title');
+    await settleLoads();
 
     expect(result.current.generation).toBeGreaterThan(initialGeneration);
   });
 
-  it('subscribes to scene-font metrics settlement even with no ResourceLoaderProvider mounted', async () => {
-    const nodes = [label('Title')];
-    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-
+  it('keeps the generation for a font that settles in the preview but that no node read', async () => {
+    const loader = createFakeResourceLoader();
+    const { result } = renderHook(() => useBuildSolveTree([label('Title')], [], []), {
+      wrapper: wrapperFor(loader.loader),
+    });
     const initialGeneration = result.current.generation;
 
-    await act(async () => {
-      peekSceneFontMetrics(
-        { kind: 'file', bytes: new ArrayBuffer(4), mimeType: 'font/ttf', fallbacks: [], properties: {} },
-        'Root/Title'
-      );
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    peekSceneFontMetrics(loader.loader.settledFonts, loadingFont(), 'Root/Elsewhere');
+    await settleLoads();
+
+    expect(result.current.generation).toBe(initialGeneration);
+  });
+
+  it('wakes on a font a node read even with no ResourceLoaderProvider mounted', async () => {
+    const { result } = renderHook(() => useBuildSolveTree([label('Title')], [], []));
+    const initialGeneration = result.current.generation;
+
+    peekSceneFontMetrics(result.current.tree[0]!.settledFonts, loadingFont(), 'Root/Title');
+    await settleLoads();
 
     expect(result.current.generation).toBeGreaterThan(initialGeneration);
   });

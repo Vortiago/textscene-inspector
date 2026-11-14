@@ -5,6 +5,8 @@
 import type { FaceGlyphs } from './fontMetrics';
 import { lazyFontContainer, openFontContainer } from './fontContainer';
 import { registerFontFace } from './fontFaceDoor';
+import { freeTypeOpensFace } from './freeTypeOpen';
+import { UNOPENED_FACE, type LoadedFace } from './settledFonts';
 import {
   createRuntimeFontMetrics,
   type DesignUnitWidthFn,
@@ -115,11 +117,12 @@ async function faceGlyphsOf(sfnt: SfntFile, bytes: ArrayBuffer): Promise<FaceGly
   return sfntFaceGlyphs(sfnt, openOutlines, kerning?.defaultKerningReader);
 }
 
-/** Loads a face from `bytes`. It never throws, and returns null for bytes that do not load. */
-export async function loadSceneFontMetrics(
-  bytes: ArrayBuffer,
-  nodePath: string
-): Promise<RegisteredCanvasFontMetrics | null> {
+/**
+ * Loads a face from `bytes`. It never throws. FreeType decides first, so bytes it cannot open answer
+ * `UNOPENED_FACE` whatever the browser says, and null is bytes only the browser cannot load.
+ */
+export async function loadSceneFontMetrics(bytes: ArrayBuffer, nodePath: string): Promise<LoadedFace> {
+  if (!(await freeTypeOpensFace(bytes))) return UNOPENED_FACE;
   try {
     return await loadRuntimeFont(bytes, nodePath);
   } catch (err: unknown) {

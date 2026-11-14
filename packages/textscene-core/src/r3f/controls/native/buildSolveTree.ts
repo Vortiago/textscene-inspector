@@ -56,7 +56,8 @@ import {
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
 import type { LabelProperties } from '../../../nodes/2d/ui/label/types';
 import { themeResolutionScope, type ThemeResolutionScope } from '../../../resources/styles/theme/lookup';
-import { useSceneFontSettleCount } from './text/useSceneFontSettleCount';
+import type { AwaitedFonts } from './text/settledFonts';
+import { settledFontsOf, useAwaitedFontsVersion } from './text/useSettledFont';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useLayoutDirectionEnv } from '../../contexts/useLayoutDirectionEnv';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
@@ -207,6 +208,8 @@ interface ForestResult {
   pendingDirectories: string[];
   /** Every cache key the walk read, cached or not: the keys a reload must request again. */
   readKeys: ReadonlySet<string>;
+  /** The fonts this forest's solve and painters read while they loaded. It grows as they read. */
+  awaitedFonts: AwaitedFonts;
   /** Every viewport size the walk read: a publish that answers each the same leaves the forest. */
   viewportSizeReads: readonly ViewportSizeRead[];
 }
@@ -474,6 +477,9 @@ function buildForest(
     return out;
   }
 
+  const awaitedFonts = new Map<object, number>();
+  const settledFonts = settledFontsOf(loader).recording(awaitedFonts);
+
   /** The project's theme and default font, resolved once for every node. */
   const projectFonts = resolveProjectFonts(
     projectSettings,
@@ -694,6 +700,7 @@ function buildForest(
       resources: scope,
       themeChain,
       projectFonts,
+      settledFonts,
     };
   }
 
@@ -831,6 +838,7 @@ function buildForest(
       resources: ownScope,
       themeChain: nodeThemeChain,
       projectFonts,
+      settledFonts,
     };
     const hoistedBelow = isBoundary ? [] : childHoisted;
     return canvasChainBroken || topLevel
@@ -866,6 +874,7 @@ function buildForest(
     pendingFonts: [...pendingFonts],
     pendingDirectories: [...pendingDirectories],
     readKeys,
+    awaitedFonts,
     viewportSizeReads,
   };
 }
@@ -914,9 +923,10 @@ function useSolveForest(
 ): UseBuildSolveTreeResult {
   const loader = useResourceLoader();
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
-  // With or without a loader: `peekSceneFontMetrics` starts font loads from the
-  // solve itself and answers with the bundled fallback until the metrics settle.
-  const fontMetricsVersion = useSceneFontSettleCount(true);
+  // With or without a loader: `peekSceneFontMetrics` starts font loads from the solve itself and
+  // answers with the bundled fallback until the metrics settle. Only a font the last build read
+  // while it loaded wakes it.
+  const awaitedFonts = useAwaitedFontsVersion(settledFontsOf(loader));
   // `gui/theme/custom` and `gui/theme/custom_font`, the last rungs before the built-in default. Null
   // without a provider, like every unset project setting.
   const projectSettings = useProjectSettings().settings;
@@ -925,7 +935,7 @@ function useSolveForest(
   const readKeys = useRef<ReadonlySet<string>>(NO_KEYS);
   const cacheVersion = useCacheVersion(loader, SOLVE_TREE_BUSES, readKeys);
   // Both counters only grow, so their sum moves whenever either does.
-  const generation = fontMetricsVersion + cacheVersion;
+  const generation = awaitedFonts.version + cacheVersion;
   const viewportTargets = useViewportTextures();
   const live = useSharedLiveTree();
   const viewportTargetSize = useMemo(
@@ -980,6 +990,8 @@ function useSolveForest(
     pendingFonts,
     pendingDirectories,
   } = forest;
+  const { track: trackAwaitedFonts } = awaitedFonts;
+  useEffect(() => trackAwaitedFonts(forest.awaitedFonts), [trackAwaitedFonts, forest.awaitedFonts]);
   useEffect(() => {
     readKeys.current = forest.readKeys;
     lastSizes.current = { key: sizesKey, reads: forest.viewportSizeReads };

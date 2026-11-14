@@ -187,13 +187,14 @@ describe('useCsgGeometryContext for a TextMesh', () => {
     expect(result.current.setup.context).not.toBe(awaiting);
   });
 
-  it('stops loading, and names the failure, for a font file that failed', () => {
+  it('stops loading, and names the failure, for a font file that failed', async () => {
     const fake = createFakeResourceLoader();
     const result = renderText(fake);
 
     act(() => fake.fonts._fail(FONT_PATH, 'gone'));
 
-    expect(result.current.setup.isLoading).toBe(false);
+    // The bundled font draws in its place, once its outlines load in this preview.
+    await waitFor(() => expect(result.current.setup.isLoading).toBe(false));
     expect(result.current.missing.has(FONT_PATH)).toBe(true);
   });
 

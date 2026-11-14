@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fixtureFontBytes, systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
+import { settledFontsOf } from '../../../r3f/controls/native/text/useSettledFont';
 import { NO_PROJECT_FONTS, type ProjectFonts } from '../../fonts/font/projectFonts';
 import type { FontFileResource, FontResource } from '../../fonts/font/types';
 import type { ThemeResource } from '../../styles/theme/types';
@@ -57,7 +58,7 @@ async function readyFace(mesh: ReturnType<typeof textMeshWith>) {
 
 /** The outlines a font settles to, which tells the font a chain chose. */
 async function outlinesOf(font: FontResource) {
-  return settledPeek(() => peekSceneFontOutlines(font));
+  return settledPeek(() => peekSceneFontOutlines(settledFontsOf(null), font));
 }
 
 describe('textMeshFont', () => {
@@ -306,12 +307,15 @@ describe('textMeshFont of a face that fails to load', () => {
     vi.resetModules();
     const fresh = await import('./textMeshFont');
     const freshOutlines = await import('../../../r3f/controls/native/text/sceneFontOutlines');
+    const { settledFontsOf: freshFontsOf } = await import('../../../r3f/controls/native/text/useSettledFont');
     const { textMeshWith: freshMeshWith, trueTypeFontFile: freshFontFile } =
       await import('./textMeshFont.testkit');
     const font = freshFontFile();
     const mesh = freshMeshWith({}, { [FONT_PATH]: font });
 
-    expect(await settledPeek(() => freshOutlines.peekSceneFontOutlines(font))).toBeTruthy();
+    expect(
+      await settledPeek(() => freshOutlines.peekSceneFontOutlines(freshFontsOf(null), font))
+    ).toBeTruthy();
     expect(await settledPeek(() => fresh.textMeshFont(mesh))).toEqual({ status: 'unreadable' });
   });
 });

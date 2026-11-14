@@ -1,8 +1,8 @@
 /**
- * A deterministic `'canvas'`-kind `FontMetrics` (`text/runtimeFontMetrics.ts`) for
- * a painter's scene-font path. Under vitest `peekSceneFontMetrics` returns the
- * bundled face, so a test stubs it: `vi.spyOn(sceneFontLoader,
- * 'peekSceneFontMetrics').mockReturnValue(TEST_SCENE_FONT_METRICS)`.
+ * A deterministic `'canvas'`-kind `FontMetrics` (`text/runtimeFontMetrics.ts`) for a painter's
+ * scene-font path. happy-dom has no `FontFace`, so a font file settles on the bundled face unless a
+ * test gives its loader a face loader that answers this one (`ResourceLoaderOptions.loadFace`), or
+ * stubs the peek: `vi.spyOn(sceneFontLoader, 'peekSceneFontMetrics').mockReturnValue(...)`.
  */
 // Round scalars, so each pixel value is a hand check: at 16px the ascent is
 // `ceil(800*16/1000)` = 13 and the descent `ceil(200*16/1000)` = 4, so the line

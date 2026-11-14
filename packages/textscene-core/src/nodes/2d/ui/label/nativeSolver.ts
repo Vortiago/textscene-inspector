@@ -107,7 +107,9 @@ interface LabelFontState {
 export function labelFontState(n: ShareNode): LabelFontState {
   const font = n.labelSettingsFont;
   const settled =
-    font === null || font === LABEL_SETTINGS_FONT_LOADING ? null : peekSettledSceneFontMetrics(font, n.path);
+    font === null || font === LABEL_SETTINGS_FONT_LOADING
+      ? null
+      : peekSettledSceneFontMetrics(n.settledFonts, font, n.path);
   if (settled) return { metrics: settled, isLoading: false };
   return { metrics: resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY), isLoading: font !== null };
 }

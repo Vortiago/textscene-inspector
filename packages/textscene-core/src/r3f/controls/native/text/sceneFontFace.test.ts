@@ -22,7 +22,8 @@ async function registeredFaceOf(bytes: ArrayBuffer): Promise<FakeFontFace> {
   const logger = await import('../../../../logger');
   vi.spyOn(logger, 'warn').mockImplementation(() => {});
   const { peekSceneFontMetrics } = await import('./sceneFontLoader');
-  peekSceneFontMetrics(fontFile(bytes), 'Root/Variable');
+  const { createSettledFonts } = await import('./settledFonts');
+  peekSceneFontMetrics(createSettledFonts(), fontFile(bytes), 'Root/Variable');
   return vi.waitFor(
     () => recorder.faces[0] ?? Promise.reject(new Error('expected a registered FontFace, got none')),
     { timeout: REGISTRATION_TIMEOUT_MS }
