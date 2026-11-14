@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { generateFunctionPrograms } from './functionPrograms.mjs';
 import { treeNodes } from './programTree.mjs';
 import { generatePrograms } from './programs.mjs';
 import { FIXED_SEED } from './randomSet.mjs';
@@ -37,5 +38,15 @@ describe('the reduction of a program that differs', () => {
   it('keeps the program when no smaller one differs', async () => {
     const reduced = await reduceProgram(LARGE_FAULTY, async (programs) => programs.map(() => false));
     expect(reduced.source).toBe(LARGE_FAULTY.source);
+  });
+
+  it('prints a program with functions of its own whole, as it has no one tree to cut', async () => {
+    const [program] = generateFunctionPrograms({ seed: FIXED_SEED, count: 1 });
+    const judged = [];
+    const reduced = await reduceProgram(program, async (candidates) => {
+      judged.push(...candidates);
+      return candidates.map(() => true);
+    });
+    expect([reduced, judged]).toEqual([program, []]);
   });
 });

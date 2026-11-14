@@ -242,6 +242,85 @@ struct Pair { float a; float b; }; Pair kept(float x) { if (x < 0.0) discard; re
 | `-inf` | `0.0` |
 | `NaN` | `NaN` |
 
+### Probe `function-struct-return-in-branch`, 16 input rows
+
+```glsl
+struct P { float x; float y; }; P f(float a) { if (a < 0.0) return P(-a, a); return P(a, 2.0 * a); } float probe(float a) { P p = f(a); return p.x + p.y * 3.0; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `0.0` |
+| `-0.0` | `-0.0` |
+| `1.0` | `7.0` |
+| `-3e+38` | `-inf` |
+| `1e-40` | `0.0` |
+| `inf` | `inf` |
+| `-inf` | `NaN` |
+| `NaN` | `NaN` |
+
+### Probe `function-array-return-in-loop`, 16 input rows
+
+```glsl
+float[2] f(float a) { for (int i = 0; i < 3; i++) { if (a < float(i)) return float[2](a, float(i)); } return float[2](a, a); } float probe(float a) { float v[2] = f(a); return v[0] + v[1] * 10.0; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `10.0` |
+| `-0.0` | `10.0` |
+| `1.0` | `21.0` |
+| `1e-40` | `10.0` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
+
+### Probe `function-vector-array-result`, 16 input rows
+
+```glsl
+vec2[2] pair(vec2 a) { return vec2[2](a, -a); } vec2 probe(vec2 a) { vec2 p[2] = pair(a); return p[1] * 3.0 + p[0]; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `(0.0, 5.5)` |
+| `(-0.0, 0.33333334)` | `(0.0, -0.6666666)` |
+| `(1.0, 1e-7)` | `(-2.0, -2.0000002e-7)` |
+| `(-2.75, 3e+38)` | `(5.5, -inf)` |
+| `(3e+38, NaN)` | `(-inf, NaN)` |
+| `(-3e+38, 0.0)` | `(inf, 0.0)` |
+| `(1e-40, -0.0)` | `(0.0, 0.0)` |
+| `(inf, 1.0)` | `(NaN, -2.0)` |
+
+### Probe `function-vector-array-out`, 16 input rows
+
+```glsl
+void fill(vec2 a, out vec2 v[2]) { v[0] = a; v[1] = a + 1.0; } vec2 probe(vec2 a) { vec2 v[2]; fill(a, v); return v[0] * v[1]; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `(0.0, 4.8125)` |
+| `(-0.0, 0.33333334)` | `(-0.0, 0.44444448)` |
+| `(1.0, 1e-7)` | `(2.0, 1.00000015e-7)` |
+| `(1e-7, 1e-40)` | `(1.00000015e-7, 0.0)` |
+| `(123456.79, inf)` | `(15241702000.0, inf)` |
+| `(3e+38, NaN)` | `(inf, NaN)` |
+| `(1e-40, -0.0)` | `(0.0, -0.0)` |
+| `(NaN, 0.5)` | `(NaN, 0.75)` |
+
+### Probe `function-vector-array-argument`, 16 input rows
+
+```glsl
+int second(ivec4 v[2]) { return v[1].y; } int probe(int a) { ivec4 v[2] = ivec4[2](ivec4(a), ivec4(a, a + 1, a, a)); return second(v); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0` | `1` |
+| `1` | `2` |
+| `-1` | `0` |
+
 ### Probe `function-array-call-as-statement`, 16 input rows
 
 ```glsl
@@ -965,6 +1044,23 @@ The transpiler emits `the `out` and `inout` values in a struct the GLSL function
 
 Every row is native on WebGL 2 and on WebGPURenderer.
 
+### Probe `function-vector-array-out`, 16 input rows
+
+```glsl
+void fill(vec2 a, out vec2 v[2]) { v[0] = a; v[1] = a + 1.0; } vec2 probe(vec2 a) { vec2 v[2]; fill(a, v); return v[0] * v[1]; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `(0.0, 4.8125)` |
+| `(-0.0, 0.33333334)` | `(-0.0, 0.44444448)` |
+| `(1.0, 1e-7)` | `(2.0, 1.00000015e-7)` |
+| `(1e-7, 1e-40)` | `(1.00000015e-7, 0.0)` |
+| `(123456.79, inf)` | `(15241702000.0, inf)` |
+| `(3e+38, NaN)` | `(inf, NaN)` |
+| `(1e-40, -0.0)` | `(0.0, -0.0)` |
+| `(NaN, 0.5)` | `(NaN, 0.75)` |
+
 ### Probe `function-out-index-read-before-another-out`, 16 input rows
 
 ```glsl
@@ -1285,6 +1381,23 @@ A `void` function returns no value: it acts through its `out` and `inout` parame
 The transpiler emits `a GLSL function of type `void`, or of the struct of its `out` and `inout` values`. Rows: `void`. Godot source: `servers/rendering/shader_language.h:210`.
 
 Every row is native on WebGL 2 and on WebGPURenderer.
+
+### Probe `function-vector-array-out`, 16 input rows
+
+```glsl
+void fill(vec2 a, out vec2 v[2]) { v[0] = a; v[1] = a + 1.0; } vec2 probe(vec2 a) { vec2 v[2]; fill(a, v); return v[0] * v[1]; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `(0.0, 4.8125)` |
+| `(-0.0, 0.33333334)` | `(-0.0, 0.44444448)` |
+| `(1.0, 1e-7)` | `(2.0, 1.00000015e-7)` |
+| `(1e-7, 1e-40)` | `(1.00000015e-7, 0.0)` |
+| `(123456.79, inf)` | `(15241702000.0, inf)` |
+| `(3e+38, NaN)` | `(inf, NaN)` |
+| `(1e-40, -0.0)` | `(0.0, -0.0)` |
+| `(NaN, 0.5)` | `(NaN, 0.75)` |
 
 ### Probe `function-out-index-read-before-another-out`, 16 input rows
 

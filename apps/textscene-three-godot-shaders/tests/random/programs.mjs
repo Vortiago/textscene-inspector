@@ -40,14 +40,14 @@ const ATTEMPTS_AT_MOST = 100;
 const EDGE_VALUE_CHANCE = 0.2;
 
 /** The scalar type of a vector's lanes, read from its name as Godot names them. */
-function componentType(type) {
+export function componentType(type) {
   const prefix = /^([biu]?)vec\d$/.exec(type)?.[1];
   if (prefix === undefined) return type;
   return { '': 'float', b: 'bool', i: 'int', u: 'uint' }[prefix];
 }
 
 /** The type of `size` lanes of `component`: the scalar for one lane. */
-function vectorType(component, size) {
+export function vectorType(component, size) {
   if (size === 1) return component;
   const prefix = { float: '', bool: 'b', int: 'i', uint: 'u' }[component];
   return `${prefix}vec${size}`;
@@ -114,7 +114,7 @@ const PRODUCER_KINDS = { operator: 'operator', constructor: 'call', function: 'c
 /** Whether `row` is an operator that writes its first operand, which must be a parameter. */
 const writesOperand = (row) => row.family === 'operator' && WRITES_OPERAND.has(operatorOf(row));
 
-const PRODUCERS = producersByType(TRANSPILED_ROWS);
+export const PRODUCERS = producersByType(TRANSPILED_ROWS);
 const PRODUCED_ROWS = new Set([...PRODUCERS.values()].flat().map((producer) => producer.row));
 
 /**
@@ -123,11 +123,15 @@ const PRODUCED_ROWS = new Set([...PRODUCERS.values()].flat().map((producer) => p
  */
 export const ROOT_ROWS = TRANSPILED_ROWS.filter((row) => row.id in LITERALS || PRODUCED_ROWS.has(row));
 
-/** A fresh random program generator over the transpiled rows. */
-class ProgramWriter {
-  constructor(random) {
+/**
+ * A fresh random program generator over the transpiled rows, and over `producers` when a program
+ * declares functions of its own. `parameters` holds the types of the variables in reach, and
+ * `names`, when set, their names: a parameter `a<index>` otherwise.
+ */
+export class ProgramWriter {
+  constructor(random, producers = PRODUCERS) {
     this.random = random;
-    this.producers = PRODUCERS;
+    this.producers = producers;
     /** The literal rows of each type: `true` and `false` both give a `bool`. */
     this.literals = Map.groupBy(
       TRANSPILED_ROWS.filter((row) => row.id in LITERALS),
@@ -271,7 +275,7 @@ class ProgramWriter {
     );
     if (producer.kind === 'operator')
       return { kind: 'operator', type: row.returns, row, op, operands: children };
-    return { kind: 'call', type: row.returns, row, name: op, args: children };
+    return { kind: 'call', type: row.returns, row, name: producer.name ?? op, args: children };
   }
 
   /** A parameter of `type` or a literal of it, or nothing when the program has neither. */
@@ -284,7 +288,9 @@ class ProgramWriter {
 
   parameter(type) {
     const indices = this.parameters.flatMap((each, index) => (each === type ? [index] : []));
-    return { kind: 'parameter', type, index: this.random.pick(indices) };
+    const index = this.random.pick(indices);
+    if (this.names === undefined) return { kind: 'parameter', type, index };
+    return { kind: 'parameter', type, index, name: this.names[index] };
   }
 
   /** A literal of `type`: of `row`, or of a random literal row of the type. */

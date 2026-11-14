@@ -14,6 +14,8 @@ import { childrenOf, programSource, rowsOf, treeNodes, withChild } from './progr
  * one Godot run and one page run.
  */
 export async function reduceProgram(program, stillDiffers) {
+  // A program with functions of its own has no one tree to cut, so it prints whole.
+  if (program.tree === undefined) return program;
   let current = program;
   for (;;) {
     const candidates = smallerPrograms(current);

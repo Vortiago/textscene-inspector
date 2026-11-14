@@ -3,6 +3,7 @@
  * package" job compares on each pull request. A fresh seed is for `pnpm test:shaders:random`.
  */
 
+import { generateFunctionPrograms } from './functionPrograms.mjs';
 import { generatePrograms } from './programs.mjs';
 
 export const FIXED_SEED = 1847;
@@ -13,4 +14,10 @@ export const FIXED_SEED = 1847;
  */
 const RANDOM_ROOTS = 200;
 
-export const RANDOM_PROGRAMS = generatePrograms({ seed: FIXED_SEED, count: RANDOM_ROOTS });
+/** The programs that declare functions of their own, called from `probe`. */
+const FUNCTION_PROGRAMS = 100;
+
+export const RANDOM_PROGRAMS = [
+  ...generatePrograms({ seed: FIXED_SEED, count: RANDOM_ROOTS }),
+  ...generateFunctionPrograms({ seed: FIXED_SEED, count: FUNCTION_PROGRAMS }),
+];
