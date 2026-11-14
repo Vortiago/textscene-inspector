@@ -40,6 +40,9 @@ const SFNT_HEADER_SIZE = 12; // sfntVersion(4) numTables(2) searchRange(2) entry
 const TABLE_RECORD_SIZE = 16; // tag(4) checksum(4) offset(4) length(4)
 const HEAD_UNITS_PER_EM_OFFSET = 18; // head table: majorVersion(2) minorVersion(2) fontRevision(4) checkSumAdjustment(4) magicNumber(4) flags(2) unitsPerEm(2)
 const HEAD_TABLE_MIN_LENGTH = 20;
+/** `head.flags` bit 3: the face scales by the whole-pixel ppem (`TT_HEAD_FLAG_INTEGER_PPEM`). */
+const HEAD_FLAGS_OFFSET = 16;
+const HEAD_FLAG_PPEM_ROUNDED = 0x8;
 /** `head`: indexToLocFormat(2) at 50. */
 export const HEAD_INDEX_TO_LOC_FORMAT_OFFSET = 50;
 /** `hhea` and `vhea`: majorVersion(2) minorVersion(2), then ascender(2) and descender(2). */
@@ -96,7 +99,8 @@ export const FALLBACK_MARK_TABLE_TAGS: readonly string[] = [...SCENE_FONT_TABLE_
 /**
  * The tables an outline reader uses (`sfntOutlines.ts`), for the container readers to decompress:
  * the outlines, the metrics that place a TrueType glyph's phantom points, its hinting programs, the
- * layout tables the auto-hinter reads, and the `GPOS` and `GDEF` tables of the kerning at an instance.
+ * layout tables the auto-hinter reads, the `GPOS` and `GDEF` tables of the kerning at an instance,
+ * and the colour tables, bitmap strikes and SVG documents of a colour glyph.
  */
 export const OUTLINE_TABLE_TAGS: readonly string[] = [
   'head',
@@ -124,7 +128,31 @@ export const OUTLINE_TABLE_TAGS: readonly string[] = [
   'GSUB',
   'GPOS',
   'GDEF',
+  'COLR',
+  'CPAL',
+  'CBLC',
+  'CBDT',
+  'EBLC',
+  'EBDT',
+  'bloc',
+  'bdat',
+  'sbix',
+  'SVG ',
 ];
+
+/**
+ * Whether FreeType reads outlines from the face (`sfobjs.c:865-906`): a `glyf`, `CFF ` or `CFF2`
+ * table, in a face with no `CBLC` or `CBDT`, whose outlines it ignores.
+ */
+export function hasFreeTypeOutlines({ tables }: Pick<SfntFile, 'tables'>): boolean {
+  const hasOutlineTable = tables.has('glyf') || tables.has('CFF ') || tables.has('CFF2');
+  return hasOutlineTable && !tables.has('CBLC') && !tables.has('CBDT');
+}
+
+/** Whether FreeType scales the face (`sfobjs.c:1103-1110`): it has outlines, and no `sbix`, which makes it a bitmap face. */
+export function isScalableFace(sfnt: Pick<SfntFile, 'tables'>): boolean {
+  return hasFreeTypeOutlines(sfnt) && !sfnt.tables.has('sbix');
+}
 
 export interface TableRecord {
   offset: number;
@@ -225,6 +253,13 @@ export function readUnitsPerEm(dv: DataView, head: TableRecord): number {
 export function readHeadUnitsPerEm({ dv, tables }: SfntFile): number {
   const head = tables.get('head');
   return head && tableFits(dv, head, HEAD_TABLE_MIN_LENGTH) ? readUnitsPerEm(dv, head) : 0;
+}
+
+/** Whether a font's `head` flags round the ppem, false for a font with no `head` or one that does not fit. */
+export function readHeadIsPpemRounded({ dv, tables }: SfntFile): boolean {
+  const head = tables.get('head');
+  if (!head || !tableFits(dv, head, HEAD_TABLE_MIN_LENGTH)) return false;
+  return (dv.getUint16(head.offset + HEAD_FLAGS_OFFSET, false) & HEAD_FLAG_PPEM_ROUNDED) !== 0;
 }
 
 /** `head.indexToLocFormat`, `LONG_LOCA_FORMAT` for 32-bit offsets. The caller has checked that `head` fits. */

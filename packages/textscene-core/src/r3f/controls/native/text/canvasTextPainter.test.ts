@@ -209,16 +209,26 @@ describe('computeCanvasTextCanvasLayout', () => {
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0, opentype: MONO_INSTANCE });
   });
 
-  it('spans the pen box alone for a glyph with no contour on a face that draws no text (edge case)', () => {
-    const noFamily = { ...CANVAS_METRICS, cssFontFamily: undefined };
+  it.each([
+    ['draws no text', { ...CANVAS_METRICS, cssFontFamily: undefined }],
+    ['the browser can draw', CANVAS_METRICS],
+  ])('spans the pen box alone for a glyph with no contour on a face with outlines that %s', (_, face) => {
     const outlines: SfntOutlines = { glyphIndex: () => 7, glyphContours: () => null };
     const layout = shapeText('AB', {
       fontSizePx: 16,
       boxWidthPx: 0,
       autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-      fontMetrics: withVariation(noFamily, { outlines }),
+      fontMetrics: withVariation(face, { outlines }),
       lineSpacingPx: 0,
     });
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
+    expect(canvasLayout.offsetXPx).toBe(2);
+    expect(canvasLayout.canvasWidthPx).toBe(19);
+  });
+
+  // The bundled face while its outlines load: it draws nothing, so nothing reaches past a pen box.
+  it('spans the pen boxes alone on a face with no outlines and no CSS family', () => {
+    const layout = { ...layoutFor('AB', 0), fontMetrics: { ...CANVAS_METRICS, cssFontFamily: undefined } };
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
     expect(canvasLayout.offsetXPx).toBe(2);
     expect(canvasLayout.canvasWidthPx).toBe(19);
@@ -551,23 +561,73 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
     expect(calls.every((call) => call.shear === 0)).toBe(true);
   });
 
-  it('shears the text of a bold and sheared glyph that the font has no contour for', () => {
+  // FreeType gives a glyph with no contour an empty bitmap, and Godot draws a glyph only where it
+  // has a texture (`text_server_adv.cpp:4042`), so no browser text stands in for it.
+  it.each([
+    ['no CSS family', { ...CANVAS_METRICS, cssFontFamily: undefined }],
+    ['a CSS family', CANVAS_METRICS],
+  ])('draws nothing for a glyph with no contour of a face with outlines and %s', (_, face) => {
     const empty: SfntOutlines = { glyphIndex: () => 7, glyphContours: () => null };
-    const { calls } = paintRecording(boldLayoutFor('A', 1.2), 0, { skew: 0.3, outlines: empty });
-
-    expect(calls.map((call) => call.op)).toEqual(['fillText', 'strokeText']);
-    expect(calls.every((call) => Math.abs(call.shear + 0.3) < 1e-9)).toBe(true);
-  });
-
-  // FreeType gives a glyph with no contour an empty bitmap, and no host font may draw it.
-  it('draws nothing for a glyph with no contour of a face with no CSS family', () => {
-    const empty: SfntOutlines = { glyphIndex: () => 7, glyphContours: () => null };
-    const familyless = { ...CANVAS_METRICS, cssFontFamily: undefined };
-    const layout = { ...layoutFor('A', 0), fontMetrics: familyless };
+    const layout = { ...layoutFor('A', 0), fontMetrics: face };
     const { calls, raster } = paintRecording(layout, 0, { outlines: empty });
 
     expect(calls).toEqual([]);
     expect(raster!.data.some((byte, i) => i % 4 === 3 && byte !== 0)).toBe(false);
+  });
+
+  it('draws the other glyphs of a face with outlines from their contours and makes no 2D context', () => {
+    const layout = layoutFor('AB', 0);
+    const outlines: SfntOutlines = {
+      glyphIndex: (codepoint) => (codepoint === 0x41 ? 7 : 8),
+      glyphContours: (glyphIndex) => (glyphIndex === 7 ? TRIANGLE_CONTOURS : null),
+    };
+    const { raster, canvasLayout } = paintRecording(layout, 0, { outlines });
+    const penX = canvasLayout.offsetXPx;
+    const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
+
+    expect(HTMLCanvasElement.prototype.getContext).not.toHaveBeenCalled();
+    expect(alphaAt(raster, penX + 3, baselineY - 3)).toBe(255);
+    expect(alphaAt(raster, penX + 8 + 3, baselineY - 3)).toBe(0);
+  });
+
+  it('draws nothing and makes no 2D context on a face with no outlines and no CSS family', () => {
+    const layout = { ...layoutFor('AB', 0), fontMetrics: { ...CANVAS_METRICS, cssFontFamily: undefined } };
+    const { calls, raster } = paintRecording(layout, 0);
+
+    expect(HTMLCanvasElement.prototype.getContext).not.toHaveBeenCalled();
+    expect(calls).toEqual([]);
+    expect(raster!.data.some((byte, i) => i % 4 === 3 && byte !== 0)).toBe(false);
+  });
+
+  it('makes no 2D context for a run of spaces on a face with no outlines it can read', () => {
+    const { calls } = paintRecording(layoutFor('  ', 0), 0);
+
+    expect(HTMLCanvasElement.prototype.getContext).not.toHaveBeenCalled();
+    expect(calls).toEqual([]);
+  });
+
+  // A texel at alpha 0 keeps the tint on every painter, so a filtered edge never pulls in black.
+  it('keeps the tint under alpha 0 on a face with no outlines and no CSS family', () => {
+    const layout = { ...layoutFor('AB', 0), fontMetrics: { ...CANVAS_METRICS, cssFontFamily: undefined } };
+    const { raster } = paintRecording(layout, 0);
+
+    expect(Array.from(raster!.data.subarray(0, 4))).toEqual([255, 255, 255, 0]);
+  });
+
+  it('fills the text of every glyph of a face with no outlines it can read', () => {
+    const { calls } = paintRecording(layoutFor('AB', 0), 0, { outlines: null });
+
+    expect(calls.map((call) => [call.op, call.args[0]])).toEqual([
+      ['fillText', 'A'],
+      ['fillText', 'B'],
+    ]);
+  });
+
+  it('shears the text of a bold and sheared glyph of a face with no outlines', () => {
+    const { calls } = paintRecording(boldLayoutFor('A', 1.2), 0, { skew: 0.3 });
+
+    expect(calls.map((call) => call.op)).toEqual(['fillText', 'strokeText']);
+    expect(calls.every((call) => Math.abs(call.shear + 0.3) < 1e-9)).toBe(true);
   });
 
   // Godot fills the hinted outline of every glyph through FreeType (`text_server_adv.cpp:1360-1373`).
@@ -665,25 +725,18 @@ describe('paintSceneFontCanvas — embolden under an outline stroke', () => {
     expect(calls[0]!.shear).toBeCloseTo(-0.3, 10);
   });
 
-  it('strokes the text of a sheared glyph that the font has no glyph for in the sheared space', () => {
-    const { outlines } = outlinesStub(0);
-    const { calls } = paintRecording(layoutFor('A', 0), 4, { skew: 0.3, outlines });
-
-    expect(calls.map((call) => call.op)).toEqual(['strokeText']);
-    expect(calls[0]!.shear).toBeCloseTo(-0.3, 10);
-  });
-
   it('strokes the text of a bold glyph where the label has no outlines', () => {
     const { calls } = paintRecording(boldLayoutFor('A', 1.2), 4);
 
     expect(calls.map((call) => call.op)).toEqual(['strokeText']);
   });
 
-  it('strokes the text of a bold glyph that the font has no glyph for', () => {
+  it('strokes no ring for a bold and sheared glyph that the font has no glyph for', () => {
     const { outlines } = outlinesStub(0);
-    const { calls } = paintRecording(boldLayoutFor('A', 1.2), 4, { outlines });
+    const { calls, raster } = paintRecording(boldLayoutFor('A', 1.2), 4, { skew: 0.3, outlines });
 
-    expect(calls.map((call) => call.op)).toEqual(['strokeText']);
+    expect(calls).toEqual([]);
+    expect(raster!.data.some((byte, i) => i % 4 === 3 && byte !== 0)).toBe(false);
   });
 });
 
@@ -739,12 +792,12 @@ describe('paintSceneFontCanvas — a variable font at an instance', () => {
     expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0, opentype: undefined });
   });
 
-  it('fills the text of a glyph the font has no outline for at an instance', () => {
+  it('draws nothing for a glyph the font has no outline for at an instance', () => {
     const { outlines } = instanceOutlinesStub();
     const empty: SfntOutlines = { ...outlines, glyphContours: () => null };
     const { calls } = paintRecording(instanceLayoutFor('A', empty), 0);
 
-    expect(calls.map((call) => call.op)).toEqual(['fillText']);
+    expect(calls).toEqual([]);
   });
 });
 
@@ -875,6 +928,14 @@ describe('canvasGlyphRects', () => {
 
     expect(rects[0]).toEqual({ x: grid.left - 1, y: grid.top - 1, w: grid.width + 2, h: grid.height + 2 });
     expect(rects[0]!.w).toBeGreaterThan(6);
+  });
+
+  it('gives a glyph with no contour of a face with outlines no rectangle', () => {
+    const empty: SfntOutlines = { glyphIndex: () => 7, glyphContours: () => null };
+    const layout = carrying(layoutFor('A', 0), 0, empty);
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
+
+    expect(canvasGlyphRects(layout, 16, 0, canvasLayout, { glyphDrawer: 'label3D' })).toEqual([]);
   });
 
   it('gives a glyph the browser draws as text the box from its pen to its advance, over the line', () => {

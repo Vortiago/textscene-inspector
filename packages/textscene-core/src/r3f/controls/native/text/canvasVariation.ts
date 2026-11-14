@@ -1,7 +1,7 @@
 /**
- * The font-variation half of `canvasTextPainter.ts`: the embolden padding, the contours of an
- * emboldened or sheared glyph, and the emboldened text of a glyph with no contour. Godot emboldens the
- * contour (`text_server_adv.cpp:1314`), shears it (`:1318`), then strokes the result (`:1383`).
+ * The font variation of a canvas text run: the embolden padding (`canvasTextPainter.ts`) and the
+ * contours of an emboldened or sheared glyph (`outlineGlyphPainter.ts`). Godot emboldens the contour (`text_server_adv.cpp:1314`), shears it
+ * (`:1318`), then strokes the result (`:1383`).
  */
 import { variationKey, type GlyphVariation } from './fontMetrics';
 import type { GlyphContours } from './glyphContours';
@@ -17,26 +17,6 @@ export function maxEmboldenGrowthPx(layout: TextLayoutResult): number {
     for (const gp of line.glyphs) growthPx = Math.max(growthPx, gp.emboldenGrowthPx ?? 0);
   }
   return growthPx;
-}
-
-/**
- * Fills the glyph, then strokes it with a centred line of the growth's width, drawn at the
- * shift. Both cover the same ink as the emboldened outline. FreeType mitres the corners, as the
- * `miter` join does, so the caller sets it. It serves a font with no outline to read: `fillText`
- * snaps its baseline to a whole pixel, so the fill can sit up to half a pixel off its own stroke.
- */
-export function paintEmboldenedFill(
-  ctx: CanvasRenderingContext2D,
-  char: string,
-  penX: number,
-  baselineY: number,
-  growthPx: number
-): void {
-  const x = penX + growthPx / 2;
-  const y = baselineY - growthPx / 2;
-  ctx.fillText(char, x, y);
-  ctx.lineWidth = growthPx;
-  ctx.strokeText(char, x, y);
 }
 
 /** A font size animation adds a face for each size it passes, so the least recently read face goes at this count. */
@@ -82,9 +62,4 @@ export function glyphContoursReader(
       byChar.set(char, (contours = contoursOfGlyph(outlines.glyphIndex(char.codePointAt(0)!, opentype))));
     return contours;
   };
-}
-
-/** Shears what the context draws next about `baselineY`: x' = x - skew * (y - baselineY). */
-export function shearAboutBaseline(ctx: CanvasRenderingContext2D, skew: number, baselineY: number): void {
-  ctx.transform(1, 0, -skew, 1, skew * baselineY, 0);
 }
