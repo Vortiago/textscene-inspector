@@ -8,8 +8,8 @@ import type { StageName } from './stages.js';
 import type { TemplateStageNode } from './templateTree.js';
 
 /**
- * The version of the transpiler's trees. Raise it with each change that gives a text a different
- * tree, so a memo kept past a page load never serves a tree of an older transpiler.
+ * The version of the transpiler's trees, which the key holds beside Godot's. Raise it with each
+ * change that gives a text a different tree, so a stored tree never outlives its transpiler.
  */
 export const TRANSPILER_VERSION = 1;
 
@@ -29,18 +29,27 @@ export interface TreeKey {
   readonly transpilerVersion: number;
 }
 
-/** The linked stages by their key. A tree is immutable, so every caller shares it. */
+/**
+ * The trees a memo keeps: more than the skies a page draws at once, so each edit of a live
+ * shader drops the tree of the oldest text, not a tree in use.
+ */
+const KEPT_TREES = 64;
+
+/**
+ * The linked stages by their key, the least recently read dropped first. A tree is immutable, so
+ * every caller shares it.
+ */
 export class TreeMemo {
   readonly #trees = new Map<string, TemplateStageNode>();
 
   /** The tree of `key`, built by `build` the first time the memo sees the key. */
   tree(key: TreeKey, build: () => TemplateStageNode): TemplateStageNode {
     const text = keyText(key);
-    let tree = this.#trees.get(text);
-    if (!tree) {
-      tree = build();
-      this.#trees.set(text, tree);
-    }
+    const tree = this.#trees.get(text) ?? build();
+    // A Map iterates in insertion order, so a read moves the key to the end.
+    this.#trees.delete(text);
+    this.#trees.set(text, tree);
+    if (this.#trees.size > KEPT_TREES) this.#trees.delete(this.#trees.keys().next().value!);
     return tree;
   }
 }

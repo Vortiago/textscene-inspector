@@ -80,7 +80,7 @@ group_uniforms	shader head	servers/rendering/shader_language.cpp:336	#1829	TK_UN
 varying	shader head	servers/rendering/shader_language.cpp:337	#1794	TK_VARYING				
 const	shader head	servers/rendering/shader_language.cpp:338	#1794	TK_CONST				
 struct	shader head	servers/rendering/shader_language.cpp:339	#1794	TK_STRUCT				
-shader_type	shader head	servers/rendering/shader_language.cpp:340	#1830	TK_SHADER_TYPE			native	native
+shader_type	shader head	servers/rendering/shader_language.cpp:340	#1794	TK_SHADER_TYPE			native	native
 render_mode	shader head	servers/rendering/shader_language.cpp:341	#1794	TK_RENDER_MODE				
 stencil_mode	shader head	servers/rendering/shader_language.cpp:342	#1794	TK_STENCIL_MODE				
 instance	uniform	servers/rendering/shader_language.cpp:346	#1829	TK_INSTANCE				
@@ -726,7 +726,7 @@ FLOW_OP_CASE	statement	servers/rendering/shader_language.h:314	#1824				native	n
 FLOW_OP_DEFAULT	statement	servers/rendering/shader_language.h:315	#1824				native	native
 FLOW_OP_CONTINUE	statement	servers/rendering/shader_language.h:316	#1824				native	native
 FLOW_OP_DISCARD	statement	servers/rendering/shader_language.h:317	#1824				native	native
-NODE_TYPE_SHADER	tree node	servers/rendering/shader_language.h:373	#1830				native	native
+NODE_TYPE_SHADER	tree node	servers/rendering/shader_language.h:373	#1794				native	native
 NODE_TYPE_FUNCTION	tree node	servers/rendering/shader_language.h:374	#1794					
 NODE_TYPE_BLOCK	tree node	servers/rendering/shader_language.h:375	#1824				native	native
 NODE_TYPE_VARIABLE	tree node	servers/rendering/shader_language.h:376	#1823				native	native
@@ -1528,7 +1528,7 @@ vec4.stpq	swizzle	servers/rendering/shader_language.cpp:7008	#1823				native	nat
 shader_type spatial	shader head	servers/rendering/shader_types.cpp:523	#1794					
 shader_type canvas_item	shader head	servers/rendering/shader_types.cpp:524	#1794					
 shader_type particles	shader head	servers/rendering/shader_types.cpp:525	#1794					
-shader_type sky	shader head	servers/rendering/shader_types.cpp:526	#1830				native	native
+shader_type sky	shader head	servers/rendering/shader_types.cpp:526	#1794				native	native
 shader_type fog	shader head	servers/rendering/shader_types.cpp:527	#1794					
 spatial.global.TIME	built-in (read only)	servers/rendering/shader_types.cpp:79	#1794		float			
 spatial.global.EXPOSURE	built-in (read only)	servers/rendering/shader_types.cpp:80	#1794		float			
@@ -1811,7 +1811,7 @@ sky.global.LIGHT3_DIRECTION	built-in (read only)	servers/rendering/shader_types.
 sky.global.LIGHT3_ENERGY	built-in (read only)	servers/rendering/shader_types.cpp:482	#1794		float			
 sky.global.LIGHT3_COLOR	built-in (read only)	servers/rendering/shader_types.cpp:483	#1794		vec3			
 sky.global.LIGHT3_SIZE	built-in (read only)	servers/rendering/shader_types.cpp:484	#1794		float			
-sky.sky.COLOR	built-in	servers/rendering/shader_types.cpp:486	#1830		vec3		native	native
+sky.sky.COLOR	built-in	servers/rendering/shader_types.cpp:486	#1794		vec3		native	native
 sky.sky.ALPHA	built-in	servers/rendering/shader_types.cpp:487	#1794		float			
 sky.sky.EYEDIR	built-in (read only)	servers/rendering/shader_types.cpp:488	#1794		vec3			
 sky.sky.SCREEN_UV	built-in (read only)	servers/rendering/shader_types.cpp:489	#1794		vec2			

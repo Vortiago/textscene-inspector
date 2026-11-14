@@ -7,29 +7,22 @@
  * refuses it, the transpiler must refuse it too. A branch that no variant Godot compiles takes fails.
  */
 
-import { createServer } from 'vite';
 import { godotSourceDir } from '../../../../scripts/godotSource.mjs';
 import {
   printedField,
   requireGodotVersion,
   runGodotScript,
 } from '../../../../scripts/godot-probes/godotRun.mjs';
-import { REPO_ROOT } from '../../../../scripts/repoRoot.mjs';
 import { writeJobSummary } from '../consumer.mjs';
 import { KNOWN_UNTAKEN } from './knownUntaken.mjs';
 import { StageVariants, templateFiles } from './templateCases.mjs';
+import { sourceServer } from '../../../../scripts/sourceServer.mjs';
 
 const TEMPLATE = '/packages/textscene-core/src/shaders/template/';
 
 /** The transpiler's template front end, which Vite compiles from its TypeScript sources. */
 async function loadFrontEnd() {
-  const server = await createServer({
-    root: REPO_ROOT,
-    appType: 'custom',
-    logLevel: 'error',
-    server: { middlewareMode: true, hmr: false },
-    optimizeDeps: { noDiscovery: true, include: [] },
-  });
+  const server = await sourceServer();
   try {
     const load = (file) => server.ssrLoadModule(`${TEMPLATE}${file}`);
     const files = [

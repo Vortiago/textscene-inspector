@@ -4,6 +4,7 @@ import { tokenize } from '../language/tokenizer.js';
 import { compileMaterial, linkTemplateStage } from './link.js';
 import { MODE_TABLES } from './modeTables.generated.js';
 import { printTemplateStage } from './printTemplate.js';
+import { DEFAULT_SKY } from '../sky/defaultSky.testkit';
 
 const materialOf = (source: string) => parse(tokenize(source, 'user.gdshader'));
 
@@ -11,8 +12,6 @@ const skyFragment = (source: string, table = MODE_TABLES.sky!) =>
   printTemplateStage(
     linkTemplateStage('environment/sky.glsl', 'fragment', '', compileMaterial(materialOf(source), table))
   );
-
-const DEFAULT_SKY = 'shader_type sky;\n\nvoid sky() {\n\tCOLOR = vec3(0.0);\n}\n';
 
 describe('compileMaterial', () => {
   it('fills the code section of each stage function', () => {

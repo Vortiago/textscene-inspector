@@ -4,23 +4,14 @@
  * Nothing when the expression is not constant.
  */
 
+import { binaryLane, convertedLane, unaryLane } from '../language/glslangArithmetic.js';
 import type { Expression, Scalar } from '../language/shaderTree.js';
+import type { ScalarKind } from '../language/types.js';
 
 /** The lanes of a `const` variable by its name, as the scope knows them. */
 export type ConstantLookup = (name: string) => readonly Scalar[] | undefined;
 
-const INTEGER_OPS: Readonly<Record<string, (a: number, b: number) => number>> = {
-  OP_ADD: (a, b) => a + b,
-  OP_SUB: (a, b) => a - b,
-  OP_MUL: (a, b) => Math.imul(a, b),
-  OP_DIV: (a, b) => Math.trunc(a / b),
-  OP_MOD: (a, b) => a % b,
-  OP_SHIFT_LEFT: (a, b) => a << b,
-  OP_SHIFT_RIGHT: (a, b) => a >> b,
-  OP_BIT_AND: (a, b) => a & b,
-  OP_BIT_OR: (a, b) => a | b,
-  OP_BIT_XOR: (a, b) => a ^ b,
-};
+const SCALAR_KINDS: ReadonlySet<string> = new Set(['bool', 'int', 'uint', 'float']);
 
 /** The one lane of `expression` when it is a constant scalar, or nothing. */
 export function constantScalar(expression: Expression, lookup: ConstantLookup): Scalar | undefined {
@@ -46,22 +37,11 @@ function operatorValue(
 ): Scalar | undefined {
   const values = operands.map((operand) => constantScalar(operand, lookup));
   if (values.some((value) => value === undefined)) return undefined;
+  const from = operands[0]?.type;
+  if (!SCALAR_KINDS.has(type) || !from || !SCALAR_KINDS.has(from)) return undefined;
   const [a, b] = values as Scalar[];
-  if (op === 'OP_CONSTRUCT' && values.length === 1) return convertedTo(a!, type);
-  if (op === 'OP_NEGATE' && typeof a === 'number') return type === 'float' ? -a : -a | 0;
-  const integer = INTEGER_OPS[op];
-  if (integer && typeof a === 'number' && typeof b === 'number' && (type === 'int' || type === 'uint')) {
-    const value = integer(a, b);
-    return type === 'uint' ? value >>> 0 : value | 0;
-  }
-  return undefined;
-}
-
-function convertedTo(value: Scalar, type: string): Scalar | undefined {
-  const number = typeof value === 'boolean' ? Number(value) : value;
-  if (type === 'int') return Math.trunc(number) | 0;
-  if (type === 'uint') return Math.trunc(number) >>> 0;
-  if (type === 'float') return Math.fround(number);
-  if (type === 'bool') return number !== 0;
-  return undefined;
+  if (op === 'OP_CONSTRUCT' && values.length === 1)
+    return convertedLane(a!, from as ScalarKind, type as ScalarKind);
+  if (values.length === 1) return unaryLane(op, type as ScalarKind, a!);
+  return binaryLane(op, from as ScalarKind)?.(a!, b!);
 }

@@ -83,6 +83,8 @@ function definedResolved(
 
 class ConditionReader {
   private index = 0;
+  /** Above zero while the reader reads the side of `&&` or `||` that glslang skips. */
+  private skipDepth = 0;
 
   constructor(
     private readonly tokens: readonly PpToken[],
@@ -101,8 +103,12 @@ class ConditionReader {
       const operator = BINARY[op];
       if (!operator || operator[0] <= precedence) return value;
       this.index += 1;
+      const skips = (op === '&&' && value === 0) || (op === '||' && value !== 0);
+      if (skips) this.skipDepth += 1;
       const right = this.expression(operator[0]);
-      if ((op === '/' || op === '%') && right === 0) this.fail('division by 0');
+      if (skips) this.skipDepth -= 1;
+      // glslang's `shortCircuit` (`Pp.cpp`): a skipped side still parses, but divides by 0 freely.
+      if ((op === '/' || op === '%') && right === 0 && this.skipDepth === 0) this.fail('division by 0');
       value = operator[1](value, right);
     }
   }
@@ -128,6 +134,6 @@ function integerValue(text: string, fail: (message: string) => never): number {
   const digits = text.replace(/[uU]$/, '');
   if (/^0[xX][0-9a-fA-F]+$/.test(digits)) return Number.parseInt(digits, 16) | 0;
   if (/^0[0-7]*$/.test(digits)) return Number.parseInt(digits, 8) | 0;
-  if (/^[1-9]\d*$/.test(digits)) return Number.parseInt(digits, 10) | 0;
+  if (/^[1-9]\d*$/.test(digits)) return Number(digits) | 0;
   return fail('bad expression');
 }

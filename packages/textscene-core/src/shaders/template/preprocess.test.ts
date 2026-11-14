@@ -86,4 +86,12 @@ describe('preprocess', () => {
   it('refuses an #if with no #endif', () => {
     expect(() => tokensOf('#ifdef A\nx')).toThrow('missing #endif');
   });
+
+  it('reads past a division by zero on the side a && skips, as glslang does', () => {
+    expect(tokensOf('#if defined(N) && (64 / N) > 4\nyes\n#else\nno\n#endif')).toBe('no');
+  });
+
+  it('reads past a division by zero on the side a || skips', () => {
+    expect(tokensOf('#if 1 || (1 / 0)\nyes\n#endif')).toBe('yes');
+  });
 });

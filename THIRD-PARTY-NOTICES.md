@@ -381,6 +381,16 @@ orchestrator-owned:
 Each theme key is simply its SVG filename without extension (`default_theme_icons_builders.py`).
 Licensed under the same Godot Engine MIT licence below.
 
+### Bundled renderer templates
+
+`packages/textscene-core/src/shaders/template/templateFiles.generated.ts` holds unmodified copies of
+Godot 4.6.3's renderer templates, the files under `servers/rendering/renderer_rd/shaders/`, so the
+shader package links a user's shader into the template Godot links it into.
+`packages/textscene-core/src/shaders/template/modeTables.generated.ts` holds the mode tables those
+templates read, generated from the renderer's C++ (`environment/sky.cpp` and the other shader
+types). `scripts/godot-templates/run.mjs` writes both files and the Godot notice they carry. They are
+Godot Engine files under the same MIT licence below.
+
 ### Vendored viewport icon
 
 `packages/textscene-core/src/r3f/components/FreelookSpeedReadout/viewportSpeedIcon.ts` embeds an unmodified copy of `editor/icons/ViewportSpeed.svg`, the icon Godot 4.6.3's 3D editor draws under its freelook speed bar, base64-encoded the same way. It is a Godot Engine file under the same MIT licence below.
@@ -663,6 +673,8 @@ and ambient light ARE that table's output. Godot vendors it as `thirdparty/misc/
 It is by Activision Publishing and is licensed MIT, separately from Godot's own MIT licence above.
 `packages/textscene-core/src/resources/sky/skyLayerShaders.ts` ports Godot's `octmap_downsampler.glsl`
 and `octmap_filter.glsl`, which carry the same Activision notice.
+`packages/textscene-core/src/shaders/template/templateFiles.generated.ts` holds those two templates
+unmodified, with the notice.
 
 ```
 Copyright 2016 Activision Publishing, Inc.

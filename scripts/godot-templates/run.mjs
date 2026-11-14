@@ -10,15 +10,16 @@ import { join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { godotSourceDir } from '../godotSource.mjs';
+import { godotVersion } from '../godot-shader-language/readSource.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { MODE_TABLE_SOURCES, modeTable } from './modeTables.mjs';
 
-const TEMPLATE_DIR = 'servers/rendering/renderer_rd/shaders';
+export const TEMPLATE_DIR = 'servers/rendering/renderer_rd/shaders';
 const OUT_DIR = join(REPO_ROOT, 'packages/textscene-core/src/shaders/template');
 
 /**
  * The FSR templates include AMD's FidelityFX code from `thirdparty/`, which the CI image leaves
- * out. Atle chose on a card that they join with the FSR slice.
+ * out. They join with the slice that ports FSR.
  */
 export const WAITS_FOR_FSR = /(^|\/)fsr/;
 
@@ -80,10 +81,7 @@ ${tables.join('\n')}
 
 function main() {
   const godotDir = godotSourceDir(process.argv);
-  const version = readFileSync(join(godotDir, 'version.py'), 'utf8')
-    .match(/major = (\d+)[\s\S]*minor = (\d+)[\s\S]*patch = (\d+)/)
-    .slice(1)
-    .join('.');
+  const version = godotVersion(readFileSync(join(godotDir, 'version.py'), 'utf8'));
   const outputs = [
     [join(OUT_DIR, 'templateFiles.generated.ts'), renderTemplates(godotDir, version)],
     [join(OUT_DIR, 'modeTables.generated.ts'), renderModeTables(godotDir, version)],

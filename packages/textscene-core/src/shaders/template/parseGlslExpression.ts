@@ -33,6 +33,7 @@ import {
   type GlslShape,
   type SizedType,
 } from './glslTypes.js';
+import { constantScalar } from './constantValue.js';
 import { builtInOverloads, constructorRow, namedRow, operatorRow, resolvedOverload } from './glslRows.js';
 import type { PpToken } from './ppScanner.js';
 import type { TemplateCursor } from './templateCursor.js';
@@ -45,6 +46,10 @@ export interface TemplateVariable {
   readonly type: string;
   readonly arraySize?: number;
   readonly isConst?: boolean;
+  /** A stage input, a uniform, a `readonly` buffer or a built-in the stage only reads. */
+  readonly isReadOnly?: true;
+  /** The constant lanes of a `const` with a value. */
+  readonly values?: readonly Scalar[];
 }
 
 /** A function of the template, as a call resolves it. */
@@ -142,6 +147,7 @@ export class GlslExpressionParser {
     const op = ASSIGN_OPS[this.tokens.peekText()];
     if (!op || this.tokens.peek()?.kind !== 'punctuator') return target;
     const operator = this.tokens.next();
+    this.writable(target, operator);
     const value = this.expression();
     if (arraySizeOf(target) > 0 || this.scope.members(target.type)) {
       if (op !== 'OP_ASSIGN') this.tokens.fail('compound assignment needs a value type', operator.position);
@@ -160,6 +166,18 @@ export class GlslExpressionParser {
   /** A constant expression: an array size, a `case` label or a layout value. */
   constantInteger(): Expression {
     return this.conditional();
+  }
+
+  /** An array size: a constant integer expression greater than zero (section 4.1.9). */
+  arraySize(): number {
+    const expression = this.constantInteger();
+    const value = constantScalar(expression, (name) => this.scope.variable(name)?.values);
+    if (typeof value !== 'number' || value <= 0)
+      this.tokens.fail(
+        'array size must be a constant integer expression greater than zero',
+        expression.position
+      );
+    return value;
   }
 
   private assignment(op: string, target: Expression, value: Expression, operator: PpToken): Expression {
@@ -265,12 +283,21 @@ export class GlslExpressionParser {
     if (!op) return this.postfix(this.primary());
     this.tokens.next();
     const operand = this.unary();
+    if (op === 'OP_INCREMENT' || op === 'OP_DECREMENT') this.writable(operand, token!);
     const shape = glslShapeOf(operand.type);
     if (!shape)
       this.tokens.fail(`wrong operand type for '${token!.text}': '${operand.type}'`, token!.position);
     if (op === 'OP_NEGATE' && operand.kind === 'constant' && shape.scalar !== 'bool')
       return negated(operand, token!);
     return this.operator(op, [operand], operand.type);
+  }
+
+  /** Fails unless `target` names storage the program may write, as glslang's l-value check does. */
+  private writable(target: Expression, operator: PpToken): void {
+    const root = storageOf(target);
+    const variable = root.kind === 'variable' ? this.scope.variable(root.name) : undefined;
+    if (!variable || variable.isConst || variable.isReadOnly)
+      this.tokens.fail(`'${operator.text}' : l-value required`, operator.position);
   }
 
   private postfix(start: Expression): Expression {
@@ -282,6 +309,7 @@ export class GlslExpressionParser {
       else if (token.text === '.') node = this.member(node);
       else if (token.text === '++' || token.text === '--') {
         this.tokens.next();
+        this.writable(node, token);
         node = this.operator(
           token.text === '++' ? 'OP_POST_INCREMENT' : 'OP_POST_DECREMENT',
           [node],
@@ -410,11 +438,21 @@ export class GlslExpressionParser {
   private construction(typeToken: PpToken): Expression {
     const type = canonicalType(typeToken.text);
     if (this.tokens.accept('[')) {
-      const size = this.tokens.peekText() === ']' ? undefined : this.constantInteger();
+      const size = this.tokens.peekText() === ']' ? undefined : this.arraySize();
       this.tokens.expect(']');
       const elements = this.argumentList().map((element) => this.converted(element, type));
-      const arraySize = size === undefined ? elements.length : Number((size as ConstantNode).values[0]);
-      return { kind: 'array construct', type, arraySize, elements, position: typeToken.position };
+      if (size !== undefined && size !== elements.length)
+        this.tokens.fail(
+          `array constructor of ${type}[${size}] takes ${size} elements, found ${elements.length}`,
+          typeToken.position
+        );
+      return {
+        kind: 'array construct',
+        type,
+        arraySize: elements.length,
+        elements,
+        position: typeToken.position,
+      };
     }
     const args = this.argumentList();
     if (
@@ -453,9 +491,9 @@ export class GlslExpressionParser {
     const args = this.argumentList();
     const members = this.scope.members(name.text);
     if (members) {
-      const operands = members.map((member, index) => this.converted(args[index]!, member.type));
       if (args.length !== members.length)
         this.tokens.fail(`wrong number of arguments for ${name.text}`, name.position);
+      const operands = members.map((member, index) => this.converted(args[index]!, member.type));
       return {
         kind: 'operator',
         type: name.text,
@@ -658,6 +696,14 @@ function numberConstant(token: PpToken, fail: (reason: string) => never): Consta
   // A double, as glslang holds a literal: it folds constant expressions in double precision.
   const type = /^h/i.test(float[2] ?? '') ? 'float16_t' : 'float';
   return constant(type, Number(float[1]), token);
+}
+
+/** The variable an element, a field, a component or a swizzle of `target` reads from. */
+function storageOf(target: Expression): Expression {
+  if (target.kind === 'array element') return storageOf(target.array);
+  if (target.kind === 'field' || target.kind === 'member') return storageOf(target.owner);
+  if (target.kind === 'operator' && target.op === 'OP_INDEX') return storageOf(target.operands[0]!);
+  return target;
 }
 
 const constant = (type: string, value: Scalar, token: PpToken): ConstantNode => ({

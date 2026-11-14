@@ -3,8 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { generatedFragmentShader } from '../generatedShader.testkit';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import { transpileSky } from './transpileSky.js';
-
-const DEFAULT_SKY = 'shader_type sky;\n\nvoid sky() {\n\tCOLOR = vec3(0.0);\n}\n';
+import { DEFAULT_SKY } from './defaultSky.testkit';
 
 function errorOf(source: string): ShadingLanguageError {
   try {

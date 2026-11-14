@@ -57,9 +57,9 @@ The instruction count says how much of the language is transpiled, not how many 
 | docs | 37 | 37 | spatial, canvas_item, sky |
 | scenes | 2 | 2 | spatial, sky |
 
-**0 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
+**1 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
 
-The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. No shader transpiles yet, so the folder holds no file yet. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.
+The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. It holds 1 file. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.
 
 | State | Shaders |
 | --- | --- |
@@ -68,7 +68,7 @@ The printed tree of each shader the transpiler accepts is a checked-in file unde
 | refused as Godot refuses | 14 |
 | not transpiled yet (#1828) | 8 |
 | not transpiled yet (#1826) | 2 |
-| not transpiled yet (#1830) | 1 |
+| transpiled | 1 |
 
 The mismatches below are known, each with its owner. The list only shrinks, as for the random programs.
 
@@ -76,7 +76,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | --- | --- | --- |
 
 
-<details><summary>The 354 shaders not transpiled yet, with their owners</summary>
+<details><summary>The 353 shaders not transpiled yet, with their owners</summary>
 
 | Shader | Owner |
 | --- | --- |
@@ -259,7 +259,6 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `docs/tutorials/shaders/your_first_shader/your_first_2d_shader.rst#0` | #1794 |
 | `docs/tutorials/shaders/your_first_shader/your_first_3d_shader.rst#10` | #1829 |
 | `scenes/fixtures/fog-volume-spatial.gdshader` | #1794 |
-| `scenes/fixtures/sky-shader-stub.gdshader` | #1830 |
 | `rejected/generator/StandardMaterial3D/defaults` | #1794 |
 | `rejected/generator/StandardMaterial3D/transparency=2` | #1794 |
 | `rejected/generator/StandardMaterial3D/blend_mode=3` | #1794 |

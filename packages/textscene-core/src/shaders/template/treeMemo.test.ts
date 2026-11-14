@@ -48,4 +48,22 @@ describe('TreeMemo', () => {
     tree({ ...KEY, ...change });
     expect(builds()).toBe(2);
   });
+
+  it('drops the least recently read tree past the trees it keeps', () => {
+    const { tree, builds } = countingMemo();
+    tree(KEY);
+    for (let index = 0; index < 64; index += 1) tree({ ...KEY, source: `// ${index}` });
+    tree(KEY);
+    expect(builds()).toBe(66);
+  });
+
+  it('keeps a tree that was read again', () => {
+    const { tree, builds } = countingMemo();
+    tree(KEY);
+    for (let index = 0; index < 64; index += 1) {
+      tree({ ...KEY, source: `// ${index}` });
+      tree(KEY);
+    }
+    expect(builds()).toBe(65);
+  });
 });

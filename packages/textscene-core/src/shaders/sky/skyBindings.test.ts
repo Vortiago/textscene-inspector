@@ -3,8 +3,7 @@ import type { UniformNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { writeSkyBindings, type SkyScene } from './skyBindings.js';
 import { transpileSky } from './transpileSky.js';
-
-const DEFAULT_SKY = 'shader_type sky;\n\nvoid sky() {\n\tCOLOR = vec3(0.0);\n}\n';
+import { DEFAULT_SKY } from './defaultSky.testkit';
 
 const SUN = {
   direction: new THREE.Vector3(0, 0, 1),

@@ -7,8 +7,7 @@ import { tokenize } from '../language/tokenizer.js';
 import { emitTemplateStage } from './emitTemplate.js';
 import { compileMaterial, linkTemplateStage } from './link.js';
 import { MODE_TABLES } from './modeTables.generated.js';
-
-const DEFAULT_SKY = 'shader_type sky;\n\nvoid sky() {\n\tCOLOR = vec3(0.0);\n}\n';
+import { DEFAULT_SKY } from '../sky/defaultSky.testkit';
 
 function skyFragment() {
   const material = compileMaterial(parse(tokenize(DEFAULT_SKY, 'user.gdshader')), MODE_TABLES.sky!);

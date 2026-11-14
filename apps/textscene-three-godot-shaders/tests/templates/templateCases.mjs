@@ -6,11 +6,8 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { glslFiles, WAITS_FOR_FSR } from '../../../../scripts/godot-templates/run.mjs';
+import { glslFiles, TEMPLATE_DIR, WAITS_FOR_FSR } from '../../../../scripts/godot-templates/run.mjs';
 import { coveringSets, definedNames, isMaterialName, testedNames, variantText } from './defineSets.mjs';
-
-/** Where the templates are in Godot's tree. */
-export const TEMPLATE_DIR = 'servers/rendering/renderer_rd/shaders';
 
 /**
  * The templates of Godot's source at `godotDir`: each file with stages, the files that only

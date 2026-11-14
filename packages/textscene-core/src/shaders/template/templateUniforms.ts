@@ -9,6 +9,7 @@ import { uniform, uniformArray } from 'three/tsl';
 import type { Node, UniformNode } from 'three/webgpu';
 import type { ArrayValue, StructOf, StructValue, Value } from '../language/emitValue.js';
 import type { StructMember } from '../language/shaderTree.js';
+import { glslShapeOf } from './glslTypes.js';
 import type { InterfaceBlockNode } from './templateTree.js';
 
 /**
@@ -32,9 +33,20 @@ export class TemplateUniforms {
   private member(name: string, member: StructMember, structOf: StructOf): Value {
     const struct = structOf(member.type);
     const count = member.arraySize ?? 0;
+    if (struct && count === 0) return this.struct(name, struct.members, structOf);
     if (struct) return this.structArray(name, struct.members, count);
     if (count > 0) return this.array(name, member.type, count);
     return this.uniformOf(name, member.type);
+  }
+
+  /** A struct as one uniform per member: `scene_data.fog.color`. */
+  private struct(name: string, members: readonly StructMember[], structOf: StructOf): StructValue {
+    return {
+      kind: 'struct',
+      members: new Map(
+        members.map((member) => [member.name, this.member(`${name}.${member.name}`, member, structOf)])
+      ),
+    };
   }
 
   /** An array of structs as one array per member: `directional_lights.data.enabled`. */
@@ -75,24 +87,27 @@ export class TemplateUniforms {
 
 /** The value a uniform of `type` holds before the caller writes one: zero, as an unwritten GPU buffer. */
 function initialValue(type: string): unknown {
-  switch (type) {
-    case 'bool':
-      return false;
-    case 'int':
-    case 'uint':
-    case 'float':
-      return 0;
-    case 'vec2':
-      return new THREE.Vector2();
-    case 'vec3':
-      return new THREE.Vector3();
-    case 'vec4':
-      return new THREE.Vector4();
-    case 'mat3':
-      return new THREE.Matrix3().set(0, 0, 0, 0, 0, 0, 0, 0, 0);
-    case 'mat4':
-      return new THREE.Matrix4().set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    default:
-      throw new Error(`expected a uniform of a value type the emitter writes, got ${type}`);
-  }
+  const shape = glslShapeOf(type);
+  if (!shape || shape.scalar === 'float16')
+    throw new Error(`expected a uniform of a value type the emitter writes, got ${type}`);
+  const zero = shape.scalar === 'bool' ? false : 0;
+  if (shape.columns === 1 && shape.rows === 1) return zero;
+  if (shape.columns === 1) return VECTORS[shape.rows]!();
+  const matrix = MATRICES[shape.columns];
+  if (!matrix || shape.rows !== shape.columns)
+    throw new Error(`expected a square matrix uniform of 2 to 4 columns, got ${type}`);
+  return matrix().fromArray(new Array(shape.columns * shape.rows).fill(0));
 }
+
+/** The three.js vector of each component count, which three binds as a vector of the uniform's type. */
+const VECTORS: Readonly<Record<number, () => unknown>> = {
+  2: () => new THREE.Vector2(),
+  3: () => new THREE.Vector3(),
+  4: () => new THREE.Vector4(),
+};
+
+const MATRICES: Readonly<Record<number, () => THREE.Matrix2 | THREE.Matrix3 | THREE.Matrix4>> = {
+  2: () => new THREE.Matrix2(),
+  3: () => new THREE.Matrix3(),
+  4: () => new THREE.Matrix4(),
+};

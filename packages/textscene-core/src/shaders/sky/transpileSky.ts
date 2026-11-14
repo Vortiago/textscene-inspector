@@ -12,7 +12,7 @@ import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import { tokenize } from '../language/tokenizer.js';
 import { checkTranspiled } from '../language/transpiledRows.js';
 import { emitTemplateStage } from '../template/emitTemplate.js';
-import { compileMaterial, linkTemplateStage } from '../template/link.js';
+import { compileMaterial, linkTemplateStage, type CompiledMaterial } from '../template/link.js';
 import { GODOT_VERSION } from '../language/instructionTable.generated.js';
 import { MODE_TABLES } from '../template/modeTables.generated.js';
 import type { StageName } from '../template/stages.js';
@@ -43,13 +43,10 @@ export function transpileSky(source: string, file = ''): TranspiledSky {
   if (tree.shaderType !== 'sky')
     throw new ShadingLanguageError(
       `expected a shader of 'shader_type sky', found ${tree.shaderType ?? 'none'}`,
-      {
-        file,
-        line: 1,
-        column: 1,
-      }
+      tree.headPosition ?? { file, line: 1, column: 1 }
     );
   checkTranspiled(tree);
+  let material: CompiledMaterial | undefined;
   const linked = (stage: StageName): TemplateStageNode =>
     linkedStages.tree(
       {
@@ -62,8 +59,10 @@ export function transpileSky(source: string, file = ''): TranspiledSky {
         godotVersion: GODOT_VERSION,
         transpilerVersion: TRANSPILER_VERSION,
       },
-      () =>
-        linkTemplateStage(SKY_TEMPLATE, stage, BACKGROUND_VARIANT, compileMaterial(tree, MODE_TABLES.sky!))
+      () => {
+        material ??= compileMaterial(tree, MODE_TABLES.sky!);
+        return linkTemplateStage(SKY_TEMPLATE, stage, BACKGROUND_VARIANT, material);
+      }
     );
   const uniforms = new TemplateUniforms();
   const uvInterp = varyingProperty('vec2', 'uv_interp') as unknown as Node;

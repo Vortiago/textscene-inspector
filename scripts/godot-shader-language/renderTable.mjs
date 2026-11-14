@@ -84,15 +84,11 @@ function fieldText(value) {
   return Array.isArray(value) ? `(${value.join(',')})` : value;
 }
 
-/** The rows Godot's default sky shader holds, which the sky template slice draws first. */
-const DEFAULT_SKY_ROWS = new Set(['shader_type', 'shader_type sky', 'NODE_TYPE_SHADER', 'sky.sky.COLOR']);
-
 /**
  * The issue that owns an open row: the slice of the transpiler's plan that transpiles
  * its family. A row this cannot place throws, so no open row is left without an owner.
  */
 export function owningIssue(row) {
-  if (DEFAULT_SKY_ROWS.has(row.id)) return '#1830';
   switch (row.family) {
     case 'data type':
       return dataTypeOwner(row);

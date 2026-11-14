@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import { installNodesHandler, transpileSky, writeSkyBindings } from '@textscene/three-godot-shaders';
+import { framePixels } from './framePixels.js';
 
 const renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas') });
 installNodesHandler(renderer, 'display');
@@ -48,32 +49,15 @@ function drawSky(spec) {
   writeSkyBindings(sky, { camera, time: 0, brightness: 1, fog, lights: spec.lights.map(skyLight) });
   const scene = new THREE.Scene();
   scene.add(sky.mesh);
-  const target = new THREE.WebGLRenderTarget(width, height);
-  target.texture.colorSpace = THREE.SRGBColorSpace;
-  renderer.setRenderTarget(target);
-  renderer.render(scene, camera);
-  const pixels = new Uint8Array(width * height * 4);
-  renderer.readRenderTargetPixels(target, 0, 0, width, height, pixels);
-  renderer.setRenderTarget(null);
-  target.dispose();
+  const pixels = framePixels(renderer, scene, camera, { width, height, colorSpace: THREE.SRGBColorSpace });
   sky.mesh.material.dispose();
-  return { pixels: Array.from(opaque(topRowFirst(pixels, width, height))) };
+  return { pixels: Array.from(opaque(pixels)) };
 }
 
 /** Godot's viewport with no transparent background reads opaque, and the sky writes alpha 0. */
 function opaque(pixels) {
   for (let alpha = 3; alpha < pixels.length; alpha += 4) pixels[alpha] = 255;
   return pixels;
-}
-
-/** GL reads the bottom row first, and Godot's image holds the top row first. */
-function topRowFirst(pixels, width, height) {
-  const rowBytes = width * 4;
-  const flipped = new Uint8Array(pixels.length);
-  for (let row = 0; row < height; row += 1) {
-    flipped.set(pixels.subarray(row * rowBytes, (row + 1) * rowBytes), (height - 1 - row) * rowBytes);
-  }
-  return flipped;
 }
 
 globalThis.drawSky = drawSky;

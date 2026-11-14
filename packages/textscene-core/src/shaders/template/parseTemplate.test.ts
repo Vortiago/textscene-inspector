@@ -108,4 +108,58 @@ describe('parseTemplateStage', () => {
     const text = 'layout(local_size_x = 8) in;\nshared float data[8];\nvoid main() { data[0] = 1.0; }';
     expect(parsed(text)).toEqual(parsed(text));
   });
+
+  it('reads a sized array constructor whose size is a constant', () => {
+    expect(() => inFunction('const int N = 2;\nfloat a[2] = float[N](1.0, 2.0);')).not.toThrow();
+  });
+
+  it('refuses an array constructor with more sizes than elements', () => {
+    expect(() => inFunction('float a[3] = float[3](1.0, 2.0);')).toThrow(
+      'array constructor of float[3] takes 3 elements, found 2'
+    );
+  });
+
+  it('refuses a struct constructor of too few arguments by its name', () => {
+    expect(() => printed('struct S { float a; float b; };\nvoid main() { S s = S(1.0); }')).toThrow(
+      'wrong number of arguments for S'
+    );
+  });
+
+  it('refuses a block that the text ends inside', () => {
+    expect(() => printed('void main() {')).toThrow('unexpected end of the text');
+  });
+
+  it('refuses a qualifier that ends the text', () => {
+    expect(() => printed('uniform')).toThrow('unexpected end of the text');
+  });
+
+  it('gives an unsized array the size of the array it copies', () => {
+    expect(() => inFunction('float b[4];\nfloat a[] = b;\na[0] = a.length();')).not.toThrow();
+  });
+
+  it('reads the array sizes after the type of a global', () => {
+    expect(() => printed('const float[2] W = float[2](1.0, 2.0);')).not.toThrow();
+  });
+
+  it('reads the array sizes after the type of a parameter', () => {
+    expect(() => printed('void f(float[2] a) {}')).not.toThrow();
+  });
+
+  it('refuses a write to a built-in the stage only reads', () => {
+    expect(() => printed('void main() { gl_FragCoord = vec4(0.0); }', 'fragment')).toThrow(
+      'l-value required'
+    );
+  });
+
+  it('refuses an increment of a constant', () => {
+    expect(() => inFunction('const int n = 1;\nn++;')).toThrow('l-value required');
+  });
+
+  it('refuses a write to a uniform', () => {
+    expect(() => printed('uniform float u;\nvoid main() { u = 1.0; }')).toThrow('l-value required');
+  });
+
+  it('writes a swizzle of a column of a matrix', () => {
+    expect(() => inFunction('mat4 m;\nm[3].xyz = vec3(1.0);')).not.toThrow();
+  });
 });

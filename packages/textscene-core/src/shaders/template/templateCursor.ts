@@ -63,6 +63,11 @@ export class TemplateCursor {
     return this.peek(offset)?.text ?? '';
   }
 
+  /** The next token, unread. Fails at the end of the text. */
+  current(): PpToken {
+    return this.peek() ?? this.fail('unexpected end of the text');
+  }
+
   isAtEnd(): boolean {
     return this.index >= this.tokens.length;
   }

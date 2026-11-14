@@ -9,16 +9,16 @@
 import type { InstructionRow } from '../language/instructionTable.generated.js';
 import type { StageName } from './stages.js';
 
-/** A built-in variable: its type, its array size, and whether a stage may write it. */
+/** A built-in variable: its type, its array size, and whether a stage only reads it. */
 export interface BuiltInVariable {
   readonly type: string;
   readonly arraySize?: number;
-  readonly isWritable: boolean;
+  readonly isReadOnly?: true;
   readonly isConst?: boolean;
 }
 
-const read = (type: string): BuiltInVariable => ({ type, isWritable: false });
-const write = (type: string): BuiltInVariable => ({ type, isWritable: true });
+const read = (type: string): BuiltInVariable => ({ type, isReadOnly: true });
+const write = (type: string): BuiltInVariable => ({ type });
 
 const SUBGROUP: Readonly<Record<string, BuiltInVariable>> = {
   gl_SubgroupSize: read('uint'),
@@ -52,8 +52,8 @@ export const STAGE_VARIABLES: Readonly<Record<StageName, Readonly<Record<string,
     gl_HelperInvocation: read('bool'),
     gl_ViewIndex: read('int'),
     gl_FragDepth: write('float'),
-    gl_SampleMask: { type: 'int', arraySize: 1, isWritable: true },
-    gl_SampleMaskIn: { type: 'int', arraySize: 1, isWritable: false },
+    gl_SampleMask: { type: 'int', arraySize: 1 },
+    gl_SampleMaskIn: { type: 'int', arraySize: 1, isReadOnly: true },
     ...SUBGROUP,
   },
   compute: {
@@ -62,7 +62,7 @@ export const STAGE_VARIABLES: Readonly<Record<StageName, Readonly<Record<string,
     gl_LocalInvocationID: read('uvec3'),
     gl_GlobalInvocationID: read('uvec3'),
     gl_LocalInvocationIndex: read('uint'),
-    gl_WorkGroupSize: { type: 'uvec3', isWritable: false, isConst: true },
+    gl_WorkGroupSize: { type: 'uvec3', isReadOnly: true, isConst: true },
     gl_NumSubgroups: read('uint'),
     gl_SubgroupID: read('uint'),
     ...SUBGROUP,

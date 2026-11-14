@@ -11,7 +11,6 @@ import type {
   BlockNode,
   ControlFlowNode,
   DeclarationNode,
-  Declarator,
   Expression,
   Flow,
   FunctionNode,
@@ -22,7 +21,7 @@ import type {
   StructNode,
   VariableNode,
 } from '../language/shaderTree.js';
-import { withExpressionsMapped } from '../language/treeWalk.js';
+import { arraySizeOf, withExpressionsMapped } from '../language/treeWalk.js';
 import { STAGE_VARIABLES } from './glslBuiltIns.js';
 import {
   arrayOf,
@@ -151,7 +150,7 @@ class TemplateParser implements TemplateScope {
   declarations(): TemplateDeclaration[] {
     const declarations: TemplateDeclaration[] = [];
     while (!this.tokens.isAtEnd()) {
-      const token = this.tokens.peek()!;
+      const token = this.tokens.current();
       if (token.kind === 'slot') {
         this.tokens.next();
         if (this.material && token.slot!.kind === 'GLOBALS') declarations.push(...this.material.globals);
@@ -175,7 +174,7 @@ class TemplateParser implements TemplateScope {
     }
     const qualifiers = this.qualifiers();
     if (this.tokens.accept(';')) return [{ kind: 'default layout', qualifiers, position }];
-    const next = this.tokens.peek()!;
+    const next = this.tokens.current();
     if (next.kind === 'identifier' && this.tokens.peekText(1) === '{' && !this.structs.has(next.text))
       return [this.interfaceBlock(qualifiers, position)];
     if (qualifiers.words.includes('invariant') && !this.isTypeStart())
@@ -310,14 +309,7 @@ class TemplateParser implements TemplateScope {
   }
 
   private arraySize(): number {
-    const expression = this.expressions.constantInteger();
-    const value = constantScalar(expression, this.constantLanes);
-    if (typeof value !== 'number' || value <= 0)
-      this.tokens.fail(
-        'array size must be a constant integer expression greater than zero',
-        expression.position
-      );
-    return value;
+    return this.expressions.arraySize();
   }
 
   private interfaceBlock(qualifiers: GlobalQualifiers, position: SourcePosition): InterfaceBlockNode {
@@ -334,12 +326,16 @@ class TemplateParser implements TemplateScope {
       this.globals.variables.set(instance, {
         type: blockName,
         ...(arraySize !== undefined ? { arraySize } : {}),
+        ...(isReadOnlyStorage(qualifiers) ? { isReadOnly: true } : {}),
       });
     } else
       for (const field of fields)
         this.globals.variables.set(field.name, {
           type: field.type,
           ...(field.arraySize !== undefined ? { arraySize: field.arraySize } : {}),
+          ...(isReadOnlyStorage(qualifiers) || isReadOnlyStorage(field.qualifiers)
+            ? { isReadOnly: true }
+            : {}),
         });
     return {
       kind: 'interface block',
@@ -353,21 +349,36 @@ class TemplateParser implements TemplateScope {
   }
 
   private global(qualifiers: GlobalQualifiers, base: string, position: SourcePosition): TemplateDeclaration {
-    const isConst = qualifiers.words.includes('const');
+    const flags = {
+      isConst: qualifiers.words.includes('const'),
+      isReadOnly: isReadOnlyStorage(qualifiers),
+    };
+    const { type, declarators } = this.declarators(base, this.arraySizes(), flags, this.globals);
+    return { kind: 'global', qualifiers, type, declarators, position };
+  }
+
+  /** The names of one declaration of `base` up to its `;`, each set in `scope`. */
+  private declarators(
+    base: string,
+    typeSizes: readonly number[],
+    { isConst, isReadOnly }: { readonly isConst: boolean; readonly isReadOnly: boolean },
+    scope: Scope
+  ): { type: string; declarators: GlobalDeclarator[] } {
     const declarators: GlobalDeclarator[] = [];
     let type: string | undefined;
     for (;;) {
       const name = this.tokens.identifier();
-      const declared = this.declared(base);
+      const declared = this.declared(base, typeSizes);
       type = this.sameElementType(type, declared, name);
       const size = declared.arraySize;
       const value = this.tokens.accept('=') ? this.initialiser(declared) : undefined;
-      const arraySize = size === RUNTIME_SIZED && value ? arraySizeOf(value) : size;
+      const arraySize = size === RUNTIME_SIZED && value ? arraySizeOf(value) || undefined : size;
       const values = isConst && value ? constantLanes(value, this.constantLanes) : undefined;
-      this.globals.variables.set(name.text, {
+      scope.variables.set(name.text, {
         type,
         ...(arraySize !== undefined ? { arraySize } : {}),
         ...(isConst ? { isConst } : {}),
+        ...(isReadOnly ? { isReadOnly } : {}),
         ...(values ? { values } : {}),
       });
       declarators.push({
@@ -377,10 +388,9 @@ class TemplateParser implements TemplateScope {
         ...(arraySize === RUNTIME_SIZED ? { isRuntimeSized: true } : {}),
         ...(value ? { value } : {}),
       });
-      if (this.tokens.accept(';')) break;
+      if (this.tokens.accept(';')) return { type, declarators };
       this.tokens.expect(',');
     }
-    return { kind: 'global', qualifiers, type, declarators, position };
   }
 
   /**
@@ -465,8 +475,9 @@ class TemplateParser implements TemplateScope {
     for (;;) {
       const qualifiers = this.qualifiers();
       const base = this.typeName();
+      const typeSizes = this.arraySizes();
       const nameToken = this.tokens.peek()?.kind === 'identifier' ? this.tokens.next() : undefined;
-      const { type, arraySize } = this.declared(base);
+      const { type, arraySize } = this.declared(base, typeSizes);
       const qualifier: Qualifier =
         (['inout', 'out', 'in'] as const).find((word) => qualifiers.words.includes(word)) ?? 'in';
       const otherWords = qualifiers.words.filter((word) => !['in', 'out', 'inout', 'const'].includes(word));
@@ -558,7 +569,7 @@ class TemplateParser implements TemplateScope {
   }
 
   private statement(): Statement {
-    const token = this.tokens.peek()!;
+    const token = this.tokens.current();
     if (token.kind === 'slot') {
       this.tokens.next();
       if (!this.material) return { kind: 'slot', name: token.slot!.name, position: token.position };
@@ -629,32 +640,12 @@ class TemplateParser implements TemplateScope {
     const words: string[] = [];
     while (PRECISIONS.has(this.tokens.peekText())) words.push(this.tokens.next().text);
     const base = this.typeName();
-    const typeSizes = this.arraySizes();
-    const declarators: Declarator[] = [];
-    let type: string | undefined;
-    for (;;) {
-      const name = this.tokens.identifier();
-      const declared = this.declared(base, typeSizes);
-      type = this.sameElementType(type, declared, name);
-      const size = declared.arraySize;
-      const value = this.tokens.accept('=') ? this.initialiser(declared) : undefined;
-      const arraySize = size === RUNTIME_SIZED && value ? arraySizeOf(value) : size;
-      const values = isConst && value ? constantLanes(value, this.constantLanes) : undefined;
-      this.scope.variables.set(name.text, {
-        type,
-        ...(arraySize !== undefined ? { arraySize } : {}),
-        ...(isConst ? { isConst } : {}),
-        ...(values ? { values } : {}),
-      });
-      declarators.push({
-        name: name.text,
-        position: name.position,
-        ...(arraySize !== undefined ? { arraySize } : {}),
-        ...(value ? { value } : {}),
-      });
-      if (this.tokens.accept(';')) break;
-      this.tokens.expect(',');
-    }
+    const { type, declarators } = this.declarators(
+      base,
+      this.arraySizes(),
+      { isConst, isReadOnly: false },
+      this.scope
+    );
     return {
       kind: 'declaration',
       type,
@@ -809,8 +800,9 @@ function initialiserParts(
   return (index) => initialiserPart(type, index);
 }
 
-function arraySizeOf(value: Expression): number | undefined {
-  return value.kind === 'array construct' ? value.arraySize : undefined;
+/** Whether `qualifiers` declare storage the program only reads: a stage input, a uniform or a `readonly` buffer. */
+function isReadOnlyStorage(qualifiers: GlobalQualifiers): boolean {
+  return qualifiers.words.some((word) => word === 'in' || word === 'uniform' || word === 'readonly');
 }
 
 /** The lanes of a constant value: a literal's, or a folded scalar's. */
@@ -822,5 +814,3 @@ function constantLanes(
   const scalar = constantScalar(value, lookup);
   return scalar === undefined ? undefined : [scalar];
 }
-
-export type { PpToken };
