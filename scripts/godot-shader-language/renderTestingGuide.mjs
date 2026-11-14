@@ -42,7 +42,13 @@ const ANSWERS_SECTION = `## Godot's answers
 
 lavapipe compiles each shader for the CPU it runs on, and the job prints the CPU model, its vector flags and the Mesa and LLVM packages on every run. A float lane that is NaN agrees with any NaN, in the digest and in the comparison on a real GL context alike (\`scripts/godot-probes/laneAgreement.mjs\`). GLSL ES 3.00 section 4.5.1 leaves the sign and payload of a NaN to the device, and lavapipe on the same Mesa 25.2.8 and LLVM 20.1.2 gives some matrix products a NaN of the other sign on an AMD EPYC 7763 (AVX2) than on an Intel Xeon with AVX-512. A NaN against a number, against an infinity, and -0 against +0 still differ, and an int, uint or bool lane agrees bit for bit.`;
 
-function randomSection({ programs, seed, transpiledRows, knownDifferences }) {
+/** The keywords of the flows the lowering removes, as `a`, `b` or `c`. */
+function keywordList(loweredAway) {
+  const keywords = Object.values(loweredAway).map(({ keyword }) => `\`${keyword}\``);
+  return keywords.length === 1 ? keywords[0] : `${keywords.slice(0, -1).join(', ')} or ${keywords.at(-1)}`;
+}
+
+function randomSection({ programs, seed, transpiledRows, knownDifferences, loweredAway }) {
   const cases = Object.keys(knownDifferences).length;
   const known = Object.values(knownDifferences).filter((each) => each.program !== undefined).length;
   return `## Random programs against Godot
@@ -53,7 +59,7 @@ The fixed set has seed ${seed}: ${programs.length} programs, one rooted at each 
 
 **${programs.length - known} of ${programs.length} random programs bit-equal with Godot, NaN lanes compared as NaN. The others are the ${cases} listed known-difference ${cases === 1 ? 'case' : 'cases'}, each with its cause: a float rewrite by the probe GPU's driver on one side only, or a result GLSL leaves undefined.** A program that differs is reduced against a live Godot to a small program that still differs. Each known difference is a fixed case: its reduced program and its inputs, run on every pass whatever the seed, the set size or the generator. The list only shrinks: a case leaves it only when its own program equals Godot. A program of the set that differs and is no case's program fails the run.
 
-Every program of the set also passes the tree check before and after lowering, and prints as text that parses to the same tree (\`tests/random/programs.test.mjs\`). After lowering, the tree holds no \`for\`, \`do\` or \`switch\`, its one loop is \`while (true)\`, and each function's one \`return\` is its last statement. Hand-broken trees show that each check fails (\`tests/verdicts/trees.test.mjs\`).
+Every program of the set also passes the tree check before and after lowering, and prints as text that parses to the same tree (\`tests/random/programs.test.mjs\`). After lowering, the tree holds no ${keywordList(loweredAway)}, its one loop is \`while (true)\`, and no \`return\` stands before a function's last statement. Hand-broken trees show that each check fails (\`tests/verdicts/trees.test.mjs\`).
 
 | Case | Reduced program | Program of the set | First lane that differs | Cause | Owner |
 | --- | --- | --- | --- | --- | --- |
@@ -75,7 +81,7 @@ function printedTreesParagraph(transpiled) {
     transpiled === 0
       ? 'No shader transpiles yet, so the folder holds no file yet.'
       : `It holds ${transpiled} ${transpiled === 1 ? 'file' : 'files'}.`;
-  return `The printed tree of each shader the transpiler accepts is a checked-in file under \`tests/corpus/trees/\`, so a review shows how a change moves a real shader's tree. ${files} \`vitest -u\` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three writes that text, and each upgrade of three would change every file.`;
+  return `The printed tree of each shader the transpiler accepts is a checked-in file under \`tests/corpus/trees/\`, so a review shows how a change moves a real shader's tree. ${files} \`vitest -u\` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.`;
 }
 
 function corpusSection({ corpus, corpusRecord, states, knownMismatches }) {

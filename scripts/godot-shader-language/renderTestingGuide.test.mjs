@@ -21,6 +21,7 @@ const INPUT = {
     seed: 1,
     transpiledRows: 2,
     knownDifferences: KNOWN,
+    loweredAway: { FLOW_OP_FOR: { keyword: 'for' }, FLOW_OP_SWITCH: { keyword: 'switch' } },
   },
   corpus: {
     corpus: [
@@ -49,8 +50,13 @@ describe('the chapter on the tests against Godot', () => {
     expect(GUIDE).toContain('**0 of 1 real shaders transpile.** Godot rejects the other 1.');
   });
 
-  it('names the tree check of the random programs and the printed trees of the corpus', () => {
-    expect(GUIDE).toContain('Every program of the set also passes the tree check before and after lowering');
+  it('names the flows the lowering removes from the list the tree check reads', () => {
+    expect(GUIDE).toContain(
+      'After lowering, the tree holds no `for` or `switch`, its one loop is `while (true)`'
+    );
+  });
+
+  it('names the folder of the printed corpus trees', () => {
     expect(GUIDE).toContain('is a checked-in file under `tests/corpus/trees/`');
   });
 
@@ -71,6 +77,7 @@ describe('the table of known differences', () => {
         programs: [{}],
         seed: 1,
         transpiledRows: 1,
+        loweredAway: { FLOW_OP_FOR: { keyword: 'for' } },
         knownDifferences: {
           'random-1-0': {
             source: 'bool probe(bool a0) { return a0 || a0; }',
