@@ -6,16 +6,17 @@ import { describe, expect, it } from 'vitest';
 import { parse } from '../../../../packages/textscene-core/src/shaders/language/parse.ts';
 import { ShadingLanguageError } from '../../../../packages/textscene-core/src/shaders/language/shadingLanguageError.ts';
 import { tokenize } from '../../../../packages/textscene-core/src/shaders/language/tokenizer.ts';
+import { godotAnswers } from '../godotAnswers.mjs';
 import { PROBES } from './probes.mjs';
 
-const RECORD = (await import('./godot-record.json', { with: { type: 'json' } })).default;
+const RECORD = godotAnswers().probes;
 
 const refused = PROBES.flatMap((probe) => {
   const rejected = RECORD.probes[probe.name]?.rejected;
   return rejected?.stage === 'shading language' ? [[probe.name, probe.source, rejected]] : [];
 });
 
-/** The parser's refusal of `source` as Godot's record holds one, or nothing when it parses. */
+/** The parser's refusal of `source` as Godot's answers hold one, or nothing when it parses. */
 function refusalOf(source) {
   try {
     parse(tokenize(source));

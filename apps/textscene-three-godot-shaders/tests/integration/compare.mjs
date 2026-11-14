@@ -1,6 +1,6 @@
 /**
  * The verdict of one probe: the transpiled function's result bits on a real GL context against
- * Godot's record. A lane passes by the rule the record check keeps too (`laneAgreement.mjs`). The
+ * Godot's answer. A lane passes by the rule the answers file keeps too (`laneAgreement.mjs`). The
  * tolerance is zero units in the last place: Godot and the page render on the same lavapipe driver.
  */
 
@@ -32,7 +32,7 @@ const ABORT_REFUSAL = /aborts on this expression/;
  * refusal says so.
  */
 export function compareProbe(entry, actual, isFloatResult = true) {
-  if (entry === undefined) return failed('no record from Godot');
+  if (entry === undefined) return failed('no answer from Godot');
   if (entry.rejected?.stage === 'Godot') {
     return actual.isRefusal && ABORT_REFUSAL.test(actual.error)
       ? { ...failed(`Godot ends, the transpiler refuses: ${actual.error}`), passed: true }

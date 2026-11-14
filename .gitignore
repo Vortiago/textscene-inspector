@@ -126,3 +126,6 @@ scripts/godot-ref/output/
 scripts/vscode/output/
 scripts/showcase/output/
 scripts/e2e-screenshots/
+
+# Godot's live answers, written by `pnpm godot:probes` (apps/textscene-three-godot-shaders/tests/godotAnswers.mjs).
+apps/textscene-three-godot-shaders/tests/.godot-answers/

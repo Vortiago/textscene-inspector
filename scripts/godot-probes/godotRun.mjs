@@ -65,19 +65,35 @@ export function runGodotScriptToExit(mainScript, files) {
       ...files,
     };
     for (const [name, text] of Object.entries(project)) writeFileSync(join(directory, name), text);
-    const plan = godotSpawnPlan(['--path', directory], { display: true });
-    const result = spawnSync(plan.command, plan.argv, {
-      encoding: 'utf8',
-      env: plan.env,
-      timeout: plan.timeoutMs,
-      maxBuffer: OUTPUT_BYTES_AT_MOST,
-    });
-    if (result.error) throw new Error(`run godot: ${result.error.message}`);
+    const first = spawnGodot(directory);
+    const result = failedToStart(first) ? spawnGodot(directory) : first;
+    if (result.error) {
+      throw new Error(
+        `run godot twice: ${result.error.message}. Godot ${GODOT_VERSION} and xvfb-run must be on the path, as in the CI image`
+      );
+    }
     return { status: result.status, stdout: result.stdout, stderr: result.stderr };
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
 }
+
+function spawnGodot(directory) {
+  const plan = godotSpawnPlan(['--path', directory], { display: true });
+  return spawnSync(plan.command, plan.argv, {
+    encoding: 'utf8',
+    env: plan.env,
+    timeout: plan.timeoutMs,
+    maxBuffer: OUTPUT_BYTES_AT_MOST,
+  });
+}
+
+/**
+ * Whether a run ended before the project printed anything: Godot or xvfb did not start. One
+ * more start is allowed. A probe that ends Godot prints its crash report, so it is no such run.
+ */
+const failedToStart = (result) =>
+  result.error !== undefined || (result.status !== 0 && result.stdout.trim() === '');
 
 /** The text after the first `prefix` line of Godot's `stdout`. Throws when Godot printed none. */
 export function printedField(stdout, prefix) {

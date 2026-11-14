@@ -1,14 +1,13 @@
 /**
- * The static half of the random program test: Godot's record holds every program of the fixed
+ * The static half of the random program test: Godot's answers hold every program of the fixed
  * set as it is generated now, and Godot accepts each one, as a generator correct by type must
  * write. The real-GL half runs in `pnpm test:shaders:gpu`.
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { hex } from '../../../../scripts/godot-probes/record.mjs';
 import { parameterBits } from '../../../../scripts/godot-probes/probeShader.mjs';
+import { godotAnswers } from '../godotAnswers.mjs';
 import { KNOWN_DIFFERENCE_CASES, KNOWN_DIFFERENCES, recordedRandomProbes } from './knownDifferences.mjs';
 import { generatePrograms } from './programs.mjs';
 import { FIXED_SEED, RANDOM_PROGRAMS } from './randomSet.mjs';
@@ -16,24 +15,32 @@ import { FIXED_SEED, RANDOM_PROGRAMS } from './randomSet.mjs';
 /** The programs and the fixed cases, as Godot's record holds them. */
 const RECORDED = recordedRandomProbes(RANDOM_PROGRAMS);
 
-const RECORD = JSON.parse(readFileSync(join(import.meta.dirname, 'godot-record.json'), 'utf8'));
+const ANSWERS = godotAnswers();
+const RECORD = ANSWERS.random;
 
-describe("Godot's record of the random programs", () => {
-  it('holds each program of the fixed set and each fixed case with its source and inputs now', () => {
+describe("Godot's answers to the random programs", () => {
+  it.runIf(ANSWERS.live)('hold each program of the fixed set and each fixed case', () => {
+    expect(
+      RECORDED.filter((program) => RECORD.probes[program.name] === undefined).map((program) => program.name)
+    ).toEqual([]);
+  });
+
+  it('hold the source and inputs each program and fixed case has now', () => {
     const stale = RECORDED.filter((program) => {
       const entry = RECORD.probes[program.name];
+      if (entry === undefined) return false;
       const inputs = parameterBits(program).map((bits) => bits.map(hex));
-      return entry?.source !== program.source || JSON.stringify(entry.inputs) !== JSON.stringify(inputs);
+      return entry.source !== program.source || JSON.stringify(entry.inputs) !== JSON.stringify(inputs);
     });
     expect(stale.map((program) => program.name)).toEqual([]);
   });
 
-  it('holds no program the set and the fixed cases have not', () => {
+  it('hold no program the set and the fixed cases have not', () => {
     const names = new Set(RECORDED.map((program) => program.name));
     expect(Object.keys(RECORD.probes).filter((name) => !names.has(name))).toEqual([]);
   });
 
-  it('has values from Godot for every program, so Godot accepts each one', () => {
+  it.runIf(ANSWERS.live)('have values from Godot for every program, so Godot accepts each one', () => {
     expect(
       RANDOM_PROGRAMS.filter((program) => RECORD.probes[program.name]?.results === undefined).map(
         (program) => program.name
