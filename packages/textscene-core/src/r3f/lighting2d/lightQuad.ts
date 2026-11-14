@@ -14,11 +14,11 @@ import * as THREE from 'three';
 import { canvasItemFacing } from '../canvasItemFacing.js';
 import { FRAGMENT, SHADOW_SAMPLE, SHADOW_VERTEX, SHADOWED_FRAGMENT, VERTEX } from './lightQuadShaders.js';
 import { multipleTargetPass } from '../fullScreenPass.js';
-import { shadowSamplingParameters, type ShadowSampling } from './shadowSampling.js';
+import { shadowSamplingParameters, type ShadowSampling } from './shadowMap/shadowSampling.js';
 import type { Rgba } from '../../godot/math/math.js';
 import { Light2DBlendMode, Light2DShadowFilter } from '../../godot/scene/light2d.js';
 
-export { updateShadowPolarTexture, type ShadowSampling } from './shadowSampling.js';
+export { updateShadowPolarTexture, type ShadowSampling } from './shadowMap/shadowSampling.js';
 
 /**
  * `light_blend_compute`'s modes are one fixed-function blend each: ADD is SrcAlpha/One with add,

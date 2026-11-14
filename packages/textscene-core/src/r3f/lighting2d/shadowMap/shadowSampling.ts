@@ -11,9 +11,9 @@
  */
 
 import * as THREE from 'three';
-import type { Rgba } from '../../godot/math/math.js';
-import type { Light2DShadowFilter } from '../../godot/scene/light2d.js';
-import type { EnumValue } from '../../godot/classdb/enumNames.js';
+import type { Rgba } from '../../../godot/math/math.js';
+import type { Light2DShadowFilter } from '../../../godot/scene/light2d.js';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 import { shadowMapUniforms } from './shadowTaps.js';
 import { shadowMapZFarInv, type ShadowPolarLight } from './shadowPolarMap.js';
 

@@ -3,8 +3,8 @@
  * every light of the canvas shares.
  */
 
-import { projectShadowAtlasSize } from '../../parser/projectSettingsParser.js';
-import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
+import { projectShadowAtlasSize } from '../../../parser/projectSettingsParser.js';
+import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 
 export function useShadowAtlasSize(): number {
   return projectShadowAtlasSize(useProjectSettings().settings);

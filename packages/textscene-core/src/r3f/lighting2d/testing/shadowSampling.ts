@@ -1,7 +1,7 @@
 /** A `ShadowSampling` for tests that read a quad's material, every field neutral unless overridden. */
 
 import * as THREE from 'three';
-import { createShadowPoseUniforms, type ShadowSampling } from '../shadowSampling';
+import { createShadowPoseUniforms, type ShadowSampling } from '../shadowMap/shadowSampling';
 import { Light2DShadowFilter } from '../../../godot/scene/light2d';
 
 export function shadowSampling(overrides: Partial<ShadowSampling> = {}): ShadowSampling {

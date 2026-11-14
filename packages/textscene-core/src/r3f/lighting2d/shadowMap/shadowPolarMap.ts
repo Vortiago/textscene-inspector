@@ -9,8 +9,8 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { edgeCastsShadow, lightRectTest, type LightRect, type ShadowCasterEdges } from './shadowCasterEdges';
-import { coveredPixelRange } from '../../utils/coveredPixelRange';
+import { edgeCastsShadow, lightRectTest, type LightRect, type ShadowCasterEdges } from '../shadowCasterEdges';
+import { coveredPixelRange } from '../../../utils/coveredPixelRange';
 
 /**
  * What a bin holds where nothing occludes: Godot clears the row to `p_far`,

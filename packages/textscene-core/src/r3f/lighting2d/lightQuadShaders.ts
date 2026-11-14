@@ -8,7 +8,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { SHADOW_BINS, SHADOW_TAPS } from './shadowTaps.js';
+import { SHADOW_BINS, SHADOW_TAPS } from './shadowMap/shadowTaps.js';
 
 /**
  * The cookie tap. Godot reads the cookie from a light atlas cleared to transparent black, so a

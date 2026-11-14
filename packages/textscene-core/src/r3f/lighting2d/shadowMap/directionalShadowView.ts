@@ -16,14 +16,14 @@ import {
   type DirectionalShadowView,
 } from './directionalShadowMap';
 import { useShadowAtlasSize } from './useShadowAtlasSize';
-import { createDirectionalShadowTexture, writeDirectionalShadowMap } from './directionalLightQuad';
-import { useDisposeOnRelease } from '../useDisposeOnRelease';
-import { perObject } from '../../utils/perObject.js';
-import type { Quad2, ShadowCasterEdges } from './shadowCasterEdges';
-import { useCanvasLighting2D, type LightPassStep } from './lightPassContext';
-import type { CanvasClip } from './lightPassHost';
-import type { Rect2 } from '../../godot/math/rect2';
-import type { Vector2 } from '../../godot/math/vector.js';
+import { createDirectionalShadowTexture, writeDirectionalShadowMap } from '../directionalLightQuad';
+import { useDisposeOnRelease } from '../../useDisposeOnRelease';
+import { perObject } from '../../../utils/perObject.js';
+import type { Quad2, ShadowCasterEdges } from '../shadowCasterEdges';
+import { useCanvasLighting2D, type LightPassStep } from '../lightPassContext';
+import type { CanvasClip } from '../lightPassHost';
+import type { Rect2 } from '../../../godot/math/rect2';
+import type { Vector2 } from '../../../godot/math/vector.js';
 
 /** Reused by every sample, which reads it before the next one writes it. */
 const scratch = new THREE.Vector3();

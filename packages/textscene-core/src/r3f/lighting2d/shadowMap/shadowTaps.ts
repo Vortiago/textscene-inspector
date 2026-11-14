@@ -13,7 +13,7 @@
  */
 
 import type * as THREE from 'three';
-import { imageSize } from '../../resources/formats/image/imagePixels';
+import { imageSize } from '../../../resources/formats/image/imagePixels';
 
 /**
  * `float shadowBins()`, the texels in the light's map: `shadow_texture_size`. A uniform, not

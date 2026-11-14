@@ -5,15 +5,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { canvasShadowAtlasSize } from '../../godot/rendering/canvasShadowAtlas';
+import { canvasShadowAtlasSize } from '../../../godot/rendering/canvasShadowAtlas';
 import { SHADOW_MAP_FAR } from './shadowPolarMap';
 import {
   buildDirectionalShadowMap,
   ndcToShadowTransform,
   type DirectionalShadowView,
 } from './directionalShadowMap';
-import { type OccluderCullMode, type Quad2, type ShadowCasterEdges } from './shadowCasterEdges';
-import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
+import { type OccluderCullMode, type Quad2, type ShadowCasterEdges } from '../shadowCasterEdges';
+import { OccluderPolygon2DCullMode } from '../../../godot/scene/lightOccluder2d';
 
 /** The size Godot uses when the project sets none. */
 const DEFAULT_ATLAS_SIZE = canvasShadowAtlasSize(undefined);

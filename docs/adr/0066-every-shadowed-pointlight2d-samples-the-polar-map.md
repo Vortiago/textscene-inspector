@@ -3,8 +3,8 @@
 - Status: Accepted
 - Supersedes: ADR-0030's gate, its tap kernel and its texture state. ADR-0030's CPU map build
   and its `shadow_color` split stay.
-- Related: `r3f/lighting2d/shadowTaps.ts`, `r3f/lighting2d/shadowSampling.ts`,
-  `r3f/lighting2d/shadowPolarMap.ts`, `nodes/2d/pointlight2d/`.
+- Related: `r3f/lighting2d/shadowMap/shadowTaps.ts`, `r3f/lighting2d/shadowMap/shadowSampling.ts`,
+  `r3f/lighting2d/shadowMap/shadowPolarMap.ts`, `nodes/2d/pointlight2d/`.
 
 ## Context
 

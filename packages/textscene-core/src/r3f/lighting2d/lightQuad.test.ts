@@ -8,9 +8,9 @@ import { describe, it, expect } from 'vitest';
 import { canvasShadowAtlasSize } from '../../godot/rendering/canvasShadowAtlas';
 import * as THREE from 'three';
 import { createLightQuadMaterial, updateShadowPolarTexture, type ShadowSampling } from './lightQuad';
-import { SHADOW_MAP_FAR } from './shadowPolarMap';
-import { SHADOW_TAPS } from './shadowTaps';
-import { createShadowPoseUniforms, writeShadowPose } from './shadowSampling';
+import { SHADOW_MAP_FAR } from './shadowMap/shadowPolarMap';
+import { SHADOW_TAPS } from './shadowMap/shadowTaps';
+import { createShadowPoseUniforms, writeShadowPose } from './shadowMap/shadowSampling';
 import { shadowSampling } from './testing/shadowSampling';
 import { Light2DBlendMode, Light2DShadowFilter } from '../../godot/scene/light2d';
 

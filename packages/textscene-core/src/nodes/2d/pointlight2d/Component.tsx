@@ -20,16 +20,16 @@ import {
   shadowColorContributes,
   type ShadowSampling,
 } from '../../../r3f/lighting2d/lightQuad';
-import { buildShadowPolarMap } from '../../../r3f/lighting2d/shadowPolarMap';
-import { useShadowAtlasSize } from '../../../r3f/lighting2d/useShadowAtlasSize';
-import { createShadowPoseUniforms, writeShadowPose } from '../../../r3f/lighting2d/shadowSampling';
+import { buildShadowPolarMap } from '../../../r3f/lighting2d/shadowMap/shadowPolarMap';
+import { useShadowAtlasSize } from '../../../r3f/lighting2d/shadowMap/useShadowAtlasSize';
+import { createShadowPoseUniforms, writeShadowPose } from '../../../r3f/lighting2d/shadowMap/shadowSampling';
 import { useLightSequence } from '../../../r3f/lighting2d/useLightSequence';
 import { lightDrawSequence } from '../../../r3f/lighting2d/lightSequence';
 import { usePassMeshRef, useRegisterCanvasLight2D } from '../../../r3f/lighting2d/CanvasLighting2D';
 import type { PassMeshRole } from '../../../r3f/lighting2d/itemLightList';
 import { DEFAULT_LIGHT_CULL_KEY, type LightCullKey } from '../../../r3f/lighting2d/lightCullKey';
 import { useLightShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
-import { useShadowLightPose } from '../../../r3f/lighting2d/shadowLightPose';
+import { useShadowLightPose } from '../../../r3f/lighting2d/shadowMap/shadowLightPose';
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { useLightQuadMaterials } from './useLightQuadMaterials';
 import { placePositionalLight, useApartLightOrigin } from '../../../r3f/lighting2d/apartLight';
