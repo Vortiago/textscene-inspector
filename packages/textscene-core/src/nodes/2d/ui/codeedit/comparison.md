@@ -78,10 +78,8 @@ one-digit gutter (`code_edit.cpp:3863-3880`).
 
 ## Known limitations
 
-- **Narrower** The gutters size from the font's row height, the tallest face of the
-  fallback chain. Godot sizes them from `get_line_height()`, which a row grows past that
-  height with a glyph's `y_off` or a hex-code box (`text_edit.cpp:4103`). The gutter width sets the
-  wrap width the rows shape at, and Godot settles this loop over frames.
+- **Narrower** The gutters ignore a row that a glyph's `y_off` or a hex-code box makes
+  taller (`text_edit.cpp:4103`), since their width sets the wrap width.
 - **Not drawn** The main gutter reserves its width but draws no bookmark, breakpoint or
   executing-line icon, since a `.tscn` cannot set that per-line state
   (`code_edit.cpp:1419-1503`).
