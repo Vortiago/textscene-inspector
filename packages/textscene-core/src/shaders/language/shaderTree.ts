@@ -38,6 +38,8 @@ export interface VariableNode {
   readonly arraySize?: number;
   /** A `const` local: Godot refuses a write to it. */
   readonly isConst?: boolean;
+  /** The row of a built-in of the shader type, `sky.sky.COLOR`, which the link step renames. */
+  readonly builtIn?: string;
   readonly position: SourcePosition;
 }
 
@@ -272,6 +274,10 @@ export interface FunctionNode {
 /** NODE_TYPE_SHADER: its structs and functions, each in the order of the text. */
 export interface ShaderNode {
   readonly kind: 'shader';
+  /** The type `shader_type` names: `sky`, `spatial`. Nothing for a text with no head, as a probe's. */
+  readonly shaderType?: string;
+  /** Where the `shader_type` head is, when the text has one. */
+  readonly headPosition?: SourcePosition;
   readonly structs: readonly StructNode[];
   readonly functions: readonly FunctionNode[];
 }

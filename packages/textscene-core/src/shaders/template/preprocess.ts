@@ -364,5 +364,3 @@ function isSameMacro(a: Macro, b: Macro): boolean {
       token.text === b.body[index]!.text && (index === 0 || token.space === b.body[index]!.space)
   );
 }
-
-export type { Preprocessor };

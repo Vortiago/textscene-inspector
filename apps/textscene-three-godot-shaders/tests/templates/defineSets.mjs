@@ -21,22 +21,18 @@ export const isMaterialName = (name) => name === 'MATERIAL_UNIFORMS_USED' || nam
 /** How many names one set may hold: the deepest nesting of `#ifdef` in Godot's templates is 4. */
 const MAX_NAMES = 5;
 
-/** The names the conditions of `lines` test, without those the stage defines itself or `skipped`. */
+/**
+ * The names the conditions of `lines` test, without `skipped` and the material names. A name the
+ * stage defines under a condition stays: a mode defines it too, with the same empty body.
+ */
 export function testedNames(lines, skipped) {
   const tested = new Set();
-  const own = new Set();
   for (const { text } of lines) {
-    const directive = /^\s*#\s*(ifdef|ifndef|if|elif|define)\b(.*)$/.exec(text);
-    if (!directive) continue;
-    const [, word, rest] = directive;
-    const names = rest.replace(/\/\/.*$/, '').match(/[A-Za-z_]\w*/g) ?? [];
-    if (word === 'define') own.add(names[0]);
-    else for (const name of names) tested.add(name);
+    const directive = /^\s*#\s*(?:ifdef|ifndef|if|elif)\b(.*)$/.exec(text);
+    for (const name of directive?.[1].replace(/\/\/.*$/, '').match(/[A-Za-z_]\w*/g) ?? []) tested.add(name);
   }
   return [...tested]
-    .filter(
-      (name) => !own.has(name) && !skipped.has(name) && !ALWAYS_DEFINED.has(name) && !isMaterialName(name)
-    )
+    .filter((name) => !skipped.has(name) && !ALWAYS_DEFINED.has(name) && !isMaterialName(name))
     .sort();
 }
 

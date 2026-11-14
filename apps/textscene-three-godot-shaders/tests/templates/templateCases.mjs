@@ -46,8 +46,8 @@ export class StageVariants {
     Object.assign(this, { file, stage, lines, modules });
     this.general = GENERAL_DEFINES[file] ?? '';
     this.names = testedNames(lines, definedNames(this.general));
-    /** The branches each set takes, by the set's names. Written only by `takenBranches`. */
-    this.taken = new Map();
+    /** The branches the preprocessor decides for each set, by the set's names. Written only by `decidedBranches`. */
+    this.decided = new Map();
   }
 
   get key() {
@@ -59,29 +59,46 @@ export class StageVariants {
     return coveringSets(this.names, (set) => this.takenBranches(set)).map((set) => this.caseOf(set));
   }
 
-  /** `set` with one more name, for each name that makes it take branch `key`. */
+  /**
+   * The sets wider than `set` that take branch `key`: `set` with each name more, and `set` with
+   * every name the branch's directive tests, for a condition of several names.
+   */
   widenedSets(set, key) {
-    return this.names
-      .filter((name) => !set.includes(name))
-      .map((name) => [...set, name].sort())
-      .filter((wider) => this.takenBranches(wider)?.includes(key));
+    const wider = (names) => [...new Set([...set, ...names])].sort();
+    const candidates = [
+      wider(this.directiveNames(key)),
+      ...this.names.filter((name) => !set.includes(name)).map((name) => wider([name])),
+    ];
+    return candidates.filter(
+      (candidate) => candidate.length > set.length && this.takenBranches(candidate)?.includes(key)
+    );
   }
 
   /** The keys of the branches a variant with `set` takes, or nothing when the preprocessor refuses it. */
   takenBranches(set) {
+    return this.decidedBranches(set)
+      ?.filter((branch) => branch.isTaken)
+      .map((branch) => branch.key);
+  }
+
+  /** Whether the preprocessor decides branch `key` for `set`, taken or not. */
+  decides(set, key) {
+    return this.decidedBranches(set)?.some((branch) => branch.key === key) ?? false;
+  }
+
+  decidedBranches(set) {
     const id = set.join(' ');
-    if (!this.taken.has(id)) this.taken.set(id, this.branchesOf(set));
-    return this.taken.get(id);
+    if (!this.decided.has(id)) this.decided.set(id, this.branchesOf(set));
+    return this.decided.get(id);
   }
 
   branchesOf(set) {
     try {
       return this.modules
         .preprocess(this.variantOf(set))
-        .branches.filter((branch) => branch.isTaken)
-        .map((branch) => `${branch.file}:${branch.line}`);
+        .branches.map((branch) => ({ key: `${branch.file}:${branch.line}`, isTaken: branch.isTaken }));
     } catch {
-      return undefined; // A variant the preprocessor refuses takes no branch, so no case is made of it.
+      return undefined; // A variant the preprocessor refuses decides no branch, so no case is made of it.
     }
   }
 
@@ -110,16 +127,29 @@ export class StageVariants {
   }
 
   /**
-   * Every branch of the stage by `file:line`. A branch whose directive tests what a material
-   * holds is left out: the link step's tests take it.
+   * Every branch the preprocessor decides for some set tried, by `file:line`. A branch in a comment
+   * or in a branch no set reads is decided for none. A branch whose directive tests what a material
+   * holds is left out, as the link step's tests take it, and so is Godot's disabled `#if 0`.
    */
   allBranches() {
     const keys = new Set();
-    for (const line of this.variantOf([])) {
-      if (line.slot || !/^\s*#\s*(if|ifdef|ifndef|elif|else)\b/.test(line.text)) continue;
-      if ((line.text.match(/\w+/g) ?? []).some(isMaterialName)) continue;
-      keys.add(`${line.file}:${line.line}`);
-    }
+    for (const branches of this.decided.values())
+      for (const { key } of branches ?? []) if (!this.isLeftOut(key)) keys.add(key);
     return keys;
+  }
+
+  isLeftOut(key) {
+    const text = this.directiveText(key);
+    return (text.match(/\w+/g) ?? []).some(isMaterialName) || /^\s*#\s*if\s+0\s*$/.test(text);
+  }
+
+  /** The tested names the directive of branch `key` holds. */
+  directiveNames(key) {
+    return (this.directiveText(key).match(/[A-Za-z_]\w*/g) ?? []).filter((name) => this.names.includes(name));
+  }
+
+  directiveText(key) {
+    this.textByKey ??= new Map(this.variantOf([]).map((line) => [`${line.file}:${line.line}`, line.text]));
+    return this.textByKey.get(key) ?? '';
   }
 }

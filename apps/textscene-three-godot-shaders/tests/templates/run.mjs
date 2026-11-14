@@ -132,24 +132,33 @@ function untakenBranches(stageList, results) {
  */
 const WIDENED_PER_BRANCH = 2;
 
-/** The cases that widen a refused set taking an untaken branch, a few for each branch, none judged before. */
+/**
+ * The cases that widen a set to take an untaken branch, a few for each branch, none judged before.
+ * A set Godot refuses that takes the branch is widened first, then a set that decides it.
+ */
 function widenedCases(results, untaken) {
   const seen = new Set(results.map((entry) => `${entry.stages.key} ${entry.set.join(' ')}`));
   const cases = [];
   for (const [stageKey, keys] of untaken)
     for (const key of keys) {
-      const refused = results.filter(
-        (entry) => entry.stages.key === stageKey && !entry.isCompiled && entry.branches.has(key)
-      );
-      let chosen = 0;
-      for (const entry of refused)
-        for (const set of entry.stages.widenedSets(entry.set, key)) {
-          const id = `${stageKey} ${set.join(' ')}`;
-          if (chosen >= WIDENED_PER_BRANCH || seen.has(id)) continue;
-          seen.add(id);
-          cases.push(entry.stages.caseOf(set));
-          chosen += 1;
-        }
+      const ofStage = results.filter((entry) => entry.stages.key === stageKey);
+      const refused = ofStage.filter((entry) => !entry.isCompiled && entry.branches.has(key));
+      const deciding = ofStage.filter((entry) => entry.stages.decides(entry.set, key));
+      cases.push(...unseenWider([...refused, ...deciding], key, seen));
+    }
+  return cases;
+}
+
+/** At most `WIDENED_PER_BRANCH` cases of sets wider than those of `entries` that take `key`, none in `seen`. */
+function unseenWider(entries, key, seen) {
+  const cases = [];
+  for (const entry of entries)
+    for (const set of entry.stages.widenedSets(entry.set, key)) {
+      if (cases.length >= WIDENED_PER_BRANCH) return cases;
+      const id = `${entry.stages.key} ${set.join(' ')}`;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      cases.push(entry.stages.caseOf(set));
     }
   return cases;
 }

@@ -8,10 +8,13 @@ describe('testedNames', () => {
     expect(testedNames(lines('#ifdef B\n#if defined(A) && C > 1'), new Set())).toEqual(['A', 'B', 'C']);
   });
 
-  it('leaves out a name the stage defines itself, a skipped one and the material names', () => {
-    const text =
-      '#define OWN\n#ifdef OWN\n#ifdef GENERAL\n#ifdef MATERIAL_UNIFORMS_USED\n#ifdef SKY_CODE_USED';
+  it('leaves out a skipped name and the material names', () => {
+    const text = '#ifdef GENERAL\n#ifdef MATERIAL_UNIFORMS_USED\n#ifdef SKY_CODE_USED';
     expect(testedNames(lines(text), new Set(['GENERAL']))).toEqual([]);
+  });
+
+  it('keeps a name the stage defines under a condition', () => {
+    expect(testedNames(lines('#ifdef A\n#define OWN\n#endif\n#ifdef OWN'), new Set())).toEqual(['A', 'OWN']);
   });
 });
 

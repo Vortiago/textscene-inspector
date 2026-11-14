@@ -30,6 +30,19 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'shaders/language/printer.ts#printShader',
   // The tree check proves each parsed tree has Godot's node types and positions, in tests only.
   'shaders/language/treeCheck.ts#treeFault',
+  // The template front end ships before its one reader, the link step that fills the sky
+  // template's slots, which the next commit of this slice adds. The same holds for the entries
+  // of the template files below, but the printer's.
+  'shaders/template/modeTables.generated.ts#MODE_TABLES',
+  'shaders/template/parseTemplate.ts#parseTemplateStage',
+  'shaders/template/preprocess.ts#preprocess',
+  // The template check prints each parsed template stage back to text, which no draw needs.
+  'shaders/template/printTemplate.ts#printTemplateStage',
+  'shaders/template/stages.ts#splitStages',
+  'shaders/template/templateFiles.generated.ts#TEMPLATE_FILES',
+  'shaders/template/variant.ts#DEFINES_FILE',
+  'shaders/template/variant.ts#definesText',
+  'shaders/template/variant.ts#variantLines',
 ];
 
 /** The `file#name` of every value export of core that only tests import, the kept ones included. */

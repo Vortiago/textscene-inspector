@@ -84,13 +84,13 @@ canvases draw on WebGPURenderer (#1788).
 | `varying` | open, #1794 | | | `servers/rendering/shader_language.cpp:337` |
 | `const` | open, #1794 | | | `servers/rendering/shader_language.cpp:338` |
 | `struct` | open, #1794 | | | `servers/rendering/shader_language.cpp:339` |
-| `shader_type` | open, #1794 | | | `servers/rendering/shader_language.cpp:340` |
+| `shader_type` | open, #1830 | | | `servers/rendering/shader_language.cpp:340` |
 | `render_mode` | open, #1794 | | | `servers/rendering/shader_language.cpp:341` |
 | `stencil_mode` | open, #1794 | | | `servers/rendering/shader_language.cpp:342` |
 | `shader_type spatial` | open, #1794 | | | `servers/rendering/shader_types.cpp:523` |
 | `shader_type canvas_item` | open, #1794 | | | `servers/rendering/shader_types.cpp:524` |
 | `shader_type particles` | open, #1794 | | | `servers/rendering/shader_types.cpp:525` |
-| `shader_type sky` | open, #1794 | | | `servers/rendering/shader_types.cpp:526` |
+| `shader_type sky` | open, #1830 | | | `servers/rendering/shader_types.cpp:526` |
 | `shader_type fog` | open, #1794 | | | `servers/rendering/shader_types.cpp:527` |
 
 ## uniform
@@ -767,7 +767,7 @@ canvases draw on WebGPURenderer (#1788).
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `NODE_TYPE_SHADER` | open, #1794 | | | `servers/rendering/shader_language.h:373` |
+| `NODE_TYPE_SHADER` | open, #1830 | | | `servers/rendering/shader_language.h:373` |
 | `NODE_TYPE_FUNCTION` | open, #1794 | | | `servers/rendering/shader_language.h:374` |
 | `NODE_TYPE_BLOCK` | transpiled (`statement-block`, `statement-block-shadow`, `statement-block-out-of-scope`, `statement-if-declares`, `statement-switch-scope-ended`) | native | native | `servers/rendering/shader_language.h:375` |
 | `NODE_TYPE_VARIABLE` | transpiled (`type-bool`, `type-bvec2`, `type-bvec3`, `type-bvec4`, `type-int`, `type-ivec2`, `type-ivec3`, `type-ivec4`, `type-uint`, `type-uvec2`, `type-uvec3`, `type-uvec4`, `type-float`, `type-vec2`, `type-vec3`, `type-vec4`, `type-mat2`, `type-mat3`, `type-mat4`) | native | native | `servers/rendering/shader_language.h:376` |
@@ -1892,7 +1892,7 @@ canvases draw on WebGPURenderer (#1788).
 | `particles.process.USERDATA5` | open, #1794 | | | `servers/rendering/shader_types.cpp:411` |
 | `particles.process.USERDATA6` | open, #1794 | | | `servers/rendering/shader_types.cpp:412` |
 | `particles.process.TRANSFORM` | open, #1794 | | | `servers/rendering/shader_types.cpp:413` |
-| `sky.sky.COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:486` |
+| `sky.sky.COLOR` | open, #1830 | | | `servers/rendering/shader_types.cpp:486` |
 | `sky.sky.ALPHA` | open, #1794 | | | `servers/rendering/shader_types.cpp:487` |
 | `sky.sky.FOG` | open, #1794 | | | `servers/rendering/shader_types.cpp:494` |
 | `fog.fog.ALBEDO` | open, #1794 | | | `servers/rendering/shader_types.cpp:517` |

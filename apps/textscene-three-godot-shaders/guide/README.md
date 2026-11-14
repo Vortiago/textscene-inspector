@@ -30,20 +30,20 @@ Godot draws the probes and showcases on Vulkan over lavapipe (`llvmpipe (LLVM 20
 | data type | 21 of 33 | #1829 |
 | literal | 5 of 5 | none |
 | qualifier | 6 of 8 | #1794 |
-| shader head | 0 of 13 | #1829, #1794 |
+| shader head | 0 of 13 | #1829, #1794, #1830 |
 | uniform | 0 of 2 | #1829 |
 | statement keyword | 12 of 12 | none |
 | uniform hint | 0 of 19 | #1829 |
 | sampler setting | 0 of 8 | #1829 |
 | operator | 588 of 588 | none |
 | statement | 11 of 11 | none |
-| tree node | 10 of 12 | #1794 |
+| tree node | 10 of 12 | #1830, #1794 |
 | constructor | 62 of 62 | none |
 | function | 17 of 569 | #1826, #1827, #1829 |
 | function (high_end) | 0 of 120 | #1829, #1827 |
 | swizzle | 36 of 36 | none |
 | built-in (read only) | 0 of 207 | #1794 |
-| built-in | 0 of 95 | #1794 |
+| built-in | 0 of 95 | #1794, #1830 |
 | stage function | 0 of 10 | #1794 |
 | render mode | 0 of 56 | #1794 |
 | stencil mode | 0 of 10 | #1794 |
