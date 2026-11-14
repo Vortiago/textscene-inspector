@@ -1,7 +1,7 @@
 /**
  * The Control tree a FileDialog's constructor builds above its button row (`scene/gui/file_dialog.cpp:2304-2538`),
- * as synthetic `SolveNode`s in the dialog's scope. The dialog solver lays it out and the dialog painter draws
- * it like any scene Controls. The properties of the dialog decide which Controls are visible and what they
+ * as the spec of one internal Control, `main_vbox`. The one solve lays it out and the walker draws it like any
+ * scene Controls. The properties of the dialog decide which Controls are visible and what they
  * show, as `update_customization` and `_update_option_controls` do (`:1203-1214,1913-1975`).
  *
  * Portions ported from Godot Engine (MIT).
@@ -29,13 +29,15 @@ import { FILE_DIALOG_ICON_URLS, FILE_DIALOG_LIST_ICON_URLS } from '../../../r3f/
 import { ItemListIconMode, ItemListSelectMode } from '../../../godot/scene/gui';
 import type { Rgba } from '../../../godot/math/math';
 import type { ItemListProperties, ItemListRuntimeItem } from '../../2d/ui/itemlist/types';
-import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import { themedIconSize } from '../../../r3f/controls/native/scaledSvgIcon';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { requiredThemeItem } from '../../../r3f/controls/native/themeItems';
 import { themedSlotRequests, type TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry';
-import { perObject } from '../../../utils/perObject';
-import { builtButtonIconRequests, syntheticControl, syntheticPath } from '../acceptdialog/dialogParts';
+import {
+  builtButtonIconRequests,
+  type InternalControlSpec,
+} from '../../../r3f/controls/native/internalControls';
+import type { DialogBody } from '../acceptdialog/dialogParts';
 import type { FileDialogOption, FileDialogProperties } from './parser';
 
 /** `SIZE_EXPAND_FILL` and `SIZE_SHRINK_CENTER`, as a scene line writes them. */
@@ -366,7 +368,7 @@ export const fileDialogTextureSlots: TextureSlotsFn = (_node, themedIcons = {}, 
   ...builtButtonIconRequests(BUILT_BUTTON_TYPES, builtIcons),
 ];
 
-function build(dialog: SolveNode, spec: Widget, parentPath: string, scale: number): SolveNode {
+function build(dialog: SolveNode, spec: Widget, scale: number): InternalControlSpec {
   const parsed = parseNodeWithRegistry(
     { type: 'node', attributes: { name: spec.name, type: spec.type } },
     spec.raw ?? {}
@@ -376,33 +378,22 @@ function build(dialog: SolveNode, spec: Widget, parentPath: string, scale: numbe
     ...parsed.properties,
     ...spec.properties,
     ...(spec.variation && { themeTypeVariation: spec.variation }),
+    ...(spec.icon && { themeIcon: { name: spec.icon, vendoredUrl: FILE_DIALOG_ICON_URLS[spec.icon] } }),
+    ...(spec.selection && { selection: spec.selection }),
   };
-  return syntheticControl(dialog, {
+  return {
     type: spec.type,
     name: spec.name,
     properties,
-    parentPath,
-    children: (spec.children ?? []).map((child) =>
-      build(dialog, child, syntheticPath(parentPath, spec.name), scale)
-    ),
+    children: (spec.children ?? []).map((child) => build(dialog, child, scale)),
     variation: spec.variation,
     icons: themedIconsOf(dialog, [...(spec.icon ? [spec.icon] : []), ...(spec.icons ?? [])]),
     textureSize: spec.icon && iconSizeOf(dialog, spec.icon, scale),
-    syntheticDraw: {
-      themedIcon: spec.icon && { name: spec.icon, vendoredUrl: FILE_DIALOG_ICON_URLS[spec.icon] },
-      selection: spec.selection,
-    },
-  });
+  };
 }
 
-/** Written only by `fileDialogBody`. A dialog node is replaced when the scene changes it, so each node builds its tree once per theme. */
-const bodies = perObject((_dialog: SolveNode) => new Map<NativeTheme, SolveNode>());
-
 /** The tree rooted at `main_vbox`. */
-export function fileDialogBody(dialog: SolveNode, theme: NativeTheme): SolveNode {
-  const byTheme = bodies(dialog);
-  const known = byTheme.get(theme);
-  if (known) return known;
+export const fileDialogBody: DialogBody = (dialog, theme) => {
   const props = dialog.node.properties as FileDialogProperties;
   const listTheme: FileListTheme = {
     thumbnailSize: Math.trunc(requiredThemeItem(dialog.constants, 'thumbnail_size') * theme.scale),
@@ -410,12 +401,5 @@ export function fileDialogBody(dialog: SolveNode, theme: NativeTheme): SolveNode
     folderIconColor: requiredThemeItem(dialog.colors, 'folder_icon_color'),
     fileIconColor: requiredThemeItem(dialog.colors, 'file_icon_color'),
   };
-  const body = build(
-    dialog,
-    mainVBox({ props, rtl: dialog.rtl, scale: theme.scale, listTheme }),
-    dialog.path,
-    theme.scale
-  );
-  byTheme.set(theme, body);
-  return body;
-}
+  return build(dialog, mainVBox({ props, rtl: dialog.rtl, scale: theme.scale, listTheme }), theme.scale);
+};

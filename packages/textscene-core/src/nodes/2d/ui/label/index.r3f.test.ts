@@ -11,6 +11,11 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { Label } from './Component';
 import { labelMinimumSize } from './nativeSolver';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+
+function label(properties: { autowrapMode?: number }): SolveNode {
+  return { node: { type: 'Label', properties } } as unknown as SolveNode;
+}
 
 describe('Label index.r3f self-registration', () => {
   it('registers the native painter', () => {
@@ -21,10 +26,14 @@ describe('Label index.r3f self-registration', () => {
     expect(controlSolverRegistry.minimumSize('Label')).toBe(labelMinimumSize);
   });
 
-  it("declares Label size-dependent, so a tree containing one gets solveControlTree's second pass", () => {
+  it("declares an autowrapping Label size-dependent, so a tree holding one gets solveControlTree's second pass", () => {
     expect(
-      controlSolverRegistry.readsTentativeRect({ node: { type: 'Label' } } as unknown as SolveNode)
+      controlSolverRegistry.readsTentativeRect(label({ autowrapMode: AutowrapMode.AUTOWRAP_WORD }))
     ).toBe(true);
+  });
+
+  it('solves a Label that does not wrap in one pass', () => {
+    expect(controlSolverRegistry.readsTentativeRect(label({}))).toBe(false);
   });
 
   it('registers no container layout — a Label has no Control children to place', () => {
