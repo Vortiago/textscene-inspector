@@ -1,7 +1,7 @@
 name: GitHub Pages
 
 # Deploys the public edition of the web previewer: no built-in scenes, no parity
-# gallery and no source maps. Cloudflare Pages builds the dev edition apart from this,
+# gallery and no source maps. cloudflare-pages.yml deploys the dev edition apart from this,
 # with `pnpm build:deploy`. Only a main commit that CI passed deploys here.
 on:
   workflow_run:

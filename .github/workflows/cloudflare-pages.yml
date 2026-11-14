@@ -1,0 +1,70 @@
+name: Cloudflare Pages
+
+# Deploys the dev edition of the web previewer (`pnpm build:deploy`) to the Cloudflare Pages
+# project `textscene-inspector`, one preview per branch and production from main. It deploys
+# from here, not from Cloudflare's own Git build, because the build reads Godot's template
+# files, which only the CI image can write (.github/workflows/godot-templates.yml).
+on:
+  push:
+    branches: ['**']
+
+permissions:
+  contents: read
+
+# A newer push to a branch replaces that branch's older deploy.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # A notice and a green skip, not a failure, while the repository has no Cloudflare secrets:
+  # the deploy is not a check that a pull request can fix.
+  secrets:
+    name: Check for the Cloudflare secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      present: ${{ steps.secrets.outputs.present }}
+    steps:
+      - id: secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No deploy: the repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are not set."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  godot-templates:
+    needs: secrets
+    if: needs.secrets.outputs.present == 'true'
+    uses: ./.github/workflows/godot-templates.yml
+
+  deploy:
+    name: Deploy the dev edition
+    needs: godot-templates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          template-files: artifact
+
+      - run: pnpm build:deploy
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+        run: >-
+          npx --yes wrangler@4.151.3 pages deploy apps/textscene-web/dist
+          --project-name textscene-inspector --branch "$BRANCH" --commit-hash "$COMMIT"
