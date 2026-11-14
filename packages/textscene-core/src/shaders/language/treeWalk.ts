@@ -21,7 +21,12 @@ export const isCall = (expression: Expression): expression is CallNode =>
 /** The element count of an array value, 0 for one value. */
 export function arraySizeOf(expression: Expression): number {
   if (expression.kind === 'array construct') return expression.arraySize;
-  if (expression.kind === 'variable' || expression.kind === 'field' || expression.kind === 'whole assign')
+  if (
+    expression.kind === 'variable' ||
+    expression.kind === 'field' ||
+    expression.kind === 'whole assign' ||
+    expression.kind === 'array element'
+  )
     return expression.arraySize ?? 0;
   if (isCall(expression)) return expression.arraySize ?? 0;
   return 0;
@@ -85,6 +90,7 @@ export function statementExpressions(statement: Statement): readonly Expression[
     case 'declaration':
       return statement.declarators.flatMap((declarator) => (declarator.value ? [declarator.value] : []));
     case 'block':
+    case 'slot':
       return [];
     default:
       return [statement];
