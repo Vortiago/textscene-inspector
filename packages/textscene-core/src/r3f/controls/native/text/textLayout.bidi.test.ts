@@ -198,3 +198,17 @@ describe('shapeText — language', () => {
     ]);
   });
 });
+
+describe('shapeText — the drawn direction', () => {
+  it('draws a text set right to left right to left', () => {
+    const layout = shapeText('Hello', { ...BASE, direction: TextDirection.TEXT_DIRECTION_RTL });
+    expect(layout.isDrawnRtl).toBe(true);
+  });
+
+  // `shaped_text_draw` reads the set direction (`text_server.cpp:1744`), not the inferred one.
+  it('draws an AUTO text left to right, though its Arabic line infers right to left', () => {
+    const layout = shapeText('مرحبا', { ...BASE, direction: TextDirection.TEXT_DIRECTION_AUTO });
+    expect(layout.lines[0]!.isRtl).toBe(true);
+    expect(layout.isDrawnRtl).toBeFalsy();
+  });
+});

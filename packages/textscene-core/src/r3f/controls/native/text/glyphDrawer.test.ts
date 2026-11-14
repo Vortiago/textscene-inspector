@@ -22,6 +22,10 @@ describe('snapsPen', () => {
     expect(snapsPen('canvasItem', FIXED_SIZE_PX * 2, testBitmapMetrics())).toBe(false);
   });
 
+  it('keeps the pen of a bitmap face at a fractional size its enabled scale draws', () => {
+    expect(snapsPen('canvasItem', FIXED_SIZE_PX + 0.5, testBitmapMetrics())).toBe(false);
+  });
+
   it('snaps an outline face drawn from a canvas raster at a whole size', () => {
     expect(snapsPen('canvasItem', 16, OPEN_SANS_CANVAS_FONT_METRICS)).toBe(true);
   });
@@ -34,7 +38,10 @@ describe('snapsPen', () => {
     expect(snapsPen('canvasItem', 16, OPEN_SANS_FONT_METRICS)).toBe(false);
   });
 
-  it('keeps the pen in a Label3D mesh', () => {
-    expect(snapsPen('label3D', FIXED_SIZE_PX, testBitmapMetrics())).toBe(false);
+  it.each([
+    ['a bitmap face at its fixed size', FIXED_SIZE_PX, testBitmapMetrics()],
+    ['an outline face at a whole size', 16, OPEN_SANS_CANVAS_FONT_METRICS],
+  ])('keeps the pen of %s in a Label3D mesh', (_, fontSizePx, metrics) => {
+    expect(snapsPen('label3D', fontSizePx, metrics)).toBe(false);
   });
 });

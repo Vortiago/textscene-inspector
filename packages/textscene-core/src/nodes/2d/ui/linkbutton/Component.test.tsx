@@ -198,6 +198,19 @@ describe('<LinkButton> (isolated painter contract)', () => {
     expect(inkedCount(trimmed)).toBeLessThan(inkedCount(untrimmed));
   });
 
+  // Godot draws the text as one `TextLine`, so a trimmed text with a line break draws its first line.
+  it('draws the first line only of a trimmed text with a line break', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <LinkButton
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'AB\nCD', overrunBehavior: 1 })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(inkedGlyphCount(bundledRuns(renderer.scene)[0]!)).toBe(2);
+  });
+
   // `link_button.cpp:311`: under RTL the underline runs `(size.width - width) .. size.width`, flush with
   // the control's right edge. `:313`'s LTR arm starts at 0.
   it("ends the underline at the control's right edge under RTL, and starts it at 0 under LTR", async () => {
