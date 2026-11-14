@@ -98,10 +98,9 @@ describe('<Line2D> texture', () => {
     expect(endU(strokeMesh(await render({ texture_mode: STRETCH })))).toBe(1);
   });
 
-  it('rebuilds the strip when the texture arrives, with its aspect', async () => {
+  it('draws the strip once the texture arrives, with its aspect', async () => {
     const rendered = await render({ texture_mode: TILE }, { loaded: false });
-    // Without a texture the aspect is 1: 128 / 16 = 8 tiles.
-    expect(endU(strokeMesh(rendered))).toBe(8);
+    expect(rendered.renderer.scene.findAllByType('Mesh')).toHaveLength(0);
 
     await ReactThreeTestRenderer.act(async () => {
       rendered.fake.textures._resolve(TEXTURE_PATH, rendered.texture);

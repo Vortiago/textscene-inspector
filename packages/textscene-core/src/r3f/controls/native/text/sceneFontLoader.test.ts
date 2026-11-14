@@ -552,6 +552,23 @@ describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canva
     expect(getFontRunGlyphAdvancePx(face, { char: 'm' }, 10)).toBe(5);
   });
 
+  it("carries the underline FreeType reads from the font's post table", async () => {
+    const { fonts, peekSettledSceneFontMetrics: peek, ttf } = await loaderWithFontDoor();
+    const font = ttf();
+
+    peek(fonts, font, 'Root/Underline');
+    await vi.waitFor(
+      () => expect(peek(fonts, font, 'Root/Underline')).not.toBeNull(),
+      OUTLINE_LOAD_TIMEOUT_MS
+    );
+
+    // Open Sans: post -100 and 50, the position moved to the centre of the stroke.
+    expect(peek(fonts, font, 'Root/Underline')).toMatchObject({
+      underlinePosition: -125,
+      underlineThickness: 50,
+    });
+  });
+
   it('settles a plain canvas face on its outlines, with no variation on top', async () => {
     const { fonts, peekSettledSceneFontMetrics: peek, ttf } = await loaderWithFontDoor();
     const font = ttf();
