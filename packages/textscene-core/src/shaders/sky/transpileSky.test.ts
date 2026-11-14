@@ -1,4 +1,4 @@
-import type { Node } from 'three/webgpu';
+import type { NodeMaterial } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { generatedFragmentShader } from '../generatedShader.testkit';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
@@ -37,7 +37,7 @@ describe('transpileSky', () => {
 
   it('gives equal GLSL for two runs of one text', () => {
     const fragmentOf = () =>
-      generatedFragmentShader(transpileSky(DEFAULT_SKY).mesh.material.fragmentNode as Node);
+      generatedFragmentShader((transpileSky(DEFAULT_SKY).mesh.material as NodeMaterial).fragmentNode!);
     expect(fragmentOf()).toBe(fragmentOf());
   });
 });
