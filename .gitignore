@@ -5,6 +5,9 @@ node_modules/
 
 # Build outputs
 dist/
+# Godot's template files, which the install writes from Godot's source
+# (scripts/godot-templates/templateFiles.mjs).
+packages/textscene-core/src/shaders/template/templateFiles.generated.ts
 # Written by the @textscene/tscn, @textscene/renderer, @textscene/three-godot-shaders,
 # @textscene/linter, @textscene/lsp and VS Code extension builds from the notices at the
 # repository root.

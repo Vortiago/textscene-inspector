@@ -14,27 +14,39 @@ import { withConsumerPage, writeJobSummary } from '../consumer.mjs';
 import { compareImages, TOLERANCE_STEPS } from './compareImages.mjs';
 import { MAIN_SCRIPT, parseShowcaseOutput, showcaseProjectFiles } from './godotShowcases.mjs';
 import { SHOWCASES } from './showcases.mjs';
+import { parseSkyOutput, SKY_MAIN_SCRIPT, skyProjectFiles } from './godotSkyScenes.mjs';
+import { SKY_SCENES } from './skyScenes.mjs';
 
 /** Where the guide shows each showcase's two images. */
 const SHOWCASE_DIR = join(import.meta.dirname, '../../guide/showcase');
 
 const showcaseImage = (name, side) => join(SHOWCASE_DIR, `${name}-${side}.png`);
 
+/** Godot's image of each showcase and each sky scene, by name. */
 async function godotImages() {
-  const output = parseShowcaseOutput(await runGodotScript(MAIN_SCRIPT, showcaseProjectFiles(SHOWCASES)));
-  requireGodotVersion(output.godot);
-  return output.images;
+  const [showcases, skies] = await Promise.all([
+    runGodotScript(MAIN_SCRIPT, showcaseProjectFiles(SHOWCASES)).then(parseShowcaseOutput),
+    runGodotScript(SKY_MAIN_SCRIPT, skyProjectFiles(SKY_SCENES)).then(parseSkyOutput),
+  ]);
+  requireGodotVersion(showcases.godot);
+  requireGodotVersion(skies.godot);
+  return new Map([...showcases.images, ...skies.images]);
 }
 
+/** The page's image of each showcase and each sky scene, by name. */
 async function transpiledImages() {
   return withConsumerPage(
-    { pageDir: join(import.meta.dirname, 'page'), module: 'showcasePage.js', harness: 'shaderEndToEnd' },
+    { pageDir: join(import.meta.dirname, 'page'), module: 'e2ePage.js', harness: 'shaderEndToEnd' },
     async (page) => {
       const images = new Map();
-      for (const showcase of SHOWCASES) {
-        const drawn = await page.evaluate((spec) => globalThis.drawShowcase(spec), showcase);
-        if (drawn.error) throw new Error(`showcase ${showcase.name}: ${drawn.error}`);
-        images.set(showcase.name, Uint8Array.from(drawn.pixels));
+      const draws = [
+        ...SHOWCASES.map((spec) => [spec, 'drawShowcase']),
+        ...SKY_SCENES.map((spec) => [spec, 'drawSky']),
+      ];
+      for (const [spec, draw] of draws) {
+        const drawn = await page.evaluate(([value, name]) => globalThis[name](value), [spec, draw]);
+        if (drawn.error) throw new Error(`${spec.name}: ${drawn.error}`);
+        images.set(spec.name, Uint8Array.from(drawn.pixels));
       }
       return images;
     }
@@ -48,13 +60,19 @@ function writePng(path, { width, height }, pixels) {
 }
 
 /**
- * The guide image's staleness against a render: nothing when every byte matches. A guide image is
- * a baseline, so it takes no tolerance. The 2/255 tolerance is for Godot against the transpilation.
+ * The steps a render moves between two machines: lavapipe rounds `exp` and `pow` one step apart
+ * with and without AVX, as the sun scatter of `sky-fog-sun` shows on the CI runner.
+ */
+const MACHINE_STEPS = 1;
+
+/**
+ * The guide image's staleness against a render: nothing when no byte moves more than a machine
+ * moves it. The 2/255 tolerance is for Godot against the transpilation.
  */
 function staleImage(path, pixels) {
   if (!existsSync(path)) return `${path} is missing`;
   const { maxSteps } = compareImages(PNG.sync.read(readFileSync(path)).data, pixels);
-  return maxSteps === 0 ? undefined : `${path} differs from the render by up to ${maxSteps}/255`;
+  return maxSteps <= MACHINE_STEPS ? undefined : `${path} differs from the render by up to ${maxSteps}/255`;
 }
 
 function resultTable(results) {
@@ -75,7 +93,7 @@ async function main() {
   const update = process.argv.includes('--update');
   if (update) mkdirSync(SHOWCASE_DIR, { recursive: true });
   const failures = [];
-  const results = SHOWCASES.map((showcase) => {
+  const results = [...SHOWCASES, ...SKY_SCENES].map((showcase) => {
     const ours = transpilation.get(showcase.name);
     const theirs = godot.get(showcase.name);
     if (!theirs) throw new Error(`expected Godot's image of showcase ${showcase.name}, found none`);

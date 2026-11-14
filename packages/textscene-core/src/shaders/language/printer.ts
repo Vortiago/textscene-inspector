@@ -77,6 +77,8 @@ function printStatement(statement: Statement, indent: string): string {
       return printDeclaration(statement);
     case 'control flow':
       return printFlow(statement, indent);
+    case 'slot':
+      return `#CODE : ${statement.name}`;
     default:
       return isEmpty(statement) ? ';' : `${printExpression(statement)};`;
   }
@@ -163,7 +165,7 @@ const POSTFIX_OPERATORS = new Set(['OP_POST_INCREMENT', 'OP_POST_DECREMENT']);
  * The text of `expression`. A prefix operator stands without brackets, because the parser reduces
  * the text in brackets, which would fold `-vec2(1.0)` into a constant.
  */
-function printExpression(expression: Expression): string {
+export function printExpression(expression: Expression): string {
   switch (expression.kind) {
     case 'constant':
       return printConstant(expression);
@@ -175,7 +177,7 @@ function printExpression(expression: Expression): string {
     case 'array element':
       return `${printOwner(expression.array)}[${printExpression(expression.index)}]`;
     case 'array construct':
-      return `${expression.type}[${expression.arraySize}](${expression.elements.map(printExpression).join(', ')})`;
+      return `${arrayTypeText(expression.type, expression.arraySize)}(${expression.elements.map(printExpression).join(', ')})`;
     case 'array length':
       return `${printOwner(expression.array)}.length()`;
     case 'whole assign':
@@ -251,3 +253,7 @@ function floatText(value: number): string {
   const [mantissa, exponent] = value.toExponential().split('e') as [string, string];
   return `${mantissa.includes('.') ? mantissa : `${mantissa}.0`}e${exponent}`;
 }
+
+/** The type of an array, its outer size first: 5 of `vec4[6]` is `vec4[5][6]`. */
+const arrayTypeText = (element: string, size: number): string =>
+  element.replace(/^[^[]*/, (base) => `${base}[${size}]`);

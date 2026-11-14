@@ -1,6 +1,13 @@
 name: Set up the workspace
 description: Install pnpm (the version in packageManager), Node and the workspace dependencies.
 
+inputs:
+  template-files:
+    description: >-
+      Where the install gets Godot's template files: `source` in the CI image, which holds Godot's
+      source, or `artifact` from the godot-template-files artifact of this run's godot-templates job.
+    default: source
+
 runs:
   using: composite
   steps:
@@ -25,6 +32,13 @@ runs:
           scenes/isometric
           !scenes/isometric/previews
         key: godot-demos-${{ steps.demos.outputs.key }}
+
+    # The repository holds no copy of Godot's template files (scripts/godot-templates/templateFiles.mjs).
+    - if: inputs.template-files == 'artifact'
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        name: godot-template-files
+        path: packages/textscene-core/src/shaders/template
 
     - run: pnpm install --frozen-lockfile
       shell: bash

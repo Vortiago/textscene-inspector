@@ -5,7 +5,8 @@
  * row that names it and the issue that owns it.
  */
 
-import { builtInInstruction, keywordInstruction, notTranspiled } from './instructions.js';
+import { builtInInstruction, instruction, keywordInstruction, notTranspiled } from './instructions.js';
+import { INSTRUCTION_TABLE } from './instructionTable.generated.js';
 import { StatementParser, type ScopeHolder } from './parseBlock.js';
 import { ExpressionParser, type ExpressionScope } from './parseExpression.js';
 import { BlockScope, type Identifier } from './scope.js';
@@ -25,6 +26,11 @@ import type { Token } from './tokenizer.js';
 import { shapeOf } from './types.js';
 import { everyStatement, isReturn } from './treeWalk.js';
 
+/** The shader types in Godot's order (`shader_types.cpp:523`), from their `shader_type` rows. */
+const SHADER_TYPES = INSTRUCTION_TABLE.filter((row) => row.id.startsWith('shader_type ')).map((row) =>
+  row.id.slice(12)
+);
+
 /** The tree of the tokens of a shader text. */
 export function parse(tokens: readonly Token[]): ShaderNode {
   return new ShaderParser(new TokenCursor(tokens)).shader();
@@ -35,6 +41,8 @@ class ShaderParser implements ExpressionScope {
   private readonly functions: FunctionNode[] = [];
   /** Each function declared so far by its name in the text, its own included while its body is read. */
   private readonly signatures = new Map<string, FunctionSignature[]>();
+  /** The type the shader head names. Written only by `shader`. */
+  private shaderType: string | undefined;
   /** The function whose body is read: set at its `{` and cleared at its `}`. */
   private current: FunctionSignature | undefined;
   /** The block a statement is read in. Outside a body, an empty one. */
@@ -56,7 +64,26 @@ class ShaderParser implements ExpressionScope {
   identifier(name: string): Identifier | undefined {
     const found = this.holder.current.find(name, false);
     if (found) return found;
-    return this.signatures.has(name) ? { kind: 'function' } : undefined;
+    if (this.signatures.has(name)) return { kind: 'function' };
+    return this.builtIn(name);
+  }
+
+  /**
+   * The built-in `name` of the shader type in the function read: one of its stage function, one of
+   * every function (`global`), or a constant (`ShaderTypes`, `servers/rendering/shader_types.cpp`).
+   */
+  private builtIn(name: string): Identifier | undefined {
+    if (!this.shaderType || !this.current) return undefined;
+    const scopes = [this.current.rname, 'global', 'constants'];
+    const row = scopes.map((scope) => instruction(`${this.shaderType}.${scope}.${name}`)).find(Boolean);
+    if (!row?.returns) return undefined;
+    return {
+      kind: 'built-in',
+      type: row.returns,
+      arraySize: 0,
+      isConst: row.family.endsWith('(read only)'),
+      row: row.id,
+    };
   }
 
   functionsNamed(rname: string): readonly FunctionSignature[] {
@@ -76,13 +103,34 @@ class ShaderParser implements ExpressionScope {
   }
 
   shader(): ShaderNode {
+    const headPosition = this.tokens.peek().position;
+    this.shaderType = this.shaderHead();
+    const head = this.shaderType ? { shaderType: this.shaderType, headPosition } : {};
     for (;;) {
       const token = this.tokens.next();
       if (token.type === 'TK_EOF')
-        return { kind: 'shader', structs: this.structs, functions: this.functions };
+        return { kind: 'shader', ...head, structs: this.structs, functions: this.functions };
       if (token.type === 'TK_STRUCT') this.structs.push(this.structDefinition(token));
       else this.functions.push(this.functionDefinition(token));
     }
+  }
+
+  /** `shader_type sky;`, or nothing for a text with no head (`shader_language.cpp:9178`). */
+  private shaderHead(): string | undefined {
+    if (this.tokens.peek().type !== 'TK_SHADER_TYPE') return undefined;
+    this.tokens.next();
+    const name = this.tokens.next();
+    const valid = `Valid types are: ${SHADER_TYPES.map((type) => `'${type}'`).join(', ')}`;
+    if (name.type !== 'TK_IDENTIFIER')
+      this.tokens.fail(
+        `Expected an identifier after 'shader_type', indicating the type of shader. ${valid}.`
+      );
+    if (!SHADER_TYPES.includes(name.text!)) this.tokens.fail(`Invalid shader type. ${valid}`);
+    // Peeked, not read: Godot names the line of the type, not of the token after it.
+    if (this.tokens.peek().type !== 'TK_SEMICOLON')
+      this.tokens.fail(`Expected a ';' after 'shader_type ${name.text}'.`);
+    this.tokens.next();
+    return name.text;
   }
 
   /** `struct Name { members };` (`shader_language.cpp:9314`). */

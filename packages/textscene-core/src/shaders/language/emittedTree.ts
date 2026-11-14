@@ -24,8 +24,12 @@ export interface EmittedTree {
 }
 
 export function emittedTree(definition: FunctionNode): EmittedTree {
+  return emittedGlslTree({ ...definition, body: glslBlock(definition.body) });
+}
+
+/** The emitted tree of a function GLSL reads as it is: a template's, or one of Godot's text. */
+export function emittedGlslTree(glsl: FunctionNode): EmittedTree {
   const folding = new GlslangFolding();
-  const glsl = { ...definition, body: glslBlock(definition.body) };
   bindConstantReads(glsl.body, folding);
   refuseFoldedIndexOutOfRange(glsl.body, folding);
   refuseOutArgumentsThatAreNoPlace(glsl.body);

@@ -63,6 +63,8 @@ function glslStatement(statement: Statement): Statement {
         expressions: statement.expressions.map(glslExpression),
         blocks: statementBlocks(statement).map(glslBlock),
       };
+    case 'slot':
+      return statement;
     default:
       return glslStatementExpression(statement);
   }

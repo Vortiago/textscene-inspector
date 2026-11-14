@@ -371,6 +371,27 @@ const FUNCTIONS_CHAPTER = {
   ],
 };
 
+const SKY_CHAPTER = {
+  file: 'sky.md',
+  title: 'Sky shaders',
+  intro:
+    "A shader of `shader_type sky` draws a 3D view's background. Godot links it into its sky template, `environment/sky.glsl`: the shader's `sky()` fills the template's code slot, each built-in reads as the template's GLSL for it, and each name of the shader takes Godot's `m_` id. The transpiler links the shader the same way, then transpiles both stages of the template to TSL on a triangle that covers the view. `writeSkyBindings` writes the template's uniforms from the camera, the fog and the directional lights, and `SKY_BINDINGS` names the line of Godot's C++ behind each one.",
+  sections: [
+    {
+      heading: 'The shader head',
+      rows: (row) => /^shader_type( sky)?$|^NODE_TYPE_SHADER$/.test(row.id),
+      what: '`shader_type sky;` opens the shader and names its type. Godot refuses a type it does not have, with the valid ones, and a head with no `;`, at the line of the type. The shader node holds the type, the structs and the functions.',
+      tsl: 'the sky template, both stages, with the shader linked into its slots',
+    },
+    {
+      heading: '`COLOR`',
+      rows: (row) => row.id === 'sky.sky.COLOR',
+      what: "`COLOR` is the colour `sky()` writes, linear. Godot's sky template holds it in its local `color`, and writes it to the frame after the environment's brightness and fog.",
+      tsl: "the template's local `color`",
+    },
+  ],
+};
+
 export const GUIDE_CHAPTERS = [
   TYPES_AND_LITERALS,
   ARITHMETIC_CHAPTER,
@@ -381,4 +402,5 @@ export const GUIDE_CHAPTERS = [
   ASSIGNMENT_CHAPTER,
   STATEMENTS_CHAPTER,
   FUNCTIONS_CHAPTER,
+  SKY_CHAPTER,
 ];

@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { NodeMaterial } from 'three/webgpu';
 import { screenCoordinate, screenSize, vec4 } from 'three/tsl';
 import { installNodesHandler, transpileShadingLanguage } from '@textscene/three-godot-shaders';
+import { framePixels } from './framePixels.js';
 
 const renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas') });
 installNodesHandler(renderer, 'linear');
@@ -33,27 +34,9 @@ function drawShowcase(showcase) {
   const material = new NodeMaterial();
   material.fragmentNode = vec4(pattern.call([uv]), 1);
   quad.material = material;
-  const { width, height } = showcase;
-  const target = new THREE.WebGLRenderTarget(width, height);
-  renderer.setRenderTarget(target);
-  renderer.render(scene, camera);
-  const pixels = new Uint8Array(width * height * 4);
-  renderer.readRenderTargetPixels(target, 0, 0, width, height, pixels);
-  renderer.setRenderTarget(null);
-  target.dispose();
+  const pixels = framePixels(renderer, scene, camera, showcase);
   material.dispose();
-  return { pixels: Array.from(topRowFirst(pixels, width, height)) };
-}
-
-/** GL reads the bottom row first, and Godot's image holds the top row first. */
-function topRowFirst(pixels, width, height) {
-  const rowBytes = width * 4;
-  const flipped = new Uint8Array(pixels.length);
-  for (let row = 0; row < height; row += 1) {
-    flipped.set(pixels.subarray(row * rowBytes, (row + 1) * rowBytes), (height - 1 - row) * rowBytes);
-  }
-  return flipped;
+  return { pixels: Array.from(pixels) };
 }
 
 globalThis.drawShowcase = drawShowcase;
-globalThis.pageReady = true;

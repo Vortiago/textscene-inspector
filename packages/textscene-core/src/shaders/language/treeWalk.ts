@@ -21,7 +21,12 @@ export const isCall = (expression: Expression): expression is CallNode =>
 /** The element count of an array value, 0 for one value. */
 export function arraySizeOf(expression: Expression): number {
   if (expression.kind === 'array construct') return expression.arraySize;
-  if (expression.kind === 'variable' || expression.kind === 'field' || expression.kind === 'whole assign')
+  if (
+    expression.kind === 'variable' ||
+    expression.kind === 'field' ||
+    expression.kind === 'whole assign' ||
+    expression.kind === 'array element'
+  )
     return expression.arraySize ?? 0;
   if (isCall(expression)) return expression.arraySize ?? 0;
   return 0;
@@ -85,6 +90,7 @@ export function statementExpressions(statement: Statement): readonly Expression[
     case 'declaration':
       return statement.declarators.flatMap((declarator) => (declarator.value ? [declarator.value] : []));
     case 'block':
+    case 'slot':
       return [];
     default:
       return [statement];
@@ -115,4 +121,36 @@ export function* everyExpressionIn(block: BlockNode): Generator<Expression> {
 export function* everyExpression(expression: Expression): Generator<Expression> {
   yield expression;
   for (const part of subExpressions(expression)) yield* everyExpression(part);
+}
+
+/** `block` with each expression of its statements replaced by `map` of it, the parts first. */
+export function withExpressionsMapped(
+  block: BlockNode,
+  map: (expression: Expression) => Expression
+): BlockNode {
+  const deep = (expression: Expression): Expression => map(withSubExpressions(expression, deep));
+  const statement = (part: Statement): Statement => {
+    switch (part.kind) {
+      case 'block':
+        return withExpressionsMapped(part, map);
+      case 'control flow':
+        return {
+          ...part,
+          expressions: part.expressions.map(deep),
+          blocks: part.blocks.map((inner) => withExpressionsMapped(inner, map)),
+        };
+      case 'declaration':
+        return {
+          ...part,
+          declarators: part.declarators.map((declarator) =>
+            declarator.value ? { ...declarator, value: deep(declarator.value) } : declarator
+          ),
+        };
+      case 'slot':
+        return part;
+      default:
+        return deep(part);
+    }
+  };
+  return { ...block, statements: block.statements.map(statement) };
 }
