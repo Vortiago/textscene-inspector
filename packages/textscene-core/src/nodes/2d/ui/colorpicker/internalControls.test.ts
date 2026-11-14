@@ -255,6 +255,13 @@ describe('the slider grid', () => {
     }
   });
 
+  it('truncates the scaled grabber_offset, as add_theme_constant_override takes an int (control.h:682)', () => {
+    const [margin] = internalControlsOf(picker(), nativeTheme(1.1));
+    const sliders = margin!.node.children[0]!.children.find((c) => c.node.name === 'slider_gc')!;
+    const slider = sliders.children.find((c) => c.node.name === 'slider_0')!;
+    expect(slider.constants.grabber_offset).toBe(8);
+  });
+
   it('leaves the intensity slider its own grabber and no gradient (:477-481)', () => {
     const slider = at(picker(), 'slider_gc', 'slider_3');
     expect(slider.defaultIcons).toBeUndefined();

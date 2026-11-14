@@ -326,7 +326,7 @@ function colorizedSliderTheme(picker: Picker): Pick<Widget, 'pushed' | 'textureS
   return {
     pushed: {
       constants: {
-        grabber_offset: CHANNEL_GRABBER_OFFSET * picker.scale,
+        grabber_offset: Math.trunc(CHANNEL_GRABBER_OFFSET * picker.scale),
         center_grabber: requiredThemeItem(picker.node.constants, 'center_slider_grabbers'),
       },
       ...(barArrow ? { icons: grabbers(barArrow) } : { defaultIcons: grabbers(COLOR_PICKER_BAR_ARROW_ICON) }),
