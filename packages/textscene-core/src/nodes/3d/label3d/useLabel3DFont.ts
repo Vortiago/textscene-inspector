@@ -22,7 +22,7 @@ import type { SettledChainFace } from '../../../r3f/controls/native/text/settled
 import { withFallbacks, type FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
 import { settledOrBundled } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { fontGeneratesMipmaps } from '../../../r3f/controls/native/text/sceneFontResolution';
-import { usePreviewFontSettles, useSettledFont } from '../../../r3f/controls/native/text/useSettledFont';
+import { useSettledFont } from '../../../r3f/controls/native/text/useSettledFont';
 import { resolveFontReference } from '../../../resources/fonts/font/resolveFontReference';
 import { fontForNode } from '../../../resources/styles/theme/lookup';
 import type { LoadedFont } from '../../../resources/scopedResource';
@@ -79,8 +79,6 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | null 
     return { metrics: withFallbacks(canvasFace, fallbacks ?? []), generatesMipmaps, fallbackMipmaps };
   };
   const drawn = isLoading ? undefined : label3DFont();
-  // The bundled canvas face loads apart from the font: listen to this preview's settles while it does.
-  usePreviewFontSettles(!isLoading && drawn === undefined && settled.status !== 'loading');
   return drawn;
 }
 

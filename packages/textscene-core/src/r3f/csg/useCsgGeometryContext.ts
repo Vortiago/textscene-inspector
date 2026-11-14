@@ -7,7 +7,7 @@
 
 import { useCallback, useMemo } from 'react';
 import type { TscnNode } from '../../parser/types';
-import { usePreviewFontSettles, useSettledFonts } from '../controls/native/text/useSettledFont';
+import { useWatchedSettledFonts } from '../controls/native/text/useSettledFont';
 import { useLayoutDirectionEnv } from '../contexts/useLayoutDirectionEnv';
 import type { ProjectFonts } from '../../resources/fonts/font/projectFonts';
 import type { LoadedFile, LoadedFont } from '../../resources/scopedResource';
@@ -34,7 +34,8 @@ export function useCsgGeometryContext(root: TscnNode | null): CsgGeometrySetup {
   // A plan with no shape that can read a font names no font bus, so it listens to none.
   const readsFonts = shapes.some(({ shape }) => shape.readsFonts);
   const locale = useLayoutDirectionEnv().applicationLocale;
-  const settledFonts = useSettledFonts();
+  // Watched: a new store once a load a shape read settles, so the context below is built again.
+  const settledFonts = useWatchedSettledFonts();
   const fontsPlan = useCallback(
     (loadedFont: LoadedFont, loadedFile: LoadedFile, projectFonts: ProjectFonts) =>
       subtreeFontFiles(shapes, { ...pools, loadedFile, loadedFont, projectFonts, settledFonts, locale }),
@@ -51,7 +52,6 @@ export function useCsgGeometryContext(root: TscnNode | null): CsgGeometrySetup {
     [pools, loadedFile, loadedFont, projectFonts, settledFonts, locale]
   );
   const isAwaitingFont = shapes.some(({ properties, shape }) => shape.awaitsFont?.(properties, loaded));
-  usePreviewFontSettles(isAwaitingFont);
   // The meshes of a context hold the metrics they read, so a context that read them before they
   // settled gives way to a copy, with meshes of its own, when they have.
   const context = useMemo(

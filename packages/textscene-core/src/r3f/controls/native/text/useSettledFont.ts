@@ -35,8 +35,7 @@ export function useSettledFonts(): SettledFonts {
 
 /**
  * `font` with every face of its chain, as {@link readSettledFont} answers. The component renders
- * again when a load of that font settles, and for no other font. The version is the snapshot, so a
- * load that settles between a render and the subscription still re-renders it.
+ * again when a load of that font settles, and for no other font.
  */
 export function useSettledFont(font: FontResource | null | undefined, nodePath: string): SettledFont {
   const fonts = useSettledFonts();
@@ -44,24 +43,10 @@ export function useSettledFont(font: FontResource | null | undefined, nodePath: 
     (onSettle: () => void) => (font ? fonts.subscribeFont(font, onSettle) : subscribeToNothing()),
     [fonts, font]
   );
-  const version = useCallback(() => (font ? fonts.fontVersion(font) : 0), [fonts, font]);
-  useSyncExternalStore(subscribe, version, version);
+  // The preview's settles, not the font's: a sub-resource font is a new object on each render, and
+  // its own version, still 0, would show React no change, so React would keep the old render.
+  useSyncExternalStore(subscribe, fonts.version, fonts.version);
   return readSettledFont(fonts, font, nodePath);
-}
-
-/**
- * Watches every settle of this preview's font loads only while `isAwaitingFont`: a reader that reads
- * its fonts through a build of its own, not through one font, waits on them so. A reader with no
- * font to wait for never re-renders. The snapshot is the same in both branches: one that switched
- * with the branch left the reader a render behind when the wait ended.
- */
-export function usePreviewFontSettles(isAwaitingFont: boolean): number {
-  const fonts = useSettledFonts();
-  return useSyncExternalStore(
-    isAwaitingFont ? fonts.subscribe : subscribeToNothing,
-    fonts.version,
-    fonts.version
-  );
 }
 
 /** A version that moves once a font the committed forest awaited settles. */

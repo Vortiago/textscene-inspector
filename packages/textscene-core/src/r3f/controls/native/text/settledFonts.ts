@@ -67,7 +67,7 @@ export interface SettledFonts {
   fontVersion(font: object): number;
   /**
    * This preview's settled fonts, recording into `awaited` each font marked as awaited through
-   * them, with its version then. A forest that hands this to every node learns each font its solve
+   * them, and each load peeked while in flight, with its version then. A forest that hands this to every node learns each font its solve
    * and its painters read while it loaded, and watches those through {@link fontVersion}.
    */
   recording(awaited: Map<object, number>): SettledFonts;
@@ -75,6 +75,12 @@ export interface SettledFonts {
   subscribe(onSettle: () => void): () => void;
   /** Moves on every settle of this preview's loads. */
   version(): number;
+}
+
+/** `answer`, after it marks the load `key` as awaited through `fonts` while the load is in flight. */
+function awaitedIfPending<T>(fonts: SettledFonts, key: object, answer: T | undefined): T | undefined {
+  if (answer === undefined) fonts.awaitFont(key, new Set([key]));
+  return answer;
 }
 
 /**
@@ -102,6 +108,8 @@ export function createSettledFonts(loadFace: FaceLoader = loadSceneFontMetrics):
   }
 
   function wake(load: object): void {
+    // Moved first, so a reader of one font that a wake renders reads the new version as its snapshot.
+    settles.set(settles.get() + 1);
     const failures: unknown[] = [];
     for (const [font, pending] of awaited) {
       if (!pending.delete(load) || pending.size > 0) continue;
@@ -113,7 +121,6 @@ export function createSettledFonts(loadFace: FaceLoader = loadSceneFontMetrics):
         failures.push(error);
       }
     }
-    settles.set(settles.get() + 1);
     if (failures.length > 0) throw failures[0];
   }
 
@@ -155,14 +162,22 @@ export function createSettledFonts(loadFace: FaceLoader = loadSceneFontMetrics):
     },
     subscribeFont: (font, onSettle) => fontSettles(font).subscribe(onSettle),
     fontVersion,
-    recording: (record) => ({
-      ...fonts,
-      awaitFont(font, pending) {
-        // Recorded first, so a listener the mark calls finds the font among those its forest awaits.
-        if (!record.has(font)) record.set(font, fontVersion(font));
-        fonts.awaitFont(font, pending);
-      },
-    }),
+    recording(record) {
+      const recorded: SettledFonts = {
+        ...fonts,
+        // A load peeked while in flight is awaited as its own key, so a reader that reads no font,
+        // such as the bundled outlines, wakes on that load alone.
+        peekFace: (bytes, nodePath) => awaitedIfPending(recorded, bytes, fonts.peekFace(bytes, nodePath)),
+        peekOutlines: (loadKey, read) =>
+          awaitedIfPending(recorded, loadKey, fonts.peekOutlines(loadKey, read)),
+        awaitFont(font, pending) {
+          // Recorded first, so a listener the mark calls finds the font among those its forest awaits.
+          if (!record.has(font)) record.set(font, fontVersion(font));
+          fonts.awaitFont(font, pending);
+        },
+      };
+      return recorded;
+    },
     subscribe: settles.subscribe,
     version: settles.get,
   };

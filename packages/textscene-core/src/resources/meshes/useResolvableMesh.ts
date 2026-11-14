@@ -14,7 +14,7 @@ import {
   primitiveMeshFontFiles,
   primitiveMeshReadsFont,
 } from './primitivemesh/surface';
-import { usePreviewFontSettles, useSettledFonts } from '../../r3f/controls/native/text/useSettledFont';
+import { useWatchedSettledFonts } from '../../r3f/controls/native/text/useSettledFont';
 import { useLayoutDirectionEnv } from '../../r3f/contexts/useLayoutDirectionEnv';
 
 export interface ResolvableMesh {
@@ -37,15 +37,14 @@ export function useResolvableMesh(scoped: ScopedResource | null): ResolvableMesh
     readsFonts
   );
   const locale = useLayoutDirectionEnv().applicationLocale;
-  const settledFonts = useSettledFonts();
+  // Watched: a new store once a load the build read settles, so the memo below reads it again.
+  const settledFonts = useWatchedSettledFonts();
   const loaded = useMemo(
     () =>
       scoped && !isLoading ? { ...scoped, loadedFile, loadedFont, projectFonts, settledFonts, locale } : null,
     [scoped, isLoading, loadedFile, loadedFont, projectFonts, settledFonts, locale]
   );
   const hasFontPending = loaded !== null && isAwaitingFont(loaded);
-  // The version moves the render that reads the font again, once its outlines and metrics settle.
-  usePreviewFontSettles(hasFontPending);
   usePendingWhile(hasFontPending);
   return {
     mesh: hasFontPending ? null : loaded,

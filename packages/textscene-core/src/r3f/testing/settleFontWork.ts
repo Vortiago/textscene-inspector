@@ -18,7 +18,7 @@ export async function settleFontWork(): Promise<void> {
   });
 }
 
-/** Settles a font load that nothing reads in the preview of `fonts`: it wakes the readers there that watch every settle, and no reader of one font. */
+/** Settles a font load that nothing reads in the preview of `fonts`, which should wake no reader there. */
 export async function settleUnrelatedFontLoad(fonts: SettledFonts): Promise<void> {
   fonts.peekOutlines({}, () => Promise.resolve(null));
   await settleFontWork();

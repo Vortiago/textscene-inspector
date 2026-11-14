@@ -6,7 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { TRIANGLE_OUTLINES } from '../testing/triangleOutlines';
-import { settleUnrelatedFontLoad } from '../../../testing/settleFontWork';
+import { settleFontWork } from '../../../testing/settleFontWork';
+import type { SettledFonts } from './settledFonts';
 import type { SfntOutlines } from './sfntOutlines';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
@@ -18,10 +19,13 @@ const WHITE = { r: 1, g: 1, b: 1, a: 1 };
  */
 async function freshTextModules() {
   vi.resetModules();
-  let outlines: SfntOutlines | undefined;
+  // The one load of the outlines, in the store of the preview that peeks it, as the real peek loads them.
+  const outlinesLoad = {};
+  let deliverOutlines = (_outlines: SfntOutlines) => {};
+  const outlines = new Promise<SfntOutlines>((resolve) => (deliverOutlines = resolve));
   vi.doMock('./sceneFontOutlines', async (importOriginal) => ({
     ...(await importOriginal<object>()),
-    peekOutlines: () => outlines,
+    peekOutlines: (fonts: SettledFonts) => fonts.peekOutlines(outlinesLoad, () => outlines),
   }));
   const [{ TextRun }, { shapeText }, { ResourceLoader }, { ResourceLoaderContext }, runtime] =
     await Promise.all([
@@ -31,11 +35,11 @@ async function freshTextModules() {
       import('../../../../resources/ResourceLoaderContext'),
       import('./runtimeFontMetrics'),
     ]);
-  /** Hands the outlines over, and wakes every waiting run. */
+  /** Hands the outlines over, and waits until the load has woken the runs that read it. */
   const loader = new ResourceLoader();
   const loadOutlines = () => {
-    outlines = TRIANGLE_OUTLINES;
-    return settleUnrelatedFontLoad(loader.settledFonts);
+    deliverOutlines(TRIANGLE_OUTLINES);
+    return settleFontWork();
   };
   const mount = (fontMetrics?: ReturnType<typeof runtime.createRuntimeFontMetrics>) => {
     const layout = shapeText('AB', {

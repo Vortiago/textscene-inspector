@@ -11,7 +11,7 @@ import { peekOutlines } from './sceneFontOutlines';
 import { BUNDLED_FACE } from './sceneFontResolution';
 import { useProjectSettings } from '../../../contexts/ProjectSettingsContext';
 import type { SettledFonts } from './settledFonts';
-import { useSettledFonts } from './useSettledFont';
+import { useWatchedSettledFonts } from './useSettledFont';
 import type { FontHinting } from '../../../../godot/text/textServerEnums';
 
 /**
@@ -28,7 +28,8 @@ export type PeekBundledCanvasFace = (bundledFace: FontMetrics) => CanvasFontMetr
  */
 export function useBundledCanvasFace(): PeekBundledCanvasFace {
   const { defaultFontHinting, isSettled } = useProjectSettings();
-  const fonts = useSettledFonts();
+  // Watched, so a face read while the outlines load renders again once they settle.
+  const fonts = useWatchedSettledFonts();
   return useCallback(
     (bundledFace) => (isSettled ? peekBundledCanvasFace(fonts, bundledFace, defaultFontHinting) : undefined),
     [fonts, defaultFontHinting, isSettled]

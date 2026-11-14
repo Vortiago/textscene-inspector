@@ -126,6 +126,36 @@ describe('a face loader that stays pending', () => {
   );
 });
 
+describe('a reader that awaits its font', () => {
+  it.each<Reader>(['textMesh', 'csg'])(
+    'renders a %s 0 times for the settle of a load it did not read',
+    async (reader) => {
+      const loader = handLoader();
+      const fake = createFakeResourceLoader({ loadFace: loader.load });
+      const font = trueTypeFontFile();
+      let renders = 0;
+      renderHook(
+        () => {
+          renders += 1;
+          return useReaderDraws(reader, font);
+        },
+        { wrapper: previewOf(fake) }
+      );
+      act(() => fake.fonts._resolve(FONT_PATH, font));
+      await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+      const rendersBefore = renders;
+
+      // A macrotask, not `settleFontWork`: the face load this reader awaits stays pending.
+      await act(async () => {
+        fake.loader.settledFonts.peekOutlines({}, () => Promise.resolve(null));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+
+      expect(renders).toBe(rendersBefore);
+    }
+  );
+});
+
 /** A painter of a Label in the solve tree: it reads the font file through its node, once the file is there. */
 function usePaintedLabel(fake: FakeResourceLoader): number {
   const forest = useBuildSolveTree(LABEL, [], []);
