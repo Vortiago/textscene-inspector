@@ -333,7 +333,7 @@ function validNumberText(
     if (shape.period && shape.floatSuffix && last !== 'f') fail();
     if (shape.period && !shape.floatSuffix && last !== '.' && !isDigit(last)) fail();
     if (!shape.period && shape.floatSuffix && last !== 'f') fail();
-    if (!/^[+-]?(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?$/.test(stripped)) fail();
+    if (!/^(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?$/.test(stripped)) fail();
     return stripped;
   }
   if (!/^\d+$/.test(stripped)) fail();

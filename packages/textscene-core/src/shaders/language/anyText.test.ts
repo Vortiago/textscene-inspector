@@ -1,6 +1,6 @@
 /**
- * Any text gets an answer: random characters, random tokens, valid shaders with one change and long
- * repeats each end with a transpiled shader or a `ShadingLanguageError`, within a time limit. A tree the parser
+ * Any text gets an answer: random characters, random tokens, valid shaders with one change and
+ * long repeats each end with a transpiled shader or a `ShadingLanguageError`, within a time limit. A tree the parser
  * gives passes the tree check and prints as text that parses to the same tree.
  */
 
@@ -140,8 +140,8 @@ function changedShader(random: () => number): string {
 }
 
 /**
- * One character or token repeated thousands of times, then a random token: the shape of text
- * that makes a backtracking pattern slow, as a run of zeros or of `case` labels does.
+ * One character or token repeated thousands of times, then a random token: the shape of text on
+ * which a pattern that can match one run in many ways backtracks for long.
  */
 function longRepeat(random: () => number): string {
   const unit = random() < 0.5 ? pick(random, CHARACTERS) : `${pick(random, TOKENS)} `;
