@@ -19,7 +19,7 @@ import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
 import type { QuadGeometry } from './svGradient';
 
-export function buildGeometry(g: QuadGeometry): THREE.BufferGeometry {
+function buildGeometry(g: QuadGeometry): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(g.positions), 3));
   geometry.setIndex(g.indices);
@@ -36,7 +36,7 @@ interface GradientMeshProps {
 }
 
 /** One vertex-coloured, single-pass mesh: the SV square's two layers, the hue strip and every channel-slider band. */
-export function GradientMesh({ geometry, renderOrder, clippingPlanes, tint }: GradientMeshProps) {
+function GradientMesh({ geometry, renderOrder, clippingPlanes, tint }: GradientMeshProps) {
   const canvasItemMerge = useCanvasItemMerge();
   useDisposeOnRelease(geometry);
   const program = materialProgramInputs({
@@ -63,10 +63,7 @@ export function GradientMesh({ geometry, renderOrder, clippingPlanes, tint }: Gr
  * The rendering server applies a CanvasItem's accumulated modulate to every draw call, so the
  * vertex factor of `useVertexColorTint` multiplies into each colour.
  */
-export function tintVertexColors(
-  colors: number[],
-  tint: { r: number; g: number; b: number; a: number }
-): number[] {
+function tintVertexColors(colors: number[], tint: { r: number; g: number; b: number; a: number }): number[] {
   const out = new Array<number>(colors.length);
   for (let i = 0; i < colors.length; i += 4) {
     out[i] = colors[i]! * tint.r;

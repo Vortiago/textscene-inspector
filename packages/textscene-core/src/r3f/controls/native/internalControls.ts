@@ -219,7 +219,7 @@ function buildUnder(owner: SolveNode, spec: InternalControlSpec, parentPath: str
   const items = themeItemsOfType(owner, type, variation);
   const textureSize =
     spec.textureSize !== undefined ? spec.textureSize : builtButtonTextureSize(owner, spec, items);
-  const built: SolveNode = {
+  return {
     ...owner,
     path,
     node,
@@ -236,7 +236,6 @@ function buildUnder(owner: SolveNode, spec: InternalControlSpec, parentPath: str
     labelSettings: null,
     labelSettingsFont: null,
   };
-  return built;
 }
 
 /** The icons of the Control `spec` builds: the parent's theme, its own lookup, then what the parent pushes, default icons included. */

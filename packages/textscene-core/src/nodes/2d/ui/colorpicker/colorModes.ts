@@ -284,16 +284,18 @@ function alphaChannelGradientStops(normalized: Rgba): [Rgba, Rgba] {
   ];
 }
 
+/**
+ * What a polygon row draws under its stops: the alpha row's `sample_bg` tiles (`color_picker.cpp:1434`),
+ * or the HSV H row's grey polygon, over which the hue texture is modulated (`color_mode.cpp:218-221`).
+ */
+type ChannelUnderlay = 'checkerboard' | { grey: Rgba } | null;
+
 /** What a channel slider's `draw` callback draws over its top `16 * base_scale` pixels. */
 export type ChannelGradient =
   | {
       /** Drawn with `draw_polygon`: these colours evenly spaced from left to right. */
       stops: readonly Rgba[];
-      /**
-       * Drawn under the stops: the alpha row's `sample_bg` tiles (`color_picker.cpp:1434`), or the HSV
-       * H row's grey polygon, over which the hue texture is modulated (`color_mode.cpp:218-221`).
-       */
-      underlay: 'checkerboard' | { grey: Rgba } | null;
+      underlay: ChannelUnderlay;
     }
   | {
       /** Drawn with `draw_texture_rect` from a gradient texture of this size. */
@@ -302,9 +304,9 @@ export type ChannelGradient =
     };
 
 /**
- * The texture of an RGB, Linear and OKHSL H row: `set_width(400)` (`color_mode.cpp:102,302,432`).
- * Every row of a texture holds the same texels, so one row stands for the RGB rows' 6 and the
- * OKHSL row's `GradientTexture1D`.
+ * The texture of an RGB, Linear and OKHSL H row: a `GradientTexture2D` of `set_width(400)` and
+ * `set_height(6)` (`color_mode.cpp:102-103,302-303,432-433`). Every row of it holds the same texels,
+ * so one row stands for the 6.
  */
 const CHANNEL_TEXTURE: GradientTexture2D = {
   width: 400,
@@ -316,10 +318,7 @@ const CHANNEL_TEXTURE: GradientTexture2D = {
   useHdr: false,
 };
 
-const polygon = (
-  stops: readonly Rgba[],
-  underlay: 'checkerboard' | { grey: Rgba } | null = null
-): ChannelGradient => ({
+const polygon = (stops: readonly Rgba[], underlay: ChannelUnderlay = null): ChannelGradient => ({
   stops,
   underlay,
 });

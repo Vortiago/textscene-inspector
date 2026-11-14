@@ -290,7 +290,13 @@ function sliderRows({ props, color, normalized, mode }: Picker): SliderRow[] {
       index: 3,
       label: intensity.label,
       // `intensity_slider` spans -10 to 10 at step 0.001, and its value box allows greater (`:2183-2187`).
-      range: { minValue: -10, maxValue: 10, step: 0.001, value: intensity.value, allowGreater: true },
+      range: {
+        minValue: -10,
+        maxValue: intensity.max,
+        step: 0.001,
+        value: intensity.value,
+        allowGreater: true,
+      },
       isShown: props.editIntensity !== false,
       gradient: null,
       prefix: intensity.value < 0 ? '' : '+',
@@ -333,16 +339,21 @@ function colorizedSliderTheme(picker: Picker): Pick<Widget, 'pushed' | 'textureS
 function sliderRowWidgets(picker: Picker, row: SliderRow): Widget[] {
   const shown = shownIf(row.isShown);
   const labelWidth = requiredThemeItem(picker.node.constants, 'label_width');
-  const slider: Widget = row.gradient
-    ? {
-        ...widget('HSlider', `slider_${row.index}`),
-        ...colorizedSliderTheme(picker),
-        properties: { ...row.range, channelGradient: row.gradient } satisfies SharedRange &
-          ChannelGradientProperties,
-        drawnIcons: ['sample_bg'],
-        draws: ChannelGradientDraw,
-      }
-    : { ...widget('HSlider', `slider_${row.index}`), properties: row.range };
+  const sliderRaw = { size_flags_horizontal: EXPAND_FILL, size_flags_vertical: SHRINK_CENTER, ...shown };
+  const slider = widget(
+    'HSlider',
+    `slider_${row.index}`,
+    row.gradient
+      ? {
+          raw: sliderRaw,
+          ...colorizedSliderTheme(picker),
+          properties: { ...row.range, channelGradient: row.gradient } satisfies SharedRange &
+            ChannelGradientProperties,
+          drawnIcons: ['sample_bg'],
+          draws: ChannelGradientDraw,
+        }
+      : { raw: sliderRaw, properties: row.range }
+  );
   return [
     widget('Label', `label_${row.index}`, {
       raw: {
@@ -352,7 +363,7 @@ function sliderRowWidgets(picker: Picker, row: SliderRow): Widget[] {
         ...shown,
       },
     }),
-    { ...slider, raw: { size_flags_horizontal: EXPAND_FILL, size_flags_vertical: SHRINK_CENTER, ...shown } },
+    slider,
     widget('SpinBox', `value_${row.index}`, {
       raw: shown,
       // `create_slider` aligns the value field right (`:468`), which the SpinBox's `alignment` sets.
