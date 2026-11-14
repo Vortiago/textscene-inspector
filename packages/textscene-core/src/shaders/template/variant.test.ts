@@ -20,7 +20,7 @@ describe('variantLines', () => {
 
   it('gives each line of the defines the defines file', () => {
     const lines = variantLines([line('#VERSION_DEFINES', 1)], DEFINES);
-    expect(lines.every((each) => each.file === DEFINES_FILE || each.text === '')).toBe(true);
+    expect(lines.every((each) => each.file === DEFINES_FILE || (!each.slot && each.text === ''))).toBe(true);
   });
 
   it('makes a slot of each code section, named in upper case', () => {
