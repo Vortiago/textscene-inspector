@@ -1,7 +1,7 @@
 /**
  * AnimatedSprite2D render behaviour: resolves the current animation frame from
  * the SpriteFrames SubResource and draws it as a modulated quad. Unset sprite_frames draws
- * nothing, as Godot does; a sprite_frames that is set but cannot resolve draws the placeholder.
+ * nothing, as Godot does, and so does a sprite_frames that is set but cannot resolve.
  */
 import type { ReactElement } from 'react';
 import { afterEach, describe, it, expect, vi } from 'vitest';
@@ -25,6 +25,8 @@ import type { TscnNode } from '../../../parser/types';
 
 const heading = { type: 'node', attributes: { type: 'AnimatedSprite2D', name: 'A' } };
 const TEX = 'res://frame3.png';
+/** Frame 0's texture, which the loader reports as failed. */
+const ABSENT_TEX = 'res://absent.png';
 
 const ANIMATIONS =
   '[{"frames": [{"duration": 1.0, "texture": ExtResource("2")}, {"duration": 1.0, "texture": ExtResource("3")}], "loop": true, "name": &"right", "speed": 5.0}]';
@@ -48,6 +50,7 @@ async function render(rootNode: TscnNode) {
   const tex = new THREE.Texture();
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 32, height: 16 };
   fake.textures.seed(TEX, tex);
+  fake.textures.seed(ABSENT_TEX, null);
   const renderNode = (n: TscnNode): ReactElement => (
     <AnimatedSprite2D node={n}>
       {n.children.map((c, i) => (
@@ -59,7 +62,10 @@ async function render(rootNode: TscnNode) {
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider
         internalResources={[{ id: 'sf', type: 'SpriteFrames', data: { animations: ANIMATIONS, id: 'sf' } }]}
-        externalResources={[{ id: '3', type: 'Texture2D', path: TEX }]}
+        externalResources={[
+          { id: '2', type: 'Texture2D', path: ABSENT_TEX },
+          { id: '3', type: 'Texture2D', path: TEX },
+        ]}
       >
         {renderNode(rootNode)}
       </SceneResourcesProvider>
@@ -94,11 +100,16 @@ describe('AnimatedSprite2D render', () => {
     expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
-  it('renders the magenta placeholder when sprite_frames is set but does not resolve', async () => {
+  it('draws nothing for a frame texture that fails to load (animated_sprite_2d.cpp:275)', async () => {
+    const r = await render(
+      makeNode({ sprite_frames: 'SubResource("sf")', animation: '&"right"', frame: '0' })
+    );
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('draws nothing when sprite_frames is set but does not resolve', async () => {
     const r = await render(makeNode({ sprite_frames: 'SubResource("absent")' }));
-    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
-    const material = mesh.material as THREE.MeshBasicMaterial;
-    expect(material.color.getHexString()).toBe('ff00ff');
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 });
 
