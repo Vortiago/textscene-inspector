@@ -22,6 +22,7 @@ import {
   normalizeContainerLayoutResult,
 } from '../../../../r3f/controls/native/controlRectSolver';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
+import '../../../../parser/TscnParser';
 import '../../../../r3f/controls/index';
 
 const graphNodeLayout = controlSolverRegistry.containerLayout('GraphNode')!;

@@ -9,7 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { HIDDEN_LINE, parsedSceneLines, shownIf } from '../../../../r3f/controls/native/sceneLines';
+import { HIDDEN_LINE, builtWidgetProperties, shownIf } from '../../../../r3f/controls/native/sceneLines';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { Rgba } from '../../../../godot/math/math';
 import { ZERO_RECT, type Rect2 } from '../../../../godot/math/rect2';
@@ -498,12 +498,7 @@ function build(picker: Picker, spec: Widget): InternalControlSpec {
   return {
     type: spec.type,
     name: spec.name,
-    properties: {
-      ...parsedSceneLines(spec.type, spec.name, spec.raw),
-      ...spec.properties,
-      ...(spec.variation && { themeTypeVariation: spec.variation }),
-      ...(icon && { themeIcon: { name: icon, vendoredUrl: BUTTON_ICON_URLS[icon] } }),
-    },
+    properties: builtWidgetProperties(spec, BUTTON_ICON_URLS),
     children: (spec.children ?? []).map((child) => build(picker, child)),
     variation: spec.variation,
     icons: themedPickerIcons(picker.node, [...(icon ? [icon] : []), ...(spec.drawnIcons ?? [])]),

@@ -25,11 +25,6 @@ import { sidesSize, type StyleBoxFlatData } from '../../../../r3f/controls/nativ
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { LabelProperties } from '../label/types';
 import { parsedSceneLines } from '../../../../r3f/controls/native/sceneLines';
-// The band is an HBoxContainer that holds a Label: its build needs the Label parser, and its solve
-// needs both classes' solvers.
-import '../label/index';
-import '../hboxcontainer/nativeSolver';
-import '../label/solverRegistration';
 
 /** How one GraphElement class builds its `title_label`. */
 interface TitleLabelSpec {

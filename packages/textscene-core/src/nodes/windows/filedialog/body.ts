@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { parsedSceneLines, shownIf } from '../../../r3f/controls/native/sceneLines';
+import { builtWidgetProperties, shownIf } from '../../../r3f/controls/native/sceneLines';
 import {
   DisplayMode,
   FileMode,
@@ -365,10 +365,7 @@ export const fileDialogTextureSlots: TextureSlotsFn = (_node, themedIcons = {}, 
 
 function build(dialog: SolveNode, spec: Widget, scale: number): InternalControlSpec {
   const properties = {
-    ...parsedSceneLines(spec.type, spec.name, spec.raw),
-    ...spec.properties,
-    ...(spec.variation && { themeTypeVariation: spec.variation }),
-    ...(spec.icon && { themeIcon: { name: spec.icon, vendoredUrl: FILE_DIALOG_ICON_URLS[spec.icon] } }),
+    ...builtWidgetProperties(spec, FILE_DIALOG_ICON_URLS),
     ...(spec.selection && { selection: spec.selection }),
   };
   return {

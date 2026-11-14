@@ -9,7 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { parsedSceneLines, shownIf } from '../../../../r3f/controls/native/sceneLines';
+import { builtWidgetProperties, shownIf } from '../../../../r3f/controls/native/sceneLines';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
@@ -152,12 +152,7 @@ function build(graph: SolveNode, scale: number, spec: Widget): InternalControlSp
   return {
     type: spec.type,
     name: spec.name,
-    properties: {
-      ...parsedSceneLines(spec.type, spec.name, spec.raw),
-      ...spec.properties,
-      ...(spec.variation && { themeTypeVariation: spec.variation }),
-      ...(icon && { themeIcon: { name: icon, vendoredUrl: BUTTON_ICON_URLS[icon] } }),
-    },
+    properties: builtWidgetProperties(spec, BUTTON_ICON_URLS),
     children: (spec.children ?? []).map((child) => build(graph, scale, child)),
     variation: spec.variation,
     icons: themedIcon ? { [icon]: themedIcon } : undefined,

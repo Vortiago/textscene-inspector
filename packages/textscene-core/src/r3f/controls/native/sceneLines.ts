@@ -22,3 +22,26 @@ export function parsedSceneLines(type: string, name: string, lines: Record<strin
   if (!parsed) throw new Error(`expected a parser for ${type}, got none`);
   return parsed.properties;
 }
+
+/** A Control a class builds: its type and name, the scene lines its setters stand for, and its theme icon. */
+export interface BuiltWidget {
+  type: string;
+  name: string;
+  raw?: Record<string, string>;
+  /** Values set after the parse, which are already values rather than scene-line literals. */
+  properties?: object;
+  icon?: string;
+}
+
+/** What `widget` parses to, then its set values and its theme icon, with the vendored fallback `iconUrls` names. */
+export function builtWidgetProperties(
+  widget: BuiltWidget,
+  iconUrls: Readonly<Record<string, string>>
+): object {
+  const { type, name, raw, properties, icon } = widget;
+  return {
+    ...parsedSceneLines(type, name, raw),
+    ...properties,
+    ...(icon && { themeIcon: { name: icon, vendoredUrl: iconUrls[icon] } }),
+  };
+}

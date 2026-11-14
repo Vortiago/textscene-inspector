@@ -18,7 +18,8 @@ import {
 } from '../../../../r3f/controls/native/testing/solveNode';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { GraphNodeSlot } from '../graphnode/types';
-import '../graphnode/nativeSolver.js'; // registers GraphNode's MinimumSizeFn/ContainerLayoutFn
+import '../../../../parser/TscnParser';
+import '../../../../r3f/controls/index';
 import { GraphEdit } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { GraphEditConnection, GraphEditProperties } from './types';
