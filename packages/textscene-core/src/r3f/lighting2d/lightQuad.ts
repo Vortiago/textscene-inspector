@@ -12,13 +12,14 @@
 
 import * as THREE from 'three';
 import { canvasItemFacing } from '../canvasItemFacing.js';
-import { FRAGMENT, SHADOW_SAMPLE, SHADOW_VERTEX, SHADOWED_FRAGMENT, VERTEX } from './lightQuadShaders.js';
+import { FRAGMENT, SHADOWED_FRAGMENT, VERTEX } from './lightQuadShaders.js';
+import { POLAR_SHADOW_VERTEX, shadowedLightUniforms } from './shadowMap/shadowShader.js';
 import { multipleTargetPass } from '../fullScreenPass.js';
-import { shadowSamplingParameters, type ShadowSampling } from './shadowSampling.js';
+import { shadowSamplingParameters, type ShadowSampling } from './shadowMap/shadowSampling.js';
 import type { Rgba } from '../../godot/math/math.js';
 import { Light2DBlendMode, Light2DShadowFilter } from '../../godot/scene/light2d.js';
 
-export { updateShadowPolarTexture, type ShadowSampling } from './shadowSampling.js';
+export type { ShadowSampling } from './shadowMap/shadowSampling.js';
 
 /**
  * `light_blend_compute`'s modes are one fixed-function blend each: ADD is SrcAlpha/One with add,
@@ -56,11 +57,6 @@ export function shadowColorContributes(shadowColor: Rgba, filter: number): boole
   );
 }
 
-/** `Light2D.shadow_color` as the `uShadowColor` every shadowed light quad reads. */
-export function shadowColorUniform({ r, g, b, a }: Rgba): THREE.Vector4 {
-  return new THREE.Vector4(r, g, b, a);
-}
-
 /** 1 for a linear cookie tap, which blends toward the transparent atlas border; 0 for a nearest tap. */
 function edgeFade(cookie: THREE.Texture): number {
   return cookie.magFilter === THREE.NearestFilter ? 0 : 1;
@@ -96,8 +92,8 @@ export function createLightQuadMaterial({
   return multipleTargetPass(
     new THREE.ShaderMaterial({
       ...(sampling ? { defines: sampling.defines } : {}),
-      vertexShader: sampling ? SHADOW_VERTEX : VERTEX,
-      fragmentShader: sampling ? SHADOW_SAMPLE + SHADOWED_FRAGMENT : FRAGMENT,
+      vertexShader: sampling ? POLAR_SHADOW_VERTEX : VERTEX,
+      fragmentShader: sampling ? SHADOWED_FRAGMENT : FRAGMENT,
       uniforms: {
         uCookie: { value: cookie },
         uCookieEdgeFade: { value: edgeFade(cookie) },
@@ -105,7 +101,7 @@ export function createLightQuadMaterial({
         // Applied to the raw sRGB texels, Godot's canvas space: scaling a linear colour raises it
         // only by `energy^(1/2.2)` once re-encoded.
         uEnergy: { value: energy },
-        ...(shadow ? { uShadowColor: { value: shadowColorUniform(shadow.shadowColor) } } : {}),
+        ...(shadow ? shadowedLightUniforms(shadow.shadowColor) : {}),
         ...sampling?.uniforms,
       },
       // One pass, since `accumulationState` sums into the accumulator (`blendDst: OneFactor` for

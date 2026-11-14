@@ -6,7 +6,7 @@ ADR-0066 replaces its gate, its GLES3 tap kernel and its half-float linear textu
 
 - Status: Accepted
 - Related: ADR-0008 (invisible render intent), ADR-0025 (ported Godot code carries
-  Godot's MIT notice), `r3f/lighting2d/shadowPolarMap.ts`, `r3f/lighting2d/lightQuad.ts`,
+  Godot's MIT notice), `r3f/lighting2d/shadowMap/shadowPolarMap.ts`, `r3f/lighting2d/lightQuad.ts`,
   `r3f/lighting2d/shadowVolumes.ts`, `nodes/2d/pointlight2d/`.
 
 ## Context

@@ -18,7 +18,7 @@ import { useDirectionalLightSlot } from '../../../r3f/lighting2d/useLightSequenc
 import { useLightShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { shadowColorContributes } from '../../../r3f/lighting2d/lightQuad';
-import { useDirectionalShadow } from '../../../r3f/lighting2d/directionalShadowView';
+import { useDirectionalShadow } from '../../../r3f/lighting2d/shadowMap/directionalShadowView';
 import { FullScreenQuad } from '../../../r3f/lighting2d/fullScreenQuad';
 import {
   createDirectionalLightMaterial,

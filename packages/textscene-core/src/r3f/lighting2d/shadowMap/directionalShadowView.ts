@@ -16,14 +16,15 @@ import {
   type DirectionalShadowView,
 } from './directionalShadowMap';
 import { useShadowAtlasSize } from './useShadowAtlasSize';
-import { createDirectionalShadowTexture, writeDirectionalShadowMap } from './directionalLightQuad';
-import { useDisposeOnRelease } from '../useDisposeOnRelease';
-import { perObject } from '../../utils/perObject.js';
-import type { Quad2, ShadowCasterEdges } from './shadowCasterEdges';
-import { useCanvasLighting2D, type LightPassStep } from './lightPassContext';
-import type { CanvasClip } from './lightPassHost';
-import type { Rect2 } from '../../godot/math/rect2';
-import type { Vector2 } from '../../godot/math/vector.js';
+import { createShadowMapTexture, writeShadowMap } from './shadowMapTexture';
+import { DIRECTIONAL_LOOKUP } from './shadowShader';
+import { useDisposeOnRelease } from '../../useDisposeOnRelease';
+import { perObject } from '../../../utils/perObject.js';
+import type { Quad2, ShadowCasterEdges } from '../shadowCasterEdges';
+import { useCanvasLighting2D, type LightPassStep } from '../lightPassContext';
+import type { CanvasClip } from '../lightPassHost';
+import type { Rect2 } from '../../../godot/math/rect2';
+import type { Vector2 } from '../../../godot/math/vector.js';
 
 /** Reused by every sample, which reads it before the next one writes it. */
 const scratch = new THREE.Vector3();
@@ -131,7 +132,10 @@ export function useDirectionalShadow(
   const atlasSize = useShadowAtlasSize();
   // A new atlas size is a new texture: the old one has the wrong width.
   const sampler = useMemo<DirectionalShadowSampler>(
-    () => ({ map: createDirectionalShadowTexture(atlasSize), ndcToShadow: new THREE.Matrix3() }),
+    () => ({
+      map: createShadowMapTexture(atlasSize, DIRECTIONAL_LOOKUP.edge),
+      ndcToShadow: new THREE.Matrix3(),
+    }),
     [atlasSize]
   );
   useDisposeOnRelease(sampler.map);
@@ -148,7 +152,7 @@ export function useDirectionalShadow(
       const view = readShadowView(anchor, clip, maxDistance, atlasSize, built.current?.view ?? null);
       if (built.current?.view !== view || built.current.casters !== casters) {
         const { bins, worldToShadow } = buildDirectionalShadowMap(view, casters);
-        writeDirectionalShadowMap(sampler.map, bins);
+        writeShadowMap(sampler.map, bins);
         built.current = { view, casters, worldToShadow };
       }
       writeNdcToShadow(sampler.ndcToShadow, camera, built.current.worldToShadow);

@@ -6,7 +6,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { SHADOW_SNAPSHOT_PRIORITY } from './ShadowCasterStage';
+import { SHADOW_SNAPSHOT_PRIORITY } from '../ShadowCasterStage';
 import { sameShadowLight, sampleShadowLight, type ShadowLightPose } from './shadowLightSample';
 
 /**
