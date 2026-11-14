@@ -37,3 +37,6 @@ it** (`GlyphPainter` in `glyphPainter.ts`).
 - A user's font draws in its own glyphs or not at all, wherever the previewer reads its outlines.
 - A font whose outlines the previewer cannot read still draws in the browser, with the browser's
   hinting and anti-aliasing. The notes of ADR-0040 on Skia and the canvas stroke hold for it.
+- A colour glyph over an empty `glyf` entry (COLR v0 and v1 emoji) draws nothing. Godot draws its
+  layers in their own colours (`text_server_adv.cpp:1286-1290`, `:4044-4046`). The browser drew a
+  silhouette in the font colour, further from Godot by pixel count. #1876 ports Godot's colour glyph.
