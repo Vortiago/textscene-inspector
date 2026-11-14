@@ -22,7 +22,7 @@ import type {
 } from './shaderTree.js';
 import { swizzled } from './swizzle.js';
 import { elementType, shapeOf } from './types.js';
-import { arraySizeOf, isCall, isEmpty, typeName } from './treeWalk.js';
+import { arraySizeOf, isCall, isEmpty, PLACE_KINDS, typeName } from './treeWalk.js';
 
 /** The first fact `shader` breaks, or nothing when it holds them all. */
 export function treeFault(shader: ShaderNode): string | undefined {
@@ -317,9 +317,6 @@ class FunctionCheck {
     return shapeOf(type) !== undefined || this.structs.some((struct) => struct.name === type);
   }
 }
-
-/** The nodes Godot passes to an `out` or `inout` parameter (`shader_language.cpp:6408`). */
-const PLACE_KINDS: ReadonlySet<string> = new Set(['variable', 'array element', 'member', 'field']);
 
 function operatorFault(expression: OperatorNode): string | undefined {
   const { op, operands, row, type } = expression;

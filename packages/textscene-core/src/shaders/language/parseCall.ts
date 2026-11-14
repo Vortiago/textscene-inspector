@@ -76,9 +76,24 @@ function isOfType(argument: Argument, arg: Expression, convertsConstants: boolea
   );
 }
 
+/**
+ * The index of the first argument of `args` that `candidate` does not take, `args.length` when it
+ * takes them all, and nothing for a candidate of another argument count.
+ */
+function firstMisfit(
+  candidate: FunctionSignature,
+  args: readonly Expression[],
+  convertsConstants: boolean
+): number | undefined {
+  if (candidate.arguments.length !== args.length) return undefined;
+  const index = candidate.arguments.findIndex(
+    (argument, at) => !isOfType(argument, args[at]!, convertsConstants)
+  );
+  return index === -1 ? args.length : index;
+}
+
 const fits = (candidate: FunctionSignature, args: readonly Expression[], convertsConstants: boolean) =>
-  candidate.arguments.length === args.length &&
-  candidate.arguments.every((argument, index) => isOfType(argument, args[index]!, convertsConstants));
+  firstMisfit(candidate, args, convertsConstants) === args.length;
 
 /**
  * The name the call holds when no overload fits: the overload of the call's count with the most
@@ -88,11 +103,7 @@ function bestNamed(candidates: readonly FunctionSignature[], args: readonly Expr
   let name = rname;
   let most = 0;
   for (const candidate of candidates) {
-    if (candidate.arguments.length !== args.length) continue;
-    const matching = candidate.arguments.findIndex(
-      (argument, index) => !isOfType(argument, args[index]!, false)
-    );
-    const valid = matching === -1 ? args.length : matching;
+    const valid = firstMisfit(candidate, args, false) ?? 0;
     if (valid > most) [name, most] = [candidate.name, valid];
   }
   return name;
@@ -106,10 +117,8 @@ function mismatch(
   convertsConstants: boolean
 ): string {
   const failures = candidates.flatMap((candidate) => {
-    if (candidate.arguments.length !== args.length) return [];
-    const index = candidate.arguments.findIndex(
-      (argument, at) => !isOfType(argument, args[at]!, convertsConstants)
-    );
+    const index = firstMisfit(candidate, args, convertsConstants);
+    if (index === undefined) return [];
     const wanted = candidate.arguments[index]!;
     const given = args[index]!;
     return [
@@ -121,8 +130,9 @@ function mismatch(
       },
     ];
   });
-  if (failures.length === 1) {
-    const [{ list, index, wanted, given }] = failures as [(typeof failures)[0]];
+  const [only] = failures;
+  if (only && failures.length === 1) {
+    const { list, index, wanted, given } = only;
     return `No matching function for "${rname}(${list})" call: argument ${index} should be ${wanted} but is ${given}.`;
   }
   if (failures.length > 1) {
@@ -158,8 +168,7 @@ function converted(arg: Expression, type: ValueType): Expression {
  * of a constant.
  */
 function argumentRefusal(argument: Argument, arg: Expression): string | undefined {
-  if (argument.qualifier === 'in') return undefined;
-  if (argument.isConst) return undefined;
+  if (argument.qualifier === 'in' || argument.isConst) return undefined;
   return isConstantPlace(arg)
     ? `A constant value cannot be passed for the '${argument.qualifier}' parameter.`
     : undefined;

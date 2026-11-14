@@ -12,6 +12,9 @@ export const isEmpty = (statement: Statement): boolean =>
 export const isReturn = (statement: Statement): statement is ControlFlowNode =>
   statement.kind === 'control flow' && statement.flow === 'FLOW_OP_RETURN';
 
+/** The nodes Godot passes to an `out` or `inout` parameter (`shader_language.cpp:6408`). */
+export const PLACE_KINDS: ReadonlySet<string> = new Set(['variable', 'array element', 'member', 'field']);
+
 export const isCall = (expression: Expression): expression is CallNode =>
   expression.kind === 'operator' && expression.op === 'OP_CALL';
 

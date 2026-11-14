@@ -472,7 +472,7 @@ function ternaryOperand(node: Expression): Expression {
 
 const isDataTypeToken = (type: string) => keywordInstruction(type)?.family === 'data type';
 
-/** The element count of an array value, or 0 for one value, as Godot's `get_array_size`. */
+/** A constant of one scalar, at its token. */
 const constantOf = (token: Token, type: string, value: Scalar): ConstantNode => ({
   kind: 'constant',
   type,

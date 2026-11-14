@@ -33,8 +33,8 @@ export function parse(tokens: readonly Token[]): ShaderNode {
 class ShaderParser implements ExpressionScope {
   private readonly structs: StructNode[] = [];
   private readonly functions: FunctionNode[] = [];
-  /** Each function declared so far, its own included while its body is read. */
-  private readonly signatures: FunctionSignature[] = [];
+  /** Each function declared so far by its name in the text, its own included while its body is read. */
+  private readonly signatures = new Map<string, FunctionSignature[]>();
   /** The function whose body is read. Set at each function's `(`...`)`, and kept after its body. */
   private current: FunctionSignature | undefined;
   /** The block a statement is read in. Outside a body, an empty one. */
@@ -56,11 +56,11 @@ class ShaderParser implements ExpressionScope {
   identifier(name: string): Identifier | undefined {
     const found = this.holder.current.find(name, false);
     if (found) return found;
-    return this.signatures.some((declared) => declared.rname === name) ? { kind: 'function' } : undefined;
+    return this.signatures.has(name) ? { kind: 'function' } : undefined;
   }
 
   functionsNamed(rname: string): readonly FunctionSignature[] {
-    return this.signatures.filter((declared) => declared.rname === rname);
+    return this.signatures.get(rname) ?? [];
   }
 
   currentFunction(): string {
@@ -242,7 +242,7 @@ class ShaderParser implements ExpressionScope {
   private argumentDeclaration(first: Token, declared: readonly Argument[]): Argument {
     const isConst = first.type === 'TK_CONST';
     let token = isConst ? this.tokens.next() : first;
-    const qualifier = QUALIFIERS[token.type];
+    const qualifier = qualifierOf(token);
     if (qualifier) {
       if (isConst && qualifier !== 'in')
         this.tokens.fail(
@@ -289,22 +289,21 @@ class ShaderParser implements ExpressionScope {
    * returns (`shader_language.cpp:10921`).
    */
   private declare(header: Omit<FunctionSignature, 'name'>): FunctionSignature {
-    const overloads = this.signatures.filter((declared) => declared.rname === header.rname);
+    const overloads = this.signatures.get(header.rname) ?? [];
     if (overloads.some((declared) => isSameArguments(declared.arguments, header.arguments)))
       this.tokens.fail(`Redefinition of '${header.rname}'.`);
     const name = overloads.length === 0 ? header.rname : `${header.rname}@${overloads.length + 1}`;
     const signature = { name, ...header };
-    this.signatures.push(signature);
+    this.signatures.set(header.rname, [...overloads, signature]);
     return signature;
   }
 }
 
-/** The tokens of the qualifiers and the qualifier each names. */
-const QUALIFIERS: Readonly<Record<string, Qualifier>> = {
-  TK_ARG_IN: 'in',
-  TK_ARG_OUT: 'out',
-  TK_ARG_INOUT: 'inout',
-};
+/** The parameter qualifier a token names, from its row of the table: `in`, `out` or `inout`. */
+function qualifierOf(token: Token): Qualifier | undefined {
+  if (!token.type.startsWith('TK_ARG_')) return undefined;
+  return keywordInstruction(token.type)?.id as Qualifier | undefined;
+}
 
 const isSameArguments = (a: readonly Argument[], b: readonly Argument[]) =>
   a.length === b.length &&

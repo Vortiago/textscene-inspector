@@ -7,6 +7,7 @@
 import {
   FRAMES_BEFORE_READ,
   inChunksAtOnce,
+  oneGodot,
   printedField,
   printedImages,
   requireGodotVersion,
@@ -93,9 +94,7 @@ export async function runProbesInGodot(probes) {
   const outputs = await inChunksAtOnce(probes, async (chunk) =>
     parseProbeOutput(await runGodotScript(MAIN_SCRIPT, probeProjectFiles(chunk)))
   );
-  const [{ godot, adapter }] = outputs;
+  const { godot, adapter } = oneGodot(outputs);
   requireGodotVersion(godot);
-  const other = outputs.find((output) => output.godot !== godot || output.adapter !== adapter);
-  if (other) throw new Error(`expected one Godot on ${adapter}, got ${other.godot} on ${other.adapter} too`);
   return { godot, adapter, pixels: new Map(outputs.flatMap((output) => [...output.pixels])) };
 }

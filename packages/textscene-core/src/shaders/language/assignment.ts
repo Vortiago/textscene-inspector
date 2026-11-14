@@ -24,8 +24,10 @@ export function writtenTargets(expression: Expression): readonly Expression[] {
   if (isCall(expression))
     return expression.operands.filter((_, index) => expression.qualifiers[index] !== 'in');
   if (expression.kind === 'operator' && isWriteOperator(expression.op)) return [expression.operands[0]!];
-  return [];
+  return NO_TARGETS;
 }
+
+const NO_TARGETS: readonly Expression[] = [];
 
 /** Written only by `writes`. An entry goes when its node is collected. */
 // eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).

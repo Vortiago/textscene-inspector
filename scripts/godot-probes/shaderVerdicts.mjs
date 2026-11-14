@@ -4,7 +4,7 @@
  * shader it refuses between two markers, so the parse of the output reads each verdict.
  */
 
-import { inChunksAtOnce, printedField, runGodotScript } from './godotRun.mjs';
+import { inChunksAtOnce, oneGodot, printedField, runGodotScript } from './godotRun.mjs';
 
 const MARKER = 'VERDICT ';
 const DONE = 'VERDICTS DONE';
@@ -38,9 +38,7 @@ export async function godotVerdicts(texts) {
     const output = await runGodotScript(VERDICT_SCRIPT, { 'shaders.json': JSON.stringify(chunk) });
     return { godot: printedField(output, 'GODOT '), verdicts: parseVerdictOutput(output, chunk.length) };
   });
-  const [{ godot }] = runs;
-  const other = runs.find((run) => run.godot !== godot);
-  if (other) throw new Error(`expected one Godot, got ${godot} and ${other.godot}`);
+  const { godot } = oneGodot(runs);
   return { godot, verdicts: runs.flatMap((run) => run.verdicts) };
 }
 

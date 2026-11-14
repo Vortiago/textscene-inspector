@@ -4,6 +4,7 @@
  * front end, and glslang refuses the place (`lValueErrorCheck` of its parse context).
  */
 
+import { writtenTargets } from './assignment.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
 import type { BlockNode, Expression } from './shaderTree.js';
 import { everyExpressionIn, isCall } from './treeWalk.js';
@@ -12,13 +13,12 @@ import { everyExpressionIn, isCall } from './treeWalk.js';
 export function refuseRepeatedLetterPlaces(block: BlockNode): void {
   for (const part of everyExpressionIn(block)) {
     if (!isCall(part)) continue;
-    part.operands.forEach((operand, index) => {
-      if (part.qualifiers[index] !== 'in' && repeatsLetter(operand))
-        throw new ShadingLanguageError(
-          "glslang refuses a swizzle that repeats a letter as a place to write, so the GPU compiler refuses Godot's GLSL.",
-          operand.position
-        );
-    });
+    const place = writtenTargets(part).find(repeatsLetter);
+    if (place)
+      throw new ShadingLanguageError(
+        "glslang refuses a swizzle that repeats a letter as a place to write, so the GPU compiler refuses Godot's GLSL.",
+        place.position
+      );
   }
 }
 

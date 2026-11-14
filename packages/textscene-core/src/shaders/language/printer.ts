@@ -46,7 +46,7 @@ function printArgument(argument: Argument): string {
     ...(argument.isConst ? ['const'] : []),
     ...(argument.qualifier === 'in' ? [] : [argument.qualifier]),
     argument.type,
-    `${argument.name}${argument.arraySize ? `[${argument.arraySize}]` : ''}`,
+    typeName(argument.name, argument.arraySize ?? 0),
   ];
   return words.join(' ');
 }

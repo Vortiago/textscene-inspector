@@ -8,6 +8,7 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { availableParallelism, tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { mapPool } from '../compare-docs/godotLinks/pool.mjs';
 import { godotSpawnPlan } from '../godot-ref/run.mjs';
 
 /** The only Godot release the probes and showcases compare with: the transpiler follows its source. */
@@ -125,25 +126,28 @@ function spawnGodot(directory) {
  * caller still reads Godot's version.
  */
 export function inChunksAtOnce(items, run) {
-  const size = Math.max(1, Math.ceil(items.length / RUNS_AT_ONCE));
-  const chunks = Array.from({ length: Math.max(1, Math.ceil(items.length / size)) }, (_, index) =>
-    items.slice(index * size, (index + 1) * size)
-  );
+  const count = Math.max(1, Math.min(RUNS_AT_ONCE, items.length));
+  const size = Math.ceil(items.length / count);
+  const chunks = Array.from({ length: count }, (_, index) => items.slice(index * size, (index + 1) * size));
   return Promise.all(chunks.map(run));
 }
 
 /** `run` of each of `items`, with at most as many runs at once as Godot runs at once. */
-export async function eachAtOnce(items, run) {
-  const answers = new Array(items.length);
-  let next = 0;
-  const worker = async () => {
-    while (next < items.length) {
-      const index = next++;
-      answers[index] = await run(items[index]);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(RUNS_AT_ONCE, items.length) }, worker));
-  return answers;
+export const eachAtOnce = (items, run) => mapPool(items, RUNS_AT_ONCE, (item) => run(item));
+
+/**
+ * The first of `runs`, when every run names the same Godot, and the same adapter where a run
+ * names one. Answers from two engines would mix otherwise.
+ */
+export function oneGodot(runs) {
+  const [first] = runs;
+  const other = runs.find((run) => run.godot !== first.godot || run.adapter !== first.adapter);
+  if (other) {
+    throw new Error(
+      `expected one Godot, got ${first.godot} on ${first.adapter ?? 'any adapter'} and ${other.godot} on ${other.adapter ?? 'any adapter'}`
+    );
+  }
+  return first;
 }
 
 /** The spawn errors of a Godot or xvfb that did not start, which one more start may clear. */
