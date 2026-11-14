@@ -6,7 +6,6 @@
 import { useMemo } from 'react';
 import { useBundledCanvasFace } from './bundledCanvasFace';
 import { TextRunMesh, type TextRunProps } from './TextRunMesh';
-import { useSceneFontSettleCount } from './useSceneFontSettleCount';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
 
 /** Draws nothing while the outlines of the bundled font or the project settings load, and counts as a pending load meanwhile. */
@@ -14,8 +13,6 @@ export default function BundledCanvasRun({ layout, ...run }: TextRunProps) {
   // `withVariation` memoises the face, so a render keeps its identity.
   const face = useBundledCanvasFace()(layout.fontMetrics);
   const isLoading = face === undefined;
-  // Listens only while the outlines load. The count re-renders a run whose settle lands first.
-  useSceneFontSettleCount(isLoading);
   usePendingWhile(isLoading);
   // The canvas face keeps the baked advances, so the layout of the bundled face places its glyphs.
   const canvasLayout = useMemo(() => face && { ...layout, fontMetrics: face }, [layout, face]);

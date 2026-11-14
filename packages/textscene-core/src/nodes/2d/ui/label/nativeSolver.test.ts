@@ -712,7 +712,7 @@ describe('labelMinimumSize — shapes in label_settings.font (label.cpp:112,349,
   ])!;
 
   beforeEach(() => {
-    vi.spyOn(sceneFontLoader, 'peekSettledSceneFontMetrics').mockImplementation((font) =>
+    vi.spyOn(sceneFontLoader, 'peekSettledSceneFontMetrics').mockImplementation((_fonts, font) =>
       font === settingsFont ? WIDE_METRICS : OPEN_SANS_FONT_METRICS
     );
   });

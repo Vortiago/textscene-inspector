@@ -12,7 +12,8 @@
  * module runner (`lazyImports.ts`).
  *
  * A component test may mount a drawn node with no shared live tree, so the detached paint is installed.
- * It loads after the file's own imports, so a module the file mocks loads mocked.
+ * A tree with no resource loader reads one module store of settled fonts, so each test starts it empty.
+ * Both load after the file's own imports, so a module the file mocks loads mocked.
  */
 
 import { configure } from '@testing-library/react';
@@ -33,6 +34,9 @@ vi.mock('./src/resources/memoisedImport.js', async (importOriginal) => {
   return { ...module, memoisedImport: trackedMemoisedImport(module.memoisedImport) };
 });
 afterAll(settleLazyImports);
+beforeEach(async () => {
+  (await import('./src/r3f/controls/native/text/useSettledFont.js')).resetLoaderlessFonts();
+});
 beforeAll(async () => {
   installDetachedPaint((await import('./src/r3f/testing/detachedPaint.js')).DETACHED_PAINT);
 });
