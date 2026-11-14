@@ -23,6 +23,10 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'r3f/canvasItemPass/detachedPaintSlot.ts#installDetachedPaint',
   // No runtime code lists the vendored icons, and the icon test checks each one against its raster.
   'r3f/controls/native/themeIcons.ts#vendoredIconSvgUrls',
+  // The TypeScript twins of a light's blend: the test holds both shader forms to them (#1580).
+  'r3f/lighting2d/lightBlend.ts#blendLayer',
+  'r3f/lighting2d/lightBlend.ts#lightBlendCompute',
+  'r3f/lighting2d/lightBlend.ts#shadowedLightTerms',
   // The switch of the TSL port ships before its one reader, the pick of a lit surface's material,
   // which the next slice of the port adds.
   'r3f/litSurface/litSurfaceForm.ts#litSurfaceForm',
