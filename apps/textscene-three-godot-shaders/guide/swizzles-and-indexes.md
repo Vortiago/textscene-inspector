@@ -734,3 +734,31 @@ vec2 probe(vec2 a, float b) { a[1 + 5] = b; return a; }
 ```
 
 Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'[' :  vector index out of range '6'`. The transpiler refuses it too.
+
+### Probe `index-write-before-value`, 32 input rows
+
+```glsl
+ivec3 probe(ivec3 a, int i) { int k = i & 1; a[k] = 10 + k++; return a; }
+```
+
+| `a` | `i` | Godot gives |
+| --- | --- | --- |
+| `(1, 31, 1000003)` | `255` | `(1, 11, 1000003)` |
+| `(31, 1000003, 0)` | `2147483647` | `(31, 11, 0)` |
+| `(-256, -2147483648, 2)` | `0` | `(10, -2147483648, 2)` |
+| `(1000003, 0, 7)` | `-1` | `(1000003, 11, 7)` |
+| `(0, 7, 65536)` | `1000003` | `(0, 11, 65536)` |
+
+### Probe `index-compound-before-value`, 32 input rows
+
+```glsl
+ivec3 probe(ivec3 a, int i) { int k = i & 1; a[k] += (k = 2) + 10; return a; }
+```
+
+| `a` | `i` | Godot gives |
+| --- | --- | --- |
+| `(1, 31, 1000003)` | `255` | `(1, 43, 1000003)` |
+| `(31, 1000003, 0)` | `2147483647` | `(31, 1000015, 0)` |
+| `(-256, -2147483648, 2)` | `0` | `(-244, -2147483648, 2)` |
+| `(1000003, 0, 7)` | `-1` | `(1000003, 12, 7)` |
+| `(0, 7, 65536)` | `1000003` | `(0, 19, 65536)` |

@@ -3,7 +3,8 @@
  * becomes the order of statements. A value read before a part that writes is kept in a variable
  * declared first, so `a + (a = 3.0)` reads `a` before the write. `c ? a : b`, `a && b` and
  * `a || b` with a side that writes become an `if`, as GLSL runs one side. An index that writes,
- * in a place that is written, is kept, so `a[i++] += 1.0` steps `i` once.
+ * in a place that is written, is kept, so `a[i++] += 1.0` steps `i` once, and so is every index
+ * before a value that writes, so `a[i] = i++` writes the `a[i]` of the old `i`.
  */
 
 import { isWriteOperator, writes } from '../assignment.js';
@@ -70,7 +71,7 @@ class Hoist {
     if (expression.kind === 'whole assign')
       return {
         ...expression,
-        target: this.place(expression.target),
+        target: this.place(expression.target, writes(expression.value)),
         value: this.expression(expression.value),
       };
     if (expression.kind !== 'operator') return this.inOrder(expression);
@@ -95,28 +96,29 @@ class Hoist {
     return rebuilt(expression, parts);
   }
 
-  /** `a = b`, `a op= b` and the steps: the place's indices that write first, then `b`. */
+  /** `a = b`, `a op= b` and the steps: the place's indices first, then `b`. */
   private assigned(expression: OperatorNode): Expression {
     const [target, ...rest] = expression.operands as [Expression, ...Expression[]];
-    const place = this.place(target);
+    const place = this.place(target, rest.some(writes));
     return { ...expression, operands: [place, ...rest.map((part) => this.expression(part))] };
   }
 
-  /** `target` with each index that writes kept, outermost value first. */
-  private place(target: Expression): Expression {
+  /**
+   * `target` with its indices kept, outermost value first: each index that writes, and every
+   * index when `isValueWriting`, since GLSL reads the place before the value.
+   */
+  private place(target: Expression, isValueWriting: boolean): Expression {
+    const index = (part: Expression) =>
+      isValueWriting || writes(part) ? this.kept(this.expression(part)) : part;
     if (target.kind === 'array element')
-      return { ...target, array: this.place(target.array), index: this.keptIfWriting(target.index) };
+      return { ...target, array: this.place(target.array, isValueWriting), index: index(target.index) };
     if (target.kind === 'operator' && target.op === 'OP_INDEX') {
-      const [owner, index] = target.operands as [Expression, Expression];
-      return { ...target, operands: [this.place(owner), this.keptIfWriting(index)] };
+      const [owner, at] = target.operands as [Expression, Expression];
+      return { ...target, operands: [this.place(owner, isValueWriting), index(at)] };
     }
     if (target.kind === 'member' || target.kind === 'field')
-      return { ...target, owner: this.place(target.owner) };
+      return { ...target, owner: this.place(target.owner, isValueWriting) };
     return target;
-  }
-
-  private keptIfWriting(index: Expression): Expression {
-    return writes(index) ? this.kept(this.expression(index)) : index;
   }
 
   /** `c ? a : b` with a side that writes: `T t; if (c) t = a; else t = b;`. */
