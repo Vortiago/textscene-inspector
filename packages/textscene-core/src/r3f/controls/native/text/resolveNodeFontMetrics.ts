@@ -33,7 +33,7 @@ const scopeFor = perObject((n: ShareNode): ThemeResolutionScope =>
  * can settle between the solve pass and the paint pass of one generation.
  */
 export function resolveNodeFontMetrics(n: ShareNode, themeKey: string): FontMetrics {
-  return peekSceneFontMetrics(resolveNodeFont(n, themeKey), n.path);
+  return peekSceneFontMetrics(n.settledFonts, resolveNodeFont(n, themeKey), n.path);
 }
 
 /**
@@ -49,8 +49,8 @@ export function resolveNodeFontMetricsOr(
 ): FontMetrics {
   const scope = scopeFor(n);
   const found = findThemeFontIn(scope, themeKey, n.fontOverrides[themeKey]);
-  if (found !== undefined) return peekSceneFontMetrics(found, n.path);
-  return lastRung(peekSceneFontMetrics(scope.projectDefaultFont, n.path));
+  if (found !== undefined) return peekSceneFontMetrics(n.settledFonts, found, n.path);
+  return lastRung(peekSceneFontMetrics(n.settledFonts, scope.projectDefaultFont, n.path));
 }
 
 /**

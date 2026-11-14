@@ -9,6 +9,7 @@ import { perObject } from '../../../utils/perObject';
 import { parentPathOf } from '../../../utils/nodePath';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { ProjectFonts } from '../../../resources/fonts/font/projectFonts';
+import type { SettledFonts } from './text/settledFonts';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
@@ -139,6 +140,8 @@ export interface SolveNode {
    * Required, like `fontOverrides`.
    */
   projectFonts: ProjectFonts;
+  /** The faces of the fonts the preview loads, which every font read of the node peeks. Required, like `projectFonts`. */
+  settledFonts: SettledFonts;
   /**
    * Resolved theme colours by `get_theme_color(name, type)` name, merged like
    * `styleBoxes` over `theme.colors`. A painter falls back to the default
