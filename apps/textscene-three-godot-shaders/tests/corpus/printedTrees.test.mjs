@@ -18,6 +18,12 @@ const TREES_DIR = join(import.meta.dirname, 'trees');
 /** The file of a shader's printed tree, beside the file of its text. */
 const treeFile = (shader) => shader.file.replace(/\.gdshader$/, '.tree.txt');
 
+/** The tree files of `files` that no shader of `accepted` owns. */
+const staleTreeFiles = (files, accepted) => {
+  const owned = new Set(accepted.map(treeFile));
+  return files.filter((file) => file.endsWith('.tree.txt') && !owned.has(file));
+};
+
 const ACCEPTED = CORPUS.filter((shader) => transpilerVerdict(shader.text).accepted);
 
 describe('the printed trees of the corpus', () => {
@@ -28,8 +34,13 @@ describe('the printed trees of the corpus', () => {
   });
 
   it('holds no tree of a shader the transpiler does not accept', () => {
-    const expected = new Set(ACCEPTED.map(treeFile));
     const files = existsSync(TREES_DIR) ? readdirSync(TREES_DIR, { recursive: true }) : [];
-    expect(files.filter((file) => file.endsWith('.tree.txt') && !expected.has(file))).toEqual([]);
+    expect(staleTreeFiles(files, ACCEPTED)).toEqual([]);
+  });
+
+  it('finds a tree file whose shader the transpiler no longer accepts', () => {
+    const kept = { file: 'demos/kept.gdshader' };
+    const files = ['demos/kept.tree.txt', 'demos/dropped.tree.txt', 'demos/notes.md'];
+    expect(staleTreeFiles(files, [kept])).toEqual(['demos/dropped.tree.txt']);
   });
 });

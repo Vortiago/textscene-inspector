@@ -3,7 +3,7 @@ import { printShader } from '../../../../packages/textscene-core/src/shaders/lan
 import { treeFault } from '../../../../packages/textscene-core/src/shaders/language/treeCheck.ts';
 import { probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { transpilerVerdict } from '../verdicts/judge.mjs';
-import { loweredTreeOf, shapeOf, treeOf } from '../verdicts/trees.mjs';
+import { loweredFault, loweredTreeOf, shapeOf, treeOf } from '../verdicts/trees.mjs';
 import { generatePrograms, ROOT_ROWS, TRANSPILED_ROWS } from './programs.mjs';
 import { RANDOM_PROGRAMS } from './randomSet.mjs';
 
@@ -61,8 +61,8 @@ describe('the trees of the fixed-seed set', () => {
     expect(faults(RANDOM_PROGRAMS, (source) => treeFault(treeOf(source)))).toEqual([]);
   });
 
-  it('pass the tree check after lowering', () => {
-    expect(faults(RANDOM_PROGRAMS, (source) => treeFault(loweredTreeOf(source)))).toEqual([]);
+  it('pass the tree check after lowering, with no loop or switch the lowering removes', () => {
+    expect(faults(RANDOM_PROGRAMS, (source) => loweredFault(loweredTreeOf(source)))).toEqual([]);
   });
 
   it('print as text that parses to the same tree', () => {
