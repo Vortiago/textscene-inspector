@@ -21,19 +21,19 @@ import {
 import { TileSetModels, tileSetRefsOf } from './ySortTileSetModels.js';
 import { LiftedAncestors, liftedPath } from './LiftedAncestors.js';
 import { YSortLayerGroup } from './YSortLayerGroup.js';
-import { inSortOrder } from './ySortOrder.js';
 import { useLiveYSort } from './useLiveYSort.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
-import { isTopLevelItem, packPaintRanges, paintRangeSize } from './canvasPaintOrder.js';
+import { isTopLevelItem, pieceSize } from './canvasPaintOrder.js';
 import {
   IN_TREE_ORDER,
   PaintFrameProvider,
-  runFrame,
+  extraFrame,
   useChildPaintFrames,
   useNodePaint,
   type ChildPaintFrames,
   type PaintFrame,
 } from './canvasItemPass/nodePaint.js';
+import { requireDetachedPaint } from './canvasItemPass/detachedPaintSlot.js';
 import { canvasPaintPass, type CanvasItemPaint } from './canvasItemPass/canvasItemPaint.js';
 import type { ExtraSortItem, LiveSortY } from './canvasItemPass/ySort.js';
 import type { Vector2 } from '../godot/math/vector.js';
@@ -225,8 +225,8 @@ function usePublishSortInputs(
 
 /**
  * The frame each item draws in. Inside the shared live tree, a node reads its sorted paint by path
- * and an extra takes the run the sort gave its id. A subtree outside that tree, such as a
- * component test that mounts no live tree, has no pass to sort, so it packs its own run here in the same order.
+ * and an extra takes the run the sort gave its id. A detached subtree has no pass to sort, so the
+ * installed `DetachedPaint` packs its runs in the same order.
  */
 function usePieceFrames(
   items: readonly YSortItem[],
@@ -237,35 +237,15 @@ function usePieceFrames(
 ): ReadonlyMap<YSortItem, PaintFrame> {
   const sortedRuns = useSortedRunsAndPaints().runs;
   return useMemo(() => {
-    if (childFrames) return localSortFrames(liveItems, paint, childFrames.tail);
+    if (childFrames) return requireDetachedPaint().sortFrames(liveItems, paint, childFrames.tail);
     return new Map(
       liveItems.map((live, i): [YSortItem, PaintFrame] => {
         const piece = pieces.get(items[i]!)!;
         if (piece.kind === 'node') return [live, IN_TREE_ORDER];
-        return [live, runFrame(sortedRuns.get(piece.id) ?? paint.tail)];
+        return [live, extraFrame(sortedRuns.get(piece.id) ?? paint.tail)];
       })
     );
   }, [items, liveItems, pieces, paint, childFrames, sortedRuns]);
-}
-
-/**
- * The runs of `items` packed in sort order after the node's own sequence, as one flat sort orders
- * them, each keeping the canvas roots of the run `tail` the node draws in.
- */
-function localSortFrames(
-  items: readonly YSortItem[],
-  paint: CanvasItemPaint,
-  tail: PaintFrame
-): Map<YSortItem, PaintFrame> {
-  const sorted = inSortOrder(items, (item) => item.sortY);
-  const ranges = packPaintRanges(paint.range, sorted.map(pieceSize), paint.own + 1);
-  const canvasRoots = tail.kind === 'run' ? tail.canvasRoots : undefined;
-  return new Map(sorted.map((item, i) => [item, runFrame(ranges[i]!, canvasRoots)]));
-}
-
-/** The values an item draws: one for a row, which is one group with no subtree, or its whole subtree's run. */
-function pieceSize(item: YSortItem): number {
-  return item.kind === 'tileGroup' || !item.node ? 1 : paintRangeSize(item.node);
 }
 
 function itemPath(item: YSortItem, basePath: string): string {

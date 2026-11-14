@@ -4,16 +4,11 @@
  */
 
 import { useMemo, type ReactNode } from 'react';
-import type { TscnNode } from '../../parser/types';
 import type { PaintRange } from '../canvasPaintOrder';
-import { PaintFrameProvider, type PaintFrame } from '../canvasItemPass/nodePaint';
-
-const NO_CANVAS_ROOTS: ReadonlyMap<TscnNode, PaintRange> = new Map();
+import { PaintFrameProvider } from '../canvasItemPass/nodePaint';
+import { detachedFrame } from './detachedPaint';
 
 export function PaintRun({ value, children }: { value: PaintRange; children: ReactNode }) {
-  const frame = useMemo(
-    (): PaintFrame => ({ kind: 'run', range: value, canvasRoots: NO_CANVAS_ROOTS }),
-    [value]
-  );
+  const frame = useMemo(() => detachedFrame(value), [value]);
   return <PaintFrameProvider value={frame}>{children}</PaintFrameProvider>;
 }

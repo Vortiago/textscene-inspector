@@ -10,6 +10,7 @@
  */
 
 import type { TscnNode } from '../parser/types';
+import type { YSortItem } from './ySortItems';
 import { CanvasItemClipChildrenMode } from '../godot/scene/canvasItem';
 import { DEFAULT_CANVAS_LAYER, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
@@ -464,4 +465,9 @@ export function packPaintRanges(range: PaintRange, sizes: readonly number[], fro
     cursor = base + taken;
     return { base, size: taken };
   });
+}
+
+/** The values an item draws: one for a row, which is one group with no subtree, or its whole subtree's run. */
+export function pieceSize(item: Pick<YSortItem, 'kind' | 'node'>): number {
+  return item.kind === 'tileGroup' || !item.node ? 1 : paintRangeSize(item.node);
 }
