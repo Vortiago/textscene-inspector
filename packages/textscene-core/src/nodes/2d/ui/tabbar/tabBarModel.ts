@@ -1,15 +1,20 @@
 /**
- * Everything about a TabBar's tabs that does not depend on its width, as one share
- * (`solveHandoff.ts`): its painter draws it, and the layout of a Control that holds a TabBar, such
- * as TabContainer's, replays the bar's load events against it.
+ * Everything about a TabBar's tabs that does not depend on its width, as two shares
+ * (`solveHandoff.ts`): the facts the minimum size reads with no text measured, and the model that
+ * adds each shaped title. The painter draws the model, and the layout of a Control that holds a
+ * TabBar, such as TabContainer's, replays the bar's load events against it.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import type { Rgba } from '../../../../godot/math/math';
+import type { Vector2 } from '../../../../godot/math/vector';
 import { defineShare } from '../../../../r3f/controls/native/solveHandoff';
+import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -19,9 +24,12 @@ import {
   TAB_BAR_THEME_FONT_KEY,
   fitTabIconSize,
   isCloseButtonVisible,
+  pickTabStyleBox,
   resolveTabDrawState,
   shapeTabLabel,
+  tabBarFontColor,
   tabBarFontSizePx,
+  tabBarIconColor,
   tabBarThemeIconSize,
   tabContentWidth,
   tabIconNaturalSize,
@@ -34,80 +42,158 @@ import type { TabBarProperties, TabBarTabProperties } from './types';
 
 const NO_TABS: readonly TabBarTabProperties[] = [];
 
-/** One tab as it is shaped and sized, before the bar's width places it. */
-export interface ComputedTab {
+/** One tab as its theme and properties give it, before its title is shaped. */
+export interface TabFacts {
   tab: TabBarTabProperties;
   state: TabDrawState;
-  iconSize: { x: number; y: number } | null;
-  layout: TextLayoutResult;
+  /** The `tab_<state>` box the tab draws. */
+  style: StyleBoxFlatData;
+  /** The style width `get_tab_width` reads (`tabWidthStyleMinWidth`), not always the drawn box's. */
+  naturalStyleWidth: number;
+  iconSize: Vector2 | null;
+  closeVisible: boolean;
+  fontColor: Rgba;
+  iconColor: Rgba;
 }
 
-/** The TabBar's tabs, measured, with the theme items its draw reads. */
-export const tabBarModel = defineShare((solveNode, theme) => {
+/** The TabBar's tabs and the theme items its minimum size and its draw read. */
+export interface TabBarFacts {
+  tabs: readonly TabFacts[];
+  hSeparation: number;
+  closeButtonMargin: StyleBoxFlatData['contentMargin'];
+  closeIconSize: Vector2;
+  incrementIconSize: Vector2;
+  decrementIconSize: Vector2;
+  /** The largest vertical content margin of the four tab boxes (`tab_bar.cpp:47-50`). */
+  yMargin: number;
+  fontSizePx: number;
+  fontMetrics: FontMetrics | undefined;
+  layoutInput: Omit<TabBarLayoutInput, 'barWidthPx' | 'offset'>;
+  isStyleFlipped: boolean;
+}
+
+/** A tab's two widths for a title `textWidthPx` wide. */
+export interface TabWidths {
+  /** `TabBar::get_minimum_size`'s width: the box of the tab's state (`tab_bar.cpp:60-70`). */
+  minimumWidth: number;
+  /** `TabBar::get_tab_width`: the wider of `tab_hovered` and `tab_unselected` for an unselected tab (`:1757-1768`). */
+  naturalWidth: number;
+}
+
+/** One tab as it is shaped and sized, before the bar's width places it. */
+export interface ComputedTab extends TabFacts, TabWidths {
+  layout: TextLayoutResult;
+  naturalTextWidth: number;
+}
+
+/** The facts with every title shaped. */
+export interface TabBarModel extends TabBarFacts {
+  computed: readonly ComputedTab[];
+  drawInputs: readonly TabLayoutInput[];
+}
+
+function boxHeight(box: StyleBoxFlatData): number {
+  return box.contentMargin.top + box.contentMargin.bottom;
+}
+
+export const tabBarFacts = defineShare((solveNode, theme): TabBarFacts => {
   const props = solveNode.node.properties as TabBarProperties;
   const tabs = props.tabs ?? NO_TABS;
   const currentTab = resolveTabBarCurrentTab(props.currentTab, props.deselectEnabled, tabs.length, (i) =>
     isTabUnselectable(tabs[i]!)
   );
   const closeDisplayPolicy = props.tabCloseDisplayPolicy ?? 0;
-  const hSeparation = requiredThemeItem(solveNode.constants, 'h_separation');
   const iconMaxWidth = requiredThemeItem(solveNode.constants, 'icon_max_width');
-  const styleBoxes = solveNode.styleBoxes;
-  const closeButtonMargin = requiredThemeItem(styleBoxes, 'button_highlight').contentMargin;
-  const closeIconSize = tabBarThemeIconSize(solveNode, 'close', theme.scale);
+  const { styleBoxes, colors } = solveNode;
   const incrementIconSize = tabBarThemeIconSize(solveNode, 'increment', theme.scale);
   const decrementIconSize = tabBarThemeIconSize(solveNode, 'decrement', theme.scale);
-  const fontMetrics = resolveNodeFontMetrics(solveNode, TAB_BAR_THEME_FONT_KEY);
-  const fontSizePx = tabBarFontSizePx(solveNode, props);
-
-  const computed: ComputedTab[] = tabs.map((tab, i) => {
-    const iconNatural = tabIconNaturalSize(solveNode, i);
-    return {
-      tab,
-      state: resolveTabDrawState(tab, i, currentTab),
-      iconSize: iconNatural ? fitTabIconSize(iconNatural, iconMaxWidth) : null,
-      layout: shapeTabLabel(tab.title, solveNode, { fontSizePx, fontMetrics }),
-    };
-  });
-
-  const drawInputs: TabLayoutInput[] = computed.map(({ tab, state, iconSize, layout }, i) => {
-    const naturalTextWidth = shapedTextSizeWidthPx(layout.widthPx);
-    const naturalWidth = tabContentWidth({
-      styleMinWidth: tabWidthStyleMinWidth(styleBoxes, state),
-      iconWidth: iconSize ? iconSize.x : null,
-      hSeparation,
-      textWidthPx: naturalTextWidth,
-      hasText: tab.title.length > 0,
-      closeVisible: isCloseButtonVisible(closeDisplayPolicy, i, currentTab),
-      closeIconWidth: closeIconSize.x,
-      closeButtonMarginLeft: closeButtonMargin.left,
-    });
-    return { disabled: tab.disabled, hidden: tab.hidden === true, naturalWidth, naturalTextWidth };
-  });
-
-  const layoutInput: Omit<TabBarLayoutInput, 'barWidthPx' | 'offset'> = {
-    alignment: props.tabAlignment ?? TAB_ALIGNMENT_LEFT,
-    clipTabs: props.clipTabs ?? true,
-    maxTabWidthPx: props.maxTabWidth ?? 0,
-    tabSeparation: solveNode.constants.tab_separation ?? 0,
-    incrementIconWidth: incrementIconSize.x,
-    decrementIconWidth: decrementIconSize.x,
-    currentTab,
-    scrollToSelected: props.scrollToSelected ?? true,
-  };
 
   return {
-    computed,
-    drawInputs,
-    layoutInput,
-    closeDisplayPolicy,
-    hSeparation,
-    closeButtonMargin,
-    closeIconSize,
+    tabs: tabs.map((tab, i): TabFacts => {
+      const state = resolveTabDrawState(tab, i, currentTab);
+      // A disabled current tab draws its disabled box in the selected colours (`tab_bar.cpp:556-561`).
+      const colourState = i === currentTab ? 'selected' : state;
+      const iconNatural = tabIconNaturalSize(solveNode, i);
+      return {
+        tab,
+        state,
+        style: pickTabStyleBox(styleBoxes, state),
+        naturalStyleWidth: tabWidthStyleMinWidth(styleBoxes, state),
+        iconSize: iconNatural ? fitTabIconSize(iconNatural, iconMaxWidth) : null,
+        closeVisible: isCloseButtonVisible(closeDisplayPolicy, i, currentTab),
+        fontColor: tabBarFontColor(colors, colourState),
+        iconColor: tabBarIconColor(colors, colourState),
+      };
+    }),
+    hSeparation: requiredThemeItem(solveNode.constants, 'h_separation'),
+    // `_get_tab_width` pads the close button by `button_hl_style`'s margins (`tab_bar.cpp:89-100`).
+    closeButtonMargin: requiredThemeItem(styleBoxes, 'button_highlight').contentMargin,
+    closeIconSize: tabBarThemeIconSize(solveNode, 'close', theme.scale),
     incrementIconSize,
     decrementIconSize,
-    fontSizePx,
-    fontMetrics,
+    yMargin: Math.max(
+      ...(['unselected', 'selected', 'disabled', 'hovered'] as const).map((state) =>
+        boxHeight(pickTabStyleBox(styleBoxes, state))
+      )
+    ),
+    fontSizePx: tabBarFontSizePx(solveNode, props),
+    fontMetrics: resolveNodeFontMetrics(solveNode, TAB_BAR_THEME_FONT_KEY),
+    layoutInput: {
+      alignment: props.tabAlignment ?? TAB_ALIGNMENT_LEFT,
+      clipTabs: props.clipTabs ?? true,
+      maxTabWidthPx: props.maxTabWidth ?? 0,
+      tabSeparation: solveNode.constants.tab_separation ?? 0,
+      incrementIconWidth: incrementIconSize.x,
+      decrementIconWidth: decrementIconSize.x,
+      currentTab,
+      scrollToSelected: props.scrollToSelected ?? true,
+    },
     isStyleFlipped: props.tabStyleVFlip === true,
+  };
+});
+
+/** Both widths of tab `facts` with a title `textWidthPx` wide, by the one formula of `tabContentWidth`. */
+export function tabWidths(bar: TabBarFacts, facts: TabFacts, textWidthPx: number): TabWidths {
+  const widthAt = (styleMinWidth: number) =>
+    tabContentWidth({
+      styleMinWidth,
+      iconWidth: facts.iconSize ? facts.iconSize.x : null,
+      hSeparation: bar.hSeparation,
+      textWidthPx,
+      hasText: facts.tab.title.length > 0,
+      closeVisible: facts.closeVisible,
+      closeIconWidth: bar.closeIconSize.x,
+      closeButtonMarginLeft: bar.closeButtonMargin.left,
+    });
+  const { left, right } = facts.style.contentMargin;
+  return {
+    minimumWidth: widthAt(left + right),
+    naturalWidth: widthAt(facts.naturalStyleWidth),
+  };
+}
+
+/** The TabBar's tabs, measured, with the theme items its draw reads. */
+export const tabBarModel = defineShare((solveNode, theme): TabBarModel => {
+  const bar = tabBarFacts(solveNode, theme);
+  const font = { fontSizePx: bar.fontSizePx, fontMetrics: bar.fontMetrics };
+  const computed = bar.tabs.map((facts): ComputedTab => {
+    const layout = shapeTabLabel(facts.tab.title, solveNode, font);
+    const naturalTextWidth = shapedTextSizeWidthPx(layout.widthPx);
+    return {
+      ...facts,
+      ...tabWidths(bar, facts, naturalTextWidth),
+      layout,
+      naturalTextWidth,
+    };
+  });
+  return {
+    ...bar,
+    computed,
+    drawInputs: computed.map(({ tab, naturalWidth, naturalTextWidth }) => ({
+      disabled: tab.disabled,
+      hidden: tab.hidden === true,
+      naturalWidth,
+      naturalTextWidth,
+    })),
   };
 });
