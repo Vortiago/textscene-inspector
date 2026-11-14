@@ -226,6 +226,14 @@ describe('computeCanvasTextCanvasLayout', () => {
     expect(canvasLayout.canvasWidthPx).toBe(19);
   });
 
+  // The bundled face while its outlines load: it draws nothing, so nothing reaches past a pen box.
+  it('spans the pen boxes alone on a face with no outlines and no CSS family', () => {
+    const layout = { ...layoutFor('AB', 0), fontMetrics: { ...CANVAS_METRICS, cssFontFamily: undefined } };
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
+    expect(canvasLayout.offsetXPx).toBe(2);
+    expect(canvasLayout.canvasWidthPx).toBe(19);
+  });
+
   // The rows above the baseline run up to the vertical pad, and shear furthest there. A stroke
   // widens that pad past `CANVAS_TEXT_VERTICAL_PAD_PX`, so its top row shears further.
   it('pads a sheared raster by the shear of its top row', () => {
@@ -580,6 +588,15 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
     expect(HTMLCanvasElement.prototype.getContext).not.toHaveBeenCalled();
     expect(alphaAt(raster, penX + 3, baselineY - 3)).toBe(255);
     expect(alphaAt(raster, penX + 8 + 3, baselineY - 3)).toBe(0);
+  });
+
+  it('draws nothing and makes no 2D context on a face with no outlines and no CSS family', () => {
+    const layout = { ...layoutFor('AB', 0), fontMetrics: { ...CANVAS_METRICS, cssFontFamily: undefined } };
+    const { calls, raster } = paintRecording(layout, 0);
+
+    expect(HTMLCanvasElement.prototype.getContext).not.toHaveBeenCalled();
+    expect(calls).toEqual([]);
+    expect(raster!.data.some((byte, i) => i % 4 === 3 && byte !== 0)).toBe(false);
   });
 
   it('fills the text of every glyph of a face with no outlines it can read', () => {

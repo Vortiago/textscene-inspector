@@ -1,14 +1,13 @@
 /**
- * The interface of the two painters of a canvas text run. `canvasTextPainter.ts` chooses one for
- * the run, once, by whether its face carries outlines: `outlineGlyphPainter.ts` draws each glyph
- * from its contours, and `browserTextPainter.ts` draws each glyph as browser text.
+ * The interface of the painters of a canvas text run. `canvasTextPainter.ts` chooses one for the
+ * run, once, by its face: `outlineGlyphPainter.ts` draws each glyph from its contours,
+ * `browserTextPainter.ts` draws each glyph as browser text, and `blankGlyphPainter.ts` draws none.
  */
 import type { Rect2 } from '../../../../godot/math/rect2';
-import type { Vector2 } from '../../../../godot/math/vector';
 import type { ByteColour } from './glyphCoverage';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
 import type { CanvasTextCanvasLayout } from './canvasTextPainter';
-import type { GlyphPlacement, TextLayoutResult } from './textLayout';
+import type { GlyphPlacement } from './textLayout';
 
 /** How far the ink of a glyph reaches left of its pen and right of it, px, its pen box included. */
 export interface GlyphReach {
@@ -16,14 +15,16 @@ export interface GlyphReach {
   rightPx: number;
 }
 
-/** Where a raster sits against the run origin, and whether its glyphs snap to whole item pixels. */
+/** The raster a run paints into, and how its glyphs draw there. */
 export interface RasterFrame {
   readonly metrics: CanvasFontMetrics;
   readonly fontSizePx: number;
   readonly skew: number;
   readonly canvasLayout: CanvasTextCanvasLayout;
-  readonly originPhasePx: Readonly<Vector2>;
+  /** Whether the glyphs snap to whole item pixels (`snapsGlyphsToItemPixels`). */
   readonly snapsGlyphs: boolean;
+  /** A positive width paints the outline ring instead of the fill. */
+  readonly strokeWidthPx: number;
 }
 
 /** A glyph of the layout at its pen and baseline in the raster. */
@@ -34,20 +35,15 @@ export interface PlacedGlyph {
 }
 
 export interface GlyphPainter {
-  /** Reads how far the ink of each glyph of `layout` reaches at `skew`, from what the paint draws for it. */
-  reachReader(layout: TextLayoutResult, skew: number): (glyph: GlyphPlacement) => GlyphReach;
   /**
-   * The raster of `glyphs` in `colour`, the outline ring for a positive `strokeWidthPx`. Null where
-   * the painter needs a 2D context and the document has none.
+   * Reads how far the ink of each glyph reaches at `skew`, from what the paint draws for it, on a
+   * line whose ascent is `lineAscentPx`.
    */
-  paint(
-    glyphs: readonly PlacedGlyph[],
-    frame: RasterFrame,
-    colour: ByteColour,
-    strokeWidthPx: number
-  ): ImageData | null;
+  reachReader(skew: number, lineAscentPx: number): (glyph: GlyphPlacement) => GlyphReach;
+  /** The raster of `glyphs` in `colour`. Null where the painter needs a 2D context and the document has none. */
+  paint(glyphs: readonly PlacedGlyph[], frame: RasterFrame, colour: ByteColour): ImageData | null;
   /** Reads the rectangle of the quad Godot draws for a glyph, in raster px, or null for a glyph that draws none. */
-  rectReader(frame: RasterFrame, outlineRadiusPx: number): (glyph: PlacedGlyph) => Rect2 | null;
+  rectReader(frame: RasterFrame): (glyph: PlacedGlyph) => Rect2 | null;
 }
 
 /**

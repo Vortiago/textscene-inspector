@@ -12,6 +12,7 @@ import { isCanvasFontMetrics, type CanvasFontMetrics } from './runtimeFontMetric
 import { hasOwnGlyph, type GlyphPainter, type PlacedGlyph, type RasterFrame } from './glyphPainter';
 import { hasOutlines, outlineGlyphPainter } from './outlineGlyphPainter';
 import { browserTextPainter } from './browserTextPainter';
+import { blankGlyphPainter } from './blankGlyphPainter';
 import { canvasItemFacing } from '../../../canvasItemFacing';
 import type { CanvasItemPixelMaterial } from '../../../components/LitCanvasItemPixels';
 import { injectProgram, injectViewportProgram } from '../../../materialProgramInputs';
@@ -105,9 +106,7 @@ const INK_SLACK_RIGHT_PX = 1;
 function drawnExtentPx(layout: TextLayoutResult, skew: number): { startPx: number; endPx: number } {
   let startPx = Infinity;
   let endPx = -Infinity;
-  const face = layout.fontMetrics;
-  const painter = isCanvasFontMetrics(face) ? painterOf(face) : browserTextPainter;
-  const reachOf = painter.reachReader(layout, skew);
+  const reachOf = painterOf(canvasFaceOf(layout)).reachReader(skew, layout.baselineOffsetPx);
   for (const { glyphs } of layout.lines) {
     for (const glyph of glyphs) {
       const { leftPx, rightPx } = reachOf(glyph);
@@ -185,9 +184,22 @@ export interface CanvasTextPaintOptions {
   originPhasePx?: Readonly<Vector2>;
 }
 
-/** The painter of a run on `face`: the contours of a face with outlines, else browser text. */
+/**
+ * The painter of a run on `face`: the contours of a face with outlines, else the text of its
+ * `FontFace`, else nothing.
+ */
 function painterOf(face: CanvasFontMetrics): GlyphPainter {
-  return hasOutlines(face) ? outlineGlyphPainter(face) : browserTextPainter;
+  if (hasOutlines(face)) return outlineGlyphPainter(face);
+  return face.cssFontFamily === undefined ? blankGlyphPainter : browserTextPainter(face);
+}
+
+/** The face `layout` was shaped against, which a canvas text run requires to be a canvas face. */
+function canvasFaceOf(layout: TextLayoutResult): CanvasFontMetrics {
+  const face = layout.fontMetrics;
+  if (!isCanvasFontMetrics(face)) {
+    throw new Error(`expected a layout shaped against a canvas face, got a ${face.kind} face`);
+  }
+  return face;
 }
 
 /**
@@ -205,9 +217,9 @@ export function paintSceneFontCanvas(
   canvasLayout: CanvasTextCanvasLayout,
   { strokeWidthPx = 0, glyphDrawer = 'canvasItem', originPhasePx = VECTOR2_ZERO }: CanvasTextPaintOptions = {}
 ): ImageData | null {
-  const frame = rasterFrame(layout, fontSizePx, skew, canvasLayout, glyphDrawer, originPhasePx);
-  const glyphs = placeGlyphs(layout, frame);
-  return painterOf(frame.metrics).paint(glyphs, frame, opaqueByteColour(tint), strokeWidthPx);
+  const frame = rasterFrame(layout, fontSizePx, skew, canvasLayout, glyphDrawer, strokeWidthPx);
+  const glyphs = placeGlyphs(layout, frame, originPhasePx);
+  return painterOf(frame.metrics).paint(glyphs, frame, opaqueByteColour(tint));
 }
 
 /** The frame of the raster `canvasLayout` sizes for `layout`, which a canvas face shaped. */
@@ -217,26 +229,27 @@ function rasterFrame(
   skew: number,
   canvasLayout: CanvasTextCanvasLayout,
   glyphDrawer: GlyphDrawer,
-  originPhasePx: Readonly<Vector2>
+  strokeWidthPx: number
 ): RasterFrame {
-  const metrics = layout.fontMetrics;
-  if (!isCanvasFontMetrics(metrics)) {
-    throw new Error(`expected a layout shaped against a canvas face, got a ${metrics.kind} face`);
-  }
+  const metrics = canvasFaceOf(layout);
   return {
     metrics,
     fontSizePx,
     skew,
     canvasLayout,
-    originPhasePx,
     snapsGlyphs: snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, metrics),
+    strokeWidthPx,
   };
 }
 
-/** Each glyph of `layout` that draws, at its pen and baseline in the raster. */
+/**
+ * Each glyph of `layout` that draws, at its pen and baseline in the raster. `originPhasePx` is the
+ * phase of the run's place in its canvas item, which a snapped pen and baseline include.
+ */
 function placeGlyphs(
   layout: TextLayoutResult,
-  { metrics, fontSizePx, canvasLayout, originPhasePx, snapsGlyphs }: RasterFrame
+  { metrics, fontSizePx, canvasLayout, snapsGlyphs }: RasterFrame,
+  originPhasePx: Readonly<Vector2>
 ): PlacedGlyph[] {
   // The raster starts at the whole item pixel at or before the run origin, where its quad sits.
   return layout.lines.flatMap((line, lineIndex) => {
@@ -265,9 +278,9 @@ export function canvasGlyphRects(
   canvasLayout: CanvasTextCanvasLayout,
   { strokeWidthPx = 0, glyphDrawer = 'canvasItem', originPhasePx = VECTOR2_ZERO }: CanvasTextPaintOptions = {}
 ): Rect2[] {
-  const frame = rasterFrame(layout, fontSizePx, skew, canvasLayout, glyphDrawer, originPhasePx);
-  const rectOf = painterOf(frame.metrics).rectReader(frame, strokeWidthPx / 2);
-  return placeGlyphs(layout, frame).flatMap((glyph) => {
+  const frame = rasterFrame(layout, fontSizePx, skew, canvasLayout, glyphDrawer, strokeWidthPx);
+  const rectOf = painterOf(frame.metrics).rectReader(frame);
+  return placeGlyphs(layout, frame, originPhasePx).flatMap((glyph) => {
     const rect = rectOf(glyph);
     return rect && drawsGlyphRect(glyphDrawer, rect.w, rect.h) ? [rect] : [];
   });

@@ -7,27 +7,27 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import { getFontAscentPx, getFontLinePitchPx } from './fontMetrics';
 import { colourRaster } from './glyphCoverage';
 import type { GlyphPainter, GlyphReach, PlacedGlyph, RasterFrame } from './glyphPainter';
-import { isCanvasFontMetrics } from './runtimeFontMetrics';
+import { isCanvasFontMetrics, type RegisteredCanvasFontMetrics } from './runtimeFontMetrics';
 import type { CanvasTextCanvasLayout } from './canvasTextPainter';
 import type { GlyphPlacement } from './textLayout';
 
+/** The painter that draws each glyph of `face` as text in the family of its `FontFace`. */
 // Each glyph draws at the pen `x` `textLayout.ts` computed, so a whole-string `fillText` cannot
 // re-shape it with the ligatures or kerning the measurer folded in (`runtimeFontMetrics.ts`).
-export const browserTextPainter: GlyphPainter = {
-  reachReader: (layout) => (glyph) => textReachPx(glyph, layout.baselineOffsetPx),
-  // A face with no family draws no text, as `fillText` paints a host font for an unregistered family.
-  paint: (glyphs, { metrics, fontSizePx, skew, canvasLayout }, colour, strokeWidthPx) => {
-    const { canvasWidthPx, canvasHeightPx } = canvasLayout;
-    if (metrics.cssFontFamily === undefined) return new ImageData(canvasWidthPx, canvasHeightPx);
-    const ctx = textContext(canvasLayout, metrics.cssFontFamily, fontSizePx);
-    if (!ctx) return null;
-    paintGlyphTexts(ctx, glyphs, `rgb(${colour.join(', ')})`, skew, strokeWidthPx);
-    const image = ctx.getImageData(0, 0, canvasWidthPx, canvasHeightPx);
-    colourRaster(image, colour);
-    return image;
-  },
-  rectReader: textGlyphBoxReader,
-};
+export function browserTextPainter(face: RegisteredCanvasFontMetrics): GlyphPainter {
+  return {
+    reachReader: (_skew, lineAscentPx) => (glyph) => textReachPx(glyph, lineAscentPx),
+    paint: (glyphs, { fontSizePx, skew, canvasLayout, strokeWidthPx }, colour) => {
+      const ctx = textContext(canvasLayout, face.cssFontFamily, fontSizePx);
+      if (!ctx) return null;
+      paintGlyphTexts(ctx, glyphs, `rgb(${colour.join(', ')})`, skew, strokeWidthPx);
+      const image = ctx.getImageData(0, 0, canvasLayout.canvasWidthPx, canvasLayout.canvasHeightPx);
+      colourRaster(image, colour);
+      return image;
+    },
+    rectReader: (frame) => textGlyphBoxReader(face, frame),
+  };
+}
 
 /**
  * The reach of a glyph the browser draws as text: the ink its face measured, where the face draws
@@ -52,16 +52,15 @@ function textReachPx(glyph: GlyphPlacement, lineAscentPx: number): GlyphReach {
 /**
  * Reads the box of a glyph the browser draws as text, which has no bitmap grid: from its pen to its
  * advance, between the ascent and the descent of the face, grown by `outlineRadiusPx` on each side
- * as the ring of an outline pass reaches. Godot's rectangle for it is not known. Null on a face that
- * draws no text.
+ * as the ring of an outline pass reaches. Godot's rectangle for it is not known.
  */
 function textGlyphBoxReader(
-  { metrics, fontSizePx }: RasterFrame,
-  outlineRadiusPx: number
-): (glyph: PlacedGlyph) => Rect2 | null {
-  if (metrics.cssFontFamily === undefined) return () => null;
-  const ascentPx = getFontAscentPx(metrics, fontSizePx);
-  const heightPx = getFontLinePitchPx(metrics, fontSizePx, 0);
+  face: RegisteredCanvasFontMetrics,
+  { fontSizePx, strokeWidthPx }: RasterFrame
+): (glyph: PlacedGlyph) => Rect2 {
+  const outlineRadiusPx = strokeWidthPx / 2;
+  const ascentPx = getFontAscentPx(face, fontSizePx);
+  const heightPx = getFontLinePitchPx(face, fontSizePx, 0);
   return ({ penX, baselineY, placement }) => ({
     x: penX - outlineRadiusPx,
     y: baselineY - ascentPx - outlineRadiusPx,

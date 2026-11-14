@@ -24,8 +24,11 @@ it** (`GlyphPainter` in `glyphPainter.ts`).
   FreeType's bitmap of its contour or of its ring. A glyph with no contour draws nothing. The
   painter makes no 2D context.
 - A face whose outlines the previewer cannot read (`outlines` null or absent) takes the browser
-  text painter (`browserTextPainter.ts`). Each glyph draws with `fillText` or `strokeText`. It is
-  the only file that calls them.
+  text painter (`browserTextPainter.ts`). Each glyph draws with `fillText` or `strokeText` in the
+  family of its `FontFace`. It is the only file that calls them.
+- A face with neither readable outlines nor a `FontFace` takes the blank painter
+  (`blankGlyphPainter.ts`): the bundled face while its outlines load. It draws nothing, as
+  `fillText` would paint a host font for an unregistered family.
 - The painter also reads the reach of each glyph, which sizes the raster, and the rectangle of the
   quad Godot draws for it. A run reads all three from the one painter.
 

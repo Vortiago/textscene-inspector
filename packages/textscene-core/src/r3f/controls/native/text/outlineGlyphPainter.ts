@@ -4,6 +4,7 @@
  * glyph only where it has a texture (`text_server_adv.cpp:4042`). It makes no 2D context.
  */
 import type { Rect2 } from '../../../../godot/math/rect2';
+import { recentlyRead } from '../../../../utils/recentlyRead';
 import { glyphContoursReader, variedGlyphContoursReader } from './canvasVariation';
 import type { GlyphVariation } from './fontMetrics';
 import type { GlyphContours } from './glyphContours';
@@ -33,22 +34,31 @@ export function hasOutlines(face: CanvasFontMetrics): face is OutlineFace {
   return face.outlines != null;
 }
 
+/** The contours each placement draws, or null for a glyph with no contour. */
+type ContoursReader = (gp: GlyphPlacement) => GlyphContours | null;
+
+/** A RichTextLabel line holds a few font sizes. A reader built again costs two cache lookups. */
+const MAX_KEPT_SIZES = 8;
+
 /** How far Godot's glyph rectangle reaches past the bitmap on each side (`rect_range`, `text_server_adv.h:187`). */
 const GLYPH_RECT_MARGIN_PX = 1;
 
 /** The painter that draws each glyph of `face` from its contours. */
 export function outlineGlyphPainter(face: OutlineFace): GlyphPainter {
   return {
-    reachReader: (_layout, skew) => {
-      const contoursOf = perFontSize((fontSizePx) => placementContoursReader(face, fontSizePx, skew));
+    reachReader: (skew) => {
+      const contoursAt = recentlyRead<number, ContoursReader>(MAX_KEPT_SIZES);
       return (glyph) => {
-        const contours = hasOwnGlyph(glyph) ? contoursOf(glyph.fontSizePx)(glyph) : null;
+        const contoursOf =
+          hasOwnGlyph(glyph) &&
+          contoursAt(glyph.fontSizePx, (fontSizePx) => placementContoursReader(face, fontSizePx, skew));
+        const contours = contoursOf ? contoursOf(glyph) : null;
         return contours ? contourReachPx(contours, glyph.advance) : { leftPx: 0, rightPx: glyph.advance };
       };
     },
-    paint: (glyphs, frame, colour, strokeWidthPx) => {
+    paint: (glyphs, frame, colour) => {
       const contoursOf = placementContoursReader(face, frame.fontSizePx, frame.skew);
-      const outlineRadiusPx = strokeWidthPx / 2;
+      const outlineRadiusPx = frame.strokeWidthPx / 2;
       const bitmaps = glyphs.flatMap(({ placement, penX, baselineY }) => {
         const contours = contoursOf(placement);
         const bitmap = contours && placedGlyphBitmap(contours, penX, baselineY, outlineRadiusPx);
@@ -57,23 +67,13 @@ export function outlineGlyphPainter(face: OutlineFace): GlyphPainter {
       const { canvasWidthPx, canvasHeightPx } = frame.canvasLayout;
       return glyphRaster(new ImageData(canvasWidthPx, canvasHeightPx), bitmaps, colour);
     },
-    rectReader: (frame, outlineRadiusPx) => {
+    rectReader: (frame) => {
       const contoursOf = placementContoursReader(face, frame.fontSizePx, frame.skew);
       return (glyph) => {
         const contours = contoursOf(glyph.placement);
-        return contours && glyphBitmapRect(glyph, contours, frame, outlineRadiusPx);
+        return contours && glyphBitmapRect(glyph, contours, frame);
       };
     },
-  };
-}
-
-/** `read`, kept for each font size it has read: a run holds one size, and a RichTextLabel line a few. */
-function perFontSize<T>(read: (fontSizePx: number) => T): (fontSizePx: number) => T {
-  const bySize = new Map<number, T>();
-  return (fontSizePx) => {
-    let value = bySize.get(fontSizePx);
-    if (value === undefined) bySize.set(fontSizePx, (value = read(fontSizePx)));
-    return value;
   };
 }
 
@@ -81,11 +81,7 @@ function perFontSize<T>(read: (fontSizePx: number) => T): (fontSizePx: number) =
  * The contours each placement draws at `fontSizePx`, or null for a glyph with no contour. Each
  * contour carries the shear and the embolden, as Godot's FreeType draws it.
  */
-function placementContoursReader(
-  face: OutlineFace,
-  fontSizePx: number,
-  skew: number
-): (gp: GlyphPlacement) => GlyphContours | null {
+function placementContoursReader(face: OutlineFace, fontSizePx: number, skew: number): ContoursReader {
   const variation: GlyphVariation = { embolden: face.embolden ?? 0, skew, opentype: face.drawnOpentype };
   const contoursOfGlyph = variedGlyphContoursReader(face.outlines, fontSizePx, variation);
   const contoursOfChar = glyphContoursReader(face.outlines, contoursOfGlyph, variation.opentype);
@@ -122,9 +118,9 @@ function glyphRaster(image: ImageData, bitmaps: readonly GlyphBitmap[], colour: 
 function glyphBitmapRect(
   { penX, baselineY }: PlacedGlyph,
   contours: GlyphContours,
-  { snapsGlyphs }: RasterFrame,
-  outlineRadiusPx: number
+  { snapsGlyphs, strokeWidthPx }: RasterFrame
 ): Rect2 | null {
+  const outlineRadiusPx = strokeWidthPx / 2;
   const [bitmapPenX, bitmapBaselineY] = snapsGlyphs
     ? [penX, baselineY]
     : [Math.floor(penX), Math.floor(baselineY)];

@@ -38,7 +38,7 @@ interface CanvasFaceMetrics extends FontMetrics {
   readonly kind: 'canvas';
 }
 
-/** A face of a registered `FontFace`: the browser draws a glyph with no contour as text. */
+/** A face of a registered `FontFace`: the browser draws its glyphs as text where the previewer cannot read its outlines. */
 export interface RegisteredCanvasFontMetrics extends CanvasFaceMetrics {
   /** The CSS family of the `FontFace`, which the painter sets `ctx.font` to. */
   readonly cssFontFamily: string;
@@ -50,8 +50,9 @@ export interface RegisteredCanvasFontMetrics extends CanvasFaceMetrics {
 }
 
 /**
- * A face that draws from its `outlines` alone. A glyph with no contour draws nothing, as FreeType
- * gives it an empty bitmap, so the face has no ink box to measure.
+ * A face with no `FontFace`: it draws from its `outlines` alone, and draws nothing while it has
+ * none. A glyph with no contour draws nothing, as FreeType gives it an empty bitmap, so the face
+ * has no ink box to measure.
  */
 export interface OutlineCanvasFontMetrics extends CanvasFaceMetrics {
   readonly cssFontFamily?: undefined;
