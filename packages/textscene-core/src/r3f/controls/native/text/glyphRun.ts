@@ -18,7 +18,7 @@ import { isCombiningMark, normalisedCharacters } from './canonicalGlyphs';
 import { orOnRangeError, sfntGlyphIndex, sfntMapsGlyph } from './sfntCmap';
 import { glyphMetricsReader } from './sfntGlyphMetrics';
 import type { SfntFile } from './sfntTables';
-import { isInstanced, type FontMetrics } from './fontMetrics';
+import type { FontMetrics } from './fontMetrics';
 
 /** A glyph of a shaped cluster. */
 export interface RunGlyph {
@@ -221,7 +221,7 @@ const unshapedRuns = perObject((metrics: FontMetrics) => characterRunShaping((ch
  * `variation_opentype` where its outlines shape them, else at the default instance.
  */
 export function getFontRunShaping(metrics: FontMetrics, chars: readonly string[]): readonly RunCluster[] {
-  const { outlines, opentype } = metrics;
-  const atInstance = isInstanced(opentype) ? outlines?.shapingAt?.(chars, opentype) : null;
+  const { outlines, drawnOpentype } = metrics;
+  const atInstance = drawnOpentype && outlines?.shapingAt?.(chars, drawnOpentype);
   return atInstance ?? (metrics.shaping ?? unshapedRuns(metrics))(chars);
 }

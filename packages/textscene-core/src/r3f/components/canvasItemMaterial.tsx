@@ -69,7 +69,7 @@ function useReferencedCanvasItemMaterial(
  * `Ref<Material>` (`scene/main/canvas_item.cpp:1204-1211`). Null for no path, a file still
  * loading or missing, a path no resource file has, or any other material type.
  */
-export function useCanvasItemMaterialFile(path: string | null): CanvasItemMaterialProperties | null {
+function useCanvasItemMaterialFile(path: string | null): CanvasItemMaterialProperties | null {
   const resourcePath = path && isResourceFilePath(path) ? path : '';
   const { value } = useResource<ParsedResource>(resourcePath, 'resource');
   return useMemo(
