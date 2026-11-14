@@ -1317,9 +1317,9 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     paragraphSeparator,
     terminateLastParagraph
   ).entries()) {
-    // The terminator is in the shaped text but not the source, so the per-character closures, keyed
-    // into the whole text, are offset back, and the index past the paragraph's end takes the last value.
-    const sourceIndex = (i: number): number => para.offset + Math.max(0, Math.min(i, para.text.length - 1));
+    // The terminator is in the shaped text but not the source. It takes the style of the separator
+    // it stands for, as RichTextLabel shapes it in the font of its newline (`rich_text_label.cpp:643`).
+    const sourceIndex = (i: number): number => para.offset + Math.min(i, para.text.length);
     const paraText = para.terminated ? para.text + PARAGRAPH_TERMINATOR : para.text;
     const paragraphBidi = { direction, language, bidiOverride, ...paragraphBidiAt?.(para.offset) };
     const indentPx = paragraphIndentPx?.(para.offset) ?? 0;

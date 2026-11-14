@@ -971,6 +971,18 @@ describe('styledTextRuns [hr]', () => {
     expect(runs.map((run) => run.text)).toEqual(['a\n', IMAGE_OBJECT_CHAR, 'b']);
     expect(runs[1]!.fontSizePx).toBe(50);
   });
+
+  it("shapes the break after a rule in its newline's font, not at the rule's width (rich_text_label.cpp:643)", () => {
+    const runs = styledTextRuns(
+      node({}),
+      parsedProps({ text: 'a[hr]\nb', bbcodeEnabled: true }),
+      WHITE,
+      FONT_SIZE,
+      260
+    );
+    const ruleLine = shapeRuns(runs).lines[1]!;
+    expect([ruleLine.ascentPx, ruleLine.descentPx]).toEqual([18, 5]);
+  });
 });
 
 describe('shapeRichText — an [img] placeholder', () => {
