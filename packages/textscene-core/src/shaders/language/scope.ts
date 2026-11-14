@@ -24,7 +24,7 @@ export type Identifier =
       readonly kind: 'argument';
       readonly type: ValueType;
       readonly arraySize: number;
-      readonly isConst: false;
+      readonly isConst: boolean;
     }
   | { readonly kind: 'function' };
 
@@ -53,6 +53,11 @@ export class BlockScope {
     return ownBlockOnly ? undefined : this.parent?.find(name, false);
   }
 
+  /** The local variable `name` of this block or a block around it, never an argument. */
+  findLocal(name: string): LocalVariable | undefined {
+    return this.variables.get(name) ?? this.parent?.findLocal(name);
+  }
+
   /** Whether a block from this one out to the function's body is of `kind`. */
   isInside(kind: BlockKind): boolean {
     return this.kind === kind || (this.parent?.isInside(kind) ?? false);
@@ -62,5 +67,10 @@ export class BlockScope {
 function argumentNamed(args: readonly Argument[], name: string): Identifier | undefined {
   const argument = args.find((candidate) => candidate.name === name);
   if (!argument) return undefined;
-  return { kind: 'argument', type: argument.type, arraySize: 0, isConst: false };
+  return {
+    kind: 'argument',
+    type: argument.type,
+    arraySize: argument.arraySize ?? 0,
+    isConst: argument.isConst ?? false,
+  };
 }

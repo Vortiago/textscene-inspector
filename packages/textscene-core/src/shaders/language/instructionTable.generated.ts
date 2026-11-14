@@ -32,7 +32,7 @@ export interface InstructionRow {
  * args are a bracketed list, so a function of no arguments has `()`.
  */
 const ROWS = `
-void	data type	servers/rendering/shader_language.h:210	#1825	TK_TYPE_VOID				
+void	data type	servers/rendering/shader_language.h:210	#1825	TK_TYPE_VOID			native	native
 bool	data type	servers/rendering/shader_language.h:211	#1823	TK_TYPE_BOOL			native	native
 bvec2	data type	servers/rendering/shader_language.h:212	#1823	TK_TYPE_BVEC2			native	native
 bvec3	data type	servers/rendering/shader_language.h:213	#1823	TK_TYPE_BVEC3			native	native
@@ -97,9 +97,9 @@ break	statement keyword	servers/rendering/shader_language.cpp:359	#1824	TK_CF_BR
 continue	statement keyword	servers/rendering/shader_language.cpp:360	#1824	TK_CF_CONTINUE			native	native
 return	statement keyword	servers/rendering/shader_language.cpp:361	#1823	TK_CF_RETURN			native	native
 discard	statement keyword	servers/rendering/shader_language.cpp:362	#1824	TK_CF_DISCARD			native	native
-in	qualifier	servers/rendering/shader_language.cpp:366	#1825	TK_ARG_IN				
-out	qualifier	servers/rendering/shader_language.cpp:367	#1825	TK_ARG_OUT				
-inout	qualifier	servers/rendering/shader_language.cpp:368	#1825	TK_ARG_INOUT				
+in	qualifier	servers/rendering/shader_language.cpp:366	#1825	TK_ARG_IN			native	native
+out	qualifier	servers/rendering/shader_language.cpp:367	#1825	TK_ARG_OUT			native	native
+inout	qualifier	servers/rendering/shader_language.cpp:368	#1825	TK_ARG_INOUT			native	native
 source_color	uniform hint	servers/rendering/shader_language.cpp:372	#1829	TK_HINT_SOURCE_COLOR				
 color_conversion_disabled	uniform hint	servers/rendering/shader_language.cpp:373	#1829	TK_HINT_COLOR_CONVERSION_DISABLED				
 hint_range	uniform hint	servers/rendering/shader_language.cpp:374	#1829	TK_HINT_RANGE				
@@ -710,7 +710,7 @@ OP_POST_DECREMENT(float)	operator	servers/rendering/shader_language.cpp:1614	#18
 OP_POST_DECREMENT(vec2)	operator	servers/rendering/shader_language.cpp:1614	#1823		vec2	(vec2)	lowered: written to the argument value	lowered: written to the argument value
 OP_POST_DECREMENT(vec3)	operator	servers/rendering/shader_language.cpp:1614	#1823		vec3	(vec3)	lowered: written to the argument value	lowered: written to the argument value
 OP_POST_DECREMENT(vec4)	operator	servers/rendering/shader_language.cpp:1614	#1823		vec4	(vec4)	lowered: written to the argument value	lowered: written to the argument value
-OP_CALL	operator	servers/rendering/shader_language.cpp:1558	#1825					
+OP_CALL	operator	servers/rendering/shader_language.cpp:1558	#1825				native	native
 OP_CONSTRUCT	operator	servers/rendering/shader_language.cpp:1558	#1823				native	native
 OP_STRUCT	operator	servers/rendering/shader_language.cpp:1558	#1824				native	native
 OP_INDEX	operator	servers/rendering/shader_language.cpp:1558	#1823				native	native

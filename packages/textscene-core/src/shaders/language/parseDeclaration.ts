@@ -6,7 +6,8 @@
 
 import { builtInInstruction, keywordInstruction } from './instructions.js';
 import type { ArraySize } from './parseArray.js';
-import { arraySizeOf, type ExpressionParser, typeName } from './parseExpression.js';
+import type { ExpressionParser } from './parseExpression.js';
+import { arraySizeOf, typeName } from './treeWalk.js';
 import type { BlockScope } from './scope.js';
 import type { ArrayConstructNode, DeclarationNode, Declarator, Expression } from './shaderTree.js';
 import type { TokenCursor } from './tokenCursor.js';

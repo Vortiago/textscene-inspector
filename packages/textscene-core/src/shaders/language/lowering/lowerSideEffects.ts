@@ -4,12 +4,13 @@
  * declared first, so `a + (a = 3.0)` reads `a` before the write. `c ? a : b`, `a && b` and
  * `a || b` with a side that writes become an `if`, as GLSL runs one side. An index that writes,
  * in a place that is written, is kept, so `a[i++] += 1.0` steps `i` once, and so is every index
- * before a value that writes, so `a[i] = i++` writes the `a[i]` of the old `i`.
+ * before a value that writes, so `a[i] = i++` writes the `a[i]` of the old `i`. A call's `out`
+ * and `inout` arguments are places in the same way.
  */
 
 import { isWriteOperator, writes } from '../assignment.js';
-import { arraySizeOf } from '../parseExpression.js';
 import type {
+  CallNode,
   DeclarationNode,
   Expression,
   FunctionNode,
@@ -17,7 +18,7 @@ import type {
   Statement,
   VariableNode,
 } from '../shaderTree.js';
-import { subExpressions, withSubExpressions } from '../treeWalk.js';
+import { arraySizeOf, isCall, subExpressions, withSubExpressions } from '../treeWalk.js';
 import { shapeOf } from '../types.js';
 import type { FreshNames } from './freshNames.js';
 import { assign, declaration, flow, flowBody, ifStatement, not, variable } from './nodes.js';
@@ -79,7 +80,28 @@ class Hoist {
     if (op === 'OP_SELECT_IF') return this.selected(expression);
     if (op === 'OP_AND' || op === 'OP_OR') return this.shortCircuit(expression);
     if (isWriteOperator(op)) return this.assigned(expression);
+    if (isCall(expression)) return this.called(expression);
     return this.inOrder(expression);
+  }
+
+  /**
+   * A call's arguments in order, as `inOrder` keeps them, but an `out` or `inout` argument is a
+   * place: before an argument that writes, its indices are kept, never its value.
+   */
+  private called(call: CallNode): Expression {
+    const operands: Expression[] = [];
+    let keptBefore = 0;
+    for (const [at, operand] of call.operands.entries()) {
+      if (writes(operand)) {
+        for (let index = keptBefore; index < operands.length; index++) {
+          const isPlace = call.qualifiers[index] !== 'in';
+          operands[index] = isPlace ? this.place(operands[index]!, true) : this.kept(operands[index]!);
+        }
+        keptBefore = operands.length;
+      }
+      operands.push(call.qualifiers[at] === 'in' ? this.expression(operand) : this.place(operand, false));
+    }
+    return { ...call, operands };
   }
 
   /** Each part in order. Before a part that writes, the values read so far are kept. */

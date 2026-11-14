@@ -5,18 +5,20 @@
  * row that names it and the issue that owns it.
  */
 
-import { builtInInstruction, instruction, keywordInstruction, notTranspiled } from './instructions.js';
+import { builtInInstruction, keywordInstruction, notTranspiled } from './instructions.js';
 import { StatementParser, type ScopeHolder } from './parseBlock.js';
 import { ExpressionParser, type ExpressionScope } from './parseExpression.js';
 import { BlockScope, type Identifier } from './scope.js';
-import { ShadingLanguageError } from './shadingLanguageError.js';
+import type { FunctionSignature } from './parseCall.js';
 import type {
   Argument,
   BlockNode,
   FunctionNode,
+  Qualifier,
   ShaderNode,
   StructMember,
   StructNode,
+  ValueType,
 } from './shaderTree.js';
 import { TokenCursor } from './tokenCursor.js';
 import type { Token } from './tokenizer.js';
@@ -31,9 +33,10 @@ export function parse(tokens: readonly Token[]): ShaderNode {
 class ShaderParser implements ExpressionScope {
   private readonly structs: StructNode[] = [];
   private readonly functions: FunctionNode[] = [];
-  /** The argument types of each function declared so far, its own included while its body is read. */
-  private readonly signatures: { readonly name: string; readonly types: string }[] = [];
-  private returnType = 'void';
+  /** Each function declared so far, its own included while its body is read. */
+  private readonly signatures: FunctionSignature[] = [];
+  /** The function whose body is read. Set at each function's `(`...`)`, and kept after its body. */
+  private current: FunctionSignature | undefined;
   /** The block a statement is read in. Outside a body, an empty one. */
   private readonly holder: ScopeHolder = { current: new BlockScope(undefined, 'plain', []) };
   private readonly expressions: ExpressionParser;
@@ -46,14 +49,26 @@ class ShaderParser implements ExpressionScope {
       this.expressions,
       this.holder,
       (name) => this.struct(name) !== undefined,
-      () => this.returnType
+      () => this.current!
     );
   }
 
   identifier(name: string): Identifier | undefined {
     const found = this.holder.current.find(name, false);
     if (found) return found;
-    return this.signatures.some((declared) => declared.name === name) ? { kind: 'function' } : undefined;
+    return this.signatures.some((declared) => declared.rname === name) ? { kind: 'function' } : undefined;
+  }
+
+  functionsNamed(rname: string): readonly FunctionSignature[] {
+    return this.signatures.filter((declared) => declared.rname === rname);
+  }
+
+  currentFunction(): string {
+    return this.current!.name;
+  }
+
+  isLocal(name: string): boolean {
+    return this.holder.current.findLocal(name) !== undefined;
   }
 
   struct(name: string): StructNode | undefined {
@@ -130,33 +145,57 @@ class ShaderParser implements ExpressionScope {
 
   /** A function, from its return type (`shader_language.cpp:10258`). */
   private functionDefinition(first: Token): FunctionNode {
-    const typeToken = this.precededType(first, () => this.refuseGlobal(first));
-    if (typeToken.type === 'TK_IDENTIFIER' && this.struct(typeToken.text!))
-      throw notTranspiled(instruction('OP_CALL')!, typeToken.position, `a function of ${typeToken.text}`);
-    if (keywordInstruction(typeToken.type)?.family !== 'data type') this.refuseGlobal(typeToken);
-    const returnType = this.dataType(typeToken);
-    if (shapeOf(returnType) === undefined && returnType !== 'void') {
-      this.tokens.fail('Invalid function type (samplers are not allowed).');
-    }
-    if (this.tokens.peek().type === 'TK_BRACKET_OPEN')
-      throw notTranspiled(instruction('NODE_TYPE_ARRAY')!, this.tokens.peek().position);
+    const isConst = first.type === 'TK_CONST';
+    const typeToken = this.precededType(isConst ? this.tokens.next() : first, () => this.refuseGlobal(first));
+    const returnType = this.returnTypeOf(typeToken, first);
+    const returnArraySize = this.tokens.peek().type === 'TK_BRACKET_OPEN' ? this.arraySize() : 0;
     const nameToken = this.tokens.next();
     if (nameToken.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected a function name after type.');
-    const name = nameToken.text!;
-    if (builtInInstruction(name)) this.tokens.fail(`Redefinition of '${name}'.`);
+    const rname = nameToken.text!;
+    if (this.struct(rname) || builtInInstruction(rname)) this.tokens.fail(`Redefinition of '${rname}'.`);
     if (this.tokens.next().type !== 'TK_PARENTHESIS_OPEN') {
       if (returnType === 'void') this.tokens.fail("Expected '(' after function identifier.");
-      throw notTranspiled(keywordInstruction('TK_CONST')!, nameToken.position);
+      throw notTranspiled(keywordInstruction('TK_CONST')!, isConst ? first.position : nameToken.position);
     }
+    if (isConst) this.tokens.fail("'const' qualifier cannot be used with a function return type.");
     const args = this.argumentList();
-    this.returnType = returnType;
-    this.declare(name, args, nameToken);
+    const signature = this.declare({ rname, returnType, returnArraySize, arguments: args });
+    this.current = signature;
     this.tokens.expect('TK_CURLY_BRACKET_OPEN', "Expected a '{' to begin function.");
     const body = this.statements.body(args, this.tokens.lastPosition());
     if (returnType !== 'void' && !hasReturn(body)) {
       this.tokens.fail("Expected at least one 'return' statement in a non-void function.");
     }
-    return { kind: 'function', name, returnType, arguments: args, body, position: first.position };
+    const { name } = signature;
+    return {
+      kind: 'function',
+      name,
+      rname,
+      returnType,
+      ...(returnArraySize > 0 ? { returnArraySize } : {}),
+      arguments: args,
+      body,
+      position: first.position,
+    };
+  }
+
+  /** A return type: a value type, `void` or a struct's name. Godot refuses a sampler. */
+  private returnTypeOf(typeToken: Token, first: Token): ValueType {
+    if (typeToken.type === 'TK_IDENTIFIER' && this.struct(typeToken.text!)) return typeToken.text!;
+    if (keywordInstruction(typeToken.type)?.family !== 'data type') this.refuseGlobal(typeToken);
+    const type = this.dataType(typeToken);
+    // A `const` global of any other type is a constant, which the transpiler refuses.
+    if (first.type === 'TK_CONST' && shapeOf(type) === undefined) this.refuseGlobal(first);
+    if (shapeOf(type) === undefined && type !== 'void') {
+      this.tokens.fail('Invalid function type (samplers are not allowed).');
+    }
+    return type;
+  }
+
+  /** `[n]` of an array type, whose size must be known (`_parse_array_size`). */
+  private arraySize(): number {
+    this.tokens.next();
+    return this.expressions.arrays.size(true)!;
   }
 
   /**
@@ -196,55 +235,82 @@ class ShaderParser implements ExpressionScope {
     return args;
   }
 
+  /**
+   * `const in float a[2]`: `const`, a qualifier, a precision, the type, a size before or after
+   * the name (`shader_language.cpp:10724`).
+   */
   private argumentDeclaration(first: Token, declared: readonly Argument[]): Argument {
-    const qualifier = keywordInstruction(first.type);
-    if (first.type === 'TK_CONST' || (qualifier?.family === 'qualifier' && !isPrecisionToken(first.type))) {
-      throw notTranspiled(qualifier!, first.position);
+    const isConst = first.type === 'TK_CONST';
+    let token = isConst ? this.tokens.next() : first;
+    const qualifier = QUALIFIERS[token.type];
+    if (qualifier) {
+      if (isConst && qualifier !== 'in')
+        this.tokens.fail(
+          `The '${qualifier}' qualifier cannot be used within a function parameter declared with 'const'.`
+        );
+      token = this.tokens.next();
     }
-    const typeToken = this.precededType(first, () =>
+    const typeToken = this.precededType(token, () =>
       this.tokens.fail('Expected a valid data type for argument.')
     );
-    if (typeToken.type === 'TK_IDENTIFIER' && this.struct(typeToken.text!))
-      throw notTranspiled(instruction('OP_CALL')!, typeToken.position, `an argument of ${typeToken.text}`);
-    if (keywordInstruction(typeToken.type)?.family !== 'data type' || typeToken.type === 'TK_STRUCT') {
-      this.tokens.fail('Expected a valid data type for argument.');
-    }
-    const type = this.dataType(typeToken);
-    if (type === 'void') this.tokens.fail('Void type not allowed as argument.');
+    const type = this.argumentType(typeToken);
+    let arraySize = this.tokens.peek().type === 'TK_BRACKET_OPEN' ? this.arraySize() : 0;
     const nameToken = this.tokens.next();
-    if (nameToken.type === 'TK_BRACKET_OPEN')
-      throw notTranspiled(instruction('NODE_TYPE_ARRAY')!, nameToken.position);
     if (nameToken.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected an identifier for argument name.');
     const name = nameToken.text!;
     if (declared.some((argument) => argument.name === name) || builtInInstruction(name)) {
       this.tokens.fail(`Redefinition of '${name}'.`);
     }
-    if (this.tokens.peek().type === 'TK_BRACKET_OPEN')
-      throw notTranspiled(instruction('NODE_TYPE_ARRAY')!, this.tokens.peek().position);
-    return { name, type, position: nameToken.position };
+    if (this.tokens.peek().type === 'TK_BRACKET_OPEN') arraySize = this.arraySize();
+    return {
+      name,
+      type,
+      qualifier: qualifier ?? 'in',
+      ...(isConst ? { isConst } : {}),
+      ...(arraySize > 0 ? { arraySize } : {}),
+      position: nameToken.position,
+    };
+  }
+
+  /** An argument's type: a struct's name or a data type other than `void`. */
+  private argumentType(typeToken: Token): ValueType {
+    if (typeToken.type === 'TK_IDENTIFIER' && this.struct(typeToken.text!)) return typeToken.text!;
+    if (keywordInstruction(typeToken.type)?.family !== 'data type' || typeToken.type === 'TK_STRUCT') {
+      this.tokens.fail('Expected a valid data type for argument.');
+    }
+    const type = this.dataType(typeToken);
+    if (type === 'void') this.tokens.fail('Void type not allowed as argument.');
+    return type;
   }
 
   /**
-   * Records function `name` with the arguments just read. Godot refuses a second function of the
-   * same argument types (`shader_language.cpp:10921`). It accepts an overload, which the transpiler
-   * refuses: it keys the functions it gives by name.
+   * Records a function and gives it Godot's name: `f`, or `f@2` for the second function of that
+   * name. Godot refuses a second function of the same argument types and sizes, whatever it
+   * returns (`shader_language.cpp:10921`).
    */
-  private declare(name: string, args: readonly Argument[], token: Token): void {
-    const types = args.map((argument) => argument.type).join(',');
-    const overloads = this.signatures.filter((declared) => declared.name === name);
-    if (overloads.some((declared) => declared.types === types))
-      this.tokens.fail(`Redefinition of '${name}'.`);
-    if (overloads.length > 0) {
-      const owner = instruction('OP_CALL')!.owner;
-      throw new ShadingLanguageError(
-        `An overload of '${name}' is not transpiled yet (${owner})`,
-        token.position,
-        owner
-      );
-    }
-    this.signatures.push({ name, types });
+  private declare(header: Omit<FunctionSignature, 'name'>): FunctionSignature {
+    const overloads = this.signatures.filter((declared) => declared.rname === header.rname);
+    if (overloads.some((declared) => isSameArguments(declared.arguments, header.arguments)))
+      this.tokens.fail(`Redefinition of '${header.rname}'.`);
+    const name = overloads.length === 0 ? header.rname : `${header.rname}@${overloads.length + 1}`;
+    const signature = { name, ...header };
+    this.signatures.push(signature);
+    return signature;
   }
 }
+
+/** The tokens of the qualifiers and the qualifier each names. */
+const QUALIFIERS: Readonly<Record<string, Qualifier>> = {
+  TK_ARG_IN: 'in',
+  TK_ARG_OUT: 'out',
+  TK_ARG_INOUT: 'inout',
+};
+
+const isSameArguments = (a: readonly Argument[], b: readonly Argument[]) =>
+  a.length === b.length &&
+  a.every(
+    (argument, index) => argument.type === b[index]!.type && argument.arraySize === b[index]!.arraySize
+  );
 
 const isPrecisionToken = (type: string) => type.startsWith('TK_PRECISION_');
 

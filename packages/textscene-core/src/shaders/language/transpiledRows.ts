@@ -23,7 +23,12 @@ export function checkTranspiled(shader: ShaderNode): void {
 
 function checkFunction(definition: FunctionNode): void {
   checkType(definition.returnType, definition.position);
-  for (const argument of definition.arguments) checkType(argument.type, argument.position);
+  if (definition.returnArraySize) checkRow(instruction('NODE_TYPE_ARRAY')!, definition.position);
+  for (const argument of definition.arguments) {
+    checkType(argument.type, argument.position);
+    checkRow(instruction(argument.qualifier)!, argument.position);
+    if (argument.arraySize) checkRow(instruction('NODE_TYPE_ARRAY')!, argument.position);
+  }
   for (const statement of everyStatement(definition.body)) {
     checkStatement(statement);
     for (const expression of statementExpressions(statement))

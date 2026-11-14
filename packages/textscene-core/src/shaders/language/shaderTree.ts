@@ -106,6 +106,20 @@ export interface OperatorNode {
   readonly position: SourcePosition;
 }
 
+/**
+ * `f(a, b)`: OP_CALL of a function of the shader, as Godot holds it, with the function's own name,
+ * `f@2` for the second overload of `f` (`shader_language.cpp:10962`), and the arguments as its
+ * operands. Its type is the function's return type, `void` included, with the array size of an
+ * array return.
+ */
+export interface CallNode extends OperatorNode {
+  readonly op: 'OP_CALL';
+  readonly function: string;
+  /** The qualifier of each parameter, so a pass sees which operands the call writes. */
+  readonly qualifiers: readonly Qualifier[];
+  readonly arraySize?: number;
+}
+
 /** NODE_TYPE_MEMBER: a swizzle, `a.zyx`, with the row of its letter set. */
 export interface MemberNode {
   readonly kind: 'member';
@@ -204,17 +218,30 @@ export interface StructNode {
   readonly position: SourcePosition;
 }
 
+/** Whether a parameter takes the caller's value, gives one back, or both (`ArgumentQualifier`). */
+export type Qualifier = 'in' | 'out' | 'inout';
+
+/** A parameter of a function, with its array size: `const in float a`, `out int b[2]`. */
 export interface Argument {
   readonly name: string;
   readonly type: ValueType;
+  readonly qualifier: Qualifier;
+  /** A `const` parameter: Godot refuses a write to it. */
+  readonly isConst?: boolean;
+  readonly arraySize?: number;
   readonly position: SourcePosition;
 }
 
-/** NODE_TYPE_FUNCTION. */
+/**
+ * NODE_TYPE_FUNCTION. `name` is Godot's own name, `f@2` for the second overload of `f`, and
+ * `rname` the name in the text.
+ */
 export interface FunctionNode {
   readonly kind: 'function';
   readonly name: string;
+  readonly rname: string;
   readonly returnType: ValueType;
+  readonly returnArraySize?: number;
   readonly arguments: readonly Argument[];
   readonly body: BlockNode;
   readonly position: SourcePosition;

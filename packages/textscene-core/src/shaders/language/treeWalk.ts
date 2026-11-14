@@ -3,7 +3,7 @@
  * rebuilds every node names each kind once, here.
  */
 
-import type { BlockNode, ControlFlowNode, Expression, Statement } from './shaderTree.js';
+import type { BlockNode, CallNode, ControlFlowNode, Expression, Statement } from './shaderTree.js';
 
 /** Whether `statement` is the empty statement `;`. */
 export const isEmpty = (statement: Statement): boolean =>
@@ -11,6 +11,21 @@ export const isEmpty = (statement: Statement): boolean =>
 
 export const isReturn = (statement: Statement): statement is ControlFlowNode =>
   statement.kind === 'control flow' && statement.flow === 'FLOW_OP_RETURN';
+
+export const isCall = (expression: Expression): expression is CallNode =>
+  expression.kind === 'operator' && expression.op === 'OP_CALL';
+
+/** The element count of an array value, 0 for one value. */
+export function arraySizeOf(expression: Expression): number {
+  if (expression.kind === 'array construct') return expression.arraySize;
+  if (expression.kind === 'variable' || expression.kind === 'field' || expression.kind === 'whole assign')
+    return expression.arraySize ?? 0;
+  if (isCall(expression)) return expression.arraySize ?? 0;
+  return 0;
+}
+
+/** A type as Godot's messages name it: `float`, or `float[3]` for an array. */
+export const typeName = (type: string, arraySize: number) => (arraySize > 0 ? `${type}[${arraySize}]` : type);
 
 /** The expressions `expression` holds. */
 export function subExpressions(expression: Expression): readonly Expression[] {
