@@ -2,10 +2,8 @@
  * Drift guard: the three promises of `solveHandoff.ts` that neither the type
  * checker nor a per-slice test can see.
  */
-// Not asserted: a hit rate, or that a share ran once. The solver gets `sortableView(n)`
-// (`solveTree.ts:336-339`), a fresh object wherever a child is promoted, and
-// `presetTimeMinimumSize`/`buildInternalTabBarNode` mint nodes no painter sees. A miss
-// is a recompute, never a wrong answer.
+// Not asserted: a hit rate, or that a share ran once. `presetTimeMinimumSize` mints nodes
+// no painter sees. A miss is a recompute, never a wrong answer.
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -25,6 +23,8 @@ import type { SolveNode } from './solveTree';
 import type { TscnNode } from '../../../parser/types';
 import { scrollContainerLayoutChannel } from '../../../nodes/2d/ui/scrollcontainer/nativeSolver';
 import { splitContainerBoundaryChannel } from '../../../nodes/2d/ui/shared/splitContainerSolver';
+import { tabHeaderHeightChannel } from '../../../nodes/2d/ui/tabcontainer/nativeSolver';
+import { tabBarLoadedOffset } from '../../../nodes/2d/ui/tabbar/loadedOffset';
 // Side-effect import: registers every Control slice's solvers and painters.
 import '../index';
 
@@ -32,8 +32,11 @@ const UI_ROOT = join(import.meta.dirname, '../../../nodes/2d/ui');
 const WINDOWS_ROOT = join(import.meta.dirname, '../../../nodes/windows');
 const SOURCE_ROOT = join(import.meta.dirname, '../../..');
 
-/** The two file kinds a solve handoff can be spelled in: the producer and the consumer. */
-const HANDOFF_FILES = ['nativeSolver.ts', 'Component.tsx'];
+/**
+ * The file kinds a solve handoff can be spelled in: the producers (a solver, the layout of a class's
+ * internal Controls, a share's module) and the consumer.
+ */
+const HANDOFF_FILES = ['nativeSolver.ts', 'internalControls.ts', 'tabBarModel.ts', 'Component.tsx'];
 
 /** Read once: the tree cannot change mid-run, and each scan reads all of it. */
 const HANDOFF_SOURCES: SourceFile[] = walkSources([UI_ROOT], (name) => HANDOFF_FILES.includes(name));
@@ -98,16 +101,17 @@ function shareInvariantOffenders(source: string): number[] {
 // tell this slice's value from any object of the same shape.
 
 /**
- * The four spellings of `meta` that are not a read: taking it off the painter's
- * props, handing it to a channel's opener, sealing one in a solver, and the JSX
- * sites that pass `undefined` to a painter they render (`tabcontainer`,
- * `subviewportcontainer`). `import.meta` is stripped first: `\bmeta\b` matches in it.
+ * The spellings of `meta` that are not a read: taking it off the painter's props,
+ * handing it to a channel's opener, sealing one in a solver or, by path, in the
+ * layout of a class's internal Controls, and the JSX
+ * site that passes `undefined` to a painter it renders (`subviewportcontainer`). `import.meta` is stripped first: `\bmeta\b` matches in it.
  */
 function stripAllowedMeta(code: string): string {
   return code
     .replace(/\bimport\.meta\b/g, '')
     .replace(/\.open\(\s*meta\s*\)/g, '')
     .replace(/\bmeta:\s*[A-Za-z_$][\w$]*\.seal\(/g, '')
+    .replace(/\bmeta:\s*new Map\(\[\[[^,\]]+,\s*[A-Za-z_$][\w$]*\.seal\(/g, '')
     .replace(/\bmeta=\{undefined\}/g, '')
     .replace(/(^|[{,])\s*meta\s*(?=[,}])/g, '$1');
 }
@@ -148,19 +152,24 @@ function containerTree(type: string): SolveNode[] {
 
 const VIEWPORT = { x: 0, y: 0, w: 300, h: 300 };
 
-/** Every type whose registered `ContainerLayoutFn` seals a channel value. */
-/** Each producing type and the channel its painter opens `meta` through. */
-const CHANNEL_OF: Record<string, Channel<object>> = {
+/** Each type whose registered `ContainerLayoutFn` seals a channel value, and the channel its painter opens `meta` through. */
+const CHANNEL_OF: Record<string, Channel<unknown>> = {
   ScrollContainer: scrollContainerLayoutChannel,
   HSplitContainer: splitContainerBoundaryChannel,
   VSplitContainer: splitContainerBoundaryChannel,
   SplitContainer: splitContainerBoundaryChannel,
+  TabContainer: tabHeaderHeightChannel,
 };
 const CHANNEL_TYPES = Object.keys(CHANNEL_OF);
 
-/** Whether a registered channel opens `meta`: every payload is an object, so `undefined` means foreign. */
+/** The channels an `InternalLayoutFn` seals on an internal Control's entry. */
+const INTERNAL_CHANNELS: readonly Channel<unknown>[] = [tabBarLoadedOffset];
+
+/** Whether a registered channel opens `meta`: `undefined` from every opener means foreign. */
 function opensThroughAChannel(meta: unknown): boolean {
-  return Object.values(CHANNEL_OF).some((channel) => channel.open(meta) !== undefined);
+  return [...Object.values(CHANNEL_OF), ...INTERNAL_CHANNELS].some(
+    (channel) => channel.open(meta) !== undefined
+  );
 }
 
 describe('solve handoff conformance', () => {
@@ -246,7 +255,7 @@ describe('solve handoff conformance', () => {
     expect(handRolledOpenerLines('  const pos = (meta as SplitLayout).draggerPos;')).toEqual([1]);
     expect(handRolledOpenerLines('  if (typeof meta === "object") return meta;')).toEqual([1]);
     expect(handRolledOpenerLines('  minimumSizeMeta: (n) => resolve(n).meta,')).toEqual([1]);
-    // The four legitimate spellings.
+    // The legitimate spellings.
     expect(handRolledOpenerLines('  const layout = scrollBarsChannel.open(meta) ?? fallback;')).toEqual([]);
     expect(handRolledOpenerLines('  return { rects: out, meta: scrollBarsChannel.seal(layout) };')).toEqual(
       []
@@ -254,6 +263,8 @@ describe('solve handoff conformance', () => {
     expect(
       handRolledOpenerLines('export function X({ solveNode, rect, meta }: NativeControlComponentProps) {')
     ).toEqual([]);
+    expect(handRolledOpenerLines('    meta: new Map([[bar.path, offsetChannel.seal(offset)]]),')).toEqual([]);
+    expect(handRolledOpenerLines('    meta: new Map([[bar.path, offset]]),')).toEqual([1]);
     expect(handRolledOpenerLines('  meta,')).toEqual([]);
     expect(handRolledOpenerLines('            meta={undefined}')).toEqual([]);
     // Prose, and the one unrelated `meta` every scan file carries.

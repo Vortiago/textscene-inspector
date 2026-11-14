@@ -11,7 +11,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { TabBarProperties } from './types';
 import { TabBar } from './Component';
-import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import {
   controlNode,
   solveNode as emptySolveNode,
@@ -219,11 +219,12 @@ describe('<TabBar> (isolated painter contract)', () => {
     expect(await titleFontSizePx({})).toBe(THEME.fontSize);
   });
 
-  it('draws the scroll arrows once the tabs overflow a clipped bar', async () => {
-    const narrowRect: Rect2 = { x: 0, y: 0, w: 60, h: 32 };
+  /** The `ControlQuad` icon meshes of a bar too narrow for its two tabs: the two scroll arrows. */
+  async function scrollArrowMeshes(tint = painterEnv().tint) {
     const renderer = await ReactThreeTestRenderer.create(
       <TabBar
         {...painterEnv()}
+        tint={tint}
         solveNode={solveNode({
           tabs: [
             { title: 'General Settings', tooltip: '', disabled: false },
@@ -232,19 +233,51 @@ describe('<TabBar> (isolated painter contract)', () => {
           currentTab: 0,
           clipTabs: true,
         })}
-        rect={narrowRect}
+        rect={{ x: 0, y: 0, w: 60, h: 32 }}
         theme={THEME}
         renderOrder={0}
       />
     );
-    const iconMeshes = renderer.scene
+    return renderer.scene
       .findAllByType('Mesh')
       .map((m) => m.instance as THREE.Mesh)
       .filter(
         (m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined
       );
+  }
+
+  it('draws the scroll arrows once the tabs overflow a clipped bar', async () => {
     // The overflowing second tab is clipped off (never drawn) and its
     // absence is what makes the two scroll arrows visible.
-    expect(iconMeshes.length).toBeGreaterThanOrEqual(2);
+    expect((await scrollArrowMeshes()).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("tints the scroll arrows with the bar's modulate, as every item it draws (tab_bar.cpp:564-592)", async () => {
+    const arrows = await scrollArrowMeshes(painterTint({ r: 0, g: 1, b: 0, a: 1 }));
+    const colors = arrows.map((m) => (m.material as THREE.MeshBasicMaterial).color);
+    expect(colors.map((c) => c.r)).toEqual(colors.map(() => 0));
+  });
+});
+
+describe('<TabBar> with its tab style flipped (`set_tab_style_v_flip`, tab_bar.cpp:648-654)', () => {
+  /** The product of every scale on y from the tab's StyleBox up: its sign says which way up it draws. */
+  async function styleSignY(properties: Partial<TabBarProperties>): Promise<number> {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TabBar
+        {...painterEnv()}
+        solveNode={solveNode({ tabs: [{ title: 'A', tooltip: '', disabled: false }], ...properties })}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={0}
+      />
+    );
+    const [chrome] = findChromeMeshes(renderer.scene);
+    let sign = 1;
+    for (let o: THREE.Object3D | null = chrome!; o; o = o.parent) sign *= o.scale.y;
+    return sign;
+  }
+
+  it('draws the StyleBox mirrored on y', async () => {
+    expect(await styleSignY({ tabStyleVFlip: true })).toBe(-(await styleSignY({})));
   });
 });

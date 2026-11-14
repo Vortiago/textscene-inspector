@@ -45,4 +45,9 @@ export interface TabBarProperties extends ControlProperties {
   selectWithRmb?: boolean;
   /** `tab_bar.h:121`, default false. Interaction only. */
   deselectEnabled?: boolean;
+  /**
+   * `tab_bar.h:118`, no scene line carries it: a TabContainer sets it while its tabs sit at the bottom
+   * (`tab_container.cpp:826`). Each tab's StyleBox then draws mirrored on y.
+   */
+  tabStyleVFlip?: boolean;
 }

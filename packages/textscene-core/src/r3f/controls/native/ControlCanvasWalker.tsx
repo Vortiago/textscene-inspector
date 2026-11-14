@@ -14,8 +14,9 @@ import type { TextMeasurer } from './solverRegistry';
 import { childRectsOf, createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
 import { controlComponentRegistry, NO_PIECE_SLOTS } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
-import { internalControlsOf, type InternalControl } from './internalControls';
-import { InternalControlGroup, internalControlSlots, type InternalPainterEnv } from './InternalControlGroup';
+import { useCanvasModulateFor } from '../../canvasModulate';
+import { internalControlsOf } from './internalControls';
+import { InternalControls } from './InternalControlGroup';
 import { OwnCanvasModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
 import { useTextureSamplerOver } from '../../canvasItemTextureSampler';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
@@ -241,30 +242,6 @@ function ControlNodeGroup(props: ControlNodeGroupProps) {
   );
 }
 
-interface InternalControlsProps {
-  internals: readonly InternalControl[];
-  solved: ReadonlyMap<string, SolvedControl>;
-  slot: CanvasSlot;
-  chromeSlot: CanvasSlot;
-  env: InternalPainterEnv;
-}
-
-/** The internal Controls of one Control, mounted only for a class that builds some. */
-function InternalControls({ internals, solved, slot, chromeSlot, env }: InternalControlsProps) {
-  const { theme, measureText, snapToPixels, tint, childTint } = env;
-  const slots = useMemo(
-    () => internalControlSlots(internals, slot, chromeSlot),
-    [internals, slot, chromeSlot]
-  );
-  const painterEnv = useMemo(
-    () => ({ theme, measureText, snapToPixels, tint, childTint }),
-    [theme, measureText, snapToPixels, tint, childTint]
-  );
-  return internals.map(({ node }) => (
-    <InternalControlGroup key={node.path} node={node} solved={solved} slots={slots} env={painterEnv} />
-  ));
-}
-
 function ControlItemGroup({
   solveNode,
   solved,
@@ -335,6 +312,11 @@ function ControlItemGroup({
   const childRects = useMemo(() => childRectsOf(solveNode.children, solved), [solveNode.children, solved]);
 
   const internals = internalControlsOf(solveNode, theme);
+  const canvasModulate = useCanvasModulateFor(state.material);
+  const internalEnv = useMemo(
+    () => ({ theme, measureText, snapToPixels, inheritedModulate: tint.inherited, canvasModulate }),
+    [theme, measureText, snapToPixels, tint.inherited, canvasModulate]
+  );
 
   // A canvas boundary such as `CanvasLayer` wraps its descendants in fresh
   // context, so they must be its React children. The registration declares it,
@@ -368,8 +350,7 @@ function ControlItemGroup({
           solved={solved}
           slot={slot}
           chromeSlot={chromeSlot}
-          // The parent's tint, not the one a child item inherits.
-          env={{ theme, measureText, snapToPixels, tint, childTint: tint.internalChild }}
+          env={internalEnv}
         />
       )}
     </NodePathProvider>
