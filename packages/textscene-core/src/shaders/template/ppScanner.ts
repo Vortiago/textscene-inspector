@@ -6,6 +6,7 @@
  */
 
 import { ShadingLanguageError, type SourcePosition } from '../language/shadingLanguageError.js';
+import type { Macro } from './preprocess.js';
 import type { Slot, VariantLine } from './variant.js';
 
 export type PpTokenKind = 'identifier' | 'number' | 'punctuator' | 'newline' | 'slot' | 'end';
@@ -18,6 +19,8 @@ export interface PpToken {
   /** White space stands before the token on its line: `#define F(x)` and `#define F (x)` differ. */
   readonly space: boolean;
   readonly slot?: Slot;
+  /** On a slot after the preprocessor: the macros defined where the slot is, which its code reads. */
+  readonly macros?: ReadonlyMap<string, Macro>;
 }
 
 /** glslang's punctuators of more than one character (`PpScanner.cpp:440-640`), longest first. */

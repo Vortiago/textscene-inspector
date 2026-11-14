@@ -284,12 +284,25 @@ export class GlslExpressionParser {
     this.tokens.next();
     const operand = this.unary();
     if (op === 'OP_INCREMENT' || op === 'OP_DECREMENT') this.writable(operand, token!);
-    const shape = glslShapeOf(operand.type);
-    if (!shape)
-      this.tokens.fail(`wrong operand type for '${token!.text}': '${operand.type}'`, token!.position);
-    if (op === 'OP_NEGATE' && operand.kind === 'constant' && shape.scalar !== 'bool')
-      return negated(operand, token!);
+    this.takenBy(op, operand, token!);
+    if (op === 'OP_NEGATE' && operand.kind === 'constant') return negated(operand, token!);
     return this.operator(op, [operand], operand.type);
+  }
+
+  /**
+   * Fails unless `op` takes `operand`, as glslang's unary check does: `!` a bool scalar, `~` an
+   * integer, and a sign or a step any number.
+   */
+  private takenBy(op: string, operand: Expression, token: PpToken): void {
+    const shape = glslShapeOf(operand.type);
+    const takes =
+      shape !== undefined &&
+      (op === 'OP_NOT'
+        ? shape.scalar === 'bool' && shape.rows === 1
+        : op === 'OP_BIT_INVERT'
+          ? shape.scalar === 'int' || shape.scalar === 'uint'
+          : shape.scalar !== 'bool');
+    if (!takes) this.tokens.fail(`wrong operand type for '${token.text}': '${operand.type}'`, token.position);
   }
 
   /** Fails unless `target` names storage the program may write, as glslang's l-value check does. */
@@ -310,11 +323,9 @@ export class GlslExpressionParser {
       else if (token.text === '++' || token.text === '--') {
         this.tokens.next();
         this.writable(node, token);
-        node = this.operator(
-          token.text === '++' ? 'OP_POST_INCREMENT' : 'OP_POST_DECREMENT',
-          [node],
-          node.type
-        );
+        const op = token.text === '++' ? 'OP_POST_INCREMENT' : 'OP_POST_DECREMENT';
+        this.takenBy(op, node, token);
+        node = this.operator(op, [node], node.type);
       } else return node;
     }
   }

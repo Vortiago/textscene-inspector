@@ -44,9 +44,12 @@ export interface Macro {
   busy: boolean;
 }
 
-/** The preprocessed text of `lines`. */
-export function preprocess(lines: readonly VariantLine[]): Preprocessed {
-  return new Preprocessor(scanLines(lines)).run();
+/** The preprocessed text of `lines`, under `macros` defined before its first line. */
+export function preprocess(
+  lines: readonly VariantLine[],
+  macros: ReadonlyMap<string, Macro> = new Map()
+): Preprocessed {
+  return new Preprocessor(scanLines(lines), macros).run();
 }
 
 /** An input the preprocessor reads tokens from: the text, a macro's expansion or a macro argument. */
@@ -76,8 +79,9 @@ class Preprocessor {
   private readonly branches: BranchRecord[] = [];
   private atLineStart = true;
 
-  constructor(tokens: readonly PpToken[]) {
+  constructor(tokens: readonly PpToken[], macros: ReadonlyMap<string, Macro>) {
     this.base = { tokens, index: 0 };
+    for (const [name, macro] of macros) this.macros.set(name, macro);
   }
 
   run(): Preprocessed {
@@ -85,7 +89,8 @@ class Preprocessor {
     for (;;) {
       const token = this.nextExpanded(true);
       if (token.kind === 'end') break;
-      if (token.kind !== 'newline') tokens.push(token);
+      if (token.kind === 'slot') tokens.push({ ...token, macros: new Map(this.macros) });
+      else if (token.kind !== 'newline') tokens.push(token);
     }
     if (this.conditionals.length > 0)
       this.fail("'#endif' : missing #endif", this.base.tokens.at(-1)!.position);

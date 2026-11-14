@@ -85,7 +85,9 @@ function usageDefines(shader: ShaderNode, table: ModeTable): string[] {
     for (const expression of everyExpressionIn(definition.body)) {
       if (expression.kind !== 'variable' || !expression.builtIn) continue;
       const define = table.usage_defines[expression.name];
-      if (define) defines.add(define);
+      // `@NAME` reads the define of NAME (`shader_compiler.cpp:908-910`).
+      const resolved = define?.startsWith('@') ? table.usage_defines[define.slice(1)] : define;
+      if (resolved) defines.add(resolved);
     }
   return [...defines];
 }

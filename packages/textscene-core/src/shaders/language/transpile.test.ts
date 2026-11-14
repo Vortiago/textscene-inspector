@@ -89,6 +89,15 @@ describe('transpileShadingLanguage', () => {
     );
   });
 
+  it('refuses a shader of a type that links into a template, and names the call that draws it', () => {
+    expect(() => transpileShadingLanguage('shader_type sky;\nvoid sky() { COLOR = vec3(0.0); }')).toThrow(
+      expect.objectContaining({
+        message: expect.stringContaining("links into Godot's sky template: draw it with transpileSky"),
+        position: expect.objectContaining({ line: 1, column: 1 }),
+      })
+    );
+  });
+
   it('refuses a text Godot refuses', () => {
     expect(() => transpileShadingLanguage('vec3 probe(vec3 a) { return a.q; }')).toThrow(
       ShadingLanguageError

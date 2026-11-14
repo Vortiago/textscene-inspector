@@ -155,6 +155,23 @@ describe('parseTemplateStage', () => {
     expect(() => inFunction('const int n = 1;\nn++;')).toThrow('l-value required');
   });
 
+  it.each([
+    ['!', 'float a = 1.0;\nfloat b = !a;'],
+    ['!', 'bvec2 a = bvec2(true);\nbvec2 b = !a;'],
+    ['~', 'float a = 1.0;\nfloat b = ~a;'],
+    ['-', 'bool a = true;\nbool b = -a;'],
+    ['++', 'bool a = true;\na++;'],
+  ])("refuses '%s' on an operand of the wrong type", (_, body) => {
+    expect(() => inFunction(body)).toThrow('wrong operand type');
+  });
+
+  it.each(['bool b = !true;', 'ivec2 b = ~ivec2(1);', 'mat2 b = -mat2(1.0);', 'uint u = 1u;\nu--;'])(
+    'keeps a unary operator on an operand it takes: %s',
+    (body) => {
+      expect(() => inFunction(body)).not.toThrow();
+    }
+  );
+
   it('refuses a write to a uniform', () => {
     expect(() => printed('uniform float u;\nvoid main() { u = 1.0; }')).toThrow('l-value required');
   });

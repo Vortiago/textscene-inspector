@@ -10,12 +10,14 @@ import { Fn, int, texture, texture3D } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
 import { type BodyEmitter, CalledFunctions } from '../language/emitCall.js';
 import { constantNode } from '../language/emitConstant.js';
+import { GlslangFolding } from '../language/glslangFolding.js';
 import type { EmitContext } from '../language/emitExpression.js';
 import { EmitScope } from '../language/emitScope.js';
 import { StatementEmitter } from '../language/emitStatement.js';
 import { emittedGlslTree, type EmittedTree } from '../language/emittedTree.js';
 import { declareVariables, type StructOf, type Value } from '../language/emitValue.js';
-import type { StructNode } from '../language/shaderTree.js';
+import type { FunctionNode, StructNode } from '../language/shaderTree.js';
+import type { ValueType } from '../language/types.js';
 import { TemplateUniforms } from './templateUniforms.js';
 import type { GlobalNode, TemplateStageNode } from './templateTree.js';
 
@@ -52,7 +54,7 @@ export function emitTemplateStage(
   const trees = new Map<string, EmittedTree>();
   for (const declaration of stage.declarations) {
     if (declaration.kind === 'struct') structs.set(declaration.name, declaration);
-    else if (declaration.kind === 'function') trees.set(declaration.name, emittedGlslTree(declaration));
+    else if (declaration.kind === 'function') trees.set(declaration.name, loweredOnce(declaration));
     else if (declaration.kind === 'interface block' && declaration.qualifiers.words.includes('uniform'))
       globals.set(declaration.instanceName!, uniforms.block(declaration, structOf));
     else if (declaration.kind === 'global') uniformGlobals(declaration, globals, textures);
@@ -74,6 +76,19 @@ export function emitTemplateStage(
 }
 
 /**
+ * The emitted trees by their function. The tree memo shares a stage's functions between calls,
+ * so a stage it holds lowers once. Filled by `loweredOnce`, an entry cleared with its function.
+ */
+// eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
+const LOWERED = new WeakMap<FunctionNode, EmittedTree>();
+
+function loweredOnce(definition: FunctionNode): EmittedTree {
+  let tree = LOWERED.get(definition);
+  if (!tree) LOWERED.set(definition, (tree = emittedGlslTree(definition)));
+  return tree;
+}
+
+/**
  * Each texture a node and each `const` its value. A sampler stands for nothing, as three keeps
  * a sampler's state on the texture, so `sampler3D(t, s)` reads `t` alone.
  */
@@ -85,22 +100,37 @@ function uniformGlobals(
   const { words } = global.qualifiers;
   for (const declarator of global.declarators) {
     if (words.includes('uniform') && isTextureType(global.type)) {
-      const node = textureNode(global.type);
+      const node = textureNode(global.type, declarator.name);
       textures.set(declarator.name, node);
       values.set(declarator.name, node);
     } else if (words.includes('uniform') && global.type === 'sampler') {
       values.set(declarator.name, int(0) as unknown as Node);
-    } else if (words.includes('const') && declarator.value?.kind === 'constant') {
-      values.set(declarator.name, constantNode(global.type, declarator.value.values));
+    } else if (words.includes('const')) {
+      values.set(declarator.name, constantGlobal(global, declarator));
     }
   }
 }
 
+/** The value glslang folds a `const` global to, or a refusal that names it. */
+function constantGlobal(global: GlobalNode, declarator: GlobalNode['declarators'][number]): Node {
+  const lanes = declarator.value && !declarator.arraySize && FOLDING.lanesOf(declarator.value);
+  if (!lanes)
+    throw new Error(`expected a const global the emitter folds, got ${global.type} ${declarator.name}`);
+  return constantNode(global.type as ValueType, lanes);
+}
+
+/** Folds the const globals. A tree never changes, so every stage shares one. */
+const FOLDING = new GlslangFolding();
+
 const isTextureType = (type: string) => /^texture(2D|3D|2DArray|Cube)$/.test(type);
 
-/** A texture node of `type` over an empty texture, which the caller replaces with the one it binds. */
-function textureNode(type: string): TextureNode {
+/**
+ * A texture node of `type` over an empty texture, which the caller replaces with the one it binds.
+ * The bound texture carries the filter and the wrap that Godot's sampler names.
+ */
+function textureNode(type: string, name: string): TextureNode {
   if (type === 'texture3D')
     return texture3D(new THREE.Data3DTexture(new Uint8Array(4), 1, 1, 1)) as TextureNode;
-  return texture(new THREE.DataTexture(new Uint8Array(4), 1, 1)) as TextureNode;
+  if (type === 'texture2D') return texture(new THREE.DataTexture(new Uint8Array(4), 1, 1)) as TextureNode;
+  throw new Error(`expected a texture2D or a texture3D the emitter has a node for, got ${type} ${name}`);
 }

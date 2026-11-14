@@ -101,6 +101,9 @@ const QUALIFIER_WORDS = new Set([
 
 const PRECISIONS = new Set(['highp', 'mediump', 'lowp']);
 
+/** The macros defined at a slot, which the preprocessor writes on the slot's token. */
+type SlotMacros = PpToken['macros'];
+
 /** A variable of a block, a function or a stage, and its constant lanes for a `const` with a value. */
 interface ScopeEntry extends TemplateVariable {
   readonly values?: readonly Scalar[];
@@ -153,7 +156,10 @@ class TemplateParser implements TemplateScope {
       const token = this.tokens.current();
       if (token.kind === 'slot') {
         this.tokens.next();
-        if (this.material && token.slot!.kind === 'GLOBALS') declarations.push(...this.material.globals);
+        if (this.material && token.slot!.kind === 'GLOBALS')
+          declarations.push(
+            ...this.material.globals.map((global) => this.linkedGlobal(global, token.macros))
+          );
         else declarations.push({ kind: 'slot', slot: token.slot!, position: token.position });
         continue;
       }
@@ -525,21 +531,33 @@ class TemplateParser implements TemplateScope {
    * A material's stage function body in the scope of its slot, each built-in read as its GLSL
    * text there. A section the material does not fill is empty, as Godot's text is.
    */
-  private linkedCode(body: BlockNode | undefined, position: SourcePosition): BlockNode {
+  private linkedCode(body: BlockNode | undefined, position: SourcePosition, macros: SlotMacros): BlockNode {
     if (!body) return { kind: 'block', statements: [], position };
-    return withExpressionsMapped(body, (expression) =>
-      expression.kind === 'variable' && expression.builtIn ? this.builtInText(expression) : expression
+    return this.linkedBlock(body, macros);
+  }
+
+  /** A struct of the material as it is, or a function with each built-in read as its GLSL text. */
+  private linkedGlobal(global: StructNode | FunctionNode, macros: SlotMacros): StructNode | FunctionNode {
+    return global.kind === 'function' ? { ...global, body: this.linkedBlock(global.body, macros) } : global;
+  }
+
+  private linkedBlock(block: BlockNode, macros: SlotMacros): BlockNode {
+    return withExpressionsMapped(block, (expression) =>
+      expression.kind === 'variable' && expression.builtIn ? this.builtInText(expression, macros) : expression
     );
   }
 
-  /** The GLSL text of the built-in `variable` reads, at the user's place in the text. */
-  private builtInText(variable: VariableNode): Expression {
+  /**
+   * The GLSL text of the built-in `variable` reads, at the user's place in the text. Godot's
+   * linked text goes through one preprocessor, so the text reads the macros defined at the slot.
+   */
+  private builtInText(variable: VariableNode, macros: SlotMacros): Expression {
     const text = this.material!.renames[variable.name];
     if (text === undefined)
       this.tokens.fail(`'${variable.name}' has no GLSL text in the mode table`, variable.position);
     const line = { text, file: variable.position.file, line: variable.position.line };
     const tokens = new TemplateCursor(
-      preprocess([line]).tokens.map((token) => ({ ...token, position: variable.position }))
+      preprocess([line], macros).tokens.map((token) => ({ ...token, position: variable.position }))
     );
     const expression = new GlslExpressionParser(tokens, this).expression();
     if (!tokens.isAtEnd()) tokens.fail(`expected the end of the text of '${variable.name}'`);
@@ -573,7 +591,7 @@ class TemplateParser implements TemplateScope {
     if (token.kind === 'slot') {
       this.tokens.next();
       if (!this.material) return { kind: 'slot', name: token.slot!.name, position: token.position };
-      return this.linkedCode(this.material.code.get(token.slot!.name), token.position);
+      return this.linkedCode(this.material.code.get(token.slot!.name), token.position, token.macros);
     }
     const attributes = this.attributes();
     const position = this.tokens.position();

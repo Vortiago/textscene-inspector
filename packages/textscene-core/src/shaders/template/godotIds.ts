@@ -39,6 +39,7 @@ export class GodotIds {
   function(definition: FunctionNode): FunctionNode {
     return {
       ...definition,
+      name: godotId(definition.name),
       rname: godotId(definition.rname),
       returnType: this.type(definition.returnType),
       arguments: definition.arguments.map((argument) => this.argument(argument)),
@@ -55,7 +56,7 @@ export class GodotIds {
     const inner = withSubExpressions(expression, (part) => this.expression(part));
     const typed = { ...inner, type: this.type(inner.type) } as Expression;
     if (isCall(typed)) {
-      const call: CallNode = { ...typed, rname: godotId(typed.rname) };
+      const call: CallNode = { ...typed, function: godotId(typed.function), rname: godotId(typed.rname) };
       return call;
     }
     if (typed.kind === 'field') return { ...typed, name: godotId(typed.name) };

@@ -117,8 +117,12 @@ export class ExpressionEmitter {
     return OPERATIONS[op]!(nodes, types);
   }
 
-  /** A call that stands as a statement. */
+  /** A call that stands as a statement. A built-in the emitter writes has no effect but its value, which the statement drops. */
   callStatement(call: CallNode): void {
+    if (call.row.id !== 'OP_CALL') {
+      this.called(call);
+      return;
+    }
     this.writeBack(call, this.context.functions.callAsStatement(call.function, this.passed(call)));
   }
 

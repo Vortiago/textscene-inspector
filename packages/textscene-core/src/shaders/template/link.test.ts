@@ -24,6 +24,16 @@ describe('compileMaterial', () => {
       '\n#define USES_HALF_RES_COLOR\n',
     ]);
   });
+
+  it("adds the define a usage define names with '@', as Godot's compiler does", () => {
+    const usage = {
+      HALF_RES_COLOR: '@QUARTER_RES_COLOR',
+      QUARTER_RES_COLOR: '#define USES_QUARTER_RES_COLOR\n',
+    };
+    const table = { ...MODE_TABLES.sky!, usage_defines: usage };
+    const source = 'shader_type sky;\nvoid sky() {\n\tCOLOR = HALF_RES_COLOR.rgb;\n}\n';
+    expect(compileMaterial(materialOf(source), table).custom).toEqual(['#define USES_QUARTER_RES_COLOR\n']);
+  });
 });
 
 describe('linkTemplateStage', () => {
@@ -43,6 +53,31 @@ describe('linkTemplateStage', () => {
     const printed = skyFragment(source);
     expect(printed).toContain('float m_f(in float m_x)');
     expect(printed).toContain('float m_a = m_f(1.0);');
+  });
+
+  it("gives a material function that shares a template function's name its own id", () => {
+    const source =
+      'shader_type sky;\nfloat acos_approx(float x) { return x; }\nvoid sky() {\n\tCOLOR = vec3(acos_approx(1.0));\n}\n';
+    const stage = linkTemplateStage(
+      'environment/sky.glsl',
+      'fragment',
+      '',
+      compileMaterial(materialOf(source), MODE_TABLES.sky!)
+    );
+    const names = stage.declarations.flatMap((declaration) =>
+      declaration.kind === 'function' && declaration.rname.endsWith('acos_approx') ? [declaration.name] : []
+    );
+    expect(names).toEqual(['m_acos_approx', 'acos_approx']);
+  });
+
+  it("reads a built-in whose text is a template macro as the macro's value", () => {
+    const source = 'shader_type sky;\nvoid sky() {\n\tCOLOR = vec3(float(AT_CUBEMAP_PASS));\n}\n';
+    expect(skyFragment(source)).toContain('color = vec3(float(false))');
+  });
+
+  it('reads a built-in in a function of the material that no stage calls itself', () => {
+    const source = 'shader_type sky;\nfloat t() { return TIME; }\nvoid sky() {\n\tCOLOR = vec3(t());\n}\n';
+    expect(skyFragment(source)).toContain('return params.time;');
   });
 
   it("names the user's line when a built-in's text does not link", () => {
