@@ -11,11 +11,13 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
-import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import {
+  OutlinedTextRun,
+  textLayerRenderOrder,
+  useTintedTextOutline,
+} from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { NO_UNDERLINE_PX } from '../../../../r3f/controls/native/text/paragraphUnderline';
-import { isDrawnRtl } from '../../../../r3f/controls/native/text/textBidiOptions';
-import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { overrunFlagsForBehavior, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
 import {
@@ -31,6 +33,14 @@ import type { LinkButtonProperties } from './types';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
+/** The layers of an outlined run: its outline, then its fill. */
+const OUTLINED_RUN_LAYERS = 2;
+
+/** `link_button.cpp:292-313` draws the underline after the outline and the fill of its text. */
+function underlineRenderOrder(renderOrder: number): number {
+  return textLayerRenderOrder(renderOrder, OUTLINED_RUN_LAYERS, OUTLINED_RUN_LAYERS + 1);
+}
+
 export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LinkButtonProperties>(solveNode);
   const state = resolveLinkButtonDrawState(props);
@@ -39,7 +49,7 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
 
   // `tint.own` (`self_modulate` on the inherited `modulate`) multiplies the font colour before its one
   // sRGB-to-linear conversion. The underline reuses that colour, as Godot's `draw_line` does
-  // (`link_button.cpp:311,313`). `renderOrder` reaches the text and the underline alike.
+  // (`link_button.cpp:311,313`). The underline orders after the text (`underlineRenderOrder`).
   const { fontSizePx, color: baseFontColor } = linkButtonTextTheme(solveNode, props, state);
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
   const textOutline = useTintedTextOutline(solveNode, tint.own);
@@ -52,16 +62,14 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
   // link_button.cpp:286-289: `text_buf->set_width(MAX(1, size.width))` for any `overrun_behavior` but
   // NO_TRIMMING, at the control's own rect, with no style margin.
   const overrunFlags = useMemo(() => overrunFlagsForBehavior(props.overrunBehavior), [props.overrunBehavior]);
-  const isLineDrawnRtl = isDrawnRtl(useControlBidiOptions(props, solveNode));
   const layout: TextLayoutResult | null = useMemo(() => {
     if (!unshapedLayout) return null;
     return trimSoloLine(unshapedLayout, overrunFlags, Math.max(1, rect.w), {
       fontMetrics,
       fontSizePx,
       ellipsisChar: props.ellipsisChar,
-      isDrawnRtl: isLineDrawnRtl,
     });
-  }, [unshapedLayout, overrunFlags, rect.w, fontMetrics, fontSizePx, props.ellipsisChar, isLineDrawnRtl]);
+  }, [unshapedLayout, overrunFlags, rect.w, fontMetrics, fontSizePx, props.ellipsisChar]);
 
   // `link_button.cpp:289-303`: the paragraph origin, which RTL moves to the far edge. The underline
   // starts from the same x.
@@ -101,7 +109,7 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
       {underline && underline.width > 0 && (
         <CanvasItemGroup position={[placement.originX, -underline.top, 0]}>
           <ControlQuad
-            renderOrder={renderOrder}
+            renderOrder={underlineRenderOrder(renderOrder)}
             width={underline.width}
             height={underline.thickness}
             color={underlineLinearColor}

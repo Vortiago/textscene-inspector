@@ -8,7 +8,6 @@ import { CanvasItemGroup } from '../../components/CanvasItemGroup';
 import { buttonDrawnLabel, trimButtonLabel, type ButtonLabelBox } from './buttonBase';
 import { OutlinedTextRun, type OutlinedTextRunProps } from './text/OutlinedTextRun';
 import { soloLineLayout } from './text/textLayout';
-import { isDrawnRtl, type TextBidiOptions } from './text/textBidiOptions';
 
 interface ButtonLabelProps extends Pick<
   OutlinedTextRunProps,
@@ -17,34 +16,23 @@ interface ButtonLabelProps extends Pick<
   box: ButtonLabelBox;
   /** `TextServer::OverrunBehavior`; absent means no trimming. */
   overrunBehavior: number | undefined;
-  /** The paragraph's bidi options: a set RTL direction draws a trimmed fill right to left. */
-  bidi: TextBidiOptions;
   /** The label wraps ({@link isButtonAutowrapped}), so no row is trimmed. */
   isWrapped: boolean;
 }
 
 /** @canonical A Button-family label drawn in its paragraph box, each line shifted and cut */
-export function ButtonLabel({
-  layout,
-  box,
-  overrunBehavior,
-  bidi,
-  isWrapped,
-  ...runProps
-}: ButtonLabelProps) {
+export function ButtonLabel({ layout, box, overrunBehavior, isWrapped, ...runProps }: ButtonLabelProps) {
   const { fontSizePx } = runProps;
-  const isLineDrawnRtl = isDrawnRtl(bidi);
   const drawnLines = useMemo(() => {
     const trimmed = trimButtonLabel(layout, overrunBehavior, box.widthPx, {
       fontSizePx,
-      isDrawnRtl: isLineDrawnRtl,
       isWrapped,
     });
     return buttonDrawnLabel(trimmed.lines, box.widthPx, box.alignment).map(({ line, offsetXPx }) => ({
       lineLayout: soloLineLayout(line, trimmed),
       offsetXPx,
     }));
-  }, [layout, overrunBehavior, fontSizePx, isLineDrawnRtl, isWrapped, box.widthPx, box.alignment]);
+  }, [layout, overrunBehavior, fontSizePx, isWrapped, box.widthPx, box.alignment]);
   return (
     <>
       {drawnLines.map(({ lineLayout, offsetXPx }, i) => (

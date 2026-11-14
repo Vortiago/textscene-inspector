@@ -52,9 +52,9 @@ import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFont
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
+  inferredPlacement,
   overrunFlagsForBehavior,
-  trimFilledLineToWidth,
-  trimLineToWidth,
+  trimLine,
 } from '../../../../r3f/controls/native/text/textOverrun';
 import {
   AutowrapMode,
@@ -1289,6 +1289,9 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
   });
 });
 
+const TRIM_OPTIONS = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 };
+const ELLIPSIS_FLAGS = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+
 describe('layoutLabelLines — the overrun trim (label.cpp:302-332)', () => {
   it('aligns a RIGHT line by its trimmed width, as `_shape` trims before `_get_line_rect` reads it', () => {
     const layout = shapeText('A long line of text that overruns', {
@@ -1297,12 +1300,11 @@ describe('layoutLabelLines — the overrun trim (label.cpp:302-332)', () => {
       autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
     });
-    const trimTo60 = (line: TextLineLayout): TextLineLayout => ({ ...line, widthPx: 60 });
-    const [placement] = layoutLabelLines(layout, 100, 40, 2, undefined, undefined, {
-      trim: { line: trimTo60, filledLine: trimTo60 },
-    });
-    expect(placement!.line.widthPx).toBe(60);
-    expect(placement!.x).toBe(40);
+    const trim = { widthPx: 60, flags: ELLIPSIS_FLAGS, options: TRIM_OPTIONS };
+    const trimmed = trimLine(layout.lines[0]!, 60, ELLIPSIS_FLAGS, TRIM_OPTIONS, inferredPlacement);
+    const [placement] = layoutLabelLines(layout, 100, 40, 2, undefined, undefined, { trim });
+    expect(placement!.line.widthPx).toBe(trimmed.widthPx);
+    expect(placement!.x).toBe(Math.floor(100 - trimmed.widthPx));
   });
 });
 
@@ -1314,18 +1316,18 @@ describe('layoutLabelLines — the justification-aware trim of FILL with autowra
     lineSpacingPx: 3,
   });
   const naturalWidthPx = layout.lines[0]!.widthPx;
-  const markTrimmed = (line: TextLineLayout): TextLineLayout => ({ ...line, text: `${line.text}…` });
   const fillAt = (boxWidthPx: number) =>
     layoutLabelLines(layout, boxWidthPx, 40, 3, undefined, JustificationFlag.WORD_BOUND, {
-      trim: { line: markTrimmed, filledLine: markTrimmed },
+      trim: { widthPx: boxWidthPx, flags: ELLIPSIS_FLAGS, options: TRIM_OPTIONS },
     })[0]!.line;
+  const endsInEllipsis = (line: TextLineLayout) => line.glyphs.at(-1)!.char === '…';
 
   it('skips the trim of a line whose spaces shrink to fit, as `fit_width_minimum_reached` stays false (text_server_adv.cpp:5947)', () => {
-    expect(fillAt(Math.floor(naturalWidthPx) - 4).text).toBe('A long line of text');
+    expect(endsInEllipsis(fillAt(Math.floor(naturalWidthPx) - 4))).toBe(false);
   });
 
   it('trims a line that stays wider than the box at the smallest space', () => {
-    expect(fillAt(Math.floor(naturalWidthPx / 2)).text).toBe('A long line of text…');
+    expect(endsInEllipsis(fillAt(Math.floor(naturalWidthPx / 2)))).toBe(true);
   });
 });
 
@@ -1339,18 +1341,9 @@ describe('layoutLabelLines — the trimmed FILL line fitted again with CONSTRAIN
   });
   const BOX_WIDTH_PX = 100;
   const ELLIPSIS_WIDTH_PX = 13;
-  const trimOptions = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 };
-  const ellipsisFlags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
   const filledLineAt = (justificationFlags: number) =>
     layoutLabelLines(layout, BOX_WIDTH_PX, 40, 3, undefined, justificationFlags, {
-      trim: {
-        line: (line) => trimLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, trimOptions),
-        filledLine: (line, filledFlags) =>
-          trimFilledLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, {
-            ...trimOptions,
-            justificationFlags: filledFlags,
-          }),
-      },
+      trim: { widthPx: BOX_WIDTH_PX, flags: ELLIPSIS_FLAGS, options: TRIM_OPTIONS },
     })[0]!.line;
 
   it('stretches the kept spaces so the ellipsis ends at the box width', () => {

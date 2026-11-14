@@ -35,6 +35,7 @@ import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { localeLanguage } from '../../../../godot/text/textServer';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 import { resolveParagraphBidi } from './bidi';
+import { isDrawnRtl } from './textBidiOptions';
 import type { StructuredTextRange } from '../../../../godot/text/structuredText';
 
 /**
@@ -257,7 +258,7 @@ export interface TextLineLayout {
   /**
    * The glyphs `shaped_text_draw_outline` draws where they differ from `glyphs`: a trimmed AUTO
    * line whose paragraph resolved right-to-left. The outline reads the inferred direction, the
-   * fill the set one (`text_server.cpp:1744,1840`). `trimTextBufferLineToWidth` sets it, and
+   * fill the set one (`text_server.cpp:1744,1840`). `textBufferPlacement` sets it, and
    * `widthPx` stays the width of the one trimmed buffer both draws place by (`width_trimmed`).
    */
   outlineGlyphs?: GlyphPlacement[];
@@ -300,6 +301,11 @@ export interface TextLayoutResult {
    * on `.kind` between the painters.
    */
   fontMetrics: FontMetrics;
+  /**
+   * Whether the text draws right to left: its set direction, which `shaped_text_draw` reads
+   * (`text_server.cpp:1744`), not the inferred one of each line. Absent is left to right.
+   */
+  isDrawnRtl?: boolean;
 }
 
 /** Whether the first line of `layout` infers RTL, as a one-paragraph control's text reads it. False for no layout. */
@@ -327,6 +333,7 @@ export function soloLineLayout(
     heightPx: Math.max(parent.linePitchPx, baselineOffsetPx + deepestDescentPx(line)),
     baselineOffsetPx,
     fontMetrics,
+    ...(parent.isDrawnRtl && { isDrawnRtl: true }),
   };
 }
 
@@ -1412,7 +1419,16 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   const { baselineOffsetPx, linePitchPx } = lineMetrics(lines, fontMetrics, fontSizePx, lineSpacingPx);
   const heightPx = lines.length * linePitchPx;
 
-  return { shapedText: transformed, lines, linePitchPx, widthPx, heightPx, baselineOffsetPx, fontMetrics };
+  const result = {
+    shapedText: transformed,
+    lines,
+    linePitchPx,
+    widthPx,
+    heightPx,
+    baselineOffsetPx,
+    fontMetrics,
+  };
+  return isDrawnRtl({ direction }) ? { ...result, isDrawnRtl: true } : result;
 }
 
 /** The placement of each glyph of the cluster `placed` draws, at its own pen and advance. */

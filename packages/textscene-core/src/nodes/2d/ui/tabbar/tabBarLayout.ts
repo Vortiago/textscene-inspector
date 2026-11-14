@@ -53,19 +53,18 @@ export interface TabBarLayout {
   at: (offset: number | undefined) => TabBarDraw;
 }
 
-function trimmedLabel(model: TabBarModel, item: TabLayoutItem, rtl: boolean): TextLayoutResult {
+function trimmedLabel(model: TabBarModel, item: TabLayoutItem): TextLayoutResult {
   const { layout } = model.computed[item.index]!;
   if (!item.truncated || !model.fontMetrics) return layout;
   return trimSoloLine(layout, TEXT_LINE_DEFAULT_OVERRUN, item.textBudgetPx, {
     fontMetrics: model.fontMetrics,
     fontSizePx: model.fontSizePx,
-    isDrawnRtl: rtl,
   });
 }
 
 function drawnTab(model: TabBarModel, item: TabLayoutItem, size: Vector2, rtl: boolean): DrawnTab {
   const tab = model.computed[item.index]!;
-  const label = trimmedLabel(model, item, rtl);
+  const label = trimmedLabel(model, item);
   return {
     index: item.index,
     tab,

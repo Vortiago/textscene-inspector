@@ -140,14 +140,6 @@ export interface OverrunTrimOptions {
   ellipsisChar?: string;
 }
 
-export interface TextBufferTrimOptions extends OverrunTrimOptions {
-  /**
-   * The set direction is RTL: `shaped_text_draw` reads `shaped_text_get_direction`
-   * (`text_server.cpp:1744`), so only an RTL line of AUTO direction draws its fill left to right.
-   */
-  isDrawnRtl: boolean;
-}
-
 /** Where the trim loop stopped: the cut position and the ellipsis position, -1 for none. */
 interface TrimCut {
   trimPos: number;
@@ -176,83 +168,79 @@ function isSoftBreakGlyph(gp: GlyphPlacement): boolean {
 }
 
 /** A trim the loop found: the cut, and the ellipsis glyphs in logical order. */
-interface OverrunTrim {
+export interface OverrunTrim {
   cut: TrimCut;
   ellipsis: Array<Omit<GlyphPlacement, 'x'>>;
   /** `int ellipsis_width` (`:6044-6046`). */
   ellipsisWidthPx: number;
 }
 
+/** The glyphs a trimmed line draws: the fill, and the outline where it differs. */
+export type TrimPlacement = (
+  line: TextLineLayout,
+  trim: OverrunTrim,
+  widthPx: number
+) => Pick<TextLineLayout, 'glyphs' | 'outlineGlyphs'>;
+
 /**
- * Port of `TextServer::shaped_text_overrun_trim_to_width` (`text_server_adv.cpp:5935-6154`), drawn
- * in the paragraph's inferred direction (`line.isRtl`, `sd->para_direction` at `:6053`), as Label
- * draws it (`label.h:198-241`) and as `shaped_text_draw_outline` draws every text buffer. Returns
- * `line` unchanged when nothing needs trimming (`:5958-5966`), else a new layout whose glyphs,
- * text and `widthPx` include the cut and any ellipsis.
+ * Port of `TextServer::shaped_text_overrun_trim_to_width` (`text_server_adv.cpp:5935-6154`). Returns
+ * `line` unchanged when nothing needs trimming (`:5958-5966`), else a new line whose glyphs, from
+ * `place`, and `widthPx` include the cut and any ellipsis. A placement is a function, not a flag,
+ * because the three differ in a step and not in a value.
  */
-export function trimLineToWidth(
+export function trimLine(
   line: TextLineLayout,
   widthPx: number,
   flags: OverrunTrimFlags,
-  options: OverrunTrimOptions
+  options: OverrunTrimOptions,
+  place: TrimPlacement
 ): TextLineLayout {
   const trim = findOverrunTrim(line, widthPx, flags, options);
   if (!trim) return line;
-  return trimmedLine(line, trim, inferredDirectionGlyphs(line, line.glyphs, trim));
-}
-
-interface FilledTrimOptions extends OverrunTrimOptions {
-  /** The Label's `justification_flags`, which the fit after the trim reads (`label.cpp:325`). */
-  justificationFlags: number;
+  return trimmedLine(line, trim, place(line, trim, widthPx));
 }
 
 /**
- * {@link trimLineToWidth} for a line of a FILL Label with autowrap off, which `_shape` fits, trims and
- * fits again with `JUSTIFICATION_CONSTRAIN_ELLIPSIS` (`label.cpp:322-325`). The second fit grows the
- * spaces the cut keeps until the kept glyphs and the ellipsis reach `widthPx`. A line the trim
- * enforces an ellipsis on without cutting keeps its glyphs (`text_server_adv.cpp:5582`).
+ * The trim drawn in the paragraph's inferred direction (`line.isRtl`, `sd->para_direction` at
+ * `:6053`), as Label draws it (`label.h:198-241`).
  */
-export function trimFilledLineToWidth(
-  line: TextLineLayout,
-  widthPx: number,
-  flags: OverrunTrimFlags,
-  options: FilledTrimOptions
-): TextLineLayout {
-  const trim = findOverrunTrim(line, widthPx, flags, options);
-  if (!trim) return line;
-  const { trimPos } = trim.cut;
-  const glyphs =
-    trimPos < 0
-      ? line.glyphs
-      : fitTrimmedGlyphsToWidth(
-          line,
-          { trimPos, trimmedWidthPx: trimmedWidthPx(trim) },
-          widthPx,
-          options.justificationFlags
-        );
-  return trimmedLine(line, trim, inferredDirectionGlyphs(line, glyphs, trim));
+export const inferredPlacement: TrimPlacement = (line, trim) => ({
+  glyphs: inferredDirectionGlyphs(line, line.glyphs, trim),
+});
+
+/**
+ * The trim of a line of a FILL Label with autowrap off, which `_shape` fits, trims and fits again with
+ * `JUSTIFICATION_CONSTRAIN_ELLIPSIS` (`label.cpp:322-325`). The second fit grows the spaces the cut
+ * keeps until the kept glyphs and the ellipsis reach the width. A line the trim enforces an ellipsis
+ * on without cutting keeps its glyphs (`text_server_adv.cpp:5582`).
+ */
+export function filledPlacement(justificationFlags: number): TrimPlacement {
+  return (line, trim, widthPx) => {
+    const { trimPos } = trim.cut;
+    const glyphs =
+      trimPos < 0
+        ? line.glyphs
+        : fitTrimmedGlyphsToWidth(
+            line,
+            { trimPos, trimmedWidthPx: trimmedWidthPx(trim) },
+            widthPx,
+            justificationFlags
+          );
+    return { glyphs: inferredDirectionGlyphs(line, glyphs, trim) };
+  };
 }
 
 /**
- * The same trim as a `TextLine` or `TextParagraph` draws it. The fill reads the set direction
- * (`text_server.cpp:1744`). An AUTO line that infers RTL draws the glyphs before the cut from the
- * visual left, stops at the first that crosses the width (`:1781-1786`), then draws the ellipsis.
- * The outline reads the inferred direction (`:1840`), so that line puts it in `outlineGlyphs`.
+ * The trim as a `TextLine` or `TextParagraph` draws it. The fill reads the set direction
+ * (`text_server.cpp:1744`): `isDrawnRtl`. An AUTO line that infers RTL draws the glyphs before the cut
+ * from the visual left, stops at the first that crosses the width (`:1781-1786`), then draws the
+ * ellipsis. The outline reads the inferred direction (`:1840`), so that line puts it in `outlineGlyphs`.
  */
-export function trimTextBufferLineToWidth(
-  line: TextLineLayout,
-  widthPx: number,
-  flags: OverrunTrimFlags,
-  options: TextBufferTrimOptions
-): TextLineLayout {
-  const trim = findOverrunTrim(line, widthPx, flags, options);
-  if (!trim) return line;
-  const outline = trimmedLine(line, trim, inferredDirectionGlyphs(line, line.glyphs, trim));
-  if (!line.isRtl || options.isDrawnRtl) return outline;
-  return {
-    ...outline,
-    glyphs: leftToRightClippedGlyphs(line.glyphs, trim, widthPx),
-    outlineGlyphs: outline.glyphs,
+export function textBufferPlacement(isDrawnRtl: boolean): TrimPlacement {
+  return (line, trim, widthPx) => {
+    const outline = inferredDirectionGlyphs(line, line.glyphs, trim);
+    if (!line.isRtl || isDrawnRtl) return { glyphs: outline };
+    return { glyphs: leftToRightClippedGlyphs(line.glyphs, trim, widthPx), outlineGlyphs: outline };
   };
 }
 
@@ -367,42 +355,52 @@ function trimmedWidthPx({ cut, ellipsisWidthPx }: OverrunTrim): number {
 }
 
 /**
- * `line` with `glyphs` in place of its own, and without the `outlineGlyphs` of an earlier trim. A trim
- * does not reshape, so every other field, the underline among them, stays the line's.
+ * `line` with the glyphs of a placement in place of its own, and without the `outlineGlyphs` of an
+ * earlier trim. A trim does not reshape, so every other field, the underline among them, stays the line's.
  */
-function trimmedLine(line: TextLineLayout, trim: OverrunTrim, glyphs: GlyphPlacement[]): TextLineLayout {
+function trimmedLine(
+  line: TextLineLayout,
+  trim: OverrunTrim,
+  placed: Pick<TextLineLayout, 'glyphs' | 'outlineGlyphs'>
+): TextLineLayout {
   const { outlineGlyphs: _earlierTrim, ...kept } = line;
-  return { ...kept, glyphs, widthPx: trimmedWidthPx(trim) };
+  return { ...kept, ...placed, widthPx: trimmedWidthPx(trim) };
+}
+
+/** The placement of a text buffer drawn in the set direction of `layout`. */
+function layoutPlacement(layout: TextLayoutResult): TrimPlacement {
+  return textBufferPlacement(layout.isDrawnRtl === true);
 }
 
 /**
- * A one-line paragraph trimmed to `widthPx` by {@link trimTextBufferLineToWidth}, as `TextLine::draw`
- * or a one-row `TextParagraph::draw` trims it. Returns `layout` itself when nothing is cut, so a memo
- * downstream holds.
+ * The first line of a paragraph trimmed to `widthPx` as a text buffer, as `TextLine::draw` or a
+ * one-row `TextParagraph::draw` trims it. Godot draws one `TextLine` there, so a text with a line
+ * break draws its first line only. Returns `layout` itself when nothing is cut, so a memo downstream holds.
  */
 export function trimSoloLine(
   layout: TextLayoutResult,
   flags: OverrunTrimFlags,
   widthPx: number,
-  options: TextBufferTrimOptions
+  options: OverrunTrimOptions
 ): TextLayoutResult {
   if (!flags.trim) return layout;
   const line = layout.lines[0]!;
-  const trimmedLine = trimTextBufferLineToWidth(line, widthPx, flags, options);
+  const trimmedLine = trimLine(line, widthPx, flags, options, layoutPlacement(layout));
   return trimmedLine === line && layout.lines.length === 1 ? layout : soloLineLayout(trimmedLine, layout);
 }
 
 /**
- * Each row of `layout` trimmed by {@link trimTextBufferLineToWidth}, as `TextParagraph::_shape_lines`
- * trims an unwrapped buffer (`text_paragraph.cpp:282-293`). Its width is the widest trimmed row.
+ * Each row of `layout` trimmed as a text buffer, as `TextParagraph::_shape_lines` trims an unwrapped
+ * buffer (`text_paragraph.cpp:282-293`). Its width is the widest trimmed row.
  */
 export function trimLayoutToWidth(
   layout: TextLayoutResult,
   widthPx: number,
   flags: OverrunTrimFlags,
-  options: TextBufferTrimOptions
+  options: OverrunTrimOptions
 ): TextLayoutResult {
-  const lines = layout.lines.map((line) => trimTextBufferLineToWidth(line, widthPx, flags, options));
+  const place = layoutPlacement(layout);
+  const lines = layout.lines.map((line) => trimLine(line, widthPx, flags, options, place));
   // `layout` itself when no row is cut, so a memo downstream holds.
   if (lines.every((line, index) => line === layout.lines[index])) return layout;
   return { ...layout, lines, widthPx: widestLineWidthPx(lines) };

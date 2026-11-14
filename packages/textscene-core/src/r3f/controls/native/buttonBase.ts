@@ -31,7 +31,7 @@ import {
   isTextWidthClipped,
   overrunFlagsForBehavior,
   trimLayoutToWidth,
-  type TextBufferTrimOptions,
+  type OverrunTrimOptions,
   type TextClipProperties,
 } from './text/textOverrun';
 import type { TextBidiOptions } from './text/textBidiOptions';
@@ -556,7 +556,7 @@ export function buttonDrawnLabel(
 }
 
 /** What {@link trimButtonLabel} trims with, beyond the layout and the box. */
-interface ButtonLabelTrimOptions extends Omit<TextBufferTrimOptions, 'fontMetrics'> {
+interface ButtonLabelTrimOptions extends Omit<OverrunTrimOptions, 'fontMetrics'> {
   /** The label wraps: Button hides no line, so `TextParagraph::_shape_lines` trims no row of it. */
   isWrapped: boolean;
 }

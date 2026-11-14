@@ -14,13 +14,7 @@ import { faceStrikeSize, subpixelStepsPerPx, type GlyphVariation } from './fontM
 import type { BitmapGrid } from './ftGrays';
 import type { GlyphContours } from './glyphContours';
 import { blendGlyphBitmap, colourRaster, placedGlyphBitmap, type GlyphBitmap } from './glyphCoverage';
-import {
-  hasOwnGlyph,
-  type GlyphPainter,
-  type GlyphReach,
-  type PlacedGlyph,
-  type RasterFrame,
-} from './glyphPainter';
+import { type GlyphPainter, type GlyphReach, type PlacedGlyph, type RasterFrame } from './glyphPainter';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
 import type { SfntOutlines } from './sfntOutlines';
 import type { GlyphPlacement } from './textLayout';
@@ -77,7 +71,6 @@ export function outlineGlyphPainter(face: OutlineFace): GlyphPainter {
     reachReader: (skew) => {
       const readersAt = recentlyRead<number, { load: FaceLoad; formOf: GlyphFormReader }>(MAX_KEPT_SIZES);
       return (glyph) => {
-        if (!hasOwnGlyph(glyph)) return { leftPx: 0, rightPx: glyph.advance };
         const { load, formOf } = readersAt(glyph.fontSizePx, (fontSizePx) => {
           const faceLoad = faceLoadOf(face, fontSizePx);
           return { load: faceLoad, formOf: glyphFormReader(face, faceLoad, skew, true) };
