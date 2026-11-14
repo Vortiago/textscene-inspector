@@ -25,7 +25,7 @@ export function expressionText(node) {
 function bareText(node) {
   switch (node.kind) {
     case 'parameter':
-      return parameterName(node.index);
+      return node.name ?? parameterName(node.index);
     case 'literal':
       return node.text;
     case 'call':

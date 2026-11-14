@@ -40,7 +40,7 @@ async function reduceAgainstGodot(page, program) {
     return await reduceProgram(program, async (candidates) => {
       // One name each: Godot's output names each probe's pixels by its name.
       const named = candidates.map((candidate, index) => ({ ...candidate, name: `reduce-${index}` }));
-      const { pixels } = runProbesInGodot(named);
+      const { pixels } = await runProbesInGodot(named);
       // The reduction takes the first candidate that differs, so the page stops at it.
       const differs = named.map(() => false);
       for (const [index, candidate] of named.entries()) {

@@ -20,22 +20,33 @@ import {
   type Value,
   variablesOf,
 } from './emitValue.js';
+import type { CalledFunctions, CallResult } from './emitCall.js';
 import type { GlslangFolding } from './glslangFolding.js';
 import { isAssignOperator } from './operators.js';
-import { STEPS } from './assignment.js';
-import { arraySizeOf } from './parseExpression.js';
-import type { Expression, OperatorNode } from './shaderTree.js';
+import { STEPS, writtenTargets } from './assignment.js';
+import { arraySizeOf, isCall } from './treeWalk.js';
+import type { CallNode, Expression, OperatorNode } from './shaderTree.js';
 import { swizzleLanes } from './swizzle.js';
 import { shapeOf } from './types.js';
 
 const LANE_LETTERS = 'xyzw';
 
+/** What every function of a shader emits with: its structs and the functions it calls. */
+export interface EmitContext {
+  readonly structOf: StructOf;
+  readonly functions: CalledFunctions;
+}
+
 export class ExpressionEmitter {
   constructor(
     private readonly scope: EmitScope,
     private readonly folding: GlslangFolding,
-    private readonly structOf: StructOf
+    private readonly context: EmitContext
   ) {}
+
+  private get structOf(): StructOf {
+    return this.context.structOf;
+  }
 
   /** The node of an expression of a value type. */
   node(expression: Expression): Node {
@@ -92,6 +103,7 @@ export class ExpressionEmitter {
 
   private operator(expression: OperatorNode): Value {
     const { op, operands } = expression;
+    if (isCall(expression)) return this.called(expression);
     if (op === 'OP_STRUCT') return this.structConstruct(expression);
     if (op === 'OP_SELECT_IF') return this.selected(expression);
     if (op === 'OP_AND' || op === 'OP_OR') return this.shortCircuit(expression);
@@ -102,6 +114,30 @@ export class ExpressionEmitter {
     if (op === 'OP_CONSTRUCT') return constructed(expression.type, nodes, types);
     if (op === 'OP_INDEX') return element(nodes[0]!, nodes[1]!);
     return OPERATIONS[op]!(nodes, types);
+  }
+
+  /** A call that stands as a statement. */
+  callStatement(call: CallNode): void {
+    this.writeBack(call, this.context.functions.callAsStatement(call.function, this.passed(call)));
+  }
+
+  /** A call in an expression, and its result. */
+  private called(call: CallNode): Value {
+    const called = this.context.functions.call(call.function, this.passed(call));
+    this.writeBack(call, called);
+    return called.result;
+  }
+
+  /** The value of each argument of a call but an `out` one. */
+  private passed(call: CallNode): (Value | undefined)[] {
+    return call.operands.map((operand, index) =>
+      call.qualifiers[index] === 'out' ? undefined : this.value(operand)
+    );
+  }
+
+  /** Each `out` and `inout` place of a call written from what the call gives back, in order. */
+  private writeBack(call: CallNode, { written }: CallResult): void {
+    writtenTargets(call).forEach((place, index) => copyInto(this.value(place), written[index]!));
   }
 
   /** `Pair(a, b)`: each member's value, kept in the struct's own variables. */

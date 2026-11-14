@@ -17,15 +17,18 @@ caches keyed on the lockfile. The golden shards then run for 500 to 990 s each.
 The jobs that start Chromium run in one container image: the golden shards, the web previewer E2E
 run, the renderer consumer run and the VS Code for the Web run. The real-Godot reference tests
 run in it too. `.github/ci-image/Dockerfile` builds it on Ubuntu 24.04, as `ubuntu-latest` is. It
-holds the system libraries that Playwright lists for Chromium, lavapipe, the locked Chromium, and
-the Godot binary with `xvfb-run` for the tests that render through Godot.
+holds the system libraries that Playwright lists for Chromium, lavapipe, the locked Chromium, the
+Godot binary with `xvfb-run` for the tests that render through Godot, and Godot's source at the
+binary's tag in `/opt/godot-source`. The generators that read Godot's source find it there through
+`scripts/godotSource.mjs`. The source leaves out `thirdparty/`, which no generator reads.
 
 The image is `ghcr.io/<owner>/<repository>/ci:<tag>`, so a run in a fork publishes the fork's own
 image. The tag is a hash of the Dockerfile and the Playwright version of the lockfile
 (`scripts/ci/ciImage.mjs`). The `image` job of `ci.yml` builds and publishes the image only when
 the tag does not exist. So a commit that changes neither input reuses the published image, and a
-pull request that changes one runs in its own image. A build takes about 80 s, and a job pulls the
-image in 10 to 16 s.
+pull request that changes one runs in its own image. A build without Godot's source took about
+80 s. The source adds a 44 MB download, which unpacks to 213 MB in about 3 s on 4 cores. A job
+pulls the image in 13 to 18 s (runs of 2026-11-14).
 
 Node, pnpm and the workspace packages stay with `.github/actions/setup`.
 
@@ -46,7 +49,7 @@ Node, pnpm and the workspace packages stay with `.github/actions/setup`.
 
 ## Consequences
 
-- A browser job starts 5 to 10 s later than on the runner. The pull of 10 to 16 s replaces the 4
+- A browser job starts 7 to 14 s later than on the runner. The pull of 13 to 18 s replaces the 4
   to 6 s restore of Chromium and, in the E2E job, 6 s of `apt-get`. The decision buys independence
   from the Ubuntu archive, not time.
 - The Claude review job stays on the runner, and it takes nothing from the image.

@@ -5,7 +5,7 @@
 
 import { isAssignOperator } from './operators.js';
 import type { BlockNode, Expression } from './shaderTree.js';
-import { everyExpressionIn, subExpressions } from './treeWalk.js';
+import { everyExpressionIn, isCall, subExpressions } from './treeWalk.js';
 
 /** The `++` and `--` operators: whether each adds or takes one, and whether it gives the new value. */
 export const STEPS: Readonly<Record<string, { readonly operator: string; readonly givesNew: boolean }>> = {
@@ -18,22 +18,26 @@ export const STEPS: Readonly<Record<string, { readonly operator: string; readonl
 /** Whether `op` writes its first operand: an assignment, or `++` or `--` either side. */
 export const isWriteOperator = (op: string): boolean => isAssignOperator(op) || Object.hasOwn(STEPS, op);
 
-/** The place `expression` itself writes, or nothing for an expression that writes no place. */
-function writtenTarget(expression: Expression): Expression | undefined {
-  if (expression.kind === 'whole assign') return expression.target;
-  if (expression.kind === 'operator' && isWriteOperator(expression.op)) return expression.operands[0];
-  return undefined;
+/** The places `expression` itself writes: an assignment's target, or a call's `out` and `inout` arguments. */
+export function writtenTargets(expression: Expression): readonly Expression[] {
+  if (expression.kind === 'whole assign') return [expression.target];
+  if (isCall(expression))
+    return expression.operands.filter((_, index) => expression.qualifiers[index] !== 'in');
+  if (expression.kind === 'operator' && isWriteOperator(expression.op)) return [expression.operands[0]!];
+  return NO_TARGETS;
 }
+
+const NO_TARGETS: readonly Expression[] = [];
 
 /** Written only by `writes`. An entry goes when its node is collected. */
 // eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
 const writing = new WeakMap<Expression, boolean>();
 
-/** Whether `expression` writes a variable: an assignment or a step anywhere in it, found once per node. */
+/** Whether `expression` writes a variable: an assignment, a step or a call's write anywhere in it, found once per node. */
 export function writes(expression: Expression): boolean {
   let isWriting = writing.get(expression);
   if (isWriting === undefined) {
-    isWriting = writtenTarget(expression) !== undefined || subExpressions(expression).some(writes);
+    isWriting = writtenTargets(expression).length > 0 || subExpressions(expression).some(writes);
     writing.set(expression, isWriting);
   }
   return isWriting;
@@ -42,10 +46,8 @@ export function writes(expression: Expression): boolean {
 /** The variables a block writes: the name at the root of each target it assigns or steps. */
 export function writtenNames(block: BlockNode): Set<string> {
   const names = new Set<string>();
-  for (const part of everyExpressionIn(block)) {
-    const target = writtenTarget(part);
-    if (target) names.add(rootName(target));
-  }
+  for (const part of everyExpressionIn(block))
+    for (const target of writtenTargets(part)) names.add(rootName(target));
   return names;
 }
 

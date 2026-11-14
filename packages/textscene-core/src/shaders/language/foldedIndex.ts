@@ -5,7 +5,7 @@
  */
 
 import type { GlslangFolding } from './glslangFolding.js';
-import { arraySizeOf, typeName } from './parseExpression.js';
+import { arraySizeOf, typeName } from './treeWalk.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
 import type { BlockNode, Expression } from './shaderTree.js';
 import { everyExpressionIn } from './treeWalk.js';

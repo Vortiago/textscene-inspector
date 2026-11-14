@@ -344,6 +344,33 @@ const STATEMENTS_CHAPTER = {
   ],
 };
 
+const FUNCTIONS_CHAPTER = {
+  file: 'functions.md',
+  title: 'Functions and calls',
+  intro:
+    "The functions a shader declares and the calls between them: parameters with `in`, `out`, `inout` and `const`, overloads, struct and array arguments and return values, and `void` functions. Each function of the shader becomes one GLSL function, as in the GLSL Godot writes, through a TSL `Fn` with a layout. TSL's functions take values only, so an `out` or `inout` value goes back to the caller in a struct the function returns. A function called from 64 places is 10,430 characters of GLSL in this form, against 270,552 when each call site holds its own copy of the body.",
+  sections: [
+    {
+      heading: 'Calls and overloads',
+      rows: (row) => row.id === 'OP_CALL',
+      what: '`f(a, b)` calls a function declared before the call. Godot picks the function of the argument types and sizes, and converts a scalar constant to the parameter type only when the function has no overload. A second function of one name must differ in its argument types: Godot names it `f@2` in its tree. Godot refuses recursion, a call of a function declared later, and arguments of no overload, with the message that names each candidate.',
+      tsl: 'a call of the TSL `Fn` of the function, one GLSL function for each overload',
+    },
+    {
+      heading: '`in`, `out` and `inout`',
+      rows: (row) => /^(in|out|inout)$/.test(row.id),
+      what: "An `in` parameter, the default, is a copy of the caller's value, which the function may change. An `out` parameter starts undefined, and the caller's variable takes its last value when the function returns. An `inout` parameter does both. An `out` or `inout` argument must be a variable, an array element or a member that is not of a constant, and Godot refuses a constant or an expression there. A `const` parameter takes any value and refuses a write.",
+      tsl: "the `out` and `inout` values in a struct the GLSL function returns, written back to the caller's places in order",
+    },
+    {
+      heading: '`void`',
+      rows: (row) => row.id === 'void',
+      what: 'A `void` function returns no value: it acts through its `out` and `inout` parameters and `discard`. Its call stands as a statement, and Godot refuses it as a value.',
+      tsl: 'a GLSL function of type `void`, or of the struct of its `out` and `inout` values',
+    },
+  ],
+};
+
 export const GUIDE_CHAPTERS = [
   TYPES_AND_LITERALS,
   ARITHMETIC_CHAPTER,
@@ -353,4 +380,5 @@ export const GUIDE_CHAPTERS = [
   ACCESS_CHAPTER,
   ASSIGNMENT_CHAPTER,
   STATEMENTS_CHAPTER,
+  FUNCTIONS_CHAPTER,
 ];

@@ -7,9 +7,9 @@
 
 import { assignmentRefusal, isWriteOperator } from './assignment.js';
 import { signatureInstruction } from './instructions.js';
-import { arraySizeOf, typeName } from './parseExpression.js';
 import type {
   BlockNode,
+  CallNode,
   ConstantNode,
   ControlFlowNode,
   DeclarationNode,
@@ -22,12 +22,12 @@ import type {
 } from './shaderTree.js';
 import { swizzled } from './swizzle.js';
 import { elementType, shapeOf } from './types.js';
-import { isEmpty } from './treeWalk.js';
+import { arraySizeOf, isCall, isEmpty, PLACE_KINDS, typeName } from './treeWalk.js';
 
 /** The first fact `shader` breaks, or nothing when it holds them all. */
 export function treeFault(shader: ShaderNode): string | undefined {
-  for (const definition of shader.functions) {
-    const fault = new FunctionCheck(shader.structs, definition).fault();
+  for (const [index, definition] of shader.functions.entries()) {
+    const fault = new FunctionCheck(shader.structs, shader.functions.slice(0, index), definition).fault();
     if (fault !== undefined) return `${definition.name}: ${fault}`;
   }
   return undefined;
@@ -66,12 +66,17 @@ class FunctionCheck {
 
   constructor(
     private readonly structs: readonly StructNode[],
+    /** The functions declared before this one, which alone it may call. */
+    private readonly callable: readonly FunctionNode[],
     private readonly definition: FunctionNode
   ) {}
 
   fault(): string | undefined {
     const args = new Map(
-      this.definition.arguments.map((argument) => [argument.name, { type: argument.type, arraySize: 0 }])
+      this.definition.arguments.map((argument) => [
+        argument.name,
+        { type: argument.type, arraySize: argument.arraySize ?? 0 },
+      ])
     );
     this.scopes.push(args);
     return this.block(this.definition.body, BODY);
@@ -97,7 +102,8 @@ class FunctionCheck {
       case 'control flow':
         return this.flow(statement, place);
       default:
-        return isEmpty(statement) ? undefined : this.expression(statement);
+        if (isEmpty(statement)) return undefined;
+        return isCall(statement) ? this.call(statement, true) : this.expression(statement);
     }
   }
 
@@ -126,8 +132,9 @@ class FunctionCheck {
   private flow(flow: ControlFlowNode, place: Place): string | undefined {
     const [value] = flow.expressions;
     const returned = value ? typeName(value.type, arraySizeOf(value)) : 'void';
-    if (flow.flow === 'FLOW_OP_RETURN' && returned !== this.definition.returnType)
-      return `a return of ${returned} in a function of ${this.definition.returnType}`;
+    const returnType = typeName(this.definition.returnType, this.definition.returnArraySize ?? 0);
+    if (flow.flow === 'FLOW_OP_RETURN' && returned !== returnType)
+      return `a return of ${returned} in a function of ${returnType}`;
     const fault = firstFault(flow.expressions, (expression) => this.expression(expression));
     if (fault !== undefined) return fault;
     switch (flow.flow) {
@@ -181,6 +188,7 @@ class FunctionCheck {
   }
 
   private expression(expression: Expression): string | undefined {
+    if (isCall(expression)) return this.call(expression, false);
     if (!this.isType(expression.type)) return `a ${expression.kind} of type ${expression.type}`;
     const { line, column } = expression.position;
     if (!(line >= 1 && column >= 1)) return `a ${expression.kind} at no line and column`;
@@ -268,6 +276,33 @@ class FunctionCheck {
       const member = members[index]!;
       if (operand.type !== member.type || arraySizeOf(operand) !== (member.arraySize ?? 0))
         return `a ${operand.type} for the member ${member.name} of ${construct.type}`;
+      return this.expression(operand);
+    });
+  }
+
+  /**
+   * A call of a function declared before this one, never itself, typed by its return. Each
+   * argument has its parameter's type and size, and an `out` or `inout` argument is a place.
+   * A `void` call stands only as a statement.
+   */
+  private call(call: CallNode, isStatement: boolean): string | undefined {
+    const { line, column } = call.position;
+    if (!(line >= 1 && column >= 1)) return `a call of ${call.function} at no line and column`;
+    const callee = this.callable.find((candidate) => candidate.name === call.function);
+    if (!callee) return `a call of ${call.function}, which no function before ${this.definition.name} is`;
+    if (call.type !== callee.returnType || (call.arraySize ?? 0) !== (callee.returnArraySize ?? 0))
+      return `a call of ${call.function} typed ${typeName(call.type, call.arraySize ?? 0)}`;
+    if (call.type === 'void' && !isStatement) return `the void call of ${call.function} as a value`;
+    if (call.operands.length !== callee.arguments.length)
+      return `a call of ${call.function} with ${call.operands.length} arguments`;
+    return firstFault(call.operands, (operand, index) => {
+      const argument = callee.arguments[index]!;
+      if (operand.type !== argument.type || arraySizeOf(operand) !== (argument.arraySize ?? 0))
+        return `a ${operand.type} for the argument ${argument.name} of ${call.function}`;
+      if (call.qualifiers[index] !== argument.qualifier)
+        return `the qualifier ${call.qualifiers[index]} for the argument ${argument.name} of ${call.function}`;
+      if (argument.qualifier !== 'in' && !PLACE_KINDS.has(operand.kind))
+        return `a ${operand.kind} for the ${argument.qualifier} argument ${argument.name} of ${call.function}`;
       return this.expression(operand);
     });
   }

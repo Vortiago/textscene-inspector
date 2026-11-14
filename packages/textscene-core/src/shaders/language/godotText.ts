@@ -34,6 +34,7 @@ const TEXT_LEADS_WITH_OPERAND: ReadonlySet<string> = new Set([
 
 /** Godot writes a binary operator in brackets, and these in their own forms. */
 const OWN_FORM_OPERATORS: ReadonlySet<string> = new Set([
+  'OP_CALL',
   'OP_CONSTRUCT',
   'OP_STRUCT',
   'OP_SELECT_IF',

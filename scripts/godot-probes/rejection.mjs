@@ -1,20 +1,24 @@
 /**
  * Godot's reason for a probe it draws nothing for. Godot's front end prints its own message with
- * the line of the probe's shader, which the record keeps as a line of the probe's source. A text the front end accepts can still fail in the GPU
- * compiler, which prints a line of the whole GLSL Godot writes. That line moves by a few from one
- * run to the next, so the record keeps the message alone. A shader can also end Godot itself,
- * which prints the signal. The parse needs no engine.
+ * the line of the probe's shader, which the record keeps as a line of the probe's source. A text
+ * the front end accepts can still fail in the GPU compiler, which prints a line of the whole GLSL
+ * Godot writes. That line moves by a few from one run to the next, so the record keeps the
+ * message alone. A shader can also end Godot itself, which prints the signal.
  */
 
 import { MAIN_SCRIPT, probeProjectFiles } from './godotProject.mjs';
-import { probeSourceLineOffset } from './probeShader.mjs';
+import { probeShader, probeSourceLineOffset } from './probeShader.mjs';
 import { runGodotScriptToExit } from './godotRun.mjs';
+import { godotVerdicts } from './shaderVerdicts.mjs';
 
 /** Godot's crash handler: `Program crashed with signal <n>`, before its backtrace. */
 const CRASH = /Program crashed with signal (\d+)/;
 
-/** The front end's form: the message, then the shader's path, which may be empty, and its line. */
-const LANGUAGE_ERROR = /SHADER ERROR: (.*)\n\s*at: .*\(\S*:(\d+)\)/;
+/**
+ * The front end's form: the message, which may hold several lines, then the shader's path, which
+ * may be empty, and its line.
+ */
+const LANGUAGE_ERROR = /SHADER ERROR: ([\s\S]*?)\n\s*at: .*\(\S*:(\d+)\)/;
 
 /** glslang's form: `ERROR: 0:<line>: <message>`, the first of which names the fault. */
 const GLSL_ERROR = /^ERROR: \d+:\d+: (.*)$/m;
@@ -37,10 +41,27 @@ export function parseRejection(output) {
  * Godot's reason for `probe`, from a run of that probe alone. A run may end Godot, which prints
  * its crash report on standard output. Any other failed run throws.
  */
-export function godotRejection(probe) {
-  const { status, stdout, stderr } = runGodotScriptToExit(MAIN_SCRIPT, probeProjectFiles([probe]));
+export async function godotRejection(probe) {
+  const { status, stdout, stderr } = await runGodotScriptToExit(MAIN_SCRIPT, probeProjectFiles([probe]));
   if (status !== 0 && !CRASH.test(stdout)) throw new Error(`godot exited with ${status}:\n${stderr}`);
   const rejection = parseRejection(stdout);
   if (rejection.line === undefined) return rejection;
   return { ...rejection, line: rejection.line - probeSourceLineOffset(probe) };
+}
+
+/**
+ * Godot's front-end reason for each of `probes` it refuses, by name, from verdict runs of them
+ * all. A probe the front end accepts is left out: its reason comes from the GPU compiler or a
+ * crash, which only a run of that probe alone can show.
+ */
+export async function frontEndRejections(probes) {
+  const { verdicts } = await godotVerdicts(probes.map(probeShader));
+  return new Map(
+    probes.flatMap((probe, index) => {
+      const verdict = verdicts[index];
+      if (verdict.accepted) return [];
+      const line = verdict.line - probeSourceLineOffset(probe);
+      return [[probe.name, { stage: 'shading language', message: verdict.message, line }]];
+    })
+  );
 }

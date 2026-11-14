@@ -7,7 +7,8 @@
 
 import { godotIntegerConstant } from './godotNumber.js';
 import { keywordInstruction } from './instructions.js';
-import { arraySizeOf, type ExpressionParser } from './parseExpression.js';
+import type { ExpressionParser } from './parseExpression.js';
+import { arraySizeOf, typeName } from './treeWalk.js';
 import { parseDeclaration } from './parseDeclaration.js';
 import { type BlockKind, BlockScope } from './scope.js';
 import type { Argument, BlockNode, ControlFlowNode, Expression, Flow, Statement } from './shaderTree.js';
@@ -39,7 +40,7 @@ export class StatementParser {
     private readonly expressions: ExpressionParser,
     private readonly holder: ScopeHolder,
     private readonly isStruct: (name: string) => boolean,
-    private readonly returnType: () => string
+    private readonly returnType: () => { readonly returnType: string; readonly returnArraySize: number }
   ) {}
 
   /** A function's body after its `{`, in a scope that sees its arguments. */
@@ -329,18 +330,19 @@ export class StatementParser {
 
   /** `return`, with an expression of the function's type (`shader_language.cpp:8852`). */
   private returnStatement(token: Token): ControlFlowNode {
-    const returnType = this.returnType();
+    const { returnType, returnArraySize } = this.returnType();
+    const returned = typeName(returnType, returnArraySize);
     const mark = this.tokens.mark();
     if (this.tokens.next().type === 'TK_SEMICOLON') {
       if (returnType !== 'void')
-        this.tokens.fail(`Expected 'return' with an expression of type '${returnType}'.`);
+        this.tokens.fail(`Expected 'return' with an expression of type '${returned}'.`);
       return flowNode('FLOW_OP_RETURN', [], [], token.position);
     }
     if (returnType === 'void') this.tokens.fail("'void' function cannot return a value.");
     this.tokens.reset(mark);
     const expression = this.expressions.expression();
-    if (expression.type !== returnType || arraySizeOf(expression) > 0)
-      this.tokens.fail(`Expected return with an expression of type '${returnType}'.`);
+    if (expression.type !== returnType || arraySizeOf(expression) !== returnArraySize)
+      this.tokens.fail(`Expected return with an expression of type '${returned}'.`);
     if (this.tokens.next().type !== 'TK_SEMICOLON') this.tokens.fail("Expected a ';' after 'return'.");
     return flowNode('FLOW_OP_RETURN', [expression], [], token.position);
   }

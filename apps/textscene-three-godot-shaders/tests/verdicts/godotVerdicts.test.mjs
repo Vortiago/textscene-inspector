@@ -26,6 +26,22 @@ describe("Godot's verdict on a shader text", () => {
     });
   });
 
+  it("reads each line of a message that names an overload's candidates", () => {
+    const output = `VERDICT 0
+SHADER ERROR: No matching function for "f" call:
+	candidate function "f(float)" not viable, argument 1 should be float but is int.
+	candidate function "f(vec2)" not viable, argument 1 should be vec2 but is int.
+          at: (null) (:6)
+VERDICTS DONE
+`;
+    expect(parseVerdictOutput(output, 1)[0]).toEqual({
+      accepted: false,
+      message:
+        'No matching function for "f" call:\n\tcandidate function "f(float)" not viable, argument 1 should be float but is int.\n\tcandidate function "f(vec2)" not viable, argument 1 should be vec2 but is int.',
+      line: 6,
+    });
+  });
+
   it('reads a shader with no error as accepted', () => {
     expect(parseVerdictOutput(OUTPUT, 2)[1]).toEqual({ accepted: true });
   });

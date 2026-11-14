@@ -71,12 +71,6 @@ describe('parse: functions', () => {
     expect(refusal(source)).toThrow(message);
   });
 
-  it('refuses an overload, which a map of functions by name cannot hold', () => {
-    expect(refusal('float f(float a) { return a; }\nvec2 f(vec2 a) { return a; }')).toThrow(
-      "An overload of 'f' is not transpiled yet (#1825)"
-    );
-  });
-
   it('names the line and the column of a failure', () => {
     expect(refusal('float f()\n{\n  return b;\n}')).toThrow(/^3:10: Unknown identifier/);
   });
@@ -301,9 +295,7 @@ describe('parse: what the transpiler does not read yet', () => {
   it.each([
     ['shader_type canvas_item;', "'shader_type' is not transpiled yet (#1794)"],
     ['uniform float u;', "'uniform' is not transpiled yet (#1829)"],
-    ['float f(out float a) { return a; }', "'out' is not transpiled yet (#1825)"],
     ['float f(float a) { return sin(a); }', "'sin(float)' is not transpiled yet (#1826)"],
-    ['float f(float a) { return f(a); }', "'OP_CALL' is not transpiled yet (#1825)"],
     ['float f() { return TIME; }', "'TIME' is not transpiled yet (#1794)"],
   ])('names the issue that owns %s', (source, message) => {
     expect(refusal(source)).toThrow(message);

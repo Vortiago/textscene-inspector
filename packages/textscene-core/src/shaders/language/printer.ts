@@ -6,6 +6,7 @@
 import { reduced } from './constants.js';
 import { operatorText } from './operators.js';
 import type {
+  Argument,
   BlockNode,
   ConstantNode,
   ControlFlowNode,
@@ -17,7 +18,7 @@ import type {
   StructNode,
 } from './shaderTree.js';
 import { shapeOf } from './types.js';
-import { isEmpty } from './treeWalk.js';
+import { isCall, isEmpty, typeName } from './treeWalk.js';
 
 /** The text of `shader`: its structs, then its functions, in order. */
 export function printShader(shader: ShaderNode): string {
@@ -32,9 +33,22 @@ function printStruct(struct: StructNode): string {
   return `struct ${struct.name} {\n${members.join('')}};`;
 }
 
+/** A function by its name in the text: Godot names an overload `f@2` only inside its tree. */
 function printFunction(definition: FunctionNode): string {
-  const args = definition.arguments.map((argument) => `${argument.type} ${argument.name}`).join(', ');
-  return `${definition.returnType} ${definition.name}(${args}) ${printBlock(definition.body, '')}`;
+  const args = definition.arguments.map(printArgument).join(', ');
+  const returnType = typeName(definition.returnType, definition.returnArraySize ?? 0);
+  return `${returnType} ${definition.rname}(${args}) ${printBlock(definition.body, '')}`;
+}
+
+/** `const inout float a[2]`, with `in` left as the default it is. */
+function printArgument(argument: Argument): string {
+  const words = [
+    ...(argument.isConst ? ['const'] : []),
+    ...(argument.qualifier === 'in' ? [] : [argument.qualifier]),
+    argument.type,
+    typeName(argument.name, argument.arraySize ?? 0),
+  ];
+  return words.join(' ');
 }
 
 /** A block in braces, each statement on its own line one tab in from `indent`. */
@@ -172,6 +186,7 @@ function printExpression(expression: Expression): string {
       if (op === 'OP_CONSTRUCT')
         return `${expression.row.id.slice(0, expression.row.id.indexOf('('))}(${texts.join(', ')})`;
       if (op === 'OP_STRUCT') return `${expression.type}(${texts.join(', ')})`;
+      if (isCall(expression)) return `${expression.rname}(${texts.join(', ')})`;
       if (op === 'OP_INDEX') return `${printOwner(operands[0]!)}[${texts[1]}]`;
       if (op === 'OP_SELECT_IF')
         return `(${texts[0]} ? ${printTernaryPart(operands[1]!)} : ${printTernaryPart(operands[2]!)})`;
@@ -184,11 +199,11 @@ function printExpression(expression: Expression): string {
 
 /**
  * An operand a swizzle, an index or a post step follows: in brackets unless it is a name, a
- * field or an array element, or brackets already. Godot reads no array or struct in brackets.
+ * field, an array element or a call, or brackets already. Godot reads no array or struct in brackets.
  */
 function printOwner(owner: Expression): string {
   const text = printExpression(owner);
-  return BARE_OWNERS.has(owner.kind) || text.startsWith('(') ? text : `(${text})`;
+  return BARE_OWNERS.has(owner.kind) || isCall(owner) || text.startsWith('(') ? text : `(${text})`;
 }
 
 const BARE_OWNERS: ReadonlySet<string> = new Set(['variable', 'field', 'array element']);

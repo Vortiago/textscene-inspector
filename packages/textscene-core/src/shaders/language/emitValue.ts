@@ -41,8 +41,7 @@ export type StructOf = (type: ValueType) => StructNode | undefined;
  * value type starts undefined, as a GLSL local without a value does, and an array at zero.
  */
 export function declareVariables(type: ValueType, arraySize: number, structOf: StructOf): Value {
-  if (arraySize === 0) return storage(type, 1, structOf).at(0);
-  return arrayVariables(type, arraySize, structOf);
+  return variablesWithLeaves(type, arraySize, structOf).value;
 }
 
 /** A new variable that starts at `value`, or new variables written from it for an array or a struct. */
@@ -53,9 +52,51 @@ export function variablesOf(value: Value, type: ValueType, arraySize: number, st
   return variables;
 }
 
-function arrayVariables(type: ValueType, arraySize: number, structOf: StructOf): Value {
-  const elements = storage(type, arraySize, structOf);
-  return arrayOf(arraySize, (index) => elements.at(index));
+/**
+ * The types of a value's leaves, as a GLSL function takes the value: one per value-type member of
+ * a struct, or the value itself, and an array where the value repeats it. A struct of arrays of
+ * structs keeps each leaf in one flat array, as the emitter's variables do.
+ */
+export function leafTypes(type: ValueType, arraySize: number, structOf: StructOf): string[] {
+  const types: string[] = [];
+  viewOf(type, arraySize, structOf, (leafType, count) => {
+    types.push(count === 1 ? leafType : `${leafType}[${count}]`);
+    return { at: () => undefined as unknown as Value };
+  });
+  return types;
+}
+
+/** The value of `type` that `leaves` hold, in the order of `leafTypes`. */
+export function valueOfLeaves(
+  type: ValueType,
+  arraySize: number,
+  structOf: StructOf,
+  leaves: readonly Node[]
+): Value {
+  let next = 0;
+  return viewOf(type, arraySize, structOf, (_, count) => leafStorage(leaves[next++]!, count));
+}
+
+/** New variables for a value of `type`, and their leaves in the order of `leafTypes`. */
+export function variablesWithLeaves(
+  type: ValueType,
+  arraySize: number,
+  structOf: StructOf
+): { value: Value; leaves: Node[] } {
+  const leaves: Node[] = [];
+  const value = viewOf(type, arraySize, structOf, (leafType, count) => {
+    const leaf = newLeaf(leafType, count);
+    leaves.push(leaf);
+    return leafStorage(leaf, count);
+  });
+  return { value, leaves };
+}
+
+/** The leaves of `value`, copied into new variables where the copy stands on the stack. */
+export function leavesOf(value: Value, type: ValueType, arraySize: number, structOf: StructOf): Node[] {
+  const copy = variablesWithLeaves(type, arraySize, structOf);
+  copyInto(copy.value, value);
+  return copy.leaves;
 }
 
 /** `count` values of `type` side by side: a TSL array of a value type, or one per member of a struct. */
@@ -63,12 +104,25 @@ interface Storage {
   at(index: Node | number): Value;
 }
 
-function storage(type: ValueType, count: number, structOf: StructOf): Storage {
+/** The storage of `count` values of a value type, which a view reads its leaves from. */
+type LeafStorage = (type: ValueType, count: number) => Storage;
+
+/** A value of `type` whose leaves `leaf` stores. */
+function viewOf(type: ValueType, arraySize: number, structOf: StructOf, leaf: LeafStorage): Value {
+  const elements = storage(type, Math.max(arraySize, 1), structOf, leaf);
+  return arraySize === 0 ? elements.at(0) : arrayOf(arraySize, (index) => elements.at(index));
+}
+
+function storage(type: ValueType, count: number, structOf: StructOf, leaf: LeafStorage): Storage {
   const struct = structOf(type);
-  if (!struct) return valueStorage(type, count);
+  if (!struct) return leaf(type, count);
   const members = struct.members.map((member) => {
     const size = member.arraySize ?? 0;
-    return { name: member.name, size, elements: storage(member.type, count * Math.max(size, 1), structOf) };
+    return {
+      name: member.name,
+      size,
+      elements: storage(member.type, count * Math.max(size, 1), structOf, leaf),
+    };
   });
   return {
     at: (index) => ({
@@ -85,15 +139,17 @@ function storage(type: ValueType, count: number, structOf: StructOf): Storage {
   };
 }
 
-function valueStorage(type: ValueType, count: number): Storage {
+/** A new variable for one value of `type`, or a new array of `count` of them at zero. */
+function newLeaf(type: ValueType, count: number): Node {
+  if (count === 1) return property(type) as unknown as Node;
   const zero = () => constantNode(type, filledLanes(shapeOf(type)!.scalar === 'bool' ? false : 0, type));
-  if (count === 1) {
-    const variable = property(type) as unknown as Node;
-    return { at: () => variable };
-  }
-  const elements = inVar(array(Array.from({ length: count }, zero)));
-  return { at: (index) => element(elements, indexNode(index)) };
+  return inVar(array(Array.from({ length: count }, zero)));
 }
+
+/** The values a leaf holds: the leaf itself for one value, its elements for more. */
+const leafStorage = (leaf: Node, count: number): Storage => ({
+  at: (index) => (count === 1 ? leaf : element(leaf, indexNode(index))),
+});
 
 const arrayOf = (count: number, element: (index: Node | number) => Value): ArrayValue => ({
   kind: 'array',

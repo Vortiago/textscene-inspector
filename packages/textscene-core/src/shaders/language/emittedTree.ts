@@ -4,27 +4,31 @@
  * same tree, so every step the emitter depends on is checked against Godot.
  */
 
+import { writtenNames } from './assignment.js';
 import { bindConstantReads } from './constantReads.js';
 import { refuseFoldedIndexOutOfRange } from './foldedIndex.js';
+import { refuseOutArgumentsThatAreNoPlace } from './outArgumentPlace.js';
 import { GlslangFolding } from './glslangFolding.js';
 import { glslBlock } from './godotText.js';
 import { lowerFunction } from './lowering/lower.js';
-import type { FunctionNode, ShaderNode } from './shaderTree.js';
+import type { FunctionNode } from './shaderTree.js';
 
 /**
- * The lowered tree of `definition` and the constants glslang folds in it. The folding knows its
- * nodes by identity, so the lowerings move a node and never copy it.
+ * A function's lowered tree, the constants glslang folds in it, and the names its body writes.
+ * The folding knows its nodes by identity, so the lowerings move a node and never copy it.
  */
-export function emittedTree(definition: FunctionNode): { lowered: FunctionNode; folding: GlslangFolding } {
+export interface EmittedTree {
+  readonly lowered: FunctionNode;
+  readonly folding: GlslangFolding;
+  readonly written: ReadonlySet<string>;
+}
+
+export function emittedTree(definition: FunctionNode): EmittedTree {
   const folding = new GlslangFolding();
   const glsl = { ...definition, body: glslBlock(definition.body) };
   bindConstantReads(glsl.body, folding);
   refuseFoldedIndexOutOfRange(glsl.body, folding);
-  return { lowered: lowerFunction(glsl), folding };
+  refuseOutArgumentsThatAreNoPlace(glsl.body);
+  const lowered = lowerFunction(glsl);
+  return { lowered, folding, written: writtenNames(lowered.body) };
 }
-
-/** `shader` with each function's tree as the emitter walks it, which Godot's printed-text check reads. */
-export const emittedShader = (shader: ShaderNode): ShaderNode => ({
-  ...shader,
-  functions: shader.functions.map((definition) => emittedTree(definition).lowered),
-});

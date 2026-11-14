@@ -6,7 +6,7 @@
 
 import { keywordInstruction } from './instructions.js';
 import type { ExpressionParser, ExpressionScope } from './parseExpression.js';
-import { arraySizeOf, typeName } from './parseExpression.js';
+import { arraySizeOf, typeName } from './treeWalk.js';
 import type { ArrayConstructNode, Expression } from './shaderTree.js';
 import type { TokenCursor } from './tokenCursor.js';
 import type { Token } from './tokenizer.js';

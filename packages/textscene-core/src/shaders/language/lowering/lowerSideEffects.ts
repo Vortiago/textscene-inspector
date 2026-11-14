@@ -4,12 +4,13 @@
  * declared first, so `a + (a = 3.0)` reads `a` before the write. `c ? a : b`, `a && b` and
  * `a || b` with a side that writes become an `if`, as GLSL runs one side. An index that writes,
  * in a place that is written, is kept, so `a[i++] += 1.0` steps `i` once, and so is every index
- * before a value that writes, so `a[i] = i++` writes the `a[i]` of the old `i`.
+ * before a value that writes, so `a[i] = i++` writes the `a[i]` of the old `i`. A call's `out`
+ * and `inout` arguments are places in the same way.
  */
 
 import { isWriteOperator, writes } from '../assignment.js';
-import { arraySizeOf } from '../parseExpression.js';
 import type {
+  CallNode,
   DeclarationNode,
   Expression,
   FunctionNode,
@@ -17,8 +18,7 @@ import type {
   Statement,
   VariableNode,
 } from '../shaderTree.js';
-import { subExpressions, withSubExpressions } from '../treeWalk.js';
-import { shapeOf } from '../types.js';
+import { arraySizeOf, isCall, subExpressions, withSubExpressions } from '../treeWalk.js';
 import type { FreshNames } from './freshNames.js';
 import { assign, declaration, flow, flowBody, ifStatement, not, variable } from './nodes.js';
 import { rewriteFunction } from './rewrite.js';
@@ -79,7 +79,33 @@ class Hoist {
     if (op === 'OP_SELECT_IF') return this.selected(expression);
     if (op === 'OP_AND' || op === 'OP_OR') return this.shortCircuit(expression);
     if (isWriteOperator(op)) return this.assigned(expression);
+    if (isCall(expression)) return this.called(expression);
     return this.inOrder(expression);
+  }
+
+  /**
+   * A call's arguments in order, as `inOrder` keeps them, but an `out` or `inout` argument is a
+   * place: before an argument that writes, its indices are kept, never its value. GLSL reads each
+   * place's indices at the call, and the copy back writes one place after another, so a call
+   * that writes more than one place keeps the indices of all of them.
+   */
+  private called(call: CallNode): Expression {
+    const operands: Expression[] = [];
+    const isWritingPlaces = call.qualifiers.filter((qualifier) => qualifier !== 'in').length > 1;
+    let keptBefore = 0;
+    for (const [at, operand] of call.operands.entries()) {
+      if (writes(operand)) {
+        for (let index = keptBefore; index < operands.length; index++) {
+          const isPlace = call.qualifiers[index] !== 'in';
+          operands[index] = isPlace ? this.place(operands[index]!, true) : this.kept(operands[index]!);
+        }
+        keptBefore = operands.length;
+      }
+      operands.push(
+        call.qualifiers[at] === 'in' ? this.expression(operand) : this.place(operand, isWritingPlaces)
+      );
+    }
+    return { ...call, operands };
   }
 
   /** Each part in order. Before a part that writes, the values read so far are kept. */
@@ -147,7 +173,7 @@ class Hoist {
   private assignedIn(result: VariableNode, part: Expression): Statement[] {
     const inner = new Hoist(this.names);
     const value = inner.expression(part);
-    return [...inner.statements, write(result, value)];
+    return [...inner.statements, assign(result, value)];
   }
 
   /** `value` kept in a variable declared now, or `value` itself when no write can change it. */
@@ -169,17 +195,4 @@ class Hoist {
 function rebuilt(expression: Expression, parts: readonly Expression[]): Expression {
   let next = 0;
   return withSubExpressions(expression, () => parts[next++]!);
-}
-
-/** `target = value`: an operator for a value type, a whole assignment for a struct or an array. */
-function write(target: VariableNode, value: Expression): Statement {
-  if (shapeOf(target.type) && arraySizeOf(target) === 0) return assign(target, value);
-  return {
-    kind: 'whole assign',
-    type: target.type,
-    target,
-    value,
-    position: target.position,
-    ...(target.arraySize ? { arraySize: target.arraySize } : {}),
-  };
 }

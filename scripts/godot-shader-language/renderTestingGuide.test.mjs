@@ -17,7 +17,7 @@ const INPUT = {
     record: { godot: '4.6.3-stable', cases: { 'OP_ADD(float,float)': 'accepted' } },
   },
   random: {
-    programs: [{}, {}, {}],
+    programs: [{}, {}, { functions: 2 }],
     seed: 1,
     transpiledRows: 2,
     knownDifferences: KNOWN,
@@ -40,6 +40,10 @@ const INPUT = {
 const GUIDE = renderTestingGuide(INPUT);
 
 describe('the chapter on the tests against Godot', () => {
+  it('counts the random programs that declare functions of their own', () => {
+    expect(GUIDE).toContain('the rest with random roots, and 1 that declare functions of their own.');
+  });
+
   it('counts the random programs bit-equal with Godot, less those a case names, and the listed cases', () => {
     expect(GUIDE).toContain(
       '**2 of 3 random programs bit-equal with Godot, NaN lanes compared as NaN. The others are the 1 listed known-difference case, each with its cause:'

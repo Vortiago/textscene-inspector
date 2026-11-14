@@ -25,10 +25,11 @@ import {
 import { assignmentRefusal } from './assignment.js';
 import { BINARY_OPERATOR_OF_TOKEN, OPERATOR_TOKENS, UNARY_OPERATOR_OF_TOKEN } from './operators.js';
 import { type Entry, reducedEntries } from './reduction.js';
-import type { ShadingLanguageError } from './shadingLanguageError.js';
 import type { Identifier } from './scope.js';
 import type { ConstantNode, Expression, OperatorNode, Scalar, StructNode } from './shaderTree.js';
 import { ArrayParser } from './parseArray.js';
+import { type CallScope, resolvedCall } from './parseCall.js';
+import { arraySizeOf, typeName } from './treeWalk.js';
 import { swizzled } from './swizzle.js';
 import type { TokenCursor } from './tokenCursor.js';
 import type { Token } from './tokenizer.js';
@@ -42,7 +43,7 @@ import {
 } from './expressionLimits.js';
 
 /** What a name stands for where the expression stands, and the structs of the shader. */
-export interface ExpressionScope {
+export interface ExpressionScope extends CallScope {
   identifier(name: string): Identifier | undefined;
   struct(name: string): StructNode | undefined;
 }
@@ -238,7 +239,7 @@ export class ExpressionParser {
       this.tokens.next();
       if (struct) return this.structConstruction(struct, token);
       if (this.arrayOfCall) return this.arrayCall(name, token);
-      throw this.refusedCall(name, this.argumentList(), token);
+      return this.call(name, this.argumentList(), token);
     }
     if (this.arrayOfCall) this.tokens.fail(`Unknown identifier in expression: '${name}'.`);
     const found = this.scope.identifier(name);
@@ -351,18 +352,17 @@ export class ExpressionParser {
     );
   }
 
-  /** A call: a built-in function's overload row, or `OP_CALL` for a function of the shader. */
-  private refusedCall(name: string, args: readonly Expression[], token: Token): ShadingLanguageError {
+  /** A call of a function of the shader. A built-in function is refused with its overload's row. */
+  private call(name: string, args: readonly Expression[], token: Token): Expression {
     const overload = signatureInstruction(
       name,
       args.map((arg) => arg.type)
     );
-    if (overload) return notTranspiled(overload, token.position);
+    if (overload) throw notTranspiled(overload, token.position);
     const anyOverload = firstInstruction(`${name}(`);
-    if (anyOverload) return notTranspiled(anyOverload, token.position, name);
-    if (this.scope.identifier(name)?.kind === 'function')
-      return notTranspiled(instruction('OP_CALL')!, token.position);
-    this.tokens.fail(`Unknown identifier in expression: '${name}'.`);
+    if (anyOverload) throw notTranspiled(anyOverload, token.position, name);
+    const call = resolvedCall(this.scope, name, args, token.position, (message) => this.tokens.fail(message));
+    return call.arraySize ? this.arrayAccess(call) : call;
   }
 
   /** The members, indexes and increments after an operand (`shader_language.cpp:6800`). */
@@ -472,17 +472,7 @@ function ternaryOperand(node: Expression): Expression {
 
 const isDataTypeToken = (type: string) => keywordInstruction(type)?.family === 'data type';
 
-/** The element count of an array value, or 0 for one value, as Godot's `get_array_size`. */
-export function arraySizeOf(expression: Expression): number {
-  if (expression.kind === 'array construct') return expression.arraySize;
-  if (expression.kind === 'variable' || expression.kind === 'field' || expression.kind === 'whole assign')
-    return expression.arraySize ?? 0;
-  return 0;
-}
-
-/** A type as Godot's messages name it: `float`, or `float[3]` for an array. */
-export const typeName = (type: string, arraySize: number) => (arraySize > 0 ? `${type}[${arraySize}]` : type);
-
+/** A constant of one scalar, at its token. */
 const constantOf = (token: Token, type: string, value: Scalar): ConstantNode => ({
   kind: 'constant',
   type,

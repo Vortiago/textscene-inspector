@@ -35,6 +35,23 @@ describe('lowerReturns', () => {
     );
   });
 
+  it('sets a struct result in a branch as a whole value', () => {
+    const lowered = loweredText(
+      lowerReturns,
+      'struct P { float x; }; P f(float a) { if (a > 1.0) return P(a); return P(0.0); }'
+    );
+    expect(lowered).toContain('lowered_result_1 = P(a);');
+  });
+
+  it('sets an array result in a branch as a whole value', () => {
+    const lowered = loweredText(
+      lowerReturns,
+      'float[2] f(float a) { if (a > 1.0) return float[2](a, a); return float[2](0.0, 0.0); }'
+    );
+    expect(lowered).toContain('float lowered_result_1[2];');
+    expect(lowered).toContain('lowered_result_1 = float[2](a, a);');
+  });
+
   it('leaves every loop around a return, an inner loop and then the outer one', () => {
     const lowered = loweredText(
       afterLoops,

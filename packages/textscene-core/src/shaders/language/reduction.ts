@@ -8,7 +8,7 @@ import { assignmentRefusal } from './assignment.js';
 import { evaluationRefusal } from './evaluation.js';
 import { signatureInstruction } from './instructions.js';
 import { OPERATOR_RULES, isAssignOperator, operatorText } from './operators.js';
-import { arraySizeOf, typeName } from './parseExpression.js';
+import { arraySizeOf, typeName } from './treeWalk.js';
 import type { SourcePosition } from './shadingLanguageError.js';
 import type { Expression, OperatorNode } from './shaderTree.js';
 import { shapeOf } from './types.js';

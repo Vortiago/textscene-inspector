@@ -8,6 +8,7 @@
 import { LANE_COUNT, probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { pairedVectors, pairs, scalars, vectors } from './inputs.mjs';
 import { generatedProbes } from './operatorProbes.mjs';
+import { FUNCTION_PROBES } from './functionProbes.mjs';
 import { STATEMENT_PROBES } from './statementProbes.mjs';
 import { LANGUAGE_PROBES, probeOf } from './languageProbes.mjs';
 
@@ -321,5 +322,6 @@ export const PROBES = [
   combinedProbe(),
   ...LANGUAGE_PROBES,
   ...STATEMENT_PROBES,
+  ...FUNCTION_PROBES,
   ...generatedProbes(FLOAT_ROW_PROBES),
 ];
