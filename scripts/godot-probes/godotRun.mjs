@@ -26,6 +26,15 @@ const OUTPUT_CHARACTERS_AT_MOST = 256 * 1024 * 1024;
  */
 const RUNS_AT_ONCE = availableParallelism();
 
+/**
+ * The display each run starts its search for a free one at: runs at once start apart, so two of
+ * them never race for one display. Written only by `spawnGodot`, and it wraps after 64 runs.
+ */
+let runsStarted = 0;
+const FIRST_SERVER = 100;
+const SERVERS_APART = 8;
+const SERVER_SLOTS = 64;
+
 /** Frames a main script draws before it reads its viewports: the first frames compile the pipelines. */
 export const FRAMES_BEFORE_READ = 4;
 
@@ -92,14 +101,16 @@ function writeProject(files) {
  * that did not start, did not exit in time or printed more than a run may.
  */
 function spawnGodot(directory) {
-  const plan = godotSpawnPlan(['--path', directory], { display: true });
+  const firstServer = FIRST_SERVER + (runsStarted++ % SERVER_SLOTS) * SERVERS_APART;
+  const plan = godotSpawnPlan(['--path', directory], { display: true, firstServer });
   return new Promise((resolve) => {
-    const child = spawn(plan.command, plan.argv, { env: plan.env });
+    // Its own process group, so a stop reaches `xvfb-run`, Godot and Xvfb, not only `timeout`.
+    const child = spawn(plan.command, plan.argv, { env: plan.env, detached: true });
     const output = { stdout: '', stderr: '' };
     let error;
     const stop = (reason) => {
       error ??= reason;
-      child.kill('SIGKILL');
+      killGroup(child);
     };
     const timer = setTimeout(() => stop(new Error(`no exit within ${plan.timeoutMs} ms`)), plan.timeoutMs);
     for (const stream of ['stdout', 'stderr']) {
@@ -120,10 +131,21 @@ function spawnGodot(directory) {
   });
 }
 
+/** SIGKILL to `child`'s whole process group. A group that has already exited needs none. */
+function killGroup(child) {
+  try {
+    process.kill(-child.pid, 'SIGKILL');
+  } catch (error) {
+    if (error.code !== 'ESRCH')
+      throw new Error(`kill the group of godot run ${child.pid}: ${error.message}`, { cause: error });
+  }
+}
+
 /**
  * `items` in at most as many contiguous chunks as Godot runs at once, each chunk run by `run`,
  * and each chunk's answer in the order of the chunks. No items make one empty chunk, so the
  * caller still reads Godot's version.
+ * @canonical Items run in chunks, one Godot run for each chunk at once
  */
 export function inChunksAtOnce(items, run) {
   const size = Math.max(1, Math.ceil(items.length / RUNS_AT_ONCE));
@@ -132,12 +154,16 @@ export function inChunksAtOnce(items, run) {
   return Promise.all(chunks.map(run));
 }
 
-/** `run` of each of `items`, with at most as many runs at once as Godot runs at once. */
+/**
+ * `run` of each of `items`, with at most as many runs at once as Godot runs at once.
+ * @canonical Items run one Godot run each, as many at once as Godot runs at once
+ */
 export const eachAtOnce = (items, run) => mapPool(items, RUNS_AT_ONCE, (item) => run(item));
 
 /**
  * The first of `runs`, when every run names the same Godot, and the same adapter where a run
  * names one. Answers from two engines would mix otherwise.
+ * @canonical The one Godot and adapter of several Godot runs
  */
 export function oneGodot(runs) {
   const [first] = runs;

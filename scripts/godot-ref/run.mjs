@@ -1441,11 +1441,15 @@ export const SPAWN_BACKSTOP_MS = (ENGINE_TIMEOUT_S + ENGINE_KILL_AFTER_S + 30) *
  * The argv and environment for one engine pass, split out so a test can assert the reaping and
  * driver contracts without an engine, an X server or a 300-second wait.
  */
-export function godotSpawnPlan(args, { display, screen = null, groupTimeout = true }) {
+export function godotSpawnPlan(args, { display, screen = null, groupTimeout = true, firstServer = null }) {
   // Only the root-window arm sizes the X screen: its capture is the window, which a smaller
   // default screen would clip. Every other render keeps xvfb-run's default screen.
   const screenArgs = screen ? ['-s', `-screen 0 ${screen.width}x${screen.height}x24`] : [];
-  const engine = display ? ['xvfb-run', '-a', ...screenArgs, 'godot', ...args] : ['godot', ...args];
+  // `-a` takes the first free display from `-n` on, and two runs that look at once can take the
+  // same one, so runs at once each start their search at a display of their own.
+  const serverArgs = firstServer === null ? [] : ['-n', String(firstServer)];
+  const xvfb = ['xvfb-run', '-a', ...serverArgs, ...screenArgs];
+  const engine = display ? [...xvfb, 'godot', ...args] : ['godot', ...args];
   // `spawnSync` signals only the `xvfb-run` wrapper, and the orphaned `godot` and `Xvfb` render
   // on and hold the display lock. `timeout` signals the whole group (coreutils `timeout.c` calls
   // `setpgid` unless `--foreground`), and `-k` follows with SIGKILL.

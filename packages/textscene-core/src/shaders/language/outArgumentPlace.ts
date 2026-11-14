@@ -34,8 +34,6 @@ function refusal(place: Expression): string | undefined {
       return refusal(place.owner);
     case 'array element':
       return refusal(place.array);
-    case 'operator':
-      return place.op === 'OP_INDEX' ? refusal(place.operands[0]!) : 'a value that is no variable';
     default:
       return 'a value that is no variable';
   }

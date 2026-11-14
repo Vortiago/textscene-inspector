@@ -626,6 +626,14 @@ describe('an expired engine pass is reaped as a process group', () => {
     expect(s).toBeLessThan(plan.argv.indexOf('godot'));
   });
 
+  it('starts the search for a free display at the first server asked for', () => {
+    const plan = godotSpawnPlan(['--path', '/tmp/work'], { display: true, firstServer: 108 });
+    const n = plan.argv.indexOf('-n');
+    expect(plan.argv[n + 1]).toBe('108');
+    expect(n).toBeGreaterThan(plan.argv.indexOf('-a'));
+    expect(n).toBeLessThan(plan.argv.indexOf('godot'));
+  });
+
   it('still runs the headless import arm, which has no wrapper to orphan', () => {
     const plan = godotSpawnPlan(['--headless', '--import'], { display: false });
     expect(plan.command).toBe('timeout');
