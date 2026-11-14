@@ -1,6 +1,7 @@
 /**
- * One batched mesh for a run of tile cells that draw from one atlas source, with the
- * 2D material of Sprite2D. It resolves the source's texture as any Texture2D slot is resolved.
+ * One batched mesh for a run of tile cells that draw from one atlas source, with the material
+ * of the canvas mesh body (`CanvasSurfaceMaterial`). It resolves the source's texture as any
+ * Texture2D slot is resolved.
  */
 
 import { useMemo, useState } from 'react';
@@ -14,15 +15,14 @@ import {
 } from '../resources/tileset/tileGeometry';
 import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
-import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
 import { useCanvas2DTexture } from './canvas2DTextureDecode';
 import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import { WHITE_MODULATE, type VertexColorTint } from './canvasItemModulate';
 import type { Rgba } from '../godot/math/math';
 import { TILE_TEXTURE_PADDING, TILE_UV_BOUNDS_ATTRIBUTE } from './tileTexturePadding';
 import { TILE_NORMAL_ORIENTATION, TILE_NORMAL_ORIENTATION_ATTRIBUTE } from './tileNormalOrientation';
-import { materialProgramInputs } from './materialProgramInputs';
 import { usePaddedAtlasStandIn } from './paddedAtlasStandIn';
+import { CanvasSurfaceMaterial } from './canvasMesh/CanvasSurfaceMaterial';
 import { useSurfacePixelMaterial } from './components/LitCanvasItemPixels';
 import { CanvasItemSurfaceSource } from './canvasItemSurface';
 import type { CanvasItemSurface } from './lighting2d/normalMappedLighting';
@@ -35,8 +35,6 @@ interface TileSourceMeshProps {
   renderOrder: number;
   /** The tile canvas item's tint, split between the vertex colours and the material. */
   tint: VertexColorTint;
-  /** Group name for the per-source missing-texture placeholder. */
-  name?: string;
   /** The layer's effective filter and repeat, which a source's CanvasTexture may override. */
   sampler: CanvasItemTextureSampler;
 }
@@ -47,7 +45,6 @@ export function TileSourceMesh({
   grid,
   renderOrder,
   tint,
-  name,
   sampler: layerSampler,
 }: TileSourceMeshProps) {
   const texResult = useCanvasItemTextureSampledBy(layerSampler, source.texture);
@@ -84,44 +81,29 @@ export function TileSourceMesh({
 
   // The run's own maps, so runs of one tile item from different sources each light with theirs.
   const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
-  // A source with no texture draws nothing (`tile_map_layer.cpp:724`), nor does a pending or failed one.
+  // A source with no texture draws nothing (`tile_map_layer.cpp:724`), nor does a pending one. A
+  // failed one draws nothing too: Godot's loader leaves the texture null (`tile_map_layer.cpp:2676-2677`).
   const isDrawn = source.texture !== null && !texResult.missing && tex !== null && geometry !== null;
   const pixelMaterial = useSurfacePixelMaterial(surface, isDrawn);
-
-  if (!source.texture) return null;
-  // A failed load gets one placeholder for the whole source (the panel row comes from the
-  // resolver's missing report).
-  if (texResult.missing) {
-    return <MissingResourcePlaceholder shape="plane" name={name} />;
-  }
-  // Pending: render nothing, so no placeholder flashes.
-  if (!tex || !geometry) return null;
-
-  // Keyed, since the program depends on it and nothing recompiles in place
-  // (`materialProgramInputs.ts`). The atlas is awaited, so it holds steady.
-  const program = materialProgramInputs({
-    props: {
-      map: tex,
-      color: tint.color,
-      opacity: tint.opacity,
-      // Each tile's `modulate`, multiplied onto its pixels (`tile_map_layer.cpp:2690`) in sRGB.
-      vertexColors: true,
-      transparent: true,
-      depthWrite: false,
-      defines: tint.defines,
-    },
-    merge: [
-      pixelMaterial,
-      // A stand-in samples padded regions, so only the atlas itself holds samples inside each tile.
-      source.usesTexturePadding && !isStandIn ? { injection: TILE_TEXTURE_PADDING } : undefined,
-      surface && orientsNormals ? { injection: TILE_NORMAL_ORIENTATION } : undefined,
-    ],
-  });
+  if (!isDrawn) return null;
 
   return (
     <>
       <mesh renderOrder={renderOrder} geometry={geometry}>
-        <meshBasicMaterial key={program.key} {...program.props} />
+        <CanvasSurfaceMaterial
+          map={tex}
+          color={tint.color}
+          opacity={tint.opacity}
+          // Each tile's `modulate`, multiplied onto its pixels (`tile_map_layer.cpp:2690`).
+          vertexColors="stored"
+          drawsPoints={false}
+          pixelMaterial={pixelMaterial}
+          injections={[
+            // A stand-in samples padded regions, so only the atlas itself holds samples inside each tile.
+            source.usesTexturePadding && !isStandIn ? TILE_TEXTURE_PADDING : undefined,
+            surface && orientsNormals ? TILE_NORMAL_ORIENTATION : undefined,
+          ]}
+        />
       </mesh>
       {hasNormalMap && canvasTexture && (
         <CanvasItemSurfaceSource

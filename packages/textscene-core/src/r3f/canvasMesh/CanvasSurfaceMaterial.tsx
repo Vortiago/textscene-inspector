@@ -9,7 +9,7 @@ import { useThree } from '@react-three/fiber';
 import { canvasMapProps } from '../canvas2DTextureDecode';
 import { instanceColorDefines, useCanvasColorSpace, type CanvasColorSpace } from '../canvasColorSpace';
 import { canvasPointSize } from '../materials/godotPoint';
-import { materialProgramInputs } from '../materialProgramInputs';
+import { materialProgramInputs, type ProgramInjection } from '../materialProgramInputs';
 import type { CanvasItemPixelMaterial } from '../components/LitCanvasItemPixels';
 import type { CanvasVertexColors } from './canvasSurface';
 
@@ -23,7 +23,11 @@ interface CanvasSurfaceMaterialProps {
   /** True for a surface drawn as points, whose size three leaves unwritten. */
   drawsPoints: boolean;
   pixelMaterial: CanvasItemPixelMaterial;
+  /** Program edits after the pixel material, in order, as a tile run's padding and normal orientation. */
+  injections?: readonly (ProgramInjection | undefined)[];
 }
+
+const NO_INJECTIONS: readonly (ProgramInjection | undefined)[] = [];
 
 export function CanvasSurfaceMaterial({
   map,
@@ -32,6 +36,7 @@ export function CanvasSurfaceMaterial({
   vertexColors,
   drawsPoints,
   pixelMaterial,
+  injections = NO_INJECTIONS,
 }: CanvasSurfaceMaterialProps) {
   const canvasSpace = useCanvasColorSpace();
   const pixelRatio = useThree((state) => state.viewport.dpr);
@@ -52,7 +57,7 @@ export function CanvasSurfaceMaterial({
     },
     // The facing in `pixelMaterial` draws one pass whatever the winding, so a bent skin's
     // triangles and per-vertex alpha keep their index order.
-    merge: [pixelMaterial],
+    merge: [pixelMaterial, ...injections.map((injection) => injection && { injection })],
   });
   return <meshBasicMaterial key={program.key} {...program.props} />;
 }

@@ -32,8 +32,6 @@ interface TileLayerItem {
   material: CanvasItemMaterialProperties | null;
   lightMask: number | undefined;
   zFinal: number;
-  /** Group name for a source's missing-texture placeholder. */
-  name: string;
   /** The layer's effective filter and repeat, which its atlas textures sample with. */
   sampler: CanvasItemTextureSampler;
 }
@@ -108,7 +106,6 @@ function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
             grid={layer.model}
             renderOrder={item.firstOrder + runIndex}
             tint={tint}
-            name={layer.name}
             sampler={layer.sampler}
           />
         ))}

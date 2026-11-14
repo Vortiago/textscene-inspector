@@ -189,12 +189,12 @@ describe('<CPUParticles2D>', () => {
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
-  it('shows one placeholder, not one per particle, for a texture that failed', async () => {
+  // Godot's loader leaves the texture null, and the multimesh draws with white (`cpu_particles_2d.cpp:1288-1291`).
+  it('draws untextured particles for a texture that failed', async () => {
     const renderer = await render(node({ amount: '32' }), { seedTexture: false });
-    const meshes = renderer.scene.findAllByType('Mesh');
-    expect(meshes).toHaveLength(1);
-    const material = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
-    expect(material.color.getHexString()).toBe('ff00ff');
+    const material = particleMesh(renderer)!.material as THREE.MeshBasicMaterial;
+    expect(material.map).toBeNull();
+    expect(material.color.getHexString()).not.toBe('ff00ff');
   });
 
   it('applies the CanvasItem modulate as the material tint', async () => {

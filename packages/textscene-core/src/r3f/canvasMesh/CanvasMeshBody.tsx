@@ -2,7 +2,7 @@
  * The body a Node2D mesh drawer draws through: the CanvasItem ritual of `CanvasItem2D`, the
  * texture's load state, the cycle placeholder, the lighting hand-back and one material for each surface.
  * A drawer states its texture (`useCanvasMeshTexture`) and its surfaces, and nothing else.
- * CPUParticles2D, the tile mesh and CanvasGroup still draw their own.
+ * The tile run (`TileSourceMesh`) and the CanvasGroup rect mount `CanvasSurfaceMaterial` alone.
  */
 
 import { useMemo, type ReactNode } from 'react';
@@ -14,6 +14,7 @@ import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import { drawnTag } from '../meshes/meshContent';
 import { useArrayColorOf, type CanvasItemTint } from '../canvasItemModulate';
 import { CanvasItem2D } from '../components/CanvasItem2D';
+import { CanvasItemGroup } from '../components/CanvasItemGroup';
 import type { CanvasItemPixelMaterial } from '../components/LitCanvasItemPixels';
 import { MissingResourcePlaceholder } from '../components/MissingResourcePlaceholder';
 import { CanvasSurfaceMaterial } from './CanvasSurfaceMaterial';
@@ -33,6 +34,12 @@ export interface MaterialSurfaces<Input> {
   readonly useSurfaces: (input: Input, material: CanvasItemMaterialProperties | null) => CanvasSurfaces;
 }
 
+/** A named group around the drawn surfaces, which the drawer receives once it is in the tree. */
+export interface CanvasMeshBodyGroup {
+  name: string;
+  ref: (group: THREE.Group | null) => void;
+}
+
 interface CanvasMeshBodyProps<Input> {
   node: TscnNode;
   props: Node2DProperties;
@@ -46,6 +53,11 @@ interface CanvasMeshBodyProps<Input> {
   withoutTexture: 'white' | 'nothing';
   /** The surfaces in draw order, or null to draw nothing. Its children still draw. */
   surfaces: CanvasSurfaces | MaterialSurfaces<Input>;
+  /**
+   * Wraps the surfaces in a group, as CPUParticles2D samples its emission transform from one. The
+   * group mounts while the item draws, before a surface hook returns its first surfaces.
+   */
+  bodyGroup?: CanvasMeshBodyGroup;
   children?: ReactNode;
 }
 
@@ -56,6 +68,7 @@ export function CanvasMeshBody<Input>({
   texture,
   withoutTexture,
   surfaces,
+  bodyGroup,
   children,
 }: CanvasMeshBodyProps<Input>) {
   const { view, canvasTexture } = texture[DRAWN_TEXTURE];
@@ -76,10 +89,17 @@ export function CanvasMeshBody<Input>({
         if (isCyclic) return <MissingResourcePlaceholder shape="plane" name={node.name} />;
         if (!isDrawn) return null;
         const drawn = { map: view, tint, pixelMaterial };
-        return isMaterialSurfaces(surfaces) ? (
+        const meshes = isMaterialSurfaces(surfaces) ? (
           <SurfacesOfMaterial surfaces={surfaces} material={material} {...drawn} />
         ) : (
           <SurfaceMeshes surfaces={surfaces} {...drawn} />
+        );
+        return bodyGroup ? (
+          <CanvasItemGroup ref={bodyGroup.ref} name={bodyGroup.name}>
+            {meshes}
+          </CanvasItemGroup>
+        ) : (
+          meshes
         );
       }}
     >
@@ -116,7 +136,7 @@ function SurfaceMeshes({ surfaces, ...drawn }: DrawnSurfaces & { surfaces: reado
 
 /** One surface: triangles, points or line segments, by the primitive its geometry draws. */
 function SurfaceMesh({ surface, map, tint, pixelMaterial }: DrawnSurfaces & { surface: CanvasSurface }) {
-  const { geometry, arrayColor, vertexColors = 'stored', position, scale, meshRef } = surface;
+  const { geometry, arrayColor, vertexColors = 'stored', position, scale, matrix, meshRef } = surface;
   const arrayColorOf = useArrayColorOf();
   const { color, opacity } = useMemo(
     () =>
@@ -128,7 +148,7 @@ function SurfaceMesh({ surface, map, tint, pixelMaterial }: DrawnSurfaces & { su
   const primitive = geometryPrimitive(geometry);
   const Draw = drawnTag(primitive);
   return (
-    <Draw ref={meshRef} position={position} scale={scale}>
+    <Draw ref={meshRef} {...(matrix ? { matrix, matrixAutoUpdate: false } : { position, scale })}>
       <primitive object={geometry} attach="geometry" />
       <CanvasSurfaceMaterial
         map={map}

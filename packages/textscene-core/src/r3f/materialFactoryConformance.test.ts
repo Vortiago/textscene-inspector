@@ -659,7 +659,7 @@ describe('Material factory conformance', () => {
     }
     expect(RENDERER_JSX.length).toBeGreaterThanOrEqual(120);
     // A regex or reader that stopped matching would read as "no offenders".
-    expect(TAGS.flatMap(({ tags }) => tags).length).toBeGreaterThanOrEqual(30);
+    expect(TAGS.flatMap(({ tags }) => tags).length).toBeGreaterThanOrEqual(25);
     expect(CONSTRUCTOR_SITES.flatMap(({ lines }) => lines).length).toBeGreaterThanOrEqual(10);
     expect(ASSIGNMENT_SITES.flatMap(({ lines }) => lines).length).toBeGreaterThanOrEqual(4);
     expect(HOST_TAG_COUNT).toBeGreaterThanOrEqual(350);
