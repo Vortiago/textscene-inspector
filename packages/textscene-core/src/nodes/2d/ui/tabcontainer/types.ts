@@ -31,7 +31,7 @@ export interface TabContainerProperties extends ControlProperties {
   clipTabs?: boolean;
   /** Default true. */
   tabsVisible?: boolean;
-  /** Default false. */
+  /** Default false. A loaded bar draws in front mode either way (`internalControls.ts`). */
   allTabsInFront?: boolean;
   /** Default true. */
   switchOnDragHover?: boolean;

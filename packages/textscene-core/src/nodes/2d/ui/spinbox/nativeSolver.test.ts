@@ -8,8 +8,7 @@ import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
-import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
+import { createSolveContext } from '../../../../r3f/controls/native/controlRectSolver';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SpinBoxProperties } from './types';
@@ -19,18 +18,18 @@ import {
   spinBoxLayout,
   rangeStepDecimals,
   formatGodotNumber,
-  spinBoxDisplayText,
   spinBoxUpButtonState,
   spinBoxDownButtonState,
   spinBoxIconColor,
-  spinBoxFieldTextTheme,
   spinBoxMinimumSize,
   spinBoxWidestButtonIconWidth,
-  shapeSpinBoxFieldText,
 } from './nativeSolver';
 import { controlProps } from '../control/testing/controlProps';
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import type { TscnInternalResource } from '../../../../parser/types';
+import '../lineedit/index.r3f';
+import { internalControlsOf } from '../../../../r3f/controls/native/internalControls';
+import type { LineEditProperties } from '../lineedit/types';
 
 // At font size 16 with no theme in the chain: 'W' advances 1936*(16/2048) = 15.125
 // (`openSansMetrics.ts`'s hmtx), and the line is ceil(2189*16/2048) + ceil(600*16/2048) = 23 with
@@ -46,12 +45,14 @@ function node(props: Partial<SpinBoxProperties> = {}): SolveNode {
   };
 }
 
+/** The text `_update_text` writes into the field of a SpinBox with `props`, in `locale` (`spin_box.cpp:88-114`). */
+function fieldText(props: Partial<SpinBoxProperties>, locale = ''): string {
+  const [field] = internalControlsOf({ ...node(props), locale }, nativeTheme(1));
+  return (field!.node.node.properties as LineEditProperties).text ?? '';
+}
+
 function ctx(withMeasurer = true): SolveContext {
-  return {
-    theme: nativeTheme(1),
-    measureText: withMeasurer ? measureText : null,
-    combinedMinimumSize: () => ({ x: 0, y: 0 }),
-  };
+  return createSolveContext(nativeTheme(1), withMeasurer ? measureText : null);
 }
 
 describe('spinBoxButtonsBlockWidth', () => {
@@ -91,9 +92,23 @@ describe('spinBoxLayout', () => {
     expect(spinBoxLayout({ x: 10, y: 30 }, 16).fieldRect.w).toBe(0);
   });
 
-  it('truncates a fractional rect size toward zero, matching Size2i (edge case)', () => {
+  it('truncates a fractional rect size toward zero for the buttons, matching Size2i (edge case)', () => {
     const layout = spinBoxLayout({ x: 100.9, y: 29.9 }, 16);
-    expect(layout.fieldRect.h).toBe(29);
+    expect(layout.downRect.y + layout.downRect.h).toBe(29);
+  });
+
+  it('keeps the field at the fractional size, as its anchors and offsets place it (spin_box.cpp:394-395)', () => {
+    const layout = spinBoxLayout({ x: 100.5, y: 29.5 }, 16);
+    expect(layout.fieldRect).toEqual({ x: 0, y: 0, w: 82.5, h: 29.5 });
+  });
+
+  it('mirrors the fractional field under RTL', () => {
+    expect(spinBoxLayout({ x: 100.5, y: 29.5 }, 16, true).fieldRect).toEqual({
+      x: 18,
+      y: 0,
+      w: 82.5,
+      h: 29.5,
+    });
   });
 
   it('puts the buttons block on the LEFT under RTL layout (spin_box.cpp:403,409)', () => {
@@ -149,19 +164,17 @@ describe('formatGodotNumber', () => {
   });
 });
 
-describe('spinBoxDisplayText', () => {
+describe("the field's text", () => {
   it('wraps the formatted value in prefix/suffix, space-separated (happy path)', () => {
-    expect(
-      spinBoxDisplayText(controlProps({ name: 'S', prefix: '$', suffix: 'kg', step: 0.25 }), 5.5, '')
-    ).toBe('$ 5.5 kg');
+    expect(fieldText({ prefix: '$', suffix: 'kg', step: 0.25, value: 5.5 })).toBe('$ 5.5 kg');
   });
 
   it('omits an absent prefix/suffix entirely, not as an empty wrap (error path)', () => {
-    expect(spinBoxDisplayText(controlProps({ name: 'S' }), 5, '')).toBe('5');
+    expect(fieldText({ value: 5 })).toBe('5');
   });
 
   it('falls back to step=1 (Range default) when unset (edge case)', () => {
-    expect(spinBoxDisplayText(controlProps({ name: 'S' }), 5.5, '')).toBe('6'); // step_decimals(1) = 0, so String::num rounds with %.0lf
+    expect(fieldText({ value: 5.5 })).toBe('6'); // step_decimals(1) = 0, so String::num rounds with %.0lf
   });
 });
 
@@ -217,26 +230,9 @@ describe('spinBoxIconColor', () => {
   });
 });
 
-describe('spinBoxFieldTextTheme', () => {
-  it('falls back to the built-in default font size/colour absent any theme (happy path)', () => {
-    const result = spinBoxFieldTextTheme(node(), true);
-    expect(result.fontSizePx).toBe(16);
-    expect(result.color).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
-  });
-
-  it('reads the uneditable colour when not editable (edge case)', () => {
-    expect(spinBoxFieldTextTheme(node(), false).color).toEqual({
-      r: 0.875,
-      g: 0.875,
-      b: 0.875,
-      a: 0.5,
-    });
-  });
-});
-
 describe('spinBoxMinimumSize at a theme scale (spin_box.cpp:382-397)', () => {
   it('widens the buttons block to the scaled arrow: the same minimum as themed 24x12 arrows', () => {
-    const at15: SolveContext = { ...ctx(), theme: nativeTheme(1.5) };
+    const at15 = createSolveContext(nativeTheme(1.5), measureText);
     const themed = { ...node(), textureSlots: { up: { x: 24, y: 12 }, down: { x: 24, y: 12 } } };
 
     expect(spinBoxMinimumSize(node(), at15)).toEqual(spinBoxMinimumSize(themed, at15));
@@ -264,43 +260,17 @@ describe('spinBoxMinimumSize', () => {
   });
 });
 
-describe('spinBoxDisplayText with a locale (spin_box.cpp:91-93)', () => {
+describe("the field's text in a locale (spin_box.cpp:91-93)", () => {
   it('writes the value in the digits of the locale, and keeps the prefix and suffix as they are', () => {
-    expect(
-      spinBoxDisplayText(controlProps({ name: 'S', prefix: '$', suffix: 'kg', step: 0.25 }), 5.5, 'ar')
-    ).toBe('$ ٥٫٥ kg');
+    expect(fieldText({ prefix: '$', suffix: 'kg', step: 0.25, value: 5.5 }, 'ar')).toBe('$ ٥٫٥ kg');
   });
 
   it('writes ASCII digits while localize_numeral_system is off', () => {
-    expect(spinBoxDisplayText(controlProps({ name: 'S', localizeNumeralSystem: false }), 5.5, 'ar')).toBe(
-      '6'
-    );
-  });
-});
-
-describe('shapeSpinBoxFieldText', () => {
-  function visual(text: string, locale: string): string {
-    return visualChars(
-      shapeSpinBoxFieldText(text, { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS }, locale).lines[0]!
-    );
-  }
-
-  it('takes a neutral paragraph from a right-to-left locale, so the minus sign follows the digits', () => {
-    expect(visual('$ -12.5', 'ar')).toBe('12.5- $');
-  });
-
-  it('keeps a left-to-right run in its order, after the sign it follows', () => {
-    expect(visual('-12.5 kg', 'ar')).toBe('-12.5 kg');
-  });
-
-  it('keeps the typed order under a left-to-right locale', () => {
-    expect(visual('$ -12.5', 'en')).toBe('$ -12.5');
+    expect(fieldText({ localizeNumeralSystem: false, value: 5.5 }, 'ar')).toBe('6');
   });
 });
 
 describe('the inner LineEdit reads its items through the ancestor Theme chain', () => {
-  const RED = { r: 1, g: 0, b: 0, a: 1 };
-  const BLUE = { r: 0, g: 0, b: 1, a: 1 };
   const box: TscnInternalResource = {
     id: 'box',
     type: 'StyleBoxFlat',
@@ -331,25 +301,6 @@ describe('the inner LineEdit reads its items through the ancestor Theme chain', 
     const result = spinBoxMinimumSize(themed, ctx(false));
     expect(result.x).toBe(20 + 18);
     expect(result.y).toBe(18 + FONT_HEIGHT);
-  });
-
-  it('draws the font_color of LineEdit, and font_uneditable_color when not editable', () => {
-    const themed = under({ colors: { LineEdit: { font_color: RED, font_uneditable_color: BLUE } } });
-    expect(spinBoxFieldTextTheme(themed, true).color).toEqual(RED);
-    expect(spinBoxFieldTextTheme(themed, false).color).toEqual(BLUE);
-  });
-
-  it('prefers the SpinBoxInnerLineEdit variation over LineEdit', () => {
-    const themed = under({
-      colors: { LineEdit: { font_color: RED }, SpinBoxInnerLineEdit: { font_color: BLUE } },
-      typeVariations: { SpinBoxInnerLineEdit: 'LineEdit' },
-    });
-    expect(spinBoxFieldTextTheme(themed, true).color).toEqual(BLUE);
-  });
-
-  it('ignores the colours of another class', () => {
-    const themed = under({ colors: { Button: { font_color: RED } } });
-    expect(spinBoxFieldTextTheme(themed, true).color).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
   });
 });
 
