@@ -259,10 +259,14 @@ export function sortedPaintOf(
   return shifted(paint, shiftAbove(path, paint.range, runs, paints));
 }
 
-/** The body pieces of `paint` packed into `run`: the pieces after its children move up by their runs. */
+/**
+ * The body pieces of `paint` packed into `run`: the pieces after its children move up by their runs.
+ * The front room holds the runs of internal front children, which are entries of their own, so the
+ * children start at the front room and the body keeps none of it.
+ */
 function bodyAt(paint: CanvasItemPaint, run: PaintRange): CanvasItemPaint {
   const shift = run.base - paint.range.base;
-  const childrenStart = paint.front.base + paint.front.size;
+  const childrenStart = paint.front.base;
   const childrenSize = paint.range.size - run.size;
   // The pieces that take runs of their own leave their room too, so a value past them stays in the run.
   const last = run.base + run.size - 1;
@@ -275,7 +279,7 @@ function bodyAt(paint: CanvasItemPaint, run: PaintRange): CanvasItemPaint {
   return {
     range: run,
     own: at(paint.own),
-    front: move(paint.front),
+    front: { base: at(paint.front.base), size: 0 },
     layer: at(paint.layer),
     back: move(paint.back),
     tail: move(paint.tail),

@@ -17,8 +17,8 @@ import {
 } from '../../../canvasItemPass/inheritedCanvasState';
 import { mergeThemedRecord, themeResolutionScope } from '../../../../resources/styles/theme/lookup';
 import { defaultColorsOf, defaultConstantsOf, defaultStyleBoxesOf } from '../defaultThemeRecords';
+import { allocateNodePaintRange } from '../../../testing/detachedPaint';
 import {
-  allocateNodePaintRange,
   behindRangesOf,
   allocatePaintRange,
   WHOLE_CANVAS_RANGE,

@@ -24,8 +24,8 @@ const rootOrigin = new Vector3();
  * at the group of its layer. Null where the item has no 2D pose to read: the rows of a layer that
  * is the sort root, which sort in the layer's own space, a Node3D, a node whose group is not
  * mounted, and a Control, which the Control walk places and the world walk leaves at the
- * identity. A scene tile's instance registers no group, so its chain ends at its layer and
- * {@link liveRootPose} adds its placed root. One with a Control root reads none.
+ * identity. A scene tile's instance and a TileMap's layer register no group, so the chain ends at
+ * their parent and {@link liveRootPose} adds the placed pose. A tile with a Control root reads none.
  */
 export function liveGroupChain(item: YSortItem, basePath: string, groupAt: GroupAt): Object3D[] | null {
   const node = item.node as LiveNode | undefined;

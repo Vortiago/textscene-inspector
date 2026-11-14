@@ -1,76 +1,72 @@
 /**
  * Where a drawn node's pixels and subtree sit in its canvas's draw sequence. A node of the shared
- * live tree reads the paint pass by live path (`canvasItemPaint.ts`). A node drawn outside that
- * tree, such as a tile row, takes its run from the node that draws it.
+ * live tree reads the paint pass by live path (`canvasItemPaint.ts`). An extra of the sort, such
+ * as a row of a y-sorted tile layer, reads the run the sort of the pass gave its id. A subtree with
+ * no shared live tree, which only a component test mounts, reads the installed `DetachedPaint`.
+ * The preview installs none, so a node the pass misses draws flat (`FLAT_PAINT`), with a warning.
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../../parser/types';
 import { useLiveScenePass } from '../liveScenePass';
 import { useSharedLiveTree } from '../useLiveSceneTree';
-import {
-  allocateNodePaintRange,
-  allocatePaintRange,
-  behindRangesOf,
-  canvasRootRanges,
-  hostsOwnCanvas,
-  WHOLE_CANVAS_RANGE,
-  type PaintRange,
-} from '../canvasPaintOrder';
-import { isViewportBoundary } from '../../nodes/viewport/subviewport/viewportBoundary';
+import type { PaintRange } from '../canvasPaintOrder';
 import { canvasPaintPass, type CanvasItemPaint } from './canvasItemPaint';
 import { useSortedPaint } from '../contexts/YSortContext';
+import { installedDetachedPaint, type DetachedPaint } from './detachedPaintSlot';
+import { warnOnce } from '../../utils/warnOnce';
 
 /**
  * How a subtree finds its paint. `tree`: each node reads the pass at its live path, moved by the
- * y-sort of its canvas (`YSortContext`). `run`: the subtree is outside the shared live tree, and its
- * root owns `range`, where the roots of `canvasRoots` take theirs.
+ * y-sort of its canvas (`YSortContext`). `extra`: a piece the sort places by id, such as a tile
+ * row, which draws one value, the first of `range`. `detached`: the subtree has no shared live
+ * tree, and its root owns `range`, where the roots of `canvasRoots` take theirs.
  */
 export type PaintFrame =
   | { readonly kind: 'tree' }
+  | { readonly kind: 'extra'; readonly range: PaintRange }
   | {
-      readonly kind: 'run';
+      readonly kind: 'detached';
       readonly range: PaintRange;
       readonly canvasRoots: ReadonlyMap<TscnNode, PaintRange>;
     };
 
 /** The frame of a node that reads the pass at its live path, as the pass's tree order places it. */
 export const IN_TREE_ORDER: PaintFrame = { kind: 'tree' };
-const NO_CANVAS_ROOTS: ReadonlyMap<TscnNode, PaintRange> = new Map();
 
 const PaintFrameContext = createContext<PaintFrame>(IN_TREE_ORDER);
 PaintFrameContext.displayName = 'PaintFrameContext';
 
-/** Written where a subtree leaves the shared live tree, such as a tile row. */
+/** Written where a piece draws at a run the sort gave it, such as a tile row. */
 export function PaintFrameProvider({ value, children }: { value: PaintFrame; children: ReactNode }) {
   return <PaintFrameContext.Provider value={value}>{children}</PaintFrameContext.Provider>;
 }
 
-/**
- * Where the node drawing `node` at live path `path` paints: the pass's paint after the sort of its
- * canvas. A `run` frame, or a path the pass does not hold, allocates from the frame's run, which is
- * the whole canvas with no stage above.
- */
-export function useNodePaint(node: TscnNode, path: string | null): CanvasItemPaint {
-  const frame = useContext(PaintFrameContext);
-  const fromPass = useLiveScenePass(canvasPaintPass, frame.kind === 'tree' ? path : null);
-  const paint = useMemo(
-    () => fromPass ?? localPaint(frame.kind === 'run' ? frame.range : WHOLE_CANVAS_RANGE, node).paint,
-    [frame, fromPass, node]
-  );
-  return useSortedPaint(fromPass ? path : null, paint);
-}
-
-/** The frame of each child of a node outside the shared tree, and of the pieces it draws after them. */
+/** The frame of each child of a detached node, and of the pieces it draws after them. */
 export interface ChildPaintFrames {
   readonly children: readonly PaintFrame[];
   readonly tail: PaintFrame;
 }
 
 /**
+ * Where the node drawing `node` at live path `path` paints: the pass's paint after the sort of its
+ * canvas, or the run an extra frame gives.
+ */
+export function useNodePaint(node: TscnNode, path: string | null): CanvasItemPaint {
+  const frame = useContext(PaintFrameContext);
+  const fromPass = useLiveScenePass(canvasPaintPass, frame.kind === 'tree' ? path : null);
+  const paint = useMemo(() => {
+    if (fromPass) return fromPass;
+    if (frame.kind === 'extra') return extraPaint(frame.range);
+    return detachedPaint().nodePaint(frame, node);
+  }, [frame, fromPass, node]);
+  return useSortedPaint(fromPass ? path : null, paint);
+}
+
+/**
  * The frame each child of the node drawing `node` at `path` takes, by index, and the one its
- * injected content takes, or null where they read the pass themselves. A node the pass does not
- * hold hands each child the run it allocates from its own.
+ * injected content takes, or null where they read the pass themselves. Only a detached node hands
+ * down frames.
  */
 export function useChildPaintFrames(
   node: TscnNode,
@@ -79,62 +75,55 @@ export function useChildPaintFrames(
 ): ChildPaintFrames | null {
   const frame = useContext(PaintFrameContext);
   const isPassNode = useLiveScenePass(canvasPaintPass, frame.kind === 'tree' ? path : null) !== undefined;
-  return useMemo(() => {
-    if (isPassNode) return null;
-    const inherited = frame.kind === 'run' ? frame.canvasRoots : NO_CANVAS_ROOTS;
-    const { children } = localPaint(paint.range, node);
-    const canvasRoots = hostsOwnCanvas(node) ? canvasRootRanges(node.children, children) : inherited;
-    return {
-      children: node.children.map((child, index) => ({
-        kind: 'run',
-        range: canvasRoots.get(child) ?? children[index]!,
-        canvasRoots,
-      })),
-      tail: { kind: 'run', range: paint.tail, canvasRoots },
-    };
-  }, [isPassNode, frame, node, paint]);
+  const isDetached = !isPassNode && frame.kind !== 'extra';
+  return useMemo(
+    () => (isDetached ? detachedPaint().childFrames(frame, node, paint) : null),
+    [isDetached, frame, node, paint]
+  );
+}
+
+/** The frame of each root of a dispatched scene, or null where the roots read the pass. */
+export function useRootPaintFrames(roots: readonly TscnNode[]): readonly PaintFrame[] | null {
+  const hasTree = useSharedLiveTree() !== null;
+  return useMemo(() => (hasTree ? null : detachedPaint().rootFrames(roots)), [hasTree, roots]);
+}
+
+/** The frame of an extra of the sort, which draws at the first value of `range`. */
+export function extraFrame(range: PaintRange): PaintFrame {
+  return { kind: 'extra', range };
 }
 
 /**
- * The frame of each root of a dispatched scene, or null where the roots read the pass. With no
- * scene graph in context, as a component test mounts one, no pass runs, so the roots take runs.
+ * An extra draws one value, so every other part is empty. A node is an extra only where the pass
+ * holds no path for it, and so none for its subtree, which draws at the same value.
  */
-export function useRootPaintFrames(roots: readonly TscnNode[]): readonly PaintFrame[] | null {
-  const hasTree = useSharedLiveTree() !== null;
-  return useMemo(() => {
-    if (hasTree) return null;
-    const ranges = allocatePaintRange(WHOLE_CANVAS_RANGE, roots).children;
-    const canvasRoots = canvasRootRanges(roots, ranges);
-    return roots.map((root, index) => ({
-      kind: 'run',
-      range: canvasRoots.get(root) ?? ranges[index]!,
-      canvasRoots,
-    }));
-  }, [hasTree, roots]);
+function extraPaint(range: PaintRange): CanvasItemPaint {
+  const empty = { base: range.base, size: 0 };
+  return { range, own: range.base, front: empty, layer: range.base, back: empty, tail: empty, behind: [] };
 }
 
-/** The frame of a subtree outside the shared live tree whose root owns `range`, where `canvasRoots` take theirs. */
-export function runFrame(
-  range: PaintRange,
-  canvasRoots: ReadonlyMap<TscnNode, PaintRange> = NO_CANVAS_ROOTS
-): PaintFrame {
-  return { kind: 'run', range, canvasRoots };
-}
+const START_OF_CANVAS: PaintRange = { base: 0, size: 0 };
 
-/** The paint of `node` owning `range` outside the shared tree, and the run each child owns. */
-function localPaint(range: PaintRange, node: TscnNode): { paint: CanvasItemPaint; children: PaintRange[] } {
-  // A sub-viewport is a canvas of its own, whose runs start at the beginning.
-  const allocated = allocateNodePaintRange(isViewportBoundary(node.type) ? WHOLE_CANVAS_RANGE : range, node);
-  return {
-    paint: {
-      range,
-      own: allocated.self,
-      front: allocated.front,
-      layer: allocated.layer,
-      back: allocated.back,
-      tail: allocated.tail,
-      behind: behindRangesOf(node.children, allocated.children),
-    },
-    children: allocated.children,
-  };
+/**
+ * The detached paint of the preview, which mounts the shared live tree and so reaches it only where
+ * the pass misses a node. A missed node draws at its frame's first value, or at the start of the
+ * canvas, and its children read the pass at their own paths: out of order, never a blank canvas.
+ */
+const FLAT_PAINT: DetachedPaint = {
+  nodePaint(frame, node) {
+    warnOnce(
+      FLAT_PAINT,
+      node.name,
+      `expected the paint pass to hold ${node.name}, got no paint: it draws flat`
+    );
+    return extraPaint(frame.kind === 'tree' ? START_OF_CANVAS : frame.range);
+  },
+  childFrames: (_frame, node) => ({ children: node.children.map(() => IN_TREE_ORDER), tail: IN_TREE_ORDER }),
+  rootFrames: (roots) => roots.map(() => IN_TREE_ORDER),
+  sortFrames: (items) => new Map(items.map((item) => [item, IN_TREE_ORDER])),
+};
+
+/** The detached paint the test setup installed, or the flat paint of the preview. */
+export function detachedPaint(): DetachedPaint {
+  return installedDetachedPaint() ?? FLAT_PAINT;
 }

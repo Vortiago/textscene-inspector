@@ -75,8 +75,9 @@ export interface LiveNode extends TscnNode {
   /** Set on the instance a tile layer adds for a scene tile: where its merged root is placed. */
   readonly sceneTile?: SceneTilePlacement;
   /**
-   * Set on the instance a tile layer adds for a scene tile with a Node2D root: that root's transform
-   * in the layer, which a y-sort sorts the tile on (`renderer_canvas_cull.cpp:131`).
+   * Set on an unowned node that registers no group, where it sits in its parent: the root of a
+   * scene tile with a Node2D root, or a TileMap's layer at the identity. A y-sort sorts the node on
+   * it (`renderer_canvas_cull.cpp:131`).
    */
   readonly placedPose?: Transform2DColumns;
   /** Set on a scene tile's merged Control root: the `map_to_local` its layer moves it by (`tile_map_layer.cpp:1636`). */
