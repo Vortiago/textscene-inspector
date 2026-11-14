@@ -1,12 +1,20 @@
 /**
- * ColorPicker registration: the native (WebGL canvas) painter and the
- * minimum-size solver.
+ * ColorPicker registration. The picker draws nothing itself: every part is an internal Control its
+ * constructor builds (`internalControls.ts`), so it paints as the VBoxContainer it extends.
  */
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
-import { ColorPicker } from './Component';
-import { colorPickerMinimumSize } from './nativeSolver';
+import { registerInternalControls } from '../../../../r3f/controls/native/internalControls';
+import { VBoxContainer } from '../vboxcontainer/Component';
+import {
+  colorPickerInternalControls,
+  colorPickerInternalLayout,
+  colorPickerMinimumSize,
+  colorPickerTextureSlots,
+} from './internalControls';
 
 controlSolverRegistry.registerMinimumSize('ColorPicker', colorPickerMinimumSize);
+controlSolverRegistry.registerTextureSlots('ColorPicker', colorPickerTextureSlots);
+registerInternalControls('ColorPicker', colorPickerInternalControls, colorPickerInternalLayout);
 
-controlComponentRegistry.register({ typeName: 'ColorPicker', Component: ColorPicker });
+controlComponentRegistry.register({ typeName: 'ColorPicker', Component: VBoxContainer });

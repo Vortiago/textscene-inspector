@@ -5,28 +5,8 @@ import {
   verticalStripGeometry,
   COLOR_HUE_STOPS,
   horizontalStripGeometry,
-  linearizeStops,
+  texelStripGeometry,
 } from './svGradient';
-
-describe('linearizeStops', () => {
-  // core/math/color.h:192-198, Color::srgb_to_linear: c < 0.04045 ? c/12.92 : pow((c+0.055)/1.055, 2.4).
-  it('converts each stop channel sRGB to linear, keeping alpha untouched', () => {
-    const [stop] = linearizeStops([{ r: 1, g: 0, b: 0.5, a: 0.25 }]);
-    expect(stop!.r).toBeCloseTo(1, 6);
-    expect(stop!.g).toBeCloseTo(0, 6);
-    expect(stop!.b).toBeCloseTo(0.21404, 5);
-    expect(stop!.a).toBe(0.25);
-  });
-
-  it('is 0 at 0 and preserves stop order/count', () => {
-    const stops = linearizeStops([
-      { r: 0, g: 0, b: 0, a: 1 },
-      { r: 1, g: 1, b: 1, a: 1 },
-    ]);
-    expect(stops).toHaveLength(2);
-    expect(stops[0]).toEqual({ r: 0, g: 0, b: 0, a: 1 });
-  });
-});
 
 describe('svSquareBaseLayer', () => {
   it('is white at the top corners and black at the bottom — color_picker_shape.cpp:243-249', () => {
@@ -118,5 +98,27 @@ describe('horizontalStripGeometry', () => {
     // Middle stop's top vertex sits at x=50.
     expect(g.positions.slice(6, 9)).toEqual([50, 0, 0]);
     expect(g.colors.slice(8, 12)).toEqual([1, 1, 1, 1]);
+  });
+});
+
+describe('texelStripGeometry', () => {
+  const RED = { r: 1, g: 0, b: 0, a: 1 };
+  const BLUE = { r: 0, g: 0, b: 1, a: 1 };
+
+  it('puts each texel at its centre, as linear filtering samples a stretched texture', () => {
+    const g = texelStripGeometry(100, 16, [RED, BLUE]);
+    const xs = g.positions.filter((_, i) => i % 6 === 0);
+    expect(xs).toEqual([0, 25, 75, 100]);
+  });
+
+  it('holds the edge texels out to the edges, as clamped sampling does', () => {
+    const g = texelStripGeometry(100, 16, [RED, BLUE]);
+    expect(g.colors.slice(0, 4)).toEqual([1, 0, 0, 1]);
+    expect(g.colors.slice(-4)).toEqual([0, 0, 1, 1]);
+  });
+
+  it('spans the height on every column', () => {
+    const g = texelStripGeometry(100, 16, [RED]);
+    expect(g.positions).toEqual([0, 0, 0, 0, -16, 0, 50, 0, 0, 50, -16, 0, 100, 0, 0, 100, -16, 0]);
   });
 });

@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { type Gradient } from '../../textures/gradienttexture2d/types';
 import { modulateRedWithGradient, modulateWithGradient } from './gradientModulation';
-import { GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
+import { GradientColorSpace, GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
 
 /** Black to opaque red. */
 const RAMP: Gradient = {
@@ -14,6 +14,7 @@ const RAMP: Gradient = {
     { offset: 1, color: { r: 1, g: 0, b: 0, a: 1 } },
   ],
   interpolationMode: GradientInterpolationMode.LINEAR,
+  interpolationColorSpace: GradientColorSpace.SRGB,
 };
 
 /** Black to a half-transparent white, so every channel differs from red. */
@@ -23,6 +24,7 @@ const GREY_RAMP: Gradient = {
     { offset: 1, color: { r: 1, g: 1, b: 1, a: 0.5 } },
   ],
   interpolationMode: GradientInterpolationMode.LINEAR,
+  interpolationColorSpace: GradientColorSpace.SRGB,
 };
 
 describe('modulateWithGradient', () => {

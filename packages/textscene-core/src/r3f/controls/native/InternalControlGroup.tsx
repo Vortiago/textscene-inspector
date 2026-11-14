@@ -1,8 +1,9 @@
 /**
  * Paints the internal Controls of a Control (`internalControls.ts`): each at its solved rect, snapped
- * and tinted as an authored Control is, with its registered painter and the rects of its direct
- * children. Its children and its own internal Controls draw the same way. A front Control draws from
- * a piece of the parent's own slot, a back one from a piece of its back slot, in tree order.
+ * and tinted as an authored Control is, with its registered painter, what the parent draws on it
+ * (`InternalControlSpec.draws`) and the rects of its direct children. Its children and its own
+ * internal Controls draw the same way. A front Control draws from a piece of the parent's own slot,
+ * a back one from a piece of its back slot, in tree order.
  */
 import { useMemo } from 'react';
 import { ZERO_RECT } from '../../../godot/math/rect2';
@@ -11,14 +12,17 @@ import { VECTOR2_ZERO } from '../../../godot/math/vector';
 import { snappedControlOriginUnder } from './controlPixelSnap';
 import { solvedDrawTransformOf } from './controlYSort';
 import { CanvasItemGroup } from '../../components/CanvasItemGroup';
-import { canvasPieceSlot, type CanvasSlot } from '../../canvasItemState';
+import { canvasPieceSlot, canvasSubOrder, type CanvasSlot } from '../../canvasItemState';
 import { useCanvasItemTint, WHITE_MODULATE } from '../../canvasItemModulate';
+import { useCanvasModulateFor } from '../../canvasModulate';
+import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
 import {
   controlComponentRegistry,
   NO_PIECE_SLOTS,
   type NativeControlComponentProps,
 } from '../ControlComponentRegistry';
-import { internalControlsOf, type InternalControl } from './internalControls';
+import { internalControlDraws, internalControlsOf, type InternalControl } from './internalControls';
+import { placeChildren } from './paintedChildren';
 import { childRectsOf, type SolvedControl } from './controlRectSolver';
 import { controlProps, type SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
@@ -30,11 +34,8 @@ export interface InternalPainterEnv extends Pick<
 > {
   /** The parent's inherited modulate, without its `self_modulate` (`renderer_canvas_cull.cpp:268`). */
   inheritedModulate: Rgba;
-  /**
-   * The canvas modulate of the parent's material. An internal Control draws inside the parent's
-   * material and light wrap (`LitCanvasItemPixels`), so its pixels take the same one.
-   */
-  canvasModulate: Rgba;
+  /** The parent's `z_final`. An internal Control sets no `z_index`, so it draws at its parent's. */
+  zFinal: number;
 }
 
 /**
@@ -107,7 +108,9 @@ export function InternalControls({ internals, solved, slot, chromeSlot, env }: I
 /**
  * One internal Control and its subtree. A Control with `visible` false draws nothing. It tints its
  * pixels from its own `modulate` and `self_modulate` over what its parent hands down, as
- * `useCanvasItemState` does for an authored Control.
+ * `useCanvasItemState` does for an authored Control. It is a CanvasItem of its own, so it draws
+ * with its own material and `light_mask`, not its parent's (`renderer_canvas_cull.cpp:319-324`):
+ * the constructor sets neither, so it has no material and the default mask (`canvas_item.h:98,114`).
  */
 function InternalControlGroup({ node, solved, slots, env }: InternalControlGroupProps) {
   const childRects = useMemo(() => childRectsOf(node.children, solved), [node.children, solved]);
@@ -119,7 +122,8 @@ function InternalControlGroup({ node, solved, slots, env }: InternalControlGroup
     }),
     [props.modulate, props.selfModulate]
   );
-  const tint = useCanvasItemTint(tintInputs, env.inheritedModulate, env.canvasModulate);
+  const canvasModulate = useCanvasModulateFor(null);
+  const tint = useCanvasItemTint(tintInputs, env.inheritedModulate, canvasModulate);
   const childEnv = useMemo(() => ({ ...env, inheritedModulate: tint.inherited }), [env, tint.inherited]);
   if (props.visible === false) return null;
 
@@ -134,30 +138,40 @@ function InternalControlGroup({ node, solved, slots, env }: InternalControlGroup
   );
   const slot = slots.get(node.path)!;
   const Painter = controlComponentRegistry.get(node.node.type);
+  const Draws = internalControlDraws(node);
   const nested = internalControlsOf(node, env.theme);
+  // What the parent draws through `draw` lands after every piece of the class's own draw.
+  const painterSlot = Draws ? { key: slot.key, span: slot.span / 2 } : slot;
+  const painterProps = {
+    theme: env.theme,
+    measureText: env.measureText,
+    snapToPixels: env.snapToPixels,
+    tint,
+    childTint: tint.internalChild,
+    solveNode: node,
+    rect: { x: 0, y: 0, w: at.w, h: at.h },
+    renderOrder: painterSlot.key,
+    slot: painterSlot,
+    chromeSlot: painterSlot,
+    layerSlot: painterSlot,
+    pieceSlots: NO_PIECE_SLOTS,
+    childRects,
+    meta: entry?.meta,
+  };
+  const drawsSlot = canvasSubOrder(slot);
+  const children = placeChildren(
+    node.node.type,
+    node.children.map((child) => (
+      <InternalControlGroup key={child.path} node={child} solved={solved} slots={slots} env={childEnv} />
+    ))
+  );
   return (
     <CanvasItemGroup position={[origin.x, -origin.y, 0]} renderOrder={slot.key}>
-      {Painter && (
-        <Painter
-          theme={env.theme}
-          measureText={env.measureText}
-          snapToPixels={env.snapToPixels}
-          tint={tint}
-          childTint={tint.internalChild}
-          solveNode={node}
-          rect={{ x: 0, y: 0, w: at.w, h: at.h }}
-          renderOrder={slot.key}
-          slot={slot}
-          chromeSlot={slot}
-          layerSlot={slot}
-          pieceSlots={NO_PIECE_SLOTS}
-          childRects={childRects}
-          meta={entry?.meta}
-        />
-      )}
-      {node.children.map((child) => (
-        <InternalControlGroup key={child.path} node={child} solved={solved} slots={slots} env={childEnv} />
-      ))}
+      <LitCanvasItemPixels material={null} lightMask={props.lightMask} zFinal={env.zFinal}>
+        {Painter && <Painter {...painterProps}>{children.inPainter}</Painter>}
+        {Draws && <Draws {...painterProps} renderOrder={drawsSlot.key} slot={drawsSlot} />}
+      </LitCanvasItemPixels>
+      {children.afterPainter}
       {nested.map(({ node: internal }) => (
         <InternalControlGroup
           key={internal.path}

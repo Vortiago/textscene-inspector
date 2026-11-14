@@ -8,7 +8,7 @@ import type { Gradient } from '../../../resources/textures/gradienttexture2d/typ
 import { DEFAULT_BAKE_RESOLUTION, type Curve } from '../../../resources/curves/curve/types';
 import { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
 import { storedReal } from '../../../godot/math/real.js';
-import { GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
+import { GradientColorSpace, GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
 import { CurveTangentMode } from '../../../godot/scene/curve';
 
 const NO_CURVES: (Curve | null)[] = Array.from({ length: 12 }, () => null);
@@ -505,6 +505,7 @@ describe('simulateFrozenPose', () => {
         { offset: 1, color: { r: 0, g: 0, b: 1, a: 1 } },
       ],
       interpolationMode: GradientInterpolationMode.LINEAR,
+      interpolationColorSpace: GradientColorSpace.SRGB,
     };
     const pose = simulateFrozenPose(input({ props: props({ amount: '24' }), colorRamp: ramp }));
     const reds = pose.map((p) => p.color.r);

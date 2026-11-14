@@ -13,6 +13,7 @@
 import { ZERO_RECT, type Rect2 } from '../../../godot/math/rect2';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import type { TscnNode } from '../../../parser/types';
+import type { NativeControlComponent } from '../ControlComponentRegistry';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import { parseControlCanvasItem } from '../../../nodes/2d/ui/control/parser';
 import type { ButtonProperties } from '../../../nodes/2d/ui/button/types';
@@ -54,6 +55,11 @@ export interface InternalControlSpec {
   textureSlots?: SolveNode['textureSlots'];
   /** The theme items the parent pushes with `add_theme_*_override`. Each wins over the Control's own lookup. */
   pushed?: PushedThemeItems;
+  /**
+   * What the parent draws on the Control through its `draw` signal (`CanvasItem::_redraw_callback`,
+   * `canvas_item.cpp:148-149`): drawn after the class's own `NOTIFICATION_DRAW` painter, in the same item.
+   */
+  draws?: NativeControlComponent;
 }
 
 /** What a parent can push onto an internal Control, by theme item name. */
@@ -64,6 +70,8 @@ export interface PushedThemeItems extends Partial<
   icons?: Readonly<Record<string, ThemedIconRef | undefined>>;
   /** In pixels. They land where an authored `theme_override_font_sizes/*` lands. */
   fontSizes?: Readonly<Record<string, number>>;
+  /** Icons of the default theme, as vendored URLs: `SolveNode.defaultIcons`. Each hides the Control's own lookup of its name. */
+  defaultIcons?: Readonly<Record<string, string>>;
 }
 
 /** A top-level internal Control of a parent: the root of one spec tree and the place it draws. */
@@ -184,6 +192,15 @@ export function placeInternalControls(
   }));
 }
 
+/** Written only by `buildUnder`, for a spec with `draws`. A built node lives as long as its parent's build. */
+// eslint-disable-next-line no-restricted-syntax -- a side table `buildUnder` writes, not a value built from its key
+const drawsByNode = new WeakMap<SolveNode, NativeControlComponent>();
+
+/** What the parent draws on the internal Control `node` through its `draw` signal, or `undefined`. */
+export function internalControlDraws(node: SolveNode): NativeControlComponent | undefined {
+  return drawsByNode.get(node);
+}
+
 /** The path an internal Control gets: its parent's, then its own name. A container lays its children out by this link. */
 function syntheticPath(parentPath: string, name: string): string {
   return `${parentPath}/@${name}`;
@@ -211,7 +228,7 @@ function buildUnder(owner: SolveNode, spec: InternalControlSpec, parentPath: str
   const items = internalChildThemeItems(owner, type, variation);
   const textureSize =
     spec.textureSize !== undefined ? spec.textureSize : builtButtonTextureSize(owner, spec, items);
-  return {
+  const built: SolveNode = {
     ...owner,
     path,
     node,
@@ -220,20 +237,24 @@ function buildUnder(owner: SolveNode, spec: InternalControlSpec, parentPath: str
     colors: { ...items.colors, ...pushed.colors },
     constants: { ...items.constants, ...pushed.constants },
     icons: iconsUnder(spec, items),
+    defaultIcons: pushed.defaultIcons,
     fontOverrides: { ...pushed.fontOverrides },
     textureSize,
     textureSlots: spec.textureSlots ?? {},
     labelSettings: null,
     labelSettingsFont: null,
   };
+  if (spec.draws) drawsByNode.set(built, spec.draws);
+  return built;
 }
 
-/** The icons of the Control `spec` builds: the parent's theme, its own lookup, then what the parent pushes. */
+/** The icons of the Control `spec` builds: the parent's theme, its own lookup, then what the parent pushes, default icons included. */
 function iconsUnder(
   { icons: given, pushed }: InternalControlSpec,
   items: InternalThemeItems
 ): SolveNode['icons'] {
   const icons: Record<string, ThemedIconRef> = { ...given, ...items.icons };
+  for (const name of Object.keys(pushed?.defaultIcons ?? {})) delete icons[name];
   for (const [name, ref] of Object.entries(pushed?.icons ?? {})) {
     if (ref) icons[name] = ref;
     else delete icons[name];

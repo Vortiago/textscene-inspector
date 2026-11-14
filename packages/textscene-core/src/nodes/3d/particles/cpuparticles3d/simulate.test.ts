@@ -18,7 +18,7 @@ import { ORACLE_CASES, type OracleCase } from './simulateOracle.testkit';
 import type { Curve } from '../../../../resources/curves/curve/types';
 import { curveOf, point } from '../../../../resources/curves/curve/curve.testkit';
 import type { Gradient } from '../../../../resources/textures/gradienttexture2d/types';
-import { GradientInterpolationMode } from '../../../../godot/scene/gradientTexture';
+import { GradientColorSpace, GradientInterpolationMode } from '../../../../godot/scene/gradientTexture';
 import { PARAM_SLOTS } from '../../../shared/cpuparticles/params';
 import { storedColor, storedReal } from '../../../../godot/math/real';
 
@@ -40,6 +40,7 @@ function gradientOf(stops: number[][] | undefined): Gradient | null {
       color: storedColor({ r: r!, g: g!, b: b!, a: a! }),
     })),
     interpolationMode: GradientInterpolationMode.LINEAR,
+    interpolationColorSpace: GradientColorSpace.SRGB,
   };
 }
 

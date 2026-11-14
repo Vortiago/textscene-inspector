@@ -1,13 +1,12 @@
 /**
  * Vertex-colour geometry of the SV square, the vertical shape sliders and the channel bands,
- * as plain arrays. `Component.tsx` and `shapes/ShapeRow.tsx` build the `THREE.BufferGeometry`.
+ * as plain arrays, which `buildGeometry` of `GradientMesh.tsx` turns into a `THREE.BufferGeometry`.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { hsvToRgb } from '../../../../godot/math/color';
 import type { Rgba } from '../../../../godot/math/math';
 
@@ -100,18 +99,14 @@ export function verticalStripGeometry(w: number, h: number, stops: readonly Rgba
 }
 
 /**
- * `Color::srgb_to_linear` per stop (`core/math/color.h:192-198`).
- * `GRADIENT_COLOR_SPACE_LINEAR_SRGB` interpolates linear stops (`color_mode.cpp:311`),
- * and RGB mode uses `_SRGB` (`:113`). The caller's GPU lerp then runs on linear
- * values with no sRGB decode.
+ * A horizontal strip that draws a row of `texels` stretched across `w`, as `draw_texture_rect`
+ * draws a gradient texture with linear filtering: each texel's colour sits at its centre, and the
+ * edge texels hold out to the edges, where sampling clamps.
  */
-export function linearizeStops(stops: readonly Rgba[]): Rgba[] {
-  return stops.map((c) => ({
-    r: sRGBChannelToLinear(c.r),
-    g: sRGBChannelToLinear(c.g),
-    b: sRGBChannelToLinear(c.b),
-    a: c.a,
-  }));
+export function texelStripGeometry(w: number, h: number, texels: readonly Rgba[]): QuadGeometry {
+  const columns = [texels[0]!, ...texels, texels[texels.length - 1]!];
+  const xAt = (i: number) => (i === 0 ? 0 : i === columns.length - 1 ? w : ((i - 0.5) * w) / texels.length);
+  return strip(columns, (i) => [xAt(i), 0, 0, xAt(i), -h, 0]);
 }
 
 const COLOR_HUE_STOP_COUNT = 7;

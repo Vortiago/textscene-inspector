@@ -1,7 +1,7 @@
 /**
- * What one `picker_shape` draws in the shape row, as plain data: the interface every shape variant
- * returns and `ShapeRow.tsx` paints. Each variant ports one `ColorPickerShape` subclass
- * (`scene/gui/color_picker_shape.cpp`).
+ * The Controls one `picker_shape` adds to the picker's shape row, and what each one's `draw`
+ * callback draws, as plain data: the interface every shape variant returns and `ShapeRow.tsx`
+ * paints. Each variant ports one `ColorPickerShape` subclass (`scene/gui/color_picker_shape.cpp`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -17,7 +17,6 @@ import { clamp } from '../../../../../godot/math/math';
 import { extractHsv } from '../colorModes';
 import { okhslToSrgb, srgbToOkhsl } from '../okhsl';
 import type { ShapeFragment } from './shapeFragment';
-import type { ShapeRowLayout, ShapeRowSplit } from './shapeRowLayout';
 
 /**
  * The picker's colour as the shapes read it: `h`, `s`, `v` and `ok_hsl_h`, `ok_hsl_s`, `ok_hsl_l`
@@ -71,7 +70,7 @@ export interface SvSquare {
   hue: number;
 }
 
-/** Every part is optional, so one painter draws every shape. Positions are in the picker's content frame. */
+/** Every part is optional, so one painter draws every shape Control. Positions are in the Control's own frame. */
 export interface ShapeDrawing {
   fill: ShapeShaderFill | null;
   svSquare: SvSquare | null;
@@ -79,17 +78,49 @@ export interface ShapeDrawing {
   slider: ShapeSlider | null;
 }
 
+/** A drawing of `parts`, with nothing else. */
+export function shapeDrawing(parts: Partial<ShapeDrawing>): ShapeDrawing {
+  return { fill: null, svSquare: null, cursors: [], slider: null, ...parts };
+}
+
+/** What a shape Control's `draw` callback draws over `rect`, its own `(0, 0, size)`. */
+export type ShapeDraw = (rect: Rect2, color: PickerShapeColor) => ShapeDrawing;
+
+/** One Control a shape's `_initialize_controls` adds, with the Controls it holds. */
+export interface ShapeControl {
+  name: string;
+  /** `rectangle_margin` of the OK rectangles is a MarginContainer, every other one a plain Control. */
+  type: 'Control' | 'MarginContainer';
+  /**
+   * The `custom_minimum_size` its `update_theme` sets: `sv_width` by `sv_height` for the shape area,
+   * `h_width` by 0 for the slider beside it, none for a Control inside the area.
+   */
+  minimum: 'area' | 'slider' | 'none';
+  /** `SIZE_EXPAND_FILL` across: the area of a rectangle takes what the slider leaves. */
+  isExpanding?: boolean;
+  /** `set_anchors_and_offsets_preset(PRESET_FULL_RECT)`: it covers its parent. */
+  fillsParent?: boolean;
+  draw?: ShapeDraw;
+  children?: readonly ShapeControl[];
+}
+
 /** The theme icon `btn_shape` shows for the shape (`color_picker_shape.h:108-227`). */
 export type ShapeIconName = keyof typeof COLOR_PICKER_SHAPE_ICONS;
 
-/**
- * One `ColorPickerShape` subclass: its `btn_shape` icon, its controls and what it draws in them.
- * `draw` takes the split of its own `layout`, so a shape with a slider reads a slider rect.
- */
-export interface ShapeVariant<L extends ShapeRowLayout = ShapeRowLayout> {
+/** One `ColorPickerShape` subclass: its `btn_shape` icon and the Controls it adds to `shape_container`. */
+export interface ShapeVariant {
   icon: ShapeIconName;
-  layout: L;
-  draw(split: ShapeRowSplit<L>, color: PickerShapeColor): ShapeDrawing;
+  controls: readonly ShapeControl[];
+}
+
+/** `value_slider` beside a circle or an OK rectangle (`color_picker_shape.cpp:494,892`), drawn by `draw`. */
+function valueSliderControl(draw: (rect: Rect2, color: PickerShapeColor) => ShapeSlider): ShapeControl {
+  return {
+    name: 'value_slider',
+    type: 'Control',
+    minimum: 'slider',
+    draw: (rect, color) => shapeDrawing({ slider: draw(rect, color) }),
+  };
 }
 
 /**
@@ -154,4 +185,80 @@ export function okLightnessSlider(rect: Rect2, { h, s, l }: PickerShapeColor['ok
 export function okSaturationSlider(rect: Rect2, { h, s, l }: PickerShapeColor['okhsl']): ShapeSlider {
   const saturated = okhslToSrgb(h, 1, l);
   return valueSlider(rect, [saturated, okhslToSrgb(h, 0.5, l), okhslToSrgb(h, 0, l)], s, saturated);
+}
+
+/**
+ * The Controls of a circle (`ColorPickerShapeCircle::_initialize_controls`, `color_picker_shape.cpp:875-901`):
+ * `circle`, which `fill` draws through its shader, `circle_overlay` over it with the cursor at `cursor`,
+ * and `value_slider`.
+ */
+export function circleControls(
+  fill: (rect: Rect2, color: PickerShapeColor) => ShapeShaderFill,
+  cursor: (color: PickerShapeColor) => { hue: number; saturation: number },
+  slider: (rect: Rect2, color: PickerShapeColor) => ShapeSlider
+): ShapeControl[] {
+  return [
+    {
+      name: 'circle',
+      type: 'Control',
+      minimum: 'area',
+      draw: (rect, color) => shapeDrawing({ fill: fill(rect, color) }),
+      children: [
+        {
+          name: 'circle_overlay',
+          type: 'Control',
+          minimum: 'none',
+          fillsParent: true,
+          draw: (rect, color) => {
+            const { hue, saturation } = cursor(color);
+            return shapeDrawing({
+              cursors: [{ centre: circleCursorCentre(rect, hue, saturation), hasBackground: true }],
+            });
+          },
+        },
+      ],
+    },
+    valueSliderControl(slider),
+  ];
+}
+
+/**
+ * The Controls of an OK rectangle (`ColorPickerShapeOKHSRectangle::_initialize_controls`,
+ * `color_picker_shape.cpp:473-504`): `rectangle_margin` holding `square`, which `fill` draws
+ * through its shader, and `square_overlay` with the cursor at `cursor`, then `value_slider`.
+ */
+export function okRectangleControls(
+  fill: (rect: Rect2, color: PickerShapeColor) => ShapeShaderFill,
+  cursor: (color: PickerShapeColor) => Vector2,
+  slider: (rect: Rect2, color: PickerShapeColor) => ShapeSlider
+): ShapeControl[] {
+  return [
+    {
+      name: 'rectangle_margin',
+      type: 'MarginContainer',
+      minimum: 'area',
+      isExpanding: true,
+      children: [
+        {
+          name: 'square',
+          type: 'Control',
+          minimum: 'none',
+          draw: (rect, color) => shapeDrawing({ fill: fill(rect, color) }),
+        },
+        {
+          name: 'square_overlay',
+          type: 'Control',
+          minimum: 'none',
+          fillsParent: true,
+          draw: (rect, color) => {
+            const at = cursor(color);
+            return shapeDrawing({
+              cursors: [{ centre: rectCursorCentre(rect, at.x, at.y), hasBackground: true }],
+            });
+          },
+        },
+      ],
+    },
+    valueSliderControl(slider),
+  ];
 }

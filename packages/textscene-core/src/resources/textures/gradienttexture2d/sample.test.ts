@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { gradientOffsetAt, sampleGradientColor, storedGradient } from './sample';
+import { gradientOffsetAt, gradientRowTexels, sampleGradientColor, storedGradient } from './sample';
 import { rasterizeGradientTexture2D } from './build';
 import { decodeGradientTexture2D } from './decode';
 import { gradientOf } from './gradient.testkit';
@@ -8,6 +8,7 @@ import { gradientOf } from './gradient.testkit';
 import type { Gradient, GradientTexture2D } from './types';
 import {
   GradientTexture2DFill,
+  GradientColorSpace,
   GradientInterpolationMode,
   GradientTexture2DRepeat,
 } from '../../../godot/scene/gradientTexture';
@@ -62,15 +63,17 @@ describe('sampleGradientColor', () => {
     const g: Gradient = {
       stops: [{ offset: 0, color: { r: 0.2, g: 0.4, b: 0.6, a: 1 } }],
       interpolationMode: GradientInterpolationMode.LINEAR,
+      interpolationColorSpace: GradientColorSpace.SRGB,
     };
     expect(sampleGradientColor(g, 0.5)).toEqual({ r: 0.2, g: 0.4, b: 0.6, a: 1 });
   });
 });
 
 // Godot 4.6.3 `Gradient.sample` over these stops, as the float32 bits of r, g, b and a.
-const fourStops = (interpolationMode: string): Gradient =>
+const fourStops = (interpolationMode: string, interpolationColorSpace = '0'): Gradient =>
   gradientOf({
     interpolation_mode: interpolationMode,
+    interpolation_color_space: interpolationColorSpace,
     offsets: 'PackedFloat32Array(0, 0.3, 0.7, 1)',
     colors: 'PackedColorArray(0.1, 0.2, 0.8, 1, 0.9, 0.5, 0.1, 0.5, 0.33, 0.77, 0.21, 0.9, 1, 1, 1, 1)',
   });
@@ -97,6 +100,64 @@ describe('sampleGradientColor in float, as Godot samples', () => {
       '61d8113fd07a623fb80b0c3fda32783f',
     ]);
   });
+
+  it.each([
+    [
+      'linear',
+      '0',
+      [
+        '593b0e3ffbfeac3e0a6a2b3f5655553f',
+        '1f7d403f278e1e3f9bcf1a3e6666263f',
+        '727c393fcf24613f8842343f4b7e713f',
+      ],
+    ],
+    [
+      'cubic',
+      '2',
+      [
+        '9d850d3f08819a3e995b2f3f1048563f',
+        '7a7c463fbd121b3fd1b75cbf67e6183f',
+        'd31e2e3f3050633fc3bf313fda32783f',
+      ],
+    ],
+  ])(
+    'matches Godot bit for bit between %s stops in linear sRGB (gradient.h:81-82,105-106)',
+    (_, mode, expected) => {
+      const gradient = fourStops(mode, '1');
+      expect([0.1, 0.45, 0.83].map((offset) => float32Hex(sampleGradientColor(gradient, offset)))).toEqual(
+        expected
+      );
+    }
+  );
+
+  it.each([
+    [
+      'linear',
+      '0',
+      [
+        '2bf2ba3eeadec03e0399273f5655553f',
+        '10db3f3fa3551e3f4674163e6666263f',
+        'b175243f4157603f22cf163f4b7e713f',
+      ],
+    ],
+    [
+      'cubic',
+      '2',
+      [
+        '6c77b63ed559b53e7c572b3f1048563f',
+        '37b24d3f9d0b1c3f02fbe7be67e6183f',
+        '9db9133f9899633f8eee143fda32783f',
+      ],
+    ],
+  ])(
+    'matches Godot bit for bit between %s stops in OKLab (gradient.h:84-95,108-117)',
+    (_, mode, expected) => {
+      const gradient = fourStops(mode, '2');
+      expect([0.1, 0.45, 0.83].map((offset) => float32Hex(sampleGradientColor(gradient, offset)))).toEqual(
+        expected
+      );
+    }
+  );
 
   it('returns a stop colour as its float32 value (edge case)', () => {
     expect(sampleGradientColor(fourStops('0'), 0.3).r).toBe(Math.fround(0.9));
@@ -186,6 +247,7 @@ describe('rasterizeGradientTexture2D', () => {
     // Black at Godot's top (offset 0), white at Godot's bottom (offset 1).
     const gradient: Gradient = {
       interpolationMode: GradientInterpolationMode.LINEAR,
+      interpolationColorSpace: GradientColorSpace.SRGB,
       stops: [
         { offset: 0, color: { r: 0, g: 0, b: 0, a: 1 } },
         { offset: 1, color: { r: 1, g: 1, b: 1, a: 1 } },
@@ -223,6 +285,7 @@ describe('storedGradient', () => {
   it('samples the float stops as Godot 4.6.3 does', () => {
     const gradient: Gradient = {
       interpolationMode: GradientInterpolationMode.LINEAR,
+      interpolationColorSpace: GradientColorSpace.SRGB,
       stops: [
         { offset: 0.1, color: { r: 1, g: 0.2, b: 0.7, a: 1 } },
         { offset: 0.8, color: { r: 0.1, g: 0.9, b: 0.3, a: 0.4 } },
@@ -231,5 +294,32 @@ describe('storedGradient', () => {
 
     // Gradient.sample(0.66).b from the GDScript oracle on Godot 4.6.3.
     expect(sampleGradientColor(storedGradient(gradient), 0.66).b).toBe(Math.fround(0.379999995));
+  });
+});
+
+describe('gradientRowTexels', () => {
+  const redToBlue = (space: string) =>
+    gradientOf({
+      interpolation_color_space: space,
+      colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)',
+    });
+  const bytes = (texels: readonly { r: number; g: number; b: number; a: number }[]) =>
+    texels.flatMap((t) => [t.r, t.g, t.b, t.a].map((c) => Math.round(c * 255)));
+
+  it('matches the RGBA8 image of a GradientTexture1D in Godot 4.6.3 (gradient_texture.cpp:120-128)', () => {
+    expect(bytes(gradientRowTexels(redToBlue('2'), 5))).toEqual([
+      255, 0, 0, 255, 198, 73, 109, 255, 140, 83, 162, 255, 81, 71, 210, 255, 0, 0, 255, 255,
+    ]);
+  });
+
+  it('holds whole bytes, as an RGBA8 image does', () => {
+    for (const texel of gradientRowTexels(redToBlue('0'), 7)) {
+      expect(texel.g * 255).toBe(Math.round(texel.g * 255));
+      expect(texel.r * 255).toBe(Math.round(texel.r * 255));
+    }
+  });
+
+  it('gives one texel the gradient start (edge case)', () => {
+    expect(bytes(gradientRowTexels(redToBlue('0'), 1))).toEqual([255, 0, 0, 255]);
   });
 });

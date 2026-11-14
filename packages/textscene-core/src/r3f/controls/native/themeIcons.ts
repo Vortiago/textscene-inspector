@@ -429,6 +429,11 @@ export const COLOR_PICKER_SHAPE_ICONS = {
 } as const;
 export const COLOR_PICKER_BAR_ARROW_ICON = vendoredIcon('color_picker_bar_arrow', COLOR_PICKER_BAR_ARROW_B64);
 
+/** `scene/theme/icons/add.svg` (16x16): `ColorPicker`'s `add_preset`, `btn_add_preset`'s icon (`default_theme.cpp:1095`). */
+const ADD_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZD0ibTcgMXY2aC02djJoNnY2aDJ2LTZoNnYtMmgtNnYtNnoiLz48L3N2Zz4K';
+export const COLOR_PICKER_ADD_PRESET_ICON = vendoredIcon('add', ADD_B64);
+
 /** Every one of the six icons just above shares this authored size: 16x16, scaled by the project theme scale at each read (`scaledIconSize`). */
 export const COLOR_PICKER_BUTTON_ICON_SIZE = 16;
 

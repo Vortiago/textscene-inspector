@@ -158,6 +158,12 @@ export interface SolveNode {
    */
   icons: Readonly<Record<string, ThemedIconRef>>;
   /**
+   * The default theme's icons a parent pushed onto this internal Control with
+   * `add_theme_icon_override`, by name, as vendored URLs. A painter draws one in
+   * place of its own vendored icon for a name `icons` has no entry for.
+   */
+  defaultIcons?: Readonly<Record<string, string>>;
+  /**
    * The resource pools this node's own references resolve against. A node from
    * an instanced sub-scene names that scene's ids, while `SceneResourcesProvider`
    * holds the top-level scene's. A painter resolves a texture here itself, since

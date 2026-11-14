@@ -1,6 +1,6 @@
 /**
- * `<ShapeRow>`: paints one `ShapeDrawing` in the picker's content frame, in Godot's draw order: the
- * shader fill, the SV square, the cursors, then the slider, which a cursor at the area's edge passes under.
+ * `<ShapeRow>`: paints one `ShapeDrawing` in its Control's own frame, in Godot's draw order: the
+ * shader fill, the SV square, the cursors, then the slider.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

@@ -145,7 +145,7 @@ export function requiredThemeItem<V>(items: Readonly<Record<string, V>>, name: s
 
 export type InternalThemeItems = Pick<SolveNode, 'styleBoxes' | 'colors' | 'constants' | 'icons'>;
 
-/** Written only by `internalChildThemeItems`: a parent node is replaced when the scene changes, so its internal Controls resolve once per type and variation. */
+/** Written only by `themeItemsOfType`: a parent node is replaced when the scene changes, so its internal Controls resolve once per type and variation. */
 const internalThemeItemsOf = perObject((_parent: SolveNode) => new Map<string, InternalThemeItems>());
 
 /**
@@ -159,17 +159,26 @@ export function internalChildThemeItems(
   type: string,
   variation?: string
 ): InternalThemeItems {
-  const byType = internalThemeItemsOf(parent);
+  return themeItemsOfType(parent, type, variation);
+}
+
+/**
+ * The theme items `owner` reads when it names another theme type, `get_theme_stylebox(name, type)`,
+ * as a `BIND_THEME_ITEM_EXT` item does (`scene/theme/theme_db.h`). The lookup walks `owner`'s theme
+ * chain by `type`'s class chain, so it equals what a Control of `type` built inside `owner` reads.
+ */
+export function themeItemsOfType(owner: SolveNode, type: string, variation?: string): InternalThemeItems {
+  const byType = internalThemeItemsOf(owner);
   const key = variation === undefined ? type : `${type}/${variation}`;
   const known = byType.get(key);
   if (known) return known;
-  const themeScope = themeResolutionScope(type, variation, parent.themeChain, parent.projectFonts);
+  const themeScope = themeResolutionScope(type, variation, owner.themeChain, owner.projectFonts);
   const node = builtControlNode(type);
   const items = {
-    styleBoxes: resolveStyleBoxes(node, parent.resources, themeScope),
+    styleBoxes: resolveStyleBoxes(node, owner.resources, themeScope),
     colors: resolveThemedColors(node, themeScope),
     constants: resolveThemedConstants(node, themeScope),
-    icons: builtControlIcons(parent, type, variation),
+    icons: builtControlIcons(owner, type, variation),
   };
   byType.set(key, items);
   return items;

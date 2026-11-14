@@ -25,18 +25,12 @@ interface GradientMeshProps {
   geometry: THREE.BufferGeometry;
   renderOrder: number;
   clippingPlanes: THREE.Plane[];
-  /**
-   * The vertex colours are already linear (`linearizeStops`), so the GPU's linear lerp reproduces
-   * `GRADIENT_COLOR_SPACE_LINEAR_SRGB`. Otherwise they are sRGB, interpolated as stored, since
-   * interpolating two sRGB colours in linear space moves the ramp's midpoint.
-   */
-  linear?: boolean;
   /** The item's tint, whose vertex factor the geometry's colours already carry. */
   tint: VertexColorTint;
 }
 
 /** One vertex-coloured, single-pass mesh: the SV square's two layers, the hue strip and every channel-slider band. */
-export function GradientMesh({ geometry, renderOrder, clippingPlanes, linear, tint }: GradientMeshProps) {
+export function GradientMesh({ geometry, renderOrder, clippingPlanes, tint }: GradientMeshProps) {
   const canvasItemMerge = useCanvasItemMerge();
   useDisposeOnRelease(geometry);
   const program = materialProgramInputs({
@@ -47,7 +41,7 @@ export function GradientMesh({ geometry, renderOrder, clippingPlanes, linear, ti
       transparent: true,
       depthWrite: false,
       clippingPlanes,
-      defines: linear ? undefined : tint.defines,
+      defines: tint.defines,
     },
     merge: canvasItemMerge,
   });
