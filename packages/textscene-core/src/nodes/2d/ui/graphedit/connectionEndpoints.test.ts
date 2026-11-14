@@ -4,7 +4,8 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import type { GraphNodeSlot } from '../graphnode/types';
-import '../graphnode/nativeSolver.js';
+import '../../../../parser/TscnParser';
+import '../../../../r3f/controls/index';
 import type { GraphEditConnection, GraphEditProperties } from './types';
 import { resolveGraphEditConnections } from './connectionEndpoints';
 

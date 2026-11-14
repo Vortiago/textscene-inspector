@@ -1,5 +1,5 @@
 /**
- * `<GraphFrame>` render contract: panel/titlebar chrome, title text and
+ * `<GraphFrame>` render contract: panel/titlebar chrome at the band the solve hands it and
  * resizer. Structure and tint only: the golden images own the pixels.
  */
 import { describe, expect, it, vi } from 'vitest';
@@ -20,6 +20,7 @@ import { GraphFrame } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { GraphFrameProperties } from './types';
 import { bundledRunOf, bundledRunMeshes } from '../../../../r3f/controls/native/testing/bundledRunStub';
+import { titlebarBandHeightChannel } from '../graphelement/graphTitlebar';
 
 // A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
 vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
@@ -27,6 +28,9 @@ vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
 }));
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
+
+/** The band the solve hands the painter: the 23 px line of the default title font and the 4 px box margins. */
+const BAND = titlebarBandHeightChannel.seal(31);
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -91,7 +95,7 @@ describe('<GraphFrame> — the two tint arms (graph_frame.cpp:113-126)', () => {
    */
   it('draws no body panel for a texture slot when tinting is off', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GraphFrame {...painterEnv()} solveNode={texturePanel()} rect={RECT} renderOrder={0} />
+      <GraphFrame {...painterEnv()} meta={BAND} solveNode={texturePanel()} rect={RECT} renderOrder={0} />
     );
     expect(chromeMeshes(renderer.scene)).toHaveLength(1);
   });
@@ -100,29 +104,41 @@ describe('<GraphFrame> — the two tint arms (graph_frame.cpp:113-126)', () => {
 describe('<GraphFrame> (isolated painter contract)', () => {
   it('draws exactly two chrome meshes (panel + titlebar) with no title', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GraphFrame {...painterEnv()} solveNode={graphFrame()} rect={RECT} renderOrder={0} />
+      <GraphFrame {...painterEnv()} meta={BAND} solveNode={graphFrame()} rect={RECT} renderOrder={0} />
     );
     expect(chromeMeshes(renderer.scene)).toHaveLength(2);
     expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
   });
 
-  it('draws a text mesh for a non-empty title', async () => {
+  it('draws no title text: the internal title_label draws it', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GraphFrame {...painterEnv()} solveNode={graphFrame({ title: 'Hello' })} rect={RECT} renderOrder={0} />
+      <GraphFrame
+        {...painterEnv()}
+        meta={BAND}
+        solveNode={graphFrame({ title: 'Hello' })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
-    expect(bundledRunMeshes(renderer.scene).length).toBeGreaterThan(0);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it('draws no resizer when resizable is unset', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GraphFrame {...painterEnv()} solveNode={graphFrame()} rect={RECT} renderOrder={0} />
+      <GraphFrame {...painterEnv()} meta={BAND} solveNode={graphFrame()} rect={RECT} renderOrder={0} />
     );
     expect(iconMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it('draws no resizer when resizable is true but autoshrink_enabled stays at its true default', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GraphFrame {...painterEnv()} solveNode={graphFrame({ resizable: true })} rect={RECT} renderOrder={0} />
+      <GraphFrame
+        {...painterEnv()}
+        meta={BAND}
+        solveNode={graphFrame({ resizable: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(iconMeshes(renderer.scene)).toHaveLength(0);
   });
@@ -131,6 +147,7 @@ describe('<GraphFrame> (isolated painter contract)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <GraphFrame
         {...painterEnv()}
+        meta={BAND}
         solveNode={graphFrame({ resizable: true, autoshrinkEnabled: false })}
         rect={RECT}
         renderOrder={0}
@@ -159,7 +176,13 @@ describe('<GraphFrame> chrome placement', () => {
     // `StyleBoxQuad` takes only a size, so the offset has to come from the
     // group around it.
     const renderer = await ReactThreeTestRenderer.create(
-      <GraphFrame {...painterEnv()} solveNode={graphFrame({ title: 'F' })} rect={RECT} renderOrder={0} />
+      <GraphFrame
+        {...painterEnv()}
+        meta={BAND}
+        solveNode={graphFrame({ title: 'F' })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     const [body, titlebar] = chromeMeshes(renderer.scene);
     expect(worldY(renderer.scene, titlebar!)).toBe(0);
@@ -169,10 +192,11 @@ describe('<GraphFrame> chrome placement', () => {
 });
 
 describe('<GraphFrame> — self_modulate', () => {
-  it('tints the panel and the title bar with tint and the title text with childTint', async () => {
+  it('tints the panel and the title bar with tint, and nothing with childTint', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <GraphFrame
         {...painterEnv()}
+        meta={BAND}
         {...splitTints}
         solveNode={graphFrame({ title: 'Hello' })}
         rect={RECT}
@@ -181,6 +205,6 @@ describe('<GraphFrame> — self_modulate', () => {
     );
     const split = countTintSplit(renderer.scene);
     expect(split.own).toBeGreaterThan(0);
-    expect(split.child).toBe(1);
+    expect(split.child).toBe(0);
   });
 });

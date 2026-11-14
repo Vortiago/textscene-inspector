@@ -13,7 +13,7 @@ import type { NativeTheme } from './nativeTheme';
 import { childRectsOf, createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
 import { controlComponentRegistry, NO_PIECE_SLOTS } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
-import { internalControlsOf } from './internalControls';
+import { internalBackSlotOf, internalControlsOf } from './internalControls';
 import { InternalControls } from './InternalControlGroup';
 import { placeChildren } from './paintedChildren';
 import { OwnCanvasModulateProvider, OwnModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
@@ -311,15 +311,25 @@ function ControlItemGroup({
   const childRects = useMemo(() => childRectsOf(solveNode.children, solved), [solveNode.children, solved]);
 
   const internals = internalControlsOf(solveNode, theme);
+  const internalBackSlot = useMemo(() => internalBackSlotOf(solveNode, chromeSlot), [solveNode, chromeSlot]);
   const internalEnv = useMemo(
     () => ({ theme, measureText, snapToPixels, inheritedModulate: tint.inherited, zFinal: state.zFinal }),
     [theme, measureText, snapToPixels, tint.inherited, state.zFinal]
   );
 
+  const internalElements = internals.length > 0 && (
+    <InternalControls
+      internals={internals}
+      solved={solved}
+      slot={slot}
+      chromeSlot={internalBackSlot}
+      env={internalEnv}
+    />
+  );
   // A canvas boundary such as `CanvasLayer` wraps its descendants in fresh
   // context, so they must be its React children. The registration declares it,
   // so a second such type adds no branch here.
-  const children = placeChildren(solveNode.node.type, childElements);
+  const children = placeChildren(solveNode.node.type, childElements, internalElements);
   // The painter's own path, as `NodeDispatcher` gives a node's: a ViewportTexture's `viewport_path`
   // counts from the painter's local scene.
   const painter = (
@@ -344,15 +354,7 @@ function ControlItemGroup({
           {children.inPainter}
         </Painter>
       </OwnModulateProvider>
-      {internals.length > 0 && (
-        <InternalControls
-          internals={internals}
-          solved={solved}
-          slot={slot}
-          chromeSlot={chromeSlot}
-          env={internalEnv}
-        />
-      )}
+      {children.besidePainter}
     </NodePathProvider>
   );
   // The leaf meshes of a painter read the lit pixel material through context. A CanvasLayer is no

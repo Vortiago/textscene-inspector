@@ -29,7 +29,7 @@ export function VScrollBar({ solveNode, tint, rect, renderOrder }: NativeControl
 
   const trackRect = scrollBarTrackRect(size);
   const grabber = scrollBarGrabberGeometry(true, size.y, boxes, min, max, page, ratio);
-  const grabberRect = scrollBarGrabberRect(true, size, grabber);
+  const grabberRect = scrollBarGrabberRect(true, size, grabber, boxes);
 
   return (
     <>
