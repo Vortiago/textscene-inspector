@@ -45,4 +45,23 @@ describe('the layers of a TileMap', () => {
   it('are unowned, so the dock lists none and a click selects the TileMap', () => {
     expect(tree.at('Map/@TileMapLayer@0')!.raw.isUnowned).toBe(true);
   });
+
+  it('take the CanvasItem state a TileMap forwards, and not its top_level or clip_children', () => {
+    // `TileMap::set_light_mask`, `set_self_modulate` and the texture setters reach each layer
+    // (`tile_map.cpp:799-830`). No other CanvasItem property does.
+    const forwarding = liveTreeOfText(
+      MAP.replace(
+        'format = 2\n',
+        'format = 2\ntop_level = true\nclip_children = 1\nlight_mask = 5\nself_modulate = Color(1, 0, 0, 1)\n'
+      ),
+      {}
+    );
+    const props = forwarding.at('Map/@TileMapLayer@0')!.step.node.properties as TileMapLayerProperties;
+    expect([props.top_level, props.clip_children, props.light_mask, props.self_modulate]).toEqual([
+      false,
+      0,
+      5,
+      { r: 1, g: 0, b: 0, a: 1 },
+    ]);
+  });
 });
