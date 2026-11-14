@@ -18,6 +18,7 @@ import type { CanvasInheritance } from '../../canvasItemPass/inheritedCanvasStat
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Rgba } from '../../../godot/math/math.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
+import type { NativeControlComponent } from '../ControlComponentRegistry';
 
 /** `labelSettingsFont` while its font file loads: a Label draws nothing in it yet (ADR-0059). */
 export const LABEL_SETTINGS_FONT_LOADING = 'loading';
@@ -163,6 +164,8 @@ export interface SolveNode {
    * place of its own vendored icon for a name `icons` has no entry for.
    */
   defaultIcons?: Readonly<Record<string, string>>;
+  /** What the parent draws on this internal Control through its `draw` signal, after the class's own draw. */
+  draws?: NativeControlComponent;
   /**
    * The resource pools this node's own references resolve against. A node from
    * an instanced sub-scene names that scene's ids, while `SceneResourcesProvider`

@@ -26,7 +26,7 @@ import {
   type SolveContext,
   type TextureSlotRequest,
 } from './solverRegistry';
-import { internalChildThemeItems, type InternalThemeItems } from './themeItems';
+import { themeItemsOfType, type InternalThemeItems } from './themeItems';
 import { perObject } from '../../../utils/perObject';
 
 /**
@@ -192,15 +192,6 @@ export function placeInternalControls(
   }));
 }
 
-/** Written only by `buildUnder`, for a spec with `draws`. A built node lives as long as its parent's build. */
-// eslint-disable-next-line no-restricted-syntax -- a side table `buildUnder` writes, not a value built from its key
-const drawsByNode = new WeakMap<SolveNode, NativeControlComponent>();
-
-/** What the parent draws on the internal Control `node` through its `draw` signal, or `undefined`. */
-export function internalControlDraws(node: SolveNode): NativeControlComponent | undefined {
-  return drawsByNode.get(node);
-}
-
 /** The path an internal Control gets: its parent's, then its own name. A container lays its children out by this link. */
 function syntheticPath(parentPath: string, name: string): string {
   return `${parentPath}/@${name}`;
@@ -225,7 +216,7 @@ function buildUnder(owner: SolveNode, spec: InternalControlSpec, parentPath: str
     properties: builtProperties(spec, pushed.fontSizes),
     rawProperties: {},
   };
-  const items = internalChildThemeItems(owner, type, variation);
+  const items = themeItemsOfType(owner, type, variation);
   const textureSize =
     spec.textureSize !== undefined ? spec.textureSize : builtButtonTextureSize(owner, spec, items);
   const built: SolveNode = {
@@ -238,13 +229,13 @@ function buildUnder(owner: SolveNode, spec: InternalControlSpec, parentPath: str
     constants: { ...items.constants, ...pushed.constants },
     icons: iconsUnder(spec, items),
     defaultIcons: pushed.defaultIcons,
+    draws: spec.draws,
     fontOverrides: { ...pushed.fontOverrides },
     textureSize,
     textureSlots: spec.textureSlots ?? {},
     labelSettings: null,
     labelSettingsFont: null,
   };
-  if (spec.draws) drawsByNode.set(built, spec.draws);
   return built;
 }
 

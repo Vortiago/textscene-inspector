@@ -10,20 +10,23 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { useMemo } from 'react';
-import type * as THREE from 'three';
 import type { ControlProperties } from '../../control/types';
 import type { NativeControlComponentProps } from '../../../../../r3f/controls/ControlComponentRegistry';
 import { ControlQuad } from '../../../../../r3f/controls/native/controlQuad';
-import { useControlClipPlanes } from '../../../../../r3f/controls/native/controlClipping';
 import { painterView } from '../../../../../r3f/controls/native/solveTree';
 import {
   multiplyModulate,
   useItemLinearColor,
-  useVertexColorTint,
+  type OwnPixelTint,
 } from '../../../../../r3f/canvasItemModulate';
+import { useOwnerCanvas2DTexture } from '../../../../../r3f/canvas2DTextureDecode';
+import { useDisposeOnRelease } from '../../../../../r3f/useDisposeOnRelease';
+import { rasterizeGradientTexture2D } from '../../../../../resources/textures/gradienttexture2d/build';
+import type { Gradient, GradientTexture2D } from '../../../../../resources/textures/gradienttexture2d/types';
+import type { Rgba } from '../../../../../godot/math/math';
 import { AlphaCheckerboardQuad } from '../../shared/AlphaCheckerboardQuad';
-import { GradientMesh, buildGeometry, tintVertexColors } from '../GradientMesh';
-import { horizontalStripGeometry, texelStripGeometry } from '../svGradient';
+import { TintedGradient } from '../GradientMesh';
+import { horizontalStripGeometry } from '../svGradient';
 import type { ChannelGradient } from '../colorModes';
 
 /** A channel HSlider's properties: what its `draw` callback reads of the picker. */
@@ -34,6 +37,13 @@ export interface ChannelGradientProperties {
 /** `margin = 16 * base_scale` (`color_mode.cpp:187`, `color_picker.cpp:1433`): the band's height. */
 const BAND_HEIGHT = 16;
 
+interface BandProps {
+  width: number;
+  height: number;
+  tint: OwnPixelTint;
+  renderOrder: number;
+}
+
 export function ChannelGradientDraw({
   solveNode,
   rect,
@@ -41,61 +51,61 @@ export function ChannelGradientDraw({
   theme,
   renderOrder,
 }: NativeControlComponentProps) {
-  const { channelGradient: gradient } = painterView<ControlProperties & ChannelGradientProperties>(solveNode);
-  const clippingPlanes = useControlClipPlanes() as THREE.Plane[];
-  const vertexTint = useVertexColorTint(tint.own);
-  const height = BAND_HEIGHT * theme.scale;
-  const geometry = useMemo(() => {
-    const stripOf = gradient.isTexture ? texelStripGeometry : horizontalStripGeometry;
-    const strip = stripOf(rect.w, height, gradient.stops);
-    return buildGeometry({ ...strip, colors: tintVertexColors(strip.colors, vertexTint.vertex) });
-  }, [gradient, rect.w, height, vertexTint.vertex]);
-  const { underlay } = gradient;
+  const { channelGradient: band } = painterView<ControlProperties & ChannelGradientProperties>(solveNode);
+  const size = { width: rect.w, height: BAND_HEIGHT * theme.scale, tint, renderOrder };
+  if ('texture' in band) return <TextureBand texture={band.texture} gradient={band.gradient} {...size} />;
   return (
     <>
-      {underlay === 'checkerboard' && (
+      {band.underlay === 'checkerboard' && (
         <AlphaCheckerboardQuad
-          width={rect.w}
-          height={height}
+          width={size.width}
+          height={size.height}
           color={tint.color}
           opacity={tint.opacity}
           renderOrder={renderOrder}
           themed={solveNode.icons.sample_bg}
         />
       )}
-      {underlay !== null && underlay !== 'checkerboard' && (
-        <GreyUnderlay
-          grey={underlay.grey}
-          width={rect.w}
-          height={height}
-          tint={tint}
-          renderOrder={renderOrder}
-        />
+      {band.underlay !== null && band.underlay !== 'checkerboard' && (
+        <GreyUnderlay grey={band.underlay.grey} {...size} />
       )}
-      <GradientMesh
-        geometry={geometry}
-        renderOrder={renderOrder}
-        clippingPlanes={clippingPlanes}
-        tint={vertexTint}
-      />
+      <PolygonBand stops={band.stops} {...size} />
     </>
   );
 }
 
-/** The HSV H row's flat grey under the hue rainbow (`color_mode.cpp:218-219`). */
-function GreyUnderlay({
-  grey,
+/** `draw_texture_rect` of the row's gradient texture, sampled with the slider's own filter and repeat. */
+function TextureBand({
+  texture,
+  gradient,
   width,
   height,
   tint,
   renderOrder,
-}: {
-  grey: ChannelGradient['stops'][number];
-  width: number;
-  height: number;
-  tint: NativeControlComponentProps['tint'];
-  renderOrder: number;
-}) {
+}: BandProps & { texture: GradientTexture2D; gradient: Gradient }) {
+  const raster = useMemo(() => rasterizeGradientTexture2D(texture, gradient), [texture, gradient]);
+  useDisposeOnRelease(raster);
+  const sampled = useOwnerCanvas2DTexture(raster);
+  return (
+    <ControlQuad
+      width={width}
+      height={height}
+      color={tint.color}
+      opacity={tint.opacity}
+      map={sampled}
+      renderOrder={renderOrder}
+    />
+  );
+}
+
+/** `draw_polygon` of `stops` evenly spaced across the band. */
+function PolygonBand({ stops, width, height, tint, renderOrder }: BandProps & { stops: readonly Rgba[] }) {
+  const strip = useMemo(() => horizontalStripGeometry(width, height, stops), [width, height, stops]);
+  return <TintedGradient layer={strip} tint={tint} renderOrder={renderOrder} />;
+}
+
+/** The HSV H row's flat grey under the hue rainbow (`color_mode.cpp:218-219`). */
+function GreyUnderlay({ grey, width, height, tint, renderOrder }: BandProps & { grey: Rgba }) {
   const drawn = useMemo(() => multiplyModulate(tint.own, grey), [tint.own, grey]);
   const color = useItemLinearColor(drawn);
   return (

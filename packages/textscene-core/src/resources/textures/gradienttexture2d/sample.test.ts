@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { gradientOffsetAt, gradientRowTexels, sampleGradientColor, storedGradient } from './sample';
+import { gradientOffsetAt, sampleGradientColor, storedGradient } from './sample';
 import { rasterizeGradientTexture2D } from './build';
 import { decodeGradientTexture2D } from './decode';
 import { gradientOf } from './gradient.testkit';
@@ -294,32 +294,5 @@ describe('storedGradient', () => {
 
     // Gradient.sample(0.66).b from the GDScript oracle on Godot 4.6.3.
     expect(sampleGradientColor(storedGradient(gradient), 0.66).b).toBe(Math.fround(0.379999995));
-  });
-});
-
-describe('gradientRowTexels', () => {
-  const redToBlue = (space: string) =>
-    gradientOf({
-      interpolation_color_space: space,
-      colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)',
-    });
-  const bytes = (texels: readonly { r: number; g: number; b: number; a: number }[]) =>
-    texels.flatMap((t) => [t.r, t.g, t.b, t.a].map((c) => Math.round(c * 255)));
-
-  it('matches the RGBA8 image of a GradientTexture1D in Godot 4.6.3 (gradient_texture.cpp:120-128)', () => {
-    expect(bytes(gradientRowTexels(redToBlue('2'), 5))).toEqual([
-      255, 0, 0, 255, 198, 73, 109, 255, 140, 83, 162, 255, 81, 71, 210, 255, 0, 0, 255, 255,
-    ]);
-  });
-
-  it('holds whole bytes, as an RGBA8 image does', () => {
-    for (const texel of gradientRowTexels(redToBlue('0'), 7)) {
-      expect(texel.g * 255).toBe(Math.round(texel.g * 255));
-      expect(texel.r * 255).toBe(Math.round(texel.r * 255));
-    }
-  });
-
-  it('gives one texel the gradient start (edge case)', () => {
-    expect(bytes(gradientRowTexels(redToBlue('0'), 1))).toEqual([255, 0, 0, 255]);
   });
 });

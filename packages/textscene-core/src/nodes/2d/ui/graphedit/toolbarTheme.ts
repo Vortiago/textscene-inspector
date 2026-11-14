@@ -10,7 +10,7 @@ import { pickButtonStyleBox, type ToggleDrawState } from '../../../../r3f/contro
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+import { themeItemsOfType, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { lineEditField, type LineEditField } from '../lineedit/nativeSolver';
 import { SPIN_BOX_FIELD_VARIATION } from '../spinbox/nativeSolver';
 
@@ -44,9 +44,9 @@ export const graphEditToolbarTheme = (n: SolveNode, theme: NativeTheme): GraphEd
   toolbarThemesOf(n).get(theme) ?? buildToolbarTheme(n, theme);
 
 function buildToolbarTheme(n: SolveNode, theme: NativeTheme): GraphEditToolbarTheme {
-  const button = internalChildThemeItems(n, 'Button', TOOLBAR_BUTTON_VARIATION);
-  const label = internalChildThemeItems(n, 'Label');
-  const field = internalChildThemeItems(n, 'LineEdit', SPIN_BOX_FIELD_VARIATION);
+  const button = themeItemsOfType(n, 'Button', TOOLBAR_BUTTON_VARIATION);
+  const label = themeItemsOfType(n, 'Label');
+  const field = themeItemsOfType(n, 'LineEdit', SPIN_BOX_FIELD_VARIATION);
   const buttonBox = (state: ToggleDrawState) => pickButtonStyleBox(button.styleBoxes, state, n.rtl);
   const result: GraphEditToolbarTheme = {
     menuPanel: requiredThemeItem(n.styleBoxes, 'menu_panel'),
@@ -60,8 +60,8 @@ function buildToolbarTheme(n: SolveNode, theme: NativeTheme): GraphEditToolbarTh
     labelColor: requiredThemeItem(label.colors, 'font_color'),
     field: lineEditField(field),
     fieldColor: requiredThemeItem(field.colors, 'font_color'),
-    spinBoxColors: internalChildThemeItems(n, 'SpinBox').colors,
-    separation: requiredThemeItem(internalChildThemeItems(n, 'HBoxContainer').constants, 'separation'),
+    spinBoxColors: themeItemsOfType(n, 'SpinBox').colors,
+    separation: requiredThemeItem(themeItemsOfType(n, 'HBoxContainer').constants, 'separation'),
   };
   toolbarThemesOf(n).set(theme, result);
   return result;

@@ -1,6 +1,6 @@
 /**
  * The Controls one `picker_shape` adds to the picker's shape row, and what each one's `draw`
- * callback draws, as plain data: the interface every shape variant returns and `ShapeRow.tsx`
+ * callback draws, as plain data: the interface every shape variant returns and `ShapeControlDraw.tsx`
  * paints. Each variant ports one `ColorPickerShape` subclass (`scene/gui/color_picker_shape.cpp`).
  *
  * Portions ported from Godot Engine (MIT).

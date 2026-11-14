@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ColorPickerColorMode } from '../../../../godot/scene/gui';
+import { GradientColorSpace } from '../../../../godot/scene/gradientTexture';
 import {
   colorModeAlphaChannel,
   colorModeChannels,
@@ -9,6 +10,7 @@ import {
   hexFieldText,
   alphaGradient,
   channelGradient,
+  type ChannelGradient,
 } from './colorModes';
 
 const RED = { r: 1, g: 0, b: 0, a: 1 };
@@ -93,9 +95,21 @@ describe('colorModeIntensityChannel', () => {
   });
 });
 
+/** The polygon stops of a row, which fails the test for a texture row. */
+function polygonOf(band: ChannelGradient) {
+  if ('texture' in band) throw new Error('expected a polygon row, got a texture row');
+  return band;
+}
+
+/** The gradient of a texture row, which fails the test for a polygon row. */
+function textureOf(band: ChannelGradient) {
+  if (!('texture' in band)) throw new Error('expected a texture row, got a polygon row');
+  return band;
+}
+
 /** The grey polygon under the HSV H row of `color`. */
 function hueUnderlay(color: { r: number; g: number; b: number; a: number }) {
-  const { underlay } = channelGradient(ColorPickerColorMode.MODE_HSV, 0, color);
+  const { underlay } = polygonOf(channelGradient(ColorPickerColorMode.MODE_HSV, 0, color));
   if (underlay === null || underlay === 'checkerboard')
     throw new Error(`expected a grey underlay, got ${underlay}`);
   return underlay.grey;
@@ -113,13 +127,13 @@ function closeColor(
 
 describe('the HSV S and V rows', () => {
   it('S channel sweeps white to the hue at full saturation: color_mode.cpp:196-206', () => {
-    const [left, right] = channelGradient(ColorPickerColorMode.MODE_HSV, 1, RED).stops;
+    const [left, right] = polygonOf(channelGradient(ColorPickerColorMode.MODE_HSV, 1, RED)).stops;
     closeColor(left!, { r: 1, g: 1, b: 1, a: 1 });
     closeColor(right!, { r: 1, g: 0, b: 0, a: 1 });
   });
 
   it('V channel sweeps black to the hue at full value', () => {
-    const [left, right] = channelGradient(ColorPickerColorMode.MODE_HSV, 2, RED).stops;
+    const [left, right] = polygonOf(channelGradient(ColorPickerColorMode.MODE_HSV, 2, RED)).stops;
     closeColor(left!, { r: 0, g: 0, b: 0, a: 1 });
     closeColor(right!, { r: 1, g: 0, b: 0, a: 1 });
   });
@@ -140,7 +154,7 @@ describe('the HSV H row stops', () => {
   const PICKED = { r: 0.8, g: 0.6, b: 0.4, a: 1 }; // v = 0.8, s = 0.5
 
   it('are the 7 color_hue stops, from_hsv(i / 6, 1, 1), modulated by from_hsv(0, 0, v, s): color_mode.cpp:218-221, default_theme.cpp:1105-1128', () => {
-    const { stops } = channelGradient(ColorPickerColorMode.MODE_HSV, 0, PICKED);
+    const { stops } = polygonOf(channelGradient(ColorPickerColorMode.MODE_HSV, 0, PICKED));
     expect(stops).toHaveLength(7);
     // Red, yellow, green, cyan, blue, magenta, red, each times v = 0.8, at alpha s = 0.5.
     const hues = [
@@ -163,15 +177,15 @@ describe('the HSV H row stops', () => {
   });
 
   it('vanishes at saturation 0: Color::from_hsv(0, 0, v, 0) has alpha 0', () => {
-    for (const stop of channelGradient(ColorPickerColorMode.MODE_HSV, 0, { r: 0.5, g: 0.5, b: 0.5, a: 1 })
-      .stops)
+    const grey = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
+    for (const stop of polygonOf(channelGradient(ColorPickerColorMode.MODE_HSV, 0, grey)).stops)
       expect(stop.a).toBe(0);
   });
 });
 
 describe('the OKHSL S row', () => {
   it('sweeps an achromatic grey to the hue at full saturation, both at the current L: color_mode.cpp:412-427', () => {
-    const [left, right] = channelGradient(ColorPickerColorMode.MODE_OKHSL, 1, RED).stops;
+    const [left, right] = polygonOf(channelGradient(ColorPickerColorMode.MODE_OKHSL, 1, RED)).stops;
     expect(left!.r).toBeCloseTo(0.5347439, 5);
     expect(left!.g).toBeCloseTo(0.5347439, 5);
     expect(left!.b).toBeCloseTo(0.5347439, 5);
@@ -183,7 +197,7 @@ describe('the OKHSL S row', () => {
 
 describe('the OKHSL L row', () => {
   it('is black, the hue at L=0.5, then white: color_mode.cpp:392-411', () => {
-    const [black, mid, white] = channelGradient(ColorPickerColorMode.MODE_OKHSL, 2, RED).stops;
+    const [black, mid, white] = polygonOf(channelGradient(ColorPickerColorMode.MODE_OKHSL, 2, RED)).stops;
     expect(black).toEqual({ r: 0, g: 0, b: 0, a: 1 });
     // Color.from_ok_hsl(red.ok_hsl_h, red.ok_hsl_s, 0.5).r, measured in Godot 4.6.3.
     expect(mid!.r).toBeCloseTo(0.8773463368, 6);
@@ -194,11 +208,13 @@ describe('the OKHSL L row', () => {
 });
 
 describe('the OKHSL H row', () => {
-  it('sweeps hue at the current s and l, first and last texel equal: color_mode.cpp:428-457', () => {
-    const { stops } = channelGradient(ColorPickerColorMode.MODE_OKHSL, 0, RED);
-    expect(stops[0]).toEqual(stops[399]);
-    // from_ok_hsl(0, s, l) of red: 0.9599455, 0, 0.5107065, stored as bytes.
-    expect([stops[0]!.r, stops[0]!.g, stops[0]!.b].map((c) => Math.round(c * 255))).toEqual([245, 0, 130]);
+  it('sweeps hue at the current s and l, first and last stop equal: color_mode.cpp:428-457', () => {
+    const { stops } = textureOf(channelGradient(ColorPickerColorMode.MODE_OKHSL, 0, RED)).gradient;
+    expect(stops).toHaveLength(7);
+    expect(stops[0]!.color).toEqual(stops[6]!.color);
+    // from_ok_hsl(0, s, l) of red, measured in Godot 4.6.3.
+    expect(stops[0]!.color.r).toBeCloseTo(0.9599455, 5);
+    expect(stops[0]!.color.b).toBeCloseTo(0.5107065, 5);
   });
 });
 
@@ -235,7 +251,7 @@ describe('hexFieldText', () => {
 
 describe('the alpha row stops', () => {
   it('sweeps the normalised colour from alpha 0 to alpha 1: color_picker.cpp:1423-1450', () => {
-    expect(alphaGradient(RED).stops).toEqual([
+    expect(polygonOf(alphaGradient(RED)).stops).toEqual([
       { r: 1, g: 0, b: 0, a: 0 },
       { r: 1, g: 0, b: 0, a: 1 },
     ]);
@@ -267,28 +283,27 @@ describe('extractHsv', () => {
 
 describe('channelGradient', () => {
   const GREY = { r: 0.2, g: 0.4, b: 0.6, a: 1 };
-  const byte = (channel: number) => Math.round(channel * 255);
 
   it.each([
-    ['RGB', ColorPickerColorMode.MODE_RGB],
-    ['Linear', ColorPickerColorMode.MODE_LINEAR],
-  ])('draws a %s row from the 400 texels of its GradientTexture2D (color_mode.cpp:100-120)', (_, mode) => {
-    const { stops, isTexture } = channelGradient(mode, 0, GREY);
-    expect(isTexture).toBe(true);
-    expect(stops).toHaveLength(400);
-    expect(stops[0]).toEqual({ r: 0, g: 0.4, b: 0.6, a: 1 });
-    expect(stops[399]).toEqual({ r: 1, g: 0.4, b: 0.6, a: 1 });
-  });
+    ['RGB', ColorPickerColorMode.MODE_RGB, GradientColorSpace.SRGB],
+    ['Linear', ColorPickerColorMode.MODE_LINEAR, GradientColorSpace.LINEAR_SRGB],
+  ])(
+    'draws a %s row from a 400-texel gradient texture (color_mode.cpp:100-120,298-318)',
+    (_, mode, space) => {
+      const { texture, gradient } = textureOf(channelGradient(mode, 0, GREY));
+      expect(texture.width).toBe(400);
+      expect(gradient.interpolationColorSpace).toBe(space);
+      expect(gradient.stops.map((stop) => stop.color)).toEqual([
+        { r: 0, g: 0.4, b: 0.6, a: 1 },
+        { r: 1, g: 0.4, b: 0.6, a: 1 },
+      ]);
+    }
+  );
 
-  it('blends an RGB row in sRGB and a Linear row in linear sRGB (color_mode.cpp:113,311)', () => {
-    expect(byte(channelGradient(ColorPickerColorMode.MODE_RGB, 0, GREY).stops[200]!.r)).toBe(128);
-    expect(byte(channelGradient(ColorPickerColorMode.MODE_LINEAR, 0, GREY).stops[200]!.r)).toBe(188);
-  });
-
-  it('draws the OKHSL H row from a 400-texel GradientTexture1D that blends its 7 stops in OKLab (color_mode.cpp:428-457)', () => {
-    const { stops, isTexture } = channelGradient(ColorPickerColorMode.MODE_OKHSL, 0, GREY);
-    expect(isTexture).toBe(true);
-    expect(stops).toHaveLength(400);
+  it('draws the OKHSL H row from a 400-texel texture that blends in OKLab (color_mode.cpp:428-457)', () => {
+    const { texture, gradient } = textureOf(channelGradient(ColorPickerColorMode.MODE_OKHSL, 0, GREY));
+    expect(texture.width).toBe(400);
+    expect(gradient.interpolationColorSpace).toBe(GradientColorSpace.OKLAB);
   });
 
   it.each([
@@ -296,10 +311,10 @@ describe('channelGradient', () => {
     ['OKHSL S', ColorPickerColorMode.MODE_OKHSL, 1],
     ['OKHSL L', ColorPickerColorMode.MODE_OKHSL, 2],
   ] as const)('draws the %s row as a polygon of evenly spaced stops', (_, mode, channel) => {
-    expect(channelGradient(mode, channel, GREY).isTexture).toBe(false);
+    expect('stops' in channelGradient(mode, channel, GREY)).toBe(true);
   });
 
   it('draws the alpha row as a polygon over the checkerboard (color_picker.cpp:1423-1450)', () => {
-    expect(alphaGradient(GREY)).toMatchObject({ isTexture: false, underlay: 'checkerboard' });
+    expect(polygonOf(alphaGradient(GREY)).underlay).toBe('checkerboard');
   });
 });

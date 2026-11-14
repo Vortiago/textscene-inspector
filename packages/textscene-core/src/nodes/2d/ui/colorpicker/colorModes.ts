@@ -7,7 +7,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { linearChannelToSRGBF32, sRGBChannelToLinearF32 } from '../../../../utils/colorSpace';
+import { linearColorToSRGBF32, sRGBColorToLinearF32 } from '../../../../utils/colorSpace';
 import { isColorOverbright } from '../shared/colorOverbright';
 import { formatGodotNumber } from '../spinbox/nativeSolver';
 import { colorHue, colorSaturation, hsvToRgb } from '../../../../godot/math/color';
@@ -15,9 +15,13 @@ import { okhslToSrgb, srgbToOkhsl } from './okhsl';
 import { COLOR_HUE_STOPS } from './svGradient';
 import type { Rgba } from '../../../../godot/math/math';
 import { ColorPickerColorMode } from '../../../../godot/scene/gui';
-import { GradientColorSpace, GradientInterpolationMode } from '../../../../godot/scene/gradientTexture';
-import { gradientRowTexels } from '../../../../resources/textures/gradienttexture2d/sample';
-import type { Gradient } from '../../../../resources/textures/gradienttexture2d/types';
+import {
+  GradientColorSpace,
+  GradientInterpolationMode,
+  GradientTexture2DFill,
+  GradientTexture2DRepeat,
+} from '../../../../godot/scene/gradientTexture';
+import type { Gradient, GradientTexture2D } from '../../../../resources/textures/gradienttexture2d/types';
 
 interface HsvColor {
   h: number;
@@ -38,16 +42,6 @@ export function extractHsv(normalized: Rgba): HsvColor {
   };
 }
 
-/** `Color::srgb_to_linear` of the rgb, in Godot's float steps; alpha stays. */
-function srgbToLinearF32(color: Rgba): Rgba {
-  return {
-    r: sRGBChannelToLinearF32(color.r),
-    g: sRGBChannelToLinearF32(color.g),
-    b: sRGBChannelToLinearF32(color.b),
-    a: color.a,
-  };
-}
-
 /** The divisor of `_copy_color_to_normalized_and_intensity` (`color_picker.cpp:593-602`): 1 unless a linear channel exceeds 1. */
 function intensityMultiplier(linear: Rgba): number {
   return Math.max(1, linear.r, linear.g, linear.b);
@@ -60,19 +54,19 @@ function intensityMultiplier(linear: Rgba): number {
  * The round trip runs in Godot's float steps, since a grey's OKHSL hue is the noise it leaves.
  */
 export function colorNormalized(color: Rgba): Rgba {
-  const linear = srgbToLinearF32(color);
+  const linear = sRGBColorToLinearF32(color);
   const multiplier = intensityMultiplier(linear);
-  return {
-    r: linearChannelToSRGBF32(linear.r / multiplier),
-    g: linearChannelToSRGBF32(linear.g / multiplier),
-    b: linearChannelToSRGBF32(linear.b / multiplier),
+  return linearColorToSRGBF32({
+    r: linear.r / multiplier,
+    g: linear.g / multiplier,
+    b: linear.b / multiplier,
     a: color.a,
-  };
+  });
 }
 
 /** `intensity = Math::log2(multiplier)` (`color_picker.cpp:594,601`): the intensity slider's value in every `color_mode`. */
 function colorIntensity(color: Rgba): number {
-  return Math.log2(intensityMultiplier(srgbToLinearF32(color)));
+  return Math.log2(intensityMultiplier(sRGBColorToLinearF32(color)));
 }
 
 /** `ColorMode::get_name()` per mode (`color_mode.h:72,94,118,148`). The first `MODE_BUTTON_COUNT` label `mode_btns`. */
@@ -117,7 +111,7 @@ export function colorModeChannels(
       ];
     }
     case ColorPickerColorMode.MODE_LINEAR: {
-      const linear = srgbToLinearF32(normalized);
+      const linear = sRGBColorToLinearF32(normalized);
       return [
         { label: 'R', value: linear.r, max: 1 },
         { label: 'G', value: linear.g, max: 1 },
@@ -291,35 +285,53 @@ function alphaChannelGradientStops(normalized: Rgba): [Rgba, Rgba] {
 }
 
 /** What a channel slider's `draw` callback draws over its top `16 * base_scale` pixels. */
-export interface ChannelGradient {
-  /** Evenly spaced from left to right, or with `isTexture` the texels of the row's texture. */
-  stops: readonly Rgba[];
-  /**
-   * Drawn under the stops: the alpha row's `sample_bg` tiles (`color_picker.cpp:1434`), or the HSV
-   * H row's grey polygon, over which the hue texture is modulated (`color_mode.cpp:218-221`).
-   */
-  underlay: 'checkerboard' | { grey: Rgba } | null;
-  /** Drawn with `draw_texture_rect` from a gradient texture, not with `draw_polygon`. */
-  isTexture: boolean;
-}
+export type ChannelGradient =
+  | {
+      /** Drawn with `draw_polygon`: these colours evenly spaced from left to right. */
+      stops: readonly Rgba[];
+      /**
+       * Drawn under the stops: the alpha row's `sample_bg` tiles (`color_picker.cpp:1434`), or the HSV
+       * H row's grey polygon, over which the hue texture is modulated (`color_mode.cpp:218-221`).
+       */
+      underlay: 'checkerboard' | { grey: Rgba } | null;
+    }
+  | {
+      /** Drawn with `draw_texture_rect` from a gradient texture of this size. */
+      texture: GradientTexture2D;
+      gradient: Gradient;
+    };
 
-/** `set_width(400)` on the texture of an RGB, Linear and OKHSL H row (`color_mode.cpp:102,302,432`). */
-const CHANNEL_TEXTURE_WIDTH = 400;
+/**
+ * The texture of an RGB, Linear and OKHSL H row: `set_width(400)` (`color_mode.cpp:102,302,432`).
+ * Every row of a texture holds the same texels, so one row stands for the RGB rows' 6 and the
+ * OKHSL row's `GradientTexture1D`.
+ */
+const CHANNEL_TEXTURE: GradientTexture2D = {
+  width: 400,
+  height: 1,
+  fill: GradientTexture2DFill.LINEAR,
+  fillFrom: { x: 0, y: 0 },
+  fillTo: { x: 1, y: 0 },
+  repeat: GradientTexture2DRepeat.NONE,
+  useHdr: false,
+};
 
-const polygon = (stops: readonly Rgba[], underlay: ChannelGradient['underlay'] = null): ChannelGradient => ({
+const polygon = (
+  stops: readonly Rgba[],
+  underlay: 'checkerboard' | { grey: Rgba } | null = null
+): ChannelGradient => ({
   stops,
   underlay,
-  isTexture: false,
 });
 
-/** The texels of a row's texture: its stops evenly spaced in a linear `Gradient` that blends in `space`. */
+/** A row's texture: its stops evenly spaced in a linear `Gradient` that blends in `space`. */
 function texture(stops: readonly Rgba[], space: Gradient['interpolationColorSpace']): ChannelGradient {
   const gradient: Gradient = {
     stops: stops.map((color, i) => ({ offset: Math.fround(i / (stops.length - 1)), color })),
     interpolationMode: GradientInterpolationMode.LINEAR,
     interpolationColorSpace: space,
   };
-  return { stops: gradientRowTexels(gradient, CHANNEL_TEXTURE_WIDTH), underlay: null, isTexture: true };
+  return { texture: CHANNEL_TEXTURE, gradient };
 }
 
 /** `ColorMode::slider_draw` of `mode` for the channel row `channel`, 0 to 2 (`color_mode.cpp`). */

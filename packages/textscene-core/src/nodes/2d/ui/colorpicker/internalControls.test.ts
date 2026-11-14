@@ -1,7 +1,7 @@
 /** The Controls a ColorPicker builds (`color_picker.cpp:2070-2307`), what it sets on them, and the size they give it. */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { internalControlDraws, internalControlsOf } from '../../../../r3f/controls/native/internalControls';
+import { internalControlsOf } from '../../../../r3f/controls/native/internalControls';
 import { createSolveContext } from '../../../../r3f/controls/native/controlRectSolver';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
@@ -132,7 +132,7 @@ describe('the shape row', () => {
 describe('the sample row', () => {
   it('draws the pick colour on sample through its draw callback (:2091)', () => {
     const sample = at(picker({ color: 'Color(1, 0, 0, 0.5)' }), 'sample_hbc', 'sample');
-    expect(internalControlDraws(sample)).toBe(SampleDraw);
+    expect(sample.draws).toBe(SampleDraw);
     expect(propsOf<{ pickColor: unknown }>(sample).pickColor).toEqual({ r: 1, g: 0, b: 0, a: 0.5 });
   });
 
@@ -251,7 +251,7 @@ describe('the slider grid', () => {
       });
       expect(slider.constants.grabber_offset).toBe(8);
       expect(slider.constants.center_grabber).toBe(n.constants.center_slider_grabbers);
-      expect(internalControlDraws(slider)).toBe(ChannelGradientDraw);
+      expect(slider.draws).toBe(ChannelGradientDraw);
     }
   });
 
@@ -259,7 +259,7 @@ describe('the slider grid', () => {
     const slider = at(picker(), 'slider_gc', 'slider_3');
     expect(slider.defaultIcons).toBeUndefined();
     expect(slider.constants.grabber_offset).toBe(0);
-    expect(internalControlDraws(slider)).toBeUndefined();
+    expect(slider.draws).toBeUndefined();
   });
 });
 

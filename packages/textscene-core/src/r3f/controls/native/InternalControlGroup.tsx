@@ -12,7 +12,7 @@ import { VECTOR2_ZERO } from '../../../godot/math/vector';
 import { snappedControlOriginUnder } from './controlPixelSnap';
 import { solvedDrawTransformOf } from './controlYSort';
 import { CanvasItemGroup } from '../../components/CanvasItemGroup';
-import { canvasPieceSlot, canvasSubOrder, type CanvasSlot } from '../../canvasItemState';
+import { canvasHalves, canvasPieceSlot, type CanvasSlot } from '../../canvasItemState';
 import { useCanvasItemTint, WHITE_MODULATE } from '../../canvasItemModulate';
 import { useCanvasModulateFor } from '../../canvasModulate';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
@@ -21,7 +21,7 @@ import {
   NO_PIECE_SLOTS,
   type NativeControlComponentProps,
 } from '../ControlComponentRegistry';
-import { internalControlDraws, internalControlsOf, type InternalControl } from './internalControls';
+import { internalControlsOf, type InternalControl } from './internalControls';
 import { placeChildren } from './paintedChildren';
 import { childRectsOf, type SolvedControl } from './controlRectSolver';
 import { controlProps, type SolveNode } from './solveTree';
@@ -106,11 +106,9 @@ export function InternalControls({ internals, solved, slot, chromeSlot, env }: I
 }
 
 /**
- * One internal Control and its subtree. A Control with `visible` false draws nothing. It tints its
- * pixels from its own `modulate` and `self_modulate` over what its parent hands down, as
- * `useCanvasItemState` does for an authored Control. It is a CanvasItem of its own, so it draws
- * with its own material and `light_mask`, not its parent's (`renderer_canvas_cull.cpp:319-324`):
- * the constructor sets neither, so it has no material and the default mask (`canvas_item.h:98,114`).
+ * One internal Control and its subtree, tinted from its own `modulate` and `self_modulate` over what
+ * its parent hands down. As its own CanvasItem it draws with the material and `light_mask` its
+ * constructor leaves at their defaults, not its parent's (`renderer_canvas_cull.cpp:319-324`).
  */
 function InternalControlGroup({ node, solved, slots, env }: InternalControlGroupProps) {
   const childRects = useMemo(() => childRectsOf(node.children, solved), [node.children, solved]);
@@ -125,6 +123,10 @@ function InternalControlGroup({ node, solved, slots, env }: InternalControlGroup
   const canvasModulate = useCanvasModulateFor(null);
   const tint = useCanvasItemTint(tintInputs, env.inheritedModulate, canvasModulate);
   const childEnv = useMemo(() => ({ ...env, inheritedModulate: tint.inherited }), [env, tint.inherited]);
+  const slot = slots.get(node.path)!;
+  const Draws = node.draws;
+  // What the parent draws through `draw` lands after every piece of the class's own draw.
+  const [painterSlot, drawsSlot] = useMemo(() => (Draws ? canvasHalves(slot) : [slot, slot]), [slot, Draws]);
   if (props.visible === false) return null;
 
   const entry = solved.get(node.path);
@@ -136,12 +138,8 @@ function InternalControlGroup({ node, solved, slots, env }: InternalControlGroup
     solvedDrawTransformOf(node, entry ?? { rect: at }),
     env.snapToPixels
   );
-  const slot = slots.get(node.path)!;
   const Painter = controlComponentRegistry.get(node.node.type);
-  const Draws = internalControlDraws(node);
   const nested = internalControlsOf(node, env.theme);
-  // What the parent draws through `draw` lands after every piece of the class's own draw.
-  const painterSlot = Draws ? { key: slot.key, span: slot.span / 2 } : slot;
   const painterProps = {
     theme: env.theme,
     measureText: env.measureText,
@@ -158,7 +156,6 @@ function InternalControlGroup({ node, solved, slots, env }: InternalControlGroup
     childRects,
     meta: entry?.meta,
   };
-  const drawsSlot = canvasSubOrder(slot);
   const children = placeChildren(
     node.node.type,
     node.children.map((child) => (

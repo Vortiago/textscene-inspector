@@ -149,23 +149,10 @@ export type InternalThemeItems = Pick<SolveNode, 'styleBoxes' | 'colors' | 'cons
 const internalThemeItemsOf = perObject((_parent: SolveNode) => new Map<string, InternalThemeItems>());
 
 /**
- * The theme items of a Control `memnew`d inside `parent` and never serialised, such as a dialog's
- * buttons. It resolves them through the parent's theme chain by its own class chain
- * (`Control::get_theme_stylebox`, `control.cpp:3078`, then `ThemeOwner::get_theme_item_in_types`), and no
- * scene line overrides them. A `variation` is the `theme_type_variation` its constructor sets.
- */
-export function internalChildThemeItems(
-  parent: SolveNode,
-  type: string,
-  variation?: string
-): InternalThemeItems {
-  return themeItemsOfType(parent, type, variation);
-}
-
-/**
- * The theme items `owner` reads when it names another theme type, `get_theme_stylebox(name, type)`,
- * as a `BIND_THEME_ITEM_EXT` item does (`scene/theme/theme_db.h`). The lookup walks `owner`'s theme
- * chain by `type`'s class chain, so it equals what a Control of `type` built inside `owner` reads.
+ * The theme items of a Control of `type` built inside `owner` and never serialised, such as a
+ * dialog's buttons, and what `owner` reads when it names another theme type (`BIND_THEME_ITEM_EXT`,
+ * `scene/theme/theme_db.h`). The lookup walks `owner`'s theme chain by `type`'s class chain, and
+ * `variation` is the `theme_type_variation` a constructor sets.
  */
 export function themeItemsOfType(owner: SolveNode, type: string, variation?: string): InternalThemeItems {
   const byType = internalThemeItemsOf(owner);
@@ -184,7 +171,7 @@ export function themeItemsOfType(owner: SolveNode, type: string, variation?: str
   return items;
 }
 
-/** What a Control `memnew`d inside `parent` resolves its icons to: the `icons` of `internalChildThemeItems`, without the other items. */
+/** What a Control `memnew`d inside `parent` resolves its icons to: the `icons` of `themeItemsOfType`, without the other items. */
 export function builtControlIcons(
   parent: Pick<SolveNode, 'resources' | 'themeChain' | 'projectFonts'>,
   type: string,

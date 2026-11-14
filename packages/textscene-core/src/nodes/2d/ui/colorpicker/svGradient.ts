@@ -98,17 +98,6 @@ export function verticalStripGeometry(w: number, h: number, stops: readonly Rgba
   });
 }
 
-/**
- * A horizontal strip that draws a row of `texels` stretched across `w`, as `draw_texture_rect`
- * draws a gradient texture with linear filtering: each texel's colour sits at its centre, and the
- * edge texels hold out to the edges, where sampling clamps.
- */
-export function texelStripGeometry(w: number, h: number, texels: readonly Rgba[]): QuadGeometry {
-  const columns = [texels[0]!, ...texels, texels[texels.length - 1]!];
-  const xAt = (i: number) => (i === 0 ? 0 : i === columns.length - 1 ? w : ((i - 0.5) * w) / texels.length);
-  return strip(columns, (i) => [xAt(i), 0, 0, xAt(i), -h, 0]);
-}
-
 const COLOR_HUE_STOP_COUNT = 7;
 
 /**

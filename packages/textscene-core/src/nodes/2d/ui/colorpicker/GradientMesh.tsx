@@ -6,9 +6,15 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { useMemo } from 'react';
 import * as THREE from 'three';
+import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useCanvasItemMerge } from '../../../../r3f/components/LitCanvasItemPixels';
-import type { VertexColorTint } from '../../../../r3f/canvasItemModulate';
+import {
+  useVertexColorTint,
+  type OwnPixelTint,
+  type VertexColorTint,
+} from '../../../../r3f/canvasItemModulate';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
 import type { QuadGeometry } from './svGradient';
@@ -69,4 +75,30 @@ export function tintVertexColors(
     out[i + 3] = colors[i + 3]! * tint.a;
   }
   return out;
+}
+
+/** One vertex-coloured mesh at local (0, 0), with the item's tint in its colours. */
+export function TintedGradient({
+  layer,
+  tint,
+  renderOrder,
+}: {
+  layer: QuadGeometry;
+  tint: OwnPixelTint;
+  renderOrder: number;
+}) {
+  const clippingPlanes = useControlClipPlanes() as THREE.Plane[];
+  const vertexTint = useVertexColorTint(tint.own);
+  const geometry = useMemo(
+    () => buildGeometry({ ...layer, colors: tintVertexColors(layer.colors, vertexTint.vertex) }),
+    [layer, vertexTint.vertex]
+  );
+  return (
+    <GradientMesh
+      geometry={geometry}
+      renderOrder={renderOrder}
+      clippingPlanes={clippingPlanes}
+      tint={vertexTint}
+    />
+  );
 }

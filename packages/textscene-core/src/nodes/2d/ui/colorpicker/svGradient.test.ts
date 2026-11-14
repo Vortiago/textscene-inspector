@@ -5,7 +5,6 @@ import {
   verticalStripGeometry,
   COLOR_HUE_STOPS,
   horizontalStripGeometry,
-  texelStripGeometry,
 } from './svGradient';
 
 describe('svSquareBaseLayer', () => {
@@ -98,27 +97,5 @@ describe('horizontalStripGeometry', () => {
     // Middle stop's top vertex sits at x=50.
     expect(g.positions.slice(6, 9)).toEqual([50, 0, 0]);
     expect(g.colors.slice(8, 12)).toEqual([1, 1, 1, 1]);
-  });
-});
-
-describe('texelStripGeometry', () => {
-  const RED = { r: 1, g: 0, b: 0, a: 1 };
-  const BLUE = { r: 0, g: 0, b: 1, a: 1 };
-
-  it('puts each texel at its centre, as linear filtering samples a stretched texture', () => {
-    const g = texelStripGeometry(100, 16, [RED, BLUE]);
-    const xs = g.positions.filter((_, i) => i % 6 === 0);
-    expect(xs).toEqual([0, 25, 75, 100]);
-  });
-
-  it('holds the edge texels out to the edges, as clamped sampling does', () => {
-    const g = texelStripGeometry(100, 16, [RED, BLUE]);
-    expect(g.colors.slice(0, 4)).toEqual([1, 0, 0, 1]);
-    expect(g.colors.slice(-4)).toEqual([0, 0, 1, 1]);
-  });
-
-  it('spans the height on every column', () => {
-    const g = texelStripGeometry(100, 16, [RED]);
-    expect(g.positions).toEqual([0, 0, 0, 0, -16, 0, 50, 0, 0, 50, -16, 0, 100, 0, 0, 100, -16, 0]);
   });
 });

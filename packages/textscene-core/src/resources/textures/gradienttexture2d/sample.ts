@@ -8,7 +8,7 @@
 import { storedColor, storedReal as f } from '../../../godot/math/real';
 import { cubicInterpolatef, lerpf } from '../../../godot/math/math';
 import { linearSrgbToOklab, oklabToLinearSrgb } from '../../../godot/math/okLab';
-import { channelToByte, linearChannelToSRGBF32, sRGBChannelToLinearF32 } from '../../../utils/colorSpace';
+import { linearColorToSRGBF32, sRGBColorToLinearF32 } from '../../../utils/colorSpace';
 
 import type { Gradient, GradientTexture2D } from './types';
 import type { Rgba } from '../../../godot/math/math';
@@ -117,26 +117,22 @@ export function sampleGradientColor(gradient: Gradient, offset: number): Rgba {
   if (gradient.interpolationMode === GradientInterpolationMode.CONSTANT) {
     return c1;
   }
+  const space = gradient.interpolationColorSpace;
+  const from = toBlendSpace(c1, space);
+  const to = toBlendSpace(c2, space);
   if (gradient.interpolationMode === GradientInterpolationMode.CUBIC) {
-    let p0 = first - 1;
-    let p3 = second + 1;
-    if (p3 >= n) p3 = second;
-    if (p0 < 0) p0 = first;
-    const space = gradient.interpolationColorSpace;
-    const [b0, b1, b2, b3] = [stops[p0]!.color, c1, c2, stops[p3]!.color].map((c) => toBlendSpace(c, space));
+    const before = toBlendSpace(stops[Math.max(first - 1, 0)]!.color, space);
+    const after = toBlendSpace(stops[Math.min(second + 1, n - 1)]!.color, space);
     return fromBlendSpace(
       {
-        r: cubicInterpolatef(b1!.r, b2!.r, b0!.r, b3!.r, weight),
-        g: cubicInterpolatef(b1!.g, b2!.g, b0!.g, b3!.g, weight),
-        b: cubicInterpolatef(b1!.b, b2!.b, b0!.b, b3!.b, weight),
-        a: cubicInterpolatef(b1!.a, b2!.a, b0!.a, b3!.a, weight),
+        r: cubicInterpolatef(from.r, to.r, before.r, after.r, weight),
+        g: cubicInterpolatef(from.g, to.g, before.g, after.g, weight),
+        b: cubicInterpolatef(from.b, to.b, before.b, after.b, weight),
+        a: cubicInterpolatef(from.a, to.a, before.a, after.a, weight),
       },
       space
     );
   }
-  const space = gradient.interpolationColorSpace;
-  const from = toBlendSpace(c1, space);
-  const to = toBlendSpace(c2, space);
   return fromBlendSpace(
     {
       r: lerpf(from.r, to.r, weight),
@@ -153,12 +149,7 @@ type ColorSpace = Gradient['interpolationColorSpace'];
 /** `transform_color_space` (`gradient.h:75-97`): an OKLab colour rides in a `Color` as L, a, b and alpha. */
 function toBlendSpace(color: Rgba, space: ColorSpace): Rgba {
   if (space === GradientColorSpace.SRGB) return color;
-  const linear = {
-    r: sRGBChannelToLinearF32(color.r),
-    g: sRGBChannelToLinearF32(color.g),
-    b: sRGBChannelToLinearF32(color.b),
-    a: color.a,
-  };
+  const linear = sRGBColorToLinearF32(color);
   if (space === GradientColorSpace.LINEAR_SRGB) return linear;
   const lab = linearSrgbToOklab(linear);
   return { r: lab.L, g: lab.a, b: lab.b, a: linear.a };
@@ -167,29 +158,6 @@ function toBlendSpace(color: Rgba, space: ColorSpace): Rgba {
 /** `inv_transform_color_space` (`gradient.h:99-119`). */
 function fromBlendSpace(color: Rgba, space: ColorSpace): Rgba {
   if (space === GradientColorSpace.SRGB) return color;
-  const linear =
-    space === GradientColorSpace.OKLAB ? oklabToLinearSrgb({ L: color.r, a: color.g, b: color.b }) : color;
-  return {
-    r: linearChannelToSRGBF32(linear.r),
-    g: linearChannelToSRGBF32(linear.g),
-    b: linearChannelToSRGBF32(linear.b),
-    a: color.a,
-  };
-}
-
-/**
- * The `width` RGBA8 texels of a one-row gradient texture without `use_hdr`, as `GradientTexture1D::_update`
- * fills them (`gradient_texture.cpp:120-128`): the colour at `i / (width - 1)`, each channel a byte.
- * A `GradientTexture2D` with its default fill from (0, 0) to (1, 0) holds the same row in every row.
- */
-export function gradientRowTexels(gradient: Gradient, width: number): Rgba[] {
-  return Array.from({ length: width }, (_, i) => {
-    const color = sampleGradientColor(gradient, f(i / (width - 1)));
-    return {
-      r: channelToByte(color.r) / 255,
-      g: channelToByte(color.g) / 255,
-      b: channelToByte(color.b) / 255,
-      a: channelToByte(color.a) / 255,
-    };
-  });
+  if (space === GradientColorSpace.LINEAR_SRGB) return linearColorToSRGBF32(color);
+  return linearColorToSRGBF32({ ...oklabToLinearSrgb({ L: color.r, a: color.g, b: color.b }), a: color.a });
 }

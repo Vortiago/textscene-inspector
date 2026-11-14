@@ -4,6 +4,8 @@
  * to linear and back in Godot's float steps, so that pair lands on the byte it left.
  */
 
+import type { Rgba } from '../godot/math/math';
+
 /**
  * Godot's `Color::srgb_to_linear` (`core/math/color.h:192-198`) for one channel, unclamped: Godot's
  * HDR picker writes channels above 1, and the extrapolating `pow` keeps an HDR emission colour
@@ -37,6 +39,26 @@ export function linearChannelToSRGBF32(channel: number): number {
   return c < fround(0.0031308)
     ? fround(fround(12.92) * c)
     : fround((1 + 0.055) * fround(Math.pow(c, fround(1 / 2.4))) - 0.055);
+}
+
+/** `Color::srgb_to_linear` of a whole colour in float steps: {@link sRGBChannelToLinearF32} on r, g and b. Alpha stays. */
+export function sRGBColorToLinearF32(color: Rgba): Rgba {
+  return {
+    r: sRGBChannelToLinearF32(color.r),
+    g: sRGBChannelToLinearF32(color.g),
+    b: sRGBChannelToLinearF32(color.b),
+    a: color.a,
+  };
+}
+
+/** `Color::linear_to_srgb` of a whole colour in float steps: {@link linearChannelToSRGBF32} on r, g and b. Alpha stays. */
+export function linearColorToSRGBF32(color: Rgba): Rgba {
+  return {
+    r: linearChannelToSRGBF32(color.r),
+    g: linearChannelToSRGBF32(color.g),
+    b: linearChannelToSRGBF32(color.b),
+    a: color.a,
+  };
 }
 
 /** `sRGBChannelToLinear` over an RGB triple. */

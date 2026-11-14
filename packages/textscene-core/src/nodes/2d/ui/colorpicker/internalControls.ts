@@ -63,7 +63,7 @@ import { ChannelGradientDraw, type ChannelGradientProperties } from './draws/Cha
 import { SampleDraw, type SampleDrawProperties } from './draws/SampleDraw';
 import { ShapeControlDraw, type ShapeControlDrawProperties } from './shapes/ShapeControlDraw';
 import { drawnShapeVariant } from './shapes/pickerShapes';
-import { pickerShapeColor, type ShapeControl } from './shapes/shapeDrawing';
+import { pickerShapeColor, type ShapeControl, type ShapeVariant } from './shapes/shapeDrawing';
 import type { ColorPickerProperties } from './types';
 
 /** `SIZE_EXPAND_FILL`, `SIZE_SHRINK_CENTER` and `SIZE_SHRINK_BEGIN` (no flag set), as a scene line writes them. */
@@ -116,6 +116,8 @@ interface Picker {
   color: Rgba;
   normalized: Rgba;
   mode: number;
+  /** The drawn shape, or nothing for `SHAPE_NONE`. */
+  shape: ShapeVariant | null;
 }
 
 /** A Control the constructor builds: its type, its name, the scene lines it sets and what it holds. */
@@ -158,7 +160,6 @@ const iconButtonMinimum = ({ scale }: Picker) => minimumSize(ICON_BUTTON_WIDTH *
 
 /** `shape_container` with the Controls of the current shape: `_update_controls` builds only those (`:308-318`). */
 function shapeContainer(picker: Picker): Widget {
-  const variant = drawnShapeVariant(picker.props.pickerShape);
   const shapeColor = pickerShapeColor(picker.normalized);
   const constants = picker.node.constants;
   const minimum: Record<ShapeControl['minimum'], Record<string, string>> = {
@@ -186,13 +187,12 @@ function shapeContainer(picker: Picker): Widget {
   };
   return widget('HBoxContainer', 'shape_container', {
     raw: { alignment: String(ContainerAlignment.ALIGNMENT_CENTER) },
-    children: variant?.controls.map(shapeWidget) ?? [],
+    children: picker.shape?.controls.map(shapeWidget) ?? [],
   });
 }
 
 /** `sample_hbc` (`:2081-2101`): `btn_pick`, the `sample` swatch and `btn_shape`, which `SHAPE_NONE` hides (`:321`). */
 function sampleRow(picker: Picker): Widget {
-  const variant = drawnShapeVariant(picker.props.pickerShape);
   const sample: SampleDrawProperties = { pickColor: picker.color };
   return widget('HBoxContainer', 'sample_hbc', {
     raw: shownIf(picker.props.samplerVisible),
@@ -207,11 +207,11 @@ function sampleRow(picker: Picker): Widget {
         drawnIcons: ['sample_bg', 'overbright_indicator'],
         draws: SampleDraw,
       }),
-      menuButton('btn_shape', variant?.icon, {
+      menuButton('btn_shape', picker.shape?.icon, {
         toggle_mode: 'true',
         ...ICON_CENTRED,
         ...iconButtonMinimum(picker),
-        ...shownIf(variant !== null),
+        ...shownIf(picker.shape !== null),
       }),
     ],
   });
@@ -316,16 +316,14 @@ function pickerIconSize(picker: SolveNode, name: string, scale: number): Vector2
  */
 function colorizedSliderTheme(picker: Picker): Pick<Widget, 'pushed' | 'textureSlots'> {
   const barArrow = picker.node.icons.bar_arrow;
-  const grabbers = (value: string) => ({ grabber: value, grabber_highlight: value });
+  const grabbers = <Icon>(icon: Icon) => ({ grabber: icon, grabber_highlight: icon });
   return {
     pushed: {
       constants: {
         grabber_offset: CHANNEL_GRABBER_OFFSET * picker.scale,
         center_grabber: requiredThemeItem(picker.node.constants, 'center_slider_grabbers'),
       },
-      ...(barArrow
-        ? { icons: { grabber: barArrow, grabber_highlight: barArrow } }
-        : { defaultIcons: grabbers(COLOR_PICKER_BAR_ARROW_ICON) }),
+      ...(barArrow ? { icons: grabbers(barArrow) } : { defaultIcons: grabbers(COLOR_PICKER_BAR_ARROW_ICON) }),
     },
     textureSlots: { grabber: pickerIconSize(picker.node, 'bar_arrow', picker.scale) },
   };
@@ -512,6 +510,7 @@ export const colorPickerInternalControls: InternalControlsFn = (node, theme) => 
     color,
     normalized: colorNormalized(color),
     mode: props.colorMode ?? ColorPickerColorMode.MODE_RGB,
+    shape: drawnShapeVariant(props.pickerShape),
   };
   return [{ mode: 'front', spec: build(picker, internalMargin(picker)) }];
 };

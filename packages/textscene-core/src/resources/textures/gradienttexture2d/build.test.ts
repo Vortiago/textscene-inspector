@@ -111,3 +111,19 @@ describe('rasterizeGradientTexture2D', () => {
     expect(corner.a).toBe(0);
   });
 });
+
+describe('rasterizeGradientTexture2D in a colour space', () => {
+  it('matches the RGBA8 row Godot 4.6.3 bakes for an OKLab red-to-blue gradient (gradient_texture.cpp:120-128)', () => {
+    const gradient = gradientOf({
+      interpolation_color_space: '2',
+      colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)',
+    });
+    const texture = rasterizeGradientTexture2D(
+      decodeGradientTexture2D({ width: '5', height: '1' }),
+      gradient
+    );
+    expect([...(texture.image.data as Uint8Array)]).toEqual([
+      255, 0, 0, 255, 198, 73, 109, 255, 140, 83, 162, 255, 81, 71, 210, 255, 0, 0, 255, 255,
+    ]);
+  });
+});

@@ -290,7 +290,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/okHsRectangle.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShapeOKHSRectangle`: its shader's fragment body, copied verbatim, and its draw functions) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/okHlRectangle.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShapeOKHLRectangle`: its shader's fragment body, copied verbatim, and its draw functions) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/pickerShapes.ts` | `scene/gui/color_picker.cpp` (the `add_shape` order of the constructor, `set_picker_shape`'s range check) |
-| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/ShapeRow.tsx` | `scene/gui/color_picker_shape.cpp` (the draw order of the fill, the SV square, the cursors and the slider) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/ShapeControlDraw.tsx` | `scene/gui/color_picker_shape.cpp` (the draw order of the fill, the SV square, the cursors and the slider) |
 
 ### Reproduced values
 

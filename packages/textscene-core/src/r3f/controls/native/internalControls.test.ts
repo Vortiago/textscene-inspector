@@ -4,7 +4,7 @@ import { nativeTheme } from './nativeTheme';
 import { TRANSFORM2D_IDENTITY } from '../../../godot/math/transform2d';
 import { controlNode, solveNode } from './testing/solveNode';
 import { controlProps, sortableView, type SolveNode, type ThemedIconRef } from './solveTree';
-import { internalControlDraws, internalControlsOf, registerInternalControls } from './internalControls';
+import { internalControlsOf, registerInternalControls } from './internalControls';
 
 const THEME = nativeTheme(1);
 
@@ -141,12 +141,12 @@ describe('an internal Control its parent draws on', () => {
   const [slider] = internalControlsOf(host('HostThatDraws'), THEME);
 
   it('carries what the parent draws through its draw signal (canvas_item.cpp:148-149)', () => {
-    expect(internalControlDraws(slider!.node)).toBe(ParentDraw);
+    expect(slider!.node.draws).toBe(ParentDraw);
   });
 
   it('has nothing drawn on it by default', () => {
     const [field] = internalControlsOf(host('HostThatPushes'), THEME);
-    expect(internalControlDraws(field!.node)).toBeUndefined();
+    expect(field!.node.draws).toBeUndefined();
   });
 
   it('carries a pushed default icon, which hides the themed icon of that name', () => {
