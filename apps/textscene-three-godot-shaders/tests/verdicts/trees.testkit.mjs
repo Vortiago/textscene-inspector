@@ -4,7 +4,7 @@
  * its printed form.
  */
 
-import { emittedShader } from '../../../../packages/textscene-core/src/shaders/language/emittedTree.ts';
+import { emittedTree } from '../../../../packages/textscene-core/src/shaders/language/emittedTree.ts';
 import { parse } from '../../../../packages/textscene-core/src/shaders/language/parse.ts';
 import { tokenize } from '../../../../packages/textscene-core/src/shaders/language/tokenizer.ts';
 import { treeFault } from '../../../../packages/textscene-core/src/shaders/language/treeCheck.ts';
@@ -12,7 +12,10 @@ import { treeFault } from '../../../../packages/textscene-core/src/shaders/langu
 export const treeOf = (source) => parse(tokenize(source));
 
 /** The tree the emitter walks, which Godot's printed-text check reads too. */
-export const loweredTreeOf = (source) => emittedShader(treeOf(source));
+export const loweredTreeOf = (source) => {
+  const tree = treeOf(source);
+  return { ...tree, functions: tree.functions.map((definition) => emittedTree(definition).lowered) };
+};
 
 export const shapeOf = (tree) =>
   JSON.parse(JSON.stringify(tree, (key, value) => (key === 'position' ? undefined : value)));

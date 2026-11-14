@@ -9,7 +9,7 @@ import { refuseFoldedIndexOutOfRange } from './foldedIndex.js';
 import { GlslangFolding } from './glslangFolding.js';
 import { glslBlock } from './godotText.js';
 import { lowerFunction } from './lowering/lower.js';
-import type { FunctionNode, ShaderNode } from './shaderTree.js';
+import type { FunctionNode } from './shaderTree.js';
 
 /**
  * The lowered tree of `definition` and the constants glslang folds in it. The folding knows its
@@ -22,9 +22,3 @@ export function emittedTree(definition: FunctionNode): { lowered: FunctionNode; 
   refuseFoldedIndexOutOfRange(glsl.body, folding);
   return { lowered: lowerFunction(glsl), folding };
 }
-
-/** `shader` with each function's tree as the emitter walks it, which Godot's printed-text check reads. */
-export const emittedShader = (shader: ShaderNode): ShaderNode => ({
-  ...shader,
-  functions: shader.functions.map((definition) => emittedTree(definition).lowered),
-});

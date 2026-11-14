@@ -26,9 +26,6 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   // The builds and the cache are module state, so each test starts from the one reset that aborts
   // the builds in flight and clears the cache.
   'resources/textures/proceduralBuilds.ts#resetProceduralTextures',
-  // Godot's printed-text check and the round trip test read the whole shader as the emitter walks
-  // it, which the emitter itself takes one function at a time.
-  'shaders/language/emittedTree.ts#emittedShader',
   // The round trip test prints each parsed tree back to text, which no transpilation needs.
   'shaders/language/printer.ts#printShader',
   // The tree check proves each parsed tree has Godot's node types and positions, in tests only.

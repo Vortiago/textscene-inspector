@@ -11,6 +11,9 @@ import { godotRejection } from './rejection.mjs';
 
 const LANGUAGE = '/packages/textscene-core/src/shaders/language/';
 
+/** The tests' trees of a text, as parsed and as the emitter walks it, which this check reads too. */
+const TREES = '/apps/textscene-three-godot-shaders/tests/verdicts/trees.testkit.mjs';
+
 /**
  * The transpiler's printer as two functions from text to printed text: `print` of the parsed
  * tree, and `lower` of the tree the emitter walks (`emittedTree.ts`) where it
@@ -27,23 +30,24 @@ export async function loadPrinter() {
   });
   try {
     const load = (file) => server.ssrLoadModule(`${LANGUAGE}${file}`);
-    const [{ tokenize }, { parse }, { printShader }, { ShadingLanguageError }, { emittedShader }] =
-      await Promise.all(
-        ['tokenizer.ts', 'parse.ts', 'printer.ts', 'shadingLanguageError.ts', 'emittedTree.ts'].map(load)
-      );
+    const [{ printShader }, { ShadingLanguageError }, { treeOf, loweredTreeOf }] = await Promise.all([
+      load('printer.ts'),
+      load('shadingLanguageError.ts'),
+      server.ssrLoadModule(TREES),
+    ]);
     const unlessRefused = (print) => (source) => {
       try {
-        return print(parse(tokenize(source)));
+        return print(source);
       } catch (error) {
         if (error instanceof ShadingLanguageError) return undefined;
         throw error;
       }
     };
     return {
-      print: unlessRefused(printShader),
-      lower: unlessRefused((tree) => {
-        const lowered = printShader(emittedShader(tree));
-        return lowered === printShader(tree) ? undefined : lowered;
+      print: unlessRefused((source) => printShader(treeOf(source))),
+      lower: unlessRefused((source) => {
+        const lowered = printShader(loweredTreeOf(source));
+        return lowered === printShader(treeOf(source)) ? undefined : lowered;
       }),
     };
   } finally {
