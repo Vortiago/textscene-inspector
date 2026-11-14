@@ -28,12 +28,12 @@ describe('svgGlyphPlacement', () => {
       width: 4,
       left: 8,
     });
-    expect(svgGlyphPlacement({ width: 1050, height: 100 }, EMBOX, SIZE, ADVANCE_20_PX).left).toBe(0);
+    expect(svgGlyphPlacement({ width: 1050, height: 100 }, EMBOX, SIZE, ADVANCE_20_PX)?.left).toBe(0);
   });
 
   it('raises the picture by its height times the line over the ascender, rounded up', () => {
     // 3 px tall, and (16 - 4) / 16 of it is 2.25: the top sits 3 px above the baseline.
-    expect(svgGlyphPlacement({ width: 100, height: 150 }, EMBOX, SIZE, ADVANCE_20_PX).top).toBe(3);
+    expect(svgGlyphPlacement({ width: 100, height: 150 }, EMBOX, SIZE, ADVANCE_20_PX)?.top).toBe(3);
   });
 
   it('scales by the em box width on both axes', () => {
@@ -43,7 +43,7 @@ describe('svgGlyphPlacement', () => {
       SIZE,
       ADVANCE_20_PX
     );
-    expect([placement.width, placement.rows]).toEqual([4, 4]);
+    expect([placement?.width, placement?.rows]).toEqual([4, 4]);
   });
 
   it('has no placement for a picture of no area', () => {
