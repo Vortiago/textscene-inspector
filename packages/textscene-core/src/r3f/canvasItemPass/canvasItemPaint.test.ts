@@ -82,6 +82,24 @@ layer_2/name = "c"
     expect(paintAt(paint, 'Map/Child').own).toBe(map.front.base + map.front.size);
   });
 
+  it('keeps every layer of a TileMap inside its front room when its run is too small for them', () => {
+    // Three y-sorted layers each want a reserve for their rows, far more than a 64-value run holds.
+    const scene = parsed(`[node name="Map" type="TileMap"]
+layer_0/y_sort_enabled = true
+layer_1/y_sort_enabled = true
+layer_2/y_sort_enabled = true
+
+[node name="Child" type="Node2D" parent="."]
+`);
+    const paint = canvasPaintPassFrom({ base: 0, size: 64 })(liveTreeOf(scene.nodes, contextOver(scene, {})));
+    const { front } = paintAt(paint, 'Map');
+    for (const index of [0, 1, 2]) {
+      const layer = paintAt(paint, `Map/@TileMapLayer@${index}`).range;
+      expect(layer.base).toBeGreaterThanOrEqual(front.base);
+      expect(layer.base + layer.size).toBeLessThanOrEqual(front.base + front.size);
+    }
+  });
+
   it('draws a Control back room after its whole subtree', () => {
     const paint = paintOver(
       parsed(`[node name="Scroll" type="ScrollContainer"]
