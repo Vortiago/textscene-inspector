@@ -59,6 +59,15 @@ export function vector2Add(a: Vector2, b: Vector2): Vector2 {
 }
 
 /**
+ * `Vector2::operator==` (`core/math/vector2.h`): whether each component is equal.
+ *
+ * @canonical A Vector2 component-wise equality
+ */
+export function vector2Equals(a: Vector2, b: Vector2): boolean {
+  return a.x === b.x && a.y === b.y;
+}
+
+/**
  * `Vector2::max` (`core/math/vector2.h`): the larger of each component.
  *
  * @canonical A Vector2 component-wise maximum
