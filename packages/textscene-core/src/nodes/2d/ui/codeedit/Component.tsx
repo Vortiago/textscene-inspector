@@ -24,7 +24,7 @@ import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import {
   resolveTextEditStyleState,
   textEditTextTheme,
-  textEditRowHeightPx,
+  textEditFontRowHeightPx,
   textEditDrawnLines,
   textEditTabStopsPx,
   textEditRowBandTopPx,
@@ -60,13 +60,13 @@ export function CodeEdit(props: NativeControlComponentProps) {
   const { fontSizePx } = textEditTextTheme(solveNode, codeEditProps, state);
   const fontMetrics = resolveNodeFontMetrics(solveNode, TEXT_EDIT_THEME_FONT_KEY);
   const lineSpacingPx = textEditLineSpacingPx(solveNode);
-  const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
+  const fontRowHeightPx = textEditFontRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
 
   const lines = useMemo(() => (codeEditProps.text ?? '').split('\n'), [codeEditProps.text]);
   const charWidth0Px = measureText ? measureText('0', fontSizePx, 0, fontMetrics).x : 0;
   const band = useMemo(
-    () => codeEditGutterBand(codeEditProps, rowHeightPx, charWidth0Px, Math.max(1, lines.length)),
-    [codeEditProps, rowHeightPx, charWidth0Px, lines.length]
+    () => codeEditGutterBand(codeEditProps, fontRowHeightPx, charWidth0Px, Math.max(1, lines.length)),
+    [codeEditProps, fontRowHeightPx, charWidth0Px, lines.length]
   );
 
   const lineNumberColor = requiredThemeItem(solveNode.colors, 'line_number_color');
@@ -92,7 +92,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
     isPlaceholder: drawn.isPlaceholder,
     size: { x: rect.w, y: rect.h },
     margins: styleBox.contentMargin,
-    rowHeightPx,
+    lineSpacingPx,
     gutterBandWidthPx: band.totalWidthPx,
     minimapWidthPx: codeEditProps.minimapWidth ?? 80,
     drawMinimap: codeEditProps.minimapDraw,
@@ -113,7 +113,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
     scrollBarBoxes: internalScrollBarBoxes(solveNode),
   });
   // A placeholder paragraph replaces the buffer's single empty line, which starts at row 0.
-  const { lineLayouts } = rows;
+  const { lineLayouts, rowHeightPx } = rows;
   const lineStartRows = useMemo(
     () => (drawn.isPlaceholder ? [0] : lineLayouts.map(({ startRow }) => startRow)),
     [drawn.isPlaceholder, lineLayouts]

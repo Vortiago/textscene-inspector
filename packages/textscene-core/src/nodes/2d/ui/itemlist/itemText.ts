@@ -23,6 +23,7 @@ import {
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { shapedBlockHeightPx } from '../../../../r3f/controls/native/text/lineExtent';
 
 const { ICON_MODE_TOP } = ItemListIconMode;
 
@@ -143,7 +144,7 @@ function withLines(layout: TextLayoutResult, lines: readonly TextLineLayout[]): 
     ...layout,
     lines: [...lines],
     widthPx: widestLineWidthPx(lines),
-    heightPx: lines.length * layout.linePitchPx,
+    heightPx: shapedBlockHeightPx(lines, layout.lineSpacingPx),
   };
 }
 

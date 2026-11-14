@@ -8,6 +8,7 @@ import { CanvasItemGroup } from '../../components/CanvasItemGroup';
 import { buttonDrawnLabel, trimButtonLabel, type ButtonLabelBox } from './buttonBase';
 import { OutlinedTextRun, type OutlinedTextRunProps } from './text/OutlinedTextRun';
 import { soloLineLayout } from './text/textLayout';
+import { lineTopsPx } from './text/lineExtent';
 
 interface ButtonLabelProps extends Pick<
   OutlinedTextRunProps,
@@ -28,18 +29,17 @@ export function ButtonLabel({ layout, box, overrunBehavior, isWrapped, ...runPro
       fontSizePx,
       isWrapped,
     });
-    return buttonDrawnLabel(trimmed.lines, box.widthPx, box.alignment).map(({ line, offsetXPx }) => ({
+    const topsPx = lineTopsPx(trimmed);
+    return buttonDrawnLabel(trimmed.lines, box.widthPx, box.alignment).map(({ line, offsetXPx }, i) => ({
       lineLayout: soloLineLayout(line, trimmed),
       offsetXPx,
+      topPx: topsPx[i]!,
     }));
   }, [layout, overrunBehavior, fontSizePx, isWrapped, box.widthPx, box.alignment]);
   return (
     <>
-      {drawnLines.map(({ lineLayout, offsetXPx }, i) => (
-        <CanvasItemGroup
-          key={i}
-          position={[box.leftPx + offsetXPx, -(box.topPx + i * layout.linePitchPx), 0]}
-        >
+      {drawnLines.map(({ lineLayout, offsetXPx, topPx }, i) => (
+        <CanvasItemGroup key={i} position={[box.leftPx + offsetXPx, -(box.topPx + topPx), 0]}>
           <OutlinedTextRun layout={lineLayout} {...runProps} />
         </CanvasItemGroup>
       ))}

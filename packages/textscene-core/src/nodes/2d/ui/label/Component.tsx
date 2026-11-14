@@ -31,6 +31,7 @@ import {
   labelVisibleLineRange,
   layoutLabelLines,
   windowLabelLines,
+  labelFontHeightPx,
   type LabelLinePlacement,
   type LineTrim,
 } from './nativeSolver';
@@ -194,7 +195,10 @@ function LabelText({
       ...bidiOptions,
     });
     const range = labelVisibleLineRange(shaped.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
-    return windowLabelLines(shaped, range, textTheme.paragraphSpacingPx);
+    return windowLabelLines(shaped, range, {
+      paragraphSpacingPx: textTheme.paragraphSpacingPx,
+      fontHeightPx: labelFontHeightPx(fontMetrics, textTheme.fontSizePx),
+    });
   }, [
     sharedLayout,
     text,

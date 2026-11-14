@@ -33,6 +33,7 @@ import type { GodotSurface } from '../godotSurface';
 import { SurfaceWriter } from '../primitivemesh/surfaceWriter';
 import { buildGlyphMeshData, type ContourInfo, type ContourVertex, type GlyphMeshData } from './glyphMesh';
 import { shapeTextMeshLines, type TextMeshLines } from './textMeshLines';
+import { lineHeightPx, shapedBlockHeightPx } from '../../../r3f/controls/native/text/lineExtent';
 import type { TextMeshProperties } from './types';
 
 /**
@@ -163,11 +164,11 @@ function glyphMeshesByFace(
 
 function placeGlyphs(
   properties: TextMeshProperties,
-  { lines, baselineOffsetPx, linePitchPx }: TextMeshLines,
+  { lines, lineSpacingPx }: TextMeshLines,
   meshOf: (glyph: GlyphPlacement) => GlyphMeshData | null
 ): PlacedGlyph[] {
   const { pixelSize } = properties;
-  const blockHeight = lines.length * linePitchPx * pixelSize;
+  const blockHeight = shapedBlockHeightPx(lines, lineSpacingPx) * pixelSize;
   const spacing = properties.lineSpacing * pixelSize;
   let lineTop =
     blockStartY(properties.verticalAlignment, blockHeight, spacing) + properties.offset.y * pixelSize;
@@ -176,7 +177,7 @@ function placeGlyphs(
     const startX =
       lineStartOffset(shapedTextSizeWidthPx(line.widthPx) * pixelSize, properties.horizontalAlignment) +
       properties.offset.x * pixelSize;
-    const baseline = lineTop - baselineOffsetPx * pixelSize;
+    const baseline = lineTop - line.ascentPx * pixelSize;
     for (const glyph of line.glyphs) {
       const codepoint = glyph.char.codePointAt(0)!;
       if (isControlChar(codepoint) || codepoint === ZERO_WIDTH_SPACE) continue;
@@ -191,7 +192,7 @@ function placeGlyphs(
         placed.push({ ...origin, box: { x: box.x * pixelSize, y: box.y * pixelSize } });
       }
     }
-    lineTop -= linePitchPx * pixelSize;
+    lineTop -= lineHeightPx(line, lineSpacingPx) * pixelSize;
   }
   return placed;
 }

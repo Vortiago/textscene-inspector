@@ -36,7 +36,7 @@ import {
   resolveTextEditStyleState,
   textEditTextTheme,
   textEditDrawnLines,
-  textEditRowHeightPx,
+  textEditRowTextHeightPx,
   layoutTextEditDrawBand,
   textEditCurrentLineXPx,
   textEditRowOriginXPx,
@@ -68,7 +68,7 @@ import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 const GLYPH_ICON_AUTHORED_SIZE_PX = 8;
 
 /** The stand-in row for a buffer line with no shaped rows: an empty line measures no indent. */
-const EMPTY_ROW = { text: '', glyphs: [], widthPx: 0, paragraphIndex: 0 };
+const EMPTY_ROW = { text: '', glyphs: [], widthPx: 0, paragraphIndex: 0, ascentPx: 0, descentPx: 0 };
 
 interface TextEditBodyProps extends NativeControlComponentProps {
   /**
@@ -126,18 +126,6 @@ export function TextEditBody({
   const lineSpacingPx = textEditLineSpacingPx(solveNode);
   const currentLineColor = requiredThemeItem(solveNode.colors, 'current_line_color');
   const caretColor = requiredThemeItem(solveNode.colors, 'caret_color');
-  const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
-
-  // `minimap_draw`/`minimap_width` narrow the text band, and the minimap draws in the strip they
-  // free. The scroll bars draw over the band and take no part of it (`:941-944`).
-  const band = layoutTextEditDrawBand(
-    rect.w,
-    styleBox,
-    gutterBandWidthPx,
-    props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
-    props.minimapDraw,
-    rowHeightPx
-  );
 
   // The step-in reads line 0 of the buffer, which is empty while a placeholder draws (`:1480-1483`).
   const indentsWrappedRows = props.indentWrappedLines && !isPlaceholder;
@@ -147,13 +135,13 @@ export function TextEditBody({
   );
   const bidi = useControlBidiOptions(props, solveNode);
   const scrollBarBoxes = internalScrollBarBoxes(solveNode);
-  const { lineLayouts, wrapWidthPx, scrollBars } = useTextEditRows(
+  const { lineLayouts, wrapWidthPx, rowHeightPx, scrollBars } = useTextEditRows(
     {
       lines,
       isPlaceholder,
       size: { x: rect.w, y: rect.h },
       margins: styleBox.contentMargin,
-      rowHeightPx,
+      lineSpacingPx,
       gutterBandWidthPx,
       minimapWidthPx: props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
       drawMinimap: props.minimapDraw,
@@ -174,6 +162,17 @@ export function TextEditBody({
       scrollBarBoxes,
     },
     solvedRows
+  );
+
+  // `minimap_draw`/`minimap_width` narrow the text band, and the minimap draws in the strip they
+  // free. The scroll bars draw over the band and take no part of it (`:941-944`).
+  const band = layoutTextEditDrawBand(
+    rect.w,
+    styleBox,
+    gutterBandWidthPx,
+    props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
+    props.minimapDraw,
+    rowHeightPx
   );
 
   // `syntax_highlighter` resolves in this node's scope, never `useSceneResources()`. Only a
@@ -321,7 +320,11 @@ export function TextEditBody({
             : 0;
           return layout.lines.map((line, rowInLine) => {
             const row = startRow + rowInLine;
-            const rowTopPx = textEditRowTextTopPx(rowBandTopPx(row), rowHeightPx, textHeightPx);
+            const rowTopPx = textEditRowTextTopPx(
+              rowBandTopPx(row),
+              rowHeightPx,
+              textEditRowTextHeightPx(line)
+            );
             const rowStartIndex = rowStartIndices?.[rowInLine] ?? 0;
             const rowOriginXPx = textEditRowOriginXPx(
               band.xMarginBeginPx,
@@ -343,7 +346,7 @@ export function TextEditBody({
                 {runs.map((run, runIndex) => (
                   <TextRun
                     key={runIndex}
-                    layout={soloLineLayout(textEditColorRunLine(run), layout)}
+                    layout={soloLineLayout(textEditColorRunLine(run, line), layout)}
                     fontSizePx={fontSizePx}
                     tint={multiplyModulate(childTint.own, run.color)}
                     clippingPlanes={clippingPlanes}

@@ -75,11 +75,11 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
   const underline = useMemo(() => {
     if (!layout || !shouldUnderline(state, props.underline)) return null;
     const spacingConstant = requiredThemeItem(solveNode.constants, 'underline_spacing');
-    const lineUnderline = layout.lines[0]?.underline ?? NO_UNDERLINE_PX;
+    const [line] = layout.lines;
     const { y, thickness } = linkButtonUnderlineGeometry(
-      lineUnderline,
+      line?.underline ?? NO_UNDERLINE_PX,
       spacingConstant,
-      layout.baselineOffsetPx
+      line?.ascentPx ?? layout.baselineOffsetPx
     );
     return { top: y - thickness / 2, thickness, width: placement.lineWidthPx };
   }, [layout, state, props, solveNode.constants, placement]);

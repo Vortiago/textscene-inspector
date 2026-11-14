@@ -14,7 +14,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   resolveTextEditStyleState,
   textEditTextTheme,
-  textEditRowHeightPx,
+  textEditFontRowHeightPx,
   textEditMinimumSizeWith,
   TEXT_EDIT_THEME_FONT_KEY,
   textEditLineSpacingPx,
@@ -125,7 +125,7 @@ function codeEditFontMetrics(
   const state = resolveTextEditStyleState(props.editable);
   const { fontSizePx } = textEditTextTheme(n, props, state);
   const fontMetrics = resolveNodeFontMetrics(n, TEXT_EDIT_THEME_FONT_KEY);
-  const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, textEditLineSpacingPx(n));
+  const rowHeightPx = textEditFontRowHeightPx(fontMetrics, fontSizePx, textEditLineSpacingPx(n));
   const charWidth0Px = ctx.measureText ? ctx.measureText('0', fontSizePx, 0, fontMetrics).x : 0;
   return { rowHeightPx, charWidth0Px };
 }

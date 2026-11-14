@@ -13,6 +13,7 @@ import {
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../r3f/controls/native/text/textLayout';
+import { lineTopsPx, shapedBlockHeightPx } from '../../../r3f/controls/native/text/lineExtent';
 import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
 import { justifyLinesToWidth } from '../../../r3f/controls/native/text/textJustify';
 import type { TextBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
@@ -83,26 +84,31 @@ export function layoutLabel3DLines(
   layout: TextLayoutResult,
   properties: Label3DPlaceProperties
 ): Label3DLinePlacement[] {
-  const blockRisePx = blockStartY(properties.vertical_alignment, layout.heightPx, properties.line_spacing);
+  const blockRisePx = blockStartY(
+    properties.vertical_alignment,
+    shapedBlockHeightPx(layout.lines, layout.lineSpacingPx),
+    properties.line_spacing
+  );
   const topPx = -(blockRisePx + properties.offset.y);
+  const lineTopsFromBlockPx = lineTopsPx(layout);
   return layout.lines.map((line, lineIndex) => ({
     // Godot aligns by the ceiled `shaped_text_get_width` (`text_server_adv.cpp:7571`).
     x:
       lineStartOffset(shapedTextSizeWidthPx(line.widthPx), properties.horizontal_alignment) +
       properties.offset.x,
-    y: topPx + lineIndex * layout.linePitchPx,
+    y: topPx + lineTopsFromBlockPx[lineIndex]!,
     line,
   }));
 }
 
 /**
  * The box Godot's `_shape` expands over every line (`label_3d.cpp:600-606`), in node space, on the
- * label's z = 0 plane. Each line spans its width and one line pitch down from its top. A label with
- * no lines keeps the empty AABB at the origin.
+ * label's z = 0 plane. Each line spans its width and, down from its top, its ceiled shaped height
+ * plus the line spacing. A label with no lines keeps the empty AABB at the origin.
  */
 export function label3DAabb(
   placements: readonly Label3DLinePlacement[],
-  linePitchPx: number,
+  lineSpacingPx: number,
   pixelSize: number
 ): Aabb {
   if (placements.length === 0) return EMPTY_AABB;
@@ -113,7 +119,8 @@ export function label3DAabb(
     right = Math.max(right, placement.x + shapedTextSizeWidthPx(placement.line.widthPx));
   }
   const topDown = placements[0]!.y;
-  const bottomDown = placements[placements.length - 1]!.y + linePitchPx;
+  const last = placements[placements.length - 1]!;
+  const bottomDown = last.y + Math.ceil(last.line.ascentPx + last.line.descentPx) + lineSpacingPx;
   return {
     position: { x: left * pixelSize, y: -bottomDown * pixelSize, z: 0 },
     size: { x: (right - left) * pixelSize, y: (bottomDown - topDown) * pixelSize, z: 0 },

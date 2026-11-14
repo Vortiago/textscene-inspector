@@ -22,7 +22,6 @@ import { defaultConstant } from '../../../../godot/scene/defaultTheme/defaultThe
 import {
   clampAutowrapMode,
   shapeText,
-  glyphOffsetReachPx,
   shapedTextSizeWidthPx,
   soloLineLayout,
   startsParagraph,
@@ -30,6 +29,7 @@ import {
   type ShapeTextOptions,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import type { LineExtentPx } from '../../../../r3f/controls/native/text/lineExtent';
 import { justifyParagraphs } from '../../../../r3f/controls/native/text/textJustify';
 import { faceOfStyle, resolveRichTextFaces, type RichTextFaces } from './styleFaces';
 import {
@@ -40,8 +40,6 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import {
-  getFontAscentPx,
-  getFontDescentPx,
   getFontTabStopsPx,
   withVariation,
   type FontMetrics,
@@ -752,16 +750,15 @@ export interface RichTextRunPlacement {
 }
 
 /**
- * Keeps the parent's `linePitchPx` (`soloLineLayout`) and takes the face of the run's first glyph,
- * since `TextRun` picks the painter, and the shear, from `layout.fontMetrics`. `baselineOffsetPx` is
- * the line's ascent, applied once per line (`rich_text_label.cpp:1055`'s `off.y += l_ascent`),
- * so mixed sizes share it, and `soloLineLayout` grows the raster from it to the deepest descent of
- * the run's faces.
+ * Takes the face of the run's first glyph, since `TextRun` picks the painter, and the shear, from
+ * `layout.fontMetrics`. The run keeps its line's extent, images folded in: the ascent applies once
+ * per line (`rich_text_label.cpp:1055`'s `off.y += l_ascent`), so mixed sizes share it, and
+ * `soloLineLayout` grows the raster from it to the deepest descent of the run's faces.
  */
 function soloRunLayout(
   segment: RunLineSegment,
   parentLayout: TextLayoutResult,
-  lineAscentPx: number
+  { ascentPx, descentPx }: LineExtentPx
 ): TextLayoutResult {
   const { text, glyphs } = segment;
   // The right edge from the line origin, not the run's own span: the glyphs keep their line-relative
@@ -769,9 +766,8 @@ function soloRunLayout(
   const lastGlyph = glyphs.at(-1);
   const widthPx = lastGlyph ? lastGlyph.x + lastGlyph.advance : 0;
   return soloLineLayout(
-    { text, glyphs, widthPx, paragraphIndex: 0 },
+    { text, glyphs, widthPx, paragraphIndex: 0, ascentPx, descentPx },
     parentLayout,
-    lineAscentPx,
     // A segment holds a glyph at least. `faceLayouts` splits off a glyph of another face.
     glyphs[0]!.fontMetrics
   );
@@ -779,7 +775,7 @@ function soloRunLayout(
 
 /** One wrapped line's vertical metrics, recomputed per line (`text_server_adv.cpp:5486-5487`), unlike the underline's. */
 interface RichTextLineMetrics {
-  /** The line's top from the paragraph's top: the sum of the earlier lines' `ascentPx + descentPx`. */
+  /** The line's top from the text's top (`richTextLineTopsPx`). */
   topPx: number;
   /** Baseline offset from `topPx`: the max ascent of this line's fonts and images (`imageBaselineOffsetPx`). */
   ascentPx: number;
@@ -804,21 +800,40 @@ function richTextLineMetrics(
   return lineMetricsOf(attributeRunsToLines(styledRuns, layout), styledRuns, layout);
 }
 
-/**
- * `get_content_height`'s sum of each line's own ascent+descent, not `layout.heightPx`, a count
- * times one pitch that mixed sizes make wrong.
- */
-function contentHeightOf(lines: readonly RichTextLineMetrics[]): number {
-  const lastLine = lines[lines.length - 1];
-  return lastLine ? lastLine.topPx + lastLine.ascentPx + lastLine.descentPx : 0;
-}
-
 /** The height of the whole shaped text, px: what the scrollbar and `fit_content` compare against. */
 export function richTextContentHeightPx(
   styledRuns: readonly StyledTextRun[],
   layout: TextLayoutResult
 ): number {
-  return contentHeightOf(richTextLineMetrics(styledRuns, layout));
+  return richTextLineTopsPx(richTextLineMetrics(styledRuns, layout), layout).contentHeightPx;
+}
+
+/**
+ * Each line's top, and the height of the whole text. A paragraph's lines step by their bare
+ * ascent and descent (`rich_text_label.cpp:1737`, `:1894`). The next paragraph starts below
+ * `TextParagraph::get_size`, which ceils each line (`rich_text_label.cpp:2656`).
+ */
+function richTextLineTopsPx(
+  lines: readonly Pick<RichTextLineMetrics, 'ascentPx' | 'descentPx'>[],
+  layout: TextLayoutResult
+): { topsPx: number[]; contentHeightPx: number } {
+  const spacingPx = layout.lineSpacingPx;
+  const topsPx: number[] = [];
+  let paragraphTopPx = 0;
+  let inParagraphPx = 0;
+  let paragraphHeightPx = 0;
+  lines.forEach(({ ascentPx, descentPx }, lineIndex) => {
+    const paragraphIndex = layout.lines[lineIndex]!.paragraphIndex;
+    if (lineIndex > 0 && paragraphIndex !== layout.lines[lineIndex - 1]!.paragraphIndex) {
+      paragraphTopPx += paragraphHeightPx;
+      inParagraphPx = 0;
+      paragraphHeightPx = 0;
+    }
+    topsPx.push(paragraphTopPx + inParagraphPx);
+    inParagraphPx += ascentPx + descentPx + spacingPx;
+    paragraphHeightPx += Math.ceil(ascentPx + descentPx) + spacingPx;
+  });
+  return { topsPx, contentHeightPx: paragraphTopPx + paragraphHeightPx };
 }
 
 /**
@@ -847,43 +862,22 @@ function lineMetricsOf(
   layout: TextLayoutResult
 ): RichTextLineMetrics[] {
   const paragraphAscentPx = layout.baselineOffsetPx;
-  const paragraphDescentPx = layout.linePitchPx - layout.baselineOffsetPx;
+  const paragraphDescentPx = layout.linePitchPx - layout.lineSpacingPx - layout.baselineOffsetPx;
   const zeroHeightParagraphs = zeroHeightParagraphsOf(styledRuns);
 
-  let topPx = 0;
-  return perLine.map((segments, lineIndex) => {
+  const extents = perLine.map((segments, lineIndex) => {
     // An empty text buffer has no ascent or descent (measured in Godot 4.6.3).
     if (zeroHeightParagraphs.has(layout.lines[lineIndex]!.paragraphIndex)) {
-      return { topPx, ascentPx: 0, descentPx: 0, textAscentPx: 0, textDescentPx: 0 };
+      return { ascentPx: 0, descentPx: 0, textAscentPx: 0, textDescentPx: 0 };
     }
     // Text first: `_realign` measures every image against these values, and an
-    // image adds nothing to them.
-    let ascentPx = 0;
-    let descentPx = 0;
-    for (const segment of segments) {
-      const run = styledRuns[segment.runIndex]!;
-      if (run.image) continue;
-      // A glyph may draw in a face of the **Fallback chain**, so each glyph's face counts. A run of
-      // glyphs in one face measures it once.
-      let lastFace: FontMetrics | undefined;
-      for (const { fontMetrics: face } of segment.glyphs) {
-        if (face === lastFace) continue;
-        lastFace = face;
-        ascentPx = Math.max(ascentPx, getFontAscentPx(face, run.fontSizePx));
-        descentPx = Math.max(descentPx, getFontDescentPx(face, run.fontSizePx));
-      }
-      // A glyph offset past the font's line moves it (`text_server_adv.cpp:5161-5162`).
-      const { abovePx, belowPx } = glyphOffsetReachPx(segment.glyphs);
-      ascentPx = Math.max(ascentPx, abovePx);
-      descentPx = Math.max(descentPx, belowPx);
-    }
-    // A blank line shapes its break in the paragraph font, so it keeps that height.
-    if (segments.length === 0) {
-      ascentPx = paragraphAscentPx;
-      descentPx = paragraphDescentPx;
-    }
-    const textAscentPx = ascentPx;
-    const textDescentPx = descentPx;
+    // image adds nothing to them. A blank line shapes its break in the paragraph font.
+    const line = layout.lines[lineIndex]!;
+    const isBlank = segments.length === 0;
+    const textAscentPx = isBlank ? paragraphAscentPx : line.ascentPx;
+    const textDescentPx = isBlank ? paragraphDescentPx : line.descentPx;
+    let ascentPx = textAscentPx;
+    let descentPx = textDescentPx;
 
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;
@@ -898,11 +892,10 @@ function lineMetricsOf(
       descentPx = Math.max(descentPx, yOffset + run.image.sizePx.y);
     }
 
-    const metrics = { topPx, ascentPx, descentPx, textAscentPx, textDescentPx };
-    // `shapeText` carries `line_separation` in its own pitch, so these tops are a bare sum.
-    topPx += ascentPx + descentPx;
-    return metrics;
+    return { ascentPx, descentPx, textAscentPx, textDescentPx };
   });
+  const { topsPx } = richTextLineTopsPx(extents, layout);
+  return extents.map((extent, lineIndex) => ({ topPx: topsPx[lineIndex]!, ...extent }));
 }
 
 /** One line's share of one style run. */
@@ -1102,7 +1095,7 @@ export function layoutRichTextRuns(
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);
 
   const { vbeginPx, vsepPx } = richTextVerticalOffsets(
-    alignment?.fullText?.heightPx ?? contentHeightOf(lineMetrics),
+    alignment?.fullText?.heightPx ?? richTextLineTopsPx(lineMetrics, layout).contentHeightPx,
     alignment?.boxHeightPx ?? 0,
     alignment?.verticalAlignment,
     alignment?.fullText?.lineCount ?? layout.lines.length
@@ -1162,7 +1155,7 @@ export function layoutRichTextRuns(
         color: run.color,
         outline: run.outline,
         fontSizePx: run.fontSizePx,
-        layout: soloRunLayout(segment, layout, ascentPx),
+        layout: soloRunLayout(segment, layout, { ascentPx, descentPx }),
         image: run.image
           ? {
               spec: run.image.spec,
