@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { textureState } from './canvasMeshTextureState';
 
-const NOTHING = { missing: false, hasView: false, isArriving: false, hasSource: false };
+const NOTHING = { missing: false, isCyclic: false, hasView: false, isArriving: false, hasSource: false };
 
 describe('textureState', () => {
   it('is none for a slot that names no texture', () => {
@@ -24,6 +24,12 @@ describe('textureState', () => {
   });
 
   it('is missing for a failed texture, whatever else holds', () => {
-    expect(textureState({ missing: true, hasView: true, isArriving: true, hasSource: true })).toBe('missing');
+    expect(
+      textureState({ ...NOTHING, missing: true, hasView: true, isArriving: true, hasSource: true })
+    ).toBe('missing');
+  });
+
+  it('is cyclic for a ViewportTexture whose target sits in a pass cycle', () => {
+    expect(textureState({ ...NOTHING, missing: true, isCyclic: true })).toBe('cyclic');
   });
 });

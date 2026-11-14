@@ -52,6 +52,7 @@ export function useCanvasMeshTexture(
     texture: source,
     size,
     missing,
+    isCyclic = false,
     isArriving,
     hasNoImage,
     sampler,
@@ -62,7 +63,13 @@ export function useCanvasMeshTexture(
     [windowOf, source, size, hasNoImage]
   );
   const view = useWindowedCanvas2DTexture(source, sampler, window);
-  const state = textureState({ missing, hasView: view !== null, isArriving, hasSource: source !== null });
+  const state = textureState({
+    missing,
+    isCyclic,
+    hasView: view !== null,
+    isArriving,
+    hasSource: source !== null,
+  });
   return useMemo(
     () => ({
       state,

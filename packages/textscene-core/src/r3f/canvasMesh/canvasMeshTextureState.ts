@@ -11,11 +11,14 @@ export type CanvasMeshTextureState =
   | 'arriving'
   /** The slot names a texture that never draws. */
   | 'missing'
+  /** The slot names a ViewportTexture whose target sits in a pass cycle the previewer cannot draw. */
+  | 'cyclic'
   /** The texture draws. */
   | 'ready';
 
 interface TextureFacts {
   missing: boolean;
+  isCyclic: boolean;
   hasView: boolean;
   isArriving: boolean;
   /** True once the loader holds the texture, before its view is uploaded. */
@@ -25,10 +28,12 @@ interface TextureFacts {
 /** A texture the loader holds with no view yet is on its way: a large texture whose tiled upload runs. */
 export function textureState({
   missing,
+  isCyclic,
   hasView,
   isArriving,
   hasSource,
 }: TextureFacts): CanvasMeshTextureState {
+  if (isCyclic) return 'cyclic';
   if (missing) return 'missing';
   if (hasView) return 'ready';
   return isArriving || hasSource ? 'arriving' : 'none';

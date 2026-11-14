@@ -1,6 +1,6 @@
 /**
  * The body a Node2D mesh drawer draws through: the CanvasItem ritual of `CanvasItem2D`, the
- * texture's load state, the lighting hand-back and one material for each surface.
+ * texture's load state, the cycle placeholder, the lighting hand-back and one material for each surface.
  * A drawer states its texture (`useCanvasMeshTexture`) and its surfaces, and nothing else.
  * CPUParticles2D, the tile mesh and CanvasGroup still draw their own.
  */
@@ -15,6 +15,7 @@ import { drawnTag } from '../meshes/meshContent';
 import { useArrayColorOf, type CanvasItemTint } from '../canvasItemModulate';
 import { CanvasItem2D } from '../components/CanvasItem2D';
 import type { CanvasItemPixelMaterial } from '../components/LitCanvasItemPixels';
+import { MissingResourcePlaceholder } from '../components/MissingResourcePlaceholder';
 import { CanvasSurfaceMaterial } from './CanvasSurfaceMaterial';
 import { DRAWN_TEXTURE, type CanvasMeshTexture } from './useCanvasMeshTexture';
 import type { CanvasSurface } from './canvasSurface';
@@ -58,10 +59,13 @@ export function CanvasMeshBody<Input>({
   children,
 }: CanvasMeshBodyProps<Input>) {
   const { view, canvasTexture } = texture[DRAWN_TEXTURE];
+  // Godot draws a cycle's viewports in tree order, each sampling the other's last frame
+  // (`renderer_viewport.cpp:91-126`). The previewer cannot, so it shows the placeholder.
+  const isCyclic = texture.state === 'cyclic';
   // A texture that is not here yet draws nothing, whatever the item draws with no image.
   const texturePermitsDraw =
     texture.state === 'ready' || (texture.state !== 'arriving' && withoutTexture === 'white');
-  const isDrawn = texturePermitsDraw && surfaces !== null;
+  const isDrawn = !isCyclic && texturePermitsDraw && surfaces !== null;
   return (
     <CanvasItem2D
       node={node}
@@ -69,6 +73,7 @@ export function CanvasMeshBody<Input>({
       canvasTexture={canvasTexture}
       isDrawn={isDrawn}
       body={(tint, material, pixelMaterial) => {
+        if (isCyclic) return <MissingResourcePlaceholder shape="plane" name={node.name} />;
         if (!isDrawn) return null;
         const drawn = { map: view, tint, pixelMaterial };
         return isMaterialSurfaces(surfaces) ? (

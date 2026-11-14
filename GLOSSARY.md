@@ -521,7 +521,7 @@ One of the instances a MultiMesh draws: the first `visible_instance_count`, or a
 _Avoid_: "visible instance" for the record, which names only the count.
 
 **Canvas mesh body** (`CanvasMeshBody`, `r3f/canvasMesh/`):
-The module a Node2D mesh drawer draws through: Sprite2D, AnimatedSprite2D, Polygon2D, Line2D, MeshInstance2D and MultiMeshInstance2D. A drawer states its texture with `useCanvasMeshTexture` and hands over its **canvas surfaces**. The body holds the texture's load state, the CanvasTexture hand-back to the lighting, the light read, the material colour, the defines and the one material.
+The module a Node2D mesh drawer draws through: Sprite2D, AnimatedSprite2D, Polygon2D, Line2D, MeshInstance2D and MultiMeshInstance2D. A drawer states its texture with `useCanvasMeshTexture` and hands over its **canvas surfaces**. The body holds the texture's load state, the placeholder for a ViewportTexture in a pass cycle, the CanvasTexture hand-back to the lighting, the light read, the material colour, the defines and the one material.
 _Avoid_: "canvas mesh item", "sprite material".
 
 **Canvas surface** (`CanvasSurface`, `r3f/canvasMesh/canvasSurface.ts`):

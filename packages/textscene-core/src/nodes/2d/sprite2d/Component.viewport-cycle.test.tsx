@@ -94,9 +94,21 @@ describe('<Sprite2D> ViewportTexture cycle fallback', () => {
     expect(sampling).toBeUndefined();
   });
 
-  it('draws nothing instead, as for a texture that fails to load', async () => {
+  // Godot draws a cycle's viewports in tree order (`renderer_viewport.cpp:91-126`). The previewer cannot.
+  it('renders the missing-resource placeholder instead', async () => {
     const { renderer } = await renderCyclicSprite();
-    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+    const placeholder = renderer.scene
+      .findAll(() => true)
+      .map((n) => n.instance as THREE.Mesh)
+      .find((m) => {
+        const material = m.material as THREE.MeshBasicMaterial | undefined;
+        return (
+          material?.color?.getHex() === new THREE.Color('magenta').getHex() &&
+          material.opacity === 0.6 &&
+          (m.geometry as THREE.PlaneGeometry)?.type === 'PlaneGeometry'
+        );
+      });
+    expect(placeholder).toBeDefined();
   });
 
   it('logs a warning naming the consuming Sprite2D node path', async () => {

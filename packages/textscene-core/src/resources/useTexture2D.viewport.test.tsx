@@ -107,6 +107,7 @@ describe('useTexture2D with a ViewportTexture', () => {
       texture: plain,
       size: { width: 32, height: 32 },
       missing: false,
+      isCyclic: false,
       isArriving: false,
     });
   });
@@ -143,7 +144,7 @@ viewport_path = NodePath("SubViewport")
     const { result } = renderHook(() => useTexture2D(referenceIn(VIEWPORT_REF, [], RESOURCES)), {
       wrapper: wrapper({ isPublished: false }),
     });
-    expect(result.current).toEqual({ texture: null, missing: false, isArriving: false });
+    expect(result.current).toEqual({ texture: null, missing: false, isCyclic: false, isArriving: false });
   });
 
   it('reports a target in an unrenderable pass cycle as missing, so the slot draws its placeholder', () => {
@@ -156,7 +157,7 @@ viewport_path = NodePath("SubViewport")
         </ViewportPassProvider>
       ),
     });
-    expect(result.current).toEqual({ texture: null, missing: true, isArriving: false });
+    expect(result.current).toEqual({ texture: null, missing: true, isCyclic: true, isArriving: false });
   });
 });
 
