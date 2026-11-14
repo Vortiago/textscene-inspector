@@ -77,13 +77,16 @@ const NOTHING_AWAITED: AwaitedFonts = new Map();
 /**
  * The version of one reader. `version`, `tracked` and `isMoved` are written only by
  * `moveIfSettled` and `track`. After a move it stays put until the next forest is tracked, which
- * reads anew.
+ * reads anew. It watches each tracked font alone while it has a listener, so a settle of another
+ * font calls nothing here.
  */
 function createAwaitedFontsVersion(fonts: SettledFonts): AwaitedFontsVersion {
   let version = 0;
   let tracked = NOTHING_AWAITED;
   let isMoved = false;
   const listeners = new Set<() => void>();
+  /** Written only by `watch` and `unwatchAll`: the unsubscribe of each tracked font it watches. */
+  const watched = new Map<object, () => void>();
   const hasSettled = () => {
     for (const [font, readAt] of tracked) if (fonts.fontVersion(font) !== readAt) return true;
     return false;
@@ -94,21 +97,43 @@ function createAwaitedFontsVersion(fonts: SettledFonts): AwaitedFontsVersion {
     version += 1;
     for (const listener of listeners) listener();
   };
+  const watch = (font: object) => {
+    if (listeners.size > 0 && !watched.has(font)) watched.set(font, fonts.subscribeFont(font, moveIfSettled));
+  };
+  const unwatchAll = () => {
+    for (const unwatch of watched.values()) unwatch();
+    watched.clear();
+  };
+  const watchTracked = () => {
+    unwatchAll();
+    for (const font of tracked.keys()) watch(font);
+  };
+  // A painter can await a font after the forest is tracked, so each newly awaited font is watched too.
+  const watchIfTracked = (font: object) => {
+    if (tracked.has(font)) watch(font);
+  };
+  /** Written only by `subscribe` and its unsubscribe: set while the version has a listener. */
+  let unsubscribeAwaits: (() => void) | null = null;
 
   return {
     get: () => version,
     subscribe(onChange) {
       listeners.add(onChange);
-      const unsubscribe = fonts.subscribe(moveIfSettled);
+      unsubscribeAwaits ??= fonts.subscribeAwaits(watchIfTracked);
+      watchTracked();
       return () => {
-        unsubscribe();
         listeners.delete(onChange);
+        if (listeners.size > 0) return;
+        unsubscribeAwaits?.();
+        unsubscribeAwaits = null;
+        unwatchAll();
       };
     },
     track(awaited) {
       tracked = awaited;
       isMoved = false;
       moveIfSettled();
+      watchTracked();
     },
   };
 }

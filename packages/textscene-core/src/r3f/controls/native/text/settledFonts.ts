@@ -59,6 +59,8 @@ export interface SettledFonts {
    * the readers of `font`, which read it again, so a settle of another font wakes none.
    */
   awaitFont(font: object, pending: ReadonlySet<object>): void;
+  /** Subscribes to each font marked as awaited, as it is marked. Returns the unsubscribe. */
+  subscribeAwaits(onAwait: (font: object) => void): () => void;
   /** Subscribes to the settle that settles `font`. Returns the unsubscribe. */
   subscribeFont(font: object, onSettle: () => void): () => void;
   /** Moves on each settle that wakes the readers of `font`. */
@@ -89,6 +91,8 @@ export function createSettledFonts(loadFace: FaceLoader = loadSceneFontMetrics):
    * its load out of each font and wakes the readers of a font that waits on none.
    */
   const awaited = new Map<object, Set<object>>();
+  /** The listeners `awaitFont` calls with each font it marks. */
+  const awaitListeners = new Set<(font: object) => void>();
   /** Written only by `pendingLoadsOf`, for the length of its read. */
   let pendingRead: Set<object> | null = null;
 
@@ -141,14 +145,22 @@ export function createSettledFonts(loadFace: FaceLoader = loadSceneFontMetrics):
         for (const load of pending) outer?.add(load);
       }
     },
-    awaitFont: (font, pending) => void awaited.set(font, new Set(pending)),
+    awaitFont(font, pending) {
+      awaited.set(font, new Set(pending));
+      for (const onAwait of awaitListeners) onAwait(font);
+    },
+    subscribeAwaits(onAwait) {
+      awaitListeners.add(onAwait);
+      return () => void awaitListeners.delete(onAwait);
+    },
     subscribeFont: (font, onSettle) => fontSettles(font).subscribe(onSettle),
     fontVersion,
     recording: (record) => ({
       ...fonts,
       awaitFont(font, pending) {
-        fonts.awaitFont(font, pending);
+        // Recorded first, so a listener the mark calls finds the font among those its forest awaits.
         if (!record.has(font)) record.set(font, fontVersion(font));
+        fonts.awaitFont(font, pending);
       },
     }),
     subscribe: settles.subscribe,
