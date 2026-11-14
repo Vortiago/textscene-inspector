@@ -1,19 +1,12 @@
 /**
  * The browser's draw of a glyph's SVG document, where Godot's OT-SVG hook draws it with ThorVG
- * (`thorvg_svg_in_ot.cpp:218-367`): the document's content box, which ThorVG sizes a document with
- * no view box by, and the content drawn into that box at the glyph's size. The rim of a shape differs
- * from ThorVG's by the browser's own antialiasing.
+ * (`thorvg_svg_in_ot.cpp:218-367`): the document's content box as ThorVG measures it, and the
+ * content drawn into that box at the glyph's size. The rim of a shape differs from ThorVG's by the
+ * browser's own antialiasing.
  */
+import { thorvgContentBox, type ContentBox } from './contentBox/contentBox';
 import { parsedSvg } from './parsedSvg';
 import type { SvgGlyphPlacement } from './svgGlyphPlacement';
-
-/** A box in the document's own units. */
-export interface ContentBox {
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
-}
 
 /** A glyph's parsed document, ready to draw. */
 export interface SvgPicture {
@@ -30,38 +23,28 @@ export interface SvgPicture {
 }
 
 export interface SvgPictureDrawer {
-  /** The picture of a glyph's document, or null for a document that does not parse. */
+  /** The picture of a glyph's document, or null for a document that does not parse or draws no shape. */
   picture(xml: string): SvgPicture | null;
 }
 
 /** The browser's drawer, or null outside a document, where nothing draws an SVG. */
 export function browserSvgPictureDrawer(): SvgPictureDrawer | null {
-  const document = globalThis.document;
-  if (!document?.body || typeof DOMParser === 'undefined' || typeof OffscreenCanvas === 'undefined')
+  if (
+    typeof DOMParser === 'undefined' ||
+    typeof Image === 'undefined' ||
+    typeof OffscreenCanvas === 'undefined'
+  )
     return null;
   // One canvas for every draw: each draw resizes it and reads it back before the next can start.
   const canvas = new OffscreenCanvas(1, 1);
-  return { picture: (xml) => browserPicture(document, canvas, xml) };
+  return { picture: (xml) => browserPicture(canvas, xml) };
 }
 
-function browserPicture(document: Document, canvas: OffscreenCanvas, xml: string): SvgPicture | null {
+function browserPicture(canvas: OffscreenCanvas, xml: string): SvgPicture | null {
   const root = parsedSvg(xml);
-  if (!root) return null;
-  const box = measuredContentBox(document, root);
+  const box = root && thorvgContentBox(root);
+  if (!root || !box) return null;
   return { box, draw: (placement) => drawnPicture(canvas, root, box, placement) };
-}
-
-/** `getBBox` measures only an element in a rendered document, so a copy of the root joins the page unseen for the read. */
-function measuredContentBox(document: Document, root: SVGSVGElement): ContentBox {
-  const svg = document.importNode(root, true);
-  svg.setAttribute('style', 'position:absolute;left:0;top:0;visibility:hidden;pointer-events:none');
-  document.body.appendChild(svg);
-  try {
-    const { x, y, width, height } = svg.getBBox();
-    return { x, y, width, height };
-  } finally {
-    svg.remove();
-  }
 }
 
 /** The content of `box` stretched over the picture's size, as ThorVG's `Picture::size` scales each axis apart. */
