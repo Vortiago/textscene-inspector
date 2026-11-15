@@ -20,6 +20,7 @@ import {
 } from '../../../godot/variant/variantParser.js';
 import { unquoteString } from '../../../parser/utils.js';
 import { codePointCount } from '../../../godot/string/codePoints.js';
+import { classInheritanceChain } from '../../../godot/classdb/classBaseTypes.js';
 import { valueCode } from './codes.js';
 
 /**
@@ -149,7 +150,7 @@ export const scalarCombinators = {
 /**
  * An ARRAY slot with an element type, and where its refusal of another type
  * comes from. `enforced`: a `TypedArray<T>` setter, whose `Array::assign`
- * fails on another typed array (`array.cpp:275-277`), an error. `hinted`: a bare
+ * fails on another typed array (`array.cpp:245`, `:276`), an error. `hinted`: a bare
  * `const Array &` setter behind a `PROPERTY_HINT_ARRAY_TYPE`, a warning.
  */
 type TypedArraySlot = { typedAs: string } & (
@@ -171,18 +172,23 @@ function typedArrayLiteral(
   const validator: PropertyValidator = (key, value, line) => {
     const unreadable = readable(key, value, line);
     if (unreadable) return unreadable;
-    const wrapped = TYPED_WRAPPER_RE.exec(value.trim());
-    if (!wrapped || wrapped[1]!.trim() === typed.typedAs) return null;
+    const wrapper = TYPED_WRAPPER_RE.exec(value.trim())?.[1]!.trim();
+    if (wrapper === undefined || isRelatedClass(wrapper, typed.typedAs)) return null;
     return propertyError(
       key,
       line,
-      `Property '${name}' holds ${typed.typedAs} elements, got an Array[${wrapped[1]!.trim()}] (${cite})`,
+      `Property '${name}' holds ${typed.typedAs} elements, got an Array[${wrapper}] (${cite})`,
       valueCode(name),
       severity
     );
   };
   validator.grounding = { kind: typed.enforced !== undefined ? 'enforced' : 'hinted', cite };
   return accepts(validator, description);
+}
+
+// `Array::assign` takes a wrapper class on either side of the element class (array.cpp:232-243).
+function isRelatedClass(wrapper: string, element: string): boolean {
+  return classInheritanceChain(wrapper).includes(element) || classInheritanceChain(element).includes(wrapper);
 }
 
 /**

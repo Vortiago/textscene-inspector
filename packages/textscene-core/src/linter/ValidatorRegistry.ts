@@ -13,6 +13,7 @@ import { resolveDeclaration, type RegistryTables } from './validatorResolution.j
 import { refuseOverlap, unavailableKeysOf } from './removalKeys.js';
 import { derivedValidator } from './descriptorValidator.js';
 import { handRowRevision } from '../godot/classdb/propertyDescriptor.js';
+import { classProperties } from '../godot/classdb/classProperty.js';
 
 export type { PropertyValidator } from './propertyValidator.js';
 
@@ -44,7 +45,7 @@ export class ValidatorRegistry {
   /** Wildcard patterns per type, prefixes pre-sliced. Rebuilt on every registerAll. */
   private wildcards = new Map<string, WildcardEntry[]>();
   /** Written only by `derivedFor`, cleared by `clear` and by a new hand row. A miss is stored as null. */
-  private derived = new Map<string, PropertyValidator | null>();
+  private derived = new Map<string, Map<string, PropertyValidator | null>>();
   private derivedAtRevision = handRowRevision();
   /** The three maps and the base lookup, built once: the walks run per property and allocate nothing. */
   private readonly tables: RegistryTables = {
@@ -150,16 +151,25 @@ export class ValidatorRegistry {
     );
   }
 
+  /** @internal The own capture keys of `nodeType` a derived check answers, for the sheet and coverage generators. */
+  derivedOwnKeys(nodeType: string): string[] {
+    return classProperties(nodeType)
+      .filter(({ declaredBy, name }) => declaredBy === nodeType && this.isDerived(nodeType, name))
+      .map(({ name }) => name);
+  }
+
   private derivedFor(nodeType: string, propertyKey: string): PropertyValidator | null {
     if (!this.derive) return null;
     if (this.derivedAtRevision !== handRowRevision()) {
       this.derived.clear();
       this.derivedAtRevision = handRowRevision();
     }
-    const id = `${nodeType}.${propertyKey}`;
-    if (this.derived.has(id)) return this.derived.get(id)!;
+    // Keyed by type, then key: no string is built per lookup.
+    let byKey = this.derived.get(nodeType);
+    if (!byKey) this.derived.set(nodeType, (byKey = new Map()));
+    if (byKey.has(propertyKey)) return byKey.get(propertyKey)!;
     const validator = this.derive(nodeType, propertyKey);
-    this.derived.set(id, validator);
+    byKey.set(propertyKey, validator);
     return validator;
   }
 

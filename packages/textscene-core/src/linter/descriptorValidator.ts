@@ -7,7 +7,7 @@ import { parseHintEnum, parseHintFlags } from '../godot/classdb/enumHint.js';
 import { PROPERTY_HINT } from '../godot/classdb/propertyHint.js';
 import { valueTypeOf } from '../godot/classdb/classProperty.js';
 import { parseRangeHint, type RangeHintBounds } from '../godot/classdb/rangeHint.js';
-import { isRuntimeHandle, VARIANT_TYPE } from '../godot/variant/variantType.js';
+import { isRuntimeHandle, VARIANT_TYPE, variantTypeName } from '../godot/variant/variantType.js';
 import type { IntWidth } from '../godot/variant/intWidth.js';
 import type { PropertyValidator } from './propertyValidator.js';
 import { v, type Grounding } from './validators/v.js';
@@ -193,17 +193,25 @@ function floatVectorValidator(
   return bounded(name, { min: range.min, max: range.max, ...grounding(descriptor, range) });
 }
 
-// `Font` from `24/17:Font`.
+// `24/17:Font` names a class, `27/0:` a Variant type with its own hint, and `Image` a class alone.
 function arrayElementType(hintString: string): string {
-  const colon = hintString.lastIndexOf(':');
-  return colon === -1 ? hintString : hintString.slice(colon + 1);
+  const colon = hintString.indexOf(':');
+  const [type, hint] = hintString.slice(0, colon).split('/').map(Number);
+  if (colon === -1 || !Number.isInteger(type) || !Number.isInteger(hint)) return hintString;
+  if (type === VARIANT_TYPE.OBJECT && hint === PROPERTY_HINT.RESOURCE_TYPE) return hintString.slice(colon + 1);
+  return variantTypeName(type!) ?? hintString;
 }
 
 function arrayValidator(descriptor: PropertyDescriptor): PropertyValidator {
-  refuseFacts(descriptor, []);
   const { name, hint, hintString } = descriptor.property;
-  if (hint !== PROPERTY_HINT.ARRAY_TYPE || hintString.length === 0) return v.arrayLiteral(name);
-  return v.arrayLiteral(name, { typedAs: arrayElementType(hintString), hinted: descriptor.cite });
+  const isTyped = hint === PROPERTY_HINT.ARRAY_TYPE && hintString.length > 0;
+  refuseFacts(descriptor, isTyped ? ['setter'] : []);
+  if (!isTyped) return v.arrayLiteral(name);
+  const typedAs = arrayElementType(hintString);
+  const setter = descriptor.facts?.setter;
+  // A `TypedArray<T>` setter's `Array::assign` fails on another element type (array.cpp:245, :276).
+  if (setter) return v.arrayLiteral(name, { typedAs, enforced: setter.cite });
+  return v.arrayLiteral(name, { typedAs, hinted: descriptor.cite });
 }
 
 function objectValidator(descriptor: PropertyDescriptor): PropertyValidator {
