@@ -18,7 +18,7 @@ The quad's UVs hold the frame, the region and the flip, and its vertex colour ho
 
 An AtlasTexture draws its region alone: the quad leaves the margin out, samples the atlas and holds the UVs of the atlas (`sprite_3d.cpp:100-150`). The `sprite3d-atlas-instance-materials` golden pins this.
 
-The `texture_filter` rows follow `BaseMaterial3D`. three skips anisotropy under a nearest magnification filter, so `viewportAnisotropy.ts` writes the level of the viewport under way onto the GPU texture, for every anisotropic filter. The `sprite3d-texture-filter-anisotropic` golden shows the four mipmap filters at a grazing angle.
+The `texture_filter` rows follow `BaseMaterial3D`. three skips anisotropy under a nearest magnification filter. So `viewportAnisotropy.ts` writes the level of the viewport that draws onto the GPU texture. The `sprite3d-texture-filter-anisotropic` golden shows the four mipmap filters at a grazing angle.
 
 ## A GradientTexture2D with no gradient
 
