@@ -1,7 +1,3 @@
-/**
- * A fake `<Canvas>` store whose renderer records the GPU parameter writes of `useViewportAnisotropy`,
- * for a test that draws a texture without a WebGL context.
- */
 import { createElement, type ReactNode } from 'react';
 import { vi, type Mock } from 'vitest';
 import { context } from '@react-three/fiber';
@@ -16,11 +12,7 @@ interface FakeCanvasRenderer {
   wrapper: (props: { children: ReactNode }) => ReactNode;
 }
 
-/**
- * `isAllocated`: three has already made GPU storage for every texture. `hasAnisotropyExtension`:
- * the GPU supports `EXT_texture_filter_anisotropic`, else three's `extensions.get` returns null.
- * `maxAnisotropy`: the most taps the GPU samples.
- */
+/** Without `hasAnisotropyExtension`, three's `extensions.get` returns null. */
 export function fakeCanvasRenderer({
   isAllocated,
   hasAnisotropyExtension = true,

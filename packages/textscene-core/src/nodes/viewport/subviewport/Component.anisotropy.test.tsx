@@ -73,10 +73,7 @@ const textureOf = (root: THREE.Object3D): THREE.Texture | null => {
   return found;
 };
 
-/**
- * The anisotropic level of each 3D draw that samples the sprite. A SubViewport draws at its own
- * `anisotropic_filtering_level`, which defaults to the project setting (`viewport.cpp:5384`).
- */
+// A SubViewport's level defaults to the project setting (`viewport.cpp:5384`).
 async function spriteDrawLevels(source: string, project: string | null): Promise<number[]> {
   const parsed = new TscnParser().parse(source);
   const fake = createFakeResourceLoader();

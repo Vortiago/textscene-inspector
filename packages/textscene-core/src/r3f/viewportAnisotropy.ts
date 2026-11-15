@@ -3,11 +3,7 @@ import type * as THREE from 'three';
 import { context } from '@react-three/fiber';
 import { handleOf } from './sharedTexture';
 
-/**
- * The taps the 3D draw under way samples an anisotropic texture with, or null in a canvas draw and
- * outside every draw, where Godot's default samplers hold (`renderer_canvas_render_rd.cpp:460`).
- * Written only by `drawAtAnisotropicLevel`.
- */
+/** Written only by `drawAtAnisotropicLevel`. Null: default samplers (`renderer_canvas_render_rd.cpp:460`). */
 let levelUnderWay: number | null = null;
 
 /** Each drawn texture's renderer and its holds. The last release deletes the entry. */
@@ -17,10 +13,7 @@ const drawnTextures = new Map<THREE.Texture, { renderer: THREE.WebGLRenderer; ho
 // eslint-disable-next-line no-restricted-syntax -- a record each write replaces, not a value built once.
 const writtenTaps = new WeakMap<THREE.Texture, { storage: WebGLTexture; taps: number }>();
 
-/**
- * Whether `texture` samples on an anisotropic row (`material_storage.cpp:2489-2504`). Only those
- * rows upload more than one tap (`godotTextureFilterState`).
- */
+// Only the anisotropic rows upload more than one tap (`material_storage.cpp:2489-2504`).
 function isAnisotropic(texture: THREE.Texture): boolean {
   return texture.anisotropy > 1;
 }
@@ -37,10 +30,7 @@ function maxAnisotropyParameter(renderer: THREE.WebGLRenderer): number | null {
   return extension?.TEXTURE_MAX_ANISOTROPY_EXT ?? null;
 }
 
-/**
- * Writes the taps of the draw under way onto the GPU storage of `texture`, binding it through
- * three's state so its binding cache stays true. `isBound`: an upload has just bound it.
- */
+// Binds through three's state so its binding cache stays true. `isBound`: an upload has just bound it.
 function writeTaps(renderer: THREE.WebGLRenderer, texture: THREE.Texture, isBound: boolean): void {
   if (!isAnisotropic(texture)) return;
   const parameter = maxAnisotropyParameter(renderer);
@@ -59,11 +49,7 @@ function writeDrawnTextures(): void {
   for (const [texture, { renderer }] of drawnTextures) writeTaps(renderer, texture, false);
 }
 
-/**
- * Runs `draw` with `level` as the anisotropic level of each texture it samples, as each viewport
- * allocates its own samplers (`render_scene_buffers_rd.cpp:120`). Null is a canvas draw. Only
- * `drawWorld` calls it.
- */
+/** Each viewport allocates its own samplers (`render_scene_buffers_rd.cpp:120`). Null is a canvas draw. */
 export function drawAtAnisotropicLevel(level: number | null, draw: () => void): void {
   const previous = levelUnderWay;
   levelUnderWay = level;
@@ -76,17 +62,12 @@ export function drawAtAnisotropicLevel(level: number | null, draw: () => void): 
   }
 }
 
-/** Writes the taps of the draw under way onto `texture`, which its caller draws now and holds no hook for. */
+/** For a texture its caller draws now and holds no hook for. */
 export function writeViewportAnisotropy(renderer: THREE.WebGLRenderer, texture: THREE.Texture): void {
   writeTaps(renderer, texture, false);
 }
 
-/**
- * Holds a texture drawn inside a Canvas, so each draw writes its taps: at once when its storage
- * exists, as a tiled texture's does, and after each upload three makes. three writes the taps of a
- * linear magnification at upload and none for a nearest one (r187 `WebGLTextures.js:756`). It
- * calls `onUpdate` right after an upload with the texture still bound (`:1461`).
- */
+/** three skips the taps of a nearest magnification (r187 `WebGLTextures.js:756`). */
 export function useViewportAnisotropy(texture: THREE.Texture | null): void {
   // The store is absent outside a Canvas, where no renderer exists.
   const renderer = useContext(context)?.getState().gl;
@@ -121,11 +102,7 @@ interface UploadWriter {
   wrapper: THREE.Texture['onUpdate'];
 }
 
-/**
- * Written only by `holdUploadWriter`: one writer for each texture, however many runs share it, so
- * an upload writes once, through the first live hold. Every hold sits on one renderer: no texture
- * is shared across Canvases. The last hold to let go clears the entry.
- */
+/** Written only by `holdUploadWriter`. The last hold to let go clears the entry. */
 // eslint-disable-next-line no-restricted-syntax -- it keeps the live holds, and the last release deletes the entry
 const uploadWriters = new WeakMap<THREE.Texture, UploadWriter>();
 
@@ -142,10 +119,6 @@ function wrapUpload(texture: THREE.Texture): UploadWriter {
   return { holds, previous, wrapper };
 }
 
-/**
- * Opens a hold on the upload writer of `texture` and returns the release. `write` reads the texture
- * afresh.
- */
 function holdUploadWriter(texture: THREE.Texture, write: () => void): () => void {
   const held = uploadWriters.get(texture) ?? wrapUpload(texture);
   uploadWriters.set(texture, held);

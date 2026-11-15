@@ -15,10 +15,7 @@ export interface TextureFilterState {
   anisotropy: number;
 }
 
-/**
- * The taps of the anisotropic rows (`material_storage.cpp:2489-2504`) at Godot's default level, which
- * a canvas draw keeps. Each 3D draw writes its viewport's own (`viewportAnisotropy.ts`).
- */
+/** A canvas keeps the default level (`material_storage.cpp:2489-2504`). A 3D draw writes its viewport's. */
 const ANISOTROPIC_UPLOAD_TAPS = 1 << DEFAULT_ANISOTROPIC_FILTERING_LEVEL;
 
 /**
@@ -74,11 +71,7 @@ const STATES: Record<number, TextureFilterState> = {
   },
 };
 
-/**
- * The sampler state for a `texture_filter` ordinal. An absent or out-of-range
- * value resolves to Godot's default, matching how the engine treats anything
- * outside `TEXTURE_FILTER_MAX`.
- */
+/** An absent or out-of-range ordinal takes Godot's default, as past `TEXTURE_FILTER_MAX`. */
 export function godotTextureFilterState(filter: number | undefined): TextureFilterState {
   const defaultFilter = BASE_MATERIAL_3D_DEFAULTS.textureFilter;
   const row = filter !== undefined && filter in STATES ? filter : defaultFilter;
