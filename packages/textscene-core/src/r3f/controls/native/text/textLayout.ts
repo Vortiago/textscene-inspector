@@ -35,6 +35,7 @@ import { paragraphUnderline } from './paragraphUnderline';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { localeLanguage } from '../../../../godot/text/textServer';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
+import { scriptRunIds } from './scriptRuns';
 import { resolveParagraphBidi } from './bidi';
 import { isDrawnRtl } from './textBidiOptions';
 import type { StructuredTextRange } from '../../../../godot/text/structuredText';
@@ -483,6 +484,8 @@ interface RunStyle {
   rangeIds: Int32Array;
   /** The span of each character (`ShapeTextOptions.spanAt`), or null for one span. */
   spans: Int32Array | null;
+  /** The script run of each character (`scriptRunIds`): each is its own HarfBuzz run (`text_server_adv.cpp:7346-7352`). */
+  scriptRuns: Int32Array;
   /**
    * Whether a character has no glyph in its face, once the chain is searched. False lets
    * `toBreakGlyphs` skip the per-character glyph test: the paragraph pass already ran it.
@@ -490,7 +493,7 @@ interface RunStyle {
   hasUndrawnGlyph: boolean;
 }
 
-/** Whether character `i`, past the first, starts a run: its size, face, bidi level or override range differs from the character before it. */
+/** Whether character `i`, past the first, starts a run: its size, face, bidi level, override range or script run differs from the character before it. */
 function startsNewRun(style: RunStyle, i: number): boolean {
   return style.faces[i] !== style.faces[i - 1] || startsNewSpanRun(style, i);
 }
@@ -502,6 +505,7 @@ function startsNewSpanRun(style: RunStyle, i: number): boolean {
     style.spanFaces[i] !== style.spanFaces[i - 1] ||
     style.levels[i] !== style.levels[i - 1] ||
     style.rangeIds[i] !== style.rangeIds[i - 1] ||
+    style.scriptRuns[i] !== style.scriptRuns[i - 1] ||
     (style.spans !== null && style.spans[i] !== style.spans[i - 1])
   );
 }
@@ -1358,6 +1362,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       levels: bidi.levels,
       rangeIds: bidi.rangeIds,
       spans: spanAt ? Int32Array.from({ length: paraText.length }, (_v, i) => spanAt(sourceIndex(i))) : null,
+      scriptRuns: scriptRunIds(paraText),
       hasUndrawnGlyph: !spansDraw,
     };
     const breakGlyphs = toBreakGlyphs(chars, runStyle, preserveControl, hasEndGlyph);
