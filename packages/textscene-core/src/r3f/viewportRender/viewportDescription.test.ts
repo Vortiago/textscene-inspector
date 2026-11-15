@@ -43,4 +43,12 @@ describe('rootViewportDescription', () => {
       anisotropicLevel: 4,
     });
   });
+
+  it('keeps the root default for a project value Godot refuses (error case)', () => {
+    const settings = parseProjectSettings(
+      ['[rendering]', 'lights_and_shadows/positional_shadow/atlas_size=-1'].join('\n')
+    );
+
+    expect(rootViewportDescription(settings).positionalShadowAtlas.size).toBe(4096);
+  });
 });

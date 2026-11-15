@@ -37,7 +37,6 @@ function fakeRenderer(): { renderer: THREE.WebGLRenderer; threePass: ReturnType<
     getActiveMipmapLevel: () => 0,
     setRenderTarget: vi.fn(),
     initRenderTarget: vi.fn(),
-    properties: { get: () => ({}) },
     getDrawingBufferSize: (size: THREE.Vector2) => size.set(955, 756),
     ...profiledRendererMembers(),
   };

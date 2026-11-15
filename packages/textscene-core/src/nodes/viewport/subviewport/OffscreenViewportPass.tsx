@@ -182,7 +182,7 @@ export function OffscreenViewportPass({
   useSceneShadowFit(portalLightScene);
   useSceneDepthPrepass(portalLightScene);
   const shadowAtlas = useViewportShadowAtlas(properties);
-  // A viewport takes the project's bias at construction (`viewport.cpp:5383`).
+  // Each viewport takes the project's bias at construction, the root's included (`viewport.cpp:5383`).
   const rootMipmapBias = useRootViewportDescription().mipmapBias;
   const mipmapBias = properties.texture_mipmap_bias ?? rootMipmapBias;
 
