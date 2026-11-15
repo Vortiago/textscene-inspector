@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parsedShader, parseShader, shaderCode } from './parseShader.js';
+import { parsedShader, shaderCode } from './parseShader.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
 
 const SPATIAL = 'shader_type spatial;\n';
@@ -12,19 +12,23 @@ describe('shaderCode', () => {
   it('gives a text the preprocessor refuses as it is', () => {
     expect(shaderCode('#nope\nx')).toBe('#nope\nx');
   });
-
-  it('reads an include through the reader it is given', () => {
-    const readInclude = (path: string) => ({ path, code: 'y' });
-    expect(shaderCode('#include "a.gdshaderinc"', { file: 'res://s.gdshader', readInclude })).toBe(
-      '@@>res://a.gdshaderinc\ny\n@@<res://a.gdshaderinc\n'
-    );
-  });
 });
 
 describe('parsedShader', () => {
   it('gives the preprocessed text beside its tree', () => {
     const { code, tree } = parsedShader(`#define TYPE spatial\nshader_type TYPE;`);
     expect([code, tree.shaderType]).toEqual(['\nshader_type  spatial ;', 'spatial']);
+  });
+
+  it('reads an include through the reader it is given', () => {
+    const readInclude = (path: string) => ({ path, code: 'shader_type spatial;' });
+    expect(parsedShader('#include "a.gdshaderinc"', { file: 'res://s.gdshader', readInclude }).code).toBe(
+      '@@>res://a.gdshaderinc\nshader_type spatial;\n@@<res://a.gdshaderinc\n'
+    );
+  });
+
+  it('lets the compiler refuse the first # of a text the preprocessor refuses', () => {
+    expect(() => parsedShader(`${SPATIAL}#nope`)).toThrow(ShadingLanguageError);
   });
 
   it('throws the parser error of a text it cannot parse', () => {
@@ -34,19 +38,9 @@ describe('parsedShader', () => {
   it('names the file in the positions', () => {
     expect(() => parsedShader('shader_type', { file: 'res://s.gdshader' })).toThrow(/^res:\/\/s\.gdshader:/);
   });
-});
-
-describe('parseShader', () => {
-  it('gives the tree of the text', () => {
-    expect(parseShader(SPATIAL).shaderType).toBe('spatial');
-  });
-
-  it('lets the compiler refuse the first # of a text the preprocessor refuses', () => {
-    expect(() => parseShader(`${SPATIAL}#nope`)).toThrow(ShadingLanguageError);
-  });
 
   it('parses an empty text to a tree with no shader type and no functions', () => {
-    const tree = parseShader('');
+    const { tree } = parsedShader('');
     expect([tree.shaderType, tree.functions]).toEqual([undefined, []]);
   });
 });

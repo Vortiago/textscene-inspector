@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parseShader } from '../../../../packages/textscene-core/src/shaders/language/parseShader.ts';
+import { parsedShader } from '../../../../packages/textscene-core/src/shaders/language/parseShader.ts';
 import { ShadingLanguageError } from '../../../../packages/textscene-core/src/shaders/language/shadingLanguageError.ts';
 import { godotAnswers } from '../godotAnswers.mjs';
 import { probeShaderOptions } from '../integration/page/probeIncludes.mjs';
@@ -19,7 +19,7 @@ const refused = PROBES.flatMap((probe) => {
 /** The front end's refusal of `probe` as Godot's answers hold one, or nothing when it parses. */
 function refusalOf(probe) {
   try {
-    parseShader(probe.source, probeShaderOptions(probe.includes));
+    parsedShader(probe.source, probeShaderOptions(probe.includes));
     return undefined;
   } catch (error) {
     if (!(error instanceof ShadingLanguageError)) throw error;

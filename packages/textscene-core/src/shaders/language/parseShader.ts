@@ -24,11 +24,8 @@ export function shaderCode(source: string, options: ShaderOptions = {}): string 
   }
 }
 
+/** The preprocessed text of `source` and its tree. */
 export function parsedShader(source: string, options: ShaderOptions = {}): ParsedShader {
   const code = shaderCode(source, options);
   return { code, tree: parse(tokenize(code, options.file ?? '')) };
-}
-
-export function parseShader(source: string, options: ShaderOptions = {}): ShaderNode {
-  return parsedShader(source, options).tree;
 }

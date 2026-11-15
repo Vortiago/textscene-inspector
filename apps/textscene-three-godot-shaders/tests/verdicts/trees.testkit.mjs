@@ -5,14 +5,14 @@
  */
 
 import { emittedTree } from '../../../../packages/textscene-core/src/shaders/language/emittedTree.ts';
-import { parseShader } from '../../../../packages/textscene-core/src/shaders/language/parseShader.ts';
+import { parsedShader } from '../../../../packages/textscene-core/src/shaders/language/parseShader.ts';
 import { printShader } from '../../../../packages/textscene-core/src/shaders/language/printer.ts';
 import { treeFault } from '../../../../packages/textscene-core/src/shaders/language/treeCheck.ts';
 import { probeShaderOptions } from '../integration/page/probeIncludes.mjs';
 import { LOWERED_AWAY } from './loweredAway.mjs';
 
 /** The tree of `source` after Godot's preprocessor, which reads `includes` by name. */
-export const treeOf = (source, includes) => parseShader(source, probeShaderOptions(includes));
+export const treeOf = (source, includes) => parsedShader(source, probeShaderOptions(includes)).tree;
 
 /** The tree the emitter walks, which Godot's printed-text check reads too. */
 export const loweredTreeOf = (source, includes) => {
