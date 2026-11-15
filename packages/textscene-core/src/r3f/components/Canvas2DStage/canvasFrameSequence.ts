@@ -4,7 +4,6 @@
  */
 
 import { createContext, useContext, useLayoutEffect } from 'react';
-import { useFrame } from '@react-three/fiber';
 
 /** The steps one canvas runs for one frame. Each canvas holds one, and its steps register in it. */
 export interface CanvasFrameSteps {
@@ -29,13 +28,13 @@ export function runCanvasFrame(steps: CanvasFrameSteps, drawItems: () => void): 
   drawItems();
 }
 
-/** The steps of the canvas around a component, or null outside every canvas. */
+/**
+ * The steps of the canvas around a component, or null outside every canvas. A sampler or a light
+ * pass outside a canvas runs nowhere: no canvas draws what it would prepare.
+ */
 export const CanvasFrameStepsContext = createContext<CanvasFrameSteps | null>(null);
 
-/**
- * Runs `sample` as a shadow sampler of the enclosing canvas. Outside a canvas it samples on every
- * frame by itself, so a component mounted alone still samples.
- */
+/** Runs `sample` as a shadow sampler of the enclosing canvas. */
 export function useShadowSampler(sample: () => void): void {
   const steps = useContext(CanvasFrameStepsContext);
   useLayoutEffect(() => {
@@ -45,15 +44,9 @@ export function useShadowSampler(sample: () => void): void {
       steps.shadowSamplers.delete(sample);
     };
   }, [steps, sample]);
-  useFrame(() => {
-    if (!steps) sample();
-  });
 }
 
-/**
- * Runs `lightPass` as the light pass of the enclosing canvas. Outside a canvas it runs on every frame
- * by itself.
- */
+/** Runs `lightPass` as the light pass of the enclosing canvas. */
 export function useCanvasLightPass(lightPass: () => void): void {
   const steps = useContext(CanvasFrameStepsContext);
   useLayoutEffect(() => {
@@ -63,7 +56,4 @@ export function useCanvasLightPass(lightPass: () => void): void {
       if (steps.lightPass === lightPass) steps.lightPass = null;
     };
   }, [steps, lightPass]);
-  useFrame(() => {
-    if (!steps) lightPass();
-  });
 }

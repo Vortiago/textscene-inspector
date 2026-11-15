@@ -8,7 +8,7 @@
  * canvas upside down.
  */
 
-import { useCallback, useContext } from 'react';
+import { useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { projectTransparentBackground } from '../../../parser/projectSettingsParser.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
@@ -16,7 +16,7 @@ import { createCanvasFrame } from './canvasFrame.js';
 import { useMultisampledTarget } from '../../offscreen/multisampledTarget.js';
 import { viewportTransfer } from '../../texelCopy.js';
 import { useRootCanvasColorSpace } from '../../rootCanvasColorSpace.js';
-import { CanvasFrameStepsContext, runCanvasFrame } from './canvasFrameSequence.js';
+import { runCanvasFrame, type CanvasFrameSteps } from './canvasFrameSequence.js';
 
 /**
  * A positive priority stops R3F's own render, and runs after every pass at priority 0 or below, so
@@ -24,7 +24,8 @@ import { CanvasFrameStepsContext, runCanvasFrame } from './canvasFrameSequence.j
  */
 const OWNS_THE_RENDER = 1;
 
-export function CanvasFrameRender() {
+/** Draws the canvas through `steps`, the frame steps of the canvas it draws. */
+export function CanvasFrameRender({ steps }: { steps: CanvasFrameSteps }) {
   const { settings, msaaModes } = useProjectSettings();
   const space = useRootCanvasColorSpace();
   const createRootCanvasFrame = useCallback(() => createCanvasFrame(space), [space]);
@@ -35,11 +36,8 @@ export function CanvasFrameRender() {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   const camera = useThree((state) => state.camera);
-  const steps = useContext(CanvasFrameStepsContext);
-  const drawItems = useCallback(
-    () => frame.render(gl, scene, camera, viewportTransfer(colour, isTransparent)),
-    [frame, gl, scene, camera, colour, isTransparent]
-  );
-  useFrame(() => (steps ? runCanvasFrame(steps, drawItems) : drawItems()), OWNS_THE_RENDER);
+  useFrame(() => {
+    runCanvasFrame(steps, () => frame.render(gl, scene, camera, viewportTransfer(colour, isTransparent)));
+  }, OWNS_THE_RENDER);
   return null;
 }

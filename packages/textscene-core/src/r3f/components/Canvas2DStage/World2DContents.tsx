@@ -77,7 +77,7 @@ export function World2DContents({
             <CameraRig pan={pan} zoom={zoom} />
             <ProjectClearColor />
             <CanvasFrameStepsContext.Provider value={frameSteps}>
-              <CanvasFrameRender />
+              <CanvasFrameRender steps={frameSteps} />
               {/* The light accumulator starts from the canvas tint, the same pure
               function of `nodes` the dispatcher publishes to the items. */}
               <CanvasLighting2DProvider canvasModulate={canvasModulate} space={canvasSpace}>

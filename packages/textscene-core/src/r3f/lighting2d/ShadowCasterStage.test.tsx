@@ -12,6 +12,7 @@ import { useShadowCaster } from './shadowCasterRegistry';
 import { type OccluderCullMode } from './shadowCasterEdges';
 import type { WorldShadowCaster } from './shadowCasterRegistry';
 import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
+import { CanvasFrameDriver } from '../testing/CanvasFrameDriver';
 
 /** Publishes one caster and reports every snapshot the stage handed it. */
 function Probe({
@@ -38,9 +39,11 @@ async function mountStage(
 ) {
   const seen: (readonly WorldShadowCaster[])[] = [];
   const renderer = await ReactThreeTestRenderer.create(
-    <ShadowCasterStage>
-      <Probe object={object} seen={seen} segments={segments} />
-    </ShadowCasterStage>
+    <CanvasFrameDriver>
+      <ShadowCasterStage>
+        <Probe object={object} seen={seen} segments={segments} />
+      </ShadowCasterStage>
+    </CanvasFrameDriver>
   );
   return { renderer, seen };
 }
@@ -162,9 +165,11 @@ describe('the snapshot the stage compares', () => {
     await frames(renderer);
     const before = seen.at(-1)!;
     await renderer.update(
-      <ShadowCasterStage>
-        <Probe object={object} seen={seen} segments={SEGMENTS} {...change} />
-      </ShadowCasterStage>
+      <CanvasFrameDriver>
+        <ShadowCasterStage>
+          <Probe object={object} seen={seen} segments={SEGMENTS} {...change} />
+        </ShadowCasterStage>
+      </CanvasFrameDriver>
     );
     await frames(renderer);
     return { before, after: seen.at(-1)! };
