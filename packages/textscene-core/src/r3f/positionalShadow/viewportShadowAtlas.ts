@@ -12,6 +12,7 @@ import {
   type PositionalShadowRequest,
   type PositionalShadowSlot,
 } from '../../godot/rendering/lights/positionalShadowAtlas.js';
+import { nextPowerOfTwo } from '../../godot/math/powerOfTwo.js';
 import { holdPositionalShadowAtlas, releasePositionalShadowAtlas } from './shadowAtlasTarget.js';
 import type { AreaShadowLight } from './atlasAreaShadow.js';
 
@@ -24,6 +25,16 @@ type ShadowMap = NonNullable<THREE.LightShadow['map']>;
 /** Written only by `ViewportShadowAtlas.bind`. Cleared for a shadow when its atlas is disposed. */
 // eslint-disable-next-line no-restricted-syntax -- ViewportShadowAtlas.bind writes an entry from outside, and dispose deletes it
 const boundAtlas = new WeakMap<THREE.LightShadow, ViewportShadowAtlas>();
+
+// WebGL refuses a target over `MAX_TEXTURE_SIZE`, and Godot's hint allows 16384.
+export function atlasWithinGpu(
+  settings: PositionalShadowAtlasSettings,
+  maxTextureSize: number
+): PositionalShadowAtlasSettings {
+  // A context that reports no limit keeps the setting.
+  if (!(maxTextureSize < nextPowerOfTwo(settings.size))) return settings;
+  return { ...settings, size: 2 ** Math.floor(Math.log2(maxTextureSize)) };
+}
 
 export class ViewportShadowAtlas {
   private readonly slots: PositionalShadowAtlas<PositionalLight>;

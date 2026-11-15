@@ -16,7 +16,7 @@ import {
 } from './directionalShadow/fitSceneDirectionalShadows.js';
 import { sceneLights } from './directionalShadow/lightLists.js';
 import { fitScenePositionalShadows } from './positionalShadow/fitScenePositionalShadows.js';
-import { ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas.js';
+import { atlasWithinGpu, ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas.js';
 import { renderUnderWay } from './viewportRender/worldRender.js';
 import { observeSceneCamera } from './sceneRenderCamera.js';
 import { useByValue } from './hooks/useByValue.js';
@@ -70,9 +70,10 @@ function prepareSceneLights(
 /** Runs the light pass before each render of `scene` until unmount. Null runs nothing. */
 export function useSceneShadowFit(scene: THREE.Scene | null): void {
   const settings = useByValue(useRootViewportDescription().positionalShadowAtlas, sameData);
+  const maxTextureSize = useThree((state) => state.gl.capabilities.maxTextureSize);
   useEffect(() => {
     if (!scene) return undefined;
-    const rootAtlas = new ViewportShadowAtlas(settings);
+    const rootAtlas = new ViewportShadowAtlas(atlasWithinGpu(settings, maxTextureSize));
     const stopObserving = observeSceneCamera(scene, (camera) =>
       prepareSceneLights(scene, camera, renderUnderWay()?.shadowAtlas ?? rootAtlas, performance.now())
     );
@@ -82,7 +83,7 @@ export function useSceneShadowFit(scene: THREE.Scene | null): void {
       releaseSoftShadowSearch(scene);
       rootAtlas.dispose();
     };
-  }, [scene, settings]);
+  }, [scene, settings, maxTextureSize]);
 }
 
 /** Mounted once per 3D canvas, for the canvas's own scene. */
