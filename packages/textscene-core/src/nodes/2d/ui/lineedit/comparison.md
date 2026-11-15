@@ -16,6 +16,9 @@ state calls for. `max_length`
 truncates an over-long `text` the same way Godot does.
 The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
 
+Each script run shapes apart, as Godot's `ScriptIterator` splits the text (`text_server_adv.cpp:7346-7352`), so kerning and the
+rounding remainder stop where the script changes. An unassigned code point that no font has takes no advance.
+
 ## Linting
 
 <!-- lint:begin LineEdit -->

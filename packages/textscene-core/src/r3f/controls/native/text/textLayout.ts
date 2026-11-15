@@ -35,6 +35,7 @@ import { paragraphUnderline } from './paragraphUnderline';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { localeLanguage } from '../../../../godot/text/textServer';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
+import { scriptRunIds } from './scriptRuns';
 import { resolveParagraphBidi } from './bidi';
 import { isDrawnRtl } from './textBidiOptions';
 import type { StructuredTextRange } from '../../../../godot/text/structuredText';
@@ -450,6 +451,8 @@ interface BreakGlyph {
   xOffset?: number;
   /** Whether the first character of the cluster draws this one: `start` and `end` are the cluster's. */
   isClusterTail?: true;
+  /** Whether Godot gives it glyph index 0 or no glyph: it keeps its 0 advance and rounds nothing (`:7060`). */
+  hasNoGlyph?: true;
 }
 
 /** A glyph of a shaped cluster, as the run shaping gives it and the layout places it. */
@@ -483,14 +486,18 @@ interface RunStyle {
   rangeIds: Int32Array;
   /** The span of each character (`ShapeTextOptions.spanAt`), or null for one span. */
   spans: Int32Array | null;
+  /** The script run of each character (`scriptRunIds`): each is its own HarfBuzz run (`text_server_adv.cpp:7346-7352`). */
+  scriptRuns: Int32Array;
   /**
    * Whether a character has no glyph in its face, once the chain is searched. False lets
    * `toBreakGlyphs` skip the per-character glyph test: the paragraph pass already ran it.
    */
   hasUndrawnGlyph: boolean;
+  /** Whether the paragraph holds a non-graphic character. False lets `specialGlyph` skip its per-character test. */
+  hasNonGraphic: boolean;
 }
 
-/** Whether character `i`, past the first, starts a run: its size, face, bidi level or override range differs from the character before it. */
+/** Whether character `i`, past the first, starts a run: its size, face, bidi level, override range or script run differs from the character before it. */
 function startsNewRun(style: RunStyle, i: number): boolean {
   return style.faces[i] !== style.faces[i - 1] || startsNewSpanRun(style, i);
 }
@@ -502,6 +509,7 @@ function startsNewSpanRun(style: RunStyle, i: number): boolean {
     style.spanFaces[i] !== style.spanFaces[i - 1] ||
     style.levels[i] !== style.levels[i - 1] ||
     style.rangeIds[i] !== style.rangeIds[i - 1] ||
+    style.scriptRuns[i] !== style.scriptRuns[i - 1] ||
     (style.spans !== null && style.spans[i] !== style.spans[i - 1])
   );
 }
@@ -557,6 +565,10 @@ function isSpaceSeparator(cp: number): boolean {
  * (`text_server_adv.cpp:7116`).
  */
 const KEEPS_ITS_FACE = /^[\p{Cc}\p{Cn}\p{Cs}\p{Zl}\p{Zp}\p{Zs}\p{Default_Ignorable_Code_Point}]/u;
+
+/** An unassigned code point or a lone surrogate: neither blank nor graphic (`u_isgraph`), and no control. */
+const NON_GRAPHIC = /[\p{Cn}\p{Cs}]/u;
+const NON_GRAPHIC_FIRST = /^[\p{Cn}\p{Cs}]/u;
 
 /**
  * Written only by `glyphFaces`, on the first paragraph that needs a **Fallback chain**: most scenes
@@ -633,6 +645,7 @@ function unshapedGlyph(index: number): BreakGlyph {
     isHardBreak: false,
     isTab: false,
     emboldenGrowthPx: 0,
+    hasNoGlyph: true,
   };
 }
 
@@ -661,16 +674,27 @@ function specialGlyph(
   // A break grapheme, U+200B and a tab take no advance whatever the face holds. A tab no stop aligns
   // is as wide as the font's glyph for it, which is none (measured in Godot 4.6.3: `a<TAB>b` with
   // `tab_size` 0 sets `b` against `a`).
-  if (isLinebreak(cp) || cp === 0x200b || isTabChar(ch)) return zeroWidthGlyph(ch, i);
+  if (isLinebreak(cp) || cp === 0x200b || isTabChar(ch)) return noGlyph(ch, i);
   // Only the "no font has a glyph" case is left (`text_server_adv.cpp:6842-6907`).
   if (isControlChar(cp)) {
     // Without `preserve_invalid` or `preserve_control`, a control pushes no `Glyph` (`:6844`).
-    return preserveControl ? hexCodeBox(ch, i, style.sizes[i]!) : zeroWidthGlyph(ch, i);
+    return preserveControl ? hexCodeBox(ch, i, style.sizes[i]!) : noGlyph(ch, i);
   }
   const face = style.faces[i]!;
   if (face.drawsApart?.(ch)) return drawnApartGlyph(ch, i, face, style.sizes[i]!);
+  if (isNonGraphicWithoutGlyph(ch, face, style.hasNonGraphic)) {
+    // Its notdef glyph counts as valid and keeps no advance (`text_server_adv.cpp:7060`, `:7106-7108`).
+    // With `preserve_control` only a break counts as valid, so it falls back to a box (`:7104`).
+    return preserveControl ? hexCodeBox(ch, i, style.sizes[i]!) : noGlyph(ch, i);
+  }
   if (!lacksGlyph(face, ch, style.hasUndrawnGlyph)) return undefined;
   return hexCodeBox(ch, i, style.sizes[i]!);
+}
+
+/** Whether `ch` is a non-graphic character that no face of the chain of `face` has a glyph for. */
+function isNonGraphicWithoutGlyph(ch: string, face: FontMetrics, hasNonGraphic: boolean): boolean {
+  if (!hasNonGraphic || !NON_GRAPHIC_FIRST.test(ch)) return false;
+  return !face.hasGlyph(ch) && !fallbackChainOf(face).some((entry) => entry.hasGlyph(ch));
 }
 
 /** The glyph of character `ch` at `i` that `face` draws apart, at its character advance. */
@@ -690,6 +714,20 @@ function zeroWidthGlyph(ch: string, i: number): BreakGlyph {
     isTab: isTabChar(ch),
     emboldenGrowthPx: 0,
   };
+}
+
+/** The glyph of character `ch` at `i` that Godot gives glyph index 0, or no glyph. */
+function noGlyph(ch: string, i: number): BreakGlyph {
+  return { ...zeroWidthGlyph(ch, i), hasNoGlyph: true };
+}
+
+/**
+ * Whether Godot gives each glyph of a cluster that starts with `cp` index 0 and no advance
+ * (`text_server_adv.cpp:7052-7055`), whatever glyph the face shapes it with.
+ */
+function isForcedZeroWidth(cp: number, preserveControl: boolean): boolean {
+  if (preserveControl) return cp === 0x200b || cp === 0xfeff;
+  return (cp >= 0x200b && cp <= 0x200d) || cp === 0x2060 || cp === 0xfeff;
 }
 
 /** The hex-code box of character `ch` at `i`, at font size `size`. */
@@ -718,9 +756,12 @@ function clusterGlyph(
   cluster: RunCluster,
   offset: number,
   chars: ArrayLike<string>,
-  style: RunStyle
+  style: RunStyle,
+  preserveControl: boolean
 ): BreakGlyph {
   const start = offset + cluster.start;
+  if (isForcedZeroWidth(chars[start]!.codePointAt(0)!, preserveControl))
+    return { ...noGlyph(chars[start]!, start), end: offset + cluster.end };
   const face = style.faces[start]!;
   const size = style.sizes[start]!;
   const embolden = face.embolden ?? 0;
@@ -761,11 +802,12 @@ function pushShapedStretch(
   chars: ArrayLike<string>,
   start: number,
   characters: readonly string[],
-  style: RunStyle
+  style: RunStyle,
+  preserveControl: boolean
 ): void {
   if (characters.length === 0) return;
   for (const cluster of getFontRunShaping(style.faces[start]!, characters)) {
-    const glyph = clusterGlyph(cluster, start, chars, style);
+    const glyph = clusterGlyph(cluster, start, chars, style, preserveControl);
     while (glyphs.length < glyph.start) glyphs.push(unshapedGlyph(glyphs.length));
     glyphs.push(glyph);
     for (let tail = glyph.start + 1; tail < glyph.end; tail++)
@@ -794,12 +836,12 @@ function pushRunGlyphs(
       stretch.push(chars[i]!);
       continue;
     }
-    pushShapedStretch(glyphs, chars, stretchStart, stretch, style);
+    pushShapedStretch(glyphs, chars, stretchStart, stretch, style, preserveControl);
     glyphs.push(special);
     stretchStart = i + 1;
     stretch = [];
   }
-  pushShapedStretch(glyphs, chars, stretchStart, stretch, style);
+  pushShapedStretch(glyphs, chars, stretchStart, stretch, style, preserveControl);
 }
 
 /**
@@ -1007,6 +1049,8 @@ function roundGlyphAdvance(
   const cp = chars[i]!.codePointAt(0)!;
   // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
   const resets = cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp);
+  // Rounding a remainder of -0.5 into a glyph Godot skips (`gl.index != 0`, `:7060`) would give it -1.
+  if (glyph.hasNoGlyph) return resets ? 0 : remainder;
   if (!glyph.glyphs) {
     const rounded = roundedGlyph(glyph.advance, 0, resets ? 0 : remainder);
     glyph.advance = rounded.advance;
@@ -1342,7 +1386,9 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       levels: bidi.levels,
       rangeIds: bidi.rangeIds,
       spans: spanAt ? Int32Array.from({ length: paraText.length }, (_v, i) => spanAt(sourceIndex(i))) : null,
+      scriptRuns: scriptRunIds(paraText),
       hasUndrawnGlyph: !spansDraw,
+      hasNonGraphic: NON_GRAPHIC.test(paraText),
     };
     const breakGlyphs = toBreakGlyphs(chars, runStyle, preserveControl, hasEndGlyph);
     const underline = paragraphUnderline({
