@@ -13,6 +13,7 @@ import { loaderSnapshots, NO_LOADER, type SnapshotSource } from '../resources/re
 import type { CachedFile } from '../resources/useLoadedFiles.js';
 import { perObject } from '../utils/perObject.js';
 import { subscribeToNothing } from '../utils/subscribeToNothing.js';
+import { sameEntries } from '../utils/sameEntries.js';
 
 export interface LiveFiles {
   /** The same snapshot until a file it read loads, fails or reloads. Each read on it is requested. */
@@ -31,7 +32,7 @@ export interface LiveFiles {
   releaseReads(): void;
   /** Each file the current snapshot read, with its answer, for the **Missing resource** report. */
   files(): ReadonlyMap<string, CachedFile<object>>;
-  /** `onChange` hears each request the live files make, and each load or failure of a read file. */
+  /** `onChange` hears each change of {@link files}, and each load or failure of a read file. */
   subscribeFiles(onChange: () => void): () => void;
   /** A number that moves whenever `files()` may have changed. */
   filesVersion(): number;
@@ -85,6 +86,8 @@ function liveFilesOver(source: SnapshotSource): LiveFiles {
     });
   /** Written only by `scheduleRequest` and the microtask it queues. */
   let isRequestQueued = false;
+  /** Written only by the microtask `scheduleRequest` queues: the files the listeners last heard of. */
+  let reported: ReadonlyMap<string, CachedFile<object>> = new Map();
   /** Written only by `releaseReads` and the microtask it queues. */
   let isRestartQueued = false;
   const filesChanged = () => {
@@ -97,6 +100,10 @@ function liveFilesOver(source: SnapshotSource): LiveFiles {
     queueMicrotask(() => {
       isRequestQueued = false;
       source.request();
+      // A kept pass re-reads on each run, so most requests read no new file and need no report.
+      const files = source.files();
+      if (sameEntries(reported, files)) return;
+      reported = files;
       filesChanged();
     });
   };
