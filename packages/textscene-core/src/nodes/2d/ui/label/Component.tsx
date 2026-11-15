@@ -182,20 +182,41 @@ function LabelText({
   const sharedLayout =
     autowrapMode === AutowrapMode.AUTOWRAP_OFF ? labelUnwrappedShape(solveNode, theme) : null;
   const bidiOptions = useControlBidiOptions(props, solveNode);
-  const shown = useMemo((): WrappedLabelWindow => {
-    if (sharedLayout) return { layout: sharedLayout, trimmedLine: null, isLastParagraphCut: false };
-    const shaped = shapeText(text, {
-      fontSizePx: textTheme.fontSizePx,
-      boxWidthPx: labelShapingWidthPx(rect.w, contentMargin),
+  const shaped = useMemo(
+    () =>
+      sharedLayout
+        ? null
+        : shapeText(text, {
+            fontSizePx: textTheme.fontSizePx,
+            boxWidthPx: labelShapingWidthPx(rect.w, contentMargin),
+            autowrapMode,
+            lineSpacingPx: textTheme.lineSpacingPx,
+            uppercase: props.uppercase,
+            fontMetrics,
+            paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
+            tabStopsPx: props.tabStopsPx,
+            autowrapTrimFlags: props.autowrapTrimFlags,
+            ...bidiOptions,
+          }),
+    [
+      sharedLayout,
+      text,
+      textTheme.fontSizePx,
+      textTheme.lineSpacingPx,
+      rect.w,
+      contentMargin,
       autowrapMode,
-      lineSpacingPx: textTheme.lineSpacingPx,
-      uppercase: props.uppercase,
+      props.uppercase,
       fontMetrics,
-      paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
-      tabStopsPx: props.tabStopsPx,
-      autowrapTrimFlags: props.autowrapTrimFlags,
-      ...bidiOptions,
-    });
+      props.paragraphSeparator,
+      props.tabStopsPx,
+      props.autowrapTrimFlags,
+      bidiOptions,
+    ]
+  );
+  // A height change windows the shaped lines again and does not shape them again.
+  const shown = useMemo((): WrappedLabelWindow => {
+    if (!shaped) return { layout: sharedLayout!, trimmedLine: null, isLastParagraphCut: false };
     const cut = {
       linesSkipped: props.linesSkipped ?? 0,
       maxLinesVisible: props.maxLinesVisible,
@@ -208,24 +229,17 @@ function LabelText({
       fontHeightPx: labelFontHeightPx(fontMetrics, textTheme.fontSizePx),
     });
   }, [
+    shaped,
     sharedLayout,
-    text,
-    textTheme.fontSizePx,
-    textTheme.lineSpacingPx,
-    textTheme.paragraphSpacingPx,
-    rect.w,
     rect.h,
     contentMargin,
-    autowrapMode,
-    props.uppercase,
-    fontMetrics,
-    props.paragraphSeparator,
-    props.tabStopsPx,
-    props.autowrapTrimFlags,
-    bidiOptions,
     props.linesSkipped,
     props.maxLinesVisible,
     isFill,
+    textTheme.lineSpacingPx,
+    textTheme.paragraphSpacingPx,
+    textTheme.fontSizePx,
+    fontMetrics,
   ]);
   const { layout, trimmedLine, isLastParagraphCut } = shown;
 
