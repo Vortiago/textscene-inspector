@@ -18,7 +18,7 @@ function AtlasProbe({
   return null;
 }
 
-/** The atlases of two renders, the first with `first` and the second with `second`, on a GPU of `maxTextureSize`. */
+/** The settled atlas of a render with `first`, and the atlas of the next render with `second`. */
 async function atlasesOfTwoRenders(
   first: PositionalShadowAtlasSettings,
   second: PositionalShadowAtlasSettings,
