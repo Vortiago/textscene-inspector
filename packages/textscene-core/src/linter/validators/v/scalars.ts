@@ -55,10 +55,7 @@ export const scalarCombinators = {
     }, 'quoted string, or the &"…" StringName or NodePath("…") it converts');
   },
 
-  /**
-   * A `Dictionary` literal, bare `{…}` or typed `Dictionary[K, V]({…})`. Format-only: the entries
-   * are any Variant (variant_parser.cpp:1187-1322).
-   */
+  // Format only: an entry is any Variant (variant_parser.cpp:1187-1322).
   dictionary(name: string): PropertyValidator {
     const code = formatCode(name);
     return shape((key, value, line) => {
@@ -94,7 +91,7 @@ export const scalarCombinators = {
   /**
    * A string slot the setter cuts to its first character, counted in code
    * points of the decoded text: `String` is UTF-32, and the tokenizer resolves
-   * `\uXXXX` first, so `"\u2026"` is one character. An empty literal is legal,
+   * `\uXXXX` first, so `"…"` is one character. An empty literal is legal,
    * since `left(1)` of `""` is `""`.
    *
    * @param enforced - `file:line` of the `left(1)` that cuts the value, which is

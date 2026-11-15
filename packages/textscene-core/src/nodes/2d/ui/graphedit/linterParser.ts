@@ -43,9 +43,7 @@ validatorRegistry.registerAll('GraphEdit', {
   // graph_edit.cpp:3075: bare BOOL. set_right_disconnects
   // (graph_edit.cpp:2509-2511) is an assignment.
   right_disconnects: v.boolean('right_disconnects'),
-  // graph_edit.cpp:3077: DICTIONARY, typed by `PROPERTY_HINT_DICTIONARY_TYPE "int;String"` for
-  // the inspector only. set_type_names (graph_edit.cpp:1194-1196) is a bare assignment, so only
-  // the shape of the literal can be wrong.
+  // graph_edit.cpp:3077. The setter is a bare assignment (:1194-1196).
   type_names: v.dictionary('type_names'),
 
   // "Connection Lines" group, graph_edit.cpp:3079-3083. graph_edit.cpp:3080: FLOAT,

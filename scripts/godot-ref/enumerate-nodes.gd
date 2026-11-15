@@ -38,8 +38,7 @@ extends SceneTree
 # hidden on DirectionalLight3D and stored on every other light).
 const USAGE_STORAGE := 2
 
-# Each method's last argument, by method name, inherited methods included: a
-# setter may be bound on a base class.
+# Inherited methods included: a setter may be bound on a base class.
 func value_arguments(c: String) -> Dictionary:
 	var arguments: Dictionary = {}
 	for m in ClassDB.class_get_method_list(c):
@@ -49,15 +48,7 @@ func value_arguments(c: String) -> Dictionary:
 	return arguments
 
 # One row shape for both property blobs, so a consumer reads them the same way.
-# "setter_type", present only where it differs from "type", is the Variant type
-# of the setter's value argument, with that argument's "setter_hint" and
-# "setter_hint_string" (a `TypedArray<int>` says ARRAY_TYPE "int"). The loader
-# converts a value to that type, not to the property's own (class_db.cpp:1677,
-# binder_common.h:175), and the two differ where a setter takes an Array that
-# the property declares INT (`Curve._data`). Only where they differ, so the
-# capture grows by 31 rows. "has_setter" is false, and present only, where the
-# property is bound with no setter: the loader drops its write
-# (class_db.cpp:1655-1659).
+# The loader converts to the setter's type (binder_common.h:175), and drops a setterless write (class_db.cpp:1655-1659).
 func own_properties(c: String) -> Array:
 	var own: Array = []
 	var arguments: Dictionary = value_arguments(c)
