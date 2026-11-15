@@ -76,15 +76,16 @@ export function textEditRowHeightPx(
 }
 
 /**
- * {@link textEditRowHeightPx} before any line shapes: the font's rows alone. CodeEdit's gutters size
- * from it, as they set the wrap width the rows shape at.
+ * {@link textEditRowHeightPx} over the buffer shaped without wrapping. CodeEdit sizes its gutters from
+ * it on `NOTIFICATION_THEME_CHANGED` (`code_edit.cpp:56-60`), and the gutters then set the wrap width.
  */
-export function textEditFontRowHeightPx(
-  fontMetrics: FontMetrics,
-  fontSizePx: number,
+export function textEditUnwrappedRowHeightPx(
+  lines: readonly string[],
+  shape: Omit<TextEditShapeOptions, 'wrapMode' | 'wrapWidthPx'>,
   themeLineSpacingPx: number
 ): number {
-  return textEditRowHeightPx([], fontMetrics, fontSizePx, themeLineSpacingPx);
+  const lineLayouts = shapeTextEditLines(lines, { ...shape, wrapMode: 0 });
+  return textEditRowHeightPx(lineLayouts, shape.fontMetrics, shape.fontSizePx, themeLineSpacingPx);
 }
 
 /** `text_edit.cpp:8614`: `content_size_cache = Vector2i(total_width + 10, ...)`, a second bare, unscaled `10`. */
