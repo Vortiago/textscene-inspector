@@ -12,6 +12,8 @@ import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { busServing } from '../resources/testing/servingFileBus.js';
 import { HierarchyProvider } from './contexts/HierarchyContext.js';
 import { useLiveNode } from './useLiveSceneTree.js';
+import { SceneResourcesProvider } from './SceneResourcesContext.js';
+import { useTileSetModel } from './useTileSetModel.js';
 import './nodes/index';
 
 const CRATE = `[gd_scene format=3]
@@ -56,27 +58,51 @@ async function settle() {
   }
 }
 
+/** A loader over the TileSet file and the tile's scene, and a wrapper with `MAIN` in context. */
+function mount() {
+  const { bus, provider, loads } = busServing({
+    'res://tiles.tres': TILE_SET_FILE,
+    'res://crate.tscn': CRATE,
+  });
+  const loader = new ResourceLoader(bus);
+  loader.setProvider(provider);
+  // The tree's own reads of scenes stay with their consumers, so the test requests the tile's scene.
+  loader.scenes.request('res://crate.tscn');
+  const main = new TscnParser().parse(MAIN);
+  const sceneGraph = createSceneGraphFromTscnScene(main);
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
+      <ResourceLoaderProvider loader={loader}>
+        <SceneResourcesProvider externalResources={main.externalResources}>{children}</SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    </HierarchyProvider>
+  );
+  const tileSetLoads = () => loads.filter((path) => path === 'res://tiles.tres').length;
+  return { wrapper, tileSetLoads };
+}
+
 describe('the live tree over a TileSet file', () => {
   it('adds the scene tiles of a .tres TileSet with no tile component mounted', async () => {
-    const { bus, provider, loads } = busServing({
-      'res://tiles.tres': TILE_SET_FILE,
-      'res://crate.tscn': CRATE,
-    });
-    const loader = new ResourceLoader(bus);
-    loader.setProvider(provider);
-    // The tree's own reads of scenes stay with their consumers, so the test requests the tile's scene.
-    loader.scenes.request('res://crate.tscn');
-    const sceneGraph = createSceneGraphFromTscnScene(new TscnParser().parse(MAIN));
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
-        <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>
-      </HierarchyProvider>
-    );
+    const { wrapper, tileSetLoads } = mount();
 
     const { result } = renderHook(() => useLiveNode(SCENE_TILE), { wrapper });
     await settle();
 
-    expect(loads.filter((path) => path === 'res://tiles.tres')).toHaveLength(1);
+    expect(tileSetLoads()).toBe(1);
     expect(result.current?.node.name).toBe('@SceneTile@0_0');
+  });
+
+  it('loads the TileSet once for the tree and the tile component, and answers both with one model', async () => {
+    const { wrapper, tileSetLoads } = mount();
+
+    const { result } = renderHook(
+      () => ({ tile: useLiveNode(SCENE_TILE), tileSet: useTileSetModel('ExtResource("tiles")') }),
+      { wrapper }
+    );
+    await settle();
+
+    expect(tileSetLoads()).toBe(1);
+    expect(result.current.tile?.node.name).toBe('@SceneTile@0_0');
+    expect(result.current.tileSet.status).toBe('loaded');
   });
 });
