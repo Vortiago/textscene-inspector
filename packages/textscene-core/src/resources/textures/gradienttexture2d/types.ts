@@ -6,6 +6,7 @@
 
 import type { Rgba } from '../../../godot/math/math';
 import {
+  GradientColorSpace,
   GradientInterpolationMode,
   GradientTexture2DFill,
   GradientTexture2DRepeat,
@@ -22,6 +23,8 @@ export interface Gradient {
   /** Stops sorted ascending by offset (Godot sorts before sampling). */
   stops: GradientColorStop[];
   interpolationMode: EnumValue<typeof GradientInterpolationMode>;
+  /** The space the linear and cubic modes blend in. */
+  interpolationColorSpace: EnumValue<typeof GradientColorSpace>;
 }
 
 export interface GradientTexture2D {

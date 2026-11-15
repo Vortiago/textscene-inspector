@@ -1,7 +1,8 @@
 /**
  * A snapshot over a fixed map of path to file text, with no loader: the second adapter of the
  * inner seam, for a pure decode test. A path the map does not hold, or a file that does not parse,
- * answers as a failed file.
+ * answers as a failed file. `loaded` holds the value a processor built for an address, whatever its
+ * kind, and an address it does not hold answers as a failed file.
  */
 
 import { parseShaderFile, parseTresFile, type ParsedResource } from '../../parser/parsedResource';
@@ -10,7 +11,10 @@ import { fileExtension } from '../fileExtension';
 import type { ResourceSnapshot } from './read';
 import { snapshotOver } from './snapshot';
 
-export function staticSnapshot(files: Readonly<Record<string, string>>): ResourceSnapshot {
+export function staticSnapshot(
+  files: Readonly<Record<string, string>>,
+  loaded: Readonly<Record<string, object>> = {}
+): ResourceSnapshot {
   /** Written only by `getCached`: each file parses once, so a snapshot answers a path with one object. */
   const parsed = new Map<string, ParsedResource | null>();
   return snapshotOver({
@@ -18,6 +22,7 @@ export function staticSnapshot(files: Readonly<Record<string, string>>): Resourc
       if (!parsed.has(path)) parsed.set(path, parseFile(path, files[path]));
       return parsed.get(path);
     },
+    loaded: (_fileKind, address) => loaded[address] ?? null,
   });
 }
 

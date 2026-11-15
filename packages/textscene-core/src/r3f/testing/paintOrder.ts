@@ -57,7 +57,7 @@ export function isInZBucket(key: number, zFinal: number): boolean {
 }
 
 /** The first mesh drawn under `group`, which three orders by its nearest group's key. */
-function firstMeshUnder(group: THREE.Object3D): THREE.Object3D {
+export function firstMeshUnder(group: THREE.Object3D): THREE.Object3D {
   let mesh: THREE.Object3D | undefined;
   group.traverse((o) => {
     if (!mesh && isMesh(o)) mesh = o;

@@ -5,6 +5,13 @@
  * vertex buffer, not just its presence.
  */
 import { describe, expect, it } from 'vitest';
+import './index';
+import { parsedNode } from '../../../parser/testing/parserKit';
+import {
+  CANVAS_TEXTURE_REF,
+  itHandsTheBodyItsCanvasTexture,
+  renderLitItem,
+} from '../../../r3f/testing/canvasTextureLighting';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Polygon2D } from './Component';
@@ -226,27 +233,16 @@ describe('<Polygon2D> textured fill', () => {
     expect([map.magFilter, map.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
   });
 
-  it('hands the fill a material three has not yet compiled, when the texture arrives after the mesh', async () => {
-    // Every real load shows the mesh with `map = null` first, and the texture
-    // lands one render later. `USE_MAP` is baked at the first compile, so an
-    // already-compiled mapless material paints the flat fill however the map
-    // is assigned afterwards.
+  it('draws the textured fill once the texture arrives', async () => {
     const fake = createFakeResourceLoader();
     const renderer = await mount({ polygon: SQUARE, texture: 'ExtResource("1")' }, fake);
-    const mapless = mesh(renderer).material as THREE.MeshBasicMaterial;
-    expect(mapless.map).toBeNull();
-    const compiledVersion = mapless.version;
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
 
     await ReactThreeTestRenderer.act(async () => {
       fake.textures._resolve(TEX, loadedTexture());
     });
 
-    const textured = mesh(renderer).material as THREE.MeshBasicMaterial;
-    expect(textured.map).not.toBeNull();
-    // Either satisfies three: a new material, or the old one with its `version`
-    // past the compiled program's. The test renderer never reaches `setProgram`,
-    // so this pins the precondition for the recompile, not the recompile.
-    expect(textured !== mapless || textured.version > compiledVersion).toBe(true);
+    expect((mesh(renderer).material as THREE.MeshBasicMaterial).map).not.toBeNull();
   });
 
   it('leaves the fill untextured, and adds no uv attribute, when there is no texture', async () => {
@@ -304,5 +300,15 @@ describe('<Polygon2D> vertex_colors', () => {
     });
     const mat = mesh(renderer).material as THREE.MeshBasicMaterial;
     expect(mat.opacity).toBeCloseTo(1, 5);
+  });
+});
+
+describe('Polygon2D with a CanvasTexture', () => {
+  itHandsTheBodyItsCanvasTexture((wrapper: TscnInternalResource) => {
+    const polygon = parsedNode(
+      { type: 'Polygon2D', name: 'P' },
+      { texture: CANVAS_TEXTURE_REF, polygon: 'PackedVector2Array(-4, -4, 4, -4, 4, 4, -4, 4)' }
+    );
+    return renderLitItem(<Polygon2D node={polygon} />, [wrapper]);
   });
 });

@@ -209,6 +209,12 @@ export function canvasSubOrder(slot: CanvasSlot): CanvasSlot {
   return canvasPieceSlot(slot, 0, 1);
 }
 
+/** `slot` cut in two halves: the item's own pixels, then the one piece it draws after them. */
+export function canvasHalves(slot: CanvasSlot): readonly [CanvasSlot, CanvasSlot] {
+  const after = canvasSubOrder(slot);
+  return [{ key: slot.key, span: after.key - slot.key }, after];
+}
+
 /** The slot of a whole draw-order key, such as a canvas item's own: the next key starts 1 above it. */
 export function wholeKeySlot(key: number): CanvasSlot {
   return { key, span: 1 };

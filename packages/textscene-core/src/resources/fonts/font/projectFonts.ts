@@ -17,6 +17,8 @@ import type { CacheSource } from '../../../r3f/cacheSources';
 import type { ThemeResource } from '../../styles/theme/types';
 import type { FontResource } from './types';
 import { perObject } from '../../../utils/perObject';
+import { FONT_FILES } from '../../fileKinds';
+import type { Read, ResourceSnapshot } from '../../reading/read';
 
 export interface ProjectFonts {
   /** Null for no theme, one still loading and one that failed. */
@@ -41,12 +43,6 @@ export interface ProjectFontCaches {
   fonts: CacheSource<FontResource>;
 }
 
-/** The files a resolve found uncached, which a caller that loads them requests. */
-export interface PendingProjectFonts {
-  themes: Set<string>;
-  fonts: Set<string>;
-}
-
 /** The project theme's own copy of a loaded theme, which a scene may also hold. */
 const outsideScenes = perObject((theme: ThemeResource): ThemeResource => ({
   ...theme,
@@ -56,7 +52,7 @@ const outsideScenes = perObject((theme: ThemeResource): ThemeResource => ({
 /** Owns the failed-load warnings: the lookup runs on every solve pass, and the failure belongs to the file. */
 const FAILED_FONT_LOADS = {};
 
-/** The cached value of `path`, or null while it loads (`pending` takes the path) and after it failed. */
+/** The cached value of `path`: undefined while it loads (`pending` takes the path), null after it failed. */
 function cachedOrPending<T>(
   path: string,
   cache: CacheSource<T>,
@@ -71,12 +67,8 @@ function cachedOrPending<T>(
  * The font `gui/theme/custom_font` names. A failed load warns once and answers null, so the caller
  * draws the bundled font, as `ThemeDB::initialize_theme` keeps it (`theme_db.cpp:78-79`).
  */
-function resolveDefaultFont(
-  path: string,
-  fonts: CacheSource<FontResource>,
-  pending: Set<string> | undefined
-): FontResource | null {
-  const font = cachedOrPending(path, fonts, pending);
+function resolveDefaultFont(path: string, fonts: CacheSource<FontResource>): FontResource | null {
+  const font = fonts.getCached(path);
   if (font === null) {
     warnOnce(
       FAILED_FONT_LOADS,
@@ -88,26 +80,39 @@ function resolveDefaultFont(
 }
 
 /**
- * The project font context from `settings`, as the caches hold it now. A file still loading lands
- * in `pending`, when a caller passes it to request them. A theme that failed to load is null, as the default theme
- * then answers every lookup.
+ * The project font context from `settings`, as the caches hold it now. A theme still loading lands
+ * in `pendingThemes`, when a caller passes it to request them; a caller records its font reads in
+ * `fonts`. A theme that failed to load is null, as the default theme then answers every lookup.
  *
  * @canonical The project theme and project default font, from the project settings and the caches
  */
 export function resolveProjectFonts(
   settings: ProjectSettings | null,
   { themes, fonts }: ProjectFontCaches,
-  pending?: PendingProjectFonts
+  pendingThemes?: Set<string>
 ): ProjectFonts {
   const themePath = projectThemePath(settings);
   const fontPath = projectFontPath(settings);
   return {
-    projectTheme: themePath ? projectThemeOf(cachedOrPending(themePath, themes, pending?.themes)) : null,
-    projectDefaultFont: fontPath ? resolveDefaultFont(fontPath, fonts, pending?.fonts) : null,
+    projectTheme: themePath ? projectThemeOf(cachedOrPending(themePath, themes, pendingThemes)) : null,
+    projectDefaultFont: fontPath ? resolveDefaultFont(fontPath, fonts) : null,
     defaultTheme: defaultThemeAt(projectThemeScale(settings)),
   };
 }
 
 function projectThemeOf(theme: ThemeResource | null | undefined): ThemeResource | null {
   return theme ? outsideScenes(theme) : null;
+}
+
+/**
+ * The font files `snapshot` holds, as a cache: the solve reads its project default font there, so
+ * the snapshot records the read and its host requests the file.
+ */
+export function fontFilesOn(snapshot: ResourceSnapshot): CacheSource<FontResource> {
+  return { getCached: (path) => cachedFileOf(snapshot.loaded(FONT_FILES, path)) };
+}
+
+function cachedFileOf<T>(read: Read<T>): T | null | undefined {
+  if (read.status === 'pending') return undefined;
+  return read.value;
 }

@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { orthoViewRect } from '../nodes/viewport/subviewport/offscreenViewport.js';
+import { orthoViewRect } from '../nodes/viewport/subviewport/viewportFraming.js';
 import type { Rect2 } from '../godot/math/rect2.js';
 
 /** Written only by {@link viewAnchorMatrix}, which reads it before returning. */

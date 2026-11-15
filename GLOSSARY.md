@@ -158,6 +158,10 @@ _Avoid_: "sprite font", "pixel font".
 The faces a font tries for each glyph, in order: its own face, then each of its `fallbacks` and theirs, depth first (`Font::_update_rids`). The shaper draws a character from the first face that has it. A character no face has stays in the first face.
 _Avoid_: "fallback font" for the bundled Open Sans, which is the **Project default font**'s last resort.
 
+**Settled font** (`SettledFont` in `r3f/controls/native/text/settledFonts.ts`, `readSettledFont` in `sceneFontLoader.ts`, `useSettledFont`):
+A font of the scene once the face of each font of its **Fallback chain** has loaded: its face, with the chain's faces as its fallbacks, and the chain. Each preview loads its fonts through the settled fonts its `ResourceLoader` holds (`settledFonts.ts`). A settle there wakes the readers of that font in that preview, and no reader of another preview. Until then the font is loading and draws nothing. No font set is none, and draws the bundled font.
+_Avoid_: "the font metrics" for the whole answer, which holds the chain too.
+
 **Cluster** (`GlyphPlacement.char` and `sourceIndex` in `r3f/controls/native/text/textLayout.ts`):
 The characters of a run that draw as one unit: a base and the marks typed after it, or the characters of a **Shaped glyph**. The layout places each cluster once, with the cluster's text as its `char`. A line break and a reveal step fall only at the edge of a cluster, as Godot's glyph `start` and `end` set them.
 _Avoid_: "grapheme", which Unicode segments by other rules.
@@ -189,6 +193,10 @@ _Avoid_: "style variant". "scene variation" for one a scene Theme registers, whi
 **Style face** (`nodes/2d/ui/richtextlabel/styleFaces.ts`):
 The font a RichTextLabel draws a `[b]`, `[i]` or `[b][i]` span in: the theme's `bold_font`, `italics_font` or `bold_italics_font`. Where no theme sets the key, it is a `FontVariation` over the **Project default font** with embolden 1.2, skew 0.2, or both.
 _Avoid_: "synthetic bold" for a face a theme sets.
+
+**Glyph painter** (`GlyphPainter` in `r3f/controls/native/text/glyphPainter.ts`):
+The one rasteriser that draws every glyph of a canvas text run. The run takes it by its face: a face with outlines takes the outline painter (`outlineGlyphPainter.ts`), which draws each glyph from its contours and a glyph with no contour as nothing. A face whose outlines the previewer cannot read takes the browser text painter (`browserTextPainter.ts`), the only code that calls `fillText` or `strokeText`. A face with neither takes the blank painter, which draws nothing. The painter also gives the reach and the quad rectangle of each glyph (ADR-0077).
+_Avoid_: "the text path" or "the bitmap path" for one glyph of a run: a run never mixes the two.
 
 **Glyph hinting** (`r3f/controls/native/text/sfntOutlines.ts`):
 How a glyph's outline is fitted to the pixel grid at its font size before TextMesh tessellates it, as FreeType does when Godot loads it. A TrueType font with its own hinting programs runs them, a CFF font uses its charstring hints, and any other TrueType font goes through the **Auto-hinter**.
@@ -249,10 +257,12 @@ _Avoid_: a bare reference string handed past the tables it belongs to.
 **Held resource** (`HeldResource`, `resources/reading/read.ts`):
 A resource as a decode receives it: its class, its raw property strings, its address, and how it is held. It exposes no table, so a decode reads a nested reference only through `Follow`.
 A file the loader imports, not parses (an image, a mesh), is held as the class `IMPORTED_FILE`, with no properties and the file as its address.
+A file of a kind that reads its files whole is held the same way, with the class its `[ext_resource]` states.
 _Avoid_: "scoped resource" for this. A `ScopedResource` carries the tables.
 
 **Resource kind** (`ResourceKind`, `resources/reading/read.ts`):
-One decode for one family of Godot classes, for every origin, with the classes it accepts. `CURVE_2D`, `CURVE_3D`, `CURVE`, `GRADIENT`, `PARTICLE_PROCESS_MATERIAL`, `SHAPE_2D`, `OCCLUDER_POLYGON_2D`, `NAVIGATION_POLYGON`, `FAST_NOISE_LITE`, `IMAGE`, `TEXTURE_2D`, `TEXTURE_3D`, `MATERIAL`, `SKY`, `ENVIRONMENT` and `CAMERA_ATTRIBUTES` are kinds. `MATERIAL` accepts every Material class and declines one the previewer does not build, the same from either arrival (ADR-0041).
+One decode for one family of Godot classes, for every origin, with the classes it accepts. `CURVE_2D`, `CURVE_3D`, `CURVE`, `GRADIENT`, `PARTICLE_PROCESS_MATERIAL`, `SHAPE_2D`, `OCCLUDER_POLYGON_2D`, `NAVIGATION_POLYGON`, `FAST_NOISE_LITE`, `IMAGE`, `TEXTURE_2D`, `TEXTURE_3D`, `MATERIAL`, `SKY`, `ENVIRONMENT`, `CAMERA_ATTRIBUTES` and `FONT` are kinds. `MATERIAL` accepts every Material class and declines one the previewer does not build, the same from either arrival (ADR-0041).
+A kind that **reads its files whole** (`readsFilesWhole`) takes a file's value from a loader processor through `Follow.loaded`, and decodes only a resource built into a file's text. `FONT` is one: the font processor reads a font file with its import sidecar and the fonts it names.
 _Avoid_: one decode for each origin.
 
 **Resource snapshot** (`ResourceSnapshot`, `resources/reading/read.ts`):
@@ -260,7 +270,7 @@ One consistent view of what the loader holds. Each read on it answers `loaded`, 
 _Avoid_: reading the loader's cache directly in a reader.
 
 **Snapshot host** (`describeSnapshotHost`, `resources/reading/snapshotHost.testkit.ts`):
-Code that owns snapshots for a reader: it requests and pins each file the reader's reads touched, runs the reader again when one of them loads, fails or reloads, and reports a failed file once as a **Missing resource**. The hook host is the one behind `useNodeResource`.
+Code that owns snapshots for a reader: it requests and pins each file the reader's reads touched, runs the reader again when one of them loads, fails or reloads, and reports a failed file once as a **Missing resource**. The hook host is the one behind `useNodeResource`, and `useSnapshotHost` runs any reader on it. The Control solve reads its fonts through `useSnapshotHost`.
 _Avoid_: a reader that requests, pins or reports a file itself.
 
 **UID reference**:
@@ -519,6 +529,14 @@ _Avoid_: "frame", which is a Sprite2D's `frame` of `hframes`.
 **Drawn instance** (`resources/meshes/multimesh/types.ts`):
 One of the instances a MultiMesh draws: the first `visible_instance_count`, or all of them for -1, each with its transform, its colour when `use_colors` and its custom data when `use_custom_data`.
 _Avoid_: "visible instance" for the record, which names only the count.
+
+**Canvas mesh body** (`CanvasMeshBody`, `r3f/canvasMesh/`):
+The module a Node2D mesh drawer draws through: Sprite2D, AnimatedSprite2D, Polygon2D, Line2D, MeshInstance2D, MultiMeshInstance2D and CPUParticles2D. A drawer states its texture with `useCanvasMeshTexture` and hands over its **canvas surfaces**. The body holds the texture's load state, the placeholder for a ViewportTexture in a pass cycle, the CanvasTexture hand-back to the lighting, the light read, the material colour, the defines and the one material. The tile run and the CanvasGroup rect mount its material, `CanvasSurfaceMaterial`, without the body.
+_Avoid_: "canvas mesh item", "sprite material".
+
+**Canvas surface** (`CanvasSurface`, `r3f/canvasMesh/canvasSurface.ts`):
+One geometry a canvas mesh body draws, with the one array colour its draw carries (Polygon2D `color`, Line2D `default_color`) and what its `color` attribute holds: the authored sRGB numbers or colours decoded and times an instance colour.
+_Avoid_: "part", "tint shape".
 
 **Canvas frame** (`Canvas2DStage/canvasFrame.ts`):
 The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057). It stores sRGB numbers, or linear half floats in a linear canvas colour space, which the root's copy to the drawing buffer converts to sRGB. Under `render_target_clear_mode` NEVER it takes the bytes of the target first and draws over them.

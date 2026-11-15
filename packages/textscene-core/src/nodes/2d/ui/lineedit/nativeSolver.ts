@@ -72,7 +72,7 @@ export interface LineEditField {
   minimumCharacterWidth: number;
 }
 
-export function lineEditField(items: Pick<SolveNode, 'styleBoxes' | 'constants'>): LineEditField {
+function lineEditField(items: Pick<SolveNode, 'styleBoxes' | 'constants'>): LineEditField {
   return {
     normal: requiredThemeItem(items.styleBoxes, 'normal'),
     readOnly: requiredThemeItem(items.styleBoxes, 'read_only'),
@@ -222,14 +222,14 @@ export function shapeLineEditText(
  * `style_min_size` of `LineEdit::get_minimum_size` (`line_edit.cpp:2475`): the larger of the `normal` and
  * `read_only` minimum sizes, whatever `editable` says. Each caller passes the boxes it resolved.
  */
-export function lineEditStyleMinSize({ normal, readOnly }: LineEditField): Vector2 {
+function lineEditStyleMinSize({ normal, readOnly }: LineEditField): Vector2 {
   const normalMargin = contentMarginSize(normal);
   const readOnlyMargin = contentMarginSize(readOnly);
   return { x: Math.max(normalMargin.x, readOnlyMargin.x), y: Math.max(normalMargin.y, readOnlyMargin.y) };
 }
 
 /** The text part of `LineEdit::get_minimum_size`'s width (`:2447-2451`): `minimum_character_width` ems of "W". */
-export function lineEditTextMinimumWidth(field: LineEditField, emWidthPx: number): number {
+function lineEditTextMinimumWidth(field: LineEditField, emWidthPx: number): number {
   return field.minimumCharacterWidth * emWidthPx;
 }
 

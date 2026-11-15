@@ -32,7 +32,7 @@ import { viewportPassSizes } from './targetSize';
 import { useStableVector2 } from '../../../r3f/hooks/useStableVector2';
 import { useInCanvasOverWorld } from './canvasOverWorldScope';
 import { ViewportCanvasScope } from '../../../r3f/viewportCanvasScope';
-import { viewportCanvasColorSpace } from './offscreenViewport';
+import { viewportCanvasColorSpace } from './viewportTargetOptions';
 
 // Lazy: the Control painters register on import, and a viewport with no Controls never needs them.
 const ViewportControls = lazy(() =>

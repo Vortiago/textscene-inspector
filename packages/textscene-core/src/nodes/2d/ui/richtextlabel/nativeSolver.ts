@@ -22,7 +22,6 @@ import { defaultConstant } from '../../../../godot/scene/defaultTheme/defaultThe
 import {
   clampAutowrapMode,
   shapeText,
-  glyphOffsetReachPx,
   shapedTextSizeWidthPx,
   soloLineLayout,
   startsParagraph,
@@ -30,6 +29,7 @@ import {
   type ShapeTextOptions,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { shapedLineHeightPx, type LineExtentPx } from '../../../../r3f/controls/native/text/lineExtent';
 import { justifyParagraphs } from '../../../../r3f/controls/native/text/textJustify';
 import { faceOfStyle, resolveRichTextFaces, type RichTextFaces } from './styleFaces';
 import {
@@ -40,16 +40,12 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import {
-  getUnderlinePositionPx,
-  getUnderlineThicknessPx,
-} from '../../../../r3f/controls/native/text/openSansMetrics';
-import {
-  getFontAscentPx,
-  getFontDescentPx,
   getFontTabStopsPx,
   withVariation,
   type FontMetrics,
+  type UnderlinePx,
 } from '../../../../r3f/controls/native/text/fontMetrics';
+import { NO_UNDERLINE_PX } from '../../../../r3f/controls/native/text/paragraphUnderline';
 import { resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { RichTextLabelProperties } from './types';
 import {
@@ -742,11 +738,11 @@ export interface RichTextRunPlacement {
   /** The line's left offset, per line since each aligns by its own width (`richTextHorizontalOffsetPx`). */
   lineOffsetXPx: number;
   /** The paragraph's underline position and thickness for an `[u]` run, else null. */
-  underline: RichTextUnderlineMetrics | null;
+  underline: UnderlinePx | null;
   color: Rgba;
   /** The run's outline ring, in the run's own colour space before the control tint: its size and colour. */
   outline: TextOutlineTheme;
-  /** The run's font size, px, for its glyphs. The baseline is the line's: `layout.baselineOffsetPx`. */
+  /** The run's font size, px, for its glyphs. The baseline is the line's: `layout.lines[0].ascentPx`. */
   fontSizePx: number;
   /** A single-line layout of only this run's glyphs from the line, `glyph.x` already line-relative. */
   layout: TextLayoutResult;
@@ -754,16 +750,15 @@ export interface RichTextRunPlacement {
 }
 
 /**
- * Keeps the parent's `linePitchPx` (`soloLineLayout`) and takes the face of the run's first glyph,
- * since `TextRun` picks the painter, and the shear, from `layout.fontMetrics`. `baselineOffsetPx` is
- * the line's ascent, applied once per line (`rich_text_label.cpp:1055`'s `off.y += l_ascent`),
- * so mixed sizes share it, and `soloLineLayout` grows the raster from it to the deepest descent of
- * the run's faces.
+ * Takes the face of the run's first glyph, since `TextRun` picks the painter, and the shear, from
+ * `layout.fontMetrics`. The run keeps its line's extent, images folded in: the ascent applies once
+ * per line (`rich_text_label.cpp:1055`'s `off.y += l_ascent`), so mixed sizes share it, and
+ * `soloLineLayout` grows the raster from it to the deepest descent of the run's faces.
  */
 function soloRunLayout(
   segment: RunLineSegment,
   parentLayout: TextLayoutResult,
-  lineAscentPx: number
+  { ascentPx, descentPx }: LineExtentPx
 ): TextLayoutResult {
   const { text, glyphs } = segment;
   // The right edge from the line origin, not the run's own span: the glyphs keep their line-relative
@@ -771,9 +766,8 @@ function soloRunLayout(
   const lastGlyph = glyphs.at(-1);
   const widthPx = lastGlyph ? lastGlyph.x + lastGlyph.advance : 0;
   return soloLineLayout(
-    { text, glyphs, widthPx, paragraphIndex: 0 },
+    { text, glyphs, widthPx, paragraphIndex: 0, ascentPx, descentPx },
     parentLayout,
-    lineAscentPx,
     // A segment holds a glyph at least. `faceLayouts` splits off a glyph of another face.
     glyphs[0]!.fontMetrics
   );
@@ -781,7 +775,7 @@ function soloRunLayout(
 
 /** One wrapped line's vertical metrics, recomputed per line (`text_server_adv.cpp:5486-5487`), unlike the underline's. */
 interface RichTextLineMetrics {
-  /** The line's top from the paragraph's top: the sum of the earlier lines' `ascentPx + descentPx`. */
+  /** The line's top from the text's top (`richTextLineTopsPx`). */
   topPx: number;
   /** Baseline offset from `topPx`: the max ascent of this line's fonts and images (`imageBaselineOffsetPx`). */
   ascentPx: number;
@@ -806,21 +800,40 @@ function richTextLineMetrics(
   return lineMetricsOf(attributeRunsToLines(styledRuns, layout), styledRuns, layout);
 }
 
-/**
- * `get_content_height`'s sum of each line's own ascent+descent, not `layout.heightPx`, a count
- * times one pitch that mixed sizes make wrong.
- */
-function contentHeightOf(lines: readonly RichTextLineMetrics[]): number {
-  const lastLine = lines[lines.length - 1];
-  return lastLine ? lastLine.topPx + lastLine.ascentPx + lastLine.descentPx : 0;
-}
-
 /** The height of the whole shaped text, px: what the scrollbar and `fit_content` compare against. */
 export function richTextContentHeightPx(
   styledRuns: readonly StyledTextRun[],
   layout: TextLayoutResult
 ): number {
-  return contentHeightOf(richTextLineMetrics(styledRuns, layout));
+  return richTextLineTopsPx(richTextLineMetrics(styledRuns, layout), layout).contentHeightPx;
+}
+
+/**
+ * Each line's top, and the height of the whole text. A paragraph's lines step by their bare
+ * ascent and descent (`rich_text_label.cpp:1737`, `:1894`). The next paragraph starts below
+ * `TextParagraph::get_size`, which ceils each line (`rich_text_label.cpp:2656`).
+ */
+function richTextLineTopsPx(
+  lines: readonly Pick<RichTextLineMetrics, 'ascentPx' | 'descentPx'>[],
+  layout: TextLayoutResult
+): { topsPx: number[]; contentHeightPx: number } {
+  const spacingPx = layout.lineSpacingPx;
+  const topsPx: number[] = [];
+  let paragraphTopPx = 0;
+  let inParagraphPx = 0;
+  let paragraphHeightPx = 0;
+  lines.forEach((line, lineIndex) => {
+    const paragraphIndex = layout.lines[lineIndex]!.paragraphIndex;
+    if (lineIndex > 0 && paragraphIndex !== layout.lines[lineIndex - 1]!.paragraphIndex) {
+      paragraphTopPx += paragraphHeightPx;
+      inParagraphPx = 0;
+      paragraphHeightPx = 0;
+    }
+    topsPx.push(paragraphTopPx + inParagraphPx);
+    inParagraphPx += line.ascentPx + line.descentPx + spacingPx;
+    paragraphHeightPx += shapedLineHeightPx(line) + spacingPx;
+  });
+  return { topsPx, contentHeightPx: paragraphTopPx + paragraphHeightPx };
 }
 
 /**
@@ -848,44 +861,18 @@ function lineMetricsOf(
   styledRuns: readonly StyledTextRun[],
   layout: TextLayoutResult
 ): RichTextLineMetrics[] {
-  const paragraphAscentPx = layout.baselineOffsetPx;
-  const paragraphDescentPx = layout.linePitchPx - layout.baselineOffsetPx;
   const zeroHeightParagraphs = zeroHeightParagraphsOf(styledRuns);
 
-  let topPx = 0;
-  return perLine.map((segments, lineIndex) => {
+  const extents = perLine.map((segments, lineIndex) => {
     // An empty text buffer has no ascent or descent (measured in Godot 4.6.3).
     if (zeroHeightParagraphs.has(layout.lines[lineIndex]!.paragraphIndex)) {
-      return { topPx, ascentPx: 0, descentPx: 0, textAscentPx: 0, textDescentPx: 0 };
+      return { ascentPx: 0, descentPx: 0, textAscentPx: 0, textDescentPx: 0 };
     }
     // Text first: `_realign` measures every image against these values, and an
     // image adds nothing to them.
-    let ascentPx = 0;
-    let descentPx = 0;
-    for (const segment of segments) {
-      const run = styledRuns[segment.runIndex]!;
-      if (run.image) continue;
-      // A glyph may draw in a face of the **Fallback chain**, so each glyph's face counts. A run of
-      // glyphs in one face measures it once.
-      let lastFace: FontMetrics | undefined;
-      for (const { fontMetrics: face } of segment.glyphs) {
-        if (face === lastFace) continue;
-        lastFace = face;
-        ascentPx = Math.max(ascentPx, getFontAscentPx(face, run.fontSizePx));
-        descentPx = Math.max(descentPx, getFontDescentPx(face, run.fontSizePx));
-      }
-      // A glyph offset past the font's line moves it (`text_server_adv.cpp:5161-5162`).
-      const { abovePx, belowPx } = glyphOffsetReachPx(segment.glyphs);
-      ascentPx = Math.max(ascentPx, abovePx);
-      descentPx = Math.max(descentPx, belowPx);
-    }
-    // A blank line shapes its break in the paragraph font, so it keeps that height.
-    if (segments.length === 0) {
-      ascentPx = paragraphAscentPx;
-      descentPx = paragraphDescentPx;
-    }
-    const textAscentPx = ascentPx;
-    const textDescentPx = descentPx;
+    const { ascentPx: textAscentPx, descentPx: textDescentPx } = layout.lines[lineIndex]!;
+    let ascentPx = textAscentPx;
+    let descentPx = textDescentPx;
 
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;
@@ -900,55 +887,10 @@ function lineMetricsOf(
       descentPx = Math.max(descentPx, yOffset + run.image.sizePx.y);
     }
 
-    const metrics = { topPx, ascentPx, descentPx, textAscentPx, textDescentPx };
-    // `shapeText` carries `line_separation` in its own pitch, so these tops are a bare sum.
-    topPx += ascentPx + descentPx;
-    return metrics;
+    return { ascentPx, descentPx, textAscentPx, textDescentPx };
   });
-}
-
-/** The paragraph's `[u]`/`[s]` stroke geometry, `sd->upos`/`sd->uthk`, before `rich_text_label.cpp:1243`'s 1px floor. */
-interface RichTextUnderlineMetrics {
-  /** Downward offset from the line's baseline to the stroke's CENTRE, px (`shaped_text_get_underline_position`). */
-  positionPx: number;
-  /** The font's stroke thickness, px, unfloored (`shaped_text_get_underline_thickness`): `underlineRectPx` applies `MAX(1.0, uth * base_scale)`. */
-  thicknessPx: number;
-}
-
-/**
- * Each paragraph's underline position and thickness, by the source index of a character in it: a
- * max over the sizes of the paragraph's font spans. `_shape_substr` (`text_server_adv.cpp:5310-5311`)
- * copies the paragraph's `upos`/`uthk` into each line that `rich_text_label.cpp:1053-1054` reads,
- * and `:7174-7175` accumulates them from the spans' fonts only, so an `[img]` adds nothing.
- */
-function richTextUnderlineMetrics(
-  styledRuns: readonly StyledTextRun[]
-): (sourceIndex: number) => RichTextUnderlineMetrics {
-  const paragraphs: RichTextUnderlineMetrics[] = [{ positionPx: 0, thicknessPx: 0 }];
-  const paragraphStarts: number[] = [0];
-  let runStart = 0;
-  for (const run of styledRuns) {
-    let segmentStart = runStart;
-    run.text.split('\n').forEach((segment, i) => {
-      if (i > 0) {
-        paragraphStarts.push(segmentStart);
-        paragraphs.push({ positionPx: 0, thicknessPx: 0 });
-      }
-      if (segment.length > 0 && !run.image)
-        widenUnderline(paragraphs[paragraphs.length - 1]!, run.fontSizePx);
-      segmentStart += segment.length + 1;
-    });
-    runStart += run.text.length;
-  }
-  return (index) => paragraphs[countAtOrBelow(paragraphStarts, index) - 1]!;
-}
-
-/** Widens `metrics` to a span at `fontSizePx`. Both scale monotonically with the size. */
-function widenUnderline(metrics: RichTextUnderlineMetrics, fontSizePx: number): void {
-  // Open Sans's `post` table (`openSansMetrics.ts`): `fontMetrics.ts` has no
-  // underline fields, so a scene font keeps Open Sans proportions.
-  metrics.positionPx = Math.max(metrics.positionPx, getUnderlinePositionPx(fontSizePx));
-  metrics.thicknessPx = Math.max(metrics.thicknessPx, getUnderlineThicknessPx(fontSizePx));
+  const { topsPx } = richTextLineTopsPx(extents, layout);
+  return extents.map((extent, lineIndex) => ({ topPx: topsPx[lineIndex]!, ...extent }));
 }
 
 /** One line's share of one style run. */
@@ -1129,7 +1071,6 @@ export function layoutRichTextRuns(
   const boxWidthPx = alignment?.boxWidthPx ?? 0;
   // Every line of a paragraph aligns as its first item does (`rich_text_label.cpp:598-599`).
   const runAt = runAtFromRuns(styledRuns);
-  const underlineAt = richTextUnderlineMetrics(styledRuns);
   const paragraphRunOf = (lineIndex: number): StyledTextRun | undefined =>
     runAt(unfittedLayout.lines[lineIndex]?.paragraphStart ?? 0);
   const alignmentOfLine = (lineIndex: number): number =>
@@ -1149,7 +1090,7 @@ export function layoutRichTextRuns(
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);
 
   const { vbeginPx, vsepPx } = richTextVerticalOffsets(
-    alignment?.fullText?.heightPx ?? contentHeightOf(lineMetrics),
+    alignment?.fullText?.heightPx ?? richTextLineTopsPx(lineMetrics, layout).contentHeightPx,
     alignment?.boxHeightPx ?? 0,
     alignment?.verticalAlignment,
     alignment?.fullText?.lineCount ?? layout.lines.length
@@ -1205,11 +1146,11 @@ export function layoutRichTextRuns(
         lineIndex,
         lineTopPx,
         lineOffsetXPx,
-        underline: run.underline ? underlineAt(layout.lines[lineIndex]?.paragraphStart ?? 0) : null,
+        underline: run.underline ? (line.underline ?? NO_UNDERLINE_PX) : null,
         color: run.color,
         outline: run.outline,
         fontSizePx: run.fontSizePx,
-        layout: soloRunLayout(segment, layout, ascentPx),
+        layout: soloRunLayout(segment, layout, { ascentPx, descentPx }),
         image: run.image
           ? {
               spec: run.image.spec,
@@ -1254,7 +1195,7 @@ interface UnderlineRectPx {
 export function underlineRectPx(
   glyphs: readonly GlyphPlacement[],
   lineAscentPx: number,
-  metrics: RichTextUnderlineMetrics,
+  metrics: UnderlinePx,
   baseScale: number
 ): UnderlineRectPx | null {
   if (glyphs.length === 0) return null;

@@ -25,12 +25,15 @@ import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { MissingResourcesProvider } from '../../../r3f/contexts/MissingResourcesContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode, TscnInternalResource } from '../../../parser/types';
+import { subResource } from '../../../testing/subResource';
 
 const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 const TEX = 'res://ball.png';
+const NORMAL_MAP = 'res://ball_normal.png';
 const nodeHeading = { type: 'node' as const, attributes: { type: 'CPUParticles2D', name: 'Fx' } };
 
 /** Pinned so every pose below is a pure function of the fixture text. */
@@ -63,9 +66,11 @@ async function render(
     texture?: THREE.Texture;
     internalResources?: TscnInternalResource[];
     space?: CanvasColorSpace;
+    onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
+    fake?: ReturnType<typeof createFakeResourceLoader>;
   } = {}
 ) {
-  const fake = createFakeResourceLoader();
+  const fake = options.fake ?? createFakeResourceLoader();
   if (options.texture) {
     fake.textures.seed(TEX, options.texture);
   } else if (options.seedTexture !== false) {
@@ -80,18 +85,23 @@ async function render(
   }
 
   return ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace="2d">
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={options.internalResources ?? []}
-          externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
-        >
-          <CanvasColorSpaceProvider value={options.space ?? canvasColorSpaceOf(false)}>
-            <CPUParticles2D node={rootNode} />
-          </CanvasColorSpaceProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <MissingResourcesProvider onMissingPathsChange={options.onMissingPathsChange}>
+      <CanvasWorkspaceProvider workspace="2d">
+        <ResourceLoaderProvider loader={fake.loader}>
+          <SceneResourcesProvider
+            internalResources={options.internalResources ?? []}
+            externalResources={[
+              { id: '1', type: 'Texture2D', path: TEX },
+              { id: '2', type: 'Texture2D', path: NORMAL_MAP },
+            ]}
+          >
+            <CanvasColorSpaceProvider value={options.space ?? canvasColorSpaceOf(false)}>
+              <CPUParticles2D node={rootNode} />
+            </CanvasColorSpaceProvider>
+          </SceneResourcesProvider>
+        </ResourceLoaderProvider>
+      </CanvasWorkspaceProvider>
+    </MissingResourcesProvider>
   );
 }
 
@@ -99,6 +109,19 @@ type Rendered = Awaited<ReturnType<typeof render>>;
 
 function particleMesh(r: Rendered): THREE.Mesh | undefined {
   return r.scene.findAllByType('Mesh').map((o) => o.instance as THREE.Mesh)[0];
+}
+
+/** The width and height of each particle's quad, four vertices apiece, as `WxH`. */
+function quadExtents(position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute): Set<string> {
+  const extents = new Set<string>();
+  for (let first = 0; first < position.count; first += 4) {
+    const xs = [0, 1, 2, 3].map((corner) => position.getX(first + corner));
+    const ys = [0, 1, 2, 3].map((corner) => position.getY(first + corner));
+    const width = Math.max(...xs) - Math.min(...xs);
+    const height = Math.max(...ys) - Math.min(...ys);
+    extents.add(`${+width.toFixed(4)}x${+height.toFixed(4)}`);
+  }
+  return extents;
 }
 
 // The component loads this chunk lazily, so it lands before the first render.
@@ -176,6 +199,40 @@ describe('<CPUParticles2D>', () => {
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
+  it('lists a texture that failed in the Resources panel when it is not emitting', async () => {
+    let missing: readonly string[] = [];
+    await render(node({ emitting: 'false' }), {
+      seedTexture: false,
+      onMissingPathsChange: (paths) => (missing = [...paths]),
+    });
+    expect(missing).toEqual([TEX]);
+  });
+
+  describe('with a normal-mapped CanvasTexture', () => {
+    const wrapper = subResource('CanvasTexture', 'CanvasTexture_1', {
+      diffuse_texture: 'ExtResource("1")',
+      normal_texture: 'ExtResource("2")',
+    });
+
+    async function normalMapPins(emitting: string) {
+      const fake = createFakeResourceLoader();
+      fake.textures.seed(NORMAL_MAP, new THREE.Texture());
+      await render(node({ emitting, texture: 'SubResource("CanvasTexture_1")' }), {
+        fake,
+        internalResources: [wrapper],
+      });
+      return fake.textures.pinCounts.get(NORMAL_MAP) ?? 0;
+    }
+
+    it('loads the normal map while it emits', async () => {
+      expect(await normalMapPins('true')).toBeGreaterThan(0);
+    });
+
+    it('loads no normal map while it is not emitting', async () => {
+      expect(await normalMapPins('false')).toBe(0);
+    });
+  });
+
   it('still positions its children when it is not emitting', async () => {
     const child: TscnNode = {
       rawProperties: {},
@@ -189,12 +246,13 @@ describe('<CPUParticles2D>', () => {
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
-  it('shows one placeholder, not one per particle, for a texture that failed', async () => {
-    const renderer = await render(node({ amount: '32' }), { seedTexture: false });
-    const meshes = renderer.scene.findAllByType('Mesh');
-    expect(meshes).toHaveLength(1);
-    const material = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
-    expect(material.color.getHexString()).toBe('ff00ff');
+  // Godot's loader leaves the texture null, and the multimesh draws with white (`cpu_particles_2d.cpp:1288-1291`).
+  it('draws white 1 by 1 particles for a texture that failed', async () => {
+    const mesh = particleMesh(await render(node({ amount: '32' }), { seedTexture: false }))!;
+    const material = mesh.material as THREE.MeshBasicMaterial;
+    expect(material.map).toBeNull();
+    expect(material.color.getHexString()).toBe('ffffff');
+    expect(quadExtents(mesh.geometry.getAttribute('position'))).toEqual(new Set(['1x1']));
   });
 
   it('applies the CanvasItem modulate as the material tint', async () => {

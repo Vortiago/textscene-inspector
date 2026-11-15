@@ -8,6 +8,7 @@ import type { ScrollBarPairBoxes } from '../shared/scrollBarSolver';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   shapeTextEditLines,
+  textEditRowHeightPx,
   textEditRowStats,
   textEditWrapWidthPx,
   type TextEditLineLayout,
@@ -21,7 +22,8 @@ interface TextEditRowsInput {
   /** The control's `get_size()`. */
   size: Vector2;
   margins: StyleBoxFlatData['contentMargin'];
-  rowHeightPx: number;
+  /** The `line_spacing` constant, which each row adds under its text. */
+  lineSpacingPx: number;
   gutterBandWidthPx: number;
   minimapWidthPx: number;
   drawMinimap: boolean | undefined;
@@ -38,6 +40,8 @@ export interface TextEditRows {
   lineLayouts: TextEditLineLayout[];
   /** The `wrap_at_column` the rows were shaped at. */
   wrapWidthPx: number;
+  /** The pitch of every row (`textEditRowHeightPx`), which the tallest of these rows can grow. */
+  rowHeightPx: number;
   scrollBars: TextEditScrollBars;
 }
 
@@ -55,10 +59,12 @@ export function solveTextEditRows(input: TextEditRowsInput): TextEditRows {
     shapeTextEditLines(input.lines, { ...input.shape, wrapWidthPx, placeholder: input.isPlaceholder });
   const rowsAt = (wrapWidthPx: number, lineLayouts: TextEditLineLayout[]) => {
     const { totalRows, widestRowPx } = textEditRowStats(lineLayouts);
+    const { fontMetrics, fontSizePx } = input.shape;
+    const rowHeightPx = textEditRowHeightPx(lineLayouts, fontMetrics, fontSizePx, input.lineSpacingPx);
     const scrollBars = textEditScrollBars({
       size: input.size,
       margins: input.margins,
-      rowHeightPx: input.rowHeightPx,
+      rowHeightPx,
       totalRows,
       widestRowPx,
       gutterBandWidthPx: input.gutterBandWidthPx,
@@ -68,7 +74,7 @@ export function solveTextEditRows(input: TextEditRowsInput): TextEditRows {
       rtl: input.rtl,
       scrollBarBoxes: input.scrollBarBoxes,
     });
-    return { lineLayouts, wrapWidthPx, scrollBars };
+    return { lineLayouts, wrapWidthPx, rowHeightPx, scrollBars };
   };
 
   const plainWidthPx = wrapWidthFor(0);

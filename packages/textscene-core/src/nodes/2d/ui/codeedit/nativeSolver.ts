@@ -14,8 +14,10 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   resolveTextEditStyleState,
   textEditTextTheme,
-  textEditRowHeightPx,
+  textEditUnwrappedRowHeightPx,
   textEditMinimumSizeWith,
+  textEditDrawnLines,
+  textEditTabStopsPx,
   TEXT_EDIT_THEME_FONT_KEY,
   textEditLineSpacingPx,
 } from '../textedit/nativeSolver';
@@ -25,6 +27,8 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { CodeEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 
 /** `line_numbers_min_digits`'s own default (`code_edit.h:114`). */
 const CODE_EDIT_LINE_NUMBERS_MIN_DIGITS_DEFAULT = 3;
@@ -125,7 +129,15 @@ function codeEditFontMetrics(
   const state = resolveTextEditStyleState(props.editable);
   const { fontSizePx } = textEditTextTheme(n, props, state);
   const fontMetrics = resolveNodeFontMetrics(n, TEXT_EDIT_THEME_FONT_KEY);
-  const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, textEditLineSpacingPx(n));
+  const { lines } = textEditDrawnLines(props.text, props.placeholderText);
+  const shape = {
+    fontSizePx,
+    fontMetrics,
+    tabStopsPx: textEditTabStopsPx(props.indentSize, fontMetrics, fontSizePx),
+    preserveControl: props.drawControlChars,
+    bidi: controlBidiOptions(props, n),
+  };
+  const rowHeightPx = textEditUnwrappedRowHeightPx(lines, shape, textEditLineSpacingPx(n));
   const charWidth0Px = ctx.measureText ? ctx.measureText('0', fontSizePx, 0, fontMetrics).x : 0;
   return { rowHeightPx, charWidth0Px };
 }
@@ -183,6 +195,8 @@ export const codeEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as CodeEditProperties;
   const state = resolveTextEditStyleState(props.editable);
   const styleBox = requiredThemeItem(n.styleBoxes, state);
+  // Only a fitted size reads the gutter band, so a CodeEdit that fits nothing shapes no line here.
+  if (!props.fitContentWidth && !props.fitContentHeight) return contentMarginSize(styleBox);
   const { rowHeightPx, charWidth0Px } = codeEditFontMetrics(n, ctx, props);
   const lineCount = Math.max(1, (props.text ?? '').split('\n').length);
   const band = codeEditGutterBand(props, rowHeightPx, charWidth0Px, lineCount);

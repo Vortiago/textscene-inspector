@@ -9,7 +9,7 @@
 
 import * as THREE from 'three';
 import { probeCaptureOf } from '../reflectionProbe/captureCameras.js';
-import { drawOffscreen } from '../offscreen.js';
+import { drawOffscreen } from '../offscreen/draw.js';
 import {
   createFirstOpaqueSentinel,
   createLastOpaqueSentinel,

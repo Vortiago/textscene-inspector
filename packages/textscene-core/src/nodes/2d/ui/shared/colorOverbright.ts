@@ -8,6 +8,14 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
+import { COLOR_PICKER_OVERBRIGHT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
+
 export function isColorOverbright(color: { r: number; g: number; b: number }): boolean {
   return color.r > 1 || color.g > 1 || color.b > 1;
+}
+
+/** The side of the vendored `overbright_indicator` icon at the theme `scale`. */
+export function overbrightIconSize(scale: number): number {
+  return scaledIconSize(COLOR_PICKER_OVERBRIGHT_ICON_SIZE, scale);
 }

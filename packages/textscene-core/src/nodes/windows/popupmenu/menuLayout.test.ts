@@ -194,9 +194,23 @@ describe('a size line written below the items', () => {
     expect(popupMenuLoadedMinimumSize(iconBelow, ctx)).toEqual(popupMenuLoadedMinimumSize(iconless, ctx));
   });
 
-  it('does not clamp to the items when the menu does not wrap its controls', () => {
-    const unwrapped = menu(many(30), {}, false, { ...size, wrap_controls: 'false' });
+  it('does not clamp to the items when the menu stops wrapping its controls before the size line', () => {
+    const unwrapped = menu(many(30), {}, false, { wrap_controls: 'false', ...size });
     expect(sizeOf(unwrapped)).toEqual({ x: 300, y: 200 });
+  });
+
+  it('clamps to the items when the menu stops wrapping its controls after the size line', () => {
+    const clamped = menu(many(30), {}, false, { ...size, wrap_controls: 'false' });
+    expect(sizeOf(clamped).y).toBe(contentsMinimum(clamped, unlimited).y);
+  });
+
+  it('reads the scroll bar 0 wide at load, as no layout has sized it', () => {
+    // Godot 4.6.3: ten items, then `size`, gives 185 wide with wrap_controls = false after it and 193 without.
+    const clamped = menu(text('Item number 0 long'), {}, false, {
+      size: 'Vector2i(30, 20)',
+      wrap_controls: 'false',
+    });
+    expect(contentsMinimum(clamped).x - sizeOf(clamped).x).toBe(8);
   });
 });
 

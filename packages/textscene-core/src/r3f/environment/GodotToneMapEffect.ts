@@ -27,7 +27,7 @@ import { LUMINANCE_UNIFORM } from '../../resources/environment/godotLuminance';
 import type { ViewSampler } from '../../resources/textures/textureView';
 import { defaultWhiteTexture } from '../materials/defaultWhiteTexture';
 import { drawFullScreen, fullScreenPass } from '../fullScreenPass';
-import { drawOffscreen } from '../offscreen';
+import { drawOffscreen } from '../offscreen/draw';
 import { createPassTarget } from './passTarget';
 import { LuminanceReduction } from './LuminanceReduction';
 

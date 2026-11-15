@@ -13,6 +13,13 @@ LinkButton is a hyperlink-style button that opens `uri` when pressed. The previe
 never navigates. It draws the label text with no StyleBox chrome, and a solid underline
 stroke when `underline` asks for it at the node's draw state.
 
+The underline takes FreeType's position and thickness of each font the label shapes in. It takes
+the largest of them, over the theme font and each fallback it tries (`text_server_adv.cpp:7174-7175`).
+The text and the underline sit at the line's ascent: the largest ascent of the fonts its glyphs
+draw in. A glyph from a taller fallback lowers the line (`:5161`). A `FontVariation` instance
+keeps the ascent and the underline of the default instance, as Godot reads them before it sets the
+axes (`:1515-1518`, `:1948`).
+
 ## Linting
 
 <!-- lint:begin LinkButton -->
@@ -46,17 +53,11 @@ Strict parsing format-checks these `LinkButton` properties, plus 10 inherited fr
 and override (`link_button.cpp:35-48`).
 
 LinkButton draws the theme text outline, `font_outline_color` and `outline_size`, as Godot
-does (`link_button.cpp:294-301`). A ring of `outline_size / 4` px sits under the fill. No ring
-draws at an `outline_size` of 0 or a zero alpha. A trimmed AUTO line whose paragraph resolves right-to-left trims its ring by that
+does (`link_button.cpp:294-301`). A ring of `outline_size / 4` px sits under the fill, and the
+underline draws over both (`:304-313`). No ring draws at an `outline_size` of 0 or a zero alpha. A trimmed AUTO line whose paragraph resolves right-to-left trims its ring by that
 direction, with the ellipsis first. Its fill draws the glyphs that trim drops, from the visual
 left, as Godot's set-direction draw does (`text_server.cpp:1740-1935`). A line set RTL draws
 its ring and its fill alike.
 
 A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
 outline ring (ADR-0064).
-
-## Known limitations
-
-- **Approximated** A `theme_override_fonts/font` scene font takes its underline position
-  and thickness from the vendored Open Sans metrics, because no scene font carries baked
-  underline data.

@@ -13,7 +13,7 @@ import { ruleInt } from '../../../godot/variant/intSlots.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { formatReal, storedReal } from '../../../godot/math/real.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
-import type { Vector2 } from '../../../godot/math/vector.js';
+import { type Vector2, vector2Equals } from '../../../godot/math/vector.js';
 import {
   clampLimitSize,
   ContentScaleStretch,
@@ -51,8 +51,6 @@ const arms = {
 } as const satisfies RuleArms<string>;
 
 const formatSize = (size: Vector2): string => `Vector2i(${size.x}, ${size.y})`;
-const sameSize = (a: Vector2, b: Vector2): boolean => a.x === b.x && a.y === b.y;
-
 function checkMaxBelowMin(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
   if (rawProps.max_size === undefined) return [];
 
@@ -108,7 +106,7 @@ function checkSizeClamped(node: RuleContext['node'], rawProps: Record<string, st
   const { written, loaded } = replayed;
   // A negative component is the validator's error on this same clamp, so the floor at 0
   // is not reported twice.
-  if (sameSize(loaded, clampLimitSize(written))) return [];
+  if (vector2Equals(loaded, clampLimitSize(written))) return [];
   return [
     armDiagnostic(
       arms.sizeClampedByLimits,

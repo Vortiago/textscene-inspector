@@ -79,6 +79,12 @@ the axes on FreeType and HarfBuzz (`text_server_adv.cpp:1915-1950`). The glyphs 
 at the instance. They follow the `fvar`, `avar`, `gvar` and `cvar` tables. Each advance follows `HVAR`, or the
 phantom points that `gvar` moves in a font without `HVAR`. The pair kerning follows the `GPOS` `kern` feature
 with its deltas at the instance. A `FontVariation` over another takes its own axis values alone (`font.cpp:3120-3131`).
+The ascent, the descent and the underline stay those of the default instance, as Godot reads them before it
+sets the axes (`text_server_adv.cpp:1515-1518`, `:1948`).
+
+`[u]` draws at the largest underline position and thickness of the fonts a paragraph shapes in. These are each
+span's font and each fallback tried up to the one that draws a glyph (`text_server_adv.cpp:7174-7175`, `:7189-7190`). FreeType
+reads them from the `post` table of each font (`sfobjs.c:1421-1426`).
 `self_modulate` tints the text, the images and the rules. The scroll bar draws without it (`rich_text_label.cpp:8208`).
 
 ## Linting

@@ -1,6 +1,6 @@
 /**
- * `ColorPickerShapeRectangle` (`scene/gui/color_picker_shape.cpp:395-471`): the SV square, and the
- * `color_hue` rainbow in `hue_slider`.
+ * `ColorPickerShapeRectangle` (`scene/gui/color_picker_shape.cpp:395-471`): `sv_square`, which draws
+ * the SV square and its cursor, and `hue_slider`, which draws the `color_hue` rainbow.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -9,23 +9,37 @@
  */
 import { hsvToRgb, inverted } from '../../../../../godot/math/color';
 import { COLOR_HUE_STOPS } from '../svGradient';
-import { rectCursorCentre, sliderLineY, type ShapeVariant } from './shapeDrawing';
-import { RECTANGLE_LAYOUT, type SliderRowLayout } from './shapeRowLayout';
+import { rectCursorCentre, shapeDrawing, sliderLineY, type ShapeVariant } from './shapeDrawing';
 
-export const HSV_RECTANGLE: ShapeVariant<SliderRowLayout> = {
+export const HSV_RECTANGLE: ShapeVariant = {
   icon: 'shape_rect',
-  layout: RECTANGLE_LAYOUT,
-  draw({ area, slider }, { hsv }) {
-    return {
-      fill: null,
-      svSquare: { rect: area, hue: hsv.h },
-      cursors: [{ centre: rectCursorCentre(area, hsv.s, 1 - hsv.v), hasBackground: true }],
-      slider: {
-        rect: slider,
-        stops: COLOR_HUE_STOPS,
-        lineY: sliderLineY(slider.h, hsv.h),
-        lineColor: inverted(hsvToRgb(hsv.h, 1, 1)),
-      },
-    };
-  },
+  controls: [
+    {
+      // `_sv_square_draw` (`:417-419`).
+      name: 'sv_square',
+      type: 'Control',
+      minimum: 'area',
+      isExpanding: true,
+      draw: (rect, { hsv }) =>
+        shapeDrawing({
+          svSquare: { rect, hue: hsv.h },
+          cursors: [{ centre: rectCursorCentre(rect, hsv.s, 1 - hsv.v), hasBackground: true }],
+        }),
+    },
+    {
+      // `_hue_slider_draw` (`:421-434`).
+      name: 'hue_slider',
+      type: 'Control',
+      minimum: 'slider',
+      draw: (rect, { hsv }) =>
+        shapeDrawing({
+          slider: {
+            rect,
+            stops: COLOR_HUE_STOPS,
+            lineY: sliderLineY(rect.h, hsv.h),
+            lineColor: inverted(hsvToRgb(hsv.h, 1, 1)),
+          },
+        }),
+    },
+  ],
 };

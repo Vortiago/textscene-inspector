@@ -25,6 +25,20 @@ describe('collectYSortedItems', () => {
     expect(items[1]!.liftedPast).toEqual([layer]);
   });
 
+  it("sorts a scene tile's instance on the pose of its placed root in the layer", () => {
+    const tile = {
+      ...node('@SceneTile@2_1', 'Node', {}),
+      isUnowned: true,
+      placedPose: { a: 1, b: 0, c: 0, d: 1, tx: 85, ty: 51 },
+    };
+    const layer = node('Ground', 'TileMapLayer', { y_sort_enabled: true, position: { x: 0, y: 40 } }, [tile]);
+    const items = collectYSortedItems(root([layer]), Y_SORT_ROOT, 0);
+    expect(items.map((item) => [item.node?.name, item.sortY])).toEqual([
+      ['Ground', 40],
+      ['@SceneTile@2_1', 40 + 51],
+    ]);
+  });
+
   it('gives a Node3D child the sort y of its parent, not the NaN of its Vector3 rotation', () => {
     const marker = node('Marker', 'Node3D', {
       position: { x: 0, y: 7, z: 0 },

@@ -31,7 +31,7 @@ import {
   isTextWidthClipped,
   overrunFlagsForBehavior,
   trimLayoutToWidth,
-  type TextBufferTrimOptions,
+  type OverrunTrimOptions,
   type TextClipProperties,
 } from './text/textOverrun';
 import type { TextBidiOptions } from './text/textBidiOptions';
@@ -452,49 +452,6 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
 }
 
 /**
- * The icon rect of a Button with an icon and no text, at `iconAlignment` (LEFT is the default, swapped
- * to the trailing edge in an RTL layout) and the default `vertical_icon_alignment` (CENTER), local to the
- * button. Null for an empty icon.
- */
-function iconOnlyButtonIconRect(
-  rectSize: Vector2,
-  styleMargin: ButtonContentInput['styleMargin'],
-  iconSize: Vector2,
-  rtl: boolean,
-  iconAlignment: number = H_LEFT
-): Rect2 | null {
-  const { icon } = layoutButtonContent({
-    rectSize,
-    styleMargin,
-    hSeparation: 0,
-    iconMaxWidth: 0,
-    textAlignment: H_CENTER,
-    iconAlignment,
-    verticalIconAlignment: V_CENTER,
-    expandIcon: false,
-    iconNaturalSize: iconSize,
-    hasText: false,
-    textNaturalSize: { x: 0, y: 0 },
-    isTextRtl: false,
-    isClipped: false,
-    rtl,
-  });
-  return icon?.rect ?? null;
-}
-
-/** `iconOnlyButtonIconRect` for a button at `box`, in the coordinates `box` is in. */
-export function iconOnlyButtonIconRectIn(
-  box: Rect2,
-  styleMargin: ButtonContentInput['styleMargin'],
-  iconSize: Vector2,
-  rtl: boolean,
-  iconAlignment?: number
-): Rect2 | null {
-  const local = iconOnlyButtonIconRect({ x: box.w, y: box.h }, styleMargin, iconSize, rtl, iconAlignment);
-  return local && { ...local, x: box.x + local.x, y: box.y + local.y };
-}
-
-/**
  * The shaped text size `layoutButtonContent` aligns against: the ceiled width, not the raw pen advance
  * (`button.cpp:343,349` read the same `text_buf->get_size()` as the minimum size). The height needs no
  * ceil: the line pitch sums independently ceiled ascent and descent and an integral theme spacing.
@@ -599,7 +556,7 @@ export function buttonDrawnLabel(
 }
 
 /** What {@link trimButtonLabel} trims with, beyond the layout and the box. */
-interface ButtonLabelTrimOptions extends Omit<TextBufferTrimOptions, 'fontMetrics'> {
+interface ButtonLabelTrimOptions extends Omit<OverrunTrimOptions, 'fontMetrics'> {
   /** The label wraps: Button hides no line, so `TextParagraph::_shape_lines` trims no row of it. */
   isWrapped: boolean;
 }
@@ -647,7 +604,7 @@ interface ButtonContentSizeInput {
  * The text and icon terms of `Button::get_minimum_size_for_text_and_icon` (`button.cpp:492-523`),
  * without the stylebox margin, for any control that draws a Button.
  */
-export function buttonContentSize(input: ButtonContentSizeInput): Vector2 {
+function buttonContentSize(input: ButtonContentSizeInput): Vector2 {
   const { textSize, lineHeightPx, hasText, iconSize, iconAlignment, verticalIconAlignment, hSeparation } =
     input;
   const isVerticallyCentred = verticalIconAlignment === VerticalAlignment.VERTICAL_ALIGNMENT_CENTER;
@@ -690,7 +647,7 @@ export function buttonContentMinimumSize(
   label: TextLayoutResult | null,
   props: TextClipProperties & ButtonWrapProperties
 ): Vector2 {
-  return minimumSizeOfText(facts, labelMinimumTextSize(label, props), label?.linePitchPx ?? 0);
+  return minimumSizeOfText(facts, labelMinimumTextSize(label, props), label?.fontHeightPx ?? 0);
 }
 
 /**

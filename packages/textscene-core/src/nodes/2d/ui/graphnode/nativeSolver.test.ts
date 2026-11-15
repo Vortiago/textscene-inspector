@@ -17,7 +17,13 @@ import { graphNodeDrawRows, rightPortX } from './nativeSolver';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties } from './types';
 import { SizeFlags } from '../../../../godot/scene/control';
-import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
+import {
+  createSolveContext,
+  normalizeContainerLayoutResult,
+} from '../../../../r3f/controls/native/controlRectSolver';
+import { measureText } from '../../../../r3f/controls/native/text/measurer';
+import '../../../../parser/TscnParser';
+import '../../../../r3f/controls/index';
 
 const graphNodeLayout = controlSolverRegistry.containerLayout('GraphNode')!;
 const graphNodeMinimumSize = controlSolverRegistry.minimumSize('GraphNode')!;
@@ -62,11 +68,7 @@ function graphNode(
 }
 
 function ctx(): SolveContext {
-  return {
-    theme: nativeTheme(1),
-    measureText: null,
-    combinedMinimumSize: (n) => (n.node.properties as ControlProperties).customMinimumSize ?? { x: 0, y: 0 },
-  };
+  return createSolveContext(nativeTheme(1), measureText);
 }
 
 /** A fully-populated `StyleBoxFlatData` with only `contentMargin` set: for a `theme_override_styles/slot` fixture. */
@@ -144,6 +146,22 @@ describe('graphNodeLayout (graph_node.cpp:153-293)', () => {
       graphNodeLayout(n, [{ node: child, minSize: { x: 50, y: 20 } }], { x: 0, y: 0, w: 200, h: 100 }, ctx())
     );
     expect(rects.get('c')).toEqual({ x: 18, y: 43, w: 164, h: 20 });
+  });
+
+  it('keeps each row in whole pixels: _resort stores its sizes and offsets in ints (graph_node.cpp:170-252)', () => {
+    const child = leaf('c', { customMinimumSize: { x: 50, y: 20.4 } });
+    const panel = marginBox({ left: 18, top: 12.5, right: 18, bottom: 12 });
+    const n = graphNode('N', {}, [child], { panel });
+    const rects = asMap(
+      graphNodeLayout(
+        n,
+        [{ node: child, minSize: { x: 50, y: 20.4 } }],
+        { x: 0, y: 0, w: 200, h: 100 },
+        ctx()
+      )
+    );
+    // ofs_y = int(12.5 + 23 + 8) = 43, and the row is `Size2i` high: int(20.4) = 20.
+    expect(rects.get('c')).toMatchObject({ y: 43, h: 20 });
   });
 
   it('a SHRINK child (flags 0) shrinks to its own minimum at the row origin', () => {
