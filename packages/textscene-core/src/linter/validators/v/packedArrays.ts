@@ -344,7 +344,7 @@ export const packedArrayCombinators = {
         if (literal.body === '' || literal.body.startsWith('"')) return null;
         const bad = badIntElement(name, key, line, literal.body, codes, 'uint8');
         return bad.error ?? bad.truncated;
-      }, 'PackedByteArray(…), its base64 body PackedByteArray("…"), or […]'),
+      }, 'PackedByteArray(…), its base64 body PackedByteArray("…"), Array[int]([…]) or […]'),
       'uint8'
     );
   },
