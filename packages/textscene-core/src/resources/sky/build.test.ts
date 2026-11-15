@@ -7,7 +7,7 @@ import { testRenderer } from '../../testing/recordingWebGL';
 import { debandingDrawnBy } from './skyLayers.testkit';
 import { publishLiveTargets } from '../../r3f/liveTargets';
 import { publishedCanvasTarget } from '../../r3f/liveTargets.testkit';
-import { createCanvasTarget } from '../../nodes/viewport/subviewport/offscreenViewport';
+import { createCanvasTarget } from '../../r3f/offscreen/targets';
 import { canvasColorSpaceOf } from '../../r3f/canvasColorSpace';
 
 /** A sky of `materialType` with `properties` and every other property at Godot's default. */

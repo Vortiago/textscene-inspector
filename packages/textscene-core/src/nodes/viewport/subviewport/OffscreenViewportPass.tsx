@@ -40,20 +40,17 @@ import { viewportTransfer } from '../../../r3f/texelCopy';
 import type { Rgba } from '../../../godot/math/math';
 import {
   applyOrthoFrame,
-  createCanvasTarget,
-  createSceneTarget,
   godotCanvasPosition,
-  renderToOffscreenTarget,
   frameOverView,
   orthoFrameForCamera2D,
   orthoFrameForSize,
   cameraAtPath,
   selectViewportCamera2D,
   viewportAspect,
-  viewportCanvasColorSpace,
-  viewportUsesDebanding,
-  viewportMsaaMode,
-} from './offscreenViewport';
+} from './viewportFraming';
+import { createCanvasTarget, createSceneTarget } from '../../../r3f/offscreen/targets';
+import { renderToOffscreenTarget } from '../../../r3f/offscreen/draw';
+import { viewportCanvasColorSpace, viewportUsesDebanding, viewportMsaaMode } from './viewportTargetOptions';
 import { OffscreenToneMapStage, type OffscreenToneMap } from '../../../r3f/environment/offscreenToneMap';
 import { ViewportPassAttributes } from '../../../r3f/environment/worldExposure';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';

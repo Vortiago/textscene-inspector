@@ -8,7 +8,7 @@ import type * as THREE from 'three';
 import type { CanvasClip, LightPassHost } from '../../../r3f/lighting2d/lightPassHost';
 import type { Vector2 } from '../../../godot/math/vector';
 import type { Rect2 } from '../../../godot/math/rect2';
-import { orthoViewRect } from './offscreenViewport';
+import { orthoViewRect } from './viewportFraming';
 
 /**
  * Godot's `clip_rect`, `Rect2(0, 0, size)` in screen pixels (`renderer_viewport.cpp:390`), seen

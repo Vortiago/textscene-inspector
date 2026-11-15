@@ -16,7 +16,7 @@ import type { Rect2 } from '../godot/math/rect2';
 import { NodePathProvider } from '../r3f/contexts/NodePathContext';
 import { ViewportTextureProvider } from '../r3f/contexts/ViewportTextureContext';
 import { ViewportTexturePublisher, viewportEntry } from '../r3f/testing/ViewportTexturePublisher';
-import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
+import { createCanvasTarget } from '../r3f/offscreen/targets';
 import { TextureRect } from '../nodes/2d/ui/texturerect/Component';
 import { parseTextureRect } from '../nodes/2d/ui/texturerect/parser';
 import { Sprite2D } from '../nodes/2d/sprite2d/Component';

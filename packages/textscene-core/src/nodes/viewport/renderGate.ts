@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../godot/scene/viewport';
 import type { UpdateGate } from './subviewport/viewportGate.js';
+import { BLACK } from '../../r3f/offscreen/draw.js';
 
 /** One pass as the gate sees it. */
 export interface GatedPass {
@@ -76,9 +77,6 @@ export interface RenderClear {
    */
   color: THREE.Color;
 }
-
-/** The colour of a target no clear has touched. */
-export const BLACK = new THREE.Color(0, 0, 0);
 
 /**
  * The renders of one viewport, which a ONCE update mode and a ONCE clear mode spend. Godot keeps
