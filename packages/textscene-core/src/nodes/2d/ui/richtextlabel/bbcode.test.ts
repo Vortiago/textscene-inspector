@@ -487,6 +487,12 @@ describe('parseBBCodeRuns lists', () => {
     expect(runs[0]!.tags[0]).not.toBe(runs[1]!.tags[0]);
   });
 
+  // `parse_bbcode` folds each CR LF into an LF first (rich_text_label.cpp:5320).
+  it('reads a CR LF as one LF', () => {
+    const [run] = parseBBCodeRuns('[ul bullet=a\r\nb]x\r\ny[/ul]');
+    expect([run!.tags[0]!.value, run!.text]).toEqual(['a\nb', 'x\ny\n']);
+  });
+
   it('opens [ul bullet=...] with the bullet read as Godot reads it, after the first =', () => {
     const [run] = parseBBCodeRuns('[ul bullet=* ]a[/ul]');
     expect(run!.tags[0]).toMatchObject({ name: 'ul', value: '* ' });

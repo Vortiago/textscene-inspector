@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../../parser/TscnParser';
 import type { TscnScene } from '../../parser/types';
 import { liveTreeOf } from '../liveSceneTree';
-import { contextOver } from '../liveSceneTree.testkit';
+import { contextOver, runPass } from '../liveSceneTree.testkit';
 import { canvasItemPass } from './canvasItemPass';
 import { canvasTransformBetween } from './canvasTransformBetween';
 import '../nodes/index';
@@ -16,7 +16,7 @@ function sceneOf(body: string): TscnScene {
 }
 
 function between(scene: TscnScene, above: string | null, itemParent: string) {
-  const results = canvasItemPass(liveTreeOf(scene.nodes, contextOver(scene, {})));
+  const results = runPass(canvasItemPass, liveTreeOf(scene.nodes, contextOver(scene, {})));
   return canvasTransformBetween(results, above, itemParent);
 }
 

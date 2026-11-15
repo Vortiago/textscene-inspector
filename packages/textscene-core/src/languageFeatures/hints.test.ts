@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { acceptedResourceTypes, enumEntriesOf, flagLabels, rangeHint, rangeSuffix } from './hints';
+import { acceptedResourceTypes, enumEntriesOf, flagEntriesOf, rangeHint, rangeSuffix } from './hints';
 
 /** `Variant::INT` (`variant.h:96-145`) and `PROPERTY_HINT_ENUM` (`object.h:50-96`). */
 const INT = 2;
@@ -77,8 +77,8 @@ describe('hints', () => {
   });
 
   it('opens a range end that or_greater or or_less leaves open', () => {
-    expect(rangeHint(1, '0,10,1,or_greater')).toEqual({ min: '0', max: '10', hasMin: true, hasMax: false });
-    expect(rangeHint(1, '-1,1,0.01')).toEqual({ min: '-1', max: '1', hasMin: true, hasMax: true });
+    expect(rangeHint(1, '0,10,1,or_greater')).toEqual({ min: 0, radiansAsDegrees: false });
+    expect(rangeHint(1, '-1,1,0.01')).toEqual({ min: -1, max: 1, radiansAsDegrees: false });
     expect(rangeHint(0, '0,10')).toBeUndefined();
   });
 
@@ -88,7 +88,11 @@ describe('hints', () => {
   });
 
   it('lists the bits of a flags hint and nothing for another hint', () => {
-    expect(flagLabels(6, 'A,B,C')).toEqual(['A', 'B', 'C']);
-    expect(flagLabels(2, 'A,B')).toBeUndefined();
+    expect(flagEntriesOf(6, 'A,B,C:8')).toEqual([
+      { label: 'A', value: 1 },
+      { label: 'B', value: 2 },
+      { label: 'C', value: 8 },
+    ]);
+    expect(flagEntriesOf(2, 'A,B')).toBeUndefined();
   });
 });

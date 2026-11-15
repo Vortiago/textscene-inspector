@@ -227,3 +227,11 @@ describe('linkButtonLabelShape — direction, language and structured override (
     expect(visual({ text, textDirection: 2 })).toBe('abc/םולש');
   });
 });
+
+// A `TextLine` never breaks (link_button.h:49).
+describe('linkButtonLabelShape — a line break', () => {
+  it('keeps the text on one line', () => {
+    const layout = linkButtonLabelShape(node({ text: 'top\nHi' }), nativeTheme(1))!;
+    expect(layout.lines.map((line) => line.text)).toEqual(['top\nHi']);
+  });
+});

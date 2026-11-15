@@ -9,6 +9,7 @@ import type { TscnScene, TscnNode } from '../../parser/types';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
 import { TscnParser } from '../../parser/TscnParser';
+import { UnparsedTextError } from '../../parser/unparsedTextError';
 import { seatScene } from '../../parser/sceneTreeBuilder';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import { isGltfPath } from '../../godot/import/gltf';
@@ -99,7 +100,7 @@ export function createSceneProcessor({
         throw new Error(`TSCN scene must be text content: ${metadata.path}`);
       }
       if (!SCENE_HEADER.test(content)) {
-        throw new Error(`Not a text scene (missing [gd_scene header): ${metadata.path}`);
+        throw new UnparsedTextError(`Not a text scene (missing [gd_scene header): ${metadata.path}`);
       }
       return parser.parse(content);
     },

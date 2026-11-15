@@ -198,6 +198,28 @@ describe('shapeText — a character no font of the chain has (text_server_adv.cp
   it('draws a hex-code box for a character a face with no fallbacks lacks', () => {
     expect(shapeCjk(FACE_WITHOUT_CJK).controlCodepoint).toBe(0x4e00);
   });
+
+  // A notdef glyph of a character that is neither blank nor graphic counts as valid, so no fallback
+  // runs and it keeps no advance (`text_server_adv.cpp:7106-7108`, `:7060`). U+0378 is unassigned.
+  const shapeUnassigned = (preserveControl: boolean) =>
+    shapeText('B\u0378C', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics: { ...OPEN_SANS_FONT_METRICS, hasGlyph: (ch) => ch !== '\u0378' },
+      preserveControl,
+    }).lines[0]!.glyphs[1]!;
+
+  it('gives an unassigned code point the face lacks no advance and no hex-code box', () => {
+    const unassigned = shapeUnassigned(false);
+    expect([unassigned.advance, unassigned.controlCodepoint]).toEqual([0, undefined]);
+  });
+
+  // With `preserve_control`, only a line break counts as valid (`:7104`), so the box draws.
+  it('draws a hex-code box for an unassigned code point under preserveControl', () => {
+    expect(shapeUnassigned(true).controlCodepoint).toBe(0x0378);
+  });
 });
 
 describe('shapeText — the ascent and descent of a line with a hex-code box (text_server_adv.cpp:6891-6892)', () => {
@@ -847,6 +869,99 @@ describe('shapeText — glyph advances vs real Godot (text_server_adv.cpp:6936,7
       fontMetrics: face,
     });
     expect(layout.lines[0]!.glyphs.map((g) => g.advance)).toEqual([17, 16]);
+  });
+});
+
+// Godot rounds no glyph of index 0 and leaves the remainder as it was (`text_server_adv.cpp:7060`).
+// Each glyph of this face is 16.5 px at 32 px, so the third leaves a remainder of -0.5.
+it('keeps a 0 advance for a zero-width space after a remainder of -0.5', () => {
+  const face: FontMetrics = {
+    ...OPEN_SANS_FONT_METRICS,
+    shaping: undefined,
+    hasGlyph: (ch) => ch !== '\u0378',
+    getGlyphAdvanceUnits: () => 1056,
+  };
+  const layout = shapeText('AAA\u200BA', {
+    fontSizePx: 32,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 3,
+    fontMetrics: face,
+  });
+  expect(layout.lines[0]!.glyphs.map((g) => g.advance)).toEqual([17, 16, 17, 0, 16]);
+});
+
+// Godot forces a cluster that starts with U+200C, U+200D, U+2060 or U+FEFF to glyph index 0
+// (`text_server_adv.cpp:7052-7055`), so it rounds nothing, though the face shapes it at a 0 advance.
+it('keeps a 0 advance for a shaped zero-width joiner after a remainder of -0.5', () => {
+  const face: FontMetrics = {
+    ...OPEN_SANS_FONT_METRICS,
+    shaping: undefined,
+    getGlyphAdvanceUnits: (ch) => (ch === '\u200D' ? 0 : 1056),
+  };
+  const layout = shapeText('AAA\u200DA', {
+    fontSizePx: 32,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 3,
+    fontMetrics: face,
+  });
+  expect(layout.lines[0]!.glyphs.map((g) => g.advance)).toEqual([17, 16, 17, 0, 16]);
+});
+
+/**
+ * Godot shapes each script run apart (`ScriptIterator`, `text_server_adv.cpp:7346-7352`), so the
+ * rounding remainder restarts where the script changes. Each glyph of this face is 16.5 px at 32 px:
+ * one run rounds 17, 16, 17, 16, and a new run starts again at 17.
+ */
+describe('shapeText — script runs', () => {
+  const face: FontMetrics = {
+    ...OPEN_SANS_FONT_METRICS,
+    shaping: undefined,
+    hasGlyph: (ch) => ch !== '\u0378',
+    getGlyphAdvanceUnits: () => 1056,
+    getKerningAdjustmentUnits: (_left, right) => (right === 'V' || right === '\u0474' ? -256 : 0),
+  };
+  const advancesOf = (text: string): number[] =>
+    shapeText(text, {
+      fontSizePx: 32,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics: face,
+    }).lines[0]!.glyphs.map((g) => g.advance);
+
+  it('carries the remainder through one script', () => {
+    expect(advancesOf('AAAA')).toEqual([17, 16, 17, 16]);
+  });
+
+  // A kern of -256 units is -4 px at 32 px.
+  it('kerns a pair inside one script and no pair across a script change', () => {
+    expect(advancesOf('AV')[0]).toBe(13);
+    expect(advancesOf('A\u0474')[0]).toBe(17);
+  });
+
+  it('restarts the remainder at a Cyrillic letter, and again at the Latin letter after it', () => {
+    expect(advancesOf('AAA\u0416A')).toEqual([17, 16, 17, 17, 17]);
+  });
+
+  it('restarts the remainder after an unassigned code point, whose script is Unknown', () => {
+    expect(advancesOf('AAA\u0378A')).toEqual([17, 16, 17, 0, 17]);
+  });
+
+  // Godot 4.6.3 at 40 px: `)` is 13 in `Ж(AЖ)`, as alone, and 12 after `Ж`. The run that learns its
+  // script gives it to the open brackets, and no later run takes them back (`script_iterator.cpp:158`).
+  it('gives a closing bracket the script its opening bracket took', () => {
+    expect(advancesOf('\u0416(A\u0416)')).toEqual([17, 16, 17, 17, 17]);
+  });
+
+  it('keeps a space and a combining mark in the script run around them', () => {
+    expect(advancesOf('A A')).toEqual([17, 17, 16]);
+    expect(advancesOf('A\u0301A').at(-1)).toBe(16);
+  });
+
+  it('shapes an emoji apart from the letters around it', () => {
+    expect(advancesOf('AAA\u{1F600}A')).toEqual([17, 16, 17, 17, 17]);
   });
 });
 

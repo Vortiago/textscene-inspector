@@ -11,7 +11,7 @@ import { OPEN_SANS_CANVAS_FONT_METRICS } from './openSansCanvasFontMetrics';
 import {
   isTextWidthClipped,
   overrunFlagsForBehavior,
-  trimSoloLine,
+  trimTextLine,
   trimLayoutToWidth,
   trimLine,
   inferredPlacement,
@@ -527,32 +527,32 @@ function shaped(text: string) {
 
 const SOLO_OPTIONS = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX };
 
-describe('trimSoloLine', () => {
+describe('trimTextLine', () => {
   it('returns the same layout when the behaviour does not trim', () => {
     const layout = shaped('AAAAAAAA');
     expect(
-      trimSoloLine(layout, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_NO_TRIMMING), 20, SOLO_OPTIONS)
+      trimTextLine(layout, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_NO_TRIMMING), 20, SOLO_OPTIONS)
     ).toBe(layout);
   });
 
   it('returns the same layout when the line fits', () => {
     const layout = shaped('A');
     expect(
-      trimSoloLine(layout, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS), 100, SOLO_OPTIONS)
+      trimTextLine(layout, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS), 100, SOLO_OPTIONS)
     ).toBe(layout);
   });
 
   it('cuts an overlong line to the width as a text buffer trim does', () => {
     const layout = shaped('AAAAAAAA');
     const flags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
-    const trimmed = trimSoloLine(layout, flags, 40, SOLO_OPTIONS);
+    const trimmed = trimTextLine(layout, flags, 40, SOLO_OPTIONS);
     expect(trimmed.lines).toEqual([trimLine(layout.lines[0]!, 40, flags, SOLO_OPTIONS, inferredPlacement)]);
     expect(trimmed.widthPx).toBe(trimmed.lines[0]!.widthPx);
   });
 
   it("keeps the line's underline, which a trim does not reshape", () => {
     const layout = shaped('AAAAAAAA');
-    const trimmed = trimSoloLine(
+    const trimmed = trimTextLine(
       layout,
       overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
       40,
@@ -602,7 +602,7 @@ describe("trimLayoutToWidth — the layout's drawn direction (text_server.cpp:17
 
   it('keeps the drawn direction of a solo line it trims', () => {
     const layout = shapedIn(TextDirection.TEXT_DIRECTION_RTL);
-    expect(trimSoloLine(layout, ELLIPSIS, layout.widthPx * 0.75, SOLO_OPTIONS).lines[0]!.isDrawnRtl).toBe(
+    expect(trimTextLine(layout, ELLIPSIS, layout.widthPx * 0.75, SOLO_OPTIONS).lines[0]!.isDrawnRtl).toBe(
       true
     );
   });

@@ -20,7 +20,9 @@ import {
   withThemeItems,
 } from '../../../../r3f/controls/native/testing/solveNode';
 import {
+  bundledRuns,
   inkedGlyphCount,
+  inkedGlyphCounts,
   onlyBundledRun,
   runGlyphs,
   runPenExtentPx,
@@ -231,5 +233,93 @@ describe('<Label> registered through <ControlCanvasWalker> (end-to-end walker pl
     expect(renderer.scene.findAllByType('Mesh').length).toBeGreaterThan(0);
 
     controlComponentRegistry.clear();
+  });
+});
+
+/** The text each drawn line of `scene` shows, with `…` for an ellipsis glyph and no paragraph terminator. */
+function drawnLineTexts(scene: Awaited<ReturnType<typeof render>>['scene']): string[] {
+  return bundledRuns(scene).map((run) =>
+    run.layout.lines
+      .flatMap((line) => line.glyphs)
+      .map((glyph) => glyph.char)
+      .join('')
+      .replace('\u200b', '')
+  );
+}
+
+describe('<Label> — the overrun trim with autowrap on (label.cpp:268-301)', () => {
+  // Word autowrap at 40 px breaks `AA AA AA AA` into one `AA` per line.
+  const WRAPPED = { text: 'AA AA AA AA', autowrapMode: 2, overrunBehavior: 3 };
+  const NARROW = { x: 0, y: 0, w: 40, h: 200 };
+
+  it('enforces the ellipsis on the last line that max_lines_visible shows', async () => {
+    const renderer = await render({ ...WRAPPED, maxLinesVisible: 2 }, NARROW);
+    expect(drawnLineTexts(renderer.scene)).toEqual(['AA', 'AA…']);
+  });
+
+  // `visible_lines - line_index - 1` counts from the first line, not from `lines_skipped`.
+  it('trims the line at the visible count from the first line, whatever lines_skipped hides', async () => {
+    const renderer = await render({ ...WRAPPED, maxLinesVisible: 2, linesSkipped: 1 }, NARROW);
+    expect(drawnLineTexts(renderer.scene)).toEqual(['AA…', 'AA']);
+  });
+
+  it('trims no line when every line shows', async () => {
+    const renderer = await render(WRAPPED, NARROW);
+    expect(drawnLineTexts(renderer.scene)).toEqual(['AA', 'AA', 'AA', 'AA']);
+  });
+
+  it('trims no line without an overrun behaviour', async () => {
+    const renderer = await render({ ...WRAPPED, overrunBehavior: 0, maxLinesVisible: 2 }, NARROW);
+    expect(drawnLineTexts(renderer.scene)).toEqual(['AA', 'AA']);
+  });
+});
+
+describe('<Label> — a glyph reveal on a trimmed line (label.cpp:563-587, label.h:197-241)', () => {
+  // `AAAAAAAAAAAA` and the paragraph's U+200B at 100 px trim to `AAAAAAAA…`: 9 glyphs drawn of 14.
+  it('counts the glyphs the trim cut, so a ratio of 0.5 shows 7 of the 14 glyphs', async () => {
+    const renderer = await render(
+      { text: 'AAAAAAAAAAAA', overrunBehavior: 3, visibleCharactersBehavior: 3, visibleRatio: 0.5 },
+      { x: 0, y: 0, w: 100, h: 200 }
+    );
+    // trunc((13 + 1) * 0.5) = 7.
+    expect(inkedGlyphCounts(renderer.scene)).toEqual([7]);
+  });
+});
+
+describe('<Label> — the lines a wrapped Label shows in its rect (label.cpp:520-561, :1022-1061)', () => {
+  it('draws only the lines that fit the rect height, and trims the last of them', async () => {
+    // Two 26 px rows fit `ceil(50 + 3)`, a third does not.
+    const renderer = await render(
+      { text: 'AA AA AA AA', autowrapMode: 2, overrunBehavior: 3 },
+      { x: 0, y: 0, w: 40, h: 50 }
+    );
+    expect(drawnLineTexts(renderer.scene)).toEqual(['AA', 'AA…']);
+  });
+
+  // Godot fits every line but the last of the whole paragraph, so a line the window cuts after is fitted.
+  it('fits the last shown line of a FILL paragraph that continues below the window', async () => {
+    const renderer = await render(
+      { text: 'AA A AA A AA A', autowrapMode: 2, horizontalAlignment: 3, maxLinesVisible: 2 },
+      { x: 0, y: 0, w: 60, h: 200 }
+    );
+    const lastShown = bundledRuns(renderer.scene)[1]!;
+    const lastInked = runGlyphs(lastShown)
+      .filter((glyph) => glyph.char.trim() !== '')
+      .at(-1)!;
+    expect(lastInked.x + lastInked.advance).toBeCloseTo(60, 0);
+  });
+
+  // A paragraph's last line stays unfitted when lines_skipped hides the lines above it, as `jst_to_line`
+  // counts the whole paragraph. Seen alone it is a single line, which DO_NOT_SKIP_SINGLE_LINE fits.
+  it('leaves unfitted the last line of a FILL paragraph that starts above the window', async () => {
+    const renderer = await render(
+      { text: 'AA A AA A AA A', autowrapMode: 2, horizontalAlignment: 3, linesSkipped: 2 },
+      { x: 0, y: 0, w: 60, h: 200 }
+    );
+    const [onlyShown] = bundledRuns(renderer.scene);
+    const lastInked = runGlyphs(onlyShown!)
+      .filter((glyph) => glyph.char.trim() !== '')
+      .at(-1)!;
+    expect(lastInked.x + lastInked.advance).toBeLessThan(55);
   });
 });

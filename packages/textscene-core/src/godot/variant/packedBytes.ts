@@ -6,7 +6,32 @@
 
 import { parseGodotInt } from './intReader.js';
 import { toUint8 } from './intWidth.js';
-import { literalText, STRING_LITERAL_RE } from '../string/string.js';
+import { dropTrailingComma, literalText, STRING_LITERAL_RE } from '../string/string.js';
+import { arrayLiteralBody, packedArrayLiteral } from './variantParser.js';
+
+const PACKED_BYTE_ARRAY_RE = packedArrayLiteral('PackedByteArray');
+const QUOTED_BASE64_RE = /^"([A-Za-z0-9+/]*={0,2})"$/;
+
+type ByteArrayLiteral = { fault: 'not-a-literal' } | { fault: 'invalid-base64' | null; body: string };
+
+// A fault fails the whole file (variant_parser.cpp:618-622). An array converts (variant.cpp:772-778).
+export function readPackedByteArrayLiteral(value: string): ByteArrayLiteral {
+  const trimmed = value.trim();
+  const match = PACKED_BYTE_ARRAY_RE.exec(trimmed);
+  if (!match) return readConvertedArray(trimmed);
+  const body = match[1]!.trim();
+  if (body.startsWith('"') && !QUOTED_BASE64_RE.test(body)) {
+    return { fault: 'invalid-base64', body };
+  }
+  return { fault: null, body };
+}
+
+// Only brackets allow a trailing comma (variant_parser.cpp:562-571). A quoted element is no base64 body.
+function readConvertedArray(value: string): ByteArrayLiteral {
+  const body = arrayLiteralBody(value)?.trim();
+  if (body === undefined || body.startsWith('"')) return { fault: 'not-a-literal' };
+  return { fault: null, body: dropTrailingComma(body.split(',')).join(',') };
+}
 
 /**
  * The bytes between a `PackedByteArray(…)`'s parentheses. Each listed element is an int Variant

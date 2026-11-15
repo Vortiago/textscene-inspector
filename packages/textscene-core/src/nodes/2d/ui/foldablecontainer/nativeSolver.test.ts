@@ -116,6 +116,12 @@ describe('foldableContainerMinimumSize', () => {
     expect(title.size).toEqual({ x: MARGIN + ARROW + H_SEP, y: MARGIN + Math.max(FONT_HEIGHT, ARROW) });
   });
 
+  // A `TextLine` never breaks (foldable_container.h:58).
+  it('keeps a title with a line break on one line', () => {
+    const title = titleShape(node({ folded: false, title: 'Top\nSecond' }));
+    expect(title.layout!.lines.map((line) => line.text)).toEqual(['Top\nSecond']);
+  });
+
   it('unfolded with no children floors to the title bar width and adds the panel margin height', () => {
     const titleWidth = MARGIN + ARROW + H_SEP + A_WIDTH;
     const titleHeight = MARGIN + Math.max(FONT_HEIGHT, ARROW);

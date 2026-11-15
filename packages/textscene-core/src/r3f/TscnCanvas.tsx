@@ -20,18 +20,15 @@ import { GodotEditorControls } from './GodotEditorControls.js';
 import { WorldEnvironmentScope } from './environment/WorldEnvironmentScope.js';
 import { editorCameraPosition, editorCameraProjection } from './godotEditorCamera.js';
 import { usePreviewFrameloop } from './contexts/PreviewVisibilityContext.js';
-import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
-import { prepareCanvasRenderer } from './litSurface/prepareCanvasRenderer.js';
 import { SceneShadowFitter } from './SceneShadowFitter.js';
 import { SceneMipmapBias } from './materials/SceneMipmapBias.js';
 import { SceneDepthPrepass } from './depthPrepass/SceneDepthPrepass.js';
-import { ScreenshotBridge } from './ScreenshotBridge.js';
-import { TiledUploadDriver } from './tiledUpload/TiledUploadDriver.js';
 import { ActiveCameraSwitcher } from './ActiveCameraSwitcher.js';
 import { CameraFit } from './CameraFit.js';
 import { SceneCamerasProvider } from './sceneCameras.js';
-import { CanvasServices } from './CanvasServices.js';
+import { CANVAS_RENDERER_GL, CANVAS_RENDERER_PROPS } from './canvasRenderer/canvasRendererProps.js';
+import { CanvasRendererScope } from './canvasRenderer/CanvasRendererScope.js';
 import styles from './TscnCanvas.module.css';
 
 /**
@@ -48,7 +45,7 @@ export function TscnSceneContents() {
   const isEmpty = nodes === null || nodes.length === 0;
 
   return (
-    <TiledUploadDriver>
+    <CanvasRendererScope>
       {/* The root world's Environment, and Godot's editor preview sun and environment, each
           preview mounted only while the scene has no DirectionalLight3D or WorldEnvironment of
           its own (ADR-0025). Godot adds neither at runtime. This previewer takes the editor's rule. */}
@@ -70,15 +67,13 @@ export function TscnSceneContents() {
           internalResources={rootScene?.internalResources ?? []}
           externalResources={rootScene?.externalResources ?? []}
         />
-        <ViewportPassOrchestrator />
         <SceneShadowFitter />
         <SceneMipmapBias />
         <SceneDepthPrepass />
         <SelectionHighlight />
         <HoverHighlight />
-        <ScreenshotBridge />
       </WorldEnvironmentScope>
-    </TiledUploadDriver>
+    </CanvasRendererScope>
   );
 }
 
@@ -126,28 +121,14 @@ export function TscnCanvas() {
   const frameloop = usePreviewFrameloop();
   return (
     <div className={styles.root}>
-      {/* Without `shadows`, a `shadow_enabled = true` light casts nothing. `percentage`
-          selects `THREE.PCFShadowMap`, the soft-shadow type three 0.187 draws. `soft`
-          selects the removed `PCFSoftShadowMap`, which three falls back from with a warning. */}
       {/* Godot's editor opens every scene at the same fixed orbit, 70-degree FOV and
           clip planes (godotEditorCamera.ts). Framing is F there and opt-in here. */}
-      {/* Without `localClippingEnabled`, three ignores a `clippingPlanes` array.
-          A Control-only SubViewport sampled by a 3D scene draws through this
-          renderer, so its ScrollContainer clips only because the flag is set here
-          as well as on the 2D world canvas. */}
-      {/* `antialias: false`: Godot's `msaa_3d` defaults to Disabled (`rendering_server.cpp:3774`).
-          A project that turns it on gets the compositor's multisampled buffer, which resolves
-          before the tone curve as Godot's does. `flat`: the compositor applies every curve, so three
-          adds none of its own, where R3F would apply ACES. */}
       <Canvas
+        {...CANVAS_RENDERER_PROPS}
         camera={{ position: editorCameraPosition(), ...editorCameraProjection() }}
-        shadows="percentage"
-        gl={{ localClippingEnabled: true, antialias: false }}
-        flat
+        gl={CANVAS_RENDERER_GL}
         frameloop={frameloop}
-        onCreated={prepareCanvasRenderer}
       >
-        <CanvasServices />
         <SceneCamerasProvider>
           <TscnSceneContents />
           <ActiveCameraSwitcher />

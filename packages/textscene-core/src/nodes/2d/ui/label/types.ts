@@ -16,7 +16,7 @@ export interface LabelProperties
   autowrapMode?: number;
   /** When true, text renders in UPPERCASE (default false). */
   uppercase?: boolean;
-  /** `TextServer::OverrunBehavior` (0-6). Godot default 0 (OVERRUN_NO_TRIMMING). */
+  /** `TextServer::OverrunBehavior` (0-6). Godot default 0 (OVERRUN_NO_TRIMMING). Wrapped, it trims the last shown line. */
   overrunBehavior?: number;
   /** `Label.clip_text`: drops the autowrap-off minimum width to 1px (label.cpp:993-995). */
   clipText?: boolean;

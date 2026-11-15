@@ -6,6 +6,7 @@
  * owner. It reads text only.
  */
 
+import { addedLines } from '../gitDiff.mjs';
 import { changedEntries } from '../gitNameStatus.mjs';
 import { isScopeCutDocument, unownedScopeCuts } from '../scope-cuts/scopeCuts.mjs';
 import { goldenNameOf } from '../visual/baselinePath.mjs';
@@ -290,42 +291,3 @@ function exemptionEntry({ path }) {
 const cutEntry = ({ where, line, text }) => `\`${where}:${line}\` ${text}`;
 
 const quoted = ({ path, line, text }) => `\`${path}:${line}\` ${text.trim()}`;
-
-/** A hunk header, `@@ -a,b +c,d @@`: the removed count, the first new line and the added count. */
-const HUNK_HEADER = /^@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
-
-/** Git leaves a count of 1 out of a hunk header. */
-const countOf = (digits) => (digits === undefined ? 1 : Number(digits));
-
-/**
- * Each line a unified diff adds, with its path and its line number in the new file. The counts of a
- * hunk header bound its body, so an added line that starts with `++ ` does not read as a file header.
- */
-function addedLines(diff) {
-  const added = [];
-  let path = '';
-  let line = 0;
-  let oldLeft = 0;
-  let newLeft = 0;
-  for (const text of diff.split('\n')) {
-    if (oldLeft + newLeft === 0) {
-      const hunk = HUNK_HEADER.exec(text);
-      if (hunk) {
-        oldLeft = countOf(hunk[1]);
-        line = Number(hunk[2]);
-        newLeft = countOf(hunk[3]);
-      } else if (text.startsWith('+++ ')) {
-        path = text.slice('+++ b/'.length);
-      }
-      continue;
-    }
-    const sign = text[0];
-    if (sign === '+') added.push({ path, line, text: text.slice(1) });
-    if (sign === '-' || sign === ' ') oldLeft -= 1;
-    if (sign === '+' || sign === ' ') {
-      newLeft -= 1;
-      line += 1;
-    }
-  }
-  return added;
-}

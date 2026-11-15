@@ -210,10 +210,6 @@ validatorRegistry.registerAll(
 
     // "Theme" group. `null` is legal, and the combinator accepts it.
     theme: v.resourceReference('theme'),
-    // control.cpp:3017-3022 assigns a StringName. ADD_PROPERTY declares Variant::STRING
-    // (control.cpp:4320), but the StringName getter (control.cpp:3028) decides the form: `&"…"`
-    // (variant_parser.cpp:2147-2151).
-    theme_type_variation: v.stringName('theme_type_variation'),
     // control.cpp:3657-3660 assigns a full-width field (control.h:298). ENUM "Inherit,Always,Disabled"
     // = Node::AutoTranslateMode (main/node.cpp:4032-4034). Hinted, not enforced.
     tooltip_auto_translate_mode: v.enumInt('tooltip_auto_translate_mode', AUTO_TRANSLATE_MODE_NAMES, {

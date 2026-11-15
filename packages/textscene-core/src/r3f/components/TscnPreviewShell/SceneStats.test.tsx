@@ -32,6 +32,7 @@ function makeLoader(scenes: Record<string, TscnScene>): ResourceLoader {
     eventBus: new ResourceEventBus(),
     scenes: proc<TscnScene>(scenes),
     glbMeshes: proc<never>({}),
+    loadOutcomes: proc<never>({}),
     register: () => {},
   } as unknown as ResourceLoader;
 }

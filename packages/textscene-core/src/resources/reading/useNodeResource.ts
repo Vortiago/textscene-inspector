@@ -7,25 +7,12 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useByValue } from '../../r3f/hooks/useByValue';
 import { useSceneResources, type SceneResources } from '../../r3f/SceneResourcesContext';
-import { subscribeToNothing } from '../../utils/subscribeToNothing';
 import { hasUnsettledFile, useMissingFiles, useStableEntries } from '../useLoadedFiles';
 import { usePendingWhile } from '../usePendingWhile';
 import { useResourceLoader } from '../useResource';
-import { loaderSnapshots, type SnapshotSource } from './loaderSnapshots';
+import { loaderSnapshots, NO_LOADER } from './loaderSnapshots';
 import { NONE, type Read, type ResourceKind, type ResourceSnapshot } from './read';
-import { snapshotOver } from './snapshot';
 import { nodeReference, sameReference, type ScopedReference } from './scopedReference';
-
-/** With no loader, every file is missing, as `useResource` answers outside its provider. */
-const NO_LOADER_SNAPSHOT = snapshotOver({ getCached: () => null });
-const NO_FILES = new Map<string, never>();
-const NO_LOADER: SnapshotSource = {
-  current: () => NO_LOADER_SNAPSHOT,
-  restart: () => {},
-  request: () => {},
-  subscribe: subscribeToNothing,
-  files: () => NO_FILES,
-};
 
 /**
  * The read of a component: `ref` is a property of the component's own node, resolved in the

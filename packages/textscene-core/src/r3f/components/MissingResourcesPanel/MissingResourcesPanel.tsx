@@ -4,9 +4,11 @@
  * It knows only paths: the host supplies `onUpload` and `onRemove`. An
  * uploaded row is already a file, since `markUploaded` keys by file.
  */
-import { type ChangeEvent } from 'react';
+import { useMemo, type ChangeEvent } from 'react';
 import { useMissingResources } from '../../contexts/MissingResourcesContext.js';
 import { resourceFilePath } from '../../../resources/subResourcePath.js';
+import { useFirstLoadFailure } from '../../../resources/loadFailure/useFirstLoadFailure.js';
+import { failureChainText } from '../../../resources/loadFailure/failureText.js';
 import styles from './MissingResourcesPanel.module.css';
 
 export interface MissingResourcesPanelProps {
@@ -90,16 +92,17 @@ interface MissingRowProps {
 }
 
 function MissingRow({ path, onUpload }: MissingRowProps) {
-  // The file a pick replaces. For a row that names a resource inside a `.tres`
-  // it differs from the row, and the row says so: a material picked against it
-  // replaces the whole mesh file.
+  // A pick replaces the `.tres` a resource row names, or the file that failed first.
   const filePath = resourceFilePath(path);
-  const replacesOtherFile = filePath !== path;
+  const failure = useFirstLoadFailure(useMemo(() => [filePath], [filePath]));
+  const failsThroughAnother = failure !== null && failure.chain.length > 1;
+  const uploadPath = failsThroughAnother ? failure.chain.at(-1)! : filePath;
+  const replacesOtherFile = uploadPath !== path;
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    onUpload(filePath, file);
+    onUpload(uploadPath, file);
     // Reset the input so picking the same filename again would re-fire.
     e.target.value = '';
   };
@@ -110,10 +113,15 @@ function MissingRow({ path, onUpload }: MissingRowProps) {
         <div className={`${styles.icon} ${styles.missing}`} aria-hidden="true">
           ⚠
         </div>
-        <div className={styles.path} title={replacesOtherFile ? `${path} — inside ${filePath}` : path}>
+        <div className={styles.path} title={filePath !== path ? `${path}, inside ${filePath}` : path}>
           {path}
         </div>
       </div>
+      {failsThroughAnother && (
+        <div className={styles.chain} data-testid="load-failure-chain">
+          Fails to load: {failureChainText(failure.chain, failure.cause)}
+        </div>
+      )}
       <div className={styles.action}>
         <input
           type="file"
@@ -122,7 +130,7 @@ function MissingRow({ path, onUpload }: MissingRowProps) {
           // Named by the row, so two sub-resource rows of one file stay distinct to
           // assistive tech. The title names the file a pick replaces.
           aria-label={`Upload file for ${path}`}
-          title={replacesOtherFile ? `Replaces ${filePath}, which carries it` : undefined}
+          title={replacesOtherFile ? `Replaces ${uploadPath}` : undefined}
         />
       </div>
     </div>

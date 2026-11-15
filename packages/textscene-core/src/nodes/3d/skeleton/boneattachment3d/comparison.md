@@ -27,7 +27,7 @@ Strict parsing format-checks these `BoneAttachment3D` properties, plus 17 inheri
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `bone_idx` | integer >= -1 | error below |
-| `bone_name` | quoted string or &"name" |  |
+| `bone_name` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `external_skeleton` | NodePath("path/to/node") |  |
 | `override_pose` | true or false |  |
 | `use_external_skeleton` | true or false |  |

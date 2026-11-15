@@ -8,9 +8,8 @@ import { useMemo } from 'react';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
 import { useLayoutDirectionEnv } from '../../../r3f/contexts/useLayoutDirectionEnv.js';
-import { useLiveTreeVersion, useProjectTreeSettings } from '../../../r3f/useLiveSceneTree.js';
+import { treeScenesOf, useLiveTreeVersion, useProjectTreeSettings } from '../../../r3f/useLiveSceneTree.js';
 import { collectControlRasterViewports, type ControlRasterViewport } from './controlRasterViewports.js';
-import { NOTHING_CACHED } from '../../../r3f/cacheSources.js';
 
 export function useControlRasterViewports(
   nodes: readonly TscnNode[],
@@ -28,8 +27,7 @@ export function useControlRasterViewports(
     () =>
       collectControlRasterViewports(
         nodes,
-        // No loader is mounted on first paint or in an isolated test.
-        { sceneCache: loader?.scenes ?? NOTHING_CACHED, project },
+        { sceneCache: treeScenesOf(loader), project },
         { internalResources, externalResources },
         layoutDirectionEnv
       ),

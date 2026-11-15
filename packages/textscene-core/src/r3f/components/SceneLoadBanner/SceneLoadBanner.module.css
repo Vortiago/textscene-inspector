@@ -1,0 +1,21 @@
+.banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tsi-space-1);
+  padding: var(--tsi-space-2) var(--tsi-space-3);
+  background: var(--tsi-danger-bg);
+  border-left: 2px solid var(--tsi-danger-border);
+  color: var(--tsi-danger-fg);
+  border-bottom: 1px solid var(--tsi-border);
+  font-size: var(--tsi-font-sm);
+  flex-shrink: 0;
+}
+
+.title {
+  font-weight: 600;
+}
+
+.line,
+.chain {
+  overflow-wrap: anywhere;
+}

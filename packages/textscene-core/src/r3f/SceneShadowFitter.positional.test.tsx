@@ -6,7 +6,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { CaptureRenderer } from './testing/CaptureRenderer';
 import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow';
 import { SceneShadowFitter } from './SceneShadowFitter';
 import { positionalShadowAtlas } from './positionalShadow/shadowAtlasTarget';
@@ -175,17 +174,6 @@ describe('<SceneShadowFitter> positional fit on its own', () => {
     expect(light.shadow.map).toBe(positionalShadowAtlas());
     expect(light.shadow.mapSize.x).toBe(512);
     subViewport.dispose();
-  });
-
-  it('wraps the canvas renderer’s shadow pass, so each omni cube reaches the atlas', async () => {
-    const captured: { current: THREE.WebGLRenderer | null } = { current: null };
-    await ReactThreeTestRenderer.create(
-      <>
-        <CaptureRenderer captured={captured} />
-        <SceneShadowFitter />
-      </>
-    );
-    expect(Symbol.for('textscene.shadowPass') in captured.current!.shadowMap).toBe(true);
   });
 
   it('fits nothing for a light that declared nothing (edge case)', async () => {

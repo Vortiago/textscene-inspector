@@ -36,6 +36,16 @@ export function lineExtentPx(
   return { ascentPx, descentPx };
 }
 
+/**
+ * How far `glyphs` reach below the baseline, by the rule of {@link lineExtentPx}, 0 for none. A run cut
+ * from a line reads its own glyphs, so its raster does not take the descent of a deeper run beside it.
+ */
+export function glyphsDescentPx(glyphs: readonly GlyphPlacement[]): number {
+  let descentPx = 0;
+  for (const glyph of glyphs) descentPx = Math.max(descentPx, glyphExtentPx(glyph).descentPx);
+  return descentPx;
+}
+
 const NO_EXTENT: LineExtentPx = { ascentPx: 0, descentPx: 0 };
 
 /** One glyph's share of its line's extent (`text_server_adv.cpp:5146-5172`). */

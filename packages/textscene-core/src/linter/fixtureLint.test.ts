@@ -192,6 +192,16 @@ const FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[]; re
     reason:
       'named for it: the fixture exists to move scroll_offset onto the clamp branch the advisory reports',
   },
+  'unit-label-font-variation-bundled-embolden-high.tscn': {
+    rules: ['format:variation_embolden'],
+    reason:
+      'named for it: 3.0 and 4.0 sit past the hint\'s "-2,2,0.01" (ClassDB 4.6.3: FontVariation.variation_embolden), which the advisory reports; the fixture measures that Godot loads and draws them',
+  },
+  'unit-progress-bar-embolden-fill.tscn': {
+    rules: ['format:variation_embolden'],
+    reason:
+      'the 3.0 fill sits past the hint\'s "-2,2,0.01" (ClassDB 4.6.3: FontVariation.variation_embolden), which the advisory reports; the golden pins what Godot draws for it',
+  },
   'unit-bool-numeric-slots.tscn': {
     rules: ['format:frame', 'format:z_index', 'format:rotation'],
     reason:

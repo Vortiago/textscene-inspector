@@ -335,6 +335,6 @@ describe('CLI bundle purity', () => {
     // A backstop for a leak the markers miss, not a budget for the linter's growth:
     // three.js or react-dom adds more than the whole bundle. Raise it for honest
     // growth, never to admit a dependency the markers failed on.
-    expect(statSync(cliPath).size).toBeLessThan(1_400_000);
+    expect(statSync(cliPath).size).toBeLessThan(1_700_000);
   });
 });

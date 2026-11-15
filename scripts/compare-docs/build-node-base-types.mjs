@@ -154,10 +154,10 @@ ${renderEntries(table)}
  */
 function renderPropertyRows(rows) {
   return rows
-    .map(
-      (row) =>
-        `    [${JSON.stringify(row.name)}, ${row.type}, ${row.hint}, ${JSON.stringify(row.hint_string)}],`
-    )
+    .map((row) => {
+      const setterType = row.setter_type === undefined ? '' : `, ${row.setter_type}`;
+      return `    [${JSON.stringify(row.name)}, ${row.type}, ${row.hint}, ${JSON.stringify(row.hint_string)}${setterType}],`;
+    })
     .join('\n');
 }
 
@@ -169,6 +169,31 @@ function renderPropertyTable(name, properties) {
     .join('\n');
   return (
     `export const ${name}: Readonly<Record<string, readonly ClassPropertyRow[]>> = Object.freeze({\n` +
+    `${classes}\n});\n`
+  );
+}
+
+// class_db.cpp:1655-1659
+export function setterlessProperties(nodeProperties, resourceProperties) {
+  const out = {};
+  for (const [className, rows] of Object.entries({ ...nodeProperties, ...resourceProperties })) {
+    const names = rows.filter((row) => row.has_setter === false).map((row) => row.name);
+    if (names.length > 0) out[className] = names;
+  }
+  return out;
+}
+
+function renderSetterlessTable(setterless) {
+  const classes = Object.entries(setterless)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(
+      ([className, names]) =>
+        `  ${JSON.stringify(className)}: [${names.map((n) => JSON.stringify(n)).join(', ')}],`
+    )
+    .join('\n');
+  return (
+    `/** The rows each class binds with no setter: the loader drops their write (class_db.cpp:1655-1659). */\n` +
+    `export const SETTERLESS_PROPERTIES: Readonly<Record<string, readonly string[]>> = Object.freeze({\n` +
     `${classes}\n});\n`
   );
 }
@@ -188,15 +213,26 @@ function renderPropertiesModule(nodeProperties, resourceProperties, version) {
  * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
  *
  * Each row is \`[name, Variant::Type, PropertyHint, hint_string]\`, the numbers
- * \`node-properties.json\` and \`resource-properties.json\` record. A class appears only
+ * \`node-properties.json\` and \`resource-properties.json\` record, with the \`Variant::Type\` of
+ * the setter's value argument fifth where it differs from the property's. A class appears only
  * where it declares a property of its own: a reader finds an inherited property by walking
  * the base chain in \`nodeBaseTypes\` or \`classBaseTypes\`.
  */
 
-export type ClassPropertyRow = readonly [name: string, type: number, hint: number, hintString: string];
+export type ClassPropertyRow = readonly [
+  name: string,
+  type: number,
+  hint: number,
+  hintString: string,
+  setterType?: number,
+];
+
+/** The Godot release the rows come from, which a bound read from a row cites (ADR-0032). */
+export const CLASSDB_CAPTURE_VERSION = '${releaseOf(version)}';
 
 ${renderPropertyTable('NODE_CLASS_PROPERTIES', nodeProperties)}
-${renderPropertyTable('RESOURCE_CLASS_PROPERTIES', resourceProperties)}`;
+${renderPropertyTable('RESOURCE_CLASS_PROPERTIES', resourceProperties)}
+${renderSetterlessTable(setterlessProperties(nodeProperties, resourceProperties))}`;
 }
 
 /** Whether a resource hint excludes a class. */
@@ -333,6 +369,11 @@ ${classes}
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
+}
+
+/** @example `4.6.3.stable.fedora.7d41c59c4` gives `4.6.3`. */
+export function releaseOf(version) {
+  return version.split('.').slice(0, 3).join('.');
 }
 
 /** The engine version a capture run recorded in the catalog. */

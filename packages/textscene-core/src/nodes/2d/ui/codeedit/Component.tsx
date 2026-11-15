@@ -12,7 +12,7 @@ import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/control
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate, useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { shapeText } from '../../../../r3f/controls/native/text/textLayout';
+import { shapeTextLine } from '../../../../r3f/controls/native/text/textLine';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { CODE_EDIT_FOLD_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { ControlQuad as FoldQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -47,7 +47,6 @@ import {
   codeEditGuidelines,
 } from './nativeSolver';
 import type { CodeEditProperties } from './types';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 export function CodeEdit(props: NativeControlComponentProps) {
@@ -84,16 +83,17 @@ export function CodeEdit(props: NativeControlComponentProps) {
     bidi,
   };
 
+  const lines = useMemo(() => (codeEditProps.text ?? '').split('\n'), [codeEditProps.text]);
+  // `get_line_height()` reads the buffer, never the placeholder (`text_edit.cpp:136-148`, `:4103`).
   const gutterRowHeightPx = useMemo(
     () =>
       textEditUnwrappedRowHeightPx(
-        drawn.lines,
+        lines,
         { fontSizePx, fontMetrics, tabStopsPx, preserveControl: codeEditProps.drawControlChars, bidi },
         lineSpacingPx
       ),
-    [drawn.lines, fontSizePx, fontMetrics, tabStopsPx, codeEditProps.drawControlChars, bidi, lineSpacingPx]
+    [lines, fontSizePx, fontMetrics, tabStopsPx, codeEditProps.drawControlChars, bidi, lineSpacingPx]
   );
-  const lines = useMemo(() => (codeEditProps.text ?? '').split('\n'), [codeEditProps.text]);
   const charWidth0Px = measureText ? measureText('0', fontSizePx, 0, fontMetrics).x : 0;
   const band = useMemo(
     () => codeEditGutterBand(codeEditProps, gutterRowHeightPx, charWidth0Px, Math.max(1, lines.length)),
@@ -261,14 +261,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
             codeEditProps.gutterZeroPadLineNumbers,
             numerals
           );
-          const layout = shapeText(text, {
-            fontSizePx,
-            boxWidthPx: 0,
-            autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-            lineSpacingPx: 0,
-            fontMetrics,
-            language: solveNode.locale,
-          });
+          const layout = shapeTextLine(text, { fontSizePx, fontMetrics, language: solveNode.locale });
           // The gutter cell is the row's own band (`text_edit.cpp:1448`), so
           // it starts where the band does, not at the control's top edge.
           const rowTopPx = textEditRowBandTopPx(

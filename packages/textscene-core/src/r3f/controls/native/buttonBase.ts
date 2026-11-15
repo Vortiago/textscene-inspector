@@ -131,7 +131,7 @@ interface ButtonLabelShapeOptions {
 }
 
 /** Shapes a Button-family label, the one measure its painters and solvers share. */
-export function shapeButtonLabel(text: string, options: ButtonLabelShapeOptions): TextLayoutResult {
+function shapeButtonLabel(text: string, options: ButtonLabelShapeOptions): TextLayoutResult {
   const {
     fontSizePx,
     fontMetrics,

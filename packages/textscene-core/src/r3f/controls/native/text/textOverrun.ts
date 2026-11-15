@@ -352,6 +352,11 @@ function trimmedWidthPx({ cut, ellipsisWidthPx }: OverrunTrim): number {
   return cut.keptWidthPx + (cut.ellipsisPos !== -1 ? ellipsisWidthPx : 0);
 }
 
+/** The glyphs of `glyphs` that come from the shaped text, not from an ellipsis. */
+function shapedGlyphCount(glyphs: readonly GlyphPlacement[]): number {
+  return glyphs.filter((glyph) => !glyph.isEllipsis).length;
+}
+
 /**
  * `line` with the glyphs of a placement in place of its own, and without the `outlineGlyphs` of an
  * earlier trim. A trim does not reshape, so every other field, the underline among them, stays the line's.
@@ -362,15 +367,13 @@ function trimmedLine(
   placed: Pick<TextLineLayout, 'glyphs' | 'outlineGlyphs'>
 ): TextLineLayout {
   const { outlineGlyphs: _earlierTrim, ...kept } = line;
-  return { ...kept, ...placed, widthPx: trimmedWidthPx(trim) };
+  const cutGlyphCount =
+    (line.cutGlyphCount ?? 0) + shapedGlyphCount(line.glyphs) - shapedGlyphCount(placed.glyphs);
+  return { ...kept, ...placed, widthPx: trimmedWidthPx(trim), ...(cutGlyphCount > 0 && { cutGlyphCount }) };
 }
 
-/**
- * The first line of a paragraph trimmed to `widthPx` as a text buffer, as `TextLine::draw` or a
- * one-row `TextParagraph::draw` trims it. Godot draws one `TextLine` there, so a text with a line
- * break draws its first line only. Returns `layout` itself when nothing is cut, so a memo downstream holds.
- */
-export function trimSoloLine(
+/** A `shapeTextLine` layout cut to `widthPx` (`TextLine::draw`). Uncut, it is `layout` itself. */
+export function trimTextLine(
   layout: TextLayoutResult,
   flags: OverrunTrimFlags,
   widthPx: number,
@@ -379,7 +382,7 @@ export function trimSoloLine(
   if (!flags.trim) return layout;
   const line = layout.lines[0]!;
   const trimmedLine = trimLine(line, widthPx, flags, options, textBufferPlacement);
-  return trimmedLine === line && layout.lines.length === 1 ? layout : soloLineLayout(trimmedLine, layout);
+  return trimmedLine === line ? layout : soloLineLayout(trimmedLine, layout);
 }
 
 /**
