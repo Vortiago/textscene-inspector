@@ -561,13 +561,19 @@ function nextBracket(text: string, from: number): number {
   return at < 0 ? text.length : at;
 }
 
+/** `parse_bbcode` and `add_text` read each CR LF as one LF (`rich_text_label.cpp:4017,5320`). */
+export function foldCrLf(text: string): string {
+  return text.replaceAll('\r\n', '\n');
+}
+
 /**
  * Tokenizes `text` into runs, each with the full stack of open tags, outermost
  * first. An unrecognised tag emits a literal `[` and resumes at the next
  * character (`:6543-6544`), and a close tag counts only when it matches the
  * innermost open tag (`:5386`), so this scans rather than splits.
  */
-export function parseBBCodeRuns(text: string): BBCodeRun[] {
+export function parseBBCodeRuns(bbcode: string): BBCodeRun[] {
+  const text = foldCrLf(bbcode);
   const stack: OpenBBCodeTag[] = [];
   const runs: BBCodeRun[] = [];
   let pending = '';

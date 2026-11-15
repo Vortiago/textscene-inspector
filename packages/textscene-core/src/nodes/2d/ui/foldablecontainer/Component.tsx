@@ -12,7 +12,7 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
-import { overrunFlagsForBehavior, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
+import { overrunFlagsForBehavior, trimTextLine } from '../../../../r3f/controls/native/text/textOverrun';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -102,7 +102,7 @@ export function FoldableContainer({
   );
   const trimmedLayout = useMemo(() => {
     if (!title.layout) return null;
-    return trimSoloLine(title.layout, overrunFlags, Math.max(1, titleTextWidth), {
+    return trimTextLine(title.layout, overrunFlags, Math.max(1, titleTextWidth), {
       fontMetrics: title.layout.fontMetrics,
       fontSizePx: title.fontSizePx,
     });

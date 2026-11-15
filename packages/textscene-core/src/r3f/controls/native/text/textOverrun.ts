@@ -372,12 +372,8 @@ function trimmedLine(
   return { ...kept, ...placed, widthPx: trimmedWidthPx(trim), ...(cutGlyphCount > 0 && { cutGlyphCount }) };
 }
 
-/**
- * The first line of a paragraph trimmed to `widthPx` as a text buffer, as `TextLine::draw` or a
- * one-row `TextParagraph::draw` trims it. Godot draws one `TextLine` there, so a text with a line
- * break draws its first line only. Returns `layout` itself when nothing is cut, so a memo downstream holds.
- */
-export function trimSoloLine(
+/** A `shapeTextLine` layout cut to `widthPx` (`TextLine::draw`). Uncut, it is `layout` itself. */
+export function trimTextLine(
   layout: TextLayoutResult,
   flags: OverrunTrimFlags,
   widthPx: number,
@@ -386,7 +382,7 @@ export function trimSoloLine(
   if (!flags.trim) return layout;
   const line = layout.lines[0]!;
   const trimmedLine = trimLine(line, widthPx, flags, options, textBufferPlacement);
-  return trimmedLine === line && layout.lines.length === 1 ? layout : soloLineLayout(trimmedLine, layout);
+  return trimmedLine === line ? layout : soloLineLayout(trimmedLine, layout);
 }
 
 /**

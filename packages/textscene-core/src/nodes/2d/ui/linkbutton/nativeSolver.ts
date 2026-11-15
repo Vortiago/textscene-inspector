@@ -12,7 +12,7 @@
 import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
-import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
+import { shapeTextLine } from '../../../../r3f/controls/native/text/textLine';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -135,10 +135,10 @@ export const linkButtonLabelShape = defineShare<TextLayoutResult | null>((n) => 
   if (text.length === 0) return null;
   const state = resolveLinkButtonDrawState(props);
   const { fontSizePx } = linkButtonTextTheme(n, props, state);
-  return shapeButtonLabel(text, {
+  return shapeTextLine(text, {
+    ...controlBidiOptions(props, n),
     fontSizePx,
     fontMetrics: resolveNodeFontMetrics(n, LINKBUTTON_THEME_FONT_KEY),
-    bidi: controlBidiOptions(props, n),
   });
 });
 

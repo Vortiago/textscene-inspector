@@ -138,4 +138,10 @@ describe('menuBarTitleShapes direction', () => {
   it('takes the layout direction for INHERITED', () => {
     expect(visualTitle({ textDirection: 3 }, { rtl: true })).toBe('!Hello');
   });
+
+  // A title is a `TextLine`, which never breaks (menu_bar.h:53).
+  it('keeps a title with a line break on one line', () => {
+    const [title] = menuBarTitleShapes(node([popup('Menu', 'Ab\ncd')]), nativeTheme(1));
+    expect(title!.layout.lines.map((line) => line.text)).toEqual(['Ab\ncd']);
+  });
 });
