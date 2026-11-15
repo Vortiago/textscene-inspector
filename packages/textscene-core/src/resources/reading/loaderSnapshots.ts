@@ -7,7 +7,8 @@
 import type { ParsedResource } from '../../parser/parsedResource';
 import { answeredOnce, recordingReads, type CacheSource } from '../../r3f/cacheSources';
 import type { ResourceProcessor } from '../createResourceProcessor';
-import { FILE_KIND_BUSES, PARSED_RESOURCES, type FileKind } from '../fileKinds';
+import { FILE_KIND_BUSES, LOAD_OUTCOMES, PARSED_RESOURCES, type FileKind } from '../fileKinds';
+import type { LoadOutcome } from '../loadFailure/loadOutcome';
 import type { CachedFile } from '../useLoadedFiles';
 import type { ResourceLoader } from '../ResourceLoader';
 import type { ResourceSnapshot } from './read';
@@ -31,10 +32,7 @@ export interface SnapshotSource {
   request(): void;
   /** `onStale` hears a load, a failure or a reload of a file the current snapshot read. */
   subscribe(onStale: () => void): () => void;
-  /**
-   * Each file the current snapshot read, and each `file::id` address it found in a loaded file, with
-   * its answer, for the host's **Missing resource** report. An address the file does not declare answers null.
-   */
+  /** Null for an address the file does not declare, and for a file Godot fails to load. */
   files(): ReadonlyMap<string, CachedFile<object>>;
 }
 
@@ -73,7 +71,8 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
       const cache = fileKind.cacheOf(loader);
       found = {
         cache,
-        settled: keptWhileReloading(cache),
+        settled:
+          fileKind === LOAD_OUTCOMES ? failuresOnly(keptWhileReloading(cache)) : keptWhileReloading(cache),
         reads: new Map(),
         previousReads: new Map(),
         pinned: new Set(),
@@ -157,8 +156,12 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
     },
     files() {
       const files = new Map<string, CachedFile<object>>();
-      kinds.forEach(({ reads }) => reads.forEach((answer, path) => files.set(path, answer)));
+      kinds.forEach(({ reads }, fileKind) => {
+        if (fileKind !== LOAD_OUTCOMES) reads.forEach((answer, path) => files.set(path, answer));
+      });
       addresses.forEach((answer, address) => files.set(address, answer));
+      // Last, so a file Godot fails to load reports missing whatever else read it.
+      kinds.get(LOAD_OUTCOMES)?.reads.forEach((answer, path) => answer && files.set(path, null));
       return files;
     },
   };
@@ -194,6 +197,16 @@ function keptWhileReloading<T extends object>(cache: ResourceProcessor<T>): Cach
       const answer = cache.getCached(path);
       if (answer !== undefined) last.set(path, answer);
       return answer === undefined ? last.get(path) : answer;
+    },
+  };
+}
+
+// A load reads as unknown: a reader decides only on a failure, so a load starts no snapshot.
+function failuresOnly(outcomes: CacheSource<object>): CacheSource<object> {
+  return {
+    getCached(path) {
+      const outcome = outcomes.getCached(path) as LoadOutcome | null | undefined;
+      return outcome?.isFailed ? outcome : undefined;
     },
   };
 }

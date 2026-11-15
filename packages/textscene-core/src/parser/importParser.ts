@@ -62,6 +62,8 @@ export interface ParsedImportFile {
    * bake concern with no visual effect.
    */
   params: Record<string, string>;
+  /** False where `[remap] valid=false` records a failed import (resource_importer.cpp:113-116). */
+  isValid: boolean;
 }
 
 /**
@@ -74,6 +76,7 @@ export interface ParsedImportFile {
 export function parseImportFile(content: string): ParsedImportFile | null {
   let section: string | null = null;
   let importer: string | null = null;
+  let isValid = true;
   const params: Record<string, string> = {};
   let sawSection = false;
   let pending: { key: string; lines: string[]; scan: ValueScanState } | null = null;
@@ -127,10 +130,11 @@ export function parseImportFile(content: string): ParsedImportFile | null {
     const value = unquoteLiteral(raw);
     if (section === 'params') params[key!] = value;
     else if (section === 'remap' && key === 'importer') importer = value;
+    else if (section === 'remap' && key === 'valid') isValid = boolSlotValue(value) !== false;
   }
   storePending();
 
-  return sawSection ? { importer, params } : null;
+  return sawSection ? { importer, params, isValid } : null;
 }
 
 /**

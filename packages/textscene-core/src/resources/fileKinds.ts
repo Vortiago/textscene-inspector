@@ -9,6 +9,7 @@ import type { FontResource } from './fonts/font/types';
 import type { ResourceLoader } from './ResourceLoader';
 import type { ResourceType } from './ResourceEventBus';
 import type { ThemeResource } from './styles/theme/types';
+import type { LoadOutcome } from './loadFailure/loadOutcome';
 
 /** The cache and the bus events of one kind of file. */
 export interface FileKind<T extends object> {
@@ -31,7 +32,16 @@ export const THEME_FILES: FileKind<ThemeResource> = {
   cacheOf: (loader) => loader.themes,
 };
 
+/** Whether a file loads in Godot, on the load outcome bus. */
+export const LOAD_OUTCOMES: FileKind<LoadOutcome> = {
+  busTypes: ['loadoutcome'],
+  cacheOf: (loader) => loader.loadOutcomes,
+};
+
 /** Every bus a file kind loads on: a reader that may read any kind listens to these. */
-export const FILE_KIND_BUSES: readonly ResourceType[] = [PARSED_RESOURCES, FONT_FILES, THEME_FILES].flatMap(
-  (kind) => kind.busTypes
-);
+export const FILE_KIND_BUSES: readonly ResourceType[] = [
+  PARSED_RESOURCES,
+  FONT_FILES,
+  THEME_FILES,
+  LOAD_OUTCOMES,
+].flatMap((kind) => kind.busTypes);
