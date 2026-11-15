@@ -418,6 +418,14 @@ describe('textEditRowBandTopPx / textEditRowTextTopPx (text_edit.cpp:1376-1378,1
     expect(textEditRowBandTopPx(2, 20, 4, 4)).toBe(46);
   });
 
+  it('truncates the top margin and half the line spacing, as `int ofs_y` does (text_edit.cpp:1376-1378)', () => {
+    expect(textEditRowBandTopPx(10, 27, 0.99999, 5)).toBe(272);
+  });
+
+  it('truncates the centred text top, as `int ofs_y` does (text_edit.cpp:1626)', () => {
+    expect(textEditRowTextTopPx(6, 20, 15)).toBe(8);
+  });
+
   it('centres the text box inside its own band', () => {
     // row_height 20, text_height 16 -> 2px above and below.
     expect(textEditRowTextTopPx(6, 20, 16)).toBe(8);
