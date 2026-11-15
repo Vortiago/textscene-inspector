@@ -41,6 +41,7 @@ describe('the committed answers file', () => {
       'random',
       'operators',
       'corpus',
+      'expressions',
     ]);
   });
 });
