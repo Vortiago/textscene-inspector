@@ -21,6 +21,7 @@ import { writeFramebufferHeight } from './shadowFilter/framebufferRows.js';
 import { writeSunShadowUniforms } from './directionalShadow/sunShadowUniforms.js';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy.js';
 import { positionalShadowAtlas } from './positionalShadow/shadowAtlasTarget.js';
+import { perObject } from '../utils/perObject.js';
 import { beginStep, endStep } from './frameProfile/frameProfile.js';
 import type { RenderStep } from './frameProfile/frameStats.js';
 
@@ -127,8 +128,18 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
   return readers;
 }
 
-/** Lit programs sample the atlas with no slot drawn. Init skips a built target (`WebGLRenderer.js:3613`). */
+/** Counts the atlas's frees, a resize among them. Written only by the listener below. */
+let atlasBuild = 0;
+positionalShadowAtlas().addEventListener('dispose', () => atlasBuild++);
+
+/** The atlas build each renderer last allocated. */
+const allocatedBuild = perObject((_renderer: THREE.WebGLRenderer) => ({ build: -1 }));
+
+/** Lit programs sample the atlas with no slot drawn. Allocating binds the canvas (WebGLTextures.js:2042). */
 function allocatePositionalShadowAtlas(renderer: THREE.WebGLRenderer): void {
+  const allocated = allocatedBuild(renderer);
+  if (allocated.build === atlasBuild) return;
+  allocated.build = atlasBuild;
   const target = renderer.getRenderTarget();
   const face = renderer.getActiveCubeFace();
   const level = renderer.getActiveMipmapLevel();

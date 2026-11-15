@@ -39,4 +39,10 @@ describe('useRootViewportDescription', () => {
 
     expect([before.mipmapBias, after.mipmapBias]).toEqual([0, 1]);
   });
+
+  it('gives the root defaults for an empty project (error case)', () => {
+    const [description] = descriptionsOfTwoReaders({});
+
+    expect(description).toMatchObject({ mipmapBias: 0, positionalShadowAtlas: { size: 4096 } });
+  });
 });

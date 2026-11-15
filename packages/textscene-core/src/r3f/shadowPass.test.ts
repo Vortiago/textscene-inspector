@@ -37,7 +37,6 @@ function fakeRenderer(): { renderer: THREE.WebGLRenderer; threePass: ReturnType<
     getActiveMipmapLevel: () => 0,
     setRenderTarget: vi.fn(),
     initRenderTarget: vi.fn(),
-    properties: { get: () => ({}) },
     getDrawingBufferSize: (size: THREE.Vector2) => size.set(955, 756),
     ...profiledRendererMembers(),
   };
@@ -96,6 +95,25 @@ describe('installShadowPass', () => {
     expect(vi.mocked(renderer.setRenderTarget).mock.invocationCallOrder[0]).toBeGreaterThan(
       vi.mocked(renderer.initRenderTarget).mock.invocationCallOrder[0]!
     );
+  });
+
+  it('restores the render’s target only on the pass that builds the atlas (edge case)', () => {
+    const { renderer } = fakeRenderer();
+    installShadowPass(renderer);
+    runPass(renderer, []);
+    runPass(renderer, []);
+    expect(renderer.setRenderTarget).toHaveBeenCalledTimes(1);
+  });
+
+  it('builds the atlas again once it is resized (edge case)', () => {
+    const { renderer } = fakeRenderer();
+    installShadowPass(renderer);
+    runPass(renderer, []);
+    const atlas = positionalShadowAtlas();
+    atlas.setSize(atlas.width * 2, atlas.height * 2);
+    atlas.setSize(atlas.width / 2, atlas.height / 2);
+    runPass(renderer, []);
+    expect(renderer.initRenderTarget).toHaveBeenCalledTimes(2);
   });
 
   it('runs three’s pass, then copies each omni light that holds a slot', () => {
