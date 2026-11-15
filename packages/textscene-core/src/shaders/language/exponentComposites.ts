@@ -1,9 +1,13 @@
+/**
+ * `frexp` and `ldexp` as composites: `frexp` splits a float's bits with integer operations, and
+ * `ldexp` scales by exact powers of two.
+ */
+
 import {
   add,
   bitAnd,
   bitOr,
   clamp,
-  convert,
   div,
   equal,
   floatBitsToUint,
@@ -28,6 +32,7 @@ import {
   unsignedNode,
   withScalar,
 } from './compositeParts.js';
+import { convertedNode } from './emitConstant.js';
 import { topBitOf } from './integerComposites.js';
 
 const EXPONENT_MASK = 0x7f800000;
@@ -90,7 +95,7 @@ const frexp: Composite = ([x, exponent], [type, exponentType]) => {
 const powerOfTwo = (k: Node, type: string) =>
   tsl(uintBitsToFloat)(
     tsl(shiftLeft)(
-      tsl(convert)(tsl(add)(k, intNode(FLOAT_BIAS)), withScalar(type, 'uint') as never),
+      convertedNode(tsl(add)(k, intNode(FLOAT_BIAS)), type, withScalar(type, 'uint')),
       unsignedNode(FRACTION_BITS)
     )
   );

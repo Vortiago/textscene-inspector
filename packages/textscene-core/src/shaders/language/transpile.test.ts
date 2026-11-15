@@ -89,7 +89,7 @@ describe('transpileShadingLanguage', () => {
 
   it('refuses a row that is not transpiled before it reaches the emitter', () => {
     expect(() => transpileShadingLanguage('ivec2 probe(sampler2D s) { return textureSize(s, 0); }')).toThrow(
-      /is not transpiled yet \(#18\d\d\)/
+      "'textureSize(sampler2D,int)' is not transpiled yet (#1829)"
     );
   });
 

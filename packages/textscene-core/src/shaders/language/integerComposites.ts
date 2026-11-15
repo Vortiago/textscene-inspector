@@ -1,10 +1,14 @@
+/**
+ * The integer and bit functions three/tsl lacks, as composites of integer TSL operations: bit
+ * counts and scans, bit fields, and the carry and extended products.
+ */
+
 import {
   add,
   bitAnd,
   bitNot,
   bitOr,
   bitXor,
-  convert,
   equal,
   lessThan,
   mul,
@@ -15,12 +19,10 @@ import {
 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { chained, type Composite, intNode, tsl, unsignedNode, withScalar } from './compositeParts.js';
+import { convertedNode } from './emitConstant.js';
 
-// The inner convert stops three writing a negative constant as `0u`.
-const as = (x: Node, from: string, to: string) => tsl(convert)(tsl(convert)(x, from as never), to as never);
-
-const unsigned = (x: Node, type: string) => as(x, type, withScalar(type, 'uint'));
-const signed = (v: Node, type: string) => as(v, withScalar(type, 'uint'), withScalar(type, 'int'));
+const unsigned = (x: Node, type: string) => convertedNode(x, type, withScalar(type, 'uint'));
+const signed = (v: Node, type: string) => convertedNode(v, withScalar(type, 'uint'), withScalar(type, 'int'));
 
 function onesIn(v: Node): Node {
   const pairs = tsl(sub)(v, tsl(bitAnd)(tsl(shiftRight)(v, unsignedNode(1)), unsignedNode(0x55555555)));
@@ -79,8 +81,8 @@ const bitfieldReverse: Composite = ([x], [type]) => {
 const bitfieldExtract: Composite = ([value, offset, bits], [type]) => {
   const room = tsl(sub)(intNode(32), bits!);
   const atTop = tsl(shiftLeft)(tsl(shiftRight)(unsigned(value!, type!), offset!), room);
-  const field = tsl(shiftRight)(as(atTop, withScalar(type!, 'uint'), type!), room);
-  return tsl(select)(tsl(equal)(bits!, intNode(0)), as(unsignedNode(0), 'uint', type!), field);
+  const field = tsl(shiftRight)(convertedNode(atTop, withScalar(type!, 'uint'), type!), room);
+  return tsl(select)(tsl(equal)(bits!, intNode(0)), convertedNode(unsignedNode(0), 'uint', type!), field);
 };
 
 const fieldMask = (offset: Node, bits: Node) =>
@@ -96,12 +98,12 @@ const bitfieldInsert: Composite = ([base, insert, offset, bits], [type]) => {
 
 const uaddCarry: Composite = ([x, y, carry], [type]) => {
   const sum = tsl(add)(x!, y!);
-  chained(carry!).assign(as(tsl(lessThan)(sum, x!), withScalar(type!, 'bool'), type!));
+  chained(carry!).assign(convertedNode(tsl(lessThan)(sum, x!), withScalar(type!, 'bool'), type!));
   return sum;
 };
 
 const usubBorrow: Composite = ([x, y, borrow], [type]) => {
-  chained(borrow!).assign(as(tsl(lessThan)(x!, y!), withScalar(type!, 'bool'), type!));
+  chained(borrow!).assign(convertedNode(tsl(lessThan)(x!, y!), withScalar(type!, 'bool'), type!));
   return tsl(sub)(x!, y!);
 };
 

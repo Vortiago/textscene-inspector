@@ -1,3 +1,5 @@
+/** The high_end functions GLSL ES 3.0 lacks, each drawn with its nearest function. */
+
 import { add, dFdx, dFdy, fwidth, mul } from 'three/tsl';
 import { type Composite, tsl } from './compositeParts.js';
 
