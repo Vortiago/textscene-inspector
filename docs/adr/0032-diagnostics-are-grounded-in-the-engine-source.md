@@ -104,7 +104,8 @@ Two capture facts decide the check before the hint does:
   `_set_data` takes an Array.
 - **A property bound with no setter drops its write.** `ClassDB::set_property` returns true
   and stores nothing (`class_db.cpp:1655-1659`), so the capture records `has_setter: false`
-  and the check refuses every value at the error tier.
+  and the check accepts every value. Godot writes such a row from its getter, so a refusal
+  would fire on Godot's own files.
 
 A RID slot gets no check. A `.tscn` holds only the default `RID()`, because the value is a
 runtime handle.

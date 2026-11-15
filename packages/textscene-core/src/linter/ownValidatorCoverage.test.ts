@@ -1,10 +1,3 @@
-/**
- * Every type the previewer reads must have its setters read: a hand validator or a hand row
- * states what a setter refuses, which the ClassDB capture cannot report. The capture gives
- * every own row a format and hint check. `NO_OWN_PROPERTIES` is a permanent fact about Godot,
- * and `UNDECLARED` is a defect list that only shrinks.
- */
-
 import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
@@ -82,25 +75,17 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
     'its one member, render_model (openxr_render_model.cpp:46), is a Variant::RID. RID is not excluded by grammar — VariantWriter::write puts it in the ordinary misc-types branch (variant_parser.cpp:2157-2163), not the SIGNAL/CALLABLE "do not really store" bucket, and its usage carries STORAGE. What rules it out is ownership: the only path that sets a non-default value is OpenXRRenderModelManager::_update_models (openxr_render_model_manager.cpp:93-96), which memnew/add_child()es these nodes without ever calling set_owner(), so packed_scene.cpp:797 discards them before any save. A hand-placed node keeps the RID() default, and only non-default values are written',
 };
 
-/** The capture rows `type` declares itself. */
 function ownRows(type: string) {
   return classProperties(type).filter(({ declaredBy }) => declaredBy === type);
 }
 
-/**
- * Whether someone has read the type's setters: it registers a hand validator, or a hand row on
- * one of its own keys. A type whose setters refuse nothing still states it with a hand row.
- */
+// ClassDB cannot report a refusal, so a setter that refuses nothing still gets a hand row.
 function hasReadSetters(type: string): boolean {
   if (validatorRegistry.getOwnKeys(type).length > 0) return true;
   return ownRows(type).some(({ name }) => propertyDescriptor(type, name)?.facts !== undefined);
 }
 
-/**
- * The own rows of `types` a check must answer. A RID row is the one true limit: a `.tscn` holds
- * only the default `RID()` (see `OpenXRRenderModel` below), so it has no check. A class the
- * pinned capture lacks has hand rows from a later release instead.
- */
+// A `.tscn` holds only the default `RID()` (see `OpenXRRenderModel`).
 function guardedRows(types: readonly string[]) {
   return types
     .filter((type) => !isUncatalogued(type))
@@ -108,18 +93,13 @@ function guardedRows(types: readonly string[]) {
     .filter(({ variantType }) => variantType !== VARIANT_TYPE.RID);
 }
 
-/** Each row the registry answers with no check, as `Type.key`. */
 function uncheckedRows(rows: ReturnType<typeof guardedRows>): string[] {
   return rows
     .filter(({ type, key }) => validatorRegistry.declarationFor(type, key) === null)
     .map(({ type, key }) => `${type}.${key}`);
 }
 
-/**
- * Types with own properties in Godot whose setters nobody has read yet, each a live gap. Empty,
- * but kept as the ratchet: adding a type means raising the pinned count below, and
- * declaring its validators is the only correct removal.
- */
+// A ratchet: a hand validator or hand row is the only correct removal.
 const UNDECLARED: readonly string[] = [];
 
 /**
@@ -145,12 +125,7 @@ function typesWithoutOwnValidators(): string[] {
   return typesUnderGuard().filter((type) => !hasReadSetters(type));
 }
 
-/**
- * Claimed resource classes whose setters nobody has read, a ratchet of its own since the node
- * base chain never reaches a Resource. The capture checks each key's format and hint, but not
- * what a setter refuses (`box_shape_3d.cpp:100` refuses a negative size). Pseudo-types outside
- * ClassDB (`GLB`, `GLTF`) are excluded. A hand validator or hand row is the only correct removal.
- */
+// The node base chain never reaches a Resource. `GLB` and `GLTF` are not ClassDB classes.
 const UNDECLARED_RESOURCES: readonly string[] = [
   'ArrayMesh',
   'AtlasTexture',
@@ -238,7 +213,6 @@ describe('own-validator coverage for resource slices', () => {
       .filter((type) => !hasReadSetters(type))
       .filter((type) => !accounted.has(type));
 
-    // A type here parses, and nobody has read what its setters refuse. Read them.
     expect(unaccounted).toEqual([]);
   });
 
@@ -258,7 +232,6 @@ describe('own-validator coverage for resource slices', () => {
 
   it('resolves every own capture row of a claimed resource to a check', () => {
     const rows = guardedRows(claimedResourceClasses());
-    // Anti-vacuity: an emptied capture would leave the sweep green.
     expect(rows.length).toBeGreaterThan(400);
     expect(uncheckedRows(rows)).toEqual([]);
   });
@@ -275,8 +248,6 @@ describe('own-validator coverage', () => {
     const accounted = new Set([...Object.keys(NO_OWN_PROPERTIES), ...UNDECLARED]);
     const unaccounted = typesWithoutOwnValidators().filter((type) => !accounted.has(type));
 
-    // A type here parses, and nobody has read what its setters refuse. Read them,
-    // or add it to NO_OWN_PROPERTIES if Godot truly gives it none.
     expect(unaccounted).toEqual([]);
   });
 

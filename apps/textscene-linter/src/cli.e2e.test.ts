@@ -334,8 +334,7 @@ describe('CLI bundle purity', () => {
   it('stays under the size backstop', () => {
     // A backstop for a leak the markers miss, not a budget for the linter's growth:
     // three.js or react-dom adds more than the whole bundle. Raise it for honest
-    // growth, never to admit a dependency the markers failed on. The ClassDB capture
-    // the property descriptor reads is 242 KB of it.
+    // growth, never to admit a dependency the markers failed on.
     expect(statSync(cliPath).size).toBeLessThan(1_700_000);
   });
 });
