@@ -52,6 +52,7 @@ import {
   IMAGE_OBJECT_CHAR,
   hasOpenTag,
   lastTagValue,
+  foldCrLf,
   parseBBCodeRuns,
   resolveBBColor,
   type OpenBBCodeTag,
@@ -485,7 +486,7 @@ export function styledTextRuns(
       ? []
       : [
           {
-            text: raw,
+            text: foldCrLf(raw),
             bold: false,
             italic: false,
             underline: false,

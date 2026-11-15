@@ -991,3 +991,11 @@ describe('shapeLineEditText: direction, language and structured override (line_e
     expect(visual({ text: 'שלום/abc', textDirection: 2, structuredTextBidiOverride: 2 })).toBe('םולש/abc');
   });
 });
+
+// `_shape` adds the text to one shaped text and never breaks it (line_edit.cpp:3104-3112).
+describe('shapeLineEditText — a line break', () => {
+  it('keeps the text on one line', () => {
+    const layout = shapeLineEditText('Ab\ncd', {}, { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS });
+    expect(layout.lines.map((line) => line.text)).toEqual(['Ab\ncd']);
+  });
+});

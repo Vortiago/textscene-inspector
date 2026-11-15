@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { useOptionalSelection } from '../contexts/SelectionContext.js';
 import { useHelperTickUpdate, useSceneHelper } from '../hooks/useTHREEHelper.js';
 import { useResourceLoader } from '../../resources/useResource.js';
-import { useLiveTreeVersion } from '../useLiveSceneTree.js';
+import { useDrawnContentVersion } from '../../resources/useCacheVersion';
 import { WorldBoxHelper } from './WorldBoxHelper.js';
 
 // The selection colour of the imperative `HelperManager.highlightNode`.
@@ -18,9 +18,9 @@ export function SelectionHighlight() {
   const selectedNodePath = selection?.selectedNodePath ?? null;
   const nodeObjectMap = selection?.nodeObjectMap ?? null;
   const tickUpdate = useHelperTickUpdate();
-  // With the tick gate closed, bounds still change when a GLB or sub-scene
+  // With the tick gate closed, bounds still change when a GLB, a sub-scene or a resource file
   // replaces its placeholder inside the selection. Recreate the helper then.
-  const resourceVersion = useLiveTreeVersion(useResourceLoader());
+  const resourceVersion = useDrawnContentVersion(useResourceLoader());
 
   useSceneHelper<THREE.BoxHelper>(
     () => {

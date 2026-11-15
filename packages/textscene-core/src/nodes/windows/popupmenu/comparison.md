@@ -18,6 +18,7 @@ embedding root.
 
 The window takes the size of its items. A check or radio item shows its mark in a gutter that every row
 keeps. A separator is a line between the rows. A disabled item takes the disabled font colour.
+An item's text with a line break draws on one line, and the break takes no room, as in a `TextLine`.
 
 ## Right to left
 

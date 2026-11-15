@@ -690,6 +690,14 @@ describe('shapeTabLabel direction', () => {
   });
 });
 
+// A `TextLine` never breaks (tab_bar.h:79).
+describe('shapeTabLabel — a line break', () => {
+  it('keeps the title on one line', () => {
+    const layout = shapeTabLabel('One\nTwo', { rtl: false, locale: '' }, { fontSizePx: 16 });
+    expect(layout.lines.map((line) => line.text)).toEqual(['One\nTwo']);
+  });
+});
+
 describe('the two widths of a tab when tab_hovered is wider than tab_unselected', () => {
   const widerHovered = {
     ...TABLE_BOXES.tab_hovered!,

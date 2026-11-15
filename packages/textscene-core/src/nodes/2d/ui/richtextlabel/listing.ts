@@ -9,16 +9,15 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { formatControlNumber, type Numerals } from '../../../../godot/text/numberFormat';
 import type { Rgba } from '../../../../godot/math/math';
 import type { TextOutlineTheme } from '../../../../r3f/controls/native/textTheme';
 import { getFontTabWidthPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
-  shapeText,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { shapeTextLine } from '../../../../r3f/controls/native/text/textLine';
 import { IMAGE_OBJECT_CHAR, INDENT_TAGS, hasOpenTag, lastTagValue, type OpenBBCodeTag } from './bbcode';
 import { faceOfStyle, type RichTextFaces } from './styleFaces';
 import {
@@ -411,15 +410,10 @@ function shapeMarker(text: string, row: Row, faces: RichTextFaces): ListMarker {
   // A size of 0 or less shapes no glyphs, so the marker has no width and draws nothing.
   const shapedText = style.fontSizePx > 0 ? text : '';
   const direction = row.run.bidi.direction;
-  const layout = shapeText(shapedText, {
+  const layout = shapeTextLine(shapedText, {
     fontSizePx: style.fontSizePx,
-    boxWidthPx: 0,
-    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-    lineSpacingPx: 0,
     fontMetrics: faceOfStyle(faces, style),
     direction,
-    paragraphSeparator: '\n',
-    terminateLastParagraph: false,
   });
   return {
     layout,

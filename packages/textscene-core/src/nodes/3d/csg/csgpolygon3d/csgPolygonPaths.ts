@@ -13,7 +13,8 @@ import { liveGlobalTransform3D } from '../../../../r3f/liveGlobalTransform.js';
 import { uniquePathsOfLiteral } from '../../../../r3f/nodePathUniqueNames.js';
 import type { NodePatch, NodePatches } from '../../../../r3f/nodePatch.js';
 import { resolveNodePathLiteral, unclaimedUniqueNames } from '../../../../godot/string/nodePath.js';
-import { resolveCurve3D } from '../../../../resources/curves/curve3d/index.js';
+import { CURVE_3D } from '../../../../resources/curves/curve3d/index.js';
+import { nodeReference, type ResourceSnapshot } from '../../../../resources/reading';
 import { warnOnce } from '../../../../utils/warnOnce.js';
 
 /** Godot's MODE_PATH. */
@@ -27,10 +28,14 @@ const MIN_CURVE_POINTS = 2;
  * and the evaluator read one answer, testable without a renderer. `placed` holds what the
  * RemoteTransform pass moved, which the Path3D's global transform reads.
  */
-export function resolveCsgPolygonPaths(tree: LiveTree, placed: NodePatches): NodePatches {
+export function resolveCsgPolygonPaths(
+  tree: LiveTree,
+  snapshot: ResourceSnapshot,
+  placed: NodePatches
+): NodePatches {
   const patches = new Map<string, NodePatch>();
   tree.fold<void, void>(undefined, (polygon, _, descend) => {
-    const resolvedPath = resolvedPathOf(polygon, tree, placed);
+    const resolvedPath = resolvedPathOf(polygon, tree, snapshot, placed);
     if (resolvedPath) patches.set(polygon.path, { resolvedPath });
     descend();
   });
@@ -41,6 +46,7 @@ export function resolveCsgPolygonPaths(tree: LiveTree, placed: NodePatches): Nod
 function resolvedPathOf(
   polygon: LiveLink,
   tree: LiveTree,
+  snapshot: ResourceSnapshot,
   placed: NodePatches
 ): CSGPolygon3DProperties['resolvedPath'] {
   const { node } = polygon.step;
@@ -83,10 +89,10 @@ function resolvedPathOf(
     return undefined;
   }
 
-  // The Path3D's `curve` names a SubResource of the file that wrote the Path3D.
+  // The Path3D's `curve` resolves in the file that wrote the Path3D, built in or in a file of its own.
   const curveRef = (target.step.node.properties as Path3DProperties).curve;
-  const curvePoints = resolveCurve3D(curveRef, target.step.scope.internalResources);
-  if (curvePoints.length < MIN_CURVE_POINTS) return undefined;
+  const curvePoints = snapshot.read(nodeReference(curveRef, target.step.scope), CURVE_3D).value;
+  if (!curvePoints || curvePoints.length < MIN_CURVE_POINTS) return undefined;
 
   // `path_local` builds the sweep in the polygon's own space. Otherwise Godot uses the Path3D's
   // global transform as the base, builds the brush there and consumes it as local geometry, so a

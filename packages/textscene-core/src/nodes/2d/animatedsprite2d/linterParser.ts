@@ -26,7 +26,6 @@ validatorRegistry.registerAll('AnimatedSprite2D', {
   flip_h: v.boolean('flip_h'),
   flip_v: v.boolean('flip_v'),
   frame_progress: v.float('frame_progress'),
-  autoplay: v.stringName('autoplay'),
 });
 
 // No ADD_PROPERTY declares it (animated_sprite_2d.cpp:671-681), and the

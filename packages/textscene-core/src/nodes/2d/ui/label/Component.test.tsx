@@ -308,4 +308,18 @@ describe('<Label> — the lines a wrapped Label shows in its rect (label.cpp:520
       .at(-1)!;
     expect(lastInked.x + lastInked.advance).toBeCloseTo(60, 0);
   });
+
+  // A paragraph's last line stays unfitted when lines_skipped hides the lines above it, as `jst_to_line`
+  // counts the whole paragraph. Seen alone it is a single line, which DO_NOT_SKIP_SINGLE_LINE fits.
+  it('leaves unfitted the last line of a FILL paragraph that starts above the window', async () => {
+    const renderer = await render(
+      { text: 'AA A AA A AA A', autowrapMode: 2, horizontalAlignment: 3, linesSkipped: 2 },
+      { x: 0, y: 0, w: 60, h: 200 }
+    );
+    const [onlyShown] = bundledRuns(renderer.scene);
+    const lastInked = runGlyphs(onlyShown!)
+      .filter((glyph) => glyph.char.trim() !== '')
+      .at(-1)!;
+    expect(lastInked.x + lastInked.advance).toBeLessThan(55);
+  });
 });

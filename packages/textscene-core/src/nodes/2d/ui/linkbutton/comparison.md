@@ -19,6 +19,7 @@ The text and the underline sit at the line's ascent: the largest ascent of the f
 draw in. A glyph from a taller fallback lowers the line (`:5161`). A `FontVariation` instance
 keeps the ascent and the underline of the default instance, as Godot reads them before it sets the
 axes (`:1515-1518`, `:1948`).
+A text with a line break draws on one line, and the break takes no room, as in a `TextLine`. A carriage return the font maps takes the width of its glyph.
 
 ## Linting
 

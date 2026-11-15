@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../../../parser/TscnParser';
 import { liveTreeOf } from '../../../r3f/liveSceneTree';
-import { contextOver } from '../../../r3f/liveSceneTree.testkit';
+import { contextOver, runPass } from '../../../r3f/liveSceneTree.testkit';
 import { bindPolygonsToSkeletons, type PolygonSkeletonBinding } from './skeletonBinding';
 import './index';
 import '../bone2d/index';
@@ -40,7 +40,7 @@ ${polygonProperties}
 
 function bindingOf(content: string): PolygonSkeletonBinding | undefined {
   const main = new TscnParser().parse(content);
-  return bindPolygonsToSkeletons(liveTreeOf(main.nodes, contextOver(main, {}))).get('Root/Poly');
+  return runPass(bindPolygonsToSkeletons, liveTreeOf(main.nodes, contextOver(main, {}))).get('Root/Poly');
 }
 
 describe('bindPolygonsToSkeletons', () => {

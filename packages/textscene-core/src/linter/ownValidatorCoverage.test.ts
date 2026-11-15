@@ -1,14 +1,10 @@
-/**
- * A node type must declare validators for its own properties: the coverage ledger
- * counts parser registrations, while `StrictTscnParser` (`if (!validator) return;`)
- * accepts every value on a type with none. `NO_OWN_PROPERTIES` is a permanent fact
- * about Godot, and `UNDECLARED` is a defect list that only shrinks.
- */
-
 import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
+import { classProperties, isUncatalogued } from '../godot/classdb/classProperty.js';
+import { propertyDescriptor } from '../godot/classdb/propertyDescriptor.js';
+import { isRuntimeHandle } from '../godot/variant/variantType.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/classdb/resourceBaseTypes.generated.js';
 import { resourceSliceRegistry } from '../resources/sliceRegistration.js';
 import '../resources/sliceRegistrations.js'; // side-effect: every resource slice claims its types
@@ -79,11 +75,30 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
     'its one member, render_model (openxr_render_model.cpp:46), is a Variant::RID. RID is not excluded by grammar — VariantWriter::write puts it in the ordinary misc-types branch (variant_parser.cpp:2157-2163), not the SIGNAL/CALLABLE "do not really store" bucket, and its usage carries STORAGE. What rules it out is ownership: the only path that sets a non-default value is OpenXRRenderModelManager::_update_models (openxr_render_model_manager.cpp:93-96), which memnew/add_child()es these nodes without ever calling set_owner(), so packed_scene.cpp:797 discards them before any save. A hand-placed node keeps the RID() default, and only non-default values are written',
 };
 
-/**
- * Types with own properties in Godot that are not declared yet, each a live gap. Empty,
- * but kept as the ratchet: adding a type means raising the pinned count below, and
- * declaring its validators is the only correct removal.
- */
+function ownRows(type: string) {
+  return classProperties(type).filter(({ declaredBy }) => declaredBy === type);
+}
+
+// ClassDB cannot report a refusal, so a setter that refuses nothing still gets a hand row.
+function hasReadSetters(type: string): boolean {
+  if (validatorRegistry.getOwnKeys(type).length > 0) return true;
+  return ownRows(type).some(({ name }) => propertyDescriptor(type, name)?.facts !== undefined);
+}
+
+function guardedRows(types: readonly string[]) {
+  return types
+    .filter((type) => !isUncatalogued(type))
+    .flatMap((type) => ownRows(type).map((row) => ({ type, key: row.name, variantType: row.type })))
+    .filter(({ variantType }) => !isRuntimeHandle(variantType));
+}
+
+function uncheckedRows(rows: ReturnType<typeof guardedRows>): string[] {
+  return rows
+    .filter(({ type, key }) => validatorRegistry.declarationFor(type, key) === null)
+    .map(({ type, key }) => `${type}.${key}`);
+}
+
+// A ratchet: a hand validator or hand row is the only correct removal.
 const UNDECLARED: readonly string[] = [];
 
 /**
@@ -106,15 +121,10 @@ function typesUnderGuard(): string[] {
  * are declared only on `AnimationTree`, so `AnimationPlayer` inherits none, unseen here.
  */
 function typesWithoutOwnValidators(): string[] {
-  return typesUnderGuard().filter((type) => validatorRegistry.getOwnKeys(type).length === 0);
+  return typesUnderGuard().filter((type) => !hasReadSetters(type));
 }
 
-/**
- * Claimed resource classes with no own validators, a ratchet of its own since the node
- * base chain never reaches a Resource (`box_shape_3d.cpp:100` refuses a negative size).
- * Pseudo-types outside ClassDB (`GLB`, `GLTF`) are excluded. Declaring its validators is
- * the only correct removal.
- */
+// The node base chain never reaches a Resource. `GLB` and `GLTF` are not ClassDB classes.
 const UNDECLARED_RESOURCES: readonly string[] = [
   'ArrayMesh',
   'AtlasTexture',
@@ -151,16 +161,12 @@ const UNDECLARED_RESOURCES: readonly string[] = [
   'StyleBoxFlat',
   'TorusMesh',
   'ViewportTexture',
-  // The font and theme slices decode enough to draw (a `.tres` wrapper's fallbacks,
-  // a variation's base font, a theme's type chain) and validate none of it. `Font`
-  // is the abstract tier the other three descend from.
-  'Font',
+  // The font and theme slices decode enough to draw and validate none of it.
   'FontFile',
   'FontVariation',
   'SystemFont',
   'Theme',
-  // The highlighter and label-settings slices decode enough to draw and validate
-  // none of it.
+  // The highlighter and label-settings slices decode enough to draw and validate none of it.
   'CodeHighlighter',
   'LabelSettings',
 ];
@@ -199,17 +205,15 @@ describe('own-validator coverage for resource slices', () => {
   it('accounts for every claimed resource type that declares no validators', () => {
     const accounted = new Set([...Object.keys(NO_OWN_PROPERTIES_RESOURCES), ...UNDECLARED_RESOURCES]);
     const unaccounted = claimedResourceClasses()
-      .filter((type) => validatorRegistry.getOwnKeys(type).length === 0)
+      .filter((type) => !hasReadSetters(type))
       .filter((type) => !accounted.has(type));
 
-    // A type here parses but validates nothing of its own, so every property on
-    // it is silently accepted. Declare its validators.
     expect(unaccounted).toEqual([]);
   });
 
   it('keeps both lists free of types that now declare validators', () => {
     const stale = [...Object.keys(NO_OWN_PROPERTIES_RESOURCES), ...UNDECLARED_RESOURCES].filter(
-      (type) => validatorRegistry.getOwnKeys(type).length > 0
+      hasReadSetters
     );
     expect(stale).toEqual([]);
   });
@@ -218,7 +222,13 @@ describe('own-validator coverage for resource slices', () => {
     // The ratchet, exact rather than a ceiling: a ceiling above the current length is
     // a free slot for the next unvalidated slice. Raising it records slices that draw
     // without validating, and the only correct edit afterwards is lowering it.
-    expect(UNDECLARED_RESOURCES.length).toBe(42);
+    expect(UNDECLARED_RESOURCES.length).toBe(41);
+  });
+
+  it('resolves every own capture row of a claimed resource to a check', () => {
+    const rows = guardedRows(claimedResourceClasses());
+    expect(rows.length).toBeGreaterThan(400);
+    expect(uncheckedRows(rows)).toEqual([]);
   });
 
   it('sweeps a population that cannot quietly empty', () => {
@@ -233,18 +243,20 @@ describe('own-validator coverage', () => {
     const accounted = new Set([...Object.keys(NO_OWN_PROPERTIES), ...UNDECLARED]);
     const unaccounted = typesWithoutOwnValidators().filter((type) => !accounted.has(type));
 
-    // A type here parses but validates nothing of its own. Declare its
-    // validators, or add it to NO_OWN_PROPERTIES if Godot truly gives it none.
     expect(unaccounted).toEqual([]);
   });
 
   it('keeps both lists free of types that now declare validators', () => {
-    const stale = [...Object.keys(NO_OWN_PROPERTIES), ...UNDECLARED].filter(
-      (type) => validatorRegistry.getOwnKeys(type).length > 0
-    );
+    const stale = [...Object.keys(NO_OWN_PROPERTIES), ...UNDECLARED].filter(hasReadSetters);
 
     // Stale entries make the gap look larger than it is and hide regressions.
     expect(stale).toEqual([]);
+  });
+
+  it('resolves every own capture row of a type under guard to a check', () => {
+    const rows = guardedRows(typesUnderGuard());
+    expect(rows.length).toBeGreaterThan(2000);
+    expect(uncheckedRows(rows)).toEqual([]);
   });
 
   it('never lets the undeclared list grow', () => {
@@ -274,7 +286,7 @@ describe('own-validator coverage', () => {
       'Slider',
     ]) {
       expect(typesUnderGuard(), `${tier} is not under guard`).toContain(tier);
-      expect(validatorRegistry.getOwnKeys(tier), `${tier} declares nothing`).not.toEqual([]);
+      expect(hasReadSetters(tier), `${tier} has no setter read`).toBe(true);
     }
   });
 });

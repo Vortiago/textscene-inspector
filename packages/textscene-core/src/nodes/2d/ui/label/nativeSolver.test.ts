@@ -932,14 +932,25 @@ describe('windowWrappedLabel (label.cpp:268-301, :1022-1061)', () => {
     expect(window.layout.lines).toHaveLength(2);
   });
 
-  it('marks the last paragraph cut when the window ends inside it', () => {
+  /** The texts of the lines of the edge paragraphs that `window` hides. */
+  function hiddenTexts(window: ReturnType<typeof windowWrappedLabel>): { above: string[]; below: string[] } {
+    const { above, below } = window.hiddenParagraphLines;
+    return { above: above.map((line) => line.text), below: below.map((line) => line.text) };
+  }
+
+  it('hides the rest of the last paragraph when the window ends inside it', () => {
     const window = windowWrappedLabel(shapedLines([0, 0, 0]), { ...CUT, maxLinesVisible: 2 }, SPACING);
-    expect(window.isLastParagraphCut).toBe(true);
+    expect(hiddenTexts(window)).toEqual({ above: [], below: ['2'] });
   });
 
-  it('does not mark the last paragraph cut when the window ends at a paragraph end', () => {
+  it('hides no line when the window ends at a paragraph end', () => {
     const window = windowWrappedLabel(shapedLines([0, 1, 1]), { ...CUT, maxLinesVisible: 1 }, SPACING);
-    expect(window.isLastParagraphCut).toBe(false);
+    expect(hiddenTexts(window)).toEqual({ above: [], below: [] });
+  });
+
+  it('hides the head of the first paragraph that lines_skipped cuts', () => {
+    const window = windowWrappedLabel(shapedLines([0, 1, 1, 1]), { ...CUT, linesSkipped: 2 }, SPACING);
+    expect(hiddenTexts(window)).toEqual({ above: ['1'], below: [] });
   });
 });
 

@@ -59,7 +59,6 @@ import {
   AutowrapMode,
   VisibleCharactersBehavior,
   DEFAULT_JUSTIFICATION_FLAGS,
-  JustificationFlag,
 } from '../../../../godot/text/textServerEnums';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { FALLBACK_THEME_CONSTANT } from '../../../../godot/scene/theme';
@@ -344,8 +343,31 @@ export interface WrappedLabelWindow {
   /** The shown lines, windowed as {@link windowLabelLines} windows them. */
   layout: TextLayoutResult;
   trimmedLine: WrappedLabelTrimmedLine | null;
-  /** The last shown line is not its paragraph's last, so FILL fits it (`label.cpp:272-292`). */
-  isLastParagraphCut: boolean;
+  hiddenParagraphLines: HiddenParagraphLines;
+}
+
+/**
+ * The lines of the first and last shown paragraphs that the window hides. FILL counts `jst_to_line`
+ * over the whole paragraph (`label.cpp:272-292`), so these decide which shown line it fits.
+ */
+export interface HiddenParagraphLines {
+  above: readonly TextLineLayout[];
+  below: readonly TextLineLayout[];
+}
+
+export const NO_HIDDEN_PARAGRAPH_LINES: HiddenParagraphLines = { above: [], below: [] };
+
+/** The lines of the paragraphs at the edges of `range` that lie outside it. */
+function hiddenParagraphLinesOf(
+  lines: readonly TextLineLayout[],
+  range: LabelLineRange
+): HiddenParagraphLines {
+  if (range.start >= range.end) return NO_HIDDEN_PARAGRAPH_LINES;
+  let paragraphStart = range.start;
+  while (!startsParagraph(lines, paragraphStart)) paragraphStart--;
+  let paragraphEnd = range.end;
+  while (paragraphEnd < lines.length && !startsParagraph(lines, paragraphEnd)) paragraphEnd++;
+  return { above: lines.slice(paragraphStart, range.start), below: lines.slice(range.end, paragraphEnd) };
 }
 
 /** Where a wrapped Label cuts its lines: the skipped lines, the cap, the content height and FILL. */
@@ -383,7 +405,7 @@ export function windowWrappedLabel(
   return {
     layout,
     trimmedLine: trimmed && isTrimmedLineShown ? { ...trimmed, lineIndex: windowIndex } : null,
-    isLastParagraphCut: range.end < totalLines && !startsParagraph(shaped.lines, range.end),
+    hiddenParagraphLines: hiddenParagraphLinesOf(shaped.lines, range),
   };
 }
 
@@ -631,8 +653,8 @@ interface LabelLayoutOptions extends Partial<Pick<LabelSpacing, 'paragraphSpacin
   isAutowrapped?: boolean;
   /** The overrun trim `_shape` runs after the fit, before `_get_line_rect` aligns the line (`label.cpp:268-332`). */
   trim?: LineTrim;
-  /** The last line is not its paragraph's last: {@link WrappedLabelWindow.isLastParagraphCut}. Defaults `false`. */
-  isLastParagraphCut?: boolean;
+  /** {@link WrappedLabelWindow.hiddenParagraphLines}. Defaults to none. */
+  hiddenParagraphLines?: HiddenParagraphLines;
 }
 
 /** The overrun trim of `_shape` (`label.cpp:268-332`): its behaviour and ellipsis. It trims at the shaping width. */
@@ -674,21 +696,17 @@ function trimLines(
 }
 
 /**
- * The justification flags of each shown paragraph. A paragraph the window cuts keeps its last line
- * out of sight, so its last shown line is fitted as every line before `jst_to_line` (`label.cpp:272-292`).
+ * The shown `lines` fitted as FILL fits their whole paragraphs: `hidden` holds the lines of the edge
+ * paragraphs the window cuts off.
  */
-function shownParagraphFlags(
+function fitShownLines(
   lines: readonly TextLineLayout[],
-  justificationFlags: number,
-  isLastParagraphCut: boolean
-): number | ((firstLineIndex: number) => number) {
-  if (!isLastParagraphCut) return justificationFlags;
-  let lastParagraphStart = lines.length - 1;
-  while (lastParagraphStart > 0 && !startsParagraph(lines, lastParagraphStart)) lastParagraphStart--;
-  const fitEveryLine =
-    justificationFlags &
-    ~(JustificationFlag.SKIP_LAST_LINE | JustificationFlag.SKIP_LAST_LINE_WITH_VISIBLE_CHARS);
-  return (firstLineIndex) => (firstLineIndex === lastParagraphStart ? fitEveryLine : justificationFlags);
+  hidden: HiddenParagraphLines,
+  widthPx: number,
+  flags: number
+): TextLineLayout[] {
+  const fitted = justifyParagraphs([...hidden.above, ...lines, ...hidden.below], { widthPx, flags });
+  return fitted.slice(hidden.above.length, hidden.above.length + lines.length);
 }
 
 /**
@@ -711,7 +729,7 @@ export function layoutLabelLines(
     trim,
     contentMargin = ZERO_SIDES,
     paragraphSpacingPx = LABEL_PARAGRAPH_SPACING_PX,
-    isLastParagraphCut = false,
+    hiddenParagraphLines = NO_HIDDEN_PARAGRAPH_LINES,
   } = options;
   const lineCount = layout.lines.length;
   if (lineCount === 0) return [];
@@ -749,10 +767,7 @@ export function layoutLabelLines(
   // `_shape` justifies at the truncated `int width` it broke the lines at (`label.cpp:297,331`),
   // not the raw `get_size()` that `_get_line_rect` reads.
   const fitted = isFill
-    ? justifyParagraphs(layout.lines, {
-        widthPx: shapingWidthPx,
-        flags: shownParagraphFlags(layout.lines, justificationFlags, isLastParagraphCut),
-      })
+    ? fitShownLines(layout.lines, hiddenParagraphLines, shapingWidthPx, justificationFlags)
     : layout.lines;
   // With autowrap off, FILL trims `OVERRUN_JUSTIFICATION_AWARE` (`label.cpp:322-325`).
   const isTrimJustificationAware = isFill && !isAutowrapped;

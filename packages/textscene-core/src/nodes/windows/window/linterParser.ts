@@ -108,9 +108,6 @@ validatorRegistry.registerAll(
     // "Theme" group.
     // window.cpp:3477 is Control.theme's twin, down to the PropertyInfo.
     theme: v.resourceReference('theme'),
-    // Godot serialises this StringName as `&"..."`, but the variant text parser also
-    // accepts a plain `"..."`, which the setter casts, as the shared `busValidator` does.
-    theme_type_variation: v.stringName('theme_type_variation'),
   },
   // Shared with Control: Godot emits this family from both, identically.
   THEME_OVERRIDE_VALIDATORS

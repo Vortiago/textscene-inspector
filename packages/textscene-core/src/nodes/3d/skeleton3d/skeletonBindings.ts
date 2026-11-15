@@ -18,6 +18,7 @@ import { liveGlobalTransform3D } from '../../../r3f/liveGlobalTransform.js';
 import { resolveLiteralOnLiveTree } from '../../../r3f/nodePathUniqueNames.js';
 import { liveNodePatches } from '../../../r3f/liveNodePatches.js';
 import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
+import type { ResourceSnapshot } from '../../../resources/reading';
 import type { NodePatches } from '../../../r3f/nodePatch.js';
 import type { SkinBind } from '../../../resources/skin/types.js';
 import { sameElements } from '../../../utils/sameElements.js';
@@ -83,10 +84,15 @@ export interface PosedSkeleton {
  * `default_parent_skeleton_in_mesh_instance_3d` (`mesh_instance_3d.cpp:937`). A path that is empty,
  * absolute, resolves to no node, or names a node that is not a Skeleton3D binds nothing.
  */
-export function bindMeshesToSkeletons(tree: LiveTree): ReadonlyMap<string, AutomaticSkin> {
+export function bindMeshesToSkeletons(
+  tree: LiveTree,
+  snapshot: ResourceSnapshot
+): ReadonlyMap<string, AutomaticSkin> {
   const skins = new Map<string, AutomaticSkin>();
+  // Where the nodes stand once a RemoteTransform has moved them, as a modifier reads them.
+  const placed = liveScenePassResults(liveNodePatches, tree, snapshot);
   tree.fold<void, void>(undefined, ({ step, path }, _, descend) => {
-    const skin = boundSkinOf(step.node, path, tree);
+    const skin = boundSkinOf(step.node, path, tree, placed);
     if (skin) skins.set(path, skin);
     descend();
   });
@@ -101,14 +107,19 @@ export function namesSkeletonToBind(
 }
 
 /** The skin of the node at `path` where it is a MeshInstance3D bound to a Skeleton3D, else undefined. */
-function boundSkinOf(node: TscnNode, path: string, tree: LiveTree): AutomaticSkin | undefined {
+function boundSkinOf(
+  node: TscnNode,
+  path: string,
+  tree: LiveTree,
+  placed: NodePatches
+): AutomaticSkin | undefined {
   if (node.type !== 'MeshInstance3D') return undefined;
   const properties = node.properties as MeshInstance3DProperties;
   if (!namesSkeletonToBind(properties)) return undefined;
   const skeletonPath = resolveLiteralOnLiveTree(path, properties.skeleton, tree);
   const skeleton = skeletonPath === null ? null : tree.at(skeletonPath);
   if (skeleton?.step.node.type !== 'Skeleton3D') return undefined;
-  return posedSkeletonOf(skeleton, tree).skin;
+  return posedSkeletonOf(skeleton, tree, placed).skin;
 }
 
 /** The global transform of the node that `target` names from the modifier at `modifierPath`, as a modifier read it. */
@@ -213,9 +224,7 @@ const keptPoses = perObject(() => new Map<string, KeptPosed>());
  * node, the modifier nodes and what they read as they were hands back the same posed skeleton, over
  * which the skin runs the poses it holds.
  */
-export function posedSkeletonOf(skeleton: LiveLink, tree: LiveTree): PosedSkeleton {
-  // Where the nodes stand once a RemoteTransform has moved them, as a modifier reads them.
-  const placed = liveScenePassResults(liveNodePatches, tree);
+export function posedSkeletonOf(skeleton: LiveLink, tree: LiveTree, placed: NodePatches): PosedSkeleton {
   const modifiers = modifiersOf(skeleton, tree, placed);
   const kept = keptPoses(skeleton.step.node);
   const previous = kept.get(skeleton.path);

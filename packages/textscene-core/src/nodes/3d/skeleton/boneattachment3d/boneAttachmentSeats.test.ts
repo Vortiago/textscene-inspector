@@ -10,8 +10,11 @@
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../../../../parser/TscnParser';
 import type { TscnScene } from '../../../../parser/types';
-import { liveTreeOf } from '../../../../r3f/liveSceneTree';
-import { contextOver } from '../../../../r3f/liveSceneTree.testkit';
+import { liveTreeOf, type LiveTree } from '../../../../r3f/liveSceneTree';
+import { contextOver, runPass, treeSnapshot } from '../../../../r3f/liveSceneTree.testkit';
+import { liveScenePassResults } from '../../../../r3f/liveScenePass';
+import { liveNodePatches } from '../../../../r3f/liveNodePatches';
+import type { NodePatches } from '../../../../r3f/nodePatch';
 import { transform3DFromQuaternionScale } from '../../../../godot/math/transform3d';
 import type { Quaternion } from '../../../../godot/math/quaternion';
 import type { Vector3 } from '../../../../godot/math/vector';
@@ -79,7 +82,7 @@ function seatAt(
   const loaded = Object.fromEntries(
     Object.entries(scenes).map(([scenePath, text]) => [scenePath, parse(text)])
   );
-  return seatBoneAttachments(liveTreeOf(main.nodes, contextOver(main, loaded))).get(path);
+  return runPass(seatBoneAttachments, liveTreeOf(main.nodes, contextOver(main, loaded))).get(path);
 }
 
 /**
@@ -359,13 +362,18 @@ describe('the seat under the bone poses of an animation', () => {
   });
 });
 
+/** Where the nodes of `tree` stand once a RemoteTransform has moved them, as the passes read them. */
+function placedIn(tree: LiveTree): NodePatches {
+  return liveScenePassResults(liveNodePatches, tree, treeSnapshot(tree));
+}
+
 describe('one posed skeleton per live path', () => {
   it('hands the same posed skeleton to every ask of the same skeleton', () => {
     const main = parse(parentedScene('bone_idx = 1\n'));
     const tree = liveTreeOf(main.nodes, contextOver(main, {}));
 
-    expect(posedSkeletonOf(tree.at('Root/Skeleton3D')!, tree)).toBe(
-      posedSkeletonOf(tree.at('Root/Skeleton3D')!, tree)
+    expect(posedSkeletonOf(tree.at('Root/Skeleton3D')!, tree, placedIn(tree))).toBe(
+      posedSkeletonOf(tree.at('Root/Skeleton3D')!, tree, placedIn(tree))
     );
   });
 
@@ -378,8 +386,8 @@ describe('one posed skeleton per live path', () => {
     );
     const tree = liveTreeOf(main.nodes, contextOver(main, {}));
 
-    const skin = bindMeshesToSkeletons(tree).get('Root/Mesh');
-    expect(skin).toBe(posedSkeletonOf(tree.at('Root/Skeleton3D')!, tree).skin);
+    const skin = runPass(bindMeshesToSkeletons, tree).get('Root/Mesh');
+    expect(skin).toBe(posedSkeletonOf(tree.at('Root/Skeleton3D')!, tree, placedIn(tree)).skin);
     expect(skin!.skeletonPath).toBe('Root/Skeleton3D');
   });
 });
