@@ -9,6 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { stringNum } from '../../../../godot/string/stringNumber';
 import { formatControlNumber } from '../../../../godot/text/numberFormat';
 import { defaultConstant } from '../../../../godot/scene/defaultTheme/defaultTheme';
 import type { MinimumSizeFn, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
@@ -155,27 +156,13 @@ function rangeStepDecimals(step: number): number {
 }
 
 /**
- * `String::num(value, decimals)` (`core/string/ustring.cpp:1405-1481`) for `decimals >= 0`, the
- * only case `range_step_decimals` feeds it. The `nan`/`inf` arms are not ported:
- * `Range::_calc_value` makes neither from finite inputs. Trims trailing
- * zeroes but keeps one digit after the point once any were printed (`ustring.cpp:1467-1481`).
- */
-export function formatGodotNumber(value: number, decimals: number): string {
-  const fixed = value.toFixed(Math.min(decimals, 32));
-  if (!fixed.includes('.')) return fixed;
-  let trimmed = fixed.replace(/0+$/, '');
-  if (trimmed.endsWith('.')) trimmed += '0';
-  return trimmed;
-}
-
-/**
  * `SpinBox::_update_text` (`spin_box.cpp:88-114`) for a still frame. The value takes the digits of
  * `locale` (`:91-93`). `line_edit->is_editing()` is always false, so the prefix and suffix always apply.
  * `accepted` stays `true` without a live edit, so the `update_on_text_changed` re-format never runs.
  */
 function spinBoxDisplayText(props: SpinBoxProperties, resolvedValue: number, locale: string): string {
   const step = props.step ?? SPIN_BOX_STEP_DEFAULT;
-  let text = formatControlNumber(formatGodotNumber(resolvedValue, rangeStepDecimals(step)), {
+  let text = formatControlNumber(stringNum(resolvedValue, rangeStepDecimals(step)), {
     locale,
     localizeNumeralSystem: props.localizeNumeralSystem,
   });

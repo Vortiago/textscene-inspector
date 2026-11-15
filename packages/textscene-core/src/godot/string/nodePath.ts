@@ -224,3 +224,17 @@ export function unclaimedUniqueNames(
     (segment) => segment.startsWith(UNIQUE_NODE_PREFIX) && !uniquePaths?.has(segment)
   );
 }
+
+/**
+ * `String(NodePath(path))` (node_path.cpp:170, 394): the names without empty runs, then the
+ * subnames after `:`. An empty subname before the last fails the constructor, which leaves `""`.
+ */
+export function nodePathText(path: string): string {
+  const colon = path.indexOf(':');
+  const subnames = colon < 0 ? [] : path.slice(colon + 1).split(':');
+  if (subnames.at(-1) === '') subnames.pop();
+  if (subnames.includes('')) return '';
+  const names = (colon < 0 ? path : path.slice(0, colon)).split('/').filter((name) => name !== '');
+  const prefix = path.startsWith('/') ? '/' : '';
+  return `${prefix}${names.join('/')}${subnames.length > 0 ? `:${subnames.join(':')}` : ''}`;
+}

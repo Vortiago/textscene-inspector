@@ -1,5 +1,7 @@
 /** `String`'s parsing behaviour, as the engine defines it. */
 
+import { INT64_MAX, INT64_MIN } from '../variant/cInteger.js';
+import { godotStrtod } from './strtod.js';
 import { toInt32, toUint32 } from '../variant/intWidth.js';
 
 /**
@@ -120,8 +122,6 @@ const EIGHT = '8'.charCodeAt(0);
 const NINE = '9'.charCodeAt(0);
 const MINUS = '-'.charCodeAt(0);
 
-const INT64_MAX = (1n << 63n) - 1n;
-const INT64_MIN = -(1n << 63n);
 /** `INT64_MAX / 10`, the bound `_to_int`'s overflow test compares against (`ustring.cpp:2283`). */
 const INT64_MAX_TENTH = INT64_MAX / 10n;
 /** `_to_int` tests for overflow only past 18 digits (`if (unlikely(digits > 18))`, `:2282`). */
@@ -253,11 +253,7 @@ export function simplifyPath(path: string): string {
  * component), so trailing text is ignored. Swapping the two changes what a malformed value reads as.
  */
 export function stringToFloat(text: string): number {
-  // `built_in_strtod` skips leading whitespace, then takes the longest prefix it can read. `parseFloat` has the same
-  // prefix rule and 0-length miss, and differs only in reading JavaScript's `Infinity`, which the finite check maps to 0.
-  const trimmed = text.trimStart();
-  const parsed = Number.parseFloat(trimmed);
-  return Number.isFinite(parsed) ? parsed : 0;
+  return godotStrtod(text);
 }
 
 /**

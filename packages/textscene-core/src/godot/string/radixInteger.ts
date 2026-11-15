@@ -1,5 +1,4 @@
-const INT64_MAX = (1n << 63n) - 1n;
-const INT64_MIN = -(1n << 63n);
+import { INT64_MAX, INT64_MIN } from '../variant/cInteger.js';
 
 // An invalid digit gives 0, and an overflow the int64 limit of its sign.
 function radixToInt(

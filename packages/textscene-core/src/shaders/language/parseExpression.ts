@@ -6,14 +6,10 @@
 
 import { reduced } from './constants.js';
 import { matchedConstructor } from './constructors.js';
-import {
-  godotIntScalar,
-  godotIntegerConstant,
-  godotLiteralScalar,
-  godotNumberText,
-  godotUintScalar,
-} from './godotNumber.js';
+import { godotIntegerConstant, godotLiteralScalar, godotUintScalar } from './godotNumber.js';
+import { stringNum } from '../../godot/string/stringNumber.js';
 import { godotStrtod } from '../../godot/string/strtod.js';
+import { doubleToInt32 } from '../../godot/variant/cInteger.js';
 import {
   builtInInstruction,
   instruction,
@@ -167,7 +163,7 @@ export class ExpressionParser {
       case 'TK_FLOAT_CONSTANT':
         return constantOf(token, 'float', this.floatLiteral(token));
       case 'TK_INT_CONSTANT':
-        return constantOf(token, 'int', godotIntScalar(godotIntegerConstant(token.text!)));
+        return constantOf(token, 'int', doubleToInt32(godotIntegerConstant(token.text!)));
       case 'TK_UINT_CONSTANT':
         return constantOf(token, 'uint', godotUintScalar(godotIntegerConstant(token.text!)));
       case 'TK_TRUE':
@@ -492,10 +488,10 @@ function tokenText(token: Token): string {
   const name = token.type.replace(/^TK_/, '');
   switch (token.type) {
     case 'TK_FLOAT_CONSTANT':
-      return `${name}(${godotNumberText(godotStrtod(token.text!))})`;
+      return `${name}(${stringNum(godotStrtod(token.text!))})`;
     case 'TK_INT_CONSTANT':
     case 'TK_UINT_CONSTANT':
-      return `${name}(${godotNumberText(godotIntegerConstant(token.text!))})`;
+      return `${name}(${stringNum(godotIntegerConstant(token.text!))})`;
     case 'TK_IDENTIFIER':
       return `${name}(${token.text})`;
     default:

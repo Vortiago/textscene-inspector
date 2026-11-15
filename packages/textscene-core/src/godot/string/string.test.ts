@@ -245,9 +245,9 @@ describe('stringToFloat', () => {
   });
 
   // Godot's tokenizer has no `Infinity` spelling, so neither does this.
-  it('refuses JavaScript’s own infinity spellings', () => {
+  it('refuses JavaScript’s own infinity spellings, keeping the sign as built_in_strtod does', () => {
     expect(stringToFloat('Infinity')).toBe(0);
-    expect(stringToFloat('-Infinity')).toBe(0);
+    expect(stringToFloat('-Infinity')).toBe(-0);
   });
 });
 

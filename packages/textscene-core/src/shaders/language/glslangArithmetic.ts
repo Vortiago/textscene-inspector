@@ -5,7 +5,8 @@
  */
 
 import { INT32_MAX, INT32_MIN, toInt32, toUint32, UINT32_MAX } from '../../godot/variant/intWidth.js';
-import { godotIntScalar, godotUintScalar } from './godotNumber.js';
+import { doubleToInt32 } from '../../godot/variant/cInteger.js';
+import { godotUintScalar } from './godotNumber.js';
 import type { Scalar } from './shaderTree.js';
 import type { ScalarKind } from './types.js';
 
@@ -18,7 +19,7 @@ export function convertedLane(value: Scalar, from: ScalarKind, to: ScalarKind): 
   if (to === 'bool') return value !== 0 && value !== false;
   const number = typeof value === 'boolean' ? Number(value) : value;
   if (to === 'float') return number;
-  if (from === 'float') return to === 'int' ? godotIntScalar(number) : godotUintScalar(number);
+  if (from === 'float') return to === 'int' ? doubleToInt32(number) : godotUintScalar(number);
   return to === 'int' ? toInt32(number) : toUint32(number);
 }
 

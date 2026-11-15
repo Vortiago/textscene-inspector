@@ -15,6 +15,7 @@ const isDigit = (char: string | undefined) => char !== undefined && char >= '0' 
  */
 export function godotStrtod(text: string): number {
   let position = 0;
+  while (text[position] === ' ' || text[position] === '\t' || text[position] === '\n') position += 1;
   let sign = false;
   if (text[position] === '-') {
     sign = true;
