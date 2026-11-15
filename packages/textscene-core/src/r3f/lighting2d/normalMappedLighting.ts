@@ -27,6 +27,7 @@ import {
   TILE_ORIENTATION_FLIP_V,
   TILE_ORIENTATION_TRANSPOSE,
 } from '../../resources/tileset/tileOrientationBits.js';
+import { BLEND_LAYER_GLSL } from './lightBlend.js';
 
 /** What a CanvasTexture adds to an item's diffuse texture, sampled where the diffuse is. */
 export interface CanvasItemSurface {
@@ -134,13 +135,12 @@ vec3 lightNormalCompute(vec3 light_vec, vec3 normal, vec3 base_color, vec3 light
   float s = blinn / max(4.0 * cNdotV * cNdotL, 0.75);
   return specular.rgb * light_color * s + light_color * base_color * cNdotL;
 }
-
+${BLEND_LAYER_GLSL}
 void main() {`;
 
-// A layer holds a light's term premultiplied by its alpha `A`: `light_color.rgb * A`, with the
-// shadow applied, and its `shadow_color` term likewise, both negated by a SUB light. The normal term
-// is linear in the light colour, so shading the layer is shading the light, and each blend of
-// `light_blend_compute` (canvas.glsl:549-563) is `color * (1 - A·mix) + term`.
+// A layer holds a light's term premultiplied by its alpha, with the shadow applied, and its
+// `shadow_color` term likewise, both negated by a SUB light. The normal term is linear in the light
+// colour, so shading the layer is shading the light, and `blendLayer` (`lightBlend.ts`) blends it.
 const FRAGMENT_INJECTION = `#include <colorspace_fragment>
 ${LIGHT_MODE_GLSL}
 if (!unshaded) {
@@ -156,7 +156,7 @@ if (!unshaded) {
     vec3 tint = tintLayer < 0.0 ? vec3(0.0) : texture(uShadowTintLayers, vec3(lightUv, tintLayer)).rgb;
     vec3 lightVec = lightVector(uLightPlaces[i], uLightModes[i].x > 0.5);
     vec3 term = lightNormalCompute(lightVec, normal, albedo, lit.rgb, specular, usesSpecular) + tint;
-    color = color * (1.0 - uLightModes[i].y * lit.a) + term;
+    color = blendLayer(color, term, lit.a, uLightModes[i].y);
     lightOnlyAlpha += lit.a;
   }
   if (lightOnly) gl_FragColor.a = clamp(gl_FragColor.a * lightOnlyAlpha, 0.0, 1.0);
