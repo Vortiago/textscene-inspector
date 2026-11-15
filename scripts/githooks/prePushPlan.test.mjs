@@ -36,6 +36,9 @@ const STATIC_GATE = [
   'pnpm type-check:tests',
 ];
 
+/** A push that changes the toolchain: the static checks over the repository, and the pushed comments. */
+const TOOLCHAIN_GATE = [...STATIC_GATE, 'pnpm comments:check'];
+
 /** The packages whose tests project already type-checks every source file. */
 const COVERED_BY_TESTS =
   '--filter !./packages/textscene-core --filter !./packages/textscene-dev-kit --filter !./apps/textscene-linter';
@@ -80,7 +83,7 @@ describe('planChecks', () => {
 
   it('runs the real-Godot tests after the static checks when the toolchain changes too', () => {
     expect(planOnHost(true, ['package.json', 'scripts/godot-ref/run.mjs'])).toEqual([
-      ...STATIC_GATE,
+      ...TOOLCHAIN_GATE,
       ENGINE_TESTS,
     ]);
   });
@@ -124,19 +127,19 @@ describe('planChecks', () => {
       '.prettierignore',
       'lint-staged.config.mjs',
     ]) {
-      expect(plan([path])).toEqual(STATIC_GATE);
+      expect(plan([path])).toEqual(TOOLCHAIN_GATE);
     }
   });
 
   it('runs the static checks over the whole repository when the negative-fixture loader changes', () => {
-    expect(plan(['scripts/githooks/negativeFixtures.mjs'])).toEqual(STATIC_GATE);
+    expect(plan(['scripts/githooks/negativeFixtures.mjs'])).toEqual(TOOLCHAIN_GATE);
   });
 
   it('runs the tests beside a toolchain change after the static checks', () => {
     const testsBeside = () => ['scripts/githooks/prePushPlan.test.mjs'];
     expect(
       plan(['githooks/pre-push', 'scripts/githooks/prePushPlan.mjs'], [], undefined, testsBeside)
-    ).toEqual([...STATIC_GATE, 'pnpm exec vitest run scripts/githooks/prePushPlan.test.mjs']);
+    ).toEqual([...TOOLCHAIN_GATE, 'pnpm exec vitest run scripts/githooks/prePushPlan.test.mjs']);
   });
 
   it('type-checks and lints a TypeScript change', () => {
@@ -145,6 +148,7 @@ describe('planChecks', () => {
       'npx eslint --cache apps/textscene-web/src/a.ts',
       'pnpm exec prettier --cache --check apps/textscene-web/src/a.ts',
       'pnpm canonical --check',
+      'pnpm comments:check',
     ]);
   });
 
@@ -154,6 +158,7 @@ describe('planChecks', () => {
       'npx eslint --cache scripts/x.mjs scripts/x.test.mjs',
       'pnpm exec prettier --cache --check scripts/x.mjs scripts/x.test.mjs',
       'pnpm canonical --check',
+      'pnpm comments:check',
       'pnpm exec vitest run scripts/x.test.mjs',
     ]);
   });
@@ -167,6 +172,7 @@ describe('planChecks', () => {
       `npx eslint --cache ${suite}`,
       `pnpm exec prettier --cache --check ${suite}`,
       'pnpm canonical --check',
+      'pnpm comments:check',
     ]);
   });
 
@@ -181,6 +187,7 @@ describe('planChecks', () => {
       'npx eslint --cache scripts/x.mjs',
       'pnpm exec prettier --cache --check scripts/x.mjs',
       'pnpm canonical --check',
+      'pnpm comments:check',
     ]);
   });
 
@@ -188,6 +195,7 @@ describe('planChecks', () => {
     expect(plan(['tools/x.mjs'])).toEqual([
       'npx eslint --cache tools/x.mjs',
       'pnpm exec prettier --cache --check tools/x.mjs',
+      'pnpm comments:check',
     ]);
   });
 

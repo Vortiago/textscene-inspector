@@ -116,7 +116,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      # Depth 2: `comments:check` reads the change from the first parent, the base or the main before it.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
       - uses: ./.github/actions/setup
 
       # First: it needs no build and fails in seconds.
@@ -124,6 +127,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm check:dep-scripts
       - run: pnpm canonical --check
+      - run: pnpm comments:check --base HEAD^1
       # `type-check:all` builds the packages once before the parallel app checks. Each app's
       # `pretype-check` rebuilds core, so four parallel builds would rewrite the dist an app
       # is reading. The test projects and the docs checks read that dist too.

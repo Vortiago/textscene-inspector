@@ -63,6 +63,9 @@ export const STATIC_GATE = [
   ...REPOSITORY_TYPE_CHECKS,
 ];
 
+/** Not in `STATIC_GATE`, which also runs with no base: it reads the comments added since `origin/main`. */
+const COMMENTS_CHECK = ['pnpm', 'comments:check'];
+
 /**
  * The packages whose `type-check:tests` project holds every file of their `type-check` project,
  * with options no looser, so the push runs only the tests one. CI runs both. The web previewer is
@@ -116,7 +119,9 @@ export function planChecks({
   );
   const runTests = tests.length > 0 ? [['pnpm', 'exec', 'vitest', 'run', ...tests]] : [];
   const engineTests = all.some(isEngineTestInput) && hasEngine() ? [ENGINE_TESTS] : [];
-  if (all.some((path) => TOOLCHAIN.test(path))) return [...STATIC_GATE, ...runTests, ...engineTests];
+  if (all.some((path) => TOOLCHAIN.test(path))) {
+    return [...STATIC_GATE, COMMENTS_CHECK, ...runTests, ...engineTests];
+  }
 
   const plan = [];
   // The type checks build the packages first, which the generated-docs checks also need.
@@ -128,6 +133,7 @@ export function planChecks({
   const formatted = changed.filter((path) => FORMATTED.test(path));
   if (formatted.length > 0) plan.push(['pnpm', 'exec', 'prettier', '--cache', '--check', ...formatted]);
   if (linted.some((path) => CANONICAL_ROOT.test(path))) plan.push(['pnpm', 'canonical', '--check']);
+  if (linted.length > 0) plan.push(COMMENTS_CHECK);
   plan.push(...runTests);
 
   const scenes = changed.filter((path) => SCENE.test(path) && !isNegativeFixture(path));
