@@ -13,6 +13,7 @@ import { useResourceLoader } from '../../../resources/useResource.js';
 import { useLiveTreeVersion, useProjectTreeSettings } from '../../../r3f/useLiveSceneTree.js';
 import { standaloneViewportContent, type ViewportContent } from './viewportContent.js';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources.js';
+import { godotScenes } from '../../../resources/loadFailure/godotScenes.js';
 
 export function useViewportContent(node: TscnNode): ViewportContent {
   // The sub-viewport's children resolve their instance refs against the scene
@@ -21,7 +22,7 @@ export function useViewportContent(node: TscnNode): ViewportContent {
   const loader = useResourceLoader();
   const version = useLiveTreeVersion(loader);
   // No loader is mounted in the linter bundle or an isolated test.
-  const sceneCache = loader?.scenes ?? NOTHING_CACHED;
+  const sceneCache = loader ? godotScenes(loader) : NOTHING_CACHED;
   const project = useProjectTreeSettings();
 
   return useMemo(

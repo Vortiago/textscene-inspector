@@ -28,6 +28,7 @@ import { subscribeToNothing } from '../utils/subscribeToNothing.js';
 import { NOTHING_CACHED, type CacheSource } from './cacheSources.js';
 import type { ParsedResource } from '../parser/parsedResource.js';
 import { liveFilesOf, NO_LIVE_FILES, type LiveFiles } from './liveFiles.js';
+import { godotScenes, isFailedToLoad } from '../resources/loadFailure/godotScenes.js';
 import type { ResourceSnapshot } from '../resources/reading';
 import { readsCover, recording, type RecordedRead } from './recordedReads.js';
 import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
@@ -47,7 +48,7 @@ export interface SharedLiveTree {
  */
 function loaderCaches(loader: ResourceLoader | null | undefined) {
   return {
-    sceneCache: loader?.scenes ?? NOTHING_CACHED,
+    sceneCache: loader ? godotScenes(loader) : NOTHING_CACHED,
     glbCache: loader?.glbMeshes,
     parsedFiles: loader ? loadTicksOfLoader(loader).treeFiles : NO_LIVE_FILES.parsedFiles(),
   };
@@ -83,6 +84,9 @@ function liveTreeContext(
  * through the loader's {@link LiveFiles}, which hears only a file they read.
  */
 const LIVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'glb'];
+
+/** The buses whose change while no reader listened may change the tree: a scene's load outcome too. */
+const UNSEEN_TREE_BUSES: readonly ResourceType[] = [...LIVE_TREE_BUSES, 'loadoutcome'];
 
 /** What {@link useLiveTreeVersion} reads of one loader. */
 interface LoadTicks {
@@ -130,6 +134,15 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
     if (isTreeChanged) newTree();
     for (const listener of listeners) listener();
   };
+  /** Written only by `isFailedChanged`: each scene whose last outcome the tree heard failed. */
+  const failedScenes = new Set<string>();
+  const isFailedChanged = (scene: string) => {
+    const isFailed = isFailedToLoad(loader, scene);
+    if (isFailed === failedScenes.has(scene)) return false;
+    if (isFailed) failedScenes.add(scene);
+    else failedScenes.delete(scene);
+    return true;
+  };
   const isTreeReadChanged = () => {
     const parsed = files.parsedFiles();
     for (const [path, answer] of treeReads) if (parsed.getCached(path) !== answer) return true;
@@ -148,16 +161,21 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
     getVersion: () => ticks.version,
     subscribe: (onChange) => {
       if (listeners.size === 0) {
-        if (loader.eventBus.hasChangedSince(LIVE_TREE_BUSES, listenedUntil) || isTreeReadChanged()) newTree();
+        if (loader.eventBus.hasChangedSince(UNSEEN_TREE_BUSES, listenedUntil) || isTreeReadChanged())
+          newTree();
       }
       listeners.add(onChange);
       if (!stopListening) {
         const stopBus = loader.eventBus.onChange(LIVE_TREE_BUSES, ({ event }) => {
           if (event !== 'invalidated') changed(true);
         });
+        const stopOutcomes = loader.eventBus.onChange(['loadoutcome'], ({ event, key }) => {
+          if (event !== 'invalidated' && loader.scenes.isCached(key) && isFailedChanged(key)) changed(true);
+        });
         const stopFiles = files.subscribe(() => changed(isTreeReadChanged()));
         stopListening = () => {
           stopBus();
+          stopOutcomes();
           stopFiles();
         };
       }

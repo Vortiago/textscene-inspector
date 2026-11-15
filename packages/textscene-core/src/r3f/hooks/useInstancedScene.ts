@@ -6,6 +6,8 @@ import { useEffect } from 'react';
 import type { TscnExternalResource, TscnScene } from '../../parser/types.js';
 import { useResource, useResourceLoader, type ResourceResult } from '../../resources/useResource.js';
 import { findExtResource, parseResourceReference } from '../../resources/SubResourceResolver.js';
+import type { LoadOutcome } from '../../resources/loadFailure/loadOutcome.js';
+import { useMissingReport } from '../contexts/MissingResourcesContext.js';
 
 /**
  * A null `loadPath` registers and loads nothing, and the result stays `pending`.
@@ -29,5 +31,14 @@ export function useInstancedScene(
   }, [loader, loadPath, instanceRef, externalResources]);
 
   // `useResource` requests nothing for '', so the hook count stays stable.
-  return useResource<TscnScene>(loadPath ?? '', 'scene');
+  const scene = useResource<TscnScene>(loadPath ?? '', 'scene');
+  const outcome = useResource<LoadOutcome>(loadPath ?? '', 'loadoutcome').value;
+  // 'pending', not 'loaded': a scene that loads again is no upload of this path.
+  useMissingReport(loadPath ?? '', outcome?.isFailed ? 'unavailable' : 'pending');
+  return outcome?.isFailed ? failedScene(outcome.chain) : scene;
+}
+
+/** Godot drops the instance of a scene it fails to load, as one of a missing scene. */
+function failedScene(chain: readonly string[]): ResourceResult<TscnScene> {
+  return { value: undefined, status: 'unavailable', error: `fails to load through ${chain.join(', ')}` };
 }

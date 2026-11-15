@@ -11,6 +11,7 @@ import { useLayoutDirectionEnv } from '../../../r3f/contexts/useLayoutDirectionE
 import { useLiveTreeVersion, useProjectTreeSettings } from '../../../r3f/useLiveSceneTree.js';
 import { collectControlRasterViewports, type ControlRasterViewport } from './controlRasterViewports.js';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources.js';
+import { godotScenes } from '../../../resources/loadFailure/godotScenes.js';
 
 export function useControlRasterViewports(
   nodes: readonly TscnNode[],
@@ -29,7 +30,7 @@ export function useControlRasterViewports(
       collectControlRasterViewports(
         nodes,
         // No loader is mounted on first paint or in an isolated test.
-        { sceneCache: loader?.scenes ?? NOTHING_CACHED, project },
+        { sceneCache: loader ? godotScenes(loader) : NOTHING_CACHED, project },
         { internalResources, externalResources },
         layoutDirectionEnv
       ),

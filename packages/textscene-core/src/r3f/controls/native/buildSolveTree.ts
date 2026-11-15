@@ -109,6 +109,7 @@ import {
   resolveThemedIcons,
 } from './themeItems';
 import type { Vector2 } from '../../../godot/math/vector.js';
+import { godotScenes } from '../../../resources/loadFailure/godotScenes.js';
 
 interface UseBuildSolveTreeResult {
   /** Every Control whose canvas item parents at the viewport's canvas: scene roots, promoted, hoisted and `top_level` Controls. */
@@ -243,7 +244,14 @@ const NO_KEYS: ReadonlySet<string> = new Set();
  * The buses whose caches the walk reads. An `ExtResource(AtlasTexture)` `.tres`
  * completes on the resource bus, not the texture one.
  */
-const SOLVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'texture', 'resource', 'theme', 'directory'];
+const SOLVE_TREE_BUSES: readonly ResourceType[] = [
+  'scene',
+  'loadoutcome',
+  'texture',
+  'resource',
+  'theme',
+  'directory',
+];
 
 /** What the forest starts from, which its roots cannot see above them. */
 interface ForestStart {
@@ -308,7 +316,9 @@ function buildForest(
   const viewportSizeReads: ViewportSizeRead[] = [];
   const readViewportSize = recordingSizes(viewportTargetSize, viewportSizeReads);
 
-  const sceneCache: CachedSceneSource = loader ? recordingReads(loader.scenes, recordRead) : NOTHING_CACHED;
+  const sceneCache: CachedSceneSource = loader
+    ? recordingReads(godotScenes(loader), recordRead)
+    : NOTHING_CACHED;
   // The tree reads a tile layer's TileSet here too, for the scene tiles it adds as children.
   const parsedFiles = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
   const ctx: LiveTreeContext = {
