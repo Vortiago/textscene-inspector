@@ -116,6 +116,64 @@ describe('a snapshot over the loader', () => {
   });
 });
 
+describe('a snapshot of a file Godot fails to load', () => {
+  const FAILING_A = resourceFile(
+    'texture = ExtResource("1_gone")',
+    '[ext_resource type="Texture2D" path="res://gone.png" id="1_gone"]'
+  );
+
+  async function readOnceSettled(loader: ResourceLoader) {
+    const source = loaderSnapshots(loader);
+    const unsubscribe = source.subscribe(() => {});
+    const read = () =>
+      source.current().read(nodeReference('ExtResource("1_a")', sceneTables(EXT_A)), namedKind().kind);
+    read();
+    source.request();
+    await vi.waitFor(() => expect(loader.loadOutcomes.getCached(A_FILE)).toBeDefined());
+    const settled = read();
+    unsubscribe();
+    return { settled, files: source.files(), source };
+  }
+
+  it('reads a .tres whose [resource] reads a missing file as missing-file', async () => {
+    const loader = loaderServing({ [A_FILE]: FAILING_A });
+    await loaded(loader, A_FILE);
+
+    const { settled } = await readOnceSettled(loader);
+
+    expect(settled).toMatchObject({ status: 'unavailable', reason: 'missing-file' });
+  });
+
+  it('reports the .tres as missing', async () => {
+    const loader = loaderServing({ [A_FILE]: FAILING_A });
+    await loaded(loader, A_FILE);
+
+    const { files } = await readOnceSettled(loader);
+
+    expect(files.get(A_FILE)).toBeNull();
+  });
+
+  it('reports the .tres as missing when another kind of file read it after', async () => {
+    const loader = loaderServing({ [A_FILE]: FAILING_A });
+    await loaded(loader, A_FILE);
+    const { source } = await readOnceSettled(loader);
+
+    source.current().loaded(FONT_FILES, A_FILE);
+
+    expect(source.files().get(A_FILE)).toBeNull();
+  });
+
+  it('reads the .tres once the file it reads exists', async () => {
+    const loader = loaderServing({ [A_FILE]: FAILING_A, 'res://gone.png': '' });
+    await loaded(loader, A_FILE);
+
+    const { settled, files } = await readOnceSettled(loader);
+
+    expect(settled.status).toBe('loaded');
+    expect(files.get(A_FILE)).not.toBeNull();
+  });
+});
+
 describe("a snapshot's read of a processor's value", () => {
   const FONT_FILE = 'res://font.tres';
   const FONT_TEXT =

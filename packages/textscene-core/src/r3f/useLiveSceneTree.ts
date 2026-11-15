@@ -15,7 +15,7 @@ import {
   type LiveTreeEntry,
   type ResolvedLiveNode,
 } from './liveSceneTree.js';
-import type { SceneScope, TscnNode } from '../parser/types.js';
+import type { SceneScope, TscnNode, TscnScene } from '../parser/types.js';
 import { liveInstancePath, type LiveNode } from '../resources/liveNode.js';
 import { glbPathOf } from '../resources/glbSceneRoot.js';
 import { hasSceneTileCells } from './liveSceneTiles.js';
@@ -28,6 +28,7 @@ import { subscribeToNothing } from '../utils/subscribeToNothing.js';
 import { NOTHING_CACHED, type CacheSource } from './cacheSources.js';
 import type { ParsedResource } from '../parser/parsedResource.js';
 import { liveFilesOf, NO_LIVE_FILES, type LiveFiles } from './liveFiles.js';
+import { godotScenes, isFailedToLoad } from '../resources/loadFailure/godotScenes.js';
 import type { ResourceSnapshot } from '../resources/reading';
 import { readsCover, recording, type RecordedRead } from './recordedReads.js';
 import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
@@ -47,7 +48,7 @@ export interface SharedLiveTree {
  */
 function loaderCaches(loader: ResourceLoader | null | undefined) {
   return {
-    sceneCache: loader?.scenes ?? NOTHING_CACHED,
+    sceneCache: treeScenesOf(loader),
     glbCache: loader?.glbMeshes,
     parsedFiles: loader ? loadTicksOfLoader(loader).treeFiles : NO_LIVE_FILES.parsedFiles(),
   };
@@ -93,6 +94,8 @@ interface LoadTicks {
   readonly files: LiveFiles;
   /** The parsed resource files the tree reads itself, a tile layer's TileSet, each read recorded. */
   readonly treeFiles: CacheSource<ParsedResource>;
+  /** The scenes the tree instances, as Godot loads them, each outcome read recorded. */
+  readonly treeScenes: CacheSource<TscnScene>;
 }
 
 const NO_LOAD_TICKS: LoadTicks = {
@@ -101,6 +104,7 @@ const NO_LOAD_TICKS: LoadTicks = {
   getVersion: () => 0,
   files: NO_LIVE_FILES,
   treeFiles: NO_LIVE_FILES.parsedFiles(),
+  treeScenes: NOTHING_CACHED,
 };
 
 /**
@@ -122,9 +126,12 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
    * with the first answer one got. Several trees share a version, and each keeps what it first read.
    */
   let treeReads = new Map<string, ParsedResource | null | undefined>();
+  /** Written only by `treeScenes` and `newTree`: whether each scene this version read had failed. */
+  let sceneOutcomeReads = new Map<string, boolean>();
   const newTree = () => {
     ticks.version++;
     treeReads = new Map();
+    sceneOutcomeReads = new Map();
   };
   const changed = (isTreeChanged: boolean) => {
     if (isTreeChanged) newTree();
@@ -133,8 +140,11 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
   const isTreeReadChanged = () => {
     const parsed = files.parsedFiles();
     for (const [path, answer] of treeReads) if (parsed.getCached(path) !== answer) return true;
+    for (const path of sceneOutcomeReads.keys()) if (isSceneOutcomeChanged(path)) return true;
     return false;
   };
+  const isSceneOutcomeChanged = (path: string) =>
+    sceneOutcomeReads.has(path) && sceneOutcomeReads.get(path) !== isFailedToLoad(loader, path);
   const ticks: LoadTicks = {
     version: 0,
     files,
@@ -142,6 +152,13 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
       getCached(path) {
         const answer = files.parsedFiles().getCached(path);
         if (!treeReads.has(path)) treeReads.set(path, answer);
+        return answer;
+      },
+    },
+    treeScenes: {
+      getCached(path) {
+        const answer = godotScenes(loader).getCached(path);
+        if (!sceneOutcomeReads.has(path)) sceneOutcomeReads.set(path, isFailedToLoad(loader, path));
         return answer;
       },
     },
@@ -155,9 +172,13 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
         const stopBus = loader.eventBus.onChange(LIVE_TREE_BUSES, ({ event }) => {
           if (event !== 'invalidated') changed(true);
         });
+        const stopOutcomes = loader.eventBus.onChange(['loadoutcome'], ({ event, key }) => {
+          if (event !== 'invalidated' && isSceneOutcomeChanged(key)) changed(true);
+        });
         const stopFiles = files.subscribe(() => changed(isTreeReadChanged()));
         stopListening = () => {
           stopBus();
+          stopOutcomes();
           stopFiles();
         };
       }
@@ -175,6 +196,14 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
 
 function loadTicksOf(loader: ResourceLoader | null | undefined): LoadTicks {
   return loader ? loadTicksOfLoader(loader) : NO_LOAD_TICKS;
+}
+
+/**
+ * @canonical The scene cache as Godot loads it, for a reader of the live tree
+ * A scene that fails to load is no scene, and a read moves the tree's version when its outcome changes.
+ */
+export function treeScenesOf(loader: ResourceLoader | null | undefined): CacheSource<TscnScene> {
+  return loadTicksOf(loader).treeScenes;
 }
 
 /**

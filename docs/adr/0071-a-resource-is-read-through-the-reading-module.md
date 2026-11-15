@@ -72,3 +72,11 @@ arrived) or `unavailable` with a reason.
   draws its base face while a fallback loads, and decodes again once the fallback arrives.
 - A decode that declines after its own file failed answers that failure, so a font file that failed
   reads as `missing-file`, not `undecodable`.
+- A text file that Godot fails to load reads as `missing-file`, and an instance of such a scene
+  is dropped, as Godot's text loader does (`resource_format_text.cpp:647-650`, `:776`). The file
+  fails when a `[sub_resource]` or `[resource]` property, or a `Resource()` literal, reads a file
+  that is missing, does not parse or fails by this rule. `loader.loadOutcomes` answers it with the
+  chain of files. An outcome still to load reads as loads, so the check never claims a failure it
+  cannot see.
+- The main scene is the one deliberate difference: the preview draws a main scene that Godot fails
+  to load and shows the chain in a banner. A failed file below a scene that loads follows Godot.

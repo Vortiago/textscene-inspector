@@ -24,7 +24,8 @@ export type ResourceBusType =
   | 'arraymesh'
   | 'font'
   | 'theme'
-  | 'directory';
+  | 'directory'
+  | 'loadoutcome';
 
 interface ResourceSliceRegistration {
   /** Slice folder name under `resources/<category>/`, for example 'standardmaterial3d'. */
