@@ -12,6 +12,7 @@
 
 import { passesDelimiterGuards, splitDelimiterEntry } from './delimiterEntry.js';
 import { isGodotSymbol } from './symbolChars.js';
+import { isWhitespace } from '../../../../godot/string/charUtils.js';
 
 /** `CodeEdit::DelimiterType` (`code_edit.h`). */
 type DelimiterType = 'comment' | 'string';
@@ -185,7 +186,7 @@ export function isLineInDelimiter(
       // Godot's `in_region = true` here is dead at `p_column = -1`: every path
       // out of this iteration returns, so nothing reads it again.
       for (let i = key - 2; i >= 0; i--) {
-        if (!isWhitespace(text[i])) return -1;
+        if (!isWhitespace(text[i]!)) return -1;
       }
     }
 
@@ -198,16 +199,11 @@ export function isLineInDelimiter(
       endCol = next[0];
     }
     for (let i = endCol; i < text.length; i++) {
-      if (!isWhitespace(text[i])) return -1;
+      if (!isWhitespace(text[i]!)) return -1;
     }
     return region;
   }
   return inRegion ? region : -1;
-}
-
-/** `is_whitespace` (`core/string/char_utils.h`) over the characters a `.tscn` line can hold. */
-function isWhitespace(ch: string | undefined): boolean {
-  return ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r' || ch === '\v' || ch === '\f';
 }
 
 /**

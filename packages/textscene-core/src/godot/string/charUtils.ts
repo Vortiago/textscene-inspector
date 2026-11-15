@@ -1,4 +1,10 @@
-/** char_utils.h:121 */
+/** Godot's character classes of `char_utils.h` and the identifier test of `String`. */
+
+/**
+ * `is_whitespace` (char_utils.h:121) of the code point that starts `char`.
+ *
+ * @canonical Godot's whitespace class of a character
+ */
 export function isWhitespace(char: string): boolean {
   const code = char.codePointAt(0) ?? 0;
   return (
@@ -16,14 +22,9 @@ export function isWhitespace(char: string): boolean {
   );
 }
 
-export const isCharWord = (char: string | undefined): boolean =>
-  char !== undefined && /^[0-9A-Za-z_]$/.test(char);
-
-export const isCharSpace = (char: string): boolean => char === ' ' || char === '\t';
-
-// Godot's String ends in a 0, which the preprocessor reads as a character.
-export const END = '\0';
-
-export const isCharEnd = (char: string): boolean => char === '\n' || char === END;
-
+/**
+ * `String::is_valid_ascii_identifier` (ustring.cpp:4343): ASCII letters, digits and `_`, no leading digit.
+ *
+ * @canonical An ASCII identifier test
+ */
 export const isValidAsciiIdentifier = (text: string): boolean => /^[A-Za-z_][A-Za-z0-9_]*$/.test(text);
