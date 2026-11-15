@@ -60,7 +60,6 @@ describe('keyMatcher', () => {
 });
 
 describe('unvalidatedByClass', () => {
-  /** A registry with hand keys by class, and `derived` as the `Class.key` the descriptor answers. */
   const registry = (keys, derived = []) => ({
     getOwnKeys: (cls) => keys[cls] ?? [],
     isDerived: (cls, key) => derived.includes(`${cls}.${key}`),

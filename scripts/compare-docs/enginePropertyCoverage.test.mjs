@@ -15,10 +15,7 @@ import { keyMatcher, unvalidatedByClass } from './registryKeys.mjs';
 import { PROPS_OUT } from './build-node-catalog/paths.mjs';
 
 const CORE = join(import.meta.dirname, '../../packages/textscene-core');
-// A ledger, not a pass mark: it only goes down, counted per declaring class
-// with no base-walk, since a `Control` validator belongs in `Control`'s slice.
-// The one left is `OpenXRRenderModel.render_model`, a `Variant::RID`: a runtime
-// handle with no literal a scene can write.
+// `OpenXRRenderModel.render_model`: a RID, which no scene can write.
 const EXPECTED_UNVALIDATED = 1;
 
 /**

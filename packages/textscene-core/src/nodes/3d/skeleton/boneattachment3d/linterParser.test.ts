@@ -23,7 +23,6 @@ function check(property: string, value: string) {
  * Node's `physics_interpolation_mode` (`overrides=` in the XML) arrives through the base-walk.
  */
 const KEYS: string[] = [
-  'bone_name',
   'bone_idx',
   'override_pose',
   'use_external_skeleton',

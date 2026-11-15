@@ -28,7 +28,6 @@ const KEYS: string[] = [
   'shape_centered',
   'shape_visible',
   'passby_press',
-  'action',
   'visibility_mode',
 ];
 /** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
