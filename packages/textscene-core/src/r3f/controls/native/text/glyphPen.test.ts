@@ -30,6 +30,12 @@ describe("glyphOriginsPx 'fromItemPosition'", () => {
     expect(itemSummedOriginsPx(lineOf([1.5, 1.5]), 0.25)).toEqual([0.25, 1.75]);
   });
 
+  it('steps over the glyphs of another face that a run cut from the line leaves out', () => {
+    const line = lineOf([2, 3, 4]);
+    const ownFace = { ...line, glyphs: [line.glyphs[0]!, line.glyphs[2]!] };
+    expect(itemSummedOriginsPx(ownFace, 0)).toEqual([0, 5]);
+  });
+
   it("adds the glyph's own offset to its pen", () => {
     const line = lineOf([2, 2]);
     line.glyphs[1]!.xOffset = 0.5;

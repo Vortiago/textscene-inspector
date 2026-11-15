@@ -14,24 +14,28 @@ export function glyphOriginsPx(line: TextLineLayout, lineOriginXPx: number, penS
     : lineSummedOriginsPx(line, lineOriginXPx);
 }
 
+// The x step, not the advance: a run cut from a line of several faces skips the advances of the others.
 function itemSummedOriginsPx(line: TextLineLayout, lineOriginXPx: number): number[] {
-  let pen = Math.fround(lineOriginXPx + (line.glyphs[0]?.x ?? 0));
+  const firstX = line.glyphs[0]?.x ?? 0;
+  let pen = Math.fround(lineOriginXPx + firstX);
+  let previousX = firstX;
   return line.glyphs.map((glyph) => {
-    const origin = withOwnOffset(pen, glyph);
-    pen = Math.fround(pen + Math.fround(glyph.advance));
-    return origin;
+    pen = Math.fround(pen + Math.fround(glyph.x - previousX));
+    previousX = glyph.x;
+    return withOwnOffset(pen, glyph);
   });
 }
 
 function lineSummedOriginsPx(line: TextLineLayout, lineOriginXPx: number): number[] {
+  const firstX = line.glyphs[0]?.x ?? 0;
   const keepsLinePens = line.glyphs.every((glyph) => glyph.linePenPx !== undefined);
-  const origin = Math.fround(keepsLinePens ? lineOriginXPx : lineOriginXPx + (line.glyphs[0]?.x ?? 0));
+  const origin = Math.fround(keepsLinePens ? lineOriginXPx : lineOriginXPx + firstX);
   let sum = 0;
+  let previousX = firstX;
   return line.glyphs.map((glyph) => {
-    sum = glyph.linePenPx ?? sum;
-    const glyphOrigin = withOwnOffset(Math.fround(origin + sum), glyph);
-    sum = Math.fround(sum + Math.fround(glyph.advance));
-    return glyphOrigin;
+    sum = glyph.linePenPx ?? Math.fround(sum + Math.fround(glyph.x - previousX));
+    previousX = glyph.x;
+    return withOwnOffset(Math.fround(origin + sum), glyph);
   });
 }
 
