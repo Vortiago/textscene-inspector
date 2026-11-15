@@ -3,7 +3,7 @@
  * snapshots, and what a reload of a file renews.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ResourceLoader } from '../ResourceLoader';
 import { busServing } from '../testing/servingFileBus';
 import { loaderServing } from '../testing/servingResourceLoader';
@@ -163,6 +163,37 @@ describe("a snapshot's read of a processor's value", () => {
     source.current().loaded(FONT_FILES, FONT_FILE);
 
     expect(source.files().get(FONT_FILE)).toBeNull();
+    unsubscribe();
+  });
+
+  it('keeps a file pinned across a new snapshot that has not read it yet', async () => {
+    const loader = loaderServing({ [A_FILE]: resourceFile('') });
+    const source = loaderSnapshots(loader);
+    const unsubscribe = source.subscribe(() => {});
+    source.current().read(nodeReference('ExtResource("1_a")', sceneTables(EXT_A)), namedKind().kind);
+    source.request();
+    const unpin = vi.spyOn(loader.resources, 'unpin');
+
+    source.restart();
+    source.request();
+
+    expect(unpin).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it('unpins a file one snapshot after its last read', async () => {
+    const loader = loaderServing({ [A_FILE]: resourceFile('') });
+    const source = loaderSnapshots(loader);
+    const unsubscribe = source.subscribe(() => {});
+    source.current().read(nodeReference('ExtResource("1_a")', sceneTables(EXT_A)), namedKind().kind);
+    source.request();
+    const unpin = vi.spyOn(loader.resources, 'unpin');
+
+    source.restart();
+    source.restart();
+    source.request();
+
+    expect(unpin).toHaveBeenCalledWith(A_FILE);
     unsubscribe();
   });
 });

@@ -12,6 +12,7 @@ import type { CachedFile } from '../useLoadedFiles';
 import type { ResourceLoader } from '../ResourceLoader';
 import type { ResourceSnapshot } from './read';
 import { snapshotOver } from './snapshot';
+import { subscribeToNothing } from '../../utils/subscribeToNothing';
 
 export interface SnapshotSource {
   /** The same snapshot until a read it recorded would answer differently. */
@@ -21,6 +22,11 @@ export interface SnapshotSource {
    * file that reloads keeps its last answer across it.
    */
   restart(): void;
+  /**
+   * The parsed resource files as the current snapshot reads them, for a reader that walks a file's
+   * text itself: each read is recorded, requested and reported with the snapshot's own.
+   */
+  parsedFiles(): CacheSource<ParsedResource>;
   /** Requests and pins each file the current snapshot read. Call it after commit, never in render. */
   request(): void;
   /** `onStale` hears a load, a failure or a reload of a file the current snapshot read. */
@@ -38,9 +44,25 @@ interface KindReads {
   readonly settled: CacheSource<object>;
   /** Written only by the snapshot's recording. A new snapshot starts it empty. */
   reads: Map<string, CachedFile<object>>;
+  /** Written only by `start`: what the snapshot before the current one read. */
+  previousReads: ReadonlyMap<string, CachedFile<object>>;
   /** Written only by `request` and the last unsubscribe: the files this source holds pinned. */
   readonly pinned: Set<string>;
 }
+
+const NO_PARSED_FILES: CacheSource<ParsedResource> = { getCached: () => null };
+const NO_LOADER_SNAPSHOT = snapshotOver(NO_PARSED_FILES);
+const NO_FILES = new Map<string, never>();
+
+/** The source with no loader: every file is missing, as `useResource` answers outside its provider. */
+export const NO_LOADER: SnapshotSource = {
+  current: () => NO_LOADER_SNAPSHOT,
+  restart: () => {},
+  parsedFiles: () => NO_PARSED_FILES,
+  request: () => {},
+  subscribe: subscribeToNothing,
+  files: () => NO_FILES,
+};
 
 export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
   /** Written only by `kindReads`: each kind of file a snapshot of this source has read. */
@@ -49,7 +71,13 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
     let found = kinds.get(fileKind);
     if (!found) {
       const cache = fileKind.cacheOf(loader);
-      found = { cache, settled: keptWhileReloading(cache), reads: new Map(), pinned: new Set() };
+      found = {
+        cache,
+        settled: keptWhileReloading(cache),
+        reads: new Map(),
+        previousReads: new Map(),
+        pinned: new Set(),
+      };
       kinds.set(fileKind, found);
     }
     return found;
@@ -59,8 +87,12 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
   let addresses = new Map<string, ParsedResource | null>();
   let listeners = 0;
 
-  const start = (): ResourceSnapshot => {
-    kinds.forEach((kind) => (kind.reads = new Map()));
+  /** A new snapshot, with the recording reader of parsed files that reads as it does. */
+  const start = (): { snapshot: ResourceSnapshot; parsedFiles: CacheSource<ParsedResource> } => {
+    kinds.forEach((kind) => {
+      kind.previousReads = kind.reads;
+      kind.reads = new Map();
+    });
     addresses = new Map();
     const found = addresses;
     const recordedIn = (kind: KindReads) => {
@@ -70,7 +102,7 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
     const parsedFiles = recordedIn(parsed) as CacheSource<ParsedResource>;
     /** Written only by `loaded`: the recording reader of each kind, for this snapshot. */
     const loadedFiles = new Map<FileKind<object>, CacheSource<object>>();
-    return snapshotOver({
+    const snapshot = snapshotOver({
       ...parsedFiles,
       loaded(fileKind, address) {
         let files = loadedFiles.get(fileKind);
@@ -79,8 +111,9 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
       },
       onAddress: (address, file) => found.set(address, file),
     });
+    return { snapshot, parsedFiles };
   };
-  let snapshot = start();
+  let current = start();
   const isStale = () => {
     for (const { reads, settled } of kinds.values()) {
       for (const [path, answer] of reads) if (settled.getCached(path) !== answer) return true;
@@ -90,11 +123,15 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
 
   return {
     current() {
-      if (isStale()) snapshot = start();
-      return snapshot;
+      if (isStale()) current = start();
+      return current.snapshot;
     },
     restart() {
-      snapshot = start();
+      current = start();
+    },
+    parsedFiles() {
+      if (isStale()) current = start();
+      return current.parsedFiles;
     },
     request() {
       kinds.forEach(requestReads);
@@ -127,15 +164,19 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
   };
 }
 
-/** Requests and pins each file `kind` read, and unpins each it no longer reads. */
-function requestReads({ cache, reads, pinned }: KindReads): void {
+/**
+ * Requests and pins each file `kind` read, and unpins each that neither the current snapshot nor
+ * the one before it read. A reader may read again on a new snapshot after this runs, so a file
+ * leaves the pins one snapshot after its last read.
+ */
+function requestReads({ cache, reads, previousReads, pinned }: KindReads): void {
   for (const path of reads.keys()) {
     if (!pinned.has(path)) cache.pin(path);
     pinned.add(path);
     if (cache.getCached(path) === undefined && !cache.isLoading(path)) cache.request(path);
   }
   for (const path of pinned) {
-    if (reads.has(path)) continue;
+    if (reads.has(path) || previousReads.has(path)) continue;
     cache.unpin(path);
     pinned.delete(path);
   }

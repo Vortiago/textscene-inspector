@@ -16,7 +16,6 @@ import { parseTscnContent } from '../hooks/useParsedScene';
 import { DispatchedScene } from '../testing/DispatchedScene';
 import { settleLoads } from '../testing/settleLoads';
 import { liveTreeOf, type LiveTree } from '../liveSceneTree';
-import { liveScenePassResults } from '../liveScenePass';
 import { useLiveTreeSelection } from '../useLiveSceneTree';
 import { ControlCanvasLayer } from '../controls/native/ControlCanvasLayer';
 import type { SolveNode } from '../controls/native/solveTree';
@@ -26,6 +25,7 @@ import { canvasPaintPass, type CanvasItemPaint } from './canvasItemPaint';
 
 import '../nodes/index';
 import '../controls/index';
+import { runPass } from '../liveSceneTree.testkit';
 
 /**
  * Written by the mocked readers during one mount, and cleared before the next. The last write wins:
@@ -173,7 +173,7 @@ function spatialPaths(tree: LiveTree): Set<string> {
 describe('both walks read the paint pass for every node they draw', () => {
   it.each(FIXTURES)('%s', async (name) => {
     const tree = await mounted(name);
-    const paint = liveScenePassResults(canvasPaintPass, tree);
+    const paint = runPass(canvasPaintPass, tree);
     const sorted = sortedPaths(tree);
     const spatial = spatialPaths(tree);
 
@@ -260,7 +260,7 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
 polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
 `
     );
-    const paint = liveScenePassResults(canvasPaintPass, tree);
+    const paint = runPass(canvasPaintPass, tree);
     expect(worldPaints.get('Root/Mid/Top')!.own).toBe(paint.get('Root/Mid/Top')!.own);
   });
 });
