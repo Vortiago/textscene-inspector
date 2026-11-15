@@ -9,7 +9,7 @@ import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { TargetView } from '../../../r3f/contexts/ViewportTextureContext.js';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures.js';
-import { drawOffscreen } from '../../../r3f/offscreen.js';
+import { drawOffscreen } from '../../../r3f/offscreen/draw.js';
 import { copyTexels, wholeTexels, type TexelPlacement, type TexelTransfer } from '../../../r3f/texelCopy.js';
 import {
   hasHeldCopies,
@@ -20,7 +20,7 @@ import {
 } from '../../../r3f/liveTargets';
 import { holdUntilReleased, isHeld, useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { copySampling } from '../../../resources/textures/copySampling.js';
-import { storeSrgbBytes } from './offscreenViewport.js';
+import { createCopyTarget, storeSrgbBytes } from '../../../r3f/offscreen/targets.js';
 
 /** A view as its pass holds it: `fill` runs after each render of the pass, inside one offscreen draw. */
 interface PassView extends TargetView {
@@ -130,7 +130,7 @@ class ViewCopy implements PassView {
     private readonly source: THREE.WebGLRenderTarget,
     private readonly transfer: TexelTransfer
   ) {
-    this.copy = new THREE.WebGLRenderTarget(source.width, source.height, { depthBuffer: false });
+    this.copy = createCopyTarget(source.width, source.height);
     this.whole = wholeTexels(source.width, source.height);
     copySampling(this.copy.texture, source.texture);
     this.texture = this.copy.texture;

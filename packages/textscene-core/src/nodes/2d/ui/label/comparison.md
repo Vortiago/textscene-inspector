@@ -197,6 +197,19 @@ A wrapped Label shows the lines after `lines_skipped` that fit its rect height, 
 - A glyph reveal counts the glyphs a trim cut in its total (`label.cpp:583`), and shows only drawn
   glyphs (`label.h:197-241`).
 
+## Wrapped lines and the rect
+
+A wrapped Label shows the lines after `lines_skipped` that fit its rect height, at most
+`max_lines_visible` of them (`label.cpp:520-561,1022-1061`). Lines below the rect do not draw.
+
+- When lines are hidden, the line at the visible count, counted from the first line, trims with an
+  enforced ellipsis (`label.cpp:268-301`).
+- FILL fits each line but the last of its paragraph, so a line the window cuts after is fitted.
+- With `clip_text` or a trim, the minimum height floors at 1 px. A trim without `clip_text` keeps
+  room for `max_lines_visible` rows (`label.cpp:984-990`).
+- A glyph reveal counts the glyphs a trim cut in its total (`label.cpp:583`), and shows only drawn
+  glyphs (`label.h:197-241`).
+
 ## Text direction
 
 Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server runs ICU over it:

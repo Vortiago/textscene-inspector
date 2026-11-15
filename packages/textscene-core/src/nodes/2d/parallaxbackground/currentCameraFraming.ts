@@ -6,7 +6,7 @@
 import type * as THREE from 'three';
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 import { isViewportPass } from '../../../r3f/sceneRenderCamera';
-import { selectViewportCamera2D } from '../../viewport/subviewport/offscreenViewport';
+import { selectViewportCamera2D } from '../../viewport/subviewport/viewportFraming';
 import type { Camera2DTag } from '../camera2d/cameraView';
 import { parallaxViewFraming, type ParallaxViewFraming } from './parallaxScroll';
 

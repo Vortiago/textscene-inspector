@@ -1,12 +1,13 @@
 /**
  * The 2D stage's light pass, and the entry point for the declarations a light, an item and a mesh
- * make to the pass above them. The stage hosts its pass in R3F's frame loop; `CanvasLightPass.tsx`
- * is the pass itself, which a SubViewport hosts in its own ordered pass.
+ * make to the pass above them. The stage runs its pass as the light step of the canvas frame
+ * (`canvasFrameSequence.ts`). `CanvasLightPass.tsx` is the pass itself, which a SubViewport hosts too.
  */
 
 import type { CanvasColorSpace } from '../canvasColorSpace.js';
-import { useMemo, useRef, type ReactNode } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useCallback, useMemo, useRef, type ReactNode } from 'react';
+import { useThree } from '@react-three/fiber';
+import { useCanvasLightPass } from '../components/Canvas2DStage/canvasFrameSequence.js';
 import { CanvasLightPass } from './CanvasLightPass.js';
 import type { CanvasClip, LightPassHost } from './lightPassHost.js';
 import type { Rgba } from '../../godot/math/math.js';
@@ -19,12 +20,6 @@ export {
   useRegisterCanvasLight2D,
   useRegisterLitItem,
 } from './lightPassDeclarations.js';
-
-/**
- * Ahead of R3F's own render, which a negative priority leaves in place, and after the occluder and
- * light snapshots (`SHADOW_SNAPSHOT_PRIORITY`) the pass reads.
- */
-const LIGHT_PASS_PRIORITY = -1;
 
 /**
  * The stage as a pass host: the R3F scene and camera, buffers the size of the drawing buffer, and
@@ -68,7 +63,8 @@ interface CanvasLighting2DProviderProps {
 
 export function CanvasLighting2DProvider({ canvasModulate, space, children }: CanvasLighting2DProviderProps) {
   const host = useStageLightPassHost();
-  useFrame(() => host.run.current?.(), LIGHT_PASS_PRIORITY);
+  const runLightPass = useCallback(() => host.run.current?.(), [host]);
+  useCanvasLightPass(runLightPass);
   return (
     <CanvasLightPass host={host} canvasModulate={canvasModulate} space={space}>
       {children}

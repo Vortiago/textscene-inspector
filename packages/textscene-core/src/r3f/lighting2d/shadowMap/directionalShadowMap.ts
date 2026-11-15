@@ -54,6 +54,13 @@ interface DirectionalShadowMap {
   readonly worldToShadow: Affine2;
 }
 
+/**
+ * The depth an occluder must reach to cast. `set_orthogonal(..., 0.0, distance)` (`:1166-1167`)
+ * builds a [-1, 1] depth range that Godot never corrects, and the RenderingDevice clips at 0, so
+ * geometry in the upstream half of the band is clipped away.
+ */
+const NEAR_DEPTH = SHADOW_MAP_FAR / 2;
+
 /** A row-major 2×3 affine. */
 export type Affine2 = readonly [number, number, number, number, number, number];
 
@@ -167,7 +174,7 @@ function sweptViewTest(view: DirectionalShadowView): (bounds: Quad2) => boolean 
 /**
  * The map for one light over the viewport. `casters` are world-space occluders already narrowed by
  * `shadow_item_cull_mask`. Each casting edge covers the bins `coveredPixelRange` names, keeping the nearest
- * depth (`canvas_occlusion.glsl`'s `depth / z_far`) and clipping what falls outside `[0, z_far]`.
+ * depth (`canvas_occlusion.glsl`'s `depth / z_far`) and clipping what falls outside `[z_far / 2, z_far]`.
  */
 export function buildDirectionalShadowMap(
   view: DirectionalShadowView,
@@ -200,7 +207,7 @@ export function buildDirectionalShadowMap(
         // rasteriser interpolates between the snapped ends.
         const t = Math.min(1, Math.max(0, (bin + 0.5 - uA) / (uB - uA)));
         const depth = depthA + (depthB - depthA) * t;
-        if (!(depth >= 0) || !(depth <= SHADOW_MAP_FAR)) continue;
+        if (!(depth >= NEAR_DEPTH) || !(depth <= SHADOW_MAP_FAR)) continue;
         if (depth < bins[bin]!) bins[bin] = depth;
       }
     }

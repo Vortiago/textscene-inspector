@@ -55,7 +55,7 @@ function box(x: number, y: number): ShadowCasterEdges {
 
 // One box below the origin, where the stage and the default host look, and one above it, where the
 // square host looks, so every canvas in these tests has an occluder in view.
-const CASTERS = [box(400, -400), box(400, 400)];
+const CASTERS = [box(400, -600), box(400, 400)];
 
 function clipOf(x: number, y: number, w: number, h: number, scale = { x: 1, y: 1 }): CanvasClip {
   return { rect: { x, y, w, h }, scale };
@@ -217,7 +217,7 @@ describe('useDirectionalShadow, in the map it builds', () => {
       const renderer = await ReactThreeTestRenderer.create(mount(CASTERS));
       await ReactThreeTestRenderer.act(async () => {});
       const before = binsOf(sampler);
-      await renderer.update(mount([box(100, -200)]));
+      await renderer.update(mount([box(100, -800)]));
       expect(binsOf(sampler)).not.toEqual(before);
     });
   });

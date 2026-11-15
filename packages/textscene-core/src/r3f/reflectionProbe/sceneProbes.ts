@@ -20,7 +20,7 @@ import {
 } from '../../resources/sky/skyLayers.js';
 import { COMMIT_FRAMES_AFTER_SETTLE } from '../../resources/ResourceLoaderContext.js';
 import { compareTreeOrder } from '../contexts/TreeOrderContext.js';
-import { drawOffscreen } from '../offscreen.js';
+import { drawOffscreen } from '../offscreen/draw.js';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 import { observeSceneCamera, observeSceneCull, observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { holdSceneRows, type SceneRows } from '../sceneRows/sceneRows.js';

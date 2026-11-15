@@ -147,11 +147,11 @@ export function offTagMounts(source: string): OffTagMount[] {
 const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/nodes/2d/camera2d/Component.tsx':
     'spreads the shared Node2D transform bag onto a `<group>`, which has no material slot',
-  'packages/textscene-core/src/nodes/2d/canvasgroup/Component.tsx':
+  'packages/textscene-core/src/r3f/canvasGroup/CompositeGroupRect.tsx':
     'the composite rect: one material per group buffer, memoised on the buffer and disposed on replacement; the group colour travels as a uniform',
   'packages/textscene-core/src/nodes/2d/pathfollow2d/Component.tsx':
     'spreads the sampled curve transform onto a `<group>`, which has no material slot',
-  'packages/textscene-core/src/nodes/2d/pointlight2d/Component.tsx':
+  'packages/textscene-core/src/r3f/lighting2d/PointLightQuads.tsx':
     'the light quad: one material per light per parameter set, memoised on every input and disposed on replacement, so a changed input arrives as a new material',
   'packages/textscene-core/src/nodes/3d/csg/CsgPrimitive.tsx':
     'spreads the shared Node3D transform bag onto a `<group>`, which has no material slot',
@@ -196,7 +196,7 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'one material per call, its shaders fixed at construction and owned by the caller that draws it; callers move only uniforms, and each `defines` change, the sky radiance layout and the volumetric fog integrate depth, sets `needsUpdate`',
   'packages/textscene-core/src/r3f/depthPrepass/depthPrepass.ts':
     'the depth prepass base, cloned per surface and never drawn itself, and never mutated',
-  'packages/textscene-core/src/nodes/2d/canvasgroup/compositeMaterial.ts':
+  'packages/textscene-core/src/r3f/canvasGroup/compositeMaterial.ts':
     'one material per group buffer, its shaders fixed at construction; a render moves only its colour uniform',
   'packages/textscene-core/src/r3f/opaqueSentinel.ts':
     "an opaque-list sentinel's material, which writes nothing and is never mutated",

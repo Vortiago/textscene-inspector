@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { perObject } from '../../utils/perObject.js';
 import { drawFullScreen, fullScreenPass } from '../fullScreenPass.js';
-import { drawOffscreen } from '../offscreen.js';
+import { drawOffscreen } from '../offscreen/draw.js';
 import { showInSlot } from '../sharedTexture.js';
 import { bestFitNormalsSlot, SCREEN_SPACE_UNIFORM } from './screenSpaceState.js';
 

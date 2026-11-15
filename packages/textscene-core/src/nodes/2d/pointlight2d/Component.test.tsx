@@ -211,9 +211,9 @@ describe('PointLight2D Component', () => {
     expect(color.x).not.toBeCloseTo(0.214, 3); // godotColorToLinear(0.5)
   });
 
-  it('carries energy as its own multiplier rather than folding it into the colour', async () => {
+  it('carries energy, under the colour alpha, as its own multiplier rather than folding it into the colour', async () => {
     const mat = lightMaterial(await render(node({ color: 'Color(0.5, 0.5, 0.5, 1)', energy: '2.0' })));
-    expect(mat.uniforms.uEnergy!.value).toBeCloseTo(2, 5);
+    expect(mat.uniforms.uAlphaEnergy!.value).toBeCloseTo(2, 5);
     expect((mat.uniforms.uColor!.value as THREE.Vector3).x).toBeCloseTo(0.5, 5);
   });
 
@@ -320,9 +320,9 @@ describe('PointLight2D Component', () => {
       });
     });
 
-    it('draws the placeholder when the texture is set but does not resolve', async () => {
+    it('draws nothing when the texture file fails to load, as Godot leaves the property null', async () => {
       const r = await render(node({ texture: 'ExtResource("missing")' }));
-      expect(r.scene.findAllByType('Mesh').filter(isPlaceholder)).toHaveLength(1);
+      expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
     });
   });
 });

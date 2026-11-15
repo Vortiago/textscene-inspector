@@ -7,7 +7,8 @@ import type { LoadedFile } from './scopedResource';
 import { createFakeResourceLoader, type FakeResourceLoader } from './testing/createFakeResourceLoader';
 import { missingResourcesWrapper } from './testing/missingResourcesWrapper';
 import { renderWithSettleInGap } from './testing/renderWithSettleInGap';
-import { FONT_FILES, useCachedFiles, useLoadedFiles } from './useLoadedFiles';
+import { FONT_FILES } from './fileKinds';
+import { useCachedFiles, useLoadedFiles } from './useLoadedFiles';
 
 const OUTER = 'res://outer.tres';
 const INNER = 'res://inner.tres';
@@ -200,6 +201,15 @@ describe('useCachedFiles', () => {
 
     expect(result.current.files.isLoading).toBe(false);
     expect(result.current.missing.has(FONT_PATH)).toBe(true);
+  });
+
+  it('answers null for a font that failed, so a reader tells it from one that loads', () => {
+    const fake = createFakeResourceLoader();
+    const result = renderFonts(FONT_FILES, fake);
+
+    act(() => fake.fonts._fail(FONT_PATH, 'gone'));
+
+    expect(result.current.files.loadedFile(FONT_PATH)).toBeNull();
   });
 
   it('reads no file, listens to no bus and never loads for no kind', () => {

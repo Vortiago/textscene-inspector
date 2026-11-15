@@ -10,6 +10,8 @@ import { perObject } from '../../utils/perObject';
 import { sameData } from '../../utils/sameData';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { CacheSource } from '../../r3f/cacheSources';
+import type { FileKind } from '../fileKinds';
+import type { CachedFile } from '../useLoadedFiles';
 import type { SceneResources } from '../../r3f/SceneResourcesContext';
 import { holdsResource } from '../../godot/scene/resourceLiteral';
 import { scopedSection } from '../resourceSection';
@@ -46,12 +48,10 @@ interface Located {
   readonly origin: string | undefined;
 }
 
-/** A nested read a decode made, with the answer it got. */
-interface FollowedRead {
-  readonly kind: ResourceKind<unknown>;
-  readonly ref: string | undefined;
-  readonly answer: Read<unknown>;
-}
+/** A read a decode made, with the answer it got: a nested resource, or a processor's value for the holder. */
+type FollowedRead =
+  | { readonly kind: ResourceKind<unknown>; readonly ref: string | undefined; readonly answer: Read<unknown> }
+  | { readonly fileKind: FileKind<object>; readonly address: string; readonly answer: Read<unknown> };
 
 interface Decoded {
   readonly properties: Readonly<Record<string, string>>;
@@ -70,24 +70,32 @@ const slotsOf = perObject((_kind: ResourceKind<unknown>) => new Map<string, Deco
 
 /** The loader's answer for each file path, undefined while it loads and null once it failed. */
 export interface FileSource extends CacheSource<ParsedResource> {
+  /**
+   * The value the processor of `fileKind` built for `address`, undefined while it loads and null once
+   * it failed. A source with no processors answers each one failed.
+   */
+  readonly loaded?: (fileKind: FileKind<object>, address: string) => CachedFile<object>;
   /** Hears each `file::id` address a read found in a loaded file: the file, or null when it declares no such id. */
   readonly onAddress?: (address: string, file: ParsedResource | null) => void;
 }
 
 /** A snapshot over `files`. */
 export function snapshotOver(files: FileSource): ResourceSnapshot {
-  return { read: (reference, kind) => readAt(files, reference, kind, []) };
+  return {
+    read: (reference, kind) => readAt(files, reference, kind, []),
+    loaded: (fileKind, address) => loadedAt(files, fileKind, address),
+  };
 }
 
 /** The loader's answer before any file loads, which `mayName` reads against. */
-const NOTHING_LOADED: FileSource = { getCached: () => undefined };
+const NOTHING_LOADED: FileSource = { getCached: () => undefined, loaded: () => undefined };
 
 /**
  * Whether `reference` can name a `kind` before any file loads: false for an unknown id and for a
  * resource of another class, as Godot refuses the property. A file still to load can name one.
  */
 export function mayName(reference: ScopedReference, kind: ResourceKind<unknown>): boolean {
-  const found = locate(NOTHING_LOADED, reference);
+  const found = locate(NOTHING_LOADED, reference, kind);
   if (!('held' in found)) return found.status === 'pending';
   return kind.accepts(found.held.type);
 }
@@ -98,14 +106,29 @@ function readAt<T>(
   kind: ResourceKind<T>,
   stack: readonly string[]
 ): Read<T> {
-  const found = locate(files, reference);
+  const found = locate(files, reference, kind);
   if (!('held' in found)) return found;
   if (!kind.accepts(found.held.type)) return UNAVAILABLE['wrong-type'];
   if (stack.includes(found.key)) return UNAVAILABLE.cycle;
   return decoded(files, found, kind, [...stack, found.key]);
 }
 
-function locate(files: FileSource, reference: ScopedReference): Located | Read<never> {
+/** One answer object for each value, so an unchanged value keeps the identity of its answer. */
+const loadedAnswerOf = perObject((value: object): Read<object> => ({ status: 'loaded', value }));
+
+function loadedAt<U extends object>(files: FileSource, fileKind: FileKind<U>, address: string): Read<U> {
+  const value = files.loaded ? files.loaded(fileKind as FileKind<object>, address) : null;
+  if (value === undefined) return PENDING;
+  if (value === null) return UNAVAILABLE['missing-file'];
+  // The source answers from the cache of `fileKind`, which holds a U.
+  return loadedAnswerOf(value) as Read<U>;
+}
+
+function locate(
+  files: FileSource,
+  reference: ScopedReference,
+  kind: ResourceKind<unknown>
+): Located | Read<never> {
   const { ref, resources } = reference;
   if (!holdsResource(ref)) return NONE;
   const parsed = parseResourceReference(ref!);
@@ -121,14 +144,15 @@ function locate(files: FileSource, reference: ScopedReference): Located | Read<n
       origin: reference.origin,
     };
   }
-  if (parsed?.type === 'ExtResource' && !findExtResource(resources.externalResources, parsed.id)) {
-    return UNAVAILABLE['unknown-id'];
-  }
+  const ext =
+    parsed?.type === 'ExtResource' ? findExtResource(resources.externalResources, parsed.id) : undefined;
+  if (parsed?.type === 'ExtResource' && !ext) return UNAVAILABLE['unknown-id'];
   const path = resolveExtResourcePath(ref, resources.externalResources);
   const filePath = path && resourceFilePath(path);
   if (!path || !filePath) return UNAVAILABLE['wrong-type'];
+  if (kind.readsFilesWhole) return heldWhole(path, ext?.type ?? IMPORTED_FILE, reference);
   // The module reads no file it does not parse: an image is held with no properties, for its reader to load.
-  if (!loadsAsParsedResource(filePath)) return importedFile(path, reference);
+  if (!loadsAsParsedResource(filePath)) return heldWhole(path, IMPORTED_FILE, reference);
   const file = files.getCached(filePath);
   if (file === undefined) return PENDING;
   if (file === null) return UNAVAILABLE['missing-file'];
@@ -148,10 +172,11 @@ function locate(files: FileSource, reference: ScopedReference): Located | Read<n
 
 const NO_PROPERTIES: Readonly<Record<string, string>> = Object.freeze({});
 
-function importedFile(path: string, reference: ScopedReference): Located {
+/** A file the module does not parse, held with no properties for a processor to read. */
+function heldWhole(path: string, type: string, reference: ScopedReference): Located {
   return {
     held: {
-      type: IMPORTED_FILE,
+      type,
       properties: NO_PROPERTIES,
       address: path,
       isLocalToScene: false,
@@ -206,20 +231,32 @@ function decoded<T>(
   let isWaiting = false;
   const follow: Follow = {
     read(innerKind, ref) {
+      const answer = follow.readWithoutWaiting(innerKind, ref);
+      if (answer.status === 'pending') isWaiting = true;
+      return answer;
+    },
+    readWithoutWaiting(innerKind, ref) {
       const answer = readAt(files, nestedReference(located, ref), innerKind, stack);
       reads.push({ kind: innerKind, ref, answer });
-      if (answer.status === 'pending') isWaiting = true;
       return answer;
     },
     reference(ref) {
       handedTables = located.resources;
       return nestedReference(located, ref);
     },
+    loaded(fileKind) {
+      const { address } = located.held;
+      if (address === null) return NONE;
+      const answer = loadedAt(files, fileKind, address);
+      reads.push({ fileKind: fileKind as FileKind<object>, address, answer });
+      if (answer.status === 'pending') isWaiting = true;
+      return answer;
+    },
   };
   const value = decodeOnce(kind, located.held, follow);
   // Pending spreads upward: the value waits for the file a nested read named, and is not kept.
   if (isWaiting) return PENDING;
-  const answer: Read<T> = value === null ? UNAVAILABLE.undecodable : { status: 'loaded', value };
+  const answer: Read<T> = value === null ? declined(reads) : { status: 'loaded', value };
   slots.set(slot, {
     properties: located.held.properties,
     isBuiltIn: located.held.address === null,
@@ -228,6 +265,15 @@ function decoded<T>(
     answer,
   });
   return answer;
+}
+
+/**
+ * The answer of a decode that declines: the failure of the holder's own file when the decode read it
+ * whole, so a font file that failed reads as missing-file, else undecodable.
+ */
+function declined(reads: readonly FollowedRead[]): Read<never> {
+  const ownFile = reads.find((read) => 'fileKind' in read && read.answer.status === 'unavailable');
+  return (ownFile?.answer as Read<never> | undefined) ?? UNAVAILABLE.undecodable;
 }
 
 /** The decode's value, or null for a decode that declines or throws. A kept answer warns no more. */
@@ -255,8 +301,17 @@ function stillHolds(kept: Decoded, located: Located, files: FileSource, stack: r
   return (
     sameProperties &&
     (kept.handedTables === null || kept.handedTables === located.resources) &&
-    kept.reads.every(
-      ({ kind, ref, answer }) => readAt(files, nestedReference(located, ref), kind, stack) === answer
-    )
+    kept.reads.every((read) => readAgain(files, located, read, stack) === read.answer)
   );
+}
+
+/** The answer `read` gets now, for a decode kept from an earlier snapshot. */
+function readAgain(
+  files: FileSource,
+  located: Located,
+  read: FollowedRead,
+  stack: readonly string[]
+): Read<unknown> {
+  if ('fileKind' in read) return loadedAt(files, read.fileKind, read.address);
+  return readAt(files, nestedReference(located, read.ref), read.kind, stack);
 }

@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { CanvasOverWorld } from './CanvasOverWorld';
-import { createSceneTarget } from './offscreenViewport';
+import { createSceneTarget } from '../../../r3f/offscreen/targets';
 import {
   canvasColorSpaceOf,
   CanvasColorSpaceProvider,

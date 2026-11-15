@@ -21,6 +21,7 @@ import { LIGHT_PASS_LAYER } from '../../../r3f/lighting2d/lightPassLayers';
 import { drawnMeshes, isSeed, ownerName } from '../../../r3f/lighting2d/testing/lightPassProbe';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
+import { CanvasFrameDriver } from '../../../r3f/testing/CanvasFrameDriver';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { useCanvasModulateColor } from '../../../r3f/canvasModulate';
@@ -85,15 +86,17 @@ interface Frame {
   readonly drawnScenes: THREE.Object3D[];
 }
 
-/** The root canvas as the stage mounts it: its light pass over the tint its nodes give. */
+/** The root canvas as the stage mounts it: its light pass over the tint its nodes give, run each frame. */
 function TintedStage({ nodes }: { nodes: readonly TscnNode[] }) {
   return (
-    <CanvasLighting2DProvider
-      space={canvasColorSpaceOf(false)}
-      canvasModulate={useCanvasModulateColor(nodes)}
-    >
-      <NodeDispatcher nodes={nodes} />
-    </CanvasLighting2DProvider>
+    <CanvasFrameDriver>
+      <CanvasLighting2DProvider
+        space={canvasColorSpaceOf(false)}
+        canvasModulate={useCanvasModulateColor(nodes)}
+      >
+        <NodeDispatcher nodes={nodes} />
+      </CanvasLighting2DProvider>
+    </CanvasFrameDriver>
   );
 }
 
