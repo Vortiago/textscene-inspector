@@ -10,7 +10,7 @@ export const ENGINE_CITE_RE = /\.(cpp|h|glsl):\d+/;
 
 /**
  * A hint bound read from the ClassDB capture cites the capture (ADR-0032): its Godot release, the
- * class that declares the row and the key, as `captureCite` in `propertyDescriptor.ts` spells it.
+ * class that declares the row and the key, as `propertyDescriptor.ts` spells it.
  *
  * @example `ClassDB 4.6.3: Camera3D.near`.
  */

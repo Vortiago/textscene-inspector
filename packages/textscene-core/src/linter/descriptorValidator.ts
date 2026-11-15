@@ -39,12 +39,12 @@ const FORMAT_CHECKS: Readonly<Partial<Record<number, (name: string) => PropertyV
   [VARIANT_TYPE.NIL]: () => v.any(),
   [VARIANT_TYPE.BOOL]: v.boolean,
   [VARIANT_TYPE.STRING]: v.quotedString,
-  [VARIANT_TYPE.VECTOR2]: (name) => v.vector2(name),
   [VARIANT_TYPE.VECTOR2I]: (name) => v.vector2i(name),
   [VARIANT_TYPE.RECT2]: v.rect2,
   [VARIANT_TYPE.RECT2I]: v.rect2i,
-  [VARIANT_TYPE.VECTOR3]: (name) => v.vector3(name),
+  [VARIANT_TYPE.VECTOR3I]: v.vector3i,
   [VARIANT_TYPE.TRANSFORM2D]: v.transform2d,
+  [VARIANT_TYPE.VECTOR4]: v.vector4,
   [VARIANT_TYPE.PLANE]: v.plane,
   [VARIANT_TYPE.QUATERNION]: v.quaternion,
   [VARIANT_TYPE.AABB]: v.aabb,
@@ -53,7 +53,12 @@ const FORMAT_CHECKS: Readonly<Partial<Record<number, (name: string) => PropertyV
   [VARIANT_TYPE.COLOR]: v.color,
   [VARIANT_TYPE.STRING_NAME]: v.stringName,
   [VARIANT_TYPE.NODE_PATH]: (name) => v.nodePath(name),
+  [VARIANT_TYPE.DICTIONARY]: v.dictionary,
+  [VARIANT_TYPE.PACKED_BYTE_ARRAY]: v.packedByteArray,
+  [VARIANT_TYPE.PACKED_INT32_ARRAY]: v.packedInt32Array,
+  [VARIANT_TYPE.PACKED_INT64_ARRAY]: v.packedInt64Array,
   [VARIANT_TYPE.PACKED_FLOAT32_ARRAY]: (name) => v.packedFloat32Array(name, PACKED_FLOAT_EXAMPLE),
+  [VARIANT_TYPE.PACKED_FLOAT64_ARRAY]: (name) => v.packedFloat64Array(name, PACKED_FLOAT_EXAMPLE),
   [VARIANT_TYPE.PACKED_STRING_ARRAY]: (name) => v.packedStringArray(name, PACKED_STRING_EXAMPLE),
   [VARIANT_TYPE.PACKED_VECTOR2_ARRAY]: v.packedVector2Array,
   [VARIANT_TYPE.PACKED_VECTOR3_ARRAY]: v.packedVector3Array,
@@ -193,12 +198,17 @@ function floatValidator(descriptor: PropertyDescriptor): PropertyValidator {
   });
 }
 
-function vector3Validator(descriptor: PropertyDescriptor): PropertyValidator {
+/** A VECTOR2 or VECTOR3 whose RANGE hint bounds every component, else the plain format check. */
+function floatVectorValidator(
+  descriptor: PropertyDescriptor,
+  plain: (name: string) => PropertyValidator,
+  bounded: typeof v.boundedVector3
+): PropertyValidator {
   refuseFacts(descriptor, []);
   const { name, hint, hintString } = descriptor.property;
   const range = hint === PROPERTY_HINT.RANGE ? parseRangeHint(hintString) : undefined;
-  if (!range || (range.min === undefined && range.max === undefined)) return v.vector3(name);
-  return v.boundedVector3(name, { min: range.min, max: range.max, ...grounding(descriptor, range) });
+  if (!range || (range.min === undefined && range.max === undefined)) return plain(name);
+  return bounded(name, { min: range.min, max: range.max, ...grounding(descriptor, range) });
 }
 
 /** `Font` from `24/17:Font`, or `Image` from a bare class name: the element type the hint names. */
@@ -230,8 +240,10 @@ export function descriptorValidator(descriptor: PropertyDescriptor): PropertyVal
       return intValidator(descriptor);
     case VARIANT_TYPE.FLOAT:
       return floatValidator(descriptor);
+    case VARIANT_TYPE.VECTOR2:
+      return floatVectorValidator(descriptor, v.vector2, v.boundedVector2);
     case VARIANT_TYPE.VECTOR3:
-      return vector3Validator(descriptor);
+      return floatVectorValidator(descriptor, v.vector3, v.boundedVector3);
     case VARIANT_TYPE.ARRAY:
       return arrayValidator(descriptor);
     case VARIANT_TYPE.OBJECT:

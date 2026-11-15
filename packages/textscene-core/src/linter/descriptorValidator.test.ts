@@ -51,6 +51,13 @@ describe('the format check the Variant type picks', () => {
     ['PACKED_VECTOR2_ARRAY', 'ConcavePolygonShape2D', 'segments', 'PackedVector2Array(0, 0, 1, 1)', '5'],
     ['PACKED_VECTOR3_ARRAY', 'ArrayOccluder3D', 'vertices', 'PackedVector3Array(0, 0, 0)', '5'],
     ['PACKED_COLOR_ARRAY', 'ColorPalette', 'colors', 'PackedColorArray(1, 0, 0, 1)', '5'],
+    ['VECTOR3I', 'PlaceholderTexture3D', 'size', 'Vector3i(1, 2, 3)', 'Vector2i(1, 2)'],
+    ['VECTOR4', 'VisualShaderNodeVec4Parameter', 'default_value', 'Vector4(1, 2, 3, 4)', 'Vector3(1, 2, 3)'],
+    ['DICTIONARY', 'AudioStreamOggVorbis', 'tags', '{ "title": "x" }', '5'],
+    ['PACKED_BYTE_ARRAY', 'AudioStreamWAV', 'data', 'PackedByteArray(0, 1, 255)', '"x"'],
+    ['PACKED_INT32_ARRAY', 'ArrayOccluder3D', 'indices', 'PackedInt32Array(0, 1, 2)', 'PackedInt32Array(a)'],
+    ['PACKED_INT64_ARRAY', 'OggPacketSequence', 'granule_positions', 'PackedInt64Array(0, 1)', '"x"'],
+    ['PACKED_FLOAT64_ARRAY', 'GLTFAccessor', 'max', 'PackedFloat64Array(0.5, 1)', '"x"'],
   ])('%s: %s.%s accepts %s and refuses %s', (_type, className, key, good, bad) => {
     expectAccepted(check(className, key, good));
     expect(check(className, key, bad)).toBeAtTier('error');
@@ -62,6 +69,27 @@ describe('the format check the Variant type picks', () => {
     expectAccepted(check('Curve', '_data', '[Vector2(0, 0), 0.0, 0.0, 0, 0]'));
     expect(check('Curve', '_data', '5')).toBeAtTier('error');
     expectAccepted(check('ConvexPolygonShape3D', 'points', 'PackedVector3Array(0, 0, 0, 1, 1, 1)'));
+  });
+
+  it('accepts every spelling a DICTIONARY slot loads', () => {
+    // variant_parser.cpp:677 reads `{…}`, and :1187 reads the typed `Dictionary[K, V]({…})`.
+    expectAccepted(check('AudioStreamOggVorbis', 'tags', '{}'));
+    expectAccepted(check('AudioStreamOggVorbis', 'tags', 'Dictionary[String, String]({ "a": "b" })'));
+  });
+
+  it('accepts the base64 body of a PACKED_BYTE_ARRAY, which Godot writes past 64 bytes', () => {
+    expectAccepted(check('AudioStreamWAV', 'data', 'PackedByteArray("AAH/")'));
+  });
+
+  it('reports an element no slot of its width can store', () => {
+    // A byte is uint8 (variant_parser.cpp:650), and PackedInt32Array's element is int32 (:1428).
+    expect(check('AudioStreamWAV', 'data', 'PackedByteArray(300)')).toBeAtTier('error');
+    expect(check('ArrayOccluder3D', 'indices', 'PackedInt32Array(4294967296)')).toBeAtTier('error');
+    expectAccepted(check('OggPacketSequence', 'granule_positions', 'PackedInt64Array(4294967296)'));
+  });
+
+  it('accepts the Vector3 spelling a VECTOR3I slot converts', () => {
+    expectAccepted(check('PlaceholderTexture3D', 'size', 'Vector3(1, 2, 3)'));
   });
 
   it('accepts any value in a NIL slot, which holds any Variant', () => {
@@ -105,6 +133,13 @@ describe('PROPERTY_HINT_RANGE', () => {
     // GPUParticlesCollisionHeightField3D.size: "0.01,1024,0.01,or_greater,suffix:m".
     expectAccepted(check('GPUParticlesCollisionHeightField3D', 'size', 'Vector3(1, 1, 1)'));
     expectWarning(check('GPUParticlesCollisionHeightField3D', 'size', 'Vector3(0, 1, 1)'), '0.01');
+  });
+
+  it('bounds each component of a VECTOR2 range', () => {
+    // MeshTexture.image_size: "0,16384,1,suffix:px".
+    expectAccepted(check('MeshTexture', 'image_size', 'Vector2(64, 64)'));
+    expectWarning(check('MeshTexture', 'image_size', 'Vector2(64, 20000)'), '16384');
+    expectWarning(check('MeshTexture', 'image_size', 'Vector2(-1, 64)'), '0');
   });
 
   it('converts a radians_as_degrees range to the radians the file stores', () => {

@@ -13,7 +13,9 @@ validatorRegistry.registerAll('BoneAttachment3D', {
   // `get_bone_name` returns `String` (cpp:186), so Godot saves the plain quoted
   // form, and the variant parser reads `&"…"` too. set_bone_name (cpp:178-184)
   // assigns before it looks a skeleton up, so no name is refused.
-  bone_name: v.stringName('bone_name'),
+  // A StringName property with a String setter: the loader converts a NodePath
+  // literal to its text, so `NodePath("x")` stores "x" (binder_common.h:175).
+  bone_name: v.quotedString('bone_name'),
   // bone_attachment_3d.cpp:377, INT, no hint. `v.int` warns that `2.5` stores 2. -1 is the
   // default, which `_check_bind` (cpp:117) reads as "unset, resolve from bone_name", so it stays
   // legal. The ceiling is the live bone count, which no per-property validator sees.

@@ -7,7 +7,7 @@ import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js'
 import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
 import { TILE_MAP_VISIBILITY_MODE_NAMES } from '../../../../godot/scene/tileMap.js';
-import { readTileMapDataLiteral } from '../shared/tileData.js';
+import { readPackedByteArrayLiteral } from '../../../../godot/variant/packedBytes.js';
 
 /**
  * `tile_map_data`, a stored PACKED_BYTE_ARRAY (tile_map_layer.cpp:2267). The writer switches the
@@ -20,7 +20,7 @@ const tileMapDataValidator: PropertyValidator = shape((key, value, line) => {
   // cell records, and a second check here would fire twice on one malformed value.
   // A padded `PackedByteArray ( … )` loads: the tokenizer discards any character <= 32
   // before a token (variant_parser.cpp:415-417).
-  const literal = readTileMapDataLiteral(value);
+  const literal = readPackedByteArrayLiteral(value);
   if (literal.fault === 'not-a-literal') {
     return propertyError(
       key,

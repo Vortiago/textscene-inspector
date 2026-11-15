@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decodeBase64Bytes, parsePackedByteArrayBody } from './packedBytes';
+import { decodeBase64Bytes, parsePackedByteArrayBody, readPackedByteArrayLiteral } from './packedBytes';
 
 describe('decodeBase64Bytes', () => {
   it('gives the bytes a base64 body holds', () => {
@@ -35,5 +35,34 @@ describe('parsePackedByteArrayBody', () => {
   it('gives null for an element or a base64 body Godot cannot read (error path)', () => {
     expect(parsePackedByteArrayBody('1, x')).toBeNull();
     expect(parsePackedByteArrayBody('"!!!"')).toBeNull();
+  });
+});
+
+describe('readPackedByteArrayLiteral', () => {
+  it('gives the body of the constructor, padded or not', () => {
+    expect(readPackedByteArrayLiteral(' PackedByteArray ( 1, 2 ) ')).toEqual({ fault: null, body: '1, 2' });
+  });
+
+  it('gives the body of a base64 constructor', () => {
+    expect(readPackedByteArrayLiteral('PackedByteArray("AAH/")')).toEqual({ fault: null, body: '"AAH/"' });
+  });
+
+  it('reads a bare array of bytes, which PACKED_BYTE_ARRAY converts from ARRAY', () => {
+    expect(readPackedByteArrayLiteral('[1, 2]')).toEqual({ fault: null, body: '1, 2' });
+  });
+
+  it('refuses a bare array of strings, which is no base64 body', () => {
+    expect(readPackedByteArrayLiteral('["AAH/"]')).toEqual({ fault: 'not-a-literal' });
+  });
+
+  it('refuses a value of another type', () => {
+    expect(readPackedByteArrayLiteral('PackedInt32Array(1)')).toEqual({ fault: 'not-a-literal' });
+  });
+
+  it('names a quoted body outside the base64 alphabet', () => {
+    expect(readPackedByteArrayLiteral('PackedByteArray("no!")')).toEqual({
+      fault: 'invalid-base64',
+      body: '"no!"',
+    });
   });
 });

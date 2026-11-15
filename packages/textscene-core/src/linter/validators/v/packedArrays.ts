@@ -1,5 +1,6 @@
 /**
- * `Packed<Kind>Array(…)` combinators, all three built on one shared shape.
+ * `Packed<Kind>Array(…)` combinators: the float and tuple arrays share one format-only shape, the
+ * INT arrays check each element against its width, and the string array checks each literal.
  */
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
@@ -14,10 +15,12 @@ import {
   STRING_ARRAY_FORMS,
 } from '../../../godot/variant/variantParser.js';
 import { readerLimitedInt, type IntWidth } from '../../../godot/variant/intWidth.js';
-import { splitTopLevel, stringLiteralBodies } from '../../../godot/string/string.js';
+import { dropTrailingComma, splitTopLevel, stringLiteralBodies } from '../../../godot/string/string.js';
+import { readPackedByteArrayLiteral } from '../../../godot/variant/packedBytes.js';
 import { compositeSpellings } from '../../../godot/variant/variantConversion.js';
 import type { ParseError } from '../../types.js';
-import { formatCode } from './codes.js';
+import { markIntSlot } from '../intSlot.js';
+import { formatCode, valueCode } from './codes.js';
 import { shape } from './grounding.js';
 
 /** What is wrong with one element of a packed INT array, and which element. */
@@ -230,6 +233,49 @@ function packedTupleArray(
   }, acceptsLabel);
 }
 
+/** The two codes an INT element reports under: unreadable, and read but altered by the slot. */
+function intElementCodes(name: string): { format: string; value: string } {
+  return { format: formatCode(name), value: valueCode(name) };
+}
+
+/**
+ * `Packed<Int>Array(n, …)`, or the `Array[int]([…])` and `[…]` the slot converts
+ * (variant.cpp:780-793). An INT slot: an element the tokenizer cannot read, or `width` cannot
+ * hold, is reported. The packed constructor refuses a trailing comma that a bracket allows
+ * (`_parse_construct`, variant_parser.cpp:562-571).
+ */
+function packedIntArray(
+  name: string,
+  wrapper: 'PackedInt32Array' | 'PackedInt64Array',
+  width: IntWidth
+): PropertyValidator {
+  const forms = packedArrayForms(wrapper);
+  return markIntSlot(
+    shape((key, value, line) => {
+      const parsed = packedArrayBody(forms, value);
+      if (parsed === null) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' must be an int array like ${wrapper}(0, 1), Array[int]([0, 1]) or [0, 1], got: ${value}`,
+          formatCode(name)
+        );
+      }
+      if (parsed.body === '') return null;
+      const elements = parsed.body.split(',');
+      const bad = badIntElement(
+        name,
+        key,
+        line,
+        parsed.flat ? elements : dropTrailingComma(elements),
+        intElementCodes(name),
+        width
+      );
+      return bad.error ?? bad.truncated;
+    }, `int array (${wrapper}(…), Array[int]([…]) or […])`)
+  );
+}
+
 export const packedArrayCombinators = {
   /**
    * `PackedVector2Array(x, y, x, y, …)`, coordinate pairs through {@link packedTupleArray},
@@ -266,6 +312,53 @@ export const packedArrayCombinators = {
    */
   packedFloat32Array(name: string, example: string): PropertyValidator {
     return packedTupleArray(name, 'PackedFloat32Array', 1, 'PackedFloat32Array(x, y, …)', example);
+  },
+
+  /** `PackedFloat64Array(a, b, …)`: {@link packedFloat32Array}'s shape, in doubles. */
+  packedFloat64Array(name: string, example: string): PropertyValidator {
+    return packedTupleArray(name, 'PackedFloat64Array', 1, 'PackedFloat64Array(x, y, …)', example);
+  },
+
+  /** `PackedInt32Array(n, …)`, each element an int32 (`_parse_construct<int32_t>`, variant_parser.cpp:1430). */
+  packedInt32Array(name: string): PropertyValidator {
+    return packedIntArray(name, 'PackedInt32Array', 'int32');
+  },
+
+  /** `PackedInt64Array(n, …)`, each element an int64 (`_parse_construct<int64_t>`, variant_parser.cpp:1448). */
+  packedInt64Array(name: string): PropertyValidator {
+    return packedIntArray(name, 'PackedInt64Array', 'int64');
+  },
+
+  /**
+   * `PackedByteArray(n, …)` or its base64 body `PackedByteArray("…")`, which the writer uses for
+   * an array of more than 64 bytes (resource_format_text.cpp:1724-1732). Each listed element is a
+   * uint8 (`_parse_byte_array`, variant_parser.cpp:600, :650), so `300` is reported.
+   */
+  packedByteArray(name: string): PropertyValidator {
+    return markIntSlot(
+      shape((key, value, line) => {
+        const literal = readPackedByteArrayLiteral(value);
+        if (literal.fault === 'not-a-literal') {
+          return propertyError(
+            key,
+            line,
+            `Property '${name}' must be a PackedByteArray like PackedByteArray(0, 1) or a base64-quoted PackedByteArray("…"), got: ${value}`,
+            formatCode(name)
+          );
+        }
+        if (literal.fault === 'invalid-base64') {
+          return propertyError(
+            key,
+            line,
+            `Property '${name}' contains a malformed base64 string: ${literal.body}`,
+            formatCode(name)
+          );
+        }
+        if (literal.body === '' || literal.body.startsWith('"')) return null;
+        const bad = badIntElement(name, key, line, literal.body, intElementCodes(name), 'uint8');
+        return bad.error ?? bad.truncated;
+      }, 'PackedByteArray(…), its base64 body PackedByteArray("…"), or […]')
+    );
   },
 
   /**

@@ -6,7 +6,10 @@
 
 import { validatorRegistry, type ValidatorRegistry } from '../ValidatorRegistry.js';
 import type { PropertyValidator } from '../propertyValidator.js';
-import { capturedProperties } from '../../godot/classdb/classProperty.js';
+import {
+  NODE_CLASS_PROPERTIES,
+  RESOURCE_CLASS_PROPERTIES,
+} from '../../godot/classdb/classProperties.generated.js';
 
 /**
  * Which map a registration came from, or `derived` for a captured key the property descriptor
@@ -89,8 +92,12 @@ export function registeredKeys(registry: ValidatorRegistry = validatorRegistry):
       out.push({ nodeType, key, kind: 'removal' });
     }
   }
-  for (const { declaredBy, name } of capturedProperties()) {
-    if (registry.isDerived(declaredBy, name)) out.push({ nodeType: declaredBy, key: name, kind: 'derived' });
+  for (const table of [NODE_CLASS_PROPERTIES, RESOURCE_CLASS_PROPERTIES]) {
+    for (const [nodeType, rows] of Object.entries(table)) {
+      for (const [key] of rows) {
+        if (registry.isDerived(nodeType, key)) out.push({ nodeType, key, kind: 'derived' });
+      }
+    }
   }
   return out;
 }

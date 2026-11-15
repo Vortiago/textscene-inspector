@@ -227,6 +227,7 @@ describe('variantShape', () => {
     ['Array[int]([1])', 'array'],
     ['{}', 'dictionary'],
     ['{"a": 1}', 'dictionary'],
+    ['Dictionary[StringName, Variant]({"a": 1})', 'dictionary'],
   ] as const)('names %s a %s', (text, shape) => {
     expect(variantShape(text)).toBe(shape);
   });

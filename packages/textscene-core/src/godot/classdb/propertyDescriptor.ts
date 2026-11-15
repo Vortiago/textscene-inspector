@@ -83,7 +83,7 @@ function factsFor(className: string, key: string): PropertyFacts | undefined {
 }
 
 /** `ClassDB 4.6.3: Camera3D.near`: the capture, the class that declares the row and the key. */
-export function captureCite(property: ClassProperty): string {
+function captureCite(property: ClassProperty): string {
   return `ClassDB ${CLASSDB_CAPTURE_VERSION}: ${property.declaredBy}.${property.name}`;
 }
 

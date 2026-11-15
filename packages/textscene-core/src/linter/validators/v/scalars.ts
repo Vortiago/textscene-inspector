@@ -12,6 +12,7 @@ import { accepts, shape } from './grounding.js';
 
 import {
   ARRAY_LITERAL_RE,
+  DICTIONARY_LITERAL_RE,
   JACKETED_STRING_RE,
   NODE_PATH_LITERAL_RE,
   TYPED_WRAPPER_RE,
@@ -52,6 +53,23 @@ export const scalarCombinators = {
       }
       return null;
     }, 'quoted string, or the &"…" StringName or NodePath("…") it converts');
+  },
+
+  /**
+   * A `Dictionary` literal, bare `{…}` or typed `Dictionary[K, V]({…})`. Format-only: the entries
+   * are any Variant (variant_parser.cpp:1187-1322).
+   */
+  dictionary(name: string): PropertyValidator {
+    const code = formatCode(name);
+    return shape((key, value, line) => {
+      if (DICTIONARY_LITERAL_RE.test(value.trim())) return null;
+      return propertyError(
+        key,
+        line,
+        `Property '${name}' must be a Dictionary literal like {} or { "key": 1 }, got: ${value}`,
+        code
+      );
+    }, 'Dictionary literal ({…} or Dictionary[K, V]({…}))');
   },
 
   /**

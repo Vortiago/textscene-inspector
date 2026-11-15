@@ -7,60 +7,16 @@
 
 import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v, accepts, propertyError } from '../../../../linter/validators/index.js';
+import { v } from '../../../../linter/validators/index.js';
 import { SPLIT_CONTAINER_DRAGGER_VISIBILITY_NAMES } from '../../../../godot/scene/gui.js';
-import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
-import { markIntSlot } from '../../../../linter/validators/intSlot.js';
-import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
-import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-
-const SPLIT_OFFSETS_FORMAT = 'INVALID_SPLIT_OFFSETS_FORMAT';
-// All three spellings the slot converts: `can_convert_strict` lists ARRAY as a source for
-// PACKED_INT32_ARRAY (variant.cpp:467-473), and `set_split_offsets` (split_container.cpp:1071)
-// takes a `PackedInt32Array`, so the bare and typed arrays narrow as the constructor's elements
-// do, under one element grammar.
-const SPLIT_OFFSETS_FORMS = packedArrayForms('PackedInt32Array');
-
-/**
- * `PackedInt32Array(n, n, …)`, one pixel offset per dragger, with no parity constraint:
- * `SplitContainer::set_split_offsets` (split_container.cpp:1071) accepts any length. A length other
- * than `valid_children.size() - 1` sets `split_offset_pending` rather than rejecting the array, and
- * the next layout pass re-derives the missing entries.
- */
-function splitOffsetsValidator(): PropertyValidator {
-  const validator = accepts((key, value, line) => {
-    const matched = packedArrayBody(SPLIT_OFFSETS_FORMS, value);
-    if (!matched) {
-      return propertyError(
-        key,
-        line,
-        `Property 'split_offsets' must be an int array like PackedInt32Array(0, 60), Array[int]([0, 60]) or [0, 60], got: "${value}"`,
-        SPLIT_OFFSETS_FORMAT
-      );
-    }
-    const body = matched.body;
-    if (body === '') return null;
-    // The shared element grammar, as `tilemap` and `polygon2d` read theirs. Measured on 4.6.3,
-    // `(1.5, 0)` loads as `[1, 0]` and `(2e3, 0)` as `[2000, 0]` (_parse_construct<int32_t>,
-    // variant_parser.cpp:1428-1430, narrows any number token), and `(+3, 0)` fails the load,
-    // since `get_token` accepts no leading `+`, so `/^[+-]?\d+$/` is wrong both ways.
-    const bad = badIntElement('split_offsets', key, line, body, {
-      format: SPLIT_OFFSETS_FORMAT,
-      value: 'INVALID_SPLIT_OFFSETS_VALUE',
-    });
-    return bad.error ?? bad.truncated;
-  }, 'int array (PackedInt32Array(…), Array[int]([…]) or […])');
-  // An INT slot, not format-only: it rejects a literal the tokenizer reads, so
-  // `variant.h:360-377` is its authority. `set_split_offsets`
-  // (split_container.cpp:1071) accepts any length and any value, so there is no
-  // bound here beyond that.
-  return markIntSlot(validator);
-}
 
 validatorRegistry.registerAll('SplitContainer', {
   // split_container.cpp:1295: ADD_PROPERTY(PropertyInfo(Variant::PACKED_INT32_ARRAY,
   // "split_offsets", PROPERTY_HINT_NONE, "suffix:px"), "set_split_offsets", "get_split_offsets");
-  split_offsets: splitOffsetsValidator(),
+  // `set_split_offsets` (split_container.cpp:1071) accepts any length and any value. A length
+  // other than `valid_children.size() - 1` sets `split_offset_pending`, and the next layout pass
+  // re-derives the missing entries.
+  split_offsets: v.packedInt32Array('split_offsets'),
   // split_container.cpp:1296: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "collapsed"), ...)
   collapsed: v.boolean('collapsed'),
   // split_container.cpp:1297: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "dragging_enabled"), ...)

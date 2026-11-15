@@ -10,15 +10,17 @@ import { join } from 'node:path';
 import { requireFreshDist } from '../distFreshness.mjs';
 import { loadCoreLinter } from './loadCoreLinter.mjs';
 import { applicableEntries, corpusRefusals } from './formatOnlyCorpus.mjs';
-import { FORMAT_ONLY_CORPUS, SETTER_TYPES } from './formatOnlyCorpus.data.mjs';
+import { FORMAT_ONLY_CORPUS } from './formatOnlyCorpus.data.mjs';
 import { PROPS_OUT, RESOURCE_PROPS_OUT } from './build-node-catalog/paths.mjs';
 
 const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 
 /**
  * One row per captured property, from both captures, typed by what its setter
- * takes. The keys cannot collide: `Node` and `Resource` are separate branches
- * under `Object`.
+ * takes: `VariantCasterAndValidate` checks the argument against the setter's own
+ * type (`binder_common.h:175`), which the capture records as `setter_type` where it
+ * differs from the declared one, with that argument's hint. The keys cannot collide: `Node` and `Resource`
+ * are separate branches under `Object`.
  */
 function capturedRows() {
   const engine = {
@@ -30,10 +32,9 @@ function capturedRows() {
       label: `${nodeType}.${p.name}`,
       nodeType,
       name: p.name,
-      declaredType: p.type,
-      type: SETTER_TYPES.get(`${nodeType}.${p.name}`)?.type ?? p.type,
-      hint: p.hint,
-      hint_string: p.hint_string,
+      type: p.setter_type ?? p.type,
+      hint: p.setter_hint ?? p.hint,
+      hint_string: p.setter_hint_string ?? p.hint_string,
     }))
   );
 }
@@ -81,18 +82,6 @@ describe('validators that cite no grounding, against the literals Godot stores',
       .filter((row) => applicableEntries(row, FORMAT_ONLY_CORPUS).length === 0)
       .map((row) => `${row.label} (type ${row.type}, hint ${row.hint} "${row.hint_string}")`);
     expect(uncovered.sort()).toEqual([]);
-  });
-
-  it('holds no SETTER_TYPES entry the capture no longer needs', () => {
-    // An entry for a property that left the capture, or whose declared type
-    // now matches its setter, would retype a row for no reason.
-    const byLabel = new Map(rows.map((row) => [row.label, row]));
-    const stale = [...SETTER_TYPES].flatMap(([label, { type }]) => {
-      const row = byLabel.get(label);
-      if (!row) return [`${label}: not in the capture`];
-      return row.declaredType === type ? [`${label}: already declared as type ${type}`] : [];
-    });
-    expect(stale).toEqual([]);
   });
 
   it('refuses no literal the engine reads and stores', () => {

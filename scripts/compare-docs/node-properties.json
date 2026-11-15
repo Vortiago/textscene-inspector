@@ -66,6 +66,8 @@
       "hint": 0,
       "hint_string": "",
       "name": "autoplay",
+      "setter_hint": 0,
+      "setter_hint_string": "",
       "setter_type": 4,
       "type": 21
     },
@@ -129,6 +131,8 @@
       "hint": 0,
       "hint_string": "",
       "name": "autoplay",
+      "setter_hint": 0,
+      "setter_hint_string": "",
       "setter_type": 4,
       "type": 21
     },
@@ -896,6 +900,8 @@
       "hint": 0,
       "hint_string": "",
       "name": "bone_name",
+      "setter_hint": 0,
+      "setter_hint_string": "",
       "setter_type": 4,
       "type": 21
     },
@@ -1673,6 +1679,8 @@
       "hint": 0,
       "hint_string": "",
       "name": "code_completion_prefixes",
+      "setter_hint": 31,
+      "setter_hint_string": "String",
       "setter_type": 28,
       "type": 34
     },
@@ -1680,6 +1688,8 @@
       "hint": 0,
       "hint_string": "",
       "name": "delimiter_comments",
+      "setter_hint": 31,
+      "setter_hint_string": "String",
       "setter_type": 28,
       "type": 34
     },
@@ -1687,6 +1697,8 @@
       "hint": 0,
       "hint_string": "",
       "name": "delimiter_strings",
+      "setter_hint": 31,
+      "setter_hint_string": "String",
       "setter_type": 28,
       "type": 34
     },
@@ -1742,6 +1754,8 @@
       "hint": 0,
       "hint_string": "",
       "name": "indent_automatic_prefixes",
+      "setter_hint": 31,
+      "setter_hint_string": "String",
       "setter_type": 28,
       "type": 34
     },
@@ -1767,6 +1781,8 @@
       "hint": 0,
       "hint_string": "",
       "name": "line_length_guidelines",
+      "setter_hint": 31,
+      "setter_hint_string": "int",
       "setter_type": 28,
       "type": 30
     },
@@ -2392,6 +2408,8 @@
       "hint": 3,
       "hint_string": "",
       "name": "theme_type_variation",
+      "setter_hint": 0,
+      "setter_hint_string": "",
       "setter_type": 21,
       "type": 4
     },
@@ -3959,6 +3977,8 @@
       "hint": 0,
       "hint_string": "",
       "name": "control_state",
+      "setter_hint": 0,
+      "setter_hint_string": "",
       "setter_type": 2,
       "type": 1
     },
@@ -10898,6 +10918,8 @@
       "hint": 0,
       "hint_string": "",
       "name": "bone_name",
+      "setter_hint": 0,
+      "setter_hint_string": "",
       "setter_type": 4,
       "type": 21
     },
@@ -12099,6 +12121,8 @@
       "hint": 43,
       "hint_string": "show_builtin,loose_mode",
       "name": "action",
+      "setter_hint": 0,
+      "setter_hint_string": "",
       "setter_type": 4,
       "type": 21
     },
@@ -12978,6 +13002,8 @@
       "hint": 3,
       "hint_string": "",
       "name": "theme_type_variation",
+      "setter_hint": 0,
+      "setter_hint_string": "",
       "setter_type": 21,
       "type": 4
     },
@@ -13055,6 +13081,8 @@
       "hint": 3,
       "hint_string": "/user/body_tracker",
       "name": "body_tracker",
+      "setter_hint": 0,
+      "setter_hint_string": "",
       "setter_type": 21,
       "type": 4
     },
@@ -13076,6 +13104,8 @@
       "hint": 3,
       "hint_string": "/user/face_tracker",
       "name": "face_tracker",
+      "setter_hint": 0,
+      "setter_hint_string": "",
       "setter_type": 21,
       "type": 4
     },
@@ -13097,6 +13127,8 @@
       "hint": 3,
       "hint_string": "/user/hand_tracker/left,/user/hand_tracker/right",
       "name": "hand_tracker",
+      "setter_hint": 0,
+      "setter_hint_string": "",
       "setter_type": 21,
       "type": 4
     }
@@ -13106,6 +13138,8 @@
       "hint": 3,
       "hint_string": "",
       "name": "pose",
+      "setter_hint": 0,
+      "setter_hint_string": "",
       "setter_type": 21,
       "type": 4
     },
@@ -13119,6 +13153,8 @@
       "hint": 3,
       "hint_string": "",
       "name": "tracker",
+      "setter_hint": 0,
+      "setter_hint_string": "",
       "setter_type": 21,
       "type": 4
     }

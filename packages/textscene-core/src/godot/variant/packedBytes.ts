@@ -7,6 +7,35 @@
 import { parseGodotInt } from './intReader.js';
 import { toUint8 } from './intWidth.js';
 import { literalText, STRING_LITERAL_RE } from '../string/string.js';
+import { ARRAY_LITERAL_RE, packedArrayLiteral } from './variantParser.js';
+
+const PACKED_BYTE_ARRAY_RE = packedArrayLiteral('PackedByteArray');
+/** `CryptoCore::b64_decode`'s alphabet, and the only padding it accepts. */
+const QUOTED_BASE64_RE = /^"([A-Za-z0-9+/]*={0,2})"$/;
+
+/**
+ * Why Godot's text parser would refuse this `PackedByteArray` literal. A fault is a
+ * whole-file `ERR_PARSE_ERROR` (variant_parser.cpp:618-622). A bare `[…]` of bytes is a
+ * literal too: PACKED_BYTE_ARRAY converts from ARRAY (variant.cpp:772-778). Its body is
+ * decimal only, since a quoted element converts through `String::to_int` and is no base64 body.
+ */
+export function readPackedByteArrayLiteral(
+  value: string
+): { fault: 'not-a-literal' } | { fault: 'invalid-base64' | null; body: string } {
+  const trimmed = value.trim();
+  const match = PACKED_BYTE_ARRAY_RE.exec(trimmed);
+  if (!match) {
+    const bare = ARRAY_LITERAL_RE.exec(trimmed)?.[1]!.trim();
+    return bare === undefined || bare.startsWith('"')
+      ? { fault: 'not-a-literal' }
+      : { fault: null, body: bare };
+  }
+  const body = match[1]!.trim();
+  if (body.startsWith('"') && !QUOTED_BASE64_RE.test(body)) {
+    return { fault: 'invalid-base64', body };
+  }
+  return { fault: null, body };
+}
 
 /**
  * The bytes between a `PackedByteArray(…)`'s parentheses. Each listed element is an int Variant

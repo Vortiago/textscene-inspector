@@ -28,7 +28,9 @@ validatorRegistry.registerAll('AnimatedSprite3D', {
   // (object.h:132). set_autoplay/get_autoplay (sprite_3d.cpp:1343-1353) use a plain String, so
   // Godot writes a bare `"name"`. `v.stringName` also accepts a hand-authored `&"name"`, which
   // Variant coerces to String on load.
-  autoplay: v.stringName('autoplay'),
+  // A StringName property with a String setter: the loader converts a NodePath
+  // literal to its text, so `NodePath("x")` stores "x" (binder_common.h:175).
+  autoplay: v.quotedString('autoplay'),
 
   // sprite_3d.cpp:1542, INT "frame", no hint. set_frame (sprite_3d.cpp:1246-1248) forwards to
   // set_frame_and_progress, whose `if (p_frame < 0) { frame = 0; }` (sprite_3d.cpp:1271) corrects

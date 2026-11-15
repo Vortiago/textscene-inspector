@@ -16,6 +16,9 @@ const OUTSIDE_CORE = ['apps', 'packages/textscene-dev-kit', 'scripts'].map((dir)
 
 /** The value exports kept although only tests import them, each with the reason a test needs it. */
 export const KEPT_TEST_ONLY_EXPORTS = [
+  // The registry reaches it through `derivedValidator`. A test hands it a descriptor with the hand
+  // row it states, since a registered hand row is module state that nothing clears.
+  'linter/descriptorValidator.ts#descriptorValidator',
   // `@react-three/test-renderer` cannot wrap a real `<Canvas>`, so a scene test mounts its contents.
   'r3f/TscnCanvas.tsx#TscnSceneContents',
   // The preview always mounts the shared live tree, so only the test setup installs the paint of a
