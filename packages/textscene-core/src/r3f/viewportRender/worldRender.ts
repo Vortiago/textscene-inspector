@@ -2,6 +2,7 @@ import type { ViewportDescription } from './viewportDescription.js';
 import type { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas.js';
 import type { ProbeCapture } from '../reflectionProbe/captureCameras.js';
 import { drawAtMipmapBias } from '../materials/godotMipmapBias.js';
+import { drawAtAnisotropicLevel } from '../viewportAnisotropy.js';
 
 export interface WorldRender {
   viewport: ViewportDescription;
@@ -20,7 +21,9 @@ const rendersUnderWay: WorldRender[] = [];
 export function drawWorld(render: WorldRender, draw: () => void): void {
   rendersUnderWay.push(render);
   try {
-    drawAtMipmapBias(render.viewport.mipmapBias, draw);
+    // A canvas samples through the default samplers (`renderer_canvas_render_rd.cpp:460`).
+    const anisotropicLevel = render.hasCanvasTransform ? null : render.viewport.anisotropicLevel;
+    drawAtAnisotropicLevel(anisotropicLevel, () => drawAtMipmapBias(render.viewport.mipmapBias, draw));
   } finally {
     rendersUnderWay.pop();
   }

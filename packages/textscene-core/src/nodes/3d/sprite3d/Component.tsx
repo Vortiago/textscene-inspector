@@ -17,7 +17,6 @@ import { useNodeReference } from '../../../resources/reading';
 import { useTextureView } from '../../../r3f/useTextureView';
 import { flippedUvWindow, regionUvWindow } from '../../../r3f/uvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useViewportDescription } from '../../../r3f/viewportRender/viewportDescriptionContext';
 import { viewportProgramInputs } from '../../../r3f/materialProgramInputs';
 import { materialFor2d } from '../../../r3f/materialFor2d';
 import type { FadePass } from '../../../r3f/materials/fadeVariants';
@@ -87,7 +86,6 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // The wrap mode is derived, not fixed: `sprite_3d.cpp:163` reads it off the quad's own UV
   // corners, so only an overrunning window tiles.
   const wrap = spriteWrapMode(drawnWindow);
-  const anisotropicFilteringLevel = useViewportDescription().anisotropicLevel;
   const { blends, joinsShadowPass, shading, side, depthTest, textureFilter } = materialFor2d({
     alphaCut: properties.alpha_cut,
     alphaScissorThreshold: properties.alpha_scissor_threshold,
@@ -101,7 +99,6 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     noDepthTest: properties.no_depth_test,
     shaded: properties.shaded,
     textureFilter: properties.texture_filter,
-    anisotropicFilteringLevel,
   });
   // `texture_albedo` is a `source_color` sampler (`sprite_3d.cpp:306`), so the view reads as an
   // albedo, and the node's own `texture_filter` lands on it (`material.cpp:3055`).

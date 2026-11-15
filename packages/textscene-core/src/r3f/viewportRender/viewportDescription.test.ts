@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../godot/scene/viewport';
 import { parseProjectSettings } from '../../parser/projectSettingsParser';
 import {
   probeCaptureDescription,
@@ -111,6 +112,12 @@ describe('probeCaptureDescription', () => {
 
   it("samples at Godot's default samplers, with no bias", () => {
     expect(probeCaptureDescription(root).mipmapBias).toBe(0);
+  });
+
+  it("samples at Godot's default anisotropic level, whatever the viewport's", () => {
+    expect(probeCaptureDescription({ ...root, anisotropicLevel: 4 }).anisotropicLevel).toBe(
+      DEFAULT_ANISOTROPIC_FILTERING_LEVEL
+    );
   });
 
   it("keeps the root's other facts", () => {

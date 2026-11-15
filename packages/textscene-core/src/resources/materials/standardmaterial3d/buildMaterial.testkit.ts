@@ -8,12 +8,11 @@ import { materialFromBag } from './build';
 import { standardMaterialBags } from './materialBag';
 import { materialTextureStates } from './textureBinding';
 import { bindSlotTexture } from './textureBinding.testkit';
-import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../../godot/scene/viewport.js';
 import type { ResolvedTextures, StandardMaterial3DScalars, TextureSlot } from './types';
 
 /** Each populated slot's texture put through the material's own binding. */
 function boundTextureSlots(scalars: StandardMaterial3DScalars, textures: ResolvedTextures): ResolvedTextures {
-  const states = materialTextureStates(scalars, DEFAULT_ANISOTROPIC_FILTERING_LEVEL);
+  const states = materialTextureStates(scalars);
   const bound: ResolvedTextures = {};
   for (const slot of Object.keys(textures) as TextureSlot[]) {
     const texture = textures[slot];

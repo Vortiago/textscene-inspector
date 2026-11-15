@@ -193,7 +193,7 @@ describe('SceneDecals', () => {
     expect(decalAtlasTexture().minFilter).toBe(THREE.NearestFilter);
   });
 
-  it("writes the taps of Godot's nearest anisotropic filter once per upload of the atlas", async () => {
+  it("writes the taps of Godot's nearest anisotropic filter once while the level stays", async () => {
     const { renderer, render, sceneDecals } = await sceneWith(decalObject());
     const ANISOTROPY_PARAMETER = 0x84fe;
     vi.spyOn(renderer.extensions, 'get').mockReturnValue({
@@ -201,7 +201,7 @@ describe('SceneDecals', () => {
     });
     vi.spyOn(renderer.capabilities, 'getMaxAnisotropy').mockReturnValue(16);
     const write = vi.spyOn(renderer.getContext(), 'texParameterf');
-    sceneDecals.setFilter(godotTextureFilterState(4, 2));
+    sceneDecals.setFilter(godotTextureFilterState(4));
 
     render();
     render();

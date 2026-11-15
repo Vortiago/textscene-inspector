@@ -72,12 +72,8 @@ describe('textureView', () => {
       expect(textureView(texture, sampler({ filter: undefined }))).toBe(texture);
     });
 
-    it("samples an anisotropic filter at the viewport's anisotropic_filtering_level", () => {
-      const anisotropyAt = (level: number) =>
-        textureView(tiling(), sampler({ filter: filterOf(5, level) })).anisotropy;
-
-      expect(anisotropyAt(1)).toBe(2);
-      expect(anisotropyAt(3)).toBe(8);
+    it('uploads an anisotropic filter at the default taps, which each 3D draw writes over', () => {
+      expect(textureView(tiling(), sampler({ filter: filterOf(5) })).anisotropy).toBe(4);
     });
 
     it('returns the original for the window it already shows', () => {

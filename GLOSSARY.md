@@ -121,9 +121,9 @@ The offset a viewport adds to the mip level that each of its 3D material sampler
 It changes only a texture that has levels to choose between.
 _Avoid_: "LOD bias", which suggests mesh level of detail.
 
-**Anisotropic filtering level** (`r3f/viewportRender/viewportDescriptionContext.tsx`):
-The `Viewport.AnisotropicFiltering` value, 0 to 4, that sets `1 << level` taps for a texture on an anisotropic `texture_filter`: the project's `anisotropic_filtering_level`, or a SubViewport's own for the textures that only its pass draws.
-Unlike the **Mipmap bias**, the texture carries it, so it cannot change between passes.
+**Anisotropic filtering level** (`r3f/viewportAnisotropy.ts`):
+The `Viewport.AnisotropicFiltering` value, 0 to 4, that sets `1 << level` taps for a texture on an anisotropic `texture_filter`: the project's `anisotropic_filtering_level`, or a SubViewport's own.
+Like the **Mipmap bias**, each 3D draw applies the level of its viewport, so one texture samples at a different level in each viewport. A canvas draw keeps Godot's default of 4 taps.
 
 **Unwrap cache**:
 The `.unwrap_cache` file Godot's importer writes beside a source asset it unwraps for lightmaps: each mesh's UV2 layout, keyed by the MD5 of the mesh as the unwrap received it.

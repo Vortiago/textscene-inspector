@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+import { renderHook } from '@testing-library/react';
 import { mipmapBiasUniform } from '../testing/mipmapBiasUniform';
+import { fakeCanvasRenderer } from '../testing/fakeCanvasRenderer';
+import { useViewportAnisotropy } from '../viewportAnisotropy';
 import { rootViewportDescription } from './viewportDescription';
 import { drawWorld, renderUnderWay, type WorldRender } from './worldRender';
 
@@ -83,6 +87,46 @@ describe('drawWorld', () => {
     });
 
     expect(seen).toBe(-7.5);
+  });
+});
+
+describe('drawWorld and the anisotropic level', () => {
+  function heldAnisotropicTexture() {
+    const { gl, wrapper } = fakeCanvasRenderer({ isAllocated: true, maxAnisotropy: 16 });
+    const texture = new THREE.Texture();
+    texture.anisotropy = 4;
+    renderHook(() => useViewportAnisotropy(texture), { wrapper });
+    const lastTaps = () => gl.texParameterf.mock.calls.at(-1)?.[2] as number | undefined;
+    return { lastTaps };
+  }
+
+  function render(anisotropicLevel: number, hasCanvasTransform: boolean): WorldRender {
+    return {
+      viewport: { ...rootViewportDescription(null), anisotropicLevel },
+      shadowAtlas: null,
+      hasCanvasTransform,
+    };
+  }
+
+  it("samples a 3D draw at its viewport's level, and the root's again after it", () => {
+    const { lastTaps } = heldAnisotropicTexture();
+    const seen: (number | undefined)[] = [];
+
+    drawWorld(render(1, false), () => {
+      drawWorld(render(4, false), () => seen.push(lastTaps()));
+      seen.push(lastTaps());
+    });
+
+    expect(seen).toEqual([16, 2]);
+  });
+
+  it("samples a canvas draw at Godot's default samplers, whatever its viewport's level", () => {
+    const { lastTaps } = heldAnisotropicTexture();
+    let seen: number | undefined;
+
+    drawWorld(render(0, false), () => drawWorld(render(4, true), () => (seen = lastTaps())));
+
+    expect(seen).toBe(4);
   });
 });
 

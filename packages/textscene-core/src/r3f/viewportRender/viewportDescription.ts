@@ -1,5 +1,6 @@
 import type { PositionalShadowAtlasSettings } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import {
+  DEFAULT_ANISOTROPIC_FILTERING_LEVEL,
   VIEWPORT_POSITIONAL_SHADOW_ATLAS,
   viewportPositionalShadowAtlas,
 } from '../../godot/scene/viewport.js';
@@ -93,7 +94,7 @@ export function subViewportDescription(
   };
 }
 
-/** A probe face samples with Godot's default samplers, unbiased (`render_forward_clustered.cpp:1824`). */
+/** A probe face samples with Godot's default samplers (`render_forward_clustered.cpp:1824`, `material_storage.h:370`). */
 export function probeCaptureDescription(viewport: ViewportDescription): ViewportDescription {
-  return { ...viewport, mipmapBias: 0 };
+  return { ...viewport, mipmapBias: 0, anisotropicLevel: DEFAULT_ANISOTROPIC_FILTERING_LEVEL };
 }

@@ -9,7 +9,6 @@ import * as THREE from 'three';
 import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { TextRun, type TextRunProps } from '../../../r3f/controls/native/text/TextRun';
 import { NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
-import { useViewportDescription } from '../../../r3f/viewportRender/viewportDescriptionContext';
 import { materialFor2d } from '../../../r3f/materialFor2d';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { useGeometryInstance, useInstanceDraw } from '../../../r3f/visibilityRange/geometryInstance';
@@ -132,7 +131,6 @@ export default function LabelGlyphs({ nodeRef, posedRef, properties }: LabelGlyp
 
   // Not memoised: `TextRun` keys its material off the blend's fields, not its identity, so a fresh
   // equal-valued one rebuilds nothing.
-  const anisotropicFilteringLevel = useViewportDescription().anisotropicLevel;
   const { blends, joinsShadowPass, shading, side, depthTest, textureFilter } = materialFor2d({
     alphaCut: properties.alpha_cut,
     alphaScissorThreshold: properties.alpha_scissor_threshold,
@@ -145,7 +143,6 @@ export default function LabelGlyphs({ nodeRef, posedRef, properties }: LabelGlyp
     noDepthTest: properties.no_depth_test,
     shaded: properties.shaded,
     textureFilter: properties.texture_filter,
-    anisotropicFilteringLevel,
   });
   // The glyph pages carry a mip chain only for a font with `generate_mipmaps`; the filter row
   // says whether a mipmapped sampler reads it.
