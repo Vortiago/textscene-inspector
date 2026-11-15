@@ -56,7 +56,7 @@ export function ProgressBar({ solveNode, tint, rect, renderOrder }: NativeContro
 
   const { fontSizePx, color: fontColorSrgb } = progressBarTextTheme(solveNode, props);
   const font = resolveNodeFont(solveNode, PROGRESS_BAR_THEME_FONT_KEY);
-  const fontMetrics = peekSceneFontMetrics(font, solveNode.path);
+  const fontMetrics = peekSceneFontMetrics(solveNode.settledFonts, font, solveNode.path);
 
   const percentText = showPercentage
     ? progressBarPercentText(progressBarPercentRatio(props, orderedKeys), {

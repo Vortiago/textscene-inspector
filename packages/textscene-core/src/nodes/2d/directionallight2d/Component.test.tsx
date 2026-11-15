@@ -22,7 +22,7 @@ import {
   ownerName,
   recordLightPass,
 } from '../../../r3f/lighting2d/testing/lightPassProbe';
-import { SHADOW_MAP_FAR } from '../../../r3f/lighting2d/shadowPolarMap';
+import { SHADOW_MAP_FAR } from '../../../r3f/lighting2d/shadowMap/shadowPolarMap';
 import { DispatchedScene } from '../../../r3f/testing/DispatchedScene';
 import { underWhiteCanvasLighting } from '../../../r3f/lighting2d/testing/whiteCanvasLighting';
 import {

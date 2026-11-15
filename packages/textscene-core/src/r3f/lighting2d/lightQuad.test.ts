@@ -5,17 +5,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { canvasShadowAtlasSize } from '../../godot/rendering/canvasShadowAtlas';
 import * as THREE from 'three';
-import { createLightQuadMaterial, updateShadowPolarTexture, type ShadowSampling } from './lightQuad';
-import { SHADOW_MAP_FAR } from './shadowPolarMap';
-import { SHADOW_TAPS } from './shadowTaps';
-import { createShadowPoseUniforms, writeShadowPose } from './shadowSampling';
+import { createLightQuadMaterial, type ShadowSampling } from './lightQuad';
+import { POLAR_LOOKUP, SHADOWED_LIGHT_GLSL, shadowSampleGlsl } from './shadowMap/shadowShader';
+import { createShadowPoseUniforms, writeShadowPose } from './shadowMap/shadowSampling';
 import { shadowSampling } from './testing/shadowSampling';
 import { Light2DBlendMode, Light2DShadowFilter } from '../../godot/scene/light2d';
-
-/** The size Godot uses when the project sets none. */
-const DEFAULT_ATLAS_SIZE = canvasShadowAtlasSize(undefined);
 
 const WARM = { r: 1, g: 0.75, b: 0.35, a: 1 };
 
@@ -131,47 +126,6 @@ describe('createLightQuadMaterial', () => {
   });
 });
 
-describe('updateShadowPolarTexture', () => {
-  it('carries the atlas state Godot samples the map with', () => {
-    // `renderer_canvas_render_rd.cpp:975-980,1930-1934`: an R32_SFLOAT row behind a nearest
-    // sampler that repeats on u, so a tap at bin -1 reads the last bin.
-    const texture = updateShadowPolarTexture(null, new Float32Array(DEFAULT_ATLAS_SIZE));
-    expect(texture.type).toBe(THREE.FloatType);
-    expect(texture.minFilter).toBe(THREE.NearestFilter);
-    expect(texture.magFilter).toBe(THREE.NearestFilter);
-    expect(texture.wrapS).toBe(THREE.RepeatWrapping);
-    expect(texture.image.width).toBe(DEFAULT_ATLAS_SIZE);
-    expect(texture.image.height).toBe(1);
-    expect(texture.colorSpace).toBe(THREE.NoColorSpace);
-    expect(texture.generateMipmaps).toBe(false);
-  });
-
-  it('keeps an occluder distance at full float precision', () => {
-    // A half float rounds 0.6 + 2^-20 to 0.6, and a fragment on the occluder line then reads as
-    // shadowed where Godot lights it.
-    const bins = new Float32Array(DEFAULT_ATLAS_SIZE).fill(SHADOW_MAP_FAR);
-    bins[7] = Math.fround(0.6 + 2 ** -20);
-    const texture = updateShadowPolarTexture(null, bins);
-    const data = texture.image.data as Float32Array;
-    expect(data[0]).toBe(SHADOW_MAP_FAR);
-    expect(data[7]).toBe(bins[7]);
-  });
-
-  it('refills a texture of the same size in place, so the materials keep it', () => {
-    const texture = updateShadowPolarTexture(null, new Float32Array(DEFAULT_ATLAS_SIZE));
-    const bins = new Float32Array(DEFAULT_ATLAS_SIZE).fill(SHADOW_MAP_FAR);
-    expect(updateShadowPolarTexture(texture, bins)).toBe(texture);
-    expect((texture.image.data as Float32Array)[0]).toBe(SHADOW_MAP_FAR);
-  });
-
-  it('makes a fresh texture for bins of another size (edge case)', () => {
-    const texture = updateShadowPolarTexture(null, new Float32Array(8));
-    const next = updateShadowPolarTexture(texture, new Float32Array(DEFAULT_ATLAS_SIZE));
-    expect(next).not.toBe(texture);
-    expect(next.image.width).toBe(DEFAULT_ATLAS_SIZE);
-  });
-});
-
 describe('createLightQuadMaterial with a shadow', () => {
   it('leaves the unshadowed material untouched', () => {
     const mat = material(Light2DBlendMode.ADD);
@@ -188,7 +142,7 @@ describe('createLightQuadMaterial with a shadow', () => {
   });
 
   it('reads the map through the taps a DirectionalLight2D reads its own map with', () => {
-    expect(shadowedMaterial().fragmentShader).toContain(SHADOW_TAPS);
+    expect(shadowedMaterial().fragmentShader).toContain(shadowSampleGlsl(POLAR_LOOKUP));
   });
 
   it('reads a bin at its centre and lets the map repeat past either end', () => {
@@ -221,10 +175,12 @@ describe('createLightQuadMaterial with a shadow', () => {
     expect(pose.uShadowZFarInv.value).toBe(1 / 1100);
   });
 
-  it('scales BOTH rgb and alpha by the lit fraction, which is the (1-s)^2 falloff', () => {
+  it("hands the shadowed split the cookie's colour and alpha, which it scales into the (1-s)^2 falloff", () => {
     const mat = shadowedMaterial();
-    expect(mat.fragmentShader).toContain('cookie.rgb * uColor * uEnergy * lit');
-    expect(mat.fragmentShader).toContain('cookie.a * (lit + s * uShadowColor.a)');
+    expect(mat.fragmentShader).toContain(SHADOWED_LIGHT_GLSL);
+    expect(mat.fragmentShader).toContain(
+      'writeShadowedLight(cookie.rgb * uColor * uEnergy, cookie.a, shadowFraction());'
+    );
   });
 
   it('keeps the accumulator blends the unshadowed quad uses', () => {
@@ -260,13 +216,6 @@ describe('the outputs of a light quad', () => {
     // Godot calls `light_shadow_compute` once per light per fragment (`canvas.glsl:839`). A second
     // evaluation per buffer is what made a tinted light cost twice the frame time.
     expect(mainOf(shadowedMaterial()).match(/shadowFraction\(\)/g)).toHaveLength(1);
-  });
-
-  it('writes the shadow_color term under the same alpha as the light term', () => {
-    // A MIX blend scales both buffers by it, so the two must agree.
-    const main = mainOf(shadowedMaterial());
-    expect(main).toContain('float alpha = cookie.a * (lit + s * uShadowColor.a)');
-    expect(main).toContain('vec4(uShadowColor.rgb * s, alpha)');
   });
 
   it('writes the Light Only buffer the term the light buffer gets', () => {
