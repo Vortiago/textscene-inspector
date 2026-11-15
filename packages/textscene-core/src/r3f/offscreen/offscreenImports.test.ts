@@ -13,17 +13,26 @@ const OFFSCREEN = join(SRC, 'r3f/offscreen');
 const PRIMITIVES = [
   'createSceneTarget',
   'createCanvasTarget',
+  'createLinearCanvasTarget',
   'storeSrgbBytes',
   'renderToOffscreenTarget',
   'clearTarget',
+  'drawOffscreen',
+  'BLACK',
+  'useMultisampledTarget',
 ];
 
-/** Each `import … from` clause with the path it resolves to. A braced list may span lines. */
+/**
+ * Each `import … from` and `export … from` clause with the path it resolves to, so a re-export
+ * counts too. A braced list may span lines.
+ */
 function importsOf(file: string, source: string): { clause: string; target: string }[] {
-  return [...source.matchAll(/(?:^|\n)\s*import\b([^;]*?)from\s*['"]([^'"]+)['"]/g)].map((match) => ({
-    clause: match[1] ?? '',
-    target: resolve(dirname(file), match[2] ?? ''),
-  }));
+  return [...source.matchAll(/(?:^|\n)\s*(?:import|export)\b([^;]*?)from\s*['"]([^'"]+)['"]/g)].map(
+    (match) => ({
+      clause: match[1] ?? '',
+      target: resolve(dirname(file), match[2] ?? ''),
+    })
+  );
 }
 
 const isTsSource = (name: string) => /\.tsx?$/.test(name);

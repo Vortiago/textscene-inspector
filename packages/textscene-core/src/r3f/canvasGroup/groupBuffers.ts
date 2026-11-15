@@ -5,10 +5,8 @@
 
 import * as THREE from 'three';
 import { drawKeyedObjects } from '../canvasKeyWindow';
-import { BLACK } from '../offscreen/draw';
-import { drawOffscreen } from '../offscreen/draw';
+import { BLACK, drawOffscreen, renderToOffscreenTarget } from '../offscreen/draw';
 import { copyTexels, wholeTexels } from '../texelCopy';
-import { renderToOffscreenTarget } from '../offscreen/draw';
 import { collects, drawOrderOf, isOwnKey, type DrawStep } from './groupWindow';
 import type { TexelRegion } from './groupRegion';
 import type { CanvasFrameTarget, ClippingEntry, CompositeEntry, InertOwner } from './groupEntries';

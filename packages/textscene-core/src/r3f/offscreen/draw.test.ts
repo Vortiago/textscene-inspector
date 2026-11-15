@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { clearTarget, drawOffscreen } from './draw';
+import { clearTarget, drawOffscreen, renderToOffscreenTarget } from './draw';
 import { createCanvasTarget } from './targets';
 import { canvasColorSpaceOf } from '../canvasColorSpace';
 
@@ -67,27 +67,49 @@ describe('drawOffscreen', () => {
   });
 });
 
-describe('clearTarget', () => {
-  /** A renderer that records the clear colour and alpha in force at each clear. */
-  function recordingRenderer() {
-    const clears: { rgb: number[]; alpha: number }[] = [];
-    let alpha = 1;
-    const colour = new THREE.Color();
-    const gl = {
-      getRenderTarget: () => null,
-      getClearAlpha: () => alpha,
-      getClearColor: (into: THREE.Color) => into.copy(colour),
-      setClearColor: (next: THREE.Color, nextAlpha: number) => {
-        colour.copy(next);
-        alpha = nextAlpha;
-      },
-      setRenderTarget: () => {},
-      clear: () => clears.push({ rgb: colour.toArray(), alpha }),
-      autoClearColor: true,
-    } as unknown as THREE.WebGLRenderer;
-    return { gl, clears };
-  }
+/** A renderer that records the clear colour and alpha in force at each clear. */
+function recordingRenderer() {
+  const clears: { rgb: number[]; alpha: number }[] = [];
+  let alpha = 1;
+  const colour = new THREE.Color();
+  const gl = {
+    getRenderTarget: () => null,
+    getClearAlpha: () => alpha,
+    getClearColor: (into: THREE.Color) => into.copy(colour),
+    setClearColor: (next: THREE.Color, nextAlpha: number) => {
+      colour.copy(next);
+      alpha = nextAlpha;
+    },
+    setRenderTarget: () => {},
+    clear: () => clears.push({ rgb: colour.toArray(), alpha }),
+    autoClearColor: true,
+  } as unknown as THREE.WebGLRenderer;
+  return { gl, clears };
+}
 
+describe('renderToOffscreenTarget', () => {
+  it('restores the clear colour its caller had when a draw renders into a second target', () => {
+    const { gl } = recordingRenderer();
+    const callers = new THREE.Color(0.1, 0.2, 0.3);
+    gl.setClearColor(callers, 1);
+    const target = createCanvasTarget(4, 4, 't', canvasColorSpaceOf(false));
+    renderToOffscreenTarget(gl, {
+      target,
+      clearColor: new THREE.Color(1, 0, 0),
+      transparentBg: false,
+      draw: () =>
+        renderToOffscreenTarget(gl, {
+          target,
+          clearColor: new THREE.Color(0, 1, 0),
+          transparentBg: true,
+          draw: () => {},
+        }),
+    });
+    expect(gl.getClearColor(new THREE.Color()).toArray()).toEqual(callers.toArray());
+  });
+});
+
+describe('clearTarget', () => {
   it('clears an opaque target to opaque black, which a consumer samples as black', () => {
     const { gl, clears } = recordingRenderer();
     clearTarget(gl, createCanvasTarget(4, 4, 't', canvasColorSpaceOf(false)), false);

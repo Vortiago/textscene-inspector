@@ -25,12 +25,12 @@ export function drawOffscreen(renderer: THREE.WebGLRenderer, draw: () => void): 
 export const BLACK = new THREE.Color(0, 0, 0);
 
 /**
- * The previous clear colour, reused so no pass allocates a `THREE.Color` per frame.
- * Written only by `renderToOffscreenTarget`. Safe as a module scratch because the
- * one orchestrator (`ViewportPassRegistryContext`) drives passes in sequence,
- * never nested, so no pass clobbers another's saved colour.
+ * The clear colour each open `renderToOffscreenTarget` call saved, one slot per nesting depth, reused
+ * so no pass allocates a `THREE.Color` per frame. Calls nest: a canvas pass fills its group buffers
+ * inside its own draw. Written only by `renderToOffscreenTarget`, and `depth` is 0 between frames.
  */
-const PREVIOUS_CLEAR_COLOR = new THREE.Color();
+const savedClearColors: THREE.Color[] = [];
+let depth = 0;
 
 /**
  * Bind `target`, set the clear colour, run `draw`, and restore the render target, clear colour,
@@ -53,7 +53,9 @@ export function renderToOffscreenTarget(
   const previousTarget = gl.getRenderTarget();
   const previousAlpha = gl.getClearAlpha();
   const previousAutoClearColor = gl.autoClearColor;
-  gl.getClearColor(PREVIOUS_CLEAR_COLOR);
+  const previousColor = (savedClearColors[depth] ??= new THREE.Color());
+  gl.getClearColor(previousColor);
+  depth++;
 
   try {
     gl.setRenderTarget(options.target);
@@ -62,8 +64,9 @@ export function renderToOffscreenTarget(
     options.draw();
   } finally {
     gl.setRenderTarget(previousTarget);
-    gl.setClearColor(PREVIOUS_CLEAR_COLOR, previousAlpha);
+    gl.setClearColor(previousColor, previousAlpha);
     gl.autoClearColor = previousAutoClearColor;
+    depth--;
   }
 }
 
