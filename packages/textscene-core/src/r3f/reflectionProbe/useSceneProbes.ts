@@ -6,6 +6,7 @@
 import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
+import type { ViewportDescription } from '../viewportRender/viewportDescription.js';
 import { useResourceLoader } from '../../resources/useResource.js';
 import { textureWork } from '../../resources/textures/textureWork.js';
 import { fontWork } from '../controls/native/text/settledChannel.js';
@@ -13,6 +14,7 @@ import { SceneHolding } from '../sceneHolding.js';
 import { useSceneHolder } from '../useSceneHolder.js';
 import { useProjectClearColor } from '../useProjectClearColor.js';
 import { SceneProbes } from './sceneProbes.js';
+import { useViewportDescription } from '../viewportRender/viewportDescriptionContext.js';
 
 const probesOfScenes = new SceneHolding((scene, renderer) => new SceneProbes(renderer, scene));
 
@@ -22,12 +24,14 @@ export function useSceneProbes(): void {
   const loader = useResourceLoader();
   const clearColor = useRef<THREE.Color>(null!);
   clearColor.current = useProjectClearColor();
+  const viewport = useRef<ViewportDescription>(null!);
+  viewport.current = useViewportDescription();
   const holder = useSceneHolder(probesOfScenes);
 
   useFrame(() => {
     const probes = probesOfScenes.drivenBy(scene, holder);
     if (!probes) return;
     const pending = (loader?.pendingResourceCount ?? 0) + textureWork.pending() + fontWork.pending();
-    if (probes.update(pending, clearColor.current)) invalidate();
+    if (probes.update(pending, clearColor.current, viewport.current)) invalidate();
   });
 }

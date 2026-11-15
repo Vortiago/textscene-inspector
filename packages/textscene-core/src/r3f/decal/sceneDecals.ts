@@ -13,8 +13,8 @@ import {
 } from '../../resources/textures/godotTextureFilter.js';
 import { projectDecalFilter } from '../../parser/projectSettingsParser.js';
 import { compareTreeOrder } from '../contexts/TreeOrderContext.js';
-import { currentMipmapBias } from '../materials/godotMipmapBias.js';
-import { writeNearestAnisotropy } from '../nearestAnisotropy.js';
+import { renderUnderWay } from '../viewportRender/worldRender.js';
+import { writeViewportAnisotropy } from '../viewportAnisotropy.js';
 import { observeSceneCull, observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { holdSceneRows, type SceneRows } from '../sceneRows/sceneRows.js';
 import { leaveSlot, showInSlot } from '../sharedTexture.js';
@@ -42,7 +42,6 @@ export class SceneDecals {
   /** How the atlas is sampled in this scene's renders, set by `setFilter`. */
   private filter = godotTextureFilterState(projectDecalFilter(null));
   /** The `version` of the atlas whose anisotropy was last written, so one upload is written once. */
-  private anisotropyWrittenAt = -1;
   /** The visible decals in tree order, rewritten by each `show`. */
   private readonly ordered: DecalObject[] = [];
   private readonly stopObserving: (() => void)[];
@@ -85,21 +84,14 @@ export class SceneDecals {
     if (this.rows.pack(this.ordered, camera.matrixWorld)) this.sceneRows.setDecals(this.rows);
     if (this.rows.count === 0) return this.endRender();
     shownDecals[SHOWN_COUNT] = this.rows.count;
-    shownDecals[SHOWN_GRADIENT_SCALE] = 2 ** currentMipmapBias();
+    shownDecals[SHOWN_GRADIENT_SCALE] = 2 ** (renderUnderWay()?.viewport.mipmapBias ?? 0);
     const atlas = decalAtlasTexture();
     setDecalAtlasFilter(this.filter);
     shownDecals[SHOWN_LINEAR_MAGNIFICATION] = this.filter.magFilter === THREE.LinearFilter ? 1 : 0;
     this.renderer.initTexture(atlas);
-    this.writeAnisotropy(atlas);
+    writeViewportAnisotropy(this.renderer, atlas);
     showInSlot(this.renderer, decalAtlasSlot, atlas);
     this.sceneRows.show();
-  }
-
-  /** three leaves the taps of a nearest filter unwritten, and an upload resets them. */
-  private writeAnisotropy(atlas: THREE.Texture): void {
-    if (atlas.version === this.anisotropyWrittenAt) return;
-    this.anisotropyWrittenAt = atlas.version;
-    writeNearestAnisotropy(this.renderer, atlas);
   }
 
   private orderVisibleDecals(): void {

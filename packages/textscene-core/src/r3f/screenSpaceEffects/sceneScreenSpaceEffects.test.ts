@@ -27,7 +27,7 @@ function begunRender(settings: ScreenSpaceSettings) {
     () => {}
   );
   const camera = new THREE.PerspectiveCamera();
-  effects.begin(camera, target);
+  effects.begin(target);
   return { renderer, effects, camera };
 }
 

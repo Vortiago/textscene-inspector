@@ -17,7 +17,7 @@ import { textureTexel } from '../testing/backgroundTexel';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { sRGBToLinearRGB } from '../../utils/colorSpace';
 import { shownAmbientLights } from '../testing/ambientLights';
-import { captureCameras } from '../reflectionProbe/captureCameras';
+import { drawAsProbeCapture } from '../testing/worldRenders';
 
 vi.mock('../fog/FogLayer', () => ({ FogLayer: () => <group name="FogLayer" /> }));
 
@@ -110,14 +110,12 @@ describe('<EnvironmentLayer> colour background under an exposure', () => {
 
     it('keeps the clear colour an interior capture stages', async () => {
       const { scene } = await mount(BACKGROUND_COLOR, 2);
-      const [face] = captureCameras(new THREE.Matrix4(), { x: 0, y: 0, z: 0 }, [1, 1, 1, 1, 1, 1], {
-        isInterior: true,
-        hasShadows: false,
-      });
       const clearColor = new THREE.Color(0x123456);
       drawAtExposure(scene, 3, () => {
         scene.background = clearColor;
-        fireSceneRender(scene, face!);
+        drawAsProbeCapture({ isInterior: true, hasShadows: false }, () =>
+          fireSceneRender(scene, new THREE.PerspectiveCamera())
+        );
       });
       expect(scene.background).toBe(clearColor);
     });

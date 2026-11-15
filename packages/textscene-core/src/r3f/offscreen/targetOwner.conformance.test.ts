@@ -20,6 +20,7 @@ const CANVAS_PATHS = [
   'r3f/lighting2d',
   'r3f/components/Canvas2DStage',
   'nodes/viewport',
+  'r3f/viewportRender',
   'nodes/2d',
 ].map((path) => join(SRC, path));
 
@@ -40,9 +41,9 @@ const ALLOCATES_OUTSIDE_OFFSCREEN: Record<string, string> = {
 const FREES_WHAT_IT_HOLDS: Record<string, string> = {
   'packages/textscene-core/src/r3f/lighting2d/lightAccumulationTargets.ts':
     'the set of accumulation targets of one signature, held by useDisposeOnRelease',
-  'packages/textscene-core/src/nodes/viewport/subviewport/targetViews.ts':
+  'packages/textscene-core/src/r3f/viewportRender/targetViews.ts':
     "a target's views and each view's copy target, held by useDisposeOnRelease and holdUntilReleased",
-  'packages/textscene-core/src/nodes/viewport/subviewport/useBackdropTarget.ts':
+  'packages/textscene-core/src/r3f/viewportRender/useBackdropTarget.ts':
     'the BG_CANVAS holder, held by useDisposeOnRelease, which also frees its target while no pass wants it',
 };
 

@@ -11,7 +11,7 @@ import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import '../../nodes/index.js';
 import { isClaimedByCanvasItemEditor } from '../../nodeWorkspaceVisibility.js';
 import { useLiveSceneNodes, useSeatedRoots } from '../../useLiveSceneTree.js';
-import { keepsChildrenInViewport } from '../../../nodes/viewport/subviewport/viewportBoundary.js';
+import { keepsChildrenInViewport } from '../../viewportRender/viewportBoundary.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { TscnCanvas } from '../../TscnCanvas.js';
 import { Canvas2DStage } from '../Canvas2DStage/Canvas2DStage.js';

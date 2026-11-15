@@ -15,6 +15,9 @@ export interface TextureFilterState {
   anisotropy: number;
 }
 
+/** A canvas keeps the default level (`material_storage.cpp:2489-2504`). A 3D draw writes its viewport's. */
+const ANISOTROPIC_UPLOAD_TAPS = 1 << DEFAULT_ANISOTROPIC_FILTERING_LEVEL;
+
 /**
  * One sampler per mode, as `MaterialStorage::samplers_rd_allocate` allocates.
  * Godot's `min_filter` is the within-level filter and `mip_filter` the
@@ -52,51 +55,27 @@ const STATES: Record<number, TextureFilterState> = {
     generateMipmaps: true,
     anisotropy: 1,
   },
-  // NEAREST_WITH_MIPMAPS_ANISOTROPIC. three skips anisotropy when `magFilter` is
-  // `NearestFilter`, so a drawn clone gets it written by `useNearestAnisotropy`.
+  // NEAREST_WITH_MIPMAPS_ANISOTROPIC
   4: {
     magFilter: THREE.NearestFilter,
     minFilter: THREE.NearestMipmapLinearFilter,
     generateMipmaps: true,
-    anisotropy: 1,
+    anisotropy: ANISOTROPIC_UPLOAD_TAPS,
   },
   // LINEAR_WITH_MIPMAPS_ANISOTROPIC
   5: {
     magFilter: THREE.LinearFilter,
     minFilter: THREE.LinearMipmapLinearFilter,
     generateMipmaps: true,
-    anisotropy: 1,
+    anisotropy: ANISOTROPIC_UPLOAD_TAPS,
   },
 };
 
-/**
- * The rows whose sampler uses anisotropy (`material_storage.cpp:2489-2504`). They sample at
- * `1 << anisotropic_filtering_level` (`:2461`), which three clamps to the GPU maximum at upload.
- */
-const ANISOTROPIC_FILTERS: ReadonlySet<number> = new Set([4, 5]);
-
-/** Each anisotropic state by row and level, written only by `godotTextureFilterState`, so a caller's memo sees one identity. */
-const anisotropicStates = new Map<string, TextureFilterState>();
-
-/**
- * The sampler state for a `texture_filter` ordinal. An absent or out-of-range
- * value resolves to Godot's default, matching how the engine treats anything
- * outside `TEXTURE_FILTER_MAX`. The level is one `parseAnisotropicFilteringLevel` accepted.
- */
-export function godotTextureFilterState(
-  filter: number | undefined,
-  anisotropicFilteringLevel: number = DEFAULT_ANISOTROPIC_FILTERING_LEVEL
-): TextureFilterState {
+/** An absent or out-of-range ordinal takes Godot's default, as past `TEXTURE_FILTER_MAX`. */
+export function godotTextureFilterState(filter: number | undefined): TextureFilterState {
   const defaultFilter = BASE_MATERIAL_3D_DEFAULTS.textureFilter;
   const row = filter !== undefined && filter in STATES ? filter : defaultFilter;
-  if (!ANISOTROPIC_FILTERS.has(row)) return STATES[row]!;
-  const key = `${row}:${anisotropicFilteringLevel}`;
-  let state = anisotropicStates.get(key);
-  if (!state) {
-    state = { ...STATES[row]!, anisotropy: 1 << anisotropicFilteringLevel };
-    anisotropicStates.set(key, state);
-  }
-  return state;
+  return STATES[row]!;
 }
 
 /**

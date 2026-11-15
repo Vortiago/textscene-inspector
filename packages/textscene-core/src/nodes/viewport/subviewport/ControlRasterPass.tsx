@@ -19,12 +19,14 @@ import { YSortProvider } from '../../../r3f/contexts/YSortContext.js';
 import { viewportTransfer } from '../../../r3f/texelCopy.js';
 import { createCanvasTarget } from '../../../r3f/offscreen/targets.js';
 import { renderToOffscreenTarget } from '../../../r3f/offscreen/draw.js';
-import { viewportCanvasColorSpace, viewportMsaaMode } from './viewportTargetOptions.js';
+import { viewportCanvasColorSpace } from '../../../r3f/viewportRender/viewportTargetOptions.js';
+import { useSubViewportDescription } from '../../../r3f/viewportRender/useSubViewportDescription.js';
+import { drawWorld, type WorldRender } from '../../../r3f/viewportRender/worldRender.js';
 import { useMultisampledTarget } from '../../../r3f/offscreen/multisampledTarget.js';
-import { useCanvasPass } from './useCanvasPass.js';
-import { useResolvedGate } from './useViewportGate.js';
-import { usePublishViewportPass } from './usePublishViewportPass.js';
-import { useViewportRenderState } from './useGatedViewport.js';
+import { useCanvasPass } from '../../../r3f/viewportRender/useCanvasPass.js';
+import { useResolvedGate } from '../../../r3f/viewportRender/useViewportGate.js';
+import { usePublishViewportPass } from '../../../r3f/viewportRender/usePublishViewportPass.js';
+import { useViewportRenderState } from '../../../r3f/viewportRender/useGatedViewport.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
 import { viewportPassSizes } from './targetSize.js';
 import type { SubViewportProperties } from './types.js';
@@ -62,7 +64,13 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const gate = useResolvedGate(viewport.gate, path);
 
   const properties = node.properties as SubViewportProperties;
-  const { transparent_bg: transparentBg, render_target_clear_mode: clearMode } = properties;
+  const { render_target_clear_mode: clearMode } = properties;
+  const description = useSubViewportDescription(properties);
+  const canvasRender = useMemo<WorldRender>(
+    () => ({ viewport: description, shadowAtlas: null, hasCanvasTransform: true }),
+    [description]
+  );
+  const transparentBg = canvasRender.viewport.transparentBackground;
   const sizes = viewportPassSizes(node, useViewportRect(path));
   const { x: width, y: height } = sizes.target;
 
@@ -88,7 +96,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const { camera, frame } = useCanvasPass(
     sizes.view.x,
     sizes.view.y,
-    viewportMsaaMode(properties, '2d'),
+    canvasRender.viewport.msaa2D,
     canvasSpace
   );
 
@@ -99,13 +107,27 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const renderState = useViewportRenderState(gate.updateMode);
   const renderPass = useCallback(() => {
     const clear = renderState.takeRender(clearMode, clearColor);
-    renderToOffscreenTarget(gl, {
-      target,
-      clearColor: clear.color,
-      transparentBg,
-      draw: () => frame.draw(gl, portalScene, camera, clear.clears, viewportTransfer('none', transparentBg)),
-    });
-  }, [gl, target, frame, clearColor, clearMode, renderState, transparentBg, portalScene, camera]);
+    drawWorld(canvasRender, () =>
+      renderToOffscreenTarget(gl, {
+        target,
+        clearColor: clear.color,
+        transparentBg,
+        draw: () =>
+          frame.draw(gl, portalScene, camera, clear.clears, viewportTransfer('none', transparentBg)),
+      })
+    );
+  }, [
+    gl,
+    target,
+    frame,
+    clearColor,
+    clearMode,
+    renderState,
+    transparentBg,
+    portalScene,
+    camera,
+    canvasRender,
+  ]);
 
   usePublishViewportPass({
     path,

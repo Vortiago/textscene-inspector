@@ -4,7 +4,7 @@
  */
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseWindow } from './parser';
-import type { EmbeddedWindowType } from '../../viewport/subviewport/viewportBoundary';
+import type { EmbeddedWindowType } from '../../../r3f/viewportRender/viewportBoundary';
 
 export function registerWindowParser(
   typeName: EmbeddedWindowType,

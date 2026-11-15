@@ -7,7 +7,8 @@ import { godotTextureFilterState } from '../../resources/textures/godotTextureFi
 import { decalAtlasTexture } from '../../nodes/3d/decal/decalAtlas';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
-import { renderWithMipmapBias } from '../materials/godotMipmapBias';
+import { drawWorld } from '../viewportRender/worldRender';
+import { rootViewportDescription } from '../viewportRender/viewportDescription';
 import { markEditorHelper } from '../editorHelpers';
 import { instanceLayers } from '../instanceLayers/instanceLayersChunk';
 import { visualLayersOf } from '../visualLayers';
@@ -153,7 +154,14 @@ describe('SceneDecals', () => {
   it("shows the gradient scale of the render's mipmap bias", async () => {
     const { render } = await sceneWith(decalObject());
 
-    renderWithMipmapBias(-1.5, render);
+    drawWorld(
+      {
+        viewport: { ...rootViewportDescription(null), mipmapBias: -1.5 },
+        shadowAtlas: null,
+        hasCanvasTransform: false,
+      },
+      render
+    );
 
     expect(shownDecals[SHOWN_GRADIENT_SCALE]).toBeCloseTo(2 ** -1.5, 6);
   });
@@ -185,7 +193,7 @@ describe('SceneDecals', () => {
     expect(decalAtlasTexture().minFilter).toBe(THREE.NearestFilter);
   });
 
-  it("writes the taps of Godot's nearest anisotropic filter once per upload of the atlas", async () => {
+  it("writes the taps of Godot's nearest anisotropic filter once while the level stays", async () => {
     const { renderer, render, sceneDecals } = await sceneWith(decalObject());
     const ANISOTROPY_PARAMETER = 0x84fe;
     vi.spyOn(renderer.extensions, 'get').mockReturnValue({
@@ -193,7 +201,7 @@ describe('SceneDecals', () => {
     });
     vi.spyOn(renderer.capabilities, 'getMaxAnisotropy').mockReturnValue(16);
     const write = vi.spyOn(renderer.getContext(), 'texParameterf');
-    sceneDecals.setFilter(godotTextureFilterState(4, 2));
+    sceneDecals.setFilter(godotTextureFilterState(4));
 
     render();
     render();

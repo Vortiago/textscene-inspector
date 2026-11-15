@@ -1,7 +1,3 @@
-/**
- * A fake `<Canvas>` store whose renderer records the GPU parameter writes of `useNearestAnisotropy`,
- * for a test that draws a texture without a WebGL context.
- */
 import { createElement, type ReactNode } from 'react';
 import { vi, type Mock } from 'vitest';
 import { context } from '@react-three/fiber';
@@ -16,16 +12,15 @@ interface FakeCanvasRenderer {
   wrapper: (props: { children: ReactNode }) => ReactNode;
 }
 
-/**
- * `isAllocated`: three has already made GPU storage for every texture. `hasAnisotropyExtension`:
- * the GPU supports `EXT_texture_filter_anisotropic`, else three's `extensions.get` returns null.
- */
+/** Without `hasAnisotropyExtension`, three's `extensions.get` returns null. */
 export function fakeCanvasRenderer({
   isAllocated,
   hasAnisotropyExtension = true,
+  maxAnisotropy = 8,
 }: {
   isAllocated: boolean;
   hasAnisotropyExtension?: boolean;
+  maxAnisotropy?: number;
 }): FakeCanvasRenderer {
   const storage = { name: 'storage' };
   const gl = { ...FAKE_GL, texParameterf: vi.fn() };
@@ -37,7 +32,7 @@ export function fakeCanvasRenderer({
     extensions: {
       get: () => (hasAnisotropyExtension ? { TEXTURE_MAX_ANISOTROPY_EXT: MAX_ANISOTROPY_PARAMETER } : null),
     },
-    capabilities: { getMaxAnisotropy: () => 8 },
+    capabilities: { getMaxAnisotropy: () => maxAnisotropy },
   };
   const store = { getState: () => ({ gl: renderer }) };
   const wrapper = ({ children }: { children: ReactNode }) =>

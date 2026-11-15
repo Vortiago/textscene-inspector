@@ -40,8 +40,6 @@ interface MaterialFor2dInput {
   shaded: boolean;
   /** `BaseMaterial3D::TextureFilter` ordinal. */
   textureFilter: EnumValue<typeof TextureFilter>;
-  /** The viewport's anisotropic filtering level, which sets the anisotropic sampler rows. */
-  anisotropicFilteringLevel: number;
 }
 
 interface MaterialFor2d {
@@ -79,6 +77,6 @@ export function materialFor2d(input: MaterialFor2dInput): MaterialFor2d {
     shading: input.shaded ? SHADED_SCALARS : undefined,
     side: input.doubleSided === false ? THREE.FrontSide : THREE.DoubleSide,
     depthTest,
-    textureFilter: godotTextureFilterState(input.textureFilter, input.anisotropicFilteringLevel),
+    textureFilter: godotTextureFilterState(input.textureFilter),
   };
 }

@@ -41,7 +41,7 @@ function countNamed(root: THREE.Object3D, name: string): number {
 }
 
 describe('a SubViewport nested in a 3D SubViewport with a 2D item', () => {
-  beforeAll(() => import('./CanvasOverWorld'));
+  beforeAll(() => import('../../../r3f/viewportRender/CanvasOverWorld'));
 
   it('mounts the nested viewport once', async () => {
     const draws = await drawsOf(SCENE);

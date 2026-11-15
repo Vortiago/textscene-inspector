@@ -180,8 +180,10 @@ The strict parser also returns `SourceLines`, which puts each diagnostic on its 
 - **Control nodes.** They draw natively in the canvas, with no DOM (ADR-0037). Text follows
   ADR-0069.
 - **2D lights.** `r3f/lighting2d/` ports Godot's canvas light shader (ADR-0030, ADR-0066).
-- **Viewport description.** What a viewport gives each render: the root's from the project settings
-  (`r3f/viewportRender/`, ADR-0078).
+- **Viewport description.** What a viewport gives each render: the root's from the project settings,
+  a SubViewport's from its properties (`r3f/viewportRender/`, ADR-0078).
+- **World render.** Every world draw runs in `drawWorld`, and an observer reads the render under way
+  from `renderUnderWay()` (`r3f/viewportRender/worldRender.ts`, ADR-0078).
 - **Offscreen passes.** One orchestrator runs them in dependency order
   (`ViewportPassRegistryContext.tsx`).
 - **Shadows.** `<SceneShadowFitter>` fits each declared shadow

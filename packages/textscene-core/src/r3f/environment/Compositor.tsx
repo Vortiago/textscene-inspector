@@ -4,8 +4,10 @@
  * canvas's scene into the world buffer, then tonemaps that buffer onto the canvas.
  */
 
+import { useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useRootViewportDescription } from '../viewportRender/useRootViewportDescription';
+import { drawWorld, type WorldRender } from '../viewportRender/worldRender';
 import { SubscriberStep } from '../frameProfile/FrameProfiler';
 import { useToneMapPass } from './toneMapPass';
 
@@ -25,8 +27,12 @@ export function Compositor() {
     usesDebanding: root.usesDebanding,
     name: 'Canvas',
   });
+  const render = useMemo<WorldRender>(
+    () => ({ viewport: root, shadowAtlas: null, hasCanvasTransform: false }),
+    [root]
+  );
   useFrame(({ scene, camera }) => {
-    toneMap.drawWorld(scene, camera);
+    drawWorld(render, () => toneMap.drawWorld(scene, camera));
     toneMap.toneMap();
   }, COMPOSITOR_PRIORITY);
   return <SubscriberStep step="Compositor" priority={COMPOSITOR_PRIORITY} />;

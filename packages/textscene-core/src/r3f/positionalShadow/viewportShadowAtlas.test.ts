@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { ROOT_POSITIONAL_SHADOW_ATLAS, VIEWPORT_POSITIONAL_SHADOW_ATLAS } from '../../godot/scene/viewport';
-import { activeShadowAtlas, renderWithShadowAtlas, ViewportShadowAtlas } from './viewportShadowAtlas';
+import { ViewportShadowAtlas } from './viewportShadowAtlas';
 
 const rootAtlas = () => new ViewportShadowAtlas(ROOT_POSITIONAL_SHADOW_ATLAS);
 const subViewportAtlas = () => new ViewportShadowAtlas(VIEWPORT_POSITIONAL_SHADOW_ATLAS);
@@ -172,37 +172,5 @@ describe('ViewportShadowAtlas and the shared atlas texture', () => {
     // A SubViewport's 2048 atlas puts its second quadrant at x = 1024.
     expect(sub.slot(light)).toEqual({ x: 1024, y: 0, size: 512, paraboloidStep: null });
     sub.dispose();
-  });
-});
-
-describe('renderWithShadowAtlas', () => {
-  it('makes the atlas active for the render, and only for it', () => {
-    const sub = subViewportAtlas();
-    let during: ViewportShadowAtlas | null = null;
-    renderWithShadowAtlas(sub, () => {
-      during = activeShadowAtlas();
-    });
-    expect(during).toBe(sub);
-    expect(activeShadowAtlas()).toBeNull();
-  });
-
-  it('restores the outer atlas after a nested pass (edge case)', () => {
-    const outer = subViewportAtlas();
-    const inner = subViewportAtlas();
-    let afterInner: ViewportShadowAtlas | null = null;
-    renderWithShadowAtlas(outer, () => {
-      renderWithShadowAtlas(inner, () => {});
-      afterInner = activeShadowAtlas();
-    });
-    expect(afterInner).toBe(outer);
-  });
-
-  it('clears the atlas when the render throws (error case)', () => {
-    expect(() =>
-      renderWithShadowAtlas(subViewportAtlas(), () => {
-        throw new Error('lost context');
-      })
-    ).toThrow('lost context');
-    expect(activeShadowAtlas()).toBeNull();
   });
 });

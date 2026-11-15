@@ -264,10 +264,10 @@ describe('the decal atlas filter', () => {
     ]);
   });
 
-  it('samples at the anisotropy of the level under an anisotropic filter (:3449)', () => {
-    setDecalAtlasFilter(godotTextureFilterState(5, 3));
+  it('uploads the default taps under an anisotropic filter (:3449), which each 3D draw writes over', () => {
+    setDecalAtlasFilter(godotTextureFilterState(5));
 
-    expect(decalAtlasTexture().anisotropy).toBe(8);
+    expect(decalAtlasTexture().anisotropy).toBe(4);
   });
 
   it('keeps its levels under a filter that reads none', () => {

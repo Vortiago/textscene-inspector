@@ -15,7 +15,7 @@ import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
 import { Camera3DInWorld } from '../nodes/3d/camera3d/Camera3DInWorld.testkit';
-import type { CameraLike } from '../nodes/3d/camera3d/projectionFit';
+import type { CameraLike } from './viewportRender/projectionFit';
 import type { TscnNode } from '../parser/types';
 import { GodotEditorControls } from './GodotEditorControls';
 import { viewportActionsProbe } from './testing/ViewportActionsProbe';

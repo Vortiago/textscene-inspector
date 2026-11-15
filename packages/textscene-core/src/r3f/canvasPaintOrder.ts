@@ -13,7 +13,7 @@ import type { TscnNode } from '../parser/types';
 import type { YSortItem } from './ySortItems';
 import { CanvasItemClipChildrenMode } from '../godot/scene/canvasItem';
 import { DEFAULT_CANVAS_LAYER, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
-import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
+import { isViewportBoundary } from './viewportRender/viewportBoundary';
 import { clampCanvasItemZ, WORLD_CANVAS_LAYER } from './lighting2d/canvasItemPlacement';
 import { canvasItemFieldsOf, type CanvasItemNodeFields } from './canvasItemPass/canvasItemFields';
 import { isCanvasItem, isCanvasLayerType } from './canvasItemClass';

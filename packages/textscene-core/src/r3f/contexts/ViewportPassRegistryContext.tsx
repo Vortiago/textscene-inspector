@@ -19,12 +19,7 @@ import { useFrame } from '@react-three/fiber';
 import * as logger from '../../logger.js';
 import { perObject } from '../../utils/perObject.js';
 import { orderViewportPasses, type ViewportPassCycle } from '../../nodes/viewport/passOrder.js';
-import {
-  GateClock,
-  renderingPassIds,
-  type GatedPass,
-  type PassGate,
-} from '../../nodes/viewport/renderGate.js';
+import { GateClock, renderingPassIds, type GatedPass, type PassGate } from '../viewportRender/renderGate.js';
 import { useOptionalHierarchy } from './HierarchyContext.js';
 import { useTreeOrder, type TreeOrder } from './TreeOrderContext.js';
 import { useSceneAssetsSettled } from '../useSceneAssetsSettled.js';

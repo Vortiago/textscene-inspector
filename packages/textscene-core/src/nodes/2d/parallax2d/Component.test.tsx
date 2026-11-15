@@ -8,10 +8,11 @@ import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
-import type { Camera2DTag } from '../camera2d/cameraView';
+import type { Camera2DTag } from '../../../r3f/viewportRender/camera2DView';
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
-import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera';
+import { World2DCamera } from '../../../r3f/components/Canvas2DStage/world2DCamera';
+import { drawAsCanvasPass } from '../../../r3f/testing/worldRenders';
 import { heading } from '../../../parser/testing/parserKit';
 import { Parallax2D } from './Component';
 import { parseParallax2D } from './parser';
@@ -40,7 +41,7 @@ const CAMERA_TAG: Camera2DTag = {
 
 /** The 1152x648 view a Camera2D at (600, 400) frames: top-left (24, 76) in canvas pixels. */
 function viewportPassCamera(): THREE.OrthographicCamera {
-  const camera = createViewportCanvasCamera();
+  const camera = new World2DCamera();
   Object.assign(camera, { left: -576, right: 576, top: 324, bottom: -324, near: 0.1, far: 4000 });
   camera.position.set(600, -400, 1000);
   camera.updateProjectionMatrix();
@@ -72,7 +73,10 @@ describe('<Parallax2D>', () => {
     );
     const scene = renderer.scene.instance;
     if (pass === 'stage') fireSceneRender(scene, storeCamera.current!);
-    else fireSceneRender(scene, viewportPassCamera(), new THREE.WebGLRenderTarget(1152, 648));
+    else
+      drawAsCanvasPass(() =>
+        fireSceneRender(scene, viewportPassCamera(), new THREE.WebGLRenderTarget(1152, 648))
+      );
     return deltaGroup(scene);
   }
 

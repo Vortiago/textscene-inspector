@@ -3,11 +3,11 @@
  * draws. Godot reaches it through the `"__cameras_" + viewport id` group.
  */
 
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
-import { isViewportPass } from '../../../r3f/sceneRenderCamera';
-import { selectViewportCamera2D } from '../../viewport/subviewport/viewportFraming';
-import type { Camera2DTag } from '../camera2d/cameraView';
+import { renderUnderWay } from '../../../r3f/viewportRender/worldRender';
+import { selectViewportCamera2D } from '../../../r3f/viewportRender/viewportFraming';
+import type { Camera2DTag } from '../../../r3f/viewportRender/camera2DView';
 import { parallaxViewFraming, type ParallaxViewFraming } from './parallaxScroll';
 
 /**
@@ -15,19 +15,12 @@ import { parallaxViewFraming, type ParallaxViewFraming } from './parallaxScroll'
  * An offscreen pass draws the viewport's own scene, so `scene` holds that viewport's cameras.
  */
 export function currentCameraFraming(scene: THREE.Scene, camera: THREE.Camera): ParallaxViewFraming | null {
-  if (!isViewportPass(camera)) return null;
+  if (!renderUnderWay()?.hasCanvasTransform || !(camera instanceof THREE.OrthographicCamera)) return null;
+  const { left, right, top, bottom, position, zoom } = camera;
   const tag = selectViewportCamera2D(scene)?.userData.camera2d as Camera2DTag | undefined;
   if (!tag) return null;
   return parallaxViewFraming(
-    {
-      left: camera.left,
-      right: camera.right,
-      top: camera.top,
-      bottom: camera.bottom,
-      x: camera.position.x,
-      y: camera.position.y,
-      zoom: camera.zoom,
-    },
+    { left, right, top, bottom, x: position.x, y: position.y, zoom },
     tag.zoom.x || 1,
     tag.anchor_mode !== Camera2DAnchorMode.FIXED_TOP_LEFT
   );

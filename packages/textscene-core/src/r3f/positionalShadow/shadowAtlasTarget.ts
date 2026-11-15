@@ -75,14 +75,32 @@ export function holdPositionalShadowAtlas(holder: object, size: number): void {
 export function releasePositionalShadowAtlas(holder: object): void {
   if (!holders.delete(holder)) return;
   if (holders.size > 0) fitToHolders();
-  else if (atlas.width === UNHELD_SIZE) atlas.dispose();
-  else atlas.setSize(UNHELD_SIZE, UNHELD_SIZE);
+  else if (atlas.width === UNHELD_SIZE) free();
+  else resize(UNHELD_SIZE);
 }
 
-/** `setSize` frees the GPU memory of a target whose size changes, and three builds it again at its next use. */
 function fitToHolders(): void {
   const size = Math.max(UNHELD_SIZE, ...holders.values());
-  if (atlas.width !== size) atlas.setSize(size, size);
+  if (atlas.width !== size) resize(size);
+}
+
+/** Counts the atlas's frees. Written only by `free` and `resize`. */
+let build = 0;
+
+/** Moves each time the atlas frees its GPU memory, so a renderer knows to allocate it again. */
+export function positionalShadowAtlasBuild(): number {
+  return build;
+}
+
+function free(): void {
+  atlas.dispose();
+  build++;
+}
+
+/** `setSize` frees the GPU memory of a resized target, and three builds it again at its next use. */
+function resize(size: number): void {
+  atlas.setSize(size, size);
+  build++;
 }
 
 /**

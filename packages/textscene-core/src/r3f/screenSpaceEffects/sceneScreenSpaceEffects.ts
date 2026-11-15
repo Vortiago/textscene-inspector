@@ -8,14 +8,13 @@
  */
 
 import * as THREE from 'three';
-import { probeCaptureOf } from '../reflectionProbe/captureCameras.js';
 import { drawOffscreen } from '../offscreen/draw.js';
 import {
   createFirstOpaqueSentinel,
   createLastOpaqueSentinel,
   type OpaqueSentinel,
 } from '../opaqueSentinel.js';
-import { drawsTransparentBackground } from '../environment/toneMapPass.js';
+import { renderUnderWay } from '../viewportRender/worldRender.js';
 import { WorldReflection, type ReflectionSettings } from '../screenSpaceReflection/worldReflection.js';
 import { hideReflection, showReflection } from '../screenSpaceReflection/ssrUniforms.js';
 import { WorldOcclusion, type OcclusionSettings } from '../screenSpaceAmbientOcclusion/worldOcclusion.js';
@@ -92,15 +91,16 @@ export class SceneScreenSpaceEffects {
     this.lastSentinel = createLastOpaqueSentinel('ScreenSpaceEffectsEnd', () => this.endOpaque());
   }
 
-  /** Starts a render of the scene through `camera` into `target`, null for the canvas. */
-  readonly begin = (camera: THREE.Camera, target: THREE.WebGLRenderTarget | null): void => {
-    const world = this.worldOf(camera, target);
+  /** Starts a render of the scene into `target`, null for the canvas. */
+  readonly begin = (target: THREE.WebGLRenderTarget | null): void => {
+    const world = this.worldOf(target);
     const { reflection, occlusion, drawsDepthPrepass } = this.settings();
     const foldedOcclusion = world ? occlusion : null;
     this.renders.push({
       target,
       world,
-      reflection: world && drawsDepthPrepass && !drawsTransparentBackground(target!) ? reflection : null,
+      reflection:
+        world && drawsDepthPrepass && !renderUnderWay()?.viewport.transparentBackground ? reflection : null,
       occlusion: foldedOcclusion,
       drawsOcclusion: !!foldedOcclusion && drawsDepthPrepass,
       hasRun: false,
@@ -132,8 +132,8 @@ export class SceneScreenSpaceEffects {
    * (`render_forward_clustered.cpp:2086`, `:750`). Every 3D render draws into a world buffer
    * (`toneMapPass.ts`), so the canvas is no world.
    */
-  private worldOf(camera: THREE.Camera, target: THREE.WebGLRenderTarget | null): WorldEffects | null {
-    if (!target || probeCaptureOf(camera)) return null;
+  private worldOf(target: THREE.WebGLRenderTarget | null): WorldEffects | null {
+    if (!target || renderUnderWay()?.probeCapture) return null;
     let world = this.worlds.get(target);
     if (!world) {
       world = new WorldEffects();

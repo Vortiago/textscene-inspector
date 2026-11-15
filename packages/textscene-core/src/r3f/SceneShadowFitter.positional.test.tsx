@@ -10,7 +10,9 @@ import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow';
 import { SceneShadowFitter } from './SceneShadowFitter';
 import { positionalShadowAtlas } from './positionalShadow/shadowAtlasTarget';
 import { positionalShadowUserData } from './positionalShadow/declaration';
-import { renderWithShadowAtlas, ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas';
+import { ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas';
+import { drawWorld } from './viewportRender/worldRender';
+import { rootViewportDescription } from './viewportRender/viewportDescription';
 import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../godot/scene/viewport';
 import { TscnSceneContents } from './TscnCanvas';
 import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera';
@@ -46,6 +48,11 @@ function renderThrough(renderer: Renderer, camera: THREE.Camera): void {
   camera.updateMatrixWorld();
   const beforeRender = scene.onBeforeRender as (...args: unknown[]) => void;
   beforeRender.call(scene, null, scene, camera, null);
+}
+
+/** A SubViewport's world draw, fitting its lights in `shadowAtlas`. */
+function drawInViewport(shadowAtlas: ViewportShadowAtlas, draw: () => void): void {
+  drawWorld({ viewport: rootViewportDescription(null), shadowAtlas, hasCanvasTransform: false }, draw);
 }
 
 /** Godot's editor view of a scene: the fixed orbit round the origin. */
@@ -140,7 +147,7 @@ describe('<SceneShadowFitter> positional fit on its own', () => {
     return { renderer, light };
   }
 
-  it('fits a render outside any SubViewport pass in the root viewport’s atlas', async () => {
+  it('fits a render outside any world draw in the root viewport’s atlas', async () => {
     const { renderer, light } = await mountWithLight();
     renderThrough(renderer, cameraAt(5));
     expect(light.shadow.mapSize.x).toBe(ROOT_POSITIONAL_SHADOW_ATLAS.size / 4);
@@ -158,7 +165,7 @@ describe('<SceneShadowFitter> positional fit on its own', () => {
     renderThrough(renderer, cameraAt(5));
     const rootCube = light.shadow.map;
     expect(rootCube!.width).toBe(512);
-    renderWithShadowAtlas(subViewport, () => renderThrough(renderer, cameraAt(5)));
+    drawInViewport(subViewport, () => renderThrough(renderer, cameraAt(5)));
     expect(light.shadow.map!.width).toBe(256);
     renderThrough(renderer, cameraAt(5));
     // The steady scene reallocates nothing: the main view finds its own cube again.
@@ -172,7 +179,7 @@ describe('<SceneShadowFitter> positional fit on its own', () => {
     renderThrough(renderer, cameraAt(5));
     expect(light.shadow).toBeInstanceOf(AtlasSpotShadow);
     expect(light.shadow.map).toBe(positionalShadowAtlas());
-    renderWithShadowAtlas(subViewport, () => renderThrough(renderer, cameraAt(5)));
+    drawInViewport(subViewport, () => renderThrough(renderer, cameraAt(5)));
     expect(light.shadow.map).toBe(positionalShadowAtlas());
     expect(light.shadow.mapSize.x).toBe(512);
     subViewport.dispose();

@@ -25,7 +25,7 @@ import { EmbeddedWindows } from '../../windows/window/EmbeddedWindows.js';
 import type { ThemeOwner } from '../../windows/window/themeOwners.js';
 import { usePublishWrappedSize } from '../../windows/window/usePublishWrappedSize.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
-import { isEmbeddedWindow } from './viewportBoundary.js';
+import { isEmbeddedWindow } from '../../../r3f/viewportRender/viewportBoundary.js';
 
 interface ViewportControlsProps {
   /** The viewport's live path. */

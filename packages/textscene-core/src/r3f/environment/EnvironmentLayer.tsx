@@ -25,7 +25,7 @@ import { followSceneExposure } from '../exposure/sceneExposure';
 import { useExposureFactor } from './worldExposure';
 import { scaledRgb } from '../../utils/colorParser';
 import { LRUCache } from '../../resources/LRUCache';
-import { probeCaptureOf } from '../reflectionProbe/captureCameras';
+import { renderUnderWay } from '../viewportRender/worldRender';
 import {
   DrawnEnvironment,
   registerEnvironmentPart,
@@ -165,8 +165,8 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
       const stopRegistering = registerEnvironmentPart(scene, environment, () => {
         const restoreBackground = showAt(exposure);
         // An interior capture keeps the clear colour its stage drew (`captureStage.ts`).
-        const stopFollowing = followSceneExposure(scene, (drawn, camera) => {
-          if (!probeCaptureOf(camera)?.isInterior) showAt(drawn ?? 1);
+        const stopFollowing = followSceneExposure(scene, (drawn) => {
+          if (!renderUnderWay()?.probeCapture?.isInterior) showAt(drawn ?? 1);
         });
         return () => {
           stopFollowing();

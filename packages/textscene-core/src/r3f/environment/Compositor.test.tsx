@@ -22,6 +22,8 @@ import { withStubbedGl } from '../testing/stubbedGl';
 import { CaptureRenderer } from '../testing/CaptureRenderer';
 import { InWorld } from '../testing/InWorld';
 import { DEPTH_COMPONENT24, fakeWebGL2Context, rendererOver, RGBA16F } from '../testing/fakeWebGL2Context';
+import { mipmapBiasUniform } from '../testing/mipmapBiasUniform';
+import { renderUnderWay, type WorldRender } from '../viewportRender/worldRender';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -30,6 +32,8 @@ interface Draw {
   bound: THREE.WebGLRenderTarget | null;
   scene: THREE.Object3D;
   autoClear: boolean;
+  render: WorldRender | null;
+  mipmapBias: number;
 }
 
 interface MountOptions {
@@ -77,7 +81,16 @@ async function mount({
     const draws: Draw[] = [];
     await withStubbedGl(
       captured.current!,
-      { onRender: (bound, scene) => draws.push({ bound, scene, autoClear: captured.current!.autoClear }) },
+      {
+        onRender: (bound, scene) =>
+          draws.push({
+            bound,
+            scene,
+            autoClear: captured.current!.autoClear,
+            render: renderUnderWay(),
+            mipmapBias: mipmapBiasUniform().value,
+          }),
+      },
       () => renderer.advanceFrames(1, 16)
     );
     return draws;
@@ -152,6 +165,25 @@ describe('<Compositor> on the root canvas', () => {
     });
 
     await waitFor(async () => expect((await nextFrame())[0]?.bound?.samples).toBe(4));
+  });
+
+  it("draws the world as the root viewport's render, at the project's mipmap bias (viewport.cpp:5383)", async () => {
+    const { nextFrame } = await mount({
+      Wrapper: withProject('[rendering]\ntextures/default_filters/texture_mipmap_bias=-0.5\n'),
+    });
+
+    await waitFor(async () => expect((await nextFrame())[0]?.mipmapBias).toBe(-0.5));
+    expect((await nextFrame())[0]?.render).toMatchObject({
+      viewport: { camera: 'editor', mipmapBias: -0.5 },
+      shadowAtlas: null,
+      hasCanvasTransform: false,
+    });
+  });
+
+  it('tonemaps outside the world draw (edge case)', async () => {
+    const { nextFrame } = await mount();
+
+    expect((await nextFrame()).at(-1)?.render).toBeNull();
   });
 
   /** Godot dithers in its tonemap pass (`renderer_scene_render_rd.cpp:784-797`). */
