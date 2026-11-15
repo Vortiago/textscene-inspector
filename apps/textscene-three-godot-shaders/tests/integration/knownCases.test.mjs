@@ -18,9 +18,9 @@ describe('the fixed known-difference cases on the page', () => {
   });
 
   it('fails a listed program that equals Godot now', () => {
-    const results = [{ program: { name: 'random-1847-95' }, verdict: verdict(true, 4) }];
+    const results = [{ program: { name: 'random-1847-103' }, verdict: verdict(true, 4) }];
     expect(staleKnownPrograms(results)).toEqual([
-      'random-1847-95 equals Godot now: remove it as a program of knownDifferences.mjs',
+      'random-1847-103 equals Godot now: remove it as a program of knownDifferences.mjs',
     ]);
   });
 });

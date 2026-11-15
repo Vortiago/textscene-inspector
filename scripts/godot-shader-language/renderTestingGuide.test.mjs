@@ -17,10 +17,11 @@ const INPUT = {
     record: { godot: '4.6.3-stable', cases: { 'OP_ADD(float,float)': 'accepted' } },
   },
   random: {
-    programs: [{}, {}, { functions: 2 }],
+    programs: [{}, {}, {}, { functions: 2 }],
     seed: 1,
     transpiledRows: 2,
     knownDifferences: KNOWN,
+    knownProgramDifferences: { 'random-1-0': { lane: 'lane 0', cause: 'a fold', owner: '#2' } },
     loweredAway: { FLOW_OP_FOR: { keyword: 'for' }, FLOW_OP_SWITCH: { keyword: 'switch' } },
   },
   corpus: {
@@ -44,10 +45,14 @@ describe('the chapter on the tests against Godot', () => {
     expect(GUIDE).toContain('the rest with random roots, and 1 that declare functions of their own.');
   });
 
-  it('counts the random programs bit-equal with Godot, less those a case names, and the listed cases', () => {
+  it('counts the random programs bit-equal with Godot, less those a case names and those listed', () => {
     expect(GUIDE).toContain(
-      '**2 of 3 random programs bit-equal with Godot, NaN lanes compared as NaN. The others are the 1 listed known-difference case, each with its cause:'
+      '**2 of 4 random programs bit-equal with Godot, NaN lanes compared as NaN. The other 2 are listed, each with its cause.**'
     );
+  });
+
+  it('counts the listed programs by cause', () => {
+    expect(GUIDE).toContain('| a fold | 1 | #2 |');
   });
 
   it('counts the real shaders that transpile, of those Godot accepts', () => {
@@ -82,6 +87,7 @@ describe('the table of known differences', () => {
         seed: 1,
         transpiledRows: 1,
         loweredAway: { FLOW_OP_FOR: { keyword: 'for' } },
+        knownProgramDifferences: {},
         knownDifferences: {
           'random-1-0': {
             source: 'bool probe(bool a0) { return a0 || a0; }',
