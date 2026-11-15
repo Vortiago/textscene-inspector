@@ -42,7 +42,7 @@ function renderSolve() {
   const fake = createFakeResourceLoader();
   const requests: string[] = [];
   fake.fonts.setRequestImpl((path) => requests.push(path));
-  const trees: SolveNode[][] = [];
+  const trees: (readonly SolveNode[])[] = [];
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
   );
