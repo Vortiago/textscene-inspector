@@ -98,6 +98,25 @@ describe('installShadowPass', () => {
     );
   });
 
+  it('restores the render’s target only on the pass that builds the atlas (edge case)', () => {
+    const { renderer } = fakeRenderer();
+    installShadowPass(renderer);
+    runPass(renderer, []);
+    runPass(renderer, []);
+    expect(renderer.setRenderTarget).toHaveBeenCalledTimes(1);
+  });
+
+  it('builds the atlas again once it is resized (edge case)', () => {
+    const { renderer } = fakeRenderer();
+    installShadowPass(renderer);
+    runPass(renderer, []);
+    const atlas = positionalShadowAtlas();
+    atlas.setSize(atlas.width * 2, atlas.height * 2);
+    atlas.setSize(atlas.width / 2, atlas.height / 2);
+    runPass(renderer, []);
+    expect(renderer.initRenderTarget).toHaveBeenCalledTimes(2);
+  });
+
   it('runs three’s pass, then copies each omni light that holds a slot', () => {
     const copy = vi.spyOn(OmniShadowCopy.prototype, 'copy').mockImplementation(() => {});
     const { renderer, threePass } = fakeRenderer();
