@@ -4,7 +4,7 @@ import type { GlyphPlacement, TextLineLayout } from './textLayout';
 export type PenSum =
   /** At the run's place in its canvas item: `Label` (`label.h:199`) and `LineEdit` (`line_edit.cpp:1487`). */
   | 'fromItemPosition'
-  /** At zero, with the line's place added to each pen: `TextServer::shaped_text_draw` (`text_server.cpp:1755`). */
+  /** At zero, with the line origin added to each pen: `shaped_text_draw` (`text_server.cpp:1755`). */
   | 'alongLine';
 
 /** @canonical Each glyph's origin in its canvas item, its pen summed in 32-bit float as `penSum` says. */

@@ -747,7 +747,7 @@ export interface RichTextRunPlacement {
   fontSizePx: number;
   /** A single-line layout of only this run's glyphs from the line. */
   layout: TextLayoutResult;
-  /** Where `layout`'s x 0 sits from the text origin: the marker's place, or 0 for a run whose glyphs carry the line offset. */
+  /** Where `layout`'s x 0 sits from the text origin: the marker's place, or 0 for a run of the line. */
   layoutXPx: number;
   image?: RichTextImagePlacement;
 }
@@ -770,8 +770,7 @@ function soloRunLayout(
     x: glyph.x + linePen.offsetXPx,
     linePenPx: linePen.pensPx.get(glyph)!,
   }));
-  // The right edge from the text origin, not the run's own span: the glyphs keep their place in the
-  // line, and a canvas raster sized to the span alone would clip a run that starts mid-line.
+  // The right edge from the text origin: a raster sized to the run's own span would clip it mid-line.
   const lastGlyph = glyphs.at(-1);
   const widthPx = lastGlyph ? lastGlyph.x + lastGlyph.advance : 0;
   return soloLineLayout(
@@ -788,7 +787,7 @@ interface LinePen {
   pensPx: ReadonlyMap<GlyphPlacement, number>;
 }
 
-/** `off_step` starts at the line's offset and takes each glyph's advance (`rich_text_label.cpp:1155,1508`). */
+/** `off_step` starts at the line offset and adds each glyph's advance (`rich_text_label.cpp:1155,1508`). */
 function linePenOf(line: TextLineLayout, offsetXPx: number): LinePen {
   const pensPx = new Map<GlyphPlacement, number>();
   let pen = Math.fround(offsetXPx);

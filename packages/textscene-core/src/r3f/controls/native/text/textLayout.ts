@@ -216,7 +216,7 @@ export interface GlyphPlacement {
   xOffset?: number;
   /** `y_off`: how far the glyph's origin sits below the baseline, px. Absent for 0. */
   yOffset?: number;
-  /** The 32-bit pen a holder summed along a longer line than this layout holds (`rich_text_label.cpp:1155`). */
+  /** The 32-bit pen a holder summed along a longer line than this layout (`rich_text_label.cpp:1155`). */
   linePenPx?: number;
   /** How far the embolden grows this glyph's outline at its own size, px. Absent for a glyph with none. */
   emboldenGrowthPx?: number;
