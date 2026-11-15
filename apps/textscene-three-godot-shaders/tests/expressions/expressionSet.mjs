@@ -1,9 +1,3 @@
-/**
- * The expressions the port answers as Godot's Expression class does: hand cases of the tokenizer
- * and the parser, cases of every operator registration and every constructor, and type pairs no
- * operator takes. Each case names the registration it covers, so a test shows the set holds them all.
- */
-
 import {
   CONSTRUCTOR_REGISTRATIONS,
   OPERATOR_REGISTRATIONS,
@@ -50,10 +44,7 @@ export const OPERATOR_TEXT = {
 
 const UNARY = new Set(['OP_NEGATE', 'OP_BIT_NEGATE', 'OP_NOT', 'OP_POSITIVE']);
 
-/**
- * The registrations no Expression text reaches: their operator has no spelling, or `~`, which the
- * parser takes only between two operands (expression.cpp:833), where it fails.
- */
+// No text reaches an operator with no spelling, or `~` between two operands (expression.cpp:833).
 export const UNREACHABLE_OPERATORS = OPERATOR_REGISTRATIONS.filter(
   ([operator]) => !(operator in OPERATOR_TEXT) || operator === 'OP_BIT_NEGATE'
 );

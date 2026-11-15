@@ -23,7 +23,7 @@ export interface DictionaryEntry {
 }
 
 // An INT holds int64 as a bigint, and a real_t component the float32 value it stores.
-/** An OBJECT is always null. A CALLABLE or SIGNAL of no object holds its method or signal name, empty when null. */
+/** An OBJECT is always null. A CALLABLE or SIGNAL holds its method or signal name, empty when null. */
 export interface VariantValues {
   NIL: null;
   BOOL: boolean;
@@ -75,10 +75,3 @@ export function variant<T extends VariantTypeName>(type: T, value: VariantValues
 }
 
 export const NIL: VariantOf<'NIL'> = Object.freeze(variant('NIL', null));
-
-export function isType<T extends VariantTypeName>(
-  value: Variant,
-  type: T
-): value is Extract<Variant, { type: T }> {
-  return value.type === type;
-}

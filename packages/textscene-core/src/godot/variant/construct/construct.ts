@@ -1,5 +1,3 @@
-/** `Variant::construct` (variant_construct.cpp:264): the first registration whose arguments all convert strictly. */
-
 import { stringToFloat, stringToInt64 } from '../../string/string.js';
 import { withEntry } from '../compare.js';
 import { defaultValue } from '../value/defaultValue.js';
@@ -11,8 +9,8 @@ import { canConvertStrict, castVariant, packedElements } from './variantCast.js'
 
 type Arguments = readonly Variant[];
 
-/** The registration `Variant::construct` runs for arguments of these types, or nothing when none takes them. */
-export function constructorFor(
+/** The registration `Variant::construct` runs for these argument types, or nothing when none takes them. */
+function constructorFor(
   type: VariantTypeName,
   argumentTypes: readonly VariantTypeName[]
 ): ConstructorSignature | undefined {

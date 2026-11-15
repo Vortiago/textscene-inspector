@@ -118,10 +118,7 @@ const UTILITY_ARGUMENTS = new Map(
 
 class ParseFailure extends Error {}
 
-/**
- * Godot's `_parse_expression` (expression.cpp:564). Godot records the first error and goes on in
- * a few places, so `error` keeps the first and a later step that checks it stops the parse.
- */
+// expression.cpp:564. `error` keeps the first error, as Godot does, and a later check of it stops the parse.
 class ExpressionParser {
   private readonly tokenizer: ExpressionTokenizer;
   error: string | undefined;
@@ -308,7 +305,7 @@ class ExpressionParser {
     return this.reduce(items);
   }
 
-  // expression.cpp:1062: the operator of the lowest priority number joins its operands, until one node is left.
+  // expression.cpp:1062: the lowest priority number joins its operands first, until one node is left.
   private reduce(items: Item[]): ExpressionNode {
     while (items.length > 1) {
       let next = -1;

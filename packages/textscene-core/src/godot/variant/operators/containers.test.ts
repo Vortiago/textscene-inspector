@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { InvalidOperands } from './invalidOperands.js';
 import { variant, type Variant } from '../value/variant.js';
 import {
   addArrays,
@@ -57,7 +58,9 @@ describe('format', () => {
   });
 
   it('gives nothing when the values run out', () => {
-    expect(format('%d %d', variant('ARRAY', [int(1n)]))).toBeUndefined();
+    expect(format('%d %d', variant('ARRAY', [int(1n)]))).toEqual(
+      new InvalidOperands(text('not enough arguments for format string'))
+    );
   });
 });
 

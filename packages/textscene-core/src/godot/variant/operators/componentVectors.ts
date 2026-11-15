@@ -1,8 +1,3 @@
-/**
- * The componentwise C++ operators of Godot's vector types and Color (vector2.h, vector2i.h,
- * vector3.h, vector4.h, color.h, quaternion.h), over the plain component objects a Variant holds.
- */
-
 import { storedReal as f } from '../../math/real.js';
 import { divideInt32, int64ToFloat32, remainderInt32, wrapInt32 } from '../cInteger.js';
 import type { Variant, VariantTypeName } from '../value/variant.js';

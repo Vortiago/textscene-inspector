@@ -4,7 +4,7 @@ import { variant } from './value/variant.js';
 
 const int = (value: bigint) => variant('INT', value);
 
-// Each expected text is Godot 4.6.3's `%` of the same format and values, and each error String::sprintf's (ustring.cpp:5222).
+// Each expected text is Godot 4.6.3's, and each error the text of String::sprintf (ustring.cpp:5222).
 describe('stringFormat', () => {
   it('fills the integer, float, string, hex, char and left-aligned placeholders', () => {
     const values = [

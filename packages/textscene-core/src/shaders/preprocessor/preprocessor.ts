@@ -1,7 +1,7 @@
 /** Godot's shader preprocessor (shader_preprocessor.cpp): comments, directives, macros and includes, as one text. */
 
-import { instruction, notTranspiled } from '../language/instructions.js';
 import { stripComments, type StrippedCode } from './commentRemover.js';
+import { conditionRefusal, isConditionTrue } from './conditions.js';
 import { DirectiveTokenizer } from './directiveTokenizer.js';
 import { getBaseDir, isAbsolutePath, pathJoin, simplifyPath, stripEdges } from '../../godot/string/string.js';
 import { PreprocessedOutput } from './preprocessedOutput.js';
@@ -145,12 +145,9 @@ class FilePreprocessor {
     const name = this.tokenizer.directiveName();
     switch (name) {
       case 'if':
+        return this.if(column);
       case 'elif':
-        throw notTranspiled(instruction(`#${name}`)!, {
-          file: this.state.currentFile,
-          line: this.tokenizer.line + 1,
-          column,
-        });
+        return this.elif(column);
       case 'ifdef':
         return this.ifdef(true);
       case 'ifndef':
@@ -219,6 +216,33 @@ class FilePreprocessor {
     if (!this.tokenizer.consumeEmptyLine())
       throw new PreprocessorError(`Invalid '${isDefinedTaken ? 'ifdef' : 'ifndef'}' directive.`, line);
     this.startBranch(this.state.defines.has(label) === isDefinedTaken);
+  }
+
+  private if(column: number): void {
+    this.startBranch(this.isConditionTrue('if', column));
+  }
+
+  // Godot evaluates the condition even after a taken branch, so its errors still show.
+  private elif(column: number): void {
+    const line = this.tokenizer.line;
+    const branch = this.state.currentBranch;
+    if (branch === undefined || branch.isElseDefined)
+      throw new PreprocessorError("Unmatched 'elif' directive.", line);
+    const isTrue = this.isConditionTrue('elif', column);
+    const isTaken = isTrue && !branch.conditions.some((wasTaken) => wasTaken);
+    branch.conditions.push(isTaken);
+    if (!isTaken) this.skipToDirective(['elif', 'else', 'endif']);
+  }
+
+  private isConditionTrue(directive: 'if' | 'elif', column: number): boolean {
+    const line = this.tokenizer.line;
+    const condition = stripEdges(this.tokenizer.advance('\n'));
+    try {
+      return isConditionTrue(condition, this.state.defines, line);
+    } catch (error) {
+      const position = { file: this.state.currentFile, line: line + 1, column };
+      throw conditionRefusal(error, `#${directive} ${condition}`, position);
+    }
   }
 
   private startBranch(isTaken: boolean): void {

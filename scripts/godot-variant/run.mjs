@@ -1,11 +1,4 @@
 #!/usr/bin/env node
-/**
- * Writes the Variant tables the Expression port reads, from Godot's source (scripts/godotSource.mjs):
- * `pnpm godot:variant [--check] [--godot-source <dir>]`. They are the operator registrations, the
- * constructors in Godot's order, the strict conversions and the utility functions. `--check` writes nothing and exits 1 on
- * a stale file.
- */
-
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';

@@ -309,11 +309,7 @@ function hexByte(hex: string, i: number): number {
   return hexDigit(hex[i]!) * 16 + hexDigit(hex[i + 1]!);
 }
 
-/**
- * `Color::html` (`core/math/color.cpp:331-368`) gated by `Color::html_is_valid`
- * (`:372-390`): an optional `#`, then 3 or 4 digits over 15, or 6 or 8 over
- * 255. Alpha defaults to 1. `undefined` means "not hex", so the caller falls through.
- */
+/** `Color::html` (color.cpp:331, 372), or `undefined` for a text that is not a hex colour. */
 export function htmlColor(value: string): Rgba | undefined {
   const body = value.startsWith('#') ? value.slice(1) : value;
   if (!/^[0-9a-fA-F]+$/.test(body)) return undefined;

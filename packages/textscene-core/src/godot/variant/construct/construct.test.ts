@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { variant } from '../value/variant.js';
-import { construct, constructorFor } from './construct.js';
+import { construct } from './construct.js';
 
 // Each expected value is Godot 4.6.3's constructor of the same arguments.
 describe('construct', () => {
@@ -27,13 +27,13 @@ describe('construct', () => {
     expect(construct('PACKED_INT32_ARRAY', [array])).toEqual(variant('PACKED_INT32_ARRAY', [1, 2]));
   });
 
+  it('takes an int where a float is asked', () => {
+    expect(construct('VECTOR2', [variant('INT', 1n), variant('INT', 2n)])).toEqual(
+      variant('VECTOR2', { x: 1, y: 2 })
+    );
+  });
+
   it('has no value for arguments no constructor takes', () => {
     expect(construct('VECTOR2', [variant('STRING', 'a'), variant('STRING', 'b')])).toBeUndefined();
-  });
-});
-
-describe('constructorFor', () => {
-  it('takes an int where a float is asked', () => {
-    expect(constructorFor('VECTOR2', ['INT', 'INT'])?.arguments).toEqual(['FLOAT', 'FLOAT']);
   });
 });

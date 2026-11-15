@@ -1,5 +1,3 @@
-/** `T(P...)` of each `VariantConstructor<T, P...>` registration, on arguments already cast to `P`. */
-
 import type { Aabb } from '../../math/aabb.js';
 import {
   basisFromColumns,

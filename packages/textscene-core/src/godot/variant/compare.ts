@@ -1,8 +1,3 @@
-/**
- * Variant equality and truth: the C++ `==` of each type, `Variant::hash_compare` (variant.cpp:3172),
- * the key match of Array and Dictionary (StringLikeVariantComparator) and `Variant::is_zero`.
- */
-
 import { COMPONENT_VECTORS, componentsEqual } from './operators/componentVectors.js';
 import { defaultValue } from './value/defaultValue.js';
 import type { DictionaryEntry, Variant } from './value/variant.js';
@@ -69,7 +64,7 @@ function dictionariesEqual(a: readonly DictionaryEntry[], b: readonly Dictionary
 }
 
 /** `Variant::hash_compare`: NaN equals NaN in a float, a vector or a packed float array. */
-export function hashCompare(a: Variant, b: Variant, semantic = true): boolean {
+function hashCompare(a: Variant, b: Variant, semantic = true): boolean {
   if (a.type !== b.type) return false;
   switch (a.type) {
     case 'FLOAT':

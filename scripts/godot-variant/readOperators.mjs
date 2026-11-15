@@ -1,9 +1,3 @@
-/**
- * Reads the operator registrations of Godot's `Variant::_register_variant_operators`
- * (variant_op.cpp:212) into rows: operator, left and right type, evaluator class and its template
- * types. A statement this does not understand throws, so a row is never dropped in silence.
- */
-
 import { lineAt } from '../godot-shader-language/cppText.mjs';
 import { splitArguments } from './cppArguments.mjs';
 

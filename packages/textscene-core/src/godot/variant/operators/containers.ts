@@ -1,9 +1,8 @@
-/** The container and string evaluators of variant_op.h: `+` of arrays and strings, `%`, and `in`. */
-
 import { doubleToInt32, doubleToInt64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
 import { cppEqual, findEntry, isSameKey } from '../compare.js';
 import { stringFormat } from '../stringFormat.js';
 import { variant, type DictionaryEntry, type Variant } from '../value/variant.js';
+import { type InvalidOperands, invalidWithText } from './invalidOperands.js';
 
 /** `[] + []`: the elements of both. Only arrays typed alike keep the type, and no array here is typed. */
 export function addArrays(a: readonly Variant[], b: readonly Variant[]): Variant {
@@ -23,10 +22,10 @@ export function concatenate(a: Variant, b: Variant): Variant {
 }
 
 /** StringFormat: the right operand is the list of values when it is an Array, else the one value. */
-export function format(text: string, right: Variant): Variant | undefined {
+export function format(text: string, right: Variant): Variant | InvalidOperands {
   const values = right.type === 'ARRAY' ? right.value : [right];
   const formatted = stringFormat(text, values);
-  return formatted.isError ? undefined : variant('STRING', formatted.text);
+  return formatted.isError ? invalidWithText(formatted.text) : variant('STRING', formatted.text);
 }
 
 /** InStringFind: `String::find`, which finds no empty text. */

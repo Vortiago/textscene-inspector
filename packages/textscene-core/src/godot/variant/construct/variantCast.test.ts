@@ -5,7 +5,6 @@ import {
   castVariant,
   colorFromString,
   packedElements,
-  projectionOf,
   UnportedConversion,
 } from './variantCast.js';
 
@@ -171,7 +170,7 @@ describe('castVariant of other types', () => {
   });
 });
 
-describe('projectionOf', () => {
+describe('castVariant to a Projection', () => {
   it('writes the basis rows and the origin row of a Transform3D', () => {
     const transform = {
       basis_x: { x: 1, y: 2, z: 3 },
@@ -179,7 +178,7 @@ describe('projectionOf', () => {
       basis_z: { x: 7, y: 8, z: 9 },
       origin: { x: 10, y: 11, z: 12 },
     };
-    expect(projectionOf(transform)).toEqual([
+    expect(castVariant(variant('TRANSFORM3D', transform), 'PROJECTION').value).toEqual([
       { x: 1, y: 4, z: 7, w: 0 },
       { x: 2, y: 5, z: 8, w: 0 },
       { x: 3, y: 6, z: 9, w: 0 },

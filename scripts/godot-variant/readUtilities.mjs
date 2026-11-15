@@ -1,9 +1,3 @@
-/**
- * Reads the utility functions of Godot's `Variant::_register_variant_utility_functions`
- * (variant_utility.cpp:1630): each name, its argument count and whether it takes any count.
- * A statement this does not understand throws, so a function is never dropped in silence.
- */
-
 import { splitArguments } from './cppArguments.mjs';
 
 const BIND =

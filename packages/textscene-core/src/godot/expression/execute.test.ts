@@ -29,13 +29,21 @@ describe('runExpression', () => {
   });
 
   it('fails an int divided by zero at execution', () => {
-    expect(runExpression('1 / 0')).toEqual({ executeError: 'Invalid operands to operator /, int and int.' });
+    expect(runExpression('1 / 0')).toEqual({
+      executeError: 'Invalid operands to operator /, int and int.',
+      value: variant('STRING', 'Division by zero error'),
+    });
   });
 
   it('fails a String plus an int at execution', () => {
     expect(runExpression('"a" + 1')).toEqual({
       executeError: 'Invalid operands to operator +, String and int.',
+      value: variant('NIL', null),
     });
+  });
+
+  it('leaves Nil when a node below the root fails', () => {
+    expect(runExpression('(1 / 0) + 1')).toMatchObject({ value: variant('NIL', null) });
   });
 
   it('gives the parse error of a missing operand', () => {

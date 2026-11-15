@@ -9,10 +9,7 @@ const MAX_MANTISSA_DIGITS = 18;
 
 const isDigit = (char: string | undefined) => char !== undefined && char >= '0' && char <= '9';
 
-/**
- * The double `built_in_strtod` (`core/string/ustring.cpp:2365`) reads from `text`, step for step:
- * it is not correctly rounded, and the shader draws with what it gives.
- */
+/** `built_in_strtod` (ustring.cpp:2365) step for step: it is not correctly rounded. */
 export function godotStrtod(text: string): number {
   let position = 0;
   while (text[position] === ' ' || text[position] === '\t' || text[position] === '\n') position += 1;

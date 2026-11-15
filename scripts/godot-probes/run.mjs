@@ -1,16 +1,4 @@
 #!/usr/bin/env node
-/**
- * Runs every probe, the fixed-seed random programs, the operator cases, the corpus and the
- * Expression cases in Godot 4.6.3, and writes Godot's answers: `pnpm godot:probes [--check]`. Each family's answers go to
- * the ignored `tests/.godot-answers/`, where the tests and the guide read them. The committed
- * `tests/godot-answers.json` holds Godot's version, a digest of each family and the smoke subset
- * (`answerDigest.mjs`). `--check` writes the live answers but not the committed file, and exits 1
- * when the committed file differs from this run's. It needs `godot` on the path and `xvfb-run`,
- * and renders on lavapipe as `pnpm ref:godot` does. Each probe the transpiler parses also runs
- * as its printed text, and as its lowered text where the lowerings change it, and the run fails
- * when Godot answers either otherwise than the original (`printedText.mjs`).
- */
-
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/corpus.mjs';

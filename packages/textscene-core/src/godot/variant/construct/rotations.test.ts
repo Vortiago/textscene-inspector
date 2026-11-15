@@ -4,7 +4,6 @@ import { QUATERNION_IDENTITY } from '../../math/quaternion.js';
 import {
   basisQuaternion,
   checkedQuaternionFromAxisAngle,
-  isNormalized3,
   planeFromNormalPoint,
   planeFromPoints,
   quaternionArc,
@@ -13,20 +12,6 @@ import {
 } from './rotations.js';
 
 const HALF_SQRT2 = Math.SQRT1_2;
-
-describe('isNormalized3', () => {
-  it('holds a unit vector', () => {
-    expect(isNormalized3({ x: 0, y: 1, z: 0 })).toBe(true);
-  });
-
-  it('holds a vector within UNIT_EPSILON of unit length squared', () => {
-    expect(isNormalized3({ x: Math.sqrt(1.0009), y: 0, z: 0 })).toBe(true);
-  });
-
-  it('refuses a vector of another length', () => {
-    expect(isNormalized3({ x: 1, y: 1, z: 0 })).toBe(false);
-  });
-});
 
 describe('transform2DFromRotation', () => {
   it('writes the rotation into the columns and keeps the position', () => {
@@ -70,6 +55,11 @@ describe('checkedQuaternionFromAxisAngle', () => {
 
   it('refuses an axis that is not normalised with Quaternion()', () => {
     expect(checkedQuaternionFromAxisAngle({ x: 0, y: 0, z: 2 }, 1)).toEqual(QUATERNION_IDENTITY);
+  });
+
+  it('takes an axis within UNIT_EPSILON of unit length squared', () => {
+    const axis = { x: 0, y: 0, z: Math.sqrt(1.0009) };
+    expect(checkedQuaternionFromAxisAngle(axis, 1)).not.toEqual(QUATERNION_IDENTITY);
   });
 });
 

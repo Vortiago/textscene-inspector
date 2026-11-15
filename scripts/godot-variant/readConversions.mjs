@@ -1,8 +1,3 @@
-/**
- * Reads the type lists of Godot's `Variant::can_convert_strict` (variant.cpp:535): for each target
- * type, the source types it takes besides itself and NIL. A case this does not understand throws.
- */
-
 const CASE = /case (\w+): \{([\s\S]*?)\} break;/g;
 const LIST = /static const Type valid\[\] = \{([\s\S]*?)\};\s*valid_types = valid;\s*$/;
 

@@ -1,8 +1,3 @@
-/**
- * The Variant conversion operators (variant.cpp:1490-2100) a constructor applies to an argument of
- * another type, over the strict conversions `Variant::can_convert_strict` allows.
- */
-
 import { basisFromQuaternion } from '../../math/basis.js';
 import { htmlColor, namedColor } from '../../math/color.js';
 import { storedReal as f } from '../../math/real.js';
@@ -144,7 +139,7 @@ function castVector(value: Variant, type: VariantTypeName): Components {
   return Object.fromEntries(axes.map((axis) => [axis, toComponent(source[axis] ?? 0)]));
 }
 
-// A packed array element: a vector of another size or kind, a Color from a String or an int, else the default.
+// A packed element: another vector, a Color from a String or an int, else the default.
 function castOrDefault(value: Variant, type: VariantTypeName): Variant {
   if (value.type === type) return value;
   const isColorSource = type === 'COLOR' && (value.type === 'STRING' || value.type === 'INT');
@@ -252,7 +247,7 @@ function transform3DOf(value: Variant) {
 }
 
 // Projection(const Transform3D &) (projection.cpp:960): the basis columns, then the origin.
-export function projectionOf(t: {
+function projectionOf(t: {
   basis_x: Components;
   basis_y: Components;
   basis_z: Components;

@@ -1,9 +1,3 @@
-/**
- * Hand cases of Godot's Expression tokenizer and parser (expression.cpp:34, 564): each branch of
- * `_get_token` and `_parse_expression`, the precedence table and its error texts. The operator and
- * constructor edges reach the branches a random value seldom does.
- */
-
 const NUMBERS = [
   '0',
   '7',

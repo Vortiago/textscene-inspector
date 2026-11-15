@@ -1,5 +1,3 @@
-/** The comparison evaluators of variant_op.h: Less, LessEqual, Greater and GreaterEqual of each type. */
-
 import { isStringLess } from '../../string/stringOrder.js';
 import type { Variant } from '../value/variant.js';
 import { COMPONENT_VECTORS, VECTOR_ORDER } from './componentVectors.js';
@@ -38,8 +36,7 @@ function native(comparison: Comparison, a: number | bigint, b: number | bigint):
   }
 }
 
-// StringName::operator< (string_name.h:97) compares the addresses of the interned texts. Only the empty
-// name's null address and a name's own address order the same on every run.
+// string_name.h:97 orders by address: only the empty name and a name against itself order the same each run.
 function isInternedLess(a: string, b: string): boolean {
   if (a === b) return false;
   if (a === '' || b === '') return a === '';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { booleanize, cppEqual, findEntry, hashCompare, isSameKey, isZero, withEntry } from './compare.js';
+import { booleanize, cppEqual, findEntry, isSameKey, isZero, withEntry } from './compare.js';
 import { variant, type DictionaryEntry } from './value/variant.js';
 
 const int = (value: bigint) => variant('INT', value);
@@ -37,21 +37,18 @@ describe('cppEqual', () => {
   });
 });
 
-describe('hashCompare', () => {
-  it('equals NaN to NaN in a float', () => {
-    expect(hashCompare(float(Number.NaN), float(Number.NaN))).toBe(true);
+describe('the NaN rule of hash_compare', () => {
+  it('matches a NaN key to a NaN key', () => {
+    expect(isSameKey(float(Number.NaN), float(Number.NaN))).toBe(true);
   });
 
-  it('does not equal NaN to NaN when not semantic', () => {
-    expect(hashCompare(float(Number.NaN), float(Number.NaN), false)).toBe(false);
+  it('matches NaN lanes of a vector key', () => {
+    expect(isSameKey(vector2(Number.NaN, 1), vector2(Number.NaN, 1))).toBe(true);
   });
 
-  it('equals NaN lanes in a vector', () => {
-    expect(hashCompare(vector2(Number.NaN, 1), vector2(Number.NaN, 1))).toBe(true);
-  });
-
-  it('refuses two types', () => {
-    expect(hashCompare(int(1n), float(1))).toBe(false);
+  it('never equals arrays that hold NaN, as recursive_equal is not semantic', () => {
+    const array = variant('ARRAY', [float(Number.NaN)]);
+    expect(cppEqual(array, array)).toBe(false);
   });
 });
 

@@ -1,8 +1,3 @@
-/**
- * The Expression port against Godot's Expression class: every case of the set parsed and executed
- * by both, the value compared bit for bit, and each error text compared whole.
- */
-
 import { describe, expect, it } from 'vitest';
 import { runExpression } from '../../../../packages/textscene-core/src/godot/expression/execute.ts';
 import { GodotCrash } from '../../../../packages/textscene-core/src/godot/variant/cInteger.ts';
@@ -18,9 +13,9 @@ const IS_LIVE = godotAnswers().live;
 function portAnswer(text) {
   try {
     const result = runExpression(text);
-    if ('value' in result) return { verdict: 'value', text: dumpVariant(result.value) };
+    if ('executeError' in result) return { verdict: 'execute', text: result.executeError };
     if ('parseError' in result) return { verdict: 'parse', text: result.parseError };
-    return { verdict: 'execute', text: result.executeError };
+    return { verdict: 'value', text: dumpVariant(result.value) };
   } catch (error) {
     if (error instanceof GodotCrash) return { verdict: 'crash', text: '' };
     return { refusal: error.constructor.name };

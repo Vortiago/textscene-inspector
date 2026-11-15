@@ -1,12 +1,7 @@
-/**
- * `Variant::evaluate` (variant_op.cpp:1041): the evaluator registered for the operator and the two
- * operand types, from Godot's own registration table. A pair with none is invalid.
- */
-
 import { booleanize, cppEqual, isZero } from '../compare.js';
 import { variantTypeOfCpp } from '../cppType.js';
 import { OPERATOR_REGISTRATIONS } from '../registrations.generated.js';
-import { variant, type Variant, type VariantTypeName } from '../value/variant.js';
+import { NIL, variant, type Variant, type VariantTypeName } from '../value/variant.js';
 import { VARIANT_TYPE } from '../variantType.js';
 import {
   binaryArithmetic,
@@ -29,6 +24,7 @@ import {
   isInPacked,
   isInString,
 } from './containers.js';
+import { InvalidOperands, invalidWithText } from './invalidOperands.js';
 import { compare, type Comparison } from './ordering.js';
 
 export type VariantOperator = (typeof OPERATOR_REGISTRATIONS)[number][0];
@@ -47,18 +43,25 @@ const REGISTRY = new Map<string, Registration>(
 
 const bool = (value: boolean) => variant('BOOL', value);
 
-/** The result, or nothing for an invalid pair or an evaluator that sets `r_valid = false`. */
-export function evaluateOperator(operator: VariantOperator, a: Variant, b: Variant): Variant | undefined {
+/** `r_ret` and `r_valid`. A pair with no evaluator leaves Nil. */
+export interface Evaluation {
+  readonly value: Variant;
+  readonly isValid: boolean;
+}
+
+export function evaluateOperator(operator: VariantOperator, a: Variant, b: Variant): Evaluation {
   const registration = REGISTRY.get(`${operator} ${a.type} ${b.type}`);
-  if (!registration) return undefined;
-  return runEvaluator(registration, a, b);
+  if (!registration) return { value: NIL, isValid: false };
+  const result = runEvaluator(registration, a, b);
+  if (result instanceof InvalidOperands) return { value: result.value, isValid: false };
+  return { value: result, isValid: true };
 }
 
 /** `Variant::operator<` (variant.cpp:882): types order first, then OP_LESS, with no result as false. */
-export function isVariantLess(a: Variant, b: Variant): boolean {
+function isVariantLess(a: Variant, b: Variant): boolean {
   if (a.type !== b.type) return VARIANT_TYPE[a.type] < VARIANT_TYPE[b.type];
-  const result = evaluateOperator('OP_LESS', a, b);
-  return result !== undefined && booleanize(result);
+  const { value, isValid } = evaluateOperator('OP_LESS', a, b);
+  return isValid && booleanize(value);
 }
 
 const LOGIC_CLASS = /^(Nil|Bool|Int|Float|Object)X(Nil|Bool|Int|Float|Object)(Or|And|Xor)$/;
@@ -77,7 +80,11 @@ const LOGIC = {
   Xor: (a: boolean, b: boolean) => a !== b,
 };
 
-function runEvaluator({ evaluator, types }: Registration, a: Variant, b: Variant): Variant | undefined {
+const DIVISION_BY_ZERO = 'Division by zero error';
+const MODULO_BY_ZERO = 'Modulo by zero error';
+const NEGATIVE_SHIFT = 'Invalid operands for bit shifting. Only positive operands are supported.';
+
+function runEvaluator({ evaluator, types }: Registration, a: Variant, b: Variant): Variant | InvalidOperands {
   const logic = LOGIC_CLASS.exec(evaluator);
   if (logic) return bool(LOGIC[logic[3] as keyof typeof LOGIC](truthOf(a), truthOf(b)));
   const resultType = (): VariantTypeName => variantTypeOfCpp(types[0]!);
@@ -91,9 +98,9 @@ function runEvaluator({ evaluator, types }: Registration, a: Variant, b: Variant
     case 'Div':
       return binaryArithmetic('divide', a, b);
     case 'DivNZ':
-      return divideNonZero(a, b);
+      return divideNonZero(a, b) ?? invalidWithText(DIVISION_BY_ZERO);
     case 'ModNZ':
-      return moduloNonZero(a, b);
+      return moduloNonZero(a, b) ?? invalidWithText(MODULO_BY_ZERO);
     case 'Pow':
       return power(resultType(), a, b);
     case 'Neg':
@@ -105,9 +112,9 @@ function runEvaluator({ evaluator, types }: Registration, a: Variant, b: Variant
     case 'XFormInv':
       return xformInverse(a, b);
     case 'ShiftLeft':
-      return shift('left', a.value as bigint, b.value as bigint);
+      return shift('left', a.value as bigint, b.value as bigint) ?? invalidWithText(NEGATIVE_SHIFT);
     case 'ShiftRight':
-      return shift('right', a.value as bigint, b.value as bigint);
+      return shift('right', a.value as bigint, b.value as bigint) ?? invalidWithText(NEGATIVE_SHIFT);
     case 'BitAnd':
       return bitwise('and', a.value as bigint, b.value as bigint);
     case 'BitOr':
@@ -161,10 +168,10 @@ function runEvaluator({ evaluator, types }: Registration, a: Variant, b: Variant
     case 'InDictionaryHasNil':
     case 'InDictionaryHasObject':
       return bool(isInDictionary(a, b.value as never));
-    // A null Object is no base: "Invalid base object for 'in'".
+    // Every Object an expression makes is null, and a null Object is no base.
     case 'ObjectHasPropertyString':
     case 'ObjectHasPropertyStringName':
-      return undefined;
+      return invalidWithText("Invalid base object for 'in'");
     default:
       throw new Error(`expected a ported operator evaluator, got ${evaluator}`);
   }

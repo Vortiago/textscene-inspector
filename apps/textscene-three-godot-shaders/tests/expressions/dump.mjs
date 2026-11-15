@@ -1,9 +1,3 @@
-/**
- * One text for a Variant, written the same by Godot's GDScript and by the port, so a test compares
- * an expression's value bit for bit. A float is its little-endian float64 bytes, any NaN is `nan`,
- * and a string is its UTF-8 bytes.
- */
-
 const hex = (bytes) => [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 
 function dumpFloat(value) {

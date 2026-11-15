@@ -1,5 +1,3 @@
-/** `String::operator<` (ustring.cpp:428): code points compared in turn, up to the first NUL. */
-
 export function isStringLess(left: string, right: string): boolean {
   if (left.length === 0) return right.length > 0 && right.codePointAt(0) !== 0;
   return codePointDifference(left, right) < 0;

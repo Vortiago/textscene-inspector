@@ -83,10 +83,7 @@ function renderEntries(answers) {
   return lines.length === 0 ? '{}' : `{\n${lines.join(',\n')}\n${indent}}`;
 }
 
-/**
- * The text of the committed answers file, from the live records of one run: `probes` and
- * `random` keyed by probe name, the other families by case id.
- */
+/** The committed answers file: `probes` and `random` keyed by probe name, the others by case id. */
 export function renderAnswersFile(records) {
   const answers = canonicalAnswers(records);
   const families = familiesOf(answers);

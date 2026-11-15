@@ -1,9 +1,3 @@
-/**
- * Reads the constructors of Godot's `Variant::_register_variant_constructors`
- * (variant_construct.cpp:59) in their order, which `Variant::construct` tries first to last.
- * A statement this does not understand throws, so a row is never dropped in silence.
- */
-
 import { lineAt } from '../godot-shader-language/cppText.mjs';
 import { splitArguments } from './cppArguments.mjs';
 

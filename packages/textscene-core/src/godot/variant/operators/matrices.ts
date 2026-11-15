@@ -1,9 +1,3 @@
-/**
- * The C++ operators of Godot's matrix types, in `real_t` float: Transform2D (transform_2d.cpp),
- * Basis (basis.h), Transform3D (transform_3d.h), Projection (projection.cpp) and Quaternion's
- * product and rotation (quaternion.h).
- */
-
 import type { Aabb } from '../../math/aabb.js';
 import { basisInvert, type BasisComponents } from '../../math/basis.js';
 import { basisXform } from '../../math/basisFloat.js';

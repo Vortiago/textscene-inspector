@@ -1,5 +1,3 @@
-/** The built type and the argument types of each constructor registration (variant_construct.cpp). */
-
 import { variantTypeOfCpp as cpp } from '../cppType.js';
 import { CONSTRUCTOR_REGISTRATIONS } from '../registrations.generated.js';
 import type { VariantTypeName } from '../value/variant.js';

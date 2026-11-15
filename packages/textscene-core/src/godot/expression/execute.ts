@@ -1,5 +1,3 @@
-/** `Expression::_execute` (expression.cpp:1239) with no inputs and no base instance, as the shader preprocessor runs it. */
-
 import { withEntry } from '../variant/compare.js';
 import { construct } from '../variant/construct/construct.js';
 import { evaluateOperator } from '../variant/operators/evaluate.js';
@@ -16,10 +14,22 @@ import { parseExpression, type ExpressionNode, type Operator } from './parser.js
 /** An expression node whose Godot behaviour this port does not have yet. */
 export class UnportedExpression extends Error {}
 
-class ExecuteError extends Error {}
+// `value` is the `r_ret` the failed node leaves, which `execute` returns when that node is the root.
+class ExecuteError extends Error {
+  constructor(
+    message: string,
+    readonly node: ExpressionNode,
+    readonly value: Variant = NIL
+  ) {
+    super(message);
+  }
+}
 
+/** A failed execution still has a value: Nil, or the text an operator left, such as a division by zero. */
 export type ExpressionResult =
-  { readonly value: Variant } | { readonly parseError: string } | { readonly executeError: string };
+  | { readonly value: Variant }
+  | { readonly parseError: string }
+  | { readonly executeError: string; readonly value: Variant };
 
 // Variant::get_operator_name (variant_op.cpp:1081).
 const OPERATOR_NAME: Readonly<Record<Operator, string>> = {
@@ -55,10 +65,13 @@ const typeName = (type: VariantTypeName) => variantTypeName(VARIANT_TYPE[type])!
 function evaluate(node: Extract<ExpressionNode, { kind: 'operator' }>): Variant {
   const a = execute(node.left);
   const b = node.right ? execute(node.right) : NIL;
-  const result = evaluateOperator(node.operator, a, b);
-  if (result) return result;
+  const { value, isValid } = evaluateOperator(node.operator, a, b);
+  if (isValid) return value;
+  const operands = `${typeName(a.type)} and ${typeName(b.type)}`;
   throw new ExecuteError(
-    `Invalid operands to operator ${OPERATOR_NAME[node.operator]}, ${typeName(a.type)} and ${typeName(b.type)}.`
+    `Invalid operands to operator ${OPERATOR_NAME[node.operator]}, ${operands}.`,
+    node,
+    value
   );
 }
 
@@ -74,17 +87,17 @@ function dictionaryOf(nodes: readonly ExpressionNode[]): Variant {
 function constructed(node: Extract<ExpressionNode, { kind: 'constructor' }>): Variant {
   const value = construct(node.type, node.arguments.map(execute));
   if (value) return value;
-  throw new ExecuteError(`Invalid arguments to construct '${typeName(node.type)}'`);
+  throw new ExecuteError(`Invalid arguments to construct '${typeName(node.type)}'`, node);
 }
 
 function execute(node: ExpressionNode): Variant {
   switch (node.kind) {
     case 'input':
-      throw new ExecuteError(`Invalid input ${node.index} (not passed) in expression`);
+      throw new ExecuteError(`Invalid input ${node.index} (not passed) in expression`, node);
     case 'constant':
       return node.value;
     case 'self':
-      throw new ExecuteError("self can't be used because instance is null (not passed)");
+      throw new ExecuteError("self can't be used because instance is null (not passed)", node);
     case 'operator':
       return evaluate(node);
     case 'array':
@@ -110,17 +123,15 @@ function execute(node: ExpressionNode): Variant {
   }
 }
 
-/**
- * The text parsed and executed as Godot's Expression class does it. A text that crashes Godot throws
- * GodotCrash, and a node this port does not have yet throws UnportedExpression.
- */
+/** Throws GodotCrash for a text that crashes Godot, and UnportedExpression for a node not ported. */
 export function runExpression(text: string): ExpressionResult {
   const parsed = parseExpression(text);
   if ('error' in parsed) return { parseError: parsed.error };
   try {
     return { value: execute(parsed.root) };
   } catch (error) {
-    if (error instanceof ExecuteError) return { executeError: error.message };
+    if (error instanceof ExecuteError)
+      return { executeError: error.message, value: error.node === parsed.root ? error.value : NIL };
     throw error;
   }
 }

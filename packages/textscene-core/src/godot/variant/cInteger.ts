@@ -1,5 +1,3 @@
-/** The C integer and float casts of x86-64 that a Variant operator or constructor applies. */
-
 import { INT32_MIN } from './intWidth.js';
 
 export const INT64_MAX = (1n << 63n) - 1n;

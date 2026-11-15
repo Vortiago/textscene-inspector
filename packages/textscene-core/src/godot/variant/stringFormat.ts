@@ -1,5 +1,3 @@
-/** `String::sprintf` (ustring.cpp:5185), the `%` operator of a String: each placeholder takes the next value. */
-
 import { stringNum } from '../string/stringNumber.js';
 import { doubleToInt32, doubleToInt64, wrapInt32 } from './cInteger.js';
 import { stringify } from './stringify.js';

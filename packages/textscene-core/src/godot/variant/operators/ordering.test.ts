@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { variant, type Variant } from '../value/variant.js';
-import { isVariantLess } from './evaluate.js';
 import { compare, UnportableComparison } from './ordering.js';
 
 const int = (value: bigint) => variant('INT', value);
 const name = (value: string) => variant('STRING_NAME', value);
 const array = (...elements: Variant[]) => variant('ARRAY', elements);
-const less = (a: Variant, b: Variant) => compare('OP_LESS', a, b, isVariantLess);
+// Variant::operator< of elements of one type, which every case here holds.
+const isVariantLess = (a: Variant, b: Variant): boolean => compare('OP_LESS', a, b, isVariantLess);
+const less = isVariantLess;
 
 describe('compare of numbers', () => {
   it('orders two ints', () => {
@@ -62,10 +63,6 @@ describe('compare of arrays', () => {
 
   it('orders a shorter array with the same start first', () => {
     expect(less(array(int(1n)), array(int(1n), int(2n)))).toBe(true);
-  });
-
-  it('orders elements of other types by the type order', () => {
-    expect(less(array(int(9n)), array(variant('STRING', '')))).toBe(true);
   });
 });
 

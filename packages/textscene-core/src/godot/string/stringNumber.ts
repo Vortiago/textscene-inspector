@@ -1,5 +1,3 @@
-/** `String::num` and `String::num_real` (ustring.cpp:1405, 1572): a double written as Godot writes it. */
-
 import { doubleToInt64 } from '../variant/cInteger.js';
 
 /** The decimals `String::num` writes by default (`core/string/ustring.cpp:1419`). */
@@ -11,10 +9,7 @@ const FLOAT_DECIMALS = 6;
 /** The most decimals `String::num` writes (`ustring.cpp:61`). */
 const MAX_DECIMALS = 32;
 
-/**
- * `String::num(value, decimals)`: `printf("%.<n>lf")`, the zeros after the first decimal trimmed.
- * A negative `decimals` is Godot's `rtos`: 14 less one for each power of ten over 10.
- */
+/** `String::num`: a negative `decimals` is `rtos`, 14 less one for each power of ten over 10. */
 export function stringNum(value: number, decimals = -1): string {
   if (Number.isNaN(value)) return 'nan';
   if (!Number.isFinite(value)) return value < 0 ? '-inf' : 'inf';
@@ -55,11 +50,7 @@ function trimZeros(text: string): string {
   return trimmed.endsWith('.') ? `${trimmed}0` : trimmed;
 }
 
-/**
- * `printf("%.<decimals>lf", value)`: the exact decimal value of the double, rounded half to even
- * at `decimals` places, as glibc rounds. `toFixed` rounds an exact half up, so it differs on
- * those halves.
- */
+// glibc's `%.<n>lf` rounds an exact half to even, and `toFixed` rounds it up.
 function fixedPoint(value: number, decimals: number): string {
   const negative = value < 0 || Object.is(value, -0);
   const { numerator, denominator } = exactRatio(Math.abs(value));

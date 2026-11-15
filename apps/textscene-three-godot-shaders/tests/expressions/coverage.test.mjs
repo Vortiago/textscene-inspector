@@ -1,8 +1,3 @@
-/**
- * The Expression set holds every operator registration and every constructor registration an
- * Expression text can reach, and Godot answers each one with a value at least once on a live run.
- */
-
 import { describe, expect, it } from 'vitest';
 import { constructorFor } from '../../../../packages/textscene-core/src/godot/variant/construct/construct.ts';
 import { constructorSignature } from '../../../../packages/textscene-core/src/godot/variant/construct/constructorSignature.ts';

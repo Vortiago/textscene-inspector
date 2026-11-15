@@ -50,7 +50,7 @@ export function quaternionInverse({ x, y, z, w }: Quaternion): Quaternion {
   return { x: f(-x), y: f(-y), z: f(-z), w };
 }
 
-/** `Quaternion::normalized` (quaternion.cpp:69): the four components times `1 / length`, as `operator/` scales. */
+/** `Quaternion::normalized` (quaternion.cpp:69): each component times `1 / length`, as `operator/` does. */
 export function normalizedQuaternion(q: Quaternion): Quaternion {
   const { x, y, z, w } = q;
   const inverseLength = f(1 / f(Math.sqrt(quaternionDot(q, q))));

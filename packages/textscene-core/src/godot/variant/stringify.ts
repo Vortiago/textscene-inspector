@@ -1,5 +1,3 @@
-/** `Variant::stringify` (variant.cpp:1603): the text `str()`, `%s` and `print` write for a value. */
-
 import { numReal, numRealFloat, stringNum } from '../string/stringNumber.js';
 import type { Variant } from './value/variant.js';
 

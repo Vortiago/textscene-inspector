@@ -1,8 +1,3 @@
-/**
- * Asks Godot's Expression class for each text, as the shader preprocessor runs it
- * (shader_preprocessor.cpp:494): parse with no input names, then execute with no inputs and no base.
- */
-
 import { printedField, requireGodotVersion, runGodotScriptToExit } from '../godot-probes/godotRun.mjs';
 import { DUMP_GDSCRIPT } from '../../apps/textscene-three-godot-shaders/tests/expressions/dump.mjs';
 
@@ -56,11 +51,7 @@ async function runFrom(texts, first) {
   return { godot, answers: parseExpressionOutput(stdout, answered), crashed: first + answered };
 }
 
-/**
- * Godot's version and its `{ verdict, text }` for each of `texts`, in order. A text that crashes
- * Godot, such as an int64 division that raises SIGFPE, answers `crash`, and the run goes on from
- * the next text.
- */
+/** A text that crashes Godot, such as an int64 division that raises SIGFPE, answers `crash`. */
 async function askGodot(texts) {
   const answers = [];
   let godot;

@@ -48,15 +48,41 @@ describe('directives', () => {
     expect(preprocess('#define K 1\n#pragma disable_preprocessor\n#define L\nK')).toBe('\n\n#define L\nK');
   });
 
-  it('points the refusal of an indented #if at its #', () => {
-    const error = errorOf(() => preprocess('\t  #if 1\n#endif'));
+  it('takes the first #if or #elif branch whose condition is true', () => {
+    const code = '#define N 2\n#if N == 1\na\n#elif N == 2\nb\n#elif N > 1\nc\n#else\nd\n#endif\n';
+    expect(preprocess(code).replace(/\s+/g, ' ').trim()).toBe('b');
+  });
+
+  it('evaluates an #elif after a taken branch, so its error still shows', () => {
+    expect(errorOf(() => preprocess('#if 1\n#elif\n#endif\n'))).toMatchObject({
+      reason: 'Missing condition.',
+      line: 1,
+    });
+  });
+
+  it('points the refusal of an indented #if with a utility function at its #', () => {
+    const error = errorOf(() => preprocess('\t  #if abs(1)\n#endif'));
     expect((error as ShadingLanguageError).position).toEqual({ file: '', line: 1, column: 4 });
   });
 
-  it('refuses #if as not transpiled yet, with its row', () => {
-    const error = errorOf(() => preprocess('#if 1\n#endif'));
-    expect(error).toBeInstanceOf(ShadingLanguageError);
-    expect((error as ShadingLanguageError).owner).toBe('#1828');
+  it('refuses a utility function in a condition as not transpiled yet, with its row', () => {
+    const error = errorOf(() => preprocess('#if abs(1)\n#endif'));
+    expect(error).toMatchObject({
+      reason: "'#if abs(1): the utility function abs' is not transpiled yet (#1828)",
+      owner: '#1828',
+    });
+  });
+
+  it('refuses a condition that crashes Godot', () => {
+    const error = errorOf(() => preprocess('#if (-9223372036854775807 - 1) / -1\n#endif'));
+    expect(error).toMatchObject({ reason: expect.stringMatching(/^Godot crashes on #if /) });
+  });
+
+  it('refuses an #elif after #else', () => {
+    expect(errorOf(() => preprocess('#if 0\n#else\n#elif 1\n#endif\n'))).toMatchObject({
+      reason: "Unmatched 'elif' directive.",
+      line: 2,
+    });
   });
 });
 

@@ -1,5 +1,3 @@
-/** The cases the port refuses, by id, with the work that ports each or the reason no port can. */
-
 const UTILITY_FUNCTIONS = 'the utility functions slice ports the call';
 const MEMBERS = 'the methods and members slice ports the index';
 const INTERNED_ADDRESS =

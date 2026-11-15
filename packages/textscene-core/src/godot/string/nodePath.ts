@@ -225,10 +225,7 @@ export function unclaimedUniqueNames(
   );
 }
 
-/**
- * `String(NodePath(path))` (node_path.cpp:170, 394): the names without empty runs, then the
- * subnames after `:`. An empty subname before the last fails the constructor, which leaves `""`.
- */
+/** `String(NodePath(path))` (node_path.cpp:170, 394), or `""` when an empty subname fails. */
 export function nodePathText(path: string): string {
   const colon = path.indexOf(':');
   const subnames = colon < 0 ? [] : path.slice(colon + 1).split(':');

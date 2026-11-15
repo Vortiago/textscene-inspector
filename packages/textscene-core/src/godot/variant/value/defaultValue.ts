@@ -1,5 +1,3 @@
-/** The value each Variant type's C++ default constructor gives, as `Variant::construct` with no arguments makes it. */
-
 import { variant, type Variant, type VariantTypeName, type VariantValues } from './variant.js';
 
 const ZERO2 = { x: 0, y: 0 };

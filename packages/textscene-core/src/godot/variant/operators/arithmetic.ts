@@ -1,8 +1,3 @@
-/**
- * The arithmetic evaluators of variant_op.h: `R(a op b)` for each registered type pair, with the
- * C++ operator of the operand types, and the zero checks of DivNZ and ModNZ.
- */
-
 import type { Aabb } from '../../math/aabb.js';
 import { basisMultiply, type BasisComponents } from '../../math/basis.js';
 import { basisXform } from '../../math/basisFloat.js';

@@ -1,5 +1,3 @@
-/** Godot's rotation constructors in `real_t` float, with the MATH_CHECKS refusals of the editor build. */
-
 import {
   basisColumn,
   basisDeterminantOf,
@@ -39,7 +37,7 @@ const dot = (a: V3, b: V3) => vector3Dot(tuple(a), tuple(b));
 // Math::is_equal_approx(a, b, tolerance) (math_funcs.h:520).
 const isEqualWithin = (a: number, b: number, tolerance: number) => a === b || Math.abs(f(a - b)) < tolerance;
 
-export const isNormalized3 = (v: V3) => isEqualWithin(vector3LengthSquared(v.x, v.y, v.z), 1, UNIT_EPSILON);
+const isNormalized3 = (v: V3) => isEqualWithin(vector3LengthSquared(v.x, v.y, v.z), 1, UNIT_EPSILON);
 
 export function transform2DFromRotation(rotation: number, position: Readonly<Vector2>): Transform2DColumns {
   const cr = cosf(rotation);
@@ -81,7 +79,7 @@ function anyPerpendicular(v: V3): Vector3 {
   return normalized(cross(v, isRight ? { x: 1, y: 0, z: 0 } : { x: 0, y: 1, z: 0 }));
 }
 
-/** The shortest arc from `from` to `to`, normalised. MATH_CHECKS refuses a zero vector and leaves Quaternion(). */
+/** The shortest arc, normalised. MATH_CHECKS refuses a zero vector and leaves Quaternion(). */
 export function quaternionArc(from: V3, to: V3): Quaternion {
   if (isZeroApprox3(from) || isZeroApprox3(to)) return QUATERNION_IDENTITY;
   return normalizedQuaternion(arcOf(from, to));

@@ -1,9 +1,3 @@
-/**
- * Expression texts that build a value of each Variant type, picked by a seeded random source. The
- * picks hold the edge values a Variant operator treats apart: zero, negative zero, int64 and int32
- * limits, shift counts past 63, infinities and NaN.
- */
-
 const INTS = [
   '0',
   '1',
