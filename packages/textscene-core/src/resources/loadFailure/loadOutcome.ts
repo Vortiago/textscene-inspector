@@ -2,7 +2,7 @@
 
 import { isGodotTextResourcePath } from '../../godot/project/resourceFormats';
 
-export type LoadFailureCause = 'missing' | 'unparsed';
+export type LoadFailureCause = 'missing' | 'unparsed' | 'unimported';
 
 export interface LoadFailure {
   readonly isFailed: true;
@@ -17,6 +17,8 @@ export interface LoadFacts {
   /** The files whose failure fails the text file at `path`, or null where it is missing or does not parse. */
   readonly failingReads: (path: string) => Promise<readonly string[] | null>;
   readonly exists: (path: string) => Promise<boolean>;
+  /** Whether the import sidecar of the file at `path` records a failed import. */
+  readonly isImportFailed: (path: string) => Promise<boolean>;
 }
 
 const LOADS: LoadOutcome = Object.freeze({ isFailed: false });
@@ -28,12 +30,17 @@ export async function loadOutcome(
 ): Promise<LoadOutcome> {
   // Godot refuses a cycle with its own error, which the previewer does not report.
   if (stack.includes(path)) return LOADS;
-  if (!isGodotTextResourcePath(path)) return (await facts.exists(path)) ? LOADS : failed(path, 'missing');
+  if (!isGodotTextResourcePath(path)) return importedOutcome(path, facts);
   const reads = await facts.failingReads(path);
   if (reads === null) return failed(path, (await facts.exists(path)) ? 'unparsed' : 'missing');
   const outcomes = await Promise.all(reads.map((read) => loadOutcome(read, facts, [...stack, path])));
   const failure = outcomes.find((outcome) => outcome.isFailed);
   return failure?.isFailed ? { ...failure, chain: [path, ...failure.chain] } : LOADS;
+}
+
+async function importedOutcome(path: string, facts: LoadFacts): Promise<LoadOutcome> {
+  if (!(await facts.exists(path))) return failed(path, 'missing');
+  return (await facts.isImportFailed(path)) ? failed(path, 'unimported') : LOADS;
 }
 
 function failed(path: string, cause: LoadFailureCause): LoadFailure {

@@ -39,6 +39,32 @@ describe('ResourceLoader.loadOutcomes', () => {
     expect(await outcomeOf(loader, 'res://main.tscn')).toEqual({ isFailed: false });
   });
 
+  it('fails a scene whose image has a sidecar of a failed import', async () => {
+    const loader = loaderServing({
+      'res://main.tscn': ATLAS_SCENE,
+      'res://art/icon.png': 'not a png',
+      'res://art/icon.png.import': '[remap]\nimporter="texture"\ntype="CompressedTexture2D"\nvalid=false\n',
+    });
+
+    expect(await outcomeOf(loader, 'res://main.tscn')).toEqual({
+      isFailed: true,
+      chain: ['res://main.tscn', 'res://art/icon.png'],
+      cause: 'unimported',
+    });
+  });
+
+  it('fails a scene whose [sub_resource] reads a .tres with no [gd_resource] header', async () => {
+    const loader = loaderServing({
+      'res://main.tscn': ATLAS_SCENE.replace('res://art/icon.png', 'res://atlas.tres'),
+      'res://atlas.tres': '[resource]\natlas = null\n',
+    });
+
+    expect(await outcomeOf(loader, 'res://main.tscn')).toMatchObject({
+      chain: ['res://main.tscn', 'res://atlas.tres'],
+      cause: 'unparsed',
+    });
+  });
+
   it('fails a scene through the .tres its [sub_resource] reads', async () => {
     const loader = loaderServing({
       'res://main.tscn': ATLAS_SCENE.replace('res://art/icon.png', 'res://atlas.tres'),

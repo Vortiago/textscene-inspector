@@ -20,6 +20,12 @@ export function godotFailureLine(
     : `Parse Error: Parse error. [Resource file ${scene.path}]`;
 }
 
+const CAUSE_TEXT: Record<LoadFailureCause, string> = {
+  missing: 'missing',
+  unparsed: 'does not parse',
+  unimported: 'does not import',
+};
+
 export function failureChainText(chain: readonly string[], cause: LoadFailureCause): string {
-  return `${chain.join(' → ')} (${cause === 'missing' ? 'missing' : 'does not parse'})`;
+  return `${chain.join(' → ')} (${CAUSE_TEXT[cause]})`;
 }

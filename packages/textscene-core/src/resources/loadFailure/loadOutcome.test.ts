@@ -9,6 +9,7 @@ function factsOver(
   return {
     failingReads: async (path) => textFiles[path] ?? null,
     exists: async (path) => path in textFiles || otherFiles.includes(path),
+    isImportFailed: async () => false,
   };
 }
 
@@ -45,12 +46,26 @@ describe('loadOutcome', () => {
     const facts: LoadFacts = {
       failingReads: async (path) => (path === 'res://main.tscn' ? ['res://broken.tres'] : null),
       exists: async () => true,
+      isImportFailed: async () => false,
     };
 
     expect(await loadOutcome('res://main.tscn', facts)).toEqual({
       isFailed: true,
       chain: ['res://main.tscn', 'res://broken.tres'],
       cause: 'unparsed',
+    });
+  });
+
+  it('fails a text file that reads an image whose import failed', async () => {
+    const facts: LoadFacts = {
+      ...factsOver({ 'res://main.tscn': ['res://corrupt.png'] }, ['res://corrupt.png']),
+      isImportFailed: async (path) => path === 'res://corrupt.png',
+    };
+
+    expect(await loadOutcome('res://main.tscn', facts)).toEqual({
+      isFailed: true,
+      chain: ['res://main.tscn', 'res://corrupt.png'],
+      cause: 'unimported',
     });
   });
 

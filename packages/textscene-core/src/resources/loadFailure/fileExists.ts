@@ -13,8 +13,17 @@ export function folderOf(path: string): string {
  * host that cannot list, which finds every file, so no failure is claimed that the host cannot see.
  */
 export function existsInListing(path: string, listing: DirectoryListing | null): boolean {
-  if (listing === null) return true;
-  if (listing.kind === 'missing') return false;
-  const name = path.slice(path.lastIndexOf('/') + 1);
-  return listing.entries.some((entry) => entry.name === name || entry.name === importSidecarPath(name));
+  return listing === null || listsName(listing, fileName(path)) || listsImportSidecar(path, listing);
+}
+
+export function listsImportSidecar(path: string, listing: DirectoryListing | null): boolean {
+  return listing !== null && listsName(listing, importSidecarPath(fileName(path)));
+}
+
+function listsName(listing: DirectoryListing, name: string): boolean {
+  return listing.kind === 'listed' && listing.entries.some((entry) => entry.name === name);
+}
+
+function fileName(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1);
 }
