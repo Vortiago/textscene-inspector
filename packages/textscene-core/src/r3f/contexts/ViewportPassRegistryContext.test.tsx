@@ -145,6 +145,31 @@ describe('<ViewportPassOrchestrator>', () => {
     expect(order).toEqual(['a', 'b']);
   });
 
+  it('keeps the tree order when a pass registers again', async () => {
+    const order: string[] = [];
+    const first: TreeOrder = [0];
+    const second: TreeOrder = [1];
+    const passB: ViewportPass = { dependsOn: [], render: () => order.push('b') };
+    function Passes({ passA }: { passA: ViewportPass }) {
+      return (
+        <ViewportPassProvider>
+          <Registrar path="a" pass={passA} />
+          <Registrar path="b" pass={passB} />
+          <Placer path="a" order={first} />
+          <Placer path="b" order={second} />
+          <ViewportPassOrchestrator />
+        </ViewportPassProvider>
+      );
+    }
+    const renderer = await ReactThreeTestRenderer.create(
+      <Passes passA={{ dependsOn: [], render: () => order.push('a') }} />
+    );
+    // A new pass object, as a resized target makes: the registry drops `a` and adds it last.
+    await renderer.update(<Passes passA={{ dependsOn: [], render: () => order.push('a') }} />);
+    await renderer.advanceFrames(1, 16);
+    expect(order).toEqual(['a', 'b']);
+  });
+
   it('keeps a node placed while another canvas still places it', async () => {
     const order: string[] = [];
     const passA: ViewportPass = { dependsOn: [], render: () => order.push('a') };
