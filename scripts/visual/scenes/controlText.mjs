@@ -212,6 +212,7 @@ export const CONTROL_TEXT_SCENES = [
   { name: 'label-fill-paragraphs', file: 'unit-label-fill-paragraphs.tscn' },
   { name: 'label-tab-without-stop', file: 'unit-label-tab-without-stop.tscn' },
   { name: 'label-fill-trim', file: 'unit-label-fill-trim.tscn' },
+  { name: 'text-line-break', file: 'unit-text-line-break.tscn' },
   // The caret an `editable = false` field still draws.
   { name: 'text-edit-caret-readonly', file: 'unit-text-edit-caret-readonly.tscn' },
   // A wrapped row's step-in.
