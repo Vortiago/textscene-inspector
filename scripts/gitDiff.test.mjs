@@ -40,6 +40,16 @@ describe('addedLines', () => {
     expect(at(['+++ b/src/a.ts', '@@ -3,2 +2,0 @@', '-old', '-older'].join('\n'))).toEqual([]);
   });
 
+  it('unquotes a path git writes in C style', () => {
+    const diff = ['+++ "b/src/a\\"b.ts"', '@@ -0,0 +1 @@', '+one'].join('\n');
+    expect(at(diff)).toEqual(['src/a"b.ts:1']);
+  });
+
+  it('unquotes octal bytes and keeps an unescaped non-ASCII path', () => {
+    const diff = ['+++ "b/\\303\\270 æ.ts"', '@@ -0,0 +1 @@', '+one'].join('\n');
+    expect(at(diff)).toEqual(['ø æ.ts:1']);
+  });
+
   it('reads nothing from an empty diff', () => {
     expect(addedLines('')).toEqual([]);
   });

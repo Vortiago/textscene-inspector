@@ -60,9 +60,19 @@ describe('commentBlocks', () => {
     expect(block.isFileHeader).toBe(true);
   });
 
-  it('marks a comment that sits on the first statement as no file header', () => {
-    const [block] = commentBlocks('file.ts', '// Registers the parsers.\nimport "./register";\n');
+  it('marks a comment that sits on the first import as the file header', () => {
+    const [block] = commentBlocks('file.ts', '// The parser module.\nimport x from "x";\n');
+    expect(block.isFileHeader).toBe(true);
+  });
+
+  it('marks a comment that sits on a first declaration as no file header', () => {
+    const [block] = commentBlocks('file.ts', '/** Why the limit is 3. */\nconst LIMIT = 3;\n');
     expect(block.isFileHeader).toBe(false);
+  });
+
+  it('skips comment syntax in JSX text between real comments', () => {
+    const text = 'const el = (\n  <p>\n    {/* A. */}\n    // no\n    {/* B. */}\n  </p>\n);\n';
+    expect(blocksOf(text, 'file.tsx').map((block) => block.lines)).toEqual([['/* A. */'], ['/* B. */']]);
   });
 
   it('marks a comment after the first code as no file header', () => {
