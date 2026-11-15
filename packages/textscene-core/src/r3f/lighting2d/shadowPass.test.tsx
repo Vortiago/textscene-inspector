@@ -323,7 +323,7 @@ describe('one alpha over both buffers', () => {
     const drawn = await drawnFor(renderer, 'Surface', 'uLightList');
     expect(drawn).toHaveLength(1);
     expect((drawn[0]!.material as THREE.ShaderMaterial).fragmentShader).toContain(
-      'writeShadowedLight(cookie.rgb * uColor * uEnergy, cookie.a, shadowFraction());'
+      'writeShadowedLight(cookie.rgb * uColor * uAlphaEnergy, cookie.a, shadowFraction());'
     );
   });
 

@@ -13,8 +13,8 @@ import type { BitmapFont, FontFileResource, FontLoaderFn, FontResource } from '.
 
 /**
  * The `FontResource` that `section`, loaded from `path`, decodes to. A scene's own inline
- * Font never comes here: `resolveInlineFontResource` resolves it synchronously, never
- * through the resource event bus.
+ * Font never comes here: the `FONT` kind decodes it from its text, never through the
+ * resource event bus.
  */
 export async function buildFontResource(
   path: string,

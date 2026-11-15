@@ -156,15 +156,16 @@ describe('a reader that awaits its font', () => {
   );
 });
 
-/** A painter of a Label in the solve tree: it reads the font file through its node, once the file is there. */
-function usePaintedLabel(fake: FakeResourceLoader): number {
-  const forest = useBuildSolveTree(LABEL, [], []);
-  const font = fake.fonts.getCached(FONT_PATH);
+/** A painter of a Label in the solve tree: it reads the font the solve read for its node, once the file is there. */
+function usePaintedLabel(): number {
+  const forest = useBuildSolveTree(LABEL, [FONT_REFERENCE], []);
+  const font = forest.tree[0]!.fontOverrides.font;
   if (font) peekSceneFontMetrics(forest.tree[0]!.settledFonts, font, 'Label');
   return forest.generation;
 }
 
-const LABEL = [node('Label')];
+/** A Label whose font override names the font file, so the solve reads the file and runs again once it loads. */
+const LABEL = [node('Label', { themeOverrideFonts: { font: 'ExtResource("font")' } })];
 
 describe('two previews that read one font', () => {
   it('renders the solve tree of one preview 0 times for the settle of that font in the other', async () => {
@@ -172,12 +173,12 @@ describe('two previews that read one font', () => {
     const first = createFakeResourceLoader({ loadFace: firstFaces.load });
     const second = createFakeResourceLoader({ loadFace: secondFaces.load });
     const font = trueTypeFontFile();
-    const firstPreview = renderHook(() => usePaintedLabel(first), { wrapper: previewOf(first) });
+    const firstPreview = renderHook(() => usePaintedLabel(), { wrapper: previewOf(first) });
     let secondRenders = 0;
     renderHook(
       () => {
         secondRenders += 1;
-        return usePaintedLabel(second);
+        return usePaintedLabel();
       },
       { wrapper: previewOf(second) }
     );

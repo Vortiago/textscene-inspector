@@ -102,7 +102,7 @@ describe('useCsgGeometryContext', () => {
     const result = renderSetup(ROOT, fake);
     act(() => fake.resources._fail(ROCK, 'gone'));
     expect(result.current.setup.isLoading).toBe(false);
-    expect(result.current.setup.context.loadedFile(ROCK)).toBeUndefined();
+    expect(result.current.setup.context.loadedFile(ROCK)).toBeNull();
     expect(result.current.missing.has(ROCK)).toBe(true);
   });
 

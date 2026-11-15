@@ -8,7 +8,8 @@ import { useCallback } from 'react';
 import type { ProjectFonts } from './fonts/font/projectFonts';
 import type { FontResource } from './fonts/font/types';
 import type { LoadedFile, LoadedFont } from './scopedResource';
-import { FONT_FILES, useCachedFiles, useLoadedFiles } from './useLoadedFiles';
+import { FONT_FILES } from './fileKinds';
+import { useCachedFiles, useLoadedFiles } from './useLoadedFiles';
 import { useProjectFonts } from './useProjectFonts';
 
 export interface LoadedFilesAndFonts {

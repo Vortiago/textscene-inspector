@@ -1,8 +1,8 @@
 /**
- * A 2D canvas painter spreads `canvasItemFacing()` and never spells
- * `THREE.DoubleSide`, so `forceSinglePass` cannot be left out. A check for both
- * halves would have to model spreads. A source scan reaches every painter, and the
- * factories answer for the imperatively built materials.
+ * A 2D canvas painter spreads `canvasItemFacing()` and never spells `THREE.DoubleSide`, so
+ * `forceSinglePass` cannot be left out. A check for both halves would have to model spreads, so a
+ * source scan reaches every painter and the factories answer for the imperatively built materials.
+ * The canvas mesh body owns neither the Control painters nor those materials, so the scan stays whole.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

@@ -1,8 +1,8 @@
 /**
  * The quad materials a PointLight2D adds to the canvas light accumulator: Godot's `light_color`,
- * `rgb = cookie.rgb * color * energy` on the raw cookie texels, unclamped, and `a = cookie.a` raw,
- * since the alpha is both the blend factor and, summed, the Light Only mask. The GLSL is in
- * `lightQuadShaders.ts`.
+ * `rgb = cookie.rgb * color.rgb * color.a * energy` on the raw cookie texels, unclamped, and
+ * `a = cookie.a` raw, since the alpha is both the blend factor and, summed, the Light Only mask.
+ * The GLSL is in `lightQuadShaders.ts`.
  */
 /*
  * Portions ported from Godot Engine (MIT).
@@ -98,9 +98,9 @@ export function createLightQuadMaterial({
         uCookie: { value: cookie },
         uCookieEdgeFade: { value: edgeFade(cookie) },
         uColor: { value: new THREE.Vector3(color.r, color.g, color.b) },
-        // Applied to the raw sRGB texels, Godot's canvas space: scaling a linear colour raises it
-        // only by `energy^(1/2.2)` once re-encoded.
-        uEnergy: { value: energy },
+        // Godot packs the energy into the colour's alpha (`renderer_canvas_render_rd.cpp:626`) and
+        // scales the light by it (`canvas.glsl:794`), on the raw sRGB texels of its canvas space.
+        uAlphaEnergy: { value: color.a * energy },
         ...(shadow ? shadowedLightUniforms(shadow.shadowColor) : {}),
         ...sampling?.uniforms,
       },

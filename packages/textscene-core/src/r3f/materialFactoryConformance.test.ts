@@ -151,7 +151,7 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the composite rect: one material per group buffer, memoised on the buffer and disposed on replacement; the group colour travels as a uniform',
   'packages/textscene-core/src/nodes/2d/pathfollow2d/Component.tsx':
     'spreads the sampled curve transform onto a `<group>`, which has no material slot',
-  'packages/textscene-core/src/nodes/2d/pointlight2d/Component.tsx':
+  'packages/textscene-core/src/r3f/lighting2d/PointLightQuads.tsx':
     'the light quad: one material per light per parameter set, memoised on every input and disposed on replacement, so a changed input arrives as a new material',
   'packages/textscene-core/src/nodes/3d/csg/CsgPrimitive.tsx':
     'spreads the shared Node3D transform bag onto a `<group>`, which has no material slot',
