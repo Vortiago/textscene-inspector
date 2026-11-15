@@ -37,7 +37,7 @@ function createAtlas(size: number): THREE.WebGLRenderTarget {
   });
 }
 
-/** A side for the atlas before any viewport holds it. Any size serves: the first holder resizes it. */
+/** The atlas's side while no viewport holds it: lit programs sample it with no slot drawn. */
 const UNHELD_SIZE = 1;
 
 /**
@@ -47,11 +47,7 @@ const UNHELD_SIZE = 1;
 const atlas =
   atlasTargetOf(installedUniformValue(POSITIONAL_SHADOW_ATLAS_UNIFORM)) ?? createAtlas(UNHELD_SIZE);
 
-/**
- * Each holder's atlas side. Written only by `holdPositionalShadowAtlas` and
- * `releasePositionalShadowAtlas`. The atlas takes the largest side, and frees its GPU memory when the
- * last holder lets go.
- */
+/** Each holder's atlas side. Written only by the hold and the release below. */
 const holders = new Map<object, number>();
 
 /** The depth texture every lit program samples. */
@@ -69,10 +65,7 @@ export function positionalShadowAtlas(): THREE.WebGLRenderTarget {
   return atlas;
 }
 
-/**
- * Holds the atlas for a viewport whose atlas is `size` texels square. Every viewport shares the one
- * texture: each render draws its own slots before it samples them.
- */
+/** Holds the atlas for a viewport whose atlas is `size` texels square and whose lights hold slots. */
 export function holdPositionalShadowAtlas(holder: object, size: number): void {
   holders.set(holder, size);
   fitToHolders();
