@@ -248,6 +248,7 @@ jobs:
           path: apps/textscene-three-godot-shaders/tests/.godot-answers/
           if-no-files-found: ignore
       - run: pnpm godot:shader-language --check
+      - run: pnpm godot:variant --check
       - run: pnpm godot:templates --check
       - run: pnpm test:shaders:templates
       - run: pnpm vitest run apps/textscene-three-godot-shaders

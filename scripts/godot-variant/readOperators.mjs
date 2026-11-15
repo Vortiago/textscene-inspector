@@ -5,27 +5,10 @@
  */
 
 import { lineAt } from '../godot-shader-language/cppText.mjs';
+import { splitArguments } from './cppArguments.mjs';
 
 const REGISTER_OP = /^register_op<(\w+)(?:<(.*)>)?>\(Variant::(\w+), Variant::(\w+), Variant::(\w+)\);$/;
 const MACRO_CALL = /^(\w+)\((.*)\);$/;
-
-/** The top-level comma-separated parts of `text`, with `<...>` nesting kept whole. */
-function splitArguments(text) {
-  const parts = [];
-  let depth = 0;
-  let start = 0;
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-    if (char === '<') depth += 1;
-    else if (char === '>') depth -= 1;
-    else if (char === ',' && depth === 0) {
-      parts.push(text.slice(start, index).trim());
-      start = index + 1;
-    }
-  }
-  if (text.trim() !== '') parts.push(text.slice(start).trim());
-  return parts;
-}
 
 /** Each `#define register_*(params) body` of `cpp`, by name, with its body statements. */
 function registerMacros(cpp) {
