@@ -15,6 +15,9 @@ asks for it. `TextParagraph::draw` cuts each label line to the paragraph box. Th
 does the same, so a word wider than the box stays inside it. The theme constant
 `align_to_largest_stylebox` lays the content inside the largest margins of any state.
 
+Each script run shapes apart, as Godot's `ScriptIterator` splits the text (`text_server_adv.cpp:7346-7352`), so kerning and the
+rounding remainder stop where the script changes. An unassigned code point that no font has takes no advance.
+
 ## Linting
 
 <!-- lint:begin Button -->
