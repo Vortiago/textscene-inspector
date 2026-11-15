@@ -181,6 +181,8 @@ Every count counts code points, as Godot's `String` does (`label.cpp:1375-1377`)
 denominator, the cut at VC_CHARS_BEFORE_SHAPING (`:155-156`) and the budget of
 VC_CHARS_AFTER_SHAPING (`label.h:207`). An astral character, such as an emoji, counts one. An emoji
 the font lacks draws its hex-code box, as Godot draws it on a host with no system font that has it.
+An unassigned code point or a lone surrogate that no font has draws nothing and takes no advance
+(`text_server_adv.cpp:7060,7106-7108`).
 
 ## Wrapped lines and the rect
 
