@@ -26,10 +26,7 @@ type ShadowMap = NonNullable<THREE.LightShadow['map']>;
 // eslint-disable-next-line no-restricted-syntax -- ViewportShadowAtlas.bind writes an entry from outside, and dispose deletes it
 const boundAtlas = new WeakMap<THREE.LightShadow, ViewportShadowAtlas>();
 
-/**
- * `settings` with a side the GPU can allocate. Godot's hint allows 16384, and WebGL refuses a target
- * over `MAX_TEXTURE_SIZE`, which leaves every lit draw sampling an atlas that does not exist.
- */
+// WebGL refuses a target over `MAX_TEXTURE_SIZE`, and Godot's hint allows 16384.
 export function atlasWithinGpu(
   settings: PositionalShadowAtlasSettings,
   maxTextureSize: number
