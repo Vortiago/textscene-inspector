@@ -9,22 +9,15 @@ import type { TscnNode } from '../../../parser/types';
 import { PathFollow3D } from './Component';
 import { parsePathFollow3D } from './parser';
 import { Path3DCurveProvider } from '../../../r3f/contexts/Path3DCurveContext';
-import { resolveCurve3D, tessellateCurve3D, type Curve3DSampler } from '../../../resources/curves/curve3d';
+import { tessellateCurve3D, type Curve3DSampler } from '../../../resources/curves/curve3d';
 import { GizmoScene } from '../../../r3f/testing/GizmoScene';
 
 // Straight curve along +X, (0,0,0) → (10,0,0), length 10.
-const STRAIGHT: Curve3DSampler = tessellateCurve3D(
-  resolveCurve3D('SubResource("path")', [
-    {
-      id: 'path',
-      type: 'Curve3D',
-      data: {
-        _data:
-          '{"points": PackedVector3Array(0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,10,0,0), "tilts": PackedFloat32Array(0, 0)}',
-      },
-    },
-  ])
-);
+const NO_HANDLE = { x: 0, y: 0, z: 0 };
+const STRAIGHT: Curve3DSampler = tessellateCurve3D([
+  { in: NO_HANDLE, out: NO_HANDLE, position: { x: 0, y: 0, z: 0 } },
+  { in: NO_HANDLE, out: NO_HANDLE, position: { x: 10, y: 0, z: 0 } },
+]);
 
 function followNode(name = 'MyFollow', props: Record<string, string> = {}): TscnNode {
   return {

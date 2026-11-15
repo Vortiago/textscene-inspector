@@ -16,6 +16,16 @@ import type { StructuredTextRange } from '../../../../godot/text/structuredText'
 
 const bidi = bidiFactory();
 
+/** The bracket that closes `ch`, or null when `ch` opens no pair (`Bidi_Paired_Bracket`). */
+export function closingBracketOf(ch: string): string | null {
+  return bidi.openingToClosingBracket(ch);
+}
+
+/** The bracket that `ch` closes, or null when `ch` closes no pair. */
+export function openingBracketOf(ch: string): string | null {
+  return bidi.closingToOpeningBracket(ch);
+}
+
 export interface ParagraphBidiOptions {
   /** `TextDirection`. AUTO by default, Godot's default for every Control, Label3D and TextMesh. */
   direction?: number;
