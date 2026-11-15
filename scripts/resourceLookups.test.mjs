@@ -15,7 +15,8 @@ const CORE_SRC = resolve(findRepoRoot(), 'packages/textscene-core/src');
 /**
  * The layer below the module: the files that define the banned functions, the reference grammar
  * and section lookup the module and the loader's processors share, and the files that rewrite
- * tables for a merged node or resolve the scene of an instance.
+ * tables for a merged node or resolve the scene of an instance, and the loader's walk of what a
+ * file reads, which decides whether it loads.
  */
 const LAYER = new Set([
   'resources/SubResourceResolver.ts',
@@ -27,6 +28,7 @@ const LAYER = new Set([
   'resources/rehomeOverride.ts',
   'resources/authoredSpelling.ts',
   'r3f/hooks/useInstancedScene.ts',
+  'resources/loadFailure/failingReads.ts',
 ]);
 
 /**

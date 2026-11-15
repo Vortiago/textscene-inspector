@@ -42,7 +42,7 @@ describe('<SceneLoadBanner>', () => {
     expect(screen.getByRole('alert').textContent).toBe(
       [
         'The game would fail to load this scene',
-        'res://main.tscn: [ext_resource] referenced non-existent resource at: res://atlas.tres',
+        'res://main.tscn - Parse Error: [ext_resource] referenced non-existent resource at: res://atlas.tres.',
         'res://main.tscn → res://atlas.tres → res://gone.png (missing)',
       ].join('')
     );

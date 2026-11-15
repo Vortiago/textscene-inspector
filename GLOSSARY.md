@@ -1078,8 +1078,13 @@ _Avoid_: **Uploaded scene** for this.
 The one-gesture drop or select contract: the root-most `.tscn` becomes the **Uploaded scene**, and every other file, an **Import sidecar** or `project.godot` included, fulfils a `res://` reference by case-insensitive basename.
 _Avoid_: "import wizard".
 
+**Load outcome** (`resources/loadFailure/`):
+Whether Godot's loader loads a file. A text file fails when a `[sub_resource]` or `[resource]` property, or a `Resource()` literal, reads a file that is missing, does not parse or fails in turn. A `[node]` property that reads such a file gets null, and an instance of such a scene is dropped. A failed outcome holds the chain of files down to the first failed one.
+_Avoid_: "broken dependency", "missing dependency" for a file that exists and fails through another.
+
 **Missing resource**:
 A `res://` reference or **Sub-resource path** whose load failed. Its consumer may draw a magenta placeholder, and the missing-resources panel shows one row per address. A **Sub-resource path** into a file that loads but declares no such `[sub_resource]` is one too, since Godot's load of it fails.
+A text file that parses but has a **Load outcome** that fails is one too. Its row names the chain and takes an upload of the file that failed first.
 _Avoid_: "broken scene", "load error".
 
 ### Animation

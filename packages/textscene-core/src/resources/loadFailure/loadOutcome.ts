@@ -17,7 +17,7 @@ export interface LoadFacts {
   readonly exists: (path: string) => Promise<boolean>;
 }
 
-export const LOADS: LoadOutcome = Object.freeze({ isFailed: false });
+const LOADS: LoadOutcome = Object.freeze({ isFailed: false });
 
 export async function loadOutcome(
   path: string,
