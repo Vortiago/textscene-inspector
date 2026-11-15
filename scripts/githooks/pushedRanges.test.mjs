@@ -1,9 +1,14 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { pushedRanges } from './pushedRanges.mjs';
+import { REPO_ROOT } from '../repoRoot.mjs';
+
+const CHECK_COMMENTS = join(REPO_ROOT, 'scripts/comments/check-comments.mjs');
+/** A file whose comment breaks the one-line rule. */
+const TWO_LINE_COMMENT = 'export const a = 1;\n// one\n// two\nexport const b = 2;\n';
 
 const NO_SHA = '0'.repeat(40);
 const repos = [];
@@ -16,27 +21,39 @@ function repository() {
   git('init', '-q', '-b', 'main');
   git('config', 'user.email', 'test@example.invalid');
   git('config', 'user.name', 'test');
-  const commit = (file) => {
-    writeFileSync(join(dir, file), file);
-    git('add', file);
+  writeFileSync(join(dir, '.prettierignore'), '');
+  const commit = (file, text = `export const name = '${file}';\n`) => {
+    writeFileSync(join(dir, file), text);
+    git('add', '.');
     git('commit', '-q', '-m', file);
     return git('rev-parse', 'HEAD');
   };
-  return { git, commit };
+  /** The exit status of `comments:check` over the push the hook reads from `stdin`: 1 is a finding. */
+  const commentsStatus = (stdin) => {
+    const [{ bases, head }] = pushedRanges(stdin, git).pushed;
+    const args = [CHECK_COMMENTS, ...bases.flatMap((base) => ['--base', base]), '--head', head];
+    return spawnSync('node', args, { cwd: dir, encoding: 'utf8' }).status;
+  };
+  return { dir, git, commit, commentsStatus };
 }
 
 /** A branch pushed at `pushedTip`, which then merged a main that moved on to `mainTip`. */
-function branchThatMergedMain() {
-  const { git, commit } = repository();
+function branchThatMergedMain(mainText) {
+  const { dir, git, commit, commentsStatus } = repository();
   commit('base.ts');
   git('checkout', '-q', '-b', 'topic');
   const pushedTip = commit('topic.ts');
   git('checkout', '-q', 'main');
-  const mainTip = commit('main.ts');
+  const mainTip = commit('main.ts', mainText);
   git('update-ref', 'refs/remotes/origin/main', mainTip);
   git('checkout', '-q', 'topic');
   git('merge', '-q', '--no-edit', 'main');
-  return { git, pushedTip, mainTip, localTip: git('rev-parse', 'HEAD') };
+  return { dir, git, commit, commentsStatus, pushedTip, mainTip, localTip: git('rev-parse', 'HEAD') };
+}
+
+/** The pre-push line for `topic` at the current head, over `remoteSha`. */
+function pushOf(git, remoteSha) {
+  return `refs/heads/topic ${git('rev-parse', 'HEAD')} refs/heads/topic ${remoteSha}\n`;
 }
 
 afterEach(() => {
@@ -92,5 +109,43 @@ describe('pushedRanges', () => {
       deleted: [],
       pushed: [],
     });
+  });
+});
+
+describe('the comments a push checks', () => {
+  it('passes a comment main added, which a merge of main brings in', () => {
+    const { git, commentsStatus, pushedTip } = branchThatMergedMain(TWO_LINE_COMMENT);
+
+    expect(commentsStatus(pushOf(git, pushedTip))).toBe(0);
+  });
+
+  it('fails a comment the merge commit itself adds', () => {
+    const { dir, git, commit, commentsStatus } = repository();
+    commit('base.ts');
+    git('checkout', '-q', '-b', 'topic');
+    const pushedTip = commit('topic.ts');
+    git('checkout', '-q', 'main');
+    git('update-ref', 'refs/remotes/origin/main', commit('main.ts'));
+    git('checkout', '-q', 'topic');
+    git('merge', '-q', '--no-commit', 'main');
+    writeFileSync(join(dir, 'topic.ts'), TWO_LINE_COMMENT);
+    git('add', 'topic.ts');
+    git('commit', '-q', '--no-edit');
+
+    expect(commentsStatus(pushOf(git, pushedTip))).toBe(1);
+  });
+
+  it('fails a comment a commit after the merge adds', () => {
+    const { git, commit, commentsStatus, pushedTip } = branchThatMergedMain();
+    commit('topic.ts', TWO_LINE_COMMENT);
+
+    expect(commentsStatus(pushOf(git, pushedTip))).toBe(1);
+  });
+
+  it('fails a comment the first push of a branch adds (edge case)', () => {
+    const { git, commit, commentsStatus } = branchThatMergedMain();
+    commit('topic.ts', TWO_LINE_COMMENT);
+
+    expect(commentsStatus(pushOf(git, NO_SHA))).toBe(1);
   });
 });
