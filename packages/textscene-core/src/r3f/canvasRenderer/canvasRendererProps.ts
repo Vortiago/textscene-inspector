@@ -9,7 +9,7 @@ export const CANVAS_RENDERER_PROPS = {
   onCreated: prepareCanvasRenderer,
 } as const satisfies Pick<CanvasProps, 'shadows' | 'flat' | 'onCreated'>;
 
-// A ScrollContainer clips through `clippingPlanes`, and MSAA comes from a target, never the buffer (ADR-0052).
+// A ScrollContainer clips through `clippingPlanes`, and MSAA comes from a target, not the buffer (ADR-0052).
 export const CANVAS_RENDERER_GL = {
   localClippingEnabled: true,
   antialias: false,
