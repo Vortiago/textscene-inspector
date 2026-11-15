@@ -19,12 +19,12 @@ describe('ShapeCast3D strict validators', () => {
     expect(validatorRegistry.getOwnKeys('ShapeCast3D')).not.toEqual([]);
   });
 
-  it('refuses every write of collision_result, which shape_cast_3d.cpp:172 binds with no setter', () => {
+  it('accepts any value of collision_result, which shape_cast_3d.cpp:172 binds with no setter', () => {
     // ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "collision_result", PROPERTY_HINT_NONE, "",
     // PROPERTY_USAGE_NO_EDITOR), "", "get_collision_result"): the "" is the setter name, so the
-    // loader stores nothing (class_db.cpp:1655-1659).
+    // loader drops the write (class_db.cpp:1655-1659) and no value is wrong.
     const validator = validatorRegistry.findValidator('ShapeCast3D', 'collision_result');
-    expect(validator!('collision_result', '[]', 1)).toBeAtTier('error');
+    expect(validator!('collision_result', '[1]', 1)).toBeNull();
   });
 
   it('rejects a malformed value on every property it validates', () => {

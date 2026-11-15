@@ -60,7 +60,11 @@ describe('keyMatcher', () => {
 });
 
 describe('unvalidatedByClass', () => {
-  const registry = (keys) => ({ getOwnKeys: (cls) => keys[cls] ?? [] });
+  /** A registry with hand keys by class, and `derived` as the `Class.key` the descriptor answers. */
+  const registry = (keys, derived = []) => ({
+    getOwnKeys: (cls) => keys[cls] ?? [],
+    isDerived: (cls, key) => derived.includes(`${cls}.${key}`),
+  });
 
   it('reports per declaring class, ignoring what a base covers', () => {
     // A validator for a base's property belongs on the base, so the leaf is not
@@ -80,6 +84,12 @@ describe('unvalidatedByClass', () => {
   it('skips a class outside the covered scope', () => {
     const engine = { Unscoped: [{ name: 'anything' }] };
     expect(unvalidatedByClass(engine, registry({}), new Set())).toEqual([]);
+  });
+
+  it('credits a key the property descriptor answers', () => {
+    const engine = { BoxMesh: [{ name: 'size' }, { name: 'material' }] };
+    const rows = unvalidatedByClass(engine, registry({}, ['BoxMesh.size']), new Set(['BoxMesh']));
+    expect(rows).toEqual([{ cls: 'BoxMesh', missing: ['material'] }]);
   });
 
   it('credits a wildcard key for the whole family it covers', () => {

@@ -92,13 +92,11 @@ describe('the format check the Variant type picks', () => {
     expectAccepted(check('PlaceholderTexture3D', 'size', 'Vector3(1, 2, 3)'));
   });
 
-  it('refuses every value of a property bound with no setter, whose write Godot drops', () => {
-    // class_db.cpp:1655-1659: `set_property` returns true and stores nothing.
-    expect(check('ShapeCast2D', 'collision_result', '[]')).toBeAtTier('error');
-    expect(validatorOf('ShapeCast2D', 'collision_result').grounding).toEqual({
-      kind: 'enforced',
-      cite: 'class_db.cpp:1655-1659',
-    });
+  it('accepts any value of a property bound with no setter, which Godot writes from its getter', () => {
+    // Godot 4.6.3 writes `capture_included` from `is_capture_included`, and the loader drops the
+    // write (class_db.cpp:1655-1659), as the vendored platformer coin.tscn shows.
+    expectAccepted(check('Animation', 'capture_included', 'true'));
+    expectAccepted(check('ShapeCast2D', 'collision_result', '[1]'));
   });
 
   it('accepts any value in a NIL slot, which holds any Variant', () => {

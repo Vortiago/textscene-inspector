@@ -1,7 +1,7 @@
 /**
- * The combinators that never look at the value, since each is a verdict on the key: one accepts
- * every value of a property with no enforced format, and the others reject every value of a key
- * whose write the engine drops.
+ * The two combinators that never look at the value, since both are verdicts on
+ * the key: one accepts every value of a property with no enforced format, and
+ * the other rejects every value of a key the engine writes but cannot read back.
  */
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
@@ -39,25 +39,6 @@ export const keyVerdictCombinators = {
       `read-only (derived from ${opts.derivedFrom})`
     );
     validator.grounding = { kind: 'enforced', cite: opts.cite };
-    return validator;
-  },
-
-  /**
-   * A key ClassDB binds with no setter: `ClassDB::set_property` returns true and stores nothing
-   * (class_db.cpp:1655-1659), so `Object::set` never reaches `_set`. ADR-0032's error row.
-   */
-  setterless(name: string): PropertyValidator {
-    const validator = accepts(
-      (key, _value, line) =>
-        keyShapeError(
-          key,
-          line,
-          `Property '${key}' has no setter, so Godot drops the write`,
-          formatCode(name, 'READONLY')
-        ),
-      'read-only (bound with no setter)'
-    );
-    validator.grounding = { kind: 'enforced', cite: 'class_db.cpp:1655-1659' };
     return validator;
   },
 };

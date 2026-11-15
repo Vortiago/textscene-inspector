@@ -11,7 +11,8 @@ import { CMP_EPSILON } from '../../../godot/math/math.js';
 import { DOPPLER_TRACKING_NAMES } from '../../../godot/scene/audio.js';
 import { CAMERA_3D_KEEP_ASPECT_NAMES, CAMERA_3D_PROJECTION_NAMES } from '../../../godot/scene/camera3d.js';
 
-// `labels` gives the enum constant names the messages print, which the capture lacks (#261).
+// `labels` gives the enum constant names the messages print, which the capture lacks: it
+// holds only the hint labels.
 registerPropertyFacts('Camera3D', {
   // `set_projection` assigns only inside `if (p_mode==PERSPECTIVE||ORTHOGONAL||FRUSTUM)`, so an
   // out-of-enum value is dropped, which ADR-0032 counts as enforced.

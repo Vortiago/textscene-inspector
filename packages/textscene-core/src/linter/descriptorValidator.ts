@@ -234,10 +234,11 @@ function objectValidator(descriptor: PropertyDescriptor): PropertyValidator {
 
 /** The check `descriptor` implies, or null for a Variant type with none. */
 export function descriptorValidator(descriptor: PropertyDescriptor): PropertyValidator | null {
-  // Ahead of the type: no value of any type reaches a setter that does not exist.
+  // Ahead of the type: no value reaches a setter that does not exist. Godot's saver writes the
+  // getter's value, and the loader drops it (class_db.cpp:1655-1659), so no value is wrong.
   if (descriptor.property.isSetterless) {
     refuseFacts(descriptor, []);
-    return v.setterless(descriptor.property.name);
+    return v.any();
   }
   const valueType = valueTypeOf(descriptor.property);
   switch (valueType) {
