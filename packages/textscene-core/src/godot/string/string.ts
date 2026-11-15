@@ -1,7 +1,6 @@
 /** `String`'s parsing behaviour, as the engine defines it. */
 
 import { INT64_MAX, INT64_MIN } from '../variant/cInteger.js';
-import { godotStrtod } from './strtod.js';
 import { toInt32, toUint32 } from '../variant/intWidth.js';
 
 /**
@@ -244,16 +243,6 @@ export function simplifyPath(path: string): string {
     else if (!(dropsLeadingParent && parts.length === 0)) parts.push(part);
   }
   return drive + parts.join('/');
-}
-
-/**
- * `String::to_float()` (`core/string/ustring.cpp:2680-2685`): an empty string is 0, and `built_in_strtod` takes the longest
- * numeric prefix, or 0. Not {@link parseGodotFloat}, which reads an anchored TSCN float literal because unread text corrupts
- * the next assignment. `to_float` is the lenient scan a class applies to text it holds (a BBCode tag option, a split
- * component), so trailing text is ignored. Swapping the two changes what a malformed value reads as.
- */
-export function stringToFloat(text: string): number {
-  return godotStrtod(text);
 }
 
 /**

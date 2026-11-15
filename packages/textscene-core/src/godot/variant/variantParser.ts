@@ -13,8 +13,8 @@ import {
   literalText,
   splitTopLevel,
   stringLiteralBodies,
-  stringToFloat,
 } from '../string/string.js';
+import { stringToFloat } from '../string/strtod.js';
 import { boolLiteralAsNumber, scalarSlotValue } from './variantBool.js';
 
 const WS = '\\s*';

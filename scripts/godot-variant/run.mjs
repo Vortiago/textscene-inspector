@@ -14,7 +14,7 @@ const TABLE_MODULE = join(REPO_ROOT, 'packages/textscene-core/src/godot/variant/
 
 const json = (value) => JSON.stringify(value);
 
-/** The module text of the three tables. */
+/** The module text of the four tables. */
 export function renderTables({ operators, constructors, conversions, utilities }) {
   const operatorRows = operators.map(
     ({ operator, left, right, evaluator, types }) =>

@@ -6,7 +6,7 @@
  */
 
 import { stringNum } from '../../godot/string/stringNumber.js';
-import { godotStrtod } from '../../godot/string/strtod.js';
+import { stringToFloat } from '../../godot/string/strtod.js';
 
 /**
  * The text Godot's compiler writes for a float constant: `f2sp0(rtos(value))`
@@ -25,7 +25,7 @@ function withPoint(text: string): string {
  * for a value whose text no GLSL compiler reads, so Godot's shader fails to compile.
  */
 export function godotLiteralScalar(literal: string): number {
-  const scalar = Math.fround(godotStrtod(literal));
+  const scalar = Math.fround(stringToFloat(literal));
   godotConstantDouble(scalar);
   return scalar;
 }
@@ -46,7 +46,7 @@ export function godotConstantDouble(scalar: number): number {
  * (`shader_language.cpp:887`): `hex_to_int` for `0x`, the decimal reader otherwise.
  */
 export function godotIntegerConstant(text: string): number {
-  return text.startsWith('0x') ? Number.parseInt(text.slice(2), 16) : godotStrtod(text);
+  return text.startsWith('0x') ? Number.parseInt(text.slice(2), 16) : stringToFloat(text);
 }
 
 /** The largest magnitude a double holds in a 64-bit integer, past which x86-64 gives its "indefinite" value. */

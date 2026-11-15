@@ -1,6 +1,7 @@
+import { hexDigitValue } from '../string/charUtils.js';
 import { binToInt64, hexToInt64 } from '../string/radixInteger.js';
 import { stringToInt64 } from '../string/string.js';
-import { godotStrtod } from '../string/strtod.js';
+import { stringToFloat } from '../string/strtod.js';
 import { isUnicodeIdentifierContinue, isUnicodeIdentifierStart } from '../string/unicodeIdentifier.js';
 import { UTILITY_FUNCTIONS } from '../variant/registrations.generated.js';
 import { NIL, variant, type Variant, type VariantTypeName } from '../variant/value/variant.js';
@@ -114,7 +115,6 @@ const PAIRED_TOKENS: Readonly<
 const ESCAPES: Readonly<Record<string, number>> = { b: 8, t: 9, n: 10, f: 12, r: 13 };
 
 const isDigit = (char: string): boolean => char >= '0' && char <= '9';
-const isHexDigit = (char: string): boolean => /^[0-9a-fA-F]$/.test(char);
 const isBinaryDigit = (char: string): boolean => char === '0' || char === '1';
 
 // String::append_utf32 (ustring.cpp:199) writes U+FFFD for a NUL, a surrogate or a code above U+10FFFF.
@@ -222,8 +222,9 @@ export class ExpressionTokenizer {
     for (let index = 0; index < (next === 'U' ? 6 : 4); index += 1) {
       const digit = this.next();
       if (digit === END) fail('Unterminated String');
-      if (!isHexDigit(digit)) fail('Malformed hex constant in string');
-      code = (code << 4) | Number.parseInt(digit, 16);
+      const value = hexDigitValue(digit);
+      if (value === undefined) fail('Malformed hex constant in string');
+      code = (code << 4) | value!;
     }
     return code;
   }
@@ -258,7 +259,7 @@ export class ExpressionTokenizer {
         if (hasBinaryPrefix && !isBinaryDigit(char)) reading = 'DONE';
         else if (char === 'b' || char === 'B') hasBinaryPrefix = true;
       } else if (reading === 'HEX') {
-        if (hasHexPrefix && !isHexDigit(char)) reading = 'DONE';
+        if (hasHexPrefix && hexDigitValue(char) === undefined) reading = 'DONE';
         else if (char === 'x' || char === 'X') hasHexPrefix = true;
       } else if (reading === 'DEC') {
         if (char === 'e' || char === 'E') reading = 'EXP';
@@ -299,7 +300,7 @@ export class ExpressionTokenizer {
 }
 
 function numberValue(text: string, isFloat: boolean, isBinary: boolean, isHex: boolean): Variant {
-  if (isFloat) return variant('FLOAT', godotStrtod(text));
+  if (isFloat) return variant('FLOAT', stringToFloat(text));
   if (isBinary) return variant('INT', binToInt64(text));
   if (isHex) return variant('INT', hexToInt64(text));
   return variant('INT', stringToInt64(text));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isValidAsciiIdentifier, isWhitespace } from './charUtils.js';
+import { hexDigitValue, isValidAsciiIdentifier, isWhitespace } from './charUtils.js';
 
 describe('isWhitespace', () => {
   it('takes a space, a tab and a line feed', () => {
@@ -27,5 +27,15 @@ describe('isValidAsciiIdentifier', () => {
 
   it('refuses a letter outside ASCII', () => {
     expect(isValidAsciiIdentifier('é')).toBe(false);
+  });
+});
+
+describe('hexDigitValue', () => {
+  it('reads a digit in either case, as is_hex_digit accepts', () => {
+    expect(['0', '9', 'a', 'F'].map(hexDigitValue)).toEqual([0, 9, 10, 15]);
+  });
+
+  it('gives undefined for a character that is no hex digit', () => {
+    expect(['g', '', 'aa'].map(hexDigitValue)).toEqual([undefined, undefined, undefined]);
   });
 });

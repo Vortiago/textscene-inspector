@@ -1,4 +1,5 @@
-import { stringToFloat, stringToInt64 } from '../../string/string.js';
+import { stringToInt64 } from '../../string/string.js';
+import { stringToFloat } from '../../string/strtod.js';
 import { setEntry } from '../compare.js';
 import { defaultValue } from '../value/defaultValue.js';
 import { variant, type DictionaryEntry, type Variant, type VariantTypeName } from '../value/variant.js';

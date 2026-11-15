@@ -5,7 +5,8 @@
  * quirks, so a document draws as Godot draws it.
  */
 import { XmlNodeType, XmlParser } from '../../../../../godot/project/xmlParser';
-import { stringToFloat, stringToInt } from '../../../../../godot/string/string';
+import { stringToInt } from '../../../../../godot/string/string';
+import { stringToFloat } from '../../../../../godot/string/strtod';
 import type { SvgDocument } from './svgTable';
 
 /** The document of one glyph, and the em box of its `svg` element. */

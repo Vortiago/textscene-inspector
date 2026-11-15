@@ -8,7 +8,7 @@ import { reduced } from './constants.js';
 import { matchedConstructor } from './constructors.js';
 import { godotIntegerConstant, godotLiteralScalar, godotUintScalar } from './godotNumber.js';
 import { stringNum } from '../../godot/string/stringNumber.js';
-import { godotStrtod } from '../../godot/string/strtod.js';
+import { stringToFloat } from '../../godot/string/strtod.js';
 import { doubleToInt32 } from '../../godot/variant/cInteger.js';
 import {
   builtInInstruction,
@@ -488,7 +488,7 @@ function tokenText(token: Token): string {
   const name = token.type.replace(/^TK_/, '');
   switch (token.type) {
     case 'TK_FLOAT_CONSTANT':
-      return `${name}(${stringNum(godotStrtod(token.text!))})`;
+      return `${name}(${stringNum(stringToFloat(token.text!))})`;
     case 'TK_INT_CONSTANT':
     case 'TK_UINT_CONSTANT':
       return `${name}(${stringNum(godotIntegerConstant(token.text!))})`;

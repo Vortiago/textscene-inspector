@@ -9,6 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { hexDigitValue } from '../string/charUtils.js';
 import type { Rgba } from './math.js';
 
 /**
@@ -299,14 +300,9 @@ export function hsvToRgb(h: number, s: number, v: number): Rgba {
   }
 }
 
-/** `Color::html`'s single hex digit (0-9, a-f/A-F), scaled to 0-15. */
-function hexDigit(ch: string): number {
-  return parseInt(ch, 16);
-}
-
 /** `Color::html`'s hex byte (2 digits), 0-255. */
 function hexByte(hex: string, i: number): number {
-  return hexDigit(hex[i]!) * 16 + hexDigit(hex[i + 1]!);
+  return hexDigitValue(hex[i]!)! * 16 + hexDigitValue(hex[i + 1]!)!;
 }
 
 /**
@@ -320,13 +316,18 @@ export function htmlColor(value: string): Rgba | undefined {
 
   switch (body.length) {
     case 3:
-      return { r: hexDigit(body[0]!) / 15, g: hexDigit(body[1]!) / 15, b: hexDigit(body[2]!) / 15, a: 1 };
+      return {
+        r: hexDigitValue(body[0]!)! / 15,
+        g: hexDigitValue(body[1]!)! / 15,
+        b: hexDigitValue(body[2]!)! / 15,
+        a: 1,
+      };
     case 4:
       return {
-        r: hexDigit(body[0]!) / 15,
-        g: hexDigit(body[1]!) / 15,
-        b: hexDigit(body[2]!) / 15,
-        a: hexDigit(body[3]!) / 15,
+        r: hexDigitValue(body[0]!)! / 15,
+        g: hexDigitValue(body[1]!)! / 15,
+        b: hexDigitValue(body[2]!)! / 15,
+        a: hexDigitValue(body[3]!)! / 15,
       };
     case 6:
       return { r: hexByte(body, 0) / 255, g: hexByte(body, 2) / 255, b: hexByte(body, 4) / 255, a: 1 };

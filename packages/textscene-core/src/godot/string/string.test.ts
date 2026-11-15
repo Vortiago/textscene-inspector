@@ -13,11 +13,11 @@ import {
   STRING_LITERAL_SOURCE,
   stringLiteral,
   stringLiteralBodies,
-  stringToFloat,
   stringToInt,
   stripEdges,
   validateFilename,
 } from './string.js';
+import { stringToFloat } from './strtod.js';
 
 describe('stringLiteral', () => {
   it('quotes the text', () => {

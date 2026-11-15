@@ -1,3 +1,4 @@
+import { hexDigitValue } from './charUtils.js';
 import { INT64_MAX, INT64_MIN } from '../variant/cInteger.js';
 
 // An invalid digit gives 0, and an overflow the int64 limit of its sign.
@@ -26,8 +27,10 @@ function radixToInt(
   return BigInt.asIntN(64, value * sign);
 }
 
-const hexDigit = (char: string): bigint | undefined =>
-  /^[0-9a-f]$/.test(char) ? BigInt(Number.parseInt(char, 16)) : undefined;
+const hexDigit = (char: string): bigint | undefined => {
+  const value = hexDigitValue(char);
+  return value === undefined ? undefined : BigInt(value);
+};
 const binaryDigit = (char: string): bigint | undefined =>
   char === '0' || char === '1' ? BigInt(char) : undefined;
 

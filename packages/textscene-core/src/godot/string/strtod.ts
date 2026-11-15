@@ -10,11 +10,11 @@ const MAX_MANTISSA_DIGITS = 18;
 const isDigit = (char: string | undefined) => char !== undefined && char >= '0' && char <= '9';
 
 /**
- * `built_in_strtod` (ustring.cpp:2365) step for step: it is not correctly rounded.
+ * `String::to_float`: `built_in_strtod` (ustring.cpp:2365) step for step, the longest numeric prefix or 0.
  *
  * @canonical Godot's reading of a decimal float text
  */
-export function godotStrtod(text: string): number {
+export function stringToFloat(text: string): number {
   let position = 0;
   while (text[position] === ' ' || text[position] === '\t' || text[position] === '\n') position += 1;
   let sign = false;
