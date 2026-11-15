@@ -7,7 +7,7 @@ import { DEFAULT_SKY } from './defaultSky.testkit';
 
 function errorOf(source: string): ShadingLanguageError {
   try {
-    transpileSky(source, 'user.gdshader');
+    transpileSky(source, { file: 'user.gdshader' });
   } catch (error) {
     if (error instanceof ShadingLanguageError) return error;
     throw error;

@@ -13,6 +13,7 @@ import { parameterBits, PROBE_TYPES } from '../../../../scripts/godot-probes/pro
 export function runOnPage(page, probe) {
   const spec = {
     source: probe.source,
+    includes: probe.includes ?? {},
     rows: probe.inputs.length,
     parameters: parameterBits(probe),
     shapes: PROBE_TYPES,

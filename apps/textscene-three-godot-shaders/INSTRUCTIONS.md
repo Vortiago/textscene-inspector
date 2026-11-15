@@ -12,7 +12,7 @@ GLSL or WGSL operation itself, `lowered` with the name of the operations it writ
 probes run on WebGL 2. WebGPURenderer runs the same TSL nodes, and no probe runs there until the
 canvases draw on WebGPURenderer (#1788).
 
-1308 of 1889 instructions transpiled.
+1318 of 1889 instructions transpiled.
 
 ## data type
 
@@ -1995,15 +1995,15 @@ canvases draw on WebGPURenderer (#1788).
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
 | `#if` | open, #1828 | | | `servers/rendering/shader_preprocessor.cpp:384` |
-| `#ifdef` | open, #1828 | | | `servers/rendering/shader_preprocessor.cpp:386` |
-| `#ifndef` | open, #1828 | | | `servers/rendering/shader_preprocessor.cpp:388` |
+| `#ifdef` | transpiled (`condition-ifdef-taken`, `condition-ifdef-skipped`, `condition-nested`, `condition-skipped-garbage`, `condition-unterminated`, `condition-else-twice`, `condition-endif-text`, `condition-ifdef-text`, `condition-indented`, `error-skipped`, `include-define-across`, `include-missing-skipped`) | native | untested (#1788) | `servers/rendering/shader_preprocessor.cpp:386` |
+| `#ifndef` | transpiled (`condition-ifndef`, `condition-nested`) | native | untested (#1788) | `servers/rendering/shader_preprocessor.cpp:388` |
 | `#elif` | open, #1828 | | | `servers/rendering/shader_preprocessor.cpp:390` |
-| `#else` | open, #1828 | | | `servers/rendering/shader_preprocessor.cpp:392` |
-| `#endif` | open, #1828 | | | `servers/rendering/shader_preprocessor.cpp:394` |
-| `#error` | open, #1828 | | | `servers/rendering/shader_preprocessor.cpp:396` |
-| `#define` | open, #1828 | | | `servers/rendering/shader_preprocessor.cpp:398` |
-| `#undef` | open, #1828 | | | `servers/rendering/shader_preprocessor.cpp:400` |
-| `#include` | open, #1828 | | | `servers/rendering/shader_preprocessor.cpp:402` |
-| `#pragma` | open, #1828 | | | `servers/rendering/shader_preprocessor.cpp:404` |
+| `#else` | transpiled (`condition-ifdef-taken`, `condition-ifdef-skipped`, `condition-ifndef`, `condition-nested`, `condition-unmatched-else`, `condition-else-twice`) | native | untested (#1788) | `servers/rendering/shader_preprocessor.cpp:392` |
+| `#endif` | transpiled (`condition-ifdef-taken`, `condition-ifdef-skipped`, `condition-ifndef`, `condition-nested`, `condition-skipped-garbage`, `condition-unmatched-endif`, `condition-else-twice`, `condition-endif-text`, `condition-ifdef-text`, `condition-indented`, `error-skipped`, `include-define-across`, `include-missing-skipped`) | native | untested (#1788) | `servers/rendering/shader_preprocessor.cpp:394` |
+| `#error` | transpiled (`error-skipped`, `error-taken`) | native | untested (#1788) | `servers/rendering/shader_preprocessor.cpp:396` |
+| `#define` | transpiled (`define-object`, `define-function`, `define-inside-macro`, `define-nested-arguments`, `define-concatenation`, `define-continuation`, `define-word-boundary`, `define-empty-body`, `define-built-in`, `define-redefined`, `define-argument-count`, `define-concatenation-first`, `define-invalid-name`, `define-after-code`, `define-space-after-hash`, `define-uses-49`, `define-uses-50`, `define-recursive`, `undef-redefine`, `undef-unknown`, `undef-built-in`, `undef-then-ifdef`, `condition-ifdef-taken`, `condition-ifndef`, `condition-nested`, `include-define-across`, `include-macro-in-include`, `include-marker-expanded`) | native | untested (#1788) | `servers/rendering/shader_preprocessor.cpp:398` |
+| `#undef` | transpiled (`undef-redefine`, `undef-unknown`, `undef-built-in`, `undef-then-ifdef`) | native | untested (#1788) | `servers/rendering/shader_preprocessor.cpp:400` |
+| `#include` | transpiled (`include-nested`, `include-define-across`, `include-twice`, `include-cycle`, `include-missing`, `include-missing-skipped`, `include-no-quotes`, `include-macro-in-include`, `include-marker-expanded`) | native | untested (#1788) | `servers/rendering/shader_preprocessor.cpp:402` |
+| `#pragma` | transpiled (`pragma-disable`, `pragma-disable-then-directive`, `pragma-disable-keeps-macro-text`, `pragma-unknown`) | native | untested (#1788) | `servers/rendering/shader_preprocessor.cpp:404` |
 | `defined` | open, #1828 | | | `servers/rendering/shader_preprocessor.cpp:910` |
-| `#pragma disable_preprocessor` | open, #1828 | | | `servers/rendering/shader_preprocessor.cpp:803` |
+| `#pragma disable_preprocessor` | transpiled (`pragma-disable`, `pragma-disable-then-directive`, `pragma-disable-keeps-macro-text`) | native | untested (#1788) | `servers/rendering/shader_preprocessor.cpp:803` |

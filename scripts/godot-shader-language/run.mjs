@@ -34,7 +34,7 @@ import {
   KNOWN_DIFFERENCES,
   KNOWN_PROGRAM_DIFFERENCES,
 } from '../../apps/textscene-three-godot-shaders/tests/random/knownDifferences.mjs';
-import { TRANSPILED_ROWS } from '../../apps/textscene-three-godot-shaders/tests/random/programs.mjs';
+import { ROOT_ROWS } from '../../apps/textscene-three-godot-shaders/tests/random/programs.mjs';
 import { LOWERED_AWAY } from '../../apps/textscene-three-godot-shaders/tests/verdicts/loweredAway.mjs';
 import {
   FIXED_SEED,
@@ -61,7 +61,7 @@ function testingChapter(answers) {
     random: {
       programs: RANDOM_PROGRAMS,
       seed: FIXED_SEED,
-      transpiledRows: TRANSPILED_ROWS.length,
+      rootRows: ROOT_ROWS.length,
       knownDifferences: KNOWN_DIFFERENCES,
       knownProgramDifferences: KNOWN_PROGRAM_DIFFERENCES,
       loweredAway: LOWERED_AWAY,

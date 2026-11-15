@@ -39,9 +39,11 @@ const PRECISION = /\b(?:lowp|mediump|highp)\s+/g;
 
 /** The return type, the parameter types and the parameter names of the probe's `probe` function. */
 export function probeSignature(source) {
-  const match = /(?:^|[;}]\s*)(\w+) probe\(([^)]*)\)/.exec(source.replace(PRECISION, ''));
+  const match = /(?:^|[;}\n]\s*)(\w+) probe\(([^)]*)\)/.exec(source.replace(PRECISION, ''));
   if (!match)
-    throw new Error(`expected a probe source with "<type> probe(" first or after its structs, got ${source}`);
+    throw new Error(
+      `expected a probe source with "<type> probe(" first, on its own line or after its structs, got ${source}`
+    );
   const declarations =
     match[2].trim() === '' ? [] : match[2].split(',').map((parameter) => parameter.trim().split(/\s+/));
   const parameters = declarations.map(([type]) => type);

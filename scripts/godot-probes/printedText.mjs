@@ -14,9 +14,9 @@ const LANGUAGE = '/packages/textscene-core/src/shaders/language/';
 const TREES = '/apps/textscene-three-godot-shaders/tests/verdicts/trees.testkit.mjs';
 
 /**
- * The transpiler's printer as two functions from text to printed text: `print` of the parsed
- * tree, and `lower` of the tree the emitter walks (`emittedTree.ts`) where it
- * differs. Each gives nothing for a text the transpiler refuses. Vite compiles the TypeScript
+ * The transpiler's printer as two functions from a probe to printed text: `print` of the parsed
+ * tree, and `lower` of the tree the emitter walks (`emittedTree.ts`) where it differs. Both read
+ * the tree after the preprocessor, with the probe's includes. Each gives nothing for a text the transpiler refuses. Vite compiles the TypeScript
  * sources, since this script runs in plain Node.
  */
 export async function loadPrinter() {
@@ -28,19 +28,19 @@ export async function loadPrinter() {
       load('shadingLanguageError.ts'),
       server.ssrLoadModule(TREES),
     ]);
-    const unlessRefused = (print) => (source) => {
+    const unlessRefused = (print) => (probe) => {
       try {
-        return print(source);
+        return print(probe.source, probe.includes);
       } catch (error) {
         if (error instanceof ShadingLanguageError) return undefined;
         throw error;
       }
     };
     return {
-      print: unlessRefused((source) => printShader(treeOf(source))),
-      lower: unlessRefused((source) => {
-        const lowered = printShader(loweredTreeOf(source));
-        return lowered === printShader(treeOf(source)) ? undefined : lowered;
+      print: unlessRefused((source, includes) => printShader(treeOf(source, includes))),
+      lower: unlessRefused((source, includes) => {
+        const lowered = printShader(loweredTreeOf(source, includes));
+        return lowered === printShader(treeOf(source, includes)) ? undefined : lowered;
       }),
     };
   } finally {
@@ -54,9 +54,13 @@ export async function loadPrinter() {
  */
 export function printedProbes(probes, print, form = 'printed') {
   return probes.flatMap((original) => {
-    const printed = original.endsGodot ? undefined : print(original.source);
+    const printed = original.endsGodot ? undefined : print(original);
     if (printed === undefined) return [];
-    return [{ ...original, name: `${form}-${original.name}`, source: printed, original }];
+    // The printed text is preprocessed already, so it reads no include and has no text to record.
+    const name = `${form}-${original.name}`;
+    return [
+      { ...original, includes: undefined, recordsPreprocessed: false, name, source: printed, original },
+    ];
   });
 }
 

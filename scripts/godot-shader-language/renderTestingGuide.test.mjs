@@ -19,7 +19,7 @@ const INPUT = {
   random: {
     programs: [{}, {}, {}, { functions: 2 }],
     seed: 1,
-    transpiledRows: 2,
+    rootRows: 2,
     knownDifferences: KNOWN,
     knownProgramDifferences: { 'random-1-0': { lane: 'lane 0', cause: 'a fold', owner: '#2' } },
     loweredAway: { FLOW_OP_FOR: { keyword: 'for' }, FLOW_OP_SWITCH: { keyword: 'switch' } },
@@ -85,7 +85,7 @@ describe('the table of known differences', () => {
       random: {
         programs: [{}],
         seed: 1,
-        transpiledRows: 1,
+        rootRows: 1,
         loweredAway: { FLOW_OP_FOR: { keyword: 'for' } },
         knownProgramDifferences: {},
         knownDifferences: {

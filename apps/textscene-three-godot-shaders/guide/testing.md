@@ -12,7 +12,7 @@ The same cases go through the transpiler's front end. On each one, it accepts wh
 
 A generator writes random functions that are correct by type, from the signatures of the transpiled rows only, so each slice that transpiles rows gets random programs over them with no change to the generator. Operators take only the brackets Godot's priorities need, so a program tests the order of evaluation as a user's shader does.
 
-The fixed set has seed 1847: 1529 programs, one rooted at each of the 1304 transpiled rows, the rest with random roots, and 100 that declare functions of their own. Such a program declares one to three functions, and each may call an earlier one. They hold `in`, `const in`, `out` and `inout` parameters, struct and array arguments and results, `void` functions, and an early `return` in a branch or a loop. A written argument is a variable, a member, an element or a swizzle, and an element's index may be a variable that another argument of the call writes. Godot accepts every one. `pnpm godot:probes` asks Godot for its result bits, and `pnpm test:shaders:gpu` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN in a float lane.
+The fixed set has seed 1847: 1529 programs, one rooted at each of the 1229 transpiled rows a program can produce, the rest with random roots, and 100 that declare functions of their own. Such a program declares one to three functions, and each may call an earlier one. They hold `in`, `const in`, `out` and `inout` parameters, struct and array arguments and results, `void` functions, and an early `return` in a branch or a loop. A written argument is a variable, a member, an element or a swizzle, and an element's index may be a variable that another argument of the call writes. Godot accepts every one. `pnpm godot:probes` asks Godot for its result bits, and `pnpm test:shaders:gpu` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN in a float lane.
 
 **1465 of 1529 random programs bit-equal with Godot, NaN lanes compared as NaN. The other 64 are listed, each with its cause.**
 
@@ -73,10 +73,10 @@ The printed tree of each shader the transpiler accepts is a checked-in file unde
 
 | State | Shaders |
 | --- | --- |
-| not transpiled yet (#1794) | 271 |
+| not transpiled yet (#1794) | 273 |
 | not transpiled yet (#1829) | 72 |
-| refused as Godot refuses | 16 |
-| not transpiled yet (#1828) | 8 |
+| refused as Godot refuses | 18 |
+| not transpiled yet (#1828) | 4 |
 | transpiled | 1 |
 
 The mismatches below are known, each with its owner. The list only shrinks, as for the random programs.
@@ -85,7 +85,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | --- | --- | --- |
 
 
-<details><summary>The 351 shaders not transpiled yet, with their owners</summary>
+<details><summary>The 349 shaders not transpiled yet, with their owners</summary>
 
 | Shader | Owner |
 | --- | --- |
@@ -245,8 +245,8 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `docs/tutorials/shaders/screen-reading_shaders.rst#0` | #1829 |
 | `docs/tutorials/shaders/screen-reading_shaders.rst#1` | #1829 |
 | `docs/tutorials/shaders/shader_reference/canvas_item_shader.rst#0` | #1794 |
-| `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#1` | #1828 |
-| `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#13` | #1828 |
+| `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#1` | #1794 |
+| `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#13` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#18` | #1828 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#14` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#18` | #1794 |
@@ -421,8 +421,6 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `rejected/docs/tutorials/shaders/screen-reading_shaders.rst#0` | #1829 |
 | `rejected/docs/tutorials/shaders/screen-reading_shaders.rst#1` | #1829 |
 | `rejected/docs/tutorials/shaders/shader_reference/canvas_item_shader.rst#0` | #1794 |
-| `rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#1` | #1828 |
-| `rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#13` | #1828 |
 | `rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#18` | #1828 |
 | `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#14` | #1794 |
 | `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#18` | #1794 |

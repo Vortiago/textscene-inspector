@@ -36,6 +36,9 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   // The builds and the cache are module state, so each test starts from the one reset that aborts
   // the builds in flight and clears the cache.
   'resources/textures/proceduralBuilds.ts#resetProceduralTextures',
+  // The preprocessed-text check holds the preprocessor's text to Godot's, also for a text the
+  // parser refuses, so it reads the text before any parse.
+  'shaders/language/parseShader.ts#shaderCode',
   // The round trip test prints each parsed tree back to text, which no transpilation needs.
   'shaders/language/printer.ts#printShader',
   // The tree check proves each parsed tree has Godot's node types and positions, in tests only.
