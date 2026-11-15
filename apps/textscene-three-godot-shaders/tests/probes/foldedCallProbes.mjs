@@ -105,23 +105,105 @@ const CASES = [
     'bvec4(any(bvec2(false, true)), all(bvec2(false, true)), not(bvec2(false, true)))',
   ],
   ['call-of-calls', ['sin(float)', 'cos(float)', 'exp(float)'], 'float', 'sin(cos(0.5)) * exp(0.25)'],
+  [
+    'min-max-int',
+    ['min(ivec2,int)', 'max(ivec2,ivec2)'],
+    'ivec4',
+    'ivec4(min(ivec2(-3, 9), 4), max(ivec2(-7, 3), ivec2(2)))',
+  ],
+  ['max-uint', ['max(uvec2,uvec2)'], 'uvec2', 'max(uvec2(3u, 9u), uvec2(5u))'],
+  ['clamp-uint', ['clamp(uvec2,uint,uint)'], 'uvec2', 'clamp(uvec2(1u, 9u), 2u, 5u)'],
+  [
+    'compare-int-uint',
+    ['lessThanEqual(uvec2,uvec2)', 'greaterThanEqual(ivec2,ivec2)'],
+    'bvec4',
+    'bvec4(lessThanEqual(uvec2(1u, 3u), uvec2(2u)), greaterThanEqual(ivec2(-1, 2), ivec2(0)))',
+  ],
+  [
+    'equal-int-bool',
+    ['equal(ivec2,ivec2)', 'notEqual(bvec2,bvec2)'],
+    'bvec4',
+    'bvec4(equal(ivec2(-1, 2), ivec2(-1, 3)), notEqual(bvec2(true, false), bvec2(true, true)))',
+  ],
+  [
+    'vector-bounds',
+    ['clamp(vec2,vec2,vec2)', 'mix(vec2,vec2,vec2)'],
+    'vec4',
+    'vec4(clamp(vec2(-1.0, 2.0), vec2(0.1, 0.2), vec2(0.8, 0.9)), mix(vec2(0.1, 0.2), vec2(0.7, 0.9), vec2(0.3, 0.6)))',
+  ],
+  [
+    'vector-steps',
+    ['step(vec2,vec2)', 'smoothstep(vec2,vec2,vec2)'],
+    'vec4',
+    'vec4(step(vec2(0.5, 0.1), vec2(0.2, 0.7)), smoothstep(vec2(0.1, 0.2), vec2(0.9, 0.8), vec2(0.33, 0.77)))',
+  ],
+  [
+    'vector-mod-max-pow',
+    ['mod(vec2,vec2)', 'max(vec2,vec2)', 'pow(vec2,vec2)'],
+    'vec4',
+    'vec4(mod(vec2(-1.1, 7.3), vec2(3.0, 0.7)), max(vec2(0.1, 0.9), vec2(0.2, 0.3)) * pow(vec2(1.3), vec2(0.7, 2.9)))',
+  ],
 ];
 
 /**
- * Calls glslang leaves to the GPU, each on a constant and on the same value through a parameter,
- * which the browser's compiler cannot fold: on the input 0, `a + 0.899` is `0.899`.
+ * Calls glslang leaves to the GPU, each of a constant and of the same value through a parameter,
+ * which no compiler can fold: on the input 0, `a + 0.899` is `0.899`. The parameter probe gives
+ * the GPU's value on both sides, so the side whose constant probe differs from it folds the call.
  */
 const LEFT_TO_THE_GPU = [
-  ['sinh', ['sinh(float)'], 'sinh(0.899)', 'sinh(a + 0.899)'],
-  ['atanh', ['atanh(float)'], 'atanh(92.167)', 'atanh(a + 92.167)'],
+  ['sinh', ['sinh(float)'], 'float', 'sinh(0.899)', 'sinh(a + 0.899)'],
+  ['cosh', ['cosh(float)'], 'float', 'cosh(0.78)', 'cosh(a + 0.78)'],
+  ['tanh', ['tanh(float)'], 'float', 'tanh(0.932)', 'tanh(a + 0.932)'],
+  ['asinh', ['asinh(float)'], 'float', 'asinh(0.2)', 'asinh(a + 0.2)'],
+  ['acosh', ['acosh(float)'], 'float', 'acosh(3.325)', 'acosh(a + 3.325)'],
+  ['atanh', ['atanh(float)'], 'float', 'atanh(0.084446)', 'atanh(a + 0.084446)'],
+  ['determinant', ['determinant(mat2)'], 'float', 'determinant(MATRIX)', 'determinant(PARAMETER_MATRIX)'],
+  ['inverse', ['inverse(mat2)'], 'mat2', 'inverse(MATRIX)', 'inverse(PARAMETER_MATRIX)'],
+  [
+    'matrix-comp-mult',
+    ['matrixCompMult(mat2,mat2)'],
+    'mat2',
+    'matrixCompMult(MATRIX, mat2(vec2(0.7, 0.3), vec2(1.9, -0.6)))',
+    'matrixCompMult(PARAMETER_MATRIX, mat2(vec2(0.7, 0.3), vec2(1.9, -0.6)))',
+  ],
+  ['transpose', ['transpose(mat2)'], 'mat2', 'transpose(MATRIX)', 'transpose(PARAMETER_MATRIX)'],
+  ['atanh-outside-its-domain', ['atanh(float)'], 'float', 'atanh(92.167)', 'atanh(a + 92.167)'],
+  ['acosh-outside-its-domain', ['acosh(float)'], 'float', 'acosh(0.866)', 'acosh(a + 0.866)'],
+  [
+    'inverse-of-a-singular-matrix',
+    ['inverse(mat2)'],
+    'mat2',
+    'inverse(SINGULAR)',
+    'inverse(PARAMETER_SINGULAR)',
+  ],
+  ['cosh-near-the-float-range', ['cosh(float)'], 'float', 'cosh(89.152)', 'cosh(a + 89.152)'],
 ];
+
+/** The matrices of the matrix calls, each of constants and through the parameter. */
+const MATRICES = {
+  PARAMETER_MATRIX: 'mat2(vec2(a + 0.33, 1.7), vec2(-2.1, 0.9))',
+  MATRIX: 'mat2(vec2(0.33, 1.7), vec2(-2.1, 0.9))',
+  PARAMETER_SINGULAR: 'mat2(vec2(a + 1.0, 2.0), vec2(2.0, 4.0))',
+  SINGULAR: 'mat2(vec2(1.0, 2.0), vec2(2.0, 4.0))',
+};
+
+const withMatrices = (call) =>
+  Object.entries(MATRICES).reduce((text, [word, matrix]) => text.replaceAll(word, matrix), call);
 
 export const FOLDED_CALL_PROBES = [
   ...CASES.map(([word, rows, returns, call]) =>
     probeOf(`fold-call-${word}`, rows, `${returns} probe(float a) { return ${call}; }`)
   ),
-  ...LEFT_TO_THE_GPU.flatMap(([word, rows, onConstant, onParameter]) => [
-    probeOf(`gpu-call-${word}-of-a-constant`, rows, `float probe(float a) { return ${onConstant}; }`),
-    probeOf(`gpu-call-${word}-of-a-parameter`, rows, `float probe(float a) { return ${onParameter}; }`),
+  ...LEFT_TO_THE_GPU.flatMap(([word, rows, returns, onConstant, onParameter]) => [
+    probeOf(
+      `gpu-call-${word}-of-a-constant`,
+      rows,
+      `${returns} probe(float a) { return ${withMatrices(onConstant)}; }`
+    ),
+    probeOf(
+      `gpu-call-${word}-of-a-parameter`,
+      rows,
+      `${returns} probe(float a) { return ${withMatrices(onParameter)}; }`
+    ),
   ]),
 ];

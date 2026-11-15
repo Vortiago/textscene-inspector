@@ -4,6 +4,14 @@
  * so the change that fixes it removes its entry (`coverageFailures` in integration/compare.mjs).
  */
 
+import {
+  BOTH_SIDES,
+  BROWSER_COMPILER,
+  DRIVER_EDGE_CALL,
+  DRIVER_ROUNDED_CALL,
+  GODOT_DRIVER,
+} from '../driverFolds.mjs';
+
 /**
  * `min`, `max` and `clamp` of a vector and a float keep the sign of a zero and a subnormal on the
  * Godot side, and give +0 on the browser's, where the vector-by-vector overloads are equal on both.
@@ -25,22 +33,68 @@ const UNREAD_MODF = {
   cause: "driver (Mesa lavapipe) drops the out store of a modf whose value nothing reads, on Godot's side",
 };
 
-/** The probes of `foldedCallProbes.mjs` that show it: each on a parameter is bit-equal. */
-const DRIVER_FOLDED_CALL = {
-  owner: '#1826',
-  cause: "a call of constants that glslang leaves to the GPU and one side's compiler folds",
-};
-
 export const KNOWN_PROBE_DIFFERENCES = {
   'gpu-call-sinh-of-a-constant': {
-    ...DRIVER_FOLDED_CALL,
+    ...DRIVER_ROUNDED_CALL,
+    folds: GODOT_DRIVER,
     lanesOff: 16,
     first: 'lane 0: Godot 3f8335f4, transpilation 3f8335f5',
   },
+  'gpu-call-cosh-of-a-constant': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: GODOT_DRIVER,
+    lanesOff: 16,
+    first: 'lane 0: Godot 3fa8f3c3, transpilation 3fa8f3c4',
+  },
+  'gpu-call-tanh-of-a-constant': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: BROWSER_COMPILER,
+    lanesOff: 16,
+    first: 'lane 0: Godot 3f3b4538, transpilation 3f3b4539',
+  },
+  'gpu-call-asinh-of-a-constant': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: BOTH_SIDES,
+    lanesOff: 16,
+    first: 'lane 0: Godot 3e4b756d, transpilation 3e4b756b',
+  },
+  'gpu-call-acosh-of-a-constant': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: BROWSER_COMPILER,
+    lanesOff: 16,
+    first: 'lane 0: Godot 3fef8358, transpilation 3fef8359',
+  },
   'gpu-call-atanh-of-a-constant': {
-    ...DRIVER_FOLDED_CALL,
+    ...DRIVER_ROUNDED_CALL,
+    folds: BROWSER_COMPILER,
+    lanesOff: 16,
+    first: 'lane 0: Godot 3dad5bb6, transpilation 3dad5bb8',
+  },
+  'gpu-call-inverse-of-a-constant': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: BROWSER_COMPILER,
+    lanesOff: 64,
+    first: 'lane 0: Godot 3e6e5305, transpilation 3e6e5304',
+  },
+  'gpu-call-atanh-outside-its-domain-of-a-constant': {
+    ...DRIVER_EDGE_CALL,
     lanesOff: 16,
     first: 'lane 0: Godot 7fc00000, transpilation 00000000',
+  },
+  'gpu-call-acosh-outside-its-domain-of-a-constant': {
+    ...DRIVER_EDGE_CALL,
+    lanesOff: 16,
+    first: 'lane 0: Godot 7fc00000, transpilation 00000000',
+  },
+  'gpu-call-inverse-of-a-singular-matrix-of-a-constant': {
+    ...DRIVER_EDGE_CALL,
+    lanesOff: 64,
+    first: 'lane 0: Godot 7f800000, transpilation 00000000',
+  },
+  'gpu-call-cosh-near-the-float-range-of-a-constant': {
+    ...DRIVER_EDGE_CALL,
+    lanesOff: 16,
+    first: 'lane 0: Godot 7f800000, transpilation 7f449aa0',
   },
   'call-min-vec2-float': {
     ...SCALAR_BOUND,

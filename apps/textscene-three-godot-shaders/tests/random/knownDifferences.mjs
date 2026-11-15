@@ -5,6 +5,13 @@
  */
 
 import { inputRowsOfBits } from '../../../../scripts/godot-probes/probeShader.mjs';
+import {
+  BOTH_SIDES,
+  BROWSER_COMPILER,
+  DRIVER_EDGE_CALL,
+  DRIVER_ROUNDED_CALL,
+  GODOT_DRIVER,
+} from '../driverFolds.mjs';
 
 /**
  * Mesa's compiler on lavapipe treats float operations as inexact: it reorders them, fuses
@@ -161,17 +168,6 @@ export const KNOWN_DIFFERENCES = {
 };
 
 /**
- * glslang leaves `sinh`, `cosh`, `tanh`, `asinh`, `acosh`, `atanh`, `inverse`, `determinant`,
- * `matrixCompMult` and `transpose` of constants to the GPU, and one side's compiler folds such a
- * call on its own. lavapipe on Godot's side folds `sinh(0.899)` to 3f8335f4 where the GPU gives
- * 3f8335f5, and ANGLE on the browser's folds `atanh(92.167)` to 0 where the GPU gives NaN.
- */
-const DRIVER_FOLDED_CALL = {
-  owner: '#1826',
-  cause: "a call of constants that glslang leaves to the GPU and one side's compiler folds",
-};
-
-/**
  * A vector call whose other lanes read a parameter and agree, where the lane that differs is a
  * constant alone, such as `cos(46.0)` in `cos(vec4(34.979, a0.ba, float(46)))`: one side's
  * compiler folds that lane on the CPU and the other computes it on the GPU.
@@ -188,50 +184,115 @@ const DRIVER_CONSTANT_LANE = {
 export const KNOWN_PROGRAM_DIFFERENCES = {
   'random-1847-103': { ...DRIVER_REWRITE, lane: 'lane 38: Godot 4c118610, transpilation 4c11860f' },
   'random-1847-134': { ...DRIVER_REWRITE, lane: 'lane 45: Godot bfb7e46a, transpilation bfb7e469' },
-  'random-1847-174': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 42363783, transpilation 42363784' },
-  'random-1847-178': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
-  'random-1847-186': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-174': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: GODOT_DRIVER,
+    lane: 'lane 0: Godot 42363783, transpilation 42363784',
+  },
+  'random-1847-178': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-186': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
   'random-1847-198': { ...UNDEFINED_SHIFT, lane: 'lane 0: Godot 000039e4, transpilation 00000000' },
-  'random-1847-225': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 7fc00000, transpilation be025448' },
-  'random-1847-226': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
-  'random-1847-369': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 44ce73c7' },
+  'random-1847-225': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 7fc00000, transpilation be025448' },
+  'random-1847-226': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-369': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 44ce73c7' },
   'random-1847-432': { ...UNDEFINED_SHIFT, lane: 'lane 0: Godot 00000000, transpilation 0000005c' },
-  'random-1847-611': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
-  'random-1847-614': { ...DRIVER_FOLDED_CALL, lane: 'lane 1: Godot 3fef8358, transpilation 3fef8359' },
+  'random-1847-611': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-614': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: BROWSER_COMPILER,
+    lane: 'lane 1: Godot 3fef8358, transpilation 3fef8359',
+  },
   'random-1847-734': { ...DRIVER_CONSTANT_LANE, lane: 'lane 3: Godot 3f3dfdd2, transpilation 3f3dfdd1' },
-  'random-1847-763': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 3efc4466, transpilation 3efc4467' },
-  'random-1847-767': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 3e4b756d, transpilation 3e4b756b' },
-  'random-1847-775': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
-  'random-1847-777': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
-  'random-1847-781': { ...DRIVER_FOLDED_CALL, lane: 'lane 1: Godot 7fc00000, transpilation 00000000' },
-  'random-1847-794': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 3f87c104, transpilation 3f87c103' },
-  'random-1847-810': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 6024bb20, transpilation 6024bb3e' },
-  'random-1847-817': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 00000000, transpilation bf800000' },
-  'random-1847-852': { ...DRIVER_FOLDED_CALL, lane: 'lane 1: Godot 3d966e00, transpilation 3d966df0' },
-  'random-1847-871': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 80000000, transpilation 00000000' },
-  'random-1847-905': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 3fc4ef0c, transpilation 3fc4ef0d' },
-  'random-1847-935': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 3f800000, transpilation 00000000' },
-  'random-1847-940': { ...DRIVER_FOLDED_CALL, lane: 'lane 11: Godot 3f800000, transpilation 00000000' },
-  'random-1847-974': { ...DRIVER_FOLDED_CALL, lane: 'lane 1: Godot 7fc00000, transpilation c04a164c' },
-  'random-1847-989': { ...DRIVER_FOLDED_CALL, lane: 'lane 7: Godot ce06dac1, transpilation ce06dac2' },
-  'random-1847-1084': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 3f52fffe, transpilation 3f530000' },
-  'random-1847-1086': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 00000000, transpilation 3f800000' },
-  'random-1847-1132': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 37301635, transpilation b75e0000' },
-  'random-1847-1135': { ...DRIVER_FOLDED_CALL, lane: 'lane 2: Godot 3f7dc7bc, transpilation 3f7dc7bb' },
-  'random-1847-1143': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot ff800000, transpilation 00000000' },
-  'random-1847-1161': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
-  'random-1847-1184': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 599c2ddb, transpilation 599c2dde' },
-  'random-1847-1202': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 7fc00000, transpilation e2c68f11' },
-  'random-1847-1210': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 7fc00000, transpilation ff800000' },
-  'random-1847-1230': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
-  'random-1847-1232': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
-  'random-1847-1235': { ...DRIVER_FOLDED_CALL, lane: 'lane 4: Godot 7fc00000, transpilation 00000000' },
-  'random-1847-1250': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 00000028, transpilation 00000014' },
-  'random-1847-1260': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 3f8335f4, transpilation 3f8335f5' },
-  'random-1847-1268': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 40000000' },
-  'random-1847-1295': { ...DRIVER_FOLDED_CALL, lane: 'lane 0: Godot 42dea6a7, transpilation 42dea6a8' },
+  'random-1847-763': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: BROWSER_COMPILER,
+    lane: 'lane 0: Godot 3efc4466, transpilation 3efc4467',
+  },
+  'random-1847-767': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: BOTH_SIDES,
+    lane: 'lane 0: Godot 3e4b756d, transpilation 3e4b756b',
+  },
+  'random-1847-775': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-777': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-781': { ...DRIVER_EDGE_CALL, lane: 'lane 1: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-794': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: BROWSER_COMPILER,
+    lane: 'lane 0: Godot 3f87c104, transpilation 3f87c103',
+  },
+  'random-1847-810': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: GODOT_DRIVER,
+    lane: 'lane 0: Godot 6024bb20, transpilation 6024bb3e',
+  },
+  'random-1847-817': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 00000000, transpilation bf800000' },
+  'random-1847-852': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: GODOT_DRIVER,
+    lane: 'lane 1: Godot 3d966e00, transpilation 3d966df0',
+  },
+  'random-1847-871': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 80000000, transpilation 00000000' },
+  'random-1847-905': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: BOTH_SIDES,
+    lane: 'lane 0: Godot 3fc4ef0c, transpilation 3fc4ef0d',
+  },
+  'random-1847-935': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 3f800000, transpilation 00000000' },
+  'random-1847-940': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: GODOT_DRIVER,
+    lane: 'lane 11: Godot 3f800000, transpilation 00000000',
+  },
+  'random-1847-974': { ...DRIVER_EDGE_CALL, lane: 'lane 1: Godot 7fc00000, transpilation c04a164c' },
+  'random-1847-989': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: BROWSER_COMPILER,
+    lane: 'lane 7: Godot ce06dac1, transpilation ce06dac2',
+  },
+  'random-1847-1084': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: GODOT_DRIVER,
+    lane: 'lane 0: Godot 3f52fffe, transpilation 3f530000',
+  },
+  'random-1847-1086': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 00000000, transpilation 3f800000' },
+  'random-1847-1132': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: BROWSER_COMPILER,
+    lane: 'lane 0: Godot 37301635, transpilation b75e0000',
+  },
+  'random-1847-1135': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: BROWSER_COMPILER,
+    lane: 'lane 2: Godot 3f7dc7bc, transpilation 3f7dc7bb',
+  },
+  'random-1847-1143': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot ff800000, transpilation 00000000' },
+  'random-1847-1161': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-1184': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: GODOT_DRIVER,
+    lane: 'lane 0: Godot 599c2ddb, transpilation 599c2dde',
+  },
+  'random-1847-1202': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 7fc00000, transpilation e2c68f11' },
+  'random-1847-1210': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 7fc00000, transpilation ff800000' },
+  'random-1847-1230': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-1232': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-1235': { ...DRIVER_EDGE_CALL, lane: 'lane 4: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-1250': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 00000028, transpilation 00000014' },
+  'random-1847-1260': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: GODOT_DRIVER,
+    lane: 'lane 0: Godot 3f8335f4, transpilation 3f8335f5',
+  },
+  'random-1847-1268': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 40000000' },
+  'random-1847-1295': {
+    ...DRIVER_ROUNDED_CALL,
+    folds: BROWSER_COMPILER,
+    lane: 'lane 0: Godot 42dea6a7, transpilation 42dea6a8',
+  },
   'random-1847-function-41': {
-    ...DRIVER_FOLDED_CALL,
+    ...DRIVER_ROUNDED_CALL,
+    folds: BROWSER_COMPILER,
     lane: 'lane 0: Godot 345eec43, transpilation 345eec42',
   },
 };

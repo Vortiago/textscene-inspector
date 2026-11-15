@@ -164,7 +164,9 @@ function statesText(rows) {
 function renderSection(section, rows, probes, record) {
   const ids = new Set(rows.map((row) => row.id));
   // A sky scene has a camera and proves its rows in a showcase of its own, with no table of inputs.
-  const sectionProbes = probes.filter((probe) => !probe.camera && probe.rows.some((id) => ids.has(id)));
+  const sectionProbes = probes.filter(
+    (probe) => !probe.camera && probe.rows.some((id) => ids.has(id)) && (section.probes?.(probe) ?? true)
+  );
   const rowList = rows.map((row) => `\`${row.id}\``).join(', ');
   return `## ${section.heading}
 

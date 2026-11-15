@@ -90,6 +90,25 @@ describe('renderGuide', () => {
     );
   });
 
+  it('shows only the probes a section names, where it names its own', () => {
+    const folded = { ...PROBE, name: 'fold-add', source: 'float probe(float a) { return 1.0 + 2.0; }' };
+    const record = {
+      ...RECORD,
+      probes: {
+        ...RECORD.probes,
+        'fold-add': { source: folded.source, inputs: [['00000000']], results: [['40400000']] },
+      },
+    };
+    const [, chapter] = renderGuide({
+      chapters: chaptersWith([{ ...SECTION, probes: (probe) => probe.name.startsWith('fold-') }]),
+      rows: ROWS,
+      probes: [PROBE, folded],
+      record,
+    });
+    expect(chapter[1]).toContain('fold-add');
+    expect(chapter[1]).not.toContain('`add`');
+  });
+
   it('fails for a transpiled row that no section explains', () => {
     expect(() =>
       renderGuide({ chapters: chaptersWith([]), rows: ROWS, probes: [PROBE], record: RECORD })

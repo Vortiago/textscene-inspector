@@ -19,7 +19,8 @@ The fixed set has seed 1847: 1399 programs, one rooted at each of the 1166 trans
 | Cause | Programs | Owner |
 | --- | --- | --- |
 | driver rewrite (Mesa lavapipe) on one side only: a listed case, not reshaped | 2 | #1823 |
-| a call of constants that glslang leaves to the GPU and one side's compiler folds | 40 | #1826 |
+| a call glslang leaves to the GPU, which one side's compiler folds to other last bits | 17 | #1826 |
+| a call glslang leaves to the GPU, outside its domain or near the float range, which the browser's compiler folds to a number | 23 | #1826 |
 | shift count out of range at runtime, which GLSL leaves undefined: the drivers differ | 2 | #1823 |
 | driver folds the constant lane of a vector call on one side only | 1 | #1826 |
 

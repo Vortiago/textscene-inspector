@@ -961,28 +961,28 @@ canvases draw on WebGPURenderer (#1788).
 | `sinh(vec2)` | transpiled (`call-sinh-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2647` |
 | `sinh(vec3)` | transpiled (`call-sinh-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2648` |
 | `sinh(vec4)` | transpiled (`call-sinh-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2649` |
-| `cosh(float)` | transpiled (`call-cosh-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2653` |
+| `cosh(float)` | transpiled (`call-cosh-float`, `gpu-call-cosh-of-a-constant`, `gpu-call-cosh-of-a-parameter`, `gpu-call-cosh-near-the-float-range-of-a-constant`, `gpu-call-cosh-near-the-float-range-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2653` |
 | `cosh(vec2)` | transpiled (`call-cosh-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2654` |
 | `cosh(vec3)` | transpiled (`call-cosh-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2655` |
 | `cosh(vec4)` | transpiled (`call-cosh-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2656` |
-| `tanh(float)` | transpiled (`call-tanh-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2660` |
+| `tanh(float)` | transpiled (`call-tanh-float`, `gpu-call-tanh-of-a-constant`, `gpu-call-tanh-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2660` |
 | `tanh(vec2)` | transpiled (`call-tanh-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2661` |
 | `tanh(vec3)` | transpiled (`call-tanh-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2662` |
 | `tanh(vec4)` | transpiled (`call-tanh-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2663` |
-| `asinh(float)` | transpiled (`call-asinh-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2667` |
+| `asinh(float)` | transpiled (`call-asinh-float`, `gpu-call-asinh-of-a-constant`, `gpu-call-asinh-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2667` |
 | `asinh(vec2)` | transpiled (`call-asinh-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2668` |
 | `asinh(vec3)` | transpiled (`call-asinh-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2669` |
 | `asinh(vec4)` | transpiled (`call-asinh-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2670` |
-| `acosh(float)` | transpiled (`call-acosh-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2674` |
+| `acosh(float)` | transpiled (`call-acosh-float`, `gpu-call-acosh-of-a-constant`, `gpu-call-acosh-of-a-parameter`, `gpu-call-acosh-outside-its-domain-of-a-constant`, `gpu-call-acosh-outside-its-domain-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2674` |
 | `acosh(vec2)` | transpiled (`call-acosh-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2675` |
 | `acosh(vec3)` | transpiled (`call-acosh-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2676` |
 | `acosh(vec4)` | transpiled (`call-acosh-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2677` |
-| `atanh(float)` | transpiled (`call-atanh-float`, `gpu-call-atanh-of-a-constant`, `gpu-call-atanh-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2681` |
+| `atanh(float)` | transpiled (`call-atanh-float`, `gpu-call-atanh-of-a-constant`, `gpu-call-atanh-of-a-parameter`, `gpu-call-atanh-outside-its-domain-of-a-constant`, `gpu-call-atanh-outside-its-domain-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2681` |
 | `atanh(vec2)` | transpiled (`call-atanh-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2682` |
 | `atanh(vec3)` | transpiled (`call-atanh-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2683` |
 | `atanh(vec4)` | transpiled (`call-atanh-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2684` |
 | `pow(float,float)` | transpiled (`call-pow-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2689` |
-| `pow(vec2,vec2)` | transpiled (`call-pow-vec2-vec2`, `fold-call-pow`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2690` |
+| `pow(vec2,vec2)` | transpiled (`call-pow-vec2-vec2`, `fold-call-pow`, `fold-call-vector-mod-max-pow`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2690` |
 | `pow(vec3,vec3)` | transpiled (`call-pow-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2691` |
 | `pow(vec4,vec4)` | transpiled (`call-pow-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2692` |
 | `exp(float)` | transpiled (`call-exp-float`, `fold-call-exp-log`, `fold-call-call-of-calls`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2696` |
@@ -1050,7 +1050,7 @@ canvases draw on WebGPURenderer (#1788).
 | `fract(vec3)` | transpiled (`call-fract-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2800` |
 | `fract(vec4)` | transpiled (`call-fract-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2801` |
 | `mod(float,float)` | transpiled (`call-mod-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2805` |
-| `mod(vec2,vec2)` | transpiled (`call-mod-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2806` |
+| `mod(vec2,vec2)` | transpiled (`call-mod-vec2-vec2`, `fold-call-vector-mod-max-pow`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2806` |
 | `mod(vec2,float)` | transpiled (`call-mod-vec2-float`, `fold-call-mod`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2807` |
 | `mod(vec3,vec3)` | transpiled (`call-mod-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2808` |
 | `mod(vec3,float)` | transpiled (`call-mod-vec3-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2809` |
@@ -1069,7 +1069,7 @@ canvases draw on WebGPURenderer (#1788).
 | `min(vec4,float)` | transpiled (`call-min-vec4-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2828` |
 | `min(int,int)` | transpiled (`call-min-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2830` |
 | `min(ivec2,ivec2)` | transpiled (`call-min-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2831` |
-| `min(ivec2,int)` | transpiled (`call-min-ivec2-int`, `call-uint-constant-to-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2832` |
+| `min(ivec2,int)` | transpiled (`call-min-ivec2-int`, `call-uint-constant-to-int`, `fold-call-min-max-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2832` |
 | `min(ivec3,ivec3)` | transpiled (`call-min-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2833` |
 | `min(ivec3,int)` | transpiled (`call-min-ivec3-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2834` |
 | `min(ivec4,ivec4)` | transpiled (`call-min-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2835` |
@@ -1082,28 +1082,28 @@ canvases draw on WebGPURenderer (#1788).
 | `min(uvec4,uvec4)` | transpiled (`call-min-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2843` |
 | `min(uvec4,uint)` | transpiled (`call-min-uvec4-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2844` |
 | `max(float,float)` | transpiled (`call-max-float-float`, `call-int-constant-to-float`, `fold-call-min-max-of-nan`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2848` |
-| `max(vec2,vec2)` | transpiled (`call-max-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2849` |
+| `max(vec2,vec2)` | transpiled (`call-max-vec2-vec2`, `fold-call-vector-mod-max-pow`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2849` |
 | `max(vec2,float)` | transpiled (`call-max-vec2-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2850` |
 | `max(vec3,vec3)` | transpiled (`call-max-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2851` |
 | `max(vec3,float)` | transpiled (`call-max-vec3-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2852` |
 | `max(vec4,vec4)` | transpiled (`call-max-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2853` |
 | `max(vec4,float)` | transpiled (`call-max-vec4-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2854` |
 | `max(int,int)` | transpiled (`call-max-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2856` |
-| `max(ivec2,ivec2)` | transpiled (`call-max-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2857` |
+| `max(ivec2,ivec2)` | transpiled (`call-max-ivec2-ivec2`, `fold-call-min-max-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2857` |
 | `max(ivec2,int)` | transpiled (`call-max-ivec2-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2858` |
 | `max(ivec3,ivec3)` | transpiled (`call-max-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2859` |
 | `max(ivec3,int)` | transpiled (`call-max-ivec3-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2860` |
 | `max(ivec4,ivec4)` | transpiled (`call-max-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2861` |
 | `max(ivec4,int)` | transpiled (`call-max-ivec4-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2862` |
 | `max(uint,uint)` | transpiled (`call-max-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2864` |
-| `max(uvec2,uvec2)` | transpiled (`call-max-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2865` |
+| `max(uvec2,uvec2)` | transpiled (`call-max-uvec2-uvec2`, `fold-call-max-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2865` |
 | `max(uvec2,uint)` | transpiled (`call-max-uvec2-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2866` |
 | `max(uvec3,uvec3)` | transpiled (`call-max-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2867` |
 | `max(uvec3,uint)` | transpiled (`call-max-uvec3-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2868` |
 | `max(uvec4,uvec4)` | transpiled (`call-max-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2869` |
 | `max(uvec4,uint)` | transpiled (`call-max-uvec4-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2870` |
 | `clamp(float,float,float)` | transpiled (`call-clamp-float-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2874` |
-| `clamp(vec2,vec2,vec2)` | transpiled (`call-clamp-vec2-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2875` |
+| `clamp(vec2,vec2,vec2)` | transpiled (`call-clamp-vec2-vec2-vec2`, `fold-call-vector-bounds`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2875` |
 | `clamp(vec3,vec3,vec3)` | transpiled (`call-clamp-vec3-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2876` |
 | `clamp(vec4,vec4,vec4)` | transpiled (`call-clamp-vec4-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2877` |
 | `clamp(vec2,float,float)` | transpiled (`call-clamp-vec2-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2878` |
@@ -1120,13 +1120,13 @@ canvases draw on WebGPURenderer (#1788).
 | `clamp(uvec2,uvec2,uvec2)` | transpiled (`call-clamp-uvec2-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2891` |
 | `clamp(uvec3,uvec3,uvec3)` | transpiled (`call-clamp-uvec3-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2892` |
 | `clamp(uvec4,uvec4,uvec4)` | transpiled (`call-clamp-uvec4-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2893` |
-| `clamp(uvec2,uint,uint)` | transpiled (`call-clamp-uvec2-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2894` |
+| `clamp(uvec2,uint,uint)` | transpiled (`call-clamp-uvec2-uint-uint`, `fold-call-clamp-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2894` |
 | `clamp(uvec3,uint,uint)` | transpiled (`call-clamp-uvec3-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2895` |
 | `clamp(uvec4,uint,uint)` | transpiled (`call-clamp-uvec4-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2896` |
 | `mix(float,float,float)` | transpiled (`call-mix-float-float-float`, `fold-call-mix`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2900` |
 | `mix(vec2,vec2,float)` | transpiled (`call-mix-vec2-vec2-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2901` |
 | `mix(vec2,vec2,bvec2)` | transpiled (`call-mix-vec2-vec2-bvec2`, `fold-call-mix-bool`) | lowered: select by lane | untested (#1788) | `servers/rendering/shader_language.cpp:2902` |
-| `mix(vec2,vec2,vec2)` | transpiled (`call-mix-vec2-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2903` |
+| `mix(vec2,vec2,vec2)` | transpiled (`call-mix-vec2-vec2-vec2`, `fold-call-vector-bounds`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2903` |
 | `mix(vec3,vec3,float)` | transpiled (`call-mix-vec3-vec3-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2904` |
 | `mix(vec3,vec3,bvec3)` | transpiled (`call-mix-vec3-vec3-bvec3`) | lowered: select by lane | untested (#1788) | `servers/rendering/shader_language.cpp:2905` |
 | `mix(vec3,vec3,vec3)` | transpiled (`call-mix-vec3-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2906` |
@@ -1134,14 +1134,14 @@ canvases draw on WebGPURenderer (#1788).
 | `mix(vec4,vec4,bvec4)` | transpiled (`call-mix-vec4-vec4-bvec4`) | lowered: select by lane | untested (#1788) | `servers/rendering/shader_language.cpp:2908` |
 | `mix(vec4,vec4,vec4)` | transpiled (`call-mix-vec4-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2909` |
 | `step(float,float)` | transpiled (`call-step-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2913` |
-| `step(vec2,vec2)` | transpiled (`call-step-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2914` |
+| `step(vec2,vec2)` | transpiled (`call-step-vec2-vec2`, `fold-call-vector-steps`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2914` |
 | `step(vec3,vec3)` | transpiled (`call-step-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2915` |
 | `step(vec4,vec4)` | transpiled (`call-step-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2916` |
 | `step(float,vec2)` | transpiled (`call-step-float-vec2`, `fold-call-step`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2917` |
 | `step(float,vec3)` | transpiled (`call-step-float-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2918` |
 | `step(float,vec4)` | transpiled (`call-step-float-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2919` |
 | `smoothstep(float,float,float)` | transpiled (`call-smoothstep-float-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2923` |
-| `smoothstep(vec2,vec2,vec2)` | transpiled (`call-smoothstep-vec2-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2924` |
+| `smoothstep(vec2,vec2,vec2)` | transpiled (`call-smoothstep-vec2-vec2-vec2`, `fold-call-vector-steps`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2924` |
 | `smoothstep(vec3,vec3,vec3)` | transpiled (`call-smoothstep-vec3-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2925` |
 | `smoothstep(vec4,vec4,vec4)` | transpiled (`call-smoothstep-vec4-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2926` |
 | `smoothstep(float,float,vec2)` | transpiled (`call-smoothstep-float-float-vec2`, `fold-call-smoothstep`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2927` |
@@ -1197,19 +1197,19 @@ canvases draw on WebGPURenderer (#1788).
 | `faceforward(vec2,vec2,vec2)` | transpiled (`call-faceforward-vec2-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3020` |
 | `faceforward(vec3,vec3,vec3)` | transpiled (`call-faceforward-vec3-vec3-vec3`, `fold-call-faceforward`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3021` |
 | `faceforward(vec4,vec4,vec4)` | transpiled (`call-faceforward-vec4-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3022` |
-| `matrixCompMult(mat2,mat2)` | transpiled (`call-matrixCompMult-mat2-mat2`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:3026` |
+| `matrixCompMult(mat2,mat2)` | transpiled (`call-matrixCompMult-mat2-mat2`, `gpu-call-matrix-comp-mult-of-a-constant`, `gpu-call-matrix-comp-mult-of-a-parameter`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:3026` |
 | `matrixCompMult(mat3,mat3)` | transpiled (`call-matrixCompMult-mat3-mat3`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:3027` |
 | `matrixCompMult(mat4,mat4)` | transpiled (`call-matrixCompMult-mat4-mat4`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:3028` |
 | `outerProduct(vec2,vec2)` | transpiled (`call-outerProduct-vec2-vec2`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:3032` |
 | `outerProduct(vec3,vec3)` | transpiled (`call-outerProduct-vec3-vec3`, `fold-call-outer-product`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:3033` |
 | `outerProduct(vec4,vec4)` | transpiled (`call-outerProduct-vec4-vec4`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:3034` |
-| `transpose(mat2)` | transpiled (`call-transpose-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3038` |
+| `transpose(mat2)` | transpiled (`call-transpose-mat2`, `gpu-call-transpose-of-a-constant`, `gpu-call-transpose-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3038` |
 | `transpose(mat3)` | transpiled (`call-transpose-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3039` |
 | `transpose(mat4)` | transpiled (`call-transpose-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3040` |
-| `determinant(mat2)` | transpiled (`call-determinant-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3044` |
+| `determinant(mat2)` | transpiled (`call-determinant-mat2`, `gpu-call-determinant-of-a-constant`, `gpu-call-determinant-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3044` |
 | `determinant(mat3)` | transpiled (`call-determinant-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3045` |
 | `determinant(mat4)` | transpiled (`call-determinant-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3046` |
-| `inverse(mat2)` | transpiled (`call-inverse-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3050` |
+| `inverse(mat2)` | transpiled (`call-inverse-mat2`, `gpu-call-inverse-of-a-constant`, `gpu-call-inverse-of-a-parameter`, `gpu-call-inverse-of-a-singular-matrix-of-a-constant`, `gpu-call-inverse-of-a-singular-matrix-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3050` |
 | `inverse(mat3)` | transpiled (`call-inverse-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3051` |
 | `inverse(mat4)` | transpiled (`call-inverse-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3052` |
 | `lessThan(vec2,vec2)` | transpiled (`call-lessThan-vec2-vec2`, `fold-call-less-than`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3056` |
@@ -1236,13 +1236,13 @@ canvases draw on WebGPURenderer (#1788).
 | `lessThanEqual(ivec2,ivec2)` | transpiled (`call-lessThanEqual-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3088` |
 | `lessThanEqual(ivec3,ivec3)` | transpiled (`call-lessThanEqual-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3089` |
 | `lessThanEqual(ivec4,ivec4)` | transpiled (`call-lessThanEqual-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3090` |
-| `lessThanEqual(uvec2,uvec2)` | transpiled (`call-lessThanEqual-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3092` |
+| `lessThanEqual(uvec2,uvec2)` | transpiled (`call-lessThanEqual-uvec2-uvec2`, `fold-call-compare-int-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3092` |
 | `lessThanEqual(uvec3,uvec3)` | transpiled (`call-lessThanEqual-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3093` |
 | `lessThanEqual(uvec4,uvec4)` | transpiled (`call-lessThanEqual-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3094` |
 | `greaterThanEqual(vec2,vec2)` | transpiled (`call-greaterThanEqual-vec2-vec2`, `fold-call-less-than-equal-of-nan`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3098` |
 | `greaterThanEqual(vec3,vec3)` | transpiled (`call-greaterThanEqual-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3099` |
 | `greaterThanEqual(vec4,vec4)` | transpiled (`call-greaterThanEqual-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3100` |
-| `greaterThanEqual(ivec2,ivec2)` | transpiled (`call-greaterThanEqual-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3102` |
+| `greaterThanEqual(ivec2,ivec2)` | transpiled (`call-greaterThanEqual-ivec2-ivec2`, `fold-call-compare-int-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3102` |
 | `greaterThanEqual(ivec3,ivec3)` | transpiled (`call-greaterThanEqual-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3103` |
 | `greaterThanEqual(ivec4,ivec4)` | transpiled (`call-greaterThanEqual-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3104` |
 | `greaterThanEqual(uvec2,uvec2)` | transpiled (`call-greaterThanEqual-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3106` |
@@ -1251,7 +1251,7 @@ canvases draw on WebGPURenderer (#1788).
 | `equal(vec2,vec2)` | transpiled (`call-equal-vec2-vec2`, `fold-call-equal`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3112` |
 | `equal(vec3,vec3)` | transpiled (`call-equal-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3113` |
 | `equal(vec4,vec4)` | transpiled (`call-equal-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3114` |
-| `equal(ivec2,ivec2)` | transpiled (`call-equal-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3116` |
+| `equal(ivec2,ivec2)` | transpiled (`call-equal-ivec2-ivec2`, `fold-call-equal-int-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3116` |
 | `equal(ivec3,ivec3)` | transpiled (`call-equal-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3117` |
 | `equal(ivec4,ivec4)` | transpiled (`call-equal-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3118` |
 | `equal(uvec2,uvec2)` | transpiled (`call-equal-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3120` |
@@ -1269,7 +1269,7 @@ canvases draw on WebGPURenderer (#1788).
 | `notEqual(uvec2,uvec2)` | transpiled (`call-notEqual-uvec2-uvec2`, `fold-call-equal`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3138` |
 | `notEqual(uvec3,uvec3)` | transpiled (`call-notEqual-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3139` |
 | `notEqual(uvec4,uvec4)` | transpiled (`call-notEqual-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3140` |
-| `notEqual(bvec2,bvec2)` | transpiled (`call-notEqual-bvec2-bvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3142` |
+| `notEqual(bvec2,bvec2)` | transpiled (`call-notEqual-bvec2-bvec2`, `fold-call-equal-int-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3142` |
 | `notEqual(bvec3,bvec3)` | transpiled (`call-notEqual-bvec3-bvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3143` |
 | `notEqual(bvec4,bvec4)` | transpiled (`call-notEqual-bvec4-bvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3144` |
 | `any(bvec2)` | transpiled (`call-any-bvec2`, `fold-call-any-all-not`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3148` |
