@@ -127,7 +127,7 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
   return readers;
 }
 
-/** Lit programs sample the atlas with no slot drawn. Allocating binds the canvas (r187 `WebGLTextures.js:2042`). */
+/** Lit programs sample the atlas with no slot drawn, and allocating binds the canvas (`WebGLTextures.js:2042`). */
 function allocatePositionalShadowAtlas(renderer: THREE.WebGLRenderer): void {
   const atlas = positionalShadowAtlas();
   if (isAllocated(renderer, atlas)) return;

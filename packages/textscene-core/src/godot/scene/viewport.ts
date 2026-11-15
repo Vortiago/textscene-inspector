@@ -141,7 +141,7 @@ export const VRS_UPDATE_MODE_NAMES = enumNamesByValue(VrsUpdateMode);
  */
 const POSITIONAL_SHADOW_QUADRANT_SUBDIV_SHADOWS = [0, 1, 4, 16, 64, 256, 1024] as const;
 
-/** Shadows per quadrant at the default subdivisions (`scene_tree.cpp:2133-2136`, `viewport.cpp:5363-5366`). */
+/** Shadows per quadrant at the defaults (`scene_tree.cpp:2133-2136`, `viewport.cpp:5363-5366`). */
 const POSITIONAL_SHADOW_QUADRANT_SHADOWS_DEFAULT = [
   PositionalShadowAtlasQuadrantSubdiv.SHADOWS_4,
   PositionalShadowAtlasQuadrantSubdiv.SHADOWS_4,

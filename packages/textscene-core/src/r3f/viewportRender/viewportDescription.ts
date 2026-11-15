@@ -1,5 +1,3 @@
-/** What a viewport gives each render it draws, and the project's adapter for the root viewport. */
-
 import type { PositionalShadowAtlasSettings } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import {
   projectAnisotropicFilteringLevel,
