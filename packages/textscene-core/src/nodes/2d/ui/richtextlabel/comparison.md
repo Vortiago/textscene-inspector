@@ -87,6 +87,9 @@ span's font and each fallback tried up to the one that draws a glyph (`text_serv
 reads them from the `post` table of each font (`sfobjs.c:1421-1426`).
 `self_modulate` tints the text, the images and the rules. The scroll bar draws without it (`rich_text_label.cpp:8208`).
 
+Each script run shapes apart, as Godot's `ScriptIterator` splits the text (`text_server_adv.cpp:7346-7352`), so kerning and the
+rounding remainder stop where the script changes. An unassigned code point that no font has takes no advance.
+
 ## Linting
 
 <!-- lint:begin RichTextLabel -->
