@@ -73,10 +73,9 @@ The printed tree of each shader the transpiler accepts is a checked-in file unde
 
 | State | Shaders |
 | --- | --- |
-| not transpiled yet (#1794) | 273 |
-| not transpiled yet (#1829) | 72 |
-| refused as Godot refuses | 18 |
-| not transpiled yet (#1828) | 4 |
+| not transpiled yet (#1794) | 274 |
+| not transpiled yet (#1829) | 74 |
+| refused as Godot refuses | 19 |
 | transpiled | 1 |
 
 The mismatches below are known, each with its owner. The list only shrinks, as for the random programs.
@@ -85,7 +84,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | --- | --- | --- |
 
 
-<details><summary>The 349 shaders not transpiled yet, with their owners</summary>
+<details><summary>The 348 shaders not transpiled yet, with their owners</summary>
 
 | Shader | Owner |
 | --- | --- |
@@ -226,7 +225,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `demos/xr/openxr_passthrough/holepunch.gdshader` | #1794 |
 | `demos/xr/openxr_spectator_view/shaders/color.gdshader` | #1829 |
 | `demos/xr/openxr_spectator_view/shaders/color_unshaded.gdshader` | #1794 |
-| `demos/xr/openxr_spectator_view/shaders/eye_output.gdshader` | #1828 |
+| `demos/xr/openxr_spectator_view/shaders/eye_output.gdshader` | #1829 |
 | `demos/xr/openxr_spectator_view/shaders/textured.gdshader` | #1794 |
 | `demos/xr/openxr_spectator_view/shaders/textured_unshaded.gdshader` | #1794 |
 | `demos/2d/platformer/level/props/wind_sway.tres#0` | #1794 |
@@ -247,7 +246,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `docs/tutorials/shaders/shader_reference/canvas_item_shader.rst#0` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#1` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#13` | #1794 |
-| `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#18` | #1828 |
+| `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#18` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#14` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#18` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#32` | #1794 |
@@ -403,7 +402,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `rejected/demos/xr/openxr_passthrough/holepunch.gdshader` | #1794 |
 | `rejected/demos/xr/openxr_spectator_view/shaders/color.gdshader` | #1829 |
 | `rejected/demos/xr/openxr_spectator_view/shaders/color_unshaded.gdshader` | #1794 |
-| `rejected/demos/xr/openxr_spectator_view/shaders/eye_output.gdshader` | #1828 |
+| `rejected/demos/xr/openxr_spectator_view/shaders/eye_output.gdshader` | #1829 |
 | `rejected/demos/xr/openxr_spectator_view/shaders/textured.gdshader` | #1794 |
 | `rejected/demos/xr/openxr_spectator_view/shaders/textured_unshaded.gdshader` | #1794 |
 | `rejected/demos/2d/platformer/level/props/wind_sway.tres#0` | #1794 |
@@ -421,7 +420,6 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `rejected/docs/tutorials/shaders/screen-reading_shaders.rst#0` | #1829 |
 | `rejected/docs/tutorials/shaders/screen-reading_shaders.rst#1` | #1829 |
 | `rejected/docs/tutorials/shaders/shader_reference/canvas_item_shader.rst#0` | #1794 |
-| `rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#18` | #1828 |
 | `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#14` | #1794 |
 | `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#18` | #1794 |
 | `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#32` | #1794 |

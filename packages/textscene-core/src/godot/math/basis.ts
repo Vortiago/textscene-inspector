@@ -294,7 +294,7 @@ export function basisFromQuaternionScale(rotation: Quaternion, scale: Vector3): 
  * `Basis::get_quaternion` (`basis.cpp:714-748`): the quaternion of a basis that is a rotation, by
  * the largest of the trace and the diagonal.
  */
-function basisGetQuaternion(n: BasisComponents): Quaternion {
+export function basisGetQuaternion(n: BasisComponents): Quaternion {
   const at = (row: number, col: number): number => n[row * 3 + col]!;
   const trace = f(f(at(0, 0) + at(1, 1)) + at(2, 2));
   if (trace > 0) {

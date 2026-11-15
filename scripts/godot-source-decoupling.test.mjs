@@ -56,6 +56,7 @@ const GODOT_SOURCE_READERS = new Set([
   'scripts/godot-shader-language/run.mjs',
   'scripts/godot-templates/install.mjs',
   'scripts/godot-templates/run.mjs',
+  'scripts/godot-variant/run.mjs',
 ]);
 const SOURCE_IMPORT_RE = /from\s+['"][./]*(?:scripts\/)?godotSource\.mjs['"]/;
 

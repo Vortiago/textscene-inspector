@@ -54,16 +54,17 @@ const adapterWithoutWidth = (adapter) => adapter.replace(/, \d+ bits\)$/, ')');
  * The records of one live run as every reader sees them, the same on every CPU: each NaN lane of
  * a float result as one value, and the adapter without its vector width.
  */
-export function canonicalAnswers({ probes, random, operators, corpus }) {
-  return { probes: canonicalProbes(probes), random: canonicalProbes(random), operators, corpus };
+export function canonicalAnswers({ probes, random, operators, corpus, expressions }) {
+  return { probes: canonicalProbes(probes), random: canonicalProbes(random), operators, corpus, expressions };
 }
 
-/** Each family's answers, `{ id: answer }`: probes and random by name, operators and corpus by id. */
-const familiesOf = ({ probes, random, operators, corpus }) => ({
+/** Each family's answers, `{ id: answer }`: probes and random by name, the other families by case id. */
+const familiesOf = ({ probes, random, operators, corpus, expressions }) => ({
   probes: probes.probes,
   random: random.probes,
   operators: operators.cases,
   corpus: corpus.cases,
+  expressions: expressions.cases,
 });
 
 /** The families of canonical `answers` whose digest is not the one `committed` holds. */
@@ -82,10 +83,7 @@ function renderEntries(answers) {
   return lines.length === 0 ? '{}' : `{\n${lines.join(',\n')}\n${indent}}`;
 }
 
-/**
- * The text of the committed answers file, from the live records of one run: `probes` and
- * `random` keyed by probe name, `operators` and `corpus` by case id.
- */
+/** The committed answers file: `probes` and `random` keyed by probe name, the others by case id. */
 export function renderAnswersFile(records) {
   const answers = canonicalAnswers(records);
   const families = familiesOf(answers);

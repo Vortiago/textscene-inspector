@@ -128,7 +128,8 @@ function substitute(body: string, name: string, value: string): string {
   return body;
 }
 
-function findMatch(text: string, value: string, from: number): { index: number } | undefined {
+/** `find_match` (shader_preprocessor.cpp:1130): `value` with no word character on either side. */
+export function findMatch(text: string, value: string, from: number): { index: number } | undefined {
   let index = text.indexOf(value, from);
   while (index > -1) {
     if (index > 0 && isCharWord(text[index - 1])) {

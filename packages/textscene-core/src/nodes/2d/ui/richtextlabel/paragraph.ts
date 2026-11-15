@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { splitUnquoted, unquoteMatchedPair, type OpenBBCodeTag } from './bbcode';
-import { stringToFloat } from '../../../../godot/string/string';
+import { stringToFloat } from '../../../../godot/string/strtod';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import {
   DEFAULT_JUSTIFICATION_FLAGS,

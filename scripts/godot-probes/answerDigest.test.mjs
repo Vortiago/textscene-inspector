@@ -7,7 +7,13 @@ const INT = 'int probe(int a) { return a; }';
 /** The answers of a run on `adapter` whose one probe, `source`, gives `lanes`. */
 const answersOf = (source, lanes, adapter = 'a') => {
   const record = { godot: 'g', adapter, probes: { p: { source, inputs: [], results: [lanes] } } };
-  return { probes: record, random: record, operators: { cases: {} }, corpus: { cases: {} } };
+  return {
+    probes: record,
+    random: record,
+    operators: { cases: {} },
+    corpus: { cases: {} },
+    expressions: { cases: {} },
+  };
 };
 
 const fileOf = (source, lanes, adapter) => renderAnswersFile(answersOf(source, lanes, adapter));
@@ -35,6 +41,7 @@ describe('the committed answers file', () => {
       'random',
       'operators',
       'corpus',
+      'expressions',
     ]);
   });
 });

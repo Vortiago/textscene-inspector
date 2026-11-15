@@ -28,3 +28,12 @@ export function isWhitespace(char: string): boolean {
  * @canonical An ASCII identifier test
  */
 export const isValidAsciiIdentifier = (text: string): boolean => /^[A-Za-z_][A-Za-z0-9_]*$/.test(text);
+
+/**
+ * The value of a digit `is_hex_digit` (char_utils.h:93) accepts, in either case, or undefined.
+ *
+ * @canonical The value of a hexadecimal digit
+ */
+export function hexDigitValue(char: string): number | undefined {
+  return /^[0-9a-fA-F]$/.test(char) ? Number.parseInt(char, 16) : undefined;
+}

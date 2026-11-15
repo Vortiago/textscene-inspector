@@ -1,5 +1,6 @@
 /** `String`'s parsing behaviour, as the engine defines it. */
 
+import { INT64_MAX, INT64_MIN } from '../variant/cInteger.js';
 import { toInt32, toUint32 } from '../variant/intWidth.js';
 
 /**
@@ -120,8 +121,6 @@ const EIGHT = '8'.charCodeAt(0);
 const NINE = '9'.charCodeAt(0);
 const MINUS = '-'.charCodeAt(0);
 
-const INT64_MAX = (1n << 63n) - 1n;
-const INT64_MIN = -(1n << 63n);
 /** `INT64_MAX / 10`, the bound `_to_int`'s overflow test compares against (`ustring.cpp:2283`). */
 const INT64_MAX_TENTH = INT64_MAX / 10n;
 /** `_to_int` tests for overflow only past 18 digits (`if (unlikely(digits > 18))`, `:2282`). */
@@ -133,7 +132,7 @@ const DIGIT_COUNT_MASK = 0xff;
  * `String::to_int()` (`ustring.cpp:2303-2311`) as the int64 it returns. It skips a character it
  * cannot use (`:2280-2293`), so `"x"` is 0 and `"a1b2"` is 12, and it stops at the first `.`.
  */
-function stringToInt64(text: string): bigint {
+export function stringToInt64(text: string): bigint {
   // `if (length() == 0) return 0` (`:2304-2306`).
   if (text.length === 0) return 0n;
   const dot = text.indexOf('.');
@@ -244,20 +243,6 @@ export function simplifyPath(path: string): string {
     else if (!(dropsLeadingParent && parts.length === 0)) parts.push(part);
   }
   return drive + parts.join('/');
-}
-
-/**
- * `String::to_float()` (`core/string/ustring.cpp:2680-2685`): an empty string is 0, and `built_in_strtod` takes the longest
- * numeric prefix, or 0. Not {@link parseGodotFloat}, which reads an anchored TSCN float literal because unread text corrupts
- * the next assignment. `to_float` is the lenient scan a class applies to text it holds (a BBCode tag option, a split
- * component), so trailing text is ignored. Swapping the two changes what a malformed value reads as.
- */
-export function stringToFloat(text: string): number {
-  // `built_in_strtod` skips leading whitespace, then takes the longest prefix it can read. `parseFloat` has the same
-  // prefix rule and 0-length miss, and differs only in reading JavaScript's `Infinity`, which the finite check maps to 0.
-  const trimmed = text.trimStart();
-  const parsed = Number.parseFloat(trimmed);
-  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 /**

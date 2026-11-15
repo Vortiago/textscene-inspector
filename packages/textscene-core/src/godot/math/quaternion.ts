@@ -37,11 +37,12 @@ export function quaternionFromAxisAngle(axis: Vector3, angle: number): Quaternio
 export function quaternionMultiply(left: Quaternion, right: Quaternion): Quaternion {
   const { x: lx, y: ly, z: lz, w: lw } = left;
   const { x: rx, y: ry, z: rz, w: rw } = right;
+  // `operator*=` (quaternion.h:237) sums each component left to right.
   return {
-    x: f(f(f(lw * rx) + f(lx * rw)) + f(f(ly * rz) - f(lz * ry))),
-    y: f(f(f(lw * ry) + f(ly * rw)) + f(f(lz * rx) - f(lx * rz))),
-    z: f(f(f(lw * rz) + f(lz * rw)) + f(f(lx * ry) - f(ly * rx))),
-    w: f(f(f(lw * rw) - f(lx * rx)) - f(f(ly * ry) + f(lz * rz))),
+    x: f(f(f(f(lw * rx) + f(lx * rw)) + f(ly * rz)) - f(lz * ry)),
+    y: f(f(f(f(lw * ry) + f(ly * rw)) + f(lz * rx)) - f(lx * rz)),
+    z: f(f(f(f(lw * rz) + f(lz * rw)) + f(lx * ry)) - f(ly * rx)),
+    w: f(f(f(f(lw * rw) - f(lx * rx)) - f(ly * ry)) - f(lz * rz)),
   };
 }
 
@@ -50,10 +51,16 @@ export function quaternionInverse({ x, y, z, w }: Quaternion): Quaternion {
   return { x: f(-x), y: f(-y), z: f(-z), w };
 }
 
-/** `Quaternion::normalized` (`quaternion.h:88-90`): the four components over the length. */
-export function normalizedQuaternion({ x, y, z, w }: Quaternion): Quaternion {
-  const length = f(Math.sqrt(f(f(f(x * x) + f(y * y)) + f(f(z * z) + f(w * w)))));
-  return { x: f(x / length), y: f(y / length), z: f(z / length), w: f(w / length) };
+/** `Quaternion::normalized` (quaternion.cpp:69): each component times `1 / length`, as `operator/` does. */
+export function normalizedQuaternion(q: Quaternion): Quaternion {
+  const { x, y, z, w } = q;
+  const inverseLength = f(1 / f(Math.sqrt(quaternionDot(q, q))));
+  return {
+    x: f(x * inverseLength),
+    y: f(y * inverseLength),
+    z: f(z * inverseLength),
+    w: f(w * inverseLength),
+  };
 }
 
 /**
@@ -82,5 +89,5 @@ export function quaternionSlerp(from: Quaternion, to: Quaternion, weight: number
 
 /** `Quaternion::dot` (`quaternion.h`). */
 export function quaternionDot(a: Quaternion, b: Quaternion): number {
-  return f(f(f(a.x * b.x) + f(a.y * b.y)) + f(f(a.z * b.z) + f(a.w * b.w)));
+  return f(f(f(f(a.x * b.x) + f(a.y * b.y)) + f(a.z * b.z)) + f(a.w * b.w));
 }

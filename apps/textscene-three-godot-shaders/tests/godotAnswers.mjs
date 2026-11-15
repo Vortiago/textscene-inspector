@@ -1,16 +1,9 @@
-/**
- * Godot's answers to the probes, the random programs, the operator cases and the corpus, for the
- * tests that compare with them. `pnpm godot:probes` asks Godot live and writes every answer to
- * the ignored `.godot-answers/`. The committed `godot-answers.json` holds a digest of each family
- * and a smoke subset, so a test outside the CI image still compares some cases with Godot.
- */
-
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { canonicalAnswers, staleFamilies } from '../../../scripts/godot-probes/answerDigest.mjs';
 
 /** The families of answers, each a record file of the live run. */
-const FAMILIES = ['probes', 'random', 'operators', 'corpus'];
+const FAMILIES = ['probes', 'random', 'operators', 'corpus', 'expressions'];
 
 /** Written only by `pnpm godot:probes`, and left out of the repository. */
 export const LIVE_DIR = join(import.meta.dirname, '.godot-answers');
@@ -25,13 +18,7 @@ export const livePath = (family) => join(LIVE_DIR, `${family}.json`);
 
 const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
 
-/**
- * Every family's answers, `{ live, probes, random, operators, corpus }`, each in its record
- * shape and the same on every CPU (`canonicalAnswers`). `live` is false when no live run exists,
- * and each family then holds the smoke subset only: a test that needs every case runs when `live`
- * is true. Throws without a live run when `SHADER_ANSWERS` is `live`, so a job without Godot fails
- * instead of passing on the subset, and throws on a live run the committed digests do not match.
- */
+/** Each family's answers. Throws when `SHADER_ANSWERS=live` finds no live run, or a digest differs. */
 export function godotAnswers() {
   const isLive = FAMILIES.every((family) => existsSync(livePath(family)));
   if (isLive) return { live: true, ...currentLiveAnswers() };
@@ -65,6 +52,7 @@ function smokeAnswers(smoke, godot, adapter) {
     random: { godot, adapter, probes: smoke.random },
     operators: { godot, cases: smoke.operators },
     corpus: { godot, cases: smoke.corpus },
+    expressions: { godot, cases: smoke.expressions },
   };
 }
 

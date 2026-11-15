@@ -9,7 +9,7 @@
  */
 import { linearColorToSRGBF32, sRGBColorToLinearF32 } from '../../../../utils/colorSpace';
 import { isColorOverbright } from '../shared/colorOverbright';
-import { formatGodotNumber } from '../spinbox/nativeSolver';
+import { stringNum } from '../../../../godot/string/stringNumber';
 import { colorHue, colorSaturation, hsvToRgb } from '../../../../godot/math/color';
 import { okhslToSrgb, srgbToOkhsl } from './okhsl';
 import { COLOR_HUE_STOPS } from './svGradient';
@@ -259,12 +259,8 @@ interface HexFieldText {
 export function hexFieldText(color: Rgba, editAlpha: boolean): HexFieldText {
   if (!isColorValidHex(color)) {
     const showAlpha = editAlpha && color.a < 1;
-    const parts = [
-      formatGodotNumber(color.r, 3),
-      formatGodotNumber(color.g, 3),
-      formatGodotNumber(color.b, 3),
-    ];
-    if (showAlpha) parts.push(formatGodotNumber(color.a, 3));
+    const parts = [stringNum(color.r, 3), stringNum(color.g, 3), stringNum(color.b, 3)];
+    if (showAlpha) parts.push(stringNum(color.a, 3));
     return { label: 'Expr', typeText: '', text: `Color(${parts.join(', ')})` };
   }
   const withAlpha = editAlpha && color.a < 1;

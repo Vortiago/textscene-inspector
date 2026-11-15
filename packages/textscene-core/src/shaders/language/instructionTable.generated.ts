@@ -1908,10 +1908,10 @@ sky render_mode use_half_res_pass	render mode	servers/rendering/shader_types.cpp
 sky render_mode use_quarter_res_pass	render mode	servers/rendering/shader_types.cpp:500	#1794					
 sky render_mode disable_fog	render mode	servers/rendering/shader_types.cpp:501	#1794					
 sky render_mode use_debanding	render mode	servers/rendering/shader_types.cpp:502	#1794					
-#if	preprocessor	servers/rendering/shader_preprocessor.cpp:384	#1828					
+#if	preprocessor	servers/rendering/shader_preprocessor.cpp:384	#1828				native	native
 #ifdef	preprocessor	servers/rendering/shader_preprocessor.cpp:386	#1828				native	native
 #ifndef	preprocessor	servers/rendering/shader_preprocessor.cpp:388	#1828				native	native
-#elif	preprocessor	servers/rendering/shader_preprocessor.cpp:390	#1828					
+#elif	preprocessor	servers/rendering/shader_preprocessor.cpp:390	#1828				native	native
 #else	preprocessor	servers/rendering/shader_preprocessor.cpp:392	#1828				native	native
 #endif	preprocessor	servers/rendering/shader_preprocessor.cpp:394	#1828				native	native
 #error	preprocessor	servers/rendering/shader_preprocessor.cpp:396	#1828				native	native
@@ -1919,7 +1919,7 @@ sky render_mode use_debanding	render mode	servers/rendering/shader_types.cpp:502
 #undef	preprocessor	servers/rendering/shader_preprocessor.cpp:400	#1828				native	native
 #include	preprocessor	servers/rendering/shader_preprocessor.cpp:402	#1828				native	native
 #pragma	preprocessor	servers/rendering/shader_preprocessor.cpp:404	#1828				native	native
-defined	preprocessor	servers/rendering/shader_preprocessor.cpp:910	#1828					
+defined	preprocessor	servers/rendering/shader_preprocessor.cpp:910	#1828				native	native
 #pragma disable_preprocessor	preprocessor	servers/rendering/shader_preprocessor.cpp:803	#1828				native	native
 `;
 

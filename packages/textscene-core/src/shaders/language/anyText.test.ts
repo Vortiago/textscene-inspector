@@ -17,6 +17,8 @@ import { treeFault } from './treeCheck.js';
 const TIME_LIMIT_MS = 500;
 
 const CASES_PER_KIND = 400;
+// Each text has its own limit, so one kind may take their sum: 400 long repeats near the default 5 s.
+const KIND_TIME_LIMIT_MS = CASES_PER_KIND * TIME_LIMIT_MS;
 
 /** A seeded random source (mulberry32), so a failing case repeats. */
 function randomSource(seed: number): () => number {
@@ -181,16 +183,20 @@ describe.each([
   ['valid shaders with one change', changedShader, 3],
   ['long repeats of one character or token', longRepeat, 4],
 ] as const)('%s', (_, generate, seed) => {
-  it('each get an answer in time, and each tree they give is sound', () => {
-    const random = randomSource(seed);
-    for (let index = 0; index < CASES_PER_KIND; index += 1) {
-      const text = generate(random);
-      const startedAt = performance.now();
-      answer(text);
-      expect(performance.now() - startedAt, text).toBeLessThan(TIME_LIMIT_MS);
-      expectSoundTree(text);
-    }
-  });
+  it(
+    'each get an answer in time, and each tree they give is sound',
+    () => {
+      const random = randomSource(seed);
+      for (let index = 0; index < CASES_PER_KIND; index += 1) {
+        const text = generate(random);
+        const startedAt = performance.now();
+        answer(text);
+        expect(performance.now() - startedAt, text).toBeLessThan(TIME_LIMIT_MS);
+        expectSoundTree(text);
+      }
+    },
+    KIND_TIME_LIMIT_MS
+  );
 });
 
 describe('the expression limits', () => {

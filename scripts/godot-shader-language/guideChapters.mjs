@@ -699,9 +699,7 @@ When the preprocessor refuses a text, a game does not show the preprocessor's me
 
 A caller passes \`ShaderOptions\` to \`transpileShadingLanguage\` and \`transpileSky\`: \`file\`, the shader's \`res://\` path, \`readInclude\`, which answers the text of a \`.gdshaderinc\` file by its path, and \`renderingMethod\`, the project's \`rendering/renderer/rendering_method\`. \`CURRENT_RENDERER\` is 2 for \`forward_plus\`, 1 for \`mobile\` and 0 for \`gl_compatibility\`, and \`forward_plus\` when the caller gives none.
 
-\`pnpm godot:probes\` records the text Godot's preprocessor makes of each probe of this chapter, and a test checks that the port makes the same text, byte for byte. The random programs hold no directive.
-
-\`#if\`, \`#elif\` and \`defined\` evaluate a condition with Godot's Expression class, which is not transpiled yet: a shader with one is refused with its row and #1828.`,
+\`pnpm godot:probes\` records the text Godot's preprocessor makes of each probe of this chapter, and a test checks that the port makes the same text, byte for byte. The random programs hold no directive.`,
   sections: [
     {
       heading: 'Macros',
@@ -716,6 +714,13 @@ A caller passes \`ShaderOptions\` to \`transpileShadingLanguage\` and \`transpil
       what: '`#ifdef` and `#ifndef` take their branch when a macro is or is not defined, and `#else` takes the other. A skipped branch is not read, so it can hold any text. Godot refuses text after a name, a second `#else`, an `#endif` with no condition and a condition with no `#endif`.',
       tsl: 'none: the preprocessor writes the taken branch',
       probes: (probe) => probe.name.startsWith('condition-'),
+    },
+    {
+      heading: '`#if`, `#elif` and `defined`',
+      rows: directiveRows(['#if', '#elif', 'defined']),
+      what: '`#if` and `#elif` take their branch when the condition is true, and an `#elif` only when no branch before it was taken. Godot first replaces each `defined NAME` and `defined(NAME)` with `true` or `false`, then expands the macros, then runs the text with its Expression class, which the transpiler ports (`godot/expression/`). So a condition can use every Variant operator and constructor, such as `Vector2(1, 2) * 2 == Vector2(2, 4)`. A value is true when it is not its type\'s zero: `0.0`, `""` and `[]` are false. Godot evaluates an `#elif` after a taken branch too, so its errors still show. A failed operation still leaves a value: `1 / 0` leaves the text `Division by zero error`, so `#if 1 / 0` is true, and only a failure that leaves Nil, such as `"a" + 1`, is refused with `Condition evaluation error.`. Godot keeps the end of the last `defined` operand for a bare name at the end of the text, so `defined(A) || defined B` becomes `true || falsefined B`, which Godot refuses with `Condition evaluation error.`. A condition with a utility function, an index or a method call is refused with its row and #1828, and a condition that ends Godot with SIGFPE, such as `(-9223372036854775807 - 1) / -1`, is refused.',
+      tsl: 'none: the preprocessor writes the taken branch',
+      probes: (probe) => /^(if|elif)-/.test(probe.name),
     },
     {
       heading: '`#error` and `#pragma`',

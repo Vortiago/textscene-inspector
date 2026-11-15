@@ -9,6 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { hexDigitValue } from '../string/charUtils.js';
 import type { Rgba } from './math.js';
 
 /**
@@ -296,5 +297,48 @@ export function hsvToRgb(h: number, s: number, v: number): Rgba {
       return { r: t, g: p, b: v, a: 1 };
     default:
       return { r: v, g: p, b: q, a: 1 };
+  }
+}
+
+/** `Color::html`'s hex byte (2 digits), 0-255. */
+function hexByte(hex: string, i: number): number {
+  return hexDigitValue(hex[i]!)! * 16 + hexDigitValue(hex[i + 1]!)!;
+}
+
+/**
+ * `Color::html` (color.cpp:331, 372), or `undefined` for a text that is not a hex colour.
+ *
+ * @canonical A hex colour text as a colour
+ */
+export function htmlColor(value: string): Rgba | undefined {
+  const body = value.startsWith('#') ? value.slice(1) : value;
+  if (!/^[0-9a-fA-F]+$/.test(body)) return undefined;
+
+  switch (body.length) {
+    case 3:
+      return {
+        r: hexDigitValue(body[0]!)! / 15,
+        g: hexDigitValue(body[1]!)! / 15,
+        b: hexDigitValue(body[2]!)! / 15,
+        a: 1,
+      };
+    case 4:
+      return {
+        r: hexDigitValue(body[0]!)! / 15,
+        g: hexDigitValue(body[1]!)! / 15,
+        b: hexDigitValue(body[2]!)! / 15,
+        a: hexDigitValue(body[3]!)! / 15,
+      };
+    case 6:
+      return { r: hexByte(body, 0) / 255, g: hexByte(body, 2) / 255, b: hexByte(body, 4) / 255, a: 1 };
+    case 8:
+      return {
+        r: hexByte(body, 0) / 255,
+        g: hexByte(body, 2) / 255,
+        b: hexByte(body, 4) / 255,
+        a: hexByte(body, 6) / 255,
+      };
+    default:
+      return undefined;
   }
 }
