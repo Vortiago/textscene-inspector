@@ -36,6 +36,14 @@ describe('commentFindings: one line', () => {
     expect(rulesOf('/**\n * Why.\n *\n * @param x the input\n *   it reads\n */')).toEqual([[]]);
   });
 
+  it('passes a tag line wider than the print width below the prose line', () => {
+    expect(rulesOf(`/**\n * Why.\n * @param x ${'word '.repeat(9)}\n */`)).toEqual([[]]);
+  });
+
+  it('passes a coverage directive beside the prose line', () => {
+    expect(rulesOf('// Why the branch never runs.\n// v8 ignore next')).toEqual([[]]);
+  });
+
   it('passes a directive line beside the prose line', () => {
     expect(rulesOf('// Why the cast holds.\n// eslint-disable-next-line no-x')).toEqual([[]]);
   });
@@ -74,6 +82,10 @@ describe('commentFindings: work reference', () => {
 
   it("passes an upstream project's issue, cited as that project's", () => {
     expect(rulesOf('// The advance bounds it, harfbuzz#1532.')).toEqual([[]]);
+  });
+
+  it('passes a hex colour', () => {
+    expect(rulesOf('// It clears to #000000.')).toEqual([[]]);
   });
 
   it('passes a Godot citation', () => {

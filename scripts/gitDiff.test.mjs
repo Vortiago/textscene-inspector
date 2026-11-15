@@ -31,6 +31,11 @@ describe('addedLines', () => {
     expect(at(diff)).toEqual(['src/a.ts:1', 'src/a.ts:2']);
   });
 
+  it('reads the path of a file whose name holds a space without the tab git ends it with', () => {
+    const diff = ['+++ b/src/a b.ts\t', '@@ -0,0 +1 @@', '+const a = 1;'].join('\n');
+    expect(at(diff)).toEqual(['src/a b.ts:1']);
+  });
+
   it('reads no line from a hunk that only deletes', () => {
     expect(at(['+++ b/src/a.ts', '@@ -3,2 +2,0 @@', '-old', '-older'].join('\n'))).toEqual([]);
   });

@@ -45,9 +45,14 @@ describe('commentBlocks', () => {
     expect(blocksOf('const a = 1;\n// End.\n')).toEqual([{ startLine: 2, endLine: 2, lines: ['// End.'] }]);
   });
 
-  it('counts the code before a trailing comment in its widest column', () => {
+  it('counts the code before a trailing comment in its width', () => {
     const [block] = commentBlocks('file.ts', 'const a = 1; // Trailing.\n');
-    expect(block.widestColumn).toBe('const a = 1; // Trailing.'.length);
+    expect(block.widths).toEqual(['const a = 1; // Trailing.'.length]);
+  });
+
+  it('counts the indent of each later line of a block in its width', () => {
+    const [block] = commentBlocks('file.ts', 'function f() {\n  // One.\n  // Two.\n}\n');
+    expect(block.widths).toEqual([9, 9]);
   });
 
   it('marks a comment before the first code and above a blank line as the file header', () => {

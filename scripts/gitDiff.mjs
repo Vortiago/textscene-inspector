@@ -4,6 +4,9 @@ export const PLAIN_DIFF = ['--no-color', '--no-ext-diff', '--src-prefix=a/', '--
 /** A hunk header, `@@ -a,b +c,d @@`: the removed count, the first new line and the added count. */
 const HUNK_HEADER = /^@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
 
+/** Git ends a file header with a tab when its path holds a space. */
+const PATH_SPACE_TAB = /\t$/;
+
 /** Git leaves a count of 1 out of a hunk header. */
 const countOf = (digits) => (digits === undefined ? 1 : Number(digits));
 
@@ -26,7 +29,7 @@ export function addedLines(diff) {
         line = Number(hunk[2]);
         newLeft = countOf(hunk[3]);
       } else if (text.startsWith('+++ ')) {
-        path = text.slice('+++ b/'.length);
+        path = text.slice('+++ b/'.length).replace(PATH_SPACE_TAB, '');
       }
       continue;
     }

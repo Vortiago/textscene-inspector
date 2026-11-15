@@ -57,7 +57,7 @@ function isBlankLine(lines, index) {
 }
 
 /**
- * Each comment block of `text`. `widestColumn` counts the code before a trailing comment.
+ * Each comment block of `text`. `widths` holds the end column of each line, with the code before it.
  *
  * @canonical Read the comments of a source file
  */
@@ -75,7 +75,7 @@ export function commentBlocks(path, text) {
       startLine: group.startLine + 1,
       endLine: group.endLine + 1,
       lines,
-      widestColumn: Math.max(startColumn + lines[0].length, ...lines.slice(1).map((line) => line.length)),
+      widths: lines.map((line, index) => (index === 0 ? startColumn : 0) + line.length),
       isFileHeader: group.end <= firstCode && isBlankLine(sourceLines, group.endLine + 1),
     };
   });

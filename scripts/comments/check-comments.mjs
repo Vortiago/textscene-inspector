@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import process from 'node:process';
+import { parseArgs } from 'node:util';
 import prettierConfig from '../../prettier.config.mjs';
 import { git, mergeBaseWithMain } from '../githooks/changes.mjs';
 import { addedLines, PLAIN_DIFF } from '../gitDiff.mjs';
@@ -11,11 +12,6 @@ import { isCheckedSource, touchedFindings } from './touchedFindings.mjs';
 const USAGE = `pnpm comments:check [--base <rev>] | --all
   --base <rev>  check the comments added or changed since <rev>, default the merge base with origin/main
   --all         count every comment that breaks a rule, the debt the check leaves standing`;
-
-function argument(name) {
-  const index = process.argv.indexOf(name);
-  return index === -1 ? undefined : process.argv[index + 1];
-}
 
 /** An untracked file, and every file under `--all`, is read whole. */
 const wholeFiles = (paths) => paths.map((path) => [path, 'all']);
@@ -42,12 +38,16 @@ function changedSince(base) {
     ...PLAIN_DIFF,
     base
   );
-  const untracked = git('ls-files', '--others', '--exclude-standard').split('\n').filter(Boolean);
+  const untracked = git('ls-files', '--others', '--exclude-standard', '--exclude-from=.prettierignore')
+    .split('\n')
+    .filter(Boolean);
   return [...linesByPath(diff), ...wholeFiles(untracked)];
 }
 
+/** A tracked file deleted in the working tree has no text to read. */
 function everyFile() {
-  return wholeFiles(git('-c', 'core.quotePath=false', 'ls-files').split('\n'));
+  const tracked = git('-c', 'core.quotePath=false', 'ls-files').split('\n');
+  return wholeFiles(tracked.filter((path) => existsSync(join(REPO_ROOT, path))));
 }
 
 function findingsIn(files) {
@@ -79,12 +79,25 @@ function checkChanges(base) {
   return 1;
 }
 
-if (process.argv.includes('--help')) {
+function readOptions() {
+  try {
+    return parseArgs({
+      options: { base: { type: 'string' }, all: { type: 'boolean' }, help: { type: 'boolean' } },
+    }).values;
+  } catch (error) {
+    console.error(`comments:check: ${error.message}\n${USAGE}`);
+    process.exit(2);
+  }
+}
+
+const options = readOptions();
+
+if (options.help) {
   console.log(USAGE);
-} else if (process.argv.includes('--all')) {
+} else if (options.all) {
   reportDebt();
 } else {
-  const base = argument('--base') ?? mergeBaseWithMain('HEAD');
+  const base = options.base ?? mergeBaseWithMain('HEAD');
   if (base === undefined) {
     console.error(`comments:check: no origin/main in this clone, so pass --base.\n${USAGE}`);
     process.exitCode = 2;
