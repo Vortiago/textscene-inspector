@@ -891,6 +891,24 @@ it('keeps a 0 advance for a zero-width space after a remainder of -0.5', () => {
   expect(layout.lines[0]!.glyphs.map((g) => g.advance)).toEqual([17, 16, 17, 0, 16]);
 });
 
+// Godot forces a cluster that starts with U+200C, U+200D, U+2060 or U+FEFF to glyph index 0
+// (`text_server_adv.cpp:7052-7055`), so it rounds nothing, though the face shapes it at a 0 advance.
+it('keeps a 0 advance for a shaped zero-width joiner after a remainder of -0.5', () => {
+  const face: FontMetrics = {
+    ...OPEN_SANS_FONT_METRICS,
+    shaping: undefined,
+    getGlyphAdvanceUnits: (ch) => (ch === '\u200D' ? 0 : 1056),
+  };
+  const layout = shapeText('AAA\u200DA', {
+    fontSizePx: 32,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 3,
+    fontMetrics: face,
+  });
+  expect(layout.lines[0]!.glyphs.map((g) => g.advance)).toEqual([17, 16, 17, 0, 16]);
+});
+
 /**
  * Godot shapes each script run apart (`ScriptIterator`, `text_server_adv.cpp:7346-7352`), so the
  * rounding remainder restarts where the script changes. Each glyph of this face is 16.5 px at 32 px:
