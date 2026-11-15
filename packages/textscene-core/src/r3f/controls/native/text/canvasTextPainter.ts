@@ -162,11 +162,7 @@ function scaledPenShiftPx(
   return subpixelHalfStepPx(fontSizePx);
 }
 
-/**
- * How far a run's place in its canvas item sits past the whole pixel at or before it. A run that places
- * its glyphs as a canvas item does starts its quad on that pixel, as Godot draws a glyph texel-aligned
- * (`text_server_adv.cpp:4082-4084`). The phase sets where the quad starts and where the baseline floors.
- */
+/** Where a run's quad starts and its baseline floors: past the whole pixel (`text_server_adv.cpp:4082`). */
 export function originPhase(placePx: Readonly<Vector2>): Vector2 {
   return { x: fposmodp(placePx.x, 1), y: fposmodp(placePx.y, 1) };
 }
