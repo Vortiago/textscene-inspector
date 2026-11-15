@@ -4,6 +4,8 @@
  * rows, the probes and Godot's recorded values. A transpiled row with no section fails the build.
  */
 
+import { isFunctionRow } from '../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
+
 /** The rows of the operator `op`, `OP_ADD(int,int)` and the rest. */
 const operatorRows = (op) => (row) => row.id.startsWith(`${op}(`);
 
@@ -12,7 +14,7 @@ const anyOperatorRows = (ops) => (row) => ops.some((op) => row.id.startsWith(`${
 
 /** The rows of the built-in functions `names`, `sin(vec2)` and the rest. */
 const functionRows = (names) => (row) =>
-  row.family.startsWith('function') && names.some((name) => row.id.startsWith(`${name}(`));
+  isFunctionRow(row) && names.some((name) => row.id.startsWith(`${name}(`));
 
 const VALUE_TYPES = new Set([
   'bool',
@@ -212,13 +214,13 @@ const CONSTRUCTORS_CHAPTER = {
     },
     {
       heading: 'Scalar conversions',
-      rows: (row) => row.family === 'function' && /^(int|uint|float|bool)\(/.test(row.id),
+      rows: (row) => isFunctionRow(row) && /^(int|uint|float|bool)\(/.test(row.id),
       what: '`int(a)`, `uint(a)`, `float(a)` and `bool(a)` convert one scalar. A float converts to an integer toward zero. A `bool` is 1 or 0 as a number, and a number is `true` when it is not zero.',
       tsl: 'int(a)',
     },
     {
       heading: 'Vector and matrix conversions',
-      rows: (row) => row.family === 'function' && /^(?:[biu]?vec\d|mat\d)\(/.test(row.id),
+      rows: (row) => isFunctionRow(row) && /^(?:[biu]?vec\d|mat\d)\(/.test(row.id),
       what: '`ivec3(a)` converts each lane of a vector of the same size, as the scalar conversions do. `mat3(m)` takes the upper left of a larger matrix, or puts a smaller one in the upper left of the identity matrix.',
       tsl: 'ivec3(a), mat3(m)',
     },

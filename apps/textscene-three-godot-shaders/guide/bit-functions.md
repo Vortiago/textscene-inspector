@@ -2689,7 +2689,7 @@ ivec4 probe(vec4 a) { ivec4 exponent = ivec4(0); frexp(a, exponent); return expo
 | `(-inf, -1.0, 123456.79, inf)` | `(129, 1, 17, 129)` |
 | `(NaN, 0.5, 16777216.0, -inf)` | `(129, 0, 25, 129)` |
 
-### Probe `call-ldexp-float-int-range`, 35 input rows
+### Probe `call-ldexp-float-int-range`, 50 input rows
 
 ```glsl
 float probe(float a, int b) { int exponent = b; return ldexp(a, exponent); }
@@ -2697,8 +2697,8 @@ float probe(float a, int b) { int exponent = b; return ldexp(a, exponent); }
 
 | `a` | `b` | Godot gives |
 | --- | --- | --- |
-| `1e-40` | `-127` | `0.0` |
-| `7.888609e-31` | `128` | `268435460.0` |
+| `1e-40` | `-3` | `0.0` |
+| `7.888609e-31` | `-3` | `9.8607613e-32` |
 | `-1.5` | `-127` | `-0.0` |
 
 ### Probe `call-ldexp-of-a-constant-exponent`, 0 input rows

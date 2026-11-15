@@ -5,6 +5,7 @@
  * Godot's answers to it, and the real-GL test compares the transpiler's bits with them.
  */
 
+import { isFunctionRow } from '../../../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { OUT_ARGUMENTS } from '../../../../packages/textscene-core/src/shaders/language/outArguments.ts';
 import { LANE_COUNT } from '../../../../scripts/godot-probes/probeShader.mjs';
@@ -109,13 +110,12 @@ function producersByType(rows) {
   return producers;
 }
 
-const familyOf = (row) => (row.family.startsWith('function') ? 'function' : row.family);
+const familyOf = (row) => (isFunctionRow(row) ? 'function' : row.family);
 
 /** How each family of rows with operands is written. */
 const PRODUCER_KINDS = { operator: 'operator', constructor: 'call', function: 'call' };
 
-export const placeArguments = (row) =>
-  row.family.startsWith('function') ? (OUT_ARGUMENTS[operatorOf(row)] ?? []) : [];
+export const placeArguments = (row) => (isFunctionRow(row) ? (OUT_ARGUMENTS[operatorOf(row)] ?? []) : []);
 
 /**
  * The index of the operand `row` writes, which must be a parameter: the first of an operator that

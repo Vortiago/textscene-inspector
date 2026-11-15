@@ -1,10 +1,11 @@
+import { isFunctionRow } from '../../../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { nameOf, probeName, probeOf, valueProbe } from './builtInFunctionProbes.mjs';
 import { probeOf as sourceProbe } from './languageProbes.mjs';
 
 const OWNER = '#1827';
 
-const zeroOf = (type) => `${type}(${/^u|^uvec/.test(type) ? '0u' : '0'})`;
+const zeroOf = (type) => `${type}(${type.startsWith('u') ? '0u' : '0'})`;
 
 function carryProbes(row) {
   const [type] = row.args;
@@ -57,8 +58,10 @@ function ldexpProbe(row) {
   );
 }
 
-const RANGE_XS = [1e-40, 2 ** -100, -1.5, 3e38];
-const RANGE_EXPONENTS = [-127, -149, -200, -253, -277, -278, -300, 128, 129, 200, 254, 277, 278];
+// A result below 2^-126 rounds more than once in a split product, unless the driver flushes it.
+const JUST_ABOVE_LEAST_NORMAL = (1 + 5 * 2 ** -23) * 2 ** -126;
+const RANGE_XS = [1e-40, 2 ** -100, -1.5, 3e38, JUST_ABOVE_LEAST_NORMAL];
+const RANGE_EXPONENTS = [-3, -127, -149, -200, -253, -277, -278, -300, 128, 129, 200, 254, 277, 278];
 const FLOAT_MAX = 3.4028234663852886e38;
 
 // GLSL leaves an overflowing result undefined, so only finite products are rows.
@@ -141,7 +144,7 @@ function constantProbes() {
   );
 }
 
-const isOwned = (row) => row.family.startsWith('function') && row.owner === OWNER;
+const isOwned = (row) => isFunctionRow(row) && row.owner === OWNER;
 
 export const BIT_FUNCTION_PROBES = [
   ...INSTRUCTION_TABLE.filter(isOwned).flatMap((row) => PROBES_OF[nameOf(row)]?.(row) ?? [valueProbe(row)]),

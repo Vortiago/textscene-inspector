@@ -4,6 +4,7 @@
  * vector and matrix conversions. Each calls its overload once on arguments of the overload's types.
  */
 
+import { isFunctionRow } from '../../../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { PROBE_TYPES } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { argumentRows } from './inputs.mjs';
@@ -86,7 +87,7 @@ function resolutionProbes() {
 }
 
 export const BUILT_IN_FUNCTION_PROBES = [
-  ...INSTRUCTION_TABLE.filter((row) => row.family === 'function' && row.owner === OWNER).flatMap((row) =>
+  ...INSTRUCTION_TABLE.filter((row) => isFunctionRow(row) && row.owner === OWNER).flatMap((row) =>
     nameOf(row) === 'modf' ? modfProbes(row) : [valueProbe(row)]
   ),
   ...resolutionProbes(),

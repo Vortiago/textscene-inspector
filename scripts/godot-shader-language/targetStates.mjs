@@ -4,6 +4,8 @@
  * operation itself, and lowered when the emitter writes it as other operations, named here.
  */
 
+import { isFunctionRow } from '../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
+
 /** The targets, as the table names them. */
 export const TARGETS = ['webgl2', 'webgpu'];
 
@@ -83,7 +85,7 @@ function lowering(row) {
   if (/^(lowp|mediump|highp)$/.test(row.id)) return 'dropped: every float is 32-bit';
   if (row.family === 'constructor' && isMatrix(row.returns) && row.args.length === 1)
     return 'diagonal of columns';
-  if (row.family.startsWith('function') && row.args !== undefined) return functionComposite(row);
+  if (isFunctionRow(row) && row.args !== undefined) return functionComposite(row);
   if (row.family !== 'operator' || row.args === undefined) return undefined;
   const op = row.id.slice(0, row.id.indexOf('('));
   if (op === 'OP_ASSIGN' || STEPS.test(op)) return 'written to the argument value';
@@ -99,6 +101,6 @@ function lowering(row) {
 export function targetStates(row) {
   const stateOf = (name) => (name === undefined ? 'native' : `lowered: ${name}`);
   const states = Object.fromEntries(TARGETS.map((target) => [target, stateOf(lowering(row))]));
-  const polyfill = row.family.startsWith('function') ? THREE_POLYFILLS[functionName(row)] : undefined;
+  const polyfill = isFunctionRow(row) ? THREE_POLYFILLS[functionName(row)] : undefined;
   return polyfill === undefined ? states : { webgl2: stateOf(polyfill), webgpu: WEBGPU_STATE };
 }

@@ -5,6 +5,7 @@
  * change, and `--check` names it then.
  */
 
+import { isFunctionRow } from '../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
 import { godotShader } from '../../apps/textscene-three-godot-shaders/tests/e2e/showcases.mjs';
 import { floatOfBits } from '../../apps/textscene-three-godot-shaders/tests/probes/inputs.mjs';
 import { PROBE_TYPES, probeSignature } from '../godot-probes/probeShader.mjs';
@@ -255,7 +256,7 @@ function rowCountNote(rows) {
     return { forms: formRows.length, names: names.size };
   };
   const operators = formsOf((family) => family === 'operator');
-  const functions = formsOf((family) => family.startsWith('function'));
+  const functions = formsOf((family) => isFunctionRow({ family }));
   const constructors = formsOf((family) => family === 'constructor');
   const builtIns = formsOf((family) => family.startsWith('built-in'));
   return (

@@ -158,7 +158,7 @@ export const KNOWN_PROBE_DIFFERENCES = {
   'call-ldexp-float-int-range': {
     ...SPLIT_LDEXP,
     lanesOff: 1,
-    first: 'lane 31: Godot 00000000, transpilation 00e1b1e6',
+    first: 'lane 35: Godot 00000000, transpilation 00e1b1e6',
   },
   'gpu-call-sinh-of-a-constant': {
     ...DRIVER_ROUNDED_CALL,
