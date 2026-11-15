@@ -71,26 +71,48 @@ function scriptOf(ch: string): number {
 const EMOJI = /^\p{Emoji}/u;
 const EXTENDED_PICTOGRAPHIC = /^\p{Extended_Pictographic}/u;
 const EMOJI_PRESENTATION = /^[\p{Emoji_Presentation}\p{Emoji_Modifier}\p{Regional_Indicator}]/u;
-const ZERO_WIDTH_JOINER = '‍';
-const VARIATION_SELECTOR_15 = '︎';
-const VARIATION_SELECTOR_16 = '️';
-const COMBINING_ENCLOSING_KEYCAP = '⃣';
+const ZERO_WIDTH_JOINER = '\u200d';
+const VARIATION_SELECTOR_15 = '\ufe0e';
+const VARIATION_SELECTOR_16 = '\ufe0f';
+const COMBINING_ENCLOSING_KEYCAP = '\u20e3';
+
+/** The emoji properties of a code point, as bits. */
+const IS_EMOJI = 1;
+const IS_PICTOGRAPHIC = 2;
+const IS_PRESENTATION = 4;
+
+/** Written only by `emojiBitsOf`, one entry per code point it has read. It never clears. */
+const emojiBitsCache = new Map<number, number>();
+
+function emojiBitsOf(ch: string): number {
+  const cp = ch.codePointAt(0)!;
+  let bits = emojiBitsCache.get(cp);
+  if (bits === undefined) {
+    bits =
+      (EMOJI.test(ch) ? IS_EMOJI : 0) |
+      (EXTENDED_PICTOGRAPHIC.test(ch) ? IS_PICTOGRAPHIC : 0) |
+      (EMOJI_PRESENTATION.test(ch) ? IS_PRESENTATION : 0);
+    emojiBitsCache.set(cp, bits);
+  }
+  return bits;
+}
 
 /** `ScriptIterator::is_emoji`: whether `ch`, with `next` after it, starts or continues an emoji run. */
 function isEmoji(ch: string, next: string | undefined): boolean {
-  const isEmojiOrPictograph = EMOJI.test(ch) || EXTENDED_PICTOGRAPHIC.test(ch);
+  const bits = emojiBitsOf(ch);
+  const isEmojiOrPictograph = (bits & (IS_EMOJI | IS_PICTOGRAPHIC)) !== 0;
   if (next === VARIATION_SELECTOR_15 && isEmojiOrPictograph) return false;
   if (next === VARIATION_SELECTOR_16 && isEmojiOrPictograph) return true;
-  return EMOJI_PRESENTATION.test(ch);
+  return (bits & IS_PRESENTATION) !== 0;
 }
 
-/** Whether `ch`, with `next` after it, keeps an emoji run open (`script_iterator.cpp:96`). */
+/** Whether `ch`, with `next` after it, keeps an emoji run open (`script_iterator.cpp:111`). */
 function continuesEmoji(ch: string, next: string | undefined): boolean {
   return (
     ch === ZERO_WIDTH_JOINER ||
     ch === VARIATION_SELECTOR_16 ||
     ch === COMBINING_ENCLOSING_KEYCAP ||
-    (EXTENDED_PICTOGRAPHIC.test(ch) && next !== VARIATION_SELECTOR_15)
+    ((emojiBitsOf(ch) & IS_PICTOGRAPHIC) !== 0 && next !== VARIATION_SELECTOR_15)
   );
 }
 
@@ -112,7 +134,7 @@ type Range = [number, number];
 export function scriptRunIds(text: string): Int32Array {
   const ids = new Int32Array(text.length);
   const codePoints = codePointsOf(text);
-  // ICU's paren stack outlives each run, and so does `startDepth` (`script_iterator.cpp:79-80`).
+  // The bracket stack outlives each run, and so does `startDepth` (`script_iterator.cpp:83-84`).
   const brackets: OpenBracket[] = [];
   let startDepth = -1;
   let runId = 0;
@@ -153,15 +175,31 @@ export function scriptRunIds(text: string): Int32Array {
     }
     const runEnd = k < codePoints.length ? codePoints[k]![1] : text.length;
     if (emojiStart >= 0) emojiRanges.push([emojiStart, runEnd]);
-    let from = codePoints[runStart]![1];
-    for (const [start, end] of emojiRanges) {
-      if (start > from) ids.fill(runId++, from, start);
-      ids.fill(runId++, start, end);
-      from = end;
-    }
-    if (from < runEnd) ids.fill(runId++, from, runEnd);
+    runId = fillScriptRun(ids, [codePoints[runStart]![1], runEnd], emojiRanges, runId);
   }
   return ids;
+}
+
+/**
+ * Numbers the UTF-16 units of one script run `[start, end)` from `firstId`: each emoji stretch,
+ * and each stretch between two, takes the next number (`script_iterator.cpp:176-203`).
+ * Answers the next free number.
+ */
+function fillScriptRun(
+  ids: Int32Array,
+  [start, end]: Range,
+  emojiRanges: readonly Range[],
+  firstId: number
+): number {
+  let runId = firstId;
+  let from = start;
+  for (const [emojiStart, emojiEnd] of emojiRanges) {
+    if (emojiStart > from) ids.fill(runId++, from, emojiStart);
+    ids.fill(runId++, emojiStart, emojiEnd);
+    from = emojiEnd;
+  }
+  if (from < end) ids.fill(runId++, from, end);
+  return runId;
 }
 
 /** `ScriptIterator::same_script`. */
