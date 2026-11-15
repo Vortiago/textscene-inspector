@@ -5,7 +5,8 @@
  * serialisations, so nothing here invents a value the inspector would not offer.
  */
 
-import { parseHintEnum } from '../godot/classdb/enumHint.js';
+import { parseHintEnum, parseHintFlags, type HintEnumEntry } from '../godot/classdb/enumHint.js';
+import { parseRangeHint, type RangeHintBounds } from '../godot/classdb/rangeHint.js';
 import { PROPERTY_HINT } from '../godot/classdb/propertyHint.js';
 import { resourceTypeHint } from '../godot/classdb/resourceTypeHint.js';
 import { VARIANT_TYPE } from '../godot/variant/variantType.js';
@@ -38,10 +39,10 @@ export function enumEntriesOf(property: HintedProperty): readonly EnumEntry[] {
   }));
 }
 
-/** The labels of a flags hint, whose value is a bitmask rather than one choice. */
-export function flagLabels(hint: number, hintString: string): readonly string[] | undefined {
+/** The bits of a flags hint, whose value is a bitmask rather than one choice. */
+export function flagEntriesOf(hint: number, hintString: string): readonly HintEnumEntry[] | undefined {
   if (hint !== PROPERTY_HINT.FLAGS || hintString.length === 0) return undefined;
-  return hintString.split(',');
+  return parseHintFlags(hintString);
 }
 
 /**
@@ -53,28 +54,9 @@ export function acceptedResourceTypes(hint: number, hintString: string): readonl
   return resourceTypeHint(hintString).bases;
 }
 
-/** A bounds hint, split into its parts. `or_greater` or `or_less` leaves an end open. */
-interface RangeHint {
-  readonly min: string;
-  readonly max: string;
-  readonly hasMin: boolean;
-  readonly hasMax: boolean;
-}
-
-/** The numeric bounds of a `PROPERTY_HINT_RANGE`, or undefined for another hint. */
-export function rangeHint(hint: number, hintString: string): RangeHint | undefined {
-  if (hint !== PROPERTY_HINT.RANGE) return undefined;
-  const parts = hintString.split(',');
-  const min = (parts[0] ?? '').trim();
-  const max = (parts[1] ?? '').trim();
-  const isOpenAbove = parts.some((part) => part.trim() === 'or_greater');
-  const isOpenBelow = parts.some((part) => part.trim() === 'or_less');
-  return {
-    min,
-    max,
-    hasMin: min.length > 0 && !isOpenBelow,
-    hasMax: max.length > 0 && !isOpenAbove,
-  };
+/** The bounds of a `PROPERTY_HINT_RANGE`, read as the linter reads them, or undefined for another hint. */
+export function rangeHint(hint: number, hintString: string): RangeHintBounds | undefined {
+  return hint === PROPERTY_HINT.RANGE ? parseRangeHint(hintString) : undefined;
 }
 
 const SUFFIX_PREFIX = 'suffix:';

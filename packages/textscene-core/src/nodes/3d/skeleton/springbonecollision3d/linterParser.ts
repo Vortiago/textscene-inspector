@@ -12,8 +12,6 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('SpringBoneCollision3D', {
-  // scene/3d/spring_bone_collision_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::STRING_NAME, "bone_name"), ...)
-  bone_name: v.stringName('bone_name'),
   // scene/3d/spring_bone_collision_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::INT, "bone",
   // PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), ...), with no PROPERTY_HINT_RANGE, so no
   // bound.

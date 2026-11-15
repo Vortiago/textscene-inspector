@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseHintEnum } from './enumHint';
+import { parseHintEnum, parseHintFlags } from './enumHint';
 
 describe('parseHintEnum', () => {
   it('runs the value on from an explicit one', () => {
@@ -41,5 +41,30 @@ describe('parseHintEnum', () => {
 
   it('returns no entry for an empty hint string', () => {
     expect(parseHintEnum('')).toEqual([]);
+  });
+});
+
+describe('parseHintFlags', () => {
+  it('gives an implicit label the bit of its position', () => {
+    expect(parseHintFlags('A,B,C')).toEqual([
+      { label: 'A', value: 1 },
+      { label: 'B', value: 2 },
+      { label: 'C', value: 4 },
+    ]);
+  });
+
+  it('reads an explicit value', () => {
+    expect(parseHintFlags('Vertical:1,Horizontal:2,Floating:4')).toEqual([
+      { label: 'Vertical', value: 1 },
+      { label: 'Horizontal', value: 2 },
+      { label: 'Floating', value: 4 },
+    ]);
+  });
+
+  it('skips an empty option, which keeps its position', () => {
+    expect(parseHintFlags('A,,C')).toEqual([
+      { label: 'A', value: 1 },
+      { label: 'C', value: 4 },
+    ]);
   });
 });
