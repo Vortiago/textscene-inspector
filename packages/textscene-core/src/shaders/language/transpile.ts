@@ -4,9 +4,8 @@
  */
 
 import { emitShader, type TranspiledFunction } from './emitter.js';
-import { parse } from './parse.js';
+import { parseShader, type ShaderOptions } from './parseShader.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
-import { tokenize } from './tokenizer.js';
 import { checkTranspiled } from './transpiledRows.js';
 
 /** The entry that draws each shader type whose shader links into a template of Godot's. */
@@ -17,9 +16,9 @@ export interface TranspiledShader {
   readonly functions: ReadonlyMap<string, TranspiledFunction>;
 }
 
-/** The functions of `source`. `file` names the shader in the position of an error. */
-export function transpileShadingLanguage(source: string, file = ''): TranspiledShader {
-  const tree = parse(tokenize(source, file));
+/** The functions of `source`, preprocessed with `options`. */
+export function transpileShadingLanguage(source: string, options: ShaderOptions = {}): TranspiledShader {
+  const tree = parseShader(source, options);
   checkTranspiled(tree);
   const entry = tree.shaderType && TEMPLATE_ENTRIES[tree.shaderType];
   if (entry)

@@ -32,10 +32,14 @@ func _ready() -> void:
 /**
  * Godot's version, and its verdict on each of `texts` in order: `{ accepted: true }` or its
  * message and line. The texts run in chunks at once, and every run must name the same Godot.
+ * `includes` are the `.gdshaderinc` files the texts include, by their names in the project.
  */
-export async function godotVerdicts(texts) {
+export async function godotVerdicts(texts, includes = {}) {
   const runs = await inChunksAtOnce(texts, async (chunk) => {
-    const output = await runGodotScript(VERDICT_SCRIPT, { 'shaders.json': JSON.stringify(chunk) });
+    const output = await runGodotScript(VERDICT_SCRIPT, {
+      'shaders.json': JSON.stringify(chunk),
+      ...includes,
+    });
     return { godot: printedField(output, 'GODOT '), verdicts: parseVerdictOutput(output, chunk.length) };
   });
   const { godot } = oneGodot(runs);

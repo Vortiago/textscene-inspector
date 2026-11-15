@@ -27,9 +27,15 @@ export const isDrawn = (probe, viewportPixels) => drawnPixels(probe, viewportPix
 /**
  * One probe's record entry from the pixels of its viewport, with `rejection`, Godot's stage,
  * message and line, for a probe Godot draws nothing for or that ends Godot, which has no pixels.
+ * `preprocessed` is the text Godot's preprocessor made of the probe's shader, for a probe that
+ * uses the preprocessor.
  */
-export function recordEntry(probe, viewportPixels, rejection = NO_REASON) {
-  const entry = { source: probe.source, inputs: parameterBits(probe).map((bits) => bits.map(hex)) };
+export function recordEntry(probe, viewportPixels, rejection = NO_REASON, preprocessed = undefined) {
+  const entry = {
+    ...probeText(probe),
+    inputs: parameterBits(probe).map((bits) => bits.map(hex)),
+    ...(preprocessed === undefined ? {} : { preprocessed }),
+  };
   if (probe.endsGodot || !isDrawn(probe, viewportPixels)) return { ...entry, rejected: rejection };
   const pixels = drawnPixels(probe, viewportPixels);
   const size = LANE_COUNT[probeSignature(probe.source).returns];
@@ -41,18 +47,30 @@ export function recordEntry(probe, viewportPixels, rejection = NO_REASON) {
  * The record of every probe, in probe order. `rejections` holds Godot's reason for each probe it
  * draws nothing for, by name.
  */
-export function probeRecord({ godot, adapter, pixels }, probes, rejections) {
+export function probeRecord({ godot, adapter, pixels, preprocessed }, probes, rejections) {
   const entries = Object.fromEntries(
     probes.map((probe) => [
       probe.name,
-      recordEntry(probe, pixels.get(probe.name), rejections.get(probe.name)),
+      recordEntry(probe, pixels.get(probe.name), rejections.get(probe.name), preprocessed.get(probe.name)),
     ])
   );
   return { godot, adapter, probes: entries };
 }
 
-/** Whether `entry` holds another source or other inputs than `probe` has now. */
+/** The source of `probe`, and the files it includes when it has any. */
+function probeText(probe) {
+  return probe.includes === undefined
+    ? { source: probe.source }
+    : { source: probe.source, includes: probe.includes };
+}
+
+/** Whether `entry` holds another source, other includes or other inputs than `probe` has now. */
 export function isStaleEntry(entry, probe) {
   const inputs = parameterBits(probe).map((bits) => bits.map(hex));
-  return entry.source !== probe.source || JSON.stringify(entry.inputs) !== JSON.stringify(inputs);
+  const { source, includes } = probeText(probe);
+  return (
+    entry.source !== source ||
+    JSON.stringify(entry.includes) !== JSON.stringify(includes) ||
+    JSON.stringify(entry.inputs) !== JSON.stringify(inputs)
+  );
 }

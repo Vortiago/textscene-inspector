@@ -6,7 +6,7 @@
  * message alone. A shader can also end Godot itself, which prints the signal.
  */
 
-import { MAIN_SCRIPT, probeProjectFiles } from './godotProject.mjs';
+import { MAIN_SCRIPT, probeIncludeFiles, probeProjectFiles } from './godotProject.mjs';
 import { probeShader, probeSourceLineOffset } from './probeShader.mjs';
 import { runGodotScriptToExit } from './godotRun.mjs';
 import { godotVerdicts } from './shaderVerdicts.mjs';
@@ -55,7 +55,7 @@ export async function godotRejection(probe) {
  * crash, which only a run of that probe alone can show.
  */
 export async function frontEndRejections(probes) {
-  const { verdicts } = await godotVerdicts(probes.map(probeShader));
+  const { verdicts } = await godotVerdicts(probes.map(probeShader), probeIncludeFiles(probes));
   return new Map(
     probes.flatMap((probe, index) => {
       const verdict = verdicts[index];

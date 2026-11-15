@@ -18,12 +18,19 @@ import { parameterBits, probeShader, probeWidth } from './probeShader.mjs';
 /** The prefix of each output line that carries a probe's pixels. */
 const LINE_PREFIX = 'PROBE ';
 
+/** The prefix of each output line that carries the text Godot's preprocessor made of a probe's shader. */
+const PREPROCESSED_PREFIX = 'PREPROCESSED ';
+
+/** Whether `probe` has a directive or an include for the preprocessor to act on. */
+export const usesPreprocessor = (probe) => probe.source.includes('#') || probe.includes !== undefined;
+
 /** The data file the script reads: each probe's name, width, shader file and parameter bits. */
 function probeData(probes) {
   return probes.map((probe, index) => ({
     name: probe.name,
     width: probeWidth(probe),
     shader: `res://probe_${index}.gdshader`,
+    usesPreprocessor: usesPreprocessor(probe),
     // GDScript's PackedInt32Array holds the bits as signed integers.
     parameters: parameterBits(probe).map((bits) => bits.map((value) => value | 0)),
   }));
@@ -34,9 +41,18 @@ function probeShaderFiles(probes) {
   return Object.fromEntries(probes.map((probe, index) => [`probe_${index}.gdshader`, probeShader(probe)]));
 }
 
+/** The `.gdshaderinc` files `probes` include, keyed by their names in the project. */
+export function probeIncludeFiles(probes) {
+  return Object.assign({}, ...probes.map((probe) => probe.includes ?? {}));
+}
+
 /** The files beside the main script, keyed by their names in the project. */
 export function probeProjectFiles(probes) {
-  return { 'probes.json': JSON.stringify(probeData(probes)), ...probeShaderFiles(probes) };
+  return {
+    'probes.json': JSON.stringify(probeData(probes)),
+    ...probeShaderFiles(probes),
+    ...probeIncludeFiles(probes),
+  };
 }
 
 export const MAIN_SCRIPT = `extends Node
@@ -44,6 +60,7 @@ export const MAIN_SCRIPT = `extends Node
 func _ready() -> void:
 	var data: Array = JSON.parse_string(FileAccess.get_file_as_string("res://probes.json"))
 	var viewports: Array = []
+	var preprocessed := {}
 	for probe in data:
 		var viewport := SubViewport.new()
 		viewport.size = Vector2i(int(probe.width), 1)
@@ -59,10 +76,14 @@ func _ready() -> void:
 		rect.material = material
 		viewport.add_child(rect)
 		viewports.append(viewport)
+		if probe.usesPreprocessor:
+			preprocessed[probe.name] = RenderingServer.shader_get_code(material.shader.get_rid())
 	for frame in ${FRAMES_BEFORE_READ}:
 		await RenderingServer.frame_post_draw
 	print("GODOT ", Engine.get_version_info().string)
 	print("ADAPTER ", RenderingServer.get_video_adapter_name())
+	for name in preprocessed:
+		print("${PREPROCESSED_PREFIX}", name, " ", JSON.stringify(preprocessed[name]))
 	for index in data.size():
 		var image: Image = viewports[index].get_texture().get_image()
 		image.convert(Image.FORMAT_RGBA8)
@@ -72,12 +93,30 @@ func _ready() -> void:
 
 /**
  * The bits of each probe's pixels in `stdout`, keyed by probe name, with Godot's version and
- * adapter. A pixel's four bytes are little-endian, as the shader wrote them.
+ * adapter, and the preprocessed text of each probe that uses the preprocessor. A pixel's four
+ * bytes are little-endian, as the shader wrote them.
  */
 export function parseProbeOutput(stdout) {
   const pixels = new Map();
   for (const [name, bytes] of printedImages(stdout, LINE_PREFIX)) pixels.set(name, pixelBits(bytes));
-  return { godot: printedField(stdout, 'GODOT '), adapter: printedField(stdout, 'ADAPTER '), pixels };
+  return {
+    godot: printedField(stdout, 'GODOT '),
+    adapter: printedField(stdout, 'ADAPTER '),
+    pixels,
+    preprocessed: printedTexts(stdout),
+  };
+}
+
+/** Each `PREPROCESSED <name> <JSON string>` line of `stdout`, keyed by name. */
+function printedTexts(stdout) {
+  const lines = stdout.split('\n').filter((line) => line.startsWith(PREPROCESSED_PREFIX));
+  return new Map(
+    lines.map((line) => {
+      const rest = line.slice(PREPROCESSED_PREFIX.length);
+      const space = rest.indexOf(' ');
+      return [rest.slice(0, space), JSON.parse(rest.slice(space + 1))];
+    })
+  );
 }
 
 function pixelBits(bytes) {
@@ -93,8 +132,8 @@ function pixelBits(bytes) {
 const PROBES_PER_RUN_AT_MOST = 256;
 
 /**
- * Godot's answers to `probes` from runs of the pinned release at once: its version, adapter and
- * pixels. Every run must name the same Godot and adapter, or its pixels would mix two engines.
+ * Godot's answers to `probes` from runs of the pinned release at once: its version, adapter,
+ * pixels and preprocessed texts. Every run must name the same Godot and adapter, or its pixels would mix two engines.
  */
 export async function runProbesInGodot(probes) {
   const outputs = await inChunksOfAtMost(probes, PROBES_PER_RUN_AT_MOST, async (chunk) =>
@@ -102,5 +141,10 @@ export async function runProbesInGodot(probes) {
   );
   const { godot, adapter } = oneGodot(outputs);
   requireGodotVersion(godot);
-  return { godot, adapter, pixels: new Map(outputs.flatMap((output) => [...output.pixels])) };
+  return {
+    godot,
+    adapter,
+    pixels: new Map(outputs.flatMap((output) => [...output.pixels])),
+    preprocessed: new Map(outputs.flatMap((output) => [...output.preprocessed])),
+  };
 }
