@@ -30,7 +30,7 @@ import { TrackedObjects } from '../trackedObjects.js';
 import { visibleInTree } from '../visibleInTree.js';
 import { captureCameras, probeFrame } from './captureCameras.js';
 import { drawWorld, renderUnderWay } from '../viewportRender/worldRender.js';
-import type { ViewportDescription } from '../viewportRender/viewportDescription.js';
+import { probeCaptureDescription, type ViewportDescription } from '../viewportRender/viewportDescription.js';
 import { stageCapture } from './captureStage.js';
 import { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas.js';
 import { ProbeRows, type DrawnProbe } from './probeRows.js';
@@ -217,7 +217,7 @@ export class SceneProbes {
     const farPlanes = captureFarPlanes(probe.size, probe.originOffset, probe.maxDistance);
     const cameras = captureCameras(object.matrixWorld, probe.originOffset, farPlanes);
     const render = {
-      viewport: rootViewport,
+      viewport: probeCaptureDescription(rootViewport),
       shadowAtlas: this.shadowAtlas,
       hasCanvasTransform: false,
       probeCapture: capture,

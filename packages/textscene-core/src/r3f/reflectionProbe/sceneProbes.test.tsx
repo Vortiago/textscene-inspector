@@ -7,6 +7,7 @@ import { testRenderer } from '../../testing/recordingWebGL';
 import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
 import { drawAsProbeCapture } from '../testing/worldRenders';
 import { renderUnderWay } from '../viewportRender/worldRender';
+import { mipmapBiasUniform } from '../testing/mipmapBiasUniform';
 import type { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas';
 import { ReflectionProbeObject } from './reflectionProbeObject';
 import { SceneProbes } from './sceneProbes';
@@ -319,6 +320,19 @@ describe('SceneProbes rendering', () => {
     atlas?.allocate([{ owner: light, isOmni: false, coverage: 1 }], 0);
 
     expect([atlases.size, atlas?.slot(light)?.size]).toEqual([1, 256]);
+  });
+
+  it("captures at no mipmap bias, whatever the root's (render_forward_clustered.cpp:1824)", async () => {
+    const { renderer, scene, sceneProbes, settle } = await sceneWith(probeObject());
+    const biases = new Set<number>();
+    vi.spyOn(renderer, 'render').mockImplementation((rendered) => {
+      if (rendered === scene) biases.add(mipmapBiasUniform().value);
+    });
+    settle();
+
+    sceneProbes.update(0, CLEAR, { ...rootViewportDescription(null), mipmapBias: -0.5 });
+
+    expect([...biases]).toEqual([0]);
   });
 
   it('hides the shadows from a capture without enable_shadows, until its render ends', async () => {

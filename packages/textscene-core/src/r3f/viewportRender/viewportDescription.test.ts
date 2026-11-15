@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { parseProjectSettings } from '../../parser/projectSettingsParser';
-import { rootViewportDescription, subViewportDescription } from './viewportDescription';
+import {
+  probeCaptureDescription,
+  rootViewportDescription,
+  subViewportDescription,
+} from './viewportDescription';
 
 describe('rootViewportDescription', () => {
   it("gives Godot's root defaults and the editor's rules with no project", () => {
@@ -99,5 +103,23 @@ describe('subViewportDescription', () => {
 
   it('drops debanding on an HDR target (edge case)', () => {
     expect(subViewportDescription({ ...node, use_hdr_2d: true }, root).usesDebanding).toBe(false);
+  });
+});
+
+describe('probeCaptureDescription', () => {
+  const root = { ...rootViewportDescription(null), mipmapBias: -0.75 };
+
+  it("samples at Godot's default samplers, with no bias", () => {
+    expect(probeCaptureDescription(root).mipmapBias).toBe(0);
+  });
+
+  it("keeps the root's other facts", () => {
+    expect(probeCaptureDescription({ ...root, msaa3D: 2 })).toMatchObject({ msaa3D: 2, camera: 'editor' });
+  });
+
+  it('leaves the root it reads unchanged (edge case)', () => {
+    probeCaptureDescription(root);
+
+    expect(root.mipmapBias).toBe(-0.75);
   });
 });

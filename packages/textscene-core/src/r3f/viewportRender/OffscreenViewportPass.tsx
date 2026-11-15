@@ -61,11 +61,9 @@ import { useCanvasPass } from './useCanvasPass';
 import type { SubViewportProperties } from '../../nodes/viewport/subviewport/types';
 import type { Vector2 } from '../../godot/math/vector';
 import { useProjectClearColor } from '../useProjectClearColor.js';
-import { useRootViewportDescription } from './useRootViewportDescription';
-import { subViewportDescription, type ViewportDescription } from './viewportDescription';
+import { useSubViewportDescription } from './useSubViewportDescription';
+import type { ViewportDescription } from './viewportDescription';
 import { drawWorld, type WorldRender } from './worldRender';
-import { useByValue } from '../hooks/useByValue';
-import { sameData } from '../../utils/sameData';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { hideEditorHelpers } from '../editorHelpers';
 import { viewAnchorMatrix } from '../viewportLayerAnchor';
@@ -456,15 +454,6 @@ function LitCanvas({
     <World2DLightingBoundary canvasModulate={canvasModulate} space={space}>
       {children}
     </World2DLightingBoundary>
-  );
-}
-
-/** The node's description, the same object while its facts and the root's hold. */
-function useSubViewportDescription(properties: SubViewportProperties): ViewportDescription {
-  const root = useRootViewportDescription();
-  return useByValue(
-    useMemo(() => subViewportDescription(properties, root), [properties, root]),
-    sameData
   );
 }
 

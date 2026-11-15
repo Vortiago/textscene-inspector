@@ -5,7 +5,7 @@ import { drawAtMipmapBias } from '../materials/godotMipmapBias.js';
 
 export interface WorldRender {
   viewport: ViewportDescription;
-  /** Null for the root viewport, whose atlas each scene's shadow fit builds from the root description. */
+  /** Null for the root's atlas, which each scene's shadow fit builds. A Control raster pass lights no 3D. */
   shadowAtlas: ViewportShadowAtlas | null;
   /** Whether the render draws a canvas through a Godot canvas transform: a SubViewport's 2D pass. */
   hasCanvasTransform: boolean;

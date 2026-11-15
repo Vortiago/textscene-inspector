@@ -20,8 +20,7 @@ import { viewportTransfer } from '../../../r3f/texelCopy.js';
 import { createCanvasTarget } from '../../../r3f/offscreen/targets.js';
 import { renderToOffscreenTarget } from '../../../r3f/offscreen/draw.js';
 import { viewportCanvasColorSpace } from '../../../r3f/viewportRender/viewportTargetOptions.js';
-import { useRootViewportDescription } from '../../../r3f/viewportRender/useRootViewportDescription.js';
-import { subViewportDescription } from '../../../r3f/viewportRender/viewportDescription.js';
+import { useSubViewportDescription } from '../../../r3f/viewportRender/useSubViewportDescription.js';
 import { drawWorld, type WorldRender } from '../../../r3f/viewportRender/worldRender.js';
 import { useMultisampledTarget } from '../../../r3f/offscreen/multisampledTarget.js';
 import { useCanvasPass } from '../../../r3f/viewportRender/useCanvasPass.js';
@@ -66,14 +65,10 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
 
   const properties = node.properties as SubViewportProperties;
   const { render_target_clear_mode: clearMode } = properties;
-  const root = useRootViewportDescription();
+  const description = useSubViewportDescription(properties);
   const canvasRender = useMemo<WorldRender>(
-    () => ({
-      viewport: subViewportDescription(properties, root),
-      shadowAtlas: null,
-      hasCanvasTransform: true,
-    }),
-    [properties, root]
+    () => ({ viewport: description, shadowAtlas: null, hasCanvasTransform: true }),
+    [description]
   );
   const transparentBg = canvasRender.viewport.transparentBackground;
   const sizes = viewportPassSizes(node, useViewportRect(path));
