@@ -48,6 +48,11 @@ describe('directives', () => {
     expect(preprocess('#define K 1\n#pragma disable_preprocessor\n#define L\nK')).toBe('\n\n#define L\nK');
   });
 
+  it('points the refusal of an indented #if at its #', () => {
+    const error = errorOf(() => preprocess('\t  #if 1\n#endif'));
+    expect((error as ShadingLanguageError).position).toEqual({ file: '', line: 1, column: 4 });
+  });
+
   it('refuses #if as not transpiled yet, with its row', () => {
     const error = errorOf(() => preprocess('#if 1\n#endif'));
     expect(error).toBeInstanceOf(ShadingLanguageError);
@@ -56,6 +61,12 @@ describe('directives', () => {
 });
 
 describe('includes', () => {
+  it("expands the outer file's defines over the include and its markers, as Godot does", () => {
+    const files = { 'res://shaders/c.gdshaderinc': 'x' };
+    const code = '#define shaders 1\n#include "res://shaders/c.gdshaderinc"\n';
+    expect(withFiles(code, files)).toBe('\n@@>res:// 1 /c.gdshaderinc\nx\n@@<res:// 1 /c.gdshaderinc\n');
+  });
+
   it('writes an include inside an include between their markers', () => {
     const files = { 'res://a.gdshaderinc': '#include "b.gdshaderinc"\nA', 'res://b.gdshaderinc': 'B' };
     expect(withFiles('#include "a.gdshaderinc"\nC', files)).toBe(

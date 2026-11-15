@@ -1,5 +1,7 @@
+/** Godot's macro expansion (shader_preprocessor.cpp:1000): each define's name replaced by its body, pass after pass. */
+
 import { stripEdges } from '../../godot/string/string.js';
-import { isCharSpace, isCharWord } from './godotString.js';
+import { isCharSpace, isCharWord } from './preprocessorChars.js';
 import { PreprocessorError } from './preprocessorError.js';
 
 export interface Define {
@@ -11,9 +13,42 @@ export interface Define {
 // The 51st pass fails even when it expands nothing (shader_preprocessor.cpp:1019).
 const PASSES_AT_MOST = 50;
 
-export function expandMacros(text: string, defines: ReadonlyMap<string, Define>, line: number): string {
+/** The defines of one run. The sorted names last until the next `#define` or `#undef`. */
+export class Defines {
+  private readonly byName: Map<string, Define>;
+  private sortedNames: readonly string[] | undefined;
+
+  constructor(entries: Iterable<readonly [string, Define]> = []) {
+    this.byName = new Map(entries);
+  }
+
+  get(name: string): Define | undefined {
+    return this.byName.get(name);
+  }
+
+  has(name: string): boolean {
+    return this.byName.has(name);
+  }
+
+  set(name: string, define: Define): void {
+    this.byName.set(name, define);
+    this.sortedNames = undefined;
+  }
+
+  delete(name: string): void {
+    this.byName.delete(name);
+    this.sortedNames = undefined;
+  }
+
   // `RBMap` walks its keys in order, and a define name is ASCII, so code-unit order is Godot's.
-  const names = [...defines.keys()].sort();
+  names(): readonly string[] {
+    this.sortedNames ??= [...this.byName.keys()].sort();
+    return this.sortedNames;
+  }
+}
+
+export function expandMacros(text: string, defines: Defines, line: number): string {
+  const names = defines.names();
   let expanded = text;
   for (let pass = 1; ; pass += 1) {
     let didExpand = false;
