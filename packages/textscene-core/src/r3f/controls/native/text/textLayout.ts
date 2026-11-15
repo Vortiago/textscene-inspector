@@ -671,8 +671,7 @@ function specialGlyph(
 ): BreakGlyph | undefined {
   const ch = chars[i]!;
   const cp = ch.codePointAt(0)!;
-  // A tab no stop aligns is as wide as the font's glyph for it, which is none (measured in Godot 4.6.3:
-  // `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
+  // A tab no stop aligns takes its font glyph's width, none (measured: `a<TAB>b` at `tab_size` 0 abuts).
   if (cp === 0x200b || isTabChar(ch)) return noGlyph(ch, i);
   if (isLinebreak(cp)) return lineBreakGlyph(ch, i, style);
   // Only the "no font has a glyph" case is left (`text_server_adv.cpp:6842-6907`).
