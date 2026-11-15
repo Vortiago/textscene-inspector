@@ -13,7 +13,7 @@ import { floatElements } from '../../../../resources/shapes/packedArray';
 import { codePointCount } from '../../../../godot/string/codePoints';
 import { countedCharacters } from './visibleCharacters';
 import { resolveRichTextVisibleChars } from '../shared/visibleChars';
-import { parseBBCodeRuns } from './bbcode';
+import { foldCrLf, parseBBCodeRuns } from './bbcode';
 
 const PACKED_FLOAT32_ARRAY_FORMS = packedArrayForms('PackedFloat32Array');
 
@@ -31,7 +31,7 @@ function parseTabStops(value: string | undefined): number[] | undefined {
 
 /** `get_total_character_count` (`rich_text_label.cpp:7999-8014`): each text character, newline and `[img]` counts one, and a tag or a paragraph tag's line end none. */
 function characterCount({ text = '', bbcodeEnabled }: RichTextLabelProperties): number {
-  if (!bbcodeEnabled) return codePointCount(text);
+  if (!bbcodeEnabled) return codePointCount(foldCrLf(text));
   return countedCharacters(parseBBCodeRuns(text));
 }
 

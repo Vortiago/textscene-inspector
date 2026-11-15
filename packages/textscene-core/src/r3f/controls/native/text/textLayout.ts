@@ -671,10 +671,10 @@ function specialGlyph(
 ): BreakGlyph | undefined {
   const ch = chars[i]!;
   const cp = ch.codePointAt(0)!;
-  // A break grapheme, U+200B and a tab take no advance whatever the face holds. A tab no stop aligns
-  // is as wide as the font's glyph for it, which is none (measured in Godot 4.6.3: `a<TAB>b` with
-  // `tab_size` 0 sets `b` against `a`).
-  if (isLinebreak(cp) || cp === 0x200b || isTabChar(ch)) return zeroWidthGlyph(ch, i);
+  // A tab no stop aligns is as wide as the font's glyph for it, which is none (measured in Godot 4.6.3:
+  // `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
+  if (cp === 0x200b || isTabChar(ch)) return zeroWidthGlyph(ch, i);
+  if (isLinebreak(cp)) return lineBreakGlyph(ch, i, style);
   // Only the "no font has a glyph" case is left (`text_server_adv.cpp:6842-6907`).
   if (isControlChar(cp)) {
     // Without `preserve_invalid` or `preserve_control`, a control pushes no `Glyph` (`:6844`).
@@ -684,6 +684,13 @@ function specialGlyph(
   if (face.drawsApart?.(ch)) return drawnApartGlyph(ch, i, face, style.sizes[i]!);
   if (!lacksGlyph(face, ch, style.hasUndrawnGlyph)) return undefined;
   return hexCodeBox(ch, i, style.sizes[i]!);
+}
+
+/** HarfBuzz shapes a break too, so it takes the advance of the glyph its face maps it to (`text_server_adv.cpp:7050`). */
+function lineBreakGlyph(ch: string, i: number, style: RunStyle): BreakGlyph {
+  const face = style.faces[i]!;
+  if (!face.hasGlyph(ch)) return zeroWidthGlyph(ch, i);
+  return { ...zeroWidthGlyph(ch, i), advance: getFontGlyphAdvancePx(face, ch, style.sizes[i]!) };
 }
 
 /** The glyph of character `ch` at `i` that `face` draws apart, at its character advance. */

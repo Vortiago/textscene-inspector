@@ -12,7 +12,7 @@ import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/control
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate, useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { shapeText } from '../../../../r3f/controls/native/text/textLayout';
+import { shapeTextLine } from '../../../../r3f/controls/native/text/textLine';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { CODE_EDIT_FOLD_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { ControlQuad as FoldQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -47,7 +47,6 @@ import {
   codeEditGuidelines,
 } from './nativeSolver';
 import type { CodeEditProperties } from './types';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 export function CodeEdit(props: NativeControlComponentProps) {
@@ -261,14 +260,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
             codeEditProps.gutterZeroPadLineNumbers,
             numerals
           );
-          const layout = shapeText(text, {
-            fontSizePx,
-            boxWidthPx: 0,
-            autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-            lineSpacingPx: 0,
-            fontMetrics,
-            language: solveNode.locale,
-          });
+          const layout = shapeTextLine(text, { fontSizePx, fontMetrics, language: solveNode.locale });
           // The gutter cell is the row's own band (`text_edit.cpp:1448`), so
           // it starts where the band does, not at the control's top edge.
           const rowTopPx = textEditRowBandTopPx(

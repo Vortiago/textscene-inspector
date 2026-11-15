@@ -3,7 +3,7 @@ import { shapeText, type ShapeTextOptions, type TextLayoutResult } from './textL
 
 type TextLineOptions = Pick<
   ShapeTextOptions,
-  'fontSizePx' | 'fontMetrics' | 'direction' | 'language' | 'bidiOverride'
+  'fontSizePx' | 'fontMetrics' | 'direction' | 'language' | 'bidiOverride' | 'preserveControl'
 >;
 
 /** @canonical Shape a `TextLine`: one line, where a line break takes no room */
