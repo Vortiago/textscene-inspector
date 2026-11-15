@@ -22,11 +22,7 @@ import { citesItsSource } from './testing/engineCite.js';
 import { registeredTypes } from './registryPopulation.js';
 import { everyValidatorLabel, registeredKeys } from './testing/registryPopulation.js';
 
-/**
- * A grounding whose cite names no source. It rides the shared walk rather than a private recursion, which
- * would diverge from `unclassifiedKeys`'. The walk reaches leaves because a wildcard dispatcher's own tag vouches for
- * nothing behind it.
- */
+// The shared walk, not a private recursion that would diverge from `unclassifiedKeys`'.
 const citesNoSource = (validator: PropertyValidator): boolean =>
   validator.grounding !== undefined && !citesItsSource(validator.grounding);
 
@@ -61,9 +57,7 @@ describe('bound grounding', () => {
   });
 
   it('gives every grounded bound a source citation', () => {
-    // `enforced` without a `file:line` is the unverifiable claim an invented threshold makes, and a hint bound cites the
-    // ClassDB capture or its `ADD_PROPERTY`. The floor rides on the walk (2000 validators examined, none uncited): a
-    // separate key count could pass while the walk examined nothing.
+    // The floor is on the walk, so an empty walk fails.
     expect(everyValidatorLabel(citesNoSource, { atLeast: 2000 })).toEqual([]);
   });
 });

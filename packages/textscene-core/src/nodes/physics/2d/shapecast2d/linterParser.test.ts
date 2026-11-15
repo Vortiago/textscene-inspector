@@ -21,9 +21,7 @@ describe('ShapeCast2D strict validators', () => {
   });
 
   it('accepts any value of collision_result, which shape_cast_2d.cpp:475 binds with no setter', () => {
-    // ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "collision_result", PROPERTY_HINT_NONE, "",
-    // PROPERTY_USAGE_NO_EDITOR), "", "get_collision_result"): the "" is the setter name, so the
-    // loader drops the write (class_db.cpp:1655-1659) and no value is wrong.
+    // No setter, so the loader drops the write (class_db.cpp:1655-1659).
     const validator = validatorRegistry.findValidator('ShapeCast2D', 'collision_result');
     expect(validator!('collision_result', '[1]', 1)).toBeNull();
   });

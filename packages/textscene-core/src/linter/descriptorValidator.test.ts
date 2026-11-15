@@ -1,9 +1,3 @@
-/**
- * The check a property descriptor implies, one case per Variant type and per hint the capture
- * holds. Each row is a real capture row of a class with no hand validator, so the case shows what
- * the linter now says about that class.
- */
-
 import { describe, expect, it } from 'vitest';
 import { descriptorValidator } from './descriptorValidator.js';
 import { propertyDescriptor, type PropertyDescriptor } from '../godot/classdb/propertyDescriptor.js';
@@ -64,15 +58,14 @@ describe('the format check the Variant type picks', () => {
   });
 
   it('checks the type the setter takes where it differs from the property type', () => {
-    // curve.cpp:706 declares `_data` INT, and `_set_data` takes an Array, which the loader
-    // converts to (class_db.cpp:1677, binder_common.h:175).
+    // Declared INT, set as Array (curve.cpp:706, binder_common.h:175).
     expectAccepted(check('Curve', '_data', '[Vector2(0, 0), 0.0, 0.0, 0, 0]'));
     expect(check('Curve', '_data', '5')).toBeAtTier('error');
     expectAccepted(check('ConvexPolygonShape3D', 'points', 'PackedVector3Array(0, 0, 0, 1, 1, 1)'));
   });
 
   it('accepts every spelling a DICTIONARY slot loads', () => {
-    // variant_parser.cpp:677 reads `{…}`, and :1187 reads the typed `Dictionary[K, V]({…})`.
+    // variant_parser.cpp:677, :1187
     expectAccepted(check('AudioStreamOggVorbis', 'tags', '{}'));
     expectAccepted(check('AudioStreamOggVorbis', 'tags', 'Dictionary[String, String]({ "a": "b" })'));
   });
@@ -82,7 +75,7 @@ describe('the format check the Variant type picks', () => {
   });
 
   it('reports an element no slot of its width can store', () => {
-    // A byte is uint8 (variant_parser.cpp:650), and PackedInt32Array's element is int32 (:1428).
+    // variant_parser.cpp:650, :1428
     expect(check('AudioStreamWAV', 'data', 'PackedByteArray(300)')).toBeAtTier('error');
     expect(check('ArrayOccluder3D', 'indices', 'PackedInt32Array(4294967296)')).toBeAtTier('error');
     expectAccepted(check('OggPacketSequence', 'granule_positions', 'PackedInt64Array(4294967296)'));
@@ -93,8 +86,7 @@ describe('the format check the Variant type picks', () => {
   });
 
   it('accepts any value of a property bound with no setter, which Godot writes from its getter', () => {
-    // Godot 4.6.3 writes `capture_included` from `is_capture_included`, and the loader drops the
-    // write (class_db.cpp:1655-1659), as the vendored platformer coin.tscn shows.
+    // Godot writes it from the getter and drops it on load (class_db.cpp:1655-1659).
     expectAccepted(check('Animation', 'capture_included', 'true'));
     expectAccepted(check('ShapeCast2D', 'collision_result', '[1]'));
   });
@@ -209,7 +201,6 @@ describe('the hand row folds into the same check', () => {
   });
 
   it('keeps the hint end warning beside a setter end further out', () => {
-    // frame_0/duration hints "0.0,16.0,0.01,or_greater", and this setter refuses -1 and below.
     const duration = descriptorOf('AnimatedTexture', 'frame_0/duration');
     const validator = descriptorValidator({
       ...duration,
