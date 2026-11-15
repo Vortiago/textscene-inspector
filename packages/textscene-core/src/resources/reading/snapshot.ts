@@ -10,7 +10,9 @@ import { perObject } from '../../utils/perObject';
 import { sameData } from '../../utils/sameData';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { CacheSource } from '../../r3f/cacheSources';
-import type { FileKind } from '../fileKinds';
+import { LOAD_OUTCOMES, type FileKind } from '../fileKinds';
+import type { LoadOutcome } from '../loadFailure/loadOutcome';
+import { isGodotTextResourcePath } from '../../godot/project/resourceFormats';
 import type { CachedFile } from '../useLoadedFiles';
 import type { SceneResources } from '../../r3f/SceneResourcesContext';
 import { holdsResource } from '../../godot/scene/resourceLiteral';
@@ -155,7 +157,7 @@ function locate(
   if (!loadsAsParsedResource(filePath)) return heldWhole(path, IMPORTED_FILE, reference);
   const file = files.getCached(filePath);
   if (file === undefined) return PENDING;
-  if (file === null) return UNAVAILABLE['missing-file'];
+  if (file === null || failsToLoad(files, filePath)) return UNAVAILABLE['missing-file'];
   // Scoped per parse, so the tables keep their identity while the file holds.
   const section = scopedSection(file, path);
   if (path !== filePath) files.onAddress?.(path, section ? file : null);
@@ -168,6 +170,13 @@ function locate(
     resources: section.resources,
     origin: filePath,
   };
+}
+
+/** An outcome still to load, and a source with none, loads. */
+function failsToLoad(files: FileSource, filePath: string): boolean {
+  if (!files.loaded || !isGodotTextResourcePath(filePath)) return false;
+  const outcome = files.loaded(LOAD_OUTCOMES as FileKind<object>, filePath) as LoadOutcome | null | undefined;
+  return outcome?.isFailed === true;
 }
 
 const NO_PROPERTIES: Readonly<Record<string, string>> = Object.freeze({});

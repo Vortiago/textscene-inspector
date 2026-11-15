@@ -5,6 +5,8 @@
  */
 import { FileEventBus } from '../FileEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
+import type { DirectoryEntry } from '../projectListing';
+import { folderOf } from '../loadFailure/fileExists';
 
 export function busServing(files: Record<string, string>, heldPaths: readonly string[] = []) {
   /** Every path the provider was asked to load, in order. */
@@ -15,6 +17,15 @@ export function busServing(files: Record<string, string>, heldPaths: readonly st
       if (heldPaths.includes(path)) return new Promise<never>(() => {});
       return files[path] ?? null;
     },
+    listDirectory: async (folder: string) => filesIn(files, folder),
   };
   return { bus: new FileEventBus(provider), provider, files, loads };
+}
+
+/** The files of `files` directly in `folder`, or null for a folder that holds none. */
+function filesIn(files: Record<string, string>, folder: string): DirectoryEntry[] | null {
+  const names = Object.keys(files)
+    .filter((path) => folderOf(path) === folder)
+    .map((path) => ({ name: path.slice(path.lastIndexOf('/') + 1), isDirectory: false }));
+  return names.length > 0 ? names : null;
 }
