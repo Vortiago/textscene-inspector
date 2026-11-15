@@ -100,5 +100,5 @@ export function targetStates(row) {
   const stateOf = (name) => (name === undefined ? 'native' : `lowered: ${name}`);
   const states = Object.fromEntries(TARGETS.map((target) => [target, stateOf(lowering(row))]));
   const polyfill = row.family.startsWith('function') ? THREE_POLYFILLS[functionName(row)] : undefined;
-  return polyfill === undefined ? states : { ...states, webgl2: stateOf(polyfill) };
+  return polyfill === undefined ? states : { webgl2: stateOf(polyfill), webgpu: WEBGPU_STATE };
 }

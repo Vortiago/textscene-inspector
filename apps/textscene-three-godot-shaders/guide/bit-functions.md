@@ -2470,7 +2470,7 @@ vec4 probe(vec4 a, vec4 b, vec4 c) { return fma(a, b, c); }
 
 ## Fraction and exponent
 
-`frexp(x, exponent)` gives the fraction of `x`, from 0.5 to 1 in size, and writes its exponent, so that `x` is the fraction times 2 to the exponent. `ldexp(x, exponent)` gives `x` times 2 to the exponent. Godot lists the exponent of `ldexp` as an out argument, so it must be a variable, though the call only reads it. GLSL leaves `frexp` of an infinity or a NaN, and an `ldexp` past the float range, undefined. The transpiler splits a subnormal from its bits, so a GPU that reads subnormals as zero still gives the fraction and exponent GLSL defines: 1e-40 is `0.545 * 2^-132`. Godot's test driver gives the unnormalised bits `0x3f0116c2` with exponent 0, a listed difference.
+`frexp(x, exponent)` gives the fraction of `x`, from 0.5 to 1 in size, and writes its exponent, so that `x` is the fraction times 2 to the exponent. `ldexp(x, exponent)` gives `x` times 2 to the exponent. Godot lists the exponent of `ldexp` as an out argument, so it must be a variable, though the call only reads it. GLSL leaves `frexp` of an infinity or a NaN, and an `ldexp` past the float range, undefined. The transpiler splits a subnormal from its bits, so a GPU that reads subnormals as zero still gives the fraction and exponent GLSL defines: 1e-40 is `0.545 * 2^-132`. Godot's test driver gives the unnormalised bits `0x3f0116c2` with exponent 0, a listed difference. `ldexp` gives GLSL's value from -278 to 277: `ldexp(3e38, -253)` is `0x00e1b1e6`, where Godot's test driver gives 0, and `ldexp(3e38, -252)` is equal on both, a listed difference.
 
 The transpiler emits `uintBitsToFloat(sign | fraction << shift | 0x3f000000)`. Rows: `ldexp(float,int)`, `ldexp(vec2,ivec2)`, `ldexp(vec3,ivec3)`, `ldexp(vec4,ivec4)`, `frexp(float,int)`, `frexp(vec2,ivec2)`, `frexp(vec3,ivec3)`, `frexp(vec4,ivec4)`. Godot source: `servers/rendering/shader_language.cpp:3526`.
 
@@ -2688,6 +2688,18 @@ ivec4 probe(vec4 a) { ivec4 exponent = ivec4(0); frexp(a, exponent); return expo
 | `(inf, 1.0, 1e-7, 1e-40)` | `(129, 1, -23, 0)` |
 | `(-inf, -1.0, 123456.79, inf)` | `(129, 1, 17, 129)` |
 | `(NaN, 0.5, 16777216.0, -inf)` | `(129, 0, 25, 129)` |
+
+### Probe `call-ldexp-float-int-range`, 35 input rows
+
+```glsl
+float probe(float a, int b) { int exponent = b; return ldexp(a, exponent); }
+```
+
+| `a` | `b` | Godot gives |
+| --- | --- | --- |
+| `1e-40` | `-127` | `0.0` |
+| `7.888609e-31` | `128` | `268435460.0` |
+| `-1.5` | `-127` | `-0.0` |
 
 ### Probe `call-ldexp-of-a-constant-exponent`, 0 input rows
 

@@ -1410,13 +1410,13 @@ fma(vec4,vec4,vec4)	function (high_end)	servers/rendering/shader_language.cpp:34
 packHalf2x16(vec2)	function	servers/rendering/shader_language.cpp:3412	#1827		uint	(vec2)	native	native
 packUnorm2x16(vec2)	function	servers/rendering/shader_language.cpp:3413	#1827		uint	(vec2)	native	native
 packSnorm2x16(vec2)	function	servers/rendering/shader_language.cpp:3414	#1827		uint	(vec2)	native	native
-packUnorm4x8(vec4)	function	servers/rendering/shader_language.cpp:3415	#1827		uint	(vec4)	lowered: three's tsl_packUnorm4x8	native
-packSnorm4x8(vec4)	function	servers/rendering/shader_language.cpp:3416	#1827		uint	(vec4)	lowered: three's tsl_packSnorm4x8	native
+packUnorm4x8(vec4)	function	servers/rendering/shader_language.cpp:3415	#1827		uint	(vec4)	lowered: three's tsl_packUnorm4x8	untested (#1788)
+packSnorm4x8(vec4)	function	servers/rendering/shader_language.cpp:3416	#1827		uint	(vec4)	lowered: three's tsl_packSnorm4x8	untested (#1788)
 unpackHalf2x16(uint)	function	servers/rendering/shader_language.cpp:3418	#1827		vec2	(uint)	native	native
 unpackUnorm2x16(uint)	function	servers/rendering/shader_language.cpp:3419	#1827		vec2	(uint)	native	native
 unpackSnorm2x16(uint)	function	servers/rendering/shader_language.cpp:3420	#1827		vec2	(uint)	native	native
-unpackUnorm4x8(uint)	function	servers/rendering/shader_language.cpp:3421	#1827		vec4	(uint)	lowered: three's tsl_unpackUnorm4x8	native
-unpackSnorm4x8(uint)	function	servers/rendering/shader_language.cpp:3422	#1827		vec4	(uint)	lowered: three's tsl_unpackSnorm4x8	native
+unpackUnorm4x8(uint)	function	servers/rendering/shader_language.cpp:3421	#1827		vec4	(uint)	lowered: three's tsl_unpackUnorm4x8	untested (#1788)
+unpackSnorm4x8(uint)	function	servers/rendering/shader_language.cpp:3422	#1827		vec4	(uint)	lowered: three's tsl_unpackSnorm4x8	untested (#1788)
 bitfieldExtract(int,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3426	#1827		int	(int,int,int)	lowered: shifts to the top and back	lowered: shifts to the top and back
 bitfieldExtract(ivec2,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3427	#1827		ivec2	(ivec2,int,int)	lowered: shifts to the top and back	lowered: shifts to the top and back
 bitfieldExtract(ivec3,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3428	#1827		ivec3	(ivec3,int,int)	lowered: shifts to the top and back	lowered: shifts to the top and back

@@ -47,6 +47,13 @@ const UNNORMALISED_SUBNORMAL = {
     "driver (Mesa lavapipe) splits a subnormal as if its exponent were 0: fraction unnormalised, exponent 0, on Godot's side",
 };
 
+// Godot side: ldexp(3e38, -252) equals, -253 gives 0, as a split into 2^(e >> 1) and a flushed 2^-127 gives.
+const SPLIT_LDEXP = {
+  owner: '#1827',
+  cause:
+    "driver (Mesa lavapipe) splits the ldexp exponent in halves and flushes a 2^-127 half, on Godot's side",
+};
+
 export const KNOWN_PROBE_DIFFERENCES = {
   'call-dFdx-float': {
     ...ANGLE_DERIVATIVE,
@@ -147,6 +154,11 @@ export const KNOWN_PROBE_DIFFERENCES = {
     ...UNNORMALISED_SUBNORMAL,
     lanesOff: 4,
     first: 'lane 10: Godot 00000000, transpilation ffffff7c',
+  },
+  'call-ldexp-float-int-range': {
+    ...SPLIT_LDEXP,
+    lanesOff: 1,
+    first: 'lane 31: Godot 00000000, transpilation 00e1b1e6',
   },
   'gpu-call-sinh-of-a-constant': {
     ...DRIVER_ROUNDED_CALL,

@@ -57,6 +57,26 @@ function ldexpProbe(row) {
   );
 }
 
+const RANGE_XS = [1e-40, 2 ** -100, -1.5, 3e38];
+const RANGE_EXPONENTS = [-127, -149, -200, -253, -277, -278, -300, 128, 129, 200, 254, 277, 278];
+const FLOAT_MAX = 3.4028234663852886e38;
+
+// GLSL leaves an overflowing result undefined, so only finite products are rows.
+const RANGE_ROWS = RANGE_XS.flatMap((x) => RANGE_EXPONENTS.map((e) => [x, e])).filter(
+  ([x, e]) => Math.abs(Math.fround(x) * 2 ** e) <= FLOAT_MAX
+);
+
+const ldexpRangeProbe = () => ({
+  ...probeOf(
+    'call-ldexp-float-int-range',
+    ['ldexp(float,int)'],
+    'float',
+    ['float', 'int'],
+    'int exponent = b; return ldexp(a, exponent);'
+  ),
+  inputs: RANGE_ROWS,
+});
+
 // GLSL leaves a field past bit 31 undefined. Each edge field ends at bit 32.
 const FIELD = ['b & 15', 'c & 15'];
 const EDGE_FIELDS = [
@@ -125,6 +145,7 @@ const isOwned = (row) => row.family.startsWith('function') && row.owner === OWNE
 
 export const BIT_FUNCTION_PROBES = [
   ...INSTRUCTION_TABLE.filter(isOwned).flatMap((row) => PROBES_OF[nameOf(row)]?.(row) ?? [valueProbe(row)]),
+  ldexpRangeProbe(),
   ...refusalProbes(),
   ...constantProbes(),
 ];
