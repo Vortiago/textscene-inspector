@@ -27,7 +27,7 @@ describe('parseRangeHint', () => {
   });
 
   it('answers nothing for a hint string with no two ends, which Godot refuses too', () => {
-    // `_parse_range_hint` (editor_properties.cpp:3772) fails on fewer than two slices.
+    // editor_properties.cpp:3772
     expect(parseRangeHint('suffix:m')).toBeUndefined();
   });
 });

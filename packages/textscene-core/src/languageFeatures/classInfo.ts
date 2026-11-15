@@ -1,8 +1,3 @@
-/**
- * What hover, completion and the code actions ask of ClassDB: a class's properties (the walk is
- * `godot/classdb/classProperty.ts`), the property a slot fills, and the class names a scene may use.
- */
-
 import { NODE_BASE_TYPES, isCatalogedType } from '../godot/classdb/nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/classdb/resourceBaseTypes.generated.js';
 import { findClassProperty, type ClassProperty } from '../godot/classdb/classProperty.js';

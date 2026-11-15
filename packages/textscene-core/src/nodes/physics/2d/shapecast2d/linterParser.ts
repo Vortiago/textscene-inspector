@@ -8,8 +8,7 @@ import '../../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../../linter/validators/index.js';
 
-// No `collision_result`: shape_cast_2d.cpp:475 binds it with an empty setter, so the capture
-// marks it setterless and the property descriptor accepts any value, which the loader drops.
+// No `collision_result`: it has no setter (shape_cast_2d.cpp:475).
 validatorRegistry.registerAll('ShapeCast2D', {
   enabled: v.boolean('enabled'),
   // scene/2d/physics/shape_cast_2d.cpp:469: ADD_PROPERTY(..., "shape", PROPERTY_HINT_RESOURCE_TYPE, "Shape2D")
