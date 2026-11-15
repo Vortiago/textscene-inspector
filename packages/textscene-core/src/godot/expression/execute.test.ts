@@ -1,0 +1,48 @@
+import { describe, expect, it } from 'vitest';
+import { variant } from '../variant/value/variant.js';
+import { runExpression, UnportedExpression } from './execute.js';
+
+// Each expected answer is Godot 4.6.3's Expression of the same text.
+describe('runExpression', () => {
+  it('multiplies before it adds', () => {
+    expect(runExpression('1 + 2 * 3')).toEqual({ value: variant('INT', 7n) });
+  });
+
+  it('groups ** from the left', () => {
+    expect(runExpression('2 ** 3 ** 2')).toEqual({ value: variant('INT', 64n) });
+  });
+
+  it('negates after **', () => {
+    expect(runExpression('-2 ** 2')).toEqual({ value: variant('INT', -4n) });
+  });
+
+  it('gives the sign of the dividend to %', () => {
+    expect(runExpression('7 % -3')).toEqual({ value: variant('INT', 1n) });
+  });
+
+  it('divides a float by zero to infinity', () => {
+    expect(runExpression('1.0 / 0')).toEqual({ value: variant('FLOAT', Infinity) });
+  });
+
+  it('constructs a Vector2 and scales it', () => {
+    expect(runExpression('Vector2(1, 2) * 2')).toEqual({ value: variant('VECTOR2', { x: 2, y: 4 }) });
+  });
+
+  it('fails an int divided by zero at execution', () => {
+    expect(runExpression('1 / 0')).toEqual({ executeError: 'Invalid operands to operator /, int and int.' });
+  });
+
+  it('fails a String plus an int at execution', () => {
+    expect(runExpression('"a" + 1')).toEqual({
+      executeError: 'Invalid operands to operator +, String and int.',
+    });
+  });
+
+  it('gives the parse error of a missing operand', () => {
+    expect(runExpression('1 +')).toEqual({ parseError: 'Expected expression.' });
+  });
+
+  it('refuses a utility function it has not ported', () => {
+    expect(() => runExpression('abs(1)')).toThrow(UnportedExpression);
+  });
+});
