@@ -10,4 +10,10 @@ export type { ScopedReference } from './scopedReference';
 export { nodeReference, referenceHeldBy, referenceKey } from './scopedReference';
 export { mayName, snapshotOver } from './snapshot';
 export type { NodeRead } from './useNodeResource';
-export { useNodeReference, useNodeResource, useReferencedResource, useSnapshotRead } from './useNodeResource';
+export {
+  useNodeReference,
+  useNodeResource,
+  useReferencedResource,
+  useSnapshotHost,
+  useSnapshotRead,
+} from './useNodeResource';

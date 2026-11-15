@@ -6,10 +6,8 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { ParsedResource } from '../parser/parsedResource';
-import type { FontResource } from './fonts/font/types';
-import type { ThemeResource } from './styles/theme/types';
-import type { ResourceLoader } from './ResourceLoader';
 import type { ResourceProcessor } from './createResourceProcessor';
+import { PARSED_RESOURCES, type FileKind } from './fileKinds';
 import type { ResourceType } from './ResourceEventBus';
 import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 import type { LoadedFile } from './scopedResource';
@@ -18,11 +16,11 @@ import { usePendingWhile } from './usePendingWhile';
 import { useResourceLoader } from './useResource';
 import { sameEntries } from '../utils/sameEntries';
 
-/** A file's value once loaded, or undefined while it loads and after it failed. */
-export type CachedFileReader<T> = (path: string) => T | undefined;
+/** A file's cache entry, read: undefined while it loads, null once it has failed. */
+export type CachedFileReader<T> = (path: string) => CachedFile<T>;
 
 export interface CachedFiles<T> {
-  /** The value of a file the plan named, or undefined while it loads or after it failed. */
+  /** The value of a file the plan named: undefined while it loads, null once it has failed. */
   loadedFile: CachedFileReader<T>;
   /** True while a file the plan names has neither loaded nor failed. */
   isLoading: boolean;
@@ -32,27 +30,6 @@ export type LoadedFiles = CachedFiles<ParsedResource>;
 
 /** A file's cache entry: undefined while it loads, null once it has failed. */
 export type CachedFile<T> = T | null | undefined;
-
-/** The cache and the bus events of one kind of file, which a hook of this module reads. */
-export interface FileKind<T extends object> {
-  busTypes: readonly ResourceType[];
-  cacheOf: (loader: ResourceLoader) => ResourceProcessor<T>;
-}
-
-/** A mesh `.tres` loads on the generic resource bus. */
-const PARSED_RESOURCES: FileKind<ParsedResource> = {
-  busTypes: ['resource'],
-  cacheOf: (loader) => loader.resources,
-};
-
-/** A font file loads on the font bus. */
-export const FONT_FILES: FileKind<FontResource> = { busTypes: ['font'], cacheOf: (loader) => loader.fonts };
-
-/** A Theme file loads on the theme bus, with the fonts it names. */
-export const THEME_FILES: FileKind<ThemeResource> = {
-  busTypes: ['theme'],
-  cacheOf: (loader) => loader.themes,
-};
 
 const NO_PATHS: ReadonlySet<string> = new Set();
 const NO_BUS_TYPES: readonly ResourceType[] = [];
@@ -87,7 +64,7 @@ export function useCachedFiles<T extends object>(
     onlyReadKeys: true,
   });
   const planned = useMemo(
-    () => (kind ? [...new Set(plan((path) => cache?.getCached(path) ?? undefined))] : []),
+    () => (kind ? [...new Set(plan((path) => cache?.getCached(path)))] : []),
     // `version` is a cache-buster: the cache changes outside React.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [plan, kind, cache, version]
@@ -108,7 +85,7 @@ export function useCachedFiles<T extends object>(
   const files = useStableEntries(read);
   useMissingFiles(files);
 
-  const loadedFile = useMemo((): CachedFileReader<T> => (path) => files.get(path) ?? undefined, [files]);
+  const loadedFile = useMemo((): CachedFileReader<T> => (path) => files.get(path), [files]);
   const isLoading = useMemo(() => loader !== null && hasUnsettledFile(files), [loader, files]);
   usePendingWhile(isLoading);
   return { loadedFile, isLoading };

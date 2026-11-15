@@ -21,7 +21,7 @@ function solve(
     isPlaceholder: false,
     size: { x: widthPx, y: 84 },
     margins: { left: 4, top: 4, right: 4, bottom: 4 },
-    rowHeightPx: 27,
+    lineSpacingPx: 4,
     gutterBandWidthPx: 0,
     minimapWidthPx: 0,
     drawMinimap: false,

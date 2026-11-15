@@ -863,6 +863,8 @@ describe('lineEditDrawnLayout: the glyphs the draw loop keeps (line_edit.cpp:151
     advances: number[]
   ): import('../../../../r3f/controls/native/text/textLayout').TextLineLayout => ({
     paragraphIndex: 0,
+    ascentPx: 15,
+    descentPx: 5,
     text: advances.map((_, i) => String.fromCharCode(97 + i)).join(''),
     widthPx: advances.reduce((a, b) => a + b, 0),
     glyphs: advances.map((advance, i) => ({
@@ -878,6 +880,8 @@ describe('lineEditDrawnLayout: the glyphs the draw loop keeps (line_edit.cpp:151
     shapedText: 'x'.repeat(advances.length),
     lines: [line(advances)],
     linePitchPx: 20,
+    fontHeightPx: 20,
+    lineSpacingPx: 0,
     widthPx: advances.reduce((a, b) => a + b, 0),
     heightPx: 20,
     baselineOffsetPx: 15,
@@ -914,6 +918,8 @@ describe('lineEditSelection: the rect and the glyphs a selection covers (line_ed
     lines: [
       {
         paragraphIndex: 0,
+        ascentPx: 15,
+        descentPx: 5,
         text: 'abcd',
         widthPx: 40,
         glyphs: advances.map((advance, i) => ({
@@ -928,6 +934,8 @@ describe('lineEditSelection: the rect and the glyphs a selection covers (line_ed
       },
     ],
     linePitchPx: 20,
+    fontHeightPx: 20,
+    lineSpacingPx: 0,
     widthPx: 40,
     heightPx: 20,
     baselineOffsetPx: 15,

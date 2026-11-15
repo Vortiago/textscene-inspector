@@ -6,9 +6,9 @@
 
 import { useMemo } from 'react';
 import type * as THREE from 'three';
-import { createLightQuadMaterial, type ShadowSampling } from '../../../r3f/lighting2d/lightQuad';
-import type { Rgba } from '../../../godot/math/math';
-import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
+import { createLightQuadMaterial, type ShadowSampling } from './lightQuad';
+import type { Rgba } from '../../godot/math/math';
+import { useDisposeOnRelease } from '../useDisposeOnRelease';
 
 interface LightQuadMaterialOptions {
   readonly cookie: THREE.Texture;
