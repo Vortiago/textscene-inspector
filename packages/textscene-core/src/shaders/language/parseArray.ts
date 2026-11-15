@@ -56,10 +56,7 @@ export class ArrayParser {
     return this.listed(first, type, size);
   }
 
-  /**
-   * The value of an array of `type` and `arraySize` elements: `{...}`, `float[2](...)`, `float[](...)`,
-   * or any expression of that array type.
-   */
+  /** `{...}`, `float[2](...)`, `float[](...)`, or any expression of that array type. */
   typedConstructed(type: string, arraySize: number): Expression {
     const mark = this.tokens.mark();
     const first = this.tokens.next();
@@ -89,10 +86,7 @@ export class ArrayParser {
     return type !== undefined && shapeOf(type) !== undefined ? type : undefined;
   }
 
-  /**
-   * The elements up to `)`, or `}` when `curly`, the first typing the rest when the type is not
-   * given. A given size must match the count.
-   */
+  /** The first element types the rest when no type is given. A given size must match the count. */
   private listed(first: Token, givenType: string | undefined, size: ArraySize): ArrayConstructNode {
     const isCurly = givenType === undefined;
     const elements: Expression[] = [];

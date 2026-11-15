@@ -62,10 +62,7 @@ function isConstantPlace(place: Expression): boolean {
   }
 }
 
-/**
- * The call of the built-in `name` with `args`, or nothing when `name` names no built-in function.
- * `fail` throws Godot's message at the token after the arguments, where Godot reports it.
- */
+/** Nothing when `name` is no built-in. `fail` throws at the token after the arguments, as Godot reports. */
 export function resolvedBuiltInCall(
   name: string,
   args: readonly Expression[],

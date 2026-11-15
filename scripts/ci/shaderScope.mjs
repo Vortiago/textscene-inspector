@@ -5,10 +5,7 @@ import { pathToFileURL } from 'node:url';
 /** The branch the port lands on. A pull request into any other branch runs every job. */
 export const SHADER_BRANCH = 'feature/shader-translator';
 
-/**
- * The transpiler's own files. No file outside them imports one (`shaderScope.test.mjs` checks),
- * so the previewer's jobs cannot see a change to them.
- */
+/** No file outside them imports one (`shaderScope.test.mjs`), so the previewer's jobs cannot see a change. */
 const TRANSPILER_PATHS =
   /^(?:packages\/textscene-core\/src\/shaders\/(?:language|preprocessor|sky|template)\/|apps\/textscene-three-godot-shaders\/|scripts\/godot-shader-language\/|scripts\/godot-templates\/|scripts\/godot-probes\/)/;
 

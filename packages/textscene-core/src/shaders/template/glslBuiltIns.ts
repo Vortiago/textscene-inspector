@@ -61,13 +61,9 @@ export const STAGE_VARIABLES: Readonly<Record<StageName, Readonly<Record<string,
   },
 };
 
-/**
- * The functions as GLSL declares them, `ret name(args)`, where `g` before a type stands for no
- * prefix, `i` and `u` alike, and `gen` for one to four lanes. Each expands to its overload rows.
- */
+/** `g` before a type is no prefix, `i` or `u`, and `gen` one to four lanes. Each expands to its rows. */
 const DECLARATIONS = [
-  // Section 8.8: these give a signed count for an unsigned value, where the shading language types
-  // the result as the value's type and relies on GLSL's implicit conversion back.
+  // Section 8.8 gives a signed count, which Godot types as the value's type through implicit conversion.
   'genI bitCount(genU)',
   'genI findLSB(genU)',
   'genI findMSB(genU)',

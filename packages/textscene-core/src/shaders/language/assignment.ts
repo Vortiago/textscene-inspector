@@ -28,7 +28,7 @@ const NO_TARGETS: readonly Expression[] = [];
 // eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
 const writing = new WeakMap<Expression, boolean>();
 
-/** Whether `expression` writes a variable: an assignment, a step or a call's write anywhere in it, found once per node. */
+/** Found once per node. */
 export function writes(expression: Expression): boolean {
   let isWriting = writing.get(expression);
   if (isWriting === undefined) {

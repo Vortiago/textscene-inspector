@@ -3,12 +3,7 @@ import { inChunksAtOnce, oneGodot, printedField, runGodotScript } from './godotR
 const MARKER = 'VERDICT ';
 const DONE = 'VERDICTS DONE';
 
-/**
- * The texts go in one JSON file: a `.gdshader` file in the project would be read as a resource
- * too, and a `Shader` set from a string compiles the same way. The markers go to standard error,
- * as Godot's errors do, so the two keep their order: `xvfb-run` joins standard error to standard
- * output (`/usr/bin/xvfb-run:184`).
- */
+/** Errors go to standard error so `xvfb-run` keeps their order with the markers (`/usr/bin/xvfb-run:184`). */
 const VERDICT_SCRIPT = `extends Node
 
 func _ready() -> void:
@@ -23,10 +18,7 @@ func _ready() -> void:
 	get_tree().quit()
 `;
 
-/**
- * Godot's version, and its verdict on each of `texts` in order: `{ accepted: true }` or its
- * message and line. The texts run in chunks at once, and every run must name the same Godot.
- */
+/** The texts run in chunks at once, and every run must name the same Godot. */
 export async function godotVerdicts(texts, includes = {}) {
   const runs = await inChunksAtOnce(texts, async (chunk) => {
     const output = await runGodotScript(VERDICT_SCRIPT, {
@@ -39,10 +31,7 @@ export async function godotVerdicts(texts, includes = {}) {
   return { godot, verdicts: runs.flatMap((run) => run.verdicts) };
 }
 
-/**
- * The verdicts of `count` shaders in Godot's output. Godot prints `SHADER ERROR: <message>`
- * and on the next line `at: (null) (<file>:<line>)` for the first error of a shader it refuses.
- */
+/** Godot prints `SHADER ERROR: <message>`, then `at: (null) (<file>:<line>)`, for a shader's first error. */
 export function parseVerdictOutput(output, count) {
   if (!output.includes(DONE)) {
     throw new Error(`expected "${DONE}" after ${count} shaders in Godot's output, found none`);
@@ -52,11 +41,7 @@ export function parseVerdictOutput(output, count) {
   return blocks.map(verdictOf);
 }
 
-/**
- * Godot's error on a shader: its message, which may hold several lines, as the candidates of an
- * overload do, then the file and the line. The file is empty for a shader set from a string, and
- * an include's path for an error inside it (shader_compiler.cpp:1588).
- */
+/** The message may span lines. The file is empty for a string, an include's path inside it (:1588). */
 export const SHADER_ERROR = /SHADER ERROR: ([\s\S]*?)\n\s*at: \(null\) \((\S*):(\d+)\)/;
 
 /** The message, line and file of a match of `SHADER_ERROR`, with no file for the shader itself. */

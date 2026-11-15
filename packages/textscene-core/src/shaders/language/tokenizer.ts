@@ -9,10 +9,7 @@ export interface Token {
   readonly position: SourcePosition;
 }
 
-/**
- * The operator and punctuation tokens, longest first, from the character switch of `_get_token`
- * (`shader_language.cpp:412-708`).
- */
+/** Longest first, from the character switch of `_get_token` (`shader_language.cpp:412-708`). */
 const SYMBOLS: readonly (readonly [string, string])[] = [
   ['<<=', 'TK_OP_ASSIGN_SHIFT_LEFT'],
   ['>>=', 'TK_OP_ASSIGN_SHIFT_RIGHT'],
@@ -192,8 +189,7 @@ function readIdentifier(source: string, cursor: Cursor): Token {
   const text = source.slice(start, cursor.index);
   const keyword = KEYWORD_TOKENS.get(text);
   if (keyword) return { type: keyword, position };
-  // `shader_language.cpp:923`: Godot renames every `dus_` in the name, which its compiler gives its
-  // own names. `String::replace` replaces each one, so `replace` alone would keep the second.
+  // Godot renames every `dus_` with `String::replace` (`shader_language.cpp:923`).
   return { type: 'TK_IDENTIFIER', text: text.replaceAll('dus_', '_'), position };
 }
 

@@ -39,11 +39,7 @@ const OPERATOR_TOKENS = {
   OP_BIT_INVERT: '~',
 };
 
-/**
- * The body of each operator's probe over arguments `a`, `b` and `c`. An assignment returns the
- * argument it changed. An increment reads its argument again, so the probe shows both the value
- * the operator gives and the value it stores.
- */
+/** An assignment returns the argument it changed, and an increment reads it again. */
 function probeBody(op) {
   if (op === 'OP_SELECT_IF') return 'return a ? b : c;';
   if (op === 'OP_INCREMENT') return 'return ++a + a;';
@@ -105,10 +101,7 @@ function constructorProbes(rows) {
     });
 }
 
-/**
- * Each swizzle set, read with one swizzle of each length that reorders and repeats, each lane of
- * the result from a swizzle of another length.
- */
+/** One swizzle of each length that reorders and repeats, each lane from a swizzle of another length. */
 function swizzleProbes(rows) {
   return rows
     .filter((row) => row.family === 'swizzle')

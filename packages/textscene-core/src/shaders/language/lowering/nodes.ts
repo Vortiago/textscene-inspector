@@ -40,10 +40,7 @@ export function operator(
   return { kind: 'operator', type: row.returns!, op, row, operands, position };
 }
 
-/**
- * `target = value`. A struct or an array is set whole, as Godot holds it apart from the
- * operators, whose rows are of value types.
- */
+/** A struct or an array is set whole, apart from the operators, whose rows are value types. */
 export function assign(target: VariableNode, value: Expression): OperatorNode | WholeAssignNode {
   const isWhole = (target.arraySize ?? 0) > 0 || shapeOf(target.type) === undefined;
   if (!isWhole) return operator('OP_ASSIGN', [target, value], target.position);
@@ -84,10 +81,7 @@ export const flow = (
   position: SourcePosition
 ): ControlFlowNode => ({ kind: 'control flow', flow: op, expressions, blocks, position });
 
-/**
- * The body of an `if` or a loop as Godot holds it: a block of one statement, which is a block
- * itself for more than one.
- */
+/** A block of one statement, which is a block itself for more than one. */
 export const flowBody = (statements: readonly Statement[], position: SourcePosition): BlockNode =>
   block(statements.length === 1 ? statements : [block(statements, position)], position);
 

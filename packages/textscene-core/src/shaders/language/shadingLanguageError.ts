@@ -1,7 +1,4 @@
-/**
- * Where a token or a tree node starts. The line is Godot's (`error_line`, `shader_language.h:984`).
- * Godot reports no column, so the column is the transpiler's own.
- */
+/** Godot's `error_line` (`shader_language.h:984`). Godot reports no column, so the column is ours. */
 export interface SourcePosition {
   /** The shader's path, or an empty string for a text with no file. */
   readonly file: string;
@@ -16,7 +13,7 @@ export class ShadingLanguageError extends Error {
     /** Godot's message, or the transpiler's for a construct it does not transpile yet. */
     readonly reason: string,
     readonly position: SourcePosition,
-    /** The issue that transpiles the construct, for a construct not transpiled yet. Nothing for Godot's own refusal. */
+    /** Nothing for Godot's own refusal. */
     readonly owner?: string
   ) {
     super(`${position.file ? `${position.file}:` : ''}${position.line}:${position.column}: ${reason}`);

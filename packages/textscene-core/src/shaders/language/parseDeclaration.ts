@@ -70,10 +70,7 @@ class DeclarationParser {
     return type;
   }
 
-  /**
-   * One name and what follows it, up to the `,` or `;`. `typeSize` is the size written after the
-   * type, which every name of the declaration takes.
-   */
+  /** `typeSize` is the size after the type, which every name of the declaration takes. */
   private declarator(token: Token, type: string, isConst: boolean, typeSize: ArraySize | 'none'): Declarator {
     if (token.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected an identifier.');
     const name = token.text!;
@@ -119,11 +116,7 @@ class DeclarationParser {
     return { value };
   }
 
-  /**
-   * The value of an array (`shader_language.cpp:8278`): another array's expression, a list in
-   * `{}`, or a constructor of the same type and size. An array of unknown size takes the size of
-   * its value.
-   */
+  /** An array of unknown size takes the size of its value (`shader_language.cpp:8278`). */
   private arrayValue(
     type: string,
     isConst: boolean,

@@ -9,10 +9,7 @@ import { SHOWCASES } from '../../apps/textscene-three-godot-shaders/tests/e2e/sh
 import { PROBES } from '../../apps/textscene-three-godot-shaders/tests/probes/probes.mjs';
 import { SKY_SCENES } from '../../apps/textscene-three-godot-shaders/tests/e2e/skyScenes.mjs';
 
-/**
- * What makes a row transpiled: a probe that names it, or a sky scene that names it, which the end
- * to end run draws against Godot, as no probe runs a sky shader.
- */
+/** A sky scene proves its rows too, as no probe runs a sky shader. */
 const ROW_PROOFS = [...PROBES, ...SKY_SCENES];
 import { GUIDE_CHAPTERS } from './guideChapters.mjs';
 import { godotVersion, instructionRows, SOURCE_FILES } from './readSource.mjs';
@@ -43,10 +40,7 @@ const GUIDE_DIR = join(REPO_ROOT, 'apps/textscene-three-godot-shaders/guide');
 const TESTS = join(REPO_ROOT, 'apps/textscene-three-godot-shaders/tests');
 const readJson = (path) => JSON.parse(readFileSync(join(TESTS, path), 'utf8'));
 
-/**
- * The chapter on the tests, from Godot's operator and corpus verdicts and the corpus states that
- * vitest writes.
- */
+/** From Godot's operator and corpus verdicts and the corpus states that vitest writes. */
 function testingChapter(answers) {
   return renderTestingGuide({
     operators: { cases: OPERATOR_CASES, record: answers.operators },

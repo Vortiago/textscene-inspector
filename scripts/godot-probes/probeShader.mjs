@@ -21,10 +21,7 @@ export const LANE_COUNT = Object.fromEntries(
   Object.entries(PROBE_TYPES).map(([type, { lanes }]) => [type, lanes])
 );
 
-/**
- * Written in the pixel after the last result. A shader that fails to compile draws nothing, so a
- * missing sentinel marks a probe Godot rejects.
- */
+/** A shader that fails to compile draws no sentinel, so its absence marks a rejected probe. */
 export const SENTINEL_BITS = 0xc0ffee01;
 
 /** The precision words a type may follow, which leave the type's lanes as they are. */
@@ -63,10 +60,7 @@ export function parameterBits(probe) {
   );
 }
 
-/**
- * The input rows of a probe of `source` from `bits`, the hex bits of each parameter's lanes row
- * after row as the record holds them: the inverse of `parameterBits`.
- */
+/** The inverse of `parameterBits`. */
 export function inputRowsOfBits(source, bits) {
   const { parameters } = probeSignature(source);
   if (bits.length !== parameters.length)

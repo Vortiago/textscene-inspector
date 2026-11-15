@@ -41,16 +41,10 @@ const QUALIFIERS = ['in', 'in', 'const in', 'out', 'out', 'inout', 'inout'];
 /** The chance that an `out` or `inout` argument is a part of a variable rather than all of it. */
 const PART_PLACE_CHANCE = 0.5;
 
-/**
- * The size of an array whose element a call writes. Its index variable starts at 0 or 1, so the
- * index stays inside the array whatever the call writes to the variable.
- */
+/** The index variable starts at 0 or 1, so the index stays inside the array whatever a call writes. */
 const INDEXED_ARRAY_SIZE = 2;
 
-/**
- * The chance that a function writes an `int` before another value, so that a caller may index
- * the second argument's array with the first argument's variable.
- */
+/** An `int` written first lets a caller index the second argument's array with the first's variable. */
 const INDEX_BEFORE_A_PLACE_CHANCE = 0.25;
 
 // The weight makes the return most often read a value a call wrote.
@@ -110,10 +104,7 @@ function placesOf(shape, name) {
 
 const isWritten = (qualifier) => qualifier === 'out' || qualifier === 'inout';
 
-/**
- * The variables in reach in one function, and the functions it may call. A value an argument
- * wrote is in `names` twice, so an expression reads it more often than an input.
- */
+/** A value an argument wrote is in `names` twice, so an expression reads it more often than an input. */
 class Scope {
   constructor(writer, rows) {
     this.writer = writer;
@@ -213,10 +204,7 @@ class FunctionProgramWriter {
     return new Scope(writer, this.rows);
   }
 
-  /**
-   * The text of function `name`, which it adds to the functions later ones may call. Its
-   * parameters are `b0` and on: the harness names its uniforms `p0` and on.
-   */
+  /** Parameters are `b0` and on, apart from the harness's uniforms `p0` and on. */
   helper(name) {
     const parameters = Array.from({ length: 1 + this.random.below(PARAMETERS_AT_MOST) }, (_, index) => ({
       qualifier: this.random.pick(QUALIFIERS),
@@ -250,11 +238,7 @@ class FunctionProgramWriter {
     return `${returnType} ${name}(${signature}) { ${lines.join(' ')} }`;
   }
 
-  /**
-   * The statements of a function. Each `out` parameter is written first, so an early return
-   * leaves none unwritten, which GLSL would leave undefined. A write after the early return
-   * makes the early return change what the caller reads.
-   */
+  /** Each `out` parameter is written first, so an early return leaves none undefined. */
   helperBody(scope, parameters, returns) {
     const lines = [];
     for (const parameter of parameters.filter((each) => each.qualifier === 'out')) {
@@ -296,10 +280,7 @@ class FunctionProgramWriter {
     return `${place.name} = ${scope.expression(place.type)};`;
   }
 
-  /**
-   * Adds function `name` to those a later one may call. A function of `in` values that returns
-   * a value is also a producer, so an expression may call it inside another.
-   */
+  /** A function of `in` values that returns a value is also a producer for an expression. */
   declare(name, parameters, returns) {
     this.helpers.push({ name, row: FRAME_ROWS.call, parameters, returns });
     const takesValues = parameters.every(
@@ -316,10 +297,7 @@ class FunctionProgramWriter {
     return this.random.pick(isBuiltIn ? BUILT_IN_CALLEES : this.helpers);
   }
 
-  /**
-   * The statements that call `helper` and declare the variables its `out` and `inout` arguments
-   * write. Each written value is in reach after the call, twice over.
-   */
+  /** Each written value is in reach after the call, twice over. */
   callStatement(scope, helper) {
     this.rows.add(helper.row);
     const lines = [];
@@ -344,10 +322,7 @@ class FunctionProgramWriter {
     return lines;
   }
 
-  /**
-   * A place for a written argument: a new variable, or a member, element or swizzle of one. An
-   * `int` variable may index a later argument's array element, which GLSL reads at the call.
-   */
+  /** An `int` variable may index a later argument's array element, which GLSL reads at the call. */
   place(scope, parameter, indices) {
     const { shape, qualifier } = parameter;
     const name = scope.local();
@@ -436,10 +411,7 @@ class FunctionProgramWriter {
   }
 }
 
-/**
- * The `count` programs with functions of `seed`, named apart from the expression programs. Their
- * own random stream keeps the expression programs of the seed as they were.
- */
+/** A random stream of their own keeps the seed's expression programs as they were. */
 export function generateFunctionPrograms({ seed, count }) {
   const writer = new FunctionProgramWriter(seededRandom(~seed));
   return Array.from({ length: count }, (_, index) => writer.program(`random-${seed}-function-${index}`));

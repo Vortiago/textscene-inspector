@@ -73,10 +73,7 @@ function remainder(scalar: ScalarKind, a: number, b: number): number {
   return wrapped(scalar, a % b);
 }
 
-/**
- * The comparisons and logic glslang folds. `<=` is `!(a > b)` and `>=` is `!(a < b)`, so each
- * holds for a NaN lane.
- */
+/** `<=` is `!(a > b)` and `>=` is `!(a < b)`, so each holds for a NaN lane. */
 const LOGIC: Readonly<Record<string, LaneOperation>> = {
   OP_LESS: (a, b) => a < b,
   OP_GREATER: (a, b) => a > b,

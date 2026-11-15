@@ -7,22 +7,13 @@ import {
   GODOT_DRIVER,
 } from '../driverFolds.mjs';
 
-/**
- * `min`, `max` and `clamp` of a vector and a float keep the sign of a zero and a subnormal on the
- * Godot side, and give +0 on the browser's, where the vector-by-vector overloads are equal on both.
- * three writes the same `min(a, b)` as Godot, so the two drivers' front ends differ.
- */
+/** The drivers' front ends differ: Godot keeps the sign of a zero or subnormal, the browser gives +0. */
 const SCALAR_BOUND = {
   owner: '#1826',
   cause: 'driver front ends: a float bound of a vector gives +0 for -0 and a subnormal on the browser side',
 };
 
-/**
- * Godot leaves the `whole` of `modf(x, whole)` unwritten when nothing reads the call's value: a
- * statement, or a local nothing reads, gives 0 on every input, and `f * 0.0` of the value writes
- * it. Godot's GLSL holds the call (`shader_compiler.cpp:809`), and glslang writes it as
- * `GLSLstd450Modf` with the out pointer (`GlslangToSpv.cpp:8767`), so lavapipe drops the store.
- */
+/** Lavapipe drops the out store of a `modf` whose value nothing reads (`GlslangToSpv.cpp:8767`). */
 export const UNREAD_MODF = {
   owner: '#1826',
   cause: "driver (Mesa lavapipe) drops the out store of a modf whose value nothing reads, on Godot's side",

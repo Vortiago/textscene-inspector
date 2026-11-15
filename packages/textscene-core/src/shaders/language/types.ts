@@ -46,10 +46,7 @@ export function elementType(owner: ValueType): ValueType | undefined {
   return shape.columns === undefined ? shape.scalar : `vec${shape.columns}`;
 }
 
-/**
- * The lanes of `type` that one scalar fills: every lane of a vector, or a matrix's diagonal with
- * zeros elsewhere, as both Godot (`shader_language.cpp:7882`) and GLSL construct it.
- */
+/** Every vector lane, or a matrix's diagonal, as Godot (`shader_language.cpp:7882`) and GLSL fill it. */
 export function filledLanes<T>(value: T, type: ValueType): (T | 0)[] {
   const shape = shapeOf(type)!;
   if (shape.columns === undefined) return Array<T>(shape.lanes).fill(value);

@@ -22,11 +22,7 @@ export function lowerSwitches(definition: FunctionNode, names: FreshNames): Func
   );
 }
 
-/**
- * `{ T value = v; bool falls = false; bool matches = v == 1 || ...; while (true) {
- * if (falls || value == 1) { falls = true; body } ... if (falls || !matches) { ... } break; } }`.
- * The `matches` flag stands only where a `default` does.
- */
+/** Lowers to a `while (true)` of `falls` checks. The `matches` flag stands only where a `default` does. */
 function switchChain(statement: ControlFlowNode, names: FreshNames): Statement {
   const position = statement.position;
   const valueNode = statement.expressions[0]!;

@@ -31,7 +31,7 @@ function whileLoop(statement: ControlFlowNode): Statement {
   return loop([breakUnless(boolCondition(condition!)), ...statement.blocks], statement.position);
 }
 
-/** `do s while (c);` as `{ bool first = true; while (true) { if (!first) { if (!c) break; } first = false; s } }`. */
+/** `do s while (c);` as `{ first = true; while (true) { if (!first && !c) break; first = false; s } }`. */
 function doLoop(statement: ControlFlowNode, names: FreshNames): Statement {
   const [condition] = statement.expressions;
   const first = firstFlag(names, statement);
@@ -43,10 +43,7 @@ function doLoop(statement: ControlFlowNode, names: FreshNames): Statement {
   return block([first.declaration, loop(body, statement.position)], statement.position);
 }
 
-/**
- * `for (init; c; steps) s` as `{ init; while (true) { if (!c) break; s } }`, with a flag that
- * runs the steps on each pass after the first. Every condition runs, and the last one decides.
- */
+/** A flag runs the steps on each pass after the first, so every condition runs. */
 function forLoop(statement: ControlFlowNode, names: FreshNames): Statement {
   const [init, conditions, steps, body] = statement.blocks as [BlockNode, BlockNode, BlockNode, BlockNode];
   const position = statement.position;

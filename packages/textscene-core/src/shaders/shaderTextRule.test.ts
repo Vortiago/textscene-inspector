@@ -24,18 +24,12 @@ const TEXT_ESCAPES = new Set([
   'getMethod',
 ]);
 
-/**
- * The Node subclasses that may define `generate`, each with why it writes no text. A subclass
- * that writes text into the builder's code would go around three's TSL nodes.
- */
+/** A subclass that writes text into the builder's code would go around three's TSL nodes. */
 const NODE_SUBCLASSES_ALLOWED: Readonly<Record<string, string>> = {
   WholeArray: 'generate() returns the build of the TSL node it wraps and changes only its type',
 };
 
-/**
- * Text of GLSL or WGSL source: a call built around an interpolation, or a form only shader source
- * has. A `gl_` name is left out: the template stages read `gl_FragCoord` and the rest as input names.
- */
+/** A `gl_` name is left out: the template stages read `gl_FragCoord` and the rest as input names. */
 const SHADER_SOURCE =
   /\w\s*\(\s*\$\{|bitcast<|\b[biu]?vec[234]<|\bmat[234]x[234]<|#version|\bvoid\s+main\b|\bfn\s+\w+\s*\(|\blayout\s*\(|\breturn\s+[^;]*;/;
 

@@ -17,10 +17,7 @@ export type VariantLine =
 /** The file name a line of the defines carries, which no template file has. */
 const DEFINES_FILE = '<defines>';
 
-/**
- * What one variant of one material adds to a stage (`ShaderRD::Version` and the variant's text).
- * Each define string is Godot's, lines of `#define` with their line breaks.
- */
+/** `ShaderRD::Version`: each define string is Godot's `#define` lines with their line breaks. */
 export interface VariantDefines {
   /** The defines of the shader class, `initialize`'s `p_general_defines`. */
   readonly general: string;

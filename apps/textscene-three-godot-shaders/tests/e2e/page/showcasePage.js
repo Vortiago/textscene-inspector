@@ -11,10 +11,7 @@ const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
 const scene = new THREE.Scene();
 scene.add(quad);
 
-/**
- * Godot's UV of a ColorRect that fills its viewport: (0, 0) at the top left corner, read at the
- * pixel centre. three's screen coordinate starts at the top left too.
- */
+/** Godot's ColorRect UV and three's screen coordinate both start at the top left, at the pixel centre. */
 const uv = screenCoordinate.div(screenSize);
 
 /** The pixels of `showcase`'s function, or `{ error }` when the transpilation refuses it. */

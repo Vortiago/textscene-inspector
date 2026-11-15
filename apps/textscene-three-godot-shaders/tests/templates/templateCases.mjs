@@ -7,10 +7,7 @@ import {
 } from '../../../../scripts/godot-templates/templateFiles.mjs';
 import { coveringSets, definedNames, isMaterialName, testedNames, variantText } from './defineSets.mjs';
 
-/**
- * The templates of Godot's source at `godotDir`: each file with stages, the files that only
- * stages include, and the files that wait for the third-party code.
- */
+/** Each file with stages, the files only stages include, and the files that wait for third-party code. */
 export function templateFiles(godotDir, { splitStages }) {
   const dir = join(godotDir, TEMPLATE_DIR);
   const read = (path) => {
@@ -45,7 +42,7 @@ export class StageVariants {
     Object.assign(this, { file, stage, lines, modules });
     this.general = modules.GENERAL_DEFINES[file] ?? '';
     this.names = testedNames(lines, definedNames(this.general));
-    /** The branches the preprocessor decides for each set, by the set's names. Written only by `decidedBranches`. */
+    /** Written only by `decidedBranches`. */
     this.decided = new Map();
   }
 
@@ -58,10 +55,7 @@ export class StageVariants {
     return coveringSets(this.names, (set) => this.takenBranches(set)).map((set) => this.caseOf(set));
   }
 
-  /**
-   * The sets wider than `set` that take branch `key`: `set` with each name more, and `set` with
-   * every name the branch's directive tests, for a condition of several names.
-   */
+  /** `set` with each name more, and with every name the branch's directive tests. */
   widenedSets(set, key) {
     const wider = (names) => [...new Set([...set, ...names])].sort();
     const candidates = [
@@ -125,11 +119,7 @@ export class StageVariants {
     return this.modules.variantLines(this.lines, defines);
   }
 
-  /**
-   * Every branch the preprocessor decides for some set tried, by `file:line`. A branch in a comment
-   * or in a branch no set reads is decided for none. A branch whose directive tests what a material
-   * holds is left out, as the link step's tests take it, and so is Godot's disabled code.
-   */
+  /** Leaves out a branch on what a material holds, which the link takes, and Godot's disabled code. */
   allBranches() {
     const keys = new Set();
     for (const branches of this.decided.values())

@@ -2,8 +2,8 @@ import { createServer } from 'vite';
 import { REPO_ROOT } from './repoRoot.mjs';
 
 /**
- * A server whose `ssrLoadModule` loads a source file by its path from the repository root. The
- * caller closes it.
+ * `ssrLoadModule` loads a source file by its repository path. The caller closes it.
+ *
  * @canonical Load TypeScript sources into a Node script
  */
 export function sourceServer() {

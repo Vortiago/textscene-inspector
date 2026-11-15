@@ -19,12 +19,7 @@ export function ulpDistance(a, b) {
 /** The transpiler's refusal of an expression that ends Godot as Godot evaluates it. */
 const ABORT_REFUSAL = /aborts on this expression/;
 
-/**
- * The verdict of `actual` (the page's answer: `{ bits }` per lane, or `{ error, isRefusal }`)
- * against the record `entry`: `{ passed, lanes, mismatches, maxUlp, detail }`. A shader Godot
- * rejects passes only when the transpiler refuses it, and one that ends Godot only when the
- * refusal says so.
- */
+/** A shader Godot rejects passes only on a refusal, one that ends Godot only on a refusal that says so. */
 export function compareProbe(entry, actual, isFloatResult = true) {
   if (entry === undefined) return failed('no answer from Godot');
   if (entry.rejected?.stage === 'Godot') {
@@ -58,11 +53,7 @@ export function compareProbe(entry, actual, isFloatResult = true) {
 /** The verdict of a probe that compared no lane. */
 const failed = (detail) => ({ passed: false, lanes: 0, mismatches: 0, maxUlp: 0, detail });
 
-/**
- * The coverage verdict: a transpiled row is one a probe names, and each probe must have a record
- * and pass, or differ exactly as its entry in `known` lists: the count of lanes off and the first.
- * A listed probe that equals Godot fails too, so the change that fixes it removes its entry.
- */
+/** A listed probe that equals Godot fails too, so the change that fixes it removes its entry. */
 export function coverageFailures(probes, verdicts, known) {
   return probes.flatMap((probe) => {
     const verdict = verdicts.get(probe.name);

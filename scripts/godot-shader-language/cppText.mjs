@@ -1,7 +1,4 @@
-/**
- * The enumerators of `enum <name> { ... }` in `text`, in order, each with its 1-based line.
- * `MAX`-named sentinels stay: the caller drops what is not an instruction.
- */
+/** `MAX`-named sentinels stay: the caller drops what is not an instruction. */
 export function enumMembers(text, name) {
   const start = text.search(new RegExp(`enum ${name} \\{`));
   if (start === -1) throw new Error(`expected enum ${name} in the source, found none`);

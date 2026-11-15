@@ -49,10 +49,7 @@ export function constructorRow(type: string, args: readonly string[]): Instructi
 /** A row Godot's table holds by id: `OP_INDEX`, `OP_CALL`, `OP_STRUCT`, `OP_EMPTY`. */
 export const namedRow = (id: string): InstructionRow => instruction(id)!;
 
-/**
- * The overloads of the built-in function `name`: GLSL's rows, then Godot's rows of other
- * signatures, then the 16-bit float form of each row over floats.
- */
+/** GLSL's rows, then Godot's other signatures, then the 16-bit float form of each float row. */
 export function builtInOverloads(name: string): readonly InstructionRow[] {
   const glsl = GLSL_FUNCTION_ROWS.get(name) ?? [];
   const own = new Set(glsl.map((row) => row.id));
@@ -63,10 +60,7 @@ export function builtInOverloads(name: string): readonly InstructionRow[] {
   return [...rows, ...rows.flatMap((row) => float16Row(name, row) ?? [])];
 }
 
-/**
- * The form of a row over floats that `GL_EXT_shader_explicit_arithmetic_types` adds for
- * `float16_t`, each float type made 16-bit. Nothing for a row with a texture or with no float.
- */
+/** `GL_EXT_shader_explicit_arithmetic_types` adds a `float16_t` form. Nothing with a texture or no float. */
 function float16Row(name: string, row: InstructionRow): InstructionRow | undefined {
   const types = [row.returns ?? 'void', ...(row.args ?? [])];
   if (types.some(isOpaqueType) || !types.some((type) => glslShapeOf(type)?.scalar === 'float'))
@@ -80,11 +74,7 @@ function float16Row(name: string, row: InstructionRow): InstructionRow | undefin
   return glslRow(`${name}(${args.join(',')})`, 'glsl function', source, to16(row.returns ?? 'void'), args);
 }
 
-/**
- * The overload of `rows` that a call with `args` resolves to, by section 6.1: the one whose
- * types match exactly, or else the one that needs the fewest implicit conversions. Nothing when
- * none takes the arguments.
- */
+/** Section 6.1: the exact match, else the fewest implicit conversions, else nothing. */
 export function resolvedOverload(
   rows: readonly InstructionRow[],
   args: readonly string[]

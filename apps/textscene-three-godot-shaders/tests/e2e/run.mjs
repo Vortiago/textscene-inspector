@@ -52,16 +52,10 @@ function writePng(path, { width, height }, pixels) {
   writeFileSync(path, PNG.sync.write(png));
 }
 
-/**
- * The steps a render moves between two machines: lavapipe rounds `exp` and `pow` one step apart
- * with and without AVX, as the sun scatter of `sky-fog-sun` shows on the CI runner.
- */
+/** Lavapipe rounds `exp` and `pow` one step apart with and without AVX, as `sky-fog-sun` shows on CI. */
 const MACHINE_STEPS = 1;
 
-/**
- * The guide image's staleness against a render: nothing when no byte moves more than a machine
- * moves it. The 2/255 tolerance is for Godot against the transpilation.
- */
+/** Nothing when no byte moves more than a machine moves it: 2/255 is for Godot against the transpilation. */
 function staleImage(path, pixels) {
   if (!existsSync(path)) return `${path} is missing`;
   const { maxSteps } = compareImages(PNG.sync.read(readFileSync(path)).data, pixels);

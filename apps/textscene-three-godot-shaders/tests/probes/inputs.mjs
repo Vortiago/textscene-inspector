@@ -1,7 +1,4 @@
-/**
- * The float inputs: zero of both signs, small and large of both signs, a value with no exact
- * binary form, a subnormal, the largest float, the infinities and NaN.
- */
+/** Both zeros, small and large, an inexact value, a subnormal, the largest float, the infinities and NaN. */
 export const FLOAT_VALUES = [
   0,
   -0,
@@ -34,10 +31,7 @@ export function pairs() {
 /** A lane offset that is prime to the input count, so the lanes of a row hold different values. */
 const LANE_STRIDE = 5;
 
-/**
- * The argument offsets of the two blocks of rows, apart from the lane offsets and from each other,
- * so the second block pairs each value with other partners than the first.
- */
+/** Offsets apart from the lane offsets, so the second block pairs each value with other partners. */
 const ARGUMENT_STRIDES = [7, 11];
 
 /** The value of lane `lane` of argument `argument` in row `row`, from the table of `scalar` kind. */
@@ -58,10 +52,7 @@ export function pairedVectors(sizes) {
   return argumentRows(sizes.map((size) => ({ scalar: 'float', lanes: size })));
 }
 
-/**
- * Rows of arguments of the given shapes, `{ scalar, lanes }`, one value for one lane and a list
- * otherwise: one block of rows per argument offset, with a row that repeats an earlier one left out.
- */
+/** One block of rows per argument offset, without a row that repeats an earlier one. */
 export function argumentRows(shapes) {
   const rowCount = FLOAT_VALUES.length * ARGUMENT_STRIDES.length;
   const rows = Array.from({ length: rowCount }, (_, row) =>
@@ -98,10 +89,7 @@ export function floatOfBits(bits) {
   return float32[0];
 }
 
-/**
- * The int inputs: zero, small values of both signs, the edges of the int range and of 16 bits, and
- * shift amounts past 31. Godot draws an int lane as its two's complement bits.
- */
+/** Godot draws an int lane as its two's complement bits. */
 export const INT_VALUES = [
   0, 1, -1, 2, -3, 7, 31, 32, 255, -256, 65536, 1000003, -12345, 2147483647, -2147483648, 5,
 ];

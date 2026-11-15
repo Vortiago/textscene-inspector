@@ -37,11 +37,7 @@ const binary =
   ([first, second]) =>
     tsl(operator)(first!, second!);
 
-/**
- * A binary operator over its operands, column by column where one operand is a matrix and the
- * other a scalar. three 0.187 writes `scalar op matrix` with no brackets and `matrix op scalar`
- * with the operands swapped (`OperatorNode.generate`), which `-` and `/` and any parent misread.
- */
+/** Three 0.187 misreads `scalar op matrix` and `matrix op scalar` (`OperatorNode.generate`). */
 const columnwise =
   (operator: unknown): Operation =>
   (operands, types) => {
@@ -60,10 +56,7 @@ const columnwise =
 const isMatrixByScalar = (types: readonly ValueType[]) =>
   shapeOf(types[0]!)!.columns !== undefined && shapeOf(types[1]!)!.lanes === 1;
 
-/**
- * GLSL's `/`. glslang writes `matrix / scalar` as the matrix times the scalar's reciprocal, which
- * rounds twice, so a lane can land one unit off a true division, or flush to zero.
- */
+/** glslang writes `matrix / scalar` as a product with the reciprocal, which rounds twice. */
 function quotient(operands: readonly Node[], types: readonly ValueType[]): Node {
   if (!isMatrixByScalar(types)) return columnwise(div)(operands, types);
   return columnwise(mul)([operands[0]!, tsl(div)(floatNode(1), operands[1]!)], types);
@@ -74,10 +67,7 @@ const unary =
   ([operand]) =>
     tsl(operator)(operand!);
 
-/**
- * GLSL's `==` of two values: true when every lane is equal. A vector compares lane by lane, and a
- * matrix column by column.
- */
+/** A vector compares lane by lane, and a matrix column by column. */
 function isEqual([first, second]: readonly Node[], [type]: readonly ValueType[]): Node {
   const shape = shapeOf(type!)!;
   if (shape.columns !== undefined) {
@@ -134,11 +124,7 @@ export function assignedOperator(op: string): string | undefined {
   return op === 'OP_ASSIGN' ? undefined : `OP_${op.slice('OP_ASSIGN_'.length)}`;
 }
 
-/**
- * The value of the constructor `type` over `operands`. three converts one float, or one matrix of
- * another size, to a matrix as an assignment GLSL refuses, so such a matrix is built column by
- * column, as GLSL reads it.
- */
+/** Three converts a float or another matrix size to a matrix as GLSL refuses, so this builds columns. */
 export function constructed(
   type: ValueType,
   operands: readonly Node[],

@@ -1,8 +1,4 @@
-/**
- * What a renderer tells Godot's shader compiler about one shader type
- * (`ShaderCompiler::DefaultIdentifierActions`, `servers/rendering/shader_compiler.h`): the GLSL
- * text each built-in stands for, and the define each used built-in and render mode adds.
- */
+/** `ShaderCompiler::DefaultIdentifierActions` (`servers/rendering/shader_compiler.h`). */
 export interface ModeTable {
   /** The GLSL text of each built-in: `COLOR` is `color`, `TIME` is `params.time`. */
   readonly renames: Readonly<Record<string, string>>;

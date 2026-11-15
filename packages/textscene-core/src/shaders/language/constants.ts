@@ -2,10 +2,7 @@ import type { ConstantNode, Expression, OperatorNode, Scalar } from './shaderTre
 import { unaryLane } from './glslangArithmetic.js';
 import { filledLanes, shapeOf, type ScalarKind, type ValueType } from './types.js';
 
-/**
- * The lane of the scalar constant `constant` as type `to`, or nothing where Godot converts none:
- * `int` and `uint` to `float`, a non-negative `int` to `uint`, and a `uint` up to 2^31 - 1 to `int`.
- */
+/** Godot converts `int` and `uint` to `float`, a non-negative `int` to `uint`, a small `uint` to `int`. */
 export function convertedScalar(constant: ConstantNode, to: ValueType): Scalar | undefined {
   const value = constant.values[0]!;
   if (constant.type === to) return value;
@@ -16,11 +13,7 @@ export function convertedScalar(constant: ConstantNode, to: ValueType): Scalar |
   return undefined;
 }
 
-/**
- * `_reduce_expression`: a constructor of constants becomes one constant (line 7848), and so does a
- * negation of a constant (line 7909). It reaches through constructors and negations only, so
- * `-(-1.5) + a` keeps its outer negation.
- */
+/** `_reduce_expression` (lines 7848 and 7909) reaches through constructors and negations only. */
 export function reduced(expression: Expression): Expression {
   if (expression.kind !== 'operator') return expression;
   if (expression.op === 'OP_CONSTRUCT') return reducedConstruction(expression);
@@ -62,10 +55,7 @@ function negatedScalar(value: Scalar, scalar: ScalarKind): Scalar {
   return scalar === 'bool' ? !value : unaryLane('OP_NEGATE', scalar, value)!;
 }
 
-/**
- * `node` over `operands`, or `node` itself when no operand changed. A tree the parser has reduced
- * once then keeps its nodes, and with them each node's evaluation.
- */
+/** Unchanged operands keep the node, so a reduced tree keeps each node's evaluation. */
 function withOperands(node: OperatorNode, operands: readonly Expression[]): OperatorNode {
   return operands.every((operand, index) => operand === node.operands[index]) ? node : { ...node, operands };
 }

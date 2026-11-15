@@ -234,9 +234,7 @@ const ARITIES: ReadonlyArray<readonly [string, number]> = [
 ];
 
 describe('Godot composite literal grammar', () => {
-  // Read, comment-stripped and labelled once for every assertion. Comments go because
-  // a docblock's opening and closing delimiters pair into false regexes around prose.
-  // A generated file holds Godot's own text, a GLSL template or a table row, as data.
+  // Comments go, as a docblock's delimiters pair into false regexes around prose.
   const files = allSourceFiles()
     .filter((file) => !file.endsWith('.generated.ts'))
     .map((file) => {

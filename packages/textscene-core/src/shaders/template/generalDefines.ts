@@ -1,6 +1,6 @@
 const defines = (...entries: readonly string[]) => entries.map((entry) => `\n#define ${entry}\n`).join('');
 
-/** The directional lights of a scene and of a sky's light buffer (`renderer_scene_render.h:48`, `sky.cpp:707`). */
+/** `renderer_scene_render.h:48` and `sky.cpp:707`. */
 const MAX_DIRECTIONAL_LIGHTS = 8;
 const SKY_DIRECTIONAL_LIGHTS = 4;
 

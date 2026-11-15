@@ -1,10 +1,7 @@
 import type { StageName } from './stages.js';
 import type { TemplateStageNode } from './templateTree.js';
 
-/**
- * The version of the transpiler's trees, which the key holds beside Godot's. Raise it with each
- * change that gives a text a different tree, so a stored tree never outlives its transpiler.
- */
+/** Raise it with each change that gives a text another tree, so no stored tree outlives its transpiler. */
 export const TRANSPILER_VERSION = 1;
 
 /** Everything a linked stage's tree depends on. */
@@ -23,16 +20,10 @@ export interface TreeKey {
   readonly transpilerVersion: number;
 }
 
-/**
- * The trees a memo keeps: more than the skies a page draws at once, so each edit of a live
- * shader drops the tree of the oldest text, not a tree in use.
- */
+/** More than the skies a page draws at once, so an edit drops the oldest tree, not one in use. */
 const KEPT_TREES = 64;
 
-/**
- * The linked stages by their key, the least recently read dropped first. A tree is immutable, so
- * every caller shares it.
- */
+/** Least recently read dropped first. A tree is immutable, so every caller shares it. */
 export class TreeMemo {
   readonly #trees = new Map<string, TemplateStageNode>();
 

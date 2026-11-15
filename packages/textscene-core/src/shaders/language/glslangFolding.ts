@@ -8,12 +8,7 @@ import { filledLanes, shapeOf, type ScalarKind, type TypeShape, type ValueType }
 
 export type { Lanes };
 
-/**
- * The lanes of each expression glslang folds to a constant, a matrix's columns one after the
- * other, or nothing for one that reads a variable. glslang reads Godot's float constants as
- * doubles, folds in double precision and rounds once. A fold in 32-bit floats lands one unit off:
- * `58.656 + 74.377` is 0x43050873 in Godot, 0x43050872 so.
- */
+/** glslang folds in double precision and rounds once: `58.656 + 74.377` is 0x43050873, not ...72. */
 export class GlslangFolding {
   /** Filled by `lanesOf` as it walks a function's tree, which never changes, and by `bindConstant`. */
   private readonly lanes = new WeakMap<Expression, Lanes | null>();
@@ -90,10 +85,7 @@ export class GlslangFolding {
   }
 }
 
-/**
- * A constructor of constants (`foldConstructor`): each lane converted to the type's scalar, one
- * scalar filling a vector or a matrix's diagonal, and a matrix of another matrix.
- */
+/** `foldConstructor`: one scalar fills a vector or a matrix's diagonal. */
 function constructed(type: ValueType, operands: readonly Lanes[], shapes: readonly TypeShape[]) {
   const shape = shapeOf(type)!;
   if (shape.columns !== undefined && shapes.length === 1 && shapes[0]!.columns !== undefined)
@@ -108,10 +100,7 @@ function constructed(type: ValueType, operands: readonly Lanes[], shapes: readon
   return filledLanes(lanes[0]!, type);
 }
 
-/**
- * A matrix of `size` columns built from a constant matrix of `sourceSize` columns
- * (`parseConst.cpp:151`): each lane inside the source taken from it, the identity elsewhere.
- */
+/** Lanes inside the source come from it, and the identity elsewhere (`parseConst.cpp:151`). */
 function matrixOfMatrix(size: number, source: Lanes, sourceSize: number): Lanes {
   return Array.from({ length: size * size }, (_, at) => {
     const column = Math.floor(at / size);
@@ -128,11 +117,7 @@ function element(owner: Lanes, shape: TypeShape, index: number): Lanes | undefin
   return owner.slice(index * size, (index + 1) * size);
 }
 
-/**
- * The constant of `==` or `!=`: glslang sizes it as the left operand (`Constant.cpp:101`) and sets
- * lane 0 alone, so the boolean carries a zero `int` for each other lane. A later `==` compares
- * those too: `(vec2(1.0) == vec2(2.0)) == (1 == 2)` folds to false.
- */
+/** glslang sizes the result as the left operand and sets lane 0 alone (`Constant.cpp:101`). */
 function equality(result: boolean, left: TypeShape): Lanes {
   return [result, ...Array<Scalar>(left.lanes - 1).fill(0)];
 }
@@ -154,10 +139,7 @@ function lanewise(op: string, scalar: ScalarKind, lanes: number, left: Lanes, ri
 
 const laneAt = (lanes: Lanes, lane: number) => lanes[lanes.length === 1 ? 0 : lane]!;
 
-/**
- * `matrix * matrix`, `matrix * vector` or `vector * matrix` as glslang folds it: each lane a sum
- * of products in double precision, from the first term on. Nothing for a product lane by lane.
- */
+/** Each lane a sum of products in double precision, from the first term on. */
 function matrixProduct(left: Lanes, leftShape: TypeShape, right: Lanes, rightShape: TypeShape) {
   const rows = leftShape.columns ?? (rightShape.columns === undefined ? undefined : 1);
   const columns = rightShape.columns ?? (leftShape.columns === undefined ? undefined : 1);

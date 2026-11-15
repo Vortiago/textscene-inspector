@@ -5,11 +5,7 @@ import { reduceProgram } from '../random/reduce.mjs';
 import { compareProbe, isFloatResult } from './compare.mjs';
 import { runOnPage } from './pageRun.mjs';
 
-/**
- * The verdict of each of `programs` against `entries`, Godot's answers by program name, with a
- * reduced program for each that differs in its bits and is not a known difference. A refusal by
- * the transpiler is a failure here: the generator uses transpiled rows only.
- */
+/** A transpiler refusal fails here: the generator uses transpiled rows only. */
 export async function compareRandomPrograms(page, programs, entries) {
   const results = [];
   for (const program of programs) {
@@ -22,10 +18,7 @@ export async function compareRandomPrograms(page, programs, entries) {
   return results;
 }
 
-/**
- * Whether a comparison found lanes whose bits differ. A refusal or a missing record compares no
- * lane, so a reduction that kept it would end on another fault than the one it started from.
- */
+/** A refusal compares no lane, so a reduction that kept it would end on another fault. */
 const differsInBits = (verdict) => !verdict.passed && verdict.lanes > 0;
 
 /** The reduction of `program` with a live Godot run per round, or nothing when Godot cannot run. */
@@ -54,10 +47,7 @@ async function reduceAgainstGodot(page, program) {
   }
 }
 
-/**
- * One line: the programs generated, equal, different and refused, the largest difference, and
- * how many of the differences are known with an owner.
- */
+/** One line: generated, equal, different, refused, the largest difference and the known count. */
 export function randomSummary(results) {
   const refused = results.filter(({ verdict, isRefused }) => isRefused && !verdict.passed).length;
   const differ = results.filter(({ verdict, isRefused }) => !isRefused && !verdict.passed);
@@ -77,11 +67,7 @@ export function newDifferences(results) {
     );
 }
 
-/**
- * One line for each known program that equals Godot now. A case names a program and keeps its own
- * fixed case, so it drops only the `program`: the set may have changed under the name. A listed
- * program of `KNOWN_PROGRAM_DIFFERENCES` leaves the list.
- */
+/** A known program that equals Godot now: the case keeps its fixed case, so only `program` drops. */
 export function staleKnownPrograms(results) {
   return results
     .filter(({ program, verdict }) => verdict.passed && KNOWN_PROGRAMS.has(program.name))
@@ -103,10 +89,7 @@ export async function compareKnownCases(page, cases, entries) {
 export const knownCaseSummary = (results) =>
   `${results.filter(({ verdict }) => differsInBits(verdict)).length} of ${results.length} fixed known-difference cases still differ from Godot.`;
 
-/**
- * One line for each fixed case that no longer differs in its bits: it equals Godot and leaves the
- * list, or it fails in another way, which shows no fault any more.
- */
+/** A fixed case that no longer differs in its bits leaves the list. */
 export function settledKnownCases(results) {
   return results
     .filter(({ verdict }) => !differsInBits(verdict))

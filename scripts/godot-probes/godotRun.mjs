@@ -8,22 +8,13 @@ import { godotSpawnPlan } from '../godot-ref/run.mjs';
 /** The only Godot release the probes and showcases compare with: the transpiler follows its source. */
 const GODOT_VERSION = '4.6.3';
 
-/**
- * The most output a run may print on each stream: a run that reads the verdict on twenty thousand
- * shaders prints about 600 characters of standard error for each refusal.
- */
+/** A verdict run on twenty thousand shaders prints about 600 characters of standard error per refusal. */
 const OUTPUT_CHARACTERS_AT_MOST = 256 * 1024 * 1024;
 
-/**
- * Godot runs at once. A run compiles its shaders on one core, so the probe step takes a quarter of
- * the time on the 4 cores of the CI runner: 8 s against 29 s for 1,822 probes.
- */
+/** A run compiles on one core, so 4 runs take 8 s against 29 s for 1,822 probes. */
 const RUNS_AT_ONCE = availableParallelism();
 
-/**
- * The display each run starts its search for a free one at: runs at once start apart, so two of
- * them never race for one display. Written only by `spawnGodot`, and it wraps after 64 runs.
- */
+/** Runs start apart so two never race for one display. Written only by `spawnGodot`, wraps after 64. */
 let runsStarted = 0;
 const FIRST_SERVER = 100;
 const SERVERS_APART = 8;
@@ -51,8 +42,8 @@ script = ExtResource("1")
 `;
 
 /**
- * Godot's standard output for a project whose one scene runs `mainScript`, beside `files` keyed
- * by their names in the project. Throws when Godot exits with an error.
+ * Godot's standard output for a project whose one scene runs `mainScript`. Throws on an error exit.
+ *
  * @canonical A scratch Godot project run once, its standard output read
  */
 export async function runGodotScript(mainScript, files) {
@@ -61,10 +52,7 @@ export async function runGodotScript(mainScript, files) {
   return stdout;
 }
 
-/**
- * The exit status and both outputs of a run of `mainScript`, for a run that may end Godot: Godot
- * prints its crash report on standard output and exits with 134.
- */
+/** For a run that may end Godot, which prints its crash report and exits with 134. */
 export async function runGodotScriptToExit(mainScript, files) {
   const directory = writeProject({ 'main.gd': mainScript, ...files });
   try {
@@ -90,10 +78,7 @@ function writeProject(files) {
   return directory;
 }
 
-/**
- * One run of Godot on `directory`: its exit status and both outputs, or the `error` of a run
- * that did not start, did not exit in time or printed more than a run may.
- */
+/** `error` for a run that did not start, did not exit in time, or printed more than a run may. */
 function spawnGodot(directory) {
   const firstServer = FIRST_SERVER + (runsStarted++ % SERVER_SLOTS) * SERVERS_APART;
   const plan = godotSpawnPlan(['--path', directory], { display: true, firstServer });
@@ -136,9 +121,8 @@ function killGroup(child) {
 }
 
 /**
- * `items` in at most as many contiguous chunks as Godot runs at once, each chunk run by `run`,
- * and each chunk's answer in the order of the chunks. No items make one empty chunk, so the
- * caller still reads Godot's version.
+ * No items make one empty chunk, so the caller still reads Godot's version.
+ *
  * @canonical Items run in chunks, one Godot run for each chunk at once
  */
 export function inChunksAtOnce(items, run) {
@@ -146,9 +130,8 @@ export function inChunksAtOnce(items, run) {
 }
 
 /**
- * `items` in contiguous chunks of at most `sizeAtMost` each, and no more chunks than Godot runs at
- * once where that keeps the size, run as many at once as Godot runs at once. Each chunk's answer
- * comes in the order of the chunks, and no items make one empty chunk.
+ * No more chunks than Godot runs at once where that keeps the size. No items make one empty chunk.
+ *
  * @canonical Items run in chunks of a bounded size, as many at once as Godot runs at once
  */
 export function inChunksOfAtMost(items, sizeAtMost, run) {
@@ -165,8 +148,8 @@ export function inChunksOfAtMost(items, sizeAtMost, run) {
 export const eachAtOnce = (items, run) => mapPool(items, RUNS_AT_ONCE, (item) => run(item));
 
 /**
- * The first of `runs`, when every run names the same Godot, and the same adapter where a run
- * names one. Answers from two engines would mix otherwise.
+ * Answers from two engines would mix otherwise.
+ *
  * @canonical The one Godot and adapter of several Godot runs
  */
 export function oneGodot(runs) {
@@ -183,11 +166,7 @@ export function oneGodot(runs) {
 /** The spawn errors of a Godot or xvfb that did not start, which one more start may clear. */
 const START_ERRORS = new Set(['ENOENT', 'EAGAIN']);
 
-/**
- * Whether a run ended before the project printed anything: Godot or xvfb did not start. One
- * more start is allowed. A probe that ends Godot prints its crash report, and a run that times
- * out or overflows its output has started, so neither is such a run.
- */
+/** One more start is allowed. A crash, a timeout and an overflow all show that the run started. */
 const failedToStart = (result) =>
   result.error === undefined
     ? result.status !== 0 && result.stdout.trim() === ''

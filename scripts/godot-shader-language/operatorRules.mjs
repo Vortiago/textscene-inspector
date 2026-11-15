@@ -3,10 +3,7 @@ import { enumMembers, lineAt } from './cppText.mjs';
 /** Operators `_validate_operator` does not type: each is one row with no operands. */
 const UNTYPED_OPERATORS = ['OP_SELECT_ELSE', 'OP_CALL', 'OP_CONSTRUCT', 'OP_STRUCT', 'OP_INDEX', 'OP_EMPTY'];
 
-/**
- * Each operand signature Godot accepts, `{ op, args, returns, line }`, in the order of the
- * `Operator` enum, then of `types`. An untyped operator gives one row with no `args`.
- */
+/** In `Operator` enum order, then `types` order. An untyped operator gives one row with no `args`. */
 export function operatorSignatures({ header, language }, types) {
   const order = {
     types: enumMembers(header, 'DataType').map(({ name }) => name),
@@ -31,10 +28,7 @@ export function operatorSignatures({ header, language }, types) {
 /** One `case` label and the space after it, a line comment allowed, read where it stands. */
 const CASE_LABEL = /case (OP_\w+):\s*(?:\/\/[^\n]*)?\s*/y;
 
-/**
- * Each group of `case` labels in `body` that a `{` follows: its labels, where its first label
- * starts, and where its `{` stands. Each label is read once, so the scan takes linear time.
- */
+/** Each label is read once, so the scan takes linear time. */
 export function caseGroups(body) {
   const groups = [];
   let next = body.indexOf('case ');
@@ -53,10 +47,7 @@ export function caseGroups(body) {
   return groups;
 }
 
-/**
- * The case groups of `_validate_operator`'s switch: for each operator the body of its group and
- * the line of its first label.
- */
+/** The case groups of `_validate_operator`'s switch, each with its first label's line. */
 function operatorCases(cpp) {
   const start = cpp.indexOf('bool ShaderLanguage::_validate_operator(');
   if (start === -1) throw new Error('expected _validate_operator in shader_language.cpp, found none');
@@ -342,10 +333,7 @@ function evaluate(node, state) {
   }
 }
 
-/**
- * An operand's type, and the facts a non-array operand gives: it is indexed, its array size is
- * 0, and its type name is the empty string (struct names only matter for `struct`).
- */
+/** A non-array operand is indexed, of size 0 and with an empty type name, which only `struct` reads. */
 function operandValue({ index, method }, state) {
   if (method === 'get_datatype') return state.operandTypes[index];
   if (method === 'is_indexed') return true;

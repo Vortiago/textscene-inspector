@@ -18,12 +18,7 @@ function typeTuples(arity) {
 
 const OPERAND_NAMES = ['a', 'b', 'c'];
 
-/**
- * One case. Godot reads an expression statement in a `void` function, so its verdict is the
- * operator's alone: a `return` in a `void` function is refused before the expression. The
- * transpiler reads only a function that returns one expression, so its text returns it, typed
- * by the row, or `float` where the table has none, and the error stays on the operator.
- */
+/** A `void` body keeps Godot's verdict on the operator, and the transpiler's text returns the expression. */
 function operatorCase(op, types) {
   const id = `${op}(${types.join(',')})`;
   const row = ROWS_BY_ID.get(id);

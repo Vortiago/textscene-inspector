@@ -7,12 +7,7 @@ const LANGUAGE = '/packages/textscene-core/src/shaders/language/';
 /** The tests' trees of a text, as parsed and as the emitter walks it, which this check reads too. */
 const TREES = '/apps/textscene-three-godot-shaders/tests/verdicts/trees.testkit.mjs';
 
-/**
- * The transpiler's printer as two functions from a probe to printed text: `print` of the parsed
- * tree, and `lower` of the tree the emitter walks (`emittedTree.ts`) where it differs. Both read
- * the tree after the preprocessor, with the probe's includes. Each gives nothing for a text the transpiler refuses. Vite compiles the TypeScript
- * sources, since this script runs in plain Node.
- */
+/** Vite compiles the TypeScript, since this runs in plain Node. Each gives nothing for a refusal. */
 export async function loadPrinter() {
   const server = await sourceServer();
   try {
@@ -42,10 +37,7 @@ export async function loadPrinter() {
   }
 }
 
-/**
- * The printed form of each probe `print` prints, named `<form>-<name>`, with its `original`. A
- * probe that ends Godot has no tree, since the front end refuses it, so it has no printed form.
- */
+/** A probe that ends Godot has no tree, so it has no printed form. */
 export function printedProbes(probes, print, form = 'printed') {
   return probes.flatMap((original) => {
     const printed = original.endsGodot ? undefined : print(original);
@@ -58,12 +50,7 @@ export function printedProbes(probes, print, form = 'printed') {
   });
 }
 
-/**
- * Each probe whose printed form Godot answers otherwise than the original: another verdict, other
- * result bits, or another refusal. Both forms have the same inputs, so they answer as many rows. A refusal is compared without its line, since the printed text
- * puts each statement on a line of its own. `pixels` holds both forms' pixels and `rejections`
- * both forms' reasons, by name.
- */
+/** A refusal is compared without its line, as the printed text puts each statement on its own line. */
 export function printedTextFaults(printedForms, { pixels }, rejections) {
   const answer = (probe) => {
     const { results, rejected } = recordEntry(probe, pixels.get(probe.name), rejections.get(probe.name));
@@ -81,10 +68,7 @@ export function printedTextFaults(printedForms, { pixels }, rejections) {
   });
 }
 
-/**
- * Godot's reason for a printed text it draws nothing for. Godot may draw nothing and name no
- * error, as for `b * a = b`: that is the printer's fault, so the run reports it beside the others.
- */
+/** No error for a text Godot draws nothing for, such as `b * a = b`, is the printer's fault. */
 export async function printedRejection(printed) {
   try {
     return await godotRejection(printed);

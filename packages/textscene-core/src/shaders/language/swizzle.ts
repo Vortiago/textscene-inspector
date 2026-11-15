@@ -7,10 +7,7 @@ const LETTER_SETS = ['xyzw', 'rgba', 'stpq'];
 /** The longest swizzle Godot reads. */
 const MAX_LETTERS = 4;
 
-/**
- * The member `.letters` of `owner`, or Godot's message for it. Godot reads every letter before it
- * decides, so a letter from a second set wins over a letter the type does not have.
- */
+/** Godot reads every letter first, so a second set's letter wins over a letter the type lacks. */
 export function swizzled(owner: Expression, letters: string): MemberNode | string {
   const invalid = `Invalid member for '${owner.type}' expression: '.${letters}'.`;
   const shape = shapeOf(owner.type);

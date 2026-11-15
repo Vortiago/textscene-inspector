@@ -68,9 +68,7 @@ export function constantNode(type: ValueType, lanes: readonly Scalar[]): Node {
 }
 
 /**
- * `node`, of type `from`, converted to `to`. A convert writes a constant of `to` itself, and three
- * writes a negative `uint` constant as `0u` (`generateConst` of its node builder). The inner convert
- * to `from` keeps the constant in its own type, so the GPU converts its bits.
+ * The inner convert keeps the constant in `from`, as three writes a negative `uint` constant as `0u`.
  *
  * @canonical Convert a node to another GLSL type
  */
@@ -89,10 +87,7 @@ export function scalarNode(scalar: string, lane: Scalar): Node {
   return floatNode(lane as number);
 }
 
-/**
- * The float `value`, rounded once to 32 bits. three writes -0 as `0.0` and infinity as `Infinity.0`
- * (`_toFloat` of its node builder), so those, and NaN, are written as their bits.
- */
+/** Three writes -0 as `0.0` and infinity as `Infinity.0`, so those and NaN are written as bits. */
 export function floatNode(value: number): Node {
   const rounded = Math.fround(value);
   if (Number.isFinite(rounded) && !Object.is(rounded, -0)) return float(rounded) as unknown as Node;

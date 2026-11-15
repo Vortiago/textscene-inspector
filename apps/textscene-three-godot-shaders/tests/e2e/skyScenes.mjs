@@ -19,10 +19,7 @@ const SUN = { rotation: [-20, 10, 0], color: [1, 0.9, 0.7], energy: 1.5, size: 0
 /** A fog of Godot's default values but its colour, which the scenes below change one field at a time. */
 const FOG = { color: [0.8, 0.5, 0.3], energy: 1, sunScatter: 0, skyAffect: 1, aerialPerspective: 0 };
 
-/**
- * Each non-default value the default sky reads, one scene each, so a wrong value shows in its own
- * scene. A light turned 180 degrees about Y shines towards the camera, so its sun is in view.
- */
+/** One scene per non-default value: a light turned 180 degrees about Y puts its sun in view. */
 const VALUE_SCENES = [
   { name: 'sky-fog-energy-0', fog: { ...FOG, energy: 0 } },
   { name: 'sky-fog-energy-3', fog: { ...FOG, energy: 3 } },

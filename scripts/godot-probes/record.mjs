@@ -5,10 +5,7 @@ const NO_REASON = { message: 'Godot draws nothing, not even the sentinel' };
 
 export const hex = (bits) => bits.toString(16).padStart(8, '0');
 
-/**
- * The pixels a probe draws. Godot gives a SubViewport two rows at the least, and the probe draws
- * the top one, so these are the first `probeWidth` pixels.
- */
+/** Godot gives a SubViewport two rows at the least, and the probe draws the top one. */
 function drawnPixels(probe, viewportPixels) {
   if (viewportPixels === undefined)
     throw new Error(`expected Godot's pixels for probe ${probe.name}, found none`);
@@ -18,10 +15,7 @@ function drawnPixels(probe, viewportPixels) {
 /** Whether Godot drew `probe`: its last pixel is the sentinel, which a shader that fails lacks. */
 export const isDrawn = (probe, viewportPixels) => drawnPixels(probe, viewportPixels).at(-1) === SENTINEL_BITS;
 
-/**
- * One probe's record entry from the pixels of its viewport, with `rejection`, Godot's stage,
- * message and line, for a probe Godot draws nothing for or that ends Godot, which has no pixels.
- */
+/** `rejection` for a probe without pixels: Godot's stage, message and line. */
 export function recordEntry(probe, viewportPixels, rejection = NO_REASON, preprocessed = undefined) {
   const entry = {
     ...probeText(probe),
@@ -35,10 +29,7 @@ export function recordEntry(probe, viewportPixels, rejection = NO_REASON, prepro
   return { ...entry, results };
 }
 
-/**
- * The record of every probe, in probe order. `rejections` holds Godot's reason for each probe it
- * draws nothing for, by name.
- */
+/** `rejections` holds Godot's reason for each probe it draws nothing for, by name. */
 export function probeRecord({ godot, adapter, pixels, preprocessed }, probes, rejections) {
   const entries = Object.fromEntries(
     probes.map((probe) => [

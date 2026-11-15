@@ -6,10 +6,7 @@ import type { StructMember } from '../language/shaderTree.js';
 import { glslShapeOf } from './glslTypes.js';
 import type { InterfaceBlockNode } from './templateTree.js';
 
-/**
- * The uniforms of the blocks of a program's stages, by `instance.member`. The stages of one
- * program share them, so a block both stages declare is one set of uniforms.
- */
+/** The stages of one program share them, so a block both stages declare is one set. */
 export class TemplateUniforms {
   /** Written only by `array` and `uniformOf`, at a member's first block. */
   readonly byName = new Map<string, UniformNode<unknown>>();

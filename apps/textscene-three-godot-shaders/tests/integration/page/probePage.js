@@ -68,10 +68,7 @@ renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
     .trim();
 };
 
-/**
- * A lane of each scalar kind from its 32 bits, and the 32 bits of a lane. An int lane goes through
- * a variable: three writes `uint` of a negative int constant as `0u` (`ConstNode.generate`).
- */
+/** An int lane goes through a variable: three writes `uint` of a negative int constant as `0u`. */
 const LANE_OF_BITS = {
   float: (bits) => uintBitsToFloat(bits),
   int: (bits) => int(bits),
@@ -85,11 +82,7 @@ const BITS_OF = {
   bool: (lane) => select(lane, uint(1), uint(0)),
 };
 
-/**
- * The argument node of a parameter. Each lane's bits arrive as two 16-bit halves in a float
- * uniform array: three writes every uniform buffer through a `Float32Array`, and a float holds a
- * 16-bit integer exactly, where a float of the whole bits could lose a NaN's payload.
- */
+/** Bits arrive as 16-bit halves in a float array: a float of the whole bits could lose a NaN's payload. */
 function argument(type, shape, bits, row) {
   const halves = bits.flatMap((value) => [value & 0xffff, value >>> 16]);
   const values = uniformArray(halves, 'float');
@@ -132,11 +125,7 @@ function colourOf(bits) {
   return vec4(byte(0), byte(8), byte(16), byte(24));
 }
 
-/**
- * The bits of each result lane of `spec`'s probe over its rows, or `{ error, isRefusal }` when it
- * draws nothing. `isRefusal` holds only when the transpiler refuses the source: a program the GL
- * context refuses is a fault of the transpilation, not a refusal.
- */
+/** `isRefusal` holds only for the transpiler's refusal: a GL refusal is a fault of the transpilation. */
 function runProbe(spec) {
   try {
     const probe = transpileShadingLanguage(spec.source, probeShaderOptions(spec.includes)).functions.get(

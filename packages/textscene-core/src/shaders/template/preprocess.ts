@@ -259,10 +259,7 @@ class Preprocessor {
     return this.macros.has(rest[0].text) === (word === 'ifdef');
   }
 
-  /**
-   * Starts the expansion of `macro` at `name`: a function-like macro needs its `(` next, or it
-   * stays a name. Gives whether the expansion started.
-   */
+  /** A function-like macro needs its `(` next, or it stays a name. */
   private expand(macro: Macro, name: PpToken, fromText: boolean): boolean {
     if (!macro.parameters) {
       this.pushExpansion(macro, macro.body, name);
@@ -286,10 +283,7 @@ class Preprocessor {
     this.inputs.push({ tokens: placed, index: 0, macro });
   }
 
-  /**
-   * The arguments of a call of a function-like macro, or nothing when no `(` follows the name.
-   * Line ends inside the call are white space, as in glslang's text.
-   */
+  /** Line ends inside the call are white space, as in glslang's text. */
   private macroArguments(macro: Macro, name: PpToken, fromText: boolean): PpToken[][] | undefined {
     const read = () => (fromText ? this.nextRaw() : this.nextFromInputs());
     let open = read();

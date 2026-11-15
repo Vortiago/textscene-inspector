@@ -29,16 +29,12 @@ export function inlineShaders(text) {
   return [...text.matchAll(/^code = "((?:[^"\\]|\\.)*)"/gms)].map((match) => unescapeGodotString(match[1]));
 }
 
-/** Godot's string escapes as its resource writer writes them (`variant_parser.cpp`): `\"`, `\\`, `\n`, `\t`. */
+/** Godot's resource writer escapes `\"`, `\\`, `\n` and `\t` (`variant_parser.cpp`). */
 function unescapeGodotString(text) {
   return text.replace(/\\(.)/g, (_, letter) => ({ n: '\n', t: '\t' })[letter] ?? letter);
 }
 
-/**
- * The rejected shader made from `text` by one change of kind `kind`, taken in turn so the corpus
- * holds each kind: a missing semicolon, a misspelt type, a call of a function nobody defines.
- * A text the change cannot apply to gets the first kind.
- */
+/** A rejected shader from `text` by one change of kind `kind`, the first kind when `kind` cannot apply. */
 export function oneChange(text, kind) {
   if (kind % 3 === 1 && /\bvec[234]\(/.test(text)) {
     return { change: 'misspells the first vector type', text: text.replace(/\bvec([234])\(/, 'vex$1(') };

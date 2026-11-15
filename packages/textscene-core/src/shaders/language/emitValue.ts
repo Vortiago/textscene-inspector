@@ -30,10 +30,7 @@ export const isStructValue = (value: Value): value is StructValue => (value as S
 /** The struct a type names, or nothing for a value type. */
 export type StructOf = (type: ValueType) => StructNode | undefined;
 
-/**
- * New variables for a value of `type`, `arraySize` elements, or one value for 0. A variable of a
- * value type starts undefined, as a GLSL local without a value does, and an array at zero.
- */
+/** A value-type variable starts undefined, as a GLSL local does, and an array starts at zero. */
 export function declareVariables(type: ValueType, arraySize: number, structOf: StructOf): Value {
   return variablesWithLeaves(type, arraySize, structOf).value;
 }
@@ -46,11 +43,7 @@ export function variablesOf(value: Value, type: ValueType, arraySize: number, st
   return variables;
 }
 
-/**
- * The types of a value's leaves, as a GLSL function takes the value: one per value-type member of
- * a struct, or the value itself, and an array where the value repeats it. A struct of arrays of
- * structs keeps each leaf in one flat array, as the emitter's variables do.
- */
+/** One leaf per value-type struct member, or the value itself, with structs of arrays kept flat. */
 export function leafTypes(type: ValueType, arraySize: number, structOf: StructOf): string[] {
   const types: string[] = [];
   viewOf(type, arraySize, structOf, (leafType, count) => {

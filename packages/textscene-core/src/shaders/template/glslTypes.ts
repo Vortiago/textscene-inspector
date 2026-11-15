@@ -120,10 +120,7 @@ export function convertsImplicitly(from: string, to: string): boolean {
 /** `shape` with its scalar kind replaced: `ivec3` as `vec3`. */
 export const withScalar = (shape: GlslShape, scalar: GlslScalar): string => shapeName({ ...shape, scalar });
 
-/**
- * The scalar two operands share after their implicit conversions: `uint` for `int` and `uint`,
- * `float` for an integer and a float. Nothing when neither converts to the other.
- */
+/** `uint` for `int` and `uint`, `float` for an integer and a float, nothing otherwise. */
 export function commonScalar(a: GlslScalar, b: GlslScalar): GlslScalar | undefined {
   if (a === b) return a;
   if (CONVERSIONS[a]?.includes(b)) return b;
@@ -137,10 +134,7 @@ export interface SizedType {
   readonly arraySize?: number;
 }
 
-/**
- * The type of a name declared with `sizes`, outermost first. An array of arrays keeps its inner
- * sizes in the element type, as GLSL writes it: `vec4 a[7][5]` is 7 of `vec4[5]`.
- */
+/** Outermost first, inner sizes in the element type: `vec4 a[7][5]` is 7 of `vec4[5]`. */
 export function arrayOf(type: string, sizes: readonly number[]): SizedType {
   const [outer, ...inner] = sizes;
   if (outer === undefined) return { type };

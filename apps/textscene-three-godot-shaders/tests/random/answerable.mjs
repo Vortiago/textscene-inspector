@@ -28,11 +28,7 @@ const OVERLOADS = Map.groupBy(
 
 const SCALAR = /^(int|uint|float)$/;
 
-/**
- * Whether `child` fits an argument of `type`: its own type, or a scalar that holds no parameter,
- * which Godot may hold as a constant and convert. The second reading is wider than Godot's, so a
- * tree it doubts is drawn again.
- */
+/** Wider than Godot's reading: a scalar that holds no parameter may be a constant Godot converts. */
 const mayFit = (child, type) =>
   child.type === type || (SCALAR.test(type) && SCALAR.test(child.type) && isConstant(child));
 

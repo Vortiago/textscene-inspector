@@ -118,10 +118,7 @@ function operatorNode(
 /** Whether `type` names a struct: a type with a name that holds no value shape. */
 const isStruct = (type: string) => type !== 'void' && shapeOf(type) === undefined;
 
-/**
- * Whether `op` takes the whole arrays among `operands` (`_validate_operator`): `=` and `?:` take
- * two sides of one size, and every other operator takes no whole array.
- */
+/** `_validate_operator`: only `=` and `?:` take whole arrays, two sides of one size. */
 function takesArrays(op: string, operands: readonly Expression[]): boolean {
   const sizes = operands.map(arraySizeOf);
   if (op === 'OP_ASSIGN') return sizes[0] === sizes[1];

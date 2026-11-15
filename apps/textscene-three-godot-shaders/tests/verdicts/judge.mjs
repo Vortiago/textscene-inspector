@@ -6,10 +6,7 @@ import { transpileParsedSky } from '../../../../packages/textscene-core/src/shad
 /** The entry of each shader type that links into a template of Godot's, as a user calls it. */
 const TEMPLATE_ENTRIES = { sky: (parsed) => transpileParsedSky(parsed, '') };
 
-/**
- * The transpiler's verdict on `text`: `{ accepted: true }`, `{ accepted: false, message, line }`,
- * or the open row's `owner` with the refusal. Any other throw is a crash, kept as its text.
- */
+/** A throw other than a refusal is a crash, kept as its text. */
 export function transpilerVerdict(text) {
   try {
     const parsed = parsedShader(text);
@@ -23,10 +20,7 @@ export function transpilerVerdict(text) {
   }
 }
 
-/**
- * The state of one shader: `transpiled`, `refused as Godot refuses`, `not transpiled yet` with
- * the owner, or `mismatch` with the detail.
- */
+/** `transpiled`, `refused as Godot refuses`, `not transpiled yet` with the owner, or `mismatch`. */
 export function judge(godot, transpiler) {
   if (transpiler.crashed) return mismatch(`the transpiler crashed: ${transpiler.crashed}`);
   if (transpiler.owner)

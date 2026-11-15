@@ -1,10 +1,6 @@
 import { parameterBits, PROBE_TYPES } from '../../../../scripts/godot-probes/probeShader.mjs';
 
-/**
- * The page's answer for `probe`: `{ bits }`, one per result lane, or `{ error, isRefusal }`. The
- * page reads each type's shape from the Godot harness's table, so both sides lay out the lanes
- * alike.
- */
+/** `{ bits }` per result lane, or `{ error, isRefusal }`, laid out from the Godot harness's type table. */
 export function runOnPage(page, probe) {
   const spec = {
     source: probe.source,

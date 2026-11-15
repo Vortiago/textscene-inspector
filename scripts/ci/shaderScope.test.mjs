@@ -80,8 +80,7 @@ function relativeImports(file) {
 }
 
 describe('the transpiler is outside every other job', () => {
-  // The skipped jobs build the previewer and the extension. A file of theirs that imports the
-  // transpiler, or the module entry that re-exports it, would let a skipped job miss a change.
+  // An import of the transpiler or of its module entry would let a skipped job miss a change.
   it('no file outside the transpiler imports it or the module entry that re-exports it', () => {
     const sources = execFileSync('git', ['ls-files', 'packages', 'apps', 'scripts'], {
       cwd: REPO_ROOT,

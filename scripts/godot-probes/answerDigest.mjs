@@ -1,16 +1,10 @@
 import { createHash } from 'node:crypto';
 import { isNaNBits, returnsFloat } from './laneAgreement.mjs';
 
-/**
- * A case is in the smoke subset when the first byte of the SHA-256 of its id is below this, about
- * one case in 32. The rule reads the id alone, so a new case leaves the others where they are.
- */
+/** About one case in 32, read from the id alone, so a new case leaves the others where they are. */
 const SMOKE_BYTE_BELOW = 8;
 
-/**
- * The bits every NaN of a float lane takes for every reader: GLSL ES 3.00 section 4.5.1 leaves a
- * NaN's bits to the device, and lavapipe's differ by CPU.
- */
+/** GLSL ES 3.00 section 4.5.1 leaves a NaN's bits to the device, and lavapipe's differ by CPU. */
 const CANONICAL_NAN = '7fc00000';
 
 const sha256 = (text) => createHash('sha256').update(text).digest();
@@ -44,10 +38,7 @@ const canonicalProbes = (record) => ({
 /** `llvmpipe (LLVM 20.1.2, 256 bits)` as `llvmpipe (LLVM 20.1.2)`: lavapipe names the CPU's vector width. */
 const adapterWithoutWidth = (adapter) => adapter.replace(/, \d+ bits\)$/, ')');
 
-/**
- * The records of one live run as every reader sees them, the same on every CPU: each NaN lane of
- * a float result as one value, and the adapter without its vector width.
- */
+/** The same on every CPU: one NaN form, and the adapter without its vector width. */
 export function canonicalAnswers({ probes, random, operators, corpus, expressions }) {
   return { probes: canonicalProbes(probes), random: canonicalProbes(random), operators, corpus, expressions };
 }

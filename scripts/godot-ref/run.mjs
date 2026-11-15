@@ -1445,8 +1445,7 @@ export function godotSpawnPlan(args, { display, screen = null, groupTimeout = tr
   // Only the root-window arm sizes the X screen: its capture is the window, which a smaller
   // default screen would clip. Every other render keeps xvfb-run's default screen.
   const screenArgs = screen ? ['-s', `-screen 0 ${screen.width}x${screen.height}x24`] : [];
-  // `-a` takes the first free display from `-n` on, and two runs that look at once can take the
-  // same one, so runs at once each start their search at a display of their own.
+  // Two runs that look at once could take the same free display, so each starts its search apart.
   const serverArgs = firstServer === null ? [] : ['-n', String(firstServer)];
   const xvfb = ['xvfb-run', '-a', ...serverArgs, ...screenArgs];
   const engine = display ? [...xvfb, 'godot', ...args] : ['godot', ...args];

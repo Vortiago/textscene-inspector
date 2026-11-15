@@ -23,11 +23,7 @@ export const printsBack = (tree) =>
     ? undefined
     : 'its printed text parses to another tree';
 
-/**
- * The first fact a lowered tree breaks: a fault of the tree check, a loop or a switch the
- * lowering removes, a `while` whose condition is not `true`, or a `return` before a function's
- * last statement. Nothing when it holds them all.
- */
+/** Nothing when the lowered tree keeps every fact. */
 export function loweredFault(tree) {
   const fault = treeFault(tree);
   if (fault !== undefined) return fault;

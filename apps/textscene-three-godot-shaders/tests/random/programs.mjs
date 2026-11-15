@@ -73,10 +73,7 @@ function floatLiteralText(random) {
   }
 }
 
-/**
- * The producers of each type: one entry per transpiled row that gives it, and per swizzle row
- * and lane count. A swizzle row names a base type and a letter set, and reads one to four lanes.
- */
+/** One entry per transpiled row that gives the type, and per swizzle row and lane count. */
 function producersByType(rows) {
   const producers = new Map();
   const add = (type, producer) => {
@@ -110,10 +107,7 @@ const PRODUCER_KINDS = { operator: 'operator', constructor: 'call', function: 'c
 
 export const placeArguments = (row) => (isFunctionRow(row) ? (OUT_ARGUMENTS[operatorOf(row)] ?? []) : []);
 
-/**
- * The index of the operand `row` writes, which must be a parameter: the first of an operator that
- * writes it, the first out argument of a built-in function, or nothing for a row that writes none.
- */
+/** The first operand an operator writes, the first out argument of a built-in, or nothing. */
 function writtenOperand(row) {
   if (row.family === 'operator') return WRITES_OPERAND.has(operatorOf(row)) ? 0 : undefined;
   return placeArguments(row)[0];
@@ -128,17 +122,10 @@ const FIELD_AT_MOST = 16;
 export const PRODUCERS = producersByType(TRANSPILED_ROWS);
 const PRODUCED_ROWS = new Set([...PRODUCERS.values()].flat().map((producer) => producer.row));
 
-/**
- * The transpiled rows a program can stand on at its root: a literal, a swizzle or a row with
- * operands. A type, a qualifier, a statement or a tree node row is in every program as its frame.
- */
+/** A type, qualifier, statement or tree node row is in every program as its frame. */
 export const ROOT_ROWS = TRANSPILED_ROWS.filter((row) => row.id in LITERALS || PRODUCED_ROWS.has(row));
 
-/**
- * A fresh random program generator over the transpiled rows, and over `producers` when a program
- * declares functions of its own. `parameters` holds the types of the variables in reach, and
- * `names`, when set, their names: a parameter `a<index>` otherwise.
- */
+/** `names`, when set, names the parameters in reach, otherwise `a<index>`. */
 export class ProgramWriter {
   constructor(random, producers = PRODUCERS) {
     this.random = random;
@@ -151,10 +138,7 @@ export class ProgramWriter {
     this.minDepth = this.leastDepths();
   }
 
-  /**
-   * The least depth that gives each type with no parameter in reach, by a fixpoint over the
-   * producers. A parameter's type is a leaf as well, as each program declares its own.
-   */
+  /** A fixpoint over the producers, with each parameter's type a leaf. */
   leastDepths() {
     const depths = new Map([...this.literals.keys(), ...HARNESS_TYPES].map((type) => [type, 0]));
     for (let changed = true; changed;) {
@@ -180,8 +164,7 @@ export class ProgramWriter {
     const parameters = Array.from({ length: 1 + this.random.below(3) }, () =>
       this.random.pick(this.readableTypes())
     );
-    // The first parameter feeds the root: the operand it writes, or the last, so a divisor or a
-    // vector can be a parameter that Godot gives values for.
+    // A divisor or a vector can then be a parameter that Godot gives values for.
     if (rootRow?.args?.length)
       parameters[0] = rootRow.args[writtenOperand(rootRow) ?? rootRow.args.length - 1];
     this.parameters = parameters;
@@ -252,12 +235,7 @@ export class ProgramWriter {
     return this.random.chance(SPARE_BRACKET_CHANCE) ? { ...node, bracketed: true } : node;
   }
 
-  /**
-   * Whether `producer`'s inputs can be built in `depth - 1`, and its operand can be written. A
-   * row that writes its operand stands only at the root: Godot writes an assignment or a step
-   * without brackets, which the GPU compiler reads another way inside a larger expression, and a
-   * call's out argument would be read elsewhere in the tree in an order GLSL leaves open.
-   */
+  /** A row that writes its operand stands only at the root: Godot writes it without brackets. */
   fits(producer, depth) {
     if (writesOperand(producer.row)) {
       const written = producer.args[writtenOperand(producer.row)];
@@ -337,10 +315,7 @@ export class ProgramWriter {
   }
 }
 
-/**
- * The programs of `seed`: one rooted at each row of `ROOT_ROWS`, so every such row is in the set,
- * then `count` with random roots.
- */
+/** One program rooted at each row of `ROOT_ROWS`, then `count` with random roots. */
 export function generatePrograms({ seed, count }) {
   const writer = new ProgramWriter(seededRandom(seed));
   const name = (index) => `random-${seed}-${index}`;

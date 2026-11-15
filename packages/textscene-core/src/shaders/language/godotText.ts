@@ -63,11 +63,7 @@ function glslStatement(statement: Statement): Statement {
   }
 }
 
-/**
- * The expression a statement or a declaration holds. Godot writes an array's or a struct's
- * assignment as `a=b` (`shader_compiler.cpp:1078`), which GLSL reads as Godot means only where
- * no operator, swizzle or index stands beside it.
- */
+/** Godot writes an array or struct assignment as `a=b` (`shader_compiler.cpp:1078`), right only alone. */
 function glslStatementExpression(expression: Expression): Expression {
   if (expression.kind !== 'whole assign') return glslExpression(expression);
   return {
@@ -120,7 +116,7 @@ function glslOperator(node: OperatorNode): Expression {
   return isAssignment(first!) ? lastExtended(first, (last) => typed(op, [last, second!], node)) : node;
 }
 
-/** `owner.letters`. Godot writes a swizzle after its owner's text, so it binds to the last operand of an assignment or a prefix step. */
+/** Godot writes a swizzle after its owner's text, so it binds to an assignment's last operand. */
 function glslMember(owner: Expression, letters: string, node: Expression): Expression {
   const swizzle = (of: Expression) => {
     const member = swizzled(of, letters);
@@ -183,11 +179,7 @@ function refuse(at: Expression): never {
   );
 }
 
-/**
- * Whether Godot's text of `expression` starts with `-`: a negation, a `--a`, a negative scalar
- * constant, or a swizzle, element, post step or assignment of such a text. A vector constant's
- * text starts with its type, and a binary operator's with `(`.
- */
+/** A vector constant's text starts with its type, and a binary operator's with `(`. */
 function textStartsWithMinus(expression: Expression): boolean {
   switch (expression.kind) {
     case 'constant':

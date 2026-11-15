@@ -43,11 +43,7 @@ class SingleExit {
     readonly result: VariableNode | undefined
   ) {}
 
-  /**
-   * `statements` with each `return` set into the result. A `return` in a loop breaks it, and
-   * after a loop that holds one, `if (returned) break;` leaves the loop around it.
-   * Outside a loop, the statements after one that holds a `return` run under `if (!returned)`.
-   */
+  /** A `return` in a loop breaks it. Outside a loop, the later statements run under `if (!returned)`. */
   statements(statements: readonly Statement[], isInLoop: boolean): Statement[] {
     const lowered: Statement[] = [];
     for (const [index, statement] of statements.entries()) {

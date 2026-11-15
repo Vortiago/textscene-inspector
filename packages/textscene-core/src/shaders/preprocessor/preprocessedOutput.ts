@@ -1,8 +1,4 @@
-/**
- * The preprocessor's output: the text up to the last line end, and the open text after it, which
- * the next line end expands. Godot expands that text again even when it holds an include's output
- * (shader_preprocessor.cpp:771, 1311).
- */
+/** Godot expands the open text again, also over an include's output (shader_preprocessor.cpp:771). */
 export class PreprocessedOutput {
   private readonly closed: string[] = [];
   private open = '';

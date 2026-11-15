@@ -12,7 +12,7 @@ import { PREPROCESSOR_PROBES } from './preprocessorProbes.mjs';
 /** The float vector types of this slice. */
 const VECTORS = ['vec2', 'vec3', 'vec4'];
 
-/** Each arithmetic operator: Godot's enumerator, the shading language token and the word a probe name uses. */
+/** Godot's enumerator, the shading language token and the word a probe name uses. */
 const ARITHMETIC = [
   ['OP_ADD', '+', 'add'],
   ['OP_SUB', '-', 'sub'],
@@ -60,10 +60,7 @@ function negateProbes() {
   }));
 }
 
-/**
- * Each float vector constructor overload. The probe passes its arguments through, so a lane
- * shows where each argument lands.
- */
+/** The probe passes its arguments through, so a lane shows where each argument lands. */
 function constructorProbes() {
   const overloads = [
     ['vec2', ['float']],
@@ -118,11 +115,7 @@ function swizzleProbes() {
   );
 }
 
-/**
- * Float literals, each probe four of them through a constant `vec4`, which Godot folds and writes
- * back as text (`shader_compiler.cpp:180`). The cases are where that text loses the value: digits
- * past 14 decimals, values under 1e-14, the largest floats and the forms the tokenizer reads.
- */
+/** Godot writes a folded constant back as text (`shader_compiler.cpp:180`): these cases lose the value. */
 const LITERAL_GROUPS = [
   ['0.0', '1.0', '-1.0', '0.5'],
   ['0.1', '3.14159265358979', '1e3', '2.5e-3'],
@@ -154,11 +147,7 @@ function literalProbes() {
   return [...group, plain, overflow];
 }
 
-/**
- * Negation of an operand whose text Godot already starts with `-`: Godot writes the operand alone
- * (`shader_compiler.cpp:1141`), so `-(-a)` draws as `-a`. A negated constant is folded first
- * (`shader_language.cpp:7840`), so `-(-1.5)` draws as 1.5.
- */
+/** Godot writes `-(-a)` as `-a` (`shader_compiler.cpp:1141`), and folds `-(-1.5)` first (:7840). */
 function nestedNegationProbes() {
   const cases = [
     ['vector', 'vec2', 'vec2 probe(vec2 a) { return -(-a); }', vectors(2)],
@@ -178,10 +167,7 @@ function nestedNegationProbes() {
   }));
 }
 
-/**
- * Arithmetic of constants alone, which Godot's GLSL compiler folds in double precision from the
- * text Godot writes, and rounds once. A fold in 32-bit floats lands one unit off on these values.
- */
+/** glslang folds these in double precision and rounds once, where a 32-bit fold lands one unit off. */
 function constantFoldingProbes() {
   const cases = [
     ['sum', 'float probe(float a) { return 58.656 + 74.377 + a; }'],
@@ -203,11 +189,7 @@ function constantFoldingProbes() {
   }));
 }
 
-/**
- * One chain of two operators for each pair of the four, with literals where a fold in 32-bit
- * floats and glslang's fold in double precision give different floats. Each chain also runs as a
- * vector, a vector with a scalar, and a swizzle of a constant vector.
- */
+/** Literals where a 32-bit fold and glslang's double fold differ, as scalar, vector and swizzle. */
 const FOLD_CHAINS = [
   ['add-div', '(1.9335 + 590.3) / 0.3025'],
   ['div-div', '(7425.1 / 0.33901) / 0.65885'],
@@ -260,10 +242,7 @@ function combinedProbe() {
   };
 }
 
-/**
- * Integer and boolean literals, folded into constants as Godot folds them. A literal past the int
- * range is -2^31 in Godot, and a uint literal past 32 bits wraps.
- */
+/** A literal past the int range is -2^31 in Godot, and a uint literal past 32 bits wraps. */
 function integerLiteralProbes() {
   const cases = [
     ['int', 'ivec4 probe() { return ivec4(0, -1, 2147483647, -2147483648); }', 'int literal'],
@@ -282,11 +261,7 @@ function integerLiteralProbes() {
   return cases.map(([word, source, row]) => ({ name: `literal-${word}`, rows: [row], source, inputs: [[]] }));
 }
 
-/**
- * A ternary part keeps the node Godot reads before it folds the part, and the fold negates a
- * constant in place, so a negated constant there draws with the opposite sign
- * (`shader_language.cpp:7832`).
- */
+/** The fold negates a ternary part's constant in place, so it draws negated (`shader_language.cpp:7832`). */
 function ternaryProbes() {
   const cases = [
     ['negated-vector', 'vec2 probe(bool c) { return c ? -vec2(1.0, 2.0) : vec2(3.0); }'],

@@ -14,10 +14,7 @@ import type { ValueType } from '../language/types.js';
 import { TemplateUniforms } from './templateUniforms.js';
 import type { GlobalNode, TemplateStageNode } from './templateTree.js';
 
-/**
- * What the caller gives a stage: the node of each `in` global and built-in it reads, and of each
- * `out` the next stage reads, a varying, by name.
- */
+/** Each `in` global and built-in a stage reads, and each varying the next stage reads, by name. */
 export type StageInputs = ReadonlyMap<string, Node>;
 
 /** The value `main` leaves in a variable of its own: `frag_color`, or `gl_Position`. */
@@ -68,10 +65,7 @@ export function emitTemplateStage(
   return { result: run() as unknown as Node, uniforms: uniforms.byName, textures };
 }
 
-/**
- * The emitted trees by their function. The tree memo shares a stage's functions between calls,
- * so a stage it holds lowers once. Filled by `loweredOnce`, an entry cleared with its function.
- */
+/** Filled by `loweredOnce`, an entry cleared with its function: a stage lowers once. */
 // eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
 const LOWERED = new WeakMap<FunctionNode, EmittedTree>();
 
@@ -81,10 +75,7 @@ function loweredOnce(definition: FunctionNode): EmittedTree {
   return tree;
 }
 
-/**
- * Each texture a node and each `const` its value. A sampler stands for nothing, as three keeps
- * a sampler's state on the texture, so `sampler3D(t, s)` reads `t` alone.
- */
+/** Three keeps a sampler's state on the texture, so `sampler3D(t, s)` reads `t` alone. */
 function uniformGlobals(
   global: GlobalNode,
   values: Map<string, Value>,
@@ -117,10 +108,7 @@ const FOLDING = new GlslangFolding();
 
 const isTextureType = (type: string) => /^texture(2D|3D|2DArray|Cube)$/.test(type);
 
-/**
- * A texture node of `type` over an empty texture, which the caller replaces with the one it binds.
- * The bound texture carries the filter and the wrap that Godot's sampler names.
- */
+/** The caller binds a texture with the filter and the wrap that Godot's sampler names. */
 function textureNode(type: string, name: string): TextureNode {
   if (type === 'texture3D')
     return texture3D(new THREE.Data3DTexture(new Uint8Array(4), 1, 1, 1)) as TextureNode;

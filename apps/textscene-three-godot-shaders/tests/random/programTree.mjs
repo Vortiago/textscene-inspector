@@ -42,12 +42,7 @@ const isOperator = (node) => node.kind === 'operator';
 /** A swizzle base that is an operator takes brackets: a member binds before any operator. */
 const needsBracketsAsBase = (base) => isOperator(base) && operatorPriority(base.op) > 0;
 
-/**
- * Whether operand `position` of `parent` takes brackets. Of two infix operators of one
- * priority, the left binds first, so a right operand of equal priority takes them. A prefix
- * operator takes them around any operator but a postfix one, which also keeps `- -a` from
- * reading as `--a`. A ternary or an assignment takes them as an operand and around its own.
- */
+/** The left of two equal infix operators binds first, and brackets keep `- -a` from reading as `--a`. */
 function needsBrackets(operand, parent, position) {
   if (!isOperator(operand) || operatorPriority(operand.op) === 0) return false;
   if (isPrefix(parent.op)) return true;

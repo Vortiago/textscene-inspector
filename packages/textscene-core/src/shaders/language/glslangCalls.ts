@@ -125,10 +125,7 @@ const COMPONENTWISE_CALLS: Readonly<Record<string, LaneOfArgs>> = {
   },
 };
 
-/**
- * The lane count of a lane by lane fold: the first argument's, but the larger of the edge and the
- * value for `step` and `smoothstep`.
- */
+/** The first argument's lane count, but the larger of edge and value for `step` and `smoothstep`. */
 function componentwiseLanes(name: string, shapes: readonly TypeShape[]): number {
   if (name === 'step') return Math.max(shapes[0]!.lanes, shapes[1]!.lanes);
   if (name === 'smoothstep') return Math.max(shapes[0]!.lanes, shapes[2]!.lanes);

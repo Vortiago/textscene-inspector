@@ -280,11 +280,7 @@ class FunctionCheck {
     });
   }
 
-  /**
-   * A call of a function declared before this one, never itself, typed by its return. Each
-   * argument has its parameter's type and size, and an `out` or `inout` argument is a place.
-   * A `void` call stands only as a statement.
-   */
+  /** Each argument has its parameter's type and size. A `void` call stands only as a statement. */
   private call(call: CallNode, isStatement: boolean): string | undefined {
     const { line, column } = call.position;
     if (!(line >= 1 && column >= 1)) return `a call of ${call.function} at no line and column`;
@@ -308,7 +304,7 @@ class FunctionCheck {
     });
   }
 
-  /** A call of a built-in: its row's name, return type and argument types, and a place for each out argument. */
+  /** Its row's name, return and argument types, and a place for each out argument. */
   private builtInCall(call: CallNode): string | undefined {
     const { row } = call;
     if (!row.id.startsWith(`${call.function}(`)) return `a call of ${call.function} with the row ${row.id}`;

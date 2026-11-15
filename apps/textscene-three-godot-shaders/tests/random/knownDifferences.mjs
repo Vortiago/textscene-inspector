@@ -8,32 +8,19 @@ import {
   GODOT_DRIVER,
 } from '../driverFolds.mjs';
 
-/**
- * Mesa's compiler on lavapipe treats float operations as inexact: it reorders them, fuses
- * `x + x + c` into one multiply-add and writes `x + -x` as 0. Godot's SPIR-V and the browser's
- * differ in shape, so a rewrite fires on one side only: `a + a + 98.4` is IEEE in Godot's `mat2`
- * and fused in its `float`.
- */
+/** Mesa reorders and fuses float operations, and the SPIR-V shapes differ, so a rewrite fires on one side. */
 const DRIVER_REWRITE = {
   owner: '#1823',
   cause: 'driver rewrite (Mesa lavapipe) on one side only: a listed case, not reshaped',
 };
 
-/**
- * GLSL leaves a shift by a negative count, or by 32 and more, undefined. The two sides reach the
- * driver through different front ends, and each gives its own answer.
- */
+/** GLSL leaves a shift by a negative count, or by 32 and more, undefined, and each front end differs. */
 const UNDEFINED_SHIFT = {
   owner: '#1823',
   cause: 'shift count out of range at runtime, which GLSL leaves undefined: the drivers differ',
 };
 
-/**
- * Each case by name, with its cause, the first lane that differs, its reduced program and its
- * inputs, the hex bits of each parameter's lanes row after row. `program` names the program of
- * the fixed set that shows the fault now: a program that differs and is no case's `program`
- * fails the run. A change to the set may leave a case with no program, and the case stays.
- */
+/** A program that differs and is no case's `program` fails the run. A case with no program stays. */
 export const KNOWN_DIFFERENCES = {
   'mat4-difference-product': {
     ...DRIVER_REWRITE,
@@ -162,10 +149,7 @@ export const KNOWN_DIFFERENCES = {
   },
 };
 
-/**
- * The programs of the fixed set that differ from Godot with no fixed case of their own, each by
- * its cause and its first lane off. A listed program that equals Godot fails the run.
- */
+/** A listed program that equals Godot fails the run. */
 export const KNOWN_PROGRAM_DIFFERENCES = {
   'random-1847-51': { ...ANGLE_DERIVATIVE, lane: 'lane 3: Godot 00000001, transpilation 00000000' },
   'random-1847-101': {

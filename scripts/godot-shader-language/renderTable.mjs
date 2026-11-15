@@ -6,11 +6,7 @@ const ROW_FIELDS = ['id', 'family', 'source', 'owner', 'token', 'returns', 'args
 /** The ids of the rows a probe names: the transpiled rows. */
 export const transpiledIds = (probes) => new Set(probes.flatMap((probe) => probe.rows));
 
-/**
- * The generated module: one row per line, so a diff names the rows that changed. The rows are
- * text that the module splits once: an array literal of every row, near 1,900 objects, is past
- * what TypeScript types (TS2590).
- */
+/** Rows as text split once: a literal of near 1,900 objects is past what TypeScript types (TS2590). */
 export function renderTableModule(rows, probes, version) {
   const transpiled = transpiledIds(probes);
   const lines = rows.map((row) => {
@@ -79,10 +75,7 @@ function fieldText(value) {
   return Array.isArray(value) ? `(${value.join(',')})` : value;
 }
 
-/**
- * The issue that owns an open row: the slice of the transpiler's plan that transpiles
- * its family. A row this cannot place throws, so no open row is left without an owner.
- */
+/** A row this cannot place throws, so no open row is left without an owner. */
 export function owningIssue(row) {
   switch (row.family) {
     case 'data type':
@@ -122,10 +115,7 @@ export function owningIssue(row) {
   }
 }
 
-/**
- * Samplers are the uniforms slice's, a struct type the statements', `void` the functions', whose
- * call is the first that can probe it, and the value types this slice's.
- */
+/** Samplers to uniforms, structs to statements, `void` to functions, value types to this slice. */
 function dataTypeOwner(row) {
   if (/^[iu]?sampler|^samplerExternalOES$/.test(row.id)) return '#1829';
   if (row.id === 'struct type') return '#1824';
@@ -133,31 +123,27 @@ function dataTypeOwner(row) {
   return '#1823';
 }
 
-/** `in`, `out` and `inout` are the functions slice's, the precision qualifiers this slice's, the rest the head's. */
+/** `in`, `out` and `inout` to the functions slice, precision to this slice, the rest to the head. */
 function qualifierOwner(row) {
   if (/^(in|out|inout)$/.test(row.id)) return '#1825';
   if (/^(lowp|mediump|highp)$/.test(row.id)) return '#1823';
   return '#1794';
 }
 
-/**
- * `OP_CALL` is a call of a function: of a built-in, whose overload row owns it, or of the shader's
- * own function, whose parameters and their `in`, `out` and `inout` qualifiers its slice transpiles.
- * `OP_STRUCT` builds a struct, which the statements slice declares. Each other operator is this slice's.
- */
+/** `OP_CALL` to the built-in's row or the functions slice, `OP_STRUCT` to statements, the rest here. */
 function operatorOwner(row) {
   if (row.id === 'OP_CALL') return '#1825';
   return row.id === 'OP_STRUCT' ? '#1824' : '#1823';
 }
 
-/** The shader and function nodes are the head's, the nodes of expressions this slice's, the rest the statements'. */
+/** Shader and function nodes to the head, expression nodes here, the rest to statements. */
 function treeNodeOwner(row) {
   if (/^NODE_TYPE_(SHADER|FUNCTION)$/.test(row.id)) return '#1794';
   if (/^NODE_TYPE_(VARIABLE|CONSTANT|OPERATOR|MEMBER)$/.test(row.id)) return '#1823';
   return '#1824';
 }
 
-/** Texture functions belong to the uniforms slice, integer, bit, pack and derivative ones to their own, the rest to the functions slice. */
+/** Texture functions to uniforms, integer, bit, pack and derivative ones to theirs, the rest to functions. */
 function functionOwner(row) {
   const name = row.id.slice(0, row.id.indexOf('('));
   if (/^(int|float|uint|bool)$/.test(name)) return '#1823';
@@ -168,11 +154,7 @@ function functionOwner(row) {
   return '#1826';
 }
 
-/**
- * The readable table: the count of transpiled rows, then one table per family with each row's
- * state. A row is transpiled when a probe names it, and the probe's name stands beside it, with
- * the row's state on each target.
- */
+/** A row is transpiled when a probe names it, and the probe's name stands beside it. */
 export function renderReadableTable(rows, probes, version) {
   const probeOf = new Map();
   for (const probe of probes)

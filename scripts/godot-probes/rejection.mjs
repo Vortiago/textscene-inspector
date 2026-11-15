@@ -9,10 +9,7 @@ const CRASH = /Program crashed with signal (\d+)/;
 /** glslang's form: `ERROR: 0:<line>: <message>`, the first of which names the fault. */
 const GLSL_ERROR = /^ERROR: \d+:\d+: (.*)$/m;
 
-/**
- * The stage that refuses, its message, and the file and line where Godot's front end refuses. A
- * crash comes first: Godot ends before it reaches any later stage.
- */
+/** A crash comes first: Godot ends before it reaches any later stage. */
 export function parseRejection(output) {
   const crash = CRASH.exec(output);
   if (crash) return { stage: 'Godot', message: `Godot ends with signal ${crash[1]}` };
@@ -23,10 +20,7 @@ export function parseRejection(output) {
   throw new Error(`expected Godot's shader error in its output, got:\n${output.slice(0, 2000)}`);
 }
 
-/**
- * Godot's reason for `probe`, from a run of that probe alone. A run may end Godot, which prints
- * its crash report on standard output. Any other failed run throws.
- */
+/** Godot may crash and print its report on standard output. Any other failed run throws. */
 export async function godotRejection(probe) {
   const { status, stdout, stderr } = await runGodotScriptToExit(MAIN_SCRIPT, probeProjectFiles([probe]));
   if (status !== 0 && !CRASH.test(stdout)) throw new Error(`godot exited with ${status}:\n${stderr}`);
@@ -43,11 +37,7 @@ function inProbeSource(probe, { file, line, ...refusal }) {
 const isIncludeOf = (probe, file) =>
   file !== undefined && Object.keys(probe.includes ?? {}).some((name) => file === `res://${name}`);
 
-/**
- * Godot's front-end reason for each of `probes` it refuses, by name, from verdict runs of them
- * all. A probe the front end accepts is left out: its reason comes from the GPU compiler or a
- * crash, which only a run of that probe alone can show.
- */
+/** A probe the front end accepts is left out: only a run of it alone shows its reason. */
 export async function frontEndRejections(probes) {
   const { verdicts } = await godotVerdicts(probes.map(probeShader), probeIncludeFiles(probes));
   return new Map(

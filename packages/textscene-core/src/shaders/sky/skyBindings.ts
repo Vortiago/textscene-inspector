@@ -60,8 +60,7 @@ export const SKY_BINDINGS: readonly Binding[] = [
     value: (scene) => scene.camera.getWorldPosition(new THREE.Vector3()),
   },
   { uniform: 'params.time', godot: 'sky.cpp:232', value: (scene) => scene.time },
-  // 1 / the render buffers' luminance multiplier, which is 1 on the clustered renderer
-  // (`render_forward_clustered.cpp:1978`).
+  // 1 / the luminance multiplier, 1 on the clustered renderer (`render_forward_clustered.cpp:1978`).
   { uniform: 'params.luminance_multiplier', godot: 'sky.cpp:235', value: () => 1 },
   {
     uniform: 'params.brightness_multiplier',
@@ -133,10 +132,7 @@ function orientationOf(scene: SkyScene): THREE.Matrix3 {
   return sky.multiply(camera);
 }
 
-/**
- * The terms of the projection the template unprojects with, `columns[2][0]`, `columns[0][0]`,
- * `columns[2][1]` and `columns[1][1]`. three's matrix is column-major, as Godot's columns are.
- */
+/** `columns[2][0]`, `[0][0]`, `[2][1]` and `[1][1]`: three's matrix is column-major, as Godot's is. */
 function projectionOf(scene: SkyScene): THREE.Vector4 {
   const columns = scene.camera.projectionMatrix.elements;
   return new THREE.Vector4(columns[8], columns[0], columns[9], columns[5]);

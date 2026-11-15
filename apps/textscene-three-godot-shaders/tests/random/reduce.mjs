@@ -1,11 +1,7 @@
 import { isAnswerable } from './answerable.mjs';
 import { childrenOf, programSource, rowsOf, treeNodes, withChild } from './programTree.mjs';
 
-/**
- * The smallest program found from `program` for which `stillDiffers` holds. `stillDiffers` takes
- * a list of candidates and answers one boolean for each, so a caller can judge a whole round in
- * one Godot run and one page run.
- */
+/** `stillDiffers` judges a whole round of candidates at once, in one Godot run and one page run. */
 export async function reduceProgram(program, stillDiffers) {
   // A program with functions of its own has no one tree to cut, so it prints whole.
   if (program.tree === undefined) return program;

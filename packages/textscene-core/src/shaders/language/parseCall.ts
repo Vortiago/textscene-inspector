@@ -15,20 +15,14 @@ export interface FunctionSignature {
   readonly arguments: readonly Argument[];
 }
 
-/**
- * What a call needs of the parser: the functions of a name, the function whose body is read
- * (nothing outside a body), and the locals.
- */
+/** The function whose body is read is nothing outside a body. */
 export interface CallScope {
   functionsNamed(rname: string): readonly FunctionSignature[];
   currentFunction(): string | undefined;
   isLocal(name: string): boolean;
 }
 
-/**
- * The call of `rname` with `args`, read where `position` starts it. `fail` throws Godot's message
- * at the token after the arguments, where Godot reports it.
- */
+/** `fail` throws Godot's message at the token after the arguments, where Godot reports it. */
 export function resolvedCall(
   scope: CallScope,
   rname: string,
@@ -75,10 +69,7 @@ function isOfType(argument: Argument, arg: Expression, convertsConstants: boolea
   );
 }
 
-/**
- * The index of the first argument of `args` that `candidate` does not take, `args.length` when it
- * takes them all, and nothing for a candidate of another argument count.
- */
+/** `args.length` when the candidate takes them all, nothing for another argument count. */
 function firstMisfit(
   candidate: FunctionSignature,
   args: readonly Expression[],
@@ -94,10 +85,7 @@ function firstMisfit(
 const fits = (candidate: FunctionSignature, args: readonly Expression[], convertsConstants: boolean) =>
   firstMisfit(candidate, args, convertsConstants) === args.length;
 
-/**
- * The name the call holds when no overload fits: the overload of the call's count with the most
- * arguments of the right type, or the name in the text. Godot checks recursion on it.
- */
+/** The overload with the most fitting arguments, or the text's name: Godot checks recursion on it. */
 function bestNamed(candidates: readonly FunctionSignature[], args: readonly Expression[], rname: string) {
   let name = rname;
   let most = 0;
@@ -160,12 +148,7 @@ function converted(arg: Expression, type: ValueType): Expression {
   return { ...arg, type, values: [convertedScalar(arg, type)!] };
 }
 
-/**
- * Godot's message for an argument that cannot take the place of a `const`, `out` or `inout`
- * parameter, or nothing when it can (`shader_language.cpp:6408`). A `const` parameter takes any
- * value. An `out` or `inout` parameter takes a variable, an array element or a member that is not
- * of a constant.
- */
+/** An `out` or `inout` parameter takes a variable, element or member not of a constant (:6408). */
 function argumentRefusal(argument: Argument, arg: Expression): string | undefined {
   if (argument.qualifier === 'in') return undefined;
   return isConstantPlace(arg)

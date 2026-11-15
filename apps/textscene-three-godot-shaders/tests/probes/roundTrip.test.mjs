@@ -15,10 +15,7 @@ function treeOrRefusal(make, source) {
   }
 }
 
-/**
- * The probes the transpiler parses and then refuses to lower: Godot's GLSL of each is refused by
- * the GPU compiler. A new refusal fails here, so no probe leaves the lowered set unseen.
- */
+/** The GPU compiler refuses Godot's GLSL of each, so a new refusal fails here. */
 const REFUSED_AFTER_PARSE = [
   'index-folded-past-end',
   'index-folded-write-past-end',

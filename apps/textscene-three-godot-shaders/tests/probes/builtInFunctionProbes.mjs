@@ -31,10 +31,7 @@ export function valueProbe(row) {
   return probeOf(probeName(row.id), rows, row.returns, row.args, `return ${call};`);
 }
 
-/**
- * The two probes of a `modf` overload, whose second argument is an out argument
- * (`builtin_func_out_args`): one returns the fraction, the other the whole part it writes.
- */
+/** `modf` writes its out argument (`builtin_func_out_args`), so one probe returns each part. */
 function modfProbes(row) {
   const [type] = row.args;
   const local = `${type} whole = ${type}(0.0);`;
@@ -44,10 +41,7 @@ function modfProbes(row) {
   ];
 }
 
-/**
- * The resolution of a call: a scalar constant converted to the overload's type, the places an out
- * argument takes, and the forms Godot refuses with their messages.
- */
+/** Scalar constants converted to the overload, the places an out argument takes, and Godot's refusals. */
 function resolutionProbes() {
   const cases = [
     ['int-constant-to-float', ['max(float,float)'], 'float probe(float a) { return max(a, 1); }'],

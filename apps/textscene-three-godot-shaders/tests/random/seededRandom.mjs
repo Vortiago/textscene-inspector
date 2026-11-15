@@ -1,7 +1,4 @@
-/**
- * A random source fixed by a seed: Mulberry32, a 32-bit generator with a period of 2^32 and no
- * state but one integer, so one seed gives the same programs on every platform.
- */
+/** Mulberry32 keeps its state in one integer, so one seed gives the same programs on every platform. */
 export function seededRandom(seed) {
   let state = seed >>> 0;
   const next = () => {

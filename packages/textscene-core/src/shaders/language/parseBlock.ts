@@ -201,10 +201,7 @@ export class StatementParser {
     return flowNode('FLOW_OP_SWITCH', [value], [block], token.position);
   }
 
-  /**
-   * `case n:` or `default:` in a `switch` block, which ends that block's one statement. Met
-   * inside a label's block, it ends that block and is read again by the `switch`.
-   */
+  /** A label inside another label's block ends that block and is read again by the `switch`. */
   private label(token: Token, mark: number, statements: Statement[]): Outcome {
     const scope = this.holder.current;
     const word = token.type === 'TK_CF_CASE' ? 'case' : 'default';
@@ -267,10 +264,7 @@ export class StatementParser {
     return flowNode('FLOW_OP_WHILE', [condition], [loopBody], token.position);
   }
 
-  /**
-   * `for (init; conditions; steps) s` (`shader_language.cpp:8789`): the conditions and steps
-   * stand in the initialiser's scope, and so does the body.
-   */
+  /** The conditions, steps and body stand in the initialiser's scope (`shader_language.cpp:8789`). */
   private forStatement(token: Token): ControlFlowNode {
     if (this.tokens.next().type !== 'TK_PARENTHESIS_OPEN') this.tokens.fail("Expected a '(' after 'for'.");
     const initScope = new BlockScope(this.holder.current, 'for init');

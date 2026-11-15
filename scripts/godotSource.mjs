@@ -22,8 +22,8 @@ export function foundGodotSourceDir(argv) {
 }
 
 /**
- * The source directory for `argv`. Throws, naming how to get the source, when no candidate holds
- * a Godot tree.
+ * Throws, naming how to get the source, when no candidate holds a Godot tree.
+ *
  * @canonical Where a generator finds Godot's source
  */
 export function godotSourceDir(argv) {

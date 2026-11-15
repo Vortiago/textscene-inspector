@@ -10,11 +10,7 @@ export interface LayoutEntry {
   readonly value?: Expression;
 }
 
-/**
- * The qualifiers before a global's type, in the order of the text: storage (`uniform`, `buffer`,
- * `in`, `out`, `shared`, `const`), memory (`restrict`, `readonly`, ...), interpolation (`flat`),
- * precision and `invariant`.
- */
+/** In text order: storage, memory, interpolation, precision and `invariant`. */
 export interface GlobalQualifiers {
   readonly layout: readonly LayoutEntry[];
   readonly words: readonly string[];

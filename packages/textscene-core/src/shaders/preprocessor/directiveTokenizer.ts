@@ -39,7 +39,7 @@ export class DirectiveTokenizer {
     while (this.index >= 0 && this.code[this.index] !== what) this.index -= 1;
   }
 
-  // `at += 2` and the step of the loop skip the character after a backslash and line feed, as Godot does (:93).
+  // `at += 2` and the loop step skip the character after a backslash and line feed, as Godot does (:93).
   consumeLineContinuations(offset: number): number {
     let skips = 0;
     for (let at = this.index + offset; at < this.code.length; at += 1) {
@@ -86,7 +86,7 @@ export class DirectiveTokenizer {
     return this.readIdentifier(false);
   }
 
-  /** The directive's name right after `#`: whitespace there ends it, as `get_identifier(nullptr, true)` reads. */
+  /** Whitespace right after `#` ends the name, as `get_identifier(nullptr, true)` reads. */
   directiveName(): string {
     return this.readIdentifier(true);
   }

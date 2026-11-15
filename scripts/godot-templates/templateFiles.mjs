@@ -11,10 +11,7 @@ export const TEMPLATE_FILES_PATH = join(
   'packages/textscene-core/src/shaders/template/templateFiles.generated.ts'
 );
 
-/**
- * The FSR templates include AMD's FidelityFX code from `thirdparty/`, which the CI image leaves
- * out. They join with the slice that ports FSR.
- */
+/** The FSR templates include AMD's FidelityFX from `thirdparty/`, which the CI image leaves out. */
 export const WAITS_FOR_FSR = /(^|\/)fsr/;
 
 export const GODOT_LICENCE = ` * Godot Engine (MIT).

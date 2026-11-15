@@ -22,8 +22,7 @@ describe('the reduction of a program that differs', () => {
     expect(nodeCount(LARGE_FAULTY)).toBeGreaterThan(8);
   });
 
-  // The operator and its two operands, and up to three nodes more where the program has no `vec3`
-  // parameter, so the `vec3` comes from a swizzle or a constructor of three literals.
+  // Without a `vec3` parameter, the `vec3` comes from a swizzle or a constructor of three literals.
   it('gives a program of a few nodes that still differs', async () => {
     const reduced = await reduceProgram(LARGE_FAULTY, differsWithFault);
     expect(reduced.rows).toContain(FAULTY_ROW);

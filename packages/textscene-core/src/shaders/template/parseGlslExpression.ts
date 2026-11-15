@@ -282,10 +282,7 @@ export class GlslExpressionParser {
     return this.operator(op, [operand], operand.type);
   }
 
-  /**
-   * Fails unless `op` takes `operand`, as glslang's unary check does: `!` a bool scalar, `~` an
-   * integer, and a sign or a step any number.
-   */
+  /** glslang's unary check: `!` a bool scalar, `~` an integer, and a sign or a step any number. */
   private takenBy(op: string, operand: Expression, token: PpToken): void {
     const shape = glslShapeOf(operand.type);
     const takes =
@@ -398,10 +395,7 @@ export class GlslExpressionParser {
     return { kind: 'constant', type: 'int', values: [length], position: name.position };
   }
 
-  /**
-   * `s.x` or `s.xxx` of a scalar (section 5.5): the scalar, or the vector of its copies. The tree
-   * holds the vector's constructor, which glslang compiles to the same instruction.
-   */
+  /** Section 5.5. The tree holds the vector's constructor, which glslang compiles to the same instruction. */
   private scalarSwizzle(owner: Expression, name: PpToken, shape: GlslShape): Expression {
     const letters = name.text;
     if (letters.length > 4 || !SCALAR_LETTERS.some((letter) => [...letters].every((each) => each === letter)))
@@ -616,10 +610,7 @@ export class GlslExpressionParser {
   }
 }
 
-/**
- * A negated literal as one constant, as glslang folds it: a negation is exact, and the printed
- * text then keeps a ternary's part as the template has it.
- */
+/** A negation is exact, so the printed text keeps a ternary's part as the template has it. */
 function negated(constant: ConstantNode, token: PpToken): ConstantNode {
   const values = constant.values.map((value) =>
     constant.type === 'int'
@@ -717,10 +708,7 @@ const constant = (type: string, value: Scalar, token: PpToken): ConstantNode => 
   position: token.position,
 });
 
-/**
- * A swizzle of a 16-bit float vector: the swizzle of the float vector of its lanes, which names
- * the same row, with 16-bit types. Godot's language has no 16-bit types.
- */
+/** Names the same row as the float vector's swizzle: Godot's language has no 16-bit types. */
 function float16Swizzle(owner: Expression, letters: string, shape: GlslShape): MemberNode | string {
   const swizzle = swizzled({ ...owner, type: withScalar(shape, 'float') } as Expression, letters);
   if (typeof swizzle === 'string') return swizzle;

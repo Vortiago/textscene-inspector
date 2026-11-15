@@ -74,12 +74,7 @@ class Hoist {
     return this.inOrder(expression);
   }
 
-  /**
-   * A call's arguments in order, as `inOrder` keeps them, but an `out` or `inout` argument is a
-   * place: before an argument that writes, its indices are kept, never its value. GLSL reads each
-   * place's indices at the call, and the copy back writes one place after another, so a call
-   * that writes more than one place keeps the indices of all of them.
-   */
+  /** GLSL reads each written place's indices at the call, so they are kept, never the value. */
   private called(call: CallNode): Expression {
     const operands: Expression[] = [];
     const isWritingPlaces = call.qualifiers.filter((qualifier) => qualifier !== 'in').length > 1;
@@ -120,10 +115,7 @@ class Hoist {
     return { ...expression, operands: [place, ...rest.map((part) => this.expression(part))] };
   }
 
-  /**
-   * `target` with its indices kept, outermost value first: each index that writes, and every
-   * index when `isValueWriting`, since GLSL reads the place before the value.
-   */
+  /** Outermost first. Every index when `isValueWriting`, since GLSL reads the place before the value. */
   private place(target: Expression, isValueWriting: boolean): Expression {
     const index = (part: Expression) =>
       isValueWriting || writes(part) ? this.kept(this.expression(part)) : part;

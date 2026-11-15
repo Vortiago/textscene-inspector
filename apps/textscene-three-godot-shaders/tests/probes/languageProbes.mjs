@@ -99,10 +99,7 @@ function branchProbes() {
   return cases.map(([word, row, source]) => probeOf(`branch-${word}`, [row], source));
 }
 
-/**
- * Godot writes an assignment and a prefix step without brackets (`shader_compiler.cpp:1132`), so
- * GLSL binds the operator beside one to its last operand, or refuses the text.
- */
+/** Godot writes an assignment and a prefix step without brackets (`shader_compiler.cpp:1132`). */
 function unbracketedProbes() {
   const cases = [
     ['operator-after', 'OP_ASSIGN(vec2,vec2)', 'vec2 probe(vec2 a, vec2 b) { return (a = b) * a; }'],
@@ -121,10 +118,7 @@ function unbracketedProbes() {
   return cases.map(([word, row, source]) => probeOf(`unbracketed-${word}`, [row], source));
 }
 
-/**
- * Godot writes a negation as its operand alone when the operand's text starts with `-`
- * (`shader_compiler.cpp:1141`), so `-(--a)` draws as `--a`.
- */
+/** Godot writes a negation as its operand when that text starts with `-` (`shader_compiler.cpp:1141`). */
 function negationTextProbes() {
   const cases = [
     ['decrement', 'OP_NEGATE(int)', 'int probe(int a) { return -(--a); }'],
@@ -134,11 +128,7 @@ function negationTextProbes() {
   return cases.map(([word, row, source]) => probeOf(`negation-text-${word}`, [row], source));
 }
 
-/**
- * glslang folds an operator of constants on the CPU, where the GPU's own arithmetic differs: a
- * shift count past 31, a division by zero, a conversion of a negative lane, an equality sized by
- * its left operand, and sums in double precision. The page reads the constant the transpiler writes.
- */
+/** glslang folds an operator of constants on the CPU, where the GPU's own arithmetic differs. */
 function foldingProbes() {
   const cases = [
     ['shift-past-31', 'OP_SHIFT_LEFT(uint,uint)', 'uint probe(uint a) { return (9u << 85u) ^ a; }'],
@@ -179,11 +169,7 @@ function foldingProbes() {
   return cases.map(([word, row, source]) => probeOf(`folding-${word}`, [row], source));
 }
 
-/**
- * The expressions of constants Godot 4.6.3 ends on as it evaluates them: `mat4 * vec4` reads the
- * vector past its last lane (`shader_language.cpp:2406`), and the least `int` over -1 traps the
- * CPU (`shader_language.cpp:2245`). Each runs alone in Godot, and the transpiler refuses each.
- */
+/** Godot ends on these: `mat4 * vec4` past the last lane (:2406), and the least `int` over -1 (:2245). */
 function godotEndingProbes() {
   const cases = [
     ['matrix-times-vector', 'OP_MUL(mat4,vec4)', 'vec4 probe(vec4 a) { return mat4(2.0) * vec4(1.0) + a; }'],

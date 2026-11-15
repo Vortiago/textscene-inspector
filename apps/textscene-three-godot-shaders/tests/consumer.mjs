@@ -37,10 +37,7 @@ export function pageHtml(module) {
 `;
 }
 
-/**
- * Builds and packs the package, and installs the tarball and three.js into a new directory, with
- * the files of `pageDir` beside them. The caller removes the directory.
- */
+/** Packs the package and installs it with three.js and `pageDir` in a new directory the caller removes. */
 export function installConsumer(pageDir) {
   run('pnpm', ['--filter', '@textscene/three-godot-shaders', 'build'], REPO_ROOT);
   const directory = mkdtempSync(join(tmpdir(), 'shaders-page-'));
@@ -87,10 +84,7 @@ export async function serveDirectory(directory, harness) {
   return { server, url: `http://127.0.0.1:${port}` };
 }
 
-/**
- * Runs `work(page)` on the page `module` of an installed consumer, in the browser that measures
- * against Godot, and closes everything after. Page errors fail the run.
- */
+/** Runs `work(page)` on an installed consumer's page `module`, then closes it. A page error fails the run. */
 export async function withConsumerPage({ pageDir, module, harness }, work) {
   const directory = installConsumer(pageDir);
   try {

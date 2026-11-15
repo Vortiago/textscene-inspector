@@ -11,10 +11,7 @@ import { renderTemplateFiles, TEMPLATE_FILES_PATH } from './templateFiles.mjs';
 
 const TOOL = 'godot-template-files';
 
-/**
- * Cloudflare Pages sets CF_PAGES=1 in its build (its build configuration docs). Only that build
- * downloads: anywhere else a missing source is a setup fault to name, not to hide.
- */
+/** Only Cloudflare's build downloads: anywhere else a missing source is a setup fault to name. */
 const isCloudflareBuild = () => process.env.CF_PAGES === '1';
 
 function writeFrom(godotDir) {

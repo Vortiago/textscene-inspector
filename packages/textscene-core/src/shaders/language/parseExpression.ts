@@ -38,10 +38,7 @@ export interface ExpressionScope extends CallScope {
   struct(name: string): StructNode | undefined;
 }
 
-/**
- * `ExpressionInfo`: the list of the expression a ternary's part belongs to, which the part joins
- * when it ends, and whether a `:` ends the part.
- */
+/** `ExpressionInfo`: the list a ternary part joins when it ends, and whether a `:` ends it. */
 interface TernaryPart {
   readonly entries: Entry[];
   readonly endsAtColon: boolean;
@@ -58,16 +55,10 @@ export class ExpressionParser {
     this.arrays = new ArrayParser(tokens, this, scope);
   }
 
-  /**
-   * Set while the value of a `const` declaration is read (Godot's `is_const_decl`): a variable it
-   * reads must be constant. Written by the declaration parser around each value.
-   */
+  /** Godot's `is_const_decl`, set by the declaration parser around each value. */
   isConstDeclaration = false;
 
-  /**
-   * The array whose `.` the expression being read follows (Godot's `TAG_ARRAY` block tag): there
-   * a call names an array method, `length()`, and any other name is unknown.
-   */
+  /** Godot's `TAG_ARRAY`: after an array's `.`, `length()` is the one method. */
   private arrayOfCall: Expression | undefined;
 
   /** How many lists `unreducedExpression` reads at once: brackets, arguments and ternary parts. */
@@ -129,10 +120,7 @@ export class ExpressionParser {
     return node;
   }
 
-  /**
-   * The parts after `?` (`shader_language.cpp:7461`): each joins `entries`. The then part ends at a
-   * `:`, and so does the else part of a ternary inside another's then part.
-   */
+  /** A `:` ends the then part and a nested else part (`shader_language.cpp:7461`). */
   private ternaryParts(entries: Entry[], part: TernaryPart | undefined): void {
     this.unreducedExpression({ entries, endsAtColon: true });
     entries.push({ isOperator: true, op: 'OP_SELECT_ELSE', position: this.tokens.lastPosition() });
@@ -218,10 +206,7 @@ export class ExpressionParser {
     }
   }
 
-  /**
-   * A struct's constructor, a call, or a read of a variable (`shader_language.cpp:6106`). Inside
-   * an array's call only `length()` is known.
-   */
+  /** `shader_language.cpp:6106`. Inside an array's call only `length()` is known. */
   private identifier(token: Token): Expression {
     const name = token.text!;
     const struct = this.scope.struct(name);
@@ -282,10 +267,7 @@ export class ExpressionParser {
     return { kind: 'array length', type: 'int', array: this.arrayOfCall!, position: token.position };
   }
 
-  /**
-   * What follows an array, an argument's or a struct member's (`shader_language.cpp:6657`): a whole
-   * new value after `=`, an expression of its methods after `.`, one element in `[]`, or nothing.
-   */
+  /** A new value after `=`, a method after `.`, one element in `[]`, or nothing (:6657). */
   private arrayAccess(array: Expression & { readonly arraySize?: number }): Expression {
     const mark = this.tokens.mark();
     const token = this.tokens.next();
@@ -372,10 +354,7 @@ export class ExpressionParser {
     }
   }
 
-  /**
-   * `.` after `owner`: the methods of an array that is not indexed, a struct's member, or a
-   * swizzle (`shader_language.cpp:6805`).
-   */
+  /** An unindexed array's methods, a struct's member, or a swizzle (`shader_language.cpp:6805`). */
   private member(owner: Expression): Expression {
     if (arraySizeOf(owner) > 0) return this.arrayMethods(owner);
     const token = this.tokens.next();
@@ -446,11 +425,7 @@ export class ExpressionParser {
   }
 }
 
-/**
- * The node a ternary's part leaves in the list (`shader_language.cpp:7832`), which Godot takes
- * before it reduces the part. Its reduction then negates a constant in place, so a negated
- * constant there reads as the negation of the folded constant: `-vec2(1.0)` as `-vec2(-1.0)`.
- */
+/** Godot takes the part before it reduces it, then negates a constant in place (:7832). */
 function ternaryOperand(node: Expression): Expression {
   if (node.kind !== 'operator' || node.op !== 'OP_NEGATE') return reduced(node);
   const folded = reduced(node);

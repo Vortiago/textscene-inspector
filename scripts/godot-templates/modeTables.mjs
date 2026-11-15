@@ -22,7 +22,7 @@ const MAX_USERDATAS = 6;
 
 const MAPS = ['renames', 'usage_defines', 'render_mode_defines', 'custom_samplers'];
 
-/** The value of a C++ expression of the actions: a string literal, `String::num` of a constant, a number or an enumerator. */
+/** A string literal, `String::num` of a constant, a number or an enumerator. */
 function valueOf(expression) {
   const text = expression.trim();
   const literal = /^"((?:[^"\\]|\\.)*)"$/.exec(text);
@@ -36,11 +36,7 @@ function valueOf(expression) {
   throw new Error(`expected a literal, String::num or an enumerator in the actions, found ${text}`);
 }
 
-/**
- * The statements between `DefaultIdentifierActions actions;` and `compiler.initialize(actions)`,
- * each with its line. A loop over the particle user data is unrolled. A block under a project
- * setting is read as at its default, `false`, so a block under `!setting` is read.
- */
+/** Particle user data loops are unrolled, and a project setting reads as its default, `false`. */
 function statements(cpp, file) {
   const start = cpp.indexOf('ShaderCompiler::DefaultIdentifierActions actions;');
   const end = cpp.lastIndexOf('\n', cpp.indexOf('compiler.initialize(actions);', start));

@@ -10,12 +10,7 @@ import type { Argument, FunctionNode, ShaderNode, ValueType } from './shaderTree
 import { typeName } from './treeWalk.js';
 import { shapeOf } from './types.js';
 
-/**
- * A function of the shader as TSL. `call` builds a `Fn` from one node per argument: a value
- * function gives the node of its result, and a `void` function gives the call node, which the
- * caller puts on its own stack. It throws for a function whose argument or result is no one node:
- * a struct, an array, or an `out` or `inout` argument.
- */
+/** Throws for a struct, an array, or an `out` or `inout` argument, which is no one node. */
 export interface TranspiledFunction {
   readonly name: string;
   /** A value type, or `void`. */
@@ -24,7 +19,7 @@ export interface TranspiledFunction {
   call(args: readonly Node[]): Node;
 }
 
-/** Each function of `shader` as TSL, by Godot's name. The tree holds only transpiled rows (`checkTranspiled`). */
+/** The tree holds only transpiled rows (`checkTranspiled`). */
 export function emitShader(shader: ShaderNode): ReadonlyMap<string, TranspiledFunction> {
   const structs = new Map(shader.structs.map((struct) => [struct.name, struct]));
   const structOf: StructOf = (type) => structs.get(type);
@@ -63,10 +58,7 @@ function calledInPlace(tree: EmittedTree, body: BodyEmitter, structOf: StructOf)
   };
 }
 
-/**
- * Why `definition` cannot be called with one node per argument and give one node back, or
- * nothing: a struct or an array, or an argument the call writes, has no such node.
- */
+/** A struct, an array or an argument the call writes has no one node. */
 function misfitForOneNode(definition: FunctionNode): string | undefined {
   const argument = definition.arguments.find(
     (candidate) => candidate.qualifier !== 'in' || !isOneValue(candidate.type, candidate.arraySize ?? 0)

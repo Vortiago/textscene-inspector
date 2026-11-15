@@ -14,13 +14,7 @@ const GENERATOR_CLASSES = [
 
 const LINE_PREFIX = 'GENERATED ';
 
-/**
- * A RID is a validator from one counter for every RID and an index (`rid_owner.h:167`), so a
- * shader the material makes has a validator between two shaders the script makes around it.
- * The script reads the code of each RID in that range, `RenderingServer.shader_get_code` being
- * bound while `Material.get_shader_rid` is not. A canvas item material updates its shader on
- * the next frame, so the script waits one.
- */
+/** RID validators share one counter (`rid_owner.h:167`): the material's shader sits between the script's. */
 const GENERATOR_SCRIPT = `extends Node
 
 func shader_code(name: String, property: String, value) -> String:
@@ -69,10 +63,7 @@ func _ready() -> void:
 	get_tree().quit()
 `;
 
-/**
- * Each distinct text the generators write, with the class and the property value that first
- * wrote it: `{ class, property, value, code }`, `property` empty for a class's defaults.
- */
+/** Each distinct generator text as `{ class, property, value, code }`, `property` empty for the defaults. */
 export async function generatorShaders() {
   return parseGeneratorOutput(await runGodotScript(GENERATOR_SCRIPT, {}));
 }

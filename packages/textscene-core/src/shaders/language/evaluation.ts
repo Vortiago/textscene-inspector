@@ -28,10 +28,7 @@ const EVALUATED = new Set([
 /** A value-known lane list, or nothing for a node whose values Godot does not know. */
 type Values = readonly Scalar[] | undefined;
 
-/**
- * Written only by `evaluationOf`: a node does not change once reduced, and an entry goes with its
- * node.
- */
+/** Written only by `evaluationOf`: a node does not change once reduced, and an entry goes with its node. */
 // eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
 const evaluations = new WeakMap<OperatorNode, Evaluation>();
 
@@ -42,11 +39,7 @@ function evaluationOf(node: OperatorNode): Evaluation {
   return evaluation;
 }
 
-/**
- * The values Godot knows of `node`: a constant's lanes, or an evaluated operator's. A unary
- * operator keeps none but on a `bool`, because Godot compares the lane count with the type's
- * enumerator (`shader_language.cpp:2318`).
- */
+/** A unary operator keeps values only on a `bool`: Godot compares lane count with an enumerator (:2318). */
 function knownValues(node: Expression): Values {
   if (node.kind === 'constant') return node.values;
   return node.kind === 'operator' ? evaluationOf(node).values : undefined;
@@ -79,10 +72,7 @@ function isMatrixTransform({ op, operands }: OperatorNode): boolean {
   return left!.columns === right!.lanes || right!.columns === left!.lanes;
 }
 
-/**
- * Godot's `mat4 * vec4` reads the vector's lanes as the matrix's, past the vector's last lane
- * (`shader_language.cpp:2401`), which ends the process.
- */
+/** Godot's `mat4 * vec4` reads past the vector's last lane (`shader_language.cpp:2401`) and ends. */
 function matrixTransform(node: OperatorNode) {
   if (node.operands[0]!.type === 'mat4')
     return {
@@ -105,10 +95,7 @@ function lanewise(node: OperatorNode, left: readonly Scalar[], right: readonly S
   return { values };
 }
 
-/**
- * `_eval_scalar` (`shader_language.cpp:2159`). Division checks for zero on an `int` type and on
- * the `uint` scalar only, modulo on every integer type. The least `int` over -1 traps the CPU.
- */
+/** `_eval_scalar` (:2159): division checks zero on `int` and scalar `uint`, modulo on every integer type. */
 function laneRefusal(node: OperatorNode, a: Scalar, b: Scalar): string | undefined {
   if (node.op !== 'OP_DIV' && node.op !== 'OP_MOD') return undefined;
   const scalar = shapeOf(node.type)!.scalar;
@@ -121,11 +108,7 @@ function laneRefusal(node: OperatorNode, a: Scalar, b: Scalar): string | undefin
   return undefined;
 }
 
-/**
- * One lane of an `int` or `uint` result as C++ computes it, the arithmetic glslang folds with. A
- * `uint` vector divides as floats of its bits, the branch Godot takes for it (line 2253). Other
- * lanes only mark a known value.
- */
+/** C++ arithmetic, as glslang folds it. A `uint` vector divides as floats, as Godot does (line 2253). */
 function laneValue({ op, type }: OperatorNode, a: Scalar, b: Scalar): Scalar {
   const scalar = shapeOf(type)!.scalar;
   if (scalar !== 'int' && scalar !== 'uint') return 0;

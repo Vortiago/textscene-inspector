@@ -11,19 +11,12 @@ export type Scalar = number | boolean;
 export interface ConstantNode {
   readonly kind: 'constant';
   readonly type: ValueType;
-  /**
-   * One lane each, as Godot holds it (`Scalar`): a 32-bit float, an `int` from -2^31 to 2^31 - 1,
-   * a `uint` from 0 to 2^32 - 1, or a boolean.
-   */
+  /** Godot's `Scalar`: a 32-bit float, an `int`, a `uint` or a boolean. */
   readonly values: readonly Scalar[];
   readonly position: SourcePosition;
 }
 
-/**
- * NODE_TYPE_VARIABLE: a read of a function argument or a local variable, or NODE_TYPE_ARRAY for
- * a whole array, whose `arraySize` is its element count. A struct value has its struct's name as
- * its type.
- */
+/** NODE_TYPE_VARIABLE, or NODE_TYPE_ARRAY for a whole array. A struct value's type is its struct's name. */
 export interface VariableNode {
   readonly kind: 'variable';
   readonly type: ValueType;
@@ -75,10 +68,7 @@ export interface FieldNode {
   readonly position: SourcePosition;
 }
 
-/**
- * `a = b` where both are arrays or structs. Godot holds it apart from the operators, whose rows
- * are of value types: an array's in its ArrayNode, a struct's as `OP_ASSIGN` on struct types.
- */
+/** `a = b` of arrays or structs, which Godot holds apart from the value-type operator rows. */
 export interface WholeAssignNode {
   readonly kind: 'whole assign';
   readonly type: ValueType;
@@ -88,11 +78,7 @@ export interface WholeAssignNode {
   readonly position: SourcePosition;
 }
 
-/**
- * NODE_TYPE_OPERATOR: an operator, `OP_ADD(vec3,float)`, a constructor, `OP_CONSTRUCT` with the
- * overload row `vec3(vec2,float)`, an index, `OP_INDEX`, or the empty expression `;`, `OP_EMPTY`
- * of type `void`.
- */
+/** NODE_TYPE_OPERATOR: an operator, `OP_CONSTRUCT`, `OP_INDEX`, or `OP_EMPTY` of type `void`. */
 export interface OperatorNode {
   readonly kind: 'operator';
   readonly type: ValueType;
@@ -103,12 +89,7 @@ export interface OperatorNode {
   readonly position: SourcePosition;
 }
 
-/**
- * `f(a, b)`: OP_CALL of a function of the shader, as Godot holds it, with the function's own name,
- * `f@2` for the second overload of `f` (`shader_language.cpp:10962`), and the arguments as its
- * operands. Its type is the function's return type, `void` included, with the array size of an
- * array return.
- */
+/** OP_CALL as Godot holds it, `f@2` for the second `f` (`shader_language.cpp:10962`). */
 export interface CallNode extends OperatorNode {
   readonly op: 'OP_CALL';
   /** Godot's name of the function, which tells overloads apart. */
@@ -158,13 +139,7 @@ export type Flow =
   | 'FLOW_OP_CONTINUE'
   | 'FLOW_OP_DISCARD';
 
-/**
- * NODE_TYPE_CONTROL_FLOW, with Godot's layout. `if`: the condition, and the then block and an
- * optional else block. `while` and `do`: the condition, and the body. `for`: the blocks of the
- * initialiser, the conditions and the steps, then the body. `switch`: the value, and one block of
- * its `case` and `default` nodes. `case`: the label, and the body. `default`: the body. `return`:
- * the value, if any. `break`, `continue` and `discard`: nothing.
- */
+/** NODE_TYPE_CONTROL_FLOW, with Godot's layout of blocks and expressions for each flow. */
 export interface ControlFlowNode {
   readonly kind: 'control flow';
   readonly flow: Flow;
@@ -195,10 +170,7 @@ export interface DeclarationNode {
   readonly position: SourcePosition;
 }
 
-/**
- * Where a template takes the body of a material's stage function, `#CODE : SKY`
- * (`shader_rd.cpp:77`). The link step puts the material's statements in its place.
- */
+/** `#CODE : SKY` (`shader_rd.cpp:77`): the link step puts the material's statements here. */
 export interface SlotStatementNode {
   readonly kind: 'slot';
   /** The stage function, upper case: `SKY`. */
@@ -208,10 +180,7 @@ export interface SlotStatementNode {
 
 export type Statement = Expression | ControlFlowNode | DeclarationNode | BlockNode | SlotStatementNode;
 
-/**
- * NODE_TYPE_BLOCK: statements in order, with a scope. The `for` blocks keep Godot's kinds: the
- * initialiser holds one statement, and the conditions and the steps hold expressions.
- */
+/** NODE_TYPE_BLOCK. A `for` initialiser holds one statement, and its conditions and steps expressions. */
 export interface BlockNode {
   readonly kind: 'block';
   readonly statements: readonly Statement[];
@@ -249,10 +218,7 @@ export interface Argument {
   readonly position: SourcePosition;
 }
 
-/**
- * NODE_TYPE_FUNCTION. `name` is Godot's own name, `f@2` for the second overload of `f`, and
- * `rname` the name in the text.
- */
+/** NODE_TYPE_FUNCTION: `name` is Godot's, `f@2` for the second `f`, and `rname` the text's. */
 export interface FunctionNode {
   readonly kind: 'function';
   readonly name: string;

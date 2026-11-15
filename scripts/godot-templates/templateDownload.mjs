@@ -46,10 +46,7 @@ export async function fetchBytes(url) {
   return Buffer.from(await response.arrayBuffer());
 }
 
-/**
- * Writes each file of `checksums` into `outDir` at its path in Godot's tree, from `fetchFile`. Throws,
- * naming the file and both sums, on a file whose sha256 differs, so a moved tag fails the build.
- */
+/** Throws with the file and both sums on a sha256 mismatch, so a moved tag fails the build. */
 export async function downloadTemplateTree(checksums, outDir, fetchFile = fetchBytes) {
   const { tag, files } = checksums;
   await Promise.all(

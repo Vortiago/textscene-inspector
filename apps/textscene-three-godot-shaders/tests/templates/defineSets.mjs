@@ -6,19 +6,13 @@ const ALWAYS_DEFINED = new Set([
   'defined',
 ]);
 
-/**
- * The names Godot defines for what a material holds (`_build_variant_code`): a variant with them
- * needs the material's text in the slots, so the link step's tests take their branches.
- */
+/** With these names (`_build_variant_code`), a variant needs the material's text in the slots. */
 export const isMaterialName = (name) => name === 'MATERIAL_UNIFORMS_USED' || name.endsWith('_CODE_USED');
 
 /** How many names one set may hold: the deepest nesting of `#ifdef` in Godot's templates is 4. */
 const MAX_NAMES = 5;
 
-/**
- * The names the conditions of `lines` test, without `skipped` and the material names. A name the
- * stage defines under a condition stays: a mode defines it too, with the same empty body.
- */
+/** A name the stage defines under a condition stays: a mode defines it too, with the same empty body. */
 export function testedNames(lines, skipped) {
   const tested = new Set();
   for (const { text } of lines) {
@@ -34,11 +28,7 @@ export function testedNames(lines, skipped) {
 export const variantText = (names) =>
   names.length === 0 ? '' : `\n${names.map((name) => `#define ${name}\n`).join('')}`;
 
-/**
- * The sets that between them take each branch `takenBranches` reports for some set, in the order
- * found. `takenBranches(names)` gives the keys of the branches a variant with `names` takes, or
- * nothing when the preprocessor refuses that variant.
- */
+/** `takenBranches(names)` gives a variant's taken branches, or nothing when the preprocessor refuses it. */
 export function coveringSets(names, takenBranches) {
   const covered = new Set();
   const sets = [];

@@ -51,11 +51,7 @@ export function operatorExpression(op, operands) {
   throw new Error(`expected an operator with operands, got ${op}`);
 }
 
-/**
- * The priority of each operator in Godot's reduction loop (`shader_language.cpp:7500-7632`):
- * the lowest binds first, and operators of one priority bind left to right. A postfix operator
- * binds before the loop, as a member or an index does.
- */
+/** Godot's reduction loop binds the lowest priority first, left to right (`shader_language.cpp:7500`). */
 const PRIORITY = {
   OP_NOT: 3,
   OP_NEGATE: 3,
@@ -92,7 +88,7 @@ export function operatorPriority(op) {
   return PRIORITY[op] ?? LOOSEST;
 }
 
-/** The name of a row's operator or function: `OP_ADD` for `OP_ADD(vec3,float)`, `vec3` for `vec3(vec2,float)`. */
+/** `OP_ADD` for `OP_ADD(vec3,float)`, `vec3` for `vec3(vec2,float)`. */
 export const operatorOf = (row) => row.id.slice(0, row.id.indexOf('('));
 
 /** True for an operator written before its one operand. */

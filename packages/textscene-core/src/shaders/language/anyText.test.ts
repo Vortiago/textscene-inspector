@@ -135,10 +135,7 @@ function changedShader(random: () => number): string {
   return characters.join('');
 }
 
-/**
- * One character or token repeated thousands of times, then a random token: the shape of text on
- * which a pattern that can match one run in many ways backtracks for long.
- */
+/** A pattern that can match one run in many ways backtracks for long on this shape. */
 function longRepeat(random: () => number): string {
   const unit = random() < 0.5 ? pick(random, CHARACTERS) : `${pick(random, TOKENS)} `;
   return unit.repeat(1_000 + Math.floor(random() * 19_000)) + pick(random, TOKENS);

@@ -117,16 +117,10 @@ function untakenBranches(stageList, results) {
   return untaken;
 }
 
-/**
- * How many wider sets the check tries for one untaken branch in a round. Godot compiles each, and
- * a template of 60 names gives thousands of them.
- */
+/** Godot compiles each set, and a template of 60 names gives thousands of them. */
 const WIDENED_PER_BRANCH = 2;
 
-/**
- * The cases that widen a set to take an untaken branch, a few for each branch, none judged before.
- * A set Godot refuses that takes the branch is widened first, then a set that decides it.
- */
+/** A set Godot refuses that takes the branch is widened first, then a set that decides it. */
 function widenedCases(results, untaken) {
   const seen = new Set(results.map((entry) => `${entry.stages.key} ${entry.set.join(' ')}`));
   const cases = [];
@@ -140,7 +134,7 @@ function widenedCases(results, untaken) {
   return cases;
 }
 
-/** At most `WIDENED_PER_BRANCH` cases of sets wider than those of `entries` that take `key`, none in `seen`. */
+/** At most `WIDENED_PER_BRANCH` wider sets that take `key`, none in `seen`. */
 function unseenWider(entries, key, seen) {
   const cases = [];
   for (const entry of entries)

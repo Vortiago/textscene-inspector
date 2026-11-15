@@ -36,16 +36,12 @@ export class CalledFunctions {
     private readonly body: BodyEmitter
   ) {}
 
-  /** The call of the function of Godot's name `name` in an expression, with a value for each argument but an `out` one. */
+  /** With a value for each argument but an `out` one. */
   call(name: string, args: readonly (Value | undefined)[]): CallResult {
     return this.functionNamed(name).call(args).called;
   }
 
-  /**
-   * The call as a statement. TSL drops the text of a call it builds as a statement, and of a
-   * variable nothing reads, so a call whose variable no written place reads is assigned to one of
-   * its own.
-   */
+  /** TSL drops a statement call and an unread variable, so an unread call gets a variable of its own. */
   callAsStatement(name: string, args: readonly (Value | undefined)[]): CallResult {
     const { called, node, isHeld, type } = this.functionNamed(name).call(args);
     if (!isHeld || called.written.length === 0) (property(type) as unknown as Node).assign(node);
@@ -71,12 +67,7 @@ interface Parameter {
   readonly isWritten: boolean;
 }
 
-/**
- * One function as GLSL. Its parameters are the leaves of each argument but an `out` one
- * (`leafTypes`). It gives back the leaves of its result, then of each `out` and `inout` parameter:
- * one value leaf as its return type, more or an array as the members of a struct, and none as an
- * int nothing reads.
- */
+/** Gives back result leaves, then each `out` and `inout` leaf: one leaf as the return, more as a struct. */
 class GlslFunction {
   private readonly fn: (...leaves: Node[]) => Node;
   private readonly parameters: readonly Parameter[];
@@ -84,7 +75,7 @@ class GlslFunction {
   private readonly outputCount: number;
   /** The GLSL return type: a value type, `int` for no output, or the struct of the outputs. */
   private readonly type: string;
-  /** Whether the function gives back a struct: for more than one leaf, or an array, which three's parser of GLSL cannot return. */
+  /** Three's GLSL parser cannot return an array, so more than one leaf or an array is a struct. */
   private readonly isStruct: boolean;
 
   constructor(
@@ -143,8 +134,7 @@ class GlslFunction {
         : this.leavesOfValue(args[index]!, argument.type, argument.arraySize ?? 0)
     );
     const node = this.fn(...leaves);
-    // A call that writes a place, or gives a struct, is held in a variable where it stands, so it
-    // runs once and before any later read of the place.
+    // Held where it stands, so it runs once and before any later read of the place.
     const isHeld = this.isStruct || this.outputCount > this.resultCount;
     const outputs = isHeld ? this.heldOutputs(inVar(node)) : [node];
     const definition = this.tree.lowered;
@@ -200,10 +190,7 @@ class GlslFunction {
     return [...resultLeaves, ...writtenLeaves];
   }
 
-  /**
-   * The value an `in` or `inout` parameter holds in the body. An `inout` one gets new variables,
-   * and an `in` one as `parameterValue` gives it.
-   */
+  /** An `inout` parameter gets new variables, and an `in` one the value `parameterValue` gives. */
   private parameterValue(argument: Argument, given: Value, writtenLeaves: Node[]): Value {
     if (argument.qualifier !== 'inout')
       return parameterValue(argument, given, this.tree.written, this.structOf);
@@ -220,11 +207,7 @@ class GlslFunction {
   }
 }
 
-/**
- * The value an `in` parameter holds in a function's body. An argument the function never writes
- * is read from its node, as Godot's GLSL reads its parameter. A copy into a `Var` lets the driver
- * fold the arithmetic otherwise, one unit apart.
- */
+/** An unwritten argument is read from its node, as Godot reads its parameter: a `Var` would fold apart. */
 export function parameterValue(
   argument: Argument,
   given: Value,

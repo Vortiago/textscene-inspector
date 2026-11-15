@@ -87,10 +87,7 @@ func _ready() -> void:
 	get_tree().quit()
 `;
 
-/**
- * The bits of each probe's pixels in `stdout`, keyed by probe name, with Godot's version and
- * adapter. A pixel's four bytes are little-endian, as the shader wrote them.
- */
+/** A pixel's four bytes are little-endian, as the shader wrote them. */
 export function parseProbeOutput(stdout) {
   const pixels = new Map();
   for (const [name, bytes] of printedImages(stdout, LINE_PREFIX)) pixels.set(name, pixelBits(bytes));
@@ -119,16 +116,10 @@ function pixelBits(bytes) {
   return Array.from({ length: bytes.length / 4 }, (_, pixel) => view.getUint32(pixel * 4, true));
 }
 
-/**
- * A Godot run keeps each probe's material, about 5 MB, until it ends: 700 probes in each of 4 runs
- * at once passed the 15 GB of the container. 256 keeps 4 runs under 6 GB.
- */
+/** About 5 MB per kept material: 700 probes in 4 runs passed 15 GB, 256 keeps them under 6 GB. */
 const PROBES_PER_RUN_AT_MOST = 256;
 
-/**
- * Godot's answers to `probes` from runs of the pinned release at once: its version, adapter and
- * pixels. Every run must name the same Godot and adapter, or its pixels would mix two engines.
- */
+/** Every run must name the same Godot and adapter, or its pixels would mix two engines. */
 export async function runProbesInGodot(probes) {
   const outputs = await inChunksOfAtMost(probes, PROBES_PER_RUN_AT_MOST, async (chunk) =>
     parseProbeOutput(await runGodotScript(MAIN_SCRIPT, probeProjectFiles(chunk)))

@@ -164,10 +164,7 @@ const positionOf = (line: VariantLine, column: number): SourcePosition => ({
   column,
 });
 
-/**
- * The end of a number at `start`: digits, a hexadecimal prefix, a fraction, an exponent and a
- * suffix, as glslang's `lFloatConst` and `scan` read them (`PpScanner.cpp:96`, `:345`).
- */
+/** As glslang's `lFloatConst` and `scan` read it (`PpScanner.cpp:96`, `:345`). */
 function numberEnd(text: string, start: number): number {
   let end = start;
   const hex = /^0[xX]/.test(text.slice(start));

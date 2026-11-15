@@ -9,11 +9,7 @@ export function typeName(enumerator, keywords) {
   throw new Error(`expected a keyword for ${enumerator}, found none`);
 }
 
-/**
- * The entries of `keyword_list` (`shader_language.cpp:283`): each token, its text, the heading
- * comment it sits under (`data types`, `hints`, ...) and its line. Entries above the first heading
- * have the heading `literals`.
- */
+/** `keyword_list` (`shader_language.cpp:283`). Entries above the first heading have `literals`. */
 export function keywordList(cpp) {
   const start = cpp.indexOf('const ShaderLanguage::KeyWord ShaderLanguage::keyword_list[] = {');
   if (start === -1) throw new Error('expected keyword_list in shader_language.cpp, found none');
@@ -41,11 +37,7 @@ export function valueTypes(dataTypes) {
   return names.slice(names.indexOf('TYPE_BOOL'), names.indexOf('TYPE_MAT4') + 1);
 }
 
-/**
- * The rows of `builtin_func_defs` (`shader_language.cpp:2419`): name, return type, argument
- * types, tag and `high_end`. The heading comment above a row (`Constructors.`, `sin`, ...) is kept
- * as its group.
- */
+/** `builtin_func_defs` (`shader_language.cpp:2419`), each row grouped by the heading comment above it. */
 export function builtinFunctions(cpp) {
   const start = cpp.indexOf('const ShaderLanguage::BuiltinFuncDef ShaderLanguage::builtin_func_defs[] = {');
   if (start === -1) throw new Error('expected builtin_func_defs in shader_language.cpp, found none');
@@ -79,10 +71,7 @@ export function builtinFunctions(cpp) {
   return rows;
 }
 
-/**
- * The swizzle letter sets of each vector type, from the member switch of `_parse_expression`
- * (`shader_language.cpp:6876`): for `vec3`, `xyz`, `rgb` and `stp`.
- */
+/** The member switch of `_parse_expression` (`shader_language.cpp:6876`): `xyz`, `rgb`, `stp` for `vec3`. */
 export function swizzleSets(cpp) {
   const start = cpp.indexOf('RBSet<char> position_symbols;');
   if (start === -1) throw new Error('expected the swizzle switch in shader_language.cpp, found none');
@@ -119,10 +108,7 @@ function shaderTypeOf(mode) {
   return mode.replace(/^RS::SHADER_/, '').toLowerCase();
 }
 
-/**
- * Each built-in variable and constant of each shader type and stage (`shader_types.cpp`): its
- * type, and whether a shader may write it.
- */
+/** From `shader_types.cpp`, with whether a shader may write each one. */
 export function builtIns(typesCpp) {
   const pattern =
     /shader_modes\[(RS::SHADER_\w+)\]\.functions\["(\w+)"\]\.built_ins\["(\w+)"\] = (?:(constt|constvt)\()?ShaderLanguage::(TYPE_\w+)/g;
@@ -141,10 +127,7 @@ export function builtIns(typesCpp) {
   return rows;
 }
 
-/**
- * The stage functions of each shader type and stage (`shader_types.cpp:308`), with the argument
- * and return types the `StageFunctionInfo` above each assignment holds.
- */
+/** `shader_types.cpp:308`, with the types of the `StageFunctionInfo` above each assignment. */
 export function stageFunctions(typesCpp) {
   const rows = [];
   const infos = new Map();
@@ -180,10 +163,7 @@ export function stageFunctions(typesCpp) {
   return rows;
 }
 
-/**
- * The render mode and stencil mode values of each shader type (`shader_types.cpp:233`). A mode
- * with values gives one row per value, named `<mode>_<value>` as a shader writes it.
- */
+/** `shader_types.cpp:233`. A mode with values gives one `<mode>_<value>` row per value. */
 export function renderModes(typesCpp) {
   const pattern =
     /shader_modes\[(RS::SHADER_\w+)\]\.(modes|stencil_modes)\.push_back\(\{ PNAME\("(\w+)"\)(.*)\}\);/g;
@@ -204,10 +184,7 @@ export function renderModes(typesCpp) {
   });
 }
 
-/**
- * The preprocessor directives `process_directive` dispatches (`shader_preprocessor.cpp:378`),
- * the `defined` operator and the pragma labels.
- */
+/** `process_directive` (`shader_preprocessor.cpp:378`), the `defined` operator and the pragma labels. */
 export function preprocessorDirectives(preprocessorCpp) {
   const start = preprocessorCpp.indexOf('void ShaderPreprocessor::process_directive(');
   if (start === -1) throw new Error('expected process_directive in shader_preprocessor.cpp, found none');
@@ -250,10 +227,7 @@ function cite(file, line) {
   return `${file}:${line}`;
 }
 
-/**
- * Every row of the instruction table, from the four source texts: `{ id, family, source }`, with
- * `returns` and `args` on the rows that have types. Ids are unique.
- */
+/** `{ id, family, source }`, with `returns` and `args` on typed rows. Ids are unique. */
 export function instructionRows(sources) {
   const { header, language, types, preprocessor } = sources;
   const keywords = keywordList(language);
@@ -297,8 +271,7 @@ export function instructionRows(sources) {
       family: 'statement',
       source: cite(SOURCE_FILES.header, line),
     })),
-    // The kinds of node of Godot's tree, so a declaration or a block, which no keyword or operator
-    // names, is a row too.
+    // A declaration or a block, which no keyword or operator names, is a row too.
     ...enumMembers(header, 'Type').map(({ name, line }) => ({
       id: name,
       family: 'tree node',

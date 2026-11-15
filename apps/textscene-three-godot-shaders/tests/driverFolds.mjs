@@ -8,10 +8,7 @@ export const DRIVER_ROUNDED_CALL = {
   cause: "a call glslang leaves to the GPU, which one side's compiler folds to other last bits",
 };
 
-/**
- * Outside the call's domain, or near the float range: the browser's compiler folds the call to a
- * number, such as 0 for `atanh(92.167)`, where the GPU gives NaN or infinity.
- */
+/** The browser's compiler folds these to a number, such as 0 for `atanh(92.167)`, not NaN or infinity. */
 export const DRIVER_EDGE_CALL = {
   owner: '#1826',
   cause:

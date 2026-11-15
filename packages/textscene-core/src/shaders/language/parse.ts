@@ -61,10 +61,7 @@ class ShaderParser implements ExpressionScope {
     return this.builtIn(name);
   }
 
-  /**
-   * The built-in `name` of the shader type in the function read: one of its stage function, one of
-   * every function (`global`), or a constant (`ShaderTypes`, `servers/rendering/shader_types.cpp`).
-   */
+  /** From the stage function, `global` or the constants (`servers/rendering/shader_types.cpp`). */
   private builtIn(name: string): Identifier | undefined {
     if (!this.shaderType || !this.current) return undefined;
     const scopes = [this.current.rname, 'global', 'constants'];
@@ -240,10 +237,7 @@ class ShaderParser implements ExpressionScope {
     return this.expressions.arrays.size(true)!;
   }
 
-  /**
-   * The type token after an optional precision, which Godot checks against the type
-   * (`_validate_precision`, `shader_language.cpp:9117`). `refuse` handles a `const` first.
-   */
+  /** `_validate_precision` (`shader_language.cpp:9117`). `refuse` handles a `const` first. */
   private precededType(first: Token, refuse: () => never): Token {
     if (first.type === 'TK_CONST') refuse();
     if (!isPrecisionToken(first.type)) return first;
@@ -277,10 +271,7 @@ class ShaderParser implements ExpressionScope {
     return args;
   }
 
-  /**
-   * `const in float a[2]`: `const`, a qualifier, a precision, the type, a size before or after
-   * the name (`shader_language.cpp:10724`).
-   */
+  /** `const`, a qualifier, a precision, the type, a size before or after the name (:10724). */
   private argumentDeclaration(first: Token, declared: readonly Argument[]): Argument {
     const isConst = first.type === 'TK_CONST';
     let token = isConst ? this.tokens.next() : first;
@@ -325,11 +316,7 @@ class ShaderParser implements ExpressionScope {
     return type;
   }
 
-  /**
-   * Records a function and gives it Godot's name: `f`, or `f@2` for the second function of that
-   * name. Godot refuses a second function of the same argument types and sizes, whatever it
-   * returns (`shader_language.cpp:10921`).
-   */
+  /** `f@2` names the second `f`. Godot refuses equal argument types and sizes (:10921). */
   private declare(header: Omit<FunctionSignature, 'name'>): FunctionSignature {
     const overloads = this.signatures.get(header.rname) ?? [];
     if (overloads.some((declared) => isSameArguments(declared.arguments, header.arguments)))
@@ -355,10 +342,7 @@ const isSameArguments = (a: readonly Argument[], b: readonly Argument[]) =>
 
 const isPrecisionToken = (type: string) => type.startsWith('TK_PRECISION_');
 
-/**
- * Whether a `return` stands anywhere in `block`, searched from its last statement into every
- * flow's blocks, as `_find_last_flow_op_in_block` searches (`shader_language.cpp:11088`).
- */
+/** Searches as `_find_last_flow_op_in_block` does (`shader_language.cpp:11088`). */
 function hasReturn(block: BlockNode): boolean {
   for (const statement of everyStatement(block)) if (isReturn(statement)) return true;
   return false;

@@ -53,10 +53,7 @@ function printBlock(block: BlockNode, indent: string): string {
   return `{\n${lines.join('')}${indent}}`;
 }
 
-/**
- * The one statement of a block Godot reads as one statement, the body of `if`, a loop or an
- * initialiser. Written without braces, it parses back to the same block.
- */
+/** Written without braces, the one statement parses back to the same block. */
 function printOnlyStatement(block: BlockNode, indent: string): string {
   const [statement] = block.statements;
   if (block.statements.length !== 1 || statement === undefined)
@@ -156,10 +153,7 @@ function printCaseLabel(label: ConstantNode): string {
 
 const POSTFIX_OPERATORS = new Set(['OP_POST_INCREMENT', 'OP_POST_DECREMENT']);
 
-/**
- * The text of `expression`. A prefix operator stands without brackets, because the parser reduces
- * the text in brackets, which would fold `-vec2(1.0)` into a constant.
- */
+/** A prefix operator stands without brackets, which would fold `-vec2(1.0)` into a constant. */
 export function printExpression(expression: Expression): string {
   switch (expression.kind) {
     case 'constant':
@@ -194,10 +188,7 @@ export function printExpression(expression: Expression): string {
   }
 }
 
-/**
- * An operand a swizzle, an index or a post step follows: in brackets unless it is a name, a
- * field, an array element or a call, or brackets already. Godot reads no array or struct in brackets.
- */
+/** Brackets unless a name, field, element, call or brackets: Godot reads no array or struct in brackets. */
 function printOwner(owner: Expression): string {
   const text = printExpression(owner);
   return BARE_OWNERS.has(owner.kind) || isCall(owner) || text.startsWith('(') ? text : `(${text})`;
@@ -205,10 +196,7 @@ function printOwner(owner: Expression): string {
 
 const BARE_OWNERS: ReadonlySet<string> = new Set(['variable', 'field', 'array element']);
 
-/**
- * A part of `?:`. The parser keeps a negation of a constant there and negates the constant in
- * place (`shader_language.cpp:7832`), so the text negates the constant back.
- */
+/** The parser negates a constant here in place (`shader_language.cpp:7832`), so the text negates it back. */
 function printTernaryPart(part: Expression): string {
   if (part.kind !== 'operator' || part.op !== 'OP_NEGATE' || part.operands[0]!.kind !== 'constant')
     return printExpression(part);
@@ -216,10 +204,7 @@ function printTernaryPart(part: Expression): string {
   return `-(${printExpression(negated)})`;
 }
 
-/**
- * A constant as literals the parser folds back to it: a vector or a matrix as its constructor,
- * and a negative scalar as a negated literal in brackets, which the parser folds.
- */
+/** A vector or matrix as its constructor, a negative scalar as a negated literal in brackets. */
 function printConstant(constant: ConstantNode): string {
   const shape = shapeOf(constant.type)!;
   const lanes = constant.values.map((value) => printScalar(shape.scalar, value));

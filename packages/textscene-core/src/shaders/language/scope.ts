@@ -30,10 +30,7 @@ export type Identifier =
       readonly row: string;
     };
 
-/**
- * A block and its variables. The function's body is the block whose `functionArguments` are set:
- * a lookup reaches the arguments only through it.
- */
+/** A lookup reaches the arguments only through the body, the block with `functionArguments`. */
 export class BlockScope {
   readonly variables = new Map<string, LocalVariable>();
 
@@ -43,11 +40,7 @@ export class BlockScope {
     readonly functionArguments?: readonly Argument[]
   ) {}
 
-  /**
-   * What `name` stands for. With `ownBlockOnly`, Godot's `p_allow_reassign`, a lookup reads this
-   * block alone, and the arguments only when this block is the body: a declaration may hide a
-   * name of an outer block, but not an argument in the body.
-   */
+  /** Godot's `p_allow_reassign`: a declaration may hide an outer name, not an argument in the body. */
   find(name: string, ownBlockOnly: boolean): Identifier | undefined {
     const local = this.variables.get(name);
     if (local) return { kind: 'local', ...local };

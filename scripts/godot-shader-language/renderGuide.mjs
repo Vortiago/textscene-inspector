@@ -64,10 +64,7 @@ function rowKinds({ inputs, outputs }) {
   return lanes.map((value, place) => `${place}:${kindOf(value)}`);
 }
 
-/**
- * The sample rows of a probe: first a row of normal values, then, row by row, the one that shows
- * the most kinds of value at a place no row before it shows.
- */
+/** Normal values first, then each row that shows the most new kinds of value at a new place. */
 function sampleRows(entry, parameters, returns) {
   const all = entry.results.map((result, row) => ({
     inputs: entry.inputs.map((values, index) => rowLanes(values, row, parameters[index])),
@@ -140,10 +137,7 @@ ${probeValues(probe, entry)}
 `;
 }
 
-/**
- * The state of a section's rows on each target: one line when every row is native on both, and
- * each lowered row by name otherwise.
- */
+/** One line when every row is native on both targets, each lowered row by name otherwise. */
 function statesText(rows) {
   const lowered = rows
     .map((row) => ({ row, states: targetStates(row) }))
@@ -173,10 +167,7 @@ ${statesText(rows)}
 ${sectionProbes.map((probe) => renderProbe(probe, record)).join('\n')}`;
 }
 
-/**
- * A chapter's sections, each with its transpiled rows. Throws for a transpiled row no section
- * holds, and for a section that holds no transpiled row.
- */
+/** Throws for a transpiled row no section holds, and for a section with no transpiled row. */
 function chapterSections(chapters, rows, probes) {
   const transpiled = transpiledIds(probes);
   const transpiledRows = rows.filter((row) => transpiled.has(row.id));

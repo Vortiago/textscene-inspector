@@ -48,10 +48,7 @@ function zeroOf(x: Node): Node {
   return tsl(select)(isNegative, floatNode(-0), floatNode(0));
 }
 
-/**
- * The fraction of one float, `x - trunc(x)`, with GLSL's sign: `-1.0` gives -0, and an infinity
- * gives its zero where the difference gives NaN.
- */
+/** GLSL's sign: `-1.0` gives -0, and an infinity gives its zero where the difference gives NaN. */
 function fractionLane(x: Node): Node {
   const difference = chained(x).sub(tsl(trunc)(x));
   const isZero = chained(tsl(equal)(difference, floatNode(0))).or(isinf([x], ['float']));

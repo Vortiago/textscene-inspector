@@ -53,11 +53,7 @@ async function verdictRecords(...sets) {
   });
 }
 
-/**
- * Godot's reason for each probe it draws nothing for, by name. One verdict run gives the reason of
- * every probe the front end refuses, and each other probe runs alone. A probe that ends Godot runs
- * alone from the start, since it would end the run of every probe.
- */
+/** A probe that ends Godot runs alone from the start, since it would end every probe's run. */
 async function rejections(probes, { pixels }) {
   const rejected = probes.filter((probe) => probe.endsGodot || !isDrawn(probe, pixels.get(probe.name)));
   const frontEnd = await frontEndRejections(rejected.filter((probe) => !probe.endsGodot));

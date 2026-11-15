@@ -138,11 +138,7 @@ const CASES = [
   ],
 ];
 
-/**
- * Calls glslang leaves to the GPU, each of a constant and of the same value through a parameter,
- * which no compiler can fold: on the input 0, `a + 0.899` is `0.899`. The parameter probe gives
- * the GPU's value on both sides, so the side whose constant probe differs from it folds the call.
- */
+/** A parameter probe gives the GPU's value on both sides, so a differing constant probe shows the folder. */
 const LEFT_TO_THE_GPU = [
   ['sinh', ['sinh(float)'], 'float', 'sinh(0.899)', 'sinh(a + 0.899)'],
   ['cosh', ['cosh(float)'], 'float', 'cosh(0.78)', 'cosh(a + 0.78)'],

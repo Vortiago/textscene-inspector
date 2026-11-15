@@ -49,10 +49,7 @@ import type {
   TemplateStageNode,
 } from './templateTree.js';
 
-/**
- * The tree of one stage of a preprocessed template variant, with `material` in its slots, or the
- * slots kept for a template read on its own.
- */
+/** With `material` in the slots, or the slots kept for a template read on its own. */
 export function parseTemplateStage(
   stage: StageName,
   preprocessed: Preprocessed,
@@ -392,10 +389,7 @@ class TemplateParser implements TemplateScope {
     }
   }
 
-  /**
-   * The element type the names of one declaration share. The tree holds one type for a
-   * declaration, so names with other inner array sizes fail: Godot's templates have none.
-   */
+  /** Godot's linked text goes through one preprocessor, so the text reads the macros at the slot. */
   private sameElementType(shared: string | undefined, declared: SizedType, name: PpToken): string {
     if (shared !== undefined && shared !== declared.type)
       this.tokens.fail(
@@ -520,10 +514,7 @@ class TemplateParser implements TemplateScope {
     });
   }
 
-  /**
-   * A material's stage function body in the scope of its slot, each built-in read as its GLSL
-   * text there. A section the material does not fill is empty, as Godot's text is.
-   */
+  /** A section the material does not fill is empty, as Godot's text is. */
   private linkedCode(body: BlockNode | undefined, position: SourcePosition, macros: SlotMacros): BlockNode {
     if (!body) return { kind: 'block', statements: [], position };
     return this.linkedBlock(body, macros);
@@ -540,10 +531,7 @@ class TemplateParser implements TemplateScope {
     );
   }
 
-  /**
-   * The GLSL text of the built-in `variable` reads, at the user's place in the text. Godot's
-   * linked text goes through one preprocessor, so the text reads the macros defined at the slot.
-   */
+  /** Godot's linked text goes through one preprocessor, so the text reads the macros at the slot. */
   private builtInText(variable: VariableNode, macros: SlotMacros): Expression {
     const text = this.material!.renames[variable.name];
     if (text === undefined)
@@ -811,7 +799,7 @@ function initialiserParts(
   return (index) => initialiserPart(type, index);
 }
 
-/** Whether `qualifiers` declare storage the program only reads: a stage input, a uniform or a `readonly` buffer. */
+/** A stage input, a uniform or a `readonly` buffer. */
 function isReadOnlyStorage(qualifiers: GlobalQualifiers): boolean {
   return qualifiers.words.some((word) => word === 'in' || word === 'uniform' || word === 'readonly');
 }

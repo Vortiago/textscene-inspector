@@ -6,10 +6,7 @@ import { FreshNames } from './freshNames.js';
 
 type Lowering = (definition: FunctionNode, names: FreshNames) => FunctionNode;
 
-/**
- * The text of the last function of `source` after `lower`, which must pass the tree check beside
- * the functions before it. The functions before it are left out of the text.
- */
+/** The functions before the last pass the tree check but are left out of the text. */
 export function loweredText(lower: Lowering, source: string): string {
   const shader = treeOf(source);
   const definition = shader.functions.at(-1)!;
