@@ -108,21 +108,3 @@ function isShadowOfAny(lights: ReadonlySet<PositionalLight>, shadow: THREE.Light
   for (const light of lights) if (light.shadow === shadow) return true;
   return false;
 }
-
-/** Pushed only by `renderWithShadowAtlas` around one render, and popped when that render returns. */
-const activeAtlases: ViewportShadowAtlas[] = [];
-
-/** Runs `render` with `atlas` as the atlas of every scene it renders: a SubViewport's pass. */
-export function renderWithShadowAtlas(atlas: ViewportShadowAtlas, render: () => void): void {
-  activeAtlases.push(atlas);
-  try {
-    render();
-  } finally {
-    activeAtlases.pop();
-  }
-}
-
-/** The atlas of the SubViewport rendering now, or null for a render of the main view. */
-export function activeShadowAtlas(): ViewportShadowAtlas | null {
-  return activeAtlases[activeAtlases.length - 1] ?? null;
-}

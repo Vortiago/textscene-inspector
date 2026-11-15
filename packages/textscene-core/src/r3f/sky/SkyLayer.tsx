@@ -22,7 +22,7 @@ import { hideShownSky } from './skyRadiance';
 import { holdSkyBakes, radianceUpdateOf, type SkyBakes, skyUpdatePlan } from './skyBakes';
 import { materialReadsLights } from '../../resources/sky/readsLights';
 import { stepSkyRadiance, type SkyRender } from '../../godot/rendering/environment/skyRadianceUpdate';
-import { probeCaptureOf } from '../reflectionProbe/captureCameras';
+import { renderUnderWay } from '../viewportRender/worldRender';
 import { takeRealTimeCaptureRenders } from '../reflectionProbe/realTimeCaptures';
 import { ENVIRONMENT_SWITCH } from './environmentSwitch';
 import { observeSceneRenderEnd } from '../sceneRenderCamera';
@@ -146,9 +146,9 @@ export function SkyLayer({
     // Each view runs its render through the radiance update, the first of a frame after the faces
     // Godot draws for the ALWAYS probes at the world's exposure. A capture reads that bake and steps
     // nothing, as ours captures again only on change. An interior capture draws no sky.
-    const showForRender = (drawn: number, camera: THREE.Camera) => {
+    const showForRender = (drawn: number) => {
       const render = renderAt(drawn);
-      const capture = probeCaptureOf(camera);
+      const capture = renderUnderWay()?.probeCapture;
       if (capture?.isInterior) return;
       if (!capture) {
         const captureRenders = takeRealTimeCaptureRenders(scene);
@@ -169,9 +169,7 @@ export function SkyLayer({
       const previousEnvironment = scene.environment;
       const previousIntensity = scene.environmentIntensity;
       scene.environment = ENVIRONMENT_SWITCH;
-      const stopShowingRadiance = followSceneExposure(scene, (drawn, camera) =>
-        showForRender(drawn ?? 1, camera)
-      );
+      const stopShowingRadiance = followSceneExposure(scene, (drawn) => showForRender(drawn ?? 1));
       const stopHidingRadiance = observeSceneRenderEnd(scene, hideShownSky);
       const stopShowingBackground = asBackground ? showSkyBackground(scene) : undefined;
       showAt(update.baked ?? renderAt(exposure), renderAt(exposure));

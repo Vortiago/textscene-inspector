@@ -22,7 +22,6 @@ import { editorCameraPosition, editorCameraProjection } from './godotEditorCamer
 import { usePreviewFrameloop } from './contexts/PreviewVisibilityContext.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { SceneShadowFitter } from './SceneShadowFitter.js';
-import { SceneMipmapBias } from './materials/SceneMipmapBias.js';
 import { SceneDepthPrepass } from './depthPrepass/SceneDepthPrepass.js';
 import { ActiveCameraSwitcher } from './ActiveCameraSwitcher.js';
 import { CameraFit } from './CameraFit.js';
@@ -68,7 +67,6 @@ export function TscnSceneContents() {
           externalResources={rootScene?.externalResources ?? []}
         />
         <SceneShadowFitter />
-        <SceneMipmapBias />
         <SceneDepthPrepass />
         <SelectionHighlight />
         <HoverHighlight />

@@ -48,27 +48,12 @@ interface SceneHook {
 // eslint-disable-next-line no-restricted-syntax -- the last observer's release deletes the scene's hook
 const hooks = new WeakMap<THREE.Scene, SceneHook>();
 
-/** Written only by `createViewportCanvasCamera`. A camera leaves it once it is collected. */
-const viewportCanvasCameras = new WeakSet<THREE.Camera>();
-
 /**
  * The camera a 2D sub-viewport draws its canvas through, through its Godot canvas transform. Like the
  * root's, it holds the canvas top at GL row 0, so its pass draws into a `CanvasFrame`.
  */
 export function createViewportCanvasCamera(): THREE.OrthographicCamera {
-  const camera = new World2DCamera();
-  viewportCanvasCameras.add(camera);
-  return camera;
-}
-
-/**
- * Whether a render through `camera` is a 2D sub-viewport's pass, the only surface with a Godot
- * canvas transform. The 2D stage draws through the store's free camera, with none, as Godot's
- * editor does (`camera_2d.cpp:41-44`), and a 3D sub-viewport's orthographic Camera3D frames no
- * canvas.
- */
-export function isViewportPass(camera: THREE.Camera): camera is THREE.OrthographicCamera {
-  return viewportCanvasCameras.has(camera);
+  return new World2DCamera();
 }
 
 /** Scratch for one measurement, overwritten by each: the render hooks never interleave. */

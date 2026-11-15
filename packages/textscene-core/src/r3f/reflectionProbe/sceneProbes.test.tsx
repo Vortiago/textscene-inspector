@@ -5,9 +5,10 @@ import { heading } from '../../parser/testing/parserKit';
 import { parseReflectionProbe } from '../../nodes/3d/reflectionprobe/parser';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
-import { captureCameras } from './captureCameras';
+import { drawAsProbeCapture } from '../testing/worldRenders';
 import { ReflectionProbeObject } from './reflectionProbeObject';
 import { SceneProbes } from './sceneProbes';
+import { rootViewportDescription } from '../viewportRender/viewportDescription';
 import { shownProbes } from './probeSlots';
 import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowTexels';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -95,7 +96,7 @@ async function probesIn(scene: THREE.Scene, ...probes: ReflectionProbeObject[]) 
   /** The capture faces one `update` drew. */
   const facesDrawn = (pending = 0) => {
     const before = sceneRenders();
-    sceneProbes.update(pending, CLEAR);
+    sceneProbes.update(pending, CLEAR, rootViewportDescription(null));
     return sceneRenders() - before;
   };
   const settle = () => {
@@ -284,12 +285,9 @@ describe('SceneProbes rendering', () => {
     const { scene, facesDrawn, settle } = await sceneWith(probeObject());
     settle();
     facesDrawn();
-    const [captureCamera] = captureCameras(new THREE.Matrix4(), { x: 0, y: 0, z: 0 }, [1, 1, 1, 1, 1, 1], {
-      isInterior: false,
-      hasShadows: true,
-    });
-
-    fireSceneRender(scene, captureCamera!);
+    drawAsProbeCapture({ isInterior: false, hasShadows: true }, () =>
+      fireSceneRender(scene, new THREE.PerspectiveCamera())
+    );
 
     expect(shownProbes[0]).toBe(0);
   });
@@ -311,14 +309,14 @@ describe('SceneProbes rendering', () => {
     const light = new THREE.DirectionalLight();
     light.shadow.intensity = 0.8;
     scene.add(light);
-    const [captureCamera] = captureCameras(new THREE.Matrix4(), { x: 0, y: 0, z: 0 }, [1, 1, 1, 1, 1, 1], {
-      isInterior: false,
-      hasShadows: false,
-    });
+    const camera = new THREE.PerspectiveCamera();
+    let during: number | null = null;
 
-    fireSceneRender(scene, captureCamera!);
-    const during = light.shadow.intensity;
-    fireSceneRenderEnd(scene, captureCamera!);
+    drawAsProbeCapture({ isInterior: false, hasShadows: false }, () => {
+      fireSceneRender(scene, camera);
+      during = light.shadow.intensity;
+      fireSceneRenderEnd(scene, camera);
+    });
 
     expect([during, light.shadow.intensity]).toEqual([0, 0.8]);
   });

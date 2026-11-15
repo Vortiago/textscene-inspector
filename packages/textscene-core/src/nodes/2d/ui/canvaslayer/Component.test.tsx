@@ -19,6 +19,7 @@ import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { fireSceneRender } from '../../../../r3f/testing/fireSceneRender';
 import { createViewportCanvasCamera } from '../../../../r3f/sceneRenderCamera';
+import { drawAsCanvasPass } from '../../../../r3f/testing/worldRenders';
 
 const ZERO_RECT = { x: 0, y: 0, w: 0, h: 0 };
 
@@ -162,7 +163,7 @@ describe('<CanvasLayer> in a sub-viewport pass', () => {
     camera.position.set(...VIEW.position);
     const target = new THREE.WebGLRenderTarget(SIZE.x, SIZE.y);
     scene.updateMatrixWorld();
-    fireSceneRender(scene, camera, target);
+    drawAsCanvasPass(() => fireSceneRender(scene, camera, target));
     return renderer.scene.findAllByType('Group')[0]!.instance as THREE.Object3D;
   }
 

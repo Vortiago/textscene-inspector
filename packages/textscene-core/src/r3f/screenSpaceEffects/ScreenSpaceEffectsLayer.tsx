@@ -54,7 +54,7 @@ export function ScreenSpaceEffectsLayer({ ssr, ssao }: ScreenSpaceEffectsLayerPr
     scene.add(...sentinels);
     const stopRegistering = registerEnvironmentPart(scene, environment, () => {
       showSentinels(true);
-      const stopBeginning = observeSceneCamera(scene, effects.begin);
+      const stopBeginning = observeSceneCamera(scene, (_camera, target) => effects.begin(target));
       const stopEnding = observeSceneRenderEnd(scene, effects.end);
       return () => {
         stopBeginning();

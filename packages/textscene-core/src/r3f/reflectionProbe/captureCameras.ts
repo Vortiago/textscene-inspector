@@ -1,6 +1,6 @@
 /**
- * The six cameras of a reflection probe capture (`renderer_scene_cull.cpp:3666-3711`), and the
- * capture each one draws, which the scene's observers read to draw a capture as Godot does.
+ * The six cameras of a reflection probe capture (`renderer_scene_cull.cpp:3666-3711`), and what the
+ * capture draws differently, which the scene's observers read from the render under way.
  */
 
 import * as THREE from 'three';
@@ -8,7 +8,7 @@ import { CAPTURE_NEAR, FACE_NORMALS } from '../../godot/rendering/environment/re
 import type { Vector3 } from '../../godot/math/vector.js';
 
 /** What a capture's renders draw differently from the scene's own. */
-interface ProbeCapture {
+export interface ProbeCapture {
   /** No environment: no sky, no ambient light and no fog (`render_forward_clustered.cpp:1819-1821`). */
   readonly isInterior: boolean;
   /** Whether the lights cast their shadows (`render_forward_clustered.cpp:1627-1630`). */
@@ -27,15 +27,6 @@ const FACE_UPS: readonly THREE.Vector3[] = [
   new THREE.Vector3(0, -1, 0),
   new THREE.Vector3(0, -1, 0),
 ];
-
-/** Written only by `captureCameras`. A camera leaves it once it is collected. */
-// eslint-disable-next-line no-restricted-syntax -- captureCameras writes each entry from outside, and probeCaptureOf only reads it
-const captures = new WeakMap<THREE.Camera, ProbeCapture>();
-
-/** The capture `camera` draws, or undefined for a camera that draws none. */
-export function probeCaptureOf(camera: THREE.Camera): ProbeCapture | undefined {
-  return captures.get(camera);
-}
 
 /** Scratch for one frame or one face's pose, overwritten by each. */
 const eye = new THREE.Vector3();
@@ -57,8 +48,7 @@ export function probeFrame(probeWorld: THREE.Matrix4): THREE.Matrix4 {
 export function captureCameras(
   probeWorld: THREE.Matrix4,
   originOffset: Vector3,
-  farPlanes: readonly number[],
-  capture: ProbeCapture
+  farPlanes: readonly number[]
 ): THREE.PerspectiveCamera[] {
   const frame = probeFrame(probeWorld);
   eye.set(originOffset.x, originOffset.y, originOffset.z);
@@ -72,7 +62,6 @@ export function captureCameras(
     // The render would otherwise compose the matrix again from the pose, losing the exact frame.
     camera.matrixAutoUpdate = false;
     camera.matrixWorldAutoUpdate = false;
-    captures.set(camera, capture);
     return camera;
   });
 }

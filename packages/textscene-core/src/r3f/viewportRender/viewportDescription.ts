@@ -1,5 +1,10 @@
 import type { PositionalShadowAtlasSettings } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import {
+  VIEWPORT_POSITIONAL_SHADOW_ATLAS,
+  viewportPositionalShadowAtlas,
+} from '../../godot/scene/viewport.js';
+import type { SubViewportProperties } from '../../nodes/viewport/subviewport/types.js';
+import {
   projectAnisotropicFilteringLevel,
   projectMsaaModes,
   projectPositionalShadowAtlas,
@@ -39,5 +44,51 @@ export function rootViewportDescription(settings: ProjectSettings | null): Viewp
     camera: 'editor',
     drawsEditorChrome: true,
     previewsEnvironment: true,
+  };
+}
+
+/** The node's properties the SubViewport adapter reads. */
+type SubViewportFacts = Pick<
+  SubViewportProperties,
+  | 'msaa_2d'
+  | 'msaa_3d'
+  | 'use_debanding'
+  | 'use_hdr_2d'
+  | 'transparent_bg'
+  | 'texture_mipmap_bias'
+  | 'anisotropic_filtering_level'
+  | 'positional_shadow_atlas_size'
+  | 'positional_shadow_atlas_quad_0'
+  | 'positional_shadow_atlas_quad_1'
+  | 'positional_shadow_atlas_quad_2'
+  | 'positional_shadow_atlas_quad_3'
+>;
+
+/** A SubViewport as the game draws it. An unset bias or anisotropic level takes the project's, as `root` holds it. */
+export function subViewportDescription(
+  properties: SubViewportFacts,
+  root: ViewportDescription
+): ViewportDescription {
+  return {
+    msaa2D: properties.msaa_2d,
+    msaa3D: properties.msaa_3d,
+    // A half-float target holds no banding to dither (`renderer_scene_render_rd.cpp:941`).
+    usesDebanding: properties.use_debanding && !properties.use_hdr_2d,
+    transparentBackground: properties.transparent_bg,
+    mipmapBias: properties.texture_mipmap_bias ?? root.mipmapBias,
+    positionalShadowAtlas: viewportPositionalShadowAtlas(
+      properties.positional_shadow_atlas_size,
+      [
+        properties.positional_shadow_atlas_quad_0,
+        properties.positional_shadow_atlas_quad_1,
+        properties.positional_shadow_atlas_quad_2,
+        properties.positional_shadow_atlas_quad_3,
+      ],
+      VIEWPORT_POSITIONAL_SHADOW_ATLAS
+    ),
+    anisotropicLevel: properties.anisotropic_filtering_level ?? root.anisotropicLevel,
+    camera: 'elected',
+    drawsEditorChrome: false,
+    previewsEnvironment: false,
   };
 }

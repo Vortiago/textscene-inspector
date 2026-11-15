@@ -27,14 +27,8 @@ import { CanvasOverWorldScopeProvider } from './canvasOverWorldScope';
 import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { useSceneShadowFit } from '../../../r3f/SceneShadowFitter';
 import { useSceneDepthPrepass } from '../../../r3f/depthPrepass/SceneDepthPrepass';
-import {
-  renderWithShadowAtlas,
-  ViewportShadowAtlas,
-} from '../../../r3f/positionalShadow/viewportShadowAtlas';
-import {
-  VIEWPORT_POSITIONAL_SHADOW_ATLAS,
-  viewportPositionalShadowAtlas,
-} from '../../../godot/scene/viewport';
+import { ViewportShadowAtlas } from '../../../r3f/positionalShadow/viewportShadowAtlas';
+import type { PositionalShadowAtlasSettings } from '../../../godot/rendering/lights/positionalShadowAtlas';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
 import { CanvasLightPass } from '../../../r3f/lighting2d/CanvasLightPass';
 import { createViewportLightPassHost } from './viewportLightPassHost';
@@ -59,7 +53,7 @@ import {
   runCanvasFrame,
   type CanvasFrameSteps,
 } from '../../../r3f/components/Canvas2DStage/canvasFrameSequence';
-import { viewportCanvasColorSpace, viewportUsesDebanding, viewportMsaaMode } from './viewportTargetOptions';
+import { viewportCanvasColorSpace } from './viewportTargetOptions';
 import { OffscreenToneMapStage, type OffscreenToneMap } from '../../../r3f/environment/offscreenToneMap';
 import { ViewportPassAttributes } from '../../../r3f/environment/worldExposure';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
@@ -71,8 +65,14 @@ import { useCanvasPass } from './useCanvasPass';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
-import { renderWithMipmapBias } from '../../../r3f/materials/godotMipmapBias.js';
-import { useProjectTextureMipmapBias } from '../../../r3f/materials/useProjectTextureMipmapBias.js';
+import { useRootViewportDescription } from '../../../r3f/viewportRender/useRootViewportDescription';
+import {
+  subViewportDescription,
+  type ViewportDescription,
+} from '../../../r3f/viewportRender/viewportDescription';
+import { drawWorld, type WorldRender } from '../../../r3f/viewportRender/worldRender';
+import { useByValue } from '../../../r3f/hooks/useByValue';
+import { sameData } from '../../../utils/sameData';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { hideEditorHelpers } from '../../../r3f/editorHelpers';
 import { viewAnchorMatrix } from '../../../r3f/viewportLayerAnchor';
@@ -122,7 +122,9 @@ export function OffscreenViewportPass({
   children,
 }: OffscreenViewportPassProps) {
   const properties = node.properties as SubViewportProperties;
-  const { transparent_bg: transparentBg, own_world_3d: ownWorld3D } = properties;
+  const { own_world_3d: ownWorld3D } = properties;
+  const viewport = useSubViewportDescription(properties);
+  const transparentBg = viewport.transparentBackground;
   const { x: width, y: height } = size;
 
   const gl = useThree((state) => state.gl);
@@ -152,7 +154,7 @@ export function OffscreenViewportPass({
   useDisposeOnRelease(target);
   const { gate, clearMode, renderState } = useGatedViewport(path, properties);
   const drawsCanvasOverWorld = canvasOverWorld !== null;
-  const msaaMode = viewportMsaaMode(properties, kind);
+  const msaaMode = kind === '3d' ? viewport.msaa3D : viewport.msaa2D;
   // Written only by the stage below while it is mounted.
   const toneMapStage = useRef<OffscreenToneMap | null>(null);
   // Godot tonemaps through the Environment of the world `find_world_3d()` resolves, so the stage
@@ -169,7 +171,7 @@ export function OffscreenViewportPass({
             width={width}
             height={height}
             transparentBackground={transparentBg}
-            usesDebanding={viewportUsesDebanding(properties)}
+            usesDebanding={viewport.usesDebanding}
             name={node.name}
           />
         </ViewportPassEnvironment>
@@ -181,12 +183,11 @@ export function OffscreenViewportPass({
   const portalLightScene = portals3D && !drawnCanvasWorld ? passScene : null;
   useSceneShadowFit(portalLightScene);
   useSceneDepthPrepass(portalLightScene);
-  const shadowAtlas = useViewportShadowAtlas(properties);
-  const projectMipmapBias = useProjectTextureMipmapBias();
-  const mipmapBias = properties.texture_mipmap_bias ?? projectMipmapBias;
+  const shadowAtlas = useViewportShadowAtlas(viewport.positionalShadowAtlas);
+  const { worldRender, canvasRender } = useWorldRenders(viewport, shadowAtlas);
 
   // Both canvas draws take the viewport's `msaa_2d`: the 2D world's and the Controls'.
-  const canvasMsaaMode = viewportMsaaMode(properties, '2d');
+  const canvasMsaaMode = viewport.msaa2D;
   const { camera: orthoCamera, frame } = useCanvasPass(
     viewSize.x,
     viewSize.y,
@@ -291,22 +292,21 @@ export function OffscreenViewportPass({
           const rendersClear = camera !== null && gl.autoClear;
           if (kind === '3d' && !rendersClear) gl.clear(!keepsColor, true, true);
           if (!camera) return;
-          // The pass draws through the viewport's own camera, which no editor gizmo is built for.
-          const showChrome = hideEditorHelpers(passScene);
+          const showChrome = viewport.drawsEditorChrome ? null : hideEditorHelpers(passScene);
           try {
-            renderWithMipmapBias(mipmapBias, () =>
-              renderWithShadowAtlas(shadowAtlas, () =>
-                kind === '2d'
-                  ? frame.draw(gl, passScene, camera, clear.clears, viewportTransfer('none', transparentBg))
-                  : drawWith(passScene, toneMap!.environment, exposure, () =>
-                      backdrop
-                        ? drawOverBackground(passScene, backdrop.texture, () => gl.render(passScene, camera))
-                        : gl.render(passScene, camera)
-                    )
+            if (kind === '2d') {
+              frame.draw(gl, passScene, camera, clear.clears, viewportTransfer('none', transparentBg));
+              return;
+            }
+            drawWorld(worldRender, () =>
+              drawWith(passScene, toneMap!.environment, exposure, () =>
+                backdrop
+                  ? drawOverBackground(passScene, backdrop.texture, () => gl.render(passScene, camera))
+                  : gl.render(passScene, camera)
               )
             );
           } finally {
-            showChrome();
+            showChrome?.();
           }
         },
       });
@@ -323,8 +323,8 @@ export function OffscreenViewportPass({
     gl,
     target,
     frame,
-    shadowAtlas,
-    mipmapBias,
+    viewport,
+    worldRender,
     clearColor,
     transparentBg,
     viewSize,
@@ -342,8 +342,8 @@ export function OffscreenViewportPass({
     if (kind === '3d' && !toneMapStage.current) return;
     if (kind === '2d') frameCanvas(passScene);
     if (canvasScene) frameCanvas(canvasScene);
-    runCanvasFrame(frameSteps, drawPass);
-  }, [kind, frameCanvas, passScene, canvasScene, frameSteps, drawPass]);
+    drawWorld(canvasRender, () => runCanvasFrame(frameSteps, drawPass));
+  }, [kind, frameCanvas, passScene, canvasScene, frameSteps, drawPass, canvasRender]);
 
   // Consumers sample the texture directly. The ordered driver runs every
   // non-cyclic pass before R3F's own render, so a sampler sees this frame's
@@ -407,7 +407,7 @@ export function OffscreenViewportPass({
   // inside applies to an own world, and to the parent's world through a shared one.
   const portal = createPortal(
     <CanvasWorkspaceProvider workspace={kind === '3d' ? '3d' : '2d'}>
-      <AnisotropicFilteringProvider level={properties.anisotropic_filtering_level}>
+      <AnisotropicFilteringProvider level={viewport.anisotropicLevel}>
         <WorldRootProvider value={passScene}>
           <WorldScope>
             {stage}
@@ -466,28 +466,34 @@ function LitCanvas({
   );
 }
 
-/**
- * The viewport's own positional shadow atlas, as Godot keeps one per viewport. A main view and this
- * pass that give an omni light different slots each keep their own cube, so a steady scene never
- * reallocates one per render. One shared cube would reallocate on every render the two disagree on.
- */
-function useViewportShadowAtlas(properties: SubViewportProperties): ViewportShadowAtlas {
-  const {
-    positional_shadow_atlas_size: size,
-    positional_shadow_atlas_quad_0: quad0,
-    positional_shadow_atlas_quad_1: quad1,
-    positional_shadow_atlas_quad_2: quad2,
-    positional_shadow_atlas_quad_3: quad3,
-  } = properties;
-  const atlas = useMemo(
-    () =>
-      new ViewportShadowAtlas(
-        viewportPositionalShadowAtlas(size, [quad0, quad1, quad2, quad3], VIEWPORT_POSITIONAL_SHADOW_ATLAS)
-      ),
-    [size, quad0, quad1, quad2, quad3]
+/** The node's description, the same object while its facts and the root's hold. */
+function useSubViewportDescription(properties: SubViewportProperties): ViewportDescription {
+  const root = useRootViewportDescription();
+  return useByValue(
+    useMemo(() => subViewportDescription(properties, root), [properties, root]),
+    sameData
   );
+}
+
+/** The viewport's own atlas: a light it shares with the main view keeps a cube for each, so neither reallocates. */
+function useViewportShadowAtlas(settings: PositionalShadowAtlasSettings): ViewportShadowAtlas {
+  const atlas = useMemo(() => new ViewportShadowAtlas(settings), [settings]);
   useDisposeOnRelease(atlas);
   return atlas;
+}
+
+/** The pass's 3D world draw, and the canvas draw around the whole pass, which draws through its canvas transform. */
+function useWorldRenders(
+  viewport: ViewportDescription,
+  shadowAtlas: ViewportShadowAtlas
+): { worldRender: WorldRender; canvasRender: WorldRender } {
+  return useMemo(
+    () => ({
+      worldRender: { viewport, shadowAtlas, hasCanvasTransform: false },
+      canvasRender: { viewport, shadowAtlas, hasCanvasTransform: true },
+    }),
+    [viewport, shadowAtlas]
+  );
 }
 
 /** A detached scene a pass fills through a portal: the world's (`offscreen`) or the canvas's (`canvas`). */

@@ -12,6 +12,7 @@ import type { Camera2DTag } from '../camera2d/cameraView';
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
 import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera';
+import { drawAsCanvasPass } from '../../../r3f/testing/worldRenders';
 import { heading } from '../../../parser/testing/parserKit';
 import { Parallax2D } from './Component';
 import { parseParallax2D } from './parser';
@@ -72,7 +73,10 @@ describe('<Parallax2D>', () => {
     );
     const scene = renderer.scene.instance;
     if (pass === 'stage') fireSceneRender(scene, storeCamera.current!);
-    else fireSceneRender(scene, viewportPassCamera(), new THREE.WebGLRenderTarget(1152, 648));
+    else
+      drawAsCanvasPass(() =>
+        fireSceneRender(scene, viewportPassCamera(), new THREE.WebGLRenderTarget(1152, 648))
+      );
     return deltaGroup(scene);
   }
 

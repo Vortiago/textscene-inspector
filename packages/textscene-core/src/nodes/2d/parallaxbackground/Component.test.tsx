@@ -19,6 +19,7 @@ import { ParallaxBackground } from './Component';
 import { CanvasLayerScope } from '../../../r3f/canvasLayerScope';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
 import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera';
+import { drawAsCanvasPass } from '../../../r3f/testing/worldRenders';
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 
 function backgroundNode(properties: Record<string, string> = {}): TscnNode {
@@ -123,7 +124,9 @@ describe('<ParallaxBackground>', () => {
     );
     const scene = renderer.scene.instance;
     scene.updateMatrixWorld();
-    fireSceneRender(scene, viewportPassCamera(), new THREE.WebGLRenderTarget(1152, 648));
+    drawAsCanvasPass(() =>
+      fireSceneRender(scene, viewportPassCamera(), new THREE.WebGLRenderTarget(1152, 648))
+    );
 
     const world = new THREE.Vector3().setFromMatrixPosition(scene.getObjectByName('Probe')!.matrixWorld);
     expect(world.x).toBe(24);
@@ -170,7 +173,7 @@ describe('<ParallaxBackground>', () => {
       </>
     );
     const scene = renderer.scene.instance;
-    fireSceneRender(scene, viewportPassCamera());
+    drawAsCanvasPass(() => fireSceneRender(scene, viewportPassCamera()));
 
     const wrappers = scene.getObjectByName('BG')!.children.filter((child) => child.type === 'Group');
     expect(wrappers[0]!.position.x).toBe(-24);
@@ -198,7 +201,7 @@ describe('<ParallaxBackground>', () => {
       </>
     );
     const scene = renderer.scene.instance;
-    fireSceneRender(scene, viewportPassCamera());
+    drawAsCanvasPass(() => fireSceneRender(scene, viewportPassCamera()));
 
     const wrapper = scene.getObjectByName('BG')!.children.find((child) => child.type === 'Group')!;
     expect(wrapper.position.x).toBe(-24);
@@ -250,7 +253,7 @@ describe('<ParallaxBackground>', () => {
       </NodePathProvider>
     );
     const scene = renderer.scene.instance;
-    fireSceneRender(scene, viewportPassCamera());
+    drawAsCanvasPass(() => fireSceneRender(scene, viewportPassCamera()));
 
     const wrapper = scene.getObjectByName('BG')!.children.find((c) => c.type === 'Group')!;
     expect(wrapper.position.x).toBe(0);

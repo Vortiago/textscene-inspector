@@ -4,8 +4,7 @@
  * (`material_storage.cpp:2454-2502`). WebGL2 has no per-sampler bias, so a program samples each such
  * slot with `texture(sampler, uv, bias)` from one shared uniform, and a `textureGrad` read with its
  * gradients scaled by `2^bias`, which shifts the mip level by the same amount. A pass writes the
- * uniform as it renders. A pass that draws 3D materials and skips `renderWithMipmapBias` samples at
- * the last value written.
+ * uniform for each world draw (`drawWorld`), and a draw outside one samples at 0.
  */
 
 import * as THREE from 'three';
@@ -52,37 +51,15 @@ const BIASED_SAMPLES = new RegExp(
 /** Shared by every program, so one write reaches every material. Written only by this module. */
 const biasUniform: THREE.IUniform<number> = { value: 0 };
 
-/**
- * The bias of the pass rendering now, or null for a render of the main view. Written only by
- * `renderWithMipmapBias`.
- */
-let activePassBias: number | null = null;
-
-/** Runs `render` with `bias` as the bias of every program it draws: a SubViewport's pass. */
-export function renderWithMipmapBias(bias: number, render: () => void): void {
-  const previousPassBias = activePassBias;
-  const previousValue = biasUniform.value;
-  activePassBias = bias;
+/** Runs `draw` with `bias` as the bias of every program it draws. Only `drawWorld` calls it. */
+export function drawAtMipmapBias(bias: number, draw: () => void): void {
+  const previous = biasUniform.value;
   biasUniform.value = bias;
   try {
-    render();
+    draw();
   } finally {
-    activePassBias = previousPassBias;
-    biasUniform.value = previousValue;
+    biasUniform.value = previous;
   }
-}
-
-/** The bias the render now under way samples at: its pass's, or the root viewport's. */
-export function currentMipmapBias(): number {
-  return biasUniform.value;
-}
-
-/**
- * Sets the bias for a render of a scene the main view draws, which takes the root viewport's
- * `rootBias`. A SubViewport pass that renders the same scene keeps its own bias.
- */
-export function writeMainViewMipmapBias(rootBias: number): void {
-  biasUniform.value = activePassBias ?? rootBias;
 }
 
 const SAMPLER_FUNCTION = /* glsl */ `

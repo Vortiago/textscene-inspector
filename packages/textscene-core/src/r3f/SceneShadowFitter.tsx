@@ -16,7 +16,8 @@ import {
 } from './directionalShadow/fitSceneDirectionalShadows.js';
 import { sceneLights } from './directionalShadow/lightLists.js';
 import { fitScenePositionalShadows } from './positionalShadow/fitScenePositionalShadows.js';
-import { activeShadowAtlas, ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas.js';
+import { ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas.js';
+import { renderUnderWay } from './viewportRender/worldRender.js';
 import { observeSceneCamera } from './sceneRenderCamera.js';
 import { useByValue } from './hooks/useByValue.js';
 import { sameData } from '../utils/sameData.js';
@@ -73,7 +74,7 @@ export function useSceneShadowFit(scene: THREE.Scene | null): void {
     if (!scene) return undefined;
     const rootAtlas = new ViewportShadowAtlas(settings);
     const stopObserving = observeSceneCamera(scene, (camera) =>
-      prepareSceneLights(scene, camera, activeShadowAtlas() ?? rootAtlas, performance.now())
+      prepareSceneLights(scene, camera, renderUnderWay()?.shadowAtlas ?? rootAtlas, performance.now())
     );
     return () => {
       stopObserving();

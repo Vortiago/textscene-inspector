@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import {
   cameraDistance,
   createViewportCanvasCamera,
-  isViewportPass,
   observeSceneCamera,
   observeSceneCull,
   observeScenePose,
@@ -227,20 +226,6 @@ describe('createViewportCanvasCamera', () => {
     const canvasBottom = new THREE.Vector3(50, -50, 0).project(camera);
 
     expect([canvasTop.y, canvasBottom.y]).toEqual([-1, 1]);
-  });
-});
-
-describe('isViewportPass', () => {
-  it("is true for a sub-viewport's canvas camera", () => {
-    expect(isViewportPass(createViewportCanvasCamera())).toBe(true);
-  });
-
-  it('is false for any other orthographic camera, such as a Camera3D in a 3D sub-viewport', () => {
-    expect(isViewportPass(new THREE.OrthographicCamera())).toBe(false);
-  });
-
-  it('is false for a perspective camera, which frames no canvas', () => {
-    expect(isViewportPass(new THREE.PerspectiveCamera())).toBe(false);
   });
 });
 
