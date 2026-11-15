@@ -8,7 +8,14 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
+import {
+  filledPlacement,
+  inferredPlacement,
+  isTextWidthClipped,
+  trimLine,
+  type OverrunTrimFlags,
+  type OverrunTrimOptions,
+} from '../../../../r3f/controls/native/text/textOverrun';
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { defineShare } from '../../../../r3f/controls/native/solveHandoff';
 import {
@@ -468,12 +475,10 @@ interface LabelLayoutOptions extends Partial<LabelSpacing> {
   trim?: LineTrim;
 }
 
-/** The two overrun trims of `_shape` with autowrap off (`label.cpp:319-330`). */
+/** The overrun trim of `_shape` with autowrap off (`label.cpp:319-330`): its behaviour and ellipsis. It trims at the shaping width. */
 export interface LineTrim {
-  /** Trims a line that FILL did not fit first. */
-  line: (line: TextLineLayout) => TextLineLayout;
-  /** Trims a line FILL fitted, then fits it again with `justificationFlags` (`label.cpp:325`). */
-  filledLine: (line: TextLineLayout, justificationFlags: number) => TextLineLayout;
+  flags: OverrunTrimFlags;
+  options: OverrunTrimOptions;
 }
 
 /**
@@ -482,6 +487,26 @@ export interface LineTrim {
  */
 function isFitAboveMinimum(fitted: TextLineLayout, widthPx: number): boolean {
   return Math.floor(widthPx) >= Math.floor(fitted.widthPx);
+}
+
+/**
+ * Each line of `fitted` trimmed at `widthPx`. With `fillFlags`, a line FILL fitted is trimmed, then
+ * fitted again (`label.cpp:322-325`), unless its fit stopped above the smallest spaces. Null
+ * `fillFlags` trims each line in its inferred direction.
+ */
+function trimLines(
+  shaped: readonly TextLineLayout[],
+  fitted: readonly TextLineLayout[],
+  { flags, options }: LineTrim,
+  widthPx: number,
+  fillFlags: number | null
+): TextLineLayout[] {
+  const filled = fillFlags === null ? null : filledPlacement(fillFlags);
+  return fitted.map((line, index) => {
+    if (!filled || line === shaped[index]) return trimLine(line, widthPx, flags, options, inferredPlacement);
+    if (isFitAboveMinimum(line, widthPx)) return line;
+    return trimLine(line, widthPx, flags, options, filled);
+  });
 }
 
 /**
@@ -550,11 +575,13 @@ export function layoutLabelLines(
   // With autowrap off, FILL trims `OVERRUN_JUSTIFICATION_AWARE` (`label.cpp:322-325`).
   const isTrimJustificationAware = isFill && !isAutowrapped;
   const lines = trim
-    ? fitted.map((line, index) => {
-        const shaped = layout.lines[index]!;
-        if (!isTrimJustificationAware || line === shaped) return trim.line(line);
-        return isFitAboveMinimum(line, shapingWidthPx) ? line : trim.filledLine(line, justificationFlags);
-      })
+    ? trimLines(
+        layout.lines,
+        fitted,
+        trim,
+        shapingWidthPx,
+        isTrimJustificationAware ? justificationFlags : null
+      )
     : fitted;
 
   return lines.map((line, lineIndex) => {

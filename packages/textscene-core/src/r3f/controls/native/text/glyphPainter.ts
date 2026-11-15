@@ -21,7 +21,7 @@ export interface RasterFrame {
   readonly fontSizePx: number;
   readonly skew: number;
   readonly canvasLayout: CanvasTextCanvasLayout;
-  /** Whether the glyphs snap to whole item pixels (`snapsGlyphsToItemPixels`). */
+  /** Whether the glyphs snap to whole item pixels (`snapsPen`). */
   readonly snapsGlyphs: boolean;
   /** Whether the drawer rounds the pen, as a canvas item does and Label3D does not (`glyphDrawer.ts`). */
   readonly roundsPen: boolean;
@@ -39,7 +39,8 @@ export interface PlacedGlyph {
 export interface GlyphPainter {
   /**
    * Reads how far the ink of each glyph reaches at `skew`, from what the paint draws for it, on a
-   * line whose ascent is `lineAscentPx`.
+   * line whose ascent is `lineAscentPx`. The caller passes only a glyph `hasOwnGlyph` accepts: a
+   * space, a line break or a hex-code box spans its pen box (`drawnExtentPx`).
    */
   reachReader(skew: number, lineAscentPx: number): (glyph: GlyphPlacement) => GlyphReach;
   /** The raster of `glyphs` in `colours`. Null where the painter needs a 2D context and the document has none. */

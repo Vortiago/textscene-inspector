@@ -27,17 +27,16 @@ import {
   paintSceneFontCanvas,
   createCanvasTextMaterial,
   originPhase,
-  snapsGlyphsToItemPixels,
   type CanvasTextCanvasLayout,
   type CanvasTextPaintOptions,
 } from './canvasTextPainter';
 import type { SurfaceShading } from '../../../materialFor2d';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { isBitmapFontMetrics, type BitmapFontMetrics } from './bitmapFontMetrics';
-import { bitmapFloorsPen, buildBitmapQuads, createSheetTexture } from './bitmapTextPainter';
+import { buildBitmapQuads, createSheetTexture } from './bitmapTextPainter';
 import type { FillSheet } from '../../../../resources/fonts/font/types';
 import { perObject } from '../../../../utils/perObject';
-import { GLYPH_DRAWER_RULES, type GlyphDrawer } from './glyphDrawer';
+import { GLYPH_DRAWER_RULES, snapsPen, type GlyphDrawer } from './glyphDrawer';
 import type { TextLayoutResult } from './textLayout';
 import { hexCodeBoxRects } from './hexCodeBox';
 import { CanvasItemGroup, useCanvasItemOrigin } from '../../../components/CanvasItemGroup';
@@ -476,9 +475,7 @@ export function TextRunMesh({
   // that keeps its pen reads no phase, so a move never rebuilds it.
   const itemOrigin = useCanvasItemOrigin();
   const { fontMetrics } = layout;
-  const readsPhase = isBitmapFontMetrics(fontMetrics)
-    ? bitmapFloorsPen(glyphDrawer, fontSizePx, fontMetrics)
-    : isCanvasFontMetrics(fontMetrics) && snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, fontMetrics);
+  const readsPhase = snapsPen(glyphDrawer, fontSizePx, fontMetrics);
   const { x: phaseX, y: phaseY } = readsPhase ? originPhase(itemOrigin) : VECTOR2_ZERO;
   const linearTint = useItemLinearColor(tint);
   const isLinearCanvas = useCanvasColorSpace().isLinear;

@@ -675,7 +675,7 @@ describe('measuredContentMinimumSize: the label width a minimum size keeps (butt
 
 describe('trimButtonLabel: the label trimmed to its paragraph box (button.cpp:428-432, text_paragraph.cpp:286-293)', () => {
   const FONT_SIZE_PX = 16;
-  const UNWRAPPED = { isWrapped: false, fontSizePx: FONT_SIZE_PX, isDrawnRtl: false };
+  const UNWRAPPED = { isWrapped: false, fontSizePx: FONT_SIZE_PX };
 
   function shaped(
     text: string,
