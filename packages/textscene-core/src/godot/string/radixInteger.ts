@@ -31,8 +31,16 @@ const hexDigit = (char: string): bigint | undefined =>
 const binaryDigit = (char: string): bigint | undefined =>
   char === '0' || char === '1' ? BigInt(char) : undefined;
 
-/** ustring.cpp:2187 */
+/**
+ * `String::hex_to_int` (ustring.cpp:2187).
+ *
+ * @canonical Godot's reading of a hexadecimal integer text
+ */
 export const hexToInt64 = (text: string): bigint => radixToInt(text, 16n, 'x', hexDigit);
 
-/** ustring.cpp:2228 */
+/**
+ * `String::bin_to_int` (ustring.cpp:2228).
+ *
+ * @canonical Godot's reading of a binary integer text
+ */
 export const binToInt64 = (text: string): bigint => radixToInt(text, 2n, 'b', binaryDigit);

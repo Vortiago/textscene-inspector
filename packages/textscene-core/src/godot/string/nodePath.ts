@@ -225,7 +225,11 @@ export function unclaimedUniqueNames(
   );
 }
 
-/** `String(NodePath(path))` (node_path.cpp:170, 394), or `""` when an empty subname fails. */
+/**
+ * `String(NodePath(path))` (node_path.cpp:170, 394), or `""` when an empty subname fails.
+ *
+ * @canonical The text of a NodePath
+ */
 export function nodePathText(path: string): string {
   const colon = path.indexOf(':');
   const subnames = colon < 0 ? [] : path.slice(colon + 1).split(':');

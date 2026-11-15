@@ -9,7 +9,11 @@ const FLOAT_DECIMALS = 6;
 /** The most decimals `String::num` writes (`ustring.cpp:61`). */
 const MAX_DECIMALS = 32;
 
-/** `String::num`: a negative `decimals` is `rtos`, 14 less one for each power of ten over 10. */
+/**
+ * `String::num`: a negative `decimals` is `rtos`, 14 less one for each power of ten over 10.
+ *
+ * @canonical Godot's text of a float
+ */
 export function stringNum(value: number, decimals = -1): string {
   if (Number.isNaN(value)) return 'nan';
   if (!Number.isFinite(value)) return value < 0 ? '-inf' : 'inf';
@@ -36,7 +40,8 @@ export function numRealFloat(value: number, trailing: boolean): string {
 
 function numRealWith(value: number, trailing: boolean, log10: (magnitude: number) => number, base: number) {
   if (!Number.isFinite(value)) return stringNum(value, 0);
-  if (value === Number(doubleToInt64(value))) return `${doubleToInt64(value)}${trailing ? '.0' : ''}`;
+  const whole = doubleToInt64(value);
+  if (value === Number(whole)) return `${whole}${trailing ? '.0' : ''}`;
   let decimals = base;
   const magnitude = Math.abs(value);
   if (magnitude > 10) decimals -= Math.floor(log10(magnitude));

@@ -1,4 +1,4 @@
-import { INT32_MIN } from './intWidth.js';
+import { INT32_MIN, toInt32 } from './intWidth.js';
 
 export const INT64_MAX = (1n << 63n) - 1n;
 export const INT64_MIN = -(1n << 63n);
@@ -16,15 +16,24 @@ export function wrapInt64(value: bigint): bigint {
 }
 
 export function wrapInt32(value: bigint | number): number {
-  return typeof value === 'bigint' ? Number(BigInt.asIntN(32, value)) : value | 0;
+  return typeof value === 'bigint' ? Number(BigInt.asIntN(32, value)) : toInt32(value);
 }
 
-// cvttsd2si truncates, and gives the lowest integer for NaN or a value out of range.
+/**
+ * `(int64_t)` of a double: cvttsd2si truncates, and gives the lowest integer for NaN or a value out of range.
+ *
+ * @canonical The C cast of a double to int64_t
+ */
 export function doubleToInt64(value: number): bigint {
   const whole = Math.trunc(value);
   return whole >= -INT64_RANGE && whole < INT64_RANGE ? BigInt(whole) : INT64_MIN;
 }
 
+/**
+ * `(int32_t)` of a double, with the same lowest integer for NaN or a value out of range.
+ *
+ * @canonical The C cast of a double to int32_t
+ */
 export function doubleToInt32(value: number): number {
   const whole = Math.trunc(value);
   return whole >= -INT32_RANGE && whole < INT32_RANGE ? whole | 0 : INT32_MIN;

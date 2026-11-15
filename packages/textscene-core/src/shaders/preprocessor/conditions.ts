@@ -42,8 +42,12 @@ export function conditionRefusal(
 }
 
 function checkBrackets(text: string, line: number): void {
-  const opened = [...text].filter((char) => char === '(').length;
-  const closed = [...text].filter((char) => char === ')').length;
+  let opened = 0;
+  let closed = 0;
+  for (const char of text) {
+    if (char === '(') opened += 1;
+    else if (char === ')') closed += 1;
+  }
   if (opened > closed) throw expected(')', line);
   if (closed > opened) throw expected('(', line);
 }
