@@ -230,8 +230,8 @@ function withoutPropertyOverrides(node: TscnNode): TscnNode {
 interface PlainNodeProps extends DispatchedNodeProps {
   /** Extra rendered subtree appended after the node's own inline children. */
   children?: ReactNode;
-  /** Where the inline children take their tree order from. The node's own order by default. */
-  inlineChildrenOrder?: TreeOrder;
+  /** Each inline child's place in tree order, by position. Below the node's own order by default. */
+  inlineChildOrders?: readonly TreeOrder[];
 }
 
 /**
@@ -243,17 +243,18 @@ function PlainNode({
   node: authored,
   path,
   children: extraChildren,
-  inlineChildrenOrder,
+  inlineChildOrders,
 }: PlainNodeProps): ReactNode {
   // A RemoteTransform target and a path-mode CSGPolygon3D read what the live scene passes bind
   // at their path, since a sub-scene's node is shared by every instance of it (ADR-0060).
   const node = useLiveDrawnNode(authored, path);
   const ownOrder = useTreeOrder();
-  const inlineBase = inlineChildrenOrder ?? ownOrder;
-  const inlineOrders = useMemo(
-    () => childOrders(inlineBase, node.children.length),
-    [inlineBase, node.children.length]
+  const ownChildOrders = useMemo(
+    () => childOrders(ownOrder, node.children.length),
+    [ownOrder, node.children.length]
   );
+  const inlineOrders =
+    inlineChildOrders?.length === node.children.length ? inlineChildOrders : ownChildOrders;
   const { hiddenNodePaths } = useSelection();
   const workspace = useCanvasWorkspace();
   // Before the early returns, for rules-of-hooks. A node of the shared live tree reads its paint by
@@ -422,16 +423,23 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a stripped node is a new
   // object. The order is read only for a child that states an `index=`, from the loader's template,
   // whose children every consumer of the GLB shares.
+  const stripped = useMemo(
+    () => withoutDeepChildren(glbPath !== undefined ? withoutPropertyOverrides(node) : node),
+    [node, glbPath]
+  );
   const shallow = useMemo(() => {
-    const stripped = withoutDeepChildren(glbPath !== undefined ? withoutPropertyOverrides(node) : node);
     if (!glb.value || !stripped.children.some((child) => child.index !== undefined)) return stripped;
     const objects = (glbPath && loader?.glbMeshes.getCached(glbPath)) || glb.value;
     return { ...stripped, children: glbHostChildrenInOrder(objects, stripped.children) };
-  }, [node, glbPath, glb.value, loader]);
+  }, [stripped, glbPath, glb.value, loader]);
   // What the node draws while its instanced scene is unknown or missing. Memoized like `shallow`.
   const held = useMemo(() => withoutDeepChildren(withoutOverrideSubtrees(node)), [node]);
   const order = useTreeOrder();
   const groupOrders = useMemo(() => childOrders(order, 2), [order]);
+  const hostChildOrders = useMemo(
+    () => fileOrdersOf(groupOrders[INSTANCING_SCENE_NODES]!, stripped.children, shallow.children),
+    [groupOrders, stripped.children, shallow.children]
+  );
   // Unresolvable ref, cycle, refused scene or failed load: keep the node visible with a magenta
   // placeholder child, matching the missing-texture UX. Godot's editor makes a `MissingNode` here
   // (`packed_scene.cpp:267-269`), which the host's own children hang below.
@@ -465,7 +473,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   return (
     <InstanceOwnerProvider path={belowRoot(path)} editablePaths={loadedScene.editableInstances}>
       <GlbInstanceProvider node={node} path={path} glb={glb}>
-        <PlainNode node={shallow} path={path} inlineChildrenOrder={groupOrders[INSTANCING_SCENE_NODES]!}>
+        <PlainNode node={shallow} path={path} inlineChildOrders={hostChildOrders}>
           <SceneResourcesProvider
             internalResources={loadedScene.internalResources}
             externalResources={loadedScene.externalResources}
@@ -480,6 +488,21 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
       </GlbInstanceProvider>
     </InstanceOwnerProvider>
   );
+}
+
+/**
+ * The tree order of each of `drawn`, from its place in `fileOrder`. Godot enters children in the
+ * order it adds them (`node.cpp:371`), and an `index=` moves a child only after that, so the order
+ * the viewports draw and the nodes get ready in follows the file, not the `index=`.
+ */
+function fileOrdersOf(
+  base: TreeOrder,
+  fileOrder: readonly TscnNode[],
+  drawn: readonly TscnNode[]
+): readonly TreeOrder[] {
+  const orders = childOrders(base, fileOrder.length);
+  const positions = new Map(fileOrder.map((child, i) => [child, i]));
+  return drawn.map((child, i) => orders[positions.get(child) ?? i]!);
 }
 
 /** `children` in `frame`, or as they are where they read the paint pass themselves. */
