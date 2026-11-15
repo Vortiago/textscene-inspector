@@ -29,19 +29,29 @@ viewport gives each render it draws.** It is free of React and three.
 - An adapter builds a description from its source. `rootViewportDescription` reads the project
   through the `project*` readers and gives the editor's rules. `useRootViewportDescription` keeps
   one object while the project settings object holds.
-- Each render of the root reads its facts from the description: the Compositor, the 2D canvas
-  frame, `SceneMipmapBias`, the anisotropic level and the light pass. The light pass builds the root
-  atlas again when the atlas settings change by value.
-
-The SubViewport node is the second adapter, and the In-game view the third. Until they arrive, the
-three rule fields have no reader. That is the one exception to the rule that a field arrives with
-its first reader.
+- `subViewportDescription` is the second adapter. It reads a SubViewport's own properties. Where
+  the scene sets no mipmap bias or anisotropic level, it takes the root's.
+- **Every world draw runs inside `drawWorld(render, draw)`** (`r3f/viewportRender/worldRender.ts`).
+  A `WorldRender` holds the viewport's description, its shadow atlas, whether the draw goes through
+  a canvas transform, and the probe capture when there is one. The root Compositor, each SubViewport
+  pass, each Control raster pass and each reflection probe face draw this way.
+- **An observer reads the render it draws for from `renderUnderWay()`**, not from a side table of
+  cameras or targets. The shadow fitter reads the atlas, the decals the mipmap bias, the sky, fog,
+  probes and screen-space effects the probe capture, and the canvas layers the canvas transform.
+  Renders nest: a SubViewport's 3D draw inside its 2D pass reads its own render, and the outer
+  render returns after it.
+- A null `shadowAtlas` means the root's atlas, which each scene's shadow fit holds, so the probe
+  captures of that scene share it.
+- `drawsEditorChrome` has its reader in the SubViewport pass. `camera` and `previewsEnvironment`
+  keep their rules in the pass's world kind until the In-game view, the third adapter, reads them.
+  That is the one exception to the rule that a field arrives with its first reader.
 
 ## Consequences
 
 - A project's `rendering/lights_and_shadows/positional_shadow/atlas_size` and quadrant
   subdivisions reach the root's omni and spot shadows.
 - A new root fact is one field and one reader of the project, not a new read in each renderer.
+- A new observer of a render reads `renderUnderWay()`. A new kind of draw calls `drawWorld`.
 - `atlas_16_bits`, `directional_shadow/size` and the soft shadow filter quality stay constants.
   They are settings of the render server, not of a viewport.
 - A `.mobile` override of a setting is not read: the previewer models the desktop feature set.
