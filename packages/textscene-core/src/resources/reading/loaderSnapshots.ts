@@ -44,6 +44,8 @@ interface KindReads {
   readonly settled: CacheSource<object>;
   /** Written only by the snapshot's recording. A new snapshot starts it empty. */
   reads: Map<string, CachedFile<object>>;
+  /** Written only by `start`: what the snapshot before the current one read. */
+  previousReads: ReadonlyMap<string, CachedFile<object>>;
   /** Written only by `request` and the last unsubscribe: the files this source holds pinned. */
   readonly pinned: Set<string>;
 }
@@ -69,7 +71,13 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
     let found = kinds.get(fileKind);
     if (!found) {
       const cache = fileKind.cacheOf(loader);
-      found = { cache, settled: keptWhileReloading(cache), reads: new Map(), pinned: new Set() };
+      found = {
+        cache,
+        settled: keptWhileReloading(cache),
+        reads: new Map(),
+        previousReads: new Map(),
+        pinned: new Set(),
+      };
       kinds.set(fileKind, found);
     }
     return found;
@@ -78,11 +86,13 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
   /** Written only by the snapshot's address listener. A new snapshot starts it empty. */
   let addresses = new Map<string, ParsedResource | null>();
   let listeners = 0;
-  /** Written only by `start`: the recording reader of parsed files of the current snapshot. */
-  let currentParsed: CacheSource<ParsedResource> = parsed.cache as CacheSource<ParsedResource>;
 
-  const start = (): ResourceSnapshot => {
-    kinds.forEach((kind) => (kind.reads = new Map()));
+  /** A new snapshot, with the recording reader of parsed files that reads as it does. */
+  const start = (): { snapshot: ResourceSnapshot; parsedFiles: CacheSource<ParsedResource> } => {
+    kinds.forEach((kind) => {
+      kind.previousReads = kind.reads;
+      kind.reads = new Map();
+    });
     addresses = new Map();
     const found = addresses;
     const recordedIn = (kind: KindReads) => {
@@ -90,10 +100,9 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
       return recordingReads(answeredOnce(kind.settled), (path, answer) => recorded.set(path, answer));
     };
     const parsedFiles = recordedIn(parsed) as CacheSource<ParsedResource>;
-    currentParsed = parsedFiles;
     /** Written only by `loaded`: the recording reader of each kind, for this snapshot. */
     const loadedFiles = new Map<FileKind<object>, CacheSource<object>>();
-    return snapshotOver({
+    const snapshot = snapshotOver({
       ...parsedFiles,
       loaded(fileKind, address) {
         let files = loadedFiles.get(fileKind);
@@ -102,8 +111,9 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
       },
       onAddress: (address, file) => found.set(address, file),
     });
+    return { snapshot, parsedFiles };
   };
-  let snapshot = start();
+  let current = start();
   const isStale = () => {
     for (const { reads, settled } of kinds.values()) {
       for (const [path, answer] of reads) if (settled.getCached(path) !== answer) return true;
@@ -113,15 +123,15 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
 
   return {
     current() {
-      if (isStale()) snapshot = start();
-      return snapshot;
+      if (isStale()) current = start();
+      return current.snapshot;
     },
     restart() {
-      snapshot = start();
+      current = start();
     },
     parsedFiles() {
-      if (isStale()) snapshot = start();
-      return currentParsed;
+      if (isStale()) current = start();
+      return current.parsedFiles;
     },
     request() {
       kinds.forEach(requestReads);
@@ -154,15 +164,19 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
   };
 }
 
-/** Requests and pins each file `kind` read, and unpins each it no longer reads. */
-function requestReads({ cache, reads, pinned }: KindReads): void {
+/**
+ * Requests and pins each file `kind` read, and unpins each that neither the current snapshot nor
+ * the one before it read. A reader may read again on a new snapshot after this runs, so a file
+ * leaves the pins one snapshot after its last read.
+ */
+function requestReads({ cache, reads, previousReads, pinned }: KindReads): void {
   for (const path of reads.keys()) {
     if (!pinned.has(path)) cache.pin(path);
     pinned.add(path);
     if (cache.getCached(path) === undefined && !cache.isLoading(path)) cache.request(path);
   }
   for (const path of pinned) {
-    if (reads.has(path)) continue;
+    if (reads.has(path) || previousReads.has(path)) continue;
     cache.unpin(path);
     pinned.delete(path);
   }
