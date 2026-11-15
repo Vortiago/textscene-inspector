@@ -1,7 +1,6 @@
 /** The tokenizer, against what Godot's `_get_token` (`shader_language.cpp:407`) gives. */
 
 import { describe, expect, it } from 'vitest';
-import { ShadingLanguageError } from './shadingLanguageError.js';
 import { tokenize } from './tokenizer.js';
 
 const types = (source: string) => tokenize(source).map((token) => token.type);
@@ -80,20 +79,34 @@ describe('tokenize', () => {
   });
 });
 
-describe('preprocessor directives', () => {
-  it('refuses a directive as its row, with the issue that owns it', () => {
-    let error: unknown;
-    try {
-      tokenize('#define X 1\nfloat f() { return 1.0; }');
-    } catch (caught) {
-      error = caught;
-    }
-    expect(error).toBeInstanceOf(ShadingLanguageError);
-    expect((error as ShadingLanguageError).reason).toBe("'#define' is not transpiled yet (#1828)");
-    expect((error as ShadingLanguageError).owner).toBe('#1828');
+describe('a directive the preprocessor left', () => {
+  it("is Godot's unknown character, as the compiler reads a text the preprocessor refused", () => {
+    expect(() => tokenize('float a;\n#define X 1')).toThrow("2:1: Tokenizer: Unknown character #35: '#'");
+  });
+});
+
+describe('include markers', () => {
+  it("reads the lines between the markers as the include's, from line 1", () => {
+    const tokens = tokenize(
+      'a\n@@>res://b.gdshaderinc\nb\n\n@@<res://b.gdshaderinc\n\nc',
+      'res://s.gdshader'
+    );
+    expect(tokens.slice(0, 3).map((token) => [token.text, token.position.file, token.position.line])).toEqual(
+      [
+        ['a', 'res://s.gdshader', 1],
+        ['b', 'res://b.gdshaderinc', 1],
+        ['c', 'res://s.gdshader', 3],
+      ]
+    );
   });
 
-  it("gives Godot's message for an unknown directive", () => {
-    expect(() => tokenize('# frobnicate')).toThrow(/Unknown directive\./);
+  it("refuses an exit marker with no enter marker with Godot's message", () => {
+    expect(() => tokenize('@@<res://b.gdshaderinc\n')).toThrow(
+      'Invalid include exit hint @@< without matching enter hint.'
+    );
+  });
+
+  it("refuses an '@' that starts no marker with Godot's message", () => {
+    expect(() => tokenize('a @ b')).toThrow('Invalid include enter/exit hint token (@@> and @@<)');
   });
 });

@@ -37,6 +37,7 @@ import {
   ShadingLanguageError,
   transpileShadingLanguage,
 } from '@textscene/three-godot-shaders';
+import { probeShaderOptions } from './probeIncludes.mjs';
 
 const CONSTRUCT = {
   bvec2,
@@ -145,7 +146,9 @@ function colourOf(bits) {
  */
 function runProbe(spec) {
   try {
-    const probe = transpileShadingLanguage(spec.source).functions.get('probe');
+    const probe = transpileShadingLanguage(spec.source, probeShaderOptions(spec.includes)).functions.get(
+      'probe'
+    );
     if (!probe) return { error: 'the transpilation has no function probe', isRefusal: false };
     return { bits: resultBits(probe, spec) };
   } catch (error) {

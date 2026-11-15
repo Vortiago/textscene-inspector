@@ -59,14 +59,7 @@ function causeRows(knownProgramDifferences) {
   return [...byCause].map(([cause, { owner, count }]) => `| ${cell(cause)} | ${count} | ${owner} |`);
 }
 
-function randomSection({
-  programs,
-  seed,
-  transpiledRows,
-  knownDifferences,
-  knownProgramDifferences,
-  loweredAway,
-}) {
+function randomSection({ programs, seed, rootRows, knownDifferences, knownProgramDifferences, loweredAway }) {
   const cases = Object.keys(knownDifferences).length;
   const named = Object.values(knownDifferences).filter((each) => each.program !== undefined).length;
   const differing = named + Object.keys(knownProgramDifferences).length;
@@ -75,7 +68,7 @@ function randomSection({
 
 A generator writes random functions that are correct by type, from the signatures of the transpiled rows only, so each slice that transpiles rows gets random programs over them with no change to the generator. Operators take only the brackets Godot's priorities need, so a program tests the order of evaluation as a user's shader does.
 
-The fixed set has seed ${seed}: ${programs.length} programs, one rooted at each of the ${transpiledRows} transpiled rows, the rest with random roots, and ${withFunctions} that declare functions of their own. Such a program declares one to three functions, and each may call an earlier one. They hold \`in\`, \`const in\`, \`out\` and \`inout\` parameters, struct and array arguments and results, \`void\` functions, and an early \`return\` in a branch or a loop. A written argument is a variable, a member, an element or a swizzle, and an element's index may be a variable that another argument of the call writes. Godot accepts every one. \`pnpm godot:probes\` asks Godot for its result bits, and \`pnpm test:shaders:gpu\` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN in a float lane.
+The fixed set has seed ${seed}: ${programs.length} programs, one rooted at each of the ${rootRows} transpiled rows a program can produce, the rest with random roots, and ${withFunctions} that declare functions of their own. Such a program declares one to three functions, and each may call an earlier one. They hold \`in\`, \`const in\`, \`out\` and \`inout\` parameters, struct and array arguments and results, \`void\` functions, and an early \`return\` in a branch or a loop. A written argument is a variable, a member, an element or a swizzle, and an element's index may be a variable that another argument of the call writes. Godot accepts every one. \`pnpm godot:probes\` asks Godot for its result bits, and \`pnpm test:shaders:gpu\` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN in a float lane.
 
 **${programs.length - differing} of ${programs.length} random programs bit-equal with Godot, NaN lanes compared as NaN. The other ${differing} are listed, each with its cause.**
 

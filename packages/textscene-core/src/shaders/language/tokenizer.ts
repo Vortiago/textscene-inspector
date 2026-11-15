@@ -5,7 +5,7 @@
  * Godot's message.
  */
 
-import { instruction, KEYWORD_TOKENS, notTranspiled } from './instructions.js';
+import { KEYWORD_TOKENS } from './instructions.js';
 import { ShadingLanguageError, type SourcePosition } from './shadingLanguageError.js';
 
 export interface Token {
@@ -73,7 +73,7 @@ const isIdentifierChar = (char: string) => /^[A-Za-z0-9_]$/.test(char);
 /** Every token of `source`, ending with `TK_EOF`. `file` names the shader in each position. */
 export function tokenize(source: string, file = ''): Token[] {
   const tokens: Token[] = [];
-  const cursor = { file, index: 0, line: 1, lineStart: 0 };
+  const cursor = { file, index: 0, line: 1, lineStart: 0, includes: [] };
   for (;;) {
     const token = nextToken(source, cursor);
     tokens.push(token);
@@ -82,11 +82,12 @@ export function tokenize(source: string, file = ''): Token[] {
 }
 
 interface Cursor {
-  readonly file: string;
+  file: string;
   index: number;
   line: number;
   /** The index of the first character of the cursor's line. */
   lineStart: number;
+  readonly includes: { readonly file: string; readonly line: number }[];
 }
 
 const positionOf = (cursor: Cursor): SourcePosition => ({
@@ -118,6 +119,10 @@ function nextToken(source: string, cursor: Cursor): Token {
       if (!skipComment(source, cursor)) return { type: 'TK_EOF', position: positionOf(cursor) };
       continue;
     }
+    if (char === '@') {
+      readIncludeMarker(source, cursor);
+      continue;
+    }
     return readToken(source, cursor, char);
   }
 }
@@ -145,15 +150,6 @@ function skipComment(source: string, cursor: Cursor): boolean {
 function readToken(source: string, cursor: Cursor, char: string): Token {
   const position = positionOf(cursor);
   if (char === '"') return readString(source, cursor);
-  if (char === '#') throw directiveRefusal(source, cursor, position);
-  if (char === '@') {
-    const owner = instruction('#include')!.owner;
-    throw new ShadingLanguageError(
-      `An include marker comes from the preprocessor, which is not transpiled yet (${owner})`,
-      position,
-      owner
-    );
-  }
   if (isDigit(char) || (char === '.' && isDigit(source[cursor.index + 1] ?? '')))
     return readNumber(source, cursor);
   if (char === '.') {
@@ -173,15 +169,27 @@ function readToken(source: string, cursor: Cursor, char: string): Token {
   );
 }
 
-/**
- * The refusal of a preprocessor directive: Godot's preprocessor reads every `#` line before the
- * shader is parsed (`process_directive`, `shader_preprocessor.cpp:377`), and it is not transpiled yet.
- */
-function directiveRefusal(source: string, cursor: Cursor, position: SourcePosition): ShadingLanguageError {
-  const name = /^#[ \t]*(\w*)/.exec(source.slice(cursor.index))![1];
-  const row = instruction(`#${name}`);
-  if (!row) return new ShadingLanguageError('Unknown directive.', position);
-  return notTranspiled(row, position);
+/** shader_language.cpp:658 */
+function readIncludeMarker(source: string, cursor: Cursor): void {
+  const position = positionOf(cursor);
+  const kind = source.slice(cursor.index + 1, cursor.index + 3);
+  if (kind !== '@>' && kind !== '@<')
+    throw new ShadingLanguageError('Invalid include enter/exit hint token (@@> and @@<)', position);
+  const lineEnd = source.indexOf('\n', cursor.index);
+  const end = lineEnd === -1 ? source.length : lineEnd;
+  const path = source.slice(cursor.index + 3, end);
+  cursor.index = end;
+  if (kind === '@>') {
+    cursor.includes.push({ file: cursor.file, line: cursor.line });
+    cursor.file = path;
+    cursor.line = 0;
+    return;
+  }
+  const outer = cursor.includes.pop();
+  if (outer === undefined)
+    throw new ShadingLanguageError('Invalid include exit hint @@< without matching enter hint.', position);
+  cursor.file = outer.file;
+  cursor.line = outer.line - 1;
 }
 
 function readIdentifier(source: string, cursor: Cursor): Token {

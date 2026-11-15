@@ -15,6 +15,9 @@ export {
 } from '@textscene/core/shaders';
 export type {
   NodeOutput,
+  RenderingMethod,
+  ShaderInclude,
+  ShaderOptions,
   SkyFog,
   SkyLight,
   SkyScene,

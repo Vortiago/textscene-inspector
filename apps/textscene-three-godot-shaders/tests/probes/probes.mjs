@@ -13,6 +13,7 @@ import { FOLDED_CALL_PROBES } from './foldedCallProbes.mjs';
 import { FUNCTION_PROBES } from './functionProbes.mjs';
 import { STATEMENT_PROBES } from './statementProbes.mjs';
 import { LANGUAGE_PROBES, probeOf } from './languageProbes.mjs';
+import { PREPROCESSOR_PROBES } from './preprocessorProbes.mjs';
 
 /** The float vector types of this slice. */
 const VECTORS = ['vec2', 'vec3', 'vec4'];
@@ -327,5 +328,6 @@ export const PROBES = [
   ...FUNCTION_PROBES,
   ...BUILT_IN_FUNCTION_PROBES,
   ...FOLDED_CALL_PROBES,
+  ...PREPROCESSOR_PROBES,
   ...generatedProbes(FLOAT_ROW_PROBES),
 ];
