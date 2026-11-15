@@ -1104,22 +1104,22 @@ isinf(float)	function	servers/rendering/shader_language.cpp:2940	#1826		bool	(fl
 isinf(vec2)	function	servers/rendering/shader_language.cpp:2941	#1826		bvec2	(vec2)	lowered: abs(x) == infinity	lowered: abs(x) == infinity
 isinf(vec3)	function	servers/rendering/shader_language.cpp:2942	#1826		bvec3	(vec3)	lowered: abs(x) == infinity	lowered: abs(x) == infinity
 isinf(vec4)	function	servers/rendering/shader_language.cpp:2943	#1826		bvec4	(vec4)	lowered: abs(x) == infinity	lowered: abs(x) == infinity
-floatBitsToInt(float)	function	servers/rendering/shader_language.cpp:2947	#1827		int	(float)		
-floatBitsToInt(vec2)	function	servers/rendering/shader_language.cpp:2948	#1827		ivec2	(vec2)		
-floatBitsToInt(vec3)	function	servers/rendering/shader_language.cpp:2949	#1827		ivec3	(vec3)		
-floatBitsToInt(vec4)	function	servers/rendering/shader_language.cpp:2950	#1827		ivec4	(vec4)		
-floatBitsToUint(float)	function	servers/rendering/shader_language.cpp:2954	#1827		uint	(float)		
-floatBitsToUint(vec2)	function	servers/rendering/shader_language.cpp:2955	#1827		uvec2	(vec2)		
-floatBitsToUint(vec3)	function	servers/rendering/shader_language.cpp:2956	#1827		uvec3	(vec3)		
-floatBitsToUint(vec4)	function	servers/rendering/shader_language.cpp:2957	#1827		uvec4	(vec4)		
-intBitsToFloat(int)	function	servers/rendering/shader_language.cpp:2961	#1827		float	(int)		
-intBitsToFloat(ivec2)	function	servers/rendering/shader_language.cpp:2962	#1827		vec2	(ivec2)		
-intBitsToFloat(ivec3)	function	servers/rendering/shader_language.cpp:2963	#1827		vec3	(ivec3)		
-intBitsToFloat(ivec4)	function	servers/rendering/shader_language.cpp:2964	#1827		vec4	(ivec4)		
-uintBitsToFloat(uint)	function	servers/rendering/shader_language.cpp:2968	#1827		float	(uint)		
-uintBitsToFloat(uvec2)	function	servers/rendering/shader_language.cpp:2969	#1827		vec2	(uvec2)		
-uintBitsToFloat(uvec3)	function	servers/rendering/shader_language.cpp:2970	#1827		vec3	(uvec3)		
-uintBitsToFloat(uvec4)	function	servers/rendering/shader_language.cpp:2971	#1827		vec4	(uvec4)		
+floatBitsToInt(float)	function	servers/rendering/shader_language.cpp:2947	#1827		int	(float)	native	native
+floatBitsToInt(vec2)	function	servers/rendering/shader_language.cpp:2948	#1827		ivec2	(vec2)	native	native
+floatBitsToInt(vec3)	function	servers/rendering/shader_language.cpp:2949	#1827		ivec3	(vec3)	native	native
+floatBitsToInt(vec4)	function	servers/rendering/shader_language.cpp:2950	#1827		ivec4	(vec4)	native	native
+floatBitsToUint(float)	function	servers/rendering/shader_language.cpp:2954	#1827		uint	(float)	native	native
+floatBitsToUint(vec2)	function	servers/rendering/shader_language.cpp:2955	#1827		uvec2	(vec2)	native	native
+floatBitsToUint(vec3)	function	servers/rendering/shader_language.cpp:2956	#1827		uvec3	(vec3)	native	native
+floatBitsToUint(vec4)	function	servers/rendering/shader_language.cpp:2957	#1827		uvec4	(vec4)	native	native
+intBitsToFloat(int)	function	servers/rendering/shader_language.cpp:2961	#1827		float	(int)	native	native
+intBitsToFloat(ivec2)	function	servers/rendering/shader_language.cpp:2962	#1827		vec2	(ivec2)	native	native
+intBitsToFloat(ivec3)	function	servers/rendering/shader_language.cpp:2963	#1827		vec3	(ivec3)	native	native
+intBitsToFloat(ivec4)	function	servers/rendering/shader_language.cpp:2964	#1827		vec4	(ivec4)	native	native
+uintBitsToFloat(uint)	function	servers/rendering/shader_language.cpp:2968	#1827		float	(uint)	native	native
+uintBitsToFloat(uvec2)	function	servers/rendering/shader_language.cpp:2969	#1827		vec2	(uvec2)	native	native
+uintBitsToFloat(uvec3)	function	servers/rendering/shader_language.cpp:2970	#1827		vec3	(uvec3)	native	native
+uintBitsToFloat(uvec4)	function	servers/rendering/shader_language.cpp:2971	#1827		vec4	(uvec4)	native	native
 length(float)	function	servers/rendering/shader_language.cpp:2976	#1826		float	(float)	native	native
 length(vec2)	function	servers/rendering/shader_language.cpp:2977	#1826		float	(vec2)	native	native
 length(vec3)	function	servers/rendering/shader_language.cpp:2978	#1826		float	(vec3)	native	native
@@ -1366,129 +1366,129 @@ textureQueryLevels(sampler3D)	function (high_end)	servers/rendering/shader_langu
 textureQueryLevels(isampler3D)	function (high_end)	servers/rendering/shader_language.cpp:3330	#1829		int	(isampler3D)		
 textureQueryLevels(usampler3D)	function (high_end)	servers/rendering/shader_language.cpp:3331	#1829		int	(usampler3D)		
 textureQueryLevels(samplerCube)	function (high_end)	servers/rendering/shader_language.cpp:3332	#1829		int	(samplerCube)		
-dFdx(float)	function	servers/rendering/shader_language.cpp:3336	#1827		float	(float)		
-dFdx(vec2)	function	servers/rendering/shader_language.cpp:3337	#1827		vec2	(vec2)		
-dFdx(vec3)	function	servers/rendering/shader_language.cpp:3338	#1827		vec3	(vec3)		
-dFdx(vec4)	function	servers/rendering/shader_language.cpp:3339	#1827		vec4	(vec4)		
-dFdxCoarse(float)	function (high_end)	servers/rendering/shader_language.cpp:3343	#1827		float	(float)		
-dFdxCoarse(vec2)	function (high_end)	servers/rendering/shader_language.cpp:3344	#1827		vec2	(vec2)		
-dFdxCoarse(vec3)	function (high_end)	servers/rendering/shader_language.cpp:3345	#1827		vec3	(vec3)		
-dFdxCoarse(vec4)	function (high_end)	servers/rendering/shader_language.cpp:3346	#1827		vec4	(vec4)		
-dFdxFine(float)	function (high_end)	servers/rendering/shader_language.cpp:3350	#1827		float	(float)		
-dFdxFine(vec2)	function (high_end)	servers/rendering/shader_language.cpp:3351	#1827		vec2	(vec2)		
-dFdxFine(vec3)	function (high_end)	servers/rendering/shader_language.cpp:3352	#1827		vec3	(vec3)		
-dFdxFine(vec4)	function (high_end)	servers/rendering/shader_language.cpp:3353	#1827		vec4	(vec4)		
-dFdy(float)	function	servers/rendering/shader_language.cpp:3357	#1827		float	(float)		
-dFdy(vec2)	function	servers/rendering/shader_language.cpp:3358	#1827		vec2	(vec2)		
-dFdy(vec3)	function	servers/rendering/shader_language.cpp:3359	#1827		vec3	(vec3)		
-dFdy(vec4)	function	servers/rendering/shader_language.cpp:3360	#1827		vec4	(vec4)		
-dFdyCoarse(float)	function (high_end)	servers/rendering/shader_language.cpp:3364	#1827		float	(float)		
-dFdyCoarse(vec2)	function (high_end)	servers/rendering/shader_language.cpp:3365	#1827		vec2	(vec2)		
-dFdyCoarse(vec3)	function (high_end)	servers/rendering/shader_language.cpp:3366	#1827		vec3	(vec3)		
-dFdyCoarse(vec4)	function (high_end)	servers/rendering/shader_language.cpp:3367	#1827		vec4	(vec4)		
-dFdyFine(float)	function (high_end)	servers/rendering/shader_language.cpp:3371	#1827		float	(float)		
-dFdyFine(vec2)	function (high_end)	servers/rendering/shader_language.cpp:3372	#1827		vec2	(vec2)		
-dFdyFine(vec3)	function (high_end)	servers/rendering/shader_language.cpp:3373	#1827		vec3	(vec3)		
-dFdyFine(vec4)	function (high_end)	servers/rendering/shader_language.cpp:3374	#1827		vec4	(vec4)		
-fwidth(float)	function	servers/rendering/shader_language.cpp:3378	#1827		float	(float)		
-fwidth(vec2)	function	servers/rendering/shader_language.cpp:3379	#1827		vec2	(vec2)		
-fwidth(vec3)	function	servers/rendering/shader_language.cpp:3380	#1827		vec3	(vec3)		
-fwidth(vec4)	function	servers/rendering/shader_language.cpp:3381	#1827		vec4	(vec4)		
-fwidthCoarse(float)	function (high_end)	servers/rendering/shader_language.cpp:3385	#1827		float	(float)		
-fwidthCoarse(vec2)	function (high_end)	servers/rendering/shader_language.cpp:3386	#1827		vec2	(vec2)		
-fwidthCoarse(vec3)	function (high_end)	servers/rendering/shader_language.cpp:3387	#1827		vec3	(vec3)		
-fwidthCoarse(vec4)	function (high_end)	servers/rendering/shader_language.cpp:3388	#1827		vec4	(vec4)		
-fwidthFine(float)	function (high_end)	servers/rendering/shader_language.cpp:3392	#1827		float	(float)		
-fwidthFine(vec2)	function (high_end)	servers/rendering/shader_language.cpp:3393	#1827		vec2	(vec2)		
-fwidthFine(vec3)	function (high_end)	servers/rendering/shader_language.cpp:3394	#1827		vec3	(vec3)		
-fwidthFine(vec4)	function (high_end)	servers/rendering/shader_language.cpp:3395	#1827		vec4	(vec4)		
+dFdx(float)	function	servers/rendering/shader_language.cpp:3336	#1827		float	(float)	native	native
+dFdx(vec2)	function	servers/rendering/shader_language.cpp:3337	#1827		vec2	(vec2)	native	native
+dFdx(vec3)	function	servers/rendering/shader_language.cpp:3338	#1827		vec3	(vec3)	native	native
+dFdx(vec4)	function	servers/rendering/shader_language.cpp:3339	#1827		vec4	(vec4)	native	native
+dFdxCoarse(float)	function (high_end)	servers/rendering/shader_language.cpp:3343	#1827		float	(float)	lowered: nearest form dFdx, coarse not shown on the test driver	lowered: nearest form dFdx, coarse not shown on the test driver
+dFdxCoarse(vec2)	function (high_end)	servers/rendering/shader_language.cpp:3344	#1827		vec2	(vec2)	lowered: nearest form dFdx, coarse not shown on the test driver	lowered: nearest form dFdx, coarse not shown on the test driver
+dFdxCoarse(vec3)	function (high_end)	servers/rendering/shader_language.cpp:3345	#1827		vec3	(vec3)	lowered: nearest form dFdx, coarse not shown on the test driver	lowered: nearest form dFdx, coarse not shown on the test driver
+dFdxCoarse(vec4)	function (high_end)	servers/rendering/shader_language.cpp:3346	#1827		vec4	(vec4)	lowered: nearest form dFdx, coarse not shown on the test driver	lowered: nearest form dFdx, coarse not shown on the test driver
+dFdxFine(float)	function (high_end)	servers/rendering/shader_language.cpp:3350	#1827		float	(float)	lowered: nearest form dFdx, fine not shown on the test driver	lowered: nearest form dFdx, fine not shown on the test driver
+dFdxFine(vec2)	function (high_end)	servers/rendering/shader_language.cpp:3351	#1827		vec2	(vec2)	lowered: nearest form dFdx, fine not shown on the test driver	lowered: nearest form dFdx, fine not shown on the test driver
+dFdxFine(vec3)	function (high_end)	servers/rendering/shader_language.cpp:3352	#1827		vec3	(vec3)	lowered: nearest form dFdx, fine not shown on the test driver	lowered: nearest form dFdx, fine not shown on the test driver
+dFdxFine(vec4)	function (high_end)	servers/rendering/shader_language.cpp:3353	#1827		vec4	(vec4)	lowered: nearest form dFdx, fine not shown on the test driver	lowered: nearest form dFdx, fine not shown on the test driver
+dFdy(float)	function	servers/rendering/shader_language.cpp:3357	#1827		float	(float)	native	native
+dFdy(vec2)	function	servers/rendering/shader_language.cpp:3358	#1827		vec2	(vec2)	native	native
+dFdy(vec3)	function	servers/rendering/shader_language.cpp:3359	#1827		vec3	(vec3)	native	native
+dFdy(vec4)	function	servers/rendering/shader_language.cpp:3360	#1827		vec4	(vec4)	native	native
+dFdyCoarse(float)	function (high_end)	servers/rendering/shader_language.cpp:3364	#1827		float	(float)	lowered: nearest form dFdy, coarse not shown on the test driver	lowered: nearest form dFdy, coarse not shown on the test driver
+dFdyCoarse(vec2)	function (high_end)	servers/rendering/shader_language.cpp:3365	#1827		vec2	(vec2)	lowered: nearest form dFdy, coarse not shown on the test driver	lowered: nearest form dFdy, coarse not shown on the test driver
+dFdyCoarse(vec3)	function (high_end)	servers/rendering/shader_language.cpp:3366	#1827		vec3	(vec3)	lowered: nearest form dFdy, coarse not shown on the test driver	lowered: nearest form dFdy, coarse not shown on the test driver
+dFdyCoarse(vec4)	function (high_end)	servers/rendering/shader_language.cpp:3367	#1827		vec4	(vec4)	lowered: nearest form dFdy, coarse not shown on the test driver	lowered: nearest form dFdy, coarse not shown on the test driver
+dFdyFine(float)	function (high_end)	servers/rendering/shader_language.cpp:3371	#1827		float	(float)	lowered: nearest form dFdy, fine not shown on the test driver	lowered: nearest form dFdy, fine not shown on the test driver
+dFdyFine(vec2)	function (high_end)	servers/rendering/shader_language.cpp:3372	#1827		vec2	(vec2)	lowered: nearest form dFdy, fine not shown on the test driver	lowered: nearest form dFdy, fine not shown on the test driver
+dFdyFine(vec3)	function (high_end)	servers/rendering/shader_language.cpp:3373	#1827		vec3	(vec3)	lowered: nearest form dFdy, fine not shown on the test driver	lowered: nearest form dFdy, fine not shown on the test driver
+dFdyFine(vec4)	function (high_end)	servers/rendering/shader_language.cpp:3374	#1827		vec4	(vec4)	lowered: nearest form dFdy, fine not shown on the test driver	lowered: nearest form dFdy, fine not shown on the test driver
+fwidth(float)	function	servers/rendering/shader_language.cpp:3378	#1827		float	(float)	native	native
+fwidth(vec2)	function	servers/rendering/shader_language.cpp:3379	#1827		vec2	(vec2)	native	native
+fwidth(vec3)	function	servers/rendering/shader_language.cpp:3380	#1827		vec3	(vec3)	native	native
+fwidth(vec4)	function	servers/rendering/shader_language.cpp:3381	#1827		vec4	(vec4)	native	native
+fwidthCoarse(float)	function (high_end)	servers/rendering/shader_language.cpp:3385	#1827		float	(float)	lowered: nearest form fwidth, coarse not shown on the test driver	lowered: nearest form fwidth, coarse not shown on the test driver
+fwidthCoarse(vec2)	function (high_end)	servers/rendering/shader_language.cpp:3386	#1827		vec2	(vec2)	lowered: nearest form fwidth, coarse not shown on the test driver	lowered: nearest form fwidth, coarse not shown on the test driver
+fwidthCoarse(vec3)	function (high_end)	servers/rendering/shader_language.cpp:3387	#1827		vec3	(vec3)	lowered: nearest form fwidth, coarse not shown on the test driver	lowered: nearest form fwidth, coarse not shown on the test driver
+fwidthCoarse(vec4)	function (high_end)	servers/rendering/shader_language.cpp:3388	#1827		vec4	(vec4)	lowered: nearest form fwidth, coarse not shown on the test driver	lowered: nearest form fwidth, coarse not shown on the test driver
+fwidthFine(float)	function (high_end)	servers/rendering/shader_language.cpp:3392	#1827		float	(float)	lowered: nearest form fwidth, fine not shown on the test driver	lowered: nearest form fwidth, fine not shown on the test driver
+fwidthFine(vec2)	function (high_end)	servers/rendering/shader_language.cpp:3393	#1827		vec2	(vec2)	lowered: nearest form fwidth, fine not shown on the test driver	lowered: nearest form fwidth, fine not shown on the test driver
+fwidthFine(vec3)	function (high_end)	servers/rendering/shader_language.cpp:3394	#1827		vec3	(vec3)	lowered: nearest form fwidth, fine not shown on the test driver	lowered: nearest form fwidth, fine not shown on the test driver
+fwidthFine(vec4)	function (high_end)	servers/rendering/shader_language.cpp:3395	#1827		vec4	(vec4)	lowered: nearest form fwidth, fine not shown on the test driver	lowered: nearest form fwidth, fine not shown on the test driver
 length[array]()	function	servers/rendering/shader_language.cpp:3400	#1824		int	()	native	native
-fma(float,float,float)	function (high_end)	servers/rendering/shader_language.cpp:3405	#1827		float	(float,float,float)		
-fma(vec2,vec2,vec2)	function (high_end)	servers/rendering/shader_language.cpp:3406	#1827		vec2	(vec2,vec2,vec2)		
-fma(vec3,vec3,vec3)	function (high_end)	servers/rendering/shader_language.cpp:3407	#1827		vec3	(vec3,vec3,vec3)		
-fma(vec4,vec4,vec4)	function (high_end)	servers/rendering/shader_language.cpp:3408	#1827		vec4	(vec4,vec4,vec4)		
-packHalf2x16(vec2)	function	servers/rendering/shader_language.cpp:3412	#1827		uint	(vec2)		
-packUnorm2x16(vec2)	function	servers/rendering/shader_language.cpp:3413	#1827		uint	(vec2)		
-packSnorm2x16(vec2)	function	servers/rendering/shader_language.cpp:3414	#1827		uint	(vec2)		
-packUnorm4x8(vec4)	function	servers/rendering/shader_language.cpp:3415	#1827		uint	(vec4)		
-packSnorm4x8(vec4)	function	servers/rendering/shader_language.cpp:3416	#1827		uint	(vec4)		
-unpackHalf2x16(uint)	function	servers/rendering/shader_language.cpp:3418	#1827		vec2	(uint)		
-unpackUnorm2x16(uint)	function	servers/rendering/shader_language.cpp:3419	#1827		vec2	(uint)		
-unpackSnorm2x16(uint)	function	servers/rendering/shader_language.cpp:3420	#1827		vec2	(uint)		
-unpackUnorm4x8(uint)	function	servers/rendering/shader_language.cpp:3421	#1827		vec4	(uint)		
-unpackSnorm4x8(uint)	function	servers/rendering/shader_language.cpp:3422	#1827		vec4	(uint)		
-bitfieldExtract(int,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3426	#1827		int	(int,int,int)		
-bitfieldExtract(ivec2,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3427	#1827		ivec2	(ivec2,int,int)		
-bitfieldExtract(ivec3,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3428	#1827		ivec3	(ivec3,int,int)		
-bitfieldExtract(ivec4,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3429	#1827		ivec4	(ivec4,int,int)		
-bitfieldExtract(uint,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3431	#1827		uint	(uint,int,int)		
-bitfieldExtract(uvec2,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3432	#1827		uvec2	(uvec2,int,int)		
-bitfieldExtract(uvec3,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3433	#1827		uvec3	(uvec3,int,int)		
-bitfieldExtract(uvec4,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3434	#1827		uvec4	(uvec4,int,int)		
-bitfieldInsert(int,int,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3438	#1827		int	(int,int,int,int)		
-bitfieldInsert(ivec2,ivec2,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3439	#1827		ivec2	(ivec2,ivec2,int,int)		
-bitfieldInsert(ivec3,ivec3,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3440	#1827		ivec3	(ivec3,ivec3,int,int)		
-bitfieldInsert(ivec4,ivec4,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3441	#1827		ivec4	(ivec4,ivec4,int,int)		
-bitfieldInsert(uint,uint,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3443	#1827		uint	(uint,uint,int,int)		
-bitfieldInsert(uvec2,uvec2,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3444	#1827		uvec2	(uvec2,uvec2,int,int)		
-bitfieldInsert(uvec3,uvec3,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3445	#1827		uvec3	(uvec3,uvec3,int,int)		
-bitfieldInsert(uvec4,uvec4,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3446	#1827		uvec4	(uvec4,uvec4,int,int)		
-bitfieldReverse(int)	function (high_end)	servers/rendering/shader_language.cpp:3450	#1827		int	(int)		
-bitfieldReverse(ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3451	#1827		ivec2	(ivec2)		
-bitfieldReverse(ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3452	#1827		ivec3	(ivec3)		
-bitfieldReverse(ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3453	#1827		ivec4	(ivec4)		
-bitfieldReverse(uint)	function (high_end)	servers/rendering/shader_language.cpp:3455	#1827		uint	(uint)		
-bitfieldReverse(uvec2)	function (high_end)	servers/rendering/shader_language.cpp:3456	#1827		uvec2	(uvec2)		
-bitfieldReverse(uvec3)	function (high_end)	servers/rendering/shader_language.cpp:3457	#1827		uvec3	(uvec3)		
-bitfieldReverse(uvec4)	function (high_end)	servers/rendering/shader_language.cpp:3458	#1827		uvec4	(uvec4)		
-bitCount(int)	function (high_end)	servers/rendering/shader_language.cpp:3462	#1827		int	(int)		
-bitCount(ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3463	#1827		ivec2	(ivec2)		
-bitCount(ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3464	#1827		ivec3	(ivec3)		
-bitCount(ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3465	#1827		ivec4	(ivec4)		
-bitCount(uint)	function (high_end)	servers/rendering/shader_language.cpp:3467	#1827		uint	(uint)		
-bitCount(uvec2)	function (high_end)	servers/rendering/shader_language.cpp:3468	#1827		uvec2	(uvec2)		
-bitCount(uvec3)	function (high_end)	servers/rendering/shader_language.cpp:3469	#1827		uvec3	(uvec3)		
-bitCount(uvec4)	function (high_end)	servers/rendering/shader_language.cpp:3470	#1827		uvec4	(uvec4)		
-findLSB(int)	function (high_end)	servers/rendering/shader_language.cpp:3474	#1827		int	(int)		
-findLSB(ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3475	#1827		ivec2	(ivec2)		
-findLSB(ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3476	#1827		ivec3	(ivec3)		
-findLSB(ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3477	#1827		ivec4	(ivec4)		
-findLSB(uint)	function (high_end)	servers/rendering/shader_language.cpp:3479	#1827		uint	(uint)		
-findLSB(uvec2)	function (high_end)	servers/rendering/shader_language.cpp:3480	#1827		uvec2	(uvec2)		
-findLSB(uvec3)	function (high_end)	servers/rendering/shader_language.cpp:3481	#1827		uvec3	(uvec3)		
-findLSB(uvec4)	function (high_end)	servers/rendering/shader_language.cpp:3482	#1827		uvec4	(uvec4)		
-findMSB(int)	function (high_end)	servers/rendering/shader_language.cpp:3486	#1827		int	(int)		
-findMSB(ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3487	#1827		ivec2	(ivec2)		
-findMSB(ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3488	#1827		ivec3	(ivec3)		
-findMSB(ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3489	#1827		ivec4	(ivec4)		
-findMSB(uint)	function (high_end)	servers/rendering/shader_language.cpp:3491	#1827		uint	(uint)		
-findMSB(uvec2)	function (high_end)	servers/rendering/shader_language.cpp:3492	#1827		uvec2	(uvec2)		
-findMSB(uvec3)	function (high_end)	servers/rendering/shader_language.cpp:3493	#1827		uvec3	(uvec3)		
-findMSB(uvec4)	function (high_end)	servers/rendering/shader_language.cpp:3494	#1827		uvec4	(uvec4)		
-umulExtended(uint,uint,uint,uint)	function (high_end)	servers/rendering/shader_language.cpp:3498	#1827		void	(uint,uint,uint,uint)		
-umulExtended(uvec2,uvec2,uvec2,uvec2)	function (high_end)	servers/rendering/shader_language.cpp:3499	#1827		void	(uvec2,uvec2,uvec2,uvec2)		
-umulExtended(uvec3,uvec3,uvec3,uvec3)	function (high_end)	servers/rendering/shader_language.cpp:3500	#1827		void	(uvec3,uvec3,uvec3,uvec3)		
-umulExtended(uvec4,uvec4,uvec4,uvec4)	function (high_end)	servers/rendering/shader_language.cpp:3501	#1827		void	(uvec4,uvec4,uvec4,uvec4)		
-imulExtended(int,int,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3505	#1827		void	(int,int,int,int)		
-imulExtended(ivec2,ivec2,ivec2,ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3506	#1827		void	(ivec2,ivec2,ivec2,ivec2)		
-imulExtended(ivec3,ivec3,ivec3,ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3507	#1827		void	(ivec3,ivec3,ivec3,ivec3)		
-imulExtended(ivec4,ivec4,ivec4,ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3508	#1827		void	(ivec4,ivec4,ivec4,ivec4)		
-uaddCarry(uint,uint,uint)	function (high_end)	servers/rendering/shader_language.cpp:3512	#1827		uint	(uint,uint,uint)		
-uaddCarry(uvec2,uvec2,uvec2)	function (high_end)	servers/rendering/shader_language.cpp:3513	#1827		uvec2	(uvec2,uvec2,uvec2)		
-uaddCarry(uvec3,uvec3,uvec3)	function (high_end)	servers/rendering/shader_language.cpp:3514	#1827		uvec3	(uvec3,uvec3,uvec3)		
-uaddCarry(uvec4,uvec4,uvec4)	function (high_end)	servers/rendering/shader_language.cpp:3515	#1827		uvec4	(uvec4,uvec4,uvec4)		
-usubBorrow(uint,uint,uint)	function (high_end)	servers/rendering/shader_language.cpp:3519	#1827		uint	(uint,uint,uint)		
-usubBorrow(uvec2,uvec2,uvec2)	function (high_end)	servers/rendering/shader_language.cpp:3520	#1827		uvec2	(uvec2,uvec2,uvec2)		
-usubBorrow(uvec3,uvec3,uvec3)	function (high_end)	servers/rendering/shader_language.cpp:3521	#1827		uvec3	(uvec3,uvec3,uvec3)		
-usubBorrow(uvec4,uvec4,uvec4)	function (high_end)	servers/rendering/shader_language.cpp:3522	#1827		uvec4	(uvec4,uvec4,uvec4)		
-ldexp(float,int)	function (high_end)	servers/rendering/shader_language.cpp:3526	#1827		float	(float,int)		
-ldexp(vec2,ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3527	#1827		vec2	(vec2,ivec2)		
-ldexp(vec3,ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3528	#1827		vec3	(vec3,ivec3)		
-ldexp(vec4,ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3529	#1827		vec4	(vec4,ivec4)		
-frexp(float,int)	function (high_end)	servers/rendering/shader_language.cpp:3533	#1827		float	(float,int)		
-frexp(vec2,ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3534	#1827		vec2	(vec2,ivec2)		
-frexp(vec3,ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3535	#1827		vec3	(vec3,ivec3)		
-frexp(vec4,ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3536	#1827		vec4	(vec4,ivec4)		
+fma(float,float,float)	function (high_end)	servers/rendering/shader_language.cpp:3405	#1827		float	(float,float,float)	lowered: nearest form a * b + c, which a driver may fuse	lowered: nearest form a * b + c, which a driver may fuse
+fma(vec2,vec2,vec2)	function (high_end)	servers/rendering/shader_language.cpp:3406	#1827		vec2	(vec2,vec2,vec2)	lowered: nearest form a * b + c, which a driver may fuse	lowered: nearest form a * b + c, which a driver may fuse
+fma(vec3,vec3,vec3)	function (high_end)	servers/rendering/shader_language.cpp:3407	#1827		vec3	(vec3,vec3,vec3)	lowered: nearest form a * b + c, which a driver may fuse	lowered: nearest form a * b + c, which a driver may fuse
+fma(vec4,vec4,vec4)	function (high_end)	servers/rendering/shader_language.cpp:3408	#1827		vec4	(vec4,vec4,vec4)	lowered: nearest form a * b + c, which a driver may fuse	lowered: nearest form a * b + c, which a driver may fuse
+packHalf2x16(vec2)	function	servers/rendering/shader_language.cpp:3412	#1827		uint	(vec2)	native	native
+packUnorm2x16(vec2)	function	servers/rendering/shader_language.cpp:3413	#1827		uint	(vec2)	native	native
+packSnorm2x16(vec2)	function	servers/rendering/shader_language.cpp:3414	#1827		uint	(vec2)	native	native
+packUnorm4x8(vec4)	function	servers/rendering/shader_language.cpp:3415	#1827		uint	(vec4)	lowered: three's tsl_packUnorm4x8	untested (#1788)
+packSnorm4x8(vec4)	function	servers/rendering/shader_language.cpp:3416	#1827		uint	(vec4)	lowered: three's tsl_packSnorm4x8	untested (#1788)
+unpackHalf2x16(uint)	function	servers/rendering/shader_language.cpp:3418	#1827		vec2	(uint)	native	native
+unpackUnorm2x16(uint)	function	servers/rendering/shader_language.cpp:3419	#1827		vec2	(uint)	native	native
+unpackSnorm2x16(uint)	function	servers/rendering/shader_language.cpp:3420	#1827		vec2	(uint)	native	native
+unpackUnorm4x8(uint)	function	servers/rendering/shader_language.cpp:3421	#1827		vec4	(uint)	lowered: three's tsl_unpackUnorm4x8	untested (#1788)
+unpackSnorm4x8(uint)	function	servers/rendering/shader_language.cpp:3422	#1827		vec4	(uint)	lowered: three's tsl_unpackSnorm4x8	untested (#1788)
+bitfieldExtract(int,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3426	#1827		int	(int,int,int)	lowered: shifts to the top and back	lowered: shifts to the top and back
+bitfieldExtract(ivec2,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3427	#1827		ivec2	(ivec2,int,int)	lowered: shifts to the top and back	lowered: shifts to the top and back
+bitfieldExtract(ivec3,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3428	#1827		ivec3	(ivec3,int,int)	lowered: shifts to the top and back	lowered: shifts to the top and back
+bitfieldExtract(ivec4,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3429	#1827		ivec4	(ivec4,int,int)	lowered: shifts to the top and back	lowered: shifts to the top and back
+bitfieldExtract(uint,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3431	#1827		uint	(uint,int,int)	lowered: shifts to the top and back	lowered: shifts to the top and back
+bitfieldExtract(uvec2,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3432	#1827		uvec2	(uvec2,int,int)	lowered: shifts to the top and back	lowered: shifts to the top and back
+bitfieldExtract(uvec3,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3433	#1827		uvec3	(uvec3,int,int)	lowered: shifts to the top and back	lowered: shifts to the top and back
+bitfieldExtract(uvec4,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3434	#1827		uvec4	(uvec4,int,int)	lowered: shifts to the top and back	lowered: shifts to the top and back
+bitfieldInsert(int,int,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3438	#1827		int	(int,int,int,int)	lowered: shifted mask	lowered: shifted mask
+bitfieldInsert(ivec2,ivec2,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3439	#1827		ivec2	(ivec2,ivec2,int,int)	lowered: shifted mask	lowered: shifted mask
+bitfieldInsert(ivec3,ivec3,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3440	#1827		ivec3	(ivec3,ivec3,int,int)	lowered: shifted mask	lowered: shifted mask
+bitfieldInsert(ivec4,ivec4,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3441	#1827		ivec4	(ivec4,ivec4,int,int)	lowered: shifted mask	lowered: shifted mask
+bitfieldInsert(uint,uint,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3443	#1827		uint	(uint,uint,int,int)	lowered: shifted mask	lowered: shifted mask
+bitfieldInsert(uvec2,uvec2,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3444	#1827		uvec2	(uvec2,uvec2,int,int)	lowered: shifted mask	lowered: shifted mask
+bitfieldInsert(uvec3,uvec3,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3445	#1827		uvec3	(uvec3,uvec3,int,int)	lowered: shifted mask	lowered: shifted mask
+bitfieldInsert(uvec4,uvec4,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3446	#1827		uvec4	(uvec4,uvec4,int,int)	lowered: shifted mask	lowered: shifted mask
+bitfieldReverse(int)	function (high_end)	servers/rendering/shader_language.cpp:3450	#1827		int	(int)	lowered: swaps of bits, pairs, nibbles, bytes and halves	lowered: swaps of bits, pairs, nibbles, bytes and halves
+bitfieldReverse(ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3451	#1827		ivec2	(ivec2)	lowered: swaps of bits, pairs, nibbles, bytes and halves	lowered: swaps of bits, pairs, nibbles, bytes and halves
+bitfieldReverse(ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3452	#1827		ivec3	(ivec3)	lowered: swaps of bits, pairs, nibbles, bytes and halves	lowered: swaps of bits, pairs, nibbles, bytes and halves
+bitfieldReverse(ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3453	#1827		ivec4	(ivec4)	lowered: swaps of bits, pairs, nibbles, bytes and halves	lowered: swaps of bits, pairs, nibbles, bytes and halves
+bitfieldReverse(uint)	function (high_end)	servers/rendering/shader_language.cpp:3455	#1827		uint	(uint)	lowered: swaps of bits, pairs, nibbles, bytes and halves	lowered: swaps of bits, pairs, nibbles, bytes and halves
+bitfieldReverse(uvec2)	function (high_end)	servers/rendering/shader_language.cpp:3456	#1827		uvec2	(uvec2)	lowered: swaps of bits, pairs, nibbles, bytes and halves	lowered: swaps of bits, pairs, nibbles, bytes and halves
+bitfieldReverse(uvec3)	function (high_end)	servers/rendering/shader_language.cpp:3457	#1827		uvec3	(uvec3)	lowered: swaps of bits, pairs, nibbles, bytes and halves	lowered: swaps of bits, pairs, nibbles, bytes and halves
+bitfieldReverse(uvec4)	function (high_end)	servers/rendering/shader_language.cpp:3458	#1827		uvec4	(uvec4)	lowered: swaps of bits, pairs, nibbles, bytes and halves	lowered: swaps of bits, pairs, nibbles, bytes and halves
+bitCount(int)	function (high_end)	servers/rendering/shader_language.cpp:3462	#1827		int	(int)	lowered: sums of bit pairs, nibbles and bytes	lowered: sums of bit pairs, nibbles and bytes
+bitCount(ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3463	#1827		ivec2	(ivec2)	lowered: sums of bit pairs, nibbles and bytes	lowered: sums of bit pairs, nibbles and bytes
+bitCount(ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3464	#1827		ivec3	(ivec3)	lowered: sums of bit pairs, nibbles and bytes	lowered: sums of bit pairs, nibbles and bytes
+bitCount(ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3465	#1827		ivec4	(ivec4)	lowered: sums of bit pairs, nibbles and bytes	lowered: sums of bit pairs, nibbles and bytes
+bitCount(uint)	function (high_end)	servers/rendering/shader_language.cpp:3467	#1827		uint	(uint)	lowered: sums of bit pairs, nibbles and bytes	lowered: sums of bit pairs, nibbles and bytes
+bitCount(uvec2)	function (high_end)	servers/rendering/shader_language.cpp:3468	#1827		uvec2	(uvec2)	lowered: sums of bit pairs, nibbles and bytes	lowered: sums of bit pairs, nibbles and bytes
+bitCount(uvec3)	function (high_end)	servers/rendering/shader_language.cpp:3469	#1827		uvec3	(uvec3)	lowered: sums of bit pairs, nibbles and bytes	lowered: sums of bit pairs, nibbles and bytes
+bitCount(uvec4)	function (high_end)	servers/rendering/shader_language.cpp:3470	#1827		uvec4	(uvec4)	lowered: sums of bit pairs, nibbles and bytes	lowered: sums of bit pairs, nibbles and bytes
+findLSB(int)	function (high_end)	servers/rendering/shader_language.cpp:3474	#1827		int	(int)	lowered: bit count below the lowest set bit	lowered: bit count below the lowest set bit
+findLSB(ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3475	#1827		ivec2	(ivec2)	lowered: bit count below the lowest set bit	lowered: bit count below the lowest set bit
+findLSB(ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3476	#1827		ivec3	(ivec3)	lowered: bit count below the lowest set bit	lowered: bit count below the lowest set bit
+findLSB(ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3477	#1827		ivec4	(ivec4)	lowered: bit count below the lowest set bit	lowered: bit count below the lowest set bit
+findLSB(uint)	function (high_end)	servers/rendering/shader_language.cpp:3479	#1827		uint	(uint)	lowered: bit count below the lowest set bit	lowered: bit count below the lowest set bit
+findLSB(uvec2)	function (high_end)	servers/rendering/shader_language.cpp:3480	#1827		uvec2	(uvec2)	lowered: bit count below the lowest set bit	lowered: bit count below the lowest set bit
+findLSB(uvec3)	function (high_end)	servers/rendering/shader_language.cpp:3481	#1827		uvec3	(uvec3)	lowered: bit count below the lowest set bit	lowered: bit count below the lowest set bit
+findLSB(uvec4)	function (high_end)	servers/rendering/shader_language.cpp:3482	#1827		uvec4	(uvec4)	lowered: bit count below the lowest set bit	lowered: bit count below the lowest set bit
+findMSB(int)	function (high_end)	servers/rendering/shader_language.cpp:3486	#1827		int	(int)	lowered: bit count of the bits filled below the top	lowered: bit count of the bits filled below the top
+findMSB(ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3487	#1827		ivec2	(ivec2)	lowered: bit count of the bits filled below the top	lowered: bit count of the bits filled below the top
+findMSB(ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3488	#1827		ivec3	(ivec3)	lowered: bit count of the bits filled below the top	lowered: bit count of the bits filled below the top
+findMSB(ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3489	#1827		ivec4	(ivec4)	lowered: bit count of the bits filled below the top	lowered: bit count of the bits filled below the top
+findMSB(uint)	function (high_end)	servers/rendering/shader_language.cpp:3491	#1827		uint	(uint)	lowered: bit count of the bits filled below the top	lowered: bit count of the bits filled below the top
+findMSB(uvec2)	function (high_end)	servers/rendering/shader_language.cpp:3492	#1827		uvec2	(uvec2)	lowered: bit count of the bits filled below the top	lowered: bit count of the bits filled below the top
+findMSB(uvec3)	function (high_end)	servers/rendering/shader_language.cpp:3493	#1827		uvec3	(uvec3)	lowered: bit count of the bits filled below the top	lowered: bit count of the bits filled below the top
+findMSB(uvec4)	function (high_end)	servers/rendering/shader_language.cpp:3494	#1827		uvec4	(uvec4)	lowered: bit count of the bits filled below the top	lowered: bit count of the bits filled below the top
+umulExtended(uint,uint,uint,uint)	function (high_end)	servers/rendering/shader_language.cpp:3498	#1827		void	(uint,uint,uint,uint)	lowered: products of 16-bit halves	lowered: products of 16-bit halves
+umulExtended(uvec2,uvec2,uvec2,uvec2)	function (high_end)	servers/rendering/shader_language.cpp:3499	#1827		void	(uvec2,uvec2,uvec2,uvec2)	lowered: products of 16-bit halves	lowered: products of 16-bit halves
+umulExtended(uvec3,uvec3,uvec3,uvec3)	function (high_end)	servers/rendering/shader_language.cpp:3500	#1827		void	(uvec3,uvec3,uvec3,uvec3)	lowered: products of 16-bit halves	lowered: products of 16-bit halves
+umulExtended(uvec4,uvec4,uvec4,uvec4)	function (high_end)	servers/rendering/shader_language.cpp:3501	#1827		void	(uvec4,uvec4,uvec4,uvec4)	lowered: products of 16-bit halves	lowered: products of 16-bit halves
+imulExtended(int,int,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3505	#1827		void	(int,int,int,int)	lowered: products of 16-bit halves, less each negative operand	lowered: products of 16-bit halves, less each negative operand
+imulExtended(ivec2,ivec2,ivec2,ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3506	#1827		void	(ivec2,ivec2,ivec2,ivec2)	lowered: products of 16-bit halves, less each negative operand	lowered: products of 16-bit halves, less each negative operand
+imulExtended(ivec3,ivec3,ivec3,ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3507	#1827		void	(ivec3,ivec3,ivec3,ivec3)	lowered: products of 16-bit halves, less each negative operand	lowered: products of 16-bit halves, less each negative operand
+imulExtended(ivec4,ivec4,ivec4,ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3508	#1827		void	(ivec4,ivec4,ivec4,ivec4)	lowered: products of 16-bit halves, less each negative operand	lowered: products of 16-bit halves, less each negative operand
+uaddCarry(uint,uint,uint)	function (high_end)	servers/rendering/shader_language.cpp:3512	#1827		uint	(uint,uint,uint)	lowered: wrapped sum and comparison	lowered: wrapped sum and comparison
+uaddCarry(uvec2,uvec2,uvec2)	function (high_end)	servers/rendering/shader_language.cpp:3513	#1827		uvec2	(uvec2,uvec2,uvec2)	lowered: wrapped sum and comparison	lowered: wrapped sum and comparison
+uaddCarry(uvec3,uvec3,uvec3)	function (high_end)	servers/rendering/shader_language.cpp:3514	#1827		uvec3	(uvec3,uvec3,uvec3)	lowered: wrapped sum and comparison	lowered: wrapped sum and comparison
+uaddCarry(uvec4,uvec4,uvec4)	function (high_end)	servers/rendering/shader_language.cpp:3515	#1827		uvec4	(uvec4,uvec4,uvec4)	lowered: wrapped sum and comparison	lowered: wrapped sum and comparison
+usubBorrow(uint,uint,uint)	function (high_end)	servers/rendering/shader_language.cpp:3519	#1827		uint	(uint,uint,uint)	lowered: wrapped difference and comparison	lowered: wrapped difference and comparison
+usubBorrow(uvec2,uvec2,uvec2)	function (high_end)	servers/rendering/shader_language.cpp:3520	#1827		uvec2	(uvec2,uvec2,uvec2)	lowered: wrapped difference and comparison	lowered: wrapped difference and comparison
+usubBorrow(uvec3,uvec3,uvec3)	function (high_end)	servers/rendering/shader_language.cpp:3521	#1827		uvec3	(uvec3,uvec3,uvec3)	lowered: wrapped difference and comparison	lowered: wrapped difference and comparison
+usubBorrow(uvec4,uvec4,uvec4)	function (high_end)	servers/rendering/shader_language.cpp:3522	#1827		uvec4	(uvec4,uvec4,uvec4)	lowered: wrapped difference and comparison	lowered: wrapped difference and comparison
+ldexp(float,int)	function (high_end)	servers/rendering/shader_language.cpp:3526	#1827		float	(float,int)	lowered: three products by powers of two	lowered: three products by powers of two
+ldexp(vec2,ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3527	#1827		vec2	(vec2,ivec2)	lowered: three products by powers of two	lowered: three products by powers of two
+ldexp(vec3,ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3528	#1827		vec3	(vec3,ivec3)	lowered: three products by powers of two	lowered: three products by powers of two
+ldexp(vec4,ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3529	#1827		vec4	(vec4,ivec4)	lowered: three products by powers of two	lowered: three products by powers of two
+frexp(float,int)	function (high_end)	servers/rendering/shader_language.cpp:3533	#1827		float	(float,int)	lowered: exponent and fraction bits	lowered: exponent and fraction bits
+frexp(vec2,ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3534	#1827		vec2	(vec2,ivec2)	lowered: exponent and fraction bits	lowered: exponent and fraction bits
+frexp(vec3,ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3535	#1827		vec3	(vec3,ivec3)	lowered: exponent and fraction bits	lowered: exponent and fraction bits
+frexp(vec4,ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3536	#1827		vec4	(vec4,ivec4)	lowered: exponent and fraction bits	lowered: exponent and fraction bits
 bvec2.xy	swizzle	servers/rendering/shader_language.cpp:6877	#1823				native	native
 bvec2.rg	swizzle	servers/rendering/shader_language.cpp:6877	#1823				native	native
 bvec2.st	swizzle	servers/rendering/shader_language.cpp:6877	#1823				native	native

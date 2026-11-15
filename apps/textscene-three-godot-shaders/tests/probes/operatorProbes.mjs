@@ -4,6 +4,7 @@
  * arguments of the row's types, so a row is proven on its own.
  */
 
+import { isFunctionRow } from '../../../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { PROBE_TYPES, VECTOR_PREFIX } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { argumentRows } from './inputs.mjs';
@@ -95,7 +96,7 @@ function operatorProbes(rows) {
 /** The constructors and the scalar conversions, `ivec3(int,ivec2)` and `int(float)`. */
 function constructorProbes(rows) {
   return rows
-    .filter((row) => row.family === 'constructor' || (row.family === 'function' && row.owner === '#1823'))
+    .filter((row) => row.family === 'constructor' || (isFunctionRow(row) && row.owner === '#1823'))
     .map((row) => {
       const type = row.id.slice(0, row.id.indexOf('('));
       const names = row.args.map((_, index) => ARGUMENT_NAMES[index]);

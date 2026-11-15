@@ -5,7 +5,9 @@
  * Godot's answers to it, and the real-GL test compares the transpiler's bits with them.
  */
 
+import { isFunctionRow } from '../../../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
+import { OUT_ARGUMENTS } from '../../../../packages/textscene-core/src/shaders/language/outArguments.ts';
 import { LANE_COUNT } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { WRITES_OPERAND, operatorOf } from '../operators/operatorText.mjs';
 import { FLOAT_VALUES } from '../probes/inputs.mjs';
@@ -101,29 +103,19 @@ function producersByType(rows) {
           inputs: [base],
         });
       }
-    } else if (row.family in PRODUCER_KINDS && row.args?.length) {
-      add(row.returns, { row, kind: PRODUCER_KINDS[row.family], args: row.args, inputs: row.args });
+    } else if (familyOf(row) in PRODUCER_KINDS && row.args?.length && row.returns !== 'void') {
+      add(row.returns, { row, kind: PRODUCER_KINDS[familyOf(row)], args: row.args, inputs: row.args });
     }
   }
   return producers;
 }
 
+const familyOf = (row) => (isFunctionRow(row) ? 'function' : row.family);
+
 /** How each family of rows with operands is written. */
 const PRODUCER_KINDS = { operator: 'operator', constructor: 'call', function: 'call' };
 
-/**
- * The arguments each built-in function writes, by index: Godot's `builtin_func_out_args`
- * (`shader_language.cpp:3543`).
- */
-const OUT_ARGUMENTS = {
-  modf: 1,
-  umulExtended: 2,
-  imulExtended: 2,
-  uaddCarry: 2,
-  usubBorrow: 2,
-  ldexp: 1,
-  frexp: 1,
-};
+export const placeArguments = (row) => (isFunctionRow(row) ? (OUT_ARGUMENTS[operatorOf(row)] ?? []) : []);
 
 /**
  * The index of the operand `row` writes, which must be a parameter: the first of an operator that
@@ -131,10 +123,14 @@ const OUT_ARGUMENTS = {
  */
 function writtenOperand(row) {
   if (row.family === 'operator') return WRITES_OPERAND.has(operatorOf(row)) ? 0 : undefined;
-  return row.family === 'function' ? OUT_ARGUMENTS[operatorOf(row)] : undefined;
+  return placeArguments(row)[0];
 }
 
 const writesOperand = (row) => writtenOperand(row) !== undefined;
+
+// GLSL leaves a field past bit 31 undefined: two literals of at most 16 sum to 32.
+const FIELD_ARGUMENTS = { bitfieldExtract: [1, 2], bitfieldInsert: [2, 3] };
+const FIELD_AT_MOST = 16;
 
 export const PRODUCERS = producersByType(TRANSPILED_ROWS);
 const PRODUCED_ROWS = new Set([...PRODUCERS.values()].flat().map((producer) => producer.row));
@@ -296,9 +292,11 @@ export class ProgramWriter {
     }
     const op = operatorOf(row);
     const written = writtenOperand(row);
-    const children = producer.args.map((arg, index) =>
-      index === written ? this.parameter(arg) : this.expression(arg, depth - 1)
-    );
+    const field = FIELD_ARGUMENTS[op] ?? [];
+    const children = producer.args.map((arg, index) => {
+      if (index === written) return this.parameter(arg);
+      return field.includes(index) ? this.fieldLiteral() : this.expression(arg, depth - 1);
+    });
     if (producer.kind === 'operator')
       return { kind: 'operator', type: row.returns, row, op, operands: children };
     return { kind: 'call', type: row.returns, row, name: producer.name ?? op, args: children };
@@ -317,6 +315,11 @@ export class ProgramWriter {
     const index = this.random.pick(indices);
     if (this.names === undefined) return { kind: 'parameter', type, index };
     return { kind: 'parameter', type, index, name: this.names[index] };
+  }
+
+  fieldLiteral() {
+    const row = this.literals.get('int')[0];
+    return { kind: 'literal', type: 'int', row, text: String(this.random.below(FIELD_AT_MOST + 1)) };
   }
 
   /** A literal of `type`: of `row`, or of a random literal row of the type. */

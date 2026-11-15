@@ -5,31 +5,22 @@
  */
 
 import { convertedScalar } from './constants.js';
+import { isFunctionRow } from './instructionFamily.js';
 import { overloadInstructions } from './instructions.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import type { CallNode, Expression, Qualifier, ValueType } from './shaderTree.js';
 import type { SourcePosition } from './shadingLanguageError.js';
 import { arraySizeOf, typeName } from './treeWalk.js';
 import { shapeOf } from './types.js';
-
-/** The arguments each built-in writes, by index (`builtin_func_out_args`). */
-const OUT_ARGUMENTS: Readonly<Record<string, readonly number[]>> = {
-  modf: [1],
-  umulExtended: [2, 3],
-  imulExtended: [2, 3],
-  uaddCarry: [2],
-  usubBorrow: [2],
-  ldexp: [1],
-  frexp: [1],
-};
+import { OUT_ARGUMENTS, READ_PLACES } from './outArguments.js';
 
 /** A type name calls a constructor, which the parser reads apart from the functions. */
-const isFunctionRow = (row: InstructionRow) =>
-  row.family.startsWith('function') && !/^(?:[biu]?vec\d|mat\d|bool|int|uint|float)\(/.test(row.id);
+const isCalledFunctionRow = (row: InstructionRow) =>
+  isFunctionRow(row) && !/^(?:[biu]?vec\d|mat\d|bool|int|uint|float)\(/.test(row.id);
 
 /** The overloads of the built-in function `name`, in the order of `builtin_func_defs`. */
 function godotOverloads(name: string): readonly InstructionRow[] {
-  return overloadInstructions(name).filter(isFunctionRow);
+  return overloadInstructions(name).filter(isCalledFunctionRow);
 }
 
 /** Whether `arg` takes the place of an argument of `type`: the type, or a scalar constant Godot converts. */
@@ -99,7 +90,10 @@ export function resolvedBuiltInCall(
     const refusal = outRefusal(name, index, args[index]!);
     if (refusal !== undefined) fail(refusal);
   }
-  const qualifiers = args.map((_, index): Qualifier => (outs.includes(index) ? 'out' : 'in'));
+  const reads = READ_PLACES[name] ?? [];
+  const qualifiers = args.map((_, index): Qualifier =>
+    outs.includes(index) && !reads.includes(index) ? 'out' : 'in'
+  );
   return {
     kind: 'operator',
     op: 'OP_CALL',

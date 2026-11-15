@@ -5,6 +5,7 @@
 
 import {
   bool,
+  convert,
   bvec2,
   bvec3,
   bvec4,
@@ -71,7 +72,18 @@ export function constantNode(type: ValueType, lanes: readonly Scalar[]): Node {
   return CONSTRUCTORS[type]!(...columns);
 }
 
-function scalarNode(scalar: string, lane: Scalar): Node {
+/**
+ * `node`, of type `from`, converted to `to`. A convert writes a constant of `to` itself, and three
+ * writes a negative `uint` constant as `0u` (`generateConst` of its node builder). The inner convert
+ * to `from` keeps the constant in its own type, so the GPU converts its bits.
+ *
+ * @canonical Convert a node to another GLSL type
+ */
+export const convertedNode = (node: Node, from: string, to: string): Node =>
+  convert(convert(node, from as never), to as never) as unknown as Node;
+
+/** The constant `lane` of the scalar type `scalar`. */
+export function scalarNode(scalar: string, lane: Scalar): Node {
   if (scalar === 'bool') return bool(lane as boolean) as unknown as Node;
   if (scalar === 'uint') return uint(lane as number) as unknown as Node;
   if (scalar === 'int') {

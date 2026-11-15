@@ -173,3 +173,21 @@ describe('parse: calls', () => {
     );
   });
 });
+
+describe('parse: the out arguments of built-in calls', () => {
+  it('writes the exponent of frexp, an out argument', () => {
+    const [call] = callsOf('float f(float a) { int e = 0; return frexp(a, e); }');
+    expect(call!.qualifiers).toEqual(['in', 'out']);
+  });
+
+  it('reads the exponent of ldexp, which Godot checks as an out argument', () => {
+    const [call] = callsOf('float f(float a, int b) { int e = b; return ldexp(a, e); }');
+    expect(call!.qualifiers).toEqual(['in', 'in']);
+  });
+
+  it('refuses a value for the exponent of ldexp, as Godot does', () => {
+    expect(refusal('float f(float a) { return ldexp(a, 2); }')).toThrow(
+      "Argument 2 of function 'ldexp' is not a variable, array, or member."
+    );
+  });
+});

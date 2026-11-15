@@ -1,7 +1,7 @@
 /** Each transpiled row's state on each target names its lowering. */
 
 import { describe, expect, it } from 'vitest';
-import { targetStates } from './targetStates.mjs';
+import { targetStates, WEBGPU_STATE } from './targetStates.mjs';
 
 const operatorRow = (id, args) => ({ id, family: 'operator', args });
 
@@ -56,5 +56,22 @@ describe('targetStates', () => {
       webgl2: state,
       webgpu: state,
     });
+  });
+
+  it.each([
+    ['bitCount(uvec2)', ['uvec2'], 'lowered: sums of bit pairs, nibbles and bytes'],
+    [
+      'umulExtended(uint,uint,uint,uint)',
+      ['uint', 'uint', 'uint', 'uint'],
+      'lowered: products of 16-bit halves',
+    ],
+    ['ldexp(vec2,ivec2)', ['vec2', 'ivec2'], 'lowered: three products by powers of two'],
+  ])('names the composite of the high_end function %s', (id, args, state) => {
+    expect(targetStates({ id, family: 'function (high_end)', returns: args[0], args }).webgl2).toBe(state);
+  });
+
+  it("names three's WebGL 2 function of a 4x8 pack, and leaves WebGPU untested", () => {
+    const row = { id: 'packSnorm4x8(vec4)', family: 'function (high_end)', returns: 'uint', args: ['vec4'] };
+    expect(targetStates(row)).toEqual({ webgl2: "lowered: three's tsl_packSnorm4x8", webgpu: WEBGPU_STATE });
   });
 });

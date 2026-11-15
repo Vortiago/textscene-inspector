@@ -8,6 +8,7 @@ import {
   BOTH_SIDES,
   BROWSER_COMPILER,
   DRIVER_EDGE_CALL,
+  DRIVER_NAN_MIX,
   DRIVER_ROUNDED_CALL,
   GODOT_DRIVER,
 } from '../driverFolds.mjs';
@@ -28,12 +29,137 @@ const SCALAR_BOUND = {
  * it. Godot's GLSL holds the call (`shader_compiler.cpp:809`), and glslang writes it as
  * `GLSLstd450Modf` with the out pointer (`GlslangToSpv.cpp:8767`), so lavapipe drops the store.
  */
-const UNREAD_MODF = {
+export const UNREAD_MODF = {
   owner: '#1826',
   cause: "driver (Mesa lavapipe) drops the out store of a modf whose value nothing reads, on Godot's side",
 };
 
+// ANGLE RewriteDfdy.cpp. Each lane off follows from Godot's own dFdx and dFdy bits.
+export const ANGLE_DERIVATIVE = {
+  owner: '#1827',
+  cause:
+    'browser compiler (ANGLE) writes a derivative as dFdx * r.x + dFdy * r.y, so -0 gives +0 and an infinite neighbour NaN',
+};
+
+const UNNORMALISED_SUBNORMAL = {
+  owner: '#1827',
+  cause:
+    "driver (Mesa lavapipe) splits a subnormal as if its exponent were 0: fraction unnormalised, exponent 0, on Godot's side",
+};
+
+// Measured: Godot's ldexp(3e38, e) equals ours at -252, -251, -250 and gives 0 at -253.
+const SPLIT_LDEXP = {
+  owner: '#1827',
+  cause:
+    "driver (Mesa lavapipe) gives 0 for ldexp(3e38, -253), on Godot's side: inferred, not read from Mesa, as a split into exponent halves that flushes 2^-127",
+};
+
 export const KNOWN_PROBE_DIFFERENCES = {
+  'call-dFdx-float': {
+    ...ANGLE_DERIVATIVE,
+    lanesOff: 3,
+    first: 'lane 0: Godot 80000000, transpilation 00000000',
+  },
+  'call-dFdx-vec3': {
+    ...ANGLE_DERIVATIVE,
+    lanesOff: 3,
+    first: 'lane 3: Godot 80000000, transpilation 00000000',
+  },
+  'call-dFdxCoarse-float': {
+    ...ANGLE_DERIVATIVE,
+    lanesOff: 3,
+    first: 'lane 0: Godot 80000000, transpilation 00000000',
+  },
+  'call-dFdxCoarse-vec3': {
+    ...ANGLE_DERIVATIVE,
+    lanesOff: 3,
+    first: 'lane 3: Godot 80000000, transpilation 00000000',
+  },
+  'call-dFdxFine-float': {
+    ...ANGLE_DERIVATIVE,
+    lanesOff: 3,
+    first: 'lane 0: Godot 80000000, transpilation 00000000',
+  },
+  'call-dFdxFine-vec3': {
+    ...ANGLE_DERIVATIVE,
+    lanesOff: 3,
+    first: 'lane 3: Godot 80000000, transpilation 00000000',
+  },
+  'call-dFdy-float': {
+    ...ANGLE_DERIVATIVE,
+    lanesOff: 3,
+    first: 'lane 10: Godot 00000000, transpilation ffc00000',
+  },
+  'call-dFdy-vec3': {
+    ...ANGLE_DERIVATIVE,
+    lanesOff: 3,
+    first: 'lane 2: Godot 00000000, transpilation ffc00000',
+  },
+  'call-dFdyCoarse-float': {
+    ...ANGLE_DERIVATIVE,
+    lanesOff: 3,
+    first: 'lane 10: Godot 00000000, transpilation ffc00000',
+  },
+  'call-dFdyCoarse-vec3': {
+    ...ANGLE_DERIVATIVE,
+    lanesOff: 3,
+    first: 'lane 2: Godot 00000000, transpilation ffc00000',
+  },
+  'call-dFdyFine-float': {
+    ...ANGLE_DERIVATIVE,
+    lanesOff: 3,
+    first: 'lane 10: Godot 00000000, transpilation ffc00000',
+  },
+  'call-dFdyFine-vec3': {
+    ...ANGLE_DERIVATIVE,
+    lanesOff: 3,
+    first: 'lane 2: Godot 00000000, transpilation ffc00000',
+  },
+  'call-frexp-float-int-fraction': {
+    ...UNNORMALISED_SUBNORMAL,
+    lanesOff: 1,
+    first: 'lane 12: Godot 3f0116c2, transpilation 3f0b6100',
+  },
+  'call-frexp-vec2-ivec2-fraction': {
+    ...UNNORMALISED_SUBNORMAL,
+    lanesOff: 2,
+    first: 'lane 15: Godot 3f0116c2, transpilation 3f0b6100',
+  },
+  'call-frexp-vec3-ivec3-fraction': {
+    ...UNNORMALISED_SUBNORMAL,
+    lanesOff: 3,
+    first: 'lane 8: Godot 3f0116c2, transpilation 3f0b6100',
+  },
+  'call-frexp-vec4-ivec4-fraction': {
+    ...UNNORMALISED_SUBNORMAL,
+    lanesOff: 4,
+    first: 'lane 10: Godot 3f0116c2, transpilation 3f0b6100',
+  },
+  'call-frexp-float-int-exponent': {
+    ...UNNORMALISED_SUBNORMAL,
+    lanesOff: 1,
+    first: 'lane 12: Godot 00000000, transpilation ffffff7c',
+  },
+  'call-frexp-vec2-ivec2-exponent': {
+    ...UNNORMALISED_SUBNORMAL,
+    lanesOff: 2,
+    first: 'lane 15: Godot 00000000, transpilation ffffff7c',
+  },
+  'call-frexp-vec3-ivec3-exponent': {
+    ...UNNORMALISED_SUBNORMAL,
+    lanesOff: 3,
+    first: 'lane 8: Godot 00000000, transpilation ffffff7c',
+  },
+  'call-frexp-vec4-ivec4-exponent': {
+    ...UNNORMALISED_SUBNORMAL,
+    lanesOff: 4,
+    first: 'lane 10: Godot 00000000, transpilation ffffff7c',
+  },
+  'call-ldexp-float-int-range': {
+    ...SPLIT_LDEXP,
+    lanesOff: 1,
+    first: 'lane 35: Godot 00000000, transpilation 00e1b1e6',
+  },
   'gpu-call-sinh-of-a-constant': {
     ...DRIVER_ROUNDED_CALL,
     folds: GODOT_DRIVER,
@@ -95,6 +221,11 @@ export const KNOWN_PROBE_DIFFERENCES = {
     ...DRIVER_EDGE_CALL,
     lanesOff: 16,
     first: 'lane 0: Godot 7f800000, transpilation 7f449aa0',
+  },
+  'gpu-call-mix-of-nan-of-a-constant': {
+    ...DRIVER_NAN_MIX,
+    lanesOff: 32,
+    first: 'lane 0: Godot 7fc00000, transpilation 3f800000',
   },
   'call-min-vec2-float': {
     ...SCALAR_BOUND,

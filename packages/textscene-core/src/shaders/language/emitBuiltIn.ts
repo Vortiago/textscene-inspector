@@ -30,5 +30,6 @@ export function builtInCall(name: string, row: InstructionRow, operands: readonl
     throw new Error(`expected a built-in function row with types, got ${row.id}`);
   const composite = compositeOf(name, row.args);
   const node = composite ? composite(operands, row.args) : tslFunction(name)(...operands);
+  if (row.returns === 'void') return node; // Its last write, which the statement drops.
   return TSL.convert(node as never, row.returns) as unknown as Node;
 }

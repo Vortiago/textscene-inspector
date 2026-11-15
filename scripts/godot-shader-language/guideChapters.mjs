@@ -4,6 +4,8 @@
  * rows, the probes and Godot's recorded values. A transpiled row with no section fails the build.
  */
 
+import { isFunctionRow } from '../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
+
 /** The rows of the operator `op`, `OP_ADD(int,int)` and the rest. */
 const operatorRows = (op) => (row) => row.id.startsWith(`${op}(`);
 
@@ -12,7 +14,7 @@ const anyOperatorRows = (ops) => (row) => ops.some((op) => row.id.startsWith(`${
 
 /** The rows of the built-in functions `names`, `sin(vec2)` and the rest. */
 const functionRows = (names) => (row) =>
-  row.family === 'function' && names.some((name) => row.id.startsWith(`${name}(`));
+  isFunctionRow(row) && names.some((name) => row.id.startsWith(`${name}(`));
 
 const VALUE_TYPES = new Set([
   'bool',
@@ -212,13 +214,13 @@ const CONSTRUCTORS_CHAPTER = {
     },
     {
       heading: 'Scalar conversions',
-      rows: (row) => row.family === 'function' && /^(int|uint|float|bool)\(/.test(row.id),
+      rows: (row) => isFunctionRow(row) && /^(int|uint|float|bool)\(/.test(row.id),
       what: '`int(a)`, `uint(a)`, `float(a)` and `bool(a)` convert one scalar. A float converts to an integer toward zero. A `bool` is 1 or 0 as a number, and a number is `true` when it is not zero.',
       tsl: 'int(a)',
     },
     {
       heading: 'Vector and matrix conversions',
-      rows: (row) => row.family === 'function' && /^(?:[biu]?vec\d|mat\d)\(/.test(row.id),
+      rows: (row) => isFunctionRow(row) && /^(?:[biu]?vec\d|mat\d)\(/.test(row.id),
       what: '`ivec3(a)` converts each lane of a vector of the same size, as the scalar conversions do. `mat3(m)` takes the upper left of a larger matrix, or puts a smaller one in the upper left of the identity matrix.',
       tsl: 'ivec3(a), mat3(m)',
     },
@@ -585,6 +587,86 @@ Two forms differ from Godot, each with its cause in \`tests/probes/knownProbeDif
   ],
 };
 
+const BIT_FUNCTIONS_CHAPTER = {
+  file: 'bit-functions.md',
+  title: 'Integer, bit and derivative functions',
+  intro: `The built-in functions of Godot's \`builtin_func_defs\` that read the bits of a value, pack and unpack, count and move bits, give carries and wide products, split a float into its fraction and exponent, and take a derivative. Godot marks most of them \`high_end\`: its Compatibility renderer refuses each with the message \`Built-in function "%s(%s)" is only supported on high-end platforms.\` (\`shader_language.cpp:3657\`), and Forward+ and Mobile pass them to the GPU. GLSL ES 3.0, which WebGL 2 runs, has the bits of a float, the 2x16 packs and the plain derivatives. The transpiler builds each other function from the integer and float operations GLSL ES 3.0 has, to the bits GLSL 4.50 defines.
+
+\`fma\` and the coarse and fine derivatives have no exact form in GLSL ES 3.0, so the transpiler draws each with its nearest form, on WebGL 2 only: \`fma(a, b, c)\` as \`a * b + c\`, and \`dFdxCoarse\` and \`dFdxFine\` as \`dFdx\`, and so on for \`dFdy\` and \`fwidth\`. WebGPU has the exact functions, but three's TSL does not expose them. On the test driver every probe of these forms is bit-equal with Godot, so the difference below could not be shown there.`,
+  sections: [
+    {
+      heading: 'The bits of a float',
+      rows: functionRows(['floatBitsToInt', 'floatBitsToUint', 'intBitsToFloat', 'uintBitsToFloat']),
+      what: '`floatBitsToInt` and `floatBitsToUint` give the bits of each float lane as an int or a uint, and `intBitsToFloat` and `uintBitsToFloat` give the float of the bits.',
+      tsl: 'floatBitsToUint(a)',
+    },
+    {
+      heading: 'Pack and unpack',
+      rows: functionRows([
+        'packHalf2x16',
+        'packUnorm2x16',
+        'packSnorm2x16',
+        'packUnorm4x8',
+        'packSnorm4x8',
+        'unpackHalf2x16',
+        'unpackUnorm2x16',
+        'unpackSnorm2x16',
+        'unpackUnorm4x8',
+        'unpackSnorm4x8',
+      ]),
+      what: 'Each pack function writes the lanes of a vector into one uint, as 16-bit halves or as 16-bit or 8-bit fixed-point values, and each unpack function reads them back. GLSL ES 3.0 has no 4x8 forms, so three writes a GLSL function of its own for each.',
+      tsl: 'packHalf2x16(a)',
+    },
+    {
+      heading: 'Bit counts and bit fields',
+      rows: functionRows([
+        'bitCount',
+        'findLSB',
+        'findMSB',
+        'bitfieldReverse',
+        'bitfieldExtract',
+        'bitfieldInsert',
+      ]),
+      what: '`bitCount` counts the set bits of each lane, `findLSB` and `findMSB` give the index of the lowest and highest set bit or -1 for none, and `findMSB` of a negative int gives its highest clear bit. `bitfieldReverse` reverses the bits, `bitfieldExtract(value, offset, bits)` reads a field of `bits` bits from `offset`, with its sign for an int, and `bitfieldInsert(base, insert, offset, bits)` writes one. GLSL leaves a field past bit 31, or a negative offset or count, undefined, so the transpiler gives no promise for one. Random programs draw an offset and a count of 0 to 16 each, and the probes check the defined edges: the whole word (offset 0, 32 bits), the top bit (offset 31, 1 bit) and an empty field at the top (offset 32, 0 bits).',
+      tsl: 'shiftRight(shiftLeft(shiftRight(value, offset), room), room)',
+    },
+    {
+      heading: 'Carries and wide products',
+      rows: functionRows(['uaddCarry', 'usubBorrow', 'umulExtended', 'imulExtended']),
+      what: '`uaddCarry(x, y, carry)` gives the wrapped sum and writes 1 to `carry` where it wrapped, and `usubBorrow` does the same for a difference. `umulExtended(x, y, msb, lsb)` and `imulExtended` write the high and the low 32 bits of the 64-bit product, and give nothing, so a program calls them as a statement and reads `msb` and `lsb` after it. The transpiler builds the high half from products of 16-bit halves.',
+      tsl: 'add(x, y), lessThan(sum, x)',
+    },
+    {
+      heading: 'Fused multiply-add',
+      rows: functionRows(['fma']),
+      what: "`fma(a, b, c)` gives `a * b + c`. GLSL gives it the precision of `a * b + c`, and a GPU may round the product before the sum or not. GLSL ES 3.0 has no `fma`, so on WebGL 2 the transpiler writes `a * b + c`, which the driver may fuse. Godot's `fma` on the test driver rounds twice, as `a * b + c` does there, so the probe is bit-equal on rows built to tell the two roundings apart.",
+      tsl: 'add(mul(a, b), c)',
+    },
+    {
+      heading: 'Fraction and exponent',
+      rows: functionRows(['frexp', 'ldexp']),
+      what: "`frexp(x, exponent)` gives the fraction of `x`, from 0.5 to 1 in size, and writes its exponent, so that `x` is the fraction times 2 to the exponent. `ldexp(x, exponent)` gives `x` times 2 to the exponent. Godot lists the exponent of `ldexp` as an out argument, so it must be a variable, though the call only reads it. GLSL leaves `frexp` of an infinity or a NaN, and an `ldexp` past the float range, undefined. The transpiler splits a subnormal from its bits, so a GPU that reads subnormals as zero still gives the fraction and exponent GLSL defines: 1e-40 is `0.545 * 2^-132`. Godot's test driver gives the unnormalised bits `0x3f0116c2` with exponent 0, a listed difference. `ldexp` gives GLSL's value from -278 to 277: `ldexp(3e38, -253)` is `0x00e1b1e6`, where Godot's test driver gives 0. At -252, -251 and -250 both sides are equal. The inferred cause, not read from Mesa's source, is a split of the exponent into halves that flushes 2^-127. It is a listed difference.",
+      tsl: 'uintBitsToFloat(sign | fraction << shift | 0x3f000000)',
+    },
+    {
+      heading: 'Derivatives',
+      rows: functionRows([
+        'dFdx',
+        'dFdy',
+        'fwidth',
+        'dFdxCoarse',
+        'dFdxFine',
+        'dFdyCoarse',
+        'dFdyFine',
+        'fwidthCoarse',
+        'fwidthFine',
+      ]),
+      what: "`dFdx` and `dFdy` give the difference of a value between neighbouring pixels across and down the screen, and `fwidth` the sum of their sizes. A GPU computes them for each block of 2 by 2 pixels: a coarse derivative takes one difference for the block, and a fine one a difference for each row or column. GLSL ES 3.0 has only the plain forms, which the GPU runs as either, so on WebGL 2 the coarse and fine forms draw as the plain ones. Godot's driver on the test machine runs coarse as fine, so the probes cannot show it. On a 16 by 16 target of `x * x * (y + 0.37)`, a true coarse `dFdx` in the second row of a block is 1.74 where the fine one is 3.74. A probe draws one row of pixels, so `dFdy` is 0 on both sides. The browser's compiler, ANGLE, writes each derivative as `dFdx * r.x + dFdy * r.y` for its screen rotation (`RewriteDfdy.cpp`), so a -0, infinite or NaN neighbour gives +0 or NaN where Godot gives -0, infinity or 0.",
+      tsl: 'dFdx(a)',
+    },
+  ],
+};
+
 const SKY_CHAPTER = {
   file: 'sky.md',
   title: 'Sky shaders',
@@ -669,6 +751,7 @@ export const GUIDE_CHAPTERS = [
   FUNCTIONS_CHAPTER,
   BUILT_IN_FUNCTIONS_CHAPTER,
   FOLDING_CHAPTER,
+  BIT_FUNCTIONS_CHAPTER,
   PREPROCESSOR_CHAPTER,
   SKY_CHAPTER,
 ];
