@@ -259,9 +259,7 @@ export function OffscreenViewportPass({
   );
 
   const drawPass = useCallback(() => {
-    // A 3D pass waits for its stage, which mounts before the frame that first publishes the target.
     const toneMap = kind === '3d' ? toneMapStage.current : null;
-    if (kind === '3d' && !toneMap) return;
     const clear = renderState.takeRender(clearMode, clearColor);
     const camera = toneMap ? cameraAtPath(passScene, toneMap.cameraPath) : orthoCamera;
     const exposure = toneMap?.exposure ?? null;
@@ -337,6 +335,8 @@ export function OffscreenViewportPass({
 
   // The camera is framed before the canvas runs its steps: the light pass reads it.
   const renderPass = useCallback(() => {
+    // A 3D pass waits for its stage, which mounts before the frame that first publishes the target.
+    if (kind === '3d' && !toneMapStage.current) return;
     if (kind === '2d') frameCanvas(passScene);
     if (canvasScene) frameCanvas(canvasScene);
     runCanvasFrame(frameSteps, drawPass);

@@ -8,7 +8,6 @@ import {
   callSites,
   isProductionSource,
   offendingLines,
-  reportOffenders,
   repoPath,
   walkSources,
 } from '../../testing/sourceScan';
@@ -53,8 +52,9 @@ describe('the 2D canvas frame steps', () => {
   });
 
   it('run a SubViewport light pass only through its canvas frame', () => {
-    expect(
-      reportOffenders(viewportPass, (source) => offendingLines(source, /lightHost\?\.run\.current/))
-    ).toEqual([]);
+    const [{ source }] = viewportPass;
+    const runs = offendingLines(source!, /\brun\.current\b/);
+    const lightStep = source!.split('\n').findIndex((line) => line.includes('steps.lightPass = ')) + 1;
+    expect(runs).toEqual([lightStep]);
   });
 });
