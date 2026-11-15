@@ -54,9 +54,10 @@ interface CanvasItem2DProps {
   /** Whether `body` draws any pixels, true when omitted. A body that draws none declares no light read. */
   isDrawn?: boolean;
   /**
-   * Draws this node's own child canvas items, each with its own light list, as a TileMapLayer's
-   * rendering quadrants are. A node that draws them passes no `body`. They take this node's
-   * CanvasItem state: its own-pixel tint, the material in force, sampler, `z_final` and keys.
+   * Draws what this node holds that reads no light as its own pixels: a TileMapLayer's rendering
+   * quadrants, each a child canvas item with its own light list, or a light's quads. A node that
+   * draws them passes no `body`. They take this node's CanvasItem state: its own-pixel tint, the
+   * material in force, sampler, `z_final` and keys.
    */
   ownItems?: (state: CanvasItemState) => ReactNode;
   children?: ReactNode;

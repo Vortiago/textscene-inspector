@@ -17,9 +17,8 @@ export function DirectionalLight2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      // A light draws no pixels of its own, so it reads no light and has no rect to cap.
-      isDrawn={false}
-      body={() =>
+      // A light draws no pixels of its own, so its quads read no light and give the per-item cap no rect.
+      ownItems={() =>
         props.enabled ? (
           <CanvasLight2D
             term={{
