@@ -145,6 +145,19 @@ export class ValidatorRegistry {
     return resolveDeclaration(this.tables, nodeType, propertyKey) ?? this.derivedFor(nodeType, propertyKey);
   }
 
+  /**
+   * Whether the descriptor, not a hand validator or a removal, answers `propertyKey` on `nodeType`.
+   *
+   * @internal `linter/testing/registryPopulation.ts` is the only caller: it lists the derived keys
+   * beside the registered ones, so every sweep reads a derived check as it reads a hand validator.
+   */
+  isDerived(nodeType: string, propertyKey: string): boolean {
+    return (
+      resolveDeclaration(this.tables, nodeType, propertyKey) === null &&
+      this.derivedFor(nodeType, propertyKey) !== null
+    );
+  }
+
   /** The derived check of a key, built on its first lookup and kept. */
   private derivedFor(nodeType: string, propertyKey: string): PropertyValidator | null {
     if (!this.derive) return null;

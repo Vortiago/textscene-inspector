@@ -142,7 +142,9 @@ function flagLabels(hintString: string): Record<number, string> {
 function intValidator(descriptor: PropertyDescriptor): PropertyValidator {
   const { name, hint, hintString } = descriptor.property;
   const width = descriptor.facts?.width;
-  if (hint === PROPERTY_HINT.ENUM) return enumValidator(descriptor);
+  // An empty enum hint offers nothing to bound: `AudioStreamInteractive.initial_clip` binds ""
+  // (audio_stream_interactive.cpp:494), and the editor fills its labels in at run time (:430).
+  if (hint === PROPERTY_HINT.ENUM && hintString.length > 0) return enumValidator(descriptor);
   if (hint === PROPERTY_HINT.FLAGS) {
     refuseFacts(descriptor, []);
     return hintedBitField(name, { hinted: descriptor.cite, labels: flagLabels(hintString) });

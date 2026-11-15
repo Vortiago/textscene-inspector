@@ -92,6 +92,13 @@ export function findClassProperty(className: string, name: string): ClassPropert
   return findInClassChain(className, (type) => ownProperties(type)?.get(name));
 }
 
+/** Every property the capture holds, each under the class that declares it. */
+export function* capturedProperties(): Generator<ClassProperty> {
+  for (const table of [NODE_CLASS_PROPERTIES, RESOURCE_CLASS_PROPERTIES]) {
+    for (const className of Object.keys(table)) yield* ownProperties(className)!.values();
+  }
+}
+
 /** Whether the class's rows come from the source of a later release, not from the capture. */
 export function isUncatalogued(className: string): boolean {
   return Object.hasOwn(UNCATALOGUED_PROPERTIES, className);
