@@ -2,7 +2,7 @@
  * What a sub-viewport's pass renders by: its update gate, its clear mode, and the renders of its
  * target, which live as long as the scene the viewport belongs to.
  */
-import { useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import type { SceneGraph } from '../../../core/SceneGraph.js';
 import { useOptionalHierarchy } from '../../../r3f/contexts/HierarchyContext.js';
 import { perObject } from '../../../utils/perObject.js';
@@ -45,10 +45,8 @@ function renderStateOf(sceneGraph: SceneGraph, path: string): TargetRenderState 
  */
 export function useViewportRenderState(path: string, updateMode: number): TargetRenderState {
   const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
-  const state = useMemo(
-    () => (sceneGraph ? renderStateOf(sceneGraph, path) : new TargetRenderState()),
-    [sceneGraph, path]
-  );
+  const [ownState] = useState(() => new TargetRenderState());
+  const state = sceneGraph ? renderStateOf(sceneGraph, path) : ownState;
   useEffect(() => state.rearm(), [state, updateMode]);
   return state;
 }

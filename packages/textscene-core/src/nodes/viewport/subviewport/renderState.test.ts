@@ -45,7 +45,7 @@ describe('useViewportRenderState', () => {
       wrapper: inScene(parsedScene()),
       initialProps: { mode: ONCE },
     });
-    hook.result.current.takeRender(0, new THREE.Color());
+    hook.result.current.takeRender(0, new THREE.Color(), new THREE.WebGLRenderTarget(1, 1));
     expect(hook.result.current.hasRendered).toBe(true);
 
     hook.rerender({ mode: ALWAYS });

@@ -256,7 +256,8 @@ export function OffscreenViewportPass({
     // A 3D pass waits for its stage, which mounts before the frame that first publishes the target.
     const toneMap = kind === '3d' ? toneMapStage.current : null;
     if (kind === '3d' && !toneMap) return;
-    const clear = renderState.takeRender(clearMode, clearColor);
+    const destination = toneMap ? toneMap.worldBuffer : target;
+    const clear = renderState.takeRender(clearMode, clearColor, destination);
     const camera = toneMap ? cameraAtPath(passScene, toneMap.cameraPath) : orthoCamera;
     const exposure = toneMap?.exposure ?? null;
     if (canvasScene) frameCanvas(canvasScene);
@@ -274,7 +275,7 @@ export function OffscreenViewportPass({
 
     try {
       renderToOffscreenTarget(gl, {
-        target: toneMap ? toneMap.worldBuffer : target,
+        target: destination,
         clearColor: clear.color,
         transparentBg,
         keepsColor,

@@ -80,66 +80,74 @@ describe('renderingPassIds', () => {
 describe('TargetRenderState', () => {
   const projectColor = new THREE.Color(0.3, 0.3, 0.3);
   const rgb = (color: THREE.Color) => [color.r, color.g, color.b];
+  const target = new THREE.WebGLRenderTarget(1, 1);
 
   it('clears every render under ALWAYS', () => {
     const state = new TargetRenderState();
-    expect(state.takeRender(SubViewportClearMode.ALWAYS, projectColor).clears).toBe(true);
-    expect(state.takeRender(SubViewportClearMode.ALWAYS, projectColor).clears).toBe(true);
+    expect(state.takeRender(SubViewportClearMode.ALWAYS, projectColor, target).clears).toBe(true);
+    expect(state.takeRender(SubViewportClearMode.ALWAYS, projectColor, target).clears).toBe(true);
   });
 
   it('never clears under NEVER and paints opaque black', () => {
     const state = new TargetRenderState();
-    const render = state.takeRender(SubViewportClearMode.NEVER, projectColor);
+    const render = state.takeRender(SubViewportClearMode.NEVER, projectColor, target);
     expect(render.clears).toBe(false);
     expect(rgb(render.color)).toEqual([0, 0, 0]);
   });
 
   it('clears the first render under ONCE and no later one', () => {
     const state = new TargetRenderState();
-    expect(state.takeRender(SubViewportClearMode.ONCE, projectColor).clears).toBe(true);
-    expect(state.takeRender(SubViewportClearMode.ONCE, projectColor).clears).toBe(false);
+    expect(state.takeRender(SubViewportClearMode.ONCE, projectColor, target).clears).toBe(true);
+    expect(state.takeRender(SubViewportClearMode.ONCE, projectColor, target).clears).toBe(false);
   });
 
   it('keeps the colour of the one ONCE clear after the project colour changes', () => {
     const state = new TargetRenderState();
-    state.takeRender(SubViewportClearMode.ONCE, projectColor);
-    const later = state.takeRender(SubViewportClearMode.ONCE, new THREE.Color(1, 0, 0));
+    state.takeRender(SubViewportClearMode.ONCE, projectColor, target);
+    const later = state.takeRender(SubViewportClearMode.ONCE, new THREE.Color(1, 0, 0), target);
     expect(later.color.r).toBeCloseTo(0.3);
   });
 
   it('counts a render only when one is taken', () => {
     const state = new TargetRenderState();
     expect(state.hasRendered).toBe(false);
-    state.takeRender(SubViewportClearMode.ALWAYS, projectColor);
+    state.takeRender(SubViewportClearMode.ALWAYS, projectColor, target);
     expect(state.hasRendered).toBe(true);
   });
 
   it('clears a ONCE clear again after the clear mode is set again', () => {
     const state = new TargetRenderState();
-    state.takeRender(SubViewportClearMode.ONCE, projectColor);
-    expect(state.takeRender(SubViewportClearMode.ONCE, projectColor).clears).toBe(false);
-    state.takeRender(SubViewportClearMode.ALWAYS, projectColor);
-    expect(state.takeRender(SubViewportClearMode.ONCE, projectColor).clears).toBe(true);
+    state.takeRender(SubViewportClearMode.ONCE, projectColor, target);
+    expect(state.takeRender(SubViewportClearMode.ONCE, projectColor, target).clears).toBe(false);
+    state.takeRender(SubViewportClearMode.ALWAYS, projectColor, target);
+    expect(state.takeRender(SubViewportClearMode.ONCE, projectColor, target).clears).toBe(true);
   });
 
   it('keeps a spent ONCE update after the clear mode changes', () => {
     const state = new TargetRenderState();
-    state.takeRender(SubViewportClearMode.ONCE, projectColor);
-    state.takeRender(SubViewportClearMode.ALWAYS, projectColor);
+    state.takeRender(SubViewportClearMode.ONCE, projectColor, target);
+    state.takeRender(SubViewportClearMode.ALWAYS, projectColor, target);
     expect(state.hasRendered).toBe(true);
   });
 
   it('renders a spent ONCE update again after rearm', () => {
     const state = new TargetRenderState();
-    state.takeRender(SubViewportClearMode.ALWAYS, projectColor);
+    state.takeRender(SubViewportClearMode.ALWAYS, projectColor, target);
     state.rearm();
     expect(state.hasRendered).toBe(false);
+  });
+
+  it('clears a ONCE clear again on a new target, which starts empty', () => {
+    const state = new TargetRenderState();
+    state.takeRender(SubViewportClearMode.ONCE, projectColor, target);
+    const next = new THREE.WebGLRenderTarget(1, 1);
+    expect(state.takeRender(SubViewportClearMode.ONCE, projectColor, next).clears).toBe(true);
   });
 
   it('starts with its ONCE update and its ONCE clear pending', () => {
     const state = new TargetRenderState();
     expect(state.hasRendered).toBe(false);
-    expect(state.takeRender(SubViewportClearMode.ONCE, projectColor).clears).toBe(true);
+    expect(state.takeRender(SubViewportClearMode.ONCE, projectColor, target).clears).toBe(true);
   });
 });
 

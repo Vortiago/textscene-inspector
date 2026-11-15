@@ -98,7 +98,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
 
   const renderState = useViewportRenderState(path, gate.updateMode);
   const renderPass = useCallback(() => {
-    const clear = renderState.takeRender(clearMode, clearColor);
+    const clear = renderState.takeRender(clearMode, clearColor, target);
     renderToOffscreenTarget(gl, {
       target,
       clearColor: clear.color,
