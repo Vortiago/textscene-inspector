@@ -128,3 +128,17 @@ export function describeCanvasTextureItem(
     });
   });
 }
+
+/**
+ * The wiring check of a drawer that renders `CanvasMeshBody`, whose own test holds the rest of
+ * `describeCanvasTextureItem`: the drawer hands the body the CanvasTexture its `texture` names, so
+ * a normal map in it makes the item normal-mapped.
+ */
+export function itHandsTheBodyItsCanvasTexture(
+  render: (wrapper: TscnInternalResource) => Promise<Pick<LitRender, 'registerItem'>>
+): void {
+  it('hands the canvas mesh body the CanvasTexture its texture names', async () => {
+    const { registerItem } = await render(canvasTexture({ normal_texture: FLAT_GREY_REF }));
+    expect(registerItem).toHaveBeenLastCalledWith(expect.anything(), 'apart');
+  });
+}

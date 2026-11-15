@@ -3,9 +3,15 @@
  * colour multiplied with the item's modulate, and nothing for a mesh Godot builds no surface for.
  */
 import { describe, expect, it } from 'vitest';
+import './index';
+import {
+  CANVAS_TEXTURE_REF,
+  itHandsTheBodyItsCanvasTexture,
+  renderLitItem,
+} from '../../../r3f/testing/canvasTextureLighting';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { heading } from '../../../parser/testing/parserKit';
+import { heading, parsedNode } from '../../../parser/testing/parserKit';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import { UndrawnMeshesProvider, useUndrawnMeshTypes } from '../../../r3f/contexts/UndrawnMeshesContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
@@ -206,5 +212,22 @@ describe('MeshInstance2D with an ArrayMesh of other primitives', () => {
       'Points',
       'LineSegments',
     ]);
+  });
+});
+
+describe('MeshInstance2D with a CanvasTexture', () => {
+  itHandsTheBodyItsCanvasTexture((wrapper: TscnInternalResource) => {
+    const mesh = parsedNode(
+      { type: 'MeshInstance2D', name: 'M' },
+      { mesh: 'SubResource("Quad")', texture: CANVAS_TEXTURE_REF }
+    );
+    return renderLitItem(
+      <UndrawnMeshesProvider>
+        <NodePathProvider path="Root/M">
+          <MeshInstance2D node={mesh} />
+        </NodePathProvider>
+      </UndrawnMeshesProvider>,
+      [QUAD, wrapper]
+    );
   });
 });

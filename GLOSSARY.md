@@ -158,6 +158,10 @@ _Avoid_: "sprite font", "pixel font".
 The faces a font tries for each glyph, in order: its own face, then each of its `fallbacks` and theirs, depth first (`Font::_update_rids`). The shaper draws a character from the first face that has it. A character no face has stays in the first face.
 _Avoid_: "fallback font" for the bundled Open Sans, which is the **Project default font**'s last resort.
 
+**Settled font** (`SettledFont` in `r3f/controls/native/text/settledFonts.ts`, `readSettledFont` in `sceneFontLoader.ts`, `useSettledFont`):
+A font of the scene once the face of each font of its **Fallback chain** has loaded: its face, with the chain's faces as its fallbacks, and the chain. Each preview loads its fonts through the settled fonts its `ResourceLoader` holds (`settledFonts.ts`). A settle there wakes the readers of that font in that preview, and no reader of another preview. Until then the font is loading and draws nothing. No font set is none, and draws the bundled font.
+_Avoid_: "the font metrics" for the whole answer, which holds the chain too.
+
 **Cluster** (`GlyphPlacement.char` and `sourceIndex` in `r3f/controls/native/text/textLayout.ts`):
 The characters of a run that draw as one unit: a base and the marks typed after it, or the characters of a **Shaped glyph**. The layout places each cluster once, with the cluster's text as its `char`. A line break and a reveal step fall only at the edge of a cluster, as Godot's glyph `start` and `end` set them.
 _Avoid_: "grapheme", which Unicode segments by other rules.
@@ -523,6 +527,14 @@ _Avoid_: "frame", which is a Sprite2D's `frame` of `hframes`.
 **Drawn instance** (`resources/meshes/multimesh/types.ts`):
 One of the instances a MultiMesh draws: the first `visible_instance_count`, or all of them for -1, each with its transform, its colour when `use_colors` and its custom data when `use_custom_data`.
 _Avoid_: "visible instance" for the record, which names only the count.
+
+**Canvas mesh body** (`CanvasMeshBody`, `r3f/canvasMesh/`):
+The module a Node2D mesh drawer draws through: Sprite2D, AnimatedSprite2D, Polygon2D, Line2D, MeshInstance2D, MultiMeshInstance2D and CPUParticles2D. A drawer states its texture with `useCanvasMeshTexture` and hands over its **canvas surfaces**. The body holds the texture's load state, the placeholder for a ViewportTexture in a pass cycle, the CanvasTexture hand-back to the lighting, the light read, the material colour, the defines and the one material. The tile run and the CanvasGroup rect mount its material, `CanvasSurfaceMaterial`, without the body.
+_Avoid_: "canvas mesh item", "sprite material".
+
+**Canvas surface** (`CanvasSurface`, `r3f/canvasMesh/canvasSurface.ts`):
+One geometry a canvas mesh body draws, with the one array colour its draw carries (Polygon2D `color`, Line2D `default_color`) and what its `color` attribute holds: the authored sRGB numbers or colours decoded and times an instance colour.
+_Avoid_: "part", "tint shape".
 
 **Canvas frame** (`Canvas2DStage/canvasFrame.ts`):
 The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057). It stores sRGB numbers, or linear half floats in a linear canvas colour space, which the root's copy to the drawing buffer converts to sRGB. Under `render_target_clear_mode` NEVER it takes the bytes of the target first and draws over them.

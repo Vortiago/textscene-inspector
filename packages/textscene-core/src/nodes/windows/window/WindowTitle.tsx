@@ -39,7 +39,7 @@ export function WindowTitle({ solveNode, width, border, closeHOffset, slot }: Wi
     colorKey: 'title_color',
   });
   const font = resolveNodeFont(solveNode, 'title_font');
-  const fontMetrics = peekSceneFontMetrics(font, solveNode.path);
+  const fontMetrics = peekSceneFontMetrics(solveNode.settledFonts, font, solveNode.path);
   const titleHeight = requiredThemeItem(constants, 'title_height');
   const outlineSize = requiredThemeItem(constants, 'title_outline_size');
   const outlineColor = requiredThemeItem(colors, 'title_outline_modulate');

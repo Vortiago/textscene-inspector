@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { woffFromSfnt } from './fontContainer.testkit';
-import { fontWork, sceneFontSettleCount } from './settledChannel';
+import { fontWork } from './settledChannel';
 import { drawLoad, peekOutlines, peekSceneFontOutlines } from './sceneFontOutlines';
 import { openFontOutlines } from './sfntOutlines';
 import { bundledFontBytes } from './bundledFontBytes';
@@ -10,6 +10,10 @@ import { BUNDLED_FACE, FACELESS_FONT, type FileWithBytes } from './sceneFontReso
 import { charContours, fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
 import autoHintedReference from './autofit/autoHinting.godot.json';
 import { referencePoints, type ReferenceGlyph } from './glyphVariation.testkit';
+import { createSettledFonts } from './settledFonts';
+
+/** The settled fonts of one preview, which every peek of this file loads through. */
+const fonts = createSettledFonts();
 
 /** A font file that holds `bytes`, the face it draws. */
 const fileFace = (bytes: ArrayBuffer): FileWithBytes => ({ ...fontFile(bytes), bytes });
@@ -18,19 +22,19 @@ const woffOfOpenSans = () =>
   fileFace(woffFromSfnt(fixtureFontBytes('open-sans-semibold-subset.ttf'), { compress: true }));
 
 async function settledOutlines(font: FontResource | null) {
-  await vi.waitFor(() => expect(peekSceneFontOutlines(font)).not.toBeUndefined());
-  return peekSceneFontOutlines(font);
+  await vi.waitFor(() => expect(peekSceneFontOutlines(fonts, font)).not.toBeUndefined());
+  return peekSceneFontOutlines(fonts, font);
 }
 
 describe('peekSceneFontOutlines', () => {
   it('lacks every glyph for a font with no face, so a TextMesh draws each as its fallback quad', () => {
-    expect(peekSceneFontOutlines(FACELESS_FONT)?.glyphIndex('H'.codePointAt(0)!)).toBe(0);
+    expect(peekSceneFontOutlines(fonts, FACELESS_FONT)?.glyphIndex('H'.codePointAt(0)!)).toBe(0);
   });
 
   it('answers undefined while a WOFF decompresses, then its outlines', async () => {
     const font = woffOfOpenSans();
 
-    expect(peekSceneFontOutlines(font)).toBeUndefined();
+    expect(peekSceneFontOutlines(fonts, font)).toBeUndefined();
 
     const outlines = await settledOutlines(font);
     expect(outlines?.glyphIndex(0x48)).toBe(20);
@@ -56,34 +60,34 @@ describe('peekSceneFontOutlines', () => {
 
   it('counts a settled load once, so a reader that built without the outlines reads them again', async () => {
     const font = woffOfOpenSans();
-    const before = sceneFontSettleCount();
+    const before = fonts.version();
 
     await settledOutlines(font);
 
-    expect(sceneFontSettleCount()).toBe(before + 1);
+    expect(fonts.version()).toBe(before + 1);
   });
 
   it('answers one outlines object for every peek of one font file', async () => {
     const font = woffOfOpenSans();
     const outlines = await settledOutlines(font);
 
-    expect(peekSceneFontOutlines(font)).toBe(outlines);
+    expect(peekSceneFontOutlines(fonts, font)).toBe(outlines);
   });
 
   it('starts one load for a font file that two peeks ask for before it settles', async () => {
     const font = woffOfOpenSans();
-    const before = sceneFontSettleCount();
+    const before = fonts.version();
 
-    peekSceneFontOutlines(font);
+    peekSceneFontOutlines(fonts, font);
     await settledOutlines(font);
 
-    expect(sceneFontSettleCount()).toBe(before + 1);
+    expect(fonts.version()).toBe(before + 1);
   });
 
   it('counts the load as font work until it settles, so a capture waits for the outlines', async () => {
     const font = woffOfOpenSans();
 
-    peekSceneFontOutlines(font);
+    peekSceneFontOutlines(fonts, font);
     expect(fontWork.pending()).toBe(1);
 
     await settledOutlines(font);
@@ -120,14 +124,14 @@ describe('peekSceneFontOutlines', () => {
   });
 
   it('answers null for a font file with no bytes and no fallback', () => {
-    expect(peekSceneFontOutlines(fontFile(undefined, []))).toBeNull();
+    expect(peekSceneFontOutlines(fonts, fontFile(undefined, []))).toBeNull();
   });
 });
 
 describe('peekOutlines at the draw load', () => {
   async function settledGlyphOutlines(font: FileWithBytes) {
-    await vi.waitFor(() => expect(peekOutlines(font, drawLoad(font))).not.toBeUndefined());
-    return peekOutlines(font, drawLoad(font))!;
+    await vi.waitFor(() => expect(peekOutlines(fonts, font, drawLoad(font))).not.toBeUndefined());
+    return peekOutlines(fonts, font, drawLoad(font))!;
   }
 
   async function referenceContours(name: string, hinting: FontHinting) {
@@ -139,7 +143,7 @@ describe('peekOutlines at the draw load', () => {
   it('answers undefined while the outlines of a canvas face load, then the outlines', async () => {
     const font = woffOfOpenSans();
 
-    expect(peekOutlines(font, drawLoad(font))).toBeUndefined();
+    expect(peekOutlines(fonts, font, drawLoad(font))).toBeUndefined();
 
     expect((await settledGlyphOutlines(font)).glyphIndex(0x48)).toBe(20);
   });
@@ -171,9 +175,11 @@ describe('peekOutlines at the draw load', () => {
 describe('peekOutlines of the bundled face', () => {
   it('reads the bundled Open Sans at the hinting the project sets', async () => {
     const load = { hinting: Hinting.NORMAL, isAutohinterForced: false };
-    await vi.waitFor(() => expect(peekOutlines(BUNDLED_FACE, load)).not.toBeUndefined());
+    await vi.waitFor(() => expect(peekOutlines(fonts, BUNDLED_FACE, load)).not.toBeUndefined());
     const bundled = await openFontOutlines(bundledFontBytes(), load);
 
-    expect(charContours(peekOutlines(BUNDLED_FACE, load)!, 'a', 16)).toEqual(charContours(bundled!, 'a', 16));
+    expect(charContours(peekOutlines(fonts, BUNDLED_FACE, load)!, 'a', 16)).toEqual(
+      charContours(bundled!, 'a', 16)
+    );
   });
 });

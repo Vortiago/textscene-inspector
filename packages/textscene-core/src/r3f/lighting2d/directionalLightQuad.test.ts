@@ -6,12 +6,9 @@
 import { describe, it, expect } from 'vitest';
 import { canvasShadowAtlasSize } from '../../godot/rendering/canvasShadowAtlas';
 import * as THREE from 'three';
-import {
-  createDirectionalLightMaterial,
-  createDirectionalShadowTexture,
-  writeDirectionalShadowMap,
-  type DirectionalShadowSampling,
-} from './directionalLightQuad';
+import { createDirectionalLightMaterial, type DirectionalShadowSampling } from './directionalLightQuad';
+import { createShadowMapTexture } from './shadowMap/shadowMapTexture';
+import { SHADOWED_LIGHT_GLSL } from './shadowMap/shadowShader';
 
 import { Light2DBlendMode } from '../../godot/scene/light2d';
 import { Light2DShadowFilter } from '../../godot/scene/light2d.js';
@@ -23,7 +20,7 @@ const WARM = { r: 1, g: 0.75, b: 0.35, a: 0.5 };
 
 function sampling(overrides: Partial<DirectionalShadowSampling> = {}): DirectionalShadowSampling {
   return {
-    map: createDirectionalShadowTexture(DEFAULT_ATLAS_SIZE),
+    map: createShadowMapTexture(DEFAULT_ATLAS_SIZE, 'clamp'),
     filter: Light2DShadowFilter.NONE,
     smooth: 0,
     ndcToShadow: new THREE.Matrix3(),
@@ -111,11 +108,11 @@ describe('the shadow_color term of createDirectionalLightMaterial', () => {
     expect(mat.uniforms.uShadowMap!.value).toBe(shadow.map);
   });
 
-  it("carries the light's whole alpha and only the shadowed share of the colour", () => {
+  it('hands the shadowed split its colour and its whole alpha', () => {
     // A MIX blend scales the buffer by the alpha, which is the light's over its whole reach.
     const mat = createDirectionalLightMaterial({ color: WARM, energy: 2, blendMode: 2, shadow: sampling() });
-    expect(mat.fragmentShader).toContain('float alpha = uAlpha * (lit + s * uShadowColor.a)');
-    expect(mat.fragmentShader).toContain('vec4(uShadowColor.rgb * s, alpha)');
+    expect(mat.fragmentShader).toContain(SHADOWED_LIGHT_GLSL);
+    expect(mat.fragmentShader).toContain('writeShadowedLight(uColor, uAlpha, shadowFraction());');
   });
 
   it('evaluates the shadow taps once per fragment, for the light and the shadow_color together', () => {
@@ -136,52 +133,5 @@ describe('the shadow_color term of createDirectionalLightMaterial', () => {
     expect(mat.fragmentShader).toContain('vec4(0.0, 0.0, 0.0, uAlpha)');
     expect(mat.uniforms.uAlpha!.value).toBe(1);
     expect(mat.uniforms.uShadowMap).toBeUndefined();
-  });
-});
-
-describe('createDirectionalShadowTexture', () => {
-  it('holds one full-precision depth per bin, sampled texel by texel', () => {
-    // A half float rounds a depth near 1 by 1/2048 of z_far, 5 px at the default max_distance.
-    const texture = createDirectionalShadowTexture(DEFAULT_ATLAS_SIZE);
-    expect(texture.type).toBe(THREE.FloatType);
-    expect(texture.minFilter).toBe(THREE.NearestFilter);
-    expect(texture.magFilter).toBe(THREE.NearestFilter);
-    expect(texture.image.width).toBe(DEFAULT_ATLAS_SIZE);
-  });
-});
-
-describe('createDirectionalShadowTexture at another size', () => {
-  it('holds `size` bins', () => {
-    expect(createDirectionalShadowTexture(512).image.width).toBe(512);
-  });
-});
-
-describe('writeDirectionalShadowMap', () => {
-  it('fills the texture in place and flags the upload', () => {
-    const texture = createDirectionalShadowTexture(DEFAULT_ATLAS_SIZE);
-    const bins = new Float32Array(DEFAULT_ATLAS_SIZE).fill(1);
-    bins[3] = 0.123456;
-    const versionBefore = texture.version;
-    writeDirectionalShadowMap(texture, bins);
-    expect((texture.image.data as Float32Array)[3]).toBeCloseTo(0.123456, 6);
-    expect(texture.version).toBeGreaterThan(versionBefore);
-  });
-
-  it('refuses a longer map', () => {
-    expect(() =>
-      writeDirectionalShadowMap(
-        createDirectionalShadowTexture(DEFAULT_ATLAS_SIZE),
-        new Float32Array(DEFAULT_ATLAS_SIZE + 1)
-      )
-    ).toThrow(RangeError);
-  });
-
-  it('refuses a shorter map rather than leaving stale bins behind', () => {
-    const texture = createDirectionalShadowTexture(DEFAULT_ATLAS_SIZE);
-    writeDirectionalShadowMap(texture, new Float32Array(DEFAULT_ATLAS_SIZE).fill(0.5));
-    expect(() => writeDirectionalShadowMap(texture, new Float32Array(DEFAULT_ATLAS_SIZE - 1))).toThrow(
-      RangeError
-    );
-    expect((texture.image.data as Float32Array)[DEFAULT_ATLAS_SIZE - 1]).toBe(0.5);
   });
 });
