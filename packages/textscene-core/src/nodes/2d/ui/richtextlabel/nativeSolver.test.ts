@@ -2327,6 +2327,12 @@ describe('RichTextLabel lists and indents', () => {
     expect(textAndOffset(listPlacements('[ul bullet=*]a[/ul]'))[0]![0]).toBe('* ');
   });
 
+  // A list marker is a `TextLine`, which never breaks (rich_text_label.h:163).
+  it('keeps a bullet with a line break on one line', () => {
+    const [marker] = listPlacements('[ul bullet=a\nb]x[/ul]');
+    expect(marker!.layout.lines.map((line) => line.text)).toEqual(['a\nb ']);
+  });
+
   it('draws a marker for an empty item, which keeps its line', () => {
     const placements = listPlacements('[ul]a\n\nb[/ul]');
     expect(placements.filter((p) => p.layout.lines[0]!.text === '• ')).toHaveLength(3);
