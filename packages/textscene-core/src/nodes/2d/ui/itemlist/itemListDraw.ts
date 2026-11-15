@@ -14,6 +14,7 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import { defineRectShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { soloLineLayout, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { lineTopsPx } from '../../../../r3f/controls/native/text/lineExtent';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import type { ScrollBarPairBoxes } from '../shared/scrollBarSolver';
@@ -50,6 +51,8 @@ import type { ItemListRuntimeItem, ItemListRuntimeProperties } from './types';
 interface DrawnLabelLine {
   lineLayout: TextLayoutResult;
   shiftPx: number;
+  /** The line's top below the label's, px. */
+  topPx: number;
 }
 
 /** One row as the list draws it. */
@@ -61,7 +64,7 @@ export interface ItemListDrawnRow {
   /** The icon's own colour before the list's tint (`item_list.cpp:1568-1571`). */
   iconColor: Rgba;
   /** The label at its draw width (`item_list.cpp:1625-1661`), or `null` for an item with no text. */
-  label: { linePitchPx: number; lines: DrawnLabelLine[] } | null;
+  label: { lines: DrawnLabelLine[] } | null;
   /** Row-relative pen x, already through the RTL branch of `item_list.cpp:1639-1670`. */
   textX: number;
   textY: number;
@@ -147,12 +150,13 @@ function labelAt(frame: DrawFrame, row: ItemListRow, widthPx: number): TextLayou
 
 function drawnLabel(layout: TextLayoutResult | null, widthPx: number, wrapped: boolean, rtl: boolean) {
   if (!layout) return null;
+  const topsPx = lineTopsPx(layout);
   return {
-    linePitchPx: layout.linePitchPx,
     // One layout object per line, made here, so a line keeps its meshes across renders.
-    lines: itemListDrawnLabel(layout, widthPx, wrapped, rtl).map(({ line, shiftPx }) => ({
+    lines: itemListDrawnLabel(layout, widthPx, wrapped, rtl).map(({ line, shiftPx }, index) => ({
       lineLayout: soloLineLayout(line, layout),
       shiftPx,
+      topPx: topsPx[index]!,
     })),
   };
 }

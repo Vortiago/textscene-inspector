@@ -9,11 +9,12 @@
  */
 import { ItemListIconMode } from '../../../../godot/scene/gui';
 import { AutowrapMode, OverrunBehavior, TextDirection } from '../../../../godot/text/textServerEnums';
-import { isDrawnRtl, textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import {
   overrunFlagsForBehavior,
   trimLayoutToWidth,
-  trimTextBufferLineToWidth,
+  trimLine,
+  textBufferPlacement,
   type OverrunTrimFlags,
 } from '../../../../r3f/controls/native/text/textOverrun';
 import {
@@ -22,6 +23,7 @@ import {
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { shapedBlockHeightPx } from '../../../../r3f/controls/native/text/lineExtent';
 
 const { ICON_MODE_TOP } = ItemListIconMode;
 
@@ -44,9 +46,6 @@ export function itemListMinimumShapeWidthPx(fixedColumnWidth: number): number {
 
 /** An item's own `text_direction` and `language` (`item_list.h:73-74`), which no scene changes. */
 const ITEM_BIDI = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' };
-
-/** An AUTO item draws its fill left to right, whatever direction its text infers. */
-const IS_ITEM_DRAWN_RTL = isDrawnRtl(textBidiOptions(ITEM_BIDI, ''));
 
 interface ItemTextShapeInput {
   text: string;
@@ -101,7 +100,6 @@ export function trimItemListLine(
   return trimLayoutToWidth(line, widthPx, itemOverrunFlags(input), {
     fontMetrics: line.fontMetrics,
     fontSizePx: input.fontSizePx,
-    isDrawnRtl: IS_ITEM_DRAWN_RTL,
   });
 }
 
@@ -137,11 +135,8 @@ function trimItemLine(
   widthPx: number,
   flags: OverrunTrimFlags
 ): TextLineLayout {
-  return trimTextBufferLineToWidth(line, widthPx, flags, {
-    fontMetrics: layout.fontMetrics,
-    fontSizePx: input.fontSizePx,
-    isDrawnRtl: IS_ITEM_DRAWN_RTL,
-  });
+  const options = { fontMetrics: layout.fontMetrics, fontSizePx: input.fontSizePx };
+  return trimLine(line, widthPx, flags, options, textBufferPlacement);
 }
 
 function withLines(layout: TextLayoutResult, lines: readonly TextLineLayout[]): TextLayoutResult {
@@ -149,7 +144,7 @@ function withLines(layout: TextLayoutResult, lines: readonly TextLineLayout[]): 
     ...layout,
     lines: [...lines],
     widthPx: widestLineWidthPx(lines),
-    heightPx: lines.length * layout.linePitchPx,
+    heightPx: shapedBlockHeightPx(lines, layout.lineSpacingPx),
   };
 }
 

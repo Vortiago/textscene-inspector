@@ -13,7 +13,7 @@ import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/nativ
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   getFontTabStopsPx,
-  getFontLinePitchPx,
+  getFontChainHeightPx,
   type FontMetrics,
 } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -29,6 +29,7 @@ import {
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { shapedLineHeightPx, type LineExtentPx } from '../../../../r3f/controls/native/text/lineExtent';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -56,13 +57,35 @@ export function textEditWrapOffsetPx(n: SolveNode): number {
   return requiredThemeItem(n.constants, 'wrap_offset');
 }
 
-/** `text_edit.cpp:4103`: `MAX(text.get_line_height() + theme_cache.line_spacing, 1)`. `Text::get_line_height()` (`:136-147`) is the max of every visible line's own `l.height`, which reduces to the font's own ascent+descent (no spacing) since every line in this codebase shapes at one uniform font/size. */
+/**
+ * `text_edit.cpp:4103`: `MAX(text.get_line_height() + theme_cache.line_spacing, 1)`, where
+ * `get_line_height` is the tallest line (`:136-147`). A line's `l.height` is the larger of
+ * `font->get_height`, the tallest face of the **Fallback chain**, and each of its rows (`:364-366`).
+ */
 export function textEditRowHeightPx(
-  fontMetrics: Parameters<typeof getFontLinePitchPx>[0],
+  lineLayouts: readonly TextEditLineLayout[],
+  fontMetrics: FontMetrics,
   fontSizePx: number,
   themeLineSpacingPx: number
 ): number {
-  return Math.max(getFontLinePitchPx(fontMetrics, fontSizePx, 0) + themeLineSpacingPx, 1);
+  let tallestPx = Math.trunc(getFontChainHeightPx(fontMetrics, fontSizePx));
+  for (const { layout } of lineLayouts) {
+    for (const row of layout.lines) tallestPx = Math.max(tallestPx, shapedLineHeightPx(row));
+  }
+  return Math.max(tallestPx + themeLineSpacingPx, 1);
+}
+
+/**
+ * {@link textEditRowHeightPx} over the buffer shaped without wrapping. CodeEdit sizes its gutters from
+ * it on `NOTIFICATION_THEME_CHANGED` (`code_edit.cpp:56-60`), and the gutters then set the wrap width.
+ */
+export function textEditUnwrappedRowHeightPx(
+  lines: readonly string[],
+  shape: Omit<TextEditShapeOptions, 'wrapMode' | 'wrapWidthPx'>,
+  themeLineSpacingPx: number
+): number {
+  const lineLayouts = shapeTextEditLines(lines, { ...shape, wrapMode: 0 });
+  return textEditRowHeightPx(lineLayouts, shape.fontMetrics, shape.fontSizePx, themeLineSpacingPx);
 }
 
 /** `text_edit.cpp:8614`: `content_size_cache = Vector2i(total_width + 10, ...)`, a second bare, unscaled `10`. */
@@ -309,7 +332,7 @@ export function textEditMinimumSizeWith(
     bidi: controlBidiOptions(props, n),
     placeholder: isPlaceholder,
   });
-  const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
+  const rowHeightPx = textEditRowHeightPx(lineLayouts, fontMetrics, fontSizePx, lineSpacingPx);
   const content = textEditContentSize(
     lineLayouts,
     rowHeightPx,
@@ -587,8 +610,11 @@ export function textEditRowColorRuns(
   return runs.length > 0 ? runs : [{ glyphs: [], color: fallbackColor }];
 }
 
-/** One colour run's glyphs as a `TextLineLayout`, `soloLineLayout`'s input, so a run renders through the same `<TextRun>` path as a whole row. */
-export function textEditColorRunLine(run: TextEditGlyphColorRun): TextLineLayout {
+/**
+ * One colour run's glyphs as a `TextLineLayout`, `soloLineLayout`'s input, so a run renders through
+ * the same `<TextRun>` path as a whole row. It keeps the ascent and descent of its `row`.
+ */
+export function textEditColorRunLine(run: TextEditGlyphColorRun, row: LineExtentPx): TextLineLayout {
   const first = run.glyphs[0];
   const last = run.glyphs[run.glyphs.length - 1];
   const widthPx = first && last ? last.x + last.advance - first.x : 0;
@@ -597,5 +623,7 @@ export function textEditColorRunLine(run: TextEditGlyphColorRun): TextLineLayout
     glyphs: run.glyphs,
     widthPx,
     paragraphIndex: 0,
+    ascentPx: row.ascentPx,
+    descentPx: row.descentPx,
   };
 }

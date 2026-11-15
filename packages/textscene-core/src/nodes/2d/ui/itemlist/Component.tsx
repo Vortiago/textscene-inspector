@@ -112,8 +112,8 @@ function ItemListRow({
         />
       )}
       {label &&
-        label.lines.map(({ lineLayout, shiftPx }, index) => (
-          <CanvasItemGroup key={index} position={[textX + shiftPx, -(textY + index * label.linePitchPx), 0]}>
+        label.lines.map(({ lineLayout, shiftPx, topPx }, index) => (
+          <CanvasItemGroup key={index} position={[textX + shiftPx, -(textY + topPx), 0]}>
             {isTextFillDrawn ? (
               <OutlinedTextRun {...run} layout={lineLayout} tint={tintedTextColor} />
             ) : (

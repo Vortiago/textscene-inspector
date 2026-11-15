@@ -18,7 +18,6 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
-import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { BUTTON_CLASS, buttonLayoutOf, type ButtonClass } from './nativeSolver';
 import type { ButtonProperties } from './types';
@@ -67,8 +66,6 @@ export function ButtonPainter({
   const iconTexture = themedIconName === undefined ? ownIconTexture : themedIconTexture;
   const iconModulate = useIconModulate(iconColor, tint.own);
 
-  const bidi = useControlBidiOptions(props, solveNode);
-
   return (
     <>
       {!props.flat && <StyleBoxQuad styleBox={box} color={tint.own} rect={rect} renderOrder={renderOrder} />}
@@ -93,7 +90,6 @@ export function ButtonPainter({
         <ButtonLabel
           layout={label}
           overrunBehavior={props.overrunBehavior}
-          bidi={bidi}
           isWrapped={isWrapped}
           box={content.labelBox}
           fontSizePx={textTheme.fontSizePx}
