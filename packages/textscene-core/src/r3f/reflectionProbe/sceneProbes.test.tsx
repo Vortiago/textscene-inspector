@@ -6,6 +6,8 @@ import { parseReflectionProbe } from '../../nodes/3d/reflectionprobe/parser';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
 import { drawAsProbeCapture } from '../testing/worldRenders';
+import { renderUnderWay } from '../viewportRender/worldRender';
+import type { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas';
 import { ReflectionProbeObject } from './reflectionProbeObject';
 import { SceneProbes } from './sceneProbes';
 import { rootViewportDescription } from '../viewportRender/viewportDescription';
@@ -302,6 +304,21 @@ describe('SceneProbes rendering', () => {
     fireSceneRenderEnd(scene, camera);
 
     expect(shownProbes[0]).toBe(0);
+  });
+
+  it("captures in the scene's own probe shadow atlas, not the viewport's (renderer_scene_cull.cpp:3691)", async () => {
+    const { renderer, scene, facesDrawn, settle } = await sceneWith(probeObject());
+    const atlases = new Set<ViewportShadowAtlas | null | undefined>();
+    vi.spyOn(renderer, 'render').mockImplementation((rendered) => {
+      if (rendered === scene) atlases.add(renderUnderWay()?.shadowAtlas);
+    });
+    settle();
+    facesDrawn();
+    const [atlas] = atlases;
+    const light = new THREE.SpotLight();
+    atlas?.allocate([{ owner: light, isOmni: false, coverage: 1 }], 0);
+
+    expect([atlases.size, atlas?.slot(light)?.size]).toEqual([1, 256]);
   });
 
   it('hides the shadows from a capture without enable_shadows, until its render ends', async () => {

@@ -9,6 +9,7 @@ import {
   captureFarPlanes,
   REFLECTION_ATLAS_COUNT,
   REFLECTION_ATLAS_SIZE,
+  REFLECTION_PROBE_SHADOW_ATLAS,
   reflectionAtlasLayout,
   reflectionProbeOrder,
   ReflectionProbeUpdateMode,
@@ -31,6 +32,7 @@ import { captureCameras, probeFrame } from './captureCameras.js';
 import { drawWorld, renderUnderWay } from '../viewportRender/worldRender.js';
 import type { ViewportDescription } from '../viewportRender/viewportDescription.js';
 import { stageCapture } from './captureStage.js';
+import { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas.js';
 import { ProbeRows, type DrawnProbe } from './probeRows.js';
 import { atlasSlot, NO_RENDER_EXPOSURE, shownProbes } from './probeSlots.js';
 import { isReflectionProbe, type ReflectionProbeObject } from './reflectionProbeObject.js';
@@ -67,6 +69,7 @@ export class SceneProbes {
   private atlasHasRealTimeProbe = false;
   /** The capture each probe holds in the atlas, written by `capture` and cleared with the atlas. */
   private readonly captures = new Map<ReflectionProbeObject, Capture>();
+  private readonly shadowAtlas = new ViewportShadowAtlas(REFLECTION_PROBE_SHADOW_ATLAS);
   /** Advanced only by `markCapturesStale`, so each probe captures again. */
   private generation = 0;
   /** The rows of the drawn probes, rewritten in place by `pack`. */
@@ -146,6 +149,7 @@ export class SceneProbes {
     this.leaveSlots();
     this.atlas?.target.dispose();
     this.cube.dispose();
+    this.shadowAtlas.dispose();
     this.releaseSceneRows();
   }
 
@@ -214,7 +218,7 @@ export class SceneProbes {
     const cameras = captureCameras(object.matrixWorld, probe.originOffset, farPlanes);
     const render = {
       viewport: rootViewport,
-      shadowAtlas: null,
+      shadowAtlas: this.shadowAtlas,
       hasCanvasTransform: false,
       probeCapture: capture,
     };

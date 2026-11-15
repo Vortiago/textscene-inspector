@@ -40,8 +40,10 @@ viewport gives each render it draws.** It is free of React and three.
   probes and screen-space effects the probe capture, and the canvas layers the canvas transform.
   Renders nest: a SubViewport's 3D draw inside its 2D pass reads its own render, and the outer
   render returns after it.
-- A null `shadowAtlas` means the root's atlas, which each scene's shadow fit holds, so the probe
-  captures of that scene share it.
+- A null `shadowAtlas` means the root viewport's atlas, which each scene's shadow fit builds from
+  the root description, as Godot gives every viewport its own (`renderer_viewport.cpp:961`). A
+  reflection probe capture draws in its scene's own 1024 atlas, as Godot's scenario does
+  (`renderer_scene_cull.cpp:430-435`, `:3691`).
 - `drawsEditorChrome` has its reader in the SubViewport pass. `camera` and `previewsEnvironment`
   keep their rules in the pass's world kind until the In-game view, the third adapter, reads them.
   That is the one exception to the rule that a field arrives with its first reader.
