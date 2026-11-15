@@ -20,6 +20,10 @@ import { createArrayMeshProcessor, type ArrayMeshResource } from './processors/c
 import { createFontProcessor } from './processors/createFontProcessor';
 import { createThemeProcessor } from './processors/createThemeProcessor';
 import { createDirectoryProcessor } from './processors/createDirectoryProcessor';
+import { createLoadOutcomeProcessor } from './processors/createLoadOutcomeProcessor';
+import type { LoadFacts, LoadOutcome } from './loadFailure/loadOutcome';
+import { resourceFailingReads, sceneFailingReads } from './loadFailure/failingReads';
+import { existsInListing, folderOf } from './loadFailure/fileExists';
 import { foldersAbove, type DirectoryListing } from './directoryListing';
 import { runClearCachesSequence } from './clearCachesSequence';
 import { runProvideFileSequence } from './provideFileSequence';
@@ -32,6 +36,7 @@ import { PEER_LOAD_TIMEOUT_MS, type ResourceProcessor } from './createResourcePr
 import { DependencyGraph, type Dependent } from './dependencyGraph';
 import { sectionLoader, type SectionLoaderFn } from './resourceSection';
 import { resourceFilePath } from './subResourcePath';
+import { fileExtension } from './fileExtension';
 import * as logger from '../logger';
 import { WorkerJobRunner, type CreateJobWorker } from '../workers/WorkerJobRunner';
 import {
@@ -80,6 +85,8 @@ export class ResourceLoader {
   readonly themes: ResourceProcessor<ThemeResource>;
   /** The entries of each `res://` folder a Control lists, such as a FileDialog's file list. */
   readonly directories: ResourceProcessor<DirectoryListing>;
+  /** Whether each file loads in Godot, or the chain of files that fails it. */
+  readonly loadOutcomes: ResourceProcessor<LoadOutcome>;
 
   /** Type to processor. The named accessors above are entries of this map, so routing needs no per-type switch. */
   private readonly processors: Map<ResourceType, ResourceProcessor<unknown>>;
@@ -169,6 +176,36 @@ export class ResourceLoader {
     const data = await fileBus.getProvider().loadResource(path, type);
     if (data === null) throw new Error(`File not found: ${path}`);
     return data;
+  }
+
+  /** What the walk of `path`'s load outcome reads: the parse caches and the folder listings. */
+  private loadFactsFor(path: string): LoadFacts {
+    const dependent: Dependent = { busType: 'loadoutcome', key: path };
+    return {
+      failingReads: async (file) => {
+        if (fileExtension(file) === '.tscn') {
+          const scene = await this.peerLoad(dependent, this.scenes, 'scene', file);
+          return scene && sceneFailingReads(scene);
+        }
+        const parsed = await this.peerLoad(dependent, this.resources, 'resource', file);
+        return parsed && resourceFailingReads(parsed);
+      },
+      exists: async (file) => {
+        // The file itself, so its creation or removal clears the outcome.
+        this.dependencies.record(dependent, file);
+        return existsInListing(file, await this.currentListing(dependent, folderOf(file)));
+      },
+    };
+  }
+
+  /** The listing of `folder`, the one a refresh still loads rather than the one it replaces. */
+  private async currentListing(dependent: Dependent, folder: string): Promise<DirectoryListing | null> {
+    if (!this.directories.isLoading(folder))
+      return this.peerLoad(dependent, this.directories, 'directory', folder);
+    this.dependencies.record(dependent, folder);
+    return this.eventBus
+      .once<DirectoryListing>('directory', 'loaded', folder, PEER_LOAD_TIMEOUT_MS)
+      .catch(() => null);
   }
 
   /** The section behind each address `busType` loads, from the `resource` slot's cached parse. */
@@ -266,6 +303,8 @@ export class ResourceLoader {
       return listDirectory.call(this.provider, folder);
     });
 
+    this.loadOutcomes = createLoadOutcomeProcessor(this.eventBus, (path) => this.loadFactsFor(path));
+
     this.processors = new Map<ResourceType, ResourceProcessor<unknown>>([
       ['texture', this.textures as ResourceProcessor<unknown>],
       [
@@ -291,6 +330,7 @@ export class ResourceLoader {
       ['font', this.fonts as ResourceProcessor<unknown>],
       ['theme', this.themes as ResourceProcessor<unknown>],
       ['directory', this.directories as ResourceProcessor<unknown>],
+      ['loadoutcome', this.loadOutcomes as ResourceProcessor<unknown>],
     ]);
   }
 
@@ -374,17 +414,18 @@ export class ResourceLoader {
    */
   provideFile(path: string): void {
     logger.info(`[ResourceLoader] provideFile: ${path}`);
+    // A file that appeared or went away edits the listing of each folder above it. A dialog keeps showing the old
+    // listing until the new one arrives, so a refresh replaces it where a clear would draw the folder empty.
+    // First, so a load outcome the sequence clears waits for the new listing.
+    for (const folder of foldersAbove(path)) {
+      if (this.directories.isCached(folder) || this.directories.isLoading(folder))
+        this.directories.refresh(folder);
+    }
     runProvideFileSequence({
       path,
       processors: this.processors,
       fileBus: this._fileEventBus ?? undefined,
       dependencies: this.dependencies,
     });
-    // A file that appeared or went away edits the listing of each folder above it. A dialog keeps showing the old
-    // listing until the new one arrives, so a refresh replaces it where a clear would draw the folder empty.
-    for (const folder of foldersAbove(path)) {
-      if (this.directories.isCached(folder) || this.directories.isLoading(folder))
-        this.directories.refresh(folder);
-    }
   }
 }
