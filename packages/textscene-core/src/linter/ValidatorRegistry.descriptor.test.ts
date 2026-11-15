@@ -5,7 +5,7 @@ import { CLASS_BASE_TYPES } from '../godot/classdb/classBaseTypes.js';
 import { expectAccepted } from './testing/validatorCheck.js';
 import { derivedValidator } from './descriptorValidator.js';
 import { classProperties } from '../godot/classdb/classProperty.js';
-import { propertyDescriptor } from '../godot/classdb/propertyDescriptor.js';
+import { propertyDescriptor, registerPropertyFacts } from '../godot/classdb/propertyDescriptor.js';
 import {
   NODE_CLASS_PROPERTIES,
   RESOURCE_CLASS_PROPERTIES,
@@ -30,6 +30,14 @@ describe('the registry reads the property descriptor', () => {
 
   it('answers nothing for a key no class in the chain declares', () => {
     expect(validatorRegistry.findValidator('BoxMesh', 'not_a_property')).toBeNull();
+  });
+
+  it('rebuilds a derived check when a hand row arrives after its first lookup', () => {
+    const registry = new ValidatorRegistry(CLASS_BASE_TYPES, derivedValidator);
+    const frames = () => registry.findValidator('AnimatedTexture', 'frames')!('frames', '0', 1);
+    expect(frames()).toBeAtTier('warning');
+    registerPropertyFacts('AnimatedTexture', { frames: { setter: { cite: 'animated_texture.cpp:90' } } });
+    expect(frames()).toBeAtTier('error');
   });
 
   it('builds a derived check once per type and key', () => {

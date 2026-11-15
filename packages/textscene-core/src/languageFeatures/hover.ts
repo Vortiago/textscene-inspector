@@ -12,7 +12,7 @@ import { isKnownClass, slotProperty } from './classInfo.js';
 import { findClassProperty, type ClassProperty } from '../godot/classdb/classProperty.js';
 import { classDocsUrl, propertyDocsUrl } from './docs.js';
 import type { DocumentSection, LanguageDocument, PropertyLocation, PropertySlot } from './document.js';
-import { acceptedResourceTypes, enumEntriesOf, flagLabels, rangeHint, rangeSuffix } from './hints.js';
+import { acceptedResourceTypes, enumEntriesOf, flagEntriesOf, rangeHint, rangeSuffix } from './hints.js';
 import { headingAttribute, lineRange, propertyKeySpan, propertyValueSpan, spanContains } from './ranges.js';
 import { declarationOf, referenceInValue, type ResourceReference } from './resourceRefs.js';
 import type { Hover, Position, Range } from './types.js';
@@ -40,10 +40,11 @@ function rangeText(hint: number, hintString: string): string | undefined {
   const bounds = rangeHint(hint, hintString);
   if (!bounds) return undefined;
   const suffix = rangeSuffix(hint, hintString);
-  const unit = suffix ? ` ${suffix}` : '';
-  const left = bounds.hasMin ? bounds.min : '−∞';
-  const right = bounds.hasMax ? bounds.max : '∞';
-  return `Range ${left}..${right}${unit}.`;
+  const left = bounds.min ?? '−∞';
+  const right = bounds.max ?? '∞';
+  // The hint is in degrees, and the file stores radians (editor_properties.cpp:1698-1709).
+  if (bounds.radiansAsDegrees) return `Range ${left}..${right} degrees, stored in radians.`;
+  return `Range ${left}..${right}${suffix ? ` ${suffix}` : ''}.`;
 }
 
 /** What a property accepts, from its hint. */
@@ -54,8 +55,8 @@ function acceptedText(property: ClassProperty): string | undefined {
     return `One of ${entries.map((entry) => `${codeSpan(entry.label)} (${entry.value})`).join(', ')}.`;
   const resources = acceptedResourceTypes(hint, hintString);
   if (resources) return `A resource of ${resources.map(codeSpan).join(' or ')}.`;
-  const flags = flagLabels(hint, hintString);
-  if (flags) return `A bitmask of ${flags.map(codeSpan).join(', ')}.`;
+  const flags = flagEntriesOf(hint, hintString);
+  if (flags) return `A bitmask of ${flags.map((flag) => `${codeSpan(flag.label)} (${flag.value})`).join(', ')}.`;
   return rangeText(hint, hintString);
 }
 
