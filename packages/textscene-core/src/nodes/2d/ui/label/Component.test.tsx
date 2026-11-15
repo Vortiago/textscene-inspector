@@ -303,7 +303,9 @@ describe('<Label> — the lines a wrapped Label shows in its rect (label.cpp:520
       { x: 0, y: 0, w: 60, h: 200 }
     );
     const lastShown = bundledRuns(renderer.scene)[1]!;
-    const lastInked = runGlyphs(lastShown).findLast((glyph) => glyph.char.trim() !== '')!;
+    const lastInked = runGlyphs(lastShown)
+      .filter((glyph) => glyph.char.trim() !== '')
+      .at(-1)!;
     expect(lastInked.x + lastInked.advance).toBeCloseTo(60, 0);
   });
 });
