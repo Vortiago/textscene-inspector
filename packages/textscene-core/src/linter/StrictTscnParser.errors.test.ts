@@ -36,7 +36,7 @@ invalidproperty
       const content = `[gd_scene load_steps=1 format=3]
 
 [node name="Root" type="Node3D"]
-visible =
+not_a_property =
 `;
 
       const result = parser.parse(content);
@@ -44,8 +44,8 @@ visible =
       // Empty value is allowed by parser (becomes empty string)
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
-      expect(result.scene!.nodes[0]!.rawProperties).toHaveProperty('visible');
-      expect(result.scene!.nodes[0]!.rawProperties['visible']).toBe('');
+      expect(result.scene!.nodes[0]!.rawProperties).toHaveProperty('not_a_property');
+      expect(result.scene!.nodes[0]!.rawProperties['not_a_property']).toBe('');
     });
   });
 

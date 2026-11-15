@@ -40,3 +40,20 @@ export function parseHintEnum(hintString: string): readonly HintEnumEntry[] {
 
   return entries;
 }
+
+/**
+ * Each label of a `PROPERTY_HINT_FLAGS` hint with its bit, in hint order, read the way
+ * `EditorPropertyFlags::setup` reads them (`editor_properties.cpp:1003-1023`): an explicit
+ * `Label:4` is its value, and an implicit label is bit `i` of its position. An empty option is
+ * no flag, though it still takes a position.
+ */
+export function parseHintFlags(hintString: string): readonly HintEnumEntry[] {
+  const entries: HintEnumEntry[] = [];
+  hintString.split(',').forEach((raw, i) => {
+    const option = raw.trim();
+    if (option.length === 0) return;
+    const [label, value] = option.split(':');
+    entries.push({ label: label!, value: value === undefined ? 2 ** i : toInt(value) });
+  });
+  return entries;
+}

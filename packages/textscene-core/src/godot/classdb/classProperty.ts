@@ -22,6 +22,11 @@ export interface ClassProperty {
   readonly hint: number;
   readonly hintString: string;
   readonly declaredBy: string;
+  /**
+   * The `Variant::Type` of the setter's value argument, present only where it differs from
+   * `type`. The loader converts a value to it (`class_db.cpp:1677`, `binder_common.h:175`).
+   */
+  readonly setterType?: number;
 }
 
 const PROPERTY_TABLES = [NODE_CLASS_PROPERTIES, RESOURCE_CLASS_PROPERTIES, UNCATALOGUED_PROPERTIES];
@@ -40,10 +45,15 @@ function ownRows(className: string): readonly ClassPropertyRow[] | undefined {
 }
 
 function toClassProperty(
-  [name, type, hint, hintString]: ClassPropertyRow,
+  [name, type, hint, hintString, setterType]: ClassPropertyRow,
   declaredBy: string
 ): ClassProperty {
-  return { name, type, hint, hintString, declaredBy };
+  return { name, type, hint, hintString, declaredBy, ...(setterType === undefined ? {} : { setterType }) };
+}
+
+/** The type a value converts to on load: the setter's, else the property's own. */
+export function valueTypeOf(property: ClassProperty): number {
+  return property.setterType ?? property.type;
 }
 
 /**

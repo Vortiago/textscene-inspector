@@ -38,20 +38,40 @@ extends SceneTree
 # hidden on DirectionalLight3D and stored on every other light).
 const USAGE_STORAGE := 2
 
+# The Variant type of each method's last argument, by method name, inherited
+# methods included: a setter may be bound on a base class.
+func value_argument_types(c: String) -> Dictionary:
+	var types: Dictionary = {}
+	for m in ClassDB.class_get_method_list(c):
+		var args: Array = m["args"]
+		if args.size() > 0:
+			types[m["name"]] = int(args[args.size() - 1]["type"])
+	return types
+
 # One row shape for both property blobs, so a consumer reads them the same way.
+# "setter_type", present only where it differs from "type", is the Variant type
+# of the setter's value argument. The loader converts a value to that type, not
+# to the property's own (class_db.cpp:1677, binder_common.h:175), and the two
+# differ where a setter takes an Array that the property declares INT
+# (`Curve._data`). Only where it differs, so the capture grows by 31 rows.
 func own_properties(c: String) -> Array:
 	var own: Array = []
+	var argument_types: Dictionary = value_argument_types(c)
 	for p in ClassDB.class_get_property_list(c, true):
 		# Group and category rows share the list with real properties and
 		# carry neither STORAGE nor a usable name; the flag test drops them.
 		if int(p["usage"]) & USAGE_STORAGE == 0:
 			continue
-		own.append({
+		var row: Dictionary = {
 			"name": p["name"],
 			"type": int(p["type"]),
 			"hint": int(p["hint"]),
 			"hint_string": p["hint_string"],
-		})
+		}
+		var setter_type: int = argument_types.get(ClassDB.class_get_property_setter(c, p["name"]), -1)
+		if setter_type != -1 and setter_type != row["type"]:
+			row["setter_type"] = setter_type
+		own.append(row)
 	return own
 
 # A fresh instance to read a class's getters on, or null. An abstract class's

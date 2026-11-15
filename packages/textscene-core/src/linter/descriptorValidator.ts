@@ -5,9 +5,14 @@
  * the error tier. Every check is a `v` builder call, so no bound is checked twice.
  */
 
-import type { PropertyDescriptor, PropertyFacts } from '../godot/classdb/propertyDescriptor.js';
-import { parseHintEnum } from '../godot/classdb/enumHint.js';
+import {
+  propertyDescriptor,
+  type PropertyDescriptor,
+  type PropertyFacts,
+} from '../godot/classdb/propertyDescriptor.js';
+import { parseHintEnum, parseHintFlags } from '../godot/classdb/enumHint.js';
 import { PROPERTY_HINT } from '../godot/classdb/propertyHint.js';
+import { valueTypeOf } from '../godot/classdb/classProperty.js';
 import { parseRangeHint, type RangeHintBounds } from '../godot/classdb/rangeHint.js';
 import { VARIANT_TYPE } from '../godot/variant/variantType.js';
 import type { IntWidth } from '../godot/variant/intWidth.js';
@@ -20,10 +25,10 @@ import type { EndedGrounding } from './validators/v/grounding.js';
 import { degToRad } from '../godot/math/math.js';
 
 /**
- * `variant.h:248` stores an INT as `int64_t`. Which C++ type the setter takes is not in ClassDB,
- * so a derived slot reads at the Variant's own width, and a hand row's `width` narrows it.
+ * A layers hint offers 32 layers, so a derived mask reads at 32 bits, where both `-1` (an `int`
+ * setter) and `4294967295` (a `uint32_t` one) are the same full mask.
  */
-const VARIANT_INT_WIDTH: IntWidth = 'int64';
+const LAYER_MASK_WIDTH: IntWidth = 'uint32';
 
 /** The example element a packed array's message shows. */
 const PACKED_FLOAT_EXAMPLE = '0, 1';
@@ -129,20 +134,14 @@ function enumValidator(descriptor: PropertyDescriptor): PropertyValidator {
   return v.enumSet(name, labels, grounding(descriptor, ends));
 }
 
-/** Bit value to label of a flags hint: an implicit label takes bit `i` (`editor_properties.cpp:1018-1022`). */
+/** Bit value to label of a flags hint. */
 function flagLabels(hintString: string): Record<number, string> {
-  const labels: Record<number, string> = {};
-  hintString.split(',').forEach((option, i) => {
-    const [label, value] = option.trim().split(':');
-    if (!label) return;
-    labels[value === undefined ? 2 ** i : Number.parseInt(value, 10) || 0] = label;
-  });
-  return labels;
+  return Object.fromEntries(parseHintFlags(hintString).map(({ label, value }) => [value, label]));
 }
 
 function intValidator(descriptor: PropertyDescriptor): PropertyValidator {
   const { name, hint, hintString } = descriptor.property;
-  const width = descriptor.facts?.width ?? VARIANT_INT_WIDTH;
+  const width = descriptor.facts?.width;
   if (hint === PROPERTY_HINT.ENUM) return enumValidator(descriptor);
   if (hint === PROPERTY_HINT.FLAGS) {
     refuseFacts(descriptor, []);
@@ -150,7 +149,7 @@ function intValidator(descriptor: PropertyDescriptor): PropertyValidator {
   }
   if (LAYER_HINTS.has(hint)) {
     refuseFacts(descriptor, ['width']);
-    return layerBitmask(name, { hinted: descriptor.cite, width });
+    return layerBitmask(name, { hinted: descriptor.cite, width: width ?? LAYER_MASK_WIDTH });
   }
   refuseFacts(descriptor, ['setter', 'width', 'message']);
   const ends: Ends = (hint === PROPERTY_HINT.RANGE ? parseRangeHint(hintString) : undefined) ?? {};
@@ -223,7 +222,8 @@ function objectValidator(descriptor: PropertyDescriptor): PropertyValidator {
 
 /** The check `descriptor` implies, or null for a Variant type with none. */
 export function descriptorValidator(descriptor: PropertyDescriptor): PropertyValidator | null {
-  switch (descriptor.property.type) {
+  const valueType = valueTypeOf(descriptor.property);
+  switch (valueType) {
     case VARIANT_TYPE.INT:
       return intValidator(descriptor);
     case VARIANT_TYPE.FLOAT:
@@ -236,5 +236,11 @@ export function descriptorValidator(descriptor: PropertyDescriptor): PropertyVal
       return objectValidator(descriptor);
   }
   refuseFacts(descriptor, []);
-  return FORMAT_CHECKS[descriptor.property.type]?.(descriptor.property.name) ?? null;
+  return FORMAT_CHECKS[valueType]?.(descriptor.property.name) ?? null;
+}
+
+/** The check the descriptor of `className`'s `key` implies, or null where it has none. */
+export function derivedValidator(className: string, key: string): PropertyValidator | null {
+  const descriptor = propertyDescriptor(className, key);
+  return descriptor ? descriptorValidator(descriptor) : null;
 }

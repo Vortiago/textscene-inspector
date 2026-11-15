@@ -56,18 +56,21 @@ describe('the format check the Variant type picks', () => {
     expect(check(className, key, bad)).toBeAtTier('error');
   });
 
+  it('checks the type the setter takes where it differs from the property type', () => {
+    // curve.cpp:706 declares `_data` INT, and `_set_data` takes an Array, which the loader
+    // converts to (class_db.cpp:1677, binder_common.h:175).
+    expectAccepted(check('Curve', '_data', '[Vector2(0, 0), 0.0, 0.0, 0, 0]'));
+    expect(check('Curve', '_data', '5')).toBeAtTier('error');
+    expectAccepted(check('ConvexPolygonShape3D', 'points', 'PackedVector3Array(0, 0, 0, 1, 1, 1)'));
+  });
+
   it('accepts any value in a NIL slot, which holds any Variant', () => {
-    expectAccepted(check('Curve', '_limits', '[0, 1]'));
-    expectAccepted(check('Curve', '_limits', '5'));
+    expectAccepted(check('JSON', 'data', '[0, 1]'));
+    expectAccepted(check('JSON', 'data', '5'));
   });
 
   it('gives a RID slot no check, since a .tscn holds only the default RID()', () => {
     expect(descriptorValidator(descriptorOf('OpenXRRenderModel', 'render_model'))).toBeNull();
-  });
-
-  it('reads an INT slot with no stated width at int64, the width of the Variant', () => {
-    // `variant.h:248` stores an INT as int64_t. A setter that takes `int` is a hand row's `width`.
-    expectAccepted(check('LimitAngularVelocityModifier3D', 'joint_count', '4294967296'));
   });
 
   it('marks the format check as format-only, citing nothing', () => {
@@ -190,8 +193,9 @@ describe('the hand row folds into the same check', () => {
 
   it('reads the slot at the width the hand row states', () => {
     const joints = descriptorOf('LimitAngularVelocityModifier3D', 'joint_count');
-    const validator = descriptorValidator({ ...joints, facts: { width: 'int32' } })!;
-    expectError(validator('joint_count', '4294967296', 1), 'cannot be stored');
+    expect(check('LimitAngularVelocityModifier3D', 'joint_count', '4294967296')).toBeAtTier('error');
+    const validator = descriptorValidator({ ...joints, facts: { width: 'int64' } })!;
+    expectAccepted(validator('joint_count', '4294967296', 1));
   });
 
   it('refuses a hand row on a type with no bound to carry it', () => {

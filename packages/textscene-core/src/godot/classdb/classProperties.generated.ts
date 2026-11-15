@@ -3,12 +3,19 @@
  * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
  *
  * Each row is `[name, Variant::Type, PropertyHint, hint_string]`, the numbers
- * `node-properties.json` and `resource-properties.json` record. A class appears only
+ * `node-properties.json` and `resource-properties.json` record, with the `Variant::Type` of
+ * the setter's value argument fifth where it differs from the property's. A class appears only
  * where it declares a property of its own: a reader finds an inherited property by walking
  * the base chain in `nodeBaseTypes` or `classBaseTypes`.
  */
 
-export type ClassPropertyRow = readonly [name: string, type: number, hint: number, hintString: string];
+export type ClassPropertyRow = readonly [
+  name: string,
+  type: number,
+  hint: number,
+  hintString: string,
+  setterType?: number,
+];
 
 /** The Godot release the rows come from, which a bound read from a row cites (ADR-0032). */
 export const CLASSDB_CAPTURE_VERSION = '4.6.3';
@@ -32,7 +39,7 @@ export const NODE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassProper
   ],
   "AnimatedSprite2D": [
     ["animation", 21, 2, ""],
-    ["autoplay", 21, 0, ""],
+    ["autoplay", 21, 0, "", 4],
     ["centered", 1, 0, ""],
     ["flip_h", 1, 0, ""],
     ["flip_v", 1, 0, ""],
@@ -44,7 +51,7 @@ export const NODE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassProper
   ],
   "AnimatedSprite3D": [
     ["animation", 21, 2, ""],
-    ["autoplay", 21, 0, ""],
+    ["autoplay", 21, 0, "", 4],
     ["frame", 2, 0, ""],
     ["frame_progress", 3, 0, ""],
     ["speed_scale", 3, 0, ""],
@@ -195,7 +202,7 @@ export const NODE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassProper
   ],
   "BoneAttachment3D": [
     ["bone_idx", 2, 0, ""],
-    ["bone_name", 21, 0, ""],
+    ["bone_name", 21, 0, "", 4],
     ["external_skeleton", 22, 26, "Skeleton3D"],
     ["override_pose", 1, 0, ""],
     ["use_external_skeleton", 1, 0, ""],
@@ -346,9 +353,9 @@ export const NODE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassProper
     ["auto_brace_completion_highlight_matching", 1, 0, ""],
     ["auto_brace_completion_pairs", 27, 23, "String;String"],
     ["code_completion_enabled", 1, 42, ""],
-    ["code_completion_prefixes", 34, 0, ""],
-    ["delimiter_comments", 34, 0, ""],
-    ["delimiter_strings", 34, 0, ""],
+    ["code_completion_prefixes", 34, 0, "", 28],
+    ["delimiter_comments", 34, 0, "", 28],
+    ["delimiter_strings", 34, 0, "", 28],
     ["gutters_draw_bookmarks", 1, 0, ""],
     ["gutters_draw_breakpoints_gutter", 1, 0, ""],
     ["gutters_draw_executing_lines", 1, 0, ""],
@@ -357,11 +364,11 @@ export const NODE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassProper
     ["gutters_line_numbers_min_digits", 2, 1, "1,5,1"],
     ["gutters_zero_pad_line_numbers", 1, 0, ""],
     ["indent_automatic", 1, 0, ""],
-    ["indent_automatic_prefixes", 34, 0, ""],
+    ["indent_automatic_prefixes", 34, 0, "", 28],
     ["indent_size", 2, 0, ""],
     ["indent_use_spaces", 1, 0, ""],
     ["line_folding", 1, 0, ""],
-    ["line_length_guidelines", 30, 0, ""],
+    ["line_length_guidelines", 30, 0, "", 28],
     ["symbol_lookup_on_click", 1, 0, ""],
     ["symbol_tooltip_on_hover", 1, 0, ""],
   ],
@@ -485,7 +492,7 @@ export const NODE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassProper
     ["size_flags_stretch_ratio", 3, 1, "0,20,0.01,or_greater"],
     ["size_flags_vertical", 2, 6, "Fill:1,Expand:2,Shrink Center:4,Shrink End:8"],
     ["theme", 24, 17, "Theme"],
-    ["theme_type_variation", 4, 3, ""],
+    ["theme_type_variation", 4, 3, "", 21],
     ["tooltip_auto_translate_mode", 2, 2, "Inherit,Always,Disabled"],
     ["tooltip_text", 4, 18, ""],
   ],
@@ -781,7 +788,7 @@ export const NODE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassProper
     ["toggle_mode", 1, 0, ""],
   ],
   "EditorSpinSlider": [
-    ["control_state", 1, 0, ""],
+    ["control_state", 1, 0, "", 2],
     ["editing_integer", 1, 0, ""],
     ["flat", 1, 0, ""],
     ["hide_slider", 1, 0, ""],
@@ -2139,7 +2146,7 @@ export const NODE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassProper
   ],
   "SpringBoneCollision3D": [
     ["bone", 2, 0, ""],
-    ["bone_name", 21, 0, ""],
+    ["bone_name", 21, 0, "", 4],
     ["position_offset", 9, 0, ""],
     ["rotation_offset", 15, 0, ""],
   ],
@@ -2374,7 +2381,7 @@ export const NODE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassProper
     ["wait_time", 3, 1, "0.001,4096,0.001,or_greater,exp,suffix:s"],
   ],
   "TouchScreenButton": [
-    ["action", 21, 43, "show_builtin,loose_mode"],
+    ["action", 21, 43, "show_builtin,loose_mode", 4],
     ["bitmask", 24, 17, "BitMap"],
     ["passby_press", 1, 0, ""],
     ["shape", 24, 17, "Shape2D"],
@@ -2542,7 +2549,7 @@ export const NODE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassProper
     ["sharp_corners", 1, 0, ""],
     ["size", 6, 0, "suffix:px"],
     ["theme", 24, 17, "Theme"],
-    ["theme_type_variation", 4, 3, ""],
+    ["theme_type_variation", 4, 3, "", 21],
     ["title", 4, 0, ""],
     ["transient", 1, 0, ""],
     ["transient_to_focused", 1, 0, ""],
@@ -2558,22 +2565,22 @@ export const NODE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassProper
     ["environment", 24, 17, "Environment"],
   ],
   "XRBodyModifier3D": [
-    ["body_tracker", 4, 3, "/user/body_tracker"],
+    ["body_tracker", 4, 3, "/user/body_tracker", 21],
     ["body_update", 2, 6, "Upper Body,Lower Body,Hands"],
     ["bone_update", 2, 2, "Full,Rotation Only"],
   ],
   "XRFaceModifier3D": [
-    ["face_tracker", 4, 3, "/user/face_tracker"],
+    ["face_tracker", 4, 3, "/user/face_tracker", 21],
     ["target", 22, 26, "MeshInstance3D"],
   ],
   "XRHandModifier3D": [
     ["bone_update", 2, 2, "Full,Rotation Only"],
-    ["hand_tracker", 4, 3, "/user/hand_tracker/left,/user/hand_tracker/right"],
+    ["hand_tracker", 4, 3, "/user/hand_tracker/left,/user/hand_tracker/right", 21],
   ],
   "XRNode3D": [
-    ["pose", 4, 3, ""],
+    ["pose", 4, 3, "", 21],
     ["show_when_tracked", 1, 0, ""],
-    ["tracker", 4, 3, ""],
+    ["tracker", 4, 3, "", 21],
   ],
   "XROrigin3D": [
     ["current", 1, 0, ""],
@@ -3552,7 +3559,7 @@ export const RESOURCE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassPr
   ],
   "AudioEffectPitchShift": [
     ["fft_size", 2, 2, "256,512,1024,2048,4096"],
-    ["oversampling", 3, 1, "4,32,1"],
+    ["oversampling", 3, 1, "4,32,1", 2],
     ["pitch_scale", 3, 1, "0.01,16,0.01"],
   ],
   "AudioEffectRecord": [
@@ -4278,21 +4285,21 @@ export const RESOURCE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassPr
     ["points", 35, 0, ""],
   ],
   "ConvexPolygonShape3D": [
-    ["points", 28, 0, ""],
+    ["points", 28, 0, "", 36],
   ],
   "Curve": [
-    ["_data", 2, 0, ""],
-    ["_limits", 0, 0, ""],
+    ["_data", 2, 0, "", 28],
+    ["_limits", 0, 0, "", 28],
     ["bake_resolution", 2, 1, "1,1000,1"],
     ["point_count", 2, 0, ""],
   ],
   "Curve2D": [
-    ["_data", 2, 0, ""],
+    ["_data", 2, 0, "", 27],
     ["bake_interval", 3, 1, "0.01,512,0.01"],
     ["point_count", 2, 0, ""],
   ],
   "Curve3D": [
-    ["_data", 2, 0, ""],
+    ["_data", 2, 0, "", 27],
     ["bake_interval", 3, 1, "0.01,512,0.01"],
     ["closed", 1, 0, ""],
     ["point_count", 2, 0, ""],
@@ -4877,7 +4884,7 @@ export const RESOURCE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassPr
     ["geometry_collision_mask", 2, 11, ""],
     ["geometry_parsed_geometry_type", 2, 2, "Mesh Instances,Static Colliders,Both"],
     ["geometry_source_geometry_mode", 2, 2, "Root Node Children,Group With Children,Group Explicit"],
-    ["geometry_source_group_name", 4, 0, ""],
+    ["geometry_source_group_name", 4, 0, "", 21],
     ["polygons", 28, 0, ""],
     ["region_merge_size", 3, 1, "0.0,150.0,0.01,or_greater"],
     ["region_min_size", 3, 1, "0.0,150.0,0.01,or_greater"],
@@ -4893,7 +4900,7 @@ export const RESOURCE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassPr
   "NavigationMeshSourceGeometryData3D": [
     ["indices", 30, 0, ""],
     ["projected_obstructions", 28, 0, ""],
-    ["vertices", 36, 0, ""],
+    ["vertices", 36, 0, "", 32],
   ],
   "NavigationPolygon": [
     ["agent_radius", 3, 1, "0.0,500.0,0.01,or_greater,suffix:px"],
@@ -4906,7 +4913,7 @@ export const RESOURCE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassPr
     ["parsed_geometry_type", 2, 2, "Mesh Instances,Static Colliders,Meshes and Static Colliders"],
     ["polygons", 28, 0, ""],
     ["sample_partition_type", 2, 2, "Convex Partition,Triangulate"],
-    ["source_geometry_group_name", 4, 0, ""],
+    ["source_geometry_group_name", 4, 0, "", 21],
     ["source_geometry_mode", 2, 2, "Root Node Children,Group With Children,Group Explicit"],
     ["vertices", 35, 0, ""],
   ],
@@ -5541,7 +5548,7 @@ export const RESOURCE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassPr
     ["title", 4, 0, ""],
   ],
   "VisualShaderNodeInput": [
-    ["input_name", 21, 2, ""],
+    ["input_name", 21, 2, "", 4],
   ],
   "VisualShaderNodeIntConstant": [
     ["constant", 2, 0, ""],
@@ -5572,12 +5579,12 @@ export const RESOURCE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassPr
   ],
   "VisualShaderNodeParameter": [
     ["instance_index", 2, 1, "0,15,1"],
-    ["parameter_name", 21, 0, ""],
+    ["parameter_name", 21, 0, "", 4],
     ["qualifier", 2, 2, "None,Global,Instance,Instance + Index"],
   ],
   "VisualShaderNodeParameterRef": [
     ["param_type", 2, 0, ""],
-    ["parameter_name", 21, 2, ""],
+    ["parameter_name", 21, 2, "", 4],
   ],
   "VisualShaderNodeParticleAccelerator": [
     ["mode", 2, 2, "Linear,Radial,Tangential"],
@@ -5671,7 +5678,7 @@ export const RESOURCE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassPr
     ["function", 2, 2, "Panning,Scaling"],
   ],
   "VisualShaderNodeVarying": [
-    ["varying_name", 21, 0, ""],
+    ["varying_name", 21, 0, "", 4],
     ["varying_type", 2, 2, "Float,Int,Vector2,Vector3,Vector4,Boolean,Transform"],
   ],
   "VisualShaderNodeVec2Constant": [
