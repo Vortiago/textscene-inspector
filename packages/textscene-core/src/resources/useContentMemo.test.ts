@@ -5,6 +5,7 @@ import { NO_RESOURCES } from '../r3f/SceneResourcesContext';
 import type { ResolvableResource } from './scopedResource';
 import { NO_FILES, NO_FONTS } from './testing/loadedFiles';
 import { NO_PROJECT_FONTS } from './fonts/font/projectFonts';
+import { settledFontsOf } from '../r3f/controls/native/text/useSettledFont';
 import { meshContentKey } from './meshes/meshSource';
 import { useContentMemo } from './useContentMemo';
 
@@ -14,6 +15,7 @@ const box = (size: string): ResolvableResource => ({
   loadedFile: NO_FILES,
   loadedFont: NO_FONTS,
   projectFonts: NO_PROJECT_FONTS,
+  settledFonts: settledFontsOf(null),
   locale: '',
 });
 
@@ -47,6 +49,7 @@ describe('useContentMemo', () => {
       loadedFile: NO_FILES,
       loadedFont: NO_FONTS,
       projectFonts: NO_PROJECT_FONTS,
+      settledFonts: settledFontsOf(null),
       locale: '',
     });
     const curve = (bakeResolution: string): TscnInternalResource => ({

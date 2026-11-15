@@ -4,11 +4,9 @@
  * A BMFont shapes from its descriptor and has no outlines (`bitmapFontOutlines.ts`), so only a hex-code box draws.
  */
 
-import {
-  peekSettledChainFaces,
-  type SettledChainFace,
-} from '../../../r3f/controls/native/text/sceneFontLoader';
+import { peekSettledChainFaces } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
+import type { SettledChainFace, SettledFonts } from '../../../r3f/controls/native/text/settledFonts';
 import { withOutlines } from '../../../r3f/controls/native/text/fontMetrics';
 import { identityKey } from '../../../utils/identityKey';
 import { perObject } from '../../../utils/perObject';
@@ -38,15 +36,16 @@ function readTextMeshFont({
   resources,
   loadedFont,
   projectFonts,
+  settledFonts,
 }: ResolvableResource): TextMeshFont {
   const font = fontForNode('TextMesh', resource.data['font'], { resources, loadedFont, projectFonts });
   // The settled metrics are keyed by the bytes of each face, and the name only labels a failure.
-  const faces = peekSettledChainFaces(font, `TextMesh ${resource.id}`);
+  const faces = peekSettledChainFaces(settledFonts, font, `TextMesh ${resource.id}`);
   // Peeked before the metrics settle, so a font with no outlines is unreadable at once.
-  if (!faces) return peekSceneFontOutlines(font) === null ? UNREADABLE : AWAITING_FONT;
+  if (!faces) return peekSceneFontOutlines(settledFonts, font) === null ? UNREADABLE : AWAITING_FONT;
   // Its own outlines would not match the bundled advances that stand in for it.
   if (faces[0]!.isStandIn) return UNREADABLE;
-  const [face, ...fallbacks] = faces.map(faceWithOutlines);
+  const [face, ...fallbacks] = faces.map((chainFace) => faceWithOutlines(settledFonts, chainFace));
   if (face === null) return UNREADABLE;
   if (!face || fallbacks.includes(undefined)) return AWAITING_FONT;
   const readable = fallbacks.filter((fallback): fallback is TextMeshFace => fallback !== null);
@@ -57,8 +56,11 @@ function readTextMeshFont({
  * A face with the outlines it extrudes: undefined while they load, and null for outlines this reader
  * cannot open, which drops a fallback from the chain.
  */
-function faceWithOutlines({ font, metrics }: SettledChainFace): TextMeshFace | null | undefined {
-  const outlines = peekSceneFontOutlines(font);
+function faceWithOutlines(
+  settledFonts: SettledFonts,
+  { font, metrics }: SettledChainFace
+): TextMeshFace | null | undefined {
+  const outlines = peekSceneFontOutlines(settledFonts, font);
   return outlines ? withOutlines(metrics, outlines) : outlines;
 }
 
