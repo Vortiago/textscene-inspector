@@ -1,8 +1,3 @@
-/**
- * `frexp` and `ldexp` as composites: `frexp` splits a float's bits with integer operations, and
- * `ldexp` scales by exact powers of two.
- */
-
 import {
   add,
   bitAnd,

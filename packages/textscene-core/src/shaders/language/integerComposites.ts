@@ -1,8 +1,3 @@
-/**
- * The integer and bit functions three/tsl lacks, as composites of integer TSL operations: bit
- * counts and scans, bit fields, and the carry and extended products.
- */
-
 import {
   add,
   bitAnd,

@@ -1,8 +1,3 @@
-/**
- * The parts every composite of a built-in function is made of: TSL calls on any node, constants,
- * and a type's lanes one by one. A composite is a built-in that three/tsl lacks, made of TSL nodes.
- */
-
 import type { Node } from 'three/webgpu';
 import { CONSTRUCTORS, floatNode, scalarNode } from './emitConstant.js';
 import { element } from './emitOperation.js';
