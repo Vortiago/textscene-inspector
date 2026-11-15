@@ -172,7 +172,7 @@ export function OffscreenViewportPass({
   // and draws its own depth prepass. An inline pass renders the parent scene, which its own canvas
   // serves, the canvas's world serves its own scene, and a 2D portal holds no 3D surface.
   const portalLightScene = portals3D && !drawnCanvasWorld ? passScene : null;
-  useSceneShadowFit(portalLightScene);
+  useSceneShadowFit(portalLightScene, viewport.positionalShadowAtlas);
   useSceneDepthPrepass(portalLightScene);
   const shadowAtlas = useViewportShadowAtlas(viewport.positionalShadowAtlas);
   const { worldRender, canvasRender } = useWorldRenders(viewport, shadowAtlas);
