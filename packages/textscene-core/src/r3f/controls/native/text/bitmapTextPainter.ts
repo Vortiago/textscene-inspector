@@ -71,30 +71,29 @@ export function buildBitmapQuads(
   { glyphDrawer = 'canvasItem', itemOriginPx = VECTOR2_ZERO }: BitmapPaintOptions = {}
 ): BitmapQuads {
   const baselinesPx = lineBaselinesPx(layout);
+  const floorsPen = snapsPen(glyphDrawer, fontSizePx, metrics);
   const inked = layout.lines.flatMap((line, lineIndex) => {
-    const itemOriginsPx = float32GlyphOriginsPx(line, itemOriginPx.x);
+    const itemOriginsPx = floorsPen ? float32GlyphOriginsPx(line, itemOriginPx.x) : [];
     return line.glyphs.flatMap((placement, index) => {
       const glyph = inkedGlyph(placement, metrics, sheet, glyphDrawer);
-      return glyph ? [{ glyph, placement, lineIndex, itemOriginXPx: itemOriginsPx[index]! }] : [];
+      return glyph ? [{ glyph, placement, lineIndex, itemOriginXPx: itemOriginsPx[index] ?? 0 }] : [];
     });
   });
   const positions = new Float32Array(inked.length * 4 * 3);
   const uvs = new Float32Array(inked.length * 4 * 2);
   const indices = new Uint32Array(inked.length * 6);
   const scale = metrics.pxPerUnit(fontSizePx);
-  const floorsPen = snapsPen(glyphDrawer, fontSizePx, metrics);
   const sheetWidthInverse = 1 / sheet.width;
   const sheetHeightInverse = 1 / sheet.height;
 
   let quad = 0;
   const phase = originPhase(itemOriginPx);
-  const wholeOriginXPx = itemOriginPx.x - phase.x;
   for (const { glyph, placement, lineIndex, itemOriginXPx } of inked) {
     const rowOffset = sheet.rowOffsets[glyph.fillIndex]!;
     const baselinePx = baselinesPx[lineIndex]!;
     const penX = placement.x + (placement.xOffset ?? 0);
     const penY = baselinePx + (placement.yOffset ?? 0);
-    const originX = floorsPen ? Math.floor(itemOriginXPx) - wholeOriginXPx - phase.x : penX;
+    const originX = floorsPen ? Math.floor(itemOriginXPx) - itemOriginPx.x : penX;
     const originY = floorsPen ? Math.floor(phase.y + penY) - phase.y : penY;
     const left = originX + glyph.offsetX * scale;
     const top = originY + glyph.offsetY * scale;
