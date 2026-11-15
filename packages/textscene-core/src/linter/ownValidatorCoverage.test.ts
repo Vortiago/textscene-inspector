@@ -161,14 +161,12 @@ const UNDECLARED_RESOURCES: readonly string[] = [
   'StyleBoxFlat',
   'TorusMesh',
   'ViewportTexture',
-  // The font and theme slices decode enough to draw (a `.tres` wrapper's fallbacks,
-  // a variation's base font, a theme's type chain) and validate none of it.
+  // The font and theme slices decode enough to draw and validate none of it.
   'FontFile',
   'FontVariation',
   'SystemFont',
   'Theme',
-  // The highlighter and label-settings slices decode enough to draw and validate
-  // none of it.
+  // The highlighter and label-settings slices decode enough to draw and validate none of it.
   'CodeHighlighter',
   'LabelSettings',
 ];
