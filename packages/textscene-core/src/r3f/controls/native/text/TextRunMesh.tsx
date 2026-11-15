@@ -37,6 +37,7 @@ import { buildBitmapQuads, createSheetTexture } from './bitmapTextPainter';
 import type { FillSheet } from '../../../../resources/fonts/font/types';
 import { perObject } from '../../../../utils/perObject';
 import { GLYPH_DRAWER_RULES, snapsPen, type GlyphDrawer } from './glyphDrawer';
+import type { PenSum } from './glyphPen';
 import type { TextLayoutResult } from './textLayout';
 import { lineBaselinesPx } from './lineExtent';
 import { hexCodeBoxRects } from './hexCodeBox';
@@ -121,6 +122,8 @@ export interface TextRunProps {
    * whose mesh keeps both, skips small glyphs and draws no hex-code box.
    */
   glyphDrawer?: GlyphDrawer;
+  /** Where the holder starts the pen sum of a line, `'alongLine'` by default (`glyphPen.ts`). */
+  penSum?: PenSum;
   /**
    * The raster texture's sampler: Label3D's `texture_filter` (`label_3d.h:140`). The default is
    * Godot's default filter. A mipmapped row samples a mip chain only where `mipmapped` built one.
@@ -328,12 +331,12 @@ function buildBitmapRun(
   fontSizePx: number,
   look: TextRunLook,
   sampling: RasterSampling,
-  { strokeWidthPx = 0, glyphDrawer = 'canvasItem', itemOriginPx }: CanvasTextPaintOptions
+  { strokeWidthPx = 0, glyphDrawer = 'canvasItem', itemOriginPx, penSum }: CanvasTextPaintOptions
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial, linearTint } = look;
   const isOutlinePass = strokeWidthPx > 0;
   const sheet = isOutlinePass ? metrics.bitmap.outlineSheet : metrics.bitmap.sheet;
-  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, { glyphDrawer, itemOriginPx });
+  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, { glyphDrawer, itemOriginPx, penSum });
   const geometry = quadGeometry(quads);
   const { multipliesInLinear } = GLYPH_DRAWER_RULES[glyphDrawer];
   const texture = sheetTexture(sheet, sampling, multipliesInLinear);
@@ -460,6 +463,7 @@ export function TextRunMesh({
   side,
   strokeWidthPx = 0,
   glyphDrawer = 'canvasItem',
+  penSum = 'alongLine',
   textureFilter = godotTextureFilterState(undefined),
   mipmapped = false,
   blends,
@@ -502,7 +506,7 @@ export function TextRunMesh({
         layout,
         fontSizePx,
         { tint: builtTint, clippingPlanes, depthTest, side, pixelMaterial, linearTint },
-        { strokeWidthPx, glyphDrawer, itemOriginPx: { x: originX, y: originY }, colourGlyphTint },
+        { strokeWidthPx, glyphDrawer, itemOriginPx: { x: originX, y: originY }, penSum, colourGlyphTint },
         { textureFilter, mipmapped }
       ),
     // `tint` is compared by its fields, not by identity: a caller that re-creates an equal
@@ -525,6 +529,7 @@ export function TextRunMesh({
       pixelMaterial,
       strokeWidthPx,
       glyphDrawer,
+      penSum,
       originX,
       originY,
       textureFilter,

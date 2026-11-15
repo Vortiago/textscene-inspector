@@ -250,6 +250,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
             outline={textOutline}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
+            penSum="fromItemPosition"
           />
           {selection && (
             <OutlinedTextRun
@@ -259,6 +260,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
               outline={textOutline}
               clippingPlanes={clippingPlanes}
               renderOrder={renderOrder}
+              penSum="fromItemPosition"
             />
           )}
         </CanvasItemGroup>

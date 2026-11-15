@@ -28,7 +28,7 @@ import { fposmodp } from '../../../../godot/math/math';
 import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { channelToByte } from '../../../../utils/colorSpace';
-import { float32GlyphOriginsPx } from './glyphPen';
+import { glyphOriginsPx, type PenSum } from './glyphPen';
 import { WHITE_MODULATE } from '../../../canvasItemModulate';
 
 /** Fixed vertical pad, CSS px, on every raster edge: anti-aliased ink can overshoot a glyph's ascent/descent box. The quad is this much taller than `layout.heightPx` on both edges. */
@@ -190,6 +190,8 @@ export interface CanvasTextPaintOptions {
   glyphDrawer?: GlyphDrawer;
   /** The run's place in its canvas item, which the pen and the baseline include. Zero by default. */
   itemOriginPx?: Readonly<Vector2>;
+  /** Where the holder starts its pen sum, `'alongLine'` by default as `TextServer::shaped_text_draw` does. */
+  penSum?: PenSum;
   /**
    * The colour that tints a colour glyph's texels in place of the tint's colour. Godot keeps only the
    * alpha of the font colour for one (`text_server_adv.cpp:4044-4046`), so a canvas item's modulate
@@ -233,11 +235,12 @@ export function paintSceneFontCanvas(
     strokeWidthPx = 0,
     glyphDrawer = 'canvasItem',
     itemOriginPx = VECTOR2_ZERO,
+    penSum = 'alongLine',
     colourGlyphTint = WHITE_MODULATE,
   }: CanvasTextPaintOptions = {}
 ): ImageData | null {
   const frame = rasterFrame(layout, fontSizePx, skew, canvasLayout, glyphDrawer, strokeWidthPx);
-  const glyphs = placeGlyphs(layout, frame, glyphDrawer, itemOriginPx);
+  const glyphs = placeGlyphs(layout, frame, glyphDrawer, { itemOriginPx, penSum });
   const colours = {
     text: opaqueByteColour(tint),
     colourGlyphs: [colourGlyphTint.r, colourGlyphTint.g, colourGlyphTint.b] as const,
@@ -266,12 +269,14 @@ function rasterFrame(
   };
 }
 
+type ItemPen = Required<Pick<CanvasTextPaintOptions, 'itemOriginPx' | 'penSum'>>;
+
 /** Each glyph of `layout` that draws, at its pen and baseline in the raster. */
 function placeGlyphs(
   layout: TextLayoutResult,
   { metrics, fontSizePx, canvasLayout, snapsGlyphs }: RasterFrame,
   glyphDrawer: GlyphDrawer,
-  itemOriginPx: Readonly<Vector2>
+  { itemOriginPx, penSum }: ItemPen
 ): PlacedGlyph[] {
   const unsnappedPenShiftPx = scaledPenShiftPx(glyphDrawer, fontSizePx, metrics);
   // The raster starts at the whole item pixel at or before the run origin, where its quad sits.
@@ -282,7 +287,7 @@ function placeGlyphs(
     const lineBaselinePx = baselinesPx[lineIndex]!;
     const baselineY =
       canvasLayout.offsetYPx + (snapsGlyphs ? Math.floor(phase.y + lineBaselinePx) : lineBaselinePx);
-    const itemOriginsPx = snapsGlyphs ? float32GlyphOriginsPx(line, itemOriginPx.x) : [];
+    const itemOriginsPx = snapsGlyphs ? glyphOriginsPx(line, itemOriginPx.x, penSum) : [];
     return line.glyphs.flatMap((placement, index) => {
       if (!hasOwnGlyph(placement)) return [];
       const penX =
@@ -304,11 +309,16 @@ export function canvasGlyphRects(
   fontSizePx: number,
   skew: number,
   canvasLayout: CanvasTextCanvasLayout,
-  { strokeWidthPx = 0, glyphDrawer = 'canvasItem', itemOriginPx = VECTOR2_ZERO }: CanvasTextPaintOptions = {}
+  {
+    strokeWidthPx = 0,
+    glyphDrawer = 'canvasItem',
+    itemOriginPx = VECTOR2_ZERO,
+    penSum = 'alongLine',
+  }: CanvasTextPaintOptions = {}
 ): Rect2[] {
   const frame = rasterFrame(layout, fontSizePx, skew, canvasLayout, glyphDrawer, strokeWidthPx);
   const rectOf = painterOf(frame.metrics).rectReader(frame);
-  return placeGlyphs(layout, frame, glyphDrawer, itemOriginPx).flatMap((glyph) => {
+  return placeGlyphs(layout, frame, glyphDrawer, { itemOriginPx, penSum }).flatMap((glyph) => {
     const rect = rectOf(glyph);
     return rect && drawsGlyphRect(glyphDrawer, rect.w, rect.h) ? [rect] : [];
   });

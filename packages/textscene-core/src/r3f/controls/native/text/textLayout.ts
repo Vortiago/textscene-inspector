@@ -216,6 +216,8 @@ export interface GlyphPlacement {
   xOffset?: number;
   /** `y_off`: how far the glyph's origin sits below the baseline, px. Absent for 0. */
   yOffset?: number;
+  /** The 32-bit pen a holder summed along a longer line than this layout holds (`rich_text_label.cpp:1155`). */
+  linePenPx?: number;
   /** How far the embolden grows this glyph's outline at its own size, px. Absent for a glyph with none. */
   emboldenGrowthPx?: number;
   /** This glyph's own size, px, `gl.font_size` in Godot: it scales the space-shrink floor of `fitLineToWidth` (`text_server_adv.cpp:5659`) and the measured ink. */

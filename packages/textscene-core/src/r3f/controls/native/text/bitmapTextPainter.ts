@@ -15,7 +15,7 @@ import * as THREE from 'three';
 import type { FillSheet } from '../../../../resources/fonts/font/types';
 import type { BitmapFontMetrics } from './bitmapFontMetrics';
 import { originPhase, type CanvasTextPaintOptions } from './canvasTextPainter';
-import { float32GlyphOriginsPx } from './glyphPen';
+import { glyphOriginsPx } from './glyphPen';
 import { drawsGlyphRect, snapsPen, type GlyphDrawer } from './glyphDrawer';
 import type { GlyphPlacement, TextLayoutResult } from './textLayout';
 import { lineBaselinesPx } from './lineExtent';
@@ -41,7 +41,7 @@ export interface BitmapQuads {
   indices: Uint32Array;
 }
 
-export type BitmapPaintOptions = Pick<CanvasTextPaintOptions, 'glyphDrawer' | 'itemOriginPx'>;
+export type BitmapPaintOptions = Pick<CanvasTextPaintOptions, 'glyphDrawer' | 'itemOriginPx' | 'penSum'>;
 
 /**
  * The glyph a placement draws, or undefined for a hex-code box, a space, a glyph `drawer` skips and
@@ -68,12 +68,12 @@ export function buildBitmapQuads(
   metrics: BitmapFontMetrics,
   fontSizePx: number,
   sheet: FillSheet,
-  { glyphDrawer = 'canvasItem', itemOriginPx = VECTOR2_ZERO }: BitmapPaintOptions = {}
+  { glyphDrawer = 'canvasItem', itemOriginPx = VECTOR2_ZERO, penSum = 'alongLine' }: BitmapPaintOptions = {}
 ): BitmapQuads {
   const baselinesPx = lineBaselinesPx(layout);
   const floorsPen = snapsPen(glyphDrawer, fontSizePx, metrics);
   const inked = layout.lines.flatMap((line, lineIndex) => {
-    const itemOriginsPx = floorsPen ? float32GlyphOriginsPx(line, itemOriginPx.x) : [];
+    const itemOriginsPx = floorsPen ? glyphOriginsPx(line, itemOriginPx.x, penSum) : [];
     return line.glyphs.flatMap((placement, index) => {
       const glyph = inkedGlyph(placement, metrics, sheet, glyphDrawer);
       return glyph ? [{ glyph, placement, lineIndex, itemOriginXPx: itemOriginsPx[index] ?? 0 }] : [];
