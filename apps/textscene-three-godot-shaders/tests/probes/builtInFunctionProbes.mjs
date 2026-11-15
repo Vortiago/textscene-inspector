@@ -4,21 +4,22 @@
  * vector and matrix conversions. Each calls its overload once on arguments of the overload's types.
  */
 
+import { isFunctionRow } from '../../../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { PROBE_TYPES } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { argumentRows } from './inputs.mjs';
 import { probeOf as sourceProbe } from './languageProbes.mjs';
 
 const OWNER = '#1826';
-const ARGUMENT_NAMES = ['a', 'b', 'c'];
+const ARGUMENT_NAMES = ['a', 'b', 'c', 'd'];
 const TYPE_NAME = /^(?:[biu]?vec\d|mat\d)$/;
 
-const nameOf = (row) => row.id.slice(0, row.id.indexOf('('));
+export const nameOf = (row) => row.id.slice(0, row.id.indexOf('('));
 
 /** A probe name from a row id: `clamp(vec2,float,float)` is `call-clamp-vec2-float-float`. */
-const probeName = (id) => `call-${id.replace(/[(),]+/g, '-').replace(/-$/, '')}`;
+export const probeName = (id) => `call-${id.replace(/[(),]+/g, '-').replace(/-$/, '')}`;
 
-function probeOf(name, rows, returns, args, body) {
+export function probeOf(name, rows, returns, args, body) {
   const declarations = args.map((type, index) => `${type} ${ARGUMENT_NAMES[index]}`).join(', ');
   return {
     name,
@@ -29,7 +30,7 @@ function probeOf(name, rows, returns, args, body) {
 }
 
 /** A call that returns its value: `return clamp(a, b, c);`, or a conversion `return ivec2(a);`. */
-function valueProbe(row) {
+export function valueProbe(row) {
   const name = nameOf(row);
   const call = `${name}(${row.args.map((_, index) => ARGUMENT_NAMES[index]).join(', ')})`;
   const rows = TYPE_NAME.test(name) ? [row.id, 'OP_CONSTRUCT'] : [row.id];
@@ -86,7 +87,7 @@ function resolutionProbes() {
 }
 
 export const BUILT_IN_FUNCTION_PROBES = [
-  ...INSTRUCTION_TABLE.filter((row) => row.family === 'function' && row.owner === OWNER).flatMap((row) =>
+  ...INSTRUCTION_TABLE.filter((row) => isFunctionRow(row) && row.owner === OWNER).flatMap((row) =>
     nameOf(row) === 'modf' ? modfProbes(row) : [valueProbe(row)]
   ),
   ...resolutionProbes(),

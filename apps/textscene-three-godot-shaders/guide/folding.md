@@ -1285,3 +1285,35 @@ float probe(float a) { return cosh(a + 89.152); }
 | `inf` | `inf` |
 | `-inf` | `inf` |
 | `NaN` | `NaN` |
+
+### Probe `gpu-call-mix-of-nan-of-a-constant`, 16 input rows
+
+```glsl
+vec2 probe(float a) { return mix(vec2(acosh(atan(1.0))), vec2(1.0), 1.0); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `(NaN, NaN)` |
+| `-0.0` | `(NaN, NaN)` |
+| `1.0` | `(NaN, NaN)` |
+| `1e-40` | `(NaN, NaN)` |
+| `inf` | `(NaN, NaN)` |
+| `-inf` | `(NaN, NaN)` |
+| `NaN` | `(NaN, NaN)` |
+
+### Probe `gpu-call-mix-of-nan-of-a-parameter`, 16 input rows
+
+```glsl
+vec2 probe(float a) { return mix(vec2(acosh(atan(a + 1.0))), vec2(1.0), 1.0); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `(1.0, 1.0)` |
+| `-0.0` | `(1.0, 1.0)` |
+| `1.0` | `(1.0, 1.0)` |
+| `1e-40` | `(1.0, 1.0)` |
+| `inf` | `(1.0, 1.0)` |
+| `-inf` | `(1.0, 1.0)` |
+| `NaN` | `(1.0, 1.0)` |

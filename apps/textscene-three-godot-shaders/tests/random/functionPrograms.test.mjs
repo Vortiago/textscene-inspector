@@ -51,6 +51,12 @@ describe('the generator of programs with functions', () => {
     ['a call of one function from another', /^\w+(?:\[\d\])? h[1-9]\([^)]*\) \{[^\n]*\bh\d\(/m],
     ['an element written through an index another argument writes', /\bh\d\([^;]*\b(l\d+), [^;]*\[\1\]/],
     ['a swizzle as a written place', /\bh\d\([^;]*\bl\d+\.[xyzw]+[,)]/],
+    ['a statement call of umulExtended', /[;{] umulExtended\([^;]*\);/],
+    ['a statement call of imulExtended', /[;{] imulExtended\([^;]*\);/],
+    [
+      'a call of a built-in that writes an argument, its result kept',
+      /= (?:uaddCarry|usubBorrow|modf|frexp)\(/,
+    ],
   ])('holds %s', (_, pattern) => {
     expect(holding(pattern)).toBeGreaterThan(0);
   });

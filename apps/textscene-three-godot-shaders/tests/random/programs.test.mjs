@@ -31,6 +31,18 @@ describe('the random program generator', () => {
     expect(ROOT_ROWS.map((row) => row.id).filter((id) => !used.has(id))).toEqual([]);
   });
 
+  it('writes the offset and bit count of a bit-field call as a literal GLSL defines', () => {
+    const fields = SET.flatMap((program) =>
+      [
+        ...program.source.matchAll(
+          /bitfield(?:Extract\((?:[^,()]|\([^()]*\))+|Insert\((?:[^,()]|\([^()]*\))+,(?:[^,()]|\([^()]*\))+), (\w+), (\w+)\)/g
+        ),
+      ].map((match) => [Number(match[1]), Number(match[2])])
+    );
+    expect(fields.length).toBeGreaterThan(0);
+    expect(fields.every(([offset, bits]) => offset >= 0 && bits >= 0 && offset + bits <= 32)).toBe(true);
+  });
+
   it('uses only transpiled rows', () => {
     const transpiled = new Set(TRANSPILED_ROWS.map((row) => row.id));
     expect(SET.flatMap((program) => program.rows).filter((id) => !transpiled.has(id))).toEqual([]);
