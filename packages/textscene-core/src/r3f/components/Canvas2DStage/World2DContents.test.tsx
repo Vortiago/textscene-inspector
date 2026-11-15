@@ -35,7 +35,7 @@ import { World2DContents } from './World2DContents';
 import { withProject } from '../../testing/ProjectFixture';
 import { TiledUploadQueue } from '../../tiledUpload/TiledUploadQueue';
 import { r3fStateProbe } from '../../testing/R3FStateProbe';
-import { hasShadowPass } from '../../testing/shadowPassMark';
+import { hasShadowPass } from '../../shadowPass';
 
 const baseProps = {
   nodes: [],

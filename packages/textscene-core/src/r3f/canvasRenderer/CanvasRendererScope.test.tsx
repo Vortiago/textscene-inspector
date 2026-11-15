@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CanvasRendererScope } from './CanvasRendererScope';
 import { r3fStateProbe } from '../testing/R3FStateProbe';
-import { hasShadowPass } from '../testing/shadowPassMark';
+import { hasShadowPass } from '../shadowPass';
 
 describe('CanvasRendererScope', () => {
   it('installs the shadow pass on its renderer', async () => {

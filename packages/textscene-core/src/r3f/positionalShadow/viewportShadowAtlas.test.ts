@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { ROOT_POSITIONAL_SHADOW_ATLAS, VIEWPORT_POSITIONAL_SHADOW_ATLAS } from '../../godot/scene/viewport';
-import { activeShadowAtlas, renderWithShadowAtlas, ViewportShadowAtlas } from './viewportShadowAtlas';
+import {
+  activeShadowAtlas,
+  atlasWithinGpu,
+  renderWithShadowAtlas,
+  ViewportShadowAtlas,
+} from './viewportShadowAtlas';
 
 const rootAtlas = () => new ViewportShadowAtlas(ROOT_POSITIONAL_SHADOW_ATLAS);
 const subViewportAtlas = () => new ViewportShadowAtlas(VIEWPORT_POSITIONAL_SHADOW_ATLAS);
@@ -187,5 +192,30 @@ describe('renderWithShadowAtlas', () => {
       })
     ).toThrow('lost context');
     expect(activeShadowAtlas()).toBeNull();
+  });
+});
+
+describe('atlasWithinGpu', () => {
+  it('shrinks an atlas side the GPU cannot allocate to its largest power of two', () => {
+    expect(atlasWithinGpu({ size: 16384, quadrantShadows: [1, 4, 16, 64] }, 8192)).toEqual({
+      size: 8192,
+      quadrantShadows: [1, 4, 16, 64],
+    });
+  });
+
+  it('rounds a GPU limit that is no power of two down', () => {
+    expect(atlasWithinGpu({ size: 16384, quadrantShadows: [] }, 10000).size).toBe(8192);
+  });
+
+  it('keeps the setting for a context that reports no limit', () => {
+    const settings = { size: 16384, quadrantShadows: [] };
+
+    expect(atlasWithinGpu(settings, Number.NaN)).toBe(settings);
+  });
+
+  it('keeps an atlas side the GPU allocates', () => {
+    const settings = { size: 4096, quadrantShadows: [1, 4, 16, 64] };
+
+    expect(atlasWithinGpu(settings, 8192)).toBe(settings);
   });
 });
