@@ -28,7 +28,6 @@ import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceCo
 import { useSceneShadowFit } from '../../../r3f/SceneShadowFitter';
 import { useSceneDepthPrepass } from '../../../r3f/depthPrepass/SceneDepthPrepass';
 import {
-  atlasWithinGpu,
   renderWithShadowAtlas,
   ViewportShadowAtlas,
 } from '../../../r3f/positionalShadow/viewportShadowAtlas';
@@ -481,15 +480,13 @@ function useViewportShadowAtlas(properties: SubViewportProperties): ViewportShad
     positional_shadow_atlas_quad_2: quad2,
     positional_shadow_atlas_quad_3: quad3,
   } = properties;
-  const maxTextureSize = useThree((state) => state.gl.capabilities.maxTextureSize);
-  const atlas = useMemo(() => {
-    const settings = viewportPositionalShadowAtlas(
-      size,
-      [quad0, quad1, quad2, quad3],
-      VIEWPORT_POSITIONAL_SHADOW_ATLAS
-    );
-    return new ViewportShadowAtlas(atlasWithinGpu(settings, maxTextureSize));
-  }, [size, quad0, quad1, quad2, quad3, maxTextureSize]);
+  const atlas = useMemo(
+    () =>
+      new ViewportShadowAtlas(
+        viewportPositionalShadowAtlas(size, [quad0, quad1, quad2, quad3], VIEWPORT_POSITIONAL_SHADOW_ATLAS)
+      ),
+    [size, quad0, quad1, quad2, quad3]
+  );
   useDisposeOnRelease(atlas);
   return atlas;
 }
