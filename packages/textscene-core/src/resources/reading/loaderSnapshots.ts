@@ -21,6 +21,11 @@ export interface SnapshotSource {
    * file that reloads keeps its last answer across it.
    */
   restart(): void;
+  /**
+   * The parsed resource files as the current snapshot reads them, for a reader that walks a file's
+   * text itself: each read is recorded, requested and reported with the snapshot's own.
+   */
+  parsedFiles(): CacheSource<ParsedResource>;
   /** Requests and pins each file the current snapshot read. Call it after commit, never in render. */
   request(): void;
   /** `onStale` hears a load, a failure or a reload of a file the current snapshot read. */
@@ -58,6 +63,8 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
   /** Written only by the snapshot's address listener. A new snapshot starts it empty. */
   let addresses = new Map<string, ParsedResource | null>();
   let listeners = 0;
+  /** Written only by `start`: the recording reader of parsed files of the current snapshot. */
+  let currentParsed: CacheSource<ParsedResource> = parsed.cache as CacheSource<ParsedResource>;
 
   const start = (): ResourceSnapshot => {
     kinds.forEach((kind) => (kind.reads = new Map()));
@@ -68,6 +75,7 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
       return recordingReads(answeredOnce(kind.settled), (path, answer) => recorded.set(path, answer));
     };
     const parsedFiles = recordedIn(parsed) as CacheSource<ParsedResource>;
+    currentParsed = parsedFiles;
     /** Written only by `loaded`: the recording reader of each kind, for this snapshot. */
     const loadedFiles = new Map<FileKind<object>, CacheSource<object>>();
     return snapshotOver({
@@ -95,6 +103,10 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
     },
     restart() {
       snapshot = start();
+    },
+    parsedFiles() {
+      if (isStale()) snapshot = start();
+      return currentParsed;
     },
     request() {
       kinds.forEach(requestReads);

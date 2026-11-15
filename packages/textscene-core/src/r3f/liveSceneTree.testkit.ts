@@ -17,6 +17,8 @@ import {
 import { projectTreeSettings, type ProjectSettings } from '../parser/projectSettingsParser';
 import { NOTHING_CACHED } from './cacheSources';
 import type { ParsedResource } from '../parser/parsedResource';
+import { snapshotOver, type ResourceSnapshot } from '../resources/reading';
+import type { LiveScenePass } from './liveScenePass';
 
 /** The collapsed node at `path`, or null when a segment does not resolve. */
 export function liveNodeAt(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext) {
@@ -64,6 +66,20 @@ export function contextOver(
     ...(glbs ? { glbCache: { getCached: (path: string) => glbs[path] } } : {}),
     resourceCache: { getCached: (path: string) => resources[path] },
   };
+}
+
+/**
+ * The snapshot of the resource files `tree`'s context caches, as a pass over it reads them.
+ *
+ * @canonical In tests, the snapshot a live scene pass reads
+ */
+export function treeSnapshot(tree: LiveTree): ResourceSnapshot {
+  return snapshotOver(tree.ctx.resourceCache ?? NOTHING_CACHED);
+}
+
+/** What `pass` binds in `tree`, reading the files `tree`'s context caches. */
+export function runPass<Result>(pass: LiveScenePass<Result>, tree: LiveTree): ReadonlyMap<string, Result> {
+  return pass(tree, treeSnapshot(tree));
 }
 
 /** The path of every node of `main`'s live tree, with each scene in `scenes` cached. */

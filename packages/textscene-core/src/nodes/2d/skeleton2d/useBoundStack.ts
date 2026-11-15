@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
 import { liveTreeOf } from '../../../r3f/liveSceneTree.js';
 import { useLiveTreeSelection, type SharedLiveTree } from '../../../r3f/useLiveSceneTree.js';
-import { useNodeResource } from '../../../resources/reading';
+import { useNodeResource, type ResourceSnapshot } from '../../../resources/reading';
 import { MODIFICATION_STACK } from '../../../resources/skeleton/skeletonmodificationstack2d/index.js';
 import { sameData } from '../../../utils/sameData.js';
 import { stackNodePaths } from './modificationStack/stackPaths.js';
@@ -31,9 +31,9 @@ export function useBoundStack(ref: string | undefined, skeletonPath: string | nu
   const select = useMemo(() => {
     if (!stack || skeletonPath === null) return null;
     const literals = stackNodePaths(stack);
-    return ({ roots, ctx }: SharedLiveTree): Targets => {
+    return ({ roots, ctx }: SharedLiveTree, snapshot: ResourceSnapshot): Targets => {
       const tree = liveTreeOf(roots, ctx);
-      const rigs = liveScenePassResults(bindSkeleton2DRigs, tree);
+      const rigs = liveScenePassResults(bindSkeleton2DRigs, tree, snapshot);
       return stackTargets(literals, skeletonPath, tree, rigs);
     };
   }, [stack, skeletonPath]);

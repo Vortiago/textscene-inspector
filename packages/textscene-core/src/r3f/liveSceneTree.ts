@@ -32,14 +32,7 @@ import { perObject } from '../utils/perObject.js';
 import { NOTHING_CACHED, answeredOnce, keptWhileAnswered, type CacheSource } from './cacheSources.js';
 import type { ParsedResource } from '../parser/parsedResource.js';
 import type { ControlLocalTransforms } from './contexts/YSortContext.js';
-import {
-  nodeReference,
-  snapshotOver,
-  type Read,
-  type ResourceKind,
-  type ResourceSnapshot,
-} from '../resources/reading';
-import type { SceneResources } from './SceneResourcesContext.js';
+import { nodeReference, snapshotOver } from '../resources/reading';
 import { TILE_SET } from '../resources/tileset/kind.js';
 import { isCanvasItem } from './canvasItemClass.js';
 import { paintRoomOf } from './canvasItemPass/paintRoom.js';
@@ -83,7 +76,10 @@ export interface LiveTreeContext {
   internalResources: readonly TscnInternalResource[];
   sceneCache: CachedSceneSource;
   glbCache?: CachedGlbSource;
-  /** The `.tres` files the loader holds, which a pass that reads a resource file takes from the tree. */
+  /**
+   * The parsed resource files the tree reads: a tile layer's TileSet. Its host requests each file a
+   * read names. Absent reads every file as loading.
+   */
   resourceCache?: CacheSource<ParsedResource>;
   /**
    * `Control::get_transform()` of each Control the Control walk has solved, by live path. Absent
@@ -673,7 +669,6 @@ export class LiveTree {
   /** Written only by `at`. A null marks a path the loaded tree does not contain. */
   private readonly links = new Map<string, LiveLink | null>();
   private readonly scenes: CachedSceneSource;
-  private readonly resourceSnapshot: ResourceSnapshot;
   private readonly sources: TreeSources;
 
   constructor(
@@ -681,7 +676,6 @@ export class LiveTree {
     readonly ctx: LiveTreeContext
   ) {
     this.scenes = snapshotScenes(ctx);
-    this.resourceSnapshot = snapshotOver(ctx.resourceCache ?? NOTHING_CACHED);
     this.sources = {
       scenes: this.scenes,
       glbs: ctx.glbCache ?? NOTHING_CACHED,
@@ -690,14 +684,6 @@ export class LiveTree {
     const scope = rootScope(ctx);
     this.seatedRoots = seatedFile(roots, scope, this.scenes, roots);
     this.rootGroups = [inlineGroup(this.seatedRoots, scope)];
-  }
-
-  /**
-   * The resource `ref` names, a property of a node written in `scope`, decoded as `kind` does, over
-   * the `.tres` files this tree's context has loaded.
-   */
-  readResource<T>(ref: string | undefined, scope: SceneResources, kind: ResourceKind<T>): Read<T> {
-    return this.resourceSnapshot.read(nodeReference(ref, scope), kind);
   }
 
   /** The root nodes of the loaded scene at `scenePath`, or undefined while it is not loaded. */

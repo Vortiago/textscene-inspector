@@ -320,7 +320,7 @@ function buildForest(
   };
   const tree = liveTreeOf(nodes, ctx);
   // The paint pass numbers the world walk's draws too, so the two walks' sequences compare.
-  const paints = liveScenePassResults(canvasPaintPassFrom(rootRange), tree);
+  const paints = liveScenePassResults(canvasPaintPassFrom(rootRange), tree, snapshot);
   const paintAt = (path: string) => {
     const paint = paints.get(path);
     if (!paint) throw new Error(`expected the paint pass to hold ${path}, got none`);
@@ -339,7 +339,7 @@ function buildForest(
    * is no CanvasItem: nothing above it hides it, and no container writes its `visible`.
    */
   function canvasItemAt(path: string): CanvasItemPassResult | undefined {
-    return liveScenePassResults(canvasItemPass, tree).get(path);
+    return liveScenePassResults(canvasItemPass, tree, snapshot).get(path);
   }
 
   /**
@@ -367,7 +367,7 @@ function buildForest(
     if (parent === null) return null;
     let folded = foldedChains.get(parent);
     if (!folded) {
-      folded = canvasTransformBetween(liveScenePassResults(canvasItemPass, tree), above, parent);
+      folded = canvasTransformBetween(liveScenePassResults(canvasItemPass, tree, snapshot), above, parent);
       foldedChains.set(parent, folded);
     }
     return folded;

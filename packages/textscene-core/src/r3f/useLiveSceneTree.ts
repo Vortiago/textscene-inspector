@@ -3,7 +3,7 @@
  * loader's scene, GLB and `.tres` cache snapshots, and re-render when the tree grows because an
  * instance sub-scene or GLB finishes loading after the parsed SceneGraph was built.
  */
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useResourceLoader } from '../resources/useResource.js';
 import {
@@ -25,7 +25,10 @@ import type { ResourceType } from '../resources/ResourceEventBus.js';
 import { perObject } from '../utils/perObject.js';
 import { sameElements } from '../utils/sameElements.js';
 import { subscribeToNothing } from '../utils/subscribeToNothing.js';
-import { NOTHING_CACHED } from './cacheSources.js';
+import { NOTHING_CACHED, type CacheSource } from './cacheSources.js';
+import type { ParsedResource } from '../parser/parsedResource.js';
+import { liveFilesOf, NO_LIVE_FILES, type LiveFiles } from './liveFiles.js';
+import type { ResourceSnapshot } from '../resources/reading';
 import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
 import { projectTreeSettings, type ProjectTreeSettings } from '../parser/projectSettingsParser.js';
 import { useControlLocalTransforms, type ControlLocalTransforms } from './contexts/YSortContext.js';
@@ -36,12 +39,15 @@ export interface SharedLiveTree {
   ctx: LiveTreeContext;
 }
 
-/** The caches of `loader` that a live-tree context reads. With no loader, every path reads as never requested. */
+/**
+ * The caches of `loader` that a live-tree context reads, and the snapshot its resource files are
+ * read through. With no loader, every path reads as never requested.
+ */
 function loaderCaches(loader: ResourceLoader | null | undefined) {
   return {
     sceneCache: loader?.scenes ?? NOTHING_CACHED,
     glbCache: loader?.glbMeshes,
-    resourceCache: loader?.resources,
+    resourceCache: loader ? loadTicksOfLoader(loader).treeFiles : NO_LIVE_FILES.parsedFiles(),
   };
 }
 
@@ -70,42 +76,85 @@ function liveTreeContext(
   };
 }
 
-/** `resource` so a pass that reads a `.tres` file, such as a Skeleton2D stack, runs again when the file loads. */
-const LIVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'glb', 'resource'];
+/**
+ * The buses whose loads change the tree itself. A resource file reaches the tree and its passes
+ * through the loader's {@link LiveFiles}, which hears only a file they read.
+ */
+const LIVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'glb'];
 
 /** What {@link useLiveTreeVersion} reads of one loader. */
 interface LoadTicks {
-  /** Written only by the bus handler and by a first subscribe that finds an unseen change. */
+  /** Written only by `subscribe`'s handlers: moves when the tree must be built again. */
   version: number;
   readonly subscribe: (onChange: () => void) => () => void;
   readonly getVersion: () => number;
+  readonly files: LiveFiles;
+  /** The parsed resource files the tree reads itself, a tile layer's TileSet, each read recorded. */
+  readonly treeFiles: CacheSource<ParsedResource>;
 }
 
-const NO_LOAD_TICKS: LoadTicks = { version: 0, subscribe: subscribeToNothing, getVersion: () => 0 };
+const NO_LOAD_TICKS: LoadTicks = {
+  version: 0,
+  subscribe: subscribeToNothing,
+  getVersion: () => 0,
+  files: NO_LIVE_FILES,
+  treeFiles: NO_LIVE_FILES.parsedFiles(),
+};
 
 /**
  * The one load counter of a loader, which every reader of its live tree shares. A handler sits on
- * the loader's bus only while a reader is mounted, so loads go unseen before the first subscribe
- * and after the last unsubscribe. The version moves at the first subscribe when a load settled or a cache
- * cleared meanwhile, so no reader trusts a tree built then.
+ * the loader's bus and its live files only while a reader is mounted, so loads go unseen before the
+ * first subscribe and after the last unsubscribe. The version moves at the first subscribe when a
+ * load settled, a cache cleared or a file the tree read changed meanwhile, so no reader trusts a tree
+ * built then. A resource file moves the tree's version only when the tree itself read it: a file only
+ * a pass read keeps the tree, so every other pass keeps its result.
  */
 const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
+  const files = liveFilesOf(loader);
   const listeners = new Set<() => void>();
   let stopListening: (() => void) | undefined;
   // The token of the last time a reader listened: a change after it is a load or a cache clear that went unseen.
   let listenedUntil = loader.eventBus.changeToken();
+  /** Written only by `treeFiles` and `newTree`: each resource file the trees of this version read, with its answer. */
+  let treeReads = new Map<string, ParsedResource | null | undefined>();
+  const newTree = () => {
+    ticks.version++;
+    treeReads = new Map();
+  };
+  const changed = (isTreeChanged: boolean) => {
+    if (isTreeChanged) newTree();
+    for (const listener of listeners) listener();
+  };
+  const isTreeReadChanged = () => {
+    for (const [path, answer] of treeReads) if (files.parsedFiles().getCached(path) !== answer) return true;
+    return false;
+  };
   const ticks: LoadTicks = {
     version: 0,
+    files,
+    treeFiles: {
+      getCached(path) {
+        const answer = files.parsedFiles().getCached(path);
+        treeReads.set(path, answer);
+        return answer;
+      },
+    },
     getVersion: () => ticks.version,
     subscribe: (onChange) => {
-      if (listeners.size === 0 && loader.eventBus.hasChangedSince(LIVE_TREE_BUSES, listenedUntil))
-        ticks.version++;
+      if (listeners.size === 0) {
+        if (loader.eventBus.hasChangedSince(LIVE_TREE_BUSES, listenedUntil) || isTreeReadChanged()) newTree();
+      }
       listeners.add(onChange);
-      stopListening ??= loader.eventBus.onChange(LIVE_TREE_BUSES, ({ event }) => {
-        if (event === 'invalidated') return;
-        ticks.version++;
-        for (const listener of listeners) listener();
-      });
+      if (!stopListening) {
+        const stopBus = loader.eventBus.onChange(LIVE_TREE_BUSES, ({ event }) => {
+          if (event !== 'invalidated') changed(true);
+        });
+        const stopFiles = files.subscribe(() => changed(isTreeReadChanged()));
+        stopListening = () => {
+          stopBus();
+          stopFiles();
+        };
+      }
       return () => {
         listeners.delete(onChange);
         if (listeners.size > 0) return;
@@ -260,39 +309,51 @@ export function sameSelection<T>(
 }
 
 /**
- * A value read at each load tick of `watched`. A load tick re-reads it, and the reader re-renders
- * only where `isSame` says the value changed. A reader that watches no loader reads at tick 0 once.
- * `readAt` and `isSame` must be stable.
+ * A value read at each change of `watched` a reader may see: a new tree, or a new snapshot of the
+ * live files, which a load of a file the tree or a pass read starts. `readAt` gets the tree's version
+ * and that snapshot, and the reader re-renders only where `isSame` says the value changed. A reader
+ * that watches no loader reads once. `readAt` and `isSame` must be stable.
  */
 function useReadAtLoadTick<T>(
   watched: ResourceLoader | null | undefined,
-  readAt: (version: number) => T,
+  readAt: (version: number, snapshot: ResourceSnapshot) => T,
   isSame: (a: T, b: T) => boolean
 ): T {
   const ticks = loadTicksOf(watched);
   const getSnapshot = useMemo(() => {
-    const at = valueAtLoadTick((_loader, version) => readAt(version), isSame);
-    return () => at(watched, ticks.getVersion());
-  }, [watched, ticks, readAt, isSame]);
+    /** Written only by this reader: what it read last, at which tree and snapshot. */
+    let last: { version: number; snapshot: ResourceSnapshot; value: T } | undefined;
+    return () => {
+      const version = ticks.getVersion();
+      const snapshot = ticks.files.current();
+      if (last?.version === version && last.snapshot === snapshot) return last.value;
+      const next = readAt(version, snapshot);
+      const value = last && isSame(last.value, next) ? last.value : next;
+      last = { version, snapshot, value };
+      return value;
+    };
+  }, [ticks, readAt, isSame]);
+  // A reader that stops or replaces its reads leaves files in the shared snapshot until it restarts.
+  useEffect(() => () => ticks.files.releaseReads(), [ticks, readAt]);
   return useSyncExternalStore(ticks.subscribe, getSnapshot);
 }
 
 /**
- * A value read from the shared live tree, undefined with no tree. A load tick re-reads it, and the
- * reader re-renders only where `isSame` says the value changed, so a reader whose answer a load
- * leaves alone costs no render. A null `select` asks nothing, so it watches no load. `select` and
- * `isSame` must be stable.
+ * A value read from the shared live tree and the resource files it names, undefined with no tree. A
+ * load re-reads it, and the reader re-renders only where `isSame` says the value changed, so a reader
+ * whose answer a load leaves alone costs no render. A null `select` asks nothing, so it watches no
+ * load. `select` and `isSame` must be stable.
  */
 export function useLiveTreeSelection<T>(
-  select: ((tree: SharedLiveTree) => T | undefined) | null,
+  select: ((tree: SharedLiveTree, snapshot: ResourceSnapshot) => T | undefined) | null,
   isSame: (a: T, b: T) => boolean
 ): T | undefined {
   const { sceneGraph, loader, project, controlTransforms } = useLiveTreeInputs();
   const readAt = useCallback(
-    (version: number) => {
+    (version: number, snapshot: ResourceSnapshot) => {
       if (!sceneGraph || !select) return undefined;
       const tree = sharedTreeAt({ sceneGraph, loader, project, controlTransforms }, version);
-      return tree ? select(tree) : undefined;
+      return tree ? select(tree, snapshot) : undefined;
     },
     [sceneGraph, project, loader, controlTransforms, select]
   );
@@ -301,6 +362,20 @@ export function useLiveTreeSelection<T>(
     [isSame]
   );
   return useReadAtLoadTick(select ? loader : null, readAt, isSameSelection);
+}
+
+/**
+ * `read` on the snapshot the live tree and its passes read, so a file that both the tree and a
+ * component read loads once and answers once to both. A load re-reads it, and the reader
+ * re-renders only where `isSame` says the value changed. `read` and `isSame` must be stable.
+ */
+export function useLiveFilesRead<T>(
+  read: (snapshot: ResourceSnapshot) => T,
+  isSame: (a: T, b: T) => boolean
+): T {
+  const loader = useResourceLoader();
+  const readAt = useCallback((_version: number, snapshot: ResourceSnapshot) => read(snapshot), [read]);
+  return useReadAtLoadTick(loader, readAt, isSame);
 }
 
 function seatedRootsOf({ roots, ctx }: SharedLiveTree): readonly TscnNode[] {

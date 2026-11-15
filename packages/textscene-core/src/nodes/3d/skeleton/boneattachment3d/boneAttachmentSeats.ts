@@ -24,7 +24,7 @@ import { liveGlobalTransform3D } from '../../../../r3f/liveGlobalTransform.js';
 import { resolveLiteralOnLiveTree } from '../../../../r3f/nodePathUniqueNames.js';
 import { liveNodePatches } from '../../../../r3f/liveNodePatches.js';
 import { liveScenePassResults, type LiveScenePass } from '../../../../r3f/liveScenePass.js';
-import type { NodePatch } from '../../../../r3f/nodePatch.js';
+import type { NodePatch, NodePatches } from '../../../../r3f/nodePatch.js';
 import { posedSkeletonOf } from '../../skeleton3d/skeletonBindings.js';
 import type { AnimatedPose } from '../../skeleton3d/skeletonPose.js';
 import type { BoneAttachment3DProperties } from './types.js';
@@ -52,11 +52,12 @@ export interface BoneAttachmentSeat {
  * and a node that reaches no skeleton or no bone takes no seat: it keeps the transform the file
  * wrote, where Godot's `on_skeleton_update` leaves it too.
  */
-export const seatBoneAttachments: LiveScenePass<BoneAttachmentSeat> = (tree) => {
+export const seatBoneAttachments: LiveScenePass<BoneAttachmentSeat> = (tree, snapshot) => {
   const seats = new Map<string, BoneAttachmentSeat>();
   // What each ancestor stands on, held as the property patches the transform walk reads: where a
   // RemoteTransform has moved a node, then each seat of this pass, parents first as the fold runs.
-  const placed = new Map(liveScenePassResults(liveNodePatches, tree));
+  const patches = liveScenePassResults(liveNodePatches, tree, snapshot);
+  const placed = new Map(patches);
   // The global transform of each asked path, and the inverse of each asked parent: the fold visits
   // a parent before its children, so a path's global is final once first asked.
   const globals = new Map<string, Transform3D>();
@@ -78,7 +79,7 @@ export const seatBoneAttachments: LiveScenePass<BoneAttachmentSeat> = (tree) => 
     return inverse;
   };
   tree.fold<void, void>(undefined, (link, _, descend) => {
-    seatOf(link, tree, placed, globalAt, parentInverseAt, seats);
+    seatOf(link, tree, patches, placed, globalAt, parentInverseAt, seats);
     descend();
   });
   return keptSeats(tree, seats);
@@ -126,6 +127,7 @@ function sameAsks(kept: BoneAttachmentSeat, seat: BoneAttachmentSeat): boolean {
 function seatOf(
   link: LiveLink,
   tree: LiveTree,
+  patches: NodePatches,
   placed: Map<string, NodePatch>,
   globalAt: (path: string) => Transform3D,
   parentInverseAt: (path: string) => Transform3D,
@@ -140,7 +142,7 @@ function seatOf(
   if (properties.overridePose) return;
   const skeleton = skeletonOf(properties, link.path, tree);
   if (!skeleton) return;
-  const posed = posedSkeletonOf(skeleton, tree);
+  const posed = posedSkeletonOf(skeleton, tree, patches);
   // bone_idx at 0 or more wins; a negative one takes the first bone of the name, and a name no
   // bone carries leaves the node unbound (`_check_bind`, bone_attachment_3d.cpp:117-126).
   const bone = properties.boneIdx >= 0 ? properties.boneIdx : posed.findBone(properties.boneName);

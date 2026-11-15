@@ -9,7 +9,7 @@ import type { Transform3D } from '../godot/math/transform3d';
 import type { NodePatch } from './nodePatch';
 import { TscnParser } from '../parser/TscnParser';
 import { liveTreeOf } from './liveSceneTree';
-import { contextOver, liveTreeOfText } from './liveSceneTree.testkit';
+import { contextOver, liveTreeOfText, runPass } from './liveSceneTree.testkit';
 import { liveNodePatches } from './liveNodePatches';
 import type { CSGPolygon3DResolvedPath } from '../nodes/3d/csg/csgpolygon3d/types';
 import '../nodes/3d/csg/csgpolygon3d/index';
@@ -61,7 +61,7 @@ const originX = (patch: NodePatch | undefined): number | undefined =>
 
 describe('liveNodePatches', () => {
   it('runs the RemoteTransform pass before the path pass, which reads where the Path3D ended up', () => {
-    const patches = liveNodePatches(liveTreeOfText(SCENE));
+    const patches = runPass(liveNodePatches, liveTreeOfText(SCENE));
 
     expect(patches.get('Root/Track')).toHaveProperty('transform');
     const resolved = patches.get('Root/Poly')!.resolvedPath as CSGPolygon3DResolvedPath;
@@ -71,23 +71,23 @@ describe('liveNodePatches', () => {
   it('hands back the same patch while a later tree leaves its content as it was', () => {
     // Two trees over one parse: a later load hands the same nodes to a new tree.
     const main = new TscnParser().parse(SCENE);
-    const first = liveNodePatches(liveTreeOf(main.nodes, contextOver(main, {})));
-    const second = liveNodePatches(liveTreeOf(main.nodes, contextOver(main, {})));
+    const first = runPass(liveNodePatches, liveTreeOf(main.nodes, contextOver(main, {})));
+    const second = runPass(liveNodePatches, liveTreeOf(main.nodes, contextOver(main, {})));
 
     expect(second.get('Root/Track')).toBe(first.get('Root/Track'));
     expect(second.get('Root/Poly')).toBe(first.get('Root/Poly'));
   });
 
   it('keeps a mesh that draws behind its node at its own transform', () => {
-    const patches = liveNodePatches(liveTreeOfText(CYCLE));
+    const patches = runPass(liveNodePatches, liveTreeOfText(CYCLE));
 
     expect(originX(patches.get('Root/HolderA'))).toBeCloseTo(2883, 3);
     expect(patches.has('Root/HolderA/Box')).toBe(false);
   });
 
   it('hands back a new patch once the relay moves', () => {
-    const before = liveNodePatches(liveTreeOfText(SCENE)).get('Root/Track');
-    const after = liveNodePatches(liveTreeOfText(SCENE.replace('1, 0, 9, 0)', '1, 0, 8, 0)'))).get(
+    const before = runPass(liveNodePatches, liveTreeOfText(SCENE)).get('Root/Track');
+    const after = runPass(liveNodePatches, liveTreeOfText(SCENE.replace('1, 0, 9, 0)', '1, 0, 8, 0)'))).get(
       'Root/Track'
     );
 

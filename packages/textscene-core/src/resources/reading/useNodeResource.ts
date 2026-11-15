@@ -17,11 +17,13 @@ import { snapshotOver } from './snapshot';
 import { nodeReference, sameReference, type ScopedReference } from './scopedReference';
 
 /** With no loader, every file is missing, as `useResource` answers outside its provider. */
-const NO_LOADER_SNAPSHOT = snapshotOver({ getCached: () => null });
+const NO_PARSED_FILES = { getCached: () => null };
+const NO_LOADER_SNAPSHOT = snapshotOver(NO_PARSED_FILES);
 const NO_FILES = new Map<string, never>();
 const NO_LOADER: SnapshotSource = {
   current: () => NO_LOADER_SNAPSHOT,
   restart: () => {},
+  parsedFiles: () => NO_PARSED_FILES,
   request: () => {},
   subscribe: subscribeToNothing,
   files: () => NO_FILES,

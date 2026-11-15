@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../../parser/TscnParser';
 import type { TscnScene } from '../../parser/types';
 import { liveTreeOf } from '../liveSceneTree';
-import { contextOver } from '../liveSceneTree.testkit';
+import { contextOver, runPass } from '../liveSceneTree.testkit';
 import { canvasPaintPass, canvasPaintPassFrom, type CanvasItemPaint } from './canvasItemPaint';
 import '../nodes/index';
 import '../controls/index';
@@ -16,7 +16,7 @@ function parsed(body: string): TscnScene {
 }
 
 function paintOver(main: TscnScene, scenes: Readonly<Record<string, TscnScene>> = {}) {
-  return canvasPaintPass(liveTreeOf(main.nodes, contextOver(main, scenes)));
+  return runPass(canvasPaintPass, liveTreeOf(main.nodes, contextOver(main, scenes)));
 }
 
 /** The live paths in the order their own pixels draw, with `extra` pieces placed by their sequence. */
@@ -91,7 +91,10 @@ layer_2/y_sort_enabled = true
 
 [node name="Child" type="Node2D" parent="."]
 `);
-    const paint = canvasPaintPassFrom({ base: 0, size: 64 })(liveTreeOf(scene.nodes, contextOver(scene, {})));
+    const paint = runPass(
+      canvasPaintPassFrom({ base: 0, size: 64 }),
+      liveTreeOf(scene.nodes, contextOver(scene, {}))
+    );
     const { front } = paintAt(paint, 'Map');
     for (const index of [0, 1, 2]) {
       const layer = paintAt(paint, `Map/@TileMapLayer@${index}`).range;
@@ -221,7 +224,8 @@ describe('canvasPaintPass: instances', () => {
 
   it('starts the roots at the run it is given', () => {
     const start = { base: 1000, size: 100_000 };
-    const paint = canvasPaintPassFrom(start)(
+    const paint = runPass(
+      canvasPaintPassFrom(start),
       liveTreeOf(host.nodes, contextOver(host, { 'res://part.tscn': part }))
     );
     // The run's first value stays with what holds the roots, as a parent's own value does.

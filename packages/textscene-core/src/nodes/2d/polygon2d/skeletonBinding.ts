@@ -6,6 +6,8 @@
  */
 
 import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
+import type { ResourceSnapshot } from '../../../resources/reading';
+
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { resolveLiteralOnLiveTree } from '../../../r3f/nodePathUniqueNames.js';
 import { keptPerLivePath } from '../../../r3f/keptPerLivePath.js';
@@ -24,8 +26,11 @@ export interface PolygonSkeletonBinding {
 const kept = keptPerLivePath<PolygonSkeletonBinding>();
 
 /** The binding of every Polygon2D in `tree` that a Skeleton2D deforms, by the polygon's live path. */
-export function bindPolygonsToSkeletons(tree: LiveTree): ReadonlyMap<string, PolygonSkeletonBinding> {
-  const rigs = liveScenePassResults(bindSkeleton2DRigs, tree);
+export function bindPolygonsToSkeletons(
+  tree: LiveTree,
+  snapshot: ResourceSnapshot
+): ReadonlyMap<string, PolygonSkeletonBinding> {
+  const rigs = liveScenePassResults(bindSkeleton2DRigs, tree, snapshot);
   const bindings = new Map<string, PolygonSkeletonBinding>();
   tree.fold<void, void>(undefined, (link, _, descend) => {
     const binding = bindingOf(link, tree, rigs);

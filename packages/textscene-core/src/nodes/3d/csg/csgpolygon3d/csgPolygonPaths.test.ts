@@ -6,7 +6,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { liveTreeOfText } from '../../../../r3f/liveSceneTree.testkit';
+import { liveTreeOfText, treeSnapshot } from '../../../../r3f/liveSceneTree.testkit';
 import type { NodePatches } from '../../../../r3f/nodePatch';
 import { resolveCsgPolygonPaths } from './csgPolygonPaths';
 import * as logger from '../../../../logger';
@@ -29,7 +29,8 @@ function patchesOf(
   scenes: Readonly<Record<string, string>> = {},
   placed: NodePatches = new Map()
 ): NodePatches {
-  return resolveCsgPolygonPaths(liveTreeOfText(content, scenes), placed);
+  const tree = liveTreeOfText(content, scenes);
+  return resolveCsgPolygonPaths(tree, treeSnapshot(tree), placed);
 }
 
 /** The path the pass resolves for the polygon at the live path `path`. */
