@@ -9,6 +9,12 @@ import type { PropertyValidator } from './propertyValidator.js';
 import { CLASS_BASE_TYPES } from '../godot/classdb/classBaseTypes.js';
 import { expectAccepted } from './testing/validatorCheck.js';
 import { derivedValidator } from './descriptorValidator.js';
+import { classProperties } from '../godot/classdb/classProperty.js';
+import { propertyDescriptor } from '../godot/classdb/propertyDescriptor.js';
+import {
+  NODE_CLASS_PROPERTIES,
+  RESOURCE_CLASS_PROPERTIES,
+} from '../godot/classdb/classProperties.generated.js';
 import './index.js'; // side-effect: every slice registers its validators
 
 describe('the registry reads the property descriptor', () => {
@@ -55,5 +61,25 @@ describe('a hand validator wins over the descriptor', () => {
 
   it('and a scratch registry reads no descriptor unless it is given the derivation', () => {
     expect(new ValidatorRegistry(CLASS_BASE_TYPES).declarationFor('BoxMesh', 'size')).toBeNull();
+  });
+});
+
+describe('a hand row', () => {
+  /** Every captured class and key whose descriptor carries a hand row. */
+  function keysWithHandRows(): { type: string; key: string }[] {
+    const types = [...Object.keys(NODE_CLASS_PROPERTIES), ...Object.keys(RESOURCE_CLASS_PROPERTIES)];
+    return types.flatMap((type) =>
+      classProperties(type)
+        .filter(({ name }) => propertyDescriptor(type, name)?.facts !== undefined)
+        .map(({ name }) => ({ type, key: name }))
+    );
+  }
+
+  it('sits under no key a hand validator answers, where nothing would read it', () => {
+    const rows = keysWithHandRows();
+    // Anti-vacuity: Camera3D and DirectionalLight3D register hand rows.
+    expect(rows.length).toBeGreaterThan(7);
+    const unread = rows.filter(({ type, key }) => !validatorRegistry.isDerived(type, key));
+    expect(unread.map(({ type, key }) => `${type}.${key}`)).toEqual([]);
   });
 });
