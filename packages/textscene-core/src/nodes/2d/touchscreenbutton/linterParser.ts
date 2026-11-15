@@ -35,13 +35,6 @@ validatorRegistry.registerAll('TouchScreenButton', {
   // touch_screen_button.cpp:440. set_passby_press (cpp:383-385) assigns
   // unconditionally.
   passby_press: v.boolean('passby_press'),
-  // touch_screen_button.cpp:441 declares STRING_NAME, but get_action returns String (cpp:224-226), so
-  // Godot saves the plain quoted form. The parser also reads `&"…"`. set_action (cpp:220-222) assigns
-  // unconditionally. The PROPERTY_HINT_INPUT_NAME "show_builtin,loose_mode" hint names an InputMap
-  // action, which needs the project file, so only the literal's format is checked.
-  // A StringName property with a String setter: the loader converts a NodePath
-  // literal to its text, so `NodePath("x")` stores "x" (binder_common.h:175).
-  action: v.quotedString('action'),
   // touch_screen_button.cpp:442, PROPERTY_HINT_ENUM "Always,TouchScreen Only" (0-1), BIND_ENUM_CONSTANT at
   // cpp:447-448. set_visibility_mode (cpp:374-377) has no ERR_FAIL_INDEX and the header enum
   // (touch_screen_button.h:42-45) has no MAX sentinel, so out of range is only hinted: a warning.

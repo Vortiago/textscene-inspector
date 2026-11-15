@@ -19,7 +19,6 @@ describe('propertyDescriptor', () => {
   });
 
   it('answers nothing for a class whose rows are not from the capture', () => {
-    // `UNCATALOGUED_PROPERTIES` rows come from a later release's source, so they cannot cite the capture.
     expect(propertyDescriptor('AreaLight3D', 'area_range')).toBeUndefined();
   });
 

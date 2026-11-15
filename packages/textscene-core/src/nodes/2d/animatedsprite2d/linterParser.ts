@@ -26,9 +26,6 @@ validatorRegistry.registerAll('AnimatedSprite2D', {
   flip_h: v.boolean('flip_h'),
   flip_v: v.boolean('flip_v'),
   frame_progress: v.float('frame_progress'),
-  // A StringName property with a String setter: the loader converts a NodePath
-  // literal to its text, so `NodePath("x")` stores "x" (binder_common.h:175).
-  autoplay: v.quotedString('autoplay'),
 });
 
 // No ADD_PROPERTY declares it (animated_sprite_2d.cpp:671-681), and the

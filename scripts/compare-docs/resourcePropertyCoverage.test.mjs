@@ -1,9 +1,3 @@
-/**
- * `enginePropertyCoverage`'s question, asked of the resources in a `.tscn`'s
- * `[sub_resource]` sections. Scope: every resource class the ClassDB capture
- * holds, since the property descriptor checks a class no slice registers.
- */
-
 import { beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -39,7 +33,6 @@ describe('resource property coverage', { timeout: 60_000 }, () => {
   });
 
   it('leaves no property of any captured resource class unvalidated', () => {
-    // The property descriptor answers a class no slice registers, so the scope is the capture.
     const rows = unvalidatedByClass(engine, validatorRegistry, new Set(Object.keys(engine)));
     const report = rows.map((r) => `  ${r.cls} (${r.missing.length}): ${r.missing.join(', ')}`);
     expect(report).toEqual([]);
