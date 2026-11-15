@@ -74,8 +74,11 @@ function mergedPatches(first: NodePatches, second: NodePatches): Map<string, Nod
 }
 
 /** The RemoteTransform pass over `tree`, run once for both passes below, over the bones the stacks solve. */
-const relayPoses: LiveTreeDerivation<RelayPoses> = (tree, snapshot) =>
-  applyRemoteTransforms(tree, () => liveScenePassResults(solveSkeleton2DBones, tree, snapshot));
+const relayPoses: LiveTreeDerivation<RelayPoses> = (tree, snapshot) => {
+  // Asked once, not on each pose the relays read: each ask re-checks every read of the stacks.
+  const solvedBones = liveScenePassResults(solveSkeleton2DBones, tree, snapshot);
+  return applyRemoteTransforms(tree, () => solvedBones);
+};
 
 /**
  * Every property patch of `tree`. The RemoteTransform pass runs before the CSGPolygon3D path pass,

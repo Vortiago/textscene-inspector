@@ -12,6 +12,7 @@ import type { CachedFile } from '../useLoadedFiles';
 import type { ResourceLoader } from '../ResourceLoader';
 import type { ResourceSnapshot } from './read';
 import { snapshotOver } from './snapshot';
+import { subscribeToNothing } from '../../utils/subscribeToNothing';
 
 export interface SnapshotSource {
   /** The same snapshot until a read it recorded would answer differently. */
@@ -46,6 +47,20 @@ interface KindReads {
   /** Written only by `request` and the last unsubscribe: the files this source holds pinned. */
   readonly pinned: Set<string>;
 }
+
+const NO_PARSED_FILES: CacheSource<ParsedResource> = { getCached: () => null };
+const NO_LOADER_SNAPSHOT = snapshotOver(NO_PARSED_FILES);
+const NO_FILES = new Map<string, never>();
+
+/** The source with no loader: every file is missing, as `useResource` answers outside its provider. */
+export const NO_LOADER: SnapshotSource = {
+  current: () => NO_LOADER_SNAPSHOT,
+  restart: () => {},
+  parsedFiles: () => NO_PARSED_FILES,
+  request: () => {},
+  subscribe: subscribeToNothing,
+  files: () => NO_FILES,
+};
 
 export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
   /** Written only by `kindReads`: each kind of file a snapshot of this source has read. */

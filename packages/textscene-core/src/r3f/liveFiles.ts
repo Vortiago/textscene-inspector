@@ -9,8 +9,7 @@ import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { ResourceSnapshot } from '../resources/reading';
 import type { ParsedResource } from '../parser/parsedResource.js';
 import type { CacheSource } from './cacheSources.js';
-import { loaderSnapshots, type SnapshotSource } from '../resources/reading/loaderSnapshots.js';
-import { snapshotOver } from '../resources/reading/snapshot.js';
+import { loaderSnapshots, NO_LOADER, type SnapshotSource } from '../resources/reading/loaderSnapshots.js';
 import type { CachedFile } from '../resources/useLoadedFiles.js';
 import { perObject } from '../utils/perObject.js';
 import { subscribeToNothing } from '../utils/subscribeToNothing.js';
@@ -32,23 +31,19 @@ export interface LiveFiles {
   releaseReads(): void;
   /** Each file the current snapshot read, with its answer, for the **Missing resource** report. */
   files(): ReadonlyMap<string, CachedFile<object>>;
-  /** `onChange` hears a request of a newly read file, and each load or failure of a read file. */
+  /** `onChange` hears each request the live files make, and each load or failure of a read file. */
   subscribeFiles(onChange: () => void): () => void;
   /** A number that moves whenever `files()` may have changed. */
   filesVersion(): number;
 }
 
-const NO_FILES = new Map<string, never>();
-const NOTHING_PARSED: CacheSource<ParsedResource> = { getCached: () => null };
-const NOTHING_LOADED = snapshotOver(NOTHING_PARSED);
-
 /** Every read answers a failed file: no loader holds anything. */
 export const NO_LIVE_FILES: LiveFiles = {
-  current: () => NOTHING_LOADED,
-  parsedFiles: () => NOTHING_PARSED,
+  current: NO_LOADER.current,
+  parsedFiles: NO_LOADER.parsedFiles,
   subscribe: subscribeToNothing,
   releaseReads: () => {},
-  files: () => NO_FILES,
+  files: NO_LOADER.files,
   subscribeFiles: subscribeToNothing,
   filesVersion: () => 0,
 };
@@ -67,8 +62,27 @@ export function liveFilesOf(loader: ResourceLoader | null | undefined): LiveFile
 function liveFilesOver(source: SnapshotSource): LiveFiles {
   const fileListeners = new Set<() => void>();
   const staleListeners = new Set<() => void>();
-  /** Written only by `filesChanged`. */
+  /** Written only by `filesChanged` and the source listener of `subscribeFiles`. */
   let version = 0;
+  /**
+   * Written only by `freshSnapshot` and the stale handlers: whether `last` is still the source's
+   * current snapshot. Only a heard stale event can end it, so it holds only while a reader listens.
+   */
+  let isFresh = false;
+  let last = source.current();
+  let lastParsed = source.parsedFiles();
+  const freshSnapshot = () => {
+    if (isFresh) return last;
+    last = source.current();
+    lastParsed = source.parsedFiles();
+    isFresh = staleListeners.size > 0;
+    return last;
+  };
+  const hearStale = (onStale: () => void) =>
+    source.subscribe(() => {
+      isFresh = false;
+      onStale();
+    });
   /** Written only by `scheduleRequest` and the microtask it queues. */
   let isRequestQueued = false;
   /** Written only by `releaseReads` and the microtask it queues. */
@@ -105,13 +119,17 @@ function liveFilesOver(source: SnapshotSource): LiveFiles {
     },
   }));
   return {
-    current: () => requesting(source.current()),
-    parsedFiles: () => requestingParsed(source.parsedFiles()),
+    current: () => requesting(freshSnapshot()),
+    parsedFiles() {
+      freshSnapshot();
+      return requestingParsed(lastParsed);
+    },
     subscribe(onStale) {
       staleListeners.add(onStale);
-      const stopHearing = source.subscribe(onStale);
+      const stopHearing = hearStale(onStale);
       return () => {
         staleListeners.delete(onStale);
+        if (staleListeners.size === 0) isFresh = false;
         stopHearing();
       };
     },
@@ -121,6 +139,7 @@ function liveFilesOver(source: SnapshotSource): LiveFiles {
       queueMicrotask(() => {
         isRestartQueued = false;
         source.restart();
+        isFresh = false;
         for (const listener of staleListeners) listener();
         scheduleRequest();
       });
@@ -128,7 +147,7 @@ function liveFilesOver(source: SnapshotSource): LiveFiles {
     files: () => source.files(),
     subscribeFiles(onChange) {
       fileListeners.add(onChange);
-      const stopHearing = source.subscribe(() => {
+      const stopHearing = hearStale(() => {
         version++;
         onChange();
       });

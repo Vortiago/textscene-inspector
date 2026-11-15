@@ -327,6 +327,8 @@ function buildForest(
     return paint;
   };
   const embedsWindows = embedsSubwindows(tree, viewport);
+  // Asked once for the walk, not for each Control: each ask re-checks every read the pass made.
+  const canvasItems = liveScenePassResults(canvasItemPass, tree, snapshot);
 
   /**
    * Written only by `skippedTransformOf`, for this walk only: the tree does not change within one.
@@ -339,7 +341,7 @@ function buildForest(
    * is no CanvasItem: nothing above it hides it, and no container writes its `visible`.
    */
   function canvasItemAt(path: string): CanvasItemPassResult | undefined {
-    return liveScenePassResults(canvasItemPass, tree, snapshot).get(path);
+    return canvasItems.get(path);
   }
 
   /**
@@ -367,7 +369,7 @@ function buildForest(
     if (parent === null) return null;
     let folded = foldedChains.get(parent);
     if (!folded) {
-      folded = canvasTransformBetween(liveScenePassResults(canvasItemPass, tree, snapshot), above, parent);
+      folded = canvasTransformBetween(canvasItems, above, parent);
       foldedChains.set(parent, folded);
     }
     return folded;

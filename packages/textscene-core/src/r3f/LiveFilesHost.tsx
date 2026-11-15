@@ -15,7 +15,8 @@ export function LiveFilesHost(): null {
   const live = liveFilesOf(loader);
   // Renders again whenever the files may have changed, so the report below reads them anew.
   useSyncExternalStore(live.subscribeFiles, live.filesVersion, live.filesVersion);
-  const files = useStableEntries(new Map(live.files()));
+  // `files()` builds a new map on each call, so the report holds it as it is.
+  const files = useStableEntries(live.files());
   useMissingFiles(files);
   usePendingWhile(loader !== null && hasUnsettledFile(files));
   return null;

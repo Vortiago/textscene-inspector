@@ -41,7 +41,8 @@ export interface SharedLiveTree {
 
 /**
  * The caches of `loader` that a live-tree context reads. Its parsed resource files go through the
- * live files, which request each one. With no loader, every path reads as never requested.
+ * live files, which request each one. With no loader, a scene reads as never requested and a
+ * resource file as missing, as `useNodeResource` answers.
  */
 function loaderCaches(loader: ResourceLoader | null | undefined) {
   return {
@@ -126,7 +127,8 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
     for (const listener of listeners) listener();
   };
   const isTreeReadChanged = () => {
-    for (const [path, answer] of treeReads) if (files.parsedFiles().getCached(path) !== answer) return true;
+    const parsed = files.parsedFiles();
+    for (const [path, answer] of treeReads) if (parsed.getCached(path) !== answer) return true;
     return false;
   };
   const ticks: LoadTicks = {
@@ -172,8 +174,8 @@ function loadTicksOf(loader: ResourceLoader | null | undefined): LoadTicks {
 }
 
 /**
- * A counter that moves whenever a scene, GLB or `.tres` file loads or fails, so a deleted
- * instance leaves the tree. A reader of the whole tree re-derives on it; {@link useLiveTreeSelection}
+ * A counter that moves whenever a scene or GLB file loads or fails, or a resource file the tree
+ * itself read changes, so a deleted instance leaves the tree. A reader of the whole tree re-derives on it; {@link useLiveTreeSelection}
  * re-renders only where its value changed. The scenes and
  * GLBs it reads are `useResource` consumers' keys, which they request again. It is one
  * number per loader, so two readers on one load tick see the same value.
