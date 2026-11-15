@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { concatenate, type Define, expandMacros, findMatch } from './macros.js';
+import { type Define, expandMacros } from './macros.js';
 import { PreprocessorError } from './preprocessorError.js';
 
 const define = (body: string, names: string[] = []): Define => ({ body, arguments: names, isBuiltIn: false });
@@ -40,18 +40,12 @@ describe('expandMacros', () => {
   });
 });
 
-describe('findMatch', () => {
-  it('skips a match inside a word', () => {
-    expect(findMatch('aK K', 'K', 0)).toEqual({ index: 3 });
-  });
-});
-
-describe('concatenate', () => {
-  it('joins the words either side of ##, without the spaces', () => {
-    expect(concatenate('a ## b')).toBe('ab');
+describe('##', () => {
+  it('joins the words either side, without the spaces', () => {
+    expect(expand('J(a, b)', { J: define('x ## y', ['x', 'y']) })).toBe(' ab ');
   });
 
   it('keeps a run of three #', () => {
-    expect(concatenate('a ### b')).toBe('a ### b');
+    expect(expand('K', { K: define('a ### b') })).toBe(' a ### b ');
   });
 });

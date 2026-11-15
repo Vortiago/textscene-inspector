@@ -92,7 +92,7 @@ function substitute(body: string, name: string, value: string): string {
   return body;
 }
 
-export function findMatch(text: string, value: string, from: number): { index: number } | undefined {
+function findMatch(text: string, value: string, from: number): { index: number } | undefined {
   let index = text.indexOf(value, from);
   while (index > -1) {
     if (index > 0 && isCharWord(text[index - 1])) {
@@ -108,7 +108,7 @@ export function findMatch(text: string, value: string, from: number): { index: n
   return undefined;
 }
 
-export function concatenate(body: string): string {
+function concatenate(body: string): string {
   let start = body.indexOf('##');
   while (start > -1) {
     let end = start + 2;
