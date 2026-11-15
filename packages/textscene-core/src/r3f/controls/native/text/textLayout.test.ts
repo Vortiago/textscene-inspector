@@ -198,6 +198,28 @@ describe('shapeText — a character no font of the chain has (text_server_adv.cp
   it('draws a hex-code box for a character a face with no fallbacks lacks', () => {
     expect(shapeCjk(FACE_WITHOUT_CJK).controlCodepoint).toBe(0x4e00);
   });
+
+  // A notdef glyph of a character that is neither blank nor graphic counts as valid, so no fallback
+  // runs and it keeps no advance (`text_server_adv.cpp:7106-7108`, `:7060`). U+0378 is unassigned.
+  const shapeUnassigned = (preserveControl: boolean) =>
+    shapeText('B\u0378C', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics: { ...OPEN_SANS_FONT_METRICS, hasGlyph: (ch) => ch !== '\u0378' },
+      preserveControl,
+    }).lines[0]!.glyphs[1]!;
+
+  it('gives an unassigned code point the face lacks no advance and no hex-code box', () => {
+    const unassigned = shapeUnassigned(false);
+    expect([unassigned.advance, unassigned.controlCodepoint]).toEqual([0, undefined]);
+  });
+
+  // With `preserve_control`, only a line break counts as valid (`:7104`), so the box draws.
+  it('draws a hex-code box for an unassigned code point under preserveControl', () => {
+    expect(shapeUnassigned(true).controlCodepoint).toBe(0x0378);
+  });
 });
 
 describe('shapeText — the ascent and descent of a line with a hex-code box (text_server_adv.cpp:6891-6892)', () => {
@@ -848,6 +870,25 @@ describe('shapeText — glyph advances vs real Godot (text_server_adv.cpp:6936,7
     });
     expect(layout.lines[0]!.glyphs.map((g) => g.advance)).toEqual([17, 16]);
   });
+});
+
+// Godot rounds no glyph of index 0 and leaves the remainder as it was (`text_server_adv.cpp:7060`).
+// Each glyph of this face is 16.5 px at 32 px, so the third leaves a remainder of -0.5.
+it('keeps a 0 advance for a missing unassigned code point after a remainder of -0.5', () => {
+  const face: FontMetrics = {
+    ...OPEN_SANS_FONT_METRICS,
+    shaping: undefined,
+    hasGlyph: (ch) => ch !== '\u0378',
+    getGlyphAdvanceUnits: () => 1056,
+  };
+  const layout = shapeText('AAA\u0378A', {
+    fontSizePx: 32,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 3,
+    fontMetrics: face,
+  });
+  expect(layout.lines[0]!.glyphs.map((g) => g.advance)).toEqual([17, 16, 17, 0, 16]);
 });
 
 // `Label::_shape` splits on `paragraph_separator` first, keeping empty entries, and ends each

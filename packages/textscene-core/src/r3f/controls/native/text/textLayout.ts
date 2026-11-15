@@ -558,6 +558,13 @@ function isSpaceSeparator(cp: number): boolean {
  */
 const KEEPS_ITS_FACE = /^[\p{Cc}\p{Cn}\p{Cs}\p{Zl}\p{Zp}\p{Zs}\p{Default_Ignorable_Code_Point}]/u;
 
+/** An unassigned code point or a lone surrogate: neither blank nor graphic (`u_isgraph`), and no control. */
+const NON_GRAPHIC = /^[\p{Cn}\p{Cs}]/u;
+
+function isNonGraphic(ch: string): boolean {
+  return NON_GRAPHIC.test(ch);
+}
+
 /**
  * Written only by `glyphFaces`, on the first paragraph that needs a **Fallback chain**: most scenes
  * have none. Never cleared.
@@ -669,6 +676,12 @@ function specialGlyph(
   }
   const face = style.faces[i]!;
   if (face.drawsApart?.(ch)) return drawnApartGlyph(ch, i, face, style.sizes[i]!);
+  // `hasGlyph` first: most characters are in the face, and the property test costs more.
+  if (!face.hasGlyph(ch) && isNonGraphic(ch) && !fallbackChainOf(face).some((entry) => entry.hasGlyph(ch))) {
+    // Its notdef glyph counts as valid and keeps no advance (`text_server_adv.cpp:7060`, `:7106-7108`).
+    // With `preserve_control` only a break counts as valid, so it falls back to a box (`:7104`).
+    return preserveControl ? hexCodeBox(ch, i, style.sizes[i]!) : zeroWidthGlyph(ch, i);
+  }
   if (!lacksGlyph(face, ch, style.hasUndrawnGlyph)) return undefined;
   return hexCodeBox(ch, i, style.sizes[i]!);
 }
@@ -1007,6 +1020,9 @@ function roundGlyphAdvance(
   const cp = chars[i]!.codePointAt(0)!;
   // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
   const resets = cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp);
+  // A character with no glyph keeps its 0 advance, and rounds nothing into the remainder
+  // (`gl.index != 0`, `:7060`): rounding a remainder of -0.5 would give it -1.
+  if (glyph.advance === 0 && !glyph.glyphs) return resets ? 0 : remainder;
   if (!glyph.glyphs) {
     const rounded = roundedGlyph(glyph.advance, 0, resets ? 0 : remainder);
     glyph.advance = rounded.advance;
