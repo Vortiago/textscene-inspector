@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as logger from '../../../logger';
-import { NOTHING_CACHED, type CacheSource } from '../../../r3f/cacheSources';
+import { NOTHING_CACHED, recordingReads, type CacheSource } from '../../../r3f/cacheSources';
 import type { ThemeResource } from '../../styles/theme/types';
-import { NO_PROJECT_FONTS, resolveProjectFonts, type PendingProjectFonts } from './projectFonts';
+import { NO_PROJECT_FONTS, resolveProjectFonts } from './projectFonts';
 import type { FontResource } from './types';
 
 const FONT: FontResource = {
@@ -26,7 +26,7 @@ function settingsNaming(path: string) {
   return { 'gui/theme/custom_font': path };
 }
 
-const noPending = (): PendingProjectFonts => ({ themes: new Set(), fonts: new Set() });
+const noPending = () => new Set<string>();
 const caches = (themes: CacheSource<ThemeResource>, fonts: CacheSource<FontResource>) => ({ themes, fonts });
 
 describe('resolveProjectFonts', () => {
@@ -40,21 +40,25 @@ describe('resolveProjectFonts', () => {
     warnSpy.mockRestore();
   });
 
-  it('requests the theme and the font the settings name, trimmed', () => {
+  it('requests the theme and reads the font the settings name, trimmed', () => {
     const pending = noPending();
+    const fontsRead: string[] = [];
     resolveProjectFonts(
       { 'gui/theme/custom': ' res://ui.tres ', 'gui/theme/custom_font': ' res://body.otf ' },
-      caches(NOTHING_CACHED, NOTHING_CACHED),
+      caches(
+        NOTHING_CACHED,
+        recordingReads(NOTHING_CACHED, (path) => fontsRead.push(path))
+      ),
       pending
     );
-    expect([...pending.themes, ...pending.fonts]).toEqual(['res://ui.tres', 'res://body.otf']);
+    expect([...pending, ...fontsRead]).toEqual(['res://ui.tres', 'res://body.otf']);
   });
 
   it('requests neither for no settings, a missing key or an empty value', () => {
     const pending = noPending();
     resolveProjectFonts(null, caches(NOTHING_CACHED, NOTHING_CACHED), pending);
     resolveProjectFonts({ 'gui/theme/custom': '  ' }, caches(NOTHING_CACHED, NOTHING_CACHED), pending);
-    expect([...pending.themes, ...pending.fonts]).toEqual([]);
+    expect([...pending]).toEqual([]);
   });
 
   describe('the project default font', () => {
@@ -67,7 +71,7 @@ describe('resolveProjectFonts', () => {
       const fonts = resolveProjectFonts(null, caches(NOTHING_CACHED, { getCached: () => FONT }), pending);
 
       expect(fonts).toEqual(NO_PROJECT_FONTS);
-      expect(pending.fonts.size).toBe(0);
+      expect(pending.size).toBe(0);
     });
 
     it('is null when the project sets no custom_font, or sets it empty', () => {
@@ -77,7 +81,7 @@ describe('resolveProjectFonts', () => {
         NO_PROJECT_FONTS
       );
       expect(defaultFontOf('  ', { getCached: () => FONT }, pending)).toBeNull();
-      expect(pending.fonts.size).toBe(0);
+      expect(pending.size).toBe(0);
     });
 
     it('is the cached font the setting names', () => {
@@ -92,7 +96,7 @@ describe('resolveProjectFonts', () => {
 
       expect(defaultFontOf('res://fonts/body.otf', cache, pending)).toBe(FONT);
       expect(asked).toEqual(['res://fonts/body.otf']);
-      expect(pending.fonts.size).toBe(0);
+      expect(pending.size).toBe(0);
     });
 
     it('trims the path the setting names', () => {
@@ -103,18 +107,15 @@ describe('resolveProjectFonts', () => {
       expect(defaultFontOf(' res://fonts/body.otf ', cache)).toBe(FONT);
     });
 
-    it('is null and requests the font while the cache has not seen it', () => {
-      const pending = noPending();
-
-      expect(defaultFontOf('res://fonts/late.otf', NOTHING_CACHED, pending)).toBeNull();
-      expect([...pending.fonts]).toEqual(['res://fonts/late.otf']);
+    it('is null while the cache has not seen the font', () => {
+      expect(defaultFontOf('res://fonts/late.otf', NOTHING_CACHED)).toBeNull();
     });
 
     it('is null and warns with the path when the font failed to load', () => {
       const pending = noPending();
 
       expect(defaultFontOf('res://fonts/missing.otf', { getCached: () => null }, pending)).toBeNull();
-      expect(pending.fonts.size).toBe(0);
+      expect(pending.size).toBe(0);
       expect(warnSpy).toHaveBeenCalledTimes(1);
       expect(warnSpy.mock.calls[0]![0]).toContain('res://fonts/missing.otf');
     });
@@ -149,14 +150,14 @@ describe('resolveProjectFonts', () => {
       const pending = noPending();
 
       expect(themeOf(NOTHING_CACHED, pending)).toBeNull();
-      expect([...pending.themes]).toEqual(['res://ui.tres']);
+      expect([...pending]).toEqual(['res://ui.tres']);
     });
 
     it('is null, and requests nothing, for a theme that failed to load', () => {
       const pending = noPending();
 
       expect(themeOf({ getCached: () => null }, pending)).toBeNull();
-      expect(pending.themes.size).toBe(0);
+      expect(pending.size).toBe(0);
     });
 
     it('is null with no theme setting, and requests nothing', () => {
@@ -164,7 +165,7 @@ describe('resolveProjectFonts', () => {
 
       resolveProjectFonts({}, caches({ getCached: () => THEME }, NOTHING_CACHED), pending);
 
-      expect(pending.themes.size).toBe(0);
+      expect(pending.size).toBe(0);
     });
   });
 });

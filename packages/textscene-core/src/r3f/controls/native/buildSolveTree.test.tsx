@@ -1369,7 +1369,7 @@ describe('useBuildSolveTree — theme resolution', () => {
     expect(result.current.tree[0]?.themeChain).toEqual([resolved]);
   });
 
-  it('generation bumps once a not-yet-cached font arrives, for a theme_override_fonts ref', async () => {
+  it('builds a new tree once a not-yet-cached font arrives, for a theme_override_fonts ref', async () => {
     const loader = createFakeResourceLoader();
     const fontPath = 'res://fonts/bold.ttf';
     const nodes = [label('Title', { themeOverrideFonts: { font: 'ExtResource("1_font")' } })];
@@ -1379,14 +1379,14 @@ describe('useBuildSolveTree — theme resolution', () => {
       wrapper: wrapperFor(loader.loader),
     });
 
-    const initialGeneration = result.current.generation;
-    expect(result.current.tree[0]?.fontOverrides).toEqual({ font: null });
+    const initialTree = result.current.tree;
+    expect(initialTree[0]?.fontOverrides).toEqual({ font: null });
 
     await act(async () => {
       loader.fonts._resolve(fontPath, FONT_A);
     });
 
-    expect(result.current.generation).toBeGreaterThan(initialGeneration);
+    expect(result.current.tree).not.toBe(initialTree);
     expect(result.current.tree[0]?.fontOverrides).toEqual({ font: FONT_A });
   });
 
