@@ -28,13 +28,15 @@ import {
   labelStyleBox,
   labelTextTheme,
   labelUnwrappedShape,
-  labelVisibleLineRange,
   layoutLabelLines,
-  windowLabelLines,
+  windowWrappedLabel,
+  NO_HIDDEN_PARAGRAPH_LINES,
   labelFontHeightPx,
   type LabelLinePlacement,
   type LineTrim,
+  type WrappedLabelWindow,
 } from './nativeSolver';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { applyVisibleCharsReveal } from '../shared/visibleChars';
 import { labelEffectLayers, labelFillLayer, type LabelEffectLayer } from './effectLayers';
 import type { LabelProperties } from './types';
@@ -174,49 +176,74 @@ function LabelText({
   const text = labelPreShapeText(props.text ?? '', props.visibleCharacters, props.visibleCharactersBehavior);
   // Label's own default is OFF (`label.h`'s `autowrap_mode` initialiser).
   const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);
+  const isFill = props.horizontalAlignment === HorizontalAlignment.HORIZONTAL_ALIGNMENT_FILL;
   // Autowrap off reuses `labelUnwrappedShape`, the solve handoff `labelMinimumSize`
-  // shares. Autowrap on shapes against `rect.w`, which no share knows. The share
-  // is already windowed to lines_skipped/max_lines_visible, so it is not windowed again.
+  // shares, already windowed to lines_skipped/max_lines_visible. Autowrap on shapes against
+  // `rect.w`, which no share knows, and shows the lines that fit `rect.h`.
   const sharedLayout =
     autowrapMode === AutowrapMode.AUTOWRAP_OFF ? labelUnwrappedShape(solveNode, theme) : null;
   const bidiOptions = useControlBidiOptions(props, solveNode);
-  const layout = useMemo(() => {
-    if (sharedLayout) return sharedLayout;
-    const shaped = shapeText(text, {
-      fontSizePx: textTheme.fontSizePx,
-      boxWidthPx: labelShapingWidthPx(rect.w, contentMargin),
+  const shaped = useMemo(
+    () =>
+      sharedLayout
+        ? null
+        : shapeText(text, {
+            fontSizePx: textTheme.fontSizePx,
+            boxWidthPx: labelShapingWidthPx(rect.w, contentMargin),
+            autowrapMode,
+            lineSpacingPx: textTheme.lineSpacingPx,
+            uppercase: props.uppercase,
+            fontMetrics,
+            paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
+            tabStopsPx: props.tabStopsPx,
+            autowrapTrimFlags: props.autowrapTrimFlags,
+            ...bidiOptions,
+          }),
+    [
+      sharedLayout,
+      text,
+      textTheme.fontSizePx,
+      textTheme.lineSpacingPx,
+      rect.w,
+      contentMargin,
       autowrapMode,
-      lineSpacingPx: textTheme.lineSpacingPx,
-      uppercase: props.uppercase,
+      props.uppercase,
       fontMetrics,
-      paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
-      tabStopsPx: props.tabStopsPx,
-      autowrapTrimFlags: props.autowrapTrimFlags,
-      ...bidiOptions,
-    });
-    const range = labelVisibleLineRange(shaped.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
-    return windowLabelLines(shaped, range, {
+      props.paragraphSeparator,
+      props.tabStopsPx,
+      props.autowrapTrimFlags,
+      bidiOptions,
+    ]
+  );
+  // A height change windows the shaped lines again and does not shape them again.
+  const shown = useMemo((): WrappedLabelWindow => {
+    if (!shaped)
+      return { layout: sharedLayout!, trimmedLine: null, hiddenParagraphLines: NO_HIDDEN_PARAGRAPH_LINES };
+    const cut = {
+      linesSkipped: props.linesSkipped ?? 0,
+      maxLinesVisible: props.maxLinesVisible,
+      contentHeightPx: rect.h - contentMargin.top - contentMargin.bottom,
+      isFill,
+    };
+    return windowWrappedLabel(shaped, cut, {
+      lineSpacingPx: textTheme.lineSpacingPx,
       paragraphSpacingPx: textTheme.paragraphSpacingPx,
       fontHeightPx: labelFontHeightPx(fontMetrics, textTheme.fontSizePx),
     });
   }, [
+    shaped,
     sharedLayout,
-    text,
-    textTheme.fontSizePx,
-    textTheme.lineSpacingPx,
-    textTheme.paragraphSpacingPx,
-    rect.w,
+    rect.h,
     contentMargin,
-    autowrapMode,
-    props.uppercase,
-    fontMetrics,
-    props.paragraphSeparator,
-    props.tabStopsPx,
-    props.autowrapTrimFlags,
-    bidiOptions,
     props.linesSkipped,
     props.maxLinesVisible,
+    isFill,
+    textTheme.lineSpacingPx,
+    textTheme.paragraphSpacingPx,
+    textTheme.fontSizePx,
+    fontMetrics,
   ]);
+  const { layout, trimmedLine, hiddenParagraphLines } = shown;
 
   // label.cpp:266-267 -- a non-empty tab_stops always adds AFTER_LAST_TAB,
   // on top of whatever the scene's own justification_flags already set.
@@ -225,16 +252,20 @@ function LabelText({
     return props.tabStopsPx && props.tabStopsPx.length > 0 ? base | JustificationFlag.AFTER_LAST_TAB : base;
   }, [props.justificationFlags, props.tabStopsPx]);
 
-  // label.cpp:302-332 (autowrap OFF): each line is overrun-trimmed at the shaping
-  // width, whatever clip_text says, before it is aligned. The autowrap-ON branch (`:269-301`)
-  // trims only the line `max_lines_visible` hides, which is not modelled
-  // (`LabelProperties.overrunBehavior`).
+  // `_shape` trims at the shaping width, whatever clip_text says, before the line is aligned:
+  // every line with autowrap off (`label.cpp:302-332`), and one shown line with it on (`:268-301`).
   const overrunFlags = useMemo(() => overrunFlagsForBehavior(props.overrunBehavior), [props.overrunBehavior]);
   const trim = useMemo((): LineTrim | undefined => {
-    if (autowrapMode !== AutowrapMode.AUTOWRAP_OFF || !overrunFlags.trim) return undefined;
+    if (!overrunFlags.trim) return undefined;
     const options = { fontMetrics, fontSizePx: textTheme.fontSizePx, ellipsisChar: props.ellipsisChar };
-    return { flags: overrunFlags, options };
-  }, [autowrapMode, overrunFlags, fontMetrics, textTheme.fontSizePx, props.ellipsisChar]);
+    if (autowrapMode === AutowrapMode.AUTOWRAP_OFF) return { flags: overrunFlags, options };
+    if (!trimmedLine) return undefined;
+    const flags = {
+      ...overrunFlags,
+      enforceEllipsis: overrunFlags.enforceEllipsis || trimmedLine.enforceEllipsis,
+    };
+    return { flags, options, lineIndex: trimmedLine.lineIndex };
+  }, [autowrapMode, overrunFlags, trimmedLine, fontMetrics, textTheme.fontSizePx, props.ellipsisChar]);
 
   // Godot aligns each line by its own width (`Label::_get_line_rect`), so each line
   // gets its own box top here, and `<TextRun>` anchors it at the baseline.
@@ -253,6 +284,7 @@ function LabelText({
           trim,
           contentMargin,
           paragraphSpacingPx: textTheme.paragraphSpacingPx,
+          hiddenParagraphLines,
         }
       ),
     [
@@ -267,6 +299,7 @@ function LabelText({
       solveNode.rtl,
       autowrapMode,
       trim,
+      hiddenParagraphLines,
     ]
   );
 

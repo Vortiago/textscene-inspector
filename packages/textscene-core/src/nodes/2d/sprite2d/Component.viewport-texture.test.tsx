@@ -15,7 +15,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureContext';
 import { ViewportTexturePublisher, viewportEntry } from '../../../r3f/testing/ViewportTexturePublisher';
-import { createCanvasTarget, createSceneTarget } from '../../viewport/subviewport/offscreenViewport';
+import { createCanvasTarget, createSceneTarget } from '../../../r3f/offscreen/targets';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import { copiesFilledFrom } from '../../../r3f/liveTargets.testkit';
 import { canvasColorSpaceOf } from '../../../r3f/canvasColorSpace';

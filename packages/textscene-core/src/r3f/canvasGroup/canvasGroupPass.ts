@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { drawKeyedObjects } from '../canvasKeyWindow';
-import { drawOffscreen } from '../offscreen';
+import { drawOffscreen } from '../offscreen/draw';
 import { withScenePose } from '../sceneRenderCamera';
 import { perObject } from '../../utils/perObject';
 import { beginStep, endStep } from '../frameProfile/frameProfile';

@@ -17,7 +17,7 @@ import {
 } from '../../../r3f/contexts/ViewportTextureContext.js';
 import { passGate, type TargetRenderState } from '../renderGate.js';
 import { collectNestedViewportPaths } from './nestedViewportPaths.js';
-import { clearTarget } from './offscreenViewport.js';
+import { clearTarget } from '../../../r3f/offscreen/draw.js';
 import { useTargetViews } from './targetViews.js';
 import type { UpdateGate } from './viewportGate.js';
 

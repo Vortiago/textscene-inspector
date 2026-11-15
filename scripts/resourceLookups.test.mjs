@@ -54,8 +54,6 @@ const UNMOVED = new Map([
   ['r3f/controls/native/styleBoxTexture.ts', { calls: 2, issue: 1679 }],
   ['r3f/controls/native/useIconTexture.ts', { calls: 1, issue: 1696 }],
   ['r3f/materials/materialReference.ts', { calls: 1, issue: 1685 }],
-  ['resources/curves/shared/bezierCurve.ts', { calls: 2, issue: 1687 }],
-  ['resources/fonts/font/decode.ts', { calls: 3, issue: 1686 }],
   ['resources/lightmapgidata/decode.ts', { calls: 1, issue: 1697 }],
   ['resources/meshes/primitivemesh/surface.ts', { calls: 3, issue: 1685 }],
   ['resources/styles/labelsettings/decode.ts', { calls: 1, issue: 1696 }],

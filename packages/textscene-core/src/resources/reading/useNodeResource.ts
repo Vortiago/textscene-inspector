@@ -7,24 +7,12 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useByValue } from '../../r3f/hooks/useByValue';
 import { useSceneResources, type SceneResources } from '../../r3f/SceneResourcesContext';
-import { subscribeToNothing } from '../../utils/subscribeToNothing';
 import { hasUnsettledFile, useMissingFiles, useStableEntries } from '../useLoadedFiles';
 import { usePendingWhile } from '../usePendingWhile';
 import { useResourceLoader } from '../useResource';
-import { loaderSnapshots, type SnapshotSource } from './loaderSnapshots';
+import { loaderSnapshots, NO_LOADER } from './loaderSnapshots';
 import { NONE, type Read, type ResourceKind, type ResourceSnapshot } from './read';
-import { snapshotOver } from './snapshot';
 import { nodeReference, sameReference, type ScopedReference } from './scopedReference';
-
-/** With no loader, every file is missing, as `useResource` answers outside its provider. */
-const NO_LOADER_SNAPSHOT = snapshotOver({ getCached: () => null });
-const NO_FILES = new Map<string, never>();
-const NO_LOADER: SnapshotSource = {
-  current: () => NO_LOADER_SNAPSHOT,
-  request: () => {},
-  subscribe: subscribeToNothing,
-  files: () => NO_FILES,
-};
 
 /**
  * The read of a component: `ref` is a property of the component's own node, resolved in the
@@ -75,16 +63,18 @@ export function useSnapshotRead<R>(readAll: (read: NodeRead) => R): R {
 /**
  * `read` on the loader's current snapshot, run again when a file it touched loads, fails or
  * reloads. The host requests and pins each file the read touched, and reports the missing ones.
+ * The caller keeps `read` stable while its inputs hold: a new `read` starts a new snapshot.
+ *
+ * @canonical Code with no hooks that reads resources, run by a component
  */
-function useSnapshotHost<R>(read: (snapshot: ResourceSnapshot) => R): R {
+export function useSnapshotHost<R>(read: (snapshot: ResourceSnapshot) => R): R {
   const loader = useResourceLoader();
-  // One source for each read: a source records every file its snapshot read, so a source kept
-  // across a new read would go on pinning and reporting a file the reader no longer reads.
-  const source = useMemo(
-    () => (loader ? loaderSnapshots(loader) : NO_LOADER),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new read starts a new source.
-    [loader, read]
-  );
+  // One source for each loader, so a file that reloads keeps its last answer for a new read.
+  const source = useMemo(() => (loader ? loaderSnapshots(loader) : NO_LOADER), [loader]);
+  // A new read starts a new snapshot: one that kept the last read's files would go on pinning and
+  // reporting a file the reader no longer reads.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `read` is the trigger, not an input.
+  useMemo(() => source.restart(), [source, read]);
   const snapshot = useSyncExternalStore(source.subscribe, source.current, source.current);
   const result = useMemo(() => read(snapshot), [snapshot, read]);
   const files = useStableEntries(new Map(source.files()));

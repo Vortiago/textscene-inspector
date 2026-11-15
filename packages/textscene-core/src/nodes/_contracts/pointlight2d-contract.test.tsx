@@ -186,8 +186,8 @@ enabled = false
     expect(dim.length).toBeGreaterThan(0);
     expect(bright.length).toBeGreaterThan(0);
     // energy MUST meaningfully brighten the light (ignoring it → equal → RED).
-    expect(bright[0]!.uniforms.uEnergy!.value).toBeGreaterThan(
-      (dim[0]!.uniforms.uEnergy!.value as number) * 1.5
+    expect(bright[0]!.uniforms.uAlphaEnergy!.value).toBeGreaterThan(
+      (dim[0]!.uniforms.uAlphaEnergy!.value as number) * 1.5
     );
   });
 

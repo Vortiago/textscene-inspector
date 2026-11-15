@@ -69,10 +69,17 @@ describe('shapeText — a fallback chain', () => {
 
   // Above 20 px Godot rounds each advance and carries the remainder. A glyph the font lacks shapes
   // as index 0, which leaves the remainder untouched (`text_server_adv.cpp:7058`).
-  it("carries the face's rounding remainder across a glyph a fallback draws", () => {
+  it("carries the face's rounding remainder across a Latin glyph a fallback draws", () => {
+    const halfPixelOver = faceOf({ A: 1056 });
+    const [first, , last] = glyphsOf('ABA', { ...halfPixelOver, fallbacks: [faceOf({ B: 2048 })] }, 32);
+    expect([first!.advance, last!.advance]).toEqual([17, 16]);
+  });
+
+  // A Han letter is a script run of its own (`ScriptIterator`), so the run after it starts at 0.
+  it('restarts the rounding remainder after a Han glyph a fallback draws', () => {
     const halfPixelOver = faceOf({ A: 1056 });
     const [first, , last] = glyphsOf('A一A', { ...halfPixelOver, fallbacks: [CJK] }, 32);
-    expect([first!.advance, last!.advance]).toEqual([17, 16]);
+    expect([first!.advance, last!.advance]).toEqual([17, 17]);
   });
 
   it('kerns a pair of astral characters that a fallback draws, as one run', () => {

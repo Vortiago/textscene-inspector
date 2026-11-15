@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../../parser/TscnParser';
 import type { TscnScene } from '../../parser/types';
 import { liveTreeOf } from '../liveSceneTree';
-import { contextOver } from '../liveSceneTree.testkit';
+import { contextOver, runPass } from '../liveSceneTree.testkit';
 import { canvasItemPass, type CanvasItemPassResult } from './canvasItemPass';
 import '../nodes/index';
 import '../controls/index';
@@ -17,7 +17,7 @@ function parsed(body: string): TscnScene {
 }
 
 function passOver(main: TscnScene, scenes: Readonly<Record<string, TscnScene>> = {}) {
-  return canvasItemPass(liveTreeOf(main.nodes, contextOver(main, scenes)));
+  return runPass(canvasItemPass, liveTreeOf(main.nodes, contextOver(main, scenes)));
 }
 
 function resultAt(results: ReadonlyMap<string, CanvasItemPassResult>, path: string): CanvasItemPassResult {

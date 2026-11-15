@@ -87,6 +87,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/lighting2d/apartLight.ts` | `servers/rendering/renderer_rd/renderer_canvas_render_rd.cpp` (a positional light's height and a directional light's direction and height) |
 | `packages/textscene-core/src/r3f/lighting2d/normalMappedLighting.ts` | `servers/rendering/renderer_rd/shaders/canvas.glsl` (the normal map decode, `light_normal_compute` and the light loop) |
 | `packages/textscene-core/src/r3f/lighting2d/lightQuad.ts` | `drivers/gles3/shaders/canvas.glsl` (`light_blend_compute`'s three blend modes, when a `shadow_color` contributes, `light_base_color` energy packing) |
+| `packages/textscene-core/src/r3f/lighting2d/lightBlend.ts` | `servers/rendering/renderer_rd/shaders/canvas.glsl` (`light_blend_compute` and the `shadow_color` mix of the light loop) |
 | `packages/textscene-core/src/r3f/lighting2d/lightQuadShaders.ts` | `servers/rendering/renderer_rd/shaders/canvas.glsl` (the light texture tap and `light_color` of a PointLight2D) |
 | `packages/textscene-core/src/r3f/lighting2d/shadowMap/shadowMapTexture.ts` | `servers/rendering/renderer_rd/renderer_canvas_render_rd.cpp` (the shadow atlas's `R32_SFLOAT` format and its nearest, repeat-on-u sampler) |
 | `packages/textscene-core/src/r3f/lighting2d/shadowMap/shadowSampling.ts` | `servers/rendering/renderer_viewport.cpp` (the light pose a PointLight2D's quad reads: `xform_cache` and `radius_cache`) |
@@ -237,6 +238,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/controls/native/text/textJustify.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_shaped_text_fit_to_width`), `scene/gui/label.cpp` (`Label::_shape`'s choice of the lines to justify) and `scene/resources/3d/primitive_meshes.cpp` (`TextMesh`'s same choice) |
 | `packages/textscene-core/src/r3f/controls/native/text/textTabStops.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_shaped_text_tab_align`) |
 | `packages/textscene-core/src/r3f/controls/native/text/bidi.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_shape_substr`'s per-line reorder, `_shaped_text_shape`'s paragraph direction and override ranges, `_is_locale_right_to_left`) |
+| `packages/textscene-core/src/r3f/controls/native/text/scriptRuns.ts` | `modules/text_server_adv/script_iterator.cpp` (`ScriptIterator`: the script ranges, the paired-bracket stack and the emoji stretches) |
 | `packages/textscene-core/src/godot/text/structuredText.ts` | `servers/text/text_server.cpp` (`TextServer::parse_structured_text`) and `scene/gui/control.cpp` (`Control::structured_text_parser`) |
 | `packages/textscene-core/src/nodes/3d/label3d/glyphLayout.ts` | `scene/3d/label_3d.cpp` (`Label3D::_shape`'s per-line vertical origin for `VERTICAL_ALIGNMENT_*`) |
 | `packages/textscene-core/src/godot/math/alignment.ts` | `scene/3d/label_3d.cpp` (`Label3D::_shape`'s horizontal line offset) and `scene/resources/3d/primitive_meshes.cpp` (`TextMesh::_generate_glyph_mesh_data`'s), with `FILL` falling through to `CENTER` |

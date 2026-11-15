@@ -8,6 +8,7 @@
 import type { TscnNode } from '../../parser/types';
 import { isInjected, type LiveChildGroup, type LiveTree } from '../liveSceneTree';
 import { liveScenePassResults, type LiveScenePass } from '../liveScenePass';
+import type { ResourceSnapshot } from '../../resources/reading';
 import { liveNodePatches } from '../liveNodePatches';
 import { patchedNode } from '../nodePatch';
 import {
@@ -81,7 +82,7 @@ export function canvasPaintPassFrom(start: PaintRange): LiveScenePass<CanvasItem
   const key = `${start.base}:${start.size}`;
   let pass = passesByStart.get(key);
   if (!pass) {
-    pass = (tree) => paintOf(tree, start);
+    pass = (tree, snapshot) => paintOf(tree, snapshot, start);
     passesByStart.set(key, pass);
   }
   return pass;
@@ -90,9 +91,13 @@ export function canvasPaintPassFrom(start: PaintRange): LiveScenePass<CanvasItem
 /** The paint pass of a canvas whose roots start at the beginning of the sequence. */
 export const canvasPaintPass: LiveScenePass<CanvasItemPaint> = canvasPaintPassFrom(WHOLE_CANVAS_RANGE);
 
-function paintOf(tree: LiveTree, start: PaintRange): ReadonlyMap<string, CanvasItemPaint> {
+function paintOf(
+  tree: LiveTree,
+  snapshot: ResourceSnapshot,
+  start: PaintRange
+): ReadonlyMap<string, CanvasItemPaint> {
   const results = new Map<string, CanvasItemPaint>();
-  const patches = liveScenePassResults(liveNodePatches, tree);
+  const patches = liveScenePassResults(liveNodePatches, tree, snapshot);
   const roots = tree.rootGroups.flatMap((group) => group.children);
   const rootRanges = allocatePaintRange(start, roots).children;
   const top: Above = {

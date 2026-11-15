@@ -33,6 +33,9 @@ at the instance. They follow the `fvar`, `avar`, `gvar` and `cvar` tables. Each 
 phantom points that `gvar` moves in a font without `HVAR`. The pair kerning follows the `GPOS` `kern` feature
 with its deltas at the instance. The `rvrn` feature of the `GSUB` `FeatureVariations` swaps glyphs at some axis values. A `FontVariation` over another takes its own axis values alone (`font.cpp:3120-3131`).
 
+Each script run shapes apart, as Godot's `ScriptIterator` splits the text (`text_server_adv.cpp:7346-7352`), so kerning and the
+rounding remainder stop where the script changes. An unassigned code point that no font has takes no advance.
+
 ## Linting
 
 <!-- lint:begin Label3D -->

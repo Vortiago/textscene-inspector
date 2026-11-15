@@ -5,8 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { liveScenePassResults } from '../../../r3f/liveScenePass';
-import { liveTreeOfText } from '../../../r3f/liveSceneTree.testkit';
+import { liveTreeOfText, runPass } from '../../../r3f/liveSceneTree.testkit';
 import { liveNodePatches } from '../../../r3f/liveNodePatches';
 
 /** The arm of `unit-skeleton2d-lookat.tscn` with a relay at its end, whose line `relayLines` extend. */
@@ -44,7 +43,7 @@ const LOOK_AT_ARM = armScene();
 
 describe('the RemoteTransform2D pass below a solved bone', () => {
   it('puts the target at the end of the arm that the LookAt turns', () => {
-    const patches = liveScenePassResults(liveNodePatches, liveTreeOfText(LOOK_AT_ARM));
+    const patches = runPass(liveNodePatches, liveTreeOfText(LOOK_AT_ARM));
 
     const held = patches.get('Root/Held') as { position: { x: number; y: number }; rotation: number };
     expect(held.position.x).toBeCloseTo(300, 2);
@@ -53,16 +52,13 @@ describe('the RemoteTransform2D pass below a solved bone', () => {
   });
 
   it('leaves the stored transform of the bone to the inspector', () => {
-    const patches = liveScenePassResults(liveNodePatches, liveTreeOfText(LOOK_AT_ARM));
+    const patches = runPass(liveNodePatches, liveTreeOfText(LOOK_AT_ARM));
 
     expect(patches.has('Root/Skeleton/Arm')).toBe(false);
   });
 
   it('keeps the target rotation where the relay does not update rotation', () => {
-    const patches = liveScenePassResults(
-      liveNodePatches,
-      liveTreeOfText(armScene('update_rotation = false'))
-    );
+    const patches = runPass(liveNodePatches, liveTreeOfText(armScene('update_rotation = false')));
 
     const held = patches.get('Root/Held') as { position: { x: number; y: number }; rotation: number };
     expect(held.position.y).toBeCloseTo(350, 2);
@@ -71,10 +67,7 @@ describe('the RemoteTransform2D pass below a solved bone', () => {
 
   // A local relay copies its own local transform, which the turn of the bone above does not change.
   it('copies the local transform of a relay in local coordinates, whatever the bone does', () => {
-    const patches = liveScenePassResults(
-      liveNodePatches,
-      liveTreeOfText(armScene('use_global_coordinates = false'))
-    );
+    const patches = runPass(liveNodePatches, liveTreeOfText(armScene('use_global_coordinates = false')));
 
     const held = patches.get('Root/Held') as { position: { x: number; y: number }; rotation: number };
     expect(held.position).toEqual({ x: 200, y: 0 });
@@ -93,7 +86,7 @@ describe('the RemoteTransform2D pass below a solved bone', () => {
 [node name="Held" type="Polygon2D" parent="."]
 `;
 
-    const patches = liveScenePassResults(liveNodePatches, liveTreeOfText(host, { 'res://rig.tscn': rig }));
+    const patches = runPass(liveNodePatches, liveTreeOfText(host, { 'res://rig.tscn': rig }));
 
     const held = patches.get('Host/Held') as { position: { x: number; y: number } };
     expect(held.position.x).toBeCloseTo(300, 2);
@@ -124,7 +117,7 @@ bone2d_node = NodePath("Arm")
 target_nodepath = NodePath("../Target")
 `;
 
-    const patches = liveScenePassResults(
+    const patches = runPass(
       liveNodePatches,
       liveTreeOfText(inFile, {}, { 'res://stack.tres': stackFile, 'res://lookat.tres': lookAtFile })
     );
@@ -147,7 +140,7 @@ remote_path = NodePath("../../Held")
 `;
 
     it('pushes the position the Control adds to its relay (control.cpp:719-737)', () => {
-      const patches = liveScenePassResults(liveNodePatches, liveTreeOfText(relayUnderPanel));
+      const patches = runPass(liveNodePatches, liveTreeOfText(relayUnderPanel));
 
       expect((patches.get('Root/Held') as { position: unknown }).position).toEqual({ x: 120, y: 60 });
     });
@@ -161,7 +154,7 @@ remote_path = NodePath("../../Held")
         .replace('NodePath("../../../Held")', 'NodePath("../../../../Held")')
         .replace('NodePath("../Target")', 'NodePath("../../Target")');
 
-      const patches = liveScenePassResults(liveNodePatches, liveTreeOfText(carried));
+      const patches = runPass(liveNodePatches, liveTreeOfText(carried));
 
       const held = patches.get('Root/Held') as { position: { x: number; y: number } };
       expect(held.position.x).toBeCloseTo(300, 2);
@@ -174,7 +167,7 @@ remote_path = NodePath("../../Held")
         'offset_top = 50.0\npivot_offset = Vector2(10, 10)'
       );
 
-      const patches = liveScenePassResults(liveNodePatches, liveTreeOfText(anchored));
+      const patches = runPass(liveNodePatches, liveTreeOfText(anchored));
 
       expect(patches.has('Root/Held')).toBe(false);
     });

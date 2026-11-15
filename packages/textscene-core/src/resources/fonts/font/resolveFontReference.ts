@@ -1,12 +1,13 @@
 /**
- * The Font a property of a resource names, resolved against the font files loaded so far. A pure
- * walk, so a builder reads a font without a hook, and the caller loads each path the walk read.
+ * The Font a property of a resource names, read as `FONT` against the font files loaded so far. A
+ * pure walk, so a builder reads a font without a hook, and the caller loads each path the walk read.
  */
 
-import { recordingReads } from '../../../r3f/cacheSources';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
+import { nodeReference } from '../../reading/scopedReference';
+import { snapshotOver } from '../../reading/snapshot';
 import type { LoadedFont } from '../../scopedResource';
-import { resolveInlineFontResource } from './decode';
+import { FONT } from './kind';
 import type { FontResource } from './types';
 
 export interface ResolvedFont {
@@ -19,16 +20,18 @@ export interface ResolvedFont {
 /** Resolves `ref` in `resources` through `loadedFont`. */
 export function resolveFontReference(
   ref: string | undefined,
-  { externalResources, internalResources }: SceneResources,
+  resources: SceneResources,
   loadedFont: LoadedFont
 ): ResolvedFont {
-  const paths: string[] = [];
-  const font = resolveInlineFontResource(
-    ref,
-    externalResources,
-    internalResources,
-    recordingReads({ getCached: loadedFont }, (path) => paths.push(path)),
-    new Set()
-  );
-  return { font, paths };
+  // A kept decode checks a file again before a new decode reads it, so a path can be read twice.
+  const paths = new Set<string>();
+  const snapshot = snapshotOver({
+    // FONT reads a font file whole through `loaded`, so the walk parses no file.
+    getCached: () => undefined,
+    loaded: (_fileKind, address) => {
+      paths.add(address);
+      return loadedFont(address);
+    },
+  });
+  return { font: snapshot.read(nodeReference(ref, resources), FONT).value, paths: [...paths] };
 }

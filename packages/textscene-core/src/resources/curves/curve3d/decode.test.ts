@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { TscnInternalResource } from '../../../parser/types';
-import { CURVE_3D, resolveCurve3D, tessellateCurve3D } from './decode';
+import { CURVE_3D, tessellateCurve3D } from './decode';
 import { decodedCurve } from '../shared/curveKind.testkit';
 import { MAX_PADDED_POINTS } from '../shared/pointCount';
 
@@ -132,34 +131,6 @@ describe('the Curve3D body CURVE_3D decodes', () => {
       const points = decode(body(TWO_POINTS, { point_count: '100000000' }));
       expect(points).toHaveLength(MAX_PADDED_POINTS);
     });
-  });
-});
-
-describe('resolveCurve3D', () => {
-  const curve: TscnInternalResource = {
-    id: 'Path_1',
-    type: 'Curve3D',
-    data: body('PackedVector3Array(0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 10,0,0)'),
-  };
-
-  it('decodes the Curve3D a SubResource reference names', () => {
-    const points = resolveCurve3D('SubResource("Path_1")', [curve]);
-    expect(points.map((p) => p.position)).toEqual([
-      { x: 0, y: 0, z: 0 },
-      { x: 10, y: 0, z: 0 },
-    ]);
-  });
-
-  it('resolves no points for an absent, ExtResource or unknown reference', () => {
-    expect(resolveCurve3D(undefined, [curve])).toEqual([]);
-    expect(resolveCurve3D('ExtResource("Path_1")', [curve])).toEqual([]);
-    expect(resolveCurve3D('SubResource("Missing")', [curve])).toEqual([]);
-  });
-
-  // Godot keeps the first holder of a repeated id (`resource_format_text.cpp:597-603`).
-  it('reads no points when the first holder of the id is not a Curve3D (edge case)', () => {
-    const other: TscnInternalResource = { id: 'Path_1', type: 'Curve2D', data: {} };
-    expect(resolveCurve3D('SubResource("Path_1")', [other, curve])).toEqual([]);
   });
 });
 

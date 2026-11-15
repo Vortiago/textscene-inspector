@@ -6,7 +6,7 @@
 import { useEffect, useState, type RefObject } from 'react';
 import type { BoundClips } from '../contexts/AnimationDriverContext';
 import { useResourceLoader } from '../../resources/useResource';
-import { useLiveTreeVersion } from '../useLiveSceneTree';
+import { useDrawnContentVersion } from '../../resources/useCacheVersion';
 
 /**
  * A key that changes when a load leaves `bound` stale, for a mixer effect to depend on. A load's
@@ -14,7 +14,7 @@ import { useLiveTreeVersion } from '../useLiveSceneTree';
  * the new objects. A binding that is not stale keeps its mixer, and its playhead.
  */
 export function useRebindKey(bound: RefObject<BoundClips | null>): number {
-  const loads = useLiveTreeVersion(useResourceLoader());
+  const loads = useDrawnContentVersion(useResourceLoader());
   const [key, setKey] = useState(0);
   useEffect(() => {
     if (bound.current?.isStale()) setKey((k) => k + 1);

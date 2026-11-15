@@ -175,32 +175,37 @@ function revealCharacters(lines: readonly TextLineLayout[], budget: VisibleChars
 }
 
 /**
- * The glyphs and the characters, in code points, that `lines` draw. Each placement is one glyph
- * (`shaped_text_get_glyph_count`). The placements of one cluster count its characters once. Kept per
- * lines array, which RichTextLabel passes again on each reveal tick. Label builds a new array.
+ * The glyphs and the characters, in code points, that `lines` draw, and the glyphs an overrun trim cut.
+ * Each placement is one glyph (`shaped_text_get_glyph_count`). The placements of one cluster count
+ * their characters once. Kept per lines array, which RichTextLabel passes again on each reveal tick.
  */
 const drawnCountsOf = perObject((lines: readonly TextLineLayout[]) => {
   let glyphs = 0;
   let characters = 0;
-  for (const line of lines)
+  let cutGlyphs = 0;
+  for (const line of lines) {
+    cutGlyphs += line.cutGlyphCount ?? 0;
     line.glyphs.forEach((glyph, i) => {
       glyphs++;
       const before = line.glyphs[i - 1];
       const continuesCluster = glyph.cluster !== undefined && before?.sourceIndex === glyph.sourceIndex;
       if (!continuesCluster) characters += codePointCount(glyph.cluster ?? glyph.char);
     });
-  return { glyphs, characters };
+  }
+  return { glyphs, characters, cutGlyphs };
 });
 
 /**
  * The GLYPHS behaviours: `visible_ratio * total_glyphs` glyphs, counted in visual order across lines.
+ * Label's `total_glyphs` holds the glyphs a trim cut (`label.cpp:583`), but its draw counts only the
+ * glyphs it draws (`label.h:197-241`).
  */
 function revealGlyphs(lines: readonly TextLineLayout[], budget: VisibleCharsBudget): TextLineLayout[] {
   if (budget.visibleRatio === undefined || budget.visibleRatio >= 1) return [...lines];
   const drawn = drawnCountsOf(lines);
   const totalGlyphs =
     budget.totalCharacters === undefined
-      ? drawn.glyphs
+      ? drawn.glyphs + drawn.cutGlyphs
       : budget.totalCharacters - drawn.characters + drawn.glyphs;
   const limit = truncatedShare(totalGlyphs, Math.max(0, budget.visibleRatio));
   const fromEnd =

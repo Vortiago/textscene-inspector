@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { renderHook } from '@testing-library/react';
 import { TscnParser } from '../../parser/TscnParser';
 import { liveTreeOf } from '../liveSceneTree';
-import { contextOver } from '../liveSceneTree.testkit';
+import { contextOver, runPass } from '../liveSceneTree.testkit';
 import { useBuildSolveTree } from '../controls/native/buildSolveTree';
 import { canvasItemPass } from './canvasItemPass';
 import '../nodes/index';
@@ -63,7 +63,7 @@ describe('the visible a container writes', () => {
 
   it.each(types)('hides the same pages of a %s for the pass and the walk', (type) => {
     const scene = new TscnParser().parse(containerScene(type));
-    const results = canvasItemPass(liveTreeOf(scene.nodes, contextOver(scene, {})));
+    const results = runPass(canvasItemPass, liveTreeOf(scene.nodes, contextOver(scene, {})));
     const { result } = renderHook(() => useBuildSolveTree(scene.nodes, [], []));
     const pages = result.current.tree[0]!.children;
 

@@ -178,9 +178,14 @@ a single ordered driver, not a `useFrame` per publisher. R3F runs default-priori
 `useFrame` subscribers in mount order, parent before child, so a publisher nested inside
 another (a `ViewportTexture` that samples a nested `SubViewport`) renders one frame
 stale: the outer pass runs before the inner one it samples has produced anything that
-frame. Each pass registers `{ dependsOn, render }`. `orderViewportPasses` sorts
-dependencies topologically before dependents, and a single
-`<ViewportPassOrchestrator>` drives them in that order from one `useFrame`.
+frame. Each pass registers `{ dependsOn, render }`, where `dependsOn` lists the viewports
+nested one level down. The dispatcher places each viewport node in tree order. Tree order
+here is the order Godot enters the nodes. An `index=` moves a node only after it is added
+(`node.cpp:371`, `packed_scene.cpp:541-544`), so the children without one enter first, then
+the moved ones (`childEnterOrders`).
+`orderViewportPasses` sorts the passes as Godot's `_sort_active_viewports` does
+(`renderer_viewport.cpp:91-125`): the deepest level first, and the viewports of one level in
+tree order. A single `<ViewportPassOrchestrator>` drives them in that order from one `useFrame`.
 
 A cycle (two passes that each depend on the other, directly or transitively) has no valid
 render order. The affected passes are never driven, and their target keeps what it last

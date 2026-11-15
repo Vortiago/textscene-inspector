@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { copyTexels, reversedTexelRows, type TexelPlacement, type TexelTransfer } from '../../texelCopy';
 import { takeOutputLikeDrawingBuffer } from '../../outputTarget';
 import { beginStep, endStep } from '../../frameProfile/frameProfile';
-import { drawOffscreen } from '../../offscreen';
+import { drawOffscreen } from '../../offscreen/draw';
 import type { CanvasColorSpace } from '../../canvasColorSpace';
 import { drawCanvasGroups } from '../../canvasGroup/canvasGroupPass';
 

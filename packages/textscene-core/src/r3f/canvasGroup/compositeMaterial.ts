@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
+import { canvasItemFacing } from '../canvasItemFacing';
 
 /** `c.a > 0.0001` guards the divide, as Godot's shader does. */
 const compositeFragment = /* glsl */ `
