@@ -7,14 +7,9 @@
 import * as THREE from 'three';
 import { maxEmboldenGrowthPx } from './canvasVariation';
 import type { ByteColour } from './glyphCoverage';
-import {
-  canvasGlyphPenXPx,
-  faceStrikeSize,
-  fontIsScaled,
-  subpixelHalfStepPx,
-  type FontMetrics,
-} from './fontMetrics';
+import { canvasGlyphPenXPx, faceStrikeSize, subpixelHalfStepPx, type FontMetrics } from './fontMetrics';
 import type { TextLayoutResult } from './textLayout';
+import { lineBaselinesPx, tallestAscentPx } from './lineExtent';
 import { isCanvasFontMetrics, type CanvasFontMetrics } from './runtimeFontMetrics';
 import { hasOwnGlyph, type GlyphPainter, type PlacedGlyph, type RasterFrame } from './glyphPainter';
 import { hasOutlines, outlineGlyphPainter } from './outlineGlyphPainter';
@@ -28,7 +23,7 @@ import { passBlendMaterialProps, type SurfaceBlend } from '../../../materials/su
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
 import type { SurfaceShading } from '../../../materialFor2d';
 import type { Rgba } from '../../../../godot/math/math';
-import { GLYPH_DRAWER_RULES, drawsGlyphRect, type GlyphDrawer } from './glyphDrawer';
+import { GLYPH_DRAWER_RULES, drawsGlyphRect, snapsPen, type GlyphDrawer } from './glyphDrawer';
 import { fposmodp } from '../../../../godot/math/math';
 import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
 import type { Rect2 } from '../../../../godot/math/rect2';
@@ -82,7 +77,7 @@ export function computeCanvasTextCanvasLayout(
   // The worst-case shear offset over a line's rows, `dx(y) = -skew * (y - baselinePx)`: every row
   // of the raster above the baseline. A font's
   // descent is shorter than its ascent, so the rows below shear less.
-  const shearPadPx = Math.abs(skew) * (layout.baselineOffsetPx + offsetYPx);
+  const shearPadPx = Math.abs(skew) * (tallestAscentPx(layout) + offsetYPx);
   // Whole pixels, as Godot draws a glyph texture texel-aligned: a fractional pad puts each texel
   // between two screen pixels, and the linear filter thins every edge.
   const padXPx = Math.ceil(shearPadPx + strokePadPx + emboldenPadPx);
@@ -107,17 +102,20 @@ const INK_SLACK_RIGHT_PX = 1;
 
 /**
  * The span of the ink of the glyphs at `skew` as the painter draws them, pen boxes, pen snap and
- * hinting included: Godot draws a glyph quad whole past its side bearing. A fallback face's run keeps
+ * hinting included: Godot draws a glyph quad whole past its side bearing. A space, a line break or a
+ * control draws no ink, so it spans its pen box on every painter. A fallback face's run keeps
  * its glyphs at their places on the line (`faceLayouts.ts`), so its raster spans them alone. A layout
  * with no glyph spans its width.
  */
 function drawnExtentPx(layout: TextLayoutResult, skew: number): { startPx: number; endPx: number } {
   let startPx = Infinity;
   let endPx = -Infinity;
-  const reachOf = painterOf(canvasFaceOf(layout)).reachReader(skew, layout.baselineOffsetPx);
+  const lineAscentPx = tallestAscentPx(layout);
+  const reachOf = painterOf(canvasFaceOf(layout)).reachReader(skew, lineAscentPx);
+  const penBoxOf = blankGlyphPainter.reachReader(skew, lineAscentPx);
   for (const { glyphs } of layout.lines) {
     for (const glyph of glyphs) {
-      const { leftPx, rightPx } = reachOf(glyph);
+      const { leftPx, rightPx } = hasOwnGlyph(glyph) ? reachOf(glyph) : penBoxOf(glyph);
       const originX = glyph.x + (glyph.xOffset ?? 0);
       startPx = Math.min(startPx, originX - leftPx - INK_SLACK_LEFT_PX);
       endPx = Math.max(endPx, originX + rightPx + INK_SLACK_RIGHT_PX);
@@ -147,19 +145,6 @@ export function buildCanvasTextQuadArrays(
   // on this edge, and the quad must span it or the raster samples stretched.
   const wholeRaster = { x: 0, y: 0, w: canvasLayout.canvasWidthPx, h: canvasLayout.canvasHeightPx };
   return buildCanvasGlyphQuadArrays([wholeRaster], canvasLayout, originPhasePx);
-}
-
-/**
- * Whether a run places its glyphs as a canvas item draws a glyph at scale 1: the pen on its subpixel
- * step and the baseline floored (`text_server_adv.cpp:4082-4084`). A scaled face (`fontIsScaled`)
- * draws off that branch, as Label3D's mesh does.
- */
-export function snapsGlyphsToItemPixels(
-  glyphDrawer: GlyphDrawer,
-  fontSizePx: number,
-  metrics: Pick<FontMetrics, 'pxPerUnit' | 'outlines'>
-): boolean {
-  return GLYPH_DRAWER_RULES[glyphDrawer].roundsPen && !fontIsScaled(fontSizePx, metrics);
 }
 
 /**
@@ -274,7 +259,7 @@ function rasterFrame(
     fontSizePx,
     skew,
     canvasLayout,
-    snapsGlyphs: snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, metrics),
+    snapsGlyphs: snapsPen(glyphDrawer, fontSizePx, metrics),
     roundsPen: GLYPH_DRAWER_RULES[glyphDrawer].roundsPen,
     strokeWidthPx,
   };
@@ -292,8 +277,9 @@ function placeGlyphs(
 ): PlacedGlyph[] {
   const unsnappedPenShiftPx = scaledPenShiftPx(glyphDrawer, fontSizePx, metrics);
   // The raster starts at the whole item pixel at or before the run origin, where its quad sits.
+  const baselinesPx = lineBaselinesPx(layout);
   return layout.lines.flatMap((line, lineIndex) => {
-    const lineBaselinePx = lineIndex * layout.linePitchPx + layout.baselineOffsetPx;
+    const lineBaselinePx = baselinesPx[lineIndex]!;
     const baselineY =
       canvasLayout.offsetYPx + (snapsGlyphs ? Math.floor(originPhasePx.y + lineBaselinePx) : lineBaselinePx);
     return line.glyphs.filter(hasOwnGlyph).map((placement) => {

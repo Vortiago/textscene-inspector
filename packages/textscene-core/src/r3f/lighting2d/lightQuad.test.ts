@@ -51,15 +51,24 @@ describe('createLightQuadMaterial', () => {
     const mat = material(Light2DBlendMode.ADD);
     // rgb is the light term. Alpha stays raw: the accumulator needs it as the blend factor and,
     // summed, as the Light Only mask.
-    expect(mat.fragmentShader).toContain('vec4(cookie.rgb * uColor * uEnergy, cookie.a)');
+    expect(mat.fragmentShader).toContain('vec4(cookie.rgb * uColor * uAlphaEnergy, cookie.a)');
     expect(mat.fragmentShader).not.toContain('clamp(');
   });
 
-  it('carries colour and energy as separate sRGB uniforms', () => {
+  it('carries the colour as an sRGB uniform, apart from its alpha', () => {
     const mat = material(Light2DBlendMode.ADD, 2);
     const color = mat.uniforms.uColor!.value as THREE.Vector3;
     expect([color.x, color.y, color.z]).toEqual([1, 0.75, 0.35]);
-    expect(mat.uniforms.uEnergy!.value).toBe(2);
+  });
+
+  it("scales the light term by the colour's alpha times the energy, as canvas.glsl:794 does", () => {
+    const mat = createLightQuadMaterial({
+      cookie: new THREE.Texture(),
+      color: { ...WARM, a: 0.8 },
+      energy: -1,
+      blendMode: Light2DBlendMode.ADD,
+    });
+    expect(mat.uniforms.uAlphaEnergy!.value).toBeCloseTo(-0.8, 6);
   });
 
   it('accumulates ADD as src×srcAlpha + dst', () => {
@@ -179,7 +188,7 @@ describe('createLightQuadMaterial with a shadow', () => {
     const mat = shadowedMaterial();
     expect(mat.fragmentShader).toContain(SHADOWED_LIGHT_GLSL);
     expect(mat.fragmentShader).toContain(
-      'writeShadowedLight(cookie.rgb * uColor * uEnergy, cookie.a, shadowFraction());'
+      'writeShadowedLight(cookie.rgb * uColor * uAlphaEnergy, cookie.a, shadowFraction());'
     );
   });
 

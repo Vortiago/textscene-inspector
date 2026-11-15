@@ -659,6 +659,14 @@ export const fallbackChainOf = perObject((face: FontMetrics): readonly FontMetri
   ...(face.fallbacks ?? []),
 ]);
 
+/**
+ * `Font::get_height` (`font.cpp:210-220`): the largest ascent plus descent over the **Fallback chain**
+ * of `face`, so a taller fallback makes the font taller though no glyph draws in it.
+ */
+export function getFontChainHeightPx(face: FontMetrics, fontSizePx: number): number {
+  return Math.max(...fallbackChainOf(face).map((entry) => getFontLinePitchPx(entry, fontSizePx, 0)));
+}
+
 /** The first face of the **Fallback chain** of `face` that has a glyph for `ch`, or null for none. */
 export function firstFaceWithGlyph(face: FontMetrics, ch: string): FontMetrics | null {
   return fallbackChainOf(face).find((entry) => entry.hasGlyph(ch)) ?? null;

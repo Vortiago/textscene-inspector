@@ -164,6 +164,18 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     expect(strokesOf(underlined)).toHaveLength(1);
   });
 
+  it("draws the underline below the line's own ascent, which a larger run on the line raises (rich_text_label.cpp:1571, :1737)", async () => {
+    const strokeYOf = async (text: string) => {
+      const renderer = await render({ text, bbcodeEnabled: true });
+      const stroke = meshesOf(renderer).find((m) => m.geometry.type === 'PlaneGeometry')!;
+      return stroke.getWorldPosition(new THREE.Vector3()).y;
+    };
+    const aloneY = await strokeYOf('[u]a[/u]');
+    const besideLargeY = await strokeYOf('[font_size=32]B[/font_size][u]a[/u]');
+    // Open Sans at 32 px rises about 17 px above its ascent at 16 px. Y grows upward.
+    expect(aloneY - besideLargeY).toBeGreaterThan(10);
+  });
+
   it(
     "the underline stroke's material carries the run's own colour (ControlQuad's meshBasicMaterial, sRGB-space " +
       'same as every other native chrome quad) at half its opacity ' +

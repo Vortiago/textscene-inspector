@@ -14,6 +14,8 @@ const LINE: TextLineLayout = {
   text: 'abcdefghij',
   widthPx: 100,
   paragraphIndex: 0,
+  ascentPx: 15,
+  descentPx: 5,
   glyphs: [...'abcdefghij'].map((char, index) => ({
     char,
     x: index * 10,
@@ -76,6 +78,8 @@ describe('drawnLinesInBox leaves a trim ellipsis uncut (text_server.cpp:1811-182
     text: 'ab…',
     widthPx: 33,
     paragraphIndex: 0,
+    ascentPx: 15,
+    descentPx: 5,
     glyphs: [...LINE.glyphs.slice(0, 2), ellipsis],
   };
 
@@ -85,7 +89,14 @@ describe('drawnLinesInBox leaves a trim ellipsis uncut (text_server.cpp:1811-182
   });
 
   it('draws the ellipsis of a line that kept no glyph', () => {
-    const lone: TextLineLayout = { text: '…', widthPx: 13, glyphs: [ellipsis], paragraphIndex: 0 };
+    const lone: TextLineLayout = {
+      text: '…',
+      widthPx: 13,
+      glyphs: [ellipsis],
+      paragraphIndex: 0,
+      ascentPx: 15,
+      descentPx: 5,
+    };
     const [drawn] = drawnLinesInBox([lone], 2, HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT, false);
     expect(drawn!.line.text).toBe('…');
   });
