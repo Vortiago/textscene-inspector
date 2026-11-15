@@ -8,9 +8,11 @@ import { git, mergeBaseWithMain } from '../githooks/changes.mjs';
 import { addedLines, PLAIN_DIFF } from '../gitDiff.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { isCheckedSource, touchedFindings } from './touchedFindings.mjs';
+import { linesAddedInEvery } from './linesAddedInEvery.mjs';
 
-const USAGE = `pnpm comments:check [--base <rev>] [--head <rev>] | --all
-  --base <rev>  check the comments added or changed since <rev>, default the merge base with origin/main
+const USAGE = `pnpm comments:check [--base <rev>]... [--head <rev>] | --all
+  --base <rev>  check the comments added or changed since <rev>, default the merge base with origin/main;
+                given more than once, only the lines every base's diff adds
   --head <rev>  check the commits up to <rev>, not the working tree
   --all         count every comment that breaks a rule, the debt the check leaves standing`;
 
@@ -43,17 +45,19 @@ function diffLines(...revisions) {
 
 const readFromDisk = (path) => readFileSync(join(REPO_ROOT, path), 'utf8');
 
-/** The working tree since `base`: what `pnpm check` checks before a commit, untracked files whole. */
-function workingTreeSince(base) {
+/** The working tree since `bases`: what `pnpm check` checks before a commit, untracked files whole. */
+function workingTreeSince(bases) {
   const untracked = git('ls-files', '--others', '--exclude-standard', '--exclude-from=.prettierignore')
     .split('\n')
     .filter(Boolean);
-  return { files: [...diffLines(base), ...wholeFiles(untracked)], read: readFromDisk };
+  const files = linesAddedInEvery(bases.map((base) => diffLines(base)));
+  return { files: [...files, ...wholeFiles(untracked)], read: readFromDisk };
 }
 
-/** The commits from `base` to `head`: what a push carries, whatever the working tree holds. */
-function commitsBetween(base, head) {
-  return { files: diffLines(base, head), read: (path) => git('show', `${head}:${path}`) };
+/** The commits from `bases` to `head`: what a push carries, whatever the working tree holds. */
+function commitsBetween(bases, head) {
+  const files = linesAddedInEvery(bases.map((base) => diffLines(base, head)));
+  return { files, read: (path) => git('show', `${head}:${path}`) };
 }
 
 /** A tracked file deleted in the working tree has no text to read. */
@@ -81,11 +85,12 @@ function reportDebt() {
   );
 }
 
-function checkChanges(base, head) {
-  const findings = findingsIn(head === undefined ? workingTreeSince(base) : commitsBetween(base, head));
+function checkChanges(bases, head) {
+  const findings = findingsIn(head === undefined ? workingTreeSince(bases) : commitsBetween(bases, head));
   for (const { path, line, rule, message } of findings) console.log(`${path}:${line} ${rule}: ${message}`);
   if (findings.length === 0) {
-    console.log(`comments:check: every comment added since ${base.slice(0, 12)} keeps the rules.`);
+    const since = bases.map((base) => base.slice(0, 12)).join(' and ');
+    console.log(`comments:check: every comment added since ${since} keeps the rules.`);
     return 0;
   }
   console.log(`comments:check: ${findings.length} comments break the rules in AGENTS.md "Comments".`);
@@ -96,7 +101,7 @@ function readOptions() {
   try {
     return parseArgs({
       options: {
-        base: { type: 'string' },
+        base: { type: 'string', multiple: true },
         head: { type: 'string' },
         all: { type: 'boolean' },
         help: { type: 'boolean' },
@@ -115,11 +120,11 @@ if (options.help) {
 } else if (options.all) {
   reportDebt();
 } else {
-  const base = options.base ?? mergeBaseWithMain('HEAD');
-  if (base === undefined) {
+  const bases = options.base ?? [mergeBaseWithMain('HEAD')].filter(Boolean);
+  if (bases.length === 0) {
     console.error(`comments:check: no origin/main in this clone, so pass --base.\n${USAGE}`);
     process.exitCode = 2;
   } else {
-    process.exitCode = checkChanges(base, options.head);
+    process.exitCode = checkChanges(bases, options.head);
   }
 }
