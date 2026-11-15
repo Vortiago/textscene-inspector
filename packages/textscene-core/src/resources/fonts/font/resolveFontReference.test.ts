@@ -48,6 +48,26 @@ describe('resolveFontReference', () => {
     expect(font).toMatchObject({ kind: 'variation', baseFont: FONT_FILE });
   });
 
+  it('serves a FontVariation without a fallback whose file failed, as Godot skips a null one', () => {
+    const resources: SceneResources = {
+      ...RESOURCES,
+      internalResources: [
+        {
+          id: 'v',
+          type: 'FontVariation',
+          data: { base_font: 'ExtResource("base")', fallbacks: '[ExtResource("a")]' },
+        },
+      ],
+    };
+    const loaded = (path: string): FontResource | null => (path === BASE_PATH ? FONT_FILE : null);
+
+    expect(resolveFontReference('SubResource("v")', resources, loaded).font).toMatchObject({
+      kind: 'variation',
+      baseFont: FONT_FILE,
+      fallbacks: [],
+    });
+  });
+
   it('names no file and finds no font when the property names none', () => {
     expect(resolveFontReference(undefined, RESOURCES, nothingLoaded)).toEqual({ font: null, paths: [] });
   });

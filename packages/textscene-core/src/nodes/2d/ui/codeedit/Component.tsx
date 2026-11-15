@@ -24,7 +24,7 @@ import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import {
   resolveTextEditStyleState,
   textEditTextTheme,
-  textEditRowHeightPx,
+  textEditUnwrappedRowHeightPx,
   textEditDrawnLines,
   textEditTabStopsPx,
   textEditRowBandTopPx,
@@ -60,20 +60,6 @@ export function CodeEdit(props: NativeControlComponentProps) {
   const { fontSizePx } = textEditTextTheme(solveNode, codeEditProps, state);
   const fontMetrics = resolveNodeFontMetrics(solveNode, TEXT_EDIT_THEME_FONT_KEY);
   const lineSpacingPx = textEditLineSpacingPx(solveNode);
-  const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
-
-  const lines = useMemo(() => (codeEditProps.text ?? '').split('\n'), [codeEditProps.text]);
-  const charWidth0Px = measureText ? measureText('0', fontSizePx, 0, fontMetrics).x : 0;
-  const band = useMemo(
-    () => codeEditGutterBand(codeEditProps, rowHeightPx, charWidth0Px, Math.max(1, lines.length)),
-    [codeEditProps, rowHeightPx, charWidth0Px, lines.length]
-  );
-
-  const lineNumberColor = requiredThemeItem(solveNode.colors, 'line_number_color');
-  const lineNumberColorTinted = useMemo(
-    () => multiplyModulate(childTint.own, lineNumberColor),
-    [childTint.own, lineNumberColor]
-  );
 
   // Line numbers draw once per buffer line, on its first wrapped row (text_edit.cpp:1410).
   // The rows are shaped as `<TextEditBody>` shapes them, wrap width and scroll bar included, or each
@@ -87,12 +73,45 @@ export function CodeEdit(props: NativeControlComponentProps) {
     [codeEditProps.indentSize, fontMetrics, fontSizePx]
   );
   const bidi = useControlBidiOptions(codeEditProps, solveNode);
+  const shape = {
+    fontSizePx,
+    fontMetrics,
+    wrapMode: codeEditProps.wrapMode,
+    autowrapMode: codeEditProps.autowrapMode,
+    tabStopsPx,
+    preserveControl: codeEditProps.drawControlChars,
+    indentWrappedLines: codeEditProps.indentWrappedLines,
+    bidi,
+  };
+
+  const gutterRowHeightPx = useMemo(
+    () =>
+      textEditUnwrappedRowHeightPx(
+        drawn.lines,
+        { fontSizePx, fontMetrics, tabStopsPx, preserveControl: codeEditProps.drawControlChars, bidi },
+        lineSpacingPx
+      ),
+    [drawn.lines, fontSizePx, fontMetrics, tabStopsPx, codeEditProps.drawControlChars, bidi, lineSpacingPx]
+  );
+  const lines = useMemo(() => (codeEditProps.text ?? '').split('\n'), [codeEditProps.text]);
+  const charWidth0Px = measureText ? measureText('0', fontSizePx, 0, fontMetrics).x : 0;
+  const band = useMemo(
+    () => codeEditGutterBand(codeEditProps, gutterRowHeightPx, charWidth0Px, Math.max(1, lines.length)),
+    [codeEditProps, gutterRowHeightPx, charWidth0Px, lines.length]
+  );
+
+  const lineNumberColor = requiredThemeItem(solveNode.colors, 'line_number_color');
+  const lineNumberColorTinted = useMemo(
+    () => multiplyModulate(childTint.own, lineNumberColor),
+    [childTint.own, lineNumberColor]
+  );
+
   const rows = useTextEditRows({
     lines: drawn.lines,
     isPlaceholder: drawn.isPlaceholder,
     size: { x: rect.w, y: rect.h },
     margins: styleBox.contentMargin,
-    rowHeightPx,
+    lineSpacingPx,
     gutterBandWidthPx: band.totalWidthPx,
     minimapWidthPx: codeEditProps.minimapWidth ?? 80,
     drawMinimap: codeEditProps.minimapDraw,
@@ -100,20 +119,11 @@ export function CodeEdit(props: NativeControlComponentProps) {
     scrollPastEndOfFile: codeEditProps.scrollPastEndOfFile === true,
     fitContentHeight: codeEditProps.fitContentHeight === true,
     rtl: solveNode.rtl,
-    shape: {
-      fontSizePx,
-      fontMetrics,
-      wrapMode: codeEditProps.wrapMode,
-      autowrapMode: codeEditProps.autowrapMode,
-      tabStopsPx,
-      preserveControl: codeEditProps.drawControlChars,
-      indentWrappedLines: codeEditProps.indentWrappedLines,
-      bidi,
-    },
+    shape,
     scrollBarBoxes: internalScrollBarBoxes(solveNode),
   });
   // A placeholder paragraph replaces the buffer's single empty line, which starts at row 0.
-  const { lineLayouts } = rows;
+  const { lineLayouts, rowHeightPx } = rows;
   const lineStartRows = useMemo(
     () => (drawn.isPlaceholder ? [0] : lineLayouts.map(({ startRow }) => startRow)),
     [drawn.isPlaceholder, lineLayouts]

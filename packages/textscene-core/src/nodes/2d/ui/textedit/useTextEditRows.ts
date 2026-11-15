@@ -9,7 +9,7 @@ type TextEditRowsInput = Parameters<typeof solveTextEditRows>[0];
  * so a painter nested in another shapes the buffer once.
  */
 export function useTextEditRows(input: TextEditRowsInput, solved?: TextEditRows): TextEditRows {
-  const { lines, isPlaceholder, rowHeightPx, gutterBandWidthPx, minimapWidthPx, drawMinimap } = input;
+  const { lines, isPlaceholder, lineSpacingPx, gutterBandWidthPx, minimapWidthPx, drawMinimap } = input;
   const { wrapOffsetPx } = input;
   const { scrollPastEndOfFile, fitContentHeight, rtl, scrollBarBoxes } = input;
   const { x: width, y: height } = input.size;
@@ -24,7 +24,7 @@ export function useTextEditRows(input: TextEditRowsInput, solved?: TextEditRows)
         isPlaceholder,
         size: { x: width, y: height },
         margins: { left, top, right, bottom },
-        rowHeightPx,
+        lineSpacingPx,
         gutterBandWidthPx,
         minimapWidthPx,
         drawMinimap,
@@ -53,7 +53,7 @@ export function useTextEditRows(input: TextEditRowsInput, solved?: TextEditRows)
       top,
       right,
       bottom,
-      rowHeightPx,
+      lineSpacingPx,
       gutterBandWidthPx,
       minimapWidthPx,
       drawMinimap,

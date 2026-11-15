@@ -62,17 +62,17 @@ export const FRAGMENT = /* glsl */ `
 ${COOKIE_TAP}
 ${LIGHT_OUTPUTS}
 uniform vec3 uColor;
-uniform float uEnergy;
+uniform float uAlphaEnergy;
 varying vec2 vLightUv;
 void main() {
   vec4 cookie = sampleCookie(vLightUv);
-  writeLight(vec4(cookie.rgb * uColor * uEnergy, cookie.a), vec4(0.0, 0.0, 0.0, cookie.a));
+  writeLight(vec4(cookie.rgb * uColor * uAlphaEnergy, cookie.a), vec4(0.0, 0.0, 0.0, cookie.a));
 }
 `;
 
 /**
  * The cookie-tapped light, shadowed by the polar map (`shadowShader.ts`): the light term's `rgb` is
- * `cookie.rgb · color · energy` and its alpha the cookie's.
+ * `cookie.rgb · color.rgb · color.a · energy` and its alpha the cookie's.
  */
 export const SHADOWED_FRAGMENT = /* glsl */ `
 ${shadowSampleGlsl(POLAR_LOOKUP)}
@@ -80,10 +80,10 @@ ${COOKIE_TAP}
 ${LIGHT_OUTPUTS}
 ${SHADOWED_LIGHT_GLSL}
 uniform vec3 uColor;
-uniform float uEnergy;
+uniform float uAlphaEnergy;
 varying vec2 vLightUv;
 void main() {
   vec4 cookie = sampleCookie(vLightUv);
-  writeShadowedLight(cookie.rgb * uColor * uEnergy, cookie.a, shadowFraction());
+  writeShadowedLight(cookie.rgb * uColor * uAlphaEnergy, cookie.a, shadowFraction());
 }
 `;

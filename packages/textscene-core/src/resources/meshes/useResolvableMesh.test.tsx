@@ -102,7 +102,7 @@ describe('useResolvableMesh for a TextMesh', () => {
     act(() => fake.fonts._fail(FONT_PATH, 'gone'));
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.mesh!.loadedFont(FONT_PATH)).toBeUndefined();
+    expect(result.current.mesh!.loadedFont(FONT_PATH)).toBeNull();
   });
 });
 

@@ -355,12 +355,12 @@ function RichTextBody({
           // The tint multiplies in sRGB and `<TextRun>` converts once.
           const runTint = multiplyModulate(tint.own, placement.color);
           const outline = runOutline(placement, tint.own);
-          // `[u]` is a stroke on the line's baseline with the paragraph's metrics,
+          // `[u]` is a stroke on the line's own baseline with the paragraph's metrics,
           // snapped to whole pixel rows, at `underline_alpha` times the opacity.
           const underline = placement.underline
             ? underlineRectPx(
                 placement.layout.lines[0]!.glyphs,
-                placement.layout.baselineOffsetPx,
+                placement.layout.lines[0]!.ascentPx,
                 placement.underline,
                 theme.scale
               )
