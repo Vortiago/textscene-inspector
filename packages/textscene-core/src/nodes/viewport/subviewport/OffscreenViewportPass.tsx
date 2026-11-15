@@ -56,7 +56,6 @@ import {
   runCanvasFrame,
   type CanvasFrameSteps,
 } from '../../../r3f/components/Canvas2DStage/canvasFrameSequence';
-import { perObject } from '../../../utils/perObject';
 import { viewportCanvasColorSpace, viewportUsesDebanding, viewportMsaaMode } from './viewportTargetOptions';
 import { OffscreenToneMapStage, type OffscreenToneMap } from '../../../r3f/environment/offscreenToneMap';
 import { ViewportPassAttributes } from '../../../r3f/environment/worldExposure';
@@ -207,8 +206,9 @@ export function OffscreenViewportPass({
     [litCanvasScene, orthoCamera, path, firstSize]
   );
   useLayoutEffect(() => lightHost?.resize(size), [lightHost, size]);
-  // The steps of this viewport's canvas, which its shadow samplers join. Null with no lit canvas.
-  const frameSteps = lightHost ? canvasFrameStepsOf(lightHost) : null;
+  // The steps of this viewport's canvas, which its shadow samplers join. With no lit canvas they
+  // hold no light pass.
+  const frameSteps = useMemo(() => canvasFrameStepsOf(lightHost), [lightHost]);
 
   // The canvas items of a viewport draw after its 3D render, into the same target. In sRGB, the frame's
   // bytes return to the SRGB8_ALPHA8 storage decoded, which the hardware encodes back to the same
@@ -339,8 +339,7 @@ export function OffscreenViewportPass({
   const renderPass = useCallback(() => {
     if (kind === '2d') frameCanvas(passScene);
     if (canvasScene) frameCanvas(canvasScene);
-    if (frameSteps) runCanvasFrame(frameSteps, drawPass);
-    else drawPass();
+    runCanvasFrame(frameSteps, drawPass);
   }, [kind, frameCanvas, passScene, canvasScene, frameSteps, drawPass]);
 
   // Consumers sample the texture directly. The ordered driver runs every
@@ -372,7 +371,12 @@ export function OffscreenViewportPass({
       <CanvasWorkspaceProvider workspace="2d">
         <WorldRootProvider value={canvasScene}>
           <CanvasSpaceProvider value={null}>
-            <LitCanvas host={lightHost} canvasModulate={canvasModulate} space={canvasSpace}>
+            <LitCanvas
+              host={lightHost}
+              steps={frameSteps}
+              canvasModulate={canvasModulate}
+              space={canvasSpace}
+            >
               {canvasBackdropAndItems}
             </LitCanvas>
           </CanvasSpaceProvider>
@@ -407,6 +411,7 @@ export function OffscreenViewportPass({
             <CanvasSpaceProvider value={null}>
               <LitCanvas
                 host={kind === '2d' ? lightHost : null}
+                steps={frameSteps}
                 canvasModulate={canvasModulate}
                 space={canvasSpace}
               >
@@ -434,27 +439,27 @@ export function OffscreenViewportPass({
  */
 function LitCanvas({
   host,
+  steps,
   canvasModulate,
   space,
   children,
 }: {
   host: LightPassHost | null;
+  steps: CanvasFrameSteps;
   canvasModulate: Rgba;
   space: CanvasColorSpace;
   children: ReactNode;
 }) {
   return host ? (
-    <CanvasFrameStepsContext.Provider value={canvasFrameStepsOf(host)}>
+    <CanvasFrameStepsContext.Provider value={steps}>
       <CanvasLightPass host={host} canvasModulate={canvasModulate} space={space}>
         {children}
       </CanvasLightPass>
     </CanvasFrameStepsContext.Provider>
   ) : (
-    <CanvasFrameStepsContext.Provider value={null}>
-      <World2DLightingBoundary canvasModulate={canvasModulate} space={space}>
-        {children}
-      </World2DLightingBoundary>
-    </CanvasFrameStepsContext.Provider>
+    <World2DLightingBoundary canvasModulate={canvasModulate} space={space}>
+      {children}
+    </World2DLightingBoundary>
   );
 }
 
@@ -507,9 +512,9 @@ function OwnCanvasWorldScope({ children }: { children: ReactNode }) {
   );
 }
 
-/** The steps of the canvas a viewport's light pass host lights, whose light step runs that host. */
-const canvasFrameStepsOf = perObject((host: LightPassHost): CanvasFrameSteps => {
+/** The steps of a viewport's canvas, whose light step runs `host`, or no light step with no host. */
+function canvasFrameStepsOf(host: LightPassHost | null): CanvasFrameSteps {
   const steps = createCanvasFrameSteps();
-  steps.lightPass = () => host.run.current?.();
+  if (host) steps.lightPass = () => host.run.current?.();
   return steps;
-});
+}

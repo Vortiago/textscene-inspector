@@ -6,11 +6,11 @@
 import { act } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import type * as THREE from 'three';
 import { SelectionProvider } from '../../contexts/SelectionContext';
 import { CaptureRenderer } from '../../testing/CaptureRenderer';
-import { withStubbedGl } from '../../testing/stubbedGl';
+import { advanceFrameWithStubbedGl } from '../../testing/stubbedGl';
 import { TICK_STEP, UNMOVED_LEFT, type PoseReading } from '../../testing/tickedLightProbe';
-import type * as THREE from 'three';
 
 const reading = vi.hoisted((): PoseReading => ({ left: null }));
 
@@ -35,7 +35,7 @@ describe('the root canvas frame', () => {
     expect(reading.left).toBe(UNMOVED_LEFT);
 
     // The pose is React state, so the frame's update flushes inside `act`.
-    await act(() => withStubbedGl(captured.current!, {}, () => renderer.advanceFrames(1, 16)));
+    await act(() => advanceFrameWithStubbedGl(renderer, captured.current!));
 
     expect(reading.left).toBe(UNMOVED_LEFT + TICK_STEP);
   });

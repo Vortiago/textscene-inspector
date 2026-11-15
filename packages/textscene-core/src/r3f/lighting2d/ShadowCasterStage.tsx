@@ -105,7 +105,8 @@ export function ShadowCasterStage({ children }: { children: ReactNode }) {
   const version = useSyncExternalStore(registry.subscribe, registry.version);
   // A world matrix is no React value: nothing re-renders when an AnimationPlayer moves an occluder.
   // The layout effect covers mount and React changes, since `updateWorldMatrix` needs only the
-  // committed local matrices. The canvas's shadow sampling step covers the rest. State changes only when the numbers do.
+  // committed local matrices. The canvas's shadow sampling step covers the rest. State changes only
+  // when the numbers do.
   useLayoutEffect(sample, [sample, version]);
   useShadowSampler(sample);
 

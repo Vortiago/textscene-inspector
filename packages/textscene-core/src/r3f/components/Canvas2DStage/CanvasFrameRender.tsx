@@ -1,11 +1,11 @@
 /**
  * Takes over the 2D canvas's render and runs each frame's steps (`canvasFrameSequence.ts`). The
  * draw goes through the canvas frame, whose rows the y-down camera (`world2DCamera.ts`) holds
- * upside down. The project's `msaa_2d` sets the frame's
- * sample count: off, or on a device with no count at or below the mode's, the frame is single-sampled.
- * The project's `hdr_2d` sets its space: a linear half-float frame, which the copy to the drawing
- * buffer converts to sRGB. The camera and this component go together: a `World2DCamera` drawn
- * straight to the drawing buffer shows the canvas upside down.
+ * upside down. The project's `msaa_2d` sets the frame's sample count: off, or on a device with no
+ * count at or below the mode's, the frame is single-sampled. The project's `hdr_2d` sets its space:
+ * a linear half-float frame, which the copy to the drawing buffer converts to sRGB. The camera and
+ * this component go together: a `World2DCamera` drawn straight to the drawing buffer shows the
+ * canvas upside down.
  */
 
 import { useCallback, useContext } from 'react';
@@ -36,10 +36,10 @@ export function CanvasFrameRender() {
   const scene = useThree((state) => state.scene);
   const camera = useThree((state) => state.camera);
   const steps = useContext(CanvasFrameStepsContext);
-  useFrame(() => {
-    const drawItems = () => frame.render(gl, scene, camera, viewportTransfer(colour, isTransparent));
-    if (steps) runCanvasFrame(steps, drawItems);
-    else drawItems();
-  }, OWNS_THE_RENDER);
+  const drawItems = useCallback(
+    () => frame.render(gl, scene, camera, viewportTransfer(colour, isTransparent)),
+    [frame, gl, scene, camera, colour, isTransparent]
+  );
+  useFrame(() => (steps ? runCanvasFrame(steps, drawItems) : drawItems()), OWNS_THE_RENDER);
   return null;
 }
