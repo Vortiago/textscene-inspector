@@ -16,7 +16,6 @@ import {
   textEditTextTheme,
   textEditUnwrappedRowHeightPx,
   textEditMinimumSizeWith,
-  textEditDrawnLines,
   textEditTabStopsPx,
   TEXT_EDIT_THEME_FONT_KEY,
   textEditLineSpacingPx,
@@ -27,7 +26,6 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { CodeEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
-import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 
 /** `line_numbers_min_digits`'s own default (`code_edit.h:114`). */
@@ -129,7 +127,8 @@ function codeEditFontMetrics(
   const state = resolveTextEditStyleState(props.editable);
   const { fontSizePx } = textEditTextTheme(n, props, state);
   const fontMetrics = resolveNodeFontMetrics(n, TEXT_EDIT_THEME_FONT_KEY);
-  const { lines } = textEditDrawnLines(props.text, props.placeholderText);
+  // `get_line_height()` reads the buffer, never the placeholder (`text_edit.cpp:136-148`, `:4103`).
+  const lines = (props.text ?? '').split('\n');
   const shape = {
     fontSizePx,
     fontMetrics,
@@ -195,12 +194,12 @@ export const codeEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as CodeEditProperties;
   const state = resolveTextEditStyleState(props.editable);
   const styleBox = requiredThemeItem(n.styleBoxes, state);
-  // Only a fitted size reads the gutter band, so a CodeEdit that fits nothing shapes no line here.
-  if (!props.fitContentWidth && !props.fitContentHeight) return contentMarginSize(styleBox);
-  const { rowHeightPx, charWidth0Px } = codeEditFontMetrics(n, ctx, props);
-  const lineCount = Math.max(1, (props.text ?? '').split('\n').length);
-  const band = codeEditGutterBand(props, rowHeightPx, charWidth0Px, lineCount);
-  return textEditMinimumSizeWith(n, ctx, props, styleBox, band.totalWidthPx, props.indentSize);
+  const gutterBandWidthPx = () => {
+    const { rowHeightPx, charWidth0Px } = codeEditFontMetrics(n, ctx, props);
+    const lineCount = Math.max(1, (props.text ?? '').split('\n').length);
+    return codeEditGutterBand(props, rowHeightPx, charWidth0Px, lineCount).totalWidthPx;
+  };
+  return textEditMinimumSizeWith(n, ctx, props, styleBox, gutterBandWidthPx, props.indentSize);
 };
 
 /** `folded_code_region_color` with its alpha floored at 0.4, as `_fold_gutter_draw_callback` floors it (`code_edit.cpp:1636-1637`). */

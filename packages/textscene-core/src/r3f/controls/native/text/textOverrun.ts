@@ -352,6 +352,11 @@ function trimmedWidthPx({ cut, ellipsisWidthPx }: OverrunTrim): number {
   return cut.keptWidthPx + (cut.ellipsisPos !== -1 ? ellipsisWidthPx : 0);
 }
 
+/** The glyphs of `glyphs` that come from the shaped text, not from an ellipsis. */
+function shapedGlyphCount(glyphs: readonly GlyphPlacement[]): number {
+  return glyphs.filter((glyph) => !glyph.isEllipsis).length;
+}
+
 /**
  * `line` with the glyphs of a placement in place of its own, and without the `outlineGlyphs` of an
  * earlier trim. A trim does not reshape, so every other field, the underline among them, stays the line's.
@@ -362,7 +367,9 @@ function trimmedLine(
   placed: Pick<TextLineLayout, 'glyphs' | 'outlineGlyphs'>
 ): TextLineLayout {
   const { outlineGlyphs: _earlierTrim, ...kept } = line;
-  return { ...kept, ...placed, widthPx: trimmedWidthPx(trim) };
+  const cutGlyphCount =
+    (line.cutGlyphCount ?? 0) + shapedGlyphCount(line.glyphs) - shapedGlyphCount(placed.glyphs);
+  return { ...kept, ...placed, widthPx: trimmedWidthPx(trim), ...(cutGlyphCount > 0 && { cutGlyphCount }) };
 }
 
 /**
