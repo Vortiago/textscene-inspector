@@ -1,4 +1,5 @@
-import { isCharSpace, isCharWord, stripEdges } from './godotString.js';
+import { stripEdges } from '../../godot/string/string.js';
+import { isCharSpace, isCharWord } from './godotString.js';
 import { PreprocessorError } from './preprocessorError.js';
 
 export interface Define {

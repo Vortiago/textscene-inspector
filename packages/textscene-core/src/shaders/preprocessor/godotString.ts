@@ -26,13 +26,4 @@ export const END = '\0';
 
 export const isCharEnd = (char: string): boolean => char === '\n' || char === END;
 
-// Godot strips every character at or under 32, wider than `trim`.
-export function stripEdges(text: string): string {
-  let start = 0;
-  let end = text.length;
-  while (start < end && text.charCodeAt(start) <= 32) start += 1;
-  while (end > start && text.charCodeAt(end - 1) <= 32) end -= 1;
-  return text.slice(start, end);
-}
-
 export const isValidAsciiIdentifier = (text: string): boolean => /^[A-Za-z_][A-Za-z0-9_]*$/.test(text);

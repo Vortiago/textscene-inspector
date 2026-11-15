@@ -1,8 +1,8 @@
 import { instruction, notTranspiled } from '../language/instructions.js';
 import { stripComments } from './commentRemover.js';
 import { DirectiveTokenizer } from './directiveTokenizer.js';
-import { baseDir, isRelativePath, pathJoin, simplifyPath } from './godotPath.js';
-import { END, isCharEnd, isCharSpace, stripEdges } from './godotString.js';
+import { getBaseDir, isAbsolutePath, pathJoin, simplifyPath, stripEdges } from '../../godot/string/string.js';
+import { END, isCharEnd, isCharSpace } from './godotString.js';
 import { type Define, expandMacros } from './macros.js';
 import { PreprocessorError } from './preprocessorError.js';
 
@@ -292,7 +292,7 @@ class FilePreprocessor {
 
   private resolvedPath(quoted: string): string {
     const path = simplifyPath(quoted);
-    return isRelativePath(path) ? pathJoin(baseDir(this.state.currentFile), path) : path;
+    return isAbsolutePath(path) ? path : pathJoin(getBaseDir(this.state.currentFile), path);
   }
 
   private includedText(include: ShaderInclude, line: number): string {

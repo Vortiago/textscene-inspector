@@ -1,11 +1,5 @@
-import {
-  END,
-  isCharEnd,
-  isCharSpace,
-  isValidAsciiIdentifier,
-  isWhitespace,
-  stripEdges,
-} from './godotString.js';
+import { stripEdges } from '../../godot/string/string.js';
+import { END, isCharEnd, isCharSpace, isValidAsciiIdentifier, isWhitespace } from './godotString.js';
 
 export class DirectiveTokenizer {
   // Godot's String ends in a 0 the reader returns as a character.
