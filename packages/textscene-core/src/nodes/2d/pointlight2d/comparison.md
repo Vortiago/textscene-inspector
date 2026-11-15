@@ -10,9 +10,10 @@ renders_as: the light's cookie multiplied into every CanvasItem beneath it
 # PointLight2D
 
 PointLight2D lights the canvas with a `texture` cookie tinted by `color` and scaled by
-`color.a` times `energy` (`canvas.glsl:794`), and draws nothing itself. The previewer accumulates each light into an offscreen buffer
-that every lit CanvasItem multiplies its albedo against, which is Godot's own
-arithmetic. The previewer samples the cookie clamped at its quad edge. Godot resolves a
+`color.a` times `energy` (`canvas.glsl:794`), and draws nothing itself. The previewer
+accumulates each light into an offscreen buffer that every lit CanvasItem multiplies its
+albedo against, which is Godot's own arithmetic. The `pointlight2d-color-alpha` golden holds
+an ADD light of alpha 0.6 and a SUB light of alpha 0.5 at energy 1.5 to Godot's frame. The previewer samples the cookie clamped at its quad edge. Godot resolves a
 canvas item's default repeat to the viewport's disabled default (`viewport.h:419-420`,
 `viewport.cpp:4009`, `renderer_canvas_render_rd.cpp:2344`), and the light tap uses that
 item sampler (`canvas.glsl:774-782`). A light with no `texture` lights nothing and draws no

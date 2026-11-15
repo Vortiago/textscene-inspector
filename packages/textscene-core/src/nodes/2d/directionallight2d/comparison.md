@@ -9,8 +9,8 @@ renders_as: one term over the whole light buffer that every lit CanvasItem multi
 
 # DirectionalLight2D
 
-DirectionalLight2D lights the whole canvas with `color` and `energy`, and draws nothing
-itself. It reaches every lit item on its canvas layers whatever the item's `light_mask` or
+DirectionalLight2D lights the whole canvas with `color`, blended by `color.a` times `energy`
+(`renderer_canvas_render_rd.cpp:556`, `canvas.glsl:549-563`), and draws nothing itself. It reaches every lit item on its canvas layers whatever the item's `light_mask` or
 `z_index`. The previewer adds it to the light buffer a PointLight2D uses. The three panels
 take one warm light, and the clear colour below them takes none. In a `use_hdr_2d` canvas the light
 adds to the linear albedo with no clamp, and its colour stays as authored (`canvas.glsl:715-760`).
@@ -29,6 +29,8 @@ An occluder casts only from the downstream half of the map's depth. Godot builds
 projection with a depth range of -1 to 1 and never corrects it, so the RenderingDevice clips the
 upstream half (`renderer_canvas_render_rd.cpp:1166-1167`). An occluder more than
 `max_distance / 2` upstream of the view's centre casts nothing, and the previewer clips it too.
+The `directionallight2d-max-distance-clip` golden holds one clipped and one casting occluder at
+`max_distance` 150 to Godot's frame.
 
 The map spans the canvas's own view. On the main canvas that is the project viewport at the
 origin. No Camera2D becomes current in Godot's editor (`camera_2d.cpp:354`), and the previewer
