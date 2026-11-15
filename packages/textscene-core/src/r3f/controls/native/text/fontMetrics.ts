@@ -12,6 +12,7 @@ import type { LookupGlyph } from './autofit/openTypeGdef';
 import type { SizedClusterOffsets } from './fallbackMarkPositioning';
 import type { RunGlyph, RunShaping } from './glyphRun';
 import type { SfntOutlines } from './sfntOutlines';
+import type { StrikeSize } from './strike/strikeSize';
 
 /**
  * Which glyph-painting path a `FontMetrics` pairs with, since shaping is font-agnostic but
@@ -89,6 +90,14 @@ export interface FontMetrics {
   getKerningAdjustmentUnits(a: string, b: string): number;
   /** This font's typical glyph width (such as OS/2 `xAvgCharWidth`), design units: the fallback advance for a character outside its charset. */
   readonly averageAdvanceUnits: number;
+  /**
+   * FreeType's `underline_position`, design units, y up: the centre of the stroke, below the baseline
+   * when negative (`sfntUnderline.ts`). Absent is 0, as FreeType gives a face with no `post` and
+   * Godot a BMFont.
+   */
+  readonly underlinePosition?: number;
+  /** FreeType's `underline_thickness`, design units. Absent is 0. */
+  readonly underlineThickness?: number;
   /** `FontVariation.variation_embolden` of this face. Absent is 0, no embolden. */
   readonly embolden?: number;
   /**
@@ -158,9 +167,11 @@ function unitsToPx(
  * every baseline-relative quantity adds to this value rather than re-deriving it.
  */
 export function getFontAscentPx(
-  metrics: Pick<FontMetrics, 'ascent' | 'unitsPerEm' | 'pxPerUnit'>,
+  metrics: Pick<FontMetrics, 'ascent' | 'unitsPerEm' | 'pxPerUnit' | 'outlines'>,
   fontSizePx: number
 ): number {
+  const strike = faceStrikeSize(metrics, fontSizePx);
+  if (strike) return strikeExtentPx(strike).ascentPx;
   const ascentPx = unitsToPx(metrics.ascent, metrics, fontSizePx);
   // A fixed-size font returns its cached ascent scaled, with no FreeType round (`:2907-2912`).
   return metrics.pxPerUnit ? ascentPx : Math.ceil(ascentPx);
@@ -175,10 +186,15 @@ export function getFontAscentPx(
 // `lineSpacingPx` has no default: `Math::round(3 * scale)` is the table's
 // `Label/line_spacing`, and other controls read another key or none.
 export function getFontLinePitchPx(
-  metrics: Pick<FontMetrics, 'ascent' | 'descent' | 'unitsPerEm' | 'pxPerUnit'>,
+  metrics: Pick<FontMetrics, 'ascent' | 'descent' | 'unitsPerEm' | 'pxPerUnit' | 'outlines'>,
   fontSizePx: number,
   lineSpacingPx: number
 ): number {
+  const strike = faceStrikeSize(metrics, fontSizePx);
+  if (strike) {
+    const { ascentPx, descentPx } = strikeExtentPx(strike);
+    return Math.ceil(ascentPx + descentPx) + lineSpacingPx;
+  }
   // A fixed-size font sums its scaled ascent and descent, and the shaped size ceils the sum
   // (`text_server_adv.cpp:7524-7537`).
   if (metrics.pxPerUnit) {
@@ -194,10 +210,62 @@ export function getFontLinePitchPx(
  * reading of the ceiling rule (`text_server_adv.cpp:1515-1516`).
  */
 export function getFontDescentPx(
-  metrics: Pick<FontMetrics, 'ascent' | 'descent' | 'unitsPerEm' | 'pxPerUnit'>,
+  metrics: Pick<FontMetrics, 'ascent' | 'descent' | 'unitsPerEm' | 'pxPerUnit' | 'outlines'>,
   fontSizePx: number
 ): number {
   return getFontLinePitchPx(metrics, fontSizePx, 0) - getFontAscentPx(metrics, fontSizePx);
+}
+
+/** The underline stroke of a face or a shaped line, px. */
+export interface UnderlinePx {
+  /** Down from the baseline to the centre of the stroke. */
+  readonly positionPx: number;
+  /** Before a drawer's 1 px floor. */
+  readonly thicknessPx: number;
+}
+
+/**
+ * `_font_get_underline_position` and `_font_get_underline_thickness` at `fontSizePx`: FreeType's
+ * values scaled to 26.6 by `y_scale`, the position negated to point down (`text_server_adv.cpp:1517-1518`).
+ * A fixed-size face scales its own (`:2976-2981`).
+ */
+export function getFontUnderlinePx(
+  metrics: Pick<FontMetrics, 'underlinePosition' | 'underlineThickness' | 'unitsPerEm' | 'pxPerUnit'>,
+  fontSizePx: number
+): UnderlinePx {
+  const position = metrics.underlinePosition ?? 0;
+  const thickness = metrics.underlineThickness ?? 0;
+  if (metrics.pxPerUnit) {
+    return {
+      positionPx: unitsToPx(-position, metrics, fontSizePx),
+      thicknessPx: unitsToPx(thickness, metrics, fontSizePx),
+    };
+  }
+  // `y_scale` equals `x_scale`: Godot requests the same width and height.
+  const yScale = getFontOutlineScale(metrics.unitsPerEm, fontSizePx);
+  return {
+    positionPx: -ftMulFix(position, yScale) / FIXED_26_6_ONE,
+    thicknessPx: ftMulFix(thickness, yScale) / FIXED_26_6_ONE,
+  };
+}
+
+/**
+ * The strike a face draws `fontSizePx` from (`strike/faceStrikes.ts`), or null for a face whose
+ * glyphs load at the font size itself.
+ */
+export function faceStrikeSize(
+  metrics: Pick<FontMetrics, 'outlines'>,
+  fontSizePx: number
+): StrikeSize | null {
+  return metrics.outlines?.strikes?.sizeAt(fontSizePx) ?? null;
+}
+
+/**
+ * Godot's ascent and descent of a face drawn from a strike: FreeType's size metrics at the strike,
+ * times the strike's scale, with no rounding (`text_server_adv.cpp:1515-1516`).
+ */
+function strikeExtentPx({ ascender, descender, scale }: StrikeSize): { ascentPx: number; descentPx: number } {
+  return { ascentPx: (ascender / FIXED_26_6_ONE) * scale, descentPx: (-descender / FIXED_26_6_ONE) * scale };
 }
 
 /** 1.0 in FreeType's 16.16 fixed point (`FT_Fixed`). */
@@ -298,8 +366,12 @@ const SUBPIXEL_POSITIONING_ONE_QUARTER_MAX_SIZE = 16;
  * a fractional size, which Godot's `int64_t` API cannot express. A whole-pixel size of an outline
  * font has `fd->scale` `sz / y_ppem` (`text_server_adv.cpp:1509`), so it is never scaled.
  */
-export function fontIsScaled(fontSizePx: number, metrics: Pick<FontMetrics, 'pxPerUnit'>): boolean {
-  return (metrics.pxPerUnit?.(fontSizePx) ?? 1) !== 1 || !Number.isInteger(fontSizePx);
+export function fontIsScaled(
+  fontSizePx: number,
+  metrics: Pick<FontMetrics, 'pxPerUnit' | 'outlines'>
+): boolean {
+  const scale = metrics.pxPerUnit?.(fontSizePx) ?? faceStrikeSize(metrics, fontSizePx)?.scale ?? 1;
+  return scale !== 1 || !Number.isInteger(fontSizePx);
 }
 
 /**
@@ -310,9 +382,25 @@ export function fontIsScaled(fontSizePx: number, metrics: Pick<FontMetrics, 'pxP
  */
 export function fontUsesSubpixelPositioning(
   fontSizePx: number,
-  metrics: Pick<FontMetrics, 'pxPerUnit'>
+  metrics: Pick<FontMetrics, 'pxPerUnit' | 'outlines'>
 ): boolean {
   return fontIsScaled(fontSizePx, metrics) || fontSizePx <= SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE;
+}
+
+/**
+ * The half step `_font_draw_glyph` adds to a pen before it floors it, by the size's subpixel steps
+ * (`text_server_adv.cpp:4074-4079`): a quarter pixel's half at or below 16 px, a half pixel's half at
+ * or below 20 px, else none.
+ */
+export function subpixelHalfStepPx(fontSizePx: number): number {
+  if (fontSizePx <= SUBPIXEL_POSITIONING_ONE_QUARTER_MAX_SIZE) return 0.125;
+  return fontSizePx <= SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE ? 0.25 : 0;
+}
+
+/** The subpixel steps per pixel Godot draws a glyph raster for at `fontSizePx`: 4, 2 or 1 (`text_server_adv.cpp:4024-4029`). */
+export function subpixelStepsPerPx(fontSizePx: number): number {
+  const halfStepPx = subpixelHalfStepPx(fontSizePx);
+  return halfStepPx === 0 ? 1 : 0.5 / halfStepPx;
 }
 
 /**
@@ -324,17 +412,11 @@ export function fontUsesSubpixelPositioning(
 export function canvasGlyphPenXPx(
   xPx: number,
   fontSizePx: number,
-  metrics: Pick<FontMetrics, 'pxPerUnit'>
+  metrics: Pick<FontMetrics, 'pxPerUnit' | 'outlines'>
 ): number {
   if (fontIsScaled(fontSizePx, metrics)) return xPx;
-  const stepsPerPx =
-    fontSizePx <= SUBPIXEL_POSITIONING_ONE_QUARTER_MAX_SIZE
-      ? 4
-      : fontSizePx <= SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE
-        ? 2
-        : 1;
-  const halfStepPx = stepsPerPx === 1 ? 0 : 0.5 / stepsPerPx;
-  return Math.floor(stepsPerPx * (xPx + halfStepPx)) / stepsPerPx;
+  const stepsPerPx = subpixelStepsPerPx(fontSizePx);
+  return Math.floor(stepsPerPx * (xPx + subpixelHalfStepPx(fontSizePx))) / stepsPerPx;
 }
 
 /**
@@ -370,6 +452,10 @@ function advancePx(metrics: FontMetrics, units: number, glyph: KernGlyph, fontSi
   // A bitmap font's advance reaches HarfBuzz in 26.6 as `advance * 64` and leaves as
   // `advance * scale` (`text_server_adv.cpp:130,7077`): no FreeType chain.
   if (metrics.pxPerUnit) return unitsToPx(units, metrics, fontSizePx);
+  // A strike's face shapes at the strike's scale, and draws the advance at Godot's (`:7077`). Its
+  // bitmaps load only at the default instance, so the instance's advance stays unread.
+  const strike = faceStrikeSize(metrics, fontSizePx);
+  if (strike) return (advance26_6AtScale(units, strike.xScale) / FIXED_26_6_ONE) * strike.scale;
   const advanceAtInstance = metrics.getInstanceAdvance26_6?.(glyph, fontSizePx);
   if (advanceAtInstance != null) return advanceAtInstance / FIXED_26_6_ONE;
   // The error only adds width, so a run of odd advances can push
@@ -383,7 +469,11 @@ function advancePx(metrics: FontMetrics, units: number, glyph: KernGlyph, fontSi
 // At 2048 units and 16px this is `ceil(units / 2) / 64`: 1/128 px wider for an odd advance.
 /** An advance of `units` in 26.6, through the two steps above. */
 export function glyphAdvance26_6(units: number, unitsPerEm: number, fontSizePx: number): number {
-  const { xScale } = freeTypeSizeRequest(unitsPerEm, fontSizePx);
+  return advance26_6AtScale(units, freeTypeSizeRequest(unitsPerEm, fontSizePx).xScale);
+}
+
+/** An advance of `units` in 26.6 at FreeType's 16.16 `xScale`, through the two steps above. */
+function advance26_6AtScale(units: number, xScale: number): number {
   const advance16_16 = ftMulFix(1024 * units, xScale);
   return Math.floor((advance16_16 + 512) / 1024);
 }
@@ -569,6 +659,14 @@ export const fallbackChainOf = perObject((face: FontMetrics): readonly FontMetri
   ...(face.fallbacks ?? []),
 ]);
 
+/**
+ * `Font::get_height` (`font.cpp:210-220`): the largest ascent plus descent over the **Fallback chain**
+ * of `face`, so a taller fallback makes the font taller though no glyph draws in it.
+ */
+export function getFontChainHeightPx(face: FontMetrics, fontSizePx: number): number {
+  return Math.max(...fallbackChainOf(face).map((entry) => getFontLinePitchPx(entry, fontSizePx, 0)));
+}
+
 /** The first face of the **Fallback chain** of `face` that has a glyph for `ch`, or null for none. */
 export function firstFaceWithGlyph(face: FontMetrics, ch: string): FontMetrics | null {
   return fallbackChainOf(face).find((entry) => entry.hasGlyph(ch)) ?? null;
@@ -665,8 +763,16 @@ export function getFontKerningAdjustmentPx(
   fontSizePx: number
 ): number {
   const kerning = glyphKerning(metrics, a, b);
+  const strike = faceStrikeSize(metrics, fontSizePx);
+  if (strike) {
+    const values = kerning ?? [{ units: metrics.getKerningAdjustmentUnits(a.char, b.char), deltaUnits: 0 }];
+    return (pairKerning26_6(values, metrics.unitsPerEm, strike.xScale) / FIXED_26_6_ONE) * strike.scale;
+  }
   if (kerning && !metrics.pxPerUnit)
-    return pairKerning26_6(kerning, metrics.unitsPerEm, fontSizePx) / FIXED_26_6_ONE;
+    return (
+      pairKerning26_6(kerning, metrics.unitsPerEm, getFontOutlineScale(metrics.unitsPerEm, fontSizePx)) /
+      FIXED_26_6_ONE
+    );
   const units = kerning ? kerningUnitsOf(kerning) : metrics.getKerningAdjustmentUnits(a.char, b.char);
   if (units === 0) return 0;
   return Math.round(unitsToPx(units, metrics, fontSizePx) * FIXED_26_6_ONE) / FIXED_26_6_ONE;
@@ -695,12 +801,12 @@ function glyphKerning(metrics: FontMetrics, a: KernGlyph, b: KernGlyph): PairKer
 }
 
 /**
- * `kerning` in 26.6 at `fontSizePx`, as HarfBuzz adds it to a glyph's advance: each value record's own
- * advance through `em_mult`, and its delta through `em_multf`, each rounded apart
+ * `kerning` in 26.6 at FreeType's 16.16 `xScale`, as HarfBuzz adds it to a glyph's advance: each value
+ * record's own advance through `em_mult`, and its delta through `em_multf`, each rounded apart
  * (`OT/Layout/GPOS/ValueFormat.hh:108,140`, `hb-font.hh:1145-1148,1164-1166`).
  */
-function pairKerning26_6(kerning: PairKerning, unitsPerEm: number, fontSizePx: number): number {
-  const { xMult, xMultf } = harfBuzzScale(unitsPerEm, fontSizePx);
+function pairKerning26_6(kerning: PairKerning, unitsPerEm: number, xScale16_16: number): number {
+  const { xMult, xMultf } = harfBuzzScale(unitsPerEm, xScale16_16);
   let kerning26_6 = 0;
   for (const { units, deltaUnits } of kerning) {
     kerning26_6 += Math.floor((units * xMult + 32768) / FIXED_16_16_ONE);
@@ -710,14 +816,11 @@ function pairKerning26_6(kerning: PairKerning, unitsPerEm: number, fontSizePx: n
 }
 
 /**
- * The 16.16 and the float multipliers of `hb_font_t` for Godot's FreeType size: `hb_ft_font_create`
- * sets the scale from FreeType's `x_scale` (`hb-ft.cc:1361-1363`), and `changed` derives both
- * (`hb-font.hh:1145-1148`).
+ * The 16.16 and the float multipliers of `hb_font_t` for FreeType's `x_scale`: `hb_ft_font_create`
+ * sets the scale from it (`hb-ft.cc:1361-1363`), and `changed` derives both (`hb-font.hh:1145-1148`).
  */
-function harfBuzzScale(unitsPerEm: number, fontSizePx: number): { xMult: number; xMultf: number } {
-  const xScale = Math.floor(
-    (getFontOutlineScale(unitsPerEm, fontSizePx) * unitsPerEm + 32768) / FIXED_16_16_ONE
-  );
+function harfBuzzScale(unitsPerEm: number, xScale16_16: number): { xMult: number; xMultf: number } {
+  const xScale = Math.floor((xScale16_16 * unitsPerEm + 32768) / FIXED_16_16_ONE);
   return {
     xMult: Math.trunc((xScale * FIXED_16_16_ONE) / unitsPerEm),
     xMultf: Math.fround(xScale / unitsPerEm),

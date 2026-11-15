@@ -31,6 +31,17 @@ export interface WindowProperties extends SubViewportProperties, ThemeOwnerField
   /** An exclusive window under an always-on-top window rises with it (`viewport.cpp:279-281`). */
   exclusive: boolean;
   wrap_controls: boolean;
+  /**
+   * How many of the replayed lines ran before the first size write that clamped the window to its
+   * contents minimum outside the tree: one that ran while `wrap_controls` was on
+   * (`window.cpp:1183-1190,2244-2251`). 0 for the constructor or an instanced base. Null for none.
+   */
+  lines_before_load_clamp: number | null;
+  /**
+   * Whether the size the lines leave still holds a load clamp: a `size` write while `wrap_controls`
+   * is off replaces the clamped size, and a later wrapping write clamps it again.
+   */
+  keeps_load_clamp: boolean;
   /** A native window draws outside the game frame, so the embedder draws nothing for it. */
   force_native: boolean;
   min_size: Vector2;

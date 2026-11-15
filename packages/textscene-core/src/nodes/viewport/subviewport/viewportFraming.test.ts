@@ -1,0 +1,342 @@
+/**
+ * Which camera a sub-viewport renders through and how its target is framed, asserted without R3F.
+ */
+import { describe, expect, it, vi } from 'vitest';
+import * as THREE from 'three';
+
+import {
+  frameOverView,
+  applyOrthoFrame,
+  godotCanvasPosition,
+  orthoFrameForCamera2D,
+  orthoFrameForSize,
+  cameraAtPath,
+  selectViewportCamera2D,
+  viewportAspect,
+} from './viewportFraming';
+import type { Camera2DTag } from '../../2d/camera2d/cameraView';
+
+import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
+
+/** A camera tagged the way `<Camera3D>` tags one: its dispatcher-absolute path. */
+function camera(tscnPath: string): THREE.PerspectiveCamera {
+  const cam = new THREE.PerspectiveCamera();
+  cam.userData.tscnPath = tscnPath;
+  return cam;
+}
+
+/**
+ * A group tagged the way `<Camera2D>` tags one. Defaults mirror Godot's: zoom 1,
+ * no offset, DRAG_CENTER, enabled, and the +/-10000000 "unlimited" limits.
+ */
+function camera2d(overrides: Partial<Camera2DTag> = {}): THREE.Object3D {
+  const group = new THREE.Object3D();
+  group.userData.camera2d = {
+    zoom: { x: 1, y: 1 },
+    offset: { x: 0, y: 0 },
+    anchor_mode: Camera2DAnchorMode.DRAG_CENTER,
+    limitLeft: -10000000,
+    limitTop: -10000000,
+    limitRight: 10000000,
+    limitBottom: 10000000,
+    limitEnabled: true,
+    enabled: true,
+    ...overrides,
+  } satisfies Camera2DTag;
+  return group;
+}
+
+/** Read a tagged group's payload back out, the way the offscreen pass does. */
+function tagOf(object: THREE.Object3D): Camera2DTag {
+  return object.userData.camera2d as Camera2DTag;
+}
+
+describe('cameraAtPath', () => {
+  it('finds the camera tagged with the path', () => {
+    const scene = new THREE.Scene();
+    const mine = camera('Root/SubViewport/Camera3D');
+    scene.add(camera('Root/OtherCamera'), mine);
+    expect(cameraAtPath(scene, 'Root/SubViewport/Camera3D')).toBe(mine);
+  });
+
+  it('is null before the camera mounts', () => {
+    expect(cameraAtPath(new THREE.Scene(), 'Root/SubViewport/Camera3D')).toBeNull();
+  });
+
+  it('is null for no elected camera', () => {
+    const scene = new THREE.Scene();
+    scene.add(camera('Root/SubViewport/Camera3D'));
+    expect(cameraAtPath(scene, null)).toBeNull();
+  });
+
+  /** An untagged THREE camera (a helper, the editor camera) is not a scene camera. */
+  it('ignores cameras carrying no tscnPath tag', () => {
+    const scene = new THREE.Scene();
+    scene.add(new THREE.PerspectiveCamera());
+    expect(cameraAtPath(scene, 'Root/SubViewport/Camera3D')).toBeNull();
+  });
+});
+
+describe('selectViewportCamera2D', () => {
+  it('picks the enabled Camera2D in the subtree', () => {
+    const scene = new THREE.Scene();
+    const cam = camera2d();
+    scene.add(new THREE.Object3D(), cam);
+    expect(selectViewportCamera2D(scene)).toBe(cam);
+  });
+
+  /**
+   * The inverse of the 3D rule: `scene/2d/camera_2d.cpp` on `NOTIFICATION_ENTER_TREE`
+   * claims the viewport only while `!viewport->get_camera_2d()`, so the first
+   * enabled camera in tree order keeps it. With two players in one SubViewport,
+   * the difference is a visible change of framing.
+   */
+  it('with several Camera2Ds the FIRST in tree order wins, unlike Camera3D', () => {
+    const scene = new THREE.Scene();
+    const earlier = camera2d();
+    const later = camera2d();
+    scene.add(earlier, later);
+    expect(selectViewportCamera2D(scene)).toBe(earlier);
+    expect(selectViewportCamera2D(scene)).not.toBe(later);
+  });
+
+  /**
+   * `enabled` gates the claim in the same `if`, and `set_enabled` repeats it, so
+   * a disabled camera neither becomes current nor blocks a later one.
+   */
+  it('skips a disabled camera and elects the next enabled one', () => {
+    const scene = new THREE.Scene();
+    const disabled = camera2d({ enabled: false });
+    const enabled = camera2d();
+    scene.add(disabled, enabled);
+    expect(selectViewportCamera2D(scene)).toBe(enabled);
+  });
+
+  it('returns null when every Camera2D is disabled', () => {
+    const scene = new THREE.Scene();
+    scene.add(camera2d({ enabled: false }), camera2d({ enabled: false }));
+    expect(selectViewportCamera2D(scene)).toBeNull();
+  });
+
+  /** Godot leaves the canvas transform at identity, which is origin framing. */
+  it('returns null for a subtree with no Camera2D rather than throwing', () => {
+    const scene = new THREE.Scene();
+    scene.add(new THREE.Object3D());
+    expect(selectViewportCamera2D(scene)).toBeNull();
+  });
+
+  /** Every other CanvasItem group is untagged; only `<Camera2D>` tags itself. */
+  it('ignores objects carrying no camera2d tag', () => {
+    const scene = new THREE.Scene();
+    const sprite = new THREE.Object3D();
+    sprite.userData.tscnPath = 'Root/Sprite2D';
+    scene.add(sprite);
+    expect(selectViewportCamera2D(scene)).toBeNull();
+  });
+
+  /**
+   * Pre-order traversal is the order nodes enter the tree, so a camera nested
+   * inside an earlier instanced sub-scene beats a shallower later sibling.
+   */
+  it('prefers a deeply nested earlier camera over a shallow later one', () => {
+    const scene = new THREE.Scene();
+    const player = new THREE.Object3D();
+    const nested = camera2d();
+    player.add(nested);
+    const laterSibling = camera2d();
+    scene.add(player, laterSibling);
+    expect(selectViewportCamera2D(scene)).toBe(nested);
+  });
+});
+
+describe('orthoFrameForCamera2D', () => {
+  /** DRAG_CENTER (Godot's default) centres the view rect on the camera. */
+  it('centres the view on the camera position', () => {
+    const frame = orthoFrameForCamera2D(tagOf(camera2d()), { x: 400, y: 300 }, { x: 200, y: 100 });
+    expect(frame.left).toBe(-100);
+    expect(frame.right).toBe(100);
+    expect(frame.top).toBe(50);
+    expect(frame.bottom).toBe(-50);
+    // Godot y is negated into three space, as `orthoFrameForSize` does.
+    expect(frame.position).toEqual([400, -300, 1000]);
+  });
+
+  /** Higher zoom is closer, so the view rect covers fewer canvas pixels. */
+  it('shrinks the view rect as zoom magnifies', () => {
+    const frame = orthoFrameForCamera2D(
+      tagOf(camera2d({ zoom: { x: 2, y: 2 } })),
+      { x: 0, y: 0 },
+      { x: 400, y: 200 }
+    );
+    expect(frame.right - frame.left).toBe(200);
+    expect(frame.top - frame.bottom).toBe(100);
+  });
+
+  /**
+   * A Camera2D at world (100, 608.5), offset (0, 50), limits [-715, -250, 1425, 690],
+   * in a 399x480 sub-viewport. The view would run to y = 848.5, past `limit_bottom`
+   * 690, so Godot clamps the rect to top 210, and the centre is 210 + 240 + 50 = 500,
+   * the rect Godot 4.6 frames.
+   */
+  it('clamps the view rect into the scroll limits before adding offset', () => {
+    const frame = orthoFrameForCamera2D(
+      tagOf(
+        camera2d({
+          offset: { x: 0, y: 50 },
+          limitLeft: -715,
+          limitTop: -250,
+          limitRight: 1425,
+          limitBottom: 690,
+        })
+      ),
+      { x: 100, y: 608.5 },
+      { x: 399, y: 480 }
+    );
+    expect(frame.position).toEqual([100, -500, 1000]);
+    expect(frame.right - frame.left).toBe(399);
+    expect(frame.top - frame.bottom).toBe(480);
+  });
+
+  /**
+   * Offset is added after the clamp, so "the offsetted camera can go past the
+   * limits". The same camera with no offset sits 50 canvas pixels higher.
+   */
+  it('applies offset after the clamp, so the view may leave the limits', () => {
+    const clamped = orthoFrameForCamera2D(
+      tagOf(camera2d({ limitTop: -250, limitBottom: 690 })),
+      { x: 100, y: 608.5 },
+      { x: 399, y: 480 }
+    );
+    expect(clamped.position[1]).toBe(-450);
+  });
+
+  /** FIXED_TOP_LEFT puts the camera at the view's top-left corner. */
+  it('anchors the view at the camera for FIXED_TOP_LEFT', () => {
+    const frame = orthoFrameForCamera2D(
+      tagOf(camera2d({ anchor_mode: Camera2DAnchorMode.FIXED_TOP_LEFT })),
+      { x: 0, y: 0 },
+      { x: 200, y: 100 }
+    );
+    expect(frame.position).toEqual([100, -50, 1000]);
+  });
+
+  /** A degenerate target must not produce a NaN projection. */
+  it('stays finite for a degenerate size', () => {
+    const frame = orthoFrameForCamera2D(tagOf(camera2d()), { x: 0, y: 0 }, { x: 0, y: 0 });
+    expect(Number.isFinite(frame.left)).toBe(true);
+    expect(Number.isFinite(frame.top)).toBe(true);
+    expect(frame.position.every(Number.isFinite)).toBe(true);
+  });
+});
+
+describe('godotCanvasPosition', () => {
+  /** `node2dTransform` conjugates by diag(1,-1,1): Godot (100,50) is three (100,-50). */
+  it('negates Y back out of three space', () => {
+    const object = new THREE.Object3D();
+    object.position.set(100, -50, 0);
+    object.updateMatrixWorld(true);
+    expect(godotCanvasPosition(object)).toEqual({ x: 100, y: 50 });
+  });
+
+  /**
+   * The reason the pass reads the world matrix instead of walking the parsed
+   * tree: a Camera2D inside an instanced sub-scene composes its ancestors' 2D
+   * transforms for free.
+   */
+  it('composes an instanced ancestor transform', () => {
+    const player = new THREE.Object3D();
+    player.position.set(100, -636.5, 0);
+    const cam = new THREE.Object3D();
+    cam.position.set(0, 28, 0);
+    player.add(cam);
+    player.updateMatrixWorld(true);
+    expect(godotCanvasPosition(cam)).toEqual({ x: 100, y: 608.5 });
+  });
+});
+
+describe('applyOrthoFrame', () => {
+  it('applies the frustum and position to the camera', () => {
+    const cam = new THREE.OrthographicCamera();
+    applyOrthoFrame(cam, orthoFrameForSize({ x: 300, y: 200 }));
+    expect([cam.left, cam.right, cam.top, cam.bottom]).toEqual([-150, 150, 100, -100]);
+    expect(cam.position.toArray()).toEqual([150, -100, 1000]);
+  });
+
+  /**
+   * The pass recomputes a frame every rendered frame. A static scene must not
+   * pay for a projection-matrix rebuild each time.
+   */
+  it('rebuilds the projection matrix only when the frustum moved', () => {
+    const cam = new THREE.OrthographicCamera();
+    const frame = orthoFrameForSize({ x: 300, y: 200 });
+    applyOrthoFrame(cam, frame);
+
+    const spy = vi.spyOn(cam, 'updateProjectionMatrix');
+    applyOrthoFrame(cam, orthoFrameForSize({ x: 300, y: 200 }));
+    expect(spy).not.toHaveBeenCalled();
+
+    applyOrthoFrame(cam, orthoFrameForSize({ x: 320, y: 200 }));
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
+
+  /** A camera that only pans still needs its new position, matrix rebuild or not. */
+  it('moves the camera even when the frustum is unchanged', () => {
+    const cam = new THREE.OrthographicCamera();
+    const size = { x: 200, y: 100 };
+    applyOrthoFrame(cam, orthoFrameForCamera2D(tagOf(camera2d()), { x: 0, y: 0 }, size));
+    applyOrthoFrame(cam, orthoFrameForCamera2D(tagOf(camera2d()), { x: 40, y: 10 }, size));
+    expect(cam.position.toArray()).toEqual([40, -10, 1000]);
+  });
+});
+
+describe('viewportAspect', () => {
+  it('is the target rect ratio, not the canvas ratio', () => {
+    expect(viewportAspect({ x: 256, y: 256 })).toBe(1);
+    expect(viewportAspect({ x: 300, y: 150 })).toBe(2);
+  });
+
+  /** A zero-area size would produce a NaN/Infinity projection matrix. */
+  it('falls back to 1 for a degenerate size rather than dividing by zero', () => {
+    expect(viewportAspect({ x: 256, y: 0 })).toBe(1);
+    expect(viewportAspect({ x: 0, y: 0 })).toBe(1);
+  });
+});
+
+describe('orthoFrameForSize', () => {
+  /**
+   * CanvasItem content lays out against the target rect in Godot pixels with
+   * the origin top-left and +Y down. The previewer negates Y
+   * (`node2dTransform`), so the rect occupies x ∈ [0, w], y ∈ [-h, 0].
+   */
+  it('frames exactly the target rect, centred on it', () => {
+    const frame = orthoFrameForSize({ x: 300, y: 200 });
+    expect(frame.left).toBe(-150);
+    expect(frame.right).toBe(150);
+    expect(frame.top).toBe(100);
+    expect(frame.bottom).toBe(-100);
+    expect(frame.position).toEqual([150, -100, 1000]);
+  });
+
+  it('stays finite for a degenerate size', () => {
+    const frame = orthoFrameForSize({ x: 0, y: 0 });
+    expect(Number.isFinite(frame.left)).toBe(true);
+    expect(Number.isFinite(frame.top)).toBe(true);
+  });
+});
+
+describe('frameOverView', () => {
+  it('keeps a frame whose view is its layout', () => {
+    const frame = orthoFrameForSize({ x: 120, y: 80 });
+    expect(frameOverView(frame, { x: 120, y: 80 }, { x: 120, y: 80 })).toBe(frame);
+  });
+
+  it('grows a frame about its top-left corner to the canvas units the target shows', () => {
+    const framed = frameOverView(orthoFrameForSize({ x: 120, y: 60 }), { x: 120, y: 60 }, { x: 240, y: 120 });
+    const [cx, cy] = framed.position;
+    // World edges: x from 0 to 240, y from 0 down to -120.
+    expect([cx + framed.left, cx + framed.right, cy + framed.top, cy + framed.bottom]).toEqual([
+      0, 240, 0, -120,
+    ]);
+  });
+});

@@ -1,5 +1,5 @@
 /**
- * `<GraphNode>` render contract: panel/titlebar chrome, title text, per-slot
+ * `<GraphNode>` render contract: panel/titlebar chrome at the band the solve hands it, per-slot
  * ports and slot boxes, and resizer. Structure and tint only: the golden images
  * own the pixels.
  */
@@ -27,6 +27,7 @@ import {
   UNSET_VIEWPORT_TEXTURE_REF,
 } from '../../../../resources/textures/viewporttexture/unsetViewportTexture.testkit';
 import { bundledRunOf, bundledRunMeshes } from '../../../../r3f/controls/native/testing/bundledRunStub';
+import { titlebarBandHeightChannel } from '../graphelement/graphTitlebar';
 
 // A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
 vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
@@ -34,6 +35,9 @@ vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
 }));
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
+
+/** The band the solve hands the painter: the 23 px line of the default title font and the 4 px box margins. */
+const BAND = titlebarBandHeightChannel.seal(31);
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -63,30 +67,42 @@ function iconMeshes(scene: Rendered['scene']) {
 describe('<GraphNode> (isolated painter contract)', () => {
   it('draws exactly two chrome meshes (panel + titlebar) with no children/title/slots', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GraphNode {...painterEnv()} solveNode={graphNode()} rect={RECT} renderOrder={0} />
+      <GraphNode {...painterEnv()} meta={BAND} solveNode={graphNode()} rect={RECT} renderOrder={0} />
     );
     expect(chromeMeshes(renderer.scene)).toHaveLength(2);
     expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
     expect(iconMeshes(renderer.scene)).toHaveLength(0);
   });
 
-  it('draws a text mesh for a non-empty title', async () => {
+  it('draws no title text: the internal title_label draws it', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GraphNode {...painterEnv()} solveNode={graphNode({ title: 'Hello' })} rect={RECT} renderOrder={0} />
+      <GraphNode
+        {...painterEnv()}
+        meta={BAND}
+        solveNode={graphNode({ title: 'Hello' })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
-    expect(bundledRunMeshes(renderer.scene).length).toBeGreaterThan(0);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it('draws no resizer icon when resizable is unset', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GraphNode {...painterEnv()} solveNode={graphNode()} rect={RECT} renderOrder={0} />
+      <GraphNode {...painterEnv()} meta={BAND} solveNode={graphNode()} rect={RECT} renderOrder={0} />
     );
     expect(iconMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it('draws the resizer icon when resizable is true', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GraphNode {...painterEnv()} solveNode={graphNode({ resizable: true })} rect={RECT} renderOrder={0} />
+      <GraphNode
+        {...painterEnv()}
+        meta={BAND}
+        solveNode={graphNode({ resizable: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
     expect(iconMeshes(renderer.scene)).toHaveLength(1);
   });
@@ -96,7 +112,7 @@ describe('<GraphNode> (isolated painter contract)', () => {
     const red = { r: 1, g: 0, b: 0, a: 1 };
     const solveNode = { ...themed, colors: { ...themed.colors, resizer_color: red } };
     const renderer = await ReactThreeTestRenderer.create(
-      <GraphNode {...painterEnv()} solveNode={solveNode} rect={RECT} renderOrder={0} />
+      <GraphNode {...painterEnv()} meta={BAND} solveNode={solveNode} rect={RECT} renderOrder={0} />
     );
     const [resizer] = iconMeshes(renderer.scene);
     expect((resizer!.material as THREE.MeshBasicMaterial).color.getHex()).toBe(0xff0000);
@@ -141,6 +157,7 @@ describe('<GraphNode> (isolated painter contract)', () => {
       <ResourceLoaderProvider loader={fake.loader}>
         <GraphNode
           {...painterEnv()}
+          meta={BAND}
           solveNode={solveNode}
           rect={RECT}
           renderOrder={0}
@@ -162,6 +179,7 @@ describe('<GraphNode> (isolated painter contract)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <GraphNode
         {...painterEnv()}
+        meta={BAND}
         solveNode={graphNode({ slots }, [child])}
         rect={RECT}
         renderOrder={0}
@@ -185,6 +203,7 @@ describe('<GraphNode> (isolated painter contract)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <GraphNode
         {...painterEnv()}
+        meta={BAND}
         solveNode={drawn}
         rect={RECT}
         renderOrder={0}
@@ -214,11 +233,15 @@ describe('<GraphNode> chrome placement', () => {
     // `Rect2 body_rect(0, titlebar_rect.size.height, ...)`. `StyleBoxQuad`
     // takes only a size, so the offset has to come from the group around it.
     const renderer = await ReactThreeTestRenderer.create(
-      <GraphNode {...painterEnv()} solveNode={graphNode({ title: 'N' })} rect={RECT} renderOrder={0} />
+      <GraphNode
+        {...painterEnv()}
+        meta={BAND}
+        solveNode={graphNode({ title: 'N' })}
+        rect={RECT}
+        renderOrder={0}
+      />
     );
-    // titlebar height = the title's own line height (23 at font size 16) plus
-    // the `titlebar` StyleBox's 4px top and bottom margins
-    // (`make_flat_stylebox(..., 4, 4, 4, 4)`, `default_theme.cpp:794`) = 31.
+    // The band is the height the solve seals: `BAND`.
     const [body, titlebar] = chromeMeshes(renderer.scene);
     expect(worldY(renderer.scene, titlebar!)).toBe(0);
     expect(worldY(renderer.scene, body!)).toBe(-31);
@@ -227,10 +250,11 @@ describe('<GraphNode> chrome placement', () => {
 });
 
 describe('<GraphNode> — self_modulate', () => {
-  it('tints the panel and the title bar with tint and the title text with childTint', async () => {
+  it('tints the panel and the title bar with tint, and nothing with childTint', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <GraphNode
         {...painterEnv()}
+        meta={BAND}
         {...splitTints}
         solveNode={withThemeItems({
           ...graphNode({ title: 'Hello' }),
@@ -240,6 +264,6 @@ describe('<GraphNode> — self_modulate', () => {
         renderOrder={0}
       />
     );
-    expect(countTintSplit(renderer.scene)).toEqual({ own: 2, child: 1 });
+    expect(countTintSplit(renderer.scene)).toEqual({ own: 2, child: 0 });
   });
 });

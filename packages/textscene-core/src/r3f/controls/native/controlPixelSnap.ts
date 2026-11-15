@@ -91,7 +91,7 @@ export function snappedControlOrigin(
  * (`control.cpp:727-737`), the position plus the internal translation, whole pixels when it snaps.
  * A y-sorted parent sorts the Control on this origin's y.
  */
-function controlItemOrigin(
+export function controlItemOrigin(
   position: Vector2,
   transform: ControlDrawTransform,
   snapEnabled: boolean
@@ -99,32 +99,6 @@ function controlItemOrigin(
   const outer = snappedControlOrigin(position, transform, snapEnabled);
   const internal = internalTransformTranslation(transform);
   return { x: outer.x + internal.x, y: outer.y + internal.y };
-}
-
-/** Subtracts `offset` from the snapped sum `position + offset`. The parent that holds `offset` adds it back. */
-function snapSumLess(position: Vector2, offset: Vector2, snap: (sum: Vector2) => Vector2): Vector2 {
-  const snapped = snap({ x: position.x + offset.x, y: position.y + offset.y });
-  return { x: snapped.x - offset.x, y: snapped.y - offset.y };
-}
-
-/** `snappedControlOrigin` of `position + offset`, less `offset`. */
-export function snappedControlOriginUnder(
-  position: Vector2,
-  offset: Vector2,
-  transform: ControlDrawTransform,
-  snapEnabled: boolean
-): Vector2 {
-  return snapSumLess(position, offset, (sum) => snappedControlOrigin(sum, transform, snapEnabled));
-}
-
-/** `controlItemOrigin` of `position + offset`, less `offset`. */
-export function controlItemOriginUnder(
-  position: Vector2,
-  offset: Vector2,
-  transform: ControlDrawTransform,
-  snapEnabled: boolean
-): Vector2 {
-  return snapSumLess(position, offset, (sum) => controlItemOrigin(sum, transform, snapEnabled));
 }
 
 /** The scale of a node with none authored, and of a container child `fit_child_in_rect` reset. */

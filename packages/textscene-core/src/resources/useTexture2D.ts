@@ -46,6 +46,8 @@ export interface Texture2DResult {
    * a ViewportTexture whose target sits in an unrenderable pass cycle.
    */
   missing: boolean;
+  /** True when `missing` is for a ViewportTexture whose target sits in an unrenderable pass cycle. */
+  isCyclic?: boolean;
   /** True while the texture, or a file or build it waits on, is still on its way. */
   isArriving: boolean;
   /**
@@ -261,7 +263,10 @@ function useTexture2DSlot(reference: ScopedReference | null, view: ViewportTextu
       },
     };
   if (isViewport)
-    return { ...slot, result: { texture: source, missing: viewport.cyclic, isArriving: false } };
+    return {
+      ...slot,
+      result: { texture: source, missing: viewport.cyclic, isCyclic: viewport.cyclic, isArriving: false },
+    };
   const sourceMissing = !procedural.claimed && (!path || loaded.status === 'unavailable');
   const isArriving = procedural.claimed ? procedural.building : loaded.status === 'pending' && path !== null;
   return { ...slot, result: { texture: source, missing: sourceMissing, isArriving } };

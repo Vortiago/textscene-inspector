@@ -185,12 +185,14 @@ describe('bundledSourceFiles', () => {
   write('core/dist/a.js.map', JSON.stringify({ sources: ['../src/a.ts'] }));
   write('core/dist/style.module.css', '.root {}');
   write('node_modules/noise/noise.js', 'noise');
+  write('core/src/worker.ts', 'source worker');
   const where = { packageDir: root, ownSourceDir: join(root, 'own/src') };
   const inputs = [
     'own/src/index.ts',
     'core/dist/a.js',
     'core/dist/style.module.css',
     'node_modules/noise/noise.js',
+    'core/src/worker.ts',
   ];
   const files = bundledSourceFiles({ inputs: Object.fromEntries(inputs.map((input) => [input, {}])) }, where);
   const pathOf = (inside) => relative(REPO_ROOT, join(root, inside));
@@ -203,6 +205,10 @@ describe('bundledSourceFiles', () => {
     expect(files.map(({ path }) => path)).toEqual(
       expect.arrayContaining([pathOf('own/src/index.ts'), pathOf('node_modules/noise/noise.js')])
     );
+  });
+
+  it("names another package's TypeScript where it stands, as a worker bundle reads core's source", () => {
+    expect(files).toContainEqual({ path: pathOf('core/src/worker.ts'), text: 'source worker' });
   });
 
   it('leaves out a stylesheet, which holds no code', () => {

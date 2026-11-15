@@ -13,7 +13,7 @@ A vertical scroll bar: a track with a draggable grabber, minimum at the top and
 maximum at the bottom. The previewer draws the track and the grabber, sized and
 positioned from this bar's own `value`, `min_value`, `max_value` and `page`. Godot's
 own default theme sets every increment and decrement icon to an empty texture, so
-neither Godot nor the previewer draws step buttons.
+neither Godot nor the previewer draws step buttons. The grabber starts past the leading content margin of the `scroll` box (`scroll_bar.cpp:326-344`).
 
 ## Linting
 

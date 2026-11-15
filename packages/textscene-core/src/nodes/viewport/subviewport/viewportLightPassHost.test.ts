@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { createViewportLightPassHost } from './viewportLightPassHost';
-import { applyOrthoFrame, orthoFrameForCamera2D, orthoFrameForSize } from './offscreenViewport';
+import { applyOrthoFrame, orthoFrameForCamera2D, orthoFrameForSize } from './viewportFraming';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera';
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';

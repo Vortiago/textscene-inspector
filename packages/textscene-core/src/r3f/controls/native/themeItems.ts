@@ -14,7 +14,7 @@ import {
   type ThemeResolutionScope,
 } from '../../../resources/styles/theme/lookup';
 import type { SceneScope } from '../../liveSceneTree';
-import type { SolveNode, ThemedIconRef } from './solveTree';
+import type { ShareNode, SolveNode, ThemedIconRef } from './solveTree';
 import { parseStyleBox, type ResolvedStyleBox } from './parseStyleBox';
 import { defaultColorsOf, defaultConstantsOf, defaultStyleBoxesOf } from './defaultThemeRecords';
 
@@ -145,37 +145,33 @@ export function requiredThemeItem<V>(items: Readonly<Record<string, V>>, name: s
 
 export type InternalThemeItems = Pick<SolveNode, 'styleBoxes' | 'colors' | 'constants' | 'icons'>;
 
-/** Written only by `internalChildThemeItems`: a parent node is replaced when the scene changes, so its internal Controls resolve once per type and variation. */
-const internalThemeItemsOf = perObject((_parent: SolveNode) => new Map<string, InternalThemeItems>());
+/** Written only by `themeItemsOfType`: a parent node is replaced when the scene changes, so its internal Controls resolve once per type and variation. */
+const internalThemeItemsOf = perObject((_parent: ShareNode) => new Map<string, InternalThemeItems>());
 
 /**
- * The theme items of a Control `memnew`d inside `parent` and never serialised, such as a dialog's
- * buttons. It resolves them through the parent's theme chain by its own class chain
- * (`Control::get_theme_stylebox`, `control.cpp:3078`, then `ThemeOwner::get_theme_item_in_types`), and no
- * scene line overrides them. A `variation` is the `theme_type_variation` its constructor sets.
+ * The theme items of a Control of `type` built inside `owner` and never serialised, such as a
+ * dialog's buttons, and what `owner` reads when it names another theme type (`BIND_THEME_ITEM_EXT`,
+ * `scene/theme/theme_db.h`). The lookup walks `owner`'s theme chain by `type`'s class chain, and
+ * `variation` is the `theme_type_variation` a constructor sets.
  */
-export function internalChildThemeItems(
-  parent: SolveNode,
-  type: string,
-  variation?: string
-): InternalThemeItems {
-  const byType = internalThemeItemsOf(parent);
+export function themeItemsOfType(owner: ShareNode, type: string, variation?: string): InternalThemeItems {
+  const byType = internalThemeItemsOf(owner);
   const key = variation === undefined ? type : `${type}/${variation}`;
   const known = byType.get(key);
   if (known) return known;
-  const themeScope = themeResolutionScope(type, variation, parent.themeChain, parent.projectFonts);
+  const themeScope = themeResolutionScope(type, variation, owner.themeChain, owner.projectFonts);
   const node = builtControlNode(type);
   const items = {
-    styleBoxes: resolveStyleBoxes(node, parent.resources, themeScope),
+    styleBoxes: resolveStyleBoxes(node, owner.resources, themeScope),
     colors: resolveThemedColors(node, themeScope),
     constants: resolveThemedConstants(node, themeScope),
-    icons: builtControlIcons(parent, type, variation),
+    icons: builtControlIcons(owner, type, variation),
   };
   byType.set(key, items);
   return items;
 }
 
-/** What a Control `memnew`d inside `parent` resolves its icons to: the `icons` of `internalChildThemeItems`, without the other items. */
+/** What a Control `memnew`d inside `parent` resolves its icons to: the `icons` of `themeItemsOfType`, without the other items. */
 export function builtControlIcons(
   parent: Pick<SolveNode, 'resources' | 'themeChain' | 'projectFonts'>,
   type: string,

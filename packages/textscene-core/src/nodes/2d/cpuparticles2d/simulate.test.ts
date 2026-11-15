@@ -8,7 +8,7 @@ import type { Gradient } from '../../../resources/textures/gradienttexture2d/typ
 import { DEFAULT_BAKE_RESOLUTION, type Curve } from '../../../resources/curves/curve/types';
 import { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
 import { storedReal } from '../../../godot/math/real.js';
-import { GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
+import { GradientColorSpace, GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
 import { CurveTangentMode } from '../../../godot/scene/curve';
 
 const NO_CURVES: (Curve | null)[] = Array.from({ length: 12 }, () => null);
@@ -505,6 +505,7 @@ describe('simulateFrozenPose', () => {
         { offset: 1, color: { r: 0, g: 0, b: 1, a: 1 } },
       ],
       interpolationMode: GradientInterpolationMode.LINEAR,
+      interpolationColorSpace: GradientColorSpace.SRGB,
     };
     const pose = simulateFrozenPose(input({ props: props({ amount: '24' }), colorRamp: ramp }));
     const reds = pose.map((p) => p.color.r);
@@ -896,5 +897,40 @@ describe('the POINTS, DIRECTED_POINTS and RING shapes', () => {
     expect(Math.min(...radii)).toBeGreaterThanOrEqual(24.999);
     expect(Math.max(...radii)).toBeLessThanOrEqual(40.001);
     expect(new Set(radii).size).toBe(particles.length);
+  });
+
+  /**
+   * The values of `unit-cpuparticles2d-ring.tscn`. Godot seeds the generator that places a RING
+   * particle from the clock, so no Godot run fixes where each particle sits: the test holds what
+   * every run shares, which the scene's pixel count cannot show.
+   */
+  it('draws every particle of the ring fixture on its ring, at its scale and in its colour', () => {
+    const particles = simulateFrozenPose(
+      input({
+        props: props({
+          amount: '48',
+          lifetime: '1.5',
+          preprocess: '1.5',
+          seed: '5',
+          emission_shape: '6',
+          emission_ring_radius: '120',
+          emission_ring_inner_radius: '90',
+          gravity: 'Vector2(0, 0)',
+          scale_amount_min: '3',
+          scale_amount_max: '3',
+          color: 'Color(1, 0.85, 0.3, 1)',
+        }),
+      })
+    );
+    expect(particles).toHaveLength(48);
+    for (const { transform, color } of particles) {
+      const radius = Math.hypot(transform.tx, transform.ty);
+      expect(radius).toBeGreaterThanOrEqual(89.999);
+      expect(radius).toBeLessThanOrEqual(120.001);
+      expect(Math.hypot(transform.a, transform.b)).toBeCloseTo(3, 4);
+      [1, 0.85, 0.3, 1].forEach((channel, i) =>
+        expect([color.r, color.g, color.b, color.a][i]).toBeCloseTo(channel, 3)
+      );
+    }
   });
 });

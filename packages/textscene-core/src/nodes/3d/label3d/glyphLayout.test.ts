@@ -90,7 +90,9 @@ describe('layoutLabel3DLines', () => {
       {
         shapedText: '',
         lines: [],
+        lineSpacingPx: 3,
         linePitchPx: getFontLinePitchPx(OPEN_SANS_METRICS, FONT_SIZE, 3),
+        fontHeightPx: getFontLinePitchPx(OPEN_SANS_METRICS, FONT_SIZE, 0),
         widthPx: 0,
         heightPx: 0,
         baselineOffsetPx: 35,
@@ -107,7 +109,7 @@ describe('label3DAabb (the line boxes label_3d.cpp:600-606 expands its AABB over
 
   function aabbOf(text: string, alignment: EnumValue<typeof HorizontalAlignment>, lineSpacingPx = 0) {
     const layout = shape(text, lineSpacingPx);
-    return label3DAabb(place(layout, alignment, lineSpacingPx), layout.linePitchPx, PIXEL_SIZE);
+    return label3DAabb(place(layout, alignment, lineSpacingPx), layout.lineSpacingPx, PIXEL_SIZE);
   }
 
   function centreOf(text: string, alignment: EnumValue<typeof HorizontalAlignment>, lineSpacingPx = 0) {
@@ -144,7 +146,7 @@ describe('label3DAabb (the line boxes label_3d.cpp:600-606 expands its AABB over
   });
 
   it('leaves a label with no lines an empty AABB at the origin', () => {
-    expect(label3DAabb([], getFontLinePitchPx(OPEN_SANS_METRICS, FONT_SIZE, 3), PIXEL_SIZE)).toEqual({
+    expect(label3DAabb([], 3, PIXEL_SIZE)).toEqual({
       position: { x: 0, y: 0, z: 0 },
       size: { x: 0, y: 0, z: 0 },
     });

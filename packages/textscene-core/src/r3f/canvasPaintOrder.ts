@@ -10,6 +10,7 @@
  */
 
 import type { TscnNode } from '../parser/types';
+import type { YSortItem } from './ySortItems';
 import { CanvasItemClipChildrenMode } from '../godot/scene/canvasItem';
 import { DEFAULT_CANVAS_LAYER, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
@@ -140,7 +141,8 @@ function reservesRoom(node: TscnNode): boolean {
 
 /** How many values the internal children Godot adds at the front of `node` take (`node.h:585-600`). */
 function internalFrontRoom(node: TscnNode): number {
-  return paintRoomOf(node.type).frontRoom?.(node) ?? 0;
+  const children = paintRoomOf(node.type).frontChildren?.(node) ?? [];
+  return children.reduce((room, child) => room + paintRangeSize(child), 0);
 }
 
 /** How many values the internal children Godot adds at the back of `node` take, after every authored child's. */
@@ -277,7 +279,7 @@ export function canvasRootRanges(
 }
 
 /** A parent's own sequence value, and the range each of its children owns. */
-interface AllocatedPaintRange {
+export interface AllocatedPaintRange {
   /** The sequence the parent itself draws at. */
   self: number;
   /** The run the parent's internal front children draw from (`internalFrontRoom`). */
@@ -420,11 +422,6 @@ export function behindRangesOf(children: readonly TscnNode[], ranges: readonly P
   return ranges.filter((_, index) => drawsBehindParent(children[index]!));
 }
 
-/** `allocatePaintRange` for `node`'s own children, with the layout the node declares. */
-export function allocateNodePaintRange(range: PaintRange, node: TscnNode): AllocatedPaintRange {
-  return allocatePaintRange(range, node.children, paintLayoutOf(node, node.children));
-}
-
 /** The layout `node` declares for `children`, the children it draws in its own run. */
 export function paintLayoutOf(node: TscnNode, children: readonly TscnNode[]): PaintRangeLayout {
   return {
@@ -464,4 +461,9 @@ export function packPaintRanges(range: PaintRange, sizes: readonly number[], fro
     cursor = base + taken;
     return { base, size: taken };
   });
+}
+
+/** The values an item draws: one for a row, which is one group with no subtree, or its whole subtree's run. */
+export function pieceSize(item: Pick<YSortItem, 'kind' | 'node'>): number {
+  return item.kind === 'tileGroup' || !item.node ? 1 : paintRangeSize(item.node);
 }

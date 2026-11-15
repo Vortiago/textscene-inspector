@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import type { Rect2 } from '../../../godot/math/rect2';
 import {
   controlDrawTransformOf,
-  controlItemOriginUnder,
+  controlItemOrigin,
   snapControlsToPixelsEnabled,
   snappedControlOrigin,
   type ControlDrawTransform,
@@ -186,12 +186,8 @@ describe('controlDrawTransformOf', () => {
   });
 });
 
-describe('controlItemOriginUnder', () => {
-  it('snaps the sum of the position and the offset, then returns it less the offset', () => {
-    // 7.5 + 0.2 rounds to 8, and the offset 7.5 leaves 0.5.
-    expect(controlItemOriginUnder({ x: 0.2, y: 0.2 }, { x: 7.5, y: 7.5 }, IDENTITY, true)).toEqual({
-      x: 0.5,
-      y: 0.5,
-    });
+describe('controlItemOrigin', () => {
+  it('snaps the origin of a Control with no own transform to whole pixels', () => {
+    expect(controlItemOrigin({ x: 7.7, y: 7.2 }, IDENTITY, true)).toEqual({ x: 8, y: 7 });
   });
 });

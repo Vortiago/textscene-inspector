@@ -32,6 +32,7 @@ import {
   layoutLabelLines,
   labelVisibleLineRange,
   windowLabelLines,
+  labelFontHeightPx,
   labelPreShapeText,
   labelEffectiveTextTheme,
   labelOutlineTheme,
@@ -52,9 +53,9 @@ import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFont
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
+  inferredPlacement,
   overrunFlagsForBehavior,
-  trimFilledLineToWidth,
-  trimLineToWidth,
+  trimLine,
 } from '../../../../r3f/controls/native/text/textOverrun';
 import {
   AutowrapMode,
@@ -430,6 +431,17 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
     return shapeText(text, { fontSizePx: FONT_SIZE, boxWidthPx, autowrapMode, lineSpacingPx: 3 });
   }
 
+  it('steps each line by the line spacing the text was shaped with', () => {
+    const layout = shapeText('A\nA', {
+      fontSizePx: FONT_SIZE,
+      boxWidthPx: 0,
+      autowrapMode: 0,
+      lineSpacingPx: 10,
+    });
+    const placements = layoutLabelLines(layout, 200, 200, undefined, undefined);
+    expect(placements.map((p) => p.y)).toEqual([0, PITCH - 3 + 10]);
+  });
+
   it('left alignment (default/undefined): every line starts at x=0', () => {
     const layout = layoutFor('A\nAB'); // two lines, different widths
     const placements = layoutLabelLines(layout, 200, 200, undefined, undefined);
@@ -712,7 +724,7 @@ describe('labelMinimumSize — shapes in label_settings.font (label.cpp:112,349,
   ])!;
 
   beforeEach(() => {
-    vi.spyOn(sceneFontLoader, 'peekSettledSceneFontMetrics').mockImplementation((font) =>
+    vi.spyOn(sceneFontLoader, 'peekSettledSceneFontMetrics').mockImplementation((_fonts, font) =>
       font === settingsFont ? WIDE_METRICS : OPEN_SANS_FONT_METRICS
     );
   });
@@ -833,11 +845,13 @@ describe('windowLabelLines', () => {
   const layout: TextLayoutResult = {
     shapedText: 'abc',
     lines: [
-      { text: 'a', glyphs: [], widthPx: 10, paragraphIndex: 0 },
-      { text: 'b', glyphs: [], widthPx: 30, paragraphIndex: 1 },
-      { text: 'c', glyphs: [], widthPx: 20, paragraphIndex: 2 },
+      { text: 'a', glyphs: [], widthPx: 10, paragraphIndex: 0, ascentPx: 18, descentPx: 5 },
+      { text: 'b', glyphs: [], widthPx: 30, paragraphIndex: 1, ascentPx: 18, descentPx: 5 },
+      { text: 'c', glyphs: [], widthPx: 20, paragraphIndex: 2, ascentPx: 18, descentPx: 5 },
     ],
     linePitchPx: 26,
+    fontHeightPx: 26,
+    lineSpacingPx: 3,
     widthPx: 30,
     heightPx: 78,
     baselineOffsetPx: 18,
@@ -845,14 +859,22 @@ describe('windowLabelLines', () => {
   };
 
   it('recomputes widthPx/heightPx over the KEPT lines only (happy path)', () => {
-    const windowed = windowLabelLines(layout, { start: 1, end: 3 }, 0);
+    const windowed = windowLabelLines(
+      layout,
+      { start: 1, end: 3 },
+      { paragraphSpacingPx: 0, fontHeightPx: 23 }
+    );
     expect(windowed.lines.map((l) => l.widthPx)).toEqual([30, 20]);
     expect(windowed.widthPx).toBe(30);
     expect(windowed.heightPx).toBe(52);
   });
 
   it('an empty range yields zero lines and zero height (edge case)', () => {
-    const windowed = windowLabelLines(layout, { start: 3, end: 3 }, 0);
+    const windowed = windowLabelLines(
+      layout,
+      { start: 3, end: 3 },
+      { paragraphSpacingPx: 0, fontHeightPx: 23 }
+    );
     expect(windowed.lines).toEqual([]);
     expect(windowed.heightPx).toBe(0);
     expect(windowed.widthPx).toBe(0);
@@ -899,6 +921,8 @@ function fakeLine(charCount: number, firstSourceIndex = 0): TextLineLayout {
     })),
     widthPx: charCount,
     paragraphIndex: 0,
+    ascentPx: 15,
+    descentPx: 5,
   };
 }
 
@@ -1289,6 +1313,9 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
   });
 });
 
+const TRIM_OPTIONS = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 };
+const ELLIPSIS_FLAGS = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+
 describe('layoutLabelLines — the overrun trim (label.cpp:302-332)', () => {
   it('aligns a RIGHT line by its trimmed width, as `_shape` trims before `_get_line_rect` reads it', () => {
     const layout = shapeText('A long line of text that overruns', {
@@ -1297,12 +1324,11 @@ describe('layoutLabelLines — the overrun trim (label.cpp:302-332)', () => {
       autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
     });
-    const trimTo60 = (line: TextLineLayout): TextLineLayout => ({ ...line, widthPx: 60 });
-    const [placement] = layoutLabelLines(layout, 100, 40, 2, undefined, undefined, {
-      trim: { line: trimTo60, filledLine: trimTo60 },
-    });
-    expect(placement!.line.widthPx).toBe(60);
-    expect(placement!.x).toBe(40);
+    const trim = { flags: ELLIPSIS_FLAGS, options: TRIM_OPTIONS };
+    const trimmed = trimLine(layout.lines[0]!, 100, ELLIPSIS_FLAGS, TRIM_OPTIONS, inferredPlacement);
+    const [placement] = layoutLabelLines(layout, 100, 40, 2, undefined, undefined, { trim });
+    expect(placement!.line.widthPx).toBe(trimmed.widthPx);
+    expect(placement!.x).toBe(Math.floor(100 - trimmed.widthPx));
   });
 });
 
@@ -1314,18 +1340,18 @@ describe('layoutLabelLines — the justification-aware trim of FILL with autowra
     lineSpacingPx: 3,
   });
   const naturalWidthPx = layout.lines[0]!.widthPx;
-  const markTrimmed = (line: TextLineLayout): TextLineLayout => ({ ...line, text: `${line.text}…` });
   const fillAt = (boxWidthPx: number) =>
     layoutLabelLines(layout, boxWidthPx, 40, 3, undefined, JustificationFlag.WORD_BOUND, {
-      trim: { line: markTrimmed, filledLine: markTrimmed },
+      trim: { flags: ELLIPSIS_FLAGS, options: TRIM_OPTIONS },
     })[0]!.line;
+  const endsInEllipsis = (line: TextLineLayout) => line.glyphs.at(-1)!.char === '…';
 
   it('skips the trim of a line whose spaces shrink to fit, as `fit_width_minimum_reached` stays false (text_server_adv.cpp:5947)', () => {
-    expect(fillAt(Math.floor(naturalWidthPx) - 4).text).toBe('A long line of text');
+    expect(endsInEllipsis(fillAt(Math.floor(naturalWidthPx) - 4))).toBe(false);
   });
 
   it('trims a line that stays wider than the box at the smallest space', () => {
-    expect(fillAt(Math.floor(naturalWidthPx / 2)).text).toBe('A long line of text…');
+    expect(endsInEllipsis(fillAt(Math.floor(naturalWidthPx / 2)))).toBe(true);
   });
 });
 
@@ -1339,18 +1365,9 @@ describe('layoutLabelLines — the trimmed FILL line fitted again with CONSTRAIN
   });
   const BOX_WIDTH_PX = 100;
   const ELLIPSIS_WIDTH_PX = 13;
-  const trimOptions = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 };
-  const ellipsisFlags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
   const filledLineAt = (justificationFlags: number) =>
     layoutLabelLines(layout, BOX_WIDTH_PX, 40, 3, undefined, justificationFlags, {
-      trim: {
-        line: (line) => trimLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, trimOptions),
-        filledLine: (line, filledFlags) =>
-          trimFilledLineToWidth(line, BOX_WIDTH_PX, ellipsisFlags, {
-            ...trimOptions,
-            justificationFlags: filledFlags,
-          }),
-      },
+      trim: { flags: ELLIPSIS_FLAGS, options: TRIM_OPTIONS },
     })[0]!.line;
 
   it('stretches the kept spaces so the ellipsis ends at the box width', () => {
@@ -1472,11 +1489,10 @@ describe('Label paragraph_spacing and the theme spacing constants (label.cpp:344
       lineSpacingPx: theme.lineSpacingPx,
       paragraphSeparator: LABEL_PARAGRAPH_SEPARATOR,
     });
-    const windowed = windowLabelLines(
-      shaped,
-      labelVisibleLineRange(shaped.lines.length, 0, undefined),
-      theme.paragraphSpacingPx
-    );
+    const windowed = windowLabelLines(shaped, labelVisibleLineRange(shaped.lines.length, 0, undefined), {
+      paragraphSpacingPx: theme.paragraphSpacingPx,
+      fontHeightPx: labelFontHeightPx(shaped.fontMetrics, theme.fontSizePx),
+    });
     return layoutLabelLines(
       windowed,
       boxWidthPx,
@@ -1484,10 +1500,7 @@ describe('Label paragraph_spacing and the theme spacing constants (label.cpp:344
       undefined,
       props.verticalAlignment,
       undefined,
-      {
-        lineSpacingPx: theme.lineSpacingPx,
-        paragraphSpacingPx: theme.paragraphSpacingPx,
-      }
+      { paragraphSpacingPx: theme.paragraphSpacingPx }
     ).map((p) => p.y);
   }
 

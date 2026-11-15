@@ -60,7 +60,6 @@ export function TileGroupRenderer({ item, node: authored }: { item: YSortItem; n
             material={state.material}
             lightMask={state.lightMask}
             zFinal={state.zFinal}
-            name={node.name}
             sampler={state.sampler}
           />
         )

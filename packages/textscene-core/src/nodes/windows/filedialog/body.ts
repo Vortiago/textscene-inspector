@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { parseNodeWithRegistry } from '../../../core/NodeRegistry';
+import { builtWidgetProperties, shownIf } from '../../../r3f/controls/native/sceneLines';
 import {
   DisplayMode,
   FileMode,
@@ -23,7 +23,7 @@ import {
   type FileDialogListIcon,
   type FileDialogThemeIcon,
 } from '../../../godot/scene/fileDialog';
-import { SizeFlags } from '../../../godot/scene/control';
+import { SIZE_EXPAND_FILL, SizeFlags } from '../../../godot/scene/control';
 import type { Vector2 } from '../../../godot/math/vector';
 import { FILE_DIALOG_ICON_URLS, FILE_DIALOG_LIST_ICON_URLS } from '../../../r3f/controls/native/themeIcons';
 import { ItemListIconMode, ItemListSelectMode } from '../../../godot/scene/gui';
@@ -41,7 +41,7 @@ import type { DialogBody } from '../acceptdialog/dialogParts';
 import type { FileDialogOption, FileDialogProperties } from './parser';
 
 /** `SIZE_EXPAND_FILL` and `SIZE_SHRINK_CENTER`, as a scene line writes them. */
-const EXPAND_FILL = String(SizeFlags.EXPAND | SizeFlags.FILL);
+const EXPAND_FILL = String(SIZE_EXPAND_FILL);
 const SHRINK_CENTER = String(SizeFlags.SHRINK_CENTER);
 
 /** The type variations the constructor sets (`file_dialog.cpp:2327-2576`), which the table defines. */
@@ -89,11 +89,6 @@ const widget = (type: string, name: string, more: Omit<Widget, 'type' | 'name'> 
   name,
   ...more,
 });
-
-const HIDDEN = { visible: 'false' };
-
-/** A scene line set for a Control that `update_customization` shows only while its flag is on. */
-const shownIf = (isShown: boolean): Record<string, string> => (isShown ? {} : HIDDEN);
 
 const iconButton = (name: string, icon: FileDialogThemeIcon, raw: Record<string, string> = {}) =>
   widget('Button', name, { variation: FLAT_BUTTON, icon, raw });
@@ -369,16 +364,8 @@ export const fileDialogTextureSlots: TextureSlotsFn = (_node, themedIcons = {}, 
 ];
 
 function build(dialog: SolveNode, spec: Widget, scale: number): InternalControlSpec {
-  const parsed = parseNodeWithRegistry(
-    { type: 'node', attributes: { name: spec.name, type: spec.type } },
-    spec.raw ?? {}
-  );
-  if (!parsed) throw new Error(`expected a parser for ${spec.type}, got none`);
   const properties = {
-    ...parsed.properties,
-    ...spec.properties,
-    ...(spec.variation && { themeTypeVariation: spec.variation }),
-    ...(spec.icon && { themeIcon: { name: spec.icon, vendoredUrl: FILE_DIALOG_ICON_URLS[spec.icon] } }),
+    ...builtWidgetProperties(spec, FILE_DIALOG_ICON_URLS),
     ...(spec.selection && { selection: spec.selection }),
   };
   return {

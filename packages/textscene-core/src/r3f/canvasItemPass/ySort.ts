@@ -20,7 +20,7 @@ import type { CanvasItemPaint } from './canvasItemPaint';
 /** The transform in its parent of an item the tree does not place: a solved Control, or a pose a mixer wrote. */
 export type SortOrigins = ReadonlyMap<string, Transform2DColumns>;
 
-/** A piece a node draws that the tree does not list, such as a tile row or a scene tile. */
+/** A piece a node draws that the tree does not list, such as a tile row or a ScrollContainer's bar. */
 export interface ExtraSortItem {
   readonly id: string;
   /** The point it sorts on, in the space of the node that draws it. */
@@ -28,8 +28,7 @@ export interface ExtraSortItem {
   readonly size: number;
   /**
    * Whether Godot collects it after the node's authored children: an `INTERNAL_MODE_BACK` child such
-   * as a ScrollContainer's bar (`node.h:585-600`), or a scene tile the layer appends. Every other
-   * piece comes before them.
+   * as a ScrollContainer's bar (`node.h:585-600`). Every other piece comes before them.
    */
   readonly followsChildren: boolean;
 }
@@ -50,8 +49,6 @@ export interface SortInputs {
   /** The live y of an entry, by live path or extra id, over the y the tree gives. */
   readonly liveYs: ReadonlyMap<string, LiveSortY>;
 }
-
-export const NO_SORT_INPUTS: SortInputs = { origins: new Map(), extras: new Map(), liveYs: new Map() };
 
 /** What the sort reads of a canvas item: its parent item, whether it is visible, and its fields. */
 export interface SortItem {
@@ -262,10 +259,14 @@ export function sortedPaintOf(
   return shifted(paint, shiftAbove(path, paint.range, runs, paints));
 }
 
-/** The body pieces of `paint` packed into `run`: the pieces after its children move up by their runs. */
+/**
+ * The body pieces of `paint` packed into `run`: the pieces after its children move up by their runs.
+ * The front room holds the runs of internal front children, which are entries of their own, so the
+ * children start at the front room and the body keeps none of it.
+ */
 function bodyAt(paint: CanvasItemPaint, run: PaintRange): CanvasItemPaint {
   const shift = run.base - paint.range.base;
-  const childrenStart = paint.front.base + paint.front.size;
+  const childrenStart = paint.front.base;
   const childrenSize = paint.range.size - run.size;
   // The pieces that take runs of their own leave their room too, so a value past them stays in the run.
   const last = run.base + run.size - 1;
@@ -278,7 +279,7 @@ function bodyAt(paint: CanvasItemPaint, run: PaintRange): CanvasItemPaint {
   return {
     range: run,
     own: at(paint.own),
-    front: move(paint.front),
+    front: { base: at(paint.front.base), size: 0 },
     layer: at(paint.layer),
     back: move(paint.back),
     tail: move(paint.tail),

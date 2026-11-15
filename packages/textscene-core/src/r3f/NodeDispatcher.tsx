@@ -5,7 +5,7 @@
  */
 
 import { ControlCanvasSpace } from './ControlCanvasSpace.js';
-import { Fragment, lazy, useEffect, useMemo } from 'react';
+import { Fragment, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import type { LiveNode } from '../resources/liveNode.js';
@@ -28,7 +28,13 @@ import { drawsInWorkspace } from './nodeWorkspaceVisibility.js';
 import { useAnimatedValueAt } from './contexts/AnimatedValueContext.js';
 import { useNodeObjectRegistration } from './hooks/useNodeObjectRegistration.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
-import { childOrders, TreeOrderProvider, useTreeOrder, type TreeOrder } from './contexts/TreeOrderContext.js';
+import {
+  childEnterOrders,
+  childOrders,
+  TreeOrderProvider,
+  useTreeOrder,
+  type TreeOrder,
+} from './contexts/TreeOrderContext.js';
 import { VisibilityParentScope } from './visibilityRange/VisibilityParentContext.js';
 import {
   InstancedScenePathsProvider,
@@ -39,7 +45,6 @@ import { UnownedSubtree } from './contexts/UnownedSubtreeContext.js';
 import { useLiveStepOf } from './useLiveSceneTree.js';
 import { useLiveDrawnNode } from './liveNodePatches.js';
 import { useResourceLoader } from '../resources/useResource.js';
-import { PendingSuspense } from '../resources/PendingSuspense.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { useInstancedScene } from './hooks/useInstancedScene.js';
 import { SceneResourcesProvider, useSceneResources } from './SceneResourcesContext.js';
@@ -66,10 +71,10 @@ import { GlbRootNode } from './internal/glb-scene-root/GlbRootNode.js';
 import { loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
+import { usePlaceViewport } from './contexts/ViewportPassRegistryContext.js';
+import { UndrawnViewportPlacements } from './UndrawnViewportPlacements.js';
+import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import { spaceFamilyOf } from '../godot/scene/parentSpace.js';
-
-// Lazy, as the 2D stage's own Control layer is: a canvas with no unowned Control loads none.
-const UnownedNodeControls = lazy(() => import('./controls/native/UnownedNodeControls.js'));
 
 /** Does this subtree contain anything that needs boolean evaluation? */
 function containsCsgShape(node: TscnNode): boolean {
@@ -163,17 +168,7 @@ export function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
     dispatched
   );
   if (!node.isUnowned) return scoped;
-  return (
-    <UnownedSubtree>
-      {scoped}
-      {/* The world walk draws no Control, and the scene's own Control forest never sees this node. */}
-      {node.hasControlRoot && (
-        <PendingSuspense>
-          <UnownedNodeControls node={node} />
-        </PendingSuspense>
-      )}
-    </UnownedSubtree>
-  );
+  return <UnownedSubtree>{scoped}</UnownedSubtree>;
 }
 
 /**
@@ -262,8 +257,8 @@ function PlainNode({
   const ownOrder = useTreeOrder();
   const inlineBase = inlineChildrenOrder ?? ownOrder;
   const inlineOrders = useMemo(
-    () => childOrders(inlineBase, node.children.length),
-    [inlineBase, node.children.length]
+    () => childEnterOrders(inlineBase, node.children),
+    [inlineBase, node.children]
   );
   const { hiddenNodePaths } = useSelection();
   const workspace = useCanvasWorkspace();
@@ -281,8 +276,11 @@ function PlainNode({
   const parentIsCanvasItem = useParentSpaceFamily() === 'CanvasItem';
 
   const wrapperRef = useNodeObjectRegistration(path);
+  // A viewport takes its place in the pass order from here: a Control-only one mounts its pass
+  // outside this walk.
+  usePlaceViewport(isViewportBoundary(node.type) ? path : null);
 
-  if (!drawsInWorkspace(node.type, workspace)) return null;
+  if (!drawsInWorkspace(node.type, workspace)) return <UndrawnViewportPlacements node={node} path={path} />;
 
   const sortsChildren = ysortsChildren(node);
   const inlineChildren = sortsChildren

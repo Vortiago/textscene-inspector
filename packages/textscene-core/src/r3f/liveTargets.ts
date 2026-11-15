@@ -10,7 +10,7 @@ import type { AtlasTextureLayout } from '../resources/textures/atlastexture/type
 import { copySampling } from '../resources/textures/copySampling';
 import { imageSize, readRenderTargetPixels, type ImagePixels } from '../resources/formats/image/imagePixels';
 import { perObject } from '../utils/perObject';
-import { drawOffscreen } from './offscreen';
+import { drawOffscreen } from './offscreen/draw';
 import { isHeld } from './useDisposeOnRelease';
 import { holdsSrgbBytes, markSrgbBytes } from './srgbByteTextures';
 import { copyTexels, wholeTexels, type TexelPlacement } from './texelCopy';

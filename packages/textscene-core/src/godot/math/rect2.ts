@@ -57,8 +57,3 @@ export function rect2GrowIndividual(
     h: r.h + sides.top + sides.bottom,
   };
 }
-
-/** Whether both rects have the same position and size. */
-export function rect2Equals(a: Rect2, b: Rect2): boolean {
-  return a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
-}

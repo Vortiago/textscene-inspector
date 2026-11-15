@@ -3,7 +3,7 @@
 import { enumNamesByValue } from '../classdb/enumNames.js';
 import { boolSlotValue } from '../variant/variantBool.js';
 import { findInClassChain } from '../classdb/classBaseTypes.js';
-import { type Vector2, vector2Max } from '../math/vector.js';
+import { type Vector2, VECTOR2_ZERO, vector2Equals, vector2Max } from '../math/vector.js';
 
 /**
  * `Window::Mode` without `MODE_`, each member the `DisplayServer::WindowMode` it aliases
@@ -115,6 +115,15 @@ const CLASS_DEFAULTS: Readonly<Record<string, WindowClassDefaults>> = {
 /** The defaults of `type`, from the nearest class in its chain that sets its own. */
 export function windowClassDefaults(type: string): WindowClassDefaults {
   return findInClassChain(type, (className) => CLASS_DEFAULTS[className]) ?? WINDOW_DEFAULTS;
+}
+
+/**
+ * Whether the constructor of `type` writes a size, which asks for the contents minimum before any
+ * line: ConfirmationDialog's `set_min_size` (`dialogs.cpp:531`) and FileDialog's `set_size` (`file_dialog.cpp:2284`).
+ */
+export function constructorWritesSize(type: string): boolean {
+  const { minSize, size } = windowClassDefaults(type);
+  return !vector2Equals(minSize, VECTOR2_ZERO) || size !== undefined;
 }
 
 /** The two properties `set_force_native` reads and writes. */

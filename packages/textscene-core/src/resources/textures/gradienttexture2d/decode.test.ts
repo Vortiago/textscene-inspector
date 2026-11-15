@@ -5,6 +5,7 @@ import { gradientOf } from './gradient.testkit';
 import {
   GRADIENT_TEXTURE_MAX_SIZE,
   GradientTexture2DFill,
+  GradientColorSpace,
   GradientInterpolationMode,
   GradientTexture2DRepeat,
 } from '../../../godot/scene/gradientTexture.js';
@@ -68,6 +69,17 @@ describe('the Gradient body the Gradient kind decodes', () => {
     expect(gradient.stops.map((s) => s.offset)).toEqual([0, 1]);
   });
 
+  it.each([
+    ['1', GradientColorSpace.LINEAR_SRGB],
+    ['2', GradientColorSpace.OKLAB],
+  ])('reads interpolation_color_space %s', (stored, space) => {
+    expect(gradientOf({ interpolation_color_space: stored }).interpolationColorSpace).toBe(space);
+  });
+
+  it('defaults interpolation_color_space to sRGB (gradient.h:66)', () => {
+    expect(gradientOf({}).interpolationColorSpace).toBe(GradientColorSpace.SRGB);
+  });
+
   it('sorts stops ascending by offset', () => {
     const gradient = gradientOf({
       offsets: 'PackedFloat32Array(1, 0)',
@@ -83,7 +95,11 @@ describe('the Gradient body the Gradient kind decodes', () => {
   });
 
   it('decodes an empty body to a stopless linear gradient (edge case)', () => {
-    expect(gradientOf({})).toEqual({ stops: [], interpolationMode: GradientInterpolationMode.LINEAR });
+    expect(gradientOf({})).toEqual({
+      stops: [],
+      interpolationMode: GradientInterpolationMode.LINEAR,
+      interpolationColorSpace: GradientColorSpace.SRGB,
+    });
   });
 });
 

@@ -24,6 +24,7 @@ import type { DirectoryListing } from '../directoryListing';
 import { isGodotSceneRoot } from '../formats/glb/godotNodes';
 import { tagAsLoadedGlb } from '../formats/glb/testing/loadedGlbTags';
 import { WorkerJobRunner } from '../../workers/WorkerJobRunner';
+import { createSettledFonts, type FaceLoader } from '../../r3f/controls/native/text/settledFonts';
 
 export interface FakeProcessor<T> {
   /** Backing cache: `undefined` = never requested, `null` = failed or sentinel miss, value = loaded. */
@@ -149,7 +150,8 @@ function makeFakeProcessor<T>(eventBus: ResourceEventBus, type: ResourceType): F
   };
 }
 
-export function createFakeResourceLoader(): FakeResourceLoader {
+/** `loadFace` turns a font file's bytes into a face, as `ResourceLoaderOptions.loadFace` does. */
+export function createFakeResourceLoader({ loadFace }: { loadFace?: FaceLoader } = {}): FakeResourceLoader {
   const eventBus = new ResourceEventBus();
   const metadata = new MetadataStore();
   const textures = makeFakeProcessor<THREE.Texture>(eventBus, 'texture');
@@ -195,6 +197,8 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     fonts,
     themes,
     directories,
+    // A preview of its own, with the real face loader, as `ResourceLoader` builds one.
+    settledFonts: createSettledFonts(loadFace),
     // Mirrors ResourceLoader.register and records the call, so a test asserts
     // registration without a vitest spy.
     register(resource: ExtResource): void {

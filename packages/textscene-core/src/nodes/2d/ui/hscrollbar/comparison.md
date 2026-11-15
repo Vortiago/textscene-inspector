@@ -13,7 +13,7 @@ HScrollBar is a horizontal track with a draggable grabber and step buttons. The
 previewer draws the track and the grabber, sized and positioned from `value`,
 `min_value`, `max_value` and `page`. Godot's default theme sets every increment and
 decrement icon to an empty texture, so neither Godot nor the previewer draws step
-buttons.
+buttons. The grabber starts past the leading content margin of the `scroll` box (`scroll_bar.cpp:326-344`).
 
 ## Linting
 
