@@ -200,6 +200,40 @@ describe('shapeText — a character no font of the chain has (text_server_adv.cp
   });
 });
 
+describe('shapeText — the ascent and descent of a line with a hex-code box (text_server_adv.cpp:6891-6892)', () => {
+  /** A 2048-unit face at ascent 18 px and descent 6 px at 24 px, which lacks `一`. */
+  const SHORT_FACE: FontMetrics = {
+    kind: 'canvas',
+    unitsPerEm: 2048,
+    ascent: 1536,
+    descent: 512,
+    hasGlyph: (ch) => ch !== '一',
+    getGlyphAdvanceUnits: () => 1024,
+    getKerningAdjustmentUnits: () => 0,
+    averageAdvanceUnits: 1024,
+  };
+  const lineOf = (text: string) =>
+    shapeText(text, {
+      fontSizePx: 24,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      fontMetrics: SHORT_FACE,
+    }).lines[0]!;
+
+  it('grows the ascent to 0.85 of the 30 px box', () => {
+    expect(lineOf('A一').ascentPx).toBe(25.5);
+  });
+
+  it('keeps the descent of the face, deeper than 0.15 of the box', () => {
+    expect(lineOf('A一').descentPx).toBe(6);
+  });
+
+  it('keeps the ascent of the face on a line with no box', () => {
+    expect(lineOf('AA').ascentPx).toBe(18);
+  });
+});
+
 describe('shapeText — preserveControl / control characters (text_server_adv.cpp:6844-6907, char_utils.h:117-118 is_control)', () => {
   // U+0001 START OF HEADING is `is_control` (<=0x001F) and neither tab nor linebreak.
   const CONTROL = '';
@@ -672,18 +706,6 @@ describe('soloLineLayout — re-wrapping one line of an already-shaped result', 
     expect(narrow.lines).toHaveLength(1);
   });
 
-  it('honours an explicit baselineOffsetPx — a RichTextLabel run shaped at its own [b]/[i] size sits at its OWN baseline, not the paragraph ascent', () => {
-    const parent = shapeText('AB', {
-      fontSizePx: 16,
-      boxWidthPx: 0,
-      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-      lineSpacingPx: 0,
-    });
-    const solo = soloLineLayout(parent.lines[0]!, parent, 99);
-    expect(solo.baselineOffsetPx).toBe(99);
-    expect(solo.fontMetrics).toBe(parent.fontMetrics);
-  });
-
   it('takes the face a caller names: a RichTextLabel run draws in its own face, not the paragraph one', () => {
     const parent = shapeText('AB', {
       fontSizePx: 16,
@@ -692,7 +714,7 @@ describe('soloLineLayout — re-wrapping one line of an already-shaped result', 
       lineSpacingPx: 0,
     });
     const bold = withVariation(OPEN_SANS_FONT_METRICS, { embolden: 1.2 });
-    const solo = soloLineLayout(parent.lines[0]!, parent, parent.baselineOffsetPx, bold);
+    const solo = soloLineLayout(parent.lines[0]!, parent, bold);
     expect(solo.fontMetrics).toBe(bold);
   });
 
@@ -720,6 +742,15 @@ describe('soloLineLayout — re-wrapping one line of an already-shaped result', 
       const withDeepGlyph = { ...line, glyphs: [line.glyphs[0]!, { ...line.glyphs[1]!, fontMetrics: deep }] };
       // The baseline 13 plus ceil(600 * 16/1000) = 10.
       expect(soloLineLayout(withDeepGlyph, parent).heightPx).toBe(23);
+    });
+
+    // `_shape_substr` grows the line's descent by a glyph's downward `y_off`, past any face descent.
+    it('reaches a glyph offset down past the face descent, below the baseline', () => {
+      const parent = shapeAB();
+      const line = parent.lines[0]!;
+      const withLoweredGlyph = { ...line, glyphs: [line.glyphs[0]!, { ...line.glyphs[1]!, yOffset: 9 }] };
+      // The baseline 13 plus the offset 9, over the face descent 4.
+      expect(soloLineLayout(withLoweredGlyph, parent).heightPx).toBe(22);
     });
 
     it('is the pitch for a line with no glyph', () => {

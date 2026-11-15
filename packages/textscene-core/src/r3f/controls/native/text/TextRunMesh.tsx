@@ -3,7 +3,7 @@
  * `THREE.BufferGeometry` and material. `TextRun.tsx` routes each run here, and
  * `layout.fontMetrics.kind` picks the painter: `canvasTextPainter.ts`'s single raster quad for
  * `'canvas'`, and `bitmapTextPainter.ts`'s quad for each glyph of a BMFont for `'bitmap'`. Both
- * place a line by its box-top Y alone, and its baseline `layout.baselineOffsetPx` below that, as
+ * place a line by its box-top Y alone, and its baseline its own ascent below that, as
  * Godot's `ofs.y += asc` does (`scene/gui/label.cpp:616,823`).
  *
  * Portions ported from Godot Engine (MIT).
@@ -27,18 +27,18 @@ import {
   paintSceneFontCanvas,
   createCanvasTextMaterial,
   originPhase,
-  snapsGlyphsToItemPixels,
   type CanvasTextCanvasLayout,
   type CanvasTextPaintOptions,
 } from './canvasTextPainter';
 import type { SurfaceShading } from '../../../materialFor2d';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { isBitmapFontMetrics, type BitmapFontMetrics } from './bitmapFontMetrics';
-import { bitmapFloorsPen, buildBitmapQuads, createSheetTexture } from './bitmapTextPainter';
+import { buildBitmapQuads, createSheetTexture } from './bitmapTextPainter';
 import type { FillSheet } from '../../../../resources/fonts/font/types';
 import { perObject } from '../../../../utils/perObject';
-import { GLYPH_DRAWER_RULES, type GlyphDrawer } from './glyphDrawer';
+import { GLYPH_DRAWER_RULES, snapsPen, type GlyphDrawer } from './glyphDrawer';
 import type { TextLayoutResult } from './textLayout';
+import { lineBaselinesPx } from './lineExtent';
 import { hexCodeBoxRects } from './hexCodeBox';
 import { CanvasItemGroup, useCanvasItemOrigin } from '../../../components/CanvasItemGroup';
 import { ControlQuad } from '../controlQuad';
@@ -77,9 +77,9 @@ interface HexCodeBoxAbsoluteRect {
  */
 function collectHexCodeBoxRects(layout: TextLayoutResult, fontSizePx: number): HexCodeBoxAbsoluteRect[] {
   const rects: HexCodeBoxAbsoluteRect[] = [];
+  const baselinesPx = lineBaselinesPx(layout);
   layout.lines.forEach((line, lineIndex) => {
-    const lineTopPx = lineIndex * layout.linePitchPx;
-    const baselinePx = lineTopPx + layout.baselineOffsetPx;
+    const baselinePx = baselinesPx[lineIndex]!;
     for (const gp of line.glyphs) {
       if (gp.controlCodepoint === undefined) continue;
       for (const r of hexCodeBoxRects(fontSizePx, gp.controlCodepoint)) {
@@ -476,9 +476,7 @@ export function TextRunMesh({
   // that keeps its pen reads no phase, so a move never rebuilds it.
   const itemOrigin = useCanvasItemOrigin();
   const { fontMetrics } = layout;
-  const readsPhase = isBitmapFontMetrics(fontMetrics)
-    ? bitmapFloorsPen(glyphDrawer, fontSizePx, fontMetrics)
-    : isCanvasFontMetrics(fontMetrics) && snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, fontMetrics);
+  const readsPhase = snapsPen(glyphDrawer, fontSizePx, fontMetrics);
   const { x: phaseX, y: phaseY } = readsPhase ? originPhase(itemOrigin) : VECTOR2_ZERO;
   const linearTint = useItemLinearColor(tint);
   const isLinearCanvas = useCanvasColorSpace().isLinear;

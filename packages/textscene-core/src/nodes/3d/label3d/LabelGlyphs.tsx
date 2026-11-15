@@ -112,13 +112,13 @@ export default function LabelGlyphs({ nodeRef, posedRef, properties }: LabelGlyp
   // The shaped text decides the box, so a font still loading leaves the label unplaced.
   const placement = useMemo(() => {
     if (!fontMetrics) return UNPLACED;
-    const aabb = label3DAabb(placements, layout.linePitchPx, properties.pixel_size);
+    const aabb = label3DAabb(placements, layout.lineSpacingPx, properties.pixel_size);
     return authoredPlacement(nodeRef, properties.transform, labelBillboardAabb(aabb, properties.billboard));
   }, [
     fontMetrics,
     nodeRef,
     placements,
-    layout.linePitchPx,
+    layout.lineSpacingPx,
     properties.pixel_size,
     properties.transform,
     properties.billboard,

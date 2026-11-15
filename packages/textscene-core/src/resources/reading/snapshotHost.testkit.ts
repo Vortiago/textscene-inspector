@@ -139,6 +139,19 @@ export function describeSnapshotHost(
       expect(requested()).toEqual([A_FILE, B_FILE]);
     });
 
+    it('keeps the last answer of a file that reloads for a reader that replaces the last one', async () => {
+      const { loader } = servedLoader({ [A_FILE]: resourceFile('resource_name = "from a"') });
+      const host = makeHost(loader);
+      const { kind } = namedKind();
+      host.run('ExtResource("1_a")', sceneTables(EXT_A), kind);
+      await host.settle();
+
+      loader.resources.clearCache(A_FILE);
+      host.run('ExtResource("1_a")', sceneTables(EXT_A), kind);
+
+      expect(nameOf(host.runs().at(-1))).toBe('from a');
+    });
+
     it('answers the same value for a second parse of the scene with equal resource text', async () => {
       const { loader } = servedLoader({});
       const host = makeHost(loader);

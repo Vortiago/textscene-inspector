@@ -235,6 +235,19 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
     const inkedTitleGlyphs = (r: Rendered) => inkedGlyphCount(bundledRuns(r.scene)[0]!);
     expect(inkedTitleGlyphs(trimmed)).toBeLessThan(inkedTitleGlyphs(untrimmed));
   });
+
+  // Godot draws the title as one `TextLine`, so a trimmed title with a line break draws its first line.
+  it('draws the first line only of a trimmed title with a line break', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <FoldableContainer
+        {...painterEnv()}
+        solveNode={solveNode({ folded: true, title: 'AB\nCD', titleTextOverrunBehavior: 1 })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(inkedGlyphCount(bundledRuns(renderer.scene)[0]!)).toBe(2);
+  });
 });
 
 describe('<FoldableContainer> chrome placement', () => {

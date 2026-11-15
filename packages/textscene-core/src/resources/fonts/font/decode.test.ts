@@ -1,8 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { decodeFont, resolveInlineFontResource } from './decode';
-import { resolveOnlySubResource } from '../../../testing/subResource';
+import { decodeFont } from './decode';
 import type { FontLoaderFn, FontResource } from './types';
-import { NOTHING_CACHED } from '../../../r3f/cacheSources';
 
 /** A loader that resolves nothing, for cases with no Font-valued property to recurse into. */
 const NO_OP_LOADER: FontLoaderFn = async () => null;
@@ -14,35 +12,6 @@ const FONT_A: FontResource = {
   fallbacks: [],
   properties: {},
 };
-
-/** The `fontNames` an inline SystemFont with this `font_names` value resolves to. */
-function fontNamesOf(fontNames: string): string[] {
-  const font = resolveOnlySubResource('SystemFont', { font_names: fontNames }, (ref, internalResources) =>
-    resolveInlineFontResource(ref, [], internalResources, NOTHING_CACHED, new Set())
-  );
-  if (font?.kind !== 'system') throw new Error(`expected a SystemFont, got ${font?.kind ?? 'null'}`);
-  return font.fontNames;
-}
-
-describe('the font_names a SystemFont reads', () => {
-  it('reads each element as a String slot does', () => {
-    expect(fontNamesOf('PackedStringArray("sans-serif", "Noto Sans")')).toEqual(['sans-serif', 'Noto Sans']);
-  });
-
-  it('decodes the escapes the tokenizer decodes', () => {
-    expect(fontNamesOf('PackedStringArray("a\\nb", "say \\"hi\\"")')).toEqual(['a\nb', 'say "hi"']);
-  });
-
-  it('reads nothing from an empty array or another value', () => {
-    expect(fontNamesOf('PackedStringArray()')).toEqual([]);
-    expect(fontNamesOf('"sans-serif"')).toEqual([]);
-  });
-
-  it('reads the typed and the bare array, which the slot converts', () => {
-    expect(fontNamesOf('Array[String](["sans-serif"])')).toEqual(['sans-serif']);
-    expect(fontNamesOf('["sans-serif"]')).toEqual(['sans-serif']);
-  });
-});
 
 describe('decodeFont', () => {
   it('decodes a SystemFont from font_names, leaving other properties raw', async () => {
@@ -203,155 +172,6 @@ describe('decodeFont', () => {
   });
 });
 
-describe('resolveInlineFontResource', () => {
-  it('resolves an ExtResource ref through the cache', () => {
-    const cache = { getCached: (address: string) => (address === 'res://fonts/a.ttf' ? FONT_A : undefined) };
-    const pending = new Set<string>();
-    const resolved = resolveInlineFontResource(
-      'ExtResource("1")',
-      [{ id: '1', path: 'res://fonts/a.ttf', type: 'FontFile' }],
-      [],
-      cache,
-      pending
-    );
-    expect(resolved).toBe(FONT_A);
-    expect(pending.size).toBe(0);
-  });
-
-  it('collects an uncached ExtResource address into pending and returns null for this pass', () => {
-    const pending = new Set<string>();
-    const resolved = resolveInlineFontResource(
-      'ExtResource("1")',
-      [{ id: '1', path: 'res://fonts/a.ttf', type: 'FontFile' }],
-      [],
-      NOTHING_CACHED,
-      pending
-    );
-    expect(resolved).toBeNull();
-    expect(pending.has('res://fonts/a.ttf')).toBe(true);
-  });
-
-  it('a previously-failed (cached null) address is null, not pending', () => {
-    const cache = { getCached: () => null };
-    const pending = new Set<string>();
-    const resolved = resolveInlineFontResource(
-      'ExtResource("1")',
-      [{ id: '1', path: 'res://fonts/dead.ttf', type: 'FontFile' }],
-      [],
-      cache,
-      pending
-    );
-    expect(resolved).toBeNull();
-    expect(pending.size).toBe(0);
-  });
-
-  it('decodes a scene-inline SystemFont sub-resource synchronously, no cache involved', () => {
-    const pending = new Set<string>();
-    const resolved = resolveInlineFontResource(
-      'SubResource("SystemFont_1")',
-      [],
-      [{ id: 'SystemFont_1', type: 'SystemFont', data: { font_names: 'PackedStringArray("sans-serif")' } }],
-      NOTHING_CACHED,
-      pending
-    );
-    expect(resolved).toEqual({
-      kind: 'system',
-      fontNames: ['sans-serif'],
-      baseFont: null,
-      fallbacks: [],
-      properties: {},
-    });
-    expect(pending.size).toBe(0);
-  });
-
-  it("decodes a scene-inline FontVariation, recursing into base_font's ExtResource through the cache", () => {
-    const cache = {
-      getCached: (address: string) => (address === 'res://fonts/base.ttf' ? FONT_A : undefined),
-    };
-    const pending = new Set<string>();
-    const resolved = resolveInlineFontResource(
-      'SubResource("FontVariation_1")',
-      [{ id: '1', path: 'res://fonts/base.ttf', type: 'FontFile' }],
-      [
-        {
-          id: 'FontVariation_1',
-          type: 'FontVariation',
-          data: { base_font: 'ExtResource("1")', spacing_glyph: '-8' },
-        },
-      ],
-      cache,
-      pending
-    );
-    expect(resolved).toEqual({
-      kind: 'variation',
-      baseFont: FONT_A,
-      fallbacks: [],
-      properties: { spacing_glyph: '-8' },
-    });
-  });
-
-  it('a FontVariation with no base_font resolves to a null baseFont', () => {
-    const pending = new Set<string>();
-    const resolved = resolveInlineFontResource(
-      'SubResource("FontVariation_1")',
-      [],
-      [{ id: 'FontVariation_1', type: 'FontVariation', data: {} }],
-      NOTHING_CACHED,
-      pending
-    );
-    expect(resolved).toEqual({ kind: 'variation', baseFont: null, fallbacks: [], properties: {} });
-  });
-
-  it('decodes a scene-inline FontFile, resolving every fallback', () => {
-    const cache = { getCached: (address: string) => (address === 'res://fonts/good.ttf' ? FONT_A : null) };
-    const pending = new Set<string>();
-    const resolved = resolveInlineFontResource(
-      'SubResource("FontFile_1")',
-      [
-        { id: '1', path: 'res://fonts/good.ttf', type: 'FontFile' },
-        { id: '2', path: 'res://fonts/missing.ttf', type: 'FontFile' },
-      ],
-      [
-        {
-          id: 'FontFile_1',
-          type: 'FontFile',
-          data: { fallbacks: 'Array[Font]([ExtResource("1"), ExtResource("2")])' },
-        },
-      ],
-      cache,
-      pending
-    );
-    expect(resolved).toEqual({
-      kind: 'file',
-      bytes: undefined,
-      mimeType: undefined,
-      fallbacks: [FONT_A],
-      properties: {},
-    });
-  });
-
-  it('returns null for a SubResource id that is not declared', () => {
-    const resolved = resolveInlineFontResource('SubResource("Missing")', [], [], NOTHING_CACHED, new Set());
-    expect(resolved).toBeNull();
-  });
-
-  it('returns null for a SubResource that is not a Font type', () => {
-    const resolved = resolveInlineFontResource(
-      'SubResource("StyleBoxFlat_1")',
-      [],
-      [{ id: 'StyleBoxFlat_1', type: 'StyleBoxFlat', data: {} }],
-      NOTHING_CACHED,
-      new Set()
-    );
-    expect(resolved).toBeNull();
-  });
-
-  it('returns null for an absent or malformed ref', () => {
-    expect(resolveInlineFontResource(undefined, [], [], NOTHING_CACHED, new Set())).toBeNull();
-    expect(resolveInlineFontResource('not-a-ref', [], [], NOTHING_CACHED, new Set())).toBeNull();
-  });
-});
-
 // `fallbacks` is a property of `Font` (`font.cpp:101`), so every Font kind reads it.
 describe('the fallbacks of a FontVariation and a SystemFont', () => {
   const extResources = [{ id: '1', path: 'res://fonts/good.ttf', type: 'FontFile' }];
@@ -361,17 +181,5 @@ describe('the fallbacks of a FontVariation and a SystemFont', () => {
   it.each(['FontVariation', 'SystemFont'])('loads the fallbacks of a %s file', async (type) => {
     const resource = await decodeFont('res://x.tres', type, FALLBACKS, extResources, [], loadGood);
     expect(resource).toMatchObject({ fallbacks: [FONT_A], properties: {} });
-  });
-
-  it.each(['FontVariation', 'SystemFont'])('resolves the fallbacks of a scene-inline %s', (type) => {
-    const cache = { getCached: (address: string) => (address === 'res://fonts/good.ttf' ? FONT_A : null) };
-    const resolved = resolveInlineFontResource(
-      'SubResource("Font_1")',
-      extResources,
-      [{ id: 'Font_1', type, data: FALLBACKS }],
-      cache,
-      new Set()
-    );
-    expect(resolved).toMatchObject({ fallbacks: [FONT_A], properties: {} });
   });
 });

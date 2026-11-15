@@ -1,16 +1,17 @@
 /**
  * Theme decode: one Theme resource body's property bag into typed data. A
  * file-backed `.tres` decodes to `ThemeAddresses`, and an inline Theme straight
- * to a `ThemeResource`, through one shared `scanTheme`. Fonts resolve through the
- * Font slice's own decode (`fonts/font/decode.ts`): one decoder per type.
+ * to a `ThemeResource`, through one shared `scanTheme`. An inline Theme's fonts are
+ * read by its caller, through the Font slice's own decode: one decoder per type.
  */
 
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { unquoteStringName } from '../../../parser/utils';
 import { parseOptionalFloat } from '../../../parser/valueParsers';
 import { parseColorOrUndefined } from '../../../utils/colorParser';
-import { FONT_SUB_RESOURCE_TYPES, resolveInlineFontResource } from '../../fonts/font/decode';
-import type { FontCacheReader } from '../../fonts/font/types';
+import type { SceneResources } from '../../../r3f/SceneResourcesContext';
+import { FONT_SUB_RESOURCE_TYPES } from '../../fonts/font/decode';
+import type { FontResource } from '../../fonts/font/types';
 import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { ScannedTheme, ThemeAddresses, ThemeResource } from './types';
 import { indexedKeyRegex } from '../../../godot/classdb/indexedKey.js';
@@ -168,20 +169,14 @@ export function decodeThemeAddresses(
 }
 
 /**
- * A scene's inline `[sub_resource type="Theme"]` to a `ThemeResource`,
- * synchronously, since the solve walk cannot `await`. A font ref names a sibling
- * sub-resource, read directly: the `resource` slot's `parseTresFile` throws on a
- * `[gd_scene]` header.
+ * A scene's inline `[sub_resource type="Theme"]` to a `ThemeResource`, synchronously, since the
+ * solve walk cannot `await`. `readFont` reads each Font ref in the scene's tables: the solve reads
+ * it as `FONT` on its snapshot.
  */
 export function resolveInlineThemeResource(
   properties: Record<string, string>,
-  externalResources: readonly TscnExternalResource[],
-  internalResources: readonly TscnInternalResource[],
-  fontCache: FontCacheReader,
-  pending: Set<string>
+  resources: SceneResources,
+  readFont: (ref: string) => FontResource | null
 ): ThemeResource {
-  const scanned = scanTheme(properties, (ref) =>
-    resolveInlineFontResource(ref, externalResources, internalResources, fontCache, pending)
-  );
-  return { ...scanned, resources: { externalResources, internalResources } };
+  return { ...scanTheme(properties, readFont), resources };
 }

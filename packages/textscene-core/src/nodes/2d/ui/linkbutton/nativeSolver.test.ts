@@ -152,6 +152,10 @@ describe('linkButtonUnderlineGeometry (link_button.cpp:306-308)', () => {
       thickness: 3,
     });
   });
+  // `int y` (`:307`): a line grown to 25.5 by a hex-code box at 24 px puts the stroke at 27, not 27.5.
+  it('truncates y past a fractional ascent: 25.5 and 2 give 27', () => {
+    expect(linkButtonUnderlineGeometry(OPEN_SANS_16, 2, 25.5).y).toBe(27);
+  });
 });
 
 describe('linkButtonMinimumSize (link_button.cpp:193-200) — no text', () => {

@@ -22,7 +22,6 @@ import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBid
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   shapedTextSizeWidthPx,
-  withGlyphFaceAscent,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import type { UnderlinePx } from '../../../../r3f/controls/native/text/fontMetrics';
@@ -86,8 +85,9 @@ interface UnderlineGeometry {
 
 /**
  * `link_button.cpp:306-308`: `underline_spacing` (int) plus `text_buf->get_line_underline_position()`
- * (float), narrowed to `int`, which truncates toward zero. `y` adds `get_line_ascent()`, the layout's
- * whole-pixel baseline. Thickness is `MAX(1, ...)` narrowed the same way (`:308`).
+ * (float), narrowed to `int`, which truncates toward zero. `y` adds `get_line_ascent()`, which a
+ * hex-code box can make fractional, and narrows to `int` too (`:307`). Thickness is `MAX(1, ...)`
+ * narrowed the same way (`:308`).
  */
 export function linkButtonUnderlineGeometry(
   underline: UnderlinePx,
@@ -95,7 +95,7 @@ export function linkButtonUnderlineGeometry(
   ascentPx: number
 ): UnderlineGeometry {
   const spacing = Math.trunc(underlineSpacingConstant + underline.positionPx);
-  const y = ascentPx + spacing;
+  const y = Math.trunc(ascentPx + spacing);
   const thickness = Math.trunc(Math.max(1, underline.thicknessPx));
   return { y, thickness };
 }
@@ -125,7 +125,7 @@ export function linkButtonTextPlacement(
 // Minimum size
 
 /**
- * LinkButton's shaped label at its line's own ascent, null for empty text: the solve-handoff share
+ * LinkButton's shaped label, null for empty text: the solve-handoff share
  * (`r3f/controls/native/solveHandoff.ts`) of `linkButtonMinimumSize` and `Component.tsx`. The painter's
  * overrun trimming is not part of it, since it reads the solved rect.
  */
@@ -135,12 +135,11 @@ export const linkButtonLabelShape = defineShare<TextLayoutResult | null>((n) => 
   if (text.length === 0) return null;
   const state = resolveLinkButtonDrawState(props);
   const { fontSizePx } = linkButtonTextTheme(n, props, state);
-  const layout = shapeButtonLabel(text, {
+  return shapeButtonLabel(text, {
     fontSizePx,
     fontMetrics: resolveNodeFontMetrics(n, LINKBUTTON_THEME_FONT_KEY),
     bidi: controlBidiOptions(props, n),
   });
-  return withGlyphFaceAscent(layout);
 });
 
 /**
