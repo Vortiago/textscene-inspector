@@ -451,6 +451,8 @@ interface BreakGlyph {
   xOffset?: number;
   /** Whether the first character of the cluster draws this one: `start` and `end` are the cluster's. */
   isClusterTail?: true;
+  /** Whether Godot gives it glyph index 0 or no glyph: it keeps its 0 advance and rounds nothing (`:7060`). */
+  hasNoGlyph?: true;
 }
 
 /** A glyph of a shaped cluster, as the run shaping gives it and the layout places it. */
@@ -644,6 +646,7 @@ function unshapedGlyph(index: number): BreakGlyph {
     isHardBreak: false,
     isTab: false,
     emboldenGrowthPx: 0,
+    hasNoGlyph: true,
   };
 }
 
@@ -672,11 +675,11 @@ function specialGlyph(
   // A break grapheme, U+200B and a tab take no advance whatever the face holds. A tab no stop aligns
   // is as wide as the font's glyph for it, which is none (measured in Godot 4.6.3: `a<TAB>b` with
   // `tab_size` 0 sets `b` against `a`).
-  if (isLinebreak(cp) || cp === 0x200b || isTabChar(ch)) return zeroWidthGlyph(ch, i);
+  if (isLinebreak(cp) || cp === 0x200b || isTabChar(ch)) return noGlyph(ch, i);
   // Only the "no font has a glyph" case is left (`text_server_adv.cpp:6842-6907`).
   if (isControlChar(cp)) {
     // Without `preserve_invalid` or `preserve_control`, a control pushes no `Glyph` (`:6844`).
-    return preserveControl ? hexCodeBox(ch, i, style.sizes[i]!) : zeroWidthGlyph(ch, i);
+    return preserveControl ? hexCodeBox(ch, i, style.sizes[i]!) : noGlyph(ch, i);
   }
   const face = style.faces[i]!;
   if (face.drawsApart?.(ch)) return drawnApartGlyph(ch, i, face, style.sizes[i]!);
@@ -684,7 +687,7 @@ function specialGlyph(
   if (!face.hasGlyph(ch) && isNonGraphic(ch) && !fallbackChainOf(face).some((entry) => entry.hasGlyph(ch))) {
     // Its notdef glyph counts as valid and keeps no advance (`text_server_adv.cpp:7060`, `:7106-7108`).
     // With `preserve_control` only a break counts as valid, so it falls back to a box (`:7104`).
-    return preserveControl ? hexCodeBox(ch, i, style.sizes[i]!) : zeroWidthGlyph(ch, i);
+    return preserveControl ? hexCodeBox(ch, i, style.sizes[i]!) : noGlyph(ch, i);
   }
   if (!lacksGlyph(face, ch, style.hasUndrawnGlyph)) return undefined;
   return hexCodeBox(ch, i, style.sizes[i]!);
@@ -707,6 +710,20 @@ function zeroWidthGlyph(ch: string, i: number): BreakGlyph {
     isTab: isTabChar(ch),
     emboldenGrowthPx: 0,
   };
+}
+
+/** The glyph of character `ch` at `i` that Godot gives glyph index 0, or no glyph. */
+function noGlyph(ch: string, i: number): BreakGlyph {
+  return { ...zeroWidthGlyph(ch, i), hasNoGlyph: true };
+}
+
+/**
+ * Whether Godot gives each glyph of a cluster that starts with `cp` index 0 and no advance
+ * (`text_server_adv.cpp:7052-7055`), whatever glyph the face shapes it with.
+ */
+function isForcedZeroWidth(cp: number, preserveControl: boolean): boolean {
+  if (preserveControl) return cp === 0x200b || cp === 0xfeff;
+  return (cp >= 0x200b && cp <= 0x200d) || cp === 0x2060 || cp === 0xfeff;
 }
 
 /** The hex-code box of character `ch` at `i`, at font size `size`. */
@@ -735,9 +752,12 @@ function clusterGlyph(
   cluster: RunCluster,
   offset: number,
   chars: ArrayLike<string>,
-  style: RunStyle
+  style: RunStyle,
+  preserveControl: boolean
 ): BreakGlyph {
   const start = offset + cluster.start;
+  if (isForcedZeroWidth(chars[start]!.codePointAt(0)!, preserveControl))
+    return { ...noGlyph(chars[start]!, start), end: offset + cluster.end };
   const face = style.faces[start]!;
   const size = style.sizes[start]!;
   const embolden = face.embolden ?? 0;
@@ -778,11 +798,12 @@ function pushShapedStretch(
   chars: ArrayLike<string>,
   start: number,
   characters: readonly string[],
-  style: RunStyle
+  style: RunStyle,
+  preserveControl: boolean
 ): void {
   if (characters.length === 0) return;
   for (const cluster of getFontRunShaping(style.faces[start]!, characters)) {
-    const glyph = clusterGlyph(cluster, start, chars, style);
+    const glyph = clusterGlyph(cluster, start, chars, style, preserveControl);
     while (glyphs.length < glyph.start) glyphs.push(unshapedGlyph(glyphs.length));
     glyphs.push(glyph);
     for (let tail = glyph.start + 1; tail < glyph.end; tail++)
@@ -811,12 +832,12 @@ function pushRunGlyphs(
       stretch.push(chars[i]!);
       continue;
     }
-    pushShapedStretch(glyphs, chars, stretchStart, stretch, style);
+    pushShapedStretch(glyphs, chars, stretchStart, stretch, style, preserveControl);
     glyphs.push(special);
     stretchStart = i + 1;
     stretch = [];
   }
-  pushShapedStretch(glyphs, chars, stretchStart, stretch, style);
+  pushShapedStretch(glyphs, chars, stretchStart, stretch, style, preserveControl);
 }
 
 /**
@@ -1024,9 +1045,8 @@ function roundGlyphAdvance(
   const cp = chars[i]!.codePointAt(0)!;
   // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
   const resets = cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp);
-  // A character with no glyph keeps its 0 advance, and rounds nothing into the remainder
-  // (`gl.index != 0`, `:7060`): rounding a remainder of -0.5 would give it -1.
-  if (glyph.advance === 0 && !glyph.glyphs) return resets ? 0 : remainder;
+  // Rounding a remainder of -0.5 into a glyph Godot skips (`gl.index != 0`, `:7060`) would give it -1.
+  if (glyph.hasNoGlyph) return resets ? 0 : remainder;
   if (!glyph.glyphs) {
     const rounded = roundedGlyph(glyph.advance, 0, resets ? 0 : remainder);
     glyph.advance = rounded.advance;
