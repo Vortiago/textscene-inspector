@@ -1,8 +1,9 @@
 /** The C integer and float casts of x86-64 that a Variant operator or constructor applies. */
 
+import { INT32_MIN } from './intWidth.js';
+
 export const INT64_MAX = (1n << 63n) - 1n;
 export const INT64_MIN = -(1n << 63n);
-export const INT32_MIN = -2147483648;
 
 const { fround } = Math;
 const FLOAT_MANTISSA_BITS = 24;
