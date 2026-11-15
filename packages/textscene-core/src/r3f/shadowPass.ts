@@ -128,10 +128,8 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
 }
 
 /**
- * Every lit program samples the atlas, even with no slot drawn: a size of 0 or every light culled
- * draws none, and WebGL refuses a draw that samples an unallocated depth texture. An allocation binds
- * the canvas's framebuffer (r187 `WebGLTextures.js:2042`), and three's pass restores no target when it
- * draws nothing, so the render's own target is bound again.
+ * A lit program samples the atlas with no slot drawn, and WebGL refuses an unallocated one. Allocating
+ * binds the canvas framebuffer (r187 `WebGLTextures.js:2042`), so the render's target is bound again.
  */
 function allocatePositionalShadowAtlas(renderer: THREE.WebGLRenderer): void {
   const atlas = positionalShadowAtlas();
@@ -143,7 +141,7 @@ function allocatePositionalShadowAtlas(renderer: THREE.WebGLRenderer): void {
   renderer.setRenderTarget(target, face, level);
 }
 
-/** Whether three has built `target`'s framebuffer in `renderer` (r187 `WebGLRenderer.js:3613`). */
+/** r187 `WebGLRenderer.js:3613`. */
 function isAllocated(renderer: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget): boolean {
   const properties = renderer.properties.get(target) as { __webglFramebuffer?: unknown };
   return properties.__webglFramebuffer !== undefined;

@@ -214,10 +214,7 @@ export function projectShadowAtlasSize(settings: ProjectSettings | null): number
 
 const POSITIONAL_SHADOW_SETTING = 'rendering/lights_and_shadows/positional_shadow/';
 
-/**
- * `rendering/lights_and_shadows/positional_shadow/atlas_size` and `atlas_quadrant_0_subdiv` to `_3`,
- * which the root viewport takes (`scene/main/scene_tree.cpp:2130-2141`).
- */
+/** The root viewport's positional shadow atlas (`scene_tree.cpp:2130-2141`). */
 export function projectPositionalShadowAtlas(
   settings: ProjectSettings | null
 ): PositionalShadowAtlasSettings {

@@ -141,10 +141,7 @@ export const VRS_UPDATE_MODE_NAMES = enumNamesByValue(VrsUpdateMode);
  */
 const POSITIONAL_SHADOW_QUADRANT_SUBDIV_SHADOWS = [0, 1, 4, 16, 64, 256, 1024] as const;
 
-/**
- * The shadow count of each quadrant at the default subdivisions: 4, 4, 16 and 64. The root takes them from the project settings (`scene_tree.cpp:2133-2136`), and a
- * `Viewport` sets the same values itself (`viewport.cpp:5363-5366`).
- */
+/** Shadows per quadrant at the default subdivisions (`scene_tree.cpp:2133-2136`, `viewport.cpp:5363-5366`). */
 const POSITIONAL_SHADOW_QUADRANT_SHADOWS_DEFAULT = [
   PositionalShadowAtlasQuadrantSubdiv.SHADOWS_4,
   PositionalShadowAtlasQuadrantSubdiv.SHADOWS_4,
@@ -152,27 +149,19 @@ const POSITIONAL_SHADOW_QUADRANT_SHADOWS_DEFAULT = [
   PositionalShadowAtlasQuadrantSubdiv.SHADOWS_64,
 ].map((subdiv) => POSITIONAL_SHADOW_QUADRANT_SUBDIV_SHADOWS[subdiv]);
 
-/**
- * The root viewport's atlas at the project defaults: `rendering/lights_and_shadows/positional_shadow/`
- * `atlas_size` is 4096 (`scene/main/scene_tree.cpp:2130`, applied at `:2138`). The editor's 3D
- * viewport takes the same setting (`editor/scene/3d/node_3d_editor_plugin.cpp:3157`).
- */
+/** The root's atlas at the project defaults (`scene_tree.cpp:2130`, `node_3d_editor_plugin.cpp:3157`). */
 export const ROOT_POSITIONAL_SHADOW_ATLAS: PositionalShadowAtlasSettings = {
   size: 4096,
   quadrantShadows: POSITIONAL_SHADOW_QUADRANT_SHADOWS_DEFAULT,
 };
 
-/** A `Viewport`'s own atlas, which a SubViewport keeps: side 2048 (`scene/main/viewport.h:305`). */
+/** A `Viewport`'s own atlas (`viewport.h:305`). */
 export const VIEWPORT_POSITIONAL_SHADOW_ATLAS: PositionalShadowAtlasSettings = {
   size: 2048,
   quadrantShadows: POSITIONAL_SHADOW_QUADRANT_SHADOWS_DEFAULT,
 };
 
-/**
- * A viewport's atlas from its size and its four quadrant subdivisions, each absent where the source
- * leaves `defaults`. The server refuses a negative size (`light_storage.cpp:2158`), and the setter a
- * subdivision outside the enum (`viewport.cpp:1412-1413`), so either keeps the default.
- */
+/** A refused size or subdivision keeps `defaults` (`light_storage.cpp:2158`, `viewport.cpp:1412-1413`). */
 export function viewportPositionalShadowAtlas(
   size: number | undefined,
   quadrantSubdivs: readonly (number | undefined)[],
