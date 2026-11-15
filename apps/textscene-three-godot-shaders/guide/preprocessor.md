@@ -762,3 +762,22 @@ float probe(float a) { return halved(a); }
 | `inf` | `inf` |
 | `-inf` | `-inf` |
 | `NaN` | `NaN` |
+
+### Probe `include-marker-expanded`, 16 input rows
+
+```glsl
+#define pp_marker 1
+#include "pp_marker.gdshaderinc"
+float probe(float a) { return marked(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `1.0` |
+| `-0.0` | `1.0` |
+| `1.0` | `2.0` |
+| `-1.0` | `0.0` |
+| `1e-40` | `1.0` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |

@@ -1,3 +1,5 @@
+/** Godot's `CommentRemover` (shader_preprocessor.cpp:258): the text with its comments taken out and its line breaks kept. */
+
 export interface StrippedCode {
   readonly code: string;
   readonly error?: { readonly message: string; readonly line: number };

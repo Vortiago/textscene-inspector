@@ -17,6 +17,7 @@ import {
   textEditRowStats,
   type TextEditLineLayout,
 } from './nativeSolver';
+import { isWhitespace } from '../../../../godot/string/charUtils.js';
 
 /** `minimap_char_size` is (1, 2) and `minimap_line_spacing` 1 (`text_edit.h:576-577`). */
 const CHAR_WIDTH_PX = 1;
@@ -94,24 +95,6 @@ export function textEditMinimapLines(
 
 export interface TextEditMinimapRect extends Rect2 {
   color: Rgba;
-}
-
-/** `is_whitespace` (`core/string/char_utils.h:121-123`). */
-function isWhitespace(ch: string): boolean {
-  const code = ch.charCodeAt(0);
-  return (
-    code === 0x20 ||
-    code === 0xa0 ||
-    code === 0x1680 ||
-    (code >= 0x2000 && code <= 0x200b) ||
-    code === 0x202f ||
-    code === 0x205f ||
-    code === 0x3000 ||
-    code === 0x2028 ||
-    code === 0x2029 ||
-    (code >= 0x09 && code <= 0x0d) ||
-    code === 0x85
-  );
 }
 
 function sameColor(a: Rgba, b: Rgba): boolean {

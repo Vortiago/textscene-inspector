@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { type Define, expandMacros } from './macros.js';
+import { type Define, Defines, expandMacros } from './macros.js';
 import { PreprocessorError } from './preprocessorError.js';
 
 const define = (body: string, names: string[] = []): Define => ({ body, arguments: names, isBuiltIn: false });
 const expand = (text: string, defines: Record<string, Define>) =>
-  expandMacros(text, new Map(Object.entries(defines)), 0);
+  expandMacros(text, new Defines(Object.entries(defines)), 0);
 
 describe('expandMacros', () => {
   it('replaces a define with its body between spaces', () => {
@@ -47,5 +47,30 @@ describe('##', () => {
 
   it('keeps a run of three #', () => {
     expect(expand('K', { K: define('a ### b') })).toBe(' a ### b ');
+  });
+});
+
+describe('Defines', () => {
+  it('lists its names in code-unit order', () => {
+    const defines = new Defines([
+      ['b', define('1')],
+      ['B', define('2')],
+      ['a', define('3')],
+    ]);
+    expect(defines.names()).toEqual(['B', 'a', 'b']);
+  });
+
+  it('forgets a deleted name', () => {
+    const defines = new Defines([['a', define('1')]]);
+    defines.names();
+    defines.delete('a');
+    expect([defines.has('a'), defines.names()]).toEqual([false, []]);
+  });
+
+  it('lists a name set after the names were read', () => {
+    const defines = new Defines();
+    defines.names();
+    defines.set('z', define('1'));
+    expect(defines.names()).toEqual(['z']);
   });
 });

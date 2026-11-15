@@ -5,12 +5,12 @@
  */
 
 import { ShadingLanguageError } from '../../../../packages/textscene-core/src/shaders/language/shadingLanguageError.ts';
-import { parseShader } from '../../../../packages/textscene-core/src/shaders/language/parseShader.ts';
-import { transpileShadingLanguage } from '../../../../packages/textscene-core/src/shaders/language/transpile.ts';
-import { transpileSky } from '../../../../packages/textscene-core/src/shaders/sky/transpileSky.ts';
+import { parsedShader } from '../../../../packages/textscene-core/src/shaders/language/parseShader.ts';
+import { transpileParsedShader } from '../../../../packages/textscene-core/src/shaders/language/transpile.ts';
+import { transpileParsedSky } from '../../../../packages/textscene-core/src/shaders/sky/transpileSky.ts';
 
 /** The entry of each shader type that links into a template of Godot's, as a user calls it. */
-const TEMPLATE_ENTRIES = { sky: transpileSky };
+const TEMPLATE_ENTRIES = { sky: (parsed) => transpileParsedSky(parsed, '') };
 
 /**
  * The transpiler's verdict on `text`: `{ accepted: true }`, `{ accepted: false, message, line }`,
@@ -18,8 +18,9 @@ const TEMPLATE_ENTRIES = { sky: transpileSky };
  */
 export function transpilerVerdict(text) {
   try {
-    const entry = TEMPLATE_ENTRIES[parseShader(text).shaderType] ?? transpileShadingLanguage;
-    entry(text);
+    const parsed = parsedShader(text);
+    const entry = TEMPLATE_ENTRIES[parsed.tree.shaderType] ?? transpileParsedShader;
+    entry(parsed);
     return { accepted: true };
   } catch (error) {
     if (!(error instanceof ShadingLanguageError)) return { crashed: String(error?.stack ?? error) };

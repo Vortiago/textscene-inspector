@@ -1,10 +1,13 @@
 import { stripEdges } from '../../godot/string/string.js';
-import { END, isCharEnd, isCharSpace, isValidAsciiIdentifier, isWhitespace } from './godotString.js';
+import { isValidAsciiIdentifier, isWhitespace } from '../../godot/string/charUtils.js';
+import { END, isCharEnd, isCharSpace } from './preprocessorChars.js';
+
+/** `ShaderPreprocessor::Tokenizer` (shader_preprocessor.cpp:42): the reader of a comment-free text. */
 
 export class DirectiveTokenizer {
   // Godot's String ends in a 0 the reader returns as a character.
   private readonly code: string;
-  index = 0;
+  private index = 0;
   line = 0;
   // A line break read inside a directive, written out later so each line keeps its number.
   private generated: string[] = [];
@@ -27,10 +30,16 @@ export class DirectiveTokenizer {
     return text;
   }
 
+  /** The 1-based column of the character read last, counted in the comment-free text. */
+  columnOfLast(): number {
+    return this.index - 1 - this.code.lastIndexOf('\n', this.index - 2);
+  }
+
   backtrack(what: string): void {
     while (this.index >= 0 && this.code[this.index] !== what) this.index -= 1;
   }
 
+  // `at += 2` and the step of the loop skip the character after a backslash and line feed, as Godot does (:93).
   consumeLineContinuations(offset: number): number {
     let skips = 0;
     for (let at = this.index + offset; at < this.code.length; at += 1) {
@@ -72,8 +81,17 @@ export class DirectiveTokenizer {
     return stripEdges(this.advance('\n')) === '';
   }
 
-  /** An empty string for a word that is no identifier. */
-  identifier(started = false): string {
+  /** An empty string for a word that is no identifier. Leading whitespace is skipped. */
+  identifier(): string {
+    return this.readIdentifier(false);
+  }
+
+  /** The directive's name right after `#`: whitespace there ends it, as `get_identifier(nullptr, true)` reads. */
+  directiveName(): string {
+    return this.readIdentifier(true);
+  }
+
+  private readIdentifier(started: boolean): string {
     const text: string[] = [];
     for (;;) {
       const char = this.peek();
@@ -88,6 +106,7 @@ export class DirectiveTokenizer {
     return isValidAsciiIdentifier(id) ? id : '';
   }
 
+  // Like Godot's, it puts back the place and the line, not the line breaks a continuation generated.
   peekIdentifier(): string {
     const { index, line } = this;
     const id = this.identifier();

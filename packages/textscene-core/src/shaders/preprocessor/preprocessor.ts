@@ -1,9 +1,12 @@
+/** Godot's shader preprocessor (shader_preprocessor.cpp): comments, directives, macros and includes, as one text. */
+
 import { instruction, notTranspiled } from '../language/instructions.js';
-import { stripComments } from './commentRemover.js';
+import { stripComments, type StrippedCode } from './commentRemover.js';
 import { DirectiveTokenizer } from './directiveTokenizer.js';
 import { getBaseDir, isAbsolutePath, pathJoin, simplifyPath, stripEdges } from '../../godot/string/string.js';
-import { END, isCharEnd, isCharSpace } from './godotString.js';
-import { type Define, expandMacros } from './macros.js';
+import { PreprocessedOutput } from './preprocessedOutput.js';
+import { END, isCharEnd, isCharSpace } from './preprocessorChars.js';
+import { type Define, Defines, expandMacros } from './macros.js';
 import { PreprocessorError } from './preprocessorError.js';
 
 /** `path` is the loaded resource's path, which marks the include and keeps it from loading twice. */
@@ -29,6 +32,7 @@ const RENDERERS: Readonly<Record<RenderingMethod, string>> = {
   forward_plus: '2',
 };
 
+// shader_preprocessor.cpp:752
 const INCLUDE_DEPTH_AT_MOST = 25;
 
 interface Branch {
@@ -39,7 +43,7 @@ interface Branch {
 
 /** Shared by the shader and every file it includes. */
 interface State {
-  readonly defines: Map<string, Define>;
+  readonly defines: Defines;
   currentBranch: Branch | undefined;
   conditionDepth: number;
   readonly includes: Set<string>;
@@ -56,7 +60,7 @@ export function preprocess(code: string, options: PreprocessOptions = {}): strin
   const renderer = RENDERERS[options.renderingMethod ?? 'forward_plus'];
   const builtIn = (body: string): Define => ({ body, arguments: [], isBuiltIn: true });
   const state: State = {
-    defines: new Map([
+    defines: new Defines([
       ['CURRENT_RENDERER', builtIn(renderer)],
       ['RENDERER_COMPATIBILITY', builtIn(RENDERERS.gl_compatibility)],
       ['RENDERER_MOBILE', builtIn(RENDERERS.mobile)],
@@ -71,18 +75,26 @@ export function preprocess(code: string, options: PreprocessOptions = {}): strin
     isDisabled: false,
     readInclude: options.readInclude ?? (() => undefined),
   };
-  return new FilePreprocessor(state).run(code);
+  return new FilePreprocessor(state, code).run();
 }
 
+// One file's text. Its include runs a FilePreprocessor of its own over the same state.
 class FilePreprocessor {
-  private output = '';
-  private tokenizer = new DirectiveTokenizer('');
+  private readonly output = new PreprocessedOutput();
+  private readonly tokenizer: DirectiveTokenizer;
+  private readonly stripped: StrippedCode;
 
-  constructor(private readonly state: State) {}
+  constructor(
+    private readonly state: State,
+    private readonly code: string
+  ) {
+    this.stripped = stripComments(code);
+    this.tokenizer = new DirectiveTokenizer(this.stripped.code);
+  }
 
-  run(code: string): string {
+  run(): string {
     try {
-      return this.read(code);
+      return this.read();
     } catch (error) {
       if (!(error instanceof PreprocessorError) || error.file !== '') throw error;
       throw new PreprocessorError(error.reason, error.line, this.state.currentFile);
@@ -90,57 +102,54 @@ class FilePreprocessor {
   }
 
   /** shader_preprocessor.cpp:1264 */
-  private read(code: string): string {
-    const stripped = stripComments(code);
-    if (stripped.error) throw new PreprocessorError(stripped.error.message, stripped.error.line);
-    this.state.openTexts.push(code);
-    this.tokenizer = new DirectiveTokenizer(stripped.code);
-    let lineStart = 0;
+  private read(): string {
+    const { error } = this.stripped;
+    if (error) throw new PreprocessorError(error.message, error.line);
+    this.state.openTexts.push(this.code);
     let hasSymbolsBeforeDirective = false;
     for (let token = this.tokenizer.token(); token !== END; token = this.tokenizer.token()) {
-      this.output += this.tokenizer.takeGenerated();
+      this.output.append(this.tokenizer.takeGenerated());
       if (this.state.isDisabled) {
-        this.output += token;
+        this.output.append(token);
       } else if (token === '#') {
         if (hasSymbolsBeforeDirective)
           throw new PreprocessorError('Invalid symbols placed before directive.', this.tokenizer.line);
         this.directive();
       } else {
         if (isCharEnd(token)) {
-          this.expandOutputMacros(lineStart, this.tokenizer.line);
-          lineStart = this.output.length;
+          this.expandOutputMacros(this.tokenizer.line);
           hasSymbolsBeforeDirective = false;
         } else if (!isCharSpace(token)) {
           hasSymbolsBeforeDirective = true;
         }
-        this.output += token;
+        this.output.append(token);
       }
     }
-    this.state.openTexts.splice(this.state.openTexts.indexOf(code), 1);
+    this.state.openTexts.splice(this.state.openTexts.indexOf(this.code), 1);
     if (!this.state.isDisabled) {
       if (this.state.conditionDepth !== 0)
         throw new PreprocessorError('Unmatched conditional statement.', this.tokenizer.line);
-      this.expandOutputMacros(lineStart, this.tokenizer.line);
+      this.expandOutputMacros(this.tokenizer.line);
     }
-    return this.output;
+    return this.output.text();
   }
 
   // The tokenizer is already on the next line.
-  private expandOutputMacros(start: number, line: number): void {
-    this.output =
-      this.output.slice(0, start) + expandMacros(this.output.slice(start), this.state.defines, line - 1);
+  private expandOutputMacros(line: number): void {
+    this.output.expandOpenText((text) => expandMacros(text, this.state.defines, line - 1));
   }
 
   /** shader_preprocessor.cpp:377 */
   private directive(): void {
-    const name = this.tokenizer.identifier(true);
+    const column = this.tokenizer.columnOfLast();
+    const name = this.tokenizer.directiveName();
     switch (name) {
       case 'if':
       case 'elif':
         throw notTranspiled(instruction(`#${name}`)!, {
           file: this.state.currentFile,
           line: this.tokenizer.line + 1,
-          column: 1,
+          column,
         });
       case 'ifdef':
         return this.ifdef(true);
@@ -287,7 +296,7 @@ class FilePreprocessor {
       throw new PreprocessorError(`Cyclic include found: ${path}`, line);
     if (this.state.includes.has(include.path)) return;
     this.state.includes.add(include.path);
-    this.output += `@@>${include.path}\n${this.includedText(include, line)}\n@@<${include.path}\n`;
+    this.output.append(`@@>${include.path}\n${this.includedText(include, line)}\n@@<${include.path}\n`);
   }
 
   private resolvedPath(quoted: string): string {
@@ -304,7 +313,7 @@ class FilePreprocessor {
     const outerDepth = state.conditionDepth;
     state.currentFile = include.path;
     state.conditionDepth = 0;
-    const text = new FilePreprocessor(state).run(include.code);
+    const text = new FilePreprocessor(state, include.code).run();
     state.currentFile = outerFile;
     state.conditionDepth = outerDepth;
     state.includeDepth -= 1;

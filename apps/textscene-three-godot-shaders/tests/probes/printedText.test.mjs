@@ -4,8 +4,8 @@ import { printedProbes, printedTextFaults } from '../../../../scripts/godot-prob
 
 const SOURCE = 'float probe(float a0) { return a0 + a0 * a0; }';
 const PROBE = { name: 'sum', source: SOURCE, inputs: [[1]], rows: [] };
-const PRINT = (source) =>
-  source === SOURCE ? 'float probe(float a0) {\n\treturn (a0 + (a0 * a0));\n}' : undefined;
+const PRINTED_SOURCE = 'float probe(float a0) {\n\treturn (a0 + (a0 * a0));\n}';
+const PRINT = (probe) => (probe.source === SOURCE ? PRINTED_SOURCE : undefined);
 
 /** Pixels of a one-lane float probe: the result bits, then the sentinel. */
 const drawn = (bits) => [bits, SENTINEL_BITS];
@@ -13,7 +13,15 @@ const [PRINTED] = printedProbes([PROBE], PRINT);
 
 describe('the printed form of each probe', () => {
   it('holds the printed text under its own name, with its original', () => {
-    expect(PRINTED).toMatchObject({ name: 'printed-sum', source: PRINT(SOURCE), original: PROBE });
+    expect(PRINTED).toMatchObject({ name: 'printed-sum', source: PRINTED_SOURCE, original: PROBE });
+  });
+
+  it('reads no include and records no preprocessed text, as its text is preprocessed already', () => {
+    const [printed] = printedProbes(
+      [{ ...PROBE, includes: { 'a.gdshaderinc': '' }, recordsPreprocessed: true }],
+      PRINT
+    );
+    expect([printed.includes, printed.recordsPreprocessed]).toEqual([undefined, false]);
   });
 
   it('leaves out a probe the front end refuses', () => {

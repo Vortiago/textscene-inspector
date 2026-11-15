@@ -125,7 +125,7 @@ function pragmaProbes() {
   return cases.map(([word, rows, source]) => probeOf(`pragma-${word}`, rows, source));
 }
 
-// Include names are unique across probes, as every probe shares one project.
+// An include name has one text across probes, as every probe shares one project.
 function includeProbe(word, source, includes, rows = ['#include']) {
   return { ...probeOf(`include-${word}`, rows, source), includes };
 }
@@ -174,9 +174,17 @@ function includeProbes() {
       { 'pp_macro_user.gdshaderinc': 'float halved(float x) { return HALF(x) + 1.0; }\n' },
       ['#include', '#define']
     ),
+    // The outer file's macros expand over the include markers too, as Godot's do.
+    includeProbe(
+      'marker-expanded',
+      '#define pp_marker 1\n#include "pp_marker.gdshaderinc"\nfloat probe(float a) { return marked(a); }',
+      { 'pp_marker.gdshaderinc': 'float marked(float x) { return x + 1.0; }\n' },
+      ['#include', '#define']
+    ),
   ];
 }
 
+// Each records Godot's preprocessed text: a built-in define such as CURRENT_RENDERER needs no `#`.
 export const PREPROCESSOR_PROBES = [
   ...defineProbes(),
   ...undefProbes(),
@@ -184,4 +192,4 @@ export const PREPROCESSOR_PROBES = [
   ...errorProbes(),
   ...pragmaProbes(),
   ...includeProbes(),
-];
+].map((probe) => ({ ...probe, recordsPreprocessed: true }));

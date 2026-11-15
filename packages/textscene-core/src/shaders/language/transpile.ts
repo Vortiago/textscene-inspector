@@ -4,7 +4,7 @@
  */
 
 import { emitShader, type TranspiledFunction } from './emitter.js';
-import { parseShader, type ShaderOptions } from './parseShader.js';
+import { parsedShader, type ParsedShader, type ShaderOptions } from './parseShader.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
 import { checkTranspiled } from './transpiledRows.js';
 
@@ -18,7 +18,11 @@ export interface TranspiledShader {
 
 /** The functions of `source`, preprocessed with `options`. */
 export function transpileShadingLanguage(source: string, options: ShaderOptions = {}): TranspiledShader {
-  const tree = parseShader(source, options);
+  return transpileParsedShader(parsedShader(source, options));
+}
+
+/** The functions of a parsed shader, for a caller that has read its tree already. */
+export function transpileParsedShader({ tree }: ParsedShader): TranspiledShader {
   checkTranspiled(tree);
   const entry = tree.shaderType && TEMPLATE_ENTRIES[tree.shaderType];
   if (entry)
