@@ -222,6 +222,15 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 - The overrun trim of a right-to-left line keeps its logical start and draws the ellipsis at
   the visual left (`text_server_adv.cpp:6053-6067`, `label.h:198-241`).
 
+## Script runs
+
+Each script run shapes apart, as Godot's `ScriptIterator` splits the text (`script_iterator.cpp`,
+`text_server_adv.cpp:7346-7352`). Kerning and the rounding remainder stop where the script changes.
+
+- A Common or Inherited character, such as a space, a digit or a mark, joins the run around it.
+- A closing bracket takes the script its opening bracket took.
+- An emoji stretch and an unassigned code point each form a run of their own.
+
 ## Known limitations
 
 - **Not drawn** Arabic letters draw in their isolated forms, since the shaper does not join them.
