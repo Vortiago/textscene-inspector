@@ -11,7 +11,7 @@ import { AtlasOmniShadow } from './positionalShadow/atlasOmniShadow';
 import { installedFramebufferHeight } from './shadowFilter/framebufferRows.testkit';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy';
 import { installShadowPass, readShadowMaps } from './shadowPass';
-import { holdPositionalShadowAtlas } from './positionalShadow/shadowAtlasTarget';
+import { holdPositionalShadowAtlas, positionalShadowAtlas } from './positionalShadow/shadowAtlasTarget';
 import { AtlasAreaShadow, type AreaShadowLight } from './positionalShadow/atlasAreaShadow';
 import { AtlasDepthMaterial, ParaboloidDepthMaterial } from './positionalShadow/atlasDepthMaterials';
 import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow';
@@ -36,6 +36,7 @@ function fakeRenderer(): { renderer: THREE.WebGLRenderer; threePass: ReturnType<
     getActiveCubeFace: () => 0,
     getActiveMipmapLevel: () => 0,
     setRenderTarget: vi.fn(),
+    initRenderTarget: vi.fn(),
     getDrawingBufferSize: (size: THREE.Vector2) => size.set(955, 756),
     ...profiledRendererMembers(),
   };
@@ -76,6 +77,16 @@ const runPass = (renderer: THREE.WebGLRenderer, lights: THREE.Light[], scene: TH
   renderer.shadowMap.render(lights, scene, new THREE.PerspectiveCamera());
 
 describe('installShadowPass', () => {
+  it('allocates the positional atlas before three’s pass, so a program samples it with no slot drawn', () => {
+    const { renderer, threePass } = fakeRenderer();
+    installShadowPass(renderer);
+    renderer.shadowMap.render([], new THREE.Scene(), new THREE.PerspectiveCamera());
+    expect(renderer.initRenderTarget).toHaveBeenCalledWith(positionalShadowAtlas());
+    expect(vi.mocked(renderer.initRenderTarget).mock.invocationCallOrder[0]).toBeLessThan(
+      threePass.mock.invocationCallOrder[0]!
+    );
+  });
+
   it('runs three’s pass, then copies each omni light that holds a slot', () => {
     const copy = vi.spyOn(OmniShadowCopy.prototype, 'copy').mockImplementation(() => {});
     const { renderer, threePass } = fakeRenderer();

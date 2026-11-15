@@ -10,7 +10,7 @@
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
-import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../godot/scene/viewport.js';
+import type { PositionalShadowAtlasSettings } from '../godot/rendering/lights/positionalShadowAtlas.js';
 import {
   fitSceneDirectionalShadows,
   releaseSceneLights,
@@ -19,6 +19,9 @@ import { sceneLights } from './directionalShadow/lightLists.js';
 import { fitScenePositionalShadows } from './positionalShadow/fitScenePositionalShadows.js';
 import { activeShadowAtlas, ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas.js';
 import { observeSceneCamera } from './sceneRenderCamera.js';
+import { useByValue } from './hooks/useByValue.js';
+import { sameData } from '../utils/sameData.js';
+import { useRootViewportDescription } from './viewportRender/useRootViewportDescription.js';
 import { writeAreaLightUniforms } from './areaLight/areaLightFalloff.js';
 import { updateAreaLightAtlas } from './areaLight/areaLightAtlas.js';
 import { areAtlasesUpdatedPerFrame } from './textureAtlas/updateTextureAtlases.js';
@@ -66,13 +69,18 @@ function prepareSceneLights(
 
 /**
  * Runs the light pass before every render of `scene`, until unmount. A render outside any
- * SubViewport pass is the main view's, which takes the root viewport's atlas. Unmount hands each
- * declared directional light its own shading and layers back. Null runs nothing.
+ * SubViewport pass is the main view's, which takes the root viewport's atlas, built from
+ * `rootAtlasSettings` and built again when they change by value. Unmount hands each declared
+ * directional light its own shading and layers back. Null runs nothing.
  */
-export function useSceneShadowFit(scene: THREE.Scene | null): void {
+export function useSceneShadowFit(
+  scene: THREE.Scene | null,
+  rootAtlasSettings: PositionalShadowAtlasSettings
+): void {
+  const settings = useByValue(rootAtlasSettings, sameData);
   useEffect(() => {
     if (!scene) return undefined;
-    const rootAtlas = new ViewportShadowAtlas(ROOT_POSITIONAL_SHADOW_ATLAS);
+    const rootAtlas = new ViewportShadowAtlas(settings);
     const stopObserving = observeSceneCamera(scene, (camera) =>
       prepareSceneLights(scene, camera, activeShadowAtlas() ?? rootAtlas, performance.now())
     );
@@ -82,11 +90,15 @@ export function useSceneShadowFit(scene: THREE.Scene | null): void {
       releaseSoftShadowSearch(scene);
       rootAtlas.dispose();
     };
-  }, [scene]);
+  }, [scene, settings]);
 }
 
 /** Mounted once per 3D canvas, for the canvas's own scene. */
 export function SceneShadowFitter() {
-  useSceneShadowFit(useThree((state) => state.scene));
+  const { positionalShadowAtlas } = useRootViewportDescription();
+  useSceneShadowFit(
+    useThree((state) => state.scene),
+    positionalShadowAtlas
+  );
   return null;
 }

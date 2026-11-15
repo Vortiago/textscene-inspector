@@ -1,0 +1,15 @@
+; A res:// root of its own, because `rendering/lights_and_shadows/positional_shadow/atlas_size` is a
+; project setting and no .tscn can carry one. Kept in a subdirectory: a project.godot at
+; scenes/fixtures would apply to every other fixture.
+
+config_version=5
+
+[application]
+
+config/name="Positional shadow atlas size"
+run/main_scene="res://unit-positional-shadow-atlas-size.tscn"
+config/features=PackedStringArray("4.6")
+
+[rendering]
+
+lights_and_shadows/positional_shadow/atlas_size=512

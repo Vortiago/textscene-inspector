@@ -26,12 +26,16 @@ import { AnisotropicFilteringProvider } from '../../../r3f/contexts/AnisotropicF
 import { CanvasOverWorldScopeProvider } from './canvasOverWorldScope';
 import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { useSceneShadowFit } from '../../../r3f/SceneShadowFitter';
+import { useRootViewportDescription } from '../../../r3f/viewportRender/useRootViewportDescription.js';
 import { useSceneDepthPrepass } from '../../../r3f/depthPrepass/SceneDepthPrepass';
 import {
   renderWithShadowAtlas,
   ViewportShadowAtlas,
 } from '../../../r3f/positionalShadow/viewportShadowAtlas';
-import { viewportPositionalShadowAtlas } from '../../../godot/scene/viewport';
+import {
+  VIEWPORT_POSITIONAL_SHADOW_ATLAS,
+  viewportPositionalShadowAtlas,
+} from '../../../godot/scene/viewport';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
 import { CanvasLightPass } from '../../../r3f/lighting2d/CanvasLightPass';
 import { createViewportLightPassHost } from './viewportLightPassHost';
@@ -176,7 +180,7 @@ export function OffscreenViewportPass({
   // and draws its own depth prepass. An inline pass renders the parent scene, which its own canvas
   // serves, the canvas's world serves its own scene, and a 2D portal holds no 3D surface.
   const portalLightScene = portals3D && !drawnCanvasWorld ? passScene : null;
-  useSceneShadowFit(portalLightScene);
+  useSceneShadowFit(portalLightScene, useRootViewportDescription().positionalShadowAtlas);
   useSceneDepthPrepass(portalLightScene);
   const shadowAtlas = useViewportShadowAtlas(properties);
   const projectMipmapBias = useProjectTextureMipmapBias();
@@ -477,7 +481,10 @@ function useViewportShadowAtlas(properties: SubViewportProperties): ViewportShad
     positional_shadow_atlas_quad_3: quad3,
   } = properties;
   const atlas = useMemo(
-    () => new ViewportShadowAtlas(viewportPositionalShadowAtlas(size, [quad0, quad1, quad2, quad3])),
+    () =>
+      new ViewportShadowAtlas(
+        viewportPositionalShadowAtlas(size, [quad0, quad1, quad2, quad3], VIEWPORT_POSITIONAL_SHADOW_ATLAS)
+      ),
     [size, quad0, quad1, quad2, quad3]
   );
   useDisposeOnRelease(atlas);

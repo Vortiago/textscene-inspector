@@ -19,6 +19,9 @@ export const LIGHTING_SCENES = [
   { name: 'glow-exposure', file: 'unit-glow-exposure.tscn' },
   // The Linear upscale mode, from a Fixture project's project.godot: a bilinear read of each level.
   { name: 'glow-linear-upscale', file: 'glow-linear-upscale/unit-glow-linear-upscale.tscn' },
+  // The root's positional shadow atlas at 512, from a Fixture project's project.godot: the spot light's
+  // shadow map is coarser, so its edge steps and the floor shows acne stripes. Every other scene keeps 4096.
+  { name: 'positional-shadow-atlas-size', file: 'positional-shadow-atlas-size/unit-positional-shadow-atlas-size.tscn' },
   // The root's debanding, from a Fixture project's project.godot: Godot's dither on the sky.
   { name: 'debanding', file: 'debanding/unit-debanding.tscn' },
   // A frame under 256 px has fewer glow levels, and a weighted level past the last reads that one:

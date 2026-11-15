@@ -19,6 +19,8 @@ import {
   SDF_OVERSIZE_NAMES,
   SDF_SCALE_NAMES,
   viewportPositionalShadowAtlas,
+  ROOT_POSITIONAL_SHADOW_ATLAS,
+  VIEWPORT_POSITIONAL_SHADOW_ATLAS,
   viewportCanvasItemTextureDefaults,
   VRS_MODE_NAMES,
   VRS_UPDATE_MODE_NAMES,
@@ -28,30 +30,40 @@ describe('viewportPositionalShadowAtlas', () => {
   it('counts the shadows each subdivision label names, 0 for Disabled', () => {
     for (const [value, label] of Object.entries(POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES)) {
       const subdiv = Number(value);
-      expect(viewportPositionalShadowAtlas(undefined, [subdiv]).quadrantShadows[0]).toBe(
-        label === 'DISABLED' ? 0 : Number(label)
-      );
+      expect(
+        viewportPositionalShadowAtlas(undefined, [subdiv], VIEWPORT_POSITIONAL_SHADOW_ATLAS)
+          .quadrantShadows[0]
+      ).toBe(label === 'DISABLED' ? 0 : Number(label));
     }
   });
 
   it('reads the authored size and quadrant subdivisions', () => {
-    expect(viewportPositionalShadowAtlas(4096, [1, 2, 3, 6])).toEqual({
+    expect(viewportPositionalShadowAtlas(4096, [1, 2, 3, 6], VIEWPORT_POSITIONAL_SHADOW_ATLAS)).toEqual({
       size: 4096,
       quadrantShadows: [1, 4, 16, 1024],
     });
   });
 
   it('keeps the Viewport defaults where the scene authors nothing (edge case)', () => {
-    expect(viewportPositionalShadowAtlas(undefined, [])).toEqual({
+    expect(viewportPositionalShadowAtlas(undefined, [], VIEWPORT_POSITIONAL_SHADOW_ATLAS)).toEqual({
       size: 2048,
       quadrantShadows: [4, 4, 16, 64],
     });
   });
 
   it('keeps the default for a value the setter refuses (error case)', () => {
-    expect(viewportPositionalShadowAtlas(-1, [7, -1, 2.5, undefined])).toEqual({
+    expect(
+      viewportPositionalShadowAtlas(-1, [7, -1, 2.5, undefined], VIEWPORT_POSITIONAL_SHADOW_ATLAS)
+    ).toEqual({
       size: 2048,
       quadrantShadows: [4, 4, 16, 64],
+    });
+  });
+
+  it("keeps the defaults it is given, as the root's 4096 (scene_tree.cpp:2130)", () => {
+    expect(viewportPositionalShadowAtlas(undefined, [undefined, 1], ROOT_POSITIONAL_SHADOW_ATLAS)).toEqual({
+      size: 4096,
+      quadrantShadows: [4, 1, 16, 64],
     });
   });
 });

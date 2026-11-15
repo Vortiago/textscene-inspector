@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { ROOT_POSITIONAL_SHADOW_ATLAS, viewportPositionalShadowAtlas } from '../../godot/scene/viewport';
+import { ROOT_POSITIONAL_SHADOW_ATLAS, VIEWPORT_POSITIONAL_SHADOW_ATLAS } from '../../godot/scene/viewport';
 import { activeShadowAtlas, renderWithShadowAtlas, ViewportShadowAtlas } from './viewportShadowAtlas';
 
 const rootAtlas = () => new ViewportShadowAtlas(ROOT_POSITIONAL_SHADOW_ATLAS);
-const subViewportAtlas = () => new ViewportShadowAtlas(viewportPositionalShadowAtlas(undefined, []));
+const subViewportAtlas = () => new ViewportShadowAtlas(VIEWPORT_POSITIONAL_SHADOW_ATLAS);
 
 /** An omni light whose shadow holds a cube of `size`, as a fit leaves it. */
 function omniWithCube(size: number): { light: THREE.PointLight; map: THREE.WebGLCubeRenderTarget } {
@@ -139,7 +139,7 @@ describe('ViewportShadowAtlas and the shared atlas texture', () => {
     vi.resetModules();
     const target = await import('./shadowAtlasTarget');
     const { ViewportShadowAtlas: FreshAtlas } = await import('./viewportShadowAtlas');
-    const sub = new FreshAtlas(viewportPositionalShadowAtlas(undefined, []));
+    const sub = new FreshAtlas(VIEWPORT_POSITIONAL_SHADOW_ATLAS);
     expect(target.positionalShadowAtlas().width).toBe(2048);
     const root = new FreshAtlas(ROOT_POSITIONAL_SHADOW_ATLAS);
     expect(target.positionalShadowAtlas().width).toBe(4096);

@@ -19,6 +19,8 @@ import { SelectionProvider } from './contexts/SelectionContext';
 import { ViewportModeProvider } from './contexts/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
+import { waitFor } from '@testing-library/react';
+import { withProject } from './testing/ProjectFixture';
 
 import './nodes/index';
 
@@ -182,5 +184,24 @@ describe('<SceneShadowFitter> positional fit on its own', () => {
     light.shadow.mapSize.set(64, 64);
     renderThrough(renderer, cameraAt(5));
     expect(light.shadow.mapSize.x).toBe(64);
+  });
+});
+
+describe("<SceneShadowFitter> under a project's atlas settings", () => {
+  it("fits the main view in the atlas the project's settings size", async () => {
+    const ProjectFixture = withProject('[rendering]\nlights_and_shadows/positional_shadow/atlas_size=512\n');
+    const light = declaredSpot();
+    const renderer = await ReactThreeTestRenderer.create(
+      <ProjectFixture>
+        <primitive object={light} />
+        <primitive object={light.target} />
+        <SceneShadowFitter />
+      </ProjectFixture>
+    );
+
+    await waitFor(() => {
+      renderThrough(renderer, cameraAt(5));
+      expect(light.shadow.mapSize.x).toBe(512 / 4);
+    });
   });
 });
