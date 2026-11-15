@@ -2,6 +2,7 @@ import type { Aabb } from '../../math/aabb.js';
 import { basisMultiply, type BasisComponents } from '../../math/basis.js';
 import { basisXform } from '../../math/basisFloat.js';
 import type { Plane } from '../../math/plane.js';
+import { quaternionMultiply } from '../../math/quaternion.js';
 import { storedReal as f } from '../../math/real.js';
 import type { Rect2 } from '../../math/rect2.js';
 import { multiplyTransform2D, transform2DXform, type Transform2DColumns } from '../../math/transform2d.js';
@@ -123,7 +124,7 @@ function matrixProduct(a: Variant, b: Variant): Variant | undefined {
     case 'PROJECTION':
       return make(a.type, m.multiplyProjection(a.value, b.value as typeof a.value));
     case 'QUATERNION':
-      return make(a.type, m.multiplyQuaternion(a.value, b.value as typeof a.value));
+      return make(a.type, quaternionMultiply(a.value, b.value as typeof a.value));
     default:
       return undefined;
   }

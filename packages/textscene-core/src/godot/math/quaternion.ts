@@ -37,11 +37,12 @@ export function quaternionFromAxisAngle(axis: Vector3, angle: number): Quaternio
 export function quaternionMultiply(left: Quaternion, right: Quaternion): Quaternion {
   const { x: lx, y: ly, z: lz, w: lw } = left;
   const { x: rx, y: ry, z: rz, w: rw } = right;
+  // `operator*=` (quaternion.h:237) sums each component left to right.
   return {
-    x: f(f(f(lw * rx) + f(lx * rw)) + f(f(ly * rz) - f(lz * ry))),
-    y: f(f(f(lw * ry) + f(ly * rw)) + f(f(lz * rx) - f(lx * rz))),
-    z: f(f(f(lw * rz) + f(lz * rw)) + f(f(lx * ry) - f(ly * rx))),
-    w: f(f(f(lw * rw) - f(lx * rx)) - f(f(ly * ry) + f(lz * rz))),
+    x: f(f(f(f(lw * rx) + f(lx * rw)) + f(ly * rz)) - f(lz * ry)),
+    y: f(f(f(f(lw * ry) + f(ly * rw)) + f(lz * rx)) - f(lx * rz)),
+    z: f(f(f(f(lw * rz) + f(lz * rw)) + f(lx * ry)) - f(ly * rx)),
+    w: f(f(f(f(lw * rw) - f(lx * rx)) - f(ly * ry)) - f(lz * rz)),
   };
 }
 

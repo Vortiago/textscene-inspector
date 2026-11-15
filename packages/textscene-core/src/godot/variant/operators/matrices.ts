@@ -2,7 +2,7 @@ import type { Aabb } from '../../math/aabb.js';
 import { basisInvert, type BasisComponents } from '../../math/basis.js';
 import { basisXform } from '../../math/basisFloat.js';
 import type { Plane } from '../../math/plane.js';
-import type { Quaternion } from '../../math/quaternion.js';
+import { quaternionDot, type Quaternion } from '../../math/quaternion.js';
 import { storedReal as f } from '../../math/real.js';
 import type { Rect2 } from '../../math/rect2.js';
 import { transform2DXform, type Transform2DColumns } from '../../math/transform2d.js';
@@ -219,18 +219,8 @@ export function projectionXformInv(p: ProjectionValue, v: Vector4Value): Vector4
   return { x: lane(0), y: lane(1), z: lane(2), w: lane(3) };
 }
 
-// quaternion.h:237, each sum taken left to right.
-export function multiplyQuaternion(a: Quaternion, b: Quaternion): Quaternion {
-  return {
-    x: f(f(f(f(a.w * b.x) + f(a.x * b.w)) + f(a.y * b.z)) - f(a.z * b.y)),
-    y: f(f(f(f(a.w * b.y) + f(a.y * b.w)) + f(a.z * b.x)) - f(a.x * b.z)),
-    z: f(f(f(f(a.w * b.z) + f(a.z * b.w)) + f(a.x * b.y)) - f(a.y * b.x)),
-    w: f(f(f(f(a.w * b.w) - f(a.x * b.x)) - f(a.y * b.y)) - f(a.z * b.z)),
-  };
-}
-
 export function quaternionIsNormalized(q: Quaternion): boolean {
-  const lengthSquared = f(f(f(f(q.x * q.x) + f(q.y * q.y)) + f(q.z * q.z)) + f(q.w * q.w));
+  const lengthSquared = quaternionDot(q, q);
   return lengthSquared === 1 || Math.abs(f(lengthSquared - 1)) < UNIT_EPSILON;
 }
 

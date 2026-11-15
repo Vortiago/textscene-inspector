@@ -4,6 +4,15 @@ import { runExpression, UnportedExpression } from './execute.js';
 
 // Each expected answer is Godot 4.6.3's Expression of the same text.
 describe('runExpression', () => {
+  it.each(['toString', 'constructor', '__proto__'])(
+    'reads %s as a name, which needs self, as Godot 4.6.3 does',
+    (name) => {
+      expect(runExpression(name)).toMatchObject({
+        executeError: "self can't be used because instance is null (not passed)",
+      });
+    }
+  );
+
   it('multiplies before it adds', () => {
     expect(runExpression('1 + 2 * 3')).toEqual({ value: variant('INT', 7n) });
   });

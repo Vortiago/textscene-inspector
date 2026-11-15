@@ -39,6 +39,14 @@ describe('quaternionMultiply', () => {
       0.5636
     );
   });
+
+  it('sums each component left to right, to the float32 bits Godot 4.6.3 gives', () => {
+    const f = Math.fround;
+    const left = { x: f(0.683), y: f(0.045), z: f(0.366), w: f(-0.55) };
+    const right = { x: f(0.533), y: f(-0.504), z: f(0.453), w: f(-0.531) };
+    const bits = new Uint8Array(Float32Array.from(Object.values(quaternionMultiply(left, right))).buffer);
+    expect(Buffer.from(bits).toString('hex')).toBe('0fe6e6bed4510e3e6ecc4fbf03455cbe');
+  });
 });
 
 describe('quaternionInverse', () => {

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { quaternionFromAxisAngle } from '../../math/quaternion.js';
 import {
   divideTransform2D,
-  multiplyQuaternion,
   quaternionXform,
   transform2DXformInv,
   transform3DXformAabb,
@@ -19,15 +18,6 @@ describe('matrices', () => {
 
   it('divides every column of a Transform2D', () => {
     expect(divideTransform2D(SCALE_AND_MOVE, 2)).toEqual({ a: 1, b: 0, c: 0, d: 2, tx: 0.5, ty: 0.5 });
-  });
-
-  it('multiplies two quaternions', () => {
-    expect(multiplyQuaternion({ x: 1, y: 2, z: 3, w: 4 }, { x: 5, y: 6, z: 7, w: 8 })).toEqual({
-      x: 24,
-      y: 48,
-      z: 48,
-      w: -6,
-    });
   });
 
   it('rotates a vector with the float rounding of a quarter turn', () => {

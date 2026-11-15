@@ -287,9 +287,9 @@ export class ExpressionTokenizer {
     }
     // Godot steps back even after the end, so the last character is read again (expression.cpp:446).
     this.offset -= 1;
-    const word = WORD_TOKENS[id];
+    const word = Object.hasOwn(WORD_TOKENS, id) ? WORD_TOKENS[id] : undefined;
     if (word) return { type: word } as Token;
-    const constant = CONSTANT_WORDS[id];
+    const constant = Object.hasOwn(CONSTANT_WORDS, id) ? CONSTANT_WORDS[id] : undefined;
     if (constant) return { type: 'CONSTANT', value: constant };
     const type = TYPES_BY_NAME.get(id);
     if (type) return { type: 'BASIC_TYPE', value: type };
