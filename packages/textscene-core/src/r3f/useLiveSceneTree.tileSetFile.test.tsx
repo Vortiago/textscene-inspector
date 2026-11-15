@@ -1,6 +1,7 @@
 /**
  * The live tree requests a tile layer's TileSet file itself: a `.tres` TileSet adds its scene tiles
  * as live children of the layer with no tile component mounted, once the tree's own request loads it.
+ * The tile component reads the same file on the same live files, so both give one answer in each state.
  */
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
@@ -12,6 +13,7 @@ import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { busServing } from '../resources/testing/servingFileBus.js';
 import { HierarchyProvider } from './contexts/HierarchyContext.js';
 import { useLiveNode } from './useLiveSceneTree.js';
+import { liveFilesOf } from './liveFiles.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { useTileSetModel } from './useTileSetModel.js';
 import './nodes/index';
@@ -58,12 +60,16 @@ async function settle() {
   }
 }
 
-/** A loader over the TileSet file and the tile's scene, and a wrapper with `MAIN` in context. */
-function mount() {
-  const { bus, provider, loads } = busServing({
-    'res://tiles.tres': TILE_SET_FILE,
-    'res://crate.tscn': CRATE,
-  });
+const TILE_SET_PATH = 'res://tiles.tres';
+
+/**
+ * A loader over the tile's scene and `tileSetFile` (null: the file is missing), and a wrapper with
+ * `MAIN` in context. `isTileSetHeld` keeps the TileSet loading.
+ */
+function mount(tileSetFile: string | null = TILE_SET_FILE, isTileSetHeld = false) {
+  const files: Record<string, string> = { 'res://crate.tscn': CRATE };
+  if (tileSetFile !== null) files[TILE_SET_PATH] = tileSetFile;
+  const { bus, provider, loads } = busServing(files, isTileSetHeld ? [TILE_SET_PATH] : []);
   const loader = new ResourceLoader(bus);
   loader.setProvider(provider);
   // The tree's own reads of scenes stay with their consumers, so the test requests the tile's scene.
@@ -77,8 +83,8 @@ function mount() {
       </ResourceLoaderProvider>
     </HierarchyProvider>
   );
-  const tileSetLoads = () => loads.filter((path) => path === 'res://tiles.tres').length;
-  return { wrapper, tileSetLoads };
+  const tileSetLoads = () => loads.filter((path) => path === TILE_SET_PATH).length;
+  return { wrapper, tileSetLoads, liveFiles: liveFilesOf(loader) };
 }
 
 describe('the live tree over a TileSet file', () => {
@@ -104,5 +110,33 @@ describe('the live tree over a TileSet file', () => {
     expect(tileSetLoads()).toBe(1);
     expect(result.current.tile?.node.name).toBe('@SceneTile@0_0');
     expect(result.current.tileSet.status).toBe('loaded');
+  });
+
+  it('reads the TileSet of a tile component on the live files of the tree', async () => {
+    const { wrapper, liveFiles } = mount();
+
+    renderHook(() => useTileSetModel('ExtResource("tiles")'), { wrapper });
+    await settle();
+
+    expect(liveFiles.files().has(TILE_SET_PATH)).toBe(true);
+  });
+
+  it.each([
+    { state: 'loading', file: TILE_SET_FILE, isHeld: true, status: 'pending', hasTile: false },
+    { state: 'missing', file: null, isHeld: false, status: 'unavailable', hasTile: false },
+    { state: 'not parsed', file: 'not a resource', isHeld: false, status: 'unavailable', hasTile: false },
+    { state: 'loaded', file: TILE_SET_FILE, isHeld: false, status: 'loaded', hasTile: true },
+  ])('gives the tree and the tile component one answer for a $state TileSet', async (row) => {
+    const { wrapper, liveFiles } = mount(row.file, row.isHeld);
+
+    const { result } = renderHook(
+      () => ({ tile: useLiveNode(SCENE_TILE), tileSet: useTileSetModel('ExtResource("tiles")') }),
+      { wrapper }
+    );
+    await settle();
+
+    expect(result.current.tileSet.status).toBe(row.status);
+    expect(result.current.tile !== null).toBe(row.hasTile);
+    expect(liveFiles.files().size).toBe(1);
   });
 });
