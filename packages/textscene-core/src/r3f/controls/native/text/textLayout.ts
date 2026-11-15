@@ -10,6 +10,7 @@
 
 import { round as godotRound } from '../../../../godot/math/math';
 import { hexCodeBoxAdvanceSize } from './hexCodeBox';
+import { lineExtentPx, shapedBlockHeightPx } from './lineExtent';
 import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import {
   fontUsesSubpixelPositioning,
@@ -19,6 +20,7 @@ import {
   getFontExtraAdvancePx,
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
+  getFontChainHeightPx,
   getFontGlyphAdvancePx,
   getFontRunGlyphAdvancePx,
   fallbackChainOf,
@@ -239,6 +241,13 @@ export interface TextLineLayout {
    */
   paragraphIndex: number;
   /**
+   * How far the line reaches above its baseline, px: `shaped_text_get_ascent` of the line, which
+   * `lineExtentPx` grows over its own glyphs. A Label pads it (`labelLineExtent`).
+   */
+  ascentPx: number;
+  /** How far the line reaches below its baseline, px: `shaped_text_get_descent` of the line. */
+  descentPx: number;
+  /**
    * The source index where this line's paragraph starts: Label's `para.start`. `shapeText` sets it.
    * Label hides an ellipsis by it, as the ellipsis glyph has no source character of its own.
    */
@@ -290,16 +299,30 @@ export interface TextLayoutResult {
   /** The text the lines were shaped from, after `uppercase`. A glyph's `sourceIndex` is a UTF-16 offset into it. */
   shapedText: string;
   lines: TextLineLayout[];
-  /** `getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx)`, one pitch for every line. */
+  /**
+   * `getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx)`: the pitch of a line of the span face
+   * alone, for a reader with no line to measure (an empty text, a caret). A line steps by its own
+   * height (`lineTopsPx`).
+   */
   linePitchPx: number;
+  /**
+   * `Font::get_height` of the span face (`getFontChainHeightPx`): the tallest face of its fallback
+   * chain, which a Button's minimum size reads though no glyph draws in that face.
+   */
+  fontHeightPx: number;
+  /** The gap after each line, px, which every line's height includes (`lineHeightPx`). */
+  lineSpacingPx: number;
   /** The widest line's `widthPx`. */
   widthPx: number;
-  /** `lines.length * linePitchPx`, plus the `paragraph_spacing` of each paragraph where Label windows the lines (`windowLabelLines`). */
+  /**
+   * The size of the text buffer, `TextParagraph::get_size().y` (`text_paragraph.cpp:601-611`): each
+   * line's ascent plus descent ceiled, plus the line spacing (`shapedBlockHeightPx`). Label sums its
+   * own lines and paragraph spacing instead (`windowLabelLines`).
+   */
   heightPx: number;
   /**
-   * `getFontAscentPx(fontMetrics, fontSizePx)`: the baseline, measured down from the line top. Each
-   * painter anchors a line here, so a hand-built result must state it: a wrong default misses by a
-   * whole ascent.
+   * `getFontAscentPx(fontMetrics, fontSizePx)`: the baseline of a line of the span face alone. A
+   * painter anchors each line at its own ascent (`lineBaselinesPx`).
    */
   baselineOffsetPx: number;
   /**
@@ -315,53 +338,42 @@ export function infersRtl(layout: TextLayoutResult | null): boolean {
 }
 
 /**
- * Re-wraps one shaped line as a one-line result drawn from y = 0; the caller's `<group>` supplies
- * the cumulative Y. It bypasses `shapeText`, so it echoes the parent's `fontMetrics` and baseline.
- * Override `baselineOffsetPx` and `fontMetrics` for a RichTextLabel `[b]`/`[i]` run shaped at its own
- * size, in its own face. `linePitchPx` stays the parent's.
+ * Re-wraps one shaped line as a one-line result drawn from y = 0, its baseline at the line's own
+ * ascent; the caller's `<group>` supplies the cumulative Y. It bypasses `shapeText`, so it echoes
+ * the parent's `fontMetrics`. Override `fontMetrics` for a RichTextLabel run in another face.
  */
 export function soloLineLayout(
   line: TextLineLayout,
   parent: TextLayoutResult,
-  baselineOffsetPx: number = parent.baselineOffsetPx,
   fontMetrics: FontMetrics = parent.fontMetrics
 ): TextLayoutResult {
   return {
     shapedText: parent.shapedText,
     lines: [line],
     linePitchPx: parent.linePitchPx,
+    fontHeightPx: parent.fontHeightPx,
+    lineSpacingPx: parent.lineSpacingPx,
     widthPx: line.widthPx,
-    heightPx: Math.max(parent.linePitchPx, baselineOffsetPx + deepestDescentPx(line)),
-    baselineOffsetPx,
+    heightPx: Math.max(parent.linePitchPx, line.ascentPx + deepestDescentPx(line)),
+    baselineOffsetPx: parent.baselineOffsetPx,
     fontMetrics,
   };
 }
 
 /**
- * A one-line `layout` with its baseline at the largest ascent of the faces its glyphs draw in, and
- * its height grown to their descent: Godot's one-line text buffer (`text_server_adv.cpp:5161-5162`).
- * A layout of several lines is returned as it is: one pitch serves every line of it.
- */
-export function withGlyphFaceAscent(layout: TextLayoutResult): TextLayoutResult {
-  const [line] = layout.lines;
-  if (!line || layout.lines.length > 1) return layout;
-  let ascentPx = layout.baselineOffsetPx;
-  for (const glyph of line.glyphs)
-    ascentPx = Math.max(ascentPx, getFontAscentPx(glyph.fontMetrics, glyph.fontSizePx));
-  const heightPx = Math.max(layout.heightPx, ascentPx + deepestDescentPx(line));
-  if (ascentPx === layout.baselineOffsetPx && heightPx === layout.heightPx) return layout;
-  return { ...layout, baselineOffsetPx: ascentPx, heightPx };
-}
-
-/**
- * The largest descent of a face on `line` at its size, 0 for no glyph. A canvas raster reaches this
+ * The largest descent of a glyph on `line`, from its face at its size or its downward `yOffset`
+ * (`text_server_adv.cpp:5146-5172`), 0 for no glyph. A canvas raster reaches this
  * far below the baseline, so a glyph of a fallback face with a deeper descent is not cut at the
  * bottom. The raster grows only downwards: the baseline stays.
  */
 function deepestDescentPx({ glyphs }: TextLineLayout): number {
   let deepestPx = 0;
   for (const glyph of glyphs)
-    deepestPx = Math.max(deepestPx, getFontDescentPx(glyph.fontMetrics, glyph.fontSizePx));
+    deepestPx = Math.max(
+      deepestPx,
+      getFontDescentPx(glyph.fontMetrics, glyph.fontSizePx),
+      glyph.yOffset ?? 0
+    );
   return deepestPx;
 }
 
@@ -1310,9 +1322,9 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     paragraphSeparator,
     terminateLastParagraph
   ).entries()) {
-    // The terminator is in the shaped text but not the source, so the per-character closures, keyed
-    // into the whole text, are offset back, and the index past the paragraph's end takes the last value.
-    const sourceIndex = (i: number): number => para.offset + Math.max(0, Math.min(i, para.text.length - 1));
+    // The terminator is in the shaped text but not the source. It takes the style of the separator
+    // it stands for, as RichTextLabel shapes it in the font of its newline (`rich_text_label.cpp:643`).
+    const sourceIndex = (i: number): number => para.offset + Math.min(i, para.text.length);
     const paraText = para.terminated ? para.text + PARAGRAPH_TERMINATOR : para.text;
     const paragraphBidi = { direction, language, bidiOverride, ...paragraphBidiAt?.(para.offset) };
     const indentPx = paragraphIndentPx?.(para.offset) ?? 0;
@@ -1412,15 +1424,23 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
         ...(indentPx > 0 && { indentPx }),
         isRtl: bidi.isRtl,
         ...(isDrawnRtl(paragraphBidi) && { isDrawnRtl: true }),
+        ...lineExtentPx(glyphs, fontMetrics, fontSizePx),
       });
     }
   }
 
   const widthPx = widestLineWidthPx(lines);
-  const { baselineOffsetPx, linePitchPx } = lineMetrics(lines, fontMetrics, fontSizePx, lineSpacingPx);
-  const heightPx = lines.length * linePitchPx;
-
-  return { shapedText: transformed, lines, linePitchPx, widthPx, heightPx, baselineOffsetPx, fontMetrics };
+  return {
+    shapedText: transformed,
+    lines,
+    linePitchPx: getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx),
+    fontHeightPx: getFontChainHeightPx(fontMetrics, fontSizePx),
+    lineSpacingPx,
+    widthPx,
+    heightPx: shapedBlockHeightPx(lines, lineSpacingPx),
+    baselineOffsetPx: getFontAscentPx(fontMetrics, fontSizePx),
+    fontMetrics,
+  };
 }
 
 /** The placement of each glyph of the cluster `placed` draws, at its own pen and advance. */
@@ -1442,43 +1462,6 @@ function clusterPlacements(placed: GlyphPlacement, glyphs: readonly ClusterGlyph
     pen += glyph.advance;
     return placement;
   });
-}
-
-/** How far the glyph offsets of `glyphs` reach above and below the baseline, px: `-y_off` and `y_off`. */
-export function glyphOffsetReachPx(glyphs: Iterable<GlyphPlacement>): { abovePx: number; belowPx: number } {
-  let abovePx = 0;
-  let belowPx = 0;
-  for (const { yOffset = 0 } of glyphs) {
-    abovePx = Math.max(abovePx, -yOffset);
-    belowPx = Math.max(belowPx, yOffset);
-  }
-  return { abovePx, belowPx };
-}
-
-/**
- * The font's ascent and pitch, each grown by a glyph offset past the font's line: Godot's line
- * ascent is `MAX(ascent, -y_off)` and its descent `MAX(descent, y_off)` (`text_server_adv.cpp:5161-5162`).
- * One pitch serves every line, so the furthest offset of any line sets it.
- */
-function lineMetrics(
-  lines: readonly TextLineLayout[],
-  fontMetrics: FontMetrics,
-  fontSizePx: number,
-  lineSpacingPx: number
-): { baselineOffsetPx: number; linePitchPx: number } {
-  const ascentPx = getFontAscentPx(fontMetrics, fontSizePx);
-  const descentPx = getFontDescentPx(fontMetrics, fontSizePx);
-  let liftPx = 0;
-  let dropPx = 0;
-  for (const { glyphs } of lines) {
-    const { abovePx, belowPx } = glyphOffsetReachPx(glyphs);
-    liftPx = Math.max(liftPx, abovePx - ascentPx);
-    dropPx = Math.max(dropPx, belowPx - descentPx);
-  }
-  return {
-    baselineOffsetPx: ascentPx + liftPx,
-    linePitchPx: getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx) + liftPx + dropPx,
-  };
 }
 
 /** The width of the widest of `lines`, or 0 for none. */

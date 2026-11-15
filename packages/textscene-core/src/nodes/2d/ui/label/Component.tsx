@@ -31,6 +31,7 @@ import {
   labelVisibleLineRange,
   layoutLabelLines,
   windowLabelLines,
+  labelFontHeightPx,
   type LabelLinePlacement,
   type LineTrim,
 } from './nativeSolver';
@@ -194,7 +195,10 @@ function LabelText({
       ...bidiOptions,
     });
     const range = labelVisibleLineRange(shaped.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
-    return windowLabelLines(shaped, range, textTheme.paragraphSpacingPx);
+    return windowLabelLines(shaped, range, {
+      paragraphSpacingPx: textTheme.paragraphSpacingPx,
+      fontHeightPx: labelFontHeightPx(fontMetrics, textTheme.fontSizePx),
+    });
   }, [
     sharedLayout,
     text,
@@ -248,7 +252,6 @@ function LabelText({
           isAutowrapped: autowrapMode !== AutowrapMode.AUTOWRAP_OFF,
           trim,
           contentMargin,
-          lineSpacingPx: textTheme.lineSpacingPx,
           paragraphSpacingPx: textTheme.paragraphSpacingPx,
         }
       ),
@@ -259,7 +262,6 @@ function LabelText({
       props.horizontalAlignment,
       props.verticalAlignment,
       effectiveJustificationFlags,
-      textTheme.lineSpacingPx,
       textTheme.paragraphSpacingPx,
       contentMargin,
       solveNode.rtl,

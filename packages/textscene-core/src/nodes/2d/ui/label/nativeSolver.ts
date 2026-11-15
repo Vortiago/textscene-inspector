@@ -23,7 +23,7 @@ import {
   type ShareNode,
   type SolveNode,
 } from '../../../../r3f/controls/native/solveTree';
-import { getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
+import { getFontChainHeightPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { peekSettledSceneFontMetrics } from '../../../../r3f/controls/native/text/sceneFontLoader';
 import {
@@ -36,6 +36,11 @@ import {
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { justifyParagraphs } from '../../../../r3f/controls/native/text/textJustify';
+import {
+  lineHeightPx,
+  linesHeightPx,
+  type LineExtentPx,
+} from '../../../../r3f/controls/native/text/lineExtent';
 import {
   resolveTextOutline,
   resolveTextTheme,
@@ -57,7 +62,6 @@ import {
 } from '../../../../godot/text/textServerEnums';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { FALLBACK_THEME_CONSTANT } from '../../../../godot/scene/theme';
-import { defaultConstant } from '../../../../godot/scene/defaultTheme/defaultTheme';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
@@ -67,12 +71,6 @@ const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_
  * which {@link labelFontState} falls back to.
  */
 const LABEL_THEME_FONT_KEY = 'font';
-
-/**
- * The table's `Label/line_spacing` at theme scale 1: the spacing `layoutLabelLines` assumes when its
- * caller passes none. A Label reads its own from `n.constants`.
- */
-const LABEL_LINE_SPACING_PX = defaultConstant('Label', 'line_spacing');
 
 /** Label's `paragraph_spacing`: the default theme sets none, so a lookup ends at the fallback theme. */
 const LABEL_PARAGRAPH_SPACING_PX = FALLBACK_THEME_CONSTANT;
@@ -235,20 +233,48 @@ function countParagraphs(lines: readonly TextLineLayout[]): number {
   return count;
 }
 
+/** `int font_h = font->get_height(font_size)` (`label.cpp:114,351,760`): the chain's height, truncated. */
+export function labelFontHeightPx(fontMetrics: FontMetrics, fontSizePx: number): number {
+  return Math.trunc(getFontChainHeightPx(fontMetrics, fontSizePx));
+}
+
+/** What Label windows its lines with: the gap after each paragraph and the font's height (`label.cpp:111-123`). */
+export interface LabelLineSpacing {
+  paragraphSpacingPx: number;
+  /** The Label's font height (`labelFontHeightPx`), which pads a shorter line. */
+  fontHeightPx: number;
+}
+
 /**
- * `layout.lines` cut to `range`, with height and width summed over the kept lines only, as
- * `_update_visible` and `get_layout_data` do (`label.cpp:359-361`, `:556-559`). The height holds
- * one `paragraphSpacingPx` per paragraph that keeps a line (`:381,:587`).
+ * `layout.lines` cut to `range`, each padded to the font's height (`labelLineExtent`), with height
+ * and width summed over the kept lines only, as `_update_visible` and `get_layout_data` do
+ * (`label.cpp:359-361`, `:556-559`). The height holds one `paragraphSpacingPx` per paragraph that
+ * keeps a line (`:381,:587`).
  */
 export function windowLabelLines(
   layout: TextLayoutResult,
   range: LabelLineRange,
-  paragraphSpacingPx: number
+  { paragraphSpacingPx, fontHeightPx }: LabelLineSpacing
 ): TextLayoutResult {
-  const lines = layout.lines.slice(range.start, range.end);
+  const lines = layout.lines
+    .slice(range.start, range.end)
+    .map((line) => ({ ...line, ...labelLineExtent(line, fontHeightPx) }));
   const widthPx = widestLineWidthPx(lines);
-  const heightPx = lines.length * layout.linePitchPx + countParagraphs(lines) * paragraphSpacingPx;
+  const heightPx = linesHeightPx(lines, layout.lineSpacingPx) + countParagraphs(lines) * paragraphSpacingPx;
   return { ...layout, lines, heightPx, widthPx };
+}
+
+/**
+ * The extent Label gives a line: its own, with a line shorter than the font's height grown to it,
+ * half of the difference above and the rest below (`label.cpp:117-123`, `:372-378`, `:806-812`).
+ */
+function labelLineExtent(line: LineExtentPx, fontHeightPx: number): LineExtentPx {
+  const shortfallPx = fontHeightPx - (line.ascentPx + line.descentPx);
+  if (shortfallPx <= 0) return { ascentPx: line.ascentPx, descentPx: line.descentPx };
+  return {
+    ascentPx: line.ascentPx + shortfallPx / 2,
+    descentPx: line.descentPx + (shortfallPx - shortfallPx / 2),
+  };
 }
 
 // visible_characters and visible_characters_behavior: label.cpp:778-883
@@ -302,7 +328,7 @@ export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n) => {
   return windowLabelLines(
     layout,
     labelVisibleLineRange(layout.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible),
-    paragraphSpacingPx
+    { paragraphSpacingPx, fontHeightPx: labelFontHeightPx(layout.fontMetrics, fontSizePx) }
   );
 });
 
@@ -347,7 +373,7 @@ function labelTextMinimumSize(n: SolveNode, ctx: SolveContext, margin: LabelMarg
   const spacing = labelEffectiveTextTheme(themeResolved, n.labelSettings, n.constants);
   const { fontSizePx } = spacing;
   const fontMetrics = labelFontState(n).metrics;
-  const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
+  const fontHeightPx = labelFontHeightPx(fontMetrics, fontSizePx);
   // `props.visibleCharacters` is already resolved (label.cpp:1285-1327). CHARS_BEFORE_SHAPING
   // truncates before shaping, so it runs before the empty-text gate. `uppercase` stays a `shapeText`
   // option (`label.cpp:154`), as in the painter's shape, so the rule lives in one place.
@@ -384,7 +410,10 @@ function labelTextMinimumSize(n: SolveNode, ctx: SolveContext, margin: LabelMarg
     // Not modelled: `min_size.height = 1` and the `max_lines_visible` clamp (`:985-987`), which
     // need `clip` or an `overrun_behavior` other than `OVERRUN_NO_TRIMMING`.
     const range = labelVisibleLineRange(wrapped.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
-    const windowed = windowLabelLines(wrapped, range, spacing.paragraphSpacingPx);
+    const windowed = windowLabelLines(wrapped, range, {
+      paragraphSpacingPx: spacing.paragraphSpacingPx,
+      fontHeightPx,
+    });
     return { x: 1, y: labelMinimumHeightPx(windowed, spacing, fontHeightPx) };
   }
 
@@ -463,10 +492,10 @@ interface LineDirection {
   isAutowrapped: boolean;
 }
 
-interface LabelLayoutOptions extends Partial<LabelSpacing> {
+interface LabelLayoutOptions extends Partial<Pick<LabelSpacing, 'paragraphSpacingPx'>> {
   /** The margins of the `normal` box (`style->get_offset()` and `get_margin`, `label.cpp:491-512,591-616`). Defaults to none. */
   contentMargin?: LabelMargin;
-  // The spacings default to Label's theme defaults, which the Graph titlebar's title Label uses.
+  // The paragraph spacing defaults to Label's theme default. The line spacing is the one the text was shaped with.
   /** `is_layout_rtl()` (`SolveNode.rtl`). Defaults `false`. */
   rtl?: boolean;
   /** `autowrap_mode != AUTOWRAP_OFF`, the gate of FILL's RTL arm (`label.cpp:473`). Defaults `false`. */
@@ -528,7 +557,6 @@ export function layoutLabelLines(
     isAutowrapped = false,
     trim,
     contentMargin = ZERO_SIDES,
-    lineSpacingPx = LABEL_LINE_SPACING_PX,
     paragraphSpacingPx = LABEL_PARAGRAPH_SPACING_PX,
   } = options;
   const lineCount = layout.lines.length;
@@ -536,7 +564,7 @@ export function layoutLabelLines(
 
   // label.cpp:599: `total_h - line_spacing - paragraph_spacing`. `labelMinimumSize` applies the same correction.
   const contentHeightPx =
-    layout.heightPx - lineSpacingPx - paragraphSpacingPx + contentMargin.top + contentMargin.bottom;
+    layout.heightPx - layout.lineSpacingPx - paragraphSpacingPx + contentMargin.top + contentMargin.bottom;
 
   // `get_layout_data` declares `int vbegin = 0, vsep = 0` (`label.cpp:591`), so each offset
   // truncates toward zero to a whole pixel, negative when the box is shorter than the text. The
@@ -559,7 +587,7 @@ export function layoutLabelLines(
       break;
   }
 
-  const effectivePitchPx = layout.linePitchPx + vsepPx;
+  let lineTopPx = 0;
   // `ofs.y += paragraph_spacing` after each paragraph's last shown line (`label.cpp:889`).
   let paragraphGapsAbovePx = 0;
   const isFill = (horizontalAlignment ?? H_LEFT) === H_FILL;
@@ -588,7 +616,8 @@ export function layoutLabelLines(
     if (lineIndex > 0 && startsParagraph(lines, lineIndex)) {
       paragraphGapsAbovePx += paragraphSpacingPx;
     }
-    const y = contentMargin.top + vbeginPx + lineIndex * effectivePitchPx + paragraphGapsAbovePx;
+    const y = contentMargin.top + vbeginPx + lineTopPx + paragraphGapsAbovePx;
+    lineTopPx += lineHeightPx(line, layout.lineSpacingPx) + vsepPx;
     // `_get_line_rect` aligns against the ceiled `TS->shaped_text_get_size(rid)` (`label.cpp:478`),
     // not the raw pen advance the fit needs.
     const direction = { rtl, isRtlParagraph: line.isRtl === true, isAutowrapped };

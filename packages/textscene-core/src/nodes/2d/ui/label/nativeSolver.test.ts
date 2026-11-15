@@ -32,6 +32,7 @@ import {
   layoutLabelLines,
   labelVisibleLineRange,
   windowLabelLines,
+  labelFontHeightPx,
   labelPreShapeText,
   labelEffectiveTextTheme,
   labelOutlineTheme,
@@ -429,6 +430,17 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
   function layoutFor(text: string, boxWidthPx = 0, autowrapMode = AutowrapMode.AUTOWRAP_OFF) {
     return shapeText(text, { fontSizePx: FONT_SIZE, boxWidthPx, autowrapMode, lineSpacingPx: 3 });
   }
+
+  it('steps each line by the line spacing the text was shaped with', () => {
+    const layout = shapeText('A\nA', {
+      fontSizePx: FONT_SIZE,
+      boxWidthPx: 0,
+      autowrapMode: 0,
+      lineSpacingPx: 10,
+    });
+    const placements = layoutLabelLines(layout, 200, 200, undefined, undefined);
+    expect(placements.map((p) => p.y)).toEqual([0, PITCH - 3 + 10]);
+  });
 
   it('left alignment (default/undefined): every line starts at x=0', () => {
     const layout = layoutFor('A\nAB'); // two lines, different widths
@@ -833,11 +845,13 @@ describe('windowLabelLines', () => {
   const layout: TextLayoutResult = {
     shapedText: 'abc',
     lines: [
-      { text: 'a', glyphs: [], widthPx: 10, paragraphIndex: 0 },
-      { text: 'b', glyphs: [], widthPx: 30, paragraphIndex: 1 },
-      { text: 'c', glyphs: [], widthPx: 20, paragraphIndex: 2 },
+      { text: 'a', glyphs: [], widthPx: 10, paragraphIndex: 0, ascentPx: 18, descentPx: 5 },
+      { text: 'b', glyphs: [], widthPx: 30, paragraphIndex: 1, ascentPx: 18, descentPx: 5 },
+      { text: 'c', glyphs: [], widthPx: 20, paragraphIndex: 2, ascentPx: 18, descentPx: 5 },
     ],
     linePitchPx: 26,
+    fontHeightPx: 26,
+    lineSpacingPx: 3,
     widthPx: 30,
     heightPx: 78,
     baselineOffsetPx: 18,
@@ -845,14 +859,22 @@ describe('windowLabelLines', () => {
   };
 
   it('recomputes widthPx/heightPx over the KEPT lines only (happy path)', () => {
-    const windowed = windowLabelLines(layout, { start: 1, end: 3 }, 0);
+    const windowed = windowLabelLines(
+      layout,
+      { start: 1, end: 3 },
+      { paragraphSpacingPx: 0, fontHeightPx: 23 }
+    );
     expect(windowed.lines.map((l) => l.widthPx)).toEqual([30, 20]);
     expect(windowed.widthPx).toBe(30);
     expect(windowed.heightPx).toBe(52);
   });
 
   it('an empty range yields zero lines and zero height (edge case)', () => {
-    const windowed = windowLabelLines(layout, { start: 3, end: 3 }, 0);
+    const windowed = windowLabelLines(
+      layout,
+      { start: 3, end: 3 },
+      { paragraphSpacingPx: 0, fontHeightPx: 23 }
+    );
     expect(windowed.lines).toEqual([]);
     expect(windowed.heightPx).toBe(0);
     expect(windowed.widthPx).toBe(0);
@@ -899,6 +921,8 @@ function fakeLine(charCount: number, firstSourceIndex = 0): TextLineLayout {
     })),
     widthPx: charCount,
     paragraphIndex: 0,
+    ascentPx: 15,
+    descentPx: 5,
   };
 }
 
@@ -1465,11 +1489,10 @@ describe('Label paragraph_spacing and the theme spacing constants (label.cpp:344
       lineSpacingPx: theme.lineSpacingPx,
       paragraphSeparator: LABEL_PARAGRAPH_SEPARATOR,
     });
-    const windowed = windowLabelLines(
-      shaped,
-      labelVisibleLineRange(shaped.lines.length, 0, undefined),
-      theme.paragraphSpacingPx
-    );
+    const windowed = windowLabelLines(shaped, labelVisibleLineRange(shaped.lines.length, 0, undefined), {
+      paragraphSpacingPx: theme.paragraphSpacingPx,
+      fontHeightPx: labelFontHeightPx(shaped.fontMetrics, theme.fontSizePx),
+    });
     return layoutLabelLines(
       windowed,
       boxWidthPx,
@@ -1477,10 +1500,7 @@ describe('Label paragraph_spacing and the theme spacing constants (label.cpp:344
       undefined,
       props.verticalAlignment,
       undefined,
-      {
-        lineSpacingPx: theme.lineSpacingPx,
-        paragraphSpacingPx: theme.paragraphSpacingPx,
-      }
+      { paragraphSpacingPx: theme.paragraphSpacingPx }
     ).map((p) => p.y);
   }
 

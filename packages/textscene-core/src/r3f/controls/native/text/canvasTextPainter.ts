@@ -9,6 +9,7 @@ import { maxEmboldenGrowthPx } from './canvasVariation';
 import type { ByteColour } from './glyphCoverage';
 import { canvasGlyphPenXPx, faceStrikeSize, subpixelHalfStepPx, type FontMetrics } from './fontMetrics';
 import type { TextLayoutResult } from './textLayout';
+import { lineBaselinesPx, tallestAscentPx } from './lineExtent';
 import { isCanvasFontMetrics, type CanvasFontMetrics } from './runtimeFontMetrics';
 import { hasOwnGlyph, type GlyphPainter, type PlacedGlyph, type RasterFrame } from './glyphPainter';
 import { hasOutlines, outlineGlyphPainter } from './outlineGlyphPainter';
@@ -76,7 +77,7 @@ export function computeCanvasTextCanvasLayout(
   // The worst-case shear offset over a line's rows, `dx(y) = -skew * (y - baselinePx)`: every row
   // of the raster above the baseline. A font's
   // descent is shorter than its ascent, so the rows below shear less.
-  const shearPadPx = Math.abs(skew) * (layout.baselineOffsetPx + offsetYPx);
+  const shearPadPx = Math.abs(skew) * (tallestAscentPx(layout) + offsetYPx);
   // Whole pixels, as Godot draws a glyph texture texel-aligned: a fractional pad puts each texel
   // between two screen pixels, and the linear filter thins every edge.
   const padXPx = Math.ceil(shearPadPx + strokePadPx + emboldenPadPx);
@@ -109,8 +110,9 @@ const INK_SLACK_RIGHT_PX = 1;
 function drawnExtentPx(layout: TextLayoutResult, skew: number): { startPx: number; endPx: number } {
   let startPx = Infinity;
   let endPx = -Infinity;
-  const reachOf = painterOf(canvasFaceOf(layout)).reachReader(skew, layout.baselineOffsetPx);
-  const penBoxOf = blankGlyphPainter.reachReader(skew, layout.baselineOffsetPx);
+  const lineAscentPx = tallestAscentPx(layout);
+  const reachOf = painterOf(canvasFaceOf(layout)).reachReader(skew, lineAscentPx);
+  const penBoxOf = blankGlyphPainter.reachReader(skew, lineAscentPx);
   for (const { glyphs } of layout.lines) {
     for (const glyph of glyphs) {
       const { leftPx, rightPx } = hasOwnGlyph(glyph) ? reachOf(glyph) : penBoxOf(glyph);
@@ -275,8 +277,9 @@ function placeGlyphs(
 ): PlacedGlyph[] {
   const unsnappedPenShiftPx = scaledPenShiftPx(glyphDrawer, fontSizePx, metrics);
   // The raster starts at the whole item pixel at or before the run origin, where its quad sits.
+  const baselinesPx = lineBaselinesPx(layout);
   return layout.lines.flatMap((line, lineIndex) => {
-    const lineBaselinePx = lineIndex * layout.linePitchPx + layout.baselineOffsetPx;
+    const lineBaselinePx = baselinesPx[lineIndex]!;
     const baselineY =
       canvasLayout.offsetYPx + (snapsGlyphs ? Math.floor(originPhasePx.y + lineBaselinePx) : lineBaselinePx);
     return line.glyphs.filter(hasOwnGlyph).map((placement) => {

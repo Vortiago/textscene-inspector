@@ -598,7 +598,7 @@ function lineOf(text: string): TextLineLayout {
     fontSizePx: 10,
     fontMetrics: OPEN_SANS_FONT_METRICS,
   }));
-  return { text, glyphs, widthPx: glyphs.length * 10, paragraphIndex: 0 };
+  return { text, glyphs, widthPx: glyphs.length * 10, paragraphIndex: 0, ascentPx: 15, descentPx: 5 };
 }
 
 describe('buttonDrawnLabel: each line cut to the paragraph box as TextParagraph::draw cuts it', () => {
@@ -731,11 +731,11 @@ describe('trimButtonLabel: the label trimmed to its paragraph box (button.cpp:42
 describe('buttonContentMinimumSize: the text and icon terms (button.cpp:492-523)', () => {
   const left = HORIZONTAL_ALIGNMENT_LEFT;
   const center = HORIZONTAL_ALIGNMENT_CENTER;
-  /** The content size of a label `textSize` big whose line pitch is `linePitchPx`, beside an icon of `iconNaturalSize`. */
-  const contentSize = (facts: Partial<ButtonContentInput>, textSize = { x: 50, y: 20 }, linePitchPx = 20) =>
+  /** The content size of a label `textSize` big whose font is `fontHeightPx` tall, beside an icon of `iconNaturalSize`. */
+  const contentSize = (facts: Partial<ButtonContentInput>, textSize = { x: 50, y: 20 }, fontHeightPx = 20) =>
     buttonContentMinimumSize(
       { ...BASE_INPUT, ...facts },
-      { widthPx: textSize.x, heightPx: textSize.y, linePitchPx } as TextLayoutResult,
+      { widthPx: textSize.x, heightPx: textSize.y, linePitchPx: 20, fontHeightPx } as TextLayoutResult,
       {}
     );
 
@@ -765,5 +765,9 @@ describe('buttonContentMinimumSize: the text and icon terms (button.cpp:492-523)
 
   it('floors a CENTRED icon on the line height too, so a one-row paragraph never drops below it', () => {
     expect(contentSize({ iconNaturalSize: null }, { x: 50, y: 10 }).y).toBe(20);
+  });
+
+  it('floors on the tallest face of the fallback chain, `Font::get_height` (font.cpp:210-220)', () => {
+    expect(contentSize({ iconNaturalSize: null }, { x: 50, y: 20 }, 32).y).toBe(32);
   });
 });

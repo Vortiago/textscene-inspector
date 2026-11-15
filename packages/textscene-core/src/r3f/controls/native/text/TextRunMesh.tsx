@@ -3,7 +3,7 @@
  * `THREE.BufferGeometry` and material. `TextRun.tsx` routes each run here, and
  * `layout.fontMetrics.kind` picks the painter: `canvasTextPainter.ts`'s single raster quad for
  * `'canvas'`, and `bitmapTextPainter.ts`'s quad for each glyph of a BMFont for `'bitmap'`. Both
- * place a line by its box-top Y alone, and its baseline `layout.baselineOffsetPx` below that, as
+ * place a line by its box-top Y alone, and its baseline its own ascent below that, as
  * Godot's `ofs.y += asc` does (`scene/gui/label.cpp:616,823`).
  *
  * Portions ported from Godot Engine (MIT).
@@ -38,6 +38,7 @@ import type { FillSheet } from '../../../../resources/fonts/font/types';
 import { perObject } from '../../../../utils/perObject';
 import { GLYPH_DRAWER_RULES, snapsPen, type GlyphDrawer } from './glyphDrawer';
 import type { TextLayoutResult } from './textLayout';
+import { lineBaselinesPx } from './lineExtent';
 import { hexCodeBoxRects } from './hexCodeBox';
 import { CanvasItemGroup, useCanvasItemOrigin } from '../../../components/CanvasItemGroup';
 import { ControlQuad } from '../controlQuad';
@@ -76,9 +77,9 @@ interface HexCodeBoxAbsoluteRect {
  */
 function collectHexCodeBoxRects(layout: TextLayoutResult, fontSizePx: number): HexCodeBoxAbsoluteRect[] {
   const rects: HexCodeBoxAbsoluteRect[] = [];
+  const baselinesPx = lineBaselinesPx(layout);
   layout.lines.forEach((line, lineIndex) => {
-    const lineTopPx = lineIndex * layout.linePitchPx;
-    const baselinePx = lineTopPx + layout.baselineOffsetPx;
+    const baselinePx = baselinesPx[lineIndex]!;
     for (const gp of line.glyphs) {
       if (gp.controlCodepoint === undefined) continue;
       for (const r of hexCodeBoxRects(fontSizePx, gp.controlCodepoint)) {

@@ -647,7 +647,7 @@ export function buttonContentMinimumSize(
   label: TextLayoutResult | null,
   props: TextClipProperties & ButtonWrapProperties
 ): Vector2 {
-  return minimumSizeOfText(facts, labelMinimumTextSize(label, props), label?.linePitchPx ?? 0);
+  return minimumSizeOfText(facts, labelMinimumTextSize(label, props), label?.fontHeightPx ?? 0);
 }
 
 /**

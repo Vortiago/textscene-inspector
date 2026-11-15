@@ -27,10 +27,8 @@ const NO_TRIM_FLAGS = 0;
 
 export interface TextMeshLines {
   lines: readonly TextLineLayout[];
-  /** From the top of a line to its baseline, in font px. */
-  baselineOffsetPx: number;
-  /** One line's height with `line_spacing`, in font px. */
-  linePitchPx: number;
+  /** The gap after each line, in font px. */
+  lineSpacingPx: number;
 }
 
 /** An empty `language` takes `locale`, the project's `_get_locale()` (`primitive_meshes.cpp:3230`). */
@@ -54,7 +52,6 @@ export function shapeTextMeshLines(
     lines: isFill
       ? justifyLinesToWidth(layout.lines, properties.width, properties.justificationFlags)
       : layout.lines,
-    baselineOffsetPx: layout.baselineOffsetPx,
-    linePitchPx: layout.linePitchPx,
+    lineSpacingPx: layout.lineSpacingPx,
   };
 }
