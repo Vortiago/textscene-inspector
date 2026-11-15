@@ -1073,6 +1073,758 @@ bool probe(float a) { return bool(a); }
 | `-inf` | `true` |
 | `NaN` | `true` |
 
+## Vector and matrix conversions
+
+`ivec3(a)` converts each lane of a vector of the same size, as the scalar conversions do. `mat3(m)` takes the upper left of a larger matrix, or puts a smaller one in the upper left of the identity matrix.
+
+The transpiler emits `ivec3(a), mat3(m)`. Rows: `ivec2(bvec2)`, `ivec2(ivec2)`, `ivec2(uvec2)`, `ivec2(vec2)`, `vec2(bvec2)`, `vec2(ivec2)`, `vec2(uvec2)`, `vec2(vec2)`, `uvec2(bvec2)`, `uvec2(ivec2)`, `uvec2(uvec2)`, `uvec2(vec2)`, `bvec2(bvec2)`, `bvec2(ivec2)`, `bvec2(uvec2)`, `bvec2(vec2)`, `ivec3(bvec3)`, `ivec3(ivec3)`, `ivec3(uvec3)`, `ivec3(vec3)`, `vec3(bvec3)`, `vec3(ivec3)`, `vec3(uvec3)`, `vec3(vec3)`, `uvec3(bvec3)`, `uvec3(ivec3)`, `uvec3(uvec3)`, `uvec3(vec3)`, `bvec3(bvec3)`, `bvec3(ivec3)`, `bvec3(uvec3)`, `bvec3(vec3)`, `ivec4(bvec4)`, `ivec4(ivec4)`, `ivec4(uvec4)`, `ivec4(vec4)`, `vec4(bvec4)`, `vec4(ivec4)`, `vec4(uvec4)`, `vec4(vec4)`, `uvec4(bvec4)`, `uvec4(ivec4)`, `uvec4(uvec4)`, `uvec4(vec4)`, `bvec4(bvec4)`, `bvec4(ivec4)`, `bvec4(uvec4)`, `bvec4(vec4)`, `mat2(mat3)`, `mat2(mat4)`, `mat3(mat2)`, `mat3(mat4)`, `mat4(mat2)`, `mat4(mat3)`. Godot source: `servers/rendering/shader_language.cpp:2514`.
+
+Every row is native on WebGL 2 and on WebGPURenderer.
+
+### Probe `call-ivec2-bvec2`, 4 input rows
+
+```glsl
+ivec2 probe(bvec2 a) { return ivec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false)` | `(0, 0)` |
+| `(true, true)` | `(1, 1)` |
+
+### Probe `call-ivec2-ivec2`, 16 input rows
+
+```glsl
+ivec2 probe(ivec2 a) { return ivec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7)` | `(0, 7)` |
+| `(1, 31)` | `(1, 31)` |
+| `(1000003, 0)` | `(1000003, 0)` |
+
+### Probe `call-ivec2-uvec2`, 16 input rows
+
+```glsl
+ivec2 probe(uvec2 a) { return ivec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u)` | `(0, 31)` |
+| `(1u, 32u)` | `(1, 32)` |
+| `(1000003u, 0u)` | `(1000003, 0)` |
+
+### Probe `call-ivec2-vec2`, 16 input rows
+
+```glsl
+ivec2 probe(vec2 a) { return ivec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `(0, -2)` |
+| `(-0.0, 0.33333334)` | `(0, 0)` |
+| `(-1.0, 123456.79)` | `(-1, 123456)` |
+| `(1e-7, 1e-40)` | `(0, 0)` |
+| `(123456.79, inf)` | `(123456, 2147483647)` |
+| `(16777216.0, -inf)` | `(16777216, -2147483648)` |
+| `(3e+38, NaN)` | `(2147483647, 0)` |
+| `(1e-40, -0.0)` | `(0, 0)` |
+
+### Probe `call-vec2-bvec2`, 4 input rows
+
+```glsl
+vec2 probe(bvec2 a) { return vec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false)` | `(0.0, 0.0)` |
+| `(true, true)` | `(1.0, 1.0)` |
+
+### Probe `call-vec2-ivec2`, 16 input rows
+
+```glsl
+vec2 probe(ivec2 a) { return vec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7)` | `(0.0, 7.0)` |
+| `(1, 31)` | `(1.0, 31.0)` |
+| `(1000003, 0)` | `(1000003.0, 0.0)` |
+
+### Probe `call-vec2-uvec2`, 16 input rows
+
+```glsl
+vec2 probe(uvec2 a) { return vec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u)` | `(0.0, 31.0)` |
+| `(1u, 32u)` | `(1.0, 32.0)` |
+| `(1000003u, 0u)` | `(1000003.0, 0.0)` |
+
+### Probe `call-vec2-vec2`, 16 input rows
+
+```glsl
+vec2 probe(vec2 a) { return vec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `(0.0, -2.75)` |
+| `(-0.0, 0.33333334)` | `(-0.0, 0.33333334)` |
+| `(1.0, 1e-7)` | `(1.0, 1e-7)` |
+| `(1e-7, 1e-40)` | `(1e-7, 1e-40)` |
+| `(123456.79, inf)` | `(123456.79, inf)` |
+| `(16777216.0, -inf)` | `(16777216.0, -inf)` |
+| `(3e+38, NaN)` | `(3e+38, NaN)` |
+| `(1e-40, -0.0)` | `(1e-40, -0.0)` |
+
+### Probe `call-uvec2-bvec2`, 4 input rows
+
+```glsl
+uvec2 probe(bvec2 a) { return uvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false)` | `(0u, 0u)` |
+| `(true, true)` | `(1u, 1u)` |
+
+### Probe `call-uvec2-ivec2`, 16 input rows
+
+```glsl
+uvec2 probe(ivec2 a) { return uvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7)` | `(0u, 7u)` |
+| `(1, 31)` | `(1u, 31u)` |
+| `(1000003, 0)` | `(1000003u, 0u)` |
+
+### Probe `call-uvec2-uvec2`, 16 input rows
+
+```glsl
+uvec2 probe(uvec2 a) { return uvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u)` | `(0u, 31u)` |
+| `(1u, 32u)` | `(1u, 32u)` |
+| `(1000003u, 0u)` | `(1000003u, 0u)` |
+
+### Probe `call-uvec2-vec2`, 16 input rows
+
+```glsl
+uvec2 probe(vec2 a) { return uvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `(0u, 0u)` |
+| `(-0.0, 0.33333334)` | `(0u, 0u)` |
+| `(1e-7, 1e-40)` | `(0u, 0u)` |
+| `(123456.79, inf)` | `(123456u, 4294967295u)` |
+| `(16777216.0, -inf)` | `(16777216u, 0u)` |
+| `(3e+38, NaN)` | `(4294967295u, 0u)` |
+| `(-3e+38, 0.0)` | `(0u, 0u)` |
+| `(1e-40, -0.0)` | `(0u, 0u)` |
+
+### Probe `call-bvec2-bvec2`, 4 input rows
+
+```glsl
+bvec2 probe(bvec2 a) { return bvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false)` | `(false, false)` |
+| `(true, true)` | `(true, true)` |
+
+### Probe `call-bvec2-ivec2`, 16 input rows
+
+```glsl
+bvec2 probe(ivec2 a) { return bvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7)` | `(false, true)` |
+| `(1000003, 0)` | `(true, false)` |
+
+### Probe `call-bvec2-uvec2`, 16 input rows
+
+```glsl
+bvec2 probe(uvec2 a) { return bvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u)` | `(false, true)` |
+| `(1000003u, 0u)` | `(true, false)` |
+
+### Probe `call-bvec2-vec2`, 16 input rows
+
+```glsl
+bvec2 probe(vec2 a) { return bvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `(false, true)` |
+| `(-0.0, 0.33333334)` | `(false, true)` |
+| `(1e-7, 1e-40)` | `(true, true)` |
+| `(123456.79, inf)` | `(true, true)` |
+| `(16777216.0, -inf)` | `(true, true)` |
+| `(3e+38, NaN)` | `(true, true)` |
+| `(-3e+38, 0.0)` | `(true, false)` |
+| `(1e-40, -0.0)` | `(true, false)` |
+
+### Probe `call-ivec3-bvec3`, 6 input rows
+
+```glsl
+ivec3 probe(bvec3 a) { return ivec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false)` | `(0, 0, 0)` |
+| `(true, true, true)` | `(1, 1, 1)` |
+
+### Probe `call-ivec3-ivec3`, 16 input rows
+
+```glsl
+ivec3 probe(ivec3 a) { return ivec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536)` | `(0, 7, 65536)` |
+| `(1, 31, 1000003)` | `(1, 31, 1000003)` |
+| `(31, 1000003, 0)` | `(31, 1000003, 0)` |
+| `(1000003, 0, 7)` | `(1000003, 0, 7)` |
+
+### Probe `call-ivec3-uvec3`, 16 input rows
+
+```glsl
+ivec3 probe(uvec3 a) { return ivec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u)` | `(0, 31, 65536)` |
+| `(1u, 32u, 1000003u)` | `(1, 32, 1000003)` |
+| `(32u, 1000003u, 0u)` | `(32, 1000003, 0)` |
+| `(1000003u, 0u, 31u)` | `(1000003, 0, 31)` |
+
+### Probe `call-ivec3-vec3`, 16 input rows
+
+```glsl
+ivec3 probe(vec3 a) { return ivec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38)` | `(0, -2, 2147483647)` |
+| `(-0.0, 0.33333334, -3e+38)` | `(0, 0, -2147483648)` |
+| `(1.0, 1e-7, 1e-40)` | `(1, 0, 0)` |
+| `(-1.0, 123456.79, inf)` | `(-1, 123456, 2147483647)` |
+| `(0.5, 16777216.0, -inf)` | `(0, 16777216, -2147483648)` |
+| `(-2.75, 3e+38, NaN)` | `(-2, 2147483647, 0)` |
+| `(1e-7, 1e-40, -0.0)` | `(0, 0, 0)` |
+| `(1e-40, -0.0, 0.33333334)` | `(0, 0, 0)` |
+
+### Probe `call-vec3-bvec3`, 6 input rows
+
+```glsl
+vec3 probe(bvec3 a) { return vec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false)` | `(0.0, 0.0, 0.0)` |
+| `(true, true, true)` | `(1.0, 1.0, 1.0)` |
+
+### Probe `call-vec3-ivec3`, 16 input rows
+
+```glsl
+vec3 probe(ivec3 a) { return vec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536)` | `(0.0, 7.0, 65536.0)` |
+| `(1, 31, 1000003)` | `(1.0, 31.0, 1000003.0)` |
+| `(31, 1000003, 0)` | `(31.0, 1000003.0, 0.0)` |
+| `(1000003, 0, 7)` | `(1000003.0, 0.0, 7.0)` |
+
+### Probe `call-vec3-uvec3`, 16 input rows
+
+```glsl
+vec3 probe(uvec3 a) { return vec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u)` | `(0.0, 31.0, 65536.0)` |
+| `(1u, 32u, 1000003u)` | `(1.0, 32.0, 1000003.0)` |
+| `(32u, 1000003u, 0u)` | `(32.0, 1000003.0, 0.0)` |
+| `(1000003u, 0u, 31u)` | `(1000003.0, 0.0, 31.0)` |
+
+### Probe `call-vec3-vec3`, 16 input rows
+
+```glsl
+vec3 probe(vec3 a) { return vec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38)` | `(0.0, -2.75, 3e+38)` |
+| `(-0.0, 0.33333334, -3e+38)` | `(-0.0, 0.33333334, -3e+38)` |
+| `(1.0, 1e-7, 1e-40)` | `(1.0, 1e-7, 1e-40)` |
+| `(-1.0, 123456.79, inf)` | `(-1.0, 123456.79, inf)` |
+| `(0.5, 16777216.0, -inf)` | `(0.5, 16777216.0, -inf)` |
+| `(-2.75, 3e+38, NaN)` | `(-2.75, 3e+38, NaN)` |
+| `(1e-7, 1e-40, -0.0)` | `(1e-7, 1e-40, -0.0)` |
+| `(1e-40, -0.0, 0.33333334)` | `(1e-40, -0.0, 0.33333334)` |
+
+### Probe `call-uvec3-bvec3`, 6 input rows
+
+```glsl
+uvec3 probe(bvec3 a) { return uvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false)` | `(0u, 0u, 0u)` |
+| `(true, true, true)` | `(1u, 1u, 1u)` |
+
+### Probe `call-uvec3-ivec3`, 16 input rows
+
+```glsl
+uvec3 probe(ivec3 a) { return uvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536)` | `(0u, 7u, 65536u)` |
+| `(1, 31, 1000003)` | `(1u, 31u, 1000003u)` |
+| `(31, 1000003, 0)` | `(31u, 1000003u, 0u)` |
+| `(1000003, 0, 7)` | `(1000003u, 0u, 7u)` |
+
+### Probe `call-uvec3-uvec3`, 16 input rows
+
+```glsl
+uvec3 probe(uvec3 a) { return uvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u)` | `(0u, 31u, 65536u)` |
+| `(1u, 32u, 1000003u)` | `(1u, 32u, 1000003u)` |
+| `(32u, 1000003u, 0u)` | `(32u, 1000003u, 0u)` |
+| `(1000003u, 0u, 31u)` | `(1000003u, 0u, 31u)` |
+
+### Probe `call-uvec3-vec3`, 16 input rows
+
+```glsl
+uvec3 probe(vec3 a) { return uvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38)` | `(0u, 0u, 4294967295u)` |
+| `(-0.0, 0.33333334, -3e+38)` | `(0u, 0u, 0u)` |
+| `(1.0, 1e-7, 1e-40)` | `(1u, 0u, 0u)` |
+| `(-1.0, 123456.79, inf)` | `(0u, 123456u, 4294967295u)` |
+| `(0.5, 16777216.0, -inf)` | `(0u, 16777216u, 0u)` |
+| `(-2.75, 3e+38, NaN)` | `(0u, 4294967295u, 0u)` |
+| `(1e-7, 1e-40, -0.0)` | `(0u, 0u, 0u)` |
+| `(1e-40, -0.0, 0.33333334)` | `(0u, 0u, 0u)` |
+
+### Probe `call-bvec3-bvec3`, 6 input rows
+
+```glsl
+bvec3 probe(bvec3 a) { return bvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false)` | `(false, false, false)` |
+| `(true, true, true)` | `(true, true, true)` |
+
+### Probe `call-bvec3-ivec3`, 16 input rows
+
+```glsl
+bvec3 probe(ivec3 a) { return bvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536)` | `(false, true, true)` |
+| `(31, 1000003, 0)` | `(true, true, false)` |
+| `(1000003, 0, 7)` | `(true, false, true)` |
+
+### Probe `call-bvec3-uvec3`, 16 input rows
+
+```glsl
+bvec3 probe(uvec3 a) { return bvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u)` | `(false, true, true)` |
+| `(32u, 1000003u, 0u)` | `(true, true, false)` |
+| `(1000003u, 0u, 31u)` | `(true, false, true)` |
+
+### Probe `call-bvec3-vec3`, 16 input rows
+
+```glsl
+bvec3 probe(vec3 a) { return bvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38)` | `(false, true, true)` |
+| `(-0.0, 0.33333334, -3e+38)` | `(false, true, true)` |
+| `(1.0, 1e-7, 1e-40)` | `(true, true, true)` |
+| `(-1.0, 123456.79, inf)` | `(true, true, true)` |
+| `(0.5, 16777216.0, -inf)` | `(true, true, true)` |
+| `(-2.75, 3e+38, NaN)` | `(true, true, true)` |
+| `(1e-7, 1e-40, -0.0)` | `(true, true, false)` |
+| `(1e-40, -0.0, 0.33333334)` | `(true, false, true)` |
+
+### Probe `call-ivec4-bvec4`, 8 input rows
+
+```glsl
+ivec4 probe(bvec4 a) { return ivec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false, true)` | `(0, 0, 0, 1)` |
+| `(true, true, true, false)` | `(1, 1, 1, 0)` |
+
+### Probe `call-ivec4-ivec4`, 16 input rows
+
+```glsl
+ivec4 probe(ivec4 a) { return ivec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536, 5)` | `(0, 7, 65536, 5)` |
+| `(1, 31, 1000003, 0)` | `(1, 31, 1000003, 0)` |
+| `(-1, 32, -12345, 1)` | `(-1, 32, -12345, 1)` |
+| `(31, 1000003, 0, 7)` | `(31, 1000003, 0, 7)` |
+| `(1000003, 0, 7, 65536)` | `(1000003, 0, 7, 65536)` |
+
+### Probe `call-ivec4-uvec4`, 16 input rows
+
+```glsl
+ivec4 probe(uvec4 a) { return ivec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u, 4294967295u)` | `(0, 31, 65536, -1)` |
+| `(1u, 32u, 1000003u, 0u)` | `(1, 32, 1000003, 0)` |
+| `(2u, 33u, 2147483647u, 1u)` | `(2, 33, 2147483647, 1)` |
+| `(32u, 1000003u, 0u, 31u)` | `(32, 1000003, 0, 31)` |
+| `(1000003u, 0u, 31u, 65536u)` | `(1000003, 0, 31, 65536)` |
+
+### Probe `call-ivec4-vec4`, 16 input rows
+
+```glsl
+ivec4 probe(vec4 a) { return ivec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN)` | `(0, -2, 2147483647, 0)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0)` | `(0, 0, -2147483648, 0)` |
+| `(1.0, 1e-7, 1e-40, -0.0)` | `(1, 0, 0, 0)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334)` | `(0, 0, 0, 0)` |
+| `(3e+38, NaN, 0.5, 16777216.0)` | `(2147483647, 0, 0, 16777216)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38)` | `(0, 0, 0, -2147483648)` |
+| `(inf, 1.0, 1e-7, 1e-40)` | `(2147483647, 1, 0, 0)` |
+| `(-inf, -1.0, 123456.79, inf)` | `(-2147483648, -1, 123456, 2147483647)` |
+
+### Probe `call-vec4-bvec4`, 8 input rows
+
+```glsl
+vec4 probe(bvec4 a) { return vec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false, true)` | `(0.0, 0.0, 0.0, 1.0)` |
+| `(true, true, true, false)` | `(1.0, 1.0, 1.0, 0.0)` |
+
+### Probe `call-vec4-ivec4`, 16 input rows
+
+```glsl
+vec4 probe(ivec4 a) { return vec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536, 5)` | `(0.0, 7.0, 65536.0, 5.0)` |
+| `(1, 31, 1000003, 0)` | `(1.0, 31.0, 1000003.0, 0.0)` |
+| `(-1, 32, -12345, 1)` | `(-1.0, 32.0, -12345.0, 1.0)` |
+| `(31, 1000003, 0, 7)` | `(31.0, 1000003.0, 0.0, 7.0)` |
+| `(1000003, 0, 7, 65536)` | `(1000003.0, 0.0, 7.0, 65536.0)` |
+
+### Probe `call-vec4-uvec4`, 16 input rows
+
+```glsl
+vec4 probe(uvec4 a) { return vec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u, 4294967295u)` | `(0.0, 31.0, 65536.0, 4294967300.0)` |
+| `(1u, 32u, 1000003u, 0u)` | `(1.0, 32.0, 1000003.0, 0.0)` |
+| `(2u, 33u, 2147483647u, 1u)` | `(2.0, 33.0, 2147483600.0, 1.0)` |
+| `(32u, 1000003u, 0u, 31u)` | `(32.0, 1000003.0, 0.0, 31.0)` |
+| `(1000003u, 0u, 31u, 65536u)` | `(1000003.0, 0.0, 31.0, 65536.0)` |
+
+### Probe `call-vec4-vec4`, 16 input rows
+
+```glsl
+vec4 probe(vec4 a) { return vec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN)` | `(0.0, -2.75, 3e+38, NaN)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0)` | `(-0.0, 0.33333334, -3e+38, 0.0)` |
+| `(1.0, 1e-7, 1e-40, -0.0)` | `(1.0, 1e-7, 1e-40, -0.0)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334)` | `(1e-7, 1e-40, -0.0, 0.33333334)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38)` | `(1e-40, -0.0, 0.33333334, -3e+38)` |
+| `(inf, 1.0, 1e-7, 1e-40)` | `(inf, 1.0, 1e-7, 1e-40)` |
+| `(-inf, -1.0, 123456.79, inf)` | `(-inf, -1.0, 123456.79, inf)` |
+| `(NaN, 0.5, 16777216.0, -inf)` | `(NaN, 0.5, 16777216.0, -inf)` |
+
+### Probe `call-uvec4-bvec4`, 8 input rows
+
+```glsl
+uvec4 probe(bvec4 a) { return uvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false, true)` | `(0u, 0u, 0u, 1u)` |
+| `(true, true, true, false)` | `(1u, 1u, 1u, 0u)` |
+
+### Probe `call-uvec4-ivec4`, 16 input rows
+
+```glsl
+uvec4 probe(ivec4 a) { return uvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536, 5)` | `(0u, 7u, 65536u, 5u)` |
+| `(1, 31, 1000003, 0)` | `(1u, 31u, 1000003u, 0u)` |
+| `(-1, 32, -12345, 1)` | `(4294967295u, 32u, 4294954951u, 1u)` |
+| `(31, 1000003, 0, 7)` | `(31u, 1000003u, 0u, 7u)` |
+| `(1000003, 0, 7, 65536)` | `(1000003u, 0u, 7u, 65536u)` |
+
+### Probe `call-uvec4-uvec4`, 16 input rows
+
+```glsl
+uvec4 probe(uvec4 a) { return uvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u, 4294967295u)` | `(0u, 31u, 65536u, 4294967295u)` |
+| `(1u, 32u, 1000003u, 0u)` | `(1u, 32u, 1000003u, 0u)` |
+| `(2u, 33u, 2147483647u, 1u)` | `(2u, 33u, 2147483647u, 1u)` |
+| `(32u, 1000003u, 0u, 31u)` | `(32u, 1000003u, 0u, 31u)` |
+| `(1000003u, 0u, 31u, 65536u)` | `(1000003u, 0u, 31u, 65536u)` |
+
+### Probe `call-uvec4-vec4`, 16 input rows
+
+```glsl
+uvec4 probe(vec4 a) { return uvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN)` | `(0u, 0u, 4294967295u, 0u)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0)` | `(0u, 0u, 0u, 0u)` |
+| `(1.0, 1e-7, 1e-40, -0.0)` | `(1u, 0u, 0u, 0u)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334)` | `(0u, 0u, 0u, 0u)` |
+| `(16777216.0, -inf, -1.0, 123456.79)` | `(16777216u, 0u, 0u, 123456u)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38)` | `(0u, 0u, 0u, 0u)` |
+| `(inf, 1.0, 1e-7, 1e-40)` | `(4294967295u, 1u, 0u, 0u)` |
+| `(-inf, -1.0, 123456.79, inf)` | `(0u, 0u, 123456u, 4294967295u)` |
+
+### Probe `call-bvec4-bvec4`, 8 input rows
+
+```glsl
+bvec4 probe(bvec4 a) { return bvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false, true)` | `(false, false, false, true)` |
+| `(true, true, true, false)` | `(true, true, true, false)` |
+
+### Probe `call-bvec4-ivec4`, 16 input rows
+
+```glsl
+bvec4 probe(ivec4 a) { return bvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536, 5)` | `(false, true, true, true)` |
+| `(1, 31, 1000003, 0)` | `(true, true, true, false)` |
+| `(31, 1000003, 0, 7)` | `(true, true, false, true)` |
+| `(1000003, 0, 7, 65536)` | `(true, false, true, true)` |
+
+### Probe `call-bvec4-uvec4`, 16 input rows
+
+```glsl
+bvec4 probe(uvec4 a) { return bvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u, 4294967295u)` | `(false, true, true, true)` |
+| `(1u, 32u, 1000003u, 0u)` | `(true, true, true, false)` |
+| `(32u, 1000003u, 0u, 31u)` | `(true, true, false, true)` |
+| `(1000003u, 0u, 31u, 65536u)` | `(true, false, true, true)` |
+
+### Probe `call-bvec4-vec4`, 16 input rows
+
+```glsl
+bvec4 probe(vec4 a) { return bvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN)` | `(false, true, true, true)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0)` | `(false, true, true, false)` |
+| `(1.0, 1e-7, 1e-40, -0.0)` | `(true, true, true, false)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334)` | `(true, true, false, true)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38)` | `(true, false, true, true)` |
+| `(inf, 1.0, 1e-7, 1e-40)` | `(true, true, true, true)` |
+| `(-inf, -1.0, 123456.79, inf)` | `(true, true, true, true)` |
+| `(NaN, 0.5, 16777216.0, -inf)` | `(true, true, true, true)` |
+
+### Probe `call-mat2-mat3`, 16 input rows
+
+```glsl
+mat2 probe(mat3 a) { return mat2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79)` | `(0.0, -2.75, NaN, 0.5)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0)` | `(-0.0, 0.33333334, 0.0, -2.75)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN)` | `(1e-7, 1e-40, 0.33333334, -3e+38)` |
+| `(123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0)` | `(123456.79, inf, 1e-7, 1e-40)` |
+| `(16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0)` | `(16777216.0, -inf, 123456.79, inf)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5)` | `(1e-40, -0.0, -3e+38, 0.0)` |
+| `(inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75)` | `(inf, 1.0, 1e-40, -0.0)` |
+| `(-inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334)` | `(-inf, -1.0, inf, 1.0)` |
+
+### Probe `call-mat2-mat4`, 16 input rows
+
+```glsl
+mat2 probe(mat4 a) { return mat2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38)` | `(0.0, -2.75, 0.5, 16777216.0)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0)` | `(1e-7, 1e-40, -3e+38, 0.0)` |
+| `(123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0)` | `(123456.79, inf, 1e-40, -0.0)` |
+| `(16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5)` | `(16777216.0, -inf, inf, 1.0)` |
+| `(3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75)` | `(3e+38, NaN, -inf, -1.0)` |
+| `(-3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334)` | `(-3e+38, 0.0, NaN, 0.5)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7)` | `(1e-40, -0.0, 0.0, -2.75)` |
+| `(inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79)` | `(inf, 1.0, -0.0, 0.33333334)` |
+
+### Probe `call-mat3-mat2`, 16 input rows
+
+```glsl
+mat3 probe(mat2 a) { return mat3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN)` | `(0.0, -2.75, 0.0, 3e+38, NaN, 0.0, 0.0, 0.0, 1.0)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0)` | `(-0.0, 0.33333334, 0.0, -3e+38, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(1.0, 1e-7, 1e-40, -0.0)` | `(1.0, 1e-7, 0.0, 1e-40, -0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334)` | `(1e-7, 1e-40, 0.0, -0.0, 0.33333334, 0.0, 0.0, 0.0, 1.0)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38)` | `(1e-40, -0.0, 0.0, 0.33333334, -3e+38, 0.0, 0.0, 0.0, 1.0)` |
+| `(inf, 1.0, 1e-7, 1e-40)` | `(inf, 1.0, 0.0, 1e-7, 1e-40, 0.0, 0.0, 0.0, 1.0)` |
+| `(-inf, -1.0, 123456.79, inf)` | `(-inf, -1.0, 0.0, 123456.79, inf, 0.0, 0.0, 0.0, 1.0)` |
+| `(NaN, 0.5, 16777216.0, -inf)` | `(NaN, 0.5, 0.0, 16777216.0, -inf, 0.0, 0.0, 0.0, 1.0)` |
+
+### Probe `call-mat3-mat4`, 16 input rows
+
+```glsl
+mat3 probe(mat4 a) { return mat3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38)` | `(0.0, -2.75, 3e+38, 0.5, 16777216.0, -inf, 123456.79, inf, 1.0)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40)` | `(-0.0, 0.33333334, -3e+38, -2.75, 3e+38, NaN, 16777216.0, -inf, -1.0)` |
+| `(-1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf)` | `(-1.0, 123456.79, inf, 1e-7, 1e-40, -0.0, -3e+38, 0.0, -2.75)` |
+| `(0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN)` | `(0.5, 16777216.0, -inf, 123456.79, inf, 1.0, 1e-40, -0.0, 0.33333334)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0)` | `(1e-7, 1e-40, -0.0, -3e+38, 0.0, -2.75, NaN, 0.5, 16777216.0)` |
+| `(123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0)` | `(123456.79, inf, 1.0, 1e-40, -0.0, 0.33333334, 0.0, -2.75, 3e+38)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7)` | `(1e-40, -0.0, 0.33333334, 0.0, -2.75, 3e+38, 0.5, 16777216.0, -inf)` |
+| `(NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38)` | `(NaN, 0.5, 16777216.0, -1.0, 123456.79, inf, 1e-7, 1e-40, -0.0)` |
+
+### Probe `call-mat4-mat2`, 16 input rows
+
+```glsl
+mat4 probe(mat2 a) { return mat4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN)` | `(0.0, -2.75, 0.0, 0.0, 3e+38, NaN, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0)` | `(-0.0, 0.33333334, 0.0, 0.0, -3e+38, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(1.0, 1e-7, 1e-40, -0.0)` | `(1.0, 1e-7, 0.0, 0.0, 1e-40, -0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334)` | `(1e-7, 1e-40, 0.0, 0.0, -0.0, 0.33333334, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38)` | `(1e-40, -0.0, 0.0, 0.0, 0.33333334, -3e+38, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(inf, 1.0, 1e-7, 1e-40)` | `(inf, 1.0, 0.0, 0.0, 1e-7, 1e-40, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(-inf, -1.0, 123456.79, inf)` | `(-inf, -1.0, 0.0, 0.0, 123456.79, inf, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(NaN, 0.5, 16777216.0, -inf)` | `(NaN, 0.5, 0.0, 0.0, 16777216.0, -inf, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+
+### Probe `call-mat4-mat3`, 16 input rows
+
+```glsl
+mat4 probe(mat3 a) { return mat4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79)` | `(0.0, -2.75, 3e+38, 0.0, NaN, 0.5, 16777216.0, 0.0, -inf, -1.0, 123456.79, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0)` | `(-0.0, 0.33333334, -3e+38, 0.0, 0.0, -2.75, 3e+38, 0.0, NaN, 0.5, 16777216.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN)` | `(1e-7, 1e-40, -0.0, 0.0, 0.33333334, -3e+38, 0.0, 0.0, -2.75, 3e+38, NaN, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0)` | `(123456.79, inf, 1.0, 0.0, 1e-7, 1e-40, -0.0, 0.0, 0.33333334, -3e+38, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0)` | `(16777216.0, -inf, -1.0, 0.0, 123456.79, inf, 1.0, 0.0, 1e-7, 1e-40, -0.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5)` | `(1e-40, -0.0, 0.33333334, 0.0, -3e+38, 0.0, -2.75, 0.0, 3e+38, NaN, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75)` | `(inf, 1.0, 1e-7, 0.0, 1e-40, -0.0, 0.33333334, 0.0, -3e+38, 0.0, -2.75, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(-inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334)` | `(-inf, -1.0, 123456.79, 0.0, inf, 1.0, 1e-7, 0.0, 1e-40, -0.0, 0.33333334, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+
 ## The constructor operator
 
 Godot holds every constructor and conversion as one operator node, `OP_CONSTRUCT`, with the overload row that matched.
@@ -1080,6 +1832,750 @@ Godot holds every constructor and conversion as one operator node, `OP_CONSTRUCT
 The transpiler emits `the constructor of the row`. Rows: `OP_CONSTRUCT`. Godot source: `servers/rendering/shader_language.cpp:1558`.
 
 Every row is native on WebGL 2 and on WebGPURenderer.
+
+### Probe `call-ivec2-bvec2`, 4 input rows
+
+```glsl
+ivec2 probe(bvec2 a) { return ivec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false)` | `(0, 0)` |
+| `(true, true)` | `(1, 1)` |
+
+### Probe `call-ivec2-ivec2`, 16 input rows
+
+```glsl
+ivec2 probe(ivec2 a) { return ivec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7)` | `(0, 7)` |
+| `(1, 31)` | `(1, 31)` |
+| `(1000003, 0)` | `(1000003, 0)` |
+
+### Probe `call-ivec2-uvec2`, 16 input rows
+
+```glsl
+ivec2 probe(uvec2 a) { return ivec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u)` | `(0, 31)` |
+| `(1u, 32u)` | `(1, 32)` |
+| `(1000003u, 0u)` | `(1000003, 0)` |
+
+### Probe `call-ivec2-vec2`, 16 input rows
+
+```glsl
+ivec2 probe(vec2 a) { return ivec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `(0, -2)` |
+| `(-0.0, 0.33333334)` | `(0, 0)` |
+| `(-1.0, 123456.79)` | `(-1, 123456)` |
+| `(1e-7, 1e-40)` | `(0, 0)` |
+| `(123456.79, inf)` | `(123456, 2147483647)` |
+| `(16777216.0, -inf)` | `(16777216, -2147483648)` |
+| `(3e+38, NaN)` | `(2147483647, 0)` |
+| `(1e-40, -0.0)` | `(0, 0)` |
+
+### Probe `call-vec2-bvec2`, 4 input rows
+
+```glsl
+vec2 probe(bvec2 a) { return vec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false)` | `(0.0, 0.0)` |
+| `(true, true)` | `(1.0, 1.0)` |
+
+### Probe `call-vec2-ivec2`, 16 input rows
+
+```glsl
+vec2 probe(ivec2 a) { return vec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7)` | `(0.0, 7.0)` |
+| `(1, 31)` | `(1.0, 31.0)` |
+| `(1000003, 0)` | `(1000003.0, 0.0)` |
+
+### Probe `call-vec2-uvec2`, 16 input rows
+
+```glsl
+vec2 probe(uvec2 a) { return vec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u)` | `(0.0, 31.0)` |
+| `(1u, 32u)` | `(1.0, 32.0)` |
+| `(1000003u, 0u)` | `(1000003.0, 0.0)` |
+
+### Probe `call-vec2-vec2`, 16 input rows
+
+```glsl
+vec2 probe(vec2 a) { return vec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `(0.0, -2.75)` |
+| `(-0.0, 0.33333334)` | `(-0.0, 0.33333334)` |
+| `(1.0, 1e-7)` | `(1.0, 1e-7)` |
+| `(1e-7, 1e-40)` | `(1e-7, 1e-40)` |
+| `(123456.79, inf)` | `(123456.79, inf)` |
+| `(16777216.0, -inf)` | `(16777216.0, -inf)` |
+| `(3e+38, NaN)` | `(3e+38, NaN)` |
+| `(1e-40, -0.0)` | `(1e-40, -0.0)` |
+
+### Probe `call-uvec2-bvec2`, 4 input rows
+
+```glsl
+uvec2 probe(bvec2 a) { return uvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false)` | `(0u, 0u)` |
+| `(true, true)` | `(1u, 1u)` |
+
+### Probe `call-uvec2-ivec2`, 16 input rows
+
+```glsl
+uvec2 probe(ivec2 a) { return uvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7)` | `(0u, 7u)` |
+| `(1, 31)` | `(1u, 31u)` |
+| `(1000003, 0)` | `(1000003u, 0u)` |
+
+### Probe `call-uvec2-uvec2`, 16 input rows
+
+```glsl
+uvec2 probe(uvec2 a) { return uvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u)` | `(0u, 31u)` |
+| `(1u, 32u)` | `(1u, 32u)` |
+| `(1000003u, 0u)` | `(1000003u, 0u)` |
+
+### Probe `call-uvec2-vec2`, 16 input rows
+
+```glsl
+uvec2 probe(vec2 a) { return uvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `(0u, 0u)` |
+| `(-0.0, 0.33333334)` | `(0u, 0u)` |
+| `(1e-7, 1e-40)` | `(0u, 0u)` |
+| `(123456.79, inf)` | `(123456u, 4294967295u)` |
+| `(16777216.0, -inf)` | `(16777216u, 0u)` |
+| `(3e+38, NaN)` | `(4294967295u, 0u)` |
+| `(-3e+38, 0.0)` | `(0u, 0u)` |
+| `(1e-40, -0.0)` | `(0u, 0u)` |
+
+### Probe `call-bvec2-bvec2`, 4 input rows
+
+```glsl
+bvec2 probe(bvec2 a) { return bvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false)` | `(false, false)` |
+| `(true, true)` | `(true, true)` |
+
+### Probe `call-bvec2-ivec2`, 16 input rows
+
+```glsl
+bvec2 probe(ivec2 a) { return bvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7)` | `(false, true)` |
+| `(1000003, 0)` | `(true, false)` |
+
+### Probe `call-bvec2-uvec2`, 16 input rows
+
+```glsl
+bvec2 probe(uvec2 a) { return bvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u)` | `(false, true)` |
+| `(1000003u, 0u)` | `(true, false)` |
+
+### Probe `call-bvec2-vec2`, 16 input rows
+
+```glsl
+bvec2 probe(vec2 a) { return bvec2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `(false, true)` |
+| `(-0.0, 0.33333334)` | `(false, true)` |
+| `(1e-7, 1e-40)` | `(true, true)` |
+| `(123456.79, inf)` | `(true, true)` |
+| `(16777216.0, -inf)` | `(true, true)` |
+| `(3e+38, NaN)` | `(true, true)` |
+| `(-3e+38, 0.0)` | `(true, false)` |
+| `(1e-40, -0.0)` | `(true, false)` |
+
+### Probe `call-ivec3-bvec3`, 6 input rows
+
+```glsl
+ivec3 probe(bvec3 a) { return ivec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false)` | `(0, 0, 0)` |
+| `(true, true, true)` | `(1, 1, 1)` |
+
+### Probe `call-ivec3-ivec3`, 16 input rows
+
+```glsl
+ivec3 probe(ivec3 a) { return ivec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536)` | `(0, 7, 65536)` |
+| `(1, 31, 1000003)` | `(1, 31, 1000003)` |
+| `(31, 1000003, 0)` | `(31, 1000003, 0)` |
+| `(1000003, 0, 7)` | `(1000003, 0, 7)` |
+
+### Probe `call-ivec3-uvec3`, 16 input rows
+
+```glsl
+ivec3 probe(uvec3 a) { return ivec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u)` | `(0, 31, 65536)` |
+| `(1u, 32u, 1000003u)` | `(1, 32, 1000003)` |
+| `(32u, 1000003u, 0u)` | `(32, 1000003, 0)` |
+| `(1000003u, 0u, 31u)` | `(1000003, 0, 31)` |
+
+### Probe `call-ivec3-vec3`, 16 input rows
+
+```glsl
+ivec3 probe(vec3 a) { return ivec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38)` | `(0, -2, 2147483647)` |
+| `(-0.0, 0.33333334, -3e+38)` | `(0, 0, -2147483648)` |
+| `(1.0, 1e-7, 1e-40)` | `(1, 0, 0)` |
+| `(-1.0, 123456.79, inf)` | `(-1, 123456, 2147483647)` |
+| `(0.5, 16777216.0, -inf)` | `(0, 16777216, -2147483648)` |
+| `(-2.75, 3e+38, NaN)` | `(-2, 2147483647, 0)` |
+| `(1e-7, 1e-40, -0.0)` | `(0, 0, 0)` |
+| `(1e-40, -0.0, 0.33333334)` | `(0, 0, 0)` |
+
+### Probe `call-vec3-bvec3`, 6 input rows
+
+```glsl
+vec3 probe(bvec3 a) { return vec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false)` | `(0.0, 0.0, 0.0)` |
+| `(true, true, true)` | `(1.0, 1.0, 1.0)` |
+
+### Probe `call-vec3-ivec3`, 16 input rows
+
+```glsl
+vec3 probe(ivec3 a) { return vec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536)` | `(0.0, 7.0, 65536.0)` |
+| `(1, 31, 1000003)` | `(1.0, 31.0, 1000003.0)` |
+| `(31, 1000003, 0)` | `(31.0, 1000003.0, 0.0)` |
+| `(1000003, 0, 7)` | `(1000003.0, 0.0, 7.0)` |
+
+### Probe `call-vec3-uvec3`, 16 input rows
+
+```glsl
+vec3 probe(uvec3 a) { return vec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u)` | `(0.0, 31.0, 65536.0)` |
+| `(1u, 32u, 1000003u)` | `(1.0, 32.0, 1000003.0)` |
+| `(32u, 1000003u, 0u)` | `(32.0, 1000003.0, 0.0)` |
+| `(1000003u, 0u, 31u)` | `(1000003.0, 0.0, 31.0)` |
+
+### Probe `call-vec3-vec3`, 16 input rows
+
+```glsl
+vec3 probe(vec3 a) { return vec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38)` | `(0.0, -2.75, 3e+38)` |
+| `(-0.0, 0.33333334, -3e+38)` | `(-0.0, 0.33333334, -3e+38)` |
+| `(1.0, 1e-7, 1e-40)` | `(1.0, 1e-7, 1e-40)` |
+| `(-1.0, 123456.79, inf)` | `(-1.0, 123456.79, inf)` |
+| `(0.5, 16777216.0, -inf)` | `(0.5, 16777216.0, -inf)` |
+| `(-2.75, 3e+38, NaN)` | `(-2.75, 3e+38, NaN)` |
+| `(1e-7, 1e-40, -0.0)` | `(1e-7, 1e-40, -0.0)` |
+| `(1e-40, -0.0, 0.33333334)` | `(1e-40, -0.0, 0.33333334)` |
+
+### Probe `call-uvec3-bvec3`, 6 input rows
+
+```glsl
+uvec3 probe(bvec3 a) { return uvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false)` | `(0u, 0u, 0u)` |
+| `(true, true, true)` | `(1u, 1u, 1u)` |
+
+### Probe `call-uvec3-ivec3`, 16 input rows
+
+```glsl
+uvec3 probe(ivec3 a) { return uvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536)` | `(0u, 7u, 65536u)` |
+| `(1, 31, 1000003)` | `(1u, 31u, 1000003u)` |
+| `(31, 1000003, 0)` | `(31u, 1000003u, 0u)` |
+| `(1000003, 0, 7)` | `(1000003u, 0u, 7u)` |
+
+### Probe `call-uvec3-uvec3`, 16 input rows
+
+```glsl
+uvec3 probe(uvec3 a) { return uvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u)` | `(0u, 31u, 65536u)` |
+| `(1u, 32u, 1000003u)` | `(1u, 32u, 1000003u)` |
+| `(32u, 1000003u, 0u)` | `(32u, 1000003u, 0u)` |
+| `(1000003u, 0u, 31u)` | `(1000003u, 0u, 31u)` |
+
+### Probe `call-uvec3-vec3`, 16 input rows
+
+```glsl
+uvec3 probe(vec3 a) { return uvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38)` | `(0u, 0u, 4294967295u)` |
+| `(-0.0, 0.33333334, -3e+38)` | `(0u, 0u, 0u)` |
+| `(1.0, 1e-7, 1e-40)` | `(1u, 0u, 0u)` |
+| `(-1.0, 123456.79, inf)` | `(0u, 123456u, 4294967295u)` |
+| `(0.5, 16777216.0, -inf)` | `(0u, 16777216u, 0u)` |
+| `(-2.75, 3e+38, NaN)` | `(0u, 4294967295u, 0u)` |
+| `(1e-7, 1e-40, -0.0)` | `(0u, 0u, 0u)` |
+| `(1e-40, -0.0, 0.33333334)` | `(0u, 0u, 0u)` |
+
+### Probe `call-bvec3-bvec3`, 6 input rows
+
+```glsl
+bvec3 probe(bvec3 a) { return bvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false)` | `(false, false, false)` |
+| `(true, true, true)` | `(true, true, true)` |
+
+### Probe `call-bvec3-ivec3`, 16 input rows
+
+```glsl
+bvec3 probe(ivec3 a) { return bvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536)` | `(false, true, true)` |
+| `(31, 1000003, 0)` | `(true, true, false)` |
+| `(1000003, 0, 7)` | `(true, false, true)` |
+
+### Probe `call-bvec3-uvec3`, 16 input rows
+
+```glsl
+bvec3 probe(uvec3 a) { return bvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u)` | `(false, true, true)` |
+| `(32u, 1000003u, 0u)` | `(true, true, false)` |
+| `(1000003u, 0u, 31u)` | `(true, false, true)` |
+
+### Probe `call-bvec3-vec3`, 16 input rows
+
+```glsl
+bvec3 probe(vec3 a) { return bvec3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38)` | `(false, true, true)` |
+| `(-0.0, 0.33333334, -3e+38)` | `(false, true, true)` |
+| `(1.0, 1e-7, 1e-40)` | `(true, true, true)` |
+| `(-1.0, 123456.79, inf)` | `(true, true, true)` |
+| `(0.5, 16777216.0, -inf)` | `(true, true, true)` |
+| `(-2.75, 3e+38, NaN)` | `(true, true, true)` |
+| `(1e-7, 1e-40, -0.0)` | `(true, true, false)` |
+| `(1e-40, -0.0, 0.33333334)` | `(true, false, true)` |
+
+### Probe `call-ivec4-bvec4`, 8 input rows
+
+```glsl
+ivec4 probe(bvec4 a) { return ivec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false, true)` | `(0, 0, 0, 1)` |
+| `(true, true, true, false)` | `(1, 1, 1, 0)` |
+
+### Probe `call-ivec4-ivec4`, 16 input rows
+
+```glsl
+ivec4 probe(ivec4 a) { return ivec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536, 5)` | `(0, 7, 65536, 5)` |
+| `(1, 31, 1000003, 0)` | `(1, 31, 1000003, 0)` |
+| `(-1, 32, -12345, 1)` | `(-1, 32, -12345, 1)` |
+| `(31, 1000003, 0, 7)` | `(31, 1000003, 0, 7)` |
+| `(1000003, 0, 7, 65536)` | `(1000003, 0, 7, 65536)` |
+
+### Probe `call-ivec4-uvec4`, 16 input rows
+
+```glsl
+ivec4 probe(uvec4 a) { return ivec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u, 4294967295u)` | `(0, 31, 65536, -1)` |
+| `(1u, 32u, 1000003u, 0u)` | `(1, 32, 1000003, 0)` |
+| `(2u, 33u, 2147483647u, 1u)` | `(2, 33, 2147483647, 1)` |
+| `(32u, 1000003u, 0u, 31u)` | `(32, 1000003, 0, 31)` |
+| `(1000003u, 0u, 31u, 65536u)` | `(1000003, 0, 31, 65536)` |
+
+### Probe `call-ivec4-vec4`, 16 input rows
+
+```glsl
+ivec4 probe(vec4 a) { return ivec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN)` | `(0, -2, 2147483647, 0)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0)` | `(0, 0, -2147483648, 0)` |
+| `(1.0, 1e-7, 1e-40, -0.0)` | `(1, 0, 0, 0)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334)` | `(0, 0, 0, 0)` |
+| `(3e+38, NaN, 0.5, 16777216.0)` | `(2147483647, 0, 0, 16777216)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38)` | `(0, 0, 0, -2147483648)` |
+| `(inf, 1.0, 1e-7, 1e-40)` | `(2147483647, 1, 0, 0)` |
+| `(-inf, -1.0, 123456.79, inf)` | `(-2147483648, -1, 123456, 2147483647)` |
+
+### Probe `call-vec4-bvec4`, 8 input rows
+
+```glsl
+vec4 probe(bvec4 a) { return vec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false, true)` | `(0.0, 0.0, 0.0, 1.0)` |
+| `(true, true, true, false)` | `(1.0, 1.0, 1.0, 0.0)` |
+
+### Probe `call-vec4-ivec4`, 16 input rows
+
+```glsl
+vec4 probe(ivec4 a) { return vec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536, 5)` | `(0.0, 7.0, 65536.0, 5.0)` |
+| `(1, 31, 1000003, 0)` | `(1.0, 31.0, 1000003.0, 0.0)` |
+| `(-1, 32, -12345, 1)` | `(-1.0, 32.0, -12345.0, 1.0)` |
+| `(31, 1000003, 0, 7)` | `(31.0, 1000003.0, 0.0, 7.0)` |
+| `(1000003, 0, 7, 65536)` | `(1000003.0, 0.0, 7.0, 65536.0)` |
+
+### Probe `call-vec4-uvec4`, 16 input rows
+
+```glsl
+vec4 probe(uvec4 a) { return vec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u, 4294967295u)` | `(0.0, 31.0, 65536.0, 4294967300.0)` |
+| `(1u, 32u, 1000003u, 0u)` | `(1.0, 32.0, 1000003.0, 0.0)` |
+| `(2u, 33u, 2147483647u, 1u)` | `(2.0, 33.0, 2147483600.0, 1.0)` |
+| `(32u, 1000003u, 0u, 31u)` | `(32.0, 1000003.0, 0.0, 31.0)` |
+| `(1000003u, 0u, 31u, 65536u)` | `(1000003.0, 0.0, 31.0, 65536.0)` |
+
+### Probe `call-vec4-vec4`, 16 input rows
+
+```glsl
+vec4 probe(vec4 a) { return vec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN)` | `(0.0, -2.75, 3e+38, NaN)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0)` | `(-0.0, 0.33333334, -3e+38, 0.0)` |
+| `(1.0, 1e-7, 1e-40, -0.0)` | `(1.0, 1e-7, 1e-40, -0.0)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334)` | `(1e-7, 1e-40, -0.0, 0.33333334)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38)` | `(1e-40, -0.0, 0.33333334, -3e+38)` |
+| `(inf, 1.0, 1e-7, 1e-40)` | `(inf, 1.0, 1e-7, 1e-40)` |
+| `(-inf, -1.0, 123456.79, inf)` | `(-inf, -1.0, 123456.79, inf)` |
+| `(NaN, 0.5, 16777216.0, -inf)` | `(NaN, 0.5, 16777216.0, -inf)` |
+
+### Probe `call-uvec4-bvec4`, 8 input rows
+
+```glsl
+uvec4 probe(bvec4 a) { return uvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false, true)` | `(0u, 0u, 0u, 1u)` |
+| `(true, true, true, false)` | `(1u, 1u, 1u, 0u)` |
+
+### Probe `call-uvec4-ivec4`, 16 input rows
+
+```glsl
+uvec4 probe(ivec4 a) { return uvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536, 5)` | `(0u, 7u, 65536u, 5u)` |
+| `(1, 31, 1000003, 0)` | `(1u, 31u, 1000003u, 0u)` |
+| `(-1, 32, -12345, 1)` | `(4294967295u, 32u, 4294954951u, 1u)` |
+| `(31, 1000003, 0, 7)` | `(31u, 1000003u, 0u, 7u)` |
+| `(1000003, 0, 7, 65536)` | `(1000003u, 0u, 7u, 65536u)` |
+
+### Probe `call-uvec4-uvec4`, 16 input rows
+
+```glsl
+uvec4 probe(uvec4 a) { return uvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u, 4294967295u)` | `(0u, 31u, 65536u, 4294967295u)` |
+| `(1u, 32u, 1000003u, 0u)` | `(1u, 32u, 1000003u, 0u)` |
+| `(2u, 33u, 2147483647u, 1u)` | `(2u, 33u, 2147483647u, 1u)` |
+| `(32u, 1000003u, 0u, 31u)` | `(32u, 1000003u, 0u, 31u)` |
+| `(1000003u, 0u, 31u, 65536u)` | `(1000003u, 0u, 31u, 65536u)` |
+
+### Probe `call-uvec4-vec4`, 16 input rows
+
+```glsl
+uvec4 probe(vec4 a) { return uvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN)` | `(0u, 0u, 4294967295u, 0u)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0)` | `(0u, 0u, 0u, 0u)` |
+| `(1.0, 1e-7, 1e-40, -0.0)` | `(1u, 0u, 0u, 0u)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334)` | `(0u, 0u, 0u, 0u)` |
+| `(16777216.0, -inf, -1.0, 123456.79)` | `(16777216u, 0u, 0u, 123456u)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38)` | `(0u, 0u, 0u, 0u)` |
+| `(inf, 1.0, 1e-7, 1e-40)` | `(4294967295u, 1u, 0u, 0u)` |
+| `(-inf, -1.0, 123456.79, inf)` | `(0u, 0u, 123456u, 4294967295u)` |
+
+### Probe `call-bvec4-bvec4`, 8 input rows
+
+```glsl
+bvec4 probe(bvec4 a) { return bvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(false, false, false, true)` | `(false, false, false, true)` |
+| `(true, true, true, false)` | `(true, true, true, false)` |
+
+### Probe `call-bvec4-ivec4`, 16 input rows
+
+```glsl
+bvec4 probe(ivec4 a) { return bvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7, 65536, 5)` | `(false, true, true, true)` |
+| `(1, 31, 1000003, 0)` | `(true, true, true, false)` |
+| `(31, 1000003, 0, 7)` | `(true, true, false, true)` |
+| `(1000003, 0, 7, 65536)` | `(true, false, true, true)` |
+
+### Probe `call-bvec4-uvec4`, 16 input rows
+
+```glsl
+bvec4 probe(uvec4 a) { return bvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u, 65536u, 4294967295u)` | `(false, true, true, true)` |
+| `(1u, 32u, 1000003u, 0u)` | `(true, true, true, false)` |
+| `(32u, 1000003u, 0u, 31u)` | `(true, true, false, true)` |
+| `(1000003u, 0u, 31u, 65536u)` | `(true, false, true, true)` |
+
+### Probe `call-bvec4-vec4`, 16 input rows
+
+```glsl
+bvec4 probe(vec4 a) { return bvec4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN)` | `(false, true, true, true)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0)` | `(false, true, true, false)` |
+| `(1.0, 1e-7, 1e-40, -0.0)` | `(true, true, true, false)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334)` | `(true, true, false, true)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38)` | `(true, false, true, true)` |
+| `(inf, 1.0, 1e-7, 1e-40)` | `(true, true, true, true)` |
+| `(-inf, -1.0, 123456.79, inf)` | `(true, true, true, true)` |
+| `(NaN, 0.5, 16777216.0, -inf)` | `(true, true, true, true)` |
+
+### Probe `call-mat2-mat3`, 16 input rows
+
+```glsl
+mat2 probe(mat3 a) { return mat2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79)` | `(0.0, -2.75, NaN, 0.5)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0)` | `(-0.0, 0.33333334, 0.0, -2.75)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN)` | `(1e-7, 1e-40, 0.33333334, -3e+38)` |
+| `(123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0)` | `(123456.79, inf, 1e-7, 1e-40)` |
+| `(16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0)` | `(16777216.0, -inf, 123456.79, inf)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5)` | `(1e-40, -0.0, -3e+38, 0.0)` |
+| `(inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75)` | `(inf, 1.0, 1e-40, -0.0)` |
+| `(-inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334)` | `(-inf, -1.0, inf, 1.0)` |
+
+### Probe `call-mat2-mat4`, 16 input rows
+
+```glsl
+mat2 probe(mat4 a) { return mat2(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38)` | `(0.0, -2.75, 0.5, 16777216.0)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0)` | `(1e-7, 1e-40, -3e+38, 0.0)` |
+| `(123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0)` | `(123456.79, inf, 1e-40, -0.0)` |
+| `(16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5)` | `(16777216.0, -inf, inf, 1.0)` |
+| `(3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75)` | `(3e+38, NaN, -inf, -1.0)` |
+| `(-3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334)` | `(-3e+38, 0.0, NaN, 0.5)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7)` | `(1e-40, -0.0, 0.0, -2.75)` |
+| `(inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79)` | `(inf, 1.0, -0.0, 0.33333334)` |
+
+### Probe `call-mat3-mat2`, 16 input rows
+
+```glsl
+mat3 probe(mat2 a) { return mat3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN)` | `(0.0, -2.75, 0.0, 3e+38, NaN, 0.0, 0.0, 0.0, 1.0)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0)` | `(-0.0, 0.33333334, 0.0, -3e+38, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(1.0, 1e-7, 1e-40, -0.0)` | `(1.0, 1e-7, 0.0, 1e-40, -0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334)` | `(1e-7, 1e-40, 0.0, -0.0, 0.33333334, 0.0, 0.0, 0.0, 1.0)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38)` | `(1e-40, -0.0, 0.0, 0.33333334, -3e+38, 0.0, 0.0, 0.0, 1.0)` |
+| `(inf, 1.0, 1e-7, 1e-40)` | `(inf, 1.0, 0.0, 1e-7, 1e-40, 0.0, 0.0, 0.0, 1.0)` |
+| `(-inf, -1.0, 123456.79, inf)` | `(-inf, -1.0, 0.0, 123456.79, inf, 0.0, 0.0, 0.0, 1.0)` |
+| `(NaN, 0.5, 16777216.0, -inf)` | `(NaN, 0.5, 0.0, 16777216.0, -inf, 0.0, 0.0, 0.0, 1.0)` |
+
+### Probe `call-mat3-mat4`, 16 input rows
+
+```glsl
+mat3 probe(mat4 a) { return mat3(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38)` | `(0.0, -2.75, 3e+38, 0.5, 16777216.0, -inf, 123456.79, inf, 1.0)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40)` | `(-0.0, 0.33333334, -3e+38, -2.75, 3e+38, NaN, 16777216.0, -inf, -1.0)` |
+| `(-1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf)` | `(-1.0, 123456.79, inf, 1e-7, 1e-40, -0.0, -3e+38, 0.0, -2.75)` |
+| `(0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN)` | `(0.5, 16777216.0, -inf, 123456.79, inf, 1.0, 1e-40, -0.0, 0.33333334)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0)` | `(1e-7, 1e-40, -0.0, -3e+38, 0.0, -2.75, NaN, 0.5, 16777216.0)` |
+| `(123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0)` | `(123456.79, inf, 1.0, 1e-40, -0.0, 0.33333334, 0.0, -2.75, 3e+38)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7)` | `(1e-40, -0.0, 0.33333334, 0.0, -2.75, 3e+38, 0.5, 16777216.0, -inf)` |
+| `(NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38)` | `(NaN, 0.5, 16777216.0, -1.0, 123456.79, inf, 1e-7, 1e-40, -0.0)` |
+
+### Probe `call-mat4-mat2`, 16 input rows
+
+```glsl
+mat4 probe(mat2 a) { return mat4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN)` | `(0.0, -2.75, 0.0, 0.0, 3e+38, NaN, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0)` | `(-0.0, 0.33333334, 0.0, 0.0, -3e+38, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(1.0, 1e-7, 1e-40, -0.0)` | `(1.0, 1e-7, 0.0, 0.0, 1e-40, -0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334)` | `(1e-7, 1e-40, 0.0, 0.0, -0.0, 0.33333334, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38)` | `(1e-40, -0.0, 0.0, 0.0, 0.33333334, -3e+38, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(inf, 1.0, 1e-7, 1e-40)` | `(inf, 1.0, 0.0, 0.0, 1e-7, 1e-40, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(-inf, -1.0, 123456.79, inf)` | `(-inf, -1.0, 0.0, 0.0, 123456.79, inf, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(NaN, 0.5, 16777216.0, -inf)` | `(NaN, 0.5, 0.0, 0.0, 16777216.0, -inf, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+
+### Probe `call-mat4-mat3`, 16 input rows
+
+```glsl
+mat4 probe(mat3 a) { return mat4(a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79)` | `(0.0, -2.75, 3e+38, 0.0, NaN, 0.5, 16777216.0, 0.0, -inf, -1.0, 123456.79, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(-0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0)` | `(-0.0, 0.33333334, -3e+38, 0.0, 0.0, -2.75, 3e+38, 0.0, NaN, 0.5, 16777216.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN)` | `(1e-7, 1e-40, -0.0, 0.0, 0.33333334, -3e+38, 0.0, 0.0, -2.75, 3e+38, NaN, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0)` | `(123456.79, inf, 1.0, 0.0, 1e-7, 1e-40, -0.0, 0.0, 0.33333334, -3e+38, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0)` | `(16777216.0, -inf, -1.0, 0.0, 123456.79, inf, 1.0, 0.0, 1e-7, 1e-40, -0.0, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5)` | `(1e-40, -0.0, 0.33333334, 0.0, -3e+38, 0.0, -2.75, 0.0, 3e+38, NaN, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75)` | `(inf, 1.0, 1e-7, 0.0, 1e-40, -0.0, 0.33333334, 0.0, -3e+38, 0.0, -2.75, 0.0, 0.0, 0.0, 0.0, 1.0)` |
+| `(-inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0, 0.33333334)` | `(-inf, -1.0, 123456.79, 0.0, inf, 1.0, 1e-7, 0.0, 1e-40, -0.0, 0.33333334, 0.0, 0.0, 0.0, 0.0, 1.0)` |
 
 ### Probe `construct-bvec2-bool`, 2 input rows
 

@@ -6,7 +6,7 @@
 
 import {
   FRAMES_BEFORE_READ,
-  inChunksAtOnce,
+  inChunksOfAtMost,
   oneGodot,
   printedField,
   printedImages,
@@ -87,11 +87,17 @@ function pixelBits(bytes) {
 }
 
 /**
+ * A Godot run keeps each probe's material, about 5 MB, until it ends: 700 probes in each of 4 runs
+ * at once passed the 15 GB of the container. 256 keeps 4 runs under 6 GB.
+ */
+const PROBES_PER_RUN_AT_MOST = 256;
+
+/**
  * Godot's answers to `probes` from runs of the pinned release at once: its version, adapter and
  * pixels. Every run must name the same Godot and adapter, or its pixels would mix two engines.
  */
 export async function runProbesInGodot(probes) {
-  const outputs = await inChunksAtOnce(probes, async (chunk) =>
+  const outputs = await inChunksOfAtMost(probes, PROBES_PER_RUN_AT_MOST, async (chunk) =>
     parseProbeOutput(await runGodotScript(MAIN_SCRIPT, probeProjectFiles(chunk)))
   );
   const { godot, adapter } = oneGodot(outputs);

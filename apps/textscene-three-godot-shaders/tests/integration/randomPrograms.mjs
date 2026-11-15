@@ -84,16 +84,14 @@ export function newDifferences(results) {
 }
 
 /**
- * One line for each program a case names that equals Godot now. The set changed under the name,
- * so the case drops its `program` and stays: only its own fixed case can show the fault is gone.
+ * One line for each known program that equals Godot now. A case names a program and keeps its own
+ * fixed case, so it drops only the `program`: the set may have changed under the name. A listed
+ * program of `KNOWN_PROGRAM_DIFFERENCES` leaves the list.
  */
 export function staleKnownPrograms(results) {
   return results
     .filter(({ program, verdict }) => verdict.passed && KNOWN_PROGRAMS.has(program.name))
-    .map(
-      ({ program }) =>
-        `${program.name} equals Godot now: remove it as the program of its case in knownDifferences.mjs`
-    );
+    .map(({ program }) => `${program.name} equals Godot now: remove it as a program of knownDifferences.mjs`);
 }
 
 /** The verdict of each fixed case of `cases` against `entries`, Godot's answers by case name. */

@@ -5,7 +5,7 @@
  * (`lowering/lowerSideEffects.ts`).
  */
 
-import { select } from 'three/tsl';
+import { property, select } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { builtInCall } from './emitBuiltIn.js';
 import { constantNode } from './emitConstant.js';
@@ -128,14 +128,27 @@ export class ExpressionEmitter {
 
   /** A call in an expression, and its result. */
   private called(call: CallNode): Value {
-    if (call.row.id !== 'OP_CALL')
-      return builtInCall(
-        call.function,
-        call.operands.map((operand) => this.node(operand))
-      );
+    if (call.row.id !== 'OP_CALL') return this.builtInCalled(call);
     const called = this.context.functions.call(call.function, this.passed(call));
     this.writeBack(call, called);
     return called.result;
+  }
+
+  /**
+   * A call of a built-in function. One that writes an argument (`modf`) runs here, into a variable
+   * of its own, so the place it writes is copied after the call and a call as a statement stays.
+   */
+  private builtInCalled(call: CallNode): Value {
+    const outs = call.operands.map((operand, index) =>
+      call.qualifiers[index] === 'out' ? (property(operand.type) as unknown as Node) : undefined
+    );
+    const nodes = call.operands.map((operand, index) => outs[index] ?? this.node(operand));
+    const node = builtInCall(call.function, call.row, nodes);
+    if (outs.every((out) => out === undefined)) return node;
+    const result = property(call.type) as unknown as Node;
+    result.assign(node);
+    this.writeBack(call, { result, written: outs.filter((out) => out !== undefined) });
+    return result;
   }
 
   /** The value of each argument of a call but an `out` one. */

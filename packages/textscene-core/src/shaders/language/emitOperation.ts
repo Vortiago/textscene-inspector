@@ -109,7 +109,8 @@ export const element = (owner: Node, index: Node) =>
   (owner as unknown as { element(index: Node): Node }).element(index);
 
 /** Column `column` of a matrix node. */
-const columnOf = (matrix: Node, column: number): Node => element(matrix, int(column) as unknown as Node);
+export const columnOf = (matrix: Node, column: number): Node =>
+  element(matrix, int(column) as unknown as Node);
 
 /** The operation of each operator that writes nothing, by Godot's enumerator. */
 export const OPERATIONS: Readonly<Record<string, Operation>> = {
@@ -140,8 +141,9 @@ export function assignedOperator(op: string): string | undefined {
 }
 
 /**
- * The value of the constructor `type` over `operands`. three converts one float to a matrix as an
- * assignment GLSL refuses, so a matrix of one float is written as its diagonal, as GLSL reads it.
+ * The value of the constructor `type` over `operands`. three converts one float, or one matrix of
+ * another size, to a matrix as an assignment GLSL refuses, so such a matrix is built column by
+ * column, as GLSL reads it.
  */
 export function constructed(
   type: ValueType,
@@ -151,13 +153,22 @@ export function constructed(
   // A template's `sampler3D(texture, sampler)`: three keeps the sampler state on the texture.
   if (type.startsWith('sampler')) return operands[0]!;
   const columns = shapeOf(type)!.columns;
-  if (columns === undefined || operandTypes.length !== 1 || operandTypes[0] !== 'float')
-    return CONSTRUCTORS[type]!(...operands);
-  const zero = floatNode(0);
-  const diagonal = Array.from({ length: columns }, (_, column) =>
-    CONSTRUCTORS[`vec${columns}`]!(
-      ...Array.from({ length: columns }, (_, row) => (row === column ? operands[0]! : zero))
-    )
-  );
-  return CONSTRUCTORS[type]!(...diagonal);
+  const [only] = operandTypes;
+  if (columns === undefined || operandTypes.length !== 1) return CONSTRUCTORS[type]!(...operands);
+  if (only === 'float')
+    return matrixOfColumns(type, columns, (column, row) => (row === column ? operands[0]! : floatNode(0)));
+  const sourceColumns = shapeOf(only!)?.columns;
+  if (sourceColumns === undefined || sourceColumns === columns) return CONSTRUCTORS[type]!(...operands);
+  return matrixOfColumns(type, columns, (column, row) => {
+    if (column < sourceColumns && row < sourceColumns)
+      return element(columnOf(operands[0]!, column), int(row) as unknown as Node);
+    return floatNode(row === column ? 1 : 0);
+  });
+}
+
+/** The matrix `type` of `columns` columns whose element at `column`, `row` is `at(column, row)`. */
+function matrixOfColumns(type: ValueType, columns: number, at: (column: number, row: number) => Node): Node {
+  const column = (index: number) =>
+    CONSTRUCTORS[`vec${columns}`]!(...Array.from({ length: columns }, (_, row) => at(index, row)));
+  return CONSTRUCTORS[type]!(...Array.from({ length: columns }, (_, index) => column(index)));
 }

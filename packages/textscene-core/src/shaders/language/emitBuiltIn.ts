@@ -1,39 +1,34 @@
 /**
- * The TSL node of each built-in function a template's own code calls, by its GLSL name. Each is
- * the GLSL function of the same name, which three writes as it is, so the GPU computes what
- * Godot's GLSL computes. A user's shader reaches none until its row has a state on each target.
+ * The TSL node of a call of a built-in function, from a user's shader or a template's own code:
+ * three/tsl's function of the same GLSL name, or a composite of TSL nodes where three has none
+ * (`builtInComposites.ts`). The result is typed as the overload returns.
  */
 
-import { abs, dot, fract, max, min, mix, normalize, pow, sqrt } from 'three/tsl';
+import * as TSL from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
+import { compositeOf } from './builtInComposites.js';
+import type { InstructionRow } from './instructionTable.generated.js';
 
-type BuiltIn = (operands: readonly Node[]) => Node;
-
-/** three's types narrow each function to a few node types. Each takes any node of a GLSL type. */
-const tsl = (operation: unknown) => operation as (...operands: Node[]) => Node;
-
-const call =
-  (operation: unknown): BuiltIn =>
-  (operands) =>
-    tsl(operation)(...operands);
-
-const BUILT_IN_CALLS: Readonly<Record<string, BuiltIn>> = {
-  abs: call(abs),
-  dot: call(dot),
-  fract: call(fract),
-  max: call(max),
-  min: call(min),
-  mix: call(mix),
-  normalize: call(normalize),
-  pow: call(pow),
-  sqrt: call(sqrt),
-  // The first operand is the texture node of `sampler3D(texture, sampler)` (`constructed`).
-  texture: ([sampler, coordinates]) => (sampler as TextureNode).sample(coordinates!),
+/** three's name of each GLSL function it spells otherwise. */
+const TSL_NAMES: Readonly<Record<string, string>> = {
+  inversesqrt: 'inverseSqrt',
+  faceforward: 'faceForward',
 };
 
-/** The node of the built-in call `name`, or a refusal that names it. */
-export function builtInCall(name: string, operands: readonly Node[]): Node {
-  const builtIn = BUILT_IN_CALLS[name];
-  if (!builtIn) throw new Error(`expected a built-in function the emitter writes, got ${name}`);
-  return builtIn(operands);
+/** three/tsl's function `name`, which takes any node of a GLSL type. */
+function tslFunction(name: string): (...operands: Node[]) => Node {
+  const operation = (TSL as Record<string, unknown>)[TSL_NAMES[name] ?? name];
+  if (typeof operation !== 'function') throw new Error(`expected a three/tsl function ${name}, found none`);
+  return operation as (...operands: Node[]) => Node;
+}
+
+/** The node of the call of `row`, the built-in `name`, over `operands`, a node for each argument. */
+export function builtInCall(name: string, row: InstructionRow, operands: readonly Node[]): Node {
+  // The first operand is the texture node of `sampler3D(texture, sampler)` (`constructed`).
+  if (name === 'texture') return (operands[0] as TextureNode).sample(operands[1]!);
+  if (row.returns === undefined || row.args === undefined)
+    throw new Error(`expected a built-in function row with types, got ${row.id}`);
+  const composite = compositeOf(name, row.args);
+  const node = composite ? composite(operands, row.args) : tslFunction(name)(...operands);
+  return TSL.convert(node as never, row.returns) as unknown as Node;
 }

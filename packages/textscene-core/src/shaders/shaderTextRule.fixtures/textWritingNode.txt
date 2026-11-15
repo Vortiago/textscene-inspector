@@ -1,0 +1,15 @@
+// The shape of a node that writes shader text: a Node subclass whose generate() writes the call
+// as GLSL or WGSL text. shaderTextRule.test.ts reads this file and expects each rule to find it.
+import { Node, type NodeBuilder } from 'three/webgpu';
+import { glslFn } from 'three/tsl';
+
+export class BuiltInCallNode extends Node {
+  override generate(builder: NodeBuilder): string {
+    const args = ['a', 'b'];
+    (builder as unknown as { addLineFlowCode(code: string): void }).addLineFlowCode(`${args[1]} = modf( ${args[0]} ).whole`);
+    return `round( ${args[0]} )`;
+  }
+}
+
+export const infinity = 'vec2<f32>( bitcast<f32>( 0x7f800000u ) )';
+export const fn = glslFn('float f(float x) { return x; }');

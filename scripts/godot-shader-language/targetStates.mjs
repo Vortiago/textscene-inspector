@@ -30,11 +30,29 @@ function operatorLowering(op, args) {
   return undefined;
 }
 
+/** The composite of TSL nodes the emitter builds for each built-in three/tsl has no function for. */
+const FUNCTION_COMPOSITES = {
+  roundEven: 'floor(x) + mod(floor(x), 2) at a half',
+  modf: 'trunc(x) and x - trunc(x)',
+  isnan: 'x != x',
+  isinf: 'abs(x) == infinity',
+  matrixCompMult: 'column by column',
+  outerProduct: 'column by column',
+};
+
+/** The composite of the built-in function `row`, or nothing where three/tsl has its function. */
+function functionComposite(row) {
+  const name = row.id.slice(0, row.id.indexOf('('));
+  if (name === 'mix' && row.args[2]?.startsWith('b')) return 'select by lane';
+  return FUNCTION_COMPOSITES[name];
+}
+
 /** The lowering of `row` on every target, or nothing for a native row. */
 function lowering(row) {
   if (/^(lowp|mediump|highp)$/.test(row.id)) return 'dropped: every float is 32-bit';
   if (row.family === 'constructor' && isMatrix(row.returns) && row.args.length === 1)
     return 'diagonal of columns';
+  if (row.family === 'function' && row.args !== undefined) return functionComposite(row);
   if (row.family !== 'operator' || row.args === undefined) return undefined;
   const op = row.id.slice(0, row.id.indexOf('('));
   if (op === 'OP_ASSIGN' || STEPS.test(op)) return 'written to the argument value';

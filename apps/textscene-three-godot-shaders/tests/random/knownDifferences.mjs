@@ -35,7 +35,6 @@ const UNDEFINED_SHIFT = {
 export const KNOWN_DIFFERENCES = {
   'mat4-difference-product': {
     ...DRIVER_REWRITE,
-    program: 'random-1847-107',
     lane: 'lane 32: Godot c31f9469, transpilation c31f9468',
     source:
       'mat4 probe(float a0, ivec3 a1) { return ((mat4(a0)) - a0) * mat4(vec4(a0, .98, a0, 11.744f), vec4(a0, .467, 61.588e+2, 13.97), vec4(a0), (vec4(3.910f, 56.755, a0, a0))) - .98; }',
@@ -46,7 +45,6 @@ export const KNOWN_DIFFERENCES = {
   },
   'vec4-sum-swizzle-difference': {
     ...DRIVER_REWRITE,
-    program: 'random-1847-136',
     lane: 'lane 0: Godot 488d8493, transpilation 488d8494',
     source:
       'vec2 probe(float a0) { return (vec4(a0, vec2(.463, 55.562e3), 0.679e+1) + vec4(a0)).ss - .463; }',
@@ -56,7 +54,6 @@ export const KNOWN_DIFFERENCES = {
   },
   'mat2-double-sum': {
     ...DRIVER_REWRITE,
-    program: 'random-1847-143',
     lane: 'lane 2: Godot 45eee9ef, transpilation 45eee9f1',
     source: 'mat2 probe(mat2 a0, uint a1, uint a2) { return a0 + a0 + 98.400; }',
     inputs: [
@@ -67,7 +64,6 @@ export const KNOWN_DIFFERENCES = {
   },
   'vec4-sum-lane-difference': {
     ...DRIVER_REWRITE,
-    program: 'random-1847-175',
     lane: 'lane 0: Godot 45bf5bf9, transpilation 45bf5bf7',
     source: 'float probe(float a0, bvec4 a1) { return (a0 + vec4(a0, 97.874e2, 50.459f, a0)).r - 75.440f; }',
     inputs: [
@@ -77,7 +73,6 @@ export const KNOWN_DIFFERENCES = {
   },
   'vec4-product-of-matrix-product': {
     ...DRIVER_REWRITE,
-    program: 'random-1847-181',
     lane: 'lane 13: Godot c51f3e50, transpilation c51f3e4f',
     source:
       'vec4 probe(float a0, uint a1) { return vec4(a0, .530, vec2(.530)) * vec4(vec2(a0, a0), (vec2(6.650f, a0) * mat2(a0))).p; }',
@@ -88,7 +83,6 @@ export const KNOWN_DIFFERENCES = {
   },
   'scalar-plus-mat2-sum': {
     ...DRIVER_REWRITE,
-    program: 'random-1847-217',
     lane: 'lane 2: Godot c362cf09, transpilation c362cf08',
     source: 'mat2 probe(mat2 a0) { return 56.407 + (a0 + a0); }',
     inputs: [
@@ -97,7 +91,6 @@ export const KNOWN_DIFFERENCES = {
   },
   'shift-right-by-minus-six': {
     ...UNDEFINED_SHIFT,
-    program: 'random-1847-437',
     lane: 'lane 1: Godot ffffffff, transpilation fffff546',
     source: 'ivec4 probe(ivec4 a0, vec4 a1, uint a2) { return a0 >>= (-6); }',
     inputs: [
@@ -108,7 +101,6 @@ export const KNOWN_DIFFERENCES = {
   },
   'shift-left-by-not-eighteen': {
     ...UNDEFINED_SHIFT,
-    program: 'random-1847-622',
     lane: 'lane 0: Godot 00000000, transpilation ffffffac',
     source: 'int probe(int a0, bvec4 a1) { return a0 << ~18; }',
     inputs: [
@@ -168,6 +160,150 @@ export const KNOWN_DIFFERENCES = {
   },
 };
 
+/**
+ * glslang folds a built-in call of constants on the CPU in double precision and rounds once
+ * (`Constant.cpp`). The transpiler folds operators only, so the GPU computes the call in float.
+ * Whether to fold calls too is Atle's choice, open now.
+ */
+const CONSTANT_BUILT_IN_CALL = {
+  owner: '#1826',
+  cause: 'a built-in call of constants that glslang folds in double precision and the GPU computes in float',
+};
+
+/** glslang folds `mat4(mat2(c))` of a constant, and the sum after it, in double precision. */
+const CONSTANT_MATRIX_CONVERSION = {
+  owner: '#1826',
+  cause:
+    'a matrix conversion of a constant that glslang folds in double precision and the GPU computes in float',
+};
+
+/**
+ * A vector call whose other lanes read a parameter and agree, where the lane that differs is a
+ * constant alone, such as `cos(46.0)` in `cos(vec4(34.979, a0.ba, float(46)))`: one side's
+ * compiler folds that lane on the CPU and the other computes it on the GPU.
+ */
+const DRIVER_CONSTANT_LANE = {
+  owner: '#1826',
+  cause: 'driver folds the constant lane of a vector call on one side only',
+};
+
+/**
+ * The programs of the fixed set that differ from Godot with no fixed case of their own, each by
+ * its cause and its first lane off. A listed program that equals Godot fails the run.
+ */
+export const KNOWN_PROGRAM_DIFFERENCES = {
+  'random-1847-95': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 450fa6f2, transpilation 450f8e07' },
+  'random-1847-103': { ...DRIVER_REWRITE, lane: 'lane 38: Godot 4c118610, transpilation 4c11860f' },
+  'random-1847-132': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation aea85a08' },
+  'random-1847-134': { ...DRIVER_REWRITE, lane: 'lane 45: Godot bfb7e46a, transpilation bfb7e469' },
+  'random-1847-136': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot c2b48cba, transpilation c2b28cba' },
+  'random-1847-145': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 4596499a, transpilation 4596519a' },
+  'random-1847-147': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 48391380' },
+  'random-1847-174': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 42363783, transpilation 42363784' },
+  'random-1847-177': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-178': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-184': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 41d2b22d' },
+  'random-1847-198': { ...UNDEFINED_SHIFT, lane: 'lane 0: Godot 000039e4, transpilation 00000000' },
+  'random-1847-219': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 3d59e1d5, transpilation 3d59e1d6' },
+  'random-1847-225': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation be025448' },
+  'random-1847-226': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-229': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-247': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 19000000, transpilation 00000000' },
+  'random-1847-291': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot c206b61f, transpilation ff800000' },
+  'random-1847-344': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation c6617206' },
+  'random-1847-346': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation c0300000' },
+  'random-1847-369': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 44ce73c7' },
+  'random-1847-371': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot c12314c4, transpilation c12314c3' },
+  'random-1847-372': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot c881cece, transpilation c881cecf' },
+  'random-1847-373': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 350900b3, transpilation 350900b4' },
+  'random-1847-394': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-399': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 3a046fc9, transpilation 3a046fc8' },
+  'random-1847-432': { ...UNDEFINED_SHIFT, lane: 'lane 0: Godot 00000000, transpilation 0000005c' },
+  'random-1847-562': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot c5d0e0cd, transpilation 490aa91f' },
+  'random-1847-611': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-614': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 1: Godot 3fef8358, transpilation 3fef8359' },
+  'random-1847-731': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 3f236cb2, transpilation 3f236cb3' },
+  'random-1847-734': { ...DRIVER_CONSTANT_LANE, lane: 'lane 3: Godot 3f3dfdd2, transpilation 3f3dfdd1' },
+  'random-1847-759': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 10: Godot 4c2892fe, transpilation 4c289356' },
+  'random-1847-763': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 3efc4466, transpilation 3efc4467' },
+  'random-1847-767': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 3e4b756d, transpilation 3e4b756b' },
+  'random-1847-770': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 2: Godot 7fc00000, transpilation c0e58da3' },
+  'random-1847-775': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-777': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-781': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 1: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-794': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 3f87c104, transpilation 3f87c103' },
+  'random-1847-803': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-810': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 6024bb20, transpilation 6024bb3e' },
+  'random-1847-817': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 00000000, transpilation bf800000' },
+  'random-1847-827': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 00000000, transpilation 3f800000' },
+  'random-1847-852': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 1: Godot 3d966e00, transpilation 3d966df0' },
+  'random-1847-871': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 80000000, transpilation 00000000' },
+  'random-1847-883': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 3f800000' },
+  'random-1847-905': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 3fc4ef0c, transpilation 3fc4ef0d' },
+  'random-1847-931': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 5: Godot 00000000, transpilation 3f800000' },
+  'random-1847-935': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 3f800000, transpilation 00000000' },
+  'random-1847-940': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 11: Godot 3f800000, transpilation 00000000' },
+  'random-1847-942': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 2: Godot 39cc7906, transpilation 39cc7905' },
+  'random-1847-943': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 00000000, transpilation 3f800000' },
+  'random-1847-944': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 00000000, transpilation 3f800000' },
+  'random-1847-974': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 1: Godot 7fc00000, transpilation c04a164c' },
+  'random-1847-989': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 7: Godot ce06dac1, transpilation ce06dac2' },
+  'random-1847-1073': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 43e993c1, transpilation 43e913c1' },
+  'random-1847-1084': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 3f52fffe, transpilation 3f530000' },
+  'random-1847-1086': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 00000000, transpilation 3f800000' },
+  'random-1847-1090': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot ffffffff, transpilation 00000000' },
+  'random-1847-1098': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 3c96b61d, transpilation 3c96b61e' },
+  'random-1847-1101': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 0000004e, transpilation 00000058' },
+  'random-1847-1102': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-1123': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 00014365, transpilation 00000000' },
+  'random-1847-1124': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 47dbb4d5, transpilation 47dbb525' },
+  'random-1847-1126': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 416e559f, transpilation 416e559e' },
+  'random-1847-1130': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 43cda937, transpilation c21cfdf4' },
+  'random-1847-1135': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 2: Godot 3f7dc7bc, transpilation 3f7dc7bb' },
+  'random-1847-1143': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot ff800000, transpilation 00000000' },
+  'random-1847-1156': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-1161': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-1184': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 599c2ddb, transpilation 599c2dde' },
+  'random-1847-1189': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 3e9243a8, transpilation 00000000' },
+  'random-1847-1200': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 00000000, transpilation 3f576aa4' },
+  'random-1847-1202': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation e2c68f11' },
+  'random-1847-1210': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation ff800000' },
+  'random-1847-1211': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot fffffec0, transpilation fffffe98' },
+  'random-1847-1216': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 2: Godot 460b47ad, transpilation 460b47ae' },
+  'random-1847-1226': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation c0258964' },
+  'random-1847-1228': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 3: Godot fffffff6, transpilation fffffffa' },
+  'random-1847-1230': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-1232': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-1235': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 4: Godot 7fc00000, transpilation 00000000' },
+  'random-1847-1236': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot bf3aa3b1, transpilation bf3aa3b0' },
+  'random-1847-1250': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 00000028, transpilation 00000014' },
+  'random-1847-1260': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 3f8335f4, transpilation 3f8335f5' },
+  'random-1847-1266': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 44e0c8b3, transpilation 44e0c8b4' },
+  'random-1847-1268': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 7fc00000, transpilation 40000000' },
+  'random-1847-1280': {
+    ...CONSTANT_MATRIX_CONVERSION,
+    lane: 'lane 2: Godot c6a7a55d, transpilation c6a7a55c',
+  },
+  'random-1847-1291': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot c4aee61a, transpilation c4aee619' },
+  'random-1847-1295': { ...CONSTANT_BUILT_IN_CALL, lane: 'lane 0: Godot 42dea6a7, transpilation 42dea6a8' },
+  'random-1847-function-6': {
+    ...CONSTANT_BUILT_IN_CALL,
+    lane: 'lane 2: Godot 00000029, transpilation 00000001',
+  },
+  'random-1847-function-19': {
+    ...CONSTANT_BUILT_IN_CALL,
+    lane: 'lane 0: Godot 7fc00000, transpilation 00000000',
+  },
+  'random-1847-function-41': {
+    ...CONSTANT_BUILT_IN_CALL,
+    lane: 'lane 0: Godot 345eec43, transpilation 345eec42',
+  },
+  'random-1847-function-62': {
+    ...CONSTANT_BUILT_IN_CALL,
+    lane: 'lane 10: Godot 3ffe353f, transpilation 3ffe3540',
+  },
+};
+
 /** The name of a case's probe, beside the programs of the fixed set in Godot's record. */
 const caseName = (name) => `known-${name}`;
 
@@ -185,9 +321,10 @@ export const KNOWN_DIFFERENCE_CASES = Object.entries(KNOWN_DIFFERENCES).map(([na
 /** The random probes Godot's record holds: the programs of a set, then every fixed case. */
 export const recordedRandomProbes = (programs) => [...programs, ...KNOWN_DIFFERENCE_CASES];
 
-/** The programs of the fixed set that a case names as showing its fault now. */
-export const KNOWN_PROGRAMS = new Set(
-  Object.values(KNOWN_DIFFERENCES)
+/** The programs of the fixed set that a case names as showing its fault now, and the listed programs. */
+export const KNOWN_PROGRAMS = new Set([
+  ...Object.values(KNOWN_DIFFERENCES)
     .map((known) => known.program)
-    .filter((program) => program !== undefined)
-);
+    .filter((program) => program !== undefined),
+  ...Object.keys(KNOWN_PROGRAM_DIFFERENCES),
+]);

@@ -16,7 +16,6 @@ import {
 } from './godotNumber.js';
 import {
   builtInInstruction,
-  firstInstruction,
   instruction,
   keywordInstruction,
   notTranspiled,
@@ -28,6 +27,7 @@ import { type Entry, reducedEntries } from './reduction.js';
 import type { Identifier } from './scope.js';
 import type { ConstantNode, Expression, OperatorNode, Scalar, StructNode } from './shaderTree.js';
 import { ArrayParser } from './parseArray.js';
+import { resolvedBuiltInCall } from './parseBuiltInCall.js';
 import { type CallScope, resolvedCall } from './parseCall.js';
 import { arraySizeOf, typeName } from './treeWalk.js';
 import { swizzled } from './swizzle.js';
@@ -355,14 +355,10 @@ export class ExpressionParser {
 
   /** A call of a function of the shader. A built-in function is refused with its overload's row. */
   private call(name: string, args: readonly Expression[], token: Token): Expression {
-    const overload = signatureInstruction(
-      name,
-      args.map((arg) => arg.type)
-    );
-    if (overload) throw notTranspiled(overload, token.position);
-    const anyOverload = firstInstruction(`${name}(`);
-    if (anyOverload) throw notTranspiled(anyOverload, token.position, name);
-    const call = resolvedCall(this.scope, name, args, token.position, (message) => this.tokens.fail(message));
+    const fail = (message: string) => this.tokens.fail(message);
+    const builtIn = resolvedBuiltInCall(name, args, token.position, fail);
+    if (builtIn) return builtIn;
+    const call = resolvedCall(this.scope, name, args, token.position, fail);
     return call.arraySize ? this.arrayAccess(call) : call;
   }
 

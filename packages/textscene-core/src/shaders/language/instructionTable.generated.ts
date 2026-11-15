@@ -816,294 +816,294 @@ bool(bool)	function	servers/rendering/shader_language.cpp:2507	#1823		bool	(bool
 bool(int)	function	servers/rendering/shader_language.cpp:2508	#1823		bool	(int)	native	native
 bool(uint)	function	servers/rendering/shader_language.cpp:2509	#1823		bool	(uint)	native	native
 bool(float)	function	servers/rendering/shader_language.cpp:2510	#1823		bool	(float)	native	native
-ivec2(bvec2)	function	servers/rendering/shader_language.cpp:2514	#1826		ivec2	(bvec2)		
-ivec2(ivec2)	function	servers/rendering/shader_language.cpp:2515	#1826		ivec2	(ivec2)		
-ivec2(uvec2)	function	servers/rendering/shader_language.cpp:2516	#1826		ivec2	(uvec2)		
-ivec2(vec2)	function	servers/rendering/shader_language.cpp:2517	#1826		ivec2	(vec2)		
-vec2(bvec2)	function	servers/rendering/shader_language.cpp:2519	#1826		vec2	(bvec2)		
-vec2(ivec2)	function	servers/rendering/shader_language.cpp:2520	#1826		vec2	(ivec2)		
-vec2(uvec2)	function	servers/rendering/shader_language.cpp:2521	#1826		vec2	(uvec2)		
-vec2(vec2)	function	servers/rendering/shader_language.cpp:2522	#1826		vec2	(vec2)		
-uvec2(bvec2)	function	servers/rendering/shader_language.cpp:2524	#1826		uvec2	(bvec2)		
-uvec2(ivec2)	function	servers/rendering/shader_language.cpp:2525	#1826		uvec2	(ivec2)		
-uvec2(uvec2)	function	servers/rendering/shader_language.cpp:2526	#1826		uvec2	(uvec2)		
-uvec2(vec2)	function	servers/rendering/shader_language.cpp:2527	#1826		uvec2	(vec2)		
-bvec2(bvec2)	function	servers/rendering/shader_language.cpp:2529	#1826		bvec2	(bvec2)		
-bvec2(ivec2)	function	servers/rendering/shader_language.cpp:2530	#1826		bvec2	(ivec2)		
-bvec2(uvec2)	function	servers/rendering/shader_language.cpp:2531	#1826		bvec2	(uvec2)		
-bvec2(vec2)	function	servers/rendering/shader_language.cpp:2532	#1826		bvec2	(vec2)		
-ivec3(bvec3)	function	servers/rendering/shader_language.cpp:2534	#1826		ivec3	(bvec3)		
-ivec3(ivec3)	function	servers/rendering/shader_language.cpp:2535	#1826		ivec3	(ivec3)		
-ivec3(uvec3)	function	servers/rendering/shader_language.cpp:2536	#1826		ivec3	(uvec3)		
-ivec3(vec3)	function	servers/rendering/shader_language.cpp:2537	#1826		ivec3	(vec3)		
-vec3(bvec3)	function	servers/rendering/shader_language.cpp:2539	#1826		vec3	(bvec3)		
-vec3(ivec3)	function	servers/rendering/shader_language.cpp:2540	#1826		vec3	(ivec3)		
-vec3(uvec3)	function	servers/rendering/shader_language.cpp:2541	#1826		vec3	(uvec3)		
-vec3(vec3)	function	servers/rendering/shader_language.cpp:2542	#1826		vec3	(vec3)		
-uvec3(bvec3)	function	servers/rendering/shader_language.cpp:2544	#1826		uvec3	(bvec3)		
-uvec3(ivec3)	function	servers/rendering/shader_language.cpp:2545	#1826		uvec3	(ivec3)		
-uvec3(uvec3)	function	servers/rendering/shader_language.cpp:2546	#1826		uvec3	(uvec3)		
-uvec3(vec3)	function	servers/rendering/shader_language.cpp:2547	#1826		uvec3	(vec3)		
-bvec3(bvec3)	function	servers/rendering/shader_language.cpp:2549	#1826		bvec3	(bvec3)		
-bvec3(ivec3)	function	servers/rendering/shader_language.cpp:2550	#1826		bvec3	(ivec3)		
-bvec3(uvec3)	function	servers/rendering/shader_language.cpp:2551	#1826		bvec3	(uvec3)		
-bvec3(vec3)	function	servers/rendering/shader_language.cpp:2552	#1826		bvec3	(vec3)		
-ivec4(bvec4)	function	servers/rendering/shader_language.cpp:2554	#1826		ivec4	(bvec4)		
-ivec4(ivec4)	function	servers/rendering/shader_language.cpp:2555	#1826		ivec4	(ivec4)		
-ivec4(uvec4)	function	servers/rendering/shader_language.cpp:2556	#1826		ivec4	(uvec4)		
-ivec4(vec4)	function	servers/rendering/shader_language.cpp:2557	#1826		ivec4	(vec4)		
-vec4(bvec4)	function	servers/rendering/shader_language.cpp:2559	#1826		vec4	(bvec4)		
-vec4(ivec4)	function	servers/rendering/shader_language.cpp:2560	#1826		vec4	(ivec4)		
-vec4(uvec4)	function	servers/rendering/shader_language.cpp:2561	#1826		vec4	(uvec4)		
-vec4(vec4)	function	servers/rendering/shader_language.cpp:2562	#1826		vec4	(vec4)		
-uvec4(bvec4)	function	servers/rendering/shader_language.cpp:2564	#1826		uvec4	(bvec4)		
-uvec4(ivec4)	function	servers/rendering/shader_language.cpp:2565	#1826		uvec4	(ivec4)		
-uvec4(uvec4)	function	servers/rendering/shader_language.cpp:2566	#1826		uvec4	(uvec4)		
-uvec4(vec4)	function	servers/rendering/shader_language.cpp:2567	#1826		uvec4	(vec4)		
-bvec4(bvec4)	function	servers/rendering/shader_language.cpp:2569	#1826		bvec4	(bvec4)		
-bvec4(ivec4)	function	servers/rendering/shader_language.cpp:2570	#1826		bvec4	(ivec4)		
-bvec4(uvec4)	function	servers/rendering/shader_language.cpp:2571	#1826		bvec4	(uvec4)		
-bvec4(vec4)	function	servers/rendering/shader_language.cpp:2572	#1826		bvec4	(vec4)		
-mat2(mat3)	function	servers/rendering/shader_language.cpp:2576	#1826		mat2	(mat3)		
-mat2(mat4)	function	servers/rendering/shader_language.cpp:2577	#1826		mat2	(mat4)		
-mat3(mat2)	function	servers/rendering/shader_language.cpp:2578	#1826		mat3	(mat2)		
-mat3(mat4)	function	servers/rendering/shader_language.cpp:2579	#1826		mat3	(mat4)		
-mat4(mat2)	function	servers/rendering/shader_language.cpp:2580	#1826		mat4	(mat2)		
-mat4(mat3)	function	servers/rendering/shader_language.cpp:2581	#1826		mat4	(mat3)		
-radians(float)	function	servers/rendering/shader_language.cpp:2586	#1826		float	(float)		
-radians(vec2)	function	servers/rendering/shader_language.cpp:2587	#1826		vec2	(vec2)		
-radians(vec3)	function	servers/rendering/shader_language.cpp:2588	#1826		vec3	(vec3)		
-radians(vec4)	function	servers/rendering/shader_language.cpp:2589	#1826		vec4	(vec4)		
-degrees(float)	function	servers/rendering/shader_language.cpp:2593	#1826		float	(float)		
-degrees(vec2)	function	servers/rendering/shader_language.cpp:2594	#1826		vec2	(vec2)		
-degrees(vec3)	function	servers/rendering/shader_language.cpp:2595	#1826		vec3	(vec3)		
-degrees(vec4)	function	servers/rendering/shader_language.cpp:2596	#1826		vec4	(vec4)		
-sin(float)	function	servers/rendering/shader_language.cpp:2600	#1826		float	(float)		
-sin(vec2)	function	servers/rendering/shader_language.cpp:2601	#1826		vec2	(vec2)		
-sin(vec3)	function	servers/rendering/shader_language.cpp:2602	#1826		vec3	(vec3)		
-sin(vec4)	function	servers/rendering/shader_language.cpp:2603	#1826		vec4	(vec4)		
-cos(float)	function	servers/rendering/shader_language.cpp:2607	#1826		float	(float)		
-cos(vec2)	function	servers/rendering/shader_language.cpp:2608	#1826		vec2	(vec2)		
-cos(vec3)	function	servers/rendering/shader_language.cpp:2609	#1826		vec3	(vec3)		
-cos(vec4)	function	servers/rendering/shader_language.cpp:2610	#1826		vec4	(vec4)		
-tan(float)	function	servers/rendering/shader_language.cpp:2614	#1826		float	(float)		
-tan(vec2)	function	servers/rendering/shader_language.cpp:2615	#1826		vec2	(vec2)		
-tan(vec3)	function	servers/rendering/shader_language.cpp:2616	#1826		vec3	(vec3)		
-tan(vec4)	function	servers/rendering/shader_language.cpp:2617	#1826		vec4	(vec4)		
-asin(float)	function	servers/rendering/shader_language.cpp:2621	#1826		float	(float)		
-asin(vec2)	function	servers/rendering/shader_language.cpp:2622	#1826		vec2	(vec2)		
-asin(vec3)	function	servers/rendering/shader_language.cpp:2623	#1826		vec3	(vec3)		
-asin(vec4)	function	servers/rendering/shader_language.cpp:2624	#1826		vec4	(vec4)		
-acos(float)	function	servers/rendering/shader_language.cpp:2628	#1826		float	(float)		
-acos(vec2)	function	servers/rendering/shader_language.cpp:2629	#1826		vec2	(vec2)		
-acos(vec3)	function	servers/rendering/shader_language.cpp:2630	#1826		vec3	(vec3)		
-acos(vec4)	function	servers/rendering/shader_language.cpp:2631	#1826		vec4	(vec4)		
-atan(float)	function	servers/rendering/shader_language.cpp:2635	#1826		float	(float)		
-atan(vec2)	function	servers/rendering/shader_language.cpp:2636	#1826		vec2	(vec2)		
-atan(vec3)	function	servers/rendering/shader_language.cpp:2637	#1826		vec3	(vec3)		
-atan(vec4)	function	servers/rendering/shader_language.cpp:2638	#1826		vec4	(vec4)		
-atan(float,float)	function	servers/rendering/shader_language.cpp:2639	#1826		float	(float,float)		
-atan(vec2,vec2)	function	servers/rendering/shader_language.cpp:2640	#1826		vec2	(vec2,vec2)		
-atan(vec3,vec3)	function	servers/rendering/shader_language.cpp:2641	#1826		vec3	(vec3,vec3)		
-atan(vec4,vec4)	function	servers/rendering/shader_language.cpp:2642	#1826		vec4	(vec4,vec4)		
-sinh(float)	function	servers/rendering/shader_language.cpp:2646	#1826		float	(float)		
-sinh(vec2)	function	servers/rendering/shader_language.cpp:2647	#1826		vec2	(vec2)		
-sinh(vec3)	function	servers/rendering/shader_language.cpp:2648	#1826		vec3	(vec3)		
-sinh(vec4)	function	servers/rendering/shader_language.cpp:2649	#1826		vec4	(vec4)		
-cosh(float)	function	servers/rendering/shader_language.cpp:2653	#1826		float	(float)		
-cosh(vec2)	function	servers/rendering/shader_language.cpp:2654	#1826		vec2	(vec2)		
-cosh(vec3)	function	servers/rendering/shader_language.cpp:2655	#1826		vec3	(vec3)		
-cosh(vec4)	function	servers/rendering/shader_language.cpp:2656	#1826		vec4	(vec4)		
-tanh(float)	function	servers/rendering/shader_language.cpp:2660	#1826		float	(float)		
-tanh(vec2)	function	servers/rendering/shader_language.cpp:2661	#1826		vec2	(vec2)		
-tanh(vec3)	function	servers/rendering/shader_language.cpp:2662	#1826		vec3	(vec3)		
-tanh(vec4)	function	servers/rendering/shader_language.cpp:2663	#1826		vec4	(vec4)		
-asinh(float)	function	servers/rendering/shader_language.cpp:2667	#1826		float	(float)		
-asinh(vec2)	function	servers/rendering/shader_language.cpp:2668	#1826		vec2	(vec2)		
-asinh(vec3)	function	servers/rendering/shader_language.cpp:2669	#1826		vec3	(vec3)		
-asinh(vec4)	function	servers/rendering/shader_language.cpp:2670	#1826		vec4	(vec4)		
-acosh(float)	function	servers/rendering/shader_language.cpp:2674	#1826		float	(float)		
-acosh(vec2)	function	servers/rendering/shader_language.cpp:2675	#1826		vec2	(vec2)		
-acosh(vec3)	function	servers/rendering/shader_language.cpp:2676	#1826		vec3	(vec3)		
-acosh(vec4)	function	servers/rendering/shader_language.cpp:2677	#1826		vec4	(vec4)		
-atanh(float)	function	servers/rendering/shader_language.cpp:2681	#1826		float	(float)		
-atanh(vec2)	function	servers/rendering/shader_language.cpp:2682	#1826		vec2	(vec2)		
-atanh(vec3)	function	servers/rendering/shader_language.cpp:2683	#1826		vec3	(vec3)		
-atanh(vec4)	function	servers/rendering/shader_language.cpp:2684	#1826		vec4	(vec4)		
-pow(float,float)	function	servers/rendering/shader_language.cpp:2689	#1826		float	(float,float)		
-pow(vec2,vec2)	function	servers/rendering/shader_language.cpp:2690	#1826		vec2	(vec2,vec2)		
-pow(vec3,vec3)	function	servers/rendering/shader_language.cpp:2691	#1826		vec3	(vec3,vec3)		
-pow(vec4,vec4)	function	servers/rendering/shader_language.cpp:2692	#1826		vec4	(vec4,vec4)		
-exp(float)	function	servers/rendering/shader_language.cpp:2696	#1826		float	(float)		
-exp(vec2)	function	servers/rendering/shader_language.cpp:2697	#1826		vec2	(vec2)		
-exp(vec3)	function	servers/rendering/shader_language.cpp:2698	#1826		vec3	(vec3)		
-exp(vec4)	function	servers/rendering/shader_language.cpp:2699	#1826		vec4	(vec4)		
-log(float)	function	servers/rendering/shader_language.cpp:2703	#1826		float	(float)		
-log(vec2)	function	servers/rendering/shader_language.cpp:2704	#1826		vec2	(vec2)		
-log(vec3)	function	servers/rendering/shader_language.cpp:2705	#1826		vec3	(vec3)		
-log(vec4)	function	servers/rendering/shader_language.cpp:2706	#1826		vec4	(vec4)		
-exp2(float)	function	servers/rendering/shader_language.cpp:2710	#1826		float	(float)		
-exp2(vec2)	function	servers/rendering/shader_language.cpp:2711	#1826		vec2	(vec2)		
-exp2(vec3)	function	servers/rendering/shader_language.cpp:2712	#1826		vec3	(vec3)		
-exp2(vec4)	function	servers/rendering/shader_language.cpp:2713	#1826		vec4	(vec4)		
-log2(float)	function	servers/rendering/shader_language.cpp:2717	#1826		float	(float)		
-log2(vec2)	function	servers/rendering/shader_language.cpp:2718	#1826		vec2	(vec2)		
-log2(vec3)	function	servers/rendering/shader_language.cpp:2719	#1826		vec3	(vec3)		
-log2(vec4)	function	servers/rendering/shader_language.cpp:2720	#1826		vec4	(vec4)		
-sqrt(float)	function	servers/rendering/shader_language.cpp:2724	#1826		float	(float)		
-sqrt(vec2)	function	servers/rendering/shader_language.cpp:2725	#1826		vec2	(vec2)		
-sqrt(vec3)	function	servers/rendering/shader_language.cpp:2726	#1826		vec3	(vec3)		
-sqrt(vec4)	function	servers/rendering/shader_language.cpp:2727	#1826		vec4	(vec4)		
-inversesqrt(float)	function	servers/rendering/shader_language.cpp:2731	#1826		float	(float)		
-inversesqrt(vec2)	function	servers/rendering/shader_language.cpp:2732	#1826		vec2	(vec2)		
-inversesqrt(vec3)	function	servers/rendering/shader_language.cpp:2733	#1826		vec3	(vec3)		
-inversesqrt(vec4)	function	servers/rendering/shader_language.cpp:2734	#1826		vec4	(vec4)		
-abs(float)	function	servers/rendering/shader_language.cpp:2739	#1826		float	(float)		
-abs(vec2)	function	servers/rendering/shader_language.cpp:2740	#1826		vec2	(vec2)		
-abs(vec3)	function	servers/rendering/shader_language.cpp:2741	#1826		vec3	(vec3)		
-abs(vec4)	function	servers/rendering/shader_language.cpp:2742	#1826		vec4	(vec4)		
-abs(int)	function	servers/rendering/shader_language.cpp:2744	#1826		int	(int)		
-abs(ivec2)	function	servers/rendering/shader_language.cpp:2745	#1826		ivec2	(ivec2)		
-abs(ivec3)	function	servers/rendering/shader_language.cpp:2746	#1826		ivec3	(ivec3)		
-abs(ivec4)	function	servers/rendering/shader_language.cpp:2747	#1826		ivec4	(ivec4)		
-sign(float)	function	servers/rendering/shader_language.cpp:2751	#1826		float	(float)		
-sign(vec2)	function	servers/rendering/shader_language.cpp:2752	#1826		vec2	(vec2)		
-sign(vec3)	function	servers/rendering/shader_language.cpp:2753	#1826		vec3	(vec3)		
-sign(vec4)	function	servers/rendering/shader_language.cpp:2754	#1826		vec4	(vec4)		
-sign(int)	function	servers/rendering/shader_language.cpp:2756	#1826		int	(int)		
-sign(ivec2)	function	servers/rendering/shader_language.cpp:2757	#1826		ivec2	(ivec2)		
-sign(ivec3)	function	servers/rendering/shader_language.cpp:2758	#1826		ivec3	(ivec3)		
-sign(ivec4)	function	servers/rendering/shader_language.cpp:2759	#1826		ivec4	(ivec4)		
-floor(float)	function	servers/rendering/shader_language.cpp:2763	#1826		float	(float)		
-floor(vec2)	function	servers/rendering/shader_language.cpp:2764	#1826		vec2	(vec2)		
-floor(vec3)	function	servers/rendering/shader_language.cpp:2765	#1826		vec3	(vec3)		
-floor(vec4)	function	servers/rendering/shader_language.cpp:2766	#1826		vec4	(vec4)		
-trunc(float)	function	servers/rendering/shader_language.cpp:2770	#1826		float	(float)		
-trunc(vec2)	function	servers/rendering/shader_language.cpp:2771	#1826		vec2	(vec2)		
-trunc(vec3)	function	servers/rendering/shader_language.cpp:2772	#1826		vec3	(vec3)		
-trunc(vec4)	function	servers/rendering/shader_language.cpp:2773	#1826		vec4	(vec4)		
-round(float)	function	servers/rendering/shader_language.cpp:2777	#1826		float	(float)		
-round(vec2)	function	servers/rendering/shader_language.cpp:2778	#1826		vec2	(vec2)		
-round(vec3)	function	servers/rendering/shader_language.cpp:2779	#1826		vec3	(vec3)		
-round(vec4)	function	servers/rendering/shader_language.cpp:2780	#1826		vec4	(vec4)		
-roundEven(float)	function	servers/rendering/shader_language.cpp:2784	#1826		float	(float)		
-roundEven(vec2)	function	servers/rendering/shader_language.cpp:2785	#1826		vec2	(vec2)		
-roundEven(vec3)	function	servers/rendering/shader_language.cpp:2786	#1826		vec3	(vec3)		
-roundEven(vec4)	function	servers/rendering/shader_language.cpp:2787	#1826		vec4	(vec4)		
-ceil(float)	function	servers/rendering/shader_language.cpp:2791	#1826		float	(float)		
-ceil(vec2)	function	servers/rendering/shader_language.cpp:2792	#1826		vec2	(vec2)		
-ceil(vec3)	function	servers/rendering/shader_language.cpp:2793	#1826		vec3	(vec3)		
-ceil(vec4)	function	servers/rendering/shader_language.cpp:2794	#1826		vec4	(vec4)		
-fract(float)	function	servers/rendering/shader_language.cpp:2798	#1826		float	(float)		
-fract(vec2)	function	servers/rendering/shader_language.cpp:2799	#1826		vec2	(vec2)		
-fract(vec3)	function	servers/rendering/shader_language.cpp:2800	#1826		vec3	(vec3)		
-fract(vec4)	function	servers/rendering/shader_language.cpp:2801	#1826		vec4	(vec4)		
-mod(float,float)	function	servers/rendering/shader_language.cpp:2805	#1826		float	(float,float)		
-mod(vec2,vec2)	function	servers/rendering/shader_language.cpp:2806	#1826		vec2	(vec2,vec2)		
-mod(vec2,float)	function	servers/rendering/shader_language.cpp:2807	#1826		vec2	(vec2,float)		
-mod(vec3,vec3)	function	servers/rendering/shader_language.cpp:2808	#1826		vec3	(vec3,vec3)		
-mod(vec3,float)	function	servers/rendering/shader_language.cpp:2809	#1826		vec3	(vec3,float)		
-mod(vec4,vec4)	function	servers/rendering/shader_language.cpp:2810	#1826		vec4	(vec4,vec4)		
-mod(vec4,float)	function	servers/rendering/shader_language.cpp:2811	#1826		vec4	(vec4,float)		
-modf(float,float)	function	servers/rendering/shader_language.cpp:2815	#1826		float	(float,float)		
-modf(vec2,vec2)	function	servers/rendering/shader_language.cpp:2816	#1826		vec2	(vec2,vec2)		
-modf(vec3,vec3)	function	servers/rendering/shader_language.cpp:2817	#1826		vec3	(vec3,vec3)		
-modf(vec4,vec4)	function	servers/rendering/shader_language.cpp:2818	#1826		vec4	(vec4,vec4)		
-min(float,float)	function	servers/rendering/shader_language.cpp:2822	#1826		float	(float,float)		
-min(vec2,vec2)	function	servers/rendering/shader_language.cpp:2823	#1826		vec2	(vec2,vec2)		
-min(vec2,float)	function	servers/rendering/shader_language.cpp:2824	#1826		vec2	(vec2,float)		
-min(vec3,vec3)	function	servers/rendering/shader_language.cpp:2825	#1826		vec3	(vec3,vec3)		
-min(vec3,float)	function	servers/rendering/shader_language.cpp:2826	#1826		vec3	(vec3,float)		
-min(vec4,vec4)	function	servers/rendering/shader_language.cpp:2827	#1826		vec4	(vec4,vec4)		
-min(vec4,float)	function	servers/rendering/shader_language.cpp:2828	#1826		vec4	(vec4,float)		
-min(int,int)	function	servers/rendering/shader_language.cpp:2830	#1826		int	(int,int)		
-min(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:2831	#1826		ivec2	(ivec2,ivec2)		
-min(ivec2,int)	function	servers/rendering/shader_language.cpp:2832	#1826		ivec2	(ivec2,int)		
-min(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:2833	#1826		ivec3	(ivec3,ivec3)		
-min(ivec3,int)	function	servers/rendering/shader_language.cpp:2834	#1826		ivec3	(ivec3,int)		
-min(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:2835	#1826		ivec4	(ivec4,ivec4)		
-min(ivec4,int)	function	servers/rendering/shader_language.cpp:2836	#1826		ivec4	(ivec4,int)		
-min(uint,uint)	function	servers/rendering/shader_language.cpp:2838	#1826		uint	(uint,uint)		
-min(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:2839	#1826		uvec2	(uvec2,uvec2)		
-min(uvec2,uint)	function	servers/rendering/shader_language.cpp:2840	#1826		uvec2	(uvec2,uint)		
-min(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:2841	#1826		uvec3	(uvec3,uvec3)		
-min(uvec3,uint)	function	servers/rendering/shader_language.cpp:2842	#1826		uvec3	(uvec3,uint)		
-min(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:2843	#1826		uvec4	(uvec4,uvec4)		
-min(uvec4,uint)	function	servers/rendering/shader_language.cpp:2844	#1826		uvec4	(uvec4,uint)		
-max(float,float)	function	servers/rendering/shader_language.cpp:2848	#1826		float	(float,float)		
-max(vec2,vec2)	function	servers/rendering/shader_language.cpp:2849	#1826		vec2	(vec2,vec2)		
-max(vec2,float)	function	servers/rendering/shader_language.cpp:2850	#1826		vec2	(vec2,float)		
-max(vec3,vec3)	function	servers/rendering/shader_language.cpp:2851	#1826		vec3	(vec3,vec3)		
-max(vec3,float)	function	servers/rendering/shader_language.cpp:2852	#1826		vec3	(vec3,float)		
-max(vec4,vec4)	function	servers/rendering/shader_language.cpp:2853	#1826		vec4	(vec4,vec4)		
-max(vec4,float)	function	servers/rendering/shader_language.cpp:2854	#1826		vec4	(vec4,float)		
-max(int,int)	function	servers/rendering/shader_language.cpp:2856	#1826		int	(int,int)		
-max(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:2857	#1826		ivec2	(ivec2,ivec2)		
-max(ivec2,int)	function	servers/rendering/shader_language.cpp:2858	#1826		ivec2	(ivec2,int)		
-max(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:2859	#1826		ivec3	(ivec3,ivec3)		
-max(ivec3,int)	function	servers/rendering/shader_language.cpp:2860	#1826		ivec3	(ivec3,int)		
-max(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:2861	#1826		ivec4	(ivec4,ivec4)		
-max(ivec4,int)	function	servers/rendering/shader_language.cpp:2862	#1826		ivec4	(ivec4,int)		
-max(uint,uint)	function	servers/rendering/shader_language.cpp:2864	#1826		uint	(uint,uint)		
-max(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:2865	#1826		uvec2	(uvec2,uvec2)		
-max(uvec2,uint)	function	servers/rendering/shader_language.cpp:2866	#1826		uvec2	(uvec2,uint)		
-max(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:2867	#1826		uvec3	(uvec3,uvec3)		
-max(uvec3,uint)	function	servers/rendering/shader_language.cpp:2868	#1826		uvec3	(uvec3,uint)		
-max(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:2869	#1826		uvec4	(uvec4,uvec4)		
-max(uvec4,uint)	function	servers/rendering/shader_language.cpp:2870	#1826		uvec4	(uvec4,uint)		
-clamp(float,float,float)	function	servers/rendering/shader_language.cpp:2874	#1826		float	(float,float,float)		
-clamp(vec2,vec2,vec2)	function	servers/rendering/shader_language.cpp:2875	#1826		vec2	(vec2,vec2,vec2)		
-clamp(vec3,vec3,vec3)	function	servers/rendering/shader_language.cpp:2876	#1826		vec3	(vec3,vec3,vec3)		
-clamp(vec4,vec4,vec4)	function	servers/rendering/shader_language.cpp:2877	#1826		vec4	(vec4,vec4,vec4)		
-clamp(vec2,float,float)	function	servers/rendering/shader_language.cpp:2878	#1826		vec2	(vec2,float,float)		
-clamp(vec3,float,float)	function	servers/rendering/shader_language.cpp:2879	#1826		vec3	(vec3,float,float)		
-clamp(vec4,float,float)	function	servers/rendering/shader_language.cpp:2880	#1826		vec4	(vec4,float,float)		
-clamp(int,int,int)	function	servers/rendering/shader_language.cpp:2882	#1826		int	(int,int,int)		
-clamp(ivec2,ivec2,ivec2)	function	servers/rendering/shader_language.cpp:2883	#1826		ivec2	(ivec2,ivec2,ivec2)		
-clamp(ivec3,ivec3,ivec3)	function	servers/rendering/shader_language.cpp:2884	#1826		ivec3	(ivec3,ivec3,ivec3)		
-clamp(ivec4,ivec4,ivec4)	function	servers/rendering/shader_language.cpp:2885	#1826		ivec4	(ivec4,ivec4,ivec4)		
-clamp(ivec2,int,int)	function	servers/rendering/shader_language.cpp:2886	#1826		ivec2	(ivec2,int,int)		
-clamp(ivec3,int,int)	function	servers/rendering/shader_language.cpp:2887	#1826		ivec3	(ivec3,int,int)		
-clamp(ivec4,int,int)	function	servers/rendering/shader_language.cpp:2888	#1826		ivec4	(ivec4,int,int)		
-clamp(uint,uint,uint)	function	servers/rendering/shader_language.cpp:2890	#1826		uint	(uint,uint,uint)		
-clamp(uvec2,uvec2,uvec2)	function	servers/rendering/shader_language.cpp:2891	#1826		uvec2	(uvec2,uvec2,uvec2)		
-clamp(uvec3,uvec3,uvec3)	function	servers/rendering/shader_language.cpp:2892	#1826		uvec3	(uvec3,uvec3,uvec3)		
-clamp(uvec4,uvec4,uvec4)	function	servers/rendering/shader_language.cpp:2893	#1826		uvec4	(uvec4,uvec4,uvec4)		
-clamp(uvec2,uint,uint)	function	servers/rendering/shader_language.cpp:2894	#1826		uvec2	(uvec2,uint,uint)		
-clamp(uvec3,uint,uint)	function	servers/rendering/shader_language.cpp:2895	#1826		uvec3	(uvec3,uint,uint)		
-clamp(uvec4,uint,uint)	function	servers/rendering/shader_language.cpp:2896	#1826		uvec4	(uvec4,uint,uint)		
-mix(float,float,float)	function	servers/rendering/shader_language.cpp:2900	#1826		float	(float,float,float)		
-mix(vec2,vec2,float)	function	servers/rendering/shader_language.cpp:2901	#1826		vec2	(vec2,vec2,float)		
-mix(vec2,vec2,bvec2)	function	servers/rendering/shader_language.cpp:2902	#1826		vec2	(vec2,vec2,bvec2)		
-mix(vec2,vec2,vec2)	function	servers/rendering/shader_language.cpp:2903	#1826		vec2	(vec2,vec2,vec2)		
-mix(vec3,vec3,float)	function	servers/rendering/shader_language.cpp:2904	#1826		vec3	(vec3,vec3,float)		
-mix(vec3,vec3,bvec3)	function	servers/rendering/shader_language.cpp:2905	#1826		vec3	(vec3,vec3,bvec3)		
-mix(vec3,vec3,vec3)	function	servers/rendering/shader_language.cpp:2906	#1826		vec3	(vec3,vec3,vec3)		
-mix(vec4,vec4,float)	function	servers/rendering/shader_language.cpp:2907	#1826		vec4	(vec4,vec4,float)		
-mix(vec4,vec4,bvec4)	function	servers/rendering/shader_language.cpp:2908	#1826		vec4	(vec4,vec4,bvec4)		
-mix(vec4,vec4,vec4)	function	servers/rendering/shader_language.cpp:2909	#1826		vec4	(vec4,vec4,vec4)		
-step(float,float)	function	servers/rendering/shader_language.cpp:2913	#1826		float	(float,float)		
-step(vec2,vec2)	function	servers/rendering/shader_language.cpp:2914	#1826		vec2	(vec2,vec2)		
-step(vec3,vec3)	function	servers/rendering/shader_language.cpp:2915	#1826		vec3	(vec3,vec3)		
-step(vec4,vec4)	function	servers/rendering/shader_language.cpp:2916	#1826		vec4	(vec4,vec4)		
-step(float,vec2)	function	servers/rendering/shader_language.cpp:2917	#1826		vec2	(float,vec2)		
-step(float,vec3)	function	servers/rendering/shader_language.cpp:2918	#1826		vec3	(float,vec3)		
-step(float,vec4)	function	servers/rendering/shader_language.cpp:2919	#1826		vec4	(float,vec4)		
-smoothstep(float,float,float)	function	servers/rendering/shader_language.cpp:2923	#1826		float	(float,float,float)		
-smoothstep(vec2,vec2,vec2)	function	servers/rendering/shader_language.cpp:2924	#1826		vec2	(vec2,vec2,vec2)		
-smoothstep(vec3,vec3,vec3)	function	servers/rendering/shader_language.cpp:2925	#1826		vec3	(vec3,vec3,vec3)		
-smoothstep(vec4,vec4,vec4)	function	servers/rendering/shader_language.cpp:2926	#1826		vec4	(vec4,vec4,vec4)		
-smoothstep(float,float,vec2)	function	servers/rendering/shader_language.cpp:2927	#1826		vec2	(float,float,vec2)		
-smoothstep(float,float,vec3)	function	servers/rendering/shader_language.cpp:2928	#1826		vec3	(float,float,vec3)		
-smoothstep(float,float,vec4)	function	servers/rendering/shader_language.cpp:2929	#1826		vec4	(float,float,vec4)		
-isnan(float)	function	servers/rendering/shader_language.cpp:2933	#1826		bool	(float)		
-isnan(vec2)	function	servers/rendering/shader_language.cpp:2934	#1826		bvec2	(vec2)		
-isnan(vec3)	function	servers/rendering/shader_language.cpp:2935	#1826		bvec3	(vec3)		
-isnan(vec4)	function	servers/rendering/shader_language.cpp:2936	#1826		bvec4	(vec4)		
-isinf(float)	function	servers/rendering/shader_language.cpp:2940	#1826		bool	(float)		
-isinf(vec2)	function	servers/rendering/shader_language.cpp:2941	#1826		bvec2	(vec2)		
-isinf(vec3)	function	servers/rendering/shader_language.cpp:2942	#1826		bvec3	(vec3)		
-isinf(vec4)	function	servers/rendering/shader_language.cpp:2943	#1826		bvec4	(vec4)		
+ivec2(bvec2)	function	servers/rendering/shader_language.cpp:2514	#1826		ivec2	(bvec2)	native	native
+ivec2(ivec2)	function	servers/rendering/shader_language.cpp:2515	#1826		ivec2	(ivec2)	native	native
+ivec2(uvec2)	function	servers/rendering/shader_language.cpp:2516	#1826		ivec2	(uvec2)	native	native
+ivec2(vec2)	function	servers/rendering/shader_language.cpp:2517	#1826		ivec2	(vec2)	native	native
+vec2(bvec2)	function	servers/rendering/shader_language.cpp:2519	#1826		vec2	(bvec2)	native	native
+vec2(ivec2)	function	servers/rendering/shader_language.cpp:2520	#1826		vec2	(ivec2)	native	native
+vec2(uvec2)	function	servers/rendering/shader_language.cpp:2521	#1826		vec2	(uvec2)	native	native
+vec2(vec2)	function	servers/rendering/shader_language.cpp:2522	#1826		vec2	(vec2)	native	native
+uvec2(bvec2)	function	servers/rendering/shader_language.cpp:2524	#1826		uvec2	(bvec2)	native	native
+uvec2(ivec2)	function	servers/rendering/shader_language.cpp:2525	#1826		uvec2	(ivec2)	native	native
+uvec2(uvec2)	function	servers/rendering/shader_language.cpp:2526	#1826		uvec2	(uvec2)	native	native
+uvec2(vec2)	function	servers/rendering/shader_language.cpp:2527	#1826		uvec2	(vec2)	native	native
+bvec2(bvec2)	function	servers/rendering/shader_language.cpp:2529	#1826		bvec2	(bvec2)	native	native
+bvec2(ivec2)	function	servers/rendering/shader_language.cpp:2530	#1826		bvec2	(ivec2)	native	native
+bvec2(uvec2)	function	servers/rendering/shader_language.cpp:2531	#1826		bvec2	(uvec2)	native	native
+bvec2(vec2)	function	servers/rendering/shader_language.cpp:2532	#1826		bvec2	(vec2)	native	native
+ivec3(bvec3)	function	servers/rendering/shader_language.cpp:2534	#1826		ivec3	(bvec3)	native	native
+ivec3(ivec3)	function	servers/rendering/shader_language.cpp:2535	#1826		ivec3	(ivec3)	native	native
+ivec3(uvec3)	function	servers/rendering/shader_language.cpp:2536	#1826		ivec3	(uvec3)	native	native
+ivec3(vec3)	function	servers/rendering/shader_language.cpp:2537	#1826		ivec3	(vec3)	native	native
+vec3(bvec3)	function	servers/rendering/shader_language.cpp:2539	#1826		vec3	(bvec3)	native	native
+vec3(ivec3)	function	servers/rendering/shader_language.cpp:2540	#1826		vec3	(ivec3)	native	native
+vec3(uvec3)	function	servers/rendering/shader_language.cpp:2541	#1826		vec3	(uvec3)	native	native
+vec3(vec3)	function	servers/rendering/shader_language.cpp:2542	#1826		vec3	(vec3)	native	native
+uvec3(bvec3)	function	servers/rendering/shader_language.cpp:2544	#1826		uvec3	(bvec3)	native	native
+uvec3(ivec3)	function	servers/rendering/shader_language.cpp:2545	#1826		uvec3	(ivec3)	native	native
+uvec3(uvec3)	function	servers/rendering/shader_language.cpp:2546	#1826		uvec3	(uvec3)	native	native
+uvec3(vec3)	function	servers/rendering/shader_language.cpp:2547	#1826		uvec3	(vec3)	native	native
+bvec3(bvec3)	function	servers/rendering/shader_language.cpp:2549	#1826		bvec3	(bvec3)	native	native
+bvec3(ivec3)	function	servers/rendering/shader_language.cpp:2550	#1826		bvec3	(ivec3)	native	native
+bvec3(uvec3)	function	servers/rendering/shader_language.cpp:2551	#1826		bvec3	(uvec3)	native	native
+bvec3(vec3)	function	servers/rendering/shader_language.cpp:2552	#1826		bvec3	(vec3)	native	native
+ivec4(bvec4)	function	servers/rendering/shader_language.cpp:2554	#1826		ivec4	(bvec4)	native	native
+ivec4(ivec4)	function	servers/rendering/shader_language.cpp:2555	#1826		ivec4	(ivec4)	native	native
+ivec4(uvec4)	function	servers/rendering/shader_language.cpp:2556	#1826		ivec4	(uvec4)	native	native
+ivec4(vec4)	function	servers/rendering/shader_language.cpp:2557	#1826		ivec4	(vec4)	native	native
+vec4(bvec4)	function	servers/rendering/shader_language.cpp:2559	#1826		vec4	(bvec4)	native	native
+vec4(ivec4)	function	servers/rendering/shader_language.cpp:2560	#1826		vec4	(ivec4)	native	native
+vec4(uvec4)	function	servers/rendering/shader_language.cpp:2561	#1826		vec4	(uvec4)	native	native
+vec4(vec4)	function	servers/rendering/shader_language.cpp:2562	#1826		vec4	(vec4)	native	native
+uvec4(bvec4)	function	servers/rendering/shader_language.cpp:2564	#1826		uvec4	(bvec4)	native	native
+uvec4(ivec4)	function	servers/rendering/shader_language.cpp:2565	#1826		uvec4	(ivec4)	native	native
+uvec4(uvec4)	function	servers/rendering/shader_language.cpp:2566	#1826		uvec4	(uvec4)	native	native
+uvec4(vec4)	function	servers/rendering/shader_language.cpp:2567	#1826		uvec4	(vec4)	native	native
+bvec4(bvec4)	function	servers/rendering/shader_language.cpp:2569	#1826		bvec4	(bvec4)	native	native
+bvec4(ivec4)	function	servers/rendering/shader_language.cpp:2570	#1826		bvec4	(ivec4)	native	native
+bvec4(uvec4)	function	servers/rendering/shader_language.cpp:2571	#1826		bvec4	(uvec4)	native	native
+bvec4(vec4)	function	servers/rendering/shader_language.cpp:2572	#1826		bvec4	(vec4)	native	native
+mat2(mat3)	function	servers/rendering/shader_language.cpp:2576	#1826		mat2	(mat3)	native	native
+mat2(mat4)	function	servers/rendering/shader_language.cpp:2577	#1826		mat2	(mat4)	native	native
+mat3(mat2)	function	servers/rendering/shader_language.cpp:2578	#1826		mat3	(mat2)	native	native
+mat3(mat4)	function	servers/rendering/shader_language.cpp:2579	#1826		mat3	(mat4)	native	native
+mat4(mat2)	function	servers/rendering/shader_language.cpp:2580	#1826		mat4	(mat2)	native	native
+mat4(mat3)	function	servers/rendering/shader_language.cpp:2581	#1826		mat4	(mat3)	native	native
+radians(float)	function	servers/rendering/shader_language.cpp:2586	#1826		float	(float)	native	native
+radians(vec2)	function	servers/rendering/shader_language.cpp:2587	#1826		vec2	(vec2)	native	native
+radians(vec3)	function	servers/rendering/shader_language.cpp:2588	#1826		vec3	(vec3)	native	native
+radians(vec4)	function	servers/rendering/shader_language.cpp:2589	#1826		vec4	(vec4)	native	native
+degrees(float)	function	servers/rendering/shader_language.cpp:2593	#1826		float	(float)	native	native
+degrees(vec2)	function	servers/rendering/shader_language.cpp:2594	#1826		vec2	(vec2)	native	native
+degrees(vec3)	function	servers/rendering/shader_language.cpp:2595	#1826		vec3	(vec3)	native	native
+degrees(vec4)	function	servers/rendering/shader_language.cpp:2596	#1826		vec4	(vec4)	native	native
+sin(float)	function	servers/rendering/shader_language.cpp:2600	#1826		float	(float)	native	native
+sin(vec2)	function	servers/rendering/shader_language.cpp:2601	#1826		vec2	(vec2)	native	native
+sin(vec3)	function	servers/rendering/shader_language.cpp:2602	#1826		vec3	(vec3)	native	native
+sin(vec4)	function	servers/rendering/shader_language.cpp:2603	#1826		vec4	(vec4)	native	native
+cos(float)	function	servers/rendering/shader_language.cpp:2607	#1826		float	(float)	native	native
+cos(vec2)	function	servers/rendering/shader_language.cpp:2608	#1826		vec2	(vec2)	native	native
+cos(vec3)	function	servers/rendering/shader_language.cpp:2609	#1826		vec3	(vec3)	native	native
+cos(vec4)	function	servers/rendering/shader_language.cpp:2610	#1826		vec4	(vec4)	native	native
+tan(float)	function	servers/rendering/shader_language.cpp:2614	#1826		float	(float)	native	native
+tan(vec2)	function	servers/rendering/shader_language.cpp:2615	#1826		vec2	(vec2)	native	native
+tan(vec3)	function	servers/rendering/shader_language.cpp:2616	#1826		vec3	(vec3)	native	native
+tan(vec4)	function	servers/rendering/shader_language.cpp:2617	#1826		vec4	(vec4)	native	native
+asin(float)	function	servers/rendering/shader_language.cpp:2621	#1826		float	(float)	native	native
+asin(vec2)	function	servers/rendering/shader_language.cpp:2622	#1826		vec2	(vec2)	native	native
+asin(vec3)	function	servers/rendering/shader_language.cpp:2623	#1826		vec3	(vec3)	native	native
+asin(vec4)	function	servers/rendering/shader_language.cpp:2624	#1826		vec4	(vec4)	native	native
+acos(float)	function	servers/rendering/shader_language.cpp:2628	#1826		float	(float)	native	native
+acos(vec2)	function	servers/rendering/shader_language.cpp:2629	#1826		vec2	(vec2)	native	native
+acos(vec3)	function	servers/rendering/shader_language.cpp:2630	#1826		vec3	(vec3)	native	native
+acos(vec4)	function	servers/rendering/shader_language.cpp:2631	#1826		vec4	(vec4)	native	native
+atan(float)	function	servers/rendering/shader_language.cpp:2635	#1826		float	(float)	native	native
+atan(vec2)	function	servers/rendering/shader_language.cpp:2636	#1826		vec2	(vec2)	native	native
+atan(vec3)	function	servers/rendering/shader_language.cpp:2637	#1826		vec3	(vec3)	native	native
+atan(vec4)	function	servers/rendering/shader_language.cpp:2638	#1826		vec4	(vec4)	native	native
+atan(float,float)	function	servers/rendering/shader_language.cpp:2639	#1826		float	(float,float)	native	native
+atan(vec2,vec2)	function	servers/rendering/shader_language.cpp:2640	#1826		vec2	(vec2,vec2)	native	native
+atan(vec3,vec3)	function	servers/rendering/shader_language.cpp:2641	#1826		vec3	(vec3,vec3)	native	native
+atan(vec4,vec4)	function	servers/rendering/shader_language.cpp:2642	#1826		vec4	(vec4,vec4)	native	native
+sinh(float)	function	servers/rendering/shader_language.cpp:2646	#1826		float	(float)	native	native
+sinh(vec2)	function	servers/rendering/shader_language.cpp:2647	#1826		vec2	(vec2)	native	native
+sinh(vec3)	function	servers/rendering/shader_language.cpp:2648	#1826		vec3	(vec3)	native	native
+sinh(vec4)	function	servers/rendering/shader_language.cpp:2649	#1826		vec4	(vec4)	native	native
+cosh(float)	function	servers/rendering/shader_language.cpp:2653	#1826		float	(float)	native	native
+cosh(vec2)	function	servers/rendering/shader_language.cpp:2654	#1826		vec2	(vec2)	native	native
+cosh(vec3)	function	servers/rendering/shader_language.cpp:2655	#1826		vec3	(vec3)	native	native
+cosh(vec4)	function	servers/rendering/shader_language.cpp:2656	#1826		vec4	(vec4)	native	native
+tanh(float)	function	servers/rendering/shader_language.cpp:2660	#1826		float	(float)	native	native
+tanh(vec2)	function	servers/rendering/shader_language.cpp:2661	#1826		vec2	(vec2)	native	native
+tanh(vec3)	function	servers/rendering/shader_language.cpp:2662	#1826		vec3	(vec3)	native	native
+tanh(vec4)	function	servers/rendering/shader_language.cpp:2663	#1826		vec4	(vec4)	native	native
+asinh(float)	function	servers/rendering/shader_language.cpp:2667	#1826		float	(float)	native	native
+asinh(vec2)	function	servers/rendering/shader_language.cpp:2668	#1826		vec2	(vec2)	native	native
+asinh(vec3)	function	servers/rendering/shader_language.cpp:2669	#1826		vec3	(vec3)	native	native
+asinh(vec4)	function	servers/rendering/shader_language.cpp:2670	#1826		vec4	(vec4)	native	native
+acosh(float)	function	servers/rendering/shader_language.cpp:2674	#1826		float	(float)	native	native
+acosh(vec2)	function	servers/rendering/shader_language.cpp:2675	#1826		vec2	(vec2)	native	native
+acosh(vec3)	function	servers/rendering/shader_language.cpp:2676	#1826		vec3	(vec3)	native	native
+acosh(vec4)	function	servers/rendering/shader_language.cpp:2677	#1826		vec4	(vec4)	native	native
+atanh(float)	function	servers/rendering/shader_language.cpp:2681	#1826		float	(float)	native	native
+atanh(vec2)	function	servers/rendering/shader_language.cpp:2682	#1826		vec2	(vec2)	native	native
+atanh(vec3)	function	servers/rendering/shader_language.cpp:2683	#1826		vec3	(vec3)	native	native
+atanh(vec4)	function	servers/rendering/shader_language.cpp:2684	#1826		vec4	(vec4)	native	native
+pow(float,float)	function	servers/rendering/shader_language.cpp:2689	#1826		float	(float,float)	native	native
+pow(vec2,vec2)	function	servers/rendering/shader_language.cpp:2690	#1826		vec2	(vec2,vec2)	native	native
+pow(vec3,vec3)	function	servers/rendering/shader_language.cpp:2691	#1826		vec3	(vec3,vec3)	native	native
+pow(vec4,vec4)	function	servers/rendering/shader_language.cpp:2692	#1826		vec4	(vec4,vec4)	native	native
+exp(float)	function	servers/rendering/shader_language.cpp:2696	#1826		float	(float)	native	native
+exp(vec2)	function	servers/rendering/shader_language.cpp:2697	#1826		vec2	(vec2)	native	native
+exp(vec3)	function	servers/rendering/shader_language.cpp:2698	#1826		vec3	(vec3)	native	native
+exp(vec4)	function	servers/rendering/shader_language.cpp:2699	#1826		vec4	(vec4)	native	native
+log(float)	function	servers/rendering/shader_language.cpp:2703	#1826		float	(float)	native	native
+log(vec2)	function	servers/rendering/shader_language.cpp:2704	#1826		vec2	(vec2)	native	native
+log(vec3)	function	servers/rendering/shader_language.cpp:2705	#1826		vec3	(vec3)	native	native
+log(vec4)	function	servers/rendering/shader_language.cpp:2706	#1826		vec4	(vec4)	native	native
+exp2(float)	function	servers/rendering/shader_language.cpp:2710	#1826		float	(float)	native	native
+exp2(vec2)	function	servers/rendering/shader_language.cpp:2711	#1826		vec2	(vec2)	native	native
+exp2(vec3)	function	servers/rendering/shader_language.cpp:2712	#1826		vec3	(vec3)	native	native
+exp2(vec4)	function	servers/rendering/shader_language.cpp:2713	#1826		vec4	(vec4)	native	native
+log2(float)	function	servers/rendering/shader_language.cpp:2717	#1826		float	(float)	native	native
+log2(vec2)	function	servers/rendering/shader_language.cpp:2718	#1826		vec2	(vec2)	native	native
+log2(vec3)	function	servers/rendering/shader_language.cpp:2719	#1826		vec3	(vec3)	native	native
+log2(vec4)	function	servers/rendering/shader_language.cpp:2720	#1826		vec4	(vec4)	native	native
+sqrt(float)	function	servers/rendering/shader_language.cpp:2724	#1826		float	(float)	native	native
+sqrt(vec2)	function	servers/rendering/shader_language.cpp:2725	#1826		vec2	(vec2)	native	native
+sqrt(vec3)	function	servers/rendering/shader_language.cpp:2726	#1826		vec3	(vec3)	native	native
+sqrt(vec4)	function	servers/rendering/shader_language.cpp:2727	#1826		vec4	(vec4)	native	native
+inversesqrt(float)	function	servers/rendering/shader_language.cpp:2731	#1826		float	(float)	native	native
+inversesqrt(vec2)	function	servers/rendering/shader_language.cpp:2732	#1826		vec2	(vec2)	native	native
+inversesqrt(vec3)	function	servers/rendering/shader_language.cpp:2733	#1826		vec3	(vec3)	native	native
+inversesqrt(vec4)	function	servers/rendering/shader_language.cpp:2734	#1826		vec4	(vec4)	native	native
+abs(float)	function	servers/rendering/shader_language.cpp:2739	#1826		float	(float)	native	native
+abs(vec2)	function	servers/rendering/shader_language.cpp:2740	#1826		vec2	(vec2)	native	native
+abs(vec3)	function	servers/rendering/shader_language.cpp:2741	#1826		vec3	(vec3)	native	native
+abs(vec4)	function	servers/rendering/shader_language.cpp:2742	#1826		vec4	(vec4)	native	native
+abs(int)	function	servers/rendering/shader_language.cpp:2744	#1826		int	(int)	native	native
+abs(ivec2)	function	servers/rendering/shader_language.cpp:2745	#1826		ivec2	(ivec2)	native	native
+abs(ivec3)	function	servers/rendering/shader_language.cpp:2746	#1826		ivec3	(ivec3)	native	native
+abs(ivec4)	function	servers/rendering/shader_language.cpp:2747	#1826		ivec4	(ivec4)	native	native
+sign(float)	function	servers/rendering/shader_language.cpp:2751	#1826		float	(float)	native	native
+sign(vec2)	function	servers/rendering/shader_language.cpp:2752	#1826		vec2	(vec2)	native	native
+sign(vec3)	function	servers/rendering/shader_language.cpp:2753	#1826		vec3	(vec3)	native	native
+sign(vec4)	function	servers/rendering/shader_language.cpp:2754	#1826		vec4	(vec4)	native	native
+sign(int)	function	servers/rendering/shader_language.cpp:2756	#1826		int	(int)	native	native
+sign(ivec2)	function	servers/rendering/shader_language.cpp:2757	#1826		ivec2	(ivec2)	native	native
+sign(ivec3)	function	servers/rendering/shader_language.cpp:2758	#1826		ivec3	(ivec3)	native	native
+sign(ivec4)	function	servers/rendering/shader_language.cpp:2759	#1826		ivec4	(ivec4)	native	native
+floor(float)	function	servers/rendering/shader_language.cpp:2763	#1826		float	(float)	native	native
+floor(vec2)	function	servers/rendering/shader_language.cpp:2764	#1826		vec2	(vec2)	native	native
+floor(vec3)	function	servers/rendering/shader_language.cpp:2765	#1826		vec3	(vec3)	native	native
+floor(vec4)	function	servers/rendering/shader_language.cpp:2766	#1826		vec4	(vec4)	native	native
+trunc(float)	function	servers/rendering/shader_language.cpp:2770	#1826		float	(float)	native	native
+trunc(vec2)	function	servers/rendering/shader_language.cpp:2771	#1826		vec2	(vec2)	native	native
+trunc(vec3)	function	servers/rendering/shader_language.cpp:2772	#1826		vec3	(vec3)	native	native
+trunc(vec4)	function	servers/rendering/shader_language.cpp:2773	#1826		vec4	(vec4)	native	native
+round(float)	function	servers/rendering/shader_language.cpp:2777	#1826		float	(float)	native	native
+round(vec2)	function	servers/rendering/shader_language.cpp:2778	#1826		vec2	(vec2)	native	native
+round(vec3)	function	servers/rendering/shader_language.cpp:2779	#1826		vec3	(vec3)	native	native
+round(vec4)	function	servers/rendering/shader_language.cpp:2780	#1826		vec4	(vec4)	native	native
+roundEven(float)	function	servers/rendering/shader_language.cpp:2784	#1826		float	(float)	lowered: floor(x) + mod(floor(x), 2) at a half	lowered: floor(x) + mod(floor(x), 2) at a half
+roundEven(vec2)	function	servers/rendering/shader_language.cpp:2785	#1826		vec2	(vec2)	lowered: floor(x) + mod(floor(x), 2) at a half	lowered: floor(x) + mod(floor(x), 2) at a half
+roundEven(vec3)	function	servers/rendering/shader_language.cpp:2786	#1826		vec3	(vec3)	lowered: floor(x) + mod(floor(x), 2) at a half	lowered: floor(x) + mod(floor(x), 2) at a half
+roundEven(vec4)	function	servers/rendering/shader_language.cpp:2787	#1826		vec4	(vec4)	lowered: floor(x) + mod(floor(x), 2) at a half	lowered: floor(x) + mod(floor(x), 2) at a half
+ceil(float)	function	servers/rendering/shader_language.cpp:2791	#1826		float	(float)	native	native
+ceil(vec2)	function	servers/rendering/shader_language.cpp:2792	#1826		vec2	(vec2)	native	native
+ceil(vec3)	function	servers/rendering/shader_language.cpp:2793	#1826		vec3	(vec3)	native	native
+ceil(vec4)	function	servers/rendering/shader_language.cpp:2794	#1826		vec4	(vec4)	native	native
+fract(float)	function	servers/rendering/shader_language.cpp:2798	#1826		float	(float)	native	native
+fract(vec2)	function	servers/rendering/shader_language.cpp:2799	#1826		vec2	(vec2)	native	native
+fract(vec3)	function	servers/rendering/shader_language.cpp:2800	#1826		vec3	(vec3)	native	native
+fract(vec4)	function	servers/rendering/shader_language.cpp:2801	#1826		vec4	(vec4)	native	native
+mod(float,float)	function	servers/rendering/shader_language.cpp:2805	#1826		float	(float,float)	native	native
+mod(vec2,vec2)	function	servers/rendering/shader_language.cpp:2806	#1826		vec2	(vec2,vec2)	native	native
+mod(vec2,float)	function	servers/rendering/shader_language.cpp:2807	#1826		vec2	(vec2,float)	native	native
+mod(vec3,vec3)	function	servers/rendering/shader_language.cpp:2808	#1826		vec3	(vec3,vec3)	native	native
+mod(vec3,float)	function	servers/rendering/shader_language.cpp:2809	#1826		vec3	(vec3,float)	native	native
+mod(vec4,vec4)	function	servers/rendering/shader_language.cpp:2810	#1826		vec4	(vec4,vec4)	native	native
+mod(vec4,float)	function	servers/rendering/shader_language.cpp:2811	#1826		vec4	(vec4,float)	native	native
+modf(float,float)	function	servers/rendering/shader_language.cpp:2815	#1826		float	(float,float)	lowered: trunc(x) and x - trunc(x)	lowered: trunc(x) and x - trunc(x)
+modf(vec2,vec2)	function	servers/rendering/shader_language.cpp:2816	#1826		vec2	(vec2,vec2)	lowered: trunc(x) and x - trunc(x)	lowered: trunc(x) and x - trunc(x)
+modf(vec3,vec3)	function	servers/rendering/shader_language.cpp:2817	#1826		vec3	(vec3,vec3)	lowered: trunc(x) and x - trunc(x)	lowered: trunc(x) and x - trunc(x)
+modf(vec4,vec4)	function	servers/rendering/shader_language.cpp:2818	#1826		vec4	(vec4,vec4)	lowered: trunc(x) and x - trunc(x)	lowered: trunc(x) and x - trunc(x)
+min(float,float)	function	servers/rendering/shader_language.cpp:2822	#1826		float	(float,float)	native	native
+min(vec2,vec2)	function	servers/rendering/shader_language.cpp:2823	#1826		vec2	(vec2,vec2)	native	native
+min(vec2,float)	function	servers/rendering/shader_language.cpp:2824	#1826		vec2	(vec2,float)	native	native
+min(vec3,vec3)	function	servers/rendering/shader_language.cpp:2825	#1826		vec3	(vec3,vec3)	native	native
+min(vec3,float)	function	servers/rendering/shader_language.cpp:2826	#1826		vec3	(vec3,float)	native	native
+min(vec4,vec4)	function	servers/rendering/shader_language.cpp:2827	#1826		vec4	(vec4,vec4)	native	native
+min(vec4,float)	function	servers/rendering/shader_language.cpp:2828	#1826		vec4	(vec4,float)	native	native
+min(int,int)	function	servers/rendering/shader_language.cpp:2830	#1826		int	(int,int)	native	native
+min(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:2831	#1826		ivec2	(ivec2,ivec2)	native	native
+min(ivec2,int)	function	servers/rendering/shader_language.cpp:2832	#1826		ivec2	(ivec2,int)	native	native
+min(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:2833	#1826		ivec3	(ivec3,ivec3)	native	native
+min(ivec3,int)	function	servers/rendering/shader_language.cpp:2834	#1826		ivec3	(ivec3,int)	native	native
+min(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:2835	#1826		ivec4	(ivec4,ivec4)	native	native
+min(ivec4,int)	function	servers/rendering/shader_language.cpp:2836	#1826		ivec4	(ivec4,int)	native	native
+min(uint,uint)	function	servers/rendering/shader_language.cpp:2838	#1826		uint	(uint,uint)	native	native
+min(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:2839	#1826		uvec2	(uvec2,uvec2)	native	native
+min(uvec2,uint)	function	servers/rendering/shader_language.cpp:2840	#1826		uvec2	(uvec2,uint)	native	native
+min(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:2841	#1826		uvec3	(uvec3,uvec3)	native	native
+min(uvec3,uint)	function	servers/rendering/shader_language.cpp:2842	#1826		uvec3	(uvec3,uint)	native	native
+min(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:2843	#1826		uvec4	(uvec4,uvec4)	native	native
+min(uvec4,uint)	function	servers/rendering/shader_language.cpp:2844	#1826		uvec4	(uvec4,uint)	native	native
+max(float,float)	function	servers/rendering/shader_language.cpp:2848	#1826		float	(float,float)	native	native
+max(vec2,vec2)	function	servers/rendering/shader_language.cpp:2849	#1826		vec2	(vec2,vec2)	native	native
+max(vec2,float)	function	servers/rendering/shader_language.cpp:2850	#1826		vec2	(vec2,float)	native	native
+max(vec3,vec3)	function	servers/rendering/shader_language.cpp:2851	#1826		vec3	(vec3,vec3)	native	native
+max(vec3,float)	function	servers/rendering/shader_language.cpp:2852	#1826		vec3	(vec3,float)	native	native
+max(vec4,vec4)	function	servers/rendering/shader_language.cpp:2853	#1826		vec4	(vec4,vec4)	native	native
+max(vec4,float)	function	servers/rendering/shader_language.cpp:2854	#1826		vec4	(vec4,float)	native	native
+max(int,int)	function	servers/rendering/shader_language.cpp:2856	#1826		int	(int,int)	native	native
+max(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:2857	#1826		ivec2	(ivec2,ivec2)	native	native
+max(ivec2,int)	function	servers/rendering/shader_language.cpp:2858	#1826		ivec2	(ivec2,int)	native	native
+max(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:2859	#1826		ivec3	(ivec3,ivec3)	native	native
+max(ivec3,int)	function	servers/rendering/shader_language.cpp:2860	#1826		ivec3	(ivec3,int)	native	native
+max(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:2861	#1826		ivec4	(ivec4,ivec4)	native	native
+max(ivec4,int)	function	servers/rendering/shader_language.cpp:2862	#1826		ivec4	(ivec4,int)	native	native
+max(uint,uint)	function	servers/rendering/shader_language.cpp:2864	#1826		uint	(uint,uint)	native	native
+max(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:2865	#1826		uvec2	(uvec2,uvec2)	native	native
+max(uvec2,uint)	function	servers/rendering/shader_language.cpp:2866	#1826		uvec2	(uvec2,uint)	native	native
+max(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:2867	#1826		uvec3	(uvec3,uvec3)	native	native
+max(uvec3,uint)	function	servers/rendering/shader_language.cpp:2868	#1826		uvec3	(uvec3,uint)	native	native
+max(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:2869	#1826		uvec4	(uvec4,uvec4)	native	native
+max(uvec4,uint)	function	servers/rendering/shader_language.cpp:2870	#1826		uvec4	(uvec4,uint)	native	native
+clamp(float,float,float)	function	servers/rendering/shader_language.cpp:2874	#1826		float	(float,float,float)	native	native
+clamp(vec2,vec2,vec2)	function	servers/rendering/shader_language.cpp:2875	#1826		vec2	(vec2,vec2,vec2)	native	native
+clamp(vec3,vec3,vec3)	function	servers/rendering/shader_language.cpp:2876	#1826		vec3	(vec3,vec3,vec3)	native	native
+clamp(vec4,vec4,vec4)	function	servers/rendering/shader_language.cpp:2877	#1826		vec4	(vec4,vec4,vec4)	native	native
+clamp(vec2,float,float)	function	servers/rendering/shader_language.cpp:2878	#1826		vec2	(vec2,float,float)	native	native
+clamp(vec3,float,float)	function	servers/rendering/shader_language.cpp:2879	#1826		vec3	(vec3,float,float)	native	native
+clamp(vec4,float,float)	function	servers/rendering/shader_language.cpp:2880	#1826		vec4	(vec4,float,float)	native	native
+clamp(int,int,int)	function	servers/rendering/shader_language.cpp:2882	#1826		int	(int,int,int)	native	native
+clamp(ivec2,ivec2,ivec2)	function	servers/rendering/shader_language.cpp:2883	#1826		ivec2	(ivec2,ivec2,ivec2)	native	native
+clamp(ivec3,ivec3,ivec3)	function	servers/rendering/shader_language.cpp:2884	#1826		ivec3	(ivec3,ivec3,ivec3)	native	native
+clamp(ivec4,ivec4,ivec4)	function	servers/rendering/shader_language.cpp:2885	#1826		ivec4	(ivec4,ivec4,ivec4)	native	native
+clamp(ivec2,int,int)	function	servers/rendering/shader_language.cpp:2886	#1826		ivec2	(ivec2,int,int)	native	native
+clamp(ivec3,int,int)	function	servers/rendering/shader_language.cpp:2887	#1826		ivec3	(ivec3,int,int)	native	native
+clamp(ivec4,int,int)	function	servers/rendering/shader_language.cpp:2888	#1826		ivec4	(ivec4,int,int)	native	native
+clamp(uint,uint,uint)	function	servers/rendering/shader_language.cpp:2890	#1826		uint	(uint,uint,uint)	native	native
+clamp(uvec2,uvec2,uvec2)	function	servers/rendering/shader_language.cpp:2891	#1826		uvec2	(uvec2,uvec2,uvec2)	native	native
+clamp(uvec3,uvec3,uvec3)	function	servers/rendering/shader_language.cpp:2892	#1826		uvec3	(uvec3,uvec3,uvec3)	native	native
+clamp(uvec4,uvec4,uvec4)	function	servers/rendering/shader_language.cpp:2893	#1826		uvec4	(uvec4,uvec4,uvec4)	native	native
+clamp(uvec2,uint,uint)	function	servers/rendering/shader_language.cpp:2894	#1826		uvec2	(uvec2,uint,uint)	native	native
+clamp(uvec3,uint,uint)	function	servers/rendering/shader_language.cpp:2895	#1826		uvec3	(uvec3,uint,uint)	native	native
+clamp(uvec4,uint,uint)	function	servers/rendering/shader_language.cpp:2896	#1826		uvec4	(uvec4,uint,uint)	native	native
+mix(float,float,float)	function	servers/rendering/shader_language.cpp:2900	#1826		float	(float,float,float)	native	native
+mix(vec2,vec2,float)	function	servers/rendering/shader_language.cpp:2901	#1826		vec2	(vec2,vec2,float)	native	native
+mix(vec2,vec2,bvec2)	function	servers/rendering/shader_language.cpp:2902	#1826		vec2	(vec2,vec2,bvec2)	lowered: select by lane	lowered: select by lane
+mix(vec2,vec2,vec2)	function	servers/rendering/shader_language.cpp:2903	#1826		vec2	(vec2,vec2,vec2)	native	native
+mix(vec3,vec3,float)	function	servers/rendering/shader_language.cpp:2904	#1826		vec3	(vec3,vec3,float)	native	native
+mix(vec3,vec3,bvec3)	function	servers/rendering/shader_language.cpp:2905	#1826		vec3	(vec3,vec3,bvec3)	lowered: select by lane	lowered: select by lane
+mix(vec3,vec3,vec3)	function	servers/rendering/shader_language.cpp:2906	#1826		vec3	(vec3,vec3,vec3)	native	native
+mix(vec4,vec4,float)	function	servers/rendering/shader_language.cpp:2907	#1826		vec4	(vec4,vec4,float)	native	native
+mix(vec4,vec4,bvec4)	function	servers/rendering/shader_language.cpp:2908	#1826		vec4	(vec4,vec4,bvec4)	lowered: select by lane	lowered: select by lane
+mix(vec4,vec4,vec4)	function	servers/rendering/shader_language.cpp:2909	#1826		vec4	(vec4,vec4,vec4)	native	native
+step(float,float)	function	servers/rendering/shader_language.cpp:2913	#1826		float	(float,float)	native	native
+step(vec2,vec2)	function	servers/rendering/shader_language.cpp:2914	#1826		vec2	(vec2,vec2)	native	native
+step(vec3,vec3)	function	servers/rendering/shader_language.cpp:2915	#1826		vec3	(vec3,vec3)	native	native
+step(vec4,vec4)	function	servers/rendering/shader_language.cpp:2916	#1826		vec4	(vec4,vec4)	native	native
+step(float,vec2)	function	servers/rendering/shader_language.cpp:2917	#1826		vec2	(float,vec2)	native	native
+step(float,vec3)	function	servers/rendering/shader_language.cpp:2918	#1826		vec3	(float,vec3)	native	native
+step(float,vec4)	function	servers/rendering/shader_language.cpp:2919	#1826		vec4	(float,vec4)	native	native
+smoothstep(float,float,float)	function	servers/rendering/shader_language.cpp:2923	#1826		float	(float,float,float)	native	native
+smoothstep(vec2,vec2,vec2)	function	servers/rendering/shader_language.cpp:2924	#1826		vec2	(vec2,vec2,vec2)	native	native
+smoothstep(vec3,vec3,vec3)	function	servers/rendering/shader_language.cpp:2925	#1826		vec3	(vec3,vec3,vec3)	native	native
+smoothstep(vec4,vec4,vec4)	function	servers/rendering/shader_language.cpp:2926	#1826		vec4	(vec4,vec4,vec4)	native	native
+smoothstep(float,float,vec2)	function	servers/rendering/shader_language.cpp:2927	#1826		vec2	(float,float,vec2)	native	native
+smoothstep(float,float,vec3)	function	servers/rendering/shader_language.cpp:2928	#1826		vec3	(float,float,vec3)	native	native
+smoothstep(float,float,vec4)	function	servers/rendering/shader_language.cpp:2929	#1826		vec4	(float,float,vec4)	native	native
+isnan(float)	function	servers/rendering/shader_language.cpp:2933	#1826		bool	(float)	lowered: x != x	lowered: x != x
+isnan(vec2)	function	servers/rendering/shader_language.cpp:2934	#1826		bvec2	(vec2)	lowered: x != x	lowered: x != x
+isnan(vec3)	function	servers/rendering/shader_language.cpp:2935	#1826		bvec3	(vec3)	lowered: x != x	lowered: x != x
+isnan(vec4)	function	servers/rendering/shader_language.cpp:2936	#1826		bvec4	(vec4)	lowered: x != x	lowered: x != x
+isinf(float)	function	servers/rendering/shader_language.cpp:2940	#1826		bool	(float)	lowered: abs(x) == infinity	lowered: abs(x) == infinity
+isinf(vec2)	function	servers/rendering/shader_language.cpp:2941	#1826		bvec2	(vec2)	lowered: abs(x) == infinity	lowered: abs(x) == infinity
+isinf(vec3)	function	servers/rendering/shader_language.cpp:2942	#1826		bvec3	(vec3)	lowered: abs(x) == infinity	lowered: abs(x) == infinity
+isinf(vec4)	function	servers/rendering/shader_language.cpp:2943	#1826		bvec4	(vec4)	lowered: abs(x) == infinity	lowered: abs(x) == infinity
 floatBitsToInt(float)	function	servers/rendering/shader_language.cpp:2947	#1827		int	(float)		
 floatBitsToInt(vec2)	function	servers/rendering/shader_language.cpp:2948	#1827		ivec2	(vec2)		
 floatBitsToInt(vec3)	function	servers/rendering/shader_language.cpp:2949	#1827		ivec3	(vec3)		
@@ -1120,116 +1120,116 @@ uintBitsToFloat(uint)	function	servers/rendering/shader_language.cpp:2968	#1827	
 uintBitsToFloat(uvec2)	function	servers/rendering/shader_language.cpp:2969	#1827		vec2	(uvec2)		
 uintBitsToFloat(uvec3)	function	servers/rendering/shader_language.cpp:2970	#1827		vec3	(uvec3)		
 uintBitsToFloat(uvec4)	function	servers/rendering/shader_language.cpp:2971	#1827		vec4	(uvec4)		
-length(float)	function	servers/rendering/shader_language.cpp:2976	#1826		float	(float)		
-length(vec2)	function	servers/rendering/shader_language.cpp:2977	#1826		float	(vec2)		
-length(vec3)	function	servers/rendering/shader_language.cpp:2978	#1826		float	(vec3)		
-length(vec4)	function	servers/rendering/shader_language.cpp:2979	#1826		float	(vec4)		
-distance(float,float)	function	servers/rendering/shader_language.cpp:2983	#1826		float	(float,float)		
-distance(vec2,vec2)	function	servers/rendering/shader_language.cpp:2984	#1826		float	(vec2,vec2)		
-distance(vec3,vec3)	function	servers/rendering/shader_language.cpp:2985	#1826		float	(vec3,vec3)		
-distance(vec4,vec4)	function	servers/rendering/shader_language.cpp:2986	#1826		float	(vec4,vec4)		
-dot(float,float)	function	servers/rendering/shader_language.cpp:2990	#1826		float	(float,float)		
-dot(vec2,vec2)	function	servers/rendering/shader_language.cpp:2991	#1826		float	(vec2,vec2)		
-dot(vec3,vec3)	function	servers/rendering/shader_language.cpp:2992	#1826		float	(vec3,vec3)		
-dot(vec4,vec4)	function	servers/rendering/shader_language.cpp:2993	#1826		float	(vec4,vec4)		
-cross(vec3,vec3)	function	servers/rendering/shader_language.cpp:2997	#1826		vec3	(vec3,vec3)		
-normalize(float)	function	servers/rendering/shader_language.cpp:3001	#1826		float	(float)		
-normalize(vec2)	function	servers/rendering/shader_language.cpp:3002	#1826		vec2	(vec2)		
-normalize(vec3)	function	servers/rendering/shader_language.cpp:3003	#1826		vec3	(vec3)		
-normalize(vec4)	function	servers/rendering/shader_language.cpp:3004	#1826		vec4	(vec4)		
-reflect(vec2,vec2)	function	servers/rendering/shader_language.cpp:3008	#1826		vec2	(vec2,vec2)		
-reflect(vec3,vec3)	function	servers/rendering/shader_language.cpp:3009	#1826		vec3	(vec3,vec3)		
-reflect(vec4,vec4)	function	servers/rendering/shader_language.cpp:3010	#1826		vec4	(vec4,vec4)		
-refract(vec2,vec2,float)	function	servers/rendering/shader_language.cpp:3014	#1826		vec2	(vec2,vec2,float)		
-refract(vec3,vec3,float)	function	servers/rendering/shader_language.cpp:3015	#1826		vec3	(vec3,vec3,float)		
-refract(vec4,vec4,float)	function	servers/rendering/shader_language.cpp:3016	#1826		vec4	(vec4,vec4,float)		
-faceforward(vec2,vec2,vec2)	function	servers/rendering/shader_language.cpp:3020	#1826		vec2	(vec2,vec2,vec2)		
-faceforward(vec3,vec3,vec3)	function	servers/rendering/shader_language.cpp:3021	#1826		vec3	(vec3,vec3,vec3)		
-faceforward(vec4,vec4,vec4)	function	servers/rendering/shader_language.cpp:3022	#1826		vec4	(vec4,vec4,vec4)		
-matrixCompMult(mat2,mat2)	function	servers/rendering/shader_language.cpp:3026	#1826		mat2	(mat2,mat2)		
-matrixCompMult(mat3,mat3)	function	servers/rendering/shader_language.cpp:3027	#1826		mat3	(mat3,mat3)		
-matrixCompMult(mat4,mat4)	function	servers/rendering/shader_language.cpp:3028	#1826		mat4	(mat4,mat4)		
-outerProduct(vec2,vec2)	function	servers/rendering/shader_language.cpp:3032	#1826		mat2	(vec2,vec2)		
-outerProduct(vec3,vec3)	function	servers/rendering/shader_language.cpp:3033	#1826		mat3	(vec3,vec3)		
-outerProduct(vec4,vec4)	function	servers/rendering/shader_language.cpp:3034	#1826		mat4	(vec4,vec4)		
-transpose(mat2)	function	servers/rendering/shader_language.cpp:3038	#1826		mat2	(mat2)		
-transpose(mat3)	function	servers/rendering/shader_language.cpp:3039	#1826		mat3	(mat3)		
-transpose(mat4)	function	servers/rendering/shader_language.cpp:3040	#1826		mat4	(mat4)		
-determinant(mat2)	function	servers/rendering/shader_language.cpp:3044	#1826		float	(mat2)		
-determinant(mat3)	function	servers/rendering/shader_language.cpp:3045	#1826		float	(mat3)		
-determinant(mat4)	function	servers/rendering/shader_language.cpp:3046	#1826		float	(mat4)		
-inverse(mat2)	function	servers/rendering/shader_language.cpp:3050	#1826		mat2	(mat2)		
-inverse(mat3)	function	servers/rendering/shader_language.cpp:3051	#1826		mat3	(mat3)		
-inverse(mat4)	function	servers/rendering/shader_language.cpp:3052	#1826		mat4	(mat4)		
-lessThan(vec2,vec2)	function	servers/rendering/shader_language.cpp:3056	#1826		bvec2	(vec2,vec2)		
-lessThan(vec3,vec3)	function	servers/rendering/shader_language.cpp:3057	#1826		bvec3	(vec3,vec3)		
-lessThan(vec4,vec4)	function	servers/rendering/shader_language.cpp:3058	#1826		bvec4	(vec4,vec4)		
-lessThan(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:3060	#1826		bvec2	(ivec2,ivec2)		
-lessThan(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:3061	#1826		bvec3	(ivec3,ivec3)		
-lessThan(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:3062	#1826		bvec4	(ivec4,ivec4)		
-lessThan(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:3064	#1826		bvec3	(uvec3,uvec3)		
-lessThan(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:3065	#1826		bvec4	(uvec4,uvec4)		
-lessThan(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:3066	#1826		bvec2	(uvec2,uvec2)		
-greaterThan(vec2,vec2)	function	servers/rendering/shader_language.cpp:3070	#1826		bvec2	(vec2,vec2)		
-greaterThan(vec3,vec3)	function	servers/rendering/shader_language.cpp:3071	#1826		bvec3	(vec3,vec3)		
-greaterThan(vec4,vec4)	function	servers/rendering/shader_language.cpp:3072	#1826		bvec4	(vec4,vec4)		
-greaterThan(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:3074	#1826		bvec2	(ivec2,ivec2)		
-greaterThan(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:3075	#1826		bvec3	(ivec3,ivec3)		
-greaterThan(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:3076	#1826		bvec4	(ivec4,ivec4)		
-greaterThan(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:3078	#1826		bvec2	(uvec2,uvec2)		
-greaterThan(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:3079	#1826		bvec3	(uvec3,uvec3)		
-greaterThan(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:3080	#1826		bvec4	(uvec4,uvec4)		
-lessThanEqual(vec2,vec2)	function	servers/rendering/shader_language.cpp:3084	#1826		bvec2	(vec2,vec2)		
-lessThanEqual(vec3,vec3)	function	servers/rendering/shader_language.cpp:3085	#1826		bvec3	(vec3,vec3)		
-lessThanEqual(vec4,vec4)	function	servers/rendering/shader_language.cpp:3086	#1826		bvec4	(vec4,vec4)		
-lessThanEqual(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:3088	#1826		bvec2	(ivec2,ivec2)		
-lessThanEqual(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:3089	#1826		bvec3	(ivec3,ivec3)		
-lessThanEqual(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:3090	#1826		bvec4	(ivec4,ivec4)		
-lessThanEqual(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:3092	#1826		bvec2	(uvec2,uvec2)		
-lessThanEqual(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:3093	#1826		bvec3	(uvec3,uvec3)		
-lessThanEqual(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:3094	#1826		bvec4	(uvec4,uvec4)		
-greaterThanEqual(vec2,vec2)	function	servers/rendering/shader_language.cpp:3098	#1826		bvec2	(vec2,vec2)		
-greaterThanEqual(vec3,vec3)	function	servers/rendering/shader_language.cpp:3099	#1826		bvec3	(vec3,vec3)		
-greaterThanEqual(vec4,vec4)	function	servers/rendering/shader_language.cpp:3100	#1826		bvec4	(vec4,vec4)		
-greaterThanEqual(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:3102	#1826		bvec2	(ivec2,ivec2)		
-greaterThanEqual(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:3103	#1826		bvec3	(ivec3,ivec3)		
-greaterThanEqual(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:3104	#1826		bvec4	(ivec4,ivec4)		
-greaterThanEqual(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:3106	#1826		bvec2	(uvec2,uvec2)		
-greaterThanEqual(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:3107	#1826		bvec3	(uvec3,uvec3)		
-greaterThanEqual(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:3108	#1826		bvec4	(uvec4,uvec4)		
-equal(vec2,vec2)	function	servers/rendering/shader_language.cpp:3112	#1826		bvec2	(vec2,vec2)		
-equal(vec3,vec3)	function	servers/rendering/shader_language.cpp:3113	#1826		bvec3	(vec3,vec3)		
-equal(vec4,vec4)	function	servers/rendering/shader_language.cpp:3114	#1826		bvec4	(vec4,vec4)		
-equal(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:3116	#1826		bvec2	(ivec2,ivec2)		
-equal(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:3117	#1826		bvec3	(ivec3,ivec3)		
-equal(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:3118	#1826		bvec4	(ivec4,ivec4)		
-equal(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:3120	#1826		bvec2	(uvec2,uvec2)		
-equal(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:3121	#1826		bvec3	(uvec3,uvec3)		
-equal(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:3122	#1826		bvec4	(uvec4,uvec4)		
-equal(bvec2,bvec2)	function	servers/rendering/shader_language.cpp:3124	#1826		bvec2	(bvec2,bvec2)		
-equal(bvec3,bvec3)	function	servers/rendering/shader_language.cpp:3125	#1826		bvec3	(bvec3,bvec3)		
-equal(bvec4,bvec4)	function	servers/rendering/shader_language.cpp:3126	#1826		bvec4	(bvec4,bvec4)		
-notEqual(vec2,vec2)	function	servers/rendering/shader_language.cpp:3130	#1826		bvec2	(vec2,vec2)		
-notEqual(vec3,vec3)	function	servers/rendering/shader_language.cpp:3131	#1826		bvec3	(vec3,vec3)		
-notEqual(vec4,vec4)	function	servers/rendering/shader_language.cpp:3132	#1826		bvec4	(vec4,vec4)		
-notEqual(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:3134	#1826		bvec2	(ivec2,ivec2)		
-notEqual(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:3135	#1826		bvec3	(ivec3,ivec3)		
-notEqual(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:3136	#1826		bvec4	(ivec4,ivec4)		
-notEqual(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:3138	#1826		bvec2	(uvec2,uvec2)		
-notEqual(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:3139	#1826		bvec3	(uvec3,uvec3)		
-notEqual(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:3140	#1826		bvec4	(uvec4,uvec4)		
-notEqual(bvec2,bvec2)	function	servers/rendering/shader_language.cpp:3142	#1826		bvec2	(bvec2,bvec2)		
-notEqual(bvec3,bvec3)	function	servers/rendering/shader_language.cpp:3143	#1826		bvec3	(bvec3,bvec3)		
-notEqual(bvec4,bvec4)	function	servers/rendering/shader_language.cpp:3144	#1826		bvec4	(bvec4,bvec4)		
-any(bvec2)	function	servers/rendering/shader_language.cpp:3148	#1826		bool	(bvec2)		
-any(bvec3)	function	servers/rendering/shader_language.cpp:3149	#1826		bool	(bvec3)		
-any(bvec4)	function	servers/rendering/shader_language.cpp:3150	#1826		bool	(bvec4)		
-all(bvec2)	function	servers/rendering/shader_language.cpp:3154	#1826		bool	(bvec2)		
-all(bvec3)	function	servers/rendering/shader_language.cpp:3155	#1826		bool	(bvec3)		
-all(bvec4)	function	servers/rendering/shader_language.cpp:3156	#1826		bool	(bvec4)		
-not(bvec2)	function	servers/rendering/shader_language.cpp:3160	#1826		bvec2	(bvec2)		
-not(bvec3)	function	servers/rendering/shader_language.cpp:3161	#1826		bvec3	(bvec3)		
-not(bvec4)	function	servers/rendering/shader_language.cpp:3162	#1826		bvec4	(bvec4)		
+length(float)	function	servers/rendering/shader_language.cpp:2976	#1826		float	(float)	native	native
+length(vec2)	function	servers/rendering/shader_language.cpp:2977	#1826		float	(vec2)	native	native
+length(vec3)	function	servers/rendering/shader_language.cpp:2978	#1826		float	(vec3)	native	native
+length(vec4)	function	servers/rendering/shader_language.cpp:2979	#1826		float	(vec4)	native	native
+distance(float,float)	function	servers/rendering/shader_language.cpp:2983	#1826		float	(float,float)	native	native
+distance(vec2,vec2)	function	servers/rendering/shader_language.cpp:2984	#1826		float	(vec2,vec2)	native	native
+distance(vec3,vec3)	function	servers/rendering/shader_language.cpp:2985	#1826		float	(vec3,vec3)	native	native
+distance(vec4,vec4)	function	servers/rendering/shader_language.cpp:2986	#1826		float	(vec4,vec4)	native	native
+dot(float,float)	function	servers/rendering/shader_language.cpp:2990	#1826		float	(float,float)	native	native
+dot(vec2,vec2)	function	servers/rendering/shader_language.cpp:2991	#1826		float	(vec2,vec2)	native	native
+dot(vec3,vec3)	function	servers/rendering/shader_language.cpp:2992	#1826		float	(vec3,vec3)	native	native
+dot(vec4,vec4)	function	servers/rendering/shader_language.cpp:2993	#1826		float	(vec4,vec4)	native	native
+cross(vec3,vec3)	function	servers/rendering/shader_language.cpp:2997	#1826		vec3	(vec3,vec3)	native	native
+normalize(float)	function	servers/rendering/shader_language.cpp:3001	#1826		float	(float)	native	native
+normalize(vec2)	function	servers/rendering/shader_language.cpp:3002	#1826		vec2	(vec2)	native	native
+normalize(vec3)	function	servers/rendering/shader_language.cpp:3003	#1826		vec3	(vec3)	native	native
+normalize(vec4)	function	servers/rendering/shader_language.cpp:3004	#1826		vec4	(vec4)	native	native
+reflect(vec2,vec2)	function	servers/rendering/shader_language.cpp:3008	#1826		vec2	(vec2,vec2)	native	native
+reflect(vec3,vec3)	function	servers/rendering/shader_language.cpp:3009	#1826		vec3	(vec3,vec3)	native	native
+reflect(vec4,vec4)	function	servers/rendering/shader_language.cpp:3010	#1826		vec4	(vec4,vec4)	native	native
+refract(vec2,vec2,float)	function	servers/rendering/shader_language.cpp:3014	#1826		vec2	(vec2,vec2,float)	native	native
+refract(vec3,vec3,float)	function	servers/rendering/shader_language.cpp:3015	#1826		vec3	(vec3,vec3,float)	native	native
+refract(vec4,vec4,float)	function	servers/rendering/shader_language.cpp:3016	#1826		vec4	(vec4,vec4,float)	native	native
+faceforward(vec2,vec2,vec2)	function	servers/rendering/shader_language.cpp:3020	#1826		vec2	(vec2,vec2,vec2)	native	native
+faceforward(vec3,vec3,vec3)	function	servers/rendering/shader_language.cpp:3021	#1826		vec3	(vec3,vec3,vec3)	native	native
+faceforward(vec4,vec4,vec4)	function	servers/rendering/shader_language.cpp:3022	#1826		vec4	(vec4,vec4,vec4)	native	native
+matrixCompMult(mat2,mat2)	function	servers/rendering/shader_language.cpp:3026	#1826		mat2	(mat2,mat2)	lowered: column by column	lowered: column by column
+matrixCompMult(mat3,mat3)	function	servers/rendering/shader_language.cpp:3027	#1826		mat3	(mat3,mat3)	lowered: column by column	lowered: column by column
+matrixCompMult(mat4,mat4)	function	servers/rendering/shader_language.cpp:3028	#1826		mat4	(mat4,mat4)	lowered: column by column	lowered: column by column
+outerProduct(vec2,vec2)	function	servers/rendering/shader_language.cpp:3032	#1826		mat2	(vec2,vec2)	lowered: column by column	lowered: column by column
+outerProduct(vec3,vec3)	function	servers/rendering/shader_language.cpp:3033	#1826		mat3	(vec3,vec3)	lowered: column by column	lowered: column by column
+outerProduct(vec4,vec4)	function	servers/rendering/shader_language.cpp:3034	#1826		mat4	(vec4,vec4)	lowered: column by column	lowered: column by column
+transpose(mat2)	function	servers/rendering/shader_language.cpp:3038	#1826		mat2	(mat2)	native	native
+transpose(mat3)	function	servers/rendering/shader_language.cpp:3039	#1826		mat3	(mat3)	native	native
+transpose(mat4)	function	servers/rendering/shader_language.cpp:3040	#1826		mat4	(mat4)	native	native
+determinant(mat2)	function	servers/rendering/shader_language.cpp:3044	#1826		float	(mat2)	native	native
+determinant(mat3)	function	servers/rendering/shader_language.cpp:3045	#1826		float	(mat3)	native	native
+determinant(mat4)	function	servers/rendering/shader_language.cpp:3046	#1826		float	(mat4)	native	native
+inverse(mat2)	function	servers/rendering/shader_language.cpp:3050	#1826		mat2	(mat2)	native	native
+inverse(mat3)	function	servers/rendering/shader_language.cpp:3051	#1826		mat3	(mat3)	native	native
+inverse(mat4)	function	servers/rendering/shader_language.cpp:3052	#1826		mat4	(mat4)	native	native
+lessThan(vec2,vec2)	function	servers/rendering/shader_language.cpp:3056	#1826		bvec2	(vec2,vec2)	native	native
+lessThan(vec3,vec3)	function	servers/rendering/shader_language.cpp:3057	#1826		bvec3	(vec3,vec3)	native	native
+lessThan(vec4,vec4)	function	servers/rendering/shader_language.cpp:3058	#1826		bvec4	(vec4,vec4)	native	native
+lessThan(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:3060	#1826		bvec2	(ivec2,ivec2)	native	native
+lessThan(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:3061	#1826		bvec3	(ivec3,ivec3)	native	native
+lessThan(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:3062	#1826		bvec4	(ivec4,ivec4)	native	native
+lessThan(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:3064	#1826		bvec3	(uvec3,uvec3)	native	native
+lessThan(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:3065	#1826		bvec4	(uvec4,uvec4)	native	native
+lessThan(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:3066	#1826		bvec2	(uvec2,uvec2)	native	native
+greaterThan(vec2,vec2)	function	servers/rendering/shader_language.cpp:3070	#1826		bvec2	(vec2,vec2)	native	native
+greaterThan(vec3,vec3)	function	servers/rendering/shader_language.cpp:3071	#1826		bvec3	(vec3,vec3)	native	native
+greaterThan(vec4,vec4)	function	servers/rendering/shader_language.cpp:3072	#1826		bvec4	(vec4,vec4)	native	native
+greaterThan(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:3074	#1826		bvec2	(ivec2,ivec2)	native	native
+greaterThan(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:3075	#1826		bvec3	(ivec3,ivec3)	native	native
+greaterThan(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:3076	#1826		bvec4	(ivec4,ivec4)	native	native
+greaterThan(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:3078	#1826		bvec2	(uvec2,uvec2)	native	native
+greaterThan(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:3079	#1826		bvec3	(uvec3,uvec3)	native	native
+greaterThan(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:3080	#1826		bvec4	(uvec4,uvec4)	native	native
+lessThanEqual(vec2,vec2)	function	servers/rendering/shader_language.cpp:3084	#1826		bvec2	(vec2,vec2)	native	native
+lessThanEqual(vec3,vec3)	function	servers/rendering/shader_language.cpp:3085	#1826		bvec3	(vec3,vec3)	native	native
+lessThanEqual(vec4,vec4)	function	servers/rendering/shader_language.cpp:3086	#1826		bvec4	(vec4,vec4)	native	native
+lessThanEqual(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:3088	#1826		bvec2	(ivec2,ivec2)	native	native
+lessThanEqual(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:3089	#1826		bvec3	(ivec3,ivec3)	native	native
+lessThanEqual(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:3090	#1826		bvec4	(ivec4,ivec4)	native	native
+lessThanEqual(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:3092	#1826		bvec2	(uvec2,uvec2)	native	native
+lessThanEqual(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:3093	#1826		bvec3	(uvec3,uvec3)	native	native
+lessThanEqual(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:3094	#1826		bvec4	(uvec4,uvec4)	native	native
+greaterThanEqual(vec2,vec2)	function	servers/rendering/shader_language.cpp:3098	#1826		bvec2	(vec2,vec2)	native	native
+greaterThanEqual(vec3,vec3)	function	servers/rendering/shader_language.cpp:3099	#1826		bvec3	(vec3,vec3)	native	native
+greaterThanEqual(vec4,vec4)	function	servers/rendering/shader_language.cpp:3100	#1826		bvec4	(vec4,vec4)	native	native
+greaterThanEqual(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:3102	#1826		bvec2	(ivec2,ivec2)	native	native
+greaterThanEqual(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:3103	#1826		bvec3	(ivec3,ivec3)	native	native
+greaterThanEqual(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:3104	#1826		bvec4	(ivec4,ivec4)	native	native
+greaterThanEqual(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:3106	#1826		bvec2	(uvec2,uvec2)	native	native
+greaterThanEqual(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:3107	#1826		bvec3	(uvec3,uvec3)	native	native
+greaterThanEqual(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:3108	#1826		bvec4	(uvec4,uvec4)	native	native
+equal(vec2,vec2)	function	servers/rendering/shader_language.cpp:3112	#1826		bvec2	(vec2,vec2)	native	native
+equal(vec3,vec3)	function	servers/rendering/shader_language.cpp:3113	#1826		bvec3	(vec3,vec3)	native	native
+equal(vec4,vec4)	function	servers/rendering/shader_language.cpp:3114	#1826		bvec4	(vec4,vec4)	native	native
+equal(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:3116	#1826		bvec2	(ivec2,ivec2)	native	native
+equal(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:3117	#1826		bvec3	(ivec3,ivec3)	native	native
+equal(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:3118	#1826		bvec4	(ivec4,ivec4)	native	native
+equal(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:3120	#1826		bvec2	(uvec2,uvec2)	native	native
+equal(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:3121	#1826		bvec3	(uvec3,uvec3)	native	native
+equal(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:3122	#1826		bvec4	(uvec4,uvec4)	native	native
+equal(bvec2,bvec2)	function	servers/rendering/shader_language.cpp:3124	#1826		bvec2	(bvec2,bvec2)	native	native
+equal(bvec3,bvec3)	function	servers/rendering/shader_language.cpp:3125	#1826		bvec3	(bvec3,bvec3)	native	native
+equal(bvec4,bvec4)	function	servers/rendering/shader_language.cpp:3126	#1826		bvec4	(bvec4,bvec4)	native	native
+notEqual(vec2,vec2)	function	servers/rendering/shader_language.cpp:3130	#1826		bvec2	(vec2,vec2)	native	native
+notEqual(vec3,vec3)	function	servers/rendering/shader_language.cpp:3131	#1826		bvec3	(vec3,vec3)	native	native
+notEqual(vec4,vec4)	function	servers/rendering/shader_language.cpp:3132	#1826		bvec4	(vec4,vec4)	native	native
+notEqual(ivec2,ivec2)	function	servers/rendering/shader_language.cpp:3134	#1826		bvec2	(ivec2,ivec2)	native	native
+notEqual(ivec3,ivec3)	function	servers/rendering/shader_language.cpp:3135	#1826		bvec3	(ivec3,ivec3)	native	native
+notEqual(ivec4,ivec4)	function	servers/rendering/shader_language.cpp:3136	#1826		bvec4	(ivec4,ivec4)	native	native
+notEqual(uvec2,uvec2)	function	servers/rendering/shader_language.cpp:3138	#1826		bvec2	(uvec2,uvec2)	native	native
+notEqual(uvec3,uvec3)	function	servers/rendering/shader_language.cpp:3139	#1826		bvec3	(uvec3,uvec3)	native	native
+notEqual(uvec4,uvec4)	function	servers/rendering/shader_language.cpp:3140	#1826		bvec4	(uvec4,uvec4)	native	native
+notEqual(bvec2,bvec2)	function	servers/rendering/shader_language.cpp:3142	#1826		bvec2	(bvec2,bvec2)	native	native
+notEqual(bvec3,bvec3)	function	servers/rendering/shader_language.cpp:3143	#1826		bvec3	(bvec3,bvec3)	native	native
+notEqual(bvec4,bvec4)	function	servers/rendering/shader_language.cpp:3144	#1826		bvec4	(bvec4,bvec4)	native	native
+any(bvec2)	function	servers/rendering/shader_language.cpp:3148	#1826		bool	(bvec2)	native	native
+any(bvec3)	function	servers/rendering/shader_language.cpp:3149	#1826		bool	(bvec3)	native	native
+any(bvec4)	function	servers/rendering/shader_language.cpp:3150	#1826		bool	(bvec4)	native	native
+all(bvec2)	function	servers/rendering/shader_language.cpp:3154	#1826		bool	(bvec2)	native	native
+all(bvec3)	function	servers/rendering/shader_language.cpp:3155	#1826		bool	(bvec3)	native	native
+all(bvec4)	function	servers/rendering/shader_language.cpp:3156	#1826		bool	(bvec4)	native	native
+not(bvec2)	function	servers/rendering/shader_language.cpp:3160	#1826		bvec2	(bvec2)	native	native
+not(bvec3)	function	servers/rendering/shader_language.cpp:3161	#1826		bvec3	(bvec3)	native	native
+not(bvec4)	function	servers/rendering/shader_language.cpp:3162	#1826		bvec4	(bvec4)	native	native
 textureSize(sampler2D,int)	function	servers/rendering/shader_language.cpp:3167	#1829		ivec2	(sampler2D,int)		
 textureSize(isampler2D,int)	function	servers/rendering/shader_language.cpp:3168	#1829		ivec2	(isampler2D,int)		
 textureSize(usampler2D,int)	function	servers/rendering/shader_language.cpp:3169	#1829		ivec2	(usampler2D,int)		

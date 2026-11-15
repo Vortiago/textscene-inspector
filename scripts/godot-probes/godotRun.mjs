@@ -148,10 +148,20 @@ function killGroup(child) {
  * @canonical Items run in chunks, one Godot run for each chunk at once
  */
 export function inChunksAtOnce(items, run) {
-  const size = Math.max(1, Math.ceil(items.length / RUNS_AT_ONCE));
+  return inChunksOfAtMost(items, Infinity, run);
+}
+
+/**
+ * `items` in contiguous chunks of at most `sizeAtMost` each, and no more chunks than Godot runs at
+ * once where that keeps the size, run as many at once as Godot runs at once. Each chunk's answer
+ * comes in the order of the chunks, and no items make one empty chunk.
+ * @canonical Items run in chunks of a bounded size, as many at once as Godot runs at once
+ */
+export function inChunksOfAtMost(items, sizeAtMost, run) {
+  const size = Math.max(1, Math.min(sizeAtMost, Math.ceil(items.length / RUNS_AT_ONCE)));
   const count = Math.max(1, Math.ceil(items.length / size));
   const chunks = Array.from({ length: count }, (_, index) => items.slice(index * size, (index + 1) * size));
-  return Promise.all(chunks.map(run));
+  return mapPool(chunks, RUNS_AT_ONCE, (chunk) => run(chunk));
 }
 
 /**
