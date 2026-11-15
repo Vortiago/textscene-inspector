@@ -10,15 +10,9 @@ import { literalText, STRING_LITERAL_RE } from '../string/string.js';
 import { ARRAY_LITERAL_RE, packedArrayLiteral } from './variantParser.js';
 
 const PACKED_BYTE_ARRAY_RE = packedArrayLiteral('PackedByteArray');
-/** `CryptoCore::b64_decode`'s alphabet, and the only padding it accepts. */
 const QUOTED_BASE64_RE = /^"([A-Za-z0-9+/]*={0,2})"$/;
 
-/**
- * Why Godot's text parser would refuse this `PackedByteArray` literal. A fault is a
- * whole-file `ERR_PARSE_ERROR` (variant_parser.cpp:618-622). A bare `[…]` of bytes is a
- * literal too: PACKED_BYTE_ARRAY converts from ARRAY (variant.cpp:772-778). Its body is
- * decimal only, since a quoted element converts through `String::to_int` and is no base64 body.
- */
+// A fault fails the whole file (variant_parser.cpp:618-622). A bare `[…]` converts (variant.cpp:772-778).
 export function readPackedByteArrayLiteral(
   value: string
 ): { fault: 'not-a-literal' } | { fault: 'invalid-base64' | null; body: string } {

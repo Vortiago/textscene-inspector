@@ -2,68 +2,14 @@
 
 import '../../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { propertyError, shape, v } from '../../../../linter/validators/index.js';
-import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
-import { markIntSlot } from '../../../../linter/validators/intSlot.js';
+import { v } from '../../../../linter/validators/index.js';
 import { TILE_MAP_VISIBILITY_MODE_NAMES } from '../../../../godot/scene/tileMap.js';
-import { readPackedByteArrayLiteral } from '../../../../godot/variant/packedBytes.js';
-
-/**
- * `tile_map_data`, a stored PACKED_BYTE_ARRAY (tile_map_layer.cpp:2267). The writer switches the
- * whole file to base64 once any PackedByteArray passes 64 bytes (resource_format_text.cpp:1724-1728):
- * a 2-byte header and 12 bytes per cell make six cells base64 and five decimal. The reader accepts
- * both spellings whatever `format=` says (`variant_parser.cpp:1410-1427`).
- */
-const tileMapDataValidator: PropertyValidator = shape((key, value, line) => {
-  // Shape only: the `tilemaplayer-invalid-tile-data` rule decodes the header and the
-  // cell records, and a second check here would fire twice on one malformed value.
-  // A padded `PackedByteArray ( … )` loads: the tokenizer discards any character <= 32
-  // before a token (variant_parser.cpp:415-417).
-  const literal = readPackedByteArrayLiteral(value);
-  if (literal.fault === 'not-a-literal') {
-    return propertyError(
-      key,
-      line,
-      `Property 'tile_map_data' must be a PackedByteArray like PackedByteArray(0, 0, 0) or a base64-quoted PackedByteArray("…"), got: "${value}"`,
-      'INVALID_TILE_MAP_DATA_FORMAT'
-    );
-  }
-  const { body } = literal;
-  if (literal.fault === 'invalid-base64') {
-    return propertyError(
-      key,
-      line,
-      `Property 'tile_map_data' contains a malformed base64 string: ${body}`,
-      'INVALID_TILE_MAP_DATA_FORMAT'
-    );
-  }
-  if (body === '') return null;
-  if (body.startsWith('"')) return null;
-  // `uint8`, alone among the packed-int slots: `_parse_byte_array` (variant_parser.cpp:600)
-  // pushes into a `Vector<uint8_t>` (:650) through `Variant::operator uint8_t()`
-  // (variant.cpp:1519-1521). Measured on 4.6.3, `PackedByteArray(0, 0, 300, 0)` stores [0, 0, 44, 0].
-  const bad = badIntElement(
-    'tile_map_data',
-    key,
-    line,
-    body,
-    { format: 'INVALID_TILE_MAP_DATA_FORMAT', value: 'INVALID_TILE_MAP_DATA_VALUE' },
-    'uint8'
-  );
-  return bad.error ?? bad.truncated;
-}, 'PackedByteArray(…) int array of bytes, or a base64-quoted PackedByteArray("…") (decoded by the tilemaplayer-invalid-tile-data rule)');
-
-// The tag the sweep reads: this is an INT slot, and an element it cannot hold
-// is a refusal of a real value rather than a format complaint. `uint8` is the
-// element's own width, so the sweep probes a byte's bounds rather than int32's.
-markIntSlot(tileMapDataValidator, 'uint8');
 
 validatorRegistry.registerAll('TileMapLayer', {
   tile_set: v.resourceReference('tile_set'),
   enabled: v.boolean('enabled'),
-  // tile_map_layer.cpp:2267: see tileMapDataValidator.
-  tile_map_data: tileMapDataValidator,
+  // tile_map_layer.cpp:2267. The tilemaplayer-invalid-tile-data rule decodes the cells.
+  tile_map_data: v.packedByteArray('tile_map_data'),
 
   // -- Rendering (tile_map_layer.cpp:2271-2275) --
   // set_occlusion_enabled (:3442-3450), bare assignment.

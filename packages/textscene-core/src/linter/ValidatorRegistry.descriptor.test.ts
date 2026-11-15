@@ -1,8 +1,3 @@
-/**
- * The registry answers a key no hand validator claims from the property descriptor, so a class
- * with no hand table still gets a check. A hand validator anywhere on the chain wins.
- */
-
 import { describe, expect, it } from 'vitest';
 import { ValidatorRegistry, validatorRegistry } from './ValidatorRegistry.js';
 import type { PropertyValidator } from './propertyValidator.js';
@@ -65,7 +60,6 @@ describe('a hand validator wins over the descriptor', () => {
 });
 
 describe('a hand row', () => {
-  /** Every captured class and key whose descriptor carries a hand row. */
   function keysWithHandRows(): { type: string; key: string }[] {
     const types = [...Object.keys(NODE_CLASS_PROPERTIES), ...Object.keys(RESOURCE_CLASS_PROPERTIES)];
     return types.flatMap((type) =>
@@ -77,7 +71,6 @@ describe('a hand row', () => {
 
   it('sits under no key a hand validator answers, where nothing would read it', () => {
     const rows = keysWithHandRows();
-    // Anti-vacuity: Camera3D and DirectionalLight3D register hand rows.
     expect(rows.length).toBeGreaterThan(7);
     const unread = rows.filter(({ type, key }) => !validatorRegistry.isDerived(type, key));
     expect(unread.map(({ type, key }) => `${type}.${key}`)).toEqual([]);

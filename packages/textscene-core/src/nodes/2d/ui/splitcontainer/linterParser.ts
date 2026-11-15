@@ -11,11 +11,7 @@ import { v } from '../../../../linter/validators/index.js';
 import { SPLIT_CONTAINER_DRAGGER_VISIBILITY_NAMES } from '../../../../godot/scene/gui.js';
 
 validatorRegistry.registerAll('SplitContainer', {
-  // split_container.cpp:1295: ADD_PROPERTY(PropertyInfo(Variant::PACKED_INT32_ARRAY,
-  // "split_offsets", PROPERTY_HINT_NONE, "suffix:px"), "set_split_offsets", "get_split_offsets");
-  // `set_split_offsets` (split_container.cpp:1071) accepts any length and any value. A length
-  // other than `valid_children.size() - 1` sets `split_offset_pending`, and the next layout pass
-  // re-derives the missing entries.
+  // split_container.cpp:1295. The setter takes any length and value (:1071).
   split_offsets: v.packedInt32Array('split_offsets'),
   // split_container.cpp:1296: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "collapsed"), ...)
   collapsed: v.boolean('collapsed'),

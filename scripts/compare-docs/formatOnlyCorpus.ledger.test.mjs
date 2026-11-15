@@ -15,13 +15,7 @@ import { PROPS_OUT, RESOURCE_PROPS_OUT } from './build-node-catalog/paths.mjs';
 
 const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 
-/**
- * One row per captured property, from both captures, typed by what its setter
- * takes: `VariantCasterAndValidate` checks the argument against the setter's own
- * type (`binder_common.h:175`), which the capture records as `setter_type` where it
- * differs from the declared one, with that argument's hint. The keys cannot collide: `Node` and `Resource`
- * are separate branches under `Object`.
- */
+// Typed by the setter's argument (binder_common.h:175). `Node` and `Resource` keys cannot collide.
 function capturedRows() {
   const engine = {
     ...JSON.parse(readFileSync(PROPS_OUT, 'utf8')),

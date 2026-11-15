@@ -24,14 +24,6 @@ validatorRegistry.registerAll('AnimatedSprite3D', {
   // from the live SpriteFrames, in editor-only _validate_property (sprite_3d.cpp:1073-1101, :1067).
   animation: v.stringName('animation'),
 
-  // sprite_3d.cpp:1541, STRING_NAME "autoplay" with PROPERTY_USAGE_NO_EDITOR, which implies STORAGE
-  // (object.h:132). set_autoplay/get_autoplay (sprite_3d.cpp:1343-1353) use a plain String, so
-  // Godot writes a bare `"name"`. `v.stringName` also accepts a hand-authored `&"name"`, which
-  // Variant coerces to String on load.
-  // A StringName property with a String setter: the loader converts a NodePath
-  // literal to its text, so `NodePath("x")` stores "x" (binder_common.h:175).
-  autoplay: v.quotedString('autoplay'),
-
   // sprite_3d.cpp:1542, INT "frame", no hint. set_frame (sprite_3d.cpp:1246-1248) forwards to
   // set_frame_and_progress, whose `if (p_frame < 0) { frame = 0; }` (sprite_3d.cpp:1271) corrects
   // the write: an ADR-0032 error. The ceiling (sprite_3d.cpp:1273) is the animation's last frame,
