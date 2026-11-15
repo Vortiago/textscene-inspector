@@ -61,7 +61,7 @@ describe('the shadow_color term of a light quad', () => {
     // cookie gives alpha only.
     const tintTerm = mat.fragmentShader.split('\n').find((line) => line.includes('uShadowColor.rgb * s'));
     expect(tintTerm).toContain('vec4(uShadowColor.rgb * s, alpha)');
-    expect(tintTerm).not.toContain('uEnergy');
+    expect(tintTerm).not.toContain('uAlphaEnergy');
     expect(tintTerm).not.toContain('cookie.rgb');
   });
 

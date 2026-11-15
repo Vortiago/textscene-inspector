@@ -53,8 +53,8 @@ Strict parsing format-checks these `LinkButton` properties, plus 10 inherited fr
 and override (`link_button.cpp:35-48`).
 
 LinkButton draws the theme text outline, `font_outline_color` and `outline_size`, as Godot
-does (`link_button.cpp:294-301`). A ring of `outline_size / 4` px sits under the fill. No ring
-draws at an `outline_size` of 0 or a zero alpha. A trimmed AUTO line whose paragraph resolves right-to-left trims its ring by that
+does (`link_button.cpp:294-301`). A ring of `outline_size / 4` px sits under the fill, and the
+underline draws over both (`:304-313`). No ring draws at an `outline_size` of 0 or a zero alpha. A trimmed AUTO line whose paragraph resolves right-to-left trims its ring by that
 direction, with the ellipsis first. Its fill draws the glyphs that trim drops, from the visual
 left, as Godot's set-direction draw does (`text_server.cpp:1740-1935`). A line set RTL draws
 its ring and its fill alike.

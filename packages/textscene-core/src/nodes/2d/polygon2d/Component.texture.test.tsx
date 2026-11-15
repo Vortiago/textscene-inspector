@@ -5,6 +5,13 @@
  * vertex buffer, not just its presence.
  */
 import { describe, expect, it } from 'vitest';
+import './index';
+import { parsedNode } from '../../../parser/testing/parserKit';
+import {
+  CANVAS_TEXTURE_REF,
+  itHandsTheBodyItsCanvasTexture,
+  renderLitItem,
+} from '../../../r3f/testing/canvasTextureLighting';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Polygon2D } from './Component';
@@ -293,5 +300,15 @@ describe('<Polygon2D> vertex_colors', () => {
     });
     const mat = mesh(renderer).material as THREE.MeshBasicMaterial;
     expect(mat.opacity).toBeCloseTo(1, 5);
+  });
+});
+
+describe('Polygon2D with a CanvasTexture', () => {
+  itHandsTheBodyItsCanvasTexture((wrapper: TscnInternalResource) => {
+    const polygon = parsedNode(
+      { type: 'Polygon2D', name: 'P' },
+      { texture: CANVAS_TEXTURE_REF, polygon: 'PackedVector2Array(-4, -4, 4, -4, 4, 4, -4, 4)' }
+    );
+    return renderLitItem(<Polygon2D node={polygon} />, [wrapper]);
   });
 });

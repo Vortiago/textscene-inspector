@@ -30,7 +30,14 @@ function mkLine(entries: Array<[char: string, advance: number]>): TextLineLayout
     x += advance;
     return g;
   });
-  return { text: entries.map((e) => e[0]).join(''), glyphs, widthPx: x, paragraphIndex: 0 };
+  return {
+    text: entries.map((e) => e[0]).join(''),
+    glyphs,
+    widthPx: x,
+    paragraphIndex: 0,
+    ascentPx: 15,
+    descentPx: 5,
+  };
 }
 
 describe('fitLineToWidth', () => {
@@ -153,7 +160,14 @@ describe('fitLineToWidth', () => {
   });
 
   it('a line with no glyphs is returned unchanged (edge)', () => {
-    const line: TextLineLayout = { text: '', glyphs: [], widthPx: 0, paragraphIndex: 0 };
+    const line: TextLineLayout = {
+      text: '',
+      glyphs: [],
+      widthPx: 0,
+      paragraphIndex: 0,
+      ascentPx: 15,
+      descentPx: 5,
+    };
     const fitted = fitLine(line, 50, JustificationFlag.WORD_BOUND);
     expect(fitted).toBe(line);
   });
