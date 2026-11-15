@@ -75,9 +75,13 @@ function mergedPatches(first: NodePatches, second: NodePatches): Map<string, Nod
 
 /** The RemoteTransform pass over `tree`, run once for both passes below, over the bones the stacks solve. */
 const relayPoses: LiveTreeDerivation<RelayPoses> = (tree, snapshot) => {
-  // Asked once, not on each pose the relays read: each ask re-checks every read of the stacks.
-  const solvedBones = liveScenePassResults(solveSkeleton2DBones, tree, snapshot);
-  return applyRemoteTransforms(tree, () => solvedBones);
+  // Asked at most once: a tree with no relay that reads a pose solves no stack, and each ask
+  // re-checks every read of the stacks.
+  let solvedBones: NodePatches | undefined;
+  return applyRemoteTransforms(
+    tree,
+    () => (solvedBones ??= liveScenePassResults(solveSkeleton2DBones, tree, snapshot))
+  );
 };
 
 /**
