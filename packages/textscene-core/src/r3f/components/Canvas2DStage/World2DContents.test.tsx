@@ -34,6 +34,8 @@ vi.mock('./CanvasFrameRender.js', () => ({
 import { World2DContents } from './World2DContents';
 import { withProject } from '../../testing/ProjectFixture';
 import { TiledUploadQueue } from '../../tiledUpload/TiledUploadQueue';
+import { r3fStateProbe } from '../../testing/R3FStateProbe';
+import { hasShadowPass } from '../../testing/shadowPassMark';
 
 const baseProps = {
   nodes: [],
@@ -129,5 +131,20 @@ describe('World2DContents screenshot', () => {
     );
 
     expect(actions().hasScreenshotHandler()).toBe(true);
+  });
+});
+
+describe('World2DContents renderer', () => {
+  it('installs the shadow pass, so a 3D SubViewport on the 2D canvas draws its shadows', async () => {
+    const { Probe, state } = r3fStateProbe();
+
+    await ReactThreeTestRenderer.create(
+      <SelectionProvider>
+        <World2DContents {...baseProps} />
+        <Probe />
+      </SelectionProvider>
+    );
+
+    expect(hasShadowPass(state().gl)).toBe(true);
   });
 });
