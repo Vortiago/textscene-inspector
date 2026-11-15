@@ -66,12 +66,7 @@ function prepareSceneLights(
   });
 }
 
-/**
- * Runs the light pass before every render of `scene`, until unmount. A render outside any
- * SubViewport pass is the main view's, which takes the root viewport's atlas, built again when its
- * settings change by value. Unmount hands each declared directional light its own shading and
- * layers back. Null runs nothing.
- */
+/** Runs the light pass before each render of `scene` until unmount. Null runs nothing. */
 export function useSceneShadowFit(scene: THREE.Scene | null): void {
   const settings = useByValue(useRootViewportDescription().positionalShadowAtlas, sameData);
   useEffect(() => {

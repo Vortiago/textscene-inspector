@@ -11,10 +11,7 @@ import {
   type ProjectSettings,
 } from '../../parser/projectSettingsParser.js';
 
-/**
- * The three rules are fields, not a kind of viewport: the In-game view is a root viewport with the
- * game's rules.
- */
+/** Rules are fields, not a kind: the In-game view is a root viewport with the game's rules. */
 export interface ViewportDescription {
   msaa2D: number;
   msaa3D: number;
@@ -23,7 +20,7 @@ export interface ViewportDescription {
   mipmapBias: number;
   positionalShadowAtlas: PositionalShadowAtlasSettings;
   anisotropicLevel: number;
-  /** `editor`: the user's free camera, or the previewed Camera3D. `elected`: the viewport's current camera. */
+  /** `editor`: the free or previewed camera. `elected`: the viewport's current camera. */
   camera: 'editor' | 'elected';
   drawsEditorChrome: boolean;
   /** Whether the editor's preview sun and preview Environment stand in (ADR-0025). */
