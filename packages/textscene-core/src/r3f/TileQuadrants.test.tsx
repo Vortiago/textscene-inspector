@@ -140,7 +140,6 @@ function render(
         material={material}
         lightMask={1}
         zFinal={zFinal}
-        name="Layer"
         sampler={{ filter: 2, repeat: 1 }}
       />
     )
@@ -209,11 +208,11 @@ describe('<TileQuadrants>', () => {
     expect(meshes.map(canvasKeyOf)).toEqual([layerKey(3), layerKey(5)]);
   });
 
-  it("draws a missing-texture placeholder in its tile's z bucket, not the layer's", async () => {
+  it('draws no mesh for a tile whose source texture fails to load, in its own z bucket or any', async () => {
     const meshes = meshesOf(
       await render([[cell(0, 0, 0), cell(FAILED_SOURCE, 1, 0, 1)]], { zFinal: 3 }).tree
     );
-    expect(meshes.map(canvasKeyOf)).toEqual([layerKey(3), layerKey(5)]);
+    expect(meshes.map(canvasKeyOf)).toEqual([layerKey(3)]);
   });
 
   it('draws a tile with its own CanvasItemMaterial with its blend mode', async () => {
