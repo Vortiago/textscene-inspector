@@ -327,8 +327,8 @@ export const JACKETED_STRING_RE = new RegExp(`^[&@]?${STRING_LITERAL_SOURCE}$`);
 const CALL_RE = /^[A-Za-z_]\w*\s*\([\s\S]*\)$/;
 const DICTIONARY_RE = /^\{[\s\S]*\}$/;
 
-// variant_parser.cpp:677, :1187-1322
-export const DICTIONARY_LITERAL_RE = /^(?:\{[\s\S]*\}|Dictionary\s*\[[^[\]()]+\]\s*\(\s*\{[\s\S]*\}\s*\))$/;
+// A type argument may be an `ExtResource(…)` script (variant_parser.cpp:677, :1187-1322).
+export const DICTIONARY_LITERAL_RE = /^(?:\{[\s\S]*\}|Dictionary\s*\[[^[\]]+\]\s*\(\s*\{[\s\S]*\}\s*\))$/;
 
 /**
  * The Variant a whole value opens with its first token, its closing bracket matched, or null when `parse_value`
