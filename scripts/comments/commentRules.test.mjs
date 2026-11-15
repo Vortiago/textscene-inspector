@@ -59,6 +59,22 @@ describe('commentFindings: one line', () => {
   });
 });
 
+describe('commentFindings: what reads as a directive or a tag', () => {
+  it('counts a prose line that starts with the word global', () => {
+    expect(rulesOf('// Why it is so,\n// global uniforms read it.')).toEqual([['long-comment']]);
+  });
+
+  it('passes an eslint globals directive', () => {
+    expect(rulesOf('/* global window, document: readonly */')).toEqual([[]]);
+  });
+
+  it('counts a prose line that starts with a scoped package name', () => {
+    expect(rulesOf('// The previewer reads it from\n// @textscene/core, not the app.')).toEqual([
+      ['long-comment'],
+    ]);
+  });
+});
+
 describe('commentFindings: file header', () => {
   it('fails a module header', () => {
     const [block] = commentBlocks('file.ts', '/** What the module is. */\n\nexport const a = 1;\n');
@@ -86,6 +102,18 @@ describe('commentFindings: work reference', () => {
 
   it('passes a hex colour', () => {
     expect(rulesOf('// It clears to #000000.')).toEqual([[]]);
+  });
+
+  it('fails an issue number in a tag line', () => {
+    expect(rulesOf('/**\n * Why.\n * @see #1234\n */')).toEqual([['work-reference']]);
+  });
+
+  it('fails an issue number in a directive reason', () => {
+    expect(rulesOf('// eslint-disable-next-line x -- #1234')).toEqual([['work-reference']]);
+  });
+
+  it('passes a colour written as code', () => {
+    expect(rulesOf('// A grey `#333` background.')).toEqual([[]]);
   });
 
   it('passes a Godot citation', () => {

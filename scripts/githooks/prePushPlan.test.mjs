@@ -191,6 +191,21 @@ describe('planChecks', () => {
     ]);
   });
 
+  it('checks the comments of each pushed range, not the working tree', () => {
+    const pushed = [{ base: 'b1', head: 'h1' }];
+    const commands = planChecks({
+      changed: ['scripts/x.mjs'],
+      deleted: [],
+      pushed,
+      isNegativeFixture: () => false,
+      testsBeside: () => [],
+      isEngineTestInput,
+      hasEngine: () => false,
+    }).map((command) => command.join(' '));
+    expect(commands).toContain('pnpm comments:check --base b1 --head h1');
+    expect(commands).not.toContain('pnpm comments:check');
+  });
+
   it('reads no @canonical tags for code outside the roots the list reads', () => {
     expect(plan(['tools/x.mjs'])).toEqual([
       'npx eslint --cache tools/x.mjs',

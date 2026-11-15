@@ -3,7 +3,7 @@ import { commentFindings } from './commentRules.mjs';
 
 const SOURCE = /\.(?:ts|tsx|js|jsx|mjs|cjs)$/;
 /** A generator writes every comment of its file, and its stamp in the first 300 characters. */
-const GENERATED_STAMP = /GENERATED/;
+const GENERATED_STAMP = /^\s*(?:\/\/|\/?\*+)\s*(?:AUTO-)?GENERATED\b/m;
 const STAMP_SEARCH_CHARS = 300;
 
 export function isCheckedSource(path) {

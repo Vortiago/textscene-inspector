@@ -63,8 +63,11 @@ export const STATIC_GATE = [
   ...REPOSITORY_TYPE_CHECKS,
 ];
 
-/** Not in `STATIC_GATE`, which also runs with no base: it reads the comments added since `origin/main`. */
-const COMMENTS_CHECK = ['pnpm', 'comments:check'];
+/** Not in `STATIC_GATE`, which runs with no base too. A push checks its commits, not the working tree. */
+function commentsChecks(pushed) {
+  if (pushed === undefined) return [['pnpm', 'comments:check']];
+  return pushed.map(({ base, head }) => ['pnpm', 'comments:check', '--base', base, '--head', head]);
+}
 
 /**
  * The packages whose `type-check:tests` project holds every file of their `type-check` project,
@@ -96,16 +99,20 @@ function typeChecksFor(typed) {
 }
 
 /**
- * The commands, in order, for a push that changes `changed` (paths that still exist) and deletes
- * `deleted`. Each command is an argv array. An empty list means the push needs no check.
- * `isNegativeFixture` tells a scene that exists to error, which the plan does not lint.
- * `testsBeside` gives the test files beside a changed file, which the plan runs.
- * `isEngineTestInput` tells a file the real-Godot tests read, and `hasEngine` whether this host can
- * run them.
+ * The argv of each check a push needs, in order. An empty list means the push needs no check.
+ *
+ * @param changed the paths the push changes that still exist
+ * @param deleted the paths the push deletes
+ * @param pushed the `{ base, head }` of each pushed ref, or undefined for `pnpm check`'s working tree
+ * @param isNegativeFixture tells a scene that exists to error, which the plan does not lint
+ * @param testsBeside gives the test files beside a changed file, which the plan runs
+ * @param isEngineTestInput tells a file the real-Godot tests read
+ * @param hasEngine tells whether this host can run them
  */
 export function planChecks({
   changed,
   deleted,
+  pushed,
   isNegativeFixture,
   testsBeside,
   isEngineTestInput,
@@ -120,7 +127,7 @@ export function planChecks({
   const runTests = tests.length > 0 ? [['pnpm', 'exec', 'vitest', 'run', ...tests]] : [];
   const engineTests = all.some(isEngineTestInput) && hasEngine() ? [ENGINE_TESTS] : [];
   if (all.some((path) => TOOLCHAIN.test(path))) {
-    return [...STATIC_GATE, COMMENTS_CHECK, ...runTests, ...engineTests];
+    return [...STATIC_GATE, ...commentsChecks(pushed), ...runTests, ...engineTests];
   }
 
   const plan = [];
@@ -133,7 +140,7 @@ export function planChecks({
   const formatted = changed.filter((path) => FORMATTED.test(path));
   if (formatted.length > 0) plan.push(['pnpm', 'exec', 'prettier', '--cache', '--check', ...formatted]);
   if (linted.some((path) => CANONICAL_ROOT.test(path))) plan.push(['pnpm', 'canonical', '--check']);
-  if (linted.length > 0) plan.push(COMMENTS_CHECK);
+  if (linted.length > 0) plan.push(...commentsChecks(pushed));
   plan.push(...runTests);
 
   const scenes = changed.filter((path) => SCENE.test(path) && !isNegativeFixture(path));
