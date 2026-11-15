@@ -211,9 +211,9 @@ describe('PointLight2D Component', () => {
     expect(color.x).not.toBeCloseTo(0.214, 3); // godotColorToLinear(0.5)
   });
 
-  it('carries energy as its own multiplier rather than folding it into the colour', async () => {
+  it('carries energy, under the colour alpha, as its own multiplier rather than folding it into the colour', async () => {
     const mat = lightMaterial(await render(node({ color: 'Color(0.5, 0.5, 0.5, 1)', energy: '2.0' })));
-    expect(mat.uniforms.uEnergy!.value).toBeCloseTo(2, 5);
+    expect(mat.uniforms.uAlphaEnergy!.value).toBeCloseTo(2, 5);
     expect((mat.uniforms.uColor!.value as THREE.Vector3).x).toBeCloseTo(0.5, 5);
   });
 

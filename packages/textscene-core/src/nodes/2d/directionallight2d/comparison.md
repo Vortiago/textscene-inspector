@@ -25,6 +25,11 @@ measures depth along the light across the project viewport's diagonal
 builds the same 1D map, so the band covers the occluder's inside too. It culls an occluder
 on its local bounds, as Godot does (`renderer_viewport.cpp:635`).
 
+An occluder casts only from the downstream half of the map's depth. Godot builds the map's
+projection with a depth range of -1 to 1 and never corrects it, so the RenderingDevice clips the
+upstream half (`renderer_canvas_render_rd.cpp:1166-1167`). An occluder more than
+`max_distance / 2` upstream of the view's centre casts nothing, and the previewer clips it too.
+
 The map spans the canvas's own view. On the main canvas that is the project viewport at the
 origin. No Camera2D becomes current in Godot's editor (`camera_2d.cpp:354`), and the previewer
 draws the canvas as the editor does. In a SubViewport the map spans `Rect2(0, 0, size)` through

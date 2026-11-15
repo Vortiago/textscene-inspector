@@ -9,8 +9,8 @@ renders_as: the light's cookie multiplied into every CanvasItem beneath it
 
 # PointLight2D
 
-PointLight2D lights the canvas with a `texture` cookie tinted by `color` and `energy`,
-and draws nothing itself. The previewer accumulates each light into an offscreen buffer
+PointLight2D lights the canvas with a `texture` cookie tinted by `color` and scaled by
+`color.a` times `energy` (`canvas.glsl:794`), and draws nothing itself. The previewer accumulates each light into an offscreen buffer
 that every lit CanvasItem multiplies its albedo against, which is Godot's own
 arithmetic. The previewer samples the cookie clamped at its quad edge. Godot resolves a
 canvas item's default repeat to the viewport's disabled default (`viewport.h:419-420`,
