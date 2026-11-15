@@ -18,7 +18,7 @@ Each `\n` ends a paragraph (`rich_text_label.cpp:4016-4053`). Under FILL, from `
 single-line paragraph (`rich_text_label.h:582`). The fit width is the control's width truncated to a whole
 pixel (`rich_text_label.h:672`).
 The pen of a line sums its advances in 32-bit float from the line's offset, across its style runs
-(`rich_text_label.cpp:1155,1508`), so a glyph near a quarter pixel picks the same raster as Godot's (`text_server_adv.cpp:4024`).
+(`rich_text_label.cpp:1155,1508`). So a glyph near a quarter pixel picks the same raster as in Godot (`text_server_adv.cpp:4024`).
 
 A `[p]` tag reads `jst` or `justification_flags`, and `tab_stops`, for its own paragraph (`rich_text_label.cpp:5758-5789`). A bare
 `[p]` has the header flags and no tab stops, so its tabs use `tab_size` (`rich_text_label.h:849`). A `[p]` with other options,
