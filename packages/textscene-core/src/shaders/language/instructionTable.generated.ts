@@ -1410,13 +1410,13 @@ fma(vec4,vec4,vec4)	function (high_end)	servers/rendering/shader_language.cpp:34
 packHalf2x16(vec2)	function	servers/rendering/shader_language.cpp:3412	#1827		uint	(vec2)	native	native
 packUnorm2x16(vec2)	function	servers/rendering/shader_language.cpp:3413	#1827		uint	(vec2)	native	native
 packSnorm2x16(vec2)	function	servers/rendering/shader_language.cpp:3414	#1827		uint	(vec2)	native	native
-packUnorm4x8(vec4)	function	servers/rendering/shader_language.cpp:3415	#1827		uint	(vec4)	lowered: three's tsl_packUnorm4x8	lowered: three's tsl_packUnorm4x8
-packSnorm4x8(vec4)	function	servers/rendering/shader_language.cpp:3416	#1827		uint	(vec4)	lowered: three's tsl_packSnorm4x8	lowered: three's tsl_packSnorm4x8
+packUnorm4x8(vec4)	function	servers/rendering/shader_language.cpp:3415	#1827		uint	(vec4)	lowered: three's tsl_packUnorm4x8	native
+packSnorm4x8(vec4)	function	servers/rendering/shader_language.cpp:3416	#1827		uint	(vec4)	lowered: three's tsl_packSnorm4x8	native
 unpackHalf2x16(uint)	function	servers/rendering/shader_language.cpp:3418	#1827		vec2	(uint)	native	native
 unpackUnorm2x16(uint)	function	servers/rendering/shader_language.cpp:3419	#1827		vec2	(uint)	native	native
 unpackSnorm2x16(uint)	function	servers/rendering/shader_language.cpp:3420	#1827		vec2	(uint)	native	native
-unpackUnorm4x8(uint)	function	servers/rendering/shader_language.cpp:3421	#1827		vec4	(uint)	lowered: three's tsl_unpackUnorm4x8	lowered: three's tsl_unpackUnorm4x8
-unpackSnorm4x8(uint)	function	servers/rendering/shader_language.cpp:3422	#1827		vec4	(uint)	lowered: three's tsl_unpackSnorm4x8	lowered: three's tsl_unpackSnorm4x8
+unpackUnorm4x8(uint)	function	servers/rendering/shader_language.cpp:3421	#1827		vec4	(uint)	lowered: three's tsl_unpackUnorm4x8	native
+unpackSnorm4x8(uint)	function	servers/rendering/shader_language.cpp:3422	#1827		vec4	(uint)	lowered: three's tsl_unpackSnorm4x8	native
 bitfieldExtract(int,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3426	#1827		int	(int,int,int)	lowered: shifts to the top and back	lowered: shifts to the top and back
 bitfieldExtract(ivec2,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3427	#1827		ivec2	(ivec2,int,int)	lowered: shifts to the top and back	lowered: shifts to the top and back
 bitfieldExtract(ivec3,int,int)	function (high_end)	servers/rendering/shader_language.cpp:3428	#1827		ivec3	(ivec3,int,int)	lowered: shifts to the top and back	lowered: shifts to the top and back
@@ -1481,10 +1481,10 @@ usubBorrow(uint,uint,uint)	function (high_end)	servers/rendering/shader_language
 usubBorrow(uvec2,uvec2,uvec2)	function (high_end)	servers/rendering/shader_language.cpp:3520	#1827		uvec2	(uvec2,uvec2,uvec2)	lowered: wrapped difference and comparison	lowered: wrapped difference and comparison
 usubBorrow(uvec3,uvec3,uvec3)	function (high_end)	servers/rendering/shader_language.cpp:3521	#1827		uvec3	(uvec3,uvec3,uvec3)	lowered: wrapped difference and comparison	lowered: wrapped difference and comparison
 usubBorrow(uvec4,uvec4,uvec4)	function (high_end)	servers/rendering/shader_language.cpp:3522	#1827		uvec4	(uvec4,uvec4,uvec4)	lowered: wrapped difference and comparison	lowered: wrapped difference and comparison
-ldexp(float,int)	function (high_end)	servers/rendering/shader_language.cpp:3526	#1827		float	(float,int)	lowered: two products by powers of two	lowered: two products by powers of two
-ldexp(vec2,ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3527	#1827		vec2	(vec2,ivec2)	lowered: two products by powers of two	lowered: two products by powers of two
-ldexp(vec3,ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3528	#1827		vec3	(vec3,ivec3)	lowered: two products by powers of two	lowered: two products by powers of two
-ldexp(vec4,ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3529	#1827		vec4	(vec4,ivec4)	lowered: two products by powers of two	lowered: two products by powers of two
+ldexp(float,int)	function (high_end)	servers/rendering/shader_language.cpp:3526	#1827		float	(float,int)	lowered: three products by powers of two	lowered: three products by powers of two
+ldexp(vec2,ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3527	#1827		vec2	(vec2,ivec2)	lowered: three products by powers of two	lowered: three products by powers of two
+ldexp(vec3,ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3528	#1827		vec3	(vec3,ivec3)	lowered: three products by powers of two	lowered: three products by powers of two
+ldexp(vec4,ivec4)	function (high_end)	servers/rendering/shader_language.cpp:3529	#1827		vec4	(vec4,ivec4)	lowered: three products by powers of two	lowered: three products by powers of two
 frexp(float,int)	function (high_end)	servers/rendering/shader_language.cpp:3533	#1827		float	(float,int)	lowered: exponent and fraction bits	lowered: exponent and fraction bits
 frexp(vec2,ivec2)	function (high_end)	servers/rendering/shader_language.cpp:3534	#1827		vec2	(vec2,ivec2)	lowered: exponent and fraction bits	lowered: exponent and fraction bits
 frexp(vec3,ivec3)	function (high_end)	servers/rendering/shader_language.cpp:3535	#1827		vec3	(vec3,ivec3)	lowered: exponent and fraction bits	lowered: exponent and fraction bits

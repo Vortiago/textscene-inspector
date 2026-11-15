@@ -1,4 +1,4 @@
-import { int } from 'three/tsl';
+import { int, uint } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { CONSTRUCTORS, floatNode } from './emitConstant.js';
 import { element } from './emitOperation.js';
@@ -17,8 +17,12 @@ interface Chained {
   div(node: Node): Node;
   lessThan(node: Node): Node;
   or(node: Node): Node;
+  and(node: Node): Node;
   assign(node: Node): Node;
 }
+
+export const unsignedNode = (value: number) => uint(value) as unknown as Node;
+export const intNode = (value: number) => int(value) as unknown as Node;
 
 export const chained = (node: Node) => node as unknown as Chained;
 

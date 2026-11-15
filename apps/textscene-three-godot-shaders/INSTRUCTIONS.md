@@ -1537,10 +1537,10 @@ canvases draw on WebGPURenderer (#1788).
 | `usubBorrow(uvec2,uvec2,uvec2)` | transpiled (`call-usubBorrow-uvec2-uvec2-uvec2-result`, `call-usubBorrow-uvec2-uvec2-uvec2-written`) | lowered: wrapped difference and comparison | untested (#1788) | `servers/rendering/shader_language.cpp:3520` |
 | `usubBorrow(uvec3,uvec3,uvec3)` | transpiled (`call-usubBorrow-uvec3-uvec3-uvec3-result`, `call-usubBorrow-uvec3-uvec3-uvec3-written`) | lowered: wrapped difference and comparison | untested (#1788) | `servers/rendering/shader_language.cpp:3521` |
 | `usubBorrow(uvec4,uvec4,uvec4)` | transpiled (`call-usubBorrow-uvec4-uvec4-uvec4-result`, `call-usubBorrow-uvec4-uvec4-uvec4-written`) | lowered: wrapped difference and comparison | untested (#1788) | `servers/rendering/shader_language.cpp:3522` |
-| `ldexp(float,int)` | transpiled (`call-ldexp-float-int`, `call-ldexp-of-a-constant-exponent`) | lowered: two products by powers of two | untested (#1788) | `servers/rendering/shader_language.cpp:3526` |
-| `ldexp(vec2,ivec2)` | transpiled (`call-ldexp-vec2-ivec2`) | lowered: two products by powers of two | untested (#1788) | `servers/rendering/shader_language.cpp:3527` |
-| `ldexp(vec3,ivec3)` | transpiled (`call-ldexp-vec3-ivec3`) | lowered: two products by powers of two | untested (#1788) | `servers/rendering/shader_language.cpp:3528` |
-| `ldexp(vec4,ivec4)` | transpiled (`call-ldexp-vec4-ivec4`) | lowered: two products by powers of two | untested (#1788) | `servers/rendering/shader_language.cpp:3529` |
+| `ldexp(float,int)` | transpiled (`call-ldexp-float-int`, `call-ldexp-of-a-constant-exponent`) | lowered: three products by powers of two | untested (#1788) | `servers/rendering/shader_language.cpp:3526` |
+| `ldexp(vec2,ivec2)` | transpiled (`call-ldexp-vec2-ivec2`) | lowered: three products by powers of two | untested (#1788) | `servers/rendering/shader_language.cpp:3527` |
+| `ldexp(vec3,ivec3)` | transpiled (`call-ldexp-vec3-ivec3`) | lowered: three products by powers of two | untested (#1788) | `servers/rendering/shader_language.cpp:3528` |
+| `ldexp(vec4,ivec4)` | transpiled (`call-ldexp-vec4-ivec4`) | lowered: three products by powers of two | untested (#1788) | `servers/rendering/shader_language.cpp:3529` |
 | `frexp(float,int)` | transpiled (`call-frexp-float-int-fraction`, `call-frexp-float-int-exponent`, `call-frexp-to-a-value`) | lowered: exponent and fraction bits | untested (#1788) | `servers/rendering/shader_language.cpp:3533` |
 | `frexp(vec2,ivec2)` | transpiled (`call-frexp-vec2-ivec2-fraction`, `call-frexp-vec2-ivec2-exponent`) | lowered: exponent and fraction bits | untested (#1788) | `servers/rendering/shader_language.cpp:3534` |
 | `frexp(vec3,ivec3)` | transpiled (`call-frexp-vec3-ivec3-fraction`, `call-frexp-vec3-ivec3-exponent`) | lowered: exponent and fraction bits | untested (#1788) | `servers/rendering/shader_language.cpp:3535` |

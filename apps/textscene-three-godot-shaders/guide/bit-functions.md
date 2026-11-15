@@ -2470,16 +2470,16 @@ vec4 probe(vec4 a, vec4 b, vec4 c) { return fma(a, b, c); }
 
 ## Fraction and exponent
 
-`frexp(x, exponent)` gives the fraction of `x`, from 0.5 to 1 in size, and writes its exponent, so that `x` is the fraction times 2 to the exponent. `ldexp(x, exponent)` gives `x` times 2 to the exponent. Godot lists the exponent of `ldexp` as an out argument, so it must be a variable, though the call only reads it. GLSL leaves `frexp` of an infinity or a NaN, and an `ldexp` past the float range, undefined.
+`frexp(x, exponent)` gives the fraction of `x`, from 0.5 to 1 in size, and writes its exponent, so that `x` is the fraction times 2 to the exponent. `ldexp(x, exponent)` gives `x` times 2 to the exponent. Godot lists the exponent of `ldexp` as an out argument, so it must be a variable, though the call only reads it. GLSL leaves `frexp` of an infinity or a NaN, and an `ldexp` past the float range, undefined. The transpiler splits a subnormal from its bits, so a GPU that reads subnormals as zero still gives the fraction and exponent GLSL defines: 1e-40 is `0.545 * 2^-132`. Godot's test driver gives the unnormalised bits `0x3f0116c2` with exponent 0, a listed difference.
 
-The transpiler emits `uintBitsToFloat(bits & 0x807fffff | 0x3f000000)`. Rows: `ldexp(float,int)`, `ldexp(vec2,ivec2)`, `ldexp(vec3,ivec3)`, `ldexp(vec4,ivec4)`, `frexp(float,int)`, `frexp(vec2,ivec2)`, `frexp(vec3,ivec3)`, `frexp(vec4,ivec4)`. Godot source: `servers/rendering/shader_language.cpp:3526`.
+The transpiler emits `uintBitsToFloat(sign | fraction << shift | 0x3f000000)`. Rows: `ldexp(float,int)`, `ldexp(vec2,ivec2)`, `ldexp(vec3,ivec3)`, `ldexp(vec4,ivec4)`, `frexp(float,int)`, `frexp(vec2,ivec2)`, `frexp(vec3,ivec3)`, `frexp(vec4,ivec4)`. Godot source: `servers/rendering/shader_language.cpp:3526`.
 
 Lowered rows:
 
-- `ldexp(float,int)`: WebGL 2 lowered: two products by powers of two.
-- `ldexp(vec2,ivec2)`: WebGL 2 lowered: two products by powers of two.
-- `ldexp(vec3,ivec3)`: WebGL 2 lowered: two products by powers of two.
-- `ldexp(vec4,ivec4)`: WebGL 2 lowered: two products by powers of two.
+- `ldexp(float,int)`: WebGL 2 lowered: three products by powers of two.
+- `ldexp(vec2,ivec2)`: WebGL 2 lowered: three products by powers of two.
+- `ldexp(vec3,ivec3)`: WebGL 2 lowered: three products by powers of two.
+- `ldexp(vec4,ivec4)`: WebGL 2 lowered: three products by powers of two.
 - `frexp(float,int)`: WebGL 2 lowered: exponent and fraction bits.
 - `frexp(vec2,ivec2)`: WebGL 2 lowered: exponent and fraction bits.
 - `frexp(vec3,ivec3)`: WebGL 2 lowered: exponent and fraction bits.

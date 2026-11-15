@@ -117,7 +117,7 @@ export class ExpressionEmitter {
     return OPERATIONS[op]!(nodes, types);
   }
 
-  /** A call that stands as a statement. A built-in the emitter writes has no effect but its value, which the statement drops. */
+  /** A call that stands as a statement: a built-in's value is dropped, its out writes kept. */
   callStatement(call: CallNode): void {
     if (call.row.id !== 'OP_CALL') {
       this.called(call);
@@ -134,10 +134,7 @@ export class ExpressionEmitter {
     return called.result;
   }
 
-  /**
-   * A call of a built-in function. One that writes an argument (`modf`) runs here, into a variable
-   * of its own, so the place it writes is copied after the call and a call as a statement stays.
-   */
+  /** A built-in that writes an argument stores a non-void value in a variable, so its writes stay. */
   private builtInCalled(call: CallNode): Value {
     const outs = call.operands.map((operand, index) =>
       call.qualifiers[index] === 'out' ? (property(operand.type) as unknown as Node) : undefined
@@ -145,8 +142,11 @@ export class ExpressionEmitter {
     const nodes = call.operands.map((operand, index) => outs[index] ?? this.node(operand));
     const node = builtInCall(call.function, call.row, nodes);
     if (outs.every((out) => out === undefined)) return node;
-    const result = call.type === 'void' ? node : (property(call.type) as unknown as Node);
-    if (result !== node) result.assign(node);
+    let result = node;
+    if (call.type !== 'void') {
+      result = property(call.type) as unknown as Node;
+      result.assign(node);
+    }
     this.writeBack(call, { result, written: outs.filter((out) => out !== undefined) });
     return result;
   }

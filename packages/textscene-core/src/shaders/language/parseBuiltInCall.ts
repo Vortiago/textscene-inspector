@@ -11,20 +11,7 @@ import type { CallNode, Expression, Qualifier, ValueType } from './shaderTree.js
 import type { SourcePosition } from './shadingLanguageError.js';
 import { arraySizeOf, typeName } from './treeWalk.js';
 import { shapeOf } from './types.js';
-
-/** The arguments each built-in writes, by index (`builtin_func_out_args`). */
-const OUT_ARGUMENTS: Readonly<Record<string, readonly number[]>> = {
-  modf: [1],
-  umulExtended: [2, 3],
-  imulExtended: [2, 3],
-  uaddCarry: [2],
-  usubBorrow: [2],
-  ldexp: [1],
-  frexp: [1],
-};
-
-// Godot checks these as places, but GLSL only reads them (shader_language.cpp:3543).
-const READ_PLACES: Readonly<Record<string, readonly number[]>> = { ldexp: [1] };
+import { OUT_ARGUMENTS, READ_PLACES } from './outArguments.js';
 
 /** A type name calls a constructor, which the parser reads apart from the functions. */
 const isFunctionRow = (row: InstructionRow) =>

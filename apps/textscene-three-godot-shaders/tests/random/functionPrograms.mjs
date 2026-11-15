@@ -6,6 +6,7 @@
  */
 
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
+import { READ_PLACES } from '../../../../packages/textscene-core/src/shaders/language/outArguments.ts';
 import { expressionText, rowsOf } from './programTree.mjs';
 import {
   PRODUCERS,
@@ -74,16 +75,15 @@ const isScalarOrVector = (type) => !type.startsWith('mat');
 
 const valueShape = (type) => ({ kind: 'value', type });
 
-// `inout` for ldexp's exponent: Godot takes a place, GLSL reads it.
 const BUILT_IN_CALLEES = TRANSPILED_ROWS.filter((row) => placeArguments(row).length > 0).map((row) => {
   const name = row.id.slice(0, row.id.indexOf('('));
   const places = placeArguments(row);
-  const writes = name !== 'ldexp';
+  const reads = READ_PLACES[name] ?? [];
   return {
     name,
     row: row.id,
     parameters: row.args.map((type, index) => ({
-      qualifier: places.includes(index) ? (writes ? 'out' : 'inout') : 'in',
+      qualifier: places.includes(index) ? (reads.includes(index) ? 'inout' : 'out') : 'in',
       shape: valueShape(type),
     })),
     returns: row.returns === 'void' ? undefined : valueShape(row.returns),

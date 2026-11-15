@@ -52,7 +52,7 @@ const FUNCTION_COMPOSITES = {
   umulExtended: 'products of 16-bit halves',
   imulExtended: 'products of 16-bit halves, less each negative operand',
   frexp: 'exponent and fraction bits',
-  ldexp: 'two products by powers of two',
+  ldexp: 'three products by powers of two',
   dFdxCoarse: 'nearest form dFdx, coarse not shown on the test driver',
   dFdxFine: 'nearest form dFdx, fine not shown on the test driver',
   dFdyCoarse: 'nearest form dFdy, coarse not shown on the test driver',
@@ -69,11 +69,13 @@ const THREE_POLYFILLS = {
   unpackUnorm4x8: "three's tsl_unpackUnorm4x8",
 };
 
+const functionName = (row) => row.id.slice(0, row.id.indexOf('('));
+
 /** The composite of the built-in function `row`, or nothing where three/tsl has its function. */
 function functionComposite(row) {
-  const name = row.id.slice(0, row.id.indexOf('('));
+  const name = functionName(row);
   if (name === 'mix' && row.args[2]?.startsWith('b')) return 'select by lane';
-  return FUNCTION_COMPOSITES[name] ?? THREE_POLYFILLS[name];
+  return FUNCTION_COMPOSITES[name];
 }
 
 /** The lowering of `row` on every target, or nothing for a native row. */
@@ -95,7 +97,8 @@ function lowering(row) {
 
 /** The state of the transpiled row `row` on each target: `native` or `lowered: <name>`. */
 export function targetStates(row) {
-  const name = lowering(row);
-  const state = name === undefined ? 'native' : `lowered: ${name}`;
-  return Object.fromEntries(TARGETS.map((target) => [target, state]));
+  const stateOf = (name) => (name === undefined ? 'native' : `lowered: ${name}`);
+  const states = Object.fromEntries(TARGETS.map((target) => [target, stateOf(lowering(row))]));
+  const polyfill = row.family.startsWith('function') ? THREE_POLYFILLS[functionName(row)] : undefined;
+  return polyfill === undefined ? states : { ...states, webgl2: stateOf(polyfill) };
 }

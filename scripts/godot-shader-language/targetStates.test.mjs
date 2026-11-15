@@ -65,9 +65,13 @@ describe('targetStates', () => {
       ['uint', 'uint', 'uint', 'uint'],
       'lowered: products of 16-bit halves',
     ],
-    ['ldexp(vec2,ivec2)', ['vec2', 'ivec2'], 'lowered: two products by powers of two'],
-    ['packSnorm4x8(vec4)', ['vec4'], "lowered: three's tsl_packSnorm4x8"],
+    ['ldexp(vec2,ivec2)', ['vec2', 'ivec2'], 'lowered: three products by powers of two'],
   ])('names the composite of the high_end function %s', (id, args, state) => {
     expect(targetStates({ id, family: 'function (high_end)', returns: args[0], args }).webgl2).toBe(state);
+  });
+
+  it("names three's WebGL 2 function of a 4x8 pack, which WGSL has natively", () => {
+    const row = { id: 'packSnorm4x8(vec4)', family: 'function (high_end)', returns: 'uint', args: ['vec4'] };
+    expect(targetStates(row)).toEqual({ webgl2: "lowered: three's tsl_packSnorm4x8", webgpu: 'native' });
   });
 });

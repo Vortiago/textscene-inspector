@@ -6,6 +6,7 @@
  */
 
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
+import { OUT_ARGUMENTS } from '../../../../packages/textscene-core/src/shaders/language/outArguments.ts';
 import { LANE_COUNT } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { WRITES_OPERAND, operatorOf } from '../operators/operatorText.mjs';
 import { FLOAT_VALUES } from '../probes/inputs.mjs';
@@ -112,20 +113,6 @@ const familyOf = (row) => (row.family.startsWith('function') ? 'function' : row.
 
 /** How each family of rows with operands is written. */
 const PRODUCER_KINDS = { operator: 'operator', constructor: 'call', function: 'call' };
-
-/**
- * The arguments each built-in function writes, by index: Godot's `builtin_func_out_args`
- * (`shader_language.cpp:3543`). Godot lists the exponent of `ldexp`, which GLSL reads.
- */
-const OUT_ARGUMENTS = {
-  modf: [1],
-  umulExtended: [2, 3],
-  imulExtended: [2, 3],
-  uaddCarry: [2],
-  usubBorrow: [2],
-  ldexp: [1],
-  frexp: [1],
-};
 
 export const placeArguments = (row) =>
   row.family.startsWith('function') ? (OUT_ARGUMENTS[operatorOf(row)] ?? []) : [];

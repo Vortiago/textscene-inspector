@@ -4,6 +4,7 @@ import {
   bitOr,
   clamp,
   convert,
+  div,
   equal,
   floatBitsToUint,
   int,
@@ -16,64 +17,91 @@ import {
   uintBitsToFloat,
 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import { byLane, chained, type Composite, laneOf, tsl, withScalar } from './compositeParts.js';
-import { floatNode } from './emitConstant.js';
-
-const unsignedNode = (value: number) => uint(value) as unknown as Node;
-const intNode = (value: number) => int(value) as unknown as Node;
+import {
+  byLane,
+  chained,
+  type Composite,
+  intNode,
+  laneOf,
+  lanesOf,
+  tsl,
+  unsignedNode,
+  withScalar,
+} from './compositeParts.js';
+import { topBitOf } from './integerComposites.js';
 
 const EXPONENT_MASK = 0x7f800000;
-const SIGN_AND_FRACTION = 0x807fffff;
+const FRACTION_MASK = 0x007fffff;
+const SIGN_MASK = 0x80000000;
 const HALF_EXPONENT = 0x3f000000;
-const SUBNORMAL_SCALE = 32;
+const FRACTION_BITS = 23;
+/** frexp's exponent of a normal float is its biased exponent less this. */
+const HALF_BIAS = 126;
+/** frexp's exponent of a subnormal is the index of its top fraction bit less this. */
+const SUBNORMAL_BIAS = 148;
+const FLOAT_BIAS = 127;
+/** Past these, every finite non-zero x gives 0 or an infinity. */
+const LDEXP_LOWEST = -278;
+const LDEXP_HIGHEST = 277;
 
 const isInfiniteOrNaN = (bits: Node) =>
   tsl(equal)(tsl(bitAnd)(bits, unsignedNode(EXPONENT_MASK)), unsignedNode(EXPONENT_MASK));
 
+// Integer operations only, so a GPU that flushes subnormals still splits one.
 function split(x: Node): { fraction: Node; exponent: Node } {
-  const isZero = tsl(equal)(x, floatNode(0));
-  const isSubnormal = tsl(equal)(
-    tsl(bitAnd)(tsl(floatBitsToUint)(x), unsignedNode(EXPONENT_MASK)),
-    unsignedNode(0)
+  const bits = tsl(floatBitsToUint)(x);
+  const fractionBits = tsl(bitAnd)(bits, unsignedNode(FRACTION_MASK));
+  const biased = tsl(int)(
+    tsl(shiftRight)(tsl(bitAnd)(bits, unsignedNode(EXPONENT_MASK)), unsignedNode(FRACTION_BITS))
   );
-  const normal = tsl(select)(isSubnormal, tsl(mul)(x, floatNode(2 ** SUBNORMAL_SCALE)), x);
-  const bits = tsl(floatBitsToUint)(normal);
-  const biased = tsl(int)(tsl(bitAnd)(tsl(shiftRight)(bits, unsignedNode(23)), unsignedNode(0xff)));
-  const scale = tsl(select)(isSubnormal, intNode(126 + SUBNORMAL_SCALE), intNode(126));
+  const isSubnormal = tsl(equal)(biased, intNode(0));
+  const isZero = chained(isSubnormal).and(tsl(equal)(fractionBits, unsignedNode(0)));
+  const top = topBitOf(fractionBits, 'uint');
+  const shift = tsl(uint)(tsl(sub)(intNode(FRACTION_BITS), top));
+  const normalised = tsl(select)(
+    isSubnormal,
+    tsl(bitAnd)(tsl(shiftLeft)(fractionBits, shift), unsignedNode(FRACTION_MASK)),
+    fractionBits
+  );
   const halfBits = tsl(bitOr)(
-    tsl(bitAnd)(bits, unsignedNode(SIGN_AND_FRACTION)),
+    tsl(bitOr)(tsl(bitAnd)(bits, unsignedNode(SIGN_MASK)), normalised),
     unsignedNode(HALF_EXPONENT)
+  );
+  const exponent = tsl(select)(
+    isSubnormal,
+    tsl(sub)(top, intNode(SUBNORMAL_BIAS)),
+    tsl(sub)(biased, intNode(HALF_BIAS))
   );
   // GLSL leaves infinity and NaN undefined: x itself, as C's frexp and Godot's driver give.
   const keepsX = chained(isZero).or(isInfiniteOrNaN(bits));
   return {
     fraction: tsl(select)(keepsX, x, tsl(uintBitsToFloat)(halfBits)),
-    exponent: tsl(select)(isZero, intNode(0), tsl(sub)(biased, scale)),
+    exponent: tsl(select)(isZero, intNode(0), exponent),
   };
 }
 
 const frexp: Composite = ([x, exponent], [type, exponentType]) => {
-  const lanes = (part: 'fraction' | 'exponent', laneType: string) =>
-    byLane(laneType, (index) => split(laneOf(x!, type!, index))[part]);
-  chained(exponent!).assign(lanes('exponent', exponentType!));
-  return lanes('fraction', type!);
+  const parts = Array.from({ length: lanesOf(type!) }, (_, index) => split(laneOf(x!, type!, index)));
+  chained(exponent!).assign(byLane(exponentType!, (index) => parts[index]!.exponent));
+  return byLane(type!, (index) => parts[index]!.fraction);
 };
 
 // Exact for -126 <= k <= 127.
 const powerOfTwo = (k: Node, type: string) =>
   tsl(uintBitsToFloat)(
     tsl(shiftLeft)(
-      tsl(convert)(tsl(add)(k, intNode(127)), withScalar(type, 'uint') as never),
-      unsignedNode(23)
+      tsl(convert)(tsl(add)(k, intNode(FLOAT_BIAS)), withScalar(type, 'uint') as never),
+      unsignedNode(FRACTION_BITS)
     )
   );
 
-// Two normal powers keep a subnormal result exact. Past the clamp, every result overflows or is 0.
+// Three normal powers of two span the clamp.
 const ldexp: Composite = ([x, exponent], [, exponentType]) => {
-  const whole = tsl(clamp)(exponent!, intNode(-252), intNode(254));
-  const half = tsl(shiftRight)(whole, intNode(1));
-  const rest = tsl(sub)(whole, half);
-  return tsl(mul)(tsl(mul)(x!, powerOfTwo(half, exponentType!)), powerOfTwo(rest, exponentType!));
+  const whole = tsl(clamp)(exponent!, intNode(LDEXP_LOWEST), intNode(LDEXP_HIGHEST));
+  const first = tsl(div)(whole, intNode(3));
+  const second = tsl(div)(tsl(sub)(whole, first), intNode(2));
+  const third = tsl(sub)(tsl(sub)(whole, first), second);
+  return [first, second, third].reduce((product, k) => tsl(mul)(product, powerOfTwo(k, exponentType!)), x!);
 };
 
 export const EXPONENT_COMPOSITES: Readonly<Record<string, Composite>> = { frexp, ldexp };

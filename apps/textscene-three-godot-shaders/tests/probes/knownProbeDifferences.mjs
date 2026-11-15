@@ -43,7 +43,8 @@ export const ANGLE_DERIVATIVE = {
 
 const UNNORMALISED_SUBNORMAL = {
   owner: '#1827',
-  cause: "driver (Mesa lavapipe) leaves the frexp fraction of a subnormal unnormalised, on Godot's side",
+  cause:
+    "driver (Mesa lavapipe) splits a subnormal as if its exponent were 0: fraction unnormalised, exponent 0, on Godot's side",
 };
 
 export const KNOWN_PROBE_DIFFERENCES = {
@@ -110,22 +111,42 @@ export const KNOWN_PROBE_DIFFERENCES = {
   'call-frexp-float-int-fraction': {
     ...UNNORMALISED_SUBNORMAL,
     lanesOff: 1,
-    first: 'lane 12: Godot 3f0116c2, transpilation 000116c2',
+    first: 'lane 12: Godot 3f0116c2, transpilation 3f0b6100',
   },
   'call-frexp-vec2-ivec2-fraction': {
     ...UNNORMALISED_SUBNORMAL,
     lanesOff: 2,
-    first: 'lane 15: Godot 3f0116c2, transpilation 000116c2',
+    first: 'lane 15: Godot 3f0116c2, transpilation 3f0b6100',
   },
   'call-frexp-vec3-ivec3-fraction': {
     ...UNNORMALISED_SUBNORMAL,
     lanesOff: 3,
-    first: 'lane 8: Godot 3f0116c2, transpilation 000116c2',
+    first: 'lane 8: Godot 3f0116c2, transpilation 3f0b6100',
   },
   'call-frexp-vec4-ivec4-fraction': {
     ...UNNORMALISED_SUBNORMAL,
     lanesOff: 4,
-    first: 'lane 10: Godot 3f0116c2, transpilation 000116c2',
+    first: 'lane 10: Godot 3f0116c2, transpilation 3f0b6100',
+  },
+  'call-frexp-float-int-exponent': {
+    ...UNNORMALISED_SUBNORMAL,
+    lanesOff: 1,
+    first: 'lane 12: Godot 00000000, transpilation ffffff7c',
+  },
+  'call-frexp-vec2-ivec2-exponent': {
+    ...UNNORMALISED_SUBNORMAL,
+    lanesOff: 2,
+    first: 'lane 15: Godot 00000000, transpilation ffffff7c',
+  },
+  'call-frexp-vec3-ivec3-exponent': {
+    ...UNNORMALISED_SUBNORMAL,
+    lanesOff: 3,
+    first: 'lane 8: Godot 00000000, transpilation ffffff7c',
+  },
+  'call-frexp-vec4-ivec4-exponent': {
+    ...UNNORMALISED_SUBNORMAL,
+    lanesOff: 4,
+    first: 'lane 10: Godot 00000000, transpilation ffffff7c',
   },
   'gpu-call-sinh-of-a-constant': {
     ...DRIVER_ROUNDED_CALL,

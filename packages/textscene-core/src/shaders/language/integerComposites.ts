@@ -6,20 +6,15 @@ import {
   bitXor,
   convert,
   equal,
-  int,
   lessThan,
   mul,
   select,
   shiftLeft,
   shiftRight,
   sub,
-  uint,
 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import { chained, type Composite, tsl, withScalar } from './compositeParts.js';
-
-const unsignedNode = (value: number) => uint(value) as unknown as Node;
-const intNode = (value: number) => int(value) as unknown as Node;
+import { chained, type Composite, intNode, tsl, unsignedNode, withScalar } from './compositeParts.js';
 
 // The inner convert stops three writing a negative constant as `0u`.
 const as = (x: Node, from: string, to: string) => tsl(convert)(tsl(convert)(x, from as never), to as never);
@@ -47,7 +42,8 @@ function filledBelowTop(v: Node): Node {
   );
 }
 
-const topBitOf = (v: Node, type: string) => tsl(sub)(signed(onesIn(filledBelowTop(v)), type), intNode(1));
+export const topBitOf = (v: Node, type: string) =>
+  tsl(sub)(signed(onesIn(filledBelowTop(v)), type), intNode(1));
 
 const bitCount: Composite = ([x], [type]) => onesIn(unsigned(x!, type!));
 
