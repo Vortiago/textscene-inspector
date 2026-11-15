@@ -212,7 +212,7 @@ interface LabelLineRange {
  * (unset or negative means no limit), in every autowrap mode. {@link windowWrappedLabel} passes the
  * count of lines that fit the height as the cap.
  */
-export function labelVisibleLineRange(
+function labelVisibleLineRange(
   totalLines: number,
   linesSkipped: number,
   maxLinesVisible: number | undefined
@@ -250,7 +250,7 @@ export interface LabelLineSpacing {
  * (`label.cpp:359-361`, `:556-559`). The height holds one `paragraphSpacingPx` per paragraph that
  * keeps a line (`:381,:587`).
  */
-export function windowLabelLines(
+function windowLabelLines(
   layout: TextLayoutResult,
   range: LabelLineRange,
   { paragraphSpacingPx, fontHeightPx }: LabelLineSpacing
