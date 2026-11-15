@@ -691,7 +691,7 @@ function specialGlyph(
   return hexCodeBox(ch, i, style.sizes[i]!);
 }
 
-/** HarfBuzz shapes a break too, so it takes the advance of the glyph its face maps it to (`text_server_adv.cpp:7050`). */
+/** HarfBuzz shapes a break too: it takes its face's glyph advance (`text_server_adv.cpp:7050`). */
 function lineBreakGlyph(ch: string, i: number, style: RunStyle): BreakGlyph {
   const face = style.faces[i]!;
   if (!face.hasGlyph(ch)) return noGlyph(ch, i);

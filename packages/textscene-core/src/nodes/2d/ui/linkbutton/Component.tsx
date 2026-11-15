@@ -19,7 +19,7 @@ import {
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { NO_UNDERLINE_PX } from '../../../../r3f/controls/native/text/paragraphUnderline';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { overrunFlagsForBehavior, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
+import { overrunFlagsForBehavior, trimTextLine } from '../../../../r3f/controls/native/text/textOverrun';
 import {
   linkButtonLabelShape,
   linkButtonTextPlacement,
@@ -56,7 +56,7 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
   const overrunFlags = useMemo(() => overrunFlagsForBehavior(props.overrunBehavior), [props.overrunBehavior]);
   const layout: TextLayoutResult | null = useMemo(() => {
     if (!unshapedLayout) return null;
-    return trimSoloLine(unshapedLayout, overrunFlags, Math.max(1, rect.w), {
+    return trimTextLine(unshapedLayout, overrunFlags, Math.max(1, rect.w), {
       fontMetrics,
       fontSizePx,
       ellipsisChar: props.ellipsisChar,

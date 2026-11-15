@@ -10,7 +10,7 @@ import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBo
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { OutlinedTextRun } from '../../../r3f/controls/native/text/OutlinedTextRun';
 import { shapedTextSizeWidthPx } from '../../../r3f/controls/native/text/textLayout';
-import { TEXT_LINE_DEFAULT_OVERRUN, trimSoloLine } from '../../../r3f/controls/native/text/textOverrun';
+import { TEXT_LINE_DEFAULT_OVERRUN, trimTextLine } from '../../../r3f/controls/native/text/textOverrun';
 import { resolveNodeFont } from '../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { peekSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { resolveTextTheme } from '../../../r3f/controls/native/textTheme';
@@ -47,7 +47,7 @@ export function WindowTitle({ solveNode, width, border, closeHOffset, slot }: Wi
 
   const layout = useMemo(() => {
     if (space <= 0) return null;
-    return trimSoloLine(
+    return trimTextLine(
       shapeTitle(props.title, { fontSizePx, fontMetrics, isRtl: solveNode.rtl }),
       TEXT_LINE_DEFAULT_OVERRUN,
       space,
