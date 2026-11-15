@@ -11,7 +11,7 @@ Each compares two scalars of one type, `int`, `uint` or `float`. A comparison wi
 
 The transpiler emits `a.lessThan(b)`. Rows: `OP_LESS(int,int)`, `OP_LESS(uint,uint)`, `OP_LESS(float,float)`, `OP_LESS_EQUAL(int,int)`, `OP_LESS_EQUAL(uint,uint)`, `OP_LESS_EQUAL(float,float)`, `OP_GREATER(int,int)`, `OP_GREATER(uint,uint)`, `OP_GREATER(float,float)`, `OP_GREATER_EQUAL(int,int)`, `OP_GREATER_EQUAL(uint,uint)`, `OP_GREATER_EQUAL(float,float)`. Godot source: `servers/rendering/shader_language.cpp:1576`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `less-int-int`, 32 input rows
 
@@ -177,38 +177,38 @@ The transpiler emits `a.equal(b), all(equal(a, b)) for a vector`. Rows: `OP_EQUA
 
 Lowered rows:
 
-- `OP_EQUAL(bvec2,bvec2)`: WebGL 2 lowered: all(equal(a, b)), WebGPURenderer lowered: all(equal(a, b)).
-- `OP_EQUAL(bvec3,bvec3)`: WebGL 2 lowered: all(equal(a, b)), WebGPURenderer lowered: all(equal(a, b)).
-- `OP_EQUAL(bvec4,bvec4)`: WebGL 2 lowered: all(equal(a, b)), WebGPURenderer lowered: all(equal(a, b)).
-- `OP_EQUAL(ivec2,ivec2)`: WebGL 2 lowered: all(equal(a, b)), WebGPURenderer lowered: all(equal(a, b)).
-- `OP_EQUAL(ivec3,ivec3)`: WebGL 2 lowered: all(equal(a, b)), WebGPURenderer lowered: all(equal(a, b)).
-- `OP_EQUAL(ivec4,ivec4)`: WebGL 2 lowered: all(equal(a, b)), WebGPURenderer lowered: all(equal(a, b)).
-- `OP_EQUAL(uvec2,uvec2)`: WebGL 2 lowered: all(equal(a, b)), WebGPURenderer lowered: all(equal(a, b)).
-- `OP_EQUAL(uvec3,uvec3)`: WebGL 2 lowered: all(equal(a, b)), WebGPURenderer lowered: all(equal(a, b)).
-- `OP_EQUAL(uvec4,uvec4)`: WebGL 2 lowered: all(equal(a, b)), WebGPURenderer lowered: all(equal(a, b)).
-- `OP_EQUAL(vec2,vec2)`: WebGL 2 lowered: all(equal(a, b)), WebGPURenderer lowered: all(equal(a, b)).
-- `OP_EQUAL(vec3,vec3)`: WebGL 2 lowered: all(equal(a, b)), WebGPURenderer lowered: all(equal(a, b)).
-- `OP_EQUAL(vec4,vec4)`: WebGL 2 lowered: all(equal(a, b)), WebGPURenderer lowered: all(equal(a, b)).
-- `OP_EQUAL(mat2,mat2)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_EQUAL(mat3,mat3)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_EQUAL(mat4,mat4)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_NOT_EQUAL(bvec2,bvec2)`: WebGL 2 lowered: any(notEqual(a, b)), WebGPURenderer lowered: any(notEqual(a, b)).
-- `OP_NOT_EQUAL(bvec3,bvec3)`: WebGL 2 lowered: any(notEqual(a, b)), WebGPURenderer lowered: any(notEqual(a, b)).
-- `OP_NOT_EQUAL(bvec4,bvec4)`: WebGL 2 lowered: any(notEqual(a, b)), WebGPURenderer lowered: any(notEqual(a, b)).
-- `OP_NOT_EQUAL(ivec2,ivec2)`: WebGL 2 lowered: any(notEqual(a, b)), WebGPURenderer lowered: any(notEqual(a, b)).
-- `OP_NOT_EQUAL(ivec3,ivec3)`: WebGL 2 lowered: any(notEqual(a, b)), WebGPURenderer lowered: any(notEqual(a, b)).
-- `OP_NOT_EQUAL(ivec4,ivec4)`: WebGL 2 lowered: any(notEqual(a, b)), WebGPURenderer lowered: any(notEqual(a, b)).
-- `OP_NOT_EQUAL(uvec2,uvec2)`: WebGL 2 lowered: any(notEqual(a, b)), WebGPURenderer lowered: any(notEqual(a, b)).
-- `OP_NOT_EQUAL(uvec3,uvec3)`: WebGL 2 lowered: any(notEqual(a, b)), WebGPURenderer lowered: any(notEqual(a, b)).
-- `OP_NOT_EQUAL(uvec4,uvec4)`: WebGL 2 lowered: any(notEqual(a, b)), WebGPURenderer lowered: any(notEqual(a, b)).
-- `OP_NOT_EQUAL(vec2,vec2)`: WebGL 2 lowered: any(notEqual(a, b)), WebGPURenderer lowered: any(notEqual(a, b)).
-- `OP_NOT_EQUAL(vec3,vec3)`: WebGL 2 lowered: any(notEqual(a, b)), WebGPURenderer lowered: any(notEqual(a, b)).
-- `OP_NOT_EQUAL(vec4,vec4)`: WebGL 2 lowered: any(notEqual(a, b)), WebGPURenderer lowered: any(notEqual(a, b)).
-- `OP_NOT_EQUAL(mat2,mat2)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_NOT_EQUAL(mat3,mat3)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_NOT_EQUAL(mat4,mat4)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_EQUAL(bvec2,bvec2)`: WebGL 2 lowered: all(equal(a, b)).
+- `OP_EQUAL(bvec3,bvec3)`: WebGL 2 lowered: all(equal(a, b)).
+- `OP_EQUAL(bvec4,bvec4)`: WebGL 2 lowered: all(equal(a, b)).
+- `OP_EQUAL(ivec2,ivec2)`: WebGL 2 lowered: all(equal(a, b)).
+- `OP_EQUAL(ivec3,ivec3)`: WebGL 2 lowered: all(equal(a, b)).
+- `OP_EQUAL(ivec4,ivec4)`: WebGL 2 lowered: all(equal(a, b)).
+- `OP_EQUAL(uvec2,uvec2)`: WebGL 2 lowered: all(equal(a, b)).
+- `OP_EQUAL(uvec3,uvec3)`: WebGL 2 lowered: all(equal(a, b)).
+- `OP_EQUAL(uvec4,uvec4)`: WebGL 2 lowered: all(equal(a, b)).
+- `OP_EQUAL(vec2,vec2)`: WebGL 2 lowered: all(equal(a, b)).
+- `OP_EQUAL(vec3,vec3)`: WebGL 2 lowered: all(equal(a, b)).
+- `OP_EQUAL(vec4,vec4)`: WebGL 2 lowered: all(equal(a, b)).
+- `OP_EQUAL(mat2,mat2)`: WebGL 2 lowered: column by column.
+- `OP_EQUAL(mat3,mat3)`: WebGL 2 lowered: column by column.
+- `OP_EQUAL(mat4,mat4)`: WebGL 2 lowered: column by column.
+- `OP_NOT_EQUAL(bvec2,bvec2)`: WebGL 2 lowered: any(notEqual(a, b)).
+- `OP_NOT_EQUAL(bvec3,bvec3)`: WebGL 2 lowered: any(notEqual(a, b)).
+- `OP_NOT_EQUAL(bvec4,bvec4)`: WebGL 2 lowered: any(notEqual(a, b)).
+- `OP_NOT_EQUAL(ivec2,ivec2)`: WebGL 2 lowered: any(notEqual(a, b)).
+- `OP_NOT_EQUAL(ivec3,ivec3)`: WebGL 2 lowered: any(notEqual(a, b)).
+- `OP_NOT_EQUAL(ivec4,ivec4)`: WebGL 2 lowered: any(notEqual(a, b)).
+- `OP_NOT_EQUAL(uvec2,uvec2)`: WebGL 2 lowered: any(notEqual(a, b)).
+- `OP_NOT_EQUAL(uvec3,uvec3)`: WebGL 2 lowered: any(notEqual(a, b)).
+- `OP_NOT_EQUAL(uvec4,uvec4)`: WebGL 2 lowered: any(notEqual(a, b)).
+- `OP_NOT_EQUAL(vec2,vec2)`: WebGL 2 lowered: any(notEqual(a, b)).
+- `OP_NOT_EQUAL(vec3,vec3)`: WebGL 2 lowered: any(notEqual(a, b)).
+- `OP_NOT_EQUAL(vec4,vec4)`: WebGL 2 lowered: any(notEqual(a, b)).
+- `OP_NOT_EQUAL(mat2,mat2)`: WebGL 2 lowered: column by column.
+- `OP_NOT_EQUAL(mat3,mat3)`: WebGL 2 lowered: column by column.
+- `OP_NOT_EQUAL(mat4,mat4)`: WebGL 2 lowered: column by column.
 
-The other rows are native on WebGL 2 and on WebGPURenderer.
+The other rows are native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `folding-double-equality`, 2 input rows
 
@@ -797,10 +797,10 @@ The transpiler emits `select(a, b, false)`. Rows: `OP_AND(bool,bool)`, `OP_OR(bo
 
 Lowered rows:
 
-- `OP_AND(bool,bool)`: WebGL 2 lowered: select, WebGPURenderer lowered: select.
-- `OP_OR(bool,bool)`: WebGL 2 lowered: select, WebGPURenderer lowered: select.
+- `OP_AND(bool,bool)`: WebGL 2 lowered: select.
+- `OP_OR(bool,bool)`: WebGL 2 lowered: select.
 
-The other rows are native on WebGL 2 and on WebGPURenderer.
+The other rows are native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `branch-and`, 28 input rows
 
@@ -867,7 +867,7 @@ bool probe(bool a) { return !a; }
 
 The transpiler emits `select(c, a, b)`. Rows: `OP_SELECT_IF(bool,bool,bool)`, `OP_SELECT_IF(bool,bvec2,bvec2)`, `OP_SELECT_IF(bool,bvec3,bvec3)`, `OP_SELECT_IF(bool,bvec4,bvec4)`, `OP_SELECT_IF(bool,int,int)`, `OP_SELECT_IF(bool,ivec2,ivec2)`, `OP_SELECT_IF(bool,ivec3,ivec3)`, `OP_SELECT_IF(bool,ivec4,ivec4)`, `OP_SELECT_IF(bool,uint,uint)`, `OP_SELECT_IF(bool,uvec2,uvec2)`, `OP_SELECT_IF(bool,uvec3,uvec3)`, `OP_SELECT_IF(bool,uvec4,uvec4)`, `OP_SELECT_IF(bool,float,float)`, `OP_SELECT_IF(bool,vec2,vec2)`, `OP_SELECT_IF(bool,vec3,vec3)`, `OP_SELECT_IF(bool,vec4,vec4)`, `OP_SELECT_IF(bool,mat2,mat2)`, `OP_SELECT_IF(bool,mat3,mat3)`, `OP_SELECT_IF(bool,mat4,mat4)`, `OP_SELECT_ELSE`. Godot source: `servers/rendering/shader_language.cpp:1990`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `ternary-negated-vector`, 2 input rows
 

@@ -11,7 +11,7 @@ Godot 4.6.3-stable (official), probed on llvmpipe (LLVM 20.1.2). Each table show
 
 The transpiler emits `vec3(a, b)`. Rows: `bvec2(bool)`, `bvec2(bool,bool)`, `bvec3(bool)`, `bvec3(bool,bool,bool)`, `bvec3(bvec2,bool)`, `bvec3(bool,bvec2)`, `bvec4(bool)`, `bvec4(bool,bool,bool,bool)`, `bvec4(bool,bvec2,bool)`, `bvec4(bvec2,bool,bool)`, `bvec4(bool,bool,bvec2)`, `bvec4(bool,bvec3)`, `bvec4(bvec3,bool)`, `bvec4(bvec2,bvec2)`, `vec2(float)`, `vec2(float,float)`, `vec3(float)`, `vec3(float,float,float)`, `vec3(vec2,float)`, `vec3(float,vec2)`, `vec4(float)`, `vec4(float,float,float,float)`, `vec4(float,vec2,float)`, `vec4(vec2,float,float)`, `vec4(float,float,vec2)`, `vec4(float,vec3)`, `vec4(vec3,float)`, `vec4(vec2,vec2)`, `ivec2(int)`, `ivec2(int,int)`, `ivec3(int)`, `ivec3(int,int,int)`, `ivec3(ivec2,int)`, `ivec3(int,ivec2)`, `ivec4(int)`, `ivec4(int,int,int,int)`, `ivec4(int,ivec2,int)`, `ivec4(ivec2,int,int)`, `ivec4(int,int,ivec2)`, `ivec4(int,ivec3)`, `ivec4(ivec3,int)`, `ivec4(ivec2,ivec2)`, `uvec2(uint)`, `uvec2(uint,uint)`, `uvec3(uint)`, `uvec3(uint,uint,uint)`, `uvec3(uvec2,uint)`, `uvec3(uint,uvec2)`, `uvec4(uint)`, `uvec4(uint,uint,uint,uint)`, `uvec4(uint,uvec2,uint)`, `uvec4(uvec2,uint,uint)`, `uvec4(uint,uint,uvec2)`, `uvec4(uint,uvec3)`, `uvec4(uvec3,uint)`, `uvec4(uvec2,uvec2)`. Godot source: `servers/rendering/shader_language.cpp:2422`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `construct-vec2-float`, 16 input rows
 
@@ -764,11 +764,11 @@ The transpiler emits `mat3(a, b, c)`. Rows: `mat2(vec2,vec2)`, `mat3(vec3,vec3,v
 
 Lowered rows:
 
-- `mat2(float)`: WebGL 2 lowered: diagonal of columns, WebGPURenderer lowered: diagonal of columns.
-- `mat3(float)`: WebGL 2 lowered: diagonal of columns, WebGPURenderer lowered: diagonal of columns.
-- `mat4(float)`: WebGL 2 lowered: diagonal of columns, WebGPURenderer lowered: diagonal of columns.
+- `mat2(float)`: WebGL 2 lowered: diagonal of columns.
+- `mat3(float)`: WebGL 2 lowered: diagonal of columns.
+- `mat4(float)`: WebGL 2 lowered: diagonal of columns.
 
-The other rows are native on WebGL 2 and on WebGPURenderer.
+The other rows are native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `construct-mat2-vec2-vec2`, 32 input rows
 
@@ -875,7 +875,7 @@ mat4 probe(float a) { return mat4(a); }
 
 The transpiler emits `int(a)`. Rows: `int(bool)`, `int(int)`, `int(uint)`, `int(float)`, `float(bool)`, `float(int)`, `float(uint)`, `float(float)`, `uint(bool)`, `uint(int)`, `uint(uint)`, `uint(float)`, `bool(bool)`, `bool(int)`, `bool(uint)`, `bool(float)`. Godot source: `servers/rendering/shader_language.cpp:2492`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `construct-int-bool`, 2 input rows
 
@@ -1079,7 +1079,7 @@ bool probe(float a) { return bool(a); }
 
 The transpiler emits `ivec3(a), mat3(m)`. Rows: `ivec2(bvec2)`, `ivec2(ivec2)`, `ivec2(uvec2)`, `ivec2(vec2)`, `vec2(bvec2)`, `vec2(ivec2)`, `vec2(uvec2)`, `vec2(vec2)`, `uvec2(bvec2)`, `uvec2(ivec2)`, `uvec2(uvec2)`, `uvec2(vec2)`, `bvec2(bvec2)`, `bvec2(ivec2)`, `bvec2(uvec2)`, `bvec2(vec2)`, `ivec3(bvec3)`, `ivec3(ivec3)`, `ivec3(uvec3)`, `ivec3(vec3)`, `vec3(bvec3)`, `vec3(ivec3)`, `vec3(uvec3)`, `vec3(vec3)`, `uvec3(bvec3)`, `uvec3(ivec3)`, `uvec3(uvec3)`, `uvec3(vec3)`, `bvec3(bvec3)`, `bvec3(ivec3)`, `bvec3(uvec3)`, `bvec3(vec3)`, `ivec4(bvec4)`, `ivec4(ivec4)`, `ivec4(uvec4)`, `ivec4(vec4)`, `vec4(bvec4)`, `vec4(ivec4)`, `vec4(uvec4)`, `vec4(vec4)`, `uvec4(bvec4)`, `uvec4(ivec4)`, `uvec4(uvec4)`, `uvec4(vec4)`, `bvec4(bvec4)`, `bvec4(ivec4)`, `bvec4(uvec4)`, `bvec4(vec4)`, `mat2(mat3)`, `mat2(mat4)`, `mat3(mat2)`, `mat3(mat4)`, `mat4(mat2)`, `mat4(mat3)`. Godot source: `servers/rendering/shader_language.cpp:2514`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `call-ivec2-bvec2`, 4 input rows
 
@@ -1831,7 +1831,7 @@ Godot holds every constructor and conversion as one operator node, `OP_CONSTRUCT
 
 The transpiler emits `the constructor of the row`. Rows: `OP_CONSTRUCT`. Godot source: `servers/rendering/shader_language.cpp:1558`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `call-ivec2-bvec2`, 4 input rows
 

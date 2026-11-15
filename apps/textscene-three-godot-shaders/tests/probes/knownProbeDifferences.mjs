@@ -25,7 +25,23 @@ const UNREAD_MODF = {
   cause: "driver (Mesa lavapipe) drops the out store of a modf whose value nothing reads, on Godot's side",
 };
 
+/** The probes of `foldedCallProbes.mjs` that show it: each on a parameter is bit-equal. */
+const DRIVER_FOLDED_CALL = {
+  owner: '#1826',
+  cause: "a call of constants that glslang leaves to the GPU and one side's compiler folds",
+};
+
 export const KNOWN_PROBE_DIFFERENCES = {
+  'gpu-call-sinh-of-a-constant': {
+    ...DRIVER_FOLDED_CALL,
+    lanesOff: 16,
+    first: 'lane 0: Godot 3f8335f4, transpilation 3f8335f5',
+  },
+  'gpu-call-atanh-of-a-constant': {
+    ...DRIVER_FOLDED_CALL,
+    lanesOff: 16,
+    first: 'lane 0: Godot 7fc00000, transpilation 00000000',
+  },
   'call-min-vec2-float': {
     ...SCALAR_BOUND,
     lanesOff: 1,

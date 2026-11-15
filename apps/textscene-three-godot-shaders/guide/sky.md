@@ -186,7 +186,7 @@ void sky() {
 
 The transpiler emits `the sky template, both stages, with the shader linked into its slots`. Rows: `shader_type`, `NODE_TYPE_SHADER`, `shader_type sky`. Godot source: `servers/rendering/shader_language.cpp:340`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 
 ## `COLOR`
@@ -195,5 +195,5 @@ Every row is native on WebGL 2 and on WebGPURenderer.
 
 The transpiler emits `the template's local `color``. Rows: `sky.sky.COLOR`. Godot source: `servers/rendering/shader_types.cpp:486`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

@@ -107,6 +107,21 @@ const CASES = [
   ['call-of-calls', ['sin(float)', 'cos(float)', 'exp(float)'], 'float', 'sin(cos(0.5)) * exp(0.25)'],
 ];
 
-export const FOLDED_CALL_PROBES = CASES.map(([word, rows, returns, call]) =>
-  probeOf(`fold-call-${word}`, rows, `${returns} probe(float a) { return ${call}; }`)
-);
+/**
+ * Calls glslang leaves to the GPU, each on a constant and on the same value through a parameter,
+ * which the browser's compiler cannot fold: on the input 0, `a + 0.899` is `0.899`.
+ */
+const LEFT_TO_THE_GPU = [
+  ['sinh', ['sinh(float)'], 'sinh(0.899)', 'sinh(a + 0.899)'],
+  ['atanh', ['atanh(float)'], 'atanh(92.167)', 'atanh(a + 92.167)'],
+];
+
+export const FOLDED_CALL_PROBES = [
+  ...CASES.map(([word, rows, returns, call]) =>
+    probeOf(`fold-call-${word}`, rows, `${returns} probe(float a) { return ${call}; }`)
+  ),
+  ...LEFT_TO_THE_GPU.flatMap(([word, rows, onConstant, onParameter]) => [
+    probeOf(`gpu-call-${word}-of-a-constant`, rows, `float probe(float a) { return ${onConstant}; }`),
+    probeOf(`gpu-call-${word}-of-a-parameter`, rows, `float probe(float a) { return ${onParameter}; }`),
+  ]),
+];

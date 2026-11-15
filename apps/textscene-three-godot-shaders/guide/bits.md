@@ -11,7 +11,7 @@ Godot 4.6.3-stable (official), probed on llvmpipe (LLVM 20.1.2). Each table show
 
 The transpiler emits `a.bitAnd(b), a.bitOr(b), a.bitXor(b)`. Rows: `OP_BIT_AND(int,int)`, `OP_BIT_AND(ivec2,ivec2)`, `OP_BIT_AND(ivec3,ivec3)`, `OP_BIT_AND(ivec4,ivec4)`, `OP_BIT_AND(uint,uint)`, `OP_BIT_AND(uvec2,uvec2)`, `OP_BIT_AND(uvec3,uvec3)`, `OP_BIT_AND(uvec4,uvec4)`, `OP_BIT_OR(int,int)`, `OP_BIT_OR(ivec2,ivec2)`, `OP_BIT_OR(ivec3,ivec3)`, `OP_BIT_OR(ivec4,ivec4)`, `OP_BIT_OR(uint,uint)`, `OP_BIT_OR(uvec2,uvec2)`, `OP_BIT_OR(uvec3,uvec3)`, `OP_BIT_OR(uvec4,uvec4)`, `OP_BIT_XOR(int,int)`, `OP_BIT_XOR(ivec2,ivec2)`, `OP_BIT_XOR(ivec3,ivec3)`, `OP_BIT_XOR(ivec4,ivec4)`, `OP_BIT_XOR(uint,uint)`, `OP_BIT_XOR(uvec2,uvec2)`, `OP_BIT_XOR(uvec3,uvec3)`, `OP_BIT_XOR(uvec4,uvec4)`. Godot source: `servers/rendering/shader_language.cpp:1902`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `bit-and-int-int`, 32 input rows
 
@@ -343,7 +343,7 @@ uvec4 probe(uvec4 a, uvec4 b) { return a ^ b; }
 
 The transpiler emits `a.bitNot()`. Rows: `OP_BIT_INVERT(int)`, `OP_BIT_INVERT(ivec2)`, `OP_BIT_INVERT(ivec3)`, `OP_BIT_INVERT(ivec4)`, `OP_BIT_INVERT(uint)`, `OP_BIT_INVERT(uvec2)`, `OP_BIT_INVERT(uvec3)`, `OP_BIT_INVERT(uvec4)`. Godot source: `servers/rendering/shader_language.cpp:1981`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `bit-invert-int`, 16 input rows
 
@@ -469,7 +469,7 @@ uvec4 probe(uvec4 a) { return ~a; }
 
 The transpiler emits `a.shiftLeft(b), a.shiftRight(b)`. Rows: `OP_SHIFT_LEFT(int,int)`, `OP_SHIFT_LEFT(ivec2,int)`, `OP_SHIFT_LEFT(ivec2,ivec2)`, `OP_SHIFT_LEFT(ivec3,int)`, `OP_SHIFT_LEFT(ivec3,ivec3)`, `OP_SHIFT_LEFT(ivec4,int)`, `OP_SHIFT_LEFT(ivec4,ivec4)`, `OP_SHIFT_LEFT(uint,uint)`, `OP_SHIFT_LEFT(uvec2,uint)`, `OP_SHIFT_LEFT(uvec2,uvec2)`, `OP_SHIFT_LEFT(uvec3,uint)`, `OP_SHIFT_LEFT(uvec3,uvec3)`, `OP_SHIFT_LEFT(uvec4,uint)`, `OP_SHIFT_LEFT(uvec4,uvec4)`, `OP_SHIFT_RIGHT(int,int)`, `OP_SHIFT_RIGHT(ivec2,int)`, `OP_SHIFT_RIGHT(ivec2,ivec2)`, `OP_SHIFT_RIGHT(ivec3,int)`, `OP_SHIFT_RIGHT(ivec3,ivec3)`, `OP_SHIFT_RIGHT(ivec4,int)`, `OP_SHIFT_RIGHT(ivec4,ivec4)`, `OP_SHIFT_RIGHT(uint,uint)`, `OP_SHIFT_RIGHT(uvec2,uint)`, `OP_SHIFT_RIGHT(uvec2,uvec2)`, `OP_SHIFT_RIGHT(uvec3,uint)`, `OP_SHIFT_RIGHT(uvec3,uvec3)`, `OP_SHIFT_RIGHT(uvec4,uint)`, `OP_SHIFT_RIGHT(uvec4,uvec4)`. Godot source: `servers/rendering/shader_language.cpp:1755`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `folding-shift-past-31`, 16 input rows
 

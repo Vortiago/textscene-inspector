@@ -18,26 +18,26 @@ canvases draw on WebGPURenderer (#1788).
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `void` | transpiled (`function-vector-array-out`, `function-out-index-read-before-another-out`, `function-inout-index-read-before-an-out`, `function-void-call-discards`, `function-void`, `function-out`, `function-out-before-read`, `function-inout-twice`, `function-inout-read-after-a-writing-argument`, `function-inout-vector-lane`, `function-inout-array-element`, `function-inout-struct-member`, `function-out-struct`, `function-out-array`, `function-void-value`, `function-void-return-value`, `function-void-argument`, `function-out-constant`, `function-out-expression`, `function-out-const-local`, `function-out-swizzle-twice`, `function-out-member-of-call`, `function-inout-member-of-sum`, `function-const-out`, `function-const-inout`, `function-qualifier-twice`) | native | native | `servers/rendering/shader_language.h:210` |
-| `bool` | transpiled (`type-bool`) | native | native | `servers/rendering/shader_language.h:211` |
-| `bvec2` | transpiled (`type-bvec2`) | native | native | `servers/rendering/shader_language.h:212` |
-| `bvec3` | transpiled (`type-bvec3`) | native | native | `servers/rendering/shader_language.h:213` |
-| `bvec4` | transpiled (`type-bvec4`) | native | native | `servers/rendering/shader_language.h:214` |
-| `int` | transpiled (`type-int`) | native | native | `servers/rendering/shader_language.h:215` |
-| `ivec2` | transpiled (`type-ivec2`) | native | native | `servers/rendering/shader_language.h:216` |
-| `ivec3` | transpiled (`type-ivec3`) | native | native | `servers/rendering/shader_language.h:217` |
-| `ivec4` | transpiled (`type-ivec4`) | native | native | `servers/rendering/shader_language.h:218` |
-| `uint` | transpiled (`type-uint`, `folding-negative-int-to-uint`) | native | native | `servers/rendering/shader_language.h:219` |
-| `uvec2` | transpiled (`type-uvec2`) | native | native | `servers/rendering/shader_language.h:220` |
-| `uvec3` | transpiled (`type-uvec3`) | native | native | `servers/rendering/shader_language.h:221` |
-| `uvec4` | transpiled (`type-uvec4`) | native | native | `servers/rendering/shader_language.h:222` |
-| `float` | transpiled (`type-float`) | native | native | `servers/rendering/shader_language.h:223` |
-| `vec2` | transpiled (`type-vec2`) | native | native | `servers/rendering/shader_language.h:224` |
-| `vec3` | transpiled (`type-vec3`) | native | native | `servers/rendering/shader_language.h:225` |
-| `vec4` | transpiled (`type-vec4`) | native | native | `servers/rendering/shader_language.h:226` |
-| `mat2` | transpiled (`type-mat2`) | native | native | `servers/rendering/shader_language.h:227` |
-| `mat3` | transpiled (`type-mat3`) | native | native | `servers/rendering/shader_language.h:228` |
-| `mat4` | transpiled (`type-mat4`) | native | native | `servers/rendering/shader_language.h:229` |
+| `void` | transpiled (`function-vector-array-out`, `function-out-index-read-before-another-out`, `function-inout-index-read-before-an-out`, `function-void-call-discards`, `function-void`, `function-out`, `function-out-before-read`, `function-inout-twice`, `function-inout-read-after-a-writing-argument`, `function-inout-vector-lane`, `function-inout-array-element`, `function-inout-struct-member`, `function-out-struct`, `function-out-array`, `function-void-value`, `function-void-return-value`, `function-void-argument`, `function-out-constant`, `function-out-expression`, `function-out-const-local`, `function-out-swizzle-twice`, `function-out-member-of-call`, `function-inout-member-of-sum`, `function-const-out`, `function-const-inout`, `function-qualifier-twice`) | native | untested (#1788) | `servers/rendering/shader_language.h:210` |
+| `bool` | transpiled (`type-bool`) | native | untested (#1788) | `servers/rendering/shader_language.h:211` |
+| `bvec2` | transpiled (`type-bvec2`) | native | untested (#1788) | `servers/rendering/shader_language.h:212` |
+| `bvec3` | transpiled (`type-bvec3`) | native | untested (#1788) | `servers/rendering/shader_language.h:213` |
+| `bvec4` | transpiled (`type-bvec4`) | native | untested (#1788) | `servers/rendering/shader_language.h:214` |
+| `int` | transpiled (`type-int`) | native | untested (#1788) | `servers/rendering/shader_language.h:215` |
+| `ivec2` | transpiled (`type-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.h:216` |
+| `ivec3` | transpiled (`type-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.h:217` |
+| `ivec4` | transpiled (`type-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.h:218` |
+| `uint` | transpiled (`type-uint`, `folding-negative-int-to-uint`) | native | untested (#1788) | `servers/rendering/shader_language.h:219` |
+| `uvec2` | transpiled (`type-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.h:220` |
+| `uvec3` | transpiled (`type-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.h:221` |
+| `uvec4` | transpiled (`type-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.h:222` |
+| `float` | transpiled (`type-float`) | native | untested (#1788) | `servers/rendering/shader_language.h:223` |
+| `vec2` | transpiled (`type-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.h:224` |
+| `vec3` | transpiled (`type-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.h:225` |
+| `vec4` | transpiled (`type-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.h:226` |
+| `mat2` | transpiled (`type-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.h:227` |
+| `mat3` | transpiled (`type-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.h:228` |
+| `mat4` | transpiled (`type-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.h:229` |
 | `sampler2D` | open, #1829 | | | `servers/rendering/shader_language.h:230` |
 | `isampler2D` | open, #1829 | | | `servers/rendering/shader_language.h:231` |
 | `usampler2D` | open, #1829 | | | `servers/rendering/shader_language.h:232` |
@@ -50,17 +50,17 @@ canvases draw on WebGPURenderer (#1788).
 | `samplerCube` | open, #1829 | | | `servers/rendering/shader_language.h:239` |
 | `samplerCubeArray` | open, #1829 | | | `servers/rendering/shader_language.h:240` |
 | `samplerExternalOES` | open, #1829 | | | `servers/rendering/shader_language.h:241` |
-| `struct type` | transpiled (`statement-struct`, `statement-struct-member-write`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-nested`, `statement-struct-assign`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`, `statement-struct-wrong-argument`, `statement-struct-unknown-member`) | native | native | `servers/rendering/shader_language.h:242` |
+| `struct type` | transpiled (`statement-struct`, `statement-struct-member-write`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-nested`, `statement-struct-assign`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`, `statement-struct-wrong-argument`, `statement-struct-unknown-member`) | native | untested (#1788) | `servers/rendering/shader_language.h:242` |
 
 ## literal
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `float literal` | transpiled (`literal-0`, `literal-1`, `literal-2`, `literal-3`, `literal-4`, `literal-5`, `literal-unfolded`, `literal-overflow`, `fold-sum`, `fold-chain`, `fold-difference-quotient`, `fold-vector-scalar`, `fold-quotient-vector`, `fold-swizzle`, `fold-negated-sum`, `fold-overflow`, `fold-negative-zero`, `fold-division-by-zero`, `fold-chain-add-div`, `fold-chain-div-div`, `fold-chain-mul-sub`, `fold-chain-sub-mul`, `fold-chain-mul-div`, `fold-chain-add-sub`, `fold-chain-div-add`, `fold-chain-div-mul`, `fold-chain-mul-add`, `fold-chain-mul-mul`, `fold-chain-sub-sub`, `fold-chain-add-add`, `fold-mixed-vector`, `fold-mixed-vector-scalar`, `fold-mixed-scalar-vector`, `fold-mixed-swizzle`) | native | native | `servers/rendering/shader_language.h:59` |
-| `int literal` | transpiled (`literal-int`, `literal-int-overflow`, `literal-int-unfolded`) | native | native | `servers/rendering/shader_language.h:60` |
-| `uint literal` | transpiled (`literal-uint`, `literal-uint-overflow`, `literal-uint-negated`) | native | native | `servers/rendering/shader_language.h:61` |
-| `true` | transpiled (`literal-bool`) | native | native | `servers/rendering/shader_language.cpp:284` |
-| `false` | transpiled (`literal-bool-false`) | native | native | `servers/rendering/shader_language.cpp:285` |
+| `float literal` | transpiled (`literal-0`, `literal-1`, `literal-2`, `literal-3`, `literal-4`, `literal-5`, `literal-unfolded`, `literal-overflow`, `fold-sum`, `fold-chain`, `fold-difference-quotient`, `fold-vector-scalar`, `fold-quotient-vector`, `fold-swizzle`, `fold-negated-sum`, `fold-overflow`, `fold-negative-zero`, `fold-division-by-zero`, `fold-chain-add-div`, `fold-chain-div-div`, `fold-chain-mul-sub`, `fold-chain-sub-mul`, `fold-chain-mul-div`, `fold-chain-add-sub`, `fold-chain-div-add`, `fold-chain-div-mul`, `fold-chain-mul-add`, `fold-chain-mul-mul`, `fold-chain-sub-sub`, `fold-chain-add-add`, `fold-mixed-vector`, `fold-mixed-vector-scalar`, `fold-mixed-scalar-vector`, `fold-mixed-swizzle`) | native | untested (#1788) | `servers/rendering/shader_language.h:59` |
+| `int literal` | transpiled (`literal-int`, `literal-int-overflow`, `literal-int-unfolded`) | native | untested (#1788) | `servers/rendering/shader_language.h:60` |
+| `uint literal` | transpiled (`literal-uint`, `literal-uint-overflow`, `literal-uint-negated`) | native | untested (#1788) | `servers/rendering/shader_language.h:61` |
+| `true` | transpiled (`literal-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:284` |
+| `false` | transpiled (`literal-bool-false`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:285` |
 
 ## qualifier
 
@@ -68,12 +68,12 @@ canvases draw on WebGPURenderer (#1788).
 | --- | --- | --- | --- | --- |
 | `flat` | open, #1794 | | | `servers/rendering/shader_language.cpp:324` |
 | `smooth` | open, #1794 | | | `servers/rendering/shader_language.cpp:325` |
-| `lowp` | transpiled (`precision-lowp`) | lowered: dropped: every float is 32-bit | lowered: dropped: every float is 32-bit | `servers/rendering/shader_language.cpp:329` |
-| `mediump` | transpiled (`precision-mediump`) | lowered: dropped: every float is 32-bit | lowered: dropped: every float is 32-bit | `servers/rendering/shader_language.cpp:330` |
-| `highp` | transpiled (`precision-highp`) | lowered: dropped: every float is 32-bit | lowered: dropped: every float is 32-bit | `servers/rendering/shader_language.cpp:331` |
-| `in` | transpiled (`function-in`, `function-in-unwritten-caller`, `function-const-in`) | native | native | `servers/rendering/shader_language.cpp:366` |
-| `out` | transpiled (`function-vector-array-out`, `function-out-index-read-before-another-out`, `function-inout-index-read-before-an-out`, `function-out`, `function-out-before-read`, `function-out-value-function`, `function-out-struct`, `function-out-array`, `function-out-constant`, `function-out-expression`, `function-out-const-local`, `function-out-swizzle-twice`, `function-out-member-of-call`, `function-const-out`, `function-qualifier-twice`) | native | native | `servers/rendering/shader_language.cpp:367` |
-| `inout` | transpiled (`function-inout-index-read-before-an-out`, `function-inout-twice`, `function-inout-in-expression`, `function-inout-read-after-a-writing-argument`, `function-inout-read-after-a-writing-argument-of-a-value-call`, `function-inout-vector-lane`, `function-inout-array-element`, `function-inout-struct-member`, `function-inout-member-of-sum`, `function-const-inout`) | native | native | `servers/rendering/shader_language.cpp:368` |
+| `lowp` | transpiled (`precision-lowp`) | lowered: dropped: every float is 32-bit | untested (#1788) | `servers/rendering/shader_language.cpp:329` |
+| `mediump` | transpiled (`precision-mediump`) | lowered: dropped: every float is 32-bit | untested (#1788) | `servers/rendering/shader_language.cpp:330` |
+| `highp` | transpiled (`precision-highp`) | lowered: dropped: every float is 32-bit | untested (#1788) | `servers/rendering/shader_language.cpp:331` |
+| `in` | transpiled (`function-in`, `function-in-unwritten-caller`, `function-const-in`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:366` |
+| `out` | transpiled (`function-vector-array-out`, `function-out-index-read-before-another-out`, `function-inout-index-read-before-an-out`, `function-out`, `function-out-before-read`, `function-out-value-function`, `function-out-struct`, `function-out-array`, `function-out-constant`, `function-out-expression`, `function-out-const-local`, `function-out-swizzle-twice`, `function-out-member-of-call`, `function-const-out`, `function-qualifier-twice`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:367` |
+| `inout` | transpiled (`function-inout-index-read-before-an-out`, `function-inout-twice`, `function-inout-in-expression`, `function-inout-read-after-a-writing-argument`, `function-inout-read-after-a-writing-argument-of-a-value-call`, `function-inout-vector-lane`, `function-inout-array-element`, `function-inout-struct-member`, `function-inout-member-of-sum`, `function-const-inout`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:368` |
 
 ## shader head
 
@@ -84,13 +84,13 @@ canvases draw on WebGPURenderer (#1788).
 | `varying` | open, #1794 | | | `servers/rendering/shader_language.cpp:337` |
 | `const` | open, #1794 | | | `servers/rendering/shader_language.cpp:338` |
 | `struct` | open, #1794 | | | `servers/rendering/shader_language.cpp:339` |
-| `shader_type` | transpiled (`sky-default`, `sky-fog`, `sky-fog-sun`, `sky-fog-energy-0`, `sky-fog-energy-3`, `sky-fog-affect-0`, `sky-fog-affect-half`, `sky-sun-coloured`, `sky-sun-below`, `sky-sun-energy-0`, `sky-camera-wide`) | native | native | `servers/rendering/shader_language.cpp:340` |
+| `shader_type` | transpiled (`sky-default`, `sky-fog`, `sky-fog-sun`, `sky-fog-energy-0`, `sky-fog-energy-3`, `sky-fog-affect-0`, `sky-fog-affect-half`, `sky-sun-coloured`, `sky-sun-below`, `sky-sun-energy-0`, `sky-camera-wide`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:340` |
 | `render_mode` | open, #1794 | | | `servers/rendering/shader_language.cpp:341` |
 | `stencil_mode` | open, #1794 | | | `servers/rendering/shader_language.cpp:342` |
 | `shader_type spatial` | open, #1794 | | | `servers/rendering/shader_types.cpp:523` |
 | `shader_type canvas_item` | open, #1794 | | | `servers/rendering/shader_types.cpp:524` |
 | `shader_type particles` | open, #1794 | | | `servers/rendering/shader_types.cpp:525` |
-| `shader_type sky` | transpiled (`sky-default`, `sky-fog`, `sky-fog-sun`, `sky-fog-energy-0`, `sky-fog-energy-3`, `sky-fog-affect-0`, `sky-fog-affect-half`, `sky-sun-coloured`, `sky-sun-below`, `sky-sun-energy-0`, `sky-camera-wide`) | native | native | `servers/rendering/shader_types.cpp:526` |
+| `shader_type sky` | transpiled (`sky-default`, `sky-fog`, `sky-fog-sun`, `sky-fog-energy-0`, `sky-fog-energy-3`, `sky-fog-affect-0`, `sky-fog-affect-half`, `sky-sun-coloured`, `sky-sun-below`, `sky-sun-energy-0`, `sky-camera-wide`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:526` |
 | `shader_type fog` | open, #1794 | | | `servers/rendering/shader_types.cpp:527` |
 
 ## uniform
@@ -104,18 +104,18 @@ canvases draw on WebGPURenderer (#1788).
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `if` | transpiled (`statement-if`, `statement-if-else`, `statement-else-if`, `statement-dangling-else`, `statement-if-not-bool`, `statement-if-declares`, `statement-return-in-if`, `statement-return-in-loop`, `statement-return-missing-path`, `statement-discard`) | native | native | `servers/rendering/shader_language.cpp:351` |
-| `else` | transpiled (`statement-if-else`, `statement-else-if`, `statement-dangling-else`) | native | native | `servers/rendering/shader_language.cpp:352` |
-| `for` | transpiled (`loop-for-0-times`, `loop-for-1-times`, `loop-for-9-times`, `loop-for-argument-times`, `loop-for-break-continue`, `loop-for-continue-steps`, `loop-nested-break`, `loop-nested-continue`, `loop-for-scope`, `loop-for-empty-parts`, `loop-float-counter`, `statement-return-in-loop`, `statement-return-in-nested-loop`, `statement-switch-in-loop`, `statement-switch-in-loop-break`, `statement-discard-in-loop`, `statement-array-computed-index`) | native | native | `servers/rendering/shader_language.cpp:353` |
-| `while` | transpiled (`loop-while-0-times`, `loop-while-1-times`, `loop-while-9-times`, `loop-while-argument-times`, `loop-while-break-continue`, `loop-nested-break`, `statement-return-in-nested-loop`) | native | native | `servers/rendering/shader_language.cpp:354` |
-| `do` | transpiled (`loop-do-0-times`, `loop-do-1-times`, `loop-do-9-times`, `loop-do-argument-times`, `loop-do-break-continue`, `loop-do-continue-checks`) | native | native | `servers/rendering/shader_language.cpp:355` |
-| `switch` | transpiled (`statement-return-in-switch`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-scope`, `statement-switch-fall-through-ended`, `statement-switch-default-last`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-scope-ended`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`, `statement-switch-twice`, `statement-switch-float`, `statement-switch-case-variable`, `statement-switch-case-folded`) | native | native | `servers/rendering/shader_language.cpp:356` |
-| `case` | transpiled (`statement-return-in-switch`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-scope`, `statement-switch-fall-through-ended`, `statement-switch-default-last`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-scope-ended`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`, `statement-switch-twice`, `statement-switch-float`, `statement-switch-case-variable`, `statement-switch-case-folded`) | native | native | `servers/rendering/shader_language.cpp:357` |
-| `default` | transpiled (`statement-switch`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-default-last`, `statement-switch-uint-ended`) | native | native | `servers/rendering/shader_language.cpp:358` |
-| `break` | transpiled (`loop-for-break-continue`, `loop-while-break-continue`, `loop-do-break-continue`, `loop-nested-break`, `loop-break-outside`, `loop-for-empty-parts`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-fall-through-ended`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`) | native | native | `servers/rendering/shader_language.cpp:359` |
-| `continue` | transpiled (`loop-for-break-continue`, `loop-while-break-continue`, `loop-do-break-continue`, `loop-do-continue-checks`, `loop-for-continue-steps`, `loop-nested-continue`, `loop-continue-outside`, `statement-switch-in-loop`) | native | native | `servers/rendering/shader_language.cpp:360` |
-| `return` | transpiled (`type-bool`, `type-bvec2`, `type-bvec3`, `type-bvec4`, `type-int`, `type-ivec2`, `type-ivec3`, `type-ivec4`, `type-uint`, `type-uvec2`, `type-uvec3`, `type-uvec4`, `type-float`, `type-vec2`, `type-vec3`, `type-vec4`, `type-mat2`, `type-mat3`, `type-mat4`) | native | native | `servers/rendering/shader_language.cpp:361` |
-| `discard` | transpiled (`statement-discard`, `statement-discard-in-loop`) | native | native | `servers/rendering/shader_language.cpp:362` |
+| `if` | transpiled (`statement-if`, `statement-if-else`, `statement-else-if`, `statement-dangling-else`, `statement-if-not-bool`, `statement-if-declares`, `statement-return-in-if`, `statement-return-in-loop`, `statement-return-missing-path`, `statement-discard`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:351` |
+| `else` | transpiled (`statement-if-else`, `statement-else-if`, `statement-dangling-else`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:352` |
+| `for` | transpiled (`loop-for-0-times`, `loop-for-1-times`, `loop-for-9-times`, `loop-for-argument-times`, `loop-for-break-continue`, `loop-for-continue-steps`, `loop-nested-break`, `loop-nested-continue`, `loop-for-scope`, `loop-for-empty-parts`, `loop-float-counter`, `statement-return-in-loop`, `statement-return-in-nested-loop`, `statement-switch-in-loop`, `statement-switch-in-loop-break`, `statement-discard-in-loop`, `statement-array-computed-index`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:353` |
+| `while` | transpiled (`loop-while-0-times`, `loop-while-1-times`, `loop-while-9-times`, `loop-while-argument-times`, `loop-while-break-continue`, `loop-nested-break`, `statement-return-in-nested-loop`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:354` |
+| `do` | transpiled (`loop-do-0-times`, `loop-do-1-times`, `loop-do-9-times`, `loop-do-argument-times`, `loop-do-break-continue`, `loop-do-continue-checks`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:355` |
+| `switch` | transpiled (`statement-return-in-switch`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-scope`, `statement-switch-fall-through-ended`, `statement-switch-default-last`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-scope-ended`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`, `statement-switch-twice`, `statement-switch-float`, `statement-switch-case-variable`, `statement-switch-case-folded`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:356` |
+| `case` | transpiled (`statement-return-in-switch`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-scope`, `statement-switch-fall-through-ended`, `statement-switch-default-last`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-scope-ended`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`, `statement-switch-twice`, `statement-switch-float`, `statement-switch-case-variable`, `statement-switch-case-folded`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:357` |
+| `default` | transpiled (`statement-switch`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-default-last`, `statement-switch-uint-ended`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:358` |
+| `break` | transpiled (`loop-for-break-continue`, `loop-while-break-continue`, `loop-do-break-continue`, `loop-nested-break`, `loop-break-outside`, `loop-for-empty-parts`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-fall-through-ended`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:359` |
+| `continue` | transpiled (`loop-for-break-continue`, `loop-while-break-continue`, `loop-do-break-continue`, `loop-do-continue-checks`, `loop-for-continue-steps`, `loop-nested-continue`, `loop-continue-outside`, `statement-switch-in-loop`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:360` |
+| `return` | transpiled (`type-bool`, `type-bvec2`, `type-bvec3`, `type-bvec4`, `type-int`, `type-ivec2`, `type-ivec3`, `type-ivec4`, `type-uint`, `type-uvec2`, `type-uvec3`, `type-uvec4`, `type-float`, `type-vec2`, `type-vec3`, `type-vec4`, `type-mat2`, `type-mat3`, `type-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:361` |
+| `discard` | transpiled (`statement-discard`, `statement-discard-in-loop`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:362` |
 
 ## uniform hint
 
@@ -158,1003 +158,1003 @@ canvases draw on WebGPURenderer (#1788).
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `OP_EQUAL(bool,bool)` | transpiled (`folding-equality-of-equalities`, `equal-bool-bool`) | native | native | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(bvec2,bvec2)` | transpiled (`equal-bvec2-bvec2`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(bvec3,bvec3)` | transpiled (`equal-bvec3-bvec3`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(bvec4,bvec4)` | transpiled (`equal-bvec4-bvec4`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(int,int)` | transpiled (`equal-int-int`) | native | native | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(ivec2,ivec2)` | transpiled (`equal-ivec2-ivec2`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(ivec3,ivec3)` | transpiled (`equal-ivec3-ivec3`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(ivec4,ivec4)` | transpiled (`equal-ivec4-ivec4`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(uint,uint)` | transpiled (`equal-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(uvec2,uvec2)` | transpiled (`equal-uvec2-uvec2`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(uvec3,uvec3)` | transpiled (`equal-uvec3-uvec3`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(uvec4,uvec4)` | transpiled (`equal-uvec4-uvec4`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(float,float)` | transpiled (`folding-double-equality`, `equal-float-float`) | native | native | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(vec2,vec2)` | transpiled (`equal-vec2-vec2`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(vec3,vec3)` | transpiled (`equal-vec3-vec3`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(vec4,vec4)` | transpiled (`equal-vec4-vec4`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(mat2,mat2)` | transpiled (`folding-matrix-equality`, `equal-mat2-mat2`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(mat3,mat3)` | transpiled (`equal-mat3-mat3`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(mat4,mat4)` | transpiled (`equal-mat4-mat4`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(bool,bool)` | transpiled (`not-equal-bool-bool`) | native | native | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(bvec2,bvec2)` | transpiled (`not-equal-bvec2-bvec2`) | lowered: any(notEqual(a, b)) | lowered: any(notEqual(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(bvec3,bvec3)` | transpiled (`not-equal-bvec3-bvec3`) | lowered: any(notEqual(a, b)) | lowered: any(notEqual(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(bvec4,bvec4)` | transpiled (`not-equal-bvec4-bvec4`) | lowered: any(notEqual(a, b)) | lowered: any(notEqual(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(int,int)` | transpiled (`not-equal-int-int`) | native | native | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(ivec2,ivec2)` | transpiled (`not-equal-ivec2-ivec2`) | lowered: any(notEqual(a, b)) | lowered: any(notEqual(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(ivec3,ivec3)` | transpiled (`not-equal-ivec3-ivec3`) | lowered: any(notEqual(a, b)) | lowered: any(notEqual(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(ivec4,ivec4)` | transpiled (`not-equal-ivec4-ivec4`) | lowered: any(notEqual(a, b)) | lowered: any(notEqual(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(uint,uint)` | transpiled (`not-equal-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(uvec2,uvec2)` | transpiled (`not-equal-uvec2-uvec2`) | lowered: any(notEqual(a, b)) | lowered: any(notEqual(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(uvec3,uvec3)` | transpiled (`not-equal-uvec3-uvec3`) | lowered: any(notEqual(a, b)) | lowered: any(notEqual(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(uvec4,uvec4)` | transpiled (`not-equal-uvec4-uvec4`) | lowered: any(notEqual(a, b)) | lowered: any(notEqual(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(float,float)` | transpiled (`not-equal-float-float`) | native | native | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(vec2,vec2)` | transpiled (`not-equal-vec2-vec2`) | lowered: any(notEqual(a, b)) | lowered: any(notEqual(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(vec3,vec3)` | transpiled (`not-equal-vec3-vec3`) | lowered: any(notEqual(a, b)) | lowered: any(notEqual(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(vec4,vec4)` | transpiled (`not-equal-vec4-vec4`) | lowered: any(notEqual(a, b)) | lowered: any(notEqual(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(mat2,mat2)` | transpiled (`not-equal-mat2-mat2`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(mat3,mat3)` | transpiled (`not-equal-mat3-mat3`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1565` |
-| `OP_NOT_EQUAL(mat4,mat4)` | transpiled (`not-equal-mat4-mat4`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1565` |
-| `OP_LESS(int,int)` | transpiled (`less-int-int`) | native | native | `servers/rendering/shader_language.cpp:1576` |
-| `OP_LESS(uint,uint)` | transpiled (`less-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1576` |
-| `OP_LESS(float,float)` | transpiled (`less-float-float`) | native | native | `servers/rendering/shader_language.cpp:1576` |
-| `OP_LESS_EQUAL(int,int)` | transpiled (`less-equal-int-int`) | native | native | `servers/rendering/shader_language.cpp:1576` |
-| `OP_LESS_EQUAL(uint,uint)` | transpiled (`less-equal-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1576` |
-| `OP_LESS_EQUAL(float,float)` | transpiled (`less-equal-float-float`) | native | native | `servers/rendering/shader_language.cpp:1576` |
-| `OP_GREATER(int,int)` | transpiled (`greater-int-int`) | native | native | `servers/rendering/shader_language.cpp:1576` |
-| `OP_GREATER(uint,uint)` | transpiled (`greater-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1576` |
-| `OP_GREATER(float,float)` | transpiled (`greater-float-float`) | native | native | `servers/rendering/shader_language.cpp:1576` |
-| `OP_GREATER_EQUAL(int,int)` | transpiled (`greater-equal-int-int`) | native | native | `servers/rendering/shader_language.cpp:1576` |
-| `OP_GREATER_EQUAL(uint,uint)` | transpiled (`greater-equal-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1576` |
-| `OP_GREATER_EQUAL(float,float)` | transpiled (`greater-equal-float-float`) | native | native | `servers/rendering/shader_language.cpp:1576` |
-| `OP_AND(bool,bool)` | transpiled (`branch-and`, `and-bool-bool`) | lowered: select | lowered: select | `servers/rendering/shader_language.cpp:1591` |
-| `OP_OR(bool,bool)` | transpiled (`branch-or`, `or-bool-bool`) | lowered: select | lowered: select | `servers/rendering/shader_language.cpp:1591` |
-| `OP_NOT(bool)` | transpiled (`not-bool`) | native | native | `servers/rendering/shader_language.cpp:1604` |
-| `OP_NEGATE(int)` | transpiled (`negation-text-decrement`, `negate-int`) | native | native | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(ivec2)` | transpiled (`negate-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(ivec3)` | transpiled (`negate-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(ivec4)` | transpiled (`negate-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(uint)` | transpiled (`negate-uint`) | native | native | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(uvec2)` | transpiled (`negate-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(uvec3)` | transpiled (`negate-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(uvec4)` | transpiled (`negate-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(float)` | transpiled (`negate-float`, `negate-nested-scalar`, `negate-nested-triple`, `negate-nested-swizzle`, `negate-nested-sum`, `negate-nested-constant`, `unbracketed-negated`, `negation-text-element`) | native | native | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(vec2)` | transpiled (`negate-vec2`, `negate-nested-vector`, `negate-nested-constructor`, `negate-nested-constant-vector`, `negation-text-swizzle`) | native | native | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(vec3)` | transpiled (`negate-vec3`) | native | native | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(vec4)` | transpiled (`negate-vec4`) | native | native | `servers/rendering/shader_language.cpp:1614` |
-| `OP_ADD(int,int)` | transpiled (`add-int-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(int,ivec2)` | transpiled (`add-int-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(int,ivec3)` | transpiled (`add-int-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(int,ivec4)` | transpiled (`add-int-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(ivec2,int)` | transpiled (`add-ivec2-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(ivec2,ivec2)` | transpiled (`add-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(ivec3,int)` | transpiled (`add-ivec3-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(ivec3,ivec3)` | transpiled (`add-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(ivec4,int)` | transpiled (`add-ivec4-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(ivec4,ivec4)` | transpiled (`add-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(uint,uint)` | transpiled (`add-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(uint,uvec2)` | transpiled (`add-uint-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(uint,uvec3)` | transpiled (`add-uint-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(uint,uvec4)` | transpiled (`add-uint-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(uvec2,uint)` | transpiled (`add-uvec2-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(uvec2,uvec2)` | transpiled (`add-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(uvec3,uint)` | transpiled (`add-uvec3-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(uvec3,uvec3)` | transpiled (`add-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(uvec4,uint)` | transpiled (`add-uvec4-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(uvec4,uvec4)` | transpiled (`add-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(float,float)` | transpiled (`add-float-float`, `folding-bool-to-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(float,vec2)` | transpiled (`add-float-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(float,vec3)` | transpiled (`add-float-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(float,vec4)` | transpiled (`add-float-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(float,mat2)` | transpiled (`add-float-mat2`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(float,mat3)` | transpiled (`add-float-mat3`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(float,mat4)` | transpiled (`add-float-mat4`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(vec2,float)` | transpiled (`add-vec2-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(vec2,vec2)` | transpiled (`add-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(vec3,float)` | transpiled (`add-vec3-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(vec3,vec3)` | transpiled (`add-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(vec4,float)` | transpiled (`add-vec4-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(vec4,vec4)` | transpiled (`add-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(mat2,float)` | transpiled (`add-mat2-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(mat2,mat2)` | transpiled (`add-mat2-mat2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(mat3,float)` | transpiled (`add-mat3-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(mat3,mat3)` | transpiled (`add-mat3-mat3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(mat4,float)` | transpiled (`add-mat4-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(mat4,mat4)` | transpiled (`add-mat4-mat4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(int,int)` | transpiled (`sub-int-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(int,ivec2)` | transpiled (`sub-int-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(int,ivec3)` | transpiled (`sub-int-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(int,ivec4)` | transpiled (`sub-int-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(ivec2,int)` | transpiled (`sub-ivec2-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(ivec2,ivec2)` | transpiled (`sub-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(ivec3,int)` | transpiled (`sub-ivec3-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(ivec3,ivec3)` | transpiled (`sub-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(ivec4,int)` | transpiled (`sub-ivec4-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(ivec4,ivec4)` | transpiled (`sub-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(uint,uint)` | transpiled (`sub-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(uint,uvec2)` | transpiled (`sub-uint-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(uint,uvec3)` | transpiled (`sub-uint-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(uint,uvec4)` | transpiled (`sub-uint-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(uvec2,uint)` | transpiled (`sub-uvec2-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(uvec2,uvec2)` | transpiled (`sub-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(uvec3,uint)` | transpiled (`sub-uvec3-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(uvec3,uvec3)` | transpiled (`sub-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(uvec4,uint)` | transpiled (`sub-uvec4-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(uvec4,uvec4)` | transpiled (`sub-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(float,float)` | transpiled (`sub-float-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(float,vec2)` | transpiled (`sub-float-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(float,vec3)` | transpiled (`sub-float-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(float,vec4)` | transpiled (`sub-float-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(float,mat2)` | transpiled (`sub-float-mat2`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(float,mat3)` | transpiled (`sub-float-mat3`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(float,mat4)` | transpiled (`sub-float-mat4`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(vec2,float)` | transpiled (`sub-vec2-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(vec2,vec2)` | transpiled (`sub-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(vec3,float)` | transpiled (`sub-vec3-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(vec3,vec3)` | transpiled (`sub-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(vec4,float)` | transpiled (`sub-vec4-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(vec4,vec4)` | transpiled (`sub-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(mat2,float)` | transpiled (`sub-mat2-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(mat2,mat2)` | transpiled (`sub-mat2-mat2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(mat3,float)` | transpiled (`sub-mat3-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(mat3,mat3)` | transpiled (`sub-mat3-mat3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(mat4,float)` | transpiled (`sub-mat4-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(mat4,mat4)` | transpiled (`sub-mat4-mat4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(int,int)` | transpiled (`mul-int-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(int,ivec2)` | transpiled (`mul-int-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(int,ivec3)` | transpiled (`mul-int-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(int,ivec4)` | transpiled (`mul-int-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(ivec2,int)` | transpiled (`mul-ivec2-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(ivec2,ivec2)` | transpiled (`mul-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(ivec3,int)` | transpiled (`mul-ivec3-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(ivec3,ivec3)` | transpiled (`mul-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(ivec4,int)` | transpiled (`mul-ivec4-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(ivec4,ivec4)` | transpiled (`mul-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(uint,uint)` | transpiled (`mul-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(uint,uvec2)` | transpiled (`mul-uint-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(uint,uvec3)` | transpiled (`mul-uint-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(uint,uvec4)` | transpiled (`mul-uint-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(uvec2,uint)` | transpiled (`mul-uvec2-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(uvec2,uvec2)` | transpiled (`mul-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(uvec3,uint)` | transpiled (`mul-uvec3-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(uvec3,uvec3)` | transpiled (`mul-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(uvec4,uint)` | transpiled (`mul-uvec4-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(uvec4,uvec4)` | transpiled (`mul-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(float,float)` | transpiled (`mul-float-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(float,vec2)` | transpiled (`mul-float-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(float,vec3)` | transpiled (`mul-float-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(float,vec4)` | transpiled (`mul-float-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(float,mat2)` | transpiled (`mul-float-mat2`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(float,mat3)` | transpiled (`mul-float-mat3`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(float,mat4)` | transpiled (`mul-float-mat4`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(vec2,float)` | transpiled (`mul-vec2-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(vec2,vec2)` | transpiled (`mul-vec2-vec2`, `unbracketed-operator-before`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(vec2,mat2)` | transpiled (`mul-vec2-mat2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(vec3,float)` | transpiled (`mul-vec3-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(vec3,vec3)` | transpiled (`mul-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(vec3,mat3)` | transpiled (`mul-vec3-mat3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(vec4,float)` | transpiled (`mul-vec4-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(vec4,vec4)` | transpiled (`mul-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(vec4,mat4)` | transpiled (`mul-vec4-mat4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(mat2,float)` | transpiled (`mul-mat2-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(mat2,vec2)` | transpiled (`mul-mat2-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(mat2,mat2)` | transpiled (`mul-mat2-mat2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(mat3,float)` | transpiled (`mul-mat3-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(mat3,vec3)` | transpiled (`folding-matrix-times-vector`, `mul-mat3-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(mat3,mat3)` | transpiled (`mul-mat3-mat3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(mat4,float)` | transpiled (`mul-mat4-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(mat4,vec4)` | transpiled (`ends-godot-matrix-times-vector`, `mul-mat4-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(mat4,mat4)` | transpiled (`mul-mat4-mat4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(int,int)` | transpiled (`ends-godot-least-int-over-minus-one`, `div-int-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(int,ivec2)` | transpiled (`div-int-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(int,ivec3)` | transpiled (`div-int-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(int,ivec4)` | transpiled (`div-int-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(ivec2,int)` | transpiled (`div-ivec2-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(ivec2,ivec2)` | transpiled (`div-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(ivec3,int)` | transpiled (`div-ivec3-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(ivec3,ivec3)` | transpiled (`div-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(ivec4,int)` | transpiled (`div-ivec4-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(ivec4,ivec4)` | transpiled (`div-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(uint,uint)` | transpiled (`div-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(uint,uvec2)` | transpiled (`div-uint-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(uint,uvec3)` | transpiled (`div-uint-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(uint,uvec4)` | transpiled (`div-uint-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(uvec2,uint)` | transpiled (`div-uvec2-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(uvec2,uvec2)` | transpiled (`folding-uint-division-by-zero`, `div-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(uvec3,uint)` | transpiled (`div-uvec3-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(uvec3,uvec3)` | transpiled (`div-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(uvec4,uint)` | transpiled (`div-uvec4-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(uvec4,uvec4)` | transpiled (`div-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(float,float)` | transpiled (`div-float-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(float,vec2)` | transpiled (`div-float-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(float,vec3)` | transpiled (`div-float-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(float,vec4)` | transpiled (`div-float-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(float,mat2)` | transpiled (`div-float-mat2`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(float,mat3)` | transpiled (`div-float-mat3`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(float,mat4)` | transpiled (`div-float-mat4`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(vec2,float)` | transpiled (`div-vec2-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(vec2,vec2)` | transpiled (`div-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(vec3,float)` | transpiled (`div-vec3-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(vec3,vec3)` | transpiled (`div-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(vec4,float)` | transpiled (`div-vec4-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(vec4,vec4)` | transpiled (`div-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(mat2,float)` | transpiled (`div-mat2-float`) | lowered: product with the reciprocal | lowered: product with the reciprocal | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(mat2,mat2)` | transpiled (`div-mat2-mat2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(mat3,float)` | transpiled (`div-mat3-float`) | lowered: product with the reciprocal | lowered: product with the reciprocal | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(mat3,mat3)` | transpiled (`div-mat3-mat3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(mat4,float)` | transpiled (`div-mat4-float`) | lowered: product with the reciprocal | lowered: product with the reciprocal | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(mat4,mat4)` | transpiled (`div-mat4-mat4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MOD(int,int)` | transpiled (`mod-int-int`) | native | native | `servers/rendering/shader_language.cpp:1693` |
-| `OP_MOD(ivec2,int)` | transpiled (`mod-ivec2-int`) | native | native | `servers/rendering/shader_language.cpp:1693` |
-| `OP_MOD(ivec2,ivec2)` | transpiled (`mod-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1693` |
-| `OP_MOD(ivec3,int)` | transpiled (`mod-ivec3-int`) | native | native | `servers/rendering/shader_language.cpp:1693` |
-| `OP_MOD(ivec3,ivec3)` | transpiled (`mod-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1693` |
-| `OP_MOD(ivec4,int)` | transpiled (`mod-ivec4-int`) | native | native | `servers/rendering/shader_language.cpp:1693` |
-| `OP_MOD(ivec4,ivec4)` | transpiled (`mod-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1693` |
-| `OP_MOD(uint,uint)` | transpiled (`mod-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1693` |
-| `OP_MOD(uvec2,uint)` | transpiled (`mod-uvec2-uint`) | native | native | `servers/rendering/shader_language.cpp:1693` |
-| `OP_MOD(uvec2,uvec2)` | transpiled (`mod-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1693` |
-| `OP_MOD(uvec3,uint)` | transpiled (`mod-uvec3-uint`) | native | native | `servers/rendering/shader_language.cpp:1693` |
-| `OP_MOD(uvec3,uvec3)` | transpiled (`mod-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1693` |
-| `OP_MOD(uvec4,uint)` | transpiled (`mod-uvec4-uint`) | native | native | `servers/rendering/shader_language.cpp:1693` |
-| `OP_MOD(uvec4,uvec4)` | transpiled (`mod-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1693` |
-| `OP_SHIFT_LEFT(int,int)` | transpiled (`shift-left-int-int`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_LEFT(ivec2,int)` | transpiled (`shift-left-ivec2-int`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_LEFT(ivec2,ivec2)` | transpiled (`shift-left-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_LEFT(ivec3,int)` | transpiled (`shift-left-ivec3-int`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_LEFT(ivec3,ivec3)` | transpiled (`shift-left-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_LEFT(ivec4,int)` | transpiled (`shift-left-ivec4-int`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_LEFT(ivec4,ivec4)` | transpiled (`shift-left-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_LEFT(uint,uint)` | transpiled (`folding-shift-past-31`, `shift-left-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_LEFT(uvec2,uint)` | transpiled (`shift-left-uvec2-uint`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_LEFT(uvec2,uvec2)` | transpiled (`shift-left-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_LEFT(uvec3,uint)` | transpiled (`shift-left-uvec3-uint`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_LEFT(uvec3,uvec3)` | transpiled (`shift-left-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_LEFT(uvec4,uint)` | transpiled (`shift-left-uvec4-uint`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_LEFT(uvec4,uvec4)` | transpiled (`shift-left-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_RIGHT(int,int)` | transpiled (`shift-right-int-int`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_RIGHT(ivec2,int)` | transpiled (`folding-shift-negative`, `shift-right-ivec2-int`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_RIGHT(ivec2,ivec2)` | transpiled (`shift-right-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_RIGHT(ivec3,int)` | transpiled (`shift-right-ivec3-int`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_RIGHT(ivec3,ivec3)` | transpiled (`shift-right-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_RIGHT(ivec4,int)` | transpiled (`shift-right-ivec4-int`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_RIGHT(ivec4,ivec4)` | transpiled (`shift-right-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_RIGHT(uint,uint)` | transpiled (`shift-right-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_RIGHT(uvec2,uint)` | transpiled (`shift-right-uvec2-uint`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_RIGHT(uvec2,uvec2)` | transpiled (`shift-right-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_RIGHT(uvec3,uint)` | transpiled (`shift-right-uvec3-uint`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_RIGHT(uvec3,uvec3)` | transpiled (`shift-right-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_RIGHT(uvec4,uint)` | transpiled (`shift-right-uvec4-uint`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_RIGHT(uvec4,uvec4)` | transpiled (`shift-right-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN(bool,bool)` | transpiled (`unbracketed-condition`, `assign-bool-bool`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(bvec2,bvec2)` | transpiled (`assign-bvec2-bvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(bvec3,bvec3)` | transpiled (`assign-bvec3-bvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(bvec4,bvec4)` | transpiled (`assign-bvec4-bvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(int,int)` | transpiled (`unbracketed-chain`, `assign-int-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(ivec2,ivec2)` | transpiled (`assign-ivec2-ivec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(ivec3,ivec3)` | transpiled (`assign-ivec3-ivec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(ivec4,ivec4)` | transpiled (`assign-ivec4-ivec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(uint,uint)` | transpiled (`assign-uint-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(uvec2,uvec2)` | transpiled (`assign-uvec2-uvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(uvec3,uvec3)` | transpiled (`assign-uvec3-uvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(uvec4,uvec4)` | transpiled (`assign-uvec4-uvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(float,float)` | transpiled (`assign-float-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(vec2,vec2)` | transpiled (`unbracketed-operator-after`, `assign-vec2-vec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(vec3,vec3)` | transpiled (`assign-vec3-vec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(vec4,vec4)` | transpiled (`assign-vec4-vec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(mat2,mat2)` | transpiled (`assign-mat2-mat2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(mat3,mat3)` | transpiled (`assign-mat3-mat3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN(mat4,mat4)` | transpiled (`assign-mat4-mat4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1810` |
-| `OP_ASSIGN_ADD(int,int)` | transpiled (`assign-add-int-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(ivec2,int)` | transpiled (`assign-add-ivec2-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(ivec2,ivec2)` | transpiled (`assign-add-ivec2-ivec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(ivec3,int)` | transpiled (`assign-add-ivec3-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(ivec3,ivec3)` | transpiled (`assign-add-ivec3-ivec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(ivec4,int)` | transpiled (`assign-add-ivec4-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(ivec4,ivec4)` | transpiled (`assign-add-ivec4-ivec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(uint,uint)` | transpiled (`assign-add-uint-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(uvec2,uint)` | transpiled (`assign-add-uvec2-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(uvec2,uvec2)` | transpiled (`unbracketed-compound`, `assign-add-uvec2-uvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(uvec3,uint)` | transpiled (`assign-add-uvec3-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(uvec3,uvec3)` | transpiled (`assign-add-uvec3-uvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(uvec4,uint)` | transpiled (`assign-add-uvec4-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(uvec4,uvec4)` | transpiled (`assign-add-uvec4-uvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(float,float)` | transpiled (`assign-add-float-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(vec2,float)` | transpiled (`assign-add-vec2-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(vec2,vec2)` | transpiled (`assign-add-vec2-vec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(vec3,float)` | transpiled (`assign-add-vec3-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(vec3,vec3)` | transpiled (`assign-add-vec3-vec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(vec4,float)` | transpiled (`assign-add-vec4-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(vec4,vec4)` | transpiled (`assign-add-vec4-vec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(mat2,float)` | transpiled (`assign-add-mat2-float`) | lowered: written to the argument value, column by column | lowered: written to the argument value, column by column | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(mat2,mat2)` | transpiled (`assign-add-mat2-mat2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(mat3,float)` | transpiled (`assign-add-mat3-float`) | lowered: written to the argument value, column by column | lowered: written to the argument value, column by column | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(mat3,mat3)` | transpiled (`assign-add-mat3-mat3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(mat4,float)` | transpiled (`assign-add-mat4-float`) | lowered: written to the argument value, column by column | lowered: written to the argument value, column by column | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(mat4,mat4)` | transpiled (`assign-add-mat4-mat4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(int,int)` | transpiled (`assign-sub-int-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(ivec2,int)` | transpiled (`assign-sub-ivec2-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(ivec2,ivec2)` | transpiled (`assign-sub-ivec2-ivec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(ivec3,int)` | transpiled (`assign-sub-ivec3-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(ivec3,ivec3)` | transpiled (`assign-sub-ivec3-ivec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(ivec4,int)` | transpiled (`assign-sub-ivec4-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(ivec4,ivec4)` | transpiled (`assign-sub-ivec4-ivec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(uint,uint)` | transpiled (`assign-sub-uint-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(uvec2,uint)` | transpiled (`assign-sub-uvec2-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(uvec2,uvec2)` | transpiled (`assign-sub-uvec2-uvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(uvec3,uint)` | transpiled (`assign-sub-uvec3-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(uvec3,uvec3)` | transpiled (`assign-sub-uvec3-uvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(uvec4,uint)` | transpiled (`assign-sub-uvec4-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(uvec4,uvec4)` | transpiled (`assign-sub-uvec4-uvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(float,float)` | transpiled (`assign-sub-float-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(vec2,float)` | transpiled (`assign-sub-vec2-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(vec2,vec2)` | transpiled (`assign-sub-vec2-vec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(vec3,float)` | transpiled (`assign-sub-vec3-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(vec3,vec3)` | transpiled (`assign-sub-vec3-vec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(vec4,float)` | transpiled (`assign-sub-vec4-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(vec4,vec4)` | transpiled (`assign-sub-vec4-vec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(mat2,float)` | transpiled (`assign-sub-mat2-float`) | lowered: written to the argument value, column by column | lowered: written to the argument value, column by column | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(mat2,mat2)` | transpiled (`assign-sub-mat2-mat2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(mat3,float)` | transpiled (`assign-sub-mat3-float`) | lowered: written to the argument value, column by column | lowered: written to the argument value, column by column | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(mat3,mat3)` | transpiled (`assign-sub-mat3-mat3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(mat4,float)` | transpiled (`assign-sub-mat4-float`) | lowered: written to the argument value, column by column | lowered: written to the argument value, column by column | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_SUB(mat4,mat4)` | transpiled (`assign-sub-mat4-mat4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(int,int)` | transpiled (`assign-mul-int-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(ivec2,int)` | transpiled (`assign-swizzle-compound`, `assign-mul-ivec2-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(ivec2,ivec2)` | transpiled (`assign-mul-ivec2-ivec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(ivec3,int)` | transpiled (`assign-mul-ivec3-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(ivec3,ivec3)` | transpiled (`assign-mul-ivec3-ivec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(ivec4,int)` | transpiled (`assign-mul-ivec4-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(ivec4,ivec4)` | transpiled (`assign-mul-ivec4-ivec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(uint,uint)` | transpiled (`assign-mul-uint-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(uvec2,uint)` | transpiled (`assign-mul-uvec2-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(uvec2,uvec2)` | transpiled (`assign-mul-uvec2-uvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(uvec3,uint)` | transpiled (`assign-mul-uvec3-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(uvec3,uvec3)` | transpiled (`assign-mul-uvec3-uvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(uvec4,uint)` | transpiled (`assign-mul-uvec4-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(uvec4,uvec4)` | transpiled (`assign-mul-uvec4-uvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(float,float)` | transpiled (`assign-mul-float-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(vec2,float)` | transpiled (`assign-mul-vec2-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(vec2,vec2)` | transpiled (`assign-mul-vec2-vec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(vec2,mat2)` | transpiled (`assign-mul-vec2-mat2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(vec3,float)` | transpiled (`assign-mul-vec3-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(vec3,vec3)` | transpiled (`assign-mul-vec3-vec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(vec3,mat3)` | transpiled (`assign-mul-vec3-mat3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(vec4,float)` | transpiled (`assign-mul-vec4-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(vec4,vec4)` | transpiled (`assign-mul-vec4-vec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(vec4,mat4)` | transpiled (`assign-mul-vec4-mat4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(mat2,float)` | transpiled (`assign-mul-mat2-float`) | lowered: written to the argument value, column by column | lowered: written to the argument value, column by column | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(mat2,mat2)` | transpiled (`assign-mul-mat2-mat2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(mat3,float)` | transpiled (`assign-mul-mat3-float`) | lowered: written to the argument value, column by column | lowered: written to the argument value, column by column | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(mat3,mat3)` | transpiled (`assign-mul-mat3-mat3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(mat4,float)` | transpiled (`assign-mul-mat4-float`) | lowered: written to the argument value, column by column | lowered: written to the argument value, column by column | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(mat4,mat4)` | transpiled (`assign-mul-mat4-mat4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(int,int)` | transpiled (`assign-div-int-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(ivec2,int)` | transpiled (`assign-div-ivec2-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(ivec2,ivec2)` | transpiled (`assign-div-ivec2-ivec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(ivec3,int)` | transpiled (`assign-div-ivec3-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(ivec3,ivec3)` | transpiled (`assign-div-ivec3-ivec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(ivec4,int)` | transpiled (`assign-div-ivec4-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(ivec4,ivec4)` | transpiled (`assign-div-ivec4-ivec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(uint,uint)` | transpiled (`assign-div-uint-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(uvec2,uint)` | transpiled (`assign-div-uvec2-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(uvec2,uvec2)` | transpiled (`assign-div-uvec2-uvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(uvec3,uint)` | transpiled (`assign-div-uvec3-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(uvec3,uvec3)` | transpiled (`assign-div-uvec3-uvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(uvec4,uint)` | transpiled (`assign-div-uvec4-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(uvec4,uvec4)` | transpiled (`assign-div-uvec4-uvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(float,float)` | transpiled (`assign-div-float-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(vec2,float)` | transpiled (`assign-div-vec2-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(vec2,vec2)` | transpiled (`assign-div-vec2-vec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(vec3,float)` | transpiled (`assign-div-vec3-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(vec3,vec3)` | transpiled (`assign-div-vec3-vec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(vec4,float)` | transpiled (`assign-div-vec4-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(vec4,vec4)` | transpiled (`assign-div-vec4-vec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(mat2,float)` | transpiled (`assign-div-mat2-float`) | lowered: written to the argument value, product with the reciprocal | lowered: written to the argument value, product with the reciprocal | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(mat2,mat2)` | transpiled (`assign-div-mat2-mat2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(mat3,float)` | transpiled (`assign-div-mat3-float`) | lowered: written to the argument value, product with the reciprocal | lowered: written to the argument value, product with the reciprocal | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(mat3,mat3)` | transpiled (`assign-div-mat3-mat3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(mat4,float)` | transpiled (`assign-div-mat4-float`) | lowered: written to the argument value, product with the reciprocal | lowered: written to the argument value, product with the reciprocal | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_DIV(mat4,mat4)` | transpiled (`assign-div-mat4-mat4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MOD(int,int)` | transpiled (`assign-mod-int-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1693` |
-| `OP_ASSIGN_MOD(ivec2,int)` | transpiled (`assign-mod-ivec2-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1693` |
-| `OP_ASSIGN_MOD(ivec2,ivec2)` | transpiled (`assign-mod-ivec2-ivec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1693` |
-| `OP_ASSIGN_MOD(ivec3,int)` | transpiled (`assign-mod-ivec3-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1693` |
-| `OP_ASSIGN_MOD(ivec3,ivec3)` | transpiled (`assign-mod-ivec3-ivec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1693` |
-| `OP_ASSIGN_MOD(ivec4,int)` | transpiled (`assign-mod-ivec4-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1693` |
-| `OP_ASSIGN_MOD(ivec4,ivec4)` | transpiled (`assign-mod-ivec4-ivec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1693` |
-| `OP_ASSIGN_MOD(uint,uint)` | transpiled (`assign-mod-uint-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1693` |
-| `OP_ASSIGN_MOD(uvec2,uint)` | transpiled (`assign-mod-uvec2-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1693` |
-| `OP_ASSIGN_MOD(uvec2,uvec2)` | transpiled (`assign-mod-uvec2-uvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1693` |
-| `OP_ASSIGN_MOD(uvec3,uint)` | transpiled (`assign-mod-uvec3-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1693` |
-| `OP_ASSIGN_MOD(uvec3,uvec3)` | transpiled (`assign-mod-uvec3-uvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1693` |
-| `OP_ASSIGN_MOD(uvec4,uint)` | transpiled (`assign-mod-uvec4-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1693` |
-| `OP_ASSIGN_MOD(uvec4,uvec4)` | transpiled (`assign-mod-uvec4-uvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1693` |
-| `OP_ASSIGN_SHIFT_LEFT(int,int)` | transpiled (`assign-shift-left-int-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_LEFT(ivec2,int)` | transpiled (`assign-shift-left-ivec2-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_LEFT(ivec2,ivec2)` | transpiled (`assign-shift-left-ivec2-ivec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_LEFT(ivec3,int)` | transpiled (`assign-shift-left-ivec3-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_LEFT(ivec3,ivec3)` | transpiled (`assign-shift-left-ivec3-ivec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_LEFT(ivec4,int)` | transpiled (`assign-shift-left-ivec4-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_LEFT(ivec4,ivec4)` | transpiled (`assign-shift-left-ivec4-ivec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_LEFT(uint,uint)` | transpiled (`assign-shift-left-uint-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_LEFT(uvec2,uint)` | transpiled (`assign-shift-left-uvec2-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_LEFT(uvec2,uvec2)` | transpiled (`assign-shift-left-uvec2-uvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_LEFT(uvec3,uint)` | transpiled (`assign-shift-left-uvec3-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_LEFT(uvec3,uvec3)` | transpiled (`assign-shift-left-uvec3-uvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_LEFT(uvec4,uint)` | transpiled (`assign-shift-left-uvec4-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_LEFT(uvec4,uvec4)` | transpiled (`assign-shift-left-uvec4-uvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_RIGHT(int,int)` | transpiled (`assign-shift-right-int-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_RIGHT(ivec2,int)` | transpiled (`assign-shift-right-ivec2-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_RIGHT(ivec2,ivec2)` | transpiled (`assign-shift-right-ivec2-ivec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_RIGHT(ivec3,int)` | transpiled (`assign-shift-right-ivec3-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_RIGHT(ivec3,ivec3)` | transpiled (`assign-shift-right-ivec3-ivec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_RIGHT(ivec4,int)` | transpiled (`assign-shift-right-ivec4-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_RIGHT(ivec4,ivec4)` | transpiled (`assign-shift-right-ivec4-ivec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_RIGHT(uint,uint)` | transpiled (`assign-shift-right-uint-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_RIGHT(uvec2,uint)` | transpiled (`assign-shift-right-uvec2-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_RIGHT(uvec2,uvec2)` | transpiled (`assign-shift-right-uvec2-uvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_RIGHT(uvec3,uint)` | transpiled (`assign-shift-right-uvec3-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_RIGHT(uvec3,uvec3)` | transpiled (`assign-shift-right-uvec3-uvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_RIGHT(uvec4,uint)` | transpiled (`assign-shift-right-uvec4-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_SHIFT_RIGHT(uvec4,uvec4)` | transpiled (`assign-shift-right-uvec4-uvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1755` |
-| `OP_ASSIGN_BIT_AND(int,int)` | transpiled (`assign-bit-and-int-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_AND(ivec2,int)` | transpiled (`assign-bit-and-ivec2-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_AND(ivec2,ivec2)` | transpiled (`assign-bit-and-ivec2-ivec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_AND(ivec3,int)` | transpiled (`assign-bit-and-ivec3-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_AND(ivec3,ivec3)` | transpiled (`assign-bit-and-ivec3-ivec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_AND(ivec4,int)` | transpiled (`assign-bit-and-ivec4-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_AND(ivec4,ivec4)` | transpiled (`assign-bit-and-ivec4-ivec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_AND(uint,uint)` | transpiled (`assign-bit-and-uint-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_AND(uvec2,uint)` | transpiled (`assign-bit-and-uvec2-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_AND(uvec2,uvec2)` | transpiled (`assign-bit-and-uvec2-uvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_AND(uvec3,uint)` | transpiled (`assign-bit-and-uvec3-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_AND(uvec3,uvec3)` | transpiled (`assign-bit-and-uvec3-uvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_AND(uvec4,uint)` | transpiled (`assign-bit-and-uvec4-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_AND(uvec4,uvec4)` | transpiled (`assign-bit-and-uvec4-uvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_OR(int,int)` | transpiled (`assign-bit-or-int-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_OR(ivec2,int)` | transpiled (`assign-bit-or-ivec2-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_OR(ivec2,ivec2)` | transpiled (`assign-bit-or-ivec2-ivec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_OR(ivec3,int)` | transpiled (`assign-bit-or-ivec3-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_OR(ivec3,ivec3)` | transpiled (`assign-bit-or-ivec3-ivec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_OR(ivec4,int)` | transpiled (`assign-bit-or-ivec4-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_OR(ivec4,ivec4)` | transpiled (`assign-bit-or-ivec4-ivec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_OR(uint,uint)` | transpiled (`assign-bit-or-uint-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_OR(uvec2,uint)` | transpiled (`assign-bit-or-uvec2-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_OR(uvec2,uvec2)` | transpiled (`assign-bit-or-uvec2-uvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_OR(uvec3,uint)` | transpiled (`assign-bit-or-uvec3-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_OR(uvec3,uvec3)` | transpiled (`assign-bit-or-uvec3-uvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_OR(uvec4,uint)` | transpiled (`assign-bit-or-uvec4-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_OR(uvec4,uvec4)` | transpiled (`assign-bit-or-uvec4-uvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_XOR(int,int)` | transpiled (`assign-bit-xor-int-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_XOR(ivec2,int)` | transpiled (`assign-bit-xor-ivec2-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_XOR(ivec2,ivec2)` | transpiled (`assign-bit-xor-ivec2-ivec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_XOR(ivec3,int)` | transpiled (`assign-bit-xor-ivec3-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_XOR(ivec3,ivec3)` | transpiled (`assign-bit-xor-ivec3-ivec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_XOR(ivec4,int)` | transpiled (`assign-bit-xor-ivec4-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_XOR(ivec4,ivec4)` | transpiled (`assign-bit-xor-ivec4-ivec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_XOR(uint,uint)` | transpiled (`assign-bit-xor-uint-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_XOR(uvec2,uint)` | transpiled (`assign-bit-xor-uvec2-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_XOR(uvec2,uvec2)` | transpiled (`assign-bit-xor-uvec2-uvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_XOR(uvec3,uint)` | transpiled (`assign-bit-xor-uvec3-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_XOR(uvec3,uvec3)` | transpiled (`assign-bit-xor-uvec3-uvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_XOR(uvec4,uint)` | transpiled (`assign-bit-xor-uvec4-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_ASSIGN_BIT_XOR(uvec4,uvec4)` | transpiled (`assign-bit-xor-uvec4-uvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_AND(int,int)` | transpiled (`bit-and-int-int`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_AND(ivec2,ivec2)` | transpiled (`bit-and-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_AND(ivec3,ivec3)` | transpiled (`bit-and-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_AND(ivec4,ivec4)` | transpiled (`bit-and-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_AND(uint,uint)` | transpiled (`bit-and-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_AND(uvec2,uvec2)` | transpiled (`bit-and-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_AND(uvec3,uvec3)` | transpiled (`bit-and-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_AND(uvec4,uvec4)` | transpiled (`bit-and-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_OR(int,int)` | transpiled (`bit-or-int-int`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_OR(ivec2,ivec2)` | transpiled (`bit-or-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_OR(ivec3,ivec3)` | transpiled (`bit-or-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_OR(ivec4,ivec4)` | transpiled (`bit-or-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_OR(uint,uint)` | transpiled (`bit-or-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_OR(uvec2,uvec2)` | transpiled (`bit-or-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_OR(uvec3,uvec3)` | transpiled (`bit-or-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_OR(uvec4,uvec4)` | transpiled (`bit-or-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_XOR(int,int)` | transpiled (`bit-xor-int-int`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_XOR(ivec2,ivec2)` | transpiled (`bit-xor-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_XOR(ivec3,ivec3)` | transpiled (`bit-xor-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_XOR(ivec4,ivec4)` | transpiled (`bit-xor-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_XOR(uint,uint)` | transpiled (`bit-xor-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_XOR(uvec2,uvec2)` | transpiled (`bit-xor-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_XOR(uvec3,uvec3)` | transpiled (`bit-xor-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_XOR(uvec4,uvec4)` | transpiled (`bit-xor-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1902` |
-| `OP_BIT_INVERT(int)` | transpiled (`bit-invert-int`) | native | native | `servers/rendering/shader_language.cpp:1981` |
-| `OP_BIT_INVERT(ivec2)` | transpiled (`bit-invert-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1981` |
-| `OP_BIT_INVERT(ivec3)` | transpiled (`bit-invert-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1981` |
-| `OP_BIT_INVERT(ivec4)` | transpiled (`bit-invert-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1981` |
-| `OP_BIT_INVERT(uint)` | transpiled (`bit-invert-uint`) | native | native | `servers/rendering/shader_language.cpp:1981` |
-| `OP_BIT_INVERT(uvec2)` | transpiled (`bit-invert-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1981` |
-| `OP_BIT_INVERT(uvec3)` | transpiled (`bit-invert-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1981` |
-| `OP_BIT_INVERT(uvec4)` | transpiled (`bit-invert-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1981` |
-| `OP_INCREMENT(int)` | transpiled (`increment-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_INCREMENT(ivec2)` | transpiled (`increment-ivec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_INCREMENT(ivec3)` | transpiled (`increment-ivec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_INCREMENT(ivec4)` | transpiled (`increment-ivec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_INCREMENT(uint)` | transpiled (`increment-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_INCREMENT(uvec2)` | transpiled (`increment-uvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_INCREMENT(uvec3)` | transpiled (`increment-uvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_INCREMENT(uvec4)` | transpiled (`increment-uvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_INCREMENT(float)` | transpiled (`unbracketed-swizzle-of-step`, `increment-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_INCREMENT(vec2)` | transpiled (`increment-vec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_INCREMENT(vec3)` | transpiled (`increment-vec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_INCREMENT(vec4)` | transpiled (`increment-vec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_DECREMENT(int)` | transpiled (`decrement-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_DECREMENT(ivec2)` | transpiled (`decrement-ivec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_DECREMENT(ivec3)` | transpiled (`decrement-ivec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_DECREMENT(ivec4)` | transpiled (`decrement-ivec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_DECREMENT(uint)` | transpiled (`decrement-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_DECREMENT(uvec2)` | transpiled (`decrement-uvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_DECREMENT(uvec3)` | transpiled (`decrement-uvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_DECREMENT(uvec4)` | transpiled (`decrement-uvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_DECREMENT(float)` | transpiled (`decrement-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_DECREMENT(vec2)` | transpiled (`decrement-vec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_DECREMENT(vec3)` | transpiled (`decrement-vec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_DECREMENT(vec4)` | transpiled (`decrement-vec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_SELECT_IF(bool,bool,bool)` | transpiled (`select-if-bool-bool-bool`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,bvec2,bvec2)` | transpiled (`select-if-bool-bvec2-bvec2`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,bvec3,bvec3)` | transpiled (`select-if-bool-bvec3-bvec3`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,bvec4,bvec4)` | transpiled (`select-if-bool-bvec4-bvec4`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,int,int)` | transpiled (`branch-select`, `folding-select`, `select-if-bool-int-int`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,ivec2,ivec2)` | transpiled (`ternary-negated-int`, `select-if-bool-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,ivec3,ivec3)` | transpiled (`select-if-bool-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,ivec4,ivec4)` | transpiled (`select-if-bool-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,uint,uint)` | transpiled (`select-if-bool-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,uvec2,uvec2)` | transpiled (`select-if-bool-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,uvec3,uvec3)` | transpiled (`select-if-bool-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,uvec4,uvec4)` | transpiled (`select-if-bool-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,float,float)` | transpiled (`ternary-double-negation`, `ternary-nested`, `select-if-bool-float-float`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,vec2,vec2)` | transpiled (`ternary-negated-vector`, `ternary-negated-else`, `select-if-bool-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,vec3,vec3)` | transpiled (`select-if-bool-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,vec4,vec4)` | transpiled (`select-if-bool-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,mat2,mat2)` | transpiled (`select-if-bool-mat2-mat2`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,mat3,mat3)` | transpiled (`select-if-bool-mat3-mat3`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,mat4,mat4)` | transpiled (`select-if-bool-mat4-mat4`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_ELSE` | transpiled (`ternary-negated-vector`, `ternary-negated-else`, `ternary-double-negation`, `ternary-negated-int`, `ternary-nested`) | native | native | `servers/rendering/shader_language.cpp:1558` |
-| `OP_POST_INCREMENT(int)` | transpiled (`unbracketed-post-step`, `post-increment-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_INCREMENT(ivec2)` | transpiled (`post-increment-ivec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_INCREMENT(ivec3)` | transpiled (`post-increment-ivec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_INCREMENT(ivec4)` | transpiled (`post-increment-ivec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_INCREMENT(uint)` | transpiled (`post-increment-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_INCREMENT(uvec2)` | transpiled (`post-increment-uvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_INCREMENT(uvec3)` | transpiled (`post-increment-uvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_INCREMENT(uvec4)` | transpiled (`post-increment-uvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_INCREMENT(float)` | transpiled (`assign-swizzle-step`, `post-increment-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_INCREMENT(vec2)` | transpiled (`post-increment-vec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_INCREMENT(vec3)` | transpiled (`post-increment-vec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_INCREMENT(vec4)` | transpiled (`post-increment-vec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_DECREMENT(int)` | transpiled (`post-decrement-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_DECREMENT(ivec2)` | transpiled (`post-decrement-ivec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_DECREMENT(ivec3)` | transpiled (`post-decrement-ivec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_DECREMENT(ivec4)` | transpiled (`post-decrement-ivec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_DECREMENT(uint)` | transpiled (`post-decrement-uint`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_DECREMENT(uvec2)` | transpiled (`post-decrement-uvec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_DECREMENT(uvec3)` | transpiled (`post-decrement-uvec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_DECREMENT(uvec4)` | transpiled (`post-decrement-uvec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_DECREMENT(float)` | transpiled (`post-decrement-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_DECREMENT(vec2)` | transpiled (`post-decrement-vec2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_DECREMENT(vec3)` | transpiled (`post-decrement-vec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_POST_DECREMENT(vec4)` | transpiled (`post-decrement-vec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
-| `OP_CALL` | transpiled (`function-one-place`, `function-two-places`, `function-nested`, `function-from-a-function`, `function-in-a-loop`, `function-in-a-condition`, `function-no-arguments`, `function-vector`, `function-matrix`, `function-constant-converted`, `function-argument-named-as-function`, `function-early-return-in-loop`, `function-early-return-in-branch`, `function-value-call-as-statement`, `function-struct-call-as-statement`, `function-struct-return-in-branch`, `function-array-return-in-loop`, `function-vector-array-result`, `function-vector-array-out`, `function-vector-array-argument`, `function-array-call-as-statement`, `function-out-index-read-before-another-out`, `function-inout-index-read-before-an-out`, `function-void-call-discards`, `function-void`, `function-in`, `function-in-unwritten-caller`, `function-out`, `function-out-before-read`, `function-out-value-function`, `function-inout-twice`, `function-inout-in-expression`, `function-inout-read-after-a-writing-argument`, `function-inout-read-after-a-writing-argument-of-a-value-call`, `function-inout-vector-lane`, `function-inout-array-element`, `function-inout-struct-member`, `function-out-struct`, `function-out-array`, `function-const`, `function-const-of-constant`, `function-const-in`, `function-overload-by-type`, `function-overload-by-count`, `function-struct-argument`, `function-struct-return`, `function-struct-return-member`, `function-array-argument`, `function-array-argument-type-size`, `function-array-argument-constructed`, `function-array-argument-unchanged`, `function-array-return`, `function-struct-array-argument`, `function-recursion`, `function-probe-recursion`, `function-later-function`, `function-unknown-function`, `function-too-few`, `function-too-many`, `function-wrong-type`, `function-overload-constant`, `function-void-value`, `function-void-return-value`, `function-void-argument`, `function-out-constant`, `function-out-expression`, `function-out-const-local`, `function-out-swizzle-twice`, `function-out-member-of-call`, `function-inout-member-of-sum`, `function-const-out`, `function-const-inout`, `function-const-write`, `function-qualifier-twice`, `function-same-overload`, `function-overload-by-return`, `function-local-named-as-function`, `function-function-as-value`, `function-wrong-struct`, `function-wrong-array-size`, `function-array-return-size`, `function-const-return`) | native | native | `servers/rendering/shader_language.cpp:1558` |
-| `OP_CONSTRUCT` | transpiled (`call-ivec2-bvec2`, `call-ivec2-ivec2`, `call-ivec2-uvec2`, `call-ivec2-vec2`, `call-vec2-bvec2`, `call-vec2-ivec2`, `call-vec2-uvec2`, `call-vec2-vec2`, `call-uvec2-bvec2`, `call-uvec2-ivec2`, `call-uvec2-uvec2`, `call-uvec2-vec2`, `call-bvec2-bvec2`, `call-bvec2-ivec2`, `call-bvec2-uvec2`, `call-bvec2-vec2`, `call-ivec3-bvec3`, `call-ivec3-ivec3`, `call-ivec3-uvec3`, `call-ivec3-vec3`, `call-vec3-bvec3`, `call-vec3-ivec3`, `call-vec3-uvec3`, `call-vec3-vec3`, `call-uvec3-bvec3`, `call-uvec3-ivec3`, `call-uvec3-uvec3`, `call-uvec3-vec3`, `call-bvec3-bvec3`, `call-bvec3-ivec3`, `call-bvec3-uvec3`, `call-bvec3-vec3`, `call-ivec4-bvec4`, `call-ivec4-ivec4`, `call-ivec4-uvec4`, `call-ivec4-vec4`, `call-vec4-bvec4`, `call-vec4-ivec4`, `call-vec4-uvec4`, `call-vec4-vec4`, `call-uvec4-bvec4`, `call-uvec4-ivec4`, `call-uvec4-uvec4`, `call-uvec4-vec4`, `call-bvec4-bvec4`, `call-bvec4-ivec4`, `call-bvec4-uvec4`, `call-bvec4-vec4`, `call-mat2-mat3`, `call-mat2-mat4`, `call-mat3-mat2`, `call-mat3-mat4`, `call-mat4-mat2`, `call-mat4-mat3`, `construct-bvec2-bool`, `construct-bvec2-bool-bool`, `construct-bvec3-bool`, `construct-bvec3-bool-bool-bool`, `construct-bvec3-bvec2-bool`, `construct-bvec3-bool-bvec2`, `construct-bvec4-bool`, `construct-bvec4-bool-bool-bool-bool`, `construct-bvec4-bool-bvec2-bool`, `construct-bvec4-bvec2-bool-bool`, `construct-bvec4-bool-bool-bvec2`, `construct-bvec4-bool-bvec3`, `construct-bvec4-bvec3-bool`, `construct-bvec4-bvec2-bvec2`, `construct-ivec2-int`, `construct-ivec2-int-int`, `construct-ivec3-int`, `construct-ivec3-int-int-int`, `construct-ivec3-ivec2-int`, `construct-ivec3-int-ivec2`, `construct-ivec4-int`, `construct-ivec4-int-int-int-int`, `construct-ivec4-int-ivec2-int`, `construct-ivec4-ivec2-int-int`, `construct-ivec4-int-int-ivec2`, `construct-ivec4-int-ivec3`, `construct-ivec4-ivec3-int`, `construct-ivec4-ivec2-ivec2`, `construct-uvec2-uint`, `construct-uvec2-uint-uint`, `construct-uvec3-uint`, `construct-uvec3-uint-uint-uint`, `construct-uvec3-uvec2-uint`, `construct-uvec3-uint-uvec2`, `construct-uvec4-uint`, `construct-uvec4-uint-uint-uint-uint`, `construct-uvec4-uint-uvec2-uint`, `construct-uvec4-uvec2-uint-uint`, `construct-uvec4-uint-uint-uvec2`, `construct-uvec4-uint-uvec3`, `construct-uvec4-uvec3-uint`, `construct-uvec4-uvec2-uvec2`, `construct-mat2-vec2-vec2`, `construct-mat3-vec3-vec3-vec3`, `construct-mat4-vec4-vec4-vec4-vec4`, `construct-mat2-float`, `construct-mat3-float`, `construct-mat4-float`, `construct-int-bool`, `construct-int-int`, `construct-int-uint`, `construct-int-float`, `construct-float-bool`, `construct-float-int`, `construct-float-uint`, `construct-float-float`, `construct-uint-bool`, `construct-uint-int`, `construct-uint-uint`, `construct-uint-float`, `construct-bool-bool`, `construct-bool-int`, `construct-bool-uint`, `construct-bool-float`) | native | native | `servers/rendering/shader_language.cpp:1558` |
-| `OP_STRUCT` | transpiled (`statement-struct`, `statement-struct-member-write`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-nested`, `statement-struct-assign`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`, `statement-struct-wrong-argument`, `statement-struct-unknown-member`) | native | native | `servers/rendering/shader_language.cpp:1558` |
-| `OP_INDEX` | transpiled (`index-vector-read`, `index-vector-constant`, `index-uint-index`, `index-matrix-column`, `index-matrix-lane`, `index-vector-write`, `index-matrix-write`, `index-lane-write`, `index-member-write`, `index-folded-read`, `index-folded-write`, `index-folded-past-end`, `index-folded-write-past-end`, `index-write-before-value`, `index-compound-before-value`) | native | native | `servers/rendering/shader_language.cpp:1558` |
-| `OP_EMPTY` | transpiled (`statement-empty`) | native | native | `servers/rendering/shader_language.cpp:1558` |
+| `OP_EQUAL(bool,bool)` | transpiled (`folding-equality-of-equalities`, `equal-bool-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(bvec2,bvec2)` | transpiled (`equal-bvec2-bvec2`) | lowered: all(equal(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(bvec3,bvec3)` | transpiled (`equal-bvec3-bvec3`) | lowered: all(equal(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(bvec4,bvec4)` | transpiled (`equal-bvec4-bvec4`) | lowered: all(equal(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(int,int)` | transpiled (`equal-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(ivec2,ivec2)` | transpiled (`equal-ivec2-ivec2`) | lowered: all(equal(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(ivec3,ivec3)` | transpiled (`equal-ivec3-ivec3`) | lowered: all(equal(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(ivec4,ivec4)` | transpiled (`equal-ivec4-ivec4`) | lowered: all(equal(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(uint,uint)` | transpiled (`equal-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(uvec2,uvec2)` | transpiled (`equal-uvec2-uvec2`) | lowered: all(equal(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(uvec3,uvec3)` | transpiled (`equal-uvec3-uvec3`) | lowered: all(equal(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(uvec4,uvec4)` | transpiled (`equal-uvec4-uvec4`) | lowered: all(equal(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(float,float)` | transpiled (`folding-double-equality`, `equal-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(vec2,vec2)` | transpiled (`equal-vec2-vec2`) | lowered: all(equal(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(vec3,vec3)` | transpiled (`equal-vec3-vec3`) | lowered: all(equal(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(vec4,vec4)` | transpiled (`equal-vec4-vec4`) | lowered: all(equal(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(mat2,mat2)` | transpiled (`folding-matrix-equality`, `equal-mat2-mat2`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(mat3,mat3)` | transpiled (`equal-mat3-mat3`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(mat4,mat4)` | transpiled (`equal-mat4-mat4`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(bool,bool)` | transpiled (`not-equal-bool-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(bvec2,bvec2)` | transpiled (`not-equal-bvec2-bvec2`) | lowered: any(notEqual(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(bvec3,bvec3)` | transpiled (`not-equal-bvec3-bvec3`) | lowered: any(notEqual(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(bvec4,bvec4)` | transpiled (`not-equal-bvec4-bvec4`) | lowered: any(notEqual(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(int,int)` | transpiled (`not-equal-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(ivec2,ivec2)` | transpiled (`not-equal-ivec2-ivec2`) | lowered: any(notEqual(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(ivec3,ivec3)` | transpiled (`not-equal-ivec3-ivec3`) | lowered: any(notEqual(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(ivec4,ivec4)` | transpiled (`not-equal-ivec4-ivec4`) | lowered: any(notEqual(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(uint,uint)` | transpiled (`not-equal-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(uvec2,uvec2)` | transpiled (`not-equal-uvec2-uvec2`) | lowered: any(notEqual(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(uvec3,uvec3)` | transpiled (`not-equal-uvec3-uvec3`) | lowered: any(notEqual(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(uvec4,uvec4)` | transpiled (`not-equal-uvec4-uvec4`) | lowered: any(notEqual(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(float,float)` | transpiled (`not-equal-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(vec2,vec2)` | transpiled (`not-equal-vec2-vec2`) | lowered: any(notEqual(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(vec3,vec3)` | transpiled (`not-equal-vec3-vec3`) | lowered: any(notEqual(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(vec4,vec4)` | transpiled (`not-equal-vec4-vec4`) | lowered: any(notEqual(a, b)) | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(mat2,mat2)` | transpiled (`not-equal-mat2-mat2`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(mat3,mat3)` | transpiled (`not-equal-mat3-mat3`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_NOT_EQUAL(mat4,mat4)` | transpiled (`not-equal-mat4-mat4`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1565` |
+| `OP_LESS(int,int)` | transpiled (`less-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1576` |
+| `OP_LESS(uint,uint)` | transpiled (`less-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1576` |
+| `OP_LESS(float,float)` | transpiled (`less-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1576` |
+| `OP_LESS_EQUAL(int,int)` | transpiled (`less-equal-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1576` |
+| `OP_LESS_EQUAL(uint,uint)` | transpiled (`less-equal-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1576` |
+| `OP_LESS_EQUAL(float,float)` | transpiled (`less-equal-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1576` |
+| `OP_GREATER(int,int)` | transpiled (`greater-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1576` |
+| `OP_GREATER(uint,uint)` | transpiled (`greater-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1576` |
+| `OP_GREATER(float,float)` | transpiled (`greater-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1576` |
+| `OP_GREATER_EQUAL(int,int)` | transpiled (`greater-equal-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1576` |
+| `OP_GREATER_EQUAL(uint,uint)` | transpiled (`greater-equal-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1576` |
+| `OP_GREATER_EQUAL(float,float)` | transpiled (`greater-equal-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1576` |
+| `OP_AND(bool,bool)` | transpiled (`branch-and`, `and-bool-bool`) | lowered: select | untested (#1788) | `servers/rendering/shader_language.cpp:1591` |
+| `OP_OR(bool,bool)` | transpiled (`branch-or`, `or-bool-bool`) | lowered: select | untested (#1788) | `servers/rendering/shader_language.cpp:1591` |
+| `OP_NOT(bool)` | transpiled (`not-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1604` |
+| `OP_NEGATE(int)` | transpiled (`negation-text-decrement`, `negate-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(ivec2)` | transpiled (`negate-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(ivec3)` | transpiled (`negate-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(ivec4)` | transpiled (`negate-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(uint)` | transpiled (`negate-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(uvec2)` | transpiled (`negate-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(uvec3)` | transpiled (`negate-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(uvec4)` | transpiled (`negate-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(float)` | transpiled (`negate-float`, `negate-nested-scalar`, `negate-nested-triple`, `negate-nested-swizzle`, `negate-nested-sum`, `negate-nested-constant`, `unbracketed-negated`, `negation-text-element`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(vec2)` | transpiled (`negate-vec2`, `negate-nested-vector`, `negate-nested-constructor`, `negate-nested-constant-vector`, `negation-text-swizzle`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(vec3)` | transpiled (`negate-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(vec4)` | transpiled (`negate-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_ADD(int,int)` | transpiled (`add-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(int,ivec2)` | transpiled (`add-int-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(int,ivec3)` | transpiled (`add-int-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(int,ivec4)` | transpiled (`add-int-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(ivec2,int)` | transpiled (`add-ivec2-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(ivec2,ivec2)` | transpiled (`add-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(ivec3,int)` | transpiled (`add-ivec3-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(ivec3,ivec3)` | transpiled (`add-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(ivec4,int)` | transpiled (`add-ivec4-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(ivec4,ivec4)` | transpiled (`add-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(uint,uint)` | transpiled (`add-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(uint,uvec2)` | transpiled (`add-uint-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(uint,uvec3)` | transpiled (`add-uint-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(uint,uvec4)` | transpiled (`add-uint-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(uvec2,uint)` | transpiled (`add-uvec2-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(uvec2,uvec2)` | transpiled (`add-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(uvec3,uint)` | transpiled (`add-uvec3-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(uvec3,uvec3)` | transpiled (`add-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(uvec4,uint)` | transpiled (`add-uvec4-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(uvec4,uvec4)` | transpiled (`add-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(float,float)` | transpiled (`add-float-float`, `folding-bool-to-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(float,vec2)` | transpiled (`add-float-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(float,vec3)` | transpiled (`add-float-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(float,vec4)` | transpiled (`add-float-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(float,mat2)` | transpiled (`add-float-mat2`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(float,mat3)` | transpiled (`add-float-mat3`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(float,mat4)` | transpiled (`add-float-mat4`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(vec2,float)` | transpiled (`add-vec2-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(vec2,vec2)` | transpiled (`add-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(vec3,float)` | transpiled (`add-vec3-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(vec3,vec3)` | transpiled (`add-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(vec4,float)` | transpiled (`add-vec4-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(vec4,vec4)` | transpiled (`add-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(mat2,float)` | transpiled (`add-mat2-float`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(mat2,mat2)` | transpiled (`add-mat2-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(mat3,float)` | transpiled (`add-mat3-float`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(mat3,mat3)` | transpiled (`add-mat3-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(mat4,float)` | transpiled (`add-mat4-float`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(mat4,mat4)` | transpiled (`add-mat4-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(int,int)` | transpiled (`sub-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(int,ivec2)` | transpiled (`sub-int-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(int,ivec3)` | transpiled (`sub-int-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(int,ivec4)` | transpiled (`sub-int-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(ivec2,int)` | transpiled (`sub-ivec2-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(ivec2,ivec2)` | transpiled (`sub-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(ivec3,int)` | transpiled (`sub-ivec3-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(ivec3,ivec3)` | transpiled (`sub-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(ivec4,int)` | transpiled (`sub-ivec4-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(ivec4,ivec4)` | transpiled (`sub-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(uint,uint)` | transpiled (`sub-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(uint,uvec2)` | transpiled (`sub-uint-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(uint,uvec3)` | transpiled (`sub-uint-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(uint,uvec4)` | transpiled (`sub-uint-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(uvec2,uint)` | transpiled (`sub-uvec2-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(uvec2,uvec2)` | transpiled (`sub-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(uvec3,uint)` | transpiled (`sub-uvec3-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(uvec3,uvec3)` | transpiled (`sub-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(uvec4,uint)` | transpiled (`sub-uvec4-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(uvec4,uvec4)` | transpiled (`sub-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(float,float)` | transpiled (`sub-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(float,vec2)` | transpiled (`sub-float-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(float,vec3)` | transpiled (`sub-float-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(float,vec4)` | transpiled (`sub-float-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(float,mat2)` | transpiled (`sub-float-mat2`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(float,mat3)` | transpiled (`sub-float-mat3`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(float,mat4)` | transpiled (`sub-float-mat4`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(vec2,float)` | transpiled (`sub-vec2-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(vec2,vec2)` | transpiled (`sub-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(vec3,float)` | transpiled (`sub-vec3-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(vec3,vec3)` | transpiled (`sub-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(vec4,float)` | transpiled (`sub-vec4-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(vec4,vec4)` | transpiled (`sub-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(mat2,float)` | transpiled (`sub-mat2-float`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(mat2,mat2)` | transpiled (`sub-mat2-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(mat3,float)` | transpiled (`sub-mat3-float`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(mat3,mat3)` | transpiled (`sub-mat3-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(mat4,float)` | transpiled (`sub-mat4-float`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(mat4,mat4)` | transpiled (`sub-mat4-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(int,int)` | transpiled (`mul-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(int,ivec2)` | transpiled (`mul-int-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(int,ivec3)` | transpiled (`mul-int-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(int,ivec4)` | transpiled (`mul-int-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(ivec2,int)` | transpiled (`mul-ivec2-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(ivec2,ivec2)` | transpiled (`mul-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(ivec3,int)` | transpiled (`mul-ivec3-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(ivec3,ivec3)` | transpiled (`mul-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(ivec4,int)` | transpiled (`mul-ivec4-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(ivec4,ivec4)` | transpiled (`mul-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(uint,uint)` | transpiled (`mul-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(uint,uvec2)` | transpiled (`mul-uint-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(uint,uvec3)` | transpiled (`mul-uint-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(uint,uvec4)` | transpiled (`mul-uint-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(uvec2,uint)` | transpiled (`mul-uvec2-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(uvec2,uvec2)` | transpiled (`mul-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(uvec3,uint)` | transpiled (`mul-uvec3-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(uvec3,uvec3)` | transpiled (`mul-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(uvec4,uint)` | transpiled (`mul-uvec4-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(uvec4,uvec4)` | transpiled (`mul-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(float,float)` | transpiled (`mul-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(float,vec2)` | transpiled (`mul-float-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(float,vec3)` | transpiled (`mul-float-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(float,vec4)` | transpiled (`mul-float-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(float,mat2)` | transpiled (`mul-float-mat2`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(float,mat3)` | transpiled (`mul-float-mat3`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(float,mat4)` | transpiled (`mul-float-mat4`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(vec2,float)` | transpiled (`mul-vec2-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(vec2,vec2)` | transpiled (`mul-vec2-vec2`, `unbracketed-operator-before`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(vec2,mat2)` | transpiled (`mul-vec2-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(vec3,float)` | transpiled (`mul-vec3-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(vec3,vec3)` | transpiled (`mul-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(vec3,mat3)` | transpiled (`mul-vec3-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(vec4,float)` | transpiled (`mul-vec4-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(vec4,vec4)` | transpiled (`mul-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(vec4,mat4)` | transpiled (`mul-vec4-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(mat2,float)` | transpiled (`mul-mat2-float`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(mat2,vec2)` | transpiled (`mul-mat2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(mat2,mat2)` | transpiled (`mul-mat2-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(mat3,float)` | transpiled (`mul-mat3-float`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(mat3,vec3)` | transpiled (`folding-matrix-times-vector`, `mul-mat3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(mat3,mat3)` | transpiled (`mul-mat3-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(mat4,float)` | transpiled (`mul-mat4-float`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(mat4,vec4)` | transpiled (`ends-godot-matrix-times-vector`, `mul-mat4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(mat4,mat4)` | transpiled (`mul-mat4-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(int,int)` | transpiled (`ends-godot-least-int-over-minus-one`, `div-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(int,ivec2)` | transpiled (`div-int-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(int,ivec3)` | transpiled (`div-int-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(int,ivec4)` | transpiled (`div-int-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(ivec2,int)` | transpiled (`div-ivec2-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(ivec2,ivec2)` | transpiled (`div-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(ivec3,int)` | transpiled (`div-ivec3-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(ivec3,ivec3)` | transpiled (`div-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(ivec4,int)` | transpiled (`div-ivec4-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(ivec4,ivec4)` | transpiled (`div-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(uint,uint)` | transpiled (`div-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(uint,uvec2)` | transpiled (`div-uint-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(uint,uvec3)` | transpiled (`div-uint-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(uint,uvec4)` | transpiled (`div-uint-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(uvec2,uint)` | transpiled (`div-uvec2-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(uvec2,uvec2)` | transpiled (`folding-uint-division-by-zero`, `div-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(uvec3,uint)` | transpiled (`div-uvec3-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(uvec3,uvec3)` | transpiled (`div-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(uvec4,uint)` | transpiled (`div-uvec4-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(uvec4,uvec4)` | transpiled (`div-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(float,float)` | transpiled (`div-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(float,vec2)` | transpiled (`div-float-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(float,vec3)` | transpiled (`div-float-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(float,vec4)` | transpiled (`div-float-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(float,mat2)` | transpiled (`div-float-mat2`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(float,mat3)` | transpiled (`div-float-mat3`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(float,mat4)` | transpiled (`div-float-mat4`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(vec2,float)` | transpiled (`div-vec2-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(vec2,vec2)` | transpiled (`div-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(vec3,float)` | transpiled (`div-vec3-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(vec3,vec3)` | transpiled (`div-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(vec4,float)` | transpiled (`div-vec4-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(vec4,vec4)` | transpiled (`div-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(mat2,float)` | transpiled (`div-mat2-float`) | lowered: product with the reciprocal | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(mat2,mat2)` | transpiled (`div-mat2-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(mat3,float)` | transpiled (`div-mat3-float`) | lowered: product with the reciprocal | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(mat3,mat3)` | transpiled (`div-mat3-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(mat4,float)` | transpiled (`div-mat4-float`) | lowered: product with the reciprocal | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(mat4,mat4)` | transpiled (`div-mat4-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MOD(int,int)` | transpiled (`mod-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_MOD(ivec2,int)` | transpiled (`mod-ivec2-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_MOD(ivec2,ivec2)` | transpiled (`mod-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_MOD(ivec3,int)` | transpiled (`mod-ivec3-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_MOD(ivec3,ivec3)` | transpiled (`mod-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_MOD(ivec4,int)` | transpiled (`mod-ivec4-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_MOD(ivec4,ivec4)` | transpiled (`mod-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_MOD(uint,uint)` | transpiled (`mod-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_MOD(uvec2,uint)` | transpiled (`mod-uvec2-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_MOD(uvec2,uvec2)` | transpiled (`mod-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_MOD(uvec3,uint)` | transpiled (`mod-uvec3-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_MOD(uvec3,uvec3)` | transpiled (`mod-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_MOD(uvec4,uint)` | transpiled (`mod-uvec4-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_MOD(uvec4,uvec4)` | transpiled (`mod-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_SHIFT_LEFT(int,int)` | transpiled (`shift-left-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_LEFT(ivec2,int)` | transpiled (`shift-left-ivec2-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_LEFT(ivec2,ivec2)` | transpiled (`shift-left-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_LEFT(ivec3,int)` | transpiled (`shift-left-ivec3-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_LEFT(ivec3,ivec3)` | transpiled (`shift-left-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_LEFT(ivec4,int)` | transpiled (`shift-left-ivec4-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_LEFT(ivec4,ivec4)` | transpiled (`shift-left-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_LEFT(uint,uint)` | transpiled (`folding-shift-past-31`, `shift-left-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_LEFT(uvec2,uint)` | transpiled (`shift-left-uvec2-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_LEFT(uvec2,uvec2)` | transpiled (`shift-left-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_LEFT(uvec3,uint)` | transpiled (`shift-left-uvec3-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_LEFT(uvec3,uvec3)` | transpiled (`shift-left-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_LEFT(uvec4,uint)` | transpiled (`shift-left-uvec4-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_LEFT(uvec4,uvec4)` | transpiled (`shift-left-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_RIGHT(int,int)` | transpiled (`shift-right-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_RIGHT(ivec2,int)` | transpiled (`folding-shift-negative`, `shift-right-ivec2-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_RIGHT(ivec2,ivec2)` | transpiled (`shift-right-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_RIGHT(ivec3,int)` | transpiled (`shift-right-ivec3-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_RIGHT(ivec3,ivec3)` | transpiled (`shift-right-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_RIGHT(ivec4,int)` | transpiled (`shift-right-ivec4-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_RIGHT(ivec4,ivec4)` | transpiled (`shift-right-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_RIGHT(uint,uint)` | transpiled (`shift-right-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_RIGHT(uvec2,uint)` | transpiled (`shift-right-uvec2-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_RIGHT(uvec2,uvec2)` | transpiled (`shift-right-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_RIGHT(uvec3,uint)` | transpiled (`shift-right-uvec3-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_RIGHT(uvec3,uvec3)` | transpiled (`shift-right-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_RIGHT(uvec4,uint)` | transpiled (`shift-right-uvec4-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_RIGHT(uvec4,uvec4)` | transpiled (`shift-right-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN(bool,bool)` | transpiled (`unbracketed-condition`, `assign-bool-bool`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(bvec2,bvec2)` | transpiled (`assign-bvec2-bvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(bvec3,bvec3)` | transpiled (`assign-bvec3-bvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(bvec4,bvec4)` | transpiled (`assign-bvec4-bvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(int,int)` | transpiled (`unbracketed-chain`, `assign-int-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(ivec2,ivec2)` | transpiled (`assign-ivec2-ivec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(ivec3,ivec3)` | transpiled (`assign-ivec3-ivec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(ivec4,ivec4)` | transpiled (`assign-ivec4-ivec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(uint,uint)` | transpiled (`assign-uint-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(uvec2,uvec2)` | transpiled (`assign-uvec2-uvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(uvec3,uvec3)` | transpiled (`assign-uvec3-uvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(uvec4,uvec4)` | transpiled (`assign-uvec4-uvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(float,float)` | transpiled (`assign-float-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(vec2,vec2)` | transpiled (`unbracketed-operator-after`, `assign-vec2-vec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(vec3,vec3)` | transpiled (`assign-vec3-vec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(vec4,vec4)` | transpiled (`assign-vec4-vec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(mat2,mat2)` | transpiled (`assign-mat2-mat2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(mat3,mat3)` | transpiled (`assign-mat3-mat3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN(mat4,mat4)` | transpiled (`assign-mat4-mat4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1810` |
+| `OP_ASSIGN_ADD(int,int)` | transpiled (`assign-add-int-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(ivec2,int)` | transpiled (`assign-add-ivec2-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(ivec2,ivec2)` | transpiled (`assign-add-ivec2-ivec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(ivec3,int)` | transpiled (`assign-add-ivec3-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(ivec3,ivec3)` | transpiled (`assign-add-ivec3-ivec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(ivec4,int)` | transpiled (`assign-add-ivec4-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(ivec4,ivec4)` | transpiled (`assign-add-ivec4-ivec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(uint,uint)` | transpiled (`assign-add-uint-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(uvec2,uint)` | transpiled (`assign-add-uvec2-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(uvec2,uvec2)` | transpiled (`unbracketed-compound`, `assign-add-uvec2-uvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(uvec3,uint)` | transpiled (`assign-add-uvec3-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(uvec3,uvec3)` | transpiled (`assign-add-uvec3-uvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(uvec4,uint)` | transpiled (`assign-add-uvec4-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(uvec4,uvec4)` | transpiled (`assign-add-uvec4-uvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(float,float)` | transpiled (`assign-add-float-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(vec2,float)` | transpiled (`assign-add-vec2-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(vec2,vec2)` | transpiled (`assign-add-vec2-vec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(vec3,float)` | transpiled (`assign-add-vec3-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(vec3,vec3)` | transpiled (`assign-add-vec3-vec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(vec4,float)` | transpiled (`assign-add-vec4-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(vec4,vec4)` | transpiled (`assign-add-vec4-vec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(mat2,float)` | transpiled (`assign-add-mat2-float`) | lowered: written to the argument value, column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(mat2,mat2)` | transpiled (`assign-add-mat2-mat2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(mat3,float)` | transpiled (`assign-add-mat3-float`) | lowered: written to the argument value, column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(mat3,mat3)` | transpiled (`assign-add-mat3-mat3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(mat4,float)` | transpiled (`assign-add-mat4-float`) | lowered: written to the argument value, column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(mat4,mat4)` | transpiled (`assign-add-mat4-mat4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(int,int)` | transpiled (`assign-sub-int-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(ivec2,int)` | transpiled (`assign-sub-ivec2-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(ivec2,ivec2)` | transpiled (`assign-sub-ivec2-ivec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(ivec3,int)` | transpiled (`assign-sub-ivec3-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(ivec3,ivec3)` | transpiled (`assign-sub-ivec3-ivec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(ivec4,int)` | transpiled (`assign-sub-ivec4-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(ivec4,ivec4)` | transpiled (`assign-sub-ivec4-ivec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(uint,uint)` | transpiled (`assign-sub-uint-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(uvec2,uint)` | transpiled (`assign-sub-uvec2-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(uvec2,uvec2)` | transpiled (`assign-sub-uvec2-uvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(uvec3,uint)` | transpiled (`assign-sub-uvec3-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(uvec3,uvec3)` | transpiled (`assign-sub-uvec3-uvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(uvec4,uint)` | transpiled (`assign-sub-uvec4-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(uvec4,uvec4)` | transpiled (`assign-sub-uvec4-uvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(float,float)` | transpiled (`assign-sub-float-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(vec2,float)` | transpiled (`assign-sub-vec2-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(vec2,vec2)` | transpiled (`assign-sub-vec2-vec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(vec3,float)` | transpiled (`assign-sub-vec3-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(vec3,vec3)` | transpiled (`assign-sub-vec3-vec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(vec4,float)` | transpiled (`assign-sub-vec4-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(vec4,vec4)` | transpiled (`assign-sub-vec4-vec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(mat2,float)` | transpiled (`assign-sub-mat2-float`) | lowered: written to the argument value, column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(mat2,mat2)` | transpiled (`assign-sub-mat2-mat2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(mat3,float)` | transpiled (`assign-sub-mat3-float`) | lowered: written to the argument value, column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(mat3,mat3)` | transpiled (`assign-sub-mat3-mat3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(mat4,float)` | transpiled (`assign-sub-mat4-float`) | lowered: written to the argument value, column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_SUB(mat4,mat4)` | transpiled (`assign-sub-mat4-mat4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(int,int)` | transpiled (`assign-mul-int-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(ivec2,int)` | transpiled (`assign-swizzle-compound`, `assign-mul-ivec2-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(ivec2,ivec2)` | transpiled (`assign-mul-ivec2-ivec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(ivec3,int)` | transpiled (`assign-mul-ivec3-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(ivec3,ivec3)` | transpiled (`assign-mul-ivec3-ivec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(ivec4,int)` | transpiled (`assign-mul-ivec4-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(ivec4,ivec4)` | transpiled (`assign-mul-ivec4-ivec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(uint,uint)` | transpiled (`assign-mul-uint-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(uvec2,uint)` | transpiled (`assign-mul-uvec2-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(uvec2,uvec2)` | transpiled (`assign-mul-uvec2-uvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(uvec3,uint)` | transpiled (`assign-mul-uvec3-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(uvec3,uvec3)` | transpiled (`assign-mul-uvec3-uvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(uvec4,uint)` | transpiled (`assign-mul-uvec4-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(uvec4,uvec4)` | transpiled (`assign-mul-uvec4-uvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(float,float)` | transpiled (`assign-mul-float-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(vec2,float)` | transpiled (`assign-mul-vec2-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(vec2,vec2)` | transpiled (`assign-mul-vec2-vec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(vec2,mat2)` | transpiled (`assign-mul-vec2-mat2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(vec3,float)` | transpiled (`assign-mul-vec3-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(vec3,vec3)` | transpiled (`assign-mul-vec3-vec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(vec3,mat3)` | transpiled (`assign-mul-vec3-mat3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(vec4,float)` | transpiled (`assign-mul-vec4-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(vec4,vec4)` | transpiled (`assign-mul-vec4-vec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(vec4,mat4)` | transpiled (`assign-mul-vec4-mat4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(mat2,float)` | transpiled (`assign-mul-mat2-float`) | lowered: written to the argument value, column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(mat2,mat2)` | transpiled (`assign-mul-mat2-mat2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(mat3,float)` | transpiled (`assign-mul-mat3-float`) | lowered: written to the argument value, column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(mat3,mat3)` | transpiled (`assign-mul-mat3-mat3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(mat4,float)` | transpiled (`assign-mul-mat4-float`) | lowered: written to the argument value, column by column | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(mat4,mat4)` | transpiled (`assign-mul-mat4-mat4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(int,int)` | transpiled (`assign-div-int-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(ivec2,int)` | transpiled (`assign-div-ivec2-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(ivec2,ivec2)` | transpiled (`assign-div-ivec2-ivec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(ivec3,int)` | transpiled (`assign-div-ivec3-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(ivec3,ivec3)` | transpiled (`assign-div-ivec3-ivec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(ivec4,int)` | transpiled (`assign-div-ivec4-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(ivec4,ivec4)` | transpiled (`assign-div-ivec4-ivec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(uint,uint)` | transpiled (`assign-div-uint-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(uvec2,uint)` | transpiled (`assign-div-uvec2-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(uvec2,uvec2)` | transpiled (`assign-div-uvec2-uvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(uvec3,uint)` | transpiled (`assign-div-uvec3-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(uvec3,uvec3)` | transpiled (`assign-div-uvec3-uvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(uvec4,uint)` | transpiled (`assign-div-uvec4-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(uvec4,uvec4)` | transpiled (`assign-div-uvec4-uvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(float,float)` | transpiled (`assign-div-float-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(vec2,float)` | transpiled (`assign-div-vec2-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(vec2,vec2)` | transpiled (`assign-div-vec2-vec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(vec3,float)` | transpiled (`assign-div-vec3-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(vec3,vec3)` | transpiled (`assign-div-vec3-vec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(vec4,float)` | transpiled (`assign-div-vec4-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(vec4,vec4)` | transpiled (`assign-div-vec4-vec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(mat2,float)` | transpiled (`assign-div-mat2-float`) | lowered: written to the argument value, product with the reciprocal | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(mat2,mat2)` | transpiled (`assign-div-mat2-mat2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(mat3,float)` | transpiled (`assign-div-mat3-float`) | lowered: written to the argument value, product with the reciprocal | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(mat3,mat3)` | transpiled (`assign-div-mat3-mat3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(mat4,float)` | transpiled (`assign-div-mat4-float`) | lowered: written to the argument value, product with the reciprocal | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_DIV(mat4,mat4)` | transpiled (`assign-div-mat4-mat4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MOD(int,int)` | transpiled (`assign-mod-int-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_ASSIGN_MOD(ivec2,int)` | transpiled (`assign-mod-ivec2-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_ASSIGN_MOD(ivec2,ivec2)` | transpiled (`assign-mod-ivec2-ivec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_ASSIGN_MOD(ivec3,int)` | transpiled (`assign-mod-ivec3-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_ASSIGN_MOD(ivec3,ivec3)` | transpiled (`assign-mod-ivec3-ivec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_ASSIGN_MOD(ivec4,int)` | transpiled (`assign-mod-ivec4-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_ASSIGN_MOD(ivec4,ivec4)` | transpiled (`assign-mod-ivec4-ivec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_ASSIGN_MOD(uint,uint)` | transpiled (`assign-mod-uint-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_ASSIGN_MOD(uvec2,uint)` | transpiled (`assign-mod-uvec2-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_ASSIGN_MOD(uvec2,uvec2)` | transpiled (`assign-mod-uvec2-uvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_ASSIGN_MOD(uvec3,uint)` | transpiled (`assign-mod-uvec3-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_ASSIGN_MOD(uvec3,uvec3)` | transpiled (`assign-mod-uvec3-uvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_ASSIGN_MOD(uvec4,uint)` | transpiled (`assign-mod-uvec4-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_ASSIGN_MOD(uvec4,uvec4)` | transpiled (`assign-mod-uvec4-uvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1693` |
+| `OP_ASSIGN_SHIFT_LEFT(int,int)` | transpiled (`assign-shift-left-int-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_LEFT(ivec2,int)` | transpiled (`assign-shift-left-ivec2-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_LEFT(ivec2,ivec2)` | transpiled (`assign-shift-left-ivec2-ivec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_LEFT(ivec3,int)` | transpiled (`assign-shift-left-ivec3-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_LEFT(ivec3,ivec3)` | transpiled (`assign-shift-left-ivec3-ivec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_LEFT(ivec4,int)` | transpiled (`assign-shift-left-ivec4-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_LEFT(ivec4,ivec4)` | transpiled (`assign-shift-left-ivec4-ivec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_LEFT(uint,uint)` | transpiled (`assign-shift-left-uint-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_LEFT(uvec2,uint)` | transpiled (`assign-shift-left-uvec2-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_LEFT(uvec2,uvec2)` | transpiled (`assign-shift-left-uvec2-uvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_LEFT(uvec3,uint)` | transpiled (`assign-shift-left-uvec3-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_LEFT(uvec3,uvec3)` | transpiled (`assign-shift-left-uvec3-uvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_LEFT(uvec4,uint)` | transpiled (`assign-shift-left-uvec4-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_LEFT(uvec4,uvec4)` | transpiled (`assign-shift-left-uvec4-uvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_RIGHT(int,int)` | transpiled (`assign-shift-right-int-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_RIGHT(ivec2,int)` | transpiled (`assign-shift-right-ivec2-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_RIGHT(ivec2,ivec2)` | transpiled (`assign-shift-right-ivec2-ivec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_RIGHT(ivec3,int)` | transpiled (`assign-shift-right-ivec3-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_RIGHT(ivec3,ivec3)` | transpiled (`assign-shift-right-ivec3-ivec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_RIGHT(ivec4,int)` | transpiled (`assign-shift-right-ivec4-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_RIGHT(ivec4,ivec4)` | transpiled (`assign-shift-right-ivec4-ivec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_RIGHT(uint,uint)` | transpiled (`assign-shift-right-uint-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_RIGHT(uvec2,uint)` | transpiled (`assign-shift-right-uvec2-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_RIGHT(uvec2,uvec2)` | transpiled (`assign-shift-right-uvec2-uvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_RIGHT(uvec3,uint)` | transpiled (`assign-shift-right-uvec3-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_RIGHT(uvec3,uvec3)` | transpiled (`assign-shift-right-uvec3-uvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_RIGHT(uvec4,uint)` | transpiled (`assign-shift-right-uvec4-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_SHIFT_RIGHT(uvec4,uvec4)` | transpiled (`assign-shift-right-uvec4-uvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1755` |
+| `OP_ASSIGN_BIT_AND(int,int)` | transpiled (`assign-bit-and-int-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_AND(ivec2,int)` | transpiled (`assign-bit-and-ivec2-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_AND(ivec2,ivec2)` | transpiled (`assign-bit-and-ivec2-ivec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_AND(ivec3,int)` | transpiled (`assign-bit-and-ivec3-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_AND(ivec3,ivec3)` | transpiled (`assign-bit-and-ivec3-ivec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_AND(ivec4,int)` | transpiled (`assign-bit-and-ivec4-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_AND(ivec4,ivec4)` | transpiled (`assign-bit-and-ivec4-ivec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_AND(uint,uint)` | transpiled (`assign-bit-and-uint-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_AND(uvec2,uint)` | transpiled (`assign-bit-and-uvec2-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_AND(uvec2,uvec2)` | transpiled (`assign-bit-and-uvec2-uvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_AND(uvec3,uint)` | transpiled (`assign-bit-and-uvec3-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_AND(uvec3,uvec3)` | transpiled (`assign-bit-and-uvec3-uvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_AND(uvec4,uint)` | transpiled (`assign-bit-and-uvec4-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_AND(uvec4,uvec4)` | transpiled (`assign-bit-and-uvec4-uvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_OR(int,int)` | transpiled (`assign-bit-or-int-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_OR(ivec2,int)` | transpiled (`assign-bit-or-ivec2-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_OR(ivec2,ivec2)` | transpiled (`assign-bit-or-ivec2-ivec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_OR(ivec3,int)` | transpiled (`assign-bit-or-ivec3-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_OR(ivec3,ivec3)` | transpiled (`assign-bit-or-ivec3-ivec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_OR(ivec4,int)` | transpiled (`assign-bit-or-ivec4-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_OR(ivec4,ivec4)` | transpiled (`assign-bit-or-ivec4-ivec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_OR(uint,uint)` | transpiled (`assign-bit-or-uint-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_OR(uvec2,uint)` | transpiled (`assign-bit-or-uvec2-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_OR(uvec2,uvec2)` | transpiled (`assign-bit-or-uvec2-uvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_OR(uvec3,uint)` | transpiled (`assign-bit-or-uvec3-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_OR(uvec3,uvec3)` | transpiled (`assign-bit-or-uvec3-uvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_OR(uvec4,uint)` | transpiled (`assign-bit-or-uvec4-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_OR(uvec4,uvec4)` | transpiled (`assign-bit-or-uvec4-uvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_XOR(int,int)` | transpiled (`assign-bit-xor-int-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_XOR(ivec2,int)` | transpiled (`assign-bit-xor-ivec2-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_XOR(ivec2,ivec2)` | transpiled (`assign-bit-xor-ivec2-ivec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_XOR(ivec3,int)` | transpiled (`assign-bit-xor-ivec3-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_XOR(ivec3,ivec3)` | transpiled (`assign-bit-xor-ivec3-ivec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_XOR(ivec4,int)` | transpiled (`assign-bit-xor-ivec4-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_XOR(ivec4,ivec4)` | transpiled (`assign-bit-xor-ivec4-ivec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_XOR(uint,uint)` | transpiled (`assign-bit-xor-uint-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_XOR(uvec2,uint)` | transpiled (`assign-bit-xor-uvec2-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_XOR(uvec2,uvec2)` | transpiled (`assign-bit-xor-uvec2-uvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_XOR(uvec3,uint)` | transpiled (`assign-bit-xor-uvec3-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_XOR(uvec3,uvec3)` | transpiled (`assign-bit-xor-uvec3-uvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_XOR(uvec4,uint)` | transpiled (`assign-bit-xor-uvec4-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_ASSIGN_BIT_XOR(uvec4,uvec4)` | transpiled (`assign-bit-xor-uvec4-uvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_AND(int,int)` | transpiled (`bit-and-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_AND(ivec2,ivec2)` | transpiled (`bit-and-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_AND(ivec3,ivec3)` | transpiled (`bit-and-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_AND(ivec4,ivec4)` | transpiled (`bit-and-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_AND(uint,uint)` | transpiled (`bit-and-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_AND(uvec2,uvec2)` | transpiled (`bit-and-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_AND(uvec3,uvec3)` | transpiled (`bit-and-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_AND(uvec4,uvec4)` | transpiled (`bit-and-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_OR(int,int)` | transpiled (`bit-or-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_OR(ivec2,ivec2)` | transpiled (`bit-or-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_OR(ivec3,ivec3)` | transpiled (`bit-or-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_OR(ivec4,ivec4)` | transpiled (`bit-or-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_OR(uint,uint)` | transpiled (`bit-or-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_OR(uvec2,uvec2)` | transpiled (`bit-or-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_OR(uvec3,uvec3)` | transpiled (`bit-or-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_OR(uvec4,uvec4)` | transpiled (`bit-or-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_XOR(int,int)` | transpiled (`bit-xor-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_XOR(ivec2,ivec2)` | transpiled (`bit-xor-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_XOR(ivec3,ivec3)` | transpiled (`bit-xor-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_XOR(ivec4,ivec4)` | transpiled (`bit-xor-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_XOR(uint,uint)` | transpiled (`bit-xor-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_XOR(uvec2,uvec2)` | transpiled (`bit-xor-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_XOR(uvec3,uvec3)` | transpiled (`bit-xor-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_XOR(uvec4,uvec4)` | transpiled (`bit-xor-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1902` |
+| `OP_BIT_INVERT(int)` | transpiled (`bit-invert-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1981` |
+| `OP_BIT_INVERT(ivec2)` | transpiled (`bit-invert-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1981` |
+| `OP_BIT_INVERT(ivec3)` | transpiled (`bit-invert-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1981` |
+| `OP_BIT_INVERT(ivec4)` | transpiled (`bit-invert-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1981` |
+| `OP_BIT_INVERT(uint)` | transpiled (`bit-invert-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1981` |
+| `OP_BIT_INVERT(uvec2)` | transpiled (`bit-invert-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1981` |
+| `OP_BIT_INVERT(uvec3)` | transpiled (`bit-invert-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1981` |
+| `OP_BIT_INVERT(uvec4)` | transpiled (`bit-invert-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1981` |
+| `OP_INCREMENT(int)` | transpiled (`increment-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_INCREMENT(ivec2)` | transpiled (`increment-ivec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_INCREMENT(ivec3)` | transpiled (`increment-ivec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_INCREMENT(ivec4)` | transpiled (`increment-ivec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_INCREMENT(uint)` | transpiled (`increment-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_INCREMENT(uvec2)` | transpiled (`increment-uvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_INCREMENT(uvec3)` | transpiled (`increment-uvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_INCREMENT(uvec4)` | transpiled (`increment-uvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_INCREMENT(float)` | transpiled (`unbracketed-swizzle-of-step`, `increment-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_INCREMENT(vec2)` | transpiled (`increment-vec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_INCREMENT(vec3)` | transpiled (`increment-vec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_INCREMENT(vec4)` | transpiled (`increment-vec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_DECREMENT(int)` | transpiled (`decrement-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_DECREMENT(ivec2)` | transpiled (`decrement-ivec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_DECREMENT(ivec3)` | transpiled (`decrement-ivec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_DECREMENT(ivec4)` | transpiled (`decrement-ivec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_DECREMENT(uint)` | transpiled (`decrement-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_DECREMENT(uvec2)` | transpiled (`decrement-uvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_DECREMENT(uvec3)` | transpiled (`decrement-uvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_DECREMENT(uvec4)` | transpiled (`decrement-uvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_DECREMENT(float)` | transpiled (`decrement-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_DECREMENT(vec2)` | transpiled (`decrement-vec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_DECREMENT(vec3)` | transpiled (`decrement-vec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_DECREMENT(vec4)` | transpiled (`decrement-vec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_SELECT_IF(bool,bool,bool)` | transpiled (`select-if-bool-bool-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,bvec2,bvec2)` | transpiled (`select-if-bool-bvec2-bvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,bvec3,bvec3)` | transpiled (`select-if-bool-bvec3-bvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,bvec4,bvec4)` | transpiled (`select-if-bool-bvec4-bvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,int,int)` | transpiled (`branch-select`, `folding-select`, `select-if-bool-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,ivec2,ivec2)` | transpiled (`ternary-negated-int`, `select-if-bool-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,ivec3,ivec3)` | transpiled (`select-if-bool-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,ivec4,ivec4)` | transpiled (`select-if-bool-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,uint,uint)` | transpiled (`select-if-bool-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,uvec2,uvec2)` | transpiled (`select-if-bool-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,uvec3,uvec3)` | transpiled (`select-if-bool-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,uvec4,uvec4)` | transpiled (`select-if-bool-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,float,float)` | transpiled (`ternary-double-negation`, `ternary-nested`, `select-if-bool-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,vec2,vec2)` | transpiled (`ternary-negated-vector`, `ternary-negated-else`, `select-if-bool-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,vec3,vec3)` | transpiled (`select-if-bool-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,vec4,vec4)` | transpiled (`select-if-bool-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,mat2,mat2)` | transpiled (`select-if-bool-mat2-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,mat3,mat3)` | transpiled (`select-if-bool-mat3-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,mat4,mat4)` | transpiled (`select-if-bool-mat4-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_ELSE` | transpiled (`ternary-negated-vector`, `ternary-negated-else`, `ternary-double-negation`, `ternary-negated-int`, `ternary-nested`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1558` |
+| `OP_POST_INCREMENT(int)` | transpiled (`unbracketed-post-step`, `post-increment-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_INCREMENT(ivec2)` | transpiled (`post-increment-ivec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_INCREMENT(ivec3)` | transpiled (`post-increment-ivec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_INCREMENT(ivec4)` | transpiled (`post-increment-ivec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_INCREMENT(uint)` | transpiled (`post-increment-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_INCREMENT(uvec2)` | transpiled (`post-increment-uvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_INCREMENT(uvec3)` | transpiled (`post-increment-uvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_INCREMENT(uvec4)` | transpiled (`post-increment-uvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_INCREMENT(float)` | transpiled (`assign-swizzle-step`, `post-increment-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_INCREMENT(vec2)` | transpiled (`post-increment-vec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_INCREMENT(vec3)` | transpiled (`post-increment-vec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_INCREMENT(vec4)` | transpiled (`post-increment-vec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_DECREMENT(int)` | transpiled (`post-decrement-int`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_DECREMENT(ivec2)` | transpiled (`post-decrement-ivec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_DECREMENT(ivec3)` | transpiled (`post-decrement-ivec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_DECREMENT(ivec4)` | transpiled (`post-decrement-ivec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_DECREMENT(uint)` | transpiled (`post-decrement-uint`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_DECREMENT(uvec2)` | transpiled (`post-decrement-uvec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_DECREMENT(uvec3)` | transpiled (`post-decrement-uvec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_DECREMENT(uvec4)` | transpiled (`post-decrement-uvec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_DECREMENT(float)` | transpiled (`post-decrement-float`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_DECREMENT(vec2)` | transpiled (`post-decrement-vec2`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_DECREMENT(vec3)` | transpiled (`post-decrement-vec3`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_POST_DECREMENT(vec4)` | transpiled (`post-decrement-vec4`) | lowered: written to the argument value | untested (#1788) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_CALL` | transpiled (`function-one-place`, `function-two-places`, `function-nested`, `function-from-a-function`, `function-in-a-loop`, `function-in-a-condition`, `function-no-arguments`, `function-vector`, `function-matrix`, `function-constant-converted`, `function-argument-named-as-function`, `function-early-return-in-loop`, `function-early-return-in-branch`, `function-value-call-as-statement`, `function-struct-call-as-statement`, `function-struct-return-in-branch`, `function-array-return-in-loop`, `function-vector-array-result`, `function-vector-array-out`, `function-vector-array-argument`, `function-array-call-as-statement`, `function-out-index-read-before-another-out`, `function-inout-index-read-before-an-out`, `function-void-call-discards`, `function-void`, `function-in`, `function-in-unwritten-caller`, `function-out`, `function-out-before-read`, `function-out-value-function`, `function-inout-twice`, `function-inout-in-expression`, `function-inout-read-after-a-writing-argument`, `function-inout-read-after-a-writing-argument-of-a-value-call`, `function-inout-vector-lane`, `function-inout-array-element`, `function-inout-struct-member`, `function-out-struct`, `function-out-array`, `function-const`, `function-const-of-constant`, `function-const-in`, `function-overload-by-type`, `function-overload-by-count`, `function-struct-argument`, `function-struct-return`, `function-struct-return-member`, `function-array-argument`, `function-array-argument-type-size`, `function-array-argument-constructed`, `function-array-argument-unchanged`, `function-array-return`, `function-struct-array-argument`, `function-recursion`, `function-probe-recursion`, `function-later-function`, `function-unknown-function`, `function-too-few`, `function-too-many`, `function-wrong-type`, `function-overload-constant`, `function-void-value`, `function-void-return-value`, `function-void-argument`, `function-out-constant`, `function-out-expression`, `function-out-const-local`, `function-out-swizzle-twice`, `function-out-member-of-call`, `function-inout-member-of-sum`, `function-const-out`, `function-const-inout`, `function-const-write`, `function-qualifier-twice`, `function-same-overload`, `function-overload-by-return`, `function-local-named-as-function`, `function-function-as-value`, `function-wrong-struct`, `function-wrong-array-size`, `function-array-return-size`, `function-const-return`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1558` |
+| `OP_CONSTRUCT` | transpiled (`call-ivec2-bvec2`, `call-ivec2-ivec2`, `call-ivec2-uvec2`, `call-ivec2-vec2`, `call-vec2-bvec2`, `call-vec2-ivec2`, `call-vec2-uvec2`, `call-vec2-vec2`, `call-uvec2-bvec2`, `call-uvec2-ivec2`, `call-uvec2-uvec2`, `call-uvec2-vec2`, `call-bvec2-bvec2`, `call-bvec2-ivec2`, `call-bvec2-uvec2`, `call-bvec2-vec2`, `call-ivec3-bvec3`, `call-ivec3-ivec3`, `call-ivec3-uvec3`, `call-ivec3-vec3`, `call-vec3-bvec3`, `call-vec3-ivec3`, `call-vec3-uvec3`, `call-vec3-vec3`, `call-uvec3-bvec3`, `call-uvec3-ivec3`, `call-uvec3-uvec3`, `call-uvec3-vec3`, `call-bvec3-bvec3`, `call-bvec3-ivec3`, `call-bvec3-uvec3`, `call-bvec3-vec3`, `call-ivec4-bvec4`, `call-ivec4-ivec4`, `call-ivec4-uvec4`, `call-ivec4-vec4`, `call-vec4-bvec4`, `call-vec4-ivec4`, `call-vec4-uvec4`, `call-vec4-vec4`, `call-uvec4-bvec4`, `call-uvec4-ivec4`, `call-uvec4-uvec4`, `call-uvec4-vec4`, `call-bvec4-bvec4`, `call-bvec4-ivec4`, `call-bvec4-uvec4`, `call-bvec4-vec4`, `call-mat2-mat3`, `call-mat2-mat4`, `call-mat3-mat2`, `call-mat3-mat4`, `call-mat4-mat2`, `call-mat4-mat3`, `construct-bvec2-bool`, `construct-bvec2-bool-bool`, `construct-bvec3-bool`, `construct-bvec3-bool-bool-bool`, `construct-bvec3-bvec2-bool`, `construct-bvec3-bool-bvec2`, `construct-bvec4-bool`, `construct-bvec4-bool-bool-bool-bool`, `construct-bvec4-bool-bvec2-bool`, `construct-bvec4-bvec2-bool-bool`, `construct-bvec4-bool-bool-bvec2`, `construct-bvec4-bool-bvec3`, `construct-bvec4-bvec3-bool`, `construct-bvec4-bvec2-bvec2`, `construct-ivec2-int`, `construct-ivec2-int-int`, `construct-ivec3-int`, `construct-ivec3-int-int-int`, `construct-ivec3-ivec2-int`, `construct-ivec3-int-ivec2`, `construct-ivec4-int`, `construct-ivec4-int-int-int-int`, `construct-ivec4-int-ivec2-int`, `construct-ivec4-ivec2-int-int`, `construct-ivec4-int-int-ivec2`, `construct-ivec4-int-ivec3`, `construct-ivec4-ivec3-int`, `construct-ivec4-ivec2-ivec2`, `construct-uvec2-uint`, `construct-uvec2-uint-uint`, `construct-uvec3-uint`, `construct-uvec3-uint-uint-uint`, `construct-uvec3-uvec2-uint`, `construct-uvec3-uint-uvec2`, `construct-uvec4-uint`, `construct-uvec4-uint-uint-uint-uint`, `construct-uvec4-uint-uvec2-uint`, `construct-uvec4-uvec2-uint-uint`, `construct-uvec4-uint-uint-uvec2`, `construct-uvec4-uint-uvec3`, `construct-uvec4-uvec3-uint`, `construct-uvec4-uvec2-uvec2`, `construct-mat2-vec2-vec2`, `construct-mat3-vec3-vec3-vec3`, `construct-mat4-vec4-vec4-vec4-vec4`, `construct-mat2-float`, `construct-mat3-float`, `construct-mat4-float`, `construct-int-bool`, `construct-int-int`, `construct-int-uint`, `construct-int-float`, `construct-float-bool`, `construct-float-int`, `construct-float-uint`, `construct-float-float`, `construct-uint-bool`, `construct-uint-int`, `construct-uint-uint`, `construct-uint-float`, `construct-bool-bool`, `construct-bool-int`, `construct-bool-uint`, `construct-bool-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1558` |
+| `OP_STRUCT` | transpiled (`statement-struct`, `statement-struct-member-write`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-nested`, `statement-struct-assign`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`, `statement-struct-wrong-argument`, `statement-struct-unknown-member`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1558` |
+| `OP_INDEX` | transpiled (`index-vector-read`, `index-vector-constant`, `index-uint-index`, `index-matrix-column`, `index-matrix-lane`, `index-vector-write`, `index-matrix-write`, `index-lane-write`, `index-member-write`, `index-folded-read`, `index-folded-write`, `index-folded-past-end`, `index-folded-write-past-end`, `index-folded-call-read`, `index-folded-call-past-end`, `index-write-before-value`, `index-compound-before-value`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1558` |
+| `OP_EMPTY` | transpiled (`statement-empty`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:1558` |
 
 ## statement
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `FLOW_OP_IF` | transpiled (`statement-if`, `statement-if-else`, `statement-else-if`, `statement-dangling-else`, `statement-if-not-bool`, `statement-if-declares`, `statement-return-in-if`, `statement-return-in-loop`, `statement-return-missing-path`, `statement-discard`) | native | native | `servers/rendering/shader_language.h:307` |
-| `FLOW_OP_RETURN` | transpiled (`type-bool`, `type-bvec2`, `type-bvec3`, `type-bvec4`, `type-int`, `type-ivec2`, `type-ivec3`, `type-ivec4`, `type-uint`, `type-uvec2`, `type-uvec3`, `type-uvec4`, `type-float`, `type-vec2`, `type-vec3`, `type-vec4`, `type-mat2`, `type-mat3`, `type-mat4`, `statement-after-return`) | native | native | `servers/rendering/shader_language.h:308` |
-| `FLOW_OP_FOR` | transpiled (`loop-for-0-times`, `loop-for-1-times`, `loop-for-9-times`, `loop-for-argument-times`, `loop-for-break-continue`, `loop-for-continue-steps`, `loop-nested-break`, `loop-nested-continue`, `loop-for-scope`, `loop-for-empty-parts`, `loop-float-counter`, `statement-return-in-loop`, `statement-return-in-nested-loop`, `statement-switch-in-loop`, `statement-switch-in-loop-break`, `statement-discard-in-loop`, `statement-array-computed-index`) | native | native | `servers/rendering/shader_language.h:309` |
-| `FLOW_OP_WHILE` | transpiled (`loop-while-0-times`, `loop-while-1-times`, `loop-while-9-times`, `loop-while-argument-times`, `loop-while-break-continue`, `loop-nested-break`, `statement-return-in-nested-loop`) | native | native | `servers/rendering/shader_language.h:310` |
-| `FLOW_OP_DO` | transpiled (`loop-do-0-times`, `loop-do-1-times`, `loop-do-9-times`, `loop-do-argument-times`, `loop-do-break-continue`, `loop-do-continue-checks`) | native | native | `servers/rendering/shader_language.h:311` |
-| `FLOW_OP_BREAK` | transpiled (`loop-for-break-continue`, `loop-while-break-continue`, `loop-do-break-continue`, `loop-nested-break`, `loop-break-outside`, `loop-for-empty-parts`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-fall-through-ended`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`) | native | native | `servers/rendering/shader_language.h:312` |
-| `FLOW_OP_SWITCH` | transpiled (`statement-return-in-switch`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-scope`, `statement-switch-fall-through-ended`, `statement-switch-default-last`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-scope-ended`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`, `statement-switch-twice`, `statement-switch-float`, `statement-switch-case-variable`, `statement-switch-case-folded`) | native | native | `servers/rendering/shader_language.h:313` |
-| `FLOW_OP_CASE` | transpiled (`statement-return-in-switch`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-scope`, `statement-switch-fall-through-ended`, `statement-switch-default-last`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-scope-ended`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`, `statement-switch-twice`, `statement-switch-float`, `statement-switch-case-variable`, `statement-switch-case-folded`) | native | native | `servers/rendering/shader_language.h:314` |
-| `FLOW_OP_DEFAULT` | transpiled (`statement-switch`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-default-last`, `statement-switch-uint-ended`) | native | native | `servers/rendering/shader_language.h:315` |
-| `FLOW_OP_CONTINUE` | transpiled (`loop-for-break-continue`, `loop-while-break-continue`, `loop-do-break-continue`, `loop-do-continue-checks`, `loop-for-continue-steps`, `loop-nested-continue`, `loop-continue-outside`, `statement-switch-in-loop`) | native | native | `servers/rendering/shader_language.h:316` |
-| `FLOW_OP_DISCARD` | transpiled (`statement-discard`, `statement-discard-in-loop`) | native | native | `servers/rendering/shader_language.h:317` |
+| `FLOW_OP_IF` | transpiled (`statement-if`, `statement-if-else`, `statement-else-if`, `statement-dangling-else`, `statement-if-not-bool`, `statement-if-declares`, `statement-return-in-if`, `statement-return-in-loop`, `statement-return-missing-path`, `statement-discard`) | native | untested (#1788) | `servers/rendering/shader_language.h:307` |
+| `FLOW_OP_RETURN` | transpiled (`type-bool`, `type-bvec2`, `type-bvec3`, `type-bvec4`, `type-int`, `type-ivec2`, `type-ivec3`, `type-ivec4`, `type-uint`, `type-uvec2`, `type-uvec3`, `type-uvec4`, `type-float`, `type-vec2`, `type-vec3`, `type-vec4`, `type-mat2`, `type-mat3`, `type-mat4`, `statement-after-return`) | native | untested (#1788) | `servers/rendering/shader_language.h:308` |
+| `FLOW_OP_FOR` | transpiled (`loop-for-0-times`, `loop-for-1-times`, `loop-for-9-times`, `loop-for-argument-times`, `loop-for-break-continue`, `loop-for-continue-steps`, `loop-nested-break`, `loop-nested-continue`, `loop-for-scope`, `loop-for-empty-parts`, `loop-float-counter`, `statement-return-in-loop`, `statement-return-in-nested-loop`, `statement-switch-in-loop`, `statement-switch-in-loop-break`, `statement-discard-in-loop`, `statement-array-computed-index`) | native | untested (#1788) | `servers/rendering/shader_language.h:309` |
+| `FLOW_OP_WHILE` | transpiled (`loop-while-0-times`, `loop-while-1-times`, `loop-while-9-times`, `loop-while-argument-times`, `loop-while-break-continue`, `loop-nested-break`, `statement-return-in-nested-loop`) | native | untested (#1788) | `servers/rendering/shader_language.h:310` |
+| `FLOW_OP_DO` | transpiled (`loop-do-0-times`, `loop-do-1-times`, `loop-do-9-times`, `loop-do-argument-times`, `loop-do-break-continue`, `loop-do-continue-checks`) | native | untested (#1788) | `servers/rendering/shader_language.h:311` |
+| `FLOW_OP_BREAK` | transpiled (`loop-for-break-continue`, `loop-while-break-continue`, `loop-do-break-continue`, `loop-nested-break`, `loop-break-outside`, `loop-for-empty-parts`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-fall-through-ended`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`) | native | untested (#1788) | `servers/rendering/shader_language.h:312` |
+| `FLOW_OP_SWITCH` | transpiled (`statement-return-in-switch`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-scope`, `statement-switch-fall-through-ended`, `statement-switch-default-last`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-scope-ended`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`, `statement-switch-twice`, `statement-switch-float`, `statement-switch-case-variable`, `statement-switch-case-folded`) | native | untested (#1788) | `servers/rendering/shader_language.h:313` |
+| `FLOW_OP_CASE` | transpiled (`statement-return-in-switch`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-scope`, `statement-switch-fall-through-ended`, `statement-switch-default-last`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-scope-ended`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`, `statement-switch-twice`, `statement-switch-float`, `statement-switch-case-variable`, `statement-switch-case-folded`) | native | untested (#1788) | `servers/rendering/shader_language.h:314` |
+| `FLOW_OP_DEFAULT` | transpiled (`statement-switch`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-default-last`, `statement-switch-uint-ended`) | native | untested (#1788) | `servers/rendering/shader_language.h:315` |
+| `FLOW_OP_CONTINUE` | transpiled (`loop-for-break-continue`, `loop-while-break-continue`, `loop-do-break-continue`, `loop-do-continue-checks`, `loop-for-continue-steps`, `loop-nested-continue`, `loop-continue-outside`, `statement-switch-in-loop`) | native | untested (#1788) | `servers/rendering/shader_language.h:316` |
+| `FLOW_OP_DISCARD` | transpiled (`statement-discard`, `statement-discard-in-loop`) | native | untested (#1788) | `servers/rendering/shader_language.h:317` |
 
 ## tree node
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `NODE_TYPE_SHADER` | transpiled (`sky-default`, `sky-fog`, `sky-fog-sun`, `sky-fog-energy-0`, `sky-fog-energy-3`, `sky-fog-affect-0`, `sky-fog-affect-half`, `sky-sun-coloured`, `sky-sun-below`, `sky-sun-energy-0`, `sky-camera-wide`) | native | native | `servers/rendering/shader_language.h:373` |
+| `NODE_TYPE_SHADER` | transpiled (`sky-default`, `sky-fog`, `sky-fog-sun`, `sky-fog-energy-0`, `sky-fog-energy-3`, `sky-fog-affect-0`, `sky-fog-affect-half`, `sky-sun-coloured`, `sky-sun-below`, `sky-sun-energy-0`, `sky-camera-wide`) | native | untested (#1788) | `servers/rendering/shader_language.h:373` |
 | `NODE_TYPE_FUNCTION` | open, #1794 | | | `servers/rendering/shader_language.h:374` |
-| `NODE_TYPE_BLOCK` | transpiled (`statement-block`, `statement-block-shadow`, `statement-block-out-of-scope`, `statement-if-declares`, `statement-switch-scope-ended`) | native | native | `servers/rendering/shader_language.h:375` |
-| `NODE_TYPE_VARIABLE` | transpiled (`type-bool`, `type-bvec2`, `type-bvec3`, `type-bvec4`, `type-int`, `type-ivec2`, `type-ivec3`, `type-ivec4`, `type-uint`, `type-uvec2`, `type-uvec3`, `type-uvec4`, `type-float`, `type-vec2`, `type-vec3`, `type-vec4`, `type-mat2`, `type-mat3`, `type-mat4`) | native | native | `servers/rendering/shader_language.h:376` |
-| `NODE_TYPE_VARIABLE_DECLARATION` | transpiled (`statement-local`, `statement-local-list`, `statement-local-const`, `statement-local-const-write`, `statement-local-undeclared`, `statement-local-twice`, `statement-local-of-argument-name`, `statement-block`, `statement-block-shadow`, `statement-block-out-of-scope`, `statement-local-initialised-by-itself`, `loop-for-scope`, `statement-switch-scope`, `statement-switch-scope-ended`, `statement-array`, `statement-array-type-first`, `statement-array-initialiser-list`, `statement-array-length`, `statement-array-length-before-operator`, `statement-array-computed-index`, `statement-array-swizzle-write`, `statement-array-assign`, `statement-array-size-mismatch`, `statement-array-constant-index-past-end`, `statement-array-const`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`) | native | native | `servers/rendering/shader_language.h:377` |
-| `NODE_TYPE_CONSTANT` | transpiled (`statement-tree`) | native | native | `servers/rendering/shader_language.h:378` |
-| `NODE_TYPE_OPERATOR` | transpiled (`statement-sequence`) | native | native | `servers/rendering/shader_language.h:379` |
-| `NODE_TYPE_CONTROL_FLOW` | transpiled (`statement-if`, `statement-if-else`, `statement-else-if`, `statement-dangling-else`, `statement-if-not-bool`, `statement-if-declares`, `loop-for-0-times`, `loop-for-1-times`, `loop-for-9-times`, `loop-for-argument-times`, `loop-while-0-times`, `loop-while-1-times`, `loop-while-9-times`, `loop-while-argument-times`, `loop-do-0-times`, `loop-do-1-times`, `loop-do-9-times`, `loop-do-argument-times`, `loop-for-break-continue`, `loop-while-break-continue`, `loop-do-break-continue`, `loop-do-continue-checks`, `loop-for-continue-steps`, `loop-nested-break`, `loop-nested-break`, `loop-nested-continue`, `loop-for-scope`, `loop-for-empty-parts`, `loop-float-counter`, `statement-return-in-if`, `statement-return-in-loop`, `statement-return-in-loop`, `statement-return-in-nested-loop`, `statement-return-in-nested-loop`, `statement-return-in-switch`, `statement-return-missing-path`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-in-loop`, `statement-switch-scope`, `statement-switch-fall-through-ended`, `statement-switch-default-last`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-in-loop-break`, `statement-switch-scope-ended`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`, `statement-switch-twice`, `statement-switch-float`, `statement-switch-case-variable`, `statement-switch-case-folded`, `statement-discard`, `statement-discard-in-loop`, `statement-array-computed-index`) | native | native | `servers/rendering/shader_language.h:380` |
-| `NODE_TYPE_MEMBER` | transpiled (`statement-tree`) | native | native | `servers/rendering/shader_language.h:381` |
-| `NODE_TYPE_ARRAY` | transpiled (`statement-array`, `statement-array-type-first`, `statement-array-initialiser-list`, `statement-array-length`, `statement-array-length-before-operator`, `statement-array-computed-index`, `statement-array-swizzle-write`, `statement-array-assign`, `statement-array-size-mismatch`, `statement-array-constant-index-past-end`, `statement-array-const`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`) | native | native | `servers/rendering/shader_language.h:382` |
-| `NODE_TYPE_ARRAY_CONSTRUCT` | transpiled (`statement-array`, `statement-array-type-first`, `statement-array-assign`, `statement-array-size-mismatch`, `statement-array-const`, `statement-struct-array`, `statement-struct-array-unsized`) | native | native | `servers/rendering/shader_language.h:383` |
-| `NODE_TYPE_STRUCT` | transpiled (`statement-struct`, `statement-struct-member-write`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-nested`, `statement-struct-assign`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`, `statement-struct-wrong-argument`, `statement-struct-unknown-member`) | native | native | `servers/rendering/shader_language.h:384` |
+| `NODE_TYPE_BLOCK` | transpiled (`statement-block`, `statement-block-shadow`, `statement-block-out-of-scope`, `statement-if-declares`, `statement-switch-scope-ended`) | native | untested (#1788) | `servers/rendering/shader_language.h:375` |
+| `NODE_TYPE_VARIABLE` | transpiled (`type-bool`, `type-bvec2`, `type-bvec3`, `type-bvec4`, `type-int`, `type-ivec2`, `type-ivec3`, `type-ivec4`, `type-uint`, `type-uvec2`, `type-uvec3`, `type-uvec4`, `type-float`, `type-vec2`, `type-vec3`, `type-vec4`, `type-mat2`, `type-mat3`, `type-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.h:376` |
+| `NODE_TYPE_VARIABLE_DECLARATION` | transpiled (`statement-local`, `statement-local-list`, `statement-local-const`, `statement-local-const-write`, `statement-local-undeclared`, `statement-local-twice`, `statement-local-of-argument-name`, `statement-block`, `statement-block-shadow`, `statement-block-out-of-scope`, `statement-local-initialised-by-itself`, `loop-for-scope`, `statement-switch-scope`, `statement-switch-scope-ended`, `statement-array`, `statement-array-type-first`, `statement-array-initialiser-list`, `statement-array-length`, `statement-array-length-before-operator`, `statement-array-computed-index`, `statement-array-swizzle-write`, `statement-array-assign`, `statement-array-size-mismatch`, `statement-array-constant-index-past-end`, `statement-array-const`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`) | native | untested (#1788) | `servers/rendering/shader_language.h:377` |
+| `NODE_TYPE_CONSTANT` | transpiled (`statement-tree`) | native | untested (#1788) | `servers/rendering/shader_language.h:378` |
+| `NODE_TYPE_OPERATOR` | transpiled (`statement-sequence`) | native | untested (#1788) | `servers/rendering/shader_language.h:379` |
+| `NODE_TYPE_CONTROL_FLOW` | transpiled (`statement-if`, `statement-if-else`, `statement-else-if`, `statement-dangling-else`, `statement-if-not-bool`, `statement-if-declares`, `loop-for-0-times`, `loop-for-1-times`, `loop-for-9-times`, `loop-for-argument-times`, `loop-while-0-times`, `loop-while-1-times`, `loop-while-9-times`, `loop-while-argument-times`, `loop-do-0-times`, `loop-do-1-times`, `loop-do-9-times`, `loop-do-argument-times`, `loop-for-break-continue`, `loop-while-break-continue`, `loop-do-break-continue`, `loop-do-continue-checks`, `loop-for-continue-steps`, `loop-nested-break`, `loop-nested-break`, `loop-nested-continue`, `loop-for-scope`, `loop-for-empty-parts`, `loop-float-counter`, `statement-return-in-if`, `statement-return-in-loop`, `statement-return-in-loop`, `statement-return-in-nested-loop`, `statement-return-in-nested-loop`, `statement-return-in-switch`, `statement-return-missing-path`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-in-loop`, `statement-switch-scope`, `statement-switch-fall-through-ended`, `statement-switch-default-last`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-in-loop-break`, `statement-switch-scope-ended`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`, `statement-switch-twice`, `statement-switch-float`, `statement-switch-case-variable`, `statement-switch-case-folded`, `statement-discard`, `statement-discard-in-loop`, `statement-array-computed-index`) | native | untested (#1788) | `servers/rendering/shader_language.h:380` |
+| `NODE_TYPE_MEMBER` | transpiled (`statement-tree`) | native | untested (#1788) | `servers/rendering/shader_language.h:381` |
+| `NODE_TYPE_ARRAY` | transpiled (`statement-array`, `statement-array-type-first`, `statement-array-initialiser-list`, `statement-array-length`, `statement-array-length-before-operator`, `statement-array-computed-index`, `statement-array-swizzle-write`, `statement-array-assign`, `statement-array-size-mismatch`, `statement-array-constant-index-past-end`, `statement-array-const`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`) | native | untested (#1788) | `servers/rendering/shader_language.h:382` |
+| `NODE_TYPE_ARRAY_CONSTRUCT` | transpiled (`statement-array`, `statement-array-type-first`, `statement-array-assign`, `statement-array-size-mismatch`, `statement-array-const`, `statement-struct-array`, `statement-struct-array-unsized`) | native | untested (#1788) | `servers/rendering/shader_language.h:383` |
+| `NODE_TYPE_STRUCT` | transpiled (`statement-struct`, `statement-struct-member-write`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-nested`, `statement-struct-assign`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`, `statement-struct-wrong-argument`, `statement-struct-unknown-member`) | native | untested (#1788) | `servers/rendering/shader_language.h:384` |
 
 ## constructor
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `bvec2(bool)` | transpiled (`construct-bvec2-bool`) | native | native | `servers/rendering/shader_language.cpp:2422` |
-| `bvec2(bool,bool)` | transpiled (`construct-bvec2-bool-bool`) | native | native | `servers/rendering/shader_language.cpp:2423` |
-| `bvec3(bool)` | transpiled (`construct-bvec3-bool`) | native | native | `servers/rendering/shader_language.cpp:2424` |
-| `bvec3(bool,bool,bool)` | transpiled (`construct-bvec3-bool-bool-bool`) | native | native | `servers/rendering/shader_language.cpp:2425` |
-| `bvec3(bvec2,bool)` | transpiled (`construct-bvec3-bvec2-bool`) | native | native | `servers/rendering/shader_language.cpp:2426` |
-| `bvec3(bool,bvec2)` | transpiled (`construct-bvec3-bool-bvec2`) | native | native | `servers/rendering/shader_language.cpp:2427` |
-| `bvec4(bool)` | transpiled (`construct-bvec4-bool`) | native | native | `servers/rendering/shader_language.cpp:2428` |
-| `bvec4(bool,bool,bool,bool)` | transpiled (`construct-bvec4-bool-bool-bool-bool`) | native | native | `servers/rendering/shader_language.cpp:2429` |
-| `bvec4(bool,bvec2,bool)` | transpiled (`construct-bvec4-bool-bvec2-bool`) | native | native | `servers/rendering/shader_language.cpp:2430` |
-| `bvec4(bvec2,bool,bool)` | transpiled (`construct-bvec4-bvec2-bool-bool`) | native | native | `servers/rendering/shader_language.cpp:2431` |
-| `bvec4(bool,bool,bvec2)` | transpiled (`construct-bvec4-bool-bool-bvec2`) | native | native | `servers/rendering/shader_language.cpp:2432` |
-| `bvec4(bool,bvec3)` | transpiled (`construct-bvec4-bool-bvec3`) | native | native | `servers/rendering/shader_language.cpp:2433` |
-| `bvec4(bvec3,bool)` | transpiled (`construct-bvec4-bvec3-bool`) | native | native | `servers/rendering/shader_language.cpp:2434` |
-| `bvec4(bvec2,bvec2)` | transpiled (`construct-bvec4-bvec2-bvec2`) | native | native | `servers/rendering/shader_language.cpp:2435` |
-| `vec2(float)` | transpiled (`construct-vec2-float`) | native | native | `servers/rendering/shader_language.cpp:2437` |
-| `vec2(float,float)` | transpiled (`construct-vec2-float-float`) | native | native | `servers/rendering/shader_language.cpp:2438` |
-| `vec3(float)` | transpiled (`construct-vec3-float`) | native | native | `servers/rendering/shader_language.cpp:2439` |
-| `vec3(float,float,float)` | transpiled (`construct-vec3-float-float-float`) | native | native | `servers/rendering/shader_language.cpp:2440` |
-| `vec3(vec2,float)` | transpiled (`construct-vec3-vec2-float`) | native | native | `servers/rendering/shader_language.cpp:2441` |
-| `vec3(float,vec2)` | transpiled (`construct-vec3-float-vec2`) | native | native | `servers/rendering/shader_language.cpp:2442` |
-| `vec4(float)` | transpiled (`construct-vec4-float`) | native | native | `servers/rendering/shader_language.cpp:2443` |
-| `vec4(float,float,float,float)` | transpiled (`construct-vec4-float-float-float-float`) | native | native | `servers/rendering/shader_language.cpp:2444` |
-| `vec4(float,vec2,float)` | transpiled (`construct-vec4-float-vec2-float`) | native | native | `servers/rendering/shader_language.cpp:2445` |
-| `vec4(vec2,float,float)` | transpiled (`construct-vec4-vec2-float-float`) | native | native | `servers/rendering/shader_language.cpp:2446` |
-| `vec4(float,float,vec2)` | transpiled (`construct-vec4-float-float-vec2`) | native | native | `servers/rendering/shader_language.cpp:2447` |
-| `vec4(float,vec3)` | transpiled (`construct-vec4-float-vec3`) | native | native | `servers/rendering/shader_language.cpp:2448` |
-| `vec4(vec3,float)` | transpiled (`construct-vec4-vec3-float`) | native | native | `servers/rendering/shader_language.cpp:2449` |
-| `vec4(vec2,vec2)` | transpiled (`construct-vec4-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2450` |
-| `ivec2(int)` | transpiled (`construct-ivec2-int`) | native | native | `servers/rendering/shader_language.cpp:2452` |
-| `ivec2(int,int)` | transpiled (`construct-ivec2-int-int`) | native | native | `servers/rendering/shader_language.cpp:2453` |
-| `ivec3(int)` | transpiled (`construct-ivec3-int`) | native | native | `servers/rendering/shader_language.cpp:2454` |
-| `ivec3(int,int,int)` | transpiled (`construct-ivec3-int-int-int`) | native | native | `servers/rendering/shader_language.cpp:2455` |
-| `ivec3(ivec2,int)` | transpiled (`construct-ivec3-ivec2-int`) | native | native | `servers/rendering/shader_language.cpp:2456` |
-| `ivec3(int,ivec2)` | transpiled (`construct-ivec3-int-ivec2`) | native | native | `servers/rendering/shader_language.cpp:2457` |
-| `ivec4(int)` | transpiled (`construct-ivec4-int`) | native | native | `servers/rendering/shader_language.cpp:2458` |
-| `ivec4(int,int,int,int)` | transpiled (`construct-ivec4-int-int-int-int`) | native | native | `servers/rendering/shader_language.cpp:2459` |
-| `ivec4(int,ivec2,int)` | transpiled (`construct-ivec4-int-ivec2-int`) | native | native | `servers/rendering/shader_language.cpp:2460` |
-| `ivec4(ivec2,int,int)` | transpiled (`construct-ivec4-ivec2-int-int`) | native | native | `servers/rendering/shader_language.cpp:2461` |
-| `ivec4(int,int,ivec2)` | transpiled (`construct-ivec4-int-int-ivec2`) | native | native | `servers/rendering/shader_language.cpp:2462` |
-| `ivec4(int,ivec3)` | transpiled (`construct-ivec4-int-ivec3`) | native | native | `servers/rendering/shader_language.cpp:2463` |
-| `ivec4(ivec3,int)` | transpiled (`construct-ivec4-ivec3-int`) | native | native | `servers/rendering/shader_language.cpp:2464` |
-| `ivec4(ivec2,ivec2)` | transpiled (`construct-ivec4-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:2465` |
-| `uvec2(uint)` | transpiled (`construct-uvec2-uint`) | native | native | `servers/rendering/shader_language.cpp:2467` |
-| `uvec2(uint,uint)` | transpiled (`construct-uvec2-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:2468` |
-| `uvec3(uint)` | transpiled (`construct-uvec3-uint`) | native | native | `servers/rendering/shader_language.cpp:2469` |
-| `uvec3(uint,uint,uint)` | transpiled (`construct-uvec3-uint-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:2470` |
-| `uvec3(uvec2,uint)` | transpiled (`construct-uvec3-uvec2-uint`) | native | native | `servers/rendering/shader_language.cpp:2471` |
-| `uvec3(uint,uvec2)` | transpiled (`construct-uvec3-uint-uvec2`) | native | native | `servers/rendering/shader_language.cpp:2472` |
-| `uvec4(uint)` | transpiled (`construct-uvec4-uint`) | native | native | `servers/rendering/shader_language.cpp:2473` |
-| `uvec4(uint,uint,uint,uint)` | transpiled (`construct-uvec4-uint-uint-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:2474` |
-| `uvec4(uint,uvec2,uint)` | transpiled (`construct-uvec4-uint-uvec2-uint`) | native | native | `servers/rendering/shader_language.cpp:2475` |
-| `uvec4(uvec2,uint,uint)` | transpiled (`construct-uvec4-uvec2-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:2476` |
-| `uvec4(uint,uint,uvec2)` | transpiled (`construct-uvec4-uint-uint-uvec2`) | native | native | `servers/rendering/shader_language.cpp:2477` |
-| `uvec4(uint,uvec3)` | transpiled (`construct-uvec4-uint-uvec3`) | native | native | `servers/rendering/shader_language.cpp:2478` |
-| `uvec4(uvec3,uint)` | transpiled (`construct-uvec4-uvec3-uint`) | native | native | `servers/rendering/shader_language.cpp:2479` |
-| `uvec4(uvec2,uvec2)` | transpiled (`construct-uvec4-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:2480` |
-| `mat2(vec2,vec2)` | transpiled (`construct-mat2-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2482` |
-| `mat3(vec3,vec3,vec3)` | transpiled (`construct-mat3-vec3-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:2483` |
-| `mat4(vec4,vec4,vec4,vec4)` | transpiled (`construct-mat4-vec4-vec4-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2484` |
-| `mat2(float)` | transpiled (`construct-mat2-float`) | lowered: diagonal of columns | lowered: diagonal of columns | `servers/rendering/shader_language.cpp:2486` |
-| `mat3(float)` | transpiled (`construct-mat3-float`) | lowered: diagonal of columns | lowered: diagonal of columns | `servers/rendering/shader_language.cpp:2487` |
-| `mat4(float)` | transpiled (`construct-mat4-float`) | lowered: diagonal of columns | lowered: diagonal of columns | `servers/rendering/shader_language.cpp:2488` |
+| `bvec2(bool)` | transpiled (`construct-bvec2-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2422` |
+| `bvec2(bool,bool)` | transpiled (`construct-bvec2-bool-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2423` |
+| `bvec3(bool)` | transpiled (`construct-bvec3-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2424` |
+| `bvec3(bool,bool,bool)` | transpiled (`construct-bvec3-bool-bool-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2425` |
+| `bvec3(bvec2,bool)` | transpiled (`construct-bvec3-bvec2-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2426` |
+| `bvec3(bool,bvec2)` | transpiled (`construct-bvec3-bool-bvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2427` |
+| `bvec4(bool)` | transpiled (`construct-bvec4-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2428` |
+| `bvec4(bool,bool,bool,bool)` | transpiled (`construct-bvec4-bool-bool-bool-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2429` |
+| `bvec4(bool,bvec2,bool)` | transpiled (`construct-bvec4-bool-bvec2-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2430` |
+| `bvec4(bvec2,bool,bool)` | transpiled (`construct-bvec4-bvec2-bool-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2431` |
+| `bvec4(bool,bool,bvec2)` | transpiled (`construct-bvec4-bool-bool-bvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2432` |
+| `bvec4(bool,bvec3)` | transpiled (`construct-bvec4-bool-bvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2433` |
+| `bvec4(bvec3,bool)` | transpiled (`construct-bvec4-bvec3-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2434` |
+| `bvec4(bvec2,bvec2)` | transpiled (`construct-bvec4-bvec2-bvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2435` |
+| `vec2(float)` | transpiled (`construct-vec2-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2437` |
+| `vec2(float,float)` | transpiled (`construct-vec2-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2438` |
+| `vec3(float)` | transpiled (`construct-vec3-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2439` |
+| `vec3(float,float,float)` | transpiled (`construct-vec3-float-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2440` |
+| `vec3(vec2,float)` | transpiled (`construct-vec3-vec2-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2441` |
+| `vec3(float,vec2)` | transpiled (`construct-vec3-float-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2442` |
+| `vec4(float)` | transpiled (`construct-vec4-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2443` |
+| `vec4(float,float,float,float)` | transpiled (`construct-vec4-float-float-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2444` |
+| `vec4(float,vec2,float)` | transpiled (`construct-vec4-float-vec2-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2445` |
+| `vec4(vec2,float,float)` | transpiled (`construct-vec4-vec2-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2446` |
+| `vec4(float,float,vec2)` | transpiled (`construct-vec4-float-float-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2447` |
+| `vec4(float,vec3)` | transpiled (`construct-vec4-float-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2448` |
+| `vec4(vec3,float)` | transpiled (`construct-vec4-vec3-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2449` |
+| `vec4(vec2,vec2)` | transpiled (`construct-vec4-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2450` |
+| `ivec2(int)` | transpiled (`construct-ivec2-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2452` |
+| `ivec2(int,int)` | transpiled (`construct-ivec2-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2453` |
+| `ivec3(int)` | transpiled (`construct-ivec3-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2454` |
+| `ivec3(int,int,int)` | transpiled (`construct-ivec3-int-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2455` |
+| `ivec3(ivec2,int)` | transpiled (`construct-ivec3-ivec2-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2456` |
+| `ivec3(int,ivec2)` | transpiled (`construct-ivec3-int-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2457` |
+| `ivec4(int)` | transpiled (`construct-ivec4-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2458` |
+| `ivec4(int,int,int,int)` | transpiled (`construct-ivec4-int-int-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2459` |
+| `ivec4(int,ivec2,int)` | transpiled (`construct-ivec4-int-ivec2-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2460` |
+| `ivec4(ivec2,int,int)` | transpiled (`construct-ivec4-ivec2-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2461` |
+| `ivec4(int,int,ivec2)` | transpiled (`construct-ivec4-int-int-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2462` |
+| `ivec4(int,ivec3)` | transpiled (`construct-ivec4-int-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2463` |
+| `ivec4(ivec3,int)` | transpiled (`construct-ivec4-ivec3-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2464` |
+| `ivec4(ivec2,ivec2)` | transpiled (`construct-ivec4-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2465` |
+| `uvec2(uint)` | transpiled (`construct-uvec2-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2467` |
+| `uvec2(uint,uint)` | transpiled (`construct-uvec2-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2468` |
+| `uvec3(uint)` | transpiled (`construct-uvec3-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2469` |
+| `uvec3(uint,uint,uint)` | transpiled (`construct-uvec3-uint-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2470` |
+| `uvec3(uvec2,uint)` | transpiled (`construct-uvec3-uvec2-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2471` |
+| `uvec3(uint,uvec2)` | transpiled (`construct-uvec3-uint-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2472` |
+| `uvec4(uint)` | transpiled (`construct-uvec4-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2473` |
+| `uvec4(uint,uint,uint,uint)` | transpiled (`construct-uvec4-uint-uint-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2474` |
+| `uvec4(uint,uvec2,uint)` | transpiled (`construct-uvec4-uint-uvec2-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2475` |
+| `uvec4(uvec2,uint,uint)` | transpiled (`construct-uvec4-uvec2-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2476` |
+| `uvec4(uint,uint,uvec2)` | transpiled (`construct-uvec4-uint-uint-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2477` |
+| `uvec4(uint,uvec3)` | transpiled (`construct-uvec4-uint-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2478` |
+| `uvec4(uvec3,uint)` | transpiled (`construct-uvec4-uvec3-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2479` |
+| `uvec4(uvec2,uvec2)` | transpiled (`construct-uvec4-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2480` |
+| `mat2(vec2,vec2)` | transpiled (`construct-mat2-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2482` |
+| `mat3(vec3,vec3,vec3)` | transpiled (`construct-mat3-vec3-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2483` |
+| `mat4(vec4,vec4,vec4,vec4)` | transpiled (`construct-mat4-vec4-vec4-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2484` |
+| `mat2(float)` | transpiled (`construct-mat2-float`) | lowered: diagonal of columns | untested (#1788) | `servers/rendering/shader_language.cpp:2486` |
+| `mat3(float)` | transpiled (`construct-mat3-float`) | lowered: diagonal of columns | untested (#1788) | `servers/rendering/shader_language.cpp:2487` |
+| `mat4(float)` | transpiled (`construct-mat4-float`) | lowered: diagonal of columns | untested (#1788) | `servers/rendering/shader_language.cpp:2488` |
 
 ## function
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `int(bool)` | transpiled (`construct-int-bool`) | native | native | `servers/rendering/shader_language.cpp:2492` |
-| `int(int)` | transpiled (`construct-int-int`) | native | native | `servers/rendering/shader_language.cpp:2493` |
-| `int(uint)` | transpiled (`construct-int-uint`) | native | native | `servers/rendering/shader_language.cpp:2494` |
-| `int(float)` | transpiled (`construct-int-float`) | native | native | `servers/rendering/shader_language.cpp:2495` |
-| `float(bool)` | transpiled (`construct-float-bool`) | native | native | `servers/rendering/shader_language.cpp:2497` |
-| `float(int)` | transpiled (`construct-float-int`) | native | native | `servers/rendering/shader_language.cpp:2498` |
-| `float(uint)` | transpiled (`construct-float-uint`) | native | native | `servers/rendering/shader_language.cpp:2499` |
-| `float(float)` | transpiled (`construct-float-float`) | native | native | `servers/rendering/shader_language.cpp:2500` |
-| `uint(bool)` | transpiled (`construct-uint-bool`) | native | native | `servers/rendering/shader_language.cpp:2502` |
-| `uint(int)` | transpiled (`construct-uint-int`) | native | native | `servers/rendering/shader_language.cpp:2503` |
-| `uint(uint)` | transpiled (`construct-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:2504` |
-| `uint(float)` | transpiled (`construct-uint-float`) | native | native | `servers/rendering/shader_language.cpp:2505` |
-| `bool(bool)` | transpiled (`construct-bool-bool`) | native | native | `servers/rendering/shader_language.cpp:2507` |
-| `bool(int)` | transpiled (`construct-bool-int`) | native | native | `servers/rendering/shader_language.cpp:2508` |
-| `bool(uint)` | transpiled (`construct-bool-uint`) | native | native | `servers/rendering/shader_language.cpp:2509` |
-| `bool(float)` | transpiled (`construct-bool-float`) | native | native | `servers/rendering/shader_language.cpp:2510` |
-| `ivec2(bvec2)` | transpiled (`call-ivec2-bvec2`) | native | native | `servers/rendering/shader_language.cpp:2514` |
-| `ivec2(ivec2)` | transpiled (`call-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:2515` |
-| `ivec2(uvec2)` | transpiled (`call-ivec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:2516` |
-| `ivec2(vec2)` | transpiled (`call-ivec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2517` |
-| `vec2(bvec2)` | transpiled (`call-vec2-bvec2`) | native | native | `servers/rendering/shader_language.cpp:2519` |
-| `vec2(ivec2)` | transpiled (`call-vec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:2520` |
-| `vec2(uvec2)` | transpiled (`call-vec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:2521` |
-| `vec2(vec2)` | transpiled (`call-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2522` |
-| `uvec2(bvec2)` | transpiled (`call-uvec2-bvec2`) | native | native | `servers/rendering/shader_language.cpp:2524` |
-| `uvec2(ivec2)` | transpiled (`call-uvec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:2525` |
-| `uvec2(uvec2)` | transpiled (`call-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:2526` |
-| `uvec2(vec2)` | transpiled (`call-uvec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2527` |
-| `bvec2(bvec2)` | transpiled (`call-bvec2-bvec2`) | native | native | `servers/rendering/shader_language.cpp:2529` |
-| `bvec2(ivec2)` | transpiled (`call-bvec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:2530` |
-| `bvec2(uvec2)` | transpiled (`call-bvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:2531` |
-| `bvec2(vec2)` | transpiled (`call-bvec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2532` |
-| `ivec3(bvec3)` | transpiled (`call-ivec3-bvec3`) | native | native | `servers/rendering/shader_language.cpp:2534` |
-| `ivec3(ivec3)` | transpiled (`call-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:2535` |
-| `ivec3(uvec3)` | transpiled (`call-ivec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:2536` |
-| `ivec3(vec3)` | transpiled (`call-ivec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:2537` |
-| `vec3(bvec3)` | transpiled (`call-vec3-bvec3`) | native | native | `servers/rendering/shader_language.cpp:2539` |
-| `vec3(ivec3)` | transpiled (`call-vec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:2540` |
-| `vec3(uvec3)` | transpiled (`call-vec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:2541` |
-| `vec3(vec3)` | transpiled (`call-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:2542` |
-| `uvec3(bvec3)` | transpiled (`call-uvec3-bvec3`) | native | native | `servers/rendering/shader_language.cpp:2544` |
-| `uvec3(ivec3)` | transpiled (`call-uvec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:2545` |
-| `uvec3(uvec3)` | transpiled (`call-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:2546` |
-| `uvec3(vec3)` | transpiled (`call-uvec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:2547` |
-| `bvec3(bvec3)` | transpiled (`call-bvec3-bvec3`) | native | native | `servers/rendering/shader_language.cpp:2549` |
-| `bvec3(ivec3)` | transpiled (`call-bvec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:2550` |
-| `bvec3(uvec3)` | transpiled (`call-bvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:2551` |
-| `bvec3(vec3)` | transpiled (`call-bvec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:2552` |
-| `ivec4(bvec4)` | transpiled (`call-ivec4-bvec4`) | native | native | `servers/rendering/shader_language.cpp:2554` |
-| `ivec4(ivec4)` | transpiled (`call-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:2555` |
-| `ivec4(uvec4)` | transpiled (`call-ivec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:2556` |
-| `ivec4(vec4)` | transpiled (`call-ivec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2557` |
-| `vec4(bvec4)` | transpiled (`call-vec4-bvec4`) | native | native | `servers/rendering/shader_language.cpp:2559` |
-| `vec4(ivec4)` | transpiled (`call-vec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:2560` |
-| `vec4(uvec4)` | transpiled (`call-vec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:2561` |
-| `vec4(vec4)` | transpiled (`call-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2562` |
-| `uvec4(bvec4)` | transpiled (`call-uvec4-bvec4`) | native | native | `servers/rendering/shader_language.cpp:2564` |
-| `uvec4(ivec4)` | transpiled (`call-uvec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:2565` |
-| `uvec4(uvec4)` | transpiled (`call-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:2566` |
-| `uvec4(vec4)` | transpiled (`call-uvec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2567` |
-| `bvec4(bvec4)` | transpiled (`call-bvec4-bvec4`) | native | native | `servers/rendering/shader_language.cpp:2569` |
-| `bvec4(ivec4)` | transpiled (`call-bvec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:2570` |
-| `bvec4(uvec4)` | transpiled (`call-bvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:2571` |
-| `bvec4(vec4)` | transpiled (`call-bvec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2572` |
-| `mat2(mat3)` | transpiled (`call-mat2-mat3`) | native | native | `servers/rendering/shader_language.cpp:2576` |
-| `mat2(mat4)` | transpiled (`call-mat2-mat4`) | native | native | `servers/rendering/shader_language.cpp:2577` |
-| `mat3(mat2)` | transpiled (`call-mat3-mat2`) | native | native | `servers/rendering/shader_language.cpp:2578` |
-| `mat3(mat4)` | transpiled (`call-mat3-mat4`) | native | native | `servers/rendering/shader_language.cpp:2579` |
-| `mat4(mat2)` | transpiled (`call-mat4-mat2`) | native | native | `servers/rendering/shader_language.cpp:2580` |
-| `mat4(mat3)` | transpiled (`call-mat4-mat3`) | native | native | `servers/rendering/shader_language.cpp:2581` |
-| `radians(float)` | transpiled (`call-radians-float`, `fold-call-radians`) | native | native | `servers/rendering/shader_language.cpp:2586` |
-| `radians(vec2)` | transpiled (`call-radians-vec2`) | native | native | `servers/rendering/shader_language.cpp:2587` |
-| `radians(vec3)` | transpiled (`call-radians-vec3`) | native | native | `servers/rendering/shader_language.cpp:2588` |
-| `radians(vec4)` | transpiled (`call-radians-vec4`) | native | native | `servers/rendering/shader_language.cpp:2589` |
-| `degrees(float)` | transpiled (`call-degrees-float`, `fold-call-degrees`) | native | native | `servers/rendering/shader_language.cpp:2593` |
-| `degrees(vec2)` | transpiled (`call-degrees-vec2`) | native | native | `servers/rendering/shader_language.cpp:2594` |
-| `degrees(vec3)` | transpiled (`call-degrees-vec3`) | native | native | `servers/rendering/shader_language.cpp:2595` |
-| `degrees(vec4)` | transpiled (`call-degrees-vec4`) | native | native | `servers/rendering/shader_language.cpp:2596` |
-| `sin(float)` | transpiled (`call-sin-float`, `call-wrong-type`, `call-too-many`, `fold-call-sin-cos`, `fold-call-call-of-calls`) | native | native | `servers/rendering/shader_language.cpp:2600` |
-| `sin(vec2)` | transpiled (`call-sin-vec2`) | native | native | `servers/rendering/shader_language.cpp:2601` |
-| `sin(vec3)` | transpiled (`call-sin-vec3`) | native | native | `servers/rendering/shader_language.cpp:2602` |
-| `sin(vec4)` | transpiled (`call-sin-vec4`) | native | native | `servers/rendering/shader_language.cpp:2603` |
-| `cos(float)` | transpiled (`call-cos-float`, `fold-call-sin-cos`, `fold-call-call-of-calls`) | native | native | `servers/rendering/shader_language.cpp:2607` |
-| `cos(vec2)` | transpiled (`call-cos-vec2`) | native | native | `servers/rendering/shader_language.cpp:2608` |
-| `cos(vec3)` | transpiled (`call-cos-vec3`) | native | native | `servers/rendering/shader_language.cpp:2609` |
-| `cos(vec4)` | transpiled (`call-cos-vec4`) | native | native | `servers/rendering/shader_language.cpp:2610` |
-| `tan(float)` | transpiled (`call-tan-float`) | native | native | `servers/rendering/shader_language.cpp:2614` |
-| `tan(vec2)` | transpiled (`call-tan-vec2`, `fold-call-tan`) | native | native | `servers/rendering/shader_language.cpp:2615` |
-| `tan(vec3)` | transpiled (`call-tan-vec3`) | native | native | `servers/rendering/shader_language.cpp:2616` |
-| `tan(vec4)` | transpiled (`call-tan-vec4`) | native | native | `servers/rendering/shader_language.cpp:2617` |
-| `asin(float)` | transpiled (`call-asin-float`, `fold-call-inverse-trigonometry`) | native | native | `servers/rendering/shader_language.cpp:2621` |
-| `asin(vec2)` | transpiled (`call-asin-vec2`) | native | native | `servers/rendering/shader_language.cpp:2622` |
-| `asin(vec3)` | transpiled (`call-asin-vec3`) | native | native | `servers/rendering/shader_language.cpp:2623` |
-| `asin(vec4)` | transpiled (`call-asin-vec4`) | native | native | `servers/rendering/shader_language.cpp:2624` |
-| `acos(float)` | transpiled (`call-acos-float`, `fold-call-inverse-trigonometry`) | native | native | `servers/rendering/shader_language.cpp:2628` |
-| `acos(vec2)` | transpiled (`call-acos-vec2`) | native | native | `servers/rendering/shader_language.cpp:2629` |
-| `acos(vec3)` | transpiled (`call-acos-vec3`) | native | native | `servers/rendering/shader_language.cpp:2630` |
-| `acos(vec4)` | transpiled (`call-acos-vec4`) | native | native | `servers/rendering/shader_language.cpp:2631` |
-| `atan(float)` | transpiled (`call-atan-float`, `fold-call-inverse-trigonometry`) | native | native | `servers/rendering/shader_language.cpp:2635` |
-| `atan(vec2)` | transpiled (`call-atan-vec2`) | native | native | `servers/rendering/shader_language.cpp:2636` |
-| `atan(vec3)` | transpiled (`call-atan-vec3`) | native | native | `servers/rendering/shader_language.cpp:2637` |
-| `atan(vec4)` | transpiled (`call-atan-vec4`) | native | native | `servers/rendering/shader_language.cpp:2638` |
-| `atan(float,float)` | transpiled (`call-atan-float-float`) | native | native | `servers/rendering/shader_language.cpp:2639` |
-| `atan(vec2,vec2)` | transpiled (`call-atan-vec2-vec2`, `fold-call-atan-of-two`) | native | native | `servers/rendering/shader_language.cpp:2640` |
-| `atan(vec3,vec3)` | transpiled (`call-atan-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:2641` |
-| `atan(vec4,vec4)` | transpiled (`call-atan-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2642` |
-| `sinh(float)` | transpiled (`call-sinh-float`) | native | native | `servers/rendering/shader_language.cpp:2646` |
-| `sinh(vec2)` | transpiled (`call-sinh-vec2`) | native | native | `servers/rendering/shader_language.cpp:2647` |
-| `sinh(vec3)` | transpiled (`call-sinh-vec3`) | native | native | `servers/rendering/shader_language.cpp:2648` |
-| `sinh(vec4)` | transpiled (`call-sinh-vec4`) | native | native | `servers/rendering/shader_language.cpp:2649` |
-| `cosh(float)` | transpiled (`call-cosh-float`) | native | native | `servers/rendering/shader_language.cpp:2653` |
-| `cosh(vec2)` | transpiled (`call-cosh-vec2`) | native | native | `servers/rendering/shader_language.cpp:2654` |
-| `cosh(vec3)` | transpiled (`call-cosh-vec3`) | native | native | `servers/rendering/shader_language.cpp:2655` |
-| `cosh(vec4)` | transpiled (`call-cosh-vec4`) | native | native | `servers/rendering/shader_language.cpp:2656` |
-| `tanh(float)` | transpiled (`call-tanh-float`) | native | native | `servers/rendering/shader_language.cpp:2660` |
-| `tanh(vec2)` | transpiled (`call-tanh-vec2`) | native | native | `servers/rendering/shader_language.cpp:2661` |
-| `tanh(vec3)` | transpiled (`call-tanh-vec3`) | native | native | `servers/rendering/shader_language.cpp:2662` |
-| `tanh(vec4)` | transpiled (`call-tanh-vec4`) | native | native | `servers/rendering/shader_language.cpp:2663` |
-| `asinh(float)` | transpiled (`call-asinh-float`) | native | native | `servers/rendering/shader_language.cpp:2667` |
-| `asinh(vec2)` | transpiled (`call-asinh-vec2`) | native | native | `servers/rendering/shader_language.cpp:2668` |
-| `asinh(vec3)` | transpiled (`call-asinh-vec3`) | native | native | `servers/rendering/shader_language.cpp:2669` |
-| `asinh(vec4)` | transpiled (`call-asinh-vec4`) | native | native | `servers/rendering/shader_language.cpp:2670` |
-| `acosh(float)` | transpiled (`call-acosh-float`) | native | native | `servers/rendering/shader_language.cpp:2674` |
-| `acosh(vec2)` | transpiled (`call-acosh-vec2`) | native | native | `servers/rendering/shader_language.cpp:2675` |
-| `acosh(vec3)` | transpiled (`call-acosh-vec3`) | native | native | `servers/rendering/shader_language.cpp:2676` |
-| `acosh(vec4)` | transpiled (`call-acosh-vec4`) | native | native | `servers/rendering/shader_language.cpp:2677` |
-| `atanh(float)` | transpiled (`call-atanh-float`) | native | native | `servers/rendering/shader_language.cpp:2681` |
-| `atanh(vec2)` | transpiled (`call-atanh-vec2`) | native | native | `servers/rendering/shader_language.cpp:2682` |
-| `atanh(vec3)` | transpiled (`call-atanh-vec3`) | native | native | `servers/rendering/shader_language.cpp:2683` |
-| `atanh(vec4)` | transpiled (`call-atanh-vec4`) | native | native | `servers/rendering/shader_language.cpp:2684` |
-| `pow(float,float)` | transpiled (`call-pow-float-float`) | native | native | `servers/rendering/shader_language.cpp:2689` |
-| `pow(vec2,vec2)` | transpiled (`call-pow-vec2-vec2`, `fold-call-pow`) | native | native | `servers/rendering/shader_language.cpp:2690` |
-| `pow(vec3,vec3)` | transpiled (`call-pow-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:2691` |
-| `pow(vec4,vec4)` | transpiled (`call-pow-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2692` |
-| `exp(float)` | transpiled (`call-exp-float`, `fold-call-exp-log`, `fold-call-call-of-calls`) | native | native | `servers/rendering/shader_language.cpp:2696` |
-| `exp(vec2)` | transpiled (`call-exp-vec2`) | native | native | `servers/rendering/shader_language.cpp:2697` |
-| `exp(vec3)` | transpiled (`call-exp-vec3`) | native | native | `servers/rendering/shader_language.cpp:2698` |
-| `exp(vec4)` | transpiled (`call-exp-vec4`) | native | native | `servers/rendering/shader_language.cpp:2699` |
-| `log(float)` | transpiled (`call-log-float`, `fold-call-exp-log`) | native | native | `servers/rendering/shader_language.cpp:2703` |
-| `log(vec2)` | transpiled (`call-log-vec2`) | native | native | `servers/rendering/shader_language.cpp:2704` |
-| `log(vec3)` | transpiled (`call-log-vec3`) | native | native | `servers/rendering/shader_language.cpp:2705` |
-| `log(vec4)` | transpiled (`call-log-vec4`) | native | native | `servers/rendering/shader_language.cpp:2706` |
-| `exp2(float)` | transpiled (`call-exp2-float`, `fold-call-exp2-log2`) | native | native | `servers/rendering/shader_language.cpp:2710` |
-| `exp2(vec2)` | transpiled (`call-exp2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2711` |
-| `exp2(vec3)` | transpiled (`call-exp2-vec3`) | native | native | `servers/rendering/shader_language.cpp:2712` |
-| `exp2(vec4)` | transpiled (`call-exp2-vec4`) | native | native | `servers/rendering/shader_language.cpp:2713` |
-| `log2(float)` | transpiled (`call-log2-float`, `fold-call-exp2-log2`) | native | native | `servers/rendering/shader_language.cpp:2717` |
-| `log2(vec2)` | transpiled (`call-log2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2718` |
-| `log2(vec3)` | transpiled (`call-log2-vec3`) | native | native | `servers/rendering/shader_language.cpp:2719` |
-| `log2(vec4)` | transpiled (`call-log2-vec4`) | native | native | `servers/rendering/shader_language.cpp:2720` |
-| `sqrt(float)` | transpiled (`call-sqrt-float`, `fold-call-sqrt-inversesqrt`) | native | native | `servers/rendering/shader_language.cpp:2724` |
-| `sqrt(vec2)` | transpiled (`call-sqrt-vec2`) | native | native | `servers/rendering/shader_language.cpp:2725` |
-| `sqrt(vec3)` | transpiled (`call-sqrt-vec3`) | native | native | `servers/rendering/shader_language.cpp:2726` |
-| `sqrt(vec4)` | transpiled (`call-sqrt-vec4`) | native | native | `servers/rendering/shader_language.cpp:2727` |
-| `inversesqrt(float)` | transpiled (`call-inversesqrt-float`, `fold-call-sqrt-inversesqrt`) | native | native | `servers/rendering/shader_language.cpp:2731` |
-| `inversesqrt(vec2)` | transpiled (`call-inversesqrt-vec2`) | native | native | `servers/rendering/shader_language.cpp:2732` |
-| `inversesqrt(vec3)` | transpiled (`call-inversesqrt-vec3`) | native | native | `servers/rendering/shader_language.cpp:2733` |
-| `inversesqrt(vec4)` | transpiled (`call-inversesqrt-vec4`) | native | native | `servers/rendering/shader_language.cpp:2734` |
-| `abs(float)` | transpiled (`call-abs-float`) | native | native | `servers/rendering/shader_language.cpp:2739` |
-| `abs(vec2)` | transpiled (`call-abs-vec2`, `fold-call-abs`) | native | native | `servers/rendering/shader_language.cpp:2740` |
-| `abs(vec3)` | transpiled (`call-abs-vec3`) | native | native | `servers/rendering/shader_language.cpp:2741` |
-| `abs(vec4)` | transpiled (`call-abs-vec4`) | native | native | `servers/rendering/shader_language.cpp:2742` |
-| `abs(int)` | transpiled (`call-abs-int`) | native | native | `servers/rendering/shader_language.cpp:2744` |
-| `abs(ivec2)` | transpiled (`call-abs-ivec2`, `fold-call-abs`) | native | native | `servers/rendering/shader_language.cpp:2745` |
-| `abs(ivec3)` | transpiled (`call-abs-ivec3`) | native | native | `servers/rendering/shader_language.cpp:2746` |
-| `abs(ivec4)` | transpiled (`call-abs-ivec4`) | native | native | `servers/rendering/shader_language.cpp:2747` |
-| `sign(float)` | transpiled (`call-sign-float`) | native | native | `servers/rendering/shader_language.cpp:2751` |
-| `sign(vec2)` | transpiled (`call-sign-vec2`) | native | native | `servers/rendering/shader_language.cpp:2752` |
-| `sign(vec3)` | transpiled (`call-sign-vec3`) | native | native | `servers/rendering/shader_language.cpp:2753` |
-| `sign(vec4)` | transpiled (`call-sign-vec4`, `fold-call-sign`) | native | native | `servers/rendering/shader_language.cpp:2754` |
-| `sign(int)` | transpiled (`call-sign-int`) | native | native | `servers/rendering/shader_language.cpp:2756` |
-| `sign(ivec2)` | transpiled (`call-sign-ivec2`, `fold-call-sign-int`) | native | native | `servers/rendering/shader_language.cpp:2757` |
-| `sign(ivec3)` | transpiled (`call-sign-ivec3`) | native | native | `servers/rendering/shader_language.cpp:2758` |
-| `sign(ivec4)` | transpiled (`call-sign-ivec4`) | native | native | `servers/rendering/shader_language.cpp:2759` |
-| `floor(float)` | transpiled (`call-floor-float`, `fold-call-floor-ceil-fract-trunc`) | native | native | `servers/rendering/shader_language.cpp:2763` |
-| `floor(vec2)` | transpiled (`call-floor-vec2`) | native | native | `servers/rendering/shader_language.cpp:2764` |
-| `floor(vec3)` | transpiled (`call-floor-vec3`) | native | native | `servers/rendering/shader_language.cpp:2765` |
-| `floor(vec4)` | transpiled (`call-floor-vec4`) | native | native | `servers/rendering/shader_language.cpp:2766` |
-| `trunc(float)` | transpiled (`call-trunc-float`, `fold-call-floor-ceil-fract-trunc`) | native | native | `servers/rendering/shader_language.cpp:2770` |
-| `trunc(vec2)` | transpiled (`call-trunc-vec2`) | native | native | `servers/rendering/shader_language.cpp:2771` |
-| `trunc(vec3)` | transpiled (`call-trunc-vec3`) | native | native | `servers/rendering/shader_language.cpp:2772` |
-| `trunc(vec4)` | transpiled (`call-trunc-vec4`) | native | native | `servers/rendering/shader_language.cpp:2773` |
-| `round(float)` | transpiled (`call-round-float`) | native | native | `servers/rendering/shader_language.cpp:2777` |
-| `round(vec2)` | transpiled (`call-round-vec2`) | native | native | `servers/rendering/shader_language.cpp:2778` |
-| `round(vec3)` | transpiled (`call-round-vec3`) | native | native | `servers/rendering/shader_language.cpp:2779` |
-| `round(vec4)` | transpiled (`call-round-vec4`, `fold-call-round`) | native | native | `servers/rendering/shader_language.cpp:2780` |
-| `roundEven(float)` | transpiled (`call-roundEven-float`) | lowered: floor(x) + mod(floor(x), 2) at a half | lowered: floor(x) + mod(floor(x), 2) at a half | `servers/rendering/shader_language.cpp:2784` |
-| `roundEven(vec2)` | transpiled (`call-roundEven-vec2`) | lowered: floor(x) + mod(floor(x), 2) at a half | lowered: floor(x) + mod(floor(x), 2) at a half | `servers/rendering/shader_language.cpp:2785` |
-| `roundEven(vec3)` | transpiled (`call-roundEven-vec3`) | lowered: floor(x) + mod(floor(x), 2) at a half | lowered: floor(x) + mod(floor(x), 2) at a half | `servers/rendering/shader_language.cpp:2786` |
-| `roundEven(vec4)` | transpiled (`call-roundEven-vec4`, `fold-call-round-even`) | lowered: floor(x) + mod(floor(x), 2) at a half | lowered: floor(x) + mod(floor(x), 2) at a half | `servers/rendering/shader_language.cpp:2787` |
-| `ceil(float)` | transpiled (`call-ceil-float`, `fold-call-floor-ceil-fract-trunc`) | native | native | `servers/rendering/shader_language.cpp:2791` |
-| `ceil(vec2)` | transpiled (`call-ceil-vec2`) | native | native | `servers/rendering/shader_language.cpp:2792` |
-| `ceil(vec3)` | transpiled (`call-ceil-vec3`) | native | native | `servers/rendering/shader_language.cpp:2793` |
-| `ceil(vec4)` | transpiled (`call-ceil-vec4`) | native | native | `servers/rendering/shader_language.cpp:2794` |
-| `fract(float)` | transpiled (`call-fract-float`, `fold-call-floor-ceil-fract-trunc`) | native | native | `servers/rendering/shader_language.cpp:2798` |
-| `fract(vec2)` | transpiled (`call-fract-vec2`) | native | native | `servers/rendering/shader_language.cpp:2799` |
-| `fract(vec3)` | transpiled (`call-fract-vec3`) | native | native | `servers/rendering/shader_language.cpp:2800` |
-| `fract(vec4)` | transpiled (`call-fract-vec4`) | native | native | `servers/rendering/shader_language.cpp:2801` |
-| `mod(float,float)` | transpiled (`call-mod-float-float`) | native | native | `servers/rendering/shader_language.cpp:2805` |
-| `mod(vec2,vec2)` | transpiled (`call-mod-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2806` |
-| `mod(vec2,float)` | transpiled (`call-mod-vec2-float`, `fold-call-mod`) | native | native | `servers/rendering/shader_language.cpp:2807` |
-| `mod(vec3,vec3)` | transpiled (`call-mod-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:2808` |
-| `mod(vec3,float)` | transpiled (`call-mod-vec3-float`) | native | native | `servers/rendering/shader_language.cpp:2809` |
-| `mod(vec4,vec4)` | transpiled (`call-mod-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2810` |
-| `mod(vec4,float)` | transpiled (`call-mod-vec4-float`) | native | native | `servers/rendering/shader_language.cpp:2811` |
-| `modf(float,float)` | transpiled (`call-modf-float-float-fraction`, `call-modf-float-float-whole`, `call-out-to-a-swizzle`, `call-out-to-an-element`, `call-out-to-a-constant`, `call-out-to-a-value`, `call-out-to-a-const`) | lowered: trunc(x) and x - trunc(x) | lowered: trunc(x) and x - trunc(x) | `servers/rendering/shader_language.cpp:2815` |
-| `modf(vec2,vec2)` | transpiled (`call-modf-vec2-vec2-fraction`, `call-modf-vec2-vec2-whole`) | lowered: trunc(x) and x - trunc(x) | lowered: trunc(x) and x - trunc(x) | `servers/rendering/shader_language.cpp:2816` |
-| `modf(vec3,vec3)` | transpiled (`call-modf-vec3-vec3-fraction`, `call-modf-vec3-vec3-whole`) | lowered: trunc(x) and x - trunc(x) | lowered: trunc(x) and x - trunc(x) | `servers/rendering/shader_language.cpp:2817` |
-| `modf(vec4,vec4)` | transpiled (`call-modf-vec4-vec4-fraction`, `call-modf-vec4-vec4-whole`) | lowered: trunc(x) and x - trunc(x) | lowered: trunc(x) and x - trunc(x) | `servers/rendering/shader_language.cpp:2818` |
-| `min(float,float)` | transpiled (`call-min-float-float`, `fold-call-min-max-of-nan`) | native | native | `servers/rendering/shader_language.cpp:2822` |
-| `min(vec2,vec2)` | transpiled (`call-min-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2823` |
-| `min(vec2,float)` | transpiled (`call-min-vec2-float`) | native | native | `servers/rendering/shader_language.cpp:2824` |
-| `min(vec3,vec3)` | transpiled (`call-min-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:2825` |
-| `min(vec3,float)` | transpiled (`call-min-vec3-float`) | native | native | `servers/rendering/shader_language.cpp:2826` |
-| `min(vec4,vec4)` | transpiled (`call-min-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2827` |
-| `min(vec4,float)` | transpiled (`call-min-vec4-float`) | native | native | `servers/rendering/shader_language.cpp:2828` |
-| `min(int,int)` | transpiled (`call-min-int-int`) | native | native | `servers/rendering/shader_language.cpp:2830` |
-| `min(ivec2,ivec2)` | transpiled (`call-min-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:2831` |
-| `min(ivec2,int)` | transpiled (`call-min-ivec2-int`, `call-uint-constant-to-int`) | native | native | `servers/rendering/shader_language.cpp:2832` |
-| `min(ivec3,ivec3)` | transpiled (`call-min-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:2833` |
-| `min(ivec3,int)` | transpiled (`call-min-ivec3-int`) | native | native | `servers/rendering/shader_language.cpp:2834` |
-| `min(ivec4,ivec4)` | transpiled (`call-min-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:2835` |
-| `min(ivec4,int)` | transpiled (`call-min-ivec4-int`) | native | native | `servers/rendering/shader_language.cpp:2836` |
-| `min(uint,uint)` | transpiled (`call-min-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:2838` |
-| `min(uvec2,uvec2)` | transpiled (`call-min-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:2839` |
-| `min(uvec2,uint)` | transpiled (`call-min-uvec2-uint`, `fold-call-min-uint`) | native | native | `servers/rendering/shader_language.cpp:2840` |
-| `min(uvec3,uvec3)` | transpiled (`call-min-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:2841` |
-| `min(uvec3,uint)` | transpiled (`call-min-uvec3-uint`) | native | native | `servers/rendering/shader_language.cpp:2842` |
-| `min(uvec4,uvec4)` | transpiled (`call-min-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:2843` |
-| `min(uvec4,uint)` | transpiled (`call-min-uvec4-uint`) | native | native | `servers/rendering/shader_language.cpp:2844` |
-| `max(float,float)` | transpiled (`call-max-float-float`, `call-int-constant-to-float`, `fold-call-min-max-of-nan`) | native | native | `servers/rendering/shader_language.cpp:2848` |
-| `max(vec2,vec2)` | transpiled (`call-max-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2849` |
-| `max(vec2,float)` | transpiled (`call-max-vec2-float`) | native | native | `servers/rendering/shader_language.cpp:2850` |
-| `max(vec3,vec3)` | transpiled (`call-max-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:2851` |
-| `max(vec3,float)` | transpiled (`call-max-vec3-float`) | native | native | `servers/rendering/shader_language.cpp:2852` |
-| `max(vec4,vec4)` | transpiled (`call-max-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2853` |
-| `max(vec4,float)` | transpiled (`call-max-vec4-float`) | native | native | `servers/rendering/shader_language.cpp:2854` |
-| `max(int,int)` | transpiled (`call-max-int-int`) | native | native | `servers/rendering/shader_language.cpp:2856` |
-| `max(ivec2,ivec2)` | transpiled (`call-max-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:2857` |
-| `max(ivec2,int)` | transpiled (`call-max-ivec2-int`) | native | native | `servers/rendering/shader_language.cpp:2858` |
-| `max(ivec3,ivec3)` | transpiled (`call-max-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:2859` |
-| `max(ivec3,int)` | transpiled (`call-max-ivec3-int`) | native | native | `servers/rendering/shader_language.cpp:2860` |
-| `max(ivec4,ivec4)` | transpiled (`call-max-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:2861` |
-| `max(ivec4,int)` | transpiled (`call-max-ivec4-int`) | native | native | `servers/rendering/shader_language.cpp:2862` |
-| `max(uint,uint)` | transpiled (`call-max-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:2864` |
-| `max(uvec2,uvec2)` | transpiled (`call-max-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:2865` |
-| `max(uvec2,uint)` | transpiled (`call-max-uvec2-uint`) | native | native | `servers/rendering/shader_language.cpp:2866` |
-| `max(uvec3,uvec3)` | transpiled (`call-max-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:2867` |
-| `max(uvec3,uint)` | transpiled (`call-max-uvec3-uint`) | native | native | `servers/rendering/shader_language.cpp:2868` |
-| `max(uvec4,uvec4)` | transpiled (`call-max-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:2869` |
-| `max(uvec4,uint)` | transpiled (`call-max-uvec4-uint`) | native | native | `servers/rendering/shader_language.cpp:2870` |
-| `clamp(float,float,float)` | transpiled (`call-clamp-float-float-float`) | native | native | `servers/rendering/shader_language.cpp:2874` |
-| `clamp(vec2,vec2,vec2)` | transpiled (`call-clamp-vec2-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2875` |
-| `clamp(vec3,vec3,vec3)` | transpiled (`call-clamp-vec3-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:2876` |
-| `clamp(vec4,vec4,vec4)` | transpiled (`call-clamp-vec4-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2877` |
-| `clamp(vec2,float,float)` | transpiled (`call-clamp-vec2-float-float`) | native | native | `servers/rendering/shader_language.cpp:2878` |
-| `clamp(vec3,float,float)` | transpiled (`call-clamp-vec3-float-float`, `fold-call-clamp`) | native | native | `servers/rendering/shader_language.cpp:2879` |
-| `clamp(vec4,float,float)` | transpiled (`call-clamp-vec4-float-float`) | native | native | `servers/rendering/shader_language.cpp:2880` |
-| `clamp(int,int,int)` | transpiled (`call-clamp-int-int-int`) | native | native | `servers/rendering/shader_language.cpp:2882` |
-| `clamp(ivec2,ivec2,ivec2)` | transpiled (`call-clamp-ivec2-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:2883` |
-| `clamp(ivec3,ivec3,ivec3)` | transpiled (`call-clamp-ivec3-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:2884` |
-| `clamp(ivec4,ivec4,ivec4)` | transpiled (`call-clamp-ivec4-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:2885` |
-| `clamp(ivec2,int,int)` | transpiled (`call-clamp-ivec2-int-int`, `fold-call-clamp-int`) | native | native | `servers/rendering/shader_language.cpp:2886` |
-| `clamp(ivec3,int,int)` | transpiled (`call-clamp-ivec3-int-int`) | native | native | `servers/rendering/shader_language.cpp:2887` |
-| `clamp(ivec4,int,int)` | transpiled (`call-clamp-ivec4-int-int`) | native | native | `servers/rendering/shader_language.cpp:2888` |
-| `clamp(uint,uint,uint)` | transpiled (`call-clamp-uint-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:2890` |
-| `clamp(uvec2,uvec2,uvec2)` | transpiled (`call-clamp-uvec2-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:2891` |
-| `clamp(uvec3,uvec3,uvec3)` | transpiled (`call-clamp-uvec3-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:2892` |
-| `clamp(uvec4,uvec4,uvec4)` | transpiled (`call-clamp-uvec4-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:2893` |
-| `clamp(uvec2,uint,uint)` | transpiled (`call-clamp-uvec2-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:2894` |
-| `clamp(uvec3,uint,uint)` | transpiled (`call-clamp-uvec3-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:2895` |
-| `clamp(uvec4,uint,uint)` | transpiled (`call-clamp-uvec4-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:2896` |
-| `mix(float,float,float)` | transpiled (`call-mix-float-float-float`, `fold-call-mix`) | native | native | `servers/rendering/shader_language.cpp:2900` |
-| `mix(vec2,vec2,float)` | transpiled (`call-mix-vec2-vec2-float`) | native | native | `servers/rendering/shader_language.cpp:2901` |
-| `mix(vec2,vec2,bvec2)` | transpiled (`call-mix-vec2-vec2-bvec2`, `fold-call-mix-bool`) | lowered: select by lane | lowered: select by lane | `servers/rendering/shader_language.cpp:2902` |
-| `mix(vec2,vec2,vec2)` | transpiled (`call-mix-vec2-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2903` |
-| `mix(vec3,vec3,float)` | transpiled (`call-mix-vec3-vec3-float`) | native | native | `servers/rendering/shader_language.cpp:2904` |
-| `mix(vec3,vec3,bvec3)` | transpiled (`call-mix-vec3-vec3-bvec3`) | lowered: select by lane | lowered: select by lane | `servers/rendering/shader_language.cpp:2905` |
-| `mix(vec3,vec3,vec3)` | transpiled (`call-mix-vec3-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:2906` |
-| `mix(vec4,vec4,float)` | transpiled (`call-mix-vec4-vec4-float`) | native | native | `servers/rendering/shader_language.cpp:2907` |
-| `mix(vec4,vec4,bvec4)` | transpiled (`call-mix-vec4-vec4-bvec4`) | lowered: select by lane | lowered: select by lane | `servers/rendering/shader_language.cpp:2908` |
-| `mix(vec4,vec4,vec4)` | transpiled (`call-mix-vec4-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2909` |
-| `step(float,float)` | transpiled (`call-step-float-float`) | native | native | `servers/rendering/shader_language.cpp:2913` |
-| `step(vec2,vec2)` | transpiled (`call-step-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2914` |
-| `step(vec3,vec3)` | transpiled (`call-step-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:2915` |
-| `step(vec4,vec4)` | transpiled (`call-step-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2916` |
-| `step(float,vec2)` | transpiled (`call-step-float-vec2`, `fold-call-step`) | native | native | `servers/rendering/shader_language.cpp:2917` |
-| `step(float,vec3)` | transpiled (`call-step-float-vec3`) | native | native | `servers/rendering/shader_language.cpp:2918` |
-| `step(float,vec4)` | transpiled (`call-step-float-vec4`) | native | native | `servers/rendering/shader_language.cpp:2919` |
-| `smoothstep(float,float,float)` | transpiled (`call-smoothstep-float-float-float`) | native | native | `servers/rendering/shader_language.cpp:2923` |
-| `smoothstep(vec2,vec2,vec2)` | transpiled (`call-smoothstep-vec2-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2924` |
-| `smoothstep(vec3,vec3,vec3)` | transpiled (`call-smoothstep-vec3-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:2925` |
-| `smoothstep(vec4,vec4,vec4)` | transpiled (`call-smoothstep-vec4-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2926` |
-| `smoothstep(float,float,vec2)` | transpiled (`call-smoothstep-float-float-vec2`, `fold-call-smoothstep`) | native | native | `servers/rendering/shader_language.cpp:2927` |
-| `smoothstep(float,float,vec3)` | transpiled (`call-smoothstep-float-float-vec3`) | native | native | `servers/rendering/shader_language.cpp:2928` |
-| `smoothstep(float,float,vec4)` | transpiled (`call-smoothstep-float-float-vec4`) | native | native | `servers/rendering/shader_language.cpp:2929` |
-| `isnan(float)` | transpiled (`call-isnan-float`, `fold-call-isnan-isinf`) | lowered: x != x | lowered: x != x | `servers/rendering/shader_language.cpp:2933` |
-| `isnan(vec2)` | transpiled (`call-isnan-vec2`) | lowered: x != x | lowered: x != x | `servers/rendering/shader_language.cpp:2934` |
-| `isnan(vec3)` | transpiled (`call-isnan-vec3`) | lowered: x != x | lowered: x != x | `servers/rendering/shader_language.cpp:2935` |
-| `isnan(vec4)` | transpiled (`call-isnan-vec4`) | lowered: x != x | lowered: x != x | `servers/rendering/shader_language.cpp:2936` |
-| `isinf(float)` | transpiled (`call-isinf-float`, `fold-call-isnan-isinf`) | lowered: abs(x) == infinity | lowered: abs(x) == infinity | `servers/rendering/shader_language.cpp:2940` |
-| `isinf(vec2)` | transpiled (`call-isinf-vec2`) | lowered: abs(x) == infinity | lowered: abs(x) == infinity | `servers/rendering/shader_language.cpp:2941` |
-| `isinf(vec3)` | transpiled (`call-isinf-vec3`) | lowered: abs(x) == infinity | lowered: abs(x) == infinity | `servers/rendering/shader_language.cpp:2942` |
-| `isinf(vec4)` | transpiled (`call-isinf-vec4`) | lowered: abs(x) == infinity | lowered: abs(x) == infinity | `servers/rendering/shader_language.cpp:2943` |
+| `int(bool)` | transpiled (`construct-int-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2492` |
+| `int(int)` | transpiled (`construct-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2493` |
+| `int(uint)` | transpiled (`construct-int-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2494` |
+| `int(float)` | transpiled (`construct-int-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2495` |
+| `float(bool)` | transpiled (`construct-float-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2497` |
+| `float(int)` | transpiled (`construct-float-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2498` |
+| `float(uint)` | transpiled (`construct-float-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2499` |
+| `float(float)` | transpiled (`construct-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2500` |
+| `uint(bool)` | transpiled (`construct-uint-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2502` |
+| `uint(int)` | transpiled (`construct-uint-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2503` |
+| `uint(uint)` | transpiled (`construct-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2504` |
+| `uint(float)` | transpiled (`construct-uint-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2505` |
+| `bool(bool)` | transpiled (`construct-bool-bool`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2507` |
+| `bool(int)` | transpiled (`construct-bool-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2508` |
+| `bool(uint)` | transpiled (`construct-bool-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2509` |
+| `bool(float)` | transpiled (`construct-bool-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2510` |
+| `ivec2(bvec2)` | transpiled (`call-ivec2-bvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2514` |
+| `ivec2(ivec2)` | transpiled (`call-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2515` |
+| `ivec2(uvec2)` | transpiled (`call-ivec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2516` |
+| `ivec2(vec2)` | transpiled (`call-ivec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2517` |
+| `vec2(bvec2)` | transpiled (`call-vec2-bvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2519` |
+| `vec2(ivec2)` | transpiled (`call-vec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2520` |
+| `vec2(uvec2)` | transpiled (`call-vec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2521` |
+| `vec2(vec2)` | transpiled (`call-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2522` |
+| `uvec2(bvec2)` | transpiled (`call-uvec2-bvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2524` |
+| `uvec2(ivec2)` | transpiled (`call-uvec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2525` |
+| `uvec2(uvec2)` | transpiled (`call-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2526` |
+| `uvec2(vec2)` | transpiled (`call-uvec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2527` |
+| `bvec2(bvec2)` | transpiled (`call-bvec2-bvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2529` |
+| `bvec2(ivec2)` | transpiled (`call-bvec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2530` |
+| `bvec2(uvec2)` | transpiled (`call-bvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2531` |
+| `bvec2(vec2)` | transpiled (`call-bvec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2532` |
+| `ivec3(bvec3)` | transpiled (`call-ivec3-bvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2534` |
+| `ivec3(ivec3)` | transpiled (`call-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2535` |
+| `ivec3(uvec3)` | transpiled (`call-ivec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2536` |
+| `ivec3(vec3)` | transpiled (`call-ivec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2537` |
+| `vec3(bvec3)` | transpiled (`call-vec3-bvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2539` |
+| `vec3(ivec3)` | transpiled (`call-vec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2540` |
+| `vec3(uvec3)` | transpiled (`call-vec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2541` |
+| `vec3(vec3)` | transpiled (`call-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2542` |
+| `uvec3(bvec3)` | transpiled (`call-uvec3-bvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2544` |
+| `uvec3(ivec3)` | transpiled (`call-uvec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2545` |
+| `uvec3(uvec3)` | transpiled (`call-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2546` |
+| `uvec3(vec3)` | transpiled (`call-uvec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2547` |
+| `bvec3(bvec3)` | transpiled (`call-bvec3-bvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2549` |
+| `bvec3(ivec3)` | transpiled (`call-bvec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2550` |
+| `bvec3(uvec3)` | transpiled (`call-bvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2551` |
+| `bvec3(vec3)` | transpiled (`call-bvec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2552` |
+| `ivec4(bvec4)` | transpiled (`call-ivec4-bvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2554` |
+| `ivec4(ivec4)` | transpiled (`call-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2555` |
+| `ivec4(uvec4)` | transpiled (`call-ivec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2556` |
+| `ivec4(vec4)` | transpiled (`call-ivec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2557` |
+| `vec4(bvec4)` | transpiled (`call-vec4-bvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2559` |
+| `vec4(ivec4)` | transpiled (`call-vec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2560` |
+| `vec4(uvec4)` | transpiled (`call-vec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2561` |
+| `vec4(vec4)` | transpiled (`call-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2562` |
+| `uvec4(bvec4)` | transpiled (`call-uvec4-bvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2564` |
+| `uvec4(ivec4)` | transpiled (`call-uvec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2565` |
+| `uvec4(uvec4)` | transpiled (`call-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2566` |
+| `uvec4(vec4)` | transpiled (`call-uvec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2567` |
+| `bvec4(bvec4)` | transpiled (`call-bvec4-bvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2569` |
+| `bvec4(ivec4)` | transpiled (`call-bvec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2570` |
+| `bvec4(uvec4)` | transpiled (`call-bvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2571` |
+| `bvec4(vec4)` | transpiled (`call-bvec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2572` |
+| `mat2(mat3)` | transpiled (`call-mat2-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2576` |
+| `mat2(mat4)` | transpiled (`call-mat2-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2577` |
+| `mat3(mat2)` | transpiled (`call-mat3-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2578` |
+| `mat3(mat4)` | transpiled (`call-mat3-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2579` |
+| `mat4(mat2)` | transpiled (`call-mat4-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2580` |
+| `mat4(mat3)` | transpiled (`call-mat4-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2581` |
+| `radians(float)` | transpiled (`call-radians-float`, `fold-call-radians`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2586` |
+| `radians(vec2)` | transpiled (`call-radians-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2587` |
+| `radians(vec3)` | transpiled (`call-radians-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2588` |
+| `radians(vec4)` | transpiled (`call-radians-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2589` |
+| `degrees(float)` | transpiled (`call-degrees-float`, `fold-call-degrees`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2593` |
+| `degrees(vec2)` | transpiled (`call-degrees-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2594` |
+| `degrees(vec3)` | transpiled (`call-degrees-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2595` |
+| `degrees(vec4)` | transpiled (`call-degrees-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2596` |
+| `sin(float)` | transpiled (`call-sin-float`, `call-wrong-type`, `call-too-many`, `fold-call-sin-cos`, `fold-call-call-of-calls`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2600` |
+| `sin(vec2)` | transpiled (`call-sin-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2601` |
+| `sin(vec3)` | transpiled (`call-sin-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2602` |
+| `sin(vec4)` | transpiled (`call-sin-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2603` |
+| `cos(float)` | transpiled (`call-cos-float`, `fold-call-sin-cos`, `fold-call-call-of-calls`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2607` |
+| `cos(vec2)` | transpiled (`call-cos-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2608` |
+| `cos(vec3)` | transpiled (`call-cos-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2609` |
+| `cos(vec4)` | transpiled (`call-cos-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2610` |
+| `tan(float)` | transpiled (`call-tan-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2614` |
+| `tan(vec2)` | transpiled (`call-tan-vec2`, `fold-call-tan`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2615` |
+| `tan(vec3)` | transpiled (`call-tan-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2616` |
+| `tan(vec4)` | transpiled (`call-tan-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2617` |
+| `asin(float)` | transpiled (`call-asin-float`, `fold-call-inverse-trigonometry`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2621` |
+| `asin(vec2)` | transpiled (`call-asin-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2622` |
+| `asin(vec3)` | transpiled (`call-asin-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2623` |
+| `asin(vec4)` | transpiled (`call-asin-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2624` |
+| `acos(float)` | transpiled (`call-acos-float`, `fold-call-inverse-trigonometry`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2628` |
+| `acos(vec2)` | transpiled (`call-acos-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2629` |
+| `acos(vec3)` | transpiled (`call-acos-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2630` |
+| `acos(vec4)` | transpiled (`call-acos-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2631` |
+| `atan(float)` | transpiled (`call-atan-float`, `fold-call-inverse-trigonometry`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2635` |
+| `atan(vec2)` | transpiled (`call-atan-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2636` |
+| `atan(vec3)` | transpiled (`call-atan-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2637` |
+| `atan(vec4)` | transpiled (`call-atan-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2638` |
+| `atan(float,float)` | transpiled (`call-atan-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2639` |
+| `atan(vec2,vec2)` | transpiled (`call-atan-vec2-vec2`, `fold-call-atan-of-two`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2640` |
+| `atan(vec3,vec3)` | transpiled (`call-atan-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2641` |
+| `atan(vec4,vec4)` | transpiled (`call-atan-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2642` |
+| `sinh(float)` | transpiled (`call-sinh-float`, `gpu-call-sinh-of-a-constant`, `gpu-call-sinh-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2646` |
+| `sinh(vec2)` | transpiled (`call-sinh-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2647` |
+| `sinh(vec3)` | transpiled (`call-sinh-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2648` |
+| `sinh(vec4)` | transpiled (`call-sinh-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2649` |
+| `cosh(float)` | transpiled (`call-cosh-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2653` |
+| `cosh(vec2)` | transpiled (`call-cosh-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2654` |
+| `cosh(vec3)` | transpiled (`call-cosh-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2655` |
+| `cosh(vec4)` | transpiled (`call-cosh-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2656` |
+| `tanh(float)` | transpiled (`call-tanh-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2660` |
+| `tanh(vec2)` | transpiled (`call-tanh-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2661` |
+| `tanh(vec3)` | transpiled (`call-tanh-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2662` |
+| `tanh(vec4)` | transpiled (`call-tanh-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2663` |
+| `asinh(float)` | transpiled (`call-asinh-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2667` |
+| `asinh(vec2)` | transpiled (`call-asinh-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2668` |
+| `asinh(vec3)` | transpiled (`call-asinh-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2669` |
+| `asinh(vec4)` | transpiled (`call-asinh-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2670` |
+| `acosh(float)` | transpiled (`call-acosh-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2674` |
+| `acosh(vec2)` | transpiled (`call-acosh-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2675` |
+| `acosh(vec3)` | transpiled (`call-acosh-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2676` |
+| `acosh(vec4)` | transpiled (`call-acosh-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2677` |
+| `atanh(float)` | transpiled (`call-atanh-float`, `gpu-call-atanh-of-a-constant`, `gpu-call-atanh-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2681` |
+| `atanh(vec2)` | transpiled (`call-atanh-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2682` |
+| `atanh(vec3)` | transpiled (`call-atanh-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2683` |
+| `atanh(vec4)` | transpiled (`call-atanh-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2684` |
+| `pow(float,float)` | transpiled (`call-pow-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2689` |
+| `pow(vec2,vec2)` | transpiled (`call-pow-vec2-vec2`, `fold-call-pow`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2690` |
+| `pow(vec3,vec3)` | transpiled (`call-pow-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2691` |
+| `pow(vec4,vec4)` | transpiled (`call-pow-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2692` |
+| `exp(float)` | transpiled (`call-exp-float`, `fold-call-exp-log`, `fold-call-call-of-calls`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2696` |
+| `exp(vec2)` | transpiled (`call-exp-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2697` |
+| `exp(vec3)` | transpiled (`call-exp-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2698` |
+| `exp(vec4)` | transpiled (`call-exp-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2699` |
+| `log(float)` | transpiled (`call-log-float`, `fold-call-exp-log`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2703` |
+| `log(vec2)` | transpiled (`call-log-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2704` |
+| `log(vec3)` | transpiled (`call-log-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2705` |
+| `log(vec4)` | transpiled (`call-log-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2706` |
+| `exp2(float)` | transpiled (`call-exp2-float`, `fold-call-exp2-log2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2710` |
+| `exp2(vec2)` | transpiled (`call-exp2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2711` |
+| `exp2(vec3)` | transpiled (`call-exp2-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2712` |
+| `exp2(vec4)` | transpiled (`call-exp2-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2713` |
+| `log2(float)` | transpiled (`call-log2-float`, `fold-call-exp2-log2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2717` |
+| `log2(vec2)` | transpiled (`call-log2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2718` |
+| `log2(vec3)` | transpiled (`call-log2-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2719` |
+| `log2(vec4)` | transpiled (`call-log2-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2720` |
+| `sqrt(float)` | transpiled (`call-sqrt-float`, `fold-call-sqrt-inversesqrt`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2724` |
+| `sqrt(vec2)` | transpiled (`call-sqrt-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2725` |
+| `sqrt(vec3)` | transpiled (`call-sqrt-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2726` |
+| `sqrt(vec4)` | transpiled (`call-sqrt-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2727` |
+| `inversesqrt(float)` | transpiled (`call-inversesqrt-float`, `fold-call-sqrt-inversesqrt`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2731` |
+| `inversesqrt(vec2)` | transpiled (`call-inversesqrt-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2732` |
+| `inversesqrt(vec3)` | transpiled (`call-inversesqrt-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2733` |
+| `inversesqrt(vec4)` | transpiled (`call-inversesqrt-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2734` |
+| `abs(float)` | transpiled (`call-abs-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2739` |
+| `abs(vec2)` | transpiled (`call-abs-vec2`, `fold-call-abs`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2740` |
+| `abs(vec3)` | transpiled (`call-abs-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2741` |
+| `abs(vec4)` | transpiled (`call-abs-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2742` |
+| `abs(int)` | transpiled (`call-abs-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2744` |
+| `abs(ivec2)` | transpiled (`call-abs-ivec2`, `fold-call-abs`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2745` |
+| `abs(ivec3)` | transpiled (`call-abs-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2746` |
+| `abs(ivec4)` | transpiled (`call-abs-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2747` |
+| `sign(float)` | transpiled (`call-sign-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2751` |
+| `sign(vec2)` | transpiled (`call-sign-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2752` |
+| `sign(vec3)` | transpiled (`call-sign-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2753` |
+| `sign(vec4)` | transpiled (`call-sign-vec4`, `fold-call-sign`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2754` |
+| `sign(int)` | transpiled (`call-sign-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2756` |
+| `sign(ivec2)` | transpiled (`call-sign-ivec2`, `fold-call-sign-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2757` |
+| `sign(ivec3)` | transpiled (`call-sign-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2758` |
+| `sign(ivec4)` | transpiled (`call-sign-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2759` |
+| `floor(float)` | transpiled (`call-floor-float`, `fold-call-floor-ceil-fract-trunc`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2763` |
+| `floor(vec2)` | transpiled (`call-floor-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2764` |
+| `floor(vec3)` | transpiled (`call-floor-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2765` |
+| `floor(vec4)` | transpiled (`call-floor-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2766` |
+| `trunc(float)` | transpiled (`call-trunc-float`, `fold-call-floor-ceil-fract-trunc`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2770` |
+| `trunc(vec2)` | transpiled (`call-trunc-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2771` |
+| `trunc(vec3)` | transpiled (`call-trunc-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2772` |
+| `trunc(vec4)` | transpiled (`call-trunc-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2773` |
+| `round(float)` | transpiled (`call-round-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2777` |
+| `round(vec2)` | transpiled (`call-round-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2778` |
+| `round(vec3)` | transpiled (`call-round-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2779` |
+| `round(vec4)` | transpiled (`call-round-vec4`, `fold-call-round`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2780` |
+| `roundEven(float)` | transpiled (`call-roundEven-float`) | lowered: floor(x) + mod(floor(x), 2) at a half | untested (#1788) | `servers/rendering/shader_language.cpp:2784` |
+| `roundEven(vec2)` | transpiled (`call-roundEven-vec2`) | lowered: floor(x) + mod(floor(x), 2) at a half | untested (#1788) | `servers/rendering/shader_language.cpp:2785` |
+| `roundEven(vec3)` | transpiled (`call-roundEven-vec3`) | lowered: floor(x) + mod(floor(x), 2) at a half | untested (#1788) | `servers/rendering/shader_language.cpp:2786` |
+| `roundEven(vec4)` | transpiled (`call-roundEven-vec4`, `fold-call-round-even`) | lowered: floor(x) + mod(floor(x), 2) at a half | untested (#1788) | `servers/rendering/shader_language.cpp:2787` |
+| `ceil(float)` | transpiled (`call-ceil-float`, `fold-call-floor-ceil-fract-trunc`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2791` |
+| `ceil(vec2)` | transpiled (`call-ceil-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2792` |
+| `ceil(vec3)` | transpiled (`call-ceil-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2793` |
+| `ceil(vec4)` | transpiled (`call-ceil-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2794` |
+| `fract(float)` | transpiled (`call-fract-float`, `fold-call-floor-ceil-fract-trunc`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2798` |
+| `fract(vec2)` | transpiled (`call-fract-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2799` |
+| `fract(vec3)` | transpiled (`call-fract-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2800` |
+| `fract(vec4)` | transpiled (`call-fract-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2801` |
+| `mod(float,float)` | transpiled (`call-mod-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2805` |
+| `mod(vec2,vec2)` | transpiled (`call-mod-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2806` |
+| `mod(vec2,float)` | transpiled (`call-mod-vec2-float`, `fold-call-mod`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2807` |
+| `mod(vec3,vec3)` | transpiled (`call-mod-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2808` |
+| `mod(vec3,float)` | transpiled (`call-mod-vec3-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2809` |
+| `mod(vec4,vec4)` | transpiled (`call-mod-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2810` |
+| `mod(vec4,float)` | transpiled (`call-mod-vec4-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2811` |
+| `modf(float,float)` | transpiled (`call-modf-float-float-fraction`, `call-modf-float-float-whole`, `call-out-to-a-swizzle`, `call-out-to-an-element`, `call-out-to-a-constant`, `call-out-to-a-value`, `call-out-to-a-const`) | lowered: trunc(x) and x - trunc(x) | untested (#1788) | `servers/rendering/shader_language.cpp:2815` |
+| `modf(vec2,vec2)` | transpiled (`call-modf-vec2-vec2-fraction`, `call-modf-vec2-vec2-whole`) | lowered: trunc(x) and x - trunc(x) | untested (#1788) | `servers/rendering/shader_language.cpp:2816` |
+| `modf(vec3,vec3)` | transpiled (`call-modf-vec3-vec3-fraction`, `call-modf-vec3-vec3-whole`) | lowered: trunc(x) and x - trunc(x) | untested (#1788) | `servers/rendering/shader_language.cpp:2817` |
+| `modf(vec4,vec4)` | transpiled (`call-modf-vec4-vec4-fraction`, `call-modf-vec4-vec4-whole`) | lowered: trunc(x) and x - trunc(x) | untested (#1788) | `servers/rendering/shader_language.cpp:2818` |
+| `min(float,float)` | transpiled (`call-min-float-float`, `fold-call-min-max-of-nan`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2822` |
+| `min(vec2,vec2)` | transpiled (`call-min-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2823` |
+| `min(vec2,float)` | transpiled (`call-min-vec2-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2824` |
+| `min(vec3,vec3)` | transpiled (`call-min-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2825` |
+| `min(vec3,float)` | transpiled (`call-min-vec3-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2826` |
+| `min(vec4,vec4)` | transpiled (`call-min-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2827` |
+| `min(vec4,float)` | transpiled (`call-min-vec4-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2828` |
+| `min(int,int)` | transpiled (`call-min-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2830` |
+| `min(ivec2,ivec2)` | transpiled (`call-min-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2831` |
+| `min(ivec2,int)` | transpiled (`call-min-ivec2-int`, `call-uint-constant-to-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2832` |
+| `min(ivec3,ivec3)` | transpiled (`call-min-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2833` |
+| `min(ivec3,int)` | transpiled (`call-min-ivec3-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2834` |
+| `min(ivec4,ivec4)` | transpiled (`call-min-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2835` |
+| `min(ivec4,int)` | transpiled (`call-min-ivec4-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2836` |
+| `min(uint,uint)` | transpiled (`call-min-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2838` |
+| `min(uvec2,uvec2)` | transpiled (`call-min-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2839` |
+| `min(uvec2,uint)` | transpiled (`call-min-uvec2-uint`, `fold-call-min-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2840` |
+| `min(uvec3,uvec3)` | transpiled (`call-min-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2841` |
+| `min(uvec3,uint)` | transpiled (`call-min-uvec3-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2842` |
+| `min(uvec4,uvec4)` | transpiled (`call-min-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2843` |
+| `min(uvec4,uint)` | transpiled (`call-min-uvec4-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2844` |
+| `max(float,float)` | transpiled (`call-max-float-float`, `call-int-constant-to-float`, `fold-call-min-max-of-nan`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2848` |
+| `max(vec2,vec2)` | transpiled (`call-max-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2849` |
+| `max(vec2,float)` | transpiled (`call-max-vec2-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2850` |
+| `max(vec3,vec3)` | transpiled (`call-max-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2851` |
+| `max(vec3,float)` | transpiled (`call-max-vec3-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2852` |
+| `max(vec4,vec4)` | transpiled (`call-max-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2853` |
+| `max(vec4,float)` | transpiled (`call-max-vec4-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2854` |
+| `max(int,int)` | transpiled (`call-max-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2856` |
+| `max(ivec2,ivec2)` | transpiled (`call-max-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2857` |
+| `max(ivec2,int)` | transpiled (`call-max-ivec2-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2858` |
+| `max(ivec3,ivec3)` | transpiled (`call-max-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2859` |
+| `max(ivec3,int)` | transpiled (`call-max-ivec3-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2860` |
+| `max(ivec4,ivec4)` | transpiled (`call-max-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2861` |
+| `max(ivec4,int)` | transpiled (`call-max-ivec4-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2862` |
+| `max(uint,uint)` | transpiled (`call-max-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2864` |
+| `max(uvec2,uvec2)` | transpiled (`call-max-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2865` |
+| `max(uvec2,uint)` | transpiled (`call-max-uvec2-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2866` |
+| `max(uvec3,uvec3)` | transpiled (`call-max-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2867` |
+| `max(uvec3,uint)` | transpiled (`call-max-uvec3-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2868` |
+| `max(uvec4,uvec4)` | transpiled (`call-max-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2869` |
+| `max(uvec4,uint)` | transpiled (`call-max-uvec4-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2870` |
+| `clamp(float,float,float)` | transpiled (`call-clamp-float-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2874` |
+| `clamp(vec2,vec2,vec2)` | transpiled (`call-clamp-vec2-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2875` |
+| `clamp(vec3,vec3,vec3)` | transpiled (`call-clamp-vec3-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2876` |
+| `clamp(vec4,vec4,vec4)` | transpiled (`call-clamp-vec4-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2877` |
+| `clamp(vec2,float,float)` | transpiled (`call-clamp-vec2-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2878` |
+| `clamp(vec3,float,float)` | transpiled (`call-clamp-vec3-float-float`, `fold-call-clamp`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2879` |
+| `clamp(vec4,float,float)` | transpiled (`call-clamp-vec4-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2880` |
+| `clamp(int,int,int)` | transpiled (`call-clamp-int-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2882` |
+| `clamp(ivec2,ivec2,ivec2)` | transpiled (`call-clamp-ivec2-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2883` |
+| `clamp(ivec3,ivec3,ivec3)` | transpiled (`call-clamp-ivec3-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2884` |
+| `clamp(ivec4,ivec4,ivec4)` | transpiled (`call-clamp-ivec4-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2885` |
+| `clamp(ivec2,int,int)` | transpiled (`call-clamp-ivec2-int-int`, `fold-call-clamp-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2886` |
+| `clamp(ivec3,int,int)` | transpiled (`call-clamp-ivec3-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2887` |
+| `clamp(ivec4,int,int)` | transpiled (`call-clamp-ivec4-int-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2888` |
+| `clamp(uint,uint,uint)` | transpiled (`call-clamp-uint-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2890` |
+| `clamp(uvec2,uvec2,uvec2)` | transpiled (`call-clamp-uvec2-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2891` |
+| `clamp(uvec3,uvec3,uvec3)` | transpiled (`call-clamp-uvec3-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2892` |
+| `clamp(uvec4,uvec4,uvec4)` | transpiled (`call-clamp-uvec4-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2893` |
+| `clamp(uvec2,uint,uint)` | transpiled (`call-clamp-uvec2-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2894` |
+| `clamp(uvec3,uint,uint)` | transpiled (`call-clamp-uvec3-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2895` |
+| `clamp(uvec4,uint,uint)` | transpiled (`call-clamp-uvec4-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2896` |
+| `mix(float,float,float)` | transpiled (`call-mix-float-float-float`, `fold-call-mix`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2900` |
+| `mix(vec2,vec2,float)` | transpiled (`call-mix-vec2-vec2-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2901` |
+| `mix(vec2,vec2,bvec2)` | transpiled (`call-mix-vec2-vec2-bvec2`, `fold-call-mix-bool`) | lowered: select by lane | untested (#1788) | `servers/rendering/shader_language.cpp:2902` |
+| `mix(vec2,vec2,vec2)` | transpiled (`call-mix-vec2-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2903` |
+| `mix(vec3,vec3,float)` | transpiled (`call-mix-vec3-vec3-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2904` |
+| `mix(vec3,vec3,bvec3)` | transpiled (`call-mix-vec3-vec3-bvec3`) | lowered: select by lane | untested (#1788) | `servers/rendering/shader_language.cpp:2905` |
+| `mix(vec3,vec3,vec3)` | transpiled (`call-mix-vec3-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2906` |
+| `mix(vec4,vec4,float)` | transpiled (`call-mix-vec4-vec4-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2907` |
+| `mix(vec4,vec4,bvec4)` | transpiled (`call-mix-vec4-vec4-bvec4`) | lowered: select by lane | untested (#1788) | `servers/rendering/shader_language.cpp:2908` |
+| `mix(vec4,vec4,vec4)` | transpiled (`call-mix-vec4-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2909` |
+| `step(float,float)` | transpiled (`call-step-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2913` |
+| `step(vec2,vec2)` | transpiled (`call-step-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2914` |
+| `step(vec3,vec3)` | transpiled (`call-step-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2915` |
+| `step(vec4,vec4)` | transpiled (`call-step-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2916` |
+| `step(float,vec2)` | transpiled (`call-step-float-vec2`, `fold-call-step`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2917` |
+| `step(float,vec3)` | transpiled (`call-step-float-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2918` |
+| `step(float,vec4)` | transpiled (`call-step-float-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2919` |
+| `smoothstep(float,float,float)` | transpiled (`call-smoothstep-float-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2923` |
+| `smoothstep(vec2,vec2,vec2)` | transpiled (`call-smoothstep-vec2-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2924` |
+| `smoothstep(vec3,vec3,vec3)` | transpiled (`call-smoothstep-vec3-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2925` |
+| `smoothstep(vec4,vec4,vec4)` | transpiled (`call-smoothstep-vec4-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2926` |
+| `smoothstep(float,float,vec2)` | transpiled (`call-smoothstep-float-float-vec2`, `fold-call-smoothstep`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2927` |
+| `smoothstep(float,float,vec3)` | transpiled (`call-smoothstep-float-float-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2928` |
+| `smoothstep(float,float,vec4)` | transpiled (`call-smoothstep-float-float-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2929` |
+| `isnan(float)` | transpiled (`call-isnan-float`, `fold-call-isnan-isinf`) | lowered: x != x | untested (#1788) | `servers/rendering/shader_language.cpp:2933` |
+| `isnan(vec2)` | transpiled (`call-isnan-vec2`) | lowered: x != x | untested (#1788) | `servers/rendering/shader_language.cpp:2934` |
+| `isnan(vec3)` | transpiled (`call-isnan-vec3`) | lowered: x != x | untested (#1788) | `servers/rendering/shader_language.cpp:2935` |
+| `isnan(vec4)` | transpiled (`call-isnan-vec4`) | lowered: x != x | untested (#1788) | `servers/rendering/shader_language.cpp:2936` |
+| `isinf(float)` | transpiled (`call-isinf-float`, `fold-call-isnan-isinf`) | lowered: abs(x) == infinity | untested (#1788) | `servers/rendering/shader_language.cpp:2940` |
+| `isinf(vec2)` | transpiled (`call-isinf-vec2`) | lowered: abs(x) == infinity | untested (#1788) | `servers/rendering/shader_language.cpp:2941` |
+| `isinf(vec3)` | transpiled (`call-isinf-vec3`) | lowered: abs(x) == infinity | untested (#1788) | `servers/rendering/shader_language.cpp:2942` |
+| `isinf(vec4)` | transpiled (`call-isinf-vec4`) | lowered: abs(x) == infinity | untested (#1788) | `servers/rendering/shader_language.cpp:2943` |
 | `floatBitsToInt(float)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2947` |
 | `floatBitsToInt(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2948` |
 | `floatBitsToInt(vec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2949` |
@@ -1171,116 +1171,116 @@ canvases draw on WebGPURenderer (#1788).
 | `uintBitsToFloat(uvec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2969` |
 | `uintBitsToFloat(uvec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2970` |
 | `uintBitsToFloat(uvec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2971` |
-| `length(float)` | transpiled (`call-length-float`, `call-whole-array`) | native | native | `servers/rendering/shader_language.cpp:2976` |
-| `length(vec2)` | transpiled (`call-length-vec2`) | native | native | `servers/rendering/shader_language.cpp:2977` |
-| `length(vec3)` | transpiled (`call-length-vec3`, `fold-call-length`) | native | native | `servers/rendering/shader_language.cpp:2978` |
-| `length(vec4)` | transpiled (`call-length-vec4`) | native | native | `servers/rendering/shader_language.cpp:2979` |
-| `distance(float,float)` | transpiled (`call-distance-float-float`) | native | native | `servers/rendering/shader_language.cpp:2983` |
-| `distance(vec2,vec2)` | transpiled (`call-distance-vec2-vec2`, `fold-call-distance`) | native | native | `servers/rendering/shader_language.cpp:2984` |
-| `distance(vec3,vec3)` | transpiled (`call-distance-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:2985` |
-| `distance(vec4,vec4)` | transpiled (`call-distance-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2986` |
-| `dot(float,float)` | transpiled (`call-dot-float-float`) | native | native | `servers/rendering/shader_language.cpp:2990` |
-| `dot(vec2,vec2)` | transpiled (`call-dot-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:2991` |
-| `dot(vec3,vec3)` | transpiled (`call-dot-vec3-vec3`, `fold-call-dot`) | native | native | `servers/rendering/shader_language.cpp:2992` |
-| `dot(vec4,vec4)` | transpiled (`call-dot-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:2993` |
-| `cross(vec3,vec3)` | transpiled (`call-cross-vec3-vec3`, `fold-call-cross`) | native | native | `servers/rendering/shader_language.cpp:2997` |
-| `normalize(float)` | transpiled (`call-normalize-float`) | native | native | `servers/rendering/shader_language.cpp:3001` |
-| `normalize(vec2)` | transpiled (`call-normalize-vec2`) | native | native | `servers/rendering/shader_language.cpp:3002` |
-| `normalize(vec3)` | transpiled (`call-normalize-vec3`, `fold-call-normalize`) | native | native | `servers/rendering/shader_language.cpp:3003` |
-| `normalize(vec4)` | transpiled (`call-normalize-vec4`) | native | native | `servers/rendering/shader_language.cpp:3004` |
-| `reflect(vec2,vec2)` | transpiled (`call-reflect-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:3008` |
-| `reflect(vec3,vec3)` | transpiled (`call-reflect-vec3-vec3`, `fold-call-reflect`) | native | native | `servers/rendering/shader_language.cpp:3009` |
-| `reflect(vec4,vec4)` | transpiled (`call-reflect-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:3010` |
-| `refract(vec2,vec2,float)` | transpiled (`call-refract-vec2-vec2-float`, `fold-call-refract-past-the-critical-angle`) | native | native | `servers/rendering/shader_language.cpp:3014` |
-| `refract(vec3,vec3,float)` | transpiled (`call-refract-vec3-vec3-float`, `fold-call-refract`) | native | native | `servers/rendering/shader_language.cpp:3015` |
-| `refract(vec4,vec4,float)` | transpiled (`call-refract-vec4-vec4-float`) | native | native | `servers/rendering/shader_language.cpp:3016` |
-| `faceforward(vec2,vec2,vec2)` | transpiled (`call-faceforward-vec2-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:3020` |
-| `faceforward(vec3,vec3,vec3)` | transpiled (`call-faceforward-vec3-vec3-vec3`, `fold-call-faceforward`) | native | native | `servers/rendering/shader_language.cpp:3021` |
-| `faceforward(vec4,vec4,vec4)` | transpiled (`call-faceforward-vec4-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:3022` |
-| `matrixCompMult(mat2,mat2)` | transpiled (`call-matrixCompMult-mat2-mat2`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:3026` |
-| `matrixCompMult(mat3,mat3)` | transpiled (`call-matrixCompMult-mat3-mat3`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:3027` |
-| `matrixCompMult(mat4,mat4)` | transpiled (`call-matrixCompMult-mat4-mat4`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:3028` |
-| `outerProduct(vec2,vec2)` | transpiled (`call-outerProduct-vec2-vec2`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:3032` |
-| `outerProduct(vec3,vec3)` | transpiled (`call-outerProduct-vec3-vec3`, `fold-call-outer-product`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:3033` |
-| `outerProduct(vec4,vec4)` | transpiled (`call-outerProduct-vec4-vec4`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:3034` |
-| `transpose(mat2)` | transpiled (`call-transpose-mat2`) | native | native | `servers/rendering/shader_language.cpp:3038` |
-| `transpose(mat3)` | transpiled (`call-transpose-mat3`) | native | native | `servers/rendering/shader_language.cpp:3039` |
-| `transpose(mat4)` | transpiled (`call-transpose-mat4`) | native | native | `servers/rendering/shader_language.cpp:3040` |
-| `determinant(mat2)` | transpiled (`call-determinant-mat2`) | native | native | `servers/rendering/shader_language.cpp:3044` |
-| `determinant(mat3)` | transpiled (`call-determinant-mat3`) | native | native | `servers/rendering/shader_language.cpp:3045` |
-| `determinant(mat4)` | transpiled (`call-determinant-mat4`) | native | native | `servers/rendering/shader_language.cpp:3046` |
-| `inverse(mat2)` | transpiled (`call-inverse-mat2`) | native | native | `servers/rendering/shader_language.cpp:3050` |
-| `inverse(mat3)` | transpiled (`call-inverse-mat3`) | native | native | `servers/rendering/shader_language.cpp:3051` |
-| `inverse(mat4)` | transpiled (`call-inverse-mat4`) | native | native | `servers/rendering/shader_language.cpp:3052` |
-| `lessThan(vec2,vec2)` | transpiled (`call-lessThan-vec2-vec2`, `fold-call-less-than`) | native | native | `servers/rendering/shader_language.cpp:3056` |
-| `lessThan(vec3,vec3)` | transpiled (`call-lessThan-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:3057` |
-| `lessThan(vec4,vec4)` | transpiled (`call-lessThan-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:3058` |
-| `lessThan(ivec2,ivec2)` | transpiled (`call-lessThan-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:3060` |
-| `lessThan(ivec3,ivec3)` | transpiled (`call-lessThan-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:3061` |
-| `lessThan(ivec4,ivec4)` | transpiled (`call-lessThan-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:3062` |
-| `lessThan(uvec3,uvec3)` | transpiled (`call-lessThan-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:3064` |
-| `lessThan(uvec4,uvec4)` | transpiled (`call-lessThan-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:3065` |
-| `lessThan(uvec2,uvec2)` | transpiled (`call-lessThan-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:3066` |
-| `greaterThan(vec2,vec2)` | transpiled (`call-greaterThan-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:3070` |
-| `greaterThan(vec3,vec3)` | transpiled (`call-greaterThan-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:3071` |
-| `greaterThan(vec4,vec4)` | transpiled (`call-greaterThan-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:3072` |
-| `greaterThan(ivec2,ivec2)` | transpiled (`call-greaterThan-ivec2-ivec2`, `fold-call-less-than`) | native | native | `servers/rendering/shader_language.cpp:3074` |
-| `greaterThan(ivec3,ivec3)` | transpiled (`call-greaterThan-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:3075` |
-| `greaterThan(ivec4,ivec4)` | transpiled (`call-greaterThan-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:3076` |
-| `greaterThan(uvec2,uvec2)` | transpiled (`call-greaterThan-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:3078` |
-| `greaterThan(uvec3,uvec3)` | transpiled (`call-greaterThan-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:3079` |
-| `greaterThan(uvec4,uvec4)` | transpiled (`call-greaterThan-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:3080` |
-| `lessThanEqual(vec2,vec2)` | transpiled (`call-lessThanEqual-vec2-vec2`, `fold-call-less-than-equal-of-nan`) | native | native | `servers/rendering/shader_language.cpp:3084` |
-| `lessThanEqual(vec3,vec3)` | transpiled (`call-lessThanEqual-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:3085` |
-| `lessThanEqual(vec4,vec4)` | transpiled (`call-lessThanEqual-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:3086` |
-| `lessThanEqual(ivec2,ivec2)` | transpiled (`call-lessThanEqual-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:3088` |
-| `lessThanEqual(ivec3,ivec3)` | transpiled (`call-lessThanEqual-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:3089` |
-| `lessThanEqual(ivec4,ivec4)` | transpiled (`call-lessThanEqual-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:3090` |
-| `lessThanEqual(uvec2,uvec2)` | transpiled (`call-lessThanEqual-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:3092` |
-| `lessThanEqual(uvec3,uvec3)` | transpiled (`call-lessThanEqual-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:3093` |
-| `lessThanEqual(uvec4,uvec4)` | transpiled (`call-lessThanEqual-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:3094` |
-| `greaterThanEqual(vec2,vec2)` | transpiled (`call-greaterThanEqual-vec2-vec2`, `fold-call-less-than-equal-of-nan`) | native | native | `servers/rendering/shader_language.cpp:3098` |
-| `greaterThanEqual(vec3,vec3)` | transpiled (`call-greaterThanEqual-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:3099` |
-| `greaterThanEqual(vec4,vec4)` | transpiled (`call-greaterThanEqual-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:3100` |
-| `greaterThanEqual(ivec2,ivec2)` | transpiled (`call-greaterThanEqual-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:3102` |
-| `greaterThanEqual(ivec3,ivec3)` | transpiled (`call-greaterThanEqual-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:3103` |
-| `greaterThanEqual(ivec4,ivec4)` | transpiled (`call-greaterThanEqual-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:3104` |
-| `greaterThanEqual(uvec2,uvec2)` | transpiled (`call-greaterThanEqual-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:3106` |
-| `greaterThanEqual(uvec3,uvec3)` | transpiled (`call-greaterThanEqual-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:3107` |
-| `greaterThanEqual(uvec4,uvec4)` | transpiled (`call-greaterThanEqual-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:3108` |
-| `equal(vec2,vec2)` | transpiled (`call-equal-vec2-vec2`, `fold-call-equal`) | native | native | `servers/rendering/shader_language.cpp:3112` |
-| `equal(vec3,vec3)` | transpiled (`call-equal-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:3113` |
-| `equal(vec4,vec4)` | transpiled (`call-equal-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:3114` |
-| `equal(ivec2,ivec2)` | transpiled (`call-equal-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:3116` |
-| `equal(ivec3,ivec3)` | transpiled (`call-equal-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:3117` |
-| `equal(ivec4,ivec4)` | transpiled (`call-equal-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:3118` |
-| `equal(uvec2,uvec2)` | transpiled (`call-equal-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:3120` |
-| `equal(uvec3,uvec3)` | transpiled (`call-equal-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:3121` |
-| `equal(uvec4,uvec4)` | transpiled (`call-equal-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:3122` |
-| `equal(bvec2,bvec2)` | transpiled (`call-equal-bvec2-bvec2`) | native | native | `servers/rendering/shader_language.cpp:3124` |
-| `equal(bvec3,bvec3)` | transpiled (`call-equal-bvec3-bvec3`) | native | native | `servers/rendering/shader_language.cpp:3125` |
-| `equal(bvec4,bvec4)` | transpiled (`call-equal-bvec4-bvec4`) | native | native | `servers/rendering/shader_language.cpp:3126` |
-| `notEqual(vec2,vec2)` | transpiled (`call-notEqual-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:3130` |
-| `notEqual(vec3,vec3)` | transpiled (`call-notEqual-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:3131` |
-| `notEqual(vec4,vec4)` | transpiled (`call-notEqual-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:3132` |
-| `notEqual(ivec2,ivec2)` | transpiled (`call-notEqual-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:3134` |
-| `notEqual(ivec3,ivec3)` | transpiled (`call-notEqual-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:3135` |
-| `notEqual(ivec4,ivec4)` | transpiled (`call-notEqual-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:3136` |
-| `notEqual(uvec2,uvec2)` | transpiled (`call-notEqual-uvec2-uvec2`, `fold-call-equal`) | native | native | `servers/rendering/shader_language.cpp:3138` |
-| `notEqual(uvec3,uvec3)` | transpiled (`call-notEqual-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:3139` |
-| `notEqual(uvec4,uvec4)` | transpiled (`call-notEqual-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:3140` |
-| `notEqual(bvec2,bvec2)` | transpiled (`call-notEqual-bvec2-bvec2`) | native | native | `servers/rendering/shader_language.cpp:3142` |
-| `notEqual(bvec3,bvec3)` | transpiled (`call-notEqual-bvec3-bvec3`) | native | native | `servers/rendering/shader_language.cpp:3143` |
-| `notEqual(bvec4,bvec4)` | transpiled (`call-notEqual-bvec4-bvec4`) | native | native | `servers/rendering/shader_language.cpp:3144` |
-| `any(bvec2)` | transpiled (`call-any-bvec2`, `fold-call-any-all-not`) | native | native | `servers/rendering/shader_language.cpp:3148` |
-| `any(bvec3)` | transpiled (`call-any-bvec3`) | native | native | `servers/rendering/shader_language.cpp:3149` |
-| `any(bvec4)` | transpiled (`call-any-bvec4`) | native | native | `servers/rendering/shader_language.cpp:3150` |
-| `all(bvec2)` | transpiled (`call-all-bvec2`, `fold-call-any-all-not`) | native | native | `servers/rendering/shader_language.cpp:3154` |
-| `all(bvec3)` | transpiled (`call-all-bvec3`) | native | native | `servers/rendering/shader_language.cpp:3155` |
-| `all(bvec4)` | transpiled (`call-all-bvec4`) | native | native | `servers/rendering/shader_language.cpp:3156` |
-| `not(bvec2)` | transpiled (`call-not-bvec2`, `fold-call-any-all-not`) | native | native | `servers/rendering/shader_language.cpp:3160` |
-| `not(bvec3)` | transpiled (`call-not-bvec3`) | native | native | `servers/rendering/shader_language.cpp:3161` |
-| `not(bvec4)` | transpiled (`call-not-bvec4`) | native | native | `servers/rendering/shader_language.cpp:3162` |
+| `length(float)` | transpiled (`call-length-float`, `call-whole-array`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2976` |
+| `length(vec2)` | transpiled (`call-length-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2977` |
+| `length(vec3)` | transpiled (`call-length-vec3`, `fold-call-length`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2978` |
+| `length(vec4)` | transpiled (`call-length-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2979` |
+| `distance(float,float)` | transpiled (`call-distance-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2983` |
+| `distance(vec2,vec2)` | transpiled (`call-distance-vec2-vec2`, `fold-call-distance`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2984` |
+| `distance(vec3,vec3)` | transpiled (`call-distance-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2985` |
+| `distance(vec4,vec4)` | transpiled (`call-distance-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2986` |
+| `dot(float,float)` | transpiled (`call-dot-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2990` |
+| `dot(vec2,vec2)` | transpiled (`call-dot-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2991` |
+| `dot(vec3,vec3)` | transpiled (`call-dot-vec3-vec3`, `fold-call-dot`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2992` |
+| `dot(vec4,vec4)` | transpiled (`call-dot-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2993` |
+| `cross(vec3,vec3)` | transpiled (`call-cross-vec3-vec3`, `fold-call-cross`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2997` |
+| `normalize(float)` | transpiled (`call-normalize-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3001` |
+| `normalize(vec2)` | transpiled (`call-normalize-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3002` |
+| `normalize(vec3)` | transpiled (`call-normalize-vec3`, `fold-call-normalize`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3003` |
+| `normalize(vec4)` | transpiled (`call-normalize-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3004` |
+| `reflect(vec2,vec2)` | transpiled (`call-reflect-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3008` |
+| `reflect(vec3,vec3)` | transpiled (`call-reflect-vec3-vec3`, `fold-call-reflect`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3009` |
+| `reflect(vec4,vec4)` | transpiled (`call-reflect-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3010` |
+| `refract(vec2,vec2,float)` | transpiled (`call-refract-vec2-vec2-float`, `fold-call-refract-past-the-critical-angle`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3014` |
+| `refract(vec3,vec3,float)` | transpiled (`call-refract-vec3-vec3-float`, `fold-call-refract`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3015` |
+| `refract(vec4,vec4,float)` | transpiled (`call-refract-vec4-vec4-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3016` |
+| `faceforward(vec2,vec2,vec2)` | transpiled (`call-faceforward-vec2-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3020` |
+| `faceforward(vec3,vec3,vec3)` | transpiled (`call-faceforward-vec3-vec3-vec3`, `fold-call-faceforward`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3021` |
+| `faceforward(vec4,vec4,vec4)` | transpiled (`call-faceforward-vec4-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3022` |
+| `matrixCompMult(mat2,mat2)` | transpiled (`call-matrixCompMult-mat2-mat2`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:3026` |
+| `matrixCompMult(mat3,mat3)` | transpiled (`call-matrixCompMult-mat3-mat3`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:3027` |
+| `matrixCompMult(mat4,mat4)` | transpiled (`call-matrixCompMult-mat4-mat4`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:3028` |
+| `outerProduct(vec2,vec2)` | transpiled (`call-outerProduct-vec2-vec2`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:3032` |
+| `outerProduct(vec3,vec3)` | transpiled (`call-outerProduct-vec3-vec3`, `fold-call-outer-product`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:3033` |
+| `outerProduct(vec4,vec4)` | transpiled (`call-outerProduct-vec4-vec4`) | lowered: column by column | untested (#1788) | `servers/rendering/shader_language.cpp:3034` |
+| `transpose(mat2)` | transpiled (`call-transpose-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3038` |
+| `transpose(mat3)` | transpiled (`call-transpose-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3039` |
+| `transpose(mat4)` | transpiled (`call-transpose-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3040` |
+| `determinant(mat2)` | transpiled (`call-determinant-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3044` |
+| `determinant(mat3)` | transpiled (`call-determinant-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3045` |
+| `determinant(mat4)` | transpiled (`call-determinant-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3046` |
+| `inverse(mat2)` | transpiled (`call-inverse-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3050` |
+| `inverse(mat3)` | transpiled (`call-inverse-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3051` |
+| `inverse(mat4)` | transpiled (`call-inverse-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3052` |
+| `lessThan(vec2,vec2)` | transpiled (`call-lessThan-vec2-vec2`, `fold-call-less-than`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3056` |
+| `lessThan(vec3,vec3)` | transpiled (`call-lessThan-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3057` |
+| `lessThan(vec4,vec4)` | transpiled (`call-lessThan-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3058` |
+| `lessThan(ivec2,ivec2)` | transpiled (`call-lessThan-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3060` |
+| `lessThan(ivec3,ivec3)` | transpiled (`call-lessThan-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3061` |
+| `lessThan(ivec4,ivec4)` | transpiled (`call-lessThan-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3062` |
+| `lessThan(uvec3,uvec3)` | transpiled (`call-lessThan-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3064` |
+| `lessThan(uvec4,uvec4)` | transpiled (`call-lessThan-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3065` |
+| `lessThan(uvec2,uvec2)` | transpiled (`call-lessThan-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3066` |
+| `greaterThan(vec2,vec2)` | transpiled (`call-greaterThan-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3070` |
+| `greaterThan(vec3,vec3)` | transpiled (`call-greaterThan-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3071` |
+| `greaterThan(vec4,vec4)` | transpiled (`call-greaterThan-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3072` |
+| `greaterThan(ivec2,ivec2)` | transpiled (`call-greaterThan-ivec2-ivec2`, `fold-call-less-than`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3074` |
+| `greaterThan(ivec3,ivec3)` | transpiled (`call-greaterThan-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3075` |
+| `greaterThan(ivec4,ivec4)` | transpiled (`call-greaterThan-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3076` |
+| `greaterThan(uvec2,uvec2)` | transpiled (`call-greaterThan-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3078` |
+| `greaterThan(uvec3,uvec3)` | transpiled (`call-greaterThan-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3079` |
+| `greaterThan(uvec4,uvec4)` | transpiled (`call-greaterThan-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3080` |
+| `lessThanEqual(vec2,vec2)` | transpiled (`call-lessThanEqual-vec2-vec2`, `fold-call-less-than-equal-of-nan`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3084` |
+| `lessThanEqual(vec3,vec3)` | transpiled (`call-lessThanEqual-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3085` |
+| `lessThanEqual(vec4,vec4)` | transpiled (`call-lessThanEqual-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3086` |
+| `lessThanEqual(ivec2,ivec2)` | transpiled (`call-lessThanEqual-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3088` |
+| `lessThanEqual(ivec3,ivec3)` | transpiled (`call-lessThanEqual-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3089` |
+| `lessThanEqual(ivec4,ivec4)` | transpiled (`call-lessThanEqual-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3090` |
+| `lessThanEqual(uvec2,uvec2)` | transpiled (`call-lessThanEqual-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3092` |
+| `lessThanEqual(uvec3,uvec3)` | transpiled (`call-lessThanEqual-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3093` |
+| `lessThanEqual(uvec4,uvec4)` | transpiled (`call-lessThanEqual-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3094` |
+| `greaterThanEqual(vec2,vec2)` | transpiled (`call-greaterThanEqual-vec2-vec2`, `fold-call-less-than-equal-of-nan`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3098` |
+| `greaterThanEqual(vec3,vec3)` | transpiled (`call-greaterThanEqual-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3099` |
+| `greaterThanEqual(vec4,vec4)` | transpiled (`call-greaterThanEqual-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3100` |
+| `greaterThanEqual(ivec2,ivec2)` | transpiled (`call-greaterThanEqual-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3102` |
+| `greaterThanEqual(ivec3,ivec3)` | transpiled (`call-greaterThanEqual-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3103` |
+| `greaterThanEqual(ivec4,ivec4)` | transpiled (`call-greaterThanEqual-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3104` |
+| `greaterThanEqual(uvec2,uvec2)` | transpiled (`call-greaterThanEqual-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3106` |
+| `greaterThanEqual(uvec3,uvec3)` | transpiled (`call-greaterThanEqual-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3107` |
+| `greaterThanEqual(uvec4,uvec4)` | transpiled (`call-greaterThanEqual-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3108` |
+| `equal(vec2,vec2)` | transpiled (`call-equal-vec2-vec2`, `fold-call-equal`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3112` |
+| `equal(vec3,vec3)` | transpiled (`call-equal-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3113` |
+| `equal(vec4,vec4)` | transpiled (`call-equal-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3114` |
+| `equal(ivec2,ivec2)` | transpiled (`call-equal-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3116` |
+| `equal(ivec3,ivec3)` | transpiled (`call-equal-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3117` |
+| `equal(ivec4,ivec4)` | transpiled (`call-equal-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3118` |
+| `equal(uvec2,uvec2)` | transpiled (`call-equal-uvec2-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3120` |
+| `equal(uvec3,uvec3)` | transpiled (`call-equal-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3121` |
+| `equal(uvec4,uvec4)` | transpiled (`call-equal-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3122` |
+| `equal(bvec2,bvec2)` | transpiled (`call-equal-bvec2-bvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3124` |
+| `equal(bvec3,bvec3)` | transpiled (`call-equal-bvec3-bvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3125` |
+| `equal(bvec4,bvec4)` | transpiled (`call-equal-bvec4-bvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3126` |
+| `notEqual(vec2,vec2)` | transpiled (`call-notEqual-vec2-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3130` |
+| `notEqual(vec3,vec3)` | transpiled (`call-notEqual-vec3-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3131` |
+| `notEqual(vec4,vec4)` | transpiled (`call-notEqual-vec4-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3132` |
+| `notEqual(ivec2,ivec2)` | transpiled (`call-notEqual-ivec2-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3134` |
+| `notEqual(ivec3,ivec3)` | transpiled (`call-notEqual-ivec3-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3135` |
+| `notEqual(ivec4,ivec4)` | transpiled (`call-notEqual-ivec4-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3136` |
+| `notEqual(uvec2,uvec2)` | transpiled (`call-notEqual-uvec2-uvec2`, `fold-call-equal`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3138` |
+| `notEqual(uvec3,uvec3)` | transpiled (`call-notEqual-uvec3-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3139` |
+| `notEqual(uvec4,uvec4)` | transpiled (`call-notEqual-uvec4-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3140` |
+| `notEqual(bvec2,bvec2)` | transpiled (`call-notEqual-bvec2-bvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3142` |
+| `notEqual(bvec3,bvec3)` | transpiled (`call-notEqual-bvec3-bvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3143` |
+| `notEqual(bvec4,bvec4)` | transpiled (`call-notEqual-bvec4-bvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3144` |
+| `any(bvec2)` | transpiled (`call-any-bvec2`, `fold-call-any-all-not`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3148` |
+| `any(bvec3)` | transpiled (`call-any-bvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3149` |
+| `any(bvec4)` | transpiled (`call-any-bvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3150` |
+| `all(bvec2)` | transpiled (`call-all-bvec2`, `fold-call-any-all-not`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3154` |
+| `all(bvec3)` | transpiled (`call-all-bvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3155` |
+| `all(bvec4)` | transpiled (`call-all-bvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3156` |
+| `not(bvec2)` | transpiled (`call-not-bvec2`, `fold-call-any-all-not`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3160` |
+| `not(bvec3)` | transpiled (`call-not-bvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3161` |
+| `not(bvec4)` | transpiled (`call-not-bvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3162` |
 | `textureSize(sampler2D,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3167` |
 | `textureSize(isampler2D,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3168` |
 | `textureSize(usampler2D,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3169` |
@@ -1409,7 +1409,7 @@ canvases draw on WebGPURenderer (#1788).
 | `fwidth(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3379` |
 | `fwidth(vec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3380` |
 | `fwidth(vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3381` |
-| `length[array]()` | transpiled (`statement-array-length`, `statement-array-length-before-operator`) | native | native | `servers/rendering/shader_language.cpp:3400` |
+| `length[array]()` | transpiled (`statement-array-length`, `statement-array-length-before-operator`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3400` |
 | `packHalf2x16(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3412` |
 | `packUnorm2x16(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3413` |
 | `packSnorm2x16(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3414` |
@@ -1550,42 +1550,42 @@ canvases draw on WebGPURenderer (#1788).
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `bvec2.xy` | transpiled (`swizzle-bvec2-xy`) | native | native | `servers/rendering/shader_language.cpp:6877` |
-| `bvec2.rg` | transpiled (`swizzle-bvec2-rg`) | native | native | `servers/rendering/shader_language.cpp:6877` |
-| `bvec2.st` | transpiled (`swizzle-bvec2-st`) | native | native | `servers/rendering/shader_language.cpp:6877` |
-| `ivec2.xy` | transpiled (`swizzle-ivec2-xy`) | native | native | `servers/rendering/shader_language.cpp:6877` |
-| `ivec2.rg` | transpiled (`swizzle-ivec2-rg`) | native | native | `servers/rendering/shader_language.cpp:6877` |
-| `ivec2.st` | transpiled (`swizzle-ivec2-st`) | native | native | `servers/rendering/shader_language.cpp:6877` |
-| `uvec2.xy` | transpiled (`swizzle-uvec2-xy`) | native | native | `servers/rendering/shader_language.cpp:6877` |
-| `uvec2.rg` | transpiled (`swizzle-uvec2-rg`) | native | native | `servers/rendering/shader_language.cpp:6877` |
-| `uvec2.st` | transpiled (`swizzle-uvec2-st`) | native | native | `servers/rendering/shader_language.cpp:6877` |
-| `vec2.xy` | transpiled (`swizzle-vec2-xy`) | native | native | `servers/rendering/shader_language.cpp:6877` |
-| `vec2.rg` | transpiled (`swizzle-vec2-rg`) | native | native | `servers/rendering/shader_language.cpp:6877` |
-| `vec2.st` | transpiled (`swizzle-vec2-st`) | native | native | `servers/rendering/shader_language.cpp:6877` |
-| `bvec3.xyz` | transpiled (`swizzle-bvec3-xyz`) | native | native | `servers/rendering/shader_language.cpp:6941` |
-| `bvec3.rgb` | transpiled (`swizzle-bvec3-rgb`) | native | native | `servers/rendering/shader_language.cpp:6941` |
-| `bvec3.stp` | transpiled (`swizzle-bvec3-stp`) | native | native | `servers/rendering/shader_language.cpp:6941` |
-| `ivec3.xyz` | transpiled (`swizzle-ivec3-xyz`) | native | native | `servers/rendering/shader_language.cpp:6941` |
-| `ivec3.rgb` | transpiled (`swizzle-ivec3-rgb`) | native | native | `servers/rendering/shader_language.cpp:6941` |
-| `ivec3.stp` | transpiled (`swizzle-ivec3-stp`) | native | native | `servers/rendering/shader_language.cpp:6941` |
-| `uvec3.xyz` | transpiled (`swizzle-uvec3-xyz`) | native | native | `servers/rendering/shader_language.cpp:6941` |
-| `uvec3.rgb` | transpiled (`swizzle-uvec3-rgb`) | native | native | `servers/rendering/shader_language.cpp:6941` |
-| `uvec3.stp` | transpiled (`swizzle-uvec3-stp`) | native | native | `servers/rendering/shader_language.cpp:6941` |
-| `vec3.xyz` | transpiled (`swizzle-vec3-xyz`) | native | native | `servers/rendering/shader_language.cpp:6941` |
-| `vec3.rgb` | transpiled (`swizzle-vec3-rgb`) | native | native | `servers/rendering/shader_language.cpp:6941` |
-| `vec3.stp` | transpiled (`swizzle-vec3-stp`) | native | native | `servers/rendering/shader_language.cpp:6941` |
-| `bvec4.xyzw` | transpiled (`swizzle-bvec4-xyzw`) | native | native | `servers/rendering/shader_language.cpp:7008` |
-| `bvec4.rgba` | transpiled (`swizzle-bvec4-rgba`) | native | native | `servers/rendering/shader_language.cpp:7008` |
-| `bvec4.stpq` | transpiled (`swizzle-bvec4-stpq`) | native | native | `servers/rendering/shader_language.cpp:7008` |
-| `ivec4.xyzw` | transpiled (`swizzle-ivec4-xyzw`) | native | native | `servers/rendering/shader_language.cpp:7008` |
-| `ivec4.rgba` | transpiled (`swizzle-ivec4-rgba`) | native | native | `servers/rendering/shader_language.cpp:7008` |
-| `ivec4.stpq` | transpiled (`swizzle-ivec4-stpq`) | native | native | `servers/rendering/shader_language.cpp:7008` |
-| `uvec4.xyzw` | transpiled (`swizzle-uvec4-xyzw`) | native | native | `servers/rendering/shader_language.cpp:7008` |
-| `uvec4.rgba` | transpiled (`swizzle-uvec4-rgba`) | native | native | `servers/rendering/shader_language.cpp:7008` |
-| `uvec4.stpq` | transpiled (`swizzle-uvec4-stpq`) | native | native | `servers/rendering/shader_language.cpp:7008` |
-| `vec4.xyzw` | transpiled (`swizzle-vec4-xyzw`, `assign-swizzle`) | native | native | `servers/rendering/shader_language.cpp:7008` |
-| `vec4.rgba` | transpiled (`swizzle-vec4-rgba`, `assign-swizzle-rgba`) | native | native | `servers/rendering/shader_language.cpp:7008` |
-| `vec4.stpq` | transpiled (`swizzle-vec4-stpq`) | native | native | `servers/rendering/shader_language.cpp:7008` |
+| `bvec2.xy` | transpiled (`swizzle-bvec2-xy`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6877` |
+| `bvec2.rg` | transpiled (`swizzle-bvec2-rg`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6877` |
+| `bvec2.st` | transpiled (`swizzle-bvec2-st`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6877` |
+| `ivec2.xy` | transpiled (`swizzle-ivec2-xy`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6877` |
+| `ivec2.rg` | transpiled (`swizzle-ivec2-rg`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6877` |
+| `ivec2.st` | transpiled (`swizzle-ivec2-st`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6877` |
+| `uvec2.xy` | transpiled (`swizzle-uvec2-xy`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6877` |
+| `uvec2.rg` | transpiled (`swizzle-uvec2-rg`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6877` |
+| `uvec2.st` | transpiled (`swizzle-uvec2-st`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6877` |
+| `vec2.xy` | transpiled (`swizzle-vec2-xy`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6877` |
+| `vec2.rg` | transpiled (`swizzle-vec2-rg`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6877` |
+| `vec2.st` | transpiled (`swizzle-vec2-st`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6877` |
+| `bvec3.xyz` | transpiled (`swizzle-bvec3-xyz`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6941` |
+| `bvec3.rgb` | transpiled (`swizzle-bvec3-rgb`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6941` |
+| `bvec3.stp` | transpiled (`swizzle-bvec3-stp`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6941` |
+| `ivec3.xyz` | transpiled (`swizzle-ivec3-xyz`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6941` |
+| `ivec3.rgb` | transpiled (`swizzle-ivec3-rgb`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6941` |
+| `ivec3.stp` | transpiled (`swizzle-ivec3-stp`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6941` |
+| `uvec3.xyz` | transpiled (`swizzle-uvec3-xyz`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6941` |
+| `uvec3.rgb` | transpiled (`swizzle-uvec3-rgb`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6941` |
+| `uvec3.stp` | transpiled (`swizzle-uvec3-stp`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6941` |
+| `vec3.xyz` | transpiled (`swizzle-vec3-xyz`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6941` |
+| `vec3.rgb` | transpiled (`swizzle-vec3-rgb`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6941` |
+| `vec3.stp` | transpiled (`swizzle-vec3-stp`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:6941` |
+| `bvec4.xyzw` | transpiled (`swizzle-bvec4-xyzw`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:7008` |
+| `bvec4.rgba` | transpiled (`swizzle-bvec4-rgba`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:7008` |
+| `bvec4.stpq` | transpiled (`swizzle-bvec4-stpq`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:7008` |
+| `ivec4.xyzw` | transpiled (`swizzle-ivec4-xyzw`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:7008` |
+| `ivec4.rgba` | transpiled (`swizzle-ivec4-rgba`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:7008` |
+| `ivec4.stpq` | transpiled (`swizzle-ivec4-stpq`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:7008` |
+| `uvec4.xyzw` | transpiled (`swizzle-uvec4-xyzw`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:7008` |
+| `uvec4.rgba` | transpiled (`swizzle-uvec4-rgba`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:7008` |
+| `uvec4.stpq` | transpiled (`swizzle-uvec4-stpq`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:7008` |
+| `vec4.xyzw` | transpiled (`swizzle-vec4-xyzw`, `assign-swizzle`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:7008` |
+| `vec4.rgba` | transpiled (`swizzle-vec4-rgba`, `assign-swizzle-rgba`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:7008` |
+| `vec4.stpq` | transpiled (`swizzle-vec4-stpq`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:7008` |
 
 ## built-in (read only)
 
@@ -1892,7 +1892,7 @@ canvases draw on WebGPURenderer (#1788).
 | `particles.process.USERDATA5` | open, #1794 | | | `servers/rendering/shader_types.cpp:411` |
 | `particles.process.USERDATA6` | open, #1794 | | | `servers/rendering/shader_types.cpp:412` |
 | `particles.process.TRANSFORM` | open, #1794 | | | `servers/rendering/shader_types.cpp:413` |
-| `sky.sky.COLOR` | transpiled (`sky-default`, `sky-fog`, `sky-fog-sun`, `sky-fog-energy-0`, `sky-fog-energy-3`, `sky-fog-affect-0`, `sky-fog-affect-half`, `sky-sun-coloured`, `sky-sun-below`, `sky-sun-energy-0`, `sky-camera-wide`) | native | native | `servers/rendering/shader_types.cpp:486` |
+| `sky.sky.COLOR` | transpiled (`sky-default`, `sky-fog`, `sky-fog-sun`, `sky-fog-energy-0`, `sky-fog-energy-3`, `sky-fog-affect-0`, `sky-fog-affect-half`, `sky-sun-coloured`, `sky-sun-below`, `sky-sun-energy-0`, `sky-camera-wide`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:486` |
 | `sky.sky.ALPHA` | open, #1794 | | | `servers/rendering/shader_types.cpp:487` |
 | `sky.sky.FOG` | open, #1794 | | | `servers/rendering/shader_types.cpp:494` |
 | `fog.fog.ALBEDO` | open, #1794 | | | `servers/rendering/shader_types.cpp:517` |

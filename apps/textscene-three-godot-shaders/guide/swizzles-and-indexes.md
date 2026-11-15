@@ -11,7 +11,7 @@ Godot 4.6.3-stable (official), probed on llvmpipe (LLVM 20.1.2). Each table show
 
 The transpiler emits `a.zyx`. Rows: `bvec2.xy`, `bvec2.rg`, `bvec2.st`, `ivec2.xy`, `ivec2.rg`, `ivec2.st`, `uvec2.xy`, `uvec2.rg`, `uvec2.st`, `vec2.xy`, `vec2.rg`, `vec2.st`, `bvec3.xyz`, `bvec3.rgb`, `bvec3.stp`, `ivec3.xyz`, `ivec3.rgb`, `ivec3.stp`, `uvec3.xyz`, `uvec3.rgb`, `uvec3.stp`, `vec3.xyz`, `vec3.rgb`, `vec3.stp`, `bvec4.xyzw`, `bvec4.rgba`, `bvec4.stpq`, `ivec4.xyzw`, `ivec4.rgba`, `ivec4.stpq`, `uvec4.xyzw`, `uvec4.rgba`, `uvec4.stpq`, `vec4.xyzw`, `vec4.rgba`, `vec4.stpq`. Godot source: `servers/rendering/shader_language.cpp:6877`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `swizzle-vec2-xy`, 16 input rows
 
@@ -539,7 +539,7 @@ uvec4 probe(uvec4 a) { return uvec4(a.t, a.ts.y, a.pst.z, a.qpss.w); }
 
 The transpiler emits `a.element(i)`. Rows: `OP_INDEX`. Godot source: `servers/rendering/shader_language.cpp:1558`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `index-vector-read`, 32 input rows
 
@@ -734,6 +734,31 @@ vec2 probe(vec2 a, float b) { a[1 + 5] = b; return a; }
 ```
 
 Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'[' :  vector index out of range '6'`. The transpiler refuses it too.
+
+### Probe `index-folded-call-read`, 16 input rows
+
+```glsl
+float probe(vec2 a) { return a[int(abs(-1.0))]; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `-2.75` |
+| `(1.0, 1e-7)` | `1e-7` |
+| `(1e-7, 1e-40)` | `1e-40` |
+| `(123456.79, inf)` | `inf` |
+| `(16777216.0, -inf)` | `-inf` |
+| `(3e+38, NaN)` | `NaN` |
+| `(-3e+38, 0.0)` | `0.0` |
+| `(1e-40, -0.0)` | `-0.0` |
+
+### Probe `index-folded-call-past-end`, 0 input rows
+
+```glsl
+float probe(vec2 a) { return a[int(abs(-5.0))]; }
+```
+
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'[' :  vector index out of range '5'`. The transpiler refuses it too.
 
 ### Probe `index-write-before-value`, 32 input rows
 

@@ -85,7 +85,9 @@ describe('renderGuide', () => {
       probes: [PROBE],
       record: RECORD,
     });
-    expect(chapter[1]).toContain('Every row is native on WebGL 2 and on WebGPURenderer.');
+    expect(chapter[1]).toContain(
+      'Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).'
+    );
   });
 
   it('fails for a transpiled row that no section explains', () => {
