@@ -90,10 +90,7 @@ export const scalarCombinators = {
   },
 
   /**
-   * A string slot the setter cuts to its first character, counted in code
-   * points of the decoded text: `String` is UTF-32, and the tokenizer resolves
-   * `\uXXXX` first, so an escaped `…` is one character. An empty literal is legal,
-   * since `left(1)` of `""` is `""`.
+   * A string the setter cuts to its first code point: an escaped `…` is one character, and `""` is legal.
    *
    * @param enforced - `file:line` of the `left(1)` that cuts the value, which is
    *   the "silently alters the write" branch of ADR-0032 and so the error tier.
@@ -147,12 +144,7 @@ export const scalarCombinators = {
   },
 };
 
-/**
- * An ARRAY slot with an element type, and where its refusal of another type
- * comes from. `enforced`: a `TypedArray<T>` setter, whose `Array::assign`
- * fails on another typed array (`array.cpp:245`, `:276`), an error. `hinted`: a bare
- * `const Array &` setter behind a `PROPERTY_HINT_ARRAY_TYPE`, a warning.
- */
+/** `enforced` cites a `TypedArray<T>` setter (`array.cpp:245`, `:276`), an error. `hinted` warns. */
 type TypedArraySlot = { typedAs: string } & (
   { enforced: string; hinted?: never } | { hinted: string; enforced?: never }
 );

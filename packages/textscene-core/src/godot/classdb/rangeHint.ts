@@ -1,5 +1,3 @@
-// editor_properties.cpp:3764-3828
-
 /** An end `or_less` or `or_greater` opens is absent. */
 export interface RangeHintBounds {
   readonly min?: number;

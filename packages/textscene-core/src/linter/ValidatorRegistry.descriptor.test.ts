@@ -48,7 +48,7 @@ describe('the registry reads the property descriptor', () => {
 });
 
 describe('the base walk before the derivation', () => {
-  // An ancestor's hand validator answers before a nearer capture row, which is right while no class repeats a key.
+  // An ancestor's hand validator answers before a nearer capture row: right while no class repeats a key.
   it('meets no class that re-declares a key an ancestor captures', () => {
     const tables: Readonly<Record<string, readonly (readonly unknown[])[]>> = {
       ...NODE_CLASS_PROPERTIES,
