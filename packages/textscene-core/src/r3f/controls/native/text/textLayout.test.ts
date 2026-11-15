@@ -902,6 +902,7 @@ describe('shapeText — script runs', () => {
     shaping: undefined,
     hasGlyph: (ch) => ch !== '\u0378',
     getGlyphAdvanceUnits: () => 1056,
+    getKerningAdjustmentUnits: (left, right) => (right === 'V' || right === '\u0474' ? -256 : 0),
   };
   const advancesOf = (text: string): number[] =>
     shapeText(text, {
@@ -914,6 +915,12 @@ describe('shapeText — script runs', () => {
 
   it('carries the remainder through one script', () => {
     expect(advancesOf('AAAA')).toEqual([17, 16, 17, 16]);
+  });
+
+  // A kern of -256 units is -4 px at 32 px.
+  it('kerns a pair inside one script and no pair across a script change', () => {
+    expect(advancesOf('AV')[0]).toBe(13);
+    expect(advancesOf('A\u0474')[0]).toBe(17);
   });
 
   it('restarts the remainder at a Cyrillic letter, and again at the Latin letter after it', () => {
