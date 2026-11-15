@@ -32,6 +32,7 @@ import {
   layoutLabelLines,
   labelVisibleLineRange,
   windowLabelLines,
+  windowWrappedLabel,
   labelFontHeightPx,
   labelPreShapeText,
   labelEffectiveTextTheme,
@@ -223,6 +224,28 @@ describe('labelMinimumSize — autowrap ON reports the WRAPPED height once a pri
  * 14/12/14/12) min height 114, VBoxContainer (separation 2) 90, unwrapped Label (font_size 28) 39,
  * wrapped Label (autowrap WORD, box 640) 49.
  */
+describe('labelMinimumSize — a wrapped Label that clips or trims (label.cpp:984-990)', () => {
+  // Word autowrap at 40 px breaks `AA AA AA AA` into four 26 px rows.
+  const WRAPPED = { text: 'AA AA AA AA', autowrapMode: 2 };
+  const at40: SolveContext = { ...ctx(), tentativeRect: () => ({ x: 0, y: 0, w: 40, h: 0 }) };
+
+  it('holds every row without clip_text or a trim', () => {
+    expect(minSize(node(WRAPPED), at40).y).toBe(101);
+  });
+
+  it('floors the height at 1 with clip_text, so the rect height decides the rows it shows', () => {
+    expect(minSize(node({ ...WRAPPED, clipText: true }), at40).y).toBe(1);
+  });
+
+  it('floors the height at 1 with a trim and no max_lines_visible', () => {
+    expect(minSize(node({ ...WRAPPED, overrunBehavior: 3 }), at40).y).toBe(1);
+  });
+
+  it('keeps room for max_lines_visible rows with a trim and no clip_text', () => {
+    expect(minSize(node({ ...WRAPPED, overrunBehavior: 3, maxLinesVisible: 2 }), at40).y).toBe(49);
+  });
+});
+
 describe('labelMinimumSize wired through the registry + full solve — the wrapped height reaches the container', () => {
   afterEach(() => {
     controlSolverRegistry.clear();
@@ -838,6 +861,65 @@ describe('labelVisibleLineRange (label.cpp:344-361)', () => {
 
   it('skipping past the end yields an empty range, never a negative one (edge case)', () => {
     expect(labelVisibleLineRange(3, 5, undefined)).toEqual({ start: 3, end: 3 });
+  });
+});
+
+describe('windowWrappedLabel (label.cpp:268-301, :1022-1061)', () => {
+  /** Lines 26 px tall with the spacing, one per entry, each entry its paragraph index. */
+  function shapedLines(paragraphIndexes: number[]): TextLayoutResult {
+    return {
+      shapedText: '',
+      lines: paragraphIndexes.map((paragraphIndex) => ({
+        text: 'a',
+        glyphs: [],
+        widthPx: 10,
+        paragraphIndex,
+        ascentPx: 18,
+        descentPx: 5,
+      })),
+      linePitchPx: 26,
+      fontHeightPx: 23,
+      lineSpacingPx: 3,
+      widthPx: 10,
+      heightPx: 26 * paragraphIndexes.length,
+      baselineOffsetPx: 18,
+      fontMetrics: { kind: 'bundled' } as TextLayoutResult['fontMetrics'],
+    };
+  }
+  const SPACING = { lineSpacingPx: 3, paragraphSpacingPx: 0, fontHeightPx: 23 };
+  const CUT = { linesSkipped: 0, maxLinesVisible: undefined, contentHeightPx: 1000, isFill: false };
+
+  it('shows the lines that fit the content height and trims the last of them with an ellipsis', () => {
+    // Two 26 px lines fit `ceil(50 + 3)`, a third does not.
+    const window = windowWrappedLabel(shapedLines([0, 1, 2]), { ...CUT, contentHeightPx: 50 }, SPACING);
+    expect(window.layout.lines).toHaveLength(2);
+    expect(window.trimmedLine).toEqual({ lineIndex: 1, enforceEllipsis: true });
+  });
+
+  it('trims no line when every line shows and the Label does not FILL', () => {
+    expect(windowWrappedLabel(shapedLines([0, 1]), CUT, SPACING).trimmedLine).toBeNull();
+  });
+
+  it('trims the last line under FILL when every line shows, without forcing the ellipsis', () => {
+    const window = windowWrappedLabel(shapedLines([0, 1]), { ...CUT, isFill: true }, SPACING);
+    expect(window.trimmedLine).toEqual({ lineIndex: 1, enforceEllipsis: false });
+  });
+
+  it('counts on in the next paragraph when a negative paragraph spacing brings it back under the limit', () => {
+    // 26 fits 33, 52 does not, and -50 brings the next paragraph's line to 28.
+    const spacing = { ...SPACING, paragraphSpacingPx: -50 };
+    const window = windowWrappedLabel(shapedLines([0, 0, 1]), { ...CUT, contentHeightPx: 30 }, spacing);
+    expect(window.layout.lines).toHaveLength(2);
+  });
+
+  it('marks the last paragraph cut when the window ends inside it', () => {
+    const window = windowWrappedLabel(shapedLines([0, 0, 0]), { ...CUT, maxLinesVisible: 2 }, SPACING);
+    expect(window.isLastParagraphCut).toBe(true);
+  });
+
+  it('does not mark the last paragraph cut when the window ends at a paragraph end', () => {
+    const window = windowWrappedLabel(shapedLines([0, 1, 1]), { ...CUT, maxLinesVisible: 1 }, SPACING);
+    expect(window.isLastParagraphCut).toBe(false);
   });
 });
 

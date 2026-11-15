@@ -231,6 +231,11 @@ export interface TextLineLayout {
   text: string;
   glyphs: GlyphPlacement[];
   /**
+   * The glyphs the overrun trim cut from the shaped line, absent for none. Godot keeps them in the
+   * shaped text, so Label counts them in `total_glyphs` (`label.cpp:583`).
+   */
+  cutGlyphCount?: number;
+  /**
    * The sum of the line's advances, target px: Godot's raw pen extent `sd->width`. The size the
    * engine reports (`shaped_text_get_size`) goes through `shapedTextSizeWidthPx`.
    */

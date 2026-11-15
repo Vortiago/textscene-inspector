@@ -59,6 +59,7 @@ import {
   AutowrapMode,
   VisibleCharactersBehavior,
   DEFAULT_JUSTIFICATION_FLAGS,
+  JustificationFlag,
 } from '../../../../godot/text/textServerEnums';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { FALLBACK_THEME_CONSTANT } from '../../../../godot/scene/theme';
@@ -208,8 +209,8 @@ interface LabelLineRange {
 /**
  * The visible-line window of `Label::_update_visible` (`label.cpp:344-361`) and of
  * `get_layout_data` (`:520-561`): skip `linesSkipped` lines, then cap the rest at `maxLinesVisible`
- * (unset or negative means no limit), in every autowrap mode. Not ported: the clamp to the lines
- * that fit the rect height (`:533-548`, `comparison.md`).
+ * (unset or negative means no limit), in every autowrap mode. {@link windowWrappedLabel} passes the
+ * count of lines that fit the height as the cap.
  */
 export function labelVisibleLineRange(
   totalLines: number,
@@ -272,6 +273,116 @@ function labelLineExtent(line: LineExtentPx, fontHeightPx: number): LineExtentPx
   return {
     ascentPx: line.ascentPx + shortfallPx / 2,
     descentPx: line.descentPx + (shortfallPx - shortfallPx / 2),
+  };
+}
+
+// The lines a wrapped Label shows: label.cpp:244-301, :520-561, :1022-1061
+
+/** The spacing that decides how many wrapped lines fit the content height. */
+interface WrappedLabelSpacing extends LabelLineSpacing {
+  lineSpacingPx: number;
+}
+
+/**
+ * `get_visible_line_count` (`label.cpp:1022-1061`): the lines after `linesSkipped` whose padded
+ * extents, spacing and paragraph gaps fit `contentHeightPx`, capped at `maxLinesVisible`.
+ */
+function labelVisibleLineCount(
+  lines: readonly TextLineLayout[],
+  spacing: WrappedLabelSpacing,
+  contentHeightPx: number,
+  linesSkipped: number,
+  maxLinesVisible: number | undefined
+): number {
+  const limitPx = Math.ceil(contentHeightPx + spacing.lineSpacingPx);
+  const first = Math.max(0, linesSkipped);
+  let totalPx = 0;
+  let visible = 0;
+  // A line past the limit ends only its paragraph's count, as a negative spacing can bring the next back.
+  let isParagraphFull = false;
+  for (let i = first; i < lines.length; i++) {
+    if (i > first && startsParagraph(lines, i)) {
+      totalPx += spacing.paragraphSpacingPx;
+      isParagraphFull = false;
+    }
+    if (isParagraphFull) continue;
+    const { ascentPx, descentPx } = labelLineExtent(lines[i]!, spacing.fontHeightPx);
+    totalPx += ascentPx + descentPx + spacing.lineSpacingPx;
+    isParagraphFull = totalPx > limitPx;
+    if (!isParagraphFull) visible++;
+  }
+  return maxLinesVisible !== undefined && maxLinesVisible >= 0 ? Math.min(visible, maxLinesVisible) : visible;
+}
+
+/** The one line `_shape` trims with autowrap on, and whether it forces the ellipsis. */
+export interface WrappedLabelTrimmedLine {
+  /** Counted from the first line of the window it belongs to. */
+  lineIndex: number;
+  /** `OVERRUN_ENFORCE_ELLIPSIS`, set while lines are hidden (`label.cpp:270-272`). */
+  enforceEllipsis: boolean;
+}
+
+/**
+ * The line `_shape` trims with autowrap on (`label.cpp:268-301`), or null for none. Without FILL it
+ * trims only while lines are hidden. FILL trims it too unless it fits the line first, which
+ * `layoutLabelLines` decides. `visible_lines - line_index - 1` counts from the first shaped line,
+ * not from `lines_skipped`.
+ */
+function labelWrappedTrimmedLine(
+  totalLines: number,
+  visibleLines: number,
+  isFill: boolean
+): WrappedLabelTrimmedLine | null {
+  const isHidden = visibleLines > 0 && visibleLines < totalLines;
+  if (visibleLines <= 0 || (!isHidden && !isFill)) return null;
+  return { lineIndex: visibleLines - 1, enforceEllipsis: isHidden };
+}
+
+/** A wrapped Label's shown lines, and the one line among them `_shape` trims. */
+export interface WrappedLabelWindow {
+  /** The shown lines, windowed as {@link windowLabelLines} windows them. */
+  layout: TextLayoutResult;
+  trimmedLine: WrappedLabelTrimmedLine | null;
+  /** The last shown line is not its paragraph's last, so FILL fits it (`label.cpp:272-292`). */
+  isLastParagraphCut: boolean;
+}
+
+/** Where a wrapped Label cuts its lines: the skipped lines, the cap, the content height and FILL. */
+export interface WrappedLabelCut {
+  linesSkipped: number;
+  maxLinesVisible: number | undefined;
+  /** The control's height less its `normal` box's vertical margins. */
+  contentHeightPx: number;
+  isFill: boolean;
+}
+
+/**
+ * The lines a wrapped Label draws: those after `lines_skipped` that fit its height, capped at
+ * `max_lines_visible` (`get_layout_data`, `label.cpp:520-561`), and the line `_shape` trims among them.
+ * With autowrap off the minimum size holds every line, so the height cuts none.
+ */
+export function windowWrappedLabel(
+  shaped: TextLayoutResult,
+  cut: WrappedLabelCut,
+  spacing: WrappedLabelSpacing
+): WrappedLabelWindow {
+  const totalLines = shaped.lines.length;
+  const visibleLines = labelVisibleLineCount(
+    shaped.lines,
+    spacing,
+    cut.contentHeightPx,
+    cut.linesSkipped,
+    cut.maxLinesVisible
+  );
+  const range = labelVisibleLineRange(totalLines, cut.linesSkipped, visibleLines);
+  const layout = windowLabelLines(shaped, range, spacing);
+  const trimmed = labelWrappedTrimmedLine(totalLines, visibleLines, cut.isFill);
+  const windowIndex = trimmed ? trimmed.lineIndex - range.start : -1;
+  const isTrimmedLineShown = windowIndex >= 0 && windowIndex < layout.lines.length;
+  return {
+    layout,
+    trimmedLine: trimmed && isTrimmedLineShown ? { ...trimmed, lineIndex: windowIndex } : null,
+    isLastParagraphCut: range.end < totalLines && !startsParagraph(shaped.lines, range.end),
   };
 }
 
@@ -345,6 +456,23 @@ function labelMinimumHeightPx(
   return Math.max(extentPx, fontHeightPx);
 }
 
+/**
+ * A wrapped Label's minimum height (`label.cpp:984-990`). A Label that trims, and does not clip, keeps
+ * room for `max_lines_visible` rows of `font_h + line_spacing`. One that clips or trims otherwise
+ * floors at 1, so its rect height decides the lines it shows.
+ */
+function wrappedLabelMinimumHeightPx(
+  textHeightPx: number,
+  props: Pick<LabelProperties, 'clipText' | 'overrunBehavior' | 'maxLinesVisible'>,
+  rowHeightPx: number
+): number {
+  const maxLinesVisible = props.maxLinesVisible ?? -1;
+  if (!props.clipText && isTextWidthClipped(props) && maxLinesVisible > 0) {
+    return Math.min(textHeightPx, rowHeightPx * maxLinesVisible);
+  }
+  return isTextWidthClipped(props) ? 1 : textHeightPx;
+}
+
 /** Whether a Label wraps its text, so its minimum height reads the width a first pass gives (`label.cpp:983-996`). */
 export function isLabelAutowrapped(n: SolveNode): boolean {
   const props = n.node.properties as LabelProperties;
@@ -405,14 +533,16 @@ function labelTextMinimumSize(n: SolveNode, ctx: SolveContext, margin: LabelMarg
       autowrapTrimFlags: props.autowrapTrimFlags,
       ...controlBidiOptions(props, n),
     });
-    // Not modelled: `min_size.height = 1` and the `max_lines_visible` clamp (`:985-987`), which
-    // need `clip` or an `overrun_behavior` other than `OVERRUN_NO_TRIMMING`.
     const range = labelVisibleLineRange(wrapped.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
     const windowed = windowLabelLines(wrapped, range, {
       paragraphSpacingPx: spacing.paragraphSpacingPx,
       fontHeightPx,
     });
-    return { x: 1, y: labelMinimumHeightPx(windowed, spacing, fontHeightPx) };
+    const textHeightPx = labelMinimumHeightPx(windowed, spacing, fontHeightPx);
+    return {
+      x: 1,
+      y: wrappedLabelMinimumHeightPx(textHeightPx, props, fontHeightPx + spacing.lineSpacingPx),
+    };
   }
 
   // Non-null: empty text, the share's only null, returned above.
@@ -498,14 +628,18 @@ interface LabelLayoutOptions extends Partial<Pick<LabelSpacing, 'paragraphSpacin
   rtl?: boolean;
   /** `autowrap_mode != AUTOWRAP_OFF`, the gate of FILL's RTL arm (`label.cpp:473`). Defaults `false`. */
   isAutowrapped?: boolean;
-  /** The overrun trim `_shape` runs on each line after the fit, before `_get_line_rect` aligns it (`label.cpp:319-330`). */
+  /** The overrun trim `_shape` runs after the fit, before `_get_line_rect` aligns the line (`label.cpp:268-332`). */
   trim?: LineTrim;
+  /** The last line is not its paragraph's last: {@link WrappedLabelWindow.isLastParagraphCut}. Defaults `false`. */
+  isLastParagraphCut?: boolean;
 }
 
-/** The overrun trim of `_shape` with autowrap off (`label.cpp:319-330`): its behaviour and ellipsis. It trims at the shaping width. */
+/** The overrun trim of `_shape` (`label.cpp:268-332`): its behaviour and ellipsis. It trims at the shaping width. */
 export interface LineTrim {
   flags: OverrunTrimFlags;
   options: OverrunTrimOptions;
+  /** The one line it trims, counted in the shown lines: autowrap on. Every line when absent: autowrap off. */
+  lineIndex?: number;
 }
 
 /**
@@ -517,23 +651,43 @@ function isFitAboveMinimum(fitted: TextLineLayout, widthPx: number): boolean {
 }
 
 /**
- * Each line of `fitted` trimmed at `widthPx`. With `fillFlags`, a line FILL fitted is trimmed, then
- * fitted again (`label.cpp:322-325`), unless its fit stopped above the smallest spaces. Null
- * `fillFlags` trims each line in its inferred direction.
+ * The lines of `fitted` that `trim` names, trimmed at `widthPx` in their inferred direction. With
+ * `fillFlags`, a line FILL fitted is trimmed, then fitted again (`label.cpp:322-325`), unless its fit
+ * stopped above the smallest spaces. Null `fillFlags` leaves a fitted line whole, as a wrapped FILL
+ * Label trims only a line it does not fit (`:288-292`).
  */
 function trimLines(
   shaped: readonly TextLineLayout[],
   fitted: readonly TextLineLayout[],
-  { flags, options }: LineTrim,
+  { flags, options, lineIndex }: LineTrim,
   widthPx: number,
   fillFlags: number | null
 ): TextLineLayout[] {
   const filled = fillFlags === null ? null : filledPlacement(fillFlags);
   return fitted.map((line, index) => {
-    if (!filled || line === shaped[index]) return trimLine(line, widthPx, flags, options, inferredPlacement);
-    if (isFitAboveMinimum(line, widthPx)) return line;
+    if (lineIndex !== undefined && index !== lineIndex) return line;
+    if (line === shaped[index]) return trimLine(line, widthPx, flags, options, inferredPlacement);
+    if (!filled || isFitAboveMinimum(line, widthPx)) return line;
     return trimLine(line, widthPx, flags, options, filled);
   });
+}
+
+/**
+ * The justification flags of each shown paragraph. A paragraph the window cuts keeps its last line
+ * out of sight, so its last shown line is fitted as every line before `jst_to_line` (`label.cpp:272-292`).
+ */
+function shownParagraphFlags(
+  lines: readonly TextLineLayout[],
+  justificationFlags: number,
+  isLastParagraphCut: boolean
+): number | ((firstLineIndex: number) => number) {
+  if (!isLastParagraphCut) return justificationFlags;
+  let lastParagraphStart = lines.length - 1;
+  while (lastParagraphStart > 0 && !startsParagraph(lines, lastParagraphStart)) lastParagraphStart--;
+  const fitEveryLine =
+    justificationFlags &
+    ~(JustificationFlag.SKIP_LAST_LINE | JustificationFlag.SKIP_LAST_LINE_WITH_VISIBLE_CHARS);
+  return (firstLineIndex) => (firstLineIndex === lastParagraphStart ? fitEveryLine : justificationFlags);
 }
 
 /**
@@ -556,6 +710,7 @@ export function layoutLabelLines(
     trim,
     contentMargin = ZERO_SIDES,
     paragraphSpacingPx = LABEL_PARAGRAPH_SPACING_PX,
+    isLastParagraphCut = false,
   } = options;
   const lineCount = layout.lines.length;
   if (lineCount === 0) return [];
@@ -595,7 +750,7 @@ export function layoutLabelLines(
   const fitted = isFill
     ? justifyParagraphs(layout.lines, {
         widthPx: shapingWidthPx,
-        flags: justificationFlags,
+        flags: shownParagraphFlags(layout.lines, justificationFlags, isLastParagraphCut),
       })
     : layout.lines;
   // With autowrap off, FILL trims `OVERRUN_JUSTIFICATION_AWARE` (`label.cpp:322-325`).
