@@ -47,11 +47,11 @@ const UNNORMALISED_SUBNORMAL = {
     "driver (Mesa lavapipe) splits a subnormal as if its exponent were 0: fraction unnormalised, exponent 0, on Godot's side",
 };
 
-// Godot side: ldexp(3e38, -252) equals, -253 gives 0, as a split into 2^(e >> 1) and a flushed 2^-127 gives.
+// Measured: Godot's ldexp(3e38, e) equals ours at -252, -251, -250 and gives 0 at -253.
 const SPLIT_LDEXP = {
   owner: '#1827',
   cause:
-    "driver (Mesa lavapipe) splits the ldexp exponent in halves and flushes a 2^-127 half, on Godot's side",
+    "driver (Mesa lavapipe) gives 0 for ldexp(3e38, -253), on Godot's side: inferred, not read from Mesa, as a split into exponent halves that flushes 2^-127",
 };
 
 export const KNOWN_PROBE_DIFFERENCES = {
