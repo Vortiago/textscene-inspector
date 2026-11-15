@@ -10,12 +10,11 @@
 
 import { round as godotRound } from '../../../../godot/math/math';
 import { hexCodeBoxAdvanceSize } from './hexCodeBox';
-import { lineExtentPx, shapedBlockHeightPx } from './lineExtent';
+import { glyphsDescentPx, lineExtentPx, shapedBlockHeightPx } from './lineExtent';
 import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import {
   fontUsesSubpixelPositioning,
   getFontAscentPx,
-  getFontDescentPx,
   getFontEmboldenGrowthPx,
   getFontExtraAdvancePx,
   getFontKerningAdjustmentPx,
@@ -359,27 +358,10 @@ export function soloLineLayout(
     fontHeightPx: parent.fontHeightPx,
     lineSpacingPx: parent.lineSpacingPx,
     widthPx: line.widthPx,
-    heightPx: Math.max(parent.linePitchPx, line.ascentPx + deepestDescentPx(line)),
+    heightPx: Math.max(parent.linePitchPx, line.ascentPx + glyphsDescentPx(line.glyphs)),
     baselineOffsetPx: parent.baselineOffsetPx,
     fontMetrics,
   };
-}
-
-/**
- * The largest descent of a glyph on `line`, from its face at its size or its downward `yOffset`
- * (`text_server_adv.cpp:5146-5172`), 0 for no glyph. A canvas raster reaches this
- * far below the baseline, so a glyph of a fallback face with a deeper descent is not cut at the
- * bottom. The raster grows only downwards: the baseline stays.
- */
-function deepestDescentPx({ glyphs }: TextLineLayout): number {
-  let deepestPx = 0;
-  for (const glyph of glyphs)
-    deepestPx = Math.max(
-      deepestPx,
-      getFontDescentPx(glyph.fontMetrics, glyph.fontSizePx),
-      glyph.yOffset ?? 0
-    );
-  return deepestPx;
 }
 
 /**
