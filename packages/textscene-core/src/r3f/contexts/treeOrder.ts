@@ -11,6 +11,22 @@ export function childOrders(parent: TreeOrder, count: number): TreeOrder[] {
   return Array.from({ length: count }, (_, i) => [...parent, i]);
 }
 
+/**
+ * The orders of `children`, listed as they stand, by the order they enter the tree. Godot enters
+ * children in the order it adds them (`node.cpp:371`) and moves a child to its `index=` only after
+ * the add (`packed_scene.cpp:541-544`). It writes `index=` on each node it adds below an instanced
+ * or inherited scene, so the children without one entered first, and each group keeps its order.
+ */
+export function childEnterOrders(parent: TreeOrder, children: readonly { index?: number }[]): TreeOrder[] {
+  const unmoved = children.filter((child) => child.index === undefined).length;
+  let unmovedSeen = 0;
+  let movedSeen = 0;
+  return children.map((child) => [
+    ...parent,
+    child.index === undefined ? unmovedSeen++ : unmoved + movedSeen++,
+  ]);
+}
+
 /** Negative when `a` enters the tree before `b`, zero for one place. An ancestor comes first. */
 export function compareTreeOrder(a: TreeOrder, b: TreeOrder): number {
   return siblingOrder(a, b) || a.length - b.length;

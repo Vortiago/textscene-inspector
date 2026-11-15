@@ -6,7 +6,13 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import type { TreeOrder } from './treeOrder.js';
 
-export { childOrders, compareReadyOrder, compareTreeOrder, type TreeOrder } from './treeOrder.js';
+export {
+  childEnterOrders,
+  childOrders,
+  compareReadyOrder,
+  compareTreeOrder,
+  type TreeOrder,
+} from './treeOrder.js';
 
 const SCENE_ROOT: TreeOrder = Object.freeze([]);
 
