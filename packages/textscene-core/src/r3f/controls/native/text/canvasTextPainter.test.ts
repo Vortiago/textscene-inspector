@@ -21,6 +21,7 @@ import { TRIANGLE_CONTOURS, TRIANGLE_OUTLINES } from '../testing/triangleOutline
 import { placedGlyphBitmap } from './glyphCoverage';
 import type { SfntOutlines } from './sfntOutlines';
 import type { GlyphDrawer } from './glyphDrawer';
+import type { PenSum } from './glyphPen';
 import type { Vector2 } from '../../../../godot/math/vector';
 
 const CANVAS_METRICS = createRuntimeFontMetrics({
@@ -351,6 +352,7 @@ function paintRecording(
     outlines = null,
     glyphDrawer,
     itemOriginPx,
+    penSum,
     fontSizePx = 16,
   }: {
     fontSizePx?: number;
@@ -358,6 +360,7 @@ function paintRecording(
     outlines?: SfntOutlines | null;
     glyphDrawer?: GlyphDrawer;
     itemOriginPx?: Vector2;
+    penSum?: PenSum;
   } = {}
 ) {
   const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
@@ -403,6 +406,7 @@ function paintRecording(
       strokeWidthPx,
       glyphDrawer,
       itemOriginPx,
+      penSum,
     }
   );
   return { calls, canvasLayout, raster, getImageData: ctx.getImageData };
@@ -441,7 +445,9 @@ describe('paintSceneFontCanvas — pen', () => {
   /** A two-glyph line whose second pen sits between quarter pixels, as a justified line can put it. */
   function fractionalPenLayout() {
     const layout = layoutFor('AB', 0);
-    layout.lines[0]!.glyphs[1]!.x = 10.6;
+    const [a, b] = layout.lines[0]!.glyphs;
+    a!.advance = 10.6;
+    b!.x = a!.x + 10.6;
     return layout;
   }
 
@@ -456,6 +462,28 @@ describe('paintSceneFontCanvas — pen', () => {
     });
     // 0.3 + 10.6 = 10.9 rounds to the quarter step 11, and the quad starts at the floored origin 0.
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 11);
+  });
+
+  it('moves a pen summed from the item x to another quarter step on a whole-pixel move (label.h:199)', () => {
+    const lastPenAt = (itemX: number) => {
+      const layout = layoutFor('A', 0);
+      const a = layout.lines[0]!.glyphs[0]!;
+      const grownSpacePx = 4.15625 + 1 / 3;
+      const spaces = Array.from({ length: 12 }, (_, i) => ({
+        ...a,
+        x: i * grownSpacePx,
+        advance: grownSpacePx,
+      }));
+      layout.lines[0]!.glyphs = [...spaces, { ...a, x: 12 * grownSpacePx }];
+      const { calls, canvasLayout } = paintRecording(layout, 0, {
+        itemOriginPx: { x: itemX, y: 0 },
+        penSum: 'fromItemPosition',
+      });
+      return (calls.filter((c) => c.op === 'fillText').at(-1)!.args[1] as number) - canvasLayout.offsetXPx;
+    };
+
+    // From 0.25 the pen sums to 54.124996, below the step. From 1000.25 it sums to 1054.125, on it.
+    expect([lastPenAt(0.25), lastPenAt(1000.25)]).toEqual([54, 54.25]);
   });
 
   it('shears a raised glyph about its own origin, so the line shear does not move its pen', () => {
@@ -949,7 +977,8 @@ describe('canvasGlyphRects', () => {
       x += grownSpacePx;
       return space;
     });
-    expect(x).toBe(53.87500000000001);
+    // The double sum passes the quarter step, so only the 32-bit sum lands before it.
+    expect(x).toBeGreaterThan(53.875);
 
     expect(firstRectX(withGlyphs([...spaces, { ...a, x }]))).toBe(
       firstRectX(withGlyphs([{ ...a, x: 53.75 }]))

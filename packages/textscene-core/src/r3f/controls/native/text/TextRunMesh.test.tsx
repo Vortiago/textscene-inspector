@@ -74,11 +74,6 @@ describe('<TextRunMesh> on the canvas painter', () => {
     return raster() === before;
   }
 
-  // The pen sums in 32-bit float from the item origin (label.h:199): a whole-pixel move can change it.
-  it('paints its raster again when the run moves by whole pixels in x', async () => {
-    expect(await keepsRaster(inItemAt(2.25, 1.75), inItemAt(5.25, 1.75))).toBe(false);
-  });
-
   it('keeps its raster when the run moves by whole pixels in y', async () => {
     expect(await keepsRaster(inItemAt(2.25, 1.75), inItemAt(2.25, 9.75))).toBe(true);
   });
