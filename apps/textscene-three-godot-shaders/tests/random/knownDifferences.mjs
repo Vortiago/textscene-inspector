@@ -168,6 +168,16 @@ export const KNOWN_DIFFERENCES = {
 };
 
 /**
+ * A program whose first lane off is the lower bound of a `clamp`, a constant both sides write
+ * alike. The same source as a probe differs only on the lanes of its upper bound `asinh(41967.0)`,
+ * and equals Godot with that bound replaced by 20.0, so the lower-bound lane stays unexplained.
+ */
+const CAUSE_NOT_YET_SHOWN = {
+  owner: '#1826',
+  cause: 'cause not yet shown: the first lane off is a clamp bound both sides write alike',
+};
+
+/**
  * A vector call whose other lanes read a parameter and agree, where the lane that differs is a
  * constant alone, such as `cos(46.0)` in `cos(vec4(34.979, a0.ba, float(46)))`: one side's
  * compiler folds that lane on the CPU and the other computes it on the GPU.
@@ -234,8 +244,7 @@ export const KNOWN_PROGRAM_DIFFERENCES = {
   },
   'random-1847-871': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 80000000, transpilation 00000000' },
   'random-1847-905': {
-    ...DRIVER_ROUNDED_CALL,
-    folds: BOTH_SIDES,
+    ...CAUSE_NOT_YET_SHOWN,
     lane: 'lane 0: Godot 3fc4ef0c, transpilation 3fc4ef0d',
   },
   'random-1847-935': { ...DRIVER_EDGE_CALL, lane: 'lane 0: Godot 3f800000, transpilation 00000000' },

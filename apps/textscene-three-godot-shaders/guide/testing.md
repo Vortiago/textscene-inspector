@@ -19,10 +19,11 @@ The fixed set has seed 1847: 1399 programs, one rooted at each of the 1166 trans
 | Cause | Programs | Owner |
 | --- | --- | --- |
 | driver rewrite (Mesa lavapipe) on one side only: a listed case, not reshaped | 2 | #1823 |
-| a call glslang leaves to the GPU, which one side's compiler folds to other last bits | 17 | #1826 |
+| a call glslang leaves to the GPU, which one side's compiler folds to other last bits | 16 | #1826 |
 | a call glslang leaves to the GPU, outside its domain or near the float range, which the browser's compiler folds to a number | 23 | #1826 |
 | shift count out of range at runtime, which GLSL leaves undefined: the drivers differ | 2 | #1823 |
 | driver folds the constant lane of a vector call on one side only | 1 | #1826 |
+| cause not yet shown: the first lane off is a clamp bound both sides write alike | 1 | #1826 |
 
 The 13 known-difference cases are fixed, each with its cause: a float rewrite by the probe GPU's driver on one side only, or a result GLSL leaves undefined. A program that differs is reduced against a live Godot to a small program that still differs, and a program with functions of its own prints whole. Each known difference is a fixed case: its reduced program and its inputs, run on every pass whatever the seed, the set size or the generator. The list only shrinks: a case leaves it only when its own program equals Godot. A program of the set that differs and is no case's program fails the run.
 
