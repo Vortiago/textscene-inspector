@@ -270,10 +270,9 @@ function windowLabelLines(
 function labelLineExtent(line: LineExtentPx, fontHeightPx: number): LineExtentPx {
   const shortfallPx = fontHeightPx - (line.ascentPx + line.descentPx);
   if (shortfallPx <= 0) return { ascentPx: line.ascentPx, descentPx: line.descentPx };
-  return {
-    ascentPx: line.ascentPx + shortfallPx / 2,
-    descentPx: line.descentPx + (shortfallPx - shortfallPx / 2),
-  };
+  // Godot halves a `double`, so both halves are equal.
+  const halfPx = shortfallPx / 2;
+  return { ascentPx: line.ascentPx + halfPx, descentPx: line.descentPx + halfPx };
 }
 
 // The lines a wrapped Label shows: label.cpp:244-301, :520-561, :1022-1061
