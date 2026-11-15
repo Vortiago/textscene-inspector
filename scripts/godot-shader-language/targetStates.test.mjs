@@ -57,4 +57,17 @@ describe('targetStates', () => {
       webgpu: state,
     });
   });
+
+  it.each([
+    ['bitCount(uvec2)', ['uvec2'], 'lowered: sums of bit pairs, nibbles and bytes'],
+    [
+      'umulExtended(uint,uint,uint,uint)',
+      ['uint', 'uint', 'uint', 'uint'],
+      'lowered: products of 16-bit halves',
+    ],
+    ['ldexp(vec2,ivec2)', ['vec2', 'ivec2'], 'lowered: two products by powers of two'],
+    ['packSnorm4x8(vec4)', ['vec4'], "lowered: three's tsl_packSnorm4x8"],
+  ])('names the composite of the high_end function %s', (id, args, state) => {
+    expect(targetStates({ id, family: 'function (high_end)', returns: args[0], args }).webgl2).toBe(state);
+  });
 });

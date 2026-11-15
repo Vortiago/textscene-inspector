@@ -177,6 +177,13 @@ const LEFT_TO_THE_GPU = [
     'inverse(PARAMETER_SINGULAR)',
   ],
   ['cosh-near-the-float-range', ['cosh(float)'], 'float', 'cosh(89.152)', 'cosh(a + 89.152)'],
+  [
+    'mix-of-nan',
+    ['mix(vec2,vec2,float)', 'acosh(vec2)', 'atan(vec2)'],
+    'vec2',
+    'mix(vec2(acosh(atan(1.0))), vec2(1.0), 1.0)',
+    'mix(vec2(acosh(atan(a + 1.0))), vec2(1.0), 1.0)',
+  ],
 ];
 
 /** The matrices of the matrix calls, each of constants and through the parameter. */

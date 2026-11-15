@@ -1,49 +1,17 @@
 /**
- * The built-in functions three/tsl has no function for, each built from TSL nodes as GLSL defines
- * it: `roundEven`, `modf`, `isnan`, `isinf`, `matrixCompMult`, `outerProduct`, and `mix` with a
- * `bvec` blend, which three's `mix` casts to a float.
+ * The built-in functions three/tsl or GLSL ES 3.0 lacks, each built from TSL nodes as GLSL
+ * defines it.
  */
 
-import { abs, equal, floor, fract, int, mod, notEqual, round, select, trunc } from 'three/tsl';
+import { abs, equal, floor, fract, mod, notEqual, round, select, trunc } from 'three/tsl';
 import type { Node } from 'three/webgpu';
+import { byLane, chained, type Composite, laneOf, lanesOf, splat, tsl } from './compositeParts.js';
 import { CONSTRUCTORS, floatNode } from './emitConstant.js';
-import { columnOf, element } from './emitOperation.js';
+import { columnOf } from './emitOperation.js';
+import { EXPONENT_COMPOSITES } from './exponentComposites.js';
+import { INTEGER_COMPOSITES } from './integerComposites.js';
+import { NEAREST_COMPOSITES } from './nearestComposites.js';
 import { shapeOf } from './types.js';
-
-/** A composite of the operands of a call over the overload's argument types `args`. */
-export type Composite = (operands: readonly Node[], args: readonly string[]) => Node;
-
-/** three's types narrow each function to a few node types. Each takes any node of a GLSL type. */
-const tsl = (operation: unknown) => operation as (...operands: Node[]) => Node;
-
-/** The chained operations of a TSL node, which three's types leave out of `Node`. */
-interface Chained {
-  add(node: Node): Node;
-  sub(node: Node): Node;
-  mul(node: Node): Node;
-  div(node: Node): Node;
-  lessThan(node: Node): Node;
-  or(node: Node): Node;
-  assign(node: Node): Node;
-}
-
-const chained = (node: Node) => node as unknown as Chained;
-
-const lanesOf = (type: string) => shapeOf(type)?.lanes ?? 1;
-
-/** `type` filled with the float `value` in every lane. */
-const splat = (type: string, value: number) =>
-  type === 'float' ? floatNode(value) : CONSTRUCTORS[type]!(floatNode(value));
-
-/** A vector of `type` whose lane `i` is `lane(i)`, or the scalar `lane(0)`. */
-function byLane(type: string, lane: (index: number) => Node): Node {
-  const lanes = Array.from({ length: lanesOf(type) }, (_, index) => lane(index));
-  return lanes.length === 1 ? lanes[0]! : CONSTRUCTORS[type]!(...lanes);
-}
-
-/** Lane `index` of `vector`, or the scalar itself. */
-const laneOf = (vector: Node, type: string, index: number) =>
-  lanesOf(type) === 1 ? vector : element(vector, int(index) as unknown as Node);
 
 /** `roundEven` of one float: `round(x)`, but a half goes to the even one of `floor(x) + mod(floor(x), 2)`. */
 function roundEvenLane(x: Node): Node {
@@ -103,6 +71,9 @@ const modf: Composite = ([x, whole], [type]) => {
 
 /** Each composite, by its GLSL name. `mix` is one only with a `bvec` blend (`compositeOf`). */
 const COMPOSITES: Readonly<Record<string, Composite>> = {
+  ...INTEGER_COMPOSITES,
+  ...EXPONENT_COMPOSITES,
+  ...NEAREST_COMPOSITES,
   roundEven,
   modf,
   isnan,

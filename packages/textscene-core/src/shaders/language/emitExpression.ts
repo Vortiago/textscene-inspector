@@ -145,8 +145,8 @@ export class ExpressionEmitter {
     const nodes = call.operands.map((operand, index) => outs[index] ?? this.node(operand));
     const node = builtInCall(call.function, call.row, nodes);
     if (outs.every((out) => out === undefined)) return node;
-    const result = property(call.type) as unknown as Node;
-    result.assign(node);
+    const result = call.type === 'void' ? node : (property(call.type) as unknown as Node);
+    if (result !== node) result.assign(node);
     this.writeBack(call, { result, written: outs.filter((out) => out !== undefined) });
     return result;
   }

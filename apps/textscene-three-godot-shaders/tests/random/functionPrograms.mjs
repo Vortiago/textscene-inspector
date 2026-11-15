@@ -7,7 +7,14 @@
 
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { expressionText, rowsOf } from './programTree.mjs';
-import { PRODUCERS, ProgramWriter, componentType, vectorType } from './programs.mjs';
+import {
+  PRODUCERS,
+  ProgramWriter,
+  TRANSPILED_ROWS,
+  componentType,
+  placeArguments,
+  vectorType,
+} from './programs.mjs';
 import { seededRandom } from './seededRandom.mjs';
 
 /** The functions a program declares before `probe`: enough for a chain of three calls. */
@@ -32,6 +39,7 @@ const EARLY_RETURN_CHANCE = 0.6;
 const LOOP_CHANCE = 0.5;
 const INNER_CALL_CHANCE = 0.6;
 const INDEXED_PLACE_CHANCE = 0.5;
+const BUILT_IN_CALL_CHANCE = 0.3;
 
 /** The chances of each qualifier, `const in` among them, which Godot reads as `in`. */
 const QUALIFIERS = ['in', 'in', 'const in', 'out', 'out', 'inout', 'inout'];
@@ -51,8 +59,9 @@ const INDEXED_ARRAY_SIZE = 2;
  */
 const INDEX_BEFORE_A_PLACE_CHANCE = 0.25;
 
-/** The chance that `probe` returns the type of a value a call wrote, so the return reads it. */
+// The weight makes the return most often read a value a call wrote.
 const RETURN_AN_OUTPUT_CHANCE = 0.7;
+const RETURNED_OUTPUT_WEIGHT = 8;
 
 /** The rows a program uses for the frame of its functions, beside the rows of its expressions. */
 const FRAME_ROWS = { call: 'OP_CALL', void: 'void', if: 'if', for: 'for', return: 'return' };
@@ -64,6 +73,22 @@ const LETTERS = 'xyzw';
 const isScalarOrVector = (type) => !type.startsWith('mat');
 
 const valueShape = (type) => ({ kind: 'value', type });
+
+// `inout` for ldexp's exponent: Godot takes a place, GLSL reads it.
+const BUILT_IN_CALLEES = TRANSPILED_ROWS.filter((row) => placeArguments(row).length > 0).map((row) => {
+  const name = row.id.slice(0, row.id.indexOf('('));
+  const places = placeArguments(row);
+  const writes = name !== 'ldexp';
+  return {
+    name,
+    row: row.id,
+    parameters: row.args.map((type, index) => ({
+      qualifier: places.includes(index) ? (writes ? 'out' : 'inout') : 'in',
+      shape: valueShape(type),
+    })),
+    returns: row.returns === 'void' ? undefined : valueShape(row.returns),
+  };
+});
 
 /** The text of a shape as a type: `vec2`, `S0` or `float[3]`. */
 function typeText(shape) {
@@ -243,9 +268,7 @@ class FunctionProgramWriter {
       lines.push(`${parameter.name} = ${scope.value(parameter.shape)};`);
       scope.add(placesOf(parameter.shape, parameter.name));
     }
-    if (this.helpers.length > 0 && this.random.chance(INNER_CALL_CHANCE)) {
-      lines.push(...this.callStatement(scope, this.random.pick(this.helpers)));
-    }
+    if (this.random.chance(INNER_CALL_CHANCE)) lines.push(...this.callStatement(scope, this.callee()));
     const writable = parameters
       .filter((parameter) => isWritten(parameter.qualifier))
       .flatMap((parameter) => placesOf(parameter.shape, parameter.name));
@@ -285,7 +308,7 @@ class FunctionProgramWriter {
    * a value is also a producer, so an expression may call it inside another.
    */
   declare(name, parameters, returns) {
-    this.helpers.push({ name, parameters, returns });
+    this.helpers.push({ name, row: FRAME_ROWS.call, parameters, returns });
     const takesValues = parameters.every(
       (parameter) => !isWritten(parameter.qualifier) && parameter.shape.kind === 'value'
     );
@@ -295,12 +318,17 @@ class FunctionProgramWriter {
     this.producers.set(returns.type, [...(this.producers.get(returns.type) ?? []), producer]);
   }
 
+  callee() {
+    const isBuiltIn = this.helpers.length === 0 || this.random.chance(BUILT_IN_CALL_CHANCE);
+    return this.random.pick(isBuiltIn ? BUILT_IN_CALLEES : this.helpers);
+  }
+
   /**
    * The statements that call `helper` and declare the variables its `out` and `inout` arguments
    * write. Each written value is in reach after the call, twice over.
    */
   callStatement(scope, helper) {
-    this.rows.add(FRAME_ROWS.call);
+    this.rows.add(helper.row);
     const lines = [];
     const written = [];
     const indices = [];
@@ -399,14 +427,14 @@ class FunctionProgramWriter {
     scope.add(parameters.map((type, index) => ({ type, name: `a${index}` })));
     const calls = [this.helpers.at(-1)];
     const callCount = this.random.below(PROBE_CALLS_AT_MOST);
-    for (let index = 0; index < callCount; index += 1) calls.push(this.random.pick(this.helpers));
+    for (let index = 0; index < callCount; index += 1) calls.push(this.callee());
     const before = scope.places.length;
     const lines = calls.flatMap((helper) => this.callStatement(scope, helper));
     const outputs = scope.places.slice(before).filter((place) => this.types.includes(place.type));
-    const returns =
-      outputs.length > 0 && this.random.chance(RETURN_AN_OUTPUT_CHANCE)
-        ? this.random.pick(outputs).type
-        : this.random.pick(this.types);
+    const returned = outputs.length > 0 && this.random.chance(RETURN_AN_OUTPUT_CHANCE);
+    const output = returned ? this.random.pick(outputs) : undefined;
+    if (output) scope.add([output], RETURNED_OUTPUT_WEIGHT);
+    const returns = output?.type ?? this.random.pick(this.types);
     const list = parameters.map((type, index) => `${type} a${index}`).join(', ');
     return {
       returns,

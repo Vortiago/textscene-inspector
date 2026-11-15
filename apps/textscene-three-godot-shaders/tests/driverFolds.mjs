@@ -25,3 +25,10 @@ export const DRIVER_EDGE_CALL = {
     "a call glslang leaves to the GPU, outside its domain or near the float range, which the browser's compiler folds to a number",
   folds: BROWSER_COMPILER,
 };
+
+export const DRIVER_NAN_MIX = {
+  owner: '#1826',
+  cause:
+    "a mix of a NaN with a weight of 1, which Godot's driver folds to NaN and the GPU gives as the second value",
+  folds: GODOT_DRIVER,
+};

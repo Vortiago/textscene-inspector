@@ -41,13 +41,39 @@ const FUNCTION_COMPOSITES = {
   isinf: 'abs(x) == infinity',
   matrixCompMult: 'column by column',
   outerProduct: 'column by column',
+  bitCount: 'sums of bit pairs, nibbles and bytes',
+  findLSB: 'bit count below the lowest set bit',
+  findMSB: 'bit count of the bits filled below the top',
+  bitfieldReverse: 'swaps of bits, pairs, nibbles, bytes and halves',
+  bitfieldExtract: 'shifts to the top and back',
+  bitfieldInsert: 'shifted mask',
+  uaddCarry: 'wrapped sum and comparison',
+  usubBorrow: 'wrapped difference and comparison',
+  umulExtended: 'products of 16-bit halves',
+  imulExtended: 'products of 16-bit halves, less each negative operand',
+  frexp: 'exponent and fraction bits',
+  ldexp: 'two products by powers of two',
+  dFdxCoarse: 'nearest form dFdx, coarse not shown on the test driver',
+  dFdxFine: 'nearest form dFdx, fine not shown on the test driver',
+  dFdyCoarse: 'nearest form dFdy, coarse not shown on the test driver',
+  dFdyFine: 'nearest form dFdy, fine not shown on the test driver',
+  fwidthCoarse: 'nearest form fwidth, coarse not shown on the test driver',
+  fwidthFine: 'nearest form fwidth, fine not shown on the test driver',
+  fma: 'nearest form a * b + c, which a driver may fuse',
+};
+
+const THREE_POLYFILLS = {
+  packSnorm4x8: "three's tsl_packSnorm4x8",
+  packUnorm4x8: "three's tsl_packUnorm4x8",
+  unpackSnorm4x8: "three's tsl_unpackSnorm4x8",
+  unpackUnorm4x8: "three's tsl_unpackUnorm4x8",
 };
 
 /** The composite of the built-in function `row`, or nothing where three/tsl has its function. */
 function functionComposite(row) {
   const name = row.id.slice(0, row.id.indexOf('('));
   if (name === 'mix' && row.args[2]?.startsWith('b')) return 'select by lane';
-  return FUNCTION_COMPOSITES[name];
+  return FUNCTION_COMPOSITES[name] ?? THREE_POLYFILLS[name];
 }
 
 /** The lowering of `row` on every target, or nothing for a native row. */
@@ -55,7 +81,7 @@ function lowering(row) {
   if (/^(lowp|mediump|highp)$/.test(row.id)) return 'dropped: every float is 32-bit';
   if (row.family === 'constructor' && isMatrix(row.returns) && row.args.length === 1)
     return 'diagonal of columns';
-  if (row.family === 'function' && row.args !== undefined) return functionComposite(row);
+  if (row.family.startsWith('function') && row.args !== undefined) return functionComposite(row);
   if (row.family !== 'operator' || row.args === undefined) return undefined;
   const op = row.id.slice(0, row.id.indexOf('('));
   if (op === 'OP_ASSIGN' || STEPS.test(op)) return 'written to the argument value';

@@ -12,7 +12,7 @@ GLSL or WGSL operation itself, `lowered` with the name of the operations it writ
 probes run on WebGL 2. WebGPURenderer runs the same TSL nodes, and no probe runs there until the
 canvases draw on WebGPURenderer (#1788).
 
-1170 of 1889 instructions transpiled.
+1308 of 1889 instructions transpiled.
 
 ## data type
 
@@ -950,7 +950,7 @@ canvases draw on WebGPURenderer (#1788).
 | `acos(vec3)` | transpiled (`call-acos-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2630` |
 | `acos(vec4)` | transpiled (`call-acos-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2631` |
 | `atan(float)` | transpiled (`call-atan-float`, `fold-call-inverse-trigonometry`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2635` |
-| `atan(vec2)` | transpiled (`call-atan-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2636` |
+| `atan(vec2)` | transpiled (`call-atan-vec2`, `gpu-call-mix-of-nan-of-a-constant`, `gpu-call-mix-of-nan-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2636` |
 | `atan(vec3)` | transpiled (`call-atan-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2637` |
 | `atan(vec4)` | transpiled (`call-atan-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2638` |
 | `atan(float,float)` | transpiled (`call-atan-float-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2639` |
@@ -974,7 +974,7 @@ canvases draw on WebGPURenderer (#1788).
 | `asinh(vec3)` | transpiled (`call-asinh-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2669` |
 | `asinh(vec4)` | transpiled (`call-asinh-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2670` |
 | `acosh(float)` | transpiled (`call-acosh-float`, `gpu-call-acosh-of-a-constant`, `gpu-call-acosh-of-a-parameter`, `gpu-call-acosh-outside-its-domain-of-a-constant`, `gpu-call-acosh-outside-its-domain-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2674` |
-| `acosh(vec2)` | transpiled (`call-acosh-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2675` |
+| `acosh(vec2)` | transpiled (`call-acosh-vec2`, `gpu-call-mix-of-nan-of-a-constant`, `gpu-call-mix-of-nan-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2675` |
 | `acosh(vec3)` | transpiled (`call-acosh-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2676` |
 | `acosh(vec4)` | transpiled (`call-acosh-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2677` |
 | `atanh(float)` | transpiled (`call-atanh-float`, `gpu-call-atanh-of-a-constant`, `gpu-call-atanh-of-a-parameter`, `gpu-call-atanh-outside-its-domain-of-a-constant`, `gpu-call-atanh-outside-its-domain-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2681` |
@@ -1124,7 +1124,7 @@ canvases draw on WebGPURenderer (#1788).
 | `clamp(uvec3,uint,uint)` | transpiled (`call-clamp-uvec3-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2895` |
 | `clamp(uvec4,uint,uint)` | transpiled (`call-clamp-uvec4-uint-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2896` |
 | `mix(float,float,float)` | transpiled (`call-mix-float-float-float`, `fold-call-mix`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2900` |
-| `mix(vec2,vec2,float)` | transpiled (`call-mix-vec2-vec2-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2901` |
+| `mix(vec2,vec2,float)` | transpiled (`call-mix-vec2-vec2-float`, `gpu-call-mix-of-nan-of-a-constant`, `gpu-call-mix-of-nan-of-a-parameter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2901` |
 | `mix(vec2,vec2,bvec2)` | transpiled (`call-mix-vec2-vec2-bvec2`, `fold-call-mix-bool`) | lowered: select by lane | untested (#1788) | `servers/rendering/shader_language.cpp:2902` |
 | `mix(vec2,vec2,vec2)` | transpiled (`call-mix-vec2-vec2-vec2`, `fold-call-vector-bounds`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2903` |
 | `mix(vec3,vec3,float)` | transpiled (`call-mix-vec3-vec3-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2904` |
@@ -1155,22 +1155,22 @@ canvases draw on WebGPURenderer (#1788).
 | `isinf(vec2)` | transpiled (`call-isinf-vec2`) | lowered: abs(x) == infinity | untested (#1788) | `servers/rendering/shader_language.cpp:2941` |
 | `isinf(vec3)` | transpiled (`call-isinf-vec3`) | lowered: abs(x) == infinity | untested (#1788) | `servers/rendering/shader_language.cpp:2942` |
 | `isinf(vec4)` | transpiled (`call-isinf-vec4`) | lowered: abs(x) == infinity | untested (#1788) | `servers/rendering/shader_language.cpp:2943` |
-| `floatBitsToInt(float)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2947` |
-| `floatBitsToInt(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2948` |
-| `floatBitsToInt(vec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2949` |
-| `floatBitsToInt(vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2950` |
-| `floatBitsToUint(float)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2954` |
-| `floatBitsToUint(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2955` |
-| `floatBitsToUint(vec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2956` |
-| `floatBitsToUint(vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2957` |
-| `intBitsToFloat(int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2961` |
-| `intBitsToFloat(ivec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2962` |
-| `intBitsToFloat(ivec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2963` |
-| `intBitsToFloat(ivec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2964` |
-| `uintBitsToFloat(uint)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2968` |
-| `uintBitsToFloat(uvec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2969` |
-| `uintBitsToFloat(uvec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2970` |
-| `uintBitsToFloat(uvec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:2971` |
+| `floatBitsToInt(float)` | transpiled (`call-floatBitsToInt-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2947` |
+| `floatBitsToInt(vec2)` | transpiled (`call-floatBitsToInt-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2948` |
+| `floatBitsToInt(vec3)` | transpiled (`call-floatBitsToInt-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2949` |
+| `floatBitsToInt(vec4)` | transpiled (`call-floatBitsToInt-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2950` |
+| `floatBitsToUint(float)` | transpiled (`call-floatBitsToUint-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2954` |
+| `floatBitsToUint(vec2)` | transpiled (`call-floatBitsToUint-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2955` |
+| `floatBitsToUint(vec3)` | transpiled (`call-floatBitsToUint-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2956` |
+| `floatBitsToUint(vec4)` | transpiled (`call-floatBitsToUint-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2957` |
+| `intBitsToFloat(int)` | transpiled (`call-intBitsToFloat-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2961` |
+| `intBitsToFloat(ivec2)` | transpiled (`call-intBitsToFloat-ivec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2962` |
+| `intBitsToFloat(ivec3)` | transpiled (`call-intBitsToFloat-ivec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2963` |
+| `intBitsToFloat(ivec4)` | transpiled (`call-intBitsToFloat-ivec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2964` |
+| `uintBitsToFloat(uint)` | transpiled (`call-uintBitsToFloat-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2968` |
+| `uintBitsToFloat(uvec2)` | transpiled (`call-uintBitsToFloat-uvec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2969` |
+| `uintBitsToFloat(uvec3)` | transpiled (`call-uintBitsToFloat-uvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2970` |
+| `uintBitsToFloat(uvec4)` | transpiled (`call-uintBitsToFloat-uvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2971` |
 | `length(float)` | transpiled (`call-length-float`, `call-whole-array`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2976` |
 | `length(vec2)` | transpiled (`call-length-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2977` |
 | `length(vec3)` | transpiled (`call-length-vec3`, `fold-call-length`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:2978` |
@@ -1397,29 +1397,29 @@ canvases draw on WebGPURenderer (#1788).
 | `textureGather(usampler2DArray,vec3,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3304` |
 | `textureGather(samplerCube,vec3)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3305` |
 | `textureGather(samplerCube,vec3,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3306` |
-| `dFdx(float)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3336` |
-| `dFdx(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3337` |
-| `dFdx(vec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3338` |
-| `dFdx(vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3339` |
-| `dFdy(float)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3357` |
-| `dFdy(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3358` |
-| `dFdy(vec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3359` |
-| `dFdy(vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3360` |
-| `fwidth(float)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3378` |
-| `fwidth(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3379` |
-| `fwidth(vec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3380` |
-| `fwidth(vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3381` |
+| `dFdx(float)` | transpiled (`call-dFdx-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3336` |
+| `dFdx(vec2)` | transpiled (`call-dFdx-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3337` |
+| `dFdx(vec3)` | transpiled (`call-dFdx-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3338` |
+| `dFdx(vec4)` | transpiled (`call-dFdx-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3339` |
+| `dFdy(float)` | transpiled (`call-dFdy-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3357` |
+| `dFdy(vec2)` | transpiled (`call-dFdy-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3358` |
+| `dFdy(vec3)` | transpiled (`call-dFdy-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3359` |
+| `dFdy(vec4)` | transpiled (`call-dFdy-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3360` |
+| `fwidth(float)` | transpiled (`call-fwidth-float`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3378` |
+| `fwidth(vec2)` | transpiled (`call-fwidth-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3379` |
+| `fwidth(vec3)` | transpiled (`call-fwidth-vec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3380` |
+| `fwidth(vec4)` | transpiled (`call-fwidth-vec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3381` |
 | `length[array]()` | transpiled (`statement-array-length`, `statement-array-length-before-operator`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3400` |
-| `packHalf2x16(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3412` |
-| `packUnorm2x16(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3413` |
-| `packSnorm2x16(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3414` |
-| `packUnorm4x8(vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3415` |
-| `packSnorm4x8(vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3416` |
-| `unpackHalf2x16(uint)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3418` |
-| `unpackUnorm2x16(uint)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3419` |
-| `unpackSnorm2x16(uint)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3420` |
-| `unpackUnorm4x8(uint)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3421` |
-| `unpackSnorm4x8(uint)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3422` |
+| `packHalf2x16(vec2)` | transpiled (`call-packHalf2x16-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3412` |
+| `packUnorm2x16(vec2)` | transpiled (`call-packUnorm2x16-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3413` |
+| `packSnorm2x16(vec2)` | transpiled (`call-packSnorm2x16-vec2`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3414` |
+| `packUnorm4x8(vec4)` | transpiled (`call-packUnorm4x8-vec4`) | lowered: three's tsl_packUnorm4x8 | untested (#1788) | `servers/rendering/shader_language.cpp:3415` |
+| `packSnorm4x8(vec4)` | transpiled (`call-packSnorm4x8-vec4`) | lowered: three's tsl_packSnorm4x8 | untested (#1788) | `servers/rendering/shader_language.cpp:3416` |
+| `unpackHalf2x16(uint)` | transpiled (`call-unpackHalf2x16-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3418` |
+| `unpackUnorm2x16(uint)` | transpiled (`call-unpackUnorm2x16-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3419` |
+| `unpackSnorm2x16(uint)` | transpiled (`call-unpackSnorm2x16-uint`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3420` |
+| `unpackUnorm4x8(uint)` | transpiled (`call-unpackUnorm4x8-uint`) | lowered: three's tsl_unpackUnorm4x8 | untested (#1788) | `servers/rendering/shader_language.cpp:3421` |
+| `unpackSnorm4x8(uint)` | transpiled (`call-unpackSnorm4x8-uint`) | lowered: three's tsl_unpackSnorm4x8 | untested (#1788) | `servers/rendering/shader_language.cpp:3422` |
 
 ## function (high_end)
 
@@ -1445,106 +1445,106 @@ canvases draw on WebGPURenderer (#1788).
 | `textureQueryLevels(isampler3D)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3330` |
 | `textureQueryLevels(usampler3D)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3331` |
 | `textureQueryLevels(samplerCube)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3332` |
-| `dFdxCoarse(float)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3343` |
-| `dFdxCoarse(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3344` |
-| `dFdxCoarse(vec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3345` |
-| `dFdxCoarse(vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3346` |
-| `dFdxFine(float)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3350` |
-| `dFdxFine(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3351` |
-| `dFdxFine(vec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3352` |
-| `dFdxFine(vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3353` |
-| `dFdyCoarse(float)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3364` |
-| `dFdyCoarse(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3365` |
-| `dFdyCoarse(vec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3366` |
-| `dFdyCoarse(vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3367` |
-| `dFdyFine(float)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3371` |
-| `dFdyFine(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3372` |
-| `dFdyFine(vec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3373` |
-| `dFdyFine(vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3374` |
-| `fwidthCoarse(float)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3385` |
-| `fwidthCoarse(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3386` |
-| `fwidthCoarse(vec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3387` |
-| `fwidthCoarse(vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3388` |
-| `fwidthFine(float)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3392` |
-| `fwidthFine(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3393` |
-| `fwidthFine(vec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3394` |
-| `fwidthFine(vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3395` |
-| `fma(float,float,float)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3405` |
-| `fma(vec2,vec2,vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3406` |
-| `fma(vec3,vec3,vec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3407` |
-| `fma(vec4,vec4,vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3408` |
-| `bitfieldExtract(int,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3426` |
-| `bitfieldExtract(ivec2,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3427` |
-| `bitfieldExtract(ivec3,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3428` |
-| `bitfieldExtract(ivec4,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3429` |
-| `bitfieldExtract(uint,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3431` |
-| `bitfieldExtract(uvec2,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3432` |
-| `bitfieldExtract(uvec3,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3433` |
-| `bitfieldExtract(uvec4,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3434` |
-| `bitfieldInsert(int,int,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3438` |
-| `bitfieldInsert(ivec2,ivec2,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3439` |
-| `bitfieldInsert(ivec3,ivec3,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3440` |
-| `bitfieldInsert(ivec4,ivec4,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3441` |
-| `bitfieldInsert(uint,uint,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3443` |
-| `bitfieldInsert(uvec2,uvec2,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3444` |
-| `bitfieldInsert(uvec3,uvec3,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3445` |
-| `bitfieldInsert(uvec4,uvec4,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3446` |
-| `bitfieldReverse(int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3450` |
-| `bitfieldReverse(ivec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3451` |
-| `bitfieldReverse(ivec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3452` |
-| `bitfieldReverse(ivec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3453` |
-| `bitfieldReverse(uint)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3455` |
-| `bitfieldReverse(uvec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3456` |
-| `bitfieldReverse(uvec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3457` |
-| `bitfieldReverse(uvec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3458` |
-| `bitCount(int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3462` |
-| `bitCount(ivec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3463` |
-| `bitCount(ivec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3464` |
-| `bitCount(ivec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3465` |
-| `bitCount(uint)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3467` |
-| `bitCount(uvec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3468` |
-| `bitCount(uvec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3469` |
-| `bitCount(uvec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3470` |
-| `findLSB(int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3474` |
-| `findLSB(ivec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3475` |
-| `findLSB(ivec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3476` |
-| `findLSB(ivec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3477` |
-| `findLSB(uint)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3479` |
-| `findLSB(uvec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3480` |
-| `findLSB(uvec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3481` |
-| `findLSB(uvec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3482` |
-| `findMSB(int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3486` |
-| `findMSB(ivec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3487` |
-| `findMSB(ivec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3488` |
-| `findMSB(ivec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3489` |
-| `findMSB(uint)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3491` |
-| `findMSB(uvec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3492` |
-| `findMSB(uvec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3493` |
-| `findMSB(uvec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3494` |
-| `umulExtended(uint,uint,uint,uint)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3498` |
-| `umulExtended(uvec2,uvec2,uvec2,uvec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3499` |
-| `umulExtended(uvec3,uvec3,uvec3,uvec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3500` |
-| `umulExtended(uvec4,uvec4,uvec4,uvec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3501` |
-| `imulExtended(int,int,int,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3505` |
-| `imulExtended(ivec2,ivec2,ivec2,ivec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3506` |
-| `imulExtended(ivec3,ivec3,ivec3,ivec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3507` |
-| `imulExtended(ivec4,ivec4,ivec4,ivec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3508` |
-| `uaddCarry(uint,uint,uint)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3512` |
-| `uaddCarry(uvec2,uvec2,uvec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3513` |
-| `uaddCarry(uvec3,uvec3,uvec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3514` |
-| `uaddCarry(uvec4,uvec4,uvec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3515` |
-| `usubBorrow(uint,uint,uint)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3519` |
-| `usubBorrow(uvec2,uvec2,uvec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3520` |
-| `usubBorrow(uvec3,uvec3,uvec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3521` |
-| `usubBorrow(uvec4,uvec4,uvec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3522` |
-| `ldexp(float,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3526` |
-| `ldexp(vec2,ivec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3527` |
-| `ldexp(vec3,ivec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3528` |
-| `ldexp(vec4,ivec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3529` |
-| `frexp(float,int)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3533` |
-| `frexp(vec2,ivec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3534` |
-| `frexp(vec3,ivec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3535` |
-| `frexp(vec4,ivec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3536` |
+| `dFdxCoarse(float)` | transpiled (`call-dFdxCoarse-float`) | lowered: nearest form dFdx, coarse not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3343` |
+| `dFdxCoarse(vec2)` | transpiled (`call-dFdxCoarse-vec2`) | lowered: nearest form dFdx, coarse not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3344` |
+| `dFdxCoarse(vec3)` | transpiled (`call-dFdxCoarse-vec3`) | lowered: nearest form dFdx, coarse not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3345` |
+| `dFdxCoarse(vec4)` | transpiled (`call-dFdxCoarse-vec4`) | lowered: nearest form dFdx, coarse not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3346` |
+| `dFdxFine(float)` | transpiled (`call-dFdxFine-float`) | lowered: nearest form dFdx, fine not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3350` |
+| `dFdxFine(vec2)` | transpiled (`call-dFdxFine-vec2`) | lowered: nearest form dFdx, fine not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3351` |
+| `dFdxFine(vec3)` | transpiled (`call-dFdxFine-vec3`) | lowered: nearest form dFdx, fine not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3352` |
+| `dFdxFine(vec4)` | transpiled (`call-dFdxFine-vec4`) | lowered: nearest form dFdx, fine not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3353` |
+| `dFdyCoarse(float)` | transpiled (`call-dFdyCoarse-float`) | lowered: nearest form dFdy, coarse not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3364` |
+| `dFdyCoarse(vec2)` | transpiled (`call-dFdyCoarse-vec2`) | lowered: nearest form dFdy, coarse not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3365` |
+| `dFdyCoarse(vec3)` | transpiled (`call-dFdyCoarse-vec3`) | lowered: nearest form dFdy, coarse not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3366` |
+| `dFdyCoarse(vec4)` | transpiled (`call-dFdyCoarse-vec4`) | lowered: nearest form dFdy, coarse not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3367` |
+| `dFdyFine(float)` | transpiled (`call-dFdyFine-float`) | lowered: nearest form dFdy, fine not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3371` |
+| `dFdyFine(vec2)` | transpiled (`call-dFdyFine-vec2`) | lowered: nearest form dFdy, fine not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3372` |
+| `dFdyFine(vec3)` | transpiled (`call-dFdyFine-vec3`) | lowered: nearest form dFdy, fine not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3373` |
+| `dFdyFine(vec4)` | transpiled (`call-dFdyFine-vec4`) | lowered: nearest form dFdy, fine not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3374` |
+| `fwidthCoarse(float)` | transpiled (`call-fwidthCoarse-float`) | lowered: nearest form fwidth, coarse not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3385` |
+| `fwidthCoarse(vec2)` | transpiled (`call-fwidthCoarse-vec2`) | lowered: nearest form fwidth, coarse not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3386` |
+| `fwidthCoarse(vec3)` | transpiled (`call-fwidthCoarse-vec3`) | lowered: nearest form fwidth, coarse not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3387` |
+| `fwidthCoarse(vec4)` | transpiled (`call-fwidthCoarse-vec4`) | lowered: nearest form fwidth, coarse not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3388` |
+| `fwidthFine(float)` | transpiled (`call-fwidthFine-float`) | lowered: nearest form fwidth, fine not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3392` |
+| `fwidthFine(vec2)` | transpiled (`call-fwidthFine-vec2`) | lowered: nearest form fwidth, fine not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3393` |
+| `fwidthFine(vec3)` | transpiled (`call-fwidthFine-vec3`) | lowered: nearest form fwidth, fine not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3394` |
+| `fwidthFine(vec4)` | transpiled (`call-fwidthFine-vec4`) | lowered: nearest form fwidth, fine not shown on the test driver | untested (#1788) | `servers/rendering/shader_language.cpp:3395` |
+| `fma(float,float,float)` | transpiled (`call-fma-float-float-float`) | lowered: nearest form a * b + c, which a driver may fuse | untested (#1788) | `servers/rendering/shader_language.cpp:3405` |
+| `fma(vec2,vec2,vec2)` | transpiled (`call-fma-vec2-vec2-vec2`) | lowered: nearest form a * b + c, which a driver may fuse | untested (#1788) | `servers/rendering/shader_language.cpp:3406` |
+| `fma(vec3,vec3,vec3)` | transpiled (`call-fma-vec3-vec3-vec3`) | lowered: nearest form a * b + c, which a driver may fuse | untested (#1788) | `servers/rendering/shader_language.cpp:3407` |
+| `fma(vec4,vec4,vec4)` | transpiled (`call-fma-vec4-vec4-vec4`) | lowered: nearest form a * b + c, which a driver may fuse | untested (#1788) | `servers/rendering/shader_language.cpp:3408` |
+| `bitfieldExtract(int,int,int)` | transpiled (`call-bitfieldExtract-int-int-int`, `call-bitfieldExtract-int-int-int-whole-word`, `call-bitfieldExtract-int-int-int-top-bit`, `call-bitfieldExtract-int-int-int-empty-at-the-top`, `call-bitfieldExtract-of-a-negative-constant`) | lowered: shifts to the top and back | untested (#1788) | `servers/rendering/shader_language.cpp:3426` |
+| `bitfieldExtract(ivec2,int,int)` | transpiled (`call-bitfieldExtract-ivec2-int-int`, `call-bitfieldExtract-ivec2-int-int-whole-word`, `call-bitfieldExtract-ivec2-int-int-top-bit`, `call-bitfieldExtract-ivec2-int-int-empty-at-the-top`) | lowered: shifts to the top and back | untested (#1788) | `servers/rendering/shader_language.cpp:3427` |
+| `bitfieldExtract(ivec3,int,int)` | transpiled (`call-bitfieldExtract-ivec3-int-int`, `call-bitfieldExtract-ivec3-int-int-whole-word`, `call-bitfieldExtract-ivec3-int-int-top-bit`, `call-bitfieldExtract-ivec3-int-int-empty-at-the-top`) | lowered: shifts to the top and back | untested (#1788) | `servers/rendering/shader_language.cpp:3428` |
+| `bitfieldExtract(ivec4,int,int)` | transpiled (`call-bitfieldExtract-ivec4-int-int`, `call-bitfieldExtract-ivec4-int-int-whole-word`, `call-bitfieldExtract-ivec4-int-int-top-bit`, `call-bitfieldExtract-ivec4-int-int-empty-at-the-top`) | lowered: shifts to the top and back | untested (#1788) | `servers/rendering/shader_language.cpp:3429` |
+| `bitfieldExtract(uint,int,int)` | transpiled (`call-bitfieldExtract-uint-int-int`, `call-bitfieldExtract-uint-int-int-whole-word`, `call-bitfieldExtract-uint-int-int-top-bit`, `call-bitfieldExtract-uint-int-int-empty-at-the-top`) | lowered: shifts to the top and back | untested (#1788) | `servers/rendering/shader_language.cpp:3431` |
+| `bitfieldExtract(uvec2,int,int)` | transpiled (`call-bitfieldExtract-uvec2-int-int`, `call-bitfieldExtract-uvec2-int-int-whole-word`, `call-bitfieldExtract-uvec2-int-int-top-bit`, `call-bitfieldExtract-uvec2-int-int-empty-at-the-top`) | lowered: shifts to the top and back | untested (#1788) | `servers/rendering/shader_language.cpp:3432` |
+| `bitfieldExtract(uvec3,int,int)` | transpiled (`call-bitfieldExtract-uvec3-int-int`, `call-bitfieldExtract-uvec3-int-int-whole-word`, `call-bitfieldExtract-uvec3-int-int-top-bit`, `call-bitfieldExtract-uvec3-int-int-empty-at-the-top`) | lowered: shifts to the top and back | untested (#1788) | `servers/rendering/shader_language.cpp:3433` |
+| `bitfieldExtract(uvec4,int,int)` | transpiled (`call-bitfieldExtract-uvec4-int-int`, `call-bitfieldExtract-uvec4-int-int-whole-word`, `call-bitfieldExtract-uvec4-int-int-top-bit`, `call-bitfieldExtract-uvec4-int-int-empty-at-the-top`) | lowered: shifts to the top and back | untested (#1788) | `servers/rendering/shader_language.cpp:3434` |
+| `bitfieldInsert(int,int,int,int)` | transpiled (`call-bitfieldInsert-int-int-int-int`, `call-bitfieldInsert-int-int-int-int-whole-word`, `call-bitfieldInsert-int-int-int-int-top-bit`, `call-bitfieldInsert-int-int-int-int-empty-at-the-top`, `call-bitfieldInsert-of-a-negative-constant`) | lowered: shifted mask | untested (#1788) | `servers/rendering/shader_language.cpp:3438` |
+| `bitfieldInsert(ivec2,ivec2,int,int)` | transpiled (`call-bitfieldInsert-ivec2-ivec2-int-int`, `call-bitfieldInsert-ivec2-ivec2-int-int-whole-word`, `call-bitfieldInsert-ivec2-ivec2-int-int-top-bit`, `call-bitfieldInsert-ivec2-ivec2-int-int-empty-at-the-top`) | lowered: shifted mask | untested (#1788) | `servers/rendering/shader_language.cpp:3439` |
+| `bitfieldInsert(ivec3,ivec3,int,int)` | transpiled (`call-bitfieldInsert-ivec3-ivec3-int-int`, `call-bitfieldInsert-ivec3-ivec3-int-int-whole-word`, `call-bitfieldInsert-ivec3-ivec3-int-int-top-bit`, `call-bitfieldInsert-ivec3-ivec3-int-int-empty-at-the-top`) | lowered: shifted mask | untested (#1788) | `servers/rendering/shader_language.cpp:3440` |
+| `bitfieldInsert(ivec4,ivec4,int,int)` | transpiled (`call-bitfieldInsert-ivec4-ivec4-int-int`, `call-bitfieldInsert-ivec4-ivec4-int-int-whole-word`, `call-bitfieldInsert-ivec4-ivec4-int-int-top-bit`, `call-bitfieldInsert-ivec4-ivec4-int-int-empty-at-the-top`) | lowered: shifted mask | untested (#1788) | `servers/rendering/shader_language.cpp:3441` |
+| `bitfieldInsert(uint,uint,int,int)` | transpiled (`call-bitfieldInsert-uint-uint-int-int`, `call-bitfieldInsert-uint-uint-int-int-whole-word`, `call-bitfieldInsert-uint-uint-int-int-top-bit`, `call-bitfieldInsert-uint-uint-int-int-empty-at-the-top`) | lowered: shifted mask | untested (#1788) | `servers/rendering/shader_language.cpp:3443` |
+| `bitfieldInsert(uvec2,uvec2,int,int)` | transpiled (`call-bitfieldInsert-uvec2-uvec2-int-int`, `call-bitfieldInsert-uvec2-uvec2-int-int-whole-word`, `call-bitfieldInsert-uvec2-uvec2-int-int-top-bit`, `call-bitfieldInsert-uvec2-uvec2-int-int-empty-at-the-top`) | lowered: shifted mask | untested (#1788) | `servers/rendering/shader_language.cpp:3444` |
+| `bitfieldInsert(uvec3,uvec3,int,int)` | transpiled (`call-bitfieldInsert-uvec3-uvec3-int-int`, `call-bitfieldInsert-uvec3-uvec3-int-int-whole-word`, `call-bitfieldInsert-uvec3-uvec3-int-int-top-bit`, `call-bitfieldInsert-uvec3-uvec3-int-int-empty-at-the-top`) | lowered: shifted mask | untested (#1788) | `servers/rendering/shader_language.cpp:3445` |
+| `bitfieldInsert(uvec4,uvec4,int,int)` | transpiled (`call-bitfieldInsert-uvec4-uvec4-int-int`, `call-bitfieldInsert-uvec4-uvec4-int-int-whole-word`, `call-bitfieldInsert-uvec4-uvec4-int-int-top-bit`, `call-bitfieldInsert-uvec4-uvec4-int-int-empty-at-the-top`) | lowered: shifted mask | untested (#1788) | `servers/rendering/shader_language.cpp:3446` |
+| `bitfieldReverse(int)` | transpiled (`call-bitfieldReverse-int`, `call-bitfieldReverse-of-a-negative-constant`) | lowered: swaps of bits, pairs, nibbles, bytes and halves | untested (#1788) | `servers/rendering/shader_language.cpp:3450` |
+| `bitfieldReverse(ivec2)` | transpiled (`call-bitfieldReverse-ivec2`) | lowered: swaps of bits, pairs, nibbles, bytes and halves | untested (#1788) | `servers/rendering/shader_language.cpp:3451` |
+| `bitfieldReverse(ivec3)` | transpiled (`call-bitfieldReverse-ivec3`) | lowered: swaps of bits, pairs, nibbles, bytes and halves | untested (#1788) | `servers/rendering/shader_language.cpp:3452` |
+| `bitfieldReverse(ivec4)` | transpiled (`call-bitfieldReverse-ivec4`) | lowered: swaps of bits, pairs, nibbles, bytes and halves | untested (#1788) | `servers/rendering/shader_language.cpp:3453` |
+| `bitfieldReverse(uint)` | transpiled (`call-bitfieldReverse-uint`) | lowered: swaps of bits, pairs, nibbles, bytes and halves | untested (#1788) | `servers/rendering/shader_language.cpp:3455` |
+| `bitfieldReverse(uvec2)` | transpiled (`call-bitfieldReverse-uvec2`) | lowered: swaps of bits, pairs, nibbles, bytes and halves | untested (#1788) | `servers/rendering/shader_language.cpp:3456` |
+| `bitfieldReverse(uvec3)` | transpiled (`call-bitfieldReverse-uvec3`) | lowered: swaps of bits, pairs, nibbles, bytes and halves | untested (#1788) | `servers/rendering/shader_language.cpp:3457` |
+| `bitfieldReverse(uvec4)` | transpiled (`call-bitfieldReverse-uvec4`) | lowered: swaps of bits, pairs, nibbles, bytes and halves | untested (#1788) | `servers/rendering/shader_language.cpp:3458` |
+| `bitCount(int)` | transpiled (`call-bitCount-int`, `call-bitCount-of-a-negative-constant`) | lowered: sums of bit pairs, nibbles and bytes | untested (#1788) | `servers/rendering/shader_language.cpp:3462` |
+| `bitCount(ivec2)` | transpiled (`call-bitCount-ivec2`) | lowered: sums of bit pairs, nibbles and bytes | untested (#1788) | `servers/rendering/shader_language.cpp:3463` |
+| `bitCount(ivec3)` | transpiled (`call-bitCount-ivec3`) | lowered: sums of bit pairs, nibbles and bytes | untested (#1788) | `servers/rendering/shader_language.cpp:3464` |
+| `bitCount(ivec4)` | transpiled (`call-bitCount-ivec4`) | lowered: sums of bit pairs, nibbles and bytes | untested (#1788) | `servers/rendering/shader_language.cpp:3465` |
+| `bitCount(uint)` | transpiled (`call-bitCount-uint`) | lowered: sums of bit pairs, nibbles and bytes | untested (#1788) | `servers/rendering/shader_language.cpp:3467` |
+| `bitCount(uvec2)` | transpiled (`call-bitCount-uvec2`) | lowered: sums of bit pairs, nibbles and bytes | untested (#1788) | `servers/rendering/shader_language.cpp:3468` |
+| `bitCount(uvec3)` | transpiled (`call-bitCount-uvec3`) | lowered: sums of bit pairs, nibbles and bytes | untested (#1788) | `servers/rendering/shader_language.cpp:3469` |
+| `bitCount(uvec4)` | transpiled (`call-bitCount-uvec4`) | lowered: sums of bit pairs, nibbles and bytes | untested (#1788) | `servers/rendering/shader_language.cpp:3470` |
+| `findLSB(int)` | transpiled (`call-findLSB-int`, `call-findLSB-of-a-negative-constant`) | lowered: bit count below the lowest set bit | untested (#1788) | `servers/rendering/shader_language.cpp:3474` |
+| `findLSB(ivec2)` | transpiled (`call-findLSB-ivec2`) | lowered: bit count below the lowest set bit | untested (#1788) | `servers/rendering/shader_language.cpp:3475` |
+| `findLSB(ivec3)` | transpiled (`call-findLSB-ivec3`) | lowered: bit count below the lowest set bit | untested (#1788) | `servers/rendering/shader_language.cpp:3476` |
+| `findLSB(ivec4)` | transpiled (`call-findLSB-ivec4`) | lowered: bit count below the lowest set bit | untested (#1788) | `servers/rendering/shader_language.cpp:3477` |
+| `findLSB(uint)` | transpiled (`call-findLSB-uint`) | lowered: bit count below the lowest set bit | untested (#1788) | `servers/rendering/shader_language.cpp:3479` |
+| `findLSB(uvec2)` | transpiled (`call-findLSB-uvec2`) | lowered: bit count below the lowest set bit | untested (#1788) | `servers/rendering/shader_language.cpp:3480` |
+| `findLSB(uvec3)` | transpiled (`call-findLSB-uvec3`) | lowered: bit count below the lowest set bit | untested (#1788) | `servers/rendering/shader_language.cpp:3481` |
+| `findLSB(uvec4)` | transpiled (`call-findLSB-uvec4`) | lowered: bit count below the lowest set bit | untested (#1788) | `servers/rendering/shader_language.cpp:3482` |
+| `findMSB(int)` | transpiled (`call-findMSB-int`, `call-findMSB-of-a-negative-constant`) | lowered: bit count of the bits filled below the top | untested (#1788) | `servers/rendering/shader_language.cpp:3486` |
+| `findMSB(ivec2)` | transpiled (`call-findMSB-ivec2`) | lowered: bit count of the bits filled below the top | untested (#1788) | `servers/rendering/shader_language.cpp:3487` |
+| `findMSB(ivec3)` | transpiled (`call-findMSB-ivec3`) | lowered: bit count of the bits filled below the top | untested (#1788) | `servers/rendering/shader_language.cpp:3488` |
+| `findMSB(ivec4)` | transpiled (`call-findMSB-ivec4`) | lowered: bit count of the bits filled below the top | untested (#1788) | `servers/rendering/shader_language.cpp:3489` |
+| `findMSB(uint)` | transpiled (`call-findMSB-uint`) | lowered: bit count of the bits filled below the top | untested (#1788) | `servers/rendering/shader_language.cpp:3491` |
+| `findMSB(uvec2)` | transpiled (`call-findMSB-uvec2`) | lowered: bit count of the bits filled below the top | untested (#1788) | `servers/rendering/shader_language.cpp:3492` |
+| `findMSB(uvec3)` | transpiled (`call-findMSB-uvec3`) | lowered: bit count of the bits filled below the top | untested (#1788) | `servers/rendering/shader_language.cpp:3493` |
+| `findMSB(uvec4)` | transpiled (`call-findMSB-uvec4`) | lowered: bit count of the bits filled below the top | untested (#1788) | `servers/rendering/shader_language.cpp:3494` |
+| `umulExtended(uint,uint,uint,uint)` | transpiled (`call-umulExtended-uint-uint-uint-uint-msb`, `call-umulExtended-uint-uint-uint-uint-lsb`) | lowered: products of 16-bit halves | untested (#1788) | `servers/rendering/shader_language.cpp:3498` |
+| `umulExtended(uvec2,uvec2,uvec2,uvec2)` | transpiled (`call-umulExtended-uvec2-uvec2-uvec2-uvec2-msb`, `call-umulExtended-uvec2-uvec2-uvec2-uvec2-lsb`) | lowered: products of 16-bit halves | untested (#1788) | `servers/rendering/shader_language.cpp:3499` |
+| `umulExtended(uvec3,uvec3,uvec3,uvec3)` | transpiled (`call-umulExtended-uvec3-uvec3-uvec3-uvec3-msb`, `call-umulExtended-uvec3-uvec3-uvec3-uvec3-lsb`) | lowered: products of 16-bit halves | untested (#1788) | `servers/rendering/shader_language.cpp:3500` |
+| `umulExtended(uvec4,uvec4,uvec4,uvec4)` | transpiled (`call-umulExtended-uvec4-uvec4-uvec4-uvec4-msb`, `call-umulExtended-uvec4-uvec4-uvec4-uvec4-lsb`) | lowered: products of 16-bit halves | untested (#1788) | `servers/rendering/shader_language.cpp:3501` |
+| `imulExtended(int,int,int,int)` | transpiled (`call-imulExtended-int-int-int-int-msb`, `call-imulExtended-int-int-int-int-lsb`) | lowered: products of 16-bit halves, less each negative operand | untested (#1788) | `servers/rendering/shader_language.cpp:3505` |
+| `imulExtended(ivec2,ivec2,ivec2,ivec2)` | transpiled (`call-imulExtended-ivec2-ivec2-ivec2-ivec2-msb`, `call-imulExtended-ivec2-ivec2-ivec2-ivec2-lsb`) | lowered: products of 16-bit halves, less each negative operand | untested (#1788) | `servers/rendering/shader_language.cpp:3506` |
+| `imulExtended(ivec3,ivec3,ivec3,ivec3)` | transpiled (`call-imulExtended-ivec3-ivec3-ivec3-ivec3-msb`, `call-imulExtended-ivec3-ivec3-ivec3-ivec3-lsb`) | lowered: products of 16-bit halves, less each negative operand | untested (#1788) | `servers/rendering/shader_language.cpp:3507` |
+| `imulExtended(ivec4,ivec4,ivec4,ivec4)` | transpiled (`call-imulExtended-ivec4-ivec4-ivec4-ivec4-msb`, `call-imulExtended-ivec4-ivec4-ivec4-ivec4-lsb`) | lowered: products of 16-bit halves, less each negative operand | untested (#1788) | `servers/rendering/shader_language.cpp:3508` |
+| `uaddCarry(uint,uint,uint)` | transpiled (`call-uaddCarry-uint-uint-uint-result`, `call-uaddCarry-uint-uint-uint-written`) | lowered: wrapped sum and comparison | untested (#1788) | `servers/rendering/shader_language.cpp:3512` |
+| `uaddCarry(uvec2,uvec2,uvec2)` | transpiled (`call-uaddCarry-uvec2-uvec2-uvec2-result`, `call-uaddCarry-uvec2-uvec2-uvec2-written`) | lowered: wrapped sum and comparison | untested (#1788) | `servers/rendering/shader_language.cpp:3513` |
+| `uaddCarry(uvec3,uvec3,uvec3)` | transpiled (`call-uaddCarry-uvec3-uvec3-uvec3-result`, `call-uaddCarry-uvec3-uvec3-uvec3-written`) | lowered: wrapped sum and comparison | untested (#1788) | `servers/rendering/shader_language.cpp:3514` |
+| `uaddCarry(uvec4,uvec4,uvec4)` | transpiled (`call-uaddCarry-uvec4-uvec4-uvec4-result`, `call-uaddCarry-uvec4-uvec4-uvec4-written`) | lowered: wrapped sum and comparison | untested (#1788) | `servers/rendering/shader_language.cpp:3515` |
+| `usubBorrow(uint,uint,uint)` | transpiled (`call-usubBorrow-uint-uint-uint-result`, `call-usubBorrow-uint-uint-uint-written`) | lowered: wrapped difference and comparison | untested (#1788) | `servers/rendering/shader_language.cpp:3519` |
+| `usubBorrow(uvec2,uvec2,uvec2)` | transpiled (`call-usubBorrow-uvec2-uvec2-uvec2-result`, `call-usubBorrow-uvec2-uvec2-uvec2-written`) | lowered: wrapped difference and comparison | untested (#1788) | `servers/rendering/shader_language.cpp:3520` |
+| `usubBorrow(uvec3,uvec3,uvec3)` | transpiled (`call-usubBorrow-uvec3-uvec3-uvec3-result`, `call-usubBorrow-uvec3-uvec3-uvec3-written`) | lowered: wrapped difference and comparison | untested (#1788) | `servers/rendering/shader_language.cpp:3521` |
+| `usubBorrow(uvec4,uvec4,uvec4)` | transpiled (`call-usubBorrow-uvec4-uvec4-uvec4-result`, `call-usubBorrow-uvec4-uvec4-uvec4-written`) | lowered: wrapped difference and comparison | untested (#1788) | `servers/rendering/shader_language.cpp:3522` |
+| `ldexp(float,int)` | transpiled (`call-ldexp-float-int`, `call-ldexp-of-a-constant-exponent`) | lowered: two products by powers of two | untested (#1788) | `servers/rendering/shader_language.cpp:3526` |
+| `ldexp(vec2,ivec2)` | transpiled (`call-ldexp-vec2-ivec2`) | lowered: two products by powers of two | untested (#1788) | `servers/rendering/shader_language.cpp:3527` |
+| `ldexp(vec3,ivec3)` | transpiled (`call-ldexp-vec3-ivec3`) | lowered: two products by powers of two | untested (#1788) | `servers/rendering/shader_language.cpp:3528` |
+| `ldexp(vec4,ivec4)` | transpiled (`call-ldexp-vec4-ivec4`) | lowered: two products by powers of two | untested (#1788) | `servers/rendering/shader_language.cpp:3529` |
+| `frexp(float,int)` | transpiled (`call-frexp-float-int-fraction`, `call-frexp-float-int-exponent`, `call-frexp-to-a-value`) | lowered: exponent and fraction bits | untested (#1788) | `servers/rendering/shader_language.cpp:3533` |
+| `frexp(vec2,ivec2)` | transpiled (`call-frexp-vec2-ivec2-fraction`, `call-frexp-vec2-ivec2-exponent`) | lowered: exponent and fraction bits | untested (#1788) | `servers/rendering/shader_language.cpp:3534` |
+| `frexp(vec3,ivec3)` | transpiled (`call-frexp-vec3-ivec3-fraction`, `call-frexp-vec3-ivec3-exponent`) | lowered: exponent and fraction bits | untested (#1788) | `servers/rendering/shader_language.cpp:3535` |
+| `frexp(vec4,ivec4)` | transpiled (`call-frexp-vec4-ivec4-fraction`, `call-frexp-vec4-ivec4-exponent`) | lowered: exponent and fraction bits | untested (#1788) | `servers/rendering/shader_language.cpp:3536` |
 
 ## swizzle
 

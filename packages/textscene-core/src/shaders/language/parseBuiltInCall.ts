@@ -23,6 +23,9 @@ const OUT_ARGUMENTS: Readonly<Record<string, readonly number[]>> = {
   frexp: [1],
 };
 
+// Godot checks these as places, but GLSL only reads them (shader_language.cpp:3543).
+const READ_PLACES: Readonly<Record<string, readonly number[]>> = { ldexp: [1] };
+
 /** A type name calls a constructor, which the parser reads apart from the functions. */
 const isFunctionRow = (row: InstructionRow) =>
   row.family.startsWith('function') && !/^(?:[biu]?vec\d|mat\d|bool|int|uint|float)\(/.test(row.id);
@@ -99,7 +102,10 @@ export function resolvedBuiltInCall(
     const refusal = outRefusal(name, index, args[index]!);
     if (refusal !== undefined) fail(refusal);
   }
-  const qualifiers = args.map((_, index): Qualifier => (outs.includes(index) ? 'out' : 'in'));
+  const reads = READ_PLACES[name] ?? [];
+  const qualifiers = args.map((_, index): Qualifier =>
+    outs.includes(index) && !reads.includes(index) ? 'out' : 'in'
+  );
   return {
     kind: 'operator',
     op: 'OP_CALL',

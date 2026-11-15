@@ -74,9 +74,22 @@ describe('transpileShadingLanguage', () => {
     }
   );
 
+  it('emits a built-in that gives nothing as a statement that writes its out arguments', () => {
+    const glsl = glslOf(
+      'float probe(float a) { uint m = 0u; uint l = 0u; umulExtended(uint(a), 7u, m, l); return float(m + l); }',
+      [uniform(2)]
+    );
+    expect(glsl).toMatch(/>> 16u/);
+    expect(glsl).not.toMatch(/void nodeVar/);
+  });
+
+  it('converts a negative int constant to its uint bits, which three writes as 0u', () => {
+    expect(glslOf('int probe() { return bitCount(-42); }')).toContain('uint( -42 )');
+  });
+
   it('refuses a row that is not transpiled before it reaches the emitter', () => {
-    expect(() => transpileShadingLanguage('int probe(float a) { return floatBitsToInt(a); }')).toThrow(
-      "'floatBitsToInt(float)' is not transpiled yet (#1827)"
+    expect(() => transpileShadingLanguage('ivec2 probe(sampler2D s) { return textureSize(s, 0); }')).toThrow(
+      /is not transpiled yet \(#18\d\d\)/
     );
   });
 

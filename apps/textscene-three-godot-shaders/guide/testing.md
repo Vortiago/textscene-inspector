@@ -12,18 +12,17 @@ The same cases go through the transpiler's front end. On each one, it accepts wh
 
 A generator writes random functions that are correct by type, from the signatures of the transpiled rows only, so each slice that transpiles rows gets random programs over them with no change to the generator. Operators take only the brackets Godot's priorities need, so a program tests the order of evaluation as a user's shader does.
 
-The fixed set has seed 1847: 1399 programs, one rooted at each of the 1166 transpiled rows, the rest with random roots, and 100 that declare functions of their own. Such a program declares one to three functions, and each may call an earlier one. They hold `in`, `const in`, `out` and `inout` parameters, struct and array arguments and results, `void` functions, and an early `return` in a branch or a loop. A written argument is a variable, a member, an element or a swizzle, and an element's index may be a variable that another argument of the call writes. Godot accepts every one. `pnpm godot:probes` asks Godot for its result bits, and `pnpm test:shaders:gpu` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN in a float lane.
+The fixed set has seed 1847: 1529 programs, one rooted at each of the 1304 transpiled rows, the rest with random roots, and 100 that declare functions of their own. Such a program declares one to three functions, and each may call an earlier one. They hold `in`, `const in`, `out` and `inout` parameters, struct and array arguments and results, `void` functions, and an early `return` in a branch or a loop. A written argument is a variable, a member, an element or a swizzle, and an element's index may be a variable that another argument of the call writes. Godot accepts every one. `pnpm godot:probes` asks Godot for its result bits, and `pnpm test:shaders:gpu` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN in a float lane.
 
-**1354 of 1399 random programs bit-equal with Godot, NaN lanes compared as NaN. The other 45 are listed, each with its cause.**
+**1465 of 1529 random programs bit-equal with Godot, NaN lanes compared as NaN. The other 64 are listed, each with its cause.**
 
 | Cause | Programs | Owner |
 | --- | --- | --- |
-| driver rewrite (Mesa lavapipe) on one side only: a listed case, not reshaped | 2 | #1823 |
-| a call glslang leaves to the GPU, which one side's compiler folds to other last bits | 16 | #1826 |
-| a call glslang leaves to the GPU, outside its domain or near the float range, which the browser's compiler folds to a number | 23 | #1826 |
-| shift count out of range at runtime, which GLSL leaves undefined: the drivers differ | 2 | #1823 |
-| driver folds the constant lane of a vector call on one side only | 1 | #1826 |
-| cause not yet shown: the first lane off is a clamp bound both sides write alike | 1 | #1826 |
+| browser compiler (ANGLE) writes a derivative as dFdx * r.x + dFdy * r.y, so -0 gives +0 and an infinite neighbour NaN | 13 | #1827 |
+| a call glslang leaves to the GPU, which one side's compiler folds to other last bits | 25 | #1826 |
+| a call glslang leaves to the GPU, outside its domain or near the float range, which the browser's compiler folds to a number | 22 | #1826 |
+| driver rewrite (Mesa lavapipe) on one side only: a listed case, not reshaped | 3 | #1823 |
+| driver (Mesa lavapipe) drops the out store of a modf whose value nothing reads, on Godot's side | 1 | #1826 |
 
 The 13 known-difference cases are fixed, each with its cause: a float rewrite by the probe GPU's driver on one side only, or a result GLSL leaves undefined. A program that differs is reduced against a live Godot to a small program that still differs, and a program with functions of its own prints whole. Each known difference is a fixed case: its reduced program and its inputs, run on every pass whatever the seed, the set size or the generator. The list only shrinks: a case leaves it only when its own program equals Godot. A program of the set that differs and is no case's program fails the run.
 

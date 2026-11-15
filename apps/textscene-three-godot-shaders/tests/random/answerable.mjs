@@ -31,7 +31,7 @@ function isAnswerableOperator(node) {
 
 /** The overloads of each built-in function, in the order of Godot's `builtin_func_defs`. */
 const OVERLOADS = Map.groupBy(
-  INSTRUCTION_TABLE.filter((row) => row.family === 'function' && row.args),
+  INSTRUCTION_TABLE.filter((row) => row.family.startsWith('function') && row.args),
   (row) => operatorOf(row)
 );
 
@@ -47,7 +47,7 @@ const mayFit = (child, type) =>
 
 /** Whether Godot calls `node`'s own row: no overload before it takes the arguments. */
 function isCalledAsWritten(node) {
-  if (node.kind !== 'call' || node.row.family !== 'function') return true;
+  if (node.kind !== 'call' || !node.row.family.startsWith('function')) return true;
   const overloads = OVERLOADS.get(operatorOf(node.row)) ?? [];
   const earlier = overloads.slice(0, overloads.indexOf(node.row));
   return !earlier.some(
