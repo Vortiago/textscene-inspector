@@ -310,12 +310,12 @@ function buildForest(
 
   const sceneCache: CachedSceneSource = loader ? recordingReads(loader.scenes, recordRead) : NOTHING_CACHED;
   // The tree reads a tile layer's TileSet here too, for the scene tiles it adds as children.
-  const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
+  const parsedFiles = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
   const ctx: LiveTreeContext = {
     externalResources,
     internalResources,
     sceneCache,
-    resourceCache,
+    parsedFiles,
     project: projectTreeSettings(projectSettings),
   };
   const tree = liveTreeOf(nodes, ctx);
@@ -441,7 +441,7 @@ function buildForest(
 
     const path = parsedResourcePath(ref, ext);
     if (!path) return NO_LABEL_SETTINGS;
-    const cached = resourceCache.getCached(path);
+    const cached = parsedFiles.getCached(path);
     if (cached === undefined) {
       pendingResourceFiles.add(path);
       return NO_LABEL_SETTINGS;
@@ -516,7 +516,7 @@ function buildForest(
     const unwrapped = unwrapCanvasTextureRef(ref, int);
     const resourceFile = resolveExtResourceFilePath(unwrapped, ext);
     if (resourceFile) {
-      const cached = resourceCache.getCached(resourceFile);
+      const cached = parsedFiles.getCached(resourceFile);
       if (cached === undefined) {
         pendingResourceFiles.add(resourceFile);
         return null;

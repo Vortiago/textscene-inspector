@@ -64,7 +64,7 @@ export function contextOver(
     internalResources: main.internalResources,
     ...sourcesOver(sceneCacheOver(scenes)),
     ...(glbs ? { glbCache: { getCached: (path: string) => glbs[path] } } : {}),
-    resourceCache: { getCached: (path: string) => resources[path] },
+    parsedFiles: { getCached: (path: string) => resources[path] },
   };
 }
 
@@ -74,7 +74,7 @@ export function contextOver(
  * @canonical In tests, the snapshot a live scene pass reads
  */
 export function treeSnapshot(tree: LiveTree): ResourceSnapshot {
-  return snapshotOver(tree.ctx.resourceCache ?? NOTHING_CACHED);
+  return snapshotOver(tree.ctx.parsedFiles ?? NOTHING_CACHED);
 }
 
 /** What `pass` binds in `tree`, reading the files `tree`'s context caches. */

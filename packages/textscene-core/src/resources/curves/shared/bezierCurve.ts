@@ -5,9 +5,7 @@
  * No THREE.
  */
 
-import type { TscnInternalResource } from '../../../parser/types';
 import { slotInt } from '../../../godot/variant/intSlots.js';
-import { findSubResourceOfType, parseResourceReference } from '../../SubResourceResolver';
 import type { ResourceKind } from '../../reading';
 import { readBezierData, type BezierDataFormat } from './bezierData';
 import { resizeBezierPoints } from './pointCount';
@@ -44,22 +42,6 @@ function decodeBezierCurve<P>(data: Readonly<Record<string, string>>, reader: Be
   const points = readControlPoints(data._data, reader);
   const count = data.point_count === undefined ? null : slotInt(data.point_count);
   return count === null ? points : resizeBezierPoints(points, count, reader.origin);
-}
-
-/**
- * The control points of the curve a `SubResource("id")` value names: the first
- * resource under that id, when it is of the reader's class, as Godot loads it.
- * No points for any other value, or an id whose first holder is another class.
- */
-export function resolveBezierCurve<P>(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[],
-  reader: BezierCurveReader<P>
-): P[] {
-  const parsed = ref === undefined ? null : parseResourceReference(ref);
-  if (parsed?.type !== 'SubResource') return [];
-  const resource = findSubResourceOfType(internalResources, parsed.id, reader.format.className);
-  return resource ? decodeBezierCurve(resource.data, reader) : [];
 }
 
 function readControlPoints<P>(value: string | undefined, reader: BezierCurveReader<P>): P[] {

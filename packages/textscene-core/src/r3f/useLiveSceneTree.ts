@@ -40,14 +40,14 @@ export interface SharedLiveTree {
 }
 
 /**
- * The caches of `loader` that a live-tree context reads, and the snapshot its resource files are
- * read through. With no loader, every path reads as never requested.
+ * The caches of `loader` that a live-tree context reads. Its parsed resource files go through the
+ * live files, which request each one. With no loader, every path reads as never requested.
  */
 function loaderCaches(loader: ResourceLoader | null | undefined) {
   return {
     sceneCache: loader?.scenes ?? NOTHING_CACHED,
     glbCache: loader?.glbMeshes,
-    resourceCache: loader ? loadTicksOfLoader(loader).treeFiles : NO_LIVE_FILES.parsedFiles(),
+    parsedFiles: loader ? loadTicksOfLoader(loader).treeFiles : NO_LIVE_FILES.parsedFiles(),
   };
 }
 

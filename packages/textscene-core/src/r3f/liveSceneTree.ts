@@ -80,7 +80,7 @@ export interface LiveTreeContext {
    * The parsed resource files the tree reads: a tile layer's TileSet. Its host requests each file a
    * read names. Absent reads every file as loading.
    */
-  resourceCache?: CacheSource<ParsedResource>;
+  parsedFiles?: CacheSource<ParsedResource>;
   /**
    * `Control::get_transform()` of each Control the Control walk has solved, by live path. Absent
    * before the walk has run, and where no walk exists: a pass then composes a Control from its
@@ -679,7 +679,7 @@ export class LiveTree {
     this.sources = {
       scenes: this.scenes,
       glbs: ctx.glbCache ?? NOTHING_CACHED,
-      resources: ctx.resourceCache ?? NOTHING_CACHED,
+      resources: ctx.parsedFiles ?? NOTHING_CACHED,
     };
     const scope = rootScope(ctx);
     this.seatedRoots = seatedFile(roots, scope, this.scenes, roots);
