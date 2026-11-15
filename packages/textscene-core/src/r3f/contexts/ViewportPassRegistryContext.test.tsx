@@ -32,8 +32,10 @@ import {
   ViewportPassOrchestrator,
   useRegisterViewportPass,
   useViewportPassCycle,
+  usePlaceViewport,
   type ViewportPass,
 } from './ViewportPassRegistryContext';
+import { TreeOrderProvider, type TreeOrder } from './TreeOrderContext';
 import { passGate, TargetRenderState } from '../../nodes/viewport/renderGate';
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../godot/scene/viewport';
 import { HierarchyProvider } from './HierarchyContext';
@@ -43,6 +45,20 @@ import type { SceneGraph } from '../../core/SceneGraph';
 function Registrar({ path, pass }: { path: string; pass: ViewportPass }) {
   const register = useRegisterViewportPass();
   useEffect(() => register(path, pass), [register, path, pass]);
+  return null;
+}
+
+/** Places the viewport node at `path` at `order`, as the dispatcher does. */
+function Placer({ path, order }: { path: string; order: TreeOrder }) {
+  return (
+    <TreeOrderProvider order={order}>
+      <PlaceAt path={path} />
+    </TreeOrderProvider>
+  );
+}
+
+function PlaceAt({ path }: { path: string }) {
+  usePlaceViewport(path);
   return null;
 }
 
@@ -113,6 +129,44 @@ describe('<ViewportPassOrchestrator>', () => {
     );
     await renderer.advanceFrames(1, 16);
     expect(order).toEqual(['Inner', 'Middle', 'Outer']);
+  });
+
+  it('runs the passes of one level in the tree order the dispatcher places, not in registration order', async () => {
+    const order: string[] = [];
+    const renderer = await mount(
+      <>
+        <Registrar path="b" pass={{ dependsOn: [], render: () => order.push('b') }} />
+        <Registrar path="a" pass={{ dependsOn: [], render: () => order.push('a') }} />
+        <Placer path="b" order={[1]} />
+        <Placer path="a" order={[0]} />
+      </>
+    );
+    await renderer.advanceFrames(1, 16);
+    expect(order).toEqual(['a', 'b']);
+  });
+
+  it('keeps a node placed while another canvas still places it', async () => {
+    const order: string[] = [];
+    const passA: ViewportPass = { dependsOn: [], render: () => order.push('a') };
+    const passB: ViewportPass = { dependsOn: [], render: () => order.push('b') };
+    const first: TreeOrder = [0];
+    const second: TreeOrder = [1];
+    function TwoCanvases({ hasFirstCanvas }: { hasFirstCanvas: boolean }) {
+      return (
+        <ViewportPassProvider>
+          <Registrar path="b" pass={passB} />
+          <Registrar path="a" pass={passA} />
+          <Placer path="b" order={second} />
+          {hasFirstCanvas && <Placer path="a" order={first} />}
+          <Placer path="a" order={first} />
+          <ViewportPassOrchestrator />
+        </ViewportPassProvider>
+      );
+    }
+    const renderer = await ReactThreeTestRenderer.create(<TwoCanvases hasFirstCanvas />);
+    await renderer.update(<TwoCanvases hasFirstCanvas={false} />);
+    await renderer.advanceFrames(1, 16);
+    expect(order).toEqual(['a', 'b']);
   });
 
   it('unregisters on unmount, so a later frame no longer drives it', async () => {

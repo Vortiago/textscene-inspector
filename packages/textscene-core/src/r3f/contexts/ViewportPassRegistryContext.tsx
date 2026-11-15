@@ -1,9 +1,9 @@
 /**
- * One `useFrame` runs every offscreen viewport pass, dependencies first. R3F
- * runs default-priority subscribers in mount order, parent first, so a pass that
- * samples a nested `SubViewport` would render one frame stale. The registrant
- * supplies `dependsOn`: the orchestrator never inspects scene content. A pass with a `gate` renders
- * by its update mode, as Godot's `draw_viewports` decides (`renderer_viewport.cpp:769-813`).
+ * One `useFrame` runs every offscreen viewport pass, in Godot's order (`../../nodes/viewport/passOrder.ts`).
+ * R3F runs default-priority subscribers in mount order, parent first, which is not that order. The
+ * registrant supplies `dependsOn`, and the dispatcher each viewport's place in tree order: the
+ * orchestrator never inspects scene content. A pass with a `gate` renders by its update mode, as
+ * Godot's `draw_viewports` decides (`renderer_viewport.cpp:769-813`).
  */
 import {
   createContext,
@@ -25,6 +25,7 @@ import {
   type PassGate,
 } from '../../nodes/viewport/renderGate.js';
 import { useOptionalHierarchy } from './HierarchyContext.js';
+import { useTreeOrder, type TreeOrder } from './TreeOrderContext.js';
 import { useSceneAssetsSettled } from '../useSceneAssetsSettled.js';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 import { updateTextureAtlases, useTextureAtlasFrame } from '../textureAtlas/updateTextureAtlases.js';
@@ -36,7 +37,7 @@ import {
 } from '../hooks/createExternalStore.js';
 
 export interface ViewportPass {
-  /** ids (dispatcher-absolute node paths) of the OTHER passes this pass's content samples. */
+  /** ids (dispatcher-absolute node paths) of the viewports nested one level down, in tree order. */
   dependsOn: readonly string[];
   /** Perform this frame's offscreen render. Never called while this pass sits in a cycle. */
   render: () => void;
@@ -47,13 +48,20 @@ export interface ViewportPass {
 /** Publishes a pass at `path` and returns the cleanup. */
 type RegisterViewportPass = (path: string, pass: ViewportPass) => () => void;
 
+/** One mounted node's place in tree order. Every placement of one path holds the same place. */
+interface ViewportPlacement {
+  treeOrder: TreeOrder;
+}
+
 interface PassRegistryState {
   passes: ReadonlyMap<string, ViewportPass>;
+  /** Where the dispatcher draws each viewport node, by path: once in each canvas that draws it. */
+  placements: ReadonlyMap<string, readonly ViewportPlacement[]>;
   order: readonly string[];
   cycles: ReadonlyMap<string, ViewportPassCycle>;
 }
 
-const EMPTY_STATE: PassRegistryState = registryState(new Map());
+const EMPTY_STATE: PassRegistryState = registryState(new Map(), new Map());
 
 /** Without a provider, a registration sets nothing and no pass is ever driven. */
 const NO_PROVIDER: ExternalStore<PassRegistryState> = {
@@ -63,7 +71,7 @@ const NO_PROVIDER: ExternalStore<PassRegistryState> = {
 };
 
 /**
- * Written only by `registerPass`, through a provider's own store. A store, not a context value,
+ * Written only by `registerPass` and `placeViewport`, through a provider's own store. A store, not a context value,
  * since every Texture2D slot reads its cycles and a registration re-renders only the readers of
  * a cycle it changes.
  */
@@ -90,22 +98,72 @@ function registerPass(state: ExternalStore<PassRegistryState>, path: string, pas
 }
 
 function setPasses(state: ExternalStore<PassRegistryState>, passes: ReadonlyMap<string, ViewportPass>): void {
-  state.set(registryState(passes, state.get().cycles));
+  const { placements, cycles } = state.get();
+  state.set(registryState(passes, placements, cycles));
+}
+
+/**
+ * Places the viewport node at `path` at the caller's place in tree order, for as long as the caller
+ * is mounted, or places nothing for a null path. Both canvases may place one node, at one place.
+ */
+export function usePlaceViewport(path: string | null): void {
+  const state = useContext(StateContext);
+  const treeOrder = useTreeOrder();
+  useEffect(
+    () => (path === null ? undefined : placeViewport(state, path, treeOrder)),
+    [state, path, treeOrder]
+  );
+}
+
+/** Adds one placement of `path` at `treeOrder` to `state`, and returns the cleanup that removes it. */
+function placeViewport(
+  state: ExternalStore<PassRegistryState>,
+  path: string,
+  treeOrder: TreeOrder
+): () => void {
+  if (state === NO_PROVIDER) return () => {};
+  const placement: ViewportPlacement = { treeOrder };
+  const placementsAt = (orders: ReadonlyMap<string, readonly ViewportPlacement[]>) => orders.get(path) ?? [];
+  const placements = state.get().placements;
+  setPlacements(state, new Map(placements).set(path, [...placementsAt(placements), placement]));
+  return () => {
+    const current = state.get().placements;
+    const kept = placementsAt(current).filter((other) => other !== placement);
+    const next = new Map(current);
+    if (kept.length > 0) next.set(path, kept);
+    else next.delete(path);
+    setPlacements(state, next);
+  };
+}
+
+function setPlacements(
+  state: ExternalStore<PassRegistryState>,
+  placements: ReadonlyMap<string, readonly ViewportPlacement[]>
+): void {
+  const { passes, cycles } = state.get();
+  state.set(registryState(passes, placements, cycles));
 }
 
 /** The state for `passes`. A cycle equal to one in `previous` stays that object, so its readers keep it. */
 function registryState(
   passes: ReadonlyMap<string, ViewportPass>,
+  placements: ReadonlyMap<string, readonly ViewportPlacement[]>,
   previous: ReadonlyMap<string, ViewportPassCycle> = new Map()
 ): PassRegistryState {
-  const result = orderViewportPasses([...passes].map(([id, pass]) => ({ id, dependsOn: pass.dependsOn })));
+  const result = orderViewportPasses(
+    [...passes].map(([id, pass]) => ({
+      id,
+      dependsOn: pass.dependsOn,
+      treeOrder: placements.get(id)?.[0]?.treeOrder ?? null,
+    }))
+  );
   const cycles = new Map<string, ViewportPassCycle>();
   for (const cycle of result.cycles) {
     const kept = previous.get(cycle.sampler);
     cycles.set(cycle.sampler, kept && isSameCycle(kept, cycle) ? kept : cycle);
   }
   const isUnchanged = cycles.size === previous.size && [...cycles].every(([id, c]) => previous.get(id) === c);
-  return { passes, order: result.order, cycles: isUnchanged ? previous : cycles };
+  return { passes, placements, order: result.order, cycles: isUnchanged ? previous : cycles };
 }
 
 function isSameCycle(a: ViewportPassCycle, b: ViewportPassCycle): boolean {

@@ -65,6 +65,8 @@ import { GlbRootNode } from './internal/glb-scene-root/GlbRootNode.js';
 import { loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
+import { usePlaceViewport } from './contexts/ViewportPassRegistryContext.js';
+import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import { spaceFamilyOf } from '../godot/scene/parentSpace.js';
 
 /** Does this subtree contain anything that needs boolean evaluation? */
@@ -267,6 +269,9 @@ function PlainNode({
   const parentIsCanvasItem = useParentSpaceFamily() === 'CanvasItem';
 
   const wrapperRef = useNodeObjectRegistration(path);
+  // A viewport takes its place in the pass order from here: a Control-only one mounts its pass
+  // outside this walk.
+  usePlaceViewport(isViewportBoundary(node.type) ? path : null);
 
   if (!drawsInWorkspace(node.type, workspace)) return null;
 
