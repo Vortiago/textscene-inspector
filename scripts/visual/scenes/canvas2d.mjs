@@ -268,6 +268,9 @@ export const CANVAS_2D_SCENES = [
   // `--mode 2d`: (120,250) rgb(114,12,12) Under over black, (162,200) rgb(242,63,12) Under over the
   // quad, (200,180) rgb(128,56,142) Plate over both.
   { name: 'sub-viewport-3d-keep-background', file: 'unit-sub-viewport-3d-keep-background.tscn' },
+  // A 3D SubViewport under a 2D root draws its OmniLight3D's shadow, as Godot draws a viewport's
+  // shadows whatever the root is. Godot 4.6.3: the box's shadow on the floor, left of the box.
+  { name: 'sub-viewport-2d-root-omni-shadow', file: 'unit-sub-viewport-2d-root-omni-shadow.tscn' },
   // A sub-viewport lights its own 2D content with its own lights and CanvasModulate. Godot 4.6.3
   // `--mode 2d`: (160,155) rgb(159,123,130) under the Torch, (280,200) rgb(51,64,108) the tinted
   // far Floor, and (600,155) rgb(127,127,127) the untinted, unlit Outside.
