@@ -4,7 +4,7 @@ import { validatorRegistry } from './ValidatorRegistry.js';
 import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
 import { classProperties, isUncatalogued } from '../godot/classdb/classProperty.js';
 import { propertyDescriptor } from '../godot/classdb/propertyDescriptor.js';
-import { VARIANT_TYPE } from '../godot/variant/variantType.js';
+import { isRuntimeHandle } from '../godot/variant/variantType.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/classdb/resourceBaseTypes.generated.js';
 import { resourceSliceRegistry } from '../resources/sliceRegistration.js';
 import '../resources/sliceRegistrations.js'; // side-effect: every resource slice claims its types
@@ -85,12 +85,11 @@ function hasReadSetters(type: string): boolean {
   return ownRows(type).some(({ name }) => propertyDescriptor(type, name)?.facts !== undefined);
 }
 
-// A `.tscn` holds only the default `RID()` (see `OpenXRRenderModel`).
 function guardedRows(types: readonly string[]) {
   return types
     .filter((type) => !isUncatalogued(type))
     .flatMap((type) => ownRows(type).map((row) => ({ type, key: row.name, variantType: row.type })))
-    .filter(({ variantType }) => variantType !== VARIANT_TYPE.RID);
+    .filter(({ variantType }) => !isRuntimeHandle(variantType));
 }
 
 function uncheckedRows(rows: ReturnType<typeof guardedRows>): string[] {
