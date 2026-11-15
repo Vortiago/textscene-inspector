@@ -12,7 +12,6 @@ registerPropertyFacts('Camera3D', {
     message: "Property 'fov' must be between 1 and 179 degrees",
   },
   size: { setter: { cite: 'camera_3d.cpp:731', min: { at: CMP_EPSILON, exclusive: true } } },
-  cull_mask: { width: 'uint32' /* camera_3d.h:177 */ },
   keep_aspect: { labels: CAMERA_3D_KEEP_ASPECT_NAMES },
   doppler_tracking: { labels: DOPPLER_TRACKING_NAMES },
 });

@@ -34,6 +34,18 @@ export interface PropertyDescriptor {
 /** Written only by {@link registerPropertyFacts} on slice import; never cleared. */
 const handRows = new Map<string, Record<string, PropertyFacts>>();
 
+/** Raised only by {@link registerPropertyFacts}, so a reader can drop a check built before a row. */
+let handRowsRevision = 0;
+
+export function handRowRevision(): number {
+  return handRowsRevision;
+}
+
+/** @internal For the hand-row sweep in `linter/`. */
+export function handRowKeys(): readonly { className: string; key: string }[] {
+  return [...handRows].flatMap(([className, rows]) => Object.keys(rows).map((key) => ({ className, key })));
+}
+
 /** Throws on an uncaptured key or a second row for a key, rather than drop one in silence. */
 export function registerPropertyFacts(
   className: string,
@@ -47,6 +59,7 @@ export function registerPropertyFacts(
     if (Object.hasOwn(own, key)) throw new Error(`${className} already has a hand row for '${key}'`);
   }
   handRows.set(className, Object.assign(own, rows));
+  handRowsRevision++;
 }
 
 function factsFor(className: string, key: string): PropertyFacts | undefined {
