@@ -1,8 +1,3 @@
-/**
- * The parts of each node of the tree, in the order Godot writes them, so a pass that reads or
- * rebuilds every node names each kind once, here.
- */
-
 import type { BlockNode, CallNode, ControlFlowNode, Expression, Statement } from './shaderTree.js';
 
 /** Whether `statement` is the empty statement `;`. */

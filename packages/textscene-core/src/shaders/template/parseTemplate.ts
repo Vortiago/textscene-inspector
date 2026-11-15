@@ -1,10 +1,3 @@
-/**
- * The parser of one stage of a template variant: the preprocessed tokens to the template tree,
- * by GLSL 4.50's grammar for declarations outside a function (section 4) and for statements
- * (section 6). Every token goes into the tree: a token the grammar has no place for fails the
- * parse, so nothing of a template is dropped.
- */
-
 import type { SourcePosition } from '../language/shadingLanguageError.js';
 import type {
   Argument,

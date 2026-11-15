@@ -1,5 +1,3 @@
-/** Each write an expression orders becomes the order of statements. */
-
 import { describe, expect, it } from 'vitest';
 import { loweredText, text } from './lowering.testkit.js';
 import { lowerSideEffects } from './lowerSideEffects.js';

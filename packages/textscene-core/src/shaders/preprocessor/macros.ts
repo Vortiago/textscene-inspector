@@ -1,5 +1,3 @@
-/** Godot's macro expansion (shader_preprocessor.cpp:1000): each define's name replaced by its body, pass after pass. */
-
 import { stripEdges } from '../../godot/string/string.js';
 import { isCharSpace, isCharWord } from './preprocessorChars.js';
 import { PreprocessorError } from './preprocessorError.js';

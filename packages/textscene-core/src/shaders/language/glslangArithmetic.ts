@@ -1,9 +1,3 @@
-/**
- * glslang's arithmetic on constant lanes (`Constant.cpp` and `ConstantUnion.h` of the glslang Godot
- * 4.6.3 ships), as the x86-64 build of Godot computes it. A float lane is a double, an `int` lane
- * a 32-bit signed integer, a `uint` lane a 32-bit unsigned one, and a `bool` lane a boolean.
- */
-
 import { INT32_MAX, INT32_MIN, toInt32, toUint32, UINT32_MAX } from '../../godot/variant/intWidth.js';
 import { doubleToInt32 } from '../../godot/variant/cInteger.js';
 import { godotUintScalar } from './godotNumber.js';

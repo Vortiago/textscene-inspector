@@ -1,8 +1,3 @@
-/**
- * Writes in the tree: `_validate_assign` (`shader_language.cpp:5531`), whether an expression can
- * take a value and Godot's message when it cannot, and which variable each write targets.
- */
-
 import { isAssignOperator } from './operators.js';
 import type { BlockNode, Expression } from './shaderTree.js';
 import { everyExpressionIn, isCall, subExpressions } from './treeWalk.js';

@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-/**
- * Decides whether a pull request is a shader transpiler change only, which runs the shader
- * package's own pipeline and skips the previewer's jobs. CI passes `git diff --name-only` on stdin
- * and the base branch in `BASE_REF`, and this appends `shader-only=true|false` to $GITHUB_OUTPUT.
- * It runs before the workspace installs, so it imports no package.
- */
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 

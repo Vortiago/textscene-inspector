@@ -1,5 +1,3 @@
-/** Each transpiled row's state on each target names its lowering. */
-
 import { describe, expect, it } from 'vitest';
 import { targetStates, WEBGPU_STATE } from './targetStates.mjs';
 

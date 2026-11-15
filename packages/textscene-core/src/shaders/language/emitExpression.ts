@@ -1,10 +1,3 @@
-/**
- * The TSL value of an expression of the lowered tree, a plain walk. A variable is a TSL `Var`, so
- * a read gives the value at the place TSL writes it. The tree orders every write already: no
- * part is read after a later part writes it, and no `?:`, `&&` or `||` holds a write
- * (`lowering/lowerSideEffects.ts`).
- */
-
 import { property, select } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { builtInCall } from './emitBuiltIn.js';

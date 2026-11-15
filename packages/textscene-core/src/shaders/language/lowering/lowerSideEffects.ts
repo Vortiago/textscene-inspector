@@ -1,13 +1,3 @@
-/**
- * The lowering of side effects, the last one: each write that GLSL orders inside an expression
- * becomes the order of statements. A value read before a part that writes is kept in a variable
- * declared first, so `a + (a = 3.0)` reads `a` before the write. `c ? a : b`, `a && b` and
- * `a || b` with a side that writes become an `if`, as GLSL runs one side. An index that writes,
- * in a place that is written, is kept, so `a[i++] += 1.0` steps `i` once, and so is every index
- * before a value that writes, so `a[i] = i++` writes the `a[i]` of the old `i`. A call's `out`
- * and `inout` arguments are places in the same way.
- */
-
 import { isWriteOperator, writes } from '../assignment.js';
 import type {
   CallNode,

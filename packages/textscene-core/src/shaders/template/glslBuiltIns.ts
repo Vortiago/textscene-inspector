@@ -1,11 +1,3 @@
-/**
- * The built-ins of GLSL 4.50 for Vulkan that Godot's templates read and the shading language has
- * not: the `gl_*` variables of each stage (sections 7.1 and 7.3, `GL_KHR_vulkan_glsl`,
- * `GL_EXT_multiview`, `GL_KHR_shader_subgroup`), and the functions over images, atomics, barriers,
- * subgroups, subpass inputs and shadow samplers (section 8). Each function is one row, as the
- * instruction table holds an overload, so a node of the tree always names its row.
- */
-
 import type { InstructionRow } from '../language/instructionTable.generated.js';
 import type { StageName } from './stages.js';
 

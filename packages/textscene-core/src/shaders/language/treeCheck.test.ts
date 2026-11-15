@@ -1,5 +1,3 @@
-/** The tree check finds a node that breaks a fact of the tree. */
-
 import { describe, expect, it } from 'vitest';
 import { instruction } from './instructions.js';
 import { treeOf } from './parsedTree.testkit.js';

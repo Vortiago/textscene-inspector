@@ -1,5 +1,3 @@
-/** The front end of a shader text: Godot's preprocessor, then the shading language tokenizer and parser. */
-
 import { preprocess, type PreprocessOptions } from '../preprocessor/preprocessor.js';
 import { PreprocessorError } from '../preprocessor/preprocessorError.js';
 import { parse } from './parse.js';

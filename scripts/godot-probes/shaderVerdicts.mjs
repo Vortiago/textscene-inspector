@@ -1,9 +1,3 @@
-/**
- * Godot's verdict on whole shader texts: a main script sets each text as a `Shader`'s code, which
- * compiles it at once, and prints a marker before each one. Godot prints the first error of a
- * shader it refuses between two markers, so the parse of the output reads each verdict.
- */
-
 import { inChunksAtOnce, oneGodot, printedField, runGodotScript } from './godotRun.mjs';
 
 const MARKER = 'VERDICT ';

@@ -1,5 +1,3 @@
-/** The user guide: its values come from the record, and a transpiled row with no section fails. */
-
 import { describe, expect, it } from 'vitest';
 import { floatText, renderGuide } from './renderGuide.mjs';
 

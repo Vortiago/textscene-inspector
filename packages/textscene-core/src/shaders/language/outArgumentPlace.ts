@@ -1,10 +1,3 @@
-/**
- * The `out` or `inout` argument glslang refuses, though Godot's front end passes it: a place that
- * is no l-value (`lValueErrorCheck` of glslang's parse context). Godot checks a repeated swizzle
- * letter only for an assignment, so `f(a.xx.x)` passes, and it passes a member of a value that is
- * no variable, as `f(g().x)` and `f((a + b).x)`.
- */
-
 import { writtenTargets } from './assignment.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
 import type { BlockNode, Expression } from './shaderTree.js';

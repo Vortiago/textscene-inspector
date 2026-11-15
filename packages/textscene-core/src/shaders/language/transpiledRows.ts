@@ -1,8 +1,3 @@
-/**
- * The rows the emitter emits so far: those with a state in the instruction table. `checkTranspiled`
- * refuses each other row a tree holds, at its place in the text, naming the issue that owns it.
- */
-
 import { instruction, keywordInstruction, notTranspiled } from './instructions.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import type { SourcePosition } from './shadingLanguageError.js';

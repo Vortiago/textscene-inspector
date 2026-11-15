@@ -1,8 +1,3 @@
-/**
- * The tree nodes a lowering writes: each one of Godot's own nodes, with its row, at the place of
- * the statement it lowers, so the lowered tree passes the tree check and Godot reads its text.
- */
-
 import { signatureInstruction } from '../instructions.js';
 import type { SourcePosition } from '../shadingLanguageError.js';
 import type {

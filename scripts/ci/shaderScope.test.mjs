@@ -1,4 +1,3 @@
-/** Which pull requests run only the shader transpiler's own pipeline. */
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join, normalize } from 'node:path';

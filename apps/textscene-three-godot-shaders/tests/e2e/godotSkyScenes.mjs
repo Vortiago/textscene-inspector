@@ -1,9 +1,3 @@
-/**
- * The main script and files that draw every sky scene: one 3D SubViewport per scene with its
- * camera, a WorldEnvironment whose sky holds the scene's shader, its fog and its directional
- * lights, then each viewport's RGBA8 pixels printed as hex.
- */
-
 import {
   FRAMES_BEFORE_READ,
   printedField,

@@ -1,12 +1,3 @@
-/**
- * Godot's reason for a probe it draws nothing for. Godot's front end prints its own message with
- * the line of the probe's shader, which the record keeps as a line of the probe's source, or the
- * line of the include it names. A text
- * the front end accepts can still fail in the GPU compiler, which prints a line of the whole GLSL
- * Godot writes. That line moves by a few from one run to the next, so the record keeps the
- * message alone. A shader can also end Godot itself, which prints the signal.
- */
-
 import { MAIN_SCRIPT, probeIncludeFiles, probeProjectFiles } from './godotProject.mjs';
 import { probeShader, probeSourceLineOffset } from './probeShader.mjs';
 import { runGodotScriptToExit } from './godotRun.mjs';

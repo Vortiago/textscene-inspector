@@ -1,9 +1,3 @@
-/**
- * Godot's array sizes and array constructors (`_parse_array_size`, `shader_language.cpp:5682`, and
- * the two `_parse_array_constructor`s, `shader_language.cpp:5751` and `:5840`), with Godot's
- * messages.
- */
-
 import { keywordInstruction } from './instructions.js';
 import type { ExpressionParser, ExpressionScope } from './parseExpression.js';
 import { arraySizeOf, typeName } from './treeWalk.js';

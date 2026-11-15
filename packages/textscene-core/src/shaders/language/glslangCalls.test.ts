@@ -1,5 +1,3 @@
-/** The built-in calls of constants glslang folds, on parsed trees. */
-
 import { describe, expect, it } from 'vitest';
 import { GlslangFolding } from './glslangFolding.js';
 import { godotConstantDouble } from './godotNumber.js';

@@ -1,5 +1,3 @@
-/** Input rows kept as bits read back to the rows whose bits they are. */
-
 import { describe, expect, it } from 'vitest';
 import { inputRowsOfBits, parameterBits } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { hex } from '../../../../scripts/godot-probes/record.mjs';

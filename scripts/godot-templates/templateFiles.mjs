@@ -1,8 +1,3 @@
-/**
- * Renders the template files of Godot's renderer, unchanged, from a Godot tree into the module that
- * the transpiler's link step reads. `install.mjs` chooses the tree. The repository holds no copy.
- */
-
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { godotVersion } from '../godot-shader-language/readSource.mjs';

@@ -1,9 +1,3 @@
-/**
- * The printer of a template stage: its tree back to GLSL text. Godot's own GLSL compiler gives the
- * same SPIR-V for this text as for the template's, which proves that the tree holds every token of
- * the template and the right types: each implicit conversion is written as its constructor.
- */
-
 import { printExpression } from '../language/printer.js';
 import type {
   Argument,

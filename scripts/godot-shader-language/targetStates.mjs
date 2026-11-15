@@ -1,9 +1,3 @@
-/**
- * The state of each transpiled row on each target the transpiler emits for: WebGL 2 through
- * three's handler, and WebGPURenderer. A row is native when its TSL node is the GLSL or WGSL
- * operation itself, and lowered when the emitter writes it as other operations, named here.
- */
-
 import { isFunctionRow } from '../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
 
 /** The targets, as the table names them. */

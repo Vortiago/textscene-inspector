@@ -1,8 +1,3 @@
-/**
- * The transpiler of Godot's shading language to three.js TSL: a shader text in, its functions as
- * TSL out. A text Godot refuses, or a construct not transpiled yet, throws `ShadingLanguageError`.
- */
-
 import { emitShader, type TranspiledFunction } from './emitter.js';
 import { parsedShader, type ParsedShader, type ShaderOptions } from './parseShader.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';

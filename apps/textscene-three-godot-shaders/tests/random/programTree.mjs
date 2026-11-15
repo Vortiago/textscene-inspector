@@ -1,10 +1,3 @@
-/**
- * The tree of a random program and its shading language text. Each node that applies an
- * instruction holds its row, so the rows a program uses are read from its tree. The text takes
- * only the brackets Godot's priorities need, and those a node asks for, so a program tests
- * operator order as a user's shader does.
- */
-
 import {
   LOOSEST,
   isInfix,

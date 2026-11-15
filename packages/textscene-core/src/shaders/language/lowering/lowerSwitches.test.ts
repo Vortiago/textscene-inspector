@@ -1,5 +1,3 @@
-/** Each `switch` lowers to a chain of `if`s in a `while (true)` that runs once. */
-
 import { describe, expect, it } from 'vitest';
 import { loweredText, text } from './lowering.testkit.js';
 import { lowerSwitches } from './lowerSwitches.js';

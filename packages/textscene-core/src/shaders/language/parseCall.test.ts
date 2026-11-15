@@ -1,5 +1,3 @@
-/** The parameters, the overloads and the calls of a shader's functions, against Godot's messages. */
-
 import { describe, expect, it } from 'vitest';
 import { parse } from './parse.js';
 import type { CallNode, Expression, FunctionNode } from './shaderTree.js';

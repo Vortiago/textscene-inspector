@@ -1,10 +1,3 @@
-/**
- * Built-in calls of constants alone, which Godot's GLSL compiler, glslang, folds on the CPU in
- * double precision and rounds once (`Constant.cpp`). Each value is one where that fold and the
- * GPU's float arithmetic give different bits, or an edge where glslang's formula is its own:
- * `round` of a half, `sign` of NaN, `lessThanEqual` of NaN. The page reads the constant written.
- */
-
 import { probeOf } from './languageProbes.mjs';
 
 /** Each case: its word, the rows it calls, its return type and the call. */

@@ -1,9 +1,3 @@
-/**
- * The emitter: a shader's lowered functions to three.js TSL. A function the caller of the
- * transpiler calls is built where it is called, from one node per argument. A function the shader
- * calls is one GLSL function, as in Godot's GLSL (`emitCall.ts`).
- */
-
 import { Fn } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { type BodyEmitter, CalledFunctions, parameterValue } from './emitCall.js';

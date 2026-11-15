@@ -1,10 +1,3 @@
-/**
- * The transpiler on a corpus of real shaders, with Godot's verdict on each. Every shader
- * ends in one of three states: transpiled, refused as Godot refuses, or not transpiled yet with
- * the owner of the open row. `states.json` holds each state: a shader that leaves a settled state
- * fails, and a forward move is written with `vitest -u`. The count goes to the CI summary.
- */
-
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';

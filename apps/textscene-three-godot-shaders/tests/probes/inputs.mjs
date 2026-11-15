@@ -1,10 +1,4 @@
 /**
- * The input tables of the probes. Each value is a JavaScript number that a probe passes to the
- * GPU as the bits of the nearest 32-bit float, so `-0`, a subnormal, the infinities and NaN reach
- * the instruction unchanged.
- */
-
-/**
  * The float inputs: zero of both signs, small and large of both signs, a value with no exact
  * binary form, a subnormal, the largest float, the infinities and NaN.
  */

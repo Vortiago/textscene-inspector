@@ -1,9 +1,3 @@
-/**
- * The index glslang folds past a vector, a matrix or an array. Godot checks only an index that is
- * one constant node (`shader_language.cpp:7213`), so `a[1 + 5]` passes Godot's front end. glslang
- * folds `1 + 5` to a constant and refuses the index (`checkIndex` of its parse context).
- */
-
 import type { GlslangFolding } from './glslangFolding.js';
 import { arraySizeOf, typeName } from './treeWalk.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';

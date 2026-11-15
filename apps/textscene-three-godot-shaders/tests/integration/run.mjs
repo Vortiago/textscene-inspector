@@ -1,13 +1,4 @@
 #!/usr/bin/env node
-/**
- * The integration layer of the shader package: `pnpm test:shaders:gpu`. Each probe's transpiled
- * function runs on a real GL context in the browser that measures against Godot, from the packed
- * tarball and three.js alone, and its result bits are compared with Godot's live answers. The
- * run fails without a live run of `pnpm godot:probes`, when a transpiled row has no answer, or a
- * probe of it fails other than as `knownProbeDifferences.mjs` lists, and it prints the count of
- * transpiled instructions.
- */
-
 import { join } from 'node:path';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { withConsumerPage, writeJobSummary } from '../consumer.mjs';

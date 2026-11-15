@@ -1,8 +1,3 @@
-/**
- * Godot's swizzle rules (`shader_language.cpp:6850-7090`): the letter sets `xyzw`, `rgba` and
- * `stpq` of a vector of any scalar kind, and Godot's messages for letters that do not fit.
- */
-
 import { instruction } from './instructions.js';
 import type { Expression, MemberNode } from './shaderTree.js';
 import { shapeOf, vectorType } from './types.js';

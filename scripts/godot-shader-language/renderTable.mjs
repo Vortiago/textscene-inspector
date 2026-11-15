@@ -1,8 +1,3 @@
-/**
- * The two files the instruction table writes: the TypeScript rows the transpiler reads, and the
- * readable table that names each row's state and, for an open row, the issue that owns it.
- */
-
 import { TARGETS, targetStates, WEBGPU_STATE } from './targetStates.mjs';
 
 /** The fields of a row, in the order each line of the module holds them, tab-separated. */

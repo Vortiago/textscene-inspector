@@ -1,10 +1,3 @@
-/**
- * The tree GLSL reads from the text Godot writes for a tree (`_dump_node_code`,
- * `shader_compiler.cpp:1117`). Godot writes a negation, a prefix step and an assignment without
- * brackets, so the operator beside one can bind to a part of it. The emitter emits the tree GLSL
- * reads, so the GPU computes what Godot's GLSL computes, and refuses a text GLSL refuses.
- */
-
 import { assignmentRefusal } from './assignment.js';
 import { signatureInstruction } from './instructions.js';
 import { isAssignOperator } from './operators.js';

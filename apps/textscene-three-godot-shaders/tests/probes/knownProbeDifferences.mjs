@@ -1,9 +1,3 @@
-/**
- * The probes that differ from Godot by a known cause, each with the count of lanes off and the
- * first. A listed probe passes only while it differs exactly so, and fails once it equals Godot,
- * so the change that fixes it removes its entry (`coverageFailures` in integration/compare.mjs).
- */
-
 import {
   BOTH_SIDES,
   BROWSER_COMPILER,

@@ -1,5 +1,3 @@
-/** The printer writes text the parser reads as the same tree. */
-
 import { describe, expect, it } from 'vitest';
 import { treeOf } from './parsedTree.testkit.js';
 import { printShader } from './printer.js';

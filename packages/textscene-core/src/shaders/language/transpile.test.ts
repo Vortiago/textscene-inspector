@@ -1,5 +1,3 @@
-/** The transpiler end to end: a shader text to the GLSL three generates for its TSL nodes. */
-
 import { describe, expect, it } from 'vitest';
 import { mat2, uniform, vec2, vec4 } from 'three/tsl';
 import { Vector2 } from 'three';

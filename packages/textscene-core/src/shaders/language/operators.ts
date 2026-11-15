@@ -1,9 +1,3 @@
-/**
- * Godot's operators as `_parse_expression` reads and reduces them: the token of each, its
- * priority in the reduction loop (`shader_language.cpp:7501`) and its text in Godot's messages
- * (`get_operator_text`, `shader_language.cpp:44`).
- */
-
 /** The operator of a token after an operand (`shader_language.cpp:7363`). */
 export const BINARY_OPERATOR_OF_TOKEN: ReadonlyMap<string, string> = new Map([
   ['TK_OP_EQUAL', 'OP_EQUAL'],

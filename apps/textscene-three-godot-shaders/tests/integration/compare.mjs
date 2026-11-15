@@ -1,9 +1,3 @@
-/**
- * The verdict of one probe: the transpiled function's result bits on a real GL context against
- * Godot's answer. A lane passes by the rule the answers file keeps too (`laneAgreement.mjs`). The
- * tolerance is zero units in the last place: Godot and the page render on the same lavapipe driver.
- */
-
 import { lanesAgree, returnsFloat } from '../../../../scripts/godot-probes/laneAgreement.mjs';
 import { hex } from '../../../../scripts/godot-probes/record.mjs';
 

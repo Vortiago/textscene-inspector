@@ -1,5 +1,3 @@
-/** Reading helpers for the C++ text of a vendored Godot source file. */
-
 /**
  * The enumerators of `enum <name> { ... }` in `text`, in order, each with its 1-based line.
  * `MAX`-named sentinels stay: the caller drops what is not an instruction.

@@ -1,5 +1,3 @@
-/** A function lowers to one exit, its last statement. */
-
 import { describe, expect, it } from 'vitest';
 import { loweredText, text } from './lowering.testkit.js';
 import { lowerLoops } from './lowerLoops.js';

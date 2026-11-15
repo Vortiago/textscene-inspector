@@ -1,8 +1,3 @@
-/**
- * The showcase page: a plain three.js page that draws a transpiled function of UV to colour on a
- * full-frame quad, and answers the RGBA8 pixels, top row first, as Godot's image holds them.
- */
-
 import * as THREE from 'three';
 import { NodeMaterial } from 'three/webgpu';
 import { screenCoordinate, screenSize, vec4 } from 'three/tsl';

@@ -1,9 +1,3 @@
-/**
- * The binding table of the sky template: the three.js value behind each uniform of
- * `environment/sky.glsl` that the background pass reads, with the line of Godot's C++ that
- * writes it. `writeSkyBindings` writes them all from one `SkyScene`.
- */
-
 import * as THREE from 'three';
 import type { UniformNode } from 'three/webgpu';
 import type { TranspiledSky } from './transpileSky.js';

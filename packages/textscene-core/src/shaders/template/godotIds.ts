@@ -1,9 +1,3 @@
-/**
- * The names of a material in the linked text, as Godot's shader compiler writes them: each name
- * of a function, an argument, a local, a struct and a member as `_mkid` gives it
- * (`servers/rendering/shader_compiler.cpp:175`), so no name of a material meets a template's.
- */
-
 import type {
   Argument,
   BlockNode,

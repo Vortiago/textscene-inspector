@@ -1,9 +1,3 @@
-/**
- * The shading language text of each of Godot's typed operators, as `get_operator_text` names
- * them (`shader_language.cpp:44`), the place of its operands and its binding priority. The
- * operator cases and the random programs both write operators through it.
- */
-
 const PREFIX = { OP_NOT: '!', OP_NEGATE: '-', OP_BIT_INVERT: '~', OP_INCREMENT: '++', OP_DECREMENT: '--' };
 
 const POSTFIX = { OP_POST_INCREMENT: '++', OP_POST_DECREMENT: '--' };

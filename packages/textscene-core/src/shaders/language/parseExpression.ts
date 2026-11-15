@@ -1,9 +1,3 @@
-/**
- * Godot's `_parse_expression` (`shader_language.cpp:5959`): it reads operands, each with its
- * postfix members, indexes and increments, and the operators between them into a flat list, then
- * reduces the list into the typed tree. The messages and the lines they name are Godot's.
- */
-
 import { reduced } from './constants.js';
 import { matchedConstructor } from './constructors.js';
 import { godotIntegerConstant, godotLiteralScalar, godotUintScalar } from './godotNumber.js';

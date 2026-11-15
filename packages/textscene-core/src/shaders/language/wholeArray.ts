@@ -1,9 +1,3 @@
-/**
- * An array leaf of a GLSL function, typed as the whole array. Three types an array node by its
- * element and an array parameter by its element's component, so it would wrap a `vec2[2]` result
- * as `vec2[2]( v )`, which GLSL refuses, and read an element of `ivec4[2]` as an `int`.
- */
-
 import { Node } from 'three/webgpu';
 import type { NodeBuilder } from 'three/webgpu';
 

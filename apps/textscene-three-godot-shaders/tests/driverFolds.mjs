@@ -1,10 +1,3 @@
-/**
- * The two causes of a difference in a call of constants that glslang leaves to the GPU (`sinh`,
- * `cosh`, `tanh`, `asinh`, `acosh`, `atanh`, `inverse` and the other calls `Constant.cpp` does not
- * fold), and the side whose compiler folds the call. The probe pairs of `foldedCallProbes.mjs`
- * prove the side: the probe of a parameter gives the GPU's value on both sides.
- */
-
 export const GODOT_DRIVER = "Godot's driver";
 export const BROWSER_COMPILER = "the browser's compiler";
 export const BOTH_SIDES = 'both sides, to other values';

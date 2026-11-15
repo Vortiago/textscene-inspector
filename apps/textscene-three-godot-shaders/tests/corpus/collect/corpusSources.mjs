@@ -1,9 +1,3 @@
-/**
- * The parses that find whole shaders in the corpus sources, apart from the reads: the code
- * blocks of a documentation page, the Shader resources written inside a scene or resource file,
- * and the one change that makes a rejected shader from a valid one.
- */
-
 /** Each `.. code-block:: glsl` of an rST page that is a whole shader, dedented, by its block index. */
 export function docsShaders(rst) {
   const blocks = [];

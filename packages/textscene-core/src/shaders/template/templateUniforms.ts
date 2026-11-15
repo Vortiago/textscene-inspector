@@ -1,9 +1,3 @@
-/**
- * The TSL uniforms of a template stage's uniform blocks: one uniform per member, by
- * `instance.member`, and one array per member of an array of structs. The caller writes each
- * uniform's value from the three.js state the binding table names.
- */
-
 import * as THREE from 'three';
 import { uniform, uniformArray } from 'three/tsl';
 import type { Node, UniformNode } from 'three/webgpu';

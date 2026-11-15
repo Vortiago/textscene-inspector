@@ -1,9 +1,3 @@
-/**
- * Downloads Godot's template files from Godot's GitHub tree at the release tag, for a build with no
- * Godot source: the Cloudflare Pages build of the dev edition. Each file must match the sha256 in
- * `templateChecksums.generated.json`, which `pnpm godot:templates` writes from the CI image's source.
- */
-
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

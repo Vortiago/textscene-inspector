@@ -1,10 +1,3 @@
-/**
- * The preprocessing tokens of a template variant, as glslang's scanner reads them
- * (`glslang/MachineIndependent/preprocessor/PpScanner.cpp`): identifiers, numbers with their
- * suffixes, punctuators, a token for each line end, and a token for each slot. A backslash at a
- * line's end joins the next line, and comments are white space.
- */
-
 import { ShadingLanguageError, type SourcePosition } from '../language/shadingLanguageError.js';
 import type { Macro } from './preprocess.js';
 import type { Slot, VariantLine } from './variant.js';

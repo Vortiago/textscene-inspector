@@ -1,9 +1,3 @@
-/**
- * The data types of Godot's shading language that hold values (`DataType`, `shader_language.h:209`):
- * each one's scalar kind and lane count, as the parser types an expression and the emitter builds
- * its TSL node.
- */
-
 /** A Godot type name, `float` or `ivec3`. */
 export type ValueType = string;
 

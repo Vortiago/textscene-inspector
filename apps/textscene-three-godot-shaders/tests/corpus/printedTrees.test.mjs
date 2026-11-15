@@ -1,8 +1,3 @@
-/**
- * The printed tree of each corpus shader the transpiler accepts, as a checked-in file in
- * `trees/`. The testing chapter of the user guide says why, and why the GLSL gets no file.
- */
-
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';

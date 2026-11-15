@@ -1,10 +1,3 @@
-/**
- * The statements of a function's lowered tree as TSL, a plain walk. Each statement becomes the
- * TSL statement of the same GLSL statement, in order on TSL's stack, so the GPU runs what Godot's
- * GLSL runs. The tree it reads holds `while (true)` as its one loop, no `switch`, and one `return`
- * as its last statement (`lowering/lower.ts`).
- */
-
 import { Break, Continue, Discard, If, Loop } from 'three/tsl';
 import type { EmitScope } from './emitScope.js';
 import { type EmitContext, ExpressionEmitter } from './emitExpression.js';

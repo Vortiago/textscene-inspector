@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-/**
- * Collects the corpus of real shaders: `pnpm shaders:corpus`. It writes each whole shader to
- * `tests/corpus/shaders/` and the list of them, with source and licence, to `corpus.json`:
- * the text Godot's material generators write over their flag sweeps, the shaders of the demo
- * projects and the documentation at pinned commits, this repository's fixtures, and one
- * rejected shader made by one change to each valid one. It needs Godot, xvfb and git.
- */
-
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';

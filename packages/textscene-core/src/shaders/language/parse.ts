@@ -1,10 +1,3 @@
-/**
- * The parser of Godot's shading language: tokens to the typed tree, as Godot's `_parse_shader`
- * reads structs and functions (`shader_language.cpp:9314` and `:10258`) and `_parse_block` reads
- * their statements (`parseBlock.ts`). A form the transpiler does not read yet is refused with the
- * row that names it and the issue that owns it.
- */
-
 import { builtInInstruction, instruction, keywordInstruction, notTranspiled } from './instructions.js';
 import { INSTRUCTION_TABLE } from './instructionTable.generated.js';
 import { StatementParser, type ScopeHolder } from './parseBlock.js';

@@ -1,9 +1,3 @@
-/**
- * The cases of the template check: each stage of each template of Godot's renderer, under each
- * define set that takes a branch no other set takes. A case holds Godot's text of the variant and
- * the transpiler's printed tree of it, or the transpiler's refusal.
- */
-
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {

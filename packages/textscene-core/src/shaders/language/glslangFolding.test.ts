@@ -1,5 +1,3 @@
-/** The constants glslang folds, on parsed trees. */
-
 import { describe, expect, it } from 'vitest';
 import { returnedValue as resultOf } from './parsedTree.testkit.js';
 import { GlslangFolding } from './glslangFolding.js';

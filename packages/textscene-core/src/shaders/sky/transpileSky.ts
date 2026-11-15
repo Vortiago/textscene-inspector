@@ -1,9 +1,3 @@
-/**
- * A user's sky shader drawn as Godot draws a sky background: the shader linked into Godot's sky
- * template (`environment/sky.glsl`), both stages transpiled to TSL, on a triangle that covers the
- * view. The caller writes the template's uniforms from its scene with `writeSkyBindings`.
- */
-
 import * as THREE from 'three';
 import { int, screenCoordinate, varyingProperty, vec4, vertexIndex } from 'three/tsl';
 import { NodeMaterial, type Node, type TextureNode, type UniformNode } from 'three/webgpu';

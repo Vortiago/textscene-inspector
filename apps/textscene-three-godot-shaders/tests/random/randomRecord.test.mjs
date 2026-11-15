@@ -1,9 +1,3 @@
-/**
- * The static half of the random program test: Godot's answers hold every program of the fixed
- * set as it is generated now, and Godot accepts each one, as a generator correct by type must
- * write. The real-GL half runs in `pnpm test:shaders:gpu`.
- */
-
 import { describe, expect, it } from 'vitest';
 import { hex, isStaleEntry } from '../../../../scripts/godot-probes/record.mjs';
 import { parameterBits } from '../../../../scripts/godot-probes/probeShader.mjs';

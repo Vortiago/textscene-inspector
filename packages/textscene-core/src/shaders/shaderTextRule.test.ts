@@ -1,9 +1,3 @@
-/**
- * The shader text rule (ADR-0074): the emit path builds TSL node objects and writes no GLSL or
- * WGSL text. A file of the emit path is a file of `shaders/` that imports three. The parser, the
- * template text Godot's files give and the user's shaders are input, so they are outside the rule.
- */
-
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';

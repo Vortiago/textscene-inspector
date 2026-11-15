@@ -1,5 +1,3 @@
-/** The RGBA8 pixels of one frame a page draws off screen, top row first, as Godot's image holds them. */
-
 import * as THREE from 'three';
 
 /** The pixels of `scene` from `camera` at `width` by `height`, in a target of `colorSpace`. */

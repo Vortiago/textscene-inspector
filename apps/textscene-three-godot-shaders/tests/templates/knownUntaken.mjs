@@ -1,9 +1,3 @@
-/**
- * The branches of Godot's templates that no variant Godot compiles takes, each with its cause. The
- * template check fails on an untaken branch this list does not hold, and on an entry no longer
- * untaken. A key is the stage's file and stage, then the branch's `file:line`.
- */
-
 const UNUSED_FILE = 'no C++ of Godot compiles giprobe_write.glsl, and glslang refuses each mode of it';
 const MOBILE_ONLY = 'only the mobile renderer defines EXPLICIT_FP16 (scene_shader_forward_mobile.cpp:593)';
 const NO_CLIP_ALPHA = 'no C++ of Godot defines ENABLE_CLIP_ALPHA, and glslang refuses it on a vec3 albedo';

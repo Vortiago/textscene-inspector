@@ -1,9 +1,3 @@
-/**
- * The parsed tree of a shader text for the tests that check trees: the tree as the parser gives
- * it, the tree the emitter walks, and its shape without positions, which differ between a text and
- * its printed form.
- */
-
 import { emittedTree } from '../../../../packages/textscene-core/src/shaders/language/emittedTree.ts';
 import { parsedShader } from '../../../../packages/textscene-core/src/shaders/language/parseShader.ts';
 import { printShader } from '../../../../packages/textscene-core/src/shaders/language/printer.ts';

@@ -1,5 +1,3 @@
-/** The image measurement of the end to end layer. */
-
 import { describe, expect, it } from 'vitest';
 import { compareImages } from './compareImages.mjs';
 

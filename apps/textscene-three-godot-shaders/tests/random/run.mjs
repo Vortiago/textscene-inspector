@@ -1,11 +1,4 @@
 #!/usr/bin/env node
-/**
- * A longer run of random programs with a fresh seed, for a developer:
- * `pnpm test:shaders:random [--seed <n>] [--count <n>] [--functions <n>]`. It asks a live Godot for its answers,
- * so it needs Godot and xvfb as `pnpm godot:probes` does, and prints each program that differs,
- * reduced, with its seed. No pipeline runs it: the fixed-seed set guards each pull request.
- */
-
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { runProbesInGodot } from '../../../../scripts/godot-probes/godotProject.mjs';

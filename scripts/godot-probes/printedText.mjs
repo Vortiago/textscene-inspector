@@ -1,9 +1,3 @@
-/**
- * Godot's check of the printer and the lowerings: each probe the transpiler parses is printed
- * back to shading language text, as parsed and as lowered, and Godot must answer each text as it
- * answers the original, with the same verdict and the same result bits.
- */
-
 import { recordEntry } from './record.mjs';
 import { godotRejection } from './rejection.mjs';
 import { sourceServer } from '../sourceServer.mjs';

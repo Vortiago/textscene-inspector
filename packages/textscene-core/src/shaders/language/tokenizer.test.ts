@@ -1,5 +1,3 @@
-/** The tokenizer, against what Godot's `_get_token` (`shader_language.cpp:407`) gives. */
-
 import { describe, expect, it } from 'vitest';
 import { tokenize } from './tokenizer.js';
 

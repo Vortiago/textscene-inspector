@@ -1,5 +1,3 @@
-/** The measurement of a transpilation's image against Godot's: the pixels over 2/255, and the most. */
-
 /** A difference of this many 8-bit steps or less is the residue of two rasterisers, not a defect. */
 export const TOLERANCE_STEPS = 2;
 

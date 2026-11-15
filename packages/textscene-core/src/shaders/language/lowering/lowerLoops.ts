@@ -1,9 +1,3 @@
-/**
- * Each loop as `while (true)`, which TSL's `Loop` writes, with its condition as an
- * `if (!c) break;`. A `for` and a `do` keep a flag, so `continue` still runs the steps and tests
- * the condition as GLSL runs them.
- */
-
 import { ShadingLanguageError } from '../shadingLanguageError.js';
 import type { BlockNode, ControlFlowNode, Expression, FunctionNode, Statement } from '../shaderTree.js';
 import type { FreshNames } from './freshNames.js';

@@ -1,9 +1,3 @@
-/**
- * Any text gets an answer: random characters, random tokens, valid shaders with one change and
- * long repeats each end with a transpiled shader or a `ShadingLanguageError`, within a time limit. A tree the parser
- * gives passes the tree check and prints as text that parses to the same tree.
- */
-
 import { describe, expect, it } from 'vitest';
 import { DEPTH_MESSAGE, LENGTH_MESSAGE, MAX_EXPRESSION_DEPTH } from './expressionLimits.js';
 import { parse } from './parse.js';

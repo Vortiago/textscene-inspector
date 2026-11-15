@@ -1,10 +1,3 @@
-/**
- * The probes of the statements: local variables and `const`, blocks, `if`, the three loops with
- * counts of 0, 1 and many, `break` and `continue` in each loop kind, `switch` with and without
- * fall-through, `discard`, a `return` inside flow, arrays and structs. Each names the rows it
- * proves.
- */
-
 import { probeOf } from './languageProbes.mjs';
 
 const DECLARATION = 'NODE_TYPE_VARIABLE_DECLARATION';

@@ -1,9 +1,3 @@
-/**
- * The main script and files that draw every showcase: one SubViewport per showcase with a
- * ColorRect that fills it, then each viewport's RGBA8 pixels printed as hex. The parse of that
- * output is split from the run, so its test needs no engine.
- */
-
 import {
   FRAMES_BEFORE_READ,
   printedField,

@@ -1,9 +1,3 @@
-/**
- * The define sets that take every `#if` branch of a template stage. A set is a list of names the
- * variant defines, empty, as Godot's C++ writes its modes (`"\n#define MODE_SMART\n"`). The search
- * starts from no names and adds one name at a time while that takes a branch no set has taken.
- */
-
 /** The names Godot's `_build_variant_code` defines in every variant, so a set never defines them. */
 const ALWAYS_DEFINED = new Set([
   'RENDER_DRIVER_VULKAN',

@@ -1,9 +1,3 @@
-/**
- * One probe for each overload of the built-in functions of Godot's `builtin_func_defs` that slice
- * T5 owns: trigonometric, exponential, common, geometric, matrix and vector relational, and the
- * vector and matrix conversions. Each calls its overload once on arguments of the overload's types.
- */
-
 import { isFunctionRow } from '../../../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { PROBE_TYPES } from '../../../../scripts/godot-probes/probeShader.mjs';

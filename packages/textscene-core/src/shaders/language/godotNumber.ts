@@ -1,10 +1,3 @@
-/**
- * Godot's float literal chain, which decides the value a shader's literal draws with. Godot reads
- * the text with its own decimal reader, keeps a 32-bit float, and writes the float back as text
- * with 14 decimals for the GPU's compiler (`shader_compiler.cpp:180`), which reads it as a
- * double. So `1e-20` draws as 0.
- */
-
 import { stringNum } from '../../godot/string/stringNumber.js';
 import { stringToFloat } from '../../godot/string/strtod.js';
 

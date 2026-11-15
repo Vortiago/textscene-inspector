@@ -1,5 +1,3 @@
-/** Godot's character classes of `char_utils.h` and the identifier test of `String`. */
-
 /**
  * `is_whitespace` (char_utils.h:121) of the code point that starts `char`.
  *

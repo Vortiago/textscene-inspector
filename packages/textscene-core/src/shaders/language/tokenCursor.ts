@@ -1,8 +1,3 @@
-/**
- * The parser's place in the tokens, as Godot's `_get_token` and `_set_tkpos` move it. A failure
- * is reported at the token read last, whose line Godot gives the error (`_set_error` reads `tk_line`).
- */
-
 import { ShadingLanguageError, type SourcePosition } from './shadingLanguageError.js';
 import type { Token } from './tokenizer.js';
 

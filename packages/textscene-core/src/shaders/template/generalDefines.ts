@@ -1,10 +1,3 @@
-/**
- * The defines with a value that Godot's C++ gives a template, at Godot's default project
- * settings, by the template's path under `servers/rendering/renderer_rd/shaders/`. Most are a
- * shader class's general defines (`ShaderRD::initialize`'s `p_general_defines`). `USERDATA_COUNT`
- * and `OCTMAP_FORMAT` are a value of a mode, and every other name of a mode is a tested name.
- */
-
 const defines = (...entries: readonly string[]) => entries.map((entry) => `\n#define ${entry}\n`).join('');
 
 /** The directional lights of a scene and of a sky's light buffer (`renderer_scene_render.h:48`, `sky.cpp:707`). */

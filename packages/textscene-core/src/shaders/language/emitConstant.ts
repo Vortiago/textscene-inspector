@@ -1,8 +1,3 @@
-/**
- * The TSL node of a constant of any value type, with each lane written as the bits Godot holds, so
- * the GPU reads the same value Godot's GLSL holds.
- */
-
 import {
   bool,
   convert,

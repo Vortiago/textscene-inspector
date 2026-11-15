@@ -1,10 +1,4 @@
 /**
- * An error in a shader's text, or a construct the transpiler does not transpile yet. The message
- * is Godot's own where Godot refuses the text, and names the owning issue where the transpiler
- * does not reach yet, so nothing is dropped in silence.
- */
-
-/**
  * Where a token or a tree node starts. The line is Godot's (`error_line`, `shader_language.h:984`).
  * Godot reports no column, so the column is the transpiler's own.
  */

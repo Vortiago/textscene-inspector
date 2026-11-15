@@ -1,9 +1,3 @@
-/**
- * The main script and files that run every probe at once: one SubViewport per probe, drawn for a
- * few frames, then each viewport's pixels printed as hex. The parse of that output is split from
- * the run, so its test needs no engine.
- */
-
 import {
   FRAMES_BEFORE_READ,
   inChunksOfAtMost,

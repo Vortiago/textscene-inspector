@@ -1,10 +1,3 @@
-/**
- * Every probe source the parser reads gives a tree that passes the tree check, and the printer
- * writes that tree as text the parser reads as the same tree. The tree the emitter walks holds
- * both too, for every probe the transpiler does not refuse. The parser refuses what Godot's front
- * end refuses (`languageRefusals.test.mjs`), so this needs no answer from Godot.
- */
-
 import { describe, expect, it } from 'vitest';
 import { printShader } from '../../../../packages/textscene-core/src/shaders/language/printer.ts';
 import { ShadingLanguageError } from '../../../../packages/textscene-core/src/shaders/language/shadingLanguageError.ts';

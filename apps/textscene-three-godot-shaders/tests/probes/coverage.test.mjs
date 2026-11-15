@@ -1,10 +1,3 @@
-/**
- * The static half of the coverage test: each transpiled row is a row of Godot's instruction
- * table, each probe has a current answer from Godot, and the list of open rows only shrinks.
- * The real-GL half, that each probe's transpilation equals Godot's answer, runs in
- * `pnpm test:shaders:gpu`.
- */
-
 import { describe, expect, it } from 'vitest';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { isStaleEntry, recordEntry } from '../../../../scripts/godot-probes/record.mjs';

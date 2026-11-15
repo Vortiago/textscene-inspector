@@ -1,9 +1,3 @@
-/**
- * The real-GL half of the random program test: each program's transpiled text on the probe page
- * against Godot's answers, bit for bit as for a probe. A program that differs is reduced against
- * a live Godot run to a small program that still differs, printed with its seed.
- */
-
 import { recordEntry } from '../../../../scripts/godot-probes/record.mjs';
 import { runProbesInGodot } from '../../../../scripts/godot-probes/godotProject.mjs';
 import { KNOWN_PROGRAMS } from '../random/knownDifferences.mjs';

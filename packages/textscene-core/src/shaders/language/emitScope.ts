@@ -1,9 +1,3 @@
-/**
- * The names a statement sees as the emitter walks it: each block's variables, then the
- * function's arguments. TSL builds the body of an `If` or a `Loop` later than the emitter walks
- * it, so a body reads its names from a copy taken where it stands.
- */
-
 import type { Value } from './emitValue.js';
 
 export class EmitScope {

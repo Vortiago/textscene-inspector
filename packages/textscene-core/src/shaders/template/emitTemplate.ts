@@ -1,10 +1,3 @@
-/**
- * The emitter of a linked template stage: its `main` as one TSL function, its globals as TSL
- * values. A uniform block is one uniform per member (`TemplateUniforms`), a texture a texture
- * node, an `in` the node the caller gives, and an `out` a variable `main` writes. Each function of
- * the template and of the material is one GLSL function, as the shading language's are.
- */
-
 import * as THREE from 'three';
 import { Fn, int, texture, texture3D } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';

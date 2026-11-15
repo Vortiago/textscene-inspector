@@ -1,10 +1,3 @@
-/**
- * The random programs that declare functions of their own: `in`, `const in`, `out` and `inout`
- * parameters, struct and array arguments and results, `void` functions, early returns in a
- * branch and in a loop, and chains of calls with no recursion. The expressions come from the
- * expression generator, so they hold every transpiled row it writes.
- */
-
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { READ_PLACES } from '../../../../packages/textscene-core/src/shaders/language/outArguments.ts';
 import { expressionText, rowsOf } from './programTree.mjs';

@@ -1,9 +1,3 @@
-/**
- * The sky page: a plain three.js page that draws a transpiled sky shader as a scene's background,
- * with the camera, fog and directional lights of a sky scene, and answers the RGBA8 pixels, top
- * row first, as Godot's image holds them.
- */
-
 import * as THREE from 'three';
 import { installNodesHandler, transpileSky, writeSkyBindings } from '@textscene/three-godot-shaders';
 import { framePixels } from './framePixels.js';

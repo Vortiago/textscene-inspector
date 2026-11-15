@@ -1,10 +1,3 @@
-/**
- * The stage split of a template file: a port of `include_file_in_rd_header` (`glsl_builders.py:24`),
- * which Godot runs at build time. It cuts the file at `#[vertex]`, `#[fragment]` and `#[compute]`,
- * reads each `#include` once per stage, and cuts each line at `//`. Each line keeps the file and
- * line it came from.
- */
-
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 
 export type StageName = 'vertex' | 'fragment' | 'compute';

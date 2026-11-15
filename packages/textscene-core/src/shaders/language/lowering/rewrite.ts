@@ -1,8 +1,3 @@
-/**
- * A lowering's walk: every block of a function rebuilt from the inside out, each statement
- * replaced by the statement or the statements a rewrite gives for it.
- */
-
 import type { BlockNode, FunctionNode, Statement } from '../shaderTree.js';
 
 /** What a statement becomes, its own blocks already rewritten: one statement, or several in order. */

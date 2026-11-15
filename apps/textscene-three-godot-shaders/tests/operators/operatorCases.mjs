@@ -1,9 +1,3 @@
-/**
- * The cases of the operator rules: every operator of the instruction table over every tuple of the
- * value types its rows use. Each case is a one-line shader, so Godot and the transpiler both
- * report an error on line 1.
- */
-
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { operatorExpression, operatorOf } from './operatorText.mjs';
 

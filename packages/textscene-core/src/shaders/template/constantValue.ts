@@ -1,9 +1,3 @@
-/**
- * The value of a constant integer expression of a template, as an array size or a layout value
- * needs it (GLSL 4.50 section 4.3.3): literals, `const` variables and the integer operators.
- * Nothing when the expression is not constant.
- */
-
 import { binaryLane, convertedLane, unaryLane } from '../language/glslangArithmetic.js';
 import type { Expression, Scalar } from '../language/shaderTree.js';
 import type { ScalarKind } from '../language/types.js';

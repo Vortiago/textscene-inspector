@@ -1,8 +1,3 @@
-/**
- * The template parser's place in the preprocessed tokens. A failure names the token where the
- * parser stands, with glslang's form of message: `'<token>' : <reason>`.
- */
-
 import { ShadingLanguageError, type SourcePosition } from '../language/shadingLanguageError.js';
 import type { PpToken } from './ppScanner.js';
 

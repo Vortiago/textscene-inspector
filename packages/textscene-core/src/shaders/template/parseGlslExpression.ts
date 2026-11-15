@@ -1,10 +1,3 @@
-/**
- * The expressions of a template, by GLSL 4.50's grammar (section 5) and types: C's precedence,
- * the implicit conversions of section 4.1.10 written into the tree as constructors, the operand
- * rules of section 5.9 and the overload resolution of section 6.1. Each node is the shading
- * language's node for the same instruction, so one emitter reads both front ends.
- */
-
 import type { InstructionRow } from '../language/instructionTable.generated.js';
 import type { SourcePosition } from '../language/shadingLanguageError.js';
 import type {

@@ -1,9 +1,3 @@
-/**
- * The prose of the user guide of the transpiler: one chapter per family of instructions it
- * transpiles, one section per instruction. `renderGuide.mjs` adds what no one types by hand: the
- * rows, the probes and Godot's recorded values. A transpiled row with no section fails the build.
- */
-
 import { isFunctionRow } from '../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
 
 /** The rows of the operator `op`, `OP_ADD(int,int)` and the rest. */

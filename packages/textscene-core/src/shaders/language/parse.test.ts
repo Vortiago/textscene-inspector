@@ -1,5 +1,3 @@
-/** The parser, against the types, the folds and the messages of Godot's `_parse_expression` and `_parse_block`. */
-
 import { describe, expect, it } from 'vitest';
 import { returnedValue as resultOf } from './parsedTree.testkit.js';
 import { parse } from './parse.js';

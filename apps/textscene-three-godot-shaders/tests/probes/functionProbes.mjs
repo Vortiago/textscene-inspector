@@ -1,10 +1,3 @@
-/**
- * The probes of the functions a shader declares: calls from one place and from two, `in`, `out`
- * and `inout` parameters, `const` parameters, overloads, struct and array arguments and return
- * values, a `void` function through its call, an early `return`, and the forms Godot refuses,
- * recursion among them. Each names the rows it proves.
- */
-
 import { probeOf } from './languageProbes.mjs';
 
 const CALL = 'OP_CALL';

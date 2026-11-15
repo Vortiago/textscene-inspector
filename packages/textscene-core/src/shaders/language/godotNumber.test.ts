@@ -1,8 +1,3 @@
-/**
- * Godot's float literal chain: its own decimal reader, then the text its compiler writes. The
- * expected bits are Godot's own, from the literal probes of `pnpm godot:probes`.
- */
-
 import { describe, expect, it } from 'vitest';
 import { godotConstantDouble, godotLiteralScalar } from './godotNumber.js';
 

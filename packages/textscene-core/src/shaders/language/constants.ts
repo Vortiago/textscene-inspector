@@ -1,9 +1,3 @@
-/**
- * Godot's rules for constants in the tree: `convert_constant` (`shader_language.cpp:4183`), which
- * lets a scalar literal stand for another scalar type in a constructor, and `_reduce_expression`
- * (`shader_language.cpp:7840`), which folds constructors and negations of constants.
- */
-
 import type { ConstantNode, Expression, OperatorNode, Scalar } from './shaderTree.js';
 import { unaryLane } from './glslangArithmetic.js';
 import { filledLanes, shapeOf, type ScalarKind, type ValueType } from './types.js';

@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-/**
- * The template check of the shader package: `pnpm test:shaders:templates`. Every stage of every
- * template of Godot's renderer is preprocessed and parsed under define sets that take each `#if`
- * branch, and printed back to GLSL. Godot compiles its own text of each variant and the printed
- * text: where Godot compiles the variant, the two must give the same SPIR-V, and where Godot
- * refuses it, the transpiler must refuse it too. A branch that no variant Godot compiles takes fails.
- */
-
 import { godotSourceDir } from '../../../../scripts/godotSource.mjs';
 import {
   printedField,

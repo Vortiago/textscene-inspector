@@ -1,9 +1,3 @@
-/**
- * The value of an `#if` condition, as glslang's `TPpContext::eval` gives it (`Pp.cpp:417`):
- * `defined` first, then the macros, then 32-bit integer arithmetic in which a name no macro
- * defines reads as 0.
- */
-
 import { ShadingLanguageError, type SourcePosition } from '../language/shadingLanguageError.js';
 import type { PpToken } from './ppScanner.js';
 

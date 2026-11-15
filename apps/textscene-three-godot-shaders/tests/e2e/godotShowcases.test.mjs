@@ -1,5 +1,3 @@
-/** The Godot side of the showcases: its project and the parse of its output. */
-
 import { describe, expect, it } from 'vitest';
 import { parseShowcaseOutput, showcaseProjectFiles } from './godotShowcases.mjs';
 import { SHOWCASES } from './showcases.mjs';

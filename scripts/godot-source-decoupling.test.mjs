@@ -1,12 +1,3 @@
-/**
- * Keeps the local Godot checkout (REFERENCES.md) a reading aid: a bound is a literal with its
- * source line cited beside it, never read from `doc/classes/<Type>.xml` at test time, since that
- * makes a multi-gigabyte clone a build requirement. Deleting the checkout leaves `pnpm validate`
- * unchanged. A cite (`scene/3d/camera_3d.cpp:682`, `doc/classes/Range.xml`) is not a violation.
- * The one way in is `scripts/godotSource.mjs`: the CI image's source, for the generators named in
- * GODOT_SOURCE_READERS, which run in CI and not in `pnpm validate`.
- */
-
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';

@@ -1,10 +1,3 @@
-/**
- * The shading language text that Godot's material generators write, over a sweep of each
- * generator's flags: every built-in material class, at its defaults and with each `bool` and
- * enum property set to each value in turn, one at a time. Godot binds no getter of a material's
- * shader, so the script finds it by its RID (see `GENERATOR_SCRIPT`).
- */
-
 import { runGodotScript } from '../../../../../scripts/godot-probes/godotRun.mjs';
 
 /** Godot's material classes whose shader a generator writes: all five shader types. */

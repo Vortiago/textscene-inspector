@@ -1,10 +1,3 @@
-/**
- * Godot's `_parse_block` (`shader_language.cpp:7960`): the statements of a function body, with
- * Godot's messages and its quirks. A `case` runs up to its `break` or `return`, or to the next
- * label or the `}`: a last case without `break` takes the `}` of its `switch` as its own, and the
- * `switch` then takes the token after it.
- */
-
 import { godotIntegerConstant } from './godotNumber.js';
 import { keywordInstruction } from './instructions.js';
 import type { ExpressionParser } from './parseExpression.js';

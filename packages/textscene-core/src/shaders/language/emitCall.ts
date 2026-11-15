@@ -1,10 +1,3 @@
-/**
- * The functions a shader's functions call, each as one GLSL function, as Godot's GLSL has them: a
- * TSL `Fn` with a layout for each function of the text and each overload. A call gives back its
- * result and the value of each `out` and `inout` parameter, as one value or as the members of one
- * struct, and the caller writes the parameters' values to its places, in order.
- */
-
 import { Fn, int, property, struct } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import type { EmittedTree } from './emittedTree.js';

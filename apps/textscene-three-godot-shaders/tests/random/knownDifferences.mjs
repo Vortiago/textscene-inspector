@@ -1,9 +1,3 @@
-/**
- * The known differences from Godot, each a fixed case: a reduced program and its inputs, run on
- * every pass whatever the seed, the set size or the generator. The list only shrinks: a case
- * that equals Godot fails the run, so the pull request that fixes it removes it.
- */
-
 import { inputRowsOfBits } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { ANGLE_DERIVATIVE, UNREAD_MODF } from '../probes/knownProbeDifferences.mjs';
 import {

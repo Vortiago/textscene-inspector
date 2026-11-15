@@ -1,8 +1,3 @@
-/**
- * The built-in functions three/tsl or GLSL ES 3.0 lacks, each built from TSL nodes as GLSL
- * defines it.
- */
-
 import { abs, equal, floor, fract, mod, notEqual, round, select, trunc } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { byLane, chained, type Composite, laneOf, lanesOf, splat, tsl } from './compositeParts.js';

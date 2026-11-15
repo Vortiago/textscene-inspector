@@ -1,8 +1,3 @@
-/**
- * The names a lowering declares: none the function already uses, so a lowered variable never
- * hides one of the function's own.
- */
-
 import type { FunctionNode } from '../shaderTree.js';
 import { everyExpression, everyStatement, statementExpressions } from '../treeWalk.js';
 

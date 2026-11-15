@@ -1,8 +1,3 @@
-/**
- * Godot's front end evaluates an operator whose operands' values it knows, and refuses an
- * integer division or modulo by zero. Each case is Godot 4.6.3's own verdict on the same text.
- */
-
 import { describe, expect, it } from 'vitest';
 import { ShadingLanguageError } from './shadingLanguageError.js';
 import { transpileShadingLanguage } from './transpile.js';

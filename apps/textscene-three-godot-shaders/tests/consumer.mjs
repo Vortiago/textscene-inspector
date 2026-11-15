@@ -1,10 +1,3 @@
-/**
- * A plain three.js page as a user of the package builds one: the packed tarball installed beside
- * three.js alone, no bundler and no React, and an import map that names the two packages. The
- * integration and end to end layers draw on such a page, in the browser that measures against
- * Godot, so a bundle that leans on the workspace fails there.
- */
-
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';

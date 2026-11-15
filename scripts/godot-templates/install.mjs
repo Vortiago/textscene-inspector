@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-/**
- * Writes the template files of Godot's renderer at install: `node scripts/godot-templates/install.mjs
- * [--godot-source <dir>]`. It reads Godot's source when it finds one (scripts/godotSource.mjs),
- * keeps a file a CI job downloaded, and on Cloudflare Pages downloads the templates from GitHub.
- */
-
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';

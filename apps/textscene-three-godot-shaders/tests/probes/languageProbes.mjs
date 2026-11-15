@@ -1,9 +1,3 @@
-/**
- * The probes of the rows no single operator applies: each type passed and returned, the precision
- * words, the index operator, statements, and writes through swizzles, elements and the sides of a
- * branch. Each names the rows it proves.
- */
-
 import { PROBE_TYPES, probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { argumentRows } from './inputs.mjs';
 

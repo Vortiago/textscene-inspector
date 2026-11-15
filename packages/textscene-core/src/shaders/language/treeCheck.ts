@@ -1,10 +1,3 @@
-/**
- * The tree check: the facts every tree the parser gives must hold, so a parser change that breaks
- * one fails a test. Every node has a type and a line and column, every row fits its operand types,
- * every name is declared before it is read, in a block that holds the read, and with its type, and
- * every flow statement stands where Godot allows it.
- */
-
 import { assignmentRefusal, isWriteOperator } from './assignment.js';
 import { signatureInstruction } from './instructions.js';
 import type {

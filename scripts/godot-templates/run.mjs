@@ -1,11 +1,4 @@
 #!/usr/bin/env node
-/**
- * Writes the mode table of each shader type, the template files of Godot's renderer and their
- * checksums, from Godot's source (scripts/godotSource.mjs):
- * `pnpm godot:templates [--check] [--godot-source <dir>]`. `--check` writes nothing and exits 1 on a
- * stale mode table or checksums file. Git holds no template file to check.
- */
-
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';

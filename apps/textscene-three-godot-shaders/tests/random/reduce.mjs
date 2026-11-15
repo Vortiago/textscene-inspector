@@ -1,10 +1,3 @@
-/**
- * The reduction of a random program that differs from Godot: a greedy search for a smaller
- * program that still differs, so a failure prints a program of a few nodes. A step replaces one
- * node with one of its children of the same type, or with a parameter or a literal of its type,
- * or returns one subtree in place of the whole tree.
- */
-
 import { isAnswerable } from './answerable.mjs';
 import { childrenOf, programSource, rowsOf, treeNodes, withChild } from './programTree.mjs';
 

@@ -1,9 +1,3 @@
-/**
- * A call of a function of the shader, as Godot resolves it: the overload search at the call
- * (`shader_language.cpp:6213`), `_validate_function_call` with its messages (line 3870), and the
- * checks of each `const`, `out` and `inout` argument (line 6355).
- */
-
 import { convertedScalar } from './constants.js';
 import { instruction } from './instructions.js';
 import { arraySizeOf, typeName } from './treeWalk.js';

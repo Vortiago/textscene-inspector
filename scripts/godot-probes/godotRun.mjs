@@ -1,9 +1,3 @@
-/**
- * Runs a scratch Godot project once, on lavapipe under xvfb as `pnpm ref:godot` does, and answers
- * its standard output. The probes and the end to end showcases both print their pixels there, from
- * a main script that this module puts in a project of one scene.
- */
-
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { availableParallelism, tmpdir } from 'node:os';

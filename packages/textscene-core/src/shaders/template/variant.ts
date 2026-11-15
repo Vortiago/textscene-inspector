@@ -1,11 +1,3 @@
-/**
- * One variant of a template stage, as `ShaderRD` builds its text: a port of `_add_stage`, which
- * cuts a stage into chunks at `#VERSION_DEFINES`, `#GLOBALS`, `#MATERIAL_UNIFORMS` and `#CODE`
- * (`servers/rendering/renderer_rd/shader_rd.cpp:41`), and `_build_variant_code`, which joins
- * the chunks with the defines of one variant (`shader_rd.cpp:217`). A slot stays a line of its own,
- * so the parser places the material's tree there in place of Godot's GLSL text.
- */
-
 import type { StageLine } from './stages.js';
 
 /** Where Godot puts a material's compiled code: its globals, its uniforms or one stage function. */

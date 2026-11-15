@@ -1,9 +1,3 @@
-/**
- * A call of a built-in function, as `_validate_function_call` resolves it before the shader's own
- * functions (`shader_language.cpp:3622`): the first overload of `builtin_func_defs` whose
- * arguments fit, then the checks of each out argument (`builtin_func_out_args`, line 3543).
- */
-
 import { convertedScalar } from './constants.js';
 import { isFunctionRow } from './instructionFamily.js';
 import { overloadInstructions } from './instructions.js';

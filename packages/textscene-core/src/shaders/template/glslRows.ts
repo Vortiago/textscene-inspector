@@ -1,10 +1,3 @@
-/**
- * The row each operator, constructor and built-in call of a template names. Where the shading
- * language has the same signature, the node names Godot's row, so the emitter meets one row for
- * one instruction from either front end. A signature only GLSL has gets a row of its own, from
- * the section of GLSL 4.50 that defines it.
- */
-
 import type { InstructionRow } from '../language/instructionTable.generated.js';
 import { instruction, overloadInstructions, signatureInstruction } from '../language/instructions.js';
 import { GLSL_FUNCTION_ROWS } from './glslBuiltIns.js';

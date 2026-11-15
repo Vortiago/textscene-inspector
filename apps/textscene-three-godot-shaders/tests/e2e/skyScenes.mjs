@@ -1,10 +1,3 @@
-/**
- * The end to end sky scenes: each one a sky shader drawn as a 3D viewport's background, with a
- * camera, the environment's fog and its directional lights. Godot draws each scene, a plain
- * three.js page draws the transpiled sky with the same values, and the run compares the images.
- * The rows a scene names are transpiled when it matches Godot.
- */
-
 /** Godot's default sky shader (`sky.cpp:807`). */
 export const DEFAULT_SKY = `shader_type sky;
 

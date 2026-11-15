@@ -1,9 +1,3 @@
-/**
- * Parses Godot 4.6.3's shading language sources into the rows of the instruction table.
- * Each function takes a file's text and answers rows, so a test runs on an excerpt. A construct
- * of a table this does not understand throws: a row is never dropped in silence.
- */
-
 import { enumMembers, lineAt } from './cppText.mjs';
 import { operatorSignatures } from './operatorRules.mjs';
 

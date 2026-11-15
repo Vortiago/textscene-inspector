@@ -1,10 +1,3 @@
-/**
- * The probes: each one a shading language function `probe` that applies the instructions of its
- * `rows` to a table of inputs. `pnpm godot:probes` runs them in Godot and records Godot's answers,
- * and the real-GL test runs the transpiled function on the same inputs. A probe source is Godot's
- * shading language, so it runs in Godot unchanged.
- */
-
 import { LANE_COUNT, probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { pairedVectors, pairs, scalars, vectors } from './inputs.mjs';
 import { generatedProbes } from './operatorProbes.mjs';

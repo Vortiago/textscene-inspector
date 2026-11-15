@@ -1,9 +1,3 @@
-/**
- * Godot's choice of a constructor overload (`_validate_function_call`, `shader_language.cpp:3574`):
- * the first row in Godot's order whose argument types match, where a scalar constant also matches
- * a scalar type it converts to, and then each such constant converted.
- */
-
 import { convertedScalar } from './constants.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import { overloadInstructions } from './instructions.js';

@@ -1,8 +1,3 @@
-/**
- * The tree checks and the print check the harness runs over the random programs fail on a broken
- * tree: each case breaks one fact by hand and names the message the check gives.
- */
-
 import { describe, expect, it } from 'vitest';
 import { treeFault } from '../../../../packages/textscene-core/src/shaders/language/treeCheck.ts';
 import { loweredFault, loweredTreeOf, printsBack, treeOf } from './trees.testkit.mjs';

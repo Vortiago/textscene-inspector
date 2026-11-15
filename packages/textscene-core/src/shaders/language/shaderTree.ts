@@ -1,10 +1,3 @@
-/**
- * The typed tree the parser gives and the emitter reads, with Godot's node types
- * (`shader_language.h:372`). Each node that applies an instruction holds its row of the
- * instruction table, so a node is always one of Godot's own instructions, and each node holds
- * where it starts in the text.
- */
-
 import type { InstructionRow } from './instructionTable.generated.js';
 import type { SourcePosition } from './shadingLanguageError.js';
 import type { ValueType } from './types.js';

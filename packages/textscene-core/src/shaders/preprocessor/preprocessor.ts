@@ -1,5 +1,3 @@
-/** Godot's shader preprocessor (shader_preprocessor.cpp): comments, directives, macros and includes, as one text. */
-
 import { stripComments, type StrippedCode } from './commentRemover.js';
 import { conditionRefusal, isConditionTrue } from './conditions.js';
 import { DirectiveTokenizer } from './directiveTokenizer.js';

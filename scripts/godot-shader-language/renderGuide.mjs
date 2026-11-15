@@ -1,10 +1,3 @@
-/**
- * The user guide of the transpiler: an index of the coverage of each family of the instruction
- * table, and one chapter per family the transpiler reads. The rows, the probe sources and the
- * values come from the table, the probes and Godot's record, so the guide is stale only when they
- * change, and `--check` names it then.
- */
-
 import { isFunctionRow } from '../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
 import { godotShader } from '../../apps/textscene-three-godot-shaders/tests/e2e/showcases.mjs';
 import { floatOfBits } from '../../apps/textscene-three-godot-shaders/tests/probes/inputs.mjs';

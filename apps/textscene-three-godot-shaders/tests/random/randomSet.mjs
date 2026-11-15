@@ -1,8 +1,3 @@
-/**
- * The fixed-seed set of random programs that `pnpm godot:probes` records and the "Shader
- * package" job compares on each pull request. A fresh seed is for `pnpm test:shaders:random`.
- */
-
 import { generateFunctionPrograms } from './functionPrograms.mjs';
 import { generatePrograms } from './programs.mjs';
 

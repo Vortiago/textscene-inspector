@@ -1,10 +1,3 @@
-/**
- * The chapter of the user guide on how the tests check the transpiler against Godot: the
- * operator rules in full, the random programs and the corpus of real shaders. Its counts come
- * from Godot's live answers, the known lists and the corpus states, so it is stale only when
- * they change.
- */
-
 export const TESTING_FILE = 'testing.md';
 
 const count = (items, test) => items.filter(test).length;

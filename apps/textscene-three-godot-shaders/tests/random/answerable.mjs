@@ -1,13 +1,3 @@
-/**
- * The trees Godot 4.6.3 gives values for, which a random program must be. Godot's front end
- * evaluates an operator of constants (`_eval_operator`, `shader_language.cpp:2065`): it refuses
- * an integer division or modulo by a zero it knows, and it ends the process on `mat4 * vec4` of
- * constants and on the least `int` divided by -1. A divisor that holds no parameter is therefore
- * a nonzero literal, and the product holds a parameter. Godot calls the first overload of a
- * built-in function whose arguments fit, a scalar constant fitting any scalar type it converts to
- * (`shader_language.cpp:3646`), so a call's row must be that first overload.
- */
-
 import { isFunctionRow } from '../../../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { operatorOf } from '../operators/operatorText.mjs';

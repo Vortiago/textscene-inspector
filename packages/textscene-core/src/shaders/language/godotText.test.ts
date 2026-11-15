@@ -1,5 +1,3 @@
-/** The tree GLSL reads from Godot's text, on parsed trees. */
-
 import { describe, expect, it } from 'vitest';
 import { treeOf } from './parsedTree.testkit.js';
 import { glslBlock } from './godotText.js';

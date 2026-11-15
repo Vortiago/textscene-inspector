@@ -1,9 +1,3 @@
-/**
- * The memo of linked template stages: one user text parses into a template once, however many
- * materials use it. The key holds what Godot's shader cache keys on (`shader_rd.cpp:422`): the
- * text, the define set and the version, so an upgrade never serves a stale tree.
- */
-
 import type { StageName } from './stages.js';
 import type { TemplateStageNode } from './templateTree.js';
 

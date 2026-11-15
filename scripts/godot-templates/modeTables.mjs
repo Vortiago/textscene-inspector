@@ -1,9 +1,3 @@
-/**
- * The mode table of each shader type, read from the `DefaultIdentifierActions` that Godot's C++
- * fills before `ShaderCompiler::initialize`: the GLSL text of each built-in, the define each used
- * built-in and render mode adds, the samplers of built-in textures and the binding layout.
- */
-
 import { lineAt } from '../godot-shader-language/cppText.mjs';
 
 /** Where each shader type fills its actions, under `servers/rendering/`. */

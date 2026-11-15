@@ -1,5 +1,3 @@
-/** A Vite server that compiles the repository's TypeScript sources for a script that runs in plain Node. */
-
 import { createServer } from 'vite';
 import { REPO_ROOT } from './repoRoot.mjs';
 

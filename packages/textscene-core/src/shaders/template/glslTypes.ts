@@ -1,10 +1,3 @@
-/**
- * The types of GLSL 4.50 that Godot's templates use, with the implicit conversions of section
- * 4.1.10 and of `GL_EXT_shader_explicit_arithmetic_types` for 16-bit floats: a value type's scalar
- * kind, its columns and its rows, and the opaque types (textures, samplers, images and subpass
- * inputs), which hold no value.
- */
-
 export type GlslScalar = 'bool' | 'int' | 'uint' | 'float' | 'float16';
 
 /** A value type: a scalar, a vector (one column) or a matrix. */

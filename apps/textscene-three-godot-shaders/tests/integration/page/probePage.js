@@ -1,10 +1,3 @@
-/**
- * The probe page: a plain three.js page that runs one transpiled probe function per call on a
- * real GL context. Each pixel of a one-row RGBA8 target holds the four bytes of one result lane's
- * bits, as the Godot harness writes them (`scripts/godot-probes/probeShader.mjs`), and the page
- * answers those bits.
- */
-
 import * as THREE from 'three';
 import { NodeMaterial } from 'three/webgpu';
 import {

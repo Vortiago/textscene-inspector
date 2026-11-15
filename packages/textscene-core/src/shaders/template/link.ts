@@ -1,10 +1,3 @@
-/**
- * The link step: a port of `ShaderCompiler::compile` (`servers/rendering/shader_compiler.cpp:1509`)
- * and of `ShaderRD`'s variant build. A material's tree fills the slots of a template stage, its
- * built-ins read as the GLSL text of the shader type's mode table, and its nodes keep the user's
- * positions, so an error names the user's line.
- */
-
 import { glslBlock } from '../language/godotText.js';
 import { INSTRUCTION_TABLE } from '../language/instructionTable.generated.js';
 import type { BlockNode, FunctionNode, ShaderNode, StructNode } from '../language/shaderTree.js';

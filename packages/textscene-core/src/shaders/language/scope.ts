@@ -1,9 +1,3 @@
-/**
- * The names a statement sees, as Godot's chain of `BlockNode`s holds them: each block's
- * variables, then the function's arguments, then the shader's functions
- * (`_find_identifier`, `shader_language.cpp:1377`).
- */
-
 import type { Argument, Scalar, ValueType } from './shaderTree.js';
 
 /** The kind of a block, as Godot's `BlockNode::BlockType` names the ones the parser tells apart. */

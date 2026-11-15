@@ -1,5 +1,3 @@
-/** The printed text of a function after a lowering, for the lowerings' unit tests. */
-
 import { treeOf } from '../parsedTree.testkit.js';
 import { printShader } from '../printer.js';
 import type { FunctionNode } from '../shaderTree.js';

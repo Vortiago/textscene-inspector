@@ -1,9 +1,3 @@
-/**
- * The reduction loop of `_parse_expression` (`shader_language.cpp:7501`): the flat list of
- * operands and operators becomes one tree, the operator of lowest priority first, leftmost first.
- * Each operator is typed by its row of the instruction table, with Godot's messages.
- */
-
 import { assignmentRefusal } from './assignment.js';
 import { evaluationRefusal } from './evaluation.js';
 import { signatureInstruction } from './instructions.js';

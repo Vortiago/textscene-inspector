@@ -1,10 +1,3 @@
-/**
- * Where a generator finds Godot's source: the directory a run passes as `--godot-source <dir>`, or
- * else `/opt/godot-source` in the CI image (`.github/ci-image/Dockerfile`) or the source a thread
- * container keeps. Only the generators in GODOT_SOURCE_READERS of `godot-source-decoupling.test.mjs`
- * read it.
- */
-
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 

@@ -1,5 +1,3 @@
-/** Parsed trees for the unit tests of the shading language: a whole shader, and one returned value. */
-
 import { parse } from './parse.js';
 import type { Expression, ShaderNode } from './shaderTree.js';
 import { tokenize } from './tokenizer.js';

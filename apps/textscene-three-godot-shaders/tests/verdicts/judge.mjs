@@ -1,9 +1,3 @@
-/**
- * The judge of the transpiler's front end against Godot: for one shader text, Godot's verdict and
- * the transpiler's give one of three states, or a mismatch, which fails a test. The transpiler
- * may refuse what it does not transpile yet, but it must name the open row's owner.
- */
-
 import { ShadingLanguageError } from '../../../../packages/textscene-core/src/shaders/language/shadingLanguageError.ts';
 import { parsedShader } from '../../../../packages/textscene-core/src/shaders/language/parseShader.ts';
 import { transpileParsedShader } from '../../../../packages/textscene-core/src/shaders/language/transpile.ts';

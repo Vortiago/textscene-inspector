@@ -1,11 +1,4 @@
 #!/usr/bin/env node
-/**
- * The end to end layer of the shader package: `pnpm test:shaders:e2e [--update]`. Godot draws
- * each showcase, a plain three.js page draws its transpilation from the packed tarball, and the run
- * reports the pixels over 2/255 and the largest difference. It fails on any pixel over, and on a
- * guide image that no longer matches the renders; `--update` writes the guide images instead.
- */
-
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PNG } from 'pngjs';

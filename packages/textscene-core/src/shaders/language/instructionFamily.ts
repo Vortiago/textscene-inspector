@@ -1,5 +1,3 @@
-/** The family of a row of the instruction table, as every reader of the table tells it. It imports nothing, so a plain Node script reads it. */
-
 /**
  * A built-in function overload, of Godot's plain set or its high_end one.
  *

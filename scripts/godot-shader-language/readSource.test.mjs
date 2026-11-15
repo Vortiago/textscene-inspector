@@ -1,5 +1,3 @@
-/** The readers of Godot's sources, each on an excerpt of the file it reads. */
-
 import { describe, expect, it } from 'vitest';
 import { godotVersion, keywordList, shaderTypes } from './readSource.mjs';
 

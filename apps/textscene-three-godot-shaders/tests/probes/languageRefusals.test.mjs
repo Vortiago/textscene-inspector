@@ -1,7 +1,3 @@
-/**
- * Every probe Godot's front end refuses, the parser refuses with Godot's message, on Godot's line.
- */
-
 import { describe, expect, it } from 'vitest';
 import { parsedShader } from '../../../../packages/textscene-core/src/shaders/language/parseShader.ts';
 import { ShadingLanguageError } from '../../../../packages/textscene-core/src/shaders/language/shadingLanguageError.ts';

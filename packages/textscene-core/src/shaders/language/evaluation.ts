@@ -1,11 +1,3 @@
-/**
- * Godot's evaluation of an operator whose operands' values it knows (`_eval_operator`,
- * `shader_language.cpp:2065`), which `_validate_operator` runs as each operator reduces. It
- * refuses an integer division or modulo by zero, and it ends the process on two shapes, which
- * the transpiler refuses with a message of its own. Only integer lanes decide a verdict, so the
- * other lanes count only for whether a value is known.
- */
-
 import { INT32_MIN } from '../../godot/variant/intWidth.js';
 import { binaryLane } from './glslangArithmetic.js';
 import type { Expression, OperatorNode, Scalar } from './shaderTree.js';

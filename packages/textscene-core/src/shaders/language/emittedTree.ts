@@ -1,9 +1,3 @@
-/**
- * The tree the emitter walks, from a parsed function: the tree GLSL reads from Godot's text of
- * it, with the constants glslang folds bound, then lowered. Godot's printed-text check reads the
- * same tree, so every step the emitter depends on is checked against Godot.
- */
-
 import { writtenNames } from './assignment.js';
 import { bindConstantReads } from './constantReads.js';
 import { refuseFoldedIndexOutOfRange } from './foldedIndex.js';

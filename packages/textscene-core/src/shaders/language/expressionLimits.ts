@@ -1,8 +1,3 @@
-/**
- * The limits of the expressions the transpiler reads. Godot sets none, but each nesting level costs
- * the parser and the emitter stack frames, and the browser's stack is short.
- */
-
 import type { Expression } from './shaderTree.js';
 
 /** The deepest tree of one expression, and the deepest nesting of brackets and parts. */

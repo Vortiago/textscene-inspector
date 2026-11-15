@@ -1,5 +1,3 @@
-/** The character classes of Godot's shader preprocessor (shader_preprocessor.cpp:337-354). */
-
 export const isCharWord = (char: string | undefined): boolean =>
   char !== undefined && /^[0-9A-Za-z_]$/.test(char);
 

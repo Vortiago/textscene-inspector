@@ -1,8 +1,3 @@
-/**
- * The reads of `const` locals, which glslang folds to the value of the declaration: Godot writes
- * a `const` local as a GLSL `const`, so `v[k]` with `const int k = 5;` is an index glslang checks.
- */
-
 import type { GlslangFolding } from './glslangFolding.js';
 import type { BlockNode, Expression, Statement } from './shaderTree.js';
 import { everyExpression, statementBlocks, statementExpressions } from './treeWalk.js';

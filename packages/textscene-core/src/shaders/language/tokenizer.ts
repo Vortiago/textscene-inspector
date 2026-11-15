@@ -1,10 +1,3 @@
-/**
- * The tokenizer of Godot's shading language: a port of `ShaderLanguage::_get_token`
- * (`servers/rendering/shader_language.cpp:407`). Keywords come from the instruction table, so a
- * keyword Godot adds is one row there. A text Godot refuses throws `ShadingLanguageError` with
- * Godot's message.
- */
-
 import { KEYWORD_TOKENS } from './instructions.js';
 import { ShadingLanguageError, type SourcePosition } from './shadingLanguageError.js';
 

@@ -1,9 +1,3 @@
-/**
- * One probe for each typed operator row, constructor, scalar conversion and swizzle set of the
- * instruction table that the float probes of `probes.mjs` leave out. Each applies its row once to
- * arguments of the row's types, so a row is proven on its own.
- */
-
 import { isFunctionRow } from '../../../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { PROBE_TYPES, VECTOR_PREFIX } from '../../../../scripts/godot-probes/probeShader.mjs';

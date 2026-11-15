@@ -1,10 +1,3 @@
-/**
- * The random program generator: functions that are correct by type, built from the signatures
- * of the instruction table's transpiled rows, so the set grows with each slice and needs no list
- * of its own. A seed fixes the programs. A program is a probe: `pnpm godot:probes` records
- * Godot's answers to it, and the real-GL test compares the transpiler's bits with them.
- */
-
 import { isFunctionRow } from '../../../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { OUT_ARGUMENTS } from '../../../../packages/textscene-core/src/shaders/language/outArguments.ts';

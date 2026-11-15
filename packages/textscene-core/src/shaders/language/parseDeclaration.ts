@@ -1,9 +1,3 @@
-/**
- * A local declaration, as `_parse_block` reads one (`shader_language.cpp:7986`): `const`, a
- * precision, the type, then each name with its array size and its value, with Godot's messages.
- * Godot declares a name after its value, so a value cannot read the name it declares.
- */
-
 import { builtInInstruction, keywordInstruction } from './instructions.js';
 import type { ArraySize } from './parseArray.js';
 import type { ExpressionParser } from './parseExpression.js';

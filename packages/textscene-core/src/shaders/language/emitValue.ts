@@ -1,9 +1,3 @@
-/**
- * The values the emitter holds: a TSL node for a value type, and for an array or a struct a view
- * of TSL variables. A struct is kept as one variable per member, and an array of structs as one
- * array per member, so a struct member may be an array, which three's struct type cannot hold.
- */
-
 import { array, int, property, Var } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { constantNode } from './emitConstant.js';

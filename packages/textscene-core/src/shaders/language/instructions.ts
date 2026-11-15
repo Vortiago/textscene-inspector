@@ -1,8 +1,3 @@
-/**
- * The instruction table as the parser asks it: a row by id, and the error for a row the transpiler
- * does not transpile yet, which names the issue that owns the row.
- */
-
 import { INSTRUCTION_TABLE, type InstructionRow } from './instructionTable.generated.js';
 import { ShadingLanguageError, type SourcePosition } from './shadingLanguageError.js';
 

@@ -1,9 +1,3 @@
-/**
- * The operator rules in full: one tiny shader for each operator and each tuple of operand types.
- * Godot's verdict must agree with the instruction table, whose operator rows the
- * interpreter of `_validate_operator` reads, and the transpiler's front end must not disagree.
- */
-
 import { describe, expect, it } from 'vitest';
 import { verdictOfText } from '../../../../scripts/godot-probes/shaderVerdicts.mjs';
 import { godotAnswers } from '../godotAnswers.mjs';

@@ -1,9 +1,3 @@
-/**
- * The TSL node of a call of a built-in function, from a user's shader or a template's own code:
- * three/tsl's function of the same GLSL name, or a composite of TSL nodes where three has none
- * (`builtInComposites.ts`). The result is typed as the overload returns.
- */
-
 import * as TSL from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
 import { compositeOf } from './builtInComposites.js';

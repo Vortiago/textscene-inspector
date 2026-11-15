@@ -1,10 +1,3 @@
-/**
- * The Godot side of a probe: a `canvas_item` shader that runs the probe's function on each input
- * row and writes the bits of each result lane into one RGBA8 pixel. `scripts/godot-ref/` reads
- * 8-bit images only, and an 8-bit channel holds a byte exactly, so four channels hold a float's
- * 32 bits with no loss.
- */
-
 import {
   laneBits,
   laneOfBits,

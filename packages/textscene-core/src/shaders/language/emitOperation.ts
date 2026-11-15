@@ -1,9 +1,3 @@
-/**
- * The TSL node of each operator that reads its operands and writes nothing, by Godot's
- * enumerator. Godot writes each as its GLSL operator (`shader_compiler.cpp:1407`), so each node
- * computes what that GLSL operator computes for the operand types of its row.
- */
-
 import {
   add,
   all,

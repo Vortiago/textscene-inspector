@@ -1,5 +1,3 @@
-/** Each loop lowers to `while (true)` with its condition as `if (!c) break;`. */
-
 import { describe, expect, it } from 'vitest';
 import { loweredText, text } from './lowering.testkit.js';
 import { lowerLoops } from './lowerLoops.js';

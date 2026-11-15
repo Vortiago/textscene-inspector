@@ -1,11 +1,3 @@
-/**
- * The preprocessor of a template variant, with glslang's rules (`preprocessor/Pp.cpp`), the one
- * Godot's GLSL goes through: object-like and function-like macros, `#if` and its kin with a define
- * set, `defined`, and the directives the parser keeps: `#version`, `#extension` and `#pragma`.
- * It records each conditional branch it decides, so a test can see that every branch of a template
- * is read under some define set.
- */
-
 import { ShadingLanguageError, type SourcePosition } from '../language/shadingLanguageError.js';
 import { evaluateCondition } from './ppCondition.js';
 import { type PpToken, scanLines } from './ppScanner.js';

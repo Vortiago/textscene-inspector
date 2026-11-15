@@ -1,5 +1,3 @@
-/** The scan that finds the case groups of Godot's `_validate_operator`. */
-
 import { describe, expect, it } from 'vitest';
 import { caseGroups } from './operatorRules.mjs';
 

@@ -1,10 +1,3 @@
-/**
- * The tree of one stage of a template variant: the shading language's tree (`shaderTree.ts`) with
- * what GLSL 4.50 adds outside a function: layout qualifiers, interface blocks, globals, default
- * layouts, precision statements, function prototypes, the kept directives and the slots where a
- * material's tree goes.
- */
-
 import type { SourcePosition } from '../language/shadingLanguageError.js';
 import type { Expression, FunctionNode, StructMember, StructNode } from '../language/shaderTree.js';
 import type { KeptDirective } from './preprocess.js';

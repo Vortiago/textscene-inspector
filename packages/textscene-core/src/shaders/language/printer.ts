@@ -1,8 +1,3 @@
-/**
- * The printer: a typed tree back to shading language text that the parser reads as the same
- * tree. Each operator is written in brackets, so the text keeps the tree's shape.
- */
-
 import { reduced } from './constants.js';
 import { operatorText } from './operators.js';
 import type {

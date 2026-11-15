@@ -1,10 +1,3 @@
-/**
- * A function with one exit, its last statement: TSL's `Fn` gives its value as it ends, and has
- * no `return` with a value inside a branch. A `return` inside sets the result and a flag, leaves
- * each loop around it, and the flag skips each statement after it. Runs after the loops and the
- * switches are lowered, so each loop is a `while (true)`.
- */
-
 import type { BlockNode, ControlFlowNode, FunctionNode, Statement, VariableNode } from '../shaderTree.js';
 import { everyStatement, isReturn } from '../treeWalk.js';
 import type { FreshNames } from './freshNames.js';

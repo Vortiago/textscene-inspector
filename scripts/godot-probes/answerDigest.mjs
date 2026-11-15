@@ -1,9 +1,3 @@
-/**
- * The committed trace of a live Godot run: Godot's version and adapter, a digest of each family
- * of answers, and the smoke subset that the tests outside the CI image compare with. A change of
- * Godot, Mesa or LLVM changes a digest, so it shows in review as a change of this file.
- */
-
 import { createHash } from 'node:crypto';
 import { isNaNBits, returnsFloat } from './laneAgreement.mjs';
 

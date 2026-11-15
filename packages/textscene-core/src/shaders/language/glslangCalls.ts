@@ -1,10 +1,3 @@
-/**
- * glslang's folds of a built-in call whose arguments are all constants (`Constant.cpp` of the
- * glslang Godot 4.6.3 ships). A call of one argument folds as `TIntermConstantUnion::fold`, a call
- * of more as `TIntermediate::fold`. A float lane is a double, as glslang holds it until it writes
- * the SPIR-V constant. JavaScript's `Math` stands for the C library of Godot's x86-64 build.
- */
-
 import { toInt32 } from '../../godot/variant/intWidth.js';
 import type { Scalar } from './shaderTree.js';
 import type { ScalarKind, TypeShape } from './types.js';

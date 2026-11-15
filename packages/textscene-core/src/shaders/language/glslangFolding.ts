@@ -1,9 +1,3 @@
-/**
- * The constants Godot's GLSL compiler, glslang, folds, which the tree alone does not show. The
- * emitter writes each folded constant, so the GPU reads what Godot's GLSL holds, not what its own
- * arithmetic gives: a shift by 85 folds as a shift by 21, where the GPU gives zero.
- */
-
 import { arraySizeOf, isCall } from './treeWalk.js';
 import { binaryLane, convertedLane, unaryLane } from './glslangArithmetic.js';
 import { foldedCall, type Lanes } from './glslangCalls.js';

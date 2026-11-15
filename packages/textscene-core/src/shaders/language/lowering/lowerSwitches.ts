@@ -1,9 +1,3 @@
-/**
- * Each `switch` as a chain of `if`s inside a `while (true)` that runs once, so a `break` leaves
- * it as it leaves the `switch`. A flag carries the fall from one label's body into the next, and
- * `default` runs where it stands when no label matches.
- */
-
 import type { ControlFlowNode, Expression, FunctionNode, Statement } from '../shaderTree.js';
 import type { FreshNames } from './freshNames.js';
 import {
