@@ -498,3 +498,15 @@ describe('importTexture2DArraySlices', () => {
     expect(importTexture2DArraySlices(sidecar('2d_array_texture'))).toEqual({ horizontal: 8, vertical: 8 });
   });
 });
+
+describe('parseImportFile validity', () => {
+  it('reads a failed import from [remap] valid=false', () => {
+    expect(parseImportFile('[remap]\nimporter="texture"\nvalid=false\n')?.isValid).toBe(false);
+  });
+
+  it('reads an import with no valid key as valid', () => {
+    expect(
+      parseImportFile('[remap]\nimporter="texture"\npath="res://.godot/imported/a.ctex"\n')?.isValid
+    ).toBe(true);
+  });
+});

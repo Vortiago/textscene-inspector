@@ -46,6 +46,19 @@ describe('a read through a snapshot', () => {
     expect(loadedValue(read).name).toBe('inline');
   });
 
+  it('answers missing-file for a file that parses but fails to load in Godot', () => {
+    const scene = sceneTables(EXT_A);
+    const files = { [A_FILE]: resourceFile('resource_name = "inline"') };
+    const outcomes = { [A_FILE]: { isFailed: true, chain: [A_FILE, 'res://gone.png'], cause: 'missing' } };
+
+    const read = staticSnapshot(files, outcomes).read(
+      nodeReference('ExtResource("1_a")', scene),
+      namedKind().kind
+    );
+
+    expect(read).toMatchObject({ status: 'unavailable', reason: 'missing-file' });
+  });
+
   it.each([undefined, '', 'null'])('answers none for a property that holds %j', (ref) => {
     const read = staticSnapshot({}).read(nodeReference(ref, sceneTables('')), namedKind().kind);
 

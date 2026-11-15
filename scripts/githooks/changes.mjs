@@ -27,9 +27,9 @@ export function git(...args) {
 }
 
 /** The commit where `rev` left `origin/main`, or undefined when this clone has no `origin/main`. */
-export function mergeBaseWithMain(rev) {
+export function mergeBaseWithMain(rev, run = git) {
   try {
-    return git('merge-base', rev, 'origin/main');
+    return run('merge-base', rev, 'origin/main');
   } catch {
     // The caller runs the static checks over the whole repository.
     return undefined;

@@ -11,7 +11,7 @@ import { AtlasOmniShadow } from './positionalShadow/atlasOmniShadow';
 import { installedFramebufferHeight } from './shadowFilter/framebufferRows.testkit';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy';
 import { installShadowPass, readShadowMaps } from './shadowPass';
-import { holdPositionalShadowAtlas } from './positionalShadow/shadowAtlasTarget';
+import { holdPositionalShadowAtlas, positionalShadowAtlas } from './positionalShadow/shadowAtlasTarget';
 import { AtlasAreaShadow, type AreaShadowLight } from './positionalShadow/atlasAreaShadow';
 import { AtlasDepthMaterial, ParaboloidDepthMaterial } from './positionalShadow/atlasDepthMaterials';
 import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow';
@@ -36,6 +36,7 @@ function fakeRenderer(): { renderer: THREE.WebGLRenderer; threePass: ReturnType<
     getActiveCubeFace: () => 0,
     getActiveMipmapLevel: () => 0,
     setRenderTarget: vi.fn(),
+    initRenderTarget: vi.fn(),
     getDrawingBufferSize: (size: THREE.Vector2) => size.set(955, 756),
     ...profiledRendererMembers(),
   };
@@ -76,6 +77,45 @@ const runPass = (renderer: THREE.WebGLRenderer, lights: THREE.Light[], scene: TH
   renderer.shadowMap.render(lights, scene, new THREE.PerspectiveCamera());
 
 describe('installShadowPass', () => {
+  it('allocates the positional atlas before three’s pass, so a program samples it with no slot drawn', () => {
+    const { renderer, threePass } = fakeRenderer();
+    installShadowPass(renderer);
+    renderer.shadowMap.render([], new THREE.Scene(), new THREE.PerspectiveCamera());
+    expect(renderer.initRenderTarget).toHaveBeenCalledWith(positionalShadowAtlas());
+    expect(vi.mocked(renderer.initRenderTarget).mock.invocationCallOrder[0]).toBeLessThan(
+      threePass.mock.invocationCallOrder[0]!
+    );
+  });
+
+  it('binds the render’s own target again after it allocates the atlas', () => {
+    const { renderer } = fakeRenderer();
+    installShadowPass(renderer);
+    renderer.shadowMap.render([], new THREE.Scene(), new THREE.PerspectiveCamera());
+    expect(renderer.setRenderTarget).toHaveBeenCalledWith(renderer.getRenderTarget(), 0, 0);
+    expect(vi.mocked(renderer.setRenderTarget).mock.invocationCallOrder[0]).toBeGreaterThan(
+      vi.mocked(renderer.initRenderTarget).mock.invocationCallOrder[0]!
+    );
+  });
+
+  it('restores the render’s target only on the pass that builds the atlas (edge case)', () => {
+    const { renderer } = fakeRenderer();
+    installShadowPass(renderer);
+    runPass(renderer, []);
+    runPass(renderer, []);
+    expect(renderer.setRenderTarget).toHaveBeenCalledTimes(1);
+  });
+
+  it('builds the atlas again once it is resized (edge case)', () => {
+    const { renderer } = fakeRenderer();
+    installShadowPass(renderer);
+    runPass(renderer, []);
+    const atlas = positionalShadowAtlas();
+    atlas.setSize(atlas.width * 2, atlas.height * 2);
+    atlas.setSize(atlas.width / 2, atlas.height / 2);
+    runPass(renderer, []);
+    expect(renderer.initRenderTarget).toHaveBeenCalledTimes(2);
+  });
+
   it('runs three’s pass, then copies each omni light that holds a slot', () => {
     const copy = vi.spyOn(OmniShadowCopy.prototype, 'copy').mockImplementation(() => {});
     const { renderer, threePass } = fakeRenderer();

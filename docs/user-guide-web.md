@@ -63,6 +63,8 @@ A mesh whose texture is missing renders **magenta**. The Resources tab lists eac
 The mesh updates at once, and the row shows ✓. Every mesh that uses the file updates. **Remove** makes the path missing again.
 An uploaded file stays when you open another scene.
 
+A `.tres` or a scene that reads a missing file in a `[sub_resource]` fails to load in Godot. Its row says **Fails to load** with the chain of files, and the upload replaces the file that is missing. When the scene you preview fails this way, the Resources tab says **The game would fail to load this scene**, with Godot's error and the chain. The preview still draws the scene.
+
 ## Edit the source
 
 Click **Show Source** in the toolbar to open the Source pane. The scene renders again as you type.

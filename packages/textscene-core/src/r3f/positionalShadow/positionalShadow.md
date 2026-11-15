@@ -23,8 +23,8 @@ through one sampler. It ports Godot 4.6.3's positional shadow atlas: the slot al
   has no shadow.
 - A light without a slot reads its shadow opacity as zero, and gets its own opacity back with its
   next slot (`slotOpacity.ts`).
-- `<SceneShadowFitter>` also wraps the canvas renderer's shadow pass
-  (`../shadowPass.ts`), which copies each omni cube into the atlas and draws each spot light and
+- `<CanvasRendererScope>` (`../canvasRenderer/CanvasRendererScope.tsx`) wraps each canvas
+  renderer's shadow pass (`../shadowPass.ts`), on the 3D and the 2D canvas alike. The pass copies each omni cube into the atlas and draws each spot light and
   each area light's paraboloid (`atlasDepthPass.ts`).
 - `<SceneShadowFitter>` writes each area light's shadow terms into uniform arrays, in three's order
   of its rect area lights (`../areaLight/areaLightShadowUniforms.ts`).

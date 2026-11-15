@@ -14,7 +14,8 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
-import { shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
+import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
+import { shapeTextLine } from '../../../../r3f/controls/native/text/textLine';
 import { resolveNodeFont } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { peekSceneFontMetrics } from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { rangeRatio } from '../shared/range';
@@ -27,7 +28,6 @@ import {
   PROGRESS_BAR_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { ProgressBarProperties } from './types';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 export function ProgressBar({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<ProgressBarProperties>(solveNode);
@@ -67,13 +67,7 @@ export function ProgressBar({ solveNode, tint, rect, renderOrder }: NativeContro
 
   const layout = useMemo(() => {
     if (!percentText) return null;
-    return shapeText(percentText, {
-      fontSizePx,
-      boxWidthPx: 0,
-      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-      lineSpacingPx: 0,
-      fontMetrics,
-    });
+    return shapeTextLine(percentText, { fontSizePx, fontMetrics });
   }, [percentText, fontSizePx, fontMetrics]);
 
   const textPos = useMemo(() => {

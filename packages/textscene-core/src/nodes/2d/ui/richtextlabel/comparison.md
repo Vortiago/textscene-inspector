@@ -92,6 +92,8 @@ reads them from the `post` table of each font (`sfobjs.c:1421-1426`).
 Each script run shapes apart, as Godot's `ScriptIterator` splits the text (`text_server_adv.cpp:7346-7352`), so kerning and the
 rounding remainder stop where the script changes. An unassigned code point that no font has takes no advance.
 
+A list marker is a `TextLine`, so a bullet with a line break draws on one line. A CR LF reads as one LF (`rich_text_label.cpp:5320`).
+
 ## Linting
 
 <!-- lint:begin RichTextLabel -->

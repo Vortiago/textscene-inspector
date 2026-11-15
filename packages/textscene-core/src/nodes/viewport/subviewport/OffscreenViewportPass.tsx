@@ -31,7 +31,10 @@ import {
   renderWithShadowAtlas,
   ViewportShadowAtlas,
 } from '../../../r3f/positionalShadow/viewportShadowAtlas';
-import { viewportPositionalShadowAtlas } from '../../../godot/scene/viewport';
+import {
+  VIEWPORT_POSITIONAL_SHADOW_ATLAS,
+  viewportPositionalShadowAtlas,
+} from '../../../godot/scene/viewport';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
 import { CanvasLightPass } from '../../../r3f/lighting2d/CanvasLightPass';
 import { createViewportLightPassHost } from './viewportLightPassHost';
@@ -69,7 +72,7 @@ import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
 import { renderWithMipmapBias } from '../../../r3f/materials/godotMipmapBias.js';
-import { useProjectTextureMipmapBias } from '../../../r3f/materials/useProjectTextureMipmapBias.js';
+import { useRootViewportDescription } from '../../../r3f/viewportRender/useRootViewportDescription.js';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { hideEditorHelpers } from '../../../r3f/editorHelpers';
 import { viewAnchorMatrix } from '../../../r3f/viewportLayerAnchor';
@@ -179,8 +182,9 @@ export function OffscreenViewportPass({
   useSceneShadowFit(portalLightScene);
   useSceneDepthPrepass(portalLightScene);
   const shadowAtlas = useViewportShadowAtlas(properties);
-  const projectMipmapBias = useProjectTextureMipmapBias();
-  const mipmapBias = properties.texture_mipmap_bias ?? projectMipmapBias;
+  // Each viewport takes the project's bias at construction, the root's included (`viewport.cpp:5383`).
+  const rootMipmapBias = useRootViewportDescription().mipmapBias;
+  const mipmapBias = properties.texture_mipmap_bias ?? rootMipmapBias;
 
   // Both canvas draws take the viewport's `msaa_2d`: the 2D world's and the Controls'.
   const canvasMsaaMode = viewportMsaaMode(properties, '2d');
@@ -477,7 +481,10 @@ function useViewportShadowAtlas(properties: SubViewportProperties): ViewportShad
     positional_shadow_atlas_quad_3: quad3,
   } = properties;
   const atlas = useMemo(
-    () => new ViewportShadowAtlas(viewportPositionalShadowAtlas(size, [quad0, quad1, quad2, quad3])),
+    () =>
+      new ViewportShadowAtlas(
+        viewportPositionalShadowAtlas(size, [quad0, quad1, quad2, quad3], VIEWPORT_POSITIONAL_SHADOW_ATLAS)
+      ),
     [size, quad0, quad1, quad2, quad3]
   );
   useDisposeOnRelease(atlas);

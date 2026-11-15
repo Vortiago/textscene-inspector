@@ -29,7 +29,7 @@ Strict parsing format-checks these `AnimatedSprite2D` properties, plus 12 inheri
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `animation` | quoted string or &"name" |  |
-| `autoplay` | quoted string or &"name" |  |
+| `autoplay` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `centered` | true or false |  |
 | `flip_h` | true or false |  |
 | `flip_v` | true or false |  |

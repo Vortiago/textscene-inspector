@@ -40,3 +40,15 @@ export function parseHintEnum(hintString: string): readonly HintEnumEntry[] {
 
   return entries;
 }
+
+// An empty option is no flag but takes a bit position (editor_properties.cpp:1003-1023).
+export function parseHintFlags(hintString: string): readonly HintEnumEntry[] {
+  const entries: HintEnumEntry[] = [];
+  hintString.split(',').forEach((raw, i) => {
+    const option = raw.trim();
+    if (option.length === 0) return;
+    const [label, value] = option.split(':');
+    entries.push({ label: label!, value: value === undefined ? 2 ** i : toInt(value) });
+  });
+  return entries;
+}

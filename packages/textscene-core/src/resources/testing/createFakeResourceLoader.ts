@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import type { ParsedResource } from '../../parser/parsedResource';
+import type { LoadOutcome } from '../loadFailure/loadOutcome';
 import type { ExtResource, TscnScene } from '../../parser/types';
 import { ResourceEventBus, type ResourceType } from '../ResourceEventBus';
 import { MetadataStore } from '../MetadataStore';
@@ -71,6 +72,7 @@ export interface FakeResourceLoader {
   readonly fonts: FakeProcessor<FontResource>;
   readonly themes: FakeProcessor<ThemeResource>;
   readonly directories: FakeProcessor<DirectoryListing>;
+  readonly loadOutcomes: FakeProcessor<LoadOutcome>;
   /** A real runner with no worker, so jobs run in-thread with the real bytes. */
   readonly jobRunner: WorkerJobRunner;
   /** Every ExtResource passed to `loader.register`, in call order. */
@@ -164,6 +166,7 @@ export function createFakeResourceLoader({ loadFace }: { loadFace?: FaceLoader }
   const fonts = makeFakeProcessor<FontResource>(eventBus, 'font');
   const themes = makeFakeProcessor<ThemeResource>(eventBus, 'theme');
   const directories = makeFakeProcessor<DirectoryListing>(eventBus, 'directory');
+  const loadOutcomes = makeFakeProcessor<LoadOutcome>(eventBus, 'loadoutcome');
   const registerCalls: ExtResource[] = [];
 
   const byType: Record<ResourceType, FakeProcessor<unknown>> = {
@@ -177,6 +180,7 @@ export function createFakeResourceLoader({ loadFace }: { loadFace?: FaceLoader }
     font: fonts,
     theme: themes,
     directory: directories,
+    loadoutcome: loadOutcomes,
   };
 
   const byTypeMap = new Map(Object.entries(byType) as [ResourceType, FakeProcessor<unknown>][]);
@@ -197,6 +201,7 @@ export function createFakeResourceLoader({ loadFace }: { loadFace?: FaceLoader }
     fonts,
     themes,
     directories,
+    loadOutcomes,
     // A preview of its own, with the real face loader, as `ResourceLoader` builds one.
     settledFonts: createSettledFonts(loadFace),
     // Mirrors ResourceLoader.register and records the call, so a test asserts
@@ -264,6 +269,7 @@ export function createFakeResourceLoader({ loadFace }: { loadFace?: FaceLoader }
     fonts,
     themes,
     directories,
+    loadOutcomes,
     jobRunner,
     registerCalls,
   };

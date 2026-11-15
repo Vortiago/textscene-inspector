@@ -17,16 +17,14 @@ import { CanvasWorldScope } from '../../environment/WorldEnvironmentScope.js';
 import { world2DCameraPose } from './world2DCamera.js';
 import { CanvasLighting2DProvider } from '../../lighting2d/CanvasLighting2D.js';
 import { useCanvasModulateColor } from '../../canvasModulate.js';
-import { ViewportPassOrchestrator } from '../../contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlRasterLayer.js';
-import { TiledUploadDriver } from '../../tiledUpload/TiledUploadDriver.js';
 import { ProjectClearColor } from '../../ProjectClearColor.js';
 import { CanvasFrameRender } from './CanvasFrameRender.js';
 import { CanvasFrameStepsContext, createCanvasFrameSteps } from './canvasFrameSequence.js';
 import { PendingSuspense } from '../../../resources/PendingSuspense.js';
-import { ScreenshotBridge } from '../../ScreenshotBridge.js';
 import { useRootCanvasColorSpace } from '../../rootCanvasColorSpace.js';
 import { YSortProvider } from '../../contexts/YSortContext.js';
+import { CanvasRendererScope } from '../../canvasRenderer/CanvasRendererScope.js';
 
 // Through the controls barrel, whose side-effect imports register every Control
 // type: the component file alone registers none. Lazy, so the registrations stay
@@ -70,8 +68,8 @@ export function World2DContents({
   const canvasSpace = useRootCanvasColorSpace();
   const [frameSteps] = useState(createCanvasFrameSteps);
   return (
-    <TiledUploadDriver>
-      <CanvasWorkspaceProvider workspace="2d">
+    <CanvasWorkspaceProvider workspace="2d">
+      <CanvasRendererScope>
         <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
           <EditedRootProvider editableInstances={editableInstances}>
             <CameraRig pan={pan} zoom={zoom} />
@@ -102,9 +100,7 @@ export function World2DContents({
             </CanvasFrameStepsContext.Provider>
           </EditedRootProvider>
         </SceneResourcesProvider>
-        <ViewportPassOrchestrator />
-        <ScreenshotBridge />
-      </CanvasWorkspaceProvider>
-    </TiledUploadDriver>
+      </CanvasRendererScope>
+    </CanvasWorkspaceProvider>
   );
 }

@@ -47,7 +47,7 @@ A Label whose themes name no font draws the project's `gui/theme/custom_font`, a
 (`theme_db.cpp`, `default_theme.cpp:1371-1373`). A path that does not load keeps the bundled font,
 with a warning and a missing-resource row. A BMFont (`.fnt`, `.font`) works in all of those places (ADR-0064).
 A descriptor or page that fails to load gives a missing-resource row and keeps the bundled font. It honours the alignment, case, wrap, line-window and
-partial-reveal settings.
+partial-reveal settings. A carriage return the font maps takes the width of its glyph, as HarfBuzz shapes it (`text_server_adv.cpp:7050`).
 
 ## BMFont
 

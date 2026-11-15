@@ -5,6 +5,7 @@
  * `make_default_theme` (`scene/theme/default_theme.cpp:1369`).
  */
 import { describe, expect, it } from 'vitest';
+import { PositionalShadowAtlas } from '../godot/rendering/lights/positionalShadowAtlas';
 import {
   projectPrimitiveMeshTexelSize,
   projectShadowAtlasSize,
@@ -32,6 +33,7 @@ import {
   projectDefaultFontGeneratesMipmaps,
   projectDefaultFontHinting,
   projectTextureMipmapBias,
+  projectPositionalShadowAtlas,
   projectViewportSize,
   projectVolumetricFogSettings,
   projectAmbientOcclusionSettings,
@@ -892,5 +894,50 @@ describe('projectTreeSettings: the physics clock', () => {
     expect(projectPhysicsClock({ [TICKS]: '30' })).toBe(
       projectPhysicsClock({ [TICKS]: '30', 'other/key': '1' })
     );
+  });
+});
+
+describe('projectPositionalShadowAtlas', () => {
+  const KEY = 'rendering/lights_and_shadows/positional_shadow/atlas_size';
+  const quadrantKey = (quadrant: number) =>
+    `rendering/lights_and_shadows/positional_shadow/atlas_quadrant_${quadrant}_subdiv`;
+
+  it("gives the root's defaults with no project: 4096, and 4, 4, 16 and 64 shadows (scene_tree.cpp:2130-2136)", () => {
+    expect(projectPositionalShadowAtlas(null)).toEqual({ size: 4096, quadrantShadows: [4, 4, 16, 64] });
+  });
+
+  it('reads the atlas size from a project.godot line', () => {
+    const settings = parseProjectSettings(
+      `[rendering]\n\nlights_and_shadows/positional_shadow/atlas_size=512\n`
+    );
+
+    expect(projectPositionalShadowAtlas(settings).size).toBe(512);
+  });
+
+  it.each([
+    [0, [1, 4, 16, 64]],
+    [1, [4, 1, 16, 64]],
+    [2, [4, 4, 1, 64]],
+    [3, [4, 4, 16, 1]],
+  ])('reads the subdivision of quadrant %i', (quadrant, quadrantShadows) => {
+    expect(projectPositionalShadowAtlas({ [quadrantKey(quadrant)]: '1' }).quadrantShadows).toEqual(
+      quadrantShadows
+    );
+  });
+
+  it('keeps the default for a negative size, which the server refuses (light_storage.cpp:2158)', () => {
+    expect(projectPositionalShadowAtlas({ [KEY]: '-1' }).size).toBe(4096);
+  });
+
+  it('gives an atlas the server rounds up to a power of two, so 500 is 512 (light_storage.cpp:2159)', () => {
+    expect(new PositionalShadowAtlas(projectPositionalShadowAtlas({ [KEY]: '500' })).size).toBe(512);
+  });
+
+  it('gives no atlas for size 0, so no positional shadow draws (edge case)', () => {
+    expect(new PositionalShadowAtlas(projectPositionalShadowAtlas({ [KEY]: '0' })).size).toBe(0);
+  });
+
+  it('keeps the default for a subdivision outside 0 to 6, which the setter refuses (viewport.cpp:1412-1413)', () => {
+    expect(projectPositionalShadowAtlas({ [quadrantKey(0)]: '7' }).quadrantShadows[0]).toBe(4);
   });
 });

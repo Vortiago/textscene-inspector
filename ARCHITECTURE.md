@@ -172,11 +172,16 @@ The strict parser also returns `SourceLines`, which puts each diagnostic on its 
 - **Parent space.** A node follows its parent's transform only where Godot does
   (`godot/scene/parentSpace.ts`). Any other node attaches to the world root (`ParentSpaceScope`).
 - **3D and 2D.** `ViewportModeContext` picks `TscnCanvas` or `Canvas2DStage` (ADR-0006).
+- **Canvas renderer.** Both canvases take one set of `<Canvas>` props and mount one
+  `CanvasRendererScope`, which installs the shadow pass and runs the per-frame services
+  (`r3f/canvasRenderer/`).
 - **2D draw order.** One sort key for every canvas item becomes `renderOrder`
   (`canvasPaintOrder.ts`, ADR-0036).
 - **Control nodes.** They draw natively in the canvas, with no DOM (ADR-0037). Text follows
   ADR-0069.
 - **2D lights.** `r3f/lighting2d/` ports Godot's canvas light shader (ADR-0030, ADR-0066).
+- **Viewport description.** What a viewport gives each render: the root's from the project settings
+  (`r3f/viewportRender/`, ADR-0078).
 - **Offscreen passes.** One orchestrator runs them in dependency order
   (`ViewportPassRegistryContext.tsx`).
 - **Shadows.** `<SceneShadowFitter>` fits each declared shadow

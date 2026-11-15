@@ -41,7 +41,7 @@ import {
   type ViewportTargetSize,
 } from '../../../resources/textures/viewporttexture/viewportTargetSize';
 import { useViewportTextures } from '../../contexts/ViewportTextureContext';
-import { useSharedLiveTree } from '../../useLiveSceneTree';
+import { treeScenesOf, useSharedLiveTree } from '../../useLiveSceneTree';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { FONT } from '../../../resources/fonts/font/kind';
 import { fontFilesOn, resolveProjectFonts } from '../../../resources/fonts/font/projectFonts';
@@ -243,7 +243,14 @@ const NO_KEYS: ReadonlySet<string> = new Set();
  * The buses whose caches the walk reads. An `ExtResource(AtlasTexture)` `.tres`
  * completes on the resource bus, not the texture one.
  */
-const SOLVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'texture', 'resource', 'theme', 'directory'];
+const SOLVE_TREE_BUSES: readonly ResourceType[] = [
+  'scene',
+  'loadoutcome',
+  'texture',
+  'resource',
+  'theme',
+  'directory',
+];
 
 /** What the forest starts from, which its roots cannot see above them. */
 interface ForestStart {
@@ -308,25 +315,29 @@ function buildForest(
   const viewportSizeReads: ViewportSizeRead[] = [];
   const readViewportSize = recordingSizes(viewportTargetSize, viewportSizeReads);
 
-  const sceneCache: CachedSceneSource = loader ? recordingReads(loader.scenes, recordRead) : NOTHING_CACHED;
+  const sceneCache: CachedSceneSource = loader
+    ? recordingReads(treeScenesOf(loader), recordRead)
+    : NOTHING_CACHED;
   // The tree reads a tile layer's TileSet here too, for the scene tiles it adds as children.
-  const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
+  const parsedFiles = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
   const ctx: LiveTreeContext = {
     externalResources,
     internalResources,
     sceneCache,
-    resourceCache,
+    parsedFiles,
     project: projectTreeSettings(projectSettings),
   };
   const tree = liveTreeOf(nodes, ctx);
   // The paint pass numbers the world walk's draws too, so the two walks' sequences compare.
-  const paints = liveScenePassResults(canvasPaintPassFrom(rootRange), tree);
+  const paints = liveScenePassResults(canvasPaintPassFrom(rootRange), tree, snapshot);
   const paintAt = (path: string) => {
     const paint = paints.get(path);
     if (!paint) throw new Error(`expected the paint pass to hold ${path}, got none`);
     return paint;
   };
   const embedsWindows = embedsSubwindows(tree, viewport);
+  // Asked once for the walk, not for each Control: each ask re-checks every read the pass made.
+  const canvasItems = liveScenePassResults(canvasItemPass, tree, snapshot);
 
   /**
    * Written only by `skippedTransformOf`, for this walk only: the tree does not change within one.
@@ -339,7 +350,7 @@ function buildForest(
    * is no CanvasItem: nothing above it hides it, and no container writes its `visible`.
    */
   function canvasItemAt(path: string): CanvasItemPassResult | undefined {
-    return liveScenePassResults(canvasItemPass, tree).get(path);
+    return canvasItems.get(path);
   }
 
   /**
@@ -367,7 +378,7 @@ function buildForest(
     if (parent === null) return null;
     let folded = foldedChains.get(parent);
     if (!folded) {
-      folded = canvasTransformBetween(liveScenePassResults(canvasItemPass, tree), above, parent);
+      folded = canvasTransformBetween(canvasItems, above, parent);
       foldedChains.set(parent, folded);
     }
     return folded;
@@ -441,7 +452,7 @@ function buildForest(
 
     const path = parsedResourcePath(ref, ext);
     if (!path) return NO_LABEL_SETTINGS;
-    const cached = resourceCache.getCached(path);
+    const cached = parsedFiles.getCached(path);
     if (cached === undefined) {
       pendingResourceFiles.add(path);
       return NO_LABEL_SETTINGS;
@@ -516,7 +527,7 @@ function buildForest(
     const unwrapped = unwrapCanvasTextureRef(ref, int);
     const resourceFile = resolveExtResourceFilePath(unwrapped, ext);
     if (resourceFile) {
-      const cached = resourceCache.getCached(resourceFile);
+      const cached = parsedFiles.getCached(resourceFile);
       if (cached === undefined) {
         pendingResourceFiles.add(resourceFile);
         return null;

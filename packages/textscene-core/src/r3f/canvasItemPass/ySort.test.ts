@@ -6,8 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../../parser/TscnParser';
 import type { TscnScene } from '../../parser/types';
 import { liveTreeOf } from '../liveSceneTree';
-import { contextOver } from '../liveSceneTree.testkit';
-import { liveScenePassResults } from '../liveScenePass';
+import { contextOver, runPass } from '../liveSceneTree.testkit';
 import { canvasItemPass } from './canvasItemPass';
 import { canvasPaintPass } from './canvasItemPaint';
 import type { PaintRange } from '../canvasPaintOrder';
@@ -27,11 +26,11 @@ const NO_EXTRAS: ExtraSortItems = NO_SORT_INPUTS.extras;
 function sortedRuns(body: string, origins = NO_ORIGINS, extras = NO_EXTRAS): ReadonlyMap<string, PaintRange> {
   const scene = parsed(body);
   const tree = liveTreeOf(scene.nodes, contextOver(scene, {}));
-  return ySortedPaint(
-    liveScenePassResults(canvasItemPass, tree),
-    liveScenePassResults(canvasPaintPass, tree),
-    { origins, extras, liveYs: NO_SORT_INPUTS.liveYs }
-  );
+  return ySortedPaint(runPass(canvasItemPass, tree), runPass(canvasPaintPass, tree), {
+    origins,
+    extras,
+    liveYs: NO_SORT_INPUTS.liveYs,
+  });
 }
 
 /** The sorted paths and extra ids in the order their runs draw. */
@@ -281,7 +280,7 @@ y_sort_enabled = true
 [node name="Content" type="ColorRect" parent="Scroll"]
 `);
     const tree = liveTreeOf(scene.nodes, contextOver(scene, {}));
-    const paints = liveScenePassResults(canvasPaintPass, tree);
+    const paints = runPass(canvasPaintPass, tree);
     const pieces: ExtraSortItems = new Map([
       [
         'Root/Scroll',
@@ -293,7 +292,7 @@ y_sort_enabled = true
         })),
       ],
     ]);
-    const runs = ySortedPaint(liveScenePassResults(canvasItemPass, tree), paints, {
+    const runs = ySortedPaint(runPass(canvasItemPass, tree), paints, {
       ...NO_SORT_INPUTS,
       extras: pieces,
     });
@@ -320,8 +319,8 @@ layer_1/y_sort_enabled = true
 polygon = PackedVector2Array(0, 0, 10, 0, 10, 10)
 `);
     const tree = liveTreeOf(scene.nodes, contextOver(scene, {}));
-    const paints = liveScenePassResults(canvasPaintPass, tree);
-    const runs = ySortedPaint(liveScenePassResults(canvasItemPass, tree), paints, NO_SORT_INPUTS);
+    const paints = runPass(canvasPaintPass, tree);
+    const runs = ySortedPaint(runPass(canvasItemPass, tree), paints, NO_SORT_INPUTS);
     const drawn = sortedPaintOf('Root/Map', paints.get('Root/Map')!, runs, paints);
     expect(drawn.front.size).toBe(0);
   });
@@ -343,11 +342,11 @@ y_sort_enabled = true
 position = Vector2(0, 100)
 `);
     const tree = liveTreeOf(scene.nodes, contextOver(scene, {}));
-    const runs = ySortedPaint(
-      liveScenePassResults(canvasItemPass, tree),
-      liveScenePassResults(canvasPaintPass, tree),
-      { origins: NO_ORIGINS, extras, liveYs: new Map([['tile', { y: 10, space: 'Root/Map' }]]) }
-    );
+    const runs = ySortedPaint(runPass(canvasItemPass, tree), runPass(canvasPaintPass, tree), {
+      origins: NO_ORIGINS,
+      extras,
+      liveYs: new Map([['tile', { y: 10, space: 'Root/Map' }]]),
+    });
     const order = [...runs].sort((a, b) => a[1].base - b[1].base).map(([id]) => id);
     expect(order).toEqual(['Root', 'Root/Ball', 'Root/Map', 'tile']);
   });

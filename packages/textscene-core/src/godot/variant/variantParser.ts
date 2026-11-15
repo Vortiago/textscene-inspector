@@ -327,6 +327,9 @@ export const JACKETED_STRING_RE = new RegExp(`^[&@]?${STRING_LITERAL_SOURCE}$`);
 const CALL_RE = /^[A-Za-z_]\w*\s*\([\s\S]*\)$/;
 const DICTIONARY_RE = /^\{[\s\S]*\}$/;
 
+// A type argument may be an `ExtResource(…)` script (variant_parser.cpp:677, :1187-1322).
+export const DICTIONARY_LITERAL_RE = /^(?:\{[\s\S]*\}|Dictionary\s*\[[^[\]]+\]\s*\(\s*\{[\s\S]*\}\s*\))$/;
+
 /**
  * The Variant a whole value opens with its first token, its closing bracket matched, or null when `parse_value`
  * refuses it: a bare identifier it has no branch for (variant_parser.cpp:1619), or an unclosed bracket (:1648-1651).
@@ -339,6 +342,6 @@ export function variantShape(raw: string): VariantShape | null {
   if (TSCN_FLOAT_RE.test(text)) return 'number';
   if (JACKETED_STRING_RE.test(text)) return 'string';
   if (TYPED_OR_BARE_ARRAY_RE.test(text)) return 'array';
-  if (DICTIONARY_RE.test(text)) return 'dictionary';
+  if (DICTIONARY_LITERAL_RE.test(text)) return 'dictionary';
   return CALL_RE.test(text) ? 'call' : null;
 }

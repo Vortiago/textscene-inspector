@@ -6,13 +6,13 @@
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import { observeSceneCamera } from '../sceneRenderCamera.js';
-import { useProjectTextureMipmapBias } from './useProjectTextureMipmapBias.js';
+import { useRootViewportDescription } from '../viewportRender/useRootViewportDescription.js';
 import { writeMainViewMipmapBias } from './godotMipmapBias.js';
 
 /** Mounted once per canvas, for the canvas's own scene. */
 export function SceneMipmapBias() {
   const scene = useThree((state) => state.scene);
-  const rootBias = useProjectTextureMipmapBias();
+  const rootBias = useRootViewportDescription().mipmapBias;
   useEffect(() => observeSceneCamera(scene, () => writeMainViewMipmapBias(rootBias)), [scene, rootBias]);
   return null;
 }

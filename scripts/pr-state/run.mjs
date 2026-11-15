@@ -12,6 +12,7 @@ import { dirname, resolve } from 'node:path';
 import process from 'node:process';
 import { parseArgs } from 'node:util';
 import { git, parseNameStatus } from '../githooks/changes.mjs';
+import { PLAIN_DIFF } from '../gitDiff.mjs';
 import { readGitHub } from '../readGitHub.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { readIssue } from '../scope-cuts/readIssues.mjs';
@@ -65,9 +66,6 @@ function assertExemptionTablesExist() {
     }
   }
 }
-
-/** A user's git configuration can colour a diff, rename its prefixes or hand it to another program. */
-const PLAIN_DIFF = ['--no-color', '--no-ext-diff', '--src-prefix=a/', '--dst-prefix=b/'];
 
 /** The committed change, and whether the working tree has moved past the head commit the report names. */
 function readBranchChange(baseRef) {

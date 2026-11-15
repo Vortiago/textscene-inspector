@@ -12,11 +12,7 @@ import { lookupFailures } from './resourceLookups.mjs';
 
 const CORE_SRC = resolve(findRepoRoot(), 'packages/textscene-core/src');
 
-/**
- * The layer below the module: the files that define the banned functions, the reference grammar
- * and section lookup the module and the loader's processors share, and the files that rewrite
- * tables for a merged node or resolve the scene of an instance.
- */
+// The layer below the module, which may call the banned functions.
 const LAYER = new Set([
   'resources/SubResourceResolver.ts',
   'resources/useSubOrExtResource.ts',
@@ -27,6 +23,7 @@ const LAYER = new Set([
   'resources/rehomeOverride.ts',
   'resources/authoredSpelling.ts',
   'r3f/hooks/useInstancedScene.ts',
+  'resources/loadFailure/failingReads.ts',
 ]);
 
 /**
@@ -54,7 +51,6 @@ const UNMOVED = new Map([
   ['r3f/controls/native/styleBoxTexture.ts', { calls: 2, issue: 1679 }],
   ['r3f/controls/native/useIconTexture.ts', { calls: 1, issue: 1696 }],
   ['r3f/materials/materialReference.ts', { calls: 1, issue: 1685 }],
-  ['resources/curves/shared/bezierCurve.ts', { calls: 2, issue: 1687 }],
   ['resources/lightmapgidata/decode.ts', { calls: 1, issue: 1697 }],
   ['resources/meshes/primitivemesh/surface.ts', { calls: 3, issue: 1685 }],
   ['resources/styles/labelsettings/decode.ts', { calls: 1, issue: 1696 }],

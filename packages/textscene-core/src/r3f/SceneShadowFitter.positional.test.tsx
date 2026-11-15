@@ -6,7 +6,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { CaptureRenderer } from './testing/CaptureRenderer';
 import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow';
 import { SceneShadowFitter } from './SceneShadowFitter';
 import { positionalShadowAtlas } from './positionalShadow/shadowAtlasTarget';
@@ -20,6 +19,8 @@ import { SelectionProvider } from './contexts/SelectionContext';
 import { ViewportModeProvider } from './contexts/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
+import { waitFor } from '@testing-library/react';
+import { withProject } from './testing/ProjectFixture';
 
 import './nodes/index';
 
@@ -177,22 +178,30 @@ describe('<SceneShadowFitter> positional fit on its own', () => {
     subViewport.dispose();
   });
 
-  it('wraps the canvas renderer’s shadow pass, so each omni cube reaches the atlas', async () => {
-    const captured: { current: THREE.WebGLRenderer | null } = { current: null };
-    await ReactThreeTestRenderer.create(
-      <>
-        <CaptureRenderer captured={captured} />
-        <SceneShadowFitter />
-      </>
-    );
-    expect(Symbol.for('textscene.shadowPass') in captured.current!.shadowMap).toBe(true);
-  });
-
   it('fits nothing for a light that declared nothing (edge case)', async () => {
     const { renderer, light } = await mountWithLight();
     light.userData = {};
     light.shadow.mapSize.set(64, 64);
     renderThrough(renderer, cameraAt(5));
     expect(light.shadow.mapSize.x).toBe(64);
+  });
+});
+
+describe("<SceneShadowFitter> under a project's atlas settings", () => {
+  it("fits the main view in the atlas the project's settings size", async () => {
+    const ProjectFixture = withProject('[rendering]\nlights_and_shadows/positional_shadow/atlas_size=512\n');
+    const light = declaredSpot();
+    const renderer = await ReactThreeTestRenderer.create(
+      <ProjectFixture>
+        <primitive object={light} />
+        <primitive object={light.target} />
+        <SceneShadowFitter />
+      </ProjectFixture>
+    );
+
+    await waitFor(() => {
+      renderThrough(renderer, cameraAt(5));
+      expect(light.shadow.mapSize.x).toBe(512 / 4);
+    });
   });
 });

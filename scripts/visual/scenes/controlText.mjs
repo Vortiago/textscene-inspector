@@ -216,6 +216,8 @@ export const CONTROL_TEXT_SCENES = [
   // A glyph Godot gives index 0 keeps no advance and rounds nothing.
   { name: 'text-zero-advance', file: 'unit-text-zero-advance.tscn' },
   { name: 'text-zero-width-joiners', file: 'unit-text-zero-width-joiners.tscn' },
+  { name: 'text-line-break', file: 'unit-text-line-break.tscn' },
+  { name: 'text-line-controls', file: 'unit-text-line-controls.tscn' },
   // The caret an `editable = false` field still draws.
   { name: 'text-edit-caret-readonly', file: 'unit-text-edit-caret-readonly.tscn' },
   // A wrapped row's step-in.

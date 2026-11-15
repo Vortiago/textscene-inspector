@@ -10,16 +10,17 @@
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
-import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../godot/scene/viewport.js';
 import {
   fitSceneDirectionalShadows,
   releaseSceneLights,
 } from './directionalShadow/fitSceneDirectionalShadows.js';
 import { sceneLights } from './directionalShadow/lightLists.js';
 import { fitScenePositionalShadows } from './positionalShadow/fitScenePositionalShadows.js';
-import { installShadowPass } from './shadowPass.js';
 import { activeShadowAtlas, ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas.js';
 import { observeSceneCamera } from './sceneRenderCamera.js';
+import { useByValue } from './hooks/useByValue.js';
+import { sameData } from '../utils/sameData.js';
+import { useRootViewportDescription } from './viewportRender/useRootViewportDescription.js';
 import { writeAreaLightUniforms } from './areaLight/areaLightFalloff.js';
 import { updateAreaLightAtlas } from './areaLight/areaLightAtlas.js';
 import { areAtlasesUpdatedPerFrame } from './textureAtlas/updateTextureAtlases.js';
@@ -65,15 +66,12 @@ function prepareSceneLights(
   });
 }
 
-/**
- * Runs the light pass before every render of `scene`, until unmount. A render outside any
- * SubViewport pass is the main view's, which takes the root viewport's atlas. Unmount hands each
- * declared directional light its own shading and layers back. Null runs nothing.
- */
+/** Runs the light pass before each render of `scene` until unmount. Null runs nothing. */
 export function useSceneShadowFit(scene: THREE.Scene | null): void {
+  const settings = useByValue(useRootViewportDescription().positionalShadowAtlas, sameData);
   useEffect(() => {
     if (!scene) return undefined;
-    const rootAtlas = new ViewportShadowAtlas(ROOT_POSITIONAL_SHADOW_ATLAS);
+    const rootAtlas = new ViewportShadowAtlas(settings);
     const stopObserving = observeSceneCamera(scene, (camera) =>
       prepareSceneLights(scene, camera, activeShadowAtlas() ?? rootAtlas, performance.now())
     );
@@ -83,16 +81,11 @@ export function useSceneShadowFit(scene: THREE.Scene | null): void {
       releaseSoftShadowSearch(scene);
       rootAtlas.dispose();
     };
-  }, [scene]);
+  }, [scene, settings]);
 }
 
-/**
- * Mounted once per canvas, for the canvas's own scene. Its renderer's shadow pass copies each omni
- * light's cube into the atlas, for every scene the renderer draws.
- */
+/** Mounted once per 3D canvas, for the canvas's own scene. */
 export function SceneShadowFitter() {
-  const renderer = useThree((state) => state.gl);
-  useEffect(() => installShadowPass(renderer), [renderer]);
   useSceneShadowFit(useThree((state) => state.scene));
   return null;
 }

@@ -7,8 +7,6 @@
 // painter builds on. The walker tests catch a painter that mounts something else
 // (a raw `<mesh>`, a `<TextRun>`) without the ambient planes.
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { ControlClipProvider } from './controlClipping';
@@ -93,30 +91,6 @@ describe('every native quad primitive spreads useControlClipPlanes()', () => {
     );
     const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
     expect(material.clippingPlanes).toEqual([]);
-  });
-});
-
-/**
- * A per-material plane array is inert unless the renderer sets
- * `WebGLRenderer.localClippingEnabled`, and without it a ScrollContainer does
- * not clip and nothing reports it.
- */
-// The 3D canvas needs it too: a Control SubViewport sampled by a 3D scene renders
-// through that canvas's renderer (`renderToOffscreenTarget` takes `useThree().gl`).
-describe('local clipping is enabled on every canvas that draws Controls', () => {
-  const CANVAS_SOURCES = [
-    ['World2DCanvas.tsx', join(import.meta.dirname, '../../components/Canvas2DStage/World2DCanvas.tsx')],
-    ['TscnCanvas.tsx', join(import.meta.dirname, '../../TscnCanvas.tsx')],
-  ] as const;
-
-  it.each(CANVAS_SOURCES)('%s passes localClippingEnabled to its <Canvas>', (_name, path) => {
-    // Line comments stripped first, and `<Canvas\s` rather than `<Canvas\b`:
-    // both files name `<Canvas>` in prose, and a `>` in a comment would end the
-    // non-greedy match before the props.
-    const canvasTag =
-      /<Canvas\s[\s\S]*?>/.exec(readFileSync(path, 'utf8').replace(/\/\/.*$/gm, ''))?.[0] ?? '';
-    expect(canvasTag).not.toBe('');
-    expect(canvasTag).toMatch(/localClippingEnabled:\s*true/);
   });
 });
 

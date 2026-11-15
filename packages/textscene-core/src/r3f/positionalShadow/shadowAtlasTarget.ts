@@ -37,7 +37,7 @@ function createAtlas(size: number): THREE.WebGLRenderTarget {
   });
 }
 
-/** A side for the atlas before any viewport holds it. Any size serves: the first holder resizes it. */
+/** The atlas's side while no viewport holds it: lit programs sample it with no slot drawn. */
 const UNHELD_SIZE = 1;
 
 /**
@@ -47,11 +47,7 @@ const UNHELD_SIZE = 1;
 const atlas =
   atlasTargetOf(installedUniformValue(POSITIONAL_SHADOW_ATLAS_UNIFORM)) ?? createAtlas(UNHELD_SIZE);
 
-/**
- * Each holder's atlas side. Written only by `holdPositionalShadowAtlas` and
- * `releasePositionalShadowAtlas`. The atlas takes the largest side, and frees its GPU memory when the
- * last holder lets go.
- */
+/** Each holder's atlas side. Written only by the hold and the release below. */
 const holders = new Map<object, number>();
 
 /** The depth texture every lit program samples. */
@@ -69,20 +65,18 @@ export function positionalShadowAtlas(): THREE.WebGLRenderTarget {
   return atlas;
 }
 
-/**
- * Holds the atlas for a viewport whose atlas is `size` texels square. Every viewport shares the one
- * texture: each render draws its own slots before it samples them.
- */
+/** Holds the atlas for a viewport whose atlas is `size` texels square and whose lights hold slots. */
 export function holdPositionalShadowAtlas(holder: object, size: number): void {
   holders.set(holder, size);
   fitToHolders();
 }
 
-/** Lets go of the atlas for `holder`. The last holder frees its GPU memory. A stranger changes nothing. */
+/** The last holder frees the GPU memory and shrinks the atlas, which the shadow pass allocates again. */
 export function releasePositionalShadowAtlas(holder: object): void {
   if (!holders.delete(holder)) return;
-  if (holders.size === 0) atlas.dispose();
-  else fitToHolders();
+  if (holders.size > 0) fitToHolders();
+  else if (atlas.width === UNHELD_SIZE) atlas.dispose();
+  else atlas.setSize(UNHELD_SIZE, UNHELD_SIZE);
 }
 
 /** `setSize` frees the GPU memory of a target whose size changes, and three builds it again at its next use. */

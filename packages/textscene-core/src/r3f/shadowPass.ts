@@ -20,6 +20,8 @@ import { DirectionalSplitShadow } from './directionalShadow/splitShadow.js';
 import { writeFramebufferHeight } from './shadowFilter/framebufferRows.js';
 import { writeSunShadowUniforms } from './directionalShadow/sunShadowUniforms.js';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy.js';
+import { positionalShadowAtlas } from './positionalShadow/shadowAtlasTarget.js';
+import { perObject } from '../utils/perObject.js';
 import { beginStep, endStep } from './frameProfile/frameProfile.js';
 import type { RenderStep } from './frameProfile/frameStats.js';
 
@@ -103,6 +105,7 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
     // Three's pass draws no map with none to draw (r187 `WebGLShadowMap.js:94-97`).
     const isTimed = draws && lights.length > 0 && !isReading;
     if (isTimed) beginStep(renderer, 'Shadows');
+    allocatePositionalShadowAtlas(renderer);
     threePass.draw(lights, scene, camera);
     copyOmniShadows(renderer, copy, copied);
     drawProjectedShadows(threePass, projected, scene, camera);
@@ -123,6 +126,25 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
     writeFramebufferHeight(renderer);
   };
   return readers;
+}
+
+/** Counts the atlas's frees, a resize among them. Written only by the listener below. */
+let atlasBuild = 0;
+positionalShadowAtlas().addEventListener('dispose', () => atlasBuild++);
+
+/** The atlas build each renderer last allocated. */
+const allocatedBuild = perObject((_renderer: THREE.WebGLRenderer) => ({ build: -1 }));
+
+/** Lit programs sample the atlas with no slot drawn. Allocating binds the canvas (WebGLTextures.js:2042). */
+function allocatePositionalShadowAtlas(renderer: THREE.WebGLRenderer): void {
+  const allocated = allocatedBuild(renderer);
+  if (allocated.build === atlasBuild) return;
+  allocated.build = atlasBuild;
+  const target = renderer.getRenderTarget();
+  const face = renderer.getActiveCubeFace();
+  const level = renderer.getActiveMipmapLevel();
+  renderer.initRenderTarget(positionalShadowAtlas());
+  renderer.setRenderTarget(target, face, level);
 }
 
 function readMaps(readers: Readers, scene: THREE.Object3D, camera: THREE.Camera): void {

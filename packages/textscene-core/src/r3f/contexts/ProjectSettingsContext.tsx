@@ -10,14 +10,12 @@ import {
   parseProjectSettings,
   projectThemeScale,
   projectViewportSize,
-  projectMsaaModes,
   projectDefaultFontHinting,
   DEFAULT_THEME_SCALE,
   DEFAULT_VIEWPORT_WIDTH,
   DEFAULT_VIEWPORT_HEIGHT,
   type ProjectSettings,
   type ProjectViewportSize,
-  type MsaaModes,
 } from '../../parser/projectSettingsParser.js';
 import type { FontHinting } from '../../godot/text/textServerEnums.js';
 import { PROJECT_FILE_PATH } from '../../godot/project/project.js';
@@ -32,8 +30,6 @@ export interface ProjectSettingsValue {
   themeScale: number;
   /** `display/window/size/viewport_*`, or Godot's 1152x648 without a project. */
   viewportSize: ProjectViewportSize;
-  /** The root viewport's `rendering/anti_aliasing/quality/msaa_*`, or no MSAA without a project. */
-  msaaModes: MsaaModes;
   /** `gui/theme/default_font_hinting`, which the default font takes once (`theme_db.cpp:56`). */
   defaultFontHinting: FontHinting;
   /** False while the read of `res://project.godot` is in flight for a new scene: every value is still Godot's default. */
@@ -47,7 +43,6 @@ const DEFAULT_VALUE: ProjectSettingsValue = {
     width: DEFAULT_VIEWPORT_WIDTH,
     height: DEFAULT_VIEWPORT_HEIGHT,
   },
-  msaaModes: projectMsaaModes(null),
   defaultFontHinting: projectDefaultFontHinting(null),
   isSettled: true,
 };
@@ -124,7 +119,6 @@ export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsP
       settings,
       themeScale: projectThemeScale(settings),
       viewportSize: projectViewportSize(settings),
-      msaaModes: projectMsaaModes(settings),
       defaultFontHinting: projectDefaultFontHinting(settings),
       isSettled,
     }),

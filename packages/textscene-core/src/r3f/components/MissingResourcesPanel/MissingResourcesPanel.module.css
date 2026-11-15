@@ -114,3 +114,8 @@
   color: var(--tsi-fg-default);
   width: 100%;
 }
+
+.chain {
+  overflow-wrap: anywhere;
+  color: var(--tsi-fg-muted);
+}

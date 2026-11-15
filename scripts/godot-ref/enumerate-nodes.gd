@@ -38,20 +38,40 @@ extends SceneTree
 # hidden on DirectionalLight3D and stored on every other light).
 const USAGE_STORAGE := 2
 
+# Inherited methods included: a setter may be bound on a base class.
+func value_arguments(c: String) -> Dictionary:
+	var arguments: Dictionary = {}
+	for m in ClassDB.class_get_method_list(c):
+		var args: Array = m["args"]
+		if args.size() > 0:
+			arguments[m["name"]] = args[args.size() - 1]
+	return arguments
+
 # One row shape for both property blobs, so a consumer reads them the same way.
+# The loader converts to the setter's type (binder_common.h:175), and drops a setterless write (class_db.cpp:1655-1659).
 func own_properties(c: String) -> Array:
 	var own: Array = []
+	var arguments: Dictionary = value_arguments(c)
 	for p in ClassDB.class_get_property_list(c, true):
 		# Group and category rows share the list with real properties and
 		# carry neither STORAGE nor a usable name; the flag test drops them.
 		if int(p["usage"]) & USAGE_STORAGE == 0:
 			continue
-		own.append({
+		var row: Dictionary = {
 			"name": p["name"],
 			"type": int(p["type"]),
 			"hint": int(p["hint"]),
 			"hint_string": p["hint_string"],
-		})
+		}
+		var setter: String = ClassDB.class_get_property_setter(c, p["name"])
+		if setter == "":
+			row["has_setter"] = false
+		var argument: Dictionary = arguments.get(setter, {})
+		if not argument.is_empty() and int(argument["type"]) != row["type"]:
+			row["setter_type"] = int(argument["type"])
+			row["setter_hint"] = int(argument["hint"])
+			row["setter_hint_string"] = argument["hint_string"]
+		own.append(row)
 	return own
 
 # A fresh instance to read a class's getters on, or null. An abstract class's

@@ -22,7 +22,7 @@ function check(property: string, value: string) {
  * The keys AnimatedSprite3D binds, read from the source. Set this or DECLARES_NOTHING, not both.
  * Leaving both unset is red on purpose: do not delete an assertion to go green.
  */
-const KEYS: string[] = ['sprite_frames', 'animation', 'autoplay', 'frame', 'frame_progress', 'speed_scale'];
+const KEYS: string[] = ['sprite_frames', 'animation', 'frame', 'frame_progress', 'speed_scale'];
 /** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 
