@@ -91,7 +91,7 @@ export const scalarCombinators = {
   /**
    * A string slot the setter cuts to its first character, counted in code
    * points of the decoded text: `String` is UTF-32, and the tokenizer resolves
-   * `\uXXXX` first, so `"…"` is one character. An empty literal is legal,
+   * `\uXXXX` first, so an escaped `…` is one character. An empty literal is legal,
    * since `left(1)` of `""` is `""`.
    *
    * @param enforced - `file:line` of the `left(1)` that cuts the value, which is

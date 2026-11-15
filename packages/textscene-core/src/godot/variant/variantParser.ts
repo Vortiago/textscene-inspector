@@ -327,10 +327,7 @@ export const JACKETED_STRING_RE = new RegExp(`^[&@]?${STRING_LITERAL_SOURCE}$`);
 const CALL_RE = /^[A-Za-z_]\w*\s*\([\s\S]*\)$/;
 const DICTIONARY_RE = /^\{[\s\S]*\}$/;
 
-/**
- * A bare `{…}` or a typed `Dictionary[K, V]({…})` literal, as `parse_value` reads them
- * (variant_parser.cpp:677, :1187-1322). The writer types it when `Dictionary::is_typed()`.
- */
+// variant_parser.cpp:677, :1187-1322
 export const DICTIONARY_LITERAL_RE = /^(?:\{[\s\S]*\}|Dictionary\s*\[[^[\]()]+\]\s*\(\s*\{[\s\S]*\}\s*\))$/;
 
 /**

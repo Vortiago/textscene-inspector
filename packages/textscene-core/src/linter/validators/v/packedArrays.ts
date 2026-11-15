@@ -1,8 +1,3 @@
-/**
- * `Packed<Kind>Array(…)` combinators: the float and tuple arrays share one format-only shape, the
- * INT arrays check each element against its width, and the string array checks each literal.
- */
-
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { parseGodotFloat, TSCN_FLOAT_RE } from '../../../godot/variant/number.js';
@@ -233,23 +228,18 @@ function packedTupleArray(
   }, acceptsLabel);
 }
 
-/** The two codes an INT element reports under: unreadable, and read but altered by the slot. */
 function intElementCodes(name: string): { format: string; value: string } {
   return { format: formatCode(name), value: valueCode(name) };
 }
 
-/**
- * `Packed<Int>Array(n, …)`, or the `Array[int]([…])` and `[…]` the slot converts
- * (variant.cpp:780-793). An INT slot: an element the tokenizer cannot read, or `width` cannot
- * hold, is reported. The packed constructor refuses a trailing comma that a bracket allows
- * (`_parse_construct`, variant_parser.cpp:562-571).
- */
+// Brackets convert (variant.cpp:780-793). Only they allow a trailing comma (variant_parser.cpp:562-571).
 function packedIntArray(
   name: string,
   wrapper: 'PackedInt32Array' | 'PackedInt64Array',
   width: IntWidth
 ): PropertyValidator {
   const forms = packedArrayForms(wrapper);
+  const codes = intElementCodes(name);
   return markIntSlot(
     shape((key, value, line) => {
       const parsed = packedArrayBody(forms, value);
@@ -268,7 +258,7 @@ function packedIntArray(
         key,
         line,
         parsed.flat ? elements : dropTrailingComma(elements),
-        intElementCodes(name),
+        codes,
         width
       );
       return bad.error ?? bad.truncated;
@@ -315,27 +305,23 @@ export const packedArrayCombinators = {
     return packedTupleArray(name, 'PackedFloat32Array', 1, 'PackedFloat32Array(x, y, …)', example);
   },
 
-  /** `PackedFloat64Array(a, b, …)`: {@link packedFloat32Array}'s shape, in doubles. */
   packedFloat64Array(name: string, example: string): PropertyValidator {
     return packedTupleArray(name, 'PackedFloat64Array', 1, 'PackedFloat64Array(x, y, …)', example);
   },
 
-  /** `PackedInt32Array(n, …)`, each element an int32 (`_parse_construct<int32_t>`, variant_parser.cpp:1430). */
+  // variant_parser.cpp:1430
   packedInt32Array(name: string): PropertyValidator {
     return packedIntArray(name, 'PackedInt32Array', 'int32');
   },
 
-  /** `PackedInt64Array(n, …)`, each element an int64 (`_parse_construct<int64_t>`, variant_parser.cpp:1448). */
+  // variant_parser.cpp:1448
   packedInt64Array(name: string): PropertyValidator {
     return packedIntArray(name, 'PackedInt64Array', 'int64');
   },
 
-  /**
-   * `PackedByteArray(n, …)` or its base64 body `PackedByteArray("…")`, which the writer uses for
-   * an array of more than 64 bytes (resource_format_text.cpp:1724-1732). Each listed element is a
-   * uint8 (`_parse_byte_array`, variant_parser.cpp:600, :650), so `300` is reported.
-   */
+  // Base64 above 64 bytes (resource_format_text.cpp:1724-1732), else uint8 elements (variant_parser.cpp:650).
   packedByteArray(name: string): PropertyValidator {
+    const codes = intElementCodes(name);
     return markIntSlot(
       shape((key, value, line) => {
         const literal = readPackedByteArrayLiteral(value);
@@ -356,7 +342,7 @@ export const packedArrayCombinators = {
           );
         }
         if (literal.body === '' || literal.body.startsWith('"')) return null;
-        const bad = badIntElement(name, key, line, literal.body, intElementCodes(name), 'uint8');
+        const bad = badIntElement(name, key, line, literal.body, codes, 'uint8');
         return bad.error ?? bad.truncated;
       }, 'PackedByteArray(…), its base64 body PackedByteArray("…"), or […]'),
       'uint8'

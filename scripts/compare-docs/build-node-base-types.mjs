@@ -149,9 +149,8 @@ ${renderEntries(table)}
 
 /**
  * One class's property rows, each a `[name, type, hint, hint_string]` tuple in the
- * capture's own order, with the setter's value type fifth where the capture records one.
- * The tuple keeps the generated file near the two captures' size, since every row ships
- * to the VS Code host bundle for hover and completion.
+ * capture's own order. The tuple keeps the generated file near the two captures' size,
+ * since every row ships to the VS Code host bundle for hover and completion.
  */
 function renderPropertyRows(rows) {
   return rows
@@ -174,13 +173,7 @@ function renderPropertyTable(name, properties) {
   );
 }
 
-/**
- * Class → the names of its rows bound with no setter, which the capture marks `has_setter: false`.
- * `ClassDB::set_property` returns true and stores nothing for one (class_db.cpp:1655-1659).
- *
- * @param nodeProperties - `node-properties.json`, class → own rows.
- * @param resourceProperties - `resource-properties.json`, class → own rows.
- */
+// class_db.cpp:1655-1659
 export function setterlessProperties(nodeProperties, resourceProperties) {
   const out = {};
   for (const [className, rows] of Object.entries({ ...nodeProperties, ...resourceProperties })) {
@@ -190,7 +183,6 @@ export function setterlessProperties(nodeProperties, resourceProperties) {
   return out;
 }
 
-/** The frozen `class → names` constant of {@link setterlessProperties}, its classes sorted. */
 function renderSetterlessTable(setterless) {
   const classes = Object.entries(setterless)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -379,7 +371,7 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
-/** `4.6.3` from `4.6.3.stable.fedora.7d41c59c4`: the major, minor and patch numbers of a version. */
+/** @example `4.6.3.stable.fedora.7d41c59c4` gives `4.6.3`. */
 export function releaseOf(version) {
   return version.split('.').slice(0, 3).join('.');
 }
