@@ -13,6 +13,7 @@ MenuBar is a horizontal strip of menu titles, one per PopupMenu child, that open
 matching popup on click. The previewer draws each title's `normal` StyleBox (unless
 `flat`) and its text, left to right with `h_separation` between them. The popups never
 open, since a PopupMenu is a Window and this previewer draws no Windows.
+A title with a line break draws on one line, and the break takes no room, as in a `TextLine`.
 
 ## Linting
 

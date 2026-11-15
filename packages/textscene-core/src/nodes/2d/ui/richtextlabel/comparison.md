@@ -87,6 +87,8 @@ span's font and each fallback tried up to the one that draws a glyph (`text_serv
 reads them from the `post` table of each font (`sfobjs.c:1421-1426`).
 `self_modulate` tints the text, the images and the rules. The scroll bar draws without it (`rich_text_label.cpp:8208`).
 
+A list marker is a `TextLine`, so a bullet with a line break draws on one line. A CR LF reads as one LF (`rich_text_label.cpp:5320`).
+
 ## Linting
 
 <!-- lint:begin RichTextLabel -->

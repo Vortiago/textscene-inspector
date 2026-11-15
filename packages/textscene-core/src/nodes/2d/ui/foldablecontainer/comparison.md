@@ -18,7 +18,7 @@ authored. A right-to-left `layout_direction` moves the arrow to the right
 of the title bar and puts the title text at the left margin, with `title_alignment`
 swapped. It also insets the content from the panel style's right margin.
 The title draws at 16 px at every theme scale, as Godot does (`default_theme.cpp:1322`), unless the theme or an override sets `font_size`.
-A title with a line break draws on one line, and the break takes no room, as in a `TextLine`.
+A title with a line break draws on one line, and the break takes no room, as in a `TextLine`. A carriage return the font maps takes the width of its glyph.
 
 ## Linting
 
