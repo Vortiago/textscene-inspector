@@ -14,9 +14,9 @@ import {
   selectViewportCamera2D,
   viewportAspect,
 } from './viewportFraming';
-import type { Camera2DTag } from '../../2d/camera2d/cameraView';
+import type { Camera2DTag } from './camera2DView';
 
-import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
+import { Camera2DAnchorMode } from '../../godot/scene/camera2d';
 
 /** A camera tagged the way `<Camera3D>` tags one: its dispatcher-absolute path. */
 function camera(tscnPath: string): THREE.PerspectiveCamera {

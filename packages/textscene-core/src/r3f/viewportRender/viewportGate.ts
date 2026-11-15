@@ -3,14 +3,14 @@
  * SubViewportContainer parent replaces the authored mode, and the parent viewport decides a
  * WHEN_PARENT_VISIBLE pass.
  */
-import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
-import { SubViewportUpdateMode } from '../../../godot/scene/viewport.js';
-import { isShownCanvasNode } from '../../../r3f/canvasScopes.js';
-import { isCanvasLayerType } from '../../../r3f/canvasItemClass.js';
-import type { LiveTree } from '../../../r3f/liveSceneTree.js';
-import { parentPathOf } from '../../../utils/nodePath.js';
-import type { TscnNode } from '../../../parser/types.js';
-import type { SubViewportContainerProperties } from '../../2d/ui/subviewportcontainer/types.js';
+import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
+import { SubViewportUpdateMode } from '../../godot/scene/viewport.js';
+import { isShownCanvasNode } from '../canvasScopes.js';
+import { isCanvasLayerType } from '../canvasItemClass.js';
+import type { LiveTree } from '../liveSceneTree.js';
+import { parentPathOf } from '../../utils/nodePath.js';
+import type { TscnNode } from '../../parser/types.js';
+import type { SubViewportContainerProperties } from '../../nodes/2d/ui/subviewportcontainer/types.js';
 import { isEmbeddableWindow, isViewportBoundary } from './viewportBoundary.js';
 import { windowEmbedderPathAt } from './windowEmbedder.js';
 

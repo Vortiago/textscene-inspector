@@ -8,12 +8,8 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { CanvasOverWorld } from './CanvasOverWorld';
-import { createSceneTarget } from '../../../r3f/offscreen/targets';
-import {
-  canvasColorSpaceOf,
-  CanvasColorSpaceProvider,
-  type CanvasColorSpace,
-} from '../../../r3f/canvasColorSpace';
+import { createSceneTarget } from '../offscreen/targets';
+import { canvasColorSpaceOf, CanvasColorSpaceProvider, type CanvasColorSpace } from '../canvasColorSpace';
 
 const LINEAR_CANVAS = canvasColorSpaceOf(true);
 

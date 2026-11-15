@@ -3,9 +3,9 @@
  * and the magnification, with anchor_mode and offset applied.
  */
 import { describe, it, expect } from 'vitest';
-import { camera2DView, type Camera2DTag } from './cameraView';
+import { camera2DView, type Camera2DTag } from './camera2DView';
 
-import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
+import { Camera2DAnchorMode } from '../../godot/scene/camera2d';
 
 const VIEWPORT = { x: 1152, y: 648 };
 

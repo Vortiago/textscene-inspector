@@ -4,9 +4,9 @@
  */
 
 import * as THREE from 'three';
-import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
-import type { Vector2 } from '../../../godot/math/vector';
-import type { Rect2 } from '../../../godot/math/rect2';
+import { camera2DView, type Camera2DTag } from './camera2DView';
+import type { Vector2 } from '../../godot/math/vector';
+import type { Rect2 } from '../../godot/math/rect2';
 
 /**
  * The scene's camera at `cameraPath`, or null before it mounts. The world elects the camera

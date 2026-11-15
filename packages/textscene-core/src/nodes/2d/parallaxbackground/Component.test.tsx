@@ -10,7 +10,7 @@ import { useThree } from '@react-three/fiber';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 
-import type { Camera2DTag } from '../camera2d/cameraView';
+import type { Camera2DTag } from '../../../r3f/viewportRender/camera2DView';
 import { parseParallaxLayer } from '../parallaxlayer/parser';
 import { ParallaxLayer } from '../parallaxlayer/Component';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';

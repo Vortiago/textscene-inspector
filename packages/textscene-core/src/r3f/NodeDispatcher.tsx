@@ -73,7 +73,7 @@ import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
 import { usePlaceViewport } from './contexts/ViewportPassRegistryContext.js';
 import { UndrawnViewportPlacements } from './UndrawnViewportPlacements.js';
-import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
+import { isViewportBoundary } from './viewportRender/viewportBoundary.js';
 import { spaceFamilyOf } from '../godot/scene/parentSpace.js';
 
 /** Does this subtree contain anything that needs boolean evaluation? */

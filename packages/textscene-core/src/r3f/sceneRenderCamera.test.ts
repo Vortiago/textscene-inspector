@@ -9,7 +9,7 @@ import {
   observeSceneRenderEnd,
   withScenePose,
 } from './sceneRenderCamera';
-import { applyOrthoFrame, orthoFrameForSize } from '../nodes/viewport/subviewport/viewportFraming';
+import { applyOrthoFrame, orthoFrameForSize } from './viewportRender/viewportFraming';
 import { fireSceneRender, fireSceneRenderEnd } from './testing/fireSceneRender';
 
 /** A poser that writes its two steps to `order`. */

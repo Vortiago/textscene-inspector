@@ -3,9 +3,9 @@
  * windows (`LiveTreeContext.project`), which decides what a window below it embeds, so every
  * reader asks here and none holds the root's answer.
  */
-import type { TscnNode } from '../../../parser/types.js';
-import type { LiveLink, LiveStep, LiveTree } from '../../../r3f/liveSceneTree.js';
-import { parentPathOf } from '../../../utils/nodePath.js';
+import type { TscnNode } from '../../parser/types.js';
+import type { LiveLink, LiveStep, LiveTree } from '../liveSceneTree.js';
+import { parentPathOf } from '../../utils/nodePath.js';
 import {
   embeddingProperties,
   isEmbeddedWindow,

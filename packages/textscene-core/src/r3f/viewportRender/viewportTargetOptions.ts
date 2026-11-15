@@ -1,5 +1,5 @@
-import { canvasColorSpaceOf, type CanvasColorSpace } from '../../../r3f/canvasColorSpace';
-import type { SubViewportProperties } from './types';
+import { canvasColorSpaceOf, type CanvasColorSpace } from '../canvasColorSpace';
+import type { SubViewportProperties } from '../../nodes/viewport/subviewport/types';
 
 /**
  * The colour space of a sub-viewport's canvas: linear under `use_hdr_2d`. A canvas drawn over a 3D

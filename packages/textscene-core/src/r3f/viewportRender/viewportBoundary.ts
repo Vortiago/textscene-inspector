@@ -5,9 +5,9 @@
  * a sub-viewport through, since Godot shares the parent's World3D.
  */
 
-import { perObject } from '../../../utils/perObject';
-import type { TscnNode } from '../../../parser/types';
-import type { WindowProperties } from '../../windows/window/types';
+import { perObject } from '../../utils/perObject';
+import type { TscnNode } from '../../parser/types';
+import type { WindowProperties } from '../../nodes/windows/window/types';
 
 /**
  * The `Window` classes an embedder draws with their decoration (`viewport.cpp:342-401`). A

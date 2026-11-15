@@ -10,7 +10,7 @@ import { useViewportSize } from '../../../r3f/contexts/ViewportSizeContext';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { cameraGizmoLines } from './gizmoLines';
-import type { CameraLens } from './projectionFit';
+import type { CameraLens } from '../../../r3f/viewportRender/projectionFit';
 
 /** `editors/3d_gizmos/gizmo_colors/camera` (`editor_settings.cpp:883`). */
 const GIZMO_COLOUR = godotColorToLinear({ r: 0.8, g: 0.4, b: 0.8 });

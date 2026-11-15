@@ -4,37 +4,33 @@
 
 import { lazy, useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
-import {
-  CanvasWorldContext,
-  useCanvasWorld,
-  useDrawCanvasWorld,
-} from '../../../r3f/environment/canvasWorldScene';
+import { CanvasWorldContext, useCanvasWorld, useDrawCanvasWorld } from '../environment/canvasWorldScene';
 import {
   CanvasWorldScope,
   SharedWorldEnvironmentScope,
   ViewportPassEnvironment,
   WorldEnvironmentScope,
-} from '../../../r3f/environment/WorldEnvironmentScope';
-import { drawWith } from '../../../r3f/environment/sceneEnvironment';
-import type { CanvasColorSpace } from '../../../r3f/canvasColorSpace';
-import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
-import { WorldRootProvider } from '../../../r3f/parentSpaceScope';
+} from '../environment/WorldEnvironmentScope';
+import { drawWith } from '../environment/sceneEnvironment';
+import type { CanvasColorSpace } from '../canvasColorSpace';
+import { CanvasSpaceProvider } from '../canvasRootScope';
+import { WorldRootProvider } from '../parentSpaceScope';
 import * as THREE from 'three';
 
-import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { AnisotropicFilteringProvider } from '../../../r3f/contexts/AnisotropicFilteringContext';
+import type { NodeComponentProps } from '../NodeComponentRegistry';
+import { AnisotropicFilteringProvider } from '../contexts/AnisotropicFilteringContext';
 import { CanvasOverWorldScopeProvider } from './canvasOverWorldScope';
-import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceContext';
-import { useSceneShadowFit } from '../../../r3f/SceneShadowFitter';
-import { useSceneDepthPrepass } from '../../../r3f/depthPrepass/SceneDepthPrepass';
-import { ViewportShadowAtlas } from '../../../r3f/positionalShadow/viewportShadowAtlas';
-import type { PositionalShadowAtlasSettings } from '../../../godot/rendering/lights/positionalShadowAtlas';
-import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
-import { CanvasLightPass } from '../../../r3f/lighting2d/CanvasLightPass';
+import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
+import { useSceneShadowFit } from '../SceneShadowFitter';
+import { useSceneDepthPrepass } from '../depthPrepass/SceneDepthPrepass';
+import { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas';
+import type { PositionalShadowAtlasSettings } from '../../godot/rendering/lights/positionalShadowAtlas';
+import { World2DLightingBoundary } from '../lighting2d/World2DLightingBoundary';
+import { CanvasLightPass } from '../lighting2d/CanvasLightPass';
 import { createViewportLightPassHost } from './viewportLightPassHost';
-import type { LightPassHost } from '../../../r3f/lighting2d/lightPassHost';
-import { viewportTransfer } from '../../../r3f/texelCopy';
-import type { Rgba } from '../../../godot/math/math';
+import type { LightPassHost } from '../lighting2d/lightPassHost';
+import { viewportTransfer } from '../texelCopy';
+import type { Rgba } from '../../godot/math/math';
 import {
   applyOrthoFrame,
   godotCanvasPosition,
@@ -45,42 +41,39 @@ import {
   selectViewportCamera2D,
   viewportAspect,
 } from './viewportFraming';
-import { createCanvasTarget, createSceneTarget } from '../../../r3f/offscreen/targets';
-import { renderToOffscreenTarget } from '../../../r3f/offscreen/draw';
+import { createCanvasTarget, createSceneTarget } from '../offscreen/targets';
+import { renderToOffscreenTarget } from '../offscreen/draw';
 import {
   CanvasFrameStepsContext,
   createCanvasFrameSteps,
   runCanvasFrame,
   type CanvasFrameSteps,
-} from '../../../r3f/components/Canvas2DStage/canvasFrameSequence';
+} from '../components/Canvas2DStage/canvasFrameSequence';
 import { viewportCanvasColorSpace } from './viewportTargetOptions';
-import { OffscreenToneMapStage, type OffscreenToneMap } from '../../../r3f/environment/offscreenToneMap';
-import { ViewportPassAttributes } from '../../../r3f/environment/worldExposure';
-import type { Camera2DTag } from '../../2d/camera2d/cameraView';
-import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
-import { PendingSuspense } from '../../../resources/PendingSuspense';
+import { OffscreenToneMapStage, type OffscreenToneMap } from '../environment/offscreenToneMap';
+import { ViewportPassAttributes } from '../environment/worldExposure';
+import type { Camera2DTag } from './camera2DView';
+import { fitToAspect, fittedAspect } from './projectionFit';
+import { PendingSuspense } from '../../resources/PendingSuspense';
 import { usePublishViewportPass } from './usePublishViewportPass';
 import { useGatedViewport } from './useGatedViewport';
 import { useCanvasPass } from './useCanvasPass';
-import type { SubViewportProperties } from './types';
-import type { Vector2 } from '../../../godot/math/vector';
-import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
-import { useRootViewportDescription } from '../../../r3f/viewportRender/useRootViewportDescription';
-import {
-  subViewportDescription,
-  type ViewportDescription,
-} from '../../../r3f/viewportRender/viewportDescription';
-import { drawWorld, type WorldRender } from '../../../r3f/viewportRender/worldRender';
-import { useByValue } from '../../../r3f/hooks/useByValue';
-import { sameData } from '../../../utils/sameData';
-import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-import { hideEditorHelpers } from '../../../r3f/editorHelpers';
-import { viewAnchorMatrix } from '../../../r3f/viewportLayerAnchor';
-import { drawCanvasKeys } from '../../../r3f/canvasKeyWindow';
-import { BackgroundMode } from '../../../godot/scene/environment';
+import type { SubViewportProperties } from '../../nodes/viewport/subviewport/types';
+import type { Vector2 } from '../../godot/math/vector';
+import { useProjectClearColor } from '../useProjectClearColor.js';
+import { useRootViewportDescription } from './useRootViewportDescription';
+import { subViewportDescription, type ViewportDescription } from './viewportDescription';
+import { drawWorld, type WorldRender } from './worldRender';
+import { useByValue } from '../hooks/useByValue';
+import { sameData } from '../../utils/sameData';
+import { useDisposeOnRelease } from '../useDisposeOnRelease';
+import { hideEditorHelpers } from '../editorHelpers';
+import { viewAnchorMatrix } from '../viewportLayerAnchor';
+import { drawCanvasKeys } from '../canvasKeyWindow';
+import { BackgroundMode } from '../../godot/scene/environment';
 import { canvasBackdropBound, drawOverBackground, isBehindWorld, isOverWorld } from './canvasBackdrop';
 import { useBackdropTarget } from './useBackdropTarget';
-import { canvasLayerRanks } from '../../../r3f/canvasPaintOrder';
+import { canvasLayerRanks } from '../canvasPaintOrder';
 
 const CanvasOverWorld = lazy(() =>
   import('./CanvasOverWorld.js').then((m) => ({ default: m.CanvasOverWorld }))

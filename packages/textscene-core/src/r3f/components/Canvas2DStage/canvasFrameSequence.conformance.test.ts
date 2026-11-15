@@ -28,7 +28,7 @@ function prioritisedFrameCallbacks(sources: ReturnType<typeof walkSources>): str
 const lighting2D = walkSources([join(SRC, 'r3f/lighting2d')], isProductionSource);
 const stage = walkSources([join(SRC, 'r3f/components/Canvas2DStage')], isProductionSource);
 const viewportPass = walkSources(
-  [join(SRC, 'nodes/viewport/subviewport')],
+  [join(SRC, 'r3f/viewportRender')],
   (name, path) => isProductionSource(name, path) && name === 'OffscreenViewportPass.tsx'
 );
 

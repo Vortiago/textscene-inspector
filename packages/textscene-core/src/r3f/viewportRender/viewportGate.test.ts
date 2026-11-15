@@ -3,14 +3,14 @@
  * A SubViewportContainer parent replaces the authored mode (`subviewport_container.cpp:116-128`).
  */
 import { describe, expect, it } from 'vitest';
-import { TscnParser } from '../../../parser/TscnParser';
-import type { ProjectSettings } from '../../../parser/projectSettingsParser';
-import { liveTreeOf } from '../../../r3f/liveSceneTree';
-import { ROOT_EMBEDS_NO_WINDOWS } from '../../../parser/projectSettings.testkit';
-import { sourcesOver } from '../../../r3f/liveSceneTree.testkit';
-import { SubViewportUpdateMode } from '../../../godot/scene/viewport';
+import { TscnParser } from '../../parser/TscnParser';
+import type { ProjectSettings } from '../../parser/projectSettingsParser';
+import { liveTreeOf } from '../liveSceneTree';
+import { ROOT_EMBEDS_NO_WINDOWS } from '../../parser/projectSettings.testkit';
+import { sourcesOver } from '../liveSceneTree.testkit';
+import { SubViewportUpdateMode } from '../../godot/scene/viewport';
 import { resolveGate, viewportGateAt } from './viewportGate';
-import '../../../r3f/nodes/index';
+import '../nodes/index';
 
 const { DISABLED, ONCE, WHEN_VISIBLE, ALWAYS } = SubViewportUpdateMode;
 

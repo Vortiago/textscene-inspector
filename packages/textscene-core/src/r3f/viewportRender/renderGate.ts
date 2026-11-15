@@ -5,8 +5,8 @@
  */
 import * as THREE from 'three';
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../godot/scene/viewport';
-import type { UpdateGate } from './subviewport/viewportGate.js';
-import { BLACK } from '../../r3f/offscreen/draw.js';
+import type { UpdateGate } from './viewportGate.js';
+import { BLACK } from '../offscreen/draw.js';
 
 /** One pass as the gate sees it. */
 export interface GatedPass {

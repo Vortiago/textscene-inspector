@@ -4,10 +4,10 @@
  * (`camera_3d.cpp:268-283`).
  */
 import type * as THREE from 'three';
-import { getFovy } from '../../../godot/math/projection.js';
-import { radToDeg } from '../../../godot/math/math.js';
-import { Camera3DKeepAspect, Camera3DProjectionType } from '../../../godot/scene/camera3d.js';
-import type { EnumValue } from '../../../godot/classdb/enumNames.js';
+import { getFovy } from '../../godot/math/projection.js';
+import { radToDeg } from '../../godot/math/math.js';
+import { Camera3DKeepAspect, Camera3DProjectionType } from '../../godot/scene/camera3d.js';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /** The Camera3D properties that the projection takes, before the viewport aspect. */
 export interface CameraLens {

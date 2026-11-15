@@ -17,11 +17,11 @@ import {
   type SceneScope,
 } from '../../../r3f/liveSceneTree.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
-import { isViewportBoundary } from './viewportBoundary.js';
+import { isViewportBoundary } from '../../../r3f/viewportRender/viewportBoundary.js';
 import { viewportContentAt } from './viewportContent.js';
 import type { SubViewportProperties } from './types.js';
-import { viewportGateAt, type ViewportGate } from './viewportGate.js';
-import { windowEmbedderPathAt } from './windowEmbedder.js';
+import { viewportGateAt, type ViewportGate } from '../../../r3f/viewportRender/viewportGate.js';
+import { windowEmbedderPathAt } from '../../../r3f/viewportRender/windowEmbedder.js';
 import { viewportThemeOwners, type ThemeOwner } from '../../windows/window/themeOwners.js';
 
 /** The viewport a window embeds in, whose visible size limits the window's height. */

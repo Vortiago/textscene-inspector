@@ -51,11 +51,11 @@ const NEEDS_NO_OVERLAY = new Map([
     'Reads the type and the Control layout direction, which no pass patches.',
   ],
   [
-    'nodes/viewport/subviewport/viewportGate.ts',
+    'r3f/viewportRender/viewportGate.ts',
     'Reads the type and authored `visible` of the nodes around a viewport, which no pass patches. An animated `visible` comes through AnimatedValueContext.',
   ],
   [
-    'nodes/viewport/subviewport/windowEmbedder.ts',
+    'r3f/viewportRender/windowEmbedder.ts',
     'Reads the type, `gui_embed_subwindows`, `force_native` and authored `visible` of a viewport or a window, which no pass patches.',
   ],
   [

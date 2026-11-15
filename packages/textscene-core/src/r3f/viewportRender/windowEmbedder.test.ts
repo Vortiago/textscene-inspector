@@ -1,12 +1,12 @@
 /** Who embeds a window, by the viewport's own properties and by what the root window embeds. */
 import { describe, expect, it } from 'vitest';
-import type { ProjectSettings } from '../../../parser/projectSettingsParser';
-import type { TscnNode } from '../../../parser/types';
-import { liveTreeOf } from '../../../r3f/liveSceneTree';
-import { ROOT_EMBEDS_NO_WINDOWS } from '../../../parser/projectSettings.testkit';
-import { sourcesOver } from '../../../r3f/liveSceneTree.testkit';
+import type { ProjectSettings } from '../../parser/projectSettingsParser';
+import type { TscnNode } from '../../parser/types';
+import { liveTreeOf } from '../liveSceneTree';
+import { ROOT_EMBEDS_NO_WINDOWS } from '../../parser/projectSettings.testkit';
+import { sourcesOver } from '../liveSceneTree.testkit';
 import { embedsAWindow, embedsSubwindows } from './windowEmbedder';
-import '../../../r3f/nodes/index';
+import '../nodes/index';
 
 const node = (type: string, properties: Record<string, unknown> = {}, children: TscnNode[] = []) =>
   ({ name: type, type, properties, children, rawProperties: {} }) as unknown as TscnNode;

@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';
 import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
-import { fitToAspect, fittedAspect } from '../nodes/3d/camera3d/projectionFit.js';
+import { fitToAspect, fittedAspect } from './viewportRender/projectionFit.js';
 import { EditorControlsHandle } from './EditorControlsHandle.js';
 import { useSceneCamera } from './sceneCameras.js';
 

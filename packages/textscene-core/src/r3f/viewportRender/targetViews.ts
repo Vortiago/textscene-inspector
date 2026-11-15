@@ -7,20 +7,20 @@
 import { useEffect, useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { TargetView } from '../../../r3f/contexts/ViewportTextureContext.js';
-import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures.js';
-import { drawOffscreen } from '../../../r3f/offscreen/draw.js';
-import { copyTexels, wholeTexels, type TexelPlacement, type TexelTransfer } from '../../../r3f/texelCopy.js';
+import type { TargetView } from '../contexts/ViewportTextureContext.js';
+import { holdsSrgbBytes } from '../srgbByteTextures.js';
+import { drawOffscreen } from '../offscreen/draw.js';
+import { copyTexels, wholeTexels, type TexelPlacement, type TexelTransfer } from '../texelCopy.js';
 import {
   hasHeldCopies,
   hasLiveCopies,
   noteLiveTargetDrawn,
   publishLiveTargets,
   refillLiveCopies,
-} from '../../../r3f/liveTargets';
-import { holdUntilReleased, isHeld, useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-import { copySampling } from '../../../resources/textures/copySampling.js';
-import { createCopyTarget, storeSrgbBytes } from '../../../r3f/offscreen/targets.js';
+} from '../liveTargets';
+import { holdUntilReleased, isHeld, useDisposeOnRelease } from '../useDisposeOnRelease';
+import { copySampling } from '../../resources/textures/copySampling.js';
+import { createCopyTarget, storeSrgbBytes } from '../offscreen/targets.js';
 
 /** A view as its pass holds it: `fill` runs after each render of the pass, inside one offscreen draw. */
 interface PassView extends TargetView {

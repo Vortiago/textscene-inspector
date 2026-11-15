@@ -6,18 +6,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
-import type { TscnNode } from '../../../parser/types.js';
-import {
-  useRegisterViewportPass,
-  type ViewportPass,
-} from '../../../r3f/contexts/ViewportPassRegistryContext.js';
-import {
-  usePublishViewportTexture,
-  type ViewportTextureEntry,
-} from '../../../r3f/contexts/ViewportTextureContext.js';
-import { passGate, type TargetRenderState } from '../renderGate.js';
+import type { TscnNode } from '../../parser/types.js';
+import { useRegisterViewportPass, type ViewportPass } from '../contexts/ViewportPassRegistryContext.js';
+import { usePublishViewportTexture, type ViewportTextureEntry } from '../contexts/ViewportTextureContext.js';
+import { passGate, type TargetRenderState } from './renderGate.js';
 import { collectNestedViewportPaths } from './nestedViewportPaths.js';
-import { clearTarget } from '../../../r3f/offscreen/draw.js';
+import { clearTarget } from '../offscreen/draw.js';
 import { useTargetViews } from './targetViews.js';
 import type { UpdateGate } from './viewportGate.js';
 

@@ -8,7 +8,12 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { Camera as FiberCamera } from '@react-three/fiber';
 import type { Camera3DProperties } from './types';
-import { fitToAspect, fittedAspect, setLens, type CameraLens } from './projectionFit';
+import {
+  fitToAspect,
+  fittedAspect,
+  setLens,
+  type CameraLens,
+} from '../../../r3f/viewportRender/projectionFit';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';

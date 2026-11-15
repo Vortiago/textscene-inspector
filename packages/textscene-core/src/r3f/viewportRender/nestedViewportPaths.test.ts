@@ -3,7 +3,7 @@
  * the ordered pass driver (`passOrder.ts`).
  */
 import { describe, expect, it } from 'vitest';
-import type { TscnNode } from '../../../parser/types';
+import type { TscnNode } from '../../parser/types';
 import { collectNestedViewportPaths } from './nestedViewportPaths';
 
 function node(name: string, type: string, children: TscnNode[] = []): TscnNode {

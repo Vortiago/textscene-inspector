@@ -6,8 +6,8 @@
 import type * as THREE from 'three';
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 import { renderUnderWay } from '../../../r3f/viewportRender/worldRender';
-import { selectViewportCamera2D } from '../../viewport/subviewport/viewportFraming';
-import type { Camera2DTag } from '../camera2d/cameraView';
+import { selectViewportCamera2D } from '../../../r3f/viewportRender/viewportFraming';
+import type { Camera2DTag } from '../../../r3f/viewportRender/camera2DView';
 import { parallaxViewFraming, type ParallaxViewFraming } from './parallaxScroll';
 
 /**

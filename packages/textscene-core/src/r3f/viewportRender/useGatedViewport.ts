@@ -3,10 +3,10 @@
  * target, which live as long as the pass and the parsed scene.
  */
 import { useEffect, useState } from 'react';
-import { useOptionalHierarchy } from '../../../r3f/contexts/HierarchyContext.js';
-import { perObject } from '../../../utils/perObject.js';
-import { TargetRenderState } from '../renderGate.js';
-import type { SubViewportProperties } from './types.js';
+import { useOptionalHierarchy } from '../contexts/HierarchyContext.js';
+import { perObject } from '../../utils/perObject.js';
+import { TargetRenderState } from './renderGate.js';
+import type { SubViewportProperties } from '../../nodes/viewport/subviewport/types.js';
 import { useViewportGate } from './useViewportGate.js';
 import type { UpdateGate } from './viewportGate.js';
 

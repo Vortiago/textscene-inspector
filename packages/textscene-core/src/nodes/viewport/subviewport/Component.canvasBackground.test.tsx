@@ -49,7 +49,7 @@ const drawing = (draws: PassDraw[], name: string): number =>
   draws.findIndex((d) => d.scene.name !== WORLD_SCENE && d.reached.includes(name));
 
 describe('a 3D SubViewport under the Canvas background mode', () => {
-  beforeAll(() => import('./CanvasOverWorld'));
+  beforeAll(() => import('../../../r3f/viewportRender/CanvasOverWorld'));
 
   it('draws the layers up to the max layer behind the world and the rest over it', async () => {
     const draws = await drawsOf(viewportWith(3, 0));
@@ -137,7 +137,9 @@ offset_bottom = 100.0
 `;
 
 describe('a 3D SubViewport whose scene declares other canvas layers', () => {
-  beforeAll(() => Promise.all([import('./ViewportControls'), import('./CanvasOverWorld')]));
+  beforeAll(() =>
+    Promise.all([import('./ViewportControls'), import('../../../r3f/viewportRender/CanvasOverWorld')])
+  );
 
   it('ranks the Controls of its layers by its own layers', async () => {
     const draws = await drawsOf(OUTER_LAYERS_AND_INNER_CONTROLS);

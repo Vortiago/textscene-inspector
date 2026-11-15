@@ -73,12 +73,12 @@ import {
 import { NOTHING_CACHED, recordingReads } from '../../cacheSources';
 import { settleDirectories } from './directoryResolution';
 import { scopeOf } from '../../../resources/liveNode';
-import { embedsSubwindows, mayHoldWindowBelow } from '../../../nodes/viewport/subviewport/windowEmbedder';
+import { embedsSubwindows, mayHoldWindowBelow } from '../../viewportRender/windowEmbedder';
 import {
   isEmbeddableWindow,
   isEmbeddedWindow,
   isViewportBoundary,
-} from '../../../nodes/viewport/subviewport/viewportBoundary';
+} from '../../viewportRender/viewportBoundary';
 import type { WindowProperties } from '../../../nodes/windows/window/types';
 import { NO_OWNERS, type ThemeOwner } from '../../../nodes/windows/window/themeOwners';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';

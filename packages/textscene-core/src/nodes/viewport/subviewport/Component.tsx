@@ -6,7 +6,7 @@
  */
 
 import { lazy, useMemo, type ReactNode } from 'react';
-import { OffscreenViewportPass } from './OffscreenViewportPass';
+import { OffscreenViewportPass } from '../../../r3f/viewportRender/OffscreenViewportPass';
 
 import type { TscnNode } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -30,9 +30,9 @@ import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
 import { viewportPassSizes } from './targetSize';
 import { useStableVector2 } from '../../../r3f/hooks/useStableVector2';
-import { useInCanvasOverWorld } from './canvasOverWorldScope';
+import { useInCanvasOverWorld } from '../../../r3f/viewportRender/canvasOverWorldScope';
 import { ViewportCanvasScope } from '../../../r3f/viewportCanvasScope';
-import { viewportCanvasColorSpace } from './viewportTargetOptions';
+import { viewportCanvasColorSpace } from '../../../r3f/viewportRender/viewportTargetOptions';
 
 // Lazy: the Control painters register on import, and a viewport with no Controls never needs them.
 const ViewportControls = lazy(() =>

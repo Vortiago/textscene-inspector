@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { fitToAspect, fittedAspect, setLens, type CameraLens } from './projectionFit';
 
-import { radToDeg } from '../../../godot/math/math';
-import { Camera3DKeepAspect, Camera3DProjectionType } from '../../../godot/scene/camera3d';
-import type { EnumValue } from '../../../godot/classdb/enumNames.js';
+import { radToDeg } from '../../godot/math/math';
+import { Camera3DKeepAspect, Camera3DProjectionType } from '../../godot/scene/camera3d';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /** A lens at Godot's Camera3D defaults, with the given properties. */
 function lensOf(properties: Partial<CameraLens>): CameraLens {

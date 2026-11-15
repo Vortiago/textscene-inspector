@@ -5,11 +5,11 @@
 
 import { useCallback, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera';
-import { createCanvasFrame } from '../../../r3f/components/Canvas2DStage/canvasFrame';
-import { useMultisampledTarget } from '../../../r3f/offscreen/multisampledTarget';
+import { createViewportCanvasCamera } from '../sceneRenderCamera';
+import { createCanvasFrame } from '../components/Canvas2DStage/canvasFrame';
+import { useMultisampledTarget } from '../offscreen/multisampledTarget';
 import { applyOrthoFrame, orthoFrameForSize } from './viewportFraming';
-import type { CanvasColorSpace } from '../../../r3f/canvasColorSpace';
+import type { CanvasColorSpace } from '../canvasColorSpace';
 
 /**
  * A persistent camera that frames the whole target until a pass narrows it, and the `CanvasFrame`

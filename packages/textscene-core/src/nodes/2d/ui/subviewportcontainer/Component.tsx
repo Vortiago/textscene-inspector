@@ -17,7 +17,7 @@ import { useViewportTargetSlot } from '../../../../resources/textures/viewportte
 import { useRegisterViewportRect } from '../../../../r3f/contexts/ViewportRectContext.js';
 import { joinPath } from '../../../../utils/nodePath.js';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../../parser/types.js';
-import { isSubViewport } from '../../../viewport/subviewport/viewportBoundary.js';
+import { isSubViewport } from '../../../../r3f/viewportRender/viewportBoundary.js';
 import type { SubViewportProperties } from '../../../viewport/subviewport/types.js';
 import { viewportSize } from '../../../viewport/subviewport/targetSize.js';
 import type { SubViewportContainerProperties } from './types.js';

@@ -5,10 +5,10 @@
  */
 import { useMemo } from 'react';
 
-import { useAnimatedVisibility } from '../../../r3f/contexts/AnimatedValueContext.js';
-import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext.js';
-import { liveTreeOf } from '../../../r3f/liveSceneTree.js';
-import { useSharedLiveTree } from '../../../r3f/useLiveSceneTree.js';
+import { useAnimatedVisibility } from '../contexts/AnimatedValueContext.js';
+import { useViewportRect } from '../contexts/ViewportRectContext.js';
+import { liveTreeOf } from '../liveSceneTree.js';
+import { useSharedLiveTree } from '../useLiveSceneTree.js';
 import {
   resolveGate,
   ungatedViewport,

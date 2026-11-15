@@ -17,7 +17,7 @@ import {
   type AllocatedPaintRange,
   type PaintRange,
 } from '../canvasPaintOrder';
-import { isViewportBoundary } from '../../nodes/viewport/subviewport/viewportBoundary';
+import { isViewportBoundary } from '../viewportRender/viewportBoundary';
 import type { CanvasItemPaint } from '../canvasItemPass/canvasItemPaint';
 import type { PaintFrame } from '../canvasItemPass/nodePaint';
 import type { DetachedPaint } from '../canvasItemPass/detachedPaintSlot';

@@ -5,8 +5,8 @@
  * order of those passes. It walks the raw parsed tree, so an unloaded sub-scene's
  * viewport joins on re-render.
  */
-import type { TscnNode } from '../../../parser/types.js';
-import { joinPath } from '../../../utils/nodePath.js';
+import type { TscnNode } from '../../parser/types.js';
+import { joinPath } from '../../utils/nodePath.js';
 import { isViewportBoundary } from './viewportBoundary.js';
 
 export function collectNestedViewportPaths(node: TscnNode, path: string): string[] {

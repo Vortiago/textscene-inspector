@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { canvasColorSpaceOf } from '../../../r3f/canvasColorSpace';
+import { canvasColorSpaceOf } from '../canvasColorSpace';
 import { useBackdropTarget } from './useBackdropTarget';
 
 describe('useBackdropTarget', () => {

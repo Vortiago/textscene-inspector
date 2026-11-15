@@ -7,14 +7,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
-import { createCanvasTarget, createSceneTarget } from '../../../r3f/offscreen/targets';
+import { createCanvasTarget, createSceneTarget } from '../offscreen/targets';
 import { useTargetViews } from './targetViews';
-import { canvasColorSpaceOf } from '../../../r3f/canvasColorSpace';
-import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
-import { ownedTextureView } from '../../../resources/textures/textureView';
-import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
-import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
-import { holdUntilReleased } from '../../../r3f/useDisposeOnRelease';
+import { canvasColorSpaceOf } from '../canvasColorSpace';
+import { holdsSrgbBytes } from '../srgbByteTextures';
+import { ownedTextureView } from '../../resources/textures/textureView';
+import { CaptureRenderer } from '../testing/CaptureRenderer';
+import { withStubbedGl } from '../testing/stubbedGl';
+import { holdUntilReleased } from '../useDisposeOnRelease';
 
 const LINEAR_CANVAS = canvasColorSpaceOf(true);
 

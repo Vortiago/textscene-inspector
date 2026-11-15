@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { viewportCanvasColorSpace } from './viewportTargetOptions';
-import { canvasColorSpaceOf } from '../../../r3f/canvasColorSpace';
+import { canvasColorSpaceOf } from '../canvasColorSpace';
 
 const LINEAR_CANVAS = canvasColorSpaceOf(true);
 

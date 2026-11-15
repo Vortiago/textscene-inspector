@@ -5,9 +5,9 @@
  * edge snaps back.
  */
 import { describe, expect, it } from 'vitest';
-import { camera2DView } from './cameraView';
-import { parseCamera2D } from './parser';
-import type { Camera2DProperties } from './types';
+import { camera2DView } from './camera2DView';
+import { parseCamera2D } from '../../nodes/2d/camera2d/parser';
+import type { Camera2DProperties } from '../../nodes/2d/camera2d/types';
 
 const heading = { type: 'node', attributes: { name: 'Cam', type: 'Camera2D' } };
 const VIEWPORT = { x: 1152, y: 648 };

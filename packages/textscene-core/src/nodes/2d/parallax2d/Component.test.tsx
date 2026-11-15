@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
-import type { Camera2DTag } from '../camera2d/cameraView';
+import type { Camera2DTag } from '../../../r3f/viewportRender/camera2DView';
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
 import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera';

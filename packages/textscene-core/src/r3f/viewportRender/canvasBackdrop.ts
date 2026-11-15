@@ -6,10 +6,10 @@
  */
 
 import type * as THREE from 'three';
-import { canvasKeyBound, layerRankOf } from '../../../r3f/canvasPaintOrder';
-import { showBackground } from '../../../r3f/environment/sceneEnvironment';
-import type { EnvironmentSettings } from '../../../resources/environment/types';
-import { BackgroundMode } from '../../../godot/scene/environment';
+import { canvasKeyBound, layerRankOf } from '../canvasPaintOrder';
+import { showBackground } from '../environment/sceneEnvironment';
+import type { EnvironmentSettings } from '../../resources/environment/types';
+import { BackgroundMode } from '../../godot/scene/environment';
 
 /**
  * The paint-order key below which an item draws behind the 3D render, or null when nothing does:
