@@ -8,7 +8,8 @@ import { useMemo } from 'react';
 import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
 import { liveTreeOf } from '../../../r3f/liveSceneTree.js';
 import { useLiveTreeSelection, type SharedLiveTree } from '../../../r3f/useLiveSceneTree.js';
-import { useNodeResource, type ResourceSnapshot } from '../../../resources/reading';
+import type { ResourceSnapshot } from '../../../resources/reading';
+import { useLiveNodeResource } from '../../../r3f/useLiveNodeResource.js';
 import { MODIFICATION_STACK } from '../../../resources/skeleton/skeletonmodificationstack2d/index.js';
 import { sameData } from '../../../utils/sameData.js';
 import { stackNodePaths } from './modificationStack/stackPaths.js';
@@ -27,7 +28,7 @@ function sameTargets(a: Targets, b: Targets): boolean {
  * Null for no stack, a stack still loading, or no path.
  */
 export function useBoundStack(ref: string | undefined, skeletonPath: string | null): BoundStack | null {
-  const stack = useNodeResource(ref, MODIFICATION_STACK).value;
+  const stack = useLiveNodeResource(ref, MODIFICATION_STACK).value;
   const select = useMemo(() => {
     if (!stack || skeletonPath === null) return null;
     const literals = stackNodePaths(stack);

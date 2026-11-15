@@ -10,7 +10,7 @@ import { useLiveSceneNodes, useSharedLiveTree } from '../../useLiveSceneTree.js'
 import { node2dWorldPosition } from '../../node2dWorldTransform.js';
 import { solvedNodePatchesOf } from '../../liveNodePatches.js';
 import { liveTreeOf } from '../../liveSceneTree.js';
-import { liveFilesOf, NO_LIVE_FILES } from '../../liveFiles.js';
+import { liveFilesOf } from '../../liveFiles.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
 import { camera2DView } from '../../../nodes/2d/camera2d/cameraView.js';
 import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
@@ -54,7 +54,7 @@ export function CamerasPanel() {
     if (!liveTree) return;
     const placed = solvedNodePatchesOf(
       liveTreeOf(liveTree.roots, liveTree.ctx),
-      (loader ? liveFilesOf(loader) : NO_LIVE_FILES).current()
+      liveFilesOf(loader).current()
     );
     const worldPosition = node2dWorldPosition(liveTree.roots, liveTree.ctx, path, placed) ?? { x: 0, y: 0 };
     // The frame `<Canvas2DStage>` draws, so the camera lands where the stage shows it.

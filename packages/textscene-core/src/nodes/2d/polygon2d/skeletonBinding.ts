@@ -7,7 +7,6 @@
 
 import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
 import type { ResourceSnapshot } from '../../../resources/reading';
-
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { resolveLiteralOnLiveTree } from '../../../r3f/nodePathUniqueNames.js';
 import { keptPerLivePath } from '../../../r3f/keptPerLivePath.js';

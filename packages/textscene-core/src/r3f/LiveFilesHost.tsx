@@ -8,11 +8,11 @@ import { useSyncExternalStore } from 'react';
 import { useResourceLoader } from '../resources/useResource.js';
 import { hasUnsettledFile, useMissingFiles, useStableEntries } from '../resources/useLoadedFiles.js';
 import { usePendingWhile } from '../resources/usePendingWhile.js';
-import { liveFilesOf, NO_LIVE_FILES } from './liveFiles.js';
+import { liveFilesOf } from './liveFiles.js';
 
 export function LiveFilesHost(): null {
   const loader = useResourceLoader();
-  const live = loader ? liveFilesOf(loader) : NO_LIVE_FILES;
+  const live = liveFilesOf(loader);
   // Renders again whenever the files may have changed, so the report below reads them anew.
   useSyncExternalStore(live.subscribeFiles, live.filesVersion, live.filesVersion);
   const files = useStableEntries(new Map(live.files()));

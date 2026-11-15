@@ -54,9 +54,14 @@ export const NO_LIVE_FILES: LiveFiles = {
 };
 
 /** The one {@link LiveFiles} of each loader. */
-export const liveFilesOf = perObject((loader: ResourceLoader): LiveFiles =>
+const liveFilesOfLoader = perObject((loader: ResourceLoader): LiveFiles =>
   liveFilesOver(loaderSnapshots(loader))
 );
+
+/** The live files of `loader`, or {@link NO_LIVE_FILES} with no loader. */
+export function liveFilesOf(loader: ResourceLoader | null | undefined): LiveFiles {
+  return loader ? liveFilesOfLoader(loader) : NO_LIVE_FILES;
+}
 
 /** The live files over `source`. */
 function liveFilesOver(source: SnapshotSource): LiveFiles {

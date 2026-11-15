@@ -7,7 +7,6 @@
 
 import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
 import type { ResourceSnapshot } from '../../../resources/reading';
-
 import type { LiveTree } from '../../../r3f/liveSceneTree.js';
 import { keptPerLivePath } from '../../../r3f/keptPerLivePath.js';
 import { bindSkeleton2DRigs } from '../skeleton2d/skeletonRig.js';
