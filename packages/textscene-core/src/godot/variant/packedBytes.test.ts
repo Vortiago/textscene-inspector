@@ -51,6 +51,14 @@ describe('readPackedByteArrayLiteral', () => {
     expect(readPackedByteArrayLiteral('[1, 2]')).toEqual({ fault: null, body: '1, 2' });
   });
 
+  it('drops the trailing comma a bracketed array allows', () => {
+    expect(readPackedByteArrayLiteral('[1, 2,]')).toEqual({ fault: null, body: '1, 2' });
+  });
+
+  it('reads a typed array of bytes, which PACKED_BYTE_ARRAY converts from ARRAY', () => {
+    expect(readPackedByteArrayLiteral('Array[int]([1, 2])')).toEqual({ fault: null, body: '1, 2' });
+  });
+
   it('refuses a bare array of strings, which is no base64 body', () => {
     expect(readPackedByteArrayLiteral('["AAH/"]')).toEqual({ fault: 'not-a-literal' });
   });
