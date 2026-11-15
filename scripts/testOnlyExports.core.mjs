@@ -16,6 +16,8 @@ const OUTSIDE_CORE = ['apps', 'packages/textscene-dev-kit', 'scripts'].map((dir)
 
 /** The value exports kept although only tests import them, each with the reason a test needs it. */
 export const KEPT_TEST_ONLY_EXPORTS = [
+  // No runtime code lists the hand rows, and a test builds the check of each one.
+  'godot/classdb/propertyDescriptor.ts#handRowKeys',
   // A registered hand row is module state nothing clears, so a test passes its own descriptor.
   'linter/descriptorValidator.ts#descriptorValidator',
   // `@react-three/test-renderer` cannot wrap a real `<Canvas>`, so a scene test mounts its contents.
