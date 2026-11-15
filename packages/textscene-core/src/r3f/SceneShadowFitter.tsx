@@ -17,7 +17,6 @@ import {
 } from './directionalShadow/fitSceneDirectionalShadows.js';
 import { sceneLights } from './directionalShadow/lightLists.js';
 import { fitScenePositionalShadows } from './positionalShadow/fitScenePositionalShadows.js';
-import { installShadowPass } from './shadowPass.js';
 import { activeShadowAtlas, ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas.js';
 import { observeSceneCamera } from './sceneRenderCamera.js';
 import { writeAreaLightUniforms } from './areaLight/areaLightFalloff.js';
@@ -86,13 +85,8 @@ export function useSceneShadowFit(scene: THREE.Scene | null): void {
   }, [scene]);
 }
 
-/**
- * Mounted once per canvas, for the canvas's own scene. Its renderer's shadow pass copies each omni
- * light's cube into the atlas, for every scene the renderer draws.
- */
+/** Mounted once per 3D canvas, for the canvas's own scene. */
 export function SceneShadowFitter() {
-  const renderer = useThree((state) => state.gl);
-  useEffect(() => installShadowPass(renderer), [renderer]);
   useSceneShadowFit(useThree((state) => state.scene));
   return null;
 }
