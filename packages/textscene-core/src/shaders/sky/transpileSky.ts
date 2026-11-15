@@ -7,9 +7,7 @@
 import * as THREE from 'three';
 import { int, screenCoordinate, varyingProperty, vec4, vertexIndex } from 'three/tsl';
 import { NodeMaterial, type Node, type TextureNode, type UniformNode } from 'three/webgpu';
-import { parse } from '../language/parse.js';
-import { shaderCode, type ShaderOptions } from '../language/parseShader.js';
-import { tokenize } from '../language/tokenizer.js';
+import { parsedShader, type ParsedShader, type ShaderOptions } from '../language/parseShader.js';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import { checkTranspiled } from '../language/transpiledRows.js';
 import { emitTemplateStage } from '../template/emitTemplate.js';
@@ -40,9 +38,11 @@ export interface TranspiledSky {
 
 /** The sky of `source`, a shader of `shader_type sky`, preprocessed with `options`. */
 export function transpileSky(source: string, options: ShaderOptions = {}): TranspiledSky {
-  const file = options.file ?? '';
-  const code = shaderCode(source, options);
-  const tree = parse(tokenize(code, file));
+  return transpileParsedSky(parsedShader(source, options), options.file ?? '');
+}
+
+/** The sky of a parsed shader from `file`, for a caller that has read its tree already. */
+export function transpileParsedSky({ code, tree }: ParsedShader, file: string): TranspiledSky {
   if (tree.shaderType !== 'sky')
     throw new ShadingLanguageError(
       `expected a shader of 'shader_type sky', found ${tree.shaderType ?? 'none'}`,

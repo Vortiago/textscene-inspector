@@ -15,7 +15,7 @@ export const TRANSPILER_VERSION = 1;
 
 /** Everything a linked stage's tree depends on. */
 export interface TreeKey {
-  /** The user's shader text. */
+  /** The preprocessed shader text, with its includes and `CURRENT_RENDERER` in it. */
   readonly source: string;
   /** The file that names the text in the position of each node. */
   readonly file: string;
