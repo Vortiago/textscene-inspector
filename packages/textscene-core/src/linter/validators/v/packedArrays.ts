@@ -272,7 +272,8 @@ function packedIntArray(
         width
       );
       return bad.error ?? bad.truncated;
-    }, `int array (${wrapper}(…), Array[int]([…]) or […])`)
+    }, `int array (${wrapper}(…), Array[int]([…]) or […])`),
+    width
   );
 }
 
@@ -357,7 +358,8 @@ export const packedArrayCombinators = {
         if (literal.body === '' || literal.body.startsWith('"')) return null;
         const bad = badIntElement(name, key, line, literal.body, intElementCodes(name), 'uint8');
         return bad.error ?? bad.truncated;
-      }, 'PackedByteArray(…), its base64 body PackedByteArray("…"), or […]')
+      }, 'PackedByteArray(…), its base64 body PackedByteArray("…"), or […]'),
+      'uint8'
     );
   },
 

@@ -3099,6 +3099,7 @@
   ],
   "Animation": [
     {
+      "has_setter": false,
       "hint": 0,
       "hint_string": "",
       "name": "capture_included",

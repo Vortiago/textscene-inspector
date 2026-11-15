@@ -28,4 +28,9 @@ describe('classProperty', () => {
       declaredBy: 'AreaLight3D',
     });
   });
+
+  it('marks a property ClassDB binds with no setter', () => {
+    expect(findClassProperty('ShapeCast2D', 'collision_result')?.isSetterless).toBe(true);
+    expect(findClassProperty('ShapeCast2D', 'margin')?.isSetterless).toBeUndefined();
+  });
 });

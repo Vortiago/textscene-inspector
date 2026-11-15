@@ -14,6 +14,7 @@ import {
   OUT,
   PROPERTIES_OUT,
   releaseOf,
+  setterlessProperties,
   RESOURCE_OUT,
   renderFromCatalog,
   renderFromExclusionCaptures,
@@ -59,6 +60,19 @@ describe('deriveResourceTypeExclusions', () => {
     expect(deriveResourceTypeExclusions(properties, { OmniLight3D: 'Light3D' }).OmniLight3D).toEqual({
       light_projector: '',
     });
+  });
+});
+
+describe('setterlessProperties', () => {
+  it('lists each row the capture marks as bound with no setter, by class', () => {
+    const rows = {
+      ShapeCast2D: [
+        { name: 'collision_result', type: 28, hint: 0, hint_string: '', has_setter: false },
+        { name: 'margin', type: 3, hint: 0, hint_string: '' },
+      ],
+      Node2D: [{ name: 'position', type: 5, hint: 0, hint_string: '' }],
+    };
+    expect(setterlessProperties(rows, {})).toEqual({ ShapeCast2D: ['collision_result'] });
   });
 });
 

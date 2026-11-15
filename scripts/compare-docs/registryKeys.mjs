@@ -51,14 +51,15 @@ export function partitionByValidator(names, ownKeys) {
 
 /**
  * Per declaring class, not per leaf: a `BaseMaterial3D` property's validator
- * belongs on `BaseMaterial3D`, so this asks `getOwnKeys`, not `findValidator`.
+ * belongs on `BaseMaterial3D`, so this asks `getOwnKeys`, not `findValidator`. A
+ * key the property descriptor answers for the class counts as validated.
  */
 export function unvalidatedByClass(engine, validatorRegistry, covered) {
   const rows = [];
   for (const [cls, props] of Object.entries(engine)) {
     if (!covered.has(cls)) continue;
     const { missing } = partitionByValidator(
-      props.map((p) => p.name),
+      props.map((p) => p.name).filter((name) => !validatorRegistry.isDerived(cls, name)),
       validatorRegistry.getOwnKeys(cls)
     );
     if (missing.length > 0) rows.push({ cls, missing });

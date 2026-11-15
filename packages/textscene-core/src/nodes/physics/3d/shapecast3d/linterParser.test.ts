@@ -19,11 +19,12 @@ describe('ShapeCast3D strict validators', () => {
     expect(validatorRegistry.getOwnKeys('ShapeCast3D')).not.toEqual([]);
   });
 
-  it('registers no validator for collision_result: shape_cast_3d.cpp:172 binds it with an empty setter string', () => {
+  it('refuses every write of collision_result, which shape_cast_3d.cpp:172 binds with no setter', () => {
     // ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "collision_result", PROPERTY_HINT_NONE, "",
-    // PROPERTY_USAGE_NO_EDITOR), "", "get_collision_result"): the "" is the setter name.
-    // A `.tscn` cannot write this key at all, so there is nothing to validate.
-    expect(validatorRegistry.findValidator('ShapeCast3D', 'collision_result')).toBeNull();
+    // PROPERTY_USAGE_NO_EDITOR), "", "get_collision_result"): the "" is the setter name, so the
+    // loader stores nothing (class_db.cpp:1655-1659).
+    const validator = validatorRegistry.findValidator('ShapeCast3D', 'collision_result');
+    expect(validator!('collision_result', '[]', 1)).toBeAtTier('error');
   });
 
   it('rejects a malformed value on every property it validates', () => {

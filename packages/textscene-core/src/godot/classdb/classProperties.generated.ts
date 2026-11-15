@@ -5734,3 +5734,11 @@ export const RESOURCE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassPr
     ["plane", 14, 0, "suffix:m"],
   ],
 });
+
+/** The rows each class binds with no setter: the loader drops their write (class_db.cpp:1655-1659). */
+export const SETTERLESS_PROPERTIES: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  "Animation": ["capture_included"],
+  "LimitAngularVelocityModifier3D": ["joint_count"],
+  "ShapeCast2D": ["collision_result"],
+  "ShapeCast3D": ["collision_result"],
+});

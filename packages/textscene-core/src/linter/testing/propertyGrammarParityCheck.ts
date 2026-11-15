@@ -7,6 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { classInheritanceChain } from '../../godot/classdb/classBaseTypes.js';
+import { classProperties } from '../../godot/classdb/classProperty.js';
 import { NODE_CLASS_PROPERTIES } from '../../godot/classdb/classProperties.generated.js';
 import { UNCATALOGUED_PROPERTIES } from '../../godot/classdb/uncataloguedProperties.js';
 import { nodeComponentRegistry } from '../../r3f/NodeComponentRegistry.js';
@@ -24,11 +25,19 @@ import {
   scrapeParserReads,
 } from './propertyGrammarParityScan.js';
 
-/** Validator keys registered directly for a node type or any of its ancestors. */
+/**
+ * Every key the registry checks on a node type: the hand validators of the type and its
+ * ancestors, and each captured key only the property descriptor answers. A key a hand
+ * dispatcher answers stays under the dispatcher's spelling, such as `linear_limit_x/*`. A
+ * setterless key is left out, as a removal is: no parser can read a write Godot drops.
+ */
 export function getFullValidatorKeys(nodeType: string): Set<string> {
   const result = new Set<string>();
   for (const type of classInheritanceChain(nodeType)) {
     for (const k of validatorRegistry.getOwnKeys(type)) result.add(k);
+  }
+  for (const { name, isSetterless } of classProperties(nodeType)) {
+    if (!isSetterless && validatorRegistry.isDerived(nodeType, name)) result.add(name);
   }
   return result;
 }

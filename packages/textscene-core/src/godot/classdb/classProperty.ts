@@ -9,6 +9,7 @@ import { classInheritanceChain, findInClassChain } from './classBaseTypes.js';
 import {
   NODE_CLASS_PROPERTIES,
   RESOURCE_CLASS_PROPERTIES,
+  SETTERLESS_PROPERTIES,
   type ClassPropertyRow,
 } from './classProperties.generated.js';
 import { UNCATALOGUED_PROPERTIES } from './uncataloguedProperties.js';
@@ -27,6 +28,11 @@ export interface ClassProperty {
    * `type`. The loader converts a value to it (`class_db.cpp:1677`, `binder_common.h:175`).
    */
   readonly setterType?: number;
+  /**
+   * Present, and true, where ClassDB binds the property with no setter: `set_property` returns
+   * true and stores nothing (`class_db.cpp:1655-1659`), so the loader drops the write.
+   */
+  readonly isSetterless?: true;
 }
 
 const PROPERTY_TABLES = [NODE_CLASS_PROPERTIES, RESOURCE_CLASS_PROPERTIES, UNCATALOGUED_PROPERTIES];
@@ -46,9 +52,18 @@ function ownRows(className: string): readonly ClassPropertyRow[] | undefined {
 
 function toClassProperty(
   [name, type, hint, hintString, setterType]: ClassPropertyRow,
-  declaredBy: string
+  declaredBy: string,
+  setterless: readonly string[]
 ): ClassProperty {
-  return { name, type, hint, hintString, declaredBy, ...(setterType === undefined ? {} : { setterType }) };
+  return {
+    name,
+    type,
+    hint,
+    hintString,
+    declaredBy,
+    ...(setterType === undefined ? {} : { setterType }),
+    ...(setterless.includes(name) ? { isSetterless: true as const } : {}),
+  };
 }
 
 /** The type a value converts to on load: the setter's, else the property's own. */
@@ -65,7 +80,8 @@ function ownProperties(className: string): ReadonlyMap<string, ClassProperty> | 
   if (indexed) return indexed;
   const rows = ownRows(className);
   if (!rows) return undefined;
-  const byName = new Map(rows.map((row) => [row[0], toClassProperty(row, className)]));
+  const setterless = SETTERLESS_PROPERTIES[className] ?? [];
+  const byName = new Map(rows.map((row) => [row[0], toClassProperty(row, className, setterless)]));
   ownPropertyIndex.set(className, byName);
   return byName;
 }

@@ -8,9 +8,8 @@ import '../../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../../linter/validators/index.js';
 
-// No `collision_result`: scene/2d/physics/shape_cast_2d.cpp:475 binds it with an empty setter
-// (`ADD_PROPERTY(..., "", "get_collision_result")`), so no file can set it. Its
-// `PROPERTY_USAGE_NO_EDITOR` alone would not block serialisation.
+// No `collision_result`: shape_cast_2d.cpp:475 binds it with an empty setter, so the capture
+// marks it setterless and the property descriptor refuses every write of it.
 validatorRegistry.registerAll('ShapeCast2D', {
   enabled: v.boolean('enabled'),
   // scene/2d/physics/shape_cast_2d.cpp:469: ADD_PROPERTY(..., "shape", PROPERTY_HINT_RESOURCE_TYPE, "Shape2D")

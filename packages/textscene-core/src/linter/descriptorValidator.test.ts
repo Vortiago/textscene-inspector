@@ -29,7 +29,7 @@ function check(className: string, key: string, value: string) {
 describe('the format check the Variant type picks', () => {
   it.each([
     ['BOOL', 'EditorDock', 'closable', 'true', 'maybe'],
-    ['INT', 'LimitAngularVelocityModifier3D', 'joint_count', '3', '"three"'],
+    ['INT', 'AudioStreamWAV', 'loop_begin', '3', '"three"'],
     ['FLOAT', 'EditorProperty', 'name_split_ratio', '0.5', '"half"'],
     ['STRING', 'EditorDock', 'layout_key', '"key"', 'key'],
     ['STRING_NAME', 'EditorDock', 'icon_name', '&"Node"', 'Node'],
@@ -45,7 +45,7 @@ describe('the format check the Variant type picks', () => {
     ['BASIS', 'GLTFPhysicsBody', 'inertia_tensor', 'Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)', '1'],
     ['TRANSFORM3D', 'GLTFNode', 'xform', 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)', '1'],
     ['COLOR', 'EditorDock', 'title_color', 'Color(1, 0, 0, 1)', '"red-ish"'],
-    ['ARRAY', 'ShapeCast2D', 'collision_result', '[]', '5'],
+    ['ARRAY', 'GLTFSkeleton', 'unique_names', '[]', '5'],
     ['PACKED_FLOAT32_ARRAY', 'GLTFMesh', 'blend_weights', 'PackedFloat32Array(0, 1)', '"x"'],
     ['PACKED_STRING_ARRAY', 'OpenXRAction', 'toplevel_paths', 'PackedStringArray("a")', '5'],
     ['PACKED_VECTOR2_ARRAY', 'ConcavePolygonShape2D', 'segments', 'PackedVector2Array(0, 0, 1, 1)', '5'],
@@ -90,6 +90,15 @@ describe('the format check the Variant type picks', () => {
 
   it('accepts the Vector3 spelling a VECTOR3I slot converts', () => {
     expectAccepted(check('PlaceholderTexture3D', 'size', 'Vector3(1, 2, 3)'));
+  });
+
+  it('refuses every value of a property bound with no setter, whose write Godot drops', () => {
+    // class_db.cpp:1655-1659: `set_property` returns true and stores nothing.
+    expect(check('ShapeCast2D', 'collision_result', '[]')).toBeAtTier('error');
+    expect(validatorOf('ShapeCast2D', 'collision_result').grounding).toEqual({
+      kind: 'enforced',
+      cite: 'class_db.cpp:1655-1659',
+    });
   });
 
   it('accepts any value in a NIL slot, which holds any Variant', () => {
@@ -227,10 +236,10 @@ describe('the hand row folds into the same check', () => {
   });
 
   it('reads the slot at the width the hand row states', () => {
-    const joints = descriptorOf('LimitAngularVelocityModifier3D', 'joint_count');
-    expect(check('LimitAngularVelocityModifier3D', 'joint_count', '4294967296')).toBeAtTier('error');
-    const validator = descriptorValidator({ ...joints, facts: { width: 'int64' } })!;
-    expectAccepted(validator('joint_count', '4294967296', 1));
+    const loopBegin = descriptorOf('AudioStreamWAV', 'loop_begin');
+    expect(check('AudioStreamWAV', 'loop_begin', '4294967296')).toBeAtTier('error');
+    const validator = descriptorValidator({ ...loopBegin, facts: { width: 'int64' } })!;
+    expectAccepted(validator('loop_begin', '4294967296', 1));
   });
 
   it('refuses a hand row on a type with no bound to carry it', () => {

@@ -175,6 +175,38 @@ function renderPropertyTable(name, properties) {
 }
 
 /**
+ * Class → the names of its rows bound with no setter, which the capture marks `has_setter: false`.
+ * `ClassDB::set_property` returns true and stores nothing for one (class_db.cpp:1655-1659).
+ *
+ * @param nodeProperties - `node-properties.json`, class → own rows.
+ * @param resourceProperties - `resource-properties.json`, class → own rows.
+ */
+export function setterlessProperties(nodeProperties, resourceProperties) {
+  const out = {};
+  for (const [className, rows] of Object.entries({ ...nodeProperties, ...resourceProperties })) {
+    const names = rows.filter((row) => row.has_setter === false).map((row) => row.name);
+    if (names.length > 0) out[className] = names;
+  }
+  return out;
+}
+
+/** The frozen `class → names` constant of {@link setterlessProperties}, its classes sorted. */
+function renderSetterlessTable(setterless) {
+  const classes = Object.entries(setterless)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(
+      ([className, names]) =>
+        `  ${JSON.stringify(className)}: [${names.map((n) => JSON.stringify(n)).join(', ')}],`
+    )
+    .join('\n');
+  return (
+    `/** The rows each class binds with no setter: the loader drops their write (class_db.cpp:1655-1659). */\n` +
+    `export const SETTERLESS_PROPERTIES: Readonly<Record<string, readonly string[]>> = Object.freeze({\n` +
+    `${classes}\n});\n`
+  );
+}
+
+/**
  * The module source for the ClassDB property tables. A class gets rows only where it declares a
  * property of its own. A reader finds an inherited property by walking the base chain, as the
  * engine's `_get_property_list` does.
@@ -207,7 +239,8 @@ export type ClassPropertyRow = readonly [
 export const CLASSDB_CAPTURE_VERSION = '${releaseOf(version)}';
 
 ${renderPropertyTable('NODE_CLASS_PROPERTIES', nodeProperties)}
-${renderPropertyTable('RESOURCE_CLASS_PROPERTIES', resourceProperties)}`;
+${renderPropertyTable('RESOURCE_CLASS_PROPERTIES', resourceProperties)}
+${renderSetterlessTable(setterlessProperties(nodeProperties, resourceProperties))}`;
 }
 
 /** Whether a resource hint excludes a class. */

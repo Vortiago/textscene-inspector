@@ -55,7 +55,11 @@ describe('registeredKeys, derived', () => {
   });
 
   it('lists no key a hand validator answers as derived', () => {
-    expect(registeredKeys()).not.toContainEqual({ nodeType: 'Camera3D', key: 'h_offset', kind: 'derived' });
+    expect(registeredKeys()).not.toContainEqual({
+      nodeType: 'SplitContainer',
+      key: 'collapsed',
+      kind: 'derived',
+    });
   });
 
   it('lists no derived key for a registry given no derivation', () => {

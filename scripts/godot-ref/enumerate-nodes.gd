@@ -55,7 +55,9 @@ func value_arguments(c: String) -> Dictionary:
 # converts a value to that type, not to the property's own (class_db.cpp:1677,
 # binder_common.h:175), and the two differ where a setter takes an Array that
 # the property declares INT (`Curve._data`). Only where they differ, so the
-# capture grows by 31 rows.
+# capture grows by 31 rows. "has_setter" is false, and present only, where the
+# property is bound with no setter: the loader drops its write
+# (class_db.cpp:1655-1659).
 func own_properties(c: String) -> Array:
 	var own: Array = []
 	var arguments: Dictionary = value_arguments(c)
@@ -70,7 +72,10 @@ func own_properties(c: String) -> Array:
 			"hint": int(p["hint"]),
 			"hint_string": p["hint_string"],
 		}
-		var argument: Dictionary = arguments.get(ClassDB.class_get_property_setter(c, p["name"]), {})
+		var setter: String = ClassDB.class_get_property_setter(c, p["name"])
+		if setter == "":
+			row["has_setter"] = false
+		var argument: Dictionary = arguments.get(setter, {})
 		if not argument.is_empty() and int(argument["type"]) != row["type"]:
 			row["setter_type"] = int(argument["type"])
 			row["setter_hint"] = int(argument["hint"])

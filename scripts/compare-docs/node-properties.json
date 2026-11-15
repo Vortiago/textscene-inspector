@@ -6785,6 +6785,7 @@
       "type": 1
     },
     {
+      "has_setter": false,
       "hint": 0,
       "hint_string": "",
       "name": "joint_count",
@@ -10283,6 +10284,7 @@
       "type": 2
     },
     {
+      "has_setter": false,
       "hint": 0,
       "hint_string": "",
       "name": "collision_result",
@@ -10345,6 +10347,7 @@
       "type": 2
     },
     {
+      "has_setter": false,
       "hint": 0,
       "hint_string": "",
       "name": "collision_result",
