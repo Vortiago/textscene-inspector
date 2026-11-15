@@ -28,7 +28,13 @@ import { drawsInWorkspace } from './nodeWorkspaceVisibility.js';
 import { useAnimatedValueAt } from './contexts/AnimatedValueContext.js';
 import { useNodeObjectRegistration } from './hooks/useNodeObjectRegistration.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
-import { childOrders, TreeOrderProvider, useTreeOrder, type TreeOrder } from './contexts/TreeOrderContext.js';
+import {
+  childEnterOrders,
+  childOrders,
+  TreeOrderProvider,
+  useTreeOrder,
+  type TreeOrder,
+} from './contexts/TreeOrderContext.js';
 import { VisibilityParentScope } from './visibilityRange/VisibilityParentContext.js';
 import {
   InstancedScenePathsProvider,
@@ -65,6 +71,9 @@ import { GlbRootNode } from './internal/glb-scene-root/GlbRootNode.js';
 import { loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
+import { usePlaceViewport } from './contexts/ViewportPassRegistryContext.js';
+import { UndrawnViewportPlacements } from './UndrawnViewportPlacements.js';
+import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import { spaceFamilyOf } from '../godot/scene/parentSpace.js';
 
 /** Does this subtree contain anything that needs boolean evaluation? */
@@ -248,8 +257,8 @@ function PlainNode({
   const ownOrder = useTreeOrder();
   const inlineBase = inlineChildrenOrder ?? ownOrder;
   const inlineOrders = useMemo(
-    () => childOrders(inlineBase, node.children.length),
-    [inlineBase, node.children.length]
+    () => childEnterOrders(inlineBase, node.children),
+    [inlineBase, node.children]
   );
   const { hiddenNodePaths } = useSelection();
   const workspace = useCanvasWorkspace();
@@ -267,8 +276,11 @@ function PlainNode({
   const parentIsCanvasItem = useParentSpaceFamily() === 'CanvasItem';
 
   const wrapperRef = useNodeObjectRegistration(path);
+  // A viewport takes its place in the pass order from here: a Control-only one mounts its pass
+  // outside this walk.
+  usePlaceViewport(isViewportBoundary(node.type) ? path : null);
 
-  if (!drawsInWorkspace(node.type, workspace)) return null;
+  if (!drawsInWorkspace(node.type, workspace)) return <UndrawnViewportPlacements node={node} path={path} />;
 
   const sortsChildren = ysortsChildren(node);
   const inlineChildren = sortsChildren

@@ -17,7 +17,7 @@ import {
   luminanceReduceGlsl,
 } from '../../resources/environment/godotLuminance';
 import { drawFullScreen, fullScreenPass } from '../fullScreenPass';
-import { drawOffscreen } from '../offscreen';
+import { drawOffscreen } from '../offscreen/draw';
 import { createPassTarget } from './passTarget';
 
 /**

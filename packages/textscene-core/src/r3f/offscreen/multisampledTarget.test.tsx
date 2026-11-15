@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useMultisampledTarget } from './multisampledTarget';
-import { MSAA_DISABLED } from '../godot/rendering/msaa';
+import { MSAA_DISABLED } from '../../godot/rendering/msaa';
 import {
   DEPTH_COMPONENT24,
   fakeWebGL2Context,
@@ -11,7 +11,7 @@ import {
   RGBA16F,
   RGBA8,
   SRGB8_ALPHA8,
-} from './testing/fakeWebGL2Context';
+} from '../testing/fakeWebGL2Context';
 
 /** `Viewport.MSAA` modes (`scene/main/viewport.h`). */
 const MSAA_4X = 2;

@@ -30,9 +30,10 @@ vi.mock('../../../../r3f/controls/native/text/resolveNodeFontMetrics', async (im
   return { ...(await importOriginal<object>()), resolveNodeFontMetrics: () => shortFace };
 });
 
-function solveNode(text: string): SolveNode {
+function solveNode(text: string, placeholderText?: string): SolveNode {
   const properties: Partial<CodeEditProperties> = {
     text,
+    placeholderText,
     gutterDrawBookmarks: true,
     themeOverrideFontSizes: { font_size: 24 },
   };
@@ -41,11 +42,11 @@ function solveNode(text: string): SolveNode {
 }
 
 /** The x of the body text's group: the largest among the text-bearing groups. */
-async function bodyXFor(text: string): Promise<number> {
+async function bodyXFor(text: string, placeholderText?: string): Promise<number> {
   const rendered = await ReactThreeTestRenderer.create(
     <CodeEdit
       {...painterEnv()}
-      solveNode={solveNode(text)}
+      solveNode={solveNode(text, placeholderText)}
       rect={{ x: 0, y: 0, w: 300, h: 100 }}
       renderOrder={0}
     />
@@ -62,4 +63,9 @@ async function bodyXFor(text: string): Promise<number> {
 // `get_line_height()` (`code_edit.cpp:57`) is the tallest line: ceil(25.5 + 6) = 32 over the face's 24.
 it('widens the main gutter by a line that a hex-code box makes taller than the font', async () => {
   expect((await bodyXFor('a\nA一B')) - (await bodyXFor('a\nAB'))).toBe(8);
+});
+
+// `get_line_height()` reads the buffer, and an empty buffer has one empty line, whatever the placeholder holds.
+it('sizes the main gutter from the empty buffer, not from the placeholder', async () => {
+  expect((await bodyXFor('', 'A一B')) - (await bodyXFor('', 'AB'))).toBe(0);
 });

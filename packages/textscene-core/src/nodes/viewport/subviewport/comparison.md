@@ -76,6 +76,14 @@ A SubViewportContainer with `stretch` sizes its viewport before the first render
 
 Every sub-viewport is 32x32 with a red left half, and a 100x100 TextureRect shows it. A DISABLED viewport never renders, so its target holds (0, 0, 0, 0), which an opaque target shows as black. ONCE renders on the first frame after the scene loads. WHEN_VISIBLE renders from the frame after a consumer samples its target. WHEN_PARENT_VISIBLE renders in the frames its enclosing viewport renders, so a DISABLED parent stops it and not its WHEN_VISIBLE or ALWAYS siblings. A ONCE parent that samples a WHEN_VISIBLE child shows black where the child is, as the child has not rendered yet (`renderer_viewport.cpp:769-813`). A SubViewportContainer replaces the mode of its child: ALWAYS while the container is visible in the tree, DISABLED while it is not (`subviewport_container.cpp:116-128`). A viewport that holds nothing still gates the viewports inside it.
 
+## Order between viewports
+
+<!-- compare: image=unit-sub-viewport-level-order status=done fixture=unit-sub-viewport-level-order.tscn -->
+
+Godot sorts the viewports before it draws them (`renderer_viewport.cpp:91-125`), and the previewer draws them in that order. The deepest level of nested viewports draws first. The viewports of one level draw in tree order. A viewport that samples a deeper viewport outside its own subtree shows this frame's image. A viewport that samples a shallower one shows the last frame's image, also when the shallower one is earlier in the tree. So a ONCE sampler then shows the empty target.
+
+The fixture shows three ONCE samplers. A level-1 viewport samples one at level 3 and shows blue. A level-3 viewport samples one at level 1 and shows black. A level-2 viewport samples a later level-2 viewport and shows black.
+
 ## Clear mode
 
 <!-- compare: image=unit-sub-viewport-clear-mode status=done fixture=unit-sub-viewport-clear-mode.tscn -->

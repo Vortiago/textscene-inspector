@@ -84,16 +84,17 @@ export function CodeEdit(props: NativeControlComponentProps) {
     bidi,
   };
 
+  const lines = useMemo(() => (codeEditProps.text ?? '').split('\n'), [codeEditProps.text]);
+  // `get_line_height()` reads the buffer, never the placeholder (`text_edit.cpp:136-148`, `:4103`).
   const gutterRowHeightPx = useMemo(
     () =>
       textEditUnwrappedRowHeightPx(
-        drawn.lines,
+        lines,
         { fontSizePx, fontMetrics, tabStopsPx, preserveControl: codeEditProps.drawControlChars, bidi },
         lineSpacingPx
       ),
-    [drawn.lines, fontSizePx, fontMetrics, tabStopsPx, codeEditProps.drawControlChars, bidi, lineSpacingPx]
+    [lines, fontSizePx, fontMetrics, tabStopsPx, codeEditProps.drawControlChars, bidi, lineSpacingPx]
   );
-  const lines = useMemo(() => (codeEditProps.text ?? '').split('\n'), [codeEditProps.text]);
   const charWidth0Px = measureText ? measureText('0', fontSizePx, 0, fontMetrics).x : 0;
   const band = useMemo(
     () => codeEditGutterBand(codeEditProps, gutterRowHeightPx, charWidth0Px, Math.max(1, lines.length)),
