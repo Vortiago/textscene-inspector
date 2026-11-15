@@ -428,9 +428,7 @@ export class ResourceLoader {
    */
   provideFile(path: string): void {
     logger.info(`[ResourceLoader] provideFile: ${path}`);
-    // A file that appeared or went away edits the listing of each folder above it. A dialog keeps showing the old
-    // listing until the new one arrives, so a refresh replaces it where a clear would draw the folder empty.
-    // First, so a load outcome the sequence clears waits for the new listing.
+    // A refresh keeps a dialog's old listing, and runs first so an outcome waits for the new one.
     for (const folder of foldersAbove(path)) {
       if (this.directories.isCached(folder) || this.directories.isLoading(folder))
         this.directories.refresh(folder);

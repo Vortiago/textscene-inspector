@@ -1,4 +1,3 @@
-/** An instance of a scene Godot fails to load is a failed instance, as one of a missing scene. */
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';

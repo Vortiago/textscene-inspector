@@ -172,10 +172,7 @@ function locate(
   };
 }
 
-/**
- * Whether Godot fails to load the text file at `filePath`, which a property then reads as null. An
- * outcome still to load, or a source with none, loads.
- */
+/** An outcome still to load, and a source with none, loads. */
 function failsToLoad(files: FileSource, filePath: string): boolean {
   if (!files.loaded || !isGodotTextResourcePath(filePath)) return false;
   const outcome = files.loaded(LOAD_OUTCOMES as FileKind<object>, filePath) as LoadOutcome | null | undefined;

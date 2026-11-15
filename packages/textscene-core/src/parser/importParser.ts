@@ -62,7 +62,7 @@ export interface ParsedImportFile {
    * bake concern with no visual effect.
    */
   params: Record<string, string>;
-  /** False where `[remap] valid=false` records a failed import, which the loader refuses (resource_importer.cpp:113-116, :142-151). */
+  /** False where `[remap] valid=false` records a failed import (resource_importer.cpp:113-116). */
   isValid: boolean;
 }
 

@@ -1,5 +1,3 @@
-/** The first of a set of files that Godot fails to load, with each file's outcome requested and held. */
-
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { useResourceLoader } from '../useResource';
 import type { LoadFailure } from './loadOutcome';

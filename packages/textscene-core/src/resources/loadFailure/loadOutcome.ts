@@ -1,5 +1,3 @@
-/** Whether a file loads in Godot, or the chain of files down to the one that fails it. */
-
 import { isGodotTextResourcePath } from '../../godot/project/resourceFormats';
 
 export type LoadFailureCause = 'missing' | 'unparsed' | 'unimported';
@@ -13,7 +11,7 @@ export interface LoadFailure {
 
 export type LoadOutcome = { readonly isFailed: false } | LoadFailure;
 
-/** The files whose failure fails a text file, or why the file gave none: Godot cannot parse it, or the host could not read it. */
+/** The files whose failure fails a text file, or why it gave none. */
 export type FailingReads = readonly string[] | 'unparsed' | 'unread';
 
 export interface LoadFacts {
@@ -28,10 +26,7 @@ type WalkedFile = { readonly cause: LoadFailureCause } | { readonly reads: reado
 
 const LOADS: LoadOutcome = Object.freeze({ isFailed: false });
 
-/**
- * Rejects where a file that exists could not be read, so a read error of the host is no failure.
- * Each file is read once, a level at a time, so a file that many files read costs one read.
- */
+/** Rejects where a file that exists could not be read, so a read error of the host is no failure. */
 export async function loadOutcome(path: string, facts: LoadFacts): Promise<LoadOutcome> {
   const walked = new Map<string, WalkedFile>();
   let level = [path];

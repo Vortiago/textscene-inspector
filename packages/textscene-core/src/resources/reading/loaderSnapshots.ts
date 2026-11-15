@@ -32,11 +32,7 @@ export interface SnapshotSource {
   request(): void;
   /** `onStale` hears a load, a failure or a reload of a file the current snapshot read. */
   subscribe(onStale: () => void): () => void;
-  /**
-   * Each file the current snapshot read, and each `file::id` address it found in a loaded file, with
-   * its answer, for the host's **Missing resource** report. An address the file does not declare, and a file
-   * Godot fails to load, answer null.
-   */
+  /** Null for an address the file does not declare, and for a file Godot fails to load. */
   files(): ReadonlyMap<string, CachedFile<object>>;
 }
 
@@ -205,10 +201,7 @@ function keptWhileReloading<T extends object>(cache: ResourceProcessor<T>): Cach
   };
 }
 
-/**
- * The failed outcomes of `outcomes`, a file that loads read as one not yet known: a reader decides
- * only on a failure, so an outcome that arrives and loads starts no new snapshot.
- */
+// A load reads as unknown: a reader decides only on a failure, so a load starts no snapshot.
 function failuresOnly(outcomes: CacheSource<object>): CacheSource<object> {
   return {
     getCached(path) {

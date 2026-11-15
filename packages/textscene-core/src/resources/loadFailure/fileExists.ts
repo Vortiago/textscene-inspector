@@ -1,5 +1,3 @@
-/** Whether a file exists for Godot's loader, from the listing of its folder. */
-
 import { foldersAbove, type DirectoryListing } from '../directoryListing';
 import { importSidecarPath } from '../../godot/project/resourceFormats';
 
@@ -8,10 +6,7 @@ export function folderOf(path: string): string {
   return foldersAbove(path)[0] ?? 'res://';
 }
 
-/**
- * An imported file loads through its sidecar's remap (resource_importer.cpp:45). A null listing is a
- * host that cannot list, which finds every file, so no failure is claimed that the host cannot see.
- */
+/** A null listing finds every file. An import exists through its sidecar (resource_importer.cpp:45). */
 export function existsInListing(path: string, listing: DirectoryListing | null): boolean {
   return listing === null || listsName(listing, fileName(path)) || listsImportSidecar(path, listing);
 }
@@ -20,8 +15,7 @@ export function listsImportSidecar(path: string, listing: DirectoryListing | nul
   return listing !== null && listsName(listing, importSidecarPath(fileName(path)));
 }
 
-// Any case: Windows and macOS open a name in another case with a warning (file_access_windows.cpp:191,
-// file_access_unix.cpp:116), and the walk cannot tell which filesystem the project is on.
+// Any case, as the walk cannot tell the file system (file_access_windows.cpp:191, file_access_unix.cpp:116).
 function listsName(listing: DirectoryListing, name: string): boolean {
   const key = name.toLowerCase();
   return listing.kind === 'listed' && listing.entries.some((entry) => entry.name.toLowerCase() === key);

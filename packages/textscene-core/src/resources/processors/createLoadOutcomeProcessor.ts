@@ -1,5 +1,3 @@
-/** Whether each file loads in Godot, on the 'loadoutcome' bus slot. */
-
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import { loadOutcome, type LoadFacts, type LoadOutcome } from '../loadFailure/loadOutcome';

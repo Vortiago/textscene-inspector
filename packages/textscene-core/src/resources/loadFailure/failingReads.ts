@@ -1,5 +1,3 @@
-/** The files whose failure fails a text file as Godot's text loader reads it. */
-
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { RawNode, TscnExternalResource, TscnScene } from '../../parser/types';
 import {
@@ -30,8 +28,7 @@ export function resourceFailingReads(file: string, parsed: ParsedResource): stri
   return failingReads(file, parsed.extResources, sections, []);
 }
 
-// A section read of a failed file fails the file (resource_format_text.cpp:647-650, :776); a [node]
-// read is skipped (:288-290). A failed Resource() literal is a parse error anywhere (variant_parser.cpp:1170-1173).
+// A section read fails the file and a [node] read does not (resource_format_text.cpp:647-650, :288-290).
 function failingReads(
   file: string,
   externalResources: readonly TscnExternalResource[],
@@ -52,7 +49,7 @@ function failingReads(
   return [...paths].filter((path) => path.startsWith('res://'));
 }
 
-/** A `path=` relative to the file that writes it, as the text loader localises it (resource_format_text.cpp:508-510). */
+/** A `path=` relative to the file that writes it (resource_format_text.cpp:508-510). */
 export function extResourcePathIn(file: string, path: string): string {
   if (path.includes('://') || isAbsolutePath(path)) return simplifyResPath(path);
   return simplifyPath(pathJoin(getBaseDir(file), path));

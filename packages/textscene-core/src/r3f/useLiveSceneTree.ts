@@ -126,7 +126,7 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
    * with the first answer one got. Several trees share a version, and each keeps what it first read.
    */
   let treeReads = new Map<string, ParsedResource | null | undefined>();
-  /** Written only by `treeScenes` and `newTree`: whether each scene the trees of this version read had failed to load. */
+  /** Written only by `treeScenes` and `newTree`: whether each scene this version read had failed. */
   let sceneOutcomeReads = new Map<string, boolean>();
   const newTree = () => {
     ticks.version++;

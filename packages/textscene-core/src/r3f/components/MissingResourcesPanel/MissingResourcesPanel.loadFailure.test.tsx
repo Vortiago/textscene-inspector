@@ -1,4 +1,3 @@
-/** A missing row for a file Godot fails to load names the chain to the file that failed first, and takes that file. */
 import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';

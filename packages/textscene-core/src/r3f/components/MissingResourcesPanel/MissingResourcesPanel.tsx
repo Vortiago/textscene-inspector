@@ -92,8 +92,7 @@ interface MissingRowProps {
 }
 
 function MissingRow({ path, onUpload }: MissingRowProps) {
-  // The file a pick replaces. For a row that names a resource inside a `.tres` it is that file,
-  // and for a file that fails to load through another it is the file that failed first.
+  // A pick replaces the `.tres` a resource row names, or the file that failed first.
   const filePath = resourceFilePath(path);
   const failure = useFirstLoadFailure(useMemo(() => [filePath], [filePath]));
   const failsThroughAnother = failure !== null && failure.chain.length > 1;

@@ -1,13 +1,8 @@
-/** The words the preview shows for a file Godot fails to load. */
-
 import type { ParsedScene } from '../../core/SceneGraph';
 import { extResourcePathIn } from './failingReads';
 import type { LoadFailureCause } from './loadOutcome';
 
-/**
- * The error Godot prints for the read of `read` in `scene`, less its line number: an ext_resource
- * (resource_format_text.cpp:40, :152), else a `Resource()` literal in a [node] (:291).
- */
+/** Godot's error line, less its number (resource_format_text.cpp:40, :152, :291). */
 export function godotFailureLine(
   scene: Pick<ParsedScene, 'path' | 'externalResources'>,
   read: string

@@ -1,5 +1,3 @@
-/** Says when Godot's game would fail to load the scene the preview still draws, and why. */
-
 import { useMemo } from 'react';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import { sceneFailingReads } from '../../../resources/loadFailure/failingReads.js';
