@@ -30,6 +30,7 @@ import {
   labelUnwrappedShape,
   layoutLabelLines,
   windowWrappedLabel,
+  NO_HIDDEN_PARAGRAPH_LINES,
   labelFontHeightPx,
   type LabelLinePlacement,
   type LineTrim,
@@ -216,7 +217,8 @@ function LabelText({
   );
   // A height change windows the shaped lines again and does not shape them again.
   const shown = useMemo((): WrappedLabelWindow => {
-    if (!shaped) return { layout: sharedLayout!, trimmedLine: null, isLastParagraphCut: false };
+    if (!shaped)
+      return { layout: sharedLayout!, trimmedLine: null, hiddenParagraphLines: NO_HIDDEN_PARAGRAPH_LINES };
     const cut = {
       linesSkipped: props.linesSkipped ?? 0,
       maxLinesVisible: props.maxLinesVisible,
@@ -241,7 +243,7 @@ function LabelText({
     textTheme.fontSizePx,
     fontMetrics,
   ]);
-  const { layout, trimmedLine, isLastParagraphCut } = shown;
+  const { layout, trimmedLine, hiddenParagraphLines } = shown;
 
   // label.cpp:266-267 -- a non-empty tab_stops always adds AFTER_LAST_TAB,
   // on top of whatever the scene's own justification_flags already set.
@@ -282,7 +284,7 @@ function LabelText({
           trim,
           contentMargin,
           paragraphSpacingPx: textTheme.paragraphSpacingPx,
-          isLastParagraphCut,
+          hiddenParagraphLines,
         }
       ),
     [
@@ -297,7 +299,7 @@ function LabelText({
       solveNode.rtl,
       autowrapMode,
       trim,
-      isLastParagraphCut,
+      hiddenParagraphLines,
     ]
   );
 
