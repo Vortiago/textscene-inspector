@@ -11,6 +11,7 @@ import {
 } from '../../../godot/math/transform2d.js';
 import { storedTransform2D } from '../../../godot/math/real.js';
 import { MODIFICATION_STACK } from '../../../resources/skeleton/skeletonmodificationstack2d/index.js';
+import { nodeReference, type ResourceSnapshot } from '../../../resources/reading';
 import { liveScenePassResults, type LiveScenePass } from '../../../r3f/liveScenePass.js';
 import type { TscnNode } from '../../../parser/types.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
@@ -49,11 +50,11 @@ function storedPoseSource(tree: LiveTree): PoseSource<string> {
  * the position, rotation, scale and skew of the solved local transform, as `Node2D::set_transform`
  * stores them. A bone the stack leaves where it is has no entry.
  */
-export const solveSkeleton2DBones: LiveScenePass<NodePatch> = (tree) => {
+export const solveSkeleton2DBones: LiveScenePass<NodePatch> = (tree, snapshot) => {
   const patches = new Map<string, NodePatch>();
-  const rigs = liveScenePassResults(bindSkeleton2DRigs, tree);
+  const rigs = liveScenePassResults(bindSkeleton2DRigs, tree, snapshot);
   tree.fold<void, void>(undefined, (link, _inherited, descend) => {
-    if (link.step.node.type === 'Skeleton2D') solveSkeleton(link, tree, rigs, patches);
+    if (link.step.node.type === 'Skeleton2D') solveSkeleton(link, tree, snapshot, rigs, patches);
     descend();
   });
   return patches;
@@ -62,13 +63,14 @@ export const solveSkeleton2DBones: LiveScenePass<NodePatch> = (tree) => {
 function solveSkeleton(
   { path, step }: LiveLink,
   tree: LiveTree,
+  snapshot: ResourceSnapshot,
   rigs: ReadonlyMap<string, Skeleton2DRig>,
   patches: Map<string, NodePatch>
 ): void {
   const { modificationStack } = step.node.properties as Skeleton2DProperties;
   if (modificationStack === undefined) return;
   const rig = rigs.get(path);
-  const stack = tree.readResource(modificationStack, step.scope, MODIFICATION_STACK).value;
+  const stack = snapshot.read(nodeReference(modificationStack, step.scope), MODIFICATION_STACK).value;
   if (!rig || !stack) return;
   const targets = stackTargets(stackNodePaths(stack), path, tree, rigs);
   const anchors = new Set(anchorPathsOf(targets.values()));

@@ -6,7 +6,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { liveTreeOfText } from '../../../../r3f/liveSceneTree.testkit';
+import { liveTreeOfText, treeSnapshot } from '../../../../r3f/liveSceneTree.testkit';
 import type { NodePatches } from '../../../../r3f/nodePatch';
 import { resolveCsgPolygonPaths } from './csgPolygonPaths';
 import * as logger from '../../../../logger';
@@ -29,7 +29,8 @@ function patchesOf(
   scenes: Readonly<Record<string, string>> = {},
   placed: NodePatches = new Map()
 ): NodePatches {
-  return resolveCsgPolygonPaths(liveTreeOfText(content, scenes), placed);
+  const tree = liveTreeOfText(content, scenes);
+  return resolveCsgPolygonPaths(tree, treeSnapshot(tree), placed);
 }
 
 /** The path the pass resolves for the polygon at the live path `path`. */
@@ -108,6 +109,20 @@ curve = SubResource("Curve3D_road")`;
     const resolved = resolvedAt(parse(CHILD_SCENE), 'Root/Racetrack');
     expect(resolved).toBeDefined();
     expect(resolved!.curvePoints).toHaveLength(3);
+  });
+
+  it('resolves a curve that a .tres file holds, as the same curve built into the scene', () => {
+    const curveFile = `[gd_resource type="Curve3D" format=3]\n\n[resource]\n${CURVE.split('\n').slice(1).join('\n')}\n`;
+    const inFile = CHILD_SCENE.replace('SubResource("Curve3D_road")', 'ExtResource("1_curve")');
+    const content = `[gd_scene load_steps=2 format=3]\n\n[ext_resource type="Curve3D" path="res://road.tres" id="1_curve"]\n\n${inFile}\n`;
+    const tree = liveTreeOfText(content, {}, { 'res://road.tres': curveFile });
+
+    const fromFile = resolvedAt(
+      resolveCsgPolygonPaths(tree, treeSnapshot(tree), new Map()),
+      'Root/Racetrack'
+    );
+
+    expect(fromFile?.curvePoints).toEqual(resolvedAt(parse(CHILD_SCENE), 'Root/Racetrack')!.curvePoints);
   });
 
   it('leaves baseTransform null when path_local is on', () => {

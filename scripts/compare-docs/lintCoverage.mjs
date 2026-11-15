@@ -45,7 +45,8 @@ export function validatorsFor(type, validatorRegistry, baseTypes) {
   const visited = new Set();
   while (current && !visited.has(current)) {
     visited.add(current);
-    for (const key of validatorRegistry.getOwnKeys(current).sort()) {
+    const keys = [...validatorRegistry.getOwnKeys(current), ...validatorRegistry.derivedOwnKeys(current)];
+    for (const key of keys.sort()) {
       // A subclass key shadows the base's, exactly as findValidator resolves it.
       if (seen.has(key)) continue;
       seen.add(key);

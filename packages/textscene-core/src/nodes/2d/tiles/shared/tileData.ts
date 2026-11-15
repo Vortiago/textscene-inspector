@@ -6,9 +6,9 @@
  */
 
 import { warn } from '../../../../logger';
-import { ARRAY_LITERAL_RE, packedArrayLiteral } from '../../../../godot/variant/variantParser.js';
+import { packedArrayLiteral } from '../../../../godot/variant/variantParser.js';
 import { int32Elements } from '../../../../godot/variant/packedInt32.js';
-import { decodeBase64Bytes } from '../../../../godot/variant/packedBytes.js';
+import { decodeBase64Bytes, readPackedByteArrayLiteral } from '../../../../godot/variant/packedBytes.js';
 import type { Vector2 } from '../../../../godot/math/vector.js';
 
 /** One placed cell, normalized across both tile-data serializations. */
@@ -23,36 +23,7 @@ export interface PlacedCell {
   alternativeId: number;
 }
 
-const PACKED_BYTE_ARRAY_RE = packedArrayLiteral('PackedByteArray');
 const PACKED_INT32_ARRAY_RE = packedArrayLiteral('PackedInt32Array');
-/** `CryptoCore::b64_decode`'s alphabet, and the only padding it accepts. */
-const QUOTED_BASE64_RE = /^"([A-Za-z0-9+/]*={0,2})"$/;
-
-/**
- * Why Godot's text parser would refuse this `tile_map_data` literal. A fault is a
- * whole-file `ERR_PARSE_ERROR` (variant_parser.cpp:618-622), so the validator
- * reports it and the tile-data rule skips the literal rather than report twice.
- * A bare `[…]` of bytes is a literal too: PACKED_BYTE_ARRAY converts from ARRAY
- * (variant.cpp:772-778). Its body is decimal only, since a quoted element would
- * convert through `String::to_int` and is no base64 body.
- */
-export function readTileMapDataLiteral(
-  value: string
-): { fault: 'not-a-literal' } | { fault: 'invalid-base64' | null; body: string } {
-  const trimmed = value.trim();
-  const match = PACKED_BYTE_ARRAY_RE.exec(trimmed);
-  if (!match) {
-    const bare = ARRAY_LITERAL_RE.exec(trimmed)?.[1]!.trim();
-    return bare === undefined || bare.startsWith('"')
-      ? { fault: 'not-a-literal' }
-      : { fault: null, body: bare };
-  }
-  const body = match[1]!.trim();
-  if (body.startsWith('"') && !QUOTED_BASE64_RE.test(body)) {
-    return { fault: 'invalid-base64', body };
-  }
-  return { fault: null, body };
-}
 
 const CELL_BYTES = 12;
 /** Legacy `layer_N/tile_data` packs one cell per three int32s. */
@@ -61,7 +32,7 @@ const HEADER_BYTES = 2;
 const FORMAT_VERSION = 0;
 
 export function decodeTileMapData(value: string): PlacedCell[] | null {
-  const literal = readTileMapDataLiteral(value);
+  const literal = readPackedByteArrayLiteral(value);
   if (literal.fault === 'not-a-literal') return null;
 
   const bytes = decodeBytes(literal.body);

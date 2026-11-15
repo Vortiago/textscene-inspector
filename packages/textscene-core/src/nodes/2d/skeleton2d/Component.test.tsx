@@ -13,9 +13,8 @@ import { fireSceneRender, fireSceneRenderEnd } from '../../../r3f/testing/fireSc
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { OUTLINE_POINT_COUNT } from '../bone2d/boneKite';
-import { liveScenePassResults } from '../../../r3f/liveScenePass';
 import { solvedNodePatchesOf } from '../../../r3f/liveNodePatches';
-import { liveTreeOfText } from '../../../r3f/liveSceneTree.testkit';
+import { liveTreeOfText, runPass, treeSnapshot } from '../../../r3f/liveSceneTree.testkit';
 import { node2dWorldPosition } from '../../../r3f/node2dWorldTransform';
 import { solveSkeleton2DBones } from './solvedBones';
 import '../../../r3f/nodes/index';
@@ -414,8 +413,8 @@ describe('the solve of the Live scene tree', () => {
     'stands each bone where the drawn pose does for %s',
     async (_name, tscn) => {
       const tree = liveTreeOfText(tscn);
-      const moved = [...liveScenePassResults(solveSkeleton2DBones, tree).keys()];
-      const standing = solvedNodePatchesOf(tree);
+      const moved = [...runPass(solveSkeleton2DBones, tree).keys()];
+      const standing = solvedNodePatchesOf(tree, treeSnapshot(tree));
       const renderer = await render(tscn);
       startDraw(renderer);
 
@@ -432,6 +431,6 @@ describe('the solve of the Live scene tree', () => {
   it('moves no bone of a disabled stack', () => {
     const tree = liveTreeOfText(scene('enabled = false'));
 
-    expect(liveScenePassResults(solveSkeleton2DBones, tree).size).toBe(0);
+    expect(runPass(solveSkeleton2DBones, tree).size).toBe(0);
   });
 });

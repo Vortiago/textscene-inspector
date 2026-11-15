@@ -9,7 +9,7 @@
 import { useMemo } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
-import { applyRemoteTransforms } from '../nodes/shared/remotetransform/remoteTransforms.js';
+import { applyRemoteTransforms, type RelayPoses } from '../nodes/shared/remotetransform/remoteTransforms.js';
 import { resolveCsgPolygonPaths } from '../nodes/3d/csg/csgpolygon3d/csgPolygonPaths.js';
 import { solveSkeleton2DBones } from '../nodes/2d/skeleton2d/solvedBones.js';
 import { joinPath } from '../utils/nodePath.js';
@@ -19,10 +19,13 @@ import { perObject } from '../utils/perObject.js';
 import type { LiveTree } from './liveSceneTree.js';
 import {
   liveScenePassResults,
+  liveTreeResult,
   useLiveScenePass,
   useLiveScenePassSelection,
   type LiveScenePass,
+  type LiveTreeDerivation,
 } from './liveScenePass.js';
+import type { ResourceSnapshot } from '../resources/reading';
 import {
   NO_PATCHES,
   layeredPatches,
@@ -71,17 +74,27 @@ function mergedPatches(first: NodePatches, second: NodePatches): Map<string, Nod
 }
 
 /** The RemoteTransform pass over `tree`, run once for both passes below, over the bones the stacks solve. */
-const relayPosesOf = perObject((tree: LiveTree) =>
-  applyRemoteTransforms(tree, () => liveScenePassResults(solveSkeleton2DBones, tree))
-);
+const relayPoses: LiveTreeDerivation<RelayPoses> = (tree, snapshot) => {
+  // Asked at most once: a tree with no relay that reads a pose solves no stack, and each ask
+  // re-checks every read of the stacks.
+  let solvedBones: NodePatches | undefined;
+  return applyRemoteTransforms(
+    tree,
+    () => (solvedBones ??= liveScenePassResults(solveSkeleton2DBones, tree, snapshot))
+  );
+};
 
 /**
  * Every property patch of `tree`. The RemoteTransform pass runs before the CSGPolygon3D path pass,
  * since a path reads where the nodes ended up.
  */
-export const liveNodePatches: LiveScenePass<NodePatch> = (tree) => {
-  const { placed } = relayPosesOf(tree);
-  return keptPatches(previousNodePatches, tree, mergedPatches(placed, resolveCsgPolygonPaths(tree, placed)));
+export const liveNodePatches: LiveScenePass<NodePatch> = (tree, snapshot) => {
+  const { placed } = liveTreeResult(relayPoses, tree, snapshot);
+  return keptPatches(
+    previousNodePatches,
+    tree,
+    mergedPatches(placed, resolveCsgPolygonPaths(tree, snapshot, placed))
+  );
 };
 
 /**
@@ -89,10 +102,10 @@ export const liveNodePatches: LiveScenePass<NodePatch> = (tree) => {
  * node stands in the scene as Godot runs it, not what its file stores. The Cameras panel frames a
  * Camera2D with it.
  */
-export function solvedNodePatchesOf(tree: LiveTree): PatchLookup {
+export function solvedNodePatchesOf(tree: LiveTree, snapshot: ResourceSnapshot): PatchLookup {
   return layeredPatches(
-    liveScenePassResults(solveSkeleton2DBones, tree),
-    liveScenePassResults(liveNodePatches, tree)
+    liveScenePassResults(solveSkeleton2DBones, tree, snapshot),
+    liveScenePassResults(liveNodePatches, tree, snapshot)
   );
 }
 
@@ -100,9 +113,9 @@ export function solvedNodePatchesOf(tree: LiveTree): PatchLookup {
  * {@link liveNodePatches} with each mesh that draws behind its node moved to where Godot draws it.
  * Only the nodes the drawn transforms touch take a new patch, so only they are kept a second time.
  */
-const liveDrawnPatches: LiveScenePass<NodePatch> = (tree) => {
-  const patches = liveScenePassResults(liveNodePatches, tree);
-  const { drawn } = relayPosesOf(tree);
+const liveDrawnPatches: LiveScenePass<NodePatch> = (tree, snapshot) => {
+  const patches = liveScenePassResults(liveNodePatches, tree, snapshot);
+  const { drawn } = liveTreeResult(relayPoses, tree, snapshot);
   if (drawn.size === 0) return patches;
   const drawnOver = new Map<string, NodePatch>();
   for (const [path, patch] of drawn) drawnOver.set(path, { ...patches.get(path), ...patch });

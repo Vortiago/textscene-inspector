@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { applicableEntries, corpusRefusals } from './formatOnlyCorpus.mjs';
-import { FORMAT_ONLY_CORPUS, SETTER_TYPES } from './formatOnlyCorpus.data.mjs';
+import { FORMAT_ONLY_CORPUS } from './formatOnlyCorpus.data.mjs';
 import { ENGINE_CITE_RE } from '../../packages/textscene-core/src/linter/testing/engineCite.ts';
 
 const TYPE_STRING = 4;
@@ -141,11 +141,8 @@ describe('corpusRefusals', () => {
 });
 
 describe('the corpus data', () => {
-  it('cites an engine line for every literal and every setter type', () => {
-    const cites = [
-      ...FORMAT_ONLY_CORPUS.map((e) => [e.literal, e.cite]),
-      ...[...SETTER_TYPES].map(([label, e]) => [label, e.cite]),
-    ];
+  it('cites an engine line for every literal', () => {
+    const cites = FORMAT_ONLY_CORPUS.map((e) => [e.literal, e.cite]);
     expect(cites.length).toBeGreaterThan(80);
     expect(cites.filter(([, cite]) => !ENGINE_CITE_RE.test(cite))).toEqual([]);
   });

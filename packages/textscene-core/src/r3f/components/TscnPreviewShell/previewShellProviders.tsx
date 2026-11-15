@@ -8,6 +8,7 @@ import { HierarchyProvider, type HierarchyContextValue } from '../../contexts/Hi
 import { SelectionProvider } from '../../contexts/SelectionContext.js';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
+import { LiveFilesHost } from '../../LiveFilesHost.js';
 import { UndrawnMeshesProvider } from '../../contexts/UndrawnMeshesContext.js';
 import { EmptyShapesProvider } from '../../contexts/EmptyShapesContext.js';
 import {
@@ -70,6 +71,7 @@ export function previewShellProviders({
     ),
     (children) => (
       <MissingResourcesProvider onMissingPathsChange={onMissingPathsChange}>
+        <LiveFilesHost />
         {children}
       </MissingResourcesProvider>
     ),

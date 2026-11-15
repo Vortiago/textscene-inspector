@@ -222,8 +222,27 @@ an arm with `groundedArm(ruleName, grounding)`. Only an `engine` arm writes its 
 - Reference a shared dependency from the pnpm catalog as `"catalog:"`.
 - Log with `logger.info` and a `[Category]` prefix in core. Keep `error` and `warn` for real
   problems.
-- Write a comment only for non-obvious information, with no issue or work-item reference.
+- Write a comment to the rules in Comments below.
 - Change the generator, never the text of a generated file or a `lint:begin` section.
+
+### Comments
+
+These rules win over the comment length and the module opening of `.claude/rules/clean-code-rules.md`
+in this repository. `pnpm comments:check` fails on a comment the change adds or changes that breaks
+one of the first three. CI and the push run it. A comment no change touches stands until one does.
+
+- Write a comment in one line of at most 110 columns, and only for what the code cannot say: why it
+  is so, or where it departs from Godot.
+- Write no comment above the first code of a file. The file name and its exports say what it holds.
+  A design reason goes in its ADR.
+- Write no issue or PR number. Git holds the history.
+- Cite Godot as a bare reference, such as `label.cpp:272`, and do not retell what Godot does there.
+  Ported behaviour and a setter fact keep their cite.
+- State what is true now. "Previously", "moved from" and "no longer" go in the commit message.
+- Repeat no name or type that the code states.
+
+The check leaves out what a tool reads: tag lines (`@param`, `@returns`, `@canonical`), directives
+(`eslint-disable`, `@ts-expect-error`), a licence and a generated file.
 
 ### One canonical helper for each job
 

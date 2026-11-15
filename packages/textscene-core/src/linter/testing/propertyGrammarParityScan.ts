@@ -165,6 +165,6 @@ export function getInheritedParserProps(nodeType: string): Set<string> {
  * Null for a shared helper that registers nothing.
  */
 export function extractNodeType(src: string): string | null {
-  const m = /register(?:All|Unavailable)\s*\(\s*'([^']+)'/.exec(src);
+  const m = /register(?:All|Unavailable|PropertyFacts)\s*\(\s*'([^']+)'/.exec(src);
   return m ? m[1]! : null;
 }

@@ -10,9 +10,10 @@
  */
 
 import { halfOfInt } from '../../../godot/scene/window';
-import { AutowrapMode, TextDirection } from '../../../godot/text/textServerEnums';
+import { TextDirection } from '../../../godot/text/textServerEnums';
 import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
-import { shapeText, type TextLayoutResult } from '../../../r3f/controls/native/text/textLayout';
+import type { TextLayoutResult } from '../../../r3f/controls/native/text/textLayout';
+import { shapeTextLine } from '../../../r3f/controls/native/text/textLine';
 import type { Vector2 } from '../../../godot/math/vector';
 
 /** The width a title may take: what the border's margins and the close offset leave (`:363`). */
@@ -47,21 +48,11 @@ interface TitleShapeOptions {
   isRtl: boolean;
 }
 
-/**
- * The title as one `TextLine` (`viewport.cpp:374`): no wrap and no mandatory break, so a newline
- * stays inside the line at zero width.
- */
+/** The title as one `TextLine` (`viewport.cpp:374`). */
 export function shapeTitle(
   title: string,
   { fontSizePx, fontMetrics, isRtl }: TitleShapeOptions
 ): TextLayoutResult {
-  return shapeText(title, {
-    direction: isRtl ? TextDirection.TEXT_DIRECTION_RTL : TextDirection.TEXT_DIRECTION_LTR,
-    fontSizePx,
-    boxWidthPx: 0,
-    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-    lineSpacingPx: 0,
-    fontMetrics,
-    breakMandatory: false,
-  });
+  const direction = isRtl ? TextDirection.TEXT_DIRECTION_RTL : TextDirection.TEXT_DIRECTION_LTR;
+  return shapeTextLine(title, { direction, fontSizePx, fontMetrics });
 }

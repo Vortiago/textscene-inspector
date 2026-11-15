@@ -7,3 +7,12 @@
  * @example `scene/3d/light_3d.cpp:389` and `light_3d.cpp:389` both pass.
  */
 export const ENGINE_CITE_RE = /\.(cpp|h|glsl):\d+/;
+
+/** @example `ClassDB 4.6.3: Camera3D.near` */
+const CAPTURE_CITE_RE = /\bClassDB \d+\.\d+\.\d+: \w+\.\S+/;
+
+// ClassDB cannot report a refusal, so only a hint may cite the capture.
+export function citesItsSource(grounding: { kind: 'enforced' | 'hinted'; cite: string }): boolean {
+  if (ENGINE_CITE_RE.test(grounding.cite)) return true;
+  return grounding.kind === 'hinted' && CAPTURE_CITE_RE.test(grounding.cite);
+}

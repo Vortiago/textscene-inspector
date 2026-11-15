@@ -6,9 +6,12 @@
 
 import { validatorRegistry, type ValidatorRegistry } from '../ValidatorRegistry.js';
 import type { PropertyValidator } from '../propertyValidator.js';
+import {
+  NODE_CLASS_PROPERTIES,
+  RESOURCE_CLASS_PROPERTIES,
+} from '../../godot/classdb/classProperties.generated.js';
 
-/** Which map a registration came from. */
-type KeyKind = 'declaration' | 'removal';
+type KeyKind = 'declaration' | 'removal' | 'derived';
 
 /**
  * One key one type registered, spelled as the registration spells it. Roots
@@ -68,10 +71,7 @@ interface WalkOptions {
   readonly atLeast?: number;
 }
 
-/**
- * Every key any type registered, declarations then removals, in two walks: a
- * removal-only type never appears in the validator map.
- */
+// Removals walk apart: a removal-only type never appears in the validator map.
 export function registeredKeys(registry: ValidatorRegistry = validatorRegistry): readonly RegisteredKey[] {
   const out: RegisteredKey[] = [];
   for (const nodeType of registry.typesWithRegistrations()) {
@@ -82,6 +82,13 @@ export function registeredKeys(registry: ValidatorRegistry = validatorRegistry):
   for (const [nodeType, keys] of registry.removedKeysByType()) {
     for (const key of keys) {
       out.push({ nodeType, key, kind: 'removal' });
+    }
+  }
+  for (const table of [NODE_CLASS_PROPERTIES, RESOURCE_CLASS_PROPERTIES]) {
+    for (const [nodeType, rows] of Object.entries(table)) {
+      for (const [key] of rows) {
+        if (registry.isDerived(nodeType, key)) out.push({ nodeType, key, kind: 'derived' });
+      }
     }
   }
   return out;

@@ -6,6 +6,7 @@
  */
 
 import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
+import type { ResourceSnapshot } from '../../../resources/reading';
 import type { LiveTree } from '../../../r3f/liveSceneTree.js';
 import { keptPerLivePath } from '../../../r3f/keptPerLivePath.js';
 import { bindSkeleton2DRigs } from '../skeleton2d/skeletonRig.js';
@@ -35,7 +36,10 @@ export interface BoneJoint {
 const kept = keptPerLivePath<BoneKiteSource>();
 
 /** The kite source of each Bone2D of `tree`, by the live path of the bone. */
-export function bindBoneChildren(tree: LiveTree): ReadonlyMap<string, BoneKiteSource> {
+export function bindBoneChildren(
+  tree: LiveTree,
+  snapshot: ResourceSnapshot
+): ReadonlyMap<string, BoneKiteSource> {
   const bones: { path: string; node: object; children: string[] }[] = [];
   const childrenOf = new Map<string, string[]>();
   tree.fold<string | null, void>(null, ({ step, path }, parentBone, descend) => {
@@ -47,7 +51,7 @@ export function bindBoneChildren(tree: LiveTree): ReadonlyMap<string, BoneKiteSo
     bones.push({ path, node: step.node, children });
   });
   const joints = new Map<string, BoneJoint>();
-  for (const [skeletonPath, rig] of liveScenePassResults(bindSkeleton2DRigs, tree)) {
+  for (const [skeletonPath, rig] of liveScenePassResults(bindSkeleton2DRigs, tree, snapshot)) {
     for (const [bonePath, index] of rig.indexOf) joints.set(bonePath, { skeletonPath, index });
   }
   return new Map(

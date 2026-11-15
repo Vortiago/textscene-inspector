@@ -22,13 +22,7 @@ function check(property: string, value: string) {
  * (cpp:32) binds only methods, and `_validate_property` (cpp:34-58) only re-hints and hides keys.
  * Node's `physics_interpolation_mode` (`overrides=` in the XML) arrives through the base-walk.
  */
-const KEYS: string[] = [
-  'bone_name',
-  'bone_idx',
-  'override_pose',
-  'use_external_skeleton',
-  'external_skeleton',
-];
+const KEYS: string[] = ['bone_idx', 'override_pose', 'use_external_skeleton', 'external_skeleton'];
 /** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 

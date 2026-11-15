@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnScene } from '../../../parser/types';
 import { liveTreeOf } from '../../../r3f/liveSceneTree';
-import { contextOver } from '../../../r3f/liveSceneTree.testkit';
+import { contextOver, runPass } from '../../../r3f/liveSceneTree.testkit';
 import { identityTransform3D, multiplyTransform3D, type Transform3D } from '../../../godot/math/transform3d';
 import type { SkinBind } from '../../../resources/skin/types';
 import type { Quaternion } from '../../../godot/math/quaternion';
@@ -55,7 +55,7 @@ function boundSkinAt(
   const loaded = Object.fromEntries(
     Object.entries(scenes).map(([scenePath, text]) => [scenePath, parse(text)])
   );
-  return bindMeshesToSkeletons(liveTreeOf(main.nodes, contextOver(main, loaded))).get(path);
+  return runPass(bindMeshesToSkeletons, liveTreeOf(main.nodes, contextOver(main, loaded))).get(path);
 }
 
 /** The skin matrices of {@link boundSkinAt}. */
@@ -447,7 +447,7 @@ remote_path = NodePath("../Target")
   it('hands back the same skin where a later load leaves the inputs as they are', () => {
     const main = parse(modified(COPY_B2_ROTATION_TO_B1));
     const skinOfLoad = () =>
-      bindMeshesToSkeletons(liveTreeOf(main.nodes, contextOver(main, {}))).get('Root/Mesh');
+      runPass(bindMeshesToSkeletons, liveTreeOf(main.nodes, contextOver(main, {}))).get('Root/Mesh');
 
     expect(skinOfLoad()).toBe(skinOfLoad());
   });
@@ -465,7 +465,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
 `;
     const main = parse(modified(copyNodePosition, BONES, target));
     const skinOfLoad = () =>
-      bindMeshesToSkeletons(liveTreeOf(main.nodes, contextOver(main, {}))).get('Root/Mesh');
+      runPass(bindMeshesToSkeletons, liveTreeOf(main.nodes, contextOver(main, {}))).get('Root/Mesh');
 
     expect(skinOfLoad()).toBe(skinOfLoad());
   });
@@ -484,7 +484,7 @@ settings/0/relative = false
     const main = parse(modified(copyNodePosition, BONES, targetAt(1)));
     const moved = parse(modified(copyNodePosition, BONES, targetAt(2)));
     const skinOf = (scene: TscnScene) =>
-      bindMeshesToSkeletons(liveTreeOf(scene.nodes, contextOver(scene, {}))).get('Root/Mesh');
+      runPass(bindMeshesToSkeletons, liveTreeOf(scene.nodes, contextOver(scene, {}))).get('Root/Mesh');
 
     expect(skinOf(moved)).not.toBe(skinOf(main));
   });

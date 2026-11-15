@@ -86,7 +86,7 @@ Strict parsing format-checks these `TileMapLayer` properties, plus 12 inherited 
 | `occlusion_enabled` | true or false |  |
 | `physics_quadrant_size` | integer >= 1 | error below |
 | `rendering_quadrant_size` | integer >= 1 | error below |
-| `tile_map_data` | PackedByteArray(…) int array of bytes, or a base64-quoted PackedByteArray("…") (decoded by the tilemaplayer-invalid-tile-data rule) |  |
+| `tile_map_data` | PackedByteArray(…), its base64 body PackedByteArray("…"), Array[int]([…]) or […] |  |
 | `tile_set` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `use_kinematic_bodies` | true or false |  |
 | `x_draw_order_reversed` | true or false |  |

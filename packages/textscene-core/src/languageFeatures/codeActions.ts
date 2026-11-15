@@ -6,7 +6,8 @@
  */
 
 import { canonicalPropertyName, isDeprecatedPropertyName } from '../godot/classdb/deprecated.js';
-import { classProperties, isKnownClass, nodeClassNames, resourceClassNames } from './classInfo.js';
+import { isKnownClass, nodeClassNames, resourceClassNames } from './classInfo.js';
+import { classProperties } from '../godot/classdb/classProperty.js';
 import type { DocumentSection, LanguageDocument, PropertySlot } from './document.js';
 import { nearestName } from './nearest.js';
 import { headingAttribute, lineRange, propertyKeySpan } from './ranges.js';

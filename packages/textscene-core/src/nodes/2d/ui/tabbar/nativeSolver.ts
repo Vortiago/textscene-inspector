@@ -18,7 +18,7 @@ import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { shapeText } from '../../../../r3f/controls/native/text/textLayout';
+import { shapeTextLine } from '../../../../r3f/controls/native/text/textLine';
 import { resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { fitIconSize } from '../../../../r3f/controls/native/buttonBase';
 import type { TabBarProperties, TabBarTabProperties } from './types';
@@ -26,7 +26,7 @@ import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { TAB_BAR_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-import { AutowrapMode, TextDirection } from '../../../../godot/text/textServerEnums';
+import { TextDirection } from '../../../../godot/text/textServerEnums';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
   controlBidiOptions,
@@ -193,23 +193,13 @@ export function isCloseButtonVisible(policy: number, index: number, currentTab: 
 /** A tab's own `text_direction` and `language`, which no scene sets (`tab_bar.h:77`): the layout direction and the locale. */
 const TAB_TITLE_BIDI = { textDirection: TextDirection.TEXT_DIRECTION_INHERITED, language: '' };
 
-/**
- * Natural, untruncated text: TabBar never wraps and sets no `line_spacing` on `text_buf`, like
- * `buttonBase.ts`'s `shapeButtonLabel`, but TabBar is not a Button. `_shape` takes the layout
- * direction (`tab_bar.cpp:358-362`).
- */
+/** A tab's untruncated title, in the layout direction (`tab_bar.cpp:358-362`). */
 export function shapeTabLabel(
   text: string,
   env: ControlTextEnv,
   font: { fontSizePx: number; fontMetrics?: FontMetrics }
 ): TextLayoutResult {
-  return shapeText(text, {
-    ...controlBidiOptions(TAB_TITLE_BIDI, env),
-    ...font,
-    boxWidthPx: 0,
-    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-    lineSpacingPx: 0,
-  });
+  return shapeTextLine(text, { ...controlBidiOptions(TAB_TITLE_BIDI, env), ...font });
 }
 
 export interface TabLayoutInput {

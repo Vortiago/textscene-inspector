@@ -19,7 +19,7 @@ Strict parsing format-checks these `AnimatedSprite3D` properties, plus 20 inheri
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `animation` | quoted string or &"name" |  |
-| `autoplay` | quoted string or &"name" |  |
+| `autoplay` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `frame` | integer >= 0 | error below |
 | `frame_progress` | float |  |
 | `speed_scale` | float |  |

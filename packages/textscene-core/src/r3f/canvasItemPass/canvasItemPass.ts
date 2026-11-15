@@ -99,9 +99,9 @@ const TREE_TOP: Above = { item: null, visibleInTree: true, writes: NOTHING_WRITT
  * RemoteTransform2D pushes is in its fields. A node that is no CanvasItem, a CanvasLayer among
  * them, gets no result, and its children start a chain (`canvas_item.cpp:235-253`).
  */
-export const canvasItemPass: LiveScenePass<CanvasItemPassResult> = (tree) => {
+export const canvasItemPass: LiveScenePass<CanvasItemPassResult> = (tree, snapshot) => {
   const results = new Map<string, CanvasItemPassResult>();
-  const patches = liveScenePassResults(liveNodePatches, tree);
+  const patches = liveScenePassResults(liveNodePatches, tree, snapshot);
   tree.fold<Above, void>(TREE_TOP, ({ raw, step, path }, above, descend) => {
     const node = patchedNode(step.node, patches.get(path));
     const fields = canvasItemFieldsOf(node);

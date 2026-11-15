@@ -19,13 +19,12 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { shapeText } from '../../../../r3f/controls/native/text/textLayout';
+import { shapeTextLine } from '../../../../r3f/controls/native/text/textLine';
 import { resolveRangeValue, type RangeProperties, type RangeValueOrder } from '../shared/range';
 import { rect2Intersection } from '../../../../godot/math/rect2.js';
 import type { ProgressBarProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector.js';
 import { isEqualApprox } from '../../../../godot/math/math.js';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { formatControlPercent, type Numerals } from '../../../../godot/text/numberFormat';
 import { ProgressBarFillMode } from '../../../../godot/scene/gui';
 
@@ -57,13 +56,7 @@ const progressBarMinimumSize: MinimumSizeFn = (n, ctx) => {
   if (showPercentage && ctx.measureText) {
     const { fontSizePx } = progressBarTextTheme(n, props);
     const fontMetrics = resolveNodeFontMetrics(n, PROGRESS_BAR_THEME_FONT_KEY);
-    const layout = shapeText('100%', {
-      fontSizePx,
-      boxWidthPx: 0,
-      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-      lineSpacingPx: 0,
-      fontMetrics,
-    });
+    const layout = shapeTextLine('100%', { fontSizePx, fontMetrics });
     height = Math.max(height, backgroundMargin.y + layout.heightPx);
   } else if (!showPercentage) {
     width = Math.max(width, 1);
