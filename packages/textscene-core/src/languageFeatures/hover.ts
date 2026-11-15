@@ -8,7 +8,8 @@
 import { canonicalPropertyName, isDeprecatedPropertyName } from '../godot/classdb/deprecated.js';
 import { variantTypeName } from '../godot/variant/variantType.js';
 import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
-import { findClassProperty, isKnownClass, slotProperty, type ClassProperty } from './classInfo.js';
+import { isKnownClass, slotProperty } from './classInfo.js';
+import { findClassProperty, type ClassProperty } from '../godot/classdb/classProperty.js';
 import { classDocsUrl, propertyDocsUrl } from './docs.js';
 import type { DocumentSection, LanguageDocument, PropertyLocation, PropertySlot } from './document.js';
 import { acceptedResourceTypes, enumEntriesOf, flagLabels, rangeHint, rangeSuffix } from './hints.js';
