@@ -130,6 +130,13 @@ describe('releasePositionalShadowAtlas', () => {
     expect(frees()).toBe(1);
   });
 
+  it('shrinks to one texel when the last holder lets go, as the shadow pass allocates it for any program', () => {
+    const holder = {};
+    target.holdPositionalShadowAtlas(holder, 4096);
+    target.releasePositionalShadowAtlas(holder);
+    expect(target.positionalShadowAtlas().width).toBe(1);
+  });
+
   it('shrinks the atlas to the holders that remain', () => {
     const [small, large] = [{}, {}];
     target.holdPositionalShadowAtlas(small, 2048);

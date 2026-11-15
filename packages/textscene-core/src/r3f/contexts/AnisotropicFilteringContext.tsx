@@ -4,8 +4,7 @@
  * subtree provides the authored level and every other subtree reads the project's.
  */
 import { createContext, useContext, type ReactNode } from 'react';
-import { projectAnisotropicFilteringLevel } from '../../parser/projectSettingsParser';
-import { useProjectSettings } from './ProjectSettingsContext';
+import { useRootViewportDescription } from '../viewportRender/useRootViewportDescription';
 
 /** Undefined: the viewport above authors no level, so the project's holds. */
 const AnisotropicFilteringContext = createContext<number | undefined>(undefined);
@@ -25,6 +24,6 @@ export function AnisotropicFilteringProvider({
 
 export function useAnisotropicFilteringLevel(): number {
   const viewportLevel = useContext(AnisotropicFilteringContext);
-  const { settings } = useProjectSettings();
-  return viewportLevel ?? projectAnisotropicFilteringLevel(settings);
+  const rootLevel = useRootViewportDescription().anisotropicLevel;
+  return viewportLevel ?? rootLevel;
 }

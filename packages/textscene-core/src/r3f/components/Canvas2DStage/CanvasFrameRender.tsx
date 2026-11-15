@@ -10,8 +10,7 @@
 
 import { useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { projectTransparentBackground } from '../../../parser/projectSettingsParser.js';
-import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
+import { useRootViewportDescription } from '../../viewportRender/useRootViewportDescription.js';
 import { createCanvasFrame } from './canvasFrame.js';
 import { useMultisampledTarget } from '../../offscreen/multisampledTarget.js';
 import { viewportTransfer } from '../../texelCopy.js';
@@ -26,11 +25,11 @@ const OWNS_THE_RENDER = 1;
 
 /** Draws the canvas through `steps`, the frame steps of the canvas it draws. */
 export function CanvasFrameRender({ steps }: { steps: CanvasFrameSteps }) {
-  const { settings, msaaModes } = useProjectSettings();
+  const root = useRootViewportDescription();
   const space = useRootCanvasColorSpace();
   const createRootCanvasFrame = useCallback(() => createCanvasFrame(space), [space]);
-  const frame = useMultisampledTarget(msaaModes.msaa2D, createRootCanvasFrame);
-  const isTransparent = projectTransparentBackground(settings);
+  const frame = useMultisampledTarget(root.msaa2D, createRootCanvasFrame);
+  const isTransparent = root.transparentBackground;
   // The drawing buffer takes sRGB numbers: the blit converts an HDR root's linear frame (`blit.glsl:136`).
   const colour = space.isLinear ? 'encode' : 'none';
   const gl = useThree((state) => state.gl);

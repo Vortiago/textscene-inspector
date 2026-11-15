@@ -26,7 +26,6 @@ import { AnisotropicFilteringProvider } from '../../../r3f/contexts/AnisotropicF
 import { CanvasOverWorldScopeProvider } from './canvasOverWorldScope';
 import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { useSceneShadowFit } from '../../../r3f/SceneShadowFitter';
-import { useRootViewportDescription } from '../../../r3f/viewportRender/useRootViewportDescription.js';
 import { useSceneDepthPrepass } from '../../../r3f/depthPrepass/SceneDepthPrepass';
 import {
   renderWithShadowAtlas,
@@ -180,7 +179,7 @@ export function OffscreenViewportPass({
   // and draws its own depth prepass. An inline pass renders the parent scene, which its own canvas
   // serves, the canvas's world serves its own scene, and a 2D portal holds no 3D surface.
   const portalLightScene = portals3D && !drawnCanvasWorld ? passScene : null;
-  useSceneShadowFit(portalLightScene, useRootViewportDescription().positionalShadowAtlas);
+  useSceneShadowFit(portalLightScene);
   useSceneDepthPrepass(portalLightScene);
   const shadowAtlas = useViewportShadowAtlas(properties);
   const projectMipmapBias = useProjectTextureMipmapBias();

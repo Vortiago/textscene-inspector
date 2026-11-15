@@ -37,6 +37,7 @@ function fakeRenderer(): { renderer: THREE.WebGLRenderer; threePass: ReturnType<
     getActiveMipmapLevel: () => 0,
     setRenderTarget: vi.fn(),
     initRenderTarget: vi.fn(),
+    properties: { get: () => ({}) },
     getDrawingBufferSize: (size: THREE.Vector2) => size.set(955, 756),
     ...profiledRendererMembers(),
   };
@@ -85,6 +86,25 @@ describe('installShadowPass', () => {
     expect(vi.mocked(renderer.initRenderTarget).mock.invocationCallOrder[0]).toBeLessThan(
       threePass.mock.invocationCallOrder[0]!
     );
+  });
+
+  it('binds the render’s own target again after it allocates the atlas', () => {
+    const { renderer } = fakeRenderer();
+    installShadowPass(renderer);
+    renderer.shadowMap.render([], new THREE.Scene(), new THREE.PerspectiveCamera());
+    expect(renderer.setRenderTarget).toHaveBeenCalledWith(renderer.getRenderTarget(), 0, 0);
+    expect(vi.mocked(renderer.setRenderTarget).mock.invocationCallOrder[0]).toBeGreaterThan(
+      vi.mocked(renderer.initRenderTarget).mock.invocationCallOrder[0]!
+    );
+  });
+
+  it('allocates nothing once the atlas has its framebuffer (edge case)', () => {
+    const { renderer } = fakeRenderer();
+    Object.assign(renderer, { properties: { get: () => ({ __webglFramebuffer: {} }) } });
+    installShadowPass(renderer);
+    renderer.shadowMap.render([], new THREE.Scene(), new THREE.PerspectiveCamera());
+    expect(renderer.initRenderTarget).not.toHaveBeenCalled();
+    expect(renderer.setRenderTarget).not.toHaveBeenCalled();
   });
 
   it('runs three’s pass, then copies each omni light that holds a slot', () => {

@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneShadowFitter, useSceneShadowFit } from './SceneShadowFitter';
-import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../godot/scene/viewport';
 import { directionalShadowUserData } from './directionalShadow/declaration';
 import { splitSunOf } from './directionalShadow/splitSun';
 import { positionalShadowUserData } from './positionalShadow/declaration';
@@ -257,7 +256,7 @@ describe('<SceneShadowFitter> directional fit on its own', () => {
 
 describe('useSceneShadowFit', () => {
   function FitScene({ scene }: { scene: THREE.Scene | null }) {
-    useSceneShadowFit(scene, ROOT_POSITIONAL_SHADOW_ATLAS);
+    useSceneShadowFit(scene);
     return null;
   }
 

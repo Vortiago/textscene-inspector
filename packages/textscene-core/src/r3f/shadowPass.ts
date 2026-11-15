@@ -104,9 +104,7 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
     // Three's pass draws no map with none to draw (r187 `WebGLShadowMap.js:94-97`).
     const isTimed = draws && lights.length > 0 && !isReading;
     if (isTimed) beginStep(renderer, 'Shadows');
-    // Every lit program samples the atlas, even with no slot drawn: a size of 0 or every light culled
-    // draws none, and WebGL refuses a draw that samples an unallocated depth texture.
-    renderer.initRenderTarget(positionalShadowAtlas());
+    allocatePositionalShadowAtlas(renderer);
     threePass.draw(lights, scene, camera);
     copyOmniShadows(renderer, copy, copied);
     drawProjectedShadows(threePass, projected, scene, camera);
@@ -127,6 +125,28 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
     writeFramebufferHeight(renderer);
   };
   return readers;
+}
+
+/**
+ * Every lit program samples the atlas, even with no slot drawn: a size of 0 or every light culled
+ * draws none, and WebGL refuses a draw that samples an unallocated depth texture. An allocation binds
+ * the canvas's framebuffer (r187 `WebGLTextures.js:2042`), and three's pass restores no target when it
+ * draws nothing, so the render's own target is bound again.
+ */
+function allocatePositionalShadowAtlas(renderer: THREE.WebGLRenderer): void {
+  const atlas = positionalShadowAtlas();
+  if (isAllocated(renderer, atlas)) return;
+  const target = renderer.getRenderTarget();
+  const face = renderer.getActiveCubeFace();
+  const level = renderer.getActiveMipmapLevel();
+  renderer.initRenderTarget(atlas);
+  renderer.setRenderTarget(target, face, level);
+}
+
+/** Whether three has built `target`'s framebuffer in `renderer` (r187 `WebGLRenderer.js:3613`). */
+function isAllocated(renderer: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget): boolean {
+  const properties = renderer.properties.get(target) as { __webglFramebuffer?: unknown };
+  return properties.__webglFramebuffer !== undefined;
 }
 
 function readMaps(readers: Readers, scene: THREE.Object3D, camera: THREE.Camera): void {

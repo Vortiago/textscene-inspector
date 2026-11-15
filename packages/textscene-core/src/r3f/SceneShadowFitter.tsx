@@ -10,7 +10,6 @@
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
-import type { PositionalShadowAtlasSettings } from '../godot/rendering/lights/positionalShadowAtlas.js';
 import {
   fitSceneDirectionalShadows,
   releaseSceneLights,
@@ -69,15 +68,12 @@ function prepareSceneLights(
 
 /**
  * Runs the light pass before every render of `scene`, until unmount. A render outside any
- * SubViewport pass is the main view's, which takes the root viewport's atlas, built from
- * `rootAtlasSettings` and built again when they change by value. Unmount hands each declared
- * directional light its own shading and layers back. Null runs nothing.
+ * SubViewport pass is the main view's, which takes the root viewport's atlas, built again when its
+ * settings change by value. Unmount hands each declared directional light its own shading and
+ * layers back. Null runs nothing.
  */
-export function useSceneShadowFit(
-  scene: THREE.Scene | null,
-  rootAtlasSettings: PositionalShadowAtlasSettings
-): void {
-  const settings = useByValue(rootAtlasSettings, sameData);
+export function useSceneShadowFit(scene: THREE.Scene | null): void {
+  const settings = useByValue(useRootViewportDescription().positionalShadowAtlas, sameData);
   useEffect(() => {
     if (!scene) return undefined;
     const rootAtlas = new ViewportShadowAtlas(settings);
@@ -95,10 +91,6 @@ export function useSceneShadowFit(
 
 /** Mounted once per 3D canvas, for the canvas's own scene. */
 export function SceneShadowFitter() {
-  const { positionalShadowAtlas } = useRootViewportDescription();
-  useSceneShadowFit(
-    useThree((state) => state.scene),
-    positionalShadowAtlas
-  );
+  useSceneShadowFit(useThree((state) => state.scene));
   return null;
 }

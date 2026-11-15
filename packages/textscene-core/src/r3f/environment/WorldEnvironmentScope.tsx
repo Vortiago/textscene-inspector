@@ -31,7 +31,6 @@ import { createWorldGroup, type WorldResolution } from './worldGroup';
 import { PassToneMapProvider } from './passToneMap';
 import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
 import { useSceneShadowFit } from '../SceneShadowFitter';
-import { useRootViewportDescription } from '../viewportRender/useRootViewportDescription';
 import { useSceneDepthPrepass } from '../depthPrepass/SceneDepthPrepass';
 import { CanvasWorldContext, type CanvasWorld } from './canvasWorldScene';
 import { identityKey } from '../../utils/identityKey';
@@ -96,7 +95,7 @@ export function CanvasWorldScope({ children }: { children: ReactNode }) {
     [scene]
   );
   const drawnScene = holders > 0 ? scene : null;
-  useSceneShadowFit(drawnScene, useRootViewportDescription().positionalShadowAtlas);
+  useSceneShadowFit(drawnScene);
   useSceneDepthPrepass(drawnScene);
   return (
     <environments.Provider>

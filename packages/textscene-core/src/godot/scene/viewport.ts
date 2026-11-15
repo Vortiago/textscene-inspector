@@ -142,8 +142,7 @@ export const VRS_UPDATE_MODE_NAMES = enumNamesByValue(VrsUpdateMode);
 const POSITIONAL_SHADOW_QUADRANT_SUBDIV_SHADOWS = [0, 1, 4, 16, 64, 256, 1024] as const;
 
 /**
- * The quadrant subdivisions, as `PositionalShadowAtlasQuadrantSubdiv` values: 4, 4, 16 and 64
- * shadows. The root takes them from the project settings (`scene_tree.cpp:2133-2136`), and a
+ * The shadow count of each quadrant at the default subdivisions: 4, 4, 16 and 64. The root takes them from the project settings (`scene_tree.cpp:2133-2136`), and a
  * `Viewport` sets the same values itself (`viewport.cpp:5363-5366`).
  */
 const POSITIONAL_SHADOW_QUADRANT_SHADOWS_DEFAULT = [

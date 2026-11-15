@@ -29,8 +29,9 @@ viewport gives each render it draws.** It is free of React and three.
 - An adapter builds a description from its source. `rootViewportDescription` reads the project
   through the `project*` readers and gives the editor's rules. `useRootViewportDescription` keeps
   one object while the project settings object holds.
-- Each render of the root reads its facts from the description: the Compositor, `SceneMipmapBias`
-  and the light pass, which builds the root atlas again when the atlas settings change by value.
+- Each render of the root reads its facts from the description: the Compositor, the 2D canvas
+  frame, `SceneMipmapBias`, the anisotropic level and the light pass. The light pass builds the root
+  atlas again when the atlas settings change by value.
 
 The SubViewport node is the second adapter, and the In-game view the third. Until they arrive, the
 three rule fields have no reader. That is the one exception to the rule that a field arrives with

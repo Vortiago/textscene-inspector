@@ -78,11 +78,15 @@ export function holdPositionalShadowAtlas(holder: object, size: number): void {
   fitToHolders();
 }
 
-/** Lets go of the atlas for `holder`. The last holder frees its GPU memory. A stranger changes nothing. */
+/**
+ * Lets go of the atlas for `holder`. The last holder frees its GPU memory and shrinks it to the unheld
+ * side, since the shadow pass allocates it again for any lit program. A stranger changes nothing.
+ */
 export function releasePositionalShadowAtlas(holder: object): void {
   if (!holders.delete(holder)) return;
-  if (holders.size === 0) atlas.dispose();
-  else fitToHolders();
+  if (holders.size > 0) fitToHolders();
+  else if (atlas.width === UNHELD_SIZE) atlas.dispose();
+  else atlas.setSize(UNHELD_SIZE, UNHELD_SIZE);
 }
 
 /** `setSize` frees the GPU memory of a target whose size changes, and three builds it again at its next use. */
