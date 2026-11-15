@@ -14,7 +14,7 @@ export function glyphOriginsPx(line: TextLineLayout, lineOriginXPx: number, penS
     : lineSummedOriginsPx(line, lineOriginXPx);
 }
 
-export function itemSummedOriginsPx(line: TextLineLayout, lineOriginXPx: number): number[] {
+function itemSummedOriginsPx(line: TextLineLayout, lineOriginXPx: number): number[] {
   const firstX = line.glyphs[0]?.x ?? 0;
   let pen = Math.fround(lineOriginXPx + firstX);
   let previousX = firstX;
@@ -25,7 +25,7 @@ export function itemSummedOriginsPx(line: TextLineLayout, lineOriginXPx: number)
   });
 }
 
-export function lineSummedOriginsPx(line: TextLineLayout, lineOriginXPx: number): number[] {
+function lineSummedOriginsPx(line: TextLineLayout, lineOriginXPx: number): number[] {
   const firstX = line.glyphs[0]?.x ?? 0;
   const keepsLinePens = line.glyphs.every((glyph) => glyph.linePenPx !== undefined);
   const origin = Math.fround(keepsLinePens ? lineOriginXPx : lineOriginXPx + firstX);

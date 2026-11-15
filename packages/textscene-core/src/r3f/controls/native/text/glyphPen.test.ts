@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { TextLineLayout } from './textLayout';
-import { itemSummedOriginsPx, lineSummedOriginsPx } from './glyphPen';
+import { glyphOriginsPx } from './glyphPen';
+
+const itemSummedOriginsPx = (line: TextLineLayout, originXPx: number) =>
+  glyphOriginsPx(line, originXPx, 'fromItemPosition');
+const lineSummedOriginsPx = (line: TextLineLayout, originXPx: number) =>
+  glyphOriginsPx(line, originXPx, 'alongLine');
 
 /** A space of the bundled face at 16 px, grown by a third of a pixel as a FILL line grows it. */
 const GROWN_SPACE_PX = 4.15625 + 1 / 3;
@@ -15,7 +20,7 @@ function lineOf(advances: readonly number[]): TextLineLayout {
   return { text: '', glyphs, widthPx: x, paragraphIndex: 0 } as unknown as TextLineLayout;
 }
 
-describe('itemSummedOriginsPx', () => {
+describe("glyphOriginsPx 'fromItemPosition'", () => {
   it('sums the pen in 32-bit float, as `Vector2 offset_step` does (label.h:199)', () => {
     const origins = itemSummedOriginsPx(lineOf(Array(13).fill(GROWN_SPACE_PX)), 0);
     expect(origins[12]).toBe(53.874996185302734);
@@ -32,7 +37,7 @@ describe('itemSummedOriginsPx', () => {
   });
 });
 
-describe('lineSummedOriginsPx', () => {
+describe("glyphOriginsPx 'alongLine'", () => {
   it('sums from zero along the line, then adds the line origin (text_server.cpp:1755,1810)', () => {
     const line = lineOf(Array(13).fill(GROWN_SPACE_PX));
     expect(itemSummedOriginsPx(line, 100.25)[12]).toBe(154.12498474121094);
