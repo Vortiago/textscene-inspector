@@ -6,10 +6,9 @@
 
 import { useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import type * as THREE from 'three';
 import type { Transform3D } from '../../godot/math/transform3d.js';
 import { sameTransform3D } from '../../godot/math/transform3d.js';
-import { trackTargetFinder } from '../animation/trackTargets.js';
+import { lookupDrawnObjects, type DrawnObjects, type Paths } from '../drawnObjects.js';
 import { useOptionalSelection } from '../contexts/SelectionContext.js';
 import { realGlobalTransform3D } from '../nodeTreeTransforms.js';
 
@@ -23,46 +22,9 @@ function sameOptionalTransform(a: Transform3D | null, b: Transform3D | null): bo
   return a === null || b === null ? a === b : sameTransform3D(a, b);
 }
 
-type Paths = readonly (string | null)[];
-
-/** The objects found for `paths`, and the registry size they were found at. */
-interface Lookup {
-  paths: Paths;
-  registrySize: number;
-  objects: readonly (THREE.Object3D | null)[];
-}
-
-function isDetached(object: THREE.Object3D | null): boolean {
-  return object !== null && object.parent === null;
-}
-
-/**
- * `previous` while it holds: the same paths, the registry no larger or smaller, every object still
- * mounted. A lookup walks every registered wrapper, and a path with no node would repeat it each frame.
- */
-function lookupObjects(
-  registry: ReadonlyMap<string, THREE.Object3D>,
-  paths: Paths,
-  previous: Lookup | null
-): Lookup {
-  const holds =
-    previous !== null &&
-    previous.registrySize === registry.size &&
-    previous.paths.length === paths.length &&
-    previous.paths.every((path, i) => path === paths[i]) &&
-    !previous.objects.some(isDetached);
-  if (holds) return previous;
-  const find = trackTargetFinder(registry);
-  return {
-    paths,
-    registrySize: registry.size,
-    objects: paths.map((path) => (path === null ? null : find(path))),
-  };
-}
-
 /** The transform of each tracked object, and the world matrix it was read at. */
 interface ReadAt {
-  objects: Lookup['objects'];
+  objects: DrawnObjects['objects'];
   elements: (number[] | null)[];
   transforms: (Transform3D | null)[];
 }
@@ -75,13 +37,13 @@ interface ReadAt {
 export function useDrawnWorldTransforms(paths: Paths): Transforms {
   const registry = useOptionalSelection()?.nodeObjectMap ?? null;
   const [transforms, setTransforms] = useState<Transforms>([]);
-  const lookup = useRef<Lookup | null>(null);
+  const lookup = useRef<DrawnObjects | null>(null);
   // The world matrix each transform was read at, so a frame where nothing moved builds no transform.
   const read = useRef<ReadAt | null>(null);
 
   useFrame(() => {
     if (registry === null) return;
-    lookup.current = lookupObjects(registry, paths, lookup.current);
+    lookup.current = lookupDrawnObjects(registry, paths, lookup.current);
     const { objects } = lookup.current;
     if (read.current?.objects !== objects) {
       read.current = { objects, elements: objects.map(() => null), transforms: objects.map(() => null) };

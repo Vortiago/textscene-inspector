@@ -6,21 +6,21 @@
  */
 
 import { useMemo } from 'react';
-import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
-import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import type { TscnInternalResource } from '../../../parser/types';
+import { useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext';
+import { referenceHeldBy, type ScopedReference } from '../../reading';
 import { useResourceResolution } from '../../useSubOrExtResource';
 import { decodeSpriteFrames } from './decode';
 import type { SpriteFramesAnimation } from './types';
+import { isLocalToScene } from '../viewporttexture/localToScene';
 
 interface ResolvedSpriteFrames {
   /** The SpriteFrames itself, which holds every frame texture. */
   resource: TscnInternalResource;
   /** animation name → its parsed frames + timing. */
   animations: Map<string, SpriteFramesAnimation>;
-  /** SubResource pool the frame refs resolve against (scene's, or the .tres's own). */
-  subResources: readonly TscnInternalResource[];
-  /** ExtResource pool the frame/atlas refs resolve against (scene's, or the .tres's own). */
-  externalResources: readonly TscnExternalResource[];
+  /** The tables the frame refs resolve in: the scene's, or the .tres's own. */
+  resources: SceneResources;
 }
 
 interface SpriteFramesResult {
@@ -42,10 +42,26 @@ export function useSpriteFrames(spriteFramesRef: string | undefined): SpriteFram
       spriteFrames: {
         resource: scoped.resource,
         animations: decoded.animations,
-        subResources: scoped.resources.internalResources,
-        externalResources: scoped.resources.externalResources,
+        resources: scoped.resources,
       },
       status: 'loaded',
     };
   }, [scoped, status]);
+}
+
+/**
+ * The frame texture `ref` names, held by `spriteFrames`. A SpriteFrames that is not local to scene
+ * leaves a ViewportTexture frame unset up. Null with no SpriteFrames or no frame.
+ */
+export function useFrameReference(
+  spriteFrames: ResolvedSpriteFrames | null,
+  ref: string | null
+): ScopedReference | null {
+  return useMemo(
+    () =>
+      spriteFrames && ref !== null
+        ? referenceHeldBy(ref, spriteFrames.resources, isLocalToScene(spriteFrames.resource))
+        : null,
+    [spriteFrames, ref]
+  );
 }

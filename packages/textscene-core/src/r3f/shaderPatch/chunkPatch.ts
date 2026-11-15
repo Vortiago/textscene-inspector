@@ -24,6 +24,11 @@ export interface TextEdit {
   godot: string;
 }
 
+/** The edit that keeps `include` and adds `addition` on the line after it. */
+export function afterInclude(include: string, addition: string): TextEdit {
+  return { three: include, godot: `${include}\n${addition}` };
+}
+
 /** One replacement in a chunk. */
 export interface ChunkEdit<Name extends ChunkName> extends TextEdit {
   chunk: Name;

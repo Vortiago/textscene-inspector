@@ -1,5 +1,5 @@
 import { intOr } from '../../../parser/valueParsers';
-import type { OccluderCullMode } from '../../../r3f/lighting2d/shadowVolumes';
+import type { OccluderCullMode } from '../../../r3f/lighting2d/shadowCasterEdges';
 import { OccluderPolygon2DCullMode } from '../../../godot/scene/lightOccluder2d';
 import { enumMember } from '../../../godot/classdb/enumNames';
 

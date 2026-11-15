@@ -1,15 +1,15 @@
 ---
 type: VideoStreamPlayer
 category: 2D
-status: unreviewed
-fixture: unit-video-stream-player.tscn
-# image: unit-video-stream-player
-renders_as: nothing (no decoded frame ever reaches it)
+status: limitation
+fixture: unit-video-stream-player-picture-size.tscn
+image: unit-video-stream-player-picture-size
+renders_as: a transparent rect at the Ogg Theora picture size, as in the Godot editor
 ---
 
 # VideoStreamPlayer
 
-A Control that plays a `VideoStream` and draws the decoded frame into its rect. Nothing in this previewer decodes a `VideoStream`, so `NOTIFICATION_DRAW`'s texture check never passes and the node draws nothing. Godot draws the same before a stream's first frame arrives. Its children still show.
+A Control that plays a `VideoStream` and draws the decoded frame into its rect. With `expand` off its minimum size is the stream's Ogg Theora picture size (`video_stream_player.cpp:232-238`), which the previewer reads from the `.ogv` header. The editor never plays, so the node draws nothing and its children show over the picture-sized rect. A file with no Theora stream gives a minimum size of (0, 0).
 
 ## Linting
 
@@ -38,9 +38,8 @@ Strict parsing format-checks these `VideoStreamPlayer` properties, plus 53 inher
 |  | `control-property-order` | warning |
 <!-- lint:end -->
 
-The lenient parser reads VideoStreamPlayer through `parseControl`. It keeps the layout keys and ignores all ten playback keys, so a malformed `volume_db` is dropped with no fallback and no warning.
+The lenient parser reads `stream` and `expand` on top of the Control parse, and ignores the other eight playback keys. A malformed `expand` reads as off.
 
 ## Known limitations
 
-- **Not drawn** The previewer has no video decoder, so `texture` never resolves and the
-  node draws nothing, not even a debug outline.
+- **Needs runtime** Godot draws decoded frames only while a running game plays the stream.

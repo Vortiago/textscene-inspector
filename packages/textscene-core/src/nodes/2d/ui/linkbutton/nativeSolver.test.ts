@@ -15,23 +15,23 @@ import {
   linkButtonTextTheme,
   resolveLinkButtonDrawState,
   shouldUnderline,
-  linkButtonUnderlineSpacing,
   linkButtonUnderlineGeometry,
   linkButtonTextPlacement,
   linkButtonLabelShape,
 } from './nativeSolver';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlProps } from '../control/testing/controlProps';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 function node(props: Partial<LinkButtonProperties>): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: 'L',
     node: controlNode('L', 'LinkButton', { name: 'L', ...props }),
     // A local theme_override_colors/* reaches `resolveTextTheme` through `n.colors`, which the walker
     // fills unconditionally, not through props.
     colors: props.themeOverrideColors ?? {},
-  };
+  });
 }
 
 function ctx(withMeasurer = true): SolveContext {
@@ -61,7 +61,7 @@ describe('resolveLinkButtonDrawState', () => {
 describe('linkButtonTextTheme', () => {
   it('resolves control_font_color for the normal state', () => {
     // default_theme.cpp:101,203: control_font_color.
-    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'normal', ctx()).color).toEqual({
+    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'normal').color).toEqual({
       r: 0.875,
       g: 0.875,
       b: 0.875,
@@ -71,7 +71,7 @@ describe('linkButtonTextTheme', () => {
 
   it('resolves control_font_pressed_color (opaque white) for the pressed state', () => {
     // default_theme.cpp:108,204: control_font_pressed_color.
-    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'pressed', ctx()).color).toEqual({
+    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'pressed').color).toEqual({
       r: 1,
       g: 1,
       b: 1,
@@ -81,7 +81,7 @@ describe('linkButtonTextTheme', () => {
 
   it('resolves OPAQUE BLACK for the disabled state — no font_disabled_color anywhere in its ClassDB chain', () => {
     // default_theme.cpp:196-210 sets no font_disabled_color, so the fallback is Color(), opaque black.
-    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'disabled', ctx()).color).toEqual({
+    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'disabled').color).toEqual({
       r: 0,
       g: 0,
       b: 0,
@@ -90,15 +90,15 @@ describe('linkButtonTextTheme', () => {
   });
 
   it('a theme_override_colors/font_color override wins over the default', () => {
-    const props: LinkButtonProperties = {
+    const props: LinkButtonProperties = controlProps({
       name: 'L',
       textDirection: 0,
       language: '',
       structuredTextBidiOverride: 0,
       structuredTextBidiOverrideOptions: [],
       themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
-    };
-    expect(linkButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({
+    });
+    expect(linkButtonTextTheme(node(props), props, 'normal').color).toEqual({
       r: 1,
       g: 0,
       b: 0,
@@ -130,31 +130,31 @@ describe('shouldUnderline (link_button.cpp:249-278)', () => {
   });
 });
 
-describe('linkButtonUnderlineSpacing (default_theme.cpp:210)', () => {
-  it('is round(2*scale)', () => {
-    expect(linkButtonUnderlineSpacing({}, ctx())).toBe(2);
-  });
-
-  it('a theme_override_constants/underline_spacing override (already folded into n.constants) wins over the theme default', () => {
-    expect(linkButtonUnderlineSpacing({ underline_spacing: 9 }, ctx())).toBe(9);
-  });
-
-  it('moves with a non-1 theme scale (default_theme.cpp:210: round(2*scale))', () => {
-    expect(linkButtonUnderlineSpacing({}, { theme: nativeTheme(2.5) })).toBe(5);
-  });
-});
-
 describe('linkButtonUnderlineGeometry (link_button.cpp:306-308)', () => {
-  it('at size 16: spacing=trunc(2+0.9765625)=2, y=ascent(18)+2=20, thickness=1', () => {
-    const { y, thickness } = linkButtonUnderlineGeometry(16, 2, 18);
+  /** Open Sans SemiBold at 16 px, as Godot 4.6.3 measures it (`get_underline_position(16)`). */
+  const OPEN_SANS_16 = { positionPx: 0.984375, thicknessPx: 0.390625 };
+
+  it('at Open Sans 16: spacing=trunc(2+0.984375)=2, y=ascent(18)+2=20, thickness=1', () => {
+    const { y, thickness } = linkButtonUnderlineGeometry(OPEN_SANS_16, 2, 18);
     expect(y).toBe(20);
     expect(thickness).toBe(1);
   });
 
   it('a larger underline_spacing constant shifts y down by the same amount', () => {
-    const { y } = linkButtonUnderlineGeometry(16, 10, 18);
-    // spacing = trunc(10+0.9765625) = 10; y = 18+10 = 28.
+    const { y } = linkButtonUnderlineGeometry(OPEN_SANS_16, 10, 18);
+    // spacing = trunc(10+0.984375) = 10; y = 18+10 = 28.
     expect(y).toBe(28);
+  });
+
+  it("truncates the line's own position and thickness: 2.9 down and 3.9 thick give 2 and 3", () => {
+    expect(linkButtonUnderlineGeometry({ positionPx: 2.9, thicknessPx: 3.9 }, 2, 18)).toEqual({
+      y: 22,
+      thickness: 3,
+    });
+  });
+  // `int y` (`:307`): a line grown to 25.5 by a hex-code box at 24 px puts the stroke at 27, not 27.5.
+  it('truncates y past a fractional ascent: 25.5 and 2 give 27', () => {
+    expect(linkButtonUnderlineGeometry(OPEN_SANS_16, 2, 25.5).y).toBe(27);
   });
 });
 

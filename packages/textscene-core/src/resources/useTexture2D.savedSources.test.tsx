@@ -14,6 +14,7 @@ import type { ResourceLoader } from './ResourceLoader';
 import { createFakeResourceLoader, withJobRunner } from './testing/createFakeResourceLoader';
 import { resetProceduralTextures } from './textures/proceduralBuilds';
 import { useTexture2D } from './useTexture2D';
+import { referenceIn } from './reading/scopedReference.testkit';
 import { useTexture3D } from './useTexture3D';
 
 const GRADIENT_COLORS = 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)';
@@ -118,16 +119,16 @@ afterEach(resetProceduralTextures);
 describe('a Texture2D slot with a saved Gradient or FastNoiseLite', () => {
   it('draws a GradientTexture2D whose gradient is an ExtResource as it draws the SubResource form', () => {
     const { wrapper } = setUp();
-    const inline = renderHook(() => useTexture2D(GRADIENT_TEXTURE, [], INLINE), { wrapper });
-    const saved = renderHook(() => useTexture2D(GRADIENT_TEXTURE, EXTERNAL, SAVED), { wrapper });
+    const inline = renderHook(() => useTexture2D(referenceIn(GRADIENT_TEXTURE, [], INLINE)), { wrapper });
+    const saved = renderHook(() => useTexture2D(referenceIn(GRADIENT_TEXTURE, EXTERNAL, SAVED)), { wrapper });
 
     expect(pixels(saved.result.current.texture)).toEqual(pixels(inline.result.current.texture));
     expect(saved.result.current.missing).toBe(false);
   });
 
   it('builds a NoiseTexture2D whose noise and color_ramp are ExtResources from the content of the SubResource form', () => {
-    const inline = jobStartedBy(() => useTexture2D(NOISE_TEXTURE, [], INLINE));
-    const saved = jobStartedBy(() => useTexture2D(NOISE_TEXTURE, EXTERNAL, SAVED));
+    const inline = jobStartedBy(() => useTexture2D(referenceIn(NOISE_TEXTURE, [], INLINE)));
+    const saved = jobStartedBy(() => useTexture2D(referenceIn(NOISE_TEXTURE, EXTERNAL, SAVED)));
 
     expect(saved).toEqual(inline);
     expect(saved).toMatchObject({
@@ -139,7 +140,9 @@ describe('a Texture2D slot with a saved Gradient or FastNoiseLite', () => {
   it('draws nothing, and is not missing, while the saved Gradient loads', () => {
     const fake = createFakeResourceLoader();
     const wrapper = wrapperFor(fake.loader);
-    const { result } = renderHook(() => useTexture2D(GRADIENT_TEXTURE, EXTERNAL, SAVED), { wrapper });
+    const { result } = renderHook(() => useTexture2D(referenceIn(GRADIENT_TEXTURE, EXTERNAL, SAVED)), {
+      wrapper,
+    });
 
     expect(result.current).toMatchObject({ texture: null, missing: false, isArriving: true });
 
@@ -151,15 +154,19 @@ describe('a Texture2D slot with a saved Gradient or FastNoiseLite', () => {
   it('draws the Gradient of a raw res:// path as it draws the ExtResource form', () => {
     const { wrapper } = setUp();
     const raw = sceneWith({ gradient: 'res://ramp.tres', noise: '', colorRamp: '' });
-    const rawSlot = renderHook(() => useTexture2D(GRADIENT_TEXTURE, EXTERNAL, raw), { wrapper });
-    const extSlot = renderHook(() => useTexture2D(GRADIENT_TEXTURE, EXTERNAL, SAVED), { wrapper });
+    const rawSlot = renderHook(() => useTexture2D(referenceIn(GRADIENT_TEXTURE, EXTERNAL, raw)), { wrapper });
+    const extSlot = renderHook(() => useTexture2D(referenceIn(GRADIENT_TEXTURE, EXTERNAL, SAVED)), {
+      wrapper,
+    });
 
     expect(pixels(rawSlot.result.current.texture)).toEqual(pixels(extSlot.result.current.texture));
   });
 
   it('draws a new Gradient when the saved file reloads with other colours', () => {
     const { fake, wrapper } = setUp();
-    const { result } = renderHook(() => useTexture2D(GRADIENT_TEXTURE, EXTERNAL, SAVED), { wrapper });
+    const { result } = renderHook(() => useTexture2D(referenceIn(GRADIENT_TEXTURE, EXTERNAL, SAVED)), {
+      wrapper,
+    });
     const before = pixels(result.current.texture);
 
     const green = GRADIENT_TRES.replace(GRADIENT_COLORS, 'PackedColorArray(0, 1, 0, 1, 0, 1, 0, 1)');
@@ -171,7 +178,9 @@ describe('a Texture2D slot with a saved Gradient or FastNoiseLite', () => {
   it('draws nothing for a saved file that is no Gradient (error path)', () => {
     const { fake, wrapper } = setUp();
     fake.resources.seed('res://ramp.tres', parseTresFile(NOISE_TRES));
-    const { result } = renderHook(() => useTexture2D(GRADIENT_TEXTURE, EXTERNAL, SAVED), { wrapper });
+    const { result } = renderHook(() => useTexture2D(referenceIn(GRADIENT_TEXTURE, EXTERNAL, SAVED)), {
+      wrapper,
+    });
 
     expect(result.current.texture).toBeNull();
   });
@@ -180,7 +189,9 @@ describe('a Texture2D slot with a saved Gradient or FastNoiseLite', () => {
 describe('a noise texture whose saved sources are still loading', () => {
   it('starts no build until every source is in, and is arriving meanwhile', () => {
     const { wrapper, jobs } = setUp({ isRampLoaded: false });
-    const { result } = renderHook(() => useTexture2D(NOISE_TEXTURE, EXTERNAL, SAVED), { wrapper });
+    const { result } = renderHook(() => useTexture2D(referenceIn(NOISE_TEXTURE, EXTERNAL, SAVED)), {
+      wrapper,
+    });
 
     expect(jobs).toEqual([]);
     expect(result.current).toMatchObject({ texture: null, missing: false, isArriving: true });
@@ -190,22 +201,17 @@ describe('a noise texture whose saved sources are still loading', () => {
 describe('a Texture3D slot with a saved Gradient or FastNoiseLite', () => {
   it('starts no build until every source is in', () => {
     const { wrapper, jobs } = setUp({ isRampLoaded: false });
-    const { result } = renderHook(
-      () => useTexture3D(NOISE_VOLUME, { externalResources: EXTERNAL, internalResources: SAVED }),
-      { wrapper }
-    );
+    const { result } = renderHook(() => useTexture3D(referenceIn(NOISE_VOLUME, EXTERNAL, SAVED)), {
+      wrapper,
+    });
 
     expect(jobs).toEqual([]);
     expect(result.current).toBeNull();
   });
 
   it('builds a NoiseTexture3D whose noise and color_ramp are ExtResources from the content of the SubResource form', () => {
-    const inline = jobStartedBy(() =>
-      useTexture3D(NOISE_VOLUME, { externalResources: [], internalResources: INLINE })
-    );
-    const saved = jobStartedBy(() =>
-      useTexture3D(NOISE_VOLUME, { externalResources: EXTERNAL, internalResources: SAVED })
-    );
+    const inline = jobStartedBy(() => useTexture3D(referenceIn(NOISE_VOLUME, [], INLINE)));
+    const saved = jobStartedBy(() => useTexture3D(referenceIn(NOISE_VOLUME, EXTERNAL, SAVED)));
 
     expect(saved).toEqual(inline);
     expect(saved).toMatchObject({

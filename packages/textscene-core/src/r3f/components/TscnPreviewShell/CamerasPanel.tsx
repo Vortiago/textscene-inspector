@@ -8,8 +8,7 @@ import { useOptionalViewportActions } from '../../contexts/ViewportActionsContex
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { useLiveSceneNodes, useSharedLiveTree } from '../../useLiveSceneTree.js';
 import { node2dWorldPosition } from '../../node2dWorldTransform.js';
-import { liveNodePatches } from '../../liveNodePatches.js';
-import { liveScenePassResults } from '../../liveScenePass.js';
+import { solvedNodePatchesOf } from '../../liveNodePatches.js';
 import { liveTreeOf } from '../../liveSceneTree.js';
 import { camera2DView } from '../../../nodes/2d/camera2d/cameraView.js';
 import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
@@ -48,9 +47,9 @@ export function CamerasPanel() {
 
   function lookThrough2D(path: string, properties: Camera2DProperties) {
     // Over the live tree, a Camera2D inside a sub-scene composes against the
-    // instance transform instead of framing at the origin, and a RemoteTransform2D moves it.
+    // instance transform instead of framing at the origin, and a RemoteTransform2D or a solved bone above it moves it.
     if (!liveTree) return;
-    const placed = liveScenePassResults(liveNodePatches, liveTreeOf(liveTree.roots, liveTree.ctx));
+    const placed = solvedNodePatchesOf(liveTreeOf(liveTree.roots, liveTree.ctx));
     const worldPosition = node2dWorldPosition(liveTree.roots, liveTree.ctx, path, placed) ?? { x: 0, y: 0 };
     // The frame `<Canvas2DStage>` draws, so the camera lands where the stage shows it.
     cam?.requestFrame2D(

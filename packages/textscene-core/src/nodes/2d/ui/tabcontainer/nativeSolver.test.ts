@@ -1,12 +1,15 @@
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import { describe, expect, it } from 'vitest';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { TAB_ALIGNMENT_CENTER, TAB_ALIGNMENT_LEFT, TAB_ALIGNMENT_RIGHT } from '../tabbar/nativeSolver';
 import type { ControlProperties } from '../control/types';
 import type { TabContainerProperties } from './types';
+import { tabContainerChildVisibility } from './childVisibility';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import {
   TABS_POSITION_TOP,
@@ -15,13 +18,15 @@ import {
   tabContentBand,
   tabHeaderBand,
   tabHeaderHeight,
-  buildInternalTabBarNode,
-} from './nativeSolver';
-import type { ThemeResource } from '../../../../resources/styles/theme/types';
-import type { TabBarProperties } from '../tabbar/types';
-import type { FontResource } from '../../../../resources/fonts/font/types';
-import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts';
-import { ROOT_TEXTURE_SAMPLER } from '../../../../r3f/canvasItemTextureSampler';
+} from './tabLayout';
+import './nativeSolver';
+import {
+  createSolveContext,
+  normalizeContainerLayoutResult,
+} from '../../../../r3f/controls/native/controlRectSolver';
+
+/** Panel's `panel` box in the default theme table at scale 1 (`default_theme.cpp:134`). */
+const TABLE_PANEL = defaultStyleBoxesOf(defaultThemeAt(1)).Panel!.panel!;
 
 const tabContainerLayout = controlSolverRegistry.containerLayout('TabContainer')!;
 const tabContainerMinimumSize = controlSolverRegistry.minimumSize('TabContainer')!;
@@ -35,20 +40,20 @@ const NO_TABBAR_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };
 const TABBAR_MARGIN = { left: 10, top: 5, right: 30, bottom: 7 };
 
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
-  return 'rects' in result ? result.rects : result;
+  return normalizeContainerLayoutResult(result).rects;
 }
 
 function page(name: string, props: Partial<ControlProperties> = {}): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'Control', { name, ...props }),
-  };
+  });
 }
 
 /** A `theme_override_styles/tabbar_background` carrying `TABBAR_MARGIN`, everything else the default-theme panel's. */
 function tabbarBackgroundStyleBoxes(): SolveNode['styleBoxes'] {
-  return { tabbar_background: { ...nativeTheme(1).widgets.panel, contentMargin: TABBAR_MARGIN } };
+  return { tabbar_background: { ...TABLE_PANEL, contentMargin: TABBAR_MARGIN } };
 }
 
 function tabContainer(
@@ -57,22 +62,17 @@ function tabContainer(
   children: SolveNode[],
   styleBoxes?: SolveNode['styleBoxes']
 ): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     ...(styleBoxes ? { styleBoxes } : {}),
     path: name,
     node: controlNode(name, 'TabContainer', { name, ...props }),
     children,
-  };
+  });
 }
 
 function ctx(): SolveContext {
-  const theme = nativeTheme(1);
-  return {
-    theme,
-    measureText: null,
-    combinedMinimumSize: (n) => (n.node.properties as ControlProperties).customMinimumSize ?? { x: 0, y: 0 },
-  };
+  return createSolveContext(nativeTheme(1), null);
 }
 
 describe('deriveTabContainerTabs', () => {
@@ -107,13 +107,7 @@ describe('deriveTabContainerTabs', () => {
     const promoted: SolveNode = {
       ...page('Promoted'),
       path: 'Holder/Promoted',
-      skippedAncestors: {
-        transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
-        modulate: { r: 1, g: 1, b: 1, a: 1 },
-        z: [],
-        sampler: ROOT_TEXTURE_SAMPLER,
-        material: { kind: 'none' },
-      },
+      skippedTransform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
     };
     const tabs = deriveTabContainerTabs(
       { children: [page('General'), promoted, page('Advanced')] },
@@ -174,12 +168,13 @@ describe('tabContentBand', () => {
 });
 
 describe('the page a TabContainer shows', () => {
-  const childVisibility = controlSolverRegistry.childVisibility('TabContainer')!;
   const pages = [page('A'), page('B'), page('C')];
 
   function visiblePages(props: Partial<TabContainerProperties>): string[] {
     const container = tabContainer('T', props, pages).node;
-    return pages.filter((p, i) => childVisibility(container, p.node, i, pages.length)).map((p) => p.path);
+    return pages
+      .filter((p, i) => tabContainerChildVisibility(container, p.node, i, pages.length))
+      .map((p) => p.path);
   }
 
   it('is the first page when no current_tab is authored (the first add_tab selects it, tab_bar.cpp:1324-1331)', () => {
@@ -222,6 +217,17 @@ describe('tabContainerMinimumSize', () => {
     // style margins (tabbar/nativeSolver.test.ts covers the numbers). Here only
     // the ordering matters: taller than the bare page minimum.
     expect(size.y).toBeGreaterThan(10);
+  });
+
+  it('widens a LEFT-aligned bar by the theme side_margin, an override included (tab_container.cpp:1039-1042)', () => {
+    const p = page('Only');
+    const props = { tabsVisible: true, tabAlignment: TAB_ALIGNMENT_LEFT };
+    const centered = tabContainerMinimumSize(
+      tabContainer('T', { tabsVisible: true, tabAlignment: TAB_ALIGNMENT_CENTER }, [p]),
+      ctx()
+    );
+    const overridden = withThemeItems({ ...tabContainer('T', props, [p]), constants: { side_margin: 30 } });
+    expect(tabContainerMinimumSize(overridden, ctx()).x - centered.x).toBe(30);
   });
 
   it('never widens for tab_alignment CENTER (side_margin only applies to LEFT/RIGHT, tab_container.cpp:1039)', () => {
@@ -410,7 +416,7 @@ describe('the page band under RTL', () => {
   /** A `theme_override_styles/panel` whose left and right content margins differ. */
   function panelStyleBoxes(): SolveNode['styleBoxes'] {
     return {
-      panel: { ...nativeTheme(1).widgets.panel, contentMargin: { left: 6, top: 3, right: 26, bottom: 3 } },
+      panel: { ...TABLE_PANEL, contentMargin: { left: 6, top: 3, right: 26, bottom: 3 } },
     };
   }
 
@@ -437,7 +443,7 @@ describe('the page band under RTL', () => {
   it('leaves a symmetric panel margin in the same place either way', () => {
     const p = page('Only');
     const symmetric: SolveNode['styleBoxes'] = {
-      panel: { ...nativeTheme(1).widgets.panel, contentMargin: { left: 8, top: 3, right: 8, bottom: 3 } },
+      panel: { ...TABLE_PANEL, contentMargin: { left: 8, top: 3, right: 8, bottom: 3 } },
     };
     const child = [{ node: p, minSize: { x: 0, y: 0 } }];
     const rect: Rect2 = { x: 0, y: 0, w: 300, h: 120 };
@@ -464,83 +470,5 @@ describe('the page band under RTL', () => {
       tabContainerLayout(n, [{ node: p, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 200, h: 100 }, ctx())
     );
     expect(rects.get('Floating')!.y).toBe(0);
-  });
-});
-
-describe('buildInternalTabBarNode — the theme items TabContainer pushes onto its bar', () => {
-  // `_on_theme_changed` resolves `tab_font`/`tab_font_size` on the container (bound as "font"
-  // and "font_size", `tab_container.cpp:1264-1265`) and pushes both onto the internal bar as
-  // overrides (`tab_container.cpp:338-339`), so the bar never runs its `TabBar` type chain.
-  const THEME = nativeTheme(1);
-
-  function themeResource(overrides: Partial<ThemeResource>): ThemeResource {
-    return {
-      defaultFont: null,
-      defaultFontSize: undefined,
-      fonts: {},
-      fontSizes: {},
-      styles: {},
-      colors: {},
-      constants: {},
-      typeVariations: {},
-      properties: {},
-      resources: { externalResources: [], internalResources: [] },
-      ...overrides,
-    };
-  }
-
-  function container(
-    props: Partial<TabContainerProperties>,
-    projectTheme: ThemeResource | null = null
-  ): SolveNode {
-    return {
-      ...solveNode(),
-      path: 'Tabs',
-      node: controlNode('Tabs', 'TabContainer', { name: 'Tabs', ...props }),
-      projectFonts: { ...NO_PROJECT_FONTS, projectTheme },
-    };
-  }
-
-  function barFontSize(n: SolveNode): number | undefined {
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
-    return (bar.node.properties as TabBarProperties).themeOverrideFontSizes?.font_size;
-  }
-
-  it("pushes the container's own theme_override_font_sizes/font_size", () => {
-    expect(barFontSize(container({ themeOverrideFontSizes: { font_size: 28 } }))).toBe(28);
-  });
-
-  it("pushes a theme entry addressed to TabContainer, which the bar's own type chain would never find", () => {
-    const projectTheme = themeResource({
-      fontSizes: { TabContainer: { font_size: 22 }, TabBar: { font_size: 9 } },
-    });
-    expect(barFontSize(container({}, projectTheme))).toBe(22);
-  });
-
-  it('falls back to the built-in default size when nothing resolves', () => {
-    expect(barFontSize(container({}))).toBe(THEME.fontSize);
-  });
-
-  it('pushes the FONT the same way, off a TabContainer-addressed theme entry (tab_container.cpp:338)', () => {
-    const containerFont: FontResource = {
-      kind: 'system',
-      fontNames: ['Container Face'],
-      baseFont: null,
-      fallbacks: [],
-      properties: {},
-    };
-    const barFont: FontResource = {
-      kind: 'system',
-      fontNames: ['Bar Face'],
-      baseFont: null,
-      fallbacks: [],
-      properties: {},
-    };
-    const projectTheme = themeResource({
-      fonts: { TabContainer: { font: containerFont }, TabBar: { font: barFont } },
-    });
-    const n = container({}, projectTheme);
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
-    expect(bar.fontOverrides.font).toBe(containerFont);
   });
 });

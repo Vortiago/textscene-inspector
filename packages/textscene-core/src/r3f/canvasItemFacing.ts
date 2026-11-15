@@ -14,10 +14,10 @@ import * as THREE from 'three';
  */
 export interface CanvasItemFacing {
   readonly side: THREE.Side;
-  // `lineJoints.ts` joints wind by the sign of the turn and CPUParticles2D quads by
+  // A Line2D strip winds by the side of each turn and CPUParticles2D quads by
   // their transform: both paint one uniform colour, so their reorder does not show.
-  // `ShadowVolumeMask.tsx`'s `ReplaceStencilOp` is idempotent. With neither mixed
-  // winding nor an additive blend, one pass draws nothing, and the second is waste.
+  // With neither mixed winding nor an additive blend, one pass draws nothing, and
+  // the second is waste.
   readonly forceSinglePass: true;
 }
 

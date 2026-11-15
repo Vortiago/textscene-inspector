@@ -7,6 +7,7 @@ import type { ParsedResource } from '../../../parser/parsedResource.js';
 import type { ResolvableResource } from '../../scopedResource.js';
 import { loadedFilesOf, NO_FILES, NO_FONTS } from '../../testing/loadedFiles.js';
 import { NO_PROJECT_FONTS } from '../../fonts/font/projectFonts.js';
+import { settledFontsOf } from '../../../r3f/controls/native/text/useSettledFont.js';
 import type { GodotSurface } from '../godotSurface.js';
 
 /** Vertex `vertex` of an array that holds `size` numbers per vertex. */
@@ -62,6 +63,7 @@ export function scopedMesh(
     loadedFile: NO_FILES,
     loadedFont: NO_FONTS,
     projectFonts: NO_PROJECT_FONTS,
+    settledFonts: settledFontsOf(null),
     locale: '',
   };
 }

@@ -105,6 +105,7 @@ theme_override_font_sizes/font_size = 28
 text = "FIELD OPERATIONS"
 
 [node name="Subtitle" type="Label" parent="Frame/Shell/LeftColumn/HeaderCard/HeaderRow/HeaderText"]
+custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.62, 0.68, 0.74, 1)
 text = "Changes apply to the active deployment only, and are discarded when the corridor closes."
@@ -353,6 +354,7 @@ layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_bar")
 
 [node name="SquadNote" type="Label" parent="Frame/Shell/RightColumn/StatusCard/StatusRow/StatusColumn"]
+custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.62, 0.68, 0.74, 1)
 text = "Two of four wing members are still reporting inside the corridor."

@@ -1,0 +1,25 @@
+[gd_scene load_steps=4 format=3 uid="uid://unittilemaplayerscenetileplaceholders"]
+
+; The one variable: the Gizmos toggle on a TileMapLayer whose scene tiles ask for the editor's
+; placeholder disc (tile_map_layer.cpp:1661-1700). The cells are a tile with no scene, a tile with a
+; scene and display_placeholder, and a tile with a scene and neither. No other scene names a scene
+; collection source, and the unit-tile-map-layer-scene-tiles golden captures with Gizmos off.
+
+[ext_resource type="PackedScene" path="res://unit-tile-map-layer-scene-tile-polygon.tscn" id="1_polygon"]
+
+[sub_resource type="TileSetScenesCollectionSource" id="TileSetScenesCollectionSource_a"]
+scenes/1/scene = ExtResource("1_polygon")
+scenes/2/scene = ExtResource("1_polygon")
+scenes/2/display_placeholder = true
+scenes/3/display_placeholder = true
+
+[sub_resource type="TileSet" id="TileSet_b"]
+tile_size = Vector2i(64, 64)
+sources/0 = SubResource("TileSetScenesCollectionSource_a")
+
+[node name="World" type="Node2D"]
+
+[node name="Layer" type="TileMapLayer" parent="."]
+position = Vector2(100, 20)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0)
+tile_set = SubResource("TileSet_b")

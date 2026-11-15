@@ -1,0 +1,21 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitcontrolysortscenetile"]
+
+; The variable: `y_sort_enabled` on the Control root of a scene tile, which no world y-sort draws.
+; Its two children sort on their origin y, so High (10) draws under Low (40) as in tree order
+; reversed. unit-tile-map-layer-scene-tile-control-sort has a y-sorted layer around the tile.
+
+[ext_resource type="PackedScene" path="res://unit-control-y-sort-scene-tile-root.tscn" id="1_a"]
+
+[sub_resource type="TileSetScenesCollectionSource" id="S_a"]
+scenes/1/scene = ExtResource("1_a")
+
+[sub_resource type="TileSet" id="T_b"]
+tile_size = Vector2i(64, 64)
+sources/0 = SubResource("S_a")
+
+[node name="World" type="Node2D"]
+
+[node name="Layer" type="TileMapLayer" parent="."]
+position = Vector2(100, 20)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0)
+tile_set = SubResource("T_b")

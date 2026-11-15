@@ -7,6 +7,7 @@
 
 import type { ReactNode } from 'react';
 import { CanvasModulateContext } from '../canvasModulate.js';
+import { CanvasColorSpaceProvider, type CanvasColorSpace } from '../canvasColorSpace.js';
 import type { Rgba } from '../../godot/math/math.js';
 import { CanvasLighting2DContext, INERT_CANVAS_LIGHTING } from './lightPassContext.js';
 import { NoShadowCasters } from './ShadowCasterStage.js';
@@ -14,15 +15,19 @@ import { NoShadowCasters } from './ShadowCasterStage.js';
 interface World2DLightingBoundaryProps {
   /** The tint of the viewport's own world, white where it holds no visible CanvasModulate. */
   canvasModulate: Rgba;
+  /** The space the viewport's canvas draws in, provided to its items as `CanvasLightPass` does. */
+  space: CanvasColorSpace;
   children: ReactNode;
 }
 
-export function World2DLightingBoundary({ canvasModulate, children }: World2DLightingBoundaryProps) {
+export function World2DLightingBoundary({ canvasModulate, space, children }: World2DLightingBoundaryProps) {
   return (
-    <CanvasLighting2DContext.Provider value={INERT_CANVAS_LIGHTING}>
-      <CanvasModulateContext.Provider value={canvasModulate}>
-        <NoShadowCasters>{children}</NoShadowCasters>
-      </CanvasModulateContext.Provider>
-    </CanvasLighting2DContext.Provider>
+    <CanvasColorSpaceProvider value={space}>
+      <CanvasLighting2DContext.Provider value={INERT_CANVAS_LIGHTING}>
+        <CanvasModulateContext.Provider value={canvasModulate}>
+          <NoShadowCasters>{children}</NoShadowCasters>
+        </CanvasModulateContext.Provider>
+      </CanvasLighting2DContext.Provider>
+    </CanvasColorSpaceProvider>
   );
 }

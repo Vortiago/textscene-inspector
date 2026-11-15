@@ -21,10 +21,10 @@ void main() {
 }
 `;
 
-function compile(lightMode: EnumValue<typeof CanvasItemMaterialLightMode>) {
+function compile(lightMode: EnumValue<typeof CanvasItemMaterialLightMode>, isLinearCanvas = false) {
   const shared = lightUniforms();
   shared.lightMode.value = lightMode;
-  const props = canvasItemLightingProps(shared);
+  const props = canvasItemLightingProps(shared, isLinearCanvas);
   const shader = {
     vertexShader: '',
     fragmentShader: STOCK_FRAGMENT,
@@ -80,19 +80,51 @@ describe('canvasItemLightingProps', () => {
 
   it('recovers the albedo through a FLOORED divisor, so a black canvas tint still lights', () => {
     const { shader } = compile(CanvasItemMaterialLightMode.NORMAL);
-    expect(shader.fragmentShader).toContain(`max(lightSeed, vec3(${CANVAS_MODULATE_FLOOR}))`);
+    expect(shader.fragmentShader).toContain('max(lightSeed, vec3(canvasModulateFloor))');
+    expect(shader.fragmentShader).toContain(`const float canvasModulateFloor = ${CANVAS_MODULATE_FLOOR};`);
     expect(CANVAS_MODULATE_FLOOR).toBeGreaterThan(0);
     // Below one 8-bit step, so the floor cannot show on screen.
     expect(CANVAS_MODULATE_FLOOR).toBeLessThanOrEqual(1 / 255);
   });
 
-  it("clamps in Godot's space before handing the fragment back to three", () => {
-    // Godot's framebuffer clamps after the light is multiplied into the albedo, which is why the
-    // accumulation is unclamped half-float. The shadow_color term joins inside that clamp and
-    // outside the albedo multiply, where `light_shadow_compute` puts it.
+  it('floors a linear canvas at the converted floor the CPU folds in, not at the sRGB step', () => {
+    const { shader } = compile(CanvasItemMaterialLightMode.NORMAL, true);
+    const floor = Number(/const float canvasModulateFloor = ([\d.e-]+);/.exec(shader.fragmentShader)![1]);
+    expect(floor).toBeCloseTo(0.000304, 6);
+  });
+
+  it("lights in the numbers three's colour output writes, with no transfer call of its own", () => {
+    // An sRGB canvas holds the sRGB numbers `colorspace_fragment` writes, and Godot's shader does no
+    // conversion either (`canvas.glsl:720,760`). A decode and encode here lifted a value just under
+    // a half step by one level. The accumulation is unclamped half-float, so the clamp
+    // follows the albedo multiply, and the shadow_color term joins inside it.
     const { shader } = compile(CanvasItemMaterialLightMode.NORMAL);
-    expect(shader.fragmentShader).toContain('clamp(albedo * accum.rgb + shadowTint, 0.0, 1.0)');
-    expect(shader.fragmentShader).toContain('#include <colorspace_fragment>');
+    expect(shader.fragmentShader).toContain('canvasShaded(albedo * accum.rgb + shadowTint)');
+    expect(shader.fragmentShader).toContain(
+      'vec3 canvasShaded(vec3 color) { return clamp(color, 0.0, 1.0); }'
+    );
+    expect(shader.fragmentShader).not.toContain('godotToSrgb');
+    expect(shader.fragmentShader).not.toContain('godotToLinear');
+  });
+
+  it('writes the light after three has encoded the fragment', () => {
+    const { shader } = compile(CanvasItemMaterialLightMode.NORMAL);
+    const encoded = shader.fragmentShader.indexOf('#include <colorspace_fragment>');
+    // One include: a second one after the light would encode its result again.
+    expect(shader.fragmentShader.split('#include <colorspace_fragment>')).toHaveLength(2);
+    expect(shader.fragmentShader.indexOf('gl_FragColor.rgb = canvasShaded')).toBeGreaterThan(encoded);
+    expect(shader.fragmentShader.indexOf('vec3 albedo = gl_FragColor.rgb')).toBeGreaterThan(encoded);
+  });
+
+  it('defines the linear canvas at compile time, with a program key of its own', () => {
+    // Godot adds the light to the linear albedo in a half-float target, which holds above 1
+    // (`canvas.glsl:727-760`); the copy to the screen clamps.
+    const linear = compile(CanvasItemMaterialLightMode.NORMAL, true);
+    const srgb = compile(CanvasItemMaterialLightMode.NORMAL);
+    expect(linear.shader.fragmentShader).toContain('#define LINEAR_CANVAS\n');
+    expect(srgb.shader.fragmentShader).not.toContain('#define LINEAR_CANVAS');
+    expect(linear.shader.uniforms.uLinearCanvas).toBeUndefined();
+    expect(linear.props.injection.cacheKey).not.toBe(srgb.props.injection.cacheKey);
   });
 
   it('declares the mode uniform, so a light_mode edit reaches the GPU', () => {
@@ -107,7 +139,7 @@ describe('canvasItemLightingProps', () => {
     const guard = shader.fragmentShader.indexOf('if (!unshaded &&');
     expect(guard).toBeGreaterThan(-1);
     // Every write the injection makes is inside that guard.
-    expect(shader.fragmentShader.indexOf('gl_FragColor.rgb = godotToLinear')).toBeGreaterThan(guard);
+    expect(shader.fragmentShader.indexOf('gl_FragColor.rgb = canvasShaded')).toBeGreaterThan(guard);
     expect(shader.fragmentShader.indexOf('gl_FragColor.a = clamp')).toBeGreaterThan(guard);
   });
 
@@ -128,11 +160,11 @@ describe('canvasItemLightingProps', () => {
     // Both seeds live in one program and `uLightMode` picks at runtime. The divide-out is by the
     // seed, so Light Only's 1.0 makes it a no-op.
     expect(shader.fragmentShader).toContain('lightOnly ? vec3(1.0) : uCanvasModulate');
-    expect(shader.fragmentShader).toContain('godotToSrgb(gl_FragColor.rgb) / max(lightSeed');
+    expect(shader.fragmentShader).toContain('gl_FragColor.rgb / max(lightSeed');
   });
 
   it('throws, naming the hook, for a shader with no colorspace hook (error case)', () => {
-    const props = canvasItemLightingProps(lightUniforms());
+    const props = canvasItemLightingProps(lightUniforms(), false);
     const shader = {
       vertexShader: '',
       fragmentShader: 'void other() {}',

@@ -1,0 +1,65 @@
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+; GraphEdit's draw order of its children. `add_child_notify` moves each GraphFrame to index 0 and
+; the connection layer to the index after the frames (`graph_edit.cpp:714-717`), so frames draw in reverse
+; scene order, the connection over every frame, and GraphNodes over the connection. The children
+; are listed GraphNode, frame, GraphNode, frame, so a walk in scene order shows the difference.
+
+[node name="Graph" type="GraphEdit" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 408.0
+offset_bottom = 288.0
+show_grid = false
+connection_lines_thickness = 8.0
+connections = [{ "from_node": &"Source", "from_port": 0, "to_node": &"Sink", "to_port": 0, "keep_alive": true }]
+show_menu = false
+minimap_enabled = false
+
+[node name="Source" type="GraphNode" parent="Graph"]
+offset_right = 100.0
+offset_bottom = 60.0
+position_offset = Vector2(30, 100)
+title = "Source"
+slot/0/right_enabled = true
+slot/0/right_color = Color(1, 1, 0, 1)
+
+[node name="Out" type="Label" parent="Graph/Source"]
+layout_mode = 2
+text = "Out"
+
+[node name="FrameA" type="GraphFrame" parent="Graph"]
+offset_right = 200.0
+offset_bottom = 160.0
+position_offset = Vector2(20, 20)
+title = "A"
+autoshrink_enabled = false
+tint_color_enabled = true
+tint_color = Color(0.8, 0.2, 0.2, 1)
+
+[node name="Sink" type="GraphNode" parent="Graph"]
+offset_right = 100.0
+offset_bottom = 60.0
+position_offset = Vector2(270, 170)
+title = "Sink"
+slot/0/left_enabled = true
+slot/0/left_color = Color(1, 1, 0, 1)
+
+[node name="In" type="Label" parent="Graph/Sink"]
+layout_mode = 2
+text = "In"
+
+[node name="FrameB" type="GraphFrame" parent="Graph"]
+offset_right = 200.0
+offset_bottom = 160.0
+position_offset = Vector2(120, 70)
+title = "B"
+autoshrink_enabled = false
+tint_color_enabled = true
+tint_color = Color(0.2, 0.7, 0.2, 1)

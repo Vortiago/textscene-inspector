@@ -25,7 +25,7 @@ ${glsl}
  * `material.cpp`'s own text, not `godotToLinear`, which clamps a negative channel this decode keeps.
  * Forward+ draws to a linear target, so Godot's `!OUTPUT_IS_SRGB` branch always runs.
  */
-const SRGB_DECODE = /* glsl */ `	vColor.rgb = mix(
+export const SRGB_DECODE = /* glsl */ `	vColor.rgb = mix(
 		pow( ( vColor.rgb + vec3( 0.055 ) ) * ( 1.0 / ( 1.0 + 0.055 ) ), vec3( 2.4 ) ),
 		vColor.rgb * ( 1.0 / 12.92 ),
 		lessThan( vColor.rgb, vec3( 0.04045 ) ) );`;

@@ -184,3 +184,20 @@ describe('the parser a slice registers', () => {
     );
   });
 });
+
+describe('scrapeParserReads of a replaying parser', () => {
+  const scrape = (src: string) => {
+    const dir = mkdtempSync(join(tmpdir(), 'scrape-'));
+    writeFileSync(join(dir, 'parser.ts'), src);
+    return scrapeParserReads(join(dir, 'parser.ts'));
+  };
+  it('reads a key the parser compares in file order', () => {
+    expect(scrape("if (key === 'file_mode') mode = 1;")).toContain('file_mode');
+  });
+
+  it('reads an indexed family through indexedKeyRegex as its `#/*` key', () => {
+    expect(scrape("const K = indexedKeyRegex('^option_(#)/(name|values)$', 'is_valid_int');")).toContain(
+      'option_#/*'
+    );
+  });
+});

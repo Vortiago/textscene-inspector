@@ -60,6 +60,8 @@ export interface ResRoot extends ResourceProvider {
   listPaths(): Promise<readonly string[]>;
   /** Overrides the provider's optional listing: a root always lists. */
   listFiles(extension: string): Promise<readonly string[]>;
+  /** Overrides the provider's optional listing: a root always lists a folder. */
+  listDirectory(folder: string): Promise<readonly DirectoryEntry[] | null>;
 }
 
 /**
@@ -156,6 +158,13 @@ function createRoot(port: ResRootsPort, path: string): RootEntry {
       return listing(`.${lowered}`, lowered);
     },
     listPaths: () => listing(EVERY_FILE),
+    async listDirectory(folder) {
+      const resolved = resolveResPath(path, folder);
+      if (resolved === null) return null;
+      const directory = forwardSlashes(resolved);
+      const stat = await port.stat(directory);
+      return stat === null || stat.isFile ? null : port.list(directory);
+    },
   };
   return {
     path,

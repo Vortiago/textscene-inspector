@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { CATALOG_BASE_TYPES } from '../../godot/classdb/nodeBaseTypes.generated';
 import { descendsFromClass } from '../../godot/classdb/classBaseTypes';
-import { isCanvasLayerType } from '../canvasPaintOrder';
+import { isCanvasLayerType } from '../canvasItemClass';
 import { controlSolverRegistry } from './native/solverRegistry';
 import { TWO_D_UI_TYPES } from './has2DUIContent';
 

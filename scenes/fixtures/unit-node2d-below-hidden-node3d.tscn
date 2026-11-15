@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+; Moves one variable: the visible of a Node3D above a Polygon2D. Visibility resets below a node that is
+; no CanvasItem (canvas_item.cpp:330-350), so Godot still draws the polygon: pixel (100, 100) is
+; (76, 51, 153).
+
+[node name="Root" type="Node2D"]
+
+[node name="Space" type="Node3D" parent="."]
+visible = false
+
+[node name="Leaf" type="Polygon2D" parent="Space"]
+color = Color(0.3, 0.2, 0.6, 1)
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 200, 0, 200)

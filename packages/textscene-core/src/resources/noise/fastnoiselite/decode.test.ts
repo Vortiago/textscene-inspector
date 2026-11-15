@@ -3,7 +3,7 @@
  * ordinals it writes for what it sets.
  */
 import { describe, expect, it } from 'vitest';
-import { decodeFastNoiseLite } from './decode';
+import { fastNoiseLiteOf } from './fastNoiseLite.testkit';
 
 import {
   FastNoiseLiteCellularReturnType,
@@ -13,11 +13,11 @@ import {
   FastNoiseLiteNoiseType,
 } from '../../../godot/scene/fastNoiseLite';
 
-describe('decodeFastNoiseLite', () => {
+describe('FAST_NOISE_LITE', () => {
   it("applies Godot's constructor defaults to an empty resource", () => {
     // fastnoise_lite.h:97-124. A `.tres` omits most properties, so a wrong
     // default is a wrong generator.
-    expect(decodeFastNoiseLite({})).toEqual({
+    expect(fastNoiseLiteOf({})).toEqual({
       noiseType: FastNoiseLiteNoiseType.SIMPLEX_SMOOTH,
       seed: 0,
       frequency: 0.01,
@@ -43,7 +43,7 @@ describe('decodeFastNoiseLite', () => {
   });
 
   it('reads the ice.tres albedo generator', () => {
-    const decoded = decodeFastNoiseLite({
+    const decoded = fastNoiseLiteOf({
       frequency: '0.003',
       fractal_type: '2',
       fractal_lacunarity: '2.5',
@@ -57,7 +57,7 @@ describe('decodeFastNoiseLite', () => {
   });
 
   it('reads every authored fractal and cellular knob', () => {
-    const decoded = decodeFastNoiseLite({
+    const decoded = fastNoiseLiteOf({
       noise_type: '2',
       seed: '7',
       fractal_octaves: '10',
@@ -80,7 +80,7 @@ describe('decodeFastNoiseLite', () => {
   });
 
   it('reads the domain-warp block (decoded even though the rasteriser cannot apply it)', () => {
-    const decoded = decodeFastNoiseLite({
+    const decoded = fastNoiseLiteOf({
       domain_warp_enabled: 'true',
       domain_warp_type: '2',
       domain_warp_amplitude: '15.5',
@@ -101,7 +101,7 @@ describe('decodeFastNoiseLite', () => {
   });
 
   it('reads the sample offset', () => {
-    expect(decodeFastNoiseLite({ offset: 'Vector3(10, -20, 5)' }).offset).toEqual({
+    expect(fastNoiseLiteOf({ offset: 'Vector3(10, -20, 5)' }).offset).toEqual({
       x: 10,
       y: -20,
       z: 5,
@@ -110,12 +110,12 @@ describe('decodeFastNoiseLite', () => {
 
   it('falls back to the default for an out-of-range enum, never storing it raw', () => {
     // enumOr's contract: an ordinal Godot's enum does not contain is refused.
-    expect(decodeFastNoiseLite({ noise_type: '99' }).noiseType).toBe(FastNoiseLiteNoiseType.SIMPLEX_SMOOTH);
-    expect(decodeFastNoiseLite({ fractal_type: '-1' }).fractalType).toBe(FastNoiseLiteFractalType.FBM);
+    expect(fastNoiseLiteOf({ noise_type: '99' }).noiseType).toBe(FastNoiseLiteNoiseType.SIMPLEX_SMOOTH);
+    expect(fastNoiseLiteOf({ fractal_type: '-1' }).fractalType).toBe(FastNoiseLiteFractalType.FBM);
   });
 
   it('falls back rather than storing NaN for malformed scalars and offsets', () => {
-    const decoded = decodeFastNoiseLite({
+    const decoded = fastNoiseLiteOf({
       frequency: 'garbage',
       fractal_octaves: 'garbage',
       offset: 'Vector3(1, 2)',

@@ -14,10 +14,11 @@ import { FAKE_GL, MAX_ANISOTROPY_PARAMETER, fakeCanvasRenderer } from '../testin
 import { standardMaterialBags } from '../../resources/materials/standardmaterial3d/materialBag';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { fakeTiledUploads } from '../tiledUpload/fakeTiledUploads.testkit';
-import type { MaterialSource } from './materialSource';
+import type { ScopedReference } from '../../resources/reading';
 import { subResource } from '../../testing/subResource';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import { inlineMaterial, inlineSource, unfadedProps } from './surfaceMaterial.testkit';
+import { fileMaterial } from './materialReference';
 import { useSurfaceMaterial } from './useSurfaceMaterial';
 
 const TRES_PATH = 'res://painted.tres';
@@ -26,7 +27,7 @@ const FLOWMAP_PATH = 'res://flow.png';
 const EXTERNAL: TscnExternalResource[] = [{ id: '1_flow', type: 'Texture2D', path: FLOWMAP_PATH }];
 
 function renderSurface(
-  source: MaterialSource | undefined,
+  source: ScopedReference | undefined,
   withUploads = false,
   Outer: (props: { children: ReactNode }) => ReactNode = Fragment
 ) {
@@ -67,7 +68,7 @@ describe('useSurfaceMaterial for a source without a usable material', () => {
   });
 
   it('is absent while a material file loads, then draws its scalars', () => {
-    const { result, fake } = renderSurface({ kind: 'file', path: TRES_PATH });
+    const { result, fake } = renderSurface(fileMaterial(TRES_PATH));
     expect(result.current.isAbsent).toBe(true);
 
     act(() => fake.resources._resolve(TRES_PATH, parseTresFile(PAINT_TRES)));

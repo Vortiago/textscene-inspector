@@ -12,12 +12,7 @@
 
 import { lerpColor, type Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
-
-export interface GeometryBuffers {
-  positions: number[];
-  indices: number[];
-  colors: number[];
-}
+import type { GeometryBuffers } from '../../../../godot/rendering/canvasPolyline.js';
 
 /** The numerator `1.5` of `fake_aa_width` and `rim_width` (`graph_edit.cpp:232-233`). */
 const FADE_BAND_PX = 1.5;
@@ -28,6 +23,17 @@ const RIM_BAND_PX = 1.5;
  * ribbon clamps its inner ring.
  */
 const RINGS_PER_POINT = 6;
+
+/** The 4 px that `_get_shader_line_width` adds to every stroke (`graph_edit.cpp:2633`). */
+const SHADER_LINE_PADDING_PX = 4;
+
+/**
+ * `_get_shader_line_width` (`graph_edit.cpp:2632-2634`): `lines_thickness * base_scale + 4.0`.
+ * `baseScale` is the theme's default base scale, unrounded.
+ */
+export function shaderLineWidth(thickness: number, baseScale: number): number {
+  return thickness * baseScale + SHADER_LINE_PADDING_PX;
+}
 
 /**
  * `points` in Godot px (+Y down), in the destination space. The Y flip into three space

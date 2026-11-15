@@ -1,0 +1,50 @@
+; The one variable: an icon whose drawn size is zero in one axis. Left: `expand_icon` with no text on a Button
+; sized to its own margins, so the room is exactly zero. Right: a 100x1 icon clamped by
+; `icon_max_width = 1` to 1x0, beside the text. Godot reserves the icon's size and the separation either
+; way (button.cpp:349-405). unit-button-expand-icon-no-room has the negative size.
+
+[gd_scene load_steps=4 format=3 uid="uid://unitbuttoniconzerosize"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.2, 0.5, 0.35, 1)
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+
+[sub_resource type="Gradient" id="Gradient_icon"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 0.85, 0.2, 1, 0.8, 0.1, 0.1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_wide"]
+gradient = SubResource("Gradient_icon")
+width = 100
+height = 1
+fill_from = Vector2(0, 0)
+fill_to = Vector2(1, 0)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="ZeroRoom" type="Button" parent="."]
+offset_left = 24.0
+offset_top = 32.0
+offset_right = 44.0
+offset_bottom = 48.0
+icon_alignment = 0
+expand_icon = true
+icon = SubResource("GradientTexture2D_wide")
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+
+[node name="Clamped" type="Button" parent="."]
+offset_left = 120.0
+offset_top = 32.0
+offset_right = 120.0
+offset_bottom = 32.0
+text = "Save"
+icon_alignment = 0
+icon = SubResource("GradientTexture2D_wide")
+theme_override_constants/icon_max_width = 1
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")

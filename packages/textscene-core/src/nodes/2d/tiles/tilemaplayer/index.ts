@@ -3,6 +3,8 @@
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
+import { registerPaintRoom } from '../../../../r3f/canvasItemPass/paintRoom';
+import { tileMapLayerPaintRoom } from './paintRoom';
 import { parseTileMapLayer } from './parser';
 import { formatTileMapLayerProperties } from './propertyFormatter';
 
@@ -13,3 +15,4 @@ const tileMapLayerRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(tileMapLayerRegistration);
+registerPaintRoom('TileMapLayer', tileMapLayerPaintRoom);

@@ -15,6 +15,7 @@ import {
   type GlyphDefinitions,
   type KernLookup,
 } from './syntheticGpos.testkit';
+import type { PairKerning } from '../fontMetrics';
 
 /** `MarkAttachmentType` 1, in the high byte of the flag. */
 const MARK_ATTACHMENT_TYPE_1 = 0x0100;
@@ -34,7 +35,12 @@ function kerningOf(
   rightCodePoint: number
 ): number {
   const reader = instanceKerningReader(syntheticKernFont([lookup], definitions))!(BOLD_NORMALIZED);
-  return reader({ glyph: 1, codePoint: LETTER_A }, { glyph: 2, codePoint: rightCodePoint });
+  return unitsOf(reader({ glyph: 1, codePoint: LETTER_A }, { glyph: 2, codePoint: rightCodePoint }));
+}
+
+/** The design units of a pair kerning, its deltas included. */
+function unitsOf(kerning: PairKerning): number {
+  return kerning.reduce((units, value) => units + value.units + value.deltaUnits, 0);
 }
 
 /** The kerning of `A` before `V` in a font whose `GDEF` holds `definitions`. */
@@ -122,14 +128,16 @@ describe('a kern lookup of a language system', () => {
   it('adds nothing beside the default language system', () => {
     const font = syntheticKernFont([{ flag: 0 }, { flag: 0, feature: 'languageKern' }]);
     const reader = instanceKerningReader(font)!(BOLD_NORMALIZED);
-    expect(reader({ glyph: 1, codePoint: LETTER_A }, { glyph: 2, codePoint: LETTER_V })).toBe(KERNED_UNITS);
+    expect(unitsOf(reader({ glyph: 1, codePoint: LETTER_A }, { glyph: 2, codePoint: LETTER_V }))).toBe(
+      KERNED_UNITS
+    );
   });
 });
 
 describe('a lookup of another feature HarfBuzz positions by default', () => {
   const kerningIn = (lookup: KernLookup): number => {
     const reader = instanceKerningReader(syntheticKernFont([lookup]))!(BOLD_NORMALIZED);
-    return reader({ glyph: 1, codePoint: LETTER_A }, { glyph: 2, codePoint: LETTER_V });
+    return unitsOf(reader({ glyph: 1, codePoint: LETTER_A }, { glyph: 2, codePoint: LETTER_V }));
   };
 
   // `hb_ot_map_builder_t::compile` adds the required feature whatever its tag (`hb-ot-map.cc:205-210, 341-342`).

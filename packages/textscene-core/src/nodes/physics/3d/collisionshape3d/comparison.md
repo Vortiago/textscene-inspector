@@ -38,6 +38,8 @@ Strict parsing format-checks these `CollisionShape3D` properties, plus 17 inheri
 
 `shape` is copied through verbatim with no format check. `disabled` is `true` only for the literal string `true`. `debug_color` falls back to the project default `Color(0, 0.6, 0.7, 0.42)` for an absent or unparseable value, with no warning.
 
+A `shape` reads the same from the scene, from a `.tres` and from a sub-resource of a `.tres`. A resource that is no Shape3D leaves the slot empty and draws no wireframe, as in Godot.
+
 ## Known limitations
 
 - **Editor only** The shape wireframe draws only while the collision-shape toggle is on.

@@ -11,18 +11,19 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlLayoutOrder, painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { multiplyModulate, WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { multiplyModulate, WHITE_MODULATE, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { useCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import {
   useInheritedTextureSampler,
   type CanvasItemTextureSampler,
 } from '../../../../r3f/canvasItemTextureSampler';
+import { useNodeReference, type ScopedReference } from '../../../../resources/reading';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnedTextureView } from '../../../../r3f/useTextureView';
 import { regionUvWindow } from '../../../../r3f/uvWindow';
 import { rangeRatio } from '../shared/range';
 import { ninePatchGeometry } from '../../../../r3f/controls/native/ninePatchGeometry';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { drawNinePatchStretched, type NinePatchMargin } from './ninePatchProgress';
 import { linearProgressDraw } from './linearFill';
 import {
@@ -39,6 +40,8 @@ import type { Vector2 } from '../../../../godot/math/vector';
 import { imageSize, type ImageSize } from '../../../../resources/formats/image/imagePixels';
 import { sizeWithArea } from '../../../../resources/textures/textureSize';
 import { AxisStretchMode, TextureProgressBarFillMode } from '../../../../godot/scene/gui';
+import { useCanvasColorSpace } from '../../../../r3f/canvasColorSpace';
+import { useStableVector2 } from '../../../../r3f/hooks/useStableVector2';
 
 const ZERO: Vector2 = { x: 0, y: 0 };
 
@@ -60,12 +63,10 @@ function useLayerSize(
 
 /** One decoded, sampler-configured texture: `TextureRect`'s load path, once per slot. */
 function useLayerTexture(
-  ref: string | undefined,
-  externalResources: NativeControlComponentProps['solveNode']['resources']['externalResources'],
-  internalResources: NativeControlComponentProps['solveNode']['resources']['internalResources'],
+  reference: ScopedReference,
   sampler: CanvasItemTextureSampler
 ): { texture: THREE.Texture | null; size: ImageSize | undefined } {
-  const { texture: raw, size } = useTexture2D(ref, externalResources, internalResources);
+  const { texture: raw, size } = useTexture2D(reference);
   return { texture: useCanvas2DTexture(raw, sampler), size };
 }
 
@@ -75,11 +76,12 @@ function useCroppedTexture(
   region: { x: number; y: number; w: number; h: number } | undefined,
   textureSize: Vector2 | null
 ): THREE.Texture | null {
+  const { textureColorSpace } = useCanvasColorSpace();
   return useOwnedTextureView(
     texture,
     region &&
       textureSize && {
-        colorSpace: THREE.NoColorSpace,
+        colorSpace: textureColorSpace,
         wrap: THREE.ClampToEdgeWrapping,
         window: regionUvWindow(region, textureSize),
       }
@@ -90,10 +92,10 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
   const props = painterView<TextureProgressBarProperties>(solveNode);
   const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
 
-  const { externalResources, internalResources } = solveNode.resources;
-  const under = useLayerTexture(props.textureUnder, externalResources, internalResources, sampler);
-  const progress = useLayerTexture(props.textureProgress, externalResources, internalResources, sampler);
-  const over = useLayerTexture(props.textureOver, externalResources, internalResources, sampler);
+  const scope = solveNode.resources;
+  const under = useLayerTexture(useNodeReference(props.textureUnder, scope), sampler);
+  const progress = useLayerTexture(useNodeReference(props.textureProgress, scope), sampler);
+  const over = useLayerTexture(useNodeReference(props.textureOver, scope), sampler);
   const underTexture = under.texture;
   const progressTexture = progress.texture;
   const overTexture = over.texture;
@@ -118,7 +120,7 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
     }),
     [stretchMarginLeft, stretchMarginTop, stretchMarginRight, stretchMarginBottom]
   );
-  const controlSize: Vector2 = useMemo(() => ({ x: rect.w, y: rect.h }), [rect.w, rect.h]);
+  const controlSize = useStableVector2({ x: rect.w, y: rect.h });
 
   // `tint_under`/`tint_progress`/`tint_over` (raw sRGB) multiply into `tint.own` before the one
   // sRGB-to-linear conversion, as Button's icon does (`buttonBase.ts`).
@@ -134,9 +136,9 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
     () => multiplyModulate(props.tintOver ?? WHITE_MODULATE, tint.own),
     [props.tintOver, tint.own]
   );
-  const underColor = useGodotLinearColor(underColorSrgb);
-  const progressColor = useGodotLinearColor(progressColorSrgb);
-  const overColor = useGodotLinearColor(overColorSrgb);
+  const underColor = useItemLinearColor(underColorSrgb);
+  const progressColor = useItemLinearColor(progressColorSrgb);
+  const overColor = useItemLinearColor(overColorSrgb);
 
   const fillMode = normalizeTextureProgressBarFillMode(props.fillMode);
   const isRadialMode =
@@ -281,16 +283,14 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
         </CanvasItemGroup>
       )}
       {isRadialMode && radialVal !== null && radialVal >= 1 && progressTexture && radialSize && (
-        <CanvasItemGroup position={[progressOffset.x, -progressOffset.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={radialSize.x}
-            height={radialSize.y}
-            color={progressColor}
-            opacity={progressColorSrgb.a}
-            map={progressTexture}
-          />
-        </CanvasItemGroup>
+        <PositionedIcon
+          rect={{ x: progressOffset.x, y: progressOffset.y, w: radialSize.x, h: radialSize.y }}
+          texture={progressTexture}
+          color={progressColor}
+          opacity={progressColorSrgb.a}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
+        />
       )}
       {radialGeometry && progressTexture && (
         <CanvasItemGroup position={[progressOffset.x, -progressOffset.y, 0]}>
@@ -304,16 +304,19 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
         </CanvasItemGroup>
       )}
       {progressLinear && progressCropped && (
-        <CanvasItemGroup position={[progressLinear.offset.x, -progressLinear.offset.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={progressLinear.size.x}
-            height={progressLinear.size.y}
-            color={progressColor}
-            opacity={progressColorSrgb.a}
-            map={progressCropped}
-          />
-        </CanvasItemGroup>
+        <PositionedIcon
+          rect={{
+            x: progressLinear.offset.x,
+            y: progressLinear.offset.y,
+            w: progressLinear.size.x,
+            h: progressLinear.size.y,
+          }}
+          texture={progressCropped}
+          color={progressColor}
+          opacity={progressColorSrgb.a}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
+        />
       )}
 
       {overTexture && overSize && !ninePatchStretch && (

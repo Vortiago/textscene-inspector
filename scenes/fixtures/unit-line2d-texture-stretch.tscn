@@ -1,0 +1,28 @@
+; One variable: `default_color`. STRETCH spreads one texture over the whole line, and the colour
+; multiplies the texels.
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="Gradient" id="Gradient_halves"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.5)
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_halves"]
+gradient = SubResource("Gradient_halves")
+width = 32
+height = 16
+
+[node name="Line2DTextureStretch" type="Node2D"]
+
+[node name="Plain" type="Line2D" parent="."]
+points = PackedVector2Array(50, 50, 178, 50)
+width = 16.0
+texture = SubResource("GradientTexture2D_halves")
+texture_mode = 2
+
+[node name="Tinted" type="Line2D" parent="."]
+points = PackedVector2Array(50, 100, 178, 100)
+width = 16.0
+default_color = Color(0.5, 1, 1, 1)
+texture = SubResource("GradientTexture2D_halves")
+texture_mode = 2

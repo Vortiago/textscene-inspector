@@ -1,0 +1,178 @@
+[gd_scene format=3 uid="uid://unit_item_list_wrap_trim"]
+
+; One variable: each ItemList label fits its draw width, not its minimum-size width. Every list is
+; plain text, so the icon-mode, fixed_column_width, max_text_lines, text_overrun_behavior and
+; wraparound_items paths show beside each other. unit-item-list.tscn pins the property sweep and
+; no other scene shows a row that overflows its list (item_list.cpp:1625-1661, :1766).
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="TopWordBreak" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 208.0
+offset_bottom = 108.0
+icon_mode = 0
+fixed_column_width = 56
+max_columns = 3
+max_text_lines = 3
+item_count = 3
+item_0/text = "Supercalifragilistic"
+item_1/text = "Healing potion bottle"
+item_2/text = "Axe"
+
+[node name="TopHiddenLines" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 216.0
+offset_top = 8.0
+offset_right = 416.0
+offset_bottom = 108.0
+icon_mode = 0
+fixed_column_width = 56
+max_columns = 3
+max_text_lines = 2
+item_count = 3
+item_0/text = "Supercalifragilistic"
+item_1/text = "Healing potion bottle"
+item_2/text = "Axe"
+
+[node name="TopHiddenNoTrim" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 424.0
+offset_top = 8.0
+offset_right = 624.0
+offset_bottom = 108.0
+icon_mode = 0
+fixed_column_width = 56
+max_columns = 3
+max_text_lines = 2
+text_overrun_behavior = 0
+item_count = 3
+item_0/text = "Supercalifragilistic"
+item_1/text = "Healing potion bottle"
+item_2/text = "Axe"
+
+[node name="TopHiddenWordEllipsis" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 632.0
+offset_top = 8.0
+offset_right = 832.0
+offset_bottom = 108.0
+icon_mode = 0
+fixed_column_width = 56
+max_columns = 3
+max_text_lines = 2
+text_overrun_behavior = 4
+item_count = 3
+item_0/text = "Supercalifragilistic"
+item_1/text = "Healing potion bottle"
+item_2/text = "Axe"
+
+[node name="TopNarrowList" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 840.0
+offset_top = 8.0
+offset_right = 904.0
+offset_bottom = 108.0
+icon_mode = 0
+max_text_lines = 2
+item_count = 2
+item_0/text = "Long word another"
+item_1/text = "Axe"
+
+[node name="LeftNarrowList" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 124.0
+offset_right = 88.0
+offset_bottom = 224.0
+icon_mode = 1
+item_count = 2
+item_0/text = "A very long item name"
+item_1/text = "Axe"
+
+[node name="LeftFixedWidth" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 96.0
+offset_top = 124.0
+offset_right = 216.0
+offset_bottom = 224.0
+icon_mode = 1
+fixed_column_width = 48
+item_count = 2
+item_0/text = "A very long item name"
+item_1/text = "Axe"
+
+[node name="LeftNoTrim" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 224.0
+offset_top = 124.0
+offset_right = 304.0
+offset_bottom = 224.0
+icon_mode = 1
+text_overrun_behavior = 0
+item_count = 2
+item_0/text = "A very long item name"
+item_1/text = "Axe"
+
+[node name="LeftTrimChar" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 312.0
+offset_top = 124.0
+offset_right = 392.0
+offset_bottom = 224.0
+icon_mode = 1
+text_overrun_behavior = 1
+item_count = 2
+item_0/text = "A very long item name"
+item_1/text = "Axe"
+
+[node name="LeftTrimWord" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 400.0
+offset_top = 124.0
+offset_right = 480.0
+offset_bottom = 224.0
+icon_mode = 1
+text_overrun_behavior = 2
+item_count = 2
+item_0/text = "A very long item name"
+item_1/text = "Axe"
+
+[node name="LeftEllipsisForce" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 488.0
+offset_top = 124.0
+offset_right = 568.0
+offset_bottom = 224.0
+icon_mode = 1
+text_overrun_behavior = 5
+item_count = 2
+item_0/text = "A very long item name"
+item_1/text = "Axe"
+
+[node name="TopTwoColumns" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 576.0
+offset_top = 124.0
+offset_right = 696.0
+offset_bottom = 284.0
+icon_mode = 0
+max_columns = 2
+same_column_width = true
+max_text_lines = 2
+item_count = 4
+item_0/text = "Healing potion"
+item_1/text = "Axe"
+item_2/text = "Shield bash"
+item_3/text = "Bow"

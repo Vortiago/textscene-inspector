@@ -1,12 +1,11 @@
 /**
  * `<SplitContainer>`: the native painter for the base `SplitContainer` type. It follows
  * `hsplitcontainer/Component.tsx`, sealed-boundary channel included, but reads `vertical` from the
- * node, not the type. `tint` is the walker's, `self_modulate` folded onto `modulate`.
+ * node, not the type. `childTint` is the walker's tint without `self_modulate`: the grabber icon is the dragger Control's (`split_container.cpp:1340`).
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { isSortableControl } from '../shared/fitChildInRect';
@@ -30,7 +29,7 @@ function verticalOf(props: SplitContainerProperties): boolean {
 
 export function SplitContainer({
   solveNode,
-  tint,
+  childTint,
   rect,
   theme,
   renderOrder,
@@ -43,8 +42,7 @@ export function SplitContainer({
   // `dragger_visibility` or `autohide` is read. The painter checks it too, since it has no rect
   // to draw an icon between otherwise.
   const sortable = solveNode.children.filter(isSortableControl);
-  const drawsGrabber =
-    sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
+  const drawsGrabber = sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants);
   const icon = vertical ? SPLIT_CONTAINER_ICONS.vsplitter : SPLIT_CONTAINER_ICONS.hsplitter;
   const themeKey = splitGrabberThemeKey(solveNode.node.type, vertical);
   const texture = useNodeIcon(
@@ -56,11 +54,8 @@ export function SplitContainer({
     return null;
   }
 
-  const iconSize = splitGrabberIconSize(solveNode.node.type, vertical, solveNode.textureSlots);
-  const separation = resolveSplitSeparation(props, solveNode.constants, {
-    ...theme.widgets.splitContainer,
-    grabberExtent: vertical ? iconSize.y : iconSize.x,
-  });
+  const iconSize = splitGrabberIconSize(solveNode.node.type, vertical, solveNode.textureSlots, theme.scale);
+  const separation = resolveSplitSeparation(props, solveNode.constants, vertical ? iconSize.y : iconSize.x);
   const cached = splitContainerBoundaryChannel.open(meta)?.draggerPositions;
   const draggerPositions =
     cached ??
@@ -84,16 +79,15 @@ export function SplitContainer({
           iconSize
         );
         return (
-          <CanvasItemGroup key={i} position={[iconRect.x, -iconRect.y, 0]} renderOrder={renderOrder}>
-            <ControlQuad
-              renderOrder={renderOrder}
-              width={iconRect.w}
-              height={iconRect.h}
-              color={tint.color}
-              opacity={tint.opacity}
-              map={texture}
-            />
-          </CanvasItemGroup>
+          <PositionedIcon
+            key={i}
+            rect={iconRect}
+            texture={texture}
+            color={childTint.color}
+            opacity={childTint.opacity}
+            renderOrder={renderOrder}
+            canvasKey={renderOrder}
+          />
         );
       })}
     </>

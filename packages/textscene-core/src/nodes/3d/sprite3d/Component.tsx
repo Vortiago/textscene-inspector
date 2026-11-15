@@ -13,6 +13,7 @@ import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { frameRectPx, frameUvWindow, spriteWrapMode } from '../../../r3f/spriteFrame';
 import { WRAP } from '../../../r3f/canvasItemTextureSampler';
+import { useNodeReference } from '../../../resources/reading';
 import { useTextureView } from '../../../r3f/useTextureView';
 import { flippedUvWindow, regionUvWindow } from '../../../r3f/uvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -48,7 +49,6 @@ import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 export function Sprite3D({ node, children }: NodeComponentProps) {
   const spriteRef = useRef<THREE.Object3D | null>(null);
   const properties = node.properties as Sprite3DProperties;
-  const { externalResources, internalResources } = useSceneResources();
 
   const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 
@@ -57,12 +57,13 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
 
   // The sprite's material samples `texture_albedo` as `source_color` (`material.cpp:969`), so a
   // ViewportTexture gives its decoding view.
+  const scope = useSceneResources();
   const {
     texture: sourceTexture,
     size: reportedSize,
     missing: textureMissing,
     atlasCell,
-  } = useTexture2D(properties.texture, externalResources, internalResources, 'decoding');
+  } = useTexture2D(useNodeReference(properties.texture, scope), 'decoding');
 
   // An AtlasTexture draws its region alone, so a margin is no part of the quad
   // (`atlas_texture.cpp:193-219`). Any other texture draws the whole frame.

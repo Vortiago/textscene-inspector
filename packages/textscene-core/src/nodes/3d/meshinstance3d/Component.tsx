@@ -13,7 +13,8 @@ import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import { useMeshContent, type SurfacedMesh, type SurfacedPart } from '../../../r3f/meshes/meshContent';
-import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
+import { nodeMaterial } from '../../../r3f/materials/materialReference';
+import type { ScopedReference } from '../../../resources/reading';
 import { SurfacedMeshDrawer, type MeshPart } from '../../../r3f/surfacedMeshDrawer/SurfacedMeshDrawer';
 import { isOutgrownBySkin, useSkinSkeleton } from '../../../r3f/meshes/skinSkeleton';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
@@ -37,6 +38,14 @@ interface MeshInstance3DProps extends NodeComponentProps {
   gizmo?: (mesh: SurfacedMesh) => ReactNode;
 }
 
+/**
+ * The mesh a node's `mesh` property names, as the surfaces a draw mounts. MeshInstance2D reads it
+ * through here too, so the lookup of a mesh moves with this one entry.
+ */
+export function useMeshInstanceContent(meshRef: string | undefined, pools: SceneResources) {
+  return useMeshContent(useResourceResolution(meshRef, pools));
+}
+
 export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
   const properties = node.properties as MeshInstance3DProperties;
   const pools = useSceneResources();
@@ -44,7 +53,7 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
   const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 
   // A `.glb` resolves to nothing and falls through to the placeholder.
-  const content = useMeshContent(useResourceResolution(properties.mesh, pools));
+  const content = useMeshInstanceContent(properties.mesh, pools);
 
   // `surface_material_override/N`, keyed by the mesh's own surface numbering. Godot applies them
   // to every kind of mesh alike.
@@ -139,15 +148,15 @@ function overriddenPart(part: SurfacedPart, overrides: SurfaceOverrides): MeshPa
 }
 
 /** `surface_material_override/N`, resolved against the scene and keyed by Godot's original surface index. */
-type SurfaceOverrides = ReadonlyMap<number, MaterialSource>;
+type SurfaceOverrides = ReadonlyMap<number, ScopedReference>;
 
 function resolveSurfaceOverrides(
   refs: MeshInstance3DProperties['surfaceMaterialOverrides'],
   scene: SceneResources
 ): SurfaceOverrides {
-  const overrides = new Map<number, MaterialSource>();
+  const overrides = new Map<number, ScopedReference>();
   for (const [index, ref] of refs) {
-    const source = resolveMaterialSource(ref, scene);
+    const source = nodeMaterial(ref, scene);
     if (source) overrides.set(index, source);
   }
   return overrides;

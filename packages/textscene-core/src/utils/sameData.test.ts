@@ -26,4 +26,11 @@ describe('sameData', () => {
     expect(sameData(null, {})).toBe(false);
     expect(sameData(null, 0)).toBe(false);
   });
+
+  it('compares typed arrays by kind and content', () => {
+    expect(sameData(new Float32Array([1, NaN]), new Float32Array([1, NaN]))).toBe(true);
+    expect(sameData(new Float32Array([1, 2]), new Float32Array([1, 3]))).toBe(false);
+    expect(sameData(new Float32Array([1]), new Int32Array([1]))).toBe(false);
+    expect(sameData(new Int32Array([1]), [1])).toBe(false);
+  });
 });

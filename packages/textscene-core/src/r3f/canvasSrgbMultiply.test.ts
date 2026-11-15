@@ -4,18 +4,21 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { CANVAS_SRGB_DEFINES, installCanvasSrgbMultiply } from './canvasSrgbMultiply';
+import { CANVAS_LINEAR_DEFINES, CANVAS_SRGB_DEFINES, installCanvasSrgbMultiply } from './canvasSrgbMultiply';
 import { warningsOf } from './testing/logWarnings';
 
 const threeMap = THREE.ShaderChunk.map_fragment;
 const threeColor = THREE.ShaderChunk.color_fragment;
+const threeColorVertex = THREE.ShaderChunk.color_vertex;
 
 /** The define a material sets, as the patched chunks must test it. */
 const [DEFINE] = Object.keys(CANVAS_SRGB_DEFINES);
+const LINEAR_DEFINE = Object.keys(CANVAS_LINEAR_DEFINES)[0]!;
 
 afterEach(() => {
   THREE.ShaderChunk.map_fragment = threeMap;
   THREE.ShaderChunk.color_fragment = threeColor;
+  THREE.ShaderChunk.color_vertex = threeColorVertex;
 });
 
 function patchedChunks() {
@@ -55,6 +58,25 @@ describe('installCanvasSrgbMultiply', () => {
     const { map, color } = patchedChunks();
     expect(map).toContain(threeColor.trim().split('\n')[0]);
     expect(color).toContain(threeMap.trim().split('\n')[0]);
+  });
+
+  it('decodes the vertex colour attribute in the vertex stage under the linear define, before interpolation', () => {
+    installCanvasSrgbMultiply();
+    const decode = THREE.ShaderChunk.color_vertex
+      .split(`defined( ${LINEAR_DEFINE} )`)[1]!
+      .split('#endif')[0]!;
+    expect(decode).toContain('vColor.rgb = mix(');
+    expect(THREE.ShaderChunk.color_vertex.indexOf(LINEAR_DEFINE)).toBeLessThan(
+      THREE.ShaderChunk.color_vertex.indexOf('#ifdef USE_INSTANCING_COLOR')
+    );
+  });
+
+  it('multiplies the decoded vertex colour linearly in the fragment stage under the linear define', () => {
+    expect(patchedChunks().color).not.toContain(LINEAR_DEFINE);
+  });
+
+  it('leaves the map multiply linear under the linear define, since the texel decodes on sample', () => {
+    expect(patchedChunks().map).not.toContain(LINEAR_DEFINE);
   });
 
   it('changes nothing on a second call', () => {

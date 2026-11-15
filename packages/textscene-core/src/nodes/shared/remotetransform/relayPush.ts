@@ -8,10 +8,10 @@ import type { TscnNode } from '../../../parser/types.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform.js';
-import type { NodePatch, NodePatches } from '../../../r3f/nodePatch.js';
+import { NO_PATCHES, type NodePatch, type PatchLookup } from '../../../r3f/nodePatch.js';
 import { globalMatrix3D, localMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
-import { node2DLocalTransform } from '../../../r3f/node2dTransform.js';
-import type { Node2DProperties } from '../../../nodes/base/node2d/types.js';
+import { transform2DOnCanvas } from '../../../r3f/liveTransform2D.js';
+import { localTransform2D, type Node2DPose } from '../../canvasitem/shared/globalTransform2D.js';
 import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
@@ -38,65 +38,106 @@ export interface Push {
   readonly flags: RemoteFlags;
 }
 
-/** The transform maths of one space, which a push composes the same way in both. */
-interface SpaceMath<T> {
-  local(node: TscnNode): T;
-  global(path: string, chain: Map<string, TscnNode>): T;
-  compose(target: T, relay: T, flags: RemoteFlags): T;
-  localFromGlobal(global: T, parentPath: string | null, chain: Map<string, TscnNode>): T;
+/** What a push reads of one space: the transforms of nodes the pass has posed, null for one it cannot decode. */
+interface SpaceReader<T> {
+  local(path: string): T | null;
+  global(path: string): T | null;
+  localFromGlobal(global: T, parentPath: string | null): T | null;
 }
 
-const SPACE_3D: SpaceMath<Transform3D> = {
-  local: localTransform3D,
-  global: globalTransform3D,
-  compose: composeSelected3D,
-  localFromGlobal: localFromGlobal3D,
-};
+/** The transform maths of one space, which a push composes the same way in both. */
+interface SpaceMath<T> {
+  readerOver(tree: LiveTree, posed: PatchLookup): SpaceReader<T>;
+  compose(target: T, relay: T, flags: RemoteFlags): T;
+}
 
-const SPACE_2D: SpaceMath<Transform2DColumns> = {
-  local: localTransform2D,
-  global: globalTransform2D,
-  compose: composeSelected2D,
-  localFromGlobal: localFromGlobal2D,
-};
+/** The chain of nodes to a path, built once for each path, as a push asks for a path more than once. */
+function chainsOver(tree: LiveTree, posed: PatchLookup): (path: string) => Map<string, TscnNode> {
+  const chains = new Map<string, Map<string, TscnNode>>();
+  return (path) => {
+    if (!chains.has(path)) chains.set(path, nodesOnTheWayTo(tree, path, posed));
+    return chains.get(path)!;
+  };
+}
 
-/** Moves `relay`'s target as `_update_remote` does, and whether Godot sets the target's transform. */
-export function moveTarget(relay: Push, tree: LiveTree, placed: Map<string, NodePatch>): boolean {
+function reader3D(tree: LiveTree, posed: PatchLookup): SpaceReader<Transform3D> {
+  const chainTo = chainsOver(tree, posed);
+  return {
+    local: (path) => localTransform3D(chainTo(path).get(path)!),
+    global: (path) => globalTransform3D(path, chainTo(path)),
+    localFromGlobal: (global, parentPath) =>
+      localFromGlobal3D(global, parentPath, parentPath ? chainTo(parentPath) : new Map()),
+  };
+}
+
+/** The stored nodes with the poses of `posed` beside them, as `resolveGlobalTransform2D` reads a pose. */
+function reader2D(tree: LiveTree, posed: PatchLookup): SpaceReader<Transform2DColumns> {
+  const chainTo = chainsOver(tree, NO_PATCHES);
+  const global = (path: string) =>
+    transform2DOnCanvas(path, chainTo(path), posed, tree.ctx.controlTransforms);
+  return {
+    local: (path) => localTransform2D(chainTo(path).get(path)!, posed.get(path) as Node2DPose | undefined),
+    global,
+    localFromGlobal: (target, parentPath) => {
+      const parentGlobal = parentPath ? global(parentPath) : TRANSFORM2D_IDENTITY;
+      // The local transform that puts a node under `parentPath` at `target` (`node_2d.cpp:384-392`).
+      return parentGlobal && multiplyTransform2D(affineInverseTransform2D(parentGlobal), target);
+    },
+  };
+}
+
+const SPACE_3D: SpaceMath<Transform3D> = { readerOver: reader3D, compose: composeSelected3D };
+const SPACE_2D: SpaceMath<Transform2DColumns> = { readerOver: reader2D, compose: composeSelected2D };
+
+/**
+ * Moves `relay`'s target as `_update_remote` does, and whether Godot sets the target's transform.
+ * A 2D push reads the poses in `posed`, which holds what `placed` holds and the solved bones below it.
+ * A 2D push whose chain this cannot decode sets nothing.
+ */
+export function moveTarget(
+  relay: Push,
+  tree: LiveTree,
+  placed: Map<string, NodePatch>,
+  posed: PatchLookup
+): boolean {
   if (!flagsAnyPart(relay.flags)) return pushSetsTarget(relay.space, relay.flags);
   if (relay.space === 'Node3D') {
-    placed.set(relay.target.path, { transform: newTargetLocal(relay, tree, placed, SPACE_3D) });
-  } else {
-    // The parts Node2D reads from the matrix (`node_2d.cpp:127-133`), skew included.
-    const { position, rotation, scale, skew } = transform2DDecompose(
-      newTargetLocal(relay, tree, placed, SPACE_2D)
-    );
-    placed.set(relay.target.path, { position, rotation, scale, skew });
+    const local = newTargetLocal(relay, SPACE_3D, tree, placed);
+    if (local === null) return false;
+    placed.set(relay.target.path, { transform: local });
+    return true;
   }
+  const local = newTargetLocal(relay, SPACE_2D, tree, posed);
+  if (local === null) return false;
+  // The parts Node2D reads from the matrix (`node_2d.cpp:127-133`), skew included.
+  const { position, rotation, scale, skew } = transform2DDecompose(local);
+  placed.set(relay.target.path, { position, rotation, scale, skew });
   return true;
 }
 
 /**
- * The local transform `relay` gives its target, from the poses the pass has placed so far. With
+ * The local transform `relay` gives its target, from the poses the pass has posed so far. With
  * every part flagged the relay's pose is the target's, so the target's own is not read.
  */
 function newTargetLocal<T>(
   { link, target, flags }: Push,
+  math: SpaceMath<T>,
   tree: LiveTree,
-  placed: NodePatches,
-  math: SpaceMath<T>
-): T {
-  const relayChain = nodesOnTheWayTo(tree, link.path, placed);
-  const targetChain = nodesOnTheWayTo(tree, target.path, placed);
+  posed: PatchLookup
+): T | null {
+  const reads = math.readerOver(tree, posed);
   const every = flagsEveryPart(flags);
   if (!flags.useGlobal) {
-    const relayLocal = math.local(relayChain.get(link.path)!);
-    return every ? relayLocal : math.compose(math.local(targetChain.get(target.path)!), relayLocal, flags);
+    const relayLocal = reads.local(link.path);
+    if (relayLocal === null || every) return relayLocal;
+    const targetLocal = reads.local(target.path);
+    return targetLocal && math.compose(targetLocal, relayLocal, flags);
   }
-  const relayGlobal = math.global(link.path, relayChain);
-  const global = every
-    ? relayGlobal
-    : math.compose(math.global(target.path, targetChain), relayGlobal, flags);
-  return math.localFromGlobal(global, parentPathOf(target.path), targetChain);
+  const relayGlobal = reads.global(link.path);
+  if (relayGlobal === null) return null;
+  const targetGlobal = every ? relayGlobal : reads.global(target.path);
+  const global = every ? relayGlobal : targetGlobal && math.compose(targetGlobal, relayGlobal, flags);
+  return global && reads.localFromGlobal(global, parentPathOf(target.path));
 }
 
 /** The local transform that puts a node under `parentPath` at `global` (`node_3d.cpp:413-420`). */
@@ -130,33 +171,6 @@ function composeSelected3D(target: Transform3D, relay: Transform3D, flags: Remot
   if (updateRotation) return { ...transformColumnsAlong(relay, target), origin };
   if (updateScale) return { ...transformColumnsAlong(target, relay), origin };
   return { ...target, origin };
-}
-
-/** The local transform that puts a node under `parentPath` at `global` (`node_2d.cpp:384-392`). */
-function localFromGlobal2D(
-  global: Transform2DColumns,
-  parentPath: string | null,
-  chain: Map<string, TscnNode>
-): Transform2DColumns {
-  const parentGlobal = parentPath ? globalTransform2D(parentPath, chain) : TRANSFORM2D_IDENTITY;
-  return multiplyTransform2D(affineInverseTransform2D(parentGlobal), global);
-}
-
-function localTransform2D(node: TscnNode): Transform2DColumns {
-  const props = node.properties as Partial<Node2DProperties>;
-  if (!props || props.position === undefined) return TRANSFORM2D_IDENTITY;
-  return node2DLocalTransform(props);
-}
-
-function globalTransform2D(path: string, nodeByPath: Map<string, TscnNode>): Transform2DColumns {
-  let result = TRANSFORM2D_IDENTITY;
-  let acc = '';
-  for (const segment of path.split('/')) {
-    acc = acc ? `${acc}/${segment}` : segment;
-    const node = nodeByPath.get(acc);
-    if (node) result = multiplyTransform2D(result, localTransform2D(node));
-  }
-  return result;
 }
 
 /**

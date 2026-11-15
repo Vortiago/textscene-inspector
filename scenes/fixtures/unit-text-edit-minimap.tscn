@@ -1,0 +1,148 @@
+; Eight TextEdit and CodeEdit boxes of 240x84, all with minimap_draw = true. The one variable of each:
+; Plain draws six lines (the view rectangle and a 2 px bar per character); Narrow sets minimap_width = 40;
+; Spaces has runs split by spaces and tabs (a tab runs to the next stop of four columns); Wrapped wraps a
+; 62 character line over three rows; Current sets highlight_current_line (the 2 px band at line 0); Code
+; has line numbers and a CodeHighlighter (each run takes its colour at 0.6 alpha); ReadOnly sets
+; editable = false; Rtl mirrors the strip to the left. TextEdit::_notification (text_edit.cpp:1129-1312)
+; draws it. A scene without minimap_draw shows none of this.
+
+[gd_scene load_steps=2 format=3 uid="uid://unittexteditminimap"]
+
+[sub_resource type="CodeHighlighter" id="CodeHighlighter_1"]
+number_color = Color(0.639216, 0.858824, 0.933333, 1)
+symbol_color = Color(0.780392, 0.780392, 0.780392, 1)
+function_color = Color(0.34902, 0.701961, 0.882353, 1)
+member_variable_color = Color(0.702, 0.882, 1, 1)
+keyword_colors = {
+"if": Color(1, 0.44, 0.52, 1),
+"var": Color(1, 0.44, 0.52, 1)
+}
+color_regions = {
+"#": Color(0.5, 0.6, 0.5, 1),
+"\" \"": Color(0.909804, 0.831373, 0.329412, 1)
+}
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 0
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Plain" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 260.0
+offset_bottom = 104.0
+text = "one
+two
+three
+four
+five
+six"
+minimap_draw = true
+
+[node name="Narrow" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 280.0
+offset_top = 20.0
+offset_right = 520.0
+offset_bottom = 104.0
+text = "one
+two
+three
+four
+five
+six"
+minimap_draw = true
+minimap_width = 40
+
+[node name="Spaces" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 540.0
+offset_top = 20.0
+offset_right = 780.0
+offset_bottom = 104.0
+text = "a	b	c
+	indented
+  spaces  inside   here
+		deep"
+minimap_draw = true
+
+[node name="Wrapped" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 800.0
+offset_top = 20.0
+offset_right = 1040.0
+offset_bottom = 104.0
+text = "a long line that runs past the right edge of the box and keeps going on
+two
+three"
+wrap_mode = 1
+minimap_draw = true
+
+[node name="Current" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 130.0
+offset_right = 260.0
+offset_bottom = 214.0
+text = "one
+two
+three
+four
+five
+six"
+highlight_current_line = true
+minimap_draw = true
+
+[node name="Code" type="CodeEdit" parent="."]
+layout_mode = 0
+offset_left = 280.0
+offset_top = 130.0
+offset_right = 580.0
+offset_bottom = 250.0
+text = "var x = 12 # note
+if x > 3:
+	var s = \"a b c\"
+	print(s)
+# comment only"
+syntax_highlighter = SubResource("CodeHighlighter_1")
+minimap_draw = true
+gutters_draw_line_numbers = true
+
+[node name="ReadOnly" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 600.0
+offset_top = 130.0
+offset_right = 840.0
+offset_bottom = 214.0
+text = "one
+two
+three
+four
+five
+six"
+editable = false
+minimap_draw = true
+
+[node name="Rtl" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 292.0
+offset_top = 270.0
+offset_right = 532.0
+offset_bottom = 354.0
+text = "one
+two
+three
+four
+five
+six"
+layout_direction = 3
+minimap_draw = true

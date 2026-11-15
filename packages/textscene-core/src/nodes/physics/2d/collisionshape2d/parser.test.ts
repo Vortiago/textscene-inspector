@@ -13,10 +13,18 @@ describe('parseCollisionShape2D', () => {
     expect(result.disabled).toBe(true);
   });
 
+  it('parses the one-way flag (happy path)', () => {
+    const result = parseCollisionShape2D(heading('CollisionShape2D', { name: 'Shape' }), {
+      one_way_collision: 'true',
+    });
+    expect(result.oneWayCollision).toBe(true);
+  });
+
   it('leaves shape/disabled undefined when absent (edge case)', () => {
     const result = parseCollisionShape2D(heading('CollisionShape2D', { name: 'Bare' }), {});
     expect(result.shape).toBeUndefined();
     expect(result.disabled).toBeUndefined();
+    expect(result.oneWayCollision).toBeUndefined();
     expect(result.position).toEqual({ x: 0, y: 0 });
   });
 

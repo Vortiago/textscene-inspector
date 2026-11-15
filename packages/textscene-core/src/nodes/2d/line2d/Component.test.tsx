@@ -8,9 +8,12 @@ import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Line2D } from './Component';
+import { canvasColorSpaceOf, CanvasColorSpaceProvider } from '../../../r3f/canvasColorSpace';
 import { parseLine2D } from './parser';
 import type { ParsedHeading } from '../../../parser/utils';
 import type { TscnNode } from '../../../parser/types';
+
+const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 function node(rawProps: Record<string, string>, name = 'Line'): TscnNode {
   const heading: ParsedHeading = { type: 'node', attributes: { name, type: 'Line2D' } };
@@ -69,6 +72,24 @@ describe('<Line2D>', () => {
       return Boolean(color && color.r > 0.9 && color.g < 0.1 && color.b < 0.1);
     });
     expect(isRed).toBe(true);
+  });
+
+  it('converts default_color apart from the modulate in a linear canvas, as a triangle array colour', async () => {
+    // `line_2d.cpp:306-310` hands `default_color` as the one array colour (`line_builder.cpp:123`).
+    const renderer = await ReactThreeTestRenderer.create(
+      <CanvasColorSpaceProvider value={LINEAR_CANVAS}>
+        <Line2D
+          node={node({
+            points: 'PackedVector2Array(0, 0, 100, 0)',
+            default_color: 'Color(0.1, 0.1, 0.1, 1)',
+            modulate: 'Color(4, 4, 4, 1)',
+          })}
+        />
+      </CanvasColorSpaceProvider>
+    );
+    const material = (drawn(renderer)[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    // sRGBChannelToLinear(0.1) × sRGBChannelToLinear(4), not sRGBChannelToLinear(0.4).
+    expect(material.color.r).toBeCloseTo(0.2537, 4);
   });
 
   it('negates Y so Godot +Y-down maps into the conjugated 2D frame', async () => {

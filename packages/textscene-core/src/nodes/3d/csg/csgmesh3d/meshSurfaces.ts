@@ -59,6 +59,7 @@ function readMesh(meshRef: string, ctx: CsgGeometryContext): CsgMesh | null {
     loadedFile: ctx.loadedFile,
     loadedFont: ctx.loadedFont,
     projectFonts: ctx.projectFonts,
+    settledFonts: ctx.settledFonts,
     locale: ctx.locale,
     file: path && parsed ? { path, parsed } : null,
   };
@@ -110,10 +111,10 @@ function arrayMeshSurfaces(
     warn(`[CSGMesh3D] ${label} builds no brush: ${String(error)}`);
     return [];
   }
-  // A points or strip surface adds nothing: the brush builder skips every surface that is not
+  // A points, lines or strip surface adds nothing: the brush builder skips every surface that is not
   // PRIMITIVE_TRIANGLES (`csg_shape.cpp:1137-1139`).
   return mesh.surfaces
-    .filter((surface) => !surface.isPoints && !surface.isTriangleStrip)
+    .filter((surface) => !surface.primitive && !surface.isTriangleStrip)
     .map((surface) => ({
       positions: surface.positions,
       normals: surface.normals,
@@ -131,6 +132,6 @@ function arrayMeshSurfaces(
 function primitiveMeshSurfaces(mesh: ResolvableResource, material: CsgMaterialAddress): CsgMeshSurface[] {
   // The brush reads no UV2 (`csg_shape.cpp:1147-1172`), the only array the texel size scales.
   const surface = primitiveMeshSurface(mesh, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
-  if (!surface || surface.isPoints) return [];
+  if (!surface || surface.primitive) return [];
   return [{ ...surface, material }];
 }

@@ -1,15 +1,14 @@
 /**
- * Skeleton2D runs its modification stack on its bones every frame. That drive is a
- * gap here (ADR-0045), so it registers `pending` on the Node2D component and its
- * children still land in the right transform space.
+ * Skeleton2D draws nothing of its own. Its component drives the bones: it runs the modification
+ * stack on them each render and owns the pose its Polygon2Ds skin with (ADR-0045).
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { Node2D } from '../../base/node2d/Component';
+import { Skeleton2D } from './Component';
 
 nodeComponentRegistry.register({
   typeName: 'Skeleton2D',
-  Component: Node2D,
+  Component: Skeleton2D,
   canvasItem: true,
-  renderIntent: 'pending',
+  renderIntent: 'transform-only',
 });

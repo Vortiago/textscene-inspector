@@ -37,6 +37,9 @@ export const HEX_CODE_BOX_CELLS_HIGH = 15;
 /** The part of a hex-code box above the baseline (`text_server_adv.cpp:6894`, `text_server.cpp:781`). */
 export const HEX_CODE_BOX_ASCENT = 0.85;
 
+/** The part of a hex-code box below the baseline, which grows its line's descent (`text_server_adv.cpp:6892`). */
+export const HEX_CODE_BOX_DESCENT = 0.15;
+
 /** `sz` (`text_server.cpp:740`): the pixels of one cell of a hex-code box. */
 export function hexCodeBoxCellPx(fontSizePx: number): number {
   return Math.max(1, godotRound(fontSizePx / HEX_CODE_BOX_CELLS_HIGH));

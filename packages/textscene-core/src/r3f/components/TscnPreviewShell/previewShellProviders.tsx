@@ -24,6 +24,7 @@ import { ViewportPassProvider } from '../../contexts/ViewportPassRegistryContext
 import { ViewportRectProvider } from '../../contexts/ViewportRectContext.js';
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext.js';
 import { AnimationTransportProvider } from '../../contexts/AnimationTransportContext.js';
+import { PreviewVisibilityProvider } from '../../contexts/PreviewVisibilityContext.js';
 import { composeProviders } from '../../composeProviders.js';
 import { FrameStatsProvider } from '../../frameProfile/FrameStatsContext.js';
 import { SoftwareRenderingProvider } from '../../softwareRendering/SoftwareRenderingContext.js';
@@ -38,6 +39,8 @@ interface PreviewShellProviderOptions {
   initialViewportMode?: ViewportMode;
   /** The mode, gizmos, grid, framing, fog and performance overlay persisted last session. */
   initialViewport?: PersistedViewport;
+  /** Whether the host shows the preview. Both canvases stop rendering while it is `false`. */
+  isVisible?: boolean;
   panelId: string;
   rootScenePath: string;
 }
@@ -52,12 +55,14 @@ export function previewShellProviders({
   onMissingPathsChange,
   initialViewportMode,
   initialViewport = DEFAULT_VIEWPORT,
+  isVisible,
   panelId,
   rootScenePath,
 }: PreviewShellProviderOptions): (children: ReactNode) => ReactNode {
   return composeProviders(
     (children) => <HierarchyProvider value={hierarchyValue}>{children}</HierarchyProvider>,
     (children) => <SelectionProvider>{children}</SelectionProvider>,
+    (children) => <PreviewVisibilityProvider isVisible={isVisible}>{children}</PreviewVisibilityProvider>,
     (children) => (
       <ViewportActionsProvider initialPreviewedCameraPath={initialPreviewedCameraPath}>
         {children}

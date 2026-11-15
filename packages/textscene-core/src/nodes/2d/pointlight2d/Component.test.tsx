@@ -14,7 +14,8 @@ import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceCo
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import type { TscnNode } from '../../../parser/types';
+import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import { texture2DPlaceholder } from '../../../resources/textures/texture2DPlaceholder';
 import { createTextureFromBuffer } from '../../../resources/formats/image/textureProcessing';
 import { DEFAULT_TEXTURE_IMPORT } from '../../../godot/import/textureImport';
 import { CanvasLighting2DProvider } from '../../../r3f/lighting2d/CanvasLighting2D';
@@ -25,6 +26,7 @@ import {
   type ApartLightRecord,
 } from '../../../r3f/lighting2d/testing/apartLightProbe';
 import { LIGHT_PASS_LAYER } from '../../../r3f/lighting2d/lightPassLayers';
+import { canvasColorSpaceOf } from '../../../r3f/canvasColorSpace';
 
 // happy-dom never settles a real image load, so the decode hands back a bare
 // texture. Everything after it is the real `createTextureFromBuffer`.
@@ -52,7 +54,12 @@ function node(raw: Record<string, string> = {}): TscnNode {
   };
 }
 
-async function render(rootNode: TscnNode, tex = new THREE.Texture(), apartLights?: ApartLightRecord) {
+async function render(
+  rootNode: TscnNode,
+  tex = new THREE.Texture(),
+  apartLights?: ApartLightRecord,
+  internalResources: TscnInternalResource[] = []
+) {
   const fake = createFakeResourceLoader();
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
   fake.textures.seed(TEX, tex);
@@ -64,10 +71,13 @@ async function render(rootNode: TscnNode, tex = new THREE.Texture(), apartLights
     <CanvasWorkspaceProvider workspace="2d">
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider
-          internalResources={[]}
+          internalResources={internalResources}
           externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
         >
-          <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
+          <CanvasLighting2DProvider
+            space={canvasColorSpaceOf(false)}
+            canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}
+          >
             <RecordApartLights record={apartLights ?? apartLightRecord()}>
               <PointLight2D node={rootNode} />
             </RecordApartLights>
@@ -201,9 +211,9 @@ describe('PointLight2D Component', () => {
     expect(color.x).not.toBeCloseTo(0.214, 3); // godotColorToLinear(0.5)
   });
 
-  it('carries energy as its own multiplier rather than folding it into the colour', async () => {
+  it('carries energy, under the colour alpha, as its own multiplier rather than folding it into the colour', async () => {
     const mat = lightMaterial(await render(node({ color: 'Color(0.5, 0.5, 0.5, 1)', energy: '2.0' })));
-    expect(mat.uniforms.uEnergy!.value).toBeCloseTo(2, 5);
+    expect(mat.uniforms.uAlphaEnergy!.value).toBeCloseTo(2, 5);
     expect((mat.uniforms.uColor!.value as THREE.Vector3).x).toBeCloseTo(0.5, 5);
   });
 
@@ -286,9 +296,33 @@ describe('PointLight2D Component', () => {
       expect(r.scene.findAllByType('Mesh').filter(isPlaceholder)).toHaveLength(0);
     });
 
-    it('draws the placeholder when the texture is set but does not resolve', async () => {
+    describe('a GradientTexture2D with no gradient', () => {
+      const emptyGradientTexture: TscnInternalResource = {
+        id: 'T',
+        type: 'GradientTexture2D',
+        data: { width: '400', height: '400', fill: '1' },
+      };
+      const render1428 = (raw: Record<string, string> = {}) =>
+        render(node({ texture: 'SubResource("T")', ...raw }), undefined, undefined, [emptyGradientTexture]);
+
+      it("lights with Godot's 2D placeholder, not the missing-resource plane (`gradient_texture.cpp:229-233`)", async () => {
+        const r = await render1428();
+        expect(r.scene.findAllByType('Mesh').filter(isPlaceholder)).toHaveLength(0);
+        expect(lightMaterial(r).uniforms.uCookie!.value.image).toBe(texture2DPlaceholder().image);
+      });
+
+      it('draws the placeholder at its own 4 by 4 size, not the texture width and height', async () => {
+        // `renderer_viewport.cpp:455-460`: the light rect is `texture_size_with_proxy(texture)`, the
+        // placeholder RID's size, times `texture_scale`.
+        const geometry = lightMesh(await render1428({ texture_scale: '2.5' }))!
+          .geometry as THREE.PlaneGeometry;
+        expect([geometry.parameters.width, geometry.parameters.height]).toEqual([10, 10]);
+      });
+    });
+
+    it('draws nothing when the texture file fails to load, as Godot leaves the property null', async () => {
       const r = await render(node({ texture: 'ExtResource("missing")' }));
-      expect(r.scene.findAllByType('Mesh').filter(isPlaceholder)).toHaveLength(1);
+      expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
     });
   });
 });

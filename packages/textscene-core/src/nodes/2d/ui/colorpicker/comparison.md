@@ -4,42 +4,48 @@ category: 2D
 status: unreviewed
 fixture: unit-color-picker.tscn
 # image: unit-color-picker
-renders_as: the sample row, the RGB/HSV/Linear mode row, the channel slider grid, the hex field, the swatches rows and, at the default picker_shape, an SV square + hue slider
+renders_as: the shape row, the sample row, the RGB/HSV/Linear mode row, the channel slider grid, the hex field and the swatches rows
 ---
 
 # ColorPicker
 
-ColorPicker is the widget for choosing a colour through sliders, a wheel, hex input and
-presets. Its C++ constructor builds the whole widget as internal children, and a `.tscn`
-never serialises them. So the previewer's painter draws the composite directly from
-`color`, `picker_shape` and every row-visibility property, not from a subtree it could
-walk. It draws these parts:
+ColorPicker is the widget for choosing a colour through sliders, a shape, hex input and
+presets. Its constructor builds the whole widget as internal Controls, which a `.tscn` never
+serialises. `internalControls.ts` builds the same Control tree from `color`, `picker_shape`,
+`color_mode` and every row-visibility property, with what `NOTIFICATION_THEME_CHANGED`,
+`_update_controls`, `_update_color` and `_update_text_value` set on each Control. The one solve
+lays the tree out and the walker draws each Control with its own painter, as it draws a scene's
+Controls. The tree holds these rows:
 
-- The pick and shape buttons, with their `screen_picker` and `shape_rect` icons, and the
-  colour sample (checkerboard and swatch).
-- The RGB/HSV/Linear mode row. OKHSL has no button, and only the dropdown reaches it.
-  The current mode's button draws `TabContainer`'s `tab_selected` box and white
-  `font_pressed_color` text, which `BIND_THEME_ITEM_EXT` brings in from
-  `color_picker.cpp:2060-2062`. Every other mode button draws `tab_unselected`, and
-  `btn_mode` adds its `menu_option` icon.
-- The channel slider grid for the current `color_mode`, with the alpha and intensity rows
-  that `edit_alpha` and `edit_intensity` add. Every channel and alpha row draws the stock
-  `HSlider` chrome under its gradient band, with the `bar_arrow` grabber that
-  `_reset_sliders_theme` sets (`color_picker.cpp:628-651`). Intensity keeps the default
-  circle grabber, since that override skips it.
-- The value `SpinBox` of each row, at the real width of its `LineEdit` field
-  (`spin_box.cpp:82-86`), with the `up`/`down` stepper icons beside it.
-- The hex/expression field.
-- The swatches rows: a collapsed "Swatches" toggle with its `folded_arrow` and a menu
-  button, and a "Recent Colors" toggle. Neither toggle changes state. This is all a
-  `.tscn`-loaded picker holds: presets arrive only through `add_preset()` at runtime,
-  never as a serialised property. Godot leaves the swatches grid collapsed until a viewer
-  expands it, so there is no grid to draw.
-- At the default `picker_shape` (the HSV rectangle), the SV square and the hue slider
-  with their cursor and indicator.
+- `shape_container`, an HBoxContainer with the Controls of the current `picker_shape`. The
+  shapes are the HSV rectangle, the HSV wheel, the VHS and OKHSL circles, and the OK HS and OK HL
+  rectangles.
+  Each Control draws what its `draw` callback draws, with Godot's own `canvas_item` shader for a
+  wheel, circle or OK rectangle (`color_picker_shape.cpp:38-137`). At `SHAPE_NONE` the row holds
+  nothing but keeps its slot.
+- `sample_hbc`: `btn_pick` with `screen_picker`, the `sample` swatch and `btn_shape` with the
+  shape's icon. `SHAPE_NONE` hides `btn_shape`.
+- `mode_hbc`: the RGB, HSV and Linear toggle Buttons and `btn_mode`. OKHSL has no button. Each
+  mode Button draws `TabContainer`'s `tab_unselected` and `tab_selected` boxes, which the picker
+  pushes onto it (`color_picker.cpp:154-160,2060-2063`).
+- `slider_gc`, a GridContainer of a Label, an HSlider and a SpinBox for each channel, intensity
+  and alpha. Each channel and the alpha slider take `bar_arrow` as their grabber, with
+  `grabber_offset` and `center_slider_grabbers` (`color_picker.cpp:146-149,629-653`), and draw the
+  mode's gradient over their HSlider chrome. An RGB, Linear or OKHSL H row draws its gradient
+  from a 400-texel texture, blended in sRGB, linear sRGB or OKLab (`color_mode.cpp:100-120,428-457`).
+  Intensity keeps the HSlider's own grabber.
+- `hex_hbc`: `hex_label`, `text_type` and the `c_text` LineEdit. For an HDR or negative `color`,
+  `text_type` shows the disabled `color_script` icon in place of "#" (`color_picker.cpp:1319-1327`).
+- `swatches_vbc`: the "Swatches" toggle with `folded_arrow` and `menu_btn`, then the "Recent
+  Colors" toggle. Presets arrive only through `add_preset()` at runtime, so both preset rows stay
+  hidden.
 
-Every row-visibility flag also moves this node's minimum size, to match the combined
-minimum of `real_vbox`. "Known limitations" lists everything else.
+The picker's minimum size is the combined minimum of `internal_margin`, as a VBoxContainer's is.
+Each internal Control is a CanvasItem of its own. It draws with its own material and light mask,
+not the picker's, and the picker's `self_modulate` tints none of them.
+The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased
+edges match. At another `gui/theme/default_theme_scale` the browser rasters the scaled SVG, so
+the edge pixels differ by a rim.
 
 ## Linting
 
@@ -75,23 +81,13 @@ Strict parsing format-checks these `ColorPicker` properties, plus 1 inherited fr
 `sliders_visible`, `hex_visible`, `presets_visible`, `sampler_visible`, `edit_alpha` and
 `edit_intensity` with VBoxContainer's properties. `can_add_swatches` and `deferred_mode`
 stay unread, and the allowlist's citation gives the reason: a button that is never
-visible, and signal timing. A `picker_shape` of `7` or a malformed `color` loads and
-renders the same as a well-formed value. An absent `color` renders opaque white, not the
+visible, and signal timing. A `picker_shape` of `7` loads and draws the HSV rectangle, since
+`set_picker_shape` refuses it (`color_picker.cpp:854`). A malformed `color` loads and renders
+the same as a well-formed value. An absent `color` renders opaque white, not the
 raw `Color()` member default, because `ColorPicker::ColorPicker()` calls
 `set_pick_color(Color(1, 1, 1))` (`color_picker.cpp:2289`).
 
 ## Known limitations
 
-- **Shader missing** A `picker_shape` other than `0` (HSV Rectangle) or `4` (none) selects
-  a shader-backed shape (wheel, VHS/OKHSL circle, either OK rectangle), so only the sample
-  row draws.
-- **Not drawn** The `script` icon of `text_type` (`color_picker.cpp:1324`), which shows only
-  for an HDR or negative `color`.
-- **Approximated** The HSV hue channel row (`color_mode = MODE_HSV`, slider index 0)
-  draws a flat grey base with no rainbow overlay, where Godot blends one in at
-  `alpha = saturation` (`color_mode.cpp:218-221`).
-- **Approximated** The minimum-size calculation floors the channel-label column at
-  `label_width` (10px), not the widest label's width, which the shape row's 290px floor
-  hides in every fixture.
 - **Not drawn** Focus rings (`draw_focus_rect`/`draw_focus_circle`): a static previewer
   has no focus.

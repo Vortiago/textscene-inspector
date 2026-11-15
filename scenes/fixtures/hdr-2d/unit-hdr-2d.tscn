@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://unithdr2d"]
+
+; The root viewport's `rendering/viewport/hdr_2d`, from this project's project.godot. The root draws
+; its canvas in linear half floats and converts to sRGB at the copy to the screen, so every other
+; golden (hdr_2d off) differs from it. Left: a red square of alpha 0.5 over a green one. Middle: a
+; 0.5 gray square at modulate 1.5. Right: a square at modulate 4, which clamps at the copy. The
+; clear colour is Godot's default, 0.3 gray, which converts to linear as well.
+
+[node name="Root" type="Node2D"]
+
+[node name="Green" type="Polygon2D" parent="."]
+color = Color(0, 1, 0, 1)
+polygon = PackedVector2Array(100, 200, 300, 200, 300, 400, 100, 400)
+
+[node name="RedHalf" type="Polygon2D" parent="."]
+color = Color(1, 0, 0, 0.5)
+polygon = PackedVector2Array(150, 250, 250, 250, 250, 350, 150, 350)
+
+[node name="GrayBright" type="Polygon2D" parent="."]
+modulate = Color(1.5, 1.5, 1.5, 1)
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(450, 200, 650, 200, 650, 400, 450, 400)
+
+[node name="Overbright" type="Polygon2D" parent="."]
+modulate = Color(4, 4, 4, 1)
+color = Color(0.5, 0.25, 0.1, 1)
+polygon = PackedVector2Array(800, 200, 1000, 200, 1000, 400, 800, 400)

@@ -1,9 +1,9 @@
 /**
  * A light's place in its canvas light list, its draw order: Godot applies lights in attach order
  * (`renderer_canvas_cull.cpp:2102`, `renderer_viewport.cpp:450-473`), the preorder walk of
- * `canvasScopes.ts`, and MIX depends on the order. The stencil ordinal cannot serve, as it follows
- * cookie load order and is reused on unmount. The walk reads the live tree, since
- * `YSortDispatcher` mounts in sort order and Godot ranks by tree position.
+ * `canvasScopes.ts`, and MIX depends on the order. The ordinal cannot serve, as it follows
+ * light texture load order and is reused on unmount. The walk reads the live tree, since Godot
+ * ranks lights by tree position, which no y-sort moves.
  */
 
 /**

@@ -4,7 +4,7 @@
  * Component.material-anisotropy.test.tsx.
  */
 import { describe, expect, it } from 'vitest';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 
 const anisotropyOf = (properties: Record<string, string>) =>
   parseStandardMaterial3DScalars(properties).anisotropy;

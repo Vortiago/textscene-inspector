@@ -67,7 +67,7 @@ must be in the ledger, so a new subclass cannot drop out of it.
 The ledger of runtime effects is `runtimeEffectNodes.data.mjs`: a type absent
 from it claims a nil effect. Deliberate exclusions keep `linter-only`, because
 the previewer's contract says their effect is nil here, not missing: physics
-bodies, the joints that draw no gizmo, `PhysicalBone2D`/`PhysicalBone3D` ragdoll physics (ADR-0005
+bodies, `PhysicalBone2D`/`PhysicalBone3D` ragdoll physics (ADR-0005
 settled these as transform-only by design), navigation nodes, `BackBufferCopy`,
 `VisibleOnScreenNotifier2D`/`Enabler2D`, `OccluderInstance3D`, and `Bone2D` (the
 bone `Skeleton2D` moves, not a driver itself). The XR trackers (`XRNode3D`,
@@ -96,3 +96,9 @@ particle emitters keep the intent and the status their effect has.
 `PinJoint3D`, `ConeTwistJoint3D`, `HingeJoint3D`, `SliderJoint3D` and `Generic6DOFJoint3D` draw the Joint3D editor gizmo (`joint_3d_gizmo_plugin.cpp`) the same
 way: each registers a component of its own that wraps `Node3D` and adds the gated gizmo, and each sheet
 is `limitation` with an **Editor only** line and a **Needs runtime** line for the joint simulation.
+
+`PinJoint2D`, `GrooveJoint2D` and `DampedSpringJoint2D` draw their editor marker in their own `NOTIFICATION_DRAW`
+(`pin_joint_2d.cpp:42`, `groove_joint_2d.cpp:42`, `damped_spring_joint_2d.cpp:42`), in full colour for every node.
+Each registers a component of its own that wraps `Node2D` and adds the gated marker, and each sheet is
+`limitation` with an **Editor only** line and a **Needs runtime** line for the joint simulation. No Godot joint
+draws nothing, so no joint keeps `linter-only`.

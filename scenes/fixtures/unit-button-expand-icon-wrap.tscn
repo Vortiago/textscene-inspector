@@ -1,0 +1,41 @@
+; The one variable: expand_icon = true on a Button and a MenuButton whose label wraps (autowrap_mode = 2).
+; A clipped label (button.cpp:332) leaves its text width in the icon's width (:345), so the icon fills
+; the box and the label is pushed past it.
+
+[gd_scene load_steps=3 format=3 uid="uid://unit_button_expand_icon_wrap"]
+
+[sub_resource type="Gradient" id="Gradient_icon"]
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_icon"]
+gradient = SubResource("Gradient_icon")
+width = 16
+height = 16
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Button" type="Button" parent="."]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 96.0
+offset_bottom = 56.0
+autowrap_mode = 2
+text = "alpha bravo charlie"
+icon = SubResource("GradientTexture2D_icon")
+expand_icon = true
+
+[node name="MenuButton" type="MenuButton" parent="."]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 96.0
+offset_right = 96.0
+offset_bottom = 136.0
+flat = false
+autowrap_mode = 2
+text = "alpha bravo charlie"
+icon = SubResource("GradientTexture2D_icon")
+expand_icon = true

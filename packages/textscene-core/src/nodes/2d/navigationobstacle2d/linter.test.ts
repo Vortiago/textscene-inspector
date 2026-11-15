@@ -179,10 +179,22 @@ scale = Vector2(0, 0)
     expect(only(SCALE_RULE, content)).toEqual([]);
   });
 
-  it('says nothing when an ancestor is a Control (a CanvasItem this helper cannot decode)', () => {
+  it('warns through a Control ancestor whose offsets state its position (control.cpp:719-737)', () => {
     const content = `[gd_scene format=3]
 
 [node name="Root" type="Control"]
+
+[node name="Obstacle" type="NavigationObstacle2D" parent="."]
+scale = Vector2(0, 0)
+`;
+    expect(only(SCALE_RULE, content)).toHaveLength(1);
+  });
+
+  it('says nothing when an ancestor is a Control with a pivot (a CanvasItem this helper cannot decode)', () => {
+    const content = `[gd_scene format=3]
+
+[node name="Root" type="Control"]
+pivot_offset = Vector2(10, 10)
 
 [node name="Obstacle" type="NavigationObstacle2D" parent="."]
 scale = Vector2(0, 0)

@@ -44,10 +44,10 @@ describe('rendersOwnVisual', () => {
   });
 
   it('reports a parsed-but-undrawn type as not-implemented', () => {
-    // `Window` is parsed and validated, and nothing draws it, so the badge says
+    // `LightmapProbe` is parsed and validated, and nothing draws it, so the badge says
     // "not implemented". A parser registration alone never clears it.
-    expect(nodeRegistry.getRegistration('Window')).not.toBeNull();
-    expect(rendersOwnVisual('Window')).toBe('not-implemented');
+    expect(nodeRegistry.getRegistration('LightmapProbe')).not.toBeNull();
+    expect(rendersOwnVisual('LightmapProbe')).toBe('not-implemented');
   });
 
   it('reports every registered type as one of the three states', () => {

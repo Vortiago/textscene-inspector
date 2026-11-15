@@ -16,6 +16,6 @@ nodeComponentRegistry.register({
   container: true,
   // It is a CanvasItem, and the registry answers what a type is. The workspace question subtracts
   // it elsewhere: `drawsInWorkspace` drops every `isViewportSurface` first (ADR-0033), and
-  // `viewportContent` reaches `is2DUIType` first, so the flag is inert at every consumer.
+  // `viewportContent.ts` reaches `is2DUIType` first, so the flag is inert at every consumer.
   canvasItem: true,
 });

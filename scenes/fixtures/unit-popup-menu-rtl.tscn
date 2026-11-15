@@ -1,0 +1,42 @@
+; One variable: `layout_direction = 3` (RTL) on the Control the menu sits under. A PopupMenu states no
+; direction of its own, so it inherits: the check mark and icon sit at the right edge, the text runs
+; right to left, and the scroll container's bar side flips (`popup_menu.cpp:857-1064`).
+
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/checkerboard-8px.svg" id="1_icon"]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+layout_direction = 3
+
+[node name="Bg" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Menu" type="PopupMenu" parent="."]
+position = Vector2i(100, 100)
+visible = true
+item_count = 5
+item_0/text = "Open"
+item_0/icon = ExtResource("1_icon")
+item_0/id = 0
+item_1/text = "Autosave"
+item_1/checkable = 1
+item_1/checked = true
+item_1/id = 1
+item_2/text = "Modes"
+item_2/icon = ExtResource("1_icon")
+item_2/separator = true
+item_2/id = 2
+item_3/text = "Fast mode"
+item_3/checkable = 2
+item_3/checked = true
+item_3/id = 3
+item_4/text = "Quit"
+item_4/disabled = true
+item_4/id = 4

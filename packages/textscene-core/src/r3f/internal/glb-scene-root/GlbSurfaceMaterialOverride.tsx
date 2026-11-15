@@ -12,7 +12,7 @@ import { materialFromBag } from '../../../resources/materials/standardmaterial3d
 import { surfaceSlotsUnder, type SurfaceSlot } from '../../../resources/formats/glb/surfaceMaterials.js';
 import { GLTF_SURFACE } from '../../materials/surfaceTextures.js';
 import { useSurfaceMaterial } from '../../materials/useSurfaceMaterial.js';
-import { type MaterialSource } from '../../materials/materialSource.js';
+import type { ScopedReference } from '../../../resources/reading/index.js';
 import { ClonedChain, ClonedOverlay, isClonedExtraDraw } from '../../surfacedMeshDrawer/ClonedExtraDraws.js';
 
 import { registerFadedCopyBuilders, unfadedMaterial } from '../../materials/fadedMeshMaterials.js';
@@ -33,7 +33,7 @@ interface GlbSurfaceMaterialOverrideProps {
   /** The GLB-internal object whose surface materials are being replaced. */
   target: THREE.Object3D;
   /** Where the override material lives, already resolved. */
-  source: MaterialSource;
+  source: ScopedReference;
   /**
    * Which surfaces under `target` it replaces, by the surface's material and its index in the
    * mesh. Every one by default. Stable identity.
@@ -72,7 +72,7 @@ export function GlbSurfaceMaterialOverride({
 }
 
 /** `material_overlay` on a mesh inside a loaded GLB, over every surface of the GLB's own under `target`. */
-export function GlbMaterialOverlay({ target, source }: { target: THREE.Object3D; source: MaterialSource }) {
+export function GlbMaterialOverlay({ target, source }: { target: THREE.Object3D; source: ScopedReference }) {
   const slots = useMemo(() => ownSurfaceSlotsUnder(target), [target]);
   return <ClonedOverlay slots={slots} source={source} />;
 }

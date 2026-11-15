@@ -5,6 +5,7 @@
  */
 import type { ShareNode } from './solveTree';
 import { resolveNodeFontSizePx } from './text/resolveNodeFontMetrics';
+import { requiredThemeItem } from './themeItems';
 import type { Rgba } from '../../../godot/math/math';
 
 export interface TextThemeKeys {
@@ -18,13 +19,6 @@ export interface TextThemeProps {
   themeOverrideFontSizes?: Record<string, number>;
 }
 
-export interface TextThemeDefaults {
-  /** The built-in default font size, px, scaled by `default_theme_scale`: the last rung when no override or theme resolves `sizeKey`. */
-  fontSizePx: number;
-  /** The type's default theme font colour, not always `control_font_color`: Label's is opaque white (`set_color(font_color, "Label", Color(1,1,1))` in `default_theme.cpp`). */
-  color: Rgba;
-}
-
 export interface ResolvedTextTheme {
   fontSizePx: number;
   color: Rgba;
@@ -34,27 +28,23 @@ export interface ResolvedTextTheme {
  * Resolves size and colour independently, so one can be overridden while the other defaults. Size
  * walks `Control::get_theme_font_size` (`scene/gui/control.cpp:3107-3129`): an override of `0` falls
  * through (`:3114-3117`), and a theme's `default_font_size` answers when no entry matches
- * (`scene/resources/theme.cpp:658-666`).
+ * (`scene/resources/theme.cpp:658-666`). `defaultColor` answers a colour that no theme sets, such
+ * as LinkButton's `font_disabled_color`.
  */
 export function resolveTextTheme(
   n: ShareNode,
   props: TextThemeProps,
   keys: TextThemeKeys,
-  defaults: TextThemeDefaults
+  defaultColor?: Rgba
 ): ResolvedTextTheme {
   return {
-    fontSizePx: resolveNodeFontSizePx(
-      n,
-      keys.sizeKey,
-      props.themeOverrideFontSizes?.[keys.sizeKey],
-      defaults.fontSizePx
-    ),
-    color: n.colors[keys.colorKey] ?? defaults.color,
+    fontSizePx: resolveNodeFontSizePx(n, keys.sizeKey, props.themeOverrideFontSizes?.[keys.sizeKey]),
+    color: n.colors[keys.colorKey] ?? defaultColor ?? requiredThemeItem(n.colors, keys.colorKey),
   };
 }
 
 export interface TextOutlineTheme {
-  /** `font_outline_color`, sRGB. Godot's default is opaque black for most types (`default_theme.cpp:162` for Button) and white for FoldableContainer (`:1327`). */
+  /** `font_outline_color`, sRGB. Godot's default is opaque black for most types, as the table's `Button/font_outline_color` is. */
   color: Rgba;
   /** `outline_size`, px. The default theme sets 0 for every type, so no outline draws until a scene sets it. */
   sizePx: number;
@@ -62,16 +52,31 @@ export interface TextOutlineTheme {
 
 const DEFAULT_OUTLINE_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 
+/** The theme item names of one outline: a colour and a size constant. */
+export interface OutlineItemNames {
+  color: string;
+  size: string;
+}
+
+const ITEM_OUTLINE_NAMES: OutlineItemNames = { color: 'font_outline_color', size: 'outline_size' };
+
+/** The separator label's own outline items of a PopupMenu (`popup_menu.cpp:3314-3315`). */
+export const SEPARATOR_OUTLINE_NAMES: OutlineItemNames = {
+  color: 'font_separator_outline_color',
+  size: 'separator_outline_size',
+};
+
 /**
  * The `font_outline_color` and `outline_size` theme items of a Control that draws its text through
- * `OutlinedTextRun` or a Label's effect layers. `defaultColor` is the type's default theme colour.
+ * `OutlinedTextRun` or a Label's effect layers. `names` picks another pair of items for a Control
+ * that has two.
  */
 export function resolveTextOutline(
   n: Pick<ShareNode, 'colors' | 'constants'>,
-  defaultColor: Rgba = DEFAULT_OUTLINE_COLOR
+  names: OutlineItemNames = ITEM_OUTLINE_NAMES
 ): TextOutlineTheme {
   return {
-    color: n.colors['font_outline_color'] ?? defaultColor,
-    sizePx: n.constants['outline_size'] ?? 0,
+    color: n.colors[names.color] ?? DEFAULT_OUTLINE_COLOR,
+    sizePx: n.constants[names.size] ?? 0,
   };
 }

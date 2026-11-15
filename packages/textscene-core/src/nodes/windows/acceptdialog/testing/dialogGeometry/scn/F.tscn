@@ -1,0 +1,7 @@
+[gd_scene format=3]
+[node name="Root" type="Control"]
+[node name="Dialog" type="AcceptDialog" parent="."]
+visible = true
+dialog_text = "This is a rather long message that should wrap across several lines inside the dialog"
+dialog_autowrap = true
+size = Vector2i(300, 100)

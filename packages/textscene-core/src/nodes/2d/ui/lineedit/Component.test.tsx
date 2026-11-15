@@ -24,7 +24,11 @@ import { lineEditMinimumSize } from './nativeSolver';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   bundledRunOf,
   bundledRunMeshes,
@@ -51,7 +55,7 @@ function solveNode(
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
   const node: TscnNode = controlNode('MyLineEdit', 'LineEdit', { name: 'MyLineEdit', ...properties });
-  return { ...emptySolveNode(), path: 'MyLineEdit', node, styleBoxes };
+  return withThemeItems({ ...emptySolveNode(), path: 'MyLineEdit', node, styleBoxes });
 }
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
@@ -464,13 +468,13 @@ describe('<LineEdit> — right_icon', () => {
       rightIcon: 'ExtResource("1")',
       ...raw,
     });
-    const n: SolveNode = {
+    const n: SolveNode = withThemeItems({
       ...emptySolveNode(),
       path: 'MyLineEdit',
       node,
       resources: ICON_SCOPE,
       textureSlots: { right_icon: iconSize },
-    };
+    });
     return ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider internalResources={[]} externalResources={ICON_SCOPE.externalResources}>
@@ -602,6 +606,48 @@ describe('<LineEdit> — caret_force_displayed', () => {
     const quads = findControlQuadMeshes(renderer.scene).filter(
       (m) => (m.material as THREE.MeshBasicMaterial).map == null
     );
+    expect(quads).toHaveLength(1);
+    expect((quads[0]!.parent as THREE.Object3D).position.x).toBe(4);
+  });
+
+  it('draws the caret caret_width times the theme scale wide (line_edit.cpp:1550): 1 at scale 2 draws 2 px', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <LineEdit
+        {...painterEnv()}
+        theme={nativeTheme(2)}
+        solveNode={solveNode({ caretForceDisplayed: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const [caret] = findControlQuadMeshes(renderer.scene).filter(
+      (m) => (m.material as THREE.MeshBasicMaterial).map == null
+    );
+    expect((caret!.geometry as THREE.PlaneGeometry).parameters.width).toBe(2);
+  });
+});
+
+describe('<LineEdit> — selection (line_edit.cpp:1491-1506)', () => {
+  const plainQuads = (renderer: Rendered) =>
+    findControlQuadMeshes(renderer.scene).filter((m) => (m.material as THREE.MeshBasicMaterial).map == null);
+
+  it('draws no selection quad without a selection', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'a.png' })} rect={RECT} renderOrder={0} />
+    );
+    expect(plainQuads(renderer)).toHaveLength(0);
+  });
+
+  it('draws one quad behind the selected glyphs, from the pen origin', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <LineEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'a.png', selection: { begin: 0, end: 1 } })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const quads = plainQuads(renderer);
     expect(quads).toHaveLength(1);
     expect((quads[0]!.parent as THREE.Object3D).position.x).toBe(4);
   });

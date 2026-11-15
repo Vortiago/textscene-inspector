@@ -1,37 +1,28 @@
 /**
- * Resolves an `ImageTexture` sub-resource, whose `image` holds its pixels inline
- * (`scene/resources/image_texture.cpp`), to a `THREE.DataTexture`. An ImageTexture at a file path
- * is the image slice's: this reads only the saved pixels.
+ * Builds the `THREE.DataTexture` of an `ImageTexture` from the Image its `image` names
+ * (`scene/resources/image_texture.cpp`). An image file is the image slice's: this reads only
+ * the pixels an Image resource saves.
  */
 
 import type * as THREE from 'three';
-import type { TscnInternalResource } from '../../../parser/types';
 import { reverseRowsInPlace } from '../../../utils/reversedRows';
 import { colourDataTexture } from '../colourDataTexture';
 import { uploadedTexels } from '../halfFloatTexels';
-import { decodeMipmappedImageRef, type DecodedLevel } from '../image/decode';
+import { decodeMipmappedImage, type DecodedLevel } from '../image/decode';
+import type { SavedImage } from '../image/kind';
 import { carryMipChain, GODOT_DEFAULT_MIN_FILTER, type TextureLevel } from '../texelTexture';
-import {
-  resolveProceduralSubResource,
-  type ProceduralTextureResolution,
-} from '../resolveProceduralSubResource';
+import { rasterizedTexture, type ProceduralTextureResolution } from '../rasterizedTexture';
 
-export function resolveImageTexture(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): ProceduralTextureResolution<THREE.DataTexture> | null {
-  return resolveProceduralSubResource(ref, internalResources, 'ImageTexture', build);
+export function imageTexture(image: SavedImage): ProceduralTextureResolution<THREE.DataTexture> | null {
+  return rasterizedTexture(image, 'ImageTexture', () => build(image));
 }
 
 /**
- * Null with no `image`, or one `decodeMipmappedImageRef` declines. The levels the Image stores are
+ * Null for an image `decodeMipmappedImage` declines. The levels the Image stores are
  * the texture's chain as saved, which Godot uploads whole (`texture_storage.cpp:858`, `:875`).
  */
-function build(
-  properties: Record<string, string>,
-  resources: readonly TscnInternalResource[]
-): THREE.DataTexture | null {
-  const pixels = decodeMipmappedImageRef(properties.image, resources);
+function build(image: SavedImage): THREE.DataTexture | null {
+  const pixels = decodeMipmappedImage(image);
   if (!pixels) return null;
   const { width, height } = pixels;
   // The decode owns its buffers, so the rows reverse where they lie, with no copy.

@@ -1,0 +1,87 @@
+[gd_scene format=3]
+; One variable: the alternative of a TileMapLayer cell on a normal-mapped CanvasTexture. Plain,
+; FlippedH and Transposed draw the same tile, whose flat normal map tilts to +x. A cell's flip negates
+; the matching normal component and its transpose swaps them first (renderer_canvas_cull.cpp:1638-1657,
+; canvas.glsl:655-661), so FlippedH is lit from the right and Transposed from above. Each layer has a
+; light of its own mask. No other scene lights a tile through a normal map.
+
+[sub_resource type="Gradient" id="Gradient_grey"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.5, 0.5, 0.5, 1, 0.5, 0.5, 0.5, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_grey"]
+gradient = SubResource("Gradient_grey")
+width = 256
+height = 256
+
+[sub_resource type="Gradient" id="Gradient_normal"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.85, 0.5, 1, 1, 0.85, 0.5, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_normal"]
+gradient = SubResource("Gradient_normal")
+width = 256
+height = 256
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_mapped"]
+diffuse_texture = SubResource("GradientTexture2D_grey")
+normal_texture = SubResource("GradientTexture2D_normal")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_mapped"]
+texture = SubResource("CanvasTexture_mapped")
+texture_region_size = Vector2i(256, 256)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_mapped"]
+tile_size = Vector2i(256, 256)
+sources/0 = SubResource("TileSetAtlasSource_mapped")
+
+[sub_resource type="Gradient" id="Gradient_cookie"]
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_cookie"]
+gradient = SubResource("Gradient_cookie")
+width = 512
+height = 512
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[node name="Root" type="Node2D"]
+
+[node name="Plain" type="TileMapLayer" parent="."]
+position = Vector2(64, 196)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+tile_set = SubResource("TileSet_mapped")
+
+[node name="FlippedH" type="TileMapLayer" parent="."]
+position = Vector2(448, 196)
+light_mask = 2
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16)
+tile_set = SubResource("TileSet_mapped")
+
+[node name="Transposed" type="TileMapLayer" parent="."]
+position = Vector2(832, 196)
+light_mask = 4
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64)
+tile_set = SubResource("TileSet_mapped")
+
+[node name="PlainLight" type="PointLight2D" parent="."]
+position = Vector2(192, 324)
+texture = SubResource("GradientTexture2D_cookie")
+texture_scale = 2.0
+height = 50.0
+
+[node name="FlippedHLight" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+range_item_cull_mask = 2
+texture = SubResource("GradientTexture2D_cookie")
+texture_scale = 2.0
+height = 50.0
+
+[node name="TransposedLight" type="PointLight2D" parent="."]
+position = Vector2(960, 324)
+range_item_cull_mask = 4
+texture = SubResource("GradientTexture2D_cookie")
+texture_scale = 2.0
+height = 50.0

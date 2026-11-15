@@ -36,4 +36,7 @@ export const PARTICLES_2D_SCENES = [
   // one. Godot cannot draw this scene the same way twice. The previewer must,
   // and this baseline records our pose, which no reference can arbitrate.
   { name: 'cpuparticles2d-unseeded', file: 'unit-cpuparticles2d-unseeded.tscn' },
+  // A global-coords emitter's rotation leaves the normal, a local one's turns it. Godot 4.6.3
+  // `--mode 2d`: Global rgb(226) at (100,324), Local rgb(161) at (852,324) and rgb(226) at (952,224).
+  { name: 'cpuparticles2d-normal-map', file: 'unit-cpuparticles2d-normal-map.tscn', mode: '2d' },
 ];

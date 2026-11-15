@@ -18,7 +18,7 @@ import { isCombiningMark, normalisedCharacters } from './canonicalGlyphs';
 import { orOnRangeError, sfntGlyphIndex, sfntMapsGlyph } from './sfntCmap';
 import { glyphMetricsReader } from './sfntGlyphMetrics';
 import type { SfntFile } from './sfntTables';
-import { isInstanced, type FontMetrics } from './fontMetrics';
+import type { FontMetrics } from './fontMetrics';
 
 /** A glyph of a shaped cluster. */
 export interface RunGlyph {
@@ -31,7 +31,11 @@ export interface RunGlyph {
   readonly char: string;
   /** Whether the glyph is a mark, which takes no advance and sits over the glyph before it. */
   readonly isMark: boolean;
-  /** The glyph's advance at the default instance, design units, where the face reads it. */
+  /**
+   * The glyph's `hmtx` advance at the default instance, design units, where the face reads it. It is
+   * the one source of the glyph's advance, as HarfBuzz reads the advance by glyph (`hb-ft.cc:519,523`):
+   * `getFontRunGlyphAdvancePx`.
+   */
   readonly advanceUnits?: number;
 }
 
@@ -46,7 +50,7 @@ export interface RunCluster {
 
 /**
  * The clusters of `chars`, in run order. An empty string in `chars` holds no character: the second
- * unit of a surrogate pair, or a character the caller draws apart, which no cluster takes.
+ * unit of a surrogate pair, which no cluster takes.
  */
 export type RunShaping = (chars: readonly string[]) => readonly RunCluster[];
 
@@ -221,7 +225,7 @@ const unshapedRuns = perObject((metrics: FontMetrics) => characterRunShaping((ch
  * `variation_opentype` where its outlines shape them, else at the default instance.
  */
 export function getFontRunShaping(metrics: FontMetrics, chars: readonly string[]): readonly RunCluster[] {
-  const { outlines, opentype } = metrics;
-  const atInstance = isInstanced(opentype) ? outlines?.shapingAt?.(chars, opentype) : null;
+  const { outlines, drawnOpentype } = metrics;
+  const atInstance = drawnOpentype && outlines?.shapingAt?.(chars, drawnOpentype);
   return atInstance ?? (metrics.shaping ?? unshapedRuns(metrics))(chars);
 }

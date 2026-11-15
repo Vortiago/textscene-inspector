@@ -4,6 +4,7 @@
  * is the pass itself, which a SubViewport hosts in its own ordered pass.
  */
 
+import type { CanvasColorSpace } from '../canvasColorSpace.js';
 import { useMemo, useRef, type ReactNode } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { CanvasLightPass } from './CanvasLightPass.js';
@@ -60,14 +61,16 @@ function useStageLightPassHost(): LightPassHost {
 interface CanvasLighting2DProviderProps {
   /** The canvas tint, where `S` starts for an ordinary item: `CanvasLightPass` says why. */
   canvasModulate: Rgba;
+  /** The space the canvas draws in, which the pass provides to its items. */
+  space: CanvasColorSpace;
   children: ReactNode;
 }
 
-export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLighting2DProviderProps) {
+export function CanvasLighting2DProvider({ canvasModulate, space, children }: CanvasLighting2DProviderProps) {
   const host = useStageLightPassHost();
   useFrame(() => host.run.current?.(), LIGHT_PASS_PRIORITY);
   return (
-    <CanvasLightPass host={host} canvasModulate={canvasModulate}>
+    <CanvasLightPass host={host} canvasModulate={canvasModulate} space={space}>
       {children}
     </CanvasLightPass>
   );

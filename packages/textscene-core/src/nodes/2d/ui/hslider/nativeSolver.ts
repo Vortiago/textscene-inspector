@@ -10,6 +10,7 @@ import type {
   TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { sliderGrabberIconSize, sliderMinimumSize } from '../shared/sliderSolver';
 
 /** `grabber_icon` (`Theme::DATA_TYPE_ICON` under key `"grabber"`): the one themeable slot the min-size solve reads. */
@@ -21,7 +22,11 @@ const hSliderTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
 };
 
 const hSliderMinimumSize: MinimumSizeFn = (n, ctx) =>
-  sliderMinimumSize(false, ctx.theme, sliderGrabberIconSize(ctx.theme, n.textureSlots));
+  sliderMinimumSize(
+    false,
+    requiredThemeItem(n.styleBoxes, 'slider'),
+    sliderGrabberIconSize(ctx.theme, n.textureSlots)
+  );
 
 controlSolverRegistry.registerMinimumSize('HSlider', hSliderMinimumSize);
 controlSolverRegistry.registerTextureSlots('HSlider', hSliderTextureSlots);

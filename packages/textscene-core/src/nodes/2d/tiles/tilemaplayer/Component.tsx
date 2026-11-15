@@ -2,59 +2,109 @@
  * <TileMapLayer> renders the layer's placed cells (decoded at parse time) as its rendering
  * quadrants, each a lit canvas item of batched textured quads. The TileSet resolves from the
  * scene's SubResources. An unresolvable TileSet or undecodable tile data degrades to the
- * transform-only group with children intact (ADR-0008).
+ * transform-only group with children intact (ADR-0008). A y-sorted layer draws no quadrants of
+ * its own: the sort in `children` sorts its rows and scene tiles with its child nodes.
  */
 
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
+import type { TileSetModel } from '../../../../resources/tileset/types';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
-import { useTileSetModel } from '../../../../r3f/useTileSetModel';
-import { useNode2DTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import { useTileSetModel, type TileSetStatus } from '../../../../r3f/useTileSetModel';
+import { YSortExtraChildrenProvider } from '../../../../r3f/ySortExtraChildren';
+import { useNodePath } from '../../../../r3f/contexts/NodePathContext';
+import { TailChildren } from '../shared/InternalChildren';
+import { ScenePlaceholders } from '../shared/ScenePlaceholders';
+import { useSceneTiles } from '../shared/useSceneTiles';
+import type { SceneTiles } from '../../../../r3f/liveSceneTiles';
 import type { TileMapLayerProperties } from './types';
 
 export function TileMapLayer({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapLayerProperties;
   const { model, status } = useTileSetModel(props.tile_set);
-  const sampler = useNode2DTextureSampler(props);
+  const sceneTiles = useSceneTiles(node);
+  const path = useNodePath() ?? node.name;
+  if (!props.y_sort_enabled) {
+    return (
+      <QuadrantLayer node={node} model={model} status={status} sceneTiles={sceneTiles}>
+        {children}
+      </QuadrantLayer>
+    );
+  }
+  return (
+    <CanvasItem2D
+      node={node}
+      props={props}
+      ownItems={(state) =>
+        model && (
+          <ScenePlaceholders
+            grid={model}
+            tiles={sceneTiles.placeholderTiles}
+            modulate={state.tint.inherited}
+          />
+        )
+      }
+    >
+      {/* A scene tile is a child canvas item of the layer, so the sort takes it with the rows and children. */}
+      <YSortExtraChildrenProvider path={path} trailing={sceneTiles.children}>
+        {children}
+      </YSortExtraChildrenProvider>
+    </CanvasItem2D>
+  );
+}
+
+interface QuadrantLayerProps extends NodeComponentProps {
+  model: TileSetModel | null;
+  status: TileSetStatus;
+  sceneTiles: SceneTiles;
+}
+
+function QuadrantLayer({ node, model, status, sceneTiles, children }: QuadrantLayerProps) {
+  const props = node.properties as TileMapLayerProperties;
   const cells = props.cells ?? null;
-  const {
-    y_sort_enabled: ySortEnabled,
-    y_sort_origin: ySortOrigin,
-    rendering_quadrant_size: quadrantSize,
-  } = props;
+  const { y_sort_origin: ySortOrigin, rendering_quadrant_size: quadrantSize } = props;
 
   // Parsed cells never change identity, so the batched geometries survive
   // unrelated re-renders and rebuild only on new data.
   const quadrants = useMemo(
     () =>
       model && cells?.length
-        ? layerQuadrants(cells, model, { ySortEnabled, ySortOrigin, quadrantSize })
+        ? layerQuadrants(cells, model, { ySortEnabled: false, ySortOrigin, quadrantSize })
         : null,
-    [model, cells, ySortEnabled, ySortOrigin, quadrantSize]
+    [model, cells, ySortOrigin, quadrantSize]
   );
 
   return (
     <CanvasItem2D
       node={node}
       props={props}
-      ownItems={(tint, material, zFinal) =>
-        props.enabled && status === 'loaded' && model && quadrants ? (
-          <TileQuadrants
-            quadrants={quadrants}
-            model={model}
-            selfTint={tint.self}
-            material={material}
-            lightMask={props.light_mask}
-            zFinal={zFinal}
-            name={node.name}
-            sampler={sampler}
-          />
-        ) : null
-      }
+      ownItems={(state) => (
+        <>
+          {props.enabled && status === 'loaded' && model && quadrants && (
+            <TileQuadrants
+              quadrants={quadrants}
+              model={model}
+              selfTint={state.tint.self}
+              material={state.material}
+              lightMask={state.lightMask}
+              zFinal={state.zFinal}
+              sampler={state.sampler}
+            />
+          )}
+          {model && (
+            <ScenePlaceholders
+              grid={model}
+              tiles={sceneTiles.placeholderTiles}
+              modulate={state.tint.inherited}
+            />
+          )}
+        </>
+      )}
     >
       {children}
+      <TailChildren node={node} internals={sceneTiles.children} />
     </CanvasItem2D>
   );
 }

@@ -1,7 +1,8 @@
 # Godot's shaders are one module that imports only three
 
 - Status: Accepted. The owner asked for the shape on 2026-11-12, and chose the package name, the
-  place of the shader translator, the first publish and the three range.
+  place of the shader translator, the first publish and the three range. Amended on 2026-11-13 by
+  the passes amendment below, which replaces each sentence that leaves a pass to the caller.
 - Amends: ADR-0055 (where the node lit surface lives).
 - Related: ADR-0038 (one owner for every program input), ADR-0039 (one material derivation, two
   adapters), ADR-0041 (an uncompiled shader draws Godot's default surface).
@@ -43,9 +44,8 @@ publishes it.**
   input is a plain three value: a texture, a matrix or a typed array. The resource slice decodes
   into the surface type. The module reads no parsed resource and no React context.
 - **Each pipeline input is optional.** The shadow atlas, the sky radiance, the probes, the decals,
-  the lightmap and the screen-space textures come from passes of the caller. A surface with no value
-  for an input draws what Godot draws without that feature. The renderer's passes stay in `r3f/` and
-  fill the inputs.
+  the lightmap and the screen-space textures come from passes. A surface with no value for an input
+  draws what Godot draws without that feature. The passes move into the module (see the amendment).
 - **The inputs belong to one object for each renderer.** A node is built once and reads each value
   in its update callback, from the inputs of the renderer that draws. No node imports the owner of a
   value. The registration of a light node is page-wide, because three keeps the node class on the
@@ -58,8 +58,8 @@ publishes it.**
   resource pipeline and a JSX element for React. Both take their material from the module.
 
 The first publish is 0.1.0, after the port removes the shader patches. It supports `WebGLRenderer`
-with `WebGLNodesHandler`, as ADR-0055 ports nothing that only `WebGPURenderer` needs. The caller
-supplies each pipeline input.
+with `WebGLNodesHandler`, as ADR-0055 ports nothing that only `WebGPURenderer` needs.
+`WebGPURenderer` has its own issue (#1788).
 
 ## Considered options
 
@@ -67,14 +67,33 @@ supplies each pipeline input.
   React context, and a later split pays for each such read.
 - **Move the renderer's passes into the module with the nodes.** A three.js app would get shadows
   and sky light with no pass of its own. The passes still publish their values through the shader
-  patches, which the last slice of the port removes. The move waits for that slice and has its own
-  issue.
+  patches, which the last slice of the port removes. The first text of this ADR left the passes
+  with the caller. The amendment takes this option.
 
 ## Consequences
 
 - A plain three.js page is the second caller of the module. One golden drawn by such a page, with no
   React on it, proves the rule before the first publish.
-- An app that draws with the package and has no pass of its own gets Godot's direct light, ambient
-  colour and fog, with no shadow and no sky reflection.
+- An app that draws with the package needs no pass of its own: the first publish gives it Godot's
+  shadows and sky light too.
 - A three upgrade that breaks a node breaks a published package, not only this repository. The
   generated-GLSL tests of the port run against the three version the package names.
+
+## Amendment: the passes are part of the module
+
+On 2026-11-13 the owner decided that the port of Godot's shaders includes the passes (ADR-0075).
+The first text said "The renderer's passes stay in `r3f/` and fill the inputs" and "The caller
+supplies each pipeline input". Both are withdrawn.
+
+- The shadow passes, the sky bake, the probe capture, the decal atlas, the lightmap inputs and the
+  screen-space passes move into `shaders/`, and the package publishes them (#1451 and its
+  sub-issues).
+- A **Pipeline input** stays the seam between a pass and a node. The module fills each one, so the
+  caller of the package must supply none.
+- The first publish, 0.1.0, is the package from which a plain three.js app draws a Godot scene, a
+  user's `ShaderMaterial` included.
+
+The structure of the port changes too: it follows Godot's shading language, with the translator
+first. That plan is not accepted yet. Its ADR will supersede ADR-0055 and replace the parts of this
+ADR that describe the lit surface alone. The module boundary, the import rule, the package and the
+surface outputs above still hold.

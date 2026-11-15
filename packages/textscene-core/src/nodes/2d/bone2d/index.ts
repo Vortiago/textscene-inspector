@@ -1,14 +1,14 @@
 /**
- * Bone2D registration: the parser, which reuses the Node2D parse.
+ * Bone2D registration: the parser, the Node2D parse plus the rest pose.
  * linterParser.ts holds the property validators.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseNode2D } from '../../base/node2d/parser';
+import { parseBone2D } from './parser';
 
 const bone2DRegistration: NodeTypeRegistration = {
   typeName: 'Bone2D',
-  parser: parseNode2D,
+  parser: parseBone2D,
 };
 
 nodeRegistry.register(bone2DRegistration);

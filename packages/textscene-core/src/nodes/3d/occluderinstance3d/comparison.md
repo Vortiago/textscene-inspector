@@ -34,3 +34,5 @@ Strict parsing format-checks these `OccluderInstance3D` properties, plus 1 inher
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. A malformed `bake_mask = "off"` or a `bake_simplification_distance = -5` parses with no warning and reaches no in-memory state, while strict reports it.
+
+An `occluder` reads the same from the scene, from a `.tres` and from a sub-resource of a `.tres`. A resource that is no Occluder3D gives an empty selection box.

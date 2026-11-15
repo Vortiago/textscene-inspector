@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+; Moves one variable: a top_level Node2D between a tinted Node2D and a ColorRect. The chain starts
+; at the top_level item, so Godot draws the rect at (50, 60), untinted: pixel (100, 110) is (230, 76, 26).
+
+[node name="Root" type="Node2D"]
+
+[node name="Tinted" type="Node2D" parent="."]
+position = Vector2(300, 200)
+modulate = Color(0.2, 0.4, 0.9, 1)
+z_index = 5
+
+[node name="Top" type="Node2D" parent="Tinted"]
+top_level = true
+position = Vector2(50, 60)
+
+[node name="Rect" type="ColorRect" parent="Tinted/Top"]
+offset_right = 100.0
+offset_bottom = 100.0
+color = Color(0.9, 0.3, 0.1, 1)

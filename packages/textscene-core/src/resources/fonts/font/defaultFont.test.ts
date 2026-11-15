@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FontFileResource, FontResource, FontVariationResource } from './types';
 import { fontFile, systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { FACELESS_FONT, NO_FACE, findDrawnFace } from '../../../r3f/controls/native/text/sceneFontResolution';
-import { NO_DEFAULT_FONTS, withDefaultFonts, type DefaultFonts } from './defaultFont';
+import { withDefaultFonts, type DefaultFonts } from './defaultFont';
 
 const VARIATION_DEFAULT = fontFile(new ArrayBuffer(4));
 const SYSTEM_DEFAULT = fontFile(new ArrayBuffer(4));
@@ -95,7 +95,8 @@ describe('withDefaultFonts — fonts with a face of their own', () => {
 
   it('leaves every font as it is with no default fonts', () => {
     const bare = variation(null);
-    expect(withDefaultFonts(bare, NO_DEFAULT_FONTS)).toBe(bare);
+    const noDefaultFonts: DefaultFonts = { variation: [null], system: [null] };
+    expect(withDefaultFonts(bare, noDefaultFonts)).toBe(bare);
   });
 });
 

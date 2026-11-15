@@ -23,7 +23,7 @@ import { resolveTextTheme, type TextThemeKeys } from '../../../../r3f/controls/n
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { unquoteString } from '../../../../parser/utils';
 import type { TscnNode } from '../../../../parser/types';
-import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { MenuBarProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -97,13 +97,10 @@ function menuBarTitles(
  * are Windows and never enter the solve tree. `_get_menu_item_rect` and `get_minimum_size` measure
  * `theme_cache.normal` (`menu_bar.cpp:412,869`), so this picks the unmirrored box.
  */
-export const menuBarTitleShapes = defineShare<MenuBarTitle[]>((n, theme) => {
+export const menuBarTitleShapes = defineShare<MenuBarTitle[]>((n) => {
   const props = n.node.properties as MenuBarProperties;
-  const marginSize = contentMarginSize(pickButtonStyleBox(n.styleBoxes, theme.widgets.button, 'normal'));
-  const { fontSizePx } = resolveTextTheme(n, props, MENU_BAR_TEXT_THEME_KEYS, {
-    fontSizePx: theme.fontSize,
-    color: BUTTON_DEFAULT_FONT_COLOR,
-  });
+  const marginSize = contentMarginSize(pickButtonStyleBox(n.styleBoxes, 'normal'));
+  const { fontSizePx } = resolveTextTheme(n, props, MENU_BAR_TEXT_THEME_KEYS);
   return menuBarTitles(n, fontSizePx, resolveNodeFontMetrics(n, MENU_BAR_THEME_FONT_KEY), marginSize);
 });
 
@@ -112,12 +109,12 @@ export const menuBarTitleShapes = defineShare<MenuBarTitle[]>((n, theme) => {
  * `h_separation` between titles only, never trailing, by the tallest title's height.
  */
 export const menuBarMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const style = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.button, 'normal');
+  const style = pickButtonStyleBox(n.styleBoxes, 'normal');
   const marginSize = contentMarginSize(style);
   const popups = popupChildren(n);
   if (popups.length === 0) return { x: 0, y: 0 };
 
-  const hSeparation = n.constants.h_separation ?? ctx.theme.separation;
+  const hSeparation = requiredThemeItem(n.constants, 'h_separation');
 
   // `ctx.measureText` is only a readiness gate (`solverRegistry.ts`). Every title is non-empty, falling
   // back to the PopupMenu's name, so each still adds its StyleBox margin with zero text extent.

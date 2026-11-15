@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fixtureFontBytes, systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
+import { settledFontsOf } from '../../../r3f/controls/native/text/useSettledFont';
 import { NO_PROJECT_FONTS, type ProjectFonts } from '../../fonts/font/projectFonts';
 import type { FontFileResource, FontResource } from '../../fonts/font/types';
 import type { ThemeResource } from '../../styles/theme/types';
@@ -57,7 +58,7 @@ async function readyFace(mesh: ReturnType<typeof textMeshWith>) {
 
 /** The outlines a font settles to, which tells the font a chain chose. */
 async function outlinesOf(font: FontResource) {
-  return settledPeek(() => peekSceneFontOutlines(font));
+  return settledPeek(() => peekSceneFontOutlines(settledFontsOf(null), font));
 }
 
 describe('textMeshFont', () => {
@@ -153,6 +154,7 @@ describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () =
 
   it('draws the font of the TextMesh over every project font', async () => {
     const projectFonts = {
+      ...NO_PROJECT_FONTS,
       projectTheme: themeWith({ defaultFont: themeFont }),
       projectDefaultFont: projectFont,
     };
@@ -163,6 +165,7 @@ describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () =
 
   it("draws the project theme's TextMesh font when the TextMesh has none", async () => {
     const projectFonts = {
+      ...NO_PROJECT_FONTS,
       projectTheme: themeWith({ fonts: { TextMesh: { font: themeFont } } }),
       projectDefaultFont: projectFont,
     };
@@ -172,6 +175,7 @@ describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () =
 
   it("draws the project theme's default font before the project default font", async () => {
     const projectFonts = {
+      ...NO_PROJECT_FONTS,
       projectTheme: themeWith({ defaultFont: themeFont }),
       projectDefaultFont: projectFont,
     };
@@ -181,6 +185,7 @@ describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () =
 
   it("draws the project theme's font for a base type of TextMesh, such as PrimitiveMesh", async () => {
     const projectFonts = {
+      ...NO_PROJECT_FONTS,
       projectTheme: themeWith({ fonts: { PrimitiveMesh: { font: themeFont } } }),
       projectDefaultFont: projectFont,
     };
@@ -189,7 +194,11 @@ describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () =
   });
 
   it('draws the project default font when no theme names one', async () => {
-    const projectFonts = { projectTheme: themeWith({}), projectDefaultFont: projectFont };
+    const projectFonts = {
+      ...NO_PROJECT_FONTS,
+      projectTheme: themeWith({}),
+      projectDefaultFont: projectFont,
+    };
 
     expect((await readyFace(withoutFont(projectFonts))).outlines).toBe(await outlinesOf(projectFont));
   });
@@ -218,6 +227,7 @@ describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () =
 
   it("draws a SystemFont as the project theme's SystemFont font, not its TextMesh font", async () => {
     const projectFonts = {
+      ...NO_PROJECT_FONTS,
       projectTheme: themeWith({ fonts: { SystemFont: { font: themeFont }, TextMesh: { font: ownFont } } }),
       projectDefaultFont: projectFont,
     };
@@ -297,12 +307,15 @@ describe('textMeshFont of a face that fails to load', () => {
     vi.resetModules();
     const fresh = await import('./textMeshFont');
     const freshOutlines = await import('../../../r3f/controls/native/text/sceneFontOutlines');
+    const { settledFontsOf: freshFontsOf } = await import('../../../r3f/controls/native/text/useSettledFont');
     const { textMeshWith: freshMeshWith, trueTypeFontFile: freshFontFile } =
       await import('./textMeshFont.testkit');
     const font = freshFontFile();
     const mesh = freshMeshWith({}, { [FONT_PATH]: font });
 
-    expect(await settledPeek(() => freshOutlines.peekSceneFontOutlines(font))).toBeTruthy();
+    expect(
+      await settledPeek(() => freshOutlines.peekSceneFontOutlines(freshFontsOf(null), font))
+    ).toBeTruthy();
     expect(await settledPeek(() => fresh.textMeshFont(mesh))).toEqual({ status: 'unreadable' });
   });
 });

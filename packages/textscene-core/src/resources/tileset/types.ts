@@ -4,7 +4,9 @@
  * consumer holding the types needs it to read the data.
  */
 
-import type { CanvasItemMaterialProperties } from '../materials/canvasitemmaterial/types';
+import type { CanvasItemMaterialSlot } from '../materials/canvasitemmaterial/kind';
+import type { SceneFile } from '../formats/packedscene/kind';
+import type { ScopedReference } from '../reading';
 import type { DrawableCell } from './drawableCell';
 import type { Rgba } from '../../godot/math/math';
 import type { Vector2 } from '../../godot/math/vector';
@@ -16,7 +18,6 @@ import {
   type TileOffsetAxis,
 } from '../../godot/scene/tileSet';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
-import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 
 /** The grid surface of a TileSet that placement math needs. */
 export interface TileGrid {
@@ -27,25 +28,29 @@ export interface TileGrid {
   tileSize: Vector2;
 }
 
-/** A resolved TileSet: grid shape plus its atlas sources, ready for pure lookups. */
+/** A resolved TileSet: grid shape plus its sources, ready for pure lookups. */
 export interface TileSetModel extends TileGrid {
   /** Atlas sources keyed by their `sources/N` id. */
   sources: Map<number, AtlasSourceModel>;
+  /** Scene-collection sources keyed by their `sources/N` id, in the id space of `sources`. */
+  sceneSources: Map<number, SceneCollectionSourceModel>;
 }
 
-/** An atlas source's `texture`, which resolves as any Texture2D slot does. */
-export interface TileTexture {
-  ref: string;
-  /** The tables `ref` resolves in: the TileSet's own file's, or the scene's. */
-  externalResources: readonly TscnExternalResource[];
-  internalResources: readonly TscnInternalResource[];
-  /** Whether the TileSet and the atlas source that hold the texture are local to scene, for its setup. */
-  isHeldLocally: boolean;
+export interface SceneTileModel {
+  /** Null for a scene tile with no scene: it draws no instance. */
+  scene: SceneFile | null;
+  /** The editor draws a placeholder circle for the tile. It changes nothing a game draws. */
+  displayPlaceholder: boolean;
+}
+
+/** A `TileSetScenesCollectionSource`: scene tiles keyed by scene id. Its only tile is at (0, 0). */
+export interface SceneCollectionSourceModel {
+  scenes: Map<number, SceneTileModel>;
 }
 
 export interface AtlasSourceModel {
-  /** Null for a source with no texture, which draws nothing. */
-  texture: TileTexture | null;
+  /** Null for a source with no texture, which draws nothing. It resolves in the file that holds the source. */
+  texture: ScopedReference | null;
   margins: Vector2;
   separation: Vector2;
   textureRegionSize: Vector2;
@@ -68,16 +73,10 @@ interface TileOrientation {
 }
 
 /**
- * A tile's own material (`TileData.material`): a SubResource's properties, or the path of the file
- * the draw loads. Tiles that name one resource share one object, so identity compares as Godot's
- * `Ref` does.
+ * A tile's own material (`TileData.material`). Tiles that name one resource share one object, so
+ * identity compares as Godot's `Ref` does.
  */
-export type TileMaterial =
-  | {
-      /** Null for a material that is not a CanvasItemMaterial, which draws with plain canvas blending. */
-      properties: CanvasItemMaterialProperties | null;
-    }
-  | { path: string };
+export type TileMaterial = CanvasItemMaterialSlot;
 
 /** One alternative tile's `TileData`, the per-tile properties that change a frame. */
 export interface AlternativeTileModel extends TileOrientation {

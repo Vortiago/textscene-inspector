@@ -1,34 +1,61 @@
 #!/usr/bin/env node
 /**
- * `pnpm pr:state [--base <ref>] [--pr <number>]`: prints the state of the checked-out branch for a
- * report of its pull request. It reads git, the test-only export scan and, with `--pr`, GitHub.
+ * `pnpm pr:state [--base <ref>] [--pr <number>] [--out <file>]`: prints the state of the checked-out
+ * branch for a report of its pull request, and with `--out` writes it to a file too. It reads git, the
+ * test-only export scan and, with `--pr`, GitHub. It fails when the body of that pull request gives
+ * an added limit line no owner, and when a scope cut of the body, of an added document line or of an
+ * issue the pull request closes names no owner.
  */
 
-import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import process from 'node:process';
 import { parseArgs } from 'node:util';
-import { git } from '../githooks/changes.mjs';
+import { git, parseNameStatus } from '../githooks/changes.mjs';
 import { PLAIN_DIFF } from '../gitDiff.mjs';
+import { readGitHub } from '../readGitHub.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
+import { readIssue } from '../scope-cuts/readIssues.mjs';
+import { UNOWNED_CUT_HINT } from '../scope-cuts/scopeCuts.mjs';
 import { coreTestOnlyExports, KEPT_TEST_ONLY_EXPORTS } from '../testOnlyExports.core.mjs';
-import { EXEMPTION_TABLES, parsePullRequest, prStateReport } from './prState.mjs';
+import {
+  closedIssueNumbers,
+  EXEMPTION_TABLES,
+  parseCheckRuns,
+  parsePullRequest,
+  prStateReport,
+  unownedLimitLines,
+  unownedScopeCutsOf,
+} from './prState.mjs';
 
 /** A pull request into a feature branch passes that branch as `--base`. */
 const DEFAULT_BASE = 'origin/main';
 
-/** GitHub's JSON for pull request `number`, read through the `gh` CLI. */
+/** One `<name>\t<result>\t<start time>` line for each run: the conclusion, or the status of a run in progress. */
+const CHECK_RUN_LINES = '.check_runs[] | [.name, .conclusion // .status, .started_at] | @tsv';
+
+/** Pull request `number` with the checks of its head, read through the `gh` CLI. */
 function readPullRequest(number) {
   if (!/^\d+$/.test(number)) throw new Error(`expected a pull request number for --pr, got "${number}"`);
-  const endpoint = `repos/{owner}/{repo}/pulls/${number}`;
-  try {
-    return execFileSync('gh', ['api', endpoint], { encoding: 'utf8' });
-  } catch (error) {
-    throw new Error(`read pull request ${number} with \`gh api ${endpoint}\`: ${error.message}`, {
-      cause: error,
-    });
-  }
+  const pullRequest = parsePullRequest(readGitHub(`repos/{owner}/{repo}/pulls/${number}`));
+  const checkRuns = `repos/{owner}/{repo}/commits/${pullRequest.headSha}/check-runs`;
+  return {
+    ...pullRequest,
+    checks: parseCheckRuns(readGitHub(checkRuns, '--paginate', '--jq', CHECK_RUN_LINES)),
+    closedIssues: closedIssueNumbers(pullRequest.body).flatMap(readIssue),
+  };
+}
+
+/** Each Markdown file the change adds or edits, read from the working tree. */
+function readChangedDocuments(nameStatus) {
+  return parseNameStatus(nameStatus)
+    .changed.filter((path) => path.endsWith('.md'))
+    .map((path) => ({ path, text: readFileSync(resolve(REPO_ROOT, path), 'utf8') }));
+}
+
+function writeReport(report, file) {
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, report);
 }
 
 /** A table that moved would leave its edits out of the report with no sign, so a missing one stops the run. */
@@ -44,10 +71,12 @@ function assertExemptionTablesExist() {
 function readBranchChange(baseRef) {
   const headSha = git('rev-parse', 'HEAD');
   const baseSha = git('merge-base', headSha, baseRef);
+  const nameStatus = git('diff', '--name-status', '--no-renames', baseSha, headSha);
   return {
     head: { sha: headSha, branch: git('rev-parse', '--abbrev-ref', 'HEAD') },
     base: { ref: baseRef, sha: baseSha },
-    nameStatus: git('diff', '--name-status', '--no-renames', baseSha, headSha),
+    nameStatus,
+    documents: readChangedDocuments(nameStatus),
     diff: git('diff', '-U0', ...PLAIN_DIFF, baseSha, headSha),
     hasUncommittedChanges: git('status', '--porcelain') !== '',
   };
@@ -59,12 +88,25 @@ function unkeptTestOnlyExports() {
 
 assertExemptionTablesExist();
 const { values } = parseArgs({
-  options: { base: { type: 'string', default: DEFAULT_BASE }, pr: { type: 'string' } },
+  options: {
+    base: { type: 'string', default: DEFAULT_BASE },
+    pr: { type: 'string' },
+    out: { type: 'string' },
+  },
 });
-process.stdout.write(
-  prStateReport({
-    ...readBranchChange(values.base),
-    unkeptTestOnlyExports: unkeptTestOnlyExports(),
-    pullRequest: values.pr === undefined ? undefined : parsePullRequest(readPullRequest(values.pr)),
-  })
-);
+const change = {
+  ...readBranchChange(values.base),
+  unkeptTestOnlyExports: unkeptTestOnlyExports(),
+  pullRequest: values.pr === undefined ? undefined : readPullRequest(values.pr),
+};
+const report = prStateReport(change);
+process.stdout.write(report);
+if (values.out !== undefined) writeReport(report, values.out);
+if (change.pullRequest && unownedLimitLines(change).length > 0) {
+  console.error('A limit line has no owner: name its file beside an issue number or "no issue" in the body.');
+  process.exitCode = 1;
+}
+if (change.pullRequest && unownedScopeCutsOf(change).length > 0) {
+  console.error(UNOWNED_CUT_HINT);
+  process.exitCode = 1;
+}

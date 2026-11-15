@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionShape2D } from './Component';
 import { parseCollisionShape2D } from './parser';
@@ -28,20 +29,21 @@ const capsuleShape: TscnInternalResource = {
 
 const heading = { type: 'node' as const, attributes: { type: 'CollisionShape2D', name: 'Col' } };
 
-function makeNode(shapeRef: string | undefined): TscnNode {
-  const properties = parseCollisionShape2D(heading, shapeRef ? { shape: shapeRef } : {});
+function makeNode(shapeRef: string | undefined, extra: Record<string, string> = {}): TscnNode {
+  const properties = parseCollisionShape2D(heading, shapeRef ? { shape: shapeRef, ...extra } : extra);
   return { rawProperties: {}, name: 'Col', type: 'CollisionShape2D', children: [], properties };
 }
 
 async function render(
   showCollisions: boolean,
   resources: TscnInternalResource[],
-  shapeRef: string | undefined
+  shapeRef: string | undefined,
+  extra: Record<string, string> = {}
 ) {
   return ReactThreeTestRenderer.create(
     <ViewportModeProvider initialShowCollisions={showCollisions}>
       <SceneResourcesProvider internalResources={resources}>
-        <CollisionShape2D node={makeNode(shapeRef)} />
+        <CollisionShape2D node={makeNode(shapeRef, extra)} />
       </SceneResourcesProvider>
     </ViewportModeProvider>
   );
@@ -117,5 +119,76 @@ describe('<CollisionShape2D> gizmo', () => {
       </ViewportModeProvider>
     );
     expect(renderer.scene.findByProps({ name: 'child' })).toBeDefined();
+  });
+});
+
+const segmentShape: TscnInternalResource = {
+  id: 'SegmentShape2D_1',
+  type: 'SegmentShape2D',
+  data: { a: 'Vector2(0, 0)', b: 'Vector2(30, 40)' },
+};
+
+/** The material of the first mesh, the fill of a polygon or the stroke of a line. */
+function firstMeshMaterial(renderer: Awaited<ReturnType<typeof render>>) {
+  const mesh = renderer.scene.findAll((n) => n.type === 'Mesh')[0]!;
+  return (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+}
+
+describe('<CollisionShape2D> gizmo layers', () => {
+  const meshes = (renderer: Awaited<ReturnType<typeof render>>) =>
+    renderer.scene.findAll((n) => n.type === 'Mesh').length;
+
+  it('fills a rectangle and outlines it, as Godot draws a polygon shape', async () => {
+    const renderer = await render(true, [rectShape], 'SubResource("RectangleShape2D_1")');
+
+    expect(meshes(renderer)).toBe(1);
+    expect(renderer.scene.findAll((n) => n.type === 'LineSegments')).toHaveLength(1);
+  });
+
+  it('draws a segment as a stroke alone, with no outline', async () => {
+    const renderer = await render(true, [segmentShape], 'SubResource("SegmentShape2D_1")');
+
+    expect(meshes(renderer)).toBe(1);
+    expect(renderer.scene.findAll((n) => n.type === 'LineSegments')).toHaveLength(0);
+  });
+
+  it('draws the fill at the alpha of the debug colour, 0.42 by default', async () => {
+    const renderer = await render(true, [rectShape], 'SubResource("RectangleShape2D_1")');
+
+    expect(firstMeshMaterial(renderer).opacity).toBe(1);
+    const colours = (
+      renderer.scene.findAll((n) => n.type === 'Mesh')[0]!.instance as THREE.Mesh
+    ).geometry.getAttribute('color');
+    expect(colours.getW(0)).toBeCloseTo(0.42, 6);
+  });
+
+  it('draws a disabled shape grey at half the alpha', async () => {
+    const renderer = await render(true, [rectShape], 'SubResource("RectangleShape2D_1")', {
+      disabled: 'true',
+    });
+    const colours = (
+      renderer.scene.findAll((n) => n.type === 'Mesh')[0]!.instance as THREE.Mesh
+    ).geometry.getAttribute('color');
+
+    expect(colours.getW(0)).toBeCloseTo(0.21, 6);
+    expect(colours.getX(0)).toBeCloseTo(colours.getY(0), 6);
+  });
+
+  it('adds the one-way arrow, one more mesh, after the shape', async () => {
+    const renderer = await render(true, [rectShape], 'SubResource("RectangleShape2D_1")', {
+      one_way_collision: 'true',
+    });
+
+    expect(meshes(renderer)).toBe(2);
+  });
+
+  it('draws the one-way arrow over the outline of the shape', async () => {
+    const renderer = await render(true, [rectShape], 'SubResource("RectangleShape2D_1")', {
+      one_way_collision: 'true',
+    });
+    const outline = renderer.scene.findAll((n) => n.type === 'LineSegments')[0]!.instance;
+    const arrow = renderer.scene.findAll((n) => n.type === 'Mesh')[1]!.instance;
+
+    expect(arrow.renderOrder).toBeGreaterThan(outline.renderOrder);
   });
 });

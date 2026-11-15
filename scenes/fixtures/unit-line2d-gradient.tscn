@@ -1,0 +1,36 @@
+; One variable: `gradient`. A stop colours its vertex, so a stop between two points does not show,
+; and `default_color` is ignored once a gradient is set.
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="Gradient" id="Gradient_two"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="Gradient" id="Gradient_three"]
+offsets = PackedFloat32Array(0, 0.5, 1)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[node name="Line2DGradient" type="Node2D"]
+
+[node name="TwoStopsTwoPoints" type="Line2D" parent="."]
+points = PackedVector2Array(50, 50, 250, 50)
+width = 20.0
+gradient = SubResource("Gradient_two")
+
+[node name="ThreeStopsTwoPoints" type="Line2D" parent="."]
+points = PackedVector2Array(50, 100, 250, 100)
+width = 20.0
+gradient = SubResource("Gradient_three")
+
+[node name="ThreeStopsThreePoints" type="Line2D" parent="."]
+points = PackedVector2Array(50, 150, 150, 150, 250, 150)
+width = 20.0
+gradient = SubResource("Gradient_three")
+
+[node name="RoundCaps" type="Line2D" parent="."]
+points = PackedVector2Array(50, 200, 250, 200)
+width = 20.0
+default_color = Color(1, 1, 0, 1)
+gradient = SubResource("Gradient_two")
+begin_cap_mode = 2
+end_cap_mode = 2

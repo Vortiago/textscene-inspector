@@ -5,7 +5,7 @@
 
 import { accepts, propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { parsePackedStringArray } from './arrayForms.js';
+import { parsePackedStringArray } from '../../../../parser/utils.js';
 import { splitDelimiterEntry } from './delimiterEntry.js';
 import { isGodotSymbol } from './symbolChars.js';
 

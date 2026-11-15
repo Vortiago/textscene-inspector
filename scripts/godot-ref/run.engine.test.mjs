@@ -6,9 +6,9 @@
  */
 import { afterAll, describe, expect, it } from 'vitest';
 import { existsSync } from 'node:fs';
-import { readFile, mkdtemp, rm } from 'node:fs/promises';
+import { copyFile, readFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { PNG } from 'pngjs';
 import { degToRad } from '../../packages/textscene-core/src/godot/math/math.ts';
 import { REPO_ROOT } from '../repoRoot.mjs';
@@ -328,6 +328,51 @@ describe('renderReference (real Godot)', { timeout: ENGINE_TEST_TIMEOUT_MS }, ()
       /gui\/common\/snap_controls_to_pixels/
     );
     await expect(renderReference({ scene: snapScene, out, mode: '2d' })).rejects.toThrow(/--mode 2d-root/);
+  });
+
+  /**
+   * The harness clears to the sRGB gray 0.3, whose byte is 76. An HDR root stores it linear (18),
+   * and the screen blit converts it back (`renderer_compositor_rd.cpp:98`).
+   */
+  describe('the capture of a root viewport with rendering/viewport/hdr_2d', () => {
+    // The whole path, so `engineTestInputs.mjs` finds the scene in its own folder.
+    const hdrScene = join(REPO_ROOT, 'scenes/fixtures/hdr-2d/unit-hdr-2d.tscn');
+    const hdrFixture = dirname(hdrScene);
+    const CLEAR_PIXEL = [20, 20];
+    const GRAY_AT_MODULATE_1_5_PIXEL = [500, 300];
+
+    /** The fixture's scene in a project of its own with `hdr_2d` set to `isHdr`. */
+    async function renderWithHdr(isHdr) {
+      const dir = await scratchDir();
+      const project = (await readFile(join(hdrFixture, 'project.godot'), 'utf8')).replace(
+        'viewport/hdr_2d=true',
+        `viewport/hdr_2d=${isHdr}`
+      );
+      await writeFile(join(dir, 'project.godot'), project);
+      await copyFile(hdrScene, join(dir, 'unit-hdr-2d.tscn'));
+      const out = join(dir, 'shot.png');
+      await renderReference({ scene: join(dir, 'unit-hdr-2d.tscn'), out, mode: '2d-root' });
+      return probePixels(await readFile(out), [CLEAR_PIXEL, GRAY_AT_MODULATE_1_5_PIXEL]);
+    }
+
+    it('is converted from linear to sRGB, as the screen shows it', async () => {
+      const [clear, gray] = await renderWithHdr(true);
+      // Godot's Image::linear_to_srgb table reads 75 for the stored 18 (`image.cpp:4194`), which
+      // rounds before it converts. The float conversion reads 76, so the floor excludes the table.
+      expect(clear.rgb[0]).toBeGreaterThanOrEqual(76);
+      expect(clear.rgb[0]).toBeLessThanOrEqual(77);
+      expect(gray.rgb[0]).toBeGreaterThanOrEqual(192);
+      expect(gray.rgb[0]).toBeLessThanOrEqual(194);
+    });
+
+    it('is left as it is when the root is not HDR', async () => {
+      const [clear, gray] = await renderWithHdr(false);
+      expect(clear.rgb[0]).toBeGreaterThanOrEqual(76);
+      expect(clear.rgb[0]).toBeLessThanOrEqual(77);
+      // 0.5 times 1.5 multiplied as sRGB numbers, 191.
+      expect(gray.rgb[0]).toBeGreaterThanOrEqual(190);
+      expect(gray.rgb[0]).toBeLessThanOrEqual(192);
+    });
   });
 
   /** A calibration scene from `scenes/`, rendered at 160x120, as PNG bytes. */

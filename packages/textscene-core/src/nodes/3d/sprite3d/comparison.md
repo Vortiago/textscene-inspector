@@ -1,7 +1,6 @@
 ---
 type: Sprite3D
 category: 3D
-status: limitation
 fixture: unit-sprite3d.tscn
 image: unit-sprite3d
 renders_as: a textured THREE.Mesh quad
@@ -20,6 +19,14 @@ The quad's UVs hold the frame, the region and the flip, and its vertex colour ho
 An AtlasTexture draws its region alone: the quad leaves the margin out, samples the atlas and holds the UVs of the atlas (`sprite_3d.cpp:100-150`). The `sprite3d-atlas-instance-materials` golden pins this.
 
 The `texture_filter` rows follow `BaseMaterial3D`. three skips anisotropy under a nearest magnification filter, so the draw site writes it onto the GPU texture for Nearest with Mipmaps and Anisotropic (`nearestAnisotropy.ts`). The `sprite3d-texture-filter-anisotropic` golden shows the four mipmap filters at a grazing angle.
+
+## A GradientTexture2D with no gradient
+
+<!-- compare: image=unit-sprite3d-gradient-no-gradient status=done fixture=unit-sprite3d-gradient-no-gradient.tscn -->
+
+The texture never gets an image, so the sprite draws Godot's 4 by 4 magenta and black placeholder
+(`gradient_texture.cpp:229-233`). The quad takes the texture's `width` and `height`. Unlike Sprite2D,
+the placeholder fills the quad whole.
 
 ## Linting
 

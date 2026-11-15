@@ -15,20 +15,12 @@
 
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type {
-  ContainerLayoutFn,
-  MinimumSizeFn,
-  SolveContext,
-} from '../../../../r3f/controls/native/solverRegistry';
+import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { ContainerLayoutFn, MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
-
-/** The resolved `theme_override_styles/panel`, or the default-theme `panel` struct. */
-function panelStyleOf(n: SolveNode, ctx: SolveContext): StyleBoxFlatData {
-  return n.styleBoxes.panel ?? ctx.theme.widgets.panel;
-}
 
 /**
  * `PanelContainer::get_minimum_size` (`panel_container.cpp:35-51`): the
@@ -45,7 +37,7 @@ export const panelContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
     y = Math.max(y, childMin.y);
   }
 
-  const styleMin = contentMarginSize(panelStyleOf(n, ctx));
+  const styleMin = contentMarginSize(requiredThemeItem(n.styleBoxes, 'panel'));
   return { x: x + styleMin.x, y: y + styleMin.y };
 };
 
@@ -71,8 +63,8 @@ function fitChild(child: SolveNode, minSize: Vector2, rect: Rect2, rtl: boolean)
  * `rect` arrives un-inset, so each child rect is relative to the container's
  * top-left, not the content rect's.
  */
-export const panelContainerLayout: ContainerLayoutFn = (n, children, rect, ctx) => {
-  const style = panelStyleOf(n, ctx);
+export const panelContainerLayout: ContainerLayoutFn = (n, children, rect) => {
+  const style = requiredThemeItem(n.styleBoxes, 'panel');
   // `contentMargin` is already the effective margin: `native/parseStyleBox.ts`
   // resolves Godot's `-1` "ask the border width" sentinel.
   const { left, top, right, bottom } = style.contentMargin;

@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+; The one variable: a GridMap whose MeshLibrary item is an ArrayMesh with a LINES surface, in four cells: the
+; first upright, the second turned a half turn about Y, the third and fourth upright, one cell up for the
+; fourth. Godot draws the segments at each cell's place. It lights a line, which has no normal array, as a +Z
+; normal in node space, and the cell's basis turns it: the sun lights the upright lines and not the turned one.
+
+[ext_resource type="MeshLibrary" path="res://unit-array-mesh-lines-gridmap-lib.tres" id="1_16yoc"]
+
+[node name="Root" type="Node3D" unique_id=299783528]
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1323298365]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+
+[node name="GridMap" type="GridMap" parent="." unique_id=1206299766]
+mesh_library = ExtResource("1_16yoc")
+cell_size = Vector3(1, 1, 1)
+data = {
+"cells": PackedInt32Array(65535, 0, 0, 0, 0, 655360, 1, 0, 0, 65537, 0, 0)
+}

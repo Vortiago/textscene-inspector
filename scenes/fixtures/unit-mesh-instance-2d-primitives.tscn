@@ -1,0 +1,91 @@
+[gd_scene format=3]
+
+; Draws an ArrayMesh of each primitive that is not a triangle through MeshInstance2D: points, line segments,
+; a line strip, and lines and points that read a texture at their UVs. Godot draws each one pixel wide, a
+; point at the item's pixel and a line between its vertices. No other scene has a points or lines surface
+; on the canvas, so none shows a regression in how the canvas draws one.
+
+[ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_quadrants"]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_f01ao"]
+_surfaces = [{
+"2d": true,
+"aabb": AABB(10, 10, 0, 80, 70, 0),
+"attribute_data": PackedByteArray(255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255),
+"format": 34393292809,
+"primitive": 0,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(0, 0, 32, 65, 0, 0, 32, 65, 0, 0, 72, 66, 0, 0, 72, 66, 0, 0, 180, 66, 0, 0, 160, 65, 0, 0, 160, 65, 0, 0, 160, 66)
+}]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_8pcli"]
+_surfaces = [{
+"2d": true,
+"aabb": AABB(0, 10, 0, 100, 90, 0),
+"format": 34393292801,
+"primitive": 1,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 32, 65, 0, 0, 200, 66, 0, 0, 32, 65, 0, 0, 0, 0, 0, 0, 240, 65, 0, 0, 200, 66, 0, 0, 112, 66, 0, 0, 72, 66, 0, 0, 140, 66, 0, 0, 72, 66, 0, 0, 200, 66)
+}]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_8qfvd"]
+_surfaces = [{
+"2d": true,
+"aabb": AABB(0, 10, 0, 100, 80, 0),
+"attribute_data": PackedByteArray(255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255),
+"format": 34393292809,
+"primitive": 2,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 32, 65, 0, 0, 200, 66, 0, 0, 32, 65, 0, 0, 200, 66, 0, 0, 112, 66, 0, 0, 0, 0, 0, 0, 180, 66)
+}]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_jt45s"]
+_surfaces = [{
+"2d": true,
+"aabb": AABB(0, 10, 0, 100, 90, 0),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34393292817,
+"primitive": 1,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 32, 65, 0, 0, 200, 66, 0, 0, 32, 65, 0, 0, 0, 0, 0, 0, 72, 66, 0, 0, 200, 66, 0, 0, 200, 66)
+}]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_v4x8w"]
+_surfaces = [{
+"2d": true,
+"aabb": AABB(0, 10, 0, 100, 80, 0),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 128, 63),
+"format": 34393292817,
+"primitive": 0,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 32, 65, 0, 0, 200, 66, 0, 0, 32, 65, 0, 0, 200, 66, 0, 0, 112, 66, 0, 0, 0, 0, 0, 0, 180, 66)
+}]
+
+[node name="Root" type="Node2D"]
+
+[node name="Points" type="MeshInstance2D" parent="."]
+position = Vector2(50, 50)
+mesh = SubResource("ArrayMesh_f01ao")
+
+[node name="Lines" type="MeshInstance2D" parent="."]
+position = Vector2(250, 50)
+mesh = SubResource("ArrayMesh_8pcli")
+
+[node name="Strip" type="MeshInstance2D" parent="."]
+position = Vector2(450, 50)
+mesh = SubResource("ArrayMesh_8qfvd")
+
+[node name="LinesTextured" type="MeshInstance2D" parent="."]
+position = Vector2(650, 50)
+mesh = SubResource("ArrayMesh_jt45s")
+texture = ExtResource("1_quadrants")
+
+[node name="PointsTextured" type="MeshInstance2D" parent="."]
+position = Vector2(850, 50)
+mesh = SubResource("ArrayMesh_v4x8w")
+texture = ExtResource("1_quadrants")

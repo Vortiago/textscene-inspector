@@ -2,6 +2,9 @@
  * Generic `typeName → value` registry (ADR-0002). The parse, 3D-render and 2D-render domains
  * each keep a separate one, which keeps the linter bundle free of React and THREE. A duplicate
  * `typeName` overwrites, for HMR, and warns, whether it is a slice collision or a re-import.
+ * A lookup matches the exact type, not the class chain: an unported subclass then takes the Node
+ * fallback and its warning (`NodeRegistry.ts:109-115`), where a chain lookup would draw it as its
+ * base without a word.
  */
 import { warn } from '../logger.js';
 

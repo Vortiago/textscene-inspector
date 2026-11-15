@@ -7,6 +7,7 @@ import { render } from '@testing-library/react';
 import { Canvas, type CanvasProps } from '@react-three/fiber';
 import { World2DCanvas } from './World2DCanvas';
 import { World2DCamera } from './world2DCamera';
+import { PreviewVisibilityProvider } from '../../contexts/PreviewVisibilityContext';
 
 vi.mock('@react-three/fiber', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@react-three/fiber')>()),
@@ -52,5 +53,25 @@ describe('World2DCanvas', () => {
 
   it('enables local clipping, without which three ignores the Control clip planes', () => {
     expect(canvasProps().gl).toMatchObject({ localClippingEnabled: true });
+  });
+
+  it('renders no frame while the host hides the preview, and every frame while it shows', () => {
+    function frameloopWhen(isVisible: boolean) {
+      vi.mocked(Canvas).mockClear();
+      render(
+        <PreviewVisibilityProvider isVisible={isVisible}>
+          <World2DCanvas
+            nodes={[]}
+            internalResources={[]}
+            externalResources={[]}
+            pan={{ x: 0, y: 0 }}
+            zoom={1}
+          />
+        </PreviewVisibilityProvider>
+      );
+      return vi.mocked(Canvas).mock.calls.at(-1)![0].frameloop;
+    }
+
+    expect([frameloopWhen(false), frameloopWhen(true)]).toEqual(['never', 'always']);
   });
 });

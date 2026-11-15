@@ -9,7 +9,8 @@ import type { TscnInternalResource } from '../parser/types.js';
 import { peelCanvasTextures, resolveSubResourceRef, unwrapCanvasTextureRef } from './SubResourceResolver.js';
 import { atlasTextureSize, decodeAtlasTexture } from './textures/atlastexture/decode.js';
 import { decodeGradientTexture2D } from './textures/gradienttexture2d/decode.js';
-import { imageRefSize } from './textures/image/decode.js';
+import { savedImageSize } from './textures/image/decode.js';
+import { savedImageOf } from './textures/image/kind.js';
 import { decodeNoiseTexture2D } from './textures/noisetexture2d/decode.js';
 import { parsedResourceTexture } from './textures/parsedResourceTexture.js';
 import { isLocalToScene } from './textures/viewporttexture/localToScene.js';
@@ -30,10 +31,10 @@ export interface ViewportTextureSizing {
 }
 
 /** Sizing before Godot sets any ViewportTexture up, as a resource reads while its scene loads. */
-export const BEFORE_SETUP: ViewportTextureSizing = { isHeldLocally: false, viewportSize: () => null };
+const BEFORE_SETUP: ViewportTextureSizing = { isHeldLocally: false, viewportSize: () => null };
 
 /** `ViewportTexture::get_size` while no viewport is set (`viewport.cpp:150-166`). */
-const NO_AREA: Texture2DSize = { x: 0, y: 0 };
+export const NO_AREA: Texture2DSize = { x: 0, y: 0 };
 
 /**
  * The pixel size of a Texture2D slot that the scene states. Null for a form only the loader can
@@ -84,9 +85,10 @@ function sheetSize(
     return { x: width, y: height };
   }
   // An ImageTexture's size is its image's (`scene/resources/image_texture.cpp:74-75`, `:122-128`).
-  const image =
-    resource.type === 'ImageTexture' ? imageRefSize(resource.data.image, internalResources) : null;
-  return image ? { x: image.width, y: image.height } : null;
+  if (resource.type !== 'ImageTexture') return null;
+  const image = resolveSubResourceRef(resource.data.image, internalResources);
+  const size = image?.type === 'Image' ? savedImageSize(savedImageOf(image.data)) : null;
+  return size && { x: size.width, y: size.height };
 }
 
 /** The texture types whose properties state their size. */

@@ -1,0 +1,37 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitimagetexoverimagefile"]
+
+; One variable: where the Image of an ImageTexture is saved. Both sprites draw the same 2 by 2
+; image, red and green over blue and yellow, with nearest filtering. The left one's Image is a
+; sub-resource of the scene and the right one's is `unit-texture-file-image.tres`, so the two
+; draw the same four squares. An Image file that does not resolve leaves the right sprite blank.
+; Every other saved Image sits inside the file of its ImageTexture, so no other golden shows it.
+
+[ext_resource type="Image" path="res://unit-texture-file-image.tres" id="1_image"]
+
+[sub_resource type="Image" id="Image_inline"]
+data = {
+"data": PackedByteArray(230, 51, 26, 255, 26, 179, 77, 255, 26, 77, 230, 255, 242, 204, 26, 255),
+"format": "RGBA8",
+"height": 2,
+"mipmaps": false,
+"width": 2
+}
+
+[sub_resource type="ImageTexture" id="ImageTexture_overInline"]
+image = SubResource("Image_inline")
+
+[sub_resource type="ImageTexture" id="ImageTexture_overFile"]
+image = ExtResource("1_image")
+
+[node name="Root" type="Node2D"]
+texture_filter = 1
+
+[node name="OverInline" type="Sprite2D" parent="."]
+position = Vector2(384, 324)
+scale = Vector2(96, 96)
+texture = SubResource("ImageTexture_overInline")
+
+[node name="OverFile" type="Sprite2D" parent="."]
+position = Vector2(768, 324)
+scale = Vector2(96, 96)
+texture = SubResource("ImageTexture_overFile")

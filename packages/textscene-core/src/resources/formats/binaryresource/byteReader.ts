@@ -8,6 +8,13 @@ const UTF8 = new TextDecoder('utf-8');
 /** A read past the last byte, which a format reader may turn into its own error. */
 export class ReadPastEndError extends Error {}
 
+/** Whether `bytes` holds the ASCII `text` at `offset`. */
+export function hasAsciiPrefix(bytes: Uint8Array, text: string, offset = 0): boolean {
+  if (bytes.length < offset + text.length) return false;
+  for (let i = 0; i < text.length; i++) if (bytes[offset + i] !== text.charCodeAt(i)) return false;
+  return true;
+}
+
 export class ByteReader {
   private readonly view: DataView;
   private offset = 0;

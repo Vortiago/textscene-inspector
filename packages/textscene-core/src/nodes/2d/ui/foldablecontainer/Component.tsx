@@ -8,16 +8,11 @@ import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
-import { shapedTextSizeWidthPx, soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
-import {
-  overrunFlagsForBehavior,
-  trimTextBufferLineToWidth,
-} from '../../../../r3f/controls/native/text/textOverrun';
+import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
+import { overrunFlagsForBehavior, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -26,12 +21,12 @@ import {
   foldableContainerHSeparation,
   foldableContainerTitleShape,
   FOLDABLE_CONTAINER_ARROW_THEME_NAME,
-  FOLDABLE_CONTAINER_DEFAULT_OUTLINE_COLOR,
   type FoldableContainerArrow,
 } from './nativeSolver';
 import { FOLDABLE_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { TITLE_POSITION_TOP, type FoldableContainerProperties } from './types';
-import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { FlippableStyleBox } from '../../../../r3f/controls/native/FlippableStyleBox';
 
 const ARROW_ICON_URL: Record<FoldableContainerArrow, string> = {
   expanded: FOLDABLE_CONTAINER_ICONS.expandedArrow,
@@ -69,22 +64,22 @@ export function FoldableContainer({
     ARROW_ICON_URL[title.arrow]
   );
   const tintedFontColor = useMemo(() => tintColor(title.color, tint.own), [title.color, tint.own]);
-  const textOutline = useTintedTextOutline(solveNode, tint.own, FOLDABLE_CONTAINER_DEFAULT_OUTLINE_COLOR);
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
   const arrowSize = title.arrowSize;
-  const hSeparation = foldableContainerHSeparation(theme);
+  const hSeparation = foldableContainerHSeparation(solveNode);
 
   const titleMargin = title.titleStyle.contentMargin;
   const titleMarginSize = contentMarginSize(title.titleStyle);
+  const isTitleAtTop = title.titlePosition === TITLE_POSITION_TOP;
   const titleRect: Rect2 = {
     x: 0,
-    y: title.titlePosition === TITLE_POSITION_TOP ? 0 : rect.h - title.size.y,
+    y: isTitleAtTop ? 0 : rect.h - title.size.y,
     w: rect.w,
     h: title.size.y,
   };
 
-  // foldable_container.cpp:288: the near-edge margin before centring. This layout does not
-  // flip, so it reads `top` for both `title_position`s, which matches a symmetric-margin theme.
-  const titleStyleOfs = titleMargin.top;
+  // The margin on the outer edge, which the flip turns to the bottom (`foldable_container.cpp:286`).
+  const titleStyleOfs = isTitleAtTop ? titleMargin.top : titleMargin.bottom;
 
   const textHeight = title.layout ? title.layout.heightPx : 0;
   const textTopExtra = Math.max((title.size.y - titleMarginSize.y - textHeight) * 0.5, 0);
@@ -102,23 +97,16 @@ export function FoldableContainer({
   // `text_buf->set_width(title_text_width)` (`foldable_container.cpp:307`) sets the trim
   // `TextParagraph::draw` applies, so the drawn title is the trimmed shape.
   const overrunFlags = useMemo(
-    () => overrunFlagsForBehavior(props.titleTextOverrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
+    () => overrunFlagsForBehavior(props.titleTextOverrunBehavior),
     [props.titleTextOverrunBehavior]
   );
   const trimmedLayout = useMemo(() => {
-    if (!title.layout || !overrunFlags.trim) return title.layout;
-    const trimmedLine = trimTextBufferLineToWidth(
-      title.layout.lines[0]!,
-      Math.max(1, titleTextWidth),
-      overrunFlags,
-      {
-        fontMetrics: title.layout.fontMetrics,
-        fontSizePx: title.fontSizePx,
-        isDrawnRtl: title.isDrawnRtl,
-      }
-    );
-    return soloLineLayout(trimmedLine, title.layout);
-  }, [title.layout, overrunFlags, titleTextWidth, title.fontSizePx, title.isDrawnRtl]);
+    if (!title.layout) return null;
+    return trimSoloLine(title.layout, overrunFlags, Math.max(1, titleTextWidth), {
+      fontMetrics: title.layout.fontMetrics,
+      fontSizePx: title.fontSizePx,
+    });
+  }, [title.layout, overrunFlags, titleTextWidth, title.fontSizePx]);
 
   // `TextLine::set_horizontal_alignment(_get_actual_alignment())` shifts the
   // drawn glyphs within `title_text_width` (`foldable_container.cpp:497,313`).
@@ -144,33 +132,28 @@ export function FoldableContainer({
 
   const panelRect: Rect2 = {
     x: 0,
-    y: title.titlePosition === TITLE_POSITION_TOP ? title.size.y : 0,
+    y: isTitleAtTop ? title.size.y : 0,
     w: rect.w,
     h: rect.h - title.size.y,
   };
 
   return (
     <>
-      {/* `StyleBoxQuad` reads only the size of its rect,
-          so the group supplies the offset. */}
-      <CanvasItemGroup position={[titleRect.x, -titleRect.y, 0]}>
-        <StyleBoxQuad
-          styleBox={title.titleStyle}
-          color={tint.own}
-          rect={titleRect}
-          renderOrder={renderOrder}
-        />
-      </CanvasItemGroup>
-      <CanvasItemGroup position={[titleRect.x + iconPos.x, -(titleRect.y + iconPos.y), 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={arrowSize.x}
-          height={arrowSize.y}
-          color={tint.color}
-          opacity={tint.opacity}
-          map={iconTexture}
-        />
-      </CanvasItemGroup>
+      <FlippableStyleBox
+        box={title.titleStyle}
+        rect={titleRect}
+        isFlipped={!isTitleAtTop}
+        tint={tint}
+        renderOrder={renderOrder}
+      />
+      <PositionedIcon
+        rect={{ x: titleRect.x + iconPos.x, y: titleRect.y + iconPos.y, w: arrowSize.x, h: arrowSize.y }}
+        texture={iconTexture}
+        color={tint.color}
+        opacity={tint.opacity}
+        renderOrder={renderOrder}
+        canvasKey={renderOrder}
+      />
       {trimmedLayout && titleTextWidth > 0 && (
         <CanvasItemGroup position={[titleRect.x + textPos.x, -(titleRect.y + textPos.y), 0]}>
           <OutlinedTextRun
@@ -184,14 +167,13 @@ export function FoldableContainer({
         </CanvasItemGroup>
       )}
       {!title.folded && (
-        <CanvasItemGroup position={[panelRect.x, -panelRect.y, 0]}>
-          <StyleBoxQuad
-            styleBox={title.panelStyle}
-            color={tint.own}
-            rect={panelRect}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
+        <FlippableStyleBox
+          box={title.panelStyle}
+          rect={panelRect}
+          isFlipped={!isTitleAtTop}
+          tint={tint}
+          renderOrder={renderOrder}
+        />
       )}
     </>
   );

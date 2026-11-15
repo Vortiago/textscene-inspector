@@ -17,10 +17,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { HAIRLINE_THICKNESS_PX, hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import {
   computeGridDots,
   computeGridLines,
@@ -31,17 +28,9 @@ import {
 } from './grid';
 import { resolveGraphEditConnections } from './connectionEndpoints';
 import { ConnectionLine } from './ConnectionLine';
-import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { graphEditTopLayerSlots } from './internalControls';
 import {
-  shapedTextSizeWidthPx,
-  type TextLayoutResult,
-} from '../../../../r3f/controls/native/text/textLayout';
-import { formatGodotNumber, rangeStepDecimals } from '../spinbox/nativeSolver';
-import { graphEditToolbar, zoomLabelText } from './toolbar';
-import { GraphEditToolbarChrome } from './ToolbarChrome';
-import {
+  CONSTRUCTOR_SCROLL_BOUNDS,
   graphEditElements,
   isMinimapEnabled,
   minimapOpacity,
@@ -50,53 +39,20 @@ import {
 } from './minimap';
 import { GraphEditMinimapChrome } from './MinimapChrome';
 import { minimapConnectionsOf } from './minimapConnections';
-import { graphEditScrollBars } from './scrollBars';
-import { ScrollBarChrome, SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET } from '../shared/ScrollBarChrome';
+import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
+import {
+  graphEditConstructorScrollBars,
+  graphEditScrollBars,
+  hasUpdatedScrollBars,
+  mirroredScrollBars,
+} from './scrollBars';
+import { mirrorRectRtl } from '../../../../r3f/controls/native/controlRectSolver';
+import { ScrollBarChrome } from '../shared/ScrollChrome';
 import type { GraphEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
-
-/** `default_theme.cpp:1287`: `make_flat_stylebox(style_normal_color, 4, 4, 4, 5)`, with a larger bottom margin. */
-function defaultPanel(theme: NativeControlComponentProps['theme']): StyleBoxFlatData {
-  const scale = theme.contentMargin / 4;
-  return {
-    bgColor: theme.styleFill.normal,
-    borderColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 },
-    borderWidth: { left: 0, top: 0, right: 0, bottom: 0 },
-    cornerRadius: {
-      topLeft: theme.cornerRadius,
-      topRight: theme.cornerRadius,
-      bottomRight: theme.cornerRadius,
-      bottomLeft: theme.cornerRadius,
-    },
-    expandMargin: { left: 0, top: 0, right: 0, bottom: 0 },
-    contentMargin: {
-      left: Math.round(4 * scale),
-      top: Math.round(4 * scale),
-      right: Math.round(4 * scale),
-      bottom: Math.round(5 * scale),
-    },
-    drawCenter: true,
-    borderBlend: false,
-    antiAliased: true,
-    aaSize: 1,
-    cornerDetail: 8,
-    skew: { x: 0, y: 0 },
-    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-    shadowSize: 0,
-    shadowOffset: { x: 0, y: 0 },
-  };
-}
-
-/** `default_theme.cpp:1293`: `Color(1, 1, 1, 0.05)`. */
-const GRID_MINOR_DEFAULT: Rgba = { r: 1, g: 1, b: 1, a: 0.05 };
-/** `default_theme.cpp:1294`: `Color(1, 1, 1, 0.2)`. */
-const GRID_MAJOR_DEFAULT: Rgba = { r: 1, g: 1, b: 1, a: 0.2 };
-
-/** Every internal Label and LineEdit reads the plain "font" theme key, as `Label` and `Button` do. */
-const GRAPH_EDIT_THEME_FONT_KEY = 'font';
-
-/** `snapping_distance_spinbox->set_step(1)` (`graph_edit.cpp:3292`): the digit budget of `_update_text`. */
-const SNAPPING_SPINBOX_STEP = 1;
+import { themeItemsOfType, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+import { useStableVector2 } from '../../../../r3f/hooks/useStableVector2';
+import { shaderLineWidth } from './connectionStroke';
 
 /** `graph_edit.cpp:1945,1957`: `Rect2(x - 1, y - 1, 3, 3)`. */
 const DOT_SIZE_PX = 3;
@@ -104,7 +60,7 @@ const DOT_SIZE_PX = 3;
 /** Grid and connection colours take the tint while both are sRGB, before the one linear conversion. */
 function useColorQuad(base: Rgba, tintOwn: NativeControlComponentProps['tint']['own']) {
   const combined = useMemo(() => multiplyModulate(tintOwn, base), [tintOwn, base]);
-  const color = useGodotLinearColor(combined);
+  const color = useItemLinearColor(combined);
   return { color, opacity: combined.a };
 }
 
@@ -117,8 +73,8 @@ function GridLineQuad({
 }: {
   line: GridLine;
   rect: { w: number; h: number };
-  majorColor: { color: ReturnType<typeof useGodotLinearColor>; opacity: number };
-  minorColor: { color: ReturnType<typeof useGodotLinearColor>; opacity: number };
+  majorColor: { color: ReturnType<typeof useItemLinearColor>; opacity: number };
+  minorColor: { color: ReturnType<typeof useItemLinearColor>; opacity: number };
   renderOrder: number;
 }) {
   const { color, opacity } = line.major ? majorColor : minorColor;
@@ -139,7 +95,7 @@ function GridDotQuad({
   renderOrder,
 }: {
   dot: GridDot;
-  colorQuad: { color: ReturnType<typeof useGodotLinearColor>; opacity: number };
+  colorQuad: { color: ReturnType<typeof useItemLinearColor>; opacity: number };
   renderOrder: number;
 }) {
   return (
@@ -158,17 +114,19 @@ function GridDotQuad({
 export function GraphEdit({
   solveNode,
   tint,
+  childTint,
   rect,
   theme,
   renderOrder,
-  subtreeChromeRenderOrder,
+  chromeSlot,
+  layerSlot,
   childRects,
   measureText,
   snapToPixels,
   children,
 }: NativeControlComponentProps) {
   const props = painterView<GraphEditProperties>(solveNode);
-  const panelStyle = solveNode.styleBoxes.panel ?? defaultPanel(theme);
+  const panelStyle = requiredThemeItem(solveNode.styleBoxes, 'panel');
 
   const showGrid = props.showGrid !== false;
   const gridPattern = props.gridPattern ?? GRID_PATTERN_LINES;
@@ -184,22 +142,17 @@ export function GraphEdit({
   // `graph_edit.h:253`/`:252`: `lines_curvature = 0.5f`, `lines_thickness = 4.0f`.
   const curvature = props.connectionLinesCurvature ?? 0.5;
   const thickness = props.connectionLinesThickness ?? 4;
-  // `_get_shader_line_width` (`graph_edit.cpp:2632-2634`): `lines_thickness * base_scale + 4.0`,
-  // with `base_scale` recovered from `theme.contentMargin`.
-  const lineWidth = thickness * (theme.contentMargin / DEFAULT_CONTENT_MARGIN) + 4;
-  // The default `connection_rim_color` is `style_normal_color` (`default_theme.cpp:1301`),
-  // which `theme.styleFill.normal` holds.
-  const rimColor = solveNode.colors.connection_rim_color ?? theme.styleFill.normal;
-  // The walker draws each GraphElement at scale 1 (`isFreeParent` in `ControlCanvasWalker.tsx`),
-  // but an endpoint keeps the full `* zoom` (`connectionEndpoints.ts`). At a zoom other than 1,
-  // the line ends where Godot's port is, away from the unscaled node.
+  const lineWidth = shaderLineWidth(thickness, theme.scale);
+  const rimColor = requiredThemeItem(solveNode.colors, 'connection_rim_color');
+  // An endpoint keeps the full `* zoom` (`connectionEndpoints.ts`), as the walker scales each
+  // GraphElement child by `zoom`.
   const connections = useMemo(
     () => resolveGraphEditConnections(solveNode, childRects, props, theme, measureText),
     [solveNode, childRects, props, theme, measureText]
   );
 
-  const majorColor = useColorQuad(solveNode.colors.grid_major ?? GRID_MAJOR_DEFAULT, tint.own);
-  const minorColor = useColorQuad(solveNode.colors.grid_minor ?? GRID_MINOR_DEFAULT, tint.own);
+  const majorColor = useColorQuad(requiredThemeItem(solveNode.colors, 'grid_major'), tint.own);
+  const minorColor = useColorQuad(requiredThemeItem(solveNode.colors, 'grid_minor'), tint.own);
   // `transparent_grid_minor.a *= CLAMP(1.0 * (zoom - 0.4), 0, 1)` (graph_edit.cpp:1932).
   const minorDotAlphaFactor = Math.min(1, Math.max(0, zoom - 0.4));
   const minorDotColor = useMemo(
@@ -207,7 +160,7 @@ export function GraphEdit({
     [minorColor.color, minorColor.opacity, minorDotAlphaFactor]
   );
 
-  const rectSize = useMemo(() => ({ x: rect.w, y: rect.h }), [rect.w, rect.h]);
+  const rectSize = useStableVector2({ x: rect.w, y: rect.h });
   const lines = useMemo(
     () =>
       showGrid && gridPattern !== GRID_PATTERN_DOTS
@@ -223,44 +176,28 @@ export function GraphEdit({
     [showGrid, gridPattern, rectSize, scrollOffset, zoom, snappingDistance]
   );
 
-  // Read in the render body, not a `useMemo` (`Label`'s `Component.tsx` says why).
-  const fontMetrics = resolveNodeFontMetrics(solveNode, GRAPH_EDIT_THEME_FONT_KEY);
-  const layoutCache = useMemo(() => new Map<string, TextLayoutResult>(), []);
-  const shape = (text: string): TextLayoutResult => {
-    let layout = layoutCache.get(text);
-    if (!layout) {
-      layout = shapeButtonLabel(text, { fontSizePx: theme.fontSize, fontMetrics });
-      layoutCache.set(text, layout);
-    }
-    return layout;
-  };
-  const toolbar = graphEditToolbar(props, theme, {
-    measure: (text) => {
-      const l = shape(text);
-      return { x: shapedTextSizeWidthPx(l.widthPx), y: l.heightPx };
-    },
-    emSpaceWidthPx: shape('W').widthPx,
-    fontHeightPx: getFontLinePitchPx(fontMetrics, theme.fontSize, 0),
-  });
-  const toolbarText = {
-    zoomLabel: zoomLabelText(zoom),
-    snappingDistance: formatGodotNumber(snappingDistance, rangeStepDecimals(SNAPPING_SPINBOX_STEP)),
-  };
-
   const minimapEnabled = isMinimapEnabled(props);
   const graphEditSize = rectSize;
-  const { bounds, hasPositionedChild, minimapElements } = graphEditElements(
-    solveNode,
-    childRects,
-    zoom,
-    graphEditSize,
-    theme
-  );
-  // The chrome is `INTERNAL_MODE_*` children of `top_layer`, which is `INTERNAL_MODE_BACK`
-  // (`graph_edit.cpp:3183`), so it paints after every GraphElement, in `top_layer`
-  // child order (`:3210,3229,3329`): scrollbars, toolbar, minimap.
-  const scrollBars = graphEditScrollBars(graphEditSize, bounds, scrollOffset, theme);
-  const minimapPanelRect = minimapRect(graphEditSize, props);
+  const elements = graphEditElements(solveNode, childRects, zoom, graphEditSize);
+  const { hasPositionedChild, minimapElements } = elements;
+  // Until `_update_scrollbars` runs, both bars keep the constructor range and the minimap reads
+  // zero bounds (`scrollBars.ts`).
+  const hasUpdatedBars = hasUpdatedScrollBars({
+    hasGraphElement: elements.hasGraphElement,
+    queuedScrollOffsetUpdate: props.queuedScrollOffsetUpdate === true,
+    outOfTreeSize: props.outOfTreeSize ?? graphEditSize,
+    solvedSize: graphEditSize,
+  });
+  const bounds = hasUpdatedBars ? elements.bounds : CONSTRUCTOR_SCROLL_BOUNDS;
+  const scrollBarBoxes = internalScrollBarBoxes(solveNode);
+  const ltrScrollBars = hasUpdatedBars
+    ? graphEditScrollBars(graphEditSize, bounds, scrollOffset, scrollBarBoxes)
+    : graphEditConstructorScrollBars(graphEditSize, scrollBarBoxes);
+  // `top_layer`'s anchored children mirror in a right-to-left layout (`control.cpp:1785-1787`).
+  const scrollBars = solveNode.rtl ? mirroredScrollBars(ltrScrollBars, graphEditSize.x) : ltrScrollBars;
+  const topLayer = useMemo(() => graphEditTopLayerSlots(chromeSlot), [chromeSlot]);
+  const ltrMinimapRect = minimapRect(graphEditSize, props);
+  const minimapPanelRect = solveNode.rtl ? mirrorRectRtl(ltrMinimapRect, graphEditSize.x) : ltrMinimapRect;
   const minimapXform = minimapTransform({ x: minimapPanelRect.w, y: minimapPanelRect.h }, bounds);
 
   // The constructor calls `set_clip_contents(true)` (`graph_edit.cpp:3342`), so every GraphEdit
@@ -270,11 +207,9 @@ export function GraphEdit({
   // The walker hands the children over (`wrapsChildren`): the clip reaches them only inside the provider.
   const { anchorRef, clip } = useWorldClipPlanes(ownRect);
 
-  // Connections draw at this node's `renderOrder`, behind every GraphElement. Godot puts
-  // `connections_layer` above the grid and below the GraphFrames and GraphNodes
-  // (`graph_edit.cpp:717`): see `comparison.md`.
   return (
     <CanvasItemGroup ref={anchorRef}>
+      {/* The panel and the grid are the item's own pixels. The connections, the bars and the minimap are child Controls, and the toolbar an internal Control (`graph_edit.cpp:3183-3329`): no `self_modulate`. */}
       <ControlClipProvider value={clip}>
         <StyleBoxQuad
           styleBox={panelStyle}
@@ -303,51 +238,36 @@ export function GraphEdit({
             <GridDotQuad key={`M${i}`} dot={dot} colorQuad={majorColor} renderOrder={renderOrder} />
           ))}
 
-        {connections.map((connection, i) => (
-          <ConnectionLine
-            key={i}
-            connection={connection}
-            curvature={curvature}
-            lineWidth={lineWidth}
-            rimColor={rimColor}
-            tintOwn={tint.own}
-            renderOrder={renderOrder}
-          />
-        ))}
+        <CanvasItemGroup renderOrder={layerSlot.key}>
+          {connections.map((connection, i) => (
+            <ConnectionLine
+              key={i}
+              connection={connection}
+              curvature={curvature}
+              lineWidth={lineWidth}
+              rimColor={rimColor}
+              tintOwn={childTint.own}
+              renderOrder={layerSlot.key}
+            />
+          ))}
+        </CanvasItemGroup>
 
         {children}
 
         <ScrollBarChrome
           bar={scrollBars.horizontal}
-          track={theme.widgets.scrollBar.scrollHorizontal}
-          grabber={theme.widgets.scrollBar.grabber}
-          color={tint.own}
-          renderOrder={subtreeChromeRenderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET}
-          grabberRenderOrder={subtreeChromeRenderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET + 0.05}
+          boxes={scrollBarBoxes.horizontal}
+          color={childTint.own}
+          chromeSlot={topLayer.scrollBars}
           snapToPixels={snapToPixels}
         />
         <ScrollBarChrome
           bar={scrollBars.vertical}
-          track={theme.widgets.scrollBar.scrollVertical}
-          grabber={theme.widgets.scrollBar.grabber}
-          color={tint.own}
-          renderOrder={subtreeChromeRenderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET}
-          grabberRenderOrder={subtreeChromeRenderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET + 0.05}
+          boxes={scrollBarBoxes.vertical}
+          color={childTint.own}
+          chromeSlot={topLayer.scrollBars}
           snapToPixels={snapToPixels}
         />
-
-        {toolbar && (
-          <GraphEditToolbarChrome
-            toolbar={toolbar}
-            icons={solveNode.icons}
-            theme={theme}
-            tint={tint}
-            text={toolbarText}
-            shape={shape}
-            rtl={solveNode.rtl}
-            renderOrder={subtreeChromeRenderOrder + 0.5}
-          />
-        )}
 
         {minimapEnabled && (
           <GraphEditMinimapChrome
@@ -363,9 +283,10 @@ export function GraphEdit({
             curvature={curvature}
             connectionLinesAntialiased={props.connectionLinesAntialiased !== false}
             icons={solveNode.icons}
+            items={themeItemsOfType(solveNode, 'GraphEditMinimap')}
             theme={theme}
-            tint={tint}
-            renderOrder={subtreeChromeRenderOrder + 0.75}
+            tint={childTint}
+            slot={topLayer.minimap}
           />
         )}
       </ControlClipProvider>

@@ -1,0 +1,80 @@
+; One variable: thirty items, taller than the 648 px embedder. The menu is cut to the frame height,
+; and the scroll container shows its vertical bar (`popup_menu.cpp:280-286`, `scroll_container.cpp:592-593`).
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Menu" type="PopupMenu" parent="."]
+position = Vector2i(100, 20)
+visible = true
+item_count = 30
+item_0/text = "Item 1"
+item_0/id = 0
+item_1/text = "Item 2"
+item_1/id = 1
+item_2/text = "Item 3"
+item_2/id = 2
+item_3/text = "Item 4"
+item_3/id = 3
+item_4/text = "Item 5"
+item_4/id = 4
+item_5/text = "Item 6"
+item_5/id = 5
+item_6/text = "Item 7"
+item_6/id = 6
+item_7/text = "Item 8"
+item_7/id = 7
+item_8/text = "Item 9"
+item_8/id = 8
+item_9/text = "Item 10"
+item_9/id = 9
+item_10/text = "Item 11"
+item_10/id = 10
+item_11/text = "Item 12"
+item_11/id = 11
+item_12/text = "Item 13"
+item_12/id = 12
+item_13/text = "Item 14"
+item_13/id = 13
+item_14/text = "Item 15"
+item_14/id = 14
+item_15/text = "Item 16"
+item_15/id = 15
+item_16/text = "Item 17"
+item_16/id = 16
+item_17/text = "Item 18"
+item_17/id = 17
+item_18/text = "Item 19"
+item_18/id = 18
+item_19/text = "Item 20"
+item_19/id = 19
+item_20/text = "Item 21"
+item_20/id = 20
+item_21/text = "Item 22"
+item_21/id = 21
+item_22/text = "Item 23"
+item_22/id = 22
+item_23/text = "Item 24"
+item_23/id = 23
+item_24/text = "Item 25"
+item_24/id = 24
+item_25/text = "Item 26"
+item_25/id = 25
+item_26/text = "Item 27"
+item_26/id = 26
+item_27/text = "Item 28"
+item_27/id = 27
+item_28/text = "Item 29"
+item_28/id = 28
+item_29/text = "Item 30"
+item_29/id = 29

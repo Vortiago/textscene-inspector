@@ -1,0 +1,10 @@
+[gd_resource type="TileSetAtlasSource" format=3]
+
+; The atlas source of unit-tileset-source-file, saved in its own file.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[resource]
+texture = ExtResource("1_marker")
+texture_region_size = Vector2i(96, 96)
+0:0/0 = 0

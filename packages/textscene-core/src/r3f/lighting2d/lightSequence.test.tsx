@@ -11,7 +11,6 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { TscnParser } from '../../parser/TscnParser';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import { litQuadRenderOrder } from './ShadowVolumeMask';
 import { lightDrawSequence } from './lightSequence';
 import { CanvasLightSequenceProvider, useDirectionalLightSlot, useLightSequence } from './useLightSequence';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
@@ -123,7 +122,7 @@ describe('CanvasLightSequenceProvider', () => {
     expect(await sequences(['Root/A', 'Root/Mid/B', 'Root/C'])).toEqual([0, 1, 2]);
   });
 
-  it('is dense across an unlit tree, so the pairing spends no empty slots', async () => {
+  it('is dense across an unlit tree', async () => {
     // `Prop` is a Sprite2D between two lights and takes no slot.
     expect(await sequences(['Root/C'])).toEqual([2]);
   });
@@ -172,14 +171,10 @@ describe('light draw order over the live tree', () => {
 [node name="Mid" type="Node2D" parent="."]
 ${lamp('B', 'Mid')}${lamp('C')}`
     );
-    expect(quadOrders(renderer)).toEqual([
-      litQuadRenderOrder(0),
-      litQuadRenderOrder(1),
-      litQuadRenderOrder(2),
-    ]);
+    expect(quadOrders(renderer)).toEqual([0, 1, 2]);
   });
 
-  it('is dense across an unlit tree, so the pairing spends no empty slots', async () => {
+  it('is dense across an unlit tree', async () => {
     const renderer = await render(
       `
 [node name="Sprite" type="Sprite2D" parent="."]
@@ -188,11 +183,11 @@ ${lamp('A')}
 polygon = PackedVector2Array(0, 0, 10, 0, 10, 10)
 ${lamp('B')}`
     );
-    expect(quadOrders(renderer)).toEqual([litQuadRenderOrder(0), litQuadRenderOrder(1)]);
+    expect(quadOrders(renderer)).toEqual([0, 1]);
   });
 
-  it('gives a lone light slot zero rather than an arbitrary offset', async () => {
-    expect(quadOrders(await render(lamp('Only')))).toEqual([litQuadRenderOrder(0)]);
+  it('gives a lone light slot zero', async () => {
+    expect(quadOrders(await render(lamp('Only')))).toEqual([0]);
   });
 });
 

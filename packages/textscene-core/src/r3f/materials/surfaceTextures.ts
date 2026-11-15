@@ -9,14 +9,14 @@ import type * as THREE from 'three';
 import { useMemo } from 'react';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { useAnisotropicFilteringLevel } from '../contexts/AnisotropicFilteringContext';
-import { NODE_PROPERTY, useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
-import { NO_RESOURCES } from '../SceneResourcesContext';
+import type { ScopedReference } from '../../resources/reading';
+import type { StandardMaterial } from '../../resources/materials/material/types';
+import { useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
 import { useTextureView } from '../useTextureView';
 import type {
   ResolvedTextures,
   StandardMaterial3DScalars,
   TextureSlot,
-  TextureSlotReferences,
 } from '../../resources/materials/standardmaterial3d/types';
 import { TEXTURE_SLOTS } from '../../resources/materials/standardmaterial3d/types';
 import { isAnisotropic } from '../../resources/materials/standardmaterial3d/materialBag';
@@ -31,8 +31,6 @@ import {
 import { repackAnisotropyFlowmap } from '../../resources/textures/repackFlowmap';
 import { defaultWhiteTexture } from './defaultWhiteTexture';
 import { pendingMapStandIn } from './pendingMapStandIn';
-import type { MaterialResource } from './materialSource';
-import { isLocalToScene } from '../../resources/textures/viewporttexture/localToScene.js';
 
 /** The glTF surface a GLB override draws on, whose UVs keep Godot's top-down V (`godot/math/uv.ts`). */
 export const GLTF_SURFACE = 'gltf';
@@ -41,25 +39,16 @@ export const GLTF_SURFACE = 'gltf';
 export type TexturedSurface = typeof GLTF_SURFACE;
 
 /**
- * Every texture slot of one StandardMaterial3D, resolved in `material`'s own file's tables. Null
+ * Every texture slot of one StandardMaterial3D, each `slots` reference read as a Texture2D. Null
  * when a slot never draws, a file that cannot load or a ViewportTexture in a pass cycle: the
  * surface takes `MISSING_TEXTURE_MATERIAL`.
  */
 export function useSurfaceTextures(
   scalars: StandardMaterial3DScalars | null,
-  material: MaterialResource | null,
+  slots: StandardMaterial['textures'],
   surface?: TexturedSurface
 ): ResolvedTextures | null {
-  // The decode's gated table, never the raw property bag: Godot samples a gated slot only inside
-  // its `if (features[…])` branch (`scene/resources/material.cpp:1090,1745`), so a
-  // `normal_texture` without `normal_enabled` reaches no shader.
-  const references = scalars?.textureSlots;
-
-  // Godot sets a slot's ViewportTexture up through each holder down to it, the material last.
-  const isHeldLocally = material
-    ? (material.isHeldLocally ?? true) && isLocalToScene(material.resource)
-    : NODE_PROPERTY;
-  const sources = useEachSlot(useSlotTexture, references, material, isHeldLocally);
+  const sources = useEachSlot(useSlotTexture, slots);
   // The per-material half of every binding: UV set and transform, sampler filter and
   // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `slotViewSampler`'s.
   const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
@@ -109,29 +98,11 @@ type SlotMap = Pick<Texture2DResult, 'texture' | 'isArriving'>;
  * a texture by RID: an AtlasTexture's is its whole sheet (`scene/resources/atlas_texture.cpp:55-58`),
  * a CanvasTexture's names none, and a ViewportTexture's names its viewport's target.
  */
-function useSlotTexture(
-  slot: TextureSlot,
-  references: TextureSlotReferences | undefined,
-  material: MaterialResource | null,
-  isHeldLocally: boolean
-): Texture2DResult {
+function useSlotTexture(slot: TextureSlot, slots: StandardMaterial['textures']): Texture2DResult {
   const view = slotReadsSourceColor(slot) ? 'decoding' : 'plain';
-  const result = useTexture2DRid(
-    textureSlotReference(references, slot),
-    material?.externalResources ?? NO_RESOURCES.externalResources,
-    material?.internalResources ?? NO_RESOURCES.internalResources,
-    view,
-    isHeldLocally
-  );
+  const reference: ScopedReference | null = slots[slot] ?? null;
+  const result = useTexture2DRid(reference, view);
   return result.namesTexture ? result : { ...result, texture: defaultWhiteTexture() };
-}
-
-function textureSlotReference(
-  references: TextureSlotReferences | undefined,
-  slot: TextureSlot
-): string | undefined {
-  const raw = references?.[slot];
-  return typeof raw === 'string' ? raw : undefined;
 }
 
 /**

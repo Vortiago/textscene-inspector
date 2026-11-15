@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ByteReader } from './byteReader';
+import { ByteReader, hasAsciiPrefix } from './byteReader';
 
 const bytes = (...values: number[]) => new Uint8Array(values);
 
@@ -51,5 +51,19 @@ describe('ByteReader', () => {
     const reader = new ByteReader(bytes(9, 9, 7, 0, 5, 0).subarray(2));
     reader.seek(2);
     expect(reader.u16()).toBe(5);
+  });
+});
+
+describe('hasAsciiPrefix', () => {
+  it('matches the text at the offset', () => {
+    expect(hasAsciiPrefix(bytes(0, 0x4f, 0x67, 0x67), 'Ogg', 1)).toBe(true);
+  });
+
+  it('rejects a different byte', () => {
+    expect(hasAsciiPrefix(bytes(0x4f, 0x67, 0x68), 'Ogg')).toBe(false);
+  });
+
+  it('rejects bytes shorter than the text', () => {
+    expect(hasAsciiPrefix(bytes(0x4f, 0x67), 'Ogg')).toBe(false);
   });
 });

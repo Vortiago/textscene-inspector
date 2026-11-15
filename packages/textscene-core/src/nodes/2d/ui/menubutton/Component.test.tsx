@@ -12,8 +12,16 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import type { MenuButtonProperties } from './types';
 import { MenuButton } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { bundledRunMeshes, bundledRuns } from '../../../../r3f/controls/native/testing/bundledRunStub';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  bundledRunMeshes,
+  bundledRuns,
+  inkedGlyphCounts,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
 
 // A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
 vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
@@ -26,7 +34,7 @@ const RECT: Rect2 = { x: 0, y: 0, w: 120, h: 32 };
 
 function solveNode(properties: Partial<MenuButtonProperties> = {}): SolveNode {
   const node: TscnNode = controlNode('MyMenuButton', 'MenuButton', { name: 'MyMenuButton', ...properties });
-  return { ...emptySolveNode(), path: 'MyMenuButton', node };
+  return withThemeItems({ ...emptySolveNode(), path: 'MyMenuButton', node });
 }
 
 function findChromeMesh(scene: Rendered['scene']) {
@@ -106,5 +114,19 @@ describe('<MenuButton> (isolated painter contract)', () => {
 
     expect(ltrRight).toBeGreaterThan(ltrLeft);
     expect(rtlLeft).toBe(ltrRight);
+  });
+});
+
+describe('<MenuButton>: autowrap_mode wraps the label as Button does (button.cpp:428-432)', () => {
+  it('draws three centred lines', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <MenuButton
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'alpha bravo charlie', autowrapMode: 2 })}
+        rect={{ x: 0, y: 0, w: 80, h: 77 }}
+        renderOrder={0}
+      />
+    );
+    expect(inkedGlyphCounts(renderer.scene)).toHaveLength(3);
   });
 });

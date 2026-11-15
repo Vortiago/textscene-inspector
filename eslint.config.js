@@ -33,6 +33,20 @@ const NODE_ONLY_PATTERNS = [
   { group: ['node:*', '**/diskProject', '**/diskProject.js'], message: NODE_ONLY_MESSAGE },
 ];
 
+/** The directories of core besides `godot/` that the shader module must not import (ADR-0072). */
+const CORE_DIRECTORIES_OUTSIDE_SHADERS = [
+  'core',
+  'languageFeatures',
+  'linter',
+  'nodes',
+  'parser',
+  'r3f',
+  'resources',
+  'testing',
+  'utils',
+  'workers',
+];
+
 /** One `no-restricted-imports` setting: a later block's setting replaces an earlier one, so each block lists every group it needs. */
 function restrictedImports(patterns, paths = []) {
   return ['error', { paths, patterns }];
@@ -120,6 +134,7 @@ export default [
       'apps/textscene-lsp/src/**/*.ts',
       'apps/textscene-tscn/src/**/*.ts',
       'apps/textscene-renderer/src/**/*.ts',
+      'apps/textscene-three-godot-shaders/src/**/*.ts',
       'packages/textscene-dev-kit/src/**/*.ts',
       '**/*.config.ts',
       'vitest.shared.ts',
@@ -239,6 +254,41 @@ export default [
             group: REACT_AND_THREE_IMPORTS,
             message:
               'The language-feature engine must stay React/THREE-free, so the extension host and the tscn-lsp server can import it.',
+          },
+          ...NODE_ONLY_PATTERNS,
+        ],
+        NODE_BUILTIN_PATHS
+      ),
+    },
+  },
+
+  // The shader module imports only three.js, `godot/` and its own files (ADR-0072), so a three.js
+  // app with no React can draw with it. This is the fast editor-time guard against the obvious
+  // leak. `shaders/importRule.test.ts` checks the whole module graph.
+  {
+    files: ['packages/textscene-core/src/shaders/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': restrictedImports(
+        [
+          {
+            group: [
+              'react',
+              'react/*',
+              'react-dom',
+              'react-dom/*',
+              '@react-three/*',
+              '*.tsx',
+              '**/*.tsx',
+              ...CORE_DIRECTORIES_OUTSIDE_SHADERS.flatMap((directory) => [
+                `**/${directory}`,
+                `**/${directory}/**`,
+              ]),
+              // A three.js path such as `three/addons/utils/*` ends in a core directory's name.
+              '!three/**',
+            ],
+            message:
+              'The shader module imports only three.js, godot/ and its own files (ADR-0072). Read a value of the renderer through a pipeline input instead.',
           },
           ...NODE_ONLY_PATTERNS,
         ],

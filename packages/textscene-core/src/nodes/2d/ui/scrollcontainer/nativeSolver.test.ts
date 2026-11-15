@@ -10,7 +10,11 @@ import type { ScrollContainerProperties } from './types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
+import {
+  createSolveContext,
+  normalizeContainerLayoutResult,
+  solveControlTree,
+} from '../../../../r3f/controls/native/controlRectSolver';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import {
   scrollContainerMinimumSize,
@@ -18,16 +22,11 @@ import {
   scrollContainerScrollBars,
   scrollContainerLayoutChannel,
 } from './nativeSolver';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 
-/**
- * The child-rects half of `scrollContainerLayout`. `'rects' in result`, not
- * `instanceof Map`: a `Map` is not structurally a `ReadonlyMap`, so
- * `instanceof` cannot narrow it (as in `normalizeContainerLayoutResult`).
- */
+/** The child-rects half of `scrollContainerLayout`. */
 function layoutRects(...args: Parameters<typeof scrollContainerLayout>): ReadonlyMap<string, Rect2> {
-  const result = scrollContainerLayout(...args);
-  return 'rects' in result ? result.rects : result;
+  return normalizeContainerLayoutResult(scrollContainerLayout(...args)).rects;
 }
 
 const THEME = nativeTheme(1);
@@ -40,20 +39,20 @@ function ctx() {
 }
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'Control', { name, ...props }),
-  };
+  });
 }
 
 function scrollContainer(props: Partial<ScrollContainerProperties>, children: SolveNode[]): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: 'Scroll',
     node: controlNode('Scroll', 'ScrollContainer', { name: 'Scroll', ...props }),
     children,
-  };
+  });
 }
 
 describe('scrollContainerMinimumSize (scene/gui/scroll_container.cpp::get_minimum_size)', () => {
@@ -287,9 +286,7 @@ describe('scrollContainerLayout — the sealed solve handoff carries the FULL Sc
     const expected = scrollContainerScrollBars(n, solveCtx, RECT);
 
     expect(result).not.toBeInstanceOf(Map);
-    // `'rects' in result`, not `instanceof Map`: see `layoutRects`.
-    if (!('rects' in result)) throw new Error('unreachable');
-    expect(scrollContainerLayoutChannel.open(result.meta)).toEqual(expected);
+    expect(scrollContainerLayoutChannel.open(normalizeContainerLayoutResult(result).meta)).toEqual(expected);
   });
 });
 
@@ -304,15 +301,15 @@ describe('wired through the registry + full solve, against the real fixture numb
     controlSolverRegistry.registerMinimumSize(TYPE, scrollContainerMinimumSize);
     controlSolverRegistry.registerContainerLayout(TYPE, scrollContainerLayout);
     try {
-      const content: SolveNode = {
+      const content: SolveNode = withThemeItems({
         ...solveNode(),
         path: 'Root/ScrollContainer/Content',
         node: controlNode('Content', 'VBoxContainer', {
           name: 'Content',
           customMinimumSize: { x: 399, y: 800 },
         }),
-      };
-      const scroll: SolveNode = {
+      });
+      const scroll: SolveNode = withThemeItems({
         ...solveNode(),
         path: 'Root/ScrollContainer',
         node: controlNode('ScrollContainer', TYPE, {
@@ -326,8 +323,8 @@ describe('wired through the registry + full solve, against the real fixture numb
           offsetBottom: -16,
         }),
         children: [content],
-      };
-      const root: SolveNode = {
+      });
+      const root: SolveNode = withThemeItems({
         ...solveNode(),
         path: 'Root',
         node: controlNode('Root', 'Control', {
@@ -337,7 +334,7 @@ describe('wired through the registry + full solve, against the real fixture numb
           anchorBottom: 1,
         }),
         children: [scroll],
-      };
+      });
 
       const viewport: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
       const solved = solveControlTree([root], viewport, ctx());

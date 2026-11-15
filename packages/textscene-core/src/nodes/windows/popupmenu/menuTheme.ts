@@ -1,0 +1,108 @@
+/**
+ * The theme items a PopupMenu reads (`PopupMenu::_update_theme_item_cache`, `popup_menu.cpp:1326-1337`
+ * and `popup_menu.h:176-230`): each from the node's overrides, its theme chain, then the default theme.
+ * Pure: no React, no THREE.
+ *
+ * Portions ported from Godot Engine (MIT).
+ * Copyright (c) 2014-present Godot Engine contributors.
+ * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
+ * See THIRD-PARTY-NOTICES.md.
+ */
+
+import type { Rgba } from '../../../godot/math/math';
+import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
+import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
+import type { SolveNode } from '../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../r3f/controls/native/themeItems';
+import { scaledIconSizeOf } from '../../../r3f/controls/native/scaledSvgIcon';
+import {
+  CHECKBOX_ICON_NATURAL_SIZE,
+  CHECK_BOX_ICON_THEME_NAME,
+  type CheckBoxIconKey,
+} from '../../2d/ui/checkbox/nativeSolver';
+import type { Vector2 } from '../../../godot/math/vector';
+import {
+  resolveTextOutline,
+  SEPARATOR_OUTLINE_NAMES,
+  type TextOutlineTheme,
+} from '../../../r3f/controls/native/textTheme';
+import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
+import {
+  resolveNodeFontMetrics,
+  resolveNodeFontSizePx,
+} from '../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import type { WindowProperties } from '../window/types';
+import { internalScrollBarBoxes } from '../../2d/ui/shared/scrollBarBoxes';
+import type { ScrollBarBoxes } from '../../2d/ui/shared/scrollBarSolver';
+
+/** A font and its size, as `theme_cache.font` and `font_size` hold them. */
+interface MenuFont {
+  metrics: FontMetrics;
+  sizePx: number;
+}
+
+export interface PopupMenuTheme {
+  panel: ResolvedStyleBox;
+  separator: ResolvedStyleBox;
+  labeledSeparatorLeft: ResolvedStyleBox;
+  labeledSeparatorRight: ResolvedStyleBox;
+  vSeparation: number;
+  hSeparation: number;
+  itemStartPadding: number;
+  itemEndPadding: number;
+  iconMaxWidth: number;
+  isGutterCompact: boolean;
+  /** The boxes of the vertical bar of the menu's internal ScrollContainer (`popup_menu.cpp:3488`). */
+  scrollBar: ScrollBarBoxes;
+  /** Each check icon's size: a theme's own, else the vendored default at the theme scale. */
+  checkIconSizes: Readonly<Record<CheckBoxIconKey, Vector2>>;
+  font: MenuFont;
+  separatorFont: MenuFont;
+  fontColor: Rgba;
+  fontDisabledColor: Rgba;
+  fontSeparatorColor: Rgba;
+  outline: TextOutlineTheme;
+  separatorOutline: TextOutlineTheme;
+}
+
+function menuFont(n: SolveNode, fontKey: string, sizeKey: string): MenuFont {
+  const { themeOverrideFontSizes } = n.node.properties as WindowProperties;
+  return {
+    metrics: resolveNodeFontMetrics(n, fontKey),
+    sizePx: resolveNodeFontSizePx(n, sizeKey, themeOverrideFontSizes?.[sizeKey]),
+  };
+}
+
+/** The eight check icons by key, each at the size `popup_menu.cpp:853-855` draws it. */
+function checkIconSizesOf(n: SolveNode, theme: NativeTheme): PopupMenuTheme['checkIconSizes'] {
+  const vendored = scaledIconSizeOf(CHECKBOX_ICON_NATURAL_SIZE, theme.scale);
+  const keys = Object.keys(CHECK_BOX_ICON_THEME_NAME) as CheckBoxIconKey[];
+  return Object.fromEntries(
+    keys.map((key) => [key, n.textureSlots[CHECK_BOX_ICON_THEME_NAME[key]] ?? vendored])
+  ) as PopupMenuTheme['checkIconSizes'];
+}
+
+export function popupMenuTheme(n: SolveNode, theme: NativeTheme): PopupMenuTheme {
+  const { styleBoxes, constants, colors } = n;
+  return {
+    panel: requiredThemeItem(styleBoxes, 'panel'),
+    separator: requiredThemeItem(styleBoxes, 'separator'),
+    labeledSeparatorLeft: requiredThemeItem(styleBoxes, 'labeled_separator_left'),
+    labeledSeparatorRight: requiredThemeItem(styleBoxes, 'labeled_separator_right'),
+    vSeparation: requiredThemeItem(constants, 'v_separation'),
+    hSeparation: requiredThemeItem(constants, 'h_separation'),
+    itemStartPadding: requiredThemeItem(constants, 'item_start_padding'),
+    itemEndPadding: requiredThemeItem(constants, 'item_end_padding'),
+    iconMaxWidth: requiredThemeItem(constants, 'icon_max_width'),
+    isGutterCompact: requiredThemeItem(constants, 'gutter_compact') !== 0,
+    scrollBar: internalScrollBarBoxes(n).vertical,
+    checkIconSizes: checkIconSizesOf(n, theme),
+    font: menuFont(n, 'font', 'font_size'),
+    separatorFont: menuFont(n, 'font_separator', 'font_separator_size'),
+    fontColor: requiredThemeItem(colors, 'font_color'),
+    fontDisabledColor: requiredThemeItem(colors, 'font_disabled_color'),
+    fontSeparatorColor: requiredThemeItem(colors, 'font_separator_color'),
+    outline: resolveTextOutline(n),
+    separatorOutline: resolveTextOutline(n, SEPARATOR_OUTLINE_NAMES),
+  };
+}

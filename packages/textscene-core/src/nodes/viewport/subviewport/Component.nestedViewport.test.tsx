@@ -14,6 +14,7 @@ const SCENE = `[gd_scene format=3]
 [node name="Root" type="Node2D"]
 
 [node name="View" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(200, 150)
 
 [node name="Camera3D" type="Camera3D" parent="View"]
@@ -24,6 +25,7 @@ size = Vector2i(200, 150)
 polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
 
 [node name="Inner" type="SubViewport" parent="View"]
+render_target_update_mode = 4
 
 [node name="InnerCamera" type="Camera3D" parent="View/Inner"]
 

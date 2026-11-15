@@ -10,8 +10,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { godotColorToLinear } from '../../../../r3f/godotColor';
+import { multiplyModulate, useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
 import {
   ControlClipProvider,
   useControlClipPlanes,
@@ -20,17 +19,14 @@ import {
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useWindowedCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useResolvedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import { useNodeReference } from '../../../../resources/reading';
 import { WHOLE_FRAME, frameUvWindow } from '../../../../r3f/spriteFrame';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { clampAutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
 import { OutlinedTextRun } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { ScrollBarChrome } from '../shared/ScrollChrome';
 import {
-  ScrollBarChrome,
-  SCROLL_BAR_GRABBER_RENDER_ORDER_OFFSET,
-  SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET,
-} from '../shared/ScrollBarChrome';
-import {
-  RICH_TEXT_LABEL_UNDERLINE_ALPHA,
+  richTextLabelUnderlineAlpha,
   RICH_TEXT_LABEL_DEFAULT_AUTOWRAP,
   layoutRichTextRuns,
   richTextLabelTextTheme,
@@ -43,13 +39,14 @@ import {
 } from './nativeSolver';
 import { resolveRichTextFaces } from './styleFaces';
 import { shapeBesideScrollBar } from './scrollBar';
+import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import { countedCharacters, richTextReveal, truncateRunsToCharacters } from './visibleCharacters';
 import type { RichTextLabelProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { ResolvedTextTheme, TextOutlineTheme } from '../../../../r3f/controls/native/textTheme';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 
 interface ImageLike {
   width?: number;
@@ -73,8 +70,8 @@ function RichTextImage({
   renderOrder: number;
 }) {
   const { spec, widthPx, heightPx } = placement;
-  const { externalResources, internalResources } = resources;
-  const { texture: rawTexture } = useTexture2D(spec.path, externalResources, internalResources);
+  const toItemLinear = useItemLinearColorOf();
+  const { texture: rawTexture } = useTexture2D(useNodeReference(spec.path, resources));
 
   const regionWindow = useMemo(
     () =>
@@ -112,16 +109,14 @@ function RichTextImage({
   const imageTint = multiplyModulate(tint, spec.color);
 
   return (
-    <CanvasItemGroup position={[offsetXPx, -offsetYPx, 0]}>
-      <ControlQuad
-        renderOrder={renderOrder}
-        width={drawWidthPx}
-        height={drawHeightPx}
-        color={godotColorToLinear(imageTint)}
-        opacity={imageTint.a}
-        map={drawnTexture}
-      />
-    </CanvasItemGroup>
+    <PositionedIcon
+      rect={{ x: offsetXPx, y: offsetYPx, w: drawWidthPx, h: drawHeightPx }}
+      texture={drawnTexture}
+      color={toItemLinear(imageTint)}
+      opacity={imageTint.a}
+      renderOrder={renderOrder}
+      canvasKey={renderOrder}
+    />
   );
 }
 
@@ -135,13 +130,14 @@ function RichTextRule({
   tint: Rgba;
   renderOrder: number;
 }) {
+  const toItemLinear = useItemLinearColorOf();
   const imageTint = multiplyModulate(tint, placement.spec.color);
   return (
     <ControlQuad
       renderOrder={renderOrder}
       width={placement.widthPx}
       height={placement.heightPx}
-      color={godotColorToLinear(imageTint)}
+      color={toItemLinear(imageTint)}
       opacity={imageTint.a}
     />
   );
@@ -176,13 +172,12 @@ function useShapedRichText(
   solveNode: SolveNode,
   props: RichTextLabelProperties,
   rect: Rect2,
-  theme: NativeTheme,
   textTheme: ResolvedTextTheme
 ) {
   const runsAt = useCallback(
     (wrapWidthPx: number) =>
-      styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize, wrapWidthPx),
-    [solveNode, props, textTheme.color, textTheme.fontSizePx, theme.fontSize]
+      styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, wrapWidthPx),
+    [solveNode, props, textTheme.color, textTheme.fontSizePx]
   );
   // RichTextLabel's own default is WORD_SMART (`rich_text_label.h:557`), not Label's OFF.
   const autowrapMode = clampAutowrapMode(props.autowrapMode, RICH_TEXT_LABEL_DEFAULT_AUTOWRAP);
@@ -230,6 +225,7 @@ function useShapedRichText(
     ]
   );
 
+  const verticalBarBoxes = internalScrollBarBoxes(solveNode).vertical;
   const shaped = useMemo(
     () =>
       shapeBesideScrollBar(
@@ -238,9 +234,9 @@ function useShapedRichText(
           return { runs, layout: shapeAtWidth(runs, wrapWidthPx) };
         },
         box,
-        theme
+        verticalBarBoxes
       ),
-    [runsAt, runsAtRectWidth, rect.w, shapeAtWidth, box, theme]
+    [runsAt, runsAtRectWidth, rect.w, shapeAtWidth, box, verticalBarBoxes]
   );
 
   const { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior } = props;
@@ -276,17 +272,18 @@ function useShapedRichText(
 function RichTextBody({
   solveNode,
   tint,
+  childTint,
   rect,
   renderOrder,
-  theme,
+  slot,
   snapToPixels,
   clippingPlanes,
+  theme,
 }: RichTextBodyProps) {
   const props = painterView<RichTextLabelProperties>(solveNode);
-  const textTheme = useMemo(
-    () => richTextLabelTextTheme(solveNode, props, { theme }),
-    [solveNode, props, theme]
-  );
+  const toItemLinear = useItemLinearColorOf();
+  const textTheme = useMemo(() => richTextLabelTextTheme(solveNode, props), [solveNode, props]);
+  const underlineAlpha = richTextLabelUnderlineAlpha(solveNode);
 
   const {
     runs,
@@ -299,7 +296,7 @@ function RichTextBody({
     textOriginXPx,
     scrollOffsetPx,
     scrollBar,
-  } = useShapedRichText(solveNode, props, rect, theme, textTheme);
+  } = useShapedRichText(solveNode, props, rect, textTheme);
 
   // The alignment property and the `[center]`/`[right]`/`[left]`/`[fill]` tags
   // (`rich_text_label.cpp:5681-5696`) resolve through one `_find_alignment`
@@ -358,13 +355,14 @@ function RichTextBody({
           // The tint multiplies in sRGB and `<TextRun>` converts once.
           const runTint = multiplyModulate(tint.own, placement.color);
           const outline = runOutline(placement, tint.own);
-          // `[u]` is a stroke on the line's baseline with the paragraph's metrics,
+          // `[u]` is a stroke on the line's own baseline with the paragraph's metrics,
           // snapped to whole pixel rows, at `underline_alpha` times the opacity.
           const underline = placement.underline
             ? underlineRectPx(
                 placement.layout.lines[0]!.glyphs,
-                placement.layout.baselineOffsetPx,
-                placement.underline
+                placement.layout.lines[0]!.ascentPx,
+                placement.underline,
+                theme.scale
               )
             : null;
           return (
@@ -382,8 +380,8 @@ function RichTextBody({
                   <ControlQuad
                     width={underline.x1 - underline.x0}
                     height={underline.heightPx}
-                    color={godotColorToLinear(runTint)}
-                    opacity={runTint.a * RICH_TEXT_LABEL_UNDERLINE_ALPHA}
+                    color={toItemLinear(runTint)}
+                    opacity={runTint.a * underlineAlpha}
                     renderOrder={renderOrder}
                   />
                 </CanvasItemGroup>
@@ -397,11 +395,9 @@ function RichTextBody({
         // over the text, under any regular child.
         <ScrollBarChrome
           bar={scrollBar}
-          track={theme.widgets.scrollBar.scrollVertical}
-          grabber={theme.widgets.scrollBar.grabber}
-          color={tint.own}
-          renderOrder={renderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET}
-          grabberRenderOrder={renderOrder + SCROLL_BAR_GRABBER_RENDER_ORDER_OFFSET}
+          boxes={internalScrollBarBoxes(solveNode).vertical}
+          color={childTint.own}
+          chromeSlot={slot}
           snapToPixels={snapToPixels}
         />
       )}

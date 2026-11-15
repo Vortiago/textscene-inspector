@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { decodeArrayMeshTres } from '../testing/decodeArrayMeshTres';
 import type { ArrayMeshData } from './arraymesh/types';
 import {
-  geometryDrawsPoints,
+  geometryPrimitive,
   godotSurfaceParts,
   godotSurfacesGeometry,
   godotTriangleVertices,
@@ -42,7 +42,6 @@ function triangle(overrides: Partial<ArrayMeshData['surfaces'][number] & GodotSu
   return {
     surfaceIndex: 0,
     format: 0,
-    primitive: 3,
     vertexCount: 3,
     indexCount: 3,
     positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
@@ -242,7 +241,7 @@ describe('godotSurfacesGeometry', () => {
 });
 
 describe('godotSurfacesGeometry for a points surface', () => {
-  const POINT: GodotSurface = { positions: new Float32Array([1, 2, 3]), indices: [0], isPoints: true };
+  const POINT: GodotSurface = { positions: new Float32Array([1, 2, 3]), indices: [0], primitive: 'points' };
 
   it('draws each vertex through its index, in one draw group', () => {
     const geometry = godotSurfacesGeometry([POINT]);
@@ -263,7 +262,7 @@ describe('godotSurfacesGeometry of points surfaces', () => {
   const points = (positions: number[], extra: Partial<GodotSurface> = {}): GodotSurface => ({
     positions: new Float32Array(positions),
     indices: new Uint32Array([0]),
-    isPoints: true,
+    primitive: 'points',
     ...extra,
   });
 
@@ -281,9 +280,9 @@ describe('godotSurfacesGeometry of points surfaces', () => {
     ]);
   });
 
-  it('tags the geometry as drawn by points, and a triangle geometry not', () => {
-    expect(geometryDrawsPoints(godotSurfacesGeometry([points([0, 0, 0])]))).toBe(true);
-    expect(geometryDrawsPoints(godotSurfacesGeometry([triangle()]))).toBe(false);
+  it('tags the geometry as drawn by points, and a triangle geometry as triangles', () => {
+    expect(geometryPrimitive(godotSurfacesGeometry([points([0, 0, 0])]))).toBe('points');
+    expect(geometryPrimitive(godotSurfacesGeometry([triangle()]))).toBe('triangles');
   });
 });
 
@@ -291,7 +290,7 @@ describe('godotSurfaceParts', () => {
   const point = (tag: string): GodotSurface & { tag: string } => ({
     positions: new Float32Array([0, 0, 0]),
     indices: [0],
-    isPoints: true,
+    primitive: 'points',
     tag,
   });
   const tri = (tag: string): GodotSurface & { tag: string } => ({ ...triangle(), tag });
@@ -301,20 +300,20 @@ describe('godotSurfaceParts', () => {
 
     expect(parts).toHaveLength(1);
     expect(parts[0]!.surfaces.map((s) => s.tag)).toEqual(['a', 'b']);
-    expect(geometryDrawsPoints(parts[0]!.geometry)).toBe(false);
+    expect(geometryPrimitive(parts[0]!.geometry)).toBe('triangles');
   });
 
   it('draws a mesh of only points as one points part', () => {
     const parts = godotSurfaceParts([point('a')]);
 
     expect(parts).toHaveLength(1);
-    expect(geometryDrawsPoints(parts[0]!.geometry)).toBe(true);
+    expect(geometryPrimitive(parts[0]!.geometry)).toBe('points');
   });
 
   it('splits triangle and points surfaces into a part each, triangles first, keeping each surface', () => {
     const parts = godotSurfaceParts([point('dots'), tri('wall'), point('more dots')]);
 
-    expect(parts.map((part) => geometryDrawsPoints(part.geometry))).toEqual([false, true]);
+    expect(parts.map((part) => geometryPrimitive(part.geometry))).toEqual(['triangles', 'points']);
     expect(parts.map((part) => part.surfaces.map((s) => s.tag))).toEqual([['wall'], ['dots', 'more dots']]);
     expect(parts[1]!.geometry.groups.map((g) => g.materialIndex)).toEqual([0, 1]);
   });
@@ -349,5 +348,64 @@ describe('godotTriangleVertices', () => {
   it('drops the vertices of an incomplete triangle', () => {
     const geometry = godotSurfacesGeometry([quad([0, 1, 2, 3])]);
     expect(Array.from(godotTriangleVertices(geometry))).toEqual([0, 1, 2]);
+  });
+});
+
+describe('godotSurfacesGeometry vertex colours', () => {
+  const RED_GREEN_BLUE = new Uint8Array([255, 0, 0, 255, 0, 255, 0, 127, 0, 0, 255, 255]);
+
+  it('carries the stored RGBA8 bytes as a normalised four-wide colour attribute', () => {
+    const geo = godotSurfacesGeometry([triangle({ colors: RED_GREEN_BLUE })]);
+    const color = geo.getAttribute('color') as THREE.BufferAttribute;
+
+    expect(color.itemSize).toBe(4);
+    expect(color.normalized).toBe(true);
+    expect(Array.from(color.array)).toEqual(Array.from(RED_GREEN_BLUE));
+  });
+
+  it('adds no colour attribute for surfaces that carry none', () => {
+    expect(godotSurfacesGeometry([triangle()]).hasAttribute('color')).toBe(false);
+  });
+
+  it('reads white for a surface with no colour beside one that has colours', () => {
+    const geo = godotSurfacesGeometry([triangle({ colors: RED_GREEN_BLUE }), triangle({ surfaceIndex: 1 })]);
+
+    expect(Array.from(geo.getAttribute('color').array).slice(12)).toEqual(Array(12).fill(255));
+  });
+});
+
+describe('godotSurfacesGeometry of lines surfaces', () => {
+  const SEGMENTS = triangle({ primitive: 'lines', indices: new Uint32Array([0, 1, 1, 2]) });
+
+  it('keeps the segments in order, with no winding to swap', () => {
+    const geo = godotSurfacesGeometry([SEGMENTS]);
+
+    expect(Array.from(geo.getIndex()!.array)).toEqual([0, 1, 1, 2]);
+  });
+
+  it('names the primitive the geometry draws, and triangles for none', () => {
+    expect(geometryPrimitive(godotSurfacesGeometry([SEGMENTS]))).toBe('lines');
+    expect(geometryPrimitive(godotSurfacesGeometry([triangle()]))).toBe('triangles');
+  });
+
+  it("gives every vertex Godot's default normal, as a points surface gets", () => {
+    const normals = godotSurfacesGeometry([{ ...SEGMENTS, normals: undefined }]).getAttribute('normal');
+
+    expect(Array.from(normals.array)).toEqual([0, 0, 1, 0, 0, 1, 0, 0, 1]);
+  });
+
+  it('draws the lines of a mesh after its triangles and points, as a part of their own', () => {
+    const parts = godotSurfaceParts([
+      SEGMENTS,
+      triangle({ surfaceIndex: 1, primitive: 'points' }),
+      triangle({ surfaceIndex: 2 }),
+    ]);
+
+    expect(parts.map((part) => part.surfaces.map((surface) => surface.surfaceIndex))).toEqual([
+      [2],
+      [1],
+      [0],
+    ]);
+    expect(parts.map((part) => geometryPrimitive(part.geometry))).toEqual(['triangles', 'points', 'lines']);
   });
 });

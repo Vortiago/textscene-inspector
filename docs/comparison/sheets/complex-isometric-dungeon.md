@@ -24,8 +24,6 @@ Draw order and the light pass match.
 ## Known limitations
 
 - **Needs runtime** The candle sparks draw here and not in Godot (see Candle).
-- **Approximated** The coin stacks, the paw-print stains and the inner rings of the circles
-  read softer and darker than Godot's.
 
 ## The pieces on their own
 

@@ -13,6 +13,7 @@ import { ResourceLoaderProvider } from '../../../../index';
 import { loaderServing } from '../../../../resources/testing/servingResourceLoader';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
 import { isInstancedMesh } from '../../../../r3f/testing/threeNarrow';
+import { settleFontWork } from '../../../../r3f/testing/settleFontWork';
 import { wallQuadSurfaces, type SurfaceKeys } from '../../../../resources/testing/arrayMeshSurfaces';
 
 const LIBRARY_PATH = 'res://stage/tiles.tres';
@@ -104,6 +105,8 @@ export interface MountedGridMap {
   tiles(): THREE.Mesh[];
   /** Every THREE.Points the GridMap mounts now, with world matrices brought up to date. */
   points(): THREE.Points[];
+  /** Every THREE.LineSegments the GridMap mounts now, with world matrices brought up to date. */
+  lines(): THREE.LineSegments[];
 }
 
 const EXT: TscnExternalResource[] = [{ id: '1_lib', path: LIBRARY_PATH, type: 'MeshLibrary' }];
@@ -165,17 +168,23 @@ export async function mountGridMap({
   // Three chained loads: library .tres → tile .tres → the tile's material.
   for (let i = 0; i < 12; i++) {
     await new Promise<void>((r) => setTimeout(r, 20));
+    // A font decode outlasts every pass on a loaded runner, so each pass waits for the fonts it started.
+    await settleFontWork();
     await renderer.update(tree);
   }
   // No frame has run, so the world matrices are brought up to date from the root.
-  const drawn = <T extends THREE.Object3D>(type: 'Mesh' | 'Points'): T[] => {
+  const drawn = <T extends THREE.Object3D>(type: 'Mesh' | 'Points' | 'LineSegments'): T[] => {
     const objects = renderer.scene.findAllByType(type).map((m) => instanceAs<T>(m));
     let root: THREE.Object3D | undefined = objects[0];
     while (root?.parent) root = root.parent;
     root?.updateMatrixWorld(true);
     return objects;
   };
-  return { tiles: () => drawn<THREE.Mesh>('Mesh'), points: () => drawn<THREE.Points>('Points') };
+  return {
+    tiles: () => drawn<THREE.Mesh>('Mesh'),
+    points: () => drawn<THREE.Points>('Points'),
+    lines: () => drawn<THREE.LineSegments>('LineSegments'),
+  };
 }
 
 /** Every mesh the GridMap mounts once its loads resolve, or once the held load stops them. */

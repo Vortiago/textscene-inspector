@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://unittilemaplayerscenetileraisedcontrol"]
+
+[node name="Root" type="ColorRect"]
+z_index = 1
+offset_right = 20.0
+offset_bottom = 20.0
+color = Color(0, 1, 0, 1)

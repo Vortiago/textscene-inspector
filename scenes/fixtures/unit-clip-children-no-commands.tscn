@@ -1,0 +1,23 @@
+; One variable: the `clip_children` parent, a Polygon2D with no polygon, draws nothing. Godot gives it no
+; canvas group (`renderer_canvas_cull.cpp:476`), so its `show_behind_parent` child, the blue square at
+; index 1, draws before the red square at index 0 and the red shows over it. No other scene clips with
+; an owner that has no commands.
+
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Owner" type="Polygon2D" parent="."]
+position = Vector2(100, 100)
+clip_children = 1
+color = Color(0, 1, 0, 1)
+
+[node name="Front" type="Polygon2D" parent="Owner"]
+color = Color(1, 0, 0, 0.7)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Behind" type="Polygon2D" parent="Owner"]
+position = Vector2(50, 50)
+show_behind_parent = true
+color = Color(0, 0, 1, 0.7)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)

@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+; The variable: the sort y of a Control child of a y-sorted Node2D, which is the origin of its
+; canvas item (its offset_top), not the 0 a Node2D `position` would give. `Tile` sorts at 68: `Low`
+; (offset_top 80) draws over it and `High` (offset_top 10) under it, though both are listed after it.
+
+[node name="Root" type="Node2D"]
+
+[node name="Floor" type="Node2D" parent="."]
+y_sort_enabled = true
+position = Vector2(100, 100)
+
+[node name="Tile" type="Polygon2D" parent="Floor"]
+position = Vector2(0, 68)
+color = Color(0.85, 0.15, 0.15, 1)
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 200, 0, 200)
+
+[node name="Low" type="ColorRect" parent="Floor"]
+offset_left = 120.0
+offset_top = 80.0
+offset_right = 320.0
+offset_bottom = 280.0
+color = Color(0.15, 0.3, 0.85, 1)
+
+[node name="High" type="ColorRect" parent="Floor"]
+offset_left = 120.0
+offset_top = 10.0
+offset_right = 320.0
+offset_bottom = 210.0
+color = Color(0.15, 0.7, 0.2, 1)

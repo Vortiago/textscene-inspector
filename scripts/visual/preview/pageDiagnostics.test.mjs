@@ -4,6 +4,7 @@ import {
   attachDiagnostics,
   clearDiagnostics,
   describeFailedRequests,
+  errorReport,
   loggedErrors,
 } from './pageDiagnostics.mjs';
 
@@ -57,6 +58,19 @@ describe('loggedErrors', () => {
     emitConsole(page, 'warning', 'a warning');
     page.emit('requestfailed', { url: () => 'http://h/a.png', failure: () => null });
     expect(loggedErrors(diagnostics)).toEqual([]);
+  });
+});
+
+describe('errorReport', () => {
+  it('says a failed request carried no error text, rather than printing undefined', () => {
+    const diagnostics = { consoleErrors: [], consoleWarnings: [], pageErrors: [], failedRequests: [] };
+    diagnostics.failedRequests.push({ url: 'http://h/a.png', failure: undefined });
+    expect(errorReport(diagnostics)).toBe('failed request: http://h/a.png (no error text)');
+  });
+
+  it('labels each logged error with its source, before the failed requests', () => {
+    const diagnostics = { consoleErrors: ['c'], consoleWarnings: [], pageErrors: ['p'], failedRequests: [] };
+    expect(errorReport(diagnostics)).toBe('console error: c | page error: p');
   });
 });
 

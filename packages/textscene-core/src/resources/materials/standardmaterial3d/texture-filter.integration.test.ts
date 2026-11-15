@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { buildMaterial } from './buildMaterial.testkit';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 import type { ResolvedTextures } from './types';
 import { godotTextureFilterState } from '../../textures/godotTextureFilter';
 

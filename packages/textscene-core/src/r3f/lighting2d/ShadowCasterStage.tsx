@@ -24,7 +24,7 @@ import {
   type WorldShadowCaster,
 } from './shadowCasterRegistry';
 import { createCasterMotionWatch } from './shadowCasterMotion';
-import type { Quad2 } from './shadowVolumes';
+import type { Quad2 } from './shadowCasterEdges';
 
 /**
  * Runs ahead of the light accumulation pre-pass (-1), so a frame that both

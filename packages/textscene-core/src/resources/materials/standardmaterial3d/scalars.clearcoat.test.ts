@@ -4,7 +4,7 @@
  * as Godot ignores them with the flag off.
  */
 import { describe, expect, it } from 'vitest';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 
 describe('parseStandardMaterial3DScalars — clearcoat flag (WI-66)', () => {
   it('parses clearcoat + clearcoat_roughness when clearcoat_enabled is true', () => {

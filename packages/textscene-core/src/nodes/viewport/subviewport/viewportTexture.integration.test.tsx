@@ -13,7 +13,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { TscnParser } from '../../../parser/TscnParser';
 import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureContext';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
-import { unconfiguredViewportTexture } from '../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
+import { texture2DPlaceholder } from '../../../resources/textures/texture2DPlaceholder';
 
 import '../../../r3f/nodes/index';
 
@@ -202,7 +202,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_1")
 
   it("draws Godot's placeholder for a material a mesh holds that is not local to scene", async () => {
     const renderer = await renderScene(meshHeldMaterialScene('false'));
-    expect(mapImages(renderer)).toContain(unconfiguredViewportTexture().image);
+    expect(mapImages(renderer)).toContain(texture2DPlaceholder().image);
   });
 
   /** Godot reports an unset ViewportTexture's size as 0 (`viewport.cpp:134-166`), so the sprite has no area. */
@@ -211,7 +211,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_1")
     const sprite = renderer.scene
       .findAll((node) => node.type === 'Mesh')
       .map((node) => node.instance as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>)
-      .find((mesh) => mesh.material.map?.image === unconfiguredViewportTexture().image);
+      .find((mesh) => mesh.material.map?.image === texture2DPlaceholder().image);
     expect(sprite?.geometry.parameters).toMatchObject({ width: 0, height: 0 });
   });
 
@@ -219,14 +219,14 @@ surface_material_override/0 = SubResource("StandardMaterial3D_1")
     const renderer = await renderScene(spriteFramesScene('true'), '2d');
     const images = mapImages(renderer);
     expect(images.length).toBeGreaterThan(0);
-    expect(images).not.toContain(unconfiguredViewportTexture().image);
+    expect(images).not.toContain(texture2DPlaceholder().image);
   });
 
   it('draws the viewport for a material a mesh holds that is local to scene', async () => {
     const renderer = await renderScene(meshHeldMaterialScene('true'));
     const images = mapImages(renderer);
     expect(images.length).toBeGreaterThan(0);
-    expect(images).not.toContain(unconfiguredViewportTexture().image);
+    expect(images).not.toContain(texture2DPlaceholder().image);
   });
 });
 

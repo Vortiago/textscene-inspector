@@ -1,23 +1,26 @@
 /**
  * Parses an OptionButton through `parseButton`, since an OptionButton is a Button in Godot, plus the
- * `popup/item_N/...` items and `selected`. The renderer ignores `text`: `_select` overwrites it from the
- * chosen item (option_button.cpp:423), so `Component.tsx` reads the selected item's label.
+ * `popup/item_N/...` items and `selected`. The renderer ignores `text`: `_select` overwrites it, and Button's `icon`,
+ * from the chosen item (option_button.cpp:423-424), so `Component.tsx` reads the selected item's label and icon.
  */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { OptionItem, OptionButtonProperties } from './types';
-import { parseButton } from '../button/parser';
+import { parseToggleButton } from '../button/parser';
 import { slotCount, slotInt } from '../../../../godot/variant/intSlots.js';
 import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 import { OPTION_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
 export function parseOptionButton(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): OptionButtonProperties {
-  const result: OptionButtonProperties = { ...parseButton(heading, properties) };
+  const result: OptionButtonProperties = {
+    ...parseToggleButton(heading, properties),
+  };
 
   // A dense array, one slot per index, so `selected`, the raw Godot index, aligns with items[selected]
   // even when an item omits its text key.
@@ -44,9 +47,11 @@ export function parseOptionButton(
     const rawText = leaves?.get('text');
     const text = rawText !== undefined ? unquoteString(rawText) : '';
     const id = slotInt(leaves?.get('id'));
-    items.push({ text, id: id ?? i });
+    const icon = leaves?.get('icon');
+    items.push(icon === undefined ? { text, id: id ?? i } : { text, id: id ?? i, icon });
   }
 
   if (items.length > 0) result.items = items;
+  if (boolSlotValue(properties.fit_to_longest_item) === false) result.fitToLongestItem = false;
   return result;
 }

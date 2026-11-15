@@ -14,7 +14,7 @@ import { UV2_CHANNEL } from '../../resources/meshes/uv2';
 import { GLTF_SURFACE, type TexturedSurface } from './surfaceTextures';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { copiesFilledFrom } from '../liveTargets.testkit';
-import { unconfiguredViewportTexture } from '../../resources/textures/viewporttexture/unconfiguredViewportTexture';
+import { texture2DPlaceholder } from '../../resources/textures/texture2DPlaceholder';
 import { inlineMaterial, unfadedProps } from './surfaceMaterial.testkit';
 import { useSurfaceMaterial } from './useSurfaceMaterial';
 import { ViewportTextureProvider } from '../contexts/ViewportTextureContext';
@@ -205,7 +205,7 @@ describe('useSurfaceMaterial with a ViewportTexture Godot never sets up', () => 
       albedo_texture: 'SubResource("ViewportTexture_a")',
     });
 
-    expect(props.map!.image).toBe(unconfiguredViewportTexture().image);
+    expect(props.map!.image).toBe(texture2DPlaceholder().image);
   });
 });
 

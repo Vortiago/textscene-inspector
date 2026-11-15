@@ -2,12 +2,30 @@
  * One `useFrame` runs every offscreen viewport pass, dependencies first. R3F
  * runs default-priority subscribers in mount order, parent first, so a pass that
  * samples a nested `SubViewport` would render one frame stale. The registrant
- * supplies `dependsOn`: the orchestrator never inspects scene content.
+ * supplies `dependsOn`: the orchestrator never inspects scene content. A pass with a `gate` renders
+ * by its update mode, as Godot's `draw_viewports` decides (`renderer_viewport.cpp:769-813`).
  */
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as logger from '../../logger.js';
 import { orderViewportPasses, type ViewportPassCycle } from '../../nodes/viewport/passOrder.js';
+import {
+  GateClock,
+  renderingPassIds,
+  type GatedPass,
+  type PassGate,
+} from '../../nodes/viewport/renderGate.js';
+import { useOptionalHierarchy } from './HierarchyContext.js';
+import { useSceneAssetsSettled } from '../useSceneAssetsSettled.js';
 import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 import { updateTextureAtlases, useTextureAtlasFrame } from '../textureAtlas/updateTextureAtlases.js';
 import {
@@ -22,6 +40,8 @@ export interface ViewportPass {
   dependsOn: readonly string[];
   /** Perform this frame's offscreen render. Never called while this pass sits in a cycle. */
   render: () => void;
+  /** What decides whether the pass renders. A pass without one renders every frame. */
+  gate?: PassGate;
 }
 
 /** Publishes a pass at `path` and returns the cleanup. */
@@ -144,17 +164,50 @@ function useCycleWarnings(state: ExternalStore<PassRegistryState>): void {
 export function ViewportPassOrchestrator(): null {
   const { passes, order, cycles } = useExternalStoreValue(useContext(StateContext));
   useTextureAtlasFrame();
+  const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
+  const { isSettled: isLoaded } = useSceneAssetsSettled();
+  const clock = useSceneGateClock(sceneGraph);
+  const gated = useMemo(() => gatedPassesOf(passes), [passes]);
+  useEffect(() => clock.prune((id) => passes.has(id)), [clock, passes]);
 
   useFrame(({ gl }) => {
     updateTextureAtlases(gl);
+    const frame = clock.begin(isLoaded);
     if (order.length === 0) return;
     beginStep(gl, 'SubViewports');
+    const rendering = renderingPassIds(gated, frame);
     for (const id of order) {
-      if (cycles.has(id)) continue;
-      passes.get(id)?.render();
+      const pass = passes.get(id);
+      if (!pass || cycles.has(id)) continue;
+      if (pass.gate && !rendering.has(id)) continue;
+      pass.render();
+      clock.spend(id);
     }
     endStep(gl, 'SubViewports');
+    markSampled(clock, passes);
   });
 
   return null;
+}
+
+/**
+ * The clock of the scene `sceneGraph` holds. A new parse makes new viewports, which start the count
+ * over, and the first frame of a new scene counts as unloaded.
+ */
+function useSceneGateClock(sceneGraph: unknown): GateClock {
+  const [mountedGraph] = useState(sceneGraph);
+  return useMemo(() => new GateClock(sceneGraph !== mountedGraph), [sceneGraph, mountedGraph]);
+}
+
+function gatedPassesOf(passes: ReadonlyMap<string, ViewportPass>): GatedPass[] {
+  const gated: GatedPass[] = [];
+  for (const [id, { gate }] of passes) {
+    if (gate)
+      gated.push({ id, updateMode: gate.updateMode, enclosingId: gate.enclosingPath, state: gate.state });
+  }
+  return gated;
+}
+
+function markSampled(clock: GateClock, passes: ReadonlyMap<string, ViewportPass>): void {
+  for (const [id, { gate }] of passes) if (gate?.isSampled()) clock.mark(id);
 }

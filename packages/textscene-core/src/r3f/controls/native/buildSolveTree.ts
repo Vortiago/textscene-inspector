@@ -10,14 +10,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
-import type { Node2DProperties } from '../../../nodes/base/node2d/types';
-import { perObject } from '../../../utils/perObject';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
-import { projectPhysicsClock, type ProjectSettings } from '../../../parser/projectSettingsParser';
+import { projectTreeSettings, type ProjectSettings } from '../../../parser/projectSettingsParser';
 import {
   findExtResource,
   findSubResource,
@@ -30,13 +28,11 @@ import {
 import { useResourceLoader } from '../../../resources/useResource';
 import { useCacheVersion } from '../../../resources/useCacheVersion';
 import type { ResourceType } from '../../../resources/ResourceEventBus';
-import { NODE_PROPERTY } from '../../../resources/useTexture2D';
 import {
   extResourceTexture2DSize,
   inlineTexture2DSize,
   type ViewportTextureSizing,
 } from '../../../resources/texture2DSize';
-import { isThemeLocalToScene } from '../../../resources/styles/theme/isThemeLocalToScene';
 import {
   recordingSizes,
   sizesStillAnswered,
@@ -47,10 +43,11 @@ import {
 import { useViewportTextures } from '../../contexts/ViewportTextureContext';
 import { useSharedLiveTree } from '../../useLiveSceneTree';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
-import { resolveInlineFontResource } from '../../../resources/fonts/font/decode';
-import { resolveProjectFonts } from '../../../resources/fonts/font/projectFonts';
-import { NO_DEFAULT_FONTS, withDefaultFonts } from '../../../resources/fonts/font/defaultFont';
-import type { FontCacheReader, FontResource } from '../../../resources/fonts/font/types';
+import { FONT } from '../../../resources/fonts/font/kind';
+import { fontFilesOn, resolveProjectFonts } from '../../../resources/fonts/font/projectFonts';
+import { withDefaultFonts } from '../../../resources/fonts/font/defaultFont';
+import type { FontResource } from '../../../resources/fonts/font/types';
+import { nodeReference, useSnapshotHost, type Read, type ResourceSnapshot } from '../../../resources/reading';
 import { resolveInlineThemeResource } from '../../../resources/styles/theme/decode';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import {
@@ -59,55 +56,58 @@ import {
 } from '../../../resources/styles/labelsettings/decode';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
 import type { LabelProperties } from '../../../nodes/2d/ui/label/types';
-import {
-  mergeThemedRecord,
-  themeResolutionScope,
-  type ThemeResolutionScope,
-} from '../../../resources/styles/theme/lookup';
-import { useSceneFontSettleCount } from './text/useSceneFontSettleCount';
+import { themeResolutionScope, type ThemeResolutionScope } from '../../../resources/styles/theme/lookup';
+import type { AwaitedFonts } from './text/settledFonts';
+import { settledFontsOf, useAwaitedFontsVersion } from './text/useSettledFont';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useLayoutDirectionEnv } from '../../contexts/useLayoutDirectionEnv';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import {
-  isInjected,
   liveTreeOf,
   type CachedSceneSource,
-  type LiveChildGroup,
   type LiveTreeContext,
   type LiveLink,
+  type LiveStep,
   type SceneScope,
 } from '../../liveSceneTree';
 import { NOTHING_CACHED, recordingReads } from '../../cacheSources';
+import { settleDirectories } from './directoryResolution';
 import { scopeOf } from '../../../resources/liveNode';
-import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
+import { embedsSubwindows, mayHoldWindowBelow } from '../../../nodes/viewport/subviewport/windowEmbedder';
+import {
+  isEmbeddableWindow,
+  isEmbeddedWindow,
+  isViewportBoundary,
+} from '../../../nodes/viewport/subviewport/viewportBoundary';
+import type { WindowProperties } from '../../../nodes/windows/window/types';
+import { NO_OWNERS, type ThemeOwner } from '../../../nodes/windows/window/themeOwners';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
-import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
+import { controlSolverRegistry, type BuiltIconsFn, type TextureSlotRequest } from './solverRegistry';
+import { canvasItemPass, type CanvasItemPassResult } from '../../canvasItemPass/canvasItemPass';
+import {
+  CHAIN_START_INHERITANCE,
+  type CanvasInheritance,
+  type CanvasItemLink,
+} from '../../canvasItemPass/inheritedCanvasState';
+import { canvasTransformBetween } from '../../canvasItemPass/canvasTransformBetween';
+import { parentPathOf } from '../../../utils/nodePath';
+import type { Transform2DColumns } from '../../../godot/math/transform2d';
 import {
   LABEL_SETTINGS_FONT_LOADING,
   type LabelSettingsFont,
-  type SkippedAncestors,
-  type SkippedMaterial,
   type SolveNode,
   type ThemedIconRef,
 } from './solveTree';
-import { ROOT_TEXTURE_SAMPLER, inheritTextureSampler } from '../../canvasItemTextureSampler';
-import { multiplyTransform2D } from '../../../godot/math/transform2d.js';
-import { liveNodePatches } from '../../liveNodePatches';
 import { liveScenePassResults } from '../../liveScenePass';
-import { patchedNode } from '../../nodePatch';
-import { node2DLocalTransform } from '../../node2dTransform';
-import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
+import { isTopLevelItem, WHOLE_CANVAS_RANGE, type PaintRange } from '../../canvasPaintOrder';
+import { canvasPaintPassFrom, WINDOW_CANVAS_PAINT } from '../../canvasItemPass/canvasItemPaint';
 import {
-  allocatePaintRange,
-  canvasRootRanges,
-  internalFrontRoom,
-  isCanvasLayerType,
-  isTopLevelItem,
-  WHOLE_CANVAS_RANGE,
-  type PaintRange,
-} from '../../canvasPaintOrder';
-import { parseStyleBox, type ResolvedStyleBox } from './parseStyleBox';
-import type { Rgba } from '../../../godot/math/math.js';
+  builtControlIcons,
+  resolveStyleBoxes,
+  resolveThemedColors,
+  resolveThemedConstants,
+  resolveThemedIcons,
+} from './themeItems';
 import type { Vector2 } from '../../../godot/math/vector.js';
 
 interface UseBuildSolveTreeResult {
@@ -115,126 +115,17 @@ interface UseBuildSolveTreeResult {
   tree: readonly SolveNode[];
   /** Bumps on every load or failure and on settled font metrics: a stable dependency for a consumer's memo. */
   generation: number;
+  /**
+   * The windows this viewport embeds, in pre-order, which is the order each registers in
+   * (`viewport.cpp:308-341`). None for a viewport that embeds no windows: the embedder above draws
+   * a window below it, or the window is native.
+   */
+  windows: readonly SolveNode[];
 }
 
 /** A LabelSettings font with the default fonts under it, as a theme font takes them, once it has loaded. */
 function withSettingsDefaultFonts(font: LabelSettingsFont, scope: ThemeResolutionScope): LabelSettingsFont {
   return font === LABEL_SETTINGS_FONT_LOADING ? font : withDefaultFonts(font, scope.defaultFonts);
-}
-
-/** No ancestor or project theme: `mergeThemedRecord` returns the seed unchanged. */
-const NO_THEME_SCOPE: ThemeResolutionScope = {
-  typeChain: [],
-  searchOrder: [],
-  projectDefaultFont: null,
-  defaultFonts: NO_DEFAULT_FONTS,
-};
-
-/**
- * A theme's `styles` refs, resolved against that theme's own sub-resource pool,
- * never the querying node's: a Theme's StyleBoxes live in the theme file. Keyed by
- * the `ThemeResource` object, which every referencing node shares.
- */
-const resolvedStylesOfTheme = perObject(
-  (theme: ThemeResource): Readonly<Record<string, Readonly<Record<string, ResolvedStyleBox>>>> => {
-    const { externalResources, internalResources } = theme.resources ?? {
-      externalResources: [],
-      internalResources: [],
-    };
-    const out: Record<string, Record<string, ResolvedStyleBox>> = {};
-    for (const [type, byName] of Object.entries(theme.styles ?? {})) {
-      for (const [name, ref] of Object.entries(byName)) {
-        const resolved = parseStyleBox(ref, externalResources, internalResources, isThemeLocalToScene(theme));
-        if (resolved) (out[type] ??= {})[name] = resolved;
-      }
-    }
-    return out;
-  }
-);
-
-/**
- * Every StyleBox slot, keyed as `Control::get_theme_stylebox` keys them. A
- * `theme_override_styles/*`, resolved in the node's own `scope`, wins over the
- * theme chain. An unresolvable ref is omitted, and all four StyleBox kinds are
- * kept: each wraps a `StyleBoxFlatData` core with its own `contentMargin`.
- */
-function resolveStyleBoxes(
-  node: TscnNode,
-  scope: SceneScope,
-  themeScope: ThemeResolutionScope = NO_THEME_SCOPE
-): Readonly<Record<string, ResolvedStyleBox>> {
-  const overrides = (node.properties as ControlProperties).themeOverrideStyles;
-  const local: Record<string, ResolvedStyleBox> = {};
-  if (overrides) {
-    for (const [key, ref] of Object.entries(overrides)) {
-      const resolved = parseStyleBox(ref, scope.externalResources, scope.internalResources, NODE_PROPERTY);
-      if (resolved) local[key] = resolved;
-    }
-  }
-  return mergeThemedRecord(themeScope, local, resolvedStylesOfTheme);
-}
-
-/**
- * Every theme colour, keyed as `Control::get_theme_color` keys them: a
- * `theme_override_colors/*` wins with no validity gate, else the theme chain.
- */
-function resolveThemedColors(
-  node: TscnNode,
-  themeScope: ThemeResolutionScope
-): Readonly<Record<string, Rgba>> {
-  const local = (node.properties as ControlProperties).themeOverrideColors ?? {};
-  return mergeThemedRecord(themeScope, local, (theme) => theme.colors);
-}
-
-/**
- * The constant counterpart of `resolveThemedColors` (`Control::get_theme_constant`).
- * A Theme's `<Type>/constants/<name>` is an unscaled int. Only a painter's own
- * built-in fallback on a miss is scaled.
- */
-function resolveThemedConstants(
-  node: TscnNode,
-  themeScope: ThemeResolutionScope
-): Readonly<Record<string, number>> {
-  const local = (node.properties as ControlProperties).themeOverrideConstants ?? {};
-  return mergeThemedRecord(themeScope, local, (theme) => theme.constants);
-}
-
-/**
- * A theme's `icons` refs, each paired with that theme's scope and cached per
- * theme like `resolvedStylesOfTheme`. Left unresolved: loading a texture needs a
- * `useTexture2D` subscription only a component can hold.
- */
-const iconRefsOfTheme = perObject(
-  (theme: ThemeResource): Readonly<Record<string, Readonly<Record<string, ThemedIconRef>>>> => {
-    const resources = theme.resources ?? { externalResources: [], internalResources: [] };
-    const out: Record<string, Record<string, ThemedIconRef>> = {};
-    for (const [type, byName] of Object.entries(theme.icons ?? {})) {
-      for (const [name, ref] of Object.entries(byName)) {
-        (out[type] ??= {})[name] = { ref, resources, isHeldLocally: isThemeLocalToScene(theme) };
-      }
-    }
-    return out;
-  }
-);
-
-/**
- * `Control::get_theme_icon`'s override-then-chain walk. A local
- * `theme_override_icons/<name>` ref carries the node's own `scope`, and a Theme's
- * `<Type>/icons/<name>` carries that theme's scope.
- */
-function resolveThemedIcons(
-  node: TscnNode,
-  scope: SceneScope,
-  themeScope: ThemeResolutionScope
-): Readonly<Record<string, ThemedIconRef>> {
-  const overrides = (node.properties as ControlProperties).themeOverrideIcons;
-  const local: Record<string, ThemedIconRef> = {};
-  if (overrides) {
-    for (const [key, ref] of Object.entries(overrides)) {
-      local[key] = { ref, resources: scope, isHeldLocally: NODE_PROPERTY };
-    }
-  }
-  return mergeThemedRecord(themeScope, local, iconRefsOfTheme);
 }
 
 /** A Label's `label_settings` with the font it names. */
@@ -278,10 +169,8 @@ function joinWalked(results: readonly WalkResult[]): WalkResult {
 /** What a node hands the walk of its children, who each read the part that concerns them. */
 interface Ancestry {
   themeChain: readonly ThemeResource[];
-  /** Where each child draws, by the child as authored. */
-  paintRanges: ReadonlyMap<TscnNode, PaintRange>;
-  /** What every skipped Node2D ancestor since the last real Control or root contributes. */
-  skippedAncestors: SkippedAncestors | null;
+  /** The skipped canvas items above the children, which a Control child puts back. */
+  skippedChain: SkippedChain;
   /**
    * Whether a non-`CanvasItem` link sits between here and the nearest Control,
    * so the climb ends with `has_parent_control == false` (`control.cpp:3874-3890`).
@@ -295,52 +184,32 @@ interface Ancestry {
    */
   ancestorHidden: boolean;
   /**
-   * `CanvasItem::parent_visible_in_tree` for the children. Unlike `ancestorHidden`, it
-   * resets at a `CanvasLayer` and at every non-CanvasItem parent.
-   */
-  parentVisibleInTree: boolean;
-  /**
-   * Where each root of the enclosing canvas draws: its pre-order rank among the
-   * roots, not its nesting slot (`canvasRootRanges`). A node in the map takes
-   * that run instead of its parent's.
-   */
-  canvasRoots: ReadonlyMap<TscnNode, PaintRange>;
-  /**
    * The nearest ancestor Control's `is_layout_rtl()`, or `null` off the top of
    * the tree (`scene/gui/control.cpp:3584-3608`). Other types pass it through: the
    * climb steps over them. No `Window`, the one other stop, is drawn here.
    */
   inheritedRtl: boolean | null;
   /**
-   * The parent's `resolveChildVisibility` map, `undefined` where the container
-   * writes none. Applied as a property write, as Godot's is, so every reader of
-   * `visible` honours it.
+   * Below a window or a viewport: its Controls draw in that viewport, so the walk only looks for the
+   * windows that still reach this forest's embedder.
    */
-  childVisibility: ReadonlyMap<TscnNode, boolean> | undefined;
-}
-
-/**
- * Where each child draws, by the child, from the allocations that numbered the lists in order.
- * One parent never lists a node object twice: the parser builds an object for each heading.
- */
-function paintRangesOf(...numbered: readonly (readonly [readonly TscnNode[], readonly PaintRange[]])[]) {
-  const ranges = new Map<TscnNode, PaintRange>();
-  for (const [children, allocated] of numbered) {
-    for (const [index, child] of children.entries())
-      ranges.set(child, allocated[index] ?? WHOLE_CANVAS_RANGE);
-  }
-  return ranges;
+  windowsOnly: boolean;
+  /** The forest's window root (`ForestStart.viewport`): a Control here, never a viewport boundary. */
+  isContentRoot: boolean;
 }
 
 interface ForestResult {
   tree: SolveNode[];
+  windows: SolveNode[];
   pendingScenes: PendingScene[];
   pendingTextures: string[];
   pendingResourceFiles: string[];
   pendingThemes: string[];
-  pendingFonts: string[];
+  pendingDirectories: string[];
   /** Every cache key the walk read, cached or not: the keys a reload must request again. */
   readKeys: ReadonlySet<string>;
+  /** The fonts this forest's solve and painters read while they loaded. It grows as they read. */
+  awaitedFonts: AwaitedFonts;
   /** Every viewport size the walk read: a publish that answers each the same leaves the forest. */
   viewportSizeReads: readonly ViewportSizeRead[];
 }
@@ -355,86 +224,16 @@ function isCanvasItem(node: TscnNode): boolean {
 }
 
 /**
- * Whether a container's `set_visible` write reaches this direct child:
- * `Container::as_sortable_control(get_child(i), IGNORE)` casts to `Control` and
- * rejects `top_level` first (`container.cpp:143-146`). `CanvasLayer`, in
- * `TWO_D_UI_TYPES`, is no Control.
+ * The live paths that bound the skipped canvas items above a node: from below `above`, the nearest
+ * Control or the forest's top, down to `parent`. A null `parent` is a parent that is a Control or no
+ * canvas item, so nothing is skipped.
  */
-function isSortableChild(live: TscnNode): boolean {
-  return TWO_D_UI_TYPES.has(live.type) && !isTopLevelItem(live) && !isCanvasLayerType(live.type);
+interface SkippedChain {
+  above: string | null;
+  parent: string | null;
 }
 
-/**
- * What a promoted Control's descendants inherit through the non-Control `collapsed`.
- * `get_parent_item()` casts only the direct parent (`scene/main/canvas_item.cpp:565-571`),
- * so Node2D chains compose, and a non-`CanvasItem` link reparents at the nearest
- * canvas (`canvas_item.cpp:246-267`): `null`, so nothing above it leaks through.
- */
-function nextSkippedAncestors(
-  collapsed: TscnNode,
-  previous: SkippedAncestors | null,
-  material: SkippedMaterial
-): SkippedAncestors | null {
-  if (!isCanvasItem(collapsed)) return null;
-  const props = collapsed.properties as Node2DProperties;
-  const local = node2DLocalTransform(props);
-  return {
-    // `local` first, then the ancestors above it, as `get_global_transform()` composes.
-    transform: previous ? multiplyTransform2D(previous.transform, local) : local,
-    // `_cull_canvas_item` folds each item's `modulate` into what its children
-    // inherit (`renderer_canvas_cull.cpp`); `self_modulate` stays own-pixel.
-    modulate: multiplyModulate(previous?.modulate ?? WHITE_MODULATE, props.modulate ?? WHITE_MODULATE),
-    // Appended, not summed: `p_z` clamps at every step and a
-    // `z_relative == false` item restarts (`renderer_canvas_cull.cpp:430-434`), so
-    // only the walker, which knows the ambient z, can fold it.
-    z: [...(previous?.z ?? []), { zIndex: props.z_index ?? 0, zAsRelative: props.z_as_relative !== false }],
-    // Own over previous, each property on its own: a PARENT_NODE link takes its parent's cache.
-    sampler: inheritTextureSampler(
-      { filter: props.texture_filter, repeat: props.texture_repeat },
-      previous?.sampler ?? ROOT_TEXTURE_SAMPLER
-    ),
-    material,
-  };
-}
-
-const INHERIT_MATERIAL: SkippedMaterial = { kind: 'inherit' };
-const NO_MATERIAL: SkippedMaterial = { kind: 'none' };
-
-/**
- * The material a promoted Control's parent item has through the skipped `collapsed`: its own
- * `material`, or with `use_parent_material` the one above it. A chain that starts on the Control
- * above defers to that Control. A `top_level` or canvas-root link has no parent item, so it defers
- * to nothing (`CanvasItem::get_parent_item`, `canvas_item.cpp:565-571`).
- */
-function skippedMaterialOf(
-  collapsed: TscnNode,
-  scope: SceneScope,
-  previous: SkippedAncestors | null,
-  canvasChainBroken: boolean
-): SkippedMaterial {
-  const props = collapsed.properties as Node2DProperties;
-  if (props.use_parent_material) {
-    if (previous) return previous.material;
-    return canvasChainBroken || isTopLevelItem(collapsed) ? NO_MATERIAL : INHERIT_MATERIAL;
-  }
-  return props.materialPath ? { kind: 'own', ref: props.materialPath, resources: scope } : NO_MATERIAL;
-}
-
-/**
- * The `parent_visible_in_tree` a node's children inherit, by the three arms of
- * `NOTIFICATION_ENTER_TREE` (`canvas_item.cpp:311-350`): a `CanvasItem` gives
- * `visible && parent_visible_in_tree` (`canvas_item.cpp:62-64`), a `CanvasLayer`
- * its own `is_visible()`, and anything else the root Window's (or a SubViewport's) `true`.
- */
-function childParentVisibleInTree(
-  node: TscnNode,
-  ownVisible: boolean,
-  parentVisibleInTree: boolean
-): boolean {
-  if (descendsFromClass(node.type, 'CanvasItem')) return parentVisibleInTree && ownVisible;
-  if (isCanvasLayerType(node.type)) return ownVisible;
-  return true;
-}
+const NOTHING_SKIPPED: SkippedChain = { above: null, parent: null };
 
 /** No provider (a headless or raster walk) hides nothing. */
 const NO_HIDDEN: ReadonlySet<string> = new Set();
@@ -444,7 +243,46 @@ const NO_KEYS: ReadonlySet<string> = new Set();
  * The buses whose caches the walk reads. An `ExtResource(AtlasTexture)` `.tres`
  * completes on the resource bus, not the texture one.
  */
-const SOLVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'texture', 'resource', 'theme', 'font'];
+const SOLVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'texture', 'resource', 'theme', 'directory'];
+
+/** What the forest starts from, which its roots cannot see above them. */
+interface ForestStart {
+  /** The run the forest's roots draw from. The whole canvas unless a node's own run holds the forest. */
+  rootRange: PaintRange;
+  /**
+   * `Control::is_layout_rtl()` for the nearest ancestor Control or Window above
+   * this forest, `null` for a scene's roots. A `SubViewport`'s caller passes its
+   * enclosing Control's: the climb steps over a `Viewport` (`control.cpp:3584-3598`).
+   */
+  inheritedRtl: boolean | null;
+  /**
+   * The viewport whose canvas the forest draws on, or `null` for the root window's. A window is the
+   * forest's one root: it lays its Controls out against its whole rect, as a canvas of its own, and
+   * owns a theme like a Control. A SubViewport's forest holds its children.
+   */
+  viewport: TscnNode | null;
+  /** The theme owners above the forest, nearest first (`viewportThemeOwners`). */
+  themeOwners: readonly ThemeOwner[];
+}
+
+/** Walks below a node only for the windows that reach this forest's embedder. It adds no Control here. */
+function descendForWindows(
+  step: LiveStep,
+  descend: (ancestry: Ancestry) => WalkResult[],
+  ancestry: Ancestry
+): WalkResult {
+  if (mayHoldWindowBelow(step)) descend(ancestry);
+  return NOTHING_WALKED;
+}
+
+/**
+ * `node` with the `visible` its container writes, as a property write as Godot's is, so every reader
+ * of `visible` honours it. The node itself where nothing writes it.
+ */
+function withWrittenVisible(node: TscnNode, visible: boolean | undefined): TscnNode {
+  if (visible === undefined) return node;
+  return { ...node, properties: { ...node.properties, visible } };
+}
 
 /** The SolveNode forest for one nodes and resource-scope pair. Not a hook: `useBuildSolveTree` is. */
 function buildForest(
@@ -452,34 +290,105 @@ function buildForest(
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
   loader: ResourceLoader | null,
+  snapshot: ResourceSnapshot,
   projectSettings: ProjectSettings | null,
   hiddenNodePaths: ReadonlySet<string>,
   layoutDirectionEnv: LayoutDirectionEnv,
-  inheritedRtl: boolean | null,
+  { inheritedRtl, viewport, themeOwners, rootRange }: ForestStart,
   viewportTargetSize: ViewportTargetSize
 ): ForestResult {
   const pendingScenes = new Map<string, PendingScene>();
   const pendingTextures = new Set<string>();
   const pendingResourceFiles = new Set<string>();
   const pendingThemes = new Set<string>();
-  const pendingFonts = new Set<string>();
+  const pendingDirectories = new Set<string>();
+  const windows: SolveNode[] = [];
   const readKeys = new Set<string>();
   const recordRead = (path: string) => readKeys.add(path);
   const viewportSizeReads: ViewportSizeRead[] = [];
   const readViewportSize = recordingSizes(viewportTargetSize, viewportSizeReads);
 
   const sceneCache: CachedSceneSource = loader ? recordingReads(loader.scenes, recordRead) : NOTHING_CACHED;
+  // The tree reads a tile layer's TileSet here too, for the scene tiles it adds as children.
+  const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
   const ctx: LiveTreeContext = {
     externalResources,
     internalResources,
     sceneCache,
-    physicsClock: projectPhysicsClock(projectSettings),
+    resourceCache,
+    project: projectTreeSettings(projectSettings),
   };
   const tree = liveTreeOf(nodes, ctx);
+  // The paint pass numbers the world walk's draws too, so the two walks' sequences compare.
+  const paints = liveScenePassResults(canvasPaintPassFrom(rootRange), tree);
+  const paintAt = (path: string) => {
+    const paint = paints.get(path);
+    if (!paint) throw new Error(`expected the paint pass to hold ${path}, got none`);
+    return paint;
+  };
+  const embedsWindows = embedsSubwindows(tree, viewport);
+
+  /**
+   * Written only by `skippedTransformOf`, for this walk only: the tree does not change within one.
+   * Keyed by the chain's parent alone, since the walk sets one `above` for each parent.
+   */
+  const foldedChains = new Map<string, Transform2DColumns>();
+
+  /**
+   * What the canvas item pass binds at `path`. Undefined for a CanvasLayer or a window root, which
+   * is no CanvasItem: nothing above it hides it, and no container writes its `visible`.
+   */
+  function canvasItemAt(path: string): CanvasItemPassResult | undefined {
+    return liveScenePassResults(canvasItemPass, tree).get(path);
+  }
+
+  /**
+   * The items above the Control at `path` in this walk's tree. A chain that reaches a root of the
+   * tree hangs below the drawn item the walk sits in. One below a node that is no canvas item, or
+   * at a `top_level` item, starts a chain (`canvas_item.cpp:235-253`, `:565-571`).
+   */
+  function inheritanceOf(path: string, item: CanvasItemPassResult | undefined): CanvasInheritance {
+    if (!item) return CHAIN_START_INHERITANCE;
+    const innermostFirst: CanvasItemLink[] = [];
+    let outermost = { path, item };
+    for (let at = item.parent; at !== null;) {
+      const link = canvasItemAt(at);
+      if (!link) break;
+      innermostFirst.push({ fields: link.fields, resources: link.resources, path: at });
+      outermost = { path: at, item: link };
+      at = link.parent;
+    }
+    const hangsBelowWalk = parentPathOf(outermost.path) === null && !outermost.item.fields.isTopLevel;
+    return { links: innermostFirst.reverse(), startsChain: !hangsBelowWalk };
+  }
+
+  /** The transform the skipped canvas items of `chain` put back, one fold for the sibling Controls below it. */
+  function skippedTransformOf({ above, parent }: SkippedChain): Transform2DColumns | null {
+    if (parent === null) return null;
+    let folded = foldedChains.get(parent);
+    if (!folded) {
+      folded = canvasTransformBetween(liveScenePassResults(canvasItemPass, tree), above, parent);
+      foldedChains.set(parent, folded);
+    }
+    return folded;
+  }
   const textureCache = loader ? recordingReads(loader.textures, recordRead) : NOTHING_CACHED;
-  const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
   const themeCache = loader ? recordingReads(loader.themes, recordRead) : NOTHING_CACHED;
-  const fontCache: FontCacheReader = loader ? recordingReads(loader.fonts, recordRead) : NOTHING_CACHED;
+
+  /**
+   * The Font `ref` names in a scene's tables, as `FONT` on the solve's snapshot. A Font holds no
+   * ViewportTexture, so how a holder holds it changes nothing it draws.
+   */
+  function readFont(
+    ref: string | undefined,
+    ext: readonly TscnExternalResource[],
+    int: readonly TscnInternalResource[]
+  ): Read<FontResource> {
+    return snapshot.read(nodeReference(ref, { externalResources: ext, internalResources: int }), FONT);
+  }
+  const directoryCache = loader ? recordingReads(loader.directories, recordRead) : NOTHING_CACHED;
+  /** Written by `withListedFolders`, for this walk only: the cache it reads does not change within one. */
+  const settledFolders = new WeakMap<TscnNode, TscnNode>();
 
   /**
    * A Control's own `theme` (`Control::get_theme()`, `scene/gui/control.h`). An
@@ -509,7 +418,8 @@ function buildForest(
 
     const sub = findSubResource(int, parsed.id);
     if (!sub || sub.type !== 'Theme') return null;
-    return resolveInlineThemeResource(sub.data, ext, int, fontCache, pendingFonts);
+    const scope = { externalResources: ext, internalResources: int };
+    return resolveInlineThemeResource(sub.data, scope, (ref) => readFont(ref, ext, int).value);
   }
 
   /**
@@ -546,10 +456,8 @@ function buildForest(
     int: readonly TscnInternalResource[]
   ): OwnLabelSettings {
     if (!settings) return NO_LABEL_SETTINGS;
-    const stillLoading = new Set<string>();
-    const font = resolveInlineFontResource(settings.font, ext, int, fontCache, stillLoading);
-    for (const path of stillLoading) pendingFonts.add(path);
-    return { settings, font: stillLoading.size > 0 ? LABEL_SETTINGS_FONT_LOADING : font };
+    const font = readFont(settings.font, ext, int);
+    return { settings, font: font.status === 'pending' ? LABEL_SETTINGS_FONT_LOADING : font.value };
   }
 
   /**
@@ -567,16 +475,19 @@ function buildForest(
     if (!overrides) return {};
     const out: Record<string, FontResource | null> = {};
     for (const [key, ref] of Object.entries(overrides)) {
-      out[key] = resolveInlineFontResource(ref, ext, int, fontCache, pendingFonts);
+      out[key] = readFont(ref, ext, int).value;
     }
     return out;
   }
 
+  const awaitedFonts = new Map<object, number>();
+  const settledFonts = settledFontsOf(loader).recording(awaitedFonts);
+
   /** The project's theme and default font, resolved once for every node. */
   const projectFonts = resolveProjectFonts(
     projectSettings,
-    { themes: themeCache, fonts: fontCache },
-    { themes: pendingThemes, fonts: pendingFonts }
+    { themes: themeCache, fonts: fontFilesOn(snapshot) },
+    pendingThemes
   );
 
   /**
@@ -588,7 +499,8 @@ function buildForest(
     ext: readonly TscnExternalResource[],
     int: readonly TscnInternalResource[],
     consumerPath: string,
-    isHeldLocally: boolean
+    isHeldLocally: boolean,
+    sizeOfFile?: TextureSlotRequest['sizeOfFile']
   ): Vector2 | null {
     const sizing: ViewportTextureSizing = {
       isHeldLocally,
@@ -610,7 +522,7 @@ function buildForest(
         return null;
       }
       if (cached === null) return null;
-      return extResourceTexture2DSize(cached, sizing);
+      return sizeOfFile ? sizeOfFile(cached) : extResourceTexture2DSize(cached, sizing);
     }
 
     // `resolveTexture2DPath`, as the painters use: it unwraps a `SubResource(...)`
@@ -628,6 +540,12 @@ function buildForest(
     return { x: image?.width ?? 0, y: image?.height ?? 0 };
   }
 
+  /** The theme icons of a Control built inside a node with this scope and theme chain. */
+  function builtIconsOf(scope: SceneScope, themeChain: readonly ThemeResource[]): BuiltIconsFn {
+    return (type, variation) =>
+      builtControlIcons({ resources: scope, themeChain, projectFonts }, type, variation);
+  }
+
   /** `resolveTextureSize`'s answer for a node whose type never registers a `TextureSlotsFn`. */
   const EMPTY_TEXTURE_SLOTS: Readonly<Record<string, Vector2 | null>> = {};
 
@@ -639,22 +557,25 @@ function buildForest(
   function resolveTextureSize(
     node: TscnNode,
     path: string,
-    ext: readonly TscnExternalResource[],
-    int: readonly TscnInternalResource[],
+    ownScope: SceneScope,
+    themeChain: readonly ThemeResource[],
     themedIcons: Readonly<Record<string, ThemedIconRef>>
   ): { size: Vector2 | null; slots: Readonly<Record<string, Vector2 | null>> } {
+    const { externalResources: ext, internalResources: int } = ownScope;
     const slotsFn = controlSolverRegistry.textureSlots(node.type);
     if (slotsFn) {
-      const requests = slotsFn(node, themedIcons);
+      const requests = slotsFn(node, themedIcons, builtIconsOf(ownScope, themeChain));
       const slots: Record<string, Vector2 | null> = {};
-      for (const { key, ref, scope, isHeldLocally = NODE_PROPERTY } of requests) {
+      // A node's own slot is held locally: `make_local_resource` sets it up (`packed_scene.cpp:701-704`).
+      for (const { key, ref, scope, isHeldLocally = true, sizeOfFile } of requests) {
         slots[key] = ref
           ? resolveTextureRefSize(
               ref,
               scope?.externalResources ?? ext,
               scope?.internalResources ?? int,
               path,
-              isHeldLocally
+              isHeldLocally,
+              sizeOfFile
             )
           : null;
       }
@@ -669,62 +590,136 @@ function buildForest(
     const props = node.properties as Record<string, unknown>;
     const ref = props.texture ?? props.icon;
     const size =
-      typeof ref === 'string' && ref !== ''
-        ? resolveTextureRefSize(ref, ext, int, path, NODE_PROPERTY)
-        : null;
+      typeof ref === 'string' && ref !== '' ? resolveTextureRefSize(ref, ext, int, path, true) : null;
     return { size, slots: EMPTY_TEXTURE_SLOTS };
   }
 
-  /** A `y_sort_enabled` parent re-orders its children, so the behind/ahead split does not apply. */
-  function sortsChildren(node: TscnNode): boolean {
-    return (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true;
+  /**
+   * `themeChain` with `owner`'s own `theme` in front. A Control and a Window own a theme
+   * (`ThemeOwner::propagate_theme_changed`, `scene/theme/theme_owner.cpp`).
+   */
+  function withOwnTheme(
+    owner: TscnNode,
+    scope: SceneScope,
+    themeChain: readonly ThemeResource[]
+  ): readonly ThemeResource[] {
+    const ownTheme = resolveOwnTheme(
+      (owner.properties as ControlProperties).theme,
+      scope.externalResources,
+      scope.internalResources
+    );
+    return ownTheme ? [ownTheme, ...themeChain] : themeChain;
   }
 
   /**
-   * The `visible` a registered container writes onto each direct sortable child,
-   * keyed by the raw child. The container numbers them in one `get_child(i)` loop
-   * (`tab_container.cpp:469-481`), so the count spans every group below the container.
+   * A viewport adds no Control to this forest. A window in it still reaches this forest's embedder
+   * unless the viewport embeds it, since `Window::get_embedder` climbs past each viewport that embeds
+   * none (`window.cpp`). A native window draws outside the game frame, so it is left out.
    */
-  function resolveChildVisibility(
-    fn: ChildVisibilityFn,
-    container: TscnNode,
-    groups: readonly LiveChildGroup[]
-  ): ReadonlyMap<TscnNode, boolean> {
-    const sortable: { raw: TscnNode; live: TscnNode }[] = [];
-    for (const group of groups) {
-      for (const child of group.children) {
-        const live = tree.stepOf(child, group.scope).node;
-        if (isSortableChild(live)) sortable.push({ raw: child, live });
-      }
+  function walkViewport(
+    link: LiveLink,
+    ancestry: Ancestry,
+    descend: (ancestry: Ancestry) => WalkResult[]
+  ): WalkResult {
+    if (!embedsWindows) return NOTHING_WALKED;
+    const { step, path } = link;
+    const live = step.node;
+    const hidden = ancestry.ancestorHidden || hiddenNodePaths.has(path);
+    const isWindow = isEmbeddedWindow(live.type);
+    // Theme inheritance stops at a viewport that is no Window, as at any non-Control.
+    const themeChain = isWindow ? withOwnTheme(live, step.scope, ancestry.themeChain) : [];
+    if (isEmbeddableWindow(live)) {
+      windows.push(windowSolveNode(live, path, step.scope, themeChain, hidden, ancestry.inheritedRtl));
     }
-    const out = new Map<TscnNode, boolean>();
-    for (const [index, entry] of sortable.entries()) {
-      const written = fn(container, entry.live, index, sortable.length);
-      if (written !== undefined) out.set(entry.raw, written);
-    }
-    return out;
+    if (embedsSubwindows(tree, live)) return NOTHING_WALKED;
+    return descendForWindows(step, descend, {
+      ...ancestry,
+      themeChain,
+      ancestorHidden: hidden,
+      windowsOnly: true,
+    });
+  }
+
+  /** A node's theme items by name, each resolved through `themeScope`, overrides first. */
+  function themeItems(
+    node: TscnNode,
+    scope: SceneScope,
+    themeScope: ReturnType<typeof themeResolutionScope>
+  ): Pick<SolveNode, 'styleBoxes' | 'fontOverrides' | 'colors' | 'constants' | 'icons'> {
+    return {
+      styleBoxes: resolveStyleBoxes(node, scope, themeScope),
+      fontOverrides: resolveFontOverrides(node, scope.externalResources, scope.internalResources),
+      colors: resolveThemedColors(node, themeScope),
+      constants: resolveThemedConstants(node, themeScope),
+      icons: resolveThemedIcons(node, scope, themeScope),
+    };
+  }
+
+  /** `node` settled with the folders its type lists, such as a FileDialog's. A window reaches here twice, as the embedder's entry and as the root of its own viewport. */
+  function withListedFolders(node: TscnNode): TscnNode {
+    const resolver = controlSolverRegistry.directoryResolver(node.type);
+    if (!resolver) return node;
+    const settled =
+      settledFolders.get(node) ??
+      settleDirectories(node, resolver, directoryCache.getCached, pendingDirectories);
+    settledFolders.set(node, settled);
+    return settled;
+  }
+
+  /**
+   * A window as its embedder reads it: its theme items, by the class chain from its own type
+   * (`Window::_update_theme_item_cache`). It draws in no canvas of this forest, so it carries no
+   * paint range and no Control children.
+   */
+  function windowSolveNode(
+    window: TscnNode,
+    path: string,
+    scope: SceneScope,
+    themeChain: readonly ThemeResource[],
+    hidden: boolean,
+    inheritedRtl: boolean | null
+  ): SolveNode {
+    const props = window.properties as WindowProperties;
+    const themeScope = themeResolutionScope(window.type, props.themeTypeVariation, themeChain, projectFonts);
+    const items = themeItems(window, scope, themeScope);
+    const texture = resolveTextureSize(window, path, scope, themeChain, items.icons);
+    return {
+      path,
+      node: withListedFolders(window),
+      children: [],
+      paint: WINDOW_CANVAS_PAINT,
+      skippedTransform: null,
+      parentVisibleInTree: true,
+      // A Window is no CanvasItem, so its content starts a chain.
+      inheritance: CHAIN_START_INHERITANCE,
+      rtl: inheritedRtl ?? layoutDirectionEnv.rootRtl,
+      locale: layoutDirectionEnv.applicationLocale,
+      hidden,
+      ...items,
+      textureSize: texture.size,
+      textureSlots: texture.slots,
+      labelSettings: null,
+      labelSettingsFont: null,
+      resources: scope,
+      themeChain,
+      projectFonts,
+      settledFonts,
+    };
   }
 
   /** The Control forest of one tree node: what it adds to the forest and what it hoists to the canvas. */
   function walk(
-    { raw: node, step, path, group }: LiveLink,
+    link: LiveLink,
     ancestry: Ancestry,
     descend: (ancestry: Ancestry) => WalkResult[]
   ): WalkResult {
-    const {
-      themeChain,
-      skippedAncestors,
-      canvasChainBroken,
-      ancestorHidden,
-      parentVisibleInTree,
-      canvasRoots,
-      inheritedRtl,
-      childVisibility,
-    } = ancestry;
-    const paintRange = canvasRoots.get(node) ?? ancestry.paintRanges.get(node) ?? WHOLE_CANVAS_RANGE;
-    // A SubViewport owns its own World2D (ADR-0033); its Control subtree is
-    // drawn by its own viewport surface, never by the enclosing canvas.
-    if (isViewportBoundary(node.type)) return NOTHING_WALKED;
+    const { raw: node, step, path, group } = link;
+    const { themeChain, skippedChain, canvasChainBroken, ancestorHidden, inheritedRtl } = ancestry;
+    const { isContentRoot } = ancestry;
+    // A viewport owns its own World2D (ADR-0033): its Control subtree draws in its own target. The
+    // collapsed type, since an instance's own node has none when its sub-scene root is the viewport.
+    if (isViewportBoundary(step.node.type) && !isContentRoot) return walkViewport(link, ancestry, descend);
+    const paint = paintAt(path);
 
     // A grafted node's instance ref names an id in the file that authored it.
     const authored = scopeOf(node, group.scope);
@@ -744,7 +739,7 @@ function buildForest(
 
     const { node: collapsed, scope: ownScope, groups } = step;
 
-    const isControl = TWO_D_UI_TYPES.has(collapsed.type);
+    const isControl = isContentRoot || TWO_D_UI_TYPES.has(collapsed.type);
 
     // A CanvasLayer counts as `isControl` here without being a Control at
     // all, so it never states a direction and simply passes one through.
@@ -759,46 +754,21 @@ function buildForest(
     // Theme inheritance breaks at a non-Control, non-Window ancestor
     // (`ThemeOwner::propagate_theme_changed`, `scene/theme/theme_owner.cpp`),
     // though layout passes through it.
-    const ownTheme = isControl
-      ? resolveOwnTheme(
-          (collapsed.properties as ControlProperties).theme,
-          ownScope.externalResources,
-          ownScope.internalResources
-        )
-      : null;
-    const nodeThemeChain: readonly ThemeResource[] = !isControl
-      ? []
-      : ownTheme
-        ? [ownTheme, ...themeChain]
-        : themeChain;
+    const nodeThemeChain = isControl ? withOwnTheme(collapsed, ownScope, themeChain) : [];
+    const hidden = ancestorHidden || hiddenNodePaths.has(path);
+    if (ancestry.windowsOnly) {
+      return descendForWindows(step, descend, {
+        ...ancestry,
+        themeChain: nodeThemeChain,
+        ancestorHidden: hidden,
+        inheritedRtl: rtl,
+      });
+    }
 
-    // The world walk's allocation, from the same function, so the two walks'
-    // sequences compare. `NodeDispatcher` numbers authored children from the
-    // node's run and injected sub-scene roots from `allocated.tail`, and this
-    // walk makes the same split.
-    const inlineChildren = groups.filter((g) => !isInjected(g)).flatMap((g) => g.children);
-    const allocated = allocatePaintRange(paintRange, inlineChildren, {
-      sortsChildren: sortsChildren(collapsed),
-      frontRoom: internalFrontRoom(collapsed),
-    });
-    const injectedChildren = groups.filter(isInjected).flatMap((g) => g.children);
-    const injectedRanges = allocatePaintRange(allocated.tail, injectedChildren).children;
-
-    // A Node2D above a Control is placed by what the live scene passes bind, such as a RemoteTransform2D.
-    // The passes run for the first such Node2D only, so a scene of Controls alone never runs them.
-    const placed =
-      !isControl && isCanvasItem(collapsed)
-        ? patchedNode(collapsed, liveScenePassResults(liveNodePatches, tree).get(path))
-        : collapsed;
-    // A real Control's descendants start a fresh accumulation. A skipped node
-    // folds its own CanvasItem transform into what they inherit.
-    const childSkippedAncestors = isControl
-      ? null
-      : nextSkippedAncestors(
-          placed,
-          skippedAncestors,
-          skippedMaterialOf(collapsed, ownScope, skippedAncestors, canvasChainBroken)
-        );
+    // A real Control's descendants start a fresh chain. A skipped canvas item joins the chain.
+    const childSkippedChain: SkippedChain = isControl
+      ? { above: path, parent: null }
+      : { above: skippedChain.above, parent: isCanvasItem(collapsed) ? path : null };
     // The climb is `while (!node->is_set_as_top_level())` (`control.cpp:3876`),
     // so the flag ends it on the Control itself or on any CanvasItem above.
     const topLevel = isTopLevelItem(collapsed);
@@ -807,45 +777,17 @@ function buildForest(
     const childCanvasChainBroken = isControl
       ? false
       : !isCanvasItem(collapsed) || topLevel || canvasChainBroken;
-    const hidden = ancestorHidden || hiddenNodePaths.has(path);
-    // Already filtered by `isSortableChild` when the parent built the map.
-    const writtenVisible = childVisibility?.get(node);
-    const live =
-      writtenVisible === undefined
-        ? collapsed
-        : { ...collapsed, properties: { ...collapsed.properties, visible: writtenVisible } };
-    // From `live`, not `collapsed`: a container wrote its child's `visible`
-    // before anything read it, so the page's subtree inherits the written value.
-    const childParentVisible = childParentVisibleInTree(
-      collapsed,
-      (live.properties as ControlProperties).visible !== false,
-      parentVisibleInTree
-    );
-    const childVisibilityFn = isControl ? controlSolverRegistry.childVisibility(collapsed.type) : undefined;
-    const writtenChildVisibility = childVisibilityFn
-      ? resolveChildVisibility(childVisibilityFn, collapsed, groups)
-      : undefined;
-    // A CanvasLayer is a canvas of its own, so its roots are indexed by its
-    // own counter (`canvas_layer.cpp:261-267`) over its own children.
-    const childCanvasRoots = isCanvasLayerType(collapsed.type)
-      ? canvasRootRanges(inlineChildren, allocated.children)
-      : canvasRoots;
 
     const { nodes: children, hoisted: childHoisted } = groups.some((g) => g.children.length > 0)
       ? joinWalked(
           descend({
             themeChain: nodeThemeChain,
-            paintRanges: paintRangesOf(
-              [inlineChildren, allocated.children],
-              [injectedChildren, injectedRanges]
-            ),
-            skippedAncestors: childSkippedAncestors,
+            skippedChain: childSkippedChain,
             canvasChainBroken: childCanvasChainBroken,
             ancestorHidden: hidden,
-            parentVisibleInTree: childParentVisible,
-            canvasRoots: childCanvasRoots,
             inheritedRtl: rtl,
-            childVisibility: writtenChildVisibility,
+            windowsOnly: false,
+            isContentRoot: false,
           })
         )
       : { nodes: [], hoisted: [] };
@@ -853,20 +795,18 @@ function buildForest(
     // Not a Control: no SolveNode, and its Control descendants promote up.
     if (!isControl) return { nodes: children, hoisted: childHoisted };
 
+    const canvasItem = canvasItemAt(path);
+    // The embedder applies a window's `visible`, so its own Controls always draw.
+    const live = withWrittenVisible(collapsed, isContentRoot ? true : canvasItem?.writtenVisible);
+
     const themeScope = themeResolutionScope(
       collapsed.type,
       (collapsed.properties as ControlProperties).themeTypeVariation,
       nodeThemeChain,
       projectFonts
     );
-    const themedIcons = resolveThemedIcons(collapsed, ownScope, themeScope);
-    const texture = resolveTextureSize(
-      collapsed,
-      path,
-      ownScope.externalResources,
-      ownScope.internalResources,
-      themedIcons
-    );
+    const items = themeItems(collapsed, ownScope, themeScope);
+    const texture = resolveTextureSize(collapsed, path, ownScope, nodeThemeChain, items.icons);
     // A canvas boundary IS the canvas every chain broken below it parents
     // to, so it adopts those; every other Control passes them further up.
     const isBoundary = controlSolverRegistry.isCanvasBoundary(collapsed.type);
@@ -877,34 +817,31 @@ function buildForest(
     );
     const solved: SolveNode = {
       path,
-      node: live,
+      node: withListedFolders(live),
       children: isBoundary ? [...children, ...childHoisted] : children,
-      paintRange,
-      paintSequence: allocated.self,
+      paint,
       // A CanvasLayer draws on its own canvas (`canvas_item.cpp:263-267`), and a
       // top_level Control's item parents at the canvas (`canvas_item.cpp:565-571`),
       // so no skipped ancestor composes onto either. A merely hoisted Control's
       // item still hangs under the CanvasItem above it.
-      skippedAncestors: isBoundary || topLevel ? null : skippedAncestors,
-      // Unconditional, unlike `skippedAncestors` beside it: `top_level` and
+      skippedTransform: isBoundary || topLevel ? null : skippedTransformOf(skippedChain),
+      // Unconditional, unlike `skippedTransform` beside it: `top_level` and
       // a broken chain both reset the canvas facets and neither resets
       // this one (`SolveNode.parentVisibleInTree`).
-      parentVisibleInTree,
+      parentVisibleInTree: canvasItem?.parentVisibleInTree ?? true,
+      inheritance: inheritanceOf(path, canvasItem),
       rtl: rtl ?? layoutDirectionEnv.rootRtl,
       locale: layoutDirectionEnv.applicationLocale,
       hidden,
-      styleBoxes: resolveStyleBoxes(collapsed, ownScope, themeScope),
+      ...items,
       textureSize: texture.size,
       textureSlots: texture.slots,
-      fontOverrides: resolveFontOverrides(collapsed, ownScope.externalResources, ownScope.internalResources),
       labelSettings: ownLabelSettings.settings,
       labelSettingsFont: withSettingsDefaultFonts(ownLabelSettings.font, themeScope),
-      colors: resolveThemedColors(collapsed, themeScope),
-      constants: resolveThemedConstants(collapsed, themeScope),
-      icons: themedIcons,
       resources: ownScope,
       themeChain: nodeThemeChain,
       projectFonts,
+      settledFonts,
     };
     const hoistedBelow = isBoundary ? [] : childHoisted;
     return canvasChainBroken || topLevel
@@ -912,19 +849,17 @@ function buildForest(
       : { nodes: [solved], hoisted: hoistedBelow };
   }
 
-  const rootRanges = allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children;
+  const ownerThemeChain = themeOwners.flatMap(({ node, scope }) => withOwnTheme(node, scope, []));
   const walked = joinWalked(
     tree.fold(
       {
-        themeChain: [],
-        paintRanges: paintRangesOf([nodes, rootRanges]),
-        skippedAncestors: null,
+        themeChain: ownerThemeChain,
+        skippedChain: NOTHING_SKIPPED,
         canvasChainBroken: false,
         ancestorHidden: false,
-        parentVisibleInTree: true,
-        canvasRoots: canvasRootRanges(nodes, rootRanges),
         inheritedRtl,
-        childVisibility: undefined,
+        windowsOnly: false,
+        isContentRoot: viewport !== null && isEmbeddedWindow(viewport.type),
       },
       walk
     )
@@ -934,32 +869,66 @@ function buildForest(
   // (`canvas_item.cpp:265-267`).
   return {
     tree: [...walked.nodes, ...walked.hoisted],
+    windows,
     pendingScenes: [...pendingScenes.values()],
     pendingTextures: [...pendingTextures],
     pendingResourceFiles: [...pendingResourceFiles],
     pendingThemes: [...pendingThemes],
-    pendingFonts: [...pendingFonts],
+    pendingDirectories: [...pendingDirectories],
     readKeys,
+    awaitedFonts,
     viewportSizeReads,
   };
 }
 
+/** The Control forest of `nodes`: a scene's roots, a SubViewport's children, or the unowned nodes of a tile layer. */
 export function useBuildSolveTree(
   nodes: readonly TscnNode[],
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
-  /**
-   * `Control::is_layout_rtl()` for the nearest ancestor Control or Window above
-   * this forest, `null` for a scene's roots. A `SubViewport`'s caller passes its
-   * enclosing Control's: the climb steps over a `Viewport` (`control.cpp:3584-3598`).
-   */
+  /** `ForestStart.inheritedRtl`. */
+  inheritedRtl: boolean | null = null,
+  /** The run of draws the roots take. A tile layer's scene tiles sit among the draws of the layer's children. */
+  rootRange: PaintRange = WHOLE_CANVAS_RANGE
+): UseBuildSolveTreeResult {
+  const start = useMemo(
+    () => ({ inheritedRtl, viewport: null, themeOwners: NO_OWNERS, rootRange }),
+    [inheritedRtl, rootRange]
+  );
+  return useSolveForest(nodes, externalResources, internalResources, start);
+}
+
+/**
+ * The Control forest a viewport draws on its canvas: a SubViewport's children, or a window rooted
+ * at itself (`ForestStart.viewport`).
+ */
+export function useBuildViewportTree(
+  viewport: TscnNode,
+  externalResources: readonly TscnExternalResource[],
+  internalResources: readonly TscnInternalResource[],
+  themeOwners: readonly ThemeOwner[],
   inheritedRtl: boolean | null = null
+): UseBuildSolveTreeResult {
+  const nodes = useMemo(() => (isEmbeddedWindow(viewport.type) ? [viewport] : viewport.children), [viewport]);
+  const start = useMemo(
+    () => ({ inheritedRtl, viewport, themeOwners, rootRange: WHOLE_CANVAS_RANGE }),
+    [inheritedRtl, viewport, themeOwners]
+  );
+  return useSolveForest(nodes, externalResources, internalResources, start);
+}
+
+function useSolveForest(
+  nodes: readonly TscnNode[],
+  externalResources: readonly TscnExternalResource[],
+  internalResources: readonly TscnInternalResource[],
+  start: ForestStart
 ): UseBuildSolveTreeResult {
   const loader = useResourceLoader();
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_HIDDEN;
-  // With or without a loader: `peekSceneFontMetrics` starts font loads from the
-  // solve itself and answers with the bundled fallback until the metrics settle.
-  const fontMetricsVersion = useSceneFontSettleCount(true);
+  // With or without a loader: `peekSceneFontMetrics` starts font loads from the solve itself and
+  // answers with the bundled fallback until the metrics settle. Only a font the last build read
+  // while it loaded wakes it.
+  const awaitedFonts = useAwaitedFontsVersion(settledFontsOf(loader));
   // `gui/theme/custom` and `gui/theme/custom_font`, the last rungs before the built-in default. Null
   // without a provider, like every unset project setting.
   const projectSettings = useProjectSettings().settings;
@@ -968,7 +937,7 @@ export function useBuildSolveTree(
   const readKeys = useRef<ReadonlySet<string>>(NO_KEYS);
   const cacheVersion = useCacheVersion(loader, SOLVE_TREE_BUSES, readKeys);
   // Both counters only grow, so their sum moves whenever either does.
-  const generation = fontMetricsVersion + cacheVersion;
+  const generation = awaitedFonts.version + cacheVersion;
   const viewportTargets = useViewportTextures();
   const live = useSharedLiveTree();
   const viewportTargetSize = useMemo(
@@ -985,9 +954,27 @@ export function useBuildSolveTree(
       ? last.key
       : viewportTargetSize;
 
-  const forest = useMemo(
-    () =>
-      buildForest(
+  // The Font reads go through the snapshot host, which requests and pins them. The other caches
+  // stay below with their own request loops.
+  const forest = useSnapshotHost(
+    useCallback(
+      (snapshot: ResourceSnapshot) =>
+        buildForest(
+          nodes,
+          externalResources,
+          internalResources,
+          loader,
+          snapshot,
+          projectSettings,
+          hiddenNodePaths,
+          layoutDirectionEnv,
+          start,
+          viewportTargetSize
+        ),
+      // `generation` is a cache-buster, not read inside: the loader's caches are
+      // outside React's dependency graph.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [
         nodes,
         externalResources,
         internalResources,
@@ -995,26 +982,16 @@ export function useBuildSolveTree(
         projectSettings,
         hiddenNodePaths,
         layoutDirectionEnv,
-        inheritedRtl,
-        viewportTargetSize
-      ),
-    // `generation` is a cache-buster, not read inside: the loader's caches are
-    // outside React's dependency graph.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      nodes,
-      externalResources,
-      internalResources,
-      loader,
-      projectSettings,
-      hiddenNodePaths,
-      layoutDirectionEnv,
-      inheritedRtl,
-      sizesKey,
-      generation,
-    ]
+        start,
+        sizesKey,
+        generation,
+      ]
+    )
   );
-  const { tree, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingFonts } = forest;
+  const { tree, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingDirectories } =
+    forest;
+  const { track: trackAwaitedFonts } = awaitedFonts;
+  useEffect(() => trackAwaitedFonts(forest.awaitedFonts), [trackAwaitedFonts, forest.awaitedFonts]);
   useEffect(() => {
     readKeys.current = forest.readKeys;
     lastSizes.current = { key: sizesKey, reads: forest.viewportSizeReads };
@@ -1031,8 +1008,8 @@ export function useBuildSolveTree(
     for (const path of pendingTextures) loader.textures.request(path);
     for (const path of pendingResourceFiles) loader.resources.request(path);
     for (const path of pendingThemes) loader.themes.request(path);
-    for (const path of pendingFonts) loader.fonts.request(path);
-  }, [loader, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingFonts]);
+    for (const folder of pendingDirectories) loader.directories.request(folder);
+  }, [loader, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingDirectories]);
 
-  return { tree, generation };
+  return { tree, generation, windows: forest.windows };
 }

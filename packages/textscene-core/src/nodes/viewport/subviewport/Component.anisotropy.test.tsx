@@ -33,6 +33,7 @@ const scene = (viewportProps: string) => `[gd_scene format=3]
 [node name="Root" type="Node3D"]
 
 [node name="Viewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 ${viewportProps}
 
 [node name="Sprite" type="Sprite3D" parent="Viewport"]
@@ -50,12 +51,14 @@ const nested = (outerProps: string) => `[gd_scene format=3]
 [node name="Root" type="Node3D"]
 
 [node name="Outer" type="SubViewport" parent="."]
+render_target_update_mode = 4
 own_world_3d = true
 ${outerProps}
 
 [node name="OuterCamera" type="Camera3D" parent="Outer"]
 
 [node name="Inner" type="SubViewport" parent="Outer"]
+render_target_update_mode = 4
 own_world_3d = true
 
 [node name="Sprite" type="Sprite3D" parent="Outer/Inner"]

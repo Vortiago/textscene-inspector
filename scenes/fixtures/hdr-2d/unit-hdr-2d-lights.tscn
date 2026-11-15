@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://unithdr2dlights"]
+
+; Lighting in the root viewport under `rendering/viewport/hdr_2d=true`, from this project's
+; project.godot. A linear canvas adds the light to the linear albedo with no clamp, and keeps the
+; authored light colour as it is. A 0.6 gray floor and an orange square sit under a CanvasModulate
+; above 1 and a DirectionalLight2D of energy 1.7. Every other lit golden runs with hdr_2d off, so
+; none shows the linear arithmetic.
+
+[node name="Root" type="Node2D"]
+
+[node name="Floor" type="Polygon2D" parent="."]
+color = Color(0.6, 0.6, 0.6, 1)
+polygon = PackedVector2Array(50, 100, 1100, 100, 1100, 550, 50, 550)
+
+[node name="Orange" type="Polygon2D" parent="."]
+color = Color(0.9, 0.5, 0.2, 1)
+polygon = PackedVector2Array(150, 200, 350, 200, 350, 450, 150, 450)
+
+[node name="Tint" type="CanvasModulate" parent="."]
+color = Color(0.6, 0.8, 1.4, 1)
+
+[node name="Sun" type="DirectionalLight2D" parent="."]
+color = Color(0.8, 0.9, 1, 1)
+energy = 1.7

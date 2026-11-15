@@ -9,6 +9,7 @@ import {
   parallaxLayerDelta,
   parallaxLayerPose,
   parallaxMirrorOffsets,
+  parallaxRepeatOffsets,
   parallaxScroll,
   parallaxViewFraming,
   type ParallaxScrollProperties,
@@ -256,5 +257,32 @@ describe('parallaxMirrorOffsets', () => {
   it('puts the un-mirrored copy last so it wins selection registration', () => {
     const offsets = parallaxMirrorOffsets({ x: 100, y: 50 }, unit);
     expect(offsets[offsets.length - 1]).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('parallaxRepeatOffsets', () => {
+  const size = { x: 200, y: 0 };
+
+  it('returns nothing when neither axis repeats', () => {
+    expect(parallaxRepeatOffsets({ x: 0, y: 0 }, 3)).toEqual([]);
+  });
+
+  it.each([
+    // renderer_canvas_render_rd.cpp:2233-2250: `(-(times / 2) + i) * size` for i in 0..times, integer division.
+    [1, [200, 0]],
+    [2, [-200, 0, 200]],
+    [3, [-200, 0, 200, 400]],
+    [4, [-400, -200, 0, 200, 400]],
+  ])('draws repeat_times %i as %j on one axis, the unrepeated copy last', (times, xs) => {
+    const offsets = parallaxRepeatOffsets(size, times);
+    expect(offsets.map((offset) => offset.x).sort((a, b) => a - b)).toEqual([...xs].sort((a, b) => a - b));
+    expect(offsets.at(-1)).toEqual({ x: 0, y: 0 });
+  });
+
+  it('tiles a grid when both axes repeat', () => {
+    const offsets = parallaxRepeatOffsets({ x: 10, y: 20 }, 2);
+    expect(offsets).toHaveLength(9);
+    expect(offsets).toContainEqual({ x: -10, y: 20 });
+    expect(offsets.at(-1)).toEqual({ x: 0, y: 0 });
   });
 });

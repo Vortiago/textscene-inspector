@@ -7,12 +7,12 @@
 import { CANVAS_2D_TESTIDS } from './appContract.mjs';
 
 /**
- * Sets one of the viewport's display toggles through the real UI. It waits for attached, not
+ * Turns on one of the viewport's display toggles through the real UI. It waits for attached, not
  * visible, and uses `dispatchEvent`, not `click()`: the capture context hides the toolbar with
  * `display: none`, and Playwright refuses to click a hidden target. Returns null on success, or a
  * reason for the caller to fail with.
  */
-export async function setDisplayToggle(page, label, wanted) {
+async function checkDisplayToggle(page, label) {
   const popover = page.locator('[data-testid="display-menu-popover"]');
   // Idempotent: a scene may ask for two toggles, and a second click would shut the menu.
   if ((await popover.count()) === 0) {
@@ -32,7 +32,25 @@ export async function setDisplayToggle(page, label, wanted) {
   } catch {
     return `${label} toggle not found in the Display menu`;
   }
-  if ((await toggle.isChecked()) !== wanted) await toggle.dispatchEvent('click');
+  if (!(await toggle.isChecked())) await toggle.dispatchEvent('click');
+  return null;
+}
+
+/**
+ * Greater than CameraFit's last load-time fit timer (1100 ms after mount), with margin for
+ * render-loop latency under host contention.
+ */
+export const FIT_QUIESCENCE_MS = 1500;
+
+/**
+ * Turns one display toggle on, lets the load-time camera fit finish, and takes the pointer off the
+ * toolbar so no hover is captured. Returns null on success, or a reason for the caller to fail with.
+ */
+export async function showDisplayOverlay(page, label) {
+  const reason = await checkDisplayToggle(page, label);
+  if (reason) return reason;
+  await page.waitForTimeout(FIT_QUIESCENCE_MS);
+  await page.mouse.move(0, 0);
   return null;
 }
 

@@ -4,7 +4,7 @@
  * (`material.cpp:1386-1454`).
  */
 import { describe, expect, it } from 'vitest';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 
 describe('parseStandardMaterial3DScalars: triplanar mapping', () => {
   it('projects UV1 at Godot defaults under uv1_triplanar', () => {

@@ -51,6 +51,11 @@ export function inkedGlyphCount(run: TextRunProps): number {
   return runGlyphs(run).filter((glyph) => !INKLESS.test(glyph.char)).length;
 }
 
+/** How many glyphs of each run of the bundled face under `scene` draw ink, in draw order. */
+export function inkedGlyphCounts(scene: Scene): number[] {
+  return bundledRuns(scene).map(inkedGlyphCount);
+}
+
 /** How far the pens of `run` reach, px: from its first glyph to the end of the advance of its last. */
 export function runPenExtentPx(run: TextRunProps): number {
   const glyphs = runGlyphs(run);

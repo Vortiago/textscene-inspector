@@ -1,7 +1,7 @@
 /**
  * FoldableContainer's native rect solver: `get_minimum_size` (`scene/gui/foldable_container.cpp:36-51`),
  * `_update_title_min_size` (`:441-478`) and `NOTIFICATION_SORT_CHILDREN` (`:329-386`), with the
- * "FoldableContainer" entries of `scene/theme/default_theme.cpp:1302-1336`. No `.tscn` sets hover or
+ * table's `FoldableContainer` type. No `.tscn` sets hover or
  * focus, so `folded` alone picks the title style and icon.
  *
  * Portions ported from Godot Engine (MIT).
@@ -9,22 +9,21 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {
-  ChildVisibilityFn,
   ContainerLayoutFn,
   MinimumSizeFn,
   SolveContext,
-  TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
-import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
+import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { STYLE_FILL } from '../../../../godot/scene/theme';
 import { resolveTextTheme, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
@@ -33,21 +32,20 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
-import { controlBidiOptions, isDrawnRtl } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { FoldableContainerProperties } from './types';
 import { TITLE_POSITION_BOTTOM, TITLE_POSITION_TOP } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { SizeFlags } from '../../../../godot/scene/control';
 
 /** `SceneStringName(font)` and `"font_size"`: the theme font keys of FoldableContainer (`foldable_container.cpp:568-569`). */
 const FOLDABLE_CONTAINER_THEME_FONT_KEY = 'font';
 
-/** `Math::round(2 * scale)` (`default_theme.cpp:1336`), from the raw, unrounded `gui/theme/default_theme_scale`. */
-export function foldableContainerHSeparation(theme: NativeTheme): number {
-  return Math.round(2 * theme.scale);
+/** `_get_h_separation` (`foldable_container.h:93`): the theme's `h_separation`, floored at 0. */
+export function foldableContainerHSeparation(n: Pick<SolveNode, 'constants'>): number {
+  return Math.max(requiredThemeItem(n.constants, 'h_separation'), 0);
 }
 
 /** The 16x16 size of the arrow icons (`scene/theme/icons/arrow_*.svg`), scaled as `generate_icon(..., scale)` rasterises them. */
@@ -56,75 +54,10 @@ function foldableContainerArrowSize(theme: NativeTheme): Vector2 {
   return { x: size, y: size };
 }
 
-/** The default `font_color` of FoldableContainer (`default_theme.cpp:1324`). */
-const FOLDABLE_CONTAINER_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
-/** The default `collapsed_font_color` of FoldableContainer (`default_theme.cpp:1326`). */
-const FOLDABLE_CONTAINER_DEFAULT_COLLAPSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
-/** The default `font_outline_color` of FoldableContainer: white, not the black of most types (`default_theme.cpp:1327`). */
-export const FOLDABLE_CONTAINER_DEFAULT_OUTLINE_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-
 const FOLDABLE_CONTAINER_TITLE_THEME_KEYS: Record<'expanded' | 'folded', TextThemeKeys> = {
   expanded: { sizeKey: 'font_size', colorKey: 'font_color' },
   folded: { sizeKey: 'font_size', colorKey: 'collapsed_font_color' },
 };
-
-type CornerRadius = StyleBoxFlatData['cornerRadius'];
-
-/**
- * `make_flat_stylebox` (`default_theme.cpp:57-70`), with the fields `StyleBoxFlatData` models.
- */
-function flatStyleBox(
-  bgColor: Rgba,
-  contentMargin: { left: number; top: number; right: number; bottom: number },
-  cornerRadius: CornerRadius
-): StyleBoxFlatData {
-  return makeFlatStyleBox(bgColor, { contentMargin, cornerRadius });
-}
-
-/**
- * The corners of the title StyleBox: both styles start from a uniform `default_corner_radius`
- * (`default_theme.cpp:1302-1311`), and the unfolded one squares the edge that touches the panel
- * (`:1303-1304`). `_draw_flippable_stylebox` flips it for `POSITION_BOTTOM` (`:523-532`), and
- * choosing the corners from `title_position` gives the same result without the flip.
- */
-function titleStyleCornerRadius(radius: number, folded: boolean, titlePosition: number): CornerRadius {
-  if (folded) return { topLeft: radius, topRight: radius, bottomRight: radius, bottomLeft: radius };
-  return titlePosition === TITLE_POSITION_BOTTOM
-    ? { topLeft: 0, topRight: 0, bottomRight: radius, bottomLeft: radius }
-    : { topLeft: radius, topRight: radius, bottomRight: 0, bottomLeft: 0 };
-}
-
-/** The corners of the content panel, squared on the edge that touches the title (`default_theme.cpp:1313-1316`). */
-function panelCornerRadius(radius: number, titlePosition: number): CornerRadius {
-  return titlePosition === TITLE_POSITION_BOTTOM
-    ? { topLeft: radius, topRight: radius, bottomRight: 0, bottomLeft: 0 }
-    : { topLeft: 0, topRight: 0, bottomRight: radius, bottomLeft: radius };
-}
-
-function defaultTitleStyle(theme: NativeTheme, folded: boolean, titlePosition: number): StyleBoxFlatData {
-  const margin = {
-    left: theme.contentMargin,
-    top: theme.contentMargin,
-    right: theme.contentMargin,
-    bottom: theme.contentMargin,
-  };
-  // default_theme.cpp:1302,1311: both title styles fill with style_pressed_color.
-  return flatStyleBox(
-    STYLE_FILL.pressed,
-    margin,
-    titleStyleCornerRadius(theme.cornerRadius, folded, titlePosition)
-  );
-}
-
-function defaultPanelStyle(theme: NativeTheme, titlePosition: number): StyleBoxFlatData {
-  const margin = {
-    left: theme.contentMargin,
-    top: theme.contentMargin,
-    right: theme.contentMargin,
-    bottom: theme.contentMargin,
-  };
-  return flatStyleBox(STYLE_FILL.normal, margin, panelCornerRadius(theme.cornerRadius, titlePosition));
-}
 
 export type FoldableContainerArrow = 'expanded' | 'expandedMirrored' | 'folded' | 'foldedMirrored';
 
@@ -149,12 +82,7 @@ export const FOLDABLE_CONTAINER_ARROW_THEME_NAME: Record<FoldableContainerArrow,
 
 /** The arrow slots that have a themed answer, for `controlSolverRegistry.registerTextureSlots`. */
 export const foldableContainerTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
-  const requests: TextureSlotRequest[] = [];
-  for (const name of Object.values(FOLDABLE_CONTAINER_ARROW_THEME_NAME)) {
-    const themed = themedIcons[name];
-    if (themed) requests.push(themedSlotRequest(name, themed));
-  }
-  return requests;
+  return themedSlotRequests(Object.values(FOLDABLE_CONTAINER_ARROW_THEME_NAME), themedIcons);
 };
 
 /** The arrow's size: themed when `SolveNode.textureSlots` resolved it, else the scaled vendored default. */
@@ -169,8 +97,8 @@ function resolveArrowSize(
 export interface FoldableContainerTitleMetrics {
   folded: boolean;
   titlePosition: number;
-  titleStyle: StyleBoxFlatData;
-  panelStyle: StyleBoxFlatData;
+  titleStyle: ResolvedStyleBox;
+  panelStyle: ResolvedStyleBox;
   arrow: FoldableContainerArrow;
   /** The resolved size of the current arrow (`resolveArrowSize`). */
   arrowSize: Vector2;
@@ -178,8 +106,6 @@ export interface FoldableContainerTitleMetrics {
   color: Rgba;
   /** The shaped title text, or `null` for an empty title or before a measurer exists. */
   layout: TextLayoutResult | null;
-  /** Whether the title draws right to left, from its set direction (`isDrawnRtl`). */
-  isDrawnRtl: boolean;
   /**
    * `title_minimum_size` (`foldable_container.cpp:441-478`): the minimum size of the title bar. It has
    * no `title_controls` term: `add_title_bar_control` is a method with no `ADD_PROPERTY`
@@ -207,19 +133,13 @@ function foldableContainerTitleMetrics(
 ): FoldableContainerTitleMetrics {
   const folded = props.folded === true;
   const titlePosition = props.titlePosition ?? TITLE_POSITION_TOP;
-  const overrunBehavior = props.titleTextOverrunBehavior ?? 0; // OVERRUN_NO_TRIMMING
 
-  const titleStyle = folded
-    ? (n.styleBoxes.title_collapsed_panel ?? defaultTitleStyle(ctx.theme, true, titlePosition))
-    : (n.styleBoxes.title_panel ?? defaultTitleStyle(ctx.theme, false, titlePosition));
-  const panelStyle = n.styleBoxes.panel ?? defaultPanelStyle(ctx.theme, titlePosition);
+  const titleStyle = requiredThemeItem(n.styleBoxes, folded ? 'title_collapsed_panel' : 'title_panel');
+  const panelStyle = requiredThemeItem(n.styleBoxes, 'panel');
   const arrow = titleArrow(folded, titlePosition, n.rtl);
 
   const stateKey = folded ? 'folded' : 'expanded';
-  const { fontSizePx, color } = resolveTextTheme(n, props, FOLDABLE_CONTAINER_TITLE_THEME_KEYS[stateKey], {
-    fontSizePx: ctx.theme.fontSize,
-    color: folded ? FOLDABLE_CONTAINER_DEFAULT_COLLAPSED_FONT_COLOR : FOLDABLE_CONTAINER_DEFAULT_FONT_COLOR,
-  });
+  const { fontSizePx, color } = resolveTextTheme(n, props, FOLDABLE_CONTAINER_TITLE_THEME_KEYS[stateKey]);
 
   const title = props.title ?? '';
   const hasTitle = title.length > 0;
@@ -243,12 +163,12 @@ function foldableContainerTitleMetrics(
   let height = titleMargin.y;
 
   if (hasTitle) {
-    width += foldableContainerHSeparation(ctx.theme);
+    width += foldableContainerHSeparation(n);
     const textHeight = layout ? layout.heightPx : 0;
     height += Math.max(textHeight, arrowSize.y);
-    // foldable_container.cpp:455: only OVERRUN_NO_TRIMMING (0) adds the text width.
+    // foldable_container.cpp:455: only OVERRUN_NO_TRIMMING adds the text width.
     // A trimming mode sizes the title bar to the arrow alone.
-    if (overrunBehavior === 0 && layout) {
+    if (!isTextWidthClipped({ overrunBehavior: props.titleTextOverrunBehavior }) && layout) {
       width += shapedTextSizeWidthPx(layout.widthPx);
     }
   } else {
@@ -265,7 +185,6 @@ function foldableContainerTitleMetrics(
     fontSizePx,
     color,
     layout,
-    isDrawnRtl: isDrawnRtl(bidi),
     size: { x: width, y: height },
   };
 }
@@ -278,14 +197,6 @@ function foldableContainerTitleMetrics(
 export const foldableContainerTitleShape = defineShare<FoldableContainerTitleMetrics>((n, theme) =>
   foldableContainerTitleMetrics(n, n.node.properties as FoldableContainerProperties, { theme }, true)
 );
-
-/**
- * `c->set_visible(!folded)` in `NOTIFICATION_SORT_CHILDREN` (`foldable_container.cpp:376-386`)
- * writes `visible` on each sortable child, so it overrides the authored flag both ways.
- * Every child gets the same value, so the per-child arguments of {@link ChildVisibilityFn} go unread.
- */
-export const foldableContainerChildVisibility: ChildVisibilityFn = (node) =>
-  (node.properties as FoldableContainerProperties).folded !== true;
 
 /**
  * The title bar as the solve sees it: the share once `ctx.measureText` exists,
@@ -324,7 +235,7 @@ export const foldableContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
 /**
  * The content half of `NOTIFICATION_SORT_CHILDREN` (`foldable_container.cpp:329-386`).
  * Folded, Godot skips `fit_child_in_rect`, so the map is empty. The hidden children
- * ({@link foldableContainerChildVisibility}) make an absent rect unobservable.
+ * (`foldableContainerChildVisibility`) make an absent rect unobservable.
  */
 export const foldableContainerLayout: ContainerLayoutFn = (n, children, rect, ctx) => {
   const title = foldableContainerTitle(n, ctx);

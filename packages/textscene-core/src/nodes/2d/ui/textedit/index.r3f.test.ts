@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import './index.r3f';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { TextEdit } from './Component';
 import { textEditMinimumSize } from './nativeSolver';
 
@@ -19,7 +20,9 @@ describe('TextEdit index.r3f self-registration', () => {
   });
 
   it("declares TextEdit size-dependent, so scroll_fit_content_height at wrap_mode BOUNDARY gets solveControlTree's second pass", () => {
-    expect(controlSolverRegistry.isSizeDependentMinimum('TextEdit')).toBe(true);
+    expect(
+      controlSolverRegistry.readsTentativeRect({ node: { type: 'TextEdit' } } as unknown as SolveNode)
+    ).toBe(true);
   });
 
   it('registers no container layout — a TextEdit has no Control children to place', () => {

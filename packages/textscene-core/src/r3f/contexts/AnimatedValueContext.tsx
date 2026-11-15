@@ -5,7 +5,7 @@
  * stable context re-renders only the target whose value changes.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNodePath } from './NodePathContext';
 import { createPushStoreContext, type PushStore } from './pushStore';
 
@@ -54,4 +54,98 @@ export function useAnimatedValueAt<T>(
     );
   }, [nodePath, registry, property]);
   return value;
+}
+
+const NO_VISIBILITY: ReadonlyMap<string, boolean> = new Map();
+
+/** Joins paths into one effect key: a node name cannot hold a null character. */
+const NO_PATH_CHARACTER = '\0';
+
+/**
+ * The `visible` an AnimationPlayer drives on the nodes at `paths`, by path: only the paths with a
+ * driven value are in the map. It changes with a driven value, not with each frame of one.
+ */
+export function useAnimatedVisibility(paths: readonly string[]): ReadonlyMap<string, boolean> {
+  const registry = useAnimatedValueRegistry();
+  const [visible, setVisible] = useState(NO_VISIBILITY);
+  const key = paths.join(NO_PATH_CHARACTER);
+  useEffect(() => {
+    setVisible(NO_VISIBILITY);
+    const stops = key
+      .split(NO_PATH_CHARACTER)
+      .filter(Boolean)
+      .map((path) =>
+        registry.subscribe(animatedValueKey(path, 'visible'), (value) =>
+          setVisible((previous) => withPushedVisible(previous, path, value))
+        )
+      );
+    return () => stops.forEach((stop) => stop());
+  }, [registry, key]);
+  return visible;
+}
+
+/**
+ * `values` with `key` set to the `visible` a pushed tuple holds, or removed for a released one. The
+ * same map where nothing changes, so a steady push re-renders nothing.
+ */
+export function withPushedVisible<K>(
+  values: ReadonlyMap<K, boolean>,
+  key: K,
+  value: readonly number[] | null
+): ReadonlyMap<K, boolean> {
+  const visible = value === null ? undefined : value[0] !== 0;
+  if (values.get(key) === visible) return values;
+  const next = new Map(values);
+  if (visible === undefined) next.delete(key);
+  else next.set(key, visible);
+  return next;
+}
+
+type PoseListener = (posed: ReadonlySet<string>) => void;
+
+/**
+ * The mixer-pose listeners under each registry's provider. Written only by `useOnMixerPose`, which
+ * adds a listener on mount and removes it on unmount.
+ */
+// eslint-disable-next-line no-restricted-syntax -- a listener list per provider, not a cache built on ask.
+const poseListeners = new WeakMap<AnimatedValueRegistry, Set<PoseListener>>();
+
+function poseListenersOf(registry: AnimatedValueRegistry): Set<PoseListener> {
+  let listeners = poseListeners.get(registry);
+  if (!listeners) {
+    listeners = new Set();
+    poseListeners.set(registry, listeners);
+  }
+  return listeners;
+}
+
+/**
+ * The function a driver calls after its mixer has moved the scene's objects, with the uuids of the
+ * objects its actions drive, so a listener skips a pose that moved nothing it reads. A pass that
+ * reads the transforms drawn, such as the y-sort, listens instead of racing the mixer's frame.
+ */
+export function useAnnounceMixerPose(): PoseListener {
+  const registry = useAnimatedValueRegistry();
+  return useCallback(
+    (posed) => {
+      const listeners = poseListeners.get(registry);
+      if (listeners) for (const listener of listeners) listener(posed);
+    },
+    [registry]
+  );
+}
+
+/** Calls `listener` after each pose a driver's mixer writes. `listener` is read through a ref. */
+export function useOnMixerPose(listener: PoseListener): void {
+  const registry = useAnimatedValueRegistry();
+  const listenerRef = useRef(listener);
+  listenerRef.current = listener;
+  useEffect(() => {
+    const listeners = poseListenersOf(registry);
+    const relay: PoseListener = (posed) => listenerRef.current(posed);
+    listeners.add(relay);
+    return () => {
+      listeners.delete(relay);
+    };
+  }, [registry]);
 }

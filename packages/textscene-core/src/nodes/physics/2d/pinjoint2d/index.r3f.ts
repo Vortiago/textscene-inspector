@@ -1,14 +1,6 @@
-/**
- * PinJoint2D draws nothing of its own (ADR-0008), so it reuses the Node2D
- * component, and its children still land in the right transform space.
- */
+/** PinJoint2D draws its editor marker for every node (ADR-0056). */
 
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { Node2D } from '../../../base/node2d/Component';
+import { PinJoint2D } from './Component';
 
-nodeComponentRegistry.register({
-  typeName: 'PinJoint2D',
-  Component: Node2D,
-  canvasItem: true,
-  renderIntent: 'transform-only',
-});
+nodeComponentRegistry.register({ typeName: 'PinJoint2D', Component: PinJoint2D, canvasItem: true });

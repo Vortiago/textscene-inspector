@@ -1,27 +1,21 @@
 /**
  * ProgressBar's native (WebGL canvas) rect solver (`scene/gui/progress_bar.cpp:37-48`) and draw
- * geometry, with its default `background` and `fill` StyleBoxes (`scene/theme/default_theme.cpp:438-449`).
- * `Component.tsx` paints with the same builder, so the minimum size and the drawn box always agree.
+ * geometry. The `background` and `fill` StyleBoxes come from the theme lookup, which ends at the
+ * default theme table, so the minimum size and the drawn box read the same boxes.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import {
-  controlSolverRegistry,
-  type MinimumSizeFn,
-  type SolveContext,
-} from '../../../../r3f/controls/native/solverRegistry';
+import { controlSolverRegistry, type MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { DEFAULT_FONT_SIZE } from '../../../../godot/scene/theme';
+import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
-  type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -30,97 +24,20 @@ import { resolveRangeValue, type RangeProperties, type RangeValueOrder } from '.
 import { rect2Intersection } from '../../../../godot/math/rect2.js';
 import type { ProgressBarProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector.js';
-import { isEqualApprox, type Rgba } from '../../../../godot/math/math.js';
-import { CONTROL_FONT_HOVER_COLOR } from '../../../../godot/scene/theme.js';
+import { isEqualApprox } from '../../../../godot/math/math.js';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { formatControlPercent, type Numerals } from '../../../../godot/text/numberFormat';
 import { ProgressBarFillMode } from '../../../../godot/scene/gui';
 
-/**
- * `default_theme.cpp:440-441`: `make_flat_stylebox(color, 2, 2, 2, 2, 6)`, not
- * the `default_margin` = 4 and `default_corner_radius` = 3 of every other flat
- * stylebox in `nativeTheme.ts`.
- */
-const PROGRESS_BAR_STYLE_MARGIN = 2;
-const PROGRESS_BAR_CORNER_RADIUS = 6;
-
-const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
-/** `StyleBoxFlat`'s unset default (`style_box_flat.h:40`): `make_flat_stylebox` never sets the border colour. */
-const DEFAULT_BORDER_COLOR: Rgba = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
-
-/**
- * Recovers `gui/theme/default_theme_scale` from `theme.fontSize`
- * (`Math.round(DEFAULT_FONT_SIZE * scale)`): `NativeTheme` carries its other
- * metrics already rounded, and none of them is 2 or 6. Exact for any scale
- * that is a multiple of 1/16.
- */
-function reconstructThemeScale(theme: Pick<NativeTheme, 'fontSize'>): number {
-  return theme.fontSize / DEFAULT_FONT_SIZE;
-}
-
-/** `make_flat_stylebox` (`default_theme.cpp:57-70`) at ProgressBar's own margin/corner-radius literals. */
-function progressBarFlatStyleBox(bgColor: Rgba, theme: Pick<NativeTheme, 'fontSize'>): StyleBoxFlatData {
-  const scale = reconstructThemeScale(theme);
-  const margin = Math.round(PROGRESS_BAR_STYLE_MARGIN * scale);
-  const cornerRadius = Math.round(PROGRESS_BAR_CORNER_RADIUS * scale);
-  // `set_corner_detail(MIN(Math::ceil(1.5 * p_corner_radius), 6) * scale)`
-  // (`default_theme.cpp:65`) assigns into an `int` parameter, which truncates
-  // toward zero. `MIN(ceil(1.5*6), 6)` is always 6.
-  const cornerDetail = Math.trunc(6 * scale);
-  return {
-    bgColor,
-    borderColor: DEFAULT_BORDER_COLOR,
-    borderWidth: ZERO_SIDES,
-    cornerRadius: {
-      topLeft: cornerRadius,
-      topRight: cornerRadius,
-      bottomRight: cornerRadius,
-      bottomLeft: cornerRadius,
-    },
-    expandMargin: ZERO_SIDES,
-    contentMargin: { left: margin, top: margin, right: margin, bottom: margin },
-    drawCenter: true,
-    borderBlend: false,
-    antiAliased: true,
-    aaSize: 1,
-    cornerDetail,
-    skew: { x: 0, y: 0 },
-    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-    shadowSize: 0,
-    shadowOffset: { x: 0, y: 0 },
-  };
-}
-
-/** `default_theme.cpp:440`: `background` fills with `style_disabled_color` (`theme.styleFill.disabled`). */
-export function progressBarDefaultBackground(theme: NativeTheme): StyleBoxFlatData {
-  return progressBarFlatStyleBox(theme.styleFill.disabled, theme);
-}
-
-/** `default_theme.cpp:441`: `fill` fills with `style_progress_color` (`theme.styleFill.progress`). */
-export function progressBarDefaultFill(theme: NativeTheme): StyleBoxFlatData {
-  return progressBarFlatStyleBox(theme.styleFill.progress, theme);
-}
-
-/** ProgressBar reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color` (`default_theme.cpp:283,285`). */
+/** ProgressBar reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const PROGRESS_BAR_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
 
-/** `SceneStringName(font)` = `"font"` (`default_theme.cpp:283`: `BIND_THEME_ITEM(Theme::DATA_TYPE_FONT, ProgressBar, font)`). */
+/** `SceneStringName(font)` = `"font"`, which the default theme registers under ProgressBar. */
 export const PROGRESS_BAR_THEME_FONT_KEY = 'font';
 
-/** ProgressBar's `font_color` default (`default_theme.cpp:446`). */
-const PROGRESS_BAR_DEFAULT_FONT_COLOR = CONTROL_FONT_HOVER_COLOR;
-
-/** Resolves the percent label's font size/colour (override, else the ancestor Theme chain, else ProgressBar's own `Color(0.95, 0.95, 0.95)`). */
-export function progressBarTextTheme(
-  n: SolveNode,
-  props: ProgressBarProperties,
-  ctx: Pick<SolveContext, 'theme'>
-): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = {
-    fontSizePx: ctx.theme.fontSize,
-    color: PROGRESS_BAR_DEFAULT_FONT_COLOR,
-  };
-  return resolveTextTheme(n, props, PROGRESS_BAR_THEME_KEYS, defaults);
+/** Resolves the percent label's font size and colour: the override, else the ancestor Theme chain, else the default theme table. */
+export function progressBarTextTheme(n: SolveNode, props: ProgressBarProperties): ResolvedTextTheme {
+  return resolveTextTheme(n, props, PROGRESS_BAR_THEME_KEYS);
 }
 
 /**
@@ -131,16 +48,14 @@ export function progressBarTextTheme(
  */
 const progressBarMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ProgressBarProperties;
-  const background = n.styleBoxes.background ?? progressBarDefaultBackground(ctx.theme);
-  const fill = n.styleBoxes.fill ?? progressBarDefaultFill(ctx.theme);
-  const backgroundMargin = contentMarginSize(background);
-  const fillMargin = contentMarginSize(fill);
+  const backgroundMargin = contentMarginSize(requiredThemeItem(n.styleBoxes, 'background'));
+  const fillMargin = contentMarginSize(requiredThemeItem(n.styleBoxes, 'fill'));
   let width = Math.max(backgroundMargin.x, fillMargin.x);
   let height = Math.max(backgroundMargin.y, fillMargin.y);
 
   const showPercentage = props.showPercentage ?? true;
   if (showPercentage && ctx.measureText) {
-    const { fontSizePx } = progressBarTextTheme(n, props, ctx);
+    const { fontSizePx } = progressBarTextTheme(n, props);
     const fontMetrics = resolveNodeFontMetrics(n, PROGRESS_BAR_THEME_FONT_KEY);
     const layout = shapeText('100%', {
       fontSizePx,

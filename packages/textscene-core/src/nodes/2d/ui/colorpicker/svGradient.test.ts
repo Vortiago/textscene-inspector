@@ -2,30 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   svSquareBaseLayer,
   svSquareHueLayer,
-  hueStripGeometry,
+  verticalStripGeometry,
+  COLOR_HUE_STOPS,
   horizontalStripGeometry,
-  linearizeStops,
 } from './svGradient';
-
-describe('linearizeStops', () => {
-  // core/math/color.h:192-198, Color::srgb_to_linear: c < 0.04045 ? c/12.92 : pow((c+0.055)/1.055, 2.4).
-  it('converts each stop channel sRGB to linear, keeping alpha untouched', () => {
-    const [stop] = linearizeStops([{ r: 1, g: 0, b: 0.5, a: 0.25 }]);
-    expect(stop!.r).toBeCloseTo(1, 6);
-    expect(stop!.g).toBeCloseTo(0, 6);
-    expect(stop!.b).toBeCloseTo(0.21404, 5);
-    expect(stop!.a).toBe(0.25);
-  });
-
-  it('is 0 at 0 and preserves stop order/count', () => {
-    const stops = linearizeStops([
-      { r: 0, g: 0, b: 0, a: 1 },
-      { r: 1, g: 1, b: 1, a: 1 },
-    ]);
-    expect(stops).toHaveLength(2);
-    expect(stops[0]).toEqual({ r: 0, g: 0, b: 0, a: 1 });
-  });
-});
 
 describe('svSquareBaseLayer', () => {
   it('is white at the top corners and black at the bottom — color_picker_shape.cpp:243-249', () => {
@@ -57,25 +37,35 @@ describe('svSquareHueLayer', () => {
   });
 });
 
-describe('hueStripGeometry', () => {
+describe('verticalStripGeometry', () => {
   it('has 7 stops (14 vertices) and 6 quads (12 indices)', () => {
-    const g = hueStripGeometry(30, 256);
+    const g = verticalStripGeometry(30, 256, COLOR_HUE_STOPS);
     expect(g.positions).toHaveLength(7 * 2 * 3);
     expect(g.colors).toHaveLength(7 * 2 * 4);
     expect(g.indices).toHaveLength(6 * 2 * 3);
   });
 
   it('starts red at h=0 and returns to red at h=1 — default_theme.cpp:1104-1128', () => {
-    const g = hueStripGeometry(30, 256);
+    const g = verticalStripGeometry(30, 256, COLOR_HUE_STOPS);
     expect(g.colors.slice(0, 4)).toEqual([1, 0, 0, 1]);
     const lastStop = g.colors.length - 8;
     expect(g.colors.slice(lastStop, lastStop + 4)).toEqual([1, 0, 0, 1]);
   });
 
   it('runs top-to-bottom across the full height, y negated for three-space', () => {
-    const g = hueStripGeometry(30, 256);
+    const g = verticalStripGeometry(30, 256, COLOR_HUE_STOPS);
     const lastY = g.positions[g.positions.length - 2];
     expect(lastY).toBe(-256);
+  });
+
+  it('places a 3-stop value slider stop at half the height (color_picker_shape.cpp:1052-1069)', () => {
+    const white = { r: 1, g: 1, b: 1, a: 1 };
+    const grey = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
+    const black = { r: 0, g: 0, b: 0, a: 1 };
+    const g = verticalStripGeometry(30, 256, [white, grey, black]);
+    expect(g.positions.slice(6, 9)).toEqual([0, -128, 0]);
+    expect(g.colors.slice(8, 12)).toEqual([0.5, 0.5, 0.5, 1]);
+    expect(g.indices).toHaveLength(2 * 6);
   });
 });
 

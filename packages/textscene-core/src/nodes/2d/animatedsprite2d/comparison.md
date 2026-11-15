@@ -1,7 +1,6 @@
 ---
 type: AnimatedSprite2D
 category: 2D
-status: limitation
 fixture: unit-animatedsprite2d.tscn
 image: unit-animatedsprite2d
 renders_as: a textured quad
@@ -12,7 +11,15 @@ renders_as: a textured quad
 AnimatedSprite2D plays a `SpriteFrames` clip. The previewer draws the current frame as a
 textured quad, and its transport plays the clip while the node is selected (ADR-0012). With no
 `sprite_frames`, no animation or no frame texture, it draws nothing (`animated_sprite_2d.cpp:270-278`).
-A `sprite_frames` or frame texture that is set but fails to load draws a placeholder.
+A `sprite_frames` or frame texture that is set but fails to load draws nothing, as Godot does (`animated_sprite_2d.cpp:270-278`). Godot's loader leaves a property that names a missing file null (`resource_format_text.cpp:146-154`, `:288-289`).
+
+## Normal map
+<!-- compare: image=unit-animatedsprite2d-normal-map-flip status=done fixture=unit-animatedsprite2d-normal-map-flip.tscn -->
+
+A frame's CanvasTexture `normal_texture` and `specular_texture` shade the sprite under PointLight2D
+and DirectionalLight2D. The CanvasTexture's own `texture_filter` and `texture_repeat` win over the
+sprite's. `flip_h` and `flip_v` flip the normal with the frame
+(`renderer_canvas_cull.cpp:1638-1657`), so Flipped is lit from the left, as in Godot.
 
 ## Linting
 

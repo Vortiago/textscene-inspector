@@ -10,6 +10,7 @@ import type { LoadedFile, LoadedFont } from '../../resources/scopedResource';
 import type { SceneResources } from '../SceneResourcesContext';
 import { isClosedBrush, type ShadedBrush } from '../../nodes/3d/csg/brushManifold';
 import type { CsgMaterialAddress } from './csgMaterials';
+import type { SettledFonts } from '../controls/native/text/settledFonts';
 
 export interface CsgGeometryContext extends SceneResources {
   /**
@@ -21,6 +22,8 @@ export interface CsgGeometryContext extends SceneResources {
   loadedFont: LoadedFont;
   /** The theme and default font a shape's font lookup ends at. */
   projectFonts: ProjectFonts;
+  /** The faces of the fonts the preview loads, which a shape's build peeks for its font. */
+  settledFonts: SettledFonts;
   /** The project's `_get_locale()`, which a TextMesh with no `language` shapes in. */
   locale: string;
 }

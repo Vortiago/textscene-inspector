@@ -14,19 +14,6 @@ import type { Rgba } from '../../godot/math/math';
 
 const rgb = (r: number, g: number, b: number): Rgba => ({ r, g, b, a: 1 });
 
-/**
- * The `sky_material` a `Sky` points at, `SubResource("…")` or `ExtResource("…")`
- * verbatim. `Sky` is an indirection, not a fourth material. `undefined` for any
- * other type, so a caller can pass whatever `Environment.sky` resolved to.
- */
-export function skyMaterialRef(
-  type: string | undefined,
-  data: Record<string, string> | undefined
-): string | undefined {
-  if (type !== 'Sky') return undefined;
-  return data?.sky_material;
-}
-
 /** `Sky::ProcessMode` by its value (`scene/resources/sky.h:51-56`). */
 const PROCESS_MODES: readonly SkyProcessMode[] = ['automatic', 'quality', 'incremental', 'real-time'];
 

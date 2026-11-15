@@ -12,5 +12,5 @@ Rejected: an **autonomous loop** that plays every multi-frame sprite on load. Th
 ## Consequences
 
 - A third transport driver type beside AnimationPlayer (ADR-0011, ADR-0012) and the GLB driver (ADR-0014). The Animation tab appears for a selected AnimatedSprite2D too.
-- The scrubber is **time-based** (0 to the clip duration in seconds, like the other drivers). Godot's SpriteFrames panel is frame-indexed. A frame-indexed scrubber for sprites is deferred.
+- The scrubber is **time-based** (0 to the clip duration in seconds, like the other drivers). Godot's SpriteFrames panel is frame-indexed. A frame-indexed scrubber for sprites is deferred (#1837).
 - The default (stopped) render is the static authored frame, so it is byte-stable. Sprite-playback fixtures stay out of the visual-regression manifest while they play.

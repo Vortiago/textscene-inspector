@@ -1,29 +1,22 @@
 /**
- * Resolves an `ImageTexture3D` sub-resource to a `THREE.Data3DTexture`, rows from the top as every
+ * Builds the `THREE.Data3DTexture` of a decoded `ImageTexture3D`, rows from the top as every
  * density texture runs.
  */
 
 import * as THREE from 'three';
-import type { TscnInternalResource } from '../../../parser/types';
 import { dataTexture3D } from '../dataTexture3D';
-import {
-  resolveProceduralSubResource,
-  type ProceduralTextureResolution,
-} from '../resolveProceduralSubResource';
+import { rasterizedTexture, type ProceduralTextureResolution } from '../rasterizedTexture';
+import type { ImageTexture3DSource } from '../texture3d/types';
 import { decodeImageTexture3D } from './decode';
 
-export function resolveImageTexture3D(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
+export function imageTexture3D(
+  source: ImageTexture3DSource
 ): ProceduralTextureResolution<THREE.Data3DTexture> | null {
-  return resolveProceduralSubResource(ref, internalResources, 'ImageTexture3D', build);
+  return rasterizedTexture(source, 'ImageTexture3D', () => build(source));
 }
 
-function build(
-  properties: Record<string, string>,
-  resources: readonly TscnInternalResource[]
-): THREE.Data3DTexture | null {
-  const volume = decodeImageTexture3D(properties, resources);
+function build({ images }: ImageTexture3DSource): THREE.Data3DTexture | null {
+  const volume = decodeImageTexture3D(images);
   if (!volume) return null;
   return dataTexture3D(volume.texels, volume.width, volume.height, volume.depth, THREE.RGBAFormat);
 }

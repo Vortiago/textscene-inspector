@@ -29,7 +29,7 @@ import {
 import { decodeSeparationRayShape3D } from '../../../resources/shapes/separationrayshape3d';
 import { decodeSphereShape3D } from '../../../resources/shapes/sphereshape3d';
 import { decodeWorldBoundaryShape3D } from '../../../resources/shapes/worldboundaryshape3d';
-import type { TscnInternalResource } from '../../../parser/types';
+import type { Shape3DResource } from '../../../resources/shapes/shape3d';
 
 /**
  * Godot's `AABB::get_edge` (`aabb.cpp:357-416`): the 12 edges of `-size/2, size`, in index order.
@@ -228,11 +228,11 @@ function separationRayDebugLines(length: number): Float32Array {
 
 /**
  * The wireframe of a shape the previewer decodes synchronously. Null for `ConvexPolygonShape3D`,
- * whose lazy hull draws it, and for a type without a port, which the caller warns about.
+ * whose lazy hull draws it.
  *
  * @canonical A shape resource's debug wireframe segments
  */
-export function shapeDebugLines(shape: TscnInternalResource): Float32Array | null {
+export function shapeDebugLines(shape: Shape3DResource): Float32Array | null {
   switch (shape.type) {
     case 'BoxShape3D':
       return boxDebugLines(decodeBoxShape3D(shape.data).size);
@@ -254,7 +254,7 @@ export function shapeDebugLines(shape: TscnInternalResource): Float32Array | nul
       return separationRayDebugLines(decodeSeparationRayShape3D(shape.data).length);
     case 'ConcavePolygonShape3D':
       return concaveDebugLines(decodeConcavePolygonShape3D(shape.data).data);
-    default:
+    case 'ConvexPolygonShape3D':
       return null;
   }
 }

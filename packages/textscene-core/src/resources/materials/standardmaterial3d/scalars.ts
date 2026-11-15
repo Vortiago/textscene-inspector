@@ -6,7 +6,6 @@
 
 import * as THREE from 'three';
 import { godotBlendState } from './blendState';
-import { decodeStandardMaterial3D } from './decode';
 import { textureChannelMask } from '../../../godot/rendering/materials/textureChannel';
 import { CullMode } from '../../../godot/rendering/materials/cullMode';
 import type { StandardMaterial3DData, StandardMaterial3DScalars } from './types';
@@ -23,7 +22,8 @@ const SIDE: Readonly<Record<EnumValue<typeof CullMode>, THREE.Side>> = {
   [CullMode.DISABLED]: THREE.DoubleSide,
 };
 
-function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMaterial3DScalars {
+/** The renderer's view of a decoded StandardMaterial3D. */
+export function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMaterial3DScalars {
   return {
     ...godotBlendState(data.blendMode),
     color: data.albedo,
@@ -81,21 +81,8 @@ function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMateri
     anisotropy: data.anisotropy,
     transmission: data.transmission,
     refractionThickness: data.refractionThickness,
-    textureSlots: data.textureSlots,
-    nextPass: data.nextPass,
     grows: data.grows,
     growAmount: data.growAmount,
     readsStencil: data.readsStencil,
   };
-}
-
-/**
- * Raw Godot property strings → the scalars a material slot renders. The synchronous
- * entry point of every StandardMaterial3D-bearing node component. The caller resolves
- * external textures.
- */
-export function parseStandardMaterial3DScalars(
-  properties: Record<string, string>
-): StandardMaterial3DScalars {
-  return standardMaterial3DScalars(decodeStandardMaterial3D(properties));
 }

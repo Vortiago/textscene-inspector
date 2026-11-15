@@ -1,0 +1,37 @@
+; One variable: the Theme sets Button/icons/icon, so the buttons an AcceptDialog and a ConfirmationDialog build draw and grow by that icon.
+
+[gd_scene format=3]
+
+[sub_resource type="Gradient" id="G"]
+colors = PackedColorArray(1, 0.8, 0, 1, 1, 0, 0.6, 1)
+
+[sub_resource type="GradientTexture2D" id="T"]
+gradient = SubResource("G")
+width = 24
+height = 20
+
+[sub_resource type="Theme" id="Th"]
+Button/icons/icon = SubResource("T")
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Accept" type="AcceptDialog" parent="."]
+position = Vector2i(100, 100)
+visible = true
+theme = SubResource("Th")
+dialog_text = "Line one"
+
+[node name="Confirm" type="ConfirmationDialog" parent="."]
+position = Vector2i(500, 100)
+visible = true
+theme = SubResource("Th")
+dialog_text = "Line one"

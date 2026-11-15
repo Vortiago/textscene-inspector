@@ -1,12 +1,11 @@
 /**
  * `<HSplitContainer>`, the native (WebGL canvas) painter: it draws only the
- * grabber icon. `split_bar_background` (`default_theme.cpp:1275-1277`) is empty,
+ * grabber icon. The table's `HSplitContainer/split_bar_background` is empty,
  * and `shared/splitContainerSolver.ts`'s `ContainerLayoutFn` places the children.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { isSortableControl } from '../shared/fitChildInRect';
@@ -24,7 +23,7 @@ import { splitOffsetsOf, type SplitContainerProperties } from '../shared/splitCo
 
 export function HSplitContainer({
   solveNode,
-  tint,
+  childTint,
   rect,
   theme,
   renderOrder,
@@ -37,8 +36,7 @@ export function HSplitContainer({
   // Decided before the icon hook: `autohide` defaults true, and the hook order is
   // fixed, so this is what spares the common scene an image decode and a GPU texture.
   const sortable = solveNode.children.filter(isSortableControl);
-  const drawsGrabber =
-    sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
+  const drawsGrabber = sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants);
   const themeKey = splitGrabberThemeKey(solveNode.node.type, false);
   const texture = useNodeIcon(
     drawsGrabber ? solveNode.icons[themeKey] : undefined,
@@ -49,13 +47,10 @@ export function HSplitContainer({
     return null;
   }
 
-  const iconSize = splitGrabberIconSize(solveNode.node.type, false, solveNode.textureSlots);
+  const iconSize = splitGrabberIconSize(solveNode.node.type, false, solveNode.textureSlots, theme.scale);
   // `grabberExtent` takes the icon's width, as `separationOf` in
   // `shared/splitContainerSolver.ts` does, so the icon lands on the solved boundary.
-  const separation = resolveSplitSeparation(props, solveNode.constants, {
-    ...theme.widgets.splitContainer,
-    grabberExtent: iconSize.x,
-  });
+  const separation = resolveSplitSeparation(props, solveNode.constants, iconSize.x);
   // The solver hands over `computed_split_offset`, built from each child's full
   // `combined_minimum_size`, through a channel opened by reference. The fallback
   // reads only `custom_minimum_size`, but the layout always seals a boundary, and
@@ -83,16 +78,15 @@ export function HSplitContainer({
           iconSize
         );
         return (
-          <CanvasItemGroup key={i} position={[iconRect.x, -iconRect.y, 0]} renderOrder={renderOrder}>
-            <ControlQuad
-              renderOrder={renderOrder}
-              width={iconRect.w}
-              height={iconRect.h}
-              color={tint.color}
-              opacity={tint.opacity}
-              map={texture}
-            />
-          </CanvasItemGroup>
+          <PositionedIcon
+            key={i}
+            rect={iconRect}
+            texture={texture}
+            color={childTint.color}
+            opacity={childTint.opacity}
+            renderOrder={renderOrder}
+            canvasKey={renderOrder}
+          />
         );
       })}
     </>

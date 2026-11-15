@@ -14,6 +14,7 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import {
   combinedMinimumSize,
   createSolveContext,
+  normalizeContainerLayoutResult,
 } from '../../../../r3f/controls/native/controlRectSolver.js';
 import type { TextMeasurer } from '../../../../r3f/controls/native/solverRegistry.js';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree.js';
@@ -56,10 +57,10 @@ export function graphNodePorts(
   const childEntries = child.children.map((c) => ({ node: c, minSize: combinedMinimumSize(c, ctx) }));
   const contentRect: Rect2 = { x: 0, y: 0, w: outerSize.x, h: outerSize.y };
   const result = layoutFn(child, childEntries, contentRect, ctx);
-  const childRects = 'rects' in result ? result.rects : result;
+  const { rects: childRects } = normalizeContainerLayoutResult(result);
 
   const props = child.node.properties as GraphNodeProperties;
-  const { panel } = graphNodeStyles(child, theme);
+  const { panel } = graphNodeStyles(child);
   const bodyWidth = outerSize.x - panel.contentMargin.left - panel.contentMargin.right;
   const rows = [...graphNodeDrawRows(child, props, childRects, panel.contentMargin.left, bodyWidth)].sort(
     (a, b) => a.rawIndex - b.rawIndex

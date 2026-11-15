@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../../nodes/2d/ui/control/types';
 import { resolveControlLayout } from './controlAnchors';
+import { controlProps } from '../../nodes/2d/ui/control/testing/controlProps';
 
 const BEGIN = 0;
 const END = 1;
@@ -16,7 +17,7 @@ const BOTH = 2;
 const GATED_IN = [1, 3];
 
 function props(p: Partial<ControlProperties>): ControlProperties {
-  return { name: 'N', ...p };
+  return controlProps({ name: 'N', ...p });
 }
 
 const NO_MINIMUM = () => ({ x: 0, y: 0 });

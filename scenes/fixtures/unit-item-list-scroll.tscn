@@ -1,0 +1,60 @@
+[gd_scene format=3 uid="uid://unit_item_list_scroll"]
+
+; One variable: the rows overflow the list. The first list has six rows in 80 px (the vertical bar,
+; item_list.cpp:1854-1885), the second adds scroll_hint_mode BOTH (the bottom hint, :1708-1720),
+; and the third turns wraparound_items off, so four wide rows overflow sideways (the horizontal
+; bar, :1856-1860). The grabbers sit at the top and the left, since a .tscn stores no scroll value.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="VerticalBar" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 128.0
+offset_bottom = 88.0
+item_count = 6
+item_0/text = "Sword"
+item_1/text = "Shield"
+item_2/text = "Potion"
+item_3/text = "Bow"
+item_4/text = "Helmet"
+item_5/text = "Boots"
+
+[node name="BottomHint" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 136.0
+offset_top = 8.0
+offset_right = 256.0
+offset_bottom = 88.0
+scroll_hint_mode = 1
+item_count = 6
+item_0/text = "Sword"
+item_1/text = "Shield"
+item_2/text = "Potion"
+item_3/text = "Bow"
+item_4/text = "Helmet"
+item_5/text = "Boots"
+
+[node name="HorizontalBar" type="ItemList" parent="."]
+layout_mode = 1
+offset_left = 264.0
+offset_top = 8.0
+offset_right = 384.0
+offset_bottom = 88.0
+max_columns = 0
+wraparound_items = false
+item_count = 4
+item_0/text = "Healing potion"
+item_1/text = "Iron sword"
+item_2/text = "Wooden shield"
+item_3/text = "Leather boots"

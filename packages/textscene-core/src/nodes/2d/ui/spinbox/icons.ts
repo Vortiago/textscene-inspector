@@ -5,7 +5,7 @@
  * Licence: Godot Engine, MIT. See THIRD-PARTY-NOTICES.md.
  */
 
-import { svgDataUrl } from '../../../../r3f/controls/native/themeIcons';
+import { vendoredIcon } from '../../../../r3f/controls/native/themeIcons';
 
 /** `scene/theme/icons/value_up.svg` (16x8). */
 const VALUE_UP_B64 =
@@ -22,6 +22,6 @@ interface SpinBoxIcons {
 }
 
 export const SPIN_BOX_ICONS: SpinBoxIcons = {
-  up: svgDataUrl(VALUE_UP_B64),
-  down: svgDataUrl(VALUE_DOWN_B64),
+  up: vendoredIcon('value_up', VALUE_UP_B64),
+  down: vendoredIcon('value_down', VALUE_DOWN_B64),
 };

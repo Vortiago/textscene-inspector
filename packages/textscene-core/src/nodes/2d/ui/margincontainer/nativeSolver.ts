@@ -16,9 +16,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutFn, MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
 import { DEFAULT_SIZE_FLAGS } from '../../../../godot/scene/control';
-
-/** `default_theme.cpp:1252-1255`: MarginContainer's four margins default to 0, unscaled. */
-const DEFAULT_MARGIN = 0;
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 function props(n: SolveNode): ControlProperties {
   return n.node.properties as ControlProperties;
@@ -27,10 +25,10 @@ function props(n: SolveNode): ControlProperties {
 function marginsOf(n: SolveNode): { left: number; top: number; right: number; bottom: number } {
   const c = n.constants;
   return {
-    left: c.margin_left ?? DEFAULT_MARGIN,
-    top: c.margin_top ?? DEFAULT_MARGIN,
-    right: c.margin_right ?? DEFAULT_MARGIN,
-    bottom: c.margin_bottom ?? DEFAULT_MARGIN,
+    left: requiredThemeItem(c, 'margin_left'),
+    top: requiredThemeItem(c, 'margin_top'),
+    right: requiredThemeItem(c, 'margin_right'),
+    bottom: requiredThemeItem(c, 'margin_bottom'),
   };
 }
 

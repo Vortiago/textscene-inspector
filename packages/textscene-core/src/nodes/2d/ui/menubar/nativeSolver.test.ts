@@ -17,7 +17,7 @@ import {
   menuBarTitleShapes,
   type MenuBarTitle,
 } from './nativeSolver';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const MARGIN = 8; // content_margin 4, both sides.
@@ -40,7 +40,7 @@ function node(
   props: Partial<MenuBarProperties> = {},
   overrides: Partial<SolveNode> = {}
 ): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: 'Bar',
     node: {
@@ -51,7 +51,7 @@ function node(
       properties: { name: 'Bar', textDirection: 0, language: '', ...props } as MenuBarProperties,
     },
     ...overrides,
-  };
+  });
 }
 
 function ctx(withMeasurer = true): SolveContext {

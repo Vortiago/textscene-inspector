@@ -24,9 +24,10 @@ export {
   attachDiagnostics,
   clearDiagnostics,
   describeFailedRequests,
+  errorReport,
   loggedErrors,
 } from './preview/pageDiagnostics.mjs';
-export { readViewportMode, setDisplayToggle } from './preview/viewportProbes.mjs';
+export { FIT_QUIESCENCE_MS, readViewportMode, showDisplayOverlay } from './preview/viewportProbes.mjs';
 export { withPreviewBrowser } from './preview/session.mjs';
 export { targetShooter } from './preview/targetShot.mjs';
 export {

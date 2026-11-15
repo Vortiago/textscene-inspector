@@ -3,7 +3,21 @@
  * with Y negated once, and UVs under spriteFrame.ts's flipY=true convention.
  */
 import { describe, it, expect } from 'vitest';
-import { buildPaddedStandInGeometryArrays, buildTileGeometryArrays } from './tileGeometry';
+import {
+  buildPaddedStandInGeometryArrays,
+  buildTileGeometryArrays,
+  buildTileOrientations,
+} from './tileGeometry';
+import {
+  TILE_ORIENTATION_FLIP_H,
+  TILE_ORIENTATION_FLIP_V,
+  TILE_ORIENTATION_TRANSPOSE,
+} from './tileOrientationBits';
+import {
+  TILE_TRANSFORM_FLIP_H,
+  TILE_TRANSFORM_FLIP_V,
+  TILE_TRANSFORM_TRANSPOSE,
+} from '../../godot/scene/tileSet';
 import type { AtlasSourceModel, TileGrid } from './types';
 import { TileShape } from '../../godot/scene/tileSet';
 import type { DrawableCell } from './drawableCell';
@@ -167,5 +181,43 @@ describe('buildPaddedStandInGeometryArrays', () => {
   it('gives no tile bounds', () => {
     const { uvBounds } = buildPaddedStandInGeometryArrays([cell(0, 0)], padded, grid, 4, 4);
     expect(uvBounds).toBeNull();
+  });
+});
+
+describe('tile orientations', () => {
+  const FLIP_H = TILE_TRANSFORM_FLIP_H;
+  const FLIP_V = TILE_TRANSFORM_FLIP_V;
+  const TRANSPOSE = TILE_TRANSFORM_TRANSPOSE;
+  const BIT_H = TILE_ORIENTATION_FLIP_H;
+  const BIT_V = TILE_ORIENTATION_FLIP_V;
+  const BIT_T = TILE_ORIENTATION_TRANSPOSE;
+
+  /** The alternative bits of a cell, and the orientation bits all four vertices carry. */
+  const ORIENTATIONS: [string, number, number][] = [
+    ['untransformed', 0, 0],
+    ['flip h', FLIP_H, BIT_H],
+    ['flip v', FLIP_V, BIT_V],
+    ['flip h and v', FLIP_H | FLIP_V, BIT_H | BIT_V],
+    ['transpose', TRANSPOSE, BIT_T],
+    ['transpose and flip h', TRANSPOSE | FLIP_H, BIT_T | BIT_H],
+    ['transpose and flip v', TRANSPOSE | FLIP_V, BIT_T | BIT_V],
+    ['transpose and flip h and v', TRANSPOSE | FLIP_H | FLIP_V, BIT_T | BIT_H | BIT_V],
+  ];
+
+  const orientationsOf = (cells: DrawableCell[]) => buildTileOrientations(cells, source);
+
+  it.each(ORIENTATIONS)('gives each vertex of a %s cell its bits', (_name, alternativeId, bits) => {
+    const orientations = orientationsOf([drawableCellOf({ alternativeId })]);
+    expect(Array.from(orientations)).toEqual([bits, bits, bits, bits]);
+  });
+
+  it("composes the tile's own flip with the cell's, as the drawn rect does (tile_map_layer.cpp:2727-2774)", () => {
+    const flippedTile = drawableCellOf({ alternativeId: FLIP_H }, { flipH: true });
+    expect(Array.from(orientationsOf([flippedTile]))).toEqual([0, 0, 0, 0]);
+  });
+
+  it('gives each cell its own four vertices, in cell order', () => {
+    const orientations = orientationsOf([drawableCellOf({}), drawableCellOf({ alternativeId: FLIP_V })]);
+    expect(Array.from(orientations.slice(4))).toEqual([BIT_V, BIT_V, BIT_V, BIT_V]);
   });
 });

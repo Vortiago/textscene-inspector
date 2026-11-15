@@ -8,10 +8,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { defineChannel } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type {
   ContainerLayoutFn,
   MinimumSizeFn,
@@ -307,12 +309,6 @@ function splitContainerMinimumSize(
   return vertical ? { x: crossAxis, y: mainAxis } : { x: mainAxis, y: crossAxis };
 }
 
-/** The `NativeTheme.widgets.splitContainer` fields `resolveSplitSeparation` reads. */
-interface SplitSeparationTheme {
-  separation: number;
-  grabberExtent: number;
-}
-
 /**
  * `SplitContainer::_get_separation` (`split_container.cpp:305-316`) without the out-of-scope
  * `touch_dragger_enabled`: `0` for `DRAGGER_HIDDEN_COLLAPSED`, else the theme separation floored
@@ -322,46 +318,46 @@ interface SplitSeparationTheme {
 export function resolveSplitSeparation(
   props: SplitContainerProperties,
   constants: SolveNode['constants'],
-  theme: SplitSeparationTheme
+  /** The grabber icon's extent along the split axis. */
+  grabberExtent: number
 ): number {
   if (props.draggerVisibility === DRAGGER_HIDDEN_COLLAPSED) return 0;
-  const themeSeparation = constants.separation ?? theme.separation;
-  return Math.max(themeSeparation, theme.grabberExtent);
+  return Math.max(requiredThemeItem(constants, 'separation'), grabberExtent);
 }
 
 /**
  * `SplitContainer::_get_grabber_icon` (`split_container.cpp:281-292`): the `is_fixed` types
  * (HSplitContainer, VSplitContainer) register `"grabber"`, and the base `SplitContainer` only
- * `"h_grabber"`/`"v_grabber"` (`default_theme.cpp:1240-1247`). `nativeType` is the live node's
+ * `"h_grabber"`/`"v_grabber"` in the default theme. `nativeType` is the live node's
  * class, the key the walker's theme-chain lookup used for `SolveNode.icons`/`textureSlots`.
  */
 export function splitGrabberThemeKey(nativeType: string, vertical: boolean): string {
   return nativeType === 'SplitContainer' ? (vertical ? 'v_grabber' : 'h_grabber') : 'grabber';
 }
 
-/** `hsplitter.svg`/`vsplitter.svg`'s authored size (`native/themeIcons.ts`): 8px along the split axis, 48px across it. */
-function splitGrabberVendoredSize(vertical: boolean): Vector2 {
-  return vertical ? { x: 48, y: 8 } : { x: 8, y: 48 };
+/** `hsplitter.svg`/`vsplitter.svg`'s authored size (`native/themeIcons.ts`): 8px along the split axis, 48px across it, at the theme scale. */
+function splitGrabberVendoredSize(vertical: boolean, scale: number): Vector2 {
+  return scaledIconSizeOf(vertical ? { x: 48, y: 8 } : { x: 8, y: 48 }, scale);
 }
 
 /** The grabber icon's resolved size: themed (`SolveNode.textureSlots`, keyed by `splitGrabberThemeKey`) if a Theme touched it, else the vendored default. */
 export function splitGrabberIconSize(
   nativeType: string,
   vertical: boolean,
-  textureSlots: Readonly<Record<string, Vector2 | null>>
+  textureSlots: Readonly<Record<string, Vector2 | null>>,
+  scale: number
 ): Vector2 {
-  return textureSlots[splitGrabberThemeKey(nativeType, vertical)] ?? splitGrabberVendoredSize(vertical);
+  return (
+    textureSlots[splitGrabberThemeKey(nativeType, vertical)] ?? splitGrabberVendoredSize(vertical, scale)
+  );
 }
 
 function separationOf(n: SolveNode, ctx: SolveContext, vertical: boolean): number {
-  const iconSize = splitGrabberIconSize(n.node.type, vertical, n.textureSlots);
+  const iconSize = splitGrabberIconSize(n.node.type, vertical, n.textureSlots, ctx.theme.scale);
   // The along-axis extent only: `_get_separation`'s `MAX(theme_cache.separation,
   // vertical ? g->get_height() : g->get_width())` (`split_container.cpp:314-316`).
   const grabberExtent = vertical ? iconSize.y : iconSize.x;
-  return resolveSplitSeparation(n.node.properties as SplitContainerProperties, n.constants, {
-    ...ctx.theme.widgets.splitContainer,
-    grabberExtent,
-  });
+  return resolveSplitSeparation(n.node.properties as SplitContainerProperties, n.constants, grabberExtent);
 }
 
 /** `vertical` for a live node of any of the three split types. A `TextureSlotsFn` receives only the node, never the resolved flag. */
@@ -463,12 +459,6 @@ export function makeSplitContainerMinimumSize(vertical: boolean): MinimumSizeFn 
 
 // The grabber is the only chrome a SplitContainer draws.
 
-/** The `NativeTheme.widgets.splitContainer` fields the grabber-visibility test reads. */
-interface SplitGrabberTheme {
-  /** `default_theme.cpp:1264-1266`. `isSplitGrabberVisible` gates on it. */
-  autohide: boolean;
-}
-
 /**
  * `SplitContainerDragger::_notification(NOTIFICATION_DRAW)` (`split_container.cpp:260-273`) for
  * a still frame: `dragging || mouse_inside` is always false, so `dragger_visibility ==
@@ -476,17 +466,14 @@ interface SplitGrabberTheme {
  */
 export function isSplitGrabberVisible(
   props: SplitContainerProperties,
-  constants: SolveNode['constants'],
-  theme: SplitGrabberTheme
+  constants: SolveNode['constants']
 ): boolean {
   const draggerVisibility = props.draggerVisibility ?? DRAGGER_VISIBLE;
-  const autohideOverride = constants.autohide;
-  // `autohide` defaults to 1 on all three split types (`default_theme.cpp:1264-1266`), so
-  // without `theme_override_constants/autohide` the grabber is invisible. `pnpm ref:godot`
-  // reads the backdrop colour in the gap, never the grabber's grey.
-  const autohide = autohideOverride !== undefined ? autohideOverride !== 0 : theme.autohide;
+  // The table's `autohide` is 1 on all three split types, so an unthemed
+  // grabber is invisible. `pnpm ref:godot` reads the backdrop colour in the gap, never the grabber's grey.
+  const autohide = requiredThemeItem(constants, 'autohide') !== 0;
   // A collapsed container hides the dragger (`dragger->set_visible(!collapsed)`, `:726`), so no
-  // draw runs. `split_bar_background` is an empty stylebox (`default_theme.cpp:1275-1277`).
+  // draw runs. The table's `split_bar_background` is an empty StyleBox.
   return props.collapsed !== true && draggerVisibility === DRAGGER_VISIBLE && !autohide;
 }
 

@@ -56,6 +56,7 @@ exposure_multiplier = 2.0
 [node name="Root" type="Node2D"]
 
 [node name="Bright" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="Bright"]
 environment = SubResource("World")
@@ -65,6 +66,7 @@ environment = SubResource("Warm")
 attributes = SubResource("Bright")
 
 [node name="Plain" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="Plain"]
 environment = SubResource("Warm")
@@ -93,11 +95,13 @@ current = true
 ${viewedEnvironment}
 
 [node name="Warm" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="Warm"]
 environment = SubResource("Warm")
 
 [node name="Plain" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="Plain"]
 `;
@@ -111,6 +115,7 @@ ${TEAL_ENVIRONMENT}
 [node name="Root" type="Node2D"]
 
 [node name="Warm" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="Warm"]
 environment = SubResource("World")
@@ -119,11 +124,13 @@ environment = SubResource("World")
 environment = SubResource("Warm")
 
 [node name="Teal" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="Teal"]
 environment = SubResource("Teal")
 
 [node name="Plain" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="Plain"]
 `;

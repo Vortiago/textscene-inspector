@@ -11,10 +11,13 @@ import type { TscnNode, TscnInternalResource } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ControlProperties } from '../control/types';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { parseStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { SeparatorChrome } from './Component';
-import { NODE_PROPERTY } from '../../../../resources/useTexture2D';
 
 const RECT = { x: 0, y: 0, w: 100, h: 25 };
 
@@ -24,12 +27,12 @@ function sepNode(
   internalResources: readonly TscnInternalResource[] = []
 ): SolveNode {
   const node: TscnNode = controlNode('Sep', type, { name: 'Sep', ...properties });
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: 'Sep',
     node,
     resources: { externalResources: [], internalResources },
-  };
+  });
 }
 
 /** The wrapping group `SeparatorChrome` positions at the placement rect's own offset. */
@@ -78,7 +81,7 @@ describe('<SeparatorChrome>', () => {
     );
     // `SeparatorChrome` reads only `solveNode.styleBoxes.separator`, resolved here by the walk's own
     // StyleBox parser, not by hand.
-    node.styleBoxes = { separator: parseStyleBox('SubResource("Line_1")', [], resources, NODE_PROPERTY)! };
+    node.styleBoxes = { separator: parseStyleBox('SubResource("Line_1")', [], resources, true)! };
     const renderer = await ReactThreeTestRenderer.create(
       <SeparatorChrome
         {...painterEnv()}

@@ -5,6 +5,7 @@ import { woffFromSfnt } from '../../../r3f/controls/native/text/fontContainer.te
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext';
 import { NO_PROJECT_FONTS, type ProjectFonts } from '../../fonts/font/projectFonts';
+import { settledFontsOf } from '../../../r3f/controls/native/text/useSettledFont';
 import type { FontFileResource, FontResource } from '../../fonts/font/types';
 import type { ResolvableResource } from '../../scopedResource';
 import { NO_FILES, loadedFilesOf } from '../../testing/loadedFiles';
@@ -62,6 +63,7 @@ export function textMeshWith(
     loadedFile: NO_FILES,
     loadedFont: loadedFilesOf(fonts),
     projectFonts,
+    settledFonts: settledFontsOf(null),
     locale: '',
   };
 }

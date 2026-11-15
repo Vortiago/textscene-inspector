@@ -1,0 +1,35 @@
+; One variable: a PopupPanel whose panel casts a shadow insets the panel and its child to leave the shadow room.
+
+[gd_scene format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_shadow"]
+bg_color = Color(0.85, 0.85, 0.8, 1)
+content_margin_left = 6.0
+content_margin_top = 6.0
+content_margin_right = 6.0
+content_margin_bottom = 6.0
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_size = 8
+shadow_offset = Vector2(2, 3)
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Pop" type="PopupPanel" parent="."]
+position = Vector2i(80, 60)
+size = Vector2i(300, 200)
+visible = true
+theme_override_styles/panel = SubResource("StyleBoxFlat_shadow")
+
+[node name="Box" type="ColorRect" parent="Pop"]
+offset_right = 40.0
+offset_bottom = 40.0
+color = Color(0.9, 0.2, 0.2, 1)

@@ -28,6 +28,10 @@ The 2D canvas always draws through a `CanvasFrame`, whatever `msaa_2d` says.
 - The frame copies to the drawing buffer through one full-screen pass that reads the rows in
   reverse. The drawing buffer then shows the canvas upright. The frame profile times the pass as
   Canvas copy.
+- Without `transparent_background` or `transparent_bg`, the copy writes alpha 1
+  (`viewportTransfer`). Godot samples an opaque viewport with `swizzle_a = ONE`
+  (`texture_storage.cpp:3641-3642`), so a SUB or MUL item that lowers the alpha never shows what
+  lies behind the viewport. A 3D pass's tonemap writes alpha 1 the same way (`godotCompositor.ts`).
 - Passes that read `gl_FragCoord` or project through the camera, such as the window scissor and the
   canvas item lighting, run on the same flipped target. They need no change.
 

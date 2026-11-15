@@ -2,6 +2,7 @@
  * Readers for Godot's packed array slots, THREE-free: a flat float body, the three spellings
  * of a packed tuple slot, and the nested index arrays of a polygon list.
  */
+import type { Vector2 } from '../../godot/math/vector.js';
 import { parseGodotFloat } from '../../godot/variant/number.js';
 import { int32Elements } from '../../godot/variant/packedInt32.js';
 import { splitTopLevel } from '../../godot/string/string.js';
@@ -98,6 +99,18 @@ export const parsePackedVector3Array = float32Reader(packedTupleType('PackedVect
 
 /** A Godot `PackedVector2Array` slot as flat components. */
 export const parsePackedVector2Array = float32Reader(packedTupleType('PackedVector2Array', 2));
+
+/**
+ * The points of flat `PackedVector2Array` components, one per pair; a dangling component is dropped.
+ *
+ * @canonical Packed Vector2 components as points
+ */
+export function vector2Elements(components: Float32Array): Vector2[] {
+  return Array.from({ length: Math.floor(components.length / 2) }, (_, i) => ({
+    x: components[i * 2]!,
+    y: components[i * 2 + 1]!,
+  }));
+}
 
 /** A Godot `PackedColorArray` slot as flat components. */
 export const parsePackedColorArray = float32Reader(packedTupleType('PackedColorArray', 4));

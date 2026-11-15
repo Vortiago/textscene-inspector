@@ -1,8 +1,12 @@
+**Superseded in part by ADR-0066: every shadowed PointLight2D samples the polar map with
+renderer_rd's taps.** This record keeps why the map was ported and how `shadow_color` splits.
+ADR-0066 replaces its gate, its GLES3 tap kernel and its half-float linear texture state.
+
 # A filtered 2D shadow ports Godot's polar shadow map; NONE keeps the stencil
 
 - Status: Accepted
 - Related: ADR-0008 (invisible render intent), ADR-0025 (ported Godot code carries
-  Godot's MIT notice), `r3f/lighting2d/shadowPolarMap.ts`, `r3f/lighting2d/lightQuad.ts`,
+  Godot's MIT notice), `r3f/lighting2d/shadowMap/shadowPolarMap.ts`, `r3f/lighting2d/lightQuad.ts`,
   `r3f/lighting2d/shadowVolumes.ts`, `nodes/2d/pointlight2d/`.
 
 ## Context

@@ -1,8 +1,9 @@
 /**
  * `<GraphNode>`, the native (WebGL canvas) painter for `GraphNode::_notification(NOTIFICATION_DRAW)`
- * (`scene/gui/graph_node.cpp:621-703`) in source order: body panel, titlebar, title text, per-row
- * ports and slot boxes, resizer. Each colour composes with the walker's `tint` in sRGB, as in
- * `PanelChrome`, and `ControlCanvasWalker` owns `visible`, `children` and the transform.
+ * (`scene/gui/graph_node.cpp:621-703`) in source order: body panel, titlebar, per-row ports and slot
+ * boxes, resizer. The title is an internal Label (`../graphelement/graphTitlebar.ts`). Each colour
+ * composes with the walker's `tint` in sRGB, as in `PanelChrome`, and `ControlCanvasWalker` owns
+ * `visible`, `children` and the transform.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -15,49 +16,37 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { useNodeReference } from '../../../../resources/reading';
+import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import {
-  resolveTitleFontTheme,
-  shapeTitleText,
-  layoutLabelLines,
-  titlebarGeometry,
-} from '../graphelement/graphTitlebar';
-import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { titlebarAndBodyRects, titlebarBandHeightChannel } from '../graphelement/graphTitlebar';
 import {
   GRAPH_PORT_ICON,
   GRAPH_PORT_ICON_SIZE,
   RESIZER_SE_ICON,
   RESIZER_SE_ICON_SIZE,
 } from '../graphelement/graphIcons';
-import {
-  GRAPH_NODE_TITLE_DEFAULT_COLOR,
-  GRAPH_NODE_TITLE_VARIATION,
-  graphNodeDrawRows,
-  graphNodeStyles,
-  graphNodeTitleTextMin,
-  portHOffsetOf,
-  rightPortX,
-} from './nativeSolver';
+import type { Vector2 } from '../../../../godot/math/vector';
+import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
+import { graphNodeDrawRows, graphNodeStyles, portHOffsetOf, rightPortX } from './nativeSolver';
 import type { GraphNodeProperties } from './types';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 
 /** Composes `own` (raw sRGB) with a widget's base colour, then converts the result to linear. */
 function useTintedColor(own: Rgba, base: Rgba): { color: THREE.Color; opacity: number } {
   const combined = useMemo(() => multiplyModulate(own, base), [own, base]);
-  const color = useGodotLinearColor(combined);
+  const color = useItemLinearColor(combined);
   return { color, opacity: combined.a };
 }
 
 interface PortProps {
   solveNode: SolveNode;
+  /** The default port icon's size at the theme scale, for a port with no icon of its own. */
+  defaultSize: Vector2;
   iconRef: string | undefined;
   slotColor: Rgba;
   tintOwn: Rgba;
@@ -68,25 +57,31 @@ interface PortProps {
 }
 
 /** One port icon. A dedicated component so its `useTexture2D` call keeps a stable hook count across a dynamic slot count. */
-function GraphNodePort({ solveNode, iconRef, slotColor, tintOwn, x, y, renderOrder }: PortProps) {
-  const { externalResources, internalResources } = solveNode.resources;
-  const custom = useTexture2D(iconRef, externalResources, internalResources);
+function GraphNodePort({
+  solveNode,
+  defaultSize,
+  iconRef,
+  slotColor,
+  tintOwn,
+  x,
+  y,
+  renderOrder,
+}: PortProps) {
+  const custom = useTexture2D(useNodeReference(iconRef, solveNode.resources));
   const defaultTexture = useNodeIcon(solveNode.icons.port, GRAPH_PORT_ICON);
   const texture = custom.texture ?? defaultTexture;
-  const size = custom.size ? { x: custom.size.width, y: custom.size.height } : GRAPH_PORT_ICON_SIZE;
+  const size = custom.size ? { x: custom.size.width, y: custom.size.height } : defaultSize;
   const { color, opacity } = useTintedColor(tintOwn, slotColor);
 
   return (
-    <CanvasItemGroup position={[x - size.x / 2, -(y - size.y / 2), 0]}>
-      <ControlQuad
-        width={size.x}
-        height={size.y}
-        color={color}
-        opacity={opacity}
-        map={texture}
-        renderOrder={renderOrder}
-      />
-    </CanvasItemGroup>
+    <PositionedIcon
+      rect={{ x: x - size.x / 2, y: y - size.y / 2, w: size.x, h: size.y }}
+      texture={texture}
+      color={color}
+      opacity={opacity}
+      renderOrder={renderOrder}
+      canvasKey={renderOrder}
+    />
   );
 }
 
@@ -97,60 +92,17 @@ export function GraphNode({
   theme,
   renderOrder,
   childRects,
+  meta,
 }: NativeControlComponentProps) {
   const props = painterView<GraphNodeProperties>(solveNode);
-  // `<TextRun>` builds its own material, so it takes the ambient planes as a
-  // prop rather than reading them (`nativeClipCoverage.test.tsx`'s own doc).
-  const clippingPlanes = useControlClipPlanes();
   const selected = props.selected === true;
-  const styles = graphNodeStyles(solveNode, theme);
+  const styles = graphNodeStyles(solveNode);
+  const portSize = scaledIconSizeOf(GRAPH_PORT_ICON_SIZE, theme.scale);
+  const resizerSize = scaledIconSizeOf(RESIZER_SE_ICON_SIZE, theme.scale);
   const panelStyle = selected ? styles.panelSelected : styles.panel;
   const titlebarStyle = selected ? styles.titlebarSelected : styles.titlebar;
 
-  const textMin = graphNodeTitleTextMin(solveNode, theme);
-  const titlebarBand = useMemo(
-    () => titlebarGeometry(rect.w, textMin.y, styles.titlebar),
-    [rect.w, textMin.y, styles.titlebar]
-  );
-  const bodyRect = {
-    x: 0,
-    y: titlebarBand.rect.h,
-    w: rect.w,
-    h: Math.max(0, rect.h - titlebarBand.rect.h),
-  };
-
-  const title = props.title ?? '';
-  const fontTheme = useMemo(
-    () =>
-      resolveTitleFontTheme(
-        solveNode,
-        GRAPH_NODE_TITLE_VARIATION,
-        theme.fontSize,
-        GRAPH_NODE_TITLE_DEFAULT_COLOR
-      ),
-    [solveNode, theme.fontSize]
-  );
-  const titleLayout = useMemo(
-    () => (title.length > 0 ? shapeTitleText(title, fontTheme) : null),
-    [title, fontTheme]
-  );
-  const titlePlacements = useMemo(
-    () =>
-      titleLayout
-        ? layoutLabelLines(
-            titleLayout,
-            titlebarBand.contentRect.w,
-            titlebarBand.contentRect.h,
-            undefined,
-            undefined
-          )
-        : [],
-    [titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h]
-  );
-  const titleLineLayouts = useMemo(
-    () => (titleLayout ? titlePlacements.map((p) => soloLineLayout(p.line, titleLayout)) : []),
-    [titlePlacements, titleLayout]
-  );
+  const { titlebar, body: bodyRect } = titlebarAndBodyRects(rect, titlebarBandHeightChannel.open(meta) ?? 0);
 
   // `selected_slot` has no `ADD_PROPERTY` and only input changes it (`graph_node.cpp:409-538`), so
   // it stays -1 on load and the `slot_index == selected_slot` branch (`:670-683`) never draws.
@@ -167,17 +119,11 @@ export function GraphNode({
   );
   const portHOffset = portHOffsetOf(solveNode.constants);
 
-  const titleTintColor = useMemo(
-    () => multiplyModulate(tint.own, fontTheme.color),
-    [tint.own, fontTheme.color]
-  );
-
   const resizerTexture = useNodeIcon(
     props.resizable === true ? solveNode.icons.resizer : undefined,
     props.resizable === true ? RESIZER_SE_ICON : null
   );
-  // `resizer_color` defaults to `control_font_color` (`default_theme.cpp:808`).
-  const resizerTint = useTintedColor(tint.own, CONTROL_FONT_COLOR);
+  const resizerTint = useTintedColor(tint.own, requiredThemeItem(solveNode.colors, 'resizer_color'));
 
   return (
     <>
@@ -187,32 +133,7 @@ export function GraphNode({
       <CanvasItemGroup position={[bodyRect.x, -bodyRect.y, 0]}>
         <StyleBoxQuad styleBox={panelStyle} color={tint.own} rect={bodyRect} renderOrder={renderOrder} />
       </CanvasItemGroup>
-      <StyleBoxQuad
-        styleBox={titlebarStyle}
-        color={tint.own}
-        rect={titlebarBand.rect}
-        renderOrder={renderOrder}
-      />
-
-      {titleLayout &&
-        titlePlacements.map((placement, i) => (
-          <CanvasItemGroup
-            key={i}
-            position={[
-              titlebarBand.contentRect.x + placement.x,
-              -(titlebarBand.contentRect.y + placement.y),
-              0,
-            ]}
-          >
-            <TextRun
-              layout={titleLineLayouts[i]!}
-              fontSizePx={fontTheme.fontSizePx}
-              tint={titleTintColor}
-              clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder}
-            />
-          </CanvasItemGroup>
-        ))}
+      <StyleBoxQuad styleBox={titlebarStyle} color={tint.own} rect={titlebar} renderOrder={renderOrder} />
 
       {rows.map((row) => (
         <Fragment key={row.rawIndex}>
@@ -229,6 +150,7 @@ export function GraphNode({
           {row.slot.leftEnabled && (
             <GraphNodePort
               solveNode={solveNode}
+              defaultSize={portSize}
               iconRef={row.slot.leftIcon}
               slotColor={row.slot.leftColor}
               tintOwn={tint.own}
@@ -240,6 +162,7 @@ export function GraphNode({
           {row.slot.rightEnabled && (
             <GraphNodePort
               solveNode={solveNode}
+              defaultSize={portSize}
               iconRef={row.slot.rightIcon}
               slotColor={row.slot.rightColor}
               tintOwn={tint.own}
@@ -251,16 +174,19 @@ export function GraphNode({
         </Fragment>
       ))}
       {resizerTexture && props.resizable === true && (
-        <CanvasItemGroup position={[rect.w - RESIZER_SE_ICON_SIZE.x, -(rect.h - RESIZER_SE_ICON_SIZE.y), 0]}>
-          <ControlQuad
-            width={RESIZER_SE_ICON_SIZE.x}
-            height={RESIZER_SE_ICON_SIZE.y}
-            color={resizerTint.color}
-            opacity={resizerTint.opacity}
-            map={resizerTexture}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
+        <PositionedIcon
+          rect={{
+            x: rect.w - resizerSize.x,
+            y: rect.h - resizerSize.y,
+            w: resizerSize.x,
+            h: resizerSize.y,
+          }}
+          texture={resizerTexture}
+          color={resizerTint.color}
+          opacity={resizerTint.opacity}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
+        />
       )}
     </>
   );

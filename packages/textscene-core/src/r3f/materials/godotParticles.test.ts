@@ -6,7 +6,7 @@ import { drawDepthInjections } from './depthInjections';
 import type { ProgramShader } from '../materialProgramInputs';
 import { SRGB_VERTEX_COLOR } from './godotVertexColor';
 import { programShader, type ProgramName } from '../testing/patchedFragment';
-import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
+import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars.testkit';
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { PARTICLES_ANIM_DEFAULTS } from '../../resources/materials/standardmaterial3d/types';

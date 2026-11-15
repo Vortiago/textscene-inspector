@@ -1,0 +1,54 @@
+[gd_scene load_steps=1 format=3 uid="uid://unitgrapheditzoomout"]
+
+; GraphEdit at zoom 0.5. `_update_scroll_offset` sets each GraphElement child's scale to
+; (zoom, zoom) (graph_edit.cpp:446-451), so a GraphNode and a GraphFrame draw their chrome, text
+; and ports at 0.5 times their authored size. The connection already ends on the scaled ports.
+; The frame lies clear of the connection, so only the child scale differs from zoom 1. No other
+; scene draws a GraphElement away from zoom 1, so only this pair shows a regression in that scale.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Graph" type="GraphEdit" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 408.0
+offset_bottom = 328.0
+zoom = 0.5
+connections = [{ "from_node": &"Source", "from_port": 0, "to_node": &"Sink", "to_port": 0, "keep_alive": true }]
+
+[node name="Source" type="GraphNode" parent="Graph"]
+offset_right = 120.0
+offset_bottom = 64.0
+position_offset = Vector2(40, 56)
+title = "Add"
+slot/0/right_enabled = true
+slot/0/right_color = Color(0.4, 0.7, 1, 1)
+
+[node name="Value" type="Label" parent="Graph/Source"]
+layout_mode = 2
+text = "Value"
+
+[node name="Sink" type="GraphNode" parent="Graph"]
+offset_right = 120.0
+offset_bottom = 64.0
+position_offset = Vector2(220, 56)
+title = "Print"
+slot/0/left_enabled = true
+slot/0/left_color = Color(0.4, 0.7, 1, 1)
+
+[node name="Result" type="Label" parent="Graph/Sink"]
+layout_mode = 2
+text = "Result"
+
+[node name="Frame" type="GraphFrame" parent="Graph"]
+offset_right = 260.0
+offset_bottom = 80.0
+position_offset = Vector2(40, 170)
+title = "Group"
+autoshrink_enabled = false
+tint_color_enabled = true
+tint_color = Color(0.2, 0.7, 0.2, 1)

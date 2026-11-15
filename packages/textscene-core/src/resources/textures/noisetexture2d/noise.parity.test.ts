@@ -6,13 +6,13 @@
  */
 import { describe, expect, it } from 'vitest';
 import { noiseSampler } from '../../noise/image/noiseSampler';
-import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
+import { fastNoiseLiteOf } from '../../noise/fastnoiselite/fastNoiseLite.testkit';
 
 describe('FastNoiseLite parity with Godot 4.6.3', () => {
   it('matches the engine for a resource that authors nothing (pure defaults)', () => {
     // A bare `[sub_resource type="FastNoiseLite"]`: every value comes from Godot's
     // constructor, not the library's.
-    const sample = noiseSampler(decodeFastNoiseLite({}));
+    const sample = noiseSampler(fastNoiseLiteOf({}));
     expect(sample(0, 0)).toBeCloseTo(0.0, 9);
     expect(sample(3, 7)).toBeCloseTo(0.1378282607, 6);
     expect(sample(64, 64)).toBeCloseTo(-0.1539776474, 6);
@@ -21,7 +21,7 @@ describe('FastNoiseLite parity with Godot 4.6.3', () => {
 
   it('matches the engine for the ice.tres albedo generator (ridged simplex)', () => {
     const sample = noiseSampler(
-      decodeFastNoiseLite({ frequency: '0.003', fractal_type: '2', fractal_lacunarity: '2.5' })
+      fastNoiseLiteOf({ frequency: '0.003', fractal_type: '2', fractal_lacunarity: '2.5' })
     );
     expect(sample(0, 0)).toBeCloseTo(1.0, 9);
     expect(sample(1, 0)).toBeCloseTo(0.9455099106, 6);
@@ -35,7 +35,7 @@ describe('FastNoiseLite parity with Godot 4.6.3', () => {
     // Pins the distance-function default: the library's EuclideanSq misses these,
     // Godot's Euclidean hits them.
     const sample = noiseSampler(
-      decodeFastNoiseLite({
+      fastNoiseLiteOf({
         noise_type: '2',
         seed: '7',
         frequency: '0.05',
@@ -50,7 +50,7 @@ describe('FastNoiseLite parity with Godot 4.6.3', () => {
 
   it('matches the engine for weighted fBm Perlin', () => {
     const sample = noiseSampler(
-      decodeFastNoiseLite({
+      fastNoiseLiteOf({
         noise_type: '3',
         seed: '42',
         frequency: '0.02',
@@ -67,7 +67,7 @@ describe('FastNoiseLite parity with Godot 4.6.3', () => {
 
   it('matches the engine with a sample offset applied', () => {
     // `get_noise_2d` adds `offset` before generating (fastnoise_lite.cpp:318-325).
-    const sample = noiseSampler(decodeFastNoiseLite({ noise_type: '5', offset: 'Vector3(12, -5, 0)' }));
+    const sample = noiseSampler(fastNoiseLiteOf({ noise_type: '5', offset: 'Vector3(12, -5, 0)' }));
     expect(sample(0, 0)).toBeCloseTo(0.1600944102, 6);
     expect(sample(9, 9)).toBeCloseTo(0.1846490502, 6);
   });
@@ -79,7 +79,7 @@ describe('FastNoiseLite domain warp parity with Godot 4.6.3', () => {
   // (fastnoise_lite.cpp:318-325).
   const warped = (properties: Record<string, string>) =>
     noiseSampler(
-      decodeFastNoiseLite({
+      fastNoiseLiteOf({
         seed: '3',
         frequency: '0.04',
         offset: 'Vector3(5, -2, 1)',
@@ -125,10 +125,8 @@ describe('FastNoiseLite domain warp parity with Godot 4.6.3', () => {
   });
 
   it('leaves the position unwarped when the warp is off (edge case)', () => {
-    const off = noiseSampler(
-      decodeFastNoiseLite({ seed: '3', frequency: '0.04', domain_warp_amplitude: '30' })
-    );
-    const plain = noiseSampler(decodeFastNoiseLite({ seed: '3', frequency: '0.04' }));
+    const off = noiseSampler(fastNoiseLiteOf({ seed: '3', frequency: '0.04', domain_warp_amplitude: '30' }));
+    const plain = noiseSampler(fastNoiseLiteOf({ seed: '3', frequency: '0.04' }));
     expect(off(3, 7)).toBe(plain(3, 7));
   });
 });

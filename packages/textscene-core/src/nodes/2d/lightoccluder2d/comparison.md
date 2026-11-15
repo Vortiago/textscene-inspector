@@ -43,7 +43,8 @@ same blue behind the occluder.
 
 Under PCF5 or PCF13 Godot averages taps offset in angle around the light, so the same
 occluder casts a stepped penumbra that widens with distance. The filter belongs to the
-light, so the PointLight2D sheet shows it.
+light, so the PointLight2D sheet shows it, with the unfiltered staircase of bins far from
+the light.
 
 ## Linting
 
@@ -74,5 +75,3 @@ warns and falls back to `1` for either, and an unparseable `sdf_collision` falls
   built for particle collision or SDF-lit materials.
 - **Editor only** The occluder outline draws when the Gizmos toggle is on, so a still render shows none,
   as Godot's runtime does.
-- **Approximated** Under a `shadow_filter` a tap lands in one of 2048 polar bins, so a
-  boundary at a glancing angle can sit one bin from Godot's.

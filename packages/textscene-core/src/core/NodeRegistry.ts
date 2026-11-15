@@ -1,9 +1,22 @@
 /**
+ * The override a merged property map holds. Godot runs the base's setters, then the override's in
+ * its own file order (`packed_scene.cpp:264`, `:369-492`), so a setter that reads another property needs
+ * what the base left and which keys the override writes.
+ */
+export interface OverrideLayer<Properties> {
+  /** The properties the node held before the override. */
+  held: Properties;
+  /** The keys the override writes, in its file's order. */
+  written: Record<string, string>;
+}
+
+/**
  * The registry of TSCN node types. Each type self-registers a parser, which turns snake_case
  * body properties into its typed shape (`material_override` → `materialOverride`), and an
  * optional formatter for `<NodeDetailsPanel>`. Rendering lives in `r3f/NodeComponentRegistry.ts`.
  */
 
+import type { ChildVisibilityFn } from './childVisibility';
 import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils';
 import { headingIndexField } from '../parser/rawNode';
 import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/scene/packedScene';
@@ -28,12 +41,23 @@ export interface NodeTypeRegistration {
   /** Node type name, such as 'MeshInstance3D' or 'Node3D'. */
   typeName: string;
 
-  /** Parse heading and properties into node properties object. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic registry supports any node property type
-  parser: (heading: ParsedHeading, properties: Record<string, string>) => any;
+  /**
+   * Parse heading and properties into node properties object. `override` is present where
+   * `properties` is a base's map with an override's keys layered on.
+   */
+  parser: (
+    heading: ParsedHeading,
+    properties: Record<string, string>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic registry supports any node property type
+    override?: OverrideLayer<any>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic registry supports any node property type
+  ) => any;
 
   /** Optional property formatter for custom details panel display */
   propertyFormatter?: PropertyFormatter;
+
+  /** The `visible` the node writes onto its children, for a container that writes one. */
+  writesChildVisibility?: ChildVisibilityFn;
 }
 
 class NodeRegistry {
@@ -61,6 +85,11 @@ class NodeRegistry {
 
   getRegistration(typeName: string): NodeTypeRegistration | null {
     return this.registrations.get(typeName) ?? null;
+  }
+
+  /** The `visible` a node of `typeName` writes onto its children, or undefined for one that writes none. */
+  childVisibility(typeName: string): ChildVisibilityFn | undefined {
+    return this.registrations.get(typeName)?.writesChildVisibility;
   }
 
   getAllTypeNames(): string[] {

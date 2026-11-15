@@ -1,0 +1,70 @@
+; one variable: the colour the check family draws its check in, `checkbox_checked_color` and
+; `checkbox_unchecked_color` for a CheckBox, `button_checked_color` and `button_unchecked_color` for a
+; CheckButton (check_box.cpp:139-143, check_button.cpp:142-146). No other scene themes these colours.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="CheckBoxChecked" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+theme_override_colors/checkbox_checked_color = Color(1, 0.4, 0.2, 1)
+theme_override_colors/checkbox_unchecked_color = Color(0.2, 1, 0.4, 1)
+button_pressed = true
+text = "Checked"
+
+[node name="CheckBoxUnchecked" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 60.0
+theme_override_colors/checkbox_checked_color = Color(1, 0.4, 0.2, 1)
+theme_override_colors/checkbox_unchecked_color = Color(0.2, 1, 0.4, 1)
+text = "Unchecked"
+
+[node name="CheckBoxDisabled" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 100.0
+theme_override_colors/checkbox_checked_color = Color(1, 0.4, 0.2, 1)
+disabled = true
+button_pressed = true
+text = "Disabled"
+
+[node name="CheckBoxHalfAlpha" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 140.0
+theme_override_colors/checkbox_checked_color = Color(1, 0.4, 0.2, 0.5)
+button_pressed = true
+text = "Half alpha"
+
+[node name="CheckButtonChecked" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 220.0
+offset_top = 20.0
+theme_override_colors/button_checked_color = Color(1, 0.4, 0.2, 1)
+theme_override_colors/button_unchecked_color = Color(0.2, 1, 0.4, 1)
+button_pressed = true
+text = "Checked"
+
+[node name="CheckButtonUnchecked" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 220.0
+offset_top = 60.0
+theme_override_colors/button_checked_color = Color(1, 0.4, 0.2, 1)
+theme_override_colors/button_unchecked_color = Color(0.2, 1, 0.4, 1)
+text = "Unchecked"
+
+[node name="CheckButtonDisabled" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 220.0
+offset_top = 100.0
+theme_override_colors/button_unchecked_color = Color(0.2, 1, 0.4, 1)
+disabled = true
+text = "Disabled"

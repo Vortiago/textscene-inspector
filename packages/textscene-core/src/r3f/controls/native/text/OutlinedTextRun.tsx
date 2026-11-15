@@ -21,14 +21,17 @@ export function textLayerRenderOrder(renderOrder: number, index: number, count: 
   return renderOrder + index / count;
 }
 
-/** The outline theme of `n` multiplied by the Control's own tint, in sRGB, as `<TextRun>` converts it once. */
+/** `outline` multiplied by the Control's own tint, in sRGB, as `<TextRun>` converts it once. */
+export function useTintedOutline({ color, sizePx }: TextOutlineTheme, ownTint: Rgba): TextOutlineTheme {
+  return useMemo(() => ({ color: multiplyModulate(color, ownTint), sizePx }), [color, sizePx, ownTint]);
+}
+
+/** The outline theme of `n`, tinted by {@link useTintedOutline}. */
 export function useTintedTextOutline(
   n: Pick<ShareNode, 'colors' | 'constants'>,
-  ownTint: Rgba,
-  defaultColor?: Rgba
+  ownTint: Rgba
 ): TextOutlineTheme {
-  const { color, sizePx } = resolveTextOutline(n, defaultColor);
-  return useMemo(() => ({ color: multiplyModulate(color, ownTint), sizePx }), [color, sizePx, ownTint]);
+  return useTintedOutline(resolveTextOutline(n), ownTint);
 }
 
 type RunLookProps = Pick<TextRunProps, 'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'>;
@@ -46,7 +49,7 @@ export function OutlineRingRun({ sizePx, ...run }: OutlineRingRunProps) {
   return <TextRun {...run} strokeWidthPx={outlineStrokeWidthPx(sizePx)} />;
 }
 
-type OutlinedTextRunProps = RunLookProps & {
+export type OutlinedTextRunProps = RunLookProps & {
   /** Already tinted. */
   outline: TextOutlineTheme;
 };
@@ -77,8 +80,19 @@ export function TextOutlineRing({ layout, outline, ...run }: TextOutlineRingProp
   return <OutlineRingRun {...run} layout={ringLayout} tint={outline.color} sizePx={outline.sizePx} />;
 }
 
+/** The layers of an outlined run with a ring: the ring, then the fill. */
+const OUTLINED_RUN_LAYERS = 2;
+
+/**
+ * The render order of what a Control draws over its outlined run, as LinkButton draws its
+ * underline after the text (`link_button.cpp:292-313`): above every layer of the run.
+ */
+export function aboveOutlinedRunRenderOrder(renderOrder: number): number {
+  return textLayerRenderOrder(renderOrder, OUTLINED_RUN_LAYERS, OUTLINED_RUN_LAYERS + 1);
+}
+
 export function OutlinedTextRun({ layout, outline, renderOrder = 0, ...run }: OutlinedTextRunProps) {
-  const layerCount = hasOutlineRing(outline) ? 2 : 1;
+  const layerCount = hasOutlineRing(outline) ? OUTLINED_RUN_LAYERS : 1;
   return (
     <>
       <TextOutlineRing

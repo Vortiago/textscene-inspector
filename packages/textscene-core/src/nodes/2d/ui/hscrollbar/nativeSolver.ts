@@ -7,8 +7,9 @@
 
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
+import { scrollBarBoxes } from '../shared/scrollBarBoxes';
 import { scrollBarMinimumSize } from '../shared/scrollBarSolver';
 
-const hScrollBarMinimumSize: MinimumSizeFn = (_n, ctx) => scrollBarMinimumSize(false, ctx.theme);
+const hScrollBarMinimumSize: MinimumSizeFn = (n) => scrollBarMinimumSize(false, scrollBarBoxes(n.styleBoxes));
 
 controlSolverRegistry.registerMinimumSize('HScrollBar', hScrollBarMinimumSize);

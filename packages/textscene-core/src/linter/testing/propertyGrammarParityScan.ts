@@ -68,7 +68,7 @@ export function findSliceDirs(dir: string): string[] {
  * Scrape `properties.X`, `properties['X']` and `properties[FAMILY.countKey.key]` accesses from a
  * parser source, the last through the family `propertyListFamilies.ts` declares.
  */
-export function scrapeParserProps(src: string): Set<string> {
+export function scrapeParserProps(src: string, comparesKeys = false): Set<string> {
   const props = new Set<string>();
   // properties.identifier
   const dotRe = /\bproperties\.([a-zA-Z_][a-zA-Z0-9_]*)/g;
@@ -77,6 +77,12 @@ export function scrapeParserProps(src: string): Set<string> {
   // properties['key'] or properties["key"]
   const bracketRe = /\bproperties\[['"]([^'"]+)['"]\]/g;
   while ((m = bracketRe.exec(src)) !== null) props.add(m[1]!);
+  // A slice parser that replays the lines in file order tests each key: `key === 'file_mode'`.
+  const keyCompareRe = /\bkey === '([^']+)'/g;
+  while (comparesKeys && (m = keyCompareRe.exec(src)) !== null) props.add(m[1]!);
+  // An indexed family it reads through `indexedKeyRegex('^option_(#)/…')` is the validator's `option_#/*`.
+  const indexedRe = /\bindexedKeyRegex\('\^([a-z_]+)\(#\)\//g;
+  while ((m = indexedRe.exec(src)) !== null) props.add(`${m[1]}#/*`);
   const countKeyRe = /\bproperties\[([A-Z][A-Z0-9_]*)\.countKey\.key\]/g;
   while ((m = countKeyRe.exec(src)) !== null) props.add(familyCountKey(m[1]!));
   return props;
@@ -112,9 +118,11 @@ function relativeImports(src: string): { names: string[]; specifier: string }[] 
  */
 export function scrapeParserReads(file: string, seen = new Set<string>()): Set<string> {
   if (seen.has(file)) return new Set();
+  // Only the slice's own parser: a helper it calls compares keys for a family another type validates.
+  const isSliceParser = seen.size === 0;
   seen.add(file);
   const src = readFileSync(file, 'utf8');
-  const reads = scrapeParserProps(src);
+  const reads = scrapeParserProps(src, isSliceParser);
   for (const { names, specifier } of relativeImports(src)) {
     for (const name of names) {
       if (!name || !new RegExp(`\\b${name}\\((?:[^()]*,\\s*)?properties\\s*[,)]`).test(src)) continue;

@@ -12,7 +12,8 @@ renders_as: a Button with a checkerboard + colour swatch over its face
 ColorPickerButton is a Button that opens a ColorPicker popup and shows the chosen
 `color` on its face. The previewer draws the button's chrome, then the
 checkerboard and colour swatch on top, inset by the "normal" StyleBox's content
-margins.
+margins. Its label draws through Button, so a label wider than the box is cut to the paragraph
+box as in Button.
 
 ## Linting
 

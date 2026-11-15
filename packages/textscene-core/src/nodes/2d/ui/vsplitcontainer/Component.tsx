@@ -6,8 +6,7 @@
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { isSortableControl } from '../shared/fitChildInRect';
@@ -25,7 +24,7 @@ import { splitOffsetsOf, type SplitContainerProperties } from '../shared/splitCo
 
 export function VSplitContainer({
   solveNode,
-  tint,
+  childTint,
   rect,
   theme,
   renderOrder,
@@ -37,8 +36,7 @@ export function VSplitContainer({
   // `autohide` defaults true, so the grabber is invisible in the common scene, and loading it
   // would decode an image and hold a GPU texture for a quad that never draws.
   const sortable = solveNode.children.filter(isSortableControl);
-  const drawsGrabber =
-    sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
+  const drawsGrabber = sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants);
   const themeKey = splitGrabberThemeKey(solveNode.node.type, true);
   const texture = useNodeIcon(
     drawsGrabber ? solveNode.icons[themeKey] : undefined,
@@ -49,11 +47,8 @@ export function VSplitContainer({
     return null;
   }
 
-  const iconSize = splitGrabberIconSize(solveNode.node.type, true, solveNode.textureSlots);
-  const separation = resolveSplitSeparation(props, solveNode.constants, {
-    ...theme.widgets.splitContainer,
-    grabberExtent: iconSize.y,
-  });
+  const iconSize = splitGrabberIconSize(solveNode.node.type, true, solveNode.textureSlots, theme.scale);
+  const separation = resolveSplitSeparation(props, solveNode.constants, iconSize.y);
   const cached = splitContainerBoundaryChannel.open(meta)?.draggerPositions;
   const draggerPositions =
     cached ??
@@ -77,16 +72,15 @@ export function VSplitContainer({
           iconSize
         );
         return (
-          <CanvasItemGroup key={i} position={[iconRect.x, -iconRect.y, 0]} renderOrder={renderOrder}>
-            <ControlQuad
-              renderOrder={renderOrder}
-              width={iconRect.w}
-              height={iconRect.h}
-              color={tint.color}
-              opacity={tint.opacity}
-              map={texture}
-            />
-          </CanvasItemGroup>
+          <PositionedIcon
+            key={i}
+            rect={iconRect}
+            texture={texture}
+            color={childTint.color}
+            opacity={childTint.opacity}
+            renderOrder={renderOrder}
+            canvasKey={renderOrder}
+          />
         );
       })}
     </>

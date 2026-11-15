@@ -9,6 +9,7 @@ import type { TscnInternalResource } from '../parser/types';
 import type { SceneResources } from '../r3f/SceneResourcesContext';
 import type { ProjectFonts } from './fonts/font/projectFonts';
 import type { FontResource } from './fonts/font/types';
+import type { SettledFonts } from '../r3f/controls/native/text/settledFonts';
 
 export interface ScopedResource {
   resource: TscnInternalResource;
@@ -16,11 +17,11 @@ export interface ScopedResource {
   resources: SceneResources;
 }
 
-/** The parse of a loaded file, or undefined while it loads and after it failed. */
-export type LoadedFile = (path: string) => ParsedResource | undefined;
+/** The parse of a loaded file: undefined while it loads, null once it has failed. */
+export type LoadedFile = (path: string) => ParsedResource | null | undefined;
 
-/** A font file's resource, or undefined while it loads and after it failed. */
-export type LoadedFont = (path: string) => FontResource | undefined;
+/** A font file's resource: undefined while it loads, null once it has failed. */
+export type LoadedFont = (path: string) => FontResource | null | undefined;
 
 /** A {@link ScopedResource} that also holds the lookups its ExtResource references resolve through. */
 export interface ResolvableResource extends ScopedResource {
@@ -28,6 +29,8 @@ export interface ResolvableResource extends ScopedResource {
   loadedFont: LoadedFont;
   /** The theme and default font that a font lookup ends at, when the resource has no font of its own. */
   projectFonts: ProjectFonts;
+  /** The faces of the fonts the preview loads, which the build peeks for its font. */
+  settledFonts: SettledFonts;
   /** The project's `_get_locale()`, which a TextMesh with no `language` shapes in. */
   locale: string;
 }

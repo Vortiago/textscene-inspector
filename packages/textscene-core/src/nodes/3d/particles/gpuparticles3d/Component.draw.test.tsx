@@ -5,6 +5,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { useThree } from '@react-three/fiber';
 import type { TscnInternalResource } from '../../../../parser/types';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
@@ -90,5 +91,66 @@ describe('<GPUParticles3D> draw', () => {
   it('draws the overlay over every pass', async () => {
     const meshes = await meshesOf({ ...ROW_OF_FOUR, material_overlay: 'SubResource("Overlay")' });
     expect(meshes).toHaveLength(2);
+  });
+});
+
+/** Hands the test the camera the renderer draws through. */
+function CameraProbe({ onCamera }: { onCamera: (camera: THREE.Camera) => void }) {
+  onCamera(useThree((state) => state.camera));
+  return null;
+}
+
+describe('<GPUParticles3D> draw order and alignment under a turning camera', () => {
+  /** Draws `properties` through a camera that starts looking down -Z, and returns the mesh and a way to turn the camera a quarter about Y. */
+  async function underCamera(properties: Record<string, string>) {
+    let camera!: THREE.Camera;
+    const renderer = await ReactThreeTestRenderer.create(
+      <>
+        <CameraProbe onCamera={(found) => (camera = found)} />
+        {emitter(properties)}
+      </>
+    );
+    await renderer.advanceFrames(1, 0.016);
+    return {
+      /** Looked up again each time: a new draw may replace the mesh. */
+      mesh: () => renderer.scene.findAll((node) => node.type === 'Mesh')[0]!.instance as THREE.InstancedMesh,
+      async turnQuarter() {
+        camera.rotation.y = Math.PI / 2;
+        camera.updateMatrixWorld(true);
+        // The frame reads the camera; the settle of its state draws the instances in a later act.
+        await renderer.advanceFrames(1, 0.016);
+        await ReactThreeTestRenderer.act(async () => undefined);
+      },
+    };
+  }
+
+  function instance(mesh: THREE.InstancedMesh, index: number): THREE.Matrix4 {
+    const matrix = new THREE.Matrix4();
+    mesh.getMatrixAt(index, matrix);
+    return matrix;
+  }
+
+  const xOf = (mesh: THREE.InstancedMesh, index: number) =>
+    new THREE.Vector3().setFromMatrixPosition(instance(mesh, index)).x;
+
+  it('sorts the instances along the camera again when it turns, for VIEW_DEPTH', async () => {
+    const { mesh, turnQuarter } = await underCamera({ ...ROW_OF_FOUR, draw_order: '3' });
+    // Square on, every depth ties and the index order keeps the oldest particle, the farthest along +x, first.
+    expect(xOf(mesh(), 0)).toBeGreaterThan(xOf(mesh(), 3));
+    await turnQuarter();
+    expect(xOf(mesh(), 0)).toBeLessThan(xOf(mesh(), 3));
+  });
+
+  it('keeps the index order when the camera turns, for INDEX', async () => {
+    const { mesh, turnQuarter } = await underCamera(ROW_OF_FOUR);
+    await turnQuarter();
+    expect(xOf(mesh(), 0)).toBeGreaterThan(xOf(mesh(), 3));
+  });
+
+  it('turns the instances to the camera again when it turns, for Z_BILLBOARD', async () => {
+    const { mesh, turnQuarter } = await underCamera({ ...ROW_OF_FOUR, transform_align: '1' });
+    expect(new THREE.Vector3().setFromMatrixColumn(instance(mesh(), 0), 0).x).toBeCloseTo(1, 4);
+    await turnQuarter();
+    expect(new THREE.Vector3().setFromMatrixColumn(instance(mesh(), 0), 0).z).toBeCloseTo(-1, 4);
   });
 });

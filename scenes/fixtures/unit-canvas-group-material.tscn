@@ -1,0 +1,25 @@
+; One variable against unit-canvas-group-self-modulate.tscn: a CanvasItemMaterial on the group, ADD.
+; It replaces the group shader, so the rect draws white times the group colour over the squares'
+; bounds grown by fit_margin 10, and the squares do not show. No other scene puts a material on a
+; CanvasGroup.
+
+[gd_scene format=3]
+
+[sub_resource type="CanvasItemMaterial" id="Add"]
+blend_mode = 1
+
+[node name="Root" type="Node2D"]
+
+[node name="Group" type="CanvasGroup" parent="."]
+position = Vector2(100, 100)
+self_modulate = Color(1, 1, 1, 0.5)
+material = SubResource("Add")
+
+[node name="Red" type="Polygon2D" parent="Group"]
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Blue" type="Polygon2D" parent="Group"]
+position = Vector2(50, 50)
+color = Color(0, 0, 1, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)

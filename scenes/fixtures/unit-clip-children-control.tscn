@@ -1,0 +1,30 @@
+; One variable: `clip_children` is CLIP_ONLY (1) on a Button. Its red ColorRect child crosses the button's
+; edge, so the red shows only over the button's rounded box, under the button's own alpha at the corners.
+; Godot probes: (160,130) is (183,30,30), and (300,130) is the background, outside the button.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="P" type="Button" parent="."]
+layout_mode = 0
+offset_left = 100
+offset_top = 100
+offset_right = 260
+offset_bottom = 160
+clip_children = 1
+text = "Clip me"
+
+[node name="C" type="ColorRect" parent="P"]
+layout_mode = 0
+offset_left = 0
+offset_top = 0
+offset_right = 100
+offset_bottom = 100
+color = Color(1, 0, 0, 1)

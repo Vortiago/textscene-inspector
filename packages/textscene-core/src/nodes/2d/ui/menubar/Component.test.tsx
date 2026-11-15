@@ -12,7 +12,11 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import type { MenuBarProperties } from './types';
 import { MenuBar } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { bundledRunMeshes, bundledRuns } from '../../../../r3f/controls/native/testing/bundledRunStub';
 
 // A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
@@ -36,7 +40,7 @@ function solveNode(properties: Partial<MenuBarProperties> = {}, children: TscnNo
     children,
     properties: { name: 'Bar', ...properties } as MenuBarProperties,
   };
-  return { ...emptySolveNode(), path: 'Bar', node };
+  return withThemeItems({ ...emptySolveNode(), path: 'Bar', node });
 }
 
 /** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute; `<TextRun>` does not. */

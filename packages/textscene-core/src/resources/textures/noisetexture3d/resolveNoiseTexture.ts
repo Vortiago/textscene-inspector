@@ -1,48 +1,30 @@
 /**
- * Resolves a `NoiseTexture3D` sub-resource to a texture that builds as a worker job, as
- * `resolveNoiseTexture2D` does for a NoiseTexture2D (ADR-0042).
+ * Plans the build of a decoded `NoiseTexture3D` as a worker job, as `noiseTexture2D` does for a
+ * NoiseTexture2D (ADR-0042).
  */
 
-import type { SceneResources } from '../../../r3f/SceneResourcesContext';
-import type { LoadedFile } from '../../scopedResource';
-import { noiseRefsOf, noiseSourceResources, resolveNoiseSources } from '../noiseSources';
-import {
-  resolveProceduralSubResourceAsync,
-  type ProceduralBuildPlan,
-  type ProceduralTextureLookup,
-} from '../proceduralBuilds';
+import { perObject } from '../../../utils/perObject';
+import { proceduralBuild, type ProceduralBuildPlan, type ProceduralTextureLookup } from '../proceduralBuilds';
+import type { NoiseTexture3DSource } from '../texture3d/types';
 import { noiseDataTexture3D, noiseTexture3DFits } from './build';
-import { decodeNoiseTexture3D } from './decode';
 import type { NoiseTexture3DInput } from './texels';
 
-export function resolveNoiseTexture3D(
-  ref: string | undefined,
-  pools: SceneResources,
-  loadedFile: LoadedFile
-): ProceduralTextureLookup | null {
-  return resolveProceduralSubResourceAsync(
-    ref,
-    pools.internalResources,
-    'NoiseTexture3D',
-    (properties) => plan(properties, pools, loadedFile),
-    (properties) => noiseSourceResources(noiseRefsOf(properties), pools, loadedFile)
-  );
+/**
+ * Planned once per decoded value: each consumer looks the texture up on every render, and a plan
+ * serialises its input.
+ */
+const plannedBuild = perObject(plan);
+
+export function noiseTexture3D(source: NoiseTexture3DSource): ProceduralTextureLookup | null {
+  return proceduralBuild('NoiseTexture3D', plannedBuild(source));
 }
 
-/**
- * Texture properties and the pools and files their `noise` and `color_ramp` refs resolve in, to a build.
- * Null for an unusable `noise`, for which `_generate_texture` returns no images
- * (`noise_texture_3d.cpp:146-148`), and for a size `noiseTexture3DFits` refuses.
- */
-function plan(
-  properties: Record<string, string>,
-  pools: SceneResources,
-  loadedFile: LoadedFile
-): ProceduralBuildPlan<'noise-texture-3d'> | null {
-  const decoded = decodeNoiseTexture3D(properties);
-  const sources = resolveNoiseSources(decoded, pools, loadedFile);
-  if (!sources || !noiseTexture3DFits(decoded)) return null;
-
+/** Null for a size `noiseTexture3DFits` refuses. */
+function plan({
+  texture: decoded,
+  sources,
+}: NoiseTexture3DSource): ProceduralBuildPlan<'noise-texture-3d'> | null {
+  if (!noiseTexture3DFits(decoded)) return null;
   // The input carries the values the refs name, so a renamed id keeps the same content key.
   const input: NoiseTexture3DInput = { tex: { ...decoded, noise: null, colorRamp: null }, ...sources };
   return {

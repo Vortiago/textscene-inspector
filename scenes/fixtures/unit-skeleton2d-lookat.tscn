@@ -1,0 +1,44 @@
+[gd_scene format=3]
+
+; Moves one variable: a SkeletonModification2DLookAt in an enabled stack. No other golden runs a
+; Skeleton2D modification stack, so none shows a regression in the solved pose. The arm, its bar
+; child and the strip skinned to it point at the red target below the skeleton.
+
+[sub_resource type="SkeletonModification2DLookAt" id="lookat"]
+bone_index = 0
+bone2d_node = NodePath("Arm")
+target_nodepath = NodePath("../Target")
+
+[sub_resource type="SkeletonModificationStack2D" id="stack"]
+enabled = true
+modification_count = 1
+modifications/0 = SubResource("lookat")
+
+[node name="Root" type="Node2D"]
+
+[node name="Skeleton" type="Skeleton2D" parent="."]
+position = Vector2(300, 150)
+modification_stack = SubResource("stack")
+
+[node name="Arm" type="Bone2D" parent="Skeleton"]
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+auto_calculate_length_and_angle = false
+length = 200.0
+
+[node name="Bar" type="Polygon2D" parent="Skeleton/Arm"]
+color = Color(0.95, 0.55, 0.15, 1)
+polygon = PackedVector2Array(0, -10, 200, -10, 200, 10, 0, 10)
+
+[node name="Strip" type="Polygon2D" parent="."]
+position = Vector2(300, 150)
+skeleton = NodePath("../Skeleton")
+color = Color(0.2, 0.6, 0.95, 1)
+polygon = PackedVector2Array(0, 20, 200, 20, 200, 40, 0, 40)
+bones = [NodePath("Arm"), PackedFloat32Array(1, 1, 1, 1)]
+
+[node name="Target" type="Node2D" parent="."]
+position = Vector2(300, 400)
+
+[node name="Mark" type="Polygon2D" parent="Target"]
+color = Color(0.9, 0.25, 0.25, 1)
+polygon = PackedVector2Array(-6, -6, 6, -6, 6, 6, -6, 6)

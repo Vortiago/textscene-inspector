@@ -147,6 +147,17 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
 
     clearCache,
 
+    refresh(path: string): void {
+      if (!loadDirectly) {
+        throw new Error(
+          `expected a loadDirectly ${resourceType} processor to refresh ${path}, got a file-bus one`
+        );
+      }
+      // The new token strands a running flight, whose completion finds its token gone and is dropped.
+      inflight.set(path, Symbol(path));
+      void finishLoad(path, () => loadDirectly(path));
+    },
+
     release(path: string): void {
       // A failure stays: it is small, and it is what stops a retry.
       if (cache.isPinned(path) || cache.peek(path) instanceof CachedFailure) return;

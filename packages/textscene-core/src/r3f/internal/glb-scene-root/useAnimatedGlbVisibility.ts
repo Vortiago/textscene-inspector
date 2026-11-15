@@ -10,7 +10,11 @@ import { useEffect, useState } from 'react';
 import type * as THREE from 'three';
 import { godotNodePaths } from '../../../resources/formats/glb/godotNodes';
 import { joinPath } from '../../../utils/nodePath';
-import { animatedValueKey, useAnimatedValueRegistry } from '../../contexts/AnimatedValueContext';
+import {
+  animatedValueKey,
+  useAnimatedValueRegistry,
+  withPushedVisible,
+} from '../../contexts/AnimatedValueContext';
 import type { GlbObjectEntry } from './glbHierarchy';
 import { glbFrames } from './glbPathLookup';
 
@@ -35,20 +39,6 @@ function visibleTargets(entries: readonly GlbObjectEntry[], rootPath: string): V
   return [...nodes, ...frames];
 }
 
-/** `values` with `key` set to `value`, or the same map when it holds that already, so a steady push re-renders nothing. */
-function withValue(
-  values: AnimatedVisible,
-  key: THREE.Object3D | string,
-  value: readonly number[] | null
-): AnimatedVisible {
-  const visible = value === null ? undefined : value[0] !== 0;
-  if (values.get(key) === visible) return values;
-  const next = new Map(values);
-  if (visible === undefined) next.delete(key);
-  else next.set(key, visible);
-  return next;
-}
-
 /**
  * The `visible` values the player holds for the nodes and frames of the GLB.
  *
@@ -64,7 +54,7 @@ export function useAnimatedGlbVisibility(
     if (rootPath === null) return;
     const unsubscribes = visibleTargets(entries, rootPath).map(({ path, key }) =>
       registry.subscribe(animatedValueKey(path, 'visible'), (value) =>
-        setValues((current) => withValue(current, key, value))
+        setValues((current) => withPushedVisible(current, key, value))
       )
     );
     return () => unsubscribes.forEach((unsubscribe) => unsubscribe());

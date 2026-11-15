@@ -1,7 +1,7 @@
 /**
  * The declarations a light, an item and a light mesh make to the pass. A light rebuilds its
- * declaration object each render, and re-declaring would hand it a new ordinal, its stencil ref
- * with it, so each declaration holds while its values hold.
+ * declaration object each render, and re-declaring would hand it a new ordinal, so each
+ * declaration holds while its values hold.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -229,10 +229,10 @@ describe('usePassMeshRef', () => {
 
   it("hands the pass the mesh with its light's ordinal and its role", () => {
     const { Wrap, registerPassMesh } = spyLighting();
-    const { result } = renderHook(() => usePassMeshRef(2, 'tint'), { wrapper: Wrap });
+    const { result } = renderHook(() => usePassMeshRef(2, 'unshadowed'), { wrapper: Wrap });
     const mesh = new THREE.Mesh();
     result.current(mesh);
-    expect(registerPassMesh).toHaveBeenCalledWith(mesh, 2, 'tint');
+    expect(registerPassMesh).toHaveBeenCalledWith(mesh, 2, 'unshadowed');
   });
 
   it('withdraws the mesh when it unmounts', () => {

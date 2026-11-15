@@ -21,12 +21,12 @@ describe('binaryresource slice registration', () => {
   });
 
   it('routes a bake path to the bus slot its extension claims', () => {
-    expect(resourceSliceRegistry.busTypeOfPath('res://bakes/scene.lmbake')).toBe('resource');
+    expect(resourceSliceRegistry.byPath('res://bakes/scene.lmbake')?.busType).toBe('resource');
   });
 
   it("claims Godot's binary resource extension for the generic resource bus slot", () => {
     expect(resourceSliceRegistry.byExtension('.res')?.slice).toBe('binaryresource');
-    expect(resourceSliceRegistry.busTypeOfPath('res://meshes/crate.RES')).toBe('resource');
+    expect(resourceSliceRegistry.byPath('res://meshes/crate.RES')?.busType).toBe('resource');
   });
 
   it('fetches a .res as bytes, whatever type it holds', () => {
@@ -34,16 +34,16 @@ describe('binaryresource slice registration', () => {
   });
 
   it("claims each class's own binary extension, such as a mesh or a material", () => {
-    expect(resourceSliceRegistry.busTypeOfPath('res://models/cube.mesh')).toBe('resource');
-    expect(resourceSliceRegistry.busTypeOfPath('res://materials/paint.material')).toBe('resource');
+    expect(resourceSliceRegistry.byPath('res://models/cube.mesh')?.busType).toBe('resource');
+    expect(resourceSliceRegistry.byPath('res://materials/paint.material')?.busType).toBe('resource');
   });
 
   it('leaves a binary .scn scene unclaimed, as it loads as a scene, not a resource', () => {
-    expect(resourceSliceRegistry.busTypeOfPath('res://stage/grid_map.scn')).not.toBe('resource');
+    expect(resourceSliceRegistry.byPath('res://stage/grid_map.scn')?.busType).not.toBe('resource');
   });
 
   it('routes a path whose extension no slice claims nowhere (edge case)', () => {
-    expect(resourceSliceRegistry.busTypeOfPath('res://no_extension')).toBeNull();
+    expect(resourceSliceRegistry.byPath('res://no_extension')).toBeNull();
   });
 
   it('claims no type name, so a LightmapGIData in a text .tres still arrives as text', () => {

@@ -15,6 +15,7 @@ exist only when a script creates them. So the previewer draws only the `panel` S
 and, when `column_titles_visible` is set, one blank-titled header cell per column. That
 empty panel is the whole truth of such a scene, not a limitation. A
 right-to-left Tree mirrors each header cell inside its own width (`tree.cpp:5158-5160`).
+`self_modulate` tints the whole Tree: `Tree::set_self_modulate` passes it to the header and content items (`tree.cpp:5236-5243`).
 
 ## Linting
 

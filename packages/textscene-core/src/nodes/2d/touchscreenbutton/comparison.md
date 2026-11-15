@@ -12,7 +12,7 @@ renders_as: an unlit textured quad
 TouchScreenButton is an on-screen button for touch input that draws `texture_normal` or
 `texture_pressed`. The previewer draws `texture_normal` with its top-left corner at the node
 origin, as the editor does whatever `visibility_mode` says, and never draws `texture_pressed`. Its
-collision `shape` is an outline gizmo gated behind "Visible Collision Shapes", as CollisionShape2D's is.
+collision `shape` is a gizmo in the project's collision colour gated behind "Visible Collision Shapes", as CollisionShape2D's is.
 
 ## Linting
 
@@ -44,5 +44,4 @@ validated and never rendered.
 
 ## Known limitations
 
-- **Editor only** The editor draws the collision `shape` as a filled shape, but here it is an
-  outline that shows only while Visible Collision Shapes is on.
+- **Editor only** The collision `shape` shows only while Visible Collision Shapes is on.

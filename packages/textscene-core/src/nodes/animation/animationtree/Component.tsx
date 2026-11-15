@@ -14,6 +14,7 @@ import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimationTransport, type PlayState } from '../../../r3f/contexts/AnimationTransportContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useIsSelected } from '../../../r3f/hooks/useIsSelected';
+import { useWriteMixerPose } from '../../../r3f/animation/useWriteMixerPose';
 import { useAnimationDriver, type BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
 import { useRebindKey } from '../../../r3f/animation/useRebindKey';
 import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
@@ -121,6 +122,8 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
   const prevTimeRef = useRef(0);
   /** Written only by the frame below: the mixer it last drove. */
   const prevMixerRef = useRef<AnimationMixer | null>(null);
+  const writePose = useWriteMixerPose();
+
   useFrame((_, delta) => {
     const mixer = mixerRef.current;
     const state: PlayState = isActive ? transport.playState : 'stopped';
@@ -163,7 +166,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
         // The global preview speed multiplier applies here too. The loop override does not: a
         // blend program drives N weighted actions with their own timeScale and weight, and Godot
         // has no single loop mode for a blend tree or state machine preview.
-        mixer.update(delta * transport.playbackSpeed);
+        writePose(actions, () => mixer.update(delta * transport.playbackSpeed));
         if (dominant) transport.reportTime(dominantActionTime(dominant, actions) ?? 0);
         break;
       }
@@ -175,7 +178,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
           if (!action) continue;
           seekAction(action, transport.time, { weight, timeScale });
         }
-        mixer.update(0);
+        writePose(actions, () => mixer.update(0));
         break;
       }
       case 'hold-paused': {
@@ -183,8 +186,10 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
         break;
       }
       case 'stop-and-restore': {
-        mixer.stopAllAction();
-        restoreSnapshot(snapshotRef.current);
+        writePose(actions, () => {
+          mixer.stopAllAction();
+          restoreSnapshot(snapshotRef.current);
+        });
         break;
       }
       case 'none': {

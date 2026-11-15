@@ -7,11 +7,12 @@ import { describe, expect, it, vi, afterEach } from 'vitest';
 import { createElement, type ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import * as THREE from 'three';
-import { unconfiguredViewportTexture } from '../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
+import { texture2DPlaceholder } from '../../../resources/textures/texture2DPlaceholder';
 import { canvasMapProps } from '../../canvas2DTextureDecode';
+import { canvasColorSpaceOf } from '../../canvasColorSpace';
 import { useIconTexture, useOptionalIconTexture, useNodeIcon } from './useIconTexture';
 import { fakeCanvasRenderer } from '../../testing/fakeCanvasRenderer';
-import { TextureSampler2DContext } from '../../canvasItemTextureSampler';
+import { InheritedFrom, inheritedState } from '../../testing/inheritedFrom';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../godot/scene/canvasItem';
 import type { ThemedIconRef } from './solveTree';
 import type { TscnInternalResource } from '../../../parser/types';
@@ -46,7 +47,7 @@ describe('useIconTexture', () => {
   });
 
   it('turns on the sRGB multiply every painter draws it through', () => {
-    const { result } = renderHook(() => canvasMapProps(useIconTexture(ICON)));
+    const { result } = renderHook(() => canvasMapProps(useIconTexture(ICON), canvasColorSpaceOf(false)));
 
     expect(result.current.defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
   });
@@ -67,8 +68,12 @@ describe('useIconTexture', () => {
   it("samples with the owner's inherited filter and repeat (a Nearest parent makes the icon crisp)", () => {
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(
-        TextureSampler2DContext.Provider,
-        { value: { filter: CanvasItemTextureFilter.NEAREST, repeat: CanvasItemTextureRepeat.ENABLED } },
+        InheritedFrom,
+        {
+          state: inheritedState({
+            sampler: { filter: CanvasItemTextureFilter.NEAREST, repeat: CanvasItemTextureRepeat.ENABLED },
+          }),
+        },
         children
       );
 
@@ -88,12 +93,14 @@ describe('useIconTexture', () => {
         canvas.wrapper,
         null,
         createElement(
-          TextureSampler2DContext.Provider,
+          InheritedFrom,
           {
-            value: {
-              filter: CanvasItemTextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC,
-              repeat: CanvasItemTextureRepeat.DISABLED,
-            },
+            state: inheritedState({
+              sampler: {
+                filter: CanvasItemTextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC,
+                repeat: CanvasItemTextureRepeat.DISABLED,
+              },
+            }),
           },
           children
         )
@@ -160,7 +167,7 @@ describe('useNodeIcon', () => {
       isHeldLocally: false,
     };
     const { result } = renderHook(() => useNodeIcon(themed, ICON));
-    expect(result.current?.image).toBe(unconfiguredViewportTexture().image);
+    expect(result.current?.image).toBe(texture2DPlaceholder().image);
   });
 
   it("falls back to the vendored default when the themed ref cannot resolve — `Control::_set`'s NIL branch removes an invalid icon override, matching an absent one", () => {

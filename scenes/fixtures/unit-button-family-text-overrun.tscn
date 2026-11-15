@@ -1,0 +1,59 @@
+; The one variable: text_overrun_behavior = 3 (OVERRUN_TRIM_ELLIPSIS) on a box narrower than its label.
+; Button, CheckBox, CheckButton, OptionButton and MenuButton draw their label through Button::_notification,
+; so TextParagraph::draw trims it to the paragraph box (button.cpp:428-432, text_paragraph.cpp:286-293)
+; and the trimming overrun zeroes the text's width in the minimum size (button.cpp:493-495).
+
+[gd_scene format=3 uid="uid://unit_button_family_text_overrun"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Button" type="Button" parent="."]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 96.0
+offset_bottom = 56.0
+text_overrun_behavior = 3
+text = "alpha bravo charlie"
+
+[node name="CheckBox" type="CheckBox" parent="."]
+layout_mode = 1
+offset_left = 216.0
+offset_top = 16.0
+offset_right = 296.0
+offset_bottom = 56.0
+text_overrun_behavior = 3
+text = "alpha bravo charlie"
+
+[node name="CheckButton" type="CheckButton" parent="."]
+layout_mode = 1
+offset_left = 416.0
+offset_top = 16.0
+offset_right = 516.0
+offset_bottom = 56.0
+text_overrun_behavior = 3
+text = "alpha bravo charlie"
+
+[node name="OptionButton" type="OptionButton" parent="."]
+layout_mode = 1
+offset_left = 616.0
+offset_top = 16.0
+offset_right = 716.0
+offset_bottom = 56.0
+text_overrun_behavior = 3
+item_count = 1
+selected = 0
+popup/item_0/text = "alpha bravo charlie"
+popup/item_0/id = 0
+
+[node name="MenuButton" type="MenuButton" parent="."]
+layout_mode = 1
+offset_left = 816.0
+offset_top = 16.0
+offset_right = 896.0
+offset_bottom = 56.0
+text_overrun_behavior = 3
+text = "alpha bravo charlie"

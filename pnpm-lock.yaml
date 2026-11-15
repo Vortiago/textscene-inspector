@@ -381,6 +381,39 @@ importers:
         specifier: 'catalog:'
         version: 5.1.0(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(@vitest/ui@5.1.0)(happy-dom@21.0.4)(jsdom@31.0.0)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(yaml@2.9.1))
 
+  apps/textscene-three-godot-shaders:
+    devDependencies:
+      '@textscene/core':
+        specifier: workspace:*
+        version: link:../../packages/textscene-core
+      '@textscene/dev-kit':
+        specifier: workspace:*
+        version: link:../../packages/textscene-dev-kit
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.6
+      '@types/three':
+        specifier: 'catalog:'
+        version: 0.187.0
+      '@typescript/native':
+        specifier: 'catalog:'
+        version: typescript@7.0.2
+      dts-bundle-generator:
+        specifier: 'catalog:'
+        version: 9.5.1
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.28.2
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.1.4
+      three:
+        specifier: 'catalog:'
+        version: 0.187.0
+      vitest:
+        specifier: 'catalog:'
+        version: 5.1.0(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(@vitest/ui@5.1.0)(happy-dom@21.0.4)(jsdom@31.0.0)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(yaml@2.9.1))
+
   apps/textscene-tscn:
     devDependencies:
       '@textscene/core':

@@ -6,17 +6,20 @@
 
 import type { SceneScope, TscnNode } from '../../../parser/types';
 import { perObject } from '../../../utils/perObject';
+import { parentPathOf } from '../../../utils/nodePath';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { ProjectFonts } from '../../../resources/fonts/font/projectFonts';
+import type { SettledFonts } from './text/settledFonts';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
-import type { PaintRange } from '../../canvasPaintOrder';
-import type { AmbientTextureSampler } from '../../canvasItemTextureSampler';
+import type { CanvasItemPaint } from '../../canvasItemPass/canvasItemPaint';
+import type { Transform2DColumns } from '../../../godot/math/transform2d';
+import type { CanvasInheritance } from '../../canvasItemPass/inheritedCanvasState';
 import type { StyleBoxFlatData } from './styleBoxFlat';
-import type { Transform2DColumns } from '../../../godot/math/transform2d.js';
 import type { Rgba } from '../../../godot/math/math.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
+import type { NativeControlComponent } from '../ControlComponentRegistry';
 
 /** `labelSettingsFont` while its font file loads: a Label draws nothing in it yet (ADR-0059). */
 export const LABEL_SETTINGS_FONT_LOADING = 'loading';
@@ -36,50 +39,6 @@ export interface ThemedIconRef {
 }
 
 /**
- * The accumulated `CanvasItem` state of the non-Control ancestors a promoted
- * Control was walked past: the facets `_render_canvas_item_tree` re-seeds for a
- * canvas root (`renderer_canvas_cull.cpp:70-83`), as one value because one break resets all.
- * Visibility follows the scene tree instead: {@link SolveNode.parentVisibleInTree}.
- */
-export interface SkippedAncestors {
-  /**
-   * Composed `Transform2D`, outermost first (`transform_2d.cpp:198-218`). Never decomposed:
-   * composed ancestors can shear, which rotation and scale cannot represent.
-   */
-  transform: Transform2DColumns;
-  /** Componentwise product of each skipped ancestor's `modulate`; `self_modulate` never propagates (`renderer_canvas_cull.cpp`). */
-  modulate: Rgba;
-  /**
-   * Each skipped ancestor's `z_index`/`z_as_relative`, outermost first. A list,
-   * not a sum: `p_z = CLAMP(p_z + ci->z_index, …)` clamps at every step and
-   * `z_relative == false` restarts (`renderer_canvas_cull.cpp:430-434`). The walker folds it.
-   */
-  z: readonly CanvasItemZStep[];
-  /**
-   * The `texture_filter` and `texture_repeat` the skipped ancestors name, the innermost winning
-   * (`canvas_item.cpp:1625-1699`). Unnamed where none does: the walker lays the ancestors above them
-   * and the viewport default under them.
-   */
-  sampler: AmbientTextureSampler;
-  /** What a `use_parent_material` Control under the skipped ancestors takes (`canvas_item.cpp`). */
-  material: SkippedMaterial;
-}
-
-/**
- * The material of a promoted Control's parent item: the innermost skipped ancestor that names one,
- * a chain that names none, or the Control above the chain where every skipped ancestor defers.
- * `own` carries the scope of that ancestor, since an instanced sub-scene names its materials in its file.
- */
-export type SkippedMaterial =
-  { kind: 'own'; ref: string; resources: SceneScope } | { kind: 'inherit' } | { kind: 'none' };
-
-/** One CanvasItem's contribution to `p_z` (`renderer_canvas_cull.cpp:430-434`). */
-interface CanvasItemZStep {
-  zIndex: number;
-  zAsRelative: boolean;
-}
-
-/**
  * One Control or 2D-UI node in the live, collapsed scene tree (instance roots
  * merged, sub-scene scope resolved), ready for the solver.
  */
@@ -95,26 +54,21 @@ export interface SolveNode {
    */
   children: readonly SolveNode[];
   /**
-   * The run of canvas draw-sequence values this node's subtree owns
-   * (`canvasPaintOrder.ts`), from its place among all live siblings, Node2Ds
-   * included, so a `ColorRect` authored first draws under the sprites after it.
+   * Where this node and its subtree draw in tree order (`canvasItemPaint.ts`), from its place among
+   * all live siblings, Node2Ds included, so a `ColorRect` authored first draws under the sprites
+   * after it. The walker draws it at the run the y-sort of its canvas gives.
    */
-  paintRange: PaintRange;
+  paint: CanvasItemPaint;
   /**
-   * The draw-sequence value of this node's own pixels: after any
-   * `show_behind_parent` children and before the rest.
+   * The composed `Transform2D` of the non-Control `CanvasItem` ancestors this node promoted past,
+   * outermost first (`transform_2d.cpp:198-218`), or `null` for none. Never decomposed: composed
+   * ancestors can shear. Non-null tells the solver that `data.parent_canvas_item` is not a Control
+   * (`isPromotedControl`). The rest of what they hand down is in `inheritance`.
    */
-  paintSequence: number;
-  /**
-   * What the non-Control `CanvasItem` ancestors this node promoted past contribute,
-   * or `null` for none. Non-null tells the solver that `data.parent_canvas_item`
-   * is not a Control (`isPromotedControl`).
-   */
-  // Transform, tint and z accumulate down `CanvasItem::get_parent_item()`, which
-  // casts only the direct parent and returns nullptr for `top_level`
-  // (`scene/main/canvas_item.cpp:565-571`). A plain `Node`, `Node3D` or `CanvasLayer`
-  // breaks the chain: `null`, and the node is hoisted to a canvas root.
-  skippedAncestors: SkippedAncestors | null;
+  // The chain follows `CanvasItem::get_parent_item()`, which casts only the direct parent and
+  // returns nullptr for `top_level` (`scene/main/canvas_item.cpp:565-571`). A plain `Node`,
+  // `Node3D` or `CanvasLayer` breaks it: `null`, and the node is hoisted to a canvas root.
+  skippedTransform: Transform2DColumns | null;
   /**
    * `CanvasItem::parent_visible_in_tree`, the other half of `is_visible_in_tree()`
    * (`canvas_item.cpp:62-64`). It follows the scene tree with no `top_level` test
@@ -125,6 +79,8 @@ export interface SolveNode {
   // `Window`'s visibility, or `true` in a `SubViewport` (`canvas_item.cpp:330-350`).
   // So a Control under a hidden Node3D still draws.
   parentVisibleInTree: boolean;
+  /** Where the Control's modulate, `z_final`, material and sampler come from in the walk's tree. */
+  inheritance: CanvasInheritance;
   /**
    * `Control::is_layout_rtl()` (`scene/gui/control.cpp:3551-3620`), resolved on the
    * walk because an inherited node climbs past non-Controls the solve tree lacks.
@@ -184,6 +140,8 @@ export interface SolveNode {
    * Required, like `fontOverrides`.
    */
   projectFonts: ProjectFonts;
+  /** The faces of the fonts the preview loads, which every font read of the node peeks. Required, like `projectFonts`. */
+  settledFonts: SettledFonts;
   /**
    * Resolved theme colours by `get_theme_color(name, type)` name, merged like
    * `styleBoxes` over `theme.colors`. A painter falls back to the default
@@ -204,6 +162,14 @@ export interface SolveNode {
    */
   icons: Readonly<Record<string, ThemedIconRef>>;
   /**
+   * The default theme's icons a parent pushed onto this internal Control with
+   * `add_theme_icon_override`, by name, as vendored URLs. A painter draws one in
+   * place of its own vendored icon for a name `icons` has no entry for.
+   */
+  defaultIcons?: Readonly<Record<string, string>>;
+  /** What the parent draws on this internal Control through its `draw` signal, after the class's own draw. */
+  draws?: NativeControlComponent;
+  /**
    * The resource pools this node's own references resolve against. A node from
    * an instanced sub-scene names that scene's ids, while `SceneResourcesProvider`
    * holds the top-level scene's. A painter resolves a texture here itself, since
@@ -219,7 +185,22 @@ export interface SolveNode {
  * sorts it (`container.cpp:143-155`, `box_container.cpp:58`).
  */
 export function isPromotedControl(n: SolveNode): boolean {
-  return n.skippedAncestors !== null;
+  return n.skippedTransform !== null;
+}
+
+/**
+ * Whether a container's layout places `child`: a `get_child(i)` of `parent` that is not `top_level`
+ * (`container.cpp:143-146`, `popup.cpp:361-363`). A canvas boundary also holds the Controls it
+ * adopted from deeper in its scene, which no layout of its own places.
+ */
+export function isLaidOutChild(parent: SolveNode, child: SolveNode): boolean {
+  if (isPromotedControl(child) || controlProps(child).topLevel === true) return false;
+  return isSceneChild(parent, child);
+}
+
+/** Whether `child` is a `get_child(i)` of `parent` in the scene, wherever its canvas item parents. */
+export function isSceneChild(parent: SolveNode, child: SolveNode): boolean {
+  return parentPathOf(child.path) === parent.path;
 }
 
 /** A `SolveNode` minus the sortable child list: what a share's callback sees (`solveHandoff.ts`). */
@@ -231,11 +212,13 @@ export type ShareNode = Omit<SolveNode, 'children'>;
  * (`container.cpp:143-155`, `box_container.cpp:58`, `tab_container.cpp:469-481`),
  * so a type that indexes children by position numbers them alike in each.
  */
-// Returns `n` itself when nothing is promoted, so no caller sees a fresh object per call.
-export function sortableView(n: SolveNode): SolveNode {
-  if (!n.children.some(isPromotedControl)) return n;
-  return { ...n, children: n.children.filter((child) => !isPromotedControl(child)) };
-}
+// One view per node, `n` itself when nothing is promoted, so a cache keyed by the node it hands on,
+// such as `internalControlsOf`'s, holds across calls.
+export const sortableView: (n: SolveNode) => SolveNode = perObject((n) =>
+  n.children.some(isPromotedControl)
+    ? { ...n, children: n.children.filter((child) => !isPromotedControl(child)) }
+    : n
+);
 
 /**
  * This node's properties as the Control base type: the one cast every solver
@@ -247,7 +230,7 @@ export function controlProps(n: ShareNode): ControlProperties {
 
 /**
  * A Control's properties minus the two the walker has consumed: `modulate` goes
- * into the ambient `Modulate2DContext` and `self_modulate` into `tint`, so a
+ * into what the Control hands down and `self_modulate` into `tint`, so a
  * painter that read either would apply it twice.
  */
 type PainterView<T> = Omit<T, 'modulate' | 'selfModulate'>;

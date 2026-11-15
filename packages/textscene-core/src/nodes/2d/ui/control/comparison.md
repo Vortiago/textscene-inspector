@@ -20,10 +20,24 @@ Visibility is the exception, since it follows the scene tree rather than the can
 parenting. A hidden ancestor still hides a `top_level` Control, while a
 non-canvas-item ancestor between them releases it again.
 
+A Node2D below a Control stands in the canvas space of the Control. The solved transform of the Control sits between the Node2D and the parent of the Control. A hidden Control hides the Node2D.
+
 A Control draws as a canvas item. A Light2D reaches it through `light_mask`, a CanvasModulate
 tints it, and a `CanvasItemMaterial` sets its `light_mode` and `blend_mode`. With
 `use_parent_material` it takes the material of its parent item: the Control above it, or the
-Node2D between them.
+Node2D between them. Its `z_index` adds onto its parent's z, or replaces it when `z_as_relative`
+is off, as for a Node2D.
+
+With `y_sort_enabled` the Control sorts its children by y, as any canvas item does. A Control
+child sorts on the origin of its canvas item: its solved position plus its pivot translation,
+snapped as it draws. A Node2D child sorts on its position. Equal ys keep tree order. A y-sorted
+child merges its own children into the one sort, whether it is a Control or a Node2D. A Control
+child of a y-sorted Node2D sorts the same way among the Node2D's own children. A Control
+inside a sorted Node2D item draws with that item.
+
+The Control walk of a Control-only sub-viewport, and of a scene tile with a y-sorted Control root,
+sorts its Control items itself. A sub-viewport that also holds 2D content sorts through the world
+sort, as the root canvas does. A Node2D child of a y-sorted Control then sorts with its Control children.
 
 `layout_direction` resolves to one answer per node. An explicit LTR or RTL answers from
 the value alone. INHERITED climbs to the nearest ancestor Control or Window and steps
@@ -108,6 +122,8 @@ malformed `anchor_left`, `offset_top`, `rotation`, `scale`, `pivot_offset`,
 `custom_minimum_size` or `size_flags_*` becomes `undefined` with no warning, and the
 renderer applies its own default. `theme_override_styles/*` is stored unparsed.
 `visible` is `true` for anything other than a value that reads as `false`.
+
+`clip_children` clips a Control's children to its drawn pixels, as it does for a Node2D (the Node2D sheet gives the rules). The `clip-children-control` golden has a Button clip a ColorRect.
 
 ## Known limitations
 

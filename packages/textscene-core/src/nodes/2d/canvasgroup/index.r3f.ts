@@ -1,14 +1,6 @@
-/**
- * CanvasGroup draws nothing yet, and the badge reads "not implemented". The Node2D
- * base still mounts, for `visible` and the workspace split.
- */
+/** CanvasGroup render registration: the slice's only importer of `./Component`. */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { Node2D } from '../../base/node2d/Component';
+import { CanvasGroup } from './Component';
 
-nodeComponentRegistry.register({
-  typeName: 'CanvasGroup',
-  Component: Node2D,
-  canvasItem: true,
-  renderIntent: 'pending',
-});
+nodeComponentRegistry.register({ typeName: 'CanvasGroup', Component: CanvasGroup, canvasItem: true });

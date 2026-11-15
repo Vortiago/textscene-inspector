@@ -16,6 +16,7 @@ import {
 import type { PositionalShadowSlot } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
 import { readLightPose, viewToLightPose } from './lightPose.js';
+import { drawableLocalBox, type Drawable } from '../drawable.js';
 import { drawIntoAtlasSlot, positionalShadowAtlas } from './shadowAtlasTarget.js';
 import { readIntensityThroughSlot, type ParaboloidShadow } from './slotOpacity.js';
 
@@ -55,24 +56,9 @@ class AreaShadowVolume extends THREE.Frustum {
   }
 
   override intersectsObject(object: THREE.Object3D): boolean {
-    casterBox.copy(localBox(object)).applyMatrix4(object.matrixWorld);
+    casterBox.copy(drawableLocalBox(object as Drawable)).applyMatrix4(object.matrixWorld);
     return this.intersectsBox(casterBox);
   }
-}
-
-/** The object's own box: an instanced or skinned mesh keeps one, any other mesh its geometry's. */
-function localBox(object: THREE.Object3D): THREE.Box3 {
-  const boxed = object as THREE.Object3D & {
-    boundingBox?: THREE.Box3 | null;
-    computeBoundingBox?: () => void;
-    geometry: THREE.BufferGeometry;
-  };
-  if (boxed.boundingBox !== undefined) {
-    if (boxed.boundingBox === null) boxed.computeBoundingBox!();
-    return boxed.boundingBox!;
-  }
-  if (boxed.geometry.boundingBox === null) boxed.geometry.computeBoundingBox();
-  return boxed.geometry.boundingBox!;
 }
 
 type AreaShadowInternals = THREE.LightShadow<ParaboloidCamera> & LightShadowInternals;

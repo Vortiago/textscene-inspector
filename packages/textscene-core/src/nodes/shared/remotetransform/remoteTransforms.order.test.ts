@@ -174,9 +174,10 @@ describe('applyRemoteTransforms draws a relay cycle at the frame the ref:godot h
   it("counts the project's physics ticks, which flush transforms too", () => {
     // Godot logged holder A at x 2993 with `physics_ticks_per_second=120`.
     const main = new TscnParser().parse(cycle3D());
+    const context = contextOver(main, {});
     const tree = liveTreeOf(main.nodes, {
-      ...contextOver(main, {}),
-      physicsClock: { ticksPerSecond: 120, jitterFix: 0.5 },
+      ...context,
+      project: { ...context.project, physicsClock: { ticksPerSecond: 120, jitterFix: 0.5 } },
     });
     const holderA = liveGlobalTransform3D(tree, 'Root/HolderA', applyRemoteTransforms(tree).placed)!;
     expectCloseTo([holderA.origin.x, holderA.origin.y, holderA.origin.z], [2993, 0, 3]);

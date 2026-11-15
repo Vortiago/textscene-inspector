@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+; The one variable: `color` is HDR, Color(1.5, 0.5, 0.25). `is_color_valid_hex` fails, so the hex
+; row shows `Color(...)` text and `text_type` draws the disabled `script` icon, not "#"
+; (color_picker.cpp:1319-1325).
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="HdrColorPicker" type="ColorPicker" parent="."]
+layout_mode = 1
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 304.0
+offset_bottom = 164.0
+color = Color(1.5, 0.5, 0.25, 1)
+picker_shape = 4
+sampler_visible = false
+color_modes_visible = false
+presets_visible = false
+sliders_visible = false

@@ -2,7 +2,8 @@
  * How a normal-mapped canvas item takes the light, per `canvas.glsl:652-760`. Each light reaches the
  * item at an angle, so it shades each light kept apart (`lightPassContext.ts`) by its own normal
  * term before it blends, in Godot's order. The arithmetic is Godot's, in sRGB space with its [0, 1]
- * clamp, as `canvasItemLighting.ts` does for an item with no normal map.
+ * clamp, or on the linear albedo with no clamp in a linear canvas, as `canvasItemLighting.ts` does
+ * for an item with no normal map.
  */
 /*
  * Portions ported from Godot Engine (MIT).
@@ -15,11 +16,18 @@ import type { Rgba } from '../../godot/math/math.js';
 import { editedProgram } from '../shaderPatch/chunkPatch.js';
 import {
   ITEM_ALBEDO_GLSL,
-  ITEM_LIGHTING_GLSL,
+  canvasProgramKey,
+  itemLightingGlsl,
   LIGHT_MODE_GLSL,
   type CanvasItemLightingProps,
   type CanvasItemLightingUniforms,
 } from './canvasItemLighting.js';
+import {
+  TILE_ORIENTATION_FLIP_H,
+  TILE_ORIENTATION_FLIP_V,
+  TILE_ORIENTATION_TRANSPOSE,
+} from '../../resources/tileset/tileOrientationBits.js';
+import { BLEND_LAYER_GLSL } from './lightBlend.js';
 
 /** What a CanvasTexture adds to an item's diffuse texture, sampled where the diffuse is. */
 export interface CanvasItemSurface {
@@ -68,7 +76,7 @@ const VERTEX_INJECTION = `#include <project_vertex>
 vCanvasPosition = (modelMatrix * vec4(transformed, 1.0)).xy;
 vItemAxes = vec4(normalize(modelMatrix[0].xy), normalize(modelMatrix[1].xy));`;
 
-const FRAGMENT_PREAMBLE = `uniform highp sampler2DArray uLightLayers;
+const fragmentPreamble = (isLinearCanvas: boolean) => `uniform highp sampler2DArray uLightLayers;
 uniform highp sampler2DArray uShadowTintLayers;
 uniform vec3 uLightPlaces[APART_LIGHT_COUNT];
 uniform vec3 uLightModes[APART_LIGHT_COUNT];
@@ -76,15 +84,32 @@ uniform sampler2D uNormalMap;
 uniform sampler2D uSpecularMap;
 uniform vec4 uSpecular;
 uniform float uUsesSpecular;
-${ITEM_LIGHTING_GLSL}
+${itemLightingGlsl(isLinearCanvas)}
 varying vec2 vCanvasPosition;
 varying vec4 vItemAxes;
 
+// Where a tile samples its maps: the diffuse's uv, held inside the tile where the diffuse is
+// (tile_set.cpp:5622-5671, which pads every map of a CanvasTexture alike).
+vec2 surfaceUv() {
+#ifdef TILE_UV_BOUNDS
+  return clamp(vMapUv, vTileUvBounds.xy, vTileUvBounds.zw);
+#else
+  return vMapUv;
+#endif
+}
+
 // canvas.glsl:652-665 and :706-712. Godot's decode, vec2(2, -2) - vec2(1, -1), flips y into its
-// y-down canvas. The world frame is y up, so the flip drops out.
+// y-down canvas. The world frame is y up, so the flip drops out, and Godot's transpose, which swaps
+// the y-down components, negates both here. A tile's flips then negate their own component.
 vec3 itemNormal() {
   vec3 normal;
-  normal.xy = texture2D(uNormalMap, vMapUv).xy * 2.0 - 1.0;
+  normal.xy = texture2D(uNormalMap, surfaceUv()).xy * 2.0 - 1.0;
+#ifdef TILE_NORMAL_ORIENTATION
+  int orientation = int(vTileNormalOrientation + 0.5);
+  if ((orientation & ${TILE_ORIENTATION_TRANSPOSE}) != 0) normal.xy = -normal.yx;
+  if ((orientation & ${TILE_ORIENTATION_FLIP_H}) != 0) normal.x = -normal.x;
+  if ((orientation & ${TILE_ORIENTATION_FLIP_V}) != 0) normal.y = -normal.y;
+#endif
   normal.z = sqrt(max(0.0, 1.0 - dot(normal.xy, normal.xy)));
   normal.xy = mat2(vItemAxes.xy, vItemAxes.zw) * normal.xy;
   return normalize(normal);
@@ -110,19 +135,19 @@ vec3 lightNormalCompute(vec3 light_vec, vec3 normal, vec3 base_color, vec3 light
   float s = blinn / max(4.0 * cNdotV * cNdotL, 0.75);
   return specular.rgb * light_color * s + light_color * base_color * cNdotL;
 }
-
+${BLEND_LAYER_GLSL}
 void main() {`;
 
-// A layer holds a light's term premultiplied by its alpha `A`: `light_color.rgb * A`, with the
-// shadow applied, and its `shadow_color` term likewise, both negated by a SUB light. The normal term
-// is linear in the light colour, so shading the layer is shading the light, and each blend of
-// `light_blend_compute` (canvas.glsl:549-563) is `color * (1 - A·mix) + term`.
-const FRAGMENT_INJECTION = `${LIGHT_MODE_GLSL}
+// A layer holds a light's term premultiplied by its alpha, with the shadow applied, and its
+// `shadow_color` term likewise, both negated by a SUB light. The normal term is linear in the light
+// colour, so shading the layer is shading the light, and `blendLayer` (`lightBlend.ts`) blends it.
+const FRAGMENT_INJECTION = `#include <colorspace_fragment>
+${LIGHT_MODE_GLSL}
 if (!unshaded) {
   ${ITEM_ALBEDO_GLSL}
   vec3 normal = itemNormal();
   bool usesSpecular = uUsesSpecular > 0.5;
-  vec4 specular = usesSpecular ? texture2D(uSpecularMap, vMapUv) * uSpecular : vec4(1.0);
+  vec4 specular = usesSpecular ? texture2D(uSpecularMap, surfaceUv()) * uSpecular : vec4(1.0);
   vec3 color = albedo * lightSeed;
   float lightOnlyAlpha = 0.0;
   for (int i = 0; i < APART_LIGHT_COUNT; i++) {
@@ -131,13 +156,12 @@ if (!unshaded) {
     vec3 tint = tintLayer < 0.0 ? vec3(0.0) : texture(uShadowTintLayers, vec3(lightUv, tintLayer)).rgb;
     vec3 lightVec = lightVector(uLightPlaces[i], uLightModes[i].x > 0.5);
     vec3 term = lightNormalCompute(lightVec, normal, albedo, lit.rgb, specular, usesSpecular) + tint;
-    color = color * (1.0 - uLightModes[i].y * lit.a) + term;
+    color = blendLayer(color, term, lit.a, uLightModes[i].y);
     lightOnlyAlpha += lit.a;
   }
   if (lightOnly) gl_FragColor.a = clamp(gl_FragColor.a * lightOnlyAlpha, 0.0, 1.0);
-  gl_FragColor.rgb = godotToLinear(clamp(color, 0.0, 1.0));
-}
-#include <colorspace_fragment>`;
+  gl_FragColor.rgb = canvasShaded(color);
+}`;
 
 /**
  * Props that make a `meshBasicMaterial` shade `lightCount` lights kept apart by the item's normal
@@ -146,12 +170,13 @@ if (!unshaded) {
  */
 export function normalMappedLightingProps(
   uniforms: NormalMappedLightingUniforms,
-  lightCount: number
+  lightCount: number,
+  isLinearCanvas: boolean
 ): CanvasItemLightingProps {
   return {
     transparent: true,
     injection: {
-      cacheKey: `godot-canvas-normal-light-${lightCount}`,
+      cacheKey: canvasProgramKey(`godot-canvas-normal-light-${lightCount}`, isLinearCanvas),
       onBeforeCompile: (shader) => {
         shader.uniforms.uLightLayers = uniforms.lightLayers;
         shader.uniforms.uShadowTintLayers = uniforms.shadowTintLayers;
@@ -175,7 +200,7 @@ export function normalMappedLightingProps(
             fragment: [
               {
                 three: 'void main() {',
-                godot: `#define APART_LIGHT_COUNT ${lightCount}\n${FRAGMENT_PREAMBLE}`,
+                godot: `#define APART_LIGHT_COUNT ${lightCount}\n${fragmentPreamble(isLinearCanvas)}`,
               },
               { three: '#include <colorspace_fragment>', godot: FRAGMENT_INJECTION },
             ],

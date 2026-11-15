@@ -1,0 +1,68 @@
+[gd_scene format=3]
+
+; MeshInstance2D lit by a DirectionalLight2D, through a CanvasTexture normal map. The two QuadMeshes have a
+; normal that runs along x and along y, and the Sprite2D beside them has the same texture as the second: the
+; mesh reads the map at its own UV, which runs the other way down the quad than the sprite's. No other scene
+; lights a mesh with a normal map.
+
+[sub_resource type="Gradient" id="Gradient_grey"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.5, 0.5, 0.5, 1, 0.5, 0.5, 0.5, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_grey"]
+gradient = SubResource("Gradient_grey")
+width = 200
+height = 200
+
+[sub_resource type="Gradient" id="Gradient_normal_x"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.15, 0.5, 0.8, 1, 0.85, 0.5, 0.8, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_normal_x"]
+gradient = SubResource("Gradient_normal_x")
+width = 200
+height = 200
+
+[sub_resource type="Gradient" id="Gradient_normal_y"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.5, 0.15, 0.8, 1, 0.5, 0.85, 0.8, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_normal_y"]
+gradient = SubResource("Gradient_normal_y")
+fill_to = Vector2(0, 1)
+width = 200
+height = 200
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_x"]
+diffuse_texture = SubResource("GradientTexture2D_grey")
+normal_texture = SubResource("GradientTexture2D_normal_x")
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_y"]
+diffuse_texture = SubResource("GradientTexture2D_grey")
+normal_texture = SubResource("GradientTexture2D_normal_y")
+
+[sub_resource type="QuadMesh" id="QuadMesh_x"]
+size = Vector2(200, 200)
+
+[sub_resource type="QuadMesh" id="QuadMesh_y"]
+size = Vector2(200, 200)
+
+[node name="Root" type="Node2D"]
+
+[node name="MeshX" type="MeshInstance2D" parent="."]
+position = Vector2(150, 200)
+mesh = SubResource("QuadMesh_x")
+texture = SubResource("CanvasTexture_x")
+
+[node name="MeshY" type="MeshInstance2D" parent="."]
+position = Vector2(400, 200)
+mesh = SubResource("QuadMesh_y")
+texture = SubResource("CanvasTexture_y")
+
+[node name="SpriteY" type="Sprite2D" parent="."]
+position = Vector2(650, 200)
+texture = SubResource("CanvasTexture_y")
+
+[node name="Sun" type="DirectionalLight2D" parent="."]
+rotation = 0.6
+height = 0.5

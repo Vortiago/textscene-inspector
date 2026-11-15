@@ -5,6 +5,7 @@
  */
 
 import type { Rgba } from '../../../godot/math/math';
+import type { Rect2 } from '../../../godot/math/rect2';
 import type { Vector2 } from '../../../godot/math/vector';
 
 export interface StyleBoxFlatData {
@@ -55,19 +56,22 @@ type Sides = { left: number; top: number; right: number; bottom: number };
 
 const NO_SIDES: Sides = { left: 0, top: 0, right: 0, bottom: 0 };
 
-/** Every field `make_flat_stylebox` (`default_theme.cpp:57-70`) leaves at `StyleBoxFlat`'s own default. */
+/** The fields a box sets. Each one left out keeps `StyleBoxFlat`'s own default. */
 interface FlatStyleBoxOptions {
   contentMargin?: Sides;
   cornerRadius?: number | StyleBoxFlatData['cornerRadius'];
   borderWidth?: number | Sides;
   borderColor?: Rgba;
   expandMargin?: Sides;
+  /** The detail of the theme builder (`flatCornerDetail`). Left out, the box keeps `StyleBoxFlat`'s 8. */
+  cornerDetail?: number;
+  /** Left out, the box draws its centre, as `StyleBoxFlat` does. */
+  drawCenter?: boolean;
 }
 
 /**
- * `make_flat_stylebox` (`default_theme.cpp:57-70`) for the fields `StyleBoxFlatData`
- * models. An option left out keeps `StyleBoxFlat`'s constructed default, as the
- * theme builder assigns only a colour, the margins and a corner radius.
+ * A `StyleBoxFlat` with the fields `options` sets, every length already scaled. An option left out keeps
+ * `StyleBoxFlat`'s constructed default.
  */
 export function flatStyleBox(bgColor: Rgba, options: FlatStyleBoxOptions = {}): StyleBoxFlatData {
   const { contentMargin = NO_SIDES, cornerRadius = 0, borderWidth = 0 } = options;
@@ -90,11 +94,11 @@ export function flatStyleBox(bgColor: Rgba, options: FlatStyleBoxOptions = {}): 
     cornerRadius: corners,
     expandMargin: options.expandMargin ?? NO_SIDES,
     contentMargin,
-    drawCenter: true,
+    drawCenter: options.drawCenter ?? true,
     borderBlend: false,
     antiAliased: true,
     aaSize: 1,
-    cornerDetail: 8,
+    cornerDetail: options.cornerDetail ?? 8,
     skew: { x: 0, y: 0 },
     shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
     shadowSize: 0,
@@ -108,8 +112,58 @@ export function flatStyleBox(bgColor: Rgba, options: FlatStyleBoxOptions = {}): 
  * inset by. The margins are already effective values.
  */
 export function contentMarginSize(box: StyleBoxFlatData): Vector2 {
+  return sidesSize(box.contentMargin);
+}
+
+/** Four sides that are all zero. Shared, so a caller never writes the literal again. */
+export const ZERO_SIDES: StyleBoxFlatData['contentMargin'] = Object.freeze({
+  left: 0,
+  top: 0,
+  right: 0,
+  bottom: 0,
+});
+
+/** The horizontal and vertical space four sides take together. */
+export function sidesSize(sides: StyleBoxFlatData['contentMargin']): Vector2 {
+  return { x: sides.left + sides.right, y: sides.top + sides.bottom };
+}
+
+/** Whether `box` paints a pixel: a `StyleBoxEmpty`, or a flat box whose fill, border and shadow are absent or clear, paints none. */
+export function isDrawn(box: StyleBoxFlatData): boolean {
+  const { left, top, right, bottom } = box.borderWidth;
+  const hasBorder = left > 0 || top > 0 || right > 0 || bottom > 0;
+  return (
+    (box.drawCenter && box.bgColor.a > 0) ||
+    (hasBorder && box.borderColor.a > 0) ||
+    (box.shadowSize > 0 && box.shadowColor.a > 0)
+  );
+}
+
+/** `rect` less the box's content margins: `StyleBox::get_content_rect`'s inset. */
+export function contentRect(rect: Rect2, box: StyleBoxFlatData): Rect2 {
+  const margins = contentMarginSize(box);
   return {
-    x: box.contentMargin.left + box.contentMargin.right,
-    y: box.contentMargin.top + box.contentMargin.bottom,
+    x: rect.x + box.contentMargin.left,
+    y: rect.y + box.contentMargin.top,
+    w: rect.w - margins.x,
+    h: rect.h - margins.y,
   };
+}
+
+/** A box whose own fields and nested colour, width and margin objects are read-only, as `freezeStyleBox` leaves it. */
+export type FrozenStyleBoxData = { readonly [K in keyof StyleBoxFlatData]: Readonly<StyleBoxFlatData[K]> };
+
+/**
+ * Returns a frozen copy of a box and of its nested colour, width and margin objects. A theme shares
+ * one box between states, so a consumer that edits a margin in place would change every state: it
+ * throws instead. The caller's own objects stay editable.
+ */
+export function freezeStyleBox(box: StyleBoxFlatData): FrozenStyleBoxData {
+  const copy = { ...box };
+  for (const key of Object.keys(copy) as (keyof StyleBoxFlatData)[]) {
+    const value = copy[key];
+    if (typeof value === 'object' && value !== null)
+      Object.assign(copy, { [key]: Object.freeze({ ...value }) });
+  }
+  return Object.freeze(copy);
 }

@@ -1,8 +1,8 @@
 /** Base Control parser: the layout and theme-override properties of every 2D UI node. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
-import { unquoteStringName } from '../../../../parser/utils';
-import type { ControlProperties } from './types';
+import type { ControlCanvasItemFields, ControlProperties } from './types';
+import { parseThemeOwnerFields } from './themeOwnerParser';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
 import {
   intOr,
@@ -11,72 +11,44 @@ import {
   parseHeadingIndex,
 } from '../../../../parser/valueParsers';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../../godot/scene/canvasItem.js';
+import { parseClipChildrenMode } from '../../../canvasitem/shared/clipChildrenMode';
 import { LayoutDirection } from '../../../../godot/scene/control.js';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
-import type { Rgba } from '../../../../godot/math/math.js';
 
-/** Collect `theme_override_<category>/<name> = value` into the five typed maps. */
-function parseThemeOverrides(properties: Record<string, string>): Partial<ControlProperties> {
-  const constants: Record<string, number> = {};
-  const colors: Record<string, Rgba> = {};
-  const fontSizes: Record<string, number> = {};
-  const styles: Record<string, string> = {};
-  const icons: Record<string, string> = {};
-  const fonts: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(properties)) {
-    const m = key.match(/^theme_override_(\w+)\/(.+)$/);
-    if (!m) continue;
-    const [, category, name] = m;
-    switch (category) {
-      case 'constants': {
-        const n = parseOptionalFloat(value);
-        if (n !== undefined) constants[name!] = n;
-        break;
-      }
-      case 'colors': {
-        const color = parseColorOrUndefined(value);
-        if (color) colors[name!] = color;
-        break;
-      }
-      case 'font_sizes': {
-        const n = parseOptionalFloat(value);
-        if (n !== undefined) fontSizes[name!] = n;
-        break;
-      }
-      case 'styles':
-        styles[name!] = value;
-        break;
-      case 'icons':
-        icons[name!] = value;
-        break;
-      case 'fonts':
-        fonts[name!] = value;
-        break;
-      default:
-        break;
-    }
-  }
-
-  const out: Partial<ControlProperties> = {};
-  if (Object.keys(constants).length) out.themeOverrideConstants = constants;
-  if (Object.keys(colors).length) out.themeOverrideColors = colors;
-  if (Object.keys(fontSizes).length) out.themeOverrideFontSizes = fontSizes;
-  if (Object.keys(styles).length) out.themeOverrideStyles = styles;
-  if (Object.keys(icons).length) out.themeOverrideIcons = icons;
-  if (Object.keys(fonts).length) out.themeOverrideFonts = fonts;
-  return out;
-}
-
-/** An empty `theme_type_variation` means "no variation", not a variation named "". */
-function parseThemeTypeVariation(value: string | undefined): string | undefined {
-  if (value === undefined) return undefined;
-  const name = unquoteStringName(value);
-  return name === '' ? undefined : name;
+/**
+ * The CanvasItem fields, never undefined, as in `node2d/parser.ts`: an unset Control holds the Godot
+ * defaults. An internal Control with no scene node, such as TabContainer's bar, reads them from `{}`.
+ */
+export function parseControlCanvasItem(
+  properties: Record<string, string>,
+  name: string
+): ControlCanvasItemFields {
+  const label = name || 'Control';
+  return {
+    zIndex: intOr(properties.z_index, 0),
+    zAsRelative: boolSlotValue(properties.z_as_relative) !== false,
+    showBehindParent: boolSlotValue(properties.show_behind_parent) === true,
+    topLevel: boolSlotValue(properties.top_level) === true,
+    ySortEnabled: boolSlotValue(properties.y_sort_enabled) === true,
+    lightMask: intOr(properties.light_mask, 1, `${label}.light_mask`),
+    clipChildren: parseClipChildrenMode(properties.clip_children, `${label}.clip_children`),
+    useParentMaterial: boolSlotValue(properties.use_parent_material) === true,
+    textureFilter: intOr(
+      properties.texture_filter,
+      CanvasItemTextureFilter.PARENT_NODE,
+      `${label}.texture_filter`
+    ),
+    textureRepeat: intOr(
+      properties.texture_repeat,
+      CanvasItemTextureRepeat.PARENT_NODE,
+      `${label}.texture_repeat`
+    ),
+  };
 }
 
 export function parseControl(heading: ParsedHeading, properties: Record<string, string>): ControlProperties {
-  const result: ControlProperties = { name: heading.attributes.name || '' };
+  const name = heading.attributes.name || '';
+  const result: ControlProperties = { name, ...parseControlCanvasItem(properties, name) };
 
   if (heading.attributes.parent) result.parent = heading.attributes.parent;
   if (heading.attributes.instance) result.instance = heading.attributes.instance;
@@ -116,29 +88,7 @@ export function parseControl(heading: ParsedHeading, properties: Record<string, 
   result.pivotOffset = parseOptionalVector2(properties.pivot_offset);
   result.pivotOffsetRatio = parseOptionalVector2(properties.pivot_offset_ratio);
 
-  // Never undefined, as in `node2d/parser.ts`: an unset Control holds these Godot defaults.
-  result.zIndex = intOr(properties.z_index, 0);
-  result.showBehindParent = boolSlotValue(properties.show_behind_parent) === true;
-  result.topLevel = boolSlotValue(properties.top_level) === true;
-  result.lightMask = intOr(properties.light_mask, 1, `${result.name || 'Control'}.light_mask`);
   if (properties.material !== undefined) result.materialPath = properties.material;
-  result.useParentMaterial = boolSlotValue(properties.use_parent_material) === true;
-  result.textureFilter = intOr(
-    properties.texture_filter,
-    CanvasItemTextureFilter.PARENT_NODE,
-    `${result.name || 'Control'}.texture_filter`
-  );
-  result.textureRepeat = intOr(
-    properties.texture_repeat,
-    CanvasItemTextureRepeat.PARENT_NODE,
-    `${result.name || 'Control'}.texture_repeat`
-  );
 
-  Object.assign(result, parseThemeOverrides(properties));
-
-  // Raw, and resolved later by `SubResourceResolver`, as `themeOverrideStyles` is.
-  if (properties.theme !== undefined) result.theme = properties.theme;
-  result.themeTypeVariation = parseThemeTypeVariation(properties.theme_type_variation);
-
-  return result;
+  return Object.assign(result, parseThemeOwnerFields(properties));
 }

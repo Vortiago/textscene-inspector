@@ -23,6 +23,14 @@ const NEEDS_NO_OVERLAY = new Map([
     'A pass: it takes the placements of the pass before it as an argument.',
   ],
   [
+    'nodes/2d/skeleton2d/skeletonRig.ts',
+    'Reads the type, `rest` and reach properties of each Bone2D, which no pass patches.',
+  ],
+  [
+    'nodes/2d/skeleton2d/stackTargets.ts',
+    'Reads the type and the reach properties of the nodes a stack names, which no pass patches.',
+  ],
+  [
     'nodes/shared/remotetransform/remoteTransforms.ts',
     'A pass: it reads the tree it places nodes in, and builds the placements.',
   ],
@@ -31,12 +39,32 @@ const NEEDS_NO_OVERLAY = new Map([
     'Asks whether the node a body path names is a Node3D, by type. The pose comes from the drawn objects.',
   ],
   [
+    'nodes/2d/tiles/shared/useSceneTiles.ts',
+    'Hands the scene tile children of a layer to the dispatcher, which lays the patches over each node it draws.',
+  ],
+  [
+    'nodes/windows/window/themeOwners.ts',
+    'Reads the type and the `theme` of the nodes above a window, which no pass patches.',
+  ],
+  [
     'nodes/viewport/subviewport/controlRasterViewports.ts',
     'Reads the type and the Control layout direction, which no pass patches.',
   ],
   [
+    'nodes/viewport/subviewport/viewportGate.ts',
+    'Reads the type and authored `visible` of the nodes around a viewport, which no pass patches. An animated `visible` comes through AnimatedValueContext.',
+  ],
+  [
+    'nodes/viewport/subviewport/windowEmbedder.ts',
+    'Reads the type, `gui_embed_subwindows`, `force_native` and authored `visible` of a viewport or a window, which no pass patches.',
+  ],
+  [
     'nodes/viewport/subviewport/viewportContent.ts',
     'Reads the type of each node to classify the content, never a pose.',
+  ],
+  [
+    'r3f/canvasItemPass/writtenVisibility.ts',
+    'Reads the type and `top_level` of each child and the container properties that pick its pages, which no pass patches.',
   ],
   [
     'r3f/components/SceneTreeViewer/useLiveStep.ts',

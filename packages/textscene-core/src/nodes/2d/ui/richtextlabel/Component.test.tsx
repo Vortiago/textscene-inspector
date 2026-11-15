@@ -19,13 +19,15 @@ import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFont
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
-import { RICH_TEXT_LABEL_UNDERLINE_ALPHA, richTextLabelMinimumSize } from './nativeSolver';
+import { richTextLabelMinimumSize } from './nativeSolver';
 import { RichTextLabel } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
+import { wholeKeySlot } from '../../../../r3f/canvasItemState';
 import {
-  SCROLL_BAR_GRABBER_RENDER_ORDER_OFFSET,
-  SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET,
-} from '../shared/ScrollBarChrome';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   bundledRunOf,
   bundledRuns,
@@ -56,16 +58,35 @@ function solveNode(
     scrollFollowingVisibleCharacters: false,
   };
   const tscnNode: TscnNode = controlNode(name, 'RichTextLabel', { name, ...parsedDefaults, ...properties });
-  return { ...emptySolveNode(), path, node: tscnNode, ...overrides };
+  return withThemeItems({ ...emptySolveNode(), path, node: tscnNode, ...overrides });
 }
 
 function expectedLinear(r: number, g: number, b: number): THREE.Color {
   return new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace);
 }
 
+/** The node's own slot at `renderOrder` 5: its vertical bar draws in it, over the text. */
+const NODE_SLOT = wholeKeySlot(5);
+
+/** The bar's track and grabber meshes: inside the node's slot, above its text, the grabber over the track. */
+function barMeshesOf(meshes: THREE.Mesh[]): { tracks: THREE.Mesh[]; grabbers: THREE.Mesh[] } {
+  const inSlot = meshes.filter((m) => 5 < m.renderOrder && m.renderOrder < 6);
+  const orders = [...new Set(inSlot.map((m) => m.renderOrder))].sort((a, b) => a - b);
+  return {
+    tracks: inSlot.filter((m) => m.renderOrder === orders[0]),
+    grabbers: inSlot.filter((m) => orders.length > 1 && m.renderOrder === orders.at(-1)),
+  };
+}
+
 async function render(properties: Record<string, unknown>, rect: Rect2 = { x: 0, y: 0, w: 300, h: 200 }) {
   return ReactThreeTestRenderer.create(
-    <RichTextLabel {...painterEnv()} solveNode={solveNode('RTL', properties)} rect={rect} renderOrder={5} />
+    <RichTextLabel
+      {...painterEnv()}
+      solveNode={solveNode('RTL', properties)}
+      rect={rect}
+      renderOrder={5}
+      slot={NODE_SLOT}
+    />
   );
 }
 
@@ -143,9 +164,21 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     expect(strokesOf(underlined)).toHaveLength(1);
   });
 
+  it("draws the underline below the line's own ascent, which a larger run on the line raises (rich_text_label.cpp:1571, :1737)", async () => {
+    const strokeYOf = async (text: string) => {
+      const renderer = await render({ text, bbcodeEnabled: true });
+      const stroke = meshesOf(renderer).find((m) => m.geometry.type === 'PlaneGeometry')!;
+      return stroke.getWorldPosition(new THREE.Vector3()).y;
+    };
+    const aloneY = await strokeYOf('[u]a[/u]');
+    const besideLargeY = await strokeYOf('[font_size=32]B[/font_size][u]a[/u]');
+    // Open Sans at 32 px rises about 17 px above its ascent at 16 px. Y grows upward.
+    expect(aloneY - besideLargeY).toBeGreaterThan(10);
+  });
+
   it(
     "the underline stroke's material carries the run's own colour (ControlQuad's meshBasicMaterial, sRGB-space " +
-      'same as every other native chrome quad) at RICH_TEXT_LABEL_UNDERLINE_ALPHA times its opacity ' +
+      'same as every other native chrome quad) at half its opacity ' +
       "(default_theme.cpp:1231's underline_alpha=50, rich_text_label.cpp:1237), same RGB as the text",
     async () => {
       const renderer = await render({ text: '[color=#e0a030][u]AB[/u][/color]', bbcodeEnabled: true });
@@ -159,7 +192,7 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
       expect(strokeMat.color.g).toBeCloseTo(expected.g, 5);
       expect(strokeMat.color.b).toBeCloseTo(expected.b, 5);
       expect(tint.r).toBeCloseTo(0xe0 / 255, 5);
-      expect(strokeMat.opacity).toBeCloseTo(tint.a * RICH_TEXT_LABEL_UNDERLINE_ALPHA, 6);
+      expect(strokeMat.opacity).toBeCloseTo(tint.a * 0.5, 6);
     }
   );
 
@@ -553,11 +586,7 @@ describe('<RichTextLabel> scrollbar (rich_text_label.cpp:3801-3830)', () => {
   /** The bar's track and grabber: `renderOrder` 5 is the node's, and the bar draws above its text. */
   async function barMeshes(properties: Record<string, unknown>, rect: Rect2) {
     const renderer = await render({ text: TEXT, ...properties }, rect);
-    const meshes = meshesOf(renderer);
-    return {
-      tracks: meshes.filter((m) => m.renderOrder === 5 + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET),
-      grabbers: meshes.filter((m) => m.renderOrder === 5 + SCROLL_BAR_GRABBER_RENDER_ORDER_OFFSET),
-    };
+    return barMeshesOf(meshesOf(renderer));
   }
 
   it('draws the track and the grabber when the text is taller than the rect', async () => {
@@ -575,9 +604,10 @@ describe('<RichTextLabel> scrollbar (rich_text_label.cpp:3801-3830)', () => {
         solveNode={solveNode('RTL', { text: TEXT }, { rtl: true })}
         rect={TALL_BOX}
         renderOrder={5}
+        slot={NODE_SLOT}
       />
     );
-    const track = meshesOf(renderer).find((m) => m.renderOrder === 5 + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET);
+    const [track] = barMeshesOf(meshesOf(renderer)).tracks;
     expect(track?.getWorldPosition(new THREE.Vector3()).x).toBeCloseTo(0, 6);
   });
 
@@ -632,9 +662,26 @@ describe('<RichTextLabel> visible_characters (rich_text_label.cpp:943-947,668-67
       { text: TEXT, scrollFollowingVisibleCharacters: true },
       { x: 0, y: 0, w: 300, h: 100 }
     );
-    const tracks = meshesOf(renderer).filter(
-      (m) => m.renderOrder === 5 + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET
-    );
+    const { tracks } = barMeshesOf(meshesOf(renderer));
     expect(tracks).toHaveLength(1);
+  });
+});
+
+describe('<RichTextLabel> — self_modulate', () => {
+  it('tints the text with tint and the scroll bar with childTint', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <RichTextLabel
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={solveNode('RTL', { text: 'Wave rift over quiet stone and amber light' })}
+        rect={{ x: 0, y: 0, w: 160, h: 40 }}
+        renderOrder={5}
+        slot={NODE_SLOT}
+      />
+    );
+    const split = countTintSplit(renderer.scene);
+    expect(split.own).toBeGreaterThan(0);
+    // The track and the grabber.
+    expect(split.child).toBe(2);
   });
 });

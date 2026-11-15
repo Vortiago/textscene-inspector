@@ -19,7 +19,7 @@ import { createSolveContext, solveControlTree } from './controlRectSolver';
 import { nativeTheme } from './nativeTheme';
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { SolveNode } from './solveTree';
-import { solveNode } from './testing/solveNode';
+import { solveNode, withThemeItems } from './testing/solveNode';
 
 /**
  * The registered Godot `Container` subclasses: the types whose children a
@@ -54,6 +54,14 @@ const CONTAINER_TYPES = new Set([
   // and `zoom` rather than fitting them, but it is still the parent that
   // decides where they land.
   'GraphEdit',
+  // A Window, not a Container, but `_update_child_rects` sets every child's rect (`popup.cpp:346-368`).
+  'PopupPanel',
+  // The dialogs lay their message, authored children and button row out in `_update_child_rects` (`dialogs.cpp:219-316`).
+  'AcceptDialog',
+  'ConfirmationDialog',
+  'FileDialog',
+  // A VBoxContainer that stacks `internal_margin` over its authored children (`color_picker.h:82`).
+  'ColorPicker',
 ]);
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
@@ -61,18 +69,20 @@ const THEME = nativeTheme(1);
 
 function bareSolveNode(type: string): SolveNode {
   const node = parseBareNode(type);
-  return { ...solveNode(), path: node.name, node };
+  return withThemeItems({ ...solveNode(), path: node.name, node });
 }
 
 /**
  * The 59 Control types `ClassDB.can_instantiate` accepts, plus `CanvasLayer`
  * and `ParallaxBackground`, which each root a 2D UI subtree on their own canvas
- * (`canvas_item.cpp:246-252` stops the climb at either).
+ * (`canvas_item.cpp:246-252` stops the climb at either), plus `Window`, `Popup`,
+ * `PopupPanel`, `PopupMenu`, `AcceptDialog`, `ConfirmationDialog` and `FileDialog`, which root the
+ * canvas of their own viewport.
  */
 // `ScrollBar`, `Separator`, `Slider` and the three `OpenXR*Editor*` classes are
 // abstract, so no scene holds one. A number, not a derived list: every other
 // check here moves with the registry, so a slice deleted from both sides passes.
-const REGISTERED_CONTROL_TYPES = 61;
+const REGISTERED_CONTROL_TYPES = 68;
 
 /**
  * A slice that writes a `TextureSlotsFn` and never registers it passes its own

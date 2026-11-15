@@ -1,0 +1,31 @@
+; One variable: `texture_mode` TILE with `texture_repeat` Enabled. The texture is 32 x 16 (tile_aspect 2),
+; red on the left half and blue on the right, so a 16 px wide line shows 16 px of red and 16 of blue per tile.
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="Gradient" id="Gradient_halves"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.5)
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_halves"]
+gradient = SubResource("Gradient_halves")
+width = 32
+height = 16
+
+[node name="Line2DTextureTile" type="Node2D"]
+
+[node name="Plain" type="Line2D" parent="."]
+texture_repeat = 2
+points = PackedVector2Array(50, 50, 178, 50)
+width = 16.0
+texture = SubResource("GradientTexture2D_halves")
+texture_mode = 1
+
+[node name="RoundCaps" type="Line2D" parent="."]
+texture_repeat = 2
+points = PackedVector2Array(300, 100, 428, 100)
+width = 16.0
+texture = SubResource("GradientTexture2D_halves")
+texture_mode = 1
+begin_cap_mode = 2
+end_cap_mode = 2

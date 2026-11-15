@@ -35,6 +35,8 @@ export interface TextEditProperties
   fitContentWidth?: boolean;
   /** Grows this Control's minimum height to fit every (wrapped) row. Godot default false. */
   fitContentHeight?: boolean;
+  /** Adds one screen of empty rows to the scroll range (`text_edit.cpp:8602-8605`). Godot default false. */
+  scrollPastEndOfFile?: boolean;
   /** Reserves horizontal space for the (unrendered) minimap. Godot default false. */
   minimapDraw?: boolean;
   /** The reserved minimap width, Godot px. Godot default 80. */

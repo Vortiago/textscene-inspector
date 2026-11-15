@@ -21,12 +21,68 @@ import { fixturesDir, sceneFiles } from '../parser/testing/parserKit.js';
 import { isGodotTextResourcePath } from '../godot/project/resourceFormats.js';
 
 /**
- * `unit-*` fixtures allowed an advisory (warning or info), keyed by the exact rules they may trip and asserted as set
- * equality. A unit fixture shows one node configured correctly, so an advisory usually means the fixture is wrong.
+ * Fixtures allowed an advisory (warning or info), keyed by the exact rules they may trip and asserted as set equality.
+ * Only `edge-*` fixtures are exempt, by pattern. A fixture shows one thing configured correctly, so an advisory usually
+ * means the fixture is wrong.
  * Keyed by rule, not filename, so the exemption does not blind a fixture to every later rule. Add an entry only when
  * the advisory is the fixture's point: fixing the fixture is the default.
  */
-const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[]; reason: string }>> = {
+const FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[]; reason: string }>> = {
+  'integration-trail-foreign-owner-in-content.tscn': {
+    rules: ['unresolved-parent-path'],
+    reason:
+      'the heading names a parent="Missing" that walks nowhere on purpose: Godot falls back to the parent_id_path trail (packed_scene.cpp:161-163), and the linter cannot open the instanced scene to follow it',
+  },
+  'integration-trail-name-in-content.tscn': {
+    rules: ['unresolved-parent-path'],
+    reason:
+      'the heading names a parent="Missing" that walks nowhere on purpose: Godot falls back to the parent_id_path trail (packed_scene.cpp:161-163), and the linter cannot open the instanced scene to follow it',
+  },
+  'integration-trail-parent-in-content.tscn': {
+    rules: ['unresolved-parent-path'],
+    reason:
+      'the heading names a parent="Missing" that walks nowhere on purpose: Godot falls back to the parent_id_path trail (packed_scene.cpp:161-163), and the linter cannot open the instanced scene to follow it',
+  },
+  'unit-collision-shapes-2d.tscn': {
+    rules: ['collisionshape2d-polygon-shape-limited-editing'],
+    reason:
+      'the convex and concave polygon shapes are in the fixture so their drawing shows, and the editor warns about both classes (collision_shape_2d.cpp:184-189)',
+  },
+  'integration-unsupported-hierarchy.tscn': {
+    rules: ['collisionshape3d-invalid-parent', 'collisionobject3d-needs-collision-shape'],
+    reason:
+      'the hierarchy Godot allows but does not treat as collision geometry IS the fixture: a shape under a mesh, and bodies with no shape',
+  },
+  'unit-bone2d-gizmo-child.tscn': {
+    rules: ['bone2d-invalid-parent', 'bone2d-chain-does-not-terminate'],
+    reason:
+      'the sub-scene whose Bone2D root joins no Skeleton2D on its own; the kite of the bone that instances it reaches this root',
+  },
+  'unit-clip-children-nested-inert.tscn': {
+    rules: ['canvasitem-ancestor-clips-children'],
+    reason:
+      'the inner owner clips under a clipping ancestor on purpose: Godot warns and still groups it, and the nested draw order is the fixture',
+  },
+  'unit-clip-children-nested-behind-order.tscn': {
+    rules: ['canvasitem-ancestor-clips-children'],
+    reason:
+      'the inner owner clips under a clipping ancestor on purpose: the behind child of a nested inert owner draws first, and that order is the fixture',
+  },
+  'unit-clip-children-behind-owner.tscn': {
+    rules: ['canvasitem-ancestor-clips-children'],
+    reason:
+      'the behind child clips under a clipping ancestor on purpose: Godot warns and still groups it, and its draw order before the sibling is the fixture',
+  },
+  'unit-clip-children-nested-boundary.tscn': {
+    rules: ['canvasitem-ancestor-clips-children'],
+    reason:
+      'the group and the inner owner clip under a clipping ancestor on purpose: Godot warns and still groups them, and the order across the group is the fixture',
+  },
+  'unit-clip-children-behind-groups.tscn': {
+    rules: ['canvasitem-ancestor-clips-children'],
+    reason:
+      'both groups clip under a clipping ancestor on purpose: Godot warns and still groups them, and what each copies is the fixture',
+  },
   'unit-legacy-format.tscn': {
     rules: ['legacy-format-version'],
     reason:
@@ -40,6 +96,10 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
   'unit-unsupported-nodes.tscn': {
     rules: ['collisionobject3d-needs-collision-shape'],
     reason: 'exists to show unsupported types; the Area3D has no shape on purpose',
+  },
+  'unit-canvas-group-nested.tscn': {
+    rules: ['canvasgroup-nested-in-canvasgroup'],
+    reason: 'the nested group is the fixture, held so the plain rect Godot draws for it can be measured',
   },
   'unit-cpuparticles2d-crossed-range.tscn': {
     rules: ['cpuparticles2d-param-min-above-max'],
@@ -137,6 +197,11 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason:
       'the fixture writes `true` into INT and FLOAT slots on purpose: the converted-spelling warning is the point, and the golden pins what Godot draws for it',
   },
+  'unit-window-content-scale-unknown.tscn': {
+    rules: ['format:content_scale_mode'],
+    reason:
+      'mode 3 is outside the enum on purpose: the warning is the point, and the golden pins the empty target Godot draws for it',
+  },
   'unit-lightmap-gi-shadowmask-only.tscn': {
     rules: ['format:shadowmask_mode'],
     reason:
@@ -179,6 +244,11 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
     }
   ).files
 );
+
+/** An `edge-*` fixture is malformed or odd on purpose, so any advisory it draws is the fixture's point. */
+function isEdgeFixture(name: string): boolean {
+  return basename(name).startsWith('edge-');
+}
 
 /** The fixtures' roots: a fixture is linted in the nearest `project.godot` above it, and a flat one in none. */
 const fixtureRoots = createDiskResRoots(null);
@@ -245,11 +315,11 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
     expect(all.some((linted) => linted.provider !== null)).toBe(true);
   });
 
-  it('every unit-* fixture reports an advisory only where allowlisted, rule by rule', () => {
+  it('every fixture but the edge-* ones reports an advisory only where allowlisted, rule by rule', () => {
     const unexpected: string[] = [];
     for (const { name } of all) {
-      if (!basename(name).startsWith('unit-')) continue;
-      const allowed = new Set(UNIT_FIXTURE_ADVISORIES[name]?.rules ?? []);
+      if (isEdgeFixture(name)) continue;
+      const allowed = new Set(FIXTURE_ADVISORIES[name]?.rules ?? []);
       unexpected.push(
         ...advisoryRulesFor(name)
           .filter((rule) => !allowed.has(rule))
@@ -263,7 +333,7 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
     // Set equality both ways. An entry that stopped firing means the fixture was
     // fixed or the rule changed, and the exemption is now a lie about the file.
     const stale: string[] = [];
-    for (const [file, { rules }] of Object.entries(UNIT_FIXTURE_ADVISORIES)) {
+    for (const [file, { rules }] of Object.entries(FIXTURE_ADVISORIES)) {
       const firing = new Set(advisoryRulesFor(file));
       for (const rule of rules) {
         if (!firing.has(rule)) stale.push(`${file}: ${rule} is allowlisted but no longer fires`);

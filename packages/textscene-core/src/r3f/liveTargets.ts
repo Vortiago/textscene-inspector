@@ -10,7 +10,7 @@ import type { AtlasTextureLayout } from '../resources/textures/atlastexture/type
 import { copySampling } from '../resources/textures/copySampling';
 import { imageSize, readRenderTargetPixels, type ImagePixels } from '../resources/formats/image/imagePixels';
 import { perObject } from '../utils/perObject';
-import { drawOffscreen } from './offscreen';
+import { drawOffscreen } from './offscreen/draw';
 import { isHeld } from './useDisposeOnRelease';
 import { holdsSrgbBytes, markSrgbBytes } from './srgbByteTextures';
 import { copyTexels, wholeTexels, type TexelPlacement } from './texelCopy';
@@ -154,6 +154,18 @@ function dropAlpha(data: Uint8Array | Uint8ClampedArray): void {
 /** Whether any copy of `texture` is live, so its pass has a copy to refill after a render. */
 export function hasLiveCopies(texture: THREE.Texture): boolean {
   return liveTargetOf(texture).copies.size > 0;
+}
+
+/**
+ * Whether a reader holds a copy of `texture`, at any depth: a reader that is mounted samples it,
+ * as Godot marks a target used when a consumer samples it (`texture_storage.cpp:728`). A copy no
+ * reader holds comes from a render React discarded, and samples nothing.
+ */
+export function hasHeldCopies(texture: THREE.Texture): boolean {
+  for (const copy of liveTargetOf(texture).copies) {
+    if (isHeld(copy.texture) || hasHeldCopies(copy.texture)) return true;
+  }
+  return false;
 }
 
 /**

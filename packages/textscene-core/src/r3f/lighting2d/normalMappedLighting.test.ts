@@ -22,9 +22,9 @@ void main() {
 }
 `;
 
-function compile(lightCount: number) {
+function compile(lightCount: number, isLinearCanvas = false) {
   const shared = normalMappedUniforms();
-  const props = normalMappedLightingProps(shared, lightCount);
+  const props = normalMappedLightingProps(shared, lightCount, isLinearCanvas);
   const shader = {
     vertexShader: STOCK_VERTEX,
     fragmentShader: STOCK_FRAGMENT,
@@ -35,6 +35,22 @@ function compile(lightCount: number) {
 }
 
 describe('normalMappedLightingProps', () => {
+  it('defines the linear canvas at compile time, with a program key of its own', () => {
+    const linear = compile(2, true);
+    expect(linear.shader.fragmentShader).toContain('#define LINEAR_CANVAS\n');
+    expect(compile(2).shader.fragmentShader).not.toContain('#define LINEAR_CANVAS');
+    expect(linear.props.injection.cacheKey).not.toBe(compile(2).props.injection.cacheKey);
+  });
+
+  it("lights in the numbers three's colour output writes, after it, with no transfer call", () => {
+    const { shader } = compile(2);
+    const encoded = shader.fragmentShader.indexOf('#include <colorspace_fragment>');
+    expect(shader.fragmentShader.split('#include <colorspace_fragment>')).toHaveLength(2);
+    expect(shader.fragmentShader.indexOf('gl_FragColor.rgb = canvasShaded(color)')).toBeGreaterThan(encoded);
+    expect(shader.fragmentShader).not.toContain('godotToSrgb');
+    expect(shader.fragmentShader).not.toContain('godotToLinear');
+  });
+
   it('sizes the light loop and its arrays to the lights kept apart', () => {
     const { shader } = compile(3);
     expect(shader.fragmentShader).toContain('#define APART_LIGHT_COUNT 3');
@@ -65,6 +81,26 @@ describe('normalMappedLightingProps', () => {
     const { shader } = compile(1);
     expect(shader.vertexShader).toContain('vCanvasPosition = (modelMatrix * vec4(transformed, 1.0)).xy;');
     expect(shader.vertexShader).toContain('normalize(modelMatrix[0].xy)');
+  });
+
+  it("samples the maps where a padded tile's diffuse is clamped (tile_set.cpp:5622-5671)", () => {
+    const { fragmentShader } = compile(1).shader;
+    expect(fragmentShader).toContain('#ifdef TILE_UV_BOUNDS');
+    expect(fragmentShader).toContain('clamp(vMapUv, vTileUvBounds.xy, vTileUvBounds.zw)');
+    expect(fragmentShader).toContain('texture2D(uNormalMap, surfaceUv())');
+    expect(fragmentShader).toContain('texture2D(uSpecularMap, surfaceUv())');
+  });
+
+  it("turns the normal by a tile's flips and transpose, transposed first (canvas.glsl:655-661)", () => {
+    const { fragmentShader } = compile(1).shader;
+    const orientation = fragmentShader.slice(fragmentShader.indexOf('#ifdef TILE_NORMAL_ORIENTATION'));
+    expect(orientation.indexOf('normal.xy = -normal.yx;')).toBeGreaterThan(-1);
+    expect(orientation.indexOf('normal.x = -normal.x;')).toBeGreaterThan(
+      orientation.indexOf('normal.xy = -normal.yx;')
+    );
+    expect(orientation.indexOf('normal.y = -normal.y;')).toBeGreaterThan(
+      orientation.indexOf('normal.xy = -normal.yx;')
+    );
   });
 
   it('keys the program on the light count, which sizes it', () => {

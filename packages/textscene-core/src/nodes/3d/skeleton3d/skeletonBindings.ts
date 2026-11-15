@@ -12,11 +12,10 @@
 
 import type { TscnNode } from '../../../parser/types.js';
 import { identityTransform3D, sameTransform3D, type Transform3D } from '../../../godot/math/transform3d.js';
-import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { liveGlobalTransform3D } from '../../../r3f/liveGlobalTransform.js';
-import { uniquePathsOfLiteral } from '../../../r3f/nodePathUniqueNames.js';
+import { resolveLiteralOnLiveTree } from '../../../r3f/nodePathUniqueNames.js';
 import { liveNodePatches } from '../../../r3f/liveNodePatches.js';
 import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
 import type { NodePatches } from '../../../r3f/nodePatch.js';
@@ -106,11 +105,7 @@ function boundSkinOf(node: TscnNode, path: string, tree: LiveTree): AutomaticSki
   if (node.type !== 'MeshInstance3D') return undefined;
   const properties = node.properties as MeshInstance3DProperties;
   if (!namesSkeletonToBind(properties)) return undefined;
-  const skeletonPath = resolveNodePathLiteral(
-    path,
-    properties.skeleton,
-    uniquePathsOfLiteral(properties.skeleton, path, tree)
-  );
+  const skeletonPath = resolveLiteralOnLiveTree(path, properties.skeleton, tree);
   const skeleton = skeletonPath === null ? null : tree.at(skeletonPath);
   if (skeleton?.step.node.type !== 'Skeleton3D') return undefined;
   return posedSkeletonOf(skeleton, tree).skin;
@@ -182,11 +177,7 @@ function referenceNodeGlobal(
   modifierPath: string,
   target: string
 ): Transform3D | null {
-  const resolved = resolveNodePathLiteral(
-    modifierPath,
-    target,
-    uniquePathsOfLiteral(target, modifierPath, tree)
-  );
+  const resolved = resolveLiteralOnLiveTree(modifierPath, target, tree);
   return resolved === null ? null : liveGlobalTransform3D(tree, resolved, placed);
 }
 

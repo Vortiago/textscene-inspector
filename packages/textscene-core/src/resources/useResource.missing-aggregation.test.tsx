@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import * as THREE from 'three';
-import { useResource, useResourceLoad } from './useResource';
+import { useResource } from './useResource';
 import type { ResourceLoader } from './ResourceLoader';
 import { createFakeResourceLoader, type FakeProcessor } from './testing/createFakeResourceLoader';
 import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
@@ -98,18 +98,6 @@ describe('useResource → MissingResourcesContext aggregation', () => {
     rerender({ secondPath: '' });
 
     expect(result.current.has('res://textures/missing.png')).toBe(true);
-  });
-
-  it('reports nothing for a failed load through useResourceLoad, which leaves reporting to its caller', () => {
-    const { result } = renderHook(
-      () => {
-        useResourceLoad<THREE.Texture>('res://textures/missing.png', 'texture');
-        return useMissingResources().missingPaths;
-      },
-      { wrapper: missingResourcesWrapper(loader) }
-    );
-
-    expect(result.current.size).toBe(0);
   });
 
   it('promotes a previously missing path to uploadedPaths when it turns loaded', () => {

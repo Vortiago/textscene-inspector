@@ -48,5 +48,19 @@ arrived) or `unavailable` with a reason.
   a scene and from a file.
 - A decode that hands on a reference with `Follow.reference` gets a new value when the holder's
   tables are a new object, because the reference holds them.
-- A read of a value that a loader processor builds (a font, an ArrayMesh, pixels) is not part of
-  the module yet. It lands with its first kind.
+- A file the loader imports, not parses, reads as a held resource of the class `IMPORTED_FILE`,
+  with the file as its address. `TEXTURE_2D` and `TEXTURE_3D` decode an image file to its path,
+  and the texture hook loads the pixels. So a resource file is legal at every position of a Texture2D chain.
+- A decode reads the value a loader processor builds for its holder with `Follow.loaded(fileKind)`,
+  and a reader with a bare path uses `ResourceSnapshot.loaded(fileKind, address)`. The snapshot
+  records the read by its file kind and address, so its host requests the file from that kind's
+  cache, and a `.tres` font on the font bus and on the resource bus are two reads.
+- A kind that reads its files whole (`readsFilesWhole`, the first is `FONT`) has the snapshot parse
+  none of its files. It holds the file with no properties and the class its `[ext_resource]` states,
+  and the decode reads `Follow.loaded`. Without it, a read waits for the parse and then for the
+  processor: one more run for each file.
+- A nested read that is pending makes its holder pending. A decode reads a part the value draws
+  without through `Follow.readWithoutWaiting`, which records the read but does not wait: a Font
+  draws its base face while a fallback loads, and decodes again once the fallback arrives.
+- A decode that declines after its own file failed answers that failure, so a font file that failed
+  reads as `missing-file`, not `undecodable`.

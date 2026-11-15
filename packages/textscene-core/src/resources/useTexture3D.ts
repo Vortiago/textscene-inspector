@@ -1,29 +1,24 @@
 /**
  * The one resolver for a Texture3D slot: a `NoiseTexture3D` or `ImageTexture3D`, inline or saved as
- * its own `.tres`, or an image its **Import sidecar** imports as a 3D texture, named by an
- * `ExtResource`. Null while loading, for none, and for a form the previewer cannot build. The load
- * reports a missing image or `.tres` itself.
+ * its own `.tres`, or an image its **Import sidecar** imports as a 3D texture. The `TEXTURE_3D`
+ * kind reads the resource, and this builds the GPU texture from the decoded value. Null while
+ * loading, for none, and for a form the previewer cannot build. The read reports a missing image
+ * or `.tres` itself.
  */
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import type { SceneResources } from '../r3f/SceneResourcesContext.js';
-import { isTexturePath } from './formats/image/textureProcessing.js';
-import { resolveExtResourcePath } from './SubResourceResolver.js';
-import { useProceduralTexture3D } from './useProceduralTexture.js';
+import { useReferencedResource, type ScopedReference } from './reading';
+import { proceduralTexture3D } from './textures/resolveProceduralTexture.js';
+import { TEXTURE_3D } from './textures/texture3d/kind.js';
+import { useProceduralTexture } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
-import { useParsedResourceSlot } from './useParsedResourceSlot.js';
-import { useTextureSources } from './useTextureSources.js';
 
-export function useTexture3D(ref: string | undefined, pools: SceneResources): THREE.Data3DTexture | null {
-  const slot = useParsedResourceSlot(ref, pools.externalResources, pools.internalResources);
-  const sources = useTextureSources(slot.ref, slot.externalResources, slot.internalResources);
-  const procedural = useProceduralTexture3D(sources.readyRef, sources.pools, sources.loadedFile);
-
-  const imagePath = useMemo(() => {
-    const extPath = resolveExtResourcePath(slot.ref, slot.externalResources);
-    return extPath && isTexturePath(extPath) ? extPath : null;
-  }, [slot.ref, slot.externalResources]);
+export function useTexture3D(reference: ScopedReference | null): THREE.Data3DTexture | null {
+  const decoded = useReferencedResource(reference, TEXTURE_3D).value;
+  const lookup = useMemo(() => proceduralTexture3D(decoded), [decoded]);
+  const procedural = useProceduralTexture(lookup);
+  const imagePath = decoded?.form === 'file' ? decoded.path : null;
   const loaded = useResource<THREE.Data3DTexture>(imagePath ?? '', 'texture3d');
   const texture = procedural.claimed ? procedural.texture : loaded.value;
   return texture instanceof THREE.Data3DTexture ? texture : null;

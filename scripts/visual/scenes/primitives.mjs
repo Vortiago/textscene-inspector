@@ -11,8 +11,14 @@ export const PRIMITIVE_SCENES = [
   { name: 'capsule-mesh-texture-uv', file: 'unit-capsule-mesh-texture-uv.tscn' },
   { name: 'cylinder-mesh', file: 'unit-cylinder-mesh.tscn' },
   { name: 'cylinder-mesh-texture-uv', file: 'unit-cylinder-mesh-texture-uv.tscn' },
+  // An ArrayMesh of lines: segments one pixel wide, lit as a +Z normal, a vertex-coloured strip, and a mesh of triangles and lines.
+  { name: 'array-mesh-lines', file: 'unit-array-mesh-lines.tscn' },
+  // The same surfaces under textured, emissive, metal, additive, alpha and vertex-colour materials, and an odd index count.
+  { name: 'array-mesh-lines-materials', file: 'unit-array-mesh-lines-materials.tscn' },
   { name: 'point-mesh', file: 'unit-point-mesh.tscn' },
   { name: 'point-mesh-gridmap', file: 'unit-point-mesh-gridmap.tscn' },
+  // An ArrayMesh lines surface as a MeshLibrary item, at four cells, one turned a half turn about Y.
+  { name: 'array-mesh-lines-gridmap', file: 'unit-array-mesh-lines-gridmap.tscn' },
   { name: 'prism-mesh', file: 'unit-prism-mesh.tscn' },
   { name: 'prism-mesh-texture-uv', file: 'unit-prism-mesh-texture-uv.tscn' },
   { name: 'quadmesh', file: 'unit-quadmesh.tscn' },

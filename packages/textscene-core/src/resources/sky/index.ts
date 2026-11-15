@@ -7,8 +7,8 @@
 
 import { registerResourceSlice } from '../sliceRegistration';
 
-// The `resource` slot, not the material processor: its `BUILDABLE_MATERIAL_TYPES`
-// gate throws on a sky material, which `useSubOrExtResource` then never sees.
+// The `resource` bus, whose parsed files the reading module's snapshot reads: a sky file on
+// any other bus never reaches the `SKY` kind.
 registerResourceSlice({
   slice: 'sky',
   kind: 'godot-text',

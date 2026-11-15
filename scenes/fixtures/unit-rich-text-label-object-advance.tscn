@@ -1,0 +1,79 @@
+; One variable: an [img] and an [hr] in a font file that maps no glyph to U+FFFC. Godot gives an
+; embedded object a glyph of its own, as wide as the object, outside the HarfBuzz run
+; (text_server_adv.cpp:7368-7387), so the text after it starts one object width later in any font.
+; The bundled font maps U+FFFC to a glyph one em wide, so only a font file shows the rule.
+
+[gd_scene format=3]
+
+[ext_resource type="FontFile" path="res://fonts/montserrat-semibold-subset.ttf" id="1_font"]
+[ext_resource type="Texture2D" path="res://textures/checkerboard-8px.svg" id="2_img"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="W40" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 150.0
+offset_right = 620.0
+offset_bottom = 222.0
+bbcode_enabled = true
+scroll_active = false
+horizontal_alignment = 0
+theme_override_fonts/normal_font = ExtResource("1_font")
+theme_override_font_sizes/normal_font_size = 24
+text = "ab[img=40x20]res://textures/checkerboard-8px.svg[/img]cd"
+
+[node name="W150" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 220.0
+offset_right = 620.0
+offset_bottom = 292.0
+bbcode_enabled = true
+scroll_active = false
+horizontal_alignment = 0
+theme_override_fonts/normal_font = ExtResource("1_font")
+theme_override_font_sizes/normal_font_size = 24
+text = "ab[img=150x20]res://textures/checkerboard-8px.svg[/img]cd"
+
+[node name="S8" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 290.0
+offset_right = 620.0
+offset_bottom = 320.0
+bbcode_enabled = true
+scroll_active = false
+horizontal_alignment = 0
+theme_override_fonts/normal_font = ExtResource("1_font")
+theme_override_font_sizes/normal_font_size = 8
+text = "ab[img=40x20]res://textures/checkerboard-8px.svg[/img]cd"
+
+[node name="Centre" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 430.0
+offset_right = 620.0
+offset_bottom = 502.0
+bbcode_enabled = true
+scroll_active = false
+horizontal_alignment = 1
+theme_override_fonts/normal_font = ExtResource("1_font")
+theme_override_font_sizes/normal_font_size = 24
+text = "ab[img=40x20]res://textures/checkerboard-8px.svg[/img]cd"
+
+[node name="Rule" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 500.0
+offset_right = 620.0
+offset_bottom = 580.0
+bbcode_enabled = true
+scroll_active = false
+theme_override_fonts/normal_font = ExtResource("1_font")
+theme_override_font_sizes/normal_font_size = 24
+text = "ab[hr width=40 height=6 align=left]cd"

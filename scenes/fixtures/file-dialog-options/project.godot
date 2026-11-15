@@ -1,0 +1,10 @@
+; A res:// root of its own, so the FileDialog's file list holds only this project file and the scene: the
+; directory it lists is res://. Kept in a subdirectory rather than at scenes/fixtures, whose res:// holds every other fixture.
+
+config_version=5
+
+[application]
+
+config/name="FileDialog options"
+run/main_scene="res://unit-file-dialog-options.tscn"
+config/features=PackedStringArray("4.6")

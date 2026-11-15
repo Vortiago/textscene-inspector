@@ -1,5 +1,5 @@
 /**
- * Mounts the native offscreen passes for every Control-only sub-viewport
+ * Mounts the native offscreen passes for every sub-viewport with no world content
  * (ADR-0033), for both canvases, since a consumer in either may sample one. The
  * Control renderer loads lazily, and only for a scene that has such a viewport.
  */

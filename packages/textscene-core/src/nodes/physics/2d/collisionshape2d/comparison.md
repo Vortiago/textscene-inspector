@@ -5,12 +5,12 @@ status: done
 fixture: unit-collisionshape2d.tscn
 image: unit-collisionshape2d
 visual: false
-renders_as: a toggle-gated collision outline
+renders_as: a toggle-gated collision shape
 ---
 
 # CollisionShape2D
 
-Attaches a 2D collision shape to a physics body. Its outline is a debug gizmo gated behind "Visible Collision Shapes" (ADR-0005, ADR-0006), so a plain capture draws nothing.
+Attaches a 2D collision shape to a physics body. Its shape is a debug gizmo gated behind "Visible Collision Shapes" (ADR-0005, ADR-0006), so a plain capture draws nothing. The gizmo draws in `debug_color`, grey when `disabled`, with an arrow for `one_way_collision`.
 
 ## Linting
 
@@ -42,4 +42,4 @@ Strict parsing format-checks these `CollisionShape2D` properties, plus 12 inheri
 
 ## Known limitations
 
-- **Editor only** The shape outline draws only while the collision-shape toggle is on.
+- **Editor only** The shape draws only while the collision-shape toggle is on.

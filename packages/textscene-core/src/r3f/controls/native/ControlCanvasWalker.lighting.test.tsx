@@ -11,13 +11,14 @@ import { nativeTheme } from './nativeTheme';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import { controlNode, solveNode as solveNodeDefaults } from './testing/solveNode';
 import type { SceneScope } from '../../../parser/types';
-import { ROOT_TEXTURE_SAMPLER } from '../../canvasItemTextureSampler';
+import { InheritedFrom, inheritedState } from '../../testing/inheritedFrom';
 import type { SolveNode } from './solveTree';
 import { controlComponentRegistry, type NativeControlComponent } from '../ControlComponentRegistry';
 import { ControlQuad } from './controlQuad';
 import { CanvasLighting2DContext } from '../../lighting2d/lightPassContext';
 import { recordedItems } from '../../lighting2d/testing/recordedItems';
 import type { ItemPlacement } from '../../lighting2d/itemLightList';
+import { registerInternalControls } from './internalControls';
 
 vi.mock('../../contexts/ProjectSettingsContext', () => ({
   useProjectSettings: () => ({ settings: null, viewportSize: { width: 1152, height: 648 }, themeScale: 1 }),
@@ -35,6 +36,19 @@ const QuadPainter: NativeControlComponent = ({ rect, renderOrder }) => (
     renderOrder={renderOrder}
   />
 );
+
+/** A host with one internal Control that fills it, as a ColorPicker's `internal_margin` does. */
+const HOST = 'HostOfAnInternalRect';
+registerInternalControls(
+  HOST,
+  () => [{ mode: 'front', spec: { type: 'TestRect', name: 'Inner', properties: { name: 'Inner' } } }],
+  (_host, [inner]) => new Map([[inner!.node.path, { x: 0, y: 0, w: 40, h: 40 }]])
+);
+
+const ADDITIVE: SceneScope = {
+  internalResources: [{ id: 'add', type: 'CanvasItemMaterial', data: { blend_mode: '1' } }],
+  externalResources: [],
+};
 
 function control(properties: Record<string, unknown>): SolveNode {
   return {
@@ -98,24 +112,20 @@ describe('<ControlCanvasWalker> lighting', () => {
     expect(placements).toEqual([]);
   });
 
-  it("takes the material of a skipped Node2D ancestor for a Control that uses its parent's material", async () => {
+  it("takes the material the parent item hands down for a Control that uses its parent's material", async () => {
     controlComponentRegistry.register({ typeName: 'TestRect', Component: QuadPainter });
     const additive: SceneScope = {
       internalResources: [{ id: 'add', type: 'CanvasItemMaterial', data: { blend_mode: '1' } }],
       externalResources: [],
     };
-    const promoted: SolveNode = {
-      ...control({ anchorsPreset: 15, useParentMaterial: true }),
-      skippedAncestors: {
-        transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
-        modulate: { r: 1, g: 1, b: 1, a: 1 },
-        z: [],
-        sampler: ROOT_TEXTURE_SAMPLER,
-        material: { kind: 'own', ref: 'SubResource("add")', resources: additive },
-      },
-    };
+    const promoted = control({ anchorsPreset: 15, useParentMaterial: true });
+    const parent = inheritedState({
+      material: { kind: 'own', ref: 'SubResource("add")', resources: additive },
+    });
 
-    const renderer = await ReactThreeTestRenderer.create(walk(promoted));
+    const renderer = await ReactThreeTestRenderer.create(
+      <InheritedFrom state={parent}>{walk(promoted)}</InheritedFrom>
+    );
 
     const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
     expect(material.blendDst).toBe(THREE.OneFactor);
@@ -128,5 +138,37 @@ describe('<ControlCanvasWalker> lighting', () => {
 
     const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
     expect(material.customProgramCacheKey()).toContain(LIGHT_PROGRAM_KEY);
+  });
+
+  describe('an internal Control under a host with an additive material and light_mask 2', () => {
+    async function drawHost() {
+      controlComponentRegistry.register({ typeName: HOST, Component: () => null });
+      controlComponentRegistry.register({ typeName: 'TestRect', Component: QuadPainter });
+      const { wrapper, placements } = withRegisteredItems();
+      const host: SolveNode = {
+        ...solveNodeDefaults(),
+        path: 'Host',
+        node: controlNode('Host', HOST, {
+          name: 'Host',
+          anchorsPreset: 15,
+          materialPath: 'SubResource("add")',
+          lightMask: 2,
+        }),
+        resources: ADDITIVE,
+      };
+      const renderer = await ReactThreeTestRenderer.create(wrapper(walk(host)));
+      const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
+      return { material, placements };
+    }
+
+    it("draws with the plain blend, not the host's material (renderer_canvas_cull.cpp:319-324)", async () => {
+      const { material } = await drawHost();
+      expect(material.blendDst).not.toBe(THREE.OneFactor);
+    });
+
+    it("declares itself to the light pass at light_mask 1, not the host's (canvas_item.h:98)", async () => {
+      const { placements } = await drawHost();
+      expect(placements.map((p) => p.lightMask).sort()).toEqual([1, 2]);
+    });
   });
 });

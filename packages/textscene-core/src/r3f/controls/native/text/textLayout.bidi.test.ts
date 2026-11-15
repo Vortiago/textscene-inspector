@@ -198,3 +198,28 @@ describe('shapeText — language', () => {
     ]);
   });
 });
+
+describe('shapeText — the drawn direction', () => {
+  it('draws a text set right to left right to left', () => {
+    const layout = shapeText('Hello', { ...BASE, direction: TextDirection.TEXT_DIRECTION_RTL });
+    expect(layout.lines[0]!.isDrawnRtl).toBe(true);
+  });
+
+  // `shaped_text_draw` reads the set direction (`text_server.cpp:1744`), not the inferred one.
+  it('draws an AUTO text left to right, though its Arabic line infers right to left', () => {
+    const layout = shapeText('مرحبا', { ...BASE, direction: TextDirection.TEXT_DIRECTION_AUTO });
+    expect(layout.lines[0]!.isRtl).toBe(true);
+    expect(layout.lines[0]!.isDrawnRtl).toBeFalsy();
+  });
+
+  // A RichTextLabel paragraph sets its own direction (`rich_text_label.cpp:3507-3558`).
+  it("draws each paragraph in the direction it sets, not the text's", () => {
+    const layout = shapeText('Hello\nworld', {
+      ...BASE,
+      direction: TextDirection.TEXT_DIRECTION_AUTO,
+      paragraphSeparator: '\n',
+      paragraphBidiAt: (start) => (start > 0 ? { direction: TextDirection.TEXT_DIRECTION_RTL } : {}),
+    });
+    expect(layout.lines.map((line) => line.isDrawnRtl === true)).toEqual([false, true]);
+  });
+});

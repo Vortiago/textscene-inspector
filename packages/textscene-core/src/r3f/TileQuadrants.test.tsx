@@ -14,7 +14,6 @@ import { CanvasLighting2DContext, INERT_CANVAS_LIGHTING } from './lighting2d/lig
 import type { CappedItem } from './lighting2d/itemLightCap';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import { drawableCells } from '../resources/tileset/drawableCell';
-import { parseTresFile } from '../parser/parsedResource';
 import { canvasItemMaterialOf } from '../resources/materials/canvasitemmaterial/decode';
 import {
   defaultTileData,
@@ -27,10 +26,13 @@ import { CanvasItemProvider } from './components/CanvasItemGroup';
 import { canvasRenderOrder } from './canvasPaintOrder';
 import { CanvasModulateContext } from './canvasModulate';
 import { WHITE_MODULATE } from './canvasItemModulate';
+import { canvasColorSpaceOf, CanvasColorSpaceProvider, type CanvasColorSpace } from './canvasColorSpace';
 import { type CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
 import type { Rgba } from '../godot/math/math';
 import { CanvasItemMaterialBlendMode, CanvasItemMaterialLightMode } from '../godot/scene/canvasItemMaterial';
 import { tileTextureAt } from '../resources/tileset/testing/tileTexture';
+
+const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 function canvasItemMaterial(overrides: Partial<CanvasItemMaterialProperties>): CanvasItemMaterialProperties {
   return { ...canvasItemMaterialOf({ type: 'CanvasItemMaterial', data: {} })!, ...overrides };
@@ -41,8 +43,7 @@ const UNSHADED = canvasItemMaterial({ lightMode: CanvasItemMaterialLightMode.UNS
 
 /**
  * The tile at atlas (0, 0): alternative 0 at TileData defaults, 1 at z_index 2, 2 with an additive
- * material, 3 with a ShaderMaterial, 4 with an unshaded material, 5 tinted red and 6 with an additive
- * material from a .tres file.
+ * material, 3 with a ShaderMaterial, 4 with an unshaded material and 5 tinted red.
  */
 const ALTERNATIVES: Partial<AlternativeTileModel>[] = [
   {},
@@ -51,7 +52,6 @@ const ALTERNATIVES: Partial<AlternativeTileModel>[] = [
   { material: { properties: null } },
   { material: { properties: UNSHADED } },
   { modulate: { r: 1, g: 0, b: 0, a: 1 } },
-  { material: { path: 'res://add.tres' } },
 ];
 
 const BASE_TILE: AtlasTileModel = {
@@ -84,6 +84,7 @@ const MODEL: TileSetModel = {
     [1, atlasSource(1)],
     [FAILED_SOURCE, atlasSource(FAILED_SOURCE)],
   ]),
+  sceneSources: new Map(),
 };
 
 function cell(sourceId: number, x: number, y: number, alternativeId = 0): PlacedCell {
@@ -97,11 +98,19 @@ interface Layer {
   zFinal?: number;
   material?: CanvasItemMaterialProperties | null;
   canvasModulate?: Rgba;
+  selfTint?: Rgba;
+  space?: CanvasColorSpace;
 }
 
 function render(
   quadrants: readonly (readonly PlacedCell[])[],
-  { zFinal = 0, material = null, canvasModulate = WHITE_MODULATE }: Layer = {}
+  {
+    zFinal = 0,
+    material = null,
+    canvasModulate = WHITE_MODULATE,
+    selfTint = WHITE_MODULATE,
+    space = canvasColorSpaceOf(false),
+  }: Layer = {}
 ) {
   const fake = createFakeResourceLoader();
   for (const id of MODEL.sources.keys()) {
@@ -109,17 +118,15 @@ function render(
     (texture as unknown as { image: { width: number; height: number } }).image = { width: 16, height: 16 };
     fake.textures.seed(`res://source${id}.png`, id === FAILED_SOURCE ? null : texture);
   }
-  fake.resources.seed(
-    'res://add.tres',
-    parseTresFile('[gd_resource type="CanvasItemMaterial" format=3]\n\n[resource]\nblend_mode = 1\n')
-  );
   const registerCappedItem = vi.fn((_item: CappedItem) => () => {});
   const lighting = { ...INERT_CANVAS_LIGHTING, registerCappedItem };
   const wrap = (children: ReactNode) => (
     <ResourceLoaderProvider loader={fake.loader}>
       <CanvasLighting2DContext.Provider value={lighting}>
         <CanvasModulateContext.Provider value={canvasModulate}>
-          <CanvasItemProvider value={layerKey(zFinal)}>{children}</CanvasItemProvider>
+          <CanvasColorSpaceProvider value={space}>
+            <CanvasItemProvider value={layerKey(zFinal)}>{children}</CanvasItemProvider>
+          </CanvasColorSpaceProvider>
         </CanvasModulateContext.Provider>
       </CanvasLighting2DContext.Provider>
     </ResourceLoaderProvider>
@@ -129,11 +136,10 @@ function render(
       <TileQuadrants
         quadrants={quadrants.map((cells) => drawableCells(MODEL, cells))}
         model={MODEL}
-        selfTint={WHITE_MODULATE}
+        selfTint={selfTint}
         material={material}
         lightMask={1}
         zFinal={zFinal}
-        name="Layer"
         sampler={{ filter: 2, repeat: 1 }}
       />
     )
@@ -202,22 +208,17 @@ describe('<TileQuadrants>', () => {
     expect(meshes.map(canvasKeyOf)).toEqual([layerKey(3), layerKey(5)]);
   });
 
-  it("draws a missing-texture placeholder in its tile's z bucket, not the layer's", async () => {
+  it('draws no mesh for a tile whose source texture fails to load, in its own z bucket or any', async () => {
     const meshes = meshesOf(
       await render([[cell(0, 0, 0), cell(FAILED_SOURCE, 1, 0, 1)]], { zFinal: 3 }).tree
     );
-    expect(meshes.map(canvasKeyOf)).toEqual([layerKey(3), layerKey(5)]);
+    expect(meshes.map(canvasKeyOf)).toEqual([layerKey(3)]);
   });
 
   it('draws a tile with its own CanvasItemMaterial with its blend mode', async () => {
     const [base, additive] = materialsOf(await render([[cell(0, 0, 0), cell(0, 1, 0, 2)]]).tree);
     expect(base!.blending).toBe(THREE.NormalBlending);
     expect(additive!.blending).toBe(THREE.CustomBlending);
-  });
-
-  it("draws a tile whose material is a .tres file with that file's blend mode", async () => {
-    const [fromFile] = materialsOf(await render([[cell(0, 0, 0, 6)]]).tree);
-    expect(fromFile!.blending).toBe(THREE.CustomBlending);
   });
 
   it("draws a tile with a material it cannot read with plain blending, not the layer's", async () => {
@@ -243,5 +244,24 @@ describe('<TileQuadrants>', () => {
     const [mesh] = meshesOf(await render([[cell(0, 0, 0, 5)]]).tree);
     expect((mesh!.material as THREE.MeshBasicMaterial).vertexColors).toBe(true);
     expect(Array.from(mesh!.geometry.getAttribute('color').array.slice(0, 4))).toEqual([1, 0, 0, 1]);
+  });
+
+  describe('in a linear canvas', () => {
+    const grey = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
+
+    it("puts the layer's tint into the vertex colours, which convert as one product with the tile's modulate", async () => {
+      const [mesh] = meshesOf(
+        await render([[cell(0, 0, 0, 5)]], { selfTint: grey, space: LINEAR_CANVAS }).tree
+      );
+      expect(Array.from(mesh!.geometry.getAttribute('color').array.slice(0, 4))).toEqual([0.5, 0, 0, 1]);
+      expect((mesh!.material as THREE.MeshBasicMaterial).defines).toEqual(LINEAR_CANVAS.defines);
+    });
+
+    it('carries only the converted canvas modulate on the material', async () => {
+      const [shaded] = materialsOf(
+        await render([[cell(0, 0, 0)]], { selfTint: grey, canvasModulate: grey, space: LINEAR_CANVAS }).tree
+      );
+      expect(shaded!.color.r).toBeCloseTo(0.214041, 5);
+    });
   });
 });

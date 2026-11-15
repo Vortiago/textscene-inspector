@@ -1,0 +1,6 @@
+[gd_resource type="CanvasTexture" load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://unit-texture-file-gradient.tres" id="1_gradient"]
+
+[resource]
+diffuse_texture = ExtResource("1_gradient")

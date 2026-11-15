@@ -10,7 +10,9 @@ renders_as: one merged quad mesh holding a frozen particle pose
 
 CPUParticles2D is Godot's CPU-simulated emitter. The previewer runs a port of the
 engine's own simulation once, PCG32 generator included. It draws the result as one
-merged quad mesh that holds a frozen pose.
+merged quad mesh that holds a frozen pose. A texture that is set but fails to load draws white
+quads of 1 by 1 pixel, as Godot does (`cpu_particles_2d.cpp:1288-1291`). Godot's loader leaves
+a property that names a missing file null (`resource_format_text.cpp:146-154`, `:288-289`).
 
 ## Emission shapes
 <!-- compare: image=unit-cpuparticles2d-emission-shapes status=done fixture=unit-cpuparticles2d-emission-shapes.tscn -->
@@ -39,6 +41,15 @@ birth.
 <!-- compare: image=unit-cpuparticles2d-local-coords status=done fixture=unit-cpuparticles2d-local-coords.tscn -->
 
 A scaled emitter's particles do not scale with it by default, in Godot as here.
+
+## Normal map
+<!-- compare: image=unit-cpuparticles2d-normal-map status=done fixture=unit-cpuparticles2d-normal-map.tscn -->
+
+A CanvasTexture's `normal_texture` and `specular_texture` shade the particles under PointLight2D and
+DirectionalLight2D, and its own `texture_filter` and `texture_repeat` win over the emitter's. A
+particle's own `angle` does not turn the normal. With `local_coords = false`, the default, Godot
+draws the particles at the canvas transform (`renderer_canvas_cull.cpp:267`). So the emitter's
+rotation does not turn the normal either, and Global stays lit from the right. Local turns it with the emitter.
 
 
 ## No preprocess
@@ -161,7 +172,7 @@ A bound that is `inf` or `nan` is not read: the previewer keeps the default for 
   `preprocess` moment or else at the substituted window described above.
 - **Approximated** An emitter without `use_fixed_seed` takes a fixed constant seed, so its
   particles sit in plausible places where Godot randomises them on every run.
-- **Approximated** With more than one point in `emission_points`, the previewer picks from
-  the same set as Godot's unsaved process-wide RNG, but in another order.
-- **Approximated** A RING emitter fills the same ring as Godot, in other places: Godot's
-  unsaved process-wide RNG places each particle.
+- **Needs runtime** A RING particle sits elsewhere than in Godot, whose process-wide generator
+  (`scene/2d/cpu_particles_2d.cpp:953-956`) `SceneTree` seeds from the clock (`scene/main/scene_tree.cpp:2038`).
+- **Needs runtime** With several `emission_points`, a particle takes another point than in Godot,
+  where the same clock-seeded generator picks it (`scene/2d/cpu_particles_2d.cpp:936`).

@@ -6,7 +6,8 @@
 import { useEffect } from 'react';
 import type * as THREE from 'three';
 import type { ViewportTextureView } from '../../resources/textures/viewporttexture/useViewportTextureSlot';
-import { NODE_PROPERTY, useTexture2DRid } from '../../resources/useTexture2D';
+import { useNodeReference } from '../../resources/reading';
+import { useTexture2DRid } from '../../resources/useTexture2D';
 import { useSceneResources } from '../SceneResourcesContext';
 
 /**
@@ -22,9 +23,8 @@ export function useHeldTexture(
   hold: (texture: THREE.Texture) => void,
   release: (texture: THREE.Texture) => void
 ): THREE.Texture | null {
-  const { externalResources, internalResources } = useSceneResources();
-  const texture =
-    useTexture2DRid(reference, externalResources, internalResources, view, NODE_PROPERTY).texture ?? null;
+  const scope = useSceneResources();
+  const texture = useTexture2DRid(useNodeReference(reference, scope), view).texture ?? null;
   useEffect(() => {
     if (!texture) return undefined;
     hold(texture);

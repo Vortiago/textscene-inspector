@@ -1,0 +1,90 @@
+; One variable: the SubViewport's use_hdr_2d, seen by a 3D consumer. The top quad shows a viewport
+; with it on, and the bottom quad the same canvas with it off. A 3D material reads the HDR target's
+; linear values with no decode, and a value above 1 survives into its tonemap. No other scene sets
+; use_hdr_2d, so only this scene shows a regression in what a 3D material reads from it.
+
+[gd_scene format=3]
+
+[sub_resource type="Environment" id="Environment_tonemap"]
+tonemap_mode = 1
+
+[sub_resource type="QuadMesh" id="QuadMesh_screen"]
+size = Vector2(3, 1)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_hdr"]
+viewport_path = NodePath("Hdr")
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_srgb"]
+viewport_path = NodePath("Srgb")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hdr"]
+resource_local_to_scene = true
+shading_mode = 0
+albedo_texture = SubResource("ViewportTexture_hdr")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_srgb"]
+resource_local_to_scene = true
+shading_mode = 0
+albedo_texture = SubResource("ViewportTexture_srgb")
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_tonemap")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+current = true
+
+[node name="HdrScreen" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("QuadMesh_screen")
+surface_material_override/0 = SubResource("StandardMaterial3D_hdr")
+
+[node name="SrgbScreen" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.6, 0)
+mesh = SubResource("QuadMesh_screen")
+surface_material_override/0 = SubResource("StandardMaterial3D_srgb")
+
+[node name="Hdr" type="SubViewport" parent="."]
+use_hdr_2d = true
+size = Vector2i(300, 100)
+render_target_update_mode = 4
+
+[node name="Grey" type="Polygon2D" parent="Hdr"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(10, 10, 90, 10, 90, 90, 10, 90)
+
+[node name="Green" type="Polygon2D" parent="Hdr"]
+color = Color(0, 1, 0, 1)
+polygon = PackedVector2Array(110, 10, 190, 10, 190, 90, 110, 90)
+
+[node name="Red" type="Polygon2D" parent="Hdr"]
+color = Color(1, 0, 0, 0.5)
+polygon = PackedVector2Array(110, 10, 190, 10, 190, 90, 110, 90)
+
+[node name="Hot" type="Polygon2D" parent="Hdr"]
+modulate = Color(4, 4, 4, 1)
+color = Color(0.5, 0.25, 0.1, 1)
+polygon = PackedVector2Array(210, 10, 290, 10, 290, 90, 210, 90)
+
+[node name="Srgb" type="SubViewport" parent="."]
+size = Vector2i(300, 100)
+render_target_update_mode = 4
+
+[node name="Grey" type="Polygon2D" parent="Srgb"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(10, 10, 90, 10, 90, 90, 10, 90)
+
+[node name="Green" type="Polygon2D" parent="Srgb"]
+color = Color(0, 1, 0, 1)
+polygon = PackedVector2Array(110, 10, 190, 10, 190, 90, 110, 90)
+
+[node name="Red" type="Polygon2D" parent="Srgb"]
+color = Color(1, 0, 0, 0.5)
+polygon = PackedVector2Array(110, 10, 190, 10, 190, 90, 110, 90)
+
+[node name="Hot" type="Polygon2D" parent="Srgb"]
+modulate = Color(4, 4, 4, 1)
+color = Color(0.5, 0.25, 0.1, 1)
+polygon = PackedVector2Array(210, 10, 290, 10, 290, 90, 210, 90)

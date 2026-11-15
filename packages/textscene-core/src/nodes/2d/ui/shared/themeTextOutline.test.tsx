@@ -15,7 +15,11 @@ import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import { TRIANGLE_OUTLINES } from '../../../../r3f/controls/native/testing/triangleOutlines';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
@@ -36,14 +40,20 @@ interface RunProps {
   renderOrder?: number;
 }
 
-const scene = vi.hoisted(() => ({ runs: [] as RunProps[] }));
+/** The props of each mounted run, by mount: a second render of one run replaces its entry. */
+const scene = vi.hoisted(() => ({ runs: new Map<object, RunProps>() }));
 
-vi.mock('../../../../r3f/controls/native/text/TextRunMesh', () => ({
-  TextRunMesh: (props: RunProps) => {
-    scene.runs.push(props);
-    return null;
-  },
-}));
+vi.mock('../../../../r3f/controls/native/text/TextRunMesh', async () => {
+  const { useLayoutEffect, useState } = await import('react');
+  return {
+    TextRunMesh: (props: RunProps) => {
+      const [key] = useState(() => ({}));
+      scene.runs.set(key, props);
+      useLayoutEffect(() => () => void scene.runs.delete(key), [key]);
+      return null;
+    },
+  };
+});
 
 // The bundled canvas face settles at once, with no font to decode.
 vi.mock('../../../../r3f/controls/native/text/sceneFontOutlines', async (importOriginal) => ({
@@ -76,7 +86,7 @@ function outlined(
   // OptionButton and ItemList draw their items' text, FoldableContainer its title.
   const textProperties = { name: 'N', text, title: text, items: [{ text }], selected: 0 };
   const node: TscnNode = controlNode('N', type, { ...textProperties, ...properties });
-  return { ...emptySolveNode(), path: 'N', node, colors, constants };
+  return withThemeItems({ ...emptySolveNode(), path: 'N', node, colors, constants });
 }
 
 async function render(
@@ -84,14 +94,18 @@ async function render(
   solveNode: SolveNode,
   rect: Rect2 = RECT
 ) {
-  scene.runs = [];
+  scene.runs.clear();
   await ReactThreeTestRenderer.create(
     <Control {...painterEnv()} solveNode={solveNode} rect={rect} renderOrder={0} />
   );
 }
 
-const strokeRuns = () => scene.runs.filter((run) => run.strokeWidthPx);
-const fillRun = () => scene.runs.filter((run) => !run.strokeWidthPx).at(-1)!;
+const mountedRuns = () => [...scene.runs.values()];
+const strokeRuns = () => mountedRuns().filter((run) => run.strokeWidthPx);
+const fillRun = () =>
+  mountedRuns()
+    .filter((run) => !run.strokeWidthPx)
+    .at(-1)!;
 
 afterEach(() => {
   vi.restoreAllMocks();

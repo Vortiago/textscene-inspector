@@ -706,6 +706,13 @@ describe('decodeStandardMaterial3D — UV2', () => {
   });
 });
 
+describe('decodeStandardMaterial3D — particle trails', () => {
+  it('reads use_particle_trails, off by default', () => {
+    expect(decodeStandardMaterial3D({}).usesParticleTrails).toBe(false);
+    expect(decodeStandardMaterial3D({ use_particle_trails: 'true' }).usesParticleTrails).toBe(true);
+  });
+});
+
 describe('decodeStandardMaterial3D — point size', () => {
   // `BaseMaterial3D::BaseMaterial3D` calls `set_point_size(1)` (`material.cpp:3959`), and the
   // `use_point_size` flag defaults off.

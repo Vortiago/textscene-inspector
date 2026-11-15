@@ -10,8 +10,9 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
-import type { MaterialSource } from '../../../r3f/materials/materialSource';
+import type { ScopedReference } from '../../reading';
 import { inlineSource } from '../../../r3f/materials/surfaceMaterial.testkit';
+import { fileMaterial } from '../../../r3f/materials/materialReference';
 import { parseTresFile } from '../../../parser/parsedResource';
 import { subResource } from '../../../testing/subResource';
 import { ResourceLoaderProvider } from '../../ResourceLoaderContext';
@@ -28,7 +29,8 @@ import type { ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { materialTextureStates } from './textureBinding';
 import { bindSlotTexture } from './textureBinding.testkit';
 import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../../godot/scene/viewport.js';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { decodeStandardMaterial3D } from './decode';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 import { mapSampledBy, programShader } from '../../../r3f/testing/patchedFragment';
 import { TEXTURE_SLOTS, type ResolvedTextures, type TextureSlot } from './types';
 
@@ -339,14 +341,14 @@ async function renderArrival(testCase: ParityCase, arrival: Arrival): Promise<TH
   for (const ext of testCase.extResources ?? []) fake.textures.seed(ext.path, textureFor(ext.path));
   fake.resources.seed(STANDALONE_PATH, parseTresFile(standaloneTres(testCase)));
   fake.resources.seed(MESH_PATH, parseTresFile(meshTresCarryingIt(testCase)));
-  const sources: Record<Arrival, MaterialSource> = {
+  const sources: Record<Arrival, ScopedReference> = {
     inline: inlineSource(
       subResource(testCase.resourceType ?? 'StandardMaterial3D', 'Mat_inline', testCase.properties),
       [],
       testCase.extResources ?? []
     ),
-    '.tres': { kind: 'file', path: STANDALONE_PATH },
-    '.tres::sub': { kind: 'file', path: `${MESH_PATH}::Mat_surface` },
+    '.tres': fileMaterial(STANDALONE_PATH),
+    '.tres::sub': fileMaterial(`${MESH_PATH}::Mat_surface`),
   };
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
@@ -402,10 +404,11 @@ function meshTresCarryingIt(testCase: ParityCase): string {
  */
 function inlineTextures(testCase: ParityCase): ResolvedTextures {
   const scalars = parseStandardMaterial3DScalars(testCase.properties);
+  const { textureSlots } = decodeStandardMaterial3D(testCase.properties);
   const states = materialTextureStates(scalars, DEFAULT_ANISOTROPIC_FILTERING_LEVEL);
   const resolved: ResolvedTextures = {};
   for (const slot of TEXTURE_SLOTS) {
-    const reference = scalars.textureSlots[slot];
+    const reference = textureSlots[slot];
     if (reference === undefined) continue;
     const path = resolveExtResourcePath(reference, testCase.extResources ?? []);
     if (path === null) continue;
@@ -416,10 +419,10 @@ function inlineTextures(testCase: ParityCase): ResolvedTextures {
 
 /** The loader's shared textures per slot, unbound, as the imperative adapter receives them. */
 function rawTextures(testCase: ParityCase): ResolvedTextures {
-  const scalars = parseStandardMaterial3DScalars(testCase.properties);
+  const { textureSlots } = decodeStandardMaterial3D(testCase.properties);
   const raw: ResolvedTextures = {};
   for (const slot of TEXTURE_SLOTS) {
-    const reference = scalars.textureSlots[slot];
+    const reference = textureSlots[slot];
     if (reference === undefined) continue;
     const path = resolveExtResourcePath(reference, testCase.extResources ?? []);
     if (path !== null) raw[slot] = textureFor(path);
@@ -781,7 +784,7 @@ describe('StandardMaterial3D arrival parity', () => {
     const exercised = new Set<TextureSlot>();
     for (const testCase of CASES) {
       for (const slot of Object.keys(
-        parseStandardMaterial3DScalars(testCase.properties).textureSlots
+        decodeStandardMaterial3D(testCase.properties).textureSlots
       ) as TextureSlot[]) {
         exercised.add(slot);
       }

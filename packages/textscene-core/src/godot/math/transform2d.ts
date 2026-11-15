@@ -10,9 +10,10 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { isEqualApprox, isZeroApprox, sign } from './math.js';
+import { acosClamped, isEqualApprox, isZeroApprox, lerpAngle, sign } from './math.js';
+import { atan2Real } from './realAtan2.js';
 import { storedReal as f } from './real.js';
-import { normalizedVector2, type Vector2 } from './vector.js';
+import { normalizedVector2, vector2Length, vector2Lerp, type Vector2 } from './vector.js';
 
 /**
  * `columns[0] = (a, b)` is the x axis, `columns[1] = (c, d)` the y axis and `columns[2] = (tx, ty)`
@@ -25,6 +26,14 @@ export interface Transform2DColumns {
   readonly d: number;
   readonly tx: number;
   readonly ty: number;
+}
+
+/** A {@link Transform2DColumns} an `Into` function writes, owned by its caller. */
+export type MutableTransform2D = { -readonly [K in keyof Transform2DColumns]: number };
+
+/** A new identity the caller owns, for the `out` of an `Into` function. */
+export function mutableTransform2D(): MutableTransform2D {
+  return { ...TRANSFORM2D_IDENTITY };
 }
 
 export const TRANSFORM2D_IDENTITY: Transform2DColumns = Object.freeze({
@@ -72,15 +81,45 @@ export function multiplyTransform2D(
   parent: Transform2DColumns,
   local: Transform2DColumns
 ): Transform2DColumns {
-  const origin = transform2DXform(parent, { x: local.tx, y: local.ty });
-  return {
-    a: f(f(parent.a * local.a) + f(parent.c * local.b)),
-    b: f(f(parent.b * local.a) + f(parent.d * local.b)),
-    c: f(f(parent.a * local.c) + f(parent.c * local.d)),
-    d: f(f(parent.b * local.c) + f(parent.d * local.d)),
-    tx: origin.x,
-    ty: origin.y,
-  };
+  return multiplyTransform2DInto(mutableTransform2D(), parent, local);
+}
+
+/**
+ * {@link multiplyTransform2D} written into `out`, for a loop that allocates nothing. `out` may be
+ * `parent` or `local`.
+ *
+ * @canonical A Transform2D product in float32, written in place
+ */
+export function multiplyTransform2DInto(
+  out: MutableTransform2D,
+  parent: Transform2DColumns,
+  local: Transform2DColumns
+): MutableTransform2D {
+  const a = f(f(parent.a * local.a) + f(parent.c * local.b));
+  const b = f(f(parent.b * local.a) + f(parent.d * local.b));
+  const c = f(f(parent.a * local.c) + f(parent.c * local.d));
+  const d = f(f(parent.b * local.c) + f(parent.d * local.d));
+  const tx = f(f(f(parent.a * local.tx) + f(parent.c * local.ty)) + parent.tx);
+  const ty = f(f(f(parent.b * local.tx) + f(parent.d * local.ty)) + parent.ty);
+  return assignTransform2D(out, a, b, c, d, tx, ty);
+}
+
+function assignTransform2D(
+  out: MutableTransform2D,
+  a: number,
+  b: number,
+  c: number,
+  d: number,
+  tx: number,
+  ty: number
+): MutableTransform2D {
+  out.a = a;
+  out.b = b;
+  out.c = c;
+  out.d = d;
+  out.tx = tx;
+  out.ty = ty;
+  return out;
 }
 
 /**
@@ -127,15 +166,37 @@ export function transform2DXform(t: Transform2DColumns, v: Vector2): Vector2 {
  * @canonical A Transform2D inverse in float32
  */
 export function affineInverseTransform2D(t: Transform2DColumns): Transform2DColumns {
-  const det = f(f(t.a * t.d) - f(t.b * t.c));
+  const det = transform2DDeterminant(t);
   if (det === 0 || !Number.isFinite(det)) return TRANSFORM2D_IDENTITY;
+  return affineInverseTransform2DInto(mutableTransform2D(), t);
+}
+
+/**
+ * {@link affineInverseTransform2D} written into `out`, for a loop that allocates nothing. `out` may
+ * be `t`. A singular `t` writes the identity.
+ *
+ * @canonical A Transform2D inverse in float32, written in place
+ */
+export function affineInverseTransform2DInto(
+  out: MutableTransform2D,
+  t: Transform2DColumns
+): MutableTransform2D {
+  const det = transform2DDeterminant(t);
+  if (det === 0 || !Number.isFinite(det)) return assignTransform2D(out, 1, 0, 0, 1, 0, 0);
   const idet = f(1 / det);
   const a = f(t.d * idet);
   const b = f(t.b * -idet);
   const c = f(t.c * -idet);
   const d = f(t.a * idet);
-  const origin = transform2DBasisXform({ a, b, c, d, tx: 0, ty: 0 }, { x: -t.tx, y: -t.ty });
-  return { a, b, c, d, tx: origin.x, ty: origin.y };
+  // `basis_xform` of `-origin`: no origin is added, so a -0 stays -0.
+  const ox = -t.tx;
+  const oy = -t.ty;
+  return assignTransform2D(out, a, b, c, d, f(f(a * ox) + f(c * oy)), f(f(b * ox) + f(d * oy)));
+}
+
+/** `Transform2D::determinant()` (`transform_2d.cpp:258-260`) in float32: the signed area of the basis. */
+export function transform2DDeterminant(t: Transform2DColumns): number {
+  return f(f(t.a * t.d) - f(t.b * t.c));
 }
 
 /**
@@ -145,10 +206,9 @@ export function affineInverseTransform2D(t: Transform2DColumns): Transform2DColu
  * finite. A zero determinant zeroes the signed half.
  */
 export function transform2DGetScale(t: Transform2DColumns): { x: number; y: number } {
-  const det = t.a * t.d - t.c * t.b;
   return {
-    x: Math.hypot(t.a, t.b),
-    y: sign(det) * Math.hypot(t.c, t.d),
+    x: vector2Length({ x: t.a, y: t.b }),
+    y: f(sign(transform2DDeterminant(t)) * vector2Length({ x: t.c, y: t.d })),
   };
 }
 
@@ -172,11 +232,43 @@ export function transform2DSetScale(
 }
 
 /**
+ * `Transform2D::get_origin`: the origin column as a point.
+ *
+ * @canonical The origin of a Transform2D
+ */
+export function transform2DOrigin(t: Transform2DColumns): Vector2 {
+  return { x: t.tx, y: t.ty };
+}
+
+/**
+ * `Transform2D::get_rotation` (`transform_2d.cpp:82-84`) in `real_t` float: the angle of the x axis.
+ *
+ * @canonical The rotation of a Transform2D in float32
+ */
+export function transform2DGetRotation(t: Transform2DColumns): number {
+  return atan2Real(t.b, t.a);
+}
+
+const HALF_PI_FLOAT = f(f(Math.PI) * 0.5);
+
+/**
+ * `Transform2D::get_skew` (`transform_2d.cpp:72-75`) in `real_t` float: the angle of the y axis
+ * from perpendicular to the x axis, mirrored with the sign of the determinant.
+ */
+function transform2DGetSkew(t: Transform2DColumns): number {
+  const detSign = sign(transform2DDeterminant(t));
+  const x = normalizedVector2({ x: t.a, y: t.b });
+  const y = normalizedVector2({ x: t.c, y: t.d });
+  const cosine = f(f(x.x * f(detSign * y.x)) + f(x.y * f(detSign * y.y)));
+  return f(f(acosClamped(cosine)) - HALF_PI_FLOAT);
+}
+
+/**
  * The position, rotation, scale and skew a Node2D reads from its transform
- * (`Node2D::_update_xform_values`, `node_2d.cpp:127-133`): `get_rotation` is the angle of the x axis
- * (`transform_2d.cpp:82-84`), `get_scale` is {@link transform2DGetScale}, and `get_skew`
- * (`transform_2d.cpp:72-75`) is the angle of the y axis from perpendicular to the x axis, its
- * direction mirrored with the sign of the determinant. It is the inverse of {@link transform2DFromParts}.
+ * (`Node2D::_update_xform_values`, `node_2d.cpp:127-133`), in `real_t` float. It is the inverse of
+ * {@link transform2DFromParts}.
+ *
+ * @canonical The Node2D values of a Transform2D
  */
 export function transform2DDecompose(t: Transform2DColumns): {
   position: Vector2;
@@ -184,17 +276,58 @@ export function transform2DDecompose(t: Transform2DColumns): {
   scale: { x: number; y: number };
   skew: number;
 } {
-  const detSign = sign(t.a * t.d - t.c * t.b);
-  const x = normalizedVector2({ x: t.a, y: t.b });
-  const y = normalizedVector2({ x: t.c, y: t.d });
-  // The dot of unit vectors can round past 1, where `acos` has no answer.
-  const cosine = Math.max(-1, Math.min(1, x.x * detSign * y.x + x.y * detSign * y.y));
   return {
-    position: { x: t.tx, y: t.ty },
-    rotation: Math.atan2(t.b, t.a),
+    position: transform2DOrigin(t),
+    rotation: transform2DGetRotation(t),
     scale: transform2DGetScale(t),
-    skew: Math.acos(cosine) - Math.PI / 2,
+    skew: transform2DGetSkew(t),
   };
+}
+
+/** `Transform2D(rot, pos)` (`transform_2d.cpp:97-105`): a rotation at an origin, with unit scale. */
+function rotationAt(rotation: number, t: Transform2DColumns): Transform2DColumns {
+  const cos = f(Math.cos(rotation));
+  const sin = f(Math.sin(rotation));
+  return { a: cos, b: sin, c: 0 - sin, d: cos, tx: t.tx, ty: t.ty };
+}
+
+/**
+ * `Transform2D::set_rotation` (`transform_2d.cpp:86-95`) in `real_t` float: the axes turn to
+ * `rotation` and keep the scale `get_scale` reads, so a skew is dropped. The origin stays.
+ *
+ * @canonical A Transform2D turned to a rotation in float32
+ */
+export function transform2DSetRotation(t: Transform2DColumns, rotation: number): Transform2DColumns {
+  return transform2DSetScale(rotationAt(f(rotation), t), transform2DGetScale(t));
+}
+
+/**
+ * `Transform2D::looking_at` (`transform_2d.cpp:191-196`) in `real_t` float: a transform at the
+ * origin of `t` whose x axis points at `target`, with unit scale.
+ */
+export function transform2DLookingAt(t: Transform2DColumns, target: Vector2): Transform2DColumns {
+  const facing = rotationAt(transform2DGetRotation(t), t);
+  const local = transform2DXform(affineInverseTransform2D(t), target);
+  const scale = transform2DGetScale(t);
+  const turn = atan2Real(f(local.y * scale.y), f(local.x * scale.x));
+  return transform2DSetRotation(facing, f(transform2DGetRotation(facing) + turn));
+}
+
+/**
+ * `Transform2D::interpolate_with` (`transform_2d.cpp:262-268`) in `real_t` float: the rotation and
+ * the skew turn the short way, and the scale and the origin move on a line.
+ */
+export function transform2DInterpolateWith(
+  from: Transform2DColumns,
+  to: Transform2DColumns,
+  weight: number
+): Transform2DColumns {
+  return transform2DFromParts(
+    lerpAngle(transform2DGetRotation(from), transform2DGetRotation(to), weight),
+    vector2Lerp(transform2DGetScale(from), transform2DGetScale(to), weight),
+    lerpAngle(transform2DGetSkew(from), transform2DGetSkew(to), weight),
+    vector2Lerp(transform2DOrigin(from), transform2DOrigin(to), weight)
+  );
 }
 
 /**
@@ -228,4 +361,9 @@ export function transform2DHasZeroSkew(t: Transform2DColumns): boolean {
   if (a * d - c * b === 0) return true;
   const normalizedDot = (a * c + b * d) / (len0 * len1);
   return isZeroApprox(normalizedDot);
+}
+
+/** Whether two transforms place a point identically, field for field. */
+export function equalTransform2D(p: Transform2DColumns, q: Transform2DColumns): boolean {
+  return p.a === q.a && p.b === q.b && p.c === q.c && p.d === q.d && p.tx === q.tx && p.ty === q.ty;
 }

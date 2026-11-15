@@ -1,0 +1,95 @@
+[gd_scene format=3]
+
+; The one variable: `picker_shape`, at 1 (HSV wheel), 2 (VHS circle), 3 (OKHSL circle),
+; 5 (OK HS rectangle), 6 (OK HL rectangle) and 0 (HSV rectangle) beside them. Each shape draws
+; Godot's canvas shader (color_picker_shape.cpp:38-137), its cursors and its slider. Every other
+; colour picker golden draws the HSV rectangle or no shape, so none shows these.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="Wheel" type="ColorPicker" parent="."]
+layout_mode = 0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 304.0
+offset_bottom = 304.0
+color = Color(0.2, 0.4, 0.6, 1)
+picker_shape = 1
+color_modes_visible = false
+sliders_visible = false
+hex_visible = false
+presets_visible = false
+
+[node name="VhsCircle" type="ColorPicker" parent="."]
+layout_mode = 0
+offset_left = 310.0
+offset_top = 4.0
+offset_right = 610.0
+offset_bottom = 304.0
+color = Color(0.2, 0.4, 0.6, 1)
+picker_shape = 2
+color_modes_visible = false
+sliders_visible = false
+hex_visible = false
+presets_visible = false
+
+[node name="OkhslCircle" type="ColorPicker" parent="."]
+layout_mode = 0
+offset_left = 616.0
+offset_top = 4.0
+offset_right = 916.0
+offset_bottom = 304.0
+color = Color(0.2, 0.4, 0.6, 1)
+picker_shape = 3
+color_modes_visible = false
+sliders_visible = false
+hex_visible = false
+presets_visible = false
+
+[node name="OkHsRectangle" type="ColorPicker" parent="."]
+layout_mode = 0
+offset_left = 4.0
+offset_top = 330.0
+offset_right = 304.0
+offset_bottom = 630.0
+color = Color(0.2, 0.4, 0.6, 1)
+picker_shape = 5
+color_modes_visible = false
+sliders_visible = false
+hex_visible = false
+presets_visible = false
+
+[node name="OkHlRectangle" type="ColorPicker" parent="."]
+layout_mode = 0
+offset_left = 310.0
+offset_top = 330.0
+offset_right = 610.0
+offset_bottom = 630.0
+color = Color(0.2, 0.4, 0.6, 1)
+picker_shape = 6
+color_modes_visible = false
+sliders_visible = false
+hex_visible = false
+presets_visible = false
+
+[node name="HsvRectangle" type="ColorPicker" parent="."]
+layout_mode = 0
+offset_left = 616.0
+offset_top = 330.0
+offset_right = 916.0
+offset_bottom = 630.0
+color = Color(0.2, 0.4, 0.6, 1)
+picker_shape = 0
+color_modes_visible = false
+sliders_visible = false
+hex_visible = false
+presets_visible = false

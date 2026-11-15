@@ -14,6 +14,16 @@ export type NodePatches = ReadonlyMap<string, NodePatch>;
 
 export const NO_PATCHES: NodePatches = new Map();
 
+/** What a reader of node poses asks of the patches: the patch at a live path. */
+export interface PatchLookup {
+  get(path: string): NodePatch | undefined;
+}
+
+/** `top` laid over `base`: the patch `top` holds for a path replaces the one of `base`. */
+export function layeredPatches(base: PatchLookup, top: PatchLookup): PatchLookup {
+  return { get: (path) => top.get(path) ?? base.get(path) };
+}
+
 /** `node` with `patch` laid over its properties, and `node` itself where there is no patch. */
 export function patchedNode<N extends TscnNode>(node: N, patch: NodePatch | undefined): N {
   return patch ? { ...node, properties: { ...node.properties, ...patch } } : node;

@@ -11,12 +11,19 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { GraphNodeSlot } from '../graphnode/types';
-import '../graphnode/nativeSolver.js'; // registers GraphNode's MinimumSizeFn/ContainerLayoutFn
+import '../../../../parser/TscnParser';
+import '../../../../r3f/controls/index';
 import { GraphEdit } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { GraphEditConnection, GraphEditProperties } from './types';
+import { canvasSubOrders, wholeKeySlot } from '../../../../r3f/canvasItemState';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 100, h: 100 };
 
@@ -27,14 +34,19 @@ function ClipProbe({ onPlanes }: { onPlanes: (planes: readonly THREE.Plane[]) =>
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
+/** `top_layer`'s children, an `INTERNAL_MODE_BACK` node, in child order (`graph_edit.cpp:3183`, `:3211-3329`). */
+const TOP_LAYER_ORDER = ['scrollBars', 'toolbar', 'minimap'] as const;
+/** What `_minimap_draw` draws after its panel, in order (`graph_edit.cpp:1807-1892`). */
+const MINIMAP_DRAW_ORDER = ['nodes', 'connections', 'camera', 'resizer'] as const;
+
 function graphEdit(properties: Partial<GraphEditProperties> = {}, children: SolveNode[] = []): SolveNode {
   const node: TscnNode = {
     rawProperties: {},
     name: 'G',
     type: 'GraphEdit',
     children: [],
-    // Chrome off unless a test asks for it: the toolbar and the minimap draw
-    // meshes of their own, and every assertion below counts meshes globally.
+    // The minimap off unless a test asks for it: it draws meshes of its own, and
+    // every assertion below counts meshes globally. The toolbar is an internal Control.
     properties: {
       name: 'G',
       connections: [],
@@ -43,7 +55,7 @@ function graphEdit(properties: Partial<GraphEditProperties> = {}, children: Solv
       ...properties,
     } as GraphEditProperties,
   };
-  return { ...emptySolveNode(), path: 'G', node, children };
+  return withThemeItems({ ...emptySolveNode(), path: 'G', node, children });
 }
 
 function fullSlot(overrides: Partial<GraphNodeSlot>): GraphNodeSlot {
@@ -73,12 +85,12 @@ function graphNode(
   children: SolveNode[],
   positionOffset: Vector2 = { x: 0, y: 0 }
 ): SolveNode {
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: name,
     node: controlNode(name, 'GraphNode', { name, title: '', positionOffset, slots }),
     children,
-  };
+  });
 }
 
 /**
@@ -177,6 +189,24 @@ describe('<GraphEdit> connections (graph_edit.cpp:1614-1660 _update_connections)
     expect(chromeMeshes(renderer.scene)).toHaveLength(2 + SCROLL_BAR_MESHES);
   });
 
+  it('draws the connections at the layer slot, over the GraphFrames and under the GraphNodes (graph_edit.cpp:714-717)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <GraphEdit
+        {...painterEnv()}
+        childRects={childRects}
+        solveNode={graphEdit({ showGrid: false, connections }, [source, sink])}
+        rect={{ x: 0, y: 0, w: 400, h: 100 }}
+        renderOrder={0}
+        layerSlot={wholeKeySlot(7)}
+      />
+    );
+    const ribbons: THREE.Mesh[] = [];
+    renderer.scene.instance.traverse((object) => {
+      if ((object as THREE.Mesh).isMesh && object.renderOrder === 7) ribbons.push(object as THREE.Mesh);
+    });
+    expect(ribbons.map(nearestGroupOrder)).toEqual([7]);
+  });
+
   it('draws nothing extra when an endpoint node is missing', async () => {
     const dangling: GraphEditConnection[] = [
       { fromNode: 'Source', fromPort: 0, toNode: 'Nowhere', toPort: 0 },
@@ -220,48 +250,25 @@ describe('<GraphEdit> constructor chrome (graph_edit.cpp:3229-3340)', () => {
         solveNode={graphEdit({ showGrid: false, ...properties }, [node])}
         rect={{ x: 0, y: 0, w: 400, h: 320 }}
         renderOrder={0}
-        subtreeChromeRenderOrder={9}
+        chromeSlot={wholeKeySlot(9)}
       />
     );
   }
 
-  // Chrome draws past `subtreeChromeRenderOrder`, because top_layer is INTERNAL_MODE_BACK
+  // Chrome draws inside `chromeSlot`, because top_layer is INTERNAL_MODE_BACK
   // (graph_edit.cpp:3183), in top_layer child order: scrollbars, toolbar, minimap.
-  const TOOLBAR_BAND = 9.4;
-  const MINIMAP_BAND = 9.7;
+  const { toolbar, minimap } = canvasSubOrders(wholeKeySlot(9), TOP_LAYER_ORDER);
+  const TOOLBAR_BAND = toolbar.key;
+  const MINIMAP_BAND = minimap.key;
 
   function band(renderer: Rendered, from: number, to = Infinity) {
-    return chromeMeshes(renderer.scene).filter((m) => m.renderOrder > from && m.renderOrder < to);
+    return chromeMeshes(renderer.scene).filter((m) => m.renderOrder >= from && m.renderOrder < to);
   }
 
   it('always draws both scrollbars, track and grabber, below the toolbar band (graph_edit.cpp:491-492)', async () => {
     expect(band(await render({ showMenu: false, minimapEnabled: false }), 9, TOOLBAR_BAND)).toHaveLength(
       SCROLL_BAR_MESHES
     );
-  });
-
-  it('draws the toolbar panel, each pressed toggle and the spinbox field above the whole subtree', async () => {
-    // show_grid false unpresses toggle_grid (:2735) and minimap_enabled false
-    // unpresses the minimap button (:2802), leaving toggle_snapping pressed.
-    expect(band(await render({ showMenu: true }), TOOLBAR_BAND, MINIMAP_BAND)).toHaveLength(3);
-  });
-
-  it('presses toggle_grid as well once show_grid is on (graph_edit.cpp:2729-2737)', async () => {
-    expect(band(await render({ showMenu: true, showGrid: true }), TOOLBAR_BAND, MINIMAP_BAND)).toHaveLength(
-      4
-    );
-  });
-
-  it('draws no toolbar at all when show_menu is false (graph_edit.cpp:2812-2815)', async () => {
-    expect(band(await render({ showMenu: false }), TOOLBAR_BAND, MINIMAP_BAND)).toHaveLength(0);
-  });
-
-  it('drops both grid toggles AND the spinbox together when show_grid_buttons is false (:2842-2848)', async () => {
-    // Only the panel is left: every remaining button is an unpressed FlatButton,
-    // whose normal stylebox is empty (default_theme.cpp:360,367).
-    expect(
-      band(await render({ showMenu: true, showGridButtons: false }), TOOLBAR_BAND, MINIMAP_BAND)
-    ).toHaveLength(1);
   });
 
   it('draws the minimap panel, one node rect and the camera rect when enabled', async () => {
@@ -287,15 +294,15 @@ describe('<GraphEdit> constructor chrome (graph_edit.cpp:3229-3340)', () => {
 });
 
 describe('<GraphEdit> chrome paint order', () => {
-  /** Meshes past `subtreeChromeRenderOrder`: the scrollbars, the toolbar and the minimap. */
+  /** Meshes inside `chromeSlot`: the scrollbars and the minimap. */
   async function chromeInDrawOrder() {
     const renderer = await ReactThreeTestRenderer.create(
       <GraphEdit
         {...painterEnv()}
-        solveNode={graphEdit({ showGrid: false, showMenu: true, minimapEnabled: true })}
+        solveNode={graphEdit({ showGrid: false, minimapEnabled: true })}
         rect={{ x: 0, y: 0, w: 400, h: 320 }}
         renderOrder={0}
-        subtreeChromeRenderOrder={9}
+        chromeSlot={wholeKeySlot(9)}
       />
     );
     return renderer.scene
@@ -306,7 +313,6 @@ describe('<GraphEdit> chrome paint order', () => {
   }
 
   it('sorts each chrome mesh behind every mesh its own renderOrder puts after it (three reads the group first)', async () => {
-    // A toolbar glyph under its panel is drawn at the panel's 0.6 alpha: grey where Godot draws white.
     const meshes = await chromeInDrawOrder();
     const inversions = meshes.flatMap((early, i) =>
       meshes
@@ -406,17 +412,22 @@ describe('<GraphEdit> minimap connection polylines', () => {
         ])}
         rect={{ x: 0, y: 0, w: 400, h: 320 }}
         renderOrder={0}
-        subtreeChromeRenderOrder={9}
+        chromeSlot={wholeKeySlot(9)}
       />
     );
   }
 
-  /** The one mesh drawn between the minimap's node rects and its camera rect. */
+  /**
+   * The mesh at the minimap's connections key: `_minimap_draw` draws the panel, the nodes, the
+   * connections, the camera and the resizer in that order (`graph_edit.cpp:1807-1892`).
+   */
   function polyline(renderer: Rendered): THREE.Mesh | undefined {
+    const { minimap } = canvasSubOrders(wholeKeySlot(9), TOP_LAYER_ORDER);
+    const { connections } = canvasSubOrders(minimap, MINIMAP_DRAW_ORDER);
     return renderer.scene
       .findAllByType('Mesh')
       .map((m) => m.instance as THREE.Mesh)
-      .find((m) => Math.abs(m.renderOrder - (9 + 0.75 + 0.03)) < 1e-9);
+      .find((m) => m.renderOrder === connections.key);
   }
 
   it('draws one merged polyline mesh for every resolvable connection', async () => {
@@ -455,67 +466,75 @@ describe('<GraphEdit> minimap connection polylines', () => {
   });
 });
 
-/**
- * `Button::_notification(NOTIFICATION_DRAW)` (`button.cpp:321-329`): a disabled button
- * modulates its icon with `icon_disabled_color`. The `disabled` box of `FlatButton` is the
- * empty `normal` box (`default_theme.cpp:370`), so the icon alpha is the only difference.
- */
-describe('<GraphEdit> disabled zoom buttons (graph_edit.cpp:2445-2446)', () => {
-  function render(properties: Partial<GraphEditProperties>) {
-    return ReactThreeTestRenderer.create(
+describe('<GraphEdit> scroll bars before _update_scrollbars has run (graph_edit.cpp:464-528, :3218-3222)', () => {
+  const SIZE = { x: 500, y: 280 };
+  const graphNodeChild = graphNode('N', new Map(), [], { x: 40, y: 70 });
+  const graphNodeChildRect: ReadonlyMap<string, Rect2> = new Map([['N', { x: 0, y: 0, w: 160, h: 80 }]]);
+  const { scrollBars: SCROLL_BAR_SLOT } = canvasSubOrders(wholeKeySlot(9), TOP_LAYER_ORDER);
+
+  /** A chrome quad extends half a pixel past its rect on each side for antialiasing. */
+  const QUAD_FRINGE_PX = 1;
+
+  /** The rect size of each mesh in the scroll bar slot. */
+  async function scrollBarExtents(solveNode: SolveNode, childRects: ReadonlyMap<string, Rect2> = new Map()) {
+    const renderer = await ReactThreeTestRenderer.create(
       <GraphEdit
         {...painterEnv()}
-        solveNode={graphEdit({ showGrid: false, showMenu: true, ...properties })}
-        rect={{ x: 0, y: 0, w: 400, h: 320 }}
+        childRects={childRects}
+        solveNode={solveNode}
+        rect={{ x: 0, y: 0, w: SIZE.x, h: SIZE.y }}
         renderOrder={0}
-        subtreeChromeRenderOrder={9}
+        chromeSlot={wholeKeySlot(9)}
       />
     );
-  }
-
-  /** Every toolbar icon drawn at `icon_disabled_color`'s own alpha (`default_theme.cpp:169`). */
-  function dimmedIcons(renderer: Rendered): number {
-    return renderer.scene
-      .findAllByType('Mesh')
-      .map((m) => m.instance as THREE.Mesh)
-      .filter((m) => (m.material as THREE.MeshBasicMaterial).map !== null)
-      .filter((m) => Math.abs((m.material as THREE.MeshBasicMaterial).opacity - 0.4) < 1e-9).length;
-  }
-
-  it('draws every icon on a whole pixel: Button floors its icon offset, SpinBox centres in integers (button.cpp:405, spin_box.cpp:488-491)', async () => {
-    const renderer = await render({});
-    renderer.scene.instance.updateMatrixWorld(true);
-    const corners = renderer.scene
-      .findAllByType('Mesh')
-      .map((m) => m.instance as THREE.Mesh)
-      .filter(
-        (m) => m.geometry.type === 'PlaneGeometry' && (m.material as THREE.MeshBasicMaterial).map !== null
-      )
+    return chromeMeshes(renderer.scene)
+      .filter((m) => m.renderOrder >= SCROLL_BAR_SLOT.key && m.renderOrder < SCROLL_BAR_SLOT.key + 1)
       .map((m) => {
-        const box = new THREE.Box3().setFromObject(m);
-        return [box.min.x, -box.max.y];
+        m.updateWorldMatrix(true, false);
+        const size = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3());
+        return { w: size.x - QUAD_FRINGE_PX, h: size.y - QUAD_FRINGE_PX };
       });
-    expect(corners.length).toBeGreaterThan(0);
-    expect(corners.filter(([x, y]) => !Number.isInteger(x) || !Number.isInteger(y))).toEqual([]);
+  }
+
+  const emptyProps = { showGrid: false, showMenu: false, minimapEnabled: false };
+
+  it('draws the full-length bars of the constructor on a GraphEdit with no child, placed by offsets', async () => {
+    const extents = await scrollBarExtents(graphEdit({ ...emptyProps, outOfTreeSize: SIZE }), new Map());
+    expect(extents).toContainEqual({ w: 500, h: 8 });
+    expect(extents).toContainEqual({ w: 8, h: 280 });
   });
 
-  it('draws every icon at full alpha while neither bound has been reached', async () => {
-    expect(dimmedIcons(await render({}))).toBe(0);
+  it('draws the shortened bars of _update_scrollbars once a GraphNode child exists (:296)', async () => {
+    const extents = await scrollBarExtents(
+      graphEdit({ ...emptyProps, outOfTreeSize: SIZE }, [graphNodeChild]),
+      graphNodeChildRect
+    );
+    expect(extents).toContainEqual({ w: 492, h: 8 });
+    expect(extents).toContainEqual({ w: 8, h: 272 });
   });
 
-  it('dims exactly the minus button once zoom is parked on zoom_min', async () => {
-    expect(dimmedIcons(await render({ zoomMinusDisabled: true }))).toBe(1);
+  it('draws the shortened bars where the solved size differs from the size out of the tree (:868)', async () => {
+    const extents = await scrollBarExtents(graphEdit({ ...emptyProps, outOfTreeSize: { x: 0, y: 0 } }));
+    expect(extents).toContainEqual({ w: 492, h: 8 });
   });
+});
 
-  it('dims exactly the plus button once zoom is parked on zoom_max', async () => {
-    expect(dimmedIcons(await render({ zoomPlusDisabled: true }))).toBe(1);
-  });
-
-  it('dims both when a single-step zoom range parks it on each', async () => {
-    expect(dimmedIcons(await render({ zoomMinusDisabled: true, zoomPlusDisabled: true }))).toBe(2);
-  });
-
-  it('draws no dimmed icon when the zoom buttons are hidden altogether', async () => {
-    expect(dimmedIcons(await render({ zoomMinusDisabled: true, showZoomButtons: false }))).toBe(0);
+describe('<GraphEdit> — self_modulate', () => {
+  it('tints the panel with tint and the bars and minimap with childTint', async () => {
+    const own = await ReactThreeTestRenderer.create(
+      <GraphEdit {...painterEnv()} {...splitTints} solveNode={graphEdit()} rect={RECT} renderOrder={0} />
+    );
+    const withChrome = await ReactThreeTestRenderer.create(
+      <GraphEdit
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={graphEdit({ minimapEnabled: true })}
+        rect={{ x: 0, y: 0, w: 500, h: 300 }}
+        renderOrder={0}
+      />
+    );
+    // The panel and the grid draw with `tint`. The scroll bars and the minimap draw with `childTint`.
+    expect(countTintSplit(own.scene).own).toBeGreaterThan(0);
+    expect(countTintSplit(withChrome.scene).child).toBeGreaterThan(countTintSplit(own.scene).child);
   });
 });

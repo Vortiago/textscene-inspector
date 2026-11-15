@@ -1,0 +1,27 @@
+; Two instances of one sub-scene, each drawn over the polygon authored before it. The second
+; instance has an authored child, which draws after the sub-scene's own nodes.
+
+[gd_scene load_steps=2 format=3 uid="uid://unitpainttwoinst"]
+
+[ext_resource type="PackedScene" path="res://unit-canvas-paint-instance-part.tscn" id="1_part"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Under" type="Polygon2D" parent="."]
+color = Color(0.3, 0.3, 0.3, 1)
+polygon = PackedVector2Array(0, 0, 300, 0, 300, 120, 0, 120)
+
+[node name="First" parent="." instance=ExtResource("1_part")]
+position = Vector2(20, 20)
+
+[node name="Second" parent="." instance=ExtResource("1_part")]
+position = Vector2(140, 20)
+
+[node name="Extra" type="Polygon2D" parent="Second"]
+color = Color(0.9, 0.9, 0.2, 1)
+polygon = PackedVector2Array(30, 10, 90, 10, 90, 30, 30, 30)
+
+[node name="Over" type="Polygon2D" parent="."]
+position = Vector2(100, 60)
+color = Color(0.8, 0.2, 0.2, 1)
+polygon = PackedVector2Array(0, 0, 80, 0, 80, 30, 0, 30)

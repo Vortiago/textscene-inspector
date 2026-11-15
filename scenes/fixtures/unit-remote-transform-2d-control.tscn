@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+; Moves one variable: a Control, offset, turned and scaled, above a RemoteTransform2D. The relay pushes
+; the pose that includes the Control, so the green square stands at the end of the turned arm of the
+; Control. unit-remote-transform-2d has its relays below Node2Ds only, so it shows no regression here.
+
+[node name="Root" type="Node2D"]
+
+[node name="Panel" type="Control" parent="."]
+offset_left = 100.0
+offset_top = 50.0
+rotation = 0.5
+scale = Vector2(1.5, 1.5)
+
+[node name="Relay" type="RemoteTransform2D" parent="Panel"]
+position = Vector2(40, 10)
+remote_path = NodePath("../../Held")
+
+[node name="Held" type="Polygon2D" parent="."]
+color = Color(0.3, 0.8, 0.4, 1)
+polygon = PackedVector2Array(-15, -15, 15, -15, 15, 15, -15, 15)

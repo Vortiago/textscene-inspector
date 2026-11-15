@@ -1,0 +1,22 @@
+; One variable: the owner carries a `CanvasItemMaterial` with the ADD blend, on a CLIP_AND_DRAW (2)
+; half-alpha green Polygon2D. The masked owner draws over the frame with the default MIX blend, not
+; the add. Godot probes: (125,125) is (76,139,76), (175,175) is (165,38,38).
+
+[gd_scene format=3]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_a"]
+blend_mode = 1
+
+[node name="Root" type="Node2D"]
+
+[node name="P" type="Polygon2D" parent="."]
+position = Vector2(100, 100)
+clip_children = 2
+material = SubResource("CanvasItemMaterial_a")
+color = Color(0, 1, 0, 0.5)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="C" type="Polygon2D" parent="P"]
+position = Vector2(50, 50)
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)

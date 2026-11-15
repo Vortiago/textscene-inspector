@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FLATTENED_CORPUS_ROOTS } from '../../../scripts/corpusRoots.mjs';
@@ -9,6 +9,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const scenesRoot = join(__dirname, '../../../scenes');
 const fixturesSource = join(scenesRoot, 'fixtures');
 const fixturesTarget = join(__dirname, '../public/fixtures');
+// Beside the mirror, not in it, so a FileDialog does not list it (src/fixtureListing.ts reads it).
+const listingTarget = join(__dirname, '../public/fixtures-listing.json');
 
 // The public edition's build reads no public/ (vite.config.ts), so a mirror is wasted work.
 if (isPublicSiteBuild()) {
@@ -101,3 +103,21 @@ if (skippedLargeFiles.length > 0) {
       `(Cloudflare Pages limit): ${skippedLargeFiles.join(', ')}`
   );
 }
+
+/**
+ * Every folder of the mirror with its entry names, a folder's with a trailing slash. A static host cannot list a
+ * folder, and a FileDialog lists the `res://` folder the scene names.
+ */
+function listMirror(directory, listing, folder = '') {
+  const names = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    names.push(entry.isDirectory() ? `${entry.name}/` : entry.name);
+    if (entry.isDirectory())
+      listMirror(join(directory, entry.name), listing, folder ? `${folder}/${entry.name}` : entry.name);
+  }
+  listing[folder] = names;
+  return listing;
+}
+
+writeFileSync(listingTarget, JSON.stringify(listMirror(fixturesTarget, {})));
+console.log('Wrote public/fixtures-listing.json (folders of the mirror)');

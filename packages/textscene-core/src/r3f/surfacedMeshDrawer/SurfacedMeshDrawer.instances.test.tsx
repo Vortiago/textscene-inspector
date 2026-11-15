@@ -63,7 +63,15 @@ function twoSurfaceBox(): THREE.BufferGeometry {
 function onePoint(): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0], 3));
-  geometry.userData = { godotDrawsPoints: true };
+  geometry.userData = { godotPrimitive: 'points' };
+  return geometry;
+}
+
+/** One segment from the origin to (0, 1, 0), as `godotSurfacesGeometry` marks a lines surface. */
+function oneSegment(): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 1, 0], 3));
+  geometry.userData = { godotPrimitive: 'lines' };
   return geometry;
 }
 
@@ -99,6 +107,19 @@ describe('<SurfacedMeshDrawer> at instances', () => {
     const raycaster = new THREE.Raycaster(new THREE.Vector3(5, 0, 10), new THREE.Vector3(0, 0, -1));
     points!.updateMatrixWorld();
     expect(raycaster.intersectObject(points!).map((hit) => hit.instanceId)).toEqual([1]);
+  });
+
+  it('draws a lines part as line segments at every instance, picked at each one', async () => {
+    const renderer = await renderUnderInstance(
+      <AtInstances parts={[boxOf(oneSegment(), 'Green')]} instances={TWO_PLACES} />
+    );
+
+    const [lines] = drawn<THREE.LineSegments>(renderer, 'LineSegments');
+    expect((lines!.geometry as THREE.InstancedBufferGeometry).instanceCount).toBe(2);
+    const raycaster = new THREE.Raycaster(new THREE.Vector3(5, 0.5, 10), new THREE.Vector3(0, 0, -1));
+    raycaster.params.Line = { threshold: 0.1 };
+    lines!.updateMatrixWorld();
+    expect(raycaster.intersectObject(lines!).map((hit) => hit.instanceId)).toEqual([1]);
   });
 
   it('draws a chain link as one more instanced draw that reads the same instances', async () => {

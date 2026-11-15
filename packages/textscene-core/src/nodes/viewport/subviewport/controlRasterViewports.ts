@@ -7,7 +7,7 @@
 
 import type { TscnNode } from '../../../parser/types.js';
 import type { ControlProperties } from '../../2d/ui/control/types.js';
-import { LTR_LAYOUT_ENV, resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
+import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
 import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
 import {
   liveTreeOf,
@@ -18,7 +18,17 @@ import {
 } from '../../../r3f/liveSceneTree.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
 import { isViewportBoundary } from './viewportBoundary.js';
-import { resolveViewportSubtree, viewportContentKind } from './viewportContent.js';
+import { viewportContentAt } from './viewportContent.js';
+import type { SubViewportProperties } from './types.js';
+import { viewportGateAt, type ViewportGate } from './viewportGate.js';
+import { windowEmbedderPathAt } from './windowEmbedder.js';
+import { viewportThemeOwners, type ThemeOwner } from '../../windows/window/themeOwners.js';
+
+/** The viewport a window embeds in, whose visible size limits the window's height. */
+interface EnclosingViewport {
+  path: string;
+  node: TscnNode;
+}
 
 /** A sub-viewport whose target is produced by rasterising a Control subtree. */
 export interface ControlRasterViewport extends SceneScope {
@@ -33,6 +43,12 @@ export interface ControlRasterViewport extends SceneScope {
    * pass cannot see from the viewport's children.
    */
   inheritedRtl: boolean | null;
+  /** The theme owners above a window, whose Controls take their themes (`viewportThemeOwners`). */
+  themeOwners: readonly ThemeOwner[];
+  /** The nearest viewport above, or `null` where the project's own viewport is the one around it. */
+  embedder: EnclosingViewport | null;
+  /** What the tree says of the viewport's update mode: its container, and the viewport around it. */
+  gate: ViewportGate;
 }
 
 /**
@@ -59,8 +75,14 @@ export function inheritedRtlAt(tree: LiveTree, path: string, env: LayoutDirectio
   return link ? rtlBelow(link.step.node, inheritedRtlAt(tree, above, env), env) : null;
 }
 
+function enclosingViewport(tree: LiveTree, path: string): EnclosingViewport | null {
+  const embedderPath = windowEmbedderPathAt(tree, path);
+  const node = embedderPath === null ? undefined : tree.at(embedderPath)?.step.node;
+  return embedderPath !== null && node ? { path: embedderPath, node } : null;
+}
+
 /**
- * Every Control-only sub-viewport in `roots`, depth-first, with its path and the
+ * Every sub-viewport with no world content in `roots`, depth-first, with its path and the
  * scope its Controls resolve in. A found sub-viewport is still descended into: a
  * nested one draws into its own target, and `ControlDispatcher` stops at it.
  */
@@ -68,7 +90,7 @@ export function collectControlRasterViewports(
   roots: readonly TscnNode[],
   sources: LiveTreeSources,
   scope: SceneScope,
-  layoutDirectionEnv: LayoutDirectionEnv = LTR_LAYOUT_ENV
+  layoutDirectionEnv: LayoutDirectionEnv
 ): ControlRasterViewport[] {
   const found: ControlRasterViewport[] = [];
   const ctx: LiveTreeContext = {
@@ -85,11 +107,17 @@ export function collectControlRasterViewports(
     // Classified on the resolved subtree, as `useViewportContent` does: a
     // raw `instance=` child reads as 3D, so both owners of this key would
     // decline and leave the consumer blank.
-    if (
-      isViewportBoundary(step.node.type) &&
-      viewportContentKind(resolveViewportSubtree(tree, link)) === 'dom'
-    ) {
-      found.push({ path, node: step.node, inheritedRtl, ...step.scope });
+    if (isViewportBoundary(step.node.type) && viewportContentAt(tree, link).kind === 'dom') {
+      const { render_target_update_mode: authoredMode } = step.node.properties as SubViewportProperties;
+      found.push({
+        path,
+        node: step.node,
+        inheritedRtl,
+        themeOwners: viewportThemeOwners(tree, path),
+        embedder: enclosingViewport(tree, path),
+        gate: viewportGateAt(tree, path, authoredMode),
+        ...step.scope,
+      });
     }
 
     descend(rtlBelow(step.node, inheritedRtl, layoutDirectionEnv));

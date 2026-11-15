@@ -14,6 +14,7 @@ or clear button, and its caret while `caret_force_displayed` is set. It draws th
 of one text (the string, or the placeholder) that end inside the right margin, in the colour its
 state calls for. `max_length`
 truncates an over-long `text` the same way Godot does.
+The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
 
 ## Linting
 

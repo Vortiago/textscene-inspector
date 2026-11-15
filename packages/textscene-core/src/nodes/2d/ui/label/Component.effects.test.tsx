@@ -8,7 +8,11 @@ import type { Rgba } from '../../../../godot/math/math';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { LabelSettingsResource } from '../../../../resources/styles/labelsettings/types';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { TRIANGLE_OUTLINES } from '../../../../r3f/controls/native/testing/triangleOutlines';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { isCanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
@@ -46,12 +50,12 @@ const BLACK: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 const RENDER_ORDER = 7;
 
 function label(overrides: Partial<SolveNode>): SolveNode {
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: 'L',
     node: controlNode('L', 'Label', { name: 'L', text: 'A' }),
     ...overrides,
-  };
+  });
 }
 
 function settings(overrides: Partial<LabelSettingsResource>): LabelSettingsResource {

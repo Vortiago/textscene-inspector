@@ -13,7 +13,7 @@ import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/nativ
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   getFontTabStopsPx,
-  getFontLinePitchPx,
+  getFontChainHeightPx,
   type FontMetrics,
 } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -29,10 +29,10 @@ import {
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { shapedLineHeightPx, type LineExtentPx } from '../../../../r3f/controls/native/text/lineExtent';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
-  type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -41,61 +41,63 @@ import type { CodeHighlighterColorSpan } from '../../../../resources/styles/code
 import type { TextEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-import {
-  CONTROL_FONT_COLOR,
-  CONTROL_FONT_DISABLED_COLOR,
-  CONTROL_FONT_PLACEHOLDER_COLOR,
-} from '../../../../godot/scene/theme';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
-/** `SceneStringName(font)` = `"font"`: `default_theme.cpp:460` (TextEdit), `:501` (CodeEdit). */
+/** `SceneStringName(font)` = `"font"`, which the default theme registers under TextEdit and CodeEdit. */
 export const TEXT_EDIT_THEME_FONT_KEY = 'font';
 
-/** `text_edit.cpp:4103`: `MAX(text.get_line_height() + theme_cache.line_spacing, 1)`. `Text::get_line_height()` (`:136-147`) is the max of every visible line's own `l.height`, which reduces to the font's own ascent+descent (no spacing) since every line in this codebase shapes at one uniform font/size. */
+/** `line_spacing`, the gap each row adds under its text (`text_edit.cpp:4104`). */
+export function textEditLineSpacingPx(n: SolveNode): number {
+  return requiredThemeItem(n.constants, 'line_spacing');
+}
+
+/** `wrap_offset`, the width `_update_wrap_at_column` keeps clear at the end of a row (`text_edit.cpp:8545`). */
+export function textEditWrapOffsetPx(n: SolveNode): number {
+  return requiredThemeItem(n.constants, 'wrap_offset');
+}
+
+/**
+ * `text_edit.cpp:4103`: `MAX(text.get_line_height() + theme_cache.line_spacing, 1)`, where
+ * `get_line_height` is the tallest line (`:136-147`). A line's `l.height` is the larger of
+ * `font->get_height`, the tallest face of the **Fallback chain**, and each of its rows (`:364-366`).
+ */
 export function textEditRowHeightPx(
-  fontMetrics: Parameters<typeof getFontLinePitchPx>[0],
+  lineLayouts: readonly TextEditLineLayout[],
+  fontMetrics: FontMetrics,
   fontSizePx: number,
   themeLineSpacingPx: number
 ): number {
-  return Math.max(getFontLinePitchPx(fontMetrics, fontSizePx, 0) + themeLineSpacingPx, 1);
+  let tallestPx = Math.trunc(getFontChainHeightPx(fontMetrics, fontSizePx));
+  for (const { layout } of lineLayouts) {
+    for (const row of layout.lines) tallestPx = Math.max(tallestPx, shapedLineHeightPx(row));
+  }
+  return Math.max(tallestPx + themeLineSpacingPx, 1);
 }
 
-/** `default_theme.cpp:482`: `theme->set_constant("wrap_offset", "TextEdit", 10)`, a bare `10`, not `Math.round(10 * scale)` like its neighbours. `_update_wrap_at_column` (`:8536-8543`) subtracts it unscaled. */
-const TEXT_EDIT_WRAP_OFFSET_PX = 10;
+/**
+ * {@link textEditRowHeightPx} over the buffer shaped without wrapping. CodeEdit sizes its gutters from
+ * it on `NOTIFICATION_THEME_CHANGED` (`code_edit.cpp:56-60`), and the gutters then set the wrap width.
+ */
+export function textEditUnwrappedRowHeightPx(
+  lines: readonly string[],
+  shape: Omit<TextEditShapeOptions, 'wrapMode' | 'wrapWidthPx'>,
+  themeLineSpacingPx: number
+): number {
+  const lineLayouts = shapeTextEditLines(lines, { ...shape, wrapMode: 0 });
+  return textEditRowHeightPx(lineLayouts, shape.fontMetrics, shape.fontSizePx, themeLineSpacingPx);
+}
 
 /** `text_edit.cpp:8614`: `content_size_cache = Vector2i(total_width + 10, ...)`, a second bare, unscaled `10`. */
 const TEXT_EDIT_CONTENT_WIDTH_PAD_PX = 10;
 
-/**
- * `TextEdit::get_draw_mode`'s stylebox axis. TextEdit's `normal`/`read_only` are the same
- * `Ref<StyleBoxFlat>` objects as LineEdit's (`default_theme.cpp:453,455`), as are CodeEdit's
- * (`:486,488`), so `theme.widgets.lineEdit` is this type's own default.
- */
+/** `TextEdit::get_draw_mode`'s stylebox axis: the theme item name of the box. */
 type TextEditStyleState = 'normal' | 'read_only';
 
 /** `editable ?? true` (TextEdit's own default, `text_edit.h`), collapsed to which stylebox key it selects. */
 export function resolveTextEditStyleState(editable: boolean | undefined): TextEditStyleState {
   return editable === false ? 'read_only' : 'normal';
 }
-
-/** `overrides[state]` (a resolved `theme_override_styles/<state>`) wins over the default-theme box for that state, which is LineEdit's (`TextEditStyleState`). */
-export function pickTextEditStyleBox(
-  overrides: Readonly<Record<string, StyleBoxFlatData>>,
-  lineEditDefaults: Readonly<Record<'normal' | 'readOnly', StyleBoxFlatData>>,
-  state: TextEditStyleState
-): StyleBoxFlatData {
-  const key = state === 'read_only' ? 'readOnly' : 'normal';
-  return overrides[state] ?? lineEditDefaults[key];
-}
-
-/** The `font_color` default of TextEdit and CodeEdit (`default_theme.cpp:466`, `:514`). */
-const TEXT_EDIT_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
-
-/** TextEdit's `font_readonly_color` default (`default_theme.cpp:468`). CodeEdit computes the same value inline (`:516`). */
-const TEXT_EDIT_DEFAULT_READONLY_COLOR = CONTROL_FONT_DISABLED_COLOR;
-
-/** TextEdit's `font_placeholder_color` default (`default_theme.cpp:469`). CodeEdit's is the same (`:517`). */
-const TEXT_EDIT_DEFAULT_PLACEHOLDER_COLOR = CONTROL_FONT_PLACEHOLDER_COLOR;
 
 /** The text states `NOTIFICATION_DRAW` picks a colour for: the placeholder wins over `editable` (`text_edit.cpp:1346-1352`). */
 type TextEditTextState = TextEditStyleState | 'placeholder';
@@ -106,24 +108,13 @@ const TEXT_EDIT_THEME_KEYS: Record<TextEditTextState, TextThemeKeys> = {
   placeholder: { sizeKey: 'font_size', colorKey: 'font_placeholder_color' },
 };
 
-const TEXT_EDIT_DEFAULT_COLORS: Record<TextEditTextState, Rgba> = {
-  normal: TEXT_EDIT_DEFAULT_FONT_COLOR,
-  read_only: TEXT_EDIT_DEFAULT_READONLY_COLOR,
-  placeholder: TEXT_EDIT_DEFAULT_PLACEHOLDER_COLOR,
-};
-
-/** Resolves this node's theme font size and colour for `state` (overrides, else the ancestor Theme chain, theme default or TextEdit's literal). CodeEdit shares it, since its defaults are the same. */
+/** This node's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the default theme table. CodeEdit shares it. */
 export function textEditTextTheme(
   n: SolveNode,
   props: TextEditProperties,
-  state: TextEditTextState,
-  ctx: Pick<SolveContext, 'theme'>
+  state: TextEditTextState
 ): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = {
-    fontSizePx: ctx.theme.fontSize,
-    color: TEXT_EDIT_DEFAULT_COLORS[state],
-  };
-  return resolveTextTheme(n, props, TEXT_EDIT_THEME_KEYS[state], defaults);
+  return resolveTextTheme(n, props, TEXT_EDIT_THEME_KEYS[state]);
 }
 
 /**
@@ -139,13 +130,13 @@ export function textEditDrawnLines(
 }
 
 /** A single buffer line's already-shaped rows plus its own start row index within the whole TextEdit. */
-interface TextEditLineLayout {
+export interface TextEditLineLayout {
   layout: TextLayoutResult;
   startRow: number;
 }
 
 /** What each buffer line shapes with, beyond its text. */
-interface TextEditShapeOptions {
+export interface TextEditShapeOptions {
   fontSizePx: number;
   fontMetrics: FontMetrics;
   /** `LineWrappingMode`. Only `LINE_WRAPPING_BOUNDARY` (1) wraps. */
@@ -213,22 +204,44 @@ export function shapeTextEditLines(
 }
 
 /**
- * `_update_wrap_at_column` (`text_edit.cpp:8536-8543`) without the v-scrollbar term, since no
- * scrollbar draws: `width - style min width - gutters_width - gutter_padding`, less `minimap_width`
- * when drawn, less the bare 10 `wrap_offset`. `gutterBandWidthPx` is the gutter sum, never split at
- * a call site: 0 for TextEdit, `codeEditGutterBand`'s `totalWidthPx` for CodeEdit.
+ * `_update_wrap_at_column` (`text_edit.cpp:8536-8543`): `width - style min width - gutters_width -
+ * gutter_padding`, less `minimap_width` when drawn, less the vertical scroll bar's width when it
+ * shows, less `wrap_offset`. `gutterBandWidthPx` is the gutter sum, never split at a
+ * call site: 0 for TextEdit, `codeEditGutterBand`'s `totalWidthPx` for CodeEdit.
  */
-export function textEditWrapWidthPx(
-  rectWidthPx: number,
-  styleMinWidthPx: number,
-  gutterBandWidthPx: number,
-  minimapWidthPx: number,
-  drawMinimap: boolean | undefined
-): number {
+export interface TextEditWrapInsets {
+  styleMinWidthPx: number;
+  gutterBandWidthPx: number;
+  minimapWidthPx: number;
+  drawMinimap: boolean | undefined;
+  wrapOffsetPx: number;
+  verticalBarWidthPx?: number;
+}
+
+export function textEditWrapWidthPx(rectWidthPx: number, insets: TextEditWrapInsets): number {
+  const { styleMinWidthPx, gutterBandWidthPx, minimapWidthPx, drawMinimap, wrapOffsetPx } = insets;
+  const verticalBarWidthPx = insets.verticalBarWidthPx ?? 0;
   let width = rectWidthPx - styleMinWidthPx - gutterBandWidthPx;
   if (drawMinimap) width -= minimapWidthPx;
-  width -= TEXT_EDIT_WRAP_OFFSET_PX;
+  width -= verticalBarWidthPx;
+  width -= wrapOffsetPx;
   return Math.trunc(width);
+}
+
+/** Every shaped row counted, and the widest one: `text.get_max_width()` is its ceiled width. */
+export function textEditRowStats(lineLayouts: readonly TextEditLineLayout[]): {
+  totalRows: number;
+  widestRowPx: number;
+} {
+  let widestRowPx = 0;
+  let totalRows = 0;
+  for (const { layout } of lineLayouts) {
+    totalRows += layout.lines.length;
+    for (const line of layout.lines) {
+      widestRowPx = Math.max(widestRowPx, shapedTextSizeWidthPx(line.widthPx));
+    }
+  }
+  return { totalRows, widestRowPx };
 }
 
 /**
@@ -244,15 +257,8 @@ function textEditContentSize(
   minimapWidthPx: number,
   drawMinimap: boolean | undefined
 ): Vector2 {
-  let maxRowWidthPx = 0;
-  let totalRows = 0;
-  for (const { layout } of lineLayouts) {
-    totalRows += layout.lines.length;
-    for (const line of layout.lines) {
-      maxRowWidthPx = Math.max(maxRowWidthPx, shapedTextSizeWidthPx(line.widthPx));
-    }
-  }
-  let totalWidth = maxRowWidthPx + gutterBandWidthPx;
+  const { totalRows, widestRowPx } = textEditRowStats(lineLayouts);
+  let totalWidth = widestRowPx + gutterBandWidthPx;
   if (drawMinimap) totalWidth += minimapWidthPx;
   return {
     x: totalWidth + TEXT_EDIT_CONTENT_WIDTH_PAD_PX,
@@ -265,6 +271,9 @@ function textEditContentSize(
  * only `CodeEdit.indent_size` forwards to it (`code_edit.cpp:908-920`).
  */
 export const TEXT_EDIT_DEFAULT_TAB_SIZE = 4;
+
+/** The default `minimap_width` (`text_edit.h:577`). */
+export const TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX = 80;
 
 /** `Text::invalidate_cache` (`text_edit.cpp:348-352`, and `invalidate_all_lines`, `:394-398`). */
 export function textEditTabStopsPx(
@@ -291,11 +300,9 @@ export function textEditMinimumSizeWith(
 ): Vector2 {
   const styleMin = contentMarginSize(styleBox);
   const state = resolveTextEditStyleState(props.editable);
-  const { fontSizePx } = textEditTextTheme(n, props, state, ctx);
+  const { fontSizePx } = textEditTextTheme(n, props, state);
   const fontMetrics = resolveNodeFontMetrics(n, TEXT_EDIT_THEME_FONT_KEY);
-  // TextEdit's `line_spacing` (`default_theme.cpp:479`) and BoxContainer's `DEFAULT_SEPARATION`
-  // are both `Math.round(4 * scale)`, and `nativeTheme.ts` exposes no raw `scale` to derive it.
-  const lineSpacingPx = ctx.theme.separation;
+  const lineSpacingPx = textEditLineSpacingPx(n);
 
   if (!props.fitContentWidth && !props.fitContentHeight) return styleMin;
 
@@ -303,13 +310,13 @@ export function textEditMinimumSizeWith(
   const wrapWidthPx =
     rectWidthPx === undefined
       ? 0
-      : textEditWrapWidthPx(
-          rectWidthPx,
-          styleMin.x,
+      : textEditWrapWidthPx(rectWidthPx, {
+          styleMinWidthPx: styleMin.x,
           gutterBandWidthPx,
-          props.minimapWidth ?? 80,
-          props.minimapDraw
-        );
+          minimapWidthPx: props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
+          drawMinimap: props.minimapDraw,
+          wrapOffsetPx: textEditWrapOffsetPx(n),
+        });
   const effectiveWrapMode = rectWidthPx === undefined ? 0 : props.wrapMode;
 
   const { lines, isPlaceholder } = textEditDrawnLines(props.text, props.placeholderText);
@@ -325,12 +332,12 @@ export function textEditMinimumSizeWith(
     bidi: controlBidiOptions(props, n),
     placeholder: isPlaceholder,
   });
-  const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
+  const rowHeightPx = textEditRowHeightPx(lineLayouts, fontMetrics, fontSizePx, lineSpacingPx);
   const content = textEditContentSize(
     lineLayouts,
     rowHeightPx,
     gutterBandWidthPx,
-    props.minimapWidth ?? 80,
+    props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
     props.minimapDraw
   );
 
@@ -343,7 +350,7 @@ export function textEditMinimumSizeWith(
 export const textEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as TextEditProperties;
   const state = resolveTextEditStyleState(props.editable);
-  const styleBox = pickTextEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, state);
+  const styleBox = requiredThemeItem(n.styleBoxes, state);
   return textEditMinimumSizeWith(n, ctx, props, styleBox, 0);
 };
 
@@ -500,6 +507,17 @@ export function textEditRowStartIndices(lineText: string, rows: readonly TextLin
   return starts;
 }
 
+/**
+ * A read-only TextEdit caps each highlighted colour's alpha at `font_readonly_color`'s
+ * (`text_edit.cpp:1666-1668`): a colour already fainter keeps its alpha.
+ */
+export function textEditCapSpanAlpha(
+  spans: readonly CodeHighlighterColorSpan[],
+  maxAlpha: number
+): CodeHighlighterColorSpan[] {
+  return spans.map((span) => ({ ...span, color: { ...span.color, a: Math.min(span.color.a, maxAlpha) } }));
+}
+
 function colorAt(spans: readonly CodeHighlighterColorSpan[], index: number, fallback: Rgba): Rgba {
   for (const span of spans) {
     if (index >= span.startIndex && index < span.endIndex) return span.color;
@@ -592,8 +610,11 @@ export function textEditRowColorRuns(
   return runs.length > 0 ? runs : [{ glyphs: [], color: fallbackColor }];
 }
 
-/** One colour run's glyphs as a `TextLineLayout`, `soloLineLayout`'s input, so a run renders through the same `<TextRun>` path as a whole row. */
-export function textEditColorRunLine(run: TextEditGlyphColorRun): TextLineLayout {
+/**
+ * One colour run's glyphs as a `TextLineLayout`, `soloLineLayout`'s input, so a run renders through
+ * the same `<TextRun>` path as a whole row. It keeps the ascent and descent of its `row`.
+ */
+export function textEditColorRunLine(run: TextEditGlyphColorRun, row: LineExtentPx): TextLineLayout {
   const first = run.glyphs[0];
   const last = run.glyphs[run.glyphs.length - 1];
   const widthPx = first && last ? last.x + last.advance - first.x : 0;
@@ -602,5 +623,7 @@ export function textEditColorRunLine(run: TextEditGlyphColorRun): TextLineLayout
     glyphs: run.glyphs,
     widthPx,
     paragraphIndex: 0,
+    ascentPx: row.ascentPx,
+    descentPx: row.descentPx,
   };
 }

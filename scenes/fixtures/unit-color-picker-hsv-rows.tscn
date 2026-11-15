@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+; The one variable: `color_mode = 1` (HSV). Its H row draws the `color_hue` rainbow over a grey
+; (color_mode.cpp:218-221), and the alpha row tiles the checkerboard under its gradient
+; (color_picker.cpp:1434-1435). Every other row is off so the slider grid fills the frame.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="HsvColorPicker" type="ColorPicker" parent="."]
+layout_mode = 1
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 304.0
+offset_bottom = 164.0
+color = Color(0.8, 0.6, 0.4, 0.8)
+picker_shape = 4
+color_mode = 1
+sampler_visible = false
+color_modes_visible = false
+presets_visible = false
+hex_visible = false

@@ -12,7 +12,7 @@ function child(properties: Record<string, unknown>, extra: Partial<SolveNode> = 
     path: 'Root/Child',
     node: { name: 'Child', type: 'Label', children: [], properties },
     children: [],
-    skippedAncestors: null,
+    skippedTransform: null,
     hidden: false,
     ...extra,
   } as unknown as SolveNode;
@@ -33,7 +33,7 @@ describe('isSortableControl', () => {
 
   it('skips a promoted child, which the container’s own cast never reaches', () => {
     const promoted = child({}, {
-      skippedAncestors: { transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 } },
+      skippedTransform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
     } as Partial<SolveNode>);
     expect(isSortableControl(promoted)).toBe(false);
   });

@@ -1,0 +1,21 @@
+; One variable against unit-canvas-group-self-modulate.tscn: the blue square's `z_index = 1`. A child
+; at another `z_final` is not grouped, so it draws opaque over the composited red square. No other
+; scene gives a CanvasGroup's child its own z.
+
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Group" type="CanvasGroup" parent="."]
+position = Vector2(100, 100)
+self_modulate = Color(1, 1, 1, 0.5)
+
+[node name="Red" type="Polygon2D" parent="Group"]
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Blue" type="Polygon2D" parent="Group"]
+position = Vector2(50, 50)
+z_index = 1
+color = Color(0, 0, 1, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)

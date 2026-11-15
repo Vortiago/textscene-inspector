@@ -1,0 +1,17 @@
+; The sub-scene `unit-canvas-paint-two-instances.tscn` instances twice: a Node2D root with a polygon
+; and a ColorRect, so each instance owns a run of draw sequences of its own.
+
+[gd_scene format=3 uid="uid://unitpaintpart"]
+
+[node name="Part" type="Node2D"]
+
+[node name="Shape" type="Polygon2D" parent="."]
+color = Color(0.2, 0.6, 0.9, 1)
+polygon = PackedVector2Array(0, 0, 60, 0, 60, 40, 0, 40)
+
+[node name="Panel" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 80.0
+offset_bottom = 60.0
+color = Color(0.9, 0.6, 0.2, 1)

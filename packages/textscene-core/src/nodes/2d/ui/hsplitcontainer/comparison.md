@@ -12,6 +12,7 @@ renders_as: two children side by side, split at a computed offset
 HSplitContainer places its children side by side, split where each entry of
 `split_offsets` puts that boundary, with the dragger's band between them. A right-to-left
 `layout_direction` puts the first child on the right and mirrors every boundary.
+`self_modulate` does not tint the grabber icon, which the dragger Control draws (`split_container.cpp:1340`).
 
 ## Linting
 

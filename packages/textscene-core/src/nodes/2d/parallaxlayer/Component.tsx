@@ -9,6 +9,7 @@ import type * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { Node2D } from '../../base/node2d/Component';
+import { RepeatCopies } from '../parallaxbackground/RepeatCopies';
 import { parallaxMirrorOffsets } from '../parallaxbackground/parallaxScroll';
 import { useParallaxScrollRegistry } from '../parallaxbackground/scrollContext';
 import { parentPathOf } from '../../../utils/nodePath';
@@ -52,15 +53,7 @@ export function ParallaxLayer({ node, children }: NodeComponentProps) {
     // every mesh below and so is the group three reads the key from.
     <group ref={groupRef}>
       <Node2D node={node}>
-        {mirrors.length === 0
-          ? children
-          : mirrors.map((offset, index) => (
-              // paint-order-safe: wraps dispatched children, each of which
-              // brings its own canvas-item wrapper nearer than this one.
-              <group key={`mirror-${index}`} position={[offset.x, 0 - offset.y, 0]}>
-                {children}
-              </group>
-            ))}
+        <RepeatCopies offsets={mirrors}>{children}</RepeatCopies>
       </Node2D>
     </group>
   );

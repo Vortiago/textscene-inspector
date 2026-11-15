@@ -1,0 +1,8 @@
+[gd_resource type="SkeletonModificationStack2D" load_steps=2 format=3]
+
+[ext_resource type="Resource" path="res://unit-skeleton2d-remote-transform-tres-lookat.tres" id="1_look"]
+
+[resource]
+enabled = true
+modification_count = 1
+modifications/0 = ExtResource("1_look")

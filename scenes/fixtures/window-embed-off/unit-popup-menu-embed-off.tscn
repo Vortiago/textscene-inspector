@@ -1,0 +1,36 @@
+; One variable: the project's `embed_subwindows` is off. The root then resets nothing
+; (`window.cpp:1535`), so the Window keeps its authored `gui_embed_subwindows` and embeds the
+; PopupMenu below it. A root that embeds would send the menu past the Window to the SubViewport.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Container" type="SubViewportContainer" parent="."]
+layout_mode = 0
+offset_left = 50.0
+offset_top = 50.0
+offset_right = 450.0
+offset_bottom = 350.0
+
+[node name="View" type="SubViewport" parent="Container"]
+gui_embed_subwindows = true
+size = Vector2i(400, 300)
+render_target_update_mode = 4
+
+[node name="Outer" type="Window" parent="Container/View"]
+position = Vector2i(20, 20)
+size = Vector2i(300, 200)
+visible = true
+gui_embed_subwindows = true
+
+[node name="Inner" type="PopupMenu" parent="Container/View/Outer"]
+position = Vector2i(10, 10)
+visible = true
+item_count = 2
+item_0/text = "Open"
+item_1/text = "Quit"

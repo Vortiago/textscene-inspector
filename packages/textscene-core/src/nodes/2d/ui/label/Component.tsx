@@ -7,6 +7,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { mayDrawStyleBox, StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import {
   clampAutowrapMode,
@@ -14,11 +15,7 @@ import {
   soloLineLayout,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import {
-  overrunFlagsForBehavior,
-  trimFilledLineToWidth,
-  trimLineToWidth,
-} from '../../../../r3f/controls/native/text/textOverrun';
+import { overrunFlagsForBehavior } from '../../../../r3f/controls/native/text/textOverrun';
 import { OutlineRingRun, textLayerRenderOrder } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { TextRun, type TextRunProps } from '../../../../r3f/controls/native/text/TextRun';
@@ -28,11 +25,13 @@ import {
   labelFontState,
   labelPreShapeText,
   labelShapingWidthPx,
+  labelStyleBox,
   labelTextTheme,
   labelUnwrappedShape,
   labelVisibleLineRange,
   layoutLabelLines,
   windowLabelLines,
+  labelFontHeightPx,
   type LabelLinePlacement,
   type LineTrim,
 } from './nativeSolver';
@@ -41,7 +40,6 @@ import { labelEffectLayers, labelFillLayer, type LabelEffectLayer } from './effe
 import type { LabelProperties } from './types';
 import {
   AutowrapMode,
-  OverrunBehavior,
   VisibleCharactersBehavior,
   JustificationFlag,
   DEFAULT_JUSTIFICATION_FLAGS,
@@ -83,7 +81,69 @@ function LayerRuns({ layer, placements, lineLayouts, ...run }: LayerRunsProps) {
 
 export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LabelProperties>(solveNode);
-  const themeResolved = useMemo(() => labelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
+  const style = labelStyleBox(solveNode);
+  const inheritedClippingPlanes = useControlClipPlanes();
+  // `clip_text` scissors this Label's own drawn ink to its rect
+  // (`label.cpp:733-734`'s `canvas_item_set_clip`): always called (hooks run
+  // unconditionally) but only consumed below when `props.clipText` is set.
+  const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
+  const { anchorRef, clippingPlanes: ownClippingPlanes } = useWorldClipPlanes(ownRect);
+  const clippingPlanes = props.clipText ? ownClippingPlanes : inheritedClippingPlanes;
+  // Read in the render body, not a `useMemo`: `peekSceneFontMetrics` reads a WeakMap cache
+  // that a later async load fills in place, so each render must look.
+  const { metrics: fontMetrics, isLoading: isFontLoading } = labelFontState(solveNode);
+
+  // `Label::_notification` draws the box before any text, so a loading font leaves it drawn.
+  // The default `normal` box is empty: mounting no quad for it spares every Label its hooks.
+  const box = mayDrawStyleBox(style) ? (
+    <StyleBoxQuad styleBox={style} color={tint.own} rect={ownRect} renderOrder={renderOrder} />
+  ) : null;
+
+  // A settings font that is still loading draws nothing, never the theme font (ADR-0059).
+  // The text is its own component, so a loading font runs none of its layout.
+  return (
+    <CanvasItemGroup ref={anchorRef}>
+      {box}
+      {!isFontLoading && (
+        <LabelText
+          solveNode={solveNode}
+          props={props}
+          tint={tint}
+          rect={rect}
+          renderOrder={renderOrder}
+          theme={theme}
+          contentMargin={style.contentMargin}
+          fontMetrics={fontMetrics}
+          clippingPlanes={clippingPlanes}
+        />
+      )}
+    </CanvasItemGroup>
+  );
+}
+
+type LabelTextProps = Pick<
+  NativeControlComponentProps,
+  'solveNode' | 'tint' | 'rect' | 'renderOrder' | 'theme'
+> & {
+  props: LabelProperties;
+  contentMargin: ReturnType<typeof labelStyleBox>['contentMargin'];
+  fontMetrics: ReturnType<typeof labelFontState>['metrics'];
+  clippingPlanes: TextRunProps['clippingPlanes'];
+};
+
+/** The Label's text, laid out, trimmed, placed, revealed and drawn in its effect layers. */
+function LabelText({
+  solveNode,
+  props,
+  tint,
+  rect,
+  renderOrder,
+  theme,
+  contentMargin,
+  fontMetrics,
+  clippingPlanes,
+}: LabelTextProps) {
+  const themeResolved = useMemo(() => labelTextTheme(solveNode, props), [solveNode, props]);
   const labelSettings = solveNode.labelSettings;
   // A valid `label_settings` beats the theme outright: see its own doc.
   const textTheme = useMemo(
@@ -107,13 +167,6 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     ],
     [effectLayers, tint.own, tintColor]
   );
-  const inheritedClippingPlanes = useControlClipPlanes();
-  // `clip_text` scissors this Label's own drawn ink to its rect
-  // (`label.cpp:733-734`'s `canvas_item_set_clip`): always called (hooks run
-  // unconditionally) but only consumed below when `props.clipText` is set.
-  const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
-  const { anchorRef, clippingPlanes: ownClippingPlanes } = useWorldClipPlanes(ownRect);
-  const clippingPlanes = props.clipText ? ownClippingPlanes : inheritedClippingPlanes;
 
   // VC_CHARS_BEFORE_SHAPING (the default) truncates before shaping: see
   // `labelPreShapeText`'s own doc; every other behaviour trims at draw time,
@@ -126,17 +179,12 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // is already windowed to lines_skipped/max_lines_visible, so it is not windowed again.
   const sharedLayout =
     autowrapMode === AutowrapMode.AUTOWRAP_OFF ? labelUnwrappedShape(solveNode, theme) : null;
-  // Read in the render body, not the `useMemo`: `peekSceneFontMetrics` reads a
-  // WeakMap cache that a later async load fills in place, so each render must look.
-  // The `useMemo` dependency on `fontMetrics` limits re-shaping to an identity change.
-  const { metrics: fontMetrics, isLoading: isFontLoading } = labelFontState(solveNode);
   const bidiOptions = useControlBidiOptions(props, solveNode);
   const layout = useMemo(() => {
     if (sharedLayout) return sharedLayout;
-    // A loading font draws nothing, so its layout shapes no text.
-    const shaped = shapeText(isFontLoading ? '' : text, {
+    const shaped = shapeText(text, {
       fontSizePx: textTheme.fontSizePx,
-      boxWidthPx: labelShapingWidthPx(rect.w),
+      boxWidthPx: labelShapingWidthPx(rect.w, contentMargin),
       autowrapMode,
       lineSpacingPx: textTheme.lineSpacingPx,
       uppercase: props.uppercase,
@@ -147,15 +195,18 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       ...bidiOptions,
     });
     const range = labelVisibleLineRange(shaped.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
-    return windowLabelLines(shaped, range, textTheme.paragraphSpacingPx);
+    return windowLabelLines(shaped, range, {
+      paragraphSpacingPx: textTheme.paragraphSpacingPx,
+      fontHeightPx: labelFontHeightPx(fontMetrics, textTheme.fontSizePx),
+    });
   }, [
     sharedLayout,
-    isFontLoading,
     text,
     textTheme.fontSizePx,
     textTheme.lineSpacingPx,
     textTheme.paragraphSpacingPx,
     rect.w,
+    contentMargin,
     autowrapMode,
     props.uppercase,
     fontMetrics,
@@ -178,20 +229,12 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // width, whatever clip_text says, before it is aligned. The autowrap-ON branch (`:269-301`)
   // trims only the line `max_lines_visible` hides, which is not modelled
   // (`LabelProperties.overrunBehavior`).
-  const overrunFlags = useMemo(
-    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
-    [props.overrunBehavior]
-  );
+  const overrunFlags = useMemo(() => overrunFlagsForBehavior(props.overrunBehavior), [props.overrunBehavior]);
   const trim = useMemo((): LineTrim | undefined => {
     if (autowrapMode !== AutowrapMode.AUTOWRAP_OFF || !overrunFlags.trim) return undefined;
-    const widthPx = labelShapingWidthPx(rect.w);
     const options = { fontMetrics, fontSizePx: textTheme.fontSizePx, ellipsisChar: props.ellipsisChar };
-    return {
-      line: (line) => trimLineToWidth(line, widthPx, overrunFlags, options),
-      filledLine: (line, justificationFlags) =>
-        trimFilledLineToWidth(line, widthPx, overrunFlags, { ...options, justificationFlags }),
-    };
-  }, [autowrapMode, overrunFlags, rect.w, fontMetrics, textTheme.fontSizePx, props.ellipsisChar]);
+    return { flags: overrunFlags, options };
+  }, [autowrapMode, overrunFlags, fontMetrics, textTheme.fontSizePx, props.ellipsisChar]);
 
   // Godot aligns each line by its own width (`Label::_get_line_rect`), so each line
   // gets its own box top here, and `<TextRun>` anchors it at the baseline.
@@ -208,7 +251,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
           rtl: solveNode.rtl,
           isAutowrapped: autowrapMode !== AutowrapMode.AUTOWRAP_OFF,
           trim,
-          lineSpacingPx: textTheme.lineSpacingPx,
+          contentMargin,
           paragraphSpacingPx: textTheme.paragraphSpacingPx,
         }
       ),
@@ -219,8 +262,8 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       props.horizontalAlignment,
       props.verticalAlignment,
       effectiveJustificationFlags,
-      textTheme.lineSpacingPx,
       textTheme.paragraphSpacingPx,
+      contentMargin,
       solveNode.rtl,
       autowrapMode,
       trim,
@@ -253,25 +296,18 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
 
   const lineLayouts = useSoloLineLayouts(revealedPlacements, layout);
 
-  // A settings font that is still loading draws nothing, never the theme font (ADR-0059).
-  if (isFontLoading) return <CanvasItemGroup ref={anchorRef} />;
-
   // Each run takes `renderOrder` itself, since three never inherits it, and sits in a
   // `<CanvasItemGroup>`, since three reads the nearest group's order first and a bare `<group>`
   // resets it to zero (`r3f/canvasPaintOrder.ts`).
-  return (
-    <CanvasItemGroup ref={anchorRef}>
-      {layers.map((layer, layerIndex) => (
-        <LayerRuns
-          key={layerIndex}
-          layer={layer}
-          placements={revealedPlacements}
-          lineLayouts={lineLayouts}
-          fontSizePx={textTheme.fontSizePx}
-          clippingPlanes={clippingPlanes}
-          renderOrder={textLayerRenderOrder(renderOrder, layerIndex, layers.length)}
-        />
-      ))}
-    </CanvasItemGroup>
-  );
+  return layers.map((layer, layerIndex) => (
+    <LayerRuns
+      key={layerIndex}
+      layer={layer}
+      placements={revealedPlacements}
+      lineLayouts={lineLayouts}
+      fontSizePx={textTheme.fontSizePx}
+      clippingPlanes={clippingPlanes}
+      renderOrder={textLayerRenderOrder(renderOrder, layerIndex, layers.length)}
+    />
+  ));
 }

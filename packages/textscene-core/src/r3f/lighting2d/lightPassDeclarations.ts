@@ -56,14 +56,15 @@ export function useRegisterCanvasLight2D(
 }
 
 /**
- * Declares a lit item at `placement`, by value, with the accumulation it reads. The cap hands
- * `takenLights` as a new array only when they change, so its identity serves.
+ * Declares a lit item at `placement`, by value, with the accumulation it reads, or nothing while
+ * `read` is null. The cap hands `takenLights` as a new array only when they change, so its
+ * identity serves.
  */
-export function useRegisterLitItem(placement: ItemPlacement, read: LitItemRead): void {
+export function useRegisterLitItem(placement: ItemPlacement, read: LitItemRead | null): void {
   const { registerItem } = useCanvasLighting2D();
   const { lightMask, z, layer, takenLights } = placement;
   useEffect(
-    () => registerItem({ lightMask, z, layer, takenLights }, read),
+    () => (read === null ? undefined : registerItem({ lightMask, z, layer, takenLights }, read)),
     [registerItem, lightMask, z, layer, takenLights, read]
   );
 }

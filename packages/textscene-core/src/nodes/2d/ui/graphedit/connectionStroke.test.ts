@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { connectionStrokeGeometry } from './connectionStroke';
+import { connectionStrokeGeometry, shaderLineWidth } from './connectionStroke';
 
 const RED = { r: 1, g: 0, b: 0, a: 1 };
 const BLUE = { r: 0, g: 0, b: 1, a: 1 };
@@ -53,5 +53,16 @@ describe('connectionStrokeGeometry', () => {
       indices: [],
       colors: [],
     });
+  });
+});
+
+describe('shaderLineWidth', () => {
+  // A scale whose 4 px margin rounds away from it: `round(4 * 1.1) / 4` is 1, not 1.1.
+  it('scales the thickness by the unrounded base scale (graph_edit.cpp:2632-2634)', () => {
+    expect(shaderLineWidth(4, 1.1)).toBeCloseTo(4 * 1.1 + 4, 10);
+  });
+
+  it('adds 4 px at any scale, so a zero thickness still strokes', () => {
+    expect(shaderLineWidth(0, 2)).toBe(4);
   });
 });

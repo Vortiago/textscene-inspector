@@ -16,7 +16,7 @@ import {
   layerRanks,
   WHOLE_CANVAS_RANGE,
 } from '../../../r3f/canvasPaintOrder';
-import { PaintRangeProvider } from '../../../r3f/contexts/PaintOrderContext';
+import { PaintRun } from '../../../r3f/testing/PaintRun';
 import type { TscnNode } from '../../../parser/types';
 
 /** The world canvas's rank, derived, never hardcoded: only the order of the
@@ -51,9 +51,9 @@ describe('Node2D show_behind_parent parity (#36)', () => {
     const childRange = allocatePaintRange(WHOLE_CANVAS_RANGE, parent.children).children[0]!;
     const r = await ReactThreeTestRenderer.create(
       <Node2D node={parent}>
-        <PaintRangeProvider value={childRange}>
+        <PaintRun value={childRange}>
           <Node2D node={child} />
-        </PaintRangeProvider>
+        </PaintRun>
       </Node2D>
     );
     const groups = r.scene.findAllByType('Group').map((g) => g.instance);

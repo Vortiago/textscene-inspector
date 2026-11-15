@@ -23,6 +23,7 @@ const BANNED = new Set([
   'referencedFilePath',
   'useLoadedFiles',
   'useCachedFiles',
+  'referenceHeldBy',
 ]);
 
 /** The trees a reader of a resource lives in. */

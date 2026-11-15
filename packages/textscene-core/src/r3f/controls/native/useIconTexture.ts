@@ -7,25 +7,31 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useOwnerCanvas2DTexture } from '../../canvas2DTextureDecode';
 import { applyViewSampler } from '../../../resources/textures/textureView';
-import { canvasItemViewSampler, useResolvedTextureSampler } from '../../canvasItemTextureSampler';
+import { useCanvasItemViewSampler, useResolvedTextureSampler } from '../../canvasItemTextureSampler';
 import { useNearestAnisotropy } from '../../nearestAnisotropy';
 import { useDisposeOnRelease } from '../../useDisposeOnRelease';
+import { referenceHeldBy } from '../../../resources/reading';
 import { useTexture2D } from '../../../resources/useTexture2D';
-import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
-import type { ThemedIconRef } from './solveTree';
+import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
+import { themeIconSource } from './themeIconSource';
+import type { SolveNode, ThemedIconRef } from './solveTree';
 
 /**
- * Sampled with the owner's filter and repeat, memoised on the URL and sampler, and disposed on unmount
- * or change. `null` allocates nothing: hook order is fixed, so a conditionally drawn icon (the
- * SplitContainer grabber, hidden by the default `autohide`) would decode an image it never renders.
+ * A vendored icon's pixels come from `themeIconSource` at the project's theme scale, sampled with the
+ * owner's filter and repeat. `null` allocates nothing: hook order is fixed, so a conditionally drawn
+ * icon (the SplitContainer grabber, hidden by the default `autohide`) would decode an image it never draws.
  */
 export function useOptionalIconTexture(dataUrl: string | null): THREE.Texture | null {
-  const sampler = useResolvedTextureSampler();
+  const viewSampler = useCanvasItemViewSampler(useResolvedTextureSampler());
+  const { themeScale } = useProjectSettings();
   const texture = useMemo(() => {
     if (dataUrl === null) return null;
-    // The loader bypasses `res://`, so the canvas sampler and its `NoColorSpace` tag go on here.
-    return applyViewSampler(new THREE.TextureLoader().load(dataUrl), canvasItemViewSampler(sampler));
-  }, [dataUrl, sampler]);
+    // The loader bypasses `res://`, so the canvas sampler and its colour space go on here.
+    return applyViewSampler(
+      new THREE.TextureLoader().load(themeIconSource(dataUrl, themeScale)),
+      viewSampler
+    );
+  }, [dataUrl, themeScale, viewSampler]);
   useDisposeOnRelease(texture);
   useNearestAnisotropy(texture);
   return texture;
@@ -39,9 +45,6 @@ export function useIconTexture(dataUrl: string): THREE.Texture {
   return useOptionalIconTexture(dataUrl)!;
 }
 
-const NO_EXT_RESOURCES: readonly TscnExternalResource[] = [];
-const NO_INT_RESOURCES: readonly TscnInternalResource[] = [];
-
 /**
  * Draws the themed icon `SolveNode.icons[<name>]` (loaded through `res://`, retagged for the canvas
  * colour space) or the vendored default. Both hooks run each render and load nothing on null input,
@@ -53,14 +56,22 @@ export function useNodeIcon(
   vendoredUrl: string | null
 ): THREE.Texture | null {
   const themedResult = useTexture2D(
-    themed?.ref,
-    themed?.resources.externalResources ?? NO_EXT_RESOURCES,
-    themed?.resources.internalResources ?? NO_INT_RESOURCES,
-    'plain',
-    themed?.isHeldLocally
+    themed ? referenceHeldBy(themed.ref, themed.resources, themed.isHeldLocally) : null
   );
   const themedTexture = useOwnerCanvas2DTexture(themed ? themedResult.texture : null);
   const themedWins = themed !== undefined && !themedResult.missing;
   const vendoredTexture = useOptionalIconTexture(themedWins ? null : vendoredUrl);
   return themedWins ? themedTexture : vendoredTexture;
+}
+
+/**
+ * The theme icon `name` of `n`: its theme's texture, else the default icon a parent pushed under that
+ * name (`SolveNode.defaultIcons`), else `vendoredUrl`, the class's own default.
+ */
+export function useThemeIcon(
+  n: Pick<SolveNode, 'icons' | 'defaultIcons'>,
+  name: string,
+  vendoredUrl: string
+): THREE.Texture | null {
+  return useNodeIcon(n.icons[name], n.defaultIcons?.[name] ?? vendoredUrl);
 }

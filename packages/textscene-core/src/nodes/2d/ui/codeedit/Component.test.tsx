@@ -9,9 +9,14 @@ import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CodeEdit } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { CodeEditProperties } from './types';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   bundledRunOf,
   bundledRunMeshes,
@@ -23,13 +28,23 @@ vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
   default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
 }));
 
+// A fold icon is a loaded texture. One stand-in texture lets the painter draw the arrows.
+vi.mock('../../../../r3f/controls/native/useIconTexture', async (importOriginal) => {
+  const { Texture } = await import('three');
+  const standIn = new Texture();
+  return {
+    ...(await importOriginal<object>()),
+    useNodeIcon: (_override: unknown, fallback: unknown) => (fallback === null ? null : standIn),
+  };
+});
+
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 100 };
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<CodeEditProperties> = {}): SolveNode {
   const node: TscnNode = controlNode('MyCodeEdit', 'CodeEdit', { name: 'MyCodeEdit', ...properties });
-  return { ...emptySolveNode(), path: 'MyCodeEdit', node };
+  return withThemeItems({ ...emptySolveNode(), path: 'MyCodeEdit', node });
 }
 
 /** The chrome `<TextEditBody>` draws: a `<StyleBoxQuad>` mesh with a `color` vertex attribute. */
@@ -170,5 +185,85 @@ describe('<CodeEdit> — indent_size (text_edit.cpp:349-351)', () => {
       />
     );
     expect(bundledRunMeshes(wide.scene).length).toBeGreaterThan(bundledRunMeshes(narrow.scene).length);
+  });
+});
+
+/** Every `<StyleBoxQuad>` mesh: the panel, and a track and a grabber for each scroll bar. */
+function chromeMeshCount(scene: Rendered['scene']) {
+  return scene
+    .findAllByType('Mesh')
+    .map((m) => m.instance as THREE.Mesh)
+    .filter((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined).length;
+}
+
+const PANEL_MESHES = 1;
+const BAR_MESHES = 2;
+const SIX_LINES = 'one\ntwo\nthree\nfour\nfive\nsix';
+
+describe('<CodeEdit> — scroll bars (text_edit.cpp:8587-8656)', () => {
+  it('draws one vertical bar, a track and a grabber, for six rows in 100 px', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit {...painterEnv()} solveNode={solveNode({ text: SIX_LINES })} rect={RECT} renderOrder={0} />
+    );
+    expect(chromeMeshCount(renderer.scene)).toBe(PANEL_MESHES + BAR_MESHES);
+  });
+
+  it('draws no bar for two rows', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit {...painterEnv()} solveNode={solveNode({ text: 'one\ntwo' })} rect={RECT} renderOrder={0} />
+    );
+    expect(chromeMeshCount(renderer.scene)).toBe(PANEL_MESHES);
+  });
+
+  it('draws no bar under scroll_fit_content_height', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: SIX_LINES, fitContentHeight: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(chromeMeshCount(renderer.scene)).toBe(PANEL_MESHES);
+  });
+});
+
+describe('<CodeEdit> — self_modulate', () => {
+  it('tints the box with tint and the text and the line numbers with childTint', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={solveNode({ text: 'a\nb', gutters_draw_line_numbers: true } as never)}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(countTintSplit(renderer.scene)).toEqual({ own: 1, child: 2 });
+  });
+});
+
+describe('<CodeEdit> — fold gutter', () => {
+  it('clips the fold arrows to the node rect, as `text_ci` clips every gutter (text_edit.cpp:934)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit
+        {...painterEnv()}
+        solveNode={solveNode({
+          text: 'if a:\n\tb',
+          gutterDrawFoldGutter: true,
+          lineFolding: true,
+        })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const arrows = renderer.scene
+      .findAllByType('Mesh')
+      .map((m) => m.instance as THREE.Mesh)
+      .filter((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.Texture);
+    expect(arrows).toHaveLength(1);
+    const planes = (arrows[0]!.material as THREE.Material).clippingPlanes ?? [];
+    const belowTheNode = new THREE.Vector3(10, -(RECT.h + 5), 0);
+    expect(planes.some((plane) => plane.distanceToPoint(belowTheNode) < 0)).toBe(true);
   });
 });

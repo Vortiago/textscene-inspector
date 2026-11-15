@@ -27,6 +27,10 @@ A defect the change introduces and CI does not catch:
 - A finding without a concrete input.
 - A missing issue number in a sheet, `GLOSSARY.md` or a code comment. Those carry no issue numbers.
   Accept a limit line when the PR body names its owning issue.
+- A scope cut that names its owner. A scope cut is a line that puts work off, in an ADR, in another
+  document under `docs/`, in the PR body or in an issue: an item of an `Out of scope` list, or a
+  sentence with `not filed`, `follow-up`, `deferred`, `host input` or `a later issue`. Its line holds
+  an issue number, or `no issue:` with the reason. `scripts/scope-cuts/` and `pnpm pr:state` check it.
 
 ## Severity
 

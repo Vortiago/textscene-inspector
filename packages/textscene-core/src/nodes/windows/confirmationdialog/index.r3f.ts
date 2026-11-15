@@ -1,15 +1,4 @@
-/**
- * ConfirmationDialog is parsed but not drawn: `renderIntent: 'pending'`
- * drives the "not implemented" badge and the placeholder marker. `container: true`
- * holds the type in both canvases. The `Node` base applies no `visible`.
- */
+/** ConfirmationDialog draws as a viewport its embedder shows (`registerWindowType.r3f.ts`). */
+import { registerWindowComponent } from '../window/registerWindowType.r3f';
 
-import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { Node } from '../../node/Component';
-
-nodeComponentRegistry.register({
-  typeName: 'ConfirmationDialog',
-  Component: Node,
-  container: true,
-  renderIntent: 'pending',
-});
+registerWindowComponent('ConfirmationDialog');

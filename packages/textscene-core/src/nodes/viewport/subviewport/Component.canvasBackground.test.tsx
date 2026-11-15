@@ -24,6 +24,7 @@ background_canvas_max_layer = ${maxLayer}
 [node name="Root" type="Node2D"]
 
 [node name="View" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(200, 150)
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="View"]
@@ -110,6 +111,7 @@ layer = 5
 layer = 6
 
 [node name="View" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(200, 150)
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="View"]

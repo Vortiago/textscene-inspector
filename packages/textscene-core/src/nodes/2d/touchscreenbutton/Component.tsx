@@ -7,7 +7,6 @@
 
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { YSortDispatcher } from '../../../r3f/YSortDispatcher.js';
 import type { TscnNode } from '../../../parser/types';
 import { Sprite2D } from '../sprite2d/Component';
 import type { Sprite2DProperties } from '../sprite2d/types';
@@ -38,7 +37,7 @@ export function TouchScreenButton({ node, children }: NodeComponentProps) {
   return (
     <Sprite2D node={spriteNode}>
       <ShapeOverlay props={props} />
-      {props.y_sort_enabled ? <YSortDispatcher node={node}>{children}</YSortDispatcher> : children}
+      {children}
     </Sprite2D>
   );
 }

@@ -4,7 +4,7 @@ category: 2D
 status: unreviewed
 fixture: unit-graph-edit.tscn
 # image: unit-graph-edit
-renders_as: a background panel, grid, toolbar, scrollbars and minimap, with GraphElement children placed by position_offset and the whole rect clipped
+renders_as: a background panel, grid, toolbar, scrollbars and minimap, with GraphElement children placed by position_offset, scaled by zoom and the whole rect clipped
 ---
 
 # GraphEdit
@@ -18,7 +18,13 @@ resolvable `connections` entry as a curved, tinted ribbon
 endpoint (`get_output_port_position`/`get_input_port_position` in `graph_node.cpp`). A port is a
 `Point2i`, so a connection ends on a whole pixel. It
 places every GraphElement child (`GraphNode`/`GraphFrame`) at
-`position_offset * zoom - scroll_offset`, as `GraphEdit::_update_scroll_offset` does.
+`position_offset * zoom - scroll_offset`, and draws it at scale `(zoom, zoom)` about its pivot,
+as `GraphEdit::_update_scroll_offset` does (`graph_edit.cpp:446-451`). The child's authored `scale`
+has no effect, and its `rotation` and pivot stay. A child that is no GraphElement keeps its
+anchored rect and its own transform.
+The GraphFrames draw first, in reverse scene order. The connections draw next, and the other
+children last, in scene order. `add_child_notify` moves each frame to index 0 and the connection
+layer to the index after the frames (`graph_edit.cpp:714-717`).
 The constructor's `set_clip_contents(true)` (`:3342`) clips all of it to the widget's
 rect.
 
@@ -49,28 +55,43 @@ It also draws the three pieces of chrome that the GraphEdit C++ constructor buil
 are present in every GraphEdit, whatever the scene file says:
 
 - The **toolbar** at `(10, 10)`, a `PanelContainer` at its minimum size around an
-  `HBoxContainer`. Its widgets are the zoom label (`round(zoom * 100)%`), three zoom
+  `HBoxContainer`, spaced by `HBoxContainer`'s `separation` from the Theme chain (`graph_edit.cpp:3234`). Its widgets are the zoom label (`round(zoom * 100)%`), three zoom
   buttons, the grid and snapping toggles, the snapping-distance `SpinBox`, the minimap
   toggle and the arrange button. Each icon sits on a whole pixel (`button.cpp:405`). The
   SpinBox is four advances of `W` wide, as one glyph measures it (`line_edit.cpp:2451`). `show_menu`
   hides the panel. `show_zoom_label`, `show_zoom_buttons`, `show_grid_buttons`,
-  `show_minimap_button` and `show_arrange_button` hide widgets inside it, which re-flows
+  `show_minimap_button` and `show_arrange_button` hide widgets inside it. This re-flows
   the row and re-sizes the panel. `show_grid`, `snapping_enabled` and `minimap_enabled`
-  each press their toggle, and the SpinBox shows `snapping_distance`.
-- The two **scrollbars**, anchored to the bottom and right edges. `_update_scrollbars`
-  grows the scroll range past the page in every GraphEdit with a non-zero rect, so both
-  are always visible. The size and offset of each grabber come from that range and
-  `scroll_offset`.
-- The **minimap**, anchored bottom-right, inset 12px, at `minimap_size` (at least 50 per
-  axis) and `minimap_opacity`, drawn only while `minimap_enabled`. Inside it are the
-  panel, one rect per visible GraphFrame and then GraphNode in its panel colour, every
-  connection, and the camera viewport rect. A connection is a 0.5px
+  each press their toggle. The SpinBox shows `snapping_distance` as its value. The Label, `FlatButton`
+  Buttons and SpinBox read their own class's items through the GraphEdit's ancestor Theme chain
+  (`graph_edit.cpp:3229-3300`). The boxes, the font and icon colours, and the minimum size of
+  each widget follow a Theme that sets them. Each widget is a built Control that its own class's solver and painter size and draw.
+  A right-to-left layout mirrors the toolbar.
+- The two **scrollbars**, anchored to the bottom and right edges.
+  A right-to-left layout mirrors them.
+  Each reads the boxes of its own class, HScrollBar or VScrollBar, through the Theme chain.
+  Each draws as a canvas item of its own, with no material and light_mask 1 (`renderer_canvas_cull.cpp:319-324`). Once `_update_scrollbars`
+  has run, its scroll range is past the page in every GraphEdit with a non-zero rect, so both
+  are visible. The size and offset of each grabber come from that range and `scroll_offset`.
+  It has run in three cases. The GraphEdit has a GraphElement child. A `scroll_offset` or a `zoom`
+  that moves was applied while the file loaded. The solved size differs from the size the offsets
+  gave out of the tree. Otherwise both bars keep the constructor state: full length, overlapping
+  in the corner, each grabber a dot at the middle. The minimap then reads zero bounds, and its
+  camera frame runs past the minimap panel (`graphEdit.md`).
+- The **minimap**, anchored bottom-right (bottom-left in a right-to-left layout), inset 12px, at `minimap_size` (at least 50 per
+  axis) and `minimap_opacity`, drawn only while `minimap_enabled`. It holds the panel and one
+  rect per visible GraphFrame, then GraphNode. Each rect takes the `bg_color` of its `panel`, or of
+  `panel_selected` while it is selected (`graph_edit.cpp:1834-1864`). A frame with `tint_color_enabled`
+  takes its tint. Under a StyleBoxTexture or StyleBoxLine panel the rect keeps the minimap's `node`
+  fill. Over them the minimap draws every connection and the camera viewport rect. A connection is a 0.5px
   `draw_polyline_colors` polyline, with each point's colour lerped in minimap space and
   a feather that `connection_lines_antialiased` selects. All of it is letterboxed into
   the bounding box of the graph. Godot draws no connection in the settled minimap in two
   cases. One is a `scroll_offset` or a `zoom` that moves, applied while the file loaded. The
   other is every child at `position_offset` `(0, 0)`. The minimap's only draw then reads an
   empty connection cache (`graphEdit.md`).
+The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
+`self_modulate` tints the panel and the grid. The connections, the toolbar, the minimap and both scroll bars draw without it (`graph_edit.cpp:290,853-863,3183`).
 
 ## Linting
 
@@ -126,9 +147,9 @@ lenient tree carries none of them, and a malformed one does not reach the tree.
 
 ## Known limitations
 
-- **Approximated** A GraphElement child's `position` scales with `zoom` but its drawn
-  pixels do not, so away from `zoom = 1` a node's chrome draws at its unscaled size.
-- **Approximated** Connections draw at the grid's `renderOrder` instead of directly above
-  it (`graph_edit.cpp:717`), which shows only where a node overlaps a line.
 - **Approximated** The toolbar buttons and SpinBox draw their icons, pressed boxes, field,
   arrows and disabled state, but no hover or focus state.
+- **Approximated** A connection curve takes Godot's path and width, but its anti-aliased edge differs
+  from Godot's feather.
+- **Approximated** Under a StyleBoxEmpty panel, a GraphNode or GraphFrame fills its minimap rect clear,
+  where Godot keeps the minimap's `node` fill.

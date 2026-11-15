@@ -1,0 +1,38 @@
+[gd_scene load_steps=8 format=3 uid="uid://unittilemaplayerscenetiles"]
+
+; The one variable: a TileMapLayer instantiates the scene of each cell that names a scene tile of
+; a TileSetScenesCollectionSource (tile_map_layer.cpp:1569-1659). Every other tile golden draws
+; atlas sources only, so none can show a regression in an instance's place, flip or draw order.
+; Rows: four orientations of a Node2D root, a Control root and a root with its own position, a
+; display_placeholder tile (no disc without Gizmos), three cells that draw nothing, and two
+; overlapping instances (the later one on top) beside an authored child.
+
+[ext_resource type="PackedScene" path="res://unit-tile-map-layer-scene-tile-polygon.tscn" id="1_polygon"]
+[ext_resource type="PackedScene" path="res://unit-tile-map-layer-scene-tile-control.tscn" id="2_control"]
+[ext_resource type="PackedScene" path="res://unit-tile-map-layer-scene-tile-offset.tscn" id="3_offset"]
+[ext_resource type="PackedScene" path="res://unit-tile-map-layer-scene-tile-yellow.tscn" id="4_yellow"]
+[ext_resource type="PackedScene" path="res://unit-tile-map-layer-scene-tile-magenta.tscn" id="5_magenta"]
+
+[sub_resource type="TileSetScenesCollectionSource" id="TileSetScenesCollectionSource_a"]
+scenes/1/scene = ExtResource("1_polygon")
+scenes/2/scene = ExtResource("2_control")
+scenes/3/scene = ExtResource("3_offset")
+scenes/4/scene = ExtResource("1_polygon")
+scenes/4/display_placeholder = true
+scenes/5/scene = ExtResource("4_yellow")
+scenes/6/scene = ExtResource("5_magenta")
+
+[sub_resource type="TileSet" id="TileSet_b"]
+tile_size = Vector2i(64, 64)
+sources/0 = SubResource("TileSetScenesCollectionSource_a")
+
+[node name="World" type="Node2D"]
+
+[node name="Layer" type="TileMapLayer" parent="."]
+position = Vector2(100, 20)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 16, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 32, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 64, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 16, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0, 3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 3, 16, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 4, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 4, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0, 2, 0, 5, 0, 0, 0, 0, 0, 1, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 5, 0, 1, 0, 5, 0, 0, 0, 0, 0, 0, 0, 5, 0)
+tile_set = SubResource("TileSet_b")
+
+[node name="Authored" type="Polygon2D" parent="Layer"]
+color = Color(1, 1, 1, 1)
+polygon = PackedVector2Array(64, 300, 114, 300, 114, 340, 64, 340)

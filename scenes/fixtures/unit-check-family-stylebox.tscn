@@ -1,0 +1,93 @@
+; one variable: a themed state StyleBox on a CheckBox and a CheckButton, which Button draws under the label and
+; whose `normal` margins place the check (button.cpp:214-218, check_box.cpp:126-131, check_button.cpp:132-138).
+; No other scene gives the check family a StyleBox, so none shows a regression in it.
+
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_normal"]
+content_margin_left = 20.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 10.0
+bg_color = Color(0.2, 0.3, 0.5, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pressed"]
+content_margin_left = 6.0
+content_margin_top = 12.0
+content_margin_right = 24.0
+content_margin_bottom = 4.0
+bg_color = Color(0.5, 0.3, 0.2, 1)
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="CheckBoxNormal" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pressed")
+text = "Normal box"
+
+[node name="CheckBoxPressed" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 80.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pressed")
+button_pressed = true
+text = "Pressed box"
+
+[node name="CheckBoxRtl" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 140.0
+layout_direction = 3
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+text = "Right to left"
+
+[node name="CheckButtonNormal" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 260.0
+offset_top = 20.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pressed")
+text = "Normal box"
+
+[node name="CheckButtonPressed" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 260.0
+offset_top = 80.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pressed")
+button_pressed = true
+text = "Pressed box"
+
+[node name="CheckButtonRtl" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 260.0
+offset_top = 140.0
+layout_direction = 3
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+text = "Right to left"
+
+[node name="CheckBoxStretched" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 200.0
+offset_right = 220.0
+offset_bottom = 261.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+text = "Stretched"
+
+[node name="CheckButtonStretched" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 260.0
+offset_top = 200.0
+offset_right = 460.0
+offset_bottom = 261.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+text = "Stretched"

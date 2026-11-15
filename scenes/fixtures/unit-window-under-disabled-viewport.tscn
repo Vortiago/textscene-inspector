@@ -1,0 +1,31 @@
+; One variable: a Window under a SubViewport that never updates and embeds no windows. The root
+; embeds the window (`window.cpp:1400-1420`), so the window's viewport follows the root's passes
+; (`viewport.cpp:339`), not the SubViewport's, and its Controls draw.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Frozen" type="SubViewport" parent="."]
+render_target_update_mode = 0
+
+[node name="Win" type="Window" parent="Frozen"]
+title = "Hello window"
+position = Vector2i(100, 120)
+size = Vector2i(300, 200)
+
+[node name="Inside" type="ColorRect" parent="Frozen/Win"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 120.0
+offset_bottom = 60.0
+color = Color(0.9, 0.2, 0.2, 1)

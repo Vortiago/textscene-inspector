@@ -6,7 +6,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseStyleBox } from './parseStyleBox';
 import type { TscnInternalResource } from '../../../parser/types';
-import { NODE_PROPERTY } from '../../../resources/useTexture2D';
 
 const resources: TscnInternalResource[] = [
   {
@@ -78,7 +77,7 @@ const resources: TscnInternalResource[] = [
 
 describe('parseStyleBox', () => {
   it('resolves every field of a fully-specified StyleBoxFlat SubResource', () => {
-    const box = parseStyleBox('SubResource("StyleBoxFlat_full")', [], resources, NODE_PROPERTY);
+    const box = parseStyleBox('SubResource("StyleBoxFlat_full")', [], resources, true);
     expect(box).toEqual({
       bgColor: { r: 1, g: 0, b: 0, a: 1 },
       borderColor: { r: 0, g: 1, b: 0, a: 1 },
@@ -101,7 +100,7 @@ describe('parseStyleBox', () => {
   it('falls back to Godot documented defaults for every absent key', () => {
     // The member defaults in `style_box_flat.h` (`style_box_flat.h:39,48-53`).
     // A colour literal without alpha has an alpha of 1.
-    const box = parseStyleBox('SubResource("StyleBoxFlat_empty")', [], resources, NODE_PROPERTY);
+    const box = parseStyleBox('SubResource("StyleBoxFlat_empty")', [], resources, true);
     expect(box).toEqual({
       bgColor: { r: 0.6, g: 0.6, b: 0.6, a: 1 },
       borderColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 },
@@ -122,12 +121,12 @@ describe('parseStyleBox', () => {
   });
 
   it('clamps an authored anti_aliasing_size below the setter minimum to 0.01 (StyleBoxFlat::set_aa_size)', () => {
-    const box = parseStyleBox('SubResource("StyleBoxFlat_aa_size_too_small")', [], resources, NODE_PROPERTY);
+    const box = parseStyleBox('SubResource("StyleBoxFlat_aa_size_too_small")', [], resources, true);
     expect(box?.aaSize).toBeCloseTo(0.01);
   });
 
   it('clamps an authored anti_aliasing_size above the setter maximum to 10 (StyleBoxFlat::set_aa_size)', () => {
-    const box = parseStyleBox('SubResource("StyleBoxFlat_aa_size_too_large")', [], resources, NODE_PROPERTY);
+    const box = parseStyleBox('SubResource("StyleBoxFlat_aa_size_too_large")', [], resources, true);
     expect(box?.aaSize).toBe(10);
   });
 
@@ -135,12 +134,10 @@ describe('parseStyleBox', () => {
     // style_box_flat.cpp:130: CLAMP(p_corner_detail, 1, 20). A 0 would divide
     // by zero in the arc sweep (`pt_angle`'s `detail / (double)adapted_corner_detail`).
     expect(
-      parseStyleBox('SubResource("StyleBoxFlat_corner_detail_too_small")', [], resources, NODE_PROPERTY)
-        ?.cornerDetail
+      parseStyleBox('SubResource("StyleBoxFlat_corner_detail_too_small")', [], resources, true)?.cornerDetail
     ).toBe(1);
     expect(
-      parseStyleBox('SubResource("StyleBoxFlat_corner_detail_too_large")', [], resources, NODE_PROPERTY)
-        ?.cornerDetail
+      parseStyleBox('SubResource("StyleBoxFlat_corner_detail_too_large")', [], resources, true)?.cornerDetail
     ).toBe(20);
   });
 
@@ -148,34 +145,34 @@ describe('parseStyleBox', () => {
     // style_box.cpp::get_margin: content_margin[side] < 0 (default -1) reads
     // through get_style_margin(side), which StyleBoxFlat overrides to return
     // border_width[side] (style_box_flat.cpp::get_style_margin).
-    const box = parseStyleBox('SubResource("StyleBoxFlat_border_only")', [], resources, NODE_PROPERTY);
+    const box = parseStyleBox('SubResource("StyleBoxFlat_border_only")', [], resources, true);
     expect(box?.contentMargin).toEqual({ left: 3, top: 3, right: 3, bottom: 3 });
   });
 
   it('degrades to null for an absent (undefined) ref rather than throwing', () => {
-    expect(parseStyleBox(undefined, [], resources, NODE_PROPERTY)).toBeNull();
+    expect(parseStyleBox(undefined, [], resources, true)).toBeNull();
   });
 
   it('degrades to null for a ref that is not a resource reference at all', () => {
-    expect(parseStyleBox('not-a-ref', [], resources, NODE_PROPERTY)).toBeNull();
+    expect(parseStyleBox('not-a-ref', [], resources, true)).toBeNull();
   });
 
   it('degrades to null for an ExtResource ref (only SubResources resolve)', () => {
-    expect(parseStyleBox('ExtResource("1_abc")', [], resources, NODE_PROPERTY)).toBeNull();
+    expect(parseStyleBox('ExtResource("1_abc")', [], resources, true)).toBeNull();
   });
 
   it('degrades to null for an unknown SubResource id', () => {
-    expect(parseStyleBox('SubResource("StyleBoxFlat_nope")', [], resources, NODE_PROPERTY)).toBeNull();
+    expect(parseStyleBox('SubResource("StyleBoxFlat_nope")', [], resources, true)).toBeNull();
   });
 
   it('degrades to null when the id resolves to a non-StyleBoxFlat SubResource', () => {
-    expect(parseStyleBox('SubResource("StandardMaterial3D_m")', [], resources, NODE_PROPERTY)).toBeNull();
+    expect(parseStyleBox('SubResource("StandardMaterial3D_m")', [], resources, true)).toBeNull();
   });
 
   // `null` means "no override", and a consumer paints the default theme box. A
   // StyleBoxEmpty replaces that chrome with nothing, so it is not `null`.
   it('resolves StyleBoxEmpty to a box that paints nothing, not to null', () => {
-    const box = parseStyleBox('SubResource("StyleBoxEmpty_x")', [], resources, NODE_PROPERTY);
+    const box = parseStyleBox('SubResource("StyleBoxEmpty_x")', [], resources, true);
     expect(box).not.toBeNull();
     expect(box!.drawCenter).toBe(false);
     expect(box!.borderWidth).toEqual({ left: 0, top: 0, right: 0, bottom: 0 });
@@ -185,21 +182,21 @@ describe('parseStyleBox', () => {
   // StyleBoxEmpty does not override `get_style_margin`, so an unset
   // `content_margin_<side>` falls back to the base StyleBox's 0, not a border width.
   it('gives StyleBoxEmpty zero content margin where StyleBoxFlat would fall back to its border width', () => {
-    const box = parseStyleBox('SubResource("StyleBoxEmpty_x")', [], resources, NODE_PROPERTY);
+    const box = parseStyleBox('SubResource("StyleBoxEmpty_x")', [], resources, true);
     expect(box!.contentMargin).toEqual({ left: 0, top: 0, right: 0, bottom: 0 });
   });
 
   it('honours a StyleBoxEmpty content margin authored on the StyleBox base', () => {
-    const box = parseStyleBox('SubResource("StyleBoxEmpty_margins")', [], resources, NODE_PROPERTY);
+    const box = parseStyleBox('SubResource("StyleBoxEmpty_margins")', [], resources, true);
     expect(box!.contentMargin).toEqual({ left: 7, top: 0, right: 0, bottom: 3 });
   });
 
   it('degrades to null when the resource list is empty', () => {
-    expect(parseStyleBox('SubResource("StyleBoxFlat_full")', [], [], NODE_PROPERTY)).toBeNull();
+    expect(parseStyleBox('SubResource("StyleBoxFlat_full")', [], [], true)).toBeNull();
   });
 
   it('resolves a StyleBoxLine SubResource to a StyleBoxFlatData-shaped wrapper carrying the parsed line', () => {
-    const box = parseStyleBox('SubResource("StyleBoxLine_x")', [], resources, NODE_PROPERTY);
+    const box = parseStyleBox('SubResource("StyleBoxLine_x")', [], resources, true);
     expect(box).not.toBeNull();
     expect((box as { styleBoxKind?: string }).styleBoxKind).toBe('line');
     expect((box as { line?: unknown }).line).toEqual({
@@ -221,7 +218,7 @@ describe('parseStyleBox', () => {
   });
 
   it('resolves a StyleBoxTexture SubResource to a StyleBoxFlatData-shaped wrapper carrying the parsed texture', () => {
-    const box = parseStyleBox('SubResource("StyleBoxTexture_x")', [], resources, NODE_PROPERTY);
+    const box = parseStyleBox('SubResource("StyleBoxTexture_x")', [], resources, true);
     expect(box).not.toBeNull();
     expect((box as { styleBoxKind?: string }).styleBoxKind).toBe('texture');
     expect((box as { texture?: { texture?: string } }).texture?.texture).toBe('ExtResource("1_tex")');

@@ -13,14 +13,14 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../parser/TscnParser';
 import { nearestGroupOrder } from './testing/paintOrder';
 import { parseTresFile } from '../parser/parsedResource';
-import { tileSetFromFile } from '../resources/tileset/decode';
+import { tileSetInFile } from '../resources/tileset/testing/readTileSet';
 import { mapToLocalPx } from '../resources/tileset/tilePlacement';
-import { NodeDispatcher } from './NodeDispatcher';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { findByType } from '../nodes/2d/tiles/tilemaplayer/findByType.testkit';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
-import { SceneStack } from './testing/SceneStack';
+import { DispatchedScene } from './testing/DispatchedScene';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 
 import './nodes/index';
 import { settleLoads } from './testing/settleLoads';
@@ -32,7 +32,12 @@ const isoRoot = resolve(here, '../../../../scenes/isometric');
 const tilesetContent = readFileSync(resolve(isoRoot, 'tileset/tileset.tres'), 'utf8');
 
 /** Collect world-z for every named object, plus world-z of every `tilegroup:*` group. */
-async function render(cells: PlacedCell[], decorY: number) {
+async function render(cells: PlacedCell[], decorY: number, isDecorFirst = false) {
+  const decor = `[node name="Decor" type="Polygon2D" parent="Floor"]
+position = Vector2(0, ${decorY})
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+
+`;
   const tscn = `[gd_scene format=3]
 [ext_resource type="TileSet" uid="uid://tset" path="res://tileset/tileset.tres" id="1"]
 
@@ -41,16 +46,12 @@ async function render(cells: PlacedCell[], decorY: number) {
 [node name="Floor" type="Node2D" parent="."]
 y_sort_enabled = true
 
-[node name="Ground" type="TileMapLayer" parent="Floor"]
+${isDecorFirst ? decor : ''}[node name="Ground" type="TileMapLayer" parent="Floor"]
 tile_set = ExtResource("1")
 y_sort_enabled = true
 y_sort_origin = 0
 
-[node name="Decor" type="Polygon2D" parent="Floor"]
-position = Vector2(0, ${decorY})
-polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
-
-[node name="After" type="Polygon2D" parent="."]
+${isDecorFirst ? '' : decor}[node name="After" type="Polygon2D" parent="."]
 position = Vector2(0, 0)
 polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
 `;
@@ -67,9 +68,7 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
   fake.textures.seed('res://tileset/isotiles.png', atlasTex);
 
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
-      <NodeDispatcher nodes={scene.nodes} />
-    </SceneStack>
+    <DispatchedScene sceneGraph={createSceneGraphFromTscnScene(scene)} workspace="2d" loader={fake.loader} />
   );
   await settleLoads();
 
@@ -99,7 +98,7 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
 
 describe('Y-sort TileMapLayer per-Y interleave (issue #74 dungeon symptom)', () => {
   it('a decoration between two tile rows draws BETWEEN the tile groups by Y', async () => {
-    const model = tileSetFromFile(parseTresFile(tilesetContent), TILESET_PATH)!;
+    const model = tileSetInFile(parseTresFile(tilesetContent), TILESET_PATH)!;
     // Two single-source cells at distinct Godot local Y (DIAMOND_DOWN 128x64).
     const yLow = mapToLocalPx(model, { x: 0, y: 0 }).y; // 32
     const yHigh = mapToLocalPx(model, { x: 0, y: 4 }).y; // 160
@@ -126,7 +125,7 @@ describe('Y-sort TileMapLayer per-Y interleave (issue #74 dungeon symptom)', () 
     // The rows share the layer's own reserve (`canvasPaintOrder.ts`). A fresh reserve
     // per row runs off the subtree's run into the next sibling's, which the test above
     // misses: its decoration sits inside the same subtree and overflows with it.
-    const model = tileSetFromFile(parseTresFile(tilesetContent), TILESET_PATH)!;
+    const model = tileSetInFile(parseTresFile(tilesetContent), TILESET_PATH)!;
     const cells: PlacedCell[] = [0, 2, 4, 6, 8].map((y) => ({
       coords: { x: 0, y },
       sourceId: 0,
@@ -138,5 +137,16 @@ describe('Y-sort TileMapLayer per-Y interleave (issue #74 dungeon symptom)', () 
     expect(tileZ.length).toBeGreaterThan(1);
     expect(afterZ).toBeDefined();
     expect(Math.max(...tileZ)).toBeLessThan(afterZ!);
+  });
+
+  it('draws a row over a sibling listed before the layer at the same y, in collection order', async () => {
+    const model = tileSetInFile(parseTresFile(tilesetContent), TILESET_PATH)!;
+    const cells: PlacedCell[] = [
+      { coords: { x: 0, y: 0 }, sourceId: 0, atlasCoords: { x: 0, y: 0 }, alternativeId: 0 },
+    ];
+    const { tileZ, decorZ } = await render(cells, mapToLocalPx(model, { x: 0, y: 0 }).y, true);
+
+    expect(tileZ.length).toBeGreaterThan(0);
+    expect(decorZ!).toBeLessThan(Math.min(...tileZ));
   });
 });

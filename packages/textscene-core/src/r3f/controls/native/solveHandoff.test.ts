@@ -1,10 +1,10 @@
 /**
- * The two **solve handoff** mechanisms (GLOSSARY.md, "Solve handoff"): a
- * **share** (one computation both the solver and the painter call) and a
- * **channel** (a value the solver seals and the painter opens).
+ * The three **solve handoff** forms (GLOSSARY.md, "Solve handoff"): a **share** (one computation
+ * both the solver and the painter call), a **rect share** (a share at one size) and a **channel**
+ * (a value the solver seals and the painter opens).
  */
 import { describe, expect, it } from 'vitest';
-import { defineChannel, defineShare } from './solveHandoff';
+import { defineChannel, defineRectShare, defineShare } from './solveHandoff';
 import { nativeTheme } from './nativeTheme';
 import { controlNode, solveNode } from './testing/solveNode';
 import type { SolveNode } from './solveTree';
@@ -95,6 +95,90 @@ describe('defineShare', () => {
     const theme = nativeTheme(1);
 
     expect(share(node(), theme)).toBe(`N@${theme.fontSize}`);
+  });
+});
+
+describe('defineRectShare', () => {
+  /** A rect share that counts its computes and answers with the size it ran at. */
+  function countingShare() {
+    const counter = { calls: 0 };
+    const share = defineRectShare((_n, size) => ({ size, call: ++counter.calls }));
+    return { share, counter };
+  }
+
+  it('computes once for the same size twice', () => {
+    const { share, counter } = countingShare();
+    const n = node();
+    const theme = nativeTheme(1);
+    const first = share(n, { x: 10, y: 20 }, theme);
+    expect(share(n, { x: 10, y: 20 }, theme)).toBe(first);
+    expect(counter.calls).toBe(1);
+  });
+
+  it('keeps two sizes in turn, as the tentative pass and the final rect ask', () => {
+    const { share, counter } = countingShare();
+    const n = node();
+    const theme = nativeTheme(1);
+    share(n, { x: 10, y: 20 }, theme);
+    share(n, { x: 30, y: 20 }, theme);
+    share(n, { x: 10, y: 20 }, theme);
+    share(n, { x: 30, y: 20 }, theme);
+    expect(counter.calls).toBe(2);
+  });
+
+  it('drops the oldest size when a third arrives', () => {
+    const { share, counter } = countingShare();
+    const n = node();
+    const theme = nativeTheme(1);
+    share(n, { x: 1, y: 1 }, theme);
+    share(n, { x: 2, y: 1 }, theme);
+    share(n, { x: 3, y: 1 }, theme);
+    share(n, { x: 2, y: 1 }, theme);
+    expect(counter.calls).toBe(3);
+    share(n, { x: 1, y: 1 }, theme);
+    expect(counter.calls).toBe(4);
+  });
+
+  it('keeps a size asked for again over an older one', () => {
+    const { share, counter } = countingShare();
+    const n = node();
+    const theme = nativeTheme(1);
+    share(n, { x: 1, y: 1 }, theme);
+    share(n, { x: 2, y: 1 }, theme);
+    share(n, { x: 1, y: 1 }, theme);
+    share(n, { x: 3, y: 1 }, theme);
+    share(n, { x: 1, y: 1 }, theme);
+    expect(counter.calls).toBe(3);
+  });
+
+  it('recomputes for a second theme at the same size', () => {
+    const { share, counter } = countingShare();
+    const n = node();
+    share(n, { x: 1, y: 1 }, nativeTheme(1));
+    share(n, { x: 1, y: 1 }, nativeTheme(2));
+    expect(counter.calls).toBe(2);
+  });
+
+  it('treats an infinite size as a size, as a first pass with no bound asks', () => {
+    const { share, counter } = countingShare();
+    const n = node();
+    const theme = nativeTheme(1);
+    share(n, { x: Infinity, y: 5 }, theme);
+    share(n, { x: Infinity, y: 5 }, theme);
+    expect(counter.calls).toBe(1);
+  });
+
+  it('serves an undefined value as a hit', () => {
+    let calls = 0;
+    const share = defineRectShare(() => {
+      calls++;
+      return undefined;
+    });
+    const n = node();
+    const theme = nativeTheme(1);
+    share(n, { x: 1, y: 1 }, theme);
+    share(n, { x: 1, y: 1 }, theme);
+    expect(calls).toBe(1);
   });
 });
 

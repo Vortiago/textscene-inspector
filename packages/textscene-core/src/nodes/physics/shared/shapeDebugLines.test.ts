@@ -7,15 +7,14 @@ import { describe, expect, it } from 'vitest';
 import { shapeDebugLines } from './shapeDebugLines';
 import { godotDebugLinesFor, undirectedEdges } from './godotDebugLines.testkit';
 import { degToRadf } from '../../../godot/math/math.js';
-import type { TscnInternalResource } from '../../../parser/types';
+import type { Shape3DClass, Shape3DResource } from '../../../resources/shapes/shape3d';
 
-const sphere: TscnInternalResource = { id: 'a', type: 'SphereShape3D', data: { radius: '2' } };
-const cylinder: TscnInternalResource = {
-  id: 'a',
+const sphere: Shape3DResource = { type: 'SphereShape3D', data: { radius: '2' } };
+const cylinder: Shape3DResource = {
   type: 'CylinderShape3D',
   data: { radius: '1', height: '2' },
 };
-const capsule: TscnInternalResource = { id: 'a', type: 'CapsuleShape3D', data: { radius: '1', height: '4' } };
+const capsule: Shape3DResource = { type: 'CapsuleShape3D', data: { radius: '1', height: '4' } };
 
 describe('boxDebugLines', () => {
   /** Godot's AABB edge order (aabb.cpp:357-416) read from `-size/2`. */
@@ -27,7 +26,7 @@ describe('boxDebugLines', () => {
   ];
 
   it('writes the 12 edges in index order', () => {
-    const wire = shapeDebugLines({ id: 'a', type: 'BoxShape3D', data: { size: 'Vector3(1, 1, 1)' } })!;
+    const wire = shapeDebugLines({ type: 'BoxShape3D', data: { size: 'Vector3(1, 1, 1)' } })!;
     expect(wire.length).toBe(12 * 6);
     for (let i = 0; i < firstFourEdges.length; i += 1) {
       expect(Array.from(wire.slice(i * 6, i * 6 + 6))).toEqual(firstFourEdges[i]);
@@ -35,7 +34,7 @@ describe('boxDebugLines', () => {
   });
 
   it('scales the corners by a non-cubic size, from -size/2', () => {
-    const wire = shapeDebugLines({ id: 'a', type: 'BoxShape3D', data: { size: 'Vector3(2, 0.5, 1)' } })!;
+    const wire = shapeDebugLines({ type: 'BoxShape3D', data: { size: 'Vector3(2, 0.5, 1)' } })!;
     expect(Array.from(wire.slice(0, 3))).toEqual([1, -0.25, -0.5]);
   });
 });
@@ -55,14 +54,9 @@ describe('shapeDebugLines', () => {
     for (const [i, value] of expected.entries()) expect(wire[i]).toBeCloseTo(value, 7);
   });
 
-  it('gives null for a type without a port, which the caller warns about', () => {
-    expect(shapeDebugLines({ id: 'a', type: 'SegmentShape2D', data: {} })).toBeNull();
-  });
-
   it('dedups a concave soup to one pair per canonical edge', () => {
     // Two triangles, ABC and BAF, winding the shared AB edge opposite ways: 10 vertices, not 12.
     const wire = shapeDebugLines({
-      id: 'a',
       type: 'ConcavePolygonShape3D',
       data: {
         data: 'PackedVector3Array(-0.5, 0, -0.5, 0.5, 0, -0.5, 0, 0, 0.5, 0.5, 0, -0.5, -0.5, 0, -0.5, -0.5, 0, 1)',
@@ -76,12 +70,12 @@ describe('shapeDebugLines', () => {
   });
 
   it('pins a default-size box to 12 edges', () => {
-    expect(shapeDebugLines({ id: 'a', type: 'BoxShape3D', data: {} })!.length).toBe(12 * 6);
+    expect(shapeDebugLines({ type: 'BoxShape3D', data: {} })!.length).toBe(12 * 6);
   });
 });
 
 /** Every shape type measured against Godot 4.6.3 through `get_debug_mesh()`. */
-describe.each([
+describe.each<Shape3DClass>([
   'BoxShape3D',
   'SphereShape3D',
   'CylinderShape3D',

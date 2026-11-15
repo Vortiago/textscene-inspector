@@ -8,18 +8,20 @@
 import { useEffect, useLayoutEffect, useMemo, type ReactNode, type RefObject } from 'react';
 import type * as THREE from 'three';
 import { useInstanceDraw } from '../visibilityRange/geometryInstance';
-import type { MaterialSource } from './materialSource';
+import type { ScopedReference } from '../../resources/reading';
 import { NextPassChain } from './nextPass';
 import { ExtraDrawSiteContext } from './extraDraw';
 import { orderByPass } from './passOrder';
 import { SurfaceMaterialSlots, overriddenSources } from './SurfaceMaterialSlots';
+import type { SurfacePrimitive } from '../../resources/meshes/godotSurface';
+import { listedSlot } from '../meshes/sharedInstances';
 
 /** The draw a leaf mounts the passes in, which every extra draw copies. */
 interface BaseDraw {
   /** The base draw, whose geometry every extra draw shares, but for an overlay with an `overlayGeometry`. */
   meshRef: RefObject<THREE.Object3D | null>;
-  /** The base draws `THREE.Points`, so every extra draw does too. */
-  drawsPoints?: boolean;
+  /** What the base draws, so every extra draw draws it too. */
+  primitive?: SurfacePrimitive;
   /** The skeleton that skins the base, or null for an unskinned draw. */
   skeleton?: THREE.Skeleton | null;
   /**
@@ -41,7 +43,7 @@ interface BaseDraw {
 
 interface InstancePassesProps extends BaseDraw {
   /** The material of each draw group, before `material_override`. A leaf that builds its own omits it. */
-  sources?: readonly (MaterialSource | undefined)[];
+  sources?: readonly (ScopedReference | undefined)[];
   /** The material a leaf builds itself, as an element to mount while no `material_override` stands. */
   ownMaterial?: ReactNode;
 }
@@ -50,13 +52,13 @@ interface InstancePassesProps extends BaseDraw {
 const ONE_SURFACE: readonly undefined[] = [undefined];
 
 /** A material the leaf builds itself holds no `next_pass`. */
-const NO_CHAIN: readonly MaterialSource[] = [];
+const NO_CHAIN: readonly ScopedReference[] = [];
 
 /** Mounts inside the base draw: the material slot of each draw group, each slot's chain, and the overlay. */
 export function InstancePasses(props: InstancePassesProps) {
   const {
     meshRef,
-    drawsPoints = false,
+    primitive = 'triangles',
     skeleton,
     laterSurfaces = 0,
     posedRef,
@@ -83,12 +85,12 @@ export function InstancePasses(props: InstancePassesProps) {
       {drawsOwnMaterial ? (
         ownMaterial
       ) : (
-        <SurfaceMaterialSlots sources={sources} points={drawsPoints ? 'mesh' : undefined} />
+        <SurfaceMaterialSlots sources={sources} {...listedSlot(primitive, 'mesh')} />
       )}
       <NextPassChain
         meshRef={meshRef}
         sources={drawsOwnMaterial ? NO_CHAIN : sources}
-        drawsPoints={drawsPoints}
+        primitive={primitive}
         skeleton={skeleton}
         godotLayers={layers}
         shadow={shadow}

@@ -14,7 +14,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import './nativeSolver';
 import { solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 
 const flowContainerLayout = controlSolverRegistry.containerLayout('FlowContainer')!;
 const flowContainerMinimumSize = controlSolverRegistry.minimumSize('FlowContainer')!;
@@ -36,14 +36,14 @@ function flow(
   const themeOverrideConstants: Record<string, number> = {};
   if (hSep !== undefined) themeOverrideConstants.h_separation = hSep;
   if (vSep !== undefined) themeOverrideConstants.v_separation = vSep;
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: 'F',
     node: controlNode('F', type, { name: 'F', ...rest, themeOverrideConstants }),
     children,
     // A local theme_override_constants/* reaches `separationOf` through `n.constants`, not props.
     constants: themeOverrideConstants,
-  };
+  });
 }
 
 /** No registered per-type minimum size in these tests: only `custom_minimum_size` floors. */

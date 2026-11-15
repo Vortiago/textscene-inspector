@@ -26,7 +26,7 @@ export function listWindow(
 /** One pixel each side, so a fragment on the window's edge still reads its own texel. */
 const EDGE_PIXELS = 1;
 
-/** Scratch for `windowScissor`, which runs for every shadowed light's volumes each frame. */
+/** Scratch for `windowScissor`, which runs for every list window each frame. */
 const nearCorner = new THREE.Vector3();
 const farCorner = new THREE.Vector3();
 
@@ -48,13 +48,4 @@ export function windowScissor(
   const right = THREE.MathUtils.clamp(Math.ceil(maxX) + EDGE_PIXELS, 0, size.x);
   const top = THREE.MathUtils.clamp(Math.ceil(maxY) + EDGE_PIXELS, 0, size.y);
   return scissor.set(left, bottom, right - left, top - bottom);
-}
-
-/** Narrows `scissor` to its overlap with `bound`, which is empty where they miss. */
-export function intersectScissor(scissor: THREE.Vector4, bound: THREE.Vector4): void {
-  const left = Math.max(scissor.x, bound.x);
-  const bottom = Math.max(scissor.y, bound.y);
-  const right = Math.min(scissor.x + scissor.z, bound.x + bound.z);
-  const top = Math.min(scissor.y + scissor.w, bound.y + bound.w);
-  scissor.set(left, bottom, Math.max(0, right - left), Math.max(0, top - bottom));
 }

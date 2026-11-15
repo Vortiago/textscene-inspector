@@ -1,0 +1,72 @@
+[gd_scene format=3]
+; CPUParticles2D local_coords on a normal-mapped particle: both emitters are turned a quarter turn
+; and draw the same CanvasTexture, whose flat normal map tilts to +x. Global draws at the canvas
+; transform (renderer_canvas_cull.cpp:267), so its normal does not turn. Local turns it with the
+; emitter. No other scene lights a normal-mapped particle.
+
+[sub_resource type="Gradient" id="Gradient_grey"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.5, 0.5, 0.5, 1, 0.5, 0.5, 0.5, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_grey"]
+gradient = SubResource("Gradient_grey")
+width = 256
+height = 256
+
+[sub_resource type="Gradient" id="Gradient_normal"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.85, 0.5, 1, 1, 0.85, 0.5, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_normal"]
+gradient = SubResource("Gradient_normal")
+width = 256
+height = 256
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_mapped"]
+diffuse_texture = SubResource("GradientTexture2D_grey")
+normal_texture = SubResource("GradientTexture2D_normal")
+
+[sub_resource type="Gradient" id="Gradient_cookie"]
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_cookie"]
+gradient = SubResource("Gradient_cookie")
+width = 512
+height = 512
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_1"]
+animations = [{"frames": [{"duration": 1.0, "texture": SubResource("CanvasTexture_mapped")}], "loop": true, "name": &"default", "speed": 5.0}]
+
+[node name="Root" type="Node2D"]
+
+[node name="Global" type="CPUParticles2D" parent="."]
+position = Vector2(200, 324)
+rotation = 1.5707964
+amount = 1
+preprocess = 1.0
+texture = SubResource("CanvasTexture_mapped")
+gravity = Vector2(0, 0)
+
+[node name="Local" type="CPUParticles2D" parent="."]
+position = Vector2(952, 324)
+rotation = 1.5707964
+local_coords = true
+amount = 1
+preprocess = 1.0
+texture = SubResource("CanvasTexture_mapped")
+gravity = Vector2(0, 0)
+
+[node name="LeftLight" type="PointLight2D" parent="."]
+position = Vector2(200, 324)
+texture = SubResource("GradientTexture2D_cookie")
+texture_scale = 2.0
+height = 50.0
+
+[node name="RightLight" type="PointLight2D" parent="."]
+position = Vector2(952, 324)
+texture = SubResource("GradientTexture2D_cookie")
+texture_scale = 2.0
+height = 50.0

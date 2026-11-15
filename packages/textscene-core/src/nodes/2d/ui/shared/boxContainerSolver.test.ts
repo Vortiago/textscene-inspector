@@ -20,12 +20,14 @@ import {
   boxContainerMinimumSize,
   makeBoxContainerLayout,
   makeBoxContainerMinimumSize,
-  resortBoxContainer,
-  type BoxChildInput,
 } from './boxContainerSolver';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { resortBoxContainer, type BoxChildInput } from './boxContainerResort';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { SizeFlags } from '../../../../godot/scene/control';
-import { ROOT_TEXTURE_SAMPLER } from '../../../../r3f/canvasItemTextureSampler';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const HORIZONTAL = SizeFlags.FILL | SizeFlags.EXPAND;
@@ -264,7 +266,7 @@ function solveNode(
   // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
   const constants =
     (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
-  return { ...emptySolveNode(), path, node: tscnNode, children, constants };
+  return withThemeItems({ ...emptySolveNode(), path, node: tscnNode, children, constants });
 }
 
 describe('makeBoxContainerLayout / makeBoxContainerMinimumSize — registered end-to-end via solveControlTree', () => {
@@ -336,13 +338,7 @@ describe('makeBoxContainerLayout / makeBoxContainerMinimumSize — registered en
         offsetRight: 620,
         offsetBottom: 90,
       }),
-      skippedAncestors: {
-        transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
-        modulate: { r: 1, g: 1, b: 1, a: 1 },
-        z: [],
-        sampler: ROOT_TEXTURE_SAMPLER,
-        material: { kind: 'none' },
-      },
+      skippedTransform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
     };
     const root = solveNode(
       'MyHBoxContainer',

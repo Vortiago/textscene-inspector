@@ -1,0 +1,38 @@
+[gd_scene load_steps=6 format=3 uid="uid://unitatlasovertexfile"]
+
+; One variable: where the sheet of an AtlasTexture is saved. Both sprites crop the right half of
+; the same red-to-blue GradientTexture2D. The left one's sheet is a sub-resource of the scene and
+; the right one's is `unit-texture-file-gradient.tres`, so the two draw the same blue-leaning
+; square. A sheet in a file that does not resolve leaves the right sprite a missing placeholder.
+; Every other AtlasTexture sheet is an image file, so no other golden shows it.
+
+[ext_resource type="Texture2D" path="res://unit-texture-file-gradient.tres" id="1_gradient"]
+
+[sub_resource type="Gradient" id="Gradient_ramp"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.9, 0.2, 0.1, 1, 0.1, 0.3, 0.9, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_inline"]
+gradient = SubResource("Gradient_ramp")
+width = 64
+height = 32
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_overInline"]
+atlas = SubResource("GradientTexture2D_inline")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_overFile"]
+atlas = ExtResource("1_gradient")
+region = Rect2(32, 0, 32, 32)
+
+[node name="Root" type="Node2D"]
+
+[node name="OverInline" type="Sprite2D" parent="."]
+position = Vector2(384, 324)
+scale = Vector2(6, 6)
+texture = SubResource("AtlasTexture_overInline")
+
+[node name="OverFile" type="Sprite2D" parent="."]
+position = Vector2(768, 324)
+scale = Vector2(6, 6)
+texture = SubResource("AtlasTexture_overFile")

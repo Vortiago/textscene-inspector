@@ -14,6 +14,7 @@ import {
   TAB_BAR_ICON_SIZE,
   MINI_CHECKERBOARD_ICON,
   COLOR_PICKER_OVERBRIGHT_ICON,
+  COLOR_SCRIPT_ICON,
   COLOR_PICKER_CURSOR_ICON,
   COLOR_PICKER_CURSOR_BG_ICON,
   MINI_CHECKERBOARD_SIZE,
@@ -82,7 +83,7 @@ describe('OPTION_BUTTON_ICONS', () => {
 });
 
 describe('SPLIT_CONTAINER_ICONS', () => {
-  it('hsplitter is 8x48 — default_theme.cpp:1244,1247 (HSplitContainer/SplitContainer h_grabber)', () => {
+  it('hsplitter is 8x48: default_theme.cpp:1244,1247 (HSplitContainer/SplitContainer h_grabber)', () => {
     const svg = decodeSvg(SPLIT_CONTAINER_ICONS.hsplitter);
     expect(svg).toContain('<svg');
     const { width, height } = svgSize(svg);
@@ -90,7 +91,7 @@ describe('SPLIT_CONTAINER_ICONS', () => {
     expect(height).toBe(48);
   });
 
-  it('vsplitter is 48x8 — default_theme.cpp:1245-1246 (VSplitContainer/SplitContainer v_grabber)', () => {
+  it('vsplitter is 48x8: default_theme.cpp:1245-1246 (VSplitContainer/SplitContainer v_grabber)', () => {
     const svg = decodeSvg(SPLIT_CONTAINER_ICONS.vsplitter);
     expect(svg).toContain('<svg');
     const { width, height } = svgSize(svg);
@@ -121,7 +122,7 @@ describe('SLIDER_GRABBER_ICONS', () => {
 });
 
 describe('SLIDER_TICK_ICONS', () => {
-  it('hslider is 4x8 — default_theme.cpp:592 (HSlider tick)', () => {
+  it('hslider is 4x8: default_theme.cpp:592 (HSlider tick)', () => {
     const svg = decodeSvg(SLIDER_TICK_ICONS.hslider);
     expect(svg).toContain('<svg');
     const { width, height } = svgSize(svg);
@@ -129,7 +130,7 @@ describe('SLIDER_TICK_ICONS', () => {
     expect(height).toBe(8);
   });
 
-  it('vslider is 8x4 — default_theme.cpp:607 (VSlider tick), the transpose of hslider', () => {
+  it('vslider is 8x4: default_theme.cpp:607 (VSlider tick), the transpose of hslider', () => {
     const svg = decodeSvg(SLIDER_TICK_ICONS.vslider);
     expect(svg).toContain('<svg');
     const { width, height } = svgSize(svg);
@@ -161,7 +162,7 @@ describe('CHECK_BUTTON_ICONS', () => {
 });
 
 describe('CHECK_BUTTON_ICON_NATURAL_SIZE', () => {
-  it('is 32x16 — every vendored CheckButton icon shares this authored size', () => {
+  it('is 32x16: every vendored CheckButton icon shares this authored size', () => {
     expect(CHECK_BUTTON_ICON_NATURAL_SIZE).toEqual({ x: 32, y: 16 });
   });
 });
@@ -185,7 +186,7 @@ describe('FOLDABLE_CONTAINER_ICONS', () => {
 });
 
 describe('TEXT_EDIT_GLYPH_ICONS', () => {
-  it('tab is 8x8 — default_theme.cpp:457,491 (TextEdit/CodeEdit tab)', () => {
+  it('tab is 8x8: default_theme.cpp:457,491 (TextEdit/CodeEdit tab)', () => {
     const svg = decodeSvg(TEXT_EDIT_GLYPH_ICONS.tab);
     expect(svg).toContain('<svg');
     const { width, height } = svgSize(svg);
@@ -193,7 +194,7 @@ describe('TEXT_EDIT_GLYPH_ICONS', () => {
     expect(height).toBe(8);
   });
 
-  it('space is 8x8 — default_theme.cpp:458,492 (TextEdit/CodeEdit space)', () => {
+  it('space is 8x8: default_theme.cpp:458,492 (TextEdit/CodeEdit space)', () => {
     const svg = decodeSvg(TEXT_EDIT_GLYPH_ICONS.space);
     expect(svg).toContain('<svg');
     const { width, height } = svgSize(svg);
@@ -225,13 +226,13 @@ describe('TAB_BAR_ICONS', () => {
 });
 
 describe('TAB_BAR_ICON_SIZE', () => {
-  it('is 16 — every vendored TabBar icon shares this authored size', () => {
+  it('is 16: every vendored TabBar icon shares this authored size', () => {
     expect(TAB_BAR_ICON_SIZE).toBe(16);
   });
 });
 
 describe('ColorPicker/ColorPickerButton icons', () => {
-  it('MINI_CHECKERBOARD_ICON is 16x16 — default_theme.cpp:1096,1133 (sample_bg/bg)', () => {
+  it('MINI_CHECKERBOARD_ICON is 16x16: default_theme.cpp:1096,1133 (sample_bg/bg)', () => {
     const svg = decodeSvg(MINI_CHECKERBOARD_ICON);
     expect(svg).toContain('<svg');
     const { width, height } = svgSize(svg);
@@ -239,7 +240,7 @@ describe('ColorPicker/ColorPickerButton icons', () => {
     expect(height).toBe(MINI_CHECKERBOARD_SIZE);
   });
 
-  it('COLOR_PICKER_OVERBRIGHT_ICON is 16x16 — default_theme.cpp:1098', () => {
+  it('COLOR_PICKER_OVERBRIGHT_ICON is 16x16: default_theme.cpp:1098', () => {
     const svg = decodeSvg(COLOR_PICKER_OVERBRIGHT_ICON);
     expect(svg).toContain('<svg');
     const { width, height } = svgSize(svg);
@@ -247,7 +248,13 @@ describe('ColorPicker/ColorPickerButton icons', () => {
     expect(height).toBe(16);
   });
 
-  it('COLOR_PICKER_CURSOR_ICON and COLOR_PICKER_CURSOR_BG_ICON are both 12x12 — default_theme.cpp:1100-1101', () => {
+  it('COLOR_SCRIPT_ICON is 16x16: default_theme.cpp:1102', () => {
+    const { width, height } = svgSize(decodeSvg(COLOR_SCRIPT_ICON));
+    expect(width).toBe(16);
+    expect(height).toBe(16);
+  });
+
+  it('COLOR_PICKER_CURSOR_ICON and COLOR_PICKER_CURSOR_BG_ICON are both 12x12: default_theme.cpp:1100-1101', () => {
     for (const url of [COLOR_PICKER_CURSOR_ICON, COLOR_PICKER_CURSOR_BG_ICON]) {
       const svg = decodeSvg(url);
       expect(svg).toContain('<svg');
@@ -257,10 +264,11 @@ describe('ColorPicker/ColorPickerButton icons', () => {
     }
   });
 
-  it('the four icons are pairwise distinct data: URLs', () => {
+  it('the five icons are pairwise distinct data: URLs', () => {
     const values = [
       MINI_CHECKERBOARD_ICON,
       COLOR_PICKER_OVERBRIGHT_ICON,
+      COLOR_SCRIPT_ICON,
       COLOR_PICKER_CURSOR_ICON,
       COLOR_PICKER_CURSOR_BG_ICON,
     ];
@@ -289,7 +297,7 @@ describe('GraphEdit/GraphEditMinimap icons', () => {
     expect(height).toBe(GRAPH_EDIT_ICON_SIZE);
   });
 
-  it('GRAPH_EDIT_MINIMAP_RESIZER_ICON is 16x16 — default_theme.cpp:1349 (resizer_nw)', () => {
+  it('GRAPH_EDIT_MINIMAP_RESIZER_ICON is 16x16: default_theme.cpp:1349 (resizer_nw)', () => {
     const svg = decodeSvg(GRAPH_EDIT_MINIMAP_RESIZER_ICON);
     expect(svg).toContain('<svg');
     const { width, height } = svgSize(svg);

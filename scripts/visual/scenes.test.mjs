@@ -11,14 +11,27 @@ import { CONTROL_WIDGET_SCENES } from './scenes/controlWidgets.mjs';
 import { LIGHTING_2D_SCENES } from './scenes/lighting2d.mjs';
 import { PARTICLES_2D_SCENES } from './scenes/particles2d.mjs';
 
+/** `<scene>.<option>` for each option of `scenes` that the capture does not read. */
+const unknownOptions = (scenes) =>
+  scenes.flatMap((scene) =>
+    Object.keys(scene)
+      .filter((option) => !SCENE_OPTIONS.includes(option))
+      .map((option) => `${scene.name}.${option}`)
+  );
+
 describe('GOLDEN_SCENES', () => {
   it('sets only options the capture reads, so a misspelt option fails here and not silently', () => {
-    const unknown = GOLDEN_SCENES.flatMap((scene) =>
-      Object.keys(scene)
-        .filter((option) => !SCENE_OPTIONS.includes(option))
-        .map((option) => `${scene.name}.${option}`)
-    );
-    expect(unknown).toEqual([]);
+    expect(unknownOptions(GOLDEN_SCENES)).toEqual([]);
+  });
+
+  it('takes the lit surface form a node-only golden captures with', () => {
+    expect(unknownOptions([{ name: 'node-only', file: 'a.tscn', litSurface: 'nodes' }])).toEqual([]);
+  });
+
+  it('refuses an option the capture does not read', () => {
+    expect(unknownOptions([{ name: 'misspelt', file: 'a.tscn', litSurfaces: 'nodes' }])).toEqual([
+      'misspelt.litSurfaces',
+    ]);
   });
 
   it("gives settleTimeout as milliseconds past Playwright's default, which is no limit at 0", () => {

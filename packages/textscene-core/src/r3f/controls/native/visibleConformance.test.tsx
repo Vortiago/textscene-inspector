@@ -14,13 +14,13 @@ import { nativeTheme } from './nativeTheme';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { SolveNode } from './solveTree';
-import { solveNode } from './testing/solveNode';
+import { solveNode, withThemeItems } from './testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
 
 function bareSolveNode(node: TscnNode): SolveNode {
-  return { ...solveNode(), path: node.name, node };
+  return withThemeItems({ ...solveNode(), path: node.name, node });
 }
 
 describe('Native Control visibility conformance', () => {

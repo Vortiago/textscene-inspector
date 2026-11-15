@@ -1,116 +1,54 @@
 /**
  * `<ItemList>`, the native (WebGL canvas) painter for `NOTIFICATION_DRAW`
- * (`scene/gui/item_list.cpp:1367-1729`): the panel, the guide lines, then each
- * row's icon and label, limited to what a `.tscn` can show (`nativeSolver.ts`).
+ * (`scene/gui/item_list.cpp:1367-1729`): the panel, the guide lines, each row's icon and label, the
+ * scroll hint, then the scrollbars, as `itemListDraw` places them at the painted rect.
  * `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
 import { useMemo } from 'react';
-import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
+import { useNodeReference } from '../../../../resources/reading';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
+import {
+  ControlClipProvider,
+  useControlClipPlanes,
+  useWorldClipPlanes,
+} from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
-import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   OutlinedTextRun,
   TextOutlineRing,
   useTintedTextOutline,
 } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import type { TextOutlineTheme } from '../../../../r3f/controls/native/textTheme';
-import {
-  shapedTextSizeWidthPx,
-  soloLineLayout,
-  type TextLayoutResult,
-} from '../../../../r3f/controls/native/text/textLayout';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SceneScope } from '../../../../parser/types';
-import {
-  isItemTextFillDrawn,
-  isItemTextWrapped,
-  ITEM_LIST_DEFAULT_MAX_COLUMNS,
-  ITEM_LIST_THEME_FONT_KEY,
-  itemIconColor,
-  itemIconDraw,
-  itemIconPackedSize,
-  itemListGuideColor,
-  itemListGuideLines,
-  itemListIconSlotKey,
-  itemListLineTextWidthPx,
-  itemListMirrorX,
-  itemListRightAlignOffsetPx,
-  itemListRowTextX,
-  itemListSeparation,
-  itemListTextTheme,
-  itemListWrappedTextWidthPx,
-  itemMinimumSize,
-  itemTextColor,
-  itemTextDrawOffset,
-  itemTextLineCenterOffset,
-  packItemListRows,
-  pickItemListPanelStyleBox,
-  shapeItemText,
-  trimItemListText,
-} from './nativeSolver';
-import { ItemListIconMode } from '../../../../godot/scene/gui';
-import type { ItemListItem, ItemListProperties } from './types';
+import { itemListDraw, type ItemListDrawnRow } from './itemListDraw';
+import { ScrollBarChrome, ScrollHintChrome, SCROLL_HINT_MODULATE } from '../shared/ScrollChrome';
+import type { ItemListRuntimeProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-
-/** Pass 1: this row's own icon/text size contribution: what `packItemListRows` needs, before rects exist. */
-interface RowContent {
-  item: ItemListItem;
-  disabled: boolean;
-  hasIcon: boolean;
-  iconSize: Vector2;
-  hasText: boolean;
-  textSize: Vector2;
-  /** Untrimmed: the draw pass trims it at its own width (`trimItemListText`). */
-  shapedText: TextLayoutResult | null;
-}
-
-/** Pass 2: this row's fully-resolved, plain-data geometry: everything but the async icon load. */
-interface RowGeometry {
-  item: ItemListItem;
-  disabled: boolean;
-  hasIcon: boolean;
-  iconNaturalSize: Vector2 | null;
-  fixedIconSizeSet: boolean;
-  iconDraw: ReturnType<typeof itemIconDraw>;
-  textLayout: TextLayoutResult | null;
-  /** Row-relative pen x, already through the RTL branch of `item_list.cpp:1639-1670`. */
-  textX: number;
-  textY: number;
-  /** Row-relative icon x, already mirrored (`item_list.cpp:1582-1584`). */
-  iconX: number;
-  /** The width `text_buf->set_width()` gets, and the box CENTER/RIGHT alignment works inside. */
-  textWidthPx: number;
-  /** One layout per line of wrapped `textLayout`, so each line keeps its meshes across renders. Empty for a single line. */
-  lineLayouts: TextLayoutResult[];
-  /** Read for a single line only: false where the row hides its fill and draws the outline alone (`item_list.cpp:1672-1688`). */
-  isTextFillDrawn: boolean;
-  /** `isItemTextWrapped`: a centred paragraph, drawn line by line, or one line. */
-  isTextWrapped: boolean;
-  rect: Rect2;
-  textColor: Rgba;
-}
+import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 interface ItemListRowProps {
-  geometry: RowGeometry;
+  geometry: ItemListDrawnRow;
   origin: Vector2;
   tint: Rgba;
   /** Tinted by the list, not by the item: `draw_outline` takes the theme colour (`item_list.cpp:1643`). */
   outline: TextOutlineTheme;
   renderOrder: number;
-  clippingPlanes: readonly THREE.Plane[];
   fontSizePx: number;
   resources: SceneScope;
+  /** The list's `selected` StyleBox, drawn behind a selected row. */
+  selectedBox: StyleBoxFlatData;
+  icons: SolveNode['icons'];
 }
 
 /**
@@ -124,327 +62,110 @@ function ItemListRow({
   tint,
   outline,
   renderOrder,
-  clippingPlanes,
   fontSizePx,
   resources,
+  selectedBox,
+  icons,
 }: ItemListRowProps) {
   const {
     item,
-    disabled,
-    hasIcon,
+    iconColor,
     iconDraw,
-    textLayout,
+    label,
     textX,
     textY,
     iconX,
-    textWidthPx,
-    lineLayouts,
     isTextFillDrawn,
-    isTextWrapped,
     rect,
     textColor,
+    selectedRect,
   } = geometry;
 
-  const { texture: iconSource } = useTexture2D(
-    item.icon,
-    resources.externalResources,
-    resources.internalResources
+  const { texture: iconSource } = useTexture2D(useNodeReference(item.icon, resources));
+  const ownIconTexture = useOwnerCanvas2DTexture(iconSource);
+  const themedTexture = useNodeIcon(
+    item.themedIcon && icons[item.themedIcon.name],
+    item.themedIcon?.vendoredUrl ?? null
   );
-  const iconTexture = useOwnerCanvas2DTexture(iconSource);
+  const iconTexture = item.themedIcon ? themedTexture : ownIconTexture;
+  // Inside the list's own `ControlClipProvider`, so a row clips to the list rect.
+  const clippingPlanes = useControlClipPlanes();
 
-  const iconColorSrgb = useMemo(() => tintColor(itemIconColor(disabled), tint), [disabled, tint]);
-  const iconColorLinear = useGodotLinearColor(iconColorSrgb);
+  const iconColorSrgb = useMemo(() => tintColor(iconColor, tint), [iconColor, tint]);
+  const iconColorLinear = useItemLinearColor(iconColorSrgb);
   const tintedTextColor = useMemo(() => tintColor(textColor, tint), [textColor, tint]);
   const run = { fontSizePx, outline, clippingPlanes, renderOrder };
 
   return (
     <CanvasItemGroup position={[origin.x + rect.x, -(origin.y + rect.y), 0]}>
-      {hasIcon && iconDraw.rect && iconTexture && (
-        <CanvasItemGroup position={[iconX, -iconDraw.rect.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={iconDraw.rect.w}
-            height={iconDraw.rect.h}
-            color={iconColorLinear}
-            opacity={iconColorSrgb.a}
-            map={iconTexture}
-          />
-        </CanvasItemGroup>
+      {selectedRect && (
+        <StyleBoxQuad styleBox={selectedBox} color={tint} rect={selectedRect} renderOrder={renderOrder} />
       )}
-      {textLayout &&
-        (!isTextWrapped ? (
-          <CanvasItemGroup position={[textX, -textY, 0]}>
+      {iconDraw.rect && iconTexture && (
+        <PositionedIcon
+          rect={{ ...iconDraw.rect, x: iconX }}
+          texture={iconTexture}
+          color={iconColorLinear}
+          opacity={iconColorSrgb.a}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
+        />
+      )}
+      {label &&
+        label.lines.map(({ lineLayout, shiftPx, topPx }, index) => (
+          <CanvasItemGroup key={index} position={[textX + shiftPx, -(textY + topPx), 0]}>
             {isTextFillDrawn ? (
-              <OutlinedTextRun {...run} layout={textLayout} tint={tintedTextColor} />
+              <OutlinedTextRun {...run} layout={lineLayout} tint={tintedTextColor} />
             ) : (
-              <TextOutlineRing {...run} layout={textLayout} />
+              <TextOutlineRing {...run} layout={lineLayout} />
             )}
           </CanvasItemGroup>
-        ) : (
-          textLayout.lines.map((line, index) => (
-            <CanvasItemGroup
-              key={index}
-              position={[
-                textX +
-                  itemTextLineCenterOffset(
-                    textWidthPx,
-                    shapedTextSizeWidthPx(line.widthPx),
-                    line.isRtl === true
-                  ),
-                -(textY + index * textLayout.linePitchPx),
-                0,
-              ]}
-            >
-              <OutlinedTextRun {...run} layout={lineLayouts[index]!} tint={tintedTextColor} />
-            </CanvasItemGroup>
-          ))
         ))}
     </CanvasItemGroup>
   );
 }
 
-export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
-  const props = painterView<ItemListProperties>(solveNode);
-  const items = props.items;
+export function ItemList({
+  solveNode,
+  tint,
+  childTint,
+  rect,
+  renderOrder,
+  slot,
+  snapToPixels,
+  theme,
+  children,
+}: NativeControlComponentProps) {
+  const props = painterView<ItemListRuntimeProperties>(solveNode);
+  const {
+    origin,
+    guideLines,
+    rows: visibleRows,
+    scrollBars,
+    scrollBarBoxes,
+    fontSizePx,
+    boxes,
+    guideColor,
+  } = itemListDraw(solveNode, { x: rect.w, y: rect.h }, theme);
 
-  const iconMode = props.iconMode ?? ItemListIconMode.ICON_MODE_LEFT;
-  const maxTextLines = props.maxTextLines ?? 1;
-  const fixedColumnWidth = props.fixedColumnWidth ?? 0;
-  const iconScale = props.iconScale ?? 1;
-  const fixedIconSizeSet = !!(props.fixedIconSize && props.fixedIconSize.x > 0 && props.fixedIconSize.y > 0);
-
-  const panelBox = pickItemListPanelStyleBox(solveNode.styleBoxes, theme);
-  const panelMargin = contentMarginSize(panelBox);
-
-  const { fontSizePx, color: baseFontColor } = itemListTextTheme(solveNode, props, { theme });
-  const fontMetrics = resolveNodeFontMetrics(solveNode, ITEM_LIST_THEME_FONT_KEY);
-
-  const hSeparation = itemListSeparation(theme);
-  const vSeparation = hSeparation;
-  const iconMargin = hSeparation;
-  const wraparoundItems = props.wraparoundItems !== false;
-  // Under RTL the panel and guide lines stay, and only each row's icon and label
-  // move (`item_list.cpp:1582-1584,1639-1641,1664-1668`).
-  const rtl = solveNode.rtl;
-
-  const clippingPlanes = useControlClipPlanes();
+  // `set_clip_contents(true)` (`item_list.cpp:2482`) clips to the list rect, scrollbars aside.
+  const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
+  const { anchorRef, clip } = useWorldClipPlanes(ownRect);
+  const clipsContents = props.clipContents !== false;
   const textOutline = useTintedTextOutline(solveNode, tint.own);
 
-  const rows: RowContent[] = useMemo(() => {
-    return items.map((item, index) => {
-      const disabled = item.disabled === true;
-      const hasIcon = item.icon !== undefined;
-      const naturalSize = solveNode.textureSlots[itemListIconSlotKey(index)] ?? null;
-      const iconSize = itemIconPackedSize(hasIcon, naturalSize, props.fixedIconSize, iconScale);
+  // Both scroll bars and the hint are child Controls: no `self_modulate` (`item_list.cpp:2472,2476`).
+  const hintColor = useMemo(() => childTint.color.clone().multiply(SCROLL_HINT_MODULATE), [childTint.color]);
+  const guideColorSrgb = useMemo(() => tintColor(guideColor, tint.own), [guideColor, tint.own]);
+  const guideColorLinear = useItemLinearColor(guideColorSrgb);
 
-      const text = item.text ?? '';
-      const hasText = text.length > 0;
-      const { shaped: shapedText, minimumSize: textSize } = shapeItemText({
-        text,
-        fontSizePx,
-        fontMetrics,
-        iconMode,
-        maxTextLines,
-        fixedColumnWidth,
-        overrunBehavior: props.textOverrunBehavior,
-        locale: solveNode.locale,
-      });
-
-      return { item, disabled, hasIcon, iconSize, hasText, textSize, shapedText };
-    });
-  }, [
-    items,
-    fontSizePx,
-    fontMetrics,
-    iconMode,
-    maxTextLines,
-    fixedColumnWidth,
-    iconScale,
-    props.fixedIconSize,
-    props.textOverrunBehavior,
-    solveNode,
-  ]);
-
-  const itemSizes = useMemo(
-    () =>
-      rows.map((r) =>
-        itemMinimumSize(
-          {
-            hasIcon: r.hasIcon,
-            iconSize: r.iconSize,
-            hasText: r.hasText,
-            textSize: r.textSize,
-            iconMode,
-            maxTextLines,
-            fixedColumnWidth,
-          },
-          theme
-        )
-      ),
-    [rows, iconMode, maxTextLines, fixedColumnWidth, theme]
-  );
-
-  const maxColumnWidth = itemSizes.reduce((max, s) => Math.max(max, s.x), 0);
-  const contentWidth = rect.w - panelMargin.x;
-
-  const packed = useMemo(
-    () =>
-      packItemListRows({
-        itemSizes,
-        maxColumnWidth,
-        sameColumnWidth: props.sameColumnWidth === true,
-        maxColumns: props.maxColumns ?? ITEM_LIST_DEFAULT_MAX_COLUMNS,
-        fitSize: contentWidth,
-        wraparoundItems,
-        autoWidth: props.autoWidth === true,
-        hSeparation,
-        availableHeight: Math.max(0, rect.h - panelMargin.y),
-      }),
-    [
-      itemSizes,
-      maxColumnWidth,
-      props.sameColumnWidth,
-      props.maxColumns,
-      contentWidth,
-      rect.h,
-      panelMargin.y,
-      wraparoundItems,
-      props.autoWidth,
-      hSeparation,
-    ]
-  );
-
-  const guideLines = useMemo(
-    () => itemListGuideLines(iconMode, packed.separators, contentWidth),
-    [iconMode, packed.separators, contentWidth]
-  );
-  const guideColorSrgb = useMemo(
-    () => tintColor(itemListGuideColor(solveNode), tint.own),
-    [solveNode, tint.own]
-  );
-  const guideColorLinear = useGodotLinearColor(guideColorSrgb);
-
-  // `base_ofs = theme_cache.panel_style->get_offset()` (`item_list.cpp:1429`):
-  // `StyleBox::get_offset()` is `Point2(get_margin(LEFT), get_margin(TOP))`
-  // (`style_box.cpp:87-89`), never `contentMarginSize`'s summed pair.
-  const origin: Vector2 = { x: panelBox.contentMargin.left, y: panelBox.contentMargin.top };
-
-  const rowGeometries: RowGeometry[] = useMemo(
-    () =>
-      rows.map((r, index) => {
-        const packedRect = packed.items[index]!.rect;
-        // Both centring passes read `rect_cache.SIZE` (`item_list.cpp:1553,1556,1649`),
-        // never its position, and a `Rect2` satisfies `Vector2` structurally.
-        const packedSize: Vector2 = { x: packedRect.w, y: packedRect.h };
-        const naturalSize = solveNode.textureSlots[itemListIconSlotKey(index)] ?? null;
-        const iconDraw = itemIconDraw(
-          r.hasIcon,
-          iconMode,
-          r.iconSize,
-          naturalSize,
-          fixedIconSizeSet,
-          packedSize,
-          hSeparation,
-          vSeparation,
-          iconMargin
-        );
-        const wrapped = isItemTextWrapped(iconMode, maxTextLines);
-        const textOffset = itemTextDrawOffset(
-          wrapped,
-          iconDraw.textOffsetContribution,
-          packedSize,
-          r.shapedText?.heightPx ?? 0,
-          hSeparation,
-          vSeparation
-        );
-        // Every RTL branch works in control coordinates; the row group keeps
-        // its LTR origin, so each piece comes back relative to it.
-        const rowOriginX = origin.x + packedRect.x;
-        const textWidthPx = wrapped
-          ? itemListWrappedTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems)
-          : itemListLineTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems);
-        const textBoxX = wrapped
-          ? itemListMirrorX(rowOriginX + textOffset.x, textWidthPx, rect.w, rtl)
-          : itemListRowTextX(
-              {
-                ltrX: rowOriginX + textOffset.x,
-                itemRectWidthPx: packedRect.w,
-                iconWidthPx: r.iconSize.x,
-                controlWidthPx: rect.w,
-                contentWidthPx: contentWidth,
-                wraparoundItems,
-                hSeparation,
-              },
-              rtl
-            );
-        const textLayout =
-          r.shapedText &&
-          trimItemListText(r.shapedText, textWidthPx, {
-            fontSizePx,
-            overrunBehavior: props.textOverrunBehavior,
-            iconMode,
-            maxTextLines,
-          });
-        // A non-wrapped item is a single line (`BREAK_NONE`), so the paragraph's
-        // own width is that line's (`item_list.cpp:1668`, alignment RIGHT).
-        const rightAlign =
-          !wrapped && rtl ? itemListRightAlignOffsetPx(textWidthPx, textLayout?.widthPx ?? 0) : 0;
-        return {
-          item: r.item,
-          disabled: r.disabled,
-          hasIcon: r.hasIcon,
-          iconNaturalSize: naturalSize,
-          fixedIconSizeSet,
-          iconDraw,
-          textLayout,
-          textX: textBoxX + rightAlign - rowOriginX,
-          textY: textOffset.y,
-          iconX: iconDraw.rect
-            ? itemListMirrorX(rowOriginX + iconDraw.rect.x, iconDraw.rect.w, rect.w, rtl) - rowOriginX
-            : 0,
-          textWidthPx,
-          lineLayouts:
-            wrapped && textLayout ? textLayout.lines.map((line) => soloLineLayout(line, textLayout)) : [],
-          isTextFillDrawn: isItemTextFillDrawn({
-            fixedColumnWidth,
-            wraparoundItems,
-            rowWidthPx: packedRect.w,
-            contentWidthPx: contentWidth,
-            iconWidthPx: r.iconSize.x,
-            hSeparation,
-          }),
-          isTextWrapped: wrapped,
-          rect: packedRect,
-          textColor: itemTextColor(baseFontColor, r.disabled),
-        };
-      }),
-    [
-      rows,
-      packed,
-      iconMode,
-      fixedIconSizeSet,
-      hSeparation,
-      vSeparation,
-      iconMargin,
-      solveNode,
-      baseFontColor,
-      origin.x,
-      rect.w,
-      contentWidth,
-      wraparoundItems,
-      fixedColumnWidth,
-      maxTextLines,
-      fontSizePx,
-      props.textOverrunBehavior,
-      rtl,
-    ]
-  );
-
-  return (
+  const rowsAndChildren = (
     <>
-      <StyleBoxQuad styleBox={panelBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
       {guideLines.map((line, index) => (
-        <CanvasItemGroup key={`guide-${index}`} position={[origin.x, -(origin.y + line.y), 0]}>
+        <CanvasItemGroup
+          key={`guide-${index}`}
+          position={[origin.x + line.x, -hairlineQuadStartPx(origin.y + line.y), 0]}
+        >
           <ControlQuad
             renderOrder={renderOrder}
             width={line.width}
@@ -454,19 +175,68 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           />
         </CanvasItemGroup>
       ))}
-      {rowGeometries.map((geometry, index) => (
+      {visibleRows.map((geometry) => (
         <ItemListRow
-          key={index}
+          key={geometry.index}
           geometry={geometry}
           origin={origin}
           tint={tint.own}
           outline={textOutline}
           renderOrder={renderOrder}
-          clippingPlanes={clippingPlanes}
           fontSizePx={fontSizePx}
           resources={solveNode.resources}
+          selectedBox={boxes.selected}
+          icons={solveNode.icons}
         />
       ))}
+      {visibleRows.map(
+        (geometry) =>
+          geometry.cursorRect && (
+            <CanvasItemGroup
+              key={`cursor-${geometry.index}`}
+              position={[origin.x + geometry.rect.x, -(origin.y + geometry.rect.y), 0]}
+            >
+              <StyleBoxQuad
+                styleBox={boxes.cursor}
+                color={tint.own}
+                rect={geometry.cursorRect}
+                renderOrder={renderOrder}
+              />
+            </CanvasItemGroup>
+          )
+      )}
+      <ScrollHintChrome
+        hint={scrollBars.bottomHint}
+        color={hintColor}
+        opacity={childTint.opacity}
+        chromeSlot={slot}
+      />
+      <ScrollBarChrome
+        bar={scrollBars.horizontal}
+        boxes={scrollBarBoxes.horizontal}
+        color={childTint.own}
+        chromeSlot={slot}
+        snapToPixels={snapToPixels}
+      />
+      <ScrollBarChrome
+        bar={scrollBars.vertical}
+        boxes={scrollBarBoxes.vertical}
+        color={childTint.own}
+        chromeSlot={slot}
+        snapToPixels={snapToPixels}
+      />
+      {children}
     </>
+  );
+
+  return (
+    <CanvasItemGroup ref={anchorRef}>
+      <StyleBoxQuad styleBox={boxes.panel} color={tint.own} rect={rect} renderOrder={renderOrder} />
+      {clipsContents ? (
+        <ControlClipProvider value={clip}>{rowsAndChildren}</ControlClipProvider>
+      ) : (
+        rowsAndChildren
+      )}
+    </CanvasItemGroup>
   );
 }

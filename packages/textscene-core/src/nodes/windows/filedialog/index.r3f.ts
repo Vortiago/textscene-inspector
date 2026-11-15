@@ -1,16 +1,4 @@
-/**
- * FileDialog is parsed but not drawn. The registration declares that gap and nothing
- * more: `renderIntent: 'pending'` drives the "not implemented" badge and the
- * group's placeholder marker. `container: true` holds the type in both canvases.
- * The `Node` base applies no `visible`.
- */
+/** FileDialog draws as a viewport its embedder shows (`registerWindowType.r3f.ts`). */
+import { registerWindowComponent } from '../window/registerWindowType.r3f';
 
-import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { Node } from '../../node/Component';
-
-nodeComponentRegistry.register({
-  typeName: 'FileDialog',
-  Component: Node,
-  container: true,
-  renderIntent: 'pending',
-});
+registerWindowComponent('FileDialog');

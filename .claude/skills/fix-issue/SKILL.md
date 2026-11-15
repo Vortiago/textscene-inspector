@@ -39,7 +39,9 @@ Resolve these before any code:
 
 - the behaviour that is wrong now, and the behaviour that is right, with its engine
   source (`file:line`) or a `pnpm ref:godot` measurement;
-- the test that proves it, and where it lives.
+- the test that proves it, and where it lives;
+- each part of the user's request that the plan leaves out, with the issue that owns it. The
+  renderer's subject is any Godot project a user opens (ADR-0075), so take the general reading.
 
 ## 4. Make the task list
 
@@ -106,7 +108,9 @@ request. If a hook or a CI job fails, fix the cause and push again.
 1. Commit with a conventional message. See the `conventional-commits` skill.
 2. Push the branch.
 3. Open a pull request with `Closes #<n>` in the body.
-4. Report the result to the user. Do not start the next issue.
+4. Reply to each comment of the Claude review and resolve it. See the `pr-description` skill.
+5. Report the result to the user: for a rendering change, the measurement against Godot first. Do
+   not start the next issue.
 
 Keep the `in-progress` label while the pull request is open, so that no other session
 picks the issue. The merge closes the issue. If you stop without a pull request, remove

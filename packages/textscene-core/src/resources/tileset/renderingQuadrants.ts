@@ -8,7 +8,7 @@ import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
 import { drawableCells, type DrawableCell } from './drawableCell';
 import { compareCells } from './cellOrder';
 import { mapToLocalPx } from './tilePlacement';
-import { groupBySortY } from './tileYSort';
+import { ySortRows } from './tileYSort';
 import type { TileGrid, TileSetModel } from './types';
 
 interface Quadrant {
@@ -63,5 +63,5 @@ export function layerQuadrants(
 ): readonly (readonly DrawableCell[])[] {
   const drawable = drawableCells(model, cells);
   if (!layout.ySortEnabled) return renderingQuadrants(drawable, model, layout.quadrantSize);
-  return groupBySortY(drawable, model, layout.ySortOrigin, 0).map((row) => row.cells);
+  return ySortRows(drawable, model, layout.ySortOrigin).map((row) => row.cells);
 }

@@ -1,9 +1,11 @@
 /**
  * What a Control's solver hands its painter. A computation that reads only the
- * node and the theme is a share ({@link defineShare}) that both call. Solve
+ * node and the theme is a share ({@link defineShare}) that both call, and one that
+ * also reads the node's size is a rect share ({@link defineRectShare}). Solve
  * output is a channel ({@link defineChannel}) the solver seals and the painter
- * opens. `solveHandoffConformance.test.ts` guards both.
+ * opens. `solveHandoffConformance.test.ts` guards all three.
  */
+import type { Vector2 } from '../../../godot/math/vector';
 import type { NativeTheme } from './nativeTheme';
 import type { ShareNode } from './solveTree';
 
@@ -33,12 +35,11 @@ interface Memoised<T> {
  * generation's nodes and a replaced theme take their entries with them.
  */
 // Node identity is a sound key: `useBuildSolveTree` rebuilds the forest on every scene,
-// texture, resource, theme or font arrival, and on each `onSceneFontSettled` tick
-// from `text/sceneFontLoader.ts`.
+// texture, resource, theme or font arrival, and on each settle of a font that its solve or its
+// painters read while it loaded (`text/settledFonts.ts`).
 // A `SolveNode` survives a theme change, so the key needs the theme too.
 export function defineShare<T>(compute: Share<T>): Share<T> {
-  // Theme identity is stable: both builders memoise it on the scale alone
-  // (`ControlCanvasLayer.tsx:65`, `ControlRasterPass.tsx:129`).
+  // Theme identity is stable: `nativeTheme` builds one theme per scale.
   const byNode = new WeakMap<ShareNode, WeakMap<NativeTheme, Memoised<T>>>();
   return (n, theme) => {
     let byTheme = byNode.get(n);
@@ -50,6 +51,41 @@ export function defineShare<T>(compute: Share<T>): Share<T> {
     if (hit) return hit.value;
     const value = compute(n, theme);
     byTheme.set(theme, { value });
+    return value;
+  };
+}
+
+/** One layout of a node at a size, called by a slice's solver and by its painter. */
+export type RectShare<T> = (n: ShareNode, size: Vector2, theme: NativeTheme) => T;
+
+interface SizedEntry<T> extends Memoised<T> {
+  readonly size: Vector2;
+}
+
+/**
+ * The sizes a rect share keeps for one node and theme: the tentative size of the second solve
+ * pass and the final rect, which the painter asks for too.
+ */
+const RECT_SHARE_SIZES = 2;
+
+/**
+ * Declares a rect share: `compute` runs at most once per `(node, theme, size)` while the size is
+ * one of the last {@link RECT_SHARE_SIZES} asked for that node and theme. It gets no `SolveContext`,
+ * for the reason {@link Share} gives.
+ */
+export function defineRectShare<T>(compute: RectShare<T>): RectShare<T> {
+  const entriesOf = defineShare((): SizedEntry<T>[] => []);
+  return (n, size, theme) => {
+    const entries = entriesOf(n, theme);
+    const hitAt = entries.findIndex((entry) => entry.size.x === size.x && entry.size.y === size.y);
+    if (hitAt >= 0) {
+      const [hit] = entries.splice(hitAt, 1);
+      entries.push(hit!);
+      return hit!.value;
+    }
+    const value = compute(n, size, theme);
+    entries.push({ size: { x: size.x, y: size.y }, value });
+    if (entries.length > RECT_SHARE_SIZES) entries.shift();
     return value;
   };
 }

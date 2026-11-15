@@ -1,0 +1,129 @@
+; One variable: the option that decides whether or where a clipped TabBar scrolls to its current tab
+; (tab_bar.cpp:1875-1920). Every bar has a late current tab. Bars vary scroll_to_selected, clip_tabs,
+; layout_direction, a disabled tab ahead of it, an icon, max_tab_width and a tab wider
+; than the bar. unit-tab-bar-scroll-to-current shows the plain case, so none of these shows a regression there.
+
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_icon"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="NoScroll" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 268.0
+offset_bottom = 44.0
+current_tab = 5
+clip_tabs = true
+scroll_to_selected = false
+tab_count = 6
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"
+tab_4/title = "Map"
+tab_5/title = "Quests"
+
+[node name="Unclipped" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 52.0
+offset_right = 268.0
+offset_bottom = 88.0
+current_tab = 5
+clip_tabs = false
+tab_count = 6
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"
+tab_4/title = "Map"
+tab_5/title = "Quests"
+
+[node name="Rtl" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 96.0
+offset_right = 268.0
+offset_bottom = 132.0
+current_tab = 5
+clip_tabs = true
+layout_direction = 3
+tab_count = 6
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"
+tab_4/title = "Map"
+tab_5/title = "Quests"
+
+[node name="Disabled" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 140.0
+offset_right = 268.0
+offset_bottom = 176.0
+current_tab = 5
+clip_tabs = true
+tab_count = 6
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"
+tab_4/title = "Map"
+tab_5/title = "Quests"
+tab_1/disabled = true
+tab_2/disabled = true
+
+[node name="Icon" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 184.0
+offset_right = 268.0
+offset_bottom = 220.0
+current_tab = 5
+clip_tabs = true
+theme_override_constants/icon_max_width = 16
+tab_count = 6
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"
+tab_4/title = "Map"
+tab_5/title = "Quests"
+tab_5/icon = ExtResource("1_icon")
+
+[node name="MaxWidth" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 228.0
+offset_right = 268.0
+offset_bottom = 264.0
+current_tab = 5
+clip_tabs = true
+max_tab_width = 60
+tab_count = 6
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"
+tab_4/title = "Map"
+tab_5/title = "Quests"
+
+[node name="WiderThanBar" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 272.0
+offset_right = 110.0
+offset_bottom = 308.0
+current_tab = 1
+clip_tabs = true
+tab_count = 3
+tab_0/title = "Inv"
+tab_1/title = "Equipment inventory list"
+tab_2/title = "Map"

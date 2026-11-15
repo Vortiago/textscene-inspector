@@ -9,10 +9,12 @@ renders_as: one term over the whole light buffer that every lit CanvasItem multi
 
 # DirectionalLight2D
 
-DirectionalLight2D lights the whole canvas with `color` and `energy`, and draws nothing
-itself. It reaches every lit item on its canvas layers whatever the item's `light_mask` or
+DirectionalLight2D lights the whole canvas with `color`, blended by `color.a` times `energy`
+(`renderer_canvas_render_rd.cpp:556`, `canvas.glsl:549-563`), and draws nothing itself. It reaches every lit item on its canvas layers whatever the item's `light_mask` or
 `z_index`. The previewer adds it to the light buffer a PointLight2D uses. The three panels
-take one warm light, and the clear colour below them takes none.
+take one warm light, and the clear colour below them takes none. In a `use_hdr_2d` canvas the light
+adds to the linear albedo with no clamp, and its colour stays as authored (`canvas.glsl:715-760`).
+The SubViewport sheet shows it.
 
 ## Hard shadows: a parallel shadow map
 <!-- compare: image=unit-directionallight2d-shadow status=done fixture=unit-directionallight2d-shadow.tscn -->
@@ -22,6 +24,13 @@ measures depth along the light across the project viewport's diagonal
 (`renderer_canvas_render_rd.cpp:1140-1146`). The previewer
 builds the same 1D map, so the band covers the occluder's inside too. It culls an occluder
 on its local bounds, as Godot does (`renderer_viewport.cpp:635`).
+
+An occluder casts only from the downstream half of the map's depth. Godot builds the map's
+projection with a depth range of -1 to 1 and never corrects it, so the RenderingDevice clips the
+upstream half (`renderer_canvas_render_rd.cpp:1166-1167`). An occluder more than
+`max_distance / 2` upstream of the view's centre casts nothing, and the previewer clips it too.
+The `directionallight2d-max-distance-clip` golden holds one clipped and one casting occluder at
+`max_distance` 150 to Godot's frame.
 
 The map spans the canvas's own view. On the main canvas that is the project viewport at the
 origin. No Camera2D becomes current in Godot's editor (`camera_2d.cpp:354`), and the previewer
@@ -34,6 +43,20 @@ the viewport's camera. Every occluder casts on every lit item: the directional p
 
 `shadow_filter = PCF5` averages five taps across the parallel map. The taps keep one width
 along the whole band, unlike a point light's penumbra, which widens with distance.
+
+## An occluder end on a bin centre
+<!-- compare: image=unit-directionallight2d-shadow-end-on-bin status=done fixture=unit-directionallight2d-shadow-end-on-bin.tscn -->
+
+An end that lands exactly on a bin centre covers that bin only from its left, the rasteriser's
+top-left rule, as on a PointLight2D's map. Here the end is the right side of the occluder, so the
+shadow stops one column short of it.
+
+## The shadow atlas size
+<!-- compare: image=unit-directionallight2d-shadow-atlas-size status=done fixture=shadow-atlas-size/unit-directionallight2d-shadow-atlas-size.tscn -->
+
+`rendering/2d/shadow_atlas/size` sets the bins in the parallel map, 2048 by default. A smaller
+size makes each PCF tap wider, so the penumbra widens. The previewer reads the setting and builds the
+map to that size.
 
 ## The eight-light cap and CanvasLayers
 <!-- compare: image=unit-directionallight2d-canvas-layer-cap status=done fixture=unit-directionallight2d-canvas-layer-cap.tscn -->
@@ -55,7 +78,8 @@ the square untinted by them.
 
 `height` tilts the light from the canvas plane, 0, toward the viewer, 1. A plain Sprite2D takes it
 head-on whatever the height. Two normal-mapped ones take it by their normals: Flat tilts to +x, and
-Dome sweeps from -x to +x. Each lands on Godot.
+Dome sweeps from -x to +x. Each lands on Godot. A Polygon2D, Line2D, AnimatedSprite2D,
+CPUParticles2D, MeshInstance2D, TileMapLayer or TileMap takes a normal map the same way.
 
 ## Linting
 

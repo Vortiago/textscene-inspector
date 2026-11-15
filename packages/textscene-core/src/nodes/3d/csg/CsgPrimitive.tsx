@@ -19,7 +19,7 @@ import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { buildCsgPlan } from '../../../r3f/csg/csgPlan';
 import { hasFaces } from '../../../r3f/csg/csgRegistration';
 import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
-import { resolveMaterialSource } from '../../../r3f/materials/materialSource';
+import { nodeMaterial } from '../../../r3f/materials/materialReference';
 import { useCsgGeometryContext } from '../../../r3f/csg/useCsgGeometryContext';
 import { FramePoint } from '../../../r3f/components/NodeAabb';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
@@ -118,7 +118,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
       ownSolid && [
         {
           geometry: ownSolid.geometry,
-          materials: ownSolid.materials.map((address) => resolveMaterialSource(address, ctx)),
+          materials: ownSolid.materials.map((address) => nodeMaterial(address, ctx)),
         },
       ],
     [ownSolid, ctx]

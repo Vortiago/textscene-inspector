@@ -1,0 +1,42 @@
+[gd_scene format=3 uid="uid://unitcontrolysortviewport"]
+
+; The variable: `y_sort_enabled` on a Control in a Control-only SubViewport, which no world y-sort
+; reaches. Low is listed first with the lower origin y, so y order draws High (50) under Low (100).
+; unit-control-y-sort has the same property in the root canvas.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Container" type="SubViewportContainer" parent="."]
+layout_mode = 0
+offset_left = 100.0
+offset_top = 100.0
+offset_right = 500.0
+offset_bottom = 400.0
+stretch = true
+
+[node name="Viewport" type="SubViewport" parent="Container"]
+handle_input_locally = false
+size = Vector2i(400, 300)
+render_target_update_mode = 4
+
+[node name="Sorted" type="Control" parent="Container/Viewport"]
+y_sort_enabled = true
+layout_mode = 3
+anchors_preset = 0
+
+[node name="Low" type="ColorRect" parent="Container/Viewport/Sorted"]
+offset_left = 40.0
+offset_top = 100.0
+offset_right = 140.0
+offset_bottom = 200.0
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="High" type="ColorRect" parent="Container/Viewport/Sorted"]
+offset_left = 90.0
+offset_top = 50.0
+offset_right = 190.0
+offset_bottom = 150.0
+color = Color(0.2, 0.3, 0.9, 1)

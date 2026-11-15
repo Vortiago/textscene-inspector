@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { shapeText } from './textLayout';
+import { lineTopsPx } from './lineExtent';
 import type { FontMetrics } from './fontMetrics';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { glyphsOf } from './textLayout.testkit';
@@ -159,20 +160,52 @@ describe('shapeText — a character the face draws as a base and marks', () => {
     expect(glyphsOf('Ä', withMark(20.5, 0, 1397), 32)[1]!.xOffset).toBe(-2);
   });
 
-  it('lifts the baseline and the pitch to a mark raised past the ascent (text_server_adv.cpp:5161)', () => {
-    const layout = shapedLine(withMark(0, 15));
-    expect(layout.baselineOffsetPx).toBe(15);
-    expect(layout.linePitchPx).toBe(19);
+  /** The ascent and descent of the one line of `layout`. */
+  const extentOf = ({ lines: [line] }: ReturnType<typeof shapedLine>) => [line!.ascentPx, line!.descentPx];
+
+  it('lifts the ascent of the line to a mark raised past it (text_server_adv.cpp:5161)', () => {
+    expect(extentOf(shapedLine(withMark(0, 15)))).toEqual([15, 4]);
   });
 
-  it('lowers the pitch to a mark dropped past the descent', () => {
-    const layout = shapedLine(withMark(0, -6));
-    expect(layout.baselineOffsetPx).toBe(12);
-    expect(layout.linePitchPx).toBe(18);
+  it('lowers the descent of the line to a mark dropped past it', () => {
+    expect(extentOf(shapedLine(withMark(0, -6)))).toEqual([12, 6]);
   });
 
   it('keeps the font line for a mark inside the ascent', () => {
-    const layout = shapedLine(withMark(0, 6));
-    expect([layout.baselineOffsetPx, layout.linePitchPx]).toEqual([12, 16]);
+    expect(extentOf(shapedLine(withMark(0, 6)))).toEqual([12, 4]);
+  });
+});
+
+describe('shapeText — the ascent and descent of each line (text_server_adv.cpp:5161-5162)', () => {
+  /** A face that draws only `←`, at ascent 16 px and descent 8 px at 16 px. */
+  const TALL = { ...faceOf({ '←': 1024 }), ascent: 2048, descent: 1024 };
+  const layoutOf = (text: string) =>
+    shapeText(text, {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 2,
+      fontMetrics: { ...LATIN, fallbacks: [TALL] },
+      paragraphSeparator: '\n',
+    });
+
+  it('takes the ascent and descent of a taller fallback face on its own line only', () => {
+    const { lines } = layoutOf('A\nA←\nA');
+    expect(lines.map((line) => [line.ascentPx, line.descentPx])).toEqual([
+      [12, 4],
+      [16, 8],
+      [12, 4],
+    ]);
+  });
+
+  it('places each line below the ascent, descent and line spacing of the lines above it', () => {
+    expect(lineTopsPx(layoutOf('A\nA←\nA'))).toEqual([0, 18, 44]);
+  });
+
+  it('sums the height of every line', () => {
+    expect(layoutOf('A\nA←\nA').heightPx).toBe(62);
+  });
+  it('measures the font by its tallest fallback face though no glyph draws in it (font.cpp:210-220)', () => {
+    expect(layoutOf('A').fontHeightPx).toBe(24);
   });
 });

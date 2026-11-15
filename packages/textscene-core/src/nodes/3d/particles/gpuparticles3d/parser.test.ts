@@ -119,4 +119,40 @@ describe('parseGPUParticles3D', () => {
   it('keeps at most the four passes the node declares (edge case)', () => {
     expect(parse({ draw_passes: '9' }).drawPasses).toHaveLength(4);
   });
+
+  it('draws in index order and aligns nothing by default', () => {
+    const { drawOrder, transformAlign } = parse({});
+    expect([drawOrder, transformAlign]).toEqual([0, 0]);
+  });
+
+  it('reads draw_order and transform_align', () => {
+    const { drawOrder, transformAlign } = parse({ draw_order: '3', transform_align: '2' });
+    expect([drawOrder, transformAlign]).toEqual([3, 2]);
+  });
+
+  it('keeps a draw_order no order names, which the copy shader draws in index order (edge case)', () => {
+    expect(parse({ draw_order: '7' }).drawOrder).toBe(7);
+  });
+
+  it('keeps DISABLED for the LOCAL_BILLBOARD that 4.6.3 refuses (edge case)', () => {
+    expect(parse({ transform_align: '4' }).transformAlign).toBe(0);
+  });
+
+  it("keeps the constructor's trail: off, 0.3 seconds, no skin", () => {
+    const { trailEnabled, trailLifetime, drawSkin } = parse({});
+    expect([trailEnabled, trailLifetime, drawSkin]).toEqual([false, 0.3, undefined]);
+  });
+
+  it('reads trail_enabled, trail_lifetime and the draw_skin reference', () => {
+    const { trailEnabled, trailLifetime, drawSkin } = parse({
+      trail_enabled: 'true',
+      trail_lifetime: '0.5',
+      draw_skin: 'SubResource("Skin_1")',
+    });
+    expect([trailEnabled, trailLifetime, drawSkin]).toEqual([true, 0.5, 'SubResource("Skin_1")']);
+  });
+
+  it('keeps 0.3 for a trail_lifetime the setter refuses (edge case)', () => {
+    expect(parse({ trail_lifetime: '0.005' }).trailLifetime).toBe(0.3);
+  });
 });

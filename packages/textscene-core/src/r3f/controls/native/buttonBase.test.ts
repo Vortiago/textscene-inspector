@@ -7,14 +7,24 @@
 import { describe, expect, it } from 'vitest';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import {
+  buttonContentMinimumSize,
+  buttonDrawnLabel,
   fitIconSize,
+  largestStyleBoxMargins,
   layoutButtonContent,
   pickButtonStyleBox,
-  resolveButtonDrawState,
+  resolveToggleDrawState,
+  measuredContentMinimumSize,
   tintColor,
+  trimButtonLabel,
   type ButtonContentInput,
 } from './buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
+import { shapeText, type TextLayoutResult, type TextLineLayout } from './text/textLayout';
+import { visualChars } from './text/textLayout.testkit';
+import { OPEN_SANS_FONT_METRICS } from './text/openSansFontMetrics';
+import { AutowrapMode, OverrunBehavior } from '../../../godot/text/textServerEnums';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 const { HORIZONTAL_ALIGNMENT_CENTER, HORIZONTAL_ALIGNMENT_LEFT, HORIZONTAL_ALIGNMENT_RIGHT } =
   HorizontalAlignment;
@@ -44,56 +54,78 @@ function styleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatData {
   };
 }
 
-describe('resolveButtonDrawState', () => {
-  it('is "normal" when disabled is false/undefined, "disabled" when true (no hover/pressed/focus — no input modelled)', () => {
-    expect(resolveButtonDrawState(undefined)).toBe('normal');
-    expect(resolveButtonDrawState(false)).toBe('normal');
-    expect(resolveButtonDrawState(true)).toBe('disabled');
+describe('resolveToggleDrawState', () => {
+  it('is "normal" when disabled and pressed are false or undefined', () => {
+    expect(resolveToggleDrawState(undefined, undefined)).toBe('normal');
+    expect(resolveToggleDrawState(false, false)).toBe('normal');
+  });
+
+  it('is "pressed" for a toggle that is on', () => {
+    expect(resolveToggleDrawState(false, true)).toBe('pressed');
+  });
+
+  it('is "disabled" over a toggle that is on (base_button.cpp:326-328)', () => {
+    expect(resolveToggleDrawState(true, true)).toBe('disabled');
   });
 });
 
 describe('pickButtonStyleBox', () => {
-  const defaults = {
-    normal: styleBox({ bgColor: { r: 1, g: 0, b: 0, a: 1 } }),
-    disabled: styleBox({ bgColor: { r: 0, g: 1, b: 0, a: 1 } }),
-  };
+  const normal = styleBox({ bgColor: { r: 1, g: 0, b: 0, a: 1 } });
+  const disabled = styleBox({ bgColor: { r: 0, g: 1, b: 0, a: 1 } });
+  const mirrored = styleBox({ bgColor: { r: 0, g: 0, b: 1, a: 1 } });
 
-  it('prefers a resolved theme_override_styles entry over the default-theme struct', () => {
-    const override = styleBox({ bgColor: { r: 0, g: 0, b: 1, a: 1 } });
-    expect(pickButtonStyleBox({ normal: override }, defaults, 'normal')).toBe(override);
-  });
-
-  it('falls back to the default-theme struct for the current state when no override resolves', () => {
-    expect(pickButtonStyleBox({}, defaults, 'disabled')).toBe(defaults.disabled);
+  it('reads the box of the draw state', () => {
+    expect(pickButtonStyleBox({ normal, disabled }, 'disabled')).toBe(disabled);
   });
 
   // `Button::_get_current_stylebox` (`scene/gui/button.cpp:100-148`): every
   // draw-state arm reads `rtl && has_theme_stylebox("<state>_mirrored")`
   // before its plain key.
   it('prefers the <state>_mirrored key under RTL', () => {
-    const mirrored = styleBox({ bgColor: { r: 0, g: 0, b: 1, a: 1 } });
-    const plain = styleBox({ bgColor: { r: 1, g: 1, b: 0, a: 1 } });
-    expect(pickButtonStyleBox({ normal: plain, normal_mirrored: mirrored }, defaults, 'normal', true)).toBe(
-      mirrored
-    );
-    expect(pickButtonStyleBox({ disabled_mirrored: mirrored }, defaults, 'disabled', true)).toBe(mirrored);
+    expect(pickButtonStyleBox({ normal, normal_mirrored: mirrored }, 'normal', true)).toBe(mirrored);
   });
 
   it('ignores the <state>_mirrored key under LTR', () => {
-    const mirrored = styleBox({ bgColor: { r: 0, g: 0, b: 1, a: 1 } });
-    const plain = styleBox({ bgColor: { r: 1, g: 1, b: 0, a: 1 } });
-    expect(pickButtonStyleBox({ normal: plain, normal_mirrored: mirrored }, defaults, 'normal', false)).toBe(
-      plain
-    );
-    expect(pickButtonStyleBox({ normal_mirrored: mirrored }, defaults, 'normal', false)).toBe(
-      defaults.normal
-    );
+    expect(pickButtonStyleBox({ normal, normal_mirrored: mirrored }, 'normal', false)).toBe(normal);
   });
 
-  it('falls through to the plain key under RTL when nothing resolved a mirrored one', () => {
-    const plain = styleBox({ bgColor: { r: 1, g: 1, b: 0, a: 1 } });
-    expect(pickButtonStyleBox({ normal: plain }, defaults, 'normal', true)).toBe(plain);
-    expect(pickButtonStyleBox({}, defaults, 'normal', true)).toBe(defaults.normal);
+  it('falls through to the plain key under RTL when no theme sets a mirrored one', () => {
+    expect(pickButtonStyleBox({ normal }, 'normal', true)).toBe(normal);
+  });
+
+  it('names the missing item when no theme sets the box of the state', () => {
+    expect(() => pickButtonStyleBox({ normal }, 'disabled')).toThrow(/"disabled"/);
+  });
+});
+
+describe('largestStyleBoxMargins (button.cpp:55-95)', () => {
+  const sides = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom });
+  const box = (contentMargin: StyleBoxFlatData['contentMargin']) => styleBox({ contentMargin });
+  const small = box(sides(1, 1, 1, 1));
+  const states = { normal: small, pressed: small, hover: small, disabled: small };
+
+  it('takes the largest margin of each side over the four state boxes', () => {
+    const boxes = { ...states, normal: box(sides(9, 2, 3, 4)), disabled: box(sides(5, 8, 7, 6)) };
+    expect(largestStyleBoxMargins(boxes, false)).toEqual(sides(9, 8, 7, 6));
+  });
+
+  it('measures a hover_pressed box where a theme sets one (button.cpp:72-78)', () => {
+    expect(largestStyleBoxMargins({ ...states, hover_pressed: box(sides(6, 6, 6, 6)) }, false).left).toBe(6);
+  });
+
+  it('reads hover_pressed_mirrored under RTL only where hover_pressed is set too (button.cpp:72-73)', () => {
+    const mirrored = box(sides(7, 7, 7, 7));
+    const plain = box(sides(6, 6, 6, 6));
+    expect(largestStyleBoxMargins({ ...states, hover_pressed_mirrored: mirrored }, true).left).toBe(1);
+    const both = { ...states, hover_pressed: plain, hover_pressed_mirrored: mirrored };
+    expect(largestStyleBoxMargins(both, true).left).toBe(7);
+    expect(largestStyleBoxMargins(both, false).left).toBe(6);
+  });
+
+  it('measures the <state>_mirrored boxes under RTL', () => {
+    const boxes = { ...states, normal: box(sides(9, 9, 9, 9)), normal_mirrored: box(sides(4, 4, 4, 4)) };
+    expect(largestStyleBoxMargins(boxes, true).left).toBe(4);
+    expect(largestStyleBoxMargins(boxes, false).left).toBe(9);
   });
 });
 
@@ -138,10 +170,12 @@ const BASE_INPUT: ButtonContentInput = {
   hasText: true,
   textNaturalSize: { x: 50, y: 26 },
   isTextRtl: false,
+  isClipped: false,
+  internalMargin: { left: 0, right: 0 },
   rtl: false,
 };
 
-describe('layoutButtonContent — text only, no icon', () => {
+describe('layoutButtonContent: text only, no icon', () => {
   it('LEFT alignment: text starts flush at the style margin', () => {
     const { icon, text } = layoutButtonContent(BASE_INPUT);
     expect(icon).toBeNull();
@@ -173,7 +207,7 @@ describe('layoutButtonContent — text only, no icon', () => {
  * against it (`text_paragraph.cpp:887-922`). Only CENTER adds
  * `(drawable - text_buf_width) / 2`, and stops shifting once the line overflows (`:902`).
  */
-describe('layoutButtonContent — the paragraph box the alignment measures against', () => {
+describe('layoutButtonContent: the paragraph box the alignment measures against', () => {
   it('CENTER floors its own half (text_paragraph.cpp:904)', () => {
     // drawable 112, text_buf_width 112, length 51: floor(61/2) = 30, not 30.5.
     const { text } = layoutButtonContent({
@@ -237,13 +271,13 @@ describe('layoutButtonContent — the paragraph box the alignment measures again
     expect(text!.offset.x).toBeCloseTo(3.5, 10);
   });
 
-  it('LEFT is untouched by all of it — the source adds nothing for it', () => {
+  it('LEFT is untouched by all of it: the source adds nothing for it', () => {
     const { text } = layoutButtonContent({ ...BASE_INPUT, rectSize: { x: 120.5, y: 32 } });
     expect(text!.offset.x).toBe(4);
   });
 });
 
-describe('layoutButtonContent — icon + text, horizontal icon_alignment', () => {
+describe('layoutButtonContent: icon + text, horizontal icon_alignment', () => {
   const WITH_ICON: ButtonContentInput = {
     ...BASE_INPUT,
     iconNaturalSize: { x: 16, y: 16 },
@@ -264,7 +298,7 @@ describe('layoutButtonContent — icon + text, horizontal icon_alignment', () =>
     expect(text!.offset.x).toBe(25);
   });
 
-  it('icon CENTER: no width reservation at all — text lays out exactly as if there were no icon', () => {
+  it('icon CENTER: no width reservation at all: text lays out exactly as if there were no icon', () => {
     const { icon, text } = layoutButtonContent({ ...WITH_ICON, iconAlignment: HORIZONTAL_ALIGNMENT_CENTER });
     // iconX = 4 + (112-16)/2 = 52.
     expect(icon).toEqual({ rect: { x: 52, y: 8, w: 16, h: 16 } });
@@ -272,7 +306,71 @@ describe('layoutButtonContent — icon + text, horizontal icon_alignment', () =>
   });
 });
 
-describe('layoutButtonContent — vertical_icon_alignment', () => {
+/**
+ * `_internal_margin` (`button.cpp:247-259`): the width a derived class reserves for its own element,
+ * plus `h_separation` once it is above zero, comes off the box before the icon and text lay out in it.
+ * The numbers: 120 wide, style margin 4 a side, 16 px reserved and `h_separation` 4, so the reservation
+ * is 20 and the custom element is 120 - 8 - 20 = 92.
+ */
+describe('layoutButtonContent: an internal margin reserved by a derived class', () => {
+  const WITH_ICON: ButtonContentInput = {
+    ...BASE_INPUT,
+    iconNaturalSize: { x: 16, y: 16 },
+    textAlignment: HORIZONTAL_ALIGNMENT_LEFT,
+  };
+  const LEFT_RESERVED = { left: 16, right: 0 };
+  const RIGHT_RESERVED = { left: 0, right: 16 };
+
+  it('starts a LEFT icon past the left reservation and its separation (button.cpp:374-381)', () => {
+    const { icon, labelBox } = layoutButtonContent({ ...WITH_ICON, internalMargin: LEFT_RESERVED });
+    // x = 4 + 20; the label starts past the icon and its separation: 4 + 20 + 20 = 44, 92 - 20 = 72 wide.
+    expect(icon).toEqual({ rect: { x: 24, y: 8, w: 16, h: 16 } });
+    expect(labelBox).toMatchObject({ leftPx: 44, widthPx: 72 });
+  });
+
+  it('ends a RIGHT icon before the right reservation and its separation (button.cpp:385-387)', () => {
+    const { icon, labelBox } = layoutButtonContent({
+      ...WITH_ICON,
+      iconAlignment: HORIZONTAL_ALIGNMENT_RIGHT,
+      internalMargin: RIGHT_RESERVED,
+    });
+    // x = 120 - 4 - 20 - 16 = 80; the label stays at the left margin, 92 - 20 = 72 wide.
+    expect(icon).toEqual({ rect: { x: 80, y: 8, w: 16, h: 16 } });
+    expect(labelBox).toMatchObject({ leftPx: 4, widthPx: 72 });
+  });
+
+  it('centres a CENTER icon in what the reservation leaves, and keeps the label box whole (button.cpp:374-381)', () => {
+    const { icon, labelBox } = layoutButtonContent({
+      ...WITH_ICON,
+      iconAlignment: HORIZONTAL_ALIGNMENT_CENTER,
+      internalMargin: LEFT_RESERVED,
+    });
+    // x = (92 - 16) / 2 + 4 + 20 = 62.
+    expect(icon).toEqual({ rect: { x: 62, y: 8, w: 16, h: 16 } });
+    expect(labelBox).toMatchObject({ leftPx: 24, widthPx: 92 });
+  });
+
+  it('adds no separation for a reservation of zero (button.cpp:247-259)', () => {
+    const { icon } = layoutButtonContent({ ...WITH_ICON, internalMargin: { left: 0, right: 0 } });
+    expect(icon).toEqual({ rect: { x: 4, y: 8, w: 16, h: 16 } });
+  });
+
+  it('sizes an expanded icon against the box the reservation leaves (button.cpp:333-355)', () => {
+    const { icon } = layoutButtonContent({
+      ...WITH_ICON,
+      hasText: false,
+      textNaturalSize: { x: 0, y: 0 },
+      iconAlignment: HORIZONTAL_ALIGNMENT_CENTER,
+      expandIcon: true,
+      rectSize: { x: 60, y: 32 },
+      internalMargin: LEFT_RESERVED,
+    });
+    // The box is 60 - 8 - 20 = 32 wide and 24 high: the icon grows to 24 and sits at 4 + 20 + (32 - 24) / 2.
+    expect(icon).toEqual({ rect: { x: 28, y: 4, w: 24, h: 24 } });
+  });
+});
+
+describe('layoutButtonContent: vertical_icon_alignment', () => {
   const WITH_ICON: ButtonContentInput = {
     ...BASE_INPUT,
     iconNaturalSize: { x: 16, y: 16 },
@@ -301,7 +399,7 @@ describe('layoutButtonContent — vertical_icon_alignment', () => {
   });
 });
 
-describe('layoutButtonContent — vertical centring floors like the per-glyph Math::floor(cpos.y) (text_server_adv.cpp:4083)', () => {
+describe('layoutButtonContent: vertical centring floors like the per-glyph Math::floor(cpos.y) (text_server_adv.cpp:4083)', () => {
   it('floors a half-pixel centring remainder DOWN, matching a 32px Button around 23px-tall SemiBold text', () => {
     // drawableHeight = 32-4-4=24; (24-23)/2=0.5; +styleMargin.top(4)=4.5 -> floor 4.
     const { text } = layoutButtonContent({
@@ -313,7 +411,7 @@ describe('layoutButtonContent — vertical centring floors like the per-glyph Ma
   });
 });
 
-describe('layoutButtonContent — expand_icon', () => {
+describe('layoutButtonContent: expand_icon', () => {
   it('scales the icon to fill the remaining box height, preserving aspect, when it fits within the remaining width', () => {
     const { icon } = layoutButtonContent({
       ...BASE_INPUT,
@@ -340,7 +438,73 @@ describe('layoutButtonContent — expand_icon', () => {
   });
 });
 
-describe('layoutButtonContent — icon_max_width clamps the FINAL icon size', () => {
+describe('layoutButtonContent: expand_icon under a clipped label', () => {
+  it('leaves the text out of the icon width, as `!is_clipped` skips the subtraction (button.cpp:345)', () => {
+    const { icon } = layoutButtonContent({
+      ...BASE_INPUT,
+      expandIcon: true,
+      isClipped: true,
+      iconNaturalSize: { x: 100, y: 16 },
+    });
+    // w=112, h=24; iw=150 > 112 -> iw=112, ih=16*112/100=17.92 -> round 18.
+    expect(icon).toEqual({ rect: { x: 4, y: 7, w: 112, h: 18 } });
+  });
+});
+
+describe('layoutButtonContent: expand_icon with no room left', () => {
+  it('draws no icon but still takes its negative size off the text box (button.cpp:349-405)', () => {
+    // 56x62, margins 10/8, text 36x30: w=36-(36+4)=-4, h=46-30=16; iw=16>w -> iw=ih=-4.
+    const { icon, drawableSize } = layoutButtonContent({
+      ...BASE_INPUT,
+      rectSize: { x: 56, y: 62 },
+      styleMargin: { left: 10, top: 8, right: 10, bottom: 8 },
+      textNaturalSize: { x: 36, y: 30 },
+      expandIcon: true,
+      iconNaturalSize: { x: 24, y: 24 },
+      verticalIconAlignment: VERTICAL_ALIGNMENT_TOP,
+    });
+    expect(icon).toBeNull();
+    expect(drawableSize).toEqual({ x: 36, y: 50 });
+  });
+});
+
+describe('layoutButtonContent: an icon with no area to draw', () => {
+  const input = {
+    ...BASE_INPUT,
+    rectSize: { x: 56, y: 62 },
+    styleMargin: { left: 10, top: 8, right: 10, bottom: 8 },
+    textNaturalSize: { x: 36, y: 30 },
+    iconAlignment: HORIZONTAL_ALIGNMENT_LEFT,
+  };
+
+  it('draws no icon at exactly zero room, and the text box keeps zero width (button.cpp:349-405)', () => {
+    // The box is 20 wide inside 10/10 margins and the text has no width, so w = 0 and iw = ih = 0.
+    const { icon, drawableSize } = layoutButtonContent({
+      ...input,
+      textNaturalSize: { x: 0, y: 30 },
+      hasText: true,
+      hSeparation: 0,
+      expandIcon: true,
+      iconNaturalSize: { x: 24, y: 24 },
+      verticalIconAlignment: VERTICAL_ALIGNMENT_TOP,
+      rectSize: { x: 20, y: 46 },
+    });
+    expect(icon).toBeNull();
+    expect(drawableSize.x).toBe(0);
+  });
+
+  it('keeps a 1x0 icon (100x1 clamped by icon_max_width 1) and takes its width and the separation off the text box', () => {
+    const { icon, drawableSize } = layoutButtonContent({
+      ...input,
+      iconMaxWidth: 1,
+      iconNaturalSize: { x: 100, y: 1 },
+    });
+    expect(icon!.rect.w).toBe(1);
+    expect(drawableSize.x).toBe(36 - 1 - 4);
+  });
+});
+
+describe('layoutButtonContent: icon_max_width clamps the FINAL icon size', () => {
   it('clamps a non-expanding icon before it is positioned', () => {
     const { icon } = layoutButtonContent({
       ...BASE_INPUT,
@@ -353,7 +517,7 @@ describe('layoutButtonContent — icon_max_width clamps the FINAL icon size', ()
   });
 });
 
-describe('layoutButtonContent — no icon at all', () => {
+describe('layoutButtonContent: no icon at all', () => {
   it('returns icon: null and leaves text layout exactly as the no-icon case', () => {
     const { icon, text } = layoutButtonContent({ ...BASE_INPUT, iconNaturalSize: { x: 0, y: 0 } });
     expect(icon).toBeNull();
@@ -367,7 +531,7 @@ describe('layoutButtonContent — no icon at all', () => {
  * reads only the swapped values, so the expected pixels are the LTR ones of the
  * opposite alignment.
  */
-describe('layoutButtonContent — RTL swaps the text alignment side', () => {
+describe('layoutButtonContent: RTL swaps the text alignment side', () => {
   it('lays LEFT-aligned text out at the RIGHT edge of the drawable box', () => {
     const { text } = layoutButtonContent({ ...BASE_INPUT, rtl: true });
     // align_rtl_checked = RIGHT: 4 (style margin) + (112 - 50) = 66.
@@ -393,7 +557,7 @@ describe('layoutButtonContent — RTL swaps the text alignment side', () => {
   });
 });
 
-describe('layoutButtonContent — RTL swaps the icon side', () => {
+describe('layoutButtonContent: RTL swaps the icon side', () => {
   const WITH_ICON: ButtonContentInput = {
     ...BASE_INPUT,
     rtl: true,
@@ -421,5 +585,189 @@ describe('layoutButtonContent — RTL swaps the icon side', () => {
     const { icon, text } = layoutButtonContent({ ...WITH_ICON, iconAlignment: HORIZONTAL_ALIGNMENT_CENTER });
     expect(icon).toEqual({ rect: { x: 52, y: 8, w: 16, h: 16 } });
     expect(text!.offset.x).toBe(35);
+  });
+});
+
+/** `a`..`j` and `klmno`, each glyph a 10 px advance at pen x 0, 10, 20, and so on. */
+function lineOf(text: string): TextLineLayout {
+  const glyphs = [...text].map((char, index) => ({
+    char,
+    x: index * 10,
+    advance: 10,
+    glyph: null,
+    fontSizePx: 10,
+    fontMetrics: OPEN_SANS_FONT_METRICS,
+  }));
+  return { text, glyphs, widthPx: glyphs.length * 10, paragraphIndex: 0, ascentPx: 15, descentPx: 5 };
+}
+
+describe('buttonDrawnLabel: each line cut to the paragraph box as TextParagraph::draw cuts it', () => {
+  const WIDE = lineOf('abcdefghij');
+
+  it('LEFT keeps the leading glyphs that fit the box', () => {
+    const [drawn] = buttonDrawnLabel([WIDE], 35, HORIZONTAL_ALIGNMENT_LEFT);
+    expect(drawn!.line.text).toBe('abc');
+    expect(drawn!.offsetXPx).toBe(0);
+  });
+
+  it('CENTER starts an overflowing line at the box edge, so it cuts as LEFT does', () => {
+    const [drawn] = buttonDrawnLabel([WIDE], 35, HORIZONTAL_ALIGNMENT_CENTER);
+    expect(drawn!.line.text).toBe('abc');
+    expect(drawn!.offsetXPx).toBe(0);
+  });
+
+  it('CENTER keeps the ceiling leftover of a fractional box as the line offset', () => {
+    const [drawn] = buttonDrawnLabel([WIDE], 34.5, HORIZONTAL_ALIGNMENT_CENTER);
+    expect(drawn!.offsetXPx).toBe(-0.25);
+  });
+
+  it('RIGHT keeps the trailing glyphs, placed at the trailing edge', () => {
+    const [drawn] = buttonDrawnLabel([WIDE], 35, HORIZONTAL_ALIGNMENT_RIGHT);
+    expect(drawn!.line.text).toBe('hij');
+    expect(drawn!.offsetXPx).toBe(-65);
+  });
+
+  it('returns a line that fits whole, centred by a floored half of the slack', () => {
+    const line = lineOf('abc');
+    const [drawn] = buttonDrawnLabel([line], 45, HORIZONTAL_ALIGNMENT_CENTER);
+    expect(drawn!.line).toBe(line);
+    expect(drawn!.offsetXPx).toBe(7);
+  });
+
+  it('cuts each line of a wrapped label on its own', () => {
+    const drawn = buttonDrawnLabel([lineOf('abcdef'), lineOf('gh')], 35, HORIZONTAL_ALIGNMENT_LEFT);
+    expect(drawn.map((entry) => entry.line.text)).toEqual(['abc', 'gh']);
+  });
+});
+
+/** The label width of a text-only minimum size: no style margin, icon or separation adds to it. */
+const labelWidthKept = (props: Parameters<typeof measuredContentMinimumSize>[2]) =>
+  measuredContentMinimumSize(
+    { ...BASE_INPUT, styleMargin: { left: 0, top: 0, right: 0, bottom: 0 } },
+    { x: 40.2, y: 20 },
+    props
+  ).x;
+
+describe('measuredContentMinimumSize: the label width a minimum size keeps (button.cpp:493-495)', () => {
+  it('keeps the measured width, ceiled, with no clipping property', () => {
+    expect(labelWidthKept({})).toBe(41);
+  });
+
+  it('drops the width under clip_text', () => {
+    expect(labelWidthKept({ clipText: true })).toBe(0);
+  });
+
+  it.each([
+    OverrunBehavior.OVERRUN_TRIM_CHAR,
+    OverrunBehavior.OVERRUN_TRIM_WORD,
+    OverrunBehavior.OVERRUN_TRIM_ELLIPSIS,
+    OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS,
+    OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE,
+    OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS_FORCE,
+  ])('drops the width under text_overrun_behavior %i', (overrunBehavior) => {
+    expect(labelWidthKept({ overrunBehavior })).toBe(0);
+  });
+
+  it('keeps the width under OVERRUN_NO_TRIMMING', () => {
+    expect(labelWidthKept({ overrunBehavior: OverrunBehavior.OVERRUN_NO_TRIMMING })).toBe(41);
+  });
+});
+
+describe('trimButtonLabel: the label trimmed to its paragraph box (button.cpp:428-432, text_paragraph.cpp:286-293)', () => {
+  const FONT_SIZE_PX = 16;
+  const UNWRAPPED = { isWrapped: false, fontSizePx: FONT_SIZE_PX };
+
+  function shaped(
+    text: string,
+    boxWidthPx = 0,
+    autowrapMode: EnumValue<typeof AutowrapMode> = AutowrapMode.AUTOWRAP_OFF
+  ) {
+    return shapeText(text, {
+      fontSizePx: FONT_SIZE_PX,
+      boxWidthPx,
+      autowrapMode,
+      lineSpacingPx: 0,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+    });
+  }
+
+  it('trims a line wider than the box', () => {
+    const layout = shaped('alpha bravo charlie');
+    const trimmed = trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 60, UNWRAPPED);
+    expect(trimmed.lines[0]!.widthPx).toBeLessThanOrEqual(60);
+    expect(visualChars(trimmed.lines[0]!).length).toBeLessThan(visualChars(layout.lines[0]!).length);
+  });
+
+  it('keeps a line that fits', () => {
+    const layout = shaped('alpha');
+    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 200, UNWRAPPED)).toBe(layout);
+  });
+
+  it('keeps every line of a wrapped label', () => {
+    const layout = shaped('alpha bravo charlie', 40, AutowrapMode.AUTOWRAP_WORD);
+    expect(layout.lines.length).toBeGreaterThan(1);
+    expect(
+      trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 40, { ...UNWRAPPED, isWrapped: true })
+    ).toBe(layout);
+  });
+
+  it('keeps the label under OVERRUN_NO_TRIMMING', () => {
+    const layout = shaped('alpha bravo charlie');
+    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_NO_TRIMMING, 60, UNWRAPPED)).toBe(layout);
+  });
+
+  it('trims at the ceiled box width, with a floor of 1 px', () => {
+    const layout = shaped('alpha bravo charlie');
+    const atCeil = trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 59.2, UNWRAPPED);
+    expect(atCeil.lines[0]).toEqual(
+      trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 60, UNWRAPPED).lines[0]
+    );
+    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, -5, UNWRAPPED).lines[0]!.widthPx).toBe(
+      0
+    );
+  });
+});
+
+describe('buttonContentMinimumSize: the text and icon terms (button.cpp:492-523)', () => {
+  const left = HORIZONTAL_ALIGNMENT_LEFT;
+  const center = HORIZONTAL_ALIGNMENT_CENTER;
+  /** The content size of a label `textSize` big whose font is `fontHeightPx` tall, beside an icon of `iconNaturalSize`. */
+  const contentSize = (facts: Partial<ButtonContentInput>, textSize = { x: 50, y: 20 }, fontHeightPx = 20) =>
+    buttonContentMinimumSize(
+      { ...BASE_INPUT, ...facts },
+      { widthPx: textSize.x, heightPx: textSize.y, linePitchPx: 20, fontHeightPx } as TextLayoutResult,
+      {}
+    );
+
+  it('adds a side icon and the separation to the text width and floors the height on the icon', () => {
+    expect(contentSize({ iconNaturalSize: { x: 16, y: 24 }, iconAlignment: left })).toEqual({ x: 70, y: 24 });
+  });
+
+  it('takes the wider of the text and a centred icon', () => {
+    expect(contentSize({ iconNaturalSize: { x: 80, y: 16 }, iconAlignment: center })).toEqual({
+      x: 80,
+      y: 20,
+    });
+  });
+
+  it('is the text alone without an icon', () => {
+    expect(contentSize({ iconNaturalSize: null })).toEqual({ x: 50, y: 20 });
+  });
+
+  it('stacks a TOP icon between the whole paragraph and ONE more line height (button.cpp:497-502,517-521)', () => {
+    const size = contentSize(
+      { iconNaturalSize: { x: 16, y: 16 }, verticalIconAlignment: VERTICAL_ALIGNMENT_TOP },
+      { x: 50, y: 60 }
+    );
+    // 60 (three rows) + 16 (icon) + 20 (one line, `font->get_height`), not another 60.
+    expect(size.y).toBe(96);
+  });
+
+  it('floors a CENTRED icon on the line height too, so a one-row paragraph never drops below it', () => {
+    expect(contentSize({ iconNaturalSize: null }, { x: 50, y: 10 }).y).toBe(20);
+  });
+
+  it('floors on the tallest face of the fallback chain, `Font::get_height` (font.cpp:210-220)', () => {
+    expect(contentSize({ iconNaturalSize: null }, { x: 50, y: 20 }, 32).y).toBe(32);
   });
 });

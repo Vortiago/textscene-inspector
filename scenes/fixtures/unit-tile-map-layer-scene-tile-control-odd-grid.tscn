@@ -1,0 +1,22 @@
+[gd_scene load_steps=4 format=3 uid="uid://unittilemaplayerscenetilecontroloddgrid"]
+
+; The one variable: a TileSet whose tile size is odd (15 px), so a cell centre falls on a half pixel
+; (7.5). Godot sets a Control scene tile root to map_to_local + position and snaps that sum
+; (tile_map_layer.cpp:1636, control.cpp:727-737), so the 10 px root draws at x 108, y 28. The other
+; scene tile goldens use a 64 px grid, whose centres are whole pixels.
+
+[ext_resource type="PackedScene" path="res://unit-tile-map-layer-scene-tile-plain-control.tscn" id="1_plain"]
+
+[sub_resource type="TileSetScenesCollectionSource" id="TileSetScenesCollectionSource_a"]
+scenes/1/scene = ExtResource("1_plain")
+
+[sub_resource type="TileSet" id="TileSet_b"]
+tile_size = Vector2i(15, 15)
+sources/0 = SubResource("TileSetScenesCollectionSource_a")
+
+[node name="World" type="Node2D"]
+
+[node name="Layer" type="TileMapLayer" parent="."]
+position = Vector2(100, 20)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0)
+tile_set = SubResource("TileSet_b")

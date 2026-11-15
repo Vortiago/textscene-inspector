@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 
 describe('parseStandardMaterial3DScalars: ao_light_affect', () => {
   it('defaults to 0, where the map occludes indirect light only', () => {

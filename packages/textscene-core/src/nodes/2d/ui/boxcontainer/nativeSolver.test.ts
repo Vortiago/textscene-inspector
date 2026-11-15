@@ -11,7 +11,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import './nativeSolver';
 import '../hboxcontainer/nativeSolver';
 import '../vboxcontainer/nativeSolver';
@@ -20,7 +20,7 @@ const THEME = nativeTheme(1);
 
 function child(path: string, minSize: { x: number; y: number }): SolveNode {
   const node: TscnNode = controlNode(path, 'Control', { name: path, customMinimumSize: minSize });
-  return { ...solveNode(), path: `Box/${path}`, node };
+  return withThemeItems({ ...solveNode(), path: `Box/${path}`, node });
 }
 
 function boxRoot(type: string, vertical: boolean | undefined, children: SolveNode[]): SolveNode {
@@ -33,7 +33,7 @@ function boxRoot(type: string, vertical: boolean | undefined, children: SolveNod
   };
   if (vertical !== undefined) properties.vertical = vertical;
   const node: TscnNode = controlNode('Box', type, properties);
-  return { ...solveNode(), path: 'Box', node, children };
+  return withThemeItems({ ...solveNode(), path: 'Box', node, children });
 }
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 100, h: 50 };

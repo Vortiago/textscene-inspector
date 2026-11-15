@@ -1,7 +1,4 @@
-/**
- * Skeleton2D is parsed, and its modification stack is a gap (ADR-0045), not a
- * nil effect: it registers `pending` on the Node2D component.
- */
+/** Skeleton2D registers its parse and the component that drives its bones (ADR-0045). */
 
 import { describe, expect, it, vi } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
@@ -9,43 +6,35 @@ import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { TscnParser } from '../../../parser/TscnParser';
 import { readFixture } from '../../../linter/testing/fixtureCheck';
 import * as logger from '../../../logger';
-import { parseNode2D } from '../../base/node2d/parser';
-import { Node2D } from '../../base/node2d/Component';
+import { Skeleton2D } from './Component';
+import { parseSkeleton2D } from './parser';
 import './index';
 import './index.r3f';
 
 describe('Skeleton2D registration', () => {
-  it('registers the parseNode2D parse it reuses', () => {
-    const registration = nodeRegistry.getRegistration('Skeleton2D');
-    expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode2D);
+  it('registers its own parse', () => {
+    expect(nodeRegistry.getRegistration('Skeleton2D')?.parser).toBe(parseSkeleton2D);
   });
 
-  it('reuses the Node2D component so children keep their transform space', () => {
-    expect(nodeComponentRegistry.get('Skeleton2D')).toBe(Node2D);
+  it('registers the component that drives the bones', () => {
+    expect(nodeComponentRegistry.get('Skeleton2D')).toBe(Skeleton2D);
   });
 
-  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.renderIntentOf('Skeleton2D')).toBe('pending');
+  it('registers a drive that draws nothing of its own (ADR-0045)', () => {
+    expect(nodeComponentRegistry.renderIntentOf('Skeleton2D')).toBe('transform-only');
   });
 
-  it('reads its own fixture through the lenient parser, stack sub-resource and all', () => {
-    // The fixture carries a SkeletonModificationStack2D sub-resource, a type the
-    // previewer does not model. The lenient path must survive it rather than
-    // drop the node.
+  it('reads its own fixture through the lenient parser, with the reference to its stack', () => {
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
     const scene = new TscnParser().parse(readFixture('unit-skeleton-2d.tscn'));
     const skeleton = scene.nodes[0]?.children[0];
 
     expect(skeleton?.type).toBe('Skeleton2D');
-    // `properties` is what parseNode2D produced, so it holds the Node2D
-    // transform and nothing else: `modification_stack` survives only in the raw
-    // bag, which is exactly the divergence the sheet records.
-    expect(skeleton?.rawProperties.modification_stack).toBe(
-      'SubResource("SkeletonModificationStack2D_stack")'
-    );
-    expect(skeleton?.properties).toMatchObject({ position: { x: 10, y: 20 } });
+    expect(skeleton?.properties).toMatchObject({
+      position: { x: 10, y: 20 },
+      modificationStack: 'SubResource("SkeletonModificationStack2D_stack")',
+    });
     expect(scene.internalResources?.map((r) => r.type)).toContain('SkeletonModificationStack2D');
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('Unsupported node type'));
 

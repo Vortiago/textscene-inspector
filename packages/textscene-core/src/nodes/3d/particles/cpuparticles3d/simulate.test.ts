@@ -1,7 +1,7 @@
 /**
  * The CPUParticles3D frozen pose against Godot 4.6.3's own `particle_data`. Each expected buffer is
  * what `RenderingServer.multimesh_get_buffer` returned for the emitter after its enter-tree settle,
- * read by /mnt/project-files/cpuparticles3d-633/oracle.gd with the properties each case names.
+ * set up with the properties each case names.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -18,7 +18,7 @@ import { ORACLE_CASES, type OracleCase } from './simulateOracle.testkit';
 import type { Curve } from '../../../../resources/curves/curve/types';
 import { curveOf, point } from '../../../../resources/curves/curve/curve.testkit';
 import type { Gradient } from '../../../../resources/textures/gradienttexture2d/types';
-import { GradientInterpolationMode } from '../../../../godot/scene/gradientTexture';
+import { GradientColorSpace, GradientInterpolationMode } from '../../../../godot/scene/gradientTexture';
 import { PARAM_SLOTS } from '../../../shared/cpuparticles/params';
 import { storedColor, storedReal } from '../../../../godot/math/real';
 
@@ -40,6 +40,7 @@ function gradientOf(stops: number[][] | undefined): Gradient | null {
       color: storedColor({ r: r!, g: g!, b: b!, a: a! }),
     })),
     interpolationMode: GradientInterpolationMode.LINEAR,
+    interpolationColorSpace: GradientColorSpace.SRGB,
   };
 }
 

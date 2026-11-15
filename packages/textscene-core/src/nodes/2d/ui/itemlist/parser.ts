@@ -99,6 +99,7 @@ export function parseItemList(
     iconScale: parseOptionalFloat(properties.icon_scale),
     fixedIconSize: parseOptionalVector2i(properties.fixed_icon_size, 'fixed_icon_size'),
     textOverrunBehavior: parseOptionalInt(properties.text_overrun_behavior),
+    clipContents: parseOptionalBool(properties.clip_contents),
     items: legacyItems ?? parseItems(properties, itemCount),
     // No `item_count` key exists on a legacy file; stand in with the row
     // count `add_item` would have left `get_item_count()` at.

@@ -7,16 +7,15 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CollisionGizmo } from './CollisionGizmo';
-import type { TscnInternalResource } from '../../../../parser/types';
+import type { Shape3DClass, Shape3DResource } from '../../../../resources/shapes/shape3d';
 import { linePositions } from '../../../../r3f/testing/GizmoScene';
 import { settlePendingLoads } from '../../../../r3f/testing/settleLoads';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
-import { findMesh } from '../../../3d/testing/reactThreeTestInstance';
 import { godotDebugLinesFor, undirectedEdges } from '../../shared/godotDebugLines.testkit';
 
 /** Mounts the gizmo, lets its lazy hull chunk land, and returns the lines drawn, none when it draws none. */
-async function drawn(shape: TscnInternalResource) {
+async function drawn(shape: Shape3DResource) {
   const { loader } = createFakeResourceLoader();
   const gizmo = (
     <ResourceLoaderProvider loader={loader}>
@@ -31,7 +30,7 @@ async function drawn(shape: TscnInternalResource) {
   return { positions, meshCount: renderer.scene.findAllByType('Mesh').length };
 }
 
-describe.each([
+describe.each<Shape3DClass>([
   'BoxShape3D',
   'SphereShape3D',
   'CylinderShape3D',
@@ -48,22 +47,13 @@ describe.each([
   });
 });
 
-describe.each(['ConcavePolygonShape3D', 'ConvexPolygonShape3D'])('<CollisionGizmo> %s', (type) => {
-  it.each(godotDebugLinesFor(type))('draws every edge Godot draws for $name', async ({ shape, lines }) => {
-    const { positions, meshCount } = await drawn(shape);
-    expect(undirectedEdges(positions)).toEqual(undirectedEdges(lines));
-    expect(meshCount).toBe(0);
-  });
-});
-
-describe('<CollisionGizmo> unknown shape', () => {
-  it('still falls back to a unit box for a genuinely unknown shape type', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <CollisionGizmo
-        shape={{ id: 'NotAShape3D_1', type: 'NotAShape3D', data: {} }}
-        color={new THREE.Color(0x00ff88)}
-      />
-    );
-    expect((findMesh(renderer.scene).geometry as THREE.BufferGeometry).type).toBe('BoxGeometry');
-  });
-});
+describe.each<Shape3DClass>(['ConcavePolygonShape3D', 'ConvexPolygonShape3D'])(
+  '<CollisionGizmo> %s',
+  (type) => {
+    it.each(godotDebugLinesFor(type))('draws every edge Godot draws for $name', async ({ shape, lines }) => {
+      const { positions, meshCount } = await drawn(shape);
+      expect(undirectedEdges(positions)).toEqual(undirectedEdges(lines));
+      expect(meshCount).toBe(0);
+    });
+  }
+);

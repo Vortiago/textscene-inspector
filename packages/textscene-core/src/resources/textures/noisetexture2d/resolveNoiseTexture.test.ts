@@ -1,24 +1,21 @@
 /**
- * Resolving a NoiseTexture2D from `scenes/demos/3d/procedural_materials/materials/ice.tres`:
+ * Building a NoiseTexture2D from `scenes/demos/3d/procedural_materials/materials/ice.tres`:
  * a seamless ramped albedo and an `as_normal_map` normal texture, each naming
- * sub-resources of that file. Sizes shrink from 1024x1024, about a second per
+ * sub-resources of that file, here as a scene's tables. Sizes shrink from 1024x1024, about a second per
  * texture, since the pipeline is the same at any size. The build runs as a worker
  * job, here through the in-thread runner, which runs the same job.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { NO_FILES, poolsOf } from '../../testing/loadedFiles';
 import * as THREE from 'three';
-import { parseTresFile } from '../../../parser/parsedResource';
-import type { TscnInternalResource } from '../../../parser/types';
+import { loadedValue } from '../../reading/reading.testkit';
+import { TEXTURE_2D } from '../texture2d/kind';
 import { WorkerJobRunner } from '../../../workers/WorkerJobRunner';
 import { resetProceduralTextures, type JobRunner } from '../proceduralBuilds';
-import { resolveNoiseTexture2D } from './resolveNoiseTexture';
+import { noiseTexture2D } from './resolveNoiseTexture';
 import { textureView } from '../textureView';
 import { godotTextureFilterState, samplesMipChain } from '../godotTextureFilter';
 
-const ICE = `[gd_resource type="StandardMaterial3D" format=3]
-
-[sub_resource type="Gradient" id="Gradient_16ij7"]
+const ICE = `[sub_resource type="Gradient" id="Gradient_16ij7"]
 colors = PackedColorArray(0.6, 0.8, 1, 1, 1, 1, 1, 1)
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_qbhty"]
@@ -48,31 +45,29 @@ noise = SubResource("FastNoiseLite_5tmlw")
 seamless = true
 as_normal_map = true
 bump_strength = 4.0
-
-[resource]
-albedo_texture = SubResource("NoiseTexture2D_m8iqd")
-normal_texture = SubResource("NoiseTexture2D_gyhec")
 `;
 
-const ice = parseTresFile(ICE);
 const runner = new WorkerJobRunner();
 
 /** The file with the albedo's `generate_mipmaps` off, which changes no pixel of its base. */
-function withoutMipmaps() {
-  return parseTresFile(
-    ICE.replace(
-      'seamless = true\n\n[sub_resource type="FastNoiseLite" id="FastNoiseLite_5tmlw"]',
-      'seamless = true\ngenerate_mipmaps = false\n\n[sub_resource type="FastNoiseLite" id="FastNoiseLite_5tmlw"]'
-    )
-  );
-}
+const WITHOUT_MIPMAPS = ICE.replace(
+  'seamless = true\n\n[sub_resource type="FastNoiseLite" id="FastNoiseLite_5tmlw"]',
+  'seamless = true\ngenerate_mipmaps = false\n\n[sub_resource type="FastNoiseLite" id="FastNoiseLite_5tmlw"]'
+);
 
 const ALBEDO = 'SubResource("NoiseTexture2D_m8iqd")';
 const NORMAL = 'SubResource("NoiseTexture2D_gyhec")';
 
+/** The build lookup of the NoiseTexture2D `ref` names in tables written as `sceneText`. */
+function lookupOf(ref: string, sceneText = ICE) {
+  const source = loadedValue(TEXTURE_2D, ref, sceneText);
+  if (source.form !== 'noise') throw new Error(`expected a noise source, got ${source.form}`);
+  return noiseTexture2D(source);
+}
+
 /** Builds the texture `ref` names, and its cache key. */
-async function built(ref: string, resources: readonly TscnInternalResource[] = ice.subResources) {
-  const lookup = resolveNoiseTexture2D(ref, poolsOf(resources), NO_FILES);
+async function built(ref: string, sceneText = ICE) {
+  const lookup = lookupOf(ref, sceneText);
   if (lookup?.status !== 'pending') throw new Error(`expected a pending build, got ${lookup?.status}`);
   const handle = lookup.start(runner);
   const texture = await handle.settled;
@@ -85,7 +80,7 @@ afterEach(() => {
   resetProceduralTextures();
 });
 
-describe('resolveNoiseTexture2D — the ice.tres shape', () => {
+describe('noiseTexture2D — the ice.tres shape', () => {
   it('builds the albedo slot as a ramp-coloured texture', async () => {
     const { texture } = await built(ALBEDO);
     expect(texture.image.width).toBe(32);
@@ -124,7 +119,7 @@ describe('resolveNoiseTexture2D — the ice.tres shape', () => {
 
   it('is ready with the same texture once built', async () => {
     const { texture, key } = await built(ALBEDO);
-    expect(resolveNoiseTexture2D(ALBEDO, poolsOf(ice.subResources), NO_FILES)).toEqual({
+    expect(lookupOf(ALBEDO)).toEqual({
       status: 'ready',
       texture,
       key,
@@ -133,7 +128,7 @@ describe('resolveNoiseTexture2D — the ice.tres shape', () => {
 
   it('reuses the texture after a re-parse of an unchanged file', async () => {
     const { texture } = await built(ALBEDO);
-    const reparsed = resolveNoiseTexture2D(ALBEDO, poolsOf(parseTresFile(ICE).subResources), NO_FILES);
+    const reparsed = lookupOf(ALBEDO);
     expect(reparsed?.status === 'ready' && reparsed.texture).toBe(texture);
   });
 
@@ -143,20 +138,20 @@ describe('resolveNoiseTexture2D — the ice.tres shape', () => {
   });
 
   it('carries no chain with generate_mipmaps off', async () => {
-    const { texture } = await built(ALBEDO, withoutMipmaps().subResources);
+    const { texture } = await built(ALBEDO, WITHOUT_MIPMAPS);
     expect(texture.mipmaps).toHaveLength(0);
   });
 
   it('keys the texture without a chain apart from the one the job builds', () => {
-    const chained = resolveNoiseTexture2D(ALBEDO, poolsOf(ice.subResources), NO_FILES);
-    const unchained = resolveNoiseTexture2D(ALBEDO, poolsOf(withoutMipmaps().subResources), NO_FILES);
+    const chained = lookupOf(ALBEDO);
+    const unchained = lookupOf(ALBEDO, WITHOUT_MIPMAPS);
     expect(unchained?.key).toBe(`${chained?.key}:without-mipmaps`);
   });
 
   it('drops the chain without sampling again when generate_mipmaps goes off', async () => {
     const { texture } = await built(ALBEDO);
     const run = vi.fn(runner.run.bind(runner)) as JobRunner['run'];
-    const lookup = resolveNoiseTexture2D(ALBEDO, poolsOf(withoutMipmaps().subResources), NO_FILES);
+    const lookup = lookupOf(ALBEDO, WITHOUT_MIPMAPS);
     if (lookup?.status !== 'pending') throw new Error(`expected a pending build, got ${lookup?.status}`);
 
     const unchained = await lookup.start({ run }).settled;
@@ -169,82 +164,36 @@ describe('resolveNoiseTexture2D — the ice.tres shape', () => {
   });
 
   it('is ready at once, with the chain, when generate_mipmaps goes on', async () => {
-    const { texture } = await built(ALBEDO, withoutMipmaps().subResources);
-    const lookup = resolveNoiseTexture2D(ALBEDO, poolsOf(ice.subResources), NO_FILES);
+    const { texture } = await built(ALBEDO, WITHOUT_MIPMAPS);
+    const lookup = lookupOf(ALBEDO);
     expect(lookup?.status === 'ready' && lookup.texture.mipmaps).toHaveLength(6);
     expect(lookup?.status === 'ready' && lookup.texture).not.toBe(texture);
   });
 
   it('builds again after an edit to its noise', () => {
-    const edited = parseTresFile(
-      ICE.replace(
-        'frequency = 0.003\nfractal_type = 2\nfractal_lacunarity = 2.5',
-        'frequency = 0.004\nfractal_type = 2\nfractal_lacunarity = 2.5'
-      )
+    const edited = ICE.replace(
+      'frequency = 0.003\nfractal_type = 2\nfractal_lacunarity = 2.5',
+      'frequency = 0.004\nfractal_type = 2\nfractal_lacunarity = 2.5'
     );
-    const before = resolveNoiseTexture2D(ALBEDO, poolsOf(ice.subResources), NO_FILES);
-    const after = resolveNoiseTexture2D(ALBEDO, poolsOf(edited.subResources), NO_FILES);
+    const before = lookupOf(ALBEDO);
+    const after = lookupOf(ALBEDO, edited);
     expect(after?.key).not.toBe(before?.key);
   });
 
   it('keys on content, not on the sub-resource id', () => {
-    const renamed = parseTresFile(ICE.replaceAll('NoiseTexture2D_m8iqd', 'NoiseTexture2D_renamed'));
-    expect(
-      resolveNoiseTexture2D('SubResource("NoiseTexture2D_renamed")', poolsOf(renamed.subResources), NO_FILES)
-        ?.key
-    ).toBe(resolveNoiseTexture2D(ALBEDO, poolsOf(ice.subResources), NO_FILES)?.key);
-  });
-
-  it('declines every reference that is not an inline NoiseTexture2D', () => {
-    expect(resolveNoiseTexture2D(undefined, poolsOf(ice.subResources), NO_FILES)).toBeNull();
-    expect(resolveNoiseTexture2D('ExtResource("1")', poolsOf(ice.subResources), NO_FILES)).toBeNull();
-    expect(resolveNoiseTexture2D('res://noise.png', poolsOf(ice.subResources), NO_FILES)).toBeNull();
-    // A Gradient sub-resource is not a texture, and the gradient slice declines it
-    // too, so the dispatch falls through to the async path.
-    expect(
-      resolveNoiseTexture2D('SubResource("Gradient_16ij7")', poolsOf(ice.subResources), NO_FILES)
-    ).toBeNull();
-    expect(resolveNoiseTexture2D('SubResource("nope")', poolsOf(ice.subResources), NO_FILES)).toBeNull();
-  });
-
-  it('declines a texture whose noise reference is missing or of another Noise type', () => {
-    const broken = parseTresFile(`[gd_resource type="StandardMaterial3D" format=3]
-
-[sub_resource type="NoiseTexture2D" id="no_noise"]
-width = 8
-height = 8
-
-[sub_resource type="FastNoiseLite" id="n"]
-
-[sub_resource type="NoiseTexture2D" id="dangling"]
-noise = SubResource("missing")
-
-[resource]
-`);
-    expect(
-      resolveNoiseTexture2D('SubResource("no_noise")', poolsOf(broken.subResources), NO_FILES)
-    ).toBeNull();
-    expect(
-      resolveNoiseTexture2D('SubResource("dangling")', poolsOf(broken.subResources), NO_FILES)
-    ).toBeNull();
+    const renamed = ICE.replaceAll('NoiseTexture2D_m8iqd', 'NoiseTexture2D_renamed');
+    expect(lookupOf('SubResource("NoiseTexture2D_renamed")', renamed)?.key).toBe(lookupOf(ALBEDO)?.key);
   });
 
   it("declines a texture wider than the previewer's texture ceiling, before any build", () => {
-    const oversized = parseTresFile(`[gd_resource type="StandardMaterial3D" format=3]
-
-[sub_resource type="FastNoiseLite" id="n"]
+    const oversized = `[sub_resource type="FastNoiseLite" id="n"]
 
 [sub_resource type="NoiseTexture2D" id="wide"]
 width = 2000000000
 height = 512
 noise = SubResource("n")
-
-[resource]
-albedo_texture = SubResource("wide")
-`);
-    expect(
-      resolveNoiseTexture2D('SubResource("wide")', poolsOf(oversized.subResources), NO_FILES)
-    ).toBeNull();
+`;
+    expect(lookupOf('SubResource("wide")', oversized)).toBeNull();
   });
 });
 

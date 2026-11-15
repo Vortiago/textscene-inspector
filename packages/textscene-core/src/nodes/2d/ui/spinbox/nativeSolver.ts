@@ -1,7 +1,8 @@
 /**
  * SpinBox's native rect solver: `SpinBox::get_minimum_size` (`scene/gui/spin_box.cpp:82-86`),
  * `_compute_sizes`/`_get_widest_button_icon_width` (`:382-427`), `_update_text` (`:88-114`) and
- * `_update_buttons_state_for_current_value` (`:635-645`). `Component.tsx` paints.
+ * `_update_buttons_state_for_current_value` (`:635-645`), with its internal LineEdit. `Component.tsx`
+ * paints the buttons, and the LineEdit's own painter draws the field.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -9,56 +10,36 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { formatControlNumber } from '../../../../godot/text/numberFormat';
-import type {
-  MinimumSizeFn,
-  SolveContext,
-  TextureSlotRequest,
-  TextureSlotsFn,
-} from '../../../../r3f/controls/native/solverRegistry';
-import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { shapeLineEditText } from '../lineedit/nativeSolver';
-import { textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
-import { TextDirection } from '../../../../godot/text/textServerEnums';
-import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
-import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
-import { peekSceneFontMetrics } from '../../../../r3f/controls/native/text/sceneFontLoader';
+import { defaultConstant } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import type { MinimumSizeFn, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+import { controlLayoutOrder, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
-  resolveThemeFontIn,
-  resolveThemeFontSizeIn,
-  themeResolutionScope,
-  type ThemeResolutionScope,
-} from '../../../../resources/styles/theme/lookup';
-import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
-import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import {
-  pickLineEditStyleBox,
-  LINE_EDIT_DEFAULT_FONT_COLOR,
-  LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
-} from '../lineedit/nativeSolver';
+  internalControlsOf,
+  registerInternalControls,
+  type InternalControlsFn,
+  type InternalLayoutFn,
+} from '../../../../r3f/controls/native/internalControls';
+import { parseTextDirectionProperties } from '../../../../parser/textDirectionParser';
+import { parseStructuredTextOverride } from '../../../../parser/structuredTextOverrideParser';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
+import type { LineEditProperties } from '../lineedit/types';
+import { resolveRangeValue } from '../shared/range';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SpinBoxProperties } from './types';
-import type { Vector2 } from '../../../../godot/math/vector';
+import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
+import { themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
 
 /** `Range`'s default `step` (`scene/gui/range.h:42`). SpinBox's constructor never calls `set_step` (`spin_box.cpp:723-740`), so this is what an unauthored `step` resolves to. */
 const SPIN_BOX_STEP_DEFAULT = 1;
 
-/**
- * `default_theme.cpp:647-648` sets `buttons_width`/`field_and_buttons_separation` as bare
- * literals, unlike the scaled ItemList neighbours at `default_theme.cpp:946-949`, so Godot
- * never multiplies either by `default_theme_scale`.
- */
-const SPIN_BOX_BUTTONS_WIDTH = 16;
-const SPIN_BOX_FIELD_BUTTONS_SEPARATION = 2;
-/**
- * `value_up.svg`/`value_down.svg` (`scene/theme/icons/`) declare `width="16" height="8"`.
- * Vendored icons are never rescaled by the project theme scale (`CHECKBOX_ICON_NATURAL_SIZE`
- * in `checkbox/nativeSolver.ts`).
- */
-export const SPIN_BOX_ARROW_ICON_SIZE: Vector2 = { x: 16, y: 8 };
+/** Godot never scales `buttons_width` or `field_and_buttons_separation`. */
+const SPIN_BOX_BUTTONS_WIDTH = defaultConstant('SpinBox', 'buttons_width');
+const SPIN_BOX_FIELD_BUTTONS_SEPARATION = defaultConstant('SpinBox', 'field_and_buttons_separation');
+/** `value_up.svg`/`value_down.svg` (`scene/theme/icons/`) declare `width="16" height="8"`. */
+const SPIN_BOX_ARROW_ICON_SIZE: Vector2 = { x: 16, y: 8 };
 
 /** An arrow's top-left in its button's rect: `Point2i` centring, integer division (`spin_box.cpp:475-476`, `:490-491`). */
 export function spinBoxArrowPosition(button: Rect2, iconSize: Vector2): Vector2 {
@@ -74,22 +55,21 @@ const SPIN_BOX_ICON_NAMES: readonly SpinBoxIconName[] = ['up', 'down'];
 
 /** Which of `up`/`down` have a themed answer, for `SolveNode.textureSlots`. */
 export const spinBoxTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
-  const requests: TextureSlotRequest[] = [];
-  for (const name of SPIN_BOX_ICON_NAMES) {
-    const themed = themedIcons[name];
-    if (themed) requests.push(themedSlotRequest(name, themed));
-  }
-  return requests;
+  return themedSlotRequests(SPIN_BOX_ICON_NAMES, themedIcons);
 };
 
-/** This icon's resolved size: themed if `SolveNode.textureSlots` resolved it, else the vendored default. */
-export function spinBoxIconSize(n: Pick<SolveNode, 'textureSlots'>, name: SpinBoxIconName): Vector2 {
-  return n.textureSlots[name] ?? SPIN_BOX_ARROW_ICON_SIZE;
+/** This icon's resolved size: themed if `SolveNode.textureSlots` resolved it, else the vendored default at `scale`. */
+export function spinBoxIconSize(
+  n: Pick<SolveNode, 'textureSlots'>,
+  name: SpinBoxIconName,
+  scale: number
+): Vector2 {
+  return themedIconSize(n.textureSlots, name, SPIN_BOX_ARROW_ICON_SIZE, scale);
 }
 
 /** `SpinBox::_get_widest_button_icon_width` (`spin_box.cpp:411-424`) over `up`/`down`, the icons this codebase draws. */
-export function spinBoxWidestButtonIconWidth(n: Pick<SolveNode, 'textureSlots'>): number {
-  return Math.max(spinBoxIconSize(n, 'up').x, spinBoxIconSize(n, 'down').x);
+export function spinBoxWidestButtonIconWidth(n: Pick<SolveNode, 'textureSlots'>, scale: number): number {
+  return Math.max(spinBoxIconSize(n, 'up', scale).x, spinBoxIconSize(n, 'down', scale).x);
 }
 
 /**
@@ -97,15 +77,12 @@ export function spinBoxWidestButtonIconWidth(n: Pick<SolveNode, 'textureSlots'>)
  * `set_min_buttons_width_from_icons = 1`, since a SpinBox's per-node theme-constant overrides are
  * not modelled. `widestIconWidth` is `spinBoxWidestButtonIconWidth`'s.
  */
-export function spinBoxButtonsBlockWidth(widestIconWidth: number): number {
-  const separation = SPIN_BOX_FIELD_BUTTONS_SEPARATION;
-  const wanted = SPIN_BOX_BUTTONS_WIDTH + separation;
-  const iconEnforced = widestIconWidth + separation;
-  return Math.max(wanted, iconEnforced);
+function spinBoxButtonsBlockWidth(widestIconWidth: number): number {
+  return Math.max(SPIN_BOX_BUTTONS_WIDTH, widestIconWidth) + SPIN_BOX_FIELD_BUTTONS_SEPARATION;
 }
 
-/** `buttons_vertical_separation`: `default_theme.cpp:646` sets it to 0, and no per-node theme-constant override is modelled. */
-const SPIN_BOX_BUTTONS_VERTICAL_SEPARATION = 0;
+/** The table's `SpinBox/buttons_vertical_separation`. No per-node theme-constant override is modelled. */
+const SPIN_BOX_BUTTONS_VERTICAL_SEPARATION = defaultConstant('SpinBox', 'buttons_vertical_separation');
 
 interface SpinBoxLayout {
   /** The internal field's rect: `line_edit`'s full-rect preset with a right offset of `-buttons_block_width` (`spin_box.cpp:394-395`). */
@@ -119,9 +96,10 @@ interface SpinBoxLayout {
 }
 
 /**
- * `SpinBox::_compute_sizes`'s per-draw geometry (`spin_box.cpp:399-410`). `Size2i size =
- * get_size();` truncates toward zero, so `rectSize` is truncated once. `rtl` (`SolveNode.rtl`)
- * puts the buttons block at x 0 and the separator directly after it (`:403,409`).
+ * `SpinBox::_compute_sizes`'s geometry (`spin_box.cpp:382-410`). The buttons read `Size2i size =
+ * get_size()`, truncated toward zero. The field is the LineEdit at full-rect anchors and offsets
+ * `[0, -buttons_block_width]` (`:394-395`), so it keeps the fractional size. `rtl` puts the buttons
+ * block at x 0 and the separator after it (`:403,409`).
  */
 export function spinBoxLayout(rectSize: Vector2, widestIconWidth: number, rtl = false): SpinBoxLayout {
   const w = Math.trunc(rectSize.x);
@@ -134,19 +112,23 @@ export function spinBoxLayout(rectSize: Vector2, widestIconWidth: number, rtl = 
   const buttonDownHeight = h - buttonUpHeight - vSep;
   const secondButtonTop = h - buttonDownHeight;
 
-  const fieldWidth = Math.max(0, w - blockWidth);
-  // The field has no RTL branch: it is the `LineEdit`'s full-rect preset at offsets
-  // `[0, -buttons_block_width]` (`:394-395`), and its `Control::_size_changed` mirror
-  // (`control.cpp:1785-1787`) moves it to `parent_width - x - w`.
-  const fieldLeft = rtl ? w - fieldWidth : 0;
-  const separatorLeft = rtl ? buttonsWidth : fieldWidth;
+  const separatorLeft = rtl ? buttonsWidth : Math.max(0, w - blockWidth);
 
   return {
-    fieldRect: { x: fieldLeft, y: 0, w: fieldWidth, h },
+    fieldRect: spinBoxFieldRect(rectSize, blockWidth, rtl),
     upRect: { x: buttonsLeft, y: 0, w: buttonsWidth, h: buttonUpHeight },
     downRect: { x: buttonsLeft, y: secondButtonTop, w: buttonsWidth, h: buttonDownHeight },
     fieldAndButtonsSeparatorRect: { x: separatorLeft, y: 0, w: SPIN_BOX_FIELD_BUTTONS_SEPARATION, h },
   };
+}
+
+/**
+ * The LineEdit's rect: no RTL branch of its own, since `Control::_size_changed` mirrors it
+ * (`control.cpp:1785-1787`) to `parent_width - x - w`.
+ */
+function spinBoxFieldRect(rectSize: Vector2, blockWidth: number, rtl: boolean): Rect2 {
+  const w = Math.max(0, rectSize.x - blockWidth);
+  return { x: rtl ? rectSize.x - w : 0, y: 0, w, h: rectSize.y };
 }
 
 /**
@@ -167,7 +149,7 @@ function stepDecimals(step: number): number {
 }
 
 /** `Math::range_step_decimals` (`core/math/math_funcs.cpp:89-94`): `step < 1e-13` (an unset or zero step) leaves `String::num`'s digits unlimited. */
-export function rangeStepDecimals(step: number): number {
+function rangeStepDecimals(step: number): number {
   if (step < 0.0000000000001) return 16;
   return stepDecimals(step);
 }
@@ -191,7 +173,7 @@ export function formatGodotNumber(value: number, decimals: number): string {
  * `locale` (`:91-93`). `line_edit->is_editing()` is always false, so the prefix and suffix always apply.
  * `accepted` stays `true` without a live edit, so the `update_on_text_changed` re-format never runs.
  */
-export function spinBoxDisplayText(props: SpinBoxProperties, resolvedValue: number, locale: string): string {
+function spinBoxDisplayText(props: SpinBoxProperties, resolvedValue: number, locale: string): string {
   const step = props.step ?? SPIN_BOX_STEP_DEFAULT;
   let text = formatControlNumber(formatGodotNumber(resolvedValue, rangeStepDecimals(step)), {
     locale,
@@ -204,132 +186,86 @@ export function spinBoxDisplayText(props: SpinBoxProperties, resolvedValue: numb
   return text;
 }
 
-type SpinBoxButtonState = 'normal' | 'disabled';
+export type SpinBoxButtonState = 'normal' | 'disabled';
 
 /** `is_fully_disabled = !is_editable()` (`spin_box.cpp:444`): gates both buttons whatever their own state. */
 function spinBoxFullyDisabled(props: SpinBoxProperties): boolean {
   return props.editable === false;
 }
 
-/**
- * `_update_buttons_state_for_current_value` (`spin_box.cpp:635-645`):
- * `value == max && !allow_greater` disables the up button;
- * `value == min && !allow_lesser` disables the down button.
- */
+/** `_update_buttons_state_for_current_value` (`spin_box.cpp:635-646`): a button disables at its bound unless the range lets the value go past it. */
+function spinBoxRangeButtonState(value: number, bound: number, allowsBeyond: boolean): SpinBoxButtonState {
+  return value === bound && !allowsBeyond ? 'disabled' : 'normal';
+}
+
 export function spinBoxUpButtonState(props: SpinBoxProperties, resolvedValue: number): SpinBoxButtonState {
-  const max = props.maxValue ?? 100;
   if (spinBoxFullyDisabled(props)) return 'disabled';
-  return resolvedValue === max && !props.allowGreater ? 'disabled' : 'normal';
+  return spinBoxRangeButtonState(resolvedValue, props.maxValue ?? 100, props.allowGreater === true);
 }
 
 export function spinBoxDownButtonState(props: SpinBoxProperties, resolvedValue: number): SpinBoxButtonState {
-  const min = props.minValue ?? 0;
   if (spinBoxFullyDisabled(props)) return 'disabled';
-  return resolvedValue === min && !props.allowLesser ? 'disabled' : 'normal';
+  return spinBoxRangeButtonState(resolvedValue, props.minValue ?? 0, props.allowLesser === true);
 }
-
-/** `up_icon_modulate`/`up_disabled_icon_modulate` (`default_theme.cpp:634,637`). The icon asset is the same either way (`:616-619`), and only the modulate differs. */
-const SPIN_BOX_UP_ICON_COLOR: Record<SpinBoxButtonState, Rgba> = {
-  normal: CONTROL_FONT_COLOR,
-  disabled: CONTROL_FONT_DISABLED_COLOR,
-};
-/** `down_icon_modulate`/`down_disabled_icon_modulate` (`default_theme.cpp:638,641`): the same colours as the up pair. */
-const SPIN_BOX_DOWN_ICON_COLOR = SPIN_BOX_UP_ICON_COLOR;
 
 const SPIN_BOX_ICON_COLOR_KEYS: Record<'up' | 'down', Record<SpinBoxButtonState, string>> = {
   up: { normal: 'up_icon_modulate', disabled: 'up_disabled_icon_modulate' },
   down: { normal: 'down_icon_modulate', disabled: 'down_disabled_icon_modulate' },
 };
 
-/** A `theme_override_colors/<key>` override (already folded into `n.colors`) wins; else the default-theme literal for `direction`/`state`. */
+/** The arrow's modulate for `direction` and `state`. The icon is the same either way, and only the modulate differs. */
 export function spinBoxIconColor(
   colors: SolveNode['colors'],
   direction: 'up' | 'down',
   state: SpinBoxButtonState
 ): Rgba {
-  const key = SPIN_BOX_ICON_COLOR_KEYS[direction][state];
-  const defaults = direction === 'up' ? SPIN_BOX_UP_ICON_COLOR : SPIN_BOX_DOWN_ICON_COLOR;
-  return colors[key] ?? defaults[state];
+  return requiredThemeItem(colors, SPIN_BOX_ICON_COLOR_KEYS[direction][state]);
 }
+
+/** `line_edit->set_theme_type_variation("SpinBoxInnerLineEdit")` (`spin_box.cpp:728`). */
+const SPIN_BOX_FIELD_VARIATION = 'SpinBoxInnerLineEdit';
+
+/** The field's name, so its path is `<spin box>/@LineEdit`. */
+const SPIN_BOX_FIELD_NAME = 'LineEdit';
 
 /**
- * The field's scope: `line_edit->set_theme_type_variation("SpinBoxInnerLineEdit")` (`spin_box.cpp:728`)
- * based at `"LineEdit"`, as `ThemeOwner::get_theme_type_dependencies` walks it. An unregistered
- * variation falls through to the native chain (`buildThemeTypeChain`). `n`'s `"SpinBox"` scope
- * would miss `"LineEdit"`'s defaults and any project `"SpinBoxInnerLineEdit"` entry.
+ * The internal LineEdit (`spin_box.cpp:724-731`): left-aligned and editable by default, then given
+ * the SpinBox's `alignment` (`:543`), `editable` (`:603`) and the text `_update_text` writes (`:88-114`).
  */
-function spinBoxFieldThemeScope(n: Pick<SolveNode, 'themeChain' | 'projectFonts'>): ThemeResolutionScope {
-  return themeResolutionScope('LineEdit', 'SpinBoxInnerLineEdit', n.themeChain, n.projectFonts);
-}
-
-interface SpinBoxFieldTextTheme {
-  fontSizePx: number;
-  fontMetrics: FontMetrics;
-  /** `control_font_color`/`control_font_disabled_color` (LineEdit's `font_color`/`font_uneditable_color` defaults). No ancestor-theme colour walk exists (`textTheme.ts`), so the field draws only this colour. */
-  color: Rgba;
-}
-
-/** The field's font (face + size, ancestor-walked) and colour (override-less default), for `editable` state. */
-export function spinBoxFieldTextTheme(
-  n: Pick<SolveNode, 'themeChain' | 'projectFonts' | 'path'>,
-  ctx: Pick<SolveContext, 'theme'>,
-  editable: boolean
-): SpinBoxFieldTextTheme {
-  const scope = spinBoxFieldThemeScope(n);
-  const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size', undefined, ctx.theme.fontSize);
-  const fontResource = resolveThemeFontIn(scope, 'font', undefined);
-  const fontMetrics = peekSceneFontMetrics(fontResource, n.path);
-  return {
-    fontSizePx,
-    fontMetrics,
-    color: editable ? LINE_EDIT_DEFAULT_FONT_COLOR : LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
+const spinBoxInternalControls: InternalControlsFn = (spinBox) => {
+  const props = spinBox.node.properties as SpinBoxProperties;
+  const value = resolveRangeValue(props, controlLayoutOrder(spinBox));
+  const properties: Partial<LineEditProperties> = {
+    ...parseTextDirectionProperties({}, 'LineEdit'),
+    ...parseStructuredTextOverride({}),
+    text: spinBoxDisplayText(props, value, spinBox.locale),
+    editable: props.editable !== false,
+    alignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
   };
-}
-
-/**
- * The field's text shaped as its inner LineEdit shapes it. The field keeps `LineEdit`'s default
- * `text_direction` AUTO (`line_edit.h:144`) and sets no language, so neutral text takes the
- * direction of the project `locale` (`line_edit.cpp:3103-3112`), whatever the layout direction.
- */
-export function shapeSpinBoxFieldText(
-  text: string,
-  { fontSizePx, fontMetrics }: Pick<SpinBoxFieldTextTheme, 'fontSizePx' | 'fontMetrics'>,
-  locale: string
-): TextLayoutResult {
-  const bidi = textBidiOptions({ textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' }, locale);
-  return shapeLineEditText(text, {}, { ...bidi, fontSizePx, fontMetrics });
-}
-
-/**
- * `SpinBox::get_minimum_size` (`spin_box.cpp:82-86`), with `line_edit->get_combined_minimum_size()`
- * as `LineEdit::get_minimum_size()` (`line_edit.cpp:2443-2477`) inline. It does not call
- * `lineEditMinimumSize`, which reads `n.styleBoxes['normal'/'read_only']` and so would leak the
- * SpinBox node's `theme_override_styles` into the field.
- */
-export const spinBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const props = n.node.properties as SpinBoxProperties;
-  const editable = props.editable !== false;
-  const { fontSizePx, fontMetrics } = spinBoxFieldTextTheme(n, ctx, editable);
-
-  // The field is `add_child`ed at construction (`spin_box.cpp:724-731`), never a scene node, so a
-  // SpinBox's `theme_override_styles/*` address its own items (`up_background`, …). The field
-  // always draws the default LineEdit box, hence `{}`.
-  const normalBox: StyleBoxFlatData = pickLineEditStyleBox({}, ctx.theme.widgets.lineEdit, 'normal');
-  const readOnlyBox: StyleBoxFlatData = pickLineEditStyleBox({}, ctx.theme.widgets.lineEdit, 'read_only');
-  const normalMargin = contentMarginSize(normalBox);
-  const readOnlyMargin = contentMarginSize(readOnlyBox);
-  const styleMinSize = {
-    x: Math.max(normalMargin.x, readOnlyMargin.x),
-    y: Math.max(normalMargin.y, readOnlyMargin.y),
+  const field = {
+    type: 'LineEdit',
+    name: SPIN_BOX_FIELD_NAME,
+    properties,
+    variation: SPIN_BOX_FIELD_VARIATION,
   };
-
-  const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;
-  const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
-
-  const fieldMin = {
-    x: styleMinSize.x + LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emSpaceSize,
-    y: styleMinSize.y + fontHeightPx,
-  };
-
-  return { x: fieldMin.x + spinBoxButtonsBlockWidth(spinBoxWidestButtonIconWidth(n)), y: fieldMin.y };
+  return [{ mode: 'front', spec: field }];
 };
+
+/** `_compute_sizes` (`:382-397`): the field fills the SpinBox less the buttons block. */
+const spinBoxInternalLayout: InternalLayoutFn = (spinBox, internals, rect, ctx) => {
+  const widestIconWidth = spinBoxWidestButtonIconWidth(spinBox, ctx.theme.scale);
+  const { fieldRect } = spinBoxLayout({ x: rect.w, y: rect.h }, widestIconWidth, spinBox.rtl);
+  return new Map(internals.map(({ node }) => [node.path, fieldRect]));
+};
+
+/** `SpinBox::get_minimum_size` (`spin_box.cpp:82-86`): the field's combined minimum plus the buttons block. */
+export const spinBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
+  const [field] = internalControlsOf(n, ctx.theme);
+  const fieldMin = field ? ctx.combinedMinimumSize(field.node) : VECTOR2_ZERO;
+  return {
+    x: fieldMin.x + spinBoxButtonsBlockWidth(spinBoxWidestButtonIconWidth(n, ctx.theme.scale)),
+    y: fieldMin.y,
+  };
+};
+
+registerInternalControls('SpinBox', spinBoxInternalControls, spinBoxInternalLayout);

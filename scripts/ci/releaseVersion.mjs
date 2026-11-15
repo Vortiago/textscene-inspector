@@ -27,6 +27,11 @@ const RELEASE_TARGETS = {
   lsp: { directory: 'apps/textscene-lsp', kind: 'npm', inputs: ['packages/textscene-core'] },
   tscn: { directory: 'apps/textscene-tscn', kind: 'npm', inputs: ['packages/textscene-core'] },
   renderer: { directory: 'apps/textscene-renderer', kind: 'npm', inputs: ['packages/textscene-core'] },
+  shaders: {
+    directory: 'apps/textscene-three-godot-shaders',
+    kind: 'npm',
+    inputs: ['packages/textscene-core'],
+  },
 };
 
 /** One field of `RELEASE_TARGETS`, keyed by tag prefix. */

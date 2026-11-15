@@ -6,9 +6,10 @@ import { decodeAtlasTexture } from './decode';
 import { publishLiveTargets } from '../../../r3f/liveTargets';
 import { copiesFilledFrom } from '../../../r3f/liveTargets.testkit';
 import { holdUntilReleased } from '../../../r3f/useDisposeOnRelease';
-import { createCanvasTarget } from '../../../nodes/viewport/subviewport/offscreenViewport';
+import { createCanvasTarget } from '../../../r3f/offscreen/targets';
+import { canvasColorSpaceOf } from '../../../r3f/canvasColorSpace';
 
-const CELL = { id: 'Cell', texture: decodeAtlasTexture({ region: 'Rect2(0, 0, 8, 4)' }) };
+const CELL = decodeAtlasTexture({ region: 'Rect2(0, 0, 8, 4)' });
 
 let withdrawals: (() => void)[] = [];
 afterEach(() => {
@@ -19,15 +20,15 @@ afterEach(() => {
 describe('resolveAtlasTexture', () => {
   it('cuts the cell out of a loaded sheet, kept by the procedural cache', () => {
     const sheet = new THREE.DataTexture(new Uint8Array(16 * 16 * 4), 16, 16);
-    const resolution = resolveAtlasTexture(CELL, sheet, []);
+    const resolution = resolveAtlasTexture(CELL, sheet);
     expect(resolution?.texture.image).toMatchObject({ width: 8, height: 4 });
     expect(resolution?.key).toEqual(expect.any(String));
   });
 
   it('cuts the cell out of a live target as a crop its pass refills, held by its reader', () => {
-    const target = createCanvasTarget(16, 16, 'SubViewport');
+    const target = createCanvasTarget(16, 16, 'SubViewport', canvasColorSpaceOf(false));
     withdrawals.push(publishLiveTargets([target.texture], null, false));
-    const resolution = resolveAtlasTexture(CELL, target.texture, [])!;
+    const resolution = resolveAtlasTexture(CELL, target.texture)!;
     withdrawals.push(holdUntilReleased(resolution.texture));
     expect([copiesFilledFrom(target.texture), resolution.key]).toEqual([[resolution.texture], null]);
   });

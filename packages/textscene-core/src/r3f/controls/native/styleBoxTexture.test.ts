@@ -5,7 +5,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
 import { parseStyleBoxTexture } from './styleBoxTexture';
-import { NODE_PROPERTY } from '../../../resources/useTexture2D';
 
 const internalResources: TscnInternalResource[] = [
   {
@@ -43,7 +42,7 @@ const internalResources: TscnInternalResource[] = [
 
 describe('parseStyleBoxTexture', () => {
   it('resolves every field of a fully-specified StyleBoxTexture SubResource', () => {
-    const box = parseStyleBoxTexture('SubResource("Tex_full")', [], internalResources, NODE_PROPERTY);
+    const box = parseStyleBoxTexture('SubResource("Tex_full")', [], internalResources, true);
     expect(box).toEqual({
       texture: 'ExtResource("1_tex")',
       resources: { externalResources: [], internalResources },
@@ -60,7 +59,7 @@ describe('parseStyleBoxTexture', () => {
   });
 
   it('falls back to style_box_texture.h defaults for every absent key', () => {
-    const box = parseStyleBoxTexture('SubResource("Tex_empty")', [], internalResources, NODE_PROPERTY);
+    const box = parseStyleBoxTexture('SubResource("Tex_empty")', [], internalResources, true);
     expect(box).toEqual({
       texture: undefined,
       resources: { externalResources: [], internalResources },
@@ -80,7 +79,7 @@ describe('parseStyleBoxTexture', () => {
     const resources: TscnInternalResource[] = [
       { id: 'Tex_margin_only', type: 'StyleBoxTexture', data: { texture_margin_left: '7' } },
     ];
-    const box = parseStyleBoxTexture('SubResource("Tex_margin_only")', [], resources, NODE_PROPERTY);
+    const box = parseStyleBoxTexture('SubResource("Tex_margin_only")', [], resources, true);
     expect(box?.contentMargin.left).toBe(7);
     expect(box?.margin.left).toBe(7);
   });
@@ -90,18 +89,16 @@ describe('parseStyleBoxTexture', () => {
       'SubResource("Tex_content_margin_diverges")',
       [],
       internalResources,
-      NODE_PROPERTY
+      true
     );
     expect(box?.margin.left).toBe(4);
     expect(box?.contentMargin.left).toBe(9);
   });
 
   it('degrades to null for an absent ref, a non-SubResource form, an unknown id, and a non-StyleBoxTexture resource', () => {
-    expect(parseStyleBoxTexture(undefined, [], internalResources, NODE_PROPERTY)).toBeNull();
-    expect(parseStyleBoxTexture('ExtResource("1_abc")', [], internalResources, NODE_PROPERTY)).toBeNull();
-    expect(parseStyleBoxTexture('SubResource("nope")', [], internalResources, NODE_PROPERTY)).toBeNull();
-    expect(
-      parseStyleBoxTexture('SubResource("StyleBoxFlat_x")', [], internalResources, NODE_PROPERTY)
-    ).toBeNull();
+    expect(parseStyleBoxTexture(undefined, [], internalResources, true)).toBeNull();
+    expect(parseStyleBoxTexture('ExtResource("1_abc")', [], internalResources, true)).toBeNull();
+    expect(parseStyleBoxTexture('SubResource("nope")', [], internalResources, true)).toBeNull();
+    expect(parseStyleBoxTexture('SubResource("StyleBoxFlat_x")', [], internalResources, true)).toBeNull();
   });
 });

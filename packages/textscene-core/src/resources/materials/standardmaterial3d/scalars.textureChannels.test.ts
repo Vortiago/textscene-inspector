@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 
 describe.each([
   ['roughness_texture_channel', 'roughnessTextureChannelMask'],

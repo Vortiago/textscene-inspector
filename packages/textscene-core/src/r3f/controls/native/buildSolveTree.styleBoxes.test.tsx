@@ -9,6 +9,8 @@ import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../..
 import { useBuildSolveTree } from './buildSolveTree';
 import { controlNode } from './testing/solveNode';
 import type { StyleBoxTextureData } from './styleBoxTexture';
+import { defaultStyleBoxesOf } from './defaultThemeRecords';
+import { defaultThemeAt } from '../../../godot/scene/defaultTheme/defaultTheme';
 
 const internalResources: TscnInternalResource[] = [
   { id: 'Flat_x', type: 'StyleBoxFlat', data: { bg_color: 'Color(1, 0, 0, 1)' } },
@@ -43,14 +45,17 @@ function panelWith(overrides?: Record<string, string>): TscnNode {
   return controlNode('N', 'Panel', overrides ? { themeOverrideStyles: overrides } : {});
 }
 
+/** Panel's `panel` box in the default theme table at scale 1. */
+const TABLE_PANEL = defaultStyleBoxesOf(defaultThemeAt(1)).Panel!.panel;
+
 function styleBoxesOf(node: TscnNode) {
   const { result } = renderHook(() => useBuildSolveTree([node], externalResources, internalResources));
   return result.current.tree[0]!.styleBoxes;
 }
 
 describe('useBuildSolveTree style boxes', () => {
-  it('resolves no slot when the node declares no theme_override_styles', () => {
-    expect(styleBoxesOf(panelWith())).toEqual({});
+  it("reads the default theme table's box when the node declares no theme_override_styles", () => {
+    expect(styleBoxesOf(panelWith())).toEqual({ panel: TABLE_PANEL });
   });
 
   it('keeps a StyleBoxFlat override', () => {
@@ -79,8 +84,8 @@ describe('useBuildSolveTree style boxes', () => {
     expect(boxes.panel!.contentMargin).toEqual({ left: 3, top: 0, right: 0, bottom: 0 });
   });
 
-  it('omits a slot whose ref names an unknown id', () => {
-    expect(styleBoxesOf(panelWith({ panel: 'SubResource("nope")' })).panel).toBeUndefined();
+  it("reads the default theme table's box for a slot whose ref names an unknown id", () => {
+    expect(styleBoxesOf(panelWith({ panel: 'SubResource("nope")' })).panel).toBe(TABLE_PANEL);
   });
 
   /** A ViewportTexture in a StyleBoxTexture is set up only when every holder is local to scene (`core/io/resource.cpp:497-503`). */

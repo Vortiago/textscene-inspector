@@ -4,17 +4,22 @@
  * expected number is Godot's arithmetic worked by hand at theme scale 1.
  */
 import { describe, expect, it } from 'vitest';
-import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { graphEditScrollBars } from './scrollBars';
+import { defaultScrollBarBoxes } from '../shared/testing/scrollBarBoxes';
+import {
+  graphEditConstructorScrollBars,
+  graphEditScrollBars,
+  hasUpdatedScrollBars,
+  mirroredScrollBars,
+} from './scrollBars';
 
-const theme = nativeTheme(1);
+const boxes = defaultScrollBarBoxes(1);
 // One 120x64 GraphNode at (40, 56), zoom 1, in a 400x320 GraphEdit: the same
 // box `minimap.test.ts` derives: min (-400, -320), max (560, 440).
 const bounds = { min: { x: -400, y: -320 }, max: { x: 560, y: 440 } };
 const size = { x: 400, y: 320 };
 
 describe('graphEditScrollBars', () => {
-  const bars = graphEditScrollBars(size, bounds, { x: 0, y: 0 }, theme);
+  const bars = graphEditScrollBars(size, bounds, { x: 0, y: 0 }, boxes);
 
   it('shows both bars: the box is always the graph plus one GraphEdit rect each side (:491-492)', () => {
     // max - min = 960 > page 400 across, 760 > 320 down, so neither `hide()`
@@ -47,7 +52,7 @@ describe('graphEditScrollBars', () => {
   });
 
   it('moves the grabber with scroll_offset, clamping the ratio to [0, 1] (range.cpp:308-324)', () => {
-    const scrolled = graphEditScrollBars(size, bounds, { x: 560, y: 440 }, theme);
+    const scrolled = graphEditScrollBars(size, bounds, { x: 560, y: 440 }, boxes);
     // value == max: ratio 1, so the grabber sits at the far end of its travel.
     expect(scrolled.horizontal.grabberRect.x).toBeCloseTo(384, 6);
     expect(scrolled.vertical.grabberRect.y).toBeCloseTo(304, 6);
@@ -58,9 +63,66 @@ describe('graphEditScrollBars', () => {
       { x: 0, y: 0 },
       { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } },
       { x: 0, y: 0 },
-      theme
+      boxes
     );
     expect(degenerate.horizontal.visible).toBe(false);
     expect(degenerate.vertical.visible).toBe(false);
+  });
+});
+
+describe('hasUpdatedScrollBars (_update_scrollbars callers, graph_edit.cpp:414, :868, :1733, :2448)', () => {
+  const none = {
+    hasGraphElement: false,
+    queuedScrollOffsetUpdate: false,
+    outOfTreeSize: { x: 500, y: 280 },
+    solvedSize: { x: 500, y: 280 },
+  };
+
+  it('holds when the GraphEdit has a GraphElement child', () => {
+    expect(hasUpdatedScrollBars({ ...none, hasGraphElement: true })).toBe(true);
+  });
+
+  it('holds when a setter queued the update while the file loaded', () => {
+    expect(hasUpdatedScrollBars({ ...none, queuedScrollOffsetUpdate: true })).toBe(true);
+  });
+
+  it('holds when the solved size differs from the size out of the tree (NOTIFICATION_RESIZED)', () => {
+    expect(hasUpdatedScrollBars({ ...none, solvedSize: { x: 600, y: 300 } })).toBe(true);
+  });
+
+  it('does not hold when none of the three does', () => {
+    expect(hasUpdatedScrollBars(none)).toBe(false);
+  });
+});
+
+describe('graphEditConstructorScrollBars (graph_edit.cpp:3218-3222, :841-852)', () => {
+  const bars = graphEditConstructorScrollBars({ x: 500, y: 280 }, boxes);
+
+  it('gives each bar the full length of its edge, and the bars overlap in the corner', () => {
+    expect(bars.horizontal.rect).toEqual({ x: 0, y: 272, w: 500, h: 8 });
+    expect(bars.vertical.rect).toEqual({ x: 492, y: 0, w: 8, h: 280 });
+    expect(bars.horizontal.visible).toBe(true);
+    expect(bars.vertical.visible).toBe(true);
+  });
+
+  it('puts each grabber at the middle of its bar: value 0 in -10000 to 10000, page 0', () => {
+    // The grabber is the 8 px minimum: area = 500 - 8 = 492, offset = 492 / 2 = 246.
+    expect(bars.horizontal.grabberRect).toEqual({ x: 246, y: 0, w: 8, h: 8 });
+    expect(bars.vertical.grabberRect).toEqual({ x: 0, y: 136, w: 8, h: 8 });
+  });
+});
+
+describe('mirroredScrollBars (control.cpp:1785-1787)', () => {
+  const bars = mirroredScrollBars(graphEditScrollBars(size, bounds, { x: 0, y: 0 }, boxes), size.x);
+
+  it('puts the vertical bar on the left edge and starts the horizontal bar after it', () => {
+    expect(bars.vertical.rect).toEqual({ x: 0, y: 0, w: 8, h: 312 });
+    expect(bars.horizontal.rect).toEqual({ x: 8, y: 312, w: 392, h: 8 });
+  });
+
+  it('keeps each grabber where it is inside its bar: scroll_bar.cpp never reads the direction', () => {
+    const ltr = graphEditScrollBars(size, bounds, { x: 0, y: 0 }, boxes);
+    expect(bars.horizontal.grabberRect).toEqual(ltr.horizontal.grabberRect);
+    expect(bars.vertical.grabberRect).toEqual(ltr.vertical.grabberRect);
   });
 });

@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+; The sub-scene of unit-bone2d-gizmo.tscn: a Bone2D root with a Bone2D child, so the kite of the
+; bone that instances it reaches an instance root.
+
+[node name="Hand" type="Bone2D"]
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+
+[node name="Finger" type="Bone2D" parent="."]
+position = Vector2(40, 20)
+rest = Transform2D(1, 0, 0, 1, 40, 20)

@@ -29,6 +29,7 @@ function siblings(rightOwnsItsWorld: boolean): string {
 [node name="Root" type="Node2D"]
 
 [node name="Left" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Subject" type="MeshInstance3D" parent="Left"]
 mesh = SubResource("SphereMesh_1")
@@ -36,6 +37,7 @@ mesh = SubResource("SphereMesh_1")
 [node name="Camera3D" type="Camera3D" parent="Left"]
 
 [node name="Right" type="SubViewport" parent="."]
+render_target_update_mode = 4
 own_world_3d = ${rightOwnsItsWorld}
 
 [node name="Camera3D" type="Camera3D" parent="Right"]
@@ -53,6 +55,7 @@ const NESTED = `[gd_scene format=3]
 [node name="Root" type="Node2D"]
 
 [node name="Left" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Subject" type="MeshInstance3D" parent="Left"]
 mesh = SubResource("SphereMesh_1")
@@ -60,11 +63,13 @@ mesh = SubResource("SphereMesh_1")
 [node name="Camera3D" type="Camera3D" parent="Left"]
 
 [node name="Outer" type="SubViewport" parent="."]
+render_target_update_mode = 4
 own_world_3d = true
 
 [node name="Canvas" type="Node2D" parent="Outer"]
 
 [node name="Right" type="SubViewport" parent="Outer"]
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="Outer/Right"]
 `;
@@ -117,6 +122,7 @@ const NESTED_IN_3D = `[gd_scene format=3]
 [node name="Root" type="Node2D"]
 
 [node name="Left" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Subject" type="MeshInstance3D" parent="Left"]
 mesh = SubResource("SphereMesh_1")
@@ -124,16 +130,19 @@ mesh = SubResource("SphereMesh_1")
 [node name="Camera3D" type="Camera3D" parent="Left"]
 
 [node name="Outer" type="SubViewport" parent="."]
+render_target_update_mode = 4
 own_world_3d = true
 
 [node name="Floor" type="MeshInstance3D" parent="Outer"]
 mesh = SubResource("SphereMesh_1")
 
 [node name="Middle" type="SubViewport" parent="Outer"]
+render_target_update_mode = 4
 
 [node name="Canvas" type="Node2D" parent="Outer/Middle"]
 
 [node name="Right" type="SubViewport" parent="Outer/Middle"]
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="Outer/Middle/Right"]
 `;

@@ -19,10 +19,9 @@ import {
   type Transform3D,
 } from '../../../../godot/math/transform3d.js';
 import { nodePathLiteral } from '../../../../godot/variant/variantParser.js';
-import { resolveNodePathLiteral } from '../../../../godot/string/nodePath.js';
 import type { LiveLink, LiveTree } from '../../../../r3f/liveSceneTree.js';
 import { liveGlobalTransform3D } from '../../../../r3f/liveGlobalTransform.js';
-import { uniquePathsOfLiteral } from '../../../../r3f/nodePathUniqueNames.js';
+import { resolveLiteralOnLiveTree } from '../../../../r3f/nodePathUniqueNames.js';
 import { liveNodePatches } from '../../../../r3f/liveNodePatches.js';
 import { liveScenePassResults, type LiveScenePass } from '../../../../r3f/liveScenePass.js';
 import type { NodePatch } from '../../../../r3f/nodePatch.js';
@@ -209,7 +208,7 @@ function skeletonOf(properties: BoneAttachment3DProperties, path: string, tree: 
 
 /** The Skeleton3D the `external_skeleton` literal names from the node at `from`, or null. */
 function skeletonAt(from: string, literal: string, tree: LiveTree): LiveLink | null {
-  const resolved = resolveNodePathLiteral(from, literal, uniquePathsOfLiteral(literal, from, tree));
+  const resolved = resolveLiteralOnLiveTree(from, literal, tree);
   const skeleton = resolved === null ? null : tree.at(resolved);
   return skeleton?.step.node.type === 'Skeleton3D' ? skeleton : null;
 }

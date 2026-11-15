@@ -1,0 +1,88 @@
+/**
+ * The bones a modification stack moves, solved on the Live scene tree from the transforms the scene
+ * file stores. A scene pass that reads a pose below a bone stands where Godot's Skeleton2D puts it.
+ * A stack in a `.tres` file solves once the loader holds the file. An AnimationPlayer pose does not reach the solve.
+ */
+
+import {
+  TRANSFORM2D_IDENTITY,
+  equalTransform2D,
+  transform2DDecompose,
+} from '../../../godot/math/transform2d.js';
+import { storedTransform2D } from '../../../godot/math/real.js';
+import { MODIFICATION_STACK } from '../../../resources/skeleton/skeletonmodificationstack2d/index.js';
+import { liveScenePassResults, type LiveScenePass } from '../../../r3f/liveScenePass.js';
+import type { TscnNode } from '../../../parser/types.js';
+import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
+import { nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform.js';
+import { transform2DOnCanvas, transform2DWithinPath } from '../../../r3f/liveTransform2D.js';
+import { NO_PATCHES, type NodePatch } from '../../../r3f/nodePatch.js';
+import { parentPathOf } from '../../../utils/nodePath.js';
+import { buildStackScene, type PoseSource } from './buildStackScene.js';
+import { solveStack } from './modificationStack/stackRun.js';
+import { stackNodePaths } from './modificationStack/stackPaths.js';
+import { bindSkeleton2DRigs, type Skeleton2DRig } from './skeletonRig.js';
+import type { Skeleton2DProperties } from './types.js';
+import { anchorPathsOf, stackTargets } from './stackTargets.js';
+
+/** Where the nodes of `tree` stand as the scene file stores them, each named by its live path. */
+function storedPoseSource(tree: LiveTree): PoseSource<string> {
+  const chains = new Map<string, ReadonlyMap<string, TscnNode>>();
+  const stored = (path: string) => {
+    if (!chains.has(path)) chains.set(path, nodesOnTheWayTo(tree, path, NO_PATCHES));
+    return chains.get(path)!;
+  };
+  return {
+    // A Control that neither the Control walk nor its offsets place reads as the identity.
+    canvas: (path) =>
+      storedTransform2D(
+        transform2DOnCanvas(path, stored(path), undefined, tree.ctx.controlTransforms) ?? TRANSFORM2D_IDENTITY
+      ),
+    within: (path, ancestor) =>
+      storedTransform2D(transform2DWithinPath(path, ancestor, stored(path), tree.ctx.controlTransforms)),
+    parent: parentPathOf,
+  };
+}
+
+/**
+ * The node patch of each Bone2D, by live path, that the stack of a Skeleton2D of `tree` moves:
+ * the position, rotation, scale and skew of the solved local transform, as `Node2D::set_transform`
+ * stores them. A bone the stack leaves where it is has no entry.
+ */
+export const solveSkeleton2DBones: LiveScenePass<NodePatch> = (tree) => {
+  const patches = new Map<string, NodePatch>();
+  const rigs = liveScenePassResults(bindSkeleton2DRigs, tree);
+  tree.fold<void, void>(undefined, (link, _inherited, descend) => {
+    if (link.step.node.type === 'Skeleton2D') solveSkeleton(link, tree, rigs, patches);
+    descend();
+  });
+  return patches;
+};
+
+function solveSkeleton(
+  { path, step }: LiveLink,
+  tree: LiveTree,
+  rigs: ReadonlyMap<string, Skeleton2DRig>,
+  patches: Map<string, NodePatch>
+): void {
+  const { modificationStack } = step.node.properties as Skeleton2DProperties;
+  if (modificationStack === undefined) return;
+  const rig = rigs.get(path);
+  const stack = tree.readResource(modificationStack, step.scope, MODIFICATION_STACK).value;
+  if (!rig || !stack) return;
+  const targets = stackTargets(stackNodePaths(stack), path, tree, rigs);
+  const anchors = new Set(anchorPathsOf(targets.values()));
+  const bodies = [path, ...rig.bones.map((bone) => bone.path)];
+  const { scene, posed } = buildStackScene(
+    targets,
+    rig,
+    bodies,
+    (anchor) => (anchors.has(anchor) ? anchor : undefined),
+    storedPoseSource(tree)
+  );
+  const cache = posed.slice(0, rig.bones.length).map(({ from }) => from);
+  const { locals } = solveStack(scene, cache, stack);
+  posed.forEach(({ body, from }, index) => {
+    if (!equalTransform2D(from, locals[index]!)) patches.set(body, transform2DDecompose(locals[index]!));
+  });
+}

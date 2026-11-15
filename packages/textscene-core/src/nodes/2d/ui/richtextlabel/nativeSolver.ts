@@ -1,7 +1,7 @@
 /**
  * RichTextLabel's native (WebGL canvas) solve: `get_minimum_size` (`scene/gui/rich_text_label.cpp:8036-8047`)
- * over `get_content_height` and `get_content_width` (`:7491-7522`), the theme keys of
- * `scene/theme/default_theme.cpp:1194-1211`, and the styled-run layout the painter draws.
+ * over `get_content_height` and `get_content_width` (`:7491-7522`), the table's
+ * `RichTextLabel` theme keys, and the styled-run layout the painter draws.
  * Pure math, no THREE or React.
  *
  * Portions ported from Godot Engine (MIT).
@@ -13,15 +13,15 @@ import type { TscnNode } from '../../../../parser/types';
 import { perObject } from '../../../../utils/perObject';
 import type {
   MinimumSizeFn,
-  SolveContext,
   TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+import { defaultConstant } from '../../../../godot/scene/defaultTheme/defaultTheme';
 import {
   clampAutowrapMode,
   shapeText,
-  glyphOffsetReachPx,
   shapedTextSizeWidthPx,
   soloLineLayout,
   startsParagraph,
@@ -29,6 +29,7 @@ import {
   type ShapeTextOptions,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { shapedLineHeightPx, type LineExtentPx } from '../../../../r3f/controls/native/text/lineExtent';
 import { justifyParagraphs } from '../../../../r3f/controls/native/text/textJustify';
 import { faceOfStyle, resolveRichTextFaces, type RichTextFaces } from './styleFaces';
 import {
@@ -36,19 +37,15 @@ import {
   resolveTextTheme,
   type ResolvedTextTheme,
   type TextOutlineTheme,
-  type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import {
-  getUnderlinePositionPx,
-  getUnderlineThicknessPx,
-} from '../../../../r3f/controls/native/text/openSansMetrics';
-import {
-  getFontAscentPx,
-  getFontDescentPx,
   getFontTabStopsPx,
+  withVariation,
   type FontMetrics,
+  type UnderlinePx,
 } from '../../../../r3f/controls/native/text/fontMetrics';
+import { NO_UNDERLINE_PX } from '../../../../r3f/controls/native/text/paragraphUnderline';
 import { resolveNodeFontSizePx } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { RichTextLabelProperties } from './types';
 import {
@@ -87,6 +84,7 @@ import {
 import { tagFontSizePx, tagOutline } from './runStyle';
 import { paragraphListings, runListing, type ParagraphListing, type RunListing } from './listing';
 import { countAtOrBelow } from '../../../../utils/countAtOrBelow';
+import { coveredPixelRange } from '../../../../utils/coveredPixelRange';
 
 /** RichTextLabel reads `theme_override_font_sizes/normal_font_size` and `theme_override_colors/default_color`, not Label's `font_size` and `font_color`. */
 const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
@@ -94,23 +92,12 @@ const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
   colorKey: 'default_color',
 };
 
-/** `default_theme.cpp:1205`: `theme->set_color("default_color", "RichTextLabel", Color(1, 1, 1))`, a call separate from Label's. */
-const RICH_TEXT_LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-
 /** `rich_text_label.h:557`: `TextServer::AutowrapMode autowrap_mode = TextServer::AUTOWRAP_WORD_SMART;`, unlike Label's OFF (`label.h`). */
 export const RICH_TEXT_LABEL_DEFAULT_AUTOWRAP = AutowrapMode.AUTOWRAP_WORD_SMART;
 
-/** Resolves this node's font size and colour: overrides, then the ancestor Theme chain, then RichTextLabel's white. */
-export function richTextLabelTextTheme(
-  n: SolveNode,
-  props: RichTextLabelProperties,
-  ctx: Pick<SolveContext, 'theme'>
-): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = {
-    fontSizePx: ctx.theme.fontSize,
-    color: RICH_TEXT_LABEL_DEFAULT_FONT_COLOR,
-  };
-  return resolveTextTheme(n, props, RICH_TEXT_LABEL_THEME_KEYS, defaults);
+/** This node's font size and colour: its overrides, else the ancestor Theme chain, else the default theme table. */
+export function richTextLabelTextTheme(n: SolveNode, props: RichTextLabelProperties): ResolvedTextTheme {
+  return resolveTextTheme(n, props, RICH_TEXT_LABEL_THEME_KEYS);
 }
 
 // ── [img]: its size, and its width through the shared shaper ──
@@ -186,8 +173,11 @@ function resolveImageDimension(amount: number, inPercent: boolean, boxWidthPx: n
   return Math.trunc((boxWidthPx * amount) / 100);
 }
 
-/** `horizontal_rule` is a 2 x 2 white image (`default_theme.cpp:1187-1192`). */
+/** The default `horizontal_rule` icon is a 2 x 2 white image. */
 const RULE_TEXTURE_SIZE_PX: Vector2 = { x: 2, y: 2 };
+
+/** The table's `RichTextLabel/line_separation`, which the layout reads in place of Label's `line_spacing`. */
+const RICH_TEXT_LABEL_LINE_SEPARATION = defaultConstant('RichTextLabel', 'line_separation');
 
 /** `add_hr` makes an `ItemImage` of the `horizontal_rule` icon, centred on the text (`:4180-4184`). */
 const RULE_ALIGNMENT: ParsedImageAlignment = { imagePoint: 'center', textPoint: 'center' };
@@ -276,38 +266,42 @@ interface ResolvedImageRun {
 }
 
 /**
- * Makes `shapeText` advance `IMAGE_OBJECT_CHAR` by the image width, carried in
- * as its font size. Godot sets `gl.advance = rect.size.x` (`text_server_adv.cpp:7370-7383`).
+ * Makes `shapeText` draw `IMAGE_OBJECT_CHAR` apart from the run shaping and advance it by the image
+ * width, carried in as its font size. Godot sets `gl.advance = rect.size.x` (`text_server_adv.cpp:7370-7383`).
  * At `unitsPerEm` units the advance chain returns that size rounded to 1/64px,
  * exact for whole and half pixels and within 1/128px otherwise.
  */
 const imageObjectFontMetrics = perObject(wrapForImageObject);
 
-/** One wrapper per face, so `shapeText` sees the same face on every call and its memo keeps hits. */
+const isImageObject = (ch: string): boolean => ch === IMAGE_OBJECT_CHAR;
+
+/**
+ * One wrapper per face, so `shapeText` sees the same face on every call and its memo keeps hits. An
+ * image has no outline, so it draws in the face with its outlines and no variation: no embolden,
+ * skew or instance advance replaces the image width.
+ */
 function wrapForImageObject(base: FontMetrics): FontMetrics {
   // A fractional width skips the whole-pixel round, and the size change at each
   // edge resets the remainder and kerning, as a separate shaped run would.
-  // `Object.create` keeps the rest of the face live. An image has no outline, so no embolden, skew
-  // or variable-font instance, whose advance would replace the image width.
-  return Object.create(base, {
-    embolden: { value: 0 },
-    skew: { value: 0 },
+  // `Object.create` keeps the rest of the face live.
+  const plain = withVariation(base, {});
+  return Object.create(plain, {
     hasGlyph: {
       value(ch: string): boolean {
-        return ch === IMAGE_OBJECT_CHAR || base.hasGlyph(ch);
+        return isImageObject(ch) || plain.hasGlyph(ch);
       },
     },
-    opentype: { value: undefined },
+    drawsApart: { value: isImageObject },
     getGlyphAdvanceUnits: {
       value(ch: string): number | null {
-        if (ch === IMAGE_OBJECT_CHAR) return base.unitsPerEm;
-        return base.getGlyphAdvanceUnits(ch);
+        if (isImageObject(ch)) return plain.unitsPerEm;
+        return plain.getGlyphAdvanceUnits(ch);
       },
     },
     getKerningAdjustmentUnits: {
       value(a: string, b: string): number {
-        if (a === IMAGE_OBJECT_CHAR || b === IMAGE_OBJECT_CHAR) return 0;
-        return base.getKerningAdjustmentUnits(a, b);
+        if (isImageObject(a) || isImageObject(b)) return 0;
+        return plain.getKerningAdjustmentUnits(a, b);
       },
     },
   });
@@ -330,8 +324,8 @@ function contentWidthPx(layout: TextLayoutResult): number {
 
 /**
  * `RichTextLabel::get_minimum_size` (`rich_text_label.cpp:8036-8047`): zero
- * without `fit_content`, and `Size2(1, min_size.height)` under autowrap. `normal_style`
- * is empty (default_theme.cpp:1186), and empty text has height 0
+ * without `fit_content`, and `Size2(1, min_size.height)` under autowrap. The table's
+ * `RichTextLabel/normal` is empty, and empty text has height 0
  * (`:7491-7506`), unlike Label.
  */
 export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
@@ -346,8 +340,8 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // Read whatever the autowrap: a `%`-form `[img]` resolves against the
   // paragraph width, `undefined` on the first pass.
   const availableWidthPx = ctx.tentativeRect?.(n)?.w;
-  const { fontSizePx, color } = richTextLabelTextTheme(n, props, ctx);
-  const runs = styledTextRuns(n, props, color, fontSizePx, ctx.theme.fontSize, availableWidthPx);
+  const { fontSizePx, color } = richTextLabelTextTheme(n, props);
+  const runs = styledTextRuns(n, props, color, fontSizePx, availableWidthPx);
   const text = plainTextOf(runs);
 
   if (text.length === 0) {
@@ -361,7 +355,7 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // Wrapped at the control's width: `_validate_line_caches` resizes the lines, then
   // `update_minimum_size()` runs under `fit_content` (`rich_text_label.cpp:3873,3880`).
   // `tentativeRect` is `undefined` on the first pass, as in Godot's pre-resize state.
-  // The empty `normal` StyleBox (`default_theme.cpp:1186`) makes the text rect the control's.
+  // The table's empty `RichTextLabel/normal` StyleBox makes the text rect the control's.
   const wrapWidthPx = wraps ? availableWidthPx : undefined;
   const layout = shapeRichText(runs, resolveRichTextFaces(n, runs), {
     fontSizePx,
@@ -420,7 +414,7 @@ export interface StyledTextRun {
 }
 
 /**
- * `scene/theme/default_theme.cpp:1199-1202` gives each style its own font size,
+ * The table gives each style its own `RichTextLabel/*_font_size`,
  * -1, and `_find_font` (`rich_text_label.cpp:3226-3296`, `:3257`/`:3270`/`:3283`)
  * reads it with no fallback to `normal_font_size`. `Theme::get_font_size` in
  * `scene/resources/theme.cpp` (`:658-661`) sends `<= 0` to 16 (`scene/theme/theme_db.h:85`).
@@ -434,7 +428,7 @@ const RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS = {
 /**
  * A styled run's font size before any `[font_size]`: `normalFontSizePx` for a plain run, else its
  * style key through the ancestor-Theme walk (`resolveNodeFontSizePx`,
- * `scene/resources/theme.cpp:658-666`) down to `builtInDefaultPx`. `cache` holds one answer per
+ * `scene/resources/theme.cpp:658-666`) down to the default theme's size. `cache` holds one answer per
  * key for one `styledTextRuns` call.
  */
 function resolveRunFontSizePx(
@@ -443,7 +437,6 @@ function resolveRunFontSizePx(
   props: RichTextLabelProperties,
   normalFontSizePx: number,
   n: SolveNode,
-  builtInDefaultPx: number,
   cache: Map<string, number>
 ): number {
   if (!bold && !italic) return normalFontSizePx;
@@ -455,7 +448,7 @@ function resolveRunFontSizePx(
         : RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.italic;
   const cached = cache.get(key);
   if (cached !== undefined) return cached;
-  const resolved = resolveNodeFontSizePx(n, key, props.themeOverrideFontSizes?.[key], builtInDefaultPx);
+  const resolved = resolveNodeFontSizePx(n, key, props.themeOverrideFontSizes?.[key]);
   cache.set(key, resolved);
   return resolved;
 }
@@ -483,7 +476,6 @@ export function styledTextRuns(
   props: RichTextLabelProperties,
   defaultColor: Rgba,
   normalFontSizePx: number,
-  builtInDefaultPx: number,
   boxWidthPx?: number
 ): StyledTextRun[] {
   const raw = props.text ?? '';
@@ -510,7 +502,7 @@ export function styledTextRuns(
   // One Theme walk per style key, however many spans the paragraph has.
   const runFontSizeCache = new Map<string, number>();
   const fontSizePxOf = (bold: boolean, italic: boolean): number =>
-    resolveRunFontSizePx(bold, italic, props, normalFontSizePx, n, builtInDefaultPx, runFontSizeCache);
+    resolveRunFontSizePx(bold, italic, props, normalFontSizePx, n, runFontSizeCache);
   const styled: StyledTextRun[] = [];
   for (const run of parseBBCodeRuns(raw)) {
     const listing = runListing({
@@ -703,8 +695,8 @@ export function shapeRichText(
     fontSizePx,
     boxWidthPx,
     autowrapMode,
-    // `line_separation` and `paragraph_separation` are 0 (`default_theme.cpp:1217-1218`), not Label's 3.
-    lineSpacingPx: 0,
+    // No per-node theme-constant override is modelled, so the table's value holds.
+    lineSpacingPx: RICH_TEXT_LABEL_LINE_SEPARATION,
     fontSizePxAt: fontSizePxAtFromRuns(styledRuns),
     fontMetricsAt: fontMetricsAtFromRuns(styledRuns, faces),
     spanAt: spanAtFromRuns(styledRuns),
@@ -720,11 +712,12 @@ export function shapeRichText(
 }
 
 /**
- * `default_theme.cpp:1231`: `theme->set_constant("underline_alpha", "RichTextLabel", 50)`.
- * Without `[u=color]`, which this subset lacks, `rich_text_label.cpp:1237`
+ * `underline_alpha`, a percentage. Without `[u=color]`, which this subset lacks, `rich_text_label.cpp:1237`
  * draws the run's font colour with `.a *= underline_alpha / 100.0`.
  */
-export const RICH_TEXT_LABEL_UNDERLINE_ALPHA = 0.5;
+export function richTextLabelUnderlineAlpha(n: SolveNode): number {
+  return requiredThemeItem(n.constants, 'underline_alpha') / 100;
+}
 
 /** An `[img]`'s draw geometry in its line: `_draw_line`'s `ITEM_IMAGE` arm (`rich_text_label.cpp:1090-1102`). */
 export interface RichTextImagePlacement {
@@ -745,11 +738,11 @@ export interface RichTextRunPlacement {
   /** The line's left offset, per line since each aligns by its own width (`richTextHorizontalOffsetPx`). */
   lineOffsetXPx: number;
   /** The paragraph's underline position and thickness for an `[u]` run, else null. */
-  underline: RichTextUnderlineMetrics | null;
+  underline: UnderlinePx | null;
   color: Rgba;
   /** The run's outline ring, in the run's own colour space before the control tint: its size and colour. */
   outline: TextOutlineTheme;
-  /** The run's font size, px, for its glyphs. The baseline is the line's: `layout.baselineOffsetPx`. */
+  /** The run's font size, px, for its glyphs. The baseline is the line's: `layout.lines[0].ascentPx`. */
   fontSizePx: number;
   /** A single-line layout of only this run's glyphs from the line, `glyph.x` already line-relative. */
   layout: TextLayoutResult;
@@ -757,17 +750,15 @@ export interface RichTextRunPlacement {
 }
 
 /**
- * Keeps the parent's `linePitchPx` (`soloLineLayout`) and takes the face of the run's first glyph,
- * since `TextRun` picks the painter, and the shear, from `layout.fontMetrics`. `baselineOffsetPx` is
- * the line's ascent, applied once per line (`rich_text_label.cpp:1055`'s `off.y += l_ascent`),
- * so mixed sizes share it. `heightPx` is the line's own height: a canvas raster of the parent's
- * pitch would cut off the top of a run beside a larger one.
+ * Takes the face of the run's first glyph, since `TextRun` picks the painter, and the shear, from
+ * `layout.fontMetrics`. The run keeps its line's extent, images folded in: the ascent applies once
+ * per line (`rich_text_label.cpp:1055`'s `off.y += l_ascent`), so mixed sizes share it, and
+ * `soloLineLayout` grows the raster from it to the deepest descent of the run's faces.
  */
 function soloRunLayout(
   segment: RunLineSegment,
   parentLayout: TextLayoutResult,
-  lineAscentPx: number,
-  lineHeightPx: number
+  { ascentPx, descentPx }: LineExtentPx
 ): TextLayoutResult {
   const { text, glyphs } = segment;
   // The right edge from the line origin, not the run's own span: the glyphs keep their line-relative
@@ -775,18 +766,16 @@ function soloRunLayout(
   const lastGlyph = glyphs.at(-1);
   const widthPx = lastGlyph ? lastGlyph.x + lastGlyph.advance : 0;
   return soloLineLayout(
-    { text, glyphs, widthPx, paragraphIndex: 0 },
+    { text, glyphs, widthPx, paragraphIndex: 0, ascentPx, descentPx },
     parentLayout,
-    lineAscentPx,
     // A segment holds a glyph at least. `faceLayouts` splits off a glyph of another face.
-    glyphs[0]!.fontMetrics,
-    Math.max(parentLayout.linePitchPx, lineHeightPx)
+    glyphs[0]!.fontMetrics
   );
 }
 
 /** One wrapped line's vertical metrics, recomputed per line (`text_server_adv.cpp:5486-5487`), unlike the underline's. */
 interface RichTextLineMetrics {
-  /** The line's top from the paragraph's top: the sum of the earlier lines' `ascentPx + descentPx`. */
+  /** The line's top from the text's top (`richTextLineTopsPx`). */
   topPx: number;
   /** Baseline offset from `topPx`: the max ascent of this line's fonts and images (`imageBaselineOffsetPx`). */
   ascentPx: number;
@@ -811,21 +800,40 @@ function richTextLineMetrics(
   return lineMetricsOf(attributeRunsToLines(styledRuns, layout), styledRuns, layout);
 }
 
-/**
- * `get_content_height`'s sum of each line's own ascent+descent, not `layout.heightPx`, a count
- * times one pitch that mixed sizes make wrong.
- */
-function contentHeightOf(lines: readonly RichTextLineMetrics[]): number {
-  const lastLine = lines[lines.length - 1];
-  return lastLine ? lastLine.topPx + lastLine.ascentPx + lastLine.descentPx : 0;
-}
-
 /** The height of the whole shaped text, px: what the scrollbar and `fit_content` compare against. */
 export function richTextContentHeightPx(
   styledRuns: readonly StyledTextRun[],
   layout: TextLayoutResult
 ): number {
-  return contentHeightOf(richTextLineMetrics(styledRuns, layout));
+  return richTextLineTopsPx(richTextLineMetrics(styledRuns, layout), layout).contentHeightPx;
+}
+
+/**
+ * Each line's top, and the height of the whole text. A paragraph's lines step by their bare
+ * ascent and descent (`rich_text_label.cpp:1737`, `:1894`). The next paragraph starts below
+ * `TextParagraph::get_size`, which ceils each line (`rich_text_label.cpp:2656`).
+ */
+function richTextLineTopsPx(
+  lines: readonly Pick<RichTextLineMetrics, 'ascentPx' | 'descentPx'>[],
+  layout: TextLayoutResult
+): { topsPx: number[]; contentHeightPx: number } {
+  const spacingPx = layout.lineSpacingPx;
+  const topsPx: number[] = [];
+  let paragraphTopPx = 0;
+  let inParagraphPx = 0;
+  let paragraphHeightPx = 0;
+  lines.forEach((line, lineIndex) => {
+    const paragraphIndex = layout.lines[lineIndex]!.paragraphIndex;
+    if (lineIndex > 0 && paragraphIndex !== layout.lines[lineIndex - 1]!.paragraphIndex) {
+      paragraphTopPx += paragraphHeightPx;
+      inParagraphPx = 0;
+      paragraphHeightPx = 0;
+    }
+    topsPx.push(paragraphTopPx + inParagraphPx);
+    inParagraphPx += line.ascentPx + line.descentPx + spacingPx;
+    paragraphHeightPx += shapedLineHeightPx(line) + spacingPx;
+  });
+  return { topsPx, contentHeightPx: paragraphTopPx + paragraphHeightPx };
 }
 
 /**
@@ -853,44 +861,18 @@ function lineMetricsOf(
   styledRuns: readonly StyledTextRun[],
   layout: TextLayoutResult
 ): RichTextLineMetrics[] {
-  const paragraphAscentPx = layout.baselineOffsetPx;
-  const paragraphDescentPx = layout.linePitchPx - layout.baselineOffsetPx;
   const zeroHeightParagraphs = zeroHeightParagraphsOf(styledRuns);
 
-  let topPx = 0;
-  return perLine.map((segments, lineIndex) => {
+  const extents = perLine.map((segments, lineIndex) => {
     // An empty text buffer has no ascent or descent (measured in Godot 4.6.3).
     if (zeroHeightParagraphs.has(layout.lines[lineIndex]!.paragraphIndex)) {
-      return { topPx, ascentPx: 0, descentPx: 0, textAscentPx: 0, textDescentPx: 0 };
+      return { ascentPx: 0, descentPx: 0, textAscentPx: 0, textDescentPx: 0 };
     }
     // Text first: `_realign` measures every image against these values, and an
     // image adds nothing to them.
-    let ascentPx = 0;
-    let descentPx = 0;
-    for (const segment of segments) {
-      const run = styledRuns[segment.runIndex]!;
-      if (run.image) continue;
-      // A glyph may draw in a face of the **Fallback chain**, so each glyph's face counts. A run of
-      // glyphs in one face measures it once.
-      let lastFace: FontMetrics | undefined;
-      for (const { fontMetrics: face } of segment.glyphs) {
-        if (face === lastFace) continue;
-        lastFace = face;
-        ascentPx = Math.max(ascentPx, getFontAscentPx(face, run.fontSizePx));
-        descentPx = Math.max(descentPx, getFontDescentPx(face, run.fontSizePx));
-      }
-      // A glyph offset past the font's line moves it (`text_server_adv.cpp:5161-5162`).
-      const { abovePx, belowPx } = glyphOffsetReachPx(segment.glyphs);
-      ascentPx = Math.max(ascentPx, abovePx);
-      descentPx = Math.max(descentPx, belowPx);
-    }
-    // A blank line shapes its break in the paragraph font, so it keeps that height.
-    if (segments.length === 0) {
-      ascentPx = paragraphAscentPx;
-      descentPx = paragraphDescentPx;
-    }
-    const textAscentPx = ascentPx;
-    const textDescentPx = descentPx;
+    const { ascentPx: textAscentPx, descentPx: textDescentPx } = layout.lines[lineIndex]!;
+    let ascentPx = textAscentPx;
+    let descentPx = textDescentPx;
 
     for (const segment of segments) {
       const run = styledRuns[segment.runIndex]!;
@@ -905,55 +887,10 @@ function lineMetricsOf(
       descentPx = Math.max(descentPx, yOffset + run.image.sizePx.y);
     }
 
-    const metrics = { topPx, ascentPx, descentPx, textAscentPx, textDescentPx };
-    // `line_separation` is 0 (`default_theme.cpp:1217`), so tops are a bare sum.
-    topPx += ascentPx + descentPx;
-    return metrics;
+    return { ascentPx, descentPx, textAscentPx, textDescentPx };
   });
-}
-
-/** The paragraph's `[u]`/`[s]` stroke geometry, `sd->upos`/`sd->uthk`, before `rich_text_label.cpp:1243`'s 1px floor. */
-interface RichTextUnderlineMetrics {
-  /** Downward offset from the line's baseline to the stroke's CENTRE, px (`shaped_text_get_underline_position`). */
-  positionPx: number;
-  /** The font's stroke thickness, px, unfloored (`shaped_text_get_underline_thickness`): `underlineRectPx` applies `MAX(1.0, uth)`. */
-  thicknessPx: number;
-}
-
-/**
- * Each paragraph's underline position and thickness, by the source index of a character in it: a
- * max over the sizes of the paragraph's font spans. `_shape_substr` (`text_server_adv.cpp:5310-5311`)
- * copies the paragraph's `upos`/`uthk` into each line that `rich_text_label.cpp:1053-1054` reads,
- * and `:7174-7175` accumulates them from the spans' fonts only, so an `[img]` adds nothing.
- */
-function richTextUnderlineMetrics(
-  styledRuns: readonly StyledTextRun[]
-): (sourceIndex: number) => RichTextUnderlineMetrics {
-  const paragraphs: RichTextUnderlineMetrics[] = [{ positionPx: 0, thicknessPx: 0 }];
-  const paragraphStarts: number[] = [0];
-  let runStart = 0;
-  for (const run of styledRuns) {
-    let segmentStart = runStart;
-    run.text.split('\n').forEach((segment, i) => {
-      if (i > 0) {
-        paragraphStarts.push(segmentStart);
-        paragraphs.push({ positionPx: 0, thicknessPx: 0 });
-      }
-      if (segment.length > 0 && !run.image)
-        widenUnderline(paragraphs[paragraphs.length - 1]!, run.fontSizePx);
-      segmentStart += segment.length + 1;
-    });
-    runStart += run.text.length;
-  }
-  return (index) => paragraphs[countAtOrBelow(paragraphStarts, index) - 1]!;
-}
-
-/** Widens `metrics` to a span at `fontSizePx`. Both scale monotonically with the size. */
-function widenUnderline(metrics: RichTextUnderlineMetrics, fontSizePx: number): void {
-  // Open Sans's `post` table (`openSansMetrics.ts`): `fontMetrics.ts` has no
-  // underline fields, so a scene font keeps Open Sans proportions.
-  metrics.positionPx = Math.max(metrics.positionPx, getUnderlinePositionPx(fontSizePx));
-  metrics.thicknessPx = Math.max(metrics.thicknessPx, getUnderlineThicknessPx(fontSizePx));
+  const { topsPx } = richTextLineTopsPx(extents, layout);
+  return extents.map((extent, lineIndex) => ({ topPx: topsPx[lineIndex]!, ...extent }));
 }
 
 /** One line's share of one style run. */
@@ -1134,7 +1071,6 @@ export function layoutRichTextRuns(
   const boxWidthPx = alignment?.boxWidthPx ?? 0;
   // Every line of a paragraph aligns as its first item does (`rich_text_label.cpp:598-599`).
   const runAt = runAtFromRuns(styledRuns);
-  const underlineAt = richTextUnderlineMetrics(styledRuns);
   const paragraphRunOf = (lineIndex: number): StyledTextRun | undefined =>
     runAt(unfittedLayout.lines[lineIndex]?.paragraphStart ?? 0);
   const alignmentOfLine = (lineIndex: number): number =>
@@ -1154,7 +1090,7 @@ export function layoutRichTextRuns(
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);
 
   const { vbeginPx, vsepPx } = richTextVerticalOffsets(
-    alignment?.fullText?.heightPx ?? contentHeightOf(lineMetrics),
+    alignment?.fullText?.heightPx ?? richTextLineTopsPx(lineMetrics, layout).contentHeightPx,
     alignment?.boxHeightPx ?? 0,
     alignment?.verticalAlignment,
     alignment?.fullText?.lineCount ?? layout.lines.length
@@ -1210,11 +1146,11 @@ export function layoutRichTextRuns(
         lineIndex,
         lineTopPx,
         lineOffsetXPx,
-        underline: run.underline ? underlineAt(layout.lines[lineIndex]?.paragraphStart ?? 0) : null,
+        underline: run.underline ? (line.underline ?? NO_UNDERLINE_PX) : null,
         color: run.color,
         outline: run.outline,
         fontSizePx: run.fontSizePx,
-        layout: soloRunLayout(segment, layout, ascentPx, ascentPx + descentPx),
+        layout: soloRunLayout(segment, layout, { ascentPx, descentPx }),
         image: run.image
           ? {
               spec: run.image.spec,
@@ -1246,34 +1182,28 @@ interface UnderlineRectPx {
   x1: number;
   /** Top edge: the first pixel row Godot's quad covers. */
   topPx: number;
-  /** Whole rows the quad covers: 1 for a stroke at its `MAX(1.0, uth)` floor. */
+  /** Whole rows the quad covers: 1 for a stroke at its 1 px floor. */
   heightPx: number;
-}
-
-/**
- * The whole pixels `[from, to)` covers with one sample per pixel centre:
- * pixel `n` is in iff `from <= n + 0.5 < to`, the top-left fill rule.
- */
-function coveredPixelRange(from: number, to: number): { first: number; last: number } {
-  return { first: Math.ceil(from - 0.5), last: Math.ceil(to - 0.5) - 1 };
 }
 
 /**
  * A `[u]` run's stroke rect, snapped to the pixels Godot's quad covers, or `null`
  * with no glyphs. The stroke centres `upos` below the baseline (`rich_text_label.cpp:1055`,
- * `:1242-1244`), at least 1px thick (`:1243`, with `base_scale` 1 here).
+ * `:1242-1244`), `MAX(1.0, uth * base_scale)` thick (`:1243`). `baseScale` is the theme's default
+ * base scale, the theme scale for the default theme (`make_default_theme`).
  */
 export function underlineRectPx(
   glyphs: readonly GlyphPlacement[],
   lineAscentPx: number,
-  metrics: RichTextUnderlineMetrics
+  metrics: UnderlinePx,
+  baseScale: number
 ): UnderlineRectPx | null {
   if (glyphs.length === 0) return null;
 
   const first = glyphs[0]!;
   const last = glyphs[glyphs.length - 1]!;
   const centerY = lineAscentPx + metrics.positionPx;
-  const widthPx = Math.max(1, metrics.thicknessPx);
+  const widthPx = Math.max(1, metrics.thicknessPx * baseScale);
 
   // Godot's un-antialiased quad on a canvas without MSAA covers whole rows, where
   // this multisampled canvas would feather two. The snap holds because the origin

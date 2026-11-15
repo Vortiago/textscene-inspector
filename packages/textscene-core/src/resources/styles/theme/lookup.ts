@@ -3,6 +3,8 @@
  * `ThemeResource`s `decode.ts` produces. Pure: no I/O, no parsing.
  */
 
+import type { DefaultTheme } from '../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultThemeVariationBase } from '../../../godot/scene/defaultTheme/variations';
 import { classInheritanceChain } from '../../../godot/classdb/classBaseTypes';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { withDefaultFonts, type DefaultFonts } from '../../fonts/font/defaultFont';
@@ -54,9 +56,12 @@ function buildThemeTypeChain(
     // variation owns its `base_type` walk (`scene/theme/theme_owner.cpp:181-224`),
     // which stops before `nativeType`.
     const owner = themeSearchOrder(ancestorThemes, projectTheme).find((t) =>
-      Object.hasOwn(t.typeVariations, typeVariation)
+      registersVariation(t, typeVariation)
     );
-    if (owner) {
+    // No scene or project theme registers it: the default theme may (`theme_owner.cpp:200-208`).
+    const baseOf = (variation: string): string | undefined =>
+      owner ? ownerBaseOf(owner, variation) : defaultThemeVariationBase(variation);
+    if (owner || defaultThemeVariationBase(typeVariation) !== undefined) {
       // Godot walks this unguarded. A previewer reads files it did not write, so
       // a `MyPanel/base_type = &"MyPanel"` cycle must stop the walk.
       const seen = new Set<string>();
@@ -64,16 +69,23 @@ function buildThemeTypeChain(
       while (current !== undefined && current !== '' && !seen.has(current)) {
         seen.add(current);
         chain.push(current);
-        const base: string | undefined = Object.hasOwn(owner.typeVariations, current)
-          ? owner.typeVariations[current]
-          : undefined;
-        current = base;
+        current = baseOf(current);
         if (current === nativeType) break;
       }
     }
   }
 
   return [...chain, ...nativeTypeChain(nativeType)];
+}
+
+/** Whether `theme` registers `variation` (`Theme::set_type_variation`). Own keys only, so a name such as `constructor` reads no prototype. */
+function registersVariation(theme: ThemeResource, variation: string): boolean {
+  return Object.hasOwn(theme.typeVariations, variation);
+}
+
+/** The base a Theme registers for a variation, if it registers it. */
+function ownerBaseOf(owner: ThemeResource, variation: string): string | undefined {
+  return registersVariation(owner, variation) ? owner.typeVariations[variation] : undefined;
 }
 
 /**
@@ -85,7 +97,7 @@ function buildThemeTypeChain(
 function fontInTheme(theme: ThemeResource, type: string, name: string): FontResource | undefined {
   const explicit = theme.fonts[type]?.[name];
   if (explicit !== undefined) return explicit;
-  if (Object.hasOwn(theme.typeVariations, type)) return undefined;
+  if (registersVariation(theme, type)) return undefined;
   return theme.defaultFont ?? undefined;
 }
 
@@ -93,7 +105,7 @@ function fontInTheme(theme: ThemeResource, type: string, name: string): FontReso
 function fontSizeInTheme(theme: ThemeResource, type: string, name: string): number | undefined {
   const explicit = theme.fontSizes[type]?.[name];
   if (explicit !== undefined) return explicit;
-  if (Object.hasOwn(theme.typeVariations, type)) return undefined;
+  if (registersVariation(theme, type)) return undefined;
   return theme.defaultFontSize;
 }
 
@@ -104,11 +116,15 @@ function fontSizeInTheme(theme: ThemeResource, type: string, name: string): numb
  */
 export interface ThemeResolutionScope {
   readonly typeChain: readonly string[];
+  /** The `theme_type_variation` the lookup was asked for, which the default theme may define though no Theme in `searchOrder` does. */
+  readonly variation: string | undefined;
   readonly searchOrder: readonly ThemeResource[];
   /** The font a lookup reaches after every theme: the default theme's `default_font`. Null draws the bundled font. */
   readonly projectDefaultFont: FontResource | null;
   /** The fonts under a font with no face of its own (`defaultFontsOf`). */
   readonly defaultFonts: DefaultFonts;
+  /** The theme every lookup asks last, after `searchOrder` (`theme_owner.cpp:247-257`). */
+  readonly defaultTheme: DefaultTheme;
 }
 
 /**
@@ -158,20 +174,22 @@ export function themeResolutionScope(
   ancestorThemes: readonly ThemeResource[],
   projectFonts: ProjectFonts
 ): ThemeResolutionScope {
-  const { projectTheme, projectDefaultFont } = projectFonts;
+  const { projectTheme, projectDefaultFont, defaultTheme } = projectFonts;
   const defaultFonts = defaultFontsOf(projectFonts);
   return {
     typeChain: buildThemeTypeChain(nativeType, typeVariation, ancestorThemes, projectTheme),
+    variation: typeVariation,
     searchOrder: themeSearchOrder(ancestorThemes, projectTheme),
     projectDefaultFont: withDefaultFonts(projectDefaultFont, defaultFonts),
     defaultFonts,
+    defaultTheme,
   };
 }
 
 /**
  * The font a theme or an override defines for `name`, or `undefined` where none does. A caller
  * with its own last rung uses this: RichTextLabel's `bold_font` ends at a bold built over the
- * default font, not at the default font itself (`default_theme.cpp:1195`).
+ * default font, not at the default font itself, as the default theme registers it.
  *
  * @param override The node's own `theme_override_fonts/<name>`, which wins once
  *   declared with no validity check (`control.cpp:3089-3093`). `undefined` means
@@ -210,8 +228,8 @@ export function resolveThemeFontIn(
   override: FontResource | null | undefined
 ): FontResource | null {
   const found = findThemeFontIn(scope, name, override);
-  // The default theme's `default_font`, which the project font replaces
-  // (`default_theme.cpp:1371-1373`), is the last rung (`theme_owner.cpp:227-254`).
+  // The default theme's `default_font`, which the project font replaces in
+  // `make_default_theme`, is the last rung (`theme_owner.cpp:227-254`).
   return found === undefined ? scope.projectDefaultFont : found;
 }
 
@@ -245,17 +263,13 @@ export function fontForNode(
  * The font-size counterpart of `resolveThemeFontIn` (`Control::get_theme_font_size`,
  * `control.cpp:3107-3129`). Always returns a positive size.
  *
+ * The default theme answers last, with its own size for `name` or its `default_font_size`
+ * (`Theme::has_theme_item`, `theme.cpp:1009-1030`), so the fallback size of `ThemeDB` is never read.
+ *
  * @param override Wins only when `> 0` (`if (font_size && (*font_size) > 0)`,
  *   `control.cpp:3114-3117`). A `0` falls through like an unauthored one.
- * @param builtInDefaultPx Stands in for `ThemeDB::get_fallback_font_size()`:
- *   `DEFAULT_FONT_SIZE` (`godot/scene/theme.ts`), scaled.
  */
-export function resolveThemeFontSizeIn(
-  scope: ThemeResolutionScope,
-  name: string,
-  override: number | undefined,
-  builtInDefaultPx: number
-): number {
+export function resolveThemeFontSizeIn(scope: ThemeResolutionScope, name: string, override?: number): number {
   if (override !== undefined && override > 0) return override;
 
   for (const theme of scope.searchOrder) {
@@ -264,36 +278,63 @@ export function resolveThemeFontSizeIn(
       if (found !== undefined) return found;
     }
   }
-  return builtInDefaultPx;
+  return explicitDefaultFontSize(scope, name) ?? scope.defaultTheme.defaultFontSize;
 }
+
+/**
+ * The size the default theme sets for `name` itself, before its `default_font_size` answers. That size
+ * answers at the first type of the chain that is not one of its own variations (`Theme::has_theme_item`,
+ * `theme.cpp:1021-1026`), so a scene variation based on `HeaderLarge` reads the default size.
+ */
+function explicitDefaultFontSize(scope: ThemeResolutionScope, name: string): number | undefined {
+  for (const type of scope.typeChain) {
+    const explicit = itemsAt(scope.defaultTheme.types, type)?.fontSizes[name];
+    if (explicit !== undefined) return explicit;
+    if (defaultThemeVariationBase(type) === undefined) return undefined;
+  }
+  return undefined;
+}
+
+/** `record[key]`, own keys only: a type named `constructor` reads no prototype. */
+function itemsAt<T>(record: Readonly<Record<string, T>>, key: string): T | undefined {
+  return Object.hasOwn(record, key) ? record[key] : undefined;
+}
+
+/** One kind of item of a theme, by type, then by item name. */
+type ItemsByType<V> = Readonly<Record<string, Readonly<Record<string, V>>>>;
 
 /**
  * The StyleBox, Color and Constant sibling of `resolveThemeFontIn`, for every
  * name at once (`ThemeOwner::get_theme_item_in_types`, `theme_owner.cpp:227-261`:
- * owners outer, types inner, first hit wins). Filling only unset names in the
- * same order gives each name the same first hit as a single lookup.
+ * owners outer, types inner, first hit wins, and the default theme last). Filling only
+ * unset names in the same order gives each name the same first hit as a single lookup.
  *
  * @param localOverrides `theme_override_*` entries, which always win with no
  *   validity check (`Control::get_theme_stylebox`, `get_theme_color`, `get_theme_constant`).
  * @param itemsOf A theme's per-type map. StyleBoxes come from a per-theme resolved
  *   cache, since each resolves against its own theme's `resources`, not the node.
+ * @param defaultItemsOf The same kind of item in the default theme.
  */
 export function mergeThemedRecord<V>(
   scope: ThemeResolutionScope,
   localOverrides: Readonly<Record<string, V>>,
-  itemsOf: (theme: ThemeResource) => Readonly<Record<string, Readonly<Record<string, V>>>> | undefined
+  itemsOf: (theme: ThemeResource) => ItemsByType<V> | undefined,
+  defaultItemsOf: (theme: DefaultTheme) => ItemsByType<V>
 ): Readonly<Record<string, V>> {
   const out: Record<string, V> = { ...localOverrides };
-  for (const theme of scope.searchOrder) {
-    const byType = itemsOf(theme);
-    if (!byType) continue;
+  const fillFrom = (byType: ItemsByType<V>): void => {
     for (const type of scope.typeChain) {
-      const atType = byType[type];
+      const atType = itemsAt(byType, type);
       if (!atType) continue;
       for (const [name, value] of Object.entries(atType)) {
         if (!Object.hasOwn(out, name)) out[name] = value;
       }
     }
+  };
+  for (const theme of scope.searchOrder) {
+    const byType = itemsOf(theme);
+    if (byType) fillFrom(byType);
   }
+  fillFrom(defaultItemsOf(scope.defaultTheme));
   return out;
 }

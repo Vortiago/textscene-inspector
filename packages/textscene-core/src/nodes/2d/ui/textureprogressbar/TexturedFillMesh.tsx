@@ -12,6 +12,7 @@ import { canvasMapProps } from '../../../../r3f/canvas2DTextureDecode';
 import { useCanvasItemMerge } from '../../../../r3f/components/LitCanvasItemPixels';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
+import { useCanvasColorSpace } from '../../../../r3f/canvasColorSpace';
 
 interface TexturedFillMeshGeometry {
   positions: number[];
@@ -31,6 +32,7 @@ interface TexturedFillMeshProps {
 export function TexturedFillMesh({ geometry, texture, color, opacity, renderOrder }: TexturedFillMeshProps) {
   const clippingPlanes = useControlClipPlanes();
   const canvasItemMerge = useCanvasItemMerge();
+  const canvasSpace = useCanvasColorSpace();
 
   const builtGeometry = useMemo(() => {
     if (!geometry || geometry.positions.length === 0) return null;
@@ -48,7 +50,7 @@ export function TexturedFillMesh({ geometry, texture, color, opacity, renderOrde
 
   const program = materialProgramInputs({
     props: {
-      ...canvasMapProps(texture),
+      ...canvasMapProps(texture, canvasSpace),
       color,
       opacity,
       transparent: true,

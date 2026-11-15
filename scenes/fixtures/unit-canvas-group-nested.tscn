@@ -1,0 +1,23 @@
+; One variable against unit-canvas-group-self-modulate.tscn: a second CanvasGroup between the group
+; and the squares, also at `self_modulate` alpha 0.5. Inside the outer group the inner one draws as a
+; plain white rect over the squares, and the outer one composites both. No other scene nests a group.
+
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Outer" type="CanvasGroup" parent="."]
+position = Vector2(100, 100)
+self_modulate = Color(1, 1, 1, 0.5)
+
+[node name="Inner" type="CanvasGroup" parent="Outer"]
+self_modulate = Color(1, 1, 1, 0.5)
+
+[node name="Red" type="Polygon2D" parent="Outer/Inner"]
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Blue" type="Polygon2D" parent="Outer/Inner"]
+position = Vector2(50, 50)
+color = Color(0, 0, 1, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)

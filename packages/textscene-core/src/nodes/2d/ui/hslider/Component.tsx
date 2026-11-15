@@ -8,16 +8,18 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { SLIDER_GRABBER_ICONS, SLIDER_TICK_ICONS } from '../../../../r3f/controls/native/themeIcons';
-import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
+import { useThemeIcon } from '../../../../r3f/controls/native/useIconTexture';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   resolveSliderRatio,
   sliderGrabberAreaRect,
-  sliderGrabberIconSize,
+  sliderGrabber,
   sliderGrabberRect,
+  sliderTickOffset,
   sliderTickRects,
   sliderTrackRect,
+  sliderBoxes,
 } from '../shared/sliderSolver';
 import { SLIDER_DEFAULT_EDITABLE, sliderTickIndices } from '../shared/slider';
 import type { HSliderProperties } from './types';
@@ -30,22 +32,31 @@ export function HSlider({ solveNode, tint, rect, theme, renderOrder }: NativeCon
   const size = { x: rect.w, y: rect.h };
   const ratio = resolveSliderRatio(props, controlLayoutOrder(solveNode));
 
-  const trackBase = solveNode.styleBoxes.slider ?? theme.widgets.slider.track;
-  const fillBase = solveNode.styleBoxes.grabber_area ?? theme.widgets.slider.fill;
+  const { slider: trackBase, grabberArea: fillBase } = sliderBoxes(solveNode.styleBoxes);
 
-  const grabberIconSize = sliderGrabberIconSize(theme, solveNode.textureSlots);
-  const trackRect = sliderTrackRect(false, size, theme);
-  const fillRect = sliderGrabberAreaRect(false, size, ratio, theme, grabberIconSize, solveNode.rtl);
-  const grabberRect = sliderGrabberRect(false, size, ratio, grabberIconSize, solveNode.rtl);
+  const grabber = sliderGrabber(theme, solveNode);
+  const trackRect = sliderTrackRect(false, size, trackBase);
+  const fillRect = sliderGrabberAreaRect(false, size, ratio, trackBase, grabber, solveNode.rtl);
+  const grabberRect = sliderGrabberRect(false, size, ratio, grabber, solveNode.rtl);
   const tickIndices = sliderTickIndices(props);
-  const tickRects = sliderTickRects(false, size, tickIndices, props.tickCount ?? 0, theme, grabberIconSize);
+  const tickRects = sliderTickRects(
+    false,
+    size,
+    tickIndices,
+    props.tickCount ?? 0,
+    theme,
+    grabber,
+    trackBase,
+    sliderTickOffset(solveNode)
+  );
 
   const editable = props.editable ?? SLIDER_DEFAULT_EDITABLE;
-  const grabberTexture = useNodeIcon(
-    solveNode.icons[editable ? 'grabber' : 'grabber_disabled'],
+  const grabberTexture = useThemeIcon(
+    solveNode,
+    editable ? 'grabber' : 'grabber_disabled',
     editable ? SLIDER_GRABBER_ICONS.grabber : SLIDER_GRABBER_ICONS.grabberDisabled
   );
-  const tickTexture = useNodeIcon(solveNode.icons.tick, SLIDER_TICK_ICONS.hslider);
+  const tickTexture = useThemeIcon(solveNode, 'tick', SLIDER_TICK_ICONS.hslider);
 
   return (
     <>
@@ -66,27 +77,24 @@ export function HSlider({ solveNode, tint, rect, theme, renderOrder }: NativeCon
         />
       </CanvasItemGroup>
       {tickRects.map((tickRect, i) => (
-        <CanvasItemGroup key={tickIndices[i]} position={[tickRect.x, -tickRect.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={tickRect.w}
-            height={tickRect.h}
-            color={tint.color}
-            opacity={tint.opacity}
-            map={tickTexture}
-          />
-        </CanvasItemGroup>
-      ))}
-      <CanvasItemGroup position={[grabberRect.x, -grabberRect.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={grabberRect.w}
-          height={grabberRect.h}
+        <PositionedIcon
+          key={tickIndices[i]}
+          rect={tickRect}
+          texture={tickTexture}
           color={tint.color}
           opacity={tint.opacity}
-          map={grabberTexture}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
         />
-      </CanvasItemGroup>
+      ))}
+      <PositionedIcon
+        rect={grabberRect}
+        texture={grabberTexture}
+        color={tint.color}
+        opacity={tint.opacity}
+        renderOrder={renderOrder}
+        canvasKey={renderOrder}
+      />
     </>
   );
 }

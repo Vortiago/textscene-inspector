@@ -72,8 +72,13 @@ export async function findCanvas(page) {
  * Opens `fixture` and finds the element a capture clips to: the start every capture shares. Answers
  * `{ target, reason }`, with a null target and a reason when there is none.
  */
-export async function openScene(page, baseUrl, fixture, { canvas2D = false, camera, onSlow } = {}) {
-  await gotoFixture(page, baseUrl, fixture, onSlow, { camera });
+export async function openScene(
+  page,
+  baseUrl,
+  fixture,
+  { canvas2D = false, camera, litSurface, onSlow } = {}
+) {
+  await gotoFixture(page, baseUrl, fixture, onSlow, { camera, litSurface });
   return findCaptureTarget(page, { canvas2D });
 }
 

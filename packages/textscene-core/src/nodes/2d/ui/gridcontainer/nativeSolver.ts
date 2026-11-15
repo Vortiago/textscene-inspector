@@ -14,12 +14,13 @@ import type { ControlProperties } from '../control/types';
 import type { GridContainerProperties } from './types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import {
   controlSolverRegistry,
   type ContainerLayoutFn,
   type MinimumSizeFn,
 } from '../../../../r3f/controls/native/solverRegistry';
+import { gridCellMinimumExtent } from '../shared/gridCellMinimum';
 import { fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
 import { DEFAULT_SIZE_FLAGS, SizeFlags } from '../../../../godot/scene/control';
 
@@ -37,10 +38,6 @@ function vFlagsOf(n: SolveNode): number {
 
 function columnsOf(n: SolveNode): number {
   return Math.max(1, (n.node.properties as GridContainerProperties).columns ?? 1);
-}
-
-function separationOf(n: SolveNode, key: 'h_separation' | 'v_separation', theme: NativeTheme): number {
-  return n.constants[key] ?? theme.separation;
 }
 
 // --- get_minimum_size ---------------------------------------------------------
@@ -66,8 +63,8 @@ const gridContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
     validIndex++;
 
     const ms = ctx.combinedMinimumSize(child);
-    const w = Math.trunc(ms.x);
-    const h = Math.trunc(ms.y);
+    const w = gridCellMinimumExtent(ms.x);
+    const h = gridCellMinimumExtent(ms.y);
     colMinW.set(col, Math.max(colMinW.get(col) ?? 0, w));
     rowMinH.set(row, Math.max(rowMinH.get(row) ?? 0, h));
     maxColIndex = Math.max(maxColIndex, col);
@@ -79,8 +76,8 @@ const gridContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   let height = 0;
   for (const h of rowMinH.values()) height += h;
 
-  width += separationOf(n, 'h_separation', ctx.theme) * maxColIndex;
-  height += separationOf(n, 'v_separation', ctx.theme) * maxRowIndex;
+  width += requiredThemeItem(n.constants, 'h_separation') * maxColIndex;
+  height += requiredThemeItem(n.constants, 'v_separation') * maxRowIndex;
 
   return { x: width, y: height };
 };
@@ -145,11 +142,11 @@ function remainingPixelIndex(
  * used one expands too ("consider all empty columns expanded", `:79-82`); rows
  * have no fixed count, so none do. Then `evictUnfittable`, then `fit_child_in_rect`.
  */
-const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
+const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect) => {
   const columns = columnsOf(n);
   const rtl = n.rtl;
-  const hSep = separationOf(n, 'h_separation', ctx.theme);
-  const vSep = separationOf(n, 'v_separation', ctx.theme);
+  const hSep = requiredThemeItem(n.constants, 'h_separation');
+  const vSep = requiredThemeItem(n.constants, 'v_separation');
 
   const sortable = children.filter(({ node }) => isSortableControl(node));
   const validCount = sortable.length;
@@ -162,8 +159,8 @@ const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) =
   sortable.forEach(({ node: child, minSize }, index) => {
     const row = Math.floor(index / columns);
     const col = index % columns;
-    colMinW.set(col, Math.max(colMinW.get(col) ?? 0, Math.trunc(minSize.x)));
-    rowMinH.set(row, Math.max(rowMinH.get(row) ?? 0, Math.trunc(minSize.y)));
+    colMinW.set(col, Math.max(colMinW.get(col) ?? 0, gridCellMinimumExtent(minSize.x)));
+    rowMinH.set(row, Math.max(rowMinH.get(row) ?? 0, gridCellMinimumExtent(minSize.y)));
     if (hasFlag(hFlagsOf(child), SizeFlags.EXPAND)) colExpanded.add(col);
     if (hasFlag(vFlagsOf(child), SizeFlags.EXPAND)) rowExpanded.add(row);
   });

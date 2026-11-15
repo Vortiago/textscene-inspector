@@ -41,3 +41,16 @@ describe('parseCheckButton', () => {
     expect(p.buttonPressed).toBe(false);
   });
 });
+
+describe('parseCheckButton button_pressed', () => {
+  const parse = (properties: Record<string, string>) =>
+    parseCheckButton(h({ name: 'X', type: 'CheckButton' }), properties).buttonPressed;
+
+  it('is on without toggle_mode, which the constructor sets', () => {
+    expect(parse({ button_pressed: 'true' })).toBe(true);
+  });
+
+  it('is off once toggle_mode is false, as BaseButton::set_pressed refuses it', () => {
+    expect(parse({ toggle_mode: 'false', button_pressed: 'true' })).toBe(false);
+  });
+});

@@ -2,7 +2,7 @@
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { basisFromQuaternion, basisGetRotationQuaternion } from './basis.js';
-import { CMP_EPSILON, UNIT_EPSILON, type KeyTimes } from './math.js';
+import { acosClamped, CMP_EPSILON, UNIT_EPSILON, type KeyTimes } from './math.js';
 import {
   QUATERNION_IDENTITY,
   quaternionDot,
@@ -23,11 +23,6 @@ import {
 
 function negatedQuaternion({ x, y, z, w }: Quaternion): Quaternion {
   return { x: -x, y: -y, z: -z, w: -w };
-}
-
-/** `Math::acos` (`math_funcs.h:110-112`): a cosine past one, which float rounding produces, gives 0, and one below -1 gives π. */
-function acosClamped(cosine: number): number {
-  return cosine < -1 ? f(Math.PI) : cosine > 1 ? 0 : Math.acos(cosine);
 }
 
 /**

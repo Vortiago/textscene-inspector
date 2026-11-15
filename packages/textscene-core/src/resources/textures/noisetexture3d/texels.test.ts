@@ -4,14 +4,14 @@
  * FastNoiseLite, one slice after another, each slice's rows from the top.
  */
 import { describe, expect, it } from 'vitest';
-import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
+import { fastNoiseLiteOf } from '../../noise/fastnoiselite/fastNoiseLite.testkit';
 import { type Gradient } from '../gradienttexture2d/types';
 import { decodeNoiseTexture3D } from './decode';
 import { noiseTexture3DTexels, type NoiseTexture3DInput } from './texels';
-import { GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
+import { GradientColorSpace, GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
 
 function input(properties: Record<string, string>, colorRamp: Gradient | null = null): NoiseTexture3DInput {
-  return { tex: decodeNoiseTexture3D(properties), noise: decodeFastNoiseLite({}), colorRamp };
+  return { tex: decodeNoiseTexture3D(properties), noise: fastNoiseLiteOf({}), colorRamp };
 }
 
 const SIZE = { width: '4', height: '3', depth: '5' };
@@ -54,6 +54,7 @@ describe('noiseTexture3DTexels', () => {
         { offset: 1, color: { r: 1, g: 0, b: 0, a: 1 } },
       ],
       interpolationMode: GradientInterpolationMode.LINEAR,
+      interpolationColorSpace: GradientColorSpace.SRGB,
     };
     const texels = noiseTexture3DTexels(input(SIZE, ramp));
     expect(Array.from(texels.subarray(0, 12))).toEqual([29, 58, 80, 100, 21, 48, 70, 86, 0, 27, 52, 77]);

@@ -3,6 +3,7 @@
  * Control-only sub-viewport, publishing a texture consumers sample directly.
  */
 import { describe, expect, it, vi } from 'vitest';
+import { LTR_LAYOUT_ENV } from '../../../testing/ltrLayoutEnv';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
@@ -37,12 +38,15 @@ import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 import { advanceFrameWithStubbedGl, withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { sourcesOver } from '../../../r3f/liveSceneTree.testkit';
+import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 
 const GUI_SCENE = `[gd_scene format=3]
 
 [node name="Root" type="Node3D"]
 
 [node name="SubViewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(320, 240)
 
 [node name="Panel" type="Panel" parent="SubViewport"]
@@ -56,10 +60,12 @@ function parse(source: string): TscnScene {
 }
 
 function walk(scene: TscnScene) {
-  return collectControlRasterViewports(scene.nodes, sourcesOver(), {
-    internalResources: scene.internalResources,
-    externalResources: scene.externalResources,
-  });
+  return collectControlRasterViewports(
+    scene.nodes,
+    sourcesOver(),
+    { internalResources: scene.internalResources, externalResources: scene.externalResources },
+    LTR_LAYOUT_ENV
+  );
 }
 
 /** Reports every entry the registry resolves at `path`, in order. */
@@ -147,6 +153,7 @@ describe('<ControlRasterPasses>', () => {
 [node name="Root" type="Node3D"]
 
 [node name="SubViewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(320, 240)
 
 [node name="Bar" type="ColorRect" parent="SubViewport"]
@@ -258,5 +265,114 @@ offset_bottom = 100.5
       </ViewportTextureProvider>
     );
     expect(seen.at(-1)).toBeNull();
+  });
+
+  /** A WHEN_PARENT_VISIBLE viewport follows the pass of the viewport around it, so that pass registers. */
+  describe('a Control-only viewport inside another', () => {
+    const nested = (outerMode: number) => `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Outer" type="SubViewport" parent="."]
+render_target_update_mode = ${outerMode}
+size = Vector2i(64, 64)
+
+[node name="Panel" type="Panel" parent="Outer"]
+anchors_preset = 0
+offset_right = 64.0
+offset_bottom = 64.0
+
+[node name="Inner" type="SubViewport" parent="Outer"]
+render_target_update_mode = 3
+size = Vector2i(32, 32)
+
+[node name="InnerPanel" type="Panel" parent="Outer/Inner"]
+anchors_preset = 0
+offset_right = 32.0
+offset_bottom = 32.0
+`;
+
+    /** Whether a frame draws into the inner viewport's target. */
+    async function innerDraws(outerMode: number): Promise<boolean> {
+      const seen: (ViewportTextureEntry | null)[] = [];
+      const { renderer, gl } = await mount(parse(nested(outerMode)), seen, 'Root/Outer/Inner');
+      const inner = seen.at(-1)!.plain.texture;
+      let drew = false;
+      await advanceFrameWithStubbedGl(renderer, gl, (target) => {
+        if (target?.texture === inner) drew = true;
+      });
+      return drew;
+    }
+
+    it('renders with an ALWAYS outer viewport', async () => {
+      expect(await innerDraws(4)).toBe(true);
+    });
+
+    it('never renders under a DISABLED outer viewport', async () => {
+      expect(await innerDraws(0)).toBe(false);
+    });
+  });
+});
+
+/**
+ * A y-sorted Control in a Control-only viewport sorts its children by origin y, as Godot does in
+ * the viewport's own canvas. `unit-control-y-sort-viewport` measures it: High (y 50) draws under
+ * Low (y 100), though Low is listed first.
+ */
+describe('<ControlRasterPasses> y-sort', () => {
+  const SORTED_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
+size = Vector2i(320, 240)
+
+[node name="Sorted" type="Control" parent="SubViewport"]
+y_sort_enabled = true
+
+[node name="Low" type="ColorRect" parent="SubViewport/Sorted"]
+offset_top = 100.0
+offset_right = 40.0
+offset_bottom = 140.0
+
+[node name="High" type="ColorRect" parent="SubViewport/Sorted"]
+offset_top = 50.0
+offset_right = 40.0
+offset_bottom = 90.0
+`;
+
+  it('draws the Control with the lower origin over the one listed after it', async () => {
+    const scene = parse(SORTED_SCENE);
+    const capturedGl: { current: THREE.WebGLRenderer | null } = { current: null };
+    const renderer = await ReactThreeTestRenderer.create(
+      <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene(scene), panelId: 'p' }}>
+        <ViewportTextureProvider>
+          <ViewportPassProvider>
+            <ControlRasterPasses viewports={walk(scene)} />
+            <CaptureRenderer captured={capturedGl} />
+            <ViewportPassOrchestrator />
+          </ViewportPassProvider>
+        </ViewportTextureProvider>
+      </HierarchyProvider>
+    );
+    const captured: { portalScene: THREE.Object3D | null } = { portalScene: null };
+    await withStubbedGl(
+      capturedGl.current!,
+      {
+        onRender: (_, rendered) => {
+          captured.portalScene ??= rendered;
+        },
+      },
+      () => renderer.advanceFrames(1, 16)
+    );
+    const orderOf = (name: string) => {
+      let order: number | undefined;
+      captured.portalScene?.traverse((o) => {
+        if (o.name === name) order = o.renderOrder;
+      });
+      return order;
+    };
+    expect(orderOf('ColorRect:Low')).toBeGreaterThan(orderOf('ColorRect:High')!);
   });
 });

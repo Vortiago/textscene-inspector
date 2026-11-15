@@ -1,7 +1,7 @@
 /**
  * The conformance suite of a snapshot host: code that owns snapshots for a reader, requests and
  * pins the files its reads touched, runs it again when one of them changes, and reports a failed
- * file once. The hook host passes it, and so must each later host (the Control solve, the live
+ * file once, and an address that a loaded file does not declare. The hook host passes it, and so must each later host (the Control solve, the live
  * scene tree).
  */
 
@@ -96,6 +96,19 @@ export function describeSnapshotHost(
       expect(host.reported()).toEqual([A_FILE]);
     });
 
+    it('answers unknown-id for an address the loaded file does not declare, and reports the address', async () => {
+      const { loader } = servedLoader({ [A_FILE]: resourceFile('') });
+      const host = makeHost(loader);
+      const address = `${A_FILE}::gone`;
+      const ext = `[ext_resource type="Resource" path="${address}" id="1_gone"]`;
+
+      host.run('ExtResource("1_gone")', sceneTables(ext), namedKind().kind);
+      await host.settle();
+
+      expect(host.runs().at(-1)).toMatchObject({ status: 'unavailable', reason: 'unknown-id' });
+      expect(host.reported()).toEqual([address]);
+    });
+
     it('reports no Missing resource for a failed file the reader stopped reading', async () => {
       const { loader } = servedLoader({});
       const host = makeHost(loader);
@@ -124,6 +137,19 @@ export function describeSnapshotHost(
       const outer = host.runs().at(-1);
       expect(outer?.status === 'loaded' && nameOf(outer.value.next)).toBe('from b');
       expect(requested()).toEqual([A_FILE, B_FILE]);
+    });
+
+    it('keeps the last answer of a file that reloads for a reader that replaces the last one', async () => {
+      const { loader } = servedLoader({ [A_FILE]: resourceFile('resource_name = "from a"') });
+      const host = makeHost(loader);
+      const { kind } = namedKind();
+      host.run('ExtResource("1_a")', sceneTables(EXT_A), kind);
+      await host.settle();
+
+      loader.resources.clearCache(A_FILE);
+      host.run('ExtResource("1_a")', sceneTables(EXT_A), kind);
+
+      expect(nameOf(host.runs().at(-1))).toBe('from a');
     });
 
     it('answers the same value for a second parse of the scene with equal resource text', async () => {

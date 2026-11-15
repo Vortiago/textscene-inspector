@@ -12,123 +12,24 @@
 
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { graphElementStyles } from '../graphelement/graphElementStyles';
 import {
   controlSolverRegistry,
   type ContainerLayoutFn,
   type MinimumSizeFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
-import { resolveTitleFontTheme, titleTextMinimumSize, titlebarGeometry } from '../graphelement/graphTitlebar';
+import { registerInternalControls } from '../../../../r3f/controls/native/internalControls';
+import {
+  GRAPH_FRAME_TITLE_LABEL,
+  titlebarBandHeightChannel,
+  titlebarInternalControls,
+  titlebarInternalLayout,
+  titlebarMinimumSize,
+  titlebarHeights,
+} from '../graphelement/graphTitlebar';
 import type { GraphFrameProperties } from './types';
-import type { Rgba } from '../../../../godot/math/math';
-import type { Vector2 } from '../../../../godot/math/vector';
-import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 import { DEFAULT_SIZE_FLAGS } from '../../../../godot/scene/control';
-
-/** `graph_frame.cpp` theme type variation for its internal title Label: `graph_frame.cpp:354`. */
-export const GRAPH_FRAME_TITLE_VARIATION = 'GraphFrameTitleLabel';
-
-/** `default_theme.cpp:849`: `GraphFrameTitleLabel`'s own `font_color`, opaque white. */
-export const GRAPH_FRAME_TITLE_DEFAULT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-
-/**
- * `default_theme.cpp:848`: `theme->set_font_size(font_size, "GraphFrameTitleLabel", 22)`,
- * a literal `22` where the function scales each other constant, so it stays unscaled.
- */
-export const GRAPH_FRAME_TITLE_FONT_SIZE_PX = 22;
-
-/** `GraphFrame`'s own `resizer_color` (`default_theme.cpp:841`). */
-export const GRAPH_FRAME_RESIZER_COLOR = CONTROL_FONT_COLOR;
-
-function flatBox(
-  bgColor: Rgba,
-  borderColor: Rgba,
-  borderWidth: number,
-  margin: { left: number; top: number; right: number; bottom: number },
-  expandTop: number,
-  cornerRadius: number
-): StyleBoxFlatData {
-  return {
-    bgColor,
-    borderColor,
-    borderWidth: { left: borderWidth, top: borderWidth, right: borderWidth, bottom: borderWidth },
-    cornerRadius: {
-      topLeft: cornerRadius,
-      topRight: cornerRadius,
-      bottomRight: cornerRadius,
-      bottomLeft: cornerRadius,
-    },
-    expandMargin: { left: 0, top: expandTop, right: 0, bottom: 0 },
-    contentMargin: margin,
-    drawCenter: true,
-    borderBlend: false,
-    antiAliased: true,
-    aaSize: 1,
-    cornerDetail: 8,
-    skew: { x: 0, y: 0 },
-    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-    shadowSize: 0,
-    shadowOffset: { x: 0, y: 0 },
-  };
-}
-
-/**
- * GraphFrame's default-theme StyleBoxes: `default_theme.cpp:828-841`. Not in
- * `nativeTheme.ts`'s `widgets` (no entry for GraphFrame there).
- */
-function defaultStyles(theme: NativeTheme) {
-  // `make_flat_stylebox(style_pressed_color, 18, 12, 18, 12, 3, true, 2)`:
-  // margins its own literals (18, 12), corner radius the shared default (3),
-  // border_width 2 (all scaled). Scale recovered the same way GraphNode's
-  // own `defaultStyles` does: see that module's doc.
-  const scale = theme.contentMargin / DEFAULT_CONTENT_MARGIN;
-  const panelMargin = {
-    left: Math.round(18 * scale),
-    top: Math.round(12 * scale),
-    right: Math.round(18 * scale),
-    bottom: Math.round(12 * scale),
-  };
-  const borderWidth = Math.round(2 * scale);
-  const expandTop = Math.round(38 * scale);
-  const panel = flatBox(
-    theme.styleFill.pressed,
-    theme.styleFill.pressed,
-    borderWidth,
-    panelMargin,
-    expandTop,
-    theme.cornerRadius
-  );
-  const panelSelected = flatBox(
-    theme.styleFill.pressed,
-    theme.styleFill.hover,
-    borderWidth,
-    panelMargin,
-    expandTop,
-    theme.cornerRadius
-  );
-  // `make_empty_stylebox(4, 4, 4, 4)`: draws nothing, margin `default_margin`.
-  const titlebarMargin = {
-    left: theme.contentMargin,
-    top: theme.contentMargin,
-    right: theme.contentMargin,
-    bottom: theme.contentMargin,
-  };
-  const titlebar = flatBox({ r: 0, g: 0, b: 0, a: 0 }, { r: 0, g: 0, b: 0, a: 0 }, 0, titlebarMargin, 0, 0);
-  return { panel, panelSelected, titlebar, titlebarSelected: titlebar };
-}
-
-export function graphFrameStyles(n: SolveNode, theme: NativeTheme) {
-  const d = defaultStyles(theme);
-  return {
-    panel: n.styleBoxes.panel ?? d.panel,
-    panelSelected: n.styleBoxes.panel_selected ?? d.panelSelected,
-    titlebar: n.styleBoxes.titlebar ?? d.titlebar,
-    titlebarSelected: n.styleBoxes.titlebar_selected ?? d.titlebarSelected,
-  };
-}
 
 function hFlagsOf(n: SolveNode): number {
   return (n.node.properties as GraphFrameProperties).sizeFlagsHorizontal ?? DEFAULT_SIZE_FLAGS;
@@ -137,25 +38,11 @@ function vFlagsOf(n: SolveNode): number {
   return (n.node.properties as GraphFrameProperties).sizeFlagsVertical ?? DEFAULT_SIZE_FLAGS;
 }
 
-export function graphFrameTitleTextMin(n: SolveNode, _theme: NativeTheme): Vector2 {
-  const props = n.node.properties as GraphFrameProperties;
-  const fontTheme = resolveTitleFontTheme(
-    n,
-    GRAPH_FRAME_TITLE_VARIATION,
-    GRAPH_FRAME_TITLE_FONT_SIZE_PX,
-    GRAPH_FRAME_TITLE_DEFAULT_COLOR
-  );
-  return titleTextMinimumSize(props.title ?? '', fontTheme);
-}
-
 // --- get_minimum_size ---------------------------------------------------------
 
 const graphFrameMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const { panel, titlebar } = graphFrameStyles(n, ctx.theme);
-  const textMin = graphFrameTitleTextMin(n, ctx.theme);
-
-  let width = textMin.x + titlebar.contentMargin.left + titlebar.contentMargin.right;
-  let height = textMin.y + titlebar.contentMargin.top + titlebar.contentMargin.bottom;
+  const { panel } = graphElementStyles(n);
+  let { x: width, y: height } = titlebarMinimumSize(n, ctx);
 
   for (const child of n.children) {
     if (!isSortableControl(child)) continue;
@@ -172,21 +59,22 @@ const graphFrameMinimumSize: MinimumSizeFn = (n, ctx) => {
 };
 
 controlSolverRegistry.registerMinimumSize('GraphFrame', graphFrameMinimumSize);
+registerInternalControls(
+  'GraphFrame',
+  titlebarInternalControls(GRAPH_FRAME_TITLE_LABEL),
+  titlebarInternalLayout
+);
 
 // --- _resort -------------------------------------------------------------------
 
 const graphFrameLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
-  const { panel, titlebar } = graphFrameStyles(n, ctx.theme);
-  const textMin = graphFrameTitleTextMin(n, ctx.theme);
-  const titlebarBand = titlebarGeometry(contentRect.w, textMin.y, titlebar);
+  const { panel } = graphElementStyles(n);
+  const band = titlebarHeights(n, ctx);
 
-  const offset = { x: panel.contentMargin.left, y: panel.contentMargin.top + titlebarBand.rect.h };
+  const offset = { x: panel.contentMargin.left, y: panel.contentMargin.top + band.resort };
   const size = {
     w: Math.max(0, contentRect.w - panel.contentMargin.left - panel.contentMargin.right),
-    h: Math.max(
-      0,
-      contentRect.h - panel.contentMargin.top - panel.contentMargin.bottom - titlebarBand.rect.h
-    ),
+    h: Math.max(0, contentRect.h - panel.contentMargin.top - panel.contentMargin.bottom - band.resort),
   };
   const rawRect: Rect2 = { x: offset.x, y: offset.y, w: size.w, h: size.h };
 
@@ -196,7 +84,7 @@ const graphFrameLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
     // `graph_frame.cpp` has no RTL branch; `fit_child_in_rect` reads the flag itself.
     rects.set(child.path, fitChildInRect(rawRect, minSize, hFlagsOf(child), vFlagsOf(child), n.rtl));
   }
-  return rects;
+  return { rects, meta: titlebarBandHeightChannel.seal(band.drawn) };
 };
 
 controlSolverRegistry.registerContainerLayout('GraphFrame', graphFrameLayout);

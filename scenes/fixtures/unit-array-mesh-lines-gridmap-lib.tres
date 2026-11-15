@@ -1,0 +1,26 @@
+[gd_resource type="MeshLibrary" format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7cq8o"]
+albedo_color = Color(1, 0.2, 0.2, 1)
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_gv12u"]
+_surfaces = [{
+"aabb": AABB(-0.4, -0.4, 0, 0.8, 0.8, 1e-05),
+"format": 34359742465,
+"index_count": 8,
+"index_data": PackedByteArray(0, 0, 1, 0, 1, 0, 2, 0, 2, 0, 3, 0, 3, 0, 0, 0),
+"material": SubResource("StandardMaterial3D_7cq8o"),
+"primitive": 1,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(205, 204, 204, 190, 205, 204, 204, 190, 0, 0, 0, 0, 205, 204, 204, 62, 205, 204, 204, 190, 0, 0, 0, 0, 205, 204, 204, 62, 205, 204, 204, 62, 0, 0, 0, 0, 205, 204, 204, 190, 205, 204, 204, 62, 0, 0, 0, 0)
+}]
+
+[resource]
+item/0/name = "Wire"
+item/0/mesh = SubResource("ArrayMesh_gv12u")
+item/0/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/mesh_cast_shadow = 1
+item/0/shapes = []
+item/0/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/navigation_layers = 1

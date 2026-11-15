@@ -2,9 +2,12 @@
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import { isButtonNodeAutowrapped } from '../../../../r3f/controls/native/buttonBase';
 import { CheckButton } from './Component';
 import { checkButtonMinimumSize, checkButtonTextureSlots } from './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'CheckButton', Component: CheckButton });
 controlSolverRegistry.registerMinimumSize('CheckButton', checkButtonMinimumSize);
 controlSolverRegistry.registerTextureSlots('CheckButton', checkButtonTextureSlots);
+// As Button's: `autowrap_mode` makes the label's height depend on this node's own width.
+controlSolverRegistry.registerSizeDependentMinimum('CheckButton', isButtonNodeAutowrapped);

@@ -17,6 +17,7 @@ import { World2DLightingBoundary } from './World2DLightingBoundary';
 import { CanvasModulateContext, useCanvasModulate } from '../canvasModulate';
 import type { Rgba } from '../../godot/math/math';
 import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
+import { canvasColorSpaceOf } from '../canvasColorSpace';
 
 const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 const NIGHT: Rgba = { r: 0.2, g: 0.3, b: 0.6, a: 1 };
@@ -67,9 +68,9 @@ function Read({ seen }: { seen: Seen }) {
 async function readInside(): Promise<Seen> {
   const seen: Seen = {};
   await ReactThreeTestRenderer.create(
-    <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
+    <CanvasLighting2DProvider space={canvasColorSpaceOf(false)} canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
       <Outer seen={seen} />
-      <World2DLightingBoundary canvasModulate={WHITE}>
+      <World2DLightingBoundary space={canvasColorSpaceOf(false)} canvasModulate={WHITE}>
         <Read seen={seen} />
       </World2DLightingBoundary>
     </CanvasLighting2DProvider>
@@ -99,7 +100,7 @@ describe('World2DLightingBoundary', () => {
     }
     await ReactThreeTestRenderer.create(
       <CanvasModulateContext.Provider value={NIGHT}>
-        <World2DLightingBoundary canvasModulate={WHITE}>
+        <World2DLightingBoundary space={canvasColorSpaceOf(false)} canvasModulate={WHITE}>
           <ReadModulate />
         </World2DLightingBoundary>
       </CanvasModulateContext.Provider>

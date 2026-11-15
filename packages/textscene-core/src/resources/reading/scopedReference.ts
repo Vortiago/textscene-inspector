@@ -26,7 +26,31 @@ export interface ScopedReference {
  * node holds it locally.
  */
 export function nodeReference(ref: string | undefined, scope: SceneResources): ScopedReference {
-  return { ref, resources: scope, isHeldLocally: true };
+  return referenceHeldBy(ref, scope, true);
+}
+
+/**
+ * `ref` in the tables of the resource that holds it, with no origin: a material slot, a
+ * StyleBoxTexture, a TileSet source, a SpriteFrames frame. `isHeldLocally` is false when a holder
+ * on the way is not local to scene. The source scan lists each caller.
+ */
+export function referenceHeldBy(
+  ref: string | undefined,
+  resources: SceneResources,
+  isHeldLocally: boolean
+): ScopedReference {
+  return { ref, resources, isHeldLocally };
+}
+
+/** Whether two references name the same resource, held the same way. */
+export function sameReference(a: ScopedReference | null, b: ScopedReference | null): boolean {
+  if (a === null || b === null) return a === b;
+  return (
+    a.ref === b.ref &&
+    a.resources === b.resources &&
+    a.origin === b.origin &&
+    a.isHeldLocally === b.isHeldLocally
+  );
 }
 
 /**

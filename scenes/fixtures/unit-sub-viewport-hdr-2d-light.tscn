@@ -1,0 +1,253 @@
+; One variable: the SubViewport's use_hdr_2d. Each pair draws the same lit canvas twice, with it on at
+; the left or top and off beside it. A linear canvas adds each light to the linear albedo with no
+; clamp, keeps the light colour, the cookie and the shadow colour as authored, and seeds the
+; CanvasModulate in linear. Torch pair: a PointLight2D with a shadow. Sun pair: a DirectionalLight2D
+; with a shadow. Hot pair: a torch of energy 8 under a container modulate of 0.5, which shows that a
+; value above 1 survives into the consumer. Every other lit golden runs with use_hdr_2d off, so none
+; shows the linear arithmetic.
+
+[gd_scene load_steps=10 format=3]
+
+[sub_resource type="Gradient" id="gray_sprite"]
+colors = PackedColorArray(0.5, 0.5, 0.5, 1, 0.5, 0.5, 0.5, 1)
+
+[sub_resource type="GradientTexture2D" id="diffuse"]
+gradient = SubResource("gray_sprite")
+width = 100
+height = 200
+
+[sub_resource type="Gradient" id="flat_normal"]
+colors = PackedColorArray(0.15, 0.5, 1, 1, 0.15, 0.5, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="normal"]
+gradient = SubResource("flat_normal")
+width = 100
+height = 200
+
+[sub_resource type="CanvasTexture" id="sprite_texture"]
+diffuse_texture = SubResource("diffuse")
+normal_texture = SubResource("normal")
+
+[sub_resource type="Gradient" id="gray_cookie"]
+colors = PackedColorArray(0.6, 0.6, 0.6, 1, 0.6, 0.6, 0.6, 1)
+
+[sub_resource type="GradientTexture2D" id="cookie"]
+gradient = SubResource("gray_cookie")
+width = 400
+height = 200
+
+[sub_resource type="OccluderPolygon2D" id="torch_block"]
+polygon = PackedVector2Array(140, 90, 160, 90, 160, 110, 140, 110)
+
+[sub_resource type="OccluderPolygon2D" id="sun_block"]
+polygon = PackedVector2Array(80, 20, 120, 20, 120, 60, 80, 60)
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="TorchHdr" type="SubViewportContainer" parent="."]
+layout_mode = 0
+offset_left = 50.0
+offset_top = 50.0
+offset_right = 350.0
+offset_bottom = 250.0
+
+[node name="V" type="SubViewport" parent="TorchHdr"]
+use_hdr_2d = true
+render_target_update_mode = 4
+size = Vector2i(300, 200)
+
+[node name="Floor" type="Polygon2D" parent="TorchHdr/V"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 200, 0, 200)
+
+[node name="Sprite" type="Sprite2D" parent="TorchHdr/V"]
+position = Vector2(250, 100)
+texture = SubResource("sprite_texture")
+
+[node name="Tint" type="CanvasModulate" parent="TorchHdr/V"]
+color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="Torch" type="PointLight2D" parent="TorchHdr/V"]
+position = Vector2(100, 100)
+color = Color(1, 0.55, 0.2, 1)
+energy = 1.5
+shadow_enabled = true
+shadow_color = Color(0.4, 0.2, 0, 1)
+height = 40.0
+texture = SubResource("cookie")
+
+[node name="Block" type="LightOccluder2D" parent="TorchHdr/V"]
+occluder = SubResource("torch_block")
+
+[node name="TorchSdr" type="SubViewportContainer" parent="."]
+layout_mode = 0
+offset_left = 450.0
+offset_top = 50.0
+offset_right = 750.0
+offset_bottom = 250.0
+
+[node name="V" type="SubViewport" parent="TorchSdr"]
+use_hdr_2d = false
+render_target_update_mode = 4
+size = Vector2i(300, 200)
+
+[node name="Floor" type="Polygon2D" parent="TorchSdr/V"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 200, 0, 200)
+
+[node name="Sprite" type="Sprite2D" parent="TorchSdr/V"]
+position = Vector2(250, 100)
+texture = SubResource("sprite_texture")
+
+[node name="Tint" type="CanvasModulate" parent="TorchSdr/V"]
+color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="Torch" type="PointLight2D" parent="TorchSdr/V"]
+position = Vector2(100, 100)
+color = Color(1, 0.55, 0.2, 1)
+energy = 1.5
+shadow_enabled = true
+shadow_color = Color(0.4, 0.2, 0, 1)
+height = 40.0
+texture = SubResource("cookie")
+
+[node name="Block" type="LightOccluder2D" parent="TorchSdr/V"]
+occluder = SubResource("torch_block")
+
+[node name="SunHdr" type="SubViewportContainer" parent="."]
+layout_mode = 0
+offset_left = 50.0
+offset_top = 350.0
+offset_right = 350.0
+offset_bottom = 550.0
+
+[node name="V" type="SubViewport" parent="SunHdr"]
+use_hdr_2d = true
+render_target_update_mode = 4
+size = Vector2i(300, 200)
+
+[node name="Floor" type="Polygon2D" parent="SunHdr/V"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 200, 0, 200)
+
+[node name="Sprite" type="Sprite2D" parent="SunHdr/V"]
+position = Vector2(250, 100)
+texture = SubResource("sprite_texture")
+
+[node name="Tint" type="CanvasModulate" parent="SunHdr/V"]
+color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="Sun" type="DirectionalLight2D" parent="SunHdr/V"]
+color = Color(0.5, 0.75, 1, 1)
+energy = 1.5
+shadow_enabled = true
+shadow_color = Color(0.4, 0.2, 0, 1)
+height = 0.5
+
+[node name="Block" type="LightOccluder2D" parent="SunHdr/V"]
+occluder = SubResource("sun_block")
+
+[node name="SunSdr" type="SubViewportContainer" parent="."]
+layout_mode = 0
+offset_left = 450.0
+offset_top = 350.0
+offset_right = 750.0
+offset_bottom = 550.0
+
+[node name="V" type="SubViewport" parent="SunSdr"]
+use_hdr_2d = false
+render_target_update_mode = 4
+size = Vector2i(300, 200)
+
+[node name="Floor" type="Polygon2D" parent="SunSdr/V"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 200, 0, 200)
+
+[node name="Sprite" type="Sprite2D" parent="SunSdr/V"]
+position = Vector2(250, 100)
+texture = SubResource("sprite_texture")
+
+[node name="Tint" type="CanvasModulate" parent="SunSdr/V"]
+color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="Sun" type="DirectionalLight2D" parent="SunSdr/V"]
+color = Color(0.5, 0.75, 1, 1)
+energy = 1.5
+shadow_enabled = true
+shadow_color = Color(0.4, 0.2, 0, 1)
+height = 0.5
+
+[node name="Block" type="LightOccluder2D" parent="SunSdr/V"]
+occluder = SubResource("sun_block")
+
+[node name="HotHdr" type="SubViewportContainer" parent="."]
+layout_mode = 0
+offset_left = 800.0
+offset_top = 50.0
+offset_right = 1100.0
+offset_bottom = 250.0
+modulate = Color(0.5, 0.5, 0.5, 1)
+
+[node name="V" type="SubViewport" parent="HotHdr"]
+use_hdr_2d = true
+render_target_update_mode = 4
+size = Vector2i(300, 200)
+
+[node name="Floor" type="Polygon2D" parent="HotHdr/V"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 200, 0, 200)
+
+[node name="Sprite" type="Sprite2D" parent="HotHdr/V"]
+position = Vector2(250, 100)
+texture = SubResource("sprite_texture")
+
+[node name="Tint" type="CanvasModulate" parent="HotHdr/V"]
+color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="Torch" type="PointLight2D" parent="HotHdr/V"]
+position = Vector2(100, 100)
+color = Color(1, 0.55, 0.2, 1)
+energy = 8.0
+texture = SubResource("cookie")
+
+[node name="HotSdr" type="SubViewportContainer" parent="."]
+layout_mode = 0
+offset_left = 800.0
+offset_top = 350.0
+offset_right = 1100.0
+offset_bottom = 550.0
+modulate = Color(0.5, 0.5, 0.5, 1)
+
+[node name="V" type="SubViewport" parent="HotSdr"]
+use_hdr_2d = false
+render_target_update_mode = 4
+size = Vector2i(300, 200)
+
+[node name="Floor" type="Polygon2D" parent="HotSdr/V"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 200, 0, 200)
+
+[node name="Sprite" type="Sprite2D" parent="HotSdr/V"]
+position = Vector2(250, 100)
+texture = SubResource("sprite_texture")
+
+[node name="Tint" type="CanvasModulate" parent="HotSdr/V"]
+color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="Torch" type="PointLight2D" parent="HotSdr/V"]
+position = Vector2(100, 100)
+color = Color(1, 0.55, 0.2, 1)
+energy = 8.0
+texture = SubResource("cookie")
+

@@ -1,0 +1,41 @@
+[gd_scene format=3]
+
+; Moves one variable: the transform of a y-sorted TileMapLayer, rotated 30 degrees and scaled 1.5.
+; Each tile row draws through the layer's whole transform and sorts by the y of its origin in the
+; parent's space, so the two tall white bars interleave with the rows: each covers the rows whose
+; origin lies above its own and hides under the rows whose origin lies below it.
+
+[ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_atlas"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_quadrants"]
+texture = ExtResource("1_atlas")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_quadrants"]
+tile_size = Vector2i(32, 32)
+sources/0 = SubResource("TileSetAtlasSource_quadrants")
+
+[node name="World" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Layer" type="TileMapLayer" parent="."]
+position = Vector2(260, 120)
+rotation = 0.5235988
+scale = Vector2(1.5, 1.5)
+y_sort_enabled = true
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0, 0, 0, 1, 0, 1, 0, 0, 0, 2, 0, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3, 0, 2, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 3, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 3, 0, 0, 0, 1, 0, 1, 0, 0, 0, 3, 0, 3, 0, 0, 0, 0, 0, 1, 0, 0, 0)
+tile_set = SubResource("TileSet_quadrants")
+
+[node name="BarHigh" type="Polygon2D" parent="."]
+position = Vector2(230, 190)
+color = Color(1, 1, 1, 1)
+polygon = PackedVector2Array(0, -100, 16, -100, 16, 120, 0, 120)
+
+[node name="BarLow" type="Polygon2D" parent="."]
+position = Vector2(320, 240)
+color = Color(1, 1, 1, 1)
+polygon = PackedVector2Array(0, -150, 16, -150, 16, 70, 0, 70)

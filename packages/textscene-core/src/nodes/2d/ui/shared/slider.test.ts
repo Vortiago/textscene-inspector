@@ -6,6 +6,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { parseSlider, sliderTickIndices } from './slider';
+import { controlProps } from '../control/testing/controlProps';
 
 const heading = { type: 'node', attributes: { type: 'HSlider', name: 'S' } };
 
@@ -42,22 +43,24 @@ describe('parseSlider', () => {
 
 describe('sliderTickIndices', () => {
   it('draws no ticks when tick_count is unset — the acceptance scene case', () => {
-    expect(sliderTickIndices({ name: 'S', ticksOnBorders: true })).toEqual([]);
+    expect(sliderTickIndices(controlProps({ name: 'S', ticksOnBorders: true }))).toEqual([]);
   });
 
   it('draws no ticks for tick_count 1, since Godot guards on ticks > 1', () => {
-    expect(sliderTickIndices({ name: 'S', tickCount: 1, ticksOnBorders: true })).toEqual([]);
+    expect(sliderTickIndices(controlProps({ name: 'S', tickCount: 1, ticksOnBorders: true }))).toEqual([]);
   });
 
   it('skips the first and last tick unless ticks_on_borders is set', () => {
-    expect(sliderTickIndices({ name: 'S', tickCount: 5 })).toEqual([1, 2, 3]);
+    expect(sliderTickIndices(controlProps({ name: 'S', tickCount: 5 }))).toEqual([1, 2, 3]);
   });
 
   it('keeps the border ticks when ticks_on_borders is set', () => {
-    expect(sliderTickIndices({ name: 'S', tickCount: 5, ticksOnBorders: true })).toEqual([0, 1, 2, 3, 4]);
+    expect(sliderTickIndices(controlProps({ name: 'S', tickCount: 5, ticksOnBorders: true }))).toEqual([
+      0, 1, 2, 3, 4,
+    ]);
   });
 
   it('yields nothing for tick_count 2 without borders — both ticks ARE borders (edge case)', () => {
-    expect(sliderTickIndices({ name: 'S', tickCount: 2 })).toEqual([]);
+    expect(sliderTickIndices(controlProps({ name: 'S', tickCount: 2 }))).toEqual([]);
   });
 });

@@ -5,10 +5,6 @@
 
 import * as THREE from 'three';
 import type { ViewSampler } from '../../../../resources/textures/textureView';
-import {
-  canvasItemViewSampler,
-  type CanvasItemTextureSampler,
-} from '../../../../r3f/canvasItemTextureSampler';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { imageSize, type ImageSize } from '../../../../resources/formats/image/imagePixels';
 import { textureRectUvWindow, type SampledDraw, type TextureRectDraw } from './nativeSolver';
@@ -37,15 +33,14 @@ export function sampledDraw(
   };
 }
 
-/** The sampler of a view that draws `draw`. */
+/** The sampler of a view that draws `draw`, from the item's own view sampler. */
 export function rectTextureSampler(
   draw: SampledDraw,
-  sampler: CanvasItemTextureSampler,
+  itemSampler: ViewSampler,
   { flipH, flipV }: Flip
 ): ViewSampler {
   const window = textureRectUvWindow(draw, flipH, flipV);
   // STRETCH_TILE forces repeat wrapping for this draw whatever the item's texture_repeat:
   // `draw_texture_rect(texture, rect, tile=true)` is a per-call override.
-  const itemSampler = canvasItemViewSampler(sampler);
   return draw.tile ? { ...itemSampler, wrap: THREE.RepeatWrapping, window } : { ...itemSampler, window };
 }

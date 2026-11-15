@@ -1,0 +1,9 @@
+; A res:// root of its own with three folders and PNG files: the FileDialog lists them, folders first.
+
+config_version=5
+
+[application]
+
+config/name="FileDialog listing"
+run/main_scene="res://unit-file-dialog-listing.tscn"
+config/features=PackedStringArray("4.6")

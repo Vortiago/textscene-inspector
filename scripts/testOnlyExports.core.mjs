@@ -18,6 +18,21 @@ const OUTSIDE_CORE = ['apps', 'packages/textscene-dev-kit', 'scripts'].map((dir)
 export const KEPT_TEST_ONLY_EXPORTS = [
   // `@react-three/test-renderer` cannot wrap a real `<Canvas>`, so a scene test mounts its contents.
   'r3f/TscnCanvas.tsx#TscnSceneContents',
+  // The preview always mounts the shared live tree, so only the test setup installs the paint of a
+  // subtree that a component test mounts bare (`r3f/testing/detachedPaint.ts`).
+  'r3f/canvasItemPass/detachedPaintSlot.ts#installDetachedPaint',
+  // A node and the painter it renders with no resource loader share one module store of settled
+  // fonts, so the test setup empties it before each test.
+  'r3f/controls/native/text/useSettledFont.ts#resetLoaderlessFonts',
+  // No runtime code lists the vendored icons, and the icon test checks each one against its raster.
+  'r3f/controls/native/themeIcons.ts#vendoredIconSvgUrls',
+  // The TypeScript twins of a light's blend: the test holds both shader forms to them.
+  'r3f/lighting2d/lightBlend.ts#blendLayer',
+  'r3f/lighting2d/lightBlend.ts#lightBlendCompute',
+  'r3f/lighting2d/lightBlend.ts#shadowedLightTerms',
+  // The switch of the TSL port ships before its one reader, the pick of a lit surface's material,
+  // which the next slice of the port adds.
+  'r3f/litSurface/litSurfaceForm.ts#litSurfaceForm',
   // The builds and the cache are module state, so each test starts from the one reset that aborts
   // the builds in flight and clears the cache.
   'resources/textures/proceduralBuilds.ts#resetProceduralTextures',

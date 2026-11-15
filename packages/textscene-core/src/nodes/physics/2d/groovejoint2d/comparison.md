@@ -1,16 +1,16 @@
 ---
 type: GrooveJoint2D
 category: 2D
-status: linter-only
+status: limitation
 fixture: unit-groove-joint-2d.tscn
 # image: unit-groove-joint-2d
 visual: false
-renders_as: nothing (a transform-only group, the groove is an editor gizmo)
+renders_as: a transform group with an editor marker for every node
 ---
 
 # GrooveJoint2D
 
-Restricts body B to sliding along a fixed axis from the joint's origin. Godot draws the groove only as a debug line, so the previewer renders it as a transform-only group (ADR-0008).
+Restricts body B to sliding along a fixed axis from the joint's origin. Godot draws the groove and its offset in the editor, and the previewer draws the same marker.
 
 ## Linting
 
@@ -31,4 +31,13 @@ Strict parsing format-checks these `GrooveJoint2D` properties, plus 4 inherited 
 |  | `joint-same-body` | warning |
 <!-- lint:end -->
 
-GrooveJoint2D registers `parseNode2D` directly, so `length` and `initial_offset` are never read. An out-of-range `length = 70000` or a non-numeric `initial_offset` is dropped rather than substituted or warned on.
+The lenient parser reads `length` and `initial_offset` on top of the Node2D transform. A non-numeric value warns and falls back to Godot's default, `50` and `25`. A value outside the inspector hint, such as `length = 70000`, draws where it says.
+
+## Marker
+
+Every node draws a 20 px bar at 0 and at `length` and the line between them, in `Color(0.7, 0.6, 0, 0.5)` and 3 px wide. A 20 px bar at `initial_offset` follows, in `Color(0.8, 0.8, 0.9, 0.5)` and 5 px wide (`groove_joint_2d.cpp:46-49`). The setters store any value, so a zero or negative `length` and `initial_offset` draw where they say, with no clamp (`groove_joint_2d.cpp:63-75`). The inspector range of 1 to 65535 limits only the editor field. The scene `unit-joint-2d-markers.tscn` holds the three joints' markers at in-range values.
+
+## Known limitations
+
+- **Editor only** The marker draws for every joint while the Gizmos toggle is on, which a capture keeps off.
+- **Needs runtime** Only a running game holds the second body in the groove.

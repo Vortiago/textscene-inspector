@@ -24,7 +24,7 @@ export function sfntFaceGlyphs(
   return {
     shaping: sfntRunShaping(sfnt) ?? undefined,
     markOffsets: sfntMarkOffsets(sfnt, openOutlines),
-    getGlyphKerningUnits: kerningOf && lazyKerning(() => orOnRangeError(() => kerningOf(sfnt), null)),
+    getGlyphKerning: kerningOf && lazyKerning(() => orOnRangeError(() => kerningOf(sfnt), null)),
   };
 }
 

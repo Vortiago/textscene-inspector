@@ -5,6 +5,11 @@
  * window through geometry, not texture.repeat, since every cell shares one cached texture.
  */
 
+import {
+  TILE_ORIENTATION_FLIP_H,
+  TILE_ORIENTATION_FLIP_V,
+  TILE_ORIENTATION_TRANSPOSE,
+} from './tileOrientationBits';
 import { mapToLocalPx } from './tilePlacement';
 import type { DrawableCell } from './drawableCell';
 import { tileDrawInfo, type AtlasSourceModel, type TileGrid } from './types';
@@ -138,6 +143,34 @@ function buildArrays(
   });
 
   return { positions, uvs, colors, indices, uvBounds };
+}
+
+/**
+ * Per vertex of the geometry the builders above give, the cell's flips and transpose as the
+ * `TILE_ORIENTATION_*` bits. Godot's draw shader turns a normal by them (`canvas.glsl:655-661`),
+ * while the UVs already carry the diffuse through the same orientation.
+ */
+export function buildTileOrientations(
+  cells: readonly DrawableCell[],
+  source: AtlasSourceModel
+): Float32Array {
+  const orientations = new Float32Array(cells.length * 4);
+  cells.forEach((cell, i) => {
+    orientations.fill(orientationBits(tileDrawInfo(source, cell).orientation), i * 4, i * 4 + 4);
+  });
+  return orientations;
+}
+
+function orientationBits({
+  flipH,
+  flipV,
+  transpose,
+}: ReturnType<typeof tileDrawInfo>['orientation']): number {
+  return (
+    (flipH ? TILE_ORIENTATION_FLIP_H : 0) |
+    (flipV ? TILE_ORIENTATION_FLIP_V : 0) |
+    (transpose ? TILE_ORIENTATION_TRANSPOSE : 0)
+  );
 }
 
 /** The UV rect inset by half a texel, on a quad's four corners. */

@@ -1,28 +1,40 @@
 import { describe, expect, it } from 'vitest';
+import { isTabUnselectable, resolveTabBarCurrentTab } from './currentTab';
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import {
   computeTabBarDrawLayout,
+  ensureNoOverOffset,
+  measureTabSizes,
+  placeTabs,
+  type TabBarLayoutInput,
+  type TabLayoutInput,
   isCloseButtonVisible,
   layoutScrollArrows,
   layoutTabContent,
   pickTabStyleBox,
   resolveTabDrawState,
-  isTabUnselectable,
-  resolveTabBarCurrentTab,
-  tabBarMinimumSize,
-  tabBarStyleBoxes,
   tabBarThemeIconSize,
+  tabBarFontColor,
   tabBarFontSizePx,
+  tabBarIconColor,
   tabContentWidth,
   tabDrawX,
   tabWidthStyleMinWidth,
   shapeTabLabel,
 } from './nativeSolver';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import { controlSolverRegistry, type SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import './solverRegistration';
+import { tabBarModel } from './tabBarModel';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import type { TabBarProperties } from './types';
+import { controlProps } from '../control/testing/controlProps';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
+
+/** `TabBar::get_minimum_size`, as the solver reads it. */
+const tabBarMinimumSize = controlSolverRegistry.minimumSize('TabBar')!;
 
 describe('resolveTabDrawState', () => {
   it('picks selected for the current tab', () => {
@@ -87,58 +99,28 @@ describe('resolveTabBarCurrentTab', () => {
   });
 });
 
-describe('tabBarStyleBoxes', () => {
-  // default_theme.cpp:974-985, scale 1.
-  it('builds tab_selected: style_normal_color fill, 10/4 margins, a round(2)px white top border', () => {
-    const { selected } = tabBarStyleBoxes(1);
-    expect(selected.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
-    expect(selected.contentMargin).toEqual({ left: 10, top: 4, right: 10, bottom: 4 });
-    expect(selected.borderWidth).toEqual({ left: 0, top: 2, right: 0, bottom: 0 });
-    expect(selected.borderColor).toEqual({ r: 1, g: 1, b: 1, a: 0.75 });
-  });
-
-  it('builds tab_unselected: style_pressed_color fill, a round(1)px popup-border-colour side border', () => {
-    const { unselected } = tabBarStyleBoxes(1);
-    expect(unselected.bgColor).toEqual({ r: 0, g: 0, b: 0, a: 0.6 });
-    expect(unselected.borderWidth).toEqual({ left: 1, top: 0, right: 1, bottom: 0 });
-    expect(unselected.borderColor).toEqual({ r: 0.175, g: 0.175, b: 0.175, a: 1 });
-  });
-
-  it('duplicates tab_disabled/tab_hovered from tab_unselected, overriding only bg_color (default_theme.cpp:982-985)', () => {
-    const { unselected, disabled, hovered } = tabBarStyleBoxes(1);
-    expect(disabled.contentMargin).toEqual(unselected.contentMargin);
-    expect(disabled.borderWidth).toEqual(unselected.borderWidth);
-    expect(disabled.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.3 });
-    expect(hovered.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.3 });
-  });
-
-  it('scales every margin/border width independently, rounding each (scale 1.5)', () => {
-    const { selected } = tabBarStyleBoxes(1.5);
-    // round(10*1.5)=15, round(4*1.5)=6, round(2*1.5)=3.
-    expect(selected.contentMargin).toEqual({ left: 15, top: 6, right: 15, bottom: 6 });
-    expect(selected.borderWidth.top).toBe(3);
-  });
-});
+/** TabBar's boxes in the default theme table at scale 1 (`default_theme.cpp:974-985`). */
+const TABLE_BOXES = defaultStyleBoxesOf(defaultThemeAt(1)).TabBar!;
 
 describe('pickTabStyleBox / tabWidthStyleMinWidth', () => {
-  it('an override wins over the default for the matching state', () => {
-    const defaults = tabBarStyleBoxes(1);
-    const override = { ...defaults.selected, contentMargin: { left: 1, top: 1, right: 1, bottom: 1 } };
-    const picked = pickTabStyleBox({ tab_selected: override }, defaults, 'selected');
-    expect(picked.contentMargin).toEqual({ left: 1, top: 1, right: 1, bottom: 1 });
+  it('picks the tab_<state> box', () => {
+    expect(pickTabStyleBox(TABLE_BOXES, 'selected')).toBe(TABLE_BOXES.tab_selected);
   });
 
   it('unselected width measurement takes the WIDER of unselected/hovered (tab_bar.cpp:1764)', () => {
-    const defaults = tabBarStyleBoxes(1);
-    const widerHovered = { ...defaults.hovered, contentMargin: { left: 50, top: 4, right: 50, bottom: 4 } };
-    const width = tabWidthStyleMinWidth({ tab_hovered: widerHovered }, defaults, 'unselected');
-    expect(width).toBe(100);
+    const widerHovered = {
+      ...TABLE_BOXES.tab_hovered!,
+      contentMargin: { left: 50, top: 4, right: 50, bottom: 4 },
+    };
+    expect(tabWidthStyleMinWidth({ ...TABLE_BOXES, tab_hovered: widerHovered }, 'unselected')).toBe(100);
   });
 
   it('selected/disabled width never consults tab_hovered', () => {
-    const defaults = tabBarStyleBoxes(1);
-    const widerHovered = { ...defaults.hovered, contentMargin: { left: 999, top: 4, right: 999, bottom: 4 } };
-    expect(tabWidthStyleMinWidth({ tab_hovered: widerHovered }, defaults, 'selected')).toBe(20);
+    const widerHovered = {
+      ...TABLE_BOXES.tab_hovered!,
+      contentMargin: { left: 999, top: 4, right: 999, bottom: 4 },
+    };
+    expect(tabWidthStyleMinWidth({ ...TABLE_BOXES, tab_hovered: widerHovered }, 'selected')).toBe(20);
   });
 });
 
@@ -199,96 +181,66 @@ describe('isCloseButtonVisible', () => {
 });
 
 describe('computeTabBarDrawLayout', () => {
+  const tab = (naturalWidth: number, overrides: Partial<TabLayoutInput> = {}): TabLayoutInput => ({
+    disabled: false,
+    hidden: false,
+    naturalWidth,
+    naturalTextWidth: 10,
+    ...overrides,
+  });
+  /** A 200 px bar, left aligned and unclipped, 2 px between tabs and 16 px scroll icons. */
+  const layout = (tabs: TabLayoutInput[], input: Partial<TabBarLayoutInput> = {}) =>
+    computeTabBarDrawLayout(tabs, {
+      barWidthPx: 200,
+      alignment: 0,
+      clipTabs: false,
+      maxTabWidthPx: 0,
+      tabSeparation: 2,
+      incrementIconWidth: 16,
+      decrementIconWidth: 16,
+      currentTab: 0,
+      scrollToSelected: true,
+      ...input,
+    });
+
   it('lays out every tab left-to-right, one tab_separation apart, when nothing overflows', () => {
-    const layout = computeTabBarDrawLayout(
-      [
-        { disabled: false, hidden: false, naturalWidth: 30, naturalTextWidth: 10 },
-        { disabled: false, hidden: false, naturalWidth: 40, naturalTextWidth: 10 },
-        { disabled: false, hidden: false, naturalWidth: 50, naturalTextWidth: 10 },
-      ],
-      200,
-      0,
-      false,
-      0,
-      2,
-      16
-    );
-    expect(layout.items.map((i) => [i.ofs, i.width])).toEqual([
+    const out = layout([tab(30), tab(40), tab(50)]);
+    expect(out.items.map((i) => [i.ofs, i.width])).toEqual([
       [0, 30],
       [32, 40],
       [74, 50],
     ]);
-    expect(layout.maxDrawnTab).toBe(2);
-    expect(layout.missingRight).toBe(false);
-    expect(layout.buttonsVisible).toBe(false);
+    expect(out.maxDrawnTab).toBe(2);
+    expect(out.missingRight).toBe(false);
+    expect(out.buttonsVisible).toBe(false);
   });
 
   it('clips trailing tabs that overflow the bar, exposing the scroll arrows', () => {
-    const layout = computeTabBarDrawLayout(
-      [
-        { disabled: false, hidden: false, naturalWidth: 30, naturalTextWidth: 10 },
-        { disabled: false, hidden: false, naturalWidth: 40, naturalTextWidth: 10 },
-        { disabled: false, hidden: false, naturalWidth: 50, naturalTextWidth: 10 },
-      ],
-      60,
-      0,
-      true,
-      0,
-      2,
-      16
-    );
-    expect(layout.maxDrawnTab).toBe(0);
-    expect(layout.items).toHaveLength(1);
-    expect(layout.missingRight).toBe(true);
-    expect(layout.buttonsVisible).toBe(true);
+    const out = layout([tab(30), tab(40), tab(50)], { barWidthPx: 60, clipTabs: true });
+    expect(out.maxDrawnTab).toBe(0);
+    expect(out.items).toHaveLength(1);
+    expect(out.missingRight).toBe(true);
+    expect(out.buttonsVisible).toBe(true);
   });
 
   it('truncates a tab past max_tab_width: sizeTextless floors the text budget at 1px (tab_bar.cpp:1215-1222)', () => {
-    const layout = computeTabBarDrawLayout(
-      [{ disabled: false, hidden: false, naturalWidth: 30, naturalTextWidth: 15 }],
-      200,
-      0,
-      false,
-      20,
-      0,
-      16
-    );
-    expect(layout.items[0]).toMatchObject({ width: 20, textBudgetPx: 5, truncated: true });
+    const out = layout([tab(30, { naturalTextWidth: 15 })], { maxTabWidthPx: 20, tabSeparation: 0 });
+    expect(out.items[0]).toMatchObject({ width: 20, textBudgetPx: 5, truncated: true });
   });
 
   it('omits a hidden tab from the drawn items and its own space entirely', () => {
-    const layout = computeTabBarDrawLayout(
-      [
-        { disabled: false, hidden: true, naturalWidth: 30, naturalTextWidth: 10 },
-        { disabled: false, hidden: false, naturalWidth: 40, naturalTextWidth: 10 },
-      ],
-      200,
-      0,
-      false,
-      0,
-      2,
-      16
-    );
-    expect(layout.items).toHaveLength(1);
-    expect(layout.items[0]).toMatchObject({ index: 1, ofs: 0 });
+    const out = layout([tab(30, { hidden: true }), tab(40)]);
+    expect(out.items).toHaveLength(1);
+    expect(out.items[0]).toMatchObject({ index: 1, ofs: 0 });
   });
 
-  it('right-aligns the drawn run against the bar width when tab_alignment is RIGHT', () => {
-    const layout = computeTabBarDrawLayout(
-      [{ disabled: false, hidden: false, naturalWidth: 30, naturalTextWidth: 10 }],
-      100,
-      2,
-      false,
-      0,
-      0,
-      16
-    );
-    expect(layout.items[0]!.ofs).toBe(70);
+  it('right-aligns a tab against the bar edge', () => {
+    const out = layout([tab(30)], { barWidthPx: 100, alignment: 2, tabSeparation: 0 });
+    expect(out.items[0]!.ofs).toBe(70);
   });
 
   it('returns an empty layout for zero tabs', () => {
-    const layout = computeTabBarDrawLayout([], 100, 0, false, 0, 0, 16);
-    expect(layout).toEqual({
+    expect(layout([], { barWidthPx: 100, tabSeparation: 0 })).toEqual({
       items: [],
       offset: 0,
       maxDrawnTab: 0,
@@ -298,36 +250,123 @@ describe('computeTabBarDrawLayout', () => {
   });
 
   it('reserves incrementIconWidth + decrementIconWidth separately when they differ (a themed pair need not stay symmetric)', () => {
-    const tabs = [
-      { disabled: false, hidden: false, naturalWidth: 40, naturalTextWidth: 10 },
-      { disabled: false, hidden: false, naturalWidth: 40, naturalTextWidth: 10 },
-      { disabled: false, hidden: false, naturalWidth: 40, naturalTextWidth: 10 },
-    ];
-    // w reaches 120 at i=2 (> limit=100), clips there: w -= 40 -> 80, maxDrawnTab=1.
-    // A small reserved gap (limitMinusButtons=90) already fits under 80: no further shedding.
-    const small = computeTabBarDrawLayout(tabs, 100, 0, true, 0, 0, 5, 5);
+    const tabs = [tab(40), tab(40), tab(40)];
+    const clipped = { barWidthPx: 100, clipTabs: true, tabSeparation: 0 };
+    const small = layout(tabs, { ...clipped, incrementIconWidth: 5, decrementIconWidth: 5 });
     expect(small.maxDrawnTab).toBe(1);
     // A large reserved gap (limitMinusButtons=100-30-30=40) does not fit under 80:
     // the while-loop sheds tab 1 too, dropping maxDrawnTab to 0.
-    const large = computeTabBarDrawLayout(tabs, 100, 0, true, 0, 0, 30, 30);
+    const large = layout(tabs, { ...clipped, incrementIconWidth: 30, decrementIconWidth: 30 });
     expect(large.maxDrawnTab).toBe(0);
     // The two widths need not match, which a themed pair needs.
-    const asymmetric = computeTabBarDrawLayout(tabs, 100, 0, true, 0, 0, 55, 5);
+    const asymmetric = layout(tabs, { ...clipped, incrementIconWidth: 55, decrementIconWidth: 5 });
     expect(asymmetric.maxDrawnTab).toBe(0);
+  });
+
+  describe('scrolling to the current tab (ensure_tab_visible, tab_bar.cpp:1875-1920)', () => {
+    /** Four 40 px tabs in a 130 px bar: with 16 px arrows tabs 0 and 1 fit at offset 0. */
+    const tabs = [tab(40), tab(40), tab(40), tab(40)];
+    const clipped = { barWidthPx: 130, clipTabs: true, tabSeparation: 0 };
+
+    it('leaves the strip at tab 0 when the current tab is already drawn', () => {
+      const out = layout(tabs, { ...clipped, currentTab: 1 });
+      expect(out.offset).toBe(0);
+      expect(out.items.map((i) => i.index)).toEqual([0, 1]);
+    });
+
+    it('starts the strip one tab on when the current tab is the first one past the last drawn', () => {
+      const out = layout(tabs, { ...clipped, currentTab: 2 });
+      expect(out.offset).toBe(1);
+      expect(out.items.map((i) => [i.index, i.ofs])).toEqual([
+        [1, 0],
+        [2, 40],
+      ]);
+      expect(out).toMatchObject({ maxDrawnTab: 2, missingRight: true, buttonsVisible: true });
+    });
+
+    it('scrolls the last tab in beside the arrows, with nothing missing on the right', () => {
+      const out = layout(tabs, { ...clipped, currentTab: 3 });
+      expect(out).toMatchObject({ offset: 2, maxDrawnTab: 3, missingRight: false, buttonsVisible: true });
+      expect(out.items.map((i) => i.index)).toEqual([2, 3]);
+    });
+
+    it.each([
+      ['scroll_to_selected is off', { currentTab: 3, scrollToSelected: false }],
+      ['no tab is current', { currentTab: -1 }],
+    ])('keeps the strip at tab 0 when %s', (_name, input) => {
+      expect(layout(tabs, { ...clipped, ...input }).offset).toBe(0);
+    });
+
+    it('keeps the strip at tab 0 when the current tab is hidden', () => {
+      const hiddenCurrent = tabs.map((t, i) => (i === 3 ? { ...t, hidden: true } : t));
+      expect(layout(hiddenCurrent, { ...clipped, currentTab: 3 }).offset).toBe(0);
+    });
+
+    it('keeps the strip at tab 0 for a current tab past the last tab', () => {
+      expect(layout(tabs, { ...clipped, currentTab: tabs.length }).offset).toBe(0);
+    });
+
+    it('centres the scrolled strip in the space beside the arrows', () => {
+      const out = layout(tabs, { ...clipped, currentTab: 3, alignment: 1 });
+      // tab_bar.cpp:1273: (limit_minus_buttons - w) / 2 = (130 - 32 - 80) / 2.
+      expect(out.items[0]!.ofs).toBe(9);
+    });
+  });
+});
+
+describe('ensureNoOverOffset (TabBar::_ensure_no_over_offset, tab_bar.cpp:1827-1860)', () => {
+  /** Three or four 40 px tabs in a 130 px bar: with 16 px arrows, 98 px sit beside them. */
+  const pullBack = (tabCount: number, offset: number) => {
+    const tabs: TabLayoutInput[] = Array.from({ length: tabCount }, () => ({
+      disabled: false,
+      hidden: false,
+      naturalWidth: 40,
+      naturalTextWidth: 10,
+    }));
+    const input: TabBarLayoutInput = {
+      barWidthPx: 130,
+      alignment: 0,
+      clipTabs: true,
+      maxTabWidthPx: 0,
+      tabSeparation: 0,
+      incrementIconWidth: 16,
+      decrementIconWidth: 16,
+      currentTab: 0,
+      scrollToSelected: true,
+    };
+    const sizes = measureTabSizes(tabs, 0);
+    return ensureNoOverOffset(tabs, sizes, placeTabs(tabs, sizes, input, offset), offset, input);
+  };
+
+  it('pulls the strip back while the tabs before it still fit beside the arrows', () => {
+    expect(pullBack(4, 3)).toBe(2);
+  });
+
+  it('pulls the strip back to tab 0 once every earlier tab fits without the arrows', () => {
+    expect(pullBack(3, 2)).toBe(0);
+  });
+
+  it('leaves a strip at tab 0 alone', () => {
+    expect(pullBack(4, 0)).toBe(0);
   });
 });
 
 describe('tabBarThemeIconSize (BIND_THEME_ITEM_CUSTOM(..., close_icon, "close") et al., tab_bar.cpp:2160-2182)', () => {
   it('is the vendored 16x16 default when nothing themed it', () => {
-    expect(tabBarThemeIconSize({ textureSlots: {} }, 'close')).toEqual({ x: 16, y: 16 });
+    expect(tabBarThemeIconSize({ textureSlots: {} }, 'close', 1)).toEqual({ x: 16, y: 16 });
+  });
+
+  it('is the vendored default at the theme scale: 24x24 at 1.5, never below a pixel', () => {
+    expect(tabBarThemeIconSize({ textureSlots: {} }, 'close', 1.5)).toEqual({ x: 24, y: 24 });
+    expect(tabBarThemeIconSize({ textureSlots: {} }, 'increment', 0.01)).toEqual({ x: 1, y: 1 });
   });
 
   it('is the themed size when the walker resolved a "close"/"increment"/"decrement" slot', () => {
-    expect(tabBarThemeIconSize({ textureSlots: { close: { x: 24, y: 24 } } }, 'close')).toEqual({
+    expect(tabBarThemeIconSize({ textureSlots: { close: { x: 24, y: 24 } } }, 'close', 1)).toEqual({
       x: 24,
       y: 24,
     });
-    expect(tabBarThemeIconSize({ textureSlots: {} }, 'increment')).toEqual({ x: 16, y: 16 });
+    expect(tabBarThemeIconSize({ textureSlots: {} }, 'increment', 1)).toEqual({ x: 16, y: 16 });
   });
 });
 
@@ -337,17 +376,17 @@ describe('tabBarMinimumSize — a themed "close" icon widens both axes (tab_bar.
   }
 
   function node(overrides: Partial<SolveNode> = {}): SolveNode {
-    const props: TabBarProperties = {
+    const props: TabBarProperties = controlProps({
       name: 'T',
       tabs: [{ title: '', tooltip: '', disabled: false }],
       tabCloseDisplayPolicy: 2, // ALWAYS
-    };
-    return {
+    });
+    return withThemeItems({
       ...solveNode(),
       path: 'T',
       node: controlNode('T', 'TabBar', props),
       ...overrides,
-    };
+    });
   }
 
   it('floors on the vendored 16x16 close icon when untethered', () => {
@@ -355,6 +394,25 @@ describe('tabBarMinimumSize — a themed "close" icon widens both axes (tab_bar.
     // styleMinWidth(0, no styleboxes resolved) + closeButtonMarginLeft(0, no button style resolved) + close(16).
     expect(size.x).toBeGreaterThanOrEqual(16);
     expect(size.y).toBeGreaterThanOrEqual(16);
+  });
+
+  it('floors on the scaled close icon: the same minimum as a themed 24x24 close at scale 1.5', () => {
+    const at15: SolveContext = { ...ctx(), theme: nativeTheme(1.5) };
+    const themed = node({ textureSlots: { close: { x: 24, y: 24 } } });
+
+    expect(tabBarMinimumSize(node(), at15)).toEqual(tabBarMinimumSize(themed, at15));
+  });
+
+  it("pads the close button by the button_highlight box's left margin (tab_bar.cpp:89-100)", () => {
+    const highlight = {
+      ...TABLE_BOXES.button_highlight!,
+      contentMargin: { left: 20, top: 0, right: 0, bottom: 0 },
+    };
+    const padded = node({ styleBoxes: { button_highlight: highlight } });
+    const tableLeft = TABLE_BOXES.button_highlight!.contentMargin.left;
+    expect(tabBarMinimumSize(withThemeItems(padded), ctx()).x - tabBarMinimumSize(node(), ctx()).x).toBe(
+      20 - tableLeft
+    );
   });
 
   it('widens on a themed "close" icon bigger than the vendored default', () => {
@@ -369,26 +427,27 @@ describe('tabBarFontSizePx', () => {
   // `theme_cache.font_size` (`tab_bar.cpp:365`) is a bound theme item (`tab_bar.cpp:2179`),
   // so a node-local override wins, but only while it is positive (`control.cpp:3113-3117`).
   const THEME = nativeTheme(1);
-  const bar = (): SolveNode => ({
-    ...solveNode(),
-    path: 'T',
-    node: controlNode('T', 'TabBar', { name: 'T' }),
-  });
+  const bar = (): SolveNode =>
+    withThemeItems({
+      ...solveNode(),
+      path: 'T',
+      node: controlNode('T', 'TabBar', { name: 'T' }),
+    });
 
   it('answers the theme default when the node overrides nothing', () => {
-    expect(tabBarFontSizePx(bar(), {}, THEME)).toBe(THEME.fontSize);
+    expect(tabBarFontSizePx(bar(), {})).toBe(THEME.fontSize);
   });
 
   it('a positive theme_override_font_sizes/font_size wins', () => {
-    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { font_size: 28 } }, THEME)).toBe(28);
+    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { font_size: 28 } })).toBe(28);
   });
 
   it('an override of 0 falls through (control.cpp:3115 requires > 0)', () => {
-    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { font_size: 0 } }, THEME)).toBe(THEME.fontSize);
+    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { font_size: 0 } })).toBe(THEME.fontSize);
   });
 
   it('ignores a DIFFERENT size key', () => {
-    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { normal_font_size: 28 } }, THEME)).toBe(
+    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { normal_font_size: 28 } })).toBe(
       THEME.fontSize
     );
   });
@@ -406,16 +465,16 @@ describe('tabBarMinimumSize — the tab buffer is shaped at theme_cache.font_siz
   }
 
   function node(props: Partial<TabBarProperties> = {}): SolveNode {
-    const properties: TabBarProperties = {
+    const properties: TabBarProperties = controlProps({
       name: 'T',
       tabs: [{ title: 'Map', tooltip: '', disabled: false }],
       ...props,
-    };
-    return {
+    });
+    return withThemeItems({
       ...solveNode(),
       path: 'T',
       node: controlNode('T', 'TabBar', properties),
-    };
+    });
   }
 
   function sizeOf(n: SolveNode) {
@@ -444,11 +503,11 @@ describe('tabBarMinimumSize — the tab buffer is shaped at theme_cache.font_siz
   // text_buf->get_size().y) / 2` (tab_bar.cpp:677) in the rect floored at `text_buf->get_size().y
   // + y_margin` (tab_bar.cpp:82). One buffer feeds both, so the term cannot go negative.
   it('the bar the solver sizes contains the buffer the painter shapes, at any font size', () => {
-    const style = pickTabStyleBox({}, tabBarStyleBoxes(1), 'unselected');
+    const style = pickTabStyleBox(TABLE_BOXES, 'unselected');
     for (const fontSize of [8, 16, 28, 32]) {
       const n = node({ themeOverrideFontSizes: { font_size: fontSize } });
       const props = n.node.properties as TabBarProperties;
-      const layout = shapeTabLabel('Map', n, { fontSizePx: tabBarFontSizePx(n, props, nativeTheme(1)) });
+      const layout = shapeTabLabel('Map', n, { fontSizePx: tabBarFontSizePx(n, props) });
       const content = layoutTabContent({
         barHeightPx: sizeOf(n).y,
         style,
@@ -482,9 +541,39 @@ describe('tabDrawX', () => {
   });
 });
 
+describe('layoutTabContent truncates each drawn position (tab_bar.cpp:662,668,676,734)', () => {
+  // An odd leftover height centres every element on a half pixel.
+  const out = layoutTabContent({
+    barHeightPx: 31,
+    style: { ...TABLE_BOXES.tab_selected!, contentMargin: { left: 10.5, top: 4, right: 10, bottom: 4 } },
+    tabWidthPx: 120,
+    iconSize: { x: 16, y: 16 },
+    hasText: true,
+    textNaturalHeightPx: 18,
+    textAdvanceWidthPx: 40,
+    hSeparation: 4,
+    closeVisible: true,
+    closeIconSize: { x: 16, y: 16 },
+    buttonHlMargin: { left: 3, top: 2, right: 3, bottom: 2 },
+    rtl: false,
+  });
+
+  it('draws the icon at a whole pixel', () => {
+    expect(out.icon?.rect).toMatchObject({ x: 10, y: 7 });
+  });
+
+  it('draws the title at a whole pixel', () => {
+    expect(out.text?.offset).toEqual({ x: 30, y: 6 });
+  });
+
+  it('draws the close icon at a whole pixel', () => {
+    expect(out.close?.iconOffset).toEqual({ x: 77, y: 7 });
+  });
+});
+
 describe('layoutTabContent under RTL', () => {
   const style = {
-    ...tabBarStyleBoxes(1).selected,
+    ...TABLE_BOXES.tab_selected!,
     contentMargin: { left: 20, top: 4, right: 6, bottom: 4 },
   };
   const base = {
@@ -536,6 +625,7 @@ describe('layoutScrollArrows', () => {
     incrementIconSize: { x: 16, y: 16 },
     decrementIconSize: { x: 10, y: 10 },
     missingRight: true,
+    canScrollBack: false,
   };
 
   it('puts both arrows against the RIGHT edge under LTR, decrement first (tab_bar.cpp:581,587)', () => {
@@ -557,6 +647,16 @@ describe('layoutScrollArrows', () => {
     const rtl = layoutScrollArrows({ ...base, rtl: true });
     expect(rtl.decrement.dim).toBe(false);
     expect(rtl.increment.dim).toBe(true);
+  });
+
+  it('lights the arrow toward the start once the strip has scrolled past tab 0 (tab_bar.cpp:573-585)', () => {
+    const scrolled = { ...base, missingRight: false, canScrollBack: true };
+    const ltr = layoutScrollArrows({ ...scrolled, rtl: false });
+    expect(ltr.decrement.dim).toBe(false);
+    expect(ltr.increment.dim).toBe(true);
+    const rtl = layoutScrollArrows({ ...scrolled, rtl: true });
+    expect(rtl.decrement.dim).toBe(true);
+    expect(rtl.increment.dim).toBe(false);
   });
 
   it('dims both arrows once nothing is clipped off the end', () => {
@@ -587,5 +687,68 @@ describe('shapeTabLabel direction', () => {
 
   it('draws the title as written under an LTR layout', () => {
     expect(visual(false)).toBe('Hello!');
+  });
+});
+
+describe('the two widths of a tab when tab_hovered is wider than tab_unselected', () => {
+  const widerHovered = {
+    ...TABLE_BOXES.tab_hovered!,
+    contentMargin: { left: 50, top: 4, right: 50, bottom: 4 },
+  };
+  const { left, right } = TABLE_BOXES.tab_unselected!.contentMargin;
+
+  function unselectedTab() {
+    const props: TabBarProperties = controlProps({
+      name: 'T',
+      currentTab: 0,
+      tabs: [
+        { title: '', tooltip: '', disabled: false },
+        { title: '', tooltip: '', disabled: false },
+      ],
+    });
+    const n = withThemeItems({
+      ...solveNode(),
+      path: 'T',
+      node: controlNode('T', 'TabBar', props),
+      styleBoxes: { tab_hovered: widerHovered },
+    });
+    return tabBarModel(n, nativeTheme(1)).computed[1]!;
+  }
+
+  it('sizes the minimum by the box of the tab state (tab_bar.cpp:60-70)', () => {
+    expect(unselectedTab().minimumWidth).toBe(left + right);
+  });
+
+  it('sizes the drawn tab by the wider of tab_hovered and tab_unselected (tab_bar.cpp:1757-1768)', () => {
+    expect(unselectedTab().naturalWidth).toBe(100);
+  });
+});
+
+describe('the colours of a disabled current tab (tab_bar.cpp:556-561)', () => {
+  function currentTab() {
+    const props: TabBarProperties = controlProps({
+      name: 'T',
+      currentTab: 0,
+      tabs: [{ title: 'A', tooltip: '', disabled: true }],
+    });
+    // The two icon colours are equal in the default theme, so a theme sets them apart.
+    const themed = withThemeItems({ ...solveNode(), path: 'T', node: controlNode('T', 'TabBar', props) });
+    const n = { ...themed, colors: { ...themed.colors, icon_disabled_color: { r: 1, g: 0, b: 0, a: 1 } } };
+    return { n, tab: tabBarModel(n, nativeTheme(1)).computed[0]! };
+  }
+
+  it('draws the disabled box', () => {
+    const { n, tab } = currentTab();
+    expect(tab.style).toBe(pickTabStyleBox(n.styleBoxes, 'disabled'));
+  });
+
+  it('draws the title in font_selected_color', () => {
+    const { n, tab } = currentTab();
+    expect(tab.fontColor).toEqual(tabBarFontColor(n.colors, 'selected'));
+  });
+
+  it('draws the icon in icon_selected_color', () => {
+    const { n, tab } = currentTab();
+    expect(tab.iconColor).toEqual(tabBarIconColor(n.colors, 'selected'));
   });
 });

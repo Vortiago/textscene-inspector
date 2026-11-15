@@ -174,6 +174,9 @@ export const CONTROL_TEXT_SCENES = [
   { name: 'text-edit-rtl', file: 'unit-text-edit-rtl.tscn' },
   { name: 'text-edit-placeholder', file: 'unit-text-edit-placeholder.tscn' },
   { name: 'text-edit-overflow', file: 'unit-text-edit-overflow.tscn' },
+  { name: 'text-edit-scroll-bars', file: 'unit-text-edit-scroll-bars.tscn' },
+  { name: 'text-edit-minimap', file: 'unit-text-edit-minimap.tscn' },
+  { name: 'code-edit-readonly-highlighter', file: 'unit-code-edit-readonly-highlighter.tscn' },
   { name: 'code-edit-empty-gutter', file: 'unit-code-edit-empty-gutter.tscn' },
   { name: 'code-edit-rtl', file: 'unit-code-edit-rtl.tscn' },
   { name: 'rich-text-label-rtl', file: 'unit-rich-text-label-rtl.tscn' },
@@ -198,6 +201,7 @@ export const CONTROL_TEXT_SCENES = [
     file: 'unit-rich-text-label-visible-characters-follow.tscn',
   },
   { name: 'rich-text-label-hr', file: 'unit-rich-text-label-hr.tscn' },
+  { name: 'rich-text-label-object-advance', file: 'unit-rich-text-label-object-advance.tscn' },
   { name: 'rich-text-label-font-size-outline', file: 'unit-rich-text-label-font-size-outline.tscn' },
   { name: 'rich-text-label-paragraph-justification', file: 'unit-rich-text-label-paragraph-justification.tscn' },
   { name: 'rich-text-label-paragraph-tab-stops', file: 'unit-rich-text-label-paragraph-tab-stops.tscn' },
@@ -216,4 +220,10 @@ export const CONTROL_TEXT_SCENES = [
   { name: 'code-edit-guidelines', file: 'unit-code-edit-guidelines.tscn' },
   // The fold arrow the delimiter tables decide.
   { name: 'code-edit-delimiters', file: 'unit-code-edit-delimiters.tscn' },
+  // The one variable: a Theme `normal` box on Label. It draws under the text, adds its minimum, narrows the wrap width and
+  // offsets left and right lines, not centred ones (Godot 4.6.3 `--mode 2d`: max 1 of 255, 1 px).
+  { name: 'label-theme-normal-box', file: 'unit-label-theme-normal-box.tscn', mode: '2d' },
+  // The one variable: the default theme's Label variations. Header sizes, the graph and tooltip title colours,
+  // the frame title size and the TooltipPanel box (Godot 4.6.3 `--mode 2d`: max 1 of 255, 16 px).
+  { name: 'label-default-theme-variations', file: 'unit-label-default-theme-variations.tscn', mode: '2d' },
 ];

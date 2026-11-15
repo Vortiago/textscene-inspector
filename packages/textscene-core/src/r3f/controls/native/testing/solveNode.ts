@@ -7,9 +7,25 @@
 
 import type { TscnNode } from '../../../../parser/types';
 import type { ControlProperties } from '../../../../nodes/2d/ui/control/types';
-import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts';
+import { NO_PROJECT_FONTS, type ProjectFonts } from '../../../../resources/fonts/font/projectFonts';
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
 import type { SolveNode } from '../solveTree';
-import { allocatePaintRange, WHOLE_CANVAS_RANGE, type PaintRange } from '../../../canvasPaintOrder';
+import { settledFontsOf } from '../text/useSettledFont';
+import { canvasItemFieldsOf } from '../../../canvasItemPass/canvasItemFields';
+import {
+  CHAIN_START_INHERITANCE,
+  type CanvasInheritance,
+} from '../../../canvasItemPass/inheritedCanvasState';
+import { mergeThemedRecord, themeResolutionScope } from '../../../../resources/styles/theme/lookup';
+import { defaultColorsOf, defaultConstantsOf, defaultStyleBoxesOf } from '../defaultThemeRecords';
+import { allocateNodePaintRange } from '../../../testing/detachedPaint';
+import {
+  behindRangesOf,
+  allocatePaintRange,
+  WHOLE_CANVAS_RANGE,
+  type PaintRange,
+} from '../../../canvasPaintOrder';
+import { WHOLE_CANVAS_PAINT } from '../../../canvasItemPass/canvasItemPaint';
 
 /**
  * Frozen because every node this factory builds shares them, and `readonly` is
@@ -28,6 +44,9 @@ const NO_RESOURCES: SolveNode['resources'] = Object.freeze({
   internalResources: Object.freeze([]),
 });
 
+/** A root of the walk's tree, which hangs below the drawn item the walk sits in. */
+const WALK_ROOT: CanvasInheritance = { links: [], startsChain: false };
+
 /**
  * Every field but `path` and `node`, which have no meaningful default. Spread
  * this into a literal, then supply both.
@@ -45,13 +64,14 @@ export function solveNode(): Pick<
   | 'labelSettingsFont'
   | 'themeChain'
   | 'projectFonts'
+  | 'settledFonts'
   | 'colors'
   | 'constants'
   | 'icons'
   | 'resources'
-  | 'paintRange'
-  | 'paintSequence'
-  | 'skippedAncestors'
+  | 'paint'
+  | 'skippedTransform'
+  | 'inheritance'
   | 'rtl'
   | 'locale'
 > {
@@ -69,21 +89,45 @@ export function solveNode(): Pick<
     labelSettingsFont: null,
     themeChain: NO_THEME_CHAIN,
     projectFonts: NO_PROJECT_FONTS,
+    // The store a component rendered with no resource loader reads, so a node and its painter agree.
+    settledFonts: settledFontsOf(null),
     colors: NO_COLORS,
     constants: NO_CONSTANTS,
     icons: NO_ICONS,
     resources: NO_RESOURCES,
     // The whole canvas, which a lone Control owns. These defaults tie rather than
     // invent an order. A test asserting draw order uses `withPaintRanges`.
-    paintRange: WHOLE_CANVAS_RANGE,
-    paintSequence: WHOLE_CANVAS_RANGE.base,
+    paint: WHOLE_CANVAS_PAINT,
     // No skipped Node2D ancestor, the common case a hand-built tree states.
-    skippedAncestors: null,
+    skippedTransform: null,
+    inheritance: WALK_ROOT,
     // `LAYOUT_DIRECTION_INHERITED` all the way to a left-to-right root.
     rtl: false,
     // No `internationalization/locale/test`.
     locale: '',
   };
+}
+
+/**
+ * `n` with the items the default theme gives its type and `theme_type_variation`, under the items `n`
+ * already holds, which stand in for its overrides and scene Themes. The tree build gives every node
+ * these, so a painter or solver reads them with no fallback.
+ */
+export function withThemeItems<T extends SolveNode>(n: T): T {
+  const variation = (n.node.properties as ControlProperties).themeTypeVariation;
+  const scope = themeResolutionScope(n.node.type, variation, n.themeChain, n.projectFonts);
+  const noSceneItems = () => undefined;
+  return {
+    ...n,
+    styleBoxes: mergeThemedRecord(scope, n.styleBoxes, noSceneItems, defaultStyleBoxesOf),
+    colors: mergeThemedRecord(scope, n.colors, noSceneItems, defaultColorsOf),
+    constants: mergeThemedRecord(scope, n.constants, noSceneItems, defaultConstantsOf),
+  };
+}
+
+/** No project Theme or font, under the default theme at `scale`, as `gui/theme/default_theme_scale` sets it. */
+export function projectFontsAt(scale: number): ProjectFonts {
+  return { ...NO_PROJECT_FONTS, defaultTheme: defaultThemeAt(scale) };
 }
 
 /**
@@ -127,11 +171,34 @@ function shadowTree(n: SolveNode): TscnNode {
 
 /** Splits `own` between a node and its children through the production allocator. */
 function assignRange(node: SolveNode, own: PaintRange): SolveNode {
-  const allocated = allocatePaintRange(own, node.children.map(shadowTree));
+  const shadow = shadowTree(node);
+  const allocated = allocateNodePaintRange(own, shadow);
   return {
     ...node,
-    paintRange: own,
-    paintSequence: allocated.self,
+    paint: {
+      range: own,
+      own: allocated.self,
+      front: allocated.front,
+      layer: allocated.layer,
+      back: allocated.back,
+      tail: allocated.tail,
+      behind: behindRangesOf(shadow.children, allocated.children),
+    },
     children: node.children.map((child, i) => assignRange(child, allocated.children[i]!)),
   };
+}
+
+/**
+ * `node` and its subtree with the inheritance the solve gives them: each Control's links run from
+ * the walk's root down, and a CanvasLayer's children start a chain.
+ */
+export function linkedTree(node: SolveNode, inheritance: CanvasInheritance = WALK_ROOT): SolveNode {
+  const fields = canvasItemFieldsOf(node.node);
+  const below = fields
+    ? {
+        ...inheritance,
+        links: [...inheritance.links, { fields, resources: node.resources, path: node.path }],
+      }
+    : CHAIN_START_INHERITANCE;
+  return { ...node, inheritance, children: node.children.map((child) => linkedTree(child, below)) };
 }

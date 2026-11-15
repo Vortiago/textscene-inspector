@@ -17,6 +17,7 @@ import { itemUniforms, lightsIn, recordLightPass } from './testing/lightPassProb
 import { SceneStack } from '../testing/SceneStack';
 import { settleLoads } from '../testing/settleLoads';
 import '../nodes'; // side-effect: registers every node's r3f component
+import { canvasColorSpaceOf } from '../canvasColorSpace';
 
 const COOKIE = 'res://light.png';
 
@@ -60,7 +61,7 @@ async function render(tscn: string) {
 
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
+      <CanvasLighting2DProvider space={canvasColorSpaceOf(false)} canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
         <NodeDispatcher nodes={parsed.nodes} />
       </CanvasLighting2DProvider>
     </SceneStack>

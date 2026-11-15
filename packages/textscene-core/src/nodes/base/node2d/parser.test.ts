@@ -63,6 +63,14 @@ describe('parseNode2D', () => {
     expect(set.texture_repeat).toBe(2);
   });
 
+  it('parses clip_children, which defaults to DISABLED and keeps the default past CLIP_CHILDREN_MAX', () => {
+    // `set_clip_children_mode` fails on a value at or past `CLIP_CHILDREN_MAX` (`canvas_item.cpp:1733`).
+    const clip = (value?: string) =>
+      parseNode2D(heading('Node2D', { name: 'N' }), value === undefined ? {} : { clip_children: value })
+        .clip_children;
+    expect([clip(), clip('1'), clip('2'), clip('3')]).toEqual([0, 1, 2, 0]);
+  });
+
   it('parses light_mask, the CanvasItem side of Godot 2D light culling', () => {
     // 512 shares no bit with a light's default range_item_cull_mask of 1.
     expect(parseNode2D(heading('Node2D', { name: 'N' }), { light_mask: '512' }).light_mask).toBe(512);

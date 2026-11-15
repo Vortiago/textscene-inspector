@@ -7,18 +7,21 @@
 import { describe, expect, it } from 'vitest';
 import {
   projectPrimitiveMeshTexelSize,
+  projectShadowAtlasSize,
   DEFAULT_THEME_SCALE,
   DEFAULT_VIEWPORT_HEIGHT,
   DEFAULT_VIEWPORT_WIDTH,
   declaredAutoloads,
   enabledEditorPlugins,
   parseProjectSettings,
+  type ProjectSettings,
   projectExtensionListPath,
   projectLayoutDirectionEnv,
   projectThemeScale,
   projectCanvasTextureDefaults,
   projectClearColor,
   projectTransparentBackground,
+  projectUsesHdr2D,
   projectDrawsDepthPrepass,
   projectTracesHalfSizeReflections,
   projectGlowUsesBicubicUpscale,
@@ -32,7 +35,7 @@ import {
   projectViewportSize,
   projectVolumetricFogSettings,
   projectAmbientOcclusionSettings,
-  projectPhysicsClock,
+  projectTreeSettings,
 } from './projectSettingsParser';
 import { DEFAULT_PHYSICS_CLOCK } from '../godot/scene/physicsTicks';
 import { Hinting } from '../godot/text/textServerEnums';
@@ -285,6 +288,24 @@ describe('projectTransparentBackground', () => {
   });
 });
 
+describe('projectUsesHdr2D', () => {
+  const KEY = 'rendering/viewport/hdr_2d';
+
+  it('reads an HDR root', () => {
+    expect(projectUsesHdr2D({ [KEY]: 'true' })).toBe(true);
+  });
+
+  it('reads 1 as true, as the bool slot booleanizes it', () => {
+    expect(projectUsesHdr2D({ [KEY]: '1' })).toBe(true);
+  });
+
+  it('is off by default, with no project and for a malformed value', () => {
+    expect(projectUsesHdr2D({})).toBe(false);
+    expect(projectUsesHdr2D(null)).toBe(false);
+    expect(projectUsesHdr2D({ [KEY]: 'yes' })).toBe(false);
+  });
+});
+
 describe('projectTracesHalfSizeReflections', () => {
   const KEY = 'rendering/environment/screen_space_reflection/half_size';
 
@@ -299,6 +320,26 @@ describe('projectTracesHalfSizeReflections', () => {
 
   it('keeps the default for a malformed value (error path)', () => {
     expect(projectTracesHalfSizeReflections({ [KEY]: 'nope' })).toBe(true);
+  });
+});
+
+describe('projectTreeSettings: whether the root window embeds its windows', () => {
+  const KEY = 'display/window/subwindows/embed_subwindows';
+
+  it('embeds by default (`project_settings.cpp:1756`)', () => {
+    expect(projectTreeSettings(null).rootEmbedsSubwindows).toBe(true);
+    expect(projectTreeSettings({}).rootEmbedsSubwindows).toBe(true);
+  });
+
+  it('leaves the windows native when the project turns it off', () => {
+    expect(projectTreeSettings({ [KEY]: 'false' }).rootEmbedsSubwindows).toBe(false);
+  });
+
+  it('hands back one object for equal values, so an edit to another setting keeps every tree keyed on it', () => {
+    expect(projectTreeSettings({ [KEY]: 'false' })).toBe(
+      projectTreeSettings({ [KEY]: 'false', 'other/key': '1' })
+    );
+    expect(projectTreeSettings({ [KEY]: 'false' })).not.toBe(projectTreeSettings(null));
   });
 });
 
@@ -350,6 +391,25 @@ describe('projectPrimitiveMeshTexelSize', () => {
   it('takes a size at or below zero as 0.2, as every PrimitiveMesh does (edge case)', () => {
     expect(projectPrimitiveMeshTexelSize({ [KEY]: '0' })).toBe(0.2);
     expect(projectPrimitiveMeshTexelSize({ [KEY]: '-1' })).toBe(0.2);
+  });
+});
+
+describe('projectShadowAtlasSize', () => {
+  const KEY = 'rendering/2d/shadow_atlas/size';
+
+  it('reads the size the project sets', () => {
+    expect(projectShadowAtlasSize({ [KEY]: '512' })).toBe(512);
+  });
+
+  it('is 2048 with no project, no setting or a malformed value', () => {
+    expect(projectShadowAtlasSize(null)).toBe(2048);
+    expect(projectShadowAtlasSize({})).toBe(2048);
+    expect(projectShadowAtlasSize({ [KEY]: 'big' })).toBe(2048);
+  });
+
+  it('is 2048 for a size at or below zero (edge case)', () => {
+    expect(projectShadowAtlasSize({ [KEY]: '0' })).toBe(2048);
+    expect(projectShadowAtlasSize({ [KEY]: '-512' })).toBe(2048);
   });
 });
 
@@ -794,9 +854,11 @@ describe('projectDefaultFontGeneratesMipmaps', () => {
   });
 });
 
-describe('projectPhysicsClock', () => {
+describe('projectTreeSettings: the physics clock', () => {
   const TICKS = 'physics/common/physics_ticks_per_second';
   const JITTER = 'physics/common/physics_jitter_fix';
+  const projectPhysicsClock = (settings: ProjectSettings | null) =>
+    projectTreeSettings(settings).physicsClock;
 
   it('reads both settings from a project.godot', () => {
     const settings = parseProjectSettings(

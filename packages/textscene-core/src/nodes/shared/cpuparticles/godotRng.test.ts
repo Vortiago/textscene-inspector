@@ -4,7 +4,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { GodotRandomPCG, idhash, randFromSeed } from './godotRng';
+import { GodotRandomPCG } from '../../../godot/math/randomPcg';
+import { idhash, randFromSeed } from './godotRng';
 
 const GODOT_RANDF: ReadonlyArray<{ seed: number; values: number[] }> = [
   { seed: 0, values: [0.2022718489, 0.1253594011, 0.3585808575, 0.1688661575, 0.8592844009, 0.4720523059] },

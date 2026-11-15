@@ -2,7 +2,7 @@
 
 ; Exercises the two properties MultiMeshInstance2D declares (multimesh and texture, see
 ; linterParser.ts) plus a Node2D property inherited through the base-walk, to prove the chain
-; still resolves.
+; still resolves. The MultiMesh holds four instances in a row, so the node draws them.
 
 [ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
 
@@ -12,6 +12,7 @@ size = Vector2(16, 16)
 [sub_resource type="MultiMesh" id="MultiMesh_1"]
 instance_count = 4
 mesh = SubResource("QuadMesh_1")
+buffer = PackedFloat32Array(1, 0, 0, 20, 0, 1, 0, 20, 1, 0, 0, 60, 0, 1, 0, 20, 1, 0, 0, 100, 0, 1, 0, 20, 1, 0, 0, 140, 0, 1, 0, 20)
 
 [node name="Root" type="Node2D"]
 

@@ -4,23 +4,30 @@ import type { ControlProperties } from '../control/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  projectFontsAt,
+  solveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { separatorMinimumSize } from './nativeSolver';
 
-function node(name: string, type: string, props: Partial<ControlProperties> = {}): SolveNode {
-  return {
+/** A separator under the default theme at `scale`. */
+function node(name: string, type: string, props: Partial<ControlProperties> = {}, scale = 1): SolveNode {
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, type, { name, ...props }),
+    projectFonts: projectFontsAt(scale),
     // A local theme_override_constants/* reaches a solver through `n.constants`
     // (the walker folds it in unconditionally), not `node.properties`.
     constants: props.themeOverrideConstants ?? {},
-  };
+  });
 }
 
-function ctx(scale = 1): SolveContext {
+function ctx(): SolveContext {
   return {
-    theme: nativeTheme(scale),
+    theme: nativeTheme(1),
     measureText: null,
     combinedMinimumSize: () => ({ x: 0, y: 0 }),
   };
@@ -39,7 +46,7 @@ describe('separatorMinimumSize', () => {
 
   it('the `3` is never scaled, unlike `separation`', () => {
     const fn = separatorMinimumSize('horizontal');
-    expect(fn(node('S', 'HSeparator'), ctx(2))).toEqual({ x: 3, y: 8 });
+    expect(fn(node('S', 'HSeparator', {}, 2), ctx())).toEqual({ x: 3, y: 8 });
   });
 
   it('a `theme_override_constants/separation` on the node wins verbatim over the theme', () => {

@@ -1,14 +1,9 @@
 /**
- * Bone2D draws nothing of its own (ADR-0008). It reuses the Node2D component, so
- * its children still land in the right transform space.
+ * Bone2D draws the editor kite from itself to each Bone2D child (ADR-0056), and positions its
+ * children as a Node2D does.
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { Node2D } from '../../base/node2d/Component';
+import { Bone2D } from './Component';
 
-nodeComponentRegistry.register({
-  typeName: 'Bone2D',
-  Component: Node2D,
-  canvasItem: true,
-  renderIntent: 'transform-only',
-});
+nodeComponentRegistry.register({ typeName: 'Bone2D', Component: Bone2D, canvasItem: true });

@@ -1,0 +1,76 @@
+[gd_scene load_steps=1 format=3 uid="uid://unitgrapheditoolthm"]
+
+; An ancestor Theme reaches the toolbar. GraphEdit's constructor builds a Label, FlatButtons and a SpinBox
+; for it (graph_edit.cpp:3229-3300), and each reads its own class's items through the GraphEdit's Theme chain.
+; This Theme sets Label and LineEdit colours and boxes, the Button icon colours and boxes, and the SpinBox
+; arrow colour. zoom_min = 1 parks zoom on its bound, which disables the minus button so that icon_disabled_color
+; shows. No other scene gives the toolbar a Theme, so only this one shows a regression in those reads.
+
+[sub_resource type="StyleBoxFlat" id="Button_normal"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.5, 0.15, 0.15, 1)
+
+[sub_resource type="StyleBoxFlat" id="Button_pressed"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.15, 0.15, 0.5, 1)
+
+[sub_resource type="StyleBoxFlat" id="Button_disabled"]
+content_margin_left = 6.0
+content_margin_top = 6.0
+content_margin_right = 6.0
+content_margin_bottom = 6.0
+bg_color = Color(0.15, 0.4, 0.15, 1)
+
+[sub_resource type="StyleBoxFlat" id="Field_normal"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.35, 0.1, 0.35, 1)
+
+[sub_resource type="StyleBoxFlat" id="Label_normal"]
+content_margin_left = 6.0
+content_margin_top = 6.0
+content_margin_right = 6.0
+content_margin_bottom = 6.0
+bg_color = Color(0.5, 0.4, 0.1, 1)
+
+[sub_resource type="Theme" id="Theme_toolbar"]
+Label/colors/font_color = Color(1, 1, 0.4, 1)
+Label/styles/normal = SubResource("Label_normal")
+Button/colors/icon_normal_color = Color(1, 0.8, 0.8, 1)
+Button/colors/icon_pressed_color = Color(0.8, 1, 0.8, 1)
+Button/colors/icon_disabled_color = Color(0.8, 0.8, 1, 0.8)
+Button/styles/normal = SubResource("Button_normal")
+Button/styles/pressed = SubResource("Button_pressed")
+Button/styles/disabled = SubResource("Button_disabled")
+LineEdit/colors/font_color = Color(0.4, 1, 1, 1)
+LineEdit/styles/normal = SubResource("Field_normal")
+LineEdit/styles/read_only = SubResource("Field_normal")
+SpinBox/colors/up_icon_modulate = Color(1, 0.5, 0, 1)
+SpinBox/colors/down_icon_modulate = Color(0, 0.8, 0.3, 1)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_toolbar")
+
+; minimap_enabled = false hides the minimap panel, which an empty graph draws apart from Godot and this scene does not move.
+; It holds no GraphNode: the Theme's Label items would reach the GraphNode title, which graph-title-theme-colour owns.
+; No `scroll_offset`, as in the whole family: unit-graph-edit-family.md says why.
+[node name="Graph" type="GraphEdit" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 408.0
+offset_bottom = 328.0
+show_zoom_label = true
+zoom_min = 1.0
+minimap_enabled = false

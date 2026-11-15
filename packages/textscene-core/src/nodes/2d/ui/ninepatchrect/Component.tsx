@@ -11,6 +11,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { canvasMapProps } from '../../../../r3f/canvas2DTextureDecode';
 import { canvasItemFilterState, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import { useNodeReference } from '../../../../resources/reading';
 import { useCanvasItemMerge } from '../../../../r3f/components/LitCanvasItemPixels';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../../resources/useTexture2D';
@@ -22,6 +23,7 @@ import {
 import type { NinePatchRectProperties } from './types';
 import { useOwnedTextureView } from '../../../../r3f/useTextureView';
 import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
+import { useCanvasColorSpace } from '../../../../r3f/canvasColorSpace';
 
 interface ImageLike {
   width?: number;
@@ -44,8 +46,8 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
 
   // The node's own scope, not the ambient provider's: a NinePatchRect from an instanced sub-scene
   // names ids from that scene.
-  const { externalResources, internalResources } = solveNode.resources;
-  const { texture: rawTexture } = useTexture2D(props.texture, externalResources, internalResources);
+  const scope = solveNode.resources;
+  const { texture: rawTexture } = useTexture2D(useNodeReference(props.texture, scope));
 
   const geometry = useMemo(() => {
     const image = rawTexture?.image as ImageLike | undefined;
@@ -94,8 +96,9 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
 
   // Every UV stays inside the texture or region: TILE and TILE_FIT emit repeated quads, not a wrapping
   // sampler, so a clamp is right whatever the item's `texture_repeat`.
+  const canvasSpace = useCanvasColorSpace();
   const drawnTexture = useOwnedTextureView(geometry ? rawTexture : null, {
-    colorSpace: THREE.NoColorSpace,
+    colorSpace: canvasSpace.textureColorSpace,
     filter: canvasItemFilterState(sampler.filter),
     wrap: THREE.ClampToEdgeWrapping,
   });
@@ -106,7 +109,7 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
 
   const program = materialProgramInputs({
     props: {
-      ...canvasMapProps(drawnTexture),
+      ...canvasMapProps(drawnTexture, canvasSpace),
       color: tint.color,
       opacity: tint.opacity,
       transparent: true,

@@ -11,14 +11,10 @@ import type { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../
 export const CANVAS_TEXTURE_TYPE = 'CanvasTexture';
 
 /**
- * Typed view of a `CanvasTexture` block. The texture references stay raw: resolving one needs the
- * owning file's resource tables, which a leaf module does not take.
+ * Typed view of a `CanvasTexture` block: its specular shading and its sampler. The diffuse, normal
+ * and specular maps are references, which the `TEXTURE_2D` kind follows.
  */
 export interface CanvasTextureData {
-  diffuseTexture: string | null;
-  /** Read raw, without the sRGB decode (`texture_storage.cpp:766`). */
-  normalTexture: string | null;
-  specularTexture: string | null;
   /** Only its rgb reaches the renderer: the shininess takes the alpha (`texture_storage.cpp:693-696`). */
   specularColor: Rgba;
   specularShininess: number;

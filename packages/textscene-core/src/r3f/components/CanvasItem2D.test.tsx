@@ -18,7 +18,7 @@ import {
 } from '../contexts/AnimatedValueContext';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../canvasPaintOrder';
-import type { CanvasItemTint } from '../canvasItemModulate';
+import type { CanvasItemState } from '../canvasItemState';
 import type { ItemPlacement, LitItemRead } from '../lighting2d/itemLightList';
 import {
   CanvasLighting2DContext,
@@ -163,13 +163,13 @@ describe('CanvasItem2D', () => {
       expect(registerItem).not.toHaveBeenCalled();
     });
 
-    it('hands ownItems the own-pixel tint, the material and its z_final', async () => {
+    it('hands ownItems its CanvasItem state: the own-pixel tint, the material and its z_final', async () => {
       const node = makeNode({ z_index: '2', self_modulate: 'Color(1, 0, 0, 1)' });
-      const ownItems = vi.fn((_tint: CanvasItemTint, _material: unknown, _zFinal: number) => null);
+      const ownItems = vi.fn((_state: CanvasItemState) => null);
       await ReactThreeTestRenderer.create(
         <CanvasItem2D node={node} props={node2DProps(node)} ownItems={ownItems} />
       );
-      const [tint, material, zFinal] = ownItems.mock.calls[0]!;
+      const [{ tint, material, zFinal }] = ownItems.mock.calls[0]!;
       expect(tint.own).toMatchObject({ r: 1, g: 0, b: 0 });
       expect(material).toBeNull();
       expect(zFinal).toBe(2);

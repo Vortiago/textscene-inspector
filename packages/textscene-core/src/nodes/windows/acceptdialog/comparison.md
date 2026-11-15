@@ -1,15 +1,28 @@
 ---
 type: AcceptDialog
 category: Other
-status: unimplemented
-fixture: unit-accept-dialog.tscn
-# image: unit-accept-dialog
-renders_as: nothing yet, not implemented
+fixture: unit-accept-dialog-embedded.tscn
+renders_as: an embedded window with a panel, a message and buttons
 ---
 
 # AcceptDialog
 
-A base dialog with an OK button and a message, which ConfirmationDialog and FileDialog build on. The previewer parses and validates it but does not draw it. The base `Node` mounts under `renderIntent: 'pending'` as an empty group, and its children still show (ADR-0045).
+A base dialog with an OK button and a message, which ConfirmationDialog and FileDialog build on. The previewer draws a visible dialog as an embedded window: the panel, the `dialog_text` message and the focused OK button, sized to its content. A child Control fills the content area with the message.
+
+## Message and buttons
+<!-- compare: image=unit-accept-dialog-embedded status=done fixture=unit-accept-dialog-embedded.tscn -->
+
+The panel, the message and the focused OK button, sized to the content.
+
+## Theme
+<!-- compare: image=unit-accept-dialog-theme status=done fixture=unit-accept-dialog-theme.tscn -->
+
+A Theme on the dialog or an ancestor restyles the Button and the Label inside it. It does so as for a Button and a Label in the scene.
+
+## Theme icon
+<!-- compare: image=unit-accept-dialog-theme-icon status=done fixture=unit-accept-dialog-theme-icon.tscn -->
+
+A built button draws the theme icon `icon` of `Button` and grows by it, as a Button in the scene does. This holds for the OK button, the Cancel button of a ConfirmationDialog and the buttons of a FileDialog.
 
 ## Linting
 
@@ -30,10 +43,7 @@ Strict parsing format-checks these `AcceptDialog` properties, plus 45 inherited 
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
 |  | `window-size-clamped-by-limits` | warning |
 |  | `window-content-scale-factor-floored` | warning |
+|  | `window-force-native-refused-while-visible` | error |
 <!-- lint:end -->
 
-The lenient parser registers the plain `Node` reader, which reads only the heading attributes and an optional `transform`. A bad `dialog_text` is never read, substituted or reported on the lenient path.
-
-## Known limitations
-
-- **Not drawn** Godot displays the dialog once popped up, but the previewer draws nothing for it.
+The lenient parser reads every Window key and dialog text key it draws with. A malformed value takes the class default, as an unset key does, and no diagnostic comes from the lenient path.

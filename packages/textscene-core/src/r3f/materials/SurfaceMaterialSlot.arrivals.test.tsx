@@ -13,8 +13,9 @@ import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { fakeTiledUploads } from '../tiledUpload/fakeTiledUploads.testkit';
-import type { MaterialSource } from './materialSource';
+import type { ScopedReference } from '../../resources/reading';
 import { inlineSource } from './surfaceMaterial.testkit';
+import { fileMaterial } from './materialReference';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
 
@@ -65,13 +66,13 @@ roughness = 0.25
 albedo_texture = SubResource("Ramp")
 `;
 
-const ARRIVALS: Record<string, MaterialSource> = {
+const ARRIVALS: Record<string, ScopedReference> = {
   inline: inlineSource(SCENE[2]!, SCENE),
-  '.tres': { kind: 'file', path: TRES_PATH },
-  '.tres::sub': { kind: 'file', path: `${TRES_PATH}::Inner` },
+  '.tres': fileMaterial(TRES_PATH),
+  '.tres::sub': fileMaterial(`${TRES_PATH}::Inner`),
 };
 
-async function renderSlot(source: MaterialSource) {
+async function renderSlot(source: ScopedReference) {
   const fake = createFakeResourceLoader();
   fake.resources.seed(TRES_PATH, parseTresFile(TRES));
   const uploads = fakeTiledUploads();

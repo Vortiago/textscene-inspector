@@ -10,6 +10,7 @@
 
 import { round as godotRound } from '../../../../godot/math/math';
 import { hexCodeBoxAdvanceSize } from './hexCodeBox';
+import { lineExtentPx, shapedBlockHeightPx } from './lineExtent';
 import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import {
   fontUsesSubpixelPositioning,
@@ -19,19 +20,24 @@ import {
   getFontExtraAdvancePx,
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
+  getFontChainHeightPx,
+  getFontGlyphAdvancePx,
   getFontRunGlyphAdvancePx,
   fallbackChainOf,
   type FontMetrics,
   type KernGlyph,
+  type UnderlinePx,
 } from './fontMetrics';
 import type { SizedClusterOffsets } from './fallbackMarkPositioning';
 import { getFontRunShaping, type RunCluster } from './glyphRun';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { tabAlignAdvances } from './textTabStops';
+import { paragraphUnderline } from './paragraphUnderline';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { localeLanguage } from '../../../../godot/text/textServer';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 import { resolveParagraphBidi } from './bidi';
+import { isDrawnRtl } from './textBidiOptions';
 import type { StructuredTextRange } from '../../../../godot/text/structuredText';
 
 /**
@@ -100,7 +106,7 @@ export interface ShapeTextOptions {
   /**
    * The theme `line_spacing`, px. Required, because it is a per-control constant: Label 3
    * (`labelEffectiveTextTheme`), Button-family and LineEdit 0, RichTextLabel `line_separation` 0
-   * (`default_theme.cpp:1217`), Label3D its authored `line_spacing`. A miss is a 1-3 px shift.
+   * (the table's `RichTextLabel/line_separation`), Label3D its authored `line_spacing`. A miss is a 1-3 px shift.
    */
   lineSpacingPx: number;
   /**
@@ -137,6 +143,11 @@ export interface ShapeTextOptions {
    */
   terminateLastParagraph?: boolean;
   /**
+   * Whether each paragraph ends with a zero-advance space glyph the break loop measures. Default true.
+   * A `TextParagraph` shapes none: a last glyph wider than the box would otherwise gain a blank row.
+   */
+  hasEndGlyph?: boolean;
+  /**
    * `Label.tab_stops` and `TextParagraph.tab_stops`, px, applied twice as `Label::_shape` does
    * (`label.cpp:196-198,228-230`): over the paragraph before line breaking, so the aligned advance
    * decides the wrap, then per line from its own pen origin. Undefined or empty is a no-op.
@@ -155,6 +166,12 @@ export interface ShapeTextOptions {
    */
   autowrapTrimFlags?: number;
   /**
+   * `BREAK_MANDATORY`: a hard break starts a new line. It defaults to true, as every `Label` sets it.
+   * `ItemList` leaves it off for a single-line label (`BREAK_NONE`, `item_list.cpp:48`), so a newline
+   * stays inside its one line at zero width.
+   */
+  breakMandatory?: boolean;
+  /**
    * `TextServer::shaped_text_set_preserve_control`: keeps a control character as a hex-code box glyph
    * (`text/hexCodeBox.ts`) instead of dropping it at zero width. Only the `draw_control_chars` property
    * of `LineEdit` and `TextEdit` sets it.
@@ -164,7 +181,7 @@ export interface ShapeTextOptions {
 
 /** `TextServer::LineBreakFlag` subset this module reads (`servers/text/text_server.h:113-120`). */
 const BREAK_TRIM_START_EDGE_SPACES = 1 << 6;
-const BREAK_TRIM_END_EDGE_SPACES = 1 << 7;
+export const BREAK_TRIM_END_EDGE_SPACES = 1 << 7;
 
 /** One glyph's placement within its line, in target-font-size px. */
 export interface GlyphPlacement {
@@ -205,6 +222,8 @@ export interface GlyphPlacement {
   fontSizePx: number;
   /** The face of the **Fallback chain** this glyph draws in. */
   fontMetrics: FontMetrics;
+  /** An ellipsis glyph the overrun trim appended: `shaped_text_draw` draws it after the kept glyphs, with no clip (`text_server.cpp:1811-1822`). */
+  isEllipsis?: boolean;
 }
 
 export interface TextLineLayout {
@@ -222,10 +241,22 @@ export interface TextLineLayout {
    */
   paragraphIndex: number;
   /**
+   * How far the line reaches above its baseline, px: `shaped_text_get_ascent` of the line, which
+   * `lineExtentPx` grows over its own glyphs. A Label pads it (`labelLineExtent`).
+   */
+  ascentPx: number;
+  /** How far the line reaches below its baseline, px: `shaped_text_get_descent` of the line. */
+  descentPx: number;
+  /**
    * The source index where this line's paragraph starts: Label's `para.start`. `shapeText` sets it.
    * Label hides an ellipsis by it, as the ellipsis glyph has no source character of its own.
    */
   paragraphStart?: number;
+  /**
+   * The paragraph's underline, `shaped_text_get_underline_position` and `_thickness`
+   * (`paragraphUnderline.ts`). `shapeText` sets it. A hand-built line has none, which is 0.
+   */
+  underline?: UnderlinePx;
   /** The paragraph's left inset, px, from `paragraphIndentPx`. Absent for none. */
   indentPx?: number;
   /**
@@ -234,9 +265,15 @@ export interface TextLineLayout {
    */
   isRtl?: boolean;
   /**
+   * Whether this line's paragraph is set right to left, which `shaped_text_draw` reads for the fill
+   * (`text_server.cpp:1744`), not the inferred `isRtl`. `shapeText` sets it from the paragraph's own
+   * direction. Absent is left to right, as on a line a test or a painter builds by hand.
+   */
+  isDrawnRtl?: boolean;
+  /**
    * The glyphs `shaped_text_draw_outline` draws where they differ from `glyphs`: a trimmed AUTO
    * line whose paragraph resolved right-to-left. The outline reads the inferred direction, the
-   * fill the set one (`text_server.cpp:1744,1840`). `trimTextBufferLineToWidth` sets it, and
+   * fill the set one (`text_server.cpp:1744,1840`). `textBufferPlacement` sets it, and
    * `widthPx` stays the width of the one trimmed buffer both draws place by (`width_trimmed`).
    */
   outlineGlyphs?: GlyphPlacement[];
@@ -262,16 +299,30 @@ export interface TextLayoutResult {
   /** The text the lines were shaped from, after `uppercase`. A glyph's `sourceIndex` is a UTF-16 offset into it. */
   shapedText: string;
   lines: TextLineLayout[];
-  /** `getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx)`, one pitch for every line. */
+  /**
+   * `getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx)`: the pitch of a line of the span face
+   * alone, for a reader with no line to measure (an empty text, a caret). A line steps by its own
+   * height (`lineTopsPx`).
+   */
   linePitchPx: number;
+  /**
+   * `Font::get_height` of the span face (`getFontChainHeightPx`): the tallest face of its fallback
+   * chain, which a Button's minimum size reads though no glyph draws in that face.
+   */
+  fontHeightPx: number;
+  /** The gap after each line, px, which every line's height includes (`lineHeightPx`). */
+  lineSpacingPx: number;
   /** The widest line's `widthPx`. */
   widthPx: number;
-  /** `lines.length * linePitchPx`, plus the `paragraph_spacing` of each paragraph where Label windows the lines (`windowLabelLines`). */
+  /**
+   * The size of the text buffer, `TextParagraph::get_size().y` (`text_paragraph.cpp:601-611`): each
+   * line's ascent plus descent ceiled, plus the line spacing (`shapedBlockHeightPx`). Label sums its
+   * own lines and paragraph spacing instead (`windowLabelLines`).
+   */
   heightPx: number;
   /**
-   * `getFontAscentPx(fontMetrics, fontSizePx)`: the baseline, measured down from the line top. Each
-   * painter anchors a line here, so a hand-built result must state it: a wrong default misses by a
-   * whole ascent.
+   * `getFontAscentPx(fontMetrics, fontSizePx)`: the baseline of a line of the span face alone. A
+   * painter anchors each line at its own ascent (`lineBaselinesPx`).
    */
   baselineOffsetPx: number;
   /**
@@ -287,28 +338,43 @@ export function infersRtl(layout: TextLayoutResult | null): boolean {
 }
 
 /**
- * Re-wraps one shaped line as a one-line result drawn from y = 0; the caller's `<group>` supplies
- * the cumulative Y. It bypasses `shapeText`, so it echoes the parent's `fontMetrics` and baseline.
- * Override `baselineOffsetPx` and `fontMetrics` for a RichTextLabel `[b]`/`[i]` run shaped at its own
- * size, in its own face. Override `heightPx` where the line is taller than the parent's pitch, so a
- * canvas raster holds the line's ascent. `linePitchPx` stays the parent's.
+ * Re-wraps one shaped line as a one-line result drawn from y = 0, its baseline at the line's own
+ * ascent; the caller's `<group>` supplies the cumulative Y. It bypasses `shapeText`, so it echoes
+ * the parent's `fontMetrics`. Override `fontMetrics` for a RichTextLabel run in another face.
  */
 export function soloLineLayout(
   line: TextLineLayout,
   parent: TextLayoutResult,
-  baselineOffsetPx: number = parent.baselineOffsetPx,
-  fontMetrics: FontMetrics = parent.fontMetrics,
-  heightPx: number = parent.linePitchPx
+  fontMetrics: FontMetrics = parent.fontMetrics
 ): TextLayoutResult {
   return {
     shapedText: parent.shapedText,
     lines: [line],
     linePitchPx: parent.linePitchPx,
+    fontHeightPx: parent.fontHeightPx,
+    lineSpacingPx: parent.lineSpacingPx,
     widthPx: line.widthPx,
-    heightPx,
-    baselineOffsetPx,
+    heightPx: Math.max(parent.linePitchPx, line.ascentPx + deepestDescentPx(line)),
+    baselineOffsetPx: parent.baselineOffsetPx,
     fontMetrics,
   };
+}
+
+/**
+ * The largest descent of a glyph on `line`, from its face at its size or its downward `yOffset`
+ * (`text_server_adv.cpp:5146-5172`), 0 for no glyph. A canvas raster reaches this
+ * far below the baseline, so a glyph of a fallback face with a deeper descent is not cut at the
+ * bottom. The raster grows only downwards: the baseline stays.
+ */
+function deepestDescentPx({ glyphs }: TextLineLayout): number {
+  let deepestPx = 0;
+  for (const glyph of glyphs)
+    deepestPx = Math.max(
+      deepestPx,
+      getFontDescentPx(glyph.fontMetrics, glyph.fontSizePx),
+      glyph.yOffset ?? 0
+    );
+  return deepestPx;
 }
 
 /**
@@ -326,13 +392,15 @@ interface BreakFlags {
    * WORD overflows.
    */
   adaptive: boolean;
+  /** BREAK_MANDATORY: a hard-break glyph ends the line. */
+  mandatory: boolean;
 }
 
 /**
  * `Label::_shape()`'s mode-to-flags map (`scene/gui/label.cpp` ~209-225), each mode with
  * `BREAK_MANDATORY` too. OFF sets no soft flag, so only hard breaks start a line.
  */
-function breakFlagsForAutowrap(mode: EnumValue<typeof AutowrapMode>): BreakFlags {
+function breakFlagsForAutowrap(mode: EnumValue<typeof AutowrapMode>): Omit<BreakFlags, 'mandatory'> {
   switch (mode) {
     case AutowrapMode.AUTOWRAP_ARBITRARY:
       return { wordBound: false, graphemeBound: true, adaptive: false };
@@ -592,8 +660,8 @@ function clusterTail(start: number, end: number): BreakGlyph {
 }
 
 /**
- * The glyph of character `i` where it takes no shaping: a break, a control, a tab or a hex-code box.
- * Undefined for a character its face shapes.
+ * The glyph of character `i` where it takes no shaping: a break, a control, a tab, a character its
+ * face draws apart or a hex-code box. Undefined for a character its face shapes.
  */
 function specialGlyph(
   chars: ArrayLike<string>,
@@ -612,8 +680,15 @@ function specialGlyph(
     // Without `preserve_invalid` or `preserve_control`, a control pushes no `Glyph` (`:6844`).
     return preserveControl ? hexCodeBox(ch, i, style.sizes[i]!) : zeroWidthGlyph(ch, i);
   }
-  if (!lacksGlyph(style.faces[i]!, ch, style.hasUndrawnGlyph)) return undefined;
+  const face = style.faces[i]!;
+  if (face.drawsApart?.(ch)) return drawnApartGlyph(ch, i, face, style.sizes[i]!);
+  if (!lacksGlyph(face, ch, style.hasUndrawnGlyph)) return undefined;
   return hexCodeBox(ch, i, style.sizes[i]!);
+}
+
+/** The glyph of character `ch` at `i` that `face` draws apart, at its character advance. */
+function drawnApartGlyph(ch: string, i: number, face: FontMetrics, size: number): BreakGlyph {
+  return { ...zeroWidthGlyph(ch, i), advance: getFontGlyphAdvancePx(face, ch, size) };
 }
 
 /** The glyph of character `ch` at `i` with no advance. */
@@ -745,13 +820,19 @@ function pushRunGlyphs(
  * zero-advance whitespace terminator Label appends (`label.cpp:164`). `chars` are the characters
  * the glyphs draw, mirrored where the level is odd, and `style` sets the size, face and level of each.
  */
-function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveControl = false): BreakGlyph[] {
+function toBreakGlyphs(
+  chars: ArrayLike<string>,
+  style: RunStyle,
+  preserveControl = false,
+  hasEndGlyph = true
+): BreakGlyph[] {
   const glyphs: BreakGlyph[] = [];
   for (const range of runRanges(style, chars.length))
     pushRunGlyphs(glyphs, chars, range, style, preserveControl);
   kernGlyphs(glyphs, chars, style);
   placeMarks(glyphs, style);
   roundAdvancesToWholePixels(glyphs, chars, style);
+  if (!hasEndGlyph) return glyphs;
   glyphs.push({
     start: chars.length,
     end: chars.length + 1,
@@ -1088,8 +1169,7 @@ function shapedTextGetLineBreaks(
       continue;
     }
 
-    // BREAK_MANDATORY is always on, whatever the autowrap mode.
-    if (g.isHardBreak) {
+    if (flags.mandatory && g.isHardBreak) {
       const curSafeBrk = i;
       let startPos = prevSafeBreak;
       let endPos = i;
@@ -1221,16 +1301,18 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     autowrapTrimFlags,
     trimIndent = false,
     preserveControl = false,
+    breakMandatory = true,
+    hasEndGlyph = true,
   } = options;
   // Uppercase before indices are assigned, so a `fontSizePxAt` keyed on the transformed text lines up.
   const transformed = uppercase ? upperCaseFor(text, language) : text;
-  const flags = breakFlagsForAutowrap(autowrapMode);
+  const flags = { ...breakFlagsForAutowrap(autowrapMode), mandatory: breakMandatory };
   const trim = {
     start: autowrapTrimFlags === undefined ? true : (autowrapTrimFlags & BREAK_TRIM_START_EDGE_SPACES) !== 0,
     end: autowrapTrimFlags === undefined ? true : (autowrapTrimFlags & BREAK_TRIM_END_EDGE_SPACES) !== 0,
   };
   // AUTOWRAP_OFF never soft-wraps: force an unconstrained width regardless of
-  // what the caller passed, so only the always-on hard-break branch can
+  // what the caller passed, so only the hard-break branch can
   // start a new line (mirrors Label::_shape() never OR-ing a wrap flag in).
   const effectiveWidth = autowrapMode === AutowrapMode.AUTOWRAP_OFF ? 0 : boxWidthPx;
 
@@ -1240,9 +1322,9 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     paragraphSeparator,
     terminateLastParagraph
   ).entries()) {
-    // The terminator is in the shaped text but not the source, so the per-character closures, keyed
-    // into the whole text, are offset back, and the index past the paragraph's end takes the last value.
-    const sourceIndex = (i: number): number => para.offset + Math.max(0, Math.min(i, para.text.length - 1));
+    // The terminator is in the shaped text but not the source. It takes the style of the separator
+    // it stands for, as RichTextLabel shapes it in the font of its newline (`rich_text_label.cpp:643`).
+    const sourceIndex = (i: number): number => para.offset + Math.min(i, para.text.length);
     const paraText = para.terminated ? para.text + PARAGRAPH_TERMINATOR : para.text;
     const paragraphBidi = { direction, language, bidiOverride, ...paragraphBidiAt?.(para.offset) };
     const indentPx = paragraphIndentPx?.(para.offset) ?? 0;
@@ -1275,7 +1357,12 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       spans: spanAt ? Int32Array.from({ length: paraText.length }, (_v, i) => spanAt(sourceIndex(i))) : null,
       hasUndrawnGlyph: !spansDraw,
     };
-    const breakGlyphs = toBreakGlyphs(chars, runStyle, preserveControl);
+    const breakGlyphs = toBreakGlyphs(chars, runStyle, preserveControl, hasEndGlyph);
+    const underline = paragraphUnderline({
+      chars,
+      ...runStyle,
+      isUndrawn: (i) => breakGlyphs[i]?.controlCodepoint !== undefined,
+    });
     // First tab pass: the aligned advance must be in place before line breaking measures it.
     if (hasTabStops) {
       // One entry per UTF-16 unit, as `breakGlyphs` holds them: a code-point walk shifts every
@@ -1333,17 +1420,27 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
         widthPx: penX,
         paragraphIndex,
         paragraphStart: para.offset,
+        underline,
         ...(indentPx > 0 && { indentPx }),
         isRtl: bidi.isRtl,
+        ...(isDrawnRtl(paragraphBidi) && { isDrawnRtl: true }),
+        ...lineExtentPx(glyphs, fontMetrics, fontSizePx),
       });
     }
   }
 
   const widthPx = widestLineWidthPx(lines);
-  const { baselineOffsetPx, linePitchPx } = lineMetrics(lines, fontMetrics, fontSizePx, lineSpacingPx);
-  const heightPx = lines.length * linePitchPx;
-
-  return { shapedText: transformed, lines, linePitchPx, widthPx, heightPx, baselineOffsetPx, fontMetrics };
+  return {
+    shapedText: transformed,
+    lines,
+    linePitchPx: getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx),
+    fontHeightPx: getFontChainHeightPx(fontMetrics, fontSizePx),
+    lineSpacingPx,
+    widthPx,
+    heightPx: shapedBlockHeightPx(lines, lineSpacingPx),
+    baselineOffsetPx: getFontAscentPx(fontMetrics, fontSizePx),
+    fontMetrics,
+  };
 }
 
 /** The placement of each glyph of the cluster `placed` draws, at its own pen and advance. */
@@ -1365,43 +1462,6 @@ function clusterPlacements(placed: GlyphPlacement, glyphs: readonly ClusterGlyph
     pen += glyph.advance;
     return placement;
   });
-}
-
-/** How far the glyph offsets of `glyphs` reach above and below the baseline, px: `-y_off` and `y_off`. */
-export function glyphOffsetReachPx(glyphs: Iterable<GlyphPlacement>): { abovePx: number; belowPx: number } {
-  let abovePx = 0;
-  let belowPx = 0;
-  for (const { yOffset = 0 } of glyphs) {
-    abovePx = Math.max(abovePx, -yOffset);
-    belowPx = Math.max(belowPx, yOffset);
-  }
-  return { abovePx, belowPx };
-}
-
-/**
- * The font's ascent and pitch, each grown by a glyph offset past the font's line: Godot's line
- * ascent is `MAX(ascent, -y_off)` and its descent `MAX(descent, y_off)` (`text_server_adv.cpp:5161-5162`).
- * One pitch serves every line, so the furthest offset of any line sets it.
- */
-function lineMetrics(
-  lines: readonly TextLineLayout[],
-  fontMetrics: FontMetrics,
-  fontSizePx: number,
-  lineSpacingPx: number
-): { baselineOffsetPx: number; linePitchPx: number } {
-  const ascentPx = getFontAscentPx(fontMetrics, fontSizePx);
-  const descentPx = getFontDescentPx(fontMetrics, fontSizePx);
-  let liftPx = 0;
-  let dropPx = 0;
-  for (const { glyphs } of lines) {
-    const { abovePx, belowPx } = glyphOffsetReachPx(glyphs);
-    liftPx = Math.max(liftPx, abovePx - ascentPx);
-    dropPx = Math.max(dropPx, belowPx - descentPx);
-  }
-  return {
-    baselineOffsetPx: ascentPx + liftPx,
-    linePitchPx: getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx) + liftPx + dropPx,
-  };
 }
 
 /** The width of the widest of `lines`, or 0 for none. */

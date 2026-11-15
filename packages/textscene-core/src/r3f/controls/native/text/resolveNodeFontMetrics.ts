@@ -2,7 +2,7 @@
  * Joins theme resolution (`resolveThemeFontIn`, `resolveThemeFontSizeIn`) to each Control's solver
  * and painter. Both pass the same `themeKey`, so a widget's floored box and its glyphs share one
  * font and size. It is Godot's own `set_font` key: `"font"` for Label, Button, CheckBox,
- * OptionButton and LineEdit, `"normal_font"` for RichTextLabel (`default_theme.cpp:1194`).
+ * OptionButton and LineEdit, `"normal_font"` for RichTextLabel, as the default theme registers them.
  */
 
 import { controlProps, type ShareNode } from '../solveTree';
@@ -33,13 +33,13 @@ const scopeFor = perObject((n: ShareNode): ThemeResolutionScope =>
  * can settle between the solve pass and the paint pass of one generation.
  */
 export function resolveNodeFontMetrics(n: ShareNode, themeKey: string): FontMetrics {
-  return peekSceneFontMetrics(resolveNodeFont(n, themeKey), n.path);
+  return peekSceneFontMetrics(n.settledFonts, resolveNodeFont(n, themeKey), n.path);
 }
 
 /**
  * `resolveNodeFontMetrics` for a key whose last rung is a face of its own, not the default font:
  * RichTextLabel's `bold_font` ends at a `FontVariation` over the default font
- * (`default_theme.cpp:1195`). `lastRung` gets the metrics of the default font and answers only
+ * in the default theme. `lastRung` gets the metrics of the default font and answers only
  * where no override, no ancestor theme and no project theme defines `themeKey`.
  */
 export function resolveNodeFontMetricsOr(
@@ -49,8 +49,8 @@ export function resolveNodeFontMetricsOr(
 ): FontMetrics {
   const scope = scopeFor(n);
   const found = findThemeFontIn(scope, themeKey, n.fontOverrides[themeKey]);
-  if (found !== undefined) return peekSceneFontMetrics(found, n.path);
-  return lastRung(peekSceneFontMetrics(scope.projectDefaultFont, n.path));
+  if (found !== undefined) return peekSceneFontMetrics(n.settledFonts, found, n.path);
+  return lastRung(peekSceneFontMetrics(n.settledFonts, scope.projectDefaultFont, n.path));
 }
 
 /**
@@ -66,13 +66,7 @@ export function resolveNodeFont(n: ShareNode, themeKey: string): FontResource | 
  * The font size `sizeKey` resolves to on `n` (`scene/gui/control.cpp:3107-3129`): the font key plus
  * `_size`, as each `nativeSolver.ts` cites. `overridePx` is the widget's
  * `theme_override_font_sizes/<sizeKey>`, read from `props.themeOverrideFontSizes`.
- * `builtInDefaultPx` stands in for `ThemeDB::get_fallback_font_size()`.
  */
-export function resolveNodeFontSizePx(
-  n: ShareNode,
-  sizeKey: string,
-  overridePx: number | undefined,
-  builtInDefaultPx: number
-): number {
-  return resolveThemeFontSizeIn(scopeFor(n), sizeKey, overridePx, builtInDefaultPx);
+export function resolveNodeFontSizePx(n: ShareNode, sizeKey: string, overridePx?: number): number {
+  return resolveThemeFontSizeIn(scopeFor(n), sizeKey, overridePx);
 }

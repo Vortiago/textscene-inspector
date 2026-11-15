@@ -1,0 +1,45 @@
+[gd_scene format=3]
+
+; One variable: the current Camera2D of a sub-viewport writes `screen_offset`. The view centre is
+; (360, 190) in a 320x180 viewport, so the offset is (200, 100). Godot 4.6.3 draws the 60x40 Bar
+; at screen x 120, 220 and 320 (y 100) and Marker at (110, 230). No other scene scrolls a
+; Parallax2D by a camera.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Booth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 420.0
+offset_bottom = 260.0
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+size = Vector2i(320, 180)
+render_target_update_mode = 4
+
+[node name="Camera" type="Camera2D" parent="Booth/SubViewport"]
+position = Vector2(360, 190)
+
+[node name="Marker" type="Polygon2D" parent="Booth/SubViewport"]
+color = Color(0.9, 0.2, 0.2, 1)
+polygon = PackedVector2Array(210, 250, 230, 250, 230, 270, 210, 270)
+
+[node name="Parallax" type="Parallax2D" parent="Booth/SubViewport"]
+scroll_scale = Vector2(0.5, 1)
+repeat_size = Vector2(100, 0)
+repeat_times = 4
+
+[node name="Bar" type="Polygon2D" parent="Booth/SubViewport/Parallax"]
+position = Vector2(20, 120)
+color = Color(0, 0.8, 0.3, 1)
+polygon = PackedVector2Array(0, 0, 60, 0, 60, 40, 0, 40)

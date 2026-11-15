@@ -1,0 +1,21 @@
+; One variable: a visible FileDialog in Save File mode over an empty res:// root, with one PNG filter. It differs from file-dialog-open-empty only in file_mode, so the title, the OK text and the create-folder button show.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 0
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Dialog" type="FileDialog" parent="."]
+position = Vector2i(100, 100)
+visible = true
+file_mode = 4
+filters = PackedStringArray("*.png ; PNG Image")

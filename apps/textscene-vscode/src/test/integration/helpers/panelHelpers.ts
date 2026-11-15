@@ -29,6 +29,8 @@ export interface TestPanel {
    * `dispatchWebviewMessage` call.
    */
   triggerMessage(msg: Record<string, unknown>): void;
+  /** Sets the fake panel's `visible` and fires `onDidChangeViewState`, as VS Code does when a tab hides or shows. */
+  setVisible(visible: boolean): void;
 }
 
 export interface TestPanelOptions {
@@ -55,6 +57,7 @@ export function createTestPanel(
 
   const messageListeners: Array<(msg: unknown) => void> = [];
   const disposeListeners: Array<() => void> = [];
+  const viewStateListeners: Array<() => void> = [];
   let disposed = false;
 
   const fakeWebview = {
@@ -94,6 +97,14 @@ export function createTestPanel(
         },
       };
     },
+    onDidChangeViewState: (listener: () => void, _thisArg?: unknown, _disposables?: vscode.Disposable[]) => {
+      viewStateListeners.push(listener);
+      return {
+        dispose: () => {
+          /* no-op */
+        },
+      };
+    },
     reveal: (_column?: vscode.ViewColumn, _preserveFocus?: boolean) => {
       /* no-op */
     },
@@ -119,7 +130,14 @@ export function createTestPanel(
     }
   }
 
-  return { panel, sentMessages, triggerMessage };
+  function setVisible(isVisible: boolean): void {
+    fakePanel.visible = isVisible;
+    for (const listener of viewStateListeners) {
+      listener();
+    }
+  }
+
+  return { panel, sentMessages, triggerMessage, setVisible };
 }
 
 export async function waitForMessage(

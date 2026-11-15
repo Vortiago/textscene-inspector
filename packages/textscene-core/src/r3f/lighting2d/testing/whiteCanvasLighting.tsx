@@ -2,9 +2,12 @@
 
 import type { ReactNode } from 'react';
 import { CanvasLighting2DProvider } from '../CanvasLighting2D';
+import { canvasColorSpaceOf } from '../../canvasColorSpace';
 
 export function underWhiteCanvasLighting(nodes: ReactNode) {
   return (
-    <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>{nodes}</CanvasLighting2DProvider>
+    <CanvasLighting2DProvider space={canvasColorSpaceOf(false)} canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
+      {nodes}
+    </CanvasLighting2DProvider>
   );
 }

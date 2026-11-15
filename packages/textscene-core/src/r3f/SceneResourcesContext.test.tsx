@@ -6,13 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import { render, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import {
-  SceneResourcesProvider,
-  useSceneResources,
-  findSubResource,
-  type SceneResources,
-} from './SceneResourcesContext';
-import { findExtResource } from '../resources/SubResourceResolver';
+import { SceneResourcesProvider, useSceneResources, type SceneResources } from './SceneResourcesContext';
+import { findExtResource, findSubResource } from '../resources/SubResourceResolver';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 
 const hostInternal: TscnInternalResource[] = [{ id: 'BoxMesh_host', type: 'BoxMesh', data: {} }];

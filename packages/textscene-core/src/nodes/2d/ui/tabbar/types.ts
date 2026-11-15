@@ -39,10 +39,15 @@ export interface TabBarProperties extends ControlProperties {
   dragToRearrangeEnabled?: boolean;
   /** `tab_bar.h:134`, default true. Interaction only. */
   switchOnDragHover?: boolean;
-  /** `tab_bar.h:132`, default true. Interaction only. */
+  /** `tab_bar.h:132`, default true. Gates `ensure_tab_visible` for the current tab (`tab_bar.cpp:400,492,773`). */
   scrollToSelected?: boolean;
   /** `tab_bar.h:120`, default false. Interaction only. */
   selectWithRmb?: boolean;
   /** `tab_bar.h:121`, default false. Interaction only. */
   deselectEnabled?: boolean;
+  /**
+   * `tab_bar.h:118`, no scene line carries it: a TabContainer sets it while its tabs sit at the bottom
+   * (`tab_container.cpp:826`). Each tab's StyleBox then draws mirrored on y.
+   */
+  tabStyleVFlip?: boolean;
 }

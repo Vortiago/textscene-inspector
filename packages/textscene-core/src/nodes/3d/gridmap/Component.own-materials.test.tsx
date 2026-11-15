@@ -11,7 +11,7 @@ import { fakeTiledUploads } from '../../../r3f/tiledUpload/fakeTiledUploads.test
 import { DEFAULT_MATERIAL_ROUGHNESS } from '../../../godot/rendering/materials/defaultMaterial';
 import { pendingMapStandIn } from '../../../r3f/materials/pendingMapStandIn';
 import { isInstancedMesh } from '../../../r3f/testing/threeNarrow';
-import { unconfiguredViewportTexture } from '../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
+import { texture2DPlaceholder } from '../../../resources/textures/texture2DPlaceholder';
 import { drawnMaterials, mountGridMap, renderInstancedTile } from './testing/gridMapCorpus';
 
 describe('<GridMap> tile with the ArrayMesh’s own surface material', () => {
@@ -95,9 +95,7 @@ describe('<GridMap> tile material with a ViewportTexture', () => {
    */
   it("draws Godot's placeholder when the library is not local to scene", async () => {
     const tile = await renderInstancedTile(LOCAL_VIEWPORT_TILE);
-    expect((tile.material as THREE.MeshStandardMaterial).map?.image).toBe(
-      unconfiguredViewportTexture().image
-    );
+    expect((tile.material as THREE.MeshStandardMaterial).map?.image).toBe(texture2DPlaceholder().image);
   });
 
   it('looks the viewport up when the library is local to scene, so a missing one leaves the slot empty', async () => {

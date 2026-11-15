@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parsePackedStringArray } from './arrayForms';
+import { parsePackedStringArray } from '../../../../parser/utils';
 
 describe('parsePackedStringArray', () => {
   it('reads the elements of each of the three spellings', () => {

@@ -5,9 +5,10 @@ pnpm monorepo holds `packages/textscene-core` (parser, linter, r3f components),
 `packages/textscene-dev-kit` (shared test helpers, never published), `apps/textscene-web` (web
 previewer), `apps/textscene-vscode` (VS Code extension), `apps/textscene-lsp` (`tscn-lsp`
 language server), `apps/textscene-linter` (CLI linter), `apps/textscene-tscn` (`@textscene/tscn`,
-the parser as an npm package) and `apps/textscene-renderer` (`@textscene/renderer`, the renderer as
-an npm package). The CLI linter, the language server and the parser package are free of React and
-THREE.
+the parser as an npm package), `apps/textscene-renderer` (`@textscene/renderer`, the renderer as
+an npm package) and `apps/textscene-three-godot-shaders` (`@textscene/three-godot-shaders`, the
+shader module as an npm package). The CLI linter, the language server and the parser package are
+free of React and THREE. The shader package is free of React.
 
 ## Docs
 
@@ -25,9 +26,18 @@ strategy.
 - Do one issue at a time. The user picks it.
 - Never start the next issue on your own.
 - Reference the issue from the PR with `Closes #<n>`.
+- Reply to each comment of the Claude review on your pull request with the fix commit, the owning
+  issue or the reason you decline it. Resolve the conversation after the reply.
 
 ## Policies
 
+- The renderer's subject is any Godot project a user opens, a user's own shaders included, not the
+  scenes and features the previewer draws today (ADR-0075). Port Godot's mechanism: the language,
+  the format or the whole node family, never a list of the features seen so far.
+- A line that cuts scope names the open issue that owns it: "out of scope", "later", "follow-up",
+  "not filed" or "host input". For a line in a sheet, `GLOSSARY.md` or a code comment, the pull
+  request body names it.
+- When a plan covers less than the request, show the missing part with the plan.
 - Do the full scope at full quality. Never trim, skip tests or defer for time, token or
   context pressure, and never mention such limits.
 - Implement completely: no stubs, placeholders or TODOs. Do every numbered item.
@@ -71,6 +81,9 @@ CI job fails, fix the cause.
 and prints exact pixels. It is a tool, not a gate.
 
 - Measure, never derive. Put a measurement in the pull request, never in a comparison sheet.
+- A report on a rendering change leads with the measurement against Godot: `pnpm ref:diff` on scenes
+  with several values for each feature the change touches, before and after. A refactor reports it
+  too. An unmoved golden shows only that nothing regressed, so it comes second.
 - `pnpm test:godot-ref` runs the tests that render through real Godot
   (`scripts/godot-ref/*.engine.test.mjs`). It takes about 6 minutes, and `pnpm test:unit` never
   runs it. Run it after a change to a file the tests read: a module they import, a file of
@@ -82,6 +95,9 @@ and prints exact pixels. It is a tool, not a gate.
 - `--particles <seconds>` advances every CPUParticles emitter and every GPUParticles3D, on top of its
   authored `preprocess`. The harness never picks the instant. Pass it yourself. For a comparison sheet,
   `SHEET-STANDARD.md` names it.
+- `--debug-collisions` runs the game with collision debugging, as the editor's "Visible Collision Shapes"
+  does. A 2D joint then draws its marker and a collision shape its outline. Without it a game draws neither.
+  `pnpm ref:diff <scenes> --collisions` and `pnpm ref:ours <scene> --collisions` show them on both sides.
 - `--mode 2d-root` measures a root-only setting. Add a new one to
   `ROOT_ONLY_VIEWPORT_PROPERTIES` in `scripts/godot-ref/run.mjs`.
 - A 1/255 gap on a channel whose value × 255 is fractional is not a parity defect. The driver

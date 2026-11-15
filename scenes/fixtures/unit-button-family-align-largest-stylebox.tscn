@@ -1,0 +1,92 @@
+; one variable: `align_to_largest_stylebox`, which lays the content of every draw state inside the largest
+; margins of any state and sizes the button by them (button.cpp:52-99,233-236,525).
+; No other scene sets it, so none shows a regression in it.
+
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_normal"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.2, 0.3, 0.5, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pressed"]
+content_margin_left = 30.0
+content_margin_top = 14.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+bg_color = Color(0.5, 0.3, 0.2, 1)
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="ButtonAligned" type="Button" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+theme_override_constants/align_to_largest_stylebox = 1
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pressed")
+text = "Aligned"
+
+[node name="ButtonUnaligned" type="Button" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 80.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pressed")
+text = "Unaligned"
+
+[node name="ButtonAlignedPressed" type="Button" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 140.0
+theme_override_constants/align_to_largest_stylebox = 1
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pressed")
+toggle_mode = true
+button_pressed = true
+text = "Aligned pressed"
+
+[node name="CheckBoxAligned" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 220.0
+offset_top = 20.0
+theme_override_constants/align_to_largest_stylebox = 1
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pressed")
+text = "Aligned"
+
+[node name="CheckButtonAligned" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 220.0
+offset_top = 80.0
+theme_override_constants/align_to_largest_stylebox = 1
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pressed")
+text = "Aligned"
+
+[node name="OptionButtonAligned" type="OptionButton" parent="."]
+layout_mode = 0
+offset_left = 220.0
+offset_top = 140.0
+theme_override_constants/align_to_largest_stylebox = 1
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pressed")
+selected = 0
+item_count = 1
+popup/item_0/text = "Aligned"
+popup/item_0/id = 0
+
+[node name="MenuButtonAligned" type="MenuButton" parent="."]
+layout_mode = 0
+offset_left = 220.0
+offset_top = 200.0
+theme_override_constants/align_to_largest_stylebox = 1
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pressed")
+text = "Aligned"

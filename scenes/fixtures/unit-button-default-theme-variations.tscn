@@ -1,0 +1,116 @@
+; Buttons that name a type variation the default theme defines (default_theme.cpp:357-375, :394-401).
+; FlatButton and FlatMenuButton draw an empty box with Button's margins, and pressed a darker box. A Button
+; on a Label variation reads Label's empty `normal`, so it keeps no margins, but Button's own `pressed`
+; and `disabled`. The Labels beside them pin the font steps the Buttons share.
+
+[gd_scene load_steps=1 format=3 uid="uid://unitbtndefthemevar"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="Grid" type="GridContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 400.0
+offset_bottom = 300.0
+columns = 4
+
+[node name="PlainNormal" type="Button" parent="Grid"]
+layout_mode = 2
+text = "Plain"
+
+[node name="PlainPressed" type="Button" parent="Grid"]
+layout_mode = 2
+toggle_mode = true
+button_pressed = true
+text = "Plain"
+
+[node name="PlainDisabled" type="Button" parent="Grid"]
+layout_mode = 2
+disabled = true
+text = "Plain"
+
+[node name="PlainPressedDisabled" type="Button" parent="Grid"]
+layout_mode = 2
+disabled = true
+toggle_mode = true
+button_pressed = true
+text = "Plain"
+
+[node name="FlatNormal" type="Button" parent="Grid"]
+layout_mode = 2
+theme_type_variation = &"FlatButton"
+text = "Flat"
+
+[node name="FlatPressed" type="Button" parent="Grid"]
+layout_mode = 2
+theme_type_variation = &"FlatButton"
+toggle_mode = true
+button_pressed = true
+text = "Flat"
+
+[node name="FlatDisabled" type="Button" parent="Grid"]
+layout_mode = 2
+theme_type_variation = &"FlatButton"
+disabled = true
+text = "Flat"
+
+[node name="FlatPressedDisabled" type="Button" parent="Grid"]
+layout_mode = 2
+theme_type_variation = &"FlatButton"
+disabled = true
+toggle_mode = true
+button_pressed = true
+text = "Flat"
+
+[node name="SmallNormal" type="Button" parent="Grid"]
+layout_mode = 2
+theme_type_variation = &"HeaderSmall"
+text = "Small"
+
+[node name="SmallPressed" type="Button" parent="Grid"]
+layout_mode = 2
+theme_type_variation = &"HeaderSmall"
+toggle_mode = true
+button_pressed = true
+text = "Small"
+
+[node name="SmallDisabled" type="Button" parent="Grid"]
+layout_mode = 2
+theme_type_variation = &"HeaderSmall"
+disabled = true
+text = "Small"
+
+[node name="MediumNormal" type="Button" parent="Grid"]
+layout_mode = 2
+theme_type_variation = &"HeaderMedium"
+text = "Medium"
+
+[node name="LargeNormal" type="Button" parent="Grid"]
+layout_mode = 2
+theme_type_variation = &"HeaderLarge"
+text = "Large"
+
+[node name="FlatMenu" type="MenuButton" parent="Grid"]
+layout_mode = 2
+theme_type_variation = &"FlatMenuButton"
+text = "Menu"
+
+[node name="PlainMenu" type="MenuButton" parent="Grid"]
+layout_mode = 2
+text = "Menu"
+
+[node name="FlatCheck" type="CheckBox" parent="Grid"]
+layout_mode = 2
+theme_type_variation = &"FlatButton"
+text = "Check"

@@ -18,18 +18,13 @@ vi.mock('../../../logger.js', async (importOriginal) => {
   };
 });
 
-import type { TscnInternalResource } from '../../../parser/types';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureContext';
 import {
   ViewportPassProvider,
   useRegisterViewportPass,
 } from '../../../r3f/contexts/ViewportPassRegistryContext';
-import {
-  isViewportTextureRef,
-  useViewportTextureSlot,
-  type ViewportTextureView,
-} from './useViewportTextureSlot';
+import { useViewportTextureSlot, type ViewportTextureView } from './useViewportTextureSlot';
 import {
   ViewportTexturePublisher,
   countingView,
@@ -37,36 +32,25 @@ import {
 } from '../../../r3f/testing/ViewportTexturePublisher';
 import type { ViewportTextureEntry } from '../../../r3f/contexts/ViewportTextureContext';
 
-const viewportTexture: TscnInternalResource = {
-  id: 'ViewportTexture_1',
-  type: 'ViewportTexture',
-  data: { viewport_path: 'NodePath("SubViewport")' },
-};
-
-const atlasTexture: TscnInternalResource = {
-  id: 'Atlas_1',
-  type: 'AtlasTexture',
-  data: { atlas: 'ExtResource("1")' },
-};
-
-const RESOURCES = [viewportTexture, atlasTexture];
+/** The `viewport_path` of a ViewportTexture that names the root's `SubViewport` child. */
+const VIEWPORT = 'SubViewport';
 
 function Consumer({
-  slotRef,
+  viewportPath,
   onResolve,
 }: {
-  slotRef: string | undefined;
+  viewportPath: string | null;
   onResolve: (result: ReturnType<typeof useViewportTextureSlot>) => void;
 }) {
-  onResolve(useViewportTextureSlot(slotRef, RESOURCES, 'plain'));
+  onResolve(useViewportTextureSlot(viewportPath, 'plain'));
   return null;
 }
 
 /** Mounts a consumer at `consumerPath`, optionally with a publisher. */
-function mount(slotRef: string | undefined, consumerPath: string | null, publishAt?: string) {
+function mount(viewportPath: string | null, consumerPath: string | null, publishAt?: string) {
   const seen: ReturnType<typeof useViewportTextureSlot>[] = [];
   const texture = new THREE.Texture();
-  const consumer = <Consumer slotRef={slotRef} onResolve={(r) => seen.push(r)} />;
+  const consumer = <Consumer viewportPath={viewportPath} onResolve={(r) => seen.push(r)} />;
   render(
     <ViewportTextureProvider>
       {publishAt ? (
@@ -82,21 +66,6 @@ function mount(slotRef: string | undefined, consumerPath: string | null, publish
   };
 }
 
-describe('isViewportTextureRef', () => {
-  it('recognises a ViewportTexture sub-resource', () => {
-    expect(isViewportTextureRef('SubResource("ViewportTexture_1")', RESOURCES)).toBe(true);
-  });
-
-  it('rejects a different texture sub-resource', () => {
-    expect(isViewportTextureRef('SubResource("Atlas_1")', RESOURCES)).toBe(false);
-  });
-
-  it('rejects an ExtResource and an absent reference', () => {
-    expect(isViewportTextureRef('ExtResource("1")', RESOURCES)).toBe(false);
-    expect(isViewportTextureRef(undefined, RESOURCES)).toBe(false);
-  });
-});
-
 describe('useViewportTextureSlot', () => {
   /**
    * `viewport_path` counts from the local scene root (`ViewportTexture::_setup_local_to_scene`,
@@ -104,20 +73,12 @@ describe('useViewportTextureSlot', () => {
    * paths. A deep consumer still finds a sub-viewport that is a child of the root.
    */
   it('resolves a root-relative viewport path from a consumer deep in the tree', () => {
-    const { resolved, texture } = mount(
-      'SubResource("ViewportTexture_1")',
-      'Root/Rig/Screen',
-      'Root/SubViewport'
-    );
+    const { resolved, texture } = mount(VIEWPORT, 'Root/Rig/Screen', 'Root/SubViewport');
     expect(resolved()).toBe(texture);
   });
 
   it('resolves for a consumer that is a direct child of the root', () => {
-    const { resolved, texture } = mount(
-      'SubResource("ViewportTexture_1")',
-      'Root/Screen',
-      'Root/SubViewport'
-    );
+    const { resolved, texture } = mount(VIEWPORT, 'Root/Screen', 'Root/SubViewport');
     expect(resolved()).toBe(texture);
   });
 
@@ -126,22 +87,17 @@ describe('useViewportTextureSlot', () => {
    * runs after mount, so a consumer re-renders when the reactive map updates.
    */
   it('returns null until the sub-viewport publishes', () => {
-    const { resolved } = mount('SubResource("ViewportTexture_1")', 'Root/Screen');
+    const { resolved } = mount(VIEWPORT, 'Root/Screen');
     expect(resolved()).toBeNull();
   });
 
   it('returns null when the named viewport is not the one that published', () => {
-    const { resolved } = mount('SubResource("ViewportTexture_1")', 'Root/Screen', 'Root/OtherViewport');
+    const { resolved } = mount(VIEWPORT, 'Root/Screen', 'Root/OtherViewport');
     expect(resolved()).toBeNull();
   });
 
-  it('returns null for a non-ViewportTexture reference', () => {
-    const { resolved } = mount('SubResource("Atlas_1")', 'Root/Screen', 'Root/SubViewport');
-    expect(resolved()).toBeNull();
-  });
-
-  it('returns null for an absent reference', () => {
-    const { resolved } = mount(undefined, 'Root/Screen', 'Root/SubViewport');
+  it('returns null for no viewport path', () => {
+    const { resolved } = mount(null, 'Root/Screen', 'Root/SubViewport');
     expect(resolved()).toBeNull();
   });
 
@@ -150,37 +106,13 @@ describe('useViewportTextureSlot', () => {
    * the slot resolves to nothing rather than guessing a key.
    */
   it('returns null outside a NodePathProvider rather than throwing', () => {
-    const { resolved } = mount('SubResource("ViewportTexture_1")', null, 'Root/SubViewport');
+    const { resolved } = mount(VIEWPORT, null, 'Root/SubViewport');
     expect(resolved()).toBeNull();
   });
 
-  /** A ViewportTexture naming no viewport is inert, not an error. */
-  it('returns null for an empty viewport_path', () => {
-    const empty: TscnInternalResource = {
-      id: 'Empty_1',
-      type: 'ViewportTexture',
-      data: { viewport_path: 'NodePath("")' },
-    };
-    const seen: ReturnType<typeof useViewportTextureSlot>[] = [];
-    render(
-      <ViewportTextureProvider>
-        <NodePathProvider path="Root/Screen">
-          <ConsumerWith resources={[empty]} onResolve={(r) => seen.push(r)} />
-        </NodePathProvider>
-      </ViewportTextureProvider>
-    );
-    expect(seen.at(-1)?.texture ?? null).toBeNull();
-  });
-
   describe('a target sitting in an unrenderable pass cycle', () => {
-    /**
-     * `SubResource("ViewportTexture_1")` resolves to the registry key
-     * `Root/SubViewport`, the path the cyclic pass registers under.
-     */
-    const VIEWPORT_TEXTURE_REF = 'SubResource("ViewportTexture_1")';
-    const ATLAS_REF = 'SubResource("Atlas_1")';
-
-    function mountCyclic(slotRef: string, consumerPath: string, publish: boolean) {
+    /** `SubViewport` resolves to the registry key `Root/SubViewport`, which the cyclic pass registers. */
+    function mountCyclic(viewportPath: string | null, consumerPath: string, publish: boolean) {
       const seen: ReturnType<typeof useViewportTextureSlot>[] = [];
       const texture = new THREE.Texture();
       render(
@@ -194,7 +126,7 @@ describe('useViewportTextureSlot', () => {
               />
             ) : null}
             <NodePathProvider path={consumerPath}>
-              <Consumer slotRef={slotRef} onResolve={(r) => seen.push(r)} />
+              <Consumer viewportPath={viewportPath} onResolve={(r) => seen.push(r)} />
             </NodePathProvider>
           </ViewportPassProvider>
         </ViewportTextureProvider>
@@ -233,14 +165,14 @@ describe('useViewportTextureSlot', () => {
     });
 
     it('reports cyclic: true and a null texture even though an entry was published', () => {
-      const { last } = mountCyclic(VIEWPORT_TEXTURE_REF, 'Root/Screen', true);
+      const { last } = mountCyclic(VIEWPORT, 'Root/Screen', true);
       expect(last().cyclic).toBe(true);
       expect(last().texture).toBeNull();
     });
 
     it('logs a warning naming the consuming node path', () => {
       warnCalls.length = 0;
-      mountCyclic(VIEWPORT_TEXTURE_REF, 'Root/Screen', true);
+      mountCyclic(VIEWPORT, 'Root/Screen', true);
       const matched = warnCalls.filter((args) => String(args[0]).includes('Root/Screen'));
       expect(matched.length).toBeGreaterThan(0);
     });
@@ -251,7 +183,7 @@ describe('useViewportTextureSlot', () => {
      */
     it('does not warn its own fallback message when the slot names no ViewportTexture at all', () => {
       warnCalls.length = 0;
-      const { last } = mountCyclic(ATLAS_REF, 'Root/Screen', false);
+      const { last } = mountCyclic(null, 'Root/Screen', false);
       expect(last().cyclic).toBe(false);
       const matched = warnCalls.filter((args) => String(args[0]).includes('falls back'));
       expect(matched).toHaveLength(0);
@@ -346,26 +278,15 @@ function ViewConsumer({
   view: ViewportTextureView;
   onResolve: (result: ReturnType<typeof useViewportTextureSlot>) => void;
 }) {
-  onResolve(useViewportTextureSlot('SubResource("ViewportTexture_1")', RESOURCES, view));
+  onResolve(useViewportTextureSlot(VIEWPORT, view));
   return null;
 }
 
 /** A decoding consumer that reports, inside each commit, the view it binds. */
 function CommitRecorder({ onCommit }: { onCommit: (texture: THREE.Texture | null) => void }) {
-  const { texture } = useViewportTextureSlot('SubResource("ViewportTexture_1")', RESOURCES, 'decoding');
+  const { texture } = useViewportTextureSlot(VIEWPORT, 'decoding');
   useLayoutEffect(() => {
     onCommit(texture);
   });
-  return null;
-}
-
-function ConsumerWith({
-  resources,
-  onResolve,
-}: {
-  resources: TscnInternalResource[];
-  onResolve: (result: ReturnType<typeof useViewportTextureSlot>) => void;
-}) {
-  onResolve(useViewportTextureSlot('SubResource("Empty_1")', resources, 'plain'));
   return null;
 }

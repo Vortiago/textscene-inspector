@@ -8,6 +8,7 @@ import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { DispatchedScene } from './DispatchedScene';
 import { useOptionalSelection, type SelectionContextValue } from '../contexts/SelectionContext';
+import { AnimatedValueProvider } from '../contexts/AnimatedValueContext';
 import { AnimatedBonePosesProvider } from '../contexts/AnimatedBonePosesContext';
 import {
   AnimationTransportProvider,
@@ -60,26 +61,36 @@ _data = {
 
 export const PLAYER_BODY = 'libraries/ = SubResource("Lib")';
 
-/** Mounts `tscn` through the dispatcher with `playerPath` selected, before any resource loads. */
-export async function mountWithPlayer(tscn: string, playerPath: string) {
+/**
+ * Mounts `tscn` through the dispatcher with `playerPath` selected, before any resource loads that
+ * `seed` did not hand the loader first.
+ */
+export async function mountWithPlayer(
+  tscn: string,
+  playerPath: string,
+  { workspace = '3d', seed }: { workspace?: '2d' | '3d'; seed?: (fake: FakeResourceLoader) => void } = {}
+) {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
+  seed?.(fake);
   const renderer = await ReactThreeTestRenderer.create(
     <AnimationTransportProvider>
-      <AnimatedBonePosesProvider>
-        <DispatchedScene
-          sceneGraph={createSceneGraphFromTscnScene(parsed)}
-          loader={fake.loader}
-          workspace="3d"
-          selectedPath={playerPath}
-          around={(nodes) => (
-            <>
-              <Capture />
-              {nodes}
-            </>
-          )}
-        />
-      </AnimatedBonePosesProvider>
+      <AnimatedValueProvider>
+        <AnimatedBonePosesProvider>
+          <DispatchedScene
+            sceneGraph={createSceneGraphFromTscnScene(parsed)}
+            loader={fake.loader}
+            workspace={workspace}
+            selectedPath={playerPath}
+            around={(nodes) => (
+              <>
+                <Capture />
+                {nodes}
+              </>
+            )}
+          />
+        </AnimatedBonePosesProvider>
+      </AnimatedValueProvider>
     </AnimationTransportProvider>
   );
   mounted.push(renderer);

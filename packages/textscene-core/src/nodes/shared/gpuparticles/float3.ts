@@ -11,6 +11,10 @@ export function add(a: Float3, b: Float3): Float3 {
   return [f(a[0] + b[0]), f(a[1] + b[1]), f(a[2] + b[2])];
 }
 
+export function subtract(a: Float3, b: Float3): Float3 {
+  return [f(a[0] - b[0]), f(a[1] - b[1]), f(a[2] - b[2])];
+}
+
 export function scale(a: Float3, s: number): Float3 {
   return [f(a[0] * s), f(a[1] * s), f(a[2] * s)];
 }
@@ -21,6 +25,10 @@ export function cross(a: Float3, b: Float3): Float3 {
     f(f(a[2] * b[0]) - f(b[2] * a[0])),
     f(f(a[0] * b[1]) - f(b[0] * a[1])),
   ];
+}
+
+export function dot(a: Float3, b: Float3): number {
+  return f(f(f(a[0] * b[0]) + f(a[1] * b[1])) + f(a[2] * b[2]));
 }
 
 export function length(a: Float3): number {

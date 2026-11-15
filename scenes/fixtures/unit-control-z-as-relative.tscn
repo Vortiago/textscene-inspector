@@ -1,0 +1,35 @@
+; One variable: `z_as_relative` on a Control. The amber ColorRect sets `z_index = 1` under a parent
+; Panel at `z_index = 5`. With `z_as_relative = false` its `z_final` is 1, not 6
+; (`renderer_canvas_cull.cpp:431-434`), so the teal ColorRect at `z_index = 3` draws over it where
+; they overlap. No other golden turns `z_as_relative` off on a Control.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Parent" type="Panel" parent="."]
+z_index = 5
+offset_left = 80.0
+offset_top = 80.0
+offset_right = 520.0
+offset_bottom = 400.0
+
+[node name="Absolute" type="ColorRect" parent="Parent"]
+z_index = 1
+z_as_relative = false
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 280.0
+offset_bottom = 240.0
+color = Color(0.9, 0.6, 0.1, 1)
+
+[node name="Middle" type="ColorRect" parent="."]
+z_index = 3
+offset_left = 240.0
+offset_top = 200.0
+offset_right = 640.0
+offset_bottom = 480.0
+color = Color(0.1, 0.6, 0.6, 1)

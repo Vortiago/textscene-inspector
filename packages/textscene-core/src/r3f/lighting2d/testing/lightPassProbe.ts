@@ -10,9 +10,9 @@ import type ReactThreeTestRenderer from '@react-three/test-renderer';
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
-/** One accumulation draw: the buffer it wrote and the meshes the camera would draw into it. */
+/** One accumulation draw: the buffers it wrote, one per attachment, and the meshes the camera would draw into them. */
 export interface RecordedDraw {
-  readonly texture: THREE.Texture;
+  readonly textures: readonly THREE.Texture[];
   readonly drawn: readonly THREE.Mesh[];
 }
 
@@ -43,7 +43,7 @@ export async function recordLightPass(renderer: Rendered): Promise<RecordedDraw[
     vi.spyOn(gl, 'getRenderTarget').mockImplementation(() => target),
     vi.spyOn(gl, 'clear').mockImplementation(() => {}),
     vi.spyOn(gl, 'render').mockImplementation((scene, camera) => {
-      if (target) draws.push({ texture: target.texture, drawn: drawnMeshes(scene, camera) });
+      if (target) draws.push({ textures: target.textures, drawn: drawnMeshes(scene, camera) });
     }),
   ];
   try {
@@ -92,6 +92,11 @@ export function isSeed(mesh: THREE.Mesh): boolean {
  * when no draw writes `texture`.
  */
 export function lightsIn(draws: readonly RecordedDraw[], texture: THREE.Texture): string[] {
-  const draw = draws.find((recorded) => recorded.texture === texture);
+  const draw = drawInto(draws, texture);
   return (draw?.drawn ?? []).filter((mesh) => !isSeed(mesh)).map(ownerName);
+}
+
+/** The draw that writes `texture`, whichever attachment of its target the texture is. */
+export function drawInto(draws: readonly RecordedDraw[], texture: THREE.Texture): RecordedDraw | undefined {
+  return draws.find((recorded) => recorded.textures.includes(texture));
 }

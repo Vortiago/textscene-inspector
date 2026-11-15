@@ -1,5 +1,5 @@
 /**
- * `trimLineToWidth` ports `shaped_text_overrun_trim_to_width` (`modules/text_server_adv/text_server_adv.cpp:5935-6154`).
+ * `trimLine` ports `shaped_text_overrun_trim_to_width` (`modules/text_server_adv/text_server_adv.cpp:5935-6154`).
  * Advances at size 16 are even design units at 2048/em, so each lands on the continuous scale:
  * 'A' 1354 -> 10.578125, 'B' 1350 -> 10.546875, space 532 -> 4.15625, '…' 1672 -> 13.0625.
  */
@@ -9,10 +9,14 @@ import { getFontEmboldenedAdvancePx, withVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { OPEN_SANS_CANVAS_FONT_METRICS } from './openSansCanvasFontMetrics';
 import {
+  isTextWidthClipped,
   overrunFlagsForBehavior,
-  trimFilledLineToWidth,
-  trimLineToWidth,
-  trimTextBufferLineToWidth,
+  trimSoloLine,
+  trimLayoutToWidth,
+  trimLine,
+  inferredPlacement,
+  filledPlacement,
+  textBufferPlacement,
   type OverrunTrimFlags,
 } from './textOverrun';
 import {
@@ -37,11 +41,17 @@ function line(text: string) {
 
 /** Trims with Godot's default ellipsis unless `ellipsisChar` names another. */
 function trim(text: string, widthPx: number, flags: OverrunTrimFlags, ellipsisChar?: string) {
-  return trimLineToWidth(line(text), widthPx, flags, {
-    fontMetrics: OPEN_SANS_FONT_METRICS,
-    fontSizePx: FONT_SIZE_PX,
-    ellipsisChar,
-  });
+  return trimLine(
+    line(text),
+    widthPx,
+    flags,
+    {
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      fontSizePx: FONT_SIZE_PX,
+      ellipsisChar,
+    },
+    inferredPlacement
+  );
 }
 
 /** The characters a trimmed line draws, left to right. */
@@ -57,23 +67,26 @@ describe('overrunFlagsForBehavior', () => {
       trimWordOnly: false,
       addEllipsis: false,
       enforceEllipsis: false,
+      shortStringEllipsis: false,
     });
     expect(overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_CHAR)).toEqual({
       trim: true,
       trimWordOnly: false,
       addEllipsis: false,
       enforceEllipsis: false,
+      shortStringEllipsis: false,
     });
     expect(overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS_FORCE)).toEqual({
       trim: true,
       trimWordOnly: true,
       addEllipsis: true,
-      enforceEllipsis: true,
+      enforceEllipsis: false,
+      shortStringEllipsis: true,
     });
   });
 });
 
-describe('trimLineToWidth', () => {
+describe('trimLine', () => {
   it('NO_TRIMMING leaves the line untouched however narrow the box (text_server_adv.cpp:5958)', () => {
     const result = trim('AAAAAAAAAA', 10, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_NO_TRIMMING));
     expect(drawnText(result)).toBe('AAAAAAAAAA');
@@ -110,6 +123,14 @@ describe('trimLineToWidth', () => {
     expect(result.widthPx).toBeCloseTo(8 * 10.578125 + 13, 10);
   });
 
+  it('marks only the appended ellipsis glyphs, which the draw clip leaves uncut', () => {
+    const result = trim('AAAAAAAAAAAA', 100, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS));
+    expect(result.glyphs.map((glyph) => glyph.isEllipsis === true)).toEqual([
+      ...Array<boolean>(8).fill(false),
+      true,
+    ]);
+  });
+
   it('draws the ellipsis of an emboldened face with the widened advance and the outline growth', () => {
     const fontMetrics = withVariation(OPEN_SANS_FONT_METRICS, { embolden: 1.2 });
     const shaped = shapeText('AAAAAAAAAAAA', {
@@ -120,9 +141,13 @@ describe('trimLineToWidth', () => {
       fontMetrics,
     }).lines[0]!;
     const flags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
-    const ellipsis = trimLineToWidth(shaped, 100, flags, { fontMetrics, fontSizePx: FONT_SIZE_PX }).glyphs.at(
-      -1
-    )!;
+    const ellipsis = trimLine(
+      shaped,
+      100,
+      flags,
+      { fontMetrics, fontSizePx: FONT_SIZE_PX },
+      inferredPlacement
+    ).glyphs.at(-1)!;
     expect(ellipsis.char).toBe('…');
     expect(ellipsis.advance).toBeCloseTo(getFontEmboldenedAdvancePx(fontMetrics, '…', FONT_SIZE_PX), 10);
     expect(ellipsis.emboldenGrowthPx).toBeCloseTo(1.2, 10);
@@ -145,7 +170,7 @@ describe('trimLineToWidth', () => {
     // "AAAAAA BBBBBB": every mid-word B index is skipped (not a soft break);
     // the space at index 6 is the first index >= 6 that both is a soft break
     // and whose width-after-removal (63.46875) plus the word-aware ellipsis
-    // budget (17 = ellipsis 13.0625 + space 4.15625, truncated) fits 90.
+    // budget (17 = ellipsis 13.0625 + space 4.15625, truncated) fits 90, and the width counts all 17 (`:6152`).
     const result = trim(
       'AAAAAA BBBBBB',
       90,
@@ -156,9 +181,25 @@ describe('trimLineToWidth', () => {
   });
 
   it('ENFORCE_ELLIPSIS appends the ellipsis even when the line already fits, drawing every original glyph (text_server_adv.cpp:5958,6065-6067; text_server.cpp:1768-1777 trim_pos<0)', () => {
-    const result = trim('AAAA', 200, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE));
+    const flags = {
+      ...overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
+      enforceEllipsis: true,
+    };
+    const result = trim('AAAA', 200, flags);
     expect(drawnText(result)).toBe('AAAA…');
     expect(result.widthPx).toBeCloseTo(4 * 10.578125 + 13, 10);
+  });
+
+  it('a FORCE behaviour leaves a line that fits untouched, as only ENFORCE_ELLIPSIS passes the fit test (text_server_adv.cpp:5958; text_server.cpp:2407-2425)', () => {
+    const result = trim('AAAA', 200, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE));
+    expect(drawnText(result)).toBe('AAAA');
+  });
+
+  it('a FORCE behaviour ends an overflowing short string in an ellipsis, where the plain behaviour keeps its 6 character floor', () => {
+    const ellipsis = trim('AAAAA', 40, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS));
+    const forced = trim('AAAAA', 40, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE));
+    expect(drawnText(ellipsis).endsWith('…')).toBe(false);
+    expect(drawnText(forced).endsWith('…')).toBe(true);
   });
 
   it('a custom ellipsis char outside the vendored charset falls back to three dots (text_server_adv.cpp:6007-6046 found_el_char)', () => {
@@ -172,7 +213,7 @@ describe('trimLineToWidth', () => {
   });
 
   it('the bundled canvas metrics keep that fallback: a custom ellipsis char Open Sans lacks gives three dots (text_server_adv.cpp:5985 _font_has_char)', () => {
-    const result = trimLineToWidth(
+    const result = trimLine(
       line('AAAAAAAAAAAA'),
       100,
       overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
@@ -180,18 +221,25 @@ describe('trimLineToWidth', () => {
         fontMetrics: OPEN_SANS_CANVAS_FONT_METRICS,
         fontSizePx: FONT_SIZE_PX,
         ellipsisChar: '→',
-      }
+      },
+      inferredPlacement
     );
     expect(drawnText(result)).toBe('AAAAAAAA...');
   });
 });
 
-describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-6114, label.h:198-241)', () => {
+describe('trimLine — a right-to-left line (text_server_adv.cpp:6053-6114, label.h:198-241)', () => {
   function trimRtl(widthPx: number, behavior: number) {
-    return trimLineToWidth(line(HEBREW), widthPx, overrunFlagsForBehavior(behavior), {
-      fontMetrics: OPEN_SANS_FONT_METRICS,
-      fontSizePx: FONT_SIZE_PX,
-    });
+    return trimLine(
+      line(HEBREW),
+      widthPx,
+      overrunFlagsForBehavior(behavior),
+      {
+        fontMetrics: OPEN_SANS_FONT_METRICS,
+        fontSizePx: FONT_SIZE_PX,
+      },
+      inferredPlacement
+    );
   }
 
   it('cuts at the visual left and keeps the logical start', () => {
@@ -221,7 +269,20 @@ describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-611
 
   it('puts the ellipsis first when it is enforced on a line that fits', () => {
     const full = line(HEBREW);
-    const result = trimRtl(full.widthPx + 100, OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE);
+    const enforced = {
+      ...overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
+      enforceEllipsis: true,
+    };
+    const result = trimLine(
+      full,
+      full.widthPx + 100,
+      enforced,
+      {
+        fontMetrics: OPEN_SANS_FONT_METRICS,
+        fontSizePx: FONT_SIZE_PX,
+      },
+      inferredPlacement
+    );
     expect(result.glyphs[0]!.char).toBe('…');
     expect(result.glyphs.length).toBe(full.glyphs.length + 1);
   });
@@ -256,23 +317,24 @@ describe('trimLineToWidth — a right-to-left line (text_server_adv.cpp:6053-611
       lineSpacingPx: 0,
       direction: TextDirection.TEXT_DIRECTION_LTR,
     }).lines[0]!;
-    const result = trimLineToWidth(
+    const result = trimLine(
       full,
       full.widthPx * 0.75,
       overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
-      { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX }
+      { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX },
+      inferredPlacement
     );
     expect(result.glyphs.at(-1)!.char).toBe('…');
     expect(result.glyphs[0]!.sourceIndex).toBe(HEBREW.length - 1);
   });
 });
 
-describe('trimTextBufferLineToWidth — an AUTO line whose paragraph resolved right-to-left (text_server.cpp:1740-1935)', () => {
+describe('textBufferPlacement — an AUTO line whose paragraph resolved right-to-left (text_server.cpp:1740-1935)', () => {
   const ELLIPSIS = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
-  const OPTIONS = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX, isDrawnRtl: false };
+  const OPTIONS = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX };
 
   function trimBuffer(widthPx: number) {
-    return trimTextBufferLineToWidth(line(HEBREW), widthPx, ELLIPSIS, OPTIONS);
+    return trimLine(line(HEBREW), widthPx, ELLIPSIS, OPTIONS, textBufferPlacement);
   }
 
   it('draws the outline as the right-to-left trim keeps it, the ellipsis first', () => {
@@ -304,40 +366,37 @@ describe('trimTextBufferLineToWidth — an AUTO line whose paragraph resolved ri
 
   it('reports the width of the right-to-left trim, which both draws place by', () => {
     const full = line(HEBREW);
-    const inferred = trimLineToWidth(full, full.widthPx * 0.75, ELLIPSIS, OPTIONS);
+    const inferred = trimLine(full, full.widthPx * 0.75, ELLIPSIS, OPTIONS, inferredPlacement);
     expect(trimBuffer(full.widthPx * 0.75).widthPx).toBe(inferred.widthPx);
   });
 
   // A set RTL direction is the paragraph direction too, so the fill draws as the outline does.
   it('draws one glyph set for a line set RTL', () => {
-    const full = line(HEBREW);
-    const result = trimTextBufferLineToWidth(full, full.widthPx * 0.75, ELLIPSIS, {
-      ...OPTIONS,
-      isDrawnRtl: true,
-    });
+    const full = { ...line(HEBREW), isDrawnRtl: true };
+    const result = trimLine(full, full.widthPx * 0.75, ELLIPSIS, OPTIONS, textBufferPlacement);
     expect(result.outlineGlyphs).toBeUndefined();
     expect(result.glyphs[0]!.char).toBe('…');
-    expect(result).toEqual(trimLineToWidth(full, full.widthPx * 0.75, ELLIPSIS, OPTIONS));
+    expect(result).toEqual(trimLine(full, full.widthPx * 0.75, ELLIPSIS, OPTIONS, inferredPlacement));
   });
 
   it('draws one glyph set for a left-to-right line', () => {
-    const result = trimTextBufferLineToWidth(line('AAAAAAAAAAAA'), 100, ELLIPSIS, OPTIONS);
+    const result = trimLine(line('AAAAAAAAAAAA'), 100, ELLIPSIS, OPTIONS, textBufferPlacement);
     expect(result.outlineGlyphs).toBeUndefined();
     expect(drawnText(result)).toBe('AAAAAAAA…');
   });
 
   it('keeps the paragraph indent of the line it trims', () => {
     const indented = { ...line('AAAAAAAAAAAA'), indentPx: 12 };
-    expect(trimTextBufferLineToWidth(indented, 100, ELLIPSIS, OPTIONS).indentPx).toBe(12);
+    expect(trimLine(indented, 100, ELLIPSIS, OPTIONS, textBufferPlacement).indentPx).toBe(12);
   });
 
   it('leaves a line that fits unchanged', () => {
     const full = line(HEBREW);
-    expect(trimTextBufferLineToWidth(full, full.widthPx + 1, ELLIPSIS, OPTIONS)).toBe(full);
+    expect(trimLine(full, full.widthPx + 1, ELLIPSIS, OPTIONS, textBufferPlacement)).toBe(full);
   });
 });
 
-describe('trimFilledLineToWidth — the fit after the trim, JUSTIFICATION_CONSTRAIN_ELLIPSIS (label.cpp:325, text_server_adv.cpp:5573-5583)', () => {
+describe('filledPlacement — the fit after the trim, JUSTIFICATION_CONSTRAIN_ELLIPSIS (label.cpp:325, text_server_adv.cpp:5573-5583)', () => {
   // The ellipsis advances 13.0625 and `ellipsis_width` truncates it to 13 (`:6044-6046`).
   const ELLIPSIS_ADVANCE_PX = 13.0625;
   const ELLIPSIS_WIDTH_PX = 13;
@@ -347,11 +406,8 @@ describe('trimFilledLineToWidth — the fit after the trim, JUSTIFICATION_CONSTR
   const ellipsisFlags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
 
   function trimFilled(text: string, justificationFlags: number, flags = ellipsisFlags) {
-    return trimFilledLineToWidth(line(text), WIDTH_PX, flags, {
-      fontMetrics: OPEN_SANS_FONT_METRICS,
-      fontSizePx: FONT_SIZE_PX,
-      justificationFlags,
-    });
+    const options = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX };
+    return trimLine(line(text), WIDTH_PX, flags, options, filledPlacement(justificationFlags));
   }
 
   it('grows a space the cut keeps until the ellipsis ends at the width', () => {
@@ -375,7 +431,7 @@ describe('trimFilledLineToWidth — the fit after the trim, JUSTIFICATION_CONSTR
   });
 
   it('keeps every glyph when only an enforced ellipsis draws (trim_pos < 0, `:5582`)', () => {
-    const enforced = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE);
+    const enforced = { ...ellipsisFlags, enforceEllipsis: true };
     expect(trimFilled('A B', JustificationFlag.WORD_BOUND, enforced)).toEqual(
       trim('A B', WIDTH_PX, enforced)
     );
@@ -383,11 +439,7 @@ describe('trimFilledLineToWidth — the fit after the trim, JUSTIFICATION_CONSTR
 
   it('grows the spaces of a right-to-left line from its visual left, after the ellipsis', () => {
     const hebrew = 'אבג דהו זחט יכל מנס עפצ קרש';
-    const filled = trimFilledLineToWidth(line(hebrew), WIDTH_PX, ellipsisFlags, {
-      fontMetrics: OPEN_SANS_FONT_METRICS,
-      fontSizePx: FONT_SIZE_PX,
-      justificationFlags: JustificationFlag.WORD_BOUND,
-    });
+    const filled = trimFilled(hebrew, JustificationFlag.WORD_BOUND);
     const last = filled.glyphs.at(-1)!;
     expect(filled.glyphs[0]!.char).toBe('…');
     expect(last.x + last.advance).toBeCloseTo(WIDTH_PX + (ELLIPSIS_ADVANCE_PX - ELLIPSIS_WIDTH_PX), 9);
@@ -395,7 +447,7 @@ describe('trimFilledLineToWidth — the fit after the trim, JUSTIFICATION_CONSTR
 });
 
 // :5984-6036: the dots and the space come from the last glyph's font, else the first font of the span that has them.
-describe('trimLineToWidth — the ellipsis from a fallback chain', () => {
+describe('trimLine — the ellipsis from a fallback chain', () => {
   const ELLIPSIS_ONLY = { ...OPEN_SANS_FONT_METRICS, hasGlyph: (ch: string) => ch === '…' };
   const NO_ELLIPSIS = { ...OPEN_SANS_FONT_METRICS, hasGlyph: (ch: string) => ch !== '…' };
 
@@ -408,7 +460,7 @@ describe('trimLineToWidth — the ellipsis from a fallback chain', () => {
       fontMetrics,
     }).lines[0]!;
     const flags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
-    return trimLineToWidth(shaped, 100, flags, { fontMetrics, fontSizePx: FONT_SIZE_PX });
+    return trimLine(shaped, 100, flags, { fontMetrics, fontSizePx: FONT_SIZE_PX }, inferredPlacement);
   }
 
   it('draws the ellipsis from the first fallback that has it', () => {
@@ -422,7 +474,7 @@ describe('trimLineToWidth — the ellipsis from a fallback chain', () => {
   });
 });
 
-describe('trimLineToWidth — a base and its mark (text_server_adv.cpp:6073)', () => {
+describe('trimLine — a base and its mark (text_server_adv.cpp:6073)', () => {
   /** The Hebrew line with a zero-advance mark after its visually left glyph, in that glyph's cluster. */
   function lineWithMark(): TextLineLayout {
     const shaped = line(HEBREW);
@@ -434,11 +486,12 @@ describe('trimLineToWidth — a base and its mark (text_server_adv.cpp:6073)', (
   it('cuts before the cluster, not between the base and the mark', () => {
     const marked = lineWithMark();
     const [base] = marked.glyphs;
-    const result = trimLineToWidth(
+    const result = trimLine(
       marked,
       marked.widthPx - base!.advance,
       overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_CHAR),
-      { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX }
+      { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX },
+      inferredPlacement
     );
     expect(result.glyphs.filter((glyph) => glyph.sourceIndex === base!.sourceIndex)).toEqual([]);
   });
@@ -451,13 +504,130 @@ describe('trimLineToWidth — a base and its mark (text_server_adv.cpp:6073)', (
     // A hair over the width without the cluster, so rounding cannot push the cut one cluster on.
     const withoutClusterPx = marked.widthPx - base!.advance - mark.advance + 0.001;
 
-    const result = trimLineToWidth(
+    const result = trimLine(
       marked,
       withoutClusterPx,
       overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_CHAR),
-      { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX }
+      { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX },
+      inferredPlacement
     );
 
     expect(result.glyphs.map((glyph) => glyph.sourceIndex)).toEqual(rest.map((glyph) => glyph.sourceIndex));
+  });
+});
+
+function shaped(text: string) {
+  return shapeText(text, {
+    fontSizePx: FONT_SIZE_PX,
+    boxWidthPx: 0,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+    lineSpacingPx: 0,
+  });
+}
+
+const SOLO_OPTIONS = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX };
+
+describe('trimSoloLine', () => {
+  it('returns the same layout when the behaviour does not trim', () => {
+    const layout = shaped('AAAAAAAA');
+    expect(
+      trimSoloLine(layout, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_NO_TRIMMING), 20, SOLO_OPTIONS)
+    ).toBe(layout);
+  });
+
+  it('returns the same layout when the line fits', () => {
+    const layout = shaped('A');
+    expect(
+      trimSoloLine(layout, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS), 100, SOLO_OPTIONS)
+    ).toBe(layout);
+  });
+
+  it('cuts an overlong line to the width as a text buffer trim does', () => {
+    const layout = shaped('AAAAAAAA');
+    const flags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+    const trimmed = trimSoloLine(layout, flags, 40, SOLO_OPTIONS);
+    expect(trimmed.lines).toEqual([trimLine(layout.lines[0]!, 40, flags, SOLO_OPTIONS, inferredPlacement)]);
+    expect(trimmed.widthPx).toBe(trimmed.lines[0]!.widthPx);
+  });
+
+  it("keeps the line's underline, which a trim does not reshape", () => {
+    const layout = shaped('AAAAAAAA');
+    const trimmed = trimSoloLine(
+      layout,
+      overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
+      40,
+      SOLO_OPTIONS
+    );
+    expect(trimmed.lines[0]!.underline).toEqual({ positionPx: 0.984375, thicknessPx: 0.390625 });
+  });
+});
+
+describe('isTextWidthClipped', () => {
+  it('is false with no clip_text and no trimming overrun', () => {
+    expect(isTextWidthClipped({})).toBe(false);
+    expect(isTextWidthClipped({ overrunBehavior: OverrunBehavior.OVERRUN_NO_TRIMMING })).toBe(false);
+  });
+
+  it('is true under clip_text', () => {
+    expect(isTextWidthClipped({ clipText: true })).toBe(true);
+  });
+
+  it('is true under a trimming overrun behaviour', () => {
+    expect(isTextWidthClipped({ overrunBehavior: OverrunBehavior.OVERRUN_TRIM_CHAR })).toBe(true);
+  });
+});
+
+describe("trimLayoutToWidth — the layout's drawn direction (text_server.cpp:1744)", () => {
+  const ELLIPSIS = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+  const shapedIn = (direction: number) =>
+    shapeText(HEBREW, {
+      fontSizePx: FONT_SIZE_PX,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      direction,
+    });
+  const trimmedRow = (direction: number) => {
+    const layout = shapedIn(direction);
+    return trimLayoutToWidth(layout, layout.widthPx * 0.75, ELLIPSIS, SOLO_OPTIONS).lines[0]!;
+  };
+
+  it('draws the fill of a layout set RTL in its inferred order, with no second outline set', () => {
+    expect(trimmedRow(TextDirection.TEXT_DIRECTION_RTL).outlineGlyphs).toBeUndefined();
+  });
+
+  it('draws the fill of an AUTO layout that infers RTL left to right, with the outline apart', () => {
+    expect(trimmedRow(TextDirection.TEXT_DIRECTION_AUTO).outlineGlyphs).toBeDefined();
+  });
+
+  it('keeps the drawn direction of a solo line it trims', () => {
+    const layout = shapedIn(TextDirection.TEXT_DIRECTION_RTL);
+    expect(trimSoloLine(layout, ELLIPSIS, layout.widthPx * 0.75, SOLO_OPTIONS).lines[0]!.isDrawnRtl).toBe(
+      true
+    );
+  });
+});
+
+describe('trimLine — the placement of what a trim keeps', () => {
+  const ELLIPSIS = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+  const OPTIONS = { fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: FONT_SIZE_PX };
+
+  it('places a text buffer set RTL as the inferred placement does', () => {
+    const full = { ...line(HEBREW), isDrawnRtl: true };
+    expect(trimLine(full, full.widthPx * 0.75, ELLIPSIS, OPTIONS, textBufferPlacement)).toEqual(
+      trimLine(full, full.widthPx * 0.75, ELLIPSIS, OPTIONS, inferredPlacement)
+    );
+  });
+
+  it('places a FILL line without WORD_BOUND as the inferred placement does', () => {
+    const full = line('AAA AAAAAAAAAAAAA');
+    expect(trimLine(full, 100, ELLIPSIS, OPTIONS, filledPlacement(0))).toEqual(
+      trimLine(full, 100, ELLIPSIS, OPTIONS, inferredPlacement)
+    );
+  });
+
+  it('returns a line that fits as it is, whatever the placement', () => {
+    const full = line(HEBREW);
+    expect(trimLine(full, full.widthPx + 1, ELLIPSIS, OPTIONS, textBufferPlacement)).toBe(full);
   });
 });

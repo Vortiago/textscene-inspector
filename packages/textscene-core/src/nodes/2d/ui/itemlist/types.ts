@@ -1,5 +1,6 @@
 /** ItemList property definitions: Control plus ItemList's own members and its `item_N/*` family. */
 
+import type { Rgba } from '../../../../godot/math/math';
 import type { ControlProperties } from '../control/types';
 
 /**
@@ -16,6 +17,21 @@ export interface ItemListItem {
   selectable?: boolean;
   /** `item_N/disabled`. Godot default false. */
   disabled?: boolean;
+}
+
+/**
+ * A row with the state a runtime caller sets, as a dialog sets it on its own list. A `.tscn` cannot carry these, so the parser
+ * never produces them.
+ */
+export interface ItemListRuntimeItem extends ItemListItem {
+  /** The theme icon of this row, read from `SolveNode.icons[name]`, else the vendored default. */
+  themedIcon?: { name: string; vendoredUrl: string };
+  /** The icon's `set_item_icon_modulate`. */
+  iconModulate?: Rgba;
+  /** The row `select` selected (`item_list.cpp:434-444`). */
+  isSelected?: boolean;
+  /** The row `select` made `current`, which a multi-select list marks with the `cursor` box (`item_list.cpp:1693`). */
+  isCurrent?: boolean;
 }
 
 export interface ItemListProperties extends ControlProperties {
@@ -49,6 +65,13 @@ export interface ItemListProperties extends ControlProperties {
   fixedIconSize?: { x: number; y: number };
   /** `TextServer::OverrunBehavior`. Godot default 3 (OVERRUN_TRIM_ELLIPSIS). */
   textOverrunBehavior?: number;
+  /** `Control::clip_contents`. ItemList's constructor sets true (`item_list.cpp:2482`), so only an authored `false` unclips. */
+  clipContents?: boolean;
   /** Rows 0..`itemCount-1`, dense: `items[i]` is `{}` for an index no `item_i/*` key names. */
   items: ItemListItem[];
+}
+
+/** The properties a painter reads: the scene's, with rows that may carry runtime state. */
+export interface ItemListRuntimeProperties extends ItemListProperties {
+  items: ItemListRuntimeItem[];
 }

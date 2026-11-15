@@ -123,6 +123,20 @@ describe('parseControl', () => {
       expect(p.textureRepeat).toBe(1);
     });
 
+    it('parses z_as_relative, a CanvasItem property every Control has (scene/main/canvas_item.cpp:1482)', () => {
+      expect(parseControl(heading('Control', { name: 'Abs' }), { z_as_relative: 'false' }).zAsRelative).toBe(
+        false
+      );
+      expect(parseControl(heading('Control', { name: 'Rel' }), {}).zAsRelative).toBe(true);
+    });
+
+    it('parses y_sort_enabled, a CanvasItem property every Control has (scene/main/canvas_item.cpp:706)', () => {
+      expect(
+        parseControl(heading('Control', { name: 'Sorted' }), { y_sort_enabled: 'true' }).ySortEnabled
+      ).toBe(true);
+      expect(parseControl(heading('Control', { name: 'Plain' }), {}).ySortEnabled).toBe(false);
+    });
+
     it('keeps the material reference and use_parent_material for the walker to resolve', () => {
       const p = parseControl(heading('Control', { name: 'Lit' }), {
         material: 'SubResource("CanvasItemMaterial_a")',

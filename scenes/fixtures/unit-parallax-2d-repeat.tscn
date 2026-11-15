@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+; One variable: `repeat_size` with `repeat_times = 3` on the main 2D stage, where no camera writes
+; `screen_offset`. Godot 4.6.3 draws the 40x40 square at x 0, 200, 400 and 600 (y 100): the scroll
+; offset 100 moves the node to -100, and the copies sit at -200, 0, 200 and 400 beside it. No other
+; scene repeats a Parallax2D, whose copies run on both sides of the node.
+
+[node name="Root" type="Node2D"]
+
+[node name="Parallax" type="Parallax2D" parent="."]
+scroll_offset = Vector2(100, 0)
+repeat_size = Vector2(200, 0)
+repeat_times = 3
+
+[node name="Square" type="Polygon2D" parent="Parallax"]
+position = Vector2(300, 100)
+color = Color(0.9, 0.7, 0.2, 1)
+polygon = PackedVector2Array(0, 0, 40, 0, 40, 40, 0, 40)

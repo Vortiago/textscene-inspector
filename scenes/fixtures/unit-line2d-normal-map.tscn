@@ -1,0 +1,67 @@
+[gd_scene format=3]
+; Line2D with a normal-mapped CanvasTexture: Vertical runs down the canvas and Turned runs across it,
+; rotated a quarter turn. Both carry a flat normal map that tilts to +x. Only the item's basis turns
+; the normal (canvas.glsl:708-710), never the line's direction or UVs, so Vertical lights as the
+; Polygon2D does and Turned is lit from below. No other scene lights a Line2D through a normal map.
+
+[sub_resource type="Gradient" id="Gradient_grey"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.5, 0.5, 0.5, 1, 0.5, 0.5, 0.5, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_grey"]
+gradient = SubResource("Gradient_grey")
+width = 256
+height = 256
+
+[sub_resource type="Gradient" id="Gradient_normal"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.85, 0.5, 1, 1, 0.85, 0.5, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_normal"]
+gradient = SubResource("Gradient_normal")
+width = 256
+height = 256
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_mapped"]
+diffuse_texture = SubResource("GradientTexture2D_grey")
+normal_texture = SubResource("GradientTexture2D_normal")
+
+[sub_resource type="Gradient" id="Gradient_cookie"]
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_cookie"]
+gradient = SubResource("Gradient_cookie")
+width = 512
+height = 512
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[node name="Root" type="Node2D"]
+
+[node name="Vertical" type="Line2D" parent="."]
+position = Vector2(200, 324)
+points = PackedVector2Array(0, -128, 0, 128)
+width = 256.0
+texture = SubResource("CanvasTexture_mapped")
+texture_mode = 2
+
+[node name="Turned" type="Line2D" parent="."]
+position = Vector2(952, 324)
+rotation = 1.5707964
+points = PackedVector2Array(-128, 0, 128, 0)
+width = 256.0
+texture = SubResource("CanvasTexture_mapped")
+texture_mode = 2
+
+[node name="LeftLight" type="PointLight2D" parent="."]
+position = Vector2(200, 324)
+texture = SubResource("GradientTexture2D_cookie")
+texture_scale = 2.0
+height = 50.0
+
+[node name="RightLight" type="PointLight2D" parent="."]
+position = Vector2(952, 324)
+texture = SubResource("GradientTexture2D_cookie")
+texture_scale = 2.0
+height = 50.0

@@ -29,7 +29,21 @@ that an earlier key wrote.
 
 `get_parent_anchorable_rect` returns an empty `Rect2` outside the tree (`control.cpp:687-689`). Each
 `anchor_*` adds zero, so the size is `offset_right - offset_left` by `offset_bottom - offset_top`,
-floored by `custom_minimum_size` (`control.cpp:1773-1797`, `:1744-1750`).
+floored by `custom_minimum_size` (`control.cpp:1773-1797`, `:1744-1750`). Only a key that runs
+`_size_changed` applies the floor: an `offset_*` key, or `layout_mode = 0`. A `custom_minimum_size` key
+alone leaves the size as it was (`:1676-1679`). The replay keeps this size as `outOfTreeSize`.
+
+### Scroll bars and minimap bounds
+
+`_update_scrollbars` is the only writer of the bar ranges, `min_scroll_offset` and
+`max_scroll_offset` (`:464-528`). A load reaches it in three ways:
+
+- A GraphElement child exists, hidden or not (`:296`, `:626-668`).
+- A setter queued the update: `scroll_offset`, or a `zoom` that moves (`:409`, `:2448`).
+- The solved size differs from `outOfTreeSize`, so the GraphEdit gets `NOTIFICATION_RESIZED` (`:868`).
+
+When none holds, both bars have `min` -10000, `max` 10000 and `page` 0 (`:3218-3222`), with the full-length
+rects of `NOTIFICATION_READY` (`:841-852`), and the minimap bounds are `(0, 0)`.
 
 ### `zoom`
 

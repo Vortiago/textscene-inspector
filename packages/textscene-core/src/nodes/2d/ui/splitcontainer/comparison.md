@@ -15,6 +15,7 @@ children's expand flags give it. HSplitContainer and VSplitContainer fix the axi
 type reads `vertical` to pick it. A right-to-left `layout_direction` mirrors a horizontal
 split, so the first child takes the right band. A vertical split stays stacked the same
 way.
+`self_modulate` does not tint the grabber icon, which the dragger Control draws (`split_container.cpp:1340`).
 
 ## Linting
 

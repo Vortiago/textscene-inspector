@@ -1,0 +1,132 @@
+; What a canvas item inherits through a mixed Node2D and Control chain, with values off the defaults:
+; a modulate over 1 times a Control's modulate under 1, an ADD material that `use_parent_material`
+; carries through a Control, an absolute `z_index` below a raised chain, a y-sorted parent's
+; modulate and a Path2D's modulate and `z_index`. Each band has an untinted reference beside it.
+
+[gd_scene load_steps=3 format=3 uid="uid://unitcanvasinherit"]
+
+[sub_resource type="CanvasItemMaterial" id="add"]
+blend_mode = 1
+
+[sub_resource type="Curve2D" id="line"]
+_data = {
+"points": PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 160, 0)
+}
+point_count = 2
+
+[node name="Root" type="Node2D"]
+
+[node name="Background" type="Polygon2D" parent="."]
+color = Color(0.3, 0.1, 0.1, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="Bright" type="Node2D" parent="."]
+position = Vector2(40, 40)
+modulate = Color(2, 0.5, 1, 1)
+
+[node name="Dim" type="Control" parent="Bright"]
+modulate = Color(0.4, 1, 0.5, 0.8)
+
+[node name="Product" type="Polygon2D" parent="Bright/Dim"]
+color = Color(0.5, 0.8, 0.6, 1)
+polygon = PackedVector2Array(0, 0, 120, 0, 120, 80, 0, 80)
+
+[node name="ProductRect" type="ColorRect" parent="Bright/Dim"]
+offset_left = 140.0
+offset_right = 260.0
+offset_bottom = 80.0
+color = Color(0.5, 0.8, 0.6, 1)
+
+[node name="ProductReference" type="Polygon2D" parent="."]
+position = Vector2(340, 40)
+color = Color(0.5, 0.8, 0.6, 1)
+polygon = PackedVector2Array(0, 0, 120, 0, 120, 80, 0, 80)
+
+[node name="Additive" type="Node2D" parent="."]
+material = SubResource("add")
+position = Vector2(40, 180)
+
+[node name="Carrier" type="Control" parent="Additive"]
+use_parent_material = true
+
+[node name="AddedRect" type="ColorRect" parent="Additive/Carrier"]
+use_parent_material = true
+offset_right = 120.0
+offset_bottom = 80.0
+color = Color(0.2, 0.5, 0.3, 1)
+
+[node name="AddedPolygon" type="Polygon2D" parent="Additive/Carrier"]
+use_parent_material = true
+position = Vector2(140, 0)
+color = Color(0.2, 0.5, 0.3, 1)
+polygon = PackedVector2Array(0, 0, 120, 0, 120, 80, 0, 80)
+
+[node name="AddedReference" type="ColorRect" parent="."]
+offset_left = 340.0
+offset_top = 180.0
+offset_right = 460.0
+offset_bottom = 260.0
+color = Color(0.2, 0.5, 0.3, 1)
+
+[node name="Raised" type="Node2D" parent="."]
+position = Vector2(40, 320)
+z_index = 5
+
+[node name="RaisedControl" type="Control" parent="Raised"]
+z_index = 2
+
+[node name="Absolute" type="Polygon2D" parent="Raised/RaisedControl"]
+z_index = 1
+z_as_relative = false
+color = Color(0.9, 0.9, 0.2, 1)
+polygon = PackedVector2Array(0, 0, 160, 0, 160, 80, 0, 80)
+
+[node name="Relative" type="ColorRect" parent="Raised/RaisedControl"]
+offset_left = 200.0
+offset_right = 360.0
+offset_bottom = 80.0
+color = Color(0.9, 0.9, 0.2, 1)
+
+[node name="Middle" type="Polygon2D" parent="."]
+position = Vector2(120, 340)
+z_index = 4
+color = Color(0.2, 0.3, 0.9, 1)
+polygon = PackedVector2Array(0, 0, 360, 0, 360, 40, 0, 40)
+
+[node name="Sorted" type="Node2D" parent="."]
+position = Vector2(40, 460)
+y_sort_enabled = true
+modulate = Color(0.5, 1, 1, 0.7)
+
+[node name="Low" type="Polygon2D" parent="Sorted"]
+position = Vector2(0, 30)
+modulate = Color(1, 1, 0.5, 1)
+color = Color(0.9, 0.9, 0.9, 1)
+polygon = PackedVector2Array(0, 0, 120, 0, 120, 80, 0, 80)
+
+[node name="High" type="Control" parent="Sorted"]
+offset_left = 80.0
+offset_right = 120.0
+offset_bottom = 40.0
+modulate = Color(1, 0.5, 1, 1)
+
+[node name="HighRect" type="ColorRect" parent="Sorted/High"]
+offset_right = 120.0
+offset_bottom = 80.0
+color = Color(0.9, 0.9, 0.9, 1)
+
+[node name="Curve" type="Path2D" parent="."]
+curve = SubResource("line")
+position = Vector2(600, 40)
+modulate = Color(0.3, 1, 0.6, 0.9)
+z_index = 3
+
+[node name="UnderCurve" type="Polygon2D" parent="Curve"]
+color = Color(0.9, 0.9, 0.9, 1)
+polygon = PackedVector2Array(0, 0, 160, 0, 160, 80, 0, 80)
+
+[node name="OverCurve" type="Polygon2D" parent="."]
+position = Vector2(680, 60)
+z_index = 2
+color = Color(0.8, 0.2, 0.2, 1)
+polygon = PackedVector2Array(0, 0, 160, 0, 160, 40, 0, 40)

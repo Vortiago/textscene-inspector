@@ -1,0 +1,43 @@
+; One variable: the Theme sets Button/icons/icon and a different OptionButton/icons/icon, so the Cancel, OK and filter buttons of a FileDialog draw them; its toolbar buttons keep their own icons. The file list differs from Godot's until the directory list exists.
+
+[gd_scene format=3]
+
+[sub_resource type="Gradient" id="G"]
+colors = PackedColorArray(1, 0.8, 0, 1, 1, 0, 0.6, 1)
+
+[sub_resource type="GradientTexture2D" id="T"]
+gradient = SubResource("G")
+width = 24
+height = 20
+
+[sub_resource type="Gradient" id="G2"]
+colors = PackedColorArray(0, 0.8, 1, 1, 0.2, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="T2"]
+gradient = SubResource("G2")
+width = 16
+height = 12
+
+[sub_resource type="Theme" id="Th"]
+Button/icons/icon = SubResource("T")
+OptionButton/icons/icon = SubResource("T2")
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 0
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Dialog" type="FileDialog" parent="."]
+position = Vector2i(100, 100)
+visible = true
+theme = SubResource("Th")
+size = Vector2i(700, 420)
+file_mode = 0
+filters = PackedStringArray("*.png ; PNG Image")

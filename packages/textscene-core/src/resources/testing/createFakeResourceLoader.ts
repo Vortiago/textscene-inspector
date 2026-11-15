@@ -20,9 +20,11 @@ import { createClearCache } from '../resourceProcessorClear';
 import type { ArrayMeshResource } from '../processors/createArrayMeshProcessor';
 import type { FontResource } from '../fonts/font/types';
 import type { ThemeResource } from '../styles/theme/types';
+import type { DirectoryListing } from '../directoryListing';
 import { isGodotSceneRoot } from '../formats/glb/godotNodes';
 import { tagAsLoadedGlb } from '../formats/glb/testing/loadedGlbTags';
 import { WorkerJobRunner } from '../../workers/WorkerJobRunner';
+import { createSettledFonts, type FaceLoader } from '../../r3f/controls/native/text/settledFonts';
 
 export interface FakeProcessor<T> {
   /** Backing cache: `undefined` = never requested, `null` = failed or sentinel miss, value = loaded. */
@@ -68,6 +70,7 @@ export interface FakeResourceLoader {
   readonly arrayMeshes: FakeProcessor<ArrayMeshResource>;
   readonly fonts: FakeProcessor<FontResource>;
   readonly themes: FakeProcessor<ThemeResource>;
+  readonly directories: FakeProcessor<DirectoryListing>;
   /** A real runner with no worker, so jobs run in-thread with the real bytes. */
   readonly jobRunner: WorkerJobRunner;
   /** Every ExtResource passed to `loader.register`, in call order. */
@@ -147,7 +150,8 @@ function makeFakeProcessor<T>(eventBus: ResourceEventBus, type: ResourceType): F
   };
 }
 
-export function createFakeResourceLoader(): FakeResourceLoader {
+/** `loadFace` turns a font file's bytes into a face, as `ResourceLoaderOptions.loadFace` does. */
+export function createFakeResourceLoader({ loadFace }: { loadFace?: FaceLoader } = {}): FakeResourceLoader {
   const eventBus = new ResourceEventBus();
   const metadata = new MetadataStore();
   const textures = makeFakeProcessor<THREE.Texture>(eventBus, 'texture');
@@ -159,6 +163,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
   const arrayMeshes = makeFakeProcessor<ArrayMeshResource>(eventBus, 'arraymesh');
   const fonts = makeFakeProcessor<FontResource>(eventBus, 'font');
   const themes = makeFakeProcessor<ThemeResource>(eventBus, 'theme');
+  const directories = makeFakeProcessor<DirectoryListing>(eventBus, 'directory');
   const registerCalls: ExtResource[] = [];
 
   const byType: Record<ResourceType, FakeProcessor<unknown>> = {
@@ -171,6 +176,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     arraymesh: arrayMeshes,
     font: fonts,
     theme: themes,
+    directory: directories,
   };
 
   const byTypeMap = new Map(Object.entries(byType) as [ResourceType, FakeProcessor<unknown>][]);
@@ -190,6 +196,9 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     arrayMeshes,
     fonts,
     themes,
+    directories,
+    // A preview of its own, with the real face loader, as `ResourceLoader` builds one.
+    settledFonts: createSettledFonts(loadFace),
     // Mirrors ResourceLoader.register and records the call, so a test asserts
     // registration without a vitest spy.
     register(resource: ExtResource): void {
@@ -254,6 +263,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     arrayMeshes,
     fonts,
     themes,
+    directories,
     jobRunner,
     registerCalls,
   };

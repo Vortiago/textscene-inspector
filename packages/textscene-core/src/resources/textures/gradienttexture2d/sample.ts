@@ -1,17 +1,24 @@
 /**
  * Evaluates a decoded `Gradient` or `GradientTexture2D`, ported from
  * `GradientTexture2D::_get_gradient_offset_at` and `Gradient::get_color_at_offset`.
- * No THREE: CPUParticles2D samples a colour ramp per particle. Parity limitation:
- * `Gradient.interpolation_color_space` is always sRGB, so OKLab differs mid-stop.
+ * No THREE: CPUParticles2D samples a colour ramp per particle.
+ *
+ * Portions ported from Godot Engine (MIT).
+ * Copyright (c) 2014-present Godot Engine contributors.
+ * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
+ * See THIRD-PARTY-NOTICES.md.
  */
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { storedColor, storedReal as f } from '../../../godot/math/real';
 import { cubicInterpolatef, lerpf } from '../../../godot/math/math';
+import { linearSrgbToOklab, oklabToLinearSrgb } from '../../../godot/math/okLab';
+import { linearColorToSRGBF32, sRGBColorToLinearF32 } from '../../../utils/colorSpace';
 
 import type { Gradient, GradientTexture2D } from './types';
 import type { Rgba } from '../../../godot/math/math';
 import {
+  GradientColorSpace,
   GradientTexture2DFill,
   GradientInterpolationMode,
   GradientTexture2DRepeat,
@@ -77,7 +84,7 @@ export function storedGradient(gradient: Gradient): Gradient {
 /**
  * The gradient colour at normalised `offset`, mirroring Godot's
  * `Gradient::get_color_at_offset` (`gradient.h:151-235`): binary search for the bracketing
- * stops, clamp to the endpoints, then blend by the interpolation mode in sRGB space. Every
+ * stops, clamp to the endpoints, then blend by the interpolation mode in the interpolation colour space. Every
  * step runs in float, as Godot's does, since a double lands 1/255 off on some bytes.
  */
 export function sampleGradientColor(gradient: Gradient, offset: number): Rgba {
@@ -115,25 +122,47 @@ export function sampleGradientColor(gradient: Gradient, offset: number): Rgba {
   if (gradient.interpolationMode === GradientInterpolationMode.CONSTANT) {
     return c1;
   }
+  const space = gradient.interpolationColorSpace;
+  const from = toBlendSpace(c1, space);
+  const to = toBlendSpace(c2, space);
   if (gradient.interpolationMode === GradientInterpolationMode.CUBIC) {
-    let p0 = first - 1;
-    let p3 = second + 1;
-    if (p3 >= n) p3 = second;
-    if (p0 < 0) p0 = first;
-    const c0 = stops[p0]!.color;
-    const c3 = stops[p3]!.color;
-    return {
-      r: cubicInterpolatef(c1.r, c2.r, c0.r, c3.r, weight),
-      g: cubicInterpolatef(c1.g, c2.g, c0.g, c3.g, weight),
-      b: cubicInterpolatef(c1.b, c2.b, c0.b, c3.b, weight),
-      a: cubicInterpolatef(c1.a, c2.a, c0.a, c3.a, weight),
-    };
+    const before = toBlendSpace(stops[Math.max(first - 1, 0)]!.color, space);
+    const after = toBlendSpace(stops[Math.min(second + 1, n - 1)]!.color, space);
+    return fromBlendSpace(
+      {
+        r: cubicInterpolatef(from.r, to.r, before.r, after.r, weight),
+        g: cubicInterpolatef(from.g, to.g, before.g, after.g, weight),
+        b: cubicInterpolatef(from.b, to.b, before.b, after.b, weight),
+        a: cubicInterpolatef(from.a, to.a, before.a, after.a, weight),
+      },
+      space
+    );
   }
-  // Linear.
-  return {
-    r: lerpf(c1.r, c2.r, weight),
-    g: lerpf(c1.g, c2.g, weight),
-    b: lerpf(c1.b, c2.b, weight),
-    a: lerpf(c1.a, c2.a, weight),
-  };
+  return fromBlendSpace(
+    {
+      r: lerpf(from.r, to.r, weight),
+      g: lerpf(from.g, to.g, weight),
+      b: lerpf(from.b, to.b, weight),
+      a: lerpf(from.a, to.a, weight),
+    },
+    space
+  );
+}
+
+type ColorSpace = Gradient['interpolationColorSpace'];
+
+/** `transform_color_space` (`gradient.h:75-97`): an OKLab colour rides in a `Color` as L, a, b and alpha. */
+function toBlendSpace(color: Rgba, space: ColorSpace): Rgba {
+  if (space === GradientColorSpace.SRGB) return color;
+  const linear = sRGBColorToLinearF32(color);
+  if (space === GradientColorSpace.LINEAR_SRGB) return linear;
+  const lab = linearSrgbToOklab(linear);
+  return { r: lab.L, g: lab.a, b: lab.b, a: linear.a };
+}
+
+/** `inv_transform_color_space` (`gradient.h:99-119`). */
+function fromBlendSpace(color: Rgba, space: ColorSpace): Rgba {
+  if (space === GradientColorSpace.SRGB) return color;
+  if (space === GradientColorSpace.LINEAR_SRGB) return linearColorToSRGBF32(color);
+  return linearColorToSRGBF32({ ...oklabToLinearSrgb({ L: color.r, a: color.g, b: color.b }), a: color.a });
 }

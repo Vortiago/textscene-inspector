@@ -1,0 +1,37 @@
+; One variable: each value box sits at a bound of its range, so the SpinBox arrows draw dimmed (`spin_box.cpp:635-646`).
+; ColorPicker rows at 0 and at 255 with alpha 1, and the GraphEdit snapping box at its minimum of 2. Every other golden has its values away from the bounds.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Rgb" type="ColorPicker" parent="."]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 310.0
+offset_bottom = 400.0
+color = Color(0, 0.5, 1, 1)
+edit_intensity = true
+
+[node name="Hsv" type="ColorPicker" parent="."]
+layout_mode = 0
+offset_left = 330.0
+offset_top = 10.0
+offset_right = 630.0
+offset_bottom = 400.0
+color = Color(1, 0.2, 0.2, 1)
+color_mode = 1
+edit_intensity = true
+
+[node name="Graph" type="GraphEdit" parent="."]
+layout_mode = 0
+offset_left = 650.0
+offset_top = 10.0
+offset_right = 1100.0
+offset_bottom = 300.0
+snapping_distance = 2

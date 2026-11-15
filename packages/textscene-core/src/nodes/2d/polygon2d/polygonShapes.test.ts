@@ -1,8 +1,8 @@
 /**
  * Tests Polygon2D's `polygons` index lists and `invert_enabled`. In
  * `polygon_2d.cpp` NOTIFICATION_DRAW a non-empty `polygons` builds one
- * sub-polygon per index list, and `invert_enabled` (default false) fills the
- * AABB grown by `invert_border` (default 100) with the polygon as a hole.
+ * sub-polygon per index list, and `invert_enabled` (default false) bridges the
+ * polygon to its bounds grown by `invert_border` (default 100), in one ring.
  */
 import { describe, expect, it } from 'vitest';
 import { polygonRings } from './polygonShapes';
@@ -15,7 +15,6 @@ describe('polygonRings', () => {
     const rings = polygonRings(TWO_SQUARES, [], 0, false, 100);
     expect(rings.outlines).toHaveLength(1);
     expect(rings.outlines[0]).toHaveLength(8);
-    expect(rings.hole).toBeNull();
   });
 
   it('builds one ring per `polygons` entry, indexing into `polygon`', () => {
@@ -49,52 +48,60 @@ describe('polygonRings', () => {
     expect(polygonRings(TWO_SQUARES, [[0, 1, 2, 3]], 4, false, 100).outlines[0]).toHaveLength(4);
   });
 
-  it('inverts into a grown AABB with the polygon as a hole', () => {
+  it('bridges the polygon to its grown bounds after its lowest vertex', () => {
     const rings = polygonRings(TWO_SQUARES.slice(0, 8), [], 0, true, 5);
-    // Border rect = AABB (0,0)-(10,10) grown by 5 on every side. Its corners are
-    // new vertices, appended after the polygon's own so they index cleanly.
-    expect(rings.outlines).toHaveLength(1);
-    expect(rings.outlines[0]).toEqual([4, 5, 6, 7]);
-    expect(rings.outlines[0]!.map((i) => rings.points[i])).toEqual([
-      { x: -5, y: -5 },
-      { x: 15, y: -5 },
-      { x: 15, y: 15 },
-      { x: -5, y: 15 },
-    ]);
-    expect(rings.hole).toEqual([0, 1, 2, 3]);
-    expect(rings.hole!.map((i) => rings.points[i])).toEqual([
+    const bridgeX = Math.fround(10 - 0.00001);
+    expect(rings.outlines).toEqual([rings.points.map((_, i) => i)]);
+    expect(rings.points).toEqual([
       { x: 0, y: 0 },
       { x: 10, y: 0 },
       { x: 10, y: 10 },
+      { x: 10, y: 15 },
+      { x: 15, y: 15 },
+      { x: 15, y: -5 },
+      { x: -5, y: -5 },
+      { x: -5, y: 15 },
+      { x: bridgeX, y: 15 },
+      { x: bridgeX, y: 10 },
       { x: 0, y: 10 },
     ]);
   });
 
-  it('trims internal vertices when inverted — Godot trims on that branch too', () => {
-    // `if ((invert || polygons.is_empty()) && internal_vertices > 0) len -= internal_vertices;`
-    // Invert does not skip the trim, so the hole is the outline alone and the
-    // grown bounds are measured from it.
-    const rings = polygonRings(TWO_SQUARES, [], 4, true, 5);
-    expect(rings.hole).toEqual([0, 1, 2, 3]);
-    expect(rings.hole!.map((i) => rings.points[i])).toEqual([
+  it('mirrors the bridge for a polygon wound the other way', () => {
+    const rings = polygonRings(new Float32Array([0, 0, 0, 10, 10, 10, 10, 0]), [], 0, true, 5);
+    const bridgeX = Math.fround(0 - 0.00001);
+    expect(rings.points).toEqual([
       { x: 0, y: 0 },
-      { x: 10, y: 0 },
-      { x: 10, y: 10 },
-      { x: 0, y: 10 },
-    ]);
-    // Bounds grown from the first square only; the trimmed second square
-    // (x up to 30) must not widen them.
-    expect(rings.outlines[0]!.map((i) => rings.points[i])).toEqual([
+      { x: bridgeX, y: 10 },
+      { x: bridgeX, y: 15 },
+      { x: -5, y: 15 },
       { x: -5, y: -5 },
       { x: 15, y: -5 },
       { x: 15, y: 15 },
-      { x: -5, y: 15 },
+      { x: 0, y: 15 },
+      { x: 0, y: 10 },
+      { x: 10, y: 10 },
+      { x: 10, y: 0 },
     ]);
+  });
+
+  it('measures the inverted bounds after it trims the internal vertices', () => {
+    // `if ((invert || polygons.is_empty()) && internal_vertices > 0) len -= internal_vertices;`
+    const rings = polygonRings(TWO_SQUARES, [], 4, true, 5);
+    expect(rings.points).toHaveLength(11);
+    expect(Math.max(...rings.points.map((point) => point.x))).toBe(15);
   });
 
   it('ignores `polygons` entirely when inverted, as Godot does', () => {
     const rings = polygonRings(TWO_SQUARES, [[4, 5, 6, 7]], 0, true, 5);
-    expect(rings.hole).toHaveLength(8);
+    expect(rings.outlines).toHaveLength(1);
+    expect(rings.points).toHaveLength(15);
+  });
+
+  it('still inverts a ring the trim leaves under three points', () => {
+    // Only `len <= 0` returns (`polygon_2d.cpp:158-160`).
+    const rings = polygonRings(TWO_SQUARES.slice(0, 6), [], 2, true, 5);
+    expect(rings.points).toHaveLength(8);
   });
 
   it('returns nothing for a degenerate outline', () => {

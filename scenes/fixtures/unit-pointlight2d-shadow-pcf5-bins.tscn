@@ -1,0 +1,35 @@
+[gd_scene format=3]
+
+; Moves one variable: the PCF5 tap at one bin per step (`shadow_filter_smooth = 0`), far from
+; the light. Each tap reads two nearest bins and mixes their steps by the fraction past the bin
+; (`canvas.glsl:392-399`), which shifts the edge by half a bin, widest this far out.
+
+[sub_resource type="Gradient" id="Gradient_flat"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_flat"]
+gradient = SubResource("Gradient_flat")
+width = 64
+height = 64
+
+[sub_resource type="OccluderPolygon2D" id="OccluderPolygon2D_edge"]
+closed = false
+polygon = PackedVector2Array(160, 110, 130, 160)
+
+[node name="Root" type="Node2D"]
+
+[node name="Surface" type="Polygon2D" parent="."]
+color = Color(0.25, 0.25, 0.25, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="Lamp" type="PointLight2D" parent="."]
+position = Vector2(60, 60)
+texture = SubResource("GradientTexture2D_flat")
+texture_scale = 40.0
+energy = 0.5
+shadow_enabled = true
+shadow_filter = 1
+shadow_filter_smooth = 0.0
+
+[node name="Caster" type="LightOccluder2D" parent="."]
+occluder = SubResource("OccluderPolygon2D_edge")

@@ -1,0 +1,120 @@
+; A VideoStreamPlayer with expand off takes its Ogg Theora picture size as its minimum size.
+; Each player has a 1 x 1 authored rect and a full-rect ColorRect child that shows the rect it got.
+; The clips draw no frame in the editor, so only the child shows.
+
+[gd_scene load_steps=4 format=3 uid="uid://unit_video_stream_player_picture_size"]
+
+[ext_resource type="VideoStream" path="res://video/clip-64x48.ogv" id="1_clip_64x48"]
+[ext_resource type="VideoStream" path="res://video/vorbis-only.ogv" id="2_vorbis_only"]
+[ext_resource type="VideoStream" path="res://video/clip-444-70x30.ogv" id="3_clip_444_70x30"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Autoplay" type="VideoStreamPlayer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 9.0
+offset_bottom = 9.0
+stream = ExtResource("1_clip_64x48")
+autoplay = true
+
+[node name="Fill" type="ColorRect" parent="Autoplay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 0, 0, 1)
+
+[node name="Expand" type="VideoStreamPlayer" parent="."]
+layout_mode = 0
+offset_left = 100.0
+offset_top = 8.0
+offset_right = 228.0
+offset_bottom = 104.0
+stream = ExtResource("1_clip_64x48")
+expand = true
+
+[node name="Fill" type="ColorRect" parent="Expand"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 1, 0, 1)
+
+[node name="Stopped" type="VideoStreamPlayer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 120.0
+offset_right = 9.0
+offset_bottom = 121.0
+stream = ExtResource("1_clip_64x48")
+
+[node name="Fill" type="ColorRect" parent="Stopped"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 1, 1)
+
+[node name="Paused" type="VideoStreamPlayer" parent="."]
+layout_mode = 0
+offset_left = 100.0
+offset_top = 120.0
+offset_right = 101.0
+offset_bottom = 121.0
+stream = ExtResource("1_clip_64x48")
+autoplay = true
+paused = true
+
+[node name="Fill" type="ColorRect" parent="Paused"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 1, 0, 1)
+
+[node name="VorbisOnly" type="VideoStreamPlayer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 230.0
+offset_right = 9.0
+offset_bottom = 231.0
+stream = ExtResource("2_vorbis_only")
+
+[node name="Fill" type="ColorRect" parent="VorbisOnly"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 0, 1, 1)
+
+[node name="Yuv444" type="VideoStreamPlayer" parent="."]
+layout_mode = 0
+offset_left = 100.0
+offset_top = 230.0
+offset_right = 101.0
+offset_bottom = 231.0
+stream = ExtResource("3_clip_444_70x30")
+
+[node name="Fill" type="ColorRect" parent="Yuv444"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 1, 1, 1)

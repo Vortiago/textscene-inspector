@@ -1,0 +1,50 @@
+; The one variable: clip_text on a box narrower than its label. CheckBox, CheckButton, OptionButton
+; and MenuButton draw their label through Button::_notification, so TextParagraph::draw cuts each
+; line to the paragraph box (text_paragraph.cpp:925-931) and clip_text zeroes the text's width in the
+; minimum size (button.cpp:493-495). Each box is narrower than "alpha bravo" plus its icon.
+
+[gd_scene format=3 uid="uid://unit_button_family_clip_text"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="CheckBox" type="CheckBox" parent="."]
+layout_mode = 1
+offset_left = 320.0
+offset_top = 16.0
+offset_right = 360.0
+offset_bottom = 48.0
+text = "alpha bravo"
+clip_text = true
+
+[node name="CheckButton" type="CheckButton" parent="."]
+layout_mode = 1
+offset_left = 320.0
+offset_top = 64.0
+offset_right = 380.0
+offset_bottom = 96.0
+text = "alpha bravo"
+clip_text = true
+
+[node name="OptionButton" type="OptionButton" parent="."]
+layout_mode = 1
+offset_left = 320.0
+offset_top = 112.0
+offset_right = 400.0
+offset_bottom = 144.0
+clip_text = true
+item_count = 1
+selected = 0
+popup/item_0/text = "alpha bravo"
+popup/item_0/id = 0
+
+[node name="MenuButton" type="MenuButton" parent="."]
+layout_mode = 1
+offset_left = 480.0
+offset_top = 16.0
+offset_right = 540.0
+offset_bottom = 48.0
+text = "alpha bravo"
+clip_text = true

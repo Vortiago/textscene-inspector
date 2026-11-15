@@ -52,6 +52,11 @@ describe('parseArgs', () => {
     expect(parseArgs(['a.tscn']).table).toBeNull();
   });
 
+  it('reads --collisions as a flag that is off by default', () => {
+    expect(parseArgs(['a.tscn', '--collisions']).collisions).toBe(true);
+    expect(parseArgs(['a.tscn']).collisions).toBe(false);
+  });
+
   it('rejects a table flag with no file (error path)', () => {
     expect(() => parseArgs(['a.tscn', '--table'])).toThrow('--table needs a file path, got "undefined"');
   });
@@ -198,6 +203,42 @@ describe('diffOne', () => {
 
   it('captures our 3D canvas when the engine rendered the scene in 3D', async () => {
     expect(await askedCanvas2D('3d')).toBe(false);
+  });
+
+  /** Both sides show collision shapes or neither does, so the pair measures one setting. */
+  async function askedCollisions(collisions) {
+    const dir = await mkdtemp(join(tmpdir(), 'refdiff-'));
+    const godotOut = join(dir, 'g.png');
+    await writeFile(godotOut, solidPng(4, 4));
+    const asked = {};
+    try {
+      await diffOne(
+        { scenePath: '/x/s.tscn', fixtureName: 's.tscn', label: 's' },
+        { frame: false, keep: false, collisions },
+        {
+          render: async (args) => {
+            asked.debugCollisions = args.debugCollisions;
+            return { out: godotOut, mode: '2d' };
+          },
+          capture: async (args) => {
+            asked.showCollisions = args.showCollisions;
+            return solidPng(4, 4);
+          },
+          outDir: dir,
+        }
+      );
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+    return asked;
+  }
+
+  it('shows collision shapes on both sides when asked', async () => {
+    expect(await askedCollisions(true)).toEqual({ debugCollisions: true, showCollisions: true });
+  });
+
+  it('shows collision shapes on neither side by default', async () => {
+    expect(await askedCollisions(false)).toEqual({ debugCollisions: false, showCollisions: false });
   });
 
   /**

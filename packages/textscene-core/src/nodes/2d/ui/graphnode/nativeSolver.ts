@@ -10,97 +10,32 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { graphElementStyles } from '../graphelement/graphElementStyles';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import {
   controlSolverRegistry,
   type ContainerLayoutFn,
   type MinimumSizeFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
-import { resolveTitleFontTheme, titleTextMinimumSize, titlebarGeometry } from '../graphelement/graphTitlebar';
+import { registerInternalControls } from '../../../../r3f/controls/native/internalControls';
+import {
+  GRAPH_NODE_TITLE_LABEL,
+  titlebarBandHeightChannel,
+  titlebarInternalControls,
+  titlebarInternalLayout,
+  titlebarMinimumSize,
+  titlebarHeights,
+} from '../graphelement/graphTitlebar';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties, GraphNodeSlot } from './types';
-import { lightened } from '../../../../godot/math/color';
-import type { Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 import { DEFAULT_SIZE_FLAGS, SizeFlags } from '../../../../godot/scene/control';
 
-const ZERO_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };
-
-/** `graph_node.cpp` theme type variation for its internal title Label: `graph_node.cpp:1328`. */
-export const GRAPH_NODE_TITLE_VARIATION = 'GraphNodeTitleLabel';
-
-/** `GraphNodeTitleLabel`'s own `font_color` (`default_theme.cpp:819`). */
-export const GRAPH_NODE_TITLE_DEFAULT_COLOR = CONTROL_FONT_COLOR;
-
-function flatBox(
-  bgColor: Rgba,
-  margin: { left: number; top: number; right: number; bottom: number },
-  cornerRadius: number
-): StyleBoxFlatData {
-  return makeFlatStyleBox(bgColor, { contentMargin: margin, cornerRadius });
-}
-
-/**
- * GraphNode's default-theme StyleBoxes: `default_theme.cpp:788-802`. Not in
- * `nativeTheme.ts`'s `widgets` (no entry for GraphNode there); derived here
- * from `theme.styleFill`/`theme.cornerRadius`/`theme.contentMargin` the same
- * way `nativeTheme.ts` itself builds every other widget's.
- */
-function defaultStyles(theme: NativeTheme) {
-  // `make_flat_stylebox(style_normal_color, 18, 12, 18, 12)` scales literal margins,
-  // not `default_margin` (4). `NativeTheme` holds no raw scale, so it comes from
-  // `theme.contentMargin` (`Math.round(DEFAULT_CONTENT_MARGIN * scale)`), exact where
-  // that rounding is lossless, as at each scale the previewer's UI offers.
-  const scale = theme.contentMargin / DEFAULT_CONTENT_MARGIN;
-  const panelMargin = {
-    left: Math.round(18 * scale),
-    top: Math.round(12 * scale),
-    right: Math.round(18 * scale),
-    bottom: Math.round(12 * scale),
-  };
-  const panel = flatBox(theme.styleFill.normal, panelMargin, theme.cornerRadius);
-  // `graphn_sb_titlebar_selected = graphnode_normal->duplicate()` then
-  // `set_bg_color(...)`: clones the panel's own margins, not the titlebar's.
-  const titlebarSelected = flatBox({ r: 1.0, g: 0.625, b: 0.625, a: 0.6 }, panelMargin, theme.cornerRadius);
-  const titlebar = flatBox(
-    lightened(theme.styleFill.normal, 0.3),
-    {
-      left: theme.contentMargin,
-      top: theme.contentMargin,
-      right: theme.contentMargin,
-      bottom: theme.contentMargin,
-    },
-    theme.cornerRadius
-  );
-  // `make_empty_stylebox(0, 0, 0, 0)`: draws nothing, zero margin.
-  const slot = flatBox({ r: 0, g: 0, b: 0, a: 0 }, ZERO_MARGIN, 0);
-  return { panel, panelSelected: panel, titlebar, titlebarSelected, slot };
-}
-
-export function graphNodeStyles(n: SolveNode, theme: NativeTheme) {
-  const d = defaultStyles(theme);
-  return {
-    panel: n.styleBoxes.panel ?? d.panel,
-    panelSelected: n.styleBoxes.panel_selected ?? d.panelSelected,
-    titlebar: n.styleBoxes.titlebar ?? d.titlebar,
-    titlebarSelected: n.styleBoxes.titlebar_selected ?? d.titlebarSelected,
-    slot: n.styleBoxes.slot ?? d.slot,
-  };
-}
-
-/** `theme_override_constants/separation`, else `Math.round(2 * scale)` (`default_theme.cpp`, GraphNode's own `separation`): scale recovered as `defaultStyles`'s own doc explains. */
-function separationOf(n: SolveNode, theme: NativeTheme): number {
-  const override = n.constants.separation;
-  if (override !== undefined) return override;
-  const scale = theme.contentMargin / DEFAULT_CONTENT_MARGIN;
-  return Math.round(2 * scale);
+export function graphNodeStyles(n: SolveNode) {
+  return { ...graphElementStyles(n), slot: requiredThemeItem(n.styleBoxes, 'slot') };
 }
 
 function hFlagsOf(n: SolveNode): number {
@@ -127,26 +62,14 @@ function graphNodeEffectiveSlot(slots: Map<number, GraphNodeSlot>, rawIndex: num
   return slots.get(rawIndex) ?? defaultGraphNodeSlot();
 }
 
-export function graphNodeTitleTextMin(n: SolveNode, theme: NativeTheme): Vector2 {
-  const props = n.node.properties as GraphNodeProperties;
-  const fontTheme = resolveTitleFontTheme(
-    n,
-    GRAPH_NODE_TITLE_VARIATION,
-    theme.fontSize,
-    GRAPH_NODE_TITLE_DEFAULT_COLOR
-  );
-  return titleTextMinimumSize(props.title ?? '', fontTheme);
-}
-
 // --- get_minimum_size ---------------------------------------------------------
 
 const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as GraphNodeProperties;
-  const { panel, titlebar, slot } = graphNodeStyles(n, ctx.theme);
-  const textMin = graphNodeTitleTextMin(n, ctx.theme);
+  const { panel, slot } = graphNodeStyles(n);
+  const separation = requiredThemeItem(n.constants, 'separation');
 
-  let width = textMin.x + titlebar.contentMargin.left + titlebar.contentMargin.right;
-  let height = textMin.y + titlebar.contentMargin.top + titlebar.contentMargin.bottom;
+  let { x: width, y: height } = titlebarMinimumSize(n, ctx);
 
   n.children.forEach((child, i) => {
     if (!isSortableControl(child)) return;
@@ -162,7 +85,7 @@ const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
     width = Math.max(width, w);
     // `i` counts every child, hidden ones included, so the sibling of a hidden leading child
     // still pays one `separation`.
-    if (i > 0) height += separationOf(n, ctx.theme);
+    if (i > 0) height += separation;
   });
 
   height += panel.contentMargin.top + panel.contentMargin.bottom;
@@ -170,6 +93,11 @@ const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
 };
 
 controlSolverRegistry.registerMinimumSize('GraphNode', graphNodeMinimumSize);
+registerInternalControls(
+  'GraphNode',
+  titlebarInternalControls(GRAPH_NODE_TITLE_LABEL),
+  titlebarInternalLayout
+);
 
 // --- _resort -------------------------------------------------------------------
 
@@ -187,11 +115,9 @@ interface StretchEntry {
 
 const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const props = n.node.properties as GraphNodeProperties;
-  const { panel, titlebar, slot } = graphNodeStyles(n, ctx.theme);
-  const separation = separationOf(n, ctx.theme);
-  const textMin = graphNodeTitleTextMin(n, ctx.theme);
-  const titlebarBand = titlebarGeometry(contentRect.w, textMin.y, titlebar);
-  const titlebarBandHeight = titlebarBand.rect.h;
+  const { panel, slot } = graphNodeStyles(n);
+  const separation = requiredThemeItem(n.constants, 'separation');
+  const band = titlebarHeights(n, ctx);
 
   const entries: StretchEntry[] = [];
   let stretchMin = 0;
@@ -202,7 +128,8 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
     if (!isSortableControl(child)) return;
     const eff = graphNodeEffectiveSlot(props.slots, i);
     const extra = eff.drawStylebox ? slot.contentMargin.top + slot.contentMargin.bottom : 0;
-    const minHeight = minSize.y + extra;
+    // `Size2i size`: the row's minimum is whole pixels.
+    const minHeight = Math.trunc(minSize.y + extra);
     stretchMin += minHeight;
     const willStretch = hasFlag(vFlagsOf(child), SizeFlags.EXPAND);
     const stretchRatio = stretchRatioOf(child);
@@ -224,9 +151,12 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   });
 
   const childrenCount = entries.length;
-  const stretchMax = contentRect.h - (childrenCount - 1) * separation;
+  // `stretch_max`, `available_stretch_space` and `ofs_y` are ints, so each assignment truncates.
+  const stretchMax = Math.trunc(contentRect.h - (childrenCount - 1) * separation);
   const stretchDiff = Math.max(stretchMax - stretchMin, 0);
-  availableStretch += stretchDiff - panel.contentMargin.bottom - panel.contentMargin.top - titlebarBandHeight;
+  availableStretch = Math.trunc(
+    availableStretch + stretchDiff - panel.contentMargin.bottom - panel.contentMargin.top - band.resort
+  );
 
   while (stretchRatioTotal > 0) {
     let refitSuccessful = true;
@@ -246,8 +176,8 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
     if (refitSuccessful) break;
   }
 
-  let ofsY = panel.contentMargin.top + titlebarBandHeight;
-  const width = contentRect.w - panel.contentMargin.left - panel.contentMargin.right;
+  let ofsY = Math.trunc(panel.contentMargin.top + band.resort);
+  const width = Math.trunc(contentRect.w - panel.contentMargin.left - panel.contentMargin.right);
   const rects = new Map<string, Rect2>();
 
   entries.forEach((entry, validIdx) => {
@@ -255,7 +185,7 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
     const fromY = ofsY;
     let toY = ofsY + entry.finalSize;
     if (entry.willStretch && validIdx === childrenCount - 1) {
-      toY = contentRect.h - panel.contentMargin.bottom;
+      toY = Math.trunc(contentRect.h - panel.contentMargin.bottom);
     }
     const height = toY - fromY;
     const eff = graphNodeEffectiveSlot(props.slots, entry.rawIndex);
@@ -267,7 +197,7 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
     ofsY = toY;
   });
 
-  return rects;
+  return { rects, meta: titlebarBandHeightChannel.seal(band.drawn) };
 };
 
 controlSolverRegistry.registerContainerLayout('GraphNode', graphNodeLayout);
@@ -283,9 +213,9 @@ interface GraphNodeDrawRow {
   styleboxRect: Rect2 | null;
 }
 
-/** `theme_override_constants/port_h_offset`, else `0` (`default_theme.cpp`'s own literal, not scaled), as the `int` Godot stores (`graph_node.cpp:1011`). */
+/** `port_h_offset` as the `int` Godot stores (`graph_node.cpp:1011`). */
 export function portHOffsetOf(constants: Readonly<Record<string, number>>): number {
-  return Math.trunc(constants.port_h_offset ?? 0);
+  return Math.trunc(requiredThemeItem(constants, 'port_h_offset'));
 }
 
 /** The x of a right port: `Point2i(get_size().x - port_h_offset, slot_y)` (`graph_node.cpp:666`, `:1050`) keeps whole pixels. */

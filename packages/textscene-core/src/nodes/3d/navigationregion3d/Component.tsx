@@ -9,11 +9,10 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
-import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
+import { useNodeResource } from '../../../resources/reading';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { editorHelperUserData } from '../../../r3f/editorHelpers';
-import { decodeNavigationMesh } from '../../../resources/navigation/navigationmesh';
+import { NAVIGATION_MESH } from '../../../resources/navigation/navigationmesh';
 import {
   buildNavFaceGeometry,
   buildNavEdgeGeometry,
@@ -37,22 +36,19 @@ const NAV_FACES_MATERIAL = materialProgramInputs({
 
 export function NavigationRegion3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as NavigationRegion3DProperties;
-  const sceneResources = useSceneResources();
   const { showNavigation } = useViewportMode();
   const helperUserData = useMemo(editorHelperUserData, []);
 
-  // A NavigationMesh is as often an inline `[sub_resource]` as a `.tres`.
-  const resource = useSubOrExtResource(properties.navigationMesh, sceneResources)?.resource;
+  const navmesh = useNodeResource(properties.navigationMesh, NAVIGATION_MESH).value;
 
   const overlay = useMemo(() => {
-    const navmesh = resource ? decodeNavigationMesh(resource.data) : null;
     if (!navmesh) return null;
     // Godot 3D space matches three.js, so the vertices are positions already.
     return {
       faces: buildNavFaceGeometry(navmesh.vertices, navmesh.polygons),
       edges: buildNavEdgeGeometry(navmesh.vertices, navmesh.polygons),
     };
-  }, [resource]);
+  }, [navmesh]);
 
   // R3F never disposes geometry passed through the `geometry` or `primitive` attach, and
   // these are built per component, so dispose them on a rebuild or an unmount.

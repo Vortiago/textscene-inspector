@@ -8,10 +8,9 @@ import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { godotColorToLinear } from '../../../../r3f/godotColor';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
+import { multiplyModulate, useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -20,103 +19,114 @@ import { ControlQuad as FoldQuad } from '../../../../r3f/controls/native/control
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { TextEditBody } from '../textedit/Component';
+import { useTextEditRows } from '../textedit/useTextEditRows';
+import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import {
-  pickTextEditStyleBox,
   resolveTextEditStyleState,
   textEditTextTheme,
-  textEditRowHeightPx,
-  textEditWrapWidthPx,
-  shapeTextEditLines,
+  textEditUnwrappedRowHeightPx,
+  textEditDrawnLines,
   textEditTabStopsPx,
   textEditRowBandTopPx,
   layoutTextEditDrawBand,
   TEXT_EDIT_DEFAULT_TAB_SIZE,
   TEXT_EDIT_THEME_FONT_KEY,
+  textEditLineSpacingPx,
+  textEditWrapOffsetPx,
 } from '../textedit/nativeSolver';
 import { buildFoldContext, canFoldLine, isLineCodeRegionStart } from './lineFolding';
 import {
   codeEditGutterBand,
   codeEditFoldGutterXPx,
   codeEditFoldIconRect,
-  CODE_EDIT_CODE_FOLDING_COLOR,
-  CODE_EDIT_CODE_REGION_ICON_COLOR,
+  codeEditRegionIconColor,
   codeEditLineNumberText,
   codeEditLineNumberGutterXPx,
   codeEditLineNumberTextXPx,
   codeEditGutterCellTextTopPx,
   codeEditGuidelines,
-  CODE_EDIT_LINE_NUMBER_COLOR,
-  CODE_EDIT_LINE_LENGTH_GUIDELINE_COLOR,
 } from './nativeSolver';
 import type { CodeEditProperties } from './types';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 export function CodeEdit(props: NativeControlComponentProps) {
-  const { solveNode, tint, rect, renderOrder, theme, measureText } = props;
+  const { solveNode, childTint, rect, renderOrder, measureText } = props;
+  const toItemLinear = useItemLinearColorOf();
   const codeEditProps = painterView<CodeEditProperties>(solveNode);
   const state = resolveTextEditStyleState(codeEditProps.editable);
-  const styleBox = pickTextEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, state);
+  const styleBox = requiredThemeItem(solveNode.styleBoxes, state);
 
-  const { fontSizePx } = textEditTextTheme(solveNode, codeEditProps, state, { theme });
+  const { fontSizePx } = textEditTextTheme(solveNode, codeEditProps, state);
   const fontMetrics = resolveNodeFontMetrics(solveNode, TEXT_EDIT_THEME_FONT_KEY);
-  const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, theme.separation);
-
-  const lines = useMemo(() => (codeEditProps.text ?? '').split('\n'), [codeEditProps.text]);
-  const charWidth0Px = measureText ? measureText('0', fontSizePx, 0, fontMetrics).x : 0;
-  const band = useMemo(
-    () => codeEditGutterBand(codeEditProps, rowHeightPx, charWidth0Px, Math.max(1, lines.length)),
-    [codeEditProps, rowHeightPx, charWidth0Px, lines.length]
-  );
-
-  const lineNumberColorTinted = useMemo(
-    () => multiplyModulate(tint.own, CODE_EDIT_LINE_NUMBER_COLOR),
-    [tint.own]
-  );
+  const lineSpacingPx = textEditLineSpacingPx(solveNode);
 
   // Line numbers draw once per buffer line, on its first wrapped row (text_edit.cpp:1410).
-  // The rows are shaped at `<TextEditBody>`'s wrap width, whose gutter band is
-  // `band.totalWidthPx`, or each number past the first sits beside the wrong row.
-  const wrapWidthPx = useMemo(
-    () =>
-      textEditWrapWidthPx(
-        rect.w,
-        styleBox.contentMargin.left + styleBox.contentMargin.right,
-        band.totalWidthPx,
-        codeEditProps.minimapWidth ?? 80,
-        codeEditProps.minimapDraw
-      ),
-    [rect.w, styleBox, band.totalWidthPx, codeEditProps.minimapWidth, codeEditProps.minimapDraw]
+  // The rows are shaped as `<TextEditBody>` shapes them, wrap width and scroll bar included, or each
+  // number past the first sits beside the wrong row.
+  const drawn = useMemo(
+    () => textEditDrawnLines(codeEditProps.text, codeEditProps.placeholderText),
+    [codeEditProps.text, codeEditProps.placeholderText]
   );
   const tabStopsPx = useMemo(
     () => textEditTabStopsPx(codeEditProps.indentSize, fontMetrics, fontSizePx),
     [codeEditProps.indentSize, fontMetrics, fontSizePx]
   );
   const bidi = useControlBidiOptions(codeEditProps, solveNode);
-  const lineLayouts = useMemo(
+  const shape = {
+    fontSizePx,
+    fontMetrics,
+    wrapMode: codeEditProps.wrapMode,
+    autowrapMode: codeEditProps.autowrapMode,
+    tabStopsPx,
+    preserveControl: codeEditProps.drawControlChars,
+    indentWrappedLines: codeEditProps.indentWrappedLines,
+    bidi,
+  };
+
+  const gutterRowHeightPx = useMemo(
     () =>
-      shapeTextEditLines(lines, {
-        fontSizePx,
-        fontMetrics,
-        wrapMode: codeEditProps.wrapMode,
-        autowrapMode: codeEditProps.autowrapMode,
-        wrapWidthPx,
-        tabStopsPx,
-        preserveControl: codeEditProps.drawControlChars,
-        indentWrappedLines: codeEditProps.indentWrappedLines,
-        bidi,
-      }),
-    [
-      lines,
-      fontSizePx,
-      codeEditProps.wrapMode,
-      codeEditProps.autowrapMode,
-      wrapWidthPx,
-      fontMetrics,
-      tabStopsPx,
-      codeEditProps.drawControlChars,
-      codeEditProps.indentWrappedLines,
-      bidi,
-    ]
+      textEditUnwrappedRowHeightPx(
+        drawn.lines,
+        { fontSizePx, fontMetrics, tabStopsPx, preserveControl: codeEditProps.drawControlChars, bidi },
+        lineSpacingPx
+      ),
+    [drawn.lines, fontSizePx, fontMetrics, tabStopsPx, codeEditProps.drawControlChars, bidi, lineSpacingPx]
+  );
+  const lines = useMemo(() => (codeEditProps.text ?? '').split('\n'), [codeEditProps.text]);
+  const charWidth0Px = measureText ? measureText('0', fontSizePx, 0, fontMetrics).x : 0;
+  const band = useMemo(
+    () => codeEditGutterBand(codeEditProps, gutterRowHeightPx, charWidth0Px, Math.max(1, lines.length)),
+    [codeEditProps, gutterRowHeightPx, charWidth0Px, lines.length]
+  );
+
+  const lineNumberColor = requiredThemeItem(solveNode.colors, 'line_number_color');
+  const lineNumberColorTinted = useMemo(
+    () => multiplyModulate(childTint.own, lineNumberColor),
+    [childTint.own, lineNumberColor]
+  );
+
+  const rows = useTextEditRows({
+    lines: drawn.lines,
+    isPlaceholder: drawn.isPlaceholder,
+    size: { x: rect.w, y: rect.h },
+    margins: styleBox.contentMargin,
+    lineSpacingPx,
+    gutterBandWidthPx: band.totalWidthPx,
+    minimapWidthPx: codeEditProps.minimapWidth ?? 80,
+    drawMinimap: codeEditProps.minimapDraw,
+    wrapOffsetPx: textEditWrapOffsetPx(solveNode),
+    scrollPastEndOfFile: codeEditProps.scrollPastEndOfFile === true,
+    fitContentHeight: codeEditProps.fitContentHeight === true,
+    rtl: solveNode.rtl,
+    shape,
+    scrollBarBoxes: internalScrollBarBoxes(solveNode),
+  });
+  // A placeholder paragraph replaces the buffer's single empty line, which starts at row 0.
+  const { lineLayouts, rowHeightPx } = rows;
+  const lineStartRows = useMemo(
+    () => (drawn.isPlaceholder ? [0] : lineLayouts.map(({ startRow }) => startRow)),
+    [drawn.isPlaceholder, lineLayouts]
   );
 
   const numerals = { locale: solveNode.locale, localizeNumeralSystem: codeEditProps.localizeNumeralSystem };
@@ -151,9 +161,10 @@ export function CodeEdit(props: NativeControlComponentProps) {
       solveNode.rtl,
     ]
   );
+  const baseGuidelineColor = requiredThemeItem(solveNode.colors, 'line_length_guideline_color');
   const guidelineColor = useMemo(
-    () => multiplyModulate(tint.own, CODE_EDIT_LINE_LENGTH_GUIDELINE_COLOR),
-    [tint.own]
+    () => multiplyModulate(childTint.own, baseGuidelineColor),
+    [childTint.own, baseGuidelineColor]
   );
 
   const foldContext = useMemo(
@@ -171,10 +182,14 @@ export function CodeEdit(props: NativeControlComponentProps) {
     band.mainWidthPx,
     band.lineNumberWidthPx
   );
-  const foldArrowColor = useMemo(() => multiplyModulate(tint.own, CODE_EDIT_CODE_FOLDING_COLOR), [tint.own]);
+  const foldingColor = requiredThemeItem(solveNode.colors, 'code_folding_color');
+  const foldArrowColor = useMemo(
+    () => multiplyModulate(childTint.own, foldingColor),
+    [childTint.own, foldingColor]
+  );
   const foldRegionColor = useMemo(
-    () => multiplyModulate(tint.own, CODE_EDIT_CODE_REGION_ICON_COLOR),
-    [tint.own]
+    () => multiplyModulate(childTint.own, codeEditRegionIconColor(solveNode.colors)),
+    [childTint.own, solveNode.colors]
   );
   const canFoldIcon = useNodeIcon(
     solveNode.icons.can_fold,
@@ -187,7 +202,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
 
   // Local, not `rect`: `../textedit/Component.tsx`'s `ownRect` doc gives the reason.
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
-  const { anchorRef, clippingPlanes } = useWorldClipPlanes(ownRect);
+  const { anchorRef, clippingPlanes, clip } = useWorldClipPlanes(ownRect);
 
   // `ControlCanvasWalker` owns `visible`, the children and the transform.
   return (
@@ -195,47 +210,51 @@ export function CodeEdit(props: NativeControlComponentProps) {
       <TextEditBody
         {...props}
         gutterBandWidthPx={band.totalWidthPx}
+        rows={rows}
         tabSize={codeEditProps.indentSize}
         underlay={guidelines.map((guideline, i) => (
           <CanvasItemGroup key={i} position={[guideline.xPx, 0, 0]}>
             <ControlQuad
               width={1}
               height={rect.h}
-              color={godotColorToLinear(guidelineColor)}
+              color={toItemLinear(guidelineColor)}
               opacity={guideline.dimmed ? guidelineColor.a * 0.5 : guidelineColor.a}
               renderOrder={renderOrder}
             />
           </CanvasItemGroup>
         ))}
       />
-      {band.foldDrawn &&
-        canFoldIcon &&
-        canFoldRegionIcon &&
-        lineLayouts.map(({ startRow }, lineIndex) => {
-          if (!canFoldLine(foldContext, lineIndex, codeEditProps.lineFolding === true)) return null;
-          const region = isLineCodeRegionStart(foldContext, lineIndex);
-          const icon = codeEditFoldIconRect({
-            x: foldGutterXPx,
-            y: textEditRowBandTopPx(startRow, rowHeightPx, styleBox.contentMargin.top, theme.separation),
-            w: band.foldWidthPx,
-            h: rowHeightPx,
-          });
-          const color = region ? foldRegionColor : foldArrowColor;
-          return (
-            <CanvasItemGroup key={`fold-${lineIndex}`} position={[icon.x, -icon.y, 0]}>
-              <FoldQuad
-                renderOrder={renderOrder}
-                width={icon.w}
-                height={icon.h}
-                color={godotColorToLinear(color)}
-                opacity={color.a}
-                map={region ? canFoldRegionIcon : canFoldIcon}
-              />
-            </CanvasItemGroup>
-          );
-        })}
+      {/* `text_ci` clips every gutter icon to the node rect (`text_edit.cpp:934`), so a row past the bottom edge shows no arrow. */}
+      <ControlClipProvider value={clip}>
+        {band.foldDrawn &&
+          canFoldIcon &&
+          canFoldRegionIcon &&
+          lineStartRows.map((startRow, lineIndex) => {
+            if (!canFoldLine(foldContext, lineIndex, codeEditProps.lineFolding === true)) return null;
+            const region = isLineCodeRegionStart(foldContext, lineIndex);
+            const icon = codeEditFoldIconRect({
+              x: foldGutterXPx,
+              y: textEditRowBandTopPx(startRow, rowHeightPx, styleBox.contentMargin.top, lineSpacingPx),
+              w: band.foldWidthPx,
+              h: rowHeightPx,
+            });
+            const color = region ? foldRegionColor : foldArrowColor;
+            return (
+              <CanvasItemGroup key={`fold-${lineIndex}`} position={[icon.x, -icon.y, 0]}>
+                <FoldQuad
+                  renderOrder={renderOrder}
+                  width={icon.w}
+                  height={icon.h}
+                  color={toItemLinear(color)}
+                  opacity={color.a}
+                  map={region ? canFoldRegionIcon : canFoldIcon}
+                />
+              </CanvasItemGroup>
+            );
+          })}
+      </ControlClipProvider>
       {band.lineNumbersDrawn &&
-        lineLayouts.map(({ startRow }, lineIndex) => {
+        lineStartRows.map((startRow, lineIndex) => {
           const text = codeEditLineNumberText(
             lineIndex,
             band.lineNumberDigits,
@@ -256,7 +275,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
             startRow,
             rowHeightPx,
             styleBox.contentMargin.top,
-            theme.separation
+            lineSpacingPx
           );
           const textTopPx = codeEditGutterCellTextTopPx(rowTopPx, rowHeightPx, layout.heightPx);
           return (

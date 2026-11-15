@@ -1,5 +1,5 @@
 /**
- * The allocation guard `resolveProceduralSubResource` puts around every procedural texture's
+ * The allocation guard `rasterizedTexture` puts around every procedural texture's
  * rasteriser. A size Godot accepts can still exceed the memory a tab has, and a typed array that
  * large throws `RangeError` instead of returning.
  */

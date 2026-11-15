@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+; Moves one variable: a y-sorted Control with modulate and z_index is a lifted link between a y-sorted
+; Node2D and the Polygon2D below it. Godot draws the polygon at the Control's offsets, tinted, over the
+; z 1 green polygon: pixel (360, 260) is (51, 102, 230).
+
+[node name="Root" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Link" type="Control" parent="."]
+y_sort_enabled = true
+modulate = Color(0.2, 0.4, 0.9, 1)
+z_index = 3
+offset_left = 300.0
+offset_top = 200.0
+offset_right = 340.0
+offset_bottom = 240.0
+
+[node name="Rect" type="Polygon2D" parent="Link"]
+position = Vector2(20, 20)
+color = Color(1, 1, 1, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Over" type="Polygon2D" parent="."]
+position = Vector2(350, 400)
+z_index = 1
+color = Color(0.1, 0.8, 0.1, 1)
+polygon = PackedVector2Array(0, -150, 100, -150, 100, 0, 0, 0)

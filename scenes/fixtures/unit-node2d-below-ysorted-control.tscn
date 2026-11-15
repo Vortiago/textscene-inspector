@@ -1,0 +1,34 @@
+[gd_scene format=3]
+
+; Moves one variable: a y-sorted Control, below a y-sorted Node2D, holds a Node2D. The sort lifts the Node2D
+; out of both, so each square stands at the solved Control transform plus its own pose. The
+; unit-node2d-below-control golden has no y-sort, so it shows no regression here.
+
+[node name="Root" type="Node2D"]
+
+[node name="Floor" type="Node2D" parent="."]
+y_sort_enabled = true
+position = Vector2(10, 5)
+
+[node name="Panel" type="Control" parent="Floor"]
+y_sort_enabled = true
+offset_left = 60.0
+offset_top = 30.0
+rotation = 0.2
+
+[node name="A" type="Polygon2D" parent="Floor/Panel"]
+position = Vector2(40, 60)
+rotation = 0.5
+color = Color(0.3, 0.8, 0.4, 1)
+polygon = PackedVector2Array(-15, -15, 15, -15, 15, 15, -15, 15)
+
+[node name="B" type="Polygon2D" parent="Floor/Panel"]
+position = Vector2(50, 20)
+rotation = 0.3
+color = Color(0.9, 0.3, 0.3, 1)
+polygon = PackedVector2Array(-15, -15, 15, -15, 15, 15, -15, 15)
+
+[node name="Tile" type="Polygon2D" parent="Floor"]
+position = Vector2(120, 60)
+color = Color(0.2, 0.4, 0.9, 1)
+polygon = PackedVector2Array(-15, -15, 15, -15, 15, 15, -15, 15)

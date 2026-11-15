@@ -262,7 +262,7 @@ export function defining(define: string): ProgramInjection {
 
 /**
  * One injection that applies each present part in order, or none when no part is present. One
- * part passes straight through, so `useCanvasItemLighting`'s memo still reaches the material.
+ * part passes straight through, so `useSurfaceLighting`'s memo still reaches the material.
  */
 export function composeInjections(
   parts: readonly (ProgramInjection | undefined)[]
@@ -276,7 +276,7 @@ export function composeInjections(
 
 /**
  * Each pair composed so far, keyed by its parts' identity rather than their cache keys, since
- * `useCanvasItemLighting` gives each instance its own patch under one key. Stable parts then
+ * `useSurfaceLighting` gives each instance its own patch under one key. Stable parts then
  * compose to a stable injection on every render. Collected with the first part.
  */
 const pairsWith = perObject((first: ProgramInjection) =>
@@ -297,7 +297,7 @@ function pairOf(first: ProgramInjection, second: ProgramInjection): ProgramInjec
 /**
  * One thunk per composed contribution, a handful of module literals. A fresh
  * closure per render recompiles nothing, since `applyProps` never bumps
- * `needsUpdate`, but it would overwrite the stable function `useCanvasItemLighting`
+ * `needsUpdate`, but it would overwrite the stable function `useSurfaceLighting`
  * memoises.
  */
 const CACHE_KEY_THUNKS = new Map<string, (this: THREE.Material) => string>();

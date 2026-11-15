@@ -6,11 +6,11 @@
  */
 
 import { resolve } from 'node:path';
-import { buildNodeBundles, packageLayout, writeBesideBundle } from '../../../scripts/packageBuild.mjs';
+import { buildBundles, packageLayout, writeBesideBundle } from '../../../scripts/packageBuild.mjs';
 
 const layout = packageLayout(import.meta.url);
 
-const metafile = await buildNodeBundles(layout, {
+const metafile = await buildBundles(layout, {
   entries: [
     { in: resolve(layout.ownSourceDir, 'index.ts'), out: 'index' },
     { in: resolve(layout.ownSourceDir, 'server.ts'), out: 'server' },

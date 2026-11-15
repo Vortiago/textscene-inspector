@@ -7,8 +7,8 @@
 
 import type { Vector2 } from '../../../godot/math/vector';
 
-/** Stable empty result so an unmirrored layer never re-renders on identity. */
-const EMPTY_MIRROR: readonly Vector2[] = [];
+/** The one empty result for a node that does not repeat, so an identity check holds across renders. */
+const NO_REPEATS: readonly Vector2[] = [];
 
 /** The canvas transform a viewport renders its 2D world through. */
 export interface ParallaxViewFraming {
@@ -171,21 +171,38 @@ export function parallaxLayerDelta(
 }
 
 /**
- * Where `motion_mirroring` repeats a layer, in its own local space.
- * `canvas_set_item_mirroring` sets `repeat_times = 1`, so a mirrored axis draws
- * twice, at 0 and `+repeat_size`, not tiled (ParallaxLayer.xml agrees). The
- * unmirrored copy comes last: `registerNodeObject` keeps a path's last writer.
+ * Where a repeat source draws its copies, in its own local space
+ * (`renderer_canvas_render_rd.cpp:2233-2250`): `(-(times / 2) + i) * size` for `i` in
+ * `0..times` per axis with a non-zero size, as a grid. The unrepeated copy comes last:
+ * `registerNodeObject` keeps a path's last writer, so picking selects the node itself.
+ *
+ * @canonical The offsets of a repeat source's copies (Parallax2D, ParallaxLayer mirroring)
+ */
+export function parallaxRepeatOffsets(size: Vector2, times: number): readonly Vector2[] {
+  if (!size.x && !size.y) return NO_REPEATS;
+
+  // `0 -`, not a unary minus: `-Math.trunc(0.5)` is -0, and it would give a -0 offset.
+  const firstCopy = 0 - Math.trunc(times / 2);
+  const firstX = size.x ? firstCopy : 0;
+  const firstY = size.y ? firstCopy : 0;
+  const lastX = size.x ? firstCopy + times : 0;
+  const lastY = size.y ? firstCopy + times : 0;
+  const repeats: Vector2[] = [];
+  for (let ry = firstY; ry <= lastY; ry++) {
+    for (let rx = firstX; rx <= lastX; rx++) {
+      if (rx !== 0 || ry !== 0) repeats.push({ x: rx * size.x, y: ry * size.y });
+    }
+  }
+  repeats.push({ x: 0, y: 0 });
+  return repeats;
+}
+
+/**
+ * Where `motion_mirroring` repeats a layer. `canvas_set_item_mirroring` sets `repeat_times = 1`
+ * (`renderer_canvas_cull.cpp:533-537`), so a mirrored axis draws twice, not tiled
+ * (ParallaxLayer.xml agrees).
  */
 export function parallaxMirrorOffsets(mirroring: Vector2, originScale: Vector2): readonly Vector2[] {
   // `_update_mirroring` hands the server `mirroring * orig_scale`.
-  const dx = mirroring.x * originScale.x;
-  const dy = mirroring.y * originScale.y;
-  if (!dx && !dy) return EMPTY_MIRROR;
-
-  const repeats: Vector2[] = [];
-  if (dx) repeats.push({ x: dx, y: 0 });
-  if (dy) repeats.push({ x: 0, y: dy });
-  if (dx && dy) repeats.push({ x: dx, y: dy });
-  repeats.push({ x: 0, y: 0 });
-  return repeats;
+  return parallaxRepeatOffsets({ x: mirroring.x * originScale.x, y: mirroring.y * originScale.y }, 1);
 }

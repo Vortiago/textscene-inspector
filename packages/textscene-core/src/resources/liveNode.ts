@@ -4,6 +4,9 @@
  * linter reads never carries it.
  */
 import type { SceneScope, TscnNode } from '../parser/types.js';
+import type { SceneTilePlacement } from './tileset/sceneTilePlacement.js';
+import type { Vector2 } from '../godot/math/vector.js';
+import type { Transform2DColumns } from '../godot/math/transform2d.js';
 import type { HandOffDecision } from '../parser/nodeOwner.js';
 import type { UniqueNameTable } from './instanceNameTable.js';
 import { resolveInstancePath } from './SubResourceResolver.js';
@@ -64,6 +67,21 @@ export interface LiveNode extends TscnNode {
    * matched, so the tree finds its row by that key and matches nothing again.
    */
   readonly glbTargetRelPath?: string;
+  /**
+   * Set on a node a tile layer instantiates for a scene tile: the edited scene owns neither it nor
+   * what it holds, so a click on it selects no node of its own.
+   */
+  readonly isUnowned?: boolean;
+  /** Set on the instance a tile layer adds for a scene tile: where its merged root is placed. */
+  readonly sceneTile?: SceneTilePlacement;
+  /**
+   * Set on an unowned node that registers no group, where it sits in its parent: the root of a
+   * scene tile with a Node2D root, or a TileMap's layer at the identity. A y-sort sorts the node on
+   * it (`renderer_canvas_cull.cpp:131`).
+   */
+  readonly placedPose?: Transform2DColumns;
+  /** Set on a scene tile's merged Control root: the `map_to_local` its layer moves it by (`tile_map_layer.cpp:1636`). */
+  readonly controlPositionShift?: Vector2;
 }
 
 /** The host child `node` stands for: itself, or the child it is the re-anchored copy of. */

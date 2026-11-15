@@ -6,7 +6,7 @@
  */
 
 import type { SurfaceAabb, UvScale } from './surfaceFields.js';
-import type { SurfaceLayout } from './surfaceFormat.js';
+import { COLOR_BYTES, type SurfaceLayout } from './surfaceFormat.js';
 
 /**
  * A surface's positions, or undefined for `vertex_data` too short for its count,
@@ -22,13 +22,14 @@ export function decodePositions(
 ): Float32Array | undefined {
   if (vertexCount === 0) return new Float32Array(0);
   if (bytes.byteLength < vertexCount * layout.positionStride) return undefined;
-  if (layout.compressed && !aabb) return undefined;
+  const isQuantised = layout.compressed && !layout.isPosition2D;
+  if (isQuantised && !aabb) return undefined;
 
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const positions = new Float32Array(vertexCount * 3);
   const stride = layout.positionStride;
 
-  if (layout.compressed) {
+  if (isQuantised) {
     const [ox, oy, oz] = aabb!.position;
     const [sx, sy, sz] = aabb!.size;
     for (let i = 0; i < vertexCount; i++) {
@@ -45,16 +46,39 @@ export function decodePositions(
 
   // float32s straight out of the file can be anything, including a NaN bit
   // pattern, so they are checked as they are read rather than in a second pass.
+  // A 2D position has no z, so the zeroed array already holds it.
+  const axes = layout.isPosition2D ? 2 : 3;
   for (let i = 0; i < vertexCount; i++) {
     const b = i * stride;
     const o = i * 3;
-    for (let axis = 0; axis < 3; axis++) {
+    for (let axis = 0; axis < axes; axis++) {
       const value = view.getFloat32(b + axis * 4, true);
       if (!Number.isFinite(value)) return undefined;
       positions[o + axis] = value;
     }
   }
   return positions;
+}
+
+/**
+ * The RGBA8 vertex colours, which lead each attribute record, or undefined when the surface has
+ * none or the record is narrower than the format implies. They stay the stored bytes, the values
+ * both draws multiply by.
+ */
+export function decodeColors(
+  bytes: Uint8Array,
+  vertexCount: number,
+  layout: SurfaceLayout
+): Uint8Array | undefined {
+  if (!layout.hasColor || vertexCount === 0 || bytes.byteLength === 0) return undefined;
+  const attributeStride = bytes.byteLength / vertexCount;
+  if (!Number.isInteger(attributeStride) || attributeStride < layout.attributeStride) return undefined;
+  const colors = new Uint8Array(vertexCount * COLOR_BYTES);
+  for (let i = 0; i < vertexCount; i++) {
+    const record = i * attributeStride;
+    colors.set(bytes.subarray(record, record + COLOR_BYTES), i * COLOR_BYTES);
+  }
+  return colors;
 }
 
 /** The UV sets of one surface, each undefined when the surface has none. */

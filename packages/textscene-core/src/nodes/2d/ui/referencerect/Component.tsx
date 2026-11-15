@@ -8,8 +8,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useShowGizmos } from '../../../../r3f/contexts/ViewportModeContext';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { colorOr } from '../../../../utils/colorParser';
 import { referenceRectBorderQuads } from './borderGeometry';
 import type { ReferenceRectProperties } from './types';
@@ -24,7 +23,7 @@ export function ReferenceRect({ solveNode, tint, rect, renderOrder }: NativeCont
   // One colour, so the tint multiplies in sRGB before the one linear conversion.
   const fill = useMemo(() => colorOr(props.borderColor, DEFAULT_BORDER_COLOR), [props.borderColor]);
   const filled = useMemo(() => multiplyModulate(tint.own, fill), [tint.own, fill]);
-  const color = useGodotLinearColor(filled);
+  const color = useItemLinearColor(filled);
   const width = props.borderWidth ?? 1;
   const quads = useMemo(() => referenceRectBorderQuads(rect.w, rect.h, width), [rect.w, rect.h, width]);
 

@@ -6,6 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Rect2 } from '../../../godot/math/rect2';
 import {
+  controlDrawTransformOf,
+  controlItemOrigin,
   snapControlsToPixelsEnabled,
   snappedControlOrigin,
   type ControlDrawTransform,
@@ -158,5 +160,34 @@ describe('snappedControlOrigin', () => {
     const rect: Rect2 = { x: 1.5, y: 2.5, w: 80, h: 40 };
 
     expect(snappedControlOrigin(rect, IDENTITY, true)).toEqual({ x: 2, y: 3 });
+  });
+});
+
+describe('controlDrawTransformOf', () => {
+  const control = {
+    rotation: 1,
+    scale: { x: 2, y: 3 },
+    pivotOffset: { x: 4, y: 0 },
+    pivotOffsetRatio: { x: 0.5, y: 0 },
+  };
+
+  it('reads the authored rotation and scale, and the pivot of the rect size', () => {
+    expect(controlDrawTransformOf(control, { w: 10, h: 10 })).toEqual({
+      rotation: 1,
+      scale: { x: 2, y: 3 },
+      pivot: { x: 9, y: 0 },
+    });
+  });
+
+  it('draws a container child at rotation 0 and scale 1', () => {
+    const { rotation, scale } = controlDrawTransformOf(control, { w: 10, h: 10 }, { resets: true });
+
+    expect({ rotation, scale }).toEqual({ rotation: 0, scale: { x: 1, y: 1 } });
+  });
+});
+
+describe('controlItemOrigin', () => {
+  it('snaps the origin of a Control with no own transform to whole pixels', () => {
+    expect(controlItemOrigin({ x: 7.7, y: 7.2 }, IDENTITY, true)).toEqual({ x: 8, y: 7 });
   });
 });

@@ -5,7 +5,7 @@
  */
 import { createHash } from 'node:crypto';
 import type { MipLevel } from '../../processing/mipChain';
-import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
+import { fastNoiseLiteOf } from '../../noise/fastnoiselite/fastNoiseLite.testkit';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
 import { gradientOf } from '../gradienttexture2d/gradient.testkit';
 import type { Gradient } from '../gradienttexture2d/types';
@@ -24,7 +24,7 @@ const RAMP: Gradient = gradientOf({
   colors: 'PackedColorArray(0.1, 0.2, 0.8, 1, 0.9, 0.5, 0.1, 0.5, 1, 1, 1, 1)',
 });
 
-const NOISE = decodeFastNoiseLite({ seed: '7', frequency: '0.08', fractal_type: '2' });
+const NOISE = fastNoiseLiteOf({ seed: '7', frequency: '0.08', fractal_type: '2' });
 
 /** 33x17 unless `props` sizes it: odd and non-square, so a transposed or mis-flipped row shows. */
 function noiseCase(name: string, props: Record<string, string>, colorRamp: Gradient | null = null) {

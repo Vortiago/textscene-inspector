@@ -1,0 +1,44 @@
+[gd_scene format=3]
+
+; Moves one variable: the child nodes of a y-sorted TileMapLayer. Each child sorts among the layer's
+; tile rows by its y plus its y_sort_origin, so the cyan and yellow children draw over row 0 and
+; under row 1. No other scene gives a y-sorted layer a child, so none shows the order. The left
+; layer is the root of a sort. The right layer is lifted into a y-sorted Node2D's flat sort.
+
+[ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_atlas"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_quadrants"]
+texture = ExtResource("1_atlas")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_quadrants"]
+tile_size = Vector2i(64, 64)
+sources/0 = SubResource("TileSetAtlasSource_quadrants")
+
+[node name="World" type="Node2D"]
+
+[node name="Root" type="TileMapLayer" parent="."]
+position = Vector2(400, 100)
+y_sort_enabled = true
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+tile_set = SubResource("TileSet_quadrants")
+
+[node name="RootChild" type="Polygon2D" parent="Root"]
+position = Vector2(96, 76)
+color = Color(0, 1, 1, 1)
+polygon = PackedVector2Array(-80, -70, -20, -70, -20, 30, -80, 30)
+
+[node name="Lifted" type="Node2D" parent="."]
+position = Vector2(700, 100)
+y_sort_enabled = true
+
+[node name="Layer" type="TileMapLayer" parent="Lifted"]
+y_sort_enabled = true
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+tile_set = SubResource("TileSet_quadrants")
+
+[node name="LiftedChild" type="Polygon2D" parent="Lifted/Layer"]
+position = Vector2(96, 76)
+color = Color(1, 1, 0, 1)
+polygon = PackedVector2Array(-80, -70, -20, -70, -20, 30, -80, 30)

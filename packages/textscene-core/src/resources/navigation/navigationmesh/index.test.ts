@@ -29,7 +29,7 @@ describe('navigationmesh slice registration', () => {
     expect(resourceSliceRegistry.byTypeName('NavigationLink3D')).toBeNull();
   });
 
-  it('re-exports the decode surface', () => {
-    expect(typeof navigationMeshSlice.decodeNavigationMesh).toBe('function');
+  it('re-exports the kind a NavigationRegion3D reads its mesh with', () => {
+    expect(navigationMeshSlice.NAVIGATION_MESH.name).toBe('NavigationMesh');
   });
 });

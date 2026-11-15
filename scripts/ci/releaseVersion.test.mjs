@@ -54,6 +54,16 @@ describe('checkReleaseTag', () => {
     });
   });
 
+  it('releases the shader package alone on a shaders tag', () => {
+    expect(checkReleaseTag('shaders-v0.1.0', ['renderer-v0.1.0'])).toEqual({
+      package: 'shaders',
+      kind: 'npm',
+      directory: 'apps/textscene-three-godot-shaders',
+      version: '0.1.0',
+      previousTag: '',
+    });
+  });
+
   it('compares against the highest earlier tag of the same package, ignoring the other', () => {
     const tags = ['vscode-v1.2.0', 'vscode-v1.10.0', 'linter-v1.10.5', 'vscode-v1.9.1'];
 
@@ -79,7 +89,7 @@ describe('checkReleaseTag', () => {
   it('refuses a pre-release tag, which the VS Marketplace cannot take', () => {
     expect(checkReleaseTag('vscode-v1.3.0-rc.1', [])).toEqual({
       error:
-        'expected a tag like vscode-v1.2.3, linter-v1.2.3, lsp-v1.2.3, tscn-v1.2.3 or renderer-v1.2.3, got "vscode-v1.3.0-rc.1"',
+        'expected a tag like vscode-v1.2.3, linter-v1.2.3, lsp-v1.2.3, tscn-v1.2.3, renderer-v1.2.3 or shaders-v1.2.3, got "vscode-v1.3.0-rc.1"',
     });
   });
 
@@ -89,7 +99,7 @@ describe('checkReleaseTag', () => {
 
   it('refuses a prefix that is not a released package', () => {
     expect(checkReleaseTag('web-v1.3.0', [])).toEqual({
-      error: 'expected a tag prefix out of vscode, linter, lsp, tscn, renderer, got "web"',
+      error: 'expected a tag prefix out of vscode, linter, lsp, tscn, renderer, shaders, got "web"',
     });
   });
 });
@@ -97,7 +107,7 @@ describe('checkReleaseTag', () => {
 describe('a tag prefix that Object.prototype holds', () => {
   it('is not a package', () => {
     expect(checkReleaseTag('constructor-v1.0.0', [])).toEqual({
-      error: 'expected a tag prefix out of vscode, linter, lsp, tscn, renderer, got "constructor"',
+      error: 'expected a tag prefix out of vscode, linter, lsp, tscn, renderer, shaders, got "constructor"',
     });
   });
 

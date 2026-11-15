@@ -17,7 +17,7 @@ import { nativeTheme } from './nativeTheme';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { SolveNode } from './solveTree';
-import { solveNode } from './testing/solveNode';
+import { solveNode, withThemeItems } from './testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -27,12 +27,12 @@ const PROBE_GROUP_NAME = 'Control:__probe__';
 const parseWithProbeChild = (type: string): TscnNode => parseWithChild(type, 'Control', '__probe__');
 
 function toSolveNode(node: TscnNode, path: string): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path,
     node,
     children: node.children.map((child) => toSolveNode(child, joinPath(path, child.name))),
-  };
+  });
 }
 
 /** Every registered Control type, read once the side-effect import has registered them. */

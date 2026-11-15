@@ -17,8 +17,21 @@ packed separator. A right-to-left list mirrors each row's icon inside the list's
 Its label's pen is re-derived and lands at a different distance from the icon than the
 left-to-right pen.
 
-No row is drawn selected, hovered or under a cursor highlight. `selected`, the current
-index and a live hover or focus state are never part of a `.tscn`.
+Each label wraps and trims at the width its row has when drawn, as `ItemList` sets it again in its
+draw pass. A TOP-mode label breaks at the last glyph that fits and shows `max_text_lines` lines. When
+lines hide, the last visible line ends in an ellipsis, unless `text_overrun_behavior` is
+`OVERRUN_NO_TRIMMING`. The list clips its rows to its rect, unless the scene sets `clip_contents = false`.
+
+The vertical scrollbar shows when the rows are taller than the list. The horizontal scrollbar shows when
+`wraparound_items` is off and the rows are wider. Each grabber sits at the start, since a `.tscn` stores no
+scroll value. A visible vertical scrollbar narrows the guide lines and the label widths. With
+`scroll_hint_mode` BOTH or BOTTOM, a fade covers the bottom edge while rows continue below. The top fade
+never shows, since it needs a scroll value above 1. `auto_width` and `auto_height` add the scrollbar size
+to the minimum size. The list draws only the rows that reach into its rect, also under `clip_contents = false`.
+
+No row is drawn hovered. A row draws selected, and in a multi-select list under a cursor box, only when its owner marks it, as the FileDialog list does. A `.tscn` never carries `selected`, the current
+index or a live hover or focus state.
+`self_modulate` tints the panel, the items, the guides and the cursor. Both scroll bars draw without it (`item_list.cpp:2472,2476`).
 
 ## Linting
 
@@ -81,22 +94,12 @@ left, as Godot's set-direction draw does (`text_server.cpp:1740-1935`).
 
 ## Known limitations
 
-- **Not drawn** The scroll-hint icon (`scroll_hint_mode`), which needs a live scroll
-  position that no static file has.
-- **Not drawn** The `focus` StyleBox and every selected, hovered or cursor row
-  background, since hover, focus, `selected` and the current index are not `.tscn`
-  properties.
+- **Not drawn** The `focus` StyleBox and every hovered row background, since hover and
+  focus are not `.tscn` properties.
+- **Needs runtime** A selected or cursor row draws only for an owner that marks it.
 - **Not drawn** `custom_bg_color`/`custom_fg_color`/`icon_modulate`/`icon_region`/
   `icon_transposed` are real `Item` members that a `.tscn` cannot author, since none is a
   `PropertyListHelper`-registered leaf.
-- **Approximated** A TOP-icon-mode, multi-line label wraps at word boundaries only, so a
-  long word overflows its column where Godot breaks it mid-word.
-- **Approximated** A row's text is shaped once, at its `auto_width`/`auto_height` width,
-  so a column of another width keeps lines that Godot re-wraps.
-- **Approximated** `max_text_lines` reserves a row's text height but does not cap its
-  lines, where Godot collapses the tail into an ellipsis on the last visible line.
-- **Not drawn** Both scrollbars, along with the row-guide shift and narrower packing that
-  a right-to-left vertical scrollbar causes (`item_list.cpp:1454-1458`, `:1862-1864`).
 - **Needs runtime** The right-to-left arms of `get_item_at_position`
   (`item_list.cpp:1975,1986`) and `is_pos_at_end_of_items` (`:2021-2023`) answer mouse
   hits under a live cursor, which a static preview does not have.

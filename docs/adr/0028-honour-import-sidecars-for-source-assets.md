@@ -59,11 +59,11 @@ newly vendored demo needs a decision.
 - **A project without sidecars renders at Godot's import defaults**, which is what a
   fresh Godot import of that project also produces. This is the honest answer, not a
   fallback.
-- **The UI does not show sidecar state, on purpose.** No corpus scene is missing a
+- **The UI does not show sidecar state (#1821).** No corpus scene is missing a
   sidecar, and real Godot projects ship theirs, so an indicator would not fire where
   anyone sees it. The one case it catches is a bare `.gltf` dragged in without its
   sidecar, which renders at import defaults. That error is large if the asset relies on
-  a root scale to compensate for an internal one. Revisit only if a user reports it. The
+  a root scale to compensate for an internal one. The
   cheap version is a console warning gated on "no sidecar and an internal node scale far
   from 1". The discoverable version is an inspector row, which needs a special case in
   shared inspector code, because `GLBSceneRoot` is synthetic and has no `nodeRegistry`

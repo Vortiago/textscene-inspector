@@ -2,19 +2,24 @@ import { describe, it, expect } from 'vitest';
 import {
   CONTROL_FONT_COLOR,
   CONTROL_FONT_DISABLED_COLOR,
+  CONTROL_FONT_FOCUS_COLOR,
   CONTROL_FONT_HOVER_COLOR,
   CONTROL_FONT_LOW_COLOR,
   CONTROL_FONT_LOWER_COLOR,
   CONTROL_FONT_PLACEHOLDER_COLOR,
   CONTROL_FONT_PRESSED_COLOR,
   DEFAULT_CONTENT_MARGIN,
-  DEFAULT_FONT_SIZE,
   STYLE_FILL,
   scaledGodotTheme,
 } from './theme.js';
 
 /** `fill_default_theme` (`scene/theme/default_theme.cpp:101-108`). */
 describe('default theme font colours', () => {
+  it('draws a focused Button in the hover colour, as its own object', () => {
+    expect(CONTROL_FONT_FOCUS_COLOR).toEqual({ r: 0.95, g: 0.95, b: 0.95, a: 1 });
+    expect(CONTROL_FONT_FOCUS_COLOR).not.toBe(CONTROL_FONT_HOVER_COLOR);
+  });
+
   it('draws Control text in a light grey', () => {
     expect(CONTROL_FONT_COLOR).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
   });
@@ -46,7 +51,7 @@ describe('default theme font colours', () => {
 
 describe('default theme metrics', () => {
   it('pins default_font_size = 16 (default_theme.cpp:50)', () => {
-    expect(DEFAULT_FONT_SIZE).toBe(16);
+    expect(scaledGodotTheme(1).fontSize).toBe(16);
   });
 
   it('pins default_margin = 4 (default_theme.cpp:54)', () => {
@@ -59,8 +64,12 @@ describe('default theme metrics', () => {
       hover: { r: 0.225, g: 0.225, b: 0.225, a: 0.6 },
       pressed: { r: 0, g: 0, b: 0, a: 0.6 },
       disabled: { r: 0.1, g: 0.1, b: 0.1, a: 0.3 },
+      focus: { r: 1, g: 1, b: 1, a: 0.75 },
       popup: { r: 0.25, g: 0.25, b: 0.25, a: 1 },
+      popupHover: { r: 0.4, g: 0.4, b: 0.4, a: 1 },
       progress: { r: 1, g: 1, b: 1, a: 0.4 },
+      hoverSelected: { r: 1, g: 1, b: 1, a: 0.4 },
+      selected: { r: 1, g: 1, b: 1, a: 0.3 },
     });
   });
 });
@@ -75,17 +84,9 @@ describe('scaledGodotTheme', () => {
     expect(scaledGodotTheme(1)).toEqual({
       scale: 1,
       fontSize: 16, // default_font_size, default_theme.cpp:50
-      cornerRadius: 3, // default_corner_radius, default_theme.cpp:55
-      contentMargin: 4, // default_margin, default_theme.cpp:54
-      optionButtonMarginX: 8, // 2 * default_margin, default_theme.cpp:215
-      optionButtonMarginY: 4, // default_margin, default_theme.cpp:215
       separation: 4, // Math::round(4 * scale), default_theme.cpp:1249
-      sliderTrackThickness: 8, // two margins of make_flat_stylebox(…, 4, 4, 4, 4, 4), default_theme.cpp:579
-      sliderCornerRadius: 4, // the corner radius of that call, default_theme.cpp:579
       sliderGrabberSize: 16, // the slider_grabber icon's 16x16 box
-      sliderGrabberRadius: 7, // its circle's r="7"
       sliderTickBox: 4, // the 4x8 canvas of hslider_tick.svg
-      sliderTickThickness: 2, // the 2px bar `pnpm ref:godot` measures
     });
   });
 
@@ -94,54 +95,33 @@ describe('scaledGodotTheme', () => {
     expect(scaledGodotTheme(2)).toEqual({
       scale: 2,
       fontSize: 32,
-      cornerRadius: 6,
-      contentMargin: 8,
-      optionButtonMarginX: 16,
-      optionButtonMarginY: 8,
       separation: 8,
-      // The sliders grow with everything else: the styleboxes through
-      // `make_flat_stylebox`, the grabber and tick because `generate_icon`
-      // rasterises each SVG at the scale.
-      sliderTrackThickness: 16,
-      sliderCornerRadius: 8,
+      // The grabber and tick grow because `generate_icon` rasterises each SVG at the scale.
       sliderGrabberSize: 32,
-      sliderGrabberRadius: 14,
       sliderTickBox: 8,
-      sliderTickThickness: 4,
     });
   });
 
   it('rounds each metric independently, never the scale', () => {
-    // A pre-rounded scale (1 or 2) could produce neither 24 nor 5.
+    // A pre-rounded scale (1 or 2) could produce neither 24 nor 6.
     const theme = scaledGodotTheme(1.5);
     expect(theme.fontSize).toBe(24);
-    expect(theme.cornerRadius).toBe(5);
-    expect(theme.contentMargin).toBe(6);
     expect(theme.separation).toBe(6);
   });
 
   it('rounds a half up, as Godot’s Math::round does for a positive scale', () => {
-    // round(3 · 1.25) = round(3.75) = 4; round(4 · 1.25) = 5.
-    expect(scaledGodotTheme(1.25).cornerRadius).toBe(4);
-    expect(scaledGodotTheme(1.25).contentMargin).toBe(5);
+    // round(4 · 1.125) = round(4.5) = 5.
+    expect(scaledGodotTheme(1.125).separation).toBe(5);
   });
 
   it('shrinks at a scale below 1', () => {
-    // Godot's minimum is 0.5: round(16·0.5) = 8, round(3·0.5) = 2 (half up).
+    // Godot's minimum is 0.5: round(16·0.5) = 8, round(4·0.5) = 2.
     expect(scaledGodotTheme(0.5)).toEqual({
       scale: 0.5,
       fontSize: 8,
-      cornerRadius: 2,
-      contentMargin: 2,
-      optionButtonMarginX: 4,
-      optionButtonMarginY: 2,
       separation: 2,
-      sliderTrackThickness: 4,
-      sliderCornerRadius: 2,
       sliderGrabberSize: 8,
-      sliderGrabberRadius: 4,
       sliderTickBox: 2,
-      sliderTickThickness: 1,
     });
   });
 });

@@ -16,7 +16,7 @@ import type { Rect2 } from '../godot/math/rect2';
 import { NodePathProvider } from '../r3f/contexts/NodePathContext';
 import { ViewportTextureProvider } from '../r3f/contexts/ViewportTextureContext';
 import { ViewportTexturePublisher, viewportEntry } from '../r3f/testing/ViewportTexturePublisher';
-import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
+import { createCanvasTarget } from '../r3f/offscreen/targets';
 import { TextureRect } from '../nodes/2d/ui/texturerect/Component';
 import { parseTextureRect } from '../nodes/2d/ui/texturerect/parser';
 import { Sprite2D } from '../nodes/2d/sprite2d/Component';
@@ -32,6 +32,7 @@ import { controlNode } from '../r3f/controls/native/testing/solveNode';
 import '../nodes/3d/sprite3d/index.r3f';
 import { registeredComponent } from '../r3f/testing/registeredComponent';
 import { copiesFilledFrom } from '../r3f/liveTargets.testkit';
+import { canvasColorSpaceOf } from '../r3f/canvasColorSpace';
 
 const Sprite3D = registeredComponent('Sprite3D');
 
@@ -42,8 +43,8 @@ const RESOURCES: TscnInternalResource[] = [
 const VIEWPORT_REF = 'SubResource("ViewportTexture_1")';
 const RECT: Rect2 = { x: 0, y: 0, w: 320, h: 160 };
 
-const target = createCanvasTarget(32, 32, 'SubViewport');
-const decodingTarget = createCanvasTarget(32, 32, 'SubViewport decoding view');
+const target = createCanvasTarget(32, 32, 'SubViewport', canvasColorSpaceOf(false));
+const decodingTarget = createCanvasTarget(32, 32, 'SubViewport decoding view', canvasColorSpaceOf(false));
 /** Every renderer a test mounts, unmounted after it, so no test sees another's copies. */
 let mounted: { unmount: () => Promise<void> }[] = [];
 afterEach(async () => {

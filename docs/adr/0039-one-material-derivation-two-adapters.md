@@ -14,7 +14,7 @@ A decoded `StandardMaterial3D` must become two different things, because two con
 need two shapes of the same material:
 
 - the **resource pipeline** wants a plain `THREE.Material` object it can cache, pass to
-  `<primitive>` and dispose: `buildStandardMaterial`
+  `<primitive>` and dispose: `materialFromBag`
   (`resources/materials/standardmaterial3d/build.ts`);
 - **R3F** wants a JSX element, because prop-diffing a mounted material across re-renders
   is the only thing that makes a re-parse visible: `<StandardMaterialSlot>`
@@ -217,11 +217,11 @@ reason. Its fourth union member, `invalid_key`, is the same constructor sentinel
 - **`particles_animation`** emits vertex code in Godot: `VERTEX.xy /=
   vec2(h_frames, v_frames)` plus the frame pick and the UV window
   (`canvas_item_material.cpp:118-137`). Here it is answered **on the CPU, in the
-  geometry**: `nodes/2d/cpuparticles2d/particleGeometry.ts` builds each particle's quad
-  at `cellWidth`/`cellHeight` and offsets its UVs by `uOffset`/`vOffset`, with
-  `flipbookFrame` transcribing the shader's `floor` / `clamp` / `mod` chain. So it is not
-  a material term here, and cannot be a key term of a material that never learns about
-  it.
+  geometry**: `r3f/particlesFlipbook.ts` transcribes the shader's `floor` / `clamp` /
+  `mod` chain as `flipbookCell`. `r3f/meshes/canvasMeshInstances.ts` builds each
+  CPUParticles2D quad and each mesh instance at the cell's size and offsets its UVs.
+  So it is not a material term here, and cannot be a key term of a material that never
+  learns about it.
 
 ## Cast shadows are instance state, not material state
 

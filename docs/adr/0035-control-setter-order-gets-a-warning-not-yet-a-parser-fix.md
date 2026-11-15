@@ -245,9 +245,8 @@ replays `min_value`/`max_value`/`page`/`value` against
 of the replay, and `min`/`max`/`page` interact with each other, not only with `value`.
 `set_step` is inert as a trigger (it has no `set_value` call of its own,
 `range.cpp:243-252`), so the replay excludes it. The `p_step > 0` snap term inside
-`_calc_value` (`range.cpp:184-186`) is a separate rendering-fidelity gap that
-`rangeRatio` does not model. It stays out of scope, so that an order fix is not mixed
-with a new feature.
+`_calc_value` (`range.cpp:184-186`) is not part of the order fix. `calcValue` in
+`nodes/2d/ui/shared/range.ts` applies it.
 
 Both resolvers take the raw ordered keys as an explicit, optional parameter
 (`ControlLayoutOrder`/`RangeValueOrder`, both `readonly string[] | undefined`). When that

@@ -1,38 +1,46 @@
 /**
- * The Shape2D kind: the outline a collision gizmo draws for any Shape2D, from any origin.
+ * The Shape2D kind: the drawing a collision gizmo makes for any Shape2D, from any origin.
  * `set_shape` takes a `Ref<Shape2D>`, so a resource of another class draws nothing.
  */
 
-import { warn } from '../../../logger';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
-import type { Vector2 } from '../../../godot/math/vector';
 import type { ResourceKind } from '../../reading';
 import { decodeCapsuleShape2D } from '../capsuleshape2d/decode';
 import { decodeCircleShape2D } from '../circleshape2d/decode';
+import { decodeConcavePolygonShape2D } from '../concavepolygonshape2d/decode';
+import { decodeConvexPolygonShape2D } from '../convexpolygonshape2d/decode';
 import { decodeRectangleShape2D } from '../rectangleshape2d/decode';
-import { capsulePoints, circlePoints, rectanglePoints } from './outlines';
+import { decodeSegmentShape2D } from '../segmentshape2d/decode';
+import { decodeSeparationRayShape2D } from '../separationrayshape2d/decode';
+import { decodeWorldBoundaryShape2D } from '../worldboundaryshape2d/decode';
+import type { ShapeDrawing } from './drawing';
+import {
+  capsuleDrawing,
+  circleDrawing,
+  concavePolygonDrawing,
+  convexPolygonDrawing,
+  rectangleDrawing,
+  segmentDrawing,
+  separationRayDrawing,
+  worldBoundaryDrawing,
+} from './drawings';
 
-/** The size of the rectangle drawn for a Shape2D class that has no outline yet. */
-const PLACEHOLDER_SIZE = { x: 20, y: 20 };
+type Properties = Readonly<Record<string, string>>;
 
-export const SHAPE_2D: ResourceKind<Vector2[]> = {
-  name: 'Shape2D',
-  accepts: (type) => descendsFromClass(type, 'Shape2D'),
-  decode: (held) => outlineOf(held.type, held.properties),
+const DRAWINGS: Readonly<Record<string, (properties: Properties) => ShapeDrawing>> = {
+  RectangleShape2D: (properties) => rectangleDrawing(decodeRectangleShape2D(properties)),
+  CircleShape2D: (properties) => circleDrawing(decodeCircleShape2D(properties)),
+  CapsuleShape2D: (properties) => capsuleDrawing(decodeCapsuleShape2D(properties)),
+  SegmentShape2D: (properties) => segmentDrawing(decodeSegmentShape2D(properties)),
+  ConvexPolygonShape2D: (properties) => convexPolygonDrawing(decodeConvexPolygonShape2D(properties)),
+  ConcavePolygonShape2D: (properties) => concavePolygonDrawing(decodeConcavePolygonShape2D(properties)),
+  WorldBoundaryShape2D: (properties) => worldBoundaryDrawing(decodeWorldBoundaryShape2D(properties)),
+  SeparationRayShape2D: (properties) => separationRayDrawing(decodeSeparationRayShape2D(properties)),
 };
 
-function outlineOf(type: string, properties: Readonly<Record<string, string>>): Vector2[] {
-  switch (type) {
-    case 'RectangleShape2D':
-      return rectanglePoints(decodeRectangleShape2D(properties).size);
-    case 'CircleShape2D':
-      return circlePoints(decodeCircleShape2D(properties).radius);
-    case 'CapsuleShape2D': {
-      const { radius, height } = decodeCapsuleShape2D(properties);
-      return capsulePoints(radius, height);
-    }
-    default:
-      warn(`[CollisionShape2D] Unsupported shape type "${type}" — drawing a unit rectangle.`);
-      return rectanglePoints(PLACEHOLDER_SIZE);
-  }
-}
+export const SHAPE_2D: ResourceKind<ShapeDrawing> = {
+  name: 'Shape2D',
+  accepts: (type) => descendsFromClass(type, 'Shape2D'),
+  // A Shape2D class of a plugin has no `draw()` here, so it draws nothing.
+  decode: ({ type, properties }) => DRAWINGS[type]?.(properties) ?? [],
+};

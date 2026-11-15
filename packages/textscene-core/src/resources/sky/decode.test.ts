@@ -5,7 +5,7 @@
  * converts it on upload.
  */
 import { describe, expect, it } from 'vitest';
-import { decodeSky, decodeSkyMaterial, decodeSkyProcessing, skyMaterialRef } from './decode';
+import { decodeSky, decodeSkyMaterial, decodeSkyProcessing } from './decode';
 import { warningsOf } from '../../r3f/testing/logWarnings';
 import type { SkyBake } from './types';
 
@@ -130,28 +130,6 @@ describe('decodeSkyMaterial — unsupported', () => {
   it('returns null for a sky material type we do not implement', () => {
     // Godot ships three. Null means "render no sky", never a mis-parsed one.
     expect(decodeSkyMaterial('SomeAddonSkyMaterial', {})).toBeNull();
-  });
-});
-
-describe('skyMaterialRef — the Sky indirection', () => {
-  it('returns the sky_material reference a Sky points at (happy path)', () => {
-    expect(skyMaterialRef('Sky', { sky_material: 'SubResource("Sky_dark")' })).toBe(
-      'SubResource("Sky_dark")'
-    );
-  });
-
-  it('follows the external form identically — Godot does not distinguish them', () => {
-    expect(skyMaterialRef('Sky', { sky_material: 'ExtResource("2_abc")' })).toBe('ExtResource("2_abc")');
-  });
-
-  it('is undefined for a Sky that sets no material (edge case)', () => {
-    expect(skyMaterialRef('Sky', {})).toBeUndefined();
-  });
-
-  it('is undefined for anything that is not a Sky (error path)', () => {
-    // A non-Sky has no material to follow, the same answer as a Sky with none.
-    expect(skyMaterialRef('ProceduralSkyMaterial', { sky_material: 'SubResource("x")' })).toBeUndefined();
-    expect(skyMaterialRef(undefined, undefined)).toBeUndefined();
   });
 });
 

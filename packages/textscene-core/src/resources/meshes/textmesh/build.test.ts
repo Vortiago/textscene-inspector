@@ -8,6 +8,7 @@ import {
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
 import { NO_FACE_METRICS } from '../../../r3f/controls/native/text/noFaceMetrics';
 import { peekSceneFontOutlines } from '../../../r3f/controls/native/text/sceneFontOutlines';
+import { settledFontsOf } from '../../../r3f/controls/native/text/useSettledFont';
 import { FACELESS_FONT } from '../../../r3f/controls/native/text/sceneFontResolution';
 import { openFontOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
@@ -312,7 +313,7 @@ describe('buildTextMeshSurface missing glyph', () => {
 
   // Godot 4.6.3 `TextMesh.get_mesh_arrays()` of "8aA" at 64 px, depth 0, on a SystemFont as the project font.
   it('places a quad per glyph of a font with no face, at the vertices Godot builds', () => {
-    const noFace = withOutlines(NO_FACE_METRICS, peekSceneFontOutlines(FACELESS_FONT)!);
+    const noFace = withOutlines(NO_FACE_METRICS, peekSceneFontOutlines(settledFontsOf(null), FACELESS_FONT)!);
     const properties = decodeTextMesh({ text: '"8aA"', font_size: String(FONT_SIZE), depth: '0.0' });
     const surface = buildTextMeshSurface(properties, '', [noFace]);
     const quad = (left: number, right: number) => [left, -0.21, left, 0.39, right, 0.39, right, -0.21];
@@ -326,7 +327,7 @@ describe('buildTextMeshSurface missing glyph', () => {
 
   // `primitive_meshes.cpp:3559-3562` remaps over the bounds of no outline, +INF to -INF, as the dump shows.
   it('gives the quads of a font with no face NaN UVs, as Godot does', () => {
-    const noFace = withOutlines(NO_FACE_METRICS, peekSceneFontOutlines(FACELESS_FONT)!);
+    const noFace = withOutlines(NO_FACE_METRICS, peekSceneFontOutlines(settledFontsOf(null), FACELESS_FONT)!);
     const properties = decodeTextMesh({ text: '"8"', font_size: String(FONT_SIZE), depth: '0.0' });
     expect(uvAxis(buildTextMeshSurface(properties, '', [noFace]), 0).every(Number.isNaN)).toBe(true);
   });

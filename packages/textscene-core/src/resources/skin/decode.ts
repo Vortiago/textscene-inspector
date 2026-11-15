@@ -6,7 +6,7 @@
 import { warn } from '../../logger';
 import { declaredLeafResolver, indexedElements } from '../../godot/classdb/indexedKey.js';
 import { identityTransform3D } from '../../godot/math/transform3d.js';
-import { slotInt } from '../../godot/variant/intSlots.js';
+import { slotCount, slotInt } from '../../godot/variant/intSlots.js';
 import { unquoteStringName } from '../../parser/utils';
 import { parseTransform3D } from '../../utils/transform';
 import type { SkinBind } from './types';
@@ -24,7 +24,7 @@ const BIND_LEAF = declaredLeafResolver(['bone', 'name', 'pose']);
  * and a negative `bind_count` leaves no binds (`:34`).
  */
 export function decodeSkin(properties: Record<string, string>): SkinBind[] {
-  const count = Math.max(slotInt(properties.bind_count, 0) ?? 0, 0);
+  const count = slotCount(properties.bind_count) ?? 0;
   const written = indexedElements(properties, 'bind/', 'to_int', BIND_LEAF);
   return Array.from({ length: count }, (_unused, index) => bindOf(written.get(index)));
 }

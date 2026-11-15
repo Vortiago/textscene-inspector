@@ -1,0 +1,56 @@
+; one variable: `fit_to_longest_item`, which sizes an OptionButton by its widest item when on and by the
+; selected item when off (option_button.cpp:52-63). No other scene turns it off.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Fit" type="OptionButton" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+selected = 0
+item_count = 2
+popup/item_0/text = "A"
+popup/item_0/id = 0
+popup/item_1/text = "A much longer item"
+popup/item_1/id = 1
+
+[node name="NoFit" type="OptionButton" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 70.0
+selected = 0
+fit_to_longest_item = false
+item_count = 2
+popup/item_0/text = "A"
+popup/item_0/id = 0
+popup/item_1/text = "A much longer item"
+popup/item_1/id = 1
+
+[node name="NoFitNoSelection" type="OptionButton" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 120.0
+fit_to_longest_item = false
+item_count = 2
+popup/item_0/text = "A"
+popup/item_0/id = 0
+popup/item_1/text = "A much longer item"
+popup/item_1/id = 1
+
+[node name="NoFitLongSelected" type="OptionButton" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 170.0
+selected = 1
+fit_to_longest_item = false
+item_count = 2
+popup/item_0/text = "A"
+popup/item_0/id = 0
+popup/item_1/text = "A much longer item"
+popup/item_1/id = 1

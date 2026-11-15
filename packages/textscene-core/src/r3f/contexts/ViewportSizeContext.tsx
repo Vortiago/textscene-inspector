@@ -4,7 +4,7 @@
  * gizmo that depends on it (`Node3DEditor::get_camera_viewport_size`). `ViewportRectContext` cannot
  * serve it: that holds a forced rect by SubViewport path, with no lookup from a descendant.
  */
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { Vector2 } from '../../godot/math/vector';
 import { useProjectSettings } from './ProjectSettingsContext';
 
@@ -20,5 +20,11 @@ export function ViewportSizeProvider({ size, children }: { size: Vector2; childr
 export function useViewportSize(): Vector2 {
   const enclosing = useContext(ViewportSizeContext);
   const { viewportSize } = useProjectSettings();
-  return enclosing ?? { x: viewportSize.width, y: viewportSize.height };
+  // Memoised, so the project size keeps one identity and an effect that lists it does not
+  // resubscribe on every render.
+  const projectSize = useMemo(
+    () => ({ x: viewportSize.width, y: viewportSize.height }),
+    [viewportSize.width, viewportSize.height]
+  );
+  return enclosing ?? projectSize;
 }

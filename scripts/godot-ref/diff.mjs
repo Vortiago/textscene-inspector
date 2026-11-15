@@ -29,7 +29,7 @@ const FLATTENED_ROOTS = ['fixtures', ...FLATTENED_CORPUS_ROOTS].map((root) => `$
 
 function usage() {
   console.error(
-    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--table <file.md>]\n' +
+    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--collisions] [--table <file.md>]\n' +
       '\n' +
       '  <fixture.tscn>   fixture filename as listed in apps/textscene-web/src/fixtures.ts,\n' +
       '                   or a path to a .tscn under scenes/\n' +
@@ -37,12 +37,13 @@ function usage() {
       '                   (default: report only)\n' +
       '  --frame          fit-the-bounds camera on BOTH sides instead of the editor orbit\n' +
       '  --keep           keep the per-side PNGs, not just the diff\n' +
+      '  --collisions     show collision shapes on both sides (Visible Collision Shapes)\n' +
       '  --table <file>   also write the results as a Markdown table, one row per scene'
   );
 }
 
 export function parseArgs(argv) {
-  const args = { fixtures: [], maxMean: null, frame: false, keep: false, table: null };
+  const args = { fixtures: [], maxMean: null, frame: false, keep: false, collisions: false, table: null };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--max-mean') {
@@ -57,6 +58,7 @@ export function parseArgs(argv) {
       }
     } else if (arg === '--frame') args.frame = true;
     else if (arg === '--keep') args.keep = true;
+    else if (arg === '--collisions') args.collisions = true;
     else if (arg.startsWith('--')) throw new Error(`unknown flag: ${arg}`);
     else args.fixtures.push(arg);
   }
@@ -128,11 +130,17 @@ export function comparePngs(godotBuffer, oursBuffer) {
  */
 export async function diffOne(
   { scenePath, fixtureName, label },
-  { frame, keep },
+  { frame, keep, collisions = false },
   { render = renderReference, capture = captureOurs, outDir = OUT_DIR } = {}
 ) {
   const renderAs = async (renderMode) =>
-    render({ scene: scenePath, out: join(outDir, `${label}.godot.png`), frame, mode: renderMode });
+    render({
+      scene: scenePath,
+      out: join(outDir, `${label}.godot.png`),
+      frame,
+      mode: renderMode,
+      debugCollisions: collisions,
+    });
   // `run.mjs` refuses a root-window-only viewport setting in the nested arm and
   // names the arm that can answer it, so the scene is retried there.
   const { out: godotOut, mode } = await renderAs('auto').catch((error) => {
@@ -150,6 +158,7 @@ export async function diffOne(
     frame,
     canvas2D,
     canvas2DFrame: canvas2D ? { width: reference.width, height: reference.height } : null,
+    showCollisions: collisions,
   });
   if (keep) await writeFile(join(outDir, `${label}.ours.png`), oursBuffer);
 

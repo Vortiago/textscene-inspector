@@ -16,7 +16,7 @@ target and multiplies them by its modulate in sRGB. The content inside is lit by
 inside its sub-viewport and by none on the canvas around it. The surface is a canvas item of the
 canvas around the container, so that canvas's lights and CanvasModulate reach it once. It draws
 the target only (`subviewport_container.cpp:134-144`): the Controls of a sub-viewport are in that
-target.
+target. A sub-viewport with no content shows its clear colour over the container's rect.
 
 ## Linting
 

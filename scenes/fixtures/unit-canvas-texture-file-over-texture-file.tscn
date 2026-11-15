@@ -1,0 +1,33 @@
+[gd_scene load_steps=6 format=3 uid="uid://unitcanvasfileovertexfile"]
+
+; One variable: where a CanvasTexture and its diffuse map are saved. Both sprites draw the same
+; red-to-blue GradientTexture2D through a CanvasTexture. The left one's CanvasTexture and gradient
+; are sub-resources of the scene. The right one's is `unit-texture-file-canvas.tres`, whose
+; diffuse map is `unit-texture-file-gradient.tres`, so the two draw the same ramp. No other golden
+; saves a CanvasTexture, or a texture resource as its diffuse map, in a file.
+
+[ext_resource type="Texture2D" path="res://unit-texture-file-canvas.tres" id="1_canvas"]
+
+[sub_resource type="Gradient" id="Gradient_ramp"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.9, 0.2, 0.1, 1, 0.1, 0.3, 0.9, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_inline"]
+gradient = SubResource("Gradient_ramp")
+width = 64
+height = 32
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_inline"]
+diffuse_texture = SubResource("GradientTexture2D_inline")
+
+[node name="Root" type="Node2D"]
+
+[node name="Inline" type="Sprite2D" parent="."]
+position = Vector2(576, 200)
+scale = Vector2(6, 6)
+texture = SubResource("CanvasTexture_inline")
+
+[node name="InFiles" type="Sprite2D" parent="."]
+position = Vector2(576, 448)
+scale = Vector2(6, 6)
+texture = ExtResource("1_canvas")

@@ -12,16 +12,17 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { FoldableContainerProperties } from './types';
+import { foldableContainerChildVisibility } from './childVisibility';
 import {
-  foldableContainerChildVisibility,
   foldableContainerMinimumSize,
   foldableContainerLayout,
   foldableContainerHSeparation,
   foldableContainerTitleShape,
   type FoldableContainerTitleMetrics,
 } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { projectFontsAt, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const MARGIN = 8; // content_margin 4, both sides.
@@ -35,7 +36,17 @@ function node(
   children: SolveNode[] = [],
   path = 'F'
 ): SolveNode {
-  return {
+  return nodeAt(1, props, children, path);
+}
+
+/** A FoldableContainer under the default theme at `scale`. */
+function nodeAt(
+  scale: number,
+  props: Partial<FoldableContainerProperties>,
+  children: SolveNode[] = [],
+  path = 'F'
+): SolveNode {
+  return withThemeItems({
     ...solveNode(),
     path,
     node: {
@@ -46,7 +57,9 @@ function node(
       properties: { name: path, ...props } as FoldableContainerProperties,
     },
     children,
-  };
+    projectFonts: projectFontsAt(scale),
+    constants: props.themeOverrideConstants ?? {},
+  });
 }
 
 function ctx(): SolveContext {
@@ -61,7 +74,7 @@ const minSize = foldableContainerMinimumSize;
 
 function layoutRects(...args: Parameters<typeof foldableContainerLayout>): ReadonlyMap<string, Rect2> {
   const result = foldableContainerLayout(...args);
-  return 'rects' in result ? result.rects : result;
+  return normalizeContainerLayoutResult(result).rects;
 }
 
 /** The share both solver entry points and the painter call. */
@@ -159,13 +172,21 @@ describe('foldableContainerLayout', () => {
 
 describe('foldableContainerHSeparation and the arrow size (default_theme.cpp:1336, scene/theme/icons/arrow_*.svg)', () => {
   it('h_separation is round(2*scale); the arrow icons are round(16*scale) square', () => {
-    expect(foldableContainerHSeparation(nativeTheme(1))).toBe(2);
+    expect(foldableContainerHSeparation(node({}))).toBe(2);
     expect(foldableContainerTitleShape(node({}), nativeTheme(1)).arrowSize).toEqual({ x: 16, y: 16 });
   });
 
   it('both move with a non-1 theme scale', () => {
-    expect(foldableContainerHSeparation(nativeTheme(1.5))).toBe(3);
-    expect(foldableContainerTitleShape(node({}), nativeTheme(1.5)).arrowSize).toEqual({ x: 24, y: 24 });
+    expect(foldableContainerHSeparation(nodeAt(1.5, {}))).toBe(3);
+    expect(foldableContainerTitleShape(nodeAt(1.5, {}), nativeTheme(1.5)).arrowSize).toEqual({
+      x: 24,
+      y: 24,
+    });
+  });
+
+  it('takes a theme_override_constants/h_separation, floored at 0 (foldable_container.h:93)', () => {
+    expect(foldableContainerHSeparation(node({ themeOverrideConstants: { h_separation: 7 } }))).toBe(7);
+    expect(foldableContainerHSeparation(node({ themeOverrideConstants: { h_separation: -5 } }))).toBe(0);
   });
 
   it('a themed arrow keeps its own size (edge case)', () => {
@@ -201,7 +222,10 @@ describe('FoldableContainer under RTL', () => {
     //                              : panel_style->get_margin(SIDE_LEFT)`;
     // the width subtracts both margins.
     const container = { ...node({ folded: false, title: 'A' }), rtl: true };
-    const withPanel = { ...container, styleBoxes: { panel: lopsidedPanel(container) } };
+    const withPanel = {
+      ...container,
+      styleBoxes: { ...container.styleBoxes, panel: lopsidedPanel(container) },
+    };
     const child = node({}, [], 'Child');
     const rects = layoutRects(withPanel, [{ node: child, minSize: { x: 10, y: 10 } }], RECT, ctx());
     const rect = rects.get('Child')!;
@@ -247,6 +271,35 @@ describe('foldableContainerChildVisibility — `c->set_visible(!folded)` (foldab
   });
 });
 
+describe('foldableContainerTitleShape font size (default_theme.cpp:1322)', () => {
+  it.each([1, 1.5, 2])('is 16 px at theme scale %s, unscaled', (scale) => {
+    expect(foldableContainerTitleShape(nodeAt(scale, {}), nativeTheme(scale)).fontSizePx).toBe(16);
+  });
+
+  it('keeps an authored theme_override_font_sizes/font_size at any scale', () => {
+    const authored = nodeAt(1.5, { themeOverrideFontSizes: { font_size: 30 } });
+    expect(foldableContainerTitleShape(authored, nativeTheme(1.5)).fontSizePx).toBe(30);
+  });
+});
+
+describe('foldableContainerTitleShape title margin (make_flat_stylebox, default_theme.cpp:57-60)', () => {
+  it('scales with the theme: 6 px on every side at scale 1.5', () => {
+    const margin = { left: 6, top: 6, right: 6, bottom: 6 };
+    expect(foldableContainerTitleShape(nodeAt(1.5, {}), nativeTheme(1.5)).titleStyle.contentMargin).toEqual(
+      margin
+    );
+  });
+});
+
+describe('foldableContainerTitleShape content panel margin (default_theme.cpp:1314)', () => {
+  it.each([1, 1.5, 2])('is 4 px on every side at theme scale %s, unscaled', (scale) => {
+    const margin = { left: 4, top: 4, right: 4, bottom: 4 };
+    expect(
+      foldableContainerTitleShape(nodeAt(scale, {}), nativeTheme(scale)).panelStyle.contentMargin
+    ).toEqual(margin);
+  });
+});
+
 // `_shape` (`foldable_container.cpp:487-499`): INHERITED takes the layout direction, an empty language the locale.
 describe('foldableContainerTitleShape direction', () => {
   function visualTitle(props: Partial<FoldableContainerProperties>, rtl = false): string {
@@ -274,6 +327,9 @@ describe('foldableContainerTitleShape direction', () => {
   it('draws right to left only when the title direction is RTL', () => {
     const rtl = titleShape(node({ title: 'Hello!', titleTextDirection: 2, language: '' }));
     const autoHebrew = titleShape(node({ title: 'שלום', titleTextDirection: 0, language: '' }));
-    expect([rtl.isDrawnRtl, autoHebrew.isDrawnRtl]).toEqual([true, false]);
+    expect([rtl.layout?.lines[0]?.isDrawnRtl, autoHebrew.layout?.lines[0]?.isDrawnRtl]).toEqual([
+      true,
+      undefined,
+    ]);
   });
 });

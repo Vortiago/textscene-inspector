@@ -1,6 +1,6 @@
 # A normal-mapped canvas item reads each light apart
 
-- Status: Accepted
+- Status: Accepted. ADR-0067 moves the `shadow_color` layers into a second attachment of the light layers.
 - Related: ADR-0030 (the 2D shadow penumbra), ADR-0033 (the light pass host).
 
 ## Context

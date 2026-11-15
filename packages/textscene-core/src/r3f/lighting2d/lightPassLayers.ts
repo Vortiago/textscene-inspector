@@ -5,9 +5,9 @@
  */
 
 /**
- * Every light-pass mesh draws on this layer alone: the seed, the light quads and the shadow
- * volumes. The main pass never renders it. Each accumulation pass renders it with the meshes of
- * lights off its list hidden.
+ * Every light-pass mesh draws on this layer alone: the seed and the light quads. The main pass
+ * never renders it. Each accumulation pass renders it with the meshes of lights off its list
+ * hidden.
  */
 export const LIGHT_PASS_LAYER = 1;
 

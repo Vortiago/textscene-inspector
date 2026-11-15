@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { FileEventBus } from './FileEventBus.js';
 import type { ResourceProvider } from './ResourceProvider.js';
+import './formats/theoravideo/index.js';
 
 describe('FileEventBus', () => {
   let mockProvider: ResourceProvider;
@@ -14,6 +15,34 @@ describe('FileEventBus', () => {
   });
 
   describe('request()', () => {
+    it('caps the read of a file whose slice needs only its leading bytes', async () => {
+      vi.mocked(mockProvider.loadResource).mockResolvedValue(new ArrayBuffer(8));
+
+      eventBus.request('res://video/intro.ogv');
+
+      await vi.waitFor(() => {
+        expect(mockProvider.loadResource).toHaveBeenCalledWith(
+          'res://video/intro.ogv',
+          undefined,
+          1024 * 1024
+        );
+      });
+    });
+
+    it('reads a file no slice caps whole', async () => {
+      vi.mocked(mockProvider.loadResource).mockResolvedValue(new ArrayBuffer(8));
+
+      eventBus.request('res://textures/icon.png');
+
+      await vi.waitFor(() => {
+        expect(mockProvider.loadResource).toHaveBeenCalledWith(
+          'res://textures/icon.png',
+          undefined,
+          undefined
+        );
+      });
+    });
+
     it('emits loaded event when file loads successfully', async () => {
       const handler = vi.fn();
       eventBus.on('loaded', handler);

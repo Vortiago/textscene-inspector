@@ -57,4 +57,19 @@ describe('<GizmoMesh>', () => {
     await Promise.resolve();
     expect(disposed).toBe(true);
   });
+
+  it('shades by vertex, with each vertex alpha, when the geometry has a colour attribute', async () => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(12), 4));
+    const renderer = await render(geometry);
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect((mesh.material as THREE.MeshBasicMaterial).vertexColors).toBe(true);
+  });
+
+  it('draws one colour when the geometry has no colour attribute', async () => {
+    const renderer = await render(new THREE.BoxGeometry(1, 1, 1));
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect((mesh.material as THREE.MeshBasicMaterial).vertexColors).toBe(false);
+  });
 });

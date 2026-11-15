@@ -1,0 +1,184 @@
+; The ranges, separators, panels, split, tab, grid, flow, scroll and foldable containers at
+; `gui/theme/default_theme_scale` 1.5, the one variable. Each margin, corner, thickness and spacing of
+; their default boxes rounds from the scaled value, and the bottom FoldableContainer mirrors its boxes.
+
+[gd_scene format=3 uid="uid://unitdefthemecontainers15"]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="Rows" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 808.0
+
+[node name="Ranges" type="HBoxContainer" parent="Rows"]
+layout_mode = 2
+
+[node name="Column" type="VBoxContainer" parent="Rows/Ranges"]
+layout_mode = 2
+
+[node name="VSlider" type="VSlider" parent="Rows/Ranges"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+value = 30.0
+
+[node name="HSlider" type="HSlider" parent="Rows/Ranges/Column"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+max_value = 10.0
+value = 4.0
+tick_count = 5
+ticks_on_borders = true
+
+[node name="HScrollBar" type="HScrollBar" parent="Rows/Ranges/Column"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+page = 20.0
+value = 30.0
+
+[node name="VScrollBar" type="VScrollBar" parent="Rows/Ranges"]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+page = 20.0
+value = 30.0
+
+[node name="VSeparator" type="VSeparator" parent="Rows/Ranges"]
+layout_mode = 2
+
+[node name="Panel" type="Panel" parent="Rows/Ranges"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="Rows/Ranges"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Rows/Ranges/PanelContainer"]
+layout_mode = 2
+text = "Panel"
+
+[node name="HSeparator" type="HSeparator" parent="Rows"]
+layout_mode = 2
+
+[node name="Split" type="HSplitContainer" parent="Rows"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+
+[node name="Left" type="Panel" parent="Rows/Split"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Right" type="Panel" parent="Rows/Split"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Tabs" type="TabContainer" parent="Rows"]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+current_tab = 0
+
+[node name="First" type="Control" parent="Rows/Tabs"]
+layout_mode = 2
+
+[node name="Second" type="Control" parent="Rows/Tabs"]
+visible = false
+layout_mode = 2
+
+[node name="TabBar" type="TabBar" parent="Rows"]
+layout_mode = 2
+current_tab = 1
+tab_count = 3
+tab_0/title = "One"
+tab_1/title = "Two"
+tab_2/title = "Three"
+
+[node name="Grids" type="HBoxContainer" parent="Rows"]
+layout_mode = 2
+
+[node name="Grid" type="GridContainer" parent="Rows/Grids"]
+layout_mode = 2
+columns = 2
+
+[node name="G0" type="ColorRect" parent="Rows/Grids/Grid"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+
+[node name="G1" type="ColorRect" parent="Rows/Grids/Grid"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+
+[node name="G2" type="ColorRect" parent="Rows/Grids/Grid"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+
+[node name="G3" type="ColorRect" parent="Rows/Grids/Grid"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+
+[node name="Flow" type="HFlowContainer" parent="Rows/Grids"]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+
+[node name="F0" type="ColorRect" parent="Rows/Grids/Flow"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+
+[node name="F1" type="ColorRect" parent="Rows/Grids/Flow"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+
+[node name="F2" type="ColorRect" parent="Rows/Grids/Flow"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+
+[node name="F3" type="ColorRect" parent="Rows/Grids/Flow"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+
+[node name="F4" type="ColorRect" parent="Rows/Grids/Flow"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="Rows/Grids"]
+custom_minimum_size = Vector2(120, 70)
+layout_mode = 2
+
+[node name="Content" type="ColorRect" parent="Rows/Grids/Scroll"]
+custom_minimum_size = Vector2(200, 200)
+layout_mode = 2
+color = Color(0.5, 0.3, 0.3, 1)
+
+[node name="FoldTop" type="FoldableContainer" parent="Rows/Grids"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+title = "Top"
+
+[node name="Body" type="Label" parent="Rows/Grids/FoldTop"]
+layout_mode = 2
+text = "Inside"
+
+[node name="FoldBottom" type="FoldableContainer" parent="Rows/Grids"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+title = "Bottom"
+title_position = 1
+
+[node name="Body" type="Label" parent="Rows/Grids/FoldBottom"]
+layout_mode = 2
+text = "Inside"
+
+[node name="FoldClosed" type="FoldableContainer" parent="Rows/Grids"]
+layout_mode = 2
+folded = true
+title = "Folded"

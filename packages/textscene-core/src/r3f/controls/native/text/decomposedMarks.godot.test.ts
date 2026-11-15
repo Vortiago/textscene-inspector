@@ -7,11 +7,8 @@
 import { describe, expect, it } from 'vitest';
 import reference from './decomposedMarks.godot.json';
 import type { FontMetrics } from './fontMetrics';
-import { sfntGlyphIndex, sfntHasGlyph } from './sfntCmap';
-import { sfntFaceGlyphs } from './sfntFaceGlyphs';
-import { glyphMetricsReader } from './sfntGlyphMetrics';
+import { sfntFace } from './sfntFace.testkit';
 import { fixtureSfnt } from './sfntOutlines.testkit';
-import { parseSfntScalars } from './sfntTables';
 import { glyphsOf } from './textLayout.testkit';
 
 interface ReferenceCharacter {
@@ -21,24 +18,10 @@ interface ReferenceCharacter {
   readonly glyphs: readonly { advance: number; offset: readonly [number, number] }[];
 }
 
-function fontMetricsOf(font: string): FontMetrics {
-  const sfnt = fixtureSfnt(font);
-  const { unitsPerEm, ascent, descent } = parseSfntScalars(sfnt)!;
-  const glyphIndexOf = sfntGlyphIndex(sfnt)!;
-  const metricsOf = glyphMetricsReader(sfnt);
-  const advanceUnits = (ch: string) => metricsOf(glyphIndexOf(ch.codePointAt(0)!), 0).horizontal.advance;
-  return {
-    kind: 'canvas',
-    unitsPerEm,
-    ascent,
-    descent,
-    hasGlyph: sfntHasGlyph(sfnt),
-    getGlyphAdvanceUnits: advanceUnits,
-    getKerningAdjustmentUnits: () => 0,
-    averageAdvanceUnits: advanceUnits('n'),
-    ...sfntFaceGlyphs(sfnt),
-  };
-}
+/** The face of each fixture font, read once: the rows share four fonts. */
+const faces = new Map<string, FontMetrics>();
+const faceOf = (font: string): FontMetrics =>
+  faces.get(font) ?? faces.set(font, sfntFace(fixtureSfnt(font))).get(font)!;
 
 // The JSON module types an offset as number[], not as the pair it holds.
 const references = reference as unknown as ReferenceCharacter[];
@@ -47,7 +30,7 @@ describe('shapeText — the marks of a decomposed character against Godot', () =
   it.each(references.map((row) => [`${row.char} at ${row.sizePx} px in ${row.font}`, row] as const))(
     'places %s',
     (_, { font, char, sizePx, glyphs }) => {
-      const placed = glyphsOf(char, fontMetricsOf(font), sizePx);
+      const placed = glyphsOf(char, faceOf(font), sizePx);
       // Adding zero turns the layout's -0 into the 0 of the reference.
       expect(
         placed.map(({ advance, xOffset = 0, yOffset = 0 }) => ({

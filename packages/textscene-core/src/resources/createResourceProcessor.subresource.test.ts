@@ -50,7 +50,7 @@ describe('createResourceProcessor with a sub-resource path', () => {
     processor.request('res://wheel.tres::StandardMaterial3D_shvqh');
     await flush();
 
-    expect(provider.loadResource).toHaveBeenCalledWith('res://wheel.tres');
+    expect(provider.loadResource).toHaveBeenCalledWith('res://wheel.tres', undefined, undefined);
     expect(loaded).toHaveBeenCalledWith(
       'res://wheel.tres::StandardMaterial3D_shvqh',
       'wheel-bytes@res://wheel.tres::StandardMaterial3D_shvqh'

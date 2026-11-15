@@ -8,25 +8,25 @@ import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
-import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
+import { createSolveContext } from '../../../../r3f/controls/native/controlRectSolver';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SpinBoxProperties } from './types';
 import {
-  spinBoxButtonsBlockWidth,
   spinBoxLayout,
-  rangeStepDecimals,
   formatGodotNumber,
-  spinBoxDisplayText,
   spinBoxUpButtonState,
   spinBoxDownButtonState,
   spinBoxIconColor,
-  spinBoxFieldTextTheme,
   spinBoxMinimumSize,
   spinBoxWidestButtonIconWidth,
-  shapeSpinBoxFieldText,
 } from './nativeSolver';
+import { controlProps } from '../control/testing/controlProps';
+import type { ThemeResource } from '../../../../resources/styles/theme/types';
+import type { TscnInternalResource } from '../../../../parser/types';
+import '../lineedit/index.r3f';
+import { internalControlsOf } from '../../../../r3f/controls/native/internalControls';
+import type { LineEditProperties } from '../lineedit/types';
 
 // At font size 16 with no theme in the chain: 'W' advances 1936*(16/2048) = 15.125
 // (`openSansMetrics.ts`'s hmtx), and the line is ceil(2189*16/2048) + ceil(600*16/2048) = 23 with
@@ -42,31 +42,27 @@ function node(props: Partial<SpinBoxProperties> = {}): SolveNode {
   };
 }
 
-function ctx(withMeasurer = true): SolveContext {
-  return {
-    theme: nativeTheme(1),
-    measureText: withMeasurer ? measureText : null,
-    combinedMinimumSize: () => ({ x: 0, y: 0 }),
-  };
+/** The text `_update_text` writes into the field of a SpinBox with `props`, in `locale` (`spin_box.cpp:88-114`). */
+function fieldText(props: Partial<SpinBoxProperties>, locale = ''): string {
+  const [field] = internalControlsOf({ ...node(props), locale }, nativeTheme(1));
+  return (field!.node.node.properties as LineEditProperties).text ?? '';
 }
 
-describe('spinBoxButtonsBlockWidth', () => {
-  it('is buttons_width(16) + field_and_buttons_separation(2), unscaled (happy path)', () => {
-    expect(spinBoxButtonsBlockWidth(16)).toBe(18);
-  });
-
-  it('widens when the icon-enforced width exceeds buttons_width (spin_box.cpp:389: MAX(icon_enforced, wanted))', () => {
-    expect(spinBoxButtonsBlockWidth(30)).toBe(32);
-  });
-});
+function ctx(withMeasurer = true): SolveContext {
+  return createSolveContext(nativeTheme(1), withMeasurer ? measureText : null);
+}
 
 describe('spinBoxWidestButtonIconWidth (spin_box.cpp:411-424, restricted to up/down)', () => {
   it('is the vendored 16 when neither icon is themed', () => {
-    expect(spinBoxWidestButtonIconWidth({ textureSlots: {} })).toBe(16);
+    expect(spinBoxWidestButtonIconWidth({ textureSlots: {} }, 1)).toBe(16);
+  });
+
+  it('is the vendored width at the theme scale: 24 at 1.5', () => {
+    expect(spinBoxWidestButtonIconWidth({ textureSlots: {} }, 1.5)).toBe(24);
   });
 
   it('widens to a themed icon wider than the vendored default', () => {
-    expect(spinBoxWidestButtonIconWidth({ textureSlots: { down: { x: 30, y: 8 } } })).toBe(30);
+    expect(spinBoxWidestButtonIconWidth({ textureSlots: { down: { x: 30, y: 8 } } }, 1)).toBe(30);
   });
 });
 
@@ -79,13 +75,31 @@ describe('spinBoxLayout', () => {
     expect(layout.fieldAndButtonsSeparatorRect).toEqual({ x: 82, y: 0, w: 2, h: 30 });
   });
 
+  it('widens the buttons block to an icon wider than buttons_width (spin_box.cpp:389)', () => {
+    expect(spinBoxLayout({ x: 100, y: 30 }, 30).fieldRect.w).toBe(100 - 30 - 2);
+  });
+
   it('floors the field width at 0 when the rect is narrower than the buttons block (error path)', () => {
     expect(spinBoxLayout({ x: 10, y: 30 }, 16).fieldRect.w).toBe(0);
   });
 
-  it('truncates a fractional rect size toward zero, matching Size2i (edge case)', () => {
+  it('truncates a fractional rect size toward zero for the buttons, matching Size2i (edge case)', () => {
     const layout = spinBoxLayout({ x: 100.9, y: 29.9 }, 16);
-    expect(layout.fieldRect.h).toBe(29);
+    expect(layout.downRect.y + layout.downRect.h).toBe(29);
+  });
+
+  it('keeps the field at the fractional size, as its anchors and offsets place it (spin_box.cpp:394-395)', () => {
+    const layout = spinBoxLayout({ x: 100.5, y: 29.5 }, 16);
+    expect(layout.fieldRect).toEqual({ x: 0, y: 0, w: 82.5, h: 29.5 });
+  });
+
+  it('mirrors the fractional field under RTL', () => {
+    expect(spinBoxLayout({ x: 100.5, y: 29.5 }, 16, true).fieldRect).toEqual({
+      x: 18,
+      y: 0,
+      w: 82.5,
+      h: 29.5,
+    });
   });
 
   it('puts the buttons block on the LEFT under RTL layout (spin_box.cpp:403,409)', () => {
@@ -111,21 +125,6 @@ describe('spinBoxLayout', () => {
   });
 });
 
-describe('rangeStepDecimals', () => {
-  it('reads the fractional digits a step needs (happy path)', () => {
-    expect(rangeStepDecimals(0.25)).toBe(1);
-    expect(rangeStepDecimals(0.01)).toBe(2);
-  });
-
-  it('returns 16 for a step under the 1e-13 floor (error path — an unset/zero step)', () => {
-    expect(rangeStepDecimals(0)).toBe(16);
-  });
-
-  it('returns 0 for a whole-number step (edge case)', () => {
-    expect(rangeStepDecimals(1)).toBe(0);
-  });
-});
-
 describe('formatGodotNumber', () => {
   it('trims trailing zeroes but keeps exactly one digit after the point (happy path)', () => {
     expect(formatGodotNumber(5.5, 1)).toBe('5.5');
@@ -141,31 +140,37 @@ describe('formatGodotNumber', () => {
   });
 });
 
-describe('spinBoxDisplayText', () => {
+describe("the field's text", () => {
   it('wraps the formatted value in prefix/suffix, space-separated (happy path)', () => {
-    expect(spinBoxDisplayText({ name: 'S', prefix: '$', suffix: 'kg', step: 0.25 }, 5.5, '')).toBe(
-      '$ 5.5 kg'
-    );
+    expect(fieldText({ prefix: '$', suffix: 'kg', step: 0.25, value: 5.5 })).toBe('$ 5.5 kg');
   });
 
   it('omits an absent prefix/suffix entirely, not as an empty wrap (error path)', () => {
-    expect(spinBoxDisplayText({ name: 'S' }, 5, '')).toBe('5');
+    expect(fieldText({ value: 5 })).toBe('5');
+  });
+
+  it('prints the digits the step needs (Math::range_step_decimals)', () => {
+    expect(fieldText({ step: 0.01, value: 0.25 })).toBe('0.25');
+  });
+
+  it('prints every digit for a zero step, under the 1e-13 floor', () => {
+    expect(fieldText({ step: 0, value: 0.123 })).toBe('0.123');
   });
 
   it('falls back to step=1 (Range default) when unset (edge case)', () => {
-    expect(spinBoxDisplayText({ name: 'S' }, 5.5, '')).toBe('6'); // step_decimals(1) = 0, so String::num rounds with %.0lf
+    expect(fieldText({ value: 5.5 })).toBe('6'); // step_decimals(1) = 0, so String::num rounds with %.0lf
   });
 });
 
 describe('spinBoxUpButtonState / spinBoxDownButtonState', () => {
   it('disables both buttons together when not editable (happy path)', () => {
-    const props: SpinBoxProperties = { name: 'S', editable: false, minValue: 0, maxValue: 10 };
+    const props: SpinBoxProperties = controlProps({ name: 'S', editable: false, minValue: 0, maxValue: 10 });
     expect(spinBoxUpButtonState(props, 5)).toBe('disabled');
     expect(spinBoxDownButtonState(props, 5)).toBe('disabled');
   });
 
   it('disables only the button whose bound the value has reached (error path)', () => {
-    const props: SpinBoxProperties = { name: 'S', minValue: 0, maxValue: 10 };
+    const props: SpinBoxProperties = controlProps({ name: 'S', minValue: 0, maxValue: 10 });
     expect(spinBoxUpButtonState(props, 10)).toBe('disabled');
     expect(spinBoxDownButtonState(props, 10)).toBe('normal');
     expect(spinBoxUpButtonState(props, 0)).toBe('normal');
@@ -173,45 +178,49 @@ describe('spinBoxUpButtonState / spinBoxDownButtonState', () => {
   });
 
   it('stays enabled at the bound when allow_greater/allow_lesser lifts it (edge case)', () => {
-    const props: SpinBoxProperties = {
+    const props: SpinBoxProperties = controlProps({
       name: 'S',
       minValue: 0,
       maxValue: 10,
       allowGreater: true,
       allowLesser: true,
-    };
+    });
     expect(spinBoxUpButtonState(props, 10)).toBe('normal');
     expect(spinBoxDownButtonState(props, 0)).toBe('normal');
   });
 });
 
 describe('spinBoxIconColor', () => {
-  it('defaults to control_font_color / control_font_disabled_color (happy path)', () => {
-    expect(spinBoxIconColor({}, 'up', 'normal')).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
-    expect(spinBoxIconColor({}, 'down', 'disabled')).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 0.5 });
-  });
+  const defaultColors = withThemeItems(node()).colors;
 
-  it('a theme_override_colors entry (already folded into n.colors) wins (error path — malformed keys are absent, not applied)', () => {
-    const colors = { up_icon_modulate: { r: 1, g: 0, b: 0, a: 1 } };
-    expect(spinBoxIconColor(colors, 'up', 'normal')).toEqual({ r: 1, g: 0, b: 0, a: 1 });
-    expect(spinBoxIconColor(colors, 'down', 'normal')).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
-  });
-});
-
-describe('spinBoxFieldTextTheme', () => {
-  it('falls back to the built-in default font size/colour absent any theme (happy path)', () => {
-    const result = spinBoxFieldTextTheme(node(), ctx(), true);
-    expect(result.fontSizePx).toBe(16);
-    expect(result.color).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
-  });
-
-  it('reads the uneditable colour when not editable (edge case)', () => {
-    expect(spinBoxFieldTextTheme(node(), ctx(), false).color).toEqual({
+  it('reads control_font_color and control_font_disabled_color from the default theme', () => {
+    expect(spinBoxIconColor(defaultColors, 'up', 'normal')).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
+    expect(spinBoxIconColor(defaultColors, 'down', 'disabled')).toEqual({
       r: 0.875,
       g: 0.875,
       b: 0.875,
       a: 0.5,
     });
+  });
+
+  it('reads a theme_override_colors entry folded into n.colors for its own direction only', () => {
+    const colors = { ...defaultColors, up_icon_modulate: { r: 1, g: 0, b: 0, a: 1 } };
+    expect(spinBoxIconColor(colors, 'up', 'normal')).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(spinBoxIconColor(colors, 'down', 'normal')).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
+  });
+
+  it('throws on a colour record without the item', () => {
+    expect(() => spinBoxIconColor({}, 'up', 'normal')).toThrow(/up_icon_modulate/);
+  });
+});
+
+describe('spinBoxMinimumSize at a theme scale (spin_box.cpp:382-397)', () => {
+  it('widens the buttons block to the scaled arrow: the same minimum as themed 24x12 arrows', () => {
+    const at15 = createSolveContext(nativeTheme(1.5), measureText);
+    const themed = { ...node(), textureSlots: { up: { x: 24, y: 12 }, down: { x: 24, y: 12 } } };
+
+    expect(spinBoxMinimumSize(node(), at15)).toEqual(spinBoxMinimumSize(themed, at15));
+    expect(spinBoxMinimumSize(node(), at15).x).toBeGreaterThan(spinBoxMinimumSize(node(), ctx()).x);
   });
 });
 
@@ -235,34 +244,46 @@ describe('spinBoxMinimumSize', () => {
   });
 });
 
-describe('spinBoxDisplayText with a locale (spin_box.cpp:91-93)', () => {
+describe("the field's text in a locale (spin_box.cpp:91-93)", () => {
   it('writes the value in the digits of the locale, and keeps the prefix and suffix as they are', () => {
-    expect(spinBoxDisplayText({ name: 'S', prefix: '$', suffix: 'kg', step: 0.25 }, 5.5, 'ar')).toBe(
-      '$ ٥٫٥ kg'
-    );
+    expect(fieldText({ prefix: '$', suffix: 'kg', step: 0.25, value: 5.5 }, 'ar')).toBe('$ ٥٫٥ kg');
   });
 
   it('writes ASCII digits while localize_numeral_system is off', () => {
-    expect(spinBoxDisplayText({ name: 'S', localizeNumeralSystem: false }, 5.5, 'ar')).toBe('6');
+    expect(fieldText({ localizeNumeralSystem: false, value: 5.5 }, 'ar')).toBe('6');
   });
 });
 
-describe('shapeSpinBoxFieldText', () => {
-  function visual(text: string, locale: string): string {
-    return visualChars(
-      shapeSpinBoxFieldText(text, { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS }, locale).lines[0]!
-    );
+describe('the inner LineEdit reads its items through the ancestor Theme chain', () => {
+  const box: TscnInternalResource = {
+    id: 'box',
+    type: 'StyleBoxFlat',
+    data: {
+      content_margin_left: '10.0',
+      content_margin_top: '9.0',
+      content_margin_right: '10.0',
+      content_margin_bottom: '9.0',
+    },
+  };
+
+  function under(overrides: Partial<ThemeResource>): SolveNode {
+    const themeResource: ThemeResource = {
+      defaultFont: null,
+      defaultFontSize: undefined,
+      fonts: {},
+      fontSizes: {},
+      typeVariations: {},
+      properties: {},
+      resources: { externalResources: [], internalResources: [box] },
+      ...overrides,
+    };
+    return { ...node(), themeChain: [themeResource] };
   }
 
-  it('takes a neutral paragraph from a right-to-left locale, so the minus sign follows the digits', () => {
-    expect(visual('$ -12.5', 'ar')).toBe('12.5- $');
-  });
-
-  it('keeps a left-to-right run in its order, after the sign it follows', () => {
-    expect(visual('-12.5 kg', 'ar')).toBe('-12.5 kg');
-  });
-
-  it('keeps the typed order under a left-to-right locale', () => {
-    expect(visual('$ -12.5', 'en')).toBe('$ -12.5');
+  it('sizes the field from the LineEdit normal stylebox of the Theme', () => {
+    const themed = under({ styles: { LineEdit: { normal: 'SubResource("box")' } } });
+    const result = spinBoxMinimumSize(themed, ctx(false));
+    expect(result.x).toBe(20 + 18);
+    expect(result.y).toBe(18 + FONT_HEIGHT);
   });
 });

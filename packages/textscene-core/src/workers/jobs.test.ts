@@ -8,7 +8,7 @@ import {
   NOISE_PIXEL_CASES,
   PINNED_LEVEL_HASHES,
 } from '../resources/textures/noisetexture2d/pixelCases.testkit';
-import { decodeFastNoiseLite } from '../resources/noise/fastnoiselite/decode';
+import { fastNoiseLiteOf } from '../resources/noise/fastnoiselite/fastNoiseLite.testkit';
 import { decodeNoiseTexture3D } from '../resources/textures/noisetexture3d/decode';
 import { isWorkerJobName, WORKER_JOBS } from './jobs';
 
@@ -53,7 +53,7 @@ describe('noise-texture-3d job', () => {
   const job = WORKER_JOBS['noise-texture-3d'];
   const input = {
     tex: decodeNoiseTexture3D({ width: '4', height: '3', depth: '5' }),
-    noise: decodeFastNoiseLite({}),
+    noise: fastNoiseLiteOf({}),
     colorRamp: null,
   };
 

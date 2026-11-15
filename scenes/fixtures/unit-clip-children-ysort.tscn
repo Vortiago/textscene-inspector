@@ -1,0 +1,19 @@
+; One variable: `y_sort_enabled` on the `clip_children` parent. Godot takes the y-sort branch, which groups
+; nothing (`renderer_canvas_cull.cpp:437-469`), so the red child draws whole over the green parent and the
+; parent clips nothing. The unsorted scene `unit-clip-children-only` shows the clip.
+
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Owner" type="Polygon2D" parent="."]
+position = Vector2(100, 100)
+y_sort_enabled = true
+clip_children = 1
+color = Color(0, 1, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Child" type="Polygon2D" parent="Owner"]
+position = Vector2(50, 50)
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)

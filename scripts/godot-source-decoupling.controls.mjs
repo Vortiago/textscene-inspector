@@ -71,6 +71,17 @@ export const CHECKOUT_CONTROLS = [
     body: "import { CURSOR_MAX } from '../godot/scene/control.js'; // see `godot/scene/csg.test.ts`",
   },
   { file: 'scratch/own-group.md', hit: false, body: 'A new node fact goes in `godot/scene/`.' },
+  {
+    file: 'scratch/own-folder.ts',
+    hit: false,
+    body: "import { flatCornerDetail } from '../godot/scene/defaultTheme/styleBoxes';",
+  },
+  { file: 'scratch/own-testing.md', hit: false, body: 'Run `godot/scene/testing/defaultTheme/measure.mjs`.' },
+  {
+    file: 'scratch/engine-scene-dir.ts',
+    hit: true,
+    body: "readFileSync('../godot/scene/theme/default_theme.cpp')",
+  },
   { file: 'scratch/engine-dir.ts', hit: true, body: "const gltf = '/home/dev/godot/modules/gltf';" },
   {
     file: 'scratch/sibling-dir.ts',

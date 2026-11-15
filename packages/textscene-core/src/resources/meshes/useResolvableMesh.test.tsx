@@ -102,7 +102,7 @@ describe('useResolvableMesh for a TextMesh', () => {
     act(() => fake.fonts._fail(FONT_PATH, 'gone'));
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.mesh!.loadedFont(FONT_PATH)).toBeUndefined();
+    expect(result.current.mesh!.loadedFont(FONT_PATH)).toBeNull();
   });
 });
 
@@ -120,10 +120,10 @@ describe('useResolvableMesh and the metrics of a font that settle', () => {
   }
 
   it('does not render again for a mesh that reads no font', async () => {
-    const { renders } = renderCounting(BOX);
+    const { fake, renders } = renderCounting(BOX);
     const before = renders();
 
-    await act(settleUnrelatedFontLoad);
+    await act(() => settleUnrelatedFontLoad(fake.loader.settledFonts));
 
     expect(renders()).toBe(before);
   });
@@ -135,7 +135,7 @@ describe('useResolvableMesh and the metrics of a font that settle', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     const before = renders();
 
-    await act(settleUnrelatedFontLoad);
+    await act(() => settleUnrelatedFontLoad(fake.loader.settledFonts));
 
     expect(renders()).toBe(before);
   });
@@ -147,7 +147,7 @@ describe('useResolvableMesh and the metrics of a font that settle', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     const before = renders();
 
-    await act(settleUnrelatedFontLoad);
+    await act(() => settleUnrelatedFontLoad(fake.loader.settledFonts));
 
     expect(renders()).toBe(before);
   });

@@ -1,0 +1,27 @@
+; One variable: a drawing clip_children owner G sits in the show_behind_parent span of an inert owner O.
+; Godot draws G, masked to its own pixels, before O's regular child R, so the blue square covers G.
+; No other scene draws a clip_children owner as a show_behind_parent child, so none shows its order against a sibling.
+
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="O" type="Node2D" parent="."]
+position = Vector2(100, 100)
+clip_children = 1
+
+[node name="R" type="Polygon2D" parent="O"]
+position = Vector2(60, 60)
+color = Color(0, 0, 1, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="G" type="Polygon2D" parent="O"]
+show_behind_parent = true
+clip_children = 2
+color = Color(0, 1, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="K" type="Polygon2D" parent="O/G"]
+position = Vector2(50, 0)
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)

@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import type { GraphNodeSlot } from '../graphnode/types';
-import '../graphnode/nativeSolver.js';
+import '../../../../parser/TscnParser';
+import '../../../../r3f/controls/index';
 import type { GraphEditConnection, GraphEditProperties } from './types';
 import { resolveGraphEditConnections } from './connectionEndpoints';
 
@@ -38,12 +39,12 @@ function graphNode(
   slots: Map<number, GraphNodeSlot>,
   children: SolveNode[]
 ): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'GraphNode', { name, title: '', positionOffset, slots }),
     children,
-  };
+  });
 }
 
 describe('resolveGraphEditConnections (graph_edit.cpp:1614-1660 _update_connections)', () => {

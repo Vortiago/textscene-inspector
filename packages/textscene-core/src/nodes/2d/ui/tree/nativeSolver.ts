@@ -10,67 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import type { Rgba } from '../../../../godot/math/math';
-
-/** `style_normal_color` (`default_theme.cpp:100`): Tree's `panel` fill (`:860`). */
-const TREE_PANEL_FILL: Rgba = { r: 0.1, g: 0.1, b: 0.1, a: 0.6 };
-
-const DEFAULT_BORDER_COLOR: Rgba = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
-const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
-
-/**
- * `default_theme.cpp:860`: `make_flat_stylebox(style_normal_color, 4, 4, 4, 5)`, whose bottom
- * margin (5) differs from `default_margin` (4). `NativeTheme` has no raw `scale` for
- * `Math.round(5 * scale)`, so the bottom is `Math.round(theme.contentMargin * 1.25)`, which is 5
- * at the default scale.
- */
-function treePanelStyleBox(theme: NativeTheme): StyleBoxFlatData {
-  const m = theme.contentMargin;
-  return {
-    bgColor: TREE_PANEL_FILL,
-    borderColor: DEFAULT_BORDER_COLOR,
-    borderWidth: ZERO_SIDES,
-    cornerRadius: {
-      topLeft: theme.cornerRadius,
-      topRight: theme.cornerRadius,
-      bottomRight: theme.cornerRadius,
-      bottomLeft: theme.cornerRadius,
-    },
-    expandMargin: ZERO_SIDES,
-    contentMargin: { left: m, top: m, right: m, bottom: Math.round(m * 1.25) },
-    drawCenter: true,
-    borderBlend: false,
-    antiAliased: true,
-    aaSize: 1,
-    cornerDetail: 8,
-    skew: { x: 0, y: 0 },
-    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-    shadowSize: 0,
-    shadowOffset: { x: 0, y: 0 },
-  };
-}
-
-/** `overrides['panel']` wins over `treePanelStyleBox`'s default. */
-export function pickTreePanelStyleBox(
-  overrides: Readonly<Record<string, StyleBoxFlatData>>,
-  theme: NativeTheme
-): StyleBoxFlatData {
-  return overrides.panel ?? treePanelStyleBox(theme);
-}
-
-/**
- * `overrides['title_button_normal']` wins over `theme.widgets.button.pressed`:
- * `make_flat_stylebox(style_pressed_color, 4, 4, 4, 4)` (`default_theme.cpp:873`) has the same
- * arguments as Button's pressed box (`:138-141`), so the two are equal, although separate `Ref`s.
- */
-export function pickTreeTitleButtonStyleBox(
-  overrides: Readonly<Record<string, StyleBoxFlatData>>,
-  theme: NativeTheme
-): StyleBoxFlatData {
-  return overrides.title_button_normal ?? theme.widgets.button.pressed;
-}
 
 /**
  * `Tree::_get_title_button_height` (`tree.cpp:4616-4624`) for a blank title, since none is

@@ -4,10 +4,15 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { offscreenRendererState } from '../../../nodes/viewport/subviewport/offscreenRenderer.testkit';
 import { createCanvasFrame } from './canvasFrame';
+import { registerCanvasGroup } from '../../canvasGroup/canvasGroupPass';
+import { canvasColorSpaceOf } from '../../canvasColorSpace';
 import { innermostStep, startFrameProfile } from '../../frameProfile/frameProfile';
 import { profiledRendererMembers } from '../../frameProfile/frameProfile.testkit';
 import type { RenderStep } from '../../frameProfile/frameStats';
+
+const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 type Target = THREE.WebGLRenderTarget | null;
 
@@ -26,7 +31,7 @@ function recordingRenderer(width: number, height: number) {
   const clears: { target: Target; drawsBefore: number }[] = [];
   let bound: Target = null;
   const gl = {
-    autoClear: true,
+    ...offscreenRendererState(),
     getDrawingBufferSize: (out: THREE.Vector2) => out.set(width, height),
     getRenderTarget: () => bound,
     setRenderTarget: (target: Target) => {
@@ -47,7 +52,7 @@ const camera = new THREE.OrthographicCamera();
 
 /** A frame at `samples`, as `useMultisampledTarget` sets them. */
 function multisampledFrame(samples: number): ReturnType<typeof createCanvasFrame> {
-  const frame = createCanvasFrame();
+  const frame = createCanvasFrame(canvasColorSpaceOf(false));
   frame.samples = samples;
   return frame;
 }
@@ -98,6 +103,27 @@ describe('createCanvasFrame', () => {
     frame.render(gl, scene, camera);
 
     expect(clears).toEqual([]);
+    frame.dispose();
+  });
+
+  it("draws a CanvasGroup's buffer, at the frame's size, before the world draws into the frame", () => {
+    const { gl, draws } = recordingRenderer(640, 360);
+    const groupScene = new THREE.Scene();
+    const buffer = new THREE.WebGLRenderTarget(1, 1);
+    const release = registerCanvasGroup(groupScene, {
+      kind: 'composite',
+      window: { own: 0, from: 0, to: 1 },
+      buffer,
+      fit: () => new THREE.Box3(),
+      fitNested: () => new THREE.Box3(),
+    });
+    const frame = multisampledFrame(0);
+
+    frame.render(gl, groupScene, camera);
+
+    expect(draws.slice(0, 2).map((draw) => draw.target)).toEqual([buffer, frame]);
+    expect(buffer).toMatchObject({ width: 640, height: 360 });
+    release();
     frame.dispose();
   });
 
@@ -208,6 +234,29 @@ describe('createCanvasFrame', () => {
     frame.render(resized.gl, scene, camera);
 
     expect(resized.draws[0]!.target).toMatchObject({ width: 128, height: 32 });
+    frame.dispose();
+  });
+
+  it('blends sRGB numbers in an sRGB canvas: RGBA8 under an sRGB tag, which three encodes into', () => {
+    const frame = createCanvasFrame(canvasColorSpaceOf(false));
+    expect(frame.texture.internalFormat).toBe('RGBA8');
+    expect(frame.texture.colorSpace).toBe(THREE.SRGBColorSpace);
+    frame.dispose();
+  });
+
+  it('takes its output like the drawing buffer, so a lit item writes into it in the numbers it holds', () => {
+    for (const space of [canvasColorSpaceOf(false), LINEAR_CANVAS]) {
+      const frame = createCanvasFrame(space);
+      expect((frame as { isXRRenderTarget?: boolean }).isXRRenderTarget).toBe(true);
+      frame.dispose();
+    }
+  });
+
+  it('blends linear values and keeps those above 1 in a linear canvas: RGBA16F under a linear tag', () => {
+    const frame = createCanvasFrame(LINEAR_CANVAS);
+    expect(frame.texture.type).toBe(THREE.HalfFloatType);
+    expect(frame.texture.internalFormat).toBe('RGBA16F');
+    expect(frame.texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
     frame.dispose();
   });
 });
