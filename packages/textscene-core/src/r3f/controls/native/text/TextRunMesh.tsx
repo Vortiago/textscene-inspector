@@ -477,11 +477,12 @@ export function TextRunMesh({
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
-  // A run that snaps its pen sums it in 32-bit float from the item origin, so a move rebuilds it.
+  // A snapped pen sums from the item x, so an x move rebuilds the run. The baseline reads only y's phase.
   const itemOrigin = useCanvasItemOrigin();
   const { fontMetrics } = layout;
   const readsOrigin = snapsPen(glyphDrawer, fontSizePx, fontMetrics);
-  const { x: originX, y: originY } = readsOrigin ? itemOrigin : VECTOR2_ZERO;
+  const originX = readsOrigin ? itemOrigin.x : 0;
+  const phaseY = readsOrigin ? originPhase(itemOrigin).y : 0;
   const linearTint = useItemLinearColor(tint);
   const isLinearCanvas = useCanvasColorSpace().isLinear;
   // Godot's glyph is a white coverage mask that the rect modulate tints (`text_server_adv.cpp`
@@ -506,7 +507,7 @@ export function TextRunMesh({
         layout,
         fontSizePx,
         { tint: builtTint, clippingPlanes, depthTest, side, pixelMaterial, linearTint },
-        { strokeWidthPx, glyphDrawer, itemOriginPx: { x: originX, y: originY }, penSum, colourGlyphTint },
+        { strokeWidthPx, glyphDrawer, itemOriginPx: { x: originX, y: phaseY }, penSum, colourGlyphTint },
         { textureFilter, mipmapped }
       ),
     // `tint` is compared by its fields, not by identity: a caller that re-creates an equal
@@ -531,7 +532,7 @@ export function TextRunMesh({
       glyphDrawer,
       penSum,
       originX,
-      originY,
+      phaseY,
       textureFilter,
       mipmapped,
       svgGlyphLandings,

@@ -55,23 +55,41 @@ describe('<TextRunMesh> on the canvas painter', () => {
     expect(y).toBeCloseTo(offsetYPx + 0.75, 6);
   });
 
-  // The pen sums in 32-bit float from the item origin (label.h:199): a whole-pixel move can change it.
-  it('paints its raster again when the run moves by whole pixels', async () => {
-    const at = (x: number) => (
-      <CanvasItemProvider value={0}>
-        <CanvasItemGroup position={[x, -1.75, 0]}>
-          <TextRunMesh layout={layout} fontSizePx={16} tint={{ r: 1, g: 1, b: 1, a: 1 }} />
-        </CanvasItemGroup>
-      </CanvasItemProvider>
-    );
-    const renderer = await ReactThreeTestRenderer.create(at(2.25));
+  const run = <TextRunMesh layout={layout} fontSizePx={16} tint={{ r: 1, g: 1, b: 1, a: 1 }} />;
+  const inItemAt = (x: number, y: number) => (
+    <CanvasItemProvider value={0}>
+      <CanvasItemGroup position={[x, -y, 0]}>{run}</CanvasItemGroup>
+    </CanvasItemProvider>
+  );
+
+  /** Whether the run keeps its raster texture over the move from the first scene to the second. */
+  async function keepsRaster(from: React.JSX.Element, to: React.JSX.Element): Promise<boolean> {
+    const renderer = await ReactThreeTestRenderer.create(from);
     const raster = () => {
       const mesh = renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh;
       return (mesh.material as THREE.MeshBasicMaterial).map;
     };
     const before = raster();
-    await renderer.update(at(5.25));
-    expect(raster()).not.toBe(before);
+    await renderer.update(to);
+    return raster() === before;
+  }
+
+  // The pen sums in 32-bit float from the item origin (label.h:199): a whole-pixel move can change it.
+  it('paints its raster again when the run moves by whole pixels in x', async () => {
+    expect(await keepsRaster(inItemAt(2.25, 1.75), inItemAt(5.25, 1.75))).toBe(false);
+  });
+
+  it('keeps its raster when the run moves by whole pixels in y', async () => {
+    expect(await keepsRaster(inItemAt(2.25, 1.75), inItemAt(2.25, 9.75))).toBe(true);
+  });
+
+  it('keeps its raster when its whole canvas item moves', async () => {
+    const itemAt = (x: number) => (
+      <CanvasItemGroup position={[x, 0, 0]}>
+        <CanvasItemProvider value={0}>{run}</CanvasItemProvider>
+      </CanvasItemGroup>
+    );
+    expect(await keepsRaster(itemAt(2.25), itemAt(5.25))).toBe(true);
   });
 
   it('keeps the quad of a Label3D run at its origin', async () => {
