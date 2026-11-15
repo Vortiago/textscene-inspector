@@ -118,4 +118,14 @@ describe('orderViewportPasses', () => {
     ]);
     expect(result.order).toEqual(['P/X', 'P/Y', 'P']);
   });
+
+  it('places a nested viewport where the dispatcher placed it, not by its index in the enclosing list', () => {
+    // An instanced sub-scene's nodes enter the tree before the instancing scene's own children.
+    const result = orderViewportPasses([
+      { id: 'P/Own', dependsOn: [], treeOrder: [0, 1, 0] },
+      { id: 'P/Sub/V', dependsOn: [], treeOrder: [0, 0, 0] },
+      { id: 'P', dependsOn: ['P/Own', 'P/Sub/V'], treeOrder: [0] },
+    ]);
+    expect(result.order).toEqual(['P/Sub/V', 'P/Own', 'P']);
+  });
 });

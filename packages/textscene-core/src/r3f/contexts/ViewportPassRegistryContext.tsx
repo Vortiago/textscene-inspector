@@ -17,6 +17,7 @@ import {
 } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as logger from '../../logger.js';
+import { perObject } from '../../utils/perObject.js';
 import { orderViewportPasses, type ViewportPassCycle } from '../../nodes/viewport/passOrder.js';
 import {
   GateClock,
@@ -48,15 +49,10 @@ export interface ViewportPass {
 /** Publishes a pass at `path` and returns the cleanup. */
 type RegisterViewportPass = (path: string, pass: ViewportPass) => () => void;
 
-/** One mounted node's place in tree order. Every placement of one path holds the same place. */
-interface ViewportPlacement {
-  treeOrder: TreeOrder;
-}
-
 interface PassRegistryState {
   passes: ReadonlyMap<string, ViewportPass>;
-  /** Where the dispatcher draws each viewport node, by path: once in each canvas that draws it. */
-  placements: ReadonlyMap<string, readonly ViewportPlacement[]>;
+  /** Each placed viewport node's place in tree order, by path. */
+  treeOrders: ReadonlyMap<string, TreeOrder>;
   order: readonly string[];
   cycles: ReadonlyMap<string, ViewportPassCycle>;
 }
@@ -98,9 +94,15 @@ function registerPass(state: ExternalStore<PassRegistryState>, path: string, pas
 }
 
 function setPasses(state: ExternalStore<PassRegistryState>, passes: ReadonlyMap<string, ViewportPass>): void {
-  const { placements, cycles } = state.get();
-  state.set(registryState(passes, placements, cycles));
+  const { treeOrders, cycles } = state.get();
+  state.set(registryState(passes, treeOrders, cycles));
 }
+
+/**
+ * How many mounted callers place each path, for each provider's store. Written only by
+ * `placeViewport`. A path's count clears when its last caller unmounts.
+ */
+const placementCountsOf = perObject((_state: ExternalStore<PassRegistryState>) => new Map<string, number>());
 
 /**
  * Places the viewport node at `path` at the caller's place in tree order, for as long as the caller
@@ -108,53 +110,64 @@ function setPasses(state: ExternalStore<PassRegistryState>, passes: ReadonlyMap<
  */
 export function usePlaceViewport(path: string | null): void {
   const state = useContext(StateContext);
-  const treeOrder = useTreeOrder();
+  // By value: a provider may build an equal order on every render.
+  const treeOrderKey = useTreeOrder().join(',');
   useEffect(
-    () => (path === null ? undefined : placeViewport(state, path, treeOrder)),
-    [state, path, treeOrder]
+    () => (path === null ? undefined : placeViewport(state, path, treeOrderOfKey(treeOrderKey))),
+    [state, path, treeOrderKey]
   );
 }
 
-/** Adds one placement of `path` at `treeOrder` to `state`, and returns the cleanup that removes it. */
+function treeOrderOfKey(key: string): TreeOrder {
+  return key === '' ? [] : key.split(',').map(Number);
+}
+
+/**
+ * Adds one placement of `path` at `treeOrder` to `state`, and returns the cleanup that removes it.
+ * Only the first placement and the last removal change the state, so a second canvas sorts nothing.
+ */
 function placeViewport(
   state: ExternalStore<PassRegistryState>,
   path: string,
   treeOrder: TreeOrder
 ): () => void {
   if (state === NO_PROVIDER) return () => {};
-  const placement: ViewportPlacement = { treeOrder };
-  const placementsAt = (orders: ReadonlyMap<string, readonly ViewportPlacement[]>) => orders.get(path) ?? [];
-  const placements = state.get().placements;
-  setPlacements(state, new Map(placements).set(path, [...placementsAt(placements), placement]));
+  const counts = placementCountsOf(state);
+  const count = counts.get(path) ?? 0;
+  counts.set(path, count + 1);
+  if (count === 0) setTreeOrders(state, new Map(state.get().treeOrders).set(path, treeOrder));
   return () => {
-    const current = state.get().placements;
-    const kept = placementsAt(current).filter((other) => other !== placement);
-    const next = new Map(current);
-    if (kept.length > 0) next.set(path, kept);
-    else next.delete(path);
-    setPlacements(state, next);
+    const left = counts.get(path)! - 1;
+    if (left > 0) {
+      counts.set(path, left);
+      return;
+    }
+    counts.delete(path);
+    const next = new Map(state.get().treeOrders);
+    next.delete(path);
+    setTreeOrders(state, next);
   };
 }
 
-function setPlacements(
+function setTreeOrders(
   state: ExternalStore<PassRegistryState>,
-  placements: ReadonlyMap<string, readonly ViewportPlacement[]>
+  treeOrders: ReadonlyMap<string, TreeOrder>
 ): void {
   const { passes, cycles } = state.get();
-  state.set(registryState(passes, placements, cycles));
+  state.set(registryState(passes, treeOrders, cycles));
 }
 
 /** The state for `passes`. A cycle equal to one in `previous` stays that object, so its readers keep it. */
 function registryState(
   passes: ReadonlyMap<string, ViewportPass>,
-  placements: ReadonlyMap<string, readonly ViewportPlacement[]>,
+  treeOrders: ReadonlyMap<string, TreeOrder>,
   previous: ReadonlyMap<string, ViewportPassCycle> = new Map()
 ): PassRegistryState {
   const result = orderViewportPasses(
     [...passes].map(([id, pass]) => ({
       id,
       dependsOn: pass.dependsOn,
-      treeOrder: placements.get(id)?.[0]?.treeOrder ?? null,
+      treeOrder: treeOrders.get(id) ?? null,
     }))
   );
   const cycles = new Map<string, ViewportPassCycle>();
@@ -163,7 +176,7 @@ function registryState(
     cycles.set(cycle.sampler, kept && isSameCycle(kept, cycle) ? kept : cycle);
   }
   const isUnchanged = cycles.size === previous.size && [...cycles].every(([id, c]) => previous.get(id) === c);
-  return { passes, placements, order: result.order, cycles: isUnchanged ? previous : cycles };
+  return { passes, treeOrders, order: result.order, cycles: isUnchanged ? previous : cycles };
 }
 
 function isSameCycle(a: ViewportPassCycle, b: ViewportPassCycle): boolean {

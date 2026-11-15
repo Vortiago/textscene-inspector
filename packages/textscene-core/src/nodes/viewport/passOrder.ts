@@ -6,7 +6,7 @@
  * shallower viewport sees the last frame's.
  */
 
-import { compareTreeOrder, type TreeOrder } from '../../r3f/contexts/TreeOrderContext.js';
+import { compareTreeOrder, type TreeOrder } from '../../r3f/contexts/treeOrder.js';
 
 /** One pass in the dependency graph. */
 interface ViewportPassDependency {
@@ -65,9 +65,9 @@ function compareKnownTreeOrder(a: TreeOrder | null, b: TreeOrder | null): number
 }
 
 /**
- * Each pass's place. A nested pass's tree order extends its enclosing pass's by its index in that
- * pass's `dependsOn`, which lists the nested viewports in tree order. A walk up a cycle stops where
- * it repeats.
+ * Each pass's place. A nested pass takes the place the dispatcher gave it. One the dispatcher did
+ * not reach extends its enclosing pass's place by its index in that pass's `dependsOn`, which lists
+ * the nested viewports in tree order. A walk up a cycle stops where it repeats.
  */
 function viewportPlaces(passes: readonly ViewportPassDependency[]): Map<string, ViewportPlace> {
   const byId = new Map(passes.map((pass) => [pass.id, pass]));
@@ -79,18 +79,28 @@ function viewportPlaces(passes: readonly ViewportPassDependency[]): Map<string, 
   }
   const places = new Map<string, ViewportPlace>();
   for (const { id } of passes) {
-    const indices: number[] = [];
-    const seen = new Set([id]);
-    let outermost = id;
-    for (let up = enclosing.get(outermost); up && !seen.has(up.id); up = enclosing.get(outermost)) {
-      indices.unshift(up.index);
-      seen.add(up.id);
-      outermost = up.id;
-    }
-    const root = byId.get(outermost)!.treeOrder;
-    places.set(id, { level: indices.length, treeOrder: root && [...root, ...indices] });
+    const chain = [id];
+    for (let up = enclosing.get(id); up && !chain.includes(up.id); up = enclosing.get(up.id))
+      chain.push(up.id);
+    places.set(id, { level: chain.length - 1, treeOrder: placedOrDerived(chain, byId, enclosing) });
   }
   return places;
+}
+
+/** The tree order of `chain[0]`, from the nearest pass in `chain`, inner to outer, that has a place. */
+function placedOrDerived(
+  chain: readonly string[],
+  byId: ReadonlyMap<string, ViewportPassDependency>,
+  enclosing: ReadonlyMap<string, { id: string; index: number }>
+): TreeOrder | null {
+  const indices: number[] = [];
+  for (const id of chain) {
+    const placed = byId.get(id)!.treeOrder;
+    if (placed) return [...placed, ...indices];
+    const up = enclosing.get(id);
+    if (up) indices.unshift(up.index);
+  }
+  return null;
 }
 
 /**

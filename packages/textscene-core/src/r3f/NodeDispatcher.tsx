@@ -66,6 +66,7 @@ import { loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
 import { usePlaceViewport } from './contexts/ViewportPassRegistryContext.js';
+import { UndrawnViewportPlacements } from './UndrawnViewportPlacements.js';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import { spaceFamilyOf } from '../godot/scene/parentSpace.js';
 
@@ -273,7 +274,7 @@ function PlainNode({
   // outside this walk.
   usePlaceViewport(isViewportBoundary(node.type) ? path : null);
 
-  if (!drawsInWorkspace(node.type, workspace)) return null;
+  if (!drawsInWorkspace(node.type, workspace)) return <UndrawnViewportPlacements node={node} path={path} />;
 
   const sortsChildren = ysortsChildren(node);
   const inlineChildren = sortsChildren
