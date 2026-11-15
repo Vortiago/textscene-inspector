@@ -90,22 +90,16 @@ export class TargetRenderState {
   private lastClearMode: number | null = null;
   private isOnceClearPending = true;
   private lastClearColor: THREE.Color | null = null;
-  private lastTarget: object | null = null;
 
   /** Whether the viewport has rendered since its update mode was last set. */
   get hasRendered(): boolean {
     return this.hasRenderedOnce;
   }
 
-  /**
-   * Counts a render into `target` under `clearMode` and answers what it clears. `projectClearColor`
-   * is linear. A new target starts empty, so it takes the ONCE clear again: the renders outlive a
-   * remount, and the pass's target does not.
-   */
-  takeRender(clearMode: number, projectClearColor: THREE.Color, target: object): RenderClear {
-    if (clearMode !== this.lastClearMode || target !== this.lastTarget) {
+  /** Counts a render under `clearMode` and answers what it clears. `projectClearColor` is linear. */
+  takeRender(clearMode: number, projectClearColor: THREE.Color): RenderClear {
+    if (clearMode !== this.lastClearMode) {
       this.lastClearMode = clearMode;
-      this.lastTarget = target;
       this.isOnceClearPending = true;
     }
     const clears =

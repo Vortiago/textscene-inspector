@@ -75,14 +75,14 @@ export function storeSrgbBytes(texture: THREE.Texture): void {
 }
 
 /** The shape of one target: its attachments, and the layers of an array target, null for a plain one. */
-export interface TargetShape {
+interface TargetShape {
   readonly attachments: number;
   readonly layers: number | null;
 }
 
 /**
- * A target of the 2D light pass (`r3f/lighting2d/lightAccumulationTargets.ts`): a plain target for a
- * null `layers`, else an array target of that many layers.
+ * A target that the 2D light pass sums its lights into: a plain target for a null `layers`, else an
+ * array target of that many layers.
  */
 export function createAccumulationTarget(
   type: THREE.TextureDataType,

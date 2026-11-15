@@ -310,13 +310,12 @@ describe('<ViewportPassOrchestrator> and the update mode', () => {
       state,
       options.isSampled
     );
-    const target = new THREE.WebGLRenderTarget(1, 1);
     const pass: ViewportPass = {
       dependsOn: [],
       gate,
       render: () => {
         log.renders++;
-        state.takeRender(SubViewportClearMode.ALWAYS, new THREE.Color(), target);
+        state.takeRender(SubViewportClearMode.ALWAYS, new THREE.Color());
       },
     };
     return { pass, log };

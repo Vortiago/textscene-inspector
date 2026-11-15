@@ -23,8 +23,15 @@ const CANVAS_PATHS = [
   'nodes/2d',
 ].map((path) => join(SRC, path));
 
-const ALLOCATES_TARGET = /\bnew THREE\.WebGL\w*RenderTarget\b/;
+/** A target made with `new`, or a class that is one, whether three comes in as a namespace or by name. */
+const ALLOCATES_TARGET = /\b(?:new|extends)\s+(?:THREE\.)?WebGL\w*RenderTarget\b/;
 const DISPOSES = /\.dispose\(\)/;
+
+/** Targets made outside `r3f/offscreen/`, each with the reason it stays where it is. */
+const ALLOCATES_OUTSIDE_OFFSCREEN: Record<string, string> = {
+  'packages/textscene-core/src/r3f/components/Canvas2DStage/canvasFrame.ts':
+    'CanvasFrame draws the canvas frame through drawCanvasGroups, so in r3f/offscreen/ it would import r3f/canvasGroup/, which imports r3f/offscreen/draw.ts',
+};
 
 /**
  * Owners whose own `dispose` frees what they hold. Each owner is held by `useDisposeOnRelease` or
@@ -45,12 +52,16 @@ describe('an off-screen target of the 2D canvas', () => {
   it('finds the canvas sources, so the scan cannot pass vacuously', () => {
     expect(sources.length).toBeGreaterThan(100);
     expect(sources.map(({ file }) => repoPath(file))).toEqual(
-      expect.arrayContaining(Object.keys(FREES_WHAT_IT_HOLDS))
+      expect.arrayContaining([
+        ...Object.keys(FREES_WHAT_IT_HOLDS),
+        ...Object.keys(ALLOCATES_OUTSIDE_OFFSCREEN),
+      ])
     );
   });
 
   it('is allocated only under r3f/offscreen/', () => {
-    expect(reportOffenders(sources, (source) => offendingLines(source, ALLOCATES_TARGET))).toEqual([]);
+    const scanned = sources.filter(({ file }) => !(repoPath(file) in ALLOCATES_OUTSIDE_OFFSCREEN));
+    expect(reportOffenders(scanned, (source) => offendingLines(source, ALLOCATES_TARGET))).toEqual([]);
   });
 
   it('is freed only through useDisposeOnRelease, or by an owner it holds', () => {
