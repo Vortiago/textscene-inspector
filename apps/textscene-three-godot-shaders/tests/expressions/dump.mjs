@@ -91,9 +91,9 @@ export function dumpVariant({ type, value }) {
     case 'OBJECT':
       return 'Object(null)';
     case 'CALLABLE':
-      return 'Callable()';
+      return value === '' ? 'Callable()' : `Callable(null::${value})`;
     case 'SIGNAL':
-      return 'Signal()';
+      return value === '' ? 'Signal()' : `Signal(null::[signal]${value})`;
     case 'ARRAY':
       return `[${value.map(dumpVariant).join(', ')}]`;
     case 'DICTIONARY':

@@ -144,9 +144,8 @@ const FORMATS = [
   '"%e"',
 ];
 
-/** A format string for the `%` operator, of `type` STRING or STRING_NAME. */
-export function formatText(type, random) {
-  const format = random.pick(FORMATS);
+/** A format string for the `%` operator, of `type` STRING or STRING_NAME: `format`, else a random one. */
+export function formatText(type, random, format = random.pick(FORMATS)) {
   return type === 'STRING_NAME' ? call('StringName', [format]) : format;
 }
 

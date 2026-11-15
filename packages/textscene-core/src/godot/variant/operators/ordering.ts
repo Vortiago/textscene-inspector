@@ -38,6 +38,16 @@ function native(comparison: Comparison, a: number | bigint, b: number | bigint):
   }
 }
 
+// StringName::operator< (string_name.h:97) compares the addresses of the interned texts. Only the empty
+// name's null address and a name's own address order the same on every run.
+function isInternedLess(a: string, b: string): boolean {
+  if (a === b) return false;
+  if (a === '' || b === '') return a === '';
+  throw new UnportableComparison(
+    `StringName orders "${a}" and "${b}" by the addresses of their interned texts`
+  );
+}
+
 // Array::operator< (array.cpp:166) compares elements with Variant::operator<, then the lengths.
 function isArrayLess(a: readonly Variant[], b: readonly Variant[], less: Less<Variant>): boolean {
   for (let index = 0; index < Math.min(a.length, b.length); index += 1) {
@@ -55,7 +65,7 @@ export function compare(comparison: Comparison, a: Variant, b: Variant, variantL
     case 'STRING':
       return fromLess(comparison, a.value, b.value as string, isStringLess);
     case 'STRING_NAME':
-      throw new UnportableComparison('StringName orders by the address of its interned text');
+      return fromLess(comparison, a.value, b.value as string, isInternedLess);
     case 'ARRAY':
       return fromLess(comparison, a.value, b.value as readonly Variant[], (x, y) =>
         isArrayLess(x, y, variantLess)

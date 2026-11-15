@@ -23,7 +23,7 @@ export interface DictionaryEntry {
 }
 
 // An INT holds int64 as a bigint, and a real_t component the float32 value it stores.
-/** A null OBJECT, CALLABLE or SIGNAL is the only one an expression makes. */
+/** An OBJECT is always null. A CALLABLE or SIGNAL of no object holds its method or signal name, empty when null. */
 export interface VariantValues {
   NIL: null;
   BOOL: boolean;
@@ -50,8 +50,8 @@ export interface VariantValues {
   NODE_PATH: string;
   RID: bigint;
   OBJECT: null;
-  CALLABLE: null;
-  SIGNAL: null;
+  CALLABLE: string;
+  SIGNAL: string;
   DICTIONARY: readonly DictionaryEntry[];
   ARRAY: readonly Variant[];
   PACKED_BYTE_ARRAY: readonly number[];

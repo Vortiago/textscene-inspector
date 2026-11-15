@@ -3,7 +3,7 @@
  * (shader_preprocessor.cpp:494): parse with no input names, then execute with no inputs and no base.
  */
 
-import { runGodotScriptToExit } from '../godot-probes/godotRun.mjs';
+import { printedField, requireGodotVersion, runGodotScriptToExit } from '../godot-probes/godotRun.mjs';
 import { DUMP_GDSCRIPT } from '../../apps/textscene-three-godot-shaders/tests/expressions/dump.mjs';
 
 const TEXTS_FILE = 'expressions.json';
@@ -22,6 +22,7 @@ func answer(text: String) -> String:
 
 func _ready():
 	var texts: Array = JSON.parse_string(FileAccess.get_file_as_string("res://${TEXTS_FILE}"))
+	print("GODOT ", Engine.get_version_info().string)
 	for index in texts.size():
 		print("EXPRESSION %d %s" % [index, answer(texts[index])])
 	get_tree().quit()
@@ -47,22 +48,38 @@ async function runFrom(texts, first) {
     [TEXTS_FILE]: JSON.stringify(rest),
   });
   const answered = stdout.split('\n').filter((line) => LINE.test(line)).length;
-  if (status === 0) return { answers: parseExpressionOutput(stdout, rest.length) };
+  const godot = printedField(stdout, 'GODOT ');
+  requireGodotVersion(godot);
+  if (status === 0) return { godot, answers: parseExpressionOutput(stdout, rest.length) };
   if (!stdout.includes('handle_crash: Program crashed'))
     throw new Error(`godot exited with ${status}:\n${stderr}`);
-  return { answers: parseExpressionOutput(stdout, answered), crashed: first + answered };
+  return { godot, answers: parseExpressionOutput(stdout, answered), crashed: first + answered };
 }
 
 /**
- * Godot's `{ verdict, text }` for each of `texts`, in order. A text that crashes Godot, such as an
- * int64 division that raises SIGFPE, answers `crash`, and the run goes on from the next text.
+ * Godot's version and its `{ verdict, text }` for each of `texts`, in order. A text that crashes
+ * Godot, such as an int64 division that raises SIGFPE, answers `crash`, and the run goes on from
+ * the next text.
  */
-export async function runExpressionsInGodot(texts) {
+async function askGodot(texts) {
   const answers = [];
+  let godot;
   while (answers.length < texts.length) {
     const run = await runFrom(texts, answers.length);
+    godot = run.godot;
     answers.push(...run.answers);
     if (run.crashed !== undefined) answers.push({ verdict: 'crash', text: '' });
   }
-  return answers;
+  return { godot, answers };
+}
+
+/** Godot's `{ verdict, text }` for each of `texts`, in order. */
+export async function runExpressionsInGodot(texts) {
+  return (await askGodot(texts)).answers;
+}
+
+/** The `expressions` family of `pnpm godot:probes`: Godot's version and its answer to each case, by id. */
+export async function expressionRecord(cases) {
+  const { godot, answers } = await askGodot(cases.map((each) => each.text));
+  return { godot, cases: Object.fromEntries(cases.map((each, index) => [each.id, answers[index]])) };
 }

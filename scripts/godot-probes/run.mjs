@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Runs every probe, the fixed-seed random programs, the operator cases and the corpus in Godot
- * 4.6.3, and writes Godot's answers: `pnpm godot:probes [--check]`. Each family's answers go to
+ * Runs every probe, the fixed-seed random programs, the operator cases, the corpus and the
+ * Expression cases in Godot 4.6.3, and writes Godot's answers: `pnpm godot:probes [--check]`. Each family's answers go to
  * the ignored `tests/.godot-answers/`, where the tests and the guide read them. The committed
  * `tests/godot-answers.json` holds Godot's version, a digest of each family and the smoke subset
  * (`answerDigest.mjs`). `--check` writes the live answers but not the committed file, and exits 1
@@ -27,6 +27,8 @@ import {
 } from '../../apps/textscene-three-godot-shaders/tests/random/knownDifferences.mjs';
 import { RANDOM_PROGRAMS } from '../../apps/textscene-three-godot-shaders/tests/random/randomSet.mjs';
 import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
+import { expressionRecord } from '../godot-variant/godotExpressions.mjs';
+import { sourceServer } from '../sourceServer.mjs';
 import { runProbesInGodot } from './godotProject.mjs';
 import { eachAtOnce, requireGodotVersion } from './godotRun.mjs';
 import { renderAnswersFile } from './answerDigest.mjs';
@@ -34,6 +36,18 @@ import { isDrawn, probeRecord } from './record.mjs';
 import { loadPrinter, printedProbes, printedRejection, printedTextFaults } from './printedText.mjs';
 import { frontEndRejections, godotRejection } from './rejection.mjs';
 import { godotVerdicts, verdictRecord } from './shaderVerdicts.mjs';
+
+const EXPRESSION_SET = '/apps/textscene-three-godot-shaders/tests/expressions/expressionSet.mjs';
+
+/** The Expression cases. Vite loads them, since their set imports the port's TypeScript sources. */
+async function loadExpressions() {
+  const server = await sourceServer();
+  try {
+    return (await server.ssrLoadModule(EXPRESSION_SET)).EXPRESSIONS;
+  } finally {
+    await server.close();
+  }
+}
 
 /** The record of Godot's verdict on each case of each set, `{ id, text }`, from one Godot run. */
 async function verdictRecords(...sets) {
@@ -78,6 +92,7 @@ async function endingRejection(probe) {
 
 async function main() {
   const randomProbes = recordedRandomProbes(RANDOM_PROGRAMS);
+  const expressions = await loadExpressions();
   const printer = await loadPrinter();
   const lowered = printedProbes([...PROBES, ...randomProbes], printer.lower, 'lowered');
   const printed = [...printedProbes([...PROBES, ...randomProbes], printer.print), ...lowered];
@@ -93,10 +108,11 @@ async function main() {
     random: probeRecord(output, randomProbes, reasons),
     operators: operatorRecord,
     corpus: corpusRecord,
+    expressions: await expressionRecord(expressions),
   };
   writeLiveAnswers(records);
   const answersFile = renderAnswersFile(records);
-  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${printed.length - lowered.length} printed texts as parsed and ${lowered.length} as lowered`;
+  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${expressions.length} expressions, ${printed.length - lowered.length} printed texts as parsed and ${lowered.length} as lowered`;
   const options = { tool: 'godot-probes', summary };
   const outputs = [[ANSWERS_FILE, answersFile]];
   if (process.argv.includes('--check')) checkGenerated(outputs, { ...options, command: 'pnpm godot:probes' });

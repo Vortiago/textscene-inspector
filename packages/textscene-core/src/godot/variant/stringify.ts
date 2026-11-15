@@ -116,9 +116,9 @@ export function stringify(value: Variant): string {
     case 'OBJECT':
       return '<Object#null>';
     case 'CALLABLE':
-      return 'null::null';
+      return value.value === '' ? 'null::null' : `null::${value.value}`;
     case 'SIGNAL':
-      return 'null::[signal]';
+      return `null::[signal]${value.value}`;
     case 'ARRAY':
       return listText(value.value);
     case 'DICTIONARY':

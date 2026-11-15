@@ -8,7 +8,7 @@ import {
   CONSTRUCTOR_REGISTRATIONS,
   OPERATOR_REGISTRATIONS,
 } from '../../../../packages/textscene-core/src/godot/variant/registrations.generated.ts';
-import { variantTypeOfCpp } from '../../../../packages/textscene-core/src/godot/variant/cppType.ts';
+import { constructorSignature } from '../../../../packages/textscene-core/src/godot/variant/construct/constructorSignature.ts';
 import {
   VARIANT_TYPE,
   variantTypeName,
@@ -50,9 +50,12 @@ export const OPERATOR_TEXT = {
 
 const UNARY = new Set(['OP_NEGATE', 'OP_BIT_NEGATE', 'OP_NOT', 'OP_POSITIVE']);
 
-/** The registrations no Expression text reaches: their operator has no spelling. */
+/**
+ * The registrations no Expression text reaches: their operator has no spelling, or `~`, which the
+ * parser takes only between two operands (expression.cpp:833), where it fails.
+ */
 export const UNREACHABLE_OPERATORS = OPERATOR_REGISTRATIONS.filter(
-  ([operator]) => !(operator in OPERATOR_TEXT)
+  ([operator]) => !(operator in OPERATOR_TEXT) || operator === 'OP_BIT_NEGATE'
 );
 
 const operatorKey = ([operator, left, right]) => `${operator} ${left} ${right}`;
@@ -67,6 +70,7 @@ function operatorCases(random) {
     const [operator, left, right] = row;
     return Array.from({ length: CASES_PER_REGISTRATION }, (_, index) => {
       const isFormat = operator === 'OP_MODULE' && (left === 'STRING' || left === 'STRING_NAME');
+      if (isFormat && index === 0) return formatCase(row, random);
       const leftText =
         isFormat && index < CASES_PER_REGISTRATION - 1 ? formatText(left, random) : valueText(left, random);
       const holds = operator === 'OP_IN' && index % 2 === 0;
@@ -78,6 +82,17 @@ function operatorCases(random) {
       };
     });
   });
+}
+
+/** A `%s` format of one value, which every right type formats: an Array right holds that value. */
+function formatCase(row, random) {
+  const [operator, left, right] = row;
+  const value = right === 'ARRAY' ? `[${valueText('INT', random)}]` : valueText(right, random);
+  return {
+    id: `operator ${operatorKey(row)} 0`,
+    text: operatorText(operator, formatText(left, random, '"%s"'), value),
+    operator: operatorKey(row),
+  };
 }
 
 /** Pairs of types no registration takes, which Godot refuses with "Invalid operands". */
@@ -97,7 +112,7 @@ function unregisteredCases(random) {
   });
 }
 
-/** The Variant type a constructor builds: its first template type, or the type its class names. */
+/** The id of a constructor row: its place in the table, its class and its C++ types. */
 export function constructorKey([constructor, types], index) {
   return `${index} ${constructor}<${types.join(', ')}>`;
 }
@@ -107,47 +122,7 @@ function typeName(type) {
   return variantTypeName(VARIANT_TYPE[type]);
 }
 
-/** The built type and argument types of a constructor row. Throws on a class this does not know. */
-export function constructorSignature([constructor, types]) {
-  const cpp = variantTypeOfCpp;
-  switch (constructor) {
-    case 'VariantConstructNoArgsNil':
-      return { type: 'NIL', arguments: [] };
-    case 'VariantConstructorNil':
-      return { type: 'NIL', arguments: ['NIL'] };
-    case 'VariantConstructNoArgs':
-      return { type: cpp(types[0]), arguments: [] };
-    case 'VariantConstructor':
-      return { type: cpp(types[0]), arguments: types.slice(1).map(cpp) };
-    case 'VariantConstructorFromString':
-      return { type: cpp(types[0]), arguments: ['STRING'] };
-    case 'VariantConstructNoArgsObject':
-      return { type: 'OBJECT', arguments: [] };
-    case 'VariantConstructorObject':
-      return { type: 'OBJECT', arguments: ['OBJECT'] };
-    case 'VariantConstructorNilObject':
-      return { type: 'OBJECT', arguments: ['NIL'] };
-    case 'VariantConstructorCallableArgs':
-      return { type: 'CALLABLE', arguments: ['OBJECT', 'STRING_NAME'] };
-    case 'VariantConstructorSignalArgs':
-      return { type: 'SIGNAL', arguments: ['OBJECT', 'STRING_NAME'] };
-    case 'VariantConstructorTypedDictionary':
-      return {
-        type: 'DICTIONARY',
-        arguments: ['DICTIONARY', 'INT', 'STRING_NAME', 'NIL', 'INT', 'STRING_NAME', 'NIL'],
-      };
-    case 'VariantConstructorTypedArray':
-      return { type: 'ARRAY', arguments: ['ARRAY', 'INT', 'STRING_NAME', 'NIL'] };
-    case 'VariantConstructorToArray':
-      return { type: 'ARRAY', arguments: [cpp(types[0])] };
-    case 'VariantConstructorFromArray':
-      return { type: cpp(types[0]), arguments: ['ARRAY'] };
-    default:
-      throw new Error(`expected a known constructor class, got ${constructor}`);
-  }
-}
-
-/** An argument text for a constructor: a type id or an empty class name where the row takes one. */
+/** An argument text of `type`. A NIL argument takes a value of any type. */
 function argumentText(type, random) {
   if (type === 'NIL') return random.pick(['null', '1', '"x"']);
   return valueText(type, random);
@@ -155,7 +130,7 @@ function argumentText(type, random) {
 
 function constructorCases(random) {
   return CONSTRUCTOR_REGISTRATIONS.flatMap((row, index) => {
-    const signature = constructorSignature(row);
+    const signature = constructorSignature(row, index);
     const key = constructorKey(row, index);
     return Array.from({ length: CASES_PER_REGISTRATION }, (_, caseIndex) => {
       const argumentsText = signature.arguments.map((type) => argumentText(type, random));

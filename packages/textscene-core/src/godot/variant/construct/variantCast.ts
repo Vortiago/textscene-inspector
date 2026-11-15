@@ -10,12 +10,20 @@ import { nodePathText } from '../../string/nodePath.js';
 import { stringToFloat, stringToInt64 } from '../../string/string.js';
 import { doubleToInt32, doubleToInt64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
 import { booleanize } from '../compare.js';
+import { STRICT_CONVERSIONS } from '../registrations.generated.js';
 import { stringify } from '../stringify.js';
 import { defaultValue } from '../value/defaultValue.js';
 import { variant, type ColorValue, type Variant, type VariantTypeName } from '../value/variant.js';
 import { basisQuaternion } from './rotations.js';
 
 type Components = Readonly<Record<string, number>>;
+
+/** `Variant::can_convert_strict` (variant.cpp:535). */
+export function canConvertStrict(from: VariantTypeName, to: VariantTypeName): boolean {
+  if (from === to || to === 'NIL') return true;
+  if (from === 'NIL') return to === 'OBJECT';
+  return STRICT_CONVERSIONS[to]?.includes(from) ?? false;
+}
 
 const mapComponents = (value: unknown, map: (component: number) => number) =>
   Object.fromEntries(Object.entries(value as Components).map(([key, component]) => [key, map(component)]));
