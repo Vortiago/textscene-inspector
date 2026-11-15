@@ -162,9 +162,7 @@ const UNDECLARED_RESOURCES: readonly string[] = [
   'TorusMesh',
   'ViewportTexture',
   // The font and theme slices decode enough to draw (a `.tres` wrapper's fallbacks,
-  // a variation's base font, a theme's type chain) and validate none of it. `Font`
-  // is the abstract tier the other three descend from.
-  'Font',
+  // a variation's base font, a theme's type chain) and validate none of it.
   'FontFile',
   'FontVariation',
   'SystemFont',
@@ -226,7 +224,7 @@ describe('own-validator coverage for resource slices', () => {
     // The ratchet, exact rather than a ceiling: a ceiling above the current length is
     // a free slot for the next unvalidated slice. Raising it records slices that draw
     // without validating, and the only correct edit afterwards is lowering it.
-    expect(UNDECLARED_RESOURCES.length).toBe(42);
+    expect(UNDECLARED_RESOURCES.length).toBe(41);
   });
 
   it('resolves every own capture row of a claimed resource to a check', () => {
