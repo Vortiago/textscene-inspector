@@ -95,5 +95,4 @@ The glyph raster has a mip chain only when its font generates mipmaps and `textu
 - **Approximated** A glyph off whole pixels draws at its place, where Godot's mesh samples its glyph texture between texels.
 - **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
-- **Approximated** A line with a hex-code box keeps the ascent of a BMFont, where Godot grows it to fit the box.
 - **Approximated** `ALPHA_HASH` keeps about Godot's share of pixels but not the same pixels, as the ported hash's `fract(1e4 * sin())` rounds differently on each GPU (`scene_forward_aa_inc.glsl:3-39`).

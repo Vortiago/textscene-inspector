@@ -97,6 +97,8 @@ export interface TestFontInput {
   cmapFormat: 4 | 12;
   /** `sfntVersion` of the container, TrueType by default. `'ttc'` wraps the font as the first face of a collection. */
   container?: 'true' | 'ttc';
+  /** More tables, such as `COLR` and `CPAL`, listed after the outline tables. */
+  extraTables?: readonly (readonly [string, ByteWriter])[];
 }
 
 /** The `sfntVersion` of each container. A collection's first face is TrueType. */
@@ -303,9 +305,65 @@ export function buildTestFont(input: TestFontInput): ArrayBuffer {
       ['head', headTable(input.unitsPerEm)],
       ['loca', loca],
       ['maxp', maxpTable(input.glyphs.length)],
+      ...(input.extraTables ?? []),
     ],
     input.container
   );
+}
+
+/** A colour as `CPAL` stores it: blue, green, red, alpha. */
+export type TestBgra = readonly [number, number, number, number];
+
+export interface TestCpal {
+  /** Each palette's colours. Every palette holds as many entries as the first. */
+  palettes: readonly (readonly TestBgra[])[];
+  /** Version 1 palette type flags, one for each palette. Absent, the table is version 0. */
+  paletteFlags?: readonly number[];
+}
+
+/** A `CPAL` table whose colour records hold each palette in turn. */
+export function cpalTable({ palettes, paletteFlags }: TestCpal): ByteWriter {
+  const entryCount = palettes[0]?.length ?? 0;
+  const version = paletteFlags ? 1 : 0;
+  const headerSize = 12 + palettes.length * 2 + (version === 1 ? 12 : 0);
+  const typesAt = headerSize;
+  const coloursAt = typesAt + (version === 1 ? palettes.length * 2 : 0);
+  const out = new ByteWriter()
+    .u16(version)
+    .u16(entryCount)
+    .u16(palettes.length)
+    .u16(palettes.length * entryCount)
+    .u32(coloursAt);
+  palettes.forEach((_palette, index) => out.u16(index * entryCount));
+  if (paletteFlags) {
+    out.u32(typesAt).u32(0).u32(0);
+    for (const flags of paletteFlags) out.u16(flags);
+  }
+  for (const palette of palettes) for (const colour of palette) out.raw(colour);
+  return out;
+}
+
+export interface TestColrBase {
+  glyph: number;
+  /** Each layer's glyph and its palette entry, 0xFFFF for the foreground. */
+  layers: readonly (readonly [glyph: number, paletteIndex: number])[];
+}
+
+/** A version 0 `COLR` table: the base glyph records, sorted as the spec asks, then every layer. */
+export function colrTable(bases: readonly TestColrBase[]): ByteWriter {
+  const sorted = [...bases].sort((a, b) => a.glyph - b.glyph);
+  const baseGlyphsAt = 14;
+  const layersAt = baseGlyphsAt + sorted.length * 6;
+  const layerCount = sorted.reduce((sum, base) => sum + base.layers.length, 0);
+  const out = new ByteWriter().u16(0).u16(sorted.length).u32(baseGlyphsAt).u32(layersAt).u16(layerCount);
+  let firstLayer = 0;
+  for (const { glyph, layers } of sorted) {
+    out.u16(glyph).u16(firstLayer).u16(layers.length);
+    firstLayer += layers.length;
+  }
+  for (const { layers } of sorted)
+    for (const [glyph, paletteIndex] of layers) out.u16(glyph).u16(paletteIndex);
+  return out;
 }
 
 /** The glyphs `cmap` gives the characters of `text` in decomposed form, as a cluster a mark reader takes. */

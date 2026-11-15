@@ -22,7 +22,7 @@ import { type Gradient } from '../gradienttexture2d/types';
 import { IMAGE_MAX_PIXELS } from '../../../godot/project/image.js';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { sourceColorSpace } from '../sourceColorSpace';
-import { GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
+import { GradientColorSpace, GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
 
 /** A deterministic ramp: value 0 → black, value 1 → red. */
 const RAMP: Gradient = {
@@ -31,6 +31,7 @@ const RAMP: Gradient = {
     { offset: 1, color: { r: 1, g: 0, b: 0, a: 1 } },
   ],
   interpolationMode: GradientInterpolationMode.LINEAR,
+  interpolationColorSpace: GradientColorSpace.SRGB,
 };
 
 describe('noiseImage', () => {

@@ -971,6 +971,18 @@ describe('styledTextRuns [hr]', () => {
     expect(runs.map((run) => run.text)).toEqual(['a\n', IMAGE_OBJECT_CHAR, 'b']);
     expect(runs[1]!.fontSizePx).toBe(50);
   });
+
+  it("shapes the break after a rule in its newline's font, not at the rule's width (rich_text_label.cpp:643)", () => {
+    const runs = styledTextRuns(
+      node({}),
+      parsedProps({ text: 'a[hr]\nb', bbcodeEnabled: true }),
+      WHITE,
+      FONT_SIZE,
+      260
+    );
+    const ruleLine = shapeRuns(runs).lines[1]!;
+    expect([ruleLine.ascentPx, ruleLine.descentPx]).toEqual([18, 5]);
+  });
 });
 
 describe('shapeRichText — an [img] placeholder', () => {
@@ -1153,7 +1165,7 @@ describe('layoutRichTextRuns', () => {
     ];
     const placements = layoutRichTextRuns(runs, shapeRuns(runs, { faces }));
     // ceil(4096 * 16 / 2048) = 32 above the baseline: both runs share it.
-    expect(placements.map((p) => p.layout.baselineOffsetPx)).toEqual([32, 32]);
+    expect(placements.map((p) => p.layout.lines[0]!.ascentPx)).toEqual([32, 32]);
   });
 
   it("a run's layout is wide enough for its glyphs, which keep their line-origin x (a canvas painter sizes its raster from it)", () => {
@@ -1234,11 +1246,10 @@ describe('layoutRichTextRuns', () => {
       textRun({ text: 'plain', fontSizePx: 18 }),
       textRun({ text: 'BOLD', bold: true, fontSizePx: 16 }),
     ];
-    const layout = shape('plainBOLD');
-    const placements = layoutRichTextRuns(runs, layout);
+    const placements = layoutRichTextRuns(runs, shapeRuns(runs));
     const lineAscent = getFontAscentPx(OPEN_SANS_FONT_METRICS, 18); // 20, the larger of the two.
-    expect(placements[0]!.layout.baselineOffsetPx).toBe(lineAscent);
-    expect(placements[1]!.layout.baselineOffsetPx).toBe(lineAscent);
+    expect(placements[0]!.layout.lines[0]!.ascentPx).toBe(lineAscent);
+    expect(placements[1]!.layout.lines[0]!.ascentPx).toBe(lineAscent);
     expect(getFontAscentPx(OPEN_SANS_FONT_METRICS, 16)).not.toBe(lineAscent);
   });
 
@@ -1252,8 +1263,8 @@ describe('layoutRichTextRuns', () => {
     // ceil(2189*18/2048)=20, ceil(600*18/2048)=6; ceil(2189*16/2048)=18, ceil(600*16/2048)=5.
     const placements = layoutRichTextRuns(runs, layout);
     expect(placements.map((p) => p.lineTopPx)).toEqual([0, 20 + 6]);
-    expect(placements[0]!.layout.baselineOffsetPx).toBe(20);
-    expect(placements[1]!.layout.baselineOffsetPx).toBe(18);
+    expect(placements[0]!.layout.lines[0]!.ascentPx).toBe(20);
+    expect(placements[1]!.layout.lines[0]!.ascentPx).toBe(18);
 
     // Bottom-aligned in 100px, the block starts 100 - (26 + 23) down: the second line's descent is 5.
     const bottom = layoutRichTextRuns(runs, layout, {
@@ -1340,7 +1351,7 @@ describe('layoutRichTextRuns', () => {
     it('an image-only line has no text ascent or descent, so a center/center image straddles the baseline h/2 either side', () => {
       const runs = [imageRun(10, 10)];
       const placements = layoutRichTextRuns(runs, shapeRuns(runs), BOTTOM_OF_100);
-      expect(placements[0]!.layout.baselineOffsetPx).toBe(5);
+      expect(placements[0]!.layout.lines[0]!.ascentPx).toBe(5);
       expect(placements[0]!.lineTopPx).toBe(100 - 10);
     });
 
@@ -1376,7 +1387,7 @@ describe('layoutRichTextRuns', () => {
       const layout = shapeRuns(runs);
       // ascentPx=18, descentPx=5 at 16px (getFontAscentPx(OPEN_SANS,16), fontMetrics.ts's own formula).
       const placements = layoutRichTextRuns(runs, layout, BOTTOM_OF_100);
-      expect(placements[0]!.layout.baselineOffsetPx).toBe(18);
+      expect(placements[0]!.layout.lines[0]!.ascentPx).toBe(18);
       expect(placements[0]!.lineTopPx).toBe(100 - (18 + 5));
     });
 
@@ -1385,7 +1396,7 @@ describe('layoutRichTextRuns', () => {
       const layout = shapeRuns(runs);
       // yOffset = (-18+5)/2 - 20 = -26.5; ascent = max(18, 26.5) = 26.5; descent = max(5, -26.5+40) = 13.5.
       const placements = layoutRichTextRuns(runs, layout, BOTTOM_OF_100);
-      expect(placements[0]!.layout.baselineOffsetPx).toBe(26.5);
+      expect(placements[0]!.layout.lines[0]!.ascentPx).toBe(26.5);
       expect(placements[0]!.lineTopPx).toBe(100 - (26.5 + 13.5));
       const imagePlacement = placements.find((p) => p.image)!;
       expect(imagePlacement.image!.yPx).toBe(26.5 - 26.5); // ascentPx + yOffset
@@ -1417,10 +1428,10 @@ describe('layoutRichTextRuns', () => {
 });
 
 describe('the underline metrics of a placement', () => {
-  // -(-100 - 50/2)*size/2048 and 50*size/2048: a paragraph's upos/uthk at 16px and 18px. The
-  // -thickness/2 term is FreeType's top-edge-to-centre conversion (sfobjs.c:1424-1425).
-  const METRICS_16 = { positionPx: 0.9765625, thicknessPx: 0.390625 };
-  const METRICS_18 = { positionPx: 1.0986328125, thicknessPx: 0.439453125 };
+  // Open Sans's upos/uthk at 16px and 18px, as Godot 4.6.3 measures them
+  // (`ThemeDB.fallback_font.get_underline_position`): 125 and 50 units, rounded to 1/64 px.
+  const METRICS_16 = { positionPx: 0.984375, thicknessPx: 0.390625 };
+  const METRICS_18 = { positionPx: 1.09375, thicknessPx: 0.4375 };
 
   const underlinesOf = (runs: StyledTextRun[]) =>
     layoutRichTextRuns(runs, shapeRuns(runs)).flatMap((placement) =>
@@ -1462,6 +1473,24 @@ describe('the underline metrics of a placement', () => {
       }),
     ];
     expect(underlinesOf(runs)[0]).toEqual(METRICS_16);
+  });
+
+  // `_font_get_underline_position` of each span's own font (`text_server_adv.cpp:1517-1518`).
+  it("takes a scene font's own underline, not the bundled font's", () => {
+    const bold = {
+      ...OPEN_SANS_FONT_METRICS,
+      unitsPerEm: 1000,
+      underlinePosition: -250,
+      underlineThickness: 100,
+    };
+    const runs = [
+      textRun({ text: 'plain ', fontSizePx: 16 }),
+      textRun({ text: 'bold', bold: true, underline: true, fontSizePx: 16 }),
+    ];
+    const placements = layoutRichTextRuns(runs, shapeRuns(runs, { faces: { ...ALL_FACES, bold } }));
+    expect(placements.flatMap((placement) => placement.underline ?? [])).toEqual([
+      { positionPx: 4, thicknessPx: 1.59375 },
+    ]);
   });
 });
 
@@ -2059,6 +2088,44 @@ describe('richTextContentHeightPx — a glyph from a fallback face', () => {
     });
     // ceil(4096 * 16 / 2048) + ceil(1024 * 16 / 2048) = 32 + 8.
     expect(richTextContentHeightPx([run], layout)).toBe(40);
+  });
+});
+
+describe('layoutRichTextRuns line tops — each paragraph starts below its ceiled lines (rich_text_label.cpp:1894, :2656)', () => {
+  /** A face of ascent 18 px and descent 6 px at 24 px, which lacks `一`, so its line holds a 30 px hex-code box. */
+  const SHORT_FACE: FontMetrics = {
+    kind: 'canvas',
+    unitsPerEm: 2048,
+    ascent: 1536,
+    descent: 512,
+    hasGlyph: (ch) => ch !== '一',
+    getGlyphAdvanceUnits: () => 1024,
+    getKerningAdjustmentUnits: () => 0,
+    averageAdvanceUnits: 1024,
+  };
+
+  function lineTopsOf(text: string, boxWidthPx: number): number[] {
+    const run = textRun({ text, fontSizePx: 24 });
+    const layout = shapeText(text, {
+      fontSizePx: 24,
+      boxWidthPx,
+      autowrapMode: AutowrapMode.AUTOWRAP_WORD,
+      lineSpacingPx: 0,
+      fontMetrics: SHORT_FACE,
+      paragraphSeparator: '\n',
+      terminateLastParagraph: false,
+    });
+    const placements = layoutRichTextRuns([run], layout, { boxWidthPx, boxHeightPx: TALL_BOX_PX });
+    return placements.map((placement) => placement.lineTopPx);
+  }
+
+  // The box raises the line to 0.85 * 30 = 25.5 px above and the face's 6 px below: 31.5 px.
+  it('starts the next paragraph 32 px down, the ceiled line', () => {
+    expect(lineTopsOf('A一\nA一', TALL_BOX_PX)).toEqual([0, 32]);
+  });
+
+  it('steps the wrapped lines of one paragraph by the bare 31.5 px, drawn at its floor', () => {
+    expect(lineTopsOf('A一 A一', 40)).toEqual([0, 31]);
   });
 });
 

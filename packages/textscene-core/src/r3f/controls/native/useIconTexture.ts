@@ -14,7 +14,7 @@ import { referenceHeldBy } from '../../../resources/reading';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { themeIconSource } from './themeIconSource';
-import type { ThemedIconRef } from './solveTree';
+import type { SolveNode, ThemedIconRef } from './solveTree';
 
 /**
  * A vendored icon's pixels come from `themeIconSource` at the project's theme scale, sampled with the
@@ -62,4 +62,16 @@ export function useNodeIcon(
   const themedWins = themed !== undefined && !themedResult.missing;
   const vendoredTexture = useOptionalIconTexture(themedWins ? null : vendoredUrl);
   return themedWins ? themedTexture : vendoredTexture;
+}
+
+/**
+ * The theme icon `name` of `n`: its theme's texture, else the default icon a parent pushed under that
+ * name (`SolveNode.defaultIcons`), else `vendoredUrl`, the class's own default.
+ */
+export function useThemeIcon(
+  n: Pick<SolveNode, 'icons' | 'defaultIcons'>,
+  name: string,
+  vendoredUrl: string
+): THREE.Texture | null {
+  return useNodeIcon(n.icons[name], n.defaultIcons?.[name] ?? vendoredUrl);
 }

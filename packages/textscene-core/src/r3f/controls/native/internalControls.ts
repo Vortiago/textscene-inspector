@@ -13,19 +13,21 @@
 import { ZERO_RECT, type Rect2 } from '../../../godot/math/rect2';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import type { TscnNode } from '../../../parser/types';
+import type { NativeControlComponent } from '../ControlComponentRegistry';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import { parseControlCanvasItem } from '../../../nodes/2d/ui/control/parser';
 import type { ButtonProperties } from '../../../nodes/2d/ui/button/types';
 import type { NativeTheme } from './nativeTheme';
 import { sortableView, type SolveNode, type ThemedIconRef } from './solveTree';
 import type { SealedHandoff } from './solveHandoff';
+import type { CanvasSlot } from '../../canvasItemState';
 import {
   themedSlotRequest,
   type BuiltIconsFn,
   type SolveContext,
   type TextureSlotRequest,
 } from './solverRegistry';
-import { internalChildThemeItems, type InternalThemeItems } from './themeItems';
+import { themeItemsOfType, type InternalThemeItems } from './themeItems';
 import { perObject } from '../../../utils/perObject';
 
 /**
@@ -54,6 +56,11 @@ export interface InternalControlSpec {
   textureSlots?: SolveNode['textureSlots'];
   /** The theme items the parent pushes with `add_theme_*_override`. Each wins over the Control's own lookup. */
   pushed?: PushedThemeItems;
+  /**
+   * What the parent draws on the Control through its `draw` signal (`CanvasItem::_redraw_callback`,
+   * `canvas_item.cpp:148-149`): drawn after the class's own `NOTIFICATION_DRAW` painter, in the same item.
+   */
+  draws?: NativeControlComponent;
 }
 
 /** What a parent can push onto an internal Control, by theme item name. */
@@ -64,6 +71,8 @@ export interface PushedThemeItems extends Partial<
   icons?: Readonly<Record<string, ThemedIconRef | undefined>>;
   /** In pixels. They land where an authored `theme_override_font_sizes/*` lands. */
   fontSizes?: Readonly<Record<string, number>>;
+  /** Icons of the default theme, as vendored URLs: `SolveNode.defaultIcons`. Each hides the Control's own lookup of its name. */
+  defaultIcons?: Readonly<Record<string, string>>;
 }
 
 /** A top-level internal Control of a parent: the root of one spec tree and the place it draws. */
@@ -116,9 +125,16 @@ function normalizedLayout(result: ReturnType<InternalLayoutFn>): InternalLayoutR
   return 'rects' in result ? result : { rects: result, meta: NO_META };
 }
 
+/**
+ * The piece of a parent's back slot its `INTERNAL_MODE_BACK` Controls draw in, where its painter draws
+ * pieces of that slot too, such as the scroll bars and the minimap beside GraphEdit's toolbar.
+ */
+export type InternalBackSlotFn = (backSlot: CanvasSlot) => CanvasSlot;
+
 interface Registration {
   build: InternalControlsFn;
   layout: InternalLayoutFn;
+  backSlot?: InternalBackSlotFn;
 }
 
 /** Written only by `registerInternalControls`, at module load. Matches one type name exactly, as the solver registry does. */
@@ -127,9 +143,10 @@ const registrations = new Map<string, Registration>();
 export function registerInternalControls(
   typeName: string,
   build: InternalControlsFn,
-  layout: InternalLayoutFn
+  layout: InternalLayoutFn,
+  backSlot?: InternalBackSlotFn
 ): void {
-  registrations.set(typeName, { build, layout });
+  registrations.set(typeName, { build, layout, backSlot });
 }
 
 const NONE: readonly InternalControl[] = Object.freeze([]);
@@ -146,6 +163,11 @@ const builtByParent = perObject(
 /** What `parent`'s class registers, or `undefined` when it registers no internal Controls. */
 function registrationOf(parent: SolveNode) {
   return registrations.get(parent.node.type);
+}
+
+/** The slot `parent`'s back internal Controls draw in: the whole back slot unless its class names a piece. */
+export function internalBackSlotOf(parent: SolveNode, backSlot: CanvasSlot): CanvasSlot {
+  return registrationOf(parent)?.backSlot?.(backSlot) ?? backSlot;
 }
 
 /**
@@ -208,7 +230,7 @@ function buildUnder(owner: SolveNode, spec: InternalControlSpec, parentPath: str
     properties: builtProperties(spec, pushed.fontSizes),
     rawProperties: {},
   };
-  const items = internalChildThemeItems(owner, type, variation);
+  const items = themeItemsOfType(owner, type, variation);
   const textureSize =
     spec.textureSize !== undefined ? spec.textureSize : builtButtonTextureSize(owner, spec, items);
   return {
@@ -220,6 +242,8 @@ function buildUnder(owner: SolveNode, spec: InternalControlSpec, parentPath: str
     colors: { ...items.colors, ...pushed.colors },
     constants: { ...items.constants, ...pushed.constants },
     icons: iconsUnder(spec, items),
+    defaultIcons: pushed.defaultIcons,
+    draws: spec.draws,
     fontOverrides: { ...pushed.fontOverrides },
     textureSize,
     textureSlots: spec.textureSlots ?? {},
@@ -228,12 +252,13 @@ function buildUnder(owner: SolveNode, spec: InternalControlSpec, parentPath: str
   };
 }
 
-/** The icons of the Control `spec` builds: the parent's theme, its own lookup, then what the parent pushes. */
+/** The icons of the Control `spec` builds: the parent's theme, its own lookup, then what the parent pushes, default icons included. */
 function iconsUnder(
   { icons: given, pushed }: InternalControlSpec,
   items: InternalThemeItems
 ): SolveNode['icons'] {
   const icons: Record<string, ThemedIconRef> = { ...given, ...items.icons };
+  for (const name of Object.keys(pushed?.defaultIcons ?? {})) delete icons[name];
   for (const [name, ref] of Object.entries(pushed?.icons ?? {})) {
     if (ref) icons[name] = ref;
     else delete icons[name];

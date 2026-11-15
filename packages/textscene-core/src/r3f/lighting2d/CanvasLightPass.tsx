@@ -110,8 +110,8 @@ function apartModes(
 }
 
 /**
- * One canvas's 2D light pass. The host runs it once a frame, so a SubViewport can run it inside its
- * own ordered pass, after it has framed its camera and before it draws its target.
+ * One canvas's 2D light pass. The host runs it once a frame, as the light step of its canvas frame
+ * (`runCanvasFrame`): after the shadow samples and the camera framing, before the items draw.
  *
  * @canonical The 2D light pass of a canvas
  */

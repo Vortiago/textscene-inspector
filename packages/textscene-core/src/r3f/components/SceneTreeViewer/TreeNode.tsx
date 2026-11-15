@@ -1,5 +1,6 @@
 /** One tree row and its recursive children, internal to `<SceneTreeViewer>`. */
 import { memo, useMemo, type MouseEvent } from 'react';
+import type { LiveChildGroup } from '../../liveSceneTree.js';
 import type { SceneScope, TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
@@ -105,7 +106,8 @@ function TreeNodeImpl({
   // The node as the tree shows it, and what lives below it. Instance root merge (ADR-0013), the
   // same decision the viewport and inspector make, for the row header. The hook keeps the step
   // stable across selection and hover, so the row reuses one merge.
-  const { node: effective, groups, instancePath } = useLiveStep(node, scope);
+  const { node: effective, groups: liveGroups, instancePath } = useLiveStep(node, scope);
+  const groups = useMemo(() => ownedGroups(liveGroups), [liveGroups]);
   const instanceScenePath = onOpenSubScene ? instancePath : null;
 
   const hasChildren = groups.some((g) => g.children.length > 0);
@@ -269,3 +271,12 @@ function TreeNodeImpl({
 }
 
 export const TreeNode = memo(TreeNodeImpl);
+
+/**
+ * `groups` without the children Godot adds with no owner, such as a layer's scene tile instances
+ * (`tile_map_layer.cpp:1646`), which the Scene dock does not list.
+ */
+function ownedGroups(groups: readonly LiveChildGroup[]): readonly LiveChildGroup[] {
+  if (!groups.some((group) => group.children.some((child) => child.isUnowned))) return groups;
+  return groups.map((group) => ({ ...group, children: group.children.filter((child) => !child.isUnowned) }));
+}

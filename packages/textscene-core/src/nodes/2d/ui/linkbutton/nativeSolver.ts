@@ -24,10 +24,7 @@ import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import {
-  getUnderlinePositionPx,
-  getUnderlineThicknessPx,
-} from '../../../../r3f/controls/native/text/openSansMetrics';
+import type { UnderlinePx } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { LinkButtonProperties } from './types';
 import { LinkButtonUnderlineMode } from '../../../../godot/scene/gui';
 import { FALLBACK_THEME_COLOR } from '../../../../godot/scene/theme';
@@ -88,18 +85,18 @@ interface UnderlineGeometry {
 
 /**
  * `link_button.cpp:306-308`: `underline_spacing` (int) plus `text_buf->get_line_underline_position()`
- * (float), narrowed to `int`, which truncates toward zero. `y` adds the line ascent, the whole-pixel
- * value `getFontAscentPx` gives. Thickness is `MAX(1, ...)` narrowed the same way (`:308`), with the MAX
- * applied here, as `getUnderlineThicknessPx` requires.
+ * (float), narrowed to `int`, which truncates toward zero. `y` adds `get_line_ascent()`, which a
+ * hex-code box can make fractional, and narrows to `int` too (`:307`). Thickness is `MAX(1, ...)`
+ * narrowed the same way (`:308`).
  */
 export function linkButtonUnderlineGeometry(
-  fontSizePx: number,
+  underline: UnderlinePx,
   underlineSpacingConstant: number,
   ascentPx: number
 ): UnderlineGeometry {
-  const spacing = Math.trunc(underlineSpacingConstant + getUnderlinePositionPx(fontSizePx));
-  const y = ascentPx + spacing;
-  const thickness = Math.trunc(Math.max(1, getUnderlineThicknessPx(fontSizePx)));
+  const spacing = Math.trunc(underlineSpacingConstant + underline.positionPx);
+  const y = Math.trunc(ascentPx + spacing);
+  const thickness = Math.trunc(Math.max(1, underline.thicknessPx));
   return { y, thickness };
 }
 

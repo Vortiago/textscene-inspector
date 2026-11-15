@@ -7,13 +7,21 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { linearChannelToSRGBF32, sRGBChannelToLinearF32 } from '../../../../utils/colorSpace';
+import { linearColorToSRGBF32, sRGBColorToLinearF32 } from '../../../../utils/colorSpace';
 import { isColorOverbright } from '../shared/colorOverbright';
 import { formatGodotNumber } from '../spinbox/nativeSolver';
 import { colorHue, colorSaturation, hsvToRgb } from '../../../../godot/math/color';
 import { okhslToSrgb, srgbToOkhsl } from './okhsl';
 import { COLOR_HUE_STOPS } from './svGradient';
 import type { Rgba } from '../../../../godot/math/math';
+import { ColorPickerColorMode } from '../../../../godot/scene/gui';
+import {
+  GradientColorSpace,
+  GradientInterpolationMode,
+  GradientTexture2DFill,
+  GradientTexture2DRepeat,
+} from '../../../../godot/scene/gradientTexture';
+import type { Gradient, GradientTexture2D } from '../../../../resources/textures/gradienttexture2d/types';
 
 interface HsvColor {
   h: number;
@@ -34,22 +42,6 @@ export function extractHsv(normalized: Rgba): HsvColor {
   };
 }
 
-/** `ColorModeType` (`color_picker.h`). `MODE_RAW` is a deprecated alias with the value of `MODE_LINEAR` (`:105-107`). */
-export const MODE_RGB = 0;
-export const MODE_HSV = 1;
-export const MODE_LINEAR = 2;
-export const MODE_OKHSL = 3;
-
-/** `Color::srgb_to_linear` of the rgb, in Godot's float steps; alpha stays. */
-function srgbToLinearF32(color: Rgba): Rgba {
-  return {
-    r: sRGBChannelToLinearF32(color.r),
-    g: sRGBChannelToLinearF32(color.g),
-    b: sRGBChannelToLinearF32(color.b),
-    a: color.a,
-  };
-}
-
 /** The divisor of `_copy_color_to_normalized_and_intensity` (`color_picker.cpp:593-602`): 1 unless a linear channel exceeds 1. */
 function intensityMultiplier(linear: Rgba): number {
   return Math.max(1, linear.r, linear.g, linear.b);
@@ -62,47 +54,41 @@ function intensityMultiplier(linear: Rgba): number {
  * The round trip runs in Godot's float steps, since a grey's OKHSL hue is the noise it leaves.
  */
 export function colorNormalized(color: Rgba): Rgba {
-  const linear = srgbToLinearF32(color);
+  const linear = sRGBColorToLinearF32(color);
   const multiplier = intensityMultiplier(linear);
-  return {
-    r: linearChannelToSRGBF32(linear.r / multiplier),
-    g: linearChannelToSRGBF32(linear.g / multiplier),
-    b: linearChannelToSRGBF32(linear.b / multiplier),
+  return linearColorToSRGBF32({
+    r: linear.r / multiplier,
+    g: linear.g / multiplier,
+    b: linear.b / multiplier,
     a: color.a,
-  };
+  });
 }
 
 /** `intensity = Math::log2(multiplier)` (`color_picker.cpp:594,601`): the intensity slider's value in every `color_mode`. */
 function colorIntensity(color: Rgba): number {
-  return Math.log2(intensityMultiplier(srgbToLinearF32(color)));
+  return Math.log2(intensityMultiplier(sRGBColorToLinearF32(color)));
 }
 
-/** `ColorMode::labels` per mode (`color_mode.h:67,91,114,142`). */
-const CHANNEL_LABELS: Readonly<Record<number, readonly [string, string, string]>> = {
-  [MODE_RGB]: ['R', 'G', 'B'],
-  [MODE_HSV]: ['H', 'S', 'V'],
-  [MODE_LINEAR]: ['R', 'G', 'B'],
-  [MODE_OKHSL]: ['H', 'S', 'L'],
-};
+/** `ColorMode::get_name()` per mode (`color_mode.h:72,94,118,148`). The first `MODE_BUTTON_COUNT` label `mode_btns`. */
+export const COLOR_MODE_NAMES = ['RGB', 'HSV', 'Linear', 'OKHSL'] as const;
 
-/**
- * The row order of `slider_gc` (`color_picker.cpp:2178-2189`, `color_picker.h:153-159`):
- * the 3 channel rows, then intensity, then alpha. `_update_controls` hides a
- * row and never reorders them.
- */
-export function colorPickerSliderLabels(mode: number, editAlpha: boolean, editIntensity: boolean): string[] {
-  const labels: string[] = [...(CHANNEL_LABELS[mode] ?? CHANNEL_LABELS[MODE_RGB]!)];
-  if (editIntensity) labels.push('I');
-  if (editAlpha) labels.push('A');
-  return labels;
+/** `MODE_BUTTON_COUNT` (`color_picker.h:184`). OKHSL has no mode button: only the dropdown reaches it. */
+export const MODE_BUTTON_COUNT = 3;
+
+/** `ColorMode::get_slider_step` (`color_mode.h:74,96,120,150`): 0.001 for Linear, 1 for every other mode. */
+export function colorModeStep(mode: number): number {
+  return mode === ColorPickerColorMode.MODE_LINEAR ? 0.001 : 1;
+}
+
+/** `ColorMode::get_allow_greater` (`color_mode.h:99,124`): only the RGB and Linear modes let a channel pass its max. */
+export function colorModeAllowsGreater(mode: number): boolean {
+  return mode === ColorPickerColorMode.MODE_RGB || mode === ColorPickerColorMode.MODE_LINEAR;
 }
 
 export interface ColorModeChannel {
   label: string;
   value: number;
   max: number;
-  /** `Math::range_step_decimals(step)` (`color_picker.cpp:716`): 0 for step 1 and 3 for step 0.001, the only two steps. */
-  decimals: number;
 }
 
 /**
@@ -112,73 +98,63 @@ export interface ColorModeChannel {
  */
 export function colorModeChannels(
   mode: number,
-  color: Rgba
+  normalized: Rgba
 ): [ColorModeChannel, ColorModeChannel, ColorModeChannel] {
-  const normalized = colorNormalized(color);
   switch (mode) {
-    case MODE_HSV: {
+    case ColorPickerColorMode.MODE_HSV: {
       const { h, s, v } = extractHsv(normalized);
       return [
-        { label: 'H', value: s > 0 ? h * 360 : 0, max: 359, decimals: 0 },
-        { label: 'S', value: v > 0 ? s * 100 : 0, max: 100, decimals: 0 },
-        { label: 'V', value: v * 100, max: 100, decimals: 0 },
+        { label: 'H', value: s > 0 ? h * 360 : 0, max: 359 },
+        { label: 'S', value: v > 0 ? s * 100 : 0, max: 100 },
+        { label: 'V', value: v * 100, max: 100 },
       ];
     }
-    case MODE_LINEAR: {
-      const linear = srgbToLinearF32(normalized);
+    case ColorPickerColorMode.MODE_LINEAR: {
+      const linear = sRGBColorToLinearF32(normalized);
       return [
-        { label: 'R', value: linear.r, max: 1, decimals: 3 },
-        { label: 'G', value: linear.g, max: 1, decimals: 3 },
-        { label: 'B', value: linear.b, max: 1, decimals: 3 },
+        { label: 'R', value: linear.r, max: 1 },
+        { label: 'G', value: linear.g, max: 1 },
+        { label: 'B', value: linear.b, max: 1 },
       ];
     }
-    case MODE_OKHSL: {
+    case ColorPickerColorMode.MODE_OKHSL: {
       const { h, s, l } = srgbToOkhsl(normalized);
       return [
-        { label: 'H', value: s > 0 ? h * 360 : 0, max: 359, decimals: 0 },
-        { label: 'S', value: l > 0 ? s * 100 : 0, max: 100, decimals: 0 },
-        { label: 'L', value: l * 100, max: 100, decimals: 0 },
+        { label: 'H', value: s > 0 ? h * 360 : 0, max: 359 },
+        { label: 'S', value: l > 0 ? s * 100 : 0, max: 100 },
+        { label: 'L', value: l * 100, max: 100 },
       ];
     }
-    case MODE_RGB:
+    case ColorPickerColorMode.MODE_RGB:
     default:
       return [
-        { label: 'R', value: normalized.r * 255, max: 255, decimals: 0 },
-        { label: 'G', value: normalized.g * 255, max: 255, decimals: 0 },
-        { label: 'B', value: normalized.b * 255, max: 255, decimals: 0 },
+        { label: 'R', value: normalized.r * 255, max: 255 },
+        { label: 'G', value: normalized.g * 255, max: 255 },
+        { label: 'B', value: normalized.b * 255, max: 255 },
       ];
   }
 }
 
 /** `ColorMode::get_alpha_slider_max/value` (`color_mode.h:51-52`). Linear overrides both (`:127-128`). */
 export function colorModeAlphaChannel(mode: number, color: Rgba): ColorModeChannel {
-  if (mode === MODE_LINEAR) {
-    return { label: 'A', value: color.a, max: 1, decimals: 3 };
+  if (mode === ColorPickerColorMode.MODE_LINEAR) {
+    return { label: 'A', value: color.a, max: 1 };
   }
-  return { label: 'A', value: color.a * 255, max: 255, decimals: 0 };
+  return { label: 'A', value: color.a * 255, max: 255 };
 }
 
 /** The fixed range of `SLIDER_INTENSITY` (`color_picker.cpp:2184-2186`) in every `color_mode`. */
 export function colorModeIntensityChannel(color: Rgba): ColorModeChannel {
-  return { label: 'I', value: colorIntensity(color), max: 10, decimals: 3 };
-}
-
-/**
- * `String::num(value, decimals)` (`core/string/ustring.cpp:1405-1481`), which formats
- * every value `SpinBox` and the `Color(...)` text of `color_to_string` (`color_picker.cpp:64-73`).
- * The caller adds the `+` prefix of `intensity_value` (`color_picker.cpp:729`).
- */
-export function formatSliderValue(value: number, decimals: number): string {
-  return formatGodotNumber(value, decimals);
+  return { label: 'I', value: colorIntensity(color), max: 10 };
 }
 
 /**
  * `ColorModeRGB/Linear::slider_draw`'s 2-stop gradient (`color_mode.cpp:91-98,
  * 289-296`): the channel sweeps 0 to 1 and the other two hold their `color_normalized`
  * value. Linear interpolates in `GRADIENT_COLOR_SPACE_LINEAR_SRGB` (`:311`), RGB in
- * `_SRGB` (`:113`). The caller linearises the Linear stops.
+ * `_SRGB` (`:113`).
  */
-export function rgbChannelGradientStops(channel: number, normalized: Rgba): [Rgba, Rgba] {
+function rgbChannelGradientStops(channel: number, normalized: Rgba): [Rgba, Rgba] {
   const at = (v: number): Rgba => ({
     r: channel === 0 ? v : normalized.r,
     g: channel === 1 ? v : normalized.g,
@@ -192,7 +168,7 @@ export function rgbChannelGradientStops(channel: number, normalized: Rgba): [Rgb
  * `ColorModeHSV::slider_draw`'s S and V 2-stop polygon (`color_mode.cpp:196-206`).
  * Channel 0 (H) is the rainbow strip below.
  */
-export function hsvChannelGradientStops(channel: 1 | 2, normalized: Rgba): [Rgba, Rgba] {
+function hsvChannelGradientStops(channel: 1 | 2, normalized: Rgba): [Rgba, Rgba] {
   const { h, s, v } = extractHsv(normalized);
   if (channel === 1) {
     const sCol = hsvToRgb(h, 0, v);
@@ -206,7 +182,7 @@ export function hsvChannelGradientStops(channel: 1 | 2, normalized: Rgba): [Rgba
  * `color.get_v()`, then the 7-stop `color_hue` rainbow over it with a `Color::from_hsv(0, 0, v, s)`
  * modulate. At `s` = 0 the rainbow vanishes. One extraction serves both.
  */
-export function hsvHueChannelLayers(normalized: Rgba): { base: Rgba; stops: Rgba[] } {
+function hsvHueChannelLayers(normalized: Rgba): { base: Rgba; stops: Rgba[] } {
   const { s, v } = extractHsv(normalized);
   return {
     base: { r: v, g: v, b: v, a: 1 },
@@ -218,7 +194,7 @@ export function hsvHueChannelLayers(normalized: Rgba): { base: Rgba; stops: Rgba
  * `ColorModeOKHSL::slider_draw`'s S channel 2-stop polygon (`color_mode.cpp:
  * 412-427`), at the current `okhsl_l`.
  */
-export function okhslSaturationGradientStops(normalized: Rgba): [Rgba, Rgba] {
+function okhslSaturationGradientStops(normalized: Rgba): [Rgba, Rgba] {
   const { h, l } = srgbToOkhsl(normalized);
   return [okhslToSrgb(h, 0, l), okhslToSrgb(h, 1, l)];
 }
@@ -228,7 +204,7 @@ export function okhslSaturationGradientStops(normalized: Rgba): [Rgba, Rgba] {
  * 392-411`): black, `from_ok_hsl(hue, sat, 0.5)` and `from_ok_hsl(hue, sat, 1)`,
  * as the stops at 0, 0.5 and 1.
  */
-export function okhslLightnessGradientStops(normalized: Rgba): [Rgba, Rgba, Rgba] {
+function okhslLightnessGradientStops(normalized: Rgba): [Rgba, Rgba, Rgba] {
   const { h, s } = srgbToOkhsl(normalized);
   return [{ r: 0, g: 0, b: 0, a: 1 }, okhslToSrgb(h, s, 0.5), okhslToSrgb(h, s, 1)];
 }
@@ -238,7 +214,7 @@ export function okhslLightnessGradientStops(normalized: Rgba): [Rgba, Rgba, Rgba
  * like the default theme's `ColorPicker/color_hue`, sampled at the current saturation
  * and lightness, `from_ok_hsl(h, slider_sat, okhsl_l)`, and drawn opaque.
  */
-export function okhslHueChannelStops(normalized: Rgba): Rgba[] {
+function okhslHueChannelStops(normalized: Rgba): Rgba[] {
   const { s: sat, l } = srgbToOkhsl(normalized);
   const precision = 7;
   const stops: Rgba[] = [];
@@ -284,11 +260,11 @@ export function hexFieldText(color: Rgba, editAlpha: boolean): HexFieldText {
   if (!isColorValidHex(color)) {
     const showAlpha = editAlpha && color.a < 1;
     const parts = [
-      formatSliderValue(color.r, 3),
-      formatSliderValue(color.g, 3),
-      formatSliderValue(color.b, 3),
+      formatGodotNumber(color.r, 3),
+      formatGodotNumber(color.g, 3),
+      formatGodotNumber(color.b, 3),
     ];
-    if (showAlpha) parts.push(formatSliderValue(color.a, 3));
+    if (showAlpha) parts.push(formatGodotNumber(color.a, 3));
     return { label: 'Expr', typeText: '', text: `Color(${parts.join(', ')})` };
   }
   const withAlpha = editAlpha && color.a < 1;
@@ -300,9 +276,82 @@ export function hexFieldText(color: Rgba, editAlpha: boolean): HexFieldText {
  * 1423-1450`): `color_normalized` from alpha 0 to alpha 1. Its gate `colorize_sliders`
  * defaults to `true` (`color_picker.h:266`) and has no serialised property.
  */
-export function alphaChannelGradientStops(normalized: Rgba): [Rgba, Rgba] {
+function alphaChannelGradientStops(normalized: Rgba): [Rgba, Rgba] {
   return [
     { ...normalized, a: 0 },
     { ...normalized, a: 1 },
   ];
+}
+
+/**
+ * What a polygon row draws under its stops: the alpha row's `sample_bg` tiles (`color_picker.cpp:1434`),
+ * or the HSV H row's grey polygon, over which the hue texture is modulated (`color_mode.cpp:218-221`).
+ */
+type ChannelUnderlay = 'checkerboard' | { grey: Rgba } | null;
+
+/** What a channel slider's `draw` callback draws over its top `16 * base_scale` pixels. */
+export type ChannelGradient =
+  | {
+      /** Drawn with `draw_polygon`: these colours evenly spaced from left to right. */
+      stops: readonly Rgba[];
+      underlay: ChannelUnderlay;
+    }
+  | {
+      /** Drawn with `draw_texture_rect` from a gradient texture of this size. */
+      texture: GradientTexture2D;
+      gradient: Gradient;
+    };
+
+/**
+ * The texture of an RGB, Linear and OKHSL H row: a `GradientTexture2D` of `set_width(400)` and
+ * `set_height(6)` (`color_mode.cpp:102-103,302-303,432-433`). Every row of it holds the same texels,
+ * so one row stands for the 6.
+ */
+const CHANNEL_TEXTURE: GradientTexture2D = {
+  width: 400,
+  height: 1,
+  fill: GradientTexture2DFill.LINEAR,
+  fillFrom: { x: 0, y: 0 },
+  fillTo: { x: 1, y: 0 },
+  repeat: GradientTexture2DRepeat.NONE,
+  useHdr: false,
+};
+
+const polygon = (stops: readonly Rgba[], underlay: ChannelUnderlay = null): ChannelGradient => ({
+  stops,
+  underlay,
+});
+
+/** A row's texture: its stops evenly spaced in a linear `Gradient` that blends in `space`. */
+function texture(stops: readonly Rgba[], space: Gradient['interpolationColorSpace']): ChannelGradient {
+  const gradient: Gradient = {
+    stops: stops.map((color, i) => ({ offset: Math.fround(i / (stops.length - 1)), color })),
+    interpolationMode: GradientInterpolationMode.LINEAR,
+    interpolationColorSpace: space,
+  };
+  return { texture: CHANNEL_TEXTURE, gradient };
+}
+
+/** `ColorMode::slider_draw` of `mode` for the channel row `channel`, 0 to 2 (`color_mode.cpp`). */
+export function channelGradient(mode: number, channel: 0 | 1 | 2, normalized: Rgba): ChannelGradient {
+  switch (mode) {
+    case ColorPickerColorMode.MODE_HSV: {
+      if (channel !== 0) return polygon(hsvChannelGradientStops(channel, normalized));
+      const hue = hsvHueChannelLayers(normalized);
+      return polygon(hue.stops, { grey: hue.base });
+    }
+    case ColorPickerColorMode.MODE_OKHSL:
+      if (channel === 0) return texture(okhslHueChannelStops(normalized), GradientColorSpace.OKLAB);
+      if (channel === 1) return polygon(okhslSaturationGradientStops(normalized));
+      return polygon(okhslLightnessGradientStops(normalized));
+    case ColorPickerColorMode.MODE_LINEAR:
+      return texture(rgbChannelGradientStops(channel, normalized), GradientColorSpace.LINEAR_SRGB);
+    default:
+      return texture(rgbChannelGradientStops(channel, normalized), GradientColorSpace.SRGB);
+  }
+}
+
+/** `_alpha_slider_draw` (`color_picker.cpp:1423-1450`): the colour from alpha 0 to 1 over `sample_bg`. */
+export function alphaGradient(normalized: Rgba): ChannelGradient {
+  return polygon(alphaChannelGradientStops(normalized), 'checkerboard');
 }

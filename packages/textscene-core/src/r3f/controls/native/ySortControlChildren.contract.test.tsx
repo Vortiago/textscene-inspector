@@ -6,11 +6,9 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { ControlCanvasLayer } from './ControlCanvasLayer';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
 import { compareKeys, paintKey } from '../../testing/paintOrder';
-import { SceneStack } from '../../testing/SceneStack';
 
 import '../../nodes/index';
 import '../index';
@@ -27,27 +25,16 @@ ${extra}`;
 }
 
 /** Renders both walks for `tscn` and returns the draw key of the mesh under each named node. */
-async function paintKeysOf(tscn: string, names: readonly string[], hasWorldSort = true) {
+async function paintKeysOf(tscn: string, names: readonly string[]) {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
-    hasWorldSort ? (
-      <DispatchedScene
-        sceneGraph={createSceneGraphFromTscnScene(parsed)}
-        workspace="2d"
-        loader={fake.loader}
-        around={(nodes) => (
-          <>
-            {nodes}
-            <ControlCanvasLayer nodes={parsed.nodes} />
-          </>
-        )}
-      />
-    ) : (
-      <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-        <ControlCanvasLayer nodes={parsed.nodes} />
-      </SceneStack>
-    )
+    <DispatchedScene
+      sceneGraph={createSceneGraphFromTscnScene(parsed)}
+      workspace="2d"
+      loader={fake.loader}
+      drawsControls
+    />
   );
   // No settle: the first committed frame already has the order. The test renderer flushes passive
   // effects too, so this does not prove the layout-effect timing.
@@ -121,7 +108,7 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
   });
 });
 
-describe('a Control walk with no world sort to join sorts its own Controls', () => {
+describe('a y-sorted Control root sorts the Controls of its nested sorts with its own', () => {
   it('draws a lower child over a higher one authored after it, nested sorts merged', async () => {
     const tscn =
       rootControl(true) +
@@ -136,7 +123,7 @@ offset_bottom = 40.0
 
 ` +
       rect('Mid', 50);
-    const keys = await paintKeysOf(tscn, ['Deep', 'Mid'], false);
+    const keys = await paintKeysOf(tscn, ['Deep', 'Mid']);
     expect(compareKeys(keys.Mid!, keys.Deep!)).toBeLessThan(0);
   });
 });
@@ -157,7 +144,7 @@ offset_bottom = 10.0
       rootControl(true),
       `${rootControl(true)}[node name="Box" type="Control" parent="."]\noffset_top = 10.0\n\n`
     );
-    const keys = await paintKeysOf(withBox, ['Last', 'Low'], false);
+    const keys = await paintKeysOf(withBox, ['Last', 'Low']);
     expect(compareKeys(keys.Last!, keys.Low!)).toBeLessThan(0);
   });
 
@@ -171,7 +158,7 @@ z_index = 5
 ` +
       rect('Absolute', 100, 'z_as_relative = false\nz_index = 3\n') +
       rect('Relative', 0);
-    const keys = await paintKeysOf(tscn, ['Absolute', 'Relative'], false);
+    const keys = await paintKeysOf(tscn, ['Absolute', 'Relative']);
     expect(compareKeys(keys.Absolute!, keys.Relative!)).toBeLessThan(0);
   });
 
@@ -189,7 +176,7 @@ z_index = 5
       leaf('C1', '.', 0) +
       leaf('C2', '.', 0) +
       leaf('C', '.', 0);
-    const keys = await paintKeysOf(tscn, ['B1', 'B2', 'C'], false);
+    const keys = await paintKeysOf(tscn, ['B1', 'B2', 'C']);
     expect(compareKeys(keys.C!, keys.B2!)).toBeLessThan(0);
     expect(compareKeys(keys.B2!, keys.B1!)).toBeLessThan(0);
   });

@@ -213,7 +213,32 @@ const MISSING_SUB_SCENE_SCENE = `[gd_scene load_steps=2 format=3]
 [node name="Gone" parent="." instance=ExtResource("1")]
 `;
 
-/** The `[ext_resource]` and `[sub_resource]` headings of a TileSet with the scene tiles 1 to 5 and 7 to 19 in source 0. */
+/**
+ * Scene tile 20: a y-sorted Control root whose Node2D child at y 50 holds a red Control, and a blue
+ * Control at y 30 after it. The Node2D is the entry, so the red Control draws over the blue one.
+ */
+const SORTED_CONTROL_ROOT_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="Control"]
+y_sort_enabled = true
+
+[node name="Holder" type="Node2D" parent="."]
+position = Vector2(0, 50)
+
+[node name="Low" type="ColorRect" parent="Holder"]
+offset_right = 12.0
+offset_bottom = 12.0
+color = Color(1, 0, 0, 1)
+
+[node name="Mid" type="ColorRect" parent="."]
+offset_left = 4.0
+offset_top = 30.0
+offset_right = 20.0
+offset_bottom = 46.0
+color = Color(0, 0, 1, 1)
+`;
+
+/** The `[ext_resource]` and `[sub_resource]` headings of a TileSet with the scene tiles 1 to 5 and 7 to 20 in source 0. */
 export const SCENE_TILESET_RESOURCES = `[ext_resource type="PackedScene" path="res://polygon.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://offset.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://control.tscn" id="3"]
@@ -232,6 +257,7 @@ export const SCENE_TILESET_RESOURCES = `[ext_resource type="PackedScene" path="r
 [ext_resource type="PackedScene" path="res://top-level-control.tscn" id="16"]
 [ext_resource type="PackedScene" path="res://cyclic.tscn" id="17"]
 [ext_resource type="PackedScene" path="res://missing-sub-scene.tscn" id="18"]
+[ext_resource type="PackedScene" path="res://sorted-control-root.tscn" id="19"]
 
 [sub_resource type="TileSetScenesCollectionSource" id="scenes"]
 scenes/1/scene = ExtResource("1")
@@ -252,6 +278,7 @@ scenes/16/scene = ExtResource("15")
 scenes/17/scene = ExtResource("16")
 scenes/18/scene = ExtResource("17")
 scenes/19/scene = ExtResource("18")
+scenes/20/scene = ExtResource("19")
 
 [sub_resource type="TileSet" id="tileset"]
 tile_size = Vector2i(64, 64)
@@ -277,6 +304,7 @@ const TILE_SCENES: Record<string, string> = {
   'res://top-level-control.tscn': TOP_LEVEL_CONTROL_SCENE,
   'res://cyclic.tscn': CYCLIC_SCENE,
   'res://missing-sub-scene.tscn': MISSING_SUB_SCENE_SCENE,
+  'res://sorted-control-root.tscn': SORTED_CONTROL_ROOT_SCENE,
 };
 
 /** What the viewport and the Scene dock see of the rendered scene. */
@@ -305,12 +333,8 @@ export interface RenderSceneTilesOptions {
   prepare?: (scene: TscnScene) => void;
 }
 
-/**
- * Renders `tscn` in the 2D canvas with the tile scenes loaded. The Controls of a scene tile
- * load lazily, so their module loads first and the first settle mounts them.
- */
+/** Renders `tscn` in the 2D canvas with the tile scenes loaded. */
 export async function renderSceneTiles(tscn: string, options: RenderSceneTilesOptions = {}) {
-  await import('../../../../r3f/controls/native/UnownedNodeControls');
   const fake = createFakeResourceLoader();
   const fail = (path: string) => fake.scenes._fail(path, `cannot load ${path}`);
   const failedScenes = options.failedScenes ?? [];
@@ -332,6 +356,7 @@ export async function renderSceneTiles(tscn: string, options: RenderSceneTilesOp
         sceneGraph={createSceneGraphFromTscnScene(scene)}
         loader={fake.loader}
         workspace="2d"
+        drawsControls
         showGizmos={options.showGizmos}
         selectedPath={options.selectedPath}
         around={(nodes) => <Probe probe={probe}>{nodes}</Probe>}

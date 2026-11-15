@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { nativeTheme } from './nativeTheme';
 import { TRANSFORM2D_IDENTITY } from '../../../godot/math/transform2d';
 import { controlNode, solveNode } from './testing/solveNode';
-import { controlProps, sortableView, type SolveNode } from './solveTree';
+import { controlProps, sortableView, type SolveNode, type ThemedIconRef } from './solveTree';
 import { internalControlsOf, registerInternalControls } from './internalControls';
 
 const THEME = nativeTheme(1);
@@ -38,6 +38,36 @@ registerInternalControls(
         properties: { name: 'Field' },
         variation: 'InnerField',
         pushed: { colors: { font_color: PUSHED_COLOR }, fontSizes: { font_size: 28 } },
+      },
+    },
+  ],
+  () => new Map()
+);
+
+const VENDORED_GRABBER = 'data:image/svg+xml;base64,PHN2Zy8+';
+const THEMED_GRABBER: ThemedIconRef = {
+  ref: 'ExtResource("1")',
+  resources: solveNode().resources,
+  isHeldLocally: false,
+};
+
+/** What the parent draws on its slider through the `draw` signal. */
+function ParentDraw() {
+  return null;
+}
+
+registerInternalControls(
+  'HostThatDraws',
+  () => [
+    {
+      mode: 'front',
+      spec: {
+        type: 'HSlider',
+        name: 'Slider',
+        properties: { name: 'Slider' },
+        icons: { grabber: THEMED_GRABBER, tick: THEMED_GRABBER },
+        pushed: { defaultIcons: { grabber: VENDORED_GRABBER } },
+        draws: ParentDraw,
       },
     },
   ],
@@ -104,5 +134,24 @@ describe('a built internal Control', () => {
 
   it('carries the variation its constructor sets as its theme_type_variation', () => {
     expect(controlProps(field!.node).themeTypeVariation).toBe('InnerField');
+  });
+});
+
+describe('an internal Control its parent draws on', () => {
+  const [slider] = internalControlsOf(host('HostThatDraws'), THEME);
+
+  it('carries what the parent draws through its draw signal (canvas_item.cpp:148-149)', () => {
+    expect(slider!.node.draws).toBe(ParentDraw);
+  });
+
+  it('has nothing drawn on it by default', () => {
+    const [field] = internalControlsOf(host('HostThatPushes'), THEME);
+    expect(field!.node.draws).toBeUndefined();
+  });
+
+  it('carries a pushed default icon, which hides the themed icon of that name', () => {
+    expect(slider!.node.defaultIcons).toEqual({ grabber: VENDORED_GRABBER });
+    expect(slider!.node.icons.grabber).toBeUndefined();
+    expect(slider!.node.icons.tick).toEqual(THEMED_GRABBER);
   });
 });

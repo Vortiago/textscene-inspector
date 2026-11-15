@@ -1,0 +1,147 @@
+; Variable: the order between viewport passes. Godot draws the deepest level of nested viewports
+; first, the viewports of one level in tree order (renderer_viewport.cpp:91-125). Every other
+; golden samples a viewport at its own level or below it, where each order draws the same frame.
+; Left: ONCE A (level 1, transparent_bg) samples B/B1/B2 (level 3): B2 draws first, blue.
+; Middle: ONCE C/C1/C2 (level 3) samples D (level 1, earlier in the tree): C2 draws first, empty.
+; Right, the control: ONCE E/E1 samples F/F1, both level 2, E first in the tree: empty.
+
+[gd_scene format=3]
+
+[sub_resource type="ViewportTexture" id="VT_B2"]
+viewport_path = NodePath("B/B1/B2")
+
+[sub_resource type="ViewportTexture" id="VT_A"]
+viewport_path = NodePath("A")
+
+[sub_resource type="ViewportTexture" id="VT_D"]
+viewport_path = NodePath("D")
+
+[sub_resource type="ViewportTexture" id="VT_C2"]
+viewport_path = NodePath("C/C1/C2")
+
+[sub_resource type="ViewportTexture" id="VT_F1"]
+viewport_path = NodePath("F/F1")
+
+[sub_resource type="ViewportTexture" id="VT_E1"]
+viewport_path = NodePath("E/E1")
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="A" type="SubViewport" parent="."]
+transparent_bg = true
+size = Vector2i(40, 24)
+render_target_update_mode = 1
+
+[node name="FromB2" type="TextureRect" parent="A"]
+offset_left = 4.0
+offset_top = 2.0
+offset_right = 36.0
+offset_bottom = 22.0
+texture = SubResource("VT_B2")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="AView" type="TextureRect" parent="."]
+offset_left = 30.0
+offset_top = 40.0
+offset_right = 270.0
+offset_bottom = 184.0
+texture = SubResource("VT_A")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="B" type="SubViewport" parent="."]
+size = Vector2i(36, 28)
+render_target_update_mode = 3
+
+[node name="B1" type="SubViewport" parent="B"]
+size = Vector2i(30, 26)
+render_target_update_mode = 3
+
+[node name="B2" type="SubViewport" parent="B/B1"]
+size = Vector2i(24, 20)
+render_target_update_mode = 3
+
+[node name="Blue" type="ColorRect" parent="B/B1/B2"]
+offset_right = 24.0
+offset_bottom = 20.0
+color = Color(0.2, 0.6, 0.9, 1)
+
+[node name="D" type="SubViewport" parent="."]
+size = Vector2i(20, 20)
+render_target_update_mode = 3
+
+[node name="Amber" type="ColorRect" parent="D"]
+offset_right = 20.0
+offset_bottom = 20.0
+color = Color(0.95, 0.75, 0.1, 1)
+
+[node name="C" type="SubViewport" parent="."]
+size = Vector2i(32, 32)
+render_target_update_mode = 3
+
+[node name="C1" type="SubViewport" parent="C"]
+size = Vector2i(32, 32)
+render_target_update_mode = 3
+
+[node name="C2" type="SubViewport" parent="C/C1"]
+size = Vector2i(28, 22)
+render_target_update_mode = 1
+
+[node name="FromD" type="TextureRect" parent="C/C1/C2"]
+offset_left = 2.0
+offset_top = 2.0
+offset_right = 26.0
+offset_bottom = 20.0
+texture = SubResource("VT_D")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="CView" type="TextureRect" parent="."]
+offset_left = 310.0
+offset_top = 40.0
+offset_right = 534.0
+offset_bottom = 216.0
+texture = SubResource("VT_C2")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="E" type="SubViewport" parent="."]
+size = Vector2i(32, 32)
+render_target_update_mode = 3
+
+[node name="E1" type="SubViewport" parent="E"]
+size = Vector2i(26, 18)
+render_target_update_mode = 1
+
+[node name="FromF1" type="TextureRect" parent="E/E1"]
+offset_right = 26.0
+offset_bottom = 18.0
+texture = SubResource("VT_F1")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="EView" type="TextureRect" parent="."]
+offset_left = 580.0
+offset_top = 40.0
+offset_right = 788.0
+offset_bottom = 184.0
+texture = SubResource("VT_E1")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="F" type="SubViewport" parent="."]
+size = Vector2i(32, 32)
+render_target_update_mode = 3
+
+[node name="F1" type="SubViewport" parent="F"]
+size = Vector2i(26, 18)
+render_target_update_mode = 3
+
+[node name="Green" type="ColorRect" parent="F/F1"]
+offset_right = 26.0
+offset_bottom = 18.0
+color = Color(0.3, 0.85, 0.4, 1)

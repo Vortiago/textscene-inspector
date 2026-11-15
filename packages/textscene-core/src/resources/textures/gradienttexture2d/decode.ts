@@ -9,6 +9,7 @@ import { enumOr, settableIntOr, vec2Or, type SetterRange } from '../../../parser
 import type { ResourceKind } from '../../reading';
 import {
   GRADIENT_TEXTURE_MAX_SIZE,
+  GradientColorSpace,
   GradientTexture2DFill,
   GradientInterpolationMode,
   GradientTexture2DRepeat,
@@ -59,6 +60,12 @@ function decodeGradient(data: Readonly<Record<string, string>>): Gradient {
       GradientInterpolationMode.LINEAR,
       [GradientInterpolationMode.LINEAR, GradientInterpolationMode.CONSTANT, GradientInterpolationMode.CUBIC],
       'Gradient.interpolation_mode'
+    ),
+    interpolationColorSpace: enumOr(
+      data.interpolation_color_space,
+      GradientColorSpace.SRGB,
+      [GradientColorSpace.SRGB, GradientColorSpace.LINEAR_SRGB, GradientColorSpace.OKLAB],
+      'Gradient.interpolation_color_space'
     ),
   };
 }

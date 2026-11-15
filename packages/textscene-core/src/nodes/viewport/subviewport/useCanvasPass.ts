@@ -7,8 +7,8 @@ import { useCallback, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera';
 import { createCanvasFrame } from '../../../r3f/components/Canvas2DStage/canvasFrame';
-import { useMultisampledTarget } from '../../../r3f/multisampledTarget';
-import { applyOrthoFrame, orthoFrameForSize } from './offscreenViewport';
+import { useMultisampledTarget } from '../../../r3f/offscreen/multisampledTarget';
+import { applyOrthoFrame, orthoFrameForSize } from './viewportFraming';
 import type { CanvasColorSpace } from '../../../r3f/canvasColorSpace';
 
 /**

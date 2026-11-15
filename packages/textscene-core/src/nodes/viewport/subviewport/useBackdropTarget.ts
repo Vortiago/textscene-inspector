@@ -8,7 +8,7 @@ import { useCallback, useMemo } from 'react';
 import type * as THREE from 'three';
 import type { CanvasColorSpace } from '../../../r3f/canvasColorSpace';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-import { createSceneTarget } from './offscreenViewport';
+import { createSceneTarget } from '../../../r3f/offscreen/targets';
 
 /** Holds the target of one set of inputs: a change of inputs makes a new, empty holder and frees this one. */
 class TargetHolder {

@@ -7,10 +7,9 @@
 import { describe, expect, it } from 'vitest';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import {
-  buttonContentSize,
+  buttonContentMinimumSize,
   buttonDrawnLabel,
   fitIconSize,
-  iconOnlyButtonIconRectIn,
   largestStyleBoxMargins,
   layoutButtonContent,
   pickButtonStyleBox,
@@ -21,7 +20,7 @@ import {
   type ButtonContentInput,
 } from './buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
-import { shapeText, type TextLineLayout } from './text/textLayout';
+import { shapeText, type TextLayoutResult, type TextLineLayout } from './text/textLayout';
 import { visualChars } from './text/textLayout.testkit';
 import { OPEN_SANS_FONT_METRICS } from './text/openSansFontMetrics';
 import { AutowrapMode, OverrunBehavior } from '../../../godot/text/textServerEnums';
@@ -599,7 +598,7 @@ function lineOf(text: string): TextLineLayout {
     fontSizePx: 10,
     fontMetrics: OPEN_SANS_FONT_METRICS,
   }));
-  return { text, glyphs, widthPx: glyphs.length * 10, paragraphIndex: 0 };
+  return { text, glyphs, widthPx: glyphs.length * 10, paragraphIndex: 0, ascentPx: 15, descentPx: 5 };
 }
 
 describe('buttonDrawnLabel: each line cut to the paragraph box as TextParagraph::draw cuts it', () => {
@@ -676,7 +675,7 @@ describe('measuredContentMinimumSize: the label width a minimum size keeps (butt
 
 describe('trimButtonLabel: the label trimmed to its paragraph box (button.cpp:428-432, text_paragraph.cpp:286-293)', () => {
   const FONT_SIZE_PX = 16;
-  const UNWRAPPED = { isWrapped: false, fontSizePx: FONT_SIZE_PX, isDrawnRtl: false };
+  const UNWRAPPED = { isWrapped: false, fontSizePx: FONT_SIZE_PX };
 
   function shaped(
     text: string,
@@ -729,100 +728,46 @@ describe('trimButtonLabel: the label trimmed to its paragraph box (button.cpp:42
   });
 });
 
-describe('iconOnlyButtonIconRect: an icon with no text sits at the left margin and floors its centred y (button.cpp:349-405)', () => {
-  const margin = { left: 4, top: 4, right: 4, bottom: 4 };
-
-  it("puts a 16px icon of a 28x31 button at (4, 7), as pnpm ref:godot measures text_type's script icon", () => {
-    // x: style margin 4. y: floor((31 - 8 - 16) / 2) = 3, plus margin 4.
-    expect(iconOnlyButtonIconRectIn({ x: 0, y: 0, w: 28, h: 31 }, margin, { x: 16, y: 16 }, false)).toEqual({
-      x: 4,
-      y: 7,
-      w: 16,
-      h: 16,
-    });
-  });
-
-  it('offsets the icon by the button position in iconOnlyButtonIconRectIn', () => {
-    const box = { x: 10, y: 20, w: 28, h: 31 };
-    expect(iconOnlyButtonIconRectIn(box, margin, { x: 16, y: 16 }, false)).toEqual({
-      x: 14,
-      y: 27,
-      w: 16,
-      h: 16,
-    });
-  });
-
-  it('puts the icon on the trailing edge in a right-to-left layout', () => {
-    expect(iconOnlyButtonIconRectIn({ x: 0, y: 0, w: 28, h: 31 }, margin, { x: 16, y: 16 }, true)).toEqual({
-      x: 8,
-      y: 7,
-      w: 16,
-      h: 16,
-    });
-  });
-
-  it('floors a centred icon of a 29x31 button to whole pixels (icon_alignment CENTER)', () => {
-    expect(
-      iconOnlyButtonIconRectIn(
-        { x: 0, y: 0, w: 29, h: 31 },
-        margin,
-        { x: 16, y: 16 },
-        false,
-        HORIZONTAL_ALIGNMENT_CENTER
-      )
-    ).toEqual({
-      x: 6,
-      y: 7,
-      w: 16,
-      h: 16,
-    });
-  });
-});
-
-describe('buttonContentSize', () => {
+describe('buttonContentMinimumSize: the text and icon terms (button.cpp:492-523)', () => {
   const left = HORIZONTAL_ALIGNMENT_LEFT;
   const center = HORIZONTAL_ALIGNMENT_CENTER;
-  const base = {
-    textSize: { x: 50, y: 20 },
-    lineHeightPx: 20,
-    hasText: true,
-    hSeparation: 4,
-    verticalIconAlignment: VERTICAL_ALIGNMENT_CENTER,
-  };
+  /** The content size of a label `textSize` big whose font is `fontHeightPx` tall, beside an icon of `iconNaturalSize`. */
+  const contentSize = (facts: Partial<ButtonContentInput>, textSize = { x: 50, y: 20 }, fontHeightPx = 20) =>
+    buttonContentMinimumSize(
+      { ...BASE_INPUT, ...facts },
+      { widthPx: textSize.x, heightPx: textSize.y, linePitchPx: 20, fontHeightPx } as TextLayoutResult,
+      {}
+    );
 
   it('adds a side icon and the separation to the text width and floors the height on the icon', () => {
-    const size = buttonContentSize({ ...base, iconSize: { x: 16, y: 24 }, iconAlignment: left });
-    expect(size).toEqual({ x: 70, y: 24 });
+    expect(contentSize({ iconNaturalSize: { x: 16, y: 24 }, iconAlignment: left })).toEqual({ x: 70, y: 24 });
   });
 
   it('takes the wider of the text and a centred icon', () => {
-    const size = buttonContentSize({ ...base, iconSize: { x: 80, y: 16 }, iconAlignment: center });
-    expect(size).toEqual({ x: 80, y: 20 });
+    expect(contentSize({ iconNaturalSize: { x: 80, y: 16 }, iconAlignment: center })).toEqual({
+      x: 80,
+      y: 20,
+    });
   });
 
   it('is the text alone without an icon', () => {
-    expect(buttonContentSize({ ...base, iconSize: null, iconAlignment: left })).toEqual({ x: 50, y: 20 });
+    expect(contentSize({ iconNaturalSize: null })).toEqual({ x: 50, y: 20 });
   });
 
   it('stacks a TOP icon between the whole paragraph and ONE more line height (button.cpp:497-502,517-521)', () => {
-    const size = buttonContentSize({
-      ...base,
-      textSize: { x: 50, y: 60 },
-      iconSize: { x: 16, y: 16 },
-      iconAlignment: left,
-      verticalIconAlignment: VERTICAL_ALIGNMENT_TOP,
-    });
+    const size = contentSize(
+      { iconNaturalSize: { x: 16, y: 16 }, verticalIconAlignment: VERTICAL_ALIGNMENT_TOP },
+      { x: 50, y: 60 }
+    );
     // 60 (three rows) + 16 (icon) + 20 (one line, `font->get_height`), not another 60.
     expect(size.y).toBe(96);
   });
 
   it('floors a CENTRED icon on the line height too, so a one-row paragraph never drops below it', () => {
-    const size = buttonContentSize({
-      ...base,
-      textSize: { x: 50, y: 10 },
-      iconSize: null,
-      iconAlignment: left,
-    });
-    expect(size.y).toBe(20);
+    expect(contentSize({ iconNaturalSize: null }, { x: 50, y: 10 }).y).toBe(20);
+  });
+
+  it('floors on the tallest face of the fallback chain, `Font::get_height` (font.cpp:210-220)', () => {
+    expect(contentSize({ iconNaturalSize: null }, { x: 50, y: 20 }, 32).y).toBe(32);
   });
 });

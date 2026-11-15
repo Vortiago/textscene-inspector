@@ -1,0 +1,78 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]
+
+[sub_resource type="Gradient" id="Gradient_grey"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.6, 0.6, 0.6, 1, 0.6, 0.6, 0.6, 1)
+
+[sub_resource type="GradientTexture2D" id="Tex_grey"]
+gradient = SubResource("Gradient_grey")
+width = 200
+height = 200
+
+[sub_resource type="Gradient" id="Gradient_dome"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.15, 0.5, 0.8, 1, 0.85, 0.5, 0.8, 1)
+
+[sub_resource type="GradientTexture2D" id="Tex_dome"]
+gradient = SubResource("Gradient_dome")
+width = 200
+height = 200
+
+[sub_resource type="Gradient" id="Gradient_spec"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.2, 0.2, 0.2, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="Tex_spec"]
+gradient = SubResource("Gradient_spec")
+width = 200
+height = 200
+fill_from = Vector2(0, 0)
+fill_to = Vector2(0, 1)
+
+[sub_resource type="CanvasTexture" id="CT_normal"]
+diffuse_texture = SubResource("Tex_grey")
+normal_texture = SubResource("Tex_dome")
+
+[sub_resource type="CanvasTexture" id="CT_spec"]
+diffuse_texture = SubResource("Tex_grey")
+normal_texture = SubResource("Tex_dome")
+specular_texture = SubResource("Tex_spec")
+specular_color = Color(1, 0.9, 0.7, 1)
+specular_shininess = 0.6
+
+[sub_resource type="OccluderPolygon2D" id="occ"]
+polygon = PackedVector2Array(-30, -30, 30, -30, 30, 30, -30, 30)
+
+[node name="Root" type="Node2D"]
+
+[node name="Plain" type="Sprite2D" parent="."]
+position = Vector2(200, 324)
+texture = SubResource("Tex_grey")
+
+[node name="Normal" type="Sprite2D" parent="."]
+position = Vector2(576, 324)
+texture = SubResource("CT_normal")
+
+[node name="Spec" type="Sprite2D" parent="."]
+position = Vector2(952, 324)
+texture = SubResource("CT_spec")
+
+[node name="L0" type="PointLight2D" parent="."]
+position = Vector2(400, 300)
+texture = ExtResource("1_light")
+texture_scale = 4.0
+height = 30.0
+energy = 1.0
+color = Color(1, 0.7, 0.4, 0.6)
+blend_mode = 0
+
+[node name="L1" type="PointLight2D" parent="."]
+position = Vector2(700, 360)
+texture = ExtResource("1_light")
+texture_scale = 4.0
+height = 60.0
+energy = 1.5
+color = Color(0.4, 0.8, 1, 0.5)
+blend_mode = 1

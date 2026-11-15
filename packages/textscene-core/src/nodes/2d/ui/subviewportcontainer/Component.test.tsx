@@ -37,7 +37,7 @@ import {
   type ViewportRect,
 } from '../../../../r3f/contexts/ViewportRectContext';
 import { SubViewportContainer } from './Component';
-import { createCanvasTarget, createSceneTarget } from '../../../viewport/subviewport/offscreenViewport';
+import { createCanvasTarget, createSceneTarget } from '../../../../r3f/offscreen/targets';
 import { quadsSampling } from '../../../../r3f/controls/native/testing/quadsSampling';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 // Side-effect: the Control painters and the node registrations

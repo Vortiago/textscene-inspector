@@ -2,7 +2,7 @@
  * Godot-parity contract for the shared HSlider/VSlider geometry (`scene/gui/slider.cpp`, Godot
  * 4.6.3). Each expected number is worked by hand from the cited lines or measured with
  * `pnpm ref:godot`, never the implementation's output. The zero `center_grabber`, `grabber_offset`
- * and `tick_offset` (`default_theme.cpp:594-596,609-611`) are dropped from every formula.
+ * and `tick_offset` (`default_theme.cpp:594-596,609-611`) are the default; the last block sets each.
  */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -17,6 +17,7 @@ import {
   sliderMinimumSize,
   sliderTickRects,
   sliderTrackRect,
+  type SliderGrabber,
 } from './sliderSolver';
 
 const theme = nativeTheme(1);
@@ -32,7 +33,11 @@ const slider2x = sliderAt(2);
  * `make_flat_stylebox(color, 4, 4, 4, 4, 4)` (`default_theme.cpp:579-580`), so the track is
  * 4 + 4 = 8 thick.
  */
-const grabberOf = (t: NativeTheme) => ({ x: t.sliderGrabberSize, y: t.sliderGrabberSize });
+const grabberOf = (t: NativeTheme): SliderGrabber => ({
+  size: { x: t.sliderGrabberSize, y: t.sliderGrabberSize },
+  isCentred: false,
+  offsetPx: 0,
+});
 
 describe('resolveSliderRatio', () => {
   it('reads a mid-range value through Range::get_as_ratio (happy path)', () => {
@@ -54,15 +59,15 @@ describe('resolveSliderRatio', () => {
 
 describe('sliderMinimumSize — Slider::get_minimum_size (slider.cpp:35-44)', () => {
   it('floors a HORIZONTAL slider at (track, MAX(track, grabber)) = (8, 16)', () => {
-    expect(sliderMinimumSize(false, slider, grabberOf(theme))).toEqual({ x: 8, y: 16 });
+    expect(sliderMinimumSize(false, slider, grabberOf(theme).size)).toEqual({ x: 8, y: 16 });
   });
 
   it('transposes that for VERTICAL: (MAX(track, grabber), track) = (16, 8)', () => {
-    expect(sliderMinimumSize(true, slider, grabberOf(theme))).toEqual({ x: 16, y: 8 });
+    expect(sliderMinimumSize(true, slider, grabberOf(theme).size)).toEqual({ x: 16, y: 8 });
   });
 
   it('scales with default_theme_scale — track doubles to 16, grabber to 32', () => {
-    expect(sliderMinimumSize(false, slider2x, grabberOf(theme2x))).toEqual({ x: 16, y: 32 });
+    expect(sliderMinimumSize(false, slider2x, grabberOf(theme2x).size)).toEqual({ x: 16, y: 32 });
   });
 
   it("floors on a themed grabber's own (possibly non-square) size, not the vendored 16x16", () => {
@@ -233,13 +238,13 @@ describe('is_layout_rtl() — the ONE draw branch Slider reads it in (slider.cpp
 describe('sliderTickRects — the `tick` icon per painted index, TICK_POSITION_BOTTOM_RIGHT (Godot default)', () => {
   it('draws the icon at its OWN measured size — 4 wide x 8 tall for hslider_tick, 8 x 4 for vslider_tick', () => {
     expect(
-      sliderTickRects(false, { x: 300, y: 40 }, [1], 5, theme, grabberOf(theme), slider)[0]
+      sliderTickRects(false, { x: 300, y: 40 }, [1], 5, theme, grabberOf(theme), slider, 0)[0]
     ).toMatchObject({
       w: 4,
       h: 8,
     });
     expect(
-      sliderTickRects(true, { x: 40, y: 300 }, [1], 5, theme, grabberOf(theme), slider)[0]
+      sliderTickRects(true, { x: 40, y: 300 }, [1], 5, theme, grabberOf(theme), slider, 0)[0]
     ).toMatchObject({
       w: 8,
       h: 4,
@@ -248,7 +253,7 @@ describe('sliderTickRects — the `tick` icon per painted index, TICK_POSITION_B
 
   it('scales the 8px cross axis by default_theme_scale, like every vendored icon', () => {
     expect(
-      sliderTickRects(false, { x: 300, y: 40 }, [1], 5, theme2x, grabberOf(theme2x), slider2x)[0]!.h
+      sliderTickRects(false, { x: 300, y: 40 }, [1], 5, theme2x, grabberOf(theme2x), slider2x, 0)[0]!.h
     ).toBe(16);
   });
 
@@ -256,7 +261,7 @@ describe('sliderTickRects — the `tick` icon per painted index, TICK_POSITION_B
     // grabber_offset = trunc(16/2) - trunc(4/2) = 8 - 2 = 6.
     // i=1 of [0,1,2,3,4] (5 ticks): ofs = trunc(1*284/4 + 6) = trunc(71+6) = 77.
     // y = trunc(8 + (40 - 8) / 2) = trunc(8 + 16) = 24.
-    const rects = sliderTickRects(false, { x: 300, y: 40 }, [1, 2, 3], 5, theme, grabberOf(theme), slider);
+    const rects = sliderTickRects(false, { x: 300, y: 40 }, [1, 2, 3], 5, theme, grabberOf(theme), slider, 0);
     expect(rects[0]).toEqual({ x: 77, y: 24, w: 4, h: 8 });
   });
 
@@ -264,7 +269,7 @@ describe('sliderTickRects — the `tick` icon per painted index, TICK_POSITION_B
     // grabber_offset = trunc(16/2) - trunc(4/2) = 6.
     // i=0 of [0,1,2] (3 ticks, borders on): ofs = trunc(0*284/2 + 6) = 6.
     // x = trunc(8 + (40 - 8) / 2) = 24.
-    const rects = sliderTickRects(true, { x: 40, y: 300 }, [0, 1, 2], 3, theme, grabberOf(theme), slider);
+    const rects = sliderTickRects(true, { x: 40, y: 300 }, [0, 1, 2], 3, theme, grabberOf(theme), slider, 0);
     expect(rects[0]).toEqual({ x: 24, y: 6, w: 8, h: 4 });
   });
 
@@ -276,13 +281,14 @@ describe('sliderTickRects — the `tick` icon per painted index, TICK_POSITION_B
       5,
       theme,
       grabberOf(theme),
-      slider
+      slider,
+      0
     );
     expect(rects).toHaveLength(5);
   });
 
   it('returns nothing for an empty index list (tick_count unset or <= 1)', () => {
-    expect(sliderTickRects(false, { x: 300, y: 40 }, [], 0, theme, grabberOf(theme), slider)).toEqual([]);
+    expect(sliderTickRects(false, { x: 300, y: 40 }, [], 0, theme, grabberOf(theme), slider, 0)).toEqual([]);
   });
 });
 
@@ -300,7 +306,16 @@ describe('slider draw rects — Size2i narrowing', () => {
   });
 
   it('narrows it for the tick rects', () => {
-    const ticks = sliderTickRects(false, { x: 200.6, y: 40.9 }, [0, 1], 2, theme, grabberOf(theme), slider);
+    const ticks = sliderTickRects(
+      false,
+      { x: 200.6, y: 40.9 },
+      [0, 1],
+      2,
+      theme,
+      grabberOf(theme),
+      slider,
+      0
+    );
     expect(ticks.every((t) => Number.isInteger(t.x) && Number.isInteger(t.y))).toBe(true);
   });
 });
@@ -319,5 +334,46 @@ describe('sliderGrabberRect — the two separate integer divisions', () => {
 
   it('mirrors it on the vertical axis', () => {
     expect(sliderGrabberRect(true, { x: 40, y: 200 }, 0, grabberOf(odd), false).x).toBe(13);
+  });
+});
+
+// `center_grabber`, `grabber_offset` and `tick_offset` (`slider.cpp:485-487`), which a Theme or a
+// parent's `add_theme_constant_override` sets, as ColorPicker does on its channel sliders (`color_picker.cpp:148`, `:640`).
+describe('the grabber constants', () => {
+  const centred: SliderGrabber = { ...grabberOf(theme), isCentred: true };
+
+  it('spans a centred grabber over the whole width and shifts it back by half (slider.cpp:329-330,363)', () => {
+    // areasize = 300, grabber_shift = -8: x = trunc(0.5 * 300 - 8) = 142.
+    expect(sliderGrabberRect(false, { x: 300, y: 40 }, 0.5, centred, false).x).toBe(142);
+  });
+
+  it('fills a centred grabber area to the value itself (slider.cpp:334)', () => {
+    // p = trunc(300 * 0.5 + 8 - 8) = 150.
+    expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0.5, slider, centred, false).w).toBe(150);
+  });
+
+  it('measures a centred vertical grabber up from the bottom with a positive shift (slider.cpp:299-302,326)', () => {
+    // areasize = 300, grabber_shift = 8: y = trunc(300 - 0.25 * 300 - 16 + 8) = 217.
+    expect(sliderGrabberRect(true, { x: 40, y: 300 }, 0.25, centred, false).y).toBe(217);
+    // y = round(300 - 75 - 8 + 8) = 225, h = round(75 + 8 - 8) = 75.
+    expect(sliderGrabberAreaRect(true, { x: 40, y: 300 }, 0.25, slider, centred, false)).toMatchObject({
+      y: 225,
+      h: 75,
+    });
+  });
+
+  it('shifts the grabber across the track by grabber_offset (slider.cpp:326,363)', () => {
+    const offset: SliderGrabber = { ...grabberOf(theme), offsetPx: 8 };
+    // y = 40 / 2 - 16 / 2 + 8 = 20.
+    expect(sliderGrabberRect(false, { x: 300, y: 40 }, 0, offset, false).y).toBe(20);
+    expect(sliderGrabberRect(true, { x: 40, y: 300 }, 0, offset, false).x).toBe(20);
+  });
+
+  it('moves the ticks with the centred travel and across by tick_offset (slider.cpp:342-349)', () => {
+    // ofs = trunc(1 * 300 / 4 + (8 - 2) - 8) = 73; y = 8 + 16 + 3 = 27.
+    expect(sliderTickRects(false, { x: 300, y: 40 }, [1], 5, theme, centred, slider, 3)[0]).toMatchObject({
+      x: 73,
+      y: 27,
+    });
   });
 });

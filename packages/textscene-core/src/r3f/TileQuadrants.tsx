@@ -12,12 +12,12 @@ import type { CanvasItemMaterialProperties } from '../resources/materials/canvas
 import { LitCanvasItem } from './components/LitCanvasItemPixels';
 import { CanvasItemGroup, useCanvasItemKey } from './components/CanvasItemGroup';
 import type * as THREE from 'three';
-import { foldOwnPixelTint, WHITE_MODULATE, type VertexColorTint } from './canvasItemModulate';
+import { foldOwnPixelTint, WHITE_MODULATE } from './canvasItemModulate';
 import { useCanvasModulateFor } from './canvasModulate';
 import { useCanvasColorSpace, type CanvasColorSpace } from './canvasColorSpace';
 import { useGodotLinearColor } from './godotColor';
 import { childCanvasPlace } from './canvasItemState';
-import { TileSourceMesh } from './TileSourceMesh';
+import { TileSourceMesh, type TileTint } from './TileSourceMesh';
 import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import type { Rgba } from '../godot/math/math';
 
@@ -32,8 +32,6 @@ interface TileLayerItem {
   material: CanvasItemMaterialProperties | null;
   lightMask: number | undefined;
   zFinal: number;
-  /** Group name for a source's missing-texture placeholder. */
-  name: string;
   /** The layer's effective filter and repeat, which its atlas textures sample with. */
   sampler: CanvasItemTextureSampler;
 }
@@ -74,12 +72,11 @@ function tileTint(
   canvasModulate: Rgba,
   linearModulate: THREE.Color,
   space: CanvasColorSpace
-): VertexColorTint {
+): TileTint {
   const { own, color, opacity } = foldOwnPixelTint(self, canvasModulate, space, linearModulate);
-  const { defines } = space;
   return space.isLinear
-    ? { vertex: own, color: linearModulate, opacity, defines }
-    : { vertex: WHITE_MODULATE, color, opacity, defines };
+    ? { vertex: own, color: linearModulate, opacity }
+    : { vertex: WHITE_MODULATE, color, opacity };
 }
 
 function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
@@ -108,7 +105,6 @@ function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
             grid={layer.model}
             renderOrder={item.firstOrder + runIndex}
             tint={tint}
-            name={layer.name}
             sampler={layer.sampler}
           />
         ))}

@@ -11,12 +11,14 @@
  */
 
 import type { Rect2 } from '../../../godot/math/rect2';
-import { type Vector2, vector2Max } from '../../../godot/math/vector';
+import { type Vector2, VECTOR2_ZERO, vector2Max } from '../../../godot/math/vector';
+import { perObject } from '../../../utils/perObject';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { InternalLayoutFn } from '../../../r3f/controls/native/internalControls';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import type {
   ContainerLayoutFn,
+  LoadedMinimumSizeFn,
   MinimumSizeFn,
   SolveContext,
 } from '../../../r3f/controls/native/solverRegistry';
@@ -25,6 +27,7 @@ import { labelMinimumSize } from '../../2d/ui/label/nativeSolver';
 import { everyChildFills, largestLaidOutChildMinimum } from '../window/contentFill';
 import { windowContentScale } from '../window/contentScale';
 import type { WindowProperties } from '../window/types';
+import type { DialogProperties } from './parser';
 import {
   buttonRowNode,
   buttonsSeparation,
@@ -105,30 +108,67 @@ function messageMinimumSize(dialog: SolveNode, ctx: SolveContext, width: number)
   });
 }
 
-/** The largest combined minimum among the dialog's own Controls: the authored ones and its class's body. */
-function largestChildMinimum(dialog: SolveNode, ctx: SolveContext): Vector2 {
+/** The largest combined minimum among the Controls of the dialog's class body, at least `floor`. */
+function largestBodyMinimum(dialog: SolveNode, ctx: SolveContext, floor: Vector2): Vector2 {
   return dialogBodyNodes(dialog, ctx.theme).reduce(
     (largest, body) => vector2Max(largest, ctx.combinedMinimumSize(body)),
-    largestLaidOutChildMinimum(dialog, ctx)
+    floor
   );
 }
 
+/** The largest combined minimum among the dialog's own Controls: the authored ones and its class's body. */
+function largestChildMinimum(dialog: SolveNode, ctx: SolveContext): Vector2 {
+  return largestBodyMinimum(dialog, ctx, largestLaidOutChildMinimum(dialog, ctx));
+}
+
 /**
- * `AcceptDialog::_get_contents_minimum_size` (`dialogs.cpp:281-316`): the message and the authored
- * Controls stacked above the button row and its separation, inside the panel's margins.
+ * `AcceptDialog::_get_contents_minimum_size` (`dialogs.cpp:281-316`) from the minimums of the content
+ * and the button row: the content stacked above the row and its separation, inside the panel's margins.
  */
+function stackedMinimumSize(dialog: SolveNode, content: Vector2, row: Vector2): Vector2 {
+  const margins = contentMarginSize(dialogPanelBox(dialog));
+  return {
+    x: Math.max(row.x, content.x) + margins.x,
+    y: content.y + row.y + buttonsSeparation(dialog) + margins.y,
+  };
+}
+
+/** The message and the authored Controls stacked above the button row. */
 export const dialogContentsMinimumSize: MinimumSizeFn = (dialog, ctx) => {
   const margins = contentMarginSize(dialogPanelBox(dialog));
-  const separation = buttonsSeparation(dialog);
   const row = buttonRowMinimum(dialog, ctx);
   const authored = largestChildMinimum(dialog, ctx);
   const widthWithoutMessage = Math.max(row.x, authored.x);
   const message = messageMinimumSize(dialog, ctx, wrapWidth(dialog, widthWithoutMessage, margins.x));
-  const content = vector2Max(authored, message);
-  return {
-    x: Math.max(row.x, content.x) + margins.x,
-    y: content.y + row.y + separation + margins.y,
-  };
+  return stackedMinimumSize(dialog, vector2Max(authored, message), row);
+};
+
+/**
+ * The dialog as its message and buttons were when they first computed their minimums, under its own
+ * path so a solve context keeps those minimums apart. It is an AcceptDialog: ConfirmationDialog
+ * writes its size before it adds Cancel (`dialogs.cpp:528-533`), so its row holds only OK. Kept per
+ * dialog node, so the internal Controls built from it are built once.
+ */
+const dialogAtLoad = perObject((dialog: SolveNode): SolveNode | null => {
+  const props = dialog.node.properties as DialogProperties;
+  if (!props.controls_at_load) return null;
+  const properties = { ...props, ...props.controls_at_load, has_unwrapped_message_minimum: false };
+  const node = { ...dialog.node, type: 'AcceptDialog', properties };
+  return { ...dialog, path: `${dialog.path}@load`, node, children: [] };
+});
+
+/**
+ * The contents minimum a size write reads at load. The class's body is built after the cached
+ * Controls and reads fresh, and the authored Controls are not added yet. The message label has no
+ * size before the dialog enters the tree, so an autowrapping one shapes at width 0, on one line
+ * (`label.cpp:973-996`).
+ */
+export const dialogLoadedMinimumSize: LoadedMinimumSizeFn = (dialog, ctx) => {
+  const loaded = dialogAtLoad(dialog);
+  if (!loaded) return null;
+  const body = largestBodyMinimum(dialog, ctx, VECTOR2_ZERO);
+  const message = messageMinimumSize(loaded, ctx, 0);
+  return stackedMinimumSize(loaded, vector2Max(body, message), buttonRowMinimum(loaded, ctx));
 };
 
 /** Every authored Control takes the content rect (`dialogs.cpp:248-259`). */

@@ -9,6 +9,7 @@ import { perObject } from '../../../utils/perObject';
 import { parentPathOf } from '../../../utils/nodePath';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { ProjectFonts } from '../../../resources/fonts/font/projectFonts';
+import type { SettledFonts } from './text/settledFonts';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
@@ -18,6 +19,7 @@ import type { CanvasInheritance } from '../../canvasItemPass/inheritedCanvasStat
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Rgba } from '../../../godot/math/math.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
+import type { NativeControlComponent } from '../ControlComponentRegistry';
 
 /** `labelSettingsFont` while its font file loads: a Label draws nothing in it yet (ADR-0059). */
 export const LABEL_SETTINGS_FONT_LOADING = 'loading';
@@ -138,6 +140,8 @@ export interface SolveNode {
    * Required, like `fontOverrides`.
    */
   projectFonts: ProjectFonts;
+  /** The faces of the fonts the preview loads, which every font read of the node peeks. Required, like `projectFonts`. */
+  settledFonts: SettledFonts;
   /**
    * Resolved theme colours by `get_theme_color(name, type)` name, merged like
    * `styleBoxes` over `theme.colors`. A painter falls back to the default
@@ -157,6 +161,14 @@ export interface SolveNode {
    * falls back to its vendored icon (`native/themeIcons.ts`) on a miss.
    */
   icons: Readonly<Record<string, ThemedIconRef>>;
+  /**
+   * The default theme's icons a parent pushed onto this internal Control with
+   * `add_theme_icon_override`, by name, as vendored URLs. A painter draws one in
+   * place of its own vendored icon for a name `icons` has no entry for.
+   */
+  defaultIcons?: Readonly<Record<string, string>>;
+  /** What the parent draws on this internal Control through its `draw` signal, after the class's own draw. */
+  draws?: NativeControlComponent;
   /**
    * The resource pools this node's own references resolve against. A node from
    * an instanced sub-scene names that scene's ids, while `SceneResourcesProvider`

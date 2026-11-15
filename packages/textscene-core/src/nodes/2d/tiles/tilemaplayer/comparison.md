@@ -13,7 +13,7 @@ in Godot's order, x then y (`tile_map_layer.cpp:306-311`), with each run of cell
 source batched into one quad mesh. Under `use_texture_padding` (the default), a tile samples
 only its own texels and repeats its edge texels outward, as Godot's padded atlas copy does.
 A filtered tile then shows no seam from its neighbour. Godot builds that copy once, from the texture's image at load (`tile_set.cpp:5622-5654`). So a padded `ViewportTexture` source draws its target as it stands before its first render: black when opaque and clear when transparent. One that Godot never sets up draws the placeholder. Tiles sample with the layer's inherited `texture_filter` and `texture_repeat`, or with those of the atlas source's CanvasTexture where it sets them.
-A cell whose atlas source has no texture draws nothing (`tile_map_layer.cpp:724`). A texture that is set but fails to load draws a placeholder.
+A cell whose atlas source has no texture draws nothing (`tile_map_layer.cpp:724`). A texture that is set but fails to load draws nothing too, as Godot does (`tile_map_layer.cpp:2676-2677`). In a TileSet file, Godot's loader leaves that texture null. An inline TileSet that names a missing file fails the whole scene in Godot (`resource_format_text.cpp:644-648`).
 
 ## Tile grid
 

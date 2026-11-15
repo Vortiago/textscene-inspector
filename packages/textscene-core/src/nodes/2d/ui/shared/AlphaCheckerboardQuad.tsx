@@ -4,7 +4,7 @@
  * at local (0, 0). It tiles as `texturerect/Component.tsx`'s `STRETCH_TILE` does: the quad is a region
  * of the tile's size from the top-left, as `regionUvWindow` windows it.
  */
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -13,6 +13,7 @@ import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsCont
 import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { MINI_CHECKERBOARD_ICON, MINI_CHECKERBOARD_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { applyUvWindow, regionUvWindow } from '../../../../r3f/uvWindow';
+import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
 
 interface AlphaCheckerboardQuadProps {
   width: number;
@@ -56,7 +57,7 @@ export function AlphaCheckerboardQuad({
     return texture;
   }, [texture, width, height, themeScale]);
 
-  useEffect(() => (tiled ? () => tiled.dispose() : undefined), [tiled]);
+  useDisposeOnRelease(tiled);
 
   if (width <= 0 || height <= 0 || !tiled) return null;
 

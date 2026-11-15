@@ -27,6 +27,8 @@ export function childCanvasItemProperties<T extends Node2DProperties>(parent: T)
     z_index: 0,
     z_as_relative: true,
     show_behind_parent: false,
+    top_level: false,
+    clip_children: 0,
     visible: true,
     use_parent_material: true,
   } as T;

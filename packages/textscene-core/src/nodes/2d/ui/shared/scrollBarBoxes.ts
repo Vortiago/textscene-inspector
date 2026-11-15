@@ -3,8 +3,8 @@
  * `memnew`s its bars (ItemList, TextEdit, ScrollContainer and others) reads them through its own
  * Theme chain, as an internal child does (`Control::get_theme_stylebox`, `control.cpp:3078`).
  */
-import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { themeItemsOfType, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+import type { ShareNode, SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { perObject } from '../../../../utils/perObject';
 import type { ScrollBarBoxes, ScrollBarPairBoxes } from './scrollBarSolver';
 
@@ -18,7 +18,7 @@ export const scrollBarBoxes = perObject((styleBoxes: SolveNode['styleBoxes']): S
 }));
 
 /** The boxes of the HScrollBar and VScrollBar that `host` creates inside itself, cached per host. */
-export const internalScrollBarBoxes = perObject((host: SolveNode): ScrollBarPairBoxes => ({
-  horizontal: scrollBarBoxes(internalChildThemeItems(host, 'HScrollBar').styleBoxes),
-  vertical: scrollBarBoxes(internalChildThemeItems(host, 'VScrollBar').styleBoxes),
+export const internalScrollBarBoxes = perObject((host: ShareNode): ScrollBarPairBoxes => ({
+  horizontal: scrollBarBoxes(themeItemsOfType(host, 'HScrollBar').styleBoxes),
+  vertical: scrollBarBoxes(themeItemsOfType(host, 'VScrollBar').styleBoxes),
 }));

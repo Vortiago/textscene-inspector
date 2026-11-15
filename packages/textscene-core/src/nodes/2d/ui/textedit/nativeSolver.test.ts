@@ -89,13 +89,31 @@ describe('resolveTextEditStyleState', () => {
 });
 
 describe('textEditRowHeightPx', () => {
+  const rowsOf = (lines: string[], fontMetrics = OPEN_SANS_FONT_METRICS) =>
+    shapeTextEditLines(lines, { fontSizePx: 24, fontMetrics });
+
   // text_edit.cpp:4103: MAX(text.get_line_height() + theme_cache.line_spacing, 1).
-  it('is the font line pitch plus the line_spacing constant', () => {
-    const withoutSpacing = textEditRowHeightPx(OPEN_SANS_FONT_METRICS, 16, 0);
-    expect(textEditRowHeightPx(OPEN_SANS_FONT_METRICS, 16, 4)).toBe(withoutSpacing + 4);
+  it('is the font height plus the line_spacing constant', () => {
+    const withoutSpacing = textEditRowHeightPx(rowsOf(['a']), OPEN_SANS_FONT_METRICS, 24, 0);
+    expect(textEditRowHeightPx(rowsOf(['a']), OPEN_SANS_FONT_METRICS, 24, 4)).toBe(withoutSpacing + 4);
   });
+
+  // `:364-366`: a line's height is the larger of the font height and each of its rows.
+  it('grows every row to a row taller than the font: a hex-code box of 30 px at 24 px', () => {
+    // Ascent 18 px and descent 6 px at 24 px, without `一`.
+    const short = {
+      ...OPEN_SANS_FONT_METRICS,
+      ascent: 1536,
+      descent: 512,
+      hasGlyph: (ch: string) => ch !== '一',
+    };
+    // ceil(25.5 + 6) for the box line, over the font's 18 + 6.
+    expect(textEditRowHeightPx(rowsOf(['a', 'A一B'], short), short, 24, 0)).toBe(32);
+  });
+
   it('floors at 1 for a degenerate zero-size font pitch', () => {
-    expect(textEditRowHeightPx({ ...OPEN_SANS_FONT_METRICS, ascent: 0, descent: 0 }, 1, 0)).toBe(1);
+    const empty = { ...OPEN_SANS_FONT_METRICS, ascent: 0, descent: 0 };
+    expect(textEditRowHeightPx([], empty, 1, 0)).toBe(1);
   });
 });
 
@@ -186,7 +204,7 @@ describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () =>
   const STYLE_MIN = TEXT_EDIT_BOXES.normal!.contentMargin;
   const STYLE_MIN_X = STYLE_MIN.left + STYLE_MIN.right;
   const STYLE_MIN_Y = STYLE_MIN.top + STYLE_MIN.bottom;
-  const ROW_HEIGHT_PX = textEditRowHeightPx(OPEN_SANS_FONT_METRICS, 16, THEME.separation);
+  const ROW_HEIGHT_PX = textEditRowHeightPx([], OPEN_SANS_FONT_METRICS, 16, THEME.separation);
 
   function fitWidth(props: Partial<TextEditProperties>): number {
     return textEditMinimumSize(node({ fitContentWidth: true, ...props }), ctx()).x - STYLE_MIN_X;
@@ -439,6 +457,8 @@ describe('textEditCaretRect (text_edit.cpp:926-927,945-947,1858-1877)', () => {
 describe('textEditWrapIndentPx (text_edit.cpp:190-217,1363)', () => {
   const ROW = {
     paragraphIndex: 0,
+    ascentPx: 15,
+    descentPx: 5,
     text: '    ab',
     widthPx: 0,
     glyphs: [
@@ -477,6 +497,8 @@ describe('textEditWrapIndentPx (text_edit.cpp:190-217,1363)', () => {
         { char: 'b', x: 41, advance: 9, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
       ],
       paragraphIndex: 0,
+      ascentPx: 15,
+      descentPx: 5,
     };
     expect(textEditWrapIndentPx(tabbed, '\tab', 1000)).toBe(32);
   });

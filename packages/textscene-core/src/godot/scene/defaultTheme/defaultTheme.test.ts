@@ -9,7 +9,7 @@ import {
   type Sides,
 } from './defaultTheme.js';
 import { typeItems } from './typeItems.js';
-import { DEFAULT_THEME_VARIATION_BASES } from './variations.js';
+import { defaultThemeVariationBase } from './variations.js';
 
 /**
  * Godot 4.6.3's default theme (`ThemeDB.get_default_theme()`) at each scale, item by item. Regenerate the
@@ -95,9 +95,19 @@ describe.each(themes)('defaultThemeAt(%s)', (_scale, godot) => {
   });
 });
 
-describe('DEFAULT_THEME_VARIATION_BASES', () => {
+describe('defaultThemeVariationBase', () => {
   it('names each variation of the default theme with its base, at every scale', () => {
-    for (const [, godot] of themes) expect(DEFAULT_THEME_VARIATION_BASES).toEqual(godot.variations);
+    for (const [, godot] of themes) {
+      const bases = Object.keys(godot.variations).map((variation) => [
+        variation,
+        defaultThemeVariationBase(variation),
+      ]);
+      expect(Object.fromEntries(bases)).toEqual(godot.variations);
+    }
+  });
+
+  it('has no base for a variation the default theme does not register', () => {
+    expect(defaultThemeVariationBase('constructor')).toBeUndefined();
   });
 });
 

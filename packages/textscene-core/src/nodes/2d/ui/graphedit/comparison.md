@@ -65,8 +65,12 @@ are present in every GraphEdit, whatever the scene file says:
   each press their toggle. The SpinBox shows `snapping_distance` as its value. The Label, `FlatButton`
   Buttons and SpinBox read their own class's items through the GraphEdit's ancestor Theme chain
   (`graph_edit.cpp:3229-3300`). The boxes, the font and icon colours, and the minimum size of
-  each widget follow a Theme that sets them.
-- The two **scrollbars**, anchored to the bottom and right edges. Once `_update_scrollbars`
+  each widget follow a Theme that sets them. Each widget is a built Control that its own class's solver and painter size and draw.
+  A right-to-left layout mirrors the toolbar.
+- The two **scrollbars**, anchored to the bottom and right edges.
+  A right-to-left layout mirrors them.
+  Each reads the boxes of its own class, HScrollBar or VScrollBar, through the Theme chain.
+  Each draws as a canvas item of its own, with no material and light_mask 1 (`renderer_canvas_cull.cpp:319-324`). Once `_update_scrollbars`
   has run, its scroll range is past the page in every GraphEdit with a non-zero rect, so both
   are visible. The size and offset of each grabber come from that range and `scroll_offset`.
   It has run in three cases. The GraphEdit has a GraphElement child. A `scroll_offset` or a `zoom`
@@ -74,7 +78,7 @@ are present in every GraphEdit, whatever the scene file says:
   gave out of the tree. Otherwise both bars keep the constructor state: full length, overlapping
   in the corner, each grabber a dot at the middle. The minimap then reads zero bounds, and its
   camera frame runs past the minimap panel (`graphEdit.md`).
-- The **minimap**, anchored bottom-right, inset 12px, at `minimap_size` (at least 50 per
+- The **minimap**, anchored bottom-right (bottom-left in a right-to-left layout), inset 12px, at `minimap_size` (at least 50 per
   axis) and `minimap_opacity`, drawn only while `minimap_enabled`. It holds the panel and one
   rect per visible GraphFrame, then GraphNode. Each rect takes the `bg_color` of its `panel`, or of
   `panel_selected` while it is selected (`graph_edit.cpp:1834-1864`). A frame with `tint_color_enabled`

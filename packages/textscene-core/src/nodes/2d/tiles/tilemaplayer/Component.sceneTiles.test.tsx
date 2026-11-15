@@ -20,6 +20,7 @@ import {
   onlyMesh,
   withCells,
   renderSceneTiles,
+  type Box,
 } from '../shared/sceneTiles.testkit';
 
 function layerScene(layerExtra = ''): string {
@@ -74,7 +75,7 @@ describe('TileMapLayer scene tiles', () => {
   });
 
   it.each([
-    ['a scene id the source lacks', cell(0, 0, 20)],
+    ['a scene id the source lacks', cell(0, 0, 99)],
     ['atlas coords other than (0, 0)', cell(0, 0, 1, { atlasCoords: { x: 1, y: 0 } })],
     ['a source the TileSet lacks', cell(0, 0, 1, { sourceId: 5 })],
   ])('draws no instance for %s', async (_name, placed) => {
@@ -271,5 +272,14 @@ polygon = PackedVector2Array(0, 0, 10, 0, 10, 10, 0, 10)
   it('draws a Control root of a y-sorted layer at the cell', async () => {
     const renderer = await render([cell(0, 1, 2)], 'y_sort_enabled = true\n');
     expect(drawnBoxes(renderer)).toEqual([[127, 111, 10, 10]]);
+  });
+
+  it('sorts a Control below a Node2D of a y-sorted Control root at that Node2D, as its entry (#1857)', async () => {
+    // `_collect_ysort_children` takes Holder at y 50 as the entry (`renderer_canvas_cull.cpp:110-160`),
+    // and Holder keeps Low in its own subtree, so Low draws after Mid at y 30.
+    const boxes = boxesInPaintOrder(await render([cell(0, 0, 20)]));
+    const low: Box = [132, 102, 12, 12];
+    const mid: Box = [136, 82, 16, 16];
+    expect(boxes).toEqual([mid, low]);
   });
 });
