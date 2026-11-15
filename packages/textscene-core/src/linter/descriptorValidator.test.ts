@@ -186,6 +186,28 @@ describe('a typed ARRAY and a node slot', () => {
     expectAccepted(check('Compositor', 'compositor_effects', 'Array[CompositorEffect]([])'));
     expectWarning(check('Compositor', 'compositor_effects', 'Array[Font]([])'), 'CompositorEffect');
   });
+
+  // Godot 4.6.3 stores `Array[SystemFont]([…])` and `Array[Resource]([…])` in `Font.fallbacks`.
+  it('accepts a wrapper class that inherits the element class or that it inherits', () => {
+    expectAccepted(check('Font', 'fallbacks', 'Array[SystemFont]([SubResource("t")])'));
+    expectAccepted(check('Font', 'fallbacks', 'Array[Resource]([SubResource("t")])'));
+  });
+
+  it('reads the element type of a non-object element hint by its Variant type name', () => {
+    const connections = descriptorOf('GraphEdit', 'connections');
+    const validator = descriptorValidator(connections)!;
+    expectAccepted(validator('connections', 'Array[Dictionary]([{}])', 1));
+    expectWarning(validator('connections', 'Array[int]([1])', 1), 'Dictionary');
+  });
+
+  it('refuses another element type at the error tier when the hand row states the setter', () => {
+    const validator = descriptorValidator({
+      ...descriptorOf('Font', 'fallbacks'),
+      facts: { setter: { cite: 'font.cpp:176' } },
+    })!;
+    expectError(validator('fallbacks', 'Array[Texture2D]([])', 1), 'font.cpp:176');
+    expect(validator.grounding).toEqual({ kind: 'enforced', cite: 'font.cpp:176' });
+  });
 });
 
 describe('the hand row folds into the same check', () => {

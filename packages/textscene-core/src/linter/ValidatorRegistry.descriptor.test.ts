@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ValidatorRegistry, validatorRegistry } from './ValidatorRegistry.js';
 import type { PropertyValidator } from './propertyValidator.js';
-import { CLASS_BASE_TYPES } from '../godot/classdb/classBaseTypes.js';
+import { CLASS_BASE_TYPES, classBaseChain } from '../godot/classdb/classBaseTypes.js';
 import { expectAccepted } from './testing/validatorCheck.js';
 import { derivedValidator } from './descriptorValidator.js';
 import { classProperties } from '../godot/classdb/classProperty.js';
@@ -44,6 +44,22 @@ describe('the registry reads the property descriptor', () => {
     expect(validatorRegistry.declarationFor('BoxMesh', 'size')).toBe(
       validatorRegistry.declarationFor('BoxMesh', 'size')
     );
+  });
+});
+
+describe('the base walk before the derivation', () => {
+  // An ancestor's hand validator answers before a nearer capture row, which is right while no class repeats a key.
+  it('meets no class that re-declares a key an ancestor captures', () => {
+    const tables: Readonly<Record<string, readonly (readonly unknown[])[]>> = {
+      ...NODE_CLASS_PROPERTIES,
+      ...RESOURCE_CLASS_PROPERTIES,
+    };
+    const redeclared = Object.entries(tables).flatMap(([type, rows]) =>
+      rows
+        .filter(([name]) => classBaseChain(type).some((base) => tables[base]?.some((row) => row[0] === name)))
+        .map(([name]) => `${type}.${String(name)}`)
+    );
+    expect(redeclared).toEqual([]);
   });
 });
 
