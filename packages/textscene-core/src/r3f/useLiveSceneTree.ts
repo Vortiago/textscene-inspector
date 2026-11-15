@@ -48,7 +48,7 @@ export interface SharedLiveTree {
  */
 function loaderCaches(loader: ResourceLoader | null | undefined) {
   return {
-    sceneCache: loader ? loadTicksOfLoader(loader).treeScenes : NOTHING_CACHED,
+    sceneCache: treeScenesOf(loader),
     glbCache: loader?.glbMeshes,
     parsedFiles: loader ? loadTicksOfLoader(loader).treeFiles : NO_LIVE_FILES.parsedFiles(),
   };
@@ -196,6 +196,14 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
 
 function loadTicksOf(loader: ResourceLoader | null | undefined): LoadTicks {
   return loader ? loadTicksOfLoader(loader) : NO_LOAD_TICKS;
+}
+
+/**
+ * @canonical The scene cache as Godot loads it, for a reader of the live tree
+ * A scene that fails to load is no scene, and a read moves the tree's version when its outcome changes.
+ */
+export function treeScenesOf(loader: ResourceLoader | null | undefined): CacheSource<TscnScene> {
+  return loadTicksOf(loader).treeScenes;
 }
 
 /**

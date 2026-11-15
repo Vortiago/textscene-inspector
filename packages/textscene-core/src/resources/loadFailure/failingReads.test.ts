@@ -58,6 +58,18 @@ texture = Resource("res://gone.png")
 
     expect(reads).toEqual(['res://gone.png']);
   });
+
+  it('leaves out a Resource() literal written inside a string', () => {
+    const reads = sceneFailingReads(
+      MAIN,
+      scene(`[gd_scene format=3]
+[node name="Root" type="Label"]
+text = "Resource(\\"res://gone.png\\")"
+`)
+    );
+
+    expect(reads).toEqual([]);
+  });
 });
 
 describe('a relative ext_resource path', () => {

@@ -16,6 +16,10 @@ describe('existsInListing', () => {
     expect(existsInListing('res://art/icon.png', listing('icon.png.import'))).toBe(true);
   });
 
+  it('finds a file its folder lists in another case, as a host that ignores case opens it', () => {
+    expect(existsInListing('res://art/Icon.PNG', listing('icon.png'))).toBe(true);
+  });
+
   it('misses a file its folder does not list', () => {
     expect(existsInListing('res://art/icon.png', listing('other.png'))).toBe(false);
   });

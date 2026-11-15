@@ -26,6 +26,7 @@ import { resourceFailingReads, sceneFailingReads } from './loadFailure/failingRe
 import { existsInListing, folderOf, listsImportSidecar } from './loadFailure/fileExists';
 import { importSidecarPath } from '../godot/project/resourceFormats';
 import { parseImportFile } from '../parser/importParser';
+import { UnparsedTextError } from '../parser/unparsedTextError';
 import { foldersAbove, type DirectoryListing } from './directoryListing';
 import { runClearCachesSequence } from './clearCachesSequence';
 import { runProvideFileSequence } from './provideFileSequence';
@@ -185,12 +186,16 @@ export class ResourceLoader {
     const dependent: Dependent = { busType: 'loadoutcome', key: path };
     return {
       failingReads: async (file) => {
-        if (fileExtension(file) === '.tscn') {
-          const scene = await this.peerLoad(dependent, this.scenes, 'scene', file);
-          return scene && sceneFailingReads(file, scene);
+        try {
+          if (fileExtension(file) === '.tscn')
+            return sceneFailingReads(file, await this.peerRequire(dependent, this.scenes, 'scene', file));
+          return resourceFailingReads(
+            file,
+            await this.peerRequire(dependent, this.resources, 'resource', file)
+          );
+        } catch (error) {
+          return error instanceof UnparsedTextError ? 'unparsed' : 'unread';
         }
-        const parsed = await this.peerLoad(dependent, this.resources, 'resource', file);
-        return parsed && resourceFailingReads(file, parsed);
       },
       exists: async (file) => {
         // The file itself, so its creation or removal clears the outcome.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loaderServing } from '../testing/servingResourceLoader';
-import type { ResourceLoader } from '../ResourceLoader';
+import { busServing } from '../testing/servingFileBus';
+import { ResourceLoader } from '../ResourceLoader';
 import type { LoadOutcome } from './loadOutcome';
 
 const ATLAS_SCENE = `[gd_scene format=3]
@@ -63,6 +64,24 @@ describe('ResourceLoader.loadOutcomes', () => {
       chain: ['res://main.tscn', 'res://atlas.tres'],
       cause: 'unparsed',
     });
+  });
+
+  it('claims no failure for a listed .tres the host could not read', async () => {
+    const { bus, provider } = busServing({
+      'res://main.tscn': ATLAS_SCENE.replace('res://art/icon.png', 'res://atlas.tres'),
+      'res://atlas.tres': FAILING_TRES,
+    });
+    const loadResource = provider.loadResource.bind(provider);
+    provider.loadResource = (path, type) =>
+      path === 'res://atlas.tres' ? Promise.reject(new Error('host read failed')) : loadResource(path, type);
+    const loader = new ResourceLoader(bus);
+    loader.setProvider(provider);
+
+    const settled = loader.eventBus.once('loadoutcome', 'failed', 'res://main.tscn', 2000);
+    loader.loadOutcomes.request('res://main.tscn');
+    await settled.catch(() => {});
+
+    expect(loader.loadOutcomes.getCached('res://main.tscn')?.isFailed).not.toBe(true);
   });
 
   it('fails a scene through the .tres its [sub_resource] reads', async () => {

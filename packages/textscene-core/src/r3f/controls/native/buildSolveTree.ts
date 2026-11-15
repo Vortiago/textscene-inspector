@@ -41,7 +41,7 @@ import {
   type ViewportTargetSize,
 } from '../../../resources/textures/viewporttexture/viewportTargetSize';
 import { useViewportTextures } from '../../contexts/ViewportTextureContext';
-import { useSharedLiveTree } from '../../useLiveSceneTree';
+import { treeScenesOf, useSharedLiveTree } from '../../useLiveSceneTree';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { FONT } from '../../../resources/fonts/font/kind';
 import { fontFilesOn, resolveProjectFonts } from '../../../resources/fonts/font/projectFonts';
@@ -109,7 +109,6 @@ import {
   resolveThemedIcons,
 } from './themeItems';
 import type { Vector2 } from '../../../godot/math/vector.js';
-import { godotScenes } from '../../../resources/loadFailure/godotScenes.js';
 
 interface UseBuildSolveTreeResult {
   /** Every Control whose canvas item parents at the viewport's canvas: scene roots, promoted, hoisted and `top_level` Controls. */
@@ -317,7 +316,7 @@ function buildForest(
   const readViewportSize = recordingSizes(viewportTargetSize, viewportSizeReads);
 
   const sceneCache: CachedSceneSource = loader
-    ? recordingReads(godotScenes(loader), recordRead)
+    ? recordingReads(treeScenesOf(loader), recordRead)
     : NOTHING_CACHED;
   // The tree reads a tile layer's TileSet here too, for the scene tiles it adds as children.
   const parsedFiles = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;

@@ -2,10 +2,15 @@
 
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { RawNode, TscnExternalResource, TscnScene } from '../../parser/types';
-import { simplifyResPath } from '../../godot/string/string';
+import {
+  getBaseDir,
+  isAbsolutePath,
+  pathJoin,
+  simplifyPath,
+  simplifyResPath,
+} from '../../godot/string/string';
 import { extResourceIdsIn, pathResourcePathsIn } from '../../godot/variant/resourceRef';
 import { findExtResource } from '../SubResourceResolver';
-import { normalizeRelativePath } from '../resPath';
 
 type Values = Readonly<Record<string, string>>;
 
@@ -49,10 +54,8 @@ function failingReads(
 
 /** A `path=` relative to the file that writes it, as the text loader localises it (resource_format_text.cpp:508-510). */
 export function extResourcePathIn(file: string, path: string): string {
-  if (path.includes('://') || path.startsWith('/')) return simplifyResPath(path);
-  const folder = file.slice('res://'.length, file.lastIndexOf('/') + 1);
-  const resolved = normalizeRelativePath(folder + path);
-  return resolved === null ? path : `res://${resolved}`;
+  if (path.includes('://') || isAbsolutePath(path)) return simplifyResPath(path);
+  return simplifyPath(pathJoin(getBaseDir(file), path));
 }
 
 function nodeValues(nodes: readonly RawNode[]): Values[] {

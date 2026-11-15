@@ -101,10 +101,13 @@ export class WebResourceProvider implements ResourceProvider {
 
   /**
    * The entries of the `res://` folder `folder`: the mirror's folder under the active corpus root, with the files uploaded to
-   * it. Null when neither holds the folder.
+   * it. Null when neither holds the folder. Rejects while the mirror's listing cannot be fetched, since a folder it would
+   * list is not known to be missing.
    */
   async listDirectory(folder: string): Promise<DirectoryEntry[] | null> {
     const listing = this.hasFixturesMirror ? await this.fixtureListing() : null;
+    if (this.hasFixturesMirror && !listing)
+      throw new Error(`The fixture listing is unavailable, so ${folder} cannot be listed`);
     const mirrored = listing && mirrorEntries(listing, mirrorFolderOf(folder, this.resourceRoot));
     const uploaded = this.uploadedEntries(folder);
     if (!mirrored && uploaded.size === 0) return null;

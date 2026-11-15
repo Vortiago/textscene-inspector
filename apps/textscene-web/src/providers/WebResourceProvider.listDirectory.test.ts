@@ -91,15 +91,15 @@ describe('WebResourceProvider listDirectory', () => {
     expect(await bare.listDirectory('res://')).toEqual([{ name: 'x.png', isDirectory: false }]);
   });
 
-  it('treats an HTML answer, the SPA fallback of a missing file, as no listing', async () => {
+  it('cannot list where the answer is HTML, the SPA fallback of a missing file', async () => {
     global.fetch = answerWith('<html>', 'text/html') as unknown as typeof fetch;
-    expect(await new WebResourceProvider().listDirectory('res://')).toBeNull();
+    await expect(new WebResourceProvider().listDirectory('res://')).rejects.toThrow('res://');
   });
 
   it('asks for the listing again after a server error, and keeps a later answer', async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 503 }) as unknown as typeof fetch;
     const flaky = new WebResourceProvider();
-    expect(await flaky.listDirectory('res://')).toBeNull();
+    await expect(flaky.listDirectory('res://')).rejects.toThrow();
     global.fetch = answerWith(LISTING) as unknown as typeof fetch;
     expect(await flaky.listDirectory('res://')).toEqual([
       { name: 'sub', isDirectory: true },
@@ -107,8 +107,8 @@ describe('WebResourceProvider listDirectory', () => {
     ]);
   });
 
-  it('treats a refused fetch as no listing', async () => {
+  it('cannot list after a refused fetch', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('offline')) as unknown as typeof fetch;
-    expect(await new WebResourceProvider().listDirectory('res://')).toBeNull();
+    await expect(new WebResourceProvider().listDirectory('res://')).rejects.toThrow();
   });
 });

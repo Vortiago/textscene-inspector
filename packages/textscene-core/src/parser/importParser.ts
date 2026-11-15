@@ -130,7 +130,7 @@ export function parseImportFile(content: string): ParsedImportFile | null {
     const value = unquoteLiteral(raw);
     if (section === 'params') params[key!] = value;
     else if (section === 'remap' && key === 'importer') importer = value;
-    else if (section === 'remap' && key === 'valid') isValid = value !== 'false';
+    else if (section === 'remap' && key === 'valid') isValid = boolSlotValue(value) !== false;
   }
   storePending();
 

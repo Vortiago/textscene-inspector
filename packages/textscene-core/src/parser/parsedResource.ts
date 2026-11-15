@@ -7,6 +7,7 @@
 import { stringLiteral } from '../godot/string/string.js';
 import { TscnParserCore } from './TscnParserCore.js';
 import type { TscnExternalResource, TscnInternalResource } from './types.js';
+import { UnparsedTextError } from './unparsedTextError';
 
 export interface ParsedResource {
   /** The [gd_resource type="…"] header type. */
@@ -23,7 +24,7 @@ export function parseTresFile(content: string): ParsedResource {
   const { resourceType } = scene;
 
   if (!resourceType) {
-    throw new Error('Invalid .tres file: missing [gd_resource] header type');
+    throw new UnparsedTextError('Invalid .tres file: missing [gd_resource] header type');
   }
 
   return {

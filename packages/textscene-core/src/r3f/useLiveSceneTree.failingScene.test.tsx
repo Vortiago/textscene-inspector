@@ -7,7 +7,7 @@ import { createFakeResourceLoader } from '../resources/testing/createFakeResourc
 import { makeNode } from '../parser/testing/parserKit.js';
 import type { TscnExternalResource, TscnScene } from '../parser/types.js';
 import { useInstancedScene } from './hooks/useInstancedScene.js';
-import { useLiveStepOf } from './useLiveSceneTree.js';
+import { treeScenesOf, useLiveStepOf, useLiveTreeVersion } from './useLiveSceneTree.js';
 import { INSTANTIABLE_SCENE } from '../parser/sceneDefaults.testkit';
 import type { LoadOutcome } from '../resources/loadFailure/loadOutcome.js';
 import '../nodes/node/index';
@@ -95,5 +95,20 @@ describe('an instance of a scene Godot fails to load', () => {
     await act(async () => fake.scenes._resolve(KID, kid));
 
     expect(requested).toEqual([KID]);
+  });
+
+  it('moves the tree version when it fails for a reader that reads only the scene cache', () => {
+    const fake = createFakeResourceLoader();
+    const hook = renderHook(() => {
+      const version = useLiveTreeVersion(fake.loader);
+      treeScenesOf(fake.loader).getCached(KID);
+      return version;
+    });
+    act(() => fake.scenes._resolve(KID, kid));
+    const before = hook.result.current;
+
+    act(() => fake.loadOutcomes._resolve(KID, FAILS));
+
+    expect(hook.result.current).toBeGreaterThan(before);
   });
 });

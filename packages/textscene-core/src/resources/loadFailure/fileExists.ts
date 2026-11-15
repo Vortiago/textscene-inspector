@@ -20,8 +20,11 @@ export function listsImportSidecar(path: string, listing: DirectoryListing | nul
   return listing !== null && listsName(listing, importSidecarPath(fileName(path)));
 }
 
+// Any case: Windows and macOS open a name in another case with a warning (file_access_windows.cpp:191,
+// file_access_unix.cpp:116), and the walk cannot tell which filesystem the project is on.
 function listsName(listing: DirectoryListing, name: string): boolean {
-  return listing.kind === 'listed' && listing.entries.some((entry) => entry.name === name);
+  const key = name.toLowerCase();
+  return listing.kind === 'listed' && listing.entries.some((entry) => entry.name.toLowerCase() === key);
 }
 
 function fileName(path: string): string {
