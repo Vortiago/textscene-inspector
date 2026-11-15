@@ -5,8 +5,7 @@
  */
 
 import { ShadingLanguageError } from '../../../../packages/textscene-core/src/shaders/language/shadingLanguageError.ts';
-import { parse } from '../../../../packages/textscene-core/src/shaders/language/parse.ts';
-import { tokenize } from '../../../../packages/textscene-core/src/shaders/language/tokenizer.ts';
+import { parseShader } from '../../../../packages/textscene-core/src/shaders/language/parseShader.ts';
 import { transpileShadingLanguage } from '../../../../packages/textscene-core/src/shaders/language/transpile.ts';
 import { transpileSky } from '../../../../packages/textscene-core/src/shaders/sky/transpileSky.ts';
 
@@ -19,7 +18,7 @@ const TEMPLATE_ENTRIES = { sky: transpileSky };
  */
 export function transpilerVerdict(text) {
   try {
-    const entry = TEMPLATE_ENTRIES[parse(tokenize(text)).shaderType] ?? transpileShadingLanguage;
+    const entry = TEMPLATE_ENTRIES[parseShader(text).shaderType] ?? transpileShadingLanguage;
     entry(text);
     return { accepted: true };
   } catch (error) {

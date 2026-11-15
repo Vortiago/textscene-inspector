@@ -37,7 +37,7 @@ import {
   ShadingLanguageError,
   transpileShadingLanguage,
 } from '@textscene/three-godot-shaders';
-import { probeShaderOptions } from '../../probes/probeIncludes.mjs';
+import { probeShaderOptions } from './probeIncludes.mjs';
 
 const CONSTRUCT = {
   bvec2,

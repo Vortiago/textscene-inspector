@@ -29,6 +29,9 @@ const PUBLIC_VALUE_EXPORTS = [
 ];
 const PUBLIC_TYPE_EXPORTS = [
   'NodeOutput',
+  'RenderingMethod',
+  'ShaderInclude',
+  'ShaderOptions',
   'SkyFog',
   'SkyLight',
   'SkyScene',

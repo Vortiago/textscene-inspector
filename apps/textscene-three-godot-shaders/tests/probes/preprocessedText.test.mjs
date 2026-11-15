@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { shaderCode } from '../../../../packages/textscene-core/src/shaders/language/parseShader.ts';
 import { probeShader } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { godotAnswers } from '../godotAnswers.mjs';
-import { probeShaderOptions } from './probeIncludes.mjs';
+import { probeShaderOptions } from '../integration/page/probeIncludes.mjs';
 import { PROBES } from './probes.mjs';
 
 const RECORD = godotAnswers().probes;

@@ -1,6 +1,7 @@
 /**
  * The shader options a probe runs with on the transpiler's side: Godot's harness writes the
  * probe's shader and its includes into the project's root, so an include resolves the same way.
+ * It sits in the probe page's folder, the only folder the page is served from.
  */
 
 const ROOT = 'res://';

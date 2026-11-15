@@ -606,6 +606,52 @@ const SKY_CHAPTER = {
   ],
 };
 
+const directiveRows = (ids) => (row) => ids.includes(row.id);
+
+const PREPROCESSOR_CHAPTER = {
+  file: 'preprocessor.md',
+  title: 'Preprocessor and includes',
+  intro: `Godot runs its preprocessor on a shader's text before it parses it (\`shader_preprocessor.cpp\`), and the transpiler runs a port of it (\`preprocessor/\`). The preprocessor removes the comments, reads each \`#\` line, writes only the taken branches and expands the macros. Every line keeps its number, so an error names the line of the original text.
+
+When the preprocessor refuses a text, a game does not show the preprocessor's message: \`Shader::set_code\` hands the text unchanged to the compiler, which refuses it at its first \`#\` with \`Tokenizer: Unknown character #35: '#'\`. The transpiler does the same, so its refusal is Godot's.
+
+A caller passes \`ShaderOptions\` to \`transpileShadingLanguage\` and \`transpileSky\`: \`file\`, the shader's \`res://\` path, \`readInclude\`, which answers the text of a \`.gdshaderinc\` file by its path, and \`renderingMethod\`, the project's \`rendering/renderer/rendering_method\`. \`CURRENT_RENDERER\` is 2 for \`forward_plus\`, 1 for \`mobile\` and 0 for \`gl_compatibility\`, and \`forward_plus\` when the caller gives none.
+
+\`pnpm godot:probes\` records the text Godot's preprocessor makes of each probe of this chapter, and a test checks that the port makes the same text, byte for byte. The random programs hold no directive.
+
+\`#if\`, \`#elif\` and \`defined\` evaluate a condition with Godot's Expression class, which is not transpiled yet: a shader with one is refused with its row and #1828.`,
+  sections: [
+    {
+      heading: 'Macros',
+      rows: directiveRows(['#define', '#undef']),
+      what: "`#define` makes a macro, with or without arguments, and `#undef` removes one. At the end of each line, each macro in name order replaces its first use, pass after pass, until a pass replaces none. So a macro inside a macro expands, and Godot refuses a line that uses one macro 50 times, as the 51st pass ends the expansion with an error. A body stands between two spaces, `##` joins the words either side, and a `\\` at a line's end continues the body. A macro made after a line of an include still expands in that line, because the including file expands the include's text again. Godot refuses a second `#define` of one name and `#undef` of `CURRENT_RENDERER` and the other built-in defines.",
+      tsl: 'none: the preprocessor writes shading language text',
+      probes: (probe) => /^(define|undef)-/.test(probe.name),
+    },
+    {
+      heading: 'Conditions',
+      rows: directiveRows(['#ifdef', '#ifndef', '#else', '#endif']),
+      what: '`#ifdef` and `#ifndef` take their branch when a macro is or is not defined, and `#else` takes the other. A skipped branch is not read, so it can hold any text. Godot refuses text after a name, a second `#else`, an `#endif` with no condition and a condition with no `#endif`.',
+      tsl: 'none: the preprocessor writes the taken branch',
+      probes: (probe) => probe.name.startsWith('condition-'),
+    },
+    {
+      heading: '`#error` and `#pragma`',
+      rows: directiveRows(['#error', '#pragma', '#pragma disable_preprocessor']),
+      what: '`#error` refuses the shader, unless it stands in a skipped branch. `#pragma disable_preprocessor` stops the preprocessor: the rest of the text goes to the compiler as it is, so a later `#` line is refused and a macro is not expanded. Godot knows no other pragma.',
+      tsl: 'none',
+      probes: (probe) => /^(error|pragma)-/.test(probe.name),
+    },
+    {
+      heading: '`#include`',
+      rows: directiveRows(['#include']),
+      what: "`#include \"path\"` puts the preprocessed text of a `.gdshaderinc` file in place, between the markers `@@>path` and `@@<path`, which the tokenizer reads to name the include's file and lines in an error. A relative path is relative to the shader's folder. The defines of an include stay for the text after it. A file is included once. Godot refuses a missing file, a cycle and a chain deeper than 25. It finds a cycle by the hash of a file's text, so two files of the same text count as one. An include in a skipped branch is not read.",
+      tsl: 'none: the preprocessor writes the included text',
+      probes: (probe) => probe.name.startsWith('include-'),
+    },
+  ],
+};
+
 export const GUIDE_CHAPTERS = [
   TYPES_AND_LITERALS,
   ARITHMETIC_CHAPTER,
@@ -618,5 +664,6 @@ export const GUIDE_CHAPTERS = [
   FUNCTIONS_CHAPTER,
   BUILT_IN_FUNCTIONS_CHAPTER,
   FOLDING_CHAPTER,
+  PREPROCESSOR_CHAPTER,
   SKY_CHAPTER,
 ];
