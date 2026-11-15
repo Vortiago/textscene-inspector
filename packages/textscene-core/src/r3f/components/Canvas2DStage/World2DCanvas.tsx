@@ -20,7 +20,7 @@ export function World2DCanvas(props: World2DCanvasProps) {
       {...CANVAS_RENDERER_PROPS}
       camera={camera}
       frameloop={frameloop}
-      // `alpha`: the 2D world draws over the stage behind it. This canvas has no stencil buffer.
+      // `alpha`: the 2D world draws over the stage behind it.
       gl={{ ...CANVAS_RENDERER_GL, alpha: true }}
       // Transparent to pointer input, so the stage's pan and zoom handlers work.
       style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}

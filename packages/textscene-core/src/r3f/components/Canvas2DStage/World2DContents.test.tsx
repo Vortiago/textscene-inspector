@@ -35,6 +35,7 @@ import { World2DContents } from './World2DContents';
 import { withProject } from '../../testing/ProjectFixture';
 import { TiledUploadQueue } from '../../tiledUpload/TiledUploadQueue';
 import { r3fStateProbe } from '../../testing/R3FStateProbe';
+import { hasShadowPass } from '../../testing/shadowPassMark';
 
 const baseProps = {
   nodes: [],
@@ -144,6 +145,6 @@ describe('World2DContents renderer', () => {
       </SelectionProvider>
     );
 
-    expect(Symbol.for('textscene.shadowPass') in state().gl.shadowMap).toBe(true);
+    expect(hasShadowPass(state().gl)).toBe(true);
   });
 });

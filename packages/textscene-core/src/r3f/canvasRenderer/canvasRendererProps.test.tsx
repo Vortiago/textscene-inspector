@@ -29,6 +29,12 @@ describe('CANVAS_RENDERER_GL', () => {
   it("asks for a drawing buffer with no multisampling, as Godot's MSAA defaults to Disabled", () => {
     expect(CANVAS_RENDERER_GL.antialias).toBe(false);
   });
+
+  it('enables local clipping, without which a ScrollContainer clips nothing and nothing reports it', () => {
+    // The 3D canvas needs it too: a Control SubViewport sampled by a 3D scene renders through that
+    // canvas's renderer (`renderToOffscreenTarget` takes `useThree().gl`).
+    expect(CANVAS_RENDERER_GL.localClippingEnabled).toBe(true);
+  });
 });
 
 describe('each canvas', () => {

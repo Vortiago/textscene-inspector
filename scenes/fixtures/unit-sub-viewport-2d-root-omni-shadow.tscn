@@ -1,6 +1,7 @@
 ; One variable: a 3D SubViewport under a 2D root, lit by an OmniLight3D that casts a shadow. Godot
 ; draws the shadows of a SubViewport whatever the root is, so the box shadows the floor. The 2D
-; canvas's renderer must turn its shadow map on and copy the omni cube into the atlas.
+; canvas's renderer must turn its shadow map on and copy the omni cube into the atlas. No other scene
+; shows it: every other SubViewport whose 3D light casts a shadow draws on the 3D canvas.
 
 [gd_scene format=3]
 

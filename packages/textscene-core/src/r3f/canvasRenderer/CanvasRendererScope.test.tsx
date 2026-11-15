@@ -3,9 +3,7 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CanvasRendererScope } from './CanvasRendererScope';
 import { r3fStateProbe } from '../testing/R3FStateProbe';
-
-/** The mark `installShadowPass` leaves on a wrapped shadow map. */
-const SHADOW_PASS = Symbol.for('textscene.shadowPass');
+import { hasShadowPass } from '../testing/shadowPassMark';
 
 describe('CanvasRendererScope', () => {
   it('installs the shadow pass on its renderer', async () => {
@@ -17,7 +15,7 @@ describe('CanvasRendererScope', () => {
       </CanvasRendererScope>
     );
 
-    expect(SHADOW_PASS in state().gl.shadowMap).toBe(true);
+    expect(hasShadowPass(state().gl)).toBe(true);
   });
 
   it('wraps the shadow pass once when it mounts again', async () => {
