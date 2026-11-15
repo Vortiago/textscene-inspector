@@ -10,7 +10,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { ViewportTextureProvider } from '../../contexts/ViewportTextureContext';
 import { ViewportTexturePublisher, viewportEntry } from '../../testing/ViewportTexturePublisher';
-import { createCanvasTarget } from '../../../nodes/viewport/subviewport/offscreenViewport';
+import { createCanvasTarget } from '../../offscreen/targets';
 import { useBuildSolveTree } from './buildSolveTree';
 import '../../nodes/index';
 import '../index';

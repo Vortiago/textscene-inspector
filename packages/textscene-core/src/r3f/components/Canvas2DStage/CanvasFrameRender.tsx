@@ -12,7 +12,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { projectTransparentBackground } from '../../../parser/projectSettingsParser.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import { createCanvasFrame } from './canvasFrame.js';
-import { useMultisampledTarget } from '../../multisampledTarget.js';
+import { useMultisampledTarget } from '../../offscreen/multisampledTarget.js';
 import { viewportTransfer } from '../../texelCopy.js';
 import { useRootCanvasColorSpace } from '../../rootCanvasColorSpace.js';
 

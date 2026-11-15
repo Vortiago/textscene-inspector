@@ -11,7 +11,7 @@ import type { ViewSampler } from '../resources/textures/textureView';
 import { fakeTiledUploads } from './tiledUpload/fakeTiledUploads.testkit';
 import { useOwnedTextureView, useTextureView, useWindowedTextureView } from './useTextureView';
 import { publishLiveTargets } from './liveTargets';
-import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
+import { createCanvasTarget } from './offscreen/targets';
 import { canvasColorSpaceOf } from './canvasColorSpace';
 
 const RAW_REPEAT: ViewSampler = { colorSpace: THREE.NoColorSpace, wrap: THREE.RepeatWrapping };

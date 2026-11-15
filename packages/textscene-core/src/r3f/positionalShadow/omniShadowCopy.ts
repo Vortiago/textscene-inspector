@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import type { PositionalShadowSlot } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import { drawFullScreen, fullScreenDepthPass } from '../fullScreenPass.js';
-import { drawOffscreen } from '../offscreen.js';
+import { drawOffscreen } from '../offscreen/draw.js';
 import { PACK_ATLAS_DEPTH } from './atlasDepthMaterials.js';
 import { lightPoseMatrix } from './lightPose.js';
 import { positionalShadowAtlas } from './shadowAtlasTarget.js';

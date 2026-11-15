@@ -8,9 +8,9 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
-import { msaaSampleCount, supportedSampleCount } from '../godot/rendering/msaa';
-import { useDisposeOnRelease } from './useDisposeOnRelease';
-import { perObject } from '../utils/perObject';
+import { msaaSampleCount, supportedSampleCount } from '../../godot/rendering/msaa';
+import { useDisposeOnRelease } from '../useDisposeOnRelease';
+import { perObject } from '../../utils/perObject';
 
 /** The GL internal format of a target's colour attachment. */
 type ColourStorage = THREE.PixelFormatGPU;

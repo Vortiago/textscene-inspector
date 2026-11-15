@@ -23,7 +23,7 @@ import type { VolumetricFog } from '../../resources/environment/types.js';
 import { directionalShadowAtlasDepth } from '../directionalShadow/shadowAtlas.js';
 import { drawFullScreen, fullScreenPass } from '../fullScreenPass.js';
 import { setGodotColorLinear } from '../godotColor.js';
-import { drawOffscreen } from '../offscreen.js';
+import { drawOffscreen } from '../offscreen/draw.js';
 import { positionalShadowAtlasDepth } from '../positionalShadow/shadowAtlasTarget.js';
 import { drawWithUncomparedDepth } from '../shadowFilter/uncomparedDepth.js';
 import { areaLightAtlasTexture } from '../areaLight/areaLightAtlas.js';

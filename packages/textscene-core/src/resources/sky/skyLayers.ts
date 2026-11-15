@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { drawFullScreen, releaseTextures, setUniforms } from '../../r3f/fullScreenPass.js';
 import { withMipLevels } from '../../r3f/mipLevels.js';
-import { drawOffscreen } from '../../r3f/offscreen.js';
+import { drawOffscreen } from '../../r3f/offscreen/draw.js';
 import { perObject } from '../../utils/perObject.js';
 import {
   REAL_TIME_ROUGHNESS_LAYERS,
