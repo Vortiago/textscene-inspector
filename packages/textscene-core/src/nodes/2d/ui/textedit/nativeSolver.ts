@@ -295,7 +295,7 @@ export function textEditMinimumSizeWith(
   ctx: SolveContext,
   props: TextEditProperties,
   styleBox: StyleBoxFlatData,
-  gutterBandWidthPx: number,
+  gutterBandWidthOf: () => number,
   tabSize?: number
 ): Vector2 {
   const styleMin = contentMarginSize(styleBox);
@@ -305,6 +305,8 @@ export function textEditMinimumSizeWith(
   const lineSpacingPx = textEditLineSpacingPx(n);
 
   if (!props.fitContentWidth && !props.fitContentHeight) return styleMin;
+  // Read only past the guard: a CodeEdit band shapes the whole buffer.
+  const gutterBandWidthPx = gutterBandWidthOf();
 
   const rectWidthPx = ctx.tentativeRect?.(n)?.w;
   const wrapWidthPx =
@@ -351,7 +353,7 @@ export const textEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as TextEditProperties;
   const state = resolveTextEditStyleState(props.editable);
   const styleBox = requiredThemeItem(n.styleBoxes, state);
-  return textEditMinimumSizeWith(n, ctx, props, styleBox, 0);
+  return textEditMinimumSizeWith(n, ctx, props, styleBox, () => 0);
 };
 
 interface TextEditDrawLayout {

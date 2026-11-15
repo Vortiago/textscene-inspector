@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 
-import { createCanvasTarget, createSceneTarget } from './targets';
+import { createAccumulationTarget, createCanvasTarget, createCopyTarget, createSceneTarget } from './targets';
 import { holdsSrgbBytes } from '../srgbByteTextures';
 import { canvasColorSpaceOf } from '../canvasColorSpace';
 
@@ -156,6 +156,54 @@ describe('createCanvasTarget in a linear canvas', () => {
   it('marks its texture for a raw sRGB multiply, as a non-HDR canvas consumer reads the stored numbers', () => {
     const target = createCanvasTarget(64, 64, 'Probe', LINEAR_CANVAS);
     expect(holdsSrgbBytes(target.texture)).toBe(true);
+    target.dispose();
+  });
+});
+
+describe('createCopyTarget', () => {
+  it('has the size it is given', () => {
+    const target = createCopyTarget(48, 20);
+    expect([target.width, target.height]).toEqual([48, 20]);
+    target.dispose();
+  });
+
+  it('holds colour only, since a copy never depth-tests', () => {
+    const target = createCopyTarget(48, 20);
+    expect(target.depthBuffer).toBe(false);
+    target.dispose();
+  });
+
+  it('accepts a 1 px side, the smallest target a viewport has', () => {
+    const target = createCopyTarget(1, 40);
+    expect([target.width, target.height]).toEqual([1, 40]);
+    target.dispose();
+  });
+});
+
+describe('createAccumulationTarget', () => {
+  it('makes a plain target for no layers, with one texture for each attachment', () => {
+    const target = createAccumulationTarget(THREE.FloatType, { attachments: 2, layers: null });
+    expect(target).not.toBeInstanceOf(THREE.WebGLArrayRenderTarget);
+    expect(target.textures).toHaveLength(2);
+    target.dispose();
+  });
+
+  it('makes an array target of the given layers', () => {
+    const target = createAccumulationTarget(THREE.FloatType, { attachments: 1, layers: 3 });
+    expect(target).toBeInstanceOf(THREE.WebGLArrayRenderTarget);
+    expect(target.depth).toBe(3);
+    target.dispose();
+  });
+
+  it('stores raw values, sampled linear and clamped, with no depth or stencil', () => {
+    const target = createAccumulationTarget(THREE.HalfFloatType, { attachments: 2, layers: 2 });
+    expect([target.depthBuffer, target.stencilBuffer]).toEqual([false, false]);
+    for (const texture of target.textures) {
+      expect(texture.type).toBe(THREE.HalfFloatType);
+      expect(texture.colorSpace).toBe(THREE.NoColorSpace);
+      expect([texture.minFilter, texture.magFilter]).toEqual([THREE.LinearFilter, THREE.LinearFilter]);
+      expect([texture.wrapS, texture.wrapT]).toEqual([THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping]);
+    }
     target.dispose();
   });
 });

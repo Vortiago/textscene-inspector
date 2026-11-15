@@ -10,12 +10,11 @@
 
 import { round as godotRound } from '../../../../godot/math/math';
 import { hexCodeBoxAdvanceSize } from './hexCodeBox';
-import { lineExtentPx, shapedBlockHeightPx } from './lineExtent';
+import { glyphsDescentPx, lineExtentPx, shapedBlockHeightPx } from './lineExtent';
 import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import {
   fontUsesSubpixelPositioning,
   getFontAscentPx,
-  getFontDescentPx,
   getFontEmboldenGrowthPx,
   getFontExtraAdvancePx,
   getFontKerningAdjustmentPx,
@@ -231,6 +230,11 @@ export interface TextLineLayout {
   text: string;
   glyphs: GlyphPlacement[];
   /**
+   * The glyphs the overrun trim cut from the shaped line, absent for none. Godot keeps them in the
+   * shaped text, so Label counts them in `total_glyphs` (`label.cpp:583`).
+   */
+  cutGlyphCount?: number;
+  /**
    * The sum of the line's advances, target px: Godot's raw pen extent `sd->width`. The size the
    * engine reports (`shaped_text_get_size`) goes through `shapedTextSizeWidthPx`.
    */
@@ -354,27 +358,10 @@ export function soloLineLayout(
     fontHeightPx: parent.fontHeightPx,
     lineSpacingPx: parent.lineSpacingPx,
     widthPx: line.widthPx,
-    heightPx: Math.max(parent.linePitchPx, line.ascentPx + deepestDescentPx(line)),
+    heightPx: Math.max(parent.linePitchPx, line.ascentPx + glyphsDescentPx(line.glyphs)),
     baselineOffsetPx: parent.baselineOffsetPx,
     fontMetrics,
   };
-}
-
-/**
- * The largest descent of a glyph on `line`, from its face at its size or its downward `yOffset`
- * (`text_server_adv.cpp:5146-5172`), 0 for no glyph. A canvas raster reaches this
- * far below the baseline, so a glyph of a fallback face with a deeper descent is not cut at the
- * bottom. The raster grows only downwards: the baseline stays.
- */
-function deepestDescentPx({ glyphs }: TextLineLayout): number {
-  let deepestPx = 0;
-  for (const glyph of glyphs)
-    deepestPx = Math.max(
-      deepestPx,
-      getFontDescentPx(glyph.fontMetrics, glyph.fontSizePx),
-      glyph.yOffset ?? 0
-    );
-  return deepestPx;
 }
 
 /**

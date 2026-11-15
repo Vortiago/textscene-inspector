@@ -182,6 +182,19 @@ denominator, the cut at VC_CHARS_BEFORE_SHAPING (`:155-156`) and the budget of
 VC_CHARS_AFTER_SHAPING (`label.h:207`). An astral character, such as an emoji, counts one. An emoji
 the font lacks draws its hex-code box, as Godot draws it on a host with no system font that has it.
 
+## Wrapped lines and the rect
+
+A wrapped Label shows the lines after `lines_skipped` that fit its rect height, at most
+`max_lines_visible` of them (`label.cpp:520-561,1022-1061`). Lines below the rect do not draw.
+
+- When lines are hidden, the line at the visible count, counted from the first line, trims with an
+  enforced ellipsis (`label.cpp:268-301`).
+- FILL fits each line but the last of its paragraph, so a line the window cuts after is fitted.
+- With `clip_text` or a trim, the minimum height floors at 1 px. A trim without `clip_text` keeps
+  room for `max_lines_visible` rows (`label.cpp:984-990`).
+- A glyph reveal counts the glyphs a trim cut in its total (`label.cpp:583`), and shows only drawn
+  glyphs (`label.h:197-241`).
+
 ## Text direction
 
 Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server runs ICU over it:
@@ -227,6 +240,4 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
 - **Not drawn** The doubled-backslash escapes of `paragraph_separator`, so a literal
   `"\\n"` stays two characters where Godot's `String::c_unescape()` (label.cpp:158) makes
   it a newline.
-- **Not drawn** The line-count clamp of `get_layout_data` (label.cpp:533-548), so text
-  taller than the rect overflows it here, where Godot drops the lowest lines.
 - **Not drawn** A right-to-left script in the bundled font, whose baked character set has no such glyph.

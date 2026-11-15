@@ -8,34 +8,7 @@ import { useThree } from '@react-three/fiber';
 import { useMemo } from 'react';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import * as THREE from 'three';
-
-/** The shape of one target: its attachments, and the layers of an array target, null for a plain one. */
-interface TargetShape {
-  readonly attachments: number;
-  readonly layers: number | null;
-}
-
-/** A plain target for a null `layers`, else an array target of that many layers. */
-function createAccumulationTarget(
-  type: THREE.TextureDataType,
-  { attachments, layers }: TargetShape
-): THREE.WebGLRenderTarget {
-  // NoColorSpace writes the raw sRGB-space value.
-  // The pass draws with `depthTest` off and samples its shadows, so it needs no depth or stencil.
-  const options = { type, depthBuffer: false, stencilBuffer: false, count: attachments };
-  const rt =
-    layers === null
-      ? new THREE.WebGLRenderTarget(1, 1, options)
-      : new THREE.WebGLArrayRenderTarget(1, 1, layers, options);
-  for (const texture of rt.textures) {
-    texture.colorSpace = THREE.NoColorSpace;
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-    texture.wrapS = THREE.ClampToEdgeWrapping;
-    texture.wrapT = THREE.ClampToEdgeWrapping;
-  }
-  return rt;
-}
+import { createAccumulationTarget } from '../offscreen/targets';
 
 /**
  * 32-bit float, as the canvas shader sums its lights (canvas.glsl:727-760): unclamped, and no
