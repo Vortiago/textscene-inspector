@@ -7,7 +7,7 @@ import { parseHintEnum, parseHintFlags } from '../godot/classdb/enumHint.js';
 import { PROPERTY_HINT } from '../godot/classdb/propertyHint.js';
 import { valueTypeOf } from '../godot/classdb/classProperty.js';
 import { parseRangeHint, type RangeHintBounds } from '../godot/classdb/rangeHint.js';
-import { VARIANT_TYPE } from '../godot/variant/variantType.js';
+import { isRuntimeHandle, VARIANT_TYPE } from '../godot/variant/variantType.js';
 import type { IntWidth } from '../godot/variant/intWidth.js';
 import type { PropertyValidator } from './propertyValidator.js';
 import { v, type Grounding } from './validators/v.js';
@@ -235,6 +235,7 @@ export function descriptorValidator(descriptor: PropertyDescriptor): PropertyVal
       return objectValidator(descriptor);
   }
   refuseFacts(descriptor, []);
+  if (isRuntimeHandle(valueType)) return null;
   return FORMAT_CHECKS[valueType]?.(descriptor.property.name) ?? null;
 }
 

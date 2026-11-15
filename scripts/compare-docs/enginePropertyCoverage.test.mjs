@@ -15,7 +15,7 @@ import { keyMatcher, unvalidatedByClass } from './registryKeys.mjs';
 import { PROPS_OUT } from './build-node-catalog/paths.mjs';
 
 const CORE = join(import.meta.dirname, '../../packages/textscene-core');
-// `OpenXRRenderModel.render_model`: a RID, which no scene can write.
+// `OpenXRRenderModel.render_model`, which `isRuntimeHandle` exempts.
 const EXPECTED_UNVALIDATED = 1;
 
 /**

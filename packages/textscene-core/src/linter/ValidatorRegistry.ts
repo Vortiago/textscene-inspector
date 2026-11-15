@@ -12,6 +12,7 @@ import type { Removal } from './unavailableKey.js';
 import { resolveDeclaration, type RegistryTables } from './validatorResolution.js';
 import { refuseOverlap, unavailableKeysOf } from './removalKeys.js';
 import { derivedValidator } from './descriptorValidator.js';
+import { handRowRevision } from '../godot/classdb/propertyDescriptor.js';
 
 export type { PropertyValidator } from './propertyValidator.js';
 
@@ -42,8 +43,9 @@ export class ValidatorRegistry {
   private unavailable = new Map<string, Record<string, Removal>>();
   /** Wildcard patterns per type, prefixes pre-sliced. Rebuilt on every registerAll. */
   private wildcards = new Map<string, WildcardEntry[]>();
-  /** Written only by `derivedFor`, cleared by `clear`. A miss is stored as null. */
+  /** Written only by `derivedFor`, cleared by `clear` and by a new hand row. A miss is stored as null. */
   private derived = new Map<string, PropertyValidator | null>();
+  private derivedAtRevision = handRowRevision();
   /** The three maps and the base lookup, built once: the walks run per property and allocate nothing. */
   private readonly tables: RegistryTables = {
     validators: this.validators,
@@ -150,6 +152,10 @@ export class ValidatorRegistry {
 
   private derivedFor(nodeType: string, propertyKey: string): PropertyValidator | null {
     if (!this.derive) return null;
+    if (this.derivedAtRevision !== handRowRevision()) {
+      this.derived.clear();
+      this.derivedAtRevision = handRowRevision();
+    }
     const id = `${nodeType}.${propertyKey}`;
     if (this.derived.has(id)) return this.derived.get(id)!;
     const validator = this.derive(nodeType, propertyKey);
