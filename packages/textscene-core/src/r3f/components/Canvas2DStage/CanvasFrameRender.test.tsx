@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { waitFor } from '@testing-library/react';
 import { CanvasFrameRender } from './CanvasFrameRender';
+import { createCanvasFrameSteps } from './canvasFrameSequence';
 import { patchesContext } from '../../testing/patchesContext';
 import { withProject } from '../../testing/ProjectFixture';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
@@ -41,7 +42,7 @@ async function renderPriorityIn(project: string | null) {
   const probe: Probe = { get: null, hasProject: false };
   await ReactThreeTestRenderer.create(
     <ProjectFixture>
-      <CanvasFrameRender />
+      <CanvasFrameRender steps={createCanvasFrameSteps()} />
       <StoreProbe probe={probe} />
     </ProjectFixture>,
     { beforeReturn: listSampleCounts(FOUR_SAMPLES_ONLY) }
@@ -83,7 +84,7 @@ async function copyFragmentsOneFrameIn(project: string) {
   const probe: Probe = { get: null, hasProject: false };
   const renderer = await ReactThreeTestRenderer.create(
     <ProjectFixture>
-      <CanvasFrameRender />
+      <CanvasFrameRender steps={createCanvasFrameSteps()} />
       <StoreProbe probe={probe} />
     </ProjectFixture>,
     { beforeReturn: listSampleCounts(FOUR_SAMPLES_ONLY) }

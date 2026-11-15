@@ -1,12 +1,11 @@
 /**
- * The pose of a 2D light's shadow as React state: sampled off the cookie quad on
+ * The pose of a 2D light's shadow as React state: sampled off the light texture quad on
  * mount and every frame, and republished only when the light moves or changes reach.
  */
 
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
-import { SHADOW_SNAPSHOT_PRIORITY } from '../ShadowCasterStage';
+import { useShadowSampler } from '../../components/Canvas2DStage/canvasFrameSequence';
 import { sameShadowLight, sampleShadowLight, type ShadowLightPose } from './shadowLightSample';
 
 /**
@@ -42,10 +41,10 @@ function readSampleInputs(quad: THREE.Mesh, out: Float64Array): boolean {
 }
 
 /**
- * The pose of the light whose cookie `quad` draws, sampled on mount and every
+ * The pose of the light whose light texture `quad` draws, sampled on mount and every
  * frame, republished only on a change, and null while `enabled` is false. Three
  * assembles a world transform in the render loop, so the layout pass serves a
- * still frame and the frame callback an animated light, as in ShadowCasterStage.
+ * still frame and the shadow sampling step an animated light, as in ShadowCasterStage.
  */
 export function useShadowLightPose(quad: THREE.Mesh | null, enabled: boolean): ShadowLightPose | null {
   const [pose, setPose] = useState<ShadowLightPose | null>(null);
@@ -88,7 +87,7 @@ export function useShadowLightPose(quad: THREE.Mesh | null, enabled: boolean): S
     inputsRead.current = false;
     sample();
   }, [sample]);
-  useFrame(sample, SHADOW_SNAPSHOT_PRIORITY);
+  useShadowSampler(sample);
 
   return pose;
 }

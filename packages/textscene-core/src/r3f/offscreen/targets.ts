@@ -74,6 +74,42 @@ export function storeSrgbBytes(texture: THREE.Texture): void {
   markSrgbBytes(texture);
 }
 
+/** The shape of one target: its attachments, and the layers of an array target, null for a plain one. */
+interface TargetShape {
+  readonly attachments: number;
+  readonly layers: number | null;
+}
+
+/**
+ * A target that the 2D light pass sums its lights into: a plain target for a null `layers`, else an
+ * array target of that many layers.
+ */
+export function createAccumulationTarget(
+  type: THREE.TextureDataType,
+  { attachments, layers }: TargetShape
+): THREE.WebGLRenderTarget {
+  // NoColorSpace writes the raw sRGB-space value.
+  // The pass draws with `depthTest` off and samples its shadows, so it needs no depth or stencil.
+  const options = { type, depthBuffer: false, stencilBuffer: false, count: attachments };
+  const rt =
+    layers === null
+      ? new THREE.WebGLRenderTarget(1, 1, options)
+      : new THREE.WebGLArrayRenderTarget(1, 1, layers, options);
+  for (const texture of rt.textures) {
+    texture.colorSpace = THREE.NoColorSpace;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+  }
+  return rt;
+}
+
+/** A colour-only target of `width` by `height`, which a view copies a target into. */
+export function createCopyTarget(width: number, height: number): THREE.WebGLRenderTarget {
+  return new THREE.WebGLRenderTarget(width, height, { depthBuffer: false });
+}
+
 /**
  * A target that takes its pass's output as the drawing buffer does, with Godot's sampler: linear,
  * and one mip level (`texture_storage.cpp:3585`), so minification and magnification follow one
