@@ -15,6 +15,7 @@ import { worldEdges } from '../testing/worldEdges';
 import { SHADOW_MAP_FAR } from './shadowPolarMap';
 import { Light2DShadowFilter } from '../../../godot/scene/light2d';
 import { OccluderPolygon2DCullMode } from '../../../godot/scene/lightOccluder2d';
+import { CanvasFrameDriver } from '../../testing/CanvasFrameDriver';
 
 const LOOK = {
   filter: Light2DShadowFilter.PCF13,
@@ -56,7 +57,9 @@ function Harness({
 async function mount(casters: readonly WorldShadowCaster[], lightX = 0) {
   const published: Published = [];
   const renderer = await ReactThreeTestRenderer.create(
-    <Harness published={published} casters={casters} lightX={lightX} />
+    <CanvasFrameDriver>
+      <Harness published={published} casters={casters} lightX={lightX} />
+    </CanvasFrameDriver>
   );
   await ReactThreeTestRenderer.act(async () => {});
   return { renderer, published };
@@ -89,7 +92,11 @@ describe('usePointShadow', () => {
     const before = latest(published)!;
     const nearDepths = Array.from(bins(before));
     await ReactThreeTestRenderer.act(async () => {
-      await renderer.update(<Harness published={published} casters={[wall(80)]} />);
+      await renderer.update(
+        <CanvasFrameDriver>
+          <Harness published={published} casters={[wall(80)]} />
+        </CanvasFrameDriver>
+      );
     });
     const after = latest(published)!;
     expect(after.map).toBe(before.map);
@@ -100,7 +107,11 @@ describe('usePointShadow', () => {
     const { renderer, published } = await mount([wall(50)]);
     const before = latest(published)!;
     await ReactThreeTestRenderer.act(async () => {
-      await renderer.update(<Harness published={published} casters={[wall(50)]} lightX={10} />);
+      await renderer.update(
+        <CanvasFrameDriver>
+          <Harness published={published} casters={[wall(50)]} lightX={10} />
+        </CanvasFrameDriver>
+      );
     });
     await ReactThreeTestRenderer.act(async () => {
       renderer.advanceFrames(1, 1 / 60);
@@ -116,7 +127,11 @@ describe('usePointShadow', () => {
     const map = latest(published)!.map;
     const dispose = vi.spyOn(map, 'dispose');
     await ReactThreeTestRenderer.act(async () => {
-      await renderer.update(<Harness published={published} casters={[]} />);
+      await renderer.update(
+        <CanvasFrameDriver>
+          <Harness published={published} casters={[]} />
+        </CanvasFrameDriver>
+      );
     });
     expect(latest(published)).toBeUndefined();
     expect(dispose).toHaveBeenCalledOnce();

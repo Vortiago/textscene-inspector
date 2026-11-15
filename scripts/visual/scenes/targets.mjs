@@ -164,6 +164,9 @@ export const TILE_AND_TARGET_SCENES = [
   // Control content with a translucent fill on the albedo, through the Control target's decoding
   // view. Godot 4.6.3: the Panel at (480,320) rgb(84,84,84), the backdrop at (370,240) rgb(162).
   { name: 'sub-viewport-control-texture', file: 'unit-sub-viewport-control-texture.tscn' },
+  // The order between viewport passes: deepest level first. Godot 4.6.3: (150,112) rgb(51,153,230),
+  // B2's blue through A, (422,128) rgb(0,0,0), C2's empty sample of D, and (684,112) rgb(0,0,0).
+  { name: 'sub-viewport-level-order', file: 'unit-sub-viewport-level-order.tscn', mode: '2d' },
   // The same target in the emission slot over a black albedo: every material slot binds a
   // ViewportTexture. A slot that drops it leaves a black quad.
   { name: 'sub-viewport-texture-emission', file: 'unit-sub-viewport-texture-emission.tscn' },

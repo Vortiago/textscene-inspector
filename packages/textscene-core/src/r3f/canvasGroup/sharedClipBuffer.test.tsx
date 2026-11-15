@@ -1,7 +1,8 @@
 /** The clip buffer shared by the clipping groups of one canvas. */
-import { describe, expect, it, vi } from 'vitest';
+import { StrictMode } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { canvasColorSpaceOf } from '../canvasColorSpace';
 import { useSharedClipBuffer } from './sharedClipBuffer';
 
@@ -9,6 +10,8 @@ const SRGB_CANVAS = canvasColorSpaceOf(false);
 const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 describe('useSharedClipBuffer', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it('hands two groups of one canvas the same buffer', () => {
     const scene = new THREE.Scene();
 
@@ -27,15 +30,31 @@ describe('useSharedClipBuffer', () => {
     expect(linear.result.current).not.toBe(srgb.result.current);
   });
 
-  it('frees the target only when the last group unmounts', () => {
+  it('frees the target only when the last group unmounts', async () => {
     const scene = new THREE.Scene();
     const first = renderHook(() => useSharedClipBuffer(scene, SRGB_CANVAS));
     const second = renderHook(() => useSharedClipBuffer(scene, SRGB_CANVAS));
     const dispose = vi.spyOn(first.result.current, 'dispose');
 
     first.unmount();
+    await act(async () => await Promise.resolve());
     expect(dispose).not.toHaveBeenCalled();
     second.unmount();
+    await act(async () => await Promise.resolve());
+
+    expect(dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the target of a group mounted under StrictMode, and frees it once on unmount', async () => {
+    const dispose = vi.spyOn(THREE.WebGLRenderTarget.prototype, 'dispose');
+    const group = renderHook(() => useSharedClipBuffer(new THREE.Scene(), SRGB_CANVAS), {
+      wrapper: StrictMode,
+    });
+    await act(async () => await Promise.resolve());
+    expect(dispose).not.toHaveBeenCalled();
+
+    group.unmount();
+    await act(async () => await Promise.resolve());
 
     expect(dispose).toHaveBeenCalledTimes(1);
   });
