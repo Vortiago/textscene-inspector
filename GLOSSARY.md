@@ -257,10 +257,12 @@ _Avoid_: a bare reference string handed past the tables it belongs to.
 **Held resource** (`HeldResource`, `resources/reading/read.ts`):
 A resource as a decode receives it: its class, its raw property strings, its address, and how it is held. It exposes no table, so a decode reads a nested reference only through `Follow`.
 A file the loader imports, not parses (an image, a mesh), is held as the class `IMPORTED_FILE`, with no properties and the file as its address.
+A file of a kind that reads its files whole is held the same way, with the class its `[ext_resource]` states.
 _Avoid_: "scoped resource" for this. A `ScopedResource` carries the tables.
 
 **Resource kind** (`ResourceKind`, `resources/reading/read.ts`):
-One decode for one family of Godot classes, for every origin, with the classes it accepts. `CURVE_2D`, `CURVE_3D`, `CURVE`, `GRADIENT`, `PARTICLE_PROCESS_MATERIAL`, `SHAPE_2D`, `OCCLUDER_POLYGON_2D`, `NAVIGATION_POLYGON`, `FAST_NOISE_LITE`, `IMAGE`, `TEXTURE_2D`, `TEXTURE_3D`, `MATERIAL`, `SKY`, `ENVIRONMENT` and `CAMERA_ATTRIBUTES` are kinds. `MATERIAL` accepts every Material class and declines one the previewer does not build, the same from either arrival (ADR-0041).
+One decode for one family of Godot classes, for every origin, with the classes it accepts. `CURVE_2D`, `CURVE_3D`, `CURVE`, `GRADIENT`, `PARTICLE_PROCESS_MATERIAL`, `SHAPE_2D`, `OCCLUDER_POLYGON_2D`, `NAVIGATION_POLYGON`, `FAST_NOISE_LITE`, `IMAGE`, `TEXTURE_2D`, `TEXTURE_3D`, `MATERIAL`, `SKY`, `ENVIRONMENT`, `CAMERA_ATTRIBUTES` and `FONT` are kinds. `MATERIAL` accepts every Material class and declines one the previewer does not build, the same from either arrival (ADR-0041).
+A kind that **reads its files whole** (`readsFilesWhole`) takes a file's value from a loader processor through `Follow.loaded`, and decodes only a resource built into a file's text. `FONT` is one: the font processor reads a font file with its import sidecar and the fonts it names.
 _Avoid_: one decode for each origin.
 
 **Resource snapshot** (`ResourceSnapshot`, `resources/reading/read.ts`):
@@ -268,7 +270,7 @@ One consistent view of what the loader holds. Each read on it answers `loaded`, 
 _Avoid_: reading the loader's cache directly in a reader.
 
 **Snapshot host** (`describeSnapshotHost`, `resources/reading/snapshotHost.testkit.ts`):
-Code that owns snapshots for a reader: it requests and pins each file the reader's reads touched, runs the reader again when one of them loads, fails or reloads, and reports a failed file once as a **Missing resource**. The hook host is the one behind `useNodeResource`.
+Code that owns snapshots for a reader: it requests and pins each file the reader's reads touched, runs the reader again when one of them loads, fails or reloads, and reports a failed file once as a **Missing resource**. The hook host is the one behind `useNodeResource`, and `useSnapshotHost` runs any reader on it. The Control solve reads its fonts through `useSnapshotHost`.
 _Avoid_: a reader that requests, pins or reports a file itself.
 
 **UID reference**:

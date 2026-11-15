@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { ResourceLoader } from '../ResourceLoader';
 import { busServing } from '../testing/servingFileBus';
 import { loaderServing } from '../testing/servingResourceLoader';
+import { FONT_FILES } from '../fileKinds';
 import { loaderSnapshots } from './loaderSnapshots';
 import type { Read } from './read';
 import { nodeReference } from './scopedReference';
@@ -112,5 +113,56 @@ describe('a snapshot over the loader', () => {
 
     expect(files.get(`${A_FILE}::here`)).toBe(files.get(A_FILE));
     expect(files.get(`${A_FILE}::gone`)).toBeNull();
+  });
+});
+
+describe("a snapshot's read of a processor's value", () => {
+  const FONT_FILE = 'res://font.tres';
+  const FONT_TEXT =
+    '[gd_resource type="SystemFont" format=3]\n\n[resource]\nfont_names = PackedStringArray("Serif")\n';
+
+  it('requests the file from the cache of its kind, not from the resource files', () => {
+    const loader = loaderServing({ [FONT_FILE]: FONT_TEXT });
+    const source = loaderSnapshots(loader);
+
+    expect(source.current().loaded(FONT_FILES, FONT_FILE).status).toBe('pending');
+    source.request();
+
+    expect(loader.fonts.isLoading(FONT_FILE) || loader.fonts.getCached(FONT_FILE) !== undefined).toBe(true);
+    expect(loader.resources.getCached(FONT_FILE)).toBeUndefined();
+  });
+
+  it('goes stale on a load on the bus of its kind, and answers the value', async () => {
+    const loader = loaderServing({ [FONT_FILE]: FONT_TEXT });
+    const source = loaderSnapshots(loader);
+    let staleCount = 0;
+    const unsubscribe = source.subscribe(() => staleCount++);
+    source.current().loaded(FONT_FILES, FONT_FILE);
+    source.request();
+
+    await nextTick();
+    await nextTick();
+
+    expect(staleCount).toBeGreaterThan(0);
+    expect(source.current().loaded(FONT_FILES, FONT_FILE)).toMatchObject({
+      status: 'loaded',
+      value: { kind: 'system', fontNames: ['Serif'] },
+    });
+    unsubscribe();
+  });
+
+  it('lists a failed file for the Missing resource report', async () => {
+    const loader = loaderServing({});
+    const source = loaderSnapshots(loader);
+    const unsubscribe = source.subscribe(() => {});
+    source.current().loaded(FONT_FILES, FONT_FILE);
+    source.request();
+    await nextTick();
+    await nextTick();
+
+    source.current().loaded(FONT_FILES, FONT_FILE);
+
+    expect(source.files().get(FONT_FILE)).toBeNull();
+    unsubscribe();
   });
 });

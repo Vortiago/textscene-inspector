@@ -9,7 +9,8 @@ import type { CacheSource } from '../r3f/cacheSources';
 import { useProjectSettings } from '../r3f/contexts/ProjectSettingsContext';
 import { projectFontPath, projectThemePath } from '../parser/projectSettingsParser';
 import { resolveProjectFonts, NO_PROJECT_FONTS, type ProjectFonts } from './fonts/font/projectFonts';
-import { FONT_FILES, THEME_FILES, useCachedFiles } from './useLoadedFiles';
+import { FONT_FILES, THEME_FILES } from './fileKinds';
+import { useCachedFiles } from './useLoadedFiles';
 
 export interface LoadedProjectFonts {
   projectFonts: ProjectFonts;

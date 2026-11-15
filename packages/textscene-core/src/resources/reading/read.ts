@@ -4,6 +4,7 @@
  * and no React.
  */
 
+import type { FileKind } from '../fileKinds';
 import type { ScopedReference } from './scopedReference';
 
 /** What a read answers. `value` is non-null only for `loaded`. */
@@ -19,7 +20,8 @@ export type UnavailableReason = 'missing-file' | 'unknown-id' | 'wrong-type' | '
 
 /**
  * The class of a held resource that is a file the loader imports, such as an image: no resource
- * file, so it has no properties, and its address is the file.
+ * file, so it has no properties, and its address is the file. A kind that reads its files whole
+ * holds the class the `[ext_resource]` states instead.
  */
 export const IMPORTED_FILE = 'ImportedFile';
 
@@ -42,6 +44,12 @@ export interface ResourceKind<T> {
   readonly name: string;
   /** The classes the decode accepts. Any other class answers `wrong-type`. */
   readonly accepts: (type: string) => boolean;
+  /**
+   * True for a kind whose files a loader processor reads whole, through {@link Follow.loaded}. The
+   * snapshot then parses no such file: it holds it with no properties and the class its
+   * `[ext_resource]` states, so the read waits for one file, not for the parse and then the value.
+   */
+  readonly readsFilesWhole?: boolean;
   /** Pure and synchronous. Null declines the resource (`undecodable`). */
   readonly decode: (held: HeldResource, follow: Follow) => T | null;
 }
@@ -52,6 +60,8 @@ export interface Follow {
   read<U>(kind: ResourceKind<U>, ref: string | undefined): Read<U>;
   /** The same reference, not read: for a value a consumer reads later (a surface's material). */
   reference(ref: string | undefined): ScopedReference;
+  /** The value a loader processor built for the holder's own address. `none` for a holder with no address. */
+  loaded<U extends object>(fileKind: FileKind<U>): Read<U>;
 }
 
 /**
@@ -67,6 +77,8 @@ export function optionalReference(follow: Follow, ref: string | undefined): Scop
 /** One consistent view of what the loader holds. Every read records the files it touched. */
 export interface ResourceSnapshot {
   read<T>(reference: ScopedReference, kind: ResourceKind<T>): Read<T>;
+  /** The value a loader processor built for `address`: for a bare path that no reference names. */
+  loaded<U extends object>(fileKind: FileKind<U>, address: string): Read<U>;
 }
 
 export const NONE: Read<never> = { status: 'none', value: null };

@@ -75,8 +75,11 @@ export function useSnapshotRead<R>(readAll: (read: NodeRead) => R): R {
 /**
  * `read` on the loader's current snapshot, run again when a file it touched loads, fails or
  * reloads. The host requests and pins each file the read touched, and reports the missing ones.
+ * The caller keeps `read` stable while its inputs hold: a new `read` starts a new snapshot.
+ *
+ * @canonical Code with no hooks that reads resources, run by a component
  */
-function useSnapshotHost<R>(read: (snapshot: ResourceSnapshot) => R): R {
+export function useSnapshotHost<R>(read: (snapshot: ResourceSnapshot) => R): R {
   const loader = useResourceLoader();
   // One source for each read: a source records every file its snapshot read, so a source kept
   // across a new read would go on pinning and reporting a file the reader no longer reads.

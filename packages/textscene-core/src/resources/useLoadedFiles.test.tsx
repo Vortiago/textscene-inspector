@@ -7,7 +7,8 @@ import type { LoadedFile } from './scopedResource';
 import { createFakeResourceLoader, type FakeResourceLoader } from './testing/createFakeResourceLoader';
 import { missingResourcesWrapper } from './testing/missingResourcesWrapper';
 import { renderWithSettleInGap } from './testing/renderWithSettleInGap';
-import { FONT_FILES, useCachedFiles, useLoadedFiles } from './useLoadedFiles';
+import { FONT_FILES } from './fileKinds';
+import { useCachedFiles, useLoadedFiles } from './useLoadedFiles';
 
 const OUTER = 'res://outer.tres';
 const INNER = 'res://inner.tres';
