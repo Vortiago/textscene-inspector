@@ -32,7 +32,9 @@ describe('hoverAt', () => {
   });
 
   it('states a radians_as_degrees range in the degrees its hint is written in', () => {
-    const document = new LanguageDocument('[node name="Body" type="CharacterBody3D"]\nfloor_max_angle = 0.785398');
+    const document = new LanguageDocument(
+      '[node name="Body" type="CharacterBody3D"]\nfloor_max_angle = 0.785398'
+    );
     const hover = at(document, 2, 'floor_max_angle', 0);
     expect(hover?.markdown).toContain('Range 0..180 degrees, stored in radians.');
   });
@@ -40,7 +42,9 @@ describe('hoverAt', () => {
   it('names each flag of a flags hint by its label and bit', () => {
     const document = new LanguageDocument('[node name="Box" type="Control"]\nsize_flags_horizontal = 3');
     const hover = at(document, 2, 'size_flags_horizontal', 0);
-    expect(hover?.markdown).toContain('A bitmask of `Fill` (1), `Expand` (2), `Shrink Center` (4), `Shrink End` (8).');
+    expect(hover?.markdown).toContain(
+      'A bitmask of `Fill` (1), `Expand` (2), `Shrink Center` (4), `Shrink End` (8).'
+    );
   });
 
   it('lists the labels of an enum property', () => {

@@ -198,7 +198,8 @@ function arrayElementType(hintString: string): string {
   const colon = hintString.indexOf(':');
   const [type, hint] = hintString.slice(0, colon).split('/').map(Number);
   if (colon === -1 || !Number.isInteger(type) || !Number.isInteger(hint)) return hintString;
-  if (type === VARIANT_TYPE.OBJECT && hint === PROPERTY_HINT.RESOURCE_TYPE) return hintString.slice(colon + 1);
+  if (type === VARIANT_TYPE.OBJECT && hint === PROPERTY_HINT.RESOURCE_TYPE)
+    return hintString.slice(colon + 1);
   return variantTypeName(type!) ?? hintString;
 }
 

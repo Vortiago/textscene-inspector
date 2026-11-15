@@ -56,7 +56,8 @@ function acceptedText(property: ClassProperty): string | undefined {
   const resources = acceptedResourceTypes(hint, hintString);
   if (resources) return `A resource of ${resources.map(codeSpan).join(' or ')}.`;
   const flags = flagEntriesOf(hint, hintString);
-  if (flags) return `A bitmask of ${flags.map((flag) => `${codeSpan(flag.label)} (${flag.value})`).join(', ')}.`;
+  if (flags)
+    return `A bitmask of ${flags.map((flag) => `${codeSpan(flag.label)} (${flag.value})`).join(', ')}.`;
   return rangeText(hint, hintString);
 }
 
