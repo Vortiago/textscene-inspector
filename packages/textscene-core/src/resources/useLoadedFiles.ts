@@ -16,11 +16,11 @@ import { usePendingWhile } from './usePendingWhile';
 import { useResourceLoader } from './useResource';
 import { sameEntries } from '../utils/sameEntries';
 
-/** A file's value once loaded, or undefined while it loads and after it failed. */
-export type CachedFileReader<T> = (path: string) => T | undefined;
+/** A file's cache entry, read: undefined while it loads, null once it has failed. */
+export type CachedFileReader<T> = (path: string) => CachedFile<T>;
 
 export interface CachedFiles<T> {
-  /** The value of a file the plan named, or undefined while it loads or after it failed. */
+  /** The value of a file the plan named: undefined while it loads, null once it has failed. */
   loadedFile: CachedFileReader<T>;
   /** True while a file the plan names has neither loaded nor failed. */
   isLoading: boolean;
@@ -64,7 +64,7 @@ export function useCachedFiles<T extends object>(
     onlyReadKeys: true,
   });
   const planned = useMemo(
-    () => (kind ? [...new Set(plan((path) => cache?.getCached(path) ?? undefined))] : []),
+    () => (kind ? [...new Set(plan((path) => cache?.getCached(path)))] : []),
     // `version` is a cache-buster: the cache changes outside React.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [plan, kind, cache, version]
@@ -85,7 +85,7 @@ export function useCachedFiles<T extends object>(
   const files = useStableEntries(read);
   useMissingFiles(files);
 
-  const loadedFile = useMemo((): CachedFileReader<T> => (path) => files.get(path) ?? undefined, [files]);
+  const loadedFile = useMemo((): CachedFileReader<T> => (path) => files.get(path), [files]);
   const isLoading = useMemo(() => loader !== null && hasUnsettledFile(files), [loader, files]);
   usePendingWhile(isLoading);
   return { loadedFile, isLoading };

@@ -16,6 +16,11 @@ import { snapshotOver } from './snapshot';
 export interface SnapshotSource {
   /** The same snapshot until a read it recorded would answer differently. */
   current(): ResourceSnapshot;
+  /**
+   * Starts a new snapshot for a new reader, so the files it records are that reader's alone. A
+   * file that reloads keeps its last answer across it.
+   */
+  restart(): void;
   /** Requests and pins each file the current snapshot read. Call it after commit, never in render. */
   request(): void;
   /** `onStale` hears a load, a failure or a reload of a file the current snapshot read. */
@@ -87,6 +92,9 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
     current() {
       if (isStale()) snapshot = start();
       return snapshot;
+    },
+    restart() {
+      snapshot = start();
     },
     request() {
       kinds.forEach(requestReads);

@@ -59,3 +59,8 @@ arrived) or `unavailable` with a reason.
   none of its files. It holds the file with no properties and the class its `[ext_resource]` states,
   and the decode reads `Follow.loaded`. Without it, a read waits for the parse and then for the
   processor: one more run for each file.
+- A nested read that is pending makes its holder pending. A decode reads a part the value draws
+  without through `Follow.readWithoutWaiting`, which records the read but does not wait: a Font
+  draws its base face while a fallback loads, and decodes again once the fallback arrives.
+- A decode that declines after its own file failed answers that failure, so a font file that failed
+  reads as `missing-file`, not `undecodable`.

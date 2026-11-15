@@ -203,6 +203,15 @@ describe('useCachedFiles', () => {
     expect(result.current.missing.has(FONT_PATH)).toBe(true);
   });
 
+  it('answers null for a font that failed, so a reader tells it from one that loads', () => {
+    const fake = createFakeResourceLoader();
+    const result = renderFonts(FONT_FILES, fake);
+
+    act(() => fake.fonts._fail(FONT_PATH, 'gone'));
+
+    expect(result.current.files.loadedFile(FONT_PATH)).toBeNull();
+  });
+
   it('reads no file, listens to no bus and never loads for no kind', () => {
     const fake = createFakeResourceLoader();
     const request = vi.fn();

@@ -231,9 +231,13 @@ function decoded<T>(
   let isWaiting = false;
   const follow: Follow = {
     read(innerKind, ref) {
+      const answer = follow.readWithoutWaiting(innerKind, ref);
+      if (answer.status === 'pending') isWaiting = true;
+      return answer;
+    },
+    readWithoutWaiting(innerKind, ref) {
       const answer = readAt(files, nestedReference(located, ref), innerKind, stack);
       reads.push({ kind: innerKind, ref, answer });
-      if (answer.status === 'pending') isWaiting = true;
       return answer;
     },
     reference(ref) {
@@ -252,7 +256,7 @@ function decoded<T>(
   const value = decodeOnce(kind, located.held, follow);
   // Pending spreads upward: the value waits for the file a nested read named, and is not kept.
   if (isWaiting) return PENDING;
-  const answer: Read<T> = value === null ? UNAVAILABLE.undecodable : { status: 'loaded', value };
+  const answer: Read<T> = value === null ? declined(reads) : { status: 'loaded', value };
   slots.set(slot, {
     properties: located.held.properties,
     isBuiltIn: located.held.address === null,
@@ -261,6 +265,15 @@ function decoded<T>(
     answer,
   });
   return answer;
+}
+
+/**
+ * The answer of a decode that declines: the failure of the holder's own file when the decode read it
+ * whole, so a font file that failed reads as missing-file, else undecodable.
+ */
+function declined(reads: readonly FollowedRead[]): Read<never> {
+  const ownFile = reads.find((read) => 'fileKind' in read && read.answer.status === 'unavailable');
+  return (ownFile?.answer as Read<never> | undefined) ?? UNAVAILABLE.undecodable;
 }
 
 /** The decode's value, or null for a decode that declines or throws. A kept answer warns no more. */

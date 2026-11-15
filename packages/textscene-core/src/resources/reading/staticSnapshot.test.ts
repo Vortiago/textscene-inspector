@@ -7,6 +7,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as logger from '../../logger';
 import { staticSnapshot } from './staticSnapshot.testkit';
+import { snapshotOver } from './snapshot';
+import { parseTresFile, type ParsedResource } from '../../parser/parsedResource';
+import { literalText } from '../../godot/string/string';
 import { nodeReference, referenceKey } from './scopedReference';
 import { namedKind, resourceFile, sceneTables, type Named } from './reading.testkit';
 import type { Read, ResourceKind } from './read';
@@ -14,6 +17,7 @@ import { FONT_FILES } from '../fileKinds';
 
 const A_FILE = 'res://a.tres';
 const EXT_A = `[ext_resource type="Resource" path="${A_FILE}" id="1_a"]`;
+const OUTER_NAMING_A = '[sub_resource type="Resource" id="outer"]\nnext = ExtResource("1_a")';
 
 function loadedValue(read: Read<Named>): Named {
   if (read.status !== 'loaded') throw new Error(`expected a loaded read, got ${read.status}`);
@@ -162,6 +166,29 @@ describe('a nested read', () => {
     const inFile = loadedValue(loadedValue(inScene.next).next);
 
     expect(inFile.name).toBe('in a.tres');
+  });
+
+  it('keeps the holder loaded while a part it reads without waiting loads, and decodes it again once it arrives', () => {
+    const optional: ResourceKind<Named> = {
+      name: 'Optional',
+      accepts: (type) => type === 'Resource',
+      decode: (held, follow) => ({
+        name: literalText(held.properties.resource_name ?? '""'),
+        isHeldLocally: held.isHeldLocally,
+        next: follow.readWithoutWaiting(optional, held.properties.next),
+        later: null,
+      }),
+    };
+    const files = new Map<string, ParsedResource>();
+    const snapshot = snapshotOver({ getCached: (path) => files.get(path), loaded: () => undefined });
+    const ref = nodeReference('SubResource("outer")', sceneTables(`${EXT_A}\n\n${OUTER_NAMING_A}`));
+
+    const whileLoading = loadedValue(snapshot.read(ref, optional));
+    files.set(A_FILE, parseTresFile(resourceFile('resource_name = "arrived"')));
+    const afterLoad = loadedValue(snapshot.read(ref, optional));
+
+    expect(whileLoading.next.status).toBe('pending');
+    expect(afterLoad.next).toMatchObject({ status: 'loaded', value: { name: 'arrived' } });
   });
 
   it('hands on a reference that resolves in the holder’s tables, without reading it', () => {

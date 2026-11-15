@@ -191,8 +191,33 @@ describe('a FONT read of a Font built into the scene', () => {
     expect(read.status).toBe('pending');
   });
 
-  it('reads no font, not pending, for a font file that failed', () => {
-    expect(readIn('ExtResource("2")')).toMatchObject({ status: 'unavailable', reason: 'undecodable' });
+  it('draws a FontVariation over its base font while a fallback still loads, as on main', () => {
+    const int = [
+      {
+        id: 'v',
+        type: 'FontVariation',
+        data: { base_font: 'ExtResource("1")', fallbacks: 'Array[Font]([ExtResource("3")])' },
+      },
+    ];
+    const ext = [...EXT, { id: '3', path: 'res://fonts/loading.ttf', type: 'FontFile' }];
+    const snapshot = snapshotOver({
+      getCached: () => undefined,
+      loaded: (_fileKind, address) => (address === GOOD ? FONT_A : undefined),
+    });
+
+    const read = snapshot.read(
+      nodeReference('SubResource("v")', { externalResources: ext, internalResources: int }),
+      FONT
+    );
+
+    expect(read).toMatchObject({
+      status: 'loaded',
+      value: { kind: 'variation', baseFont: FONT_A, fallbacks: [] },
+    });
+  });
+
+  it('reads no font, not pending, for a font file that failed, and says the file is missing', () => {
+    expect(readIn('ExtResource("2")')).toMatchObject({ status: 'unavailable', reason: 'missing-file' });
   });
 
   it('decodes a FontVariation over a font file, with its other properties raw', () => {

@@ -26,12 +26,13 @@ export const FONT: ResourceKind<FontResource> = {
 
 /**
  * A Font built into a scene. A base font or a fallback that names nothing, fails or loops reads as
- * none, as `Font::_update_rids_fb` skips a null one (`font.cpp:103-116`).
+ * none, as `Font::_update_rids_fb` skips a null one (`font.cpp:103-116`). A fallback still loading
+ * reads as none too, so the text draws in the base face until it arrives and the decode runs again.
  */
 function fontOfText({ type, properties }: HeldResource, follow: Follow): FontResource | null {
   if (!FONT_SUB_RESOURCE_TYPES.has(type)) return null;
   const fallbacks = extractResourceRefs(properties['fallbacks'] ?? '')
-    .map((ref) => follow.read(FONT, ref).value)
+    .map((ref) => follow.readWithoutWaiting(FONT, ref).value)
     .filter((font) => font !== null);
   const baseFont = type === 'FontVariation' ? follow.read(FONT, properties['base_font']).value : null;
   return fontResourceOf(type, properties, fallbacks, baseFont);

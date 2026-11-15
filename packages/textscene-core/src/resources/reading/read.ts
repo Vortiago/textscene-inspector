@@ -58,6 +58,11 @@ export interface ResourceKind<T> {
 export interface Follow {
   /** Decodes the nested resource now. It resolves in the holder's tables, and the holder joins the chain. */
   read<U>(kind: ResourceKind<U>, ref: string | undefined): Read<U>;
+  /**
+   * {@link Follow.read}, but a pending answer does not make the holder wait. For a part the value
+   * draws without until it arrives, as a Font draws its base face while a fallback loads.
+   */
+  readWithoutWaiting<U>(kind: ResourceKind<U>, ref: string | undefined): Read<U>;
   /** The same reference, not read: for a value a consumer reads later (a surface's material). */
   reference(ref: string | undefined): ScopedReference;
   /** The value a loader processor built for the holder's own address. `none` for a holder with no address. */
