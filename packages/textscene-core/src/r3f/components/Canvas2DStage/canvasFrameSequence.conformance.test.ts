@@ -52,9 +52,9 @@ describe('the 2D canvas frame steps', () => {
   });
 
   it('run a SubViewport light pass only through its canvas frame', () => {
-    const [{ source }] = viewportPass;
-    const runs = offendingLines(source!, /\brun\.current\b/);
-    const lightStep = source!.split('\n').findIndex((line) => line.includes('steps.lightPass = ')) + 1;
+    const source = viewportPass[0]!.source;
+    const runs = offendingLines(source, /\brun\.current\b/);
+    const lightStep = source.split('\n').findIndex((line: string) => line.includes('steps.lightPass = ')) + 1;
     expect(runs).toEqual([lightStep]);
   });
 });
