@@ -205,14 +205,15 @@ export function getFontLinePitchPx(
   return ascentPx + descentPx + lineSpacingPx;
 }
 
-/**
- * Descent at `fontSizePx`: pitch less ascent at zero spacing, so `getFontLinePitchPx` keeps the one
- * reading of the ceiling rule (`text_server_adv.cpp:1515-1516`).
- */
+/** Descent px: the pitch less the ascent, so the ceiling rule reads once (`text_server_adv.cpp:1515`). */
 export function getFontDescentPx(
   metrics: Pick<FontMetrics, 'ascent' | 'descent' | 'unitsPerEm' | 'pxPerUnit' | 'outlines'>,
   fontSizePx: number
 ): number {
+  // A fixed-size font returns its cached descent scaled, with no FreeType round (`:2941-2943`).
+  if (metrics.pxPerUnit && !faceStrikeSize(metrics, fontSizePx)) {
+    return unitsToPx(metrics.descent, metrics, fontSizePx);
+  }
   return getFontLinePitchPx(metrics, fontSizePx, 0) - getFontAscentPx(metrics, fontSizePx);
 }
 
@@ -664,7 +665,11 @@ export const fallbackChainOf = perObject((face: FontMetrics): readonly FontMetri
  * of `face`, so a taller fallback makes the font taller though no glyph draws in it.
  */
 export function getFontChainHeightPx(face: FontMetrics, fontSizePx: number): number {
-  return Math.max(...fallbackChainOf(face).map((entry) => getFontLinePitchPx(entry, fontSizePx, 0)));
+  return Math.max(
+    ...fallbackChainOf(face).map(
+      (entry) => getFontAscentPx(entry, fontSizePx) + getFontDescentPx(entry, fontSizePx)
+    )
+  );
 }
 
 /** The first face of the **Fallback chain** of `face` that has a glyph for `ch`, or null for none. */
