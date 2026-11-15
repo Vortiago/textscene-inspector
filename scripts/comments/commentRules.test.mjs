@@ -87,6 +87,27 @@ describe('commentFindings: file header', () => {
   });
 });
 
+describe('commentFindings: tool input above the first import', () => {
+  const findingsAbove = (header) =>
+    commentBlocks('file.ts', `${header}\nimport x from 'x';\n`).flatMap((block) =>
+      commentFindings(block, PRINT_WIDTH)
+    );
+
+  it.each([
+    ['a shebang', '#!/usr/bin/env node'],
+    ['a type-check pragma', '// @ts-check'],
+    ['an expected type error with its reason', '// @ts-expect-error the stub has no types'],
+    ['an eslint-disable line with its reason', '/* eslint-disable no-console -- a CLI prints */'],
+    ['a test environment', '// @vitest-environment happy-dom'],
+    ['a triple-slash reference', '/// <reference types="vite/client" />'],
+    ['a JSX pragma', '/** @jsxImportSource preact */'],
+    ['a licence header', '/*!\n * Copyright (c) Someone.\n * Licensed under MIT.\n */'],
+    ['an SPDX line', '// SPDX-License-Identifier: MIT'],
+  ])('counts no rule for %s', (_, header) => {
+    expect(findingsAbove(header)).toEqual([]);
+  });
+});
+
 describe('commentFindings: work reference', () => {
   it('fails an issue number', () => {
     expect(rulesOf('// Fixed in #1913.')).toEqual([['work-reference']]);

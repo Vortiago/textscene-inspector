@@ -3,7 +3,7 @@ const TOOL_READ_BLOCK = /\bCopyright\b|SPDX-License-Identifier|@license|canonica
 
 /** A tool reads these lines: lint, type and coverage directives, triple-slash references and regions. */
 const DIRECTIVE_LINE =
-  /^(?:eslint-(?:disable|enable)|eslint [\w@/-]+:|globals? [\w$]+(?:\s*:\s*\w+)?\s*(?:,|$)|@ts-|prettier-ignore|(?:istanbul|c8|v8) ignore\b|@vitest-environment|@jsx|\/ ?<reference|#(?:end)?region\b|webpack[A-Z]|@vite-ignore|[#@]__PURE__)/;
+  /^(?:eslint-(?:disable|enable)|eslint [\w@/-]+:|globals? [\w$]+(?:\s*:\s*\w+)?\s*(?:,|$)|@ts-|prettier-ignore|(?:istanbul|c8|v8) ignore\b|@vitest-environment|@jsx|<reference\b|#(?:end)?region\b|webpack[A-Z]|@vite-ignore|[#@]__PURE__)/;
 
 /** A bare `#n`, `PR n` or `issue n`. A colour is code in backticks, and `project#n` is an upstream cite. */
 const WORK_REFERENCE = /(?<![\w&])#\d{1,5}\b|\b(?:PR|pull request|issue)s? #?\d+\b/i;
