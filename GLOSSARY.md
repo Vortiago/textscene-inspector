@@ -616,6 +616,10 @@ _Avoid_: "background canvas".
 What displays a **sub-viewport**'s render target (a `SubViewportContainer` or a `ViewportTexture` consumer), and the one place its canvas subtree is dispatched.
 _Avoid_: "viewport container" for the concept. "render target" for the surface.
 
+**Viewport description** (`ViewportDescription` in `r3f/viewportRender/viewportDescription.ts`, ADR-0078):
+What a viewport gives each render it draws: its MSAA, debanding, transparent background, mipmap bias, positional shadow atlas and anisotropic level, and its rules for the camera, the editor chrome and the preview environment. An adapter builds it from a source: `rootViewportDescription` from the project settings.
+_Avoid_: "viewport config", "viewport settings" for the value. A `project*` read beside a render.
+
 **Embedded window** (`nodes/windows/window/`):
 A visible Window, Popup or PopupPanel that a viewport draws on its own canvas instead of the system's. The window's Controls draw into its target as a **sub-viewport**'s do, rooted at the window itself (ADR-0033).
 _Avoid_: "dialog" for the base case. "native window", which Godot draws through the system.
