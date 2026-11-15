@@ -1,4 +1,3 @@
-/** What every canvas's renderer gets before its first frame. */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CanvasRendererScope } from './CanvasRendererScope';

@@ -1,5 +1,3 @@
-/** What every canvas's renderer runs beside the drawing, mounted by the contents of each canvas. */
-
 import { useEffect, type ReactNode } from 'react';
 import { useThree } from '@react-three/fiber';
 import { installShadowPass } from '../shadowPass.js';
@@ -10,11 +8,7 @@ import { TiledUploadDriver } from '../tiledUpload/TiledUploadDriver.js';
 import { ViewportPassOrchestrator } from '../contexts/ViewportPassRegistryContext.js';
 import { ScreenshotBridge } from '../ScreenshotBridge.js';
 
-/**
- * In the contents, not the canvas file, since `@react-three/test-renderer` mounts the contents with no
- * `<Canvas>`. The screenshot bridge mounts after `children`, so its effect runs after theirs have
- * asked for their resources.
- */
+// In the contents, as the test renderer mounts no `<Canvas>`. The screenshot bridge mounts after `children`.
 export function CanvasRendererScope({ children }: { children: ReactNode }) {
   const renderer = useThree((state) => state.gl);
   useEffect(() => installShadowPass(renderer), [renderer]);

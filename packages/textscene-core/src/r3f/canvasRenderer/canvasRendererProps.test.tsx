@@ -1,8 +1,3 @@
-/**
- * The `<Canvas>` props every canvas takes. happy-dom lays no element out, so a mounted `<Canvas>`
- * never configures a renderer: the source read pins that each canvas spreads the props, and the
- * probe pins what the shadow ask becomes.
- */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -19,8 +14,7 @@ describe('CANVAS_RENDERER_PROPS', () => {
   });
 
   it('asks for no tone curve of its own, as Godot draws a root with no Environment linear', () => {
-    // tone_mapper.h:177 defaults to LINEAR, and only an Environment changes it
-    // (renderer_scene_render_rd.cpp:724-731). R3F applies ACES unless the canvas is `flat`.
+    // `tone_mapper.h:177` defaults to LINEAR, and R3F applies ACES unless the canvas is `flat`.
     expect(CANVAS_RENDERER_PROPS.flat).toBe(true);
   });
 });
@@ -31,8 +25,7 @@ describe('CANVAS_RENDERER_GL', () => {
   });
 
   it('enables local clipping, without which a ScrollContainer clips nothing and nothing reports it', () => {
-    // The 3D canvas needs it too: a Control SubViewport sampled by a 3D scene renders through that
-    // canvas's renderer (`renderToOffscreenTarget` takes `useThree().gl`).
+    // The 3D canvas needs it too: a Control SubViewport a 3D scene samples renders through its renderer.
     expect(CANVAS_RENDERER_GL.localClippingEnabled).toBe(true);
   });
 });
