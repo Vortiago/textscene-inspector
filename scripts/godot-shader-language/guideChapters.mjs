@@ -58,7 +58,7 @@ const TYPES_AND_LITERALS = {
       rows: (row) => row.id === 'float literal',
       what: `A literal such as \`2.5\`, \`.5\`, \`1e-3\` or \`2.5f\`. Godot reads the text with its own decimal reader, keeps a 32-bit float, and writes the float back into the GLSL it compiles with 14 decimals (\`shader_compiler.cpp:180\`). So a value under \`1e-14\` draws as \`0.0\`, a value with more digits draws with fewer, and a literal past the float range, such as \`1e39\`, fails to compile. The transpiler gives each literal the float that this chain gives.
 
-Arithmetic of literals alone, such as \`58.656 + 74.377\`, never reaches the GPU as arithmetic. Godot's GLSL compiler, glslang, folds every operator of constants on the CPU (\`Constant.cpp\`): it reads each number of Godot's text as a double, folds float arithmetic in double precision and rounds the result once. It folds integers, conversions, comparisons, swizzles, elements, matrix products and \`?:\` too, as the x86-64 build of Godot computes them. The transpiler folds the same subtrees the same way and writes the constant. So a float result can differ by one unit from the same sum in 32-bit floats, and \`9u << 85u\` is \`9u << 21u\`, where the GPU gives 0. Godot also folds a constructor of literals, and a negated literal at the top of an expression, into one constant (\`shader_language.cpp:7840\`).`,
+Arithmetic of literals alone, such as \`58.656 + 74.377\`, never reaches the GPU as arithmetic. Godot's GLSL compiler, glslang, folds every operator of constants on the CPU (\`Constant.cpp\`): it reads each number of Godot's text as a double, folds float arithmetic in double precision and rounds the result once. It folds integers, conversions, comparisons, swizzles, elements, matrix products, a matrix of another matrix, \`?:\` and most built-in calls too, as the x86-64 build of Godot computes them. The transpiler folds the same subtrees the same way and writes the constant. So a float result can differ by one unit from the same sum in 32-bit floats, and \`9u << 85u\` is \`9u << 21u\`, where the GPU gives 0. Godot also folds a constructor of literals, and a negated literal at the top of an expression, into one constant (\`shader_language.cpp:7840\`).`,
       tsl: 'float(value)',
     },
     {
@@ -381,6 +381,103 @@ const FUNCTIONS_CHAPTER = {
   ],
 };
 
+/** The probes of the built-in chapter: each overload on inputs, not a call of constants. */
+const isOverloadProbe = (probe) => !/^(fold|gpu)-call-/.test(probe.name);
+
+/** The built-in functions whose call of constants glslang folds (`Constant.cpp`). */
+const FOLDED_FUNCTIONS = [
+  'radians',
+  'degrees',
+  'sin',
+  'cos',
+  'tan',
+  'asin',
+  'acos',
+  'atan',
+  'pow',
+  'exp',
+  'log',
+  'exp2',
+  'log2',
+  'sqrt',
+  'inversesqrt',
+  'abs',
+  'sign',
+  'floor',
+  'trunc',
+  'round',
+  'roundEven',
+  'ceil',
+  'fract',
+  'mod',
+  'min',
+  'max',
+  'clamp',
+  'mix',
+  'step',
+  'smoothstep',
+  'isnan',
+  'isinf',
+  'length',
+  'distance',
+  'dot',
+  'cross',
+  'normalize',
+  'reflect',
+  'refract',
+  'faceforward',
+  'outerProduct',
+  'lessThan',
+  'greaterThan',
+  'lessThanEqual',
+  'greaterThanEqual',
+  'equal',
+  'notEqual',
+  'any',
+  'all',
+  'not',
+];
+
+/** The built-in functions of values whose call of constants glslang leaves to the GPU. */
+const GPU_FUNCTIONS = [
+  'sinh',
+  'cosh',
+  'tanh',
+  'asinh',
+  'acosh',
+  'atanh',
+  'matrixCompMult',
+  'transpose',
+  'determinant',
+  'inverse',
+];
+
+const FOLDING_CHAPTER = {
+  file: 'folding.md',
+  title: 'Calls of constants',
+  intro: `A call of a built-in function whose arguments are all constants, such as \`sin(vec2(1.5))\`, never reaches the GPU in Godot. glslang, the GLSL compiler of Godot, folds the call on the CPU in double precision and rounds the result to a float once (\`Constant.cpp\`). The transpiler folds the same calls with the same formulas (\`glslangCalls.ts\`) and writes the result as a TSL constant node. A call that reads a parameter or a variable is not folded on either side.
+
+glslang has its own formulas, and the transpiler keeps them: \`round(-2.5)\` is -2, \`sign(-0.0)\` is +0, \`sign\` of NaN is 1, \`min(NaN, 1.0)\` is NaN, and \`lessThanEqual\` of NaN is true. A fold rounds once from double precision, where the GPU rounds after each step, so \`length(vec3(0.1, 0.2, 0.3))\` and \`degrees(1.2345)\` differ from the GPU in the last bit.
+
+The browser's compiler folds some of these calls itself, to the same bits, so the probe of such a call is equal without the transpiler's fold too. The transpiler folds every call glslang folds, because another browser's compiler can fold it otherwise or not at all.`,
+  sections: [
+    {
+      heading: 'Calls glslang folds',
+      rows: functionRows(FOLDED_FUNCTIONS),
+      what: 'glslang folds a call of constants of each of these functions, of floats, ints, uints and bools, and of a scalar argument that stands for every lane. The derivatives `dFdx`, `dFdy` and `fwidth` fold to 0. Each probe holds values where the fold and the GPU give different bits, or an edge where glslang has its own formula.',
+      tsl: 'float(0.5235987755982988)',
+      probes: (probe) => probe.name.startsWith('fold-call-'),
+    },
+    {
+      heading: 'Calls glslang leaves to the GPU',
+      rows: functionRows(GPU_FUNCTIONS),
+      what: "glslang folds no call of the hyperbolic functions, `matrixCompMult`, `transpose`, `determinant` or `inverse`, so the GPU computes them. One side's compiler can fold such a call instead, and two kinds of difference follow. Inside the domain, the fold differs from the GPU in the last bits: Godot's driver folds `sinh` and `cosh`, the browser's compiler folds `tanh`, `acosh`, `atanh` and `inverse`, and both fold `asinh`, to other values. Outside the domain, or near the float range, the browser's compiler folds the call to a number where the GPU gives NaN or infinity: `atanh(92.167)`, `acosh(0.866)` and the inverse of a singular matrix to 0, and `cosh(89.152)` to a finite value. Each probe of a constant has a probe of the same value through the parameter, such as `sinh(a + 0.899)` on the input 0. No compiler can fold that one, so it gives the GPU's value on both sides and is bit-equal.",
+      tsl: 'sinh(a)',
+      probes: (probe) => probe.name.startsWith('gpu-call-'),
+    },
+  ],
+};
+
 const BUILT_IN_FUNCTIONS_CHAPTER = {
   file: 'built-in-functions.md',
   title: 'Built-in functions',
@@ -388,25 +485,30 @@ const BUILT_IN_FUNCTIONS_CHAPTER = {
 
 Godot picks the first overload in its table whose argument types fit. A scalar constant converts to the argument type where Godot converts it: \`max(a, 1)\` with a \`float\` \`a\` is \`max(a, 1.0)\`. Godot refuses a whole array as an argument and arguments of no overload, with the message \`Invalid arguments for the built-in function\`. A built-in name calls the built-in, before any function of the shader. The out argument of \`modf\` must be a variable, an array element or a member that is not of a constant.
 
-Three forms differ from Godot, each with its cause in \`tests/probes/knownProbeDifferences.mjs\` and \`tests/random/knownDifferences.mjs\`. \`min\`, \`max\` and \`clamp\` of a vector and a float give +0 for a -0 or a subnormal lane where Godot keeps it, in 1 to 3 lanes of a probe. Godot leaves the out argument of \`modf\` unwritten when nothing reads the call's value. glslang folds a call of constants alone, such as \`sin(vec2(1.5))\`, in double precision on the CPU, and the transpiler leaves that call to the GPU in float.`,
+A call of constants alone never reaches the GPU in Godot: glslang folds it on the CPU, and [Calls of constants](folding.md) shows how the transpiler does the same.
+
+Two forms differ from Godot, each with its cause in \`tests/probes/knownProbeDifferences.mjs\`. \`min\`, \`max\` and \`clamp\` of a vector and a float give +0 for a -0 or a subnormal lane where Godot keeps it, in 1 to 3 lanes of a probe. Godot leaves the out argument of \`modf\` unwritten when nothing reads the call's value.`,
   sections: [
     {
       heading: 'Angles and trigonometry',
       rows: functionRows(['radians', 'degrees', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan']),
       what: '`radians` and `degrees` convert an angle, and `sin`, `cos`, `tan`, `asin`, `acos` and `atan` work in radians, lane by lane. `atan(y, x)` gives the angle of the point `(x, y)`, from -π to π.',
       tsl: 'sin(a)',
+      probes: isOverloadProbe,
     },
     {
       heading: 'Hyperbolic functions',
       rows: functionRows(['sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh']),
       what: '`sinh`, `cosh`, `tanh` and their inverses `asinh`, `acosh` and `atanh`, lane by lane.',
       tsl: 'sinh(a)',
+      probes: isOverloadProbe,
     },
     {
       heading: 'Exponential functions',
       rows: functionRows(['pow', 'exp', 'log', 'exp2', 'log2', 'sqrt', 'inversesqrt']),
       what: '`pow(x, y)`, `exp`, `log`, `exp2`, `log2`, `sqrt` and `inversesqrt`, lane by lane. GLSL leaves the result of `pow` of a negative `x`, `log` of a negative value and `sqrt` of a negative value undefined, so the probe shows what the GPU gives.',
       tsl: 'pow(a, b)',
+      probes: isOverloadProbe,
     },
     {
       heading: 'Rounding and the parts of a float',
@@ -424,18 +526,21 @@ Three forms differ from Godot, each with its cause in \`tests/probes/knownProbeD
       ]),
       what: '`abs` and `sign` of a float or an int, and `floor`, `trunc`, `round`, `roundEven`, `ceil` and `fract`. `mod(x, y)` is `x - y * floor(x / y)`. `modf(x, whole)` returns the fraction of `x` and writes its whole part to `whole`, a place the call writes as an `out` argument. three/tsl has neither, so the transpiler builds `roundEven` lane by lane as `floor(x) + mod(floor(x), 2)` at a half and `round(x)` elsewhere, and `modf` as `trunc(x)` into the place and `x - trunc(x)` as the result.',
       tsl: 'floor(a)',
+      probes: isOverloadProbe,
     },
     {
       heading: 'Limits and blends',
       rows: functionRows(['min', 'max', 'clamp', 'mix', 'step', 'smoothstep']),
       what: "`min`, `max` and `clamp` of floats, ints and uints, with a scalar second and third argument for a vector. `mix(a, b, t)` blends by a float or a vector `t`, and by a `bvec` `t` picks each lane of `b` where `t` is true. three's `mix` casts a `bvec` to a float, so the transpiler builds that form as a `select` for each lane. `step(edge, x)` is 0 under the edge and 1 from it, and `smoothstep` blends between two edges on a cubic curve.",
       tsl: 'clamp(a, b, c)',
+      probes: isOverloadProbe,
     },
     {
       heading: 'NaN and infinity',
       rows: functionRows(['isnan', 'isinf']),
       what: '`isnan(x)` is true for a NaN lane, and `isinf(x)` for an infinite lane. three/tsl has neither, so the transpiler builds `isnan(x)` as `notEqual(x, x)` and `isinf(x)` as `equal(abs(x), infinity)`.',
       tsl: 'notEqual(x, x)',
+      probes: isOverloadProbe,
     },
     {
       heading: 'Geometric functions',
@@ -451,12 +556,14 @@ Three forms differ from Godot, each with its cause in \`tests/probes/knownProbeD
       ]),
       what: '`length`, `distance`, `dot` and `cross` of vectors, `normalize`, and the reflection of a direction from a normal, `reflect(i, n)`, its refraction by a ratio, `refract(i, n, eta)`, and `faceforward(n, i, nref)`, `n` turned to face away from `i`.',
       tsl: 'dot(a, b)',
+      probes: isOverloadProbe,
     },
     {
       heading: 'Matrix functions',
       rows: functionRows(['matrixCompMult', 'outerProduct', 'transpose', 'determinant', 'inverse']),
       what: '`matrixCompMult(a, b)` multiplies element by element, `outerProduct(c, r)` gives the matrix whose column `j` is `c * r[j]`, and `transpose`, `determinant` and `inverse` of a square matrix. GLSL leaves the inverse of a singular matrix undefined. three/tsl has no `matrixCompMult` or `outerProduct`, so the transpiler builds each column from TSL nodes.',
       tsl: 'inverse(m)',
+      probes: isOverloadProbe,
     },
     {
       heading: 'Vector relational functions',
@@ -473,6 +580,7 @@ Three forms differ from Godot, each with its cause in \`tests/probes/knownProbeD
       ]),
       what: '`lessThan`, `greaterThan`, `lessThanEqual`, `greaterThanEqual`, `equal` and `notEqual` compare lane by lane and give a `bvec`. `any` is true when a lane is true, `all` when every lane is, and `not` inverts each lane.',
       tsl: 'lessThan(a, b)',
+      probes: isOverloadProbe,
     },
   ],
 };
@@ -509,5 +617,6 @@ export const GUIDE_CHAPTERS = [
   STATEMENTS_CHAPTER,
   FUNCTIONS_CHAPTER,
   BUILT_IN_FUNCTIONS_CHAPTER,
+  FOLDING_CHAPTER,
   SKY_CHAPTER,
 ];

@@ -9,7 +9,7 @@ import { godotShader } from '../../apps/textscene-three-godot-shaders/tests/e2e/
 import { floatOfBits } from '../../apps/textscene-three-godot-shaders/tests/probes/inputs.mjs';
 import { PROBE_TYPES, probeSignature } from '../godot-probes/probeShader.mjs';
 import { owningIssue, transpiledIds } from './renderTable.mjs';
-import { targetStates } from './targetStates.mjs';
+import { targetStates, WEBGPU_STATE } from './targetStates.mjs';
 import { TESTING_FILE } from './renderTestingGuide.mjs';
 
 /** The most input rows a section shows of a probe, so a table stays short. */
@@ -153,20 +153,20 @@ ${probeValues(probe, entry)}
 function statesText(rows) {
   const lowered = rows
     .map((row) => ({ row, states: targetStates(row) }))
-    .filter(({ states }) => states.webgl2 !== 'native' || states.webgpu !== 'native');
-  const native = 'native on WebGL 2 and on WebGPURenderer';
-  if (lowered.length === 0) return `Every row is ${native}.`;
-  const lines = lowered.map(
-    ({ row, states }) => `- \`${row.id}\`: WebGL 2 ${states.webgl2}, WebGPURenderer ${states.webgpu}.`
-  );
-  const rest = lowered.length === rows.length ? '' : ` The other rows are ${native}.`;
-  return `Lowered rows:\n\n${lines.join('\n')}\n\n${rest.trim()}`.trim();
+    .filter(({ states }) => states.webgl2 !== 'native');
+  const untested = `WebGPURenderer runs the same nodes and is ${WEBGPU_STATE}.`;
+  if (lowered.length === 0) return `Every row is native on WebGL 2. ${untested}`;
+  const lines = lowered.map(({ row, states }) => `- \`${row.id}\`: WebGL 2 ${states.webgl2}.`);
+  const rest = lowered.length === rows.length ? '' : ' The other rows are native on WebGL 2.';
+  return `Lowered rows:\n\n${lines.join('\n')}\n\n${rest.trim()} ${untested}`.trim();
 }
 
 function renderSection(section, rows, probes, record) {
   const ids = new Set(rows.map((row) => row.id));
   // A sky scene has a camera and proves its rows in a showcase of its own, with no table of inputs.
-  const sectionProbes = probes.filter((probe) => !probe.camera && probe.rows.some((id) => ids.has(id)));
+  const sectionProbes = probes.filter(
+    (probe) => !probe.camera && probe.rows.some((id) => ids.has(id)) && (section.probes?.(probe) ?? true)
+  );
   const rowList = rows.map((row) => `\`${row.id}\``).join(', ');
   return `## ${section.heading}
 

@@ -56,6 +56,20 @@ describe('GlslangFolding', () => {
     expect(folding.lanesOf(resultOf('bool f() { return (1 == 2) == (3 == 4); }'))).toEqual([true]);
   });
 
+  it('folds a matrix of a smaller matrix, the identity filling the rest', () => {
+    expect(new GlslangFolding().lanesOf(resultOf('mat3 f() { return mat3(mat2(2.0)); }'))).toEqual([
+      2, 0, 0, 0, 2, 0, 0, 0, 1,
+    ]);
+  });
+
+  it('folds a matrix of a larger matrix to its upper left lanes', () => {
+    expect(
+      new GlslangFolding().lanesOf(
+        resultOf('mat2 f() { return mat2(mat3(vec3(1.0, 2.0, 3.0), vec3(4.0, 5.0, 6.0), vec3(7.0))); }')
+      )
+    ).toEqual([1, 2, 4, 5]);
+  });
+
   it('folds nothing that reads an argument', () => {
     expect(
       new GlslangFolding().lanesOf(resultOf('float f(float a) { return 1.0 + 2.0 + a; }'))

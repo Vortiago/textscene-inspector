@@ -39,14 +39,14 @@ The transpiler emits `a.add(b)`. Rows: `OP_ADD(int,int)`, `OP_ADD(int,ivec2)`, `
 
 Lowered rows:
 
-- `OP_ADD(float,mat2)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_ADD(float,mat3)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_ADD(float,mat4)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_ADD(mat2,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_ADD(mat3,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_ADD(mat4,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_ADD(float,mat2)`: WebGL 2 lowered: column by column.
+- `OP_ADD(float,mat3)`: WebGL 2 lowered: column by column.
+- `OP_ADD(float,mat4)`: WebGL 2 lowered: column by column.
+- `OP_ADD(mat2,float)`: WebGL 2 lowered: column by column.
+- `OP_ADD(mat3,float)`: WebGL 2 lowered: column by column.
+- `OP_ADD(mat4,float)`: WebGL 2 lowered: column by column.
 
-The other rows are native on WebGL 2 and on WebGPURenderer.
+The other rows are native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `add-float-float`, 256 input rows
 
@@ -672,14 +672,14 @@ The transpiler emits `a.sub(b)`. Rows: `OP_SUB(int,int)`, `OP_SUB(int,ivec2)`, `
 
 Lowered rows:
 
-- `OP_SUB(float,mat2)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_SUB(float,mat3)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_SUB(float,mat4)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_SUB(mat2,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_SUB(mat3,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_SUB(mat4,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_SUB(float,mat2)`: WebGL 2 lowered: column by column.
+- `OP_SUB(float,mat3)`: WebGL 2 lowered: column by column.
+- `OP_SUB(float,mat4)`: WebGL 2 lowered: column by column.
+- `OP_SUB(mat2,float)`: WebGL 2 lowered: column by column.
+- `OP_SUB(mat3,float)`: WebGL 2 lowered: column by column.
+- `OP_SUB(mat4,float)`: WebGL 2 lowered: column by column.
 
-The other rows are native on WebGL 2 and on WebGPURenderer.
+The other rows are native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `sub-float-float`, 256 input rows
 
@@ -1281,14 +1281,14 @@ The transpiler emits `a.mul(b)`. Rows: `OP_MUL(int,int)`, `OP_MUL(int,ivec2)`, `
 
 Lowered rows:
 
-- `OP_MUL(float,mat2)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_MUL(float,mat3)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_MUL(float,mat4)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_MUL(mat2,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_MUL(mat3,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_MUL(mat4,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_MUL(float,mat2)`: WebGL 2 lowered: column by column.
+- `OP_MUL(float,mat3)`: WebGL 2 lowered: column by column.
+- `OP_MUL(float,mat4)`: WebGL 2 lowered: column by column.
+- `OP_MUL(mat2,float)`: WebGL 2 lowered: column by column.
+- `OP_MUL(mat3,float)`: WebGL 2 lowered: column by column.
+- `OP_MUL(mat4,float)`: WebGL 2 lowered: column by column.
 
-The other rows are native on WebGL 2 and on WebGPURenderer.
+The other rows are native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `mul-float-float`, 256 input rows
 
@@ -2026,14 +2026,14 @@ The transpiler emits `a.div(b)`. Rows: `OP_DIV(int,int)`, `OP_DIV(int,ivec2)`, `
 
 Lowered rows:
 
-- `OP_DIV(float,mat2)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_DIV(float,mat3)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_DIV(float,mat4)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
-- `OP_DIV(mat2,float)`: WebGL 2 lowered: product with the reciprocal, WebGPURenderer lowered: product with the reciprocal.
-- `OP_DIV(mat3,float)`: WebGL 2 lowered: product with the reciprocal, WebGPURenderer lowered: product with the reciprocal.
-- `OP_DIV(mat4,float)`: WebGL 2 lowered: product with the reciprocal, WebGPURenderer lowered: product with the reciprocal.
+- `OP_DIV(float,mat2)`: WebGL 2 lowered: column by column.
+- `OP_DIV(float,mat3)`: WebGL 2 lowered: column by column.
+- `OP_DIV(float,mat4)`: WebGL 2 lowered: column by column.
+- `OP_DIV(mat2,float)`: WebGL 2 lowered: product with the reciprocal.
+- `OP_DIV(mat3,float)`: WebGL 2 lowered: product with the reciprocal.
+- `OP_DIV(mat4,float)`: WebGL 2 lowered: product with the reciprocal.
 
-The other rows are native on WebGL 2 and on WebGPURenderer.
+The other rows are native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `div-float-float`, 256 input rows
 
@@ -2659,7 +2659,7 @@ mat4 probe(mat4 a, mat4 b) { return a / b; }
 
 The transpiler emits `a.mod(b)`. Rows: `OP_MOD(int,int)`, `OP_MOD(ivec2,int)`, `OP_MOD(ivec2,ivec2)`, `OP_MOD(ivec3,int)`, `OP_MOD(ivec3,ivec3)`, `OP_MOD(ivec4,int)`, `OP_MOD(ivec4,ivec4)`, `OP_MOD(uint,uint)`, `OP_MOD(uvec2,uint)`, `OP_MOD(uvec2,uvec2)`, `OP_MOD(uvec3,uint)`, `OP_MOD(uvec3,uvec3)`, `OP_MOD(uvec4,uint)`, `OP_MOD(uvec4,uvec4)`. Godot source: `servers/rendering/shader_language.cpp:1693`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `mod-int-int`, 32 input rows
 
@@ -2863,7 +2863,7 @@ uvec4 probe(uvec4 a, uvec4 b) { return a % b; }
 
 The transpiler emits `a.negate()`. Rows: `OP_NEGATE(int)`, `OP_NEGATE(ivec2)`, `OP_NEGATE(ivec3)`, `OP_NEGATE(ivec4)`, `OP_NEGATE(uint)`, `OP_NEGATE(uvec2)`, `OP_NEGATE(uvec3)`, `OP_NEGATE(uvec4)`, `OP_NEGATE(float)`, `OP_NEGATE(vec2)`, `OP_NEGATE(vec3)`, `OP_NEGATE(vec4)`. Godot source: `servers/rendering/shader_language.cpp:1614`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `negate-float`, 16 input rows
 
@@ -3224,54 +3224,56 @@ The transpiler emits `a.add(1), with the argument value replaced`. Rows: `OP_INC
 
 Lowered rows:
 
-- `OP_INCREMENT(int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_INCREMENT(ivec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_INCREMENT(ivec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_INCREMENT(ivec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_INCREMENT(uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_INCREMENT(uvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_INCREMENT(uvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_INCREMENT(uvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_INCREMENT(float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_INCREMENT(vec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_INCREMENT(vec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_INCREMENT(vec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_DECREMENT(int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_DECREMENT(ivec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_DECREMENT(ivec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_DECREMENT(ivec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_DECREMENT(uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_DECREMENT(uvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_DECREMENT(uvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_DECREMENT(uvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_DECREMENT(float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_DECREMENT(vec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_DECREMENT(vec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_DECREMENT(vec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_INCREMENT(int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_INCREMENT(ivec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_INCREMENT(ivec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_INCREMENT(ivec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_INCREMENT(uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_INCREMENT(uvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_INCREMENT(uvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_INCREMENT(uvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_INCREMENT(float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_INCREMENT(vec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_INCREMENT(vec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_INCREMENT(vec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_DECREMENT(int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_DECREMENT(ivec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_DECREMENT(ivec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_DECREMENT(ivec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_DECREMENT(uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_DECREMENT(uvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_DECREMENT(uvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_DECREMENT(uvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_DECREMENT(float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_DECREMENT(vec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_DECREMENT(vec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_POST_DECREMENT(vec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
+- `OP_INCREMENT(int)`: WebGL 2 lowered: written to the argument value.
+- `OP_INCREMENT(ivec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_INCREMENT(ivec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_INCREMENT(ivec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_INCREMENT(uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_INCREMENT(uvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_INCREMENT(uvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_INCREMENT(uvec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_INCREMENT(float)`: WebGL 2 lowered: written to the argument value.
+- `OP_INCREMENT(vec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_INCREMENT(vec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_INCREMENT(vec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_DECREMENT(int)`: WebGL 2 lowered: written to the argument value.
+- `OP_DECREMENT(ivec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_DECREMENT(ivec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_DECREMENT(ivec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_DECREMENT(uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_DECREMENT(uvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_DECREMENT(uvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_DECREMENT(uvec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_DECREMENT(float)`: WebGL 2 lowered: written to the argument value.
+- `OP_DECREMENT(vec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_DECREMENT(vec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_DECREMENT(vec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_INCREMENT(int)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_INCREMENT(ivec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_INCREMENT(ivec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_INCREMENT(ivec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_INCREMENT(uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_INCREMENT(uvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_INCREMENT(uvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_INCREMENT(uvec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_INCREMENT(float)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_INCREMENT(vec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_INCREMENT(vec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_INCREMENT(vec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_DECREMENT(int)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_DECREMENT(ivec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_DECREMENT(ivec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_DECREMENT(ivec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_DECREMENT(uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_DECREMENT(uvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_DECREMENT(uvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_DECREMENT(uvec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_DECREMENT(float)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_DECREMENT(vec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_DECREMENT(vec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_POST_DECREMENT(vec4)`: WebGL 2 lowered: written to the argument value.
+
+ WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `assign-swizzle-step`, 16 input rows
 

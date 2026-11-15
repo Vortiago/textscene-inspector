@@ -29,6 +29,7 @@ function treeOrRefusal(make, source) {
 const REFUSED_AFTER_PARSE = [
   'index-folded-past-end',
   'index-folded-write-past-end',
+  'index-folded-call-past-end',
   'unbracketed-operator-before',
   'unbracketed-negated',
   'function-out-swizzle-twice',

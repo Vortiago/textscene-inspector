@@ -7,6 +7,9 @@
 /** The targets, as the table names them. */
 export const TARGETS = ['webgl2', 'webgpu'];
 
+/** What the guide and the table say for WebGPURenderer: no probe runs there yet. */
+export const WEBGPU_STATE = 'untested (#1788)';
+
 const isMatrix = (type) => /^mat\d$/.test(type);
 const isVector = (type) => /^[biu]?vec\d$/.test(type);
 

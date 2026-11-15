@@ -15,25 +15,27 @@ The transpiler emits `the argument value replaced by b`. Rows: `OP_ASSIGN(bool,b
 
 Lowered rows:
 
-- `OP_ASSIGN(bool,bool)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(bvec2,bvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(bvec3,bvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(bvec4,bvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(int,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(uint,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(float,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(vec2,vec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(vec3,vec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(vec4,vec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(mat2,mat2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(mat3,mat3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN(mat4,mat4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
+- `OP_ASSIGN(bool,bool)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(bvec2,bvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(bvec3,bvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(bvec4,bvec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(int,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(uint,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(float,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(vec2,vec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(vec3,vec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(vec4,vec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(mat2,mat2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(mat3,mat3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN(mat4,mat4)`: WebGL 2 lowered: written to the argument value.
+
+ WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `unbracketed-operator-after`, 32 input rows
 
@@ -355,201 +357,203 @@ The transpiler emits `the argument value replaced by a.add(b)`. Rows: `OP_ASSIGN
 
 Lowered rows:
 
-- `OP_ASSIGN_ADD(int,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(ivec2,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(ivec3,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(ivec4,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(uint,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(uvec2,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(uvec3,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(uvec4,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(float,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(vec2,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(vec2,vec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(vec3,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(vec3,vec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(vec4,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(vec4,vec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(mat2,float)`: WebGL 2 lowered: written to the argument value, column by column, WebGPURenderer lowered: written to the argument value, column by column.
-- `OP_ASSIGN_ADD(mat2,mat2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(mat3,float)`: WebGL 2 lowered: written to the argument value, column by column, WebGPURenderer lowered: written to the argument value, column by column.
-- `OP_ASSIGN_ADD(mat3,mat3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(mat4,float)`: WebGL 2 lowered: written to the argument value, column by column, WebGPURenderer lowered: written to the argument value, column by column.
-- `OP_ASSIGN_ADD(mat4,mat4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(int,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(ivec2,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(ivec3,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(ivec4,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(uint,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(uvec2,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(uvec3,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(uvec4,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(float,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(vec2,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(vec2,vec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(vec3,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(vec3,vec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(vec4,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(vec4,vec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(mat2,float)`: WebGL 2 lowered: written to the argument value, column by column, WebGPURenderer lowered: written to the argument value, column by column.
-- `OP_ASSIGN_SUB(mat2,mat2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(mat3,float)`: WebGL 2 lowered: written to the argument value, column by column, WebGPURenderer lowered: written to the argument value, column by column.
-- `OP_ASSIGN_SUB(mat3,mat3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SUB(mat4,float)`: WebGL 2 lowered: written to the argument value, column by column, WebGPURenderer lowered: written to the argument value, column by column.
-- `OP_ASSIGN_SUB(mat4,mat4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(int,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(ivec2,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(ivec3,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(ivec4,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(uint,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(uvec2,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(uvec3,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(uvec4,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(float,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(vec2,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(vec2,vec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(vec2,mat2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(vec3,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(vec3,vec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(vec3,mat3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(vec4,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(vec4,vec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(vec4,mat4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(mat2,float)`: WebGL 2 lowered: written to the argument value, column by column, WebGPURenderer lowered: written to the argument value, column by column.
-- `OP_ASSIGN_MUL(mat2,mat2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(mat3,float)`: WebGL 2 lowered: written to the argument value, column by column, WebGPURenderer lowered: written to the argument value, column by column.
-- `OP_ASSIGN_MUL(mat3,mat3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(mat4,float)`: WebGL 2 lowered: written to the argument value, column by column, WebGPURenderer lowered: written to the argument value, column by column.
-- `OP_ASSIGN_MUL(mat4,mat4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(int,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(ivec2,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(ivec3,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(ivec4,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(uint,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(uvec2,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(uvec3,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(uvec4,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(float,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(vec2,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(vec2,vec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(vec3,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(vec3,vec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(vec4,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(vec4,vec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(mat2,float)`: WebGL 2 lowered: written to the argument value, product with the reciprocal, WebGPURenderer lowered: written to the argument value, product with the reciprocal.
-- `OP_ASSIGN_DIV(mat2,mat2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(mat3,float)`: WebGL 2 lowered: written to the argument value, product with the reciprocal, WebGPURenderer lowered: written to the argument value, product with the reciprocal.
-- `OP_ASSIGN_DIV(mat3,mat3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_DIV(mat4,float)`: WebGL 2 lowered: written to the argument value, product with the reciprocal, WebGPURenderer lowered: written to the argument value, product with the reciprocal.
-- `OP_ASSIGN_DIV(mat4,mat4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MOD(int,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MOD(ivec2,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MOD(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MOD(ivec3,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MOD(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MOD(ivec4,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MOD(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MOD(uint,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MOD(uvec2,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MOD(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MOD(uvec3,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MOD(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MOD(uvec4,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MOD(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_LEFT(int,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_LEFT(ivec2,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_LEFT(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_LEFT(ivec3,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_LEFT(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_LEFT(ivec4,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_LEFT(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_LEFT(uint,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_LEFT(uvec2,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_LEFT(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_LEFT(uvec3,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_LEFT(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_LEFT(uvec4,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_LEFT(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_RIGHT(int,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_RIGHT(ivec2,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_RIGHT(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_RIGHT(ivec3,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_RIGHT(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_RIGHT(ivec4,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_RIGHT(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_RIGHT(uint,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_RIGHT(uvec2,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_RIGHT(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_RIGHT(uvec3,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_RIGHT(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_RIGHT(uvec4,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_SHIFT_RIGHT(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_AND(int,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_AND(ivec2,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_AND(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_AND(ivec3,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_AND(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_AND(ivec4,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_AND(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_AND(uint,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_AND(uvec2,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_AND(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_AND(uvec3,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_AND(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_AND(uvec4,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_AND(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_OR(int,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_OR(ivec2,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_OR(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_OR(ivec3,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_OR(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_OR(ivec4,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_OR(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_OR(uint,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_OR(uvec2,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_OR(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_OR(uvec3,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_OR(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_OR(uvec4,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_OR(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_XOR(int,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_XOR(ivec2,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_XOR(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_XOR(ivec3,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_XOR(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_XOR(ivec4,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_XOR(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_XOR(uint,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_XOR(uvec2,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_XOR(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_XOR(uvec3,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_XOR(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_XOR(uvec4,uint)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_BIT_XOR(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
+- `OP_ASSIGN_ADD(int,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(ivec2,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(ivec3,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(ivec4,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(uint,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(uvec2,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(uvec3,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(uvec4,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(float,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(vec2,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(vec2,vec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(vec3,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(vec3,vec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(vec4,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(vec4,vec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(mat2,float)`: WebGL 2 lowered: written to the argument value, column by column.
+- `OP_ASSIGN_ADD(mat2,mat2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(mat3,float)`: WebGL 2 lowered: written to the argument value, column by column.
+- `OP_ASSIGN_ADD(mat3,mat3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_ADD(mat4,float)`: WebGL 2 lowered: written to the argument value, column by column.
+- `OP_ASSIGN_ADD(mat4,mat4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(int,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(ivec2,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(ivec3,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(ivec4,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(uint,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(uvec2,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(uvec3,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(uvec4,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(float,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(vec2,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(vec2,vec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(vec3,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(vec3,vec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(vec4,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(vec4,vec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(mat2,float)`: WebGL 2 lowered: written to the argument value, column by column.
+- `OP_ASSIGN_SUB(mat2,mat2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(mat3,float)`: WebGL 2 lowered: written to the argument value, column by column.
+- `OP_ASSIGN_SUB(mat3,mat3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SUB(mat4,float)`: WebGL 2 lowered: written to the argument value, column by column.
+- `OP_ASSIGN_SUB(mat4,mat4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(int,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(ivec2,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(ivec3,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(ivec4,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(uint,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(uvec2,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(uvec3,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(uvec4,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(float,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(vec2,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(vec2,vec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(vec2,mat2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(vec3,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(vec3,vec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(vec3,mat3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(vec4,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(vec4,vec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(vec4,mat4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(mat2,float)`: WebGL 2 lowered: written to the argument value, column by column.
+- `OP_ASSIGN_MUL(mat2,mat2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(mat3,float)`: WebGL 2 lowered: written to the argument value, column by column.
+- `OP_ASSIGN_MUL(mat3,mat3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MUL(mat4,float)`: WebGL 2 lowered: written to the argument value, column by column.
+- `OP_ASSIGN_MUL(mat4,mat4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(int,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(ivec2,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(ivec3,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(ivec4,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(uint,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(uvec2,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(uvec3,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(uvec4,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(float,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(vec2,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(vec2,vec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(vec3,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(vec3,vec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(vec4,float)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(vec4,vec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(mat2,float)`: WebGL 2 lowered: written to the argument value, product with the reciprocal.
+- `OP_ASSIGN_DIV(mat2,mat2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(mat3,float)`: WebGL 2 lowered: written to the argument value, product with the reciprocal.
+- `OP_ASSIGN_DIV(mat3,mat3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_DIV(mat4,float)`: WebGL 2 lowered: written to the argument value, product with the reciprocal.
+- `OP_ASSIGN_DIV(mat4,mat4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MOD(int,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MOD(ivec2,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MOD(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MOD(ivec3,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MOD(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MOD(ivec4,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MOD(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MOD(uint,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MOD(uvec2,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MOD(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MOD(uvec3,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MOD(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MOD(uvec4,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_MOD(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_LEFT(int,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_LEFT(ivec2,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_LEFT(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_LEFT(ivec3,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_LEFT(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_LEFT(ivec4,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_LEFT(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_LEFT(uint,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_LEFT(uvec2,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_LEFT(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_LEFT(uvec3,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_LEFT(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_LEFT(uvec4,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_LEFT(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_RIGHT(int,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_RIGHT(ivec2,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_RIGHT(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_RIGHT(ivec3,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_RIGHT(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_RIGHT(ivec4,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_RIGHT(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_RIGHT(uint,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_RIGHT(uvec2,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_RIGHT(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_RIGHT(uvec3,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_RIGHT(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_RIGHT(uvec4,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_SHIFT_RIGHT(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_AND(int,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_AND(ivec2,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_AND(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_AND(ivec3,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_AND(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_AND(ivec4,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_AND(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_AND(uint,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_AND(uvec2,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_AND(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_AND(uvec3,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_AND(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_AND(uvec4,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_AND(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_OR(int,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_OR(ivec2,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_OR(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_OR(ivec3,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_OR(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_OR(ivec4,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_OR(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_OR(uint,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_OR(uvec2,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_OR(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_OR(uvec3,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_OR(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_OR(uvec4,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_OR(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_XOR(int,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_XOR(ivec2,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_XOR(ivec2,ivec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_XOR(ivec3,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_XOR(ivec3,ivec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_XOR(ivec4,int)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_XOR(ivec4,ivec4)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_XOR(uint,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_XOR(uvec2,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_XOR(uvec2,uvec2)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_XOR(uvec3,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_XOR(uvec3,uvec3)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_XOR(uvec4,uint)`: WebGL 2 lowered: written to the argument value.
+- `OP_ASSIGN_BIT_XOR(uvec4,uvec4)`: WebGL 2 lowered: written to the argument value.
+
+ WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `assign-swizzle-compound`, 32 input rows
 

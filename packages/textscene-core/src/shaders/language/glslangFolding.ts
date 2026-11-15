@@ -4,14 +4,15 @@
  * arithmetic gives: a shift by 85 folds as a shift by 21, where the GPU gives zero.
  */
 
-import { arraySizeOf } from './treeWalk.js';
+import { arraySizeOf, isCall } from './treeWalk.js';
 import { binaryLane, convertedLane, unaryLane } from './glslangArithmetic.js';
+import { foldedCall, type Lanes } from './glslangCalls.js';
 import { godotConstantDouble } from './godotNumber.js';
-import type { Expression, OperatorNode, Scalar } from './shaderTree.js';
+import type { CallNode, Expression, OperatorNode, Scalar } from './shaderTree.js';
 import { swizzleLanes } from './swizzle.js';
 import { filledLanes, shapeOf, type ScalarKind, type TypeShape, type ValueType } from './types.js';
 
-export type Lanes = readonly Scalar[];
+export type { Lanes };
 
 /**
  * The lanes of each expression glslang folds to a constant, a matrix's columns one after the
@@ -50,13 +51,23 @@ export class GlslangFolding {
         return owner && swizzleLanes(expression).map((lane) => owner[lane]!);
       }
       case 'operator':
-        // glslang folds no struct and no call of a function the shader declares.
-        return expression.op === 'OP_STRUCT' || expression.op === 'OP_CALL'
-          ? undefined
-          : this.foldOperator(expression);
+        if (expression.op === 'OP_STRUCT') return undefined;
+        return isCall(expression) ? this.foldCall(expression) : this.foldOperator(expression);
       default:
         return undefined;
     }
+  }
+
+  /** A call of a built-in on constants alone. glslang folds no call of a function the shader declares. */
+  private foldCall(call: CallNode): Lanes | undefined {
+    if (call.row.id === 'OP_CALL') return undefined;
+    const args = call.operands.map((operand) => this.lanesOf(operand));
+    if (!args.every((arg) => arg !== undefined)) return undefined;
+    return foldedCall(
+      call.function,
+      args,
+      call.operands.map((operand) => shapeOf(operand.type)!)
+    );
   }
 
   private foldOperator(node: OperatorNode): Lanes | undefined {
@@ -87,10 +98,12 @@ export class GlslangFolding {
 
 /**
  * A constructor of constants (`foldConstructor`): each lane converted to the type's scalar, one
- * scalar filling a vector or a matrix's diagonal. A matrix of a matrix is left to the GPU.
+ * scalar filling a vector or a matrix's diagonal, and a matrix of another matrix.
  */
 function constructed(type: ValueType, operands: readonly Lanes[], shapes: readonly TypeShape[]) {
   const shape = shapeOf(type)!;
+  if (shape.columns !== undefined && shapes.length === 1 && shapes[0]!.columns !== undefined)
+    return matrixOfMatrix(shape.columns, operands[0]!, shapes[0]!.columns);
   const lanes = operands.flatMap((operand, index) =>
     operand
       .slice(0, shapes[index]!.lanes)
@@ -99,6 +112,19 @@ function constructed(type: ValueType, operands: readonly Lanes[], shapes: readon
   if (lanes.length === shape.lanes) return lanes;
   if (lanes.length !== 1 || shapes[0]!.lanes !== 1) return undefined;
   return filledLanes(lanes[0]!, type);
+}
+
+/**
+ * A matrix of `size` columns built from a constant matrix of `sourceSize` columns
+ * (`parseConst.cpp:151`): each lane inside the source taken from it, the identity elsewhere.
+ */
+function matrixOfMatrix(size: number, source: Lanes, sourceSize: number): Lanes {
+  return Array.from({ length: size * size }, (_, at) => {
+    const column = Math.floor(at / size);
+    const row = at % size;
+    if (column < sourceSize && row < sourceSize) return source[column * sourceSize + row]!;
+    return column === row ? 1 : 0;
+  });
 }
 
 /** `owner[index]` (`foldDereference`): a vector's lane or a matrix's column. */

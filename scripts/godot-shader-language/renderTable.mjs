@@ -3,7 +3,7 @@
  * readable table that names each row's state and, for an open row, the issue that owns it.
  */
 
-import { TARGETS, targetStates } from './targetStates.mjs';
+import { TARGETS, targetStates, WEBGPU_STATE } from './targetStates.mjs';
 
 /** The fields of a row, in the order each line of the module holds them, tab-separated. */
 const ROW_FIELDS = ['id', 'family', 'source', 'owner', 'token', 'returns', 'args', ...TARGETS];
@@ -191,7 +191,7 @@ export function renderReadableTable(rows, probes, version) {
       if (!names) return `| \`${row.id}\` | open, ${owningIssue(row)} | | | \`${row.source}\` |`;
       const probeList = names.map((name) => `\`${name}\``).join(', ');
       const states = targetStates(row);
-      return `| \`${row.id}\` | transpiled (${probeList}) | ${states.webgl2} | ${states.webgpu} | \`${row.source}\` |`;
+      return `| \`${row.id}\` | transpiled (${probeList}) | ${states.webgl2} | ${WEBGPU_STATE} | \`${row.source}\` |`;
     });
     return `## ${family}\n\n| Instruction | State | WebGL 2 | WebGPU | Godot source |\n| --- | --- | --- | --- | --- |\n${lines.join('\n')}\n`;
   });

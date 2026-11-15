@@ -30,7 +30,10 @@ import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/co
 import { liveGodotAnswers } from '../../apps/textscene-three-godot-shaders/tests/godotAnswers.mjs';
 import { KNOWN_MISMATCHES } from '../../apps/textscene-three-godot-shaders/tests/corpus/knownMismatches.mjs';
 import { OPERATOR_CASES } from '../../apps/textscene-three-godot-shaders/tests/operators/operatorCases.mjs';
-import { KNOWN_DIFFERENCES } from '../../apps/textscene-three-godot-shaders/tests/random/knownDifferences.mjs';
+import {
+  KNOWN_DIFFERENCES,
+  KNOWN_PROGRAM_DIFFERENCES,
+} from '../../apps/textscene-three-godot-shaders/tests/random/knownDifferences.mjs';
 import { TRANSPILED_ROWS } from '../../apps/textscene-three-godot-shaders/tests/random/programs.mjs';
 import { LOWERED_AWAY } from '../../apps/textscene-three-godot-shaders/tests/verdicts/loweredAway.mjs';
 import {
@@ -60,6 +63,7 @@ function testingChapter(answers) {
       seed: FIXED_SEED,
       transpiledRows: TRANSPILED_ROWS.length,
       knownDifferences: KNOWN_DIFFERENCES,
+      knownProgramDifferences: KNOWN_PROGRAM_DIFFERENCES,
       loweredAway: LOWERED_AWAY,
     },
     corpus: {

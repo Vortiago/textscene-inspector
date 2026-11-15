@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { GlslangFolding } from '../../../../packages/textscene-core/src/shaders/language/glslangFolding.ts';
 import { treeFault } from '../../../../packages/textscene-core/src/shaders/language/treeCheck.ts';
+import {
+  everyExpressionIn,
+  isCall,
+} from '../../../../packages/textscene-core/src/shaders/language/treeWalk.ts';
 import { probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { transpilerVerdict } from '../verdicts/judge.mjs';
 import { loweredFault, loweredTreeOf, printsBack, treeOf } from '../verdicts/trees.testkit.mjs';
@@ -61,5 +66,23 @@ describe('the trees of the fixed-seed set', () => {
 
   it('print as text that parses to the same tree', () => {
     expect(faults(RANDOM_PROGRAMS, (source) => printsBack(treeOf(source)))).toEqual([]);
+  });
+});
+
+/** Whether the program `source` calls a built-in on constants alone, which glslang folds. */
+function callsABuiltInOnConstants(source) {
+  const folding = new GlslangFolding();
+  return treeOf(source).functions.some((declared) =>
+    [...everyExpressionIn(declared.body)].some(
+      (expression) => isCall(expression) && expression.row.id !== 'OP_CALL' && folding.lanesOf(expression)
+    )
+  );
+}
+
+describe('the fixed set of random programs', () => {
+  it('holds built-in calls on constants alone, which glslang folds', () => {
+    expect(
+      RANDOM_PROGRAMS.filter((program) => callsABuiltInOnConstants(program.source)).length
+    ).toBeGreaterThan(0);
   });
 });

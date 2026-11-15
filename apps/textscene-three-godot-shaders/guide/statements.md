@@ -11,7 +11,7 @@ Godot 4.6.3-stable (official), probed on llvmpipe (LLVM 20.1.2). Each table show
 
 The transpiler emits `the `Fn`'s value: the lowered function's one `return`, the last statement`. Rows: `return`, `FLOW_OP_RETURN`. Godot source: `servers/rendering/shader_language.cpp:361`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `type-bool`, 2 input rows
 
@@ -297,7 +297,7 @@ An expression and a `;` before the `return` runs for its assignments and steps. 
 
 The transpiler emits `nothing for `;``. Rows: `OP_EMPTY`. Godot source: `servers/rendering/shader_language.cpp:1558`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `statement-empty`, 16 input rows
 
@@ -321,7 +321,7 @@ float probe(float a) { ; return a; }
 
 The transpiler emits `a TSL `Var` that starts at its value`. Rows: `NODE_TYPE_VARIABLE_DECLARATION`. Godot source: `servers/rendering/shader_language.h:377`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `statement-local`, 16 input rows
 
@@ -678,7 +678,7 @@ Godot does not compile this shader: Godot refuses it at line 1, `Unknown identif
 
 The transpiler emits `its statements, in order`. Rows: `NODE_TYPE_BLOCK`. Godot source: `servers/rendering/shader_language.h:375`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `statement-block`, 16 input rows
 
@@ -741,7 +741,7 @@ int probe(int a) { switch (a & 1) { case 0: int b = 3; a += b; break; case 1: { 
 
 The transpiler emits ``If(c, ...).Else(...)``. Rows: `if`, `else`, `FLOW_OP_IF`, `NODE_TYPE_CONTROL_FLOW`. Godot source: `servers/rendering/shader_language.cpp:351`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `statement-if`, 32 input rows
 
@@ -1327,7 +1327,7 @@ int probe(int a) { int v[5]; for (int i = 0; i < 5; i++) v[i] = a + i * i; retur
 
 The transpiler emits ``Loop(...)` over the lowered `while (true)`, with `if (!c) break;` inside`. Rows: `for`, `while`, `do`, `FLOW_OP_FOR`, `FLOW_OP_WHILE`, `FLOW_OP_DO`. Godot source: `servers/rendering/shader_language.cpp:353`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `loop-for-0-times`, 16 input rows
 
@@ -1647,7 +1647,7 @@ int probe(int a) { int v[5]; for (int i = 0; i < 5; i++) v[i] = a + i * i; retur
 
 The transpiler emits ``Break()` and `Continue()``. Rows: `break`, `continue`, `FLOW_OP_BREAK`, `FLOW_OP_CONTINUE`. Godot source: `servers/rendering/shader_language.cpp:359`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `loop-for-break-continue`, 16 input rows
 
@@ -1848,7 +1848,7 @@ Godot does not compile this shader: Godot refuses it at line 1, `Expected at lea
 
 The transpiler emits ``If` chain in a `Loop` that runs once, over the lowered `switch``. Rows: `switch`, `case`, `default`, `FLOW_OP_SWITCH`, `FLOW_OP_CASE`, `FLOW_OP_DEFAULT`. Godot source: `servers/rendering/shader_language.cpp:356`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `statement-return-in-switch`, 16 input rows
 
@@ -2022,7 +2022,7 @@ Godot does not compile this shader: Godot refuses it at line 1, `Expected a ':'.
 
 The transpiler emits ``Discard()``. Rows: `discard`, `FLOW_OP_DISCARD`. Godot source: `servers/rendering/shader_language.cpp:362`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `statement-discard`, 16 input rows
 
@@ -2057,7 +2057,7 @@ int probe(int a) { for (int i = 0; i < 4; i++) { if (a == i) discard; } return a
 
 The transpiler emits ``array(...)` in a `Var`, its elements by `element(i)``. Rows: `NODE_TYPE_ARRAY`, `NODE_TYPE_ARRAY_CONSTRUCT`, `length[array]()`. Godot source: `servers/rendering/shader_language.h:382`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `statement-array`, 16 input rows
 
@@ -2266,7 +2266,7 @@ Godot does not compile this shader: Godot refuses it at line 1, `Unknown identif
 
 The transpiler emits `one `Var` per member, and one array per member for an array of structs`. Rows: `struct type`, `OP_STRUCT`, `NODE_TYPE_STRUCT`. Godot source: `servers/rendering/shader_language.h:242`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `statement-struct`, 16 input rows
 
@@ -2416,7 +2416,7 @@ Godot's tree holds an argument read as a variable node, a literal or a folded co
 
 The transpiler emits `one TSL node per tree node`. Rows: `NODE_TYPE_VARIABLE`, `NODE_TYPE_CONSTANT`, `NODE_TYPE_OPERATOR`, `NODE_TYPE_MEMBER`. Godot source: `servers/rendering/shader_language.h:376`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `type-bool`, 2 input rows
 

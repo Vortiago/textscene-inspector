@@ -11,7 +11,7 @@ The scalars `bool`, `int`, `uint` and `float`, their vectors of 2 to 4 lanes (`b
 
 The transpiler emits `int(a), ivec3(a), mat3(a)`. Rows: `bool`, `bvec2`, `bvec3`, `bvec4`, `int`, `ivec2`, `ivec3`, `ivec4`, `uint`, `uvec2`, `uvec3`, `uvec4`, `float`, `vec2`, `vec3`, `vec4`, `mat2`, `mat3`, `mat4`. Godot source: `servers/rendering/shader_language.h:211`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `type-bool`, 2 input rows
 
@@ -294,9 +294,11 @@ The transpiler emits `the value with no precision`. Rows: `lowp`, `mediump`, `hi
 
 Lowered rows:
 
-- `lowp`: WebGL 2 lowered: dropped: every float is 32-bit, WebGPURenderer lowered: dropped: every float is 32-bit.
-- `mediump`: WebGL 2 lowered: dropped: every float is 32-bit, WebGPURenderer lowered: dropped: every float is 32-bit.
-- `highp`: WebGL 2 lowered: dropped: every float is 32-bit, WebGPURenderer lowered: dropped: every float is 32-bit.
+- `lowp`: WebGL 2 lowered: dropped: every float is 32-bit.
+- `mediump`: WebGL 2 lowered: dropped: every float is 32-bit.
+- `highp`: WebGL 2 lowered: dropped: every float is 32-bit.
+
+ WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `precision-lowp`, 32 input rows
 
@@ -353,11 +355,11 @@ highp vec2 probe(highp vec2 a, highp vec2 b) { return a * b + a; }
 
 A literal such as `2.5`, `.5`, `1e-3` or `2.5f`. Godot reads the text with its own decimal reader, keeps a 32-bit float, and writes the float back into the GLSL it compiles with 14 decimals (`shader_compiler.cpp:180`). So a value under `1e-14` draws as `0.0`, a value with more digits draws with fewer, and a literal past the float range, such as `1e39`, fails to compile. The transpiler gives each literal the float that this chain gives.
 
-Arithmetic of literals alone, such as `58.656 + 74.377`, never reaches the GPU as arithmetic. Godot's GLSL compiler, glslang, folds every operator of constants on the CPU (`Constant.cpp`): it reads each number of Godot's text as a double, folds float arithmetic in double precision and rounds the result once. It folds integers, conversions, comparisons, swizzles, elements, matrix products and `?:` too, as the x86-64 build of Godot computes them. The transpiler folds the same subtrees the same way and writes the constant. So a float result can differ by one unit from the same sum in 32-bit floats, and `9u << 85u` is `9u << 21u`, where the GPU gives 0. Godot also folds a constructor of literals, and a negated literal at the top of an expression, into one constant (`shader_language.cpp:7840`).
+Arithmetic of literals alone, such as `58.656 + 74.377`, never reaches the GPU as arithmetic. Godot's GLSL compiler, glslang, folds every operator of constants on the CPU (`Constant.cpp`): it reads each number of Godot's text as a double, folds float arithmetic in double precision and rounds the result once. It folds integers, conversions, comparisons, swizzles, elements, matrix products, a matrix of another matrix, `?:` and most built-in calls too, as the x86-64 build of Godot computes them. The transpiler folds the same subtrees the same way and writes the constant. So a float result can differ by one unit from the same sum in 32-bit floats, and `9u << 85u` is `9u << 21u`, where the GPU gives 0. Godot also folds a constructor of literals, and a negated literal at the top of an expression, into one constant (`shader_language.cpp:7840`).
 
 The transpiler emits `float(value)`. Rows: `float literal`. Godot source: `servers/rendering/shader_language.h:59`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `literal-0`, no input
 
@@ -883,7 +885,7 @@ A decimal or `0x` literal is an `int`, and with a `u` after it a `uint`. An `int
 
 The transpiler emits `int(value), uint(value)`. Rows: `int literal`, `uint literal`. Godot source: `servers/rendering/shader_language.h:60`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `literal-int`, no input
 
@@ -962,7 +964,7 @@ uvec2 probe() { return uvec2(-1u, -0x80000000u); }
 
 The transpiler emits `bool(value)`. Rows: `true`, `false`. Godot source: `servers/rendering/shader_language.cpp:284`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `literal-bool`, no input
 

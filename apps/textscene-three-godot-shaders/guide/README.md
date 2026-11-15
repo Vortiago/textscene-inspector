@@ -22,6 +22,7 @@ Godot draws the probes and showcases on Vulkan over lavapipe (`llvmpipe (LLVM 20
 - [Functions and statements](statements.md): `return`, Expression statements and `;`, Local variables and `const`, Blocks, `if` and `else`, Loops, `break` and `continue`, `switch`, `discard`, Arrays, Structs, Tree nodes.
 - [Functions and calls](functions.md): Calls and overloads, `in`, `out` and `inout`, `void`.
 - [Built-in functions](built-in-functions.md): Angles and trigonometry, Hyperbolic functions, Exponential functions, Rounding and the parts of a float, Limits and blends, NaN and infinity, Geometric functions, Matrix functions, Vector relational functions.
+- [Calls of constants](folding.md): Calls glslang folds, Calls glslang leaves to the GPU.
 - [Sky shaders](sky.md): The shader head, `COLOR`.
 - [How the tests check the transpiler against Godot](testing.md): every operator rule, random programs and a corpus of real shaders.
 

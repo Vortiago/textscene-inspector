@@ -11,7 +11,7 @@ Godot 4.6.3-stable (official), probed on llvmpipe (LLVM 20.1.2). Each table show
 
 The transpiler emits `a call of the TSL `Fn` of the function, one GLSL function for each overload`. Rows: `OP_CALL`. Godot source: `servers/rendering/shader_language.cpp:1558`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `function-one-place`, 16 input rows
 
@@ -1042,7 +1042,7 @@ An `in` parameter, the default, is a copy of the caller's value, which the funct
 
 The transpiler emits `the `out` and `inout` values in a struct the GLSL function returns, written back to the caller's places in order`. Rows: `in`, `out`, `inout`. Godot source: `servers/rendering/shader_language.cpp:366`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `function-vector-array-out`, 16 input rows
 
@@ -1380,7 +1380,7 @@ A `void` function returns no value: it acts through its `out` and `inout` parame
 
 The transpiler emits `a GLSL function of type `void`, or of the struct of its `out` and `inout` values`. Rows: `void`. Godot source: `servers/rendering/shader_language.h:210`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
 ### Probe `function-vector-array-out`, 16 input rows
 
