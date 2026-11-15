@@ -10,7 +10,7 @@ import { canConvertStrict, castVariant, packedElements } from './variantCast.js'
 type Arguments = readonly Variant[];
 
 /** The registration `Variant::construct` runs for these argument types, or nothing when none takes them. */
-function constructorFor(
+export function constructorFor(
   type: VariantTypeName,
   argumentTypes: readonly VariantTypeName[]
 ): ConstructorSignature | undefined {
