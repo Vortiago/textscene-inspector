@@ -18,6 +18,9 @@ selection or IME (input method editor) state. The one caret a still frame can ca
 the `caret_draw_when_editable_disabled` one, which draws without focus.
 `self_modulate` tints the `normal` box and the focus box (`text_edit.cpp:915,949`). The text, gutters, caret, minimap and both scroll bars draw without it. They sit on the child item `text_ci` or are child Controls (`text_edit.cpp:9284-9292`).
 
+Each script run shapes apart, as Godot's `ScriptIterator` splits the text (`text_server_adv.cpp:7346-7352`), so kerning and the
+rounding remainder stop where the script changes. An unassigned code point that no font has takes no advance.
+
 ## Linting
 
 <!-- lint:begin TextEdit -->

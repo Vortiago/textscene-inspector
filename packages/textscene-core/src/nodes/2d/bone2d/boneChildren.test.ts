@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../../../parser/TscnParser';
 import { liveTreeOf } from '../../../r3f/liveSceneTree';
-import { contextOver } from '../../../r3f/liveSceneTree.testkit';
+import { contextOver, runPass } from '../../../r3f/liveSceneTree.testkit';
 import { bindBoneChildren } from './boneChildren';
 import '../../../r3f/nodes/index';
 
@@ -34,23 +34,28 @@ describe('bindBoneChildren', () => {
   };
 
   it('lists the Bone2D children of a bone in order, an instance root among them', () => {
-    expect(bindBoneChildren(tree()).get('Root/Arm')?.children).toEqual(['Root/Arm/Forearm', 'Root/Arm/Hand']);
+    expect(runPass(bindBoneChildren, tree()).get('Root/Arm')?.children).toEqual([
+      'Root/Arm/Forearm',
+      'Root/Arm/Hand',
+    ]);
   });
 
   it('lists the Bone2D child inside an instance', () => {
-    expect(bindBoneChildren(tree()).get('Root/Arm/Hand')?.children).toEqual(['Root/Arm/Hand/Finger']);
+    expect(runPass(bindBoneChildren, tree()).get('Root/Arm/Hand')?.children).toEqual([
+      'Root/Arm/Hand/Finger',
+    ]);
   });
 
   it('lists no child for a leaf bone, and none under a node that is not a Bone2D', () => {
-    expect(bindBoneChildren(tree()).get('Root/Arm/Forearm')?.children).toEqual([]);
-    expect(bindBoneChildren(tree()).has('Root/Bystander/Stray')).toBe(true);
-    expect(bindBoneChildren(tree()).has('Root/Bystander')).toBe(false);
+    expect(runPass(bindBoneChildren, tree()).get('Root/Arm/Forearm')?.children).toEqual([]);
+    expect(runPass(bindBoneChildren, tree()).has('Root/Bystander/Stray')).toBe(true);
+    expect(runPass(bindBoneChildren, tree()).has('Root/Bystander')).toBe(false);
   });
 
   // Godot makes the gizmo canvas item of a bone on its first draw, after the items of its children
   // exist, so a bone's kite draws after every kite below it and after the kites of earlier siblings.
   it('orders the kites children first, then parents, siblings in tree order', () => {
-    const order = (path: string) => bindBoneChildren(tree()).get(path)!.drawOrder;
+    const order = (path: string) => runPass(bindBoneChildren, tree()).get(path)!.drawOrder;
     expect(order('Root/Arm/Forearm')).toBeLessThan(order('Root/Arm/Hand/Finger'));
     expect(order('Root/Arm/Hand/Finger')).toBeLessThan(order('Root/Arm/Hand'));
     expect(order('Root/Arm/Hand')).toBeLessThan(order('Root/Arm'));
@@ -62,9 +67,9 @@ describe('bindBoneChildren', () => {
     const scene = new TscnParser().parse(
       `[gd_scene format=3]\n[node name="Root" type="Node2D"]\n${bones.join('\n')}\n`
     );
-    const orders = [...bindBoneChildren(liveTreeOf(scene.nodes, contextOver(scene, {}))).values()].map(
-      (source) => source.drawOrder
-    );
+    const orders = [
+      ...runPass(bindBoneChildren, liveTreeOf(scene.nodes, contextOver(scene, {}))).values(),
+    ].map((source) => source.drawOrder);
     expect(orders).toHaveLength(20000);
     expect(orders[orders.length - 1]!).toBeLessThan(1);
     expect(orders.every((order, i) => i === 0 || order > orders[i - 1]!)).toBe(true);

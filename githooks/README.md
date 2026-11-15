@@ -32,7 +32,8 @@ Prettier config, or a hook) runs the static checks over the whole repository: `f
 `lint`, `check:dep-scripts`, `canonical --check`, `type-check:all` and `type-check:tests`. It still
 runs the tests beside the pushed files. A push that changes code under a package's `src/` or under
 `scripts/` runs `canonical --check`, which fails on a `@canonical` tag that is on no export. A push
-that changes only files no check reads runs nothing.
+that changes code runs `comments:check`, which fails on a comment the push adds or changes that breaks
+the Comments rules in `AGENTS.md`. A push that changes only files no check reads runs nothing.
 `FULL_VALIDATE=1 git push` runs the full `pnpm validate`.
 
 The hook stops at the first check that fails. Below the tool's output, it prints the command that

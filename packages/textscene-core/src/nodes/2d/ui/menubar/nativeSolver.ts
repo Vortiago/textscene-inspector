@@ -15,10 +15,10 @@ import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetri
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { pickButtonStyleBox } from '../../../../r3f/controls/native/buttonBase';
 import {
-  shapeText,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { shapeTextLine } from '../../../../r3f/controls/native/text/textLine';
 import { resolveTextTheme, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { unquoteString } from '../../../../parser/utils';
@@ -27,7 +27,6 @@ import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { MenuBarProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** `SceneStringName(font)`, MenuBar's own theme font key (`menu_bar.cpp:748`). */
 const MENU_BAR_THEME_FONT_KEY = 'font';
@@ -59,11 +58,7 @@ function menuTitleText(child: TscnNode): string {
   return title.length > 0 ? title : child.name;
 }
 
-/**
- * Shapes every title once, as `MenuBar::shape()` (`menu_bar.cpp:520-528`): one `TextLine` in the bar's
- * direction and language, no wrap, no `line_spacing`. It matches Button-family shaping but is spelled
- * out, since a title is no Button label.
- */
+/** Every title as one `TextLine` in the bar's direction and language (`menu_bar.cpp:520-528`). */
 function menuBarTitles(
   n: ShareNode,
   fontSizePx: number,
@@ -72,14 +67,7 @@ function menuBarTitles(
 ): MenuBarTitle[] {
   const bidi = controlBidiOptions(n.node.properties as MenuBarProperties, n);
   return popupChildren(n).map((child) => {
-    const layout = shapeText(menuTitleText(child), {
-      ...bidi,
-      fontSizePx,
-      boxWidthPx: 0,
-      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-      lineSpacingPx: 0,
-      fontMetrics,
-    });
+    const layout = shapeTextLine(menuTitleText(child), { ...bidi, fontSizePx, fontMetrics });
     return {
       name: child.name,
       layout,

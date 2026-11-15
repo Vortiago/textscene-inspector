@@ -2,25 +2,60 @@
  * The live stage of the scene passes (ADR-0060): a pass that reads the whole Live scene tree, so a
  * node it names binds across an instance border, and answers per live node path. A sub-scene's
  * nodes are shared by every instance of it, so a result is keyed by the path, never written into a node.
+ * A pass reads a resource file through the snapshot it is handed, which its host requests.
  */
 
 import { useMemo } from 'react';
+import type { ResourceSnapshot } from '../resources/reading';
+import { answersTheSame, recording, type RecordedRead } from './recordedReads.js';
 import { liveTreeOf, type LiveTree } from './liveSceneTree.js';
 import { useLiveTreeSelection, type SharedLiveTree } from './useLiveSceneTree.js';
 import { perObject } from '../utils/perObject.js';
 
 /** A pass over one live tree, with a result for each live node path it binds. */
-export type LiveScenePass<Result> = (tree: LiveTree) => ReadonlyMap<string, Result>;
+export type LiveScenePass<Result> = (
+  tree: LiveTree,
+  snapshot: ResourceSnapshot
+) => ReadonlyMap<string, Result>;
 
-/** Written only by {@link liveScenePassResults}: each pass runs once for each live tree. */
-const resultsByPass = perObject((pass: LiveScenePass<unknown>) => perObject((tree: LiveTree) => pass(tree)));
+/** What a derivation of a live tree computes from the tree and the resource files it reads. */
+export type LiveTreeDerivation<T> = (tree: LiveTree, snapshot: ResourceSnapshot) => T;
+
+interface Kept {
+  readonly reads: readonly RecordedRead[];
+  readonly value: unknown;
+}
+
+/** Written only by {@link liveTreeResult}: the last value of each derivation over each tree. */
+const keptByDerivation = perObject((_derive: LiveTreeDerivation<unknown>) => new WeakMap<LiveTree, Kept>());
+
+/**
+ * What `derive` computes over `tree`, run once however many readers ask. The value is kept while
+ * the tree is the same and each read it made answers the same on `snapshot`, so a load of a file it
+ * never read runs nothing and a reader keeps the same object (ADR-0060).
+ */
+export function liveTreeResult<T>(
+  derive: LiveTreeDerivation<T>,
+  tree: LiveTree,
+  snapshot: ResourceSnapshot
+): T {
+  const kept = keptByDerivation(derive as LiveTreeDerivation<unknown>);
+  const last = kept.get(tree);
+  // Re-read through `snapshot`, so a caller that records its own reads records these too.
+  if (last && answersTheSame(last.reads, snapshot)) return last.value as T;
+  const reads: RecordedRead[] = [];
+  const value = derive(tree, recording(snapshot, reads));
+  kept.set(tree, { reads, value });
+  return value;
+}
 
 /** What `pass` binds in `tree`, run once however many readers ask. */
 export function liveScenePassResults<Result>(
   pass: LiveScenePass<Result>,
-  tree: LiveTree
+  tree: LiveTree,
+  snapshot: ResourceSnapshot
 ): ReadonlyMap<string, Result> {
-  return resultsByPass(pass)(tree) as ReadonlyMap<string, Result>;
+  return liveTreeResult(pass, tree, snapshot);
 }
 
 /**
@@ -53,7 +88,8 @@ export function useLiveScenePassSelection<Result, T>(
     () =>
       select === null
         ? null
-        : (live: SharedLiveTree) => select(liveScenePassResults(pass, liveTreeOf(live.roots, live.ctx))),
+        : (live: SharedLiveTree, snapshot: ResourceSnapshot) =>
+            select(liveScenePassResults(pass, liveTreeOf(live.roots, live.ctx), snapshot)),
     [pass, select]
   );
   return useLiveTreeSelection(selectFromTree, isSame);

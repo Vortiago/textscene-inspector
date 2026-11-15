@@ -44,7 +44,7 @@ A Label whose themes name no font draws the project's `gui/theme/custom_font`, a
 (`theme_db.cpp`, `default_theme.cpp:1371-1373`). A path that does not load keeps the bundled font,
 with a warning and a missing-resource row. A BMFont (`.fnt`, `.font`) works in all of those places (ADR-0064).
 A descriptor or page that fails to load gives a missing-resource row and keeps the bundled font. It honours the alignment, case, wrap, line-window and
-partial-reveal settings.
+partial-reveal settings. A carriage return the font maps takes the width of its glyph, as HarfBuzz shapes it (`text_server_adv.cpp:7050`).
 
 ## BMFont
 
@@ -181,6 +181,21 @@ Every count counts code points, as Godot's `String` does (`label.cpp:1375-1377`)
 denominator, the cut at VC_CHARS_BEFORE_SHAPING (`:155-156`) and the budget of
 VC_CHARS_AFTER_SHAPING (`label.h:207`). An astral character, such as an emoji, counts one. An emoji
 the font lacks draws its hex-code box, as Godot draws it on a host with no system font that has it.
+An unassigned code point or a lone surrogate that no font has draws nothing and takes no advance
+(`text_server_adv.cpp:7060,7106-7108`).
+
+## Wrapped lines and the rect
+
+A wrapped Label shows the lines after `lines_skipped` that fit its rect height, at most
+`max_lines_visible` of them (`label.cpp:520-561,1022-1061`). Lines below the rect do not draw.
+
+- When lines are hidden, the line at the visible count, counted from the first line, trims with an
+  enforced ellipsis (`label.cpp:268-301`).
+- FILL fits each line but the last of its paragraph, so a line the window cuts after is fitted.
+- With `clip_text` or a trim, the minimum height floors at 1 px. A trim without `clip_text` keeps
+  room for `max_lines_visible` rows (`label.cpp:984-990`).
+- A glyph reveal counts the glyphs a trim cut in its total (`label.cpp:583`), and shows only drawn
+  glyphs (`label.h:197-241`).
 
 ## Wrapped lines and the rect
 
@@ -219,6 +234,15 @@ Each paragraph runs the Unicode bidirectional algorithm, as Godot's text server 
   `label.cpp:325`, `text_server_adv.cpp:5573-5583`).
 - The overrun trim of a right-to-left line keeps its logical start and draws the ellipsis at
   the visual left (`text_server_adv.cpp:6053-6067`, `label.h:198-241`).
+
+## Script runs
+
+Each script run shapes apart, as Godot's `ScriptIterator` splits the text (`script_iterator.cpp`,
+`text_server_adv.cpp:7346-7352`). Kerning and the rounding remainder stop where the script changes.
+
+- A Common or Inherited character, such as a space, a digit or a mark, joins the run around it.
+- A closing bracket takes the script its opening bracket took.
+- An emoji stretch and an unassigned code point each form a run of their own.
 
 ## Known limitations
 

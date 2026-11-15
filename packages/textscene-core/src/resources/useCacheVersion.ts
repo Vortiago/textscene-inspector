@@ -104,3 +104,14 @@ export function useCacheVersion(
   useEffect(() => store.catchUp(renderedAt, version));
   return version;
 }
+
+/** The buses whose loads can change what a drawn node holds: a sub-scene, a GLB or a resource file. */
+const DRAWN_CONTENT_BUSES: readonly ResourceType[] = ['scene', 'glb', 'resource'];
+
+/**
+ * A number that moves on each load or failure of a scene, a GLB or a resource file, for a helper
+ * that measures what a node draws, such as a highlight box or an animation binding.
+ */
+export function useDrawnContentVersion(loader: ResourceLoader | null | undefined): number {
+  return useCacheVersion(loader, DRAWN_CONTENT_BUSES);
+}

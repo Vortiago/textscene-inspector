@@ -10,15 +10,7 @@ import {
   GRAPH_EDIT_GRID_PATTERN_NAMES,
   GRAPH_EDIT_PANNING_SCHEME_NAMES,
 } from '../../../../godot/scene/gui.js';
-import { shape, v } from '../../../../linter/validators/v.js';
-import { propertyError } from '../../../../linter/validators/propertyError.js';
-
-/**
- * `type_names` is a plain `Dictionary` member (graph_edit.h:314), returned untyped
- * (graph_edit.h:434). `PROPERTY_HINT_DICTIONARY_TYPE "int;String"` (graph_edit.cpp:3077)
- * types only the inspector widgets, so the saved form is a bare `{…}`.
- */
-const DICTIONARY_LITERAL_RE = /^\{[\s\S]*\}$/;
+import { v } from '../../../../linter/validators/v.js';
 
 validatorRegistry.registerAll('GraphEdit', {
   // Ungrouped run, graph_edit.cpp:3069-3077. graph_edit.cpp:3069: VECTOR2, PROPERTY_HINT_NONE "suffix:px".
@@ -51,19 +43,8 @@ validatorRegistry.registerAll('GraphEdit', {
   // graph_edit.cpp:3075: bare BOOL. set_right_disconnects
   // (graph_edit.cpp:2509-2511) is an assignment.
   right_disconnects: v.boolean('right_disconnects'),
-  // graph_edit.cpp:3077: DICTIONARY. set_type_names (graph_edit.cpp:1194-1196) is a bare
-  // assignment, so only the shape of the literal can be wrong.
-  type_names: shape((key, value, line) => {
-    if (!DICTIONARY_LITERAL_RE.test(value)) {
-      return propertyError(
-        key,
-        line,
-        `Property 'type_names' must be a Dictionary literal like {} or { 0: "Number" }, got: ${value}`,
-        'INVALID_TYPE_NAMES_FORMAT'
-      );
-    }
-    return null;
-  }, 'Dictionary literal ({…})'),
+  // graph_edit.cpp:3077. The setter is a bare assignment (:1194-1196).
+  type_names: v.dictionary('type_names'),
 
   // "Connection Lines" group, graph_edit.cpp:3079-3083. graph_edit.cpp:3080: FLOAT,
   // PROPERTY_HINT_NONE. set_connection_lines_curvature (graph_edit.cpp:2892-2899) assigns.

@@ -120,7 +120,7 @@ Strict parsing format-checks these `GraphEdit` properties, plus 53 inherited fro
 | `show_zoom_label` | true or false |  |
 | `snapping_distance` | integer 2-100 | error |
 | `snapping_enabled` | true or false |  |
-| `type_names` | Dictionary literal ({…}) |  |
+| `type_names` | Dictionary literal ({…} or Dictionary[K, V]({…})) |  |
 | `zoom` | float |  |
 | `zoom_max` | float |  |
 | `zoom_min` | float |  |

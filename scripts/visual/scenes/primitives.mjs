@@ -112,6 +112,8 @@ export const PRIMITIVE_SCENES = [
   { name: 'csg-polygon-path', file: 'unit-csg-polygon-path.tscn' },
   // The same polygons and Path3D nodes inside an instanced scene draw the same extrusions.
   { name: 'csg-polygon-path-instanced', file: 'unit-csg-polygon-path-instanced.tscn' },
+  // The same scene with its Curve3D in a .tres: the live tree requests the file a pass reads.
+  { name: 'csg-polygon-path-curve-file', file: 'unit-csg-polygon-path-curve-file.tscn' },
   // Real boolean evaluation (ADR-0027). If the three groups render the same, a
   // solid block beside a solid ball, the evaluator has stopped running.
   { name: 'csg-boolean-ops', file: 'unit-csg-boolean-ops.tscn' },
