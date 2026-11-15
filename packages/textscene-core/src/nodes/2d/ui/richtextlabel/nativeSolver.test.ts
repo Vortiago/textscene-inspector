@@ -419,6 +419,17 @@ describe('styledTextRuns', () => {
     ).toEqual([textRun({ text: '[b]x[/b]', fontSizePx: NORMAL })]);
   });
 
+  // `add_text` folds each CR LF into an LF (rich_text_label.cpp:4017).
+  it('bbcode disabled: reads a CR LF as one LF', () => {
+    const [run] = styledTextRuns(
+      node({}),
+      parsedProps({ text: 'a\r\nb', bbcodeEnabled: false }),
+      WHITE,
+      NORMAL
+    );
+    expect(run!.text).toBe('a\nb');
+  });
+
   it('bbcode disabled + empty text: no runs', () => {
     expect(styledTextRuns(node({}), parsedProps({ text: '', bbcodeEnabled: false }), WHITE, NORMAL)).toEqual(
       []
