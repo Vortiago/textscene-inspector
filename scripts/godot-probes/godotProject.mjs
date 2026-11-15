@@ -20,15 +20,13 @@ const LINE_PREFIX = 'PROBE ';
 
 const PREPROCESSED_PREFIX = 'PREPROCESSED ';
 
-export const usesPreprocessor = (probe) => probe.source.includes('#') || probe.includes !== undefined;
-
 /** The data file the script reads: each probe's name, width, shader file and parameter bits. */
 function probeData(probes) {
   return probes.map((probe, index) => ({
     name: probe.name,
     width: probeWidth(probe),
     shader: `res://probe_${index}.gdshader`,
-    usesPreprocessor: usesPreprocessor(probe),
+    recordsPreprocessed: probe.recordsPreprocessed === true,
     // GDScript's PackedInt32Array holds the bits as signed integers.
     parameters: parameterBits(probe).map((bits) => bits.map((value) => value | 0)),
   }));
@@ -39,8 +37,15 @@ function probeShaderFiles(probes) {
   return Object.fromEntries(probes.map((probe, index) => [`probe_${index}.gdshader`, probeShader(probe)]));
 }
 
+/** Every probe's includes in one project, so a name two probes give two texts throws. */
 export function probeIncludeFiles(probes) {
-  return Object.assign({}, ...probes.map((probe) => probe.includes ?? {}));
+  const files = {};
+  for (const [name, text] of probes.flatMap((probe) => Object.entries(probe.includes ?? {}))) {
+    if (Object.hasOwn(files, name) && files[name] !== text)
+      throw new Error(`expected one text for the include ${name}, got two`);
+    files[name] = text;
+  }
+  return files;
 }
 
 /** The files beside the main script, keyed by their names in the project. */
@@ -73,7 +78,7 @@ func _ready() -> void:
 		rect.material = material
 		viewport.add_child(rect)
 		viewports.append(viewport)
-		if probe.usesPreprocessor:
+		if probe.recordsPreprocessed:
 			preprocessed[probe.name] = RenderingServer.shader_get_code(material.shader.get_rid())
 	for frame in ${FRAMES_BEFORE_READ}:
 		await RenderingServer.frame_post_draw

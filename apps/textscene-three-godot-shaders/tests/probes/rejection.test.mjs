@@ -26,12 +26,13 @@ describe("Godot's reason for a probe it draws nothing for", () => {
     });
   });
 
-  it("reads Godot's message and line where the shader has a path", () => {
+  it("reads Godot's message, file and line where the shader has a path", () => {
     const output = `SHADER ERROR: Constants cannot be modified.\n          at: (null) (res://probe_0.gdshader:6)\n`;
     expect(parseRejection(output)).toEqual({
       stage: 'shading language',
       message: 'Constants cannot be modified.',
       line: 6,
+      file: 'res://probe_0.gdshader',
     });
   });
 

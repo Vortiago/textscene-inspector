@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { parseVerdictOutput } from '../../../../scripts/godot-probes/shaderVerdicts.mjs';
+import {
+  parseVerdictOutput,
+  verdictOfText,
+  verdictText,
+} from '../../../../scripts/godot-probes/shaderVerdicts.mjs';
 
 /** Godot's output for two shaders, the first refused, as Godot 4.6.3 prints it under xvfb. */
 const OUTPUT = `VERDICT 0
@@ -40,6 +44,21 @@ VERDICTS DONE
         'No matching function for "f" call:\n\tcandidate function "f(float)" not viable, argument 1 should be float but is int.\n\tcandidate function "f(vec2)" not viable, argument 1 should be vec2 but is int.',
       line: 6,
     });
+  });
+
+  it('reads the include that Godot names for an error inside it', () => {
+    const output = `VERDICT 0\nSHADER ERROR: Unknown identifier in expression: 'x'.\n          at: (null) (res://pp_a.gdshaderinc:3)\nVERDICTS DONE\n`;
+    expect(parseVerdictOutput(output, 1)[0]).toEqual({
+      accepted: false,
+      message: "Unknown identifier in expression: 'x'.",
+      line: 3,
+      file: 'res://pp_a.gdshaderinc',
+    });
+  });
+
+  it('keeps the include of a verdict through its record text', () => {
+    const verdict = { accepted: false, message: 'Expected a ";".', line: 3, file: 'res://pp_a.gdshaderinc' };
+    expect(verdictOfText(verdictText(verdict))).toEqual(verdict);
   });
 
   it('reads a shader with no error as accepted', () => {

@@ -47,7 +47,7 @@ export async function godotVerdicts(texts, includes = {}) {
 
 /**
  * The verdicts of `count` shaders in Godot's output. Godot prints `SHADER ERROR: <message>`
- * and on the next line `at: (null) (:<line>)` for the first error of a shader it refuses.
+ * and on the next line `at: (null) (<file>:<line>)` for the first error of a shader it refuses.
  */
 export function parseVerdictOutput(output, count) {
   if (!output.includes(DONE)) {
@@ -59,31 +59,38 @@ export function parseVerdictOutput(output, count) {
 }
 
 /**
- * Godot's error on a shader set from a string: its message, which may hold several lines, as the
- * candidates of an overload do, then the empty path and the line.
+ * Godot's error on a shader: its message, which may hold several lines, as the candidates of an
+ * overload do, then the file and the line. The file is empty for a shader set from a string, and
+ * an include's path for an error inside it (shader_compiler.cpp:1588).
  */
-const SHADER_ERROR = /SHADER ERROR: ([\s\S]*?)\n\s*at: .*\(:(\d+)\)/;
+export const SHADER_ERROR = /SHADER ERROR: ([\s\S]*?)\n\s*at: \(null\) \((\S*):(\d+)\)/;
+
+/** The message, line and file of a match of `SHADER_ERROR`, with no file for the shader itself. */
+export function shaderErrorOf([, message, file, line]) {
+  return { message: message.trim(), line: Number(line), ...(file && { file }) };
+}
 
 function verdictOf(block) {
   const error = SHADER_ERROR.exec(block);
   if (!error && block.includes('SHADER ERROR')) {
-    throw new Error(`expected "at: (null) (:<line>)" after Godot's shader error, got:\n${block}`);
+    throw new Error(`expected "at: (null) (<file>:<line>)" after Godot's shader error, got:\n${block}`);
   }
   if (!error) return { accepted: true };
-  return { accepted: false, message: error[1].trim(), line: Number(error[2]) };
+  return { accepted: false, ...shaderErrorOf(error) };
 }
 
-/** A verdict as a record holds it: `accepted`, or `line <n>: <Godot's message>`. */
+/** A verdict as a record holds it: `accepted`, or `line <n>[ in <file>]: <Godot's message>`. */
 export function verdictText(verdict) {
-  return verdict.accepted ? 'accepted' : `line ${verdict.line}: ${verdict.message}`;
+  if (verdict.accepted) return 'accepted';
+  return `line ${verdict.line}${verdict.file ? ` in ${verdict.file}` : ''}: ${verdict.message}`;
 }
 
 /** The verdict that `verdictText` wrote. */
 export function verdictOfText(text) {
   if (text === 'accepted') return { accepted: true };
-  const match = /^line (\d+): (.*)$/s.exec(text);
+  const match = /^line (\d+)(?: in (\S+))?: (.*)$/s.exec(text);
   if (!match) throw new Error(`expected "accepted" or "line <n>: <message>", got ${text}`);
-  return { accepted: false, message: match[2], line: Number(match[1]) };
+  return { accepted: false, message: match[3], line: Number(match[1]), ...(match[2] && { file: match[2] }) };
 }
 
 /** A verdict record: Godot's version and each case's verdict by its id. */
