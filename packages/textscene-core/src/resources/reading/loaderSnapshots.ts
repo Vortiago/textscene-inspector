@@ -161,10 +161,11 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
     files() {
       const files = new Map<string, CachedFile<object>>();
       kinds.forEach(({ reads }, fileKind) => {
-        if (fileKind === LOAD_OUTCOMES) reads.forEach((answer, path) => answer && files.set(path, null));
-        else reads.forEach((answer, path) => files.set(path, answer));
+        if (fileKind !== LOAD_OUTCOMES) reads.forEach((answer, path) => files.set(path, answer));
       });
       addresses.forEach((answer, address) => files.set(address, answer));
+      // Last, so a file Godot fails to load reports missing whatever else read it.
+      kinds.get(LOAD_OUTCOMES)?.reads.forEach((answer, path) => answer && files.set(path, null));
       return files;
     },
   };

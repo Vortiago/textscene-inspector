@@ -4,10 +4,13 @@ import { TscnParser } from '../../parser/TscnParser';
 import { resourceFailingReads, sceneFailingReads } from './failingReads';
 
 const scene = (text: string) => new TscnParser().parse(text);
+const MAIN = 'res://levels/main.tscn';
+const MAIN_TRES = 'res://levels/main.tres';
 
 describe('sceneFailingReads', () => {
   it('lists the file a [sub_resource] property reads', () => {
     const reads = sceneFailingReads(
+      MAIN,
       scene(`[gd_scene format=3]
 [ext_resource type="Texture2D" path="res://gone.png" id="1"]
 [sub_resource type="AtlasTexture" id="a"]
@@ -21,6 +24,7 @@ atlas = ExtResource("1")
 
   it('leaves out the file only a [node] property reads', () => {
     const reads = sceneFailingReads(
+      MAIN,
       scene(`[gd_scene format=3]
 [ext_resource type="Texture2D" path="res://gone.png" id="1"]
 [node name="Root" type="Sprite2D"]
@@ -33,6 +37,7 @@ texture = ExtResource("1")
 
   it('leaves out a declared file nothing reads', () => {
     const reads = sceneFailingReads(
+      MAIN,
       scene(`[gd_scene format=3]
 [ext_resource type="Texture2D" path="res://gone.png" id="1"]
 [node name="Root" type="Node2D"]
@@ -44,6 +49,7 @@ texture = ExtResource("1")
 
   it('lists the path of a Resource() literal in a [node] property', () => {
     const reads = sceneFailingReads(
+      MAIN,
       scene(`[gd_scene format=3]
 [node name="Root" type="Sprite2D"]
 texture = Resource("res://gone.png")
@@ -54,9 +60,26 @@ texture = Resource("res://gone.png")
   });
 });
 
+describe('a relative ext_resource path', () => {
+  it('resolves against the folder of the file that reads it', () => {
+    const reads = sceneFailingReads(
+      MAIN,
+      scene(`[gd_scene format=3]
+[ext_resource type="Texture2D" path="../art/rock.png" id="1"]
+[sub_resource type="AtlasTexture" id="a"]
+atlas = ExtResource("1")
+[node name="Root" type="Node2D"]
+`)
+    );
+
+    expect(reads).toEqual(['res://art/rock.png']);
+  });
+});
+
 describe('resourceFailingReads', () => {
   it('lists the file the [resource] section reads', () => {
     const reads = resourceFailingReads(
+      MAIN_TRES,
       parseTresFile(`[gd_resource type="AtlasTexture" format=3]
 [ext_resource type="Texture2D" path="res://gone.png" id="1"]
 [resource]
@@ -69,6 +92,7 @@ atlas = ExtResource("1")
 
   it('lists the file a [sub_resource] of a .tres reads inside an array', () => {
     const reads = resourceFailingReads(
+      MAIN_TRES,
       parseTresFile(`[gd_resource type="Resource" format=3]
 [ext_resource type="Texture2D" path="res://gone.png" id="1"]
 [sub_resource type="Resource" id="s"]

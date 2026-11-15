@@ -2,11 +2,11 @@
  * Registers the PackedScene ExtResource an instance ref names, then loads the
  * scene. The viewport's instanced node and the outliner's sub-scene rows share it.
  */
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { TscnExternalResource, TscnScene } from '../../parser/types.js';
 import { useResource, useResourceLoader, type ResourceResult } from '../../resources/useResource.js';
 import { findExtResource, parseResourceReference } from '../../resources/SubResourceResolver.js';
-import type { LoadOutcome } from '../../resources/loadFailure/loadOutcome.js';
+import { useFirstLoadFailure } from '../../resources/loadFailure/useFirstLoadFailure.js';
 import { useMissingReport } from '../contexts/MissingResourcesContext.js';
 
 /**
@@ -32,10 +32,10 @@ export function useInstancedScene(
 
   // `useResource` requests nothing for '', so the hook count stays stable.
   const scene = useResource<TscnScene>(loadPath ?? '', 'scene');
-  const outcome = useResource<LoadOutcome>(loadPath ?? '', 'loadoutcome').value;
+  const failure = useFirstLoadFailure(useMemo(() => (loadPath ? [loadPath] : []), [loadPath]));
   // 'pending', not 'loaded': a scene that loads again is no upload of this path.
-  useMissingReport(loadPath ?? '', outcome?.isFailed ? 'unavailable' : 'pending');
-  return outcome?.isFailed ? failedScene(outcome.chain) : scene;
+  useMissingReport(loadPath ?? '', failure ? 'unavailable' : 'pending');
+  return failure ? failedScene(failure.chain) : scene;
 }
 
 /** Godot drops the instance of a scene it fails to load, as one of a missing scene. */

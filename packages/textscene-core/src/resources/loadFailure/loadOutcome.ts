@@ -2,14 +2,16 @@
 
 import { isGodotTextResourcePath } from '../../godot/project/resourceFormats';
 
-export type LoadOutcome =
-  | { readonly isFailed: false }
-  | {
-      readonly isFailed: true;
-      /** The file, each text file through which it fails, and the file that failed first. */
-      readonly chain: readonly string[];
-      readonly cause: 'missing' | 'unparsed';
-    };
+export type LoadFailureCause = 'missing' | 'unparsed';
+
+export interface LoadFailure {
+  readonly isFailed: true;
+  /** The file, each text file through which it fails, and the file that failed first. */
+  readonly chain: readonly string[];
+  readonly cause: LoadFailureCause;
+}
+
+export type LoadOutcome = { readonly isFailed: false } | LoadFailure;
 
 export interface LoadFacts {
   /** The files whose failure fails the text file at `path`, or null where it is missing or does not parse. */
@@ -34,6 +36,6 @@ export async function loadOutcome(
   return failure?.isFailed ? { ...failure, chain: [path, ...failure.chain] } : LOADS;
 }
 
-function failed(path: string, cause: 'missing' | 'unparsed'): LoadOutcome {
+function failed(path: string, cause: LoadFailureCause): LoadFailure {
   return { isFailed: true, chain: [path], cause };
 }

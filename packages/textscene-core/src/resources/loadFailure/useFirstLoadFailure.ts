@@ -2,12 +2,10 @@
 
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { useResourceLoader } from '../useResource';
-import type { LoadOutcome } from './loadOutcome';
-
-type Failure = Extract<LoadOutcome, { isFailed: true }>;
+import type { LoadFailure } from './loadOutcome';
 
 /** Null while every file loads or its outcome is still to load. `paths` keeps its identity across renders. */
-export function useFirstLoadFailure(paths: readonly string[]): Failure | null {
+export function useFirstLoadFailure(paths: readonly string[]): LoadFailure | null {
   const loader = useResourceLoader();
   useEffect(() => {
     if (!loader) return undefined;
@@ -29,7 +27,7 @@ export function useFirstLoadFailure(paths: readonly string[]): Failure | null {
     },
     [loader, paths]
   );
-  const firstFailure = (): Failure | null => {
+  const firstFailure = (): LoadFailure | null => {
     for (const path of paths) {
       const outcome = loader?.loadOutcomes.getCached(path);
       if (outcome?.isFailed) return outcome;

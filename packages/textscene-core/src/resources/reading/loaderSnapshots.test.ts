@@ -132,7 +132,7 @@ describe('a snapshot of a file Godot fails to load', () => {
     await vi.waitFor(() => expect(loader.loadOutcomes.getCached(A_FILE)).toBeDefined());
     const settled = read();
     unsubscribe();
-    return { settled, files: source.files() };
+    return { settled, files: source.files(), source };
   }
 
   it('reads a .tres whose [resource] reads a missing file as missing-file', async () => {
@@ -151,6 +151,16 @@ describe('a snapshot of a file Godot fails to load', () => {
     const { files } = await readOnceSettled(loader);
 
     expect(files.get(A_FILE)).toBeNull();
+  });
+
+  it('reports the .tres as missing when another kind of file read it after', async () => {
+    const loader = loaderServing({ [A_FILE]: FAILING_A });
+    await loaded(loader, A_FILE);
+    const { source } = await readOnceSettled(loader);
+
+    source.current().loaded(FONT_FILES, A_FILE);
+
+    expect(source.files().get(A_FILE)).toBeNull();
   });
 
   it('reads the .tres once the file it reads exists', async () => {

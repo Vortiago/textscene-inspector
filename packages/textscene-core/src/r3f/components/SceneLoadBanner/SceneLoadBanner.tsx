@@ -13,7 +13,7 @@ const NO_SCENE: ParsedScene = { path: '', nodes: [], internalResources: [], exte
 export function SceneLoadBanner() {
   const sceneGraph = useOptionalHierarchy()?.sceneGraph;
   const scene = sceneGraph?.scenes?.get(sceneGraph.rootScene) ?? NO_SCENE;
-  const reads = useMemo(() => sceneFailingReads(scene), [scene]);
+  const reads = useMemo(() => sceneFailingReads(scene.path, scene), [scene]);
   const failure = useFirstLoadFailure(reads);
   if (!failure) return null;
   return (

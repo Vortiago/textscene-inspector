@@ -68,4 +68,32 @@ describe('an instance of a scene Godot fails to load', () => {
 
     expect(hook.result.current.step.isMerged).toBe(true);
   });
+
+  it('merges once its outcome loads after it failed before the scene arrived', () => {
+    const fake = createFakeResourceLoader();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
+    );
+    const hook = renderHook(() => useLiveStepOf(instance, scope), { wrapper });
+    act(() => fake.loadOutcomes._resolve(KID, FAILS));
+    act(() => fake.scenes._resolve(KID, kid));
+
+    act(() => fake.loadOutcomes._resolve(KID, { isFailed: false }));
+
+    expect(hook.result.current.isMerged).toBe(true);
+  });
+
+  it('requests the outcome of a scene the tree reads, with no instancing node mounted', async () => {
+    const fake = createFakeResourceLoader();
+    const requested: string[] = [];
+    fake.loadOutcomes.setRequestImpl((path) => requested.push(path));
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
+    );
+    renderHook(() => useLiveStepOf(instance, scope), { wrapper });
+
+    await act(async () => fake.scenes._resolve(KID, kid));
+
+    expect(requested).toEqual([KID]);
+  });
 });

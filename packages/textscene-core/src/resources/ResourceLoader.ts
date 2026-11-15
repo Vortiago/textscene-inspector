@@ -185,10 +185,10 @@ export class ResourceLoader {
       failingReads: async (file) => {
         if (fileExtension(file) === '.tscn') {
           const scene = await this.peerLoad(dependent, this.scenes, 'scene', file);
-          return scene && sceneFailingReads(scene);
+          return scene && sceneFailingReads(file, scene);
         }
         const parsed = await this.peerLoad(dependent, this.resources, 'resource', file);
-        return parsed && resourceFailingReads(parsed);
+        return parsed && resourceFailingReads(file, parsed);
       },
       exists: async (file) => {
         // The file itself, so its creation or removal clears the outcome.
