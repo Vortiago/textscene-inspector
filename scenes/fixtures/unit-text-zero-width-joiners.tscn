@@ -1,0 +1,213 @@
+; One variable: U+200D, U+200C, U+2060 and U+FEFF where the zero-advance scene has U+0378. Godot forces
+; a cluster that starts with one of them to glyph index 0 (text_server_adv.cpp:7052-7055), so it keeps
+; no advance and rounds nothing. No other scene puts these characters after a half-pixel remainder.
+; The wrapped Label and TextEdit break after a space before a joiner, where Godot does not.
+
+[gd_scene format=3]
+
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="dejavu"]
+[ext_resource type="FontFile" path="res://fonts/noto-sans-regular-subset.ttf" id="noto"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="N1" type="Label" parent="."]
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 228.0
+offset_bottom = 148.0
+theme_override_fonts/font = ExtResource("dejavu")
+theme_override_font_sizes/font_size = 24
+autowrap_mode = 3
+horizontal_alignment = 1
+text = "‍AVA"
+
+[node name="N2" type="LineEdit" parent="."]
+offset_left = 236.0
+offset_top = 8.0
+offset_right = 456.0
+offset_bottom = 148.0
+theme_override_fonts/font = ExtResource("noto")
+theme_override_font_sizes/font_size = 31
+text = "‌AVA"
+
+[node name="N3" type="TextEdit" parent="."]
+offset_left = 464.0
+offset_top = 8.0
+offset_right = 684.0
+offset_bottom = 148.0
+theme_override_font_sizes/font_size = 36
+wrap_mode = 1
+text = "⁠AVA"
+
+[node name="N4" type="RichTextLabel" parent="."]
+offset_left = 692.0
+offset_top = 8.0
+offset_right = 912.0
+offset_bottom = 148.0
+theme_override_fonts/normal_font = ExtResource("dejavu")
+theme_override_font_sizes/normal_font_size = 24
+horizontal_alignment = 2
+text = "﻿AVA"
+
+[node name="N5" type="Button" parent="."]
+offset_left = 920.0
+offset_top = 8.0
+offset_right = 1140.0
+offset_bottom = 148.0
+theme_override_fonts/font = ExtResource("noto")
+theme_override_font_sizes/font_size = 31
+autowrap_mode = 3
+text = "‍AVA"
+
+[node name="N6" type="Label" parent="."]
+offset_left = 8.0
+offset_top = 158.0
+offset_right = 228.0
+offset_bottom = 298.0
+theme_override_fonts/font = ExtResource("noto")
+theme_override_font_sizes/font_size = 31
+autowrap_mode = 3
+horizontal_alignment = 1
+text = "AVA‌"
+
+[node name="N7" type="LineEdit" parent="."]
+offset_left = 236.0
+offset_top = 158.0
+offset_right = 456.0
+offset_bottom = 298.0
+theme_override_font_sizes/font_size = 36
+text = "AVA⁠"
+
+[node name="N8" type="TextEdit" parent="."]
+offset_left = 464.0
+offset_top = 158.0
+offset_right = 684.0
+offset_bottom = 298.0
+theme_override_fonts/font = ExtResource("dejavu")
+theme_override_font_sizes/font_size = 24
+wrap_mode = 1
+text = "AVA﻿"
+
+[node name="N9" type="RichTextLabel" parent="."]
+offset_left = 692.0
+offset_top = 158.0
+offset_right = 912.0
+offset_bottom = 298.0
+theme_override_fonts/normal_font = ExtResource("noto")
+theme_override_font_sizes/normal_font_size = 31
+horizontal_alignment = 2
+text = "AVA‍"
+
+[node name="N10" type="Button" parent="."]
+offset_left = 920.0
+offset_top = 158.0
+offset_right = 1140.0
+offset_bottom = 298.0
+theme_override_font_sizes/font_size = 36
+autowrap_mode = 3
+text = "AVA‌"
+
+[node name="N11" type="Label" parent="."]
+offset_left = 8.0
+offset_top = 308.0
+offset_right = 128.0
+offset_bottom = 448.0
+theme_override_font_sizes/font_size = 36
+autowrap_mode = 3
+horizontal_alignment = 1
+text = "AV ⁠ AV ⁠ AV ⁠ AV"
+
+[node name="N12" type="LineEdit" parent="."]
+offset_left = 236.0
+offset_top = 308.0
+offset_right = 356.0
+offset_bottom = 448.0
+theme_override_fonts/font = ExtResource("dejavu")
+theme_override_font_sizes/font_size = 24
+text = "AV ﻿ AV ﻿ AV ﻿ AV"
+
+[node name="N13" type="TextEdit" parent="."]
+offset_left = 464.0
+offset_top = 308.0
+offset_right = 584.0
+offset_bottom = 448.0
+theme_override_fonts/font = ExtResource("noto")
+theme_override_font_sizes/font_size = 31
+wrap_mode = 1
+text = "AV ‍ AV ‍ AV ‍ AV"
+
+[node name="N14" type="RichTextLabel" parent="."]
+offset_left = 692.0
+offset_top = 308.0
+offset_right = 812.0
+offset_bottom = 448.0
+theme_override_font_sizes/normal_font_size = 36
+horizontal_alignment = 2
+text = "AV ‌ AV ‌ AV ‌ AV"
+
+[node name="N15" type="Button" parent="."]
+offset_left = 920.0
+offset_top = 308.0
+offset_right = 1040.0
+offset_bottom = 448.0
+theme_override_fonts/font = ExtResource("dejavu")
+theme_override_font_sizes/font_size = 24
+autowrap_mode = 3
+text = "AV ⁠ AV ⁠ AV ⁠ AV"
+
+[node name="N16" type="Label" parent="."]
+offset_left = 8.0
+offset_top = 458.0
+offset_right = 228.0
+offset_bottom = 598.0
+theme_override_fonts/font = ExtResource("dejavu")
+theme_override_font_sizes/font_size = 24
+autowrap_mode = 3
+horizontal_alignment = 1
+text = "﻿Ж ﻿ AV﻿"
+
+[node name="N17" type="LineEdit" parent="."]
+offset_left = 236.0
+offset_top = 458.0
+offset_right = 456.0
+offset_bottom = 598.0
+theme_override_fonts/font = ExtResource("noto")
+theme_override_font_sizes/font_size = 31
+text = "‍Ж ‍ AV‍"
+
+[node name="N18" type="TextEdit" parent="."]
+offset_left = 464.0
+offset_top = 458.0
+offset_right = 684.0
+offset_bottom = 598.0
+theme_override_font_sizes/font_size = 36
+wrap_mode = 1
+text = "‌Ж ‌ AV‌"
+
+[node name="N19" type="RichTextLabel" parent="."]
+offset_left = 692.0
+offset_top = 458.0
+offset_right = 912.0
+offset_bottom = 598.0
+theme_override_fonts/normal_font = ExtResource("dejavu")
+theme_override_font_sizes/normal_font_size = 24
+horizontal_alignment = 2
+text = "⁠Ж ⁠ AV⁠"
+
+[node name="N20" type="Button" parent="."]
+offset_left = 920.0
+offset_top = 458.0
+offset_right = 1140.0
+offset_bottom = 598.0
+theme_override_fonts/font = ExtResource("noto")
+theme_override_font_sizes/font_size = 31
+autowrap_mode = 3
+text = "﻿Ж ﻿ AV﻿"
