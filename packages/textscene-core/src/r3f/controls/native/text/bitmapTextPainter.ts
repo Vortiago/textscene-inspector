@@ -62,13 +62,7 @@ function inkedGlyph(
   return hasInk ? glyph : undefined;
 }
 
-/**
- * The quads of `layout`, drawn at `fontSizePx` over `sheet`: the glyph sheet, or the outline sheet
- * for an outline pass. When `snapsPen`, its pen and baseline floor at their place in the canvas item,
- * the pen summed in 32-bit float.
- * A BMFont adds no subpixel shift: `FontFile::reset_state` sets
- * `SUBPIXEL_POSITIONING_DISABLED` (`font.cpp:1433`) and `_load_bitmap_font` starts with it.
- */
+/** The quads of `layout` over `sheet`. A BMFont pen floors with no subpixel shift (`font.cpp:1433`). */
 export function buildBitmapQuads(
   layout: TextLayoutResult,
   metrics: BitmapFontMetrics,

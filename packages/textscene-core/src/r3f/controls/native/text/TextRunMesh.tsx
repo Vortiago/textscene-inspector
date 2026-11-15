@@ -473,8 +473,7 @@ export function TextRunMesh({
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
-  // The pen sums in 32-bit float from the item origin, so a move rebuilds a run that snaps its pen.
-  // A run that keeps its pen reads no origin, so a move never rebuilds it.
+  // A run that snaps its pen sums it in 32-bit float from the item origin, so a move rebuilds it.
   const itemOrigin = useCanvasItemOrigin();
   const { fontMetrics } = layout;
   const readsOrigin = snapsPen(glyphDrawer, fontSizePx, fontMetrics);

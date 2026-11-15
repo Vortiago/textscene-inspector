@@ -930,7 +930,7 @@ describe('canvasGlyphRects', () => {
     expect(rect).toMatchObject({ x: canvasLayout.offsetXPx + 0.5, w: 6 });
   });
 
-  // `font_draw_glyph` picks the raster at a pen summed in 32-bit float (label.h:199, text_server_adv.cpp:4024).
+  // `font_draw_glyph` picks the raster of a 32-bit float pen (label.h:199, text_server_adv.cpp:4024).
   it('picks the quarter-pixel raster of a pen summed in 32-bit float', () => {
     const base = carrying(layoutFor('A', 0), 0, TRIANGLE_OUTLINES);
     const a = base.lines[0]!.glyphs[0]!;
