@@ -56,15 +56,15 @@ export function dumpVariant({ type, value }) {
     case 'VECTOR2I':
       return call('Vector2i', ints(value.x, value.y));
     case 'RECT2':
-      return call('Rect2', [...vector2(value.position), ...vector2(value.size)]);
+      return call('Rect2', floats(value.x, value.y, value.w, value.h));
     case 'RECT2I':
-      return call('Rect2i', ints(value.position.x, value.position.y, value.size.x, value.size.y));
+      return call('Rect2i', ints(value.x, value.y, value.w, value.h));
     case 'VECTOR3':
       return call('Vector3', vector3(value));
     case 'VECTOR3I':
       return call('Vector3i', ints(value.x, value.y, value.z));
     case 'TRANSFORM2D':
-      return call('Transform2D', [...vector2(value.x), ...vector2(value.y), ...vector2(value.origin)]);
+      return call('Transform2D', floats(value.a, value.b, value.c, value.d, value.tx, value.ty));
     case 'VECTOR4':
       return call('Vector4', vector4(value));
     case 'VECTOR4I':
@@ -76,11 +76,14 @@ export function dumpVariant({ type, value }) {
     case 'AABB':
       return call('AABB', [...vector3(value.position), ...vector3(value.size)]);
     case 'BASIS':
-      return call('Basis', value.rows.flatMap(vector3));
+      return call('Basis', floats(...value));
     case 'TRANSFORM3D':
-      return call('Transform3D', [...value.basis.rows.flatMap(vector3), ...vector3(value.origin)]);
+      return call(
+        'Transform3D',
+        [value.basis_x, value.basis_y, value.basis_z, value.origin].flatMap(vector3)
+      );
     case 'PROJECTION':
-      return call('Projection', value.columns.flatMap(vector4));
+      return call('Projection', value.flatMap(vector4));
     case 'COLOR':
       return call('Color', color(value));
     case 'RID':

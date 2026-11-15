@@ -1,5 +1,3 @@
-/** The Variant type of a C++ type name a Variant registration names (variant_internal.h). */
-
 import type { VariantTypeName } from './value/variant.js';
 
 const VARIANT_OF_CPP: Readonly<Record<string, VariantTypeName>> = {

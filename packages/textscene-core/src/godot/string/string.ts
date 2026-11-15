@@ -133,7 +133,7 @@ const DIGIT_COUNT_MASK = 0xff;
  * `String::to_int()` (`ustring.cpp:2303-2311`) as the int64 it returns. It skips a character it
  * cannot use (`:2280-2293`), so `"x"` is 0 and `"a1b2"` is 12, and it stops at the first `.`.
  */
-function stringToInt64(text: string): bigint {
+export function stringToInt64(text: string): bigint {
   // `if (length() == 0) return 0` (`:2304-2306`).
   if (text.length === 0) return 0n;
   const dot = text.indexOf('.');

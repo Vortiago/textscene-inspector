@@ -11,9 +11,9 @@ import {
   godotIntegerConstant,
   godotLiteralScalar,
   godotNumberText,
-  godotStrtod,
   godotUintScalar,
 } from './godotNumber.js';
+import { godotStrtod } from '../../godot/string/strtod.js';
 import {
   builtInInstruction,
   instruction,
