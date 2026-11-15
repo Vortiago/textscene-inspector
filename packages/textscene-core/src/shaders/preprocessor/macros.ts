@@ -1,22 +1,15 @@
-/**
- * Macro expansion as Godot's preprocessor does it (`expand_macros`, `shader_preprocessor.cpp:1000`):
- * pass after pass, each define in name order replaces its first use, until a pass replaces none.
- */
-
 import { isCharSpace, isCharWord, stripEdges } from './godotString.js';
 import { PreprocessorError } from './preprocessorError.js';
 
 export interface Define {
   readonly body: string;
-  /** The argument names, or none for a define without arguments. */
   readonly arguments: readonly string[];
   readonly isBuiltIn: boolean;
 }
 
-/** `expand_macros` counts its passes: the 51st ends the expansion with an error, used or not. */
+// The 51st pass fails even when it expands nothing (shader_preprocessor.cpp:1019).
 const PASSES_AT_MOST = 50;
 
-/** `text` with each define of `defines` expanded. `line` is 0-based, for an error. */
 export function expandMacros(text: string, defines: ReadonlyMap<string, Define>, line: number): string {
   // `RBMap` walks its keys in order, and a define name is ASCII, so code-unit order is Godot's.
   const names = [...defines.keys()].sort();
@@ -34,7 +27,6 @@ export function expandMacros(text: string, defines: ReadonlyMap<string, Define>,
   }
 }
 
-/** `expand_macros_once`: `text` with the first use of `name` replaced, or nothing when it has none. */
 function expandOnce(text: string, name: string, define: Define, line: number): string | undefined {
   const match = findMatch(text, name, 0);
   if (!match) return undefined;
@@ -51,10 +43,6 @@ function expandOnce(text: string, name: string, define: Define, line: number): s
   return `${text.slice(0, match.index)} ${concatenate(body)} ${text.slice(end + 1)}`;
 }
 
-/**
- * The argument values in the first brackets from `start`, split at commas outside inner
- * brackets, and the index of the closing bracket.
- */
 function argumentValues(text: string, start: number, line: number): { values: string[]; end: number } {
   const values: string[] = [];
   let argumentStart = -1;
@@ -94,7 +82,7 @@ function argumentValues(text: string, start: number, line: number): { values: st
   return { values, end: argumentEnd };
 }
 
-/** `body` with each use of the argument `name` replaced by `value`, searched on after each value. */
+// A value that holds a later argument's name is replaced again, as in Godot.
 function substitute(body: string, name: string, value: string): string {
   let from = 0;
   for (let match = findMatch(body, name, from); match; match = findMatch(body, name, from)) {
@@ -104,7 +92,6 @@ function substitute(body: string, name: string, value: string): string {
   return body;
 }
 
-/** `find_match`: the first `value` from `from` with no word character either side. */
 export function findMatch(text: string, value: string, from: number): { index: number } | undefined {
   let index = text.indexOf(value, from);
   while (index > -1) {
@@ -121,7 +108,6 @@ export function findMatch(text: string, value: string, from: number): { index: n
   return undefined;
 }
 
-/** `concatenate_macro_body`: each `##` goes with the spaces either side; a run of three or more `#` stays. */
 export function concatenate(body: string): string {
   let start = body.indexOf('##');
   while (start > -1) {

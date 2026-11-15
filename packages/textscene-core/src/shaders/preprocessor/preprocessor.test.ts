@@ -1,5 +1,3 @@
-/** The preprocessor, against `ShaderPreprocessor::preprocess` (`shader_preprocessor.cpp:1288`). */
-
 import { describe, expect, it } from 'vitest';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import { preprocess, type ShaderInclude } from './preprocessor.js';

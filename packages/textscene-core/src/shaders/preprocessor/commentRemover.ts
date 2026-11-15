@@ -1,16 +1,9 @@
-/**
- * The comment remover the preprocessor runs first (`ShaderPreprocessor::CommentRemover`,
- * `shader_preprocessor.cpp:206`): each comment goes, its line breaks stay, so every line keeps
- * its number.
- */
-
 export interface StrippedCode {
   readonly code: string;
-  /** Godot's message and 0-based line for an unclosed `/*` or a stray `*\/`. */
   readonly error?: { readonly message: string; readonly line: number };
 }
 
-/** `CommentRemover::strip` and `get_error`. */
+/** shader_preprocessor.cpp:258 */
 export function stripComments(code: string): StrippedCode {
   const stripped: string[] = [];
   let index = 0;
@@ -19,7 +12,6 @@ export function stripComments(code: string): StrippedCode {
   let commentsOpen = 0;
   let stringsOpen = 0;
 
-  /** Moves past the next `what`, keeping each line break on the way. Answers false at the end. */
   const advance = (what: string): boolean => {
     while (index < code.length) {
       const char = code[index++]!;

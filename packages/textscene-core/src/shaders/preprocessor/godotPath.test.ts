@@ -1,5 +1,3 @@
-/** The path operations an include resolves with, against Godot's `String` (`ustring.cpp`). */
-
 import { describe, expect, it } from 'vitest';
 import { baseDir, isRelativePath, pathJoin, simplifyPath } from './godotPath.js';
 

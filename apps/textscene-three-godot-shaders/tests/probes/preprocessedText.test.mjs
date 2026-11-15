@@ -1,8 +1,3 @@
-/**
- * The text the preprocessor makes of each probe's shader equals the text Godot's preprocessor
- * made of it, which a live run of `pnpm godot:probes` records.
- */
-
 import { describe, expect, it } from 'vitest';
 import { shaderCode } from '../../../../packages/textscene-core/src/shaders/language/parseShader.ts';
 import { probeShader } from '../../../../scripts/godot-probes/probeShader.mjs';

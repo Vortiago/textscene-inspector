@@ -1,5 +1,3 @@
-/** Macro expansion, against `expand_macros` (`shader_preprocessor.cpp:1000`). */
-
 import { describe, expect, it } from 'vitest';
 import { concatenate, type Define, expandMacros, findMatch } from './macros.js';
 import { PreprocessorError } from './preprocessorError.js';

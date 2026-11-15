@@ -1,4 +1,4 @@
-/** A text Godot's preprocessor refuses: its message and 0-based line, in the file it reads then. */
+/** `line` is 0-based, as Godot counts it. */
 export class PreprocessorError extends Error {
   constructor(
     readonly reason: string,

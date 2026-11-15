@@ -18,10 +18,8 @@ import { parameterBits, probeShader, probeWidth } from './probeShader.mjs';
 /** The prefix of each output line that carries a probe's pixels. */
 const LINE_PREFIX = 'PROBE ';
 
-/** The prefix of each output line that carries the text Godot's preprocessor made of a probe's shader. */
 const PREPROCESSED_PREFIX = 'PREPROCESSED ';
 
-/** Whether `probe` has a directive or an include for the preprocessor to act on. */
 export const usesPreprocessor = (probe) => probe.source.includes('#') || probe.includes !== undefined;
 
 /** The data file the script reads: each probe's name, width, shader file and parameter bits. */
@@ -41,7 +39,6 @@ function probeShaderFiles(probes) {
   return Object.fromEntries(probes.map((probe, index) => [`probe_${index}.gdshader`, probeShader(probe)]));
 }
 
-/** The `.gdshaderinc` files `probes` include, keyed by their names in the project. */
 export function probeIncludeFiles(probes) {
   return Object.assign({}, ...probes.map((probe) => probe.includes ?? {}));
 }
@@ -93,8 +90,7 @@ func _ready() -> void:
 
 /**
  * The bits of each probe's pixels in `stdout`, keyed by probe name, with Godot's version and
- * adapter, and the preprocessed text of each probe that uses the preprocessor. A pixel's four
- * bytes are little-endian, as the shader wrote them.
+ * adapter. A pixel's four bytes are little-endian, as the shader wrote them.
  */
 export function parseProbeOutput(stdout) {
   const pixels = new Map();
@@ -107,7 +103,6 @@ export function parseProbeOutput(stdout) {
   };
 }
 
-/** Each `PREPROCESSED <name> <JSON string>` line of `stdout`, keyed by name. */
 function printedTexts(stdout) {
   const lines = stdout.split('\n').filter((line) => line.startsWith(PREPROCESSED_PREFIX));
   return new Map(
@@ -132,8 +127,8 @@ function pixelBits(bytes) {
 const PROBES_PER_RUN_AT_MOST = 256;
 
 /**
- * Godot's answers to `probes` from runs of the pinned release at once: its version, adapter,
- * pixels and preprocessed texts. Every run must name the same Godot and adapter, or its pixels would mix two engines.
+ * Godot's answers to `probes` from runs of the pinned release at once: its version, adapter and
+ * pixels. Every run must name the same Godot and adapter, or its pixels would mix two engines.
  */
 export async function runProbesInGodot(probes) {
   const outputs = await inChunksOfAtMost(probes, PROBES_PER_RUN_AT_MOST, async (chunk) =>

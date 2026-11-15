@@ -1,14 +1,7 @@
-/**
- * The probes of the preprocessor directives, each run through Godot's preprocessor before the
- * shader is parsed. A probe's `includes` are the `.gdshaderinc` files beside its shader, by file
- * name, and the names are unique across every probe, as all probes share one project.
- */
-
 import { probeOf } from './languageProbes.mjs';
 
 const CONDITION = ['#ifdef', '#endif'];
 
-/** `#define` with and without arguments, a macro inside a macro, `##` and line continuations. */
 function defineProbes() {
   const cases = [
     ['object', '#define K 1.5\nfloat probe(float a) { return a * K; }'],
@@ -58,7 +51,6 @@ function undefProbes() {
   return cases.map(([word, source]) => probeOf(`undef-${word}`, ['#undef', '#define'], source));
 }
 
-/** `#ifdef` and `#ifndef` taken and skipped, with `#else`, nested, and malformed. */
 function conditionProbes() {
   const cases = [
     [
@@ -133,15 +125,11 @@ function pragmaProbes() {
   return cases.map(([word, rows, source]) => probeOf(`pragma-${word}`, rows, source));
 }
 
-/** A probe of `source` whose shader has `includes` beside it. */
+// Include names are unique across probes, as every probe shares one project.
 function includeProbe(word, source, includes, rows = ['#include']) {
   return { ...probeOf(`include-${word}`, rows, source), includes };
 }
 
-/**
- * `#include` of a file that includes another, a define seen across files, the same file twice, a
- * cycle, a missing file, and a missing file inside a skipped branch.
- */
 function includeProbes() {
   return [
     includeProbe(

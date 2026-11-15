@@ -82,13 +82,11 @@ export function tokenize(source: string, file = ''): Token[] {
 }
 
 interface Cursor {
-  /** The file the cursor reads in: the shader's, or the include's between its markers. */
   file: string;
   index: number;
   line: number;
   /** The index of the first character of the cursor's line. */
   lineStart: number;
-  /** The file and line of each include marker the cursor is inside, outermost first. */
   readonly includes: { readonly file: string; readonly line: number }[];
 }
 
@@ -171,10 +169,7 @@ function readToken(source: string, cursor: Cursor, char: string): Token {
   );
 }
 
-/**
- * The marker the preprocessor writes where an include starts, `@@>path`, or ends, `@@<path`
- * (`shader_language.cpp:658`). Between the two the cursor reads in the include, from its line 1.
- */
+/** shader_language.cpp:658 */
 function readIncludeMarker(source: string, cursor: Cursor): void {
   const position = positionOf(cursor);
   const kind = source.slice(cursor.index + 1, cursor.index + 3);

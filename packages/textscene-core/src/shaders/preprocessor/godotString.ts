@@ -1,6 +1,4 @@
-/** The character tests and string operations of Godot's `String` that the preprocessor reads. */
-
-/** `is_whitespace` (`char_utils.h:121`). */
+/** char_utils.h:121 */
 export function isWhitespace(char: string): boolean {
   const code = char.codePointAt(0) ?? 0;
   return (
@@ -18,20 +16,17 @@ export function isWhitespace(char: string): boolean {
   );
 }
 
-/** `ShaderPreprocessor::is_char_word`. */
 export const isCharWord = (char: string | undefined): boolean =>
   char !== undefined && /^[0-9A-Za-z_]$/.test(char);
 
-/** `ShaderPreprocessor::is_char_space`. */
 export const isCharSpace = (char: string): boolean => char === ' ' || char === '\t';
 
-/** Godot's `0`: the terminator a `String` ends with, which the preprocessor reads as a character. */
+// Godot's String ends in a 0, which the preprocessor reads as a character.
 export const END = '\0';
 
-/** `ShaderPreprocessor::is_char_end`. */
 export const isCharEnd = (char: string): boolean => char === '\n' || char === END;
 
-/** `String::strip_edges`: every character at or under 32 goes from both ends. */
+// Godot strips every character at or under 32, wider than `trim`.
 export function stripEdges(text: string): string {
   let start = 0;
   let end = text.length;
@@ -40,5 +35,4 @@ export function stripEdges(text: string): string {
   return text.slice(start, end);
 }
 
-/** `String::is_valid_ascii_identifier`. */
 export const isValidAsciiIdentifier = (text: string): boolean => /^[A-Za-z_][A-Za-z0-9_]*$/.test(text);

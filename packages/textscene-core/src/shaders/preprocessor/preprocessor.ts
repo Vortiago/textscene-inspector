@@ -1,9 +1,3 @@
-/**
- * A port of Godot's shader preprocessor (`servers/rendering/shader_preprocessor.cpp`): the
- * directives, macros and `.gdshaderinc` includes, run on a shader's text before it is parsed.
- * The caller reads each include, so the preprocessor reads no file itself.
- */
-
 import { instruction, notTranspiled } from '../language/instructions.js';
 import { stripComments } from './commentRemover.js';
 import { DirectiveTokenizer } from './directiveTokenizer.js';
@@ -12,31 +6,29 @@ import { END, isCharEnd, isCharSpace, stripEdges } from './godotString.js';
 import { type Define, expandMacros } from './macros.js';
 import { PreprocessorError } from './preprocessorError.js';
 
-/** A `.gdshaderinc` file as the caller read it: its path as Godot names the loaded resource, and its text. */
+/** `path` is the loaded resource's path, which marks the include and keeps it from loading twice. */
 export interface ShaderInclude {
   readonly path: string;
   readonly code: string;
 }
 
-/** The project's `rendering/renderer/rendering_method`, which sets `CURRENT_RENDERER`. */
+/** The project's `rendering/renderer/rendering_method`. */
 export type RenderingMethod = 'forward_plus' | 'mobile' | 'gl_compatibility';
 
 export interface PreprocessOptions {
-  /** The shader's path, which a relative include resolves against. */
   readonly file?: string;
-  /** The include at `path`, a `res://` path or one relative to the working directory, or nothing when there is none. */
+  /** Nothing when the file is missing. A path with no `res://` is relative to the project. */
   readonly readInclude?: (path: string) => ShaderInclude | undefined;
   readonly renderingMethod?: RenderingMethod;
 }
 
-/** `insert_builtin_define` (`shader_preprocessor.cpp:1312`). */
+/** shader_preprocessor.cpp:1353 */
 const RENDERERS: Readonly<Record<RenderingMethod, string>> = {
   gl_compatibility: '0',
   mobile: '1',
   forward_plus: '2',
 };
 
-/** `process_include` refuses an include deeper than this. */
 const INCLUDE_DEPTH_AT_MOST = 25;
 
 interface Branch {
@@ -45,14 +37,13 @@ interface Branch {
   isElseDefined: boolean;
 }
 
-/** `ShaderPreprocessor::State`: shared by the shader and every file it includes. */
+/** Shared by the shader and every file it includes. */
 interface State {
   readonly defines: Map<string, Define>;
   currentBranch: Branch | undefined;
   conditionDepth: number;
-  /** The real path of each file included so far, which is not included again. */
   readonly includes: Set<string>;
-  /** The text of each file being read, outermost first. Godot keeps their hashes. */
+  // Godot keeps hashes of the open texts, so two files of one text count as a cycle.
   readonly openTexts: string[];
   includeDepth: number;
   currentFile: string;
@@ -60,7 +51,7 @@ interface State {
   readonly readInclude: (path: string) => ShaderInclude | undefined;
 }
 
-/** `code` preprocessed. A text Godot's preprocessor refuses throws `PreprocessorError`. */
+/** Throws `PreprocessorError` for a text Godot's preprocessor refuses. */
 export function preprocess(code: string, options: PreprocessOptions = {}): string {
   const renderer = RENDERERS[options.renderingMethod ?? 'forward_plus'];
   const builtIn = (body: string): Define => ({ body, arguments: [], isBuiltIn: true });
@@ -83,7 +74,6 @@ export function preprocess(code: string, options: PreprocessOptions = {}): strin
   return new FilePreprocessor(state).run(code);
 }
 
-/** One file's pass: the shader's, or an include's. */
 class FilePreprocessor {
   private output = '';
   private tokenizer = new DirectiveTokenizer('');
@@ -99,7 +89,7 @@ class FilePreprocessor {
     }
   }
 
-  /** `preprocess(State *, ...)` (`shader_preprocessor.cpp:1288`). */
+  /** shader_preprocessor.cpp:1264 */
   private read(code: string): string {
     const stripped = stripComments(code);
     if (stripped.error) throw new PreprocessorError(stripped.error.message, stripped.error.line);
@@ -135,13 +125,13 @@ class FilePreprocessor {
     return this.output;
   }
 
-  /** `expand_output_macros`: the line is already the next one, so the error line is one less. */
+  // The tokenizer is already on the next line.
   private expandOutputMacros(start: number, line: number): void {
     this.output =
       this.output.slice(0, start) + expandMacros(this.output.slice(start), this.state.defines, line - 1);
   }
 
-  /** `process_directive` (`shader_preprocessor.cpp:377`). */
+  /** shader_preprocessor.cpp:377 */
   private directive(): void {
     const name = this.tokenizer.identifier(true);
     switch (name) {
@@ -189,7 +179,6 @@ class FilePreprocessor {
     this.state.defines.set(label, { body, arguments: names, isBuiltIn: false });
   }
 
-  /** The names in the brackets after a define's name. */
   private argumentNames(line: number): string[] {
     this.tokenizer.token();
     const names: string[] = [];
@@ -214,7 +203,6 @@ class FilePreprocessor {
     this.state.defines.delete(label);
   }
 
-  /** `process_ifdef`, or `process_ifndef` when `isDefinedTaken` is false. */
   private ifdef(isDefinedTaken: boolean): void {
     const line = this.tokenizer.line;
     const label = this.tokenizer.identifier();
@@ -224,7 +212,6 @@ class FilePreprocessor {
     this.startBranch(this.state.defines.has(label) === isDefinedTaken);
   }
 
-  /** `start_branch_condition` for a new branch. A false condition skips to its next directive. */
   private startBranch(isTaken: boolean): void {
     this.state.conditionDepth += 1;
     this.state.currentBranch = {
@@ -253,10 +240,7 @@ class FilePreprocessor {
     this.state.currentBranch = this.state.currentBranch?.parent;
   }
 
-  /**
-   * `next_directive`: moves to the `#` of the next of `directives` at this branch's depth, past
-   * the branches nested in between.
-   */
+  /** shader_preprocessor.cpp:1193 */
   private skipToDirective(directives: readonly string[]): void {
     const line = this.tokenizer.line;
     let nesting = 0;
@@ -287,11 +271,7 @@ class FilePreprocessor {
     if (!this.tokenizer.consumeEmptyLine()) throw new PreprocessorError("Invalid 'pragma' directive.", line);
   }
 
-  /**
-   * `process_include` (`shader_preprocessor.cpp:615`): the file's preprocessed text between the
-   * enter and exit markers the shading language tokenizer reads. A file already included adds
-   * nothing.
-   */
+  /** shader_preprocessor.cpp:686 */
   private include(): void {
     const line = this.tokenizer.line;
     this.tokenizer.advance('"');
@@ -300,8 +280,7 @@ class FilePreprocessor {
       throw new PreprocessorError('Invalid path.', line);
     const path = this.resolvedPath(quoted);
     const include = this.state.readInclude(path);
-    // Godot tells a missing file, a failed load and a resource of another type apart; a game
-    // refuses all three alike.
+    // Godot words a failed load and a wrong type apart, but a game refuses all three alike.
     if (include === undefined)
       throw new PreprocessorError(`Shader include file does not exist: ${path}`, line);
     if (include.code !== '' && this.state.openTexts.includes(include.code))
@@ -311,13 +290,11 @@ class FilePreprocessor {
     this.output += `@@>${include.path}\n${this.includedText(include, line)}\n@@<${include.path}\n`;
   }
 
-  /** `simplify_path`, then joined to the current file's folder when relative. */
   private resolvedPath(quoted: string): string {
     const path = simplifyPath(quoted);
     return isRelativePath(path) ? pathJoin(baseDir(this.state.currentFile), path) : path;
   }
 
-  /** `include` preprocessed with the shared state, as the current file, with no branch open. */
   private includedText(include: ShaderInclude, line: number): string {
     const { state } = this;
     state.includeDepth += 1;

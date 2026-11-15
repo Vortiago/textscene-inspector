@@ -27,8 +27,6 @@ export const isDrawn = (probe, viewportPixels) => drawnPixels(probe, viewportPix
 /**
  * One probe's record entry from the pixels of its viewport, with `rejection`, Godot's stage,
  * message and line, for a probe Godot draws nothing for or that ends Godot, which has no pixels.
- * `preprocessed` is the text Godot's preprocessor made of the probe's shader, for a probe that
- * uses the preprocessor.
  */
 export function recordEntry(probe, viewportPixels, rejection = NO_REASON, preprocessed = undefined) {
   const entry = {
@@ -57,14 +55,13 @@ export function probeRecord({ godot, adapter, pixels, preprocessed }, probes, re
   return { godot, adapter, probes: entries };
 }
 
-/** The source of `probe`, and the files it includes when it has any. */
 function probeText(probe) {
   return probe.includes === undefined
     ? { source: probe.source }
     : { source: probe.source, includes: probe.includes };
 }
 
-/** Whether `entry` holds another source, other includes or other inputs than `probe` has now. */
+/** Whether `entry` holds another source or other inputs than `probe` has now. */
 export function isStaleEntry(entry, probe) {
   const inputs = parameterBits(probe).map((bits) => bits.map(hex));
   const { source, includes } = probeText(probe);

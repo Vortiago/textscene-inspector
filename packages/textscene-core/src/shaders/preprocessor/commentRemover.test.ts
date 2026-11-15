@@ -1,5 +1,3 @@
-/** The comment remover, against `CommentRemover::strip` (`shader_preprocessor.cpp:245`). */
-
 import { describe, expect, it } from 'vitest';
 import { stripComments } from './commentRemover.js';
 
