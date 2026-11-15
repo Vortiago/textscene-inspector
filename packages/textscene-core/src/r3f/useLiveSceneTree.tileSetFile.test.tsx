@@ -12,7 +12,7 @@ import { ResourceLoader } from '../resources/ResourceLoader.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { busServing } from '../resources/testing/servingFileBus.js';
 import { HierarchyProvider } from './contexts/HierarchyContext.js';
-import { useLiveNode } from './useLiveSceneTree.js';
+import { useLiveNode, useLiveStepOf } from './useLiveSceneTree.js';
 import { liveFilesOf } from './liveFiles.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { useTileSetModel } from './useTileSetModel.js';
@@ -84,7 +84,7 @@ function mount(tileSetFile: string | null = TILE_SET_FILE, isTileSetHeld = false
     </HierarchyProvider>
   );
   const tileSetLoads = () => loads.filter((path) => path === TILE_SET_PATH).length;
-  return { wrapper, tileSetLoads, liveFiles: liveFilesOf(loader) };
+  return { wrapper, tileSetLoads, liveFiles: liveFilesOf(loader), main };
 }
 
 describe('the live tree over a TileSet file', () => {
@@ -138,5 +138,21 @@ describe('the live tree over a TileSet file', () => {
     expect(result.current.tileSet.status).toBe(row.status);
     expect(result.current.tile !== null).toBe(row.hasTile);
     expect(liveFiles.files().size).toBe(1);
+  });
+
+  it('builds the tree again for a TileSet that loaded unheard after a second tree read it loaded', async () => {
+    const { wrapper, main } = mount();
+    const layer = main.nodes[0]!.children.find((node) => node.name === 'Layer')!;
+    const scope = { externalResources: main.externalResources, internalResources: main.internalResources };
+    await settle();
+    // The shared tree reads the TileSet while it loads, and its reader leaves before the load lands.
+    renderHook(() => useLiveNode(SCENE_TILE), { wrapper }).unmount();
+    await settle();
+
+    renderHook(() => useLiveStepOf(layer, scope), { wrapper });
+    const { result } = renderHook(() => useLiveNode(SCENE_TILE), { wrapper });
+    await settle();
+
+    expect(result.current?.node.name).toBe('@SceneTile@0_0');
   });
 });

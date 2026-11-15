@@ -3,7 +3,13 @@
  * each read answers the same on a later snapshot, since an unchanged answer keeps its identity.
  */
 
-import type { Read, ResourceKind, ResourceSnapshot, ScopedReference } from '../resources/reading';
+import {
+  sameReference,
+  type Read,
+  type ResourceKind,
+  type ResourceSnapshot,
+  type ScopedReference,
+} from '../resources/reading';
 import type { FileKind } from '../resources/fileKinds.js';
 
 /** One read a computation made, with the answer it got. */
@@ -24,6 +30,16 @@ function answerNow(read: RecordedRead, snapshot: ResourceSnapshot): Read<unknown
   return 'kind' in read
     ? snapshot.read(read.reference, read.kind)
     : snapshot.loaded(read.fileKind, read.address);
+}
+
+/** Whether `reads` read every file that `others` read: the same reference as the same kind, or the same address. */
+export function readsCover(reads: readonly RecordedRead[], others: readonly RecordedRead[]): boolean {
+  return others.every((other) => reads.some((read) => isSameRead(read, other)));
+}
+
+function isSameRead(a: RecordedRead, b: RecordedRead): boolean {
+  if ('kind' in a) return 'kind' in b && a.kind === b.kind && sameReference(a.reference, b.reference);
+  return !('kind' in b) && a.fileKind === b.fileKind && a.address === b.address;
 }
 
 /** `snapshot`, with each read it answers added to `reads`. */

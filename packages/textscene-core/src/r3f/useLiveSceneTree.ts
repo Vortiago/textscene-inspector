@@ -3,7 +3,7 @@
  * loader's scene, GLB and `.tres` cache snapshots, and re-render when the tree grows because an
  * instance sub-scene or GLB finishes loading after the parsed SceneGraph was built.
  */
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useResourceLoader } from '../resources/useResource.js';
 import {
@@ -29,6 +29,7 @@ import { NOTHING_CACHED, type CacheSource } from './cacheSources.js';
 import type { ParsedResource } from '../parser/parsedResource.js';
 import { liveFilesOf, NO_LIVE_FILES, type LiveFiles } from './liveFiles.js';
 import type { ResourceSnapshot } from '../resources/reading';
+import { readsCover, recording, type RecordedRead } from './recordedReads.js';
 import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
 import { projectTreeSettings, type ProjectTreeSettings } from '../parser/projectSettingsParser.js';
 import { useControlLocalTransforms, type ControlLocalTransforms } from './contexts/YSortContext.js';
@@ -116,7 +117,10 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
   let stopListening: (() => void) | undefined;
   // The token of the last time a reader listened: a change after it is a load or a cache clear that went unseen.
   let listenedUntil = loader.eventBus.changeToken();
-  /** Written only by `treeFiles` and `newTree`: each resource file the trees of this version read, with its answer. */
+  /**
+   * Written only by `treeFiles` and `newTree`: each resource file the trees of this version read,
+   * with the first answer one got. Several trees share a version, and each keeps what it first read.
+   */
   let treeReads = new Map<string, ParsedResource | null | undefined>();
   const newTree = () => {
     ticks.version++;
@@ -137,7 +141,7 @@ const loadTicksOfLoader = perObject((loader: ResourceLoader): LoadTicks => {
     treeFiles: {
       getCached(path) {
         const answer = files.parsedFiles().getCached(path);
-        treeReads.set(path, answer);
+        if (!treeReads.has(path)) treeReads.set(path, answer);
         return answer;
       },
     },
@@ -185,24 +189,23 @@ export function useLiveTreeVersion(loader: ResourceLoader | null | undefined): n
   return useSyncExternalStore(ticks.subscribe, ticks.getVersion);
 }
 
+const NO_READS: readonly RecordedRead[] = [];
+
 /** The key of a reader with no loader, which a WeakMap cannot take as null. */
 const NO_LOADER = {};
 
 /**
  * A reader of the value that `build` makes for a loader. It builds again once the loader's load tick
- * has moved, and keeps the last value when `isSame` says the new one matches it. A reader with no
- * loader builds once, at tick 0.
+ * has moved. A reader with no loader builds once, at tick 0.
  */
 function valueAtLoadTick<T>(
-  build: (loader: ResourceLoader | null | undefined, version: number) => T,
-  isSame: (a: T, b: T) => boolean = Object.is
+  build: (loader: ResourceLoader | null | undefined, version: number) => T
 ): (loader: ResourceLoader | null | undefined, version: number) => T {
   const built = new WeakMap<object, { version: number; value: T }>();
   return (loader, version) => {
     const known = built.get(loader ?? NO_LOADER);
     if (known?.version === version) return known.value;
-    const next = build(loader, version);
-    const value = known && isSame(known.value, next) ? known.value : next;
+    const value = build(loader, version);
     built.set(loader ?? NO_LOADER, { version, value });
     return value;
   };
@@ -322,6 +325,8 @@ function useReadAtLoadTick<T>(
   isSame: (a: T, b: T) => boolean
 ): T {
   const ticks = loadTicksOf(watched);
+  /** Written only by `getSnapshot`: the reads of this reader's last read, by whichever `readAt`. */
+  const lastReads = useRef<readonly RecordedRead[]>(NO_READS);
   const getSnapshot = useMemo(() => {
     /** Written only by this reader: what it read last, at which tree and snapshot. */
     let last: { version: number; snapshot: ResourceSnapshot; value: T } | undefined;
@@ -329,14 +334,24 @@ function useReadAtLoadTick<T>(
       const version = ticks.getVersion();
       const snapshot = ticks.files.current();
       if (last?.version === version && last.snapshot === snapshot) return last.value;
-      const next = readAt(version, snapshot);
+      const reads: RecordedRead[] = [];
+      const next = readAt(version, recording(snapshot, reads));
+      lastReads.current = reads;
       const value = last && isSame(last.value, next) ? last.value : next;
       last = { version, snapshot, value };
       return value;
     };
   }, [ticks, readAt, isSame]);
-  // A reader that stops or replaces its reads leaves files in the shared snapshot until it restarts.
-  useEffect(() => () => ticks.files.releaseReads(), [ticks, readAt]);
+  useEffect(() => {
+    const committedReads = lastReads.current;
+    // A file only this reader read stays in the shared snapshot until it restarts. A new `readAt`
+    // that reads the same files keeps it, so a new closure over equal inputs restarts nothing.
+    return () => {
+      const isUnmounted = lastReads.current === committedReads;
+      if (isUnmounted ? committedReads.length > 0 : !readsCover(lastReads.current, committedReads))
+        ticks.files.releaseReads();
+    };
+  }, [ticks, readAt]);
   return useSyncExternalStore(ticks.subscribe, getSnapshot);
 }
 
