@@ -12,6 +12,7 @@ import { accepts, shape } from './grounding.js';
 
 import {
   ARRAY_LITERAL_RE,
+  DICTIONARY_LITERAL_RE,
   JACKETED_STRING_RE,
   NODE_PATH_LITERAL_RE,
   TYPED_WRAPPER_RE,
@@ -19,6 +20,7 @@ import {
 } from '../../../godot/variant/variantParser.js';
 import { unquoteString } from '../../../parser/utils.js';
 import { codePointCount } from '../../../godot/string/codePoints.js';
+import { classInheritanceChain } from '../../../godot/classdb/classBaseTypes.js';
 import { valueCode } from './codes.js';
 
 /**
@@ -54,6 +56,20 @@ export const scalarCombinators = {
     }, 'quoted string, or the &"…" StringName or NodePath("…") it converts');
   },
 
+  // Format only: an entry is any Variant (variant_parser.cpp:1187-1322).
+  dictionary(name: string): PropertyValidator {
+    const code = formatCode(name);
+    return shape((key, value, line) => {
+      if (DICTIONARY_LITERAL_RE.test(value.trim())) return null;
+      return propertyError(
+        key,
+        line,
+        `Property '${name}' must be a Dictionary literal like {} or { "key": 1 }, got: ${value}`,
+        code
+      );
+    }, 'Dictionary literal ({…} or Dictionary[K, V]({…}))');
+  },
+
   /**
    * A `StringName` property: Godot writes `&"value"`, and the variant text
    * parser also accepts a plain `"value"`.
@@ -74,10 +90,7 @@ export const scalarCombinators = {
   },
 
   /**
-   * A string slot the setter cuts to its first character, counted in code
-   * points of the decoded text: `String` is UTF-32, and the tokenizer resolves
-   * `\uXXXX` first, so `"\u2026"` is one character. An empty literal is legal,
-   * since `left(1)` of `""` is `""`.
+   * A string the setter cuts to its first code point: an escaped `…` is one character, and `""` is legal.
    *
    * @param enforced - `file:line` of the `left(1)` that cuts the value, which is
    *   the "silently alters the write" branch of ADR-0032 and so the error tier.
@@ -131,12 +144,7 @@ export const scalarCombinators = {
   },
 };
 
-/**
- * An ARRAY slot with an element type, and where its refusal of another type
- * comes from. `enforced`: a `TypedArray<T>` setter, whose `Array::assign`
- * fails on another typed array (`array.cpp:275-277`), an error. `hinted`: a bare
- * `const Array &` setter behind a `PROPERTY_HINT_ARRAY_TYPE`, a warning.
- */
+/** `enforced` cites a `TypedArray<T>` setter (`array.cpp:245`, `:276`), an error. `hinted` warns. */
 type TypedArraySlot = { typedAs: string } & (
   { enforced: string; hinted?: never } | { hinted: string; enforced?: never }
 );
@@ -156,18 +164,23 @@ function typedArrayLiteral(
   const validator: PropertyValidator = (key, value, line) => {
     const unreadable = readable(key, value, line);
     if (unreadable) return unreadable;
-    const wrapped = TYPED_WRAPPER_RE.exec(value.trim());
-    if (!wrapped || wrapped[1]!.trim() === typed.typedAs) return null;
+    const wrapper = TYPED_WRAPPER_RE.exec(value.trim())?.[1]!.trim();
+    if (wrapper === undefined || isRelatedClass(wrapper, typed.typedAs)) return null;
     return propertyError(
       key,
       line,
-      `Property '${name}' holds ${typed.typedAs} elements, got an Array[${wrapped[1]!.trim()}] (${cite})`,
+      `Property '${name}' holds ${typed.typedAs} elements, got an Array[${wrapper}] (${cite})`,
       valueCode(name),
       severity
     );
   };
   validator.grounding = { kind: typed.enforced !== undefined ? 'enforced' : 'hinted', cite };
   return accepts(validator, description);
+}
+
+// `Array::assign` takes a wrapper class on either side of the element class (array.cpp:232-243).
+function isRelatedClass(wrapper: string, element: string): boolean {
+  return classInheritanceChain(wrapper).includes(element) || classInheritanceChain(element).includes(wrapper);
 }
 
 /**

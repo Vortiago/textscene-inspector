@@ -192,7 +192,7 @@ describe('planChecks', () => {
   });
 
   it('checks the comments of each pushed range, not the working tree', () => {
-    const pushed = [{ base: 'b1', head: 'h1' }];
+    const pushed = [{ bases: ['b1', 'm1'], head: 'h1' }];
     const commands = planChecks({
       changed: ['scripts/x.mjs'],
       deleted: [],
@@ -202,7 +202,7 @@ describe('planChecks', () => {
       isEngineTestInput,
       hasEngine: () => false,
     }).map((command) => command.join(' '));
-    expect(commands).toContain('pnpm comments:check --base b1 --head h1');
+    expect(commands).toContain('pnpm comments:check --base b1 --base m1 --head h1');
     expect(commands).not.toContain('pnpm comments:check');
   });
 

@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { outOfRangeCell, rulesFor } from './lintCoverage.mjs';
+import { outOfRangeCell, rulesFor, validatorsFor } from './lintCoverage.mjs';
 
 describe('the Out of range cell', () => {
   it('names one tier when both ends agree', () => {
@@ -87,5 +87,21 @@ describe('the rules that reach a type', () => {
 
   it('lists no resource rule on another type', () => {
     expect(rulesFor('Environment', noNodeRules, resourceRules)).toEqual([]);
+  });
+});
+
+describe('the validators that reach a type', () => {
+  const registry = {
+    getOwnKeys: (type) => (type === 'Base' ? ['hand'] : []),
+    derivedOwnKeys: (type) => (type === 'Leaf' ? ['fov'] : []),
+    declarationFor: () => null,
+  };
+
+  it('lists a key a derived check answers on the class that declares it', () => {
+    const rows = validatorsFor('Leaf', registry, { Leaf: 'Base' });
+    expect(rows.map(({ property, declaredOn }) => `${declaredOn}.${property}`)).toEqual([
+      'Leaf.fov',
+      'Base.hand',
+    ]);
   });
 });

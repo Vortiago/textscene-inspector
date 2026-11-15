@@ -22,7 +22,6 @@ import {
 } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
-  shapeText,
   shapedTextSizeWidthPx,
   type GlyphPlacement,
   type TextLayoutResult,
@@ -42,7 +41,7 @@ import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import type { LineEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { shapeTextLine } from '../../../../r3f/controls/native/text/textLine';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 /**
@@ -209,13 +208,7 @@ export function shapeLineEditText(
   props: Pick<LineEditProperties, 'drawControlChars'>,
   options: TextBidiOptions & { fontSizePx: number; fontMetrics: FontMetrics }
 ): TextLayoutResult {
-  return shapeText(text, {
-    ...options,
-    preserveControl: props.drawControlChars,
-    boxWidthPx: 0,
-    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-    lineSpacingPx: 0,
-  });
+  return shapeTextLine(text, { ...options, preserveControl: props.drawControlChars });
 }
 
 /**

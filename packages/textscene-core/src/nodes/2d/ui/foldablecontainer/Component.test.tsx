@@ -236,8 +236,8 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
     expect(inkedTitleGlyphs(trimmed)).toBeLessThan(inkedTitleGlyphs(untrimmed));
   });
 
-  // Godot draws the title as one `TextLine`, so a trimmed title with a line break draws its first line.
-  it('draws the first line only of a trimmed title with a line break', async () => {
+  // A `TextLine` never breaks (foldable_container.h:58).
+  it('draws a trimmed title with a line break on one line', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <FoldableContainer
         {...painterEnv()}
@@ -246,7 +246,7 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    expect(inkedGlyphCount(bundledRuns(renderer.scene)[0]!)).toBe(2);
+    expect(inkedGlyphCount(bundledRuns(renderer.scene)[0]!)).toBe(4);
   });
 });
 

@@ -317,6 +317,15 @@ A per-property format or range check that judges one property's value alone duri
 Its **Severity** comes from what the engine does (`linter/validators/v/grounding.ts`), and its **Diagnostic** is named `format:<property>`, with the key as the file writes it.
 _Avoid_: "validator" for a **Value decoder**.
 
+**Property descriptor** (`godot/classdb/propertyDescriptor.ts`):
+What this repository knows about one Godot property: its ClassDB capture row (Variant type, hint, hint string, the setter's argument type, whether it has a setter) and an optional **Hand row**.
+A key no hand **Validator** answers takes the check its descriptor implies (`linter/descriptorValidator.ts`), so a class needs no hand table to be checked.
+_Avoid_: "property info", "schema".
+
+**Hand row** (`PropertyFacts`, registered with `registerPropertyFacts`):
+The part of a **Property descriptor** that states only what the engine source says and ClassDB cannot report: the setter's refusal with its `file:line`, the C++ integer width, a message, or the enum constant names.
+_Avoid_: a hand row that restates a hint, or one under a key a hand **Validator** answers, where nothing reads it.
+
 **Format-only validator**:
 A **Validator** marked `formatOnly`, which cites nothing because it refuses only unreadable text or a whole value of a type the slot does not convert.
 The `formatOnlyCorpus` ledger checks that it never errors on a literal Godot stores.

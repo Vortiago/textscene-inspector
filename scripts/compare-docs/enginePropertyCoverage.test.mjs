@@ -15,14 +15,8 @@ import { keyMatcher, unvalidatedByClass } from './registryKeys.mjs';
 import { PROPS_OUT } from './build-node-catalog/paths.mjs';
 
 const CORE = join(import.meta.dirname, '../../packages/textscene-core');
-// A ledger, not a pass mark: it only goes down, counted per declaring class
-// with no base-walk, since a `Control` validator belongs in `Control`'s slice.
-// The four left stay unvalidated, each pinned by a `findValidator` null test.
-const EXPECTED_UNVALIDATED = 4;
-// Three pass an empty setter string to ADD_PROPERTY, so `ClassDB::set_property`
-// drops the write: `ShapeCast2D`/`ShapeCast3D.collision_result` and
-// `LimitAngularVelocityModifier3D.joint_count`. `OpenXRRenderModel.render_model`
-// is a `Variant::RID`, a runtime handle with no literal a scene can write.
+// `OpenXRRenderModel.render_model`, which `isRuntimeHandle` exempts.
+const EXPECTED_UNVALIDATED = 1;
 
 /**
  * The classes this ledger measures: the ones this repo claims, closed over the
@@ -109,8 +103,6 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
 
     // Not a filter on `usage == 2`: that is STORAGE without EDITOR, hidden from the
     // inspector but serialised, as `SpringBoneCollision3D.bone` is, and validated.
-    // `class_get_property_list` does not report setters, so a getter-only property
-    // counts here until its ADD_PROPERTY is read.
     const rows = unvalidatedByClass(engine, validatorRegistry, covered);
     const total = rows.reduce((sum, r) => sum + r.missing.length, 0);
     const report = rows.map((r) => `  ${r.cls} (${r.missing.length}): ${r.missing.join(', ')}`);

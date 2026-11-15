@@ -13,7 +13,7 @@ LineEdit is a single-line text field. The previewer draws its stylebox, its `rig
 or clear button, and its caret while `caret_force_displayed` is set. It draws the glyphs
 of one text (the string, or the placeholder) that end inside the right margin, in the colour its
 state calls for. `max_length`
-truncates an over-long `text` the same way Godot does.
+truncates an over-long `text` the same way Godot does. A text with a line break draws on one line, and the break takes no room.
 The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
 
 Each script run shapes apart, as Godot's `ScriptIterator` splits the text (`text_server_adv.cpp:7346-7352`), so kerning and the

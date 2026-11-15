@@ -9,11 +9,6 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('BoneAttachment3D', {
-  // bone_attachment_3d.cpp:376, declared Variant::STRING_NAME with no hint, but
-  // `get_bone_name` returns `String` (cpp:186), so Godot saves the plain quoted
-  // form, and the variant parser reads `&"…"` too. set_bone_name (cpp:178-184)
-  // assigns before it looks a skeleton up, so no name is refused.
-  bone_name: v.stringName('bone_name'),
   // bone_attachment_3d.cpp:377, INT, no hint. `v.int` warns that `2.5` stores 2. -1 is the
   // default, which `_check_bind` (cpp:117) reads as "unset, resolve from bone_name", so it stays
   // legal. The ceiling is the live bone count, which no per-property validator sees.

@@ -21,7 +21,7 @@ Strict parsing format-checks these `TouchScreenButton` properties, plus 12 inher
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
-| `action` | quoted string or &"name" |  |
+| `action` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `bitmask` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 | `passby_press` | true or false |  |
 | `shape` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |

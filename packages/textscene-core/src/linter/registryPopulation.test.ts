@@ -49,6 +49,24 @@ describe('registeredKeys', () => {
   });
 });
 
+describe('registeredKeys, derived', () => {
+  it('lists each captured key the descriptor answers, under the class that declares it', () => {
+    expect(registeredKeys()).toContainEqual({ nodeType: 'BoxMesh', key: 'size', kind: 'derived' });
+  });
+
+  it('lists no key a hand validator answers as derived', () => {
+    expect(registeredKeys()).not.toContainEqual({
+      nodeType: 'SplitContainer',
+      key: 'collapsed',
+      kind: 'derived',
+    });
+  });
+
+  it('lists no derived key for a registry given no derivation', () => {
+    expect(registeredKeys(new ValidatorRegistry()).filter(({ kind }) => kind === 'derived')).toEqual([]);
+  });
+});
+
 describe('everyValidator', () => {
   it('descends a dispatcher that `keep` itself rejects', () => {
     // `keep` decides what is reported, never what is descended. Excusing a

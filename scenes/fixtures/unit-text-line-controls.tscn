@@ -1,0 +1,848 @@
+; One variable: seven texts in every TextLine holder, a LineEdit and a Label: a line break in the middle, at
+; the start, at the end and twice, a CR LF, a tab and none. Each sits beside a marker, so its width shows. No
+; other scene puts these texts in these nodes.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="HL0" type="HBoxContainer" parent="."]
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 8.0
+offset_bottom = 8.0
+theme_override_constants/separation = 0
+
+[node name="L0" type="LinkButton" parent="HL0"]
+text = "Ab\ncd"
+
+[node name="Mark" type="ColorRect" parent="HL0"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HF0" type="HBoxContainer" parent="."]
+offset_left = 8.0
+offset_top = 60.0
+offset_right = 8.0
+offset_bottom = 60.0
+theme_override_constants/separation = 0
+
+[node name="F0" type="FoldableContainer" parent="HF0"]
+folded = true
+title = "Ab\ncd"
+
+[node name="Mark" type="ColorRect" parent="HF0"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HT0" type="HBoxContainer" parent="."]
+offset_left = 8.0
+offset_top = 120.0
+offset_right = 8.0
+offset_bottom = 120.0
+theme_override_constants/separation = 0
+
+[node name="T0" type="TabBar" parent="HT0"]
+clip_tabs = false
+tab_count = 2
+tab_0/title = "Ab\ncd"
+tab_1/title = "Z"
+
+[node name="Mark" type="ColorRect" parent="HT0"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HM0" type="HBoxContainer" parent="."]
+offset_left = 8.0
+offset_top = 180.0
+offset_right = 8.0
+offset_bottom = 180.0
+theme_override_constants/separation = 0
+
+[node name="M0" type="MenuBar" parent="HM0"]
+
+[node name="P" type="PopupMenu" parent="HM0/M0"]
+title = "Ab\ncd"
+
+[node name="Mark" type="ColorRect" parent="HM0"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="R0" type="RichTextLabel" parent="."]
+offset_left = 8.0
+offset_top = 230.0
+offset_right = 158.0
+offset_bottom = 290.0
+bbcode_enabled = true
+text = "[ul bullet=Ab\ncd]it[/ul]"
+
+[node name="W0" type="Window" parent="."]
+title = "Ab\ncd"
+position = Vector2i(12, 330)
+size = Vector2i(140, 50)
+
+[node name="P0" type="PopupMenu" parent="."]
+position = Vector2i(8, 430)
+visible = true
+item_count = 2
+item_0/text = "Ab\ncd"
+item_0/id = 0
+item_1/text = "Z"
+item_1/id = 1
+
+[node name="HL1" type="HBoxContainer" parent="."]
+offset_left = 170.0
+offset_top = 8.0
+offset_right = 170.0
+offset_bottom = 8.0
+theme_override_constants/separation = 0
+
+[node name="L1" type="LinkButton" parent="HL1"]
+text = "\nAb"
+
+[node name="Mark" type="ColorRect" parent="HL1"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HF1" type="HBoxContainer" parent="."]
+offset_left = 170.0
+offset_top = 60.0
+offset_right = 170.0
+offset_bottom = 60.0
+theme_override_constants/separation = 0
+
+[node name="F1" type="FoldableContainer" parent="HF1"]
+folded = true
+title = "\nAb"
+
+[node name="Mark" type="ColorRect" parent="HF1"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HT1" type="HBoxContainer" parent="."]
+offset_left = 170.0
+offset_top = 120.0
+offset_right = 170.0
+offset_bottom = 120.0
+theme_override_constants/separation = 0
+
+[node name="T1" type="TabBar" parent="HT1"]
+clip_tabs = false
+tab_count = 2
+tab_0/title = "\nAb"
+tab_1/title = "Z"
+
+[node name="Mark" type="ColorRect" parent="HT1"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HM1" type="HBoxContainer" parent="."]
+offset_left = 170.0
+offset_top = 180.0
+offset_right = 170.0
+offset_bottom = 180.0
+theme_override_constants/separation = 0
+
+[node name="M1" type="MenuBar" parent="HM1"]
+
+[node name="P" type="PopupMenu" parent="HM1/M1"]
+title = "\nAb"
+
+[node name="Mark" type="ColorRect" parent="HM1"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="R1" type="RichTextLabel" parent="."]
+offset_left = 170.0
+offset_top = 230.0
+offset_right = 320.0
+offset_bottom = 290.0
+bbcode_enabled = true
+text = "[ul bullet=\nAb]it[/ul]"
+
+[node name="W1" type="Window" parent="."]
+title = "\nAb"
+position = Vector2i(174, 330)
+size = Vector2i(140, 50)
+
+[node name="P1" type="PopupMenu" parent="."]
+position = Vector2i(170, 430)
+visible = true
+item_count = 2
+item_0/text = "\nAb"
+item_0/id = 0
+item_1/text = "Z"
+item_1/id = 1
+
+[node name="HL2" type="HBoxContainer" parent="."]
+offset_left = 332.0
+offset_top = 8.0
+offset_right = 332.0
+offset_bottom = 8.0
+theme_override_constants/separation = 0
+
+[node name="L2" type="LinkButton" parent="HL2"]
+text = "Ab\n"
+
+[node name="Mark" type="ColorRect" parent="HL2"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HF2" type="HBoxContainer" parent="."]
+offset_left = 332.0
+offset_top = 60.0
+offset_right = 332.0
+offset_bottom = 60.0
+theme_override_constants/separation = 0
+
+[node name="F2" type="FoldableContainer" parent="HF2"]
+folded = true
+title = "Ab\n"
+
+[node name="Mark" type="ColorRect" parent="HF2"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HT2" type="HBoxContainer" parent="."]
+offset_left = 332.0
+offset_top = 120.0
+offset_right = 332.0
+offset_bottom = 120.0
+theme_override_constants/separation = 0
+
+[node name="T2" type="TabBar" parent="HT2"]
+clip_tabs = false
+tab_count = 2
+tab_0/title = "Ab\n"
+tab_1/title = "Z"
+
+[node name="Mark" type="ColorRect" parent="HT2"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HM2" type="HBoxContainer" parent="."]
+offset_left = 332.0
+offset_top = 180.0
+offset_right = 332.0
+offset_bottom = 180.0
+theme_override_constants/separation = 0
+
+[node name="M2" type="MenuBar" parent="HM2"]
+
+[node name="P" type="PopupMenu" parent="HM2/M2"]
+title = "Ab\n"
+
+[node name="Mark" type="ColorRect" parent="HM2"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="R2" type="RichTextLabel" parent="."]
+offset_left = 332.0
+offset_top = 230.0
+offset_right = 482.0
+offset_bottom = 290.0
+bbcode_enabled = true
+text = "[ul bullet=Ab\n]it[/ul]"
+
+[node name="W2" type="Window" parent="."]
+title = "Ab\n"
+position = Vector2i(336, 330)
+size = Vector2i(140, 50)
+
+[node name="P2" type="PopupMenu" parent="."]
+position = Vector2i(332, 430)
+visible = true
+item_count = 2
+item_0/text = "Ab\n"
+item_0/id = 0
+item_1/text = "Z"
+item_1/id = 1
+
+[node name="HL3" type="HBoxContainer" parent="."]
+offset_left = 494.0
+offset_top = 8.0
+offset_right = 494.0
+offset_bottom = 8.0
+theme_override_constants/separation = 0
+
+[node name="L3" type="LinkButton" parent="HL3"]
+text = "Ab\n\ncd"
+
+[node name="Mark" type="ColorRect" parent="HL3"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HF3" type="HBoxContainer" parent="."]
+offset_left = 494.0
+offset_top = 60.0
+offset_right = 494.0
+offset_bottom = 60.0
+theme_override_constants/separation = 0
+
+[node name="F3" type="FoldableContainer" parent="HF3"]
+folded = true
+title = "Ab\n\ncd"
+
+[node name="Mark" type="ColorRect" parent="HF3"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HT3" type="HBoxContainer" parent="."]
+offset_left = 494.0
+offset_top = 120.0
+offset_right = 494.0
+offset_bottom = 120.0
+theme_override_constants/separation = 0
+
+[node name="T3" type="TabBar" parent="HT3"]
+clip_tabs = false
+tab_count = 2
+tab_0/title = "Ab\n\ncd"
+tab_1/title = "Z"
+
+[node name="Mark" type="ColorRect" parent="HT3"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HM3" type="HBoxContainer" parent="."]
+offset_left = 494.0
+offset_top = 180.0
+offset_right = 494.0
+offset_bottom = 180.0
+theme_override_constants/separation = 0
+
+[node name="M3" type="MenuBar" parent="HM3"]
+
+[node name="P" type="PopupMenu" parent="HM3/M3"]
+title = "Ab\n\ncd"
+
+[node name="Mark" type="ColorRect" parent="HM3"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="R3" type="RichTextLabel" parent="."]
+offset_left = 494.0
+offset_top = 230.0
+offset_right = 644.0
+offset_bottom = 290.0
+bbcode_enabled = true
+text = "[ul bullet=Ab\n\ncd]it[/ul]"
+
+[node name="W3" type="Window" parent="."]
+title = "Ab\n\ncd"
+position = Vector2i(498, 330)
+size = Vector2i(140, 50)
+
+[node name="P3" type="PopupMenu" parent="."]
+position = Vector2i(494, 430)
+visible = true
+item_count = 2
+item_0/text = "Ab\n\ncd"
+item_0/id = 0
+item_1/text = "Z"
+item_1/id = 1
+
+[node name="HL4" type="HBoxContainer" parent="."]
+offset_left = 656.0
+offset_top = 8.0
+offset_right = 656.0
+offset_bottom = 8.0
+theme_override_constants/separation = 0
+
+[node name="L4" type="LinkButton" parent="HL4"]
+text = "Ab\r\ncd"
+
+[node name="Mark" type="ColorRect" parent="HL4"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HF4" type="HBoxContainer" parent="."]
+offset_left = 656.0
+offset_top = 60.0
+offset_right = 656.0
+offset_bottom = 60.0
+theme_override_constants/separation = 0
+
+[node name="F4" type="FoldableContainer" parent="HF4"]
+folded = true
+title = "Ab\r\ncd"
+
+[node name="Mark" type="ColorRect" parent="HF4"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HT4" type="HBoxContainer" parent="."]
+offset_left = 656.0
+offset_top = 120.0
+offset_right = 656.0
+offset_bottom = 120.0
+theme_override_constants/separation = 0
+
+[node name="T4" type="TabBar" parent="HT4"]
+clip_tabs = false
+tab_count = 2
+tab_0/title = "Ab\r\ncd"
+tab_1/title = "Z"
+
+[node name="Mark" type="ColorRect" parent="HT4"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HM4" type="HBoxContainer" parent="."]
+offset_left = 656.0
+offset_top = 180.0
+offset_right = 656.0
+offset_bottom = 180.0
+theme_override_constants/separation = 0
+
+[node name="M4" type="MenuBar" parent="HM4"]
+
+[node name="P" type="PopupMenu" parent="HM4/M4"]
+title = "Ab\r\ncd"
+
+[node name="Mark" type="ColorRect" parent="HM4"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="R4" type="RichTextLabel" parent="."]
+offset_left = 656.0
+offset_top = 230.0
+offset_right = 806.0
+offset_bottom = 290.0
+bbcode_enabled = true
+text = "[ul bullet=Ab\r\ncd]it[/ul]"
+
+[node name="W4" type="Window" parent="."]
+title = "Ab\r\ncd"
+position = Vector2i(660, 330)
+size = Vector2i(140, 50)
+
+[node name="P4" type="PopupMenu" parent="."]
+position = Vector2i(656, 430)
+visible = true
+item_count = 2
+item_0/text = "Ab\r\ncd"
+item_0/id = 0
+item_1/text = "Z"
+item_1/id = 1
+
+[node name="HL5" type="HBoxContainer" parent="."]
+offset_left = 818.0
+offset_top = 8.0
+offset_right = 818.0
+offset_bottom = 8.0
+theme_override_constants/separation = 0
+
+[node name="L5" type="LinkButton" parent="HL5"]
+text = "Ab\tcd"
+
+[node name="Mark" type="ColorRect" parent="HL5"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HF5" type="HBoxContainer" parent="."]
+offset_left = 818.0
+offset_top = 60.0
+offset_right = 818.0
+offset_bottom = 60.0
+theme_override_constants/separation = 0
+
+[node name="F5" type="FoldableContainer" parent="HF5"]
+folded = true
+title = "Ab\tcd"
+
+[node name="Mark" type="ColorRect" parent="HF5"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HT5" type="HBoxContainer" parent="."]
+offset_left = 818.0
+offset_top = 120.0
+offset_right = 818.0
+offset_bottom = 120.0
+theme_override_constants/separation = 0
+
+[node name="T5" type="TabBar" parent="HT5"]
+clip_tabs = false
+tab_count = 2
+tab_0/title = "Ab\tcd"
+tab_1/title = "Z"
+
+[node name="Mark" type="ColorRect" parent="HT5"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HM5" type="HBoxContainer" parent="."]
+offset_left = 818.0
+offset_top = 180.0
+offset_right = 818.0
+offset_bottom = 180.0
+theme_override_constants/separation = 0
+
+[node name="M5" type="MenuBar" parent="HM5"]
+
+[node name="P" type="PopupMenu" parent="HM5/M5"]
+title = "Ab\tcd"
+
+[node name="Mark" type="ColorRect" parent="HM5"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="R5" type="RichTextLabel" parent="."]
+offset_left = 818.0
+offset_top = 230.0
+offset_right = 968.0
+offset_bottom = 290.0
+bbcode_enabled = true
+text = "[ul bullet=Ab\tcd]it[/ul]"
+
+[node name="W5" type="Window" parent="."]
+title = "Ab\tcd"
+position = Vector2i(822, 330)
+size = Vector2i(140, 50)
+
+[node name="P5" type="PopupMenu" parent="."]
+position = Vector2i(818, 430)
+visible = true
+item_count = 2
+item_0/text = "Ab\tcd"
+item_0/id = 0
+item_1/text = "Z"
+item_1/id = 1
+
+[node name="HL6" type="HBoxContainer" parent="."]
+offset_left = 980.0
+offset_top = 8.0
+offset_right = 980.0
+offset_bottom = 8.0
+theme_override_constants/separation = 0
+
+[node name="L6" type="LinkButton" parent="HL6"]
+text = ""
+
+[node name="Mark" type="ColorRect" parent="HL6"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HF6" type="HBoxContainer" parent="."]
+offset_left = 980.0
+offset_top = 60.0
+offset_right = 980.0
+offset_bottom = 60.0
+theme_override_constants/separation = 0
+
+[node name="F6" type="FoldableContainer" parent="HF6"]
+folded = true
+title = ""
+
+[node name="Mark" type="ColorRect" parent="HF6"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HT6" type="HBoxContainer" parent="."]
+offset_left = 980.0
+offset_top = 120.0
+offset_right = 980.0
+offset_bottom = 120.0
+theme_override_constants/separation = 0
+
+[node name="T6" type="TabBar" parent="HT6"]
+clip_tabs = false
+tab_count = 2
+tab_0/title = ""
+tab_1/title = "Z"
+
+[node name="Mark" type="ColorRect" parent="HT6"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HM6" type="HBoxContainer" parent="."]
+offset_left = 980.0
+offset_top = 180.0
+offset_right = 980.0
+offset_bottom = 180.0
+theme_override_constants/separation = 0
+
+[node name="M6" type="MenuBar" parent="HM6"]
+
+[node name="P" type="PopupMenu" parent="HM6/M6"]
+title = "_"
+
+[node name="Mark" type="ColorRect" parent="HM6"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="R6" type="RichTextLabel" parent="."]
+offset_left = 980.0
+offset_top = 230.0
+offset_right = 1130.0
+offset_bottom = 290.0
+bbcode_enabled = true
+text = "[ul bullet=-]it[/ul]"
+
+[node name="W6" type="Window" parent="."]
+title = ""
+position = Vector2i(984, 330)
+size = Vector2i(140, 50)
+
+[node name="P6" type="PopupMenu" parent="."]
+position = Vector2i(980, 430)
+visible = true
+item_count = 2
+item_0/text = ""
+item_0/id = 0
+item_1/text = "Z"
+item_1/id = 1
+
+[node name="HE0" type="HBoxContainer" parent="."]
+offset_left = 8.0
+offset_top = 545.0
+offset_right = 8.0
+offset_bottom = 545.0
+theme_override_constants/separation = 0
+
+[node name="E0" type="LineEdit" parent="HE0"]
+expand_to_text_length = true
+text = "Ab\ncd"
+
+[node name="Mark" type="ColorRect" parent="HE0"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HB0" type="HBoxContainer" parent="."]
+offset_left = 8.0
+offset_top = 590.0
+offset_right = 8.0
+offset_bottom = 590.0
+theme_override_constants/separation = 0
+
+[node name="B0" type="Label" parent="HB0"]
+text = "Ab\ncd"
+
+[node name="Mark" type="ColorRect" parent="HB0"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HE1" type="HBoxContainer" parent="."]
+offset_left = 170.0
+offset_top = 545.0
+offset_right = 170.0
+offset_bottom = 545.0
+theme_override_constants/separation = 0
+
+[node name="E1" type="LineEdit" parent="HE1"]
+expand_to_text_length = true
+text = "\nAb"
+
+[node name="Mark" type="ColorRect" parent="HE1"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HB1" type="HBoxContainer" parent="."]
+offset_left = 170.0
+offset_top = 590.0
+offset_right = 170.0
+offset_bottom = 590.0
+theme_override_constants/separation = 0
+
+[node name="B1" type="Label" parent="HB1"]
+text = "\nAb"
+
+[node name="Mark" type="ColorRect" parent="HB1"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HE2" type="HBoxContainer" parent="."]
+offset_left = 332.0
+offset_top = 545.0
+offset_right = 332.0
+offset_bottom = 545.0
+theme_override_constants/separation = 0
+
+[node name="E2" type="LineEdit" parent="HE2"]
+expand_to_text_length = true
+text = "Ab\n"
+
+[node name="Mark" type="ColorRect" parent="HE2"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HB2" type="HBoxContainer" parent="."]
+offset_left = 332.0
+offset_top = 590.0
+offset_right = 332.0
+offset_bottom = 590.0
+theme_override_constants/separation = 0
+
+[node name="B2" type="Label" parent="HB2"]
+text = "Ab\n"
+
+[node name="Mark" type="ColorRect" parent="HB2"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HE3" type="HBoxContainer" parent="."]
+offset_left = 494.0
+offset_top = 545.0
+offset_right = 494.0
+offset_bottom = 545.0
+theme_override_constants/separation = 0
+
+[node name="E3" type="LineEdit" parent="HE3"]
+expand_to_text_length = true
+text = "Ab\n\ncd"
+
+[node name="Mark" type="ColorRect" parent="HE3"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HB3" type="HBoxContainer" parent="."]
+offset_left = 494.0
+offset_top = 590.0
+offset_right = 494.0
+offset_bottom = 590.0
+theme_override_constants/separation = 0
+
+[node name="B3" type="Label" parent="HB3"]
+text = "Ab\n\ncd"
+
+[node name="Mark" type="ColorRect" parent="HB3"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HE4" type="HBoxContainer" parent="."]
+offset_left = 656.0
+offset_top = 545.0
+offset_right = 656.0
+offset_bottom = 545.0
+theme_override_constants/separation = 0
+
+[node name="E4" type="LineEdit" parent="HE4"]
+expand_to_text_length = true
+text = "Ab\r\ncd"
+
+[node name="Mark" type="ColorRect" parent="HE4"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HB4" type="HBoxContainer" parent="."]
+offset_left = 656.0
+offset_top = 590.0
+offset_right = 656.0
+offset_bottom = 590.0
+theme_override_constants/separation = 0
+
+[node name="B4" type="Label" parent="HB4"]
+text = "Ab\r\ncd"
+
+[node name="Mark" type="ColorRect" parent="HB4"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HE5" type="HBoxContainer" parent="."]
+offset_left = 818.0
+offset_top = 545.0
+offset_right = 818.0
+offset_bottom = 545.0
+theme_override_constants/separation = 0
+
+[node name="E5" type="LineEdit" parent="HE5"]
+expand_to_text_length = true
+text = "Ab\tcd"
+
+[node name="Mark" type="ColorRect" parent="HE5"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HB5" type="HBoxContainer" parent="."]
+offset_left = 818.0
+offset_top = 590.0
+offset_right = 818.0
+offset_bottom = 590.0
+theme_override_constants/separation = 0
+
+[node name="B5" type="Label" parent="HB5"]
+text = "Ab\tcd"
+
+[node name="Mark" type="ColorRect" parent="HB5"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HE6" type="HBoxContainer" parent="."]
+offset_left = 980.0
+offset_top = 545.0
+offset_right = 980.0
+offset_bottom = 545.0
+theme_override_constants/separation = 0
+
+[node name="E6" type="LineEdit" parent="HE6"]
+expand_to_text_length = true
+text = ""
+
+[node name="Mark" type="ColorRect" parent="HE6"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)
+
+[node name="HB6" type="HBoxContainer" parent="."]
+offset_left = 980.0
+offset_top = 590.0
+offset_right = 980.0
+offset_bottom = 590.0
+theme_override_constants/separation = 0
+
+[node name="B6" type="Label" parent="HB6"]
+text = ""
+
+[node name="Mark" type="ColorRect" parent="HB6"]
+custom_minimum_size = Vector2(3, 12)
+size_flags_vertical = 0
+color = Color(0, 1, 0, 1)

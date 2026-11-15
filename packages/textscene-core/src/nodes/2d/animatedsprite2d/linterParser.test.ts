@@ -25,7 +25,6 @@ const KEYS: string[] = [
   // animated_sprite_2d.cpp:671-676 and :678-681, every ADD_PROPERTY.
   'sprite_frames',
   'animation',
-  'autoplay',
   'frame',
   'frame_progress',
   'speed_scale',

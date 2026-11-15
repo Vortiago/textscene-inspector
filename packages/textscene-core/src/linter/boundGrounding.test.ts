@@ -18,17 +18,13 @@ import {
   unclassifiedKeys,
 } from './testing/validatorClassification.js';
 import './index.js'; // side-effect: every slice registers its validators
-import { ENGINE_CITE_RE } from './testing/engineCite.js';
+import { citesItsSource } from './testing/engineCite.js';
 import { registeredTypes } from './registryPopulation.js';
 import { everyValidatorLabel, registeredKeys } from './testing/registryPopulation.js';
 
-/**
- * A grounding whose cite names no engine location. It rides the shared walk rather than a private recursion, which
- * would diverge from `unclassifiedKeys`'. The walk reaches leaves because a wildcard dispatcher's own tag vouches for
- * nothing behind it.
- */
-const citesNoEngineLocation = (validator: PropertyValidator): boolean =>
-  validator.grounding !== undefined && !ENGINE_CITE_RE.test(validator.grounding.cite);
+// The shared walk, not a private recursion that would diverge from `unclassifiedKeys`'.
+const citesNoSource = (validator: PropertyValidator): boolean =>
+  validator.grounding !== undefined && !citesItsSource(validator.grounding);
 
 describe('bound grounding', () => {
   it('states an out-of-range severity wherever it states a range', () => {
@@ -61,9 +57,8 @@ describe('bound grounding', () => {
   });
 
   it('gives every grounded bound a source citation', () => {
-    // `enforced` without a `file:line` is the unverifiable claim an invented threshold makes. The floor rides on the
-    // walk (2000 validators examined, none uncited): a separate key count could pass while the walk examined nothing.
-    expect(everyValidatorLabel(citesNoEngineLocation, { atLeast: 2000 })).toEqual([]);
+    // The floor is on the walk, so an empty walk fails.
+    expect(everyValidatorLabel(citesNoSource, { atLeast: 2000 })).toEqual([]);
   });
 });
 
@@ -149,7 +144,7 @@ describe('the classification guard bites', () => {
     dispatcher.leaves = [leaf];
 
     expect(
-      everyValidatorLabel(citesNoEngineLocation, {
+      everyValidatorLabel(citesNoSource, {
         roots: [{ label: 'Generic6DOFJoint3D.linear_limit_x/*', validator: dispatcher }],
       })
     ).toEqual(['Generic6DOFJoint3D.linear_limit_x/*[0]']);
@@ -165,7 +160,7 @@ describe('the classification guard bites', () => {
     outer.leaves = [leaf, leaf];
 
     expect(
-      everyValidatorLabel(citesNoEngineLocation, {
+      everyValidatorLabel(citesNoSource, {
         roots: [{ label: 'Type.key/*', validator: outer }],
       })
     ).toEqual(['Type.key/*[0]']);

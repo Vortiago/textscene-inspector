@@ -1,9 +1,3 @@
-/**
- * Fixed-shape numeric literals: vectors, rects, transforms, a basis, a
- * quaternion, an AABB and a colour. Most are pure arity checks. A combinator
- * with a per-component bound or refusal takes a `Grounding`.
- */
-
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { tupleComponent } from '../commonValidators.js';
@@ -11,6 +5,7 @@ import { slotComponents, slotComponentsAltered, ruleInt } from '../../../godot/v
 import { convertedSpelling, markIntSlot, truncatedComponent } from '../intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from '../floatTupleValidator.js';
 import {
+  VECTOR2_REGEX,
   VECTOR3_REGEX,
   createRect2Validator,
   createTransform3DValidator,
@@ -26,29 +21,15 @@ import { unquoteString } from '../../../parser/utils.js';
 import { formatCode, numericRange, valueCode } from './codes.js';
 import { accepts, endSeverity, ground, shape, type Grounding } from './grounding.js';
 
-/** `Color::named` fails on an unknown name and yields `Color()`. */
 const UNNAMED_COLOR = 'color.cpp:396-402';
 
-// The component grammar Godot's parser takes, not `-?\d+`:
-// `_parse_construct<int32_t>` (variant_parser.cpp:577-592) accepts any number
-// token and converts it, so a float or exponent component loads and truncates.
-const RECT2I_RE = makeFloatTupleRegex('Rect2i', 4);
-
-/**
- * A per-component predicate on the narrowed components, for the setters whose
- * refusal is not a range: a zero axis, a negative component clamped up, a whole
- * vector the setter drops. Returns the refusal, or null when the value passes.
- */
+/** A refusal that is not a range, on the stored components. Null passes. */
 export type ComponentRule = (
   parts: number[],
   written: string
 ) => { message: string; severity?: 'error' | 'warning' } | null;
 
-/**
- * Runs `rule` after the format validator, on the components as Godot stores
- * them. A format or alteration error wins outright, and the truncation warning
- * for a converted spelling yields to a refusal, so it never masks a bound.
- */
+// A format error wins, and a refusal wins over the truncation warning.
 function componentRule(
   validator: PropertyValidator,
   name: string,
@@ -83,11 +64,7 @@ function componentRule(
   return guarded;
 }
 
-/**
- * Refuse a composite whose float spelling carries a non-finite component, for
- * a setter that drops the whole write on one. An integer constructor's
- * non-finite argument is the alteration `floatTupleValidator` reports instead.
- */
+// An integer spelling's non-finite argument is an alteration, which `floatTupleValidator` reports.
 function finiteComponents(
   validator: PropertyValidator,
   name: string,
@@ -119,46 +96,170 @@ function finiteComponents(
   return guarded;
 }
 
-export const vectorCombinators = {
-  /** `Rect2i(x, y, w, h)` integer format. */
-  rect2i(name: string): PropertyValidator {
-    const code = formatCode(name);
-    return markIntSlot(
-      shape((key, value, line) => {
-        const match = RECT2I_RE.exec(value);
+interface IntTupleShape {
+  readonly typeName: 'Rect2i' | 'Vector3i';
+  readonly regex: RegExp;
+  readonly arity: number;
+  readonly fields: string;
+}
+
+// Any number token, not `-?\d+`: a float component loads and truncates (variant_parser.cpp:577-592).
+const RECT2I_SHAPE: IntTupleShape = {
+  typeName: 'Rect2i',
+  regex: makeFloatTupleRegex('Rect2i', 4),
+  arity: 4,
+  fields: 'x, y, w, h',
+};
+const VECTOR3I_SHAPE: IntTupleShape = {
+  typeName: 'Vector3i',
+  regex: makeFloatTupleRegex('Vector3i', 3),
+  arity: 3,
+  fields: 'x, y, z',
+};
+
+function intTuple(
+  name: string,
+  { typeName, regex, arity, fields }: IntTupleShape,
+  acceptsLabel: string
+): PropertyValidator {
+  const code = formatCode(name);
+  const valueErrorCode = valueCode(name);
+  return markIntSlot(
+    shape((key, value, line) => {
+      const match = regex.exec(value);
+      if (!match) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' must be ${typeName}(${fields}) with integer components, got: ${value}`,
+          code
+        );
+      }
+      const components = match.slice(1, arity + 1);
+      // A float spelling holds doubles, so every component takes the `double -> int32` branch.
+      const converted = isConvertedSpelling(typeName, compositeTypeName(value));
+      if (components.some((component) => ruleInt(component, null, 'int32', converted) === null)) {
+        return propertyError(
+          key,
+          line,
+          `Property '${name}' has a component no integer can hold, got: ${value}`,
+          valueErrorCode,
+          'error'
+        );
+      }
+      return truncatedComponent(name, key, line, components, valueErrorCode);
+    }, acceptsLabel)
+  );
+}
+
+interface FloatVectorShape {
+  readonly typeName: 'Vector2' | 'Vector3';
+  readonly regex: RegExp;
+  readonly arity: number;
+  readonly fields: string;
+}
+
+const VECTOR2_SHAPE: FloatVectorShape = {
+  typeName: 'Vector2',
+  regex: VECTOR2_REGEX,
+  arity: 2,
+  fields: 'x, y',
+};
+const VECTOR3_SHAPE: FloatVectorShape = {
+  typeName: 'Vector3',
+  regex: VECTOR3_REGEX,
+  arity: 3,
+  fields: 'x, y, z',
+};
+
+function boundedFloatVector(
+  name: string,
+  { typeName, regex, arity, fields }: FloatVectorShape,
+  opts: { min?: number; max?: number } & Grounding
+): PropertyValidator {
+  const { min, max } = opts;
+  const minSeverity = endSeverity(opts, 'min');
+  const maxSeverity = endSeverity(opts, 'max');
+  const example = `${typeName}(${Array(arity).fill(1).join(', ')})`;
+  return ground(
+    accepts(
+      (key, value, line) => {
+        const match = regex.exec(value);
         if (!match) {
           return propertyError(
             key,
             line,
-            `Property '${name}' must be Rect2i(x, y, w, h) with integer components, got: ${value}`,
-            code
+            `Property '${name}' must be ${typeName} with ${arity} numbers like ${example}, got: "${value}"`,
+            formatCode(name)
           );
         }
-        const components = match.slice(1, 5);
-        // Same arm as `vector2i`: the component reads, no int32 holds it. A
-        // `Rect2(...)` in a Rect2i slot holds four doubles, so every component
-        // takes the `double -> int32` branch whatever the token looks like.
-        const converted = isConvertedSpelling('Rect2i', compositeTypeName(value));
-        if (components.some((component) => ruleInt(component, null, 'int32', converted) === null)) {
+        const captures = match.slice(1, arity + 1);
+        // An altered component is NaN to the bounds, and its stored value is undefined (variant.h:369-370).
+        if (slotComponentsAltered(value, typeName, captures)) {
           return propertyError(
             key,
             line,
-            `Property '${name}' has a component no integer can hold, got: ${value}`,
+            `Property '${name}' has a component Godot cannot store in the integer spelling it is written in, got: "${value}". ` +
+              'The file loads, but the components are narrowed at parse time to a number the file does not state.',
             valueCode(name),
             'error'
           );
         }
-        return truncatedComponent(name, key, line, components, valueCode(name));
-      }, 'Rect2i(x, y, w, h), or the Rect2 spelling Godot converts')
+        // An integer spelling narrows to int32 before it widens into this slot.
+        const parts = slotComponents(value, typeName, captures, tupleComponent);
+        const belowMin = min !== undefined && parts.some((c) => c < min);
+        const aboveMax = max !== undefined && parts.some((c) => c > max);
+        if (belowMin || aboveMax) {
+          const bound =
+            min !== undefined && max !== undefined
+              ? `between ${min} and ${max}`
+              : min !== undefined
+                ? `>= ${min}`
+                : `<= ${max}`;
+          return propertyError(
+            key,
+            line,
+            `Property '${name}' components must be ${bound}, got: ${typeName}(${parts.join(', ')})`,
+            valueCode(name),
+            belowMin ? minSeverity : maxSeverity
+          );
+        }
+        // After the bounds, so the warning never masks an enforced bound (variant_parser.cpp:721-723).
+        if (isConvertedSpelling(typeName, compositeTypeName(value))) {
+          return truncatedComponent(name, key, line, captures, valueCode(name));
+        }
+        return null;
+      },
+      `${typeName}(${fields}), each ${numericRange('float', min, max)}`
+    ),
+    opts,
+    { min, max }
+  );
+}
+
+export const vectorCombinators = {
+  rect2i(name: string): PropertyValidator {
+    return intTuple(name, RECT2I_SHAPE, 'Rect2i(x, y, w, h), or the Rect2 spelling Godot converts');
+  },
+
+  vector3i(name: string): PropertyValidator {
+    return intTuple(name, VECTOR3I_SHAPE, 'Vector3i(x, y, z), or the Vector3 spelling Godot converts');
+  },
+
+  vector4(name: string): PropertyValidator {
+    return shape(
+      floatTupleValidator(
+        name,
+        'Vector4',
+        4,
+        'Vector4 with 4 numbers like Vector4(0, 0, 0, 0)',
+        formatCode(name)
+      ),
+      'Vector4(x, y, z, w), or the Vector4i spelling Godot converts'
     );
   },
 
-  /**
-   * `Vector2(x, y)` format, optionally with a per-component finiteness refusal.
-   * `finite` takes a citation: Godot writes `inf` and `nan` into every real-typed
-   * composite, so only a setter that refuses one grounds it. Not `withFiniteGuard`,
-   * which reads a scalar.
-   */
+  /** `finite` cites a setter that refuses `inf` and `nan`: the loader stores both. */
   vector2(
     name: string,
     opts: { finite?: string; components?: ComponentRule; accepts?: string } & Grounding = {}
@@ -171,10 +272,6 @@ export const vectorCombinators = {
     return opts.finite ? finiteComponents(ruled, name, 'Vector2', 2, opts.finite) : ruled;
   },
 
-  /**
-   * `Vector2i(x, y)` integer format, optionally with a per-component minimum,
-   * which is a bound like any other and takes its `Grounding`.
-   */
   vector2i(name: string, opts: { min?: number } & Grounding = {}): PropertyValidator {
     const { min } = opts;
     return markIntSlot(
@@ -191,10 +288,6 @@ export const vectorCombinators = {
     );
   },
 
-  /**
-   * `Vector3(x, y, z)` format, optionally with a per-component refusal that is
-   * not a range (see {@link ComponentRule}); a range is `boundedVector3`.
-   */
   vector3(
     name: string,
     opts: { components?: ComponentRule; accepts?: string } & Grounding = {}
@@ -206,83 +299,14 @@ export const vectorCombinators = {
     return opts.components ? componentRule(format, name, 'Vector3', 3, opts.components, opts) : format;
   },
 
-  /**
-   * `Vector3(x, y, z)` with an inclusive per-component range, either end
-   * optional: a PROPERTY_HINT_RANGE on a VECTOR3, as gpu_particles_collision_3d.cpp:101
-   * hints `size` "0.01,1024,0.01,or_greater". A predicate that is not a range,
-   * such as a non-zero `zoom`, is `vector3`'s `components` option.
-   */
-  boundedVector3(name: string, opts: { min?: number; max?: number } & Grounding = {}): PropertyValidator {
-    const { min, max } = opts;
-    // Per end: the components share one range, but its two ends can have
-    // different authority, such as an enforced floor and a hinted ceiling.
-    const minSeverity = endSeverity(opts, 'min');
-    const maxSeverity = endSeverity(opts, 'max');
-    return ground(
-      accepts(
-        (key, value, line) => {
-          const match = VECTOR3_REGEX.exec(value);
-          if (!match) {
-            return propertyError(
-              key,
-              line,
-              `Property '${name}' must be Vector3 with 3 numbers like Vector3(1, 1, 1), got: "${value}"`,
-              formatCode(name)
-            );
-          }
-          const captures = [match[1], match[2], match[3]];
-          // Ahead of the bounds: an altered component reads back as NaN, which no
-          // bound catches. The message quotes the literal, not the stored number:
-          // `_to_int`'s float branch is undefined behaviour (variant.h:369-370).
-          if (slotComponentsAltered(value, 'Vector3', captures)) {
-            return propertyError(
-              key,
-              line,
-              `Property '${name}' has a component Godot cannot store in the integer spelling it is written in, got: "${value}". ` +
-                'The file loads, but the components are narrowed at parse time to a number the file does not state.',
-              valueCode(name),
-              'error'
-            );
-          }
-          // `slotComponents`, not bare `tupleComponent`: the `Vector3i(...)` spelling's
-          // arguments narrow through `_parse_construct<int32_t>` before the widening
-          // into this float slot, as the renderer reads them too.
-          const parts = slotComponents(value, 'Vector3', captures, tupleComponent);
-          const belowMin = min !== undefined && parts.some((c) => c < min);
-          const aboveMax = max !== undefined && parts.some((c) => c > max);
-          if (belowMin || aboveMax) {
-            const bound =
-              min !== undefined && max !== undefined
-                ? `between ${min} and ${max}`
-                : min !== undefined
-                  ? `>= ${min}`
-                  : `<= ${max}`;
-            return propertyError(
-              key,
-              line,
-              `Property '${name}' components must be ${bound}, got: Vector3(${parts.join(', ')})`,
-              valueCode(name),
-              // A component under the floor is the stronger claim when the two ends
-              // disagree, so it wins.
-              belowMin ? minSeverity : maxSeverity
-            );
-          }
-          // After the bounds so an enforced bound is never masked: the converted
-          // spelling's fractional component is stored truncated
-          // (variant_parser.cpp:721-723), the warning `floatTupleValidator` draws.
-          if (isConvertedSpelling('Vector3', compositeTypeName(value))) {
-            return truncatedComponent(name, key, line, captures, valueCode(name));
-          }
-          return null;
-        },
-        `Vector3(x, y, z), each ${numericRange('float', min, max)}`
-      ),
-      opts,
-      { min, max }
-    );
+  boundedVector2(name: string, opts: { min?: number; max?: number } & Grounding = {}): PropertyValidator {
+    return boundedFloatVector(name, VECTOR2_SHAPE, opts);
   },
 
-  /** `Rect2(x, y, w, h)` format. */
+  boundedVector3(name: string, opts: { min?: number; max?: number } & Grounding = {}): PropertyValidator {
+    return boundedFloatVector(name, VECTOR3_SHAPE, opts);
+  },
+
   rect2(name: string): PropertyValidator {
     return shape(
       createRect2Validator(name, formatCode(name)),
@@ -290,18 +314,11 @@ export const vectorCombinators = {
     );
   },
 
-  /** `Transform3D(...12 floats)` format. */
   transform3d(name: string): PropertyValidator {
     return shape(createTransform3DValidator(name, formatCode(name)), 'Transform3D(12 floats)');
   },
 
-  /**
-   * `Color(r, g, b, a)`, or a string or INT literal. COLOR converts both
-   * (`variant.cpp:712-719`): `Variant::operator Color` reads an INT as RGBA hex
-   * and a string as HTML hex or a colour name (`variant.cpp:1986-1996`). The slot
-   * stores a Color, so a re-save rewrites the line, the converted-spelling warning.
-   * A string that is neither fails `Color::named`, which stores black: an error.
-   */
+  // An int or colour string converts (variant.cpp:712-719, :1986-1996). Another string stores black.
   color(name: string): PropertyValidator {
     const code = formatCode(name);
     const tuple = floatTupleValidator(name, 'Color', 4, 'Color with 4 numbers like Color(1, 1, 1, 1)', code);
@@ -325,7 +342,6 @@ export const vectorCombinators = {
     return accepts(validator, 'Color(r, g, b, a), or the colour string or int it converts');
   },
 
-  /** `AABB(x, y, z, w, h, d)` format. */
   aabb(name: string): PropertyValidator {
     return shape(
       floatTupleValidator(
@@ -339,7 +355,6 @@ export const vectorCombinators = {
     );
   },
 
-  /** `Quaternion(x, y, z, w)` format. */
   quaternion(name: string): PropertyValidator {
     return shape(
       floatTupleValidator(
@@ -353,7 +368,6 @@ export const vectorCombinators = {
     );
   },
 
-  /** `Plane(nx, ny, nz, d)` format. */
   plane(name: string): PropertyValidator {
     return shape(
       floatTupleValidator(name, 'Plane', 4, 'Plane with 4 numbers like Plane(0, 1, 0, 0)', formatCode(name)),
@@ -361,7 +375,6 @@ export const vectorCombinators = {
     );
   },
 
-  /** `Transform2D(6 floats)` format. */
   transform2d(name: string): PropertyValidator {
     return shape(
       floatTupleValidator(
@@ -375,7 +388,6 @@ export const vectorCombinators = {
     );
   },
 
-  /** `Basis(9 floats)` format. */
   basis(name: string): PropertyValidator {
     return shape(
       floatTupleValidator(

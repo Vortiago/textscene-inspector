@@ -3099,6 +3099,7 @@
   ],
   "Animation": [
     {
+      "has_setter": false,
       "hint": 0,
       "hint_string": "",
       "name": "capture_included",
@@ -5538,6 +5539,9 @@
       "hint": 1,
       "hint_string": "4,32,1",
       "name": "oversampling",
+      "setter_hint": 0,
+      "setter_hint_string": "",
+      "setter_type": 2,
       "type": 3
     },
     {
@@ -9484,6 +9488,9 @@
       "hint": 0,
       "hint_string": "",
       "name": "points",
+      "setter_hint": 0,
+      "setter_hint_string": "",
+      "setter_type": 36,
       "type": 28
     }
   ],
@@ -9492,12 +9499,18 @@
       "hint": 0,
       "hint_string": "",
       "name": "_data",
+      "setter_hint": 0,
+      "setter_hint_string": "",
+      "setter_type": 28,
       "type": 2
     },
     {
       "hint": 0,
       "hint_string": "",
       "name": "_limits",
+      "setter_hint": 0,
+      "setter_hint_string": "",
+      "setter_type": 28,
       "type": 0
     },
     {
@@ -9518,6 +9531,9 @@
       "hint": 0,
       "hint_string": "",
       "name": "_data",
+      "setter_hint": 0,
+      "setter_hint_string": "",
+      "setter_type": 27,
       "type": 2
     },
     {
@@ -9538,6 +9554,9 @@
       "hint": 0,
       "hint_string": "",
       "name": "_data",
+      "setter_hint": 0,
+      "setter_hint_string": "",
+      "setter_type": 27,
       "type": 2
     },
     {
@@ -12398,6 +12417,9 @@
       "hint": 0,
       "hint_string": "",
       "name": "geometry_source_group_name",
+      "setter_hint": 0,
+      "setter_hint_string": "",
+      "setter_type": 21,
       "type": 4
     },
     {
@@ -12474,6 +12496,9 @@
       "hint": 0,
       "hint_string": "",
       "name": "vertices",
+      "setter_hint": 0,
+      "setter_hint_string": "",
+      "setter_type": 32,
       "type": 36
     }
   ],
@@ -12542,6 +12567,9 @@
       "hint": 0,
       "hint_string": "",
       "name": "source_geometry_group_name",
+      "setter_hint": 0,
+      "setter_hint_string": "",
+      "setter_type": 21,
       "type": 4
     },
     {
@@ -15402,6 +15430,9 @@
       "hint": 2,
       "hint_string": "",
       "name": "input_name",
+      "setter_hint": 0,
+      "setter_hint_string": "",
+      "setter_type": 4,
       "type": 21
     }
   ],
@@ -15508,6 +15539,9 @@
       "hint": 0,
       "hint_string": "",
       "name": "parameter_name",
+      "setter_hint": 0,
+      "setter_hint_string": "",
+      "setter_type": 4,
       "type": 21
     },
     {
@@ -15528,6 +15562,9 @@
       "hint": 2,
       "hint_string": "",
       "name": "parameter_name",
+      "setter_hint": 0,
+      "setter_hint_string": "",
+      "setter_type": 4,
       "type": 21
     }
   ],
@@ -15812,6 +15849,9 @@
       "hint": 0,
       "hint_string": "",
       "name": "varying_name",
+      "setter_hint": 0,
+      "setter_hint_string": "",
+      "setter_type": 4,
       "type": 21
     },
     {
