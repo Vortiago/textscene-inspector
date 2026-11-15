@@ -9,7 +9,7 @@ const PATH_SPACE_TAB = /\t$/;
 
 const C_ESCAPES = { n: '\n', t: '\t', r: '\r' };
 
-/** Git quotes a path that holds a quote, a backslash or a control character, with C escapes and octal bytes. */
+/** Git quotes a path with a quote, a backslash or a control character, in C escapes and octal bytes. */
 function unquotedPath(path) {
   if (!path.startsWith('"')) return path;
   const parts = path.slice(1, -1).split(/(\\[0-7]{3}|\\.)/);
