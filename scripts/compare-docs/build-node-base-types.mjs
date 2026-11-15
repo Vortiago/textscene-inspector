@@ -195,6 +195,9 @@ function renderPropertiesModule(nodeProperties, resourceProperties, version) {
 
 export type ClassPropertyRow = readonly [name: string, type: number, hint: number, hintString: string];
 
+/** The Godot release the rows come from, which a bound read from a row cites (ADR-0032). */
+export const CLASSDB_CAPTURE_VERSION = '${releaseOf(version)}';
+
 ${renderPropertyTable('NODE_CLASS_PROPERTIES', nodeProperties)}
 ${renderPropertyTable('RESOURCE_CLASS_PROPERTIES', resourceProperties)}`;
 }
@@ -333,6 +336,11 @@ ${classes}
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
+}
+
+/** `4.6.3` from `4.6.3.stable.fedora.7d41c59c4`: the major, minor and patch numbers of a version. */
+export function releaseOf(version) {
+  return version.split('.').slice(0, 3).join('.');
 }
 
 /** The engine version a capture run recorded in the catalog. */

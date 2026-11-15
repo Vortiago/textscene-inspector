@@ -10,6 +10,9 @@
 
 export type ClassPropertyRow = readonly [name: string, type: number, hint: number, hintString: string];
 
+/** The Godot release the rows come from, which a bound read from a row cites (ADR-0032). */
+export const CLASSDB_CAPTURE_VERSION = '4.6.3';
+
 export const NODE_CLASS_PROPERTIES: Readonly<Record<string, readonly ClassPropertyRow[]>> = Object.freeze({
   "AcceptDialog": [
     ["dialog_autowrap", 1, 0, ""],

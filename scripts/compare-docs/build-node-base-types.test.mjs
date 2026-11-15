@@ -13,6 +13,7 @@ import {
   EXCLUSIONS_OUT,
   OUT,
   PROPERTIES_OUT,
+  releaseOf,
   RESOURCE_OUT,
   renderFromCatalog,
   renderFromExclusionCaptures,
@@ -58,6 +59,12 @@ describe('deriveResourceTypeExclusions', () => {
     expect(deriveResourceTypeExclusions(properties, { OmniLight3D: 'Light3D' }).OmniLight3D).toEqual({
       light_projector: '',
     });
+  });
+});
+
+describe('releaseOf', () => {
+  it('keeps the major, minor and patch numbers of a capture version', () => {
+    expect(releaseOf('4.6.3.stable.fedora.7d41c59c4')).toBe('4.6.3');
   });
 });
 
