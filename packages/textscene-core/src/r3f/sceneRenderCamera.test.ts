@@ -2,14 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   cameraDistance,
-  createViewportCanvasCamera,
   observeSceneCamera,
   observeSceneCull,
   observeScenePose,
   observeSceneRenderEnd,
   withScenePose,
 } from './sceneRenderCamera';
-import { applyOrthoFrame, orthoFrameForSize } from './viewportRender/viewportFraming';
 import { fireSceneRender, fireSceneRenderEnd } from './testing/fireSceneRender';
 
 /** A poser that writes its two steps to `order`. */
@@ -213,19 +211,6 @@ describe('withScenePose', () => {
     const draw = vi.fn();
     withScenePose(new THREE.Scene(), draw);
     expect(draw).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('createViewportCanvasCamera', () => {
-  it("maps the canvas top to NDC y = -1, as the root canvas's camera does", () => {
-    const camera = createViewportCanvasCamera();
-    applyOrthoFrame(camera, orthoFrameForSize({ x: 100, y: 50 }));
-    camera.updateMatrixWorld(true);
-
-    const canvasTop = new THREE.Vector3(50, 0, 0).project(camera);
-    const canvasBottom = new THREE.Vector3(50, -50, 0).project(camera);
-
-    expect([canvasTop.y, canvasBottom.y]).toEqual([-1, 1]);
   });
 });
 

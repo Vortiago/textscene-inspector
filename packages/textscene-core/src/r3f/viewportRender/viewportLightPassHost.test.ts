@@ -9,13 +9,13 @@ import * as THREE from 'three';
 import { createViewportLightPassHost } from './viewportLightPassHost';
 import { applyOrthoFrame, orthoFrameForCamera2D, orthoFrameForSize } from './viewportFraming';
 import type { Camera2DTag } from './camera2DView';
-import { createViewportCanvasCamera } from '../sceneRenderCamera';
+import { World2DCamera } from '../components/Canvas2DStage/world2DCamera';
 import { Camera2DAnchorMode } from '../../godot/scene/camera2d';
 
 const SIZE = { x: 200, y: 150 };
 
 function hostOf(size = SIZE) {
-  const camera = createViewportCanvasCamera();
+  const camera = new World2DCamera();
   applyOrthoFrame(camera, orthoFrameForSize(size));
   return { camera, host: createViewportLightPassHost(new THREE.Scene(), camera, 'Booth/Viewport', size) };
 }

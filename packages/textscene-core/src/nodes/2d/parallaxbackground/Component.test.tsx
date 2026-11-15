@@ -18,7 +18,7 @@ import { parseParallaxBackground } from './parser';
 import { ParallaxBackground } from './Component';
 import { CanvasLayerScope } from '../../../r3f/canvasLayerScope';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
-import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera';
+import { World2DCamera } from '../../../r3f/components/Canvas2DStage/world2DCamera';
 import { drawAsCanvasPass } from '../../../r3f/testing/worldRenders';
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 
@@ -62,7 +62,7 @@ const CAMERA_TAG: Camera2DTag = {
  * produces it and the Godot probe measured it: top-left (24, 76) in canvas pixels.
  */
 function viewportPassCamera(): THREE.OrthographicCamera {
-  const camera = createViewportCanvasCamera();
+  const camera = new World2DCamera();
   Object.assign(camera, { left: -576, right: 576, top: 324, bottom: -324, near: 0.1, far: 4000 });
   camera.position.set(600, -400, 1000);
   camera.updateProjectionMatrix();

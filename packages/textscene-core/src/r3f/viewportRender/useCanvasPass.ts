@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import { createViewportCanvasCamera } from '../sceneRenderCamera';
+import { World2DCamera } from '../components/Canvas2DStage/world2DCamera';
 import { createCanvasFrame } from '../components/Canvas2DStage/canvasFrame';
 import { useMultisampledTarget } from '../offscreen/multisampledTarget';
 import { applyOrthoFrame, orthoFrameForSize } from './viewportFraming';
@@ -25,7 +25,7 @@ export function useCanvasPass(
   msaaMode: number,
   space: CanvasColorSpace
 ): { camera: THREE.OrthographicCamera; frame: ReturnType<typeof createCanvasFrame> } {
-  const camera = useMemo(() => createViewportCanvasCamera(), []);
+  const camera = useMemo(() => new World2DCamera(), []);
   useEffect(() => {
     camera.near = 0.1;
     camera.far = 4000;
