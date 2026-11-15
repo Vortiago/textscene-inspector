@@ -15,7 +15,6 @@ import { derivedValidator } from './descriptorValidator.js';
 
 export type { PropertyValidator } from './propertyValidator.js';
 
-/** The check a type's key gets where no hand validator claims it, or null. */
 type Derivation = (nodeType: string, propertyKey: string) => PropertyValidator | null;
 
 /** One part of a type's validator table: property key to validator. */
@@ -43,11 +42,8 @@ export class ValidatorRegistry {
   private unavailable = new Map<string, Record<string, Removal>>();
   /** Wildcard patterns per type, prefixes pre-sliced. Rebuilt on every registerAll. */
   private wildcards = new Map<string, WildcardEntry[]>();
-  /**
-   * The derived checks built so far, by type then key. Written only by `derivedFor`, and cleared
-   * by `clear`. A miss is not stored: the descriptor answers one in a few Map reads.
-   */
-  private derived = new Map<string, Map<string, PropertyValidator>>();
+  /** Written only by `derivedFor`, cleared by `clear`. A miss is stored as null. */
+  private derived = new Map<string, PropertyValidator | null>();
   /** The three maps and the base lookup, built once: the walks run per property and allocate nothing. */
   private readonly tables: RegistryTables = {
     validators: this.validators,
@@ -60,8 +56,7 @@ export class ValidatorRegistry {
    * @param baseTypes - class → base-type map driving the inheritance walk in
    *   `findValidator` (see classBaseTypes.ts). Defaults to `{}` (no inheritance,
    *   pure exact/wildcard matching); the shared singleton wires the real one.
-   * @param derive - the check for a key no hand validator on the chain claims. Absent, such a key
-   *   has none; the shared singleton wires the property descriptor's.
+   * @param derive - the check for a key no hand validator claims.
    */
   constructor(
     private baseTypes: Readonly<Record<string, string>> = {},
@@ -145,12 +140,7 @@ export class ValidatorRegistry {
     return resolveDeclaration(this.tables, nodeType, propertyKey) ?? this.derivedFor(nodeType, propertyKey);
   }
 
-  /**
-   * Whether the descriptor, not a hand validator or a removal, answers `propertyKey` on `nodeType`.
-   *
-   * @internal `linter/testing/registryPopulation.ts` is the only caller: it lists the derived keys
-   * beside the registered ones, so every sweep reads a derived check as it reads a hand validator.
-   */
+  /** @internal For the registry sweeps in `linter/testing/`. */
   isDerived(nodeType: string, propertyKey: string): boolean {
     return (
       resolveDeclaration(this.tables, nodeType, propertyKey) === null &&
@@ -158,15 +148,12 @@ export class ValidatorRegistry {
     );
   }
 
-  /** The derived check of a key, built on its first lookup and kept. */
   private derivedFor(nodeType: string, propertyKey: string): PropertyValidator | null {
     if (!this.derive) return null;
-    const cached = this.derived.get(nodeType)?.get(propertyKey);
-    if (cached) return cached;
+    const id = `${nodeType}.${propertyKey}`;
+    if (this.derived.has(id)) return this.derived.get(id)!;
     const validator = this.derive(nodeType, propertyKey);
-    if (!validator) return null;
-    if (!this.derived.has(nodeType)) this.derived.set(nodeType, new Map());
-    this.derived.get(nodeType)!.set(propertyKey, validator);
+    this.derived.set(id, validator);
     return validator;
   }
 
@@ -209,8 +196,4 @@ export class ValidatorRegistry {
   }
 }
 
-/**
- * The ValidatorRegistry, wired with Godot's real node and resource ancestry (classBaseTypes.ts), so every subclass
- * inherits its base validators, and with the property descriptor, so every catalogued class gets a check.
- */
 export const validatorRegistry = new ValidatorRegistry(CLASS_BASE_TYPES, derivedValidator);

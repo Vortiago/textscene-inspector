@@ -1,10 +1,3 @@
-/**
- * The validator a property descriptor implies, for a key no hand validator answers. The Variant
- * type picks the format check that the hand validators of that type use, a range, enum, flags or
- * layers hint adds a warning bound (ADR-0032), and the hand row's setter fact raises an end to
- * the error tier. Every check is a `v` builder call, so no bound is checked twice.
- */
-
 import {
   propertyDescriptor,
   type PropertyDescriptor,
@@ -24,22 +17,18 @@ import { RADIAN_ROUNDTRIP_EPSILON } from './validators/v/floats.js';
 import type { EndedGrounding } from './validators/v/grounding.js';
 import { degToRad } from '../godot/math/math.js';
 
-/**
- * A layers hint offers 32 layers, so a derived mask reads at 32 bits, where both `-1` (an `int`
- * setter) and `4294967295` (a `uint32_t` one) are the same full mask.
- */
+// 32 layers: `-1` and `4294967295` are both the full mask.
 const LAYER_MASK_WIDTH: IntWidth = 'uint32';
 
-/** The example element a packed array's message shows. */
 const PACKED_FLOAT_EXAMPLE = '0, 1';
 const PACKED_STRING_EXAMPLE = '"a", "b"';
 
-/** The format check of each Variant type that takes no bound. A type absent here gets no check. */
+// A type absent here gets no check.
 const FORMAT_CHECKS: Readonly<Partial<Record<number, (name: string) => PropertyValidator>>> = {
   [VARIANT_TYPE.NIL]: () => v.any(),
   [VARIANT_TYPE.BOOL]: v.boolean,
   [VARIANT_TYPE.STRING]: v.quotedString,
-  [VARIANT_TYPE.VECTOR2I]: (name) => v.vector2i(name),
+  [VARIANT_TYPE.VECTOR2I]: v.vector2i,
   [VARIANT_TYPE.RECT2]: v.rect2,
   [VARIANT_TYPE.RECT2I]: v.rect2i,
   [VARIANT_TYPE.VECTOR3I]: v.vector3i,
@@ -52,7 +41,7 @@ const FORMAT_CHECKS: Readonly<Partial<Record<number, (name: string) => PropertyV
   [VARIANT_TYPE.TRANSFORM3D]: v.transform3d,
   [VARIANT_TYPE.COLOR]: v.color,
   [VARIANT_TYPE.STRING_NAME]: v.stringName,
-  [VARIANT_TYPE.NODE_PATH]: (name) => v.nodePath(name),
+  [VARIANT_TYPE.NODE_PATH]: v.nodePath,
   [VARIANT_TYPE.DICTIONARY]: v.dictionary,
   [VARIANT_TYPE.PACKED_BYTE_ARRAY]: v.packedByteArray,
   [VARIANT_TYPE.PACKED_INT32_ARRAY]: v.packedInt32Array,
@@ -75,10 +64,12 @@ const LAYER_HINTS: ReadonlySet<number> = new Set([
   PROPERTY_HINT.LAYERS_AVOIDANCE,
 ]);
 
-/** The ends a bound closes, before the setter's facts fold in. */
 type Ends = Pick<RangeHintBounds, 'min' | 'max'>;
 
-/** `cite` for each end `ends` closes, one string where both share it, as a hand validator spells it. */
+function rangeOf({ hint, hintString }: PropertyDescriptor['property']): RangeHintBounds | undefined {
+  return hint === PROPERTY_HINT.RANGE ? parseRangeHint(hintString) : undefined;
+}
+
 function citeEnds(cite: string, ends: Ends): Grounding['hinted'] {
   const hasMin = ends.min !== undefined;
   const hasMax = ends.max !== undefined;
@@ -88,11 +79,7 @@ function citeEnds(cite: string, ends: Ends): Grounding['hinted'] {
   return undefined;
 }
 
-/**
- * The grounding of a bound at `ends`: the capture's warning, or the setter's error. A setter
- * with no end of its own refuses what the hint excludes, so both hint ends error. A setter end
- * sits apart from the hint's, which keeps warning beside it.
- */
+// A setter with no end of its own refuses at the hint's ends; one with an end keeps the hint's warning.
 function grounding({ cite, facts }: PropertyDescriptor, ends: Ends): EndedGrounding {
   const hinted = citeEnds(cite, ends);
   const setter = facts?.setter;
@@ -106,7 +93,7 @@ function grounding({ cite, facts }: PropertyDescriptor, ends: Ends): EndedGround
   };
 }
 
-/** Throws where the hand row states a fact this check has no place for, which would drop it in silence. */
+// Throws rather than drop a fact in silence.
 function refuseFacts(descriptor: PropertyDescriptor, allowed: readonly (keyof PropertyFacts)[]): void {
   const stated = Object.keys(descriptor.facts ?? {}) as (keyof PropertyFacts)[];
   const unplaced = stated.filter((fact) => !allowed.includes(fact));
@@ -117,7 +104,6 @@ function refuseFacts(descriptor: PropertyDescriptor, allowed: readonly (keyof Pr
   );
 }
 
-/** Value to label of an enum hint, with the hand row's constant names where it states them. */
 function enumLabels(descriptor: PropertyDescriptor): { values: number[]; labels: Record<number, string> } {
   const entries = parseHintEnum(descriptor.property.hintString);
   const labels: Record<number, string> = {};
@@ -139,37 +125,34 @@ function enumValidator(descriptor: PropertyDescriptor): PropertyValidator {
   return v.enumSet(name, labels, grounding(descriptor, ends));
 }
 
-/** Bit value to label of a flags hint. */
-function flagLabels(hintString: string): Record<number, string> {
+function flagLabelsOf(hintString: string): Record<number, string> {
   return Object.fromEntries(parseHintFlags(hintString).map(({ label, value }) => [value, label]));
 }
 
 function intValidator(descriptor: PropertyDescriptor): PropertyValidator {
   const { name, hint, hintString } = descriptor.property;
   const width = descriptor.facts?.width;
-  // An empty enum hint offers nothing to bound: `AudioStreamInteractive.initial_clip` binds ""
-  // (audio_stream_interactive.cpp:494), and the editor fills its labels in at run time (:430).
+  // An empty enum hint is filled at run time (audio_stream_interactive.cpp:430, :494).
   if (hint === PROPERTY_HINT.ENUM && hintString.length > 0) return enumValidator(descriptor);
   if (hint === PROPERTY_HINT.FLAGS) {
     refuseFacts(descriptor, []);
-    return hintedBitField(name, { hinted: descriptor.cite, labels: flagLabels(hintString) });
+    return hintedBitField(name, { hinted: descriptor.cite, labels: flagLabelsOf(hintString) });
   }
   if (LAYER_HINTS.has(hint)) {
     refuseFacts(descriptor, ['width']);
     return layerBitmask(name, { hinted: descriptor.cite, width: width ?? LAYER_MASK_WIDTH });
   }
   refuseFacts(descriptor, ['setter', 'width', 'message']);
-  const ends: Ends = (hint === PROPERTY_HINT.RANGE ? parseRangeHint(hintString) : undefined) ?? {};
+  const { min, max } = rangeOf(descriptor.property) ?? {};
   return v.int(name, {
-    min: ends.min,
-    max: ends.max,
+    min,
+    max,
     width,
     message: descriptor.facts?.message,
-    ...grounding(descriptor, ends),
+    ...grounding(descriptor, { min, max }),
   });
 }
 
-/** The radian ends of a degree hint, widened as `v.radians` widens them. */
 function radianEnds(ends: Ends): Ends {
   return {
     min: ends.min === undefined ? undefined : degToRad(ends.min) - RADIAN_ROUNDTRIP_EPSILON,
@@ -178,8 +161,8 @@ function radianEnds(ends: Ends): Ends {
 }
 
 function floatValidator(descriptor: PropertyDescriptor): PropertyValidator {
-  const { name, hint, hintString } = descriptor.property;
-  const range = hint === PROPERTY_HINT.RANGE ? parseRangeHint(hintString) : undefined;
+  const name = descriptor.property.name;
+  const range = rangeOf(descriptor.property);
   if (range?.radiansAsDegrees) {
     refuseFacts(descriptor, []);
     if (range.min !== undefined && range.max !== undefined) {
@@ -189,29 +172,28 @@ function floatValidator(descriptor: PropertyDescriptor): PropertyValidator {
     return v.float(name, { ...ends, ...grounding(descriptor, ends) });
   }
   refuseFacts(descriptor, ['setter', 'message']);
-  const ends: Ends = range ?? {};
+  const { min, max } = range ?? {};
   return v.float(name, {
-    min: ends.min,
-    max: ends.max,
+    min,
+    max,
     message: descriptor.facts?.message,
-    ...grounding(descriptor, ends),
+    ...grounding(descriptor, { min, max }),
   });
 }
 
-/** A VECTOR2 or VECTOR3 whose RANGE hint bounds every component, else the plain format check. */
 function floatVectorValidator(
   descriptor: PropertyDescriptor,
   plain: (name: string) => PropertyValidator,
   bounded: typeof v.boundedVector3
 ): PropertyValidator {
   refuseFacts(descriptor, []);
-  const { name, hint, hintString } = descriptor.property;
-  const range = hint === PROPERTY_HINT.RANGE ? parseRangeHint(hintString) : undefined;
+  const name = descriptor.property.name;
+  const range = rangeOf(descriptor.property);
   if (!range || (range.min === undefined && range.max === undefined)) return plain(name);
   return bounded(name, { min: range.min, max: range.max, ...grounding(descriptor, range) });
 }
 
-/** `Font` from `24/17:Font`, or `Image` from a bare class name: the element type the hint names. */
+// `Font` from `24/17:Font`.
 function arrayElementType(hintString: string): string {
   const colon = hintString.lastIndexOf(':');
   return colon === -1 ? hintString : hintString.slice(colon + 1);
@@ -227,15 +209,12 @@ function arrayValidator(descriptor: PropertyDescriptor): PropertyValidator {
 function objectValidator(descriptor: PropertyDescriptor): PropertyValidator {
   refuseFacts(descriptor, []);
   const { name, hint } = descriptor.property;
-  // A `.tscn` stores a node only as a path to it (`Control.shortcut_context`).
   if (hint === PROPERTY_HINT.NODE_TYPE) return v.nodePath(name, { orNull: true });
   return v.resourceReference(name);
 }
 
-/** The check `descriptor` implies, or null for a Variant type with none. */
 export function descriptorValidator(descriptor: PropertyDescriptor): PropertyValidator | null {
-  // Ahead of the type: no value reaches a setter that does not exist. Godot's saver writes the
-  // getter's value, and the loader drops it (class_db.cpp:1655-1659), so no value is wrong.
+  // Godot writes the getter's value and drops it on load (class_db.cpp:1655-1659).
   if (descriptor.property.isSetterless) {
     refuseFacts(descriptor, []);
     return v.any();
@@ -259,7 +238,6 @@ export function descriptorValidator(descriptor: PropertyDescriptor): PropertyVal
   return FORMAT_CHECKS[valueType]?.(descriptor.property.name) ?? null;
 }
 
-/** The check the descriptor of `className`'s `key` implies, or null where it has none. */
 export function derivedValidator(className: string, key: string): PropertyValidator | null {
   const descriptor = propertyDescriptor(className, key);
   return descriptor ? descriptorValidator(descriptor) : null;

@@ -7,9 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { classInheritanceChain } from '../../godot/classdb/classBaseTypes.js';
-import { classProperties } from '../../godot/classdb/classProperty.js';
-import { NODE_CLASS_PROPERTIES } from '../../godot/classdb/classProperties.generated.js';
-import { UNCATALOGUED_PROPERTIES } from '../../godot/classdb/uncataloguedProperties.js';
+import { classProperties, findClassProperty } from '../../godot/classdb/classProperty.js';
 import { nodeComponentRegistry } from '../../r3f/NodeComponentRegistry.js';
 // The registrations the previewer reads: `renderIntentOf` answers 'draws' for a type with none.
 import '../../r3f/nodes/index.js';
@@ -25,12 +23,7 @@ import {
   scrapeParserReads,
 } from './propertyGrammarParityScan.js';
 
-/**
- * Every key the registry checks on a node type: the hand validators of the type and its
- * ancestors, and each captured key only the property descriptor answers. A key a hand
- * dispatcher answers stays under the dispatcher's spelling, such as `linear_limit_x/*`. A
- * setterless key is left out, as a removal is: no parser can read a write Godot drops.
- */
+// A setterless key is left out: no parser reads a write Godot drops.
 export function getFullValidatorKeys(nodeType: string): Set<string> {
   const result = new Set<string>();
   for (const type of classInheritanceChain(nodeType)) {
@@ -118,31 +111,13 @@ export function unsweptListErrors({ listed, linterParserSlices, sweptSlices }: U
   return errors;
 }
 
-/** Every property name Godot declares on `nodeType` and its ancestors, by type. */
-const enginePropertyNames = new Map<string, ReadonlySet<string>>();
-
-function enginePropertiesOf(nodeType: string): ReadonlySet<string> {
-  let names = enginePropertyNames.get(nodeType);
-  if (!names) {
-    names = new Set(
-      classInheritanceChain(nodeType).flatMap((type) =>
-        [...(NODE_CLASS_PROPERTIES[type] ?? []), ...(UNCATALOGUED_PROPERTIES[type] ?? [])].map(
-          ([name]) => name
-        )
-      )
-    );
-    enginePropertyNames.set(nodeType, names);
-  }
-  return names;
-}
-
 /**
  * Whether Godot declares `key` on `nodeType` or an ancestor. A wildcard or indexed key names a
  * family that the ClassDB rows do not list (Skeleton3D has no `bones` row), so it passes.
  */
 export function isEngineProperty(nodeType: string, key: string): boolean {
   if (key.includes('*') || key.includes('#')) return true;
-  return enginePropertiesOf(nodeType).has(key);
+  return findClassProperty(nodeType, key) !== undefined;
 }
 
 interface UnreadKeysInput {
