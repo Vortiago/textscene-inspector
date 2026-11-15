@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import process from 'node:process';
 import prettierConfig from '../../prettier.config.mjs';
 import { git, mergeBaseWithMain } from '../githooks/changes.mjs';
+import { addedLines, PLAIN_DIFF } from '../gitDiff.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
-import { addedLines } from './addedLines.mjs';
 import { isCheckedSource, touchedFindings } from './touchedFindings.mjs';
 
 const USAGE = `pnpm comments:check [--base <rev>] | --all
@@ -17,7 +17,21 @@ function argument(name) {
   return index === -1 ? undefined : process.argv[index + 1];
 }
 
-/** The added lines of each checked file since `base`, with untracked files added whole. */
+/** An untracked file, and every file under `--all`, is read whole. */
+const wholeFiles = (paths) => paths.map((path) => [path, 'all']);
+
+/** The paths `.prettierignore` names: vendored and generated code, which its owner's tool writes. */
+function ignoredPaths() {
+  return new Set(git('ls-files', '-c', '-i', '--exclude-from=.prettierignore').split('\n'));
+}
+
+function linesByPath(diff) {
+  const byPath = new Map();
+  for (const { path, line } of addedLines(diff)) byPath.set(path, (byPath.get(path) ?? new Set()).add(line));
+  return [...byPath];
+}
+
+/** The added lines of each file since `base`, with untracked files added whole. */
 function changedSince(base) {
   const diff = git(
     '-c',
@@ -25,27 +39,24 @@ function changedSince(base) {
     'diff',
     '--unified=0',
     '--find-renames',
-    '--no-color',
-    '--src-prefix=a/',
-    '--dst-prefix=b/',
+    ...PLAIN_DIFF,
     base
   );
-  const changed = [...addedLines(diff)];
   const untracked = git('ls-files', '--others', '--exclude-standard').split('\n').filter(Boolean);
-  return [...changed, ...untracked.map((path) => [path, 'all'])].filter(([path]) => isCheckedSource(path));
+  return [...linesByPath(diff), ...wholeFiles(untracked)];
 }
 
 function everyFile() {
-  return git('-c', 'core.quotePath=false', 'ls-files')
-    .split('\n')
-    .filter(isCheckedSource)
-    .map((path) => [path, 'all']);
+  return wholeFiles(git('-c', 'core.quotePath=false', 'ls-files').split('\n'));
 }
 
 function findingsIn(files) {
-  return files.flatMap(([path, added]) =>
-    touchedFindings(readFileSync(join(REPO_ROOT, path), 'utf8'), path, added, prettierConfig.printWidth)
-  );
+  const ignored = ignoredPaths();
+  return files
+    .filter(([path]) => isCheckedSource(path) && !ignored.has(path))
+    .flatMap(([path, added]) =>
+      touchedFindings(readFileSync(join(REPO_ROOT, path), 'utf8'), path, added, prettierConfig.printWidth)
+    );
 }
 
 function reportDebt() {

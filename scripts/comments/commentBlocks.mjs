@@ -20,7 +20,8 @@ function commentRanges(sourceFile) {
   };
   visit(sourceFile);
   const isInJsxText = (range) => jsxTexts.some((node) => range.pos >= node.pos && range.pos < node.end);
-  return [...ranges.values()].filter((range) => !isInJsxText(range)).sort((a, b) => a.pos - b.pos);
+  const sorted = [...ranges.values()].sort((a, b) => a.pos - b.pos);
+  return jsxTexts.length === 0 ? sorted : sorted.filter((range) => !isInJsxText(range));
 }
 
 function startsItsLine(text, pos) {
@@ -56,7 +57,7 @@ function isBlankLine(lines, index) {
 }
 
 /**
- * Each comment block of `text`. `endColumns` counts the code before a trailing comment.
+ * Each comment block of `text`. `widestColumn` counts the code before a trailing comment.
  *
  * @canonical Read the comments of a source file
  */
@@ -65,15 +66,16 @@ export function commentBlocks(path, text) {
   const firstCode = sourceFile.statements[0]?.getStart(sourceFile) ?? text.length;
   const sourceLines = text.split('\n');
   return groupRanges(sourceFile, commentRanges(sourceFile)).map((group) => {
-    const lines = text.slice(group.pos, group.end).split('\n');
+    const lines = text
+      .slice(group.pos, group.end)
+      .split('\n')
+      .map((line) => line.trimEnd());
     const startColumn = sourceFile.getLineAndCharacterOfPosition(group.pos).character;
     return {
       startLine: group.startLine + 1,
       endLine: group.endLine + 1,
-      lines: lines.map((line, index) => (index === 0 ? line : line.trimEnd())),
-      endColumns: lines.map((line, index) =>
-        index === 0 ? startColumn + line.length : line.trimEnd().length
-      ),
+      lines,
+      widestColumn: Math.max(startColumn + lines[0].length, ...lines.slice(1).map((line) => line.length)),
       isFileHeader: group.end <= firstCode && isBlankLine(sourceLines, group.endLine + 1),
     };
   });

@@ -45,9 +45,9 @@ describe('commentBlocks', () => {
     expect(blocksOf('const a = 1;\n// End.\n')).toEqual([{ startLine: 2, endLine: 2, lines: ['// End.'] }]);
   });
 
-  it('gives each line the column its comment ends at', () => {
+  it('counts the code before a trailing comment in its widest column', () => {
     const [block] = commentBlocks('file.ts', 'const a = 1; // Trailing.\n');
-    expect(block.endColumns).toEqual(['const a = 1; // Trailing.'.length]);
+    expect(block.widestColumn).toBe('const a = 1; // Trailing.'.length);
   });
 
   it('marks a comment before the first code and above a blank line as the file header', () => {

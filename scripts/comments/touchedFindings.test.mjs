@@ -32,8 +32,8 @@ describe('isCheckedSource', () => {
     expect(['a.ts', 'b.tsx', 'c.js', 'd.mjs', 'e.cjs', 'f.jsx'].every(isCheckedSource)).toBe(true);
   });
 
-  it('skips a generated or a vendored source and other files', () => {
-    const paths = ['a.generated.ts', 'scripts/compare-docs/vendor/gifenc.mjs', 'README.md', 'a.d.ts.map'];
+  it('skips a file that is no source', () => {
+    const paths = ['README.md', 'a.d.ts.map', 'a.json'];
     expect(paths.some(isCheckedSource)).toBe(false);
   });
 });
