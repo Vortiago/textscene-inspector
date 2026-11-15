@@ -27,17 +27,16 @@ import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { resolveTextTheme, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
-  shapeText,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import { shapeTextLine } from '../../../../r3f/controls/native/text/textLine';
 import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { FoldableContainerProperties } from './types';
 import { TITLE_POSITION_BOTTOM, TITLE_POSITION_TOP } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { SizeFlags } from '../../../../godot/scene/control';
 
 /** `SceneStringName(font)` and `"font_size"`: the theme font keys of FoldableContainer (`foldable_container.cpp:568-569`). */
@@ -146,16 +145,7 @@ function foldableContainerTitleMetrics(
   const fontMetrics = resolveNodeFontMetrics(n, FOLDABLE_CONTAINER_THEME_FONT_KEY);
   const bidi = controlBidiOptions({ textDirection: props.titleTextDirection, language: props.language }, n);
   const layout: TextLayoutResult | null =
-    hasTitle && shapeTitle
-      ? shapeText(title, {
-          ...bidi,
-          fontSizePx,
-          boxWidthPx: 0,
-          autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-          lineSpacingPx: 0,
-          fontMetrics,
-        })
-      : null;
+    hasTitle && shapeTitle ? shapeTextLine(title, { ...bidi, fontSizePx, fontMetrics }) : null;
 
   const arrowSize = resolveArrowSize(n, arrow, ctx.theme);
   const titleMargin = contentMarginSize(titleStyle);

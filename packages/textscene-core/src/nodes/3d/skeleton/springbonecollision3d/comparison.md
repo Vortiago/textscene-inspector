@@ -20,7 +20,7 @@ Strict parsing format-checks these `SpringBoneCollision3D` properties, plus 17 i
 | Property | Accepts | Out of range |
 | --- | --- | --- |
 | `bone` | integer |  |
-| `bone_name` | quoted string or &"name" |  |
+| `bone_name` | quoted string, or the &"…" StringName or NodePath("…") it converts |  |
 | `position_offset` | Vector3(x, y, z), or the Vector3i spelling Godot converts |  |
 | `rotation_offset` | Quaternion(x, y, z, w) |  |
 

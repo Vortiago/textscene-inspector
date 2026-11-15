@@ -17,6 +17,7 @@ const BOOL = 1;
 const INT = 2;
 const FLOAT = 3;
 const STRING = 4;
+const NIL = 0;
 const VECTOR2 = 5;
 const VECTOR2I = 6;
 const RECT2 = 7;
@@ -24,9 +25,11 @@ const RECT2I = 8;
 const VECTOR3 = 9;
 const VECTOR3I = 10;
 const TRANSFORM2D = 11;
+const VECTOR4 = 12;
 const PLANE = 14;
 const QUATERNION = 15;
 const AABB = 16;
+const BASIS = 17;
 const TRANSFORM3D = 18;
 const COLOR = 20;
 const STRING_NAME = 21;
@@ -89,22 +92,6 @@ const NODE_PATH_ELEMENTS = { hint: HINT_ARRAY_TYPE, hint_string: 'NodePath' };
 const INDEX_LISTS = { hint: HINT_TYPE_STRING, hint_string: 'PackedInt32Array' };
 const RESOURCES = { hint: HINT_RESOURCE_TYPE };
 
-/**
- * Properties whose setter takes another Variant type than `ADD_PROPERTY` declares.
- * `VariantCasterAndValidate` checks the argument against the setter's own type
- * (`binder_common.h:175`), so that type's corpus applies. Keyed by
- * `Class.property`, each citing the setter's signature.
- */
-export const SETTER_TYPES = new Map([
-  ['Control.theme_type_variation', { type: STRING_NAME, cite: 'control.cpp:3017' }],
-  ['Window.theme_type_variation', { type: STRING_NAME, cite: 'window.cpp:2490' }],
-  ['XRNode3D.tracker', { type: STRING_NAME, cite: 'xr_nodes.cpp:291' }],
-  ['XRNode3D.pose', { type: STRING_NAME, cite: 'xr_nodes.cpp:315' }],
-  ['XRBodyModifier3D.body_tracker', { type: STRING_NAME, cite: 'xr_body_modifier_3d.cpp:59' }],
-  ['XRFaceModifier3D.face_tracker', { type: STRING_NAME, cite: 'xr_face_modifier_3d.cpp:505' }],
-  ['XRHandModifier3D.hand_tracker', { type: STRING_NAME, cite: 'xr_hand_modifier_3d.cpp:51' }],
-]);
-
 export const FORMAT_ONLY_CORPUS = [
   asWritten(BOOL, 'true', 'variant_parser.cpp:695-696'),
   asWritten(BOOL, 'false', 'variant_parser.cpp:697-698'),
@@ -149,11 +136,19 @@ export const FORMAT_ONLY_CORPUS = [
   converted(VECTOR3, 'Vector3i(1, 2, 3)', 'variant.cpp:635-642'),
   asWritten(VECTOR3I, 'Vector3i(1, 2, 3)', 'variant_parser.cpp:773'),
   converted(VECTOR3I, 'Vector3(1, 2, 3)', 'variant.cpp:644-651'),
+  asWritten(VECTOR4, 'Vector4(1, 2, 3, 4)', 'variant_parser.cpp:786'),
+  converted(VECTOR4, 'Vector4i(1, 2, 3, 4)', 'variant.cpp:653-661'),
   asWritten(TRANSFORM2D, 'Transform2D(1, 0, 0, 1, 0, 0)', 'variant_parser.cpp:812'),
   asWritten(PLANE, 'Plane(0, 1, 0, 0)', 'variant_parser.cpp:829'),
   asWritten(QUATERNION, 'Quaternion(0, 0, 0, 1)', 'variant_parser.cpp:842'),
   asWritten(AABB, 'AABB(0, 0, 0, 1, 1, 1)', 'variant_parser.cpp:855'),
+  asWritten(BASIS, 'Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)', 'variant_parser.cpp:868'),
   asWritten(TRANSFORM3D, 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)', 'variant_parser.cpp:881'),
+
+  // A NIL slot holds any Variant: every type converts to NIL (`variant.cpp:539-541`).
+  asWritten(NIL, '5', 'variant.cpp:539-541'),
+  asWritten(NIL, '"x"', 'variant.cpp:539-541'),
+  asWritten(NIL, '[1, "x"]', 'variant.cpp:539-541'),
 
   asWritten(COLOR, 'Color(1, 0, 0, 1)', 'variant_parser.cpp:907-919'),
   // `Variant::operator Color` reads a STRING as HTML or a name and an INT as

@@ -138,8 +138,12 @@ const KEYS: string[] = [
 ];
 
 describe('Camera3D strict validators', () => {
-  it('registers exactly what Camera3D binds', () => {
-    expect(validatorRegistry.getOwnKeys('Camera3D').sort()).toEqual([...KEYS].sort());
+  it('answers every key Camera3D binds', () => {
+    expect(KEYS.filter((key) => validatorRegistry.declarationFor('Camera3D', key) === null)).toEqual([]);
+  });
+
+  it('holds no hand validator, since the capture row and hand row answer each key', () => {
+    expect(validatorRegistry.getOwnKeys('Camera3D')).toEqual([]);
   });
 
   it('accepts every value its own fixture carries', () => {

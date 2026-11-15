@@ -54,6 +54,11 @@ describe('the contents minimum', () => {
     expect(contentsMinimum(menu([]))).toEqual({ x: 40, y: 8 });
   });
 
+  // An item's text is a `TextLine`, which never breaks (popup_menu.h:56).
+  it('gives an item with a line break one line', () => {
+    expect(contentsMinimum(menu(text('Ab\ncd'))).y).toBe(contentsMinimum(menu(text('Abcd'))).y);
+  });
+
   it('gives an item with no text the font height', () => {
     expect(contentsMinimum(menu([{}]))).toEqual({ x: 40, y: 35 });
   });

@@ -10,7 +10,7 @@
 import type { Vector2 } from '../../../../godot/math/vector';
 import { defineRectShare } from '../../../../r3f/controls/native/solveHandoff';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { TEXT_LINE_DEFAULT_OVERRUN, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
+import { TEXT_LINE_DEFAULT_OVERRUN, trimTextLine } from '../../../../r3f/controls/native/text/textOverrun';
 import {
   computeTabBarDrawLayout,
   layoutScrollArrows,
@@ -56,7 +56,7 @@ export interface TabBarLayout {
 function trimmedLabel(model: TabBarModel, item: TabLayoutItem): TextLayoutResult {
   const { layout } = model.computed[item.index]!;
   if (!item.truncated || !model.fontMetrics) return layout;
-  return trimSoloLine(layout, TEXT_LINE_DEFAULT_OVERRUN, item.textBudgetPx, {
+  return trimTextLine(layout, TEXT_LINE_DEFAULT_OVERRUN, item.textBudgetPx, {
     fontMetrics: model.fontMetrics,
     fontSizePx: model.fontSizePx,
   });

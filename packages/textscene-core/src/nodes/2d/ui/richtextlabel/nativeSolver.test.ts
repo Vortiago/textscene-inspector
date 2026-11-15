@@ -419,6 +419,17 @@ describe('styledTextRuns', () => {
     ).toEqual([textRun({ text: '[b]x[/b]', fontSizePx: NORMAL })]);
   });
 
+  // `add_text` folds each CR LF into an LF (rich_text_label.cpp:4017).
+  it('bbcode disabled: reads a CR LF as one LF', () => {
+    const [run] = styledTextRuns(
+      node({}),
+      parsedProps({ text: 'a\r\nb', bbcodeEnabled: false }),
+      WHITE,
+      NORMAL
+    );
+    expect(run!.text).toBe('a\nb');
+  });
+
   it('bbcode disabled + empty text: no runs', () => {
     expect(styledTextRuns(node({}), parsedProps({ text: '', bbcodeEnabled: false }), WHITE, NORMAL)).toEqual(
       []
@@ -2325,6 +2336,12 @@ describe('RichTextLabel lists and indents', () => {
 
   it('draws the [ul bullet=...] option as the bullet', () => {
     expect(textAndOffset(listPlacements('[ul bullet=*]a[/ul]'))[0]![0]).toBe('* ');
+  });
+
+  // A list marker is a `TextLine`, which never breaks (rich_text_label.h:163).
+  it('keeps a bullet with a line break on one line', () => {
+    const [marker] = listPlacements('[ul bullet=a\nb]x[/ul]');
+    expect(marker!.layout.lines.map((line) => line.text)).toEqual(['a\nb ']);
   });
 
   it('draws a marker for an empty item, which keeps its line', () => {

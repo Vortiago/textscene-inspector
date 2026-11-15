@@ -12,11 +12,12 @@
 import { type Vector2, vector2Max } from '../../../godot/math/vector';
 import { ItemCheckableType } from '../../../godot/scene/popupMenu';
 import { TextDirection } from '../../../godot/text/textServerEnums';
-import { fitIconSize, shapeButtonLabel } from '../../../r3f/controls/native/buttonBase';
+import { fitIconSize } from '../../../r3f/controls/native/buttonBase';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { SolveContext, TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry';
 import { getFontLinePitchPx } from '../../../r3f/controls/native/text/fontMetrics';
 import { controlBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
+import { shapeTextLine } from '../../../r3f/controls/native/text/textLine';
 import { shapedTextSizeWidthPx, type TextLayoutResult } from '../../../r3f/controls/native/text/textLayout';
 import {
   CHECK_BOX_ICON_THEME_NAME,
@@ -90,10 +91,10 @@ export function widestCheckIcon(menu: PopupMenuTheme): number {
 function shapeItem(n: SolveNode, item: PopupMenuItem, theme: PopupMenuTheme): TextLayoutResult | null {
   if (item.text.length === 0) return null;
   const font = item.separator ? theme.separatorFont : theme.font;
-  return shapeButtonLabel(item.text, {
+  return shapeTextLine(item.text, {
+    ...controlBidiOptions({ textDirection: TextDirection.TEXT_DIRECTION_INHERITED, language: '' }, n),
     fontSizePx: font.sizePx,
     fontMetrics: font.metrics,
-    bidi: controlBidiOptions({ textDirection: TextDirection.TEXT_DIRECTION_INHERITED, language: '' }, n),
   });
 }
 

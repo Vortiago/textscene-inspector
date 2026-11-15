@@ -1,0 +1,100 @@
+; One variable: a line break in a TextLine text, in LinkButton, FoldableContainer, TabBar and an embedded
+; Window title, with and without a trim. A TextLine never breaks, so the break takes no room in its
+; one line. No other scene puts a line break in these texts.
+
+[gd_scene format=3]
+
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="dejavu"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="Link1" type="LinkButton" parent="."]
+offset_left = 8.0
+offset_top = 8.0
+theme_override_font_sizes/font_size = 18
+text = "top
+Hi wide"
+
+[node name="Link2" type="LinkButton" parent="."]
+offset_left = 300.0
+offset_top = 8.0
+offset_right = 360.0
+offset_bottom = 40.0
+theme_override_fonts/font = ExtResource("dejavu")
+theme_override_font_sizes/font_size = 23
+text_overrun_behavior = 3
+text = "ab
+cd efgh"
+
+[node name="Link3" type="LinkButton" parent="."]
+offset_left = 500.0
+offset_top = 8.0
+theme_override_font_sizes/font_size = 27
+underline = 1
+text = "x
+y"
+
+[node name="Fold1" type="FoldableContainer" parent="."]
+offset_left = 8.0
+offset_top = 120.0
+offset_right = 260.0
+offset_bottom = 200.0
+title = "Top
+Second"
+
+[node name="Fold2" type="FoldableContainer" parent="."]
+offset_left = 300.0
+offset_top = 120.0
+offset_right = 380.0
+offset_bottom = 200.0
+theme_override_font_sizes/font_size = 21
+title = "Ab
+Cdefgh ij"
+title_text_overrun_behavior = 3
+
+[node name="Fold3" type="FoldableContainer" parent="."]
+offset_left = 500.0
+offset_top = 120.0
+offset_right = 700.0
+offset_bottom = 200.0
+folded = true
+title_alignment = 1
+title = "Mid
+dle"
+
+[node name="Tabs1" type="TabBar" parent="."]
+offset_left = 8.0
+offset_top = 260.0
+offset_right = 400.0
+offset_bottom = 300.0
+tab_count = 2
+tab_0/title = "One
+Two"
+tab_1/title = "Three"
+
+[node name="Tabs2" type="TabBar" parent="."]
+offset_left = 450.0
+offset_top = 260.0
+offset_right = 800.0
+offset_bottom = 300.0
+max_tab_width = 60
+theme_override_font_sizes/font_size = 19
+tab_count = 2
+tab_0/title = "Al
+pha beta"
+tab_1/title = "G
+H"
+
+[node name="Win" type="Window" parent="."]
+title = "Win
+dow"
+position = Vector2i(100, 380)
+size = Vector2i(300, 160)

@@ -11,7 +11,15 @@ A baked mesh whose surfaces are base64 `PackedByteArray` blobs laid out by a `fo
 ## Linting
 
 <!-- lint:begin ArrayMesh -->
-Strict parsing format-checks the inherited set (1 inherited from Mesh, 2 inherited from Resource); `ArrayMesh` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+Strict parsing format-checks these `ArrayMesh` properties, plus 1 inherited from Mesh, 2 inherited from Resource. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `_blend_shape_names` | string array (PackedStringArray(…), Array[String]([…]) or […]) |  |
+| `_surfaces` | Array literal ([...] or Array[T]([...])) |  |
+| `blend_shape_mode` | enum 0-1 (Normalized/Relative) | warning |
+| `custom_aabb` | AABB(x, y, z, w, h, d) |  |
+| `shadow_mesh` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
