@@ -50,6 +50,13 @@ import {
 } from './viewportFraming';
 import { createCanvasTarget, createSceneTarget } from '../../../r3f/offscreen/targets';
 import { renderToOffscreenTarget } from '../../../r3f/offscreen/draw';
+import {
+  CanvasFrameStepsContext,
+  createCanvasFrameSteps,
+  runCanvasFrame,
+  type CanvasFrameSteps,
+} from '../../../r3f/components/Canvas2DStage/canvasFrameSequence';
+import { perObject } from '../../../utils/perObject';
 import { viewportCanvasColorSpace, viewportUsesDebanding, viewportMsaaMode } from './viewportTargetOptions';
 import { OffscreenToneMapStage, type OffscreenToneMap } from '../../../r3f/environment/offscreenToneMap';
 import { ViewportPassAttributes } from '../../../r3f/environment/worldExposure';
@@ -200,6 +207,8 @@ export function OffscreenViewportPass({
     [litCanvasScene, orthoCamera, path, firstSize]
   );
   useLayoutEffect(() => lightHost?.resize(size), [lightHost, size]);
+  // The steps of this viewport's canvas, which its shadow samplers join. Null with no lit canvas.
+  const frameSteps = lightHost ? canvasFrameStepsOf(lightHost) : null;
 
   // The canvas items of a viewport draw after its 3D render, into the same target. In sRGB, the frame's
   // bytes return to the SRGB8_ALPHA8 storage decoded, which the hardware encodes back to the same
@@ -245,21 +254,17 @@ export function OffscreenViewportPass({
           : orthoFrameForSize(layoutSize);
       applyOrthoFrame(orthoCamera, frameOverView(framed, layoutSize, viewSize));
       anchorBackdrop();
-      lightHost?.run.current?.();
     },
-    [orthoCamera, layoutSize, viewSize, lightHost, anchorBackdrop]
+    [orthoCamera, layoutSize, viewSize, anchorBackdrop]
   );
 
-  const renderPass = useCallback(() => {
-    if (kind === '2d') frameCanvas(passScene);
-
+  const drawPass = useCallback(() => {
     // A 3D pass waits for its stage, which mounts before the frame that first publishes the target.
     const toneMap = kind === '3d' ? toneMapStage.current : null;
     if (kind === '3d' && !toneMap) return;
     const clear = renderState.takeRender(clearMode, clearColor);
     const camera = toneMap ? cameraAtPath(passScene, toneMap.cameraPath) : orthoCamera;
     const exposure = toneMap?.exposure ?? null;
-    if (canvasScene) frameCanvas(canvasScene);
     // Under BG_CANVAS the layers below `behindTo` draw first, and the world shows them as its background.
     const behindTo = canvasScene ? canvasBackdropBound(toneMap?.environment?.background, canvasLayers) : null;
     const backdrop = backdropTarget(behindTo !== null);
@@ -323,13 +328,20 @@ export function OffscreenViewportPass({
     transparentBg,
     viewSize,
     canvasScene,
-    frameCanvas,
     renderCanvas,
     backdropTarget,
     canvasLayers,
     renderState,
     clearMode,
   ]);
+
+  // The camera is framed before the canvas runs its steps: the light pass reads it.
+  const renderPass = useCallback(() => {
+    if (kind === '2d') frameCanvas(passScene);
+    if (canvasScene) frameCanvas(canvasScene);
+    if (frameSteps) runCanvasFrame(frameSteps, drawPass);
+    else drawPass();
+  }, [kind, frameCanvas, passScene, canvasScene, frameSteps, drawPass]);
 
   // Consumers sample the texture directly. The ordered driver runs every
   // non-cyclic pass before R3F's own render, so a sampler sees this frame's
@@ -432,13 +444,17 @@ function LitCanvas({
   children: ReactNode;
 }) {
   return host ? (
-    <CanvasLightPass host={host} canvasModulate={canvasModulate} space={space}>
-      {children}
-    </CanvasLightPass>
+    <CanvasFrameStepsContext.Provider value={canvasFrameStepsOf(host)}>
+      <CanvasLightPass host={host} canvasModulate={canvasModulate} space={space}>
+        {children}
+      </CanvasLightPass>
+    </CanvasFrameStepsContext.Provider>
   ) : (
-    <World2DLightingBoundary canvasModulate={canvasModulate} space={space}>
-      {children}
-    </World2DLightingBoundary>
+    <CanvasFrameStepsContext.Provider value={null}>
+      <World2DLightingBoundary canvasModulate={canvasModulate} space={space}>
+        {children}
+      </World2DLightingBoundary>
+    </CanvasFrameStepsContext.Provider>
   );
 }
 
@@ -490,3 +506,10 @@ function OwnCanvasWorldScope({ children }: { children: ReactNode }) {
     </OwnWorldEnvironmentScope>
   );
 }
+
+/** The steps of the canvas a viewport's light pass host lights, whose light step runs that host. */
+const canvasFrameStepsOf = perObject((host: LightPassHost): CanvasFrameSteps => {
+  const steps = createCanvasFrameSteps();
+  steps.lightPass = () => host.run.current?.();
+  return steps;
+});

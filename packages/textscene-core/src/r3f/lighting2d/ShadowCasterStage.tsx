@@ -15,7 +15,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useShadowSampler } from '../components/Canvas2DStage/canvasFrameSequence';
 import {
   createShadowCasterRegistry,
   NoShadowCasterRegistry,
@@ -25,12 +25,6 @@ import {
 } from './shadowCasterRegistry';
 import { createCasterMotionWatch } from './shadowCasterMotion';
 import type { Quad2 } from './shadowCasterEdges';
-
-/**
- * Runs ahead of the light accumulation pre-pass (-1), so a frame that both
- * moves an occluder and accumulates lights samples before it draws.
- */
-export const SHADOW_SNAPSHOT_PRIORITY = -2;
 
 const NO_CASTERS: readonly WorldShadowCaster[] = [];
 
@@ -111,9 +105,9 @@ export function ShadowCasterStage({ children }: { children: ReactNode }) {
   const version = useSyncExternalStore(registry.subscribe, registry.version);
   // A world matrix is no React value: nothing re-renders when an AnimationPlayer moves an occluder.
   // The layout effect covers mount and React changes, since `updateWorldMatrix` needs only the
-  // committed local matrices. `useFrame` covers the rest. State changes only when the numbers do.
+  // committed local matrices. The canvas's shadow sampling step covers the rest. State changes only when the numbers do.
   useLayoutEffect(sample, [sample, version]);
-  useFrame(sample, SHADOW_SNAPSHOT_PRIORITY);
+  useShadowSampler(sample);
 
   return (
     <ShadowCasterProvider registry={registry}>

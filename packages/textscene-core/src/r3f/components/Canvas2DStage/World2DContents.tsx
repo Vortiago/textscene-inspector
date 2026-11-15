@@ -4,7 +4,7 @@
  * it inside its `<Canvas>`.
  */
 
-import { lazy, useLayoutEffect } from 'react';
+import { lazy, useLayoutEffect, useState } from 'react';
 import { useThree } from '@react-three/fiber';
 import type { OrthographicCamera } from 'three';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
@@ -22,6 +22,7 @@ import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlR
 import { TiledUploadDriver } from '../../tiledUpload/TiledUploadDriver.js';
 import { ProjectClearColor } from '../../ProjectClearColor.js';
 import { CanvasFrameRender } from './CanvasFrameRender.js';
+import { CanvasFrameStepsContext, createCanvasFrameSteps } from './canvasFrameSequence.js';
 import { PendingSuspense } from '../../../resources/PendingSuspense.js';
 import { ScreenshotBridge } from '../../ScreenshotBridge.js';
 import { useRootCanvasColorSpace } from '../../rootCanvasColorSpace.js';
@@ -67,6 +68,7 @@ export function World2DContents({
 }: World2DCanvasProps) {
   const canvasModulate = useCanvasModulateColor(nodes);
   const canvasSpace = useRootCanvasColorSpace();
+  const [frameSteps] = useState(createCanvasFrameSteps);
   return (
     <TiledUploadDriver>
       <CanvasWorkspaceProvider workspace="2d">
@@ -74,28 +76,30 @@ export function World2DContents({
           <EditedRootProvider editableInstances={editableInstances}>
             <CameraRig pan={pan} zoom={zoom} />
             <ProjectClearColor />
-            <CanvasFrameRender />
-            {/* The light accumulator starts from the canvas tint, the same pure
+            <CanvasFrameStepsContext.Provider value={frameSteps}>
+              <CanvasFrameRender />
+              {/* The light accumulator starts from the canvas tint, the same pure
               function of `nodes` the dispatcher publishes to the items. */}
-            <CanvasLighting2DProvider canvasModulate={canvasModulate} space={canvasSpace}>
-              {/* One provider over both walks: a y-sorted node and the Controls beside it exchange origins and runs. */}
-              <YSortProvider>
-                <CanvasWorldScope>
-                  <NodeDispatcher nodes={nodes} />
-                </CanvasWorldScope>
-                {/* Inside the lighting provider, so a 2D light reaches a Control. */}
-                <PendingSuspense>
-                  <ControlCanvasLayer nodes={nodes} />
-                </PendingSuspense>
-              </YSortProvider>
-              {/* A `ViewportTexture` consumer may sample its target whoever draws
+              <CanvasLighting2DProvider canvasModulate={canvasModulate} space={canvasSpace}>
+                {/* One provider over both walks: a y-sorted node and the Controls beside it exchange origins and runs. */}
+                <YSortProvider>
+                  <CanvasWorldScope>
+                    <NodeDispatcher nodes={nodes} />
+                  </CanvasWorldScope>
+                  {/* Inside the lighting provider, so a 2D light reaches a Control. */}
+                  <PendingSuspense>
+                    <ControlCanvasLayer nodes={nodes} />
+                  </PendingSuspense>
+                </YSortProvider>
+                {/* A `ViewportTexture` consumer may sample its target whoever draws
                 the on-screen Controls. */}
-              <ControlRasterLayer
-                nodes={nodes}
-                internalResources={internalResources}
-                externalResources={externalResources}
-              />
-            </CanvasLighting2DProvider>
+                <ControlRasterLayer
+                  nodes={nodes}
+                  internalResources={internalResources}
+                  externalResources={externalResources}
+                />
+              </CanvasLighting2DProvider>
+            </CanvasFrameStepsContext.Provider>
           </EditedRootProvider>
         </SceneResourcesProvider>
         <ViewportPassOrchestrator />
