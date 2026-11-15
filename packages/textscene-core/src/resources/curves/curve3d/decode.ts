@@ -5,13 +5,12 @@
  * not read. No THREE: Godot 3D space is right-handed Y-up, as three.js is.
  */
 
-import type { TscnInternalResource } from '../../../parser/types';
 import { parsePackedVector3Array } from '../../shapes/packedArray';
 import { bezierInterpolatef } from '../../../godot/math/math.js';
 import { storedReal, storedVector3 } from '../../../godot/math/real.js';
 import { CURVE3D_DATA } from '../shared/bezierData';
 import type { ResourceKind } from '../../reading';
-import { bezierCurveKind, resolveBezierCurve, type BezierCurveReader } from '../shared/bezierCurve';
+import { bezierCurveKind, type BezierCurveReader } from '../shared/bezierCurve';
 import type { Curve3DControlPoint, Curve3DSample, Curve3DSampler } from './types';
 
 const CURVE3D: BezierCurveReader<Curve3DControlPoint> = {
@@ -31,14 +30,6 @@ const CURVE3D: BezierCurveReader<Curve3DControlPoint> = {
 
 /** The control points of a Curve3D, from any origin (`Path3D::set_curve` takes a `Ref<Curve3D>`). */
 export const CURVE_3D: ResourceKind<Curve3DControlPoint[]> = bezierCurveKind(CURVE3D);
-
-/** The control points of the Curve3D a `SubResource("id")` value names, or none. */
-export function resolveCurve3D(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): Curve3DControlPoint[] {
-  return resolveBezierCurve(ref, internalResources, CURVE3D);
-}
 
 /**
  * Tessellate control points into a polyline sampler. Straight spans (both

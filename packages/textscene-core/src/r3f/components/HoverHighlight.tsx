@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { useHoveredNodePath, useOptionalSelection } from '../contexts/SelectionContext.js';
 import { useHelperTickUpdate, useSceneHelper } from '../hooks/useTHREEHelper.js';
 import { useResourceLoader } from '../../resources/useResource.js';
-import { useLiveTreeVersion } from '../useLiveSceneTree.js';
+import { useDrawnContentVersion } from '../../resources/useCacheVersion';
 import { WorldBoxHelper } from './WorldBoxHelper.js';
 
 const HOVER_COLOR = 0xff8800;
@@ -19,9 +19,9 @@ export function HoverHighlight() {
   const selection = useOptionalSelection();
   const nodeObjectMap = selection?.nodeObjectMap ?? null;
   const tickUpdate = useHelperTickUpdate();
-  // See SelectionHighlight: refresh the box when an async GLB/sub-scene lands
+  // See SelectionHighlight: refresh the box when an async GLB, sub-scene or resource file lands
   // inside the hovered wrapper while the tick gate is closed.
-  const resourceVersion = useLiveTreeVersion(useResourceLoader());
+  const resourceVersion = useDrawnContentVersion(useResourceLoader());
 
   useSceneHelper<THREE.BoxHelper>(
     () => {

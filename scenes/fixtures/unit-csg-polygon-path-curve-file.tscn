@@ -1,0 +1,55 @@
+[gd_scene load_steps=3 format=3 uid="uid://unitcsgpolypathfile"]
+
+; unit-csg-polygon-path.tscn with one variable changed: both Path3D nodes name the Curve3D in its
+; own file, `curve = ExtResource(...)`, where that scene builds it in. Godot loads the same
+; `Ref<Curve3D>` from either origin (resource_format_text.cpp:104-114), so the two scenes draw alike.
+
+[ext_resource type="Curve3D" path="res://unit-csg-polygon-path-curve.tres" id="1_curve"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_road"]
+albedo_color = Color(0.35, 0.35, 0.4, 1)
+
+[node name="CSGPolygonPathRoot" type="Node3D"]
+
+; Sibling form, path_node = "../Path3D". The Road witness's property set, minus path_joined
+; (this curve is open, not a loop).
+[node name="Road" type="Node3D" parent="."]
+
+[node name="RoadTop" type="CSGPolygon3D" parent="Road"]
+polygon = PackedVector2Array(-0.6, 0.0, 0.6, 0.0, 0.6, 0.12, -0.6, 0.12)
+mode = 2
+path_node = NodePath("../Path3D")
+path_interval_type = 0
+path_interval = 0.25
+path_simplify_angle = 4.0
+path_rotation = 1
+path_rotation_accurate = false
+path_local = true
+path_continuous_u = true
+path_u_distance = 2.0
+path_joined = false
+smooth_faces = true
+material = SubResource("StandardMaterial3D_road")
+
+[node name="Path3D" type="Path3D" parent="Road"]
+curve = ExtResource("1_curve")
+
+; Child form, path_node = "Path3D", naming a Path3D parented under the polygon. Carries the
+; racetrack witness's use_collision and calculate_tangents too. Both are parsed and validated
+; but not acted on.
+[node name="Rail" type="CSGPolygon3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+calculate_tangents = false
+use_collision = true
+polygon = PackedVector2Array(-0.08, -0.08, 0.08, -0.08, 0.08, 0.08, -0.08, 0.08)
+mode = 2
+path_node = NodePath("Path3D")
+path_interval_type = 0
+path_interval = 0.5
+path_rotation = 1
+path_local = true
+path_joined = false
+material = SubResource("StandardMaterial3D_road")
+
+[node name="Path3D" type="Path3D" parent="Rail"]
+curve = ExtResource("1_curve")

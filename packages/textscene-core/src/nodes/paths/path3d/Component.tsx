@@ -10,7 +10,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
-import { useNodeResource } from '../../../resources/reading';
+import { useLiveNodeResource } from '../../../r3f/useLiveNodeResource';
 import { CURVE_3D, tessellateCurve3D, type Curve3DSampler } from '../../../resources/curves/curve3d';
 import { Path3DCurveProvider } from '../../../r3f/contexts/Path3DCurveContext';
 import type { Path3DProperties } from './types';
@@ -20,7 +20,8 @@ const PATH_COLOR = 0xffffff;
 
 export function Path3D({ node, children }: NodeComponentProps) {
   const props = node.properties as Path3DProperties;
-  const curve = useNodeResource(props.curve, CURVE_3D);
+  // The live files: the CSGPolygon3D pass reads the same curve, so the two share one load.
+  const curve = useLiveNodeResource(props.curve, CURVE_3D);
 
   // Godot 3D space is three.js space (right-handed Y-up), so curve points need no conjugation,
   // unlike the 2D twin. A curve that is missing, still loading or unreadable gives a null

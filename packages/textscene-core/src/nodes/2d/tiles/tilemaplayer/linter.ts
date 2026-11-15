@@ -8,7 +8,8 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
-import { decodeTileMapData, readTileMapDataLiteral } from '../shared/tileData.js';
+import { decodeTileMapData } from '../shared/tileData.js';
+import { readPackedByteArrayLiteral } from '../../../../godot/variant/packedBytes.js';
 
 const arms = {
   missingTileSet: groundedArm('tilemaplayer-requires-tileset', {
@@ -44,7 +45,7 @@ function checkTileMapLayer(context: RuleContext): Diagnostic[] {
   const tileData = rawProps.tile_map_data;
   if (
     tileData !== undefined &&
-    readTileMapDataLiteral(tileData).fault === null &&
+    readPackedByteArrayLiteral(tileData).fault === null &&
     decodeTileMapData(tileData) === null
   ) {
     reportArm(

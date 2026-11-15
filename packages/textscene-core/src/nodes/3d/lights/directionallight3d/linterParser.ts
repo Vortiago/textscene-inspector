@@ -1,48 +1,9 @@
-/**
- * DirectionalLight3D strict validators. The base-walk DirectionalLight3D →
- * Light3D → Node3D delivers the light_* and shadow_* validators.
- */
-
 import '../shared/linterParser.js';
-import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { v } from '../../../../linter/validators/index.js';
+import { registerPropertyFacts } from '../../../../godot/classdb/propertyDescriptor.js';
 import { DIRECTIONAL_SHADOW_MODE_NAMES } from '../../../../godot/rendering/lights/directionalShadow.js';
 import { DIRECTIONAL_LIGHT_SKY_MODE_NAMES } from '../../../../godot/rendering/lights/directionalLightSkyMode.js';
 
-validatorRegistry.registerAll('DirectionalLight3D', {
-  directional_shadow_mode: v.enumInt('directional_shadow_mode', DIRECTIONAL_SHADOW_MODE_NAMES, {
-    hinted: 'light_3d.cpp:578',
-  }),
-  directional_shadow_split_1: v.float('directional_shadow_split_1', {
-    min: 0,
-    max: 1,
-    hinted: 'light_3d.cpp:579',
-  }),
-  directional_shadow_split_2: v.float('directional_shadow_split_2', {
-    min: 0,
-    max: 1,
-    hinted: 'light_3d.cpp:580',
-  }),
-  directional_shadow_split_3: v.float('directional_shadow_split_3', {
-    min: 0,
-    max: 1,
-    hinted: 'light_3d.cpp:581',
-  }),
-  directional_shadow_fade_start: v.float('directional_shadow_fade_start', {
-    min: 0,
-    max: 1,
-    hinted: 'light_3d.cpp:583',
-  }),
-  // light_3d.cpp:584, PROPERTY_HINT_RANGE "0,8192,0.1,or_greater,exp":
-  // `or_greater` opens the ceiling and `exp` is slider scaling, so only the 0
-  // floor is a bound. Light3D::set_param:36 guards the param index, not the
-  // value, so it warns.
-  directional_shadow_max_distance: v.nonNegativeFloat('directional_shadow_max_distance', {
-    hinted: 'light_3d.cpp:584',
-  }),
-  directional_shadow_pancake_size: v.nonNegativeFloat('directional_shadow_pancake_size', {
-    hinted: 'light_3d.cpp:585',
-  }),
-  directional_shadow_blend_splits: v.boolean('directional_shadow_blend_splits'),
-  sky_mode: v.enumInt('sky_mode', DIRECTIONAL_LIGHT_SKY_MODE_NAMES, { hinted: 'light_3d.cpp:587' }),
+registerPropertyFacts('DirectionalLight3D', {
+  directional_shadow_mode: { labels: DIRECTIONAL_SHADOW_MODE_NAMES },
+  sky_mode: { labels: DIRECTIONAL_LIGHT_SKY_MODE_NAMES },
 });

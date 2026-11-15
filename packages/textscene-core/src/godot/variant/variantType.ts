@@ -99,3 +99,8 @@ const VARIANT_TYPE_NAMES: Readonly<Record<VariantType, string>> = {
 export function variantTypeName(type: number): string | undefined {
   return VARIANT_TYPE_NAMES[type as VariantType];
 }
+
+// A runtime handle: a `.tscn` holds only its default `RID()`, so a property of this type takes no check.
+export function isRuntimeHandle(type: number): boolean {
+  return type === VARIANT_TYPE.RID;
+}

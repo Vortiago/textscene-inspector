@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Related: ADR-0001 (unified slice, React-free linter), `linter/rangeAdvisory.ts`,
-  `linter/validators/v.ts`.
+  `linter/validators/v.ts`, `godot/classdb/propertyDescriptor.ts`.
 
 ## Context
 
@@ -79,6 +79,36 @@ These rules decide the row of a property:
 Each threshold carries the governing `file:line` in a comment beside it. A constant
 named for a feeling and not a source (`EXTREME_*`, `LARGE_*`, `SMALL_*`,
 `*_RECOMMENDED`) does not pass review without that citation.
+
+### A derived check cites the capture, and a setter fact cites the source
+
+The hint and the Variant type are in the ClassDB capture
+(`ClassDB.class_get_property_list`, taken by `pnpm nodes:properties`), so the linter reads
+them there for every class. A key no hand validator answers takes the check its
+**property descriptor** implies (`linter/descriptorValidator.ts`). A warning bound read from
+a capture row cites the capture, the class that declares the row and the key:
+`ClassDB 4.6.3: Camera3D.near`. That cite stands in for the `file:line` of the
+`ADD_PROPERTY`, which states the same hint.
+
+The capture cannot report what a setter does. An error still needs the `file:line` of the
+`ERR_FAIL*`, the clamp or the dropped write, so it comes from a **hand row**
+(`PropertyFacts.setter`), never from the capture. A hand row states only what ClassDB cannot
+report: the setter's refusal, the C++ width, a message and the enum constant names. A hand
+row restates no hint.
+
+Two capture facts decide the check before the hint does:
+
+- **The setter's argument type governs.** The loader converts a value to the type the
+  setter takes (`class_db.cpp:1677`, `binder_common.h:175`), so the capture records
+  `setter_type` where it differs from the property's: `Curve._data` is declared INT, and
+  `_set_data` takes an Array.
+- **A property bound with no setter drops its write.** `ClassDB::set_property` returns true
+  and stores nothing (`class_db.cpp:1655-1659`), so the capture records `has_setter: false`
+  and the check accepts every value. Godot writes such a row from its getter, so a refusal
+  would fire on Godot's own files.
+
+A RID slot gets no check. A `.tscn` holds only the default `RID()`, because the value is a
+runtime handle.
 
 ### File scope is declared, not grounded
 
@@ -164,7 +194,8 @@ the ClassDB capture, and it empties when the capture is retaken.
 A convention decays. The guards below hold. Each one closes one way that a diagnostic
 can reject a value with nothing behind it.
 
-**Each validator declares its kind.** A `PropertyValidator` carries one of three tags.
+**Each validator declares its kind.** A `PropertyValidator`, by hand or derived from a
+property descriptor, carries one of three tags.
 `formatOnly` rejects only values that never reach the property: text the tokeniser
 refuses, or a whole value of a type that `can_convert_strict` (`variant.cpp:536-830`)
 does not convert into the slot, which `PackedScene` then drops silently at
@@ -203,8 +234,7 @@ For example, `set_visibility_aabb` assigns a negative extent unaltered, so a han
 `formatOnlyCorpus.ledger.test.mjs` tests what the tag claims. It runs every validator
 that cites no `grounding` over a hand-cited corpus of literals Godot reads and stores
 (`scripts/compare-docs/formatOnlyCorpus.data.mjs`). The corpus is keyed by the Variant
-type the ClassDB capture records, or by the setter's own type where `SETTER_TYPES` names
-one. A literal stored as written may draw no diagnostic. A converted literal may draw the
+type the ClassDB capture records for the setter's argument. A literal stored as written may draw no diagnostic. A converted literal may draw the
 converted-spelling warning, and no error. The corpus is data written at authoring time,
 because no test may read the Godot checkout.
 
