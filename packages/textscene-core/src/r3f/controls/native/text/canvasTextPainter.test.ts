@@ -930,6 +930,32 @@ describe('canvasGlyphRects', () => {
     expect(rect).toMatchObject({ x: canvasLayout.offsetXPx + 0.5, w: 6 });
   });
 
+  // `font_draw_glyph` picks the raster at a pen summed in 32-bit float (label.h:199, text_server_adv.cpp:4024).
+  it('picks the quarter-pixel raster of a pen summed in 32-bit float', () => {
+    const base = carrying(layoutFor('A', 0), 0, TRIANGLE_OUTLINES);
+    const a = base.lines[0]!.glyphs[0]!;
+    const withGlyphs = (glyphs: (typeof a)[]) => ({
+      ...base,
+      lines: base.lines.map((line) => ({ ...line, glyphs })),
+    });
+    const firstRectX = (layout: typeof base) => {
+      const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
+      return canvasGlyphRects(layout, 16, 0, canvasLayout)[0]!.x - canvasLayout.offsetXPx;
+    };
+    const grownSpacePx = 4.15625 + 1 / 3;
+    let x = 0;
+    const spaces = Array.from({ length: 12 }, () => {
+      const space = { ...a, char: ' ', x, advance: grownSpacePx };
+      x += grownSpacePx;
+      return space;
+    });
+    expect(x).toBe(53.87500000000001);
+
+    expect(firstRectX(withGlyphs([...spaces, { ...a, x }]))).toBe(
+      firstRectX(withGlyphs([{ ...a, x: 53.75 }]))
+    );
+  });
+
   it('gives a canvas item glyph the grid of the bitmap at its pen', () => {
     const layout = carrying(layoutFor('A', 0), 0, TRIANGLE_OUTLINES);
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
