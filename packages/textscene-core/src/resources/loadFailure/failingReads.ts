@@ -8,8 +8,12 @@ import { findExtResource } from '../SubResourceResolver';
 
 type Values = Readonly<Record<string, string>>;
 
+type SceneSections = Pick<TscnScene, 'externalResources' | 'internalResources'> & {
+  readonly nodes: readonly RawNode[];
+};
+
 /** A `.tscn`: its `[sub_resource]` sections, and the `Resource()` literals of its `[node]` sections. */
-export function sceneFailingReads(scene: TscnScene): string[] {
+export function sceneFailingReads(scene: SceneSections): string[] {
   const sections = scene.internalResources.map((section) => section.data);
   return failingReads(scene.externalResources, sections, nodeValues(scene.nodes));
 }

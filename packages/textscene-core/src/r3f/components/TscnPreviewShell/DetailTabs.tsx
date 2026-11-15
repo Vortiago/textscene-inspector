@@ -8,6 +8,7 @@ import { lazy, Suspense, type CSSProperties } from 'react';
 import { AnimationPanel } from '../AnimationPanel/AnimationPanel.js';
 import { MissingResourcesPanel } from '../MissingResourcesPanel/MissingResourcesPanel.js';
 import { CamerasPanel } from './CamerasPanel.js';
+import { SceneLoadBanner } from '../SceneLoadBanner/SceneLoadBanner.js';
 import styles from './TscnPreviewShell.module.css';
 
 // Lazy, so the panel stays out of the first canvas-paint bundle. `React.lazy`
@@ -76,6 +77,7 @@ export function DetailTabs({
         </div>
         {activeTab === 'resources' && (
           <div className={styles.detailsPane}>
+            <SceneLoadBanner />
             {onResourceUpload ? (
               <MissingResourcesPanel onUpload={onResourceUpload} onRemove={onResourceRemove ?? (() => {})} />
             ) : (
