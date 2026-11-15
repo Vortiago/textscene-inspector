@@ -350,14 +350,14 @@ function paintRecording(
     skew = 0,
     outlines = null,
     glyphDrawer,
-    originPhasePx,
+    itemOriginPx,
     fontSizePx = 16,
   }: {
     fontSizePx?: number;
     skew?: number;
     outlines?: SfntOutlines | null;
     glyphDrawer?: GlyphDrawer;
-    originPhasePx?: Vector2;
+    itemOriginPx?: Vector2;
   } = {}
 ) {
   const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
@@ -402,7 +402,7 @@ function paintRecording(
     {
       strokeWidthPx,
       glyphDrawer,
-      originPhasePx,
+      itemOriginPx,
     }
   );
   return { calls, canvasLayout, raster, getImageData: ctx.getImageData };
@@ -452,7 +452,7 @@ describe('paintSceneFontCanvas — pen', () => {
 
   it('rounds the pen where it sits in the canvas item, past the whole pixel the quad starts on', () => {
     const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, {
-      originPhasePx: { x: 0.3, y: 0 },
+      itemOriginPx: { x: 0.3, y: 0 },
     });
     // 0.3 + 10.6 = 10.9 rounds to the quarter step 11, and the quad starts at the floored origin 0.
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 11);
@@ -472,7 +472,7 @@ describe('paintSceneFontCanvas — pen', () => {
   // `text_server_adv.cpp:4082-4084`: a glyph at scale 1 draws at the floored `cpos.y`.
   it('puts the baseline on the whole pixel a canvas item floors it to, its run origin included', () => {
     const layout = layoutFor('A\nB', 0.5);
-    const { calls, canvasLayout } = paintRecording(layout, 0, { originPhasePx: { x: 0, y: 0.6 } });
+    const { calls, canvasLayout } = paintRecording(layout, 0, { itemOriginPx: { x: 0, y: 0.6 } });
     // The second baseline sits 17.5 + 13 px down, which the origin carries to 31.1 and the floor to 31.
     expect(layout.linePitchPx + layout.baselineOffsetPx).toBeCloseTo(30.5, 9);
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[2]).toBe(canvasLayout.offsetYPx + 31);
@@ -483,7 +483,7 @@ describe('paintSceneFontCanvas — pen', () => {
     const layout = layoutFor('A\nB', 0.5);
     const { calls, canvasLayout } = paintRecording(layout, 0, {
       fontSizePx: 15.5,
-      originPhasePx: { x: 0, y: 0.6 },
+      itemOriginPx: { x: 0, y: 0.6 },
     });
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[2]).toBeCloseTo(
       canvasLayout.offsetYPx + 30.5,
@@ -494,7 +494,7 @@ describe('paintSceneFontCanvas — pen', () => {
   it('keeps the pen of a Label3D, whose mesh places each glyph where it is', () => {
     const { calls, canvasLayout } = paintRecording(fractionalPenLayout(), 0, {
       glyphDrawer: 'label3D',
-      originPhasePx: { x: 0.3, y: 0.6 },
+      itemOriginPx: { x: 0.3, y: 0.6 },
     });
     expect(calls.filter((c) => c.op === 'fillText')[1]!.args[1]).toBe(canvasLayout.offsetXPx + 10.6);
   });
@@ -503,7 +503,7 @@ describe('paintSceneFontCanvas — pen', () => {
     const layout = fractionalPenLayout();
     const { calls, canvasLayout } = paintRecording(layout, 0, {
       glyphDrawer: 'label3D',
-      originPhasePx: { x: 0.3, y: 0.6 },
+      itemOriginPx: { x: 0.3, y: 0.6 },
     });
     expect(calls.filter((c) => c.op === 'fillText')[0]!.args[2]).toBe(
       canvasLayout.offsetYPx + layout.baselineOffsetPx

@@ -328,12 +328,12 @@ function buildBitmapRun(
   fontSizePx: number,
   look: TextRunLook,
   sampling: RasterSampling,
-  { strokeWidthPx = 0, glyphDrawer = 'canvasItem', originPhasePx }: CanvasTextPaintOptions
+  { strokeWidthPx = 0, glyphDrawer = 'canvasItem', itemOriginPx }: CanvasTextPaintOptions
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial, linearTint } = look;
   const isOutlinePass = strokeWidthPx > 0;
   const sheet = isOutlinePass ? metrics.bitmap.outlineSheet : metrics.bitmap.sheet;
-  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, { glyphDrawer, originPhasePx });
+  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, { glyphDrawer, itemOriginPx });
   const geometry = quadGeometry(quads);
   const { multipliesInLinear } = GLYPH_DRAWER_RULES[glyphDrawer];
   const texture = sheetTexture(sheet, sampling, multipliesInLinear);
@@ -371,7 +371,8 @@ function buildCanvasRun(
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
   const skew = layout.fontMetrics.skew ?? 0;
-  const { strokeWidthPx, originPhasePx } = canvasPaint;
+  const { strokeWidthPx, itemOriginPx = VECTOR2_ZERO } = canvasPaint;
+  const originPhasePx = originPhase(itemOriginPx);
   const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx, originPhasePx);
   const geometry = quadGeometry(buildCanvasTextQuadArrays(canvasLayout, originPhasePx));
 
@@ -472,12 +473,12 @@ export function TextRunMesh({
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
-  // The run memo keys by the phase, so a run that moves by whole pixels keeps its raster. A run
-  // that keeps its pen reads no phase, so a move never rebuilds it.
+  // The pen sums in 32-bit float from the item origin, so a move rebuilds a run that snaps its pen.
+  // A run that keeps its pen reads no origin, so a move never rebuilds it.
   const itemOrigin = useCanvasItemOrigin();
   const { fontMetrics } = layout;
-  const readsPhase = snapsPen(glyphDrawer, fontSizePx, fontMetrics);
-  const { x: phaseX, y: phaseY } = readsPhase ? originPhase(itemOrigin) : VECTOR2_ZERO;
+  const readsOrigin = snapsPen(glyphDrawer, fontSizePx, fontMetrics);
+  const { x: originX, y: originY } = readsOrigin ? itemOrigin : VECTOR2_ZERO;
   const linearTint = useItemLinearColor(tint);
   const isLinearCanvas = useCanvasColorSpace().isLinear;
   // Godot's glyph is a white coverage mask that the rect modulate tints (`text_server_adv.cpp`
@@ -502,7 +503,7 @@ export function TextRunMesh({
         layout,
         fontSizePx,
         { tint: builtTint, clippingPlanes, depthTest, side, pixelMaterial, linearTint },
-        { strokeWidthPx, glyphDrawer, originPhasePx: { x: phaseX, y: phaseY }, colourGlyphTint },
+        { strokeWidthPx, glyphDrawer, itemOriginPx: { x: originX, y: originY }, colourGlyphTint },
         { textureFilter, mipmapped }
       ),
     // `tint` is compared by its fields, not by identity: a caller that re-creates an equal
@@ -525,8 +526,8 @@ export function TextRunMesh({
       pixelMaterial,
       strokeWidthPx,
       glyphDrawer,
-      phaseX,
-      phaseY,
+      originX,
+      originY,
       textureFilter,
       mipmapped,
       svgGlyphLandings,

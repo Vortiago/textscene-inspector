@@ -14,7 +14,8 @@
 import * as THREE from 'three';
 import type { FillSheet } from '../../../../resources/fonts/font/types';
 import type { BitmapFontMetrics } from './bitmapFontMetrics';
-import type { CanvasTextPaintOptions } from './canvasTextPainter';
+import { originPhase, type CanvasTextPaintOptions } from './canvasTextPainter';
+import { float32GlyphOriginsPx } from './glyphPen';
 import { drawsGlyphRect, snapsPen, type GlyphDrawer } from './glyphDrawer';
 import type { GlyphPlacement, TextLayoutResult } from './textLayout';
 import { lineBaselinesPx } from './lineExtent';
@@ -40,7 +41,7 @@ export interface BitmapQuads {
   indices: Uint32Array;
 }
 
-export type BitmapPaintOptions = Pick<CanvasTextPaintOptions, 'glyphDrawer' | 'originPhasePx'>;
+export type BitmapPaintOptions = Pick<CanvasTextPaintOptions, 'glyphDrawer' | 'itemOriginPx'>;
 
 /**
  * The glyph a placement draws, or undefined for a hex-code box, a space, a glyph `drawer` skips and
@@ -63,8 +64,8 @@ function inkedGlyph(
 
 /**
  * The quads of `layout`, drawn at `fontSizePx` over `sheet`: the glyph sheet, or the outline sheet
- * for an outline pass. When `snapsPen`, its pen and baseline floor at their canvas
- * position, `originPhasePx` past the run's whole item pixel (`originPhase`).
+ * for an outline pass. When `snapsPen`, its pen and baseline floor at their place in the canvas item,
+ * the pen summed in 32-bit float.
  * A BMFont adds no subpixel shift: `FontFile::reset_state` sets
  * `SUBPIXEL_POSITIONING_DISABLED` (`font.cpp:1433`) and `_load_bitmap_font` starts with it.
  */
@@ -73,15 +74,16 @@ export function buildBitmapQuads(
   metrics: BitmapFontMetrics,
   fontSizePx: number,
   sheet: FillSheet,
-  { glyphDrawer = 'canvasItem', originPhasePx = VECTOR2_ZERO }: BitmapPaintOptions = {}
+  { glyphDrawer = 'canvasItem', itemOriginPx = VECTOR2_ZERO }: BitmapPaintOptions = {}
 ): BitmapQuads {
   const baselinesPx = lineBaselinesPx(layout);
-  const inked = layout.lines.flatMap((line, lineIndex) =>
-    line.glyphs.flatMap((placement) => {
+  const inked = layout.lines.flatMap((line, lineIndex) => {
+    const itemOriginsPx = float32GlyphOriginsPx(line, itemOriginPx.x);
+    return line.glyphs.flatMap((placement, index) => {
       const glyph = inkedGlyph(placement, metrics, sheet, glyphDrawer);
-      return glyph ? [{ glyph, placement, lineIndex }] : [];
-    })
-  );
+      return glyph ? [{ glyph, placement, lineIndex, itemOriginXPx: itemOriginsPx[index]! }] : [];
+    });
+  });
   const positions = new Float32Array(inked.length * 4 * 3);
   const uvs = new Float32Array(inked.length * 4 * 2);
   const indices = new Uint32Array(inked.length * 6);
@@ -91,13 +93,15 @@ export function buildBitmapQuads(
   const sheetHeightInverse = 1 / sheet.height;
 
   let quad = 0;
-  for (const { glyph, placement, lineIndex } of inked) {
+  const phase = originPhase(itemOriginPx);
+  const wholeOriginXPx = itemOriginPx.x - phase.x;
+  for (const { glyph, placement, lineIndex, itemOriginXPx } of inked) {
     const rowOffset = sheet.rowOffsets[glyph.fillIndex]!;
     const baselinePx = baselinesPx[lineIndex]!;
     const penX = placement.x + (placement.xOffset ?? 0);
     const penY = baselinePx + (placement.yOffset ?? 0);
-    const originX = floorsPen ? Math.floor(originPhasePx.x + penX) - originPhasePx.x : penX;
-    const originY = floorsPen ? Math.floor(originPhasePx.y + penY) - originPhasePx.y : penY;
+    const originX = floorsPen ? Math.floor(itemOriginXPx) - wholeOriginXPx - phase.x : penX;
+    const originY = floorsPen ? Math.floor(phase.y + penY) - phase.y : penY;
     const left = originX + glyph.offsetX * scale;
     const top = originY + glyph.offsetY * scale;
     const right = left + glyph.width * scale;

@@ -55,7 +55,8 @@ describe('<TextRunMesh> on the canvas painter', () => {
     expect(y).toBeCloseTo(offsetYPx + 0.75, 6);
   });
 
-  it('keeps its raster when the run moves by whole pixels, as the paint reads the phase alone', async () => {
+  // The pen sums in 32-bit float from the item origin (label.h:199): a whole-pixel move can change it.
+  it('paints its raster again when the run moves by whole pixels', async () => {
     const at = (x: number) => (
       <CanvasItemProvider value={0}>
         <CanvasItemGroup position={[x, -1.75, 0]}>
@@ -70,7 +71,7 @@ describe('<TextRunMesh> on the canvas painter', () => {
     };
     const before = raster();
     await renderer.update(at(5.25));
-    expect(raster()).toBe(before);
+    expect(raster()).not.toBe(before);
   });
 
   it('keeps the quad of a Label3D run at its origin', async () => {
