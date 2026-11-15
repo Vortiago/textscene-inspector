@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { booleanize, cppEqual, findEntry, isSameKey, isZero, withEntry } from './compare.js';
+import { booleanize, cppEqual, findEntry, isSameKey, isZero, setEntry } from './compare.js';
 import { variant, type DictionaryEntry } from './value/variant.js';
 
 const int = (value: bigint) => variant('INT', value);
@@ -62,16 +62,13 @@ describe('isSameKey', () => {
   });
 });
 
-describe('withEntry', () => {
+describe('setEntry', () => {
   it('keeps the place of an existing key', () => {
-    const entries = withEntry(
-      [
-        { key: text('a'), value: int(1n) },
-        { key: text('b'), value: int(2n) },
-      ],
-      name('a'),
-      int(9n)
-    );
+    const entries = [
+      { key: text('a'), value: int(1n) },
+      { key: text('b'), value: int(2n) },
+    ];
+    setEntry(entries, name('a'), int(9n));
     expect(entries).toEqual([
       { key: text('a'), value: int(9n) },
       { key: text('b'), value: int(2n) },
@@ -79,7 +76,9 @@ describe('withEntry', () => {
   });
 
   it('adds a new key at the end', () => {
-    expect(withEntry([], text('a'), int(1n))).toEqual([{ key: text('a'), value: int(1n) }]);
+    const entries: DictionaryEntry[] = [];
+    setEntry(entries, text('a'), int(1n));
+    expect(entries).toEqual([{ key: text('a'), value: int(1n) }]);
   });
 
   it('finds no entry for a missing key', () => {

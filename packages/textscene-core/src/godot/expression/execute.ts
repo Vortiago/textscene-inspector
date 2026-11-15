@@ -1,4 +1,4 @@
-import { withEntry } from '../variant/compare.js';
+import { setEntry } from '../variant/compare.js';
 import { construct } from '../variant/construct/construct.js';
 import { evaluateOperator } from '../variant/operators/evaluate.js';
 import {
@@ -76,10 +76,10 @@ function evaluate(node: Extract<ExpressionNode, { kind: 'operator' }>): Variant 
 }
 
 function dictionaryOf(nodes: readonly ExpressionNode[]): Variant {
-  let entries: readonly DictionaryEntry[] = [];
+  const entries: DictionaryEntry[] = [];
   for (let index = 0; index < nodes.length; index += 2) {
     const key = execute(nodes[index]!);
-    entries = withEntry(entries, key, execute(nodes[index + 1]!));
+    setEntry(entries, key, execute(nodes[index + 1]!));
   }
   return variant('DICTIONARY', entries);
 }

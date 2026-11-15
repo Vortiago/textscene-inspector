@@ -131,15 +131,11 @@ export function findEntry(entries: readonly DictionaryEntry[], key: Variant): Di
   return entries.find((entry) => isSameKey(entry.key, key));
 }
 
-/** `d[key] = value`: an existing key keeps its place in the order and takes the new value. */
-export function withEntry(
-  entries: readonly DictionaryEntry[],
-  key: Variant,
-  value: Variant
-): DictionaryEntry[] {
+/** `d[key] = value` on `entries`: an existing key keeps its place in the order and takes the new value. */
+export function setEntry(entries: DictionaryEntry[], key: Variant, value: Variant): void {
   const index = entries.findIndex((entry) => isSameKey(entry.key, key));
-  if (index < 0) return [...entries, { key, value }];
-  return entries.map((entry, at) => (at === index ? { key: entry.key, value } : entry));
+  if (index < 0) entries.push({ key, value });
+  else entries[index] = { key: entries[index]!.key, value };
 }
 
 /** `Variant::is_zero`: the type's default value, or an empty container or string. */

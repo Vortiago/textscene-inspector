@@ -73,6 +73,14 @@ describe('directives', () => {
     });
   });
 
+  it('refuses a utility function in an #elif as not transpiled yet, with its row', () => {
+    const error = errorOf(() => preprocess('#if 0\n#elif abs(1)\n#endif'));
+    expect(error).toMatchObject({
+      reason: "'#elif abs(1): the utility function abs' is not transpiled yet (#1828)",
+      owner: '#1828',
+    });
+  });
+
   it('refuses a condition that crashes Godot', () => {
     const error = errorOf(() => preprocess('#if (-9223372036854775807 - 1) / -1\n#endif'));
     expect(error).toMatchObject({ reason: expect.stringMatching(/^Godot crashes on #if /) });

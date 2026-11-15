@@ -241,7 +241,7 @@ class FilePreprocessor {
       return isConditionTrue(condition, this.state.defines, line);
     } catch (error) {
       const position = { file: this.state.currentFile, line: line + 1, column };
-      throw conditionRefusal(error, `#${directive} ${condition}`, position);
+      throw conditionRefusal(error, directive, `#${directive} ${condition}`, position);
     }
   }
 

@@ -1,5 +1,5 @@
 import { stringToFloat, stringToInt64 } from '../../string/string.js';
-import { withEntry } from '../compare.js';
+import { setEntry } from '../compare.js';
 import { defaultValue } from '../value/defaultValue.js';
 import { variant, type DictionaryEntry, type Variant, type VariantTypeName } from '../value/variant.js';
 import { VARIANT_TYPE } from '../variantType.js';
@@ -114,14 +114,14 @@ function typedDictionary([base, keyType, keyClass, , valueType, valueClass]: Arg
   if (base!.type !== 'DICTIONARY' || !hasTypes || !hasClassNames) return undefined;
   const [key, value] = [containerType(keyType!), containerType(valueType!)];
   if (refusesClassName(key, keyClass!) || refusesClassName(value, valueClass!)) return base;
-  let entries: readonly DictionaryEntry[] = [];
+  const entries: DictionaryEntry[] = [];
   for (const entry of base.value) {
     const [convertedKey, convertedValue] = [
       convertElement(entry.key, key),
       convertElement(entry.value, value),
     ];
     if (!convertedKey || !convertedValue) return variant('DICTIONARY', []);
-    entries = withEntry(entries, convertedKey, convertedValue);
+    setEntry(entries, convertedKey, convertedValue);
   }
   return variant('DICTIONARY', entries);
 }

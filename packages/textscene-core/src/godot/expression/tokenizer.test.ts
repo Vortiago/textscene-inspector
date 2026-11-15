@@ -21,6 +21,25 @@ describe('ExpressionTokenizer', () => {
     expect(tokensOf("'a\\tb'")).toEqual([{ type: 'CONSTANT', value: variant('STRING', 'a\tb') }]);
   });
 
+  it('writes U+FFFD for an escape above U+10FFFF, as Godot 4.6.3 does', () => {
+    expect(tokensOf('"\\UFFFFFF\\U110000"')).toEqual([
+      { type: 'CONSTANT', value: variant('STRING', '\ufffd\ufffd') },
+    ]);
+  });
+
+  it('writes U+FFFD for a NUL escape, as Godot 4.6.3 does', () => {
+    expect(tokensOf('"a\\u0000b"')).toEqual([{ type: 'CONSTANT', value: variant('STRING', 'a\ufffdb') }]);
+  });
+
+  it('keeps the highest code point', () => {
+    expect(tokensOf('"\\U10FFFF"')).toEqual([{ type: 'CONSTANT', value: variant('STRING', '\u{10ffff}') }]);
+  });
+
+  it('reads a string longer than the engine takes as arguments', () => {
+    const long = 'a'.repeat(500_000);
+    expect(tokensOf(`"${long}"`)).toEqual([{ type: 'CONSTANT', value: variant('STRING', long) }]);
+  });
+
   it('throws on a character no token starts with', () => {
     expect(() => tokensOf('@')).toThrow(new ExpressionError('Unexpected character.'));
   });

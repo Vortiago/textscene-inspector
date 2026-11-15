@@ -117,6 +117,10 @@ const isDigit = (char: string): boolean => char >= '0' && char <= '9';
 const isHexDigit = (char: string): boolean => /^[0-9a-fA-F]$/.test(char);
 const isBinaryDigit = (char: string): boolean => char === '0' || char === '1';
 
+// String::append_utf32 (ustring.cpp:199) writes U+FFFD for a NUL, a surrogate or a code above U+10FFFF.
+const utf32Character = (code: number): string =>
+  code === 0 || (code & 0xfffff800) === 0xd800 || code > 0x10ffff ? '\ufffd' : String.fromCodePoint(code);
+
 export class ExpressionError extends Error {}
 
 const fail = (message: string): never => {
@@ -179,7 +183,7 @@ export class ExpressionTokenizer {
   }
 
   private string(quote: string): string {
-    const codes: number[] = [];
+    const characters: string[] = [];
     let lead = 0;
     for (;;) {
       const char = this.next();
@@ -187,7 +191,7 @@ export class ExpressionTokenizer {
       if (char === quote) break;
       if (char !== '\\') {
         if (lead !== 0) fail('Invalid UTF-16 sequence in string, unpaired lead surrogate');
-        codes.push(char.codePointAt(0)!);
+        characters.push(char);
         continue;
       }
       let code = this.escape();
@@ -202,10 +206,10 @@ export class ExpressionTokenizer {
         lead = 0;
       }
       if (lead !== 0) fail('Invalid UTF-16 sequence in string, unpaired lead surrogate');
-      codes.push(code);
+      characters.push(utf32Character(code));
     }
     if (lead !== 0) fail('Invalid UTF-16 sequence in string, unpaired lead surrogate');
-    return String.fromCodePoint(...codes);
+    return characters.join('');
   }
 
   private escape(): number {

@@ -27,9 +27,14 @@ export function isConditionTrue(condition: string, defines: Defines, line: numbe
 }
 
 /** The refusal of a condition the Expression port cannot answer as Godot does. Other errors pass through. */
-export function conditionRefusal(error: unknown, directive: string, position: SourcePosition): unknown {
+export function conditionRefusal(
+  error: unknown,
+  name: 'if' | 'elif',
+  directive: string,
+  position: SourcePosition
+): unknown {
   if (error instanceof UnportedExpression || error instanceof UnportedConversion)
-    return notTranspiled(instruction('#if')!, position, `${directive}: ${error.message}`);
+    return notTranspiled(instruction(`#${name}`)!, position, `${directive}: ${error.message}`);
   if (error instanceof UnportableComparison) return new ShadingLanguageError(error.message, position);
   if (error instanceof GodotCrash)
     return new ShadingLanguageError(`Godot crashes on ${directive}: ${error.message}`, position);
