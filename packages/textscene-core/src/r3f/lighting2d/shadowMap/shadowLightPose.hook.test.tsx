@@ -11,6 +11,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { useShadowLightPose } from './shadowLightPose';
 import type { ShadowLightPose } from './shadowLightSample';
+import { CanvasFrameDriver } from '../../testing/CanvasFrameDriver';
 
 /** Every pose the hook published, in order, including the initial null. */
 type Published = (ShadowLightPose | null)[];
@@ -48,7 +49,11 @@ function Harness({
 
 async function mount(props: Omit<Parameters<typeof Harness>[0], 'published'>) {
   const published: Published = [];
-  const renderer = await ReactThreeTestRenderer.create(<Harness published={published} {...props} />);
+  const renderer = await ReactThreeTestRenderer.create(
+    <CanvasFrameDriver>
+      <Harness published={published} {...props} />
+    </CanvasFrameDriver>
+  );
   await ReactThreeTestRenderer.act(async () => {});
   return { renderer, published };
 }
@@ -106,7 +111,11 @@ describe('useShadowLightPose', () => {
     });
     expect(poses(published)).toHaveLength(1);
 
-    await renderer.update(<Harness published={published} x={250} />);
+    await renderer.update(
+      <CanvasFrameDriver>
+        <Harness published={published} x={250} />
+      </CanvasFrameDriver>
+    );
     await ReactThreeTestRenderer.act(async () => {
       renderer.advanceFrames(1, 1 / 60);
     });
@@ -122,13 +131,21 @@ describe('useShadowLightPose', () => {
     const { renderer, published } = await mount({ x: 120 });
     expect(poses(published)).toHaveLength(1);
 
-    await renderer.update(<Harness published={published} x={120} enabled={false} />);
+    await renderer.update(
+      <CanvasFrameDriver>
+        <Harness published={published} x={120} enabled={false} />
+      </CanvasFrameDriver>
+    );
     await ReactThreeTestRenderer.act(async () => {
       renderer.advanceFrames(2, 1 / 60);
     });
     expect(published[published.length - 1]).toBeNull();
 
-    await renderer.update(<Harness published={published} x={120} enabled />);
+    await renderer.update(
+      <CanvasFrameDriver>
+        <Harness published={published} x={120} enabled />
+      </CanvasFrameDriver>
+    );
     await ReactThreeTestRenderer.act(async () => {
       renderer.advanceFrames(2, 1 / 60);
     });
@@ -150,7 +167,11 @@ describe('useShadowLightPose', () => {
 
   it('republishes when only the reach changes', async () => {
     const { renderer, published } = await mount({});
-    await renderer.update(<Harness published={published} width={200} />);
+    await renderer.update(
+      <CanvasFrameDriver>
+        <Harness published={published} width={200} />
+      </CanvasFrameDriver>
+    );
     await ReactThreeTestRenderer.act(async () => {
       renderer.advanceFrames(1, 1 / 60);
     });

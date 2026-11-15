@@ -234,8 +234,8 @@ describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () =>
       fitContentWidth: true,
     });
     const box = TEXT_EDIT_BOXES.normal!;
-    const withoutGutter = textEditMinimumSizeWith(node(props), ctx(), props, box, 0).x;
-    expect(textEditMinimumSizeWith(node(props), ctx(), props, box, 5).x).toBe(withoutGutter + 5);
+    const withoutGutter = textEditMinimumSizeWith(node(props), ctx(), props, box, () => 0).x;
+    expect(textEditMinimumSizeWith(node(props), ctx(), props, box, () => 5).x).toBe(withoutGutter + 5);
   });
 
   it('adds minimap_width into the width only when draw_minimap is set', () => {

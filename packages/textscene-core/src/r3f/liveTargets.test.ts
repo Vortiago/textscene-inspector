@@ -16,7 +16,7 @@ import {
   unrenderedTexel,
 } from './liveTargets';
 import { ownedTextureView, releaseView, textureView } from '../resources/textures/textureView';
-import { createCanvasTarget, createSceneTarget } from '../nodes/viewport/subviewport/offscreenViewport';
+import { createCanvasTarget, createSceneTarget } from './offscreen/targets';
 import { copiesFilledFrom, recordingRenderer } from './liveTargets.testkit';
 import { holdUntilReleased } from './useDisposeOnRelease';
 import { flippedUvWindow } from './uvWindow';

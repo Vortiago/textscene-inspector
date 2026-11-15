@@ -29,20 +29,22 @@ function baseOf(localSha, remoteSha) {
   return mergeBaseWithMain(localSha);
 }
 
-/** The changed and deleted paths of the push, or undefined when a base is missing. */
+/** The changed and deleted paths and the `{ base, head }` of each pushed ref, or undefined with no base. */
 function pushedFiles(stdin) {
   const changed = new Set();
   const deleted = new Set();
+  const pushed = [];
   for (const line of stdin.split('\n').filter((l) => l.trim() !== '')) {
     const [, localSha, , remoteSha] = line.split(' ');
     if (NO_SHA.test(localSha)) continue;
     const base = baseOf(localSha, remoteSha);
     if (base === undefined) return undefined;
+    pushed.push({ base, head: localSha });
     const files = parseNameStatus(git('diff', '--name-status', '--no-renames', base, localSha));
     files.changed.forEach((path) => changed.add(path));
     files.deleted.forEach((path) => deleted.add(path));
   }
-  return { changed: [...changed], deleted: [...deleted] };
+  return { changed: [...changed], deleted: [...deleted], pushed };
 }
 
 if (process.env.FULL_VALIDATE === '1') {

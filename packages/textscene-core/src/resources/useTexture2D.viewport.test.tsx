@@ -17,7 +17,7 @@ import { ViewportPassProvider, useRegisterViewportPass } from '../r3f/contexts/V
 import { ViewportTexturePublisher, viewportEntry } from '../r3f/testing/ViewportTexturePublisher';
 import { copiesFilledFrom } from '../r3f/liveTargets.testkit';
 import { publishLiveTargets } from '../r3f/liveTargets';
-import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
+import { createCanvasTarget } from '../r3f/offscreen/targets';
 import { texture2DPlaceholder } from './textures/texture2DPlaceholder';
 import { canvasColorSpaceOf } from '../r3f/canvasColorSpace';
 

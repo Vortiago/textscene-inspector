@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
-import { createCanvasTarget, createSceneTarget } from './offscreenViewport';
+import { createCanvasTarget, createSceneTarget } from '../../../r3f/offscreen/targets';
 import { useTargetViews } from './targetViews';
 import { canvasColorSpaceOf } from '../../../r3f/canvasColorSpace';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';

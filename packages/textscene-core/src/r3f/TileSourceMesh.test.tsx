@@ -21,7 +21,7 @@ import { texture2DPlaceholder } from '../resources/textures/texture2DPlaceholder
 import { ViewportTextureProvider } from './contexts/ViewportTextureContext';
 import { NodePathProvider } from './contexts/NodePathContext';
 import { ViewportTexturePublisher, viewportEntry } from './testing/ViewportTexturePublisher';
-import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
+import { createCanvasTarget } from './offscreen/targets';
 import { WHITE_MODULATE, type VertexColorTint } from './canvasItemModulate';
 import { canvasColorSpaceOf } from './canvasColorSpace';
 import { isLocalToScene } from '../resources/textures/viewporttexture/localToScene';

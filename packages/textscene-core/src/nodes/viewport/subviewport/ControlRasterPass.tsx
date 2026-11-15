@@ -17,13 +17,10 @@ import { SubViewportCanvasScope } from './SubViewportCanvasScope';
 import { ViewportControls } from './ViewportControls.js';
 import { YSortProvider } from '../../../r3f/contexts/YSortContext.js';
 import { viewportTransfer } from '../../../r3f/texelCopy.js';
-import {
-  createCanvasTarget,
-  renderToOffscreenTarget,
-  viewportCanvasColorSpace,
-  viewportMsaaMode,
-} from './offscreenViewport.js';
-import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
+import { createCanvasTarget } from '../../../r3f/offscreen/targets.js';
+import { renderToOffscreenTarget } from '../../../r3f/offscreen/draw.js';
+import { viewportCanvasColorSpace, viewportMsaaMode } from './viewportTargetOptions.js';
+import { useMultisampledTarget } from '../../../r3f/offscreen/multisampledTarget.js';
 import { useCanvasPass } from './useCanvasPass.js';
 import { useResolvedGate } from './useViewportGate.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';

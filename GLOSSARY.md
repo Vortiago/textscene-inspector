@@ -218,7 +218,7 @@ _Avoid_: "indent" for the sum, which names the tag and its margin alone.
 The bullet or number a `[ul]` or `[ol]` item draws before its first line (`text_prefix`). It is shaped in the item's font, drawn at the line's top and right-aligned against the text, and an empty item draws one too.
 _Avoid_: "prefix", which is the engine's name for the marker's text.
 
-**Text buffer** (`trimTextBufferLineToWidth` in `r3f/controls/native/text/textOverrun.ts`):
+**Text buffer** (`textBufferPlacement` in `r3f/controls/native/text/textOverrun.ts`, which `trimSoloLine` trims by):
 A Control's own `TextLine` or `TextParagraph`, its `text_buf`, which Button, LinkButton, the FoldableContainer title and each ItemList item draw. Its fill draws in the set direction (`shaped_text_draw`) and its outline in the **inferred direction** (`shaped_text_draw_outline`), so a trimmed AUTO line that resolves right-to-left draws a different glyph set in each. Label draws its own lines in the inferred direction for both.
 _Avoid_: "text line" for it, which names one shaped line.
 

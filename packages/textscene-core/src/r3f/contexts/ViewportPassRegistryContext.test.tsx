@@ -32,8 +32,10 @@ import {
   ViewportPassOrchestrator,
   useRegisterViewportPass,
   useViewportPassCycle,
+  usePlaceViewport,
   type ViewportPass,
 } from './ViewportPassRegistryContext';
+import { TreeOrderProvider, type TreeOrder } from './TreeOrderContext';
 import { passGate, TargetRenderState } from '../../nodes/viewport/renderGate';
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../godot/scene/viewport';
 import { HierarchyProvider } from './HierarchyContext';
@@ -43,6 +45,20 @@ import type { SceneGraph } from '../../core/SceneGraph';
 function Registrar({ path, pass }: { path: string; pass: ViewportPass }) {
   const register = useRegisterViewportPass();
   useEffect(() => register(path, pass), [register, path, pass]);
+  return null;
+}
+
+/** Places the viewport node at `path` at `order`, as the dispatcher does. */
+function Placer({ path, order }: { path: string | null; order: TreeOrder }) {
+  return (
+    <TreeOrderProvider order={order}>
+      <PlaceAt path={path} />
+    </TreeOrderProvider>
+  );
+}
+
+function PlaceAt({ path }: { path: string | null }) {
+  usePlaceViewport(path);
   return null;
 }
 
@@ -74,6 +90,13 @@ describe('useRegisterViewportPass (no provider)', () => {
     await ReactThreeTestRenderer.create(<Read />);
     expect(typeof register).toBe('function');
     expect(typeof register!('x', { dependsOn: [], render: () => {} })).toBe('function');
+  });
+});
+
+describe('usePlaceViewport (no provider)', () => {
+  it('is a safe no-op', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<Placer path="a" order={[0]} />);
+    await expect(renderer.unmount()).resolves.toBeUndefined();
   });
 });
 
@@ -113,6 +136,106 @@ describe('<ViewportPassOrchestrator>', () => {
     );
     await renderer.advanceFrames(1, 16);
     expect(order).toEqual(['Inner', 'Middle', 'Outer']);
+  });
+
+  it('runs the passes of one level in the tree order the dispatcher places, not in registration order', async () => {
+    const order: string[] = [];
+    const renderer = await mount(
+      <>
+        <Registrar path="b" pass={{ dependsOn: [], render: () => order.push('b') }} />
+        <Registrar path="a" pass={{ dependsOn: [], render: () => order.push('a') }} />
+        <Placer path="b" order={[1]} />
+        <Placer path="a" order={[0]} />
+      </>
+    );
+    await renderer.advanceFrames(1, 16);
+    expect(order).toEqual(['a', 'b']);
+  });
+
+  it('keeps the tree order when a pass registers again', async () => {
+    const order: string[] = [];
+    const first: TreeOrder = [0];
+    const second: TreeOrder = [1];
+    const passB: ViewportPass = { dependsOn: [], render: () => order.push('b') };
+    function Passes({ passA }: { passA: ViewportPass }) {
+      return (
+        <ViewportPassProvider>
+          <Registrar path="a" pass={passA} />
+          <Registrar path="b" pass={passB} />
+          <Placer path="a" order={first} />
+          <Placer path="b" order={second} />
+          <ViewportPassOrchestrator />
+        </ViewportPassProvider>
+      );
+    }
+    const renderer = await ReactThreeTestRenderer.create(
+      <Passes passA={{ dependsOn: [], render: () => order.push('a') }} />
+    );
+    // A new pass object, as a resized target makes: the registry drops `a` and adds it last.
+    await renderer.update(<Passes passA={{ dependsOn: [], render: () => order.push('a') }} />);
+    await renderer.advanceFrames(1, 16);
+    expect(order).toEqual(['a', 'b']);
+  });
+
+  it('keeps a node placed while another canvas still places it', async () => {
+    const order: string[] = [];
+    const passA: ViewportPass = { dependsOn: [], render: () => order.push('a') };
+    const passB: ViewportPass = { dependsOn: [], render: () => order.push('b') };
+    const first: TreeOrder = [0];
+    const second: TreeOrder = [1];
+    function TwoCanvases({ hasFirstCanvas }: { hasFirstCanvas: boolean }) {
+      return (
+        <ViewportPassProvider>
+          <Registrar path="b" pass={passB} />
+          <Registrar path="a" pass={passA} />
+          <Placer path="b" order={second} />
+          {hasFirstCanvas && <Placer path="a" order={first} />}
+          <Placer path="a" order={first} />
+          <ViewportPassOrchestrator />
+        </ViewportPassProvider>
+      );
+    }
+    const renderer = await ReactThreeTestRenderer.create(<TwoCanvases hasFirstCanvas />);
+    await renderer.update(<TwoCanvases hasFirstCanvas={false} />);
+    await renderer.advanceFrames(1, 16);
+    expect(order).toEqual(['a', 'b']);
+  });
+
+  it('places nothing for a null path, so that pass draws after the placed ones', async () => {
+    const order: string[] = [];
+    const renderer = await mount(
+      <>
+        <Registrar path="a" pass={{ dependsOn: [], render: () => order.push('a') }} />
+        <Registrar path="b" pass={{ dependsOn: [], render: () => order.push('b') }} />
+        <Placer path={null} order={[0]} />
+        <Placer path="b" order={[1]} />
+      </>
+    );
+    await renderer.advanceFrames(1, 16);
+    expect(order).toEqual(['b', 'a']);
+  });
+
+  it('draws a pass after the placed ones of its level once its placement unmounts', async () => {
+    const order: string[] = [];
+    const passA: ViewportPass = { dependsOn: [], render: () => order.push('a') };
+    const passB: ViewportPass = { dependsOn: [], render: () => order.push('b') };
+    const first: TreeOrder = [0];
+    const second: TreeOrder = [1];
+    function Passes({ isAPlaced }: { isAPlaced: boolean }) {
+      return (
+        <ViewportPassProvider>
+          <Registrar path="a" pass={passA} />
+          <Registrar path="b" pass={passB} />
+          {isAPlaced && <Placer path="a" order={first} />}
+          <Placer path="b" order={second} />
+          <ViewportPassOrchestrator />
+        </ViewportPassProvider>
+      );
+    }
+    const renderer = await ReactThreeTestRenderer.create(<Passes isAPlaced />);
+    await renderer.update(<Passes isAPlaced={false} />);
+    await renderer.advanceFrames(1, 16);
+    expect(order).toEqual(['b', 'a']);
   });
 
   it('unregisters on unmount, so a later frame no longer drives it', async () => {
