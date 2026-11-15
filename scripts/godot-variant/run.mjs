@@ -2,7 +2,7 @@
 /**
  * Writes the Variant tables the Expression port reads, from Godot's source (scripts/godotSource.mjs):
  * `pnpm godot:variant [--check] [--godot-source <dir>]`. They are the operator registrations, the
- * constructors in Godot's order and the strict conversions. `--check` writes nothing and exits 1 on
+ * constructors in Godot's order, the strict conversions and the utility functions. `--check` writes nothing and exits 1 on
  * a stale file.
  */
 
@@ -15,13 +15,14 @@ import { REPO_ROOT } from '../repoRoot.mjs';
 import { constructorRegistrations } from './readConstructors.mjs';
 import { strictConversions } from './readConversions.mjs';
 import { operatorRegistrations } from './readOperators.mjs';
+import { utilityFunctions } from './readUtilities.mjs';
 
 const TABLE_MODULE = join(REPO_ROOT, 'packages/textscene-core/src/godot/variant/registrations.generated.ts');
 
 const json = (value) => JSON.stringify(value);
 
 /** The module text of the three tables. */
-export function renderTables({ operators, constructors, conversions }) {
+export function renderTables({ operators, constructors, conversions, utilities }) {
   const operatorRows = operators.map(
     ({ operator, left, right, evaluator, types }) =>
       `  [${json(operator)}, ${json(left)}, ${json(right)}, ${json(evaluator)}, ${json(types)}],`
@@ -31,6 +32,9 @@ export function renderTables({ operators, constructors, conversions }) {
   );
   const conversionRows = Object.entries(conversions).map(
     ([target, sources]) => `  ${target}: ${json(sources)},`
+  );
+  const utilityRows = utilities.map(
+    ({ name, argumentCount, isVararg }) => `  [${json(name)}, ${argumentCount}, ${isVararg}],`
   );
   return `/**
  * Godot 4.6.3's Variant registrations, read from its source.
@@ -51,6 +55,11 @@ ${constructorRows.join('\n')}
 export const STRICT_CONVERSIONS: Readonly<Record<string, readonly string[]>> = {
 ${conversionRows.join('\n')}
 };
+
+/** variant_utility.cpp:1630: name, argument count, whether it takes any count. */
+export const UTILITY_FUNCTIONS: readonly (readonly [string, number, boolean])[] = [
+${utilityRows.join('\n')}
+];
 `;
 }
 
@@ -61,8 +70,9 @@ function main() {
     operators: operatorRegistrations(read('variant_op.cpp')),
     constructors: constructorRegistrations(read('variant_construct.cpp')),
     conversions: strictConversions(read('variant.cpp')),
+    utilities: utilityFunctions(read('variant_utility.cpp')),
   };
-  const summary = `${tables.operators.length} operators, ${tables.constructors.length} constructors`;
+  const summary = `${tables.operators.length} operators, ${tables.constructors.length} constructors, ${tables.utilities.length} utility functions`;
   const outputs = [[TABLE_MODULE, renderTables(tables)]];
   const options = { tool: 'godot-variant', summary };
   if (process.argv.includes('--check'))
