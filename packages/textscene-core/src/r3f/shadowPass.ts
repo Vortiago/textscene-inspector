@@ -127,21 +127,13 @@ function readersOf(renderer: THREE.WebGLRenderer): Readers {
   return readers;
 }
 
-/** Lit programs sample the atlas with no slot drawn. Allocating binds the canvas (WebGLTextures.js:2042). */
+/** Lit programs sample the atlas with no slot drawn. Init skips a built target (`WebGLRenderer.js:3613`). */
 function allocatePositionalShadowAtlas(renderer: THREE.WebGLRenderer): void {
-  const atlas = positionalShadowAtlas();
-  if (isAllocated(renderer, atlas)) return;
   const target = renderer.getRenderTarget();
   const face = renderer.getActiveCubeFace();
   const level = renderer.getActiveMipmapLevel();
-  renderer.initRenderTarget(atlas);
+  renderer.initRenderTarget(positionalShadowAtlas());
   renderer.setRenderTarget(target, face, level);
-}
-
-/** r187 `WebGLRenderer.js:3613`. */
-function isAllocated(renderer: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget): boolean {
-  const properties = renderer.properties.get(target) as { __webglFramebuffer?: unknown };
-  return properties.__webglFramebuffer !== undefined;
 }
 
 function readMaps(readers: Readers, scene: THREE.Object3D, camera: THREE.Camera): void {

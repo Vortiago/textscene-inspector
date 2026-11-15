@@ -142,12 +142,14 @@ export const VRS_UPDATE_MODE_NAMES = enumNamesByValue(VrsUpdateMode);
 const POSITIONAL_SHADOW_QUADRANT_SUBDIV_SHADOWS = [0, 1, 4, 16, 64, 256, 1024] as const;
 
 /** Shadows per quadrant at the defaults (`scene_tree.cpp:2133-2136`, `viewport.cpp:5363-5366`). */
-const POSITIONAL_SHADOW_QUADRANT_SHADOWS_DEFAULT = [
-  PositionalShadowAtlasQuadrantSubdiv.SHADOWS_4,
-  PositionalShadowAtlasQuadrantSubdiv.SHADOWS_4,
-  PositionalShadowAtlasQuadrantSubdiv.SHADOWS_16,
-  PositionalShadowAtlasQuadrantSubdiv.SHADOWS_64,
-].map((subdiv) => POSITIONAL_SHADOW_QUADRANT_SUBDIV_SHADOWS[subdiv]);
+const POSITIONAL_SHADOW_QUADRANT_SHADOWS_DEFAULT: readonly number[] = Object.freeze(
+  [
+    PositionalShadowAtlasQuadrantSubdiv.SHADOWS_4,
+    PositionalShadowAtlasQuadrantSubdiv.SHADOWS_4,
+    PositionalShadowAtlasQuadrantSubdiv.SHADOWS_16,
+    PositionalShadowAtlasQuadrantSubdiv.SHADOWS_64,
+  ].map((subdiv) => POSITIONAL_SHADOW_QUADRANT_SUBDIV_SHADOWS[subdiv])
+);
 
 /** The root's atlas at the project defaults (`scene_tree.cpp:2130`, `node_3d_editor_plugin.cpp:3157`). */
 export const ROOT_POSITIONAL_SHADOW_ATLAS: PositionalShadowAtlasSettings = {

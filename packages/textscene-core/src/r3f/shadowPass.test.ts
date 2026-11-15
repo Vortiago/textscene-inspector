@@ -98,15 +98,6 @@ describe('installShadowPass', () => {
     );
   });
 
-  it('allocates nothing once the atlas has its framebuffer (edge case)', () => {
-    const { renderer } = fakeRenderer();
-    Object.assign(renderer, { properties: { get: () => ({ __webglFramebuffer: {} }) } });
-    installShadowPass(renderer);
-    renderer.shadowMap.render([], new THREE.Scene(), new THREE.PerspectiveCamera());
-    expect(renderer.initRenderTarget).not.toHaveBeenCalled();
-    expect(renderer.setRenderTarget).not.toHaveBeenCalled();
-  });
-
   it('runs three’s pass, then copies each omni light that holds a slot', () => {
     const copy = vi.spyOn(OmniShadowCopy.prototype, 'copy').mockImplementation(() => {});
     const { renderer, threePass } = fakeRenderer();
