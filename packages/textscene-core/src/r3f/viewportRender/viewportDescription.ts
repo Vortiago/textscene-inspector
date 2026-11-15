@@ -64,7 +64,7 @@ type SubViewportFacts = Pick<
   | 'positional_shadow_atlas_quad_3'
 >;
 
-/** A SubViewport as the game draws it. An unset bias or anisotropic level takes the project's, as `root` holds it. */
+/** A SubViewport as the game draws it. An unset bias or anisotropic level takes `root`'s. */
 export function subViewportDescription(
   properties: SubViewportFacts,
   root: ViewportDescription

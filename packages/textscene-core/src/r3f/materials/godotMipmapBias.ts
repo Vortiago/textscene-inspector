@@ -1,12 +1,3 @@
-/**
- * Godot's `texture_mipmap_bias` in three's programs. Godot builds the samplers of every 3D material
- * in a viewport with the bias as their mip level offset, on the four mipmapped filters only
- * (`material_storage.cpp:2454-2502`). WebGL2 has no per-sampler bias, so a program samples each such
- * slot with `texture(sampler, uv, bias)` from one shared uniform, and a `textureGrad` read with its
- * gradients scaled by `2^bias`, which shifts the mip level by the same amount. A pass writes the
- * uniform for each world draw (`drawWorld`), and a draw outside one samples at 0.
- */
-
 import * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
 import { rewrittenShader, rewrittenThroughChunks } from '../shaderPatch/chunkPatch';
@@ -48,7 +39,7 @@ const BIASED_SAMPLES = new RegExp(
   'g'
 );
 
-/** Shared by every program, so one write reaches every material. Written only by this module. */
+/** WebGL2 has no sampler bias (`material_storage.cpp:2454-2502`). Only `drawAtMipmapBias` writes it. */
 const biasUniform: THREE.IUniform<number> = { value: 0 };
 
 /** Runs `draw` with `bias` as the bias of every program it draws. Only `drawWorld` calls it. */

@@ -115,11 +115,7 @@ export class SceneProbes {
     ];
   }
 
-  /**
-   * Captures one probe that needs it, once the scene has had no resource on its way for a few
-   * frames, and packs the captured probes. Answers whether it drew, so the caller draws a frame.
-   * A capture draws for `rootViewport`, at its mipmap bias.
-   */
+  /** Captures one probe that needs it once the scene settles, for `rootViewport`. Answers whether it drew. */
   update(pendingResources: number, clearColor: THREE.Color, rootViewport: ViewportDescription): boolean {
     this.settledFrames = pendingResources > 0 ? 0 : this.settledFrames + 1;
     if (pendingResources > 0) this.hasNewContent = true;

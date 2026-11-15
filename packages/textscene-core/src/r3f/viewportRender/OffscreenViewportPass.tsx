@@ -468,14 +468,14 @@ function useSubViewportDescription(properties: SubViewportProperties): ViewportD
   );
 }
 
-/** The viewport's own atlas: a light it shares with the main view keeps a cube for each, so neither reallocates. */
+/** The viewport's own atlas, so a light it shares with the main view keeps a cube for each. */
 function useViewportShadowAtlas(settings: PositionalShadowAtlasSettings): ViewportShadowAtlas {
   const atlas = useMemo(() => new ViewportShadowAtlas(settings), [settings]);
   useDisposeOnRelease(atlas);
   return atlas;
 }
 
-/** The pass's 3D world draw, and the canvas draw around the whole pass, which draws through its canvas transform. */
+/** The pass's 3D world draw, and the canvas draw around the whole pass. */
 function useWorldRenders(
   viewport: ViewportDescription,
   shadowAtlas: ViewportShadowAtlas

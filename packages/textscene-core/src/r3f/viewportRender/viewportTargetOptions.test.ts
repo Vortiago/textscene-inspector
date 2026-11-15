@@ -1,4 +1,3 @@
-/** What a sub-viewport's properties ask of its target. */
 import { describe, expect, it } from 'vitest';
 
 import { viewportCanvasColorSpace } from './viewportTargetOptions';

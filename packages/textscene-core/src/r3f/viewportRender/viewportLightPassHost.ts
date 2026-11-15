@@ -10,7 +10,7 @@ import type { Vector2 } from '../../godot/math/vector';
 import type { Rect2 } from '../../godot/math/rect2';
 import { orthoViewRect } from './viewportFraming';
 
-/** Godot's `clip_rect` (`renderer_viewport.cpp:390`) from the canvas: the part framed, and pixels per unit. */
+/** Godot's `clip_rect` (`renderer_viewport.cpp:390`): the part of the canvas framed, and pixels per unit. */
 export function clipOfCamera(camera: THREE.OrthographicCamera, size: Vector2): CanvasClip {
   const rect = orthoViewRect(camera, { x: 0, y: 0, w: 0, h: 0 });
   return { rect, scale: { x: size.x / rect.w, y: size.y / rect.h } };

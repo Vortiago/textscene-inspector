@@ -1,8 +1,3 @@
-/**
- * The six cameras of a reflection probe capture (`renderer_scene_cull.cpp:3666-3711`), and what the
- * capture draws differently, which the scene's observers read from the render under way.
- */
-
 import * as THREE from 'three';
 import { CAPTURE_NEAR, FACE_NORMALS } from '../../godot/rendering/environment/reflectionProbe.js';
 import type { Vector3 } from '../../godot/math/vector.js';
