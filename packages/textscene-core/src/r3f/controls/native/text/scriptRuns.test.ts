@@ -7,8 +7,8 @@ function runsOf(text: string): string[] {
   const ids = scriptRunIds(text);
   const runs: string[] = [];
   for (let i = 0; i < text.length; i++) {
-    if (i === 0 || ids[i] !== ids[i - 1]) runs.push('');
-    runs[runs.length - 1] += text[i];
+    if (i === 0 || ids[i] !== ids[i - 1]) runs.push(text[i]!);
+    else runs[runs.length - 1] += text[i]!;
   }
   return runs;
 }

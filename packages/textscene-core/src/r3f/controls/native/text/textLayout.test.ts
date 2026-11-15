@@ -902,7 +902,7 @@ describe('shapeText — script runs', () => {
     shaping: undefined,
     hasGlyph: (ch) => ch !== '\u0378',
     getGlyphAdvanceUnits: () => 1056,
-    getKerningAdjustmentUnits: (left, right) => (right === 'V' || right === '\u0474' ? -256 : 0),
+    getKerningAdjustmentUnits: (_left, right) => (right === 'V' || right === '\u0474' ? -256 : 0),
   };
   const advancesOf = (text: string): number[] =>
     shapeText(text, {
