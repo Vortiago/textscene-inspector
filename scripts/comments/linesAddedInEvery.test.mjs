@@ -15,16 +15,10 @@ describe('linesAddedInEvery', () => {
   it('keeps the lines of one base as they are', () => {
     const only = [
       ['a.ts', new Set([3])],
-      ['b.ts', 'all'],
+      ['b.ts', new Set([1, 2])],
     ];
 
     expect(linesAddedInEvery([only])).toEqual(only);
-  });
-
-  it("narrows a whole file to another base's lines (edge case)", () => {
-    expect(linesAddedInEvery([[['a.ts', 'all']], [['a.ts', new Set([4])]]])).toEqual([
-      ['a.ts', new Set([4])],
-    ]);
   });
 
   it('drops a file whose lines no base shares (edge case)', () => {

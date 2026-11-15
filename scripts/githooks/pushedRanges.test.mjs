@@ -69,12 +69,19 @@ describe('pushedRanges', () => {
     expect(ranges.pushed).toEqual([{ bases: [pushedTip, mainTip], head: localTip }]);
   });
 
-  it('keeps the changed files of the push itself, which pick the checks', () => {
+  it("picks no checks for main's files that a merge of main brings in", () => {
     const { git, pushedTip, localTip } = branchThatMergedMain();
 
     const ranges = pushedRanges(`refs/heads/topic ${localTip} refs/heads/topic ${pushedTip}\n`, git);
 
-    expect(ranges.changed).toEqual(['main.ts']);
+    expect(ranges.changed).toEqual([]);
+  });
+
+  it('picks the checks for a file the branch changes after a merge of main', () => {
+    const { git, commit, pushedTip } = branchThatMergedMain();
+    commit('later.ts');
+
+    expect(pushedRanges(pushOf(git, pushedTip), git).changed).toEqual(['later.ts']);
   });
 
   it('checks a new branch from where it left main (edge case)', () => {
