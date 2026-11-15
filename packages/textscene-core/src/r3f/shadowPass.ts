@@ -63,10 +63,6 @@ export function installShadowPass(renderer: THREE.WebGLRenderer): void {
   readersOf(renderer);
 }
 
-export function hasShadowPass(renderer: THREE.WebGLRenderer): boolean {
-  return READERS in renderer.shadowMap;
-}
-
 /**
  * Calls `read` after each shadow pass of `renderer` that renders `scene`, until the returned
  * disposer runs. The pass wraps itself on the first reader.
