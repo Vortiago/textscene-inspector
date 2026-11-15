@@ -65,26 +65,26 @@ function binAt(x: number): number {
 
 describe('buildDirectionalShadowMap: the projection', () => {
   it('stores depth from the map origin over z_far, the band one view deep', () => {
-    // An edge 400 px below the top edge: depth 400 of a 1000 px z_far.
-    const { bins } = buildDirectionalShadowMap(squareView(), [segment(400, 600, 600, 600)]);
-    expect(bins[binAt(500)]).toBeCloseTo(0.4, 6);
+    // An edge 600 px below the top edge: depth 600 of a 1000 px z_far.
+    const { bins } = buildDirectionalShadowMap(squareView(), [segment(400, 400, 600, 400)]);
+    expect(bins[binAt(500)]).toBeCloseTo(0.6, 6);
   });
 
   it('spans the view diagonal across, so a 200 px edge fills 200 / 1414.2 of the bins', () => {
-    const { bins } = buildDirectionalShadowMap(squareView(), [segment(400, 600, 600, 600)]);
+    const { bins } = buildDirectionalShadowMap(squareView(), [segment(400, 400, 600, 400)]);
     // u(400) = 0.5 - 100 / 1414.21 = 0.42929, so bin 879 (centre 879.5) is the first covered.
     expect(bins[878]).toBe(SHADOW_MAP_FAR);
-    expect(bins[879]).toBeCloseTo(0.4, 6);
-    expect(bins[1168]).toBeCloseTo(0.4, 6);
+    expect(bins[879]).toBeCloseTo(0.6, 6);
+    expect(bins[1168]).toBeCloseTo(0.6, 6);
     expect(bins[1169]).toBe(SHADOW_MAP_FAR);
   });
 
   it('fills the same share of a map of another size', () => {
     // 200 / 1414.2 of 256 bins is 36 bins, centred on the middle bin.
     const view = { ...squareView(), bins: 256 };
-    const { bins } = buildDirectionalShadowMap(view, [segment(400, 600, 600, 600)]);
+    const { bins } = buildDirectionalShadowMap(view, [segment(400, 400, 600, 400)]);
     expect(bins).toHaveLength(256);
-    expect(bins[128]).toBeCloseTo(0.4, 6);
+    expect(bins[128]).toBeCloseTo(0.6, 6);
     expect(bins.filter((depth) => depth < SHADOW_MAP_FAR).length).toBeCloseTo(36, -1);
     expect(bins[255]).toBe(SHADOW_MAP_FAR);
   });
@@ -96,21 +96,21 @@ describe('buildDirectionalShadowMap: the projection', () => {
     const endX = 500 + (1000.5 / DEFAULT_ATLAS_SIZE - 0.5) * 1000 * Math.SQRT2;
 
     it('leaves the bin clear when the edge lies before the end', () => {
-      const { bins } = buildDirectionalShadowMap(squareView(), [segment(400, 600, endX, 600)]);
-      expect([bins[999], bins[1000]]).toEqual([expect.closeTo(0.4, 6), SHADOW_MAP_FAR]);
+      const { bins } = buildDirectionalShadowMap(squareView(), [segment(400, 400, endX, 400)]);
+      expect([bins[999], bins[1000]]).toEqual([expect.closeTo(0.6, 6), SHADOW_MAP_FAR]);
     });
 
     it('covers the bin when the edge lies after the end', () => {
-      const { bins } = buildDirectionalShadowMap(squareView(), [segment(endX, 600, 600, 600)]);
-      expect([bins[999], bins[1000]]).toEqual([SHADOW_MAP_FAR, expect.closeTo(0.4, 6)]);
+      const { bins } = buildDirectionalShadowMap(squareView(), [segment(endX, 400, 600, 400)]);
+      expect([bins[999], bins[1000]]).toEqual([SHADOW_MAP_FAR, expect.closeTo(0.6, 6)]);
     });
   });
 
   it('gives a bin the snap adds past an end that end depth, not the line extended', () => {
-    // Window x 1000.501 is 0.001 px right of bin 1000's centre. Depth runs 0.2 there to 0.7.
+    // Window x 1000.501 is 0.001 px right of bin 1000's centre. Depth runs 0.6 there to 0.7.
     const xAt = (windowX: number) => 500 + (windowX / DEFAULT_ATLAS_SIZE - 0.5) * 1000 * Math.SQRT2;
-    const { bins } = buildDirectionalShadowMap(squareView(), [segment(xAt(1000.501), 800, xAt(1000.6), 300)]);
-    expect(bins[1000]).toBeCloseTo(0.2, 6);
+    const { bins } = buildDirectionalShadowMap(squareView(), [segment(xAt(1000.501), 400, xAt(1000.6), 300)]);
+    expect(bins[1000]).toBeCloseTo(0.6, 6);
   });
 
   it('starts the band max_distance upstream of the view and deepens z_far by it', () => {
@@ -121,16 +121,16 @@ describe('buildDirectionalShadowMap: the projection', () => {
 
   it('keeps the nearest edge where two cover one bin', () => {
     const { bins } = buildDirectionalShadowMap(squareView(), [
-      segment(400, 300, 600, 300),
-      segment(400, 600, 600, 600),
+      segment(400, 200, 600, 200),
+      segment(400, 400, 600, 400),
     ]);
-    expect(bins[binAt(500)]).toBeCloseTo(0.4, 6);
+    expect(bins[binAt(500)]).toBeCloseTo(0.6, 6);
   });
 
   it('interpolates depth along a slanted edge', () => {
-    // Depth runs 0.2 at x = 400 to 0.6 at x = 600, so 0.4 at the centre.
-    const { bins } = buildDirectionalShadowMap(squareView(), [segment(400, 800, 600, 400)]);
-    expect(bins[binAt(500)]).toBeCloseTo(0.4, 2);
+    // Depth runs 0.55 at x = 400 to 0.75 at x = 600, so 0.65 at the centre.
+    const { bins } = buildDirectionalShadowMap(squareView(), [segment(400, 450, 600, 250)]);
+    expect(bins[binAt(500)]).toBeCloseTo(0.65, 2);
   });
 
   it('clips geometry upstream of the map origin, as the orthographic near plane does', () => {
@@ -138,14 +138,22 @@ describe('buildDirectionalShadowMap: the projection', () => {
     expect(bins[binAt(500)]).toBe(SHADOW_MAP_FAR);
   });
 
+  it('clips geometry in the upstream half of the band, as Godot leaves its orthographic depth uncorrected', () => {
+    // from = (500, 2000), z_far = 2000: y = 1200 lies at depth 0.4, y = 900 at depth 0.55.
+    const clipped = buildDirectionalShadowMap(squareView(1000), [segment(400, 1200, 600, 1200)]);
+    const kept = buildDirectionalShadowMap(squareView(1000), [segment(400, 900, 600, 900)]);
+    expect(clipped.bins[binAt(500)]).toBe(SHADOW_MAP_FAR);
+    expect(kept.bins[binAt(500)]).toBeCloseTo(0.55, 6);
+  });
+
   it('rotates with the light: a light travelling +X measures depth from the left edge', () => {
     const { bins, worldToShadow } = buildDirectionalShadowMap(squareView(0, { x: 1, y: 0 }), [
-      segment(300, 400, 300, 600),
+      segment(700, 400, 700, 600),
     ]);
     const [m00, m01, m02, m10, m11, m12] = worldToShadow;
-    const u = m00 * 300 + m01 * 500 + m02;
-    expect(m10 * 300 + m11 * 500 + m12).toBeCloseTo(0.3, 12);
-    expect(bins[Math.floor(u * DEFAULT_ATLAS_SIZE)]).toBeCloseTo(0.3, 6);
+    const u = m00 * 700 + m01 * 500 + m02;
+    expect(m10 * 700 + m11 * 500 + m12).toBeCloseTo(0.7, 12);
+    expect(bins[Math.floor(u * DEFAULT_ATLAS_SIZE)]).toBeCloseTo(0.7, 6);
   });
 });
 
@@ -193,20 +201,21 @@ describe('buildDirectionalShadowMap: the occluder cull', () => {
   });
 
   it('keeps an occluder within max_distance upstream of the view', () => {
-    // from = (500, 1600), z_far 1600: depth 400 / 1600.
-    const { bins } = buildDirectionalShadowMap(squareView(600), [segment(400, 1200, 600, 1200)]);
-    expect(bins[binAt(500)]).toBeCloseTo(0.25, 6);
+    // from = (500, 4000), z_far 4000: depth 2800 / 4000.
+    const { bins } = buildDirectionalShadowMap(squareView(3000), [segment(400, 1200, 600, 1200)]);
+    expect(bins[binAt(500)]).toBeCloseTo(0.7, 6);
   });
 
   it("tests the occluder's local bounds, so a turned edge clear of the view's corner casts nothing", () => {
     // `renderer_viewport.cpp:621-631` maps the swept view into the occluder's local space. This
-    // edge runs along x + y = 2010, past the corner (1000, 1000), yet its world AABB overlaps it.
-    const { bins } = buildDirectionalShadowMap(squareView(), [segment(960, 1050, 1050, 960)]);
+    // edge runs along x - y = 1010, past the downstream corner (1000, 0), yet its world AABB
+    // overlaps it, and its part at depth 0.96 to 1 would cast.
+    const { bins } = buildDirectionalShadowMap(squareView(), [segment(960, -50, 1050, 40)]);
     expect(bins.every((depth) => depth === SHADOW_MAP_FAR)).toBe(true);
   });
 
   it('keeps a turned occluder whose local bounds meet the view', () => {
-    const { bins } = buildDirectionalShadowMap(squareView(), [segment(900, 1050, 1050, 900)]);
+    const { bins } = buildDirectionalShadowMap(squareView(), [segment(900, -50, 1050, 100)]);
     expect(bins.some((depth) => depth < SHADOW_MAP_FAR)).toBe(true);
   });
 
@@ -223,15 +232,15 @@ describe('buildDirectionalShadowMap: the occluder cull', () => {
  */
 describe('buildDirectionalShadowMap: cull_mode', () => {
   // The previewer's Y-up form of that square: its top edge runs +X, its bottom edge -X.
-  const top = (cullMode: OccluderCullMode) => segment(400, 600, 600, 600, cullMode);
-  const bottom = (cullMode: OccluderCullMode) => segment(600, 400, 400, 400, cullMode);
+  const top = (cullMode: OccluderCullMode) => segment(400, 400, 600, 400, cullMode);
+  const bottom = (cullMode: OccluderCullMode) => segment(600, 200, 400, 200, cullMode);
 
   it('casts from the far edge alone under CULL_CLOCKWISE', () => {
     const { bins } = buildDirectionalShadowMap(squareView(), [
       top(OccluderPolygon2DCullMode.CLOCKWISE),
       bottom(OccluderPolygon2DCullMode.CLOCKWISE),
     ]);
-    expect(bins[binAt(500)]).toBeCloseTo(0.6, 6);
+    expect(bins[binAt(500)]).toBeCloseTo(0.8, 6);
   });
 
   it('casts from the near edge under CULL_COUNTER_CLOCKWISE', () => {
@@ -239,7 +248,7 @@ describe('buildDirectionalShadowMap: cull_mode', () => {
       top(OccluderPolygon2DCullMode.COUNTER_CLOCKWISE),
       bottom(OccluderPolygon2DCullMode.COUNTER_CLOCKWISE),
     ]);
-    expect(bins[binAt(500)]).toBeCloseTo(0.4, 6);
+    expect(bins[binAt(500)]).toBeCloseTo(0.6, 6);
   });
 
   it('ignores an edge parallel to the light', () => {
@@ -256,9 +265,10 @@ describe('buildDirectionalShadowMap: cull_mode', () => {
 describe('buildDirectionalShadowMap: the canvas scale', () => {
   it('reads max_distance in screen pixels, so a 2x zoom halves its reach in the world', () => {
     const zoomed = buildDirectionalShadowMap(squareView(100, { x: 0, y: -1 }, { x: 2, y: 2 }), [
-      segment(400, 600, 600, 600),
+      segment(400, 400, 600, 400),
     ]);
-    const plain = buildDirectionalShadowMap(squareView(50), [segment(400, 600, 600, 600)]);
+    const plain = buildDirectionalShadowMap(squareView(50), [segment(400, 400, 600, 400)]);
+    expect(plain.bins[binAt(500)]).toBeLessThan(SHADOW_MAP_FAR);
     expect(Array.from(zoomed.bins)).toEqual(Array.from(plain.bins));
     expect(zoomed.worldToShadow).toEqual(plain.worldToShadow);
   });
@@ -268,15 +278,15 @@ describe('buildDirectionalShadowMap: the canvas scale', () => {
     // 2236.07, so u(x) = 0.5 + (2x - 1000) / 2236.07 and a 200 world px edge spans 400 scaled px.
     const { bins, worldToShadow } = buildDirectionalShadowMap(
       squareView(0, { x: 0, y: -1 }, { x: 2, y: 1 }),
-      [segment(400, 600, 600, 600)]
+      [segment(400, 400, 600, 400)]
     );
     const [m00, m01, m02, m10, m11, m12] = worldToShadow;
-    expect(m00 * 500 + m01 * 600 + m02).toBeCloseTo(0.5, 9);
-    expect(m10 * 500 + m11 * 600 + m12).toBeCloseTo(0.4, 9);
+    expect(m00 * 500 + m01 * 400 + m02).toBeCloseTo(0.5, 9);
+    expect(m10 * 500 + m11 * 400 + m12).toBeCloseTo(0.6, 9);
     // u(400) = 0.5 - 200 / 2236.07 = 0.410557, so bin 841 (centre 841.5) is the first covered.
     expect(bins[840]).toBe(SHADOW_MAP_FAR);
-    expect(bins[841]).toBeCloseTo(0.4, 6);
-    expect(bins[1206]).toBeCloseTo(0.4, 6);
+    expect(bins[841]).toBeCloseTo(0.6, 6);
+    expect(bins[1206]).toBeCloseTo(0.6, 6);
     expect(bins[1207]).toBe(SHADOW_MAP_FAR);
   });
 

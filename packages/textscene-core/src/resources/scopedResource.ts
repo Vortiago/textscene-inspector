@@ -17,11 +17,11 @@ export interface ScopedResource {
   resources: SceneResources;
 }
 
-/** The parse of a loaded file, or undefined while it loads and after it failed. */
-export type LoadedFile = (path: string) => ParsedResource | undefined;
+/** The parse of a loaded file: undefined while it loads, null once it has failed. */
+export type LoadedFile = (path: string) => ParsedResource | null | undefined;
 
-/** A font file's resource, or undefined while it loads and after it failed. */
-export type LoadedFont = (path: string) => FontResource | undefined;
+/** A font file's resource: undefined while it loads, null once it has failed. */
+export type LoadedFont = (path: string) => FontResource | null | undefined;
 
 /** A {@link ScopedResource} that also holds the lookups its ExtResource references resolve through. */
 export interface ResolvableResource extends ScopedResource {

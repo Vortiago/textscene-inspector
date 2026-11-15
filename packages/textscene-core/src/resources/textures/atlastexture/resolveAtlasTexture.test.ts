@@ -6,7 +6,7 @@ import { decodeAtlasTexture } from './decode';
 import { publishLiveTargets } from '../../../r3f/liveTargets';
 import { copiesFilledFrom } from '../../../r3f/liveTargets.testkit';
 import { holdUntilReleased } from '../../../r3f/useDisposeOnRelease';
-import { createCanvasTarget } from '../../../nodes/viewport/subviewport/offscreenViewport';
+import { createCanvasTarget } from '../../../r3f/offscreen/targets';
 import { canvasColorSpaceOf } from '../../../r3f/canvasColorSpace';
 
 const CELL = decodeAtlasTexture({ region: 'Rect2(0, 0, 8, 4)' });

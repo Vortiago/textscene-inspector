@@ -3,11 +3,12 @@
  * target serves all of them: a target for each would cost 500 frames of memory for 500 owners.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import type * as THREE from 'three';
 import type { CanvasColorSpace } from '../canvasColorSpace';
 import { createCanvasFrame } from '../components/Canvas2DStage/canvasFrame';
 import { perObject } from '../../utils/perObject';
+import { useDisposeOnRelease } from '../useDisposeOnRelease';
 
 type CanvasFrame = ReturnType<typeof createCanvasFrame>;
 
@@ -25,22 +26,12 @@ function sharedClipBuffer(scene: THREE.Object3D, space: CanvasColorSpace): Canva
   return buffer;
 }
 
-/** The mounted groups using each buffer. Written only by `useSharedClipBuffer`. */
-const usersOf = perObject((_buffer: CanvasFrame) => ({ count: 0 }));
-
 /**
  * `sharedClipBuffer` for a mounted group. The last group to unmount frees the target, which three
- * allocates again if a group mounts later.
+ * allocates again if a group mounts later. The buffer stays in its scene's map for that group.
  */
 export function useSharedClipBuffer(scene: THREE.Object3D, space: CanvasColorSpace): CanvasFrame {
   const buffer = useMemo(() => sharedClipBuffer(scene, space), [scene, space]);
-  useEffect(() => {
-    const users = usersOf(buffer);
-    users.count += 1;
-    return () => {
-      users.count -= 1;
-      if (users.count === 0) buffer.dispose();
-    };
-  }, [buffer]);
+  useDisposeOnRelease(buffer);
   return buffer;
 }

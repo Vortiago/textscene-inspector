@@ -4,7 +4,7 @@
  */
 import * as THREE from 'three';
 import { onTestFinished } from 'vitest';
-import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
+import { createCanvasTarget } from './offscreen/targets';
 import { publishLiveTargets, refillLiveCopies } from './liveTargets';
 import { canvasColorSpaceOf } from './canvasColorSpace';
 

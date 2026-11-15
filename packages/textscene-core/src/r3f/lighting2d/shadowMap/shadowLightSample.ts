@@ -1,6 +1,6 @@
 /**
- * Where a 2D light casts from, and how far, read off its cookie quad. Godot
- * culls occluders against `rect_cache`, the cookie's `texture_size * texture_scale`
+ * Where a 2D light casts from, and how far, read off its light texture quad. Godot
+ * culls occluders against `rect_cache`, the light texture's `texture_size * texture_scale`
  * placed by `offset` (`RendererCanvasCull::_light_find_shadow`), and radiates the
  * shadow from the light node's origin, which `offset` does not move.
  */
@@ -26,7 +26,7 @@ function expandToCorner(rect: LightRect, x: number, y: number, matrix: THREE.Mat
  * The pose the polar map is built from. Its fields come from
  * `renderer_viewport.cpp:556`: `light_update_shadow(…, light->xform_cache.affine_inverse(),
  * …, radius_cache / 1000, radius_cache * 1.1, …)`. `radius_cache` (line 485) is the
- * cookie rect's full light-local diagonal, whatever the light's position or scale.
+ * light texture rect's full light-local diagonal, whatever the light's position or scale.
  */
 export interface ShadowLightPose extends ShadowPolarLight {
   /** Narrows `ShadowPolarLight`'s `ArrayLike<number>` to the 2×3 it always is. */
@@ -34,7 +34,7 @@ export interface ShadowLightPose extends ShadowPolarLight {
 }
 
 /**
- * The pose of the light whose cookie `quad` draws, in the previewer's 2D world
+ * The pose of the light whose light texture `quad` draws, in the previewer's 2D world
  * space, or null while the quad is not in the tree. The quad's bounds give the
  * rect, and its parent, the CanvasItem, gives the local frame.
  */
@@ -57,7 +57,7 @@ export function sampleShadowLight(quad: THREE.Mesh | null, matricesFresh: boolea
   expandToCorner(rect, box.max.x, box.max.y, quad.matrixWorld);
   if (!Number.isFinite(rect.minX) || !Number.isFinite(rect.minY)) return null;
 
-  // The light node's frame, not the quad's: `offset` moves the cookie without
+  // The light node's frame, not the quad's: `offset` moves the light texture without
   // moving the space Godot states its shadow map in.
   const e = inverse.copy(quad.parent.matrixWorld).invert().elements;
   const worldToLocal: [number, number, number, number, number, number] = [

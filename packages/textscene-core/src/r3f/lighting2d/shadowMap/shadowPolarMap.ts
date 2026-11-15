@@ -49,7 +49,7 @@ export interface ShadowPolarLight {
   rect: LightRect;
   /**
    * Godot's `radius_cache`: `local_rect.size.length()` (`renderer_viewport.cpp:485`),
-   * the full diagonal of the cookie's rect in light-local units. It sets only the
+   * the full diagonal of the light texture's rect in light-local units. It sets only the
    * near and far clips and the normalisation.
    */
   readonly radius: number;

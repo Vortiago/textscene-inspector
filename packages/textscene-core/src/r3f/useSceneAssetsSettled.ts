@@ -16,9 +16,9 @@ export function useSceneAssetsSettled(): SceneAssetsState {
   // Every hook runs on every render, so React sees one hook order.
   const pendingResources = usePendingResourceCount();
   const pendingTextures = usePendingWork(textureWork);
-  const pendingFonts = usePendingWork(fontWork);
+  const pendingFontWork = usePendingWork(fontWork);
   return {
-    isSettled: pendingResources === 0 && pendingTextures === 0 && pendingFonts === 0,
+    isSettled: pendingResources === 0 && pendingTextures === 0 && pendingFontWork === 0,
     pendingTextures,
   };
 }

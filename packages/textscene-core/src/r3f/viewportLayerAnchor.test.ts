@@ -4,7 +4,7 @@ import {
   applyOrthoFrame,
   orthoFrameForCamera2D,
   orthoFrameForSize,
-} from '../nodes/viewport/subviewport/offscreenViewport';
+} from '../nodes/viewport/subviewport/viewportFraming';
 import type { Camera2DTag } from '../nodes/2d/camera2d/cameraView';
 
 import { viewportLayerMatrix } from './viewportLayerAnchor';

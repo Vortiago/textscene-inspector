@@ -12,12 +12,11 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../parser/TscnParser';
 import { NodeDispatcher } from '../NodeDispatcher';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import { CanvasLighting2DProvider } from './CanvasLighting2D';
+import { underWhiteCanvasLighting } from './testing/whiteCanvasLighting';
 import { itemUniforms, lightsIn, recordLightPass } from './testing/lightPassProbe';
 import { SceneStack } from '../testing/SceneStack';
 import { settleLoads } from '../testing/settleLoads';
 import '../nodes'; // side-effect: registers every node's r3f component
-import { canvasColorSpaceOf } from '../canvasColorSpace';
 
 const COOKIE = 'res://light.png';
 
@@ -61,9 +60,7 @@ async function render(tscn: string) {
 
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      <CanvasLighting2DProvider space={canvasColorSpaceOf(false)} canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
-        <NodeDispatcher nodes={parsed.nodes} />
-      </CanvasLighting2DProvider>
+      {underWhiteCanvasLighting(<NodeDispatcher nodes={parsed.nodes} />)}
     </SceneStack>
   );
   await settleLoads();
