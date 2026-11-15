@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import { projectDecalFilter } from '../../parser/projectSettingsParser.js';
 import { godotTextureFilterState } from '../../resources/textures/godotTextureFilter.js';
-import { useAnisotropicFilteringLevel } from '../contexts/AnisotropicFilteringContext.js';
+import { useViewportDescription } from '../viewportRender/viewportDescriptionContext.js';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
 import { SceneHolding } from '../sceneHolding.js';
 import { useSceneHolder } from '../useSceneHolder.js';
@@ -19,7 +19,7 @@ export function useSceneDecals(): void {
   useSceneHolder(decalsOfScenes);
   const scene = useThree((state) => state.scene);
   const { settings } = useProjectSettings();
-  const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
+  const anisotropicFilteringLevel = useViewportDescription().anisotropicLevel;
   const filter = projectDecalFilter(settings);
   useEffect(
     () => decalsOfScenes.of(scene)?.setFilter(godotTextureFilterState(filter, anisotropicFilteringLevel)),

@@ -121,7 +121,7 @@ The offset a viewport adds to the mip level that each of its 3D material sampler
 It changes only a texture that has levels to choose between.
 _Avoid_: "LOD bias", which suggests mesh level of detail.
 
-**Anisotropic filtering level** (`r3f/contexts/AnisotropicFilteringContext.tsx`):
+**Anisotropic filtering level** (`r3f/viewportRender/viewportDescriptionContext.tsx`):
 The `Viewport.AnisotropicFiltering` value, 0 to 4, that sets `1 << level` taps for a texture on an anisotropic `texture_filter`: the project's `anisotropic_filtering_level`, or a SubViewport's own for the textures that only its pass draws.
 Unlike the **Mipmap bias**, the texture carries it, so it cannot change between passes.
 

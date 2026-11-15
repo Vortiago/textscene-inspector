@@ -118,8 +118,8 @@ export class SceneProbes {
     ];
   }
 
-  /** Captures one probe that needs it once the scene settles, for `rootViewport`. Answers whether it drew. */
-  update(pendingResources: number, clearColor: THREE.Color, rootViewport: ViewportDescription): boolean {
+  /** Captures one probe that needs it once the scene settles, for `viewport`. Answers whether it drew. */
+  update(pendingResources: number, clearColor: THREE.Color, viewport: ViewportDescription): boolean {
     this.settledFrames = pendingResources > 0 ? 0 : this.settledFrames + 1;
     if (pendingResources > 0) this.hasNewContent = true;
     const probes = this.probes
@@ -134,7 +134,7 @@ export class SceneProbes {
     const stale = probes.findIndex((probe, layer) => !this.isCaptured(probe, layer));
     if (stale !== -1) {
       beginStep(this.renderer, 'Reflection probes');
-      this.capture(probes[stale]!, stale, atlas, clearColor, rootViewport);
+      this.capture(probes[stale]!, stale, atlas, clearColor, viewport);
       endStep(this.renderer, 'Reflection probes');
     }
     const captured = probes.filter((probe) => this.captures.has(probe));
@@ -210,14 +210,14 @@ export class SceneProbes {
     layer: number,
     atlas: ReflectionAtlas,
     clearColor: THREE.Color,
-    rootViewport: ViewportDescription
+    viewport: ViewportDescription
   ): void {
     const { probe } = object;
     const capture = { isInterior: probe.interior, hasShadows: probe.enableShadows };
     const farPlanes = captureFarPlanes(probe.size, probe.originOffset, probe.maxDistance);
     const cameras = captureCameras(object.matrixWorld, probe.originOffset, farPlanes);
     const render = {
-      viewport: probeCaptureDescription(rootViewport),
+      viewport: probeCaptureDescription(viewport),
       shadowAtlas: this.shadowAtlas,
       hasCanvasTransform: false,
       probeCapture: capture,

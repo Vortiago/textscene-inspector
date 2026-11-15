@@ -3,7 +3,7 @@
  * draws. Godot reaches it through the `"__cameras_" + viewport id` group.
  */
 
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 import { renderUnderWay } from '../../../r3f/viewportRender/worldRender';
 import { selectViewportCamera2D } from '../../../r3f/viewportRender/viewportFraming';
@@ -15,8 +15,8 @@ import { parallaxViewFraming, type ParallaxViewFraming } from './parallaxScroll'
  * An offscreen pass draws the viewport's own scene, so `scene` holds that viewport's cameras.
  */
 export function currentCameraFraming(scene: THREE.Scene, camera: THREE.Camera): ParallaxViewFraming | null {
-  if (!renderUnderWay()?.hasCanvasTransform) return null;
-  const { left, right, top, bottom, position, zoom } = camera as THREE.OrthographicCamera;
+  if (!renderUnderWay()?.hasCanvasTransform || !(camera instanceof THREE.OrthographicCamera)) return null;
+  const { left, right, top, bottom, position, zoom } = camera;
   const tag = selectViewportCamera2D(scene)?.userData.camera2d as Camera2DTag | undefined;
   if (!tag) return null;
   return parallaxViewFraming(

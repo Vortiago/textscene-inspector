@@ -18,13 +18,13 @@ import { WorldRootProvider } from '../parentSpaceScope';
 import * as THREE from 'three';
 
 import type { NodeComponentProps } from '../NodeComponentRegistry';
-import { AnisotropicFilteringProvider } from '../contexts/AnisotropicFilteringContext';
+import { ViewportDescriptionProvider } from './viewportDescriptionContext';
 import { CanvasOverWorldScopeProvider } from './canvasOverWorldScope';
 import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
 import { useSceneShadowFit } from '../SceneShadowFitter';
 import { useSceneDepthPrepass } from '../depthPrepass/SceneDepthPrepass';
-import { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas';
-import type { PositionalShadowAtlasSettings } from '../../godot/rendering/lights/positionalShadowAtlas';
+import type { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas';
+import { useViewportShadowAtlas } from '../positionalShadow/useViewportShadowAtlas';
 import { World2DLightingBoundary } from '../lighting2d/World2DLightingBoundary';
 import { CanvasLightPass } from '../lighting2d/CanvasLightPass';
 import { createViewportLightPassHost } from './viewportLightPassHost';
@@ -398,7 +398,7 @@ export function OffscreenViewportPass({
   // inside applies to an own world, and to the parent's world through a shared one.
   const portal = createPortal(
     <CanvasWorkspaceProvider workspace={kind === '3d' ? '3d' : '2d'}>
-      <AnisotropicFilteringProvider level={viewport.anisotropicLevel}>
+      <ViewportDescriptionProvider description={viewport}>
         <WorldRootProvider value={passScene}>
           <WorldScope>
             {stage}
@@ -414,7 +414,7 @@ export function OffscreenViewportPass({
             </CanvasSpaceProvider>
           </WorldScope>
         </WorldRootProvider>
-      </AnisotropicFilteringProvider>
+      </ViewportDescriptionProvider>
     </CanvasWorkspaceProvider>,
     passScene
   );
@@ -455,13 +455,6 @@ function LitCanvas({
       {children}
     </World2DLightingBoundary>
   );
-}
-
-/** The viewport's own atlas, so a light it shares with the main view keeps a cube for each. */
-function useViewportShadowAtlas(settings: PositionalShadowAtlasSettings): ViewportShadowAtlas {
-  const atlas = useMemo(() => new ViewportShadowAtlas(settings), [settings]);
-  useDisposeOnRelease(atlas);
-  return atlas;
 }
 
 /** The pass's 3D world draw, and the canvas draw around the whole pass. */

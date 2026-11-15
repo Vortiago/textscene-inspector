@@ -14,7 +14,7 @@ import { SceneHolding } from '../sceneHolding.js';
 import { useSceneHolder } from '../useSceneHolder.js';
 import { useProjectClearColor } from '../useProjectClearColor.js';
 import { SceneProbes } from './sceneProbes.js';
-import { useRootViewportDescription } from '../viewportRender/useRootViewportDescription.js';
+import { useViewportDescription } from '../viewportRender/viewportDescriptionContext.js';
 
 const probesOfScenes = new SceneHolding((scene, renderer) => new SceneProbes(renderer, scene));
 
@@ -24,14 +24,14 @@ export function useSceneProbes(): void {
   const loader = useResourceLoader();
   const clearColor = useRef<THREE.Color>(null!);
   clearColor.current = useProjectClearColor();
-  const rootViewport = useRef<ViewportDescription>(null!);
-  rootViewport.current = useRootViewportDescription();
+  const viewport = useRef<ViewportDescription>(null!);
+  viewport.current = useViewportDescription();
   const holder = useSceneHolder(probesOfScenes);
 
   useFrame(() => {
     const probes = probesOfScenes.drivenBy(scene, holder);
     if (!probes) return;
     const pending = (loader?.pendingResourceCount ?? 0) + textureWork.pending() + fontWork.pending();
-    if (probes.update(pending, clearColor.current, rootViewport.current)) invalidate();
+    if (probes.update(pending, clearColor.current, viewport.current)) invalidate();
   });
 }

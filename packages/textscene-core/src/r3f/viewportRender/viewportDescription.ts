@@ -94,6 +94,6 @@ export function subViewportDescription(
 }
 
 /** A probe face samples with Godot's default samplers, unbiased (`render_forward_clustered.cpp:1824`). */
-export function probeCaptureDescription(root: ViewportDescription): ViewportDescription {
-  return { ...root, mipmapBias: 0 };
+export function probeCaptureDescription(viewport: ViewportDescription): ViewportDescription {
+  return { ...viewport, mipmapBias: 0 };
 }

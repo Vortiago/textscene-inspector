@@ -8,7 +8,7 @@
 import type * as THREE from 'three';
 import { useMemo } from 'react';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
-import { useAnisotropicFilteringLevel } from '../contexts/AnisotropicFilteringContext';
+import { useViewportDescription } from '../viewportRender/viewportDescriptionContext';
 import type { ScopedReference } from '../../resources/reading';
 import type { StandardMaterial } from '../../resources/materials/material/types';
 import { useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
@@ -51,7 +51,7 @@ export function useSurfaceTextures(
   const sources = useEachSlot(useSlotTexture, slots);
   // The per-material half of every binding: UV set and transform, sampler filter and
   // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `slotViewSampler`'s.
-  const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
+  const anisotropicFilteringLevel = useViewportDescription().anisotropicLevel;
   const states = useMemo(
     (): MaterialTextureStates | null =>
       scalars && surfaceTextureStates(scalars, surface, anisotropicFilteringLevel),

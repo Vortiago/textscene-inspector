@@ -17,7 +17,7 @@ import { useNodeReference } from '../../../resources/reading';
 import { useTextureView } from '../../../r3f/useTextureView';
 import { flippedUvWindow, regionUvWindow } from '../../../r3f/uvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
+import { useViewportDescription } from '../../../r3f/viewportRender/viewportDescriptionContext';
 import { viewportProgramInputs } from '../../../r3f/materialProgramInputs';
 import { materialFor2d } from '../../../r3f/materialFor2d';
 import type { FadePass } from '../../../r3f/materials/fadeVariants';
@@ -87,7 +87,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // The wrap mode is derived, not fixed: `sprite_3d.cpp:163` reads it off the quad's own UV
   // corners, so only an overrunning window tiles.
   const wrap = spriteWrapMode(drawnWindow);
-  const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
+  const anisotropicFilteringLevel = useViewportDescription().anisotropicLevel;
   const { blends, joinsShadowPass, shading, side, depthTest, textureFilter } = materialFor2d({
     alphaCut: properties.alpha_cut,
     alphaScissorThreshold: properties.alpha_scissor_threshold,

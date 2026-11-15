@@ -28,14 +28,10 @@ function useViewportLayerAnchor(layer: RefObject<THREE.Object3D | null>, follow:
     return observeSceneCamera(scene, (camera, target) => {
       const object = layer.current;
       if (!object) return;
-      if (!target || !renderUnderWay()?.hasCanvasTransform) next.identity();
-      else
-        viewportLayerMatrix(
-          { enabled, scale },
-          camera as THREE.OrthographicCamera,
-          size.set(target.width, target.height),
-          next
-        );
+      const isViewportCanvasDraw =
+        target && renderUnderWay()?.hasCanvasTransform && camera instanceof THREE.OrthographicCamera;
+      if (!isViewportCanvasDraw) next.identity();
+      else viewportLayerMatrix({ enabled, scale }, camera, size.set(target.width, target.height), next);
       if (next.equals(object.matrix)) return;
       object.matrix.copy(next);
       // `onBeforeRender` runs after the scene's own matrix update, so the subtree is refreshed here.
