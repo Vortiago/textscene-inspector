@@ -270,7 +270,7 @@ One consistent view of what the loader holds. Each read on it answers `loaded`, 
 _Avoid_: reading the loader's cache directly in a reader.
 
 **Snapshot host** (`describeSnapshotHost`, `resources/reading/snapshotHost.testkit.ts`):
-Code that owns snapshots for a reader: it requests and pins each file the reader's reads touched, runs the reader again when one of them loads, fails or reloads, and reports a failed file once as a **Missing resource**. The hook host is the one behind `useNodeResource`, and `useSnapshotHost` runs any reader on it. The Control solve reads its fonts through `useSnapshotHost`.
+Code that owns snapshots for a reader: it requests and pins each file the reader's reads touched, runs the reader again when one of them loads, fails or reloads, and reports a failed file once as a **Missing resource**. The hook host is the one behind `useNodeResource`, and `useSnapshotHost` runs any reader on it. The Control solve reads its fonts through `useSnapshotHost`. The live files (`r3f/liveFiles.ts`) are the host of the live scene tree, its passes and `useLiveFilesRead`: one snapshot for each loader that all of them share.
 _Avoid_: a reader that requests, pins or reports a file itself.
 
 **UID reference**:

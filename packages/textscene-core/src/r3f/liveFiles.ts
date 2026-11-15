@@ -59,7 +59,7 @@ export const liveFilesOf = perObject((loader: ResourceLoader): LiveFiles =>
 );
 
 /** The live files over `source`. */
-export function liveFilesOver(source: SnapshotSource): LiveFiles {
+function liveFilesOver(source: SnapshotSource): LiveFiles {
   const fileListeners = new Set<() => void>();
   const staleListeners = new Set<() => void>();
   /** Written only by `filesChanged`. */
