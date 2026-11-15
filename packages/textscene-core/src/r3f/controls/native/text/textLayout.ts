@@ -493,6 +493,8 @@ interface RunStyle {
    * `toBreakGlyphs` skip the per-character glyph test: the paragraph pass already ran it.
    */
   hasUndrawnGlyph: boolean;
+  /** Whether the paragraph holds a non-graphic character. False lets `specialGlyph` skip its per-character test. */
+  hasNonGraphic: boolean;
 }
 
 /** Whether character `i`, past the first, starts a run: its size, face, bidi level, override range or script run differs from the character before it. */
@@ -565,11 +567,8 @@ function isSpaceSeparator(cp: number): boolean {
 const KEEPS_ITS_FACE = /^[\p{Cc}\p{Cn}\p{Cs}\p{Zl}\p{Zp}\p{Zs}\p{Default_Ignorable_Code_Point}]/u;
 
 /** An unassigned code point or a lone surrogate: neither blank nor graphic (`u_isgraph`), and no control. */
-const NON_GRAPHIC = /^[\p{Cn}\p{Cs}]/u;
-
-function isNonGraphic(ch: string): boolean {
-  return NON_GRAPHIC.test(ch);
-}
+const NON_GRAPHIC = /[\p{Cn}\p{Cs}]/u;
+const NON_GRAPHIC_FIRST = /^[\p{Cn}\p{Cs}]/u;
 
 /**
  * Written only by `glyphFaces`, on the first paragraph that needs a **Fallback chain**: most scenes
@@ -683,14 +682,19 @@ function specialGlyph(
   }
   const face = style.faces[i]!;
   if (face.drawsApart?.(ch)) return drawnApartGlyph(ch, i, face, style.sizes[i]!);
-  // `hasGlyph` first: most characters are in the face, and the property test costs more.
-  if (!face.hasGlyph(ch) && isNonGraphic(ch) && !fallbackChainOf(face).some((entry) => entry.hasGlyph(ch))) {
+  if (isNonGraphicWithoutGlyph(ch, face, style.hasNonGraphic)) {
     // Its notdef glyph counts as valid and keeps no advance (`text_server_adv.cpp:7060`, `:7106-7108`).
     // With `preserve_control` only a break counts as valid, so it falls back to a box (`:7104`).
     return preserveControl ? hexCodeBox(ch, i, style.sizes[i]!) : noGlyph(ch, i);
   }
   if (!lacksGlyph(face, ch, style.hasUndrawnGlyph)) return undefined;
   return hexCodeBox(ch, i, style.sizes[i]!);
+}
+
+/** Whether `ch` is a non-graphic character that no face of the chain of `face` has a glyph for. */
+function isNonGraphicWithoutGlyph(ch: string, face: FontMetrics, hasNonGraphic: boolean): boolean {
+  if (!hasNonGraphic || !NON_GRAPHIC_FIRST.test(ch)) return false;
+  return !face.hasGlyph(ch) && !fallbackChainOf(face).some((entry) => entry.hasGlyph(ch));
 }
 
 /** The glyph of character `ch` at `i` that `face` draws apart, at its character advance. */
@@ -1384,6 +1388,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       spans: spanAt ? Int32Array.from({ length: paraText.length }, (_v, i) => spanAt(sourceIndex(i))) : null,
       scriptRuns: scriptRunIds(paraText),
       hasUndrawnGlyph: !spansDraw,
+      hasNonGraphic: NON_GRAPHIC.test(paraText),
     };
     const breakGlyphs = toBreakGlyphs(chars, runStyle, preserveControl, hasEndGlyph);
     const underline = paragraphUnderline({

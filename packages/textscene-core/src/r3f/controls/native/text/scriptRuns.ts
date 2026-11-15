@@ -8,9 +8,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import bidiFactory from 'bidi-js';
-
-const bidi = bidiFactory();
+import { closingBracketOf, openingBracketOf } from './bidi';
 
 /** ICU's `USCRIPT_COMMON` and `USCRIPT_INHERITED`: a script at or below `INHERITED` joins any run. */
 const COMMON = 0;
@@ -98,7 +96,7 @@ function emojiBitsOf(ch: string): number {
 }
 
 /** `ScriptIterator::is_emoji`: whether `ch`, with `next` after it, starts or continues an emoji run. */
-function isEmoji(ch: string, next: string | undefined): boolean {
+function isEmoji(ch: string, next: string): boolean {
   const bits = emojiBitsOf(ch);
   const isEmojiOrPictograph = (bits & (IS_EMOJI | IS_PICTOGRAPHIC)) !== 0;
   if (next === VARIATION_SELECTOR_15 && isEmojiOrPictograph) return false;
@@ -107,7 +105,7 @@ function isEmoji(ch: string, next: string | undefined): boolean {
 }
 
 /** Whether `ch`, with `next` after it, keeps an emoji run open (`script_iterator.cpp:111`). */
-function continuesEmoji(ch: string, next: string | undefined): boolean {
+function continuesEmoji(ch: string, next: string): boolean {
   return (
     ch === ZERO_WIDTH_JOINER ||
     ch === VARIATION_SELECTOR_16 ||
@@ -133,20 +131,19 @@ type Range = [number, number];
  */
 export function scriptRunIds(text: string): Int32Array {
   const ids = new Int32Array(text.length);
-  const codePoints = codePointsOf(text);
   // The bracket stack outlives each run, and so does `startDepth` (`script_iterator.cpp:83-84`).
   const brackets: OpenBracket[] = [];
   let startDepth = -1;
   let runId = 0;
-  let k = 0;
-  while (k < codePoints.length) {
-    const runStart = k;
+  let at = 0;
+  let ch = codePointAt(text, 0);
+  while (at < text.length) {
+    const runStart = at;
     let runScript = COMMON;
     const emojiRanges: Range[] = [];
     let emojiStart = -1;
-    for (; k < codePoints.length; k++) {
-      const [ch, at] = codePoints[k]!;
-      const next = codePoints[k + 1]?.[0];
+    for (; at < text.length; at += ch.length, ch = codePointAt(text, at)) {
+      const next = codePointAt(text, at + ch.length);
       if (isEmoji(ch, next)) {
         if (emojiStart < 0) emojiStart = at;
       } else if (emojiStart >= 0 && !continuesEmoji(ch, next)) {
@@ -154,8 +151,8 @@ export function scriptRunIds(text: string): Int32Array {
         emojiStart = -1;
       }
       let script = scriptOf(ch);
-      const closes = bidi.closingToOpeningBracket(ch);
-      if (bidi.openingToClosingBracket(ch)) {
+      const closes = openingBracketOf(ch);
+      if (closingBracketOf(ch)) {
         brackets.push({ ch, script: runScript });
       } else if (closes && brackets.length > 0) {
         while (brackets.length > 0 && brackets.at(-1)!.ch !== closes) brackets.pop();
@@ -173,9 +170,8 @@ export function scriptRunIds(text: string): Int32Array {
         if (startDepth >= 0) startDepth--;
       }
     }
-    const runEnd = k < codePoints.length ? codePoints[k]![1] : text.length;
-    if (emojiStart >= 0) emojiRanges.push([emojiStart, runEnd]);
-    runId = fillScriptRun(ids, [codePoints[runStart]![1], runEnd], emojiRanges, runId);
+    if (emojiStart >= 0) emojiRanges.push([emojiStart, at]);
+    runId = fillScriptRun(ids, [runStart, at], emojiRanges, runId);
   }
   return ids;
 }
@@ -207,13 +203,8 @@ function isSameScript(a: number, b: number): boolean {
   return a <= INHERITED || b <= INHERITED || a === b;
 }
 
-/** Each code point of `text` with the UTF-16 index it starts at. */
-function codePointsOf(text: string): Array<[string, number]> {
-  const codePoints: Array<[string, number]> = [];
-  for (let i = 0; i < text.length;) {
-    const ch = String.fromCodePoint(text.codePointAt(i)!);
-    codePoints.push([ch, i]);
-    i += ch.length;
-  }
-  return codePoints;
+/** The code point of `text` that starts at UTF-16 index `at`, or an empty string past the end. */
+function codePointAt(text: string, at: number): string {
+  const cp = text.codePointAt(at);
+  return cp === undefined ? '' : String.fromCodePoint(cp);
 }
