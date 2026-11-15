@@ -874,14 +874,14 @@ describe('shapeText — glyph advances vs real Godot (text_server_adv.cpp:6936,7
 
 // Godot rounds no glyph of index 0 and leaves the remainder as it was (`text_server_adv.cpp:7060`).
 // Each glyph of this face is 16.5 px at 32 px, so the third leaves a remainder of -0.5.
-it('keeps a 0 advance for a missing unassigned code point after a remainder of -0.5', () => {
+it('keeps a 0 advance for a zero-width space after a remainder of -0.5', () => {
   const face: FontMetrics = {
     ...OPEN_SANS_FONT_METRICS,
     shaping: undefined,
     hasGlyph: (ch) => ch !== '\u0378',
     getGlyphAdvanceUnits: () => 1056,
   };
-  const layout = shapeText('AAA\u0378A', {
+  const layout = shapeText('AAA\u200BA', {
     fontSizePx: 32,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
@@ -889,6 +889,55 @@ it('keeps a 0 advance for a missing unassigned code point after a remainder of -
     fontMetrics: face,
   });
   expect(layout.lines[0]!.glyphs.map((g) => g.advance)).toEqual([17, 16, 17, 0, 16]);
+});
+
+/**
+ * Godot shapes each script run apart (`ScriptIterator`, `text_server_adv.cpp:7346-7352`), so the
+ * rounding remainder restarts where the script changes. Each glyph of this face is 16.5 px at 32 px:
+ * one run rounds 17, 16, 17, 16, and a new run starts again at 17.
+ */
+describe('shapeText — script runs', () => {
+  const face: FontMetrics = {
+    ...OPEN_SANS_FONT_METRICS,
+    shaping: undefined,
+    hasGlyph: (ch) => ch !== '\u0378',
+    getGlyphAdvanceUnits: () => 1056,
+  };
+  const advancesOf = (text: string): number[] =>
+    shapeText(text, {
+      fontSizePx: 32,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics: face,
+    }).lines[0]!.glyphs.map((g) => g.advance);
+
+  it('carries the remainder through one script', () => {
+    expect(advancesOf('AAAA')).toEqual([17, 16, 17, 16]);
+  });
+
+  it('restarts the remainder at a Cyrillic letter, and again at the Latin letter after it', () => {
+    expect(advancesOf('AAA\u0416A')).toEqual([17, 16, 17, 17, 17]);
+  });
+
+  it('restarts the remainder after an unassigned code point, whose script is Unknown', () => {
+    expect(advancesOf('AAA\u0378A')).toEqual([17, 16, 17, 0, 17]);
+  });
+
+  // Godot 4.6.3 at 40 px: `)` is 13 in `Ж(AЖ)`, as alone, and 12 after `Ж`. The run that learns its
+  // script gives it to the open brackets, and no later run takes them back (`script_iterator.cpp:158`).
+  it('gives a closing bracket the script its opening bracket took', () => {
+    expect(advancesOf('\u0416(A\u0416)')).toEqual([17, 16, 17, 17, 17]);
+  });
+
+  it('keeps a space and a combining mark in the script run around them', () => {
+    expect(advancesOf('A A')).toEqual([17, 17, 16]);
+    expect(advancesOf('A\u0301A').at(-1)).toBe(16);
+  });
+
+  it('shapes an emoji apart from the letters around it', () => {
+    expect(advancesOf('AAA\u{1F600}A')).toEqual([17, 16, 17, 17, 17]);
+  });
 });
 
 // `Label::_shape` splits on `paragraph_separator` first, keeping empty entries, and ends each
