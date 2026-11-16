@@ -1,6 +1,6 @@
 # Dumps what only a running engine can answer, as six JSON blobs each after a
 # marker line. Driven by build-node-catalog/classdb.mjs. Re-run against a newer
-# Godot to refresh all five.
+# Godot to refresh all six.
 #
 # ###NODES_JSON### every INSTANTIABLE Node class, with its dimension (3D / 2D /
 #   Other) and full ancestor chain.
@@ -31,8 +31,8 @@
 #   and leaves out an empty Object (resource_format_text.cpp:1980).
 #
 # ###CLASSES_JSON### every ClassDB class: its immediate base ("" for Object),
-#   whether ClassDB.can_instantiate answers yes, and whether its API is the
-#   editor's. A Variant literal such as Array[WeakRef] names any of them.
+#   and whether ClassDB.can_instantiate answers yes. A Variant literal such as
+#   Array[WeakRef] names any of them.
 extends SceneTree
 
 # PROPERTY_USAGE_STORAGE. The one flag that decides whether a property can reach
@@ -128,7 +128,6 @@ func _init() -> void:
 		all_classes[c] = [
 			ClassDB.get_parent_class(c),
 			ClassDB.can_instantiate(c),
-			ClassDB.class_get_api_type(c) == ClassDB.API_EDITOR,
 		]
 		if ClassDB.is_parent_class(c, "Resource"):
 			var res_own: Array = own_properties(c)
