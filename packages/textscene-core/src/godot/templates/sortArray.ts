@@ -53,16 +53,24 @@ class Sorter<T> {
     return less(items[b]!, items[c]!) ? c : b;
   }
 
-  /** `partitioner`: the pivot moves with its item when a swap takes it. */
+  /** `partitioner`: the scans compare with the pivot item, and a bound check stops a bad comparator. */
   private partition(first: number, last: number, pivot: number): number {
     const { items, less } = this;
+    const [rangeFirst, rangeLast] = [first, last];
+    let pivotAt = pivot;
     while (true) {
-      while (first !== pivot && less(items[first]!, items[pivot]!)) first++;
+      while (first !== pivot && less(items[first]!, items[pivotAt]!)) {
+        if (first === rangeLast - 1) break;
+        first++;
+      }
       last--;
-      while (last !== pivot && less(items[pivot]!, items[last]!)) last--;
+      while (last !== pivot && less(items[pivotAt]!, items[last]!)) {
+        if (last === rangeFirst) break;
+        last--;
+      }
       if (first >= last) return first;
-      if (pivot === first) pivot = last;
-      else if (pivot === last) pivot = first;
+      if (pivotAt === first) pivotAt = last;
+      else if (pivotAt === last) pivotAt = first;
       const swapped = items[first]!;
       items[first] = items[last]!;
       items[last] = swapped;
@@ -137,10 +145,11 @@ class Sorter<T> {
     this.items[0] = value;
   }
 
-  /** Needs an item before `last` that `value` does not sort before, so the walk stops. */
+  /** The debug build's bound check stops the walk at the first item when a bad comparator passes it. */
   private unguardedLinearInsert(last: number, value: T): void {
     const { items, less } = this;
     for (let next = last - 1; less(value, items[next]!); next--) {
+      if (next === 0) break;
       items[last] = items[next]!;
       last = next;
     }

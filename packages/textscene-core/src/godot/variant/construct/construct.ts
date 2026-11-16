@@ -103,7 +103,7 @@ const refusesClassName = ({ type, className }: ContainerType) =>
 function arrayFromTypedArguments([base, typeNumber, className]: Arguments): Variant | undefined {
   if (base!.type !== 'ARRAY' || typeNumber!.type !== 'INT' || !isStringLike(className!)) return undefined;
   const elementType = containerType(typeNumber!, className!);
-  if (refusesClassName(elementType)) return variant('ARRAY', base.value);
+  if (refusesClassName(elementType)) return variant('ARRAY', [...base.value]);
   return assignArray(base, elementType);
 }
 
@@ -113,6 +113,6 @@ function dictionaryFromTypedArguments([base, keyType, keyClass, , valueType, val
   const hasClassNames = keyClass!.type === 'STRING_NAME' && valueClass!.type === 'STRING_NAME';
   if (base!.type !== 'DICTIONARY' || !hasTypes || !hasClassNames) return undefined;
   const [key, value] = [containerType(keyType!, keyClass!), containerType(valueType!, valueClass!)];
-  if (refusesClassName(key) || refusesClassName(value)) return variant('DICTIONARY', base.value);
+  if (refusesClassName(key) || refusesClassName(value)) return variant('DICTIONARY', [...base.value]);
   return assignDictionary(base, key, value);
 }

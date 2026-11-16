@@ -8,6 +8,10 @@ import {
   lastMinimumIndex,
   vectorOf,
 } from './vectorPorts.js';
+import type { MethodContext } from './methodPort.js';
+
+/** The math methods read no random generator and call no Callable. */
+const NO_CONTEXT = {} as MethodContext;
 
 describe('componentsOf and vectorOf', () => {
   it('read and write the axes of a vector in order', () => {
@@ -58,11 +62,13 @@ describe('boundMethods', () => {
   });
 
   it('bounds each axis by the other vector', () => {
-    expect(methods.min!.run(base, [vectorOf('VECTOR2I', [1, 1])])).toEqual(vectorOf('VECTOR2I', [1, -4]));
+    expect(methods.min!.run(base, [vectorOf('VECTOR2I', [1, 1])], NO_CONTEXT)).toEqual(
+      vectorOf('VECTOR2I', [1, -4])
+    );
   });
 
   it('clamps each axis between two scalars', () => {
-    expect(methods.clampi!.run(base, [0, 2])).toEqual(vectorOf('VECTOR2I', [2, 0]));
+    expect(methods.clampi!.run(base, [0, 2], NO_CONTEXT)).toEqual(vectorOf('VECTOR2I', [2, 0]));
   });
 
   it('declares the vector type for a vector parameter and the scalar for a scalar', () => {

@@ -8,15 +8,11 @@ import {
   type VariantOf,
   type VariantTypeName,
 } from '../value/variant.js';
-import { VARIANT_TYPE } from '../variantType.js';
+import { VARIANT_TYPE, variantTypeOf } from '../variantType.js';
 import { construct } from './construct.js';
 import { canConvertStrict } from './variantCast.js';
 
 const OBJECT = VARIANT_TYPE.OBJECT;
-
-const TYPE_OF_NUMBER = new Map<number, VariantTypeName>(
-  Object.entries(VARIANT_TYPE).map(([name, number]) => [number, name as VariantTypeName])
-);
 
 const typeNumber = (container: ContainerType | undefined) => container?.type ?? VARIANT_TYPE.NIL;
 
@@ -25,8 +21,8 @@ export function isSameContainerType(a: ContainerType | undefined, b: ContainerTy
   return typeNumber(a) === typeNumber(b) && (a?.className ?? '') === (b?.className ?? '');
 }
 
-// container_type_validate.h:158: `ClassDB::is_parent_class` over the classes the tables know.
-function canReference(target: ContainerType | undefined, source: ContainerType | undefined): boolean {
+/** `ContainerTypeValidate::can_reference` (container_type_validate.h:158), over the known classes. */
+export function canReference(target: ContainerType | undefined, source: ContainerType | undefined): boolean {
   if (typeNumber(target) !== typeNumber(source)) return false;
   if (typeNumber(target) !== OBJECT || !target!.className) return true;
   if (!source!.className) return false;
@@ -35,17 +31,17 @@ function canReference(target: ContainerType | undefined, source: ContainerType |
 
 // Variant::can_convert_strict refuses a type past the last one (variant.cpp:539).
 function canConvertStrictTo(from: VariantTypeName, to: number): boolean {
-  const target = TYPE_OF_NUMBER.get(to);
+  const target = variantTypeOf(to);
   return target !== undefined && canConvertStrict(from, target);
 }
 
-const convertedTo = (element: Variant, to: number) => construct(TYPE_OF_NUMBER.get(to)!, [element]);
+const convertedTo = (element: Variant, to: number) => construct(variantTypeOf(to)!, [element]);
 
 // An expression's objects are all null, which every class takes (container_type_validate.h:91).
 const isNullObject = (element: Variant) => element.type === 'NIL' || element.type === 'OBJECT';
 
 /** The elements `Array::assign` (array.cpp:217) gives a container of `target`, or nothing on its error. */
-function assignedElements(
+export function assignedElements(
   elements: readonly Variant[],
   source: ContainerType | undefined,
   target: ContainerType | undefined
@@ -60,8 +56,8 @@ function assignedElements(
     return elements.every(isNullObject) ? elements : undefined;
   if (target.type === OBJECT || typeNumber(source) === OBJECT) return undefined;
   if (!source)
-    return convertEach(elements, target.type, (element) => element.type !== TYPE_OF_NUMBER.get(target.type));
-  if (!canConvertStrictTo(TYPE_OF_NUMBER.get(source.type) ?? 'NIL', target.type)) return undefined;
+    return convertEach(elements, target.type, (element) => element.type !== variantTypeOf(target.type));
+  if (!canConvertStrictTo(variantTypeOf(source.type) ?? 'NIL', target.type)) return undefined;
   return convertEach(elements, target.type, () => true);
 }
 
@@ -87,7 +83,7 @@ function convertEach(
 /** `ContainerTypeValidate::validate` (container_type_validate.h:49): the stored element, or none. */
 export function validatedElement(element: Variant, type: ContainerType | undefined): Variant | undefined {
   const target = typeNumber(type);
-  if (target === VARIANT_TYPE.NIL || TYPE_OF_NUMBER.get(target) === element.type) return element;
+  if (target === VARIANT_TYPE.NIL || variantTypeOf(target) === element.type) return element;
   if (element.type === 'NIL' && target === OBJECT) return element;
   return canConvertStrictTo(element.type, target) ? convertedTo(element, target) : undefined;
 }
@@ -118,9 +114,34 @@ export function typedDictionary(
   };
 }
 
-/** `Array(base, type, class_name, script)` (array.cpp:874): an empty typed array on a failed assign. */
+/** `Array(base, type, class_name, script)` (array.cpp:874): a new array, empty on a failed assign. */
 export function assignArray(base: VariantOf<'ARRAY'>, elementType: ContainerType): VariantOf<'ARRAY'> {
-  return typedArray(assignedElements(base.value, base.elementType, typing(elementType)) ?? [], elementType);
+  const elements = assignedElements(base.value, base.elementType, typing(elementType)) ?? [];
+  return typedArray([...elements], elementType);
+}
+
+/** The entries `Dictionary::assign` (dictionary.cpp:351) gives a dictionary of these types, or none. */
+export function assignedEntries(
+  source: VariantOf<'DICTIONARY'>,
+  keyType: ContainerType | undefined,
+  valueType: ContainerType | undefined
+): DictionaryEntry[] | undefined {
+  const keys = assignedElements(
+    source.value.map(({ key }) => key),
+    source.keyType,
+    typing(keyType)
+  );
+  const values =
+    keys &&
+    assignedElements(
+      source.value.map(({ value }) => value),
+      source.valueType,
+      typing(valueType)
+    );
+  if (!keys || !values) return undefined;
+  const entries: DictionaryEntry[] = [];
+  keys.forEach((key, index) => setEntry(entries, key, values[index]!));
+  return entries;
 }
 
 /** `Dictionary(base, key and value types)` (dictionary.cpp:757): an empty typed one on a failed assign. */
@@ -129,20 +150,8 @@ export function assignDictionary(
   keyType: ContainerType,
   valueType: ContainerType
 ): VariantOf<'DICTIONARY'> {
-  const keys = assignedElements(
-    base.value.map(({ key }) => key),
-    base.keyType,
-    typing(keyType)
-  );
-  const values =
-    keys &&
-    assignedElements(
-      base.value.map(({ value }) => value),
-      base.valueType,
-      typing(valueType)
-    );
-  if (!keys || !values) return typedDictionary([], keyType, valueType);
-  const entries: DictionaryEntry[] = [];
-  keys.forEach((key, index) => setEntry(entries, key, values[index]!));
-  return typedDictionary(entries, keyType, valueType);
+  return typedDictionary(assignedEntries(base, keyType, valueType) ?? [], keyType, valueType);
 }
+
+/** `Ref<Script>()` as a Variant: an expression's containers hold no script, so each answers a null Object. */
+export const NULL_SCRIPT = variant('OBJECT', null);

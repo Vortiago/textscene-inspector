@@ -97,3 +97,6 @@ export function variant<T extends VariantTypeName>(type: T, value: VariantValues
 }
 
 export const NIL: VariantOf<'NIL'> = Object.freeze(variant('NIL', null));
+
+/** `MAX_RECURSION` (typedefs.h:380): how deep a container walk goes before Godot prints an error. */
+export const MAX_RECURSION = 100;

@@ -10,7 +10,13 @@ import { nodePathFromParts } from '../string/nodePathParts.js';
 import { isStringLess } from '../string/stringOrder.js';
 import { sortArray } from '../templates/sortArray.js';
 import { isVariantLess } from './operators/evaluate.js';
-import type { ContainerType, DictionaryEntry, Variant, VariantOf } from './value/variant.js';
+import {
+  MAX_RECURSION,
+  type ContainerType,
+  type DictionaryEntry,
+  type Variant,
+  type VariantOf,
+} from './value/variant.js';
 import { variantTypeName, variantTypeNameOf } from './variantType.js';
 
 /** `rtos_fix` (variant_parser.cpp:1985): zero without its sign, and a float's spelling where it fits. */
@@ -36,9 +42,6 @@ function compatComponent(value: number): string {
 const components = (values: readonly number[]) => values.map(compatComponent).join(', ');
 const ints = (values: readonly (number | bigint)[]) => values.join(', ');
 const call = (name: string, body: string) => `${name}(${body})`;
-
-// typedefs.h:380: a container deeper than this writes empty, after an error Godot only prints.
-const MAX_RECURSION = 100;
 
 // The name `Variant::get_type_name` gives a type, empty past the last one (variant.cpp:174).
 const typeName = (type: number) => variantTypeName(type) ?? '';

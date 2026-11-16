@@ -66,17 +66,17 @@ describe('directives', () => {
   });
 
   it('refuses an unported node in a condition as not transpiled yet, with its row', () => {
-    const error = errorOf(() => preprocess('#if [1].size()\n#endif'));
+    const error = errorOf(() => preprocess('#if Signal().is_null()\n#endif'));
     expect(error).toMatchObject({
-      reason: `'#if [1].size(): the method size' is not transpiled yet (#1828)`,
+      reason: `'#if Signal().is_null(): the method is_null' is not transpiled yet (#1828)`,
       owner: '#1828',
     });
   });
 
   it('refuses an unported node in an #elif as not transpiled yet, with its row', () => {
-    const error = errorOf(() => preprocess('#if 0\n#elif [1].size()\n#endif'));
+    const error = errorOf(() => preprocess('#if 0\n#elif Signal().is_null()\n#endif'));
     expect(error).toMatchObject({
-      reason: `'#elif [1].size(): the method size' is not transpiled yet (#1828)`,
+      reason: `'#elif Signal().is_null(): the method is_null' is not transpiled yet (#1828)`,
       owner: '#1828',
     });
   });

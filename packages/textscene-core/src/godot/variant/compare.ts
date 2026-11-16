@@ -1,6 +1,12 @@
 import { COMPONENT_VECTORS, componentsEqual } from './operators/componentVectors.js';
 import { defaultValue } from './value/defaultValue.js';
-import { variant, type CallableValue, type DictionaryEntry, type Variant } from './value/variant.js';
+import {
+  MAX_RECURSION,
+  variant,
+  type CallableValue,
+  type DictionaryEntry,
+  type Variant,
+} from './value/variant.js';
 import { variantHash } from './variantHash.js';
 
 type Components = Readonly<Record<string, number>>;
@@ -59,23 +65,37 @@ function deepEqual(a: unknown, b: unknown): boolean {
   return keys.length === Object.keys(right).length && keys.every((key) => deepEqual(left[key], right[key]));
 }
 
-// Array::recursive_equal and Dictionary::recursive_equal compare elements with hash_compare(false).
-function arraysEqual(a: readonly Variant[], b: readonly Variant[]): boolean {
-  return a.length === b.length && a.every((element, index) => hashCompare(element, b[index]!, false));
+/** `Array::recursive_equal` (array.cpp:98): equal past MAX_RECURSION, after an error Godot only prints. */
+function arraysEqual(a: readonly Variant[], b: readonly Variant[], depth = 0): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  if (depth > MAX_RECURSION) return true;
+  return a.every((element, index) => hashCompare(element, b[index]!, false, depth + 1));
 }
 
-function dictionariesEqual(a: readonly DictionaryEntry[], b: readonly DictionaryEntry[]): boolean {
+/** `Dictionary::recursive_equal` (dictionary.cpp:219), the method `recursive_equal` runs too. */
+export function dictionariesEqual(
+  a: readonly DictionaryEntry[],
+  b: readonly DictionaryEntry[],
+  depth = 0
+): boolean {
+  if (a === b) return true;
   if (a.length !== b.length) return false;
+  if (depth > MAX_RECURSION) return true;
   return a.every(({ key, value }) => {
     const other = findEntry(b, key);
-    return other !== undefined && hashCompare(value, other.value, false);
+    return other !== undefined && hashCompare(value, other.value, false, depth + 1);
   });
 }
 
-/** `Variant::hash_compare`: NaN equals NaN in a float, a vector or a packed float array. */
-function hashCompare(a: Variant, b: Variant, semantic = true): boolean {
+/** `Variant::hash_compare` (variant.cpp:3172): NaN equals NaN in a float, a vector or a packed array. */
+export function hashCompare(a: Variant, b: Variant, semantic = true, depth = 0): boolean {
   if (a.type !== b.type) return false;
   switch (a.type) {
+    case 'ARRAY':
+      return arraysEqual(a.value, b.value as readonly Variant[], depth + 1);
+    case 'DICTIONARY':
+      return dictionariesEqual(a.value, b.value as readonly DictionaryEntry[], depth + 1);
     case 'FLOAT':
       return a.value === b.value || (semantic && isSameNumber(a.value, b.value as number));
     case 'VECTOR2':
@@ -136,14 +156,13 @@ export function isSameKey(a: Variant, b: Variant): boolean {
   return isStringLike(a) && isStringLike(b) && a.type !== b.type && a.value === b.value;
 }
 
-// An Expression has no variables, so two of its containers are never one allocation.
 const SHARED_BY_REFERENCE = /^(ARRAY|DICTIONARY|PACKED_.*)$/;
 
 /** `Variant::identity_compare` (variant.cpp:3355): a container by its allocation, an OBJECT by its id. */
 export function identityCompare(a: Variant, b: Variant): boolean {
   if (a.type !== b.type) return false;
   if (a.type === 'OBJECT') return true;
-  return !SHARED_BY_REFERENCE.test(a.type) && hashCompare(a, b);
+  return SHARED_BY_REFERENCE.test(a.type) ? a.value === b.value : hashCompare(a, b);
 }
 
 export function findEntry(entries: readonly DictionaryEntry[], key: Variant): DictionaryEntry | undefined {

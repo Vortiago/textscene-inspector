@@ -18,6 +18,7 @@ import { warn } from '../../../logger';
 import { lowerLevelSizes } from '../../processing/mipChain';
 import { BLOCK_FORMATS, blockBytes, decodeBlocks } from './blocks/decodeBlocks';
 import type { SavedImage } from './kind';
+import { halfToFloat } from '../../../godot/math/halfFloat.js';
 
 /** A channel no source byte fills: 0, or 255 for alpha. */
 const ZERO = -1;
@@ -289,15 +290,8 @@ function readUnorm16(bytes: DataView, offset: number): number {
   return bytes.getUint16(offset, true) / 65535;
 }
 
-/** IEEE half precision, as `Math::half_to_float` reads it (`core/math/math_funcs.h:744`). */
 function readHalf(bytes: DataView, offset: number): number {
-  const half = bytes.getUint16(offset, true);
-  const sign = half & 0x8000 ? -1 : 1;
-  const exponent = (half >> 10) & 0x1f;
-  const mantissa = half & 0x3ff;
-  if (exponent === 0) return sign * mantissa * 2 ** -24;
-  if (exponent === 0x1f) return mantissa ? NaN : sign * Infinity;
-  return sign * (1 + mantissa / 1024) * 2 ** (exponent - 15);
+  return halfToFloat(bytes.getUint16(offset, true));
 }
 
 /** `color_from_rgba4444` (`core/io/image.cpp:3382-3388`): red in the top nibble. */

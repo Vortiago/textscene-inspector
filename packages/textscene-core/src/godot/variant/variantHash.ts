@@ -11,11 +11,8 @@ import {
 } from '../math/hashFuncs.js';
 import type { NodePathParts } from '../string/nodePathParts.js';
 import { builtinMethodHash } from './call/builtinMethod.js';
-import type { CallableValue, Variant, VariantOf } from './value/variant.js';
+import { MAX_RECURSION, type CallableValue, type Variant, type VariantOf } from './value/variant.js';
 import { VARIANT_TYPE } from './variantType.js';
-
-// typedefs.h:380: a container deeper than this hashes to 0, after an error Godot only prints.
-const MAX_RECURSION = 100;
 
 type HashOne = (word: number, seed: number) => number;
 

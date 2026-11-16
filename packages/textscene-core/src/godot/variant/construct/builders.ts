@@ -1,3 +1,4 @@
+import { duplicateVariant } from '../duplicate.js';
 import type { Aabb } from '../../math/aabb.js';
 import {
   basisFromColumns,
@@ -118,7 +119,18 @@ export function buildFromCast(
   argumentTypes: readonly VariantTypeName[],
   args: Arguments
 ): Variant {
-  if (args.length === 1 && canConvertStrict(argumentTypes[0]!, type)) return castVariant(args[0]!, type);
+  if (args.length !== 1 || !canConvertStrict(argumentTypes[0]!, type))
+    return buildFromParts(type, argumentTypes, args);
+  const cast = castVariant(args[0]!, type);
+  // A Packed*Array of the same type is a new Vector, so a method on one leaves the other as it was.
+  return cast === args[0] && type.startsWith('PACKED_') ? duplicateVariant(cast, false) : cast;
+}
+
+function buildFromParts(
+  type: VariantTypeName,
+  argumentTypes: readonly VariantTypeName[],
+  args: Arguments
+): Variant {
   const build = BUILDERS[`${type}(${argumentTypes.join(',')})`];
   if (!build) throw new Error(`expected a ported constructor, got ${type}(${argumentTypes.join(', ')})`);
   return variant(type, build(args) as never) as Variant;

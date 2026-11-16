@@ -1,4 +1,6 @@
 import { runExpression, UnportedExpression } from '../../godot/expression/execute.js';
+import { UnrepresentableArray } from '../../godot/variant/call/arrayLength.js';
+import { UnportedMethod } from '../../godot/variant/call/callMethod.js';
 import { GodotCrash } from '../../godot/variant/cInteger.js';
 import { booleanize } from '../../godot/variant/compare.js';
 import type { UtilityHost } from '../../godot/variant/utility/utilityHost.js';
@@ -45,8 +47,10 @@ export function conditionRefusal(
   const row = instruction(`#${name}`)!;
   if (
     error instanceof UnportedExpression ||
+    error instanceof UnportedMethod ||
     error instanceof UnportableUtility ||
-    error instanceof UnrepresentableText
+    error instanceof UnrepresentableText ||
+    error instanceof UnrepresentableArray
   )
     return notTranspiled(row, position, `${directive}: ${error.message}`);
   if (error instanceof UnsupportedObject)
