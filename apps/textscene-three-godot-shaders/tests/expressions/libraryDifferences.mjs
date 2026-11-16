@@ -1,5 +1,5 @@
-// Both answers kept: the list fails once V8 and Godot's glibc agree or differ otherwise.
-export const LIBM_DIFFERENCES = {
+// Both answers kept: the list fails once the port and Godot's library agree or differ otherwise.
+export const LIBRARY_DIFFERENCES = {
   'utility tan 1': {
     godot: 'f79ea3ee1e6e2eb3f',
     port: 'f78ea3ee1e6e2eb3f',
@@ -23,4 +23,15 @@ export const LIBM_DIFFERENCES = {
     reason:
       'asinf in get_euler: glibc gives the float 0.92729521, the correctly rounded arc sine the one above',
   },
+  'compression-edge 59 "PackedByteArray([120, 1, 1, 1, 0, 255, 255, 65, 0, 66, 0, 66]).decompress(1, 1)"': {
+    godot: 'PackedByteArray[]',
+    port: 'PackedByteArray[65]',
+    reason: 'a stored Deflate block whose length check is wrong: zlib refuses it, fflate inflates it',
+  },
+  'compression-edge 63 "PackedByteArray([120, 1, 253, 192, 1, 32, 16, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 4, 133, 30, 0, 0, 198, 0, 132]).decompress(2, 1)"':
+    {
+      godot: 'PackedByteArray[]',
+      port: 'PackedByteArray[65, 66]',
+      reason: 'a dynamic Huffman table of 288 literal/length codes: zlib refuses past 286, fflate decodes it',
+    },
 };

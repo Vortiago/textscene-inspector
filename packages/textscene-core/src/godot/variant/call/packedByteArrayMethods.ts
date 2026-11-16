@@ -1,4 +1,5 @@
 import { writeAt } from '../../templates/arrayWrite.js';
+import { decompress, decompressDynamic } from '../../io/compression/compression.js';
 import { halfToFloat, makeHalfFloat } from '../../math/halfFloat.js';
 import { textOf } from '../../string/ustring/codes.js';
 import { REPLACEMENT, utf8Codes } from '../../string/ustring/encodings.js';
@@ -175,8 +176,19 @@ function encodeVar(bytes: number[], args: readonly CastArgument[]): Variant {
 const machineDependent = (method: string) =>
   new UnportableUtility(`${method}, which converts with the iconv of the machine Godot runs on`);
 
+/** `decompress` and `decompress_dynamic` (variant_call.cpp:811): a size, then a `Compression::Mode`. */
+const compressionPort = (run: typeof decompress) =>
+  methodPort(['int64_t', 'int32_t'], (base, args, context) =>
+    variant(
+      'PACKED_BYTE_ARRAY',
+      Array.from(run(Uint8Array.from(bytesOf(base)), args[0] as bigint, args[1] as number, context.decoders))
+    )
+  );
+
 export const PACKED_BYTE_ARRAY_METHODS: Readonly<Record<string, MethodPort>> = {
   ...PACKED_BYTE_ARRAY_SHARED_METHODS,
+  decompress: compressionPort(decompress),
+  decompress_dynamic: compressionPort(decompressDynamic),
   get_string_from_ascii: port([], (bytes) => text(asciiCodes(bytes))),
   get_string_from_utf8: port([], (bytes) => text(utf8Codes(bytes))),
   get_string_from_utf16: port([], (bytes) => text(utf16Codes(unitsOf(bytes, 2)))),

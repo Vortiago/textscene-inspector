@@ -1,3 +1,5 @@
+import { decompress as brotli } from 'brotli/decompress';
+import { decompress as zstd } from 'fzstd';
 import { describe, expect, it } from 'vitest';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import { preprocess, type ShaderInclude } from './preprocessor.js';
@@ -205,5 +207,27 @@ describe('includes', () => {
 describe('a refused text', () => {
   it('throws PreprocessorError, which the front end answers with the text as it is', () => {
     expect(errorOf(() => preprocess('#frob'))).toBeInstanceOf(PreprocessorError);
+  });
+});
+
+describe('decompress in a condition', () => {
+  const ZSTD =
+    '[40, 181, 47, 253, 32, 29, 141, 0, 0, 88, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 1, 0, 241, 74, 17]';
+  const BROTLI =
+    '[27, 28, 0, 248, 141, 148, 110, 222, 68, 85, 134, 150, 108, 32, 111, 53, 200, 60, 117, 192, 10, 17, 71]';
+  const isHello = (bytes: string, mode: number) =>
+    `#if PackedByteArray(${bytes}).decompress(29, ${mode}).get_string_from_ascii() == "hello hello hello hello world"\nyes\n#endif`;
+
+  it('decodes Zstandard and Brotli with the decoders the options lend', () => {
+    expect(preprocess(isHello(ZSTD, 2), { decoders: { zstd } })).toContain('yes');
+    expect(preprocess(isHello(BROTLI, 4), { decoders: { brotli } })).toContain('yes');
+  });
+
+  it('refuses Zstandard with no decoder lent, naming the package to install (error case)', () => {
+    expect(errorOf(() => preprocess(isHello(ZSTD, 2)))).toMatchObject({
+      reason: expect.stringContaining(
+        'install it and pass the `decompress` of `fzstd` as `decoders: { zstd }`'
+      ),
+    });
   });
 });

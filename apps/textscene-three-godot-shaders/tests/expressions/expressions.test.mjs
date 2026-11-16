@@ -1,14 +1,19 @@
+import { decompress as brotliDecompress } from 'brotli/decompress';
+import { decompress as zstdDecompress } from 'fzstd';
 import { describe, expect, it } from 'vitest';
 import { runExpression } from '../../../../packages/textscene-core/src/godot/expression/execute.ts';
+import { decodersOf } from '../../../../packages/textscene-core/src/shaders/preprocessor/decoders.ts';
 import { GodotCrash } from '../../../../packages/textscene-core/src/godot/variant/cInteger.ts';
 import { utilityHost } from '../../../../packages/textscene-core/src/godot/variant/utility/utilityHost.ts';
 import { PROJECT_FILES } from '../../../../scripts/godot-variant/godotExpressions.mjs';
 import { godotAnswers } from '../godotAnswers.mjs';
 import { dumpVariant } from './dump.mjs';
 import { EXPRESSIONS } from './expressionSet.mjs';
-import { LIBM_DIFFERENCES } from './libmDifferences.mjs';
+import { LIBRARY_DIFFERENCES } from './libraryDifferences.mjs';
 import { INTERNED_COMPARISON, REFUSED_CASES, REFUSED_METHODS, REFUSED_UTILITIES } from './refusedCases.mjs';
 
+/** The decoders an app lends for Zstandard and Brotli, so every case has Godot's answer. */
+const DECODERS = decodersOf({ zstd: zstdDecompress, brotli: brotliDecompress });
 const RECORD = godotAnswers().expressions;
 const IS_LIVE = godotAnswers().live;
 
@@ -17,7 +22,7 @@ function portAnswer(text) {
   try {
     const result = runExpression(
       text,
-      utilityHost((path) => PROJECT_FILES.includes(path))
+      utilityHost((path) => PROJECT_FILES.includes(path), DECODERS)
     );
     if ('executeError' in result)
       return { verdict: 'execute', text: result.executeError, left: dumpVariant(result.value) };
@@ -54,7 +59,7 @@ describe('the Expression port against Godot', () => {
 
   it('answers each case as Godot does', () => {
     const mismatches = ANSWERED.filter((test) => ANSWERS.get(test.id).refusal === undefined)
-      .filter((test) => LIBM_DIFFERENCES[test.id] === undefined)
+      .filter((test) => LIBRARY_DIFFERENCES[test.id] === undefined)
       .filter((test) => {
         const [ours, godot] = [ANSWERS.get(test.id), RECORD.cases[test.id]];
         return ours.verdict !== godot.verdict || ours.text !== godot.text || ours.left !== godot.left;
@@ -66,8 +71,8 @@ describe('the Expression port against Godot', () => {
     expect(mismatches).toEqual([]);
   });
 
-  it('differs from Godot on each listed libm case exactly as listed', () => {
-    const changed = Object.entries(LIBM_DIFFERENCES)
+  it('differs from Godot on each listed library case exactly as listed', () => {
+    const changed = Object.entries(LIBRARY_DIFFERENCES)
       .filter(([id]) => RECORD.cases[id] !== undefined)
       .filter(([id, { godot, port }]) => RECORD.cases[id].text !== godot || ANSWERS.get(id)?.text !== port)
       .map(([id]) => id);

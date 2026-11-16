@@ -398,12 +398,18 @@ importers:
       '@typescript/native':
         specifier: 'catalog:'
         version: typescript@7.0.2
+      brotli:
+        specifier: 'catalog:'
+        version: 2.1.0
       dts-bundle-generator:
         specifier: 'catalog:'
         version: 9.5.1
       esbuild:
         specifier: 'catalog:'
         version: 0.28.2
+      fzstd:
+        specifier: 'catalog:'
+        version: 0.1.1
       rimraf:
         specifier: 'catalog:'
         version: 6.1.4

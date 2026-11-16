@@ -1081,9 +1081,9 @@ Legal Terms
 
 <https://github.com/ariya/FastLZ>
 
-`packages/textscene-core/src/resources/formats/binaryresource/fastlz.ts` ports FastLZ's level 1
-decompressor, because Godot compresses a binary resource saved in FastLZ mode with it
-(`core/io/compression.cpp`). Godot vendors it as `thirdparty/misc/fastlz.c`. It is by Ariya
+`packages/textscene-core/src/godot/io/compression/fastlz.ts` ports FastLZ's decompressor, because
+Godot decompresses a binary resource saved in FastLZ mode, and `PackedByteArray.decompress` in FastLZ
+mode, with it (`core/io/compression.cpp`). Godot vendors it as `thirdparty/misc/fastlz.c`. It is by Ariya
 Hidayat and is licensed MIT, separately from Godot's own MIT licence above.
 
 ```

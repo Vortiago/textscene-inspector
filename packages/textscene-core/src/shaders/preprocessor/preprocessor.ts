@@ -1,3 +1,4 @@
+import { decodersOf, type ShaderDecoders } from './decoders.js';
 import { stripComments, type StrippedCode } from './commentRemover.js';
 import { conditionRefusal, isConditionTrue } from './conditions.js';
 import { DirectiveTokenizer } from './directiveTokenizer.js';
@@ -22,6 +23,7 @@ export interface PreprocessOptions {
   /** Nothing when the file is missing, which `str_to_var` of a `Resource(...)` also asks. */
   readonly readInclude?: (path: string) => ShaderInclude | undefined;
   readonly renderingMethod?: RenderingMethod;
+  readonly decoders?: ShaderDecoders;
 }
 
 /** shader_preprocessor.cpp:1353 */
@@ -67,7 +69,7 @@ export function preprocess(code: string, options: PreprocessOptions = {}): strin
       ['RENDERER_MOBILE', builtIn(RENDERERS.mobile)],
       ['RENDERER_FORWARD_PLUS', builtIn(RENDERERS.forward_plus)],
     ]),
-    host: utilityHost((path) => readInclude(path) !== undefined),
+    host: utilityHost((path) => readInclude(path) !== undefined, decodersOf(options.decoders)),
     currentBranch: undefined,
     conditionDepth: 0,
     includes: new Set(),

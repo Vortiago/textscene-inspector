@@ -4,8 +4,10 @@ const EDITOR_STATE = 'the answer is a counter or an object id of the running edi
 const MACHINE_ICONV = 'the answer converts with the iconv and locale of the machine Godot runs on';
 const TRANSLATED_UNIT =
   "humanize_size's unit goes through RTR, which translates it into the language of the editor or the game";
-const COMPRESSION_CARD =
-  'the port of compress and decompress waits on the choice of codecs that Atle has open';
+const NO_COMPRESS =
+  'the transpiler only decompresses, and a library for compress waits until everything else is ported';
+const MACHINE_ALLOCATION =
+  'Godot allocates the whole buffer first, and whether that allocation succeeds depends on the machine';
 const UNSET_MEMORY =
   'Godot counts a lead surrogate before a plain unit as two codes but writes one, so the last code is unset memory';
 const UNSEEDED =
@@ -110,15 +112,15 @@ export const REFUSED_CASES = {
     refusal: 'UnportableUtility',
     reason: UNSET_MEMORY,
   },
+  'compression-edge 58 "PackedByteArray([27, 28, 0, 248, 141, 148, 110, 222, 68, 85, 134, 150, 108, 32, 111, 53, 200, 60, 117, 192, 10, 17, 71]).decompress(9223372036854775807, 4)"':
+    { refusal: 'UnrepresentableArray', reason: MACHINE_ALLOCATION },
 };
 
 /** The methods the port refuses wherever the set calls them, with the reason. */
 export const REFUSED_METHODS = {
   to_multibyte_char_buffer: { refusal: 'UnportableUtility', reason: MACHINE_ICONV },
   get_string_from_multibyte_char: { refusal: 'UnportableUtility', reason: MACHINE_ICONV },
-  compress: { refusal: 'UnportedExpression', reason: COMPRESSION_CARD },
-  decompress: { refusal: 'UnportedExpression', reason: COMPRESSION_CARD },
-  decompress_dynamic: { refusal: 'UnportedExpression', reason: COMPRESSION_CARD },
+  compress: { refusal: 'UnportedExpression', reason: NO_COMPRESS },
   humanize_size: { refusal: 'UnportableUtility', reason: TRANSLATED_UNIT },
   pick_random: { refusal: 'UnportableUtility', reason: UNSEEDED },
   shuffle: { refusal: 'UnportableUtility', reason: UNSEEDED },
