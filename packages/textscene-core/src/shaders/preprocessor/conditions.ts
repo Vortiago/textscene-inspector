@@ -2,6 +2,7 @@ import { runExpression, UnportedExpression } from '../../godot/expression/execut
 import { GodotCrash } from '../../godot/variant/cInteger.js';
 import { booleanize } from '../../godot/variant/compare.js';
 import type { GlobalRandom } from '../../godot/variant/utility/globalRandom.js';
+import { UnsupportedObject } from '../../godot/variant/objects/makeObject.js';
 import { UnportableUtility } from '../../godot/variant/utility/unportableUtility.js';
 import { UnportableComparison } from '../../godot/variant/operators/ordering.js';
 import { instruction, notTranspiled } from '../language/instructions.js';
@@ -11,6 +12,8 @@ import { END, isCharSpace, isCharWord } from './preprocessorChars.js';
 import { PreprocessorError } from './preprocessorError.js';
 
 const DEFINED = 'defined';
+// An object in a condition has its own owner issue, apart from the rest of the #if row.
+const OBJECTS_OWNER = '#1953';
 
 const expected = (what: string, line: number) => new PreprocessorError(`Expected a '${what}'.`, line);
 const unexpected = (text: string, at: number, line: number) =>
@@ -44,8 +47,11 @@ export function conditionRefusal(
   directive: string,
   position: SourcePosition
 ): unknown {
+  const row = instruction(`#${name}`)!;
   if (error instanceof UnportedExpression || error instanceof UnportableUtility)
-    return notTranspiled(instruction(`#${name}`)!, position, `${directive}: ${error.message}`);
+    return notTranspiled(row, position, `${directive}: ${error.message}`);
+  if (error instanceof UnsupportedObject)
+    return notTranspiled({ ...row, owner: OBJECTS_OWNER }, position, `${directive}: ${error.message}`);
   if (error instanceof UnportableComparison) return new ShadingLanguageError(error.message, position);
   if (error instanceof GodotCrash)
     return new ShadingLanguageError(`Godot crashes on ${directive}: ${error.message}`, position);

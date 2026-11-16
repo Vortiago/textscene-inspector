@@ -1119,6 +1119,39 @@ const MARSHALL_EDGES = [
   'var_to_bytes([[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]])',
 ];
 
+const OBJECT_EDGES = [
+  'weakref(null)',
+  'weakref(Object())',
+  'weakref(1)',
+  'weakref()',
+  'str_to_var("Object(Node,)")',
+  'str_to_var("Object(Gradient,\\"offsets\\":PackedFloat32Array(0.5))")',
+  'str_to_var("Object(CanvasItem,)")',
+  'str_to_var("Object(1)")',
+  'str_to_var("Object")',
+  'str_to_var("Resource(\\"res://nope.tres\\")")',
+  'str_to_var("SubResource(\\"1\\")")',
+  'str_to_var("ExtResource(\\"uid://abc\\")")',
+  'str_to_var("Resource(\\"\\")")',
+  'str_to_var("Resource()")',
+  'str_to_var("Resource(1)")',
+  'str_to_var("Resource(\\"a\\", 1)")',
+  'str_to_var("Resource(\\"uid://a\\", \\"uid://b\\")")',
+  'str_to_var("Resource(\\"a\\", \\"b\\")")',
+  'str_to_var("Resource")',
+  'bytes_to_var(PackedByteArray([24, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]))',
+  'bytes_to_var(PackedByteArray([24, 0, 1, 0, 7, 0, 0, 0, 0, 0, 0, 0]))',
+  'bytes_to_var_with_objects(PackedByteArray([24, 0, 0, 0, 10, 0, 0, 0, 67, 97, 110, 118, 97, 115, 73, 116, 101, 109, 0, 0]))',
+  'str_to_var("Object(Node)")',
+  'str_to_var("Object(Node,\\"a\\")")',
+  'str_to_var("Object(Node,\\"a\\":)")',
+  'str_to_var("Object(Node,1:2)")',
+  'str_to_var("Object(Node,\\"a\\":1 \\"b\\":2)")',
+  'bytes_to_var_with_objects(PackedByteArray([24, 0, 0, 0, 4, 0, 0, 0, 78, 111, 100, 101, 0, 0, 0, 0]))',
+  'bytes_to_var_with_objects(PackedByteArray([24, 0, 0, 0, 4, 0, 0, 0, 78, 111, 100, 101, 1, 0, 0, 0, 6, 0, 0, 0, 115, 99, 114, 105, 112, 116, 0, 0, 2, 0, 0, 0, 5, 0, 0, 0]))',
+  'bytes_to_var_with_objects(PackedByteArray([24, 0, 0, 0, 4, 0, 0, 0, 78, 111, 100, 101, 1, 0, 0, 0, 6, 0, 0, 0, 115, 99, 114, 105, 112, 116, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0, 97, 0, 0, 0]))',
+];
+
 const cases = (group, texts) =>
   texts.map((text, index) => ({ id: `${group} ${index} ${JSON.stringify(text)}`, text }));
 
@@ -1134,4 +1167,5 @@ export const HAND_CASES = [
   ...cases('writer-edge', WRITER_EDGES),
   ...cases('reader-edge', READER_EDGES),
   ...cases('marshall-edge', MARSHALL_EDGES),
+  ...cases('object-edge', OBJECT_EDGES),
 ];

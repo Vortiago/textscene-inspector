@@ -1,6 +1,6 @@
 import { storedReal } from '../../math/real.js';
 import { transform3DOf } from '../../math/transform3d.js';
-import { classExists } from '../../classdb/classBaseTypes.js';
+import { canInstantiate, classExists } from '../../classdb/classBaseTypes.js';
 import { doubleToInt32, doubleToInt64, doubleToUint64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
 import { setEntry } from '../compare.js';
 import { assignArray, assignDictionary } from '../construct/typedContainer.js';
@@ -14,6 +14,7 @@ import {
   type VariantOf,
 } from '../value/variant.js';
 import { VARIANT_TYPE, variantTypeName } from '../variantType.js';
+import { makeObject } from '../objects/makeObject.js';
 import { decodeMbedtlsBase64 } from './base64.js';
 import { VariantTokenizer, type Token } from './variantTokenizer.js';
 
@@ -239,7 +240,10 @@ class VariantReader {
         return this.#typedDictionary();
       case 'Array':
         return this.#typedArray();
+      case 'Object':
+        return this.#object();
       default:
+        if (RESOURCE_CALLS.has(id)) return this.#resource(id);
         throw new ParseFault(`Unexpected identifier '${id}'`);
     }
   }
@@ -330,6 +334,62 @@ class VariantReader {
     const rid = variant('RID', BigInt.asIntN(64, id));
     this.#expect(')', "Expected ')'", rid);
     return rid;
+  }
+
+  // variant_parser.cpp:994: ClassDB::instantiate makes the object before the properties are read.
+  #object(): Variant {
+    this.#expect('(', "Expected '('");
+    const type = this.next();
+    if (type.kind !== 'identifier') throw new ParseFault('Expected identifier with type of object');
+    if (!canInstantiate(type.value))
+      throw new ParseFault(`Can't instantiate Object() of type '${type.value}'`);
+    this.#expect(',', "Expected ',' after object type");
+    this.#objectProperties();
+    return makeObject(`str_to_var of Object(${type.value}, ...)`);
+  }
+
+  // The properties parse before the object is used, so their faults still show.
+  #objectProperties(): void {
+    let needsComma = false;
+    for (;;) {
+      if (this.#tokens.isEof) throw new ParseFault('Unexpected EOF while parsing Object()');
+      const token = this.next();
+      if (token.kind === ')') return;
+      if (needsComma) {
+        if (token.kind !== ',') throw new ParseFault("Expected '}' or ','");
+        needsComma = false;
+        continue;
+      }
+      if (token.kind !== 'string') throw new ParseFault('Expected property name as string');
+      this.#expect(':', "Expected ':'");
+      if (this.#tokens.isEof) throw new ParseFault('Unexpected EOF while parsing Object()');
+      this.#nested(this.next());
+      needsComma = true;
+    }
+  }
+
+  // variant_parser.cpp:1077: without a resource parser, every name loads its path or uid from the project.
+  #resource(id: string): Variant {
+    this.#expect('(', "Expected '('");
+    let token = this.next();
+    if (token.kind !== 'string') throw new ParseFault('Expected string as argument for Resource()');
+    let path = token.value;
+    let uid = '';
+    token = this.next();
+    if (path.startsWith('uid://')) [uid, path] = [path, ''];
+    if (token.kind === ',') {
+      token = this.next();
+      if (token.kind !== 'string') throw new ParseFault('Expected string in Resource reference');
+      if (token.value.startsWith('uid://')) {
+        if (uid !== '') throw new ParseFault('Two uid:// paths in one Resource reference');
+        uid = token.value;
+      } else {
+        if (path !== '') throw new ParseFault('Two non-uid paths in one Resource reference');
+        path = token.value;
+      }
+    }
+    if (uid !== '' || path !== '') makeObject(`str_to_var of ${id}("${uid || path}")`);
+    throw new ParseFault(`Can't load resource at path: ${path} with uid: ${uid}`);
   }
 
   #emptyCall(empty: Variant): Variant {

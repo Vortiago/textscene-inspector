@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { UnsupportedObject } from '../objects/makeObject.js';
 import { NIL, variant } from '../value/variant.js';
 import { callErrorText } from './callError.js';
 import { callUtility } from './callUtility.js';
@@ -11,8 +12,18 @@ const call = (name: string, ...args: Parameters<typeof callUtility>[1]) =>
 
 describe('callUtility', () => {
   it('gives nothing for a name it does not port', () => {
-    expect(call('weakref', int(1n))).toBeUndefined();
     expect(call('no_such_function')).toBeUndefined();
+  });
+
+  it('refuses a weakref of a value that is not an object, as Godot does', () => {
+    expect(call('weakref', int(1n))).toEqual({
+      value: NIL,
+      error: { error: 'INVALID_ARGUMENT', argument: 0, expected: 'OBJECT' },
+    });
+  });
+
+  it('stops a weakref of null, as it makes a WeakRef object', () => {
+    expect(() => call('weakref', NIL)).toThrow(UnsupportedObject);
   });
 
   it('refuses a wrong argument count of a function that takes a fixed one', () => {

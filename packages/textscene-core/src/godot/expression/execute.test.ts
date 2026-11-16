@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { UnsupportedObject } from '../variant/objects/makeObject.js';
 import { variant } from '../variant/value/variant.js';
 import { runExpression, UnportedExpression } from './execute.js';
 import { UnportableUtility } from '../variant/utility/unportableUtility.js';
@@ -60,8 +61,12 @@ describe('runExpression', () => {
     expect(runExpression('1 +')).toEqual({ parseError: 'Expected expression.' });
   });
 
-  it('refuses a utility function it has not ported', () => {
-    expect(() => runExpression('weakref(null)')).toThrow(UnportedExpression);
+  it('refuses a method call it has not ported', () => {
+    expect(() => runExpression('"a".length()')).toThrow(UnportedExpression);
+  });
+
+  it('refuses an expression that makes an object', () => {
+    expect(() => runExpression('weakref(null)')).toThrow(UnsupportedObject);
   });
 
   it('calls a utility function', () => {

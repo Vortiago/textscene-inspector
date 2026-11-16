@@ -1,11 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { variantToText } from '../variantWriter';
+import { UnsupportedObject } from '../objects/makeObject';
 import { textToVariant } from './variantReader';
 
 const read = (text: string) => variantToText(textToVariant(text));
 
 // Each value is what Godot 4.6.3's str_to_var returns for the text, written by var_to_str.
 describe('textToVariant', () => {
+  it('stops on an object of a class Godot can make, after its properties parse', () => {
+    expect(() => textToVariant('Object(Node,"name":"a")')).toThrow(UnsupportedObject);
+  });
+
+  it('gives null for an object whose properties do not parse', () => {
+    expect([read('Object(Node)'), read('Object(Node,1:2)'), read('Object(CanvasItem,)')]).toEqual([
+      'null',
+      'null',
+      'null',
+    ]);
+  });
+
+  it('gives null for a Resource that names no file', () => {
+    expect(read('Resource("")')).toBe('null');
+  });
+
   it('reads a constructor with float32 components', () => {
     expect(read('Vector2(0.1, inf_neg)')).toBe('Vector2(0.1, inf_neg)');
   });

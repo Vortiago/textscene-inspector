@@ -1,7 +1,7 @@
 import { UTILITY_FUNCTIONS } from '../registrations.generated.js';
 import { NIL, type Variant } from '../value/variant.js';
 import { invalidArgument, type CallError, type UtilityResult } from './callError.js';
-import { GENERAL_TYPED, GENERAL_VARARG } from './generalUtilities.js';
+import { GENERAL_TYPED, GENERAL_VARARG, GENERAL_VARIANT } from './generalUtilities.js';
 import type { GlobalRandom } from './globalRandom.js';
 import { RANDOM_UTILITIES } from './randomUtilities.js';
 import { SCALAR_MATH } from './scalarMath.js';
@@ -27,7 +27,11 @@ const TYPED: Readonly<Record<string, TypedFunction>> = {
   ...RANDOM_UTILITIES,
   ...GENERAL_TYPED,
 };
-const SELF_CHECKED: Readonly<Record<string, VariantFunction>> = { ...VARIANT_MATH, ...GENERAL_VARARG };
+const SELF_CHECKED: Readonly<Record<string, VariantFunction>> = {
+  ...VARIANT_MATH,
+  ...GENERAL_VARARG,
+  ...GENERAL_VARIANT,
+};
 
 // `VariantCasterAndValidate` casts the arguments right to left, so the leftmost refused one is reported.
 function firstRefused(args: readonly Variant[], parameters: readonly CppParameter[]): CallError | undefined {
