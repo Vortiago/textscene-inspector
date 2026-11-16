@@ -562,7 +562,7 @@ export function styledTextRuns(
   return styled;
 }
 
-/** Whether the runs change with the box width: an `[img]` or `[hr]` sized in percent of it (`_get_image_size`). */
+/** Whether the runs change with the box width: an `[img]` or `[hr]` sized in percent (`_get_image_size`). */
 export function runsReadBoxWidth(runs: readonly StyledTextRun[]): boolean {
   return runs.some((run) => run.image && (run.image.spec.widthInPercent || run.image.spec.heightInPercent));
 }

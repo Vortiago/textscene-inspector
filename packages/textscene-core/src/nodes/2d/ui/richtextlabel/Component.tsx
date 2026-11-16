@@ -177,8 +177,7 @@ function useShapedRichText(
   rect: Rect2,
   textTheme: ResolvedTextTheme
 ) {
-  // Equal runs prove equal input: every value shaping reads from the node, the theme and the
-  // properties reaches it through the runs, the faces or a scalar option below.
+  // Equal runs prove equal input: shaping reads the node only through the runs, faces and options.
   const runsAt = (wrapWidthPx: number) =>
     styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, wrapWidthPx);
   const runsAtRectWidth = useByValue(runsAt(rect.w), sameData);
