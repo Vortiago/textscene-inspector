@@ -1,5 +1,5 @@
 import { defaultValue } from '../value/defaultValue.js';
-import { variant, type CallableValue, type Variant, type VariantOf } from '../value/variant.js';
+import { bool, int, variant, type CallableValue, type Variant, type VariantOf } from '../value/variant.js';
 import { variantHash } from '../variantHash.js';
 import { variantCallable } from './variantCallable.js';
 import { builtinMethodRow } from './builtinMethod.js';
@@ -13,8 +13,6 @@ import {
 } from './methodPort.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
 
-const int = (value: number): Variant => variant('INT', BigInt(value));
-const bool = (value: boolean): Variant => variant('BOOL', value);
 const callable = (value: CallableValue): Variant => variant('CALLABLE', value);
 const callableOf = (base: Variant) => (base as VariantOf<'CALLABLE'>).value;
 

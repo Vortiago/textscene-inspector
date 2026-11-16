@@ -1,7 +1,7 @@
 import { booleanize, cppEqual, isZero } from '../compare.js';
 import { variantTypeOfCpp } from '../cppType.js';
 import { OPERATOR_REGISTRATIONS } from '../registrations.generated.js';
-import { NIL, variant, type Variant, type VariantOf, type VariantTypeName } from '../value/variant.js';
+import { NIL, bool, variant, type Variant, type VariantOf, type VariantTypeName } from '../value/variant.js';
 import { VARIANT_TYPE } from '../variantType.js';
 import {
   binaryArithmetic,
@@ -40,8 +40,6 @@ const REGISTRY = new Map<string, Registration>(
     { evaluator: evaluator.replace(/^OperatorEvaluator/, ''), types },
   ])
 );
-
-const bool = (value: boolean) => variant('BOOL', value);
 
 /** `r_ret` and `r_valid`. A pair with no evaluator leaves Nil. */
 export interface Evaluation {

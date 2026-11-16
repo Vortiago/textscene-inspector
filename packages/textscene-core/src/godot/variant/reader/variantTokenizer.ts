@@ -1,6 +1,6 @@
 import { htmlColor } from '../../math/color.js';
 import { storedReal } from '../../math/real.js';
-import { hexDigitCodeValue, isDigitCode } from '../../string/charUtils.js';
+import { hexDigitCodeValue, isDigitCode, isHexDigitCode } from '../../string/charUtils.js';
 import { stringToFloat } from '../../string/strtod.js';
 import { INT64_MAX, INT64_MIN } from '../cInteger.js';
 import { variant, type VariantOf } from '../value/variant.js';
@@ -23,7 +23,6 @@ const REPLACEMENT_CHARACTER = 0xfffd;
 /** `\b \t \n \f \r`, by the code point after the backslash. */
 const SIMPLE_ESCAPES: Readonly<Record<number, number>> = { 0x62: 8, 0x74: 9, 0x6e: 10, 0x66: 12, 0x72: 13 };
 
-const isHexDigit = (code: number) => hexDigitCodeValue(code) !== undefined;
 const isIdentifierStart = (code: number) =>
   (code >= 0x41 && code <= 0x5a) || (code >= 0x61 && code <= 0x7a) || code === 0x5f;
 
@@ -113,7 +112,7 @@ export class VariantTokenizer {
     for (;;) {
       const code = this.#nextCode();
       if (this.#isEof) return EOF;
-      if (!isHexDigit(code)) {
+      if (!isHexDigitCode(code)) {
         this.#saved = code;
         return { kind: 'color', value: htmlTokenColor(text) };
       }
@@ -129,7 +128,7 @@ export class VariantTokenizer {
     let value = 0;
     for (let digit = 0; digit < (next === 0x55 ? 6 : 4); digit++) {
       const code = this.#nextCode();
-      if (code === 0 || !isHexDigit(code)) return undefined;
+      if (code === 0 || !isHexDigitCode(code)) return undefined;
       value = (value << 4) | hexDigitCodeValue(code)!;
     }
     return value;

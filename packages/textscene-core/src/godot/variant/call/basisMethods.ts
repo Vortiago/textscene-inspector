@@ -27,26 +27,19 @@ import {
 } from '../../math/vector.js';
 import { anyPerpendicular } from '../construct/rotations.js';
 import { transposeBasis } from '../operators/matrices.js';
-import type { CastArgument } from '../utility/utilityArguments.js';
-import { variant, type Variant } from '../value/variant.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import { valueAt } from '../utility/utilityArguments.js';
+import { bool, real, variant, vector3, type Variant } from '../value/variant.js';
+import { methodPort, portOn, valueOf, type MethodPort } from './methodPort.js';
 
 const f = Math.fround;
 
 const basisOf = (n: BasisComponents): Variant => variant('BASIS', n);
-const vectorOf = (v: Vector3): Variant => variant('VECTOR3', v);
-const real = (value: number): Variant => variant('FLOAT', value);
-const bool = (value: boolean): Variant => variant('BOOL', value);
-const basisAt = (args: readonly CastArgument[], index: number) =>
-  (args[index] as Variant).value as BasisComponents;
-const vectorAt = (args: readonly CastArgument[], index: number) => (args[index] as Variant).value as Vector3;
+const basisAt = valueAt<BasisComponents>;
+const vectorAt = valueAt<Vector3>;
 const vector = ([x, y, z]: readonly number[]): Vector3 => ({ x: x!, y: y!, z: z! });
 const tuple = ({ x, y, z }: Vector3) => [x, y, z] as const;
 
-const port = (
-  parameters: readonly MethodParameter[],
-  body: (n: BasisComponents, args: readonly CastArgument[]) => Variant
-) => methodPort(parameters, (base, args) => body(base.value as BasisComponents, args));
+const port = portOn(valueOf<BasisComponents>);
 
 const rowLength = (n: BasisComponents, row: number) =>
   vector3Length(n[row * 3]!, n[row * 3 + 1]!, n[row * 3 + 2]!);
@@ -108,8 +101,8 @@ export const BASIS_METHODS: Readonly<Record<string, MethodPort>> = {
     return basisOf(basisScale([...n] as MutableBasis, x, y, z));
   }),
   scaled_local: port(['VECTOR3'], (n, args) => basisOf(basisScaledLocal(n, vectorAt(args, 0)))),
-  get_scale: port([], (n) => vectorOf(vector(basisGetScale(n)))),
-  get_euler: port(['EulerOrder'], (n, args) => vectorOf(basisGetEuler(n, args[0] as number))),
+  get_scale: port([], (n) => vector3(vector(basisGetScale(n)))),
+  get_euler: port(['EulerOrder'], (n, args) => vector3(basisGetEuler(n, args[0] as number))),
   tdotx: port(['VECTOR3'], (n, args) => real(columnDot(n, 0, vectorAt(args, 0)))),
   tdoty: port(['VECTOR3'], (n, args) => real(columnDot(n, 1, vectorAt(args, 0)))),
   tdotz: port(['VECTOR3'], (n, args) => real(columnDot(n, 2, vectorAt(args, 0)))),

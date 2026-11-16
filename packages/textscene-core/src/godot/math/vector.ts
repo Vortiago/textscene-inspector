@@ -22,6 +22,7 @@ export interface Vector3 {
 
 /** The components of a `Vector3`, in the order Godot indexes them (`v[0]`, `v[1]`, `v[2]`). */
 export const VECTOR3_AXES = ['x', 'y', 'z'] as const;
+export const VECTOR3_ZERO: Readonly<Vector3> = Object.freeze({ x: 0, y: 0, z: 0 });
 
 /**
  * The floats of one 3D vertex in a flat array, as a `PackedVector3Array` or a line list holds them.

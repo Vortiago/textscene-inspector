@@ -26,6 +26,11 @@ export type CppParameter =
 /** The value a caster gives: a flag, a number, an int64 or uint64 as a bigint, a text, or the Variant. */
 export type CastArgument = boolean | number | bigint | string | Variant;
 
+/** The value of a Variant argument, which a method declares with a Variant type. */
+export const valueAt = <T>(args: readonly CastArgument[], index: number) =>
+  (args[index] as Variant).value as T;
+export const numberAt = (args: readonly CastArgument[], index: number) => args[index] as number;
+
 // GetTypeInfo<T>::VARIANT_TYPE: an enum is an INT, and a Variant parameter takes any type as NIL.
 const CHECKED_TYPE: Readonly<Record<CppParameter, VariantTypeName>> = {
   bool: 'BOOL',

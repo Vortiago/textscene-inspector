@@ -2,7 +2,7 @@ import { lerpf } from '../../math/math.js';
 import { atan2Real } from '../../math/realAtan2.js';
 import { vector2Cross } from '../../math/vector.js';
 import { cosf, sinf, sqrtf } from '../../math/realMath.js';
-import type { Variant } from '../value/variant.js';
+import { real, type Variant } from '../value/variant.js';
 import {
   axis,
   dot,
@@ -11,7 +11,6 @@ import {
   lengthSquared,
   lerped,
   minus,
-  real,
   unitScaled,
 } from './floatVectorMethods.js';
 import type { MethodPort } from './methodPort.js';

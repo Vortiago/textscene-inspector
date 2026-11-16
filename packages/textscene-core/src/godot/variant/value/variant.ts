@@ -123,5 +123,14 @@ export function variant<T extends VariantTypeName>(type: T, value: VariantValues
 
 export const NIL: VariantOf<'NIL'> = Object.freeze(variant('NIL', null));
 
+export const isNumber = (value: Variant): boolean => value.type === 'INT' || value.type === 'FLOAT';
+
+export const bool = (value: boolean): VariantOf<'BOOL'> => variant('BOOL', value);
+export const int = (value: bigint | number): VariantOf<'INT'> => variant('INT', BigInt(value));
+export const real = (value: number): VariantOf<'FLOAT'> => variant('FLOAT', value);
+export const vector2 = (value: Vector2Value): VariantOf<'VECTOR2'> => variant('VECTOR2', value);
+export const vector3 = (value: Vector3Value): VariantOf<'VECTOR3'> => variant('VECTOR3', value);
+export const vector3OrNil = (value: Vector3Value | undefined): Variant => (value ? vector3(value) : NIL);
+
 /** `MAX_RECURSION` (typedefs.h:380): how deep a container walk goes before Godot prints an error. */
 export const MAX_RECURSION = 100;

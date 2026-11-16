@@ -8,11 +8,10 @@ import { decodedAt } from '../marshalls/decodeVariant.js';
 import { variantToBytes } from '../marshalls/encodeVariant.js';
 import { UnportableUtility } from '../utility/unportableUtility.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
-import { NIL, variant, type Variant, type VariantTypeName } from '../value/variant.js';
+import { NIL, int, variant, type Variant, type VariantTypeName } from '../value/variant.js';
 import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
 import { PACKED_BYTE_ARRAY_SHARED_METHODS } from './packedArrayMethods.js';
 
-const int = (value: bigint | number): Variant => variant('INT', BigInt(value));
 const text = (codes: readonly number[]): Variant => variant('STRING', textOf(codes));
 
 const bytesOf = (base: Variant) => base.value as number[];

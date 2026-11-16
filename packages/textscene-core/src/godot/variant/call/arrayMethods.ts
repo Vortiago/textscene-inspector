@@ -14,7 +14,15 @@ import { duplicateVariant } from '../duplicate.js';
 import { evaluateOperator, isOperatorLess } from '../operators/evaluate.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
 import { defaultValue } from '../value/defaultValue.js';
-import { NIL, variant, type CallableValue, type Variant, type VariantOf } from '../value/variant.js';
+import {
+  NIL,
+  bool,
+  int,
+  variant,
+  type CallableValue,
+  type Variant,
+  type VariantOf,
+} from '../value/variant.js';
 import { variantHash } from '../variantHash.js';
 import { VARIANT_TYPE, variantTypeOf } from '../variantType.js';
 import { representableLength } from './arrayLength.js';
@@ -23,9 +31,6 @@ import { methodPort, type MethodContext, type MethodParameter, type MethodPort }
 import { isReadOnly, makeReadOnly, unlessReadOnly } from './readOnlyContainers.js';
 
 type ArrayVariant = VariantOf<'ARRAY'>;
-
-const int = (value: bigint | number): Variant => variant('INT', BigInt(value));
-const bool = (value: boolean): Variant => variant('BOOL', value);
 
 const elementsOf = (array: ArrayVariant) => array.value as Variant[];
 

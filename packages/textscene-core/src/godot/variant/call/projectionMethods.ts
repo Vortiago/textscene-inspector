@@ -8,8 +8,8 @@ import type { Rect2 } from '../../math/rect2.js';
 import type { Vector2 } from '../../math/vector.js';
 import { doubleToInt32 } from '../cInteger.js';
 import { multiplyProjection } from '../operators/matrices.js';
-import type { CastArgument } from '../utility/utilityArguments.js';
-import { variant, type ProjectionValue, type Variant } from '../value/variant.js';
+import { numberAt, valueAt, type CastArgument } from '../utility/utilityArguments.js';
+import { real, variant, type ProjectionValue, type Variant } from '../value/variant.js';
 import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
 
 const f = Math.fround;
@@ -29,9 +29,6 @@ const valueOf = (m: readonly number[]): ProjectionValue =>
   })) as unknown as ProjectionValue;
 
 const projectionOf = (m: readonly number[]): Variant => variant('PROJECTION', valueOf(m));
-const real = (value: number): Variant => variant('FLOAT', value);
-const numberAt = (args: readonly CastArgument[], index: number) => args[index] as number;
-const valueAt = <T>(args: readonly CastArgument[], index: number) => (args[index] as Variant).value as T;
 
 const port = (
   parameters: readonly MethodParameter[],

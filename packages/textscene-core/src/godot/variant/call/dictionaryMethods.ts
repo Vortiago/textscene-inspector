@@ -13,6 +13,8 @@ import { isOperatorLess } from '../operators/evaluate.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
 import {
   NIL,
+  bool,
+  int,
   variant,
   type ContainerType,
   type DictionaryEntry,
@@ -24,9 +26,6 @@ import { methodPort, type MethodParameter, type MethodPort } from './methodPort.
 import { isReadOnly, makeReadOnly, unlessReadOnly } from './readOnlyContainers.js';
 
 type DictionaryVariant = VariantOf<'DICTIONARY'>;
-
-const int = (value: bigint | number): Variant => variant('INT', BigInt(value));
-const bool = (value: boolean): Variant => variant('BOOL', value);
 
 const entriesOf = (dictionary: DictionaryVariant) => dictionary.value as DictionaryEntry[];
 

@@ -1,18 +1,13 @@
 import { hashOneUint64, stringHash } from '../../math/hashFuncs.js';
 import type { NodePathParts } from '../../string/nodePathParts.js';
-import type { CastArgument } from '../utility/utilityArguments.js';
-import { variant, type Variant } from '../value/variant.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import { int, variant, type Variant } from '../value/variant.js';
+import { portOn, valueOf, type MethodPort } from './methodPort.js';
 
-const int = (value: bigint | number): Variant => variant('INT', BigInt(value));
 const name = (value: string): Variant => variant('STRING_NAME', value);
 const nodePath = (absolute: boolean, names: readonly string[], subnames: readonly string[]): Variant =>
   variant('NODE_PATH', { absolute, names, subnames });
 
-const port = (
-  parameters: readonly MethodParameter[],
-  body: (path: NodePathParts, args: readonly CastArgument[]) => Variant
-) => methodPort(parameters, (base, args) => body(base.value as NodePathParts, args));
+const port = portOn(valueOf<NodePathParts>);
 
 /** A NodePath without `data`: both constructors leave a relative path with no names and no subnames empty. */
 const isEmpty = ({ absolute, names, subnames }: NodePathParts) =>

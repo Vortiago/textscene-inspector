@@ -1,6 +1,5 @@
-import { CMP_EPSILON } from '../../math/math.js';
 import { normalizedPlane, planeDistanceTo, type Plane } from '../../math/plane.js';
-import { isEqualApproxf, isZeroApproxf } from '../../math/realMath.js';
+import { CMP_EPSILON_FLOAT, isEqualApproxf, isZeroApproxf } from '../../math/realMath.js';
 import {
   vector3Add,
   vector3Cross,
@@ -10,12 +9,11 @@ import {
   vector3Sub,
   type Vector3,
 } from '../../math/vector.js';
-import type { CastArgument } from '../utility/utilityArguments.js';
-import { NIL, variant, type Variant } from '../value/variant.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import { valueAt } from '../utility/utilityArguments.js';
+import { bool, variant, vector3, vector3OrNil, type Variant } from '../value/variant.js';
+import { portOn, valueOf, type MethodPort } from './methodPort.js';
 
 const f = Math.fround;
-const CMP_EPSILON_FLOAT = f(CMP_EPSILON);
 
 const tuple = ({ x, y, z }: Vector3) => [x, y, z] as const;
 const dot = (a: Vector3, b: Vector3) => vector3Dot(tuple(a), tuple(b));
@@ -26,15 +24,10 @@ const cross = (a: Vector3, b: Vector3): Vector3 => {
 const divided = (v: Vector3, by: number) => vector3Div(v, { x: by, y: by, z: by });
 
 const planeOf = (plane: Plane): Variant => variant('PLANE', plane);
-const point = (v: Vector3): Variant => variant('VECTOR3', v);
-const bool = (value: boolean): Variant => variant('BOOL', value);
-const planeAt = (args: readonly CastArgument[], index: number) => (args[index] as Variant).value as Plane;
-const pointAt = (args: readonly CastArgument[], index: number) => (args[index] as Variant).value as Vector3;
+const planeAt = valueAt<Plane>;
+const pointAt = valueAt<Vector3>;
 
-const port = (
-  parameters: readonly MethodParameter[],
-  body: (p: Plane, args: readonly CastArgument[]) => Variant
-) => methodPort(parameters, (base, args) => body(base.value as Plane, args));
+const port = portOn(valueOf<Plane>);
 
 const isFiniteVector = ({ x, y, z }: Vector3) =>
   Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z);
@@ -70,11 +63,10 @@ function intersectsSegment({ normal, d }: Plane, begin: Vector3, end: Vector3): 
 }
 
 // plane.cpp:156: a miss gives a null Variant.
-const pointOrNil = (found: Vector3 | undefined) => (found ? point(found) : NIL);
 
 export const PLANE_METHODS: Readonly<Record<string, MethodPort>> = {
   normalized: port([], (p) => planeOf(normalizedPlane(p))),
-  get_center: port([], (p) => point(vector3Scaled(p.normal, p.d))),
+  get_center: port([], (p) => vector3(vector3Scaled(p.normal, p.d))),
   is_equal_approx: port(['PLANE'], (p, args) => {
     const other = planeAt(args, 0);
     const pairs: [number, number][] = [
@@ -93,15 +85,15 @@ export const PLANE_METHODS: Readonly<Record<string, MethodPort>> = {
   ),
   project: port(['VECTOR3'], (p, args) => {
     const to = pointAt(args, 0);
-    return point(vector3Sub(to, vector3Scaled(p.normal, planeDistanceTo(p, to))));
+    return vector3(vector3Sub(to, vector3Scaled(p.normal, planeDistanceTo(p, to))));
   }),
   intersect_3: port(['PLANE', 'PLANE'], (p, args) =>
-    pointOrNil(intersect3(p, planeAt(args, 0), planeAt(args, 1)))
+    vector3OrNil(intersect3(p, planeAt(args, 0), planeAt(args, 1)))
   ),
   intersects_ray: port(['VECTOR3', 'VECTOR3'], (p, args) =>
-    pointOrNil(intersectsRay(p, pointAt(args, 0), pointAt(args, 1)))
+    vector3OrNil(intersectsRay(p, pointAt(args, 0), pointAt(args, 1)))
   ),
   intersects_segment: port(['VECTOR3', 'VECTOR3'], (p, args) =>
-    pointOrNil(intersectsSegment(p, pointAt(args, 0), pointAt(args, 1)))
+    vector3OrNil(intersectsSegment(p, pointAt(args, 0), pointAt(args, 1)))
   ),
 };

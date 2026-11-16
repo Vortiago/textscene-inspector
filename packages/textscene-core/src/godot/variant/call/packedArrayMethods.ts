@@ -8,7 +8,7 @@ import { utf8Bytes } from '../../string/ustring/encodings.js';
 import { bisect } from '../../templates/bisect.js';
 import { sortArray, type Less } from '../../templates/sortArray.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
-import { NIL, variant, type Variant, type VariantTypeName } from '../value/variant.js';
+import { NIL, bool, int, real, variant, type Variant, type VariantTypeName } from '../value/variant.js';
 import { representableLength } from './arrayLength.js';
 import { ERROR_CODE } from './errorCode.js';
 import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
@@ -29,8 +29,6 @@ interface PackedElement<T> {
   readonly bytes?: (elements: readonly T[]) => number[];
 }
 
-const int = (value: bigint | number): Variant => variant('INT', BigInt(value));
-const bool = (value: boolean): Variant => variant('BOOL', value);
 const errorCode = (code: bigint): Variant => variant('INT', code);
 
 const bytesOf = (view: ArrayBufferView) => [...new Uint8Array(view.buffer, view.byteOffset, view.byteLength)];
@@ -66,12 +64,10 @@ const INT64_ELEMENT: PackedElement<bigint> = {
   bytes: (elements) => bytesOf(BigInt64Array.from(elements)),
 };
 
-const float = (value: number): Variant => variant('FLOAT', value);
-
 const FLOAT32_ELEMENT: PackedElement<number> = {
   parameter: 'float',
   stored: (argument) => argument as number,
-  read: float,
+  read: real,
   isEqual: isSameNumber,
   isLess: isNumberLess,
   zero: 0,

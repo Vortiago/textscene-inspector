@@ -4,7 +4,7 @@ import { vector3Cross } from '../../math/vector.js';
 import { clamp, lerpf } from '../../math/math.js';
 import { atan2Real } from '../../math/realAtan2.js';
 import { sqrtf } from '../../math/realMath.js';
-import { variant, type Variant } from '../value/variant.js';
+import { real, variant, type Variant } from '../value/variant.js';
 import {
   axis,
   dot,
@@ -14,7 +14,6 @@ import {
   lengthSquared,
   lerped,
   normalized,
-  real,
   scaled,
 } from './floatVectorMethods.js';
 import { methodPort, type MethodPort } from './methodPort.js';

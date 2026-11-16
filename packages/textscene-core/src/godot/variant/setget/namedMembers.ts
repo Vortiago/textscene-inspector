@@ -3,14 +3,12 @@ import { colorHuef, colorSaturationf, colorValue } from '../../math/color.js';
 import { round } from '../../math/math.js';
 import { srgbToOkhsl, type Okhsl } from '../../math/okHsl.js';
 import { basisOfTransform3D } from '../../math/transform3d.js';
-import { variant, type Variant, type VariantOf, type VariantTypeName } from '../value/variant.js';
+import { int, real, variant, type Variant, type VariantOf, type VariantTypeName } from '../value/variant.js';
 
 type Getter<T extends VariantTypeName> = (value: VariantOf<T>['value']) => Variant;
 type MemberTable = { readonly [T in VariantTypeName]?: Readonly<Record<string, Getter<T>>> };
 
 const f = Math.fround;
-const real = (value: number) => variant('FLOAT', value);
-const int = (value: number) => variant('INT', BigInt(value));
 const vector2 = (x: number, y: number) => variant('VECTOR2', { x, y });
 const vector3 = (x: number, y: number, z: number) => variant('VECTOR3', { x, y, z });
 

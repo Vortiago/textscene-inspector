@@ -3,7 +3,7 @@ import { cMax, cMin } from '../../math/math.js';
 import { isEqualApproxf } from '../../math/realMath.js';
 import { Side } from '../../math/side.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
-import { variant, type Variant } from '../value/variant.js';
+import { bool, variant, type Variant } from '../value/variant.js';
 import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
 import { componentsOf, vectorOf, type Components } from './vectorPorts.js';
 
@@ -38,8 +38,6 @@ const INT_RECT: RectArithmetic = {
   // Math::abs of an int32 wraps the lowest value back to itself, as std::abs does on x86-64.
   absolute: (a) => (a > 0 ? a : -a | 0),
 };
-
-const bool = (value: boolean): Variant => variant('BOOL', value);
 
 function rectMethods(arithmetic: RectArithmetic): Readonly<Record<string, MethodPort>> {
   const { type, point, scalar, add, subtract, twice, absolute } = arithmetic;

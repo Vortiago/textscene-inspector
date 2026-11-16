@@ -80,16 +80,14 @@ import { floatRanges, join, rsplit, split } from '../../string/ustring/split.js'
 import { isValidFloat, isValidHexNumber, isValidInt } from '../../string/ustring/validity.js';
 import { wildcardMatch, wildcardMatchNoCase } from '../../string/wildcard.js';
 import { xmlUnescape } from '../../string/xmlUnescape.js';
-import type { CastArgument } from '../utility/utilityArguments.js';
+import { numberAt, type CastArgument } from '../utility/utilityArguments.js';
 import { UnportableUtility } from '../utility/unportableUtility.js';
-import { variant, type Variant } from '../value/variant.js';
+import { bool, int, variant, type Variant } from '../value/variant.js';
 import { isHtmlValid } from './colorMethods.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import { methodPort, staticPort, type MethodParameter, type MethodPort } from './methodPort.js';
 
 const text = (value: string): Variant => variant('STRING', value);
 const textOfCodes = (codes: readonly number[]): Variant => text(textOf(codes));
-const int = (value: bigint | number): Variant => variant('INT', BigInt(value));
-const bool = (value: boolean): Variant => variant('BOOL', value);
 const bytes = (values: readonly number[] | Uint8Array): Variant =>
   variant('PACKED_BYTE_ARRAY', Array.from(values));
 const texts = (pieces: readonly (readonly number[])[]): Variant =>
@@ -100,7 +98,6 @@ const texts = (pieces: readonly (readonly number[])[]): Variant =>
 
 const stringAt = (args: readonly CastArgument[], index: number) => args[index] as string;
 const codesAt = (args: readonly CastArgument[], index: number) => codesOf(stringAt(args, index));
-const numberAt = (args: readonly CastArgument[], index: number) => args[index] as number;
 const flagAt = (args: readonly CastArgument[], index: number) => args[index] as boolean;
 
 /** A StringName runs the String method on `String(*p_self)` (variant_call.cpp:1971). */
@@ -112,10 +109,6 @@ const onCodes = (
   parameters: readonly MethodParameter[],
   body: (self: number[], args: readonly CastArgument[]) => Variant
 ) => onText(parameters, (self, args) => body(codesOf(self), args));
-const staticPort = (
-  parameters: readonly MethodParameter[],
-  body: (args: readonly CastArgument[]) => Variant
-) => methodPort(parameters, (_base, args) => body(args));
 
 const compared = (compare: (a: string, b: string) => number) =>
   onText(['String'], (self, args) => int(compare(self, stringAt(args, 0))));

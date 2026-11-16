@@ -1,7 +1,7 @@
 import { stringNum } from '../string/stringNumber.js';
 import { doubleToInt32, doubleToInt64, wrapInt32 } from './cInteger.js';
 import { stringify } from './stringify.js';
-import type { Variant } from './value/variant.js';
+import { isNumber, type Variant } from './value/variant.js';
 
 /** The formatted text, or Godot's error text when `isError`. */
 export interface Formatted {
@@ -24,7 +24,6 @@ const VECTOR_COUNTS: Readonly<Partial<Record<Variant['type'], number>>> = {
   VECTOR4I: 4,
 };
 
-const isNumber = (value: Variant) => value.type === 'INT' || value.type === 'FLOAT';
 const asInt64 = (value: Variant) =>
   value.type === 'INT' ? value.value : doubleToInt64(value.value as number);
 const asDouble = (value: Variant) => Number(value.value);

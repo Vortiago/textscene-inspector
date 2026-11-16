@@ -1,8 +1,6 @@
 import { basisColumn } from '../../math/basis.js';
-import { variant, type Variant, type Vector3Value, type Vector4Value } from '../value/variant.js';
+import { int, real, variant, type Variant, type Vector3Value, type Vector4Value } from '../value/variant.js';
 
-const real = (value: number) => variant('FLOAT', value);
-const int = (value: number | bigint) => variant('INT', BigInt(value));
 const xyz = ({ x, y, z }: Vector3Value) => [x, y, z];
 const xyzw = ({ x, y, z, w }: Vector4Value) => [x, y, z, w];
 
