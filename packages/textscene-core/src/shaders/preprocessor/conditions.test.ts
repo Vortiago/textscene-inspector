@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { GlobalRandom } from '../../godot/variant/utility/globalRandom.js';
+import { utilityHost } from '../../godot/variant/utility/utilityHost.js';
 import { isConditionTrue, type ConditionScope } from './conditions.js';
 import { Defines } from './macros.js';
 
 const DEFINES = new Defines([['A', { body: '2', arguments: [], isBuiltIn: false }]]);
-const scope = (): ConditionScope => ({ defines: DEFINES, random: new GlobalRandom() });
+const scope = (): ConditionScope => ({ defines: DEFINES, host: utilityHost() });
 
 function reasonOf(run: () => unknown): string {
   try {

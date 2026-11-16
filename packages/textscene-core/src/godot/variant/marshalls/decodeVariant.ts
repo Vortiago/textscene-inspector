@@ -1,8 +1,10 @@
+import { canInstantiate } from '../../classdb/classBaseTypes.js';
 import { defaultValue } from '../value/defaultValue.js';
 import type { NodePathParts } from '../../string/nodePathParts.js';
 import { storedReal } from '../../math/real.js';
 import { setEntry } from '../compare.js';
 import { typedArray, typedDictionary, validatedElement } from '../construct/typedContainer.js';
+import { makeObject } from '../objects/makeObject.js';
 import { UnportableUtility } from '../utility/unportableUtility.js';
 import {
   NIL,
@@ -189,13 +191,30 @@ class VariantDecoder {
 
   #object(header: number): Variant {
     if ((header & FLAG_OBJECT_AS_ID) !== 0) {
-      if (this.#uint64() === 0n) return variant('OBJECT', null);
-      return fail('an EncodedObjectAsID object');
+      const id = this.#uint64();
+      if (id === 0n) return variant('OBJECT', null);
+      return makeObject(`bytes_to_var of the EncodedObjectAsID of object ${id}`);
     }
     if (!this.allowObjects) fail('objects are not allowed');
     const className = this.#string();
     if (className === '') return variant('OBJECT', null);
-    return fail(`an object of class ${className}`);
+    if (!canInstantiate(className)) fail(`class ${className} cannot be instantiated`);
+    this.#objectProperties();
+    return makeObject(`bytes_to_var_with_objects of an object of class ${className}`);
+  }
+
+  // marshalls.cpp:740: the properties decode before the object is used, so their faults still show.
+  #objectProperties(): void {
+    const count = this.#int32();
+    for (let index = 0; index < count; index++) {
+      const name = this.#string();
+      const value = this.#nested();
+      if (name !== 'script' || value.type === 'NIL') continue;
+      if (value.type !== 'STRING')
+        fail('Invalid value for "script" property, expected script path as String.');
+      const path = (value as VariantOf<'STRING'>).value;
+      if (!path.startsWith('res://')) fail(`Invalid script path "${path}".`);
+    }
   }
 
   // A Signal's object id names an object of the running editor, as instance_from_id's id does.

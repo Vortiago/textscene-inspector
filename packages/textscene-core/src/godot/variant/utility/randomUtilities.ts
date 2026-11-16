@@ -12,20 +12,20 @@ function randFromSeed(seed: bigint): bigint[] {
 }
 
 export const RANDOM_UTILITIES: Readonly<Record<string, TypedFunction>> = {
-  randomize: (_args, random) => {
+  randomize: (_args, { random }) => {
     random.randomize();
     return NIL;
   },
-  randi: (_args, random) => variant('INT', BigInt(random.draw().rand())),
-  randf: (_args, random) =>
+  randi: (_args, { random }) => variant('INT', BigInt(random.draw().rand())),
+  randf: (_args, { random }) =>
     variant('FLOAT', Math.fround(Math.fround(random.draw().rand()) / UINT32_MAX_FLOAT)),
-  randi_range: ([from, to], random) =>
+  randi_range: ([from, to], { random }) =>
     variant('INT', BigInt(random.draw().randomInt(wrapInt32(from as bigint), wrapInt32(to as bigint)))),
-  randf_range: ([from, to], random) =>
+  randf_range: ([from, to], { random }) =>
     variant('FLOAT', random.draw().randomDouble(from as number, to as number)),
-  randfn: ([mean, deviation], random) =>
+  randfn: ([mean, deviation], { random }) =>
     variant('FLOAT', random.draw().randfn(mean as number, deviation as number)),
-  seed: ([seed], random) => {
+  seed: ([seed], { random }) => {
     random.seed(BigInt.asUintN(64, seed as bigint));
     return NIL;
   },

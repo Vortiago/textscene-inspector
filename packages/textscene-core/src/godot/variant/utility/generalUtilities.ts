@@ -9,6 +9,8 @@ import { textToVariant } from '../reader/variantReader.js';
 import { variantToText } from '../variantWriter.js';
 import { NIL, variant, type Variant, type VariantOf, type VariantTypeName } from '../value/variant.js';
 import { VARIANT_TYPE, variantTypeName } from '../variantType.js';
+import { makeObject } from '../objects/makeObject.js';
+import { invalidArgument } from './callError.js';
 import { UnportableUtility } from './unportableUtility.js';
 import type { TypedFunction, VariantFunction } from './utilityFunction.js';
 
@@ -50,7 +52,7 @@ export const GENERAL_TYPED: Readonly<Record<string, TypedFunction>> = {
   },
   rid_from_int64: ([id]) => variant('RID', id as bigint),
   var_to_str: ([value]) => text(variantToText(value as Variant)),
-  str_to_var: ([value]) => textToVariant(value as string),
+  str_to_var: ([value], { hasFile }) => textToVariant(value as string, hasFile),
   var_to_bytes: ([value]) => variant('PACKED_BYTE_ARRAY', variantToBytes(value as Variant, false)),
   var_to_bytes_with_objects: ([value]) =>
     variant('PACKED_BYTE_ARRAY', variantToBytes(value as Variant, true)),
@@ -78,4 +80,12 @@ export const GENERAL_VARARG: Readonly<Record<string, VariantFunction>> = {
   print_verbose: printed,
   push_error: printed,
   push_warning: printed,
+};
+
+/** The FUNCBINDVR functions of this group: each reads its Variants and sets its own call error. */
+export const GENERAL_VARIANT: Readonly<Record<string, VariantFunction>> = {
+  weakref: ([target]) =>
+    target!.type === 'NIL' || target!.type === 'OBJECT'
+      ? makeObject('weakref(...)')
+      : { value: NIL, error: invalidArgument(0, 'OBJECT') },
 };

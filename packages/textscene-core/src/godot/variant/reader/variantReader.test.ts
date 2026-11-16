@@ -1,11 +1,62 @@
 import { describe, expect, it } from 'vitest';
 import { variantToText } from '../variantWriter';
+import { UnsupportedObject } from '../objects/makeObject';
 import { textToVariant } from './variantReader';
 
 const read = (text: string) => variantToText(textToVariant(text));
 
 // Each value is what Godot 4.6.3's str_to_var returns for the text, written by var_to_str.
 describe('textToVariant', () => {
+  it('stops on an object of a class Godot can make, after its properties parse', () => {
+    expect(() => textToVariant('Object(Node,"name":"a")')).toThrow(UnsupportedObject);
+  });
+
+  it('gives null for an object whose properties do not parse', () => {
+    expect([read('Object(Node)'), read('Object(Node,1:2)'), read('Object(CanvasItem,)')]).toEqual([
+      'null',
+      'null',
+      'null',
+    ]);
+  });
+
+  it('gives null for a Resource that names no file', () => {
+    expect(read('Resource("")')).toBe('null');
+  });
+
+  it('gives null for a Resource whose file the project does not hold', () => {
+    expect(variantToText(textToVariant('Resource("res://a.tres")', (path) => path === 'res://b.tres'))).toBe(
+      'null'
+    );
+  });
+
+  it('stops on a Resource whose file the project holds, by its path relative to res://', () => {
+    expect(() => textToVariant('Resource("./a.tres")', (path) => path === 'res://a.tres')).toThrow(
+      UnsupportedObject
+    );
+  });
+
+  it('stops on a Resource of a uid, which the project uid cache decides', () => {
+    expect(() => textToVariant('Resource("uid://abc")')).toThrow(
+      expect.objectContaining({ owner: '#1815' }) as Error
+    );
+  });
+
+  it('stops as an object on a uid beside a path the project holds, as the path loads either way', () => {
+    expect(() =>
+      textToVariant('Resource("uid://abc", "res://a.tres")', (path) => path === 'res://a.tres')
+    ).toThrow(expect.objectContaining({ owner: '#1953' }) as Error);
+  });
+
+  it('takes a second argument with no string value as the path, by the token text', () => {
+    expect(() => textToVariant('Resource("", 1)', (path) => path === 'res://1')).toThrow(UnsupportedObject);
+  });
+
+  it('gives null for a Resource the project holds with no closing parenthesis', () => {
+    expect(
+      variantToText(textToVariant('Resource("res://a.tres" 5)', (path) => path === 'res://a.tres'))
+    ).toBe('null');
+  });
+
   it('reads a constructor with float32 components', () => {
     expect(read('Vector2(0.1, inf_neg)')).toBe('Vector2(0.1, inf_neg)');
   });
