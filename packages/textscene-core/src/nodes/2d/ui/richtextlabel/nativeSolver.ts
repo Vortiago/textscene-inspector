@@ -32,7 +32,7 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { shapedLineHeightPx, type LineExtentPx } from '../../../../r3f/controls/native/text/lineExtent';
 import { justifyParagraphs } from '../../../../r3f/controls/native/text/textJustify';
-import { faceOfStyle, resolveRichTextFaces, type RichTextFaces } from './styleFaces';
+import { faceOfStyle, resolveRichTextFaces, richTextStylesInUse, type RichTextFaces } from './styleFaces';
 import {
   resolveTextOutline,
   resolveTextTheme,
@@ -359,7 +359,7 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // `tentativeRect` is `undefined` on the first pass, as in Godot's pre-resize state.
   // The table's empty `RichTextLabel/normal` StyleBox makes the text rect the control's.
   const wrapWidthPx = wraps ? availableWidthPx : undefined;
-  const layout = shapeRichText(runs, resolveRichTextFaces(n, runs), {
+  const layout = shapeRichText(runs, resolveRichTextFaces(n, richTextStylesInUse(runs)), {
     fontSizePx,
     boxWidthPx: wrapWidthPx ?? 0,
     autowrapMode: wrapWidthPx === undefined ? AutowrapMode.AUTOWRAP_OFF : autowrapMode,
@@ -560,6 +560,11 @@ export function styledTextRuns(
     });
   }
   return styled;
+}
+
+/** Whether the runs change with the box width: an `[img]` or `[hr]` sized in percent (`_get_image_size`). */
+export function runsReadBoxWidth(runs: readonly StyledTextRun[]): boolean {
+  return runs.some((run) => run.image && (run.image.spec.widthInPercent || run.image.spec.heightInPercent));
 }
 
 /** The justification flags and tab stops of the paragraph the tags open on. */
@@ -823,7 +828,7 @@ function richTextLineMetrics(
   styledRuns: readonly StyledTextRun[],
   layout: TextLayoutResult
 ): RichTextLineMetrics[] {
-  return lineMetricsOf(attributeRunsToLines(styledRuns, layout), styledRuns, layout);
+  return lineMetricsOf(runsByLine(styledRuns)(layout), styledRuns, layout);
 }
 
 /** The height of the whole shaped text, px: what the scrollbar and `fit_content` compare against. */
@@ -936,6 +941,13 @@ function withGlyphs(segment: RunLineSegment, revealed: ReadonlySet<GlyphPlacemen
   if (glyphs.length === 0) return null;
   return { ...segment, glyphs, text: glyphs.map((glyph) => glyph.char).join('') };
 }
+
+/** Each layout's split into style runs: a label with no FILL paragraph reads one for height and placement. */
+const runsByLine = perObject((styledRuns: readonly StyledTextRun[]) =>
+  perObject((layout: TextLayoutResult): readonly RunLineSegment[][] =>
+    attributeRunsToLines(styledRuns, layout)
+  )
+);
 
 /**
  * Splits each shaped line back into its style runs by each glyph's `sourceIndex`. `shapeText`
@@ -1112,7 +1124,7 @@ export function layoutRichTextRuns(
   const layout = hasFilledParagraph
     ? fitFilledParagraphs(unfittedLayout, isFilled, flagsOf, boxWidthPx)
     : unfittedLayout;
-  const perLine = attributeRunsToLines(styledRuns, layout);
+  const perLine = runsByLine(styledRuns)(layout);
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);
 
   const { vbeginPx, vsepPx } = richTextVerticalOffsets(

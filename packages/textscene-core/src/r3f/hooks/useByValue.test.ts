@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useByValue } from './useByValue';
 
@@ -25,5 +25,18 @@ describe('useByValue', () => {
     rerender({ value: changed });
 
     expect(result.current).toBe(changed);
+  });
+
+  it('compares a value once, not again on each render that passes it', () => {
+    const isSame = vi.fn(sameSum);
+    const { rerender } = renderHook(({ value }) => useByValue(value, isSame), {
+      initialProps: { value: [1, 2] },
+    });
+    const equal = [2, 1];
+
+    rerender({ value: equal });
+    rerender({ value: equal });
+
+    expect(isSame).toHaveBeenCalledTimes(1);
   });
 });
