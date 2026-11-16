@@ -1,14 +1,14 @@
-import { basisFromQuaternion, basisGetQuaternion, type BasisComponents } from '../../math/basis.js';
+import type { BasisComponents } from '../../math/basis.js';
 import { wrapf, wrapi } from '../../math/doubleMath.js';
 import { lerp, lerpf, round, sign, snapped } from '../../math/math.js';
 import { quaternionSlerp, type Quaternion } from '../../math/quaternion.js';
 import { storedReal as f } from '../../math/real.js';
 import { transform2DInterpolateWith } from '../../math/transform2d.js';
 import { interpolateTransform3D } from '../../math/transform3d.js';
-import { vector3Length } from '../../math/vector.js';
 import { doubleToInt32, doubleToInt64, wrapInt32 } from '../cInteger.js';
 import { booleanize } from '../compare.js';
 import { mapComponents, toDouble, type Components } from '../construct/variantCast.js';
+import { basisSlerp } from '../call/basisMethods.js';
 import { evaluateOperator } from '../operators/evaluate.js';
 import { NIL, variant, type Variant, type VariantTypeName } from '../value/variant.js';
 import { invalidArgument, type UtilityResult } from './callError.js';
@@ -82,20 +82,6 @@ const snapVariant: VariantFunction = ([x, step]) => {
   const snappedVector = pairComponents(x!.value, step!.value, (a, b) => component(snapped(a, b)));
   return done(made(step!.type, snappedVector));
 };
-
-const rowLength = (n: BasisComponents, row: number) =>
-  vector3Length(n[row * 3]!, n[row * 3 + 1]!, n[row * 3 + 2]!);
-
-// `Basis::slerp` (basis.cpp:910): the rotations slerped, then each row scaled by its lerped length.
-function basisSlerp(from: BasisComponents, to: BasisComponents, weight: number): BasisComponents {
-  const rotation = basisFromQuaternion(
-    quaternionSlerp(basisGetQuaternion(from), basisGetQuaternion(to), weight)
-  );
-  const scales = [0, 1, 2].map((row) => lerpf(rowLength(from, row), rowLength(to, row), weight));
-  return rotation.map((component, index) =>
-    f(component * scales[Math.floor(index / 3)]!)
-  ) as unknown as BasisComponents;
-}
 
 // The weight of a type whose `lerp` takes a real_t or a float narrows to float first.
 function lerpOf(from: Variant, to: Variant, weight: number): Variant {

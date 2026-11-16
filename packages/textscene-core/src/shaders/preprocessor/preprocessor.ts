@@ -51,7 +51,6 @@ interface State {
   readonly includes: Set<string>;
   // Godot keeps hashes of the open texts, so two files of one text count as a cycle.
   readonly openTexts: string[];
-  includeDepth: number;
   currentFile: string;
   isDisabled: boolean;
   readonly readInclude: (path: string) => ShaderInclude | undefined;
@@ -74,7 +73,6 @@ export function preprocess(code: string, options: PreprocessOptions = {}): strin
     conditionDepth: 0,
     includes: new Set(),
     openTexts: [],
-    includeDepth: 0,
     currentFile: options.file ?? '',
     isDisabled: false,
     readInclude,
@@ -334,8 +332,7 @@ class FilePreprocessor {
 
   private includedText(include: ShaderInclude, line: number): string {
     const { state } = this;
-    state.includeDepth += 1;
-    if (state.includeDepth > INCLUDE_DEPTH_AT_MOST)
+    if (state.openTexts.length > INCLUDE_DEPTH_AT_MOST)
       throw new PreprocessorError('Shader max include depth exceeded.', line);
     const outerFile = state.currentFile;
     const outerDepth = state.conditionDepth;
@@ -344,7 +341,6 @@ class FilePreprocessor {
     const text = new FilePreprocessor(state, include.code).run();
     state.currentFile = outerFile;
     state.conditionDepth = outerDepth;
-    state.includeDepth -= 1;
     return text;
   }
 }

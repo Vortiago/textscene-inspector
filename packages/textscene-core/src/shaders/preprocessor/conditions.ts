@@ -1,12 +1,8 @@
-import { runExpression, UnportedExpression } from '../../godot/expression/execute.js';
-import { UnrepresentableArray } from '../../godot/variant/call/arrayLength.js';
-import { UnportedMethod } from '../../godot/variant/call/unportedMethod.js';
+import { runExpression } from '../../godot/expression/execute.js';
+import { NotPortable } from '../../godot/notPortable.js';
 import { GodotCrash } from '../../godot/variant/cInteger.js';
 import { booleanize } from '../../godot/variant/compare.js';
 import type { UtilityHost } from '../../godot/variant/utility/utilityHost.js';
-import { UnsupportedObject } from '../../godot/variant/objects/makeObject.js';
-import { UnrepresentableText } from '../../godot/string/ustring/codes.js';
-import { UnportableUtility } from '../../godot/variant/utility/unportableUtility.js';
 import { UnportableComparison } from '../../godot/variant/operators/ordering.js';
 import { instruction, notTranspiled } from '../language/instructions.js';
 import { ShadingLanguageError, type SourcePosition } from '../language/shadingLanguageError.js';
@@ -45,16 +41,12 @@ export function conditionRefusal(
   position: SourcePosition
 ): unknown {
   const row = instruction(`#${name}`)!;
-  if (
-    error instanceof UnportedExpression ||
-    error instanceof UnportedMethod ||
-    error instanceof UnportableUtility ||
-    error instanceof UnrepresentableText ||
-    error instanceof UnrepresentableArray
-  )
-    return notTranspiled(row, position, `${directive}: ${error.message}`);
-  if (error instanceof UnsupportedObject)
-    return notTranspiled({ ...row, owner: error.owner }, position, `${directive}: ${error.message}`);
+  if (error instanceof NotPortable)
+    return notTranspiled(
+      { ...row, ...(error.owner && { owner: error.owner }) },
+      position,
+      `${directive}: ${error.message}`
+    );
   if (error instanceof UnportableComparison) return new ShadingLanguageError(error.message, position);
   if (error instanceof GodotCrash)
     return new ShadingLanguageError(`Godot crashes on ${directive}: ${error.message}`, position);

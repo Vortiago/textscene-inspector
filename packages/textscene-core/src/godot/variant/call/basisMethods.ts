@@ -47,7 +47,8 @@ const rowLength = (n: BasisComponents, row: number) =>
 const columnDot = (n: BasisComponents, column: number, v: Vector3) =>
   vector3DotComponents(n[column]!, n[column + 3]!, n[column + 6]!, v.x, v.y, v.z);
 
-function slerp(n: BasisComponents, to: BasisComponents, weight: number): BasisComponents {
+/** `Basis::slerp` (basis.cpp:910): the rotations slerped, then each row scaled by its lerped length. */
+export function basisSlerp(n: BasisComponents, to: BasisComponents, weight: number): BasisComponents {
   const turned = basisFromQuaternion(quaternionSlerp(basisGetQuaternion(n), basisGetQuaternion(to), weight));
   const [x, y, z] = [0, 1, 2].map((row) => lerpf(rowLength(n, row), rowLength(to, row), weight));
   return basisScale([...turned] as MutableBasis, x!, y!, z!);
@@ -106,7 +107,7 @@ export const BASIS_METHODS: Readonly<Record<string, MethodPort>> = {
   tdotx: port(['VECTOR3'], (n, args) => real(columnDot(n, 0, vectorAt(args, 0)))),
   tdoty: port(['VECTOR3'], (n, args) => real(columnDot(n, 1, vectorAt(args, 0)))),
   tdotz: port(['VECTOR3'], (n, args) => real(columnDot(n, 2, vectorAt(args, 0)))),
-  slerp: port(['BASIS', 'float'], (n, args) => basisOf(slerp(n, basisAt(args, 0), args[1] as number))),
+  slerp: port(['BASIS', 'float'], (n, args) => basisOf(basisSlerp(n, basisAt(args, 0), args[1] as number))),
   is_conformal: port([], (n) => bool(isConformal(n))),
   is_equal_approx: port(['BASIS'], (n, args) => {
     const other = basisAt(args, 0);

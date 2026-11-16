@@ -9,9 +9,10 @@ import { utilityHost, type UtilityHost } from '../variant/utility/utilityHost.js
 import { NIL, variant, type DictionaryEntry, type Variant } from '../variant/value/variant.js';
 import { variantTypeNameOf } from '../variant/variantType.js';
 import { parseExpression, type ExpressionNode, type Operator } from './parser.js';
+import { NotPortable } from '../notPortable.js';
 
 /** An expression node whose Godot behaviour this port does not have yet. */
-export class UnportedExpression extends Error {}
+export class UnportedExpression extends NotPortable {}
 
 // `value` is the `r_ret` the failed node leaves, which `execute` returns when that node is the root.
 class ExecuteError extends Error {

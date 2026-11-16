@@ -1,4 +1,5 @@
 import { GodotCrash } from '../../variant/cInteger.js';
+import { NotPortable } from '../../notPortable.js';
 
 /** A text as its code points, the `char32_t` units a Godot `String` holds. */
 export const codesOf = (text: string): number[] => Array.from(text, (char) => char.codePointAt(0)!);
@@ -7,7 +8,7 @@ export const codesOf = (text: string): number[] => Array.from(text, (char) => ch
 export const MAX_TEXT_LENGTH = 2 ** 29 - 24;
 
 /** A String past U+10FFFF, with two surrogates in a row, or too long for a JavaScript string. */
-export class UnrepresentableText extends Error {}
+export class UnrepresentableText extends NotPortable {}
 
 const isHighSurrogate = (code: number | undefined) => code !== undefined && code >= 0xd800 && code <= 0xdbff;
 const isLowSurrogate = (code: number) => code >= 0xdc00 && code <= 0xdfff;
