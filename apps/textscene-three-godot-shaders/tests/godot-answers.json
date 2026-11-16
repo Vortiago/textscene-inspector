@@ -6,7 +6,7 @@
   "random": "f496ba32f2398f1929355ce53edcc407498209e537eebdc0cc37ae5e4d373b56",
   "operators": "71961cc3c58f615ccb90c5777e87ec3bb1e7d85793a63db00e1ba0bcfe300064",
   "corpus": "cdd73866a614dcae16a6e20af61acb6b58bb0c78ad83ac65263a0dfea750fbe1",
-  "expressions": "3e2e7d2cb3454460d6013002eaaaabc6d90b78c04ee6601b52b0f47b159fd425"
+  "expressions": "1e7ae31538ac341193d3df8d3529b265da221b027baab9c59745e97466a4dbed"
  },
  "smoke": {
   "probes": {
@@ -695,6 +695,9 @@
    "marshall-edge 194 \"bytes_to_var(PackedByteArray([25, 0, 0, 0]))\"": {"verdict":"value","text":"Callable()"},
    "marshall-edge 211 \"bytes_to_var(PackedByteArray([30, 0, 0, 0, 1, 0, 0, 0, 255, 255, 255, 255]))\"": {"verdict":"value","text":"PackedInt32Array[-1]"},
    "marshall-edge 217 \"bytes_to_var_with_objects(PackedByteArray([28, 0, 2, 0, 4, 0, 0, 0, 78, 111, 112, 101, 0, 0, 0, 0]))\"": {"verdict":"value","text":"[]"},
+   "object-edge 14 \"str_to_var(\\\"Resource(1)\\\")\"": {"verdict":"value","text":"null"},
+   "object-edge 33 \"str_to_var(\\\"Resource(\\\\\\\"nope.tres\\\\\\\")\\\")\"": {"verdict":"value","text":"null"},
+   "object-edge 36 \"str_to_var(\\\"Resource(\\\\\\\"res://main.tscn\\\\\\\" 5)\\\")\"": {"verdict":"value","text":"null"},
    "operator OP_ADD STRING STRING_NAME 2": {"verdict":"value","text":"s416263257320616e64202564"},
    "operator OP_ADD COLOR COLOR 2": {"verdict":"value","text":"Color(f0000000000000000, f00000000e887e43f, f000000000000f03f, f0000006066165940)"},
    "operator OP_ADD PACKED_VECTOR4_ARRAY PACKED_VECTOR4_ARRAY 3": {"verdict":"value","text":"PackedVector4Array[Vector4(f0000000000000080, f000000000000e03f, f000000a09999b93f, f0000000000000080), Vector4(f00000000000004c0, f00000000000004c0, f000000a09999b93f, f000000000000e03f), Vector4(f0000000000105940, f00000000000004c0, f000000a09999b93f, f00000000fa210940), Vector4(f00000000000004c0, f0000000000000000, f00000000fa210940, f000000000000e03f), Vector4(f0000000000105940, f0000000000105940, f0000000000000080, f00000000fa210940), Vector4(f00000000000004c0, f0000000000105940, f0000000000000080, f000000000000f0ff)]"},

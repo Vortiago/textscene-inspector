@@ -61,23 +61,45 @@ describe('directives', () => {
   });
 
   it('points the refusal of an indented #if with a utility function at its #', () => {
-    const error = errorOf(() => preprocess('\t  #if weakref(null)\n#endif'));
+    const error = errorOf(() => preprocess('\t  #if rid_allocate_id()\n#endif'));
     expect((error as ShadingLanguageError).position).toEqual({ file: '', line: 1, column: 4 });
   });
 
-  it('refuses a utility function in a condition as not transpiled yet, with its row', () => {
-    const error = errorOf(() => preprocess('#if weakref(null)\n#endif'));
+  it('refuses an unported node in a condition as not transpiled yet, with its row', () => {
+    const error = errorOf(() => preprocess('#if "a".length()\n#endif'));
     expect(error).toMatchObject({
-      reason: "'#if weakref(null): the utility function weakref' is not transpiled yet (#1828)",
+      reason: `'#if "a".length(): the method length' is not transpiled yet (#1828)`,
       owner: '#1828',
     });
   });
 
-  it('refuses a utility function in an #elif as not transpiled yet, with its row', () => {
-    const error = errorOf(() => preprocess('#if 0\n#elif weakref(null)\n#endif'));
+  it('refuses an unported node in an #elif as not transpiled yet, with its row', () => {
+    const error = errorOf(() => preprocess('#if 0\n#elif "a".length()\n#endif'));
     expect(error).toMatchObject({
-      reason: "'#elif weakref(null): the utility function weakref' is not transpiled yet (#1828)",
+      reason: `'#elif "a".length(): the method length' is not transpiled yet (#1828)`,
       owner: '#1828',
+    });
+  });
+
+  it('stops on a Resource in a condition whose file the include lookup finds', () => {
+    const readInclude = (path: string) => (path === 'res://a.tres' ? { path, code: '' } : undefined);
+    const error = errorOf(() =>
+      preprocess('#if str_to_var("Resource(\\"a.tres\\")")\n#endif', { readInclude })
+    );
+    expect(error).toMatchObject({ owner: '#1953' });
+  });
+
+  it('reads a Resource in a condition as null where the include lookup finds no file', () => {
+    expect(errorOf(() => preprocess('#if str_to_var("Resource(\\"a.tres\\")")\n#endif'))).toMatchObject({
+      reason: 'Condition evaluation error.',
+    });
+  });
+
+  it('refuses an object in a condition as not supported, with the owner of objects', () => {
+    const error = errorOf(() => preprocess('#if weakref(null)\n#endif'));
+    expect(error).toMatchObject({
+      reason: "'#if weakref(null): weakref(...) makes a Godot object' is not transpiled yet (#1953)",
+      owner: '#1953',
     });
   });
 

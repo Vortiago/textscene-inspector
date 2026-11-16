@@ -3,7 +3,7 @@ import { construct } from '../variant/construct/construct.js';
 import { evaluateOperator } from '../variant/operators/evaluate.js';
 import { callErrorText } from '../variant/utility/callError.js';
 import { callUtility } from '../variant/utility/callUtility.js';
-import { GlobalRandom } from '../variant/utility/globalRandom.js';
+import { utilityHost, type UtilityHost } from '../variant/utility/utilityHost.js';
 import { NIL, variant, type DictionaryEntry, type Variant } from '../variant/value/variant.js';
 import { variantTypeNameOf } from '../variant/variantType.js';
 import { parseExpression, type ExpressionNode, type Operator } from './parser.js';
@@ -59,7 +59,7 @@ const OPERATOR_NAME: Readonly<Record<Operator, string>> = {
 
 /** One run of `Expression::execute`, with the global random generator its utility calls draw from. */
 class Execution {
-  constructor(private readonly random: GlobalRandom) {}
+  constructor(private readonly host: UtilityHost) {}
 
   execute = (node: ExpressionNode): Variant => {
     switch (node.kind) {
@@ -124,7 +124,7 @@ class Execution {
   // expression.cpp:1397: a failed call still leaves the value it returned.
   private called(node: Extract<ExpressionNode, { kind: 'builtinFunction' }>): Variant {
     const args = node.arguments.map(this.execute);
-    const result = callUtility(node.name, args, this.random);
+    const result = callUtility(node.name, args, this.host);
     if (!result) throw new UnportedExpression(`the utility function ${node.name}`);
     if (!result.error) return result.value;
     const message = `Builtin call failed: ${callErrorText(node.name, args, result.error)}`;
@@ -132,12 +132,12 @@ class Execution {
   }
 }
 
-/** Throws GodotCrash, UnportedExpression for an unported node, UnportableUtility for editor state. */
-export function runExpression(text: string, random = new GlobalRandom()): ExpressionResult {
+/** Throws GodotCrash, UnportedExpression, UnportableUtility or UnsupportedObject where the port stops. */
+export function runExpression(text: string, host = utilityHost()): ExpressionResult {
   const parsed = parseExpression(text);
   if ('error' in parsed) return { parseError: parsed.error };
   try {
-    return { value: new Execution(random).execute(parsed.root) };
+    return { value: new Execution(host).execute(parsed.root) };
   } catch (error) {
     if (error instanceof ExecuteError)
       return { executeError: error.message, value: error.node === parsed.root ? error.value : NIL };

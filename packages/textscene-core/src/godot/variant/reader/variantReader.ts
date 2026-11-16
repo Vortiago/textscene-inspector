@@ -1,6 +1,7 @@
 import { storedReal } from '../../math/real.js';
+import { isAbsolutePath, simplifyPath } from '../../string/string.js';
 import { transform3DOf } from '../../math/transform3d.js';
-import { classExists } from '../../classdb/classBaseTypes.js';
+import { canInstantiate, classExists } from '../../classdb/classBaseTypes.js';
 import { doubleToInt32, doubleToInt64, doubleToUint64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
 import { setEntry } from '../compare.js';
 import { assignArray, assignDictionary } from '../construct/typedContainer.js';
@@ -13,7 +14,9 @@ import {
   type Variant,
   type VariantOf,
 } from '../value/variant.js';
+import { stringify } from '../stringify.js';
 import { VARIANT_TYPE, variantTypeName } from '../variantType.js';
+import { makeObject, readUidCache } from '../objects/makeObject.js';
 import { decodeMbedtlsBase64 } from './base64.js';
 import { VariantTokenizer, type Token } from './variantTokenizer.js';
 
@@ -170,11 +173,25 @@ const KEYWORDS: Readonly<Record<string, Variant>> = {
   nan: variant('FLOAT', NaN),
 };
 
+// `ResourceLoader::_validate_local_path` (resource_loader.cpp:505) for a path that is not a uid.
+const localPath = (path: string): string => simplifyPath(isAbsolutePath(path) ? path : `res://${path}`);
+
+// variant_parser.cpp:1141 reads any token as a text: one with no value keeps the value of the token before.
+function tokenText(token: Token, previous: string): string {
+  if (token.kind === 'string' || token.kind === 'string_name' || token.kind === 'identifier')
+    return token.value;
+  if (token.kind === 'number' || token.kind === 'color') return stringify(token.value);
+  return previous;
+}
+
 /** `VariantParser::parse` (variant_parser.cpp:1918) with no resource parser, over one text. */
 class VariantReader {
   readonly #tokens: VariantTokenizer;
 
-  constructor(text: string) {
+  constructor(
+    text: string,
+    private readonly hasFile: (path: string) => boolean
+  ) {
     this.#tokens = new VariantTokenizer(text);
   }
 
@@ -239,7 +256,10 @@ class VariantReader {
         return this.#typedDictionary();
       case 'Array':
         return this.#typedArray();
+      case 'Object':
+        return this.#object();
       default:
+        if (RESOURCE_CALLS.has(id)) return this.#resource(id);
         throw new ParseFault(`Unexpected identifier '${id}'`);
     }
   }
@@ -330,6 +350,64 @@ class VariantReader {
     const rid = variant('RID', BigInt.asIntN(64, id));
     this.#expect(')', "Expected ')'", rid);
     return rid;
+  }
+
+  // variant_parser.cpp:994: the class check comes before the `,`, as Godot makes the object first.
+  #object(): Variant {
+    this.#expect('(', "Expected '('");
+    const type = this.next();
+    if (type.kind !== 'identifier') throw new ParseFault('Expected identifier with type of object');
+    if (!canInstantiate(type.value))
+      throw new ParseFault(`Can't instantiate Object() of type '${type.value}'`);
+    this.#expect(',', "Expected ',' after object type");
+    this.#objectProperties();
+    return makeObject(`str_to_var of Object(${type.value}, ...)`);
+  }
+
+  // The properties parse before the object is used, so their faults still show.
+  #objectProperties(): void {
+    let needsComma = false;
+    for (;;) {
+      if (this.#tokens.isEof) throw new ParseFault('Unexpected EOF while parsing Object()');
+      const token = this.next();
+      if (token.kind === ')') return;
+      if (needsComma) {
+        if (token.kind !== ',') throw new ParseFault("Expected '}' or ','");
+        needsComma = false;
+        continue;
+      }
+      if (token.kind !== 'string') throw new ParseFault('Expected property name as string');
+      this.#expect(':', "Expected ':'");
+      if (this.#tokens.isEof) throw new ParseFault('Unexpected EOF while parsing Object()');
+      this.#nested(this.next());
+      needsComma = true;
+    }
+  }
+
+  // variant_parser.cpp:1121, with no resource parser.
+  #resource(id: string): Variant {
+    this.#expect('(', "Expected '('");
+    const first = this.next();
+    if (first.kind !== 'string') throw new ParseFault('Expected string as argument for Resource()');
+    let [path, uid] = first.value.startsWith('uid://') ? ['', first.value] : [first.value, ''];
+    let token = this.next();
+    if (token.kind === ',') {
+      const extra = tokenText(this.next(), first.value);
+      if (extra.startsWith('uid://')) {
+        if (uid !== '') throw new ParseFault('Two uid:// paths in one Resource reference');
+        uid = extra;
+      } else {
+        if (path !== '') throw new ParseFault('Two non-uid paths in one Resource reference');
+        path = extra;
+      }
+      token = this.next();
+    }
+    const isFound = path !== '' && this.hasFile(localPath(path));
+    if (!isFound && uid === '') throw new ParseFault(`Can't load resource at path: ${path} with uid: ${uid}`);
+    if (token.kind !== ')') throw new ParseFault("Expected ')'");
+    return isFound
+      ? makeObject(`str_to_var of ${id}("${path}")`)
+      : readUidCache(`str_to_var of ${id}("${uid}")`);
   }
 
   #emptyCall(empty: Variant): Variant {
@@ -426,8 +504,8 @@ class VariantReader {
  *
  * @canonical The Variant str_to_var reads from a text
  */
-export function textToVariant(text: string): Variant {
-  const reader = new VariantReader(text);
+export function textToVariant(text: string, hasFile: (path: string) => boolean = () => false): Variant {
+  const reader = new VariantReader(text, hasFile);
   const first = reader.next();
   if (first.kind === 'error' || first.kind === 'eof') return NIL;
   try {
