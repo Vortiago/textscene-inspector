@@ -18,8 +18,12 @@ const OUTSIDE_CORE = ['apps', 'packages/textscene-dev-kit', 'scripts'].map((dir)
 export const KEPT_TEST_ONLY_EXPORTS = [
   // No runtime code lists the hand rows, and a test builds the check of each one.
   'godot/classdb/propertyDescriptor.ts#handRowKeys',
+  // The preprocessor refuses any NotPortable, and the refusal tests name the class each case throws.
+  'godot/expression/execute.ts#UnportedExpression',
   // The Expression coverage test names the constructor registration each case reaches.
   'godot/variant/construct/construct.ts#constructorFor',
+  // The preprocessor refuses any NotPortable, and the refusal tests name the class each case throws.
+  'godot/variant/objects/makeObject.ts#UnsupportedObject',
   // A registered hand row is module state nothing clears, so a test passes its own descriptor.
   'linter/descriptorValidator.ts#descriptorValidator',
   // `@react-three/test-renderer` cannot wrap a real `<Canvas>`, so a scene test mounts its contents.
