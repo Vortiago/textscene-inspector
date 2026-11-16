@@ -1,5 +1,4 @@
-const SERIALISERS =
-  'the next utility slice ports VariantWriter, VariantParser, the marshalls and Variant::hash';
+const SERIALISERS = 'the next utility slice ports VariantWriter, VariantParser and the marshalls';
 const WEAK_REFERENCE = 'the next utility slice ports the WeakRef object weakref makes';
 const EDITOR_STATE = 'the answer is a counter or an object id of the running editor';
 const MEMBERS = 'the methods and members slice ports the index';
@@ -26,7 +25,6 @@ export const REFUSED_UTILITIES = {
   bytes_to_var: unported,
   var_to_bytes_with_objects: unported,
   bytes_to_var_with_objects: unported,
-  hash: unported,
   weakref: { refusal: 'UnportedExpression', reason: WEAK_REFERENCE },
   rid_allocate_id: { refusal: 'UnportableUtility', reason: EDITOR_STATE },
 };
