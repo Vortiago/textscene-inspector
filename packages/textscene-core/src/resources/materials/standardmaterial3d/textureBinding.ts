@@ -80,15 +80,12 @@ export interface MaterialTextureStates {
  * The texture states of a material's slots. Only an authored filter passes: comparing against
  * Godot's default would clone every texture whose sampler state differs from it.
  */
-export function materialTextureStates(
-  scalars: StandardMaterial3DScalars,
-  anisotropicFilteringLevel: number
-): MaterialTextureStates {
+export function materialTextureStates(scalars: StandardMaterial3DScalars): MaterialTextureStates {
   const sampler = {
     filter:
       scalars.textureFilter === BASE_MATERIAL_3D_DEFAULTS.textureFilter
         ? undefined
-        : godotTextureFilterState(scalars.textureFilter, anisotropicFilteringLevel),
+        : godotTextureFilterState(scalars.textureFilter),
     wrap: scalars.textureRepeat ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping,
   };
   const uv2 = { ...sampler, uv: { repeat: scalars.uv2Scale, offset: scalars.uv2Offset } };

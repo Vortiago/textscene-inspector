@@ -20,6 +20,8 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useWindowedCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useResolvedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useNodeReference } from '../../../../resources/reading';
+import { useByValue } from '../../../../r3f/hooks/useByValue';
+import { sameData } from '../../../../utils/sameData';
 import { WHOLE_FRAME, frameUvWindow } from '../../../../r3f/spriteFrame';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { clampAutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
@@ -30,6 +32,7 @@ import {
   RICH_TEXT_LABEL_DEFAULT_AUTOWRAP,
   layoutRichTextRuns,
   richTextLabelTextTheme,
+  runsReadBoxWidth,
   shapeRichText,
   styledTextRuns,
   underlineRectPx,
@@ -37,8 +40,9 @@ import {
   type RichTextRunPlacement,
   type StyledTextRun,
 } from './nativeSolver';
-import { resolveRichTextFaces } from './styleFaces';
+import { resolveRichTextFaces, richTextStylesInUse } from './styleFaces';
 import { shapeBesideScrollBar } from './scrollBar';
+import { scrollBarMinimumSize } from '../shared/scrollBarSolver';
 import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import { countedCharacters, richTextReveal, truncateRunsToCharacters } from './visibleCharacters';
 import type { RichTextLabelProperties } from './types';
@@ -174,16 +178,31 @@ function useShapedRichText(
   rect: Rect2,
   textTheme: ResolvedTextTheme
 ) {
+  // Equal runs prove equal input: shaping reads the node only through the runs, faces and options.
   const runsAt = useCallback(
     (wrapWidthPx: number) =>
       styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, wrapWidthPx),
     [solveNode, props, textTheme.color, textTheme.fontSizePx]
   );
+  const runsAtRectWidth = useByValue(
+    useMemo(() => runsAt(rect.w), [runsAt, rect.w]),
+    sameData
+  );
+  const verticalBarBoxes = useByValue(internalScrollBarBoxes(solveNode).vertical, sameData);
+  // The width `shapeBesideScrollBar` wraps at when the bar shows (`:3805`).
+  const besideBarWidthPx = rect.w - scrollBarMinimumSize(true, verticalBarBoxes).x;
+  const readsBoxWidth = props.scrollActive && runsReadBoxWidth(runsAtRectWidth);
+  const runsBesideBar = useByValue(
+    useMemo(
+      () => (readsBoxWidth ? runsAt(besideBarWidthPx) : null),
+      [readsBoxWidth, runsAt, besideBarWidthPx]
+    ),
+    sameData
+  );
   // RichTextLabel's own default is WORD_SMART (`rich_text_label.h:557`), not Label's OFF.
   const autowrapMode = clampAutowrapMode(props.autowrapMode, RICH_TEXT_LABEL_DEFAULT_AUTOWRAP);
-  // The styles in use do not depend on the wrap width.
-  const runsAtRectWidth = useMemo(() => runsAt(rect.w), [runsAt, rect.w]);
-  const faces = resolveRichTextFaces(solveNode, runsAtRectWidth);
+  const stylesInUse = useMemo(() => richTextStylesInUse(runsAtRectWidth), [runsAtRectWidth]);
+  const faces = resolveRichTextFaces(solveNode, stylesInUse);
   const { normal, bold, italic, boldItalic } = faces;
   const { rtl } = solveNode;
   const box = useMemo(
@@ -225,18 +244,26 @@ function useShapedRichText(
     ]
   );
 
-  const verticalBarBoxes = internalScrollBarBoxes(solveNode).vertical;
+  const runsOfWidth = useCallback(
+    (wrapWidthPx: number) => {
+      // Runs that read no box width serve every width.
+      if (wrapWidthPx === rect.w || !runsBesideBar) return runsAtRectWidth;
+      if (wrapWidthPx === besideBarWidthPx) return runsBesideBar;
+      throw new Error(`expected a wrap width of ${rect.w} or ${besideBarWidthPx}, got ${wrapWidthPx}`);
+    },
+    [rect.w, runsAtRectWidth, besideBarWidthPx, runsBesideBar]
+  );
   const shaped = useMemo(
     () =>
       shapeBesideScrollBar(
         (wrapWidthPx) => {
-          const runs = wrapWidthPx === rect.w ? runsAtRectWidth : runsAt(wrapWidthPx);
+          const runs = runsOfWidth(wrapWidthPx);
           return { runs, layout: shapeAtWidth(runs, wrapWidthPx) };
         },
         box,
         verticalBarBoxes
       ),
-    [runsAt, runsAtRectWidth, rect.w, shapeAtWidth, box, verticalBarBoxes]
+    [runsOfWidth, shapeAtWidth, box, verticalBarBoxes]
   );
 
   const { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior } = props;
@@ -366,7 +393,7 @@ function RichTextBody({
               )
             : null;
           return (
-            <CanvasItemGroup key={index} position={[placement.lineOffsetXPx, -y, 0]}>
+            <CanvasItemGroup key={index} position={[placement.layoutXPx, -y, 0]}>
               <OutlinedTextRun
                 layout={placement.layout}
                 outline={outline}

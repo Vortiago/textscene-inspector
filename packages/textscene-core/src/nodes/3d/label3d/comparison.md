@@ -21,6 +21,8 @@ The outline is surface 0 of the label and the fill is surface 1 (`label_3d.cpp:6
 
 A label casts no shadow by default, as its constructor turns `cast_shadow` off (`label_3d.cpp:1090`). With it on, the glyphs cast when Godot files their surface in the shadow pass (`render_forward_clustered.cpp:4079-4089`). That pass takes a cut surface, or an `OPAQUE_PREPASS` one, with the depth test on. An `OPAQUE_PREPASS` surface blends uncut, writes its depth in a depth prepass cut at 0.99, and cuts its shadow at 0.1 (`render_forward_clustered.cpp:1791,2770`). A blended label, the default `alpha_cut`, casts nothing. The `label3d-shadow` golden pins this.
 
+A `FontVariation` spaces and offsets the glyphs of a Label3D and a TextMesh as on a Label (`font.cpp:2422-2437`).
+
 ## BMFont
 
 A label in a BMFont draws each glyph as a quad over its page image at `pixel_size` (`label_3d.cpp:345-350`). The quad takes the glyph's offset and size. The label skips a glyph whose page rectangle is 2 px or less in either direction, and a character the font lacks (`:357-360`). The pen still advances past it. Its material decodes the page and the modulate and multiplies them in linear (`material.cpp:969,1218`). Any `outline_size` above 0 draws the font's outline set (`text_server_adv.h:406-414`). The `label3d-bmfont` golden pins this.

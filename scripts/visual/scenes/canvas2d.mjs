@@ -152,6 +152,18 @@ export const CANVAS_2D_SCENES = [
     name: 'sub-viewport-container-shrink-2d-content',
     file: 'unit-sub-viewport-container-shrink-2d-content.tscn',
   },
+  // A container inside an embedded Window, which the Window's Control pass draws. Godot 4.6.3
+  // `--mode 2d`: within 1/255 over the whole frame.
+  {
+    name: 'sub-viewport-container-in-window',
+    file: 'unit-sub-viewport-container-in-window.tscn',
+  },
+  // A container inside a SubViewport, which the outer viewport's Control pass draws. Godot 4.6.3
+  // `--mode 2d`: within 1/255 over the whole frame.
+  {
+    name: 'sub-viewport-container-in-sub-viewport',
+    file: 'unit-sub-viewport-container-in-sub-viewport.tscn',
+  },
   // Translucent content blends over the clear colour in the target's sRGB numbers, through the
   // 2D-world pass and the Control pass. Godot 4.6.3 `--mode 2d`: (150,130) rgb(165,89,38).
   {
@@ -271,6 +283,12 @@ export const CANVAS_2D_SCENES = [
   // A 3D SubViewport under a 2D root draws its OmniLight3D's shadow, as Godot draws a viewport's
   // shadows whatever the root is. Godot 4.6.3: the box's shadow on the floor, left of the box.
   { name: 'sub-viewport-2d-root-omni-shadow', file: 'unit-sub-viewport-2d-root-omni-shadow.tscn' },
+  // Two SubViewports share one world and one material, and each draws both panels at its own
+  // anisotropic level. Godot 4.6.3: (239,225) rgb(247,74,0) at level 0, (759,225) rgb(255,0,0) at 4.
+  {
+    name: 'sub-viewport-anisotropic-shared-material',
+    file: 'unit-sub-viewport-anisotropic-shared-material.tscn',
+  },
   // A sub-viewport lights its own 2D content with its own lights and CanvasModulate. Godot 4.6.3
   // `--mode 2d`: (160,155) rgb(159,123,130) under the Torch, (280,200) rgb(51,64,108) the tinted
   // far Floor, and (600,155) rgb(127,127,127) the untinted, unlit Outside.

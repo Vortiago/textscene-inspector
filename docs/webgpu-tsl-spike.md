@@ -314,7 +314,7 @@ These counts come from a text search, so each is approximate.
 
 The handler step needs none of these ported, except the materials that move to nodes.
 `WebGPURenderer` needs all of them ported. Ten places also call WebGL directly, for example
-`tiledUpload/`, `multisampledTarget.ts`, `nearestAnisotropy.ts` and `shadowFilter/uncomparedDepth.ts`.
+`tiledUpload/`, `multisampledTarget.ts`, `viewportAnisotropy.ts` and `shadowFilter/uncomparedDepth.ts`.
 Each needs a WebGPU form or a decision to drop it.
 
 The normal-roughness prepass draws each surface into a target with two textures

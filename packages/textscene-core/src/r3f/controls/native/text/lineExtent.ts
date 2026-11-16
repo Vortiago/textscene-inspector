@@ -3,7 +3,8 @@
  * (`text_server_adv.cpp:5124-5175`), and the place of each line of a layout that steps by them
  * (`text_paragraph.cpp:701,759`).
  */
-import { getFontAscentPx, getFontDescentPx, type FontMetrics } from './fontMetrics';
+import type { FontMetrics } from './fontMetrics';
+import { getFontSpacedAscentPx, getFontSpacedDescentPx } from './fontSpacing';
 import { HEX_CODE_BOX_ASCENT, HEX_CODE_BOX_DESCENT, hexCodeBoxAdvanceSize } from './hexCodeBox';
 import type { GlyphPlacement, TextLayoutResult, TextLineLayout } from './textLayout';
 
@@ -24,7 +25,10 @@ export function lineExtentPx(
   fontSizePx: number
 ): LineExtentPx {
   if (glyphs.length === 0) {
-    return { ascentPx: getFontAscentPx(face, fontSizePx), descentPx: getFontDescentPx(face, fontSizePx) };
+    return {
+      ascentPx: getFontSpacedAscentPx(face, fontSizePx),
+      descentPx: getFontSpacedDescentPx(face, fontSizePx),
+    };
   }
   let ascentPx = 0;
   let descentPx = 0;
@@ -48,6 +52,11 @@ export function glyphsDescentPx(glyphs: readonly GlyphPlacement[]): number {
 
 const NO_EXTENT: LineExtentPx = { ascentPx: 0, descentPx: 0 };
 
+// Godot grows the line to an infinite offset too, but a glyph there draws nothing, so it sizes nothing here.
+function finiteShiftPx(yOffsetPx: number): number {
+  return Number.isFinite(yOffsetPx) ? yOffsetPx : 0;
+}
+
 /** One glyph's share of its line's extent (`text_server_adv.cpp:5146-5172`). */
 function glyphExtentPx(glyph: GlyphPlacement): LineExtentPx {
   const { fontMetrics: face, fontSizePx, char, yOffset = 0, controlCodepoint } = glyph;
@@ -58,8 +67,8 @@ function glyphExtentPx(glyph: GlyphPlacement): LineExtentPx {
     return { ascentPx: boxHeightPx * HEX_CODE_BOX_ASCENT, descentPx: boxHeightPx * HEX_CODE_BOX_DESCENT };
   }
   return {
-    ascentPx: Math.max(getFontAscentPx(face, fontSizePx), -yOffset),
-    descentPx: Math.max(getFontDescentPx(face, fontSizePx), yOffset),
+    ascentPx: Math.max(getFontSpacedAscentPx(face, fontSizePx), -finiteShiftPx(yOffset)),
+    descentPx: Math.max(getFontSpacedDescentPx(face, fontSizePx), finiteShiftPx(yOffset)),
   };
 }
 

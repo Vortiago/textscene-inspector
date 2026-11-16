@@ -6,8 +6,8 @@ import { renderHook } from '@testing-library/react';
 import type { SceneGraph } from '../../../core/SceneGraph.js';
 import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext.js';
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../../godot/scene/viewport.js';
-import type { TargetRenderState } from '../renderGate.js';
-import { useViewportRenderState } from './useGatedViewport.js';
+import type { TargetRenderState } from '../../../r3f/viewportRender/renderGate.js';
+import { useViewportRenderState } from '../../../r3f/viewportRender/useGatedViewport.js';
 
 const PROJECT_CLEAR = new THREE.Color(0.3, 0.3, 0.3);
 

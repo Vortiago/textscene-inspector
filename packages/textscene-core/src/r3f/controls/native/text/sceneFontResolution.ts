@@ -16,6 +16,7 @@ import { fontHintingOf, type FontHinting } from '../../../../godot/text/textServ
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import { dictNumberEntries } from '../../../../godot/variant/variantParser';
 import type { OpentypeCoordinates } from './fontMetrics';
+import { NO_FACE_SPACING, type FaceSpacing } from './fontSpacing';
 import { perObject } from '../../../../utils/perObject';
 
 export type FileWithBytes = FontFileResource & { bytes: ArrayBuffer };
@@ -133,6 +134,36 @@ export function fontVariationSkew(font: FontResource | null | undefined): number
     drawnVariation(font)?.properties['variation_transform']?.trim() ?? ''
   );
   return match ? matchedFloat(match[2]!) : 0;
+}
+
+/** The spacing of the face `font` draws: a variation's, else a FontFile's `cache/0` (`font.cpp:1195`). */
+export function fontFaceSpacing(font: FontResource | null | undefined): FaceSpacing {
+  const variation = drawnVariation(font);
+  if (variation) return spacingIn(variation.properties, '');
+  return font?.kind === 'file' ? spacingIn(font.properties, 'cache/0/') : NO_FACE_SPACING;
+}
+
+/** What `Font::get_height` adds (`font.cpp:219`): a variation's top and bottom spacing, 0 for a FontFile. */
+export function fontHeightSpacingPx(font: FontResource | null | undefined): number {
+  const variation = drawnVariation(font);
+  if (!variation) return 0;
+  const { spacing } = spacingIn(variation.properties, '');
+  return spacing.top + spacing.bottom;
+}
+
+function spacingIn(properties: Record<string, string>, prefix: string): FaceSpacing {
+  const spacingOf = (key: string): number => parseOptionalInt(properties[prefix + key]) ?? 0;
+  const offsetText = properties[prefix + 'baseline_offset'];
+  return {
+    spacing: {
+      top: spacingOf('spacing_top'),
+      bottom: spacingOf('spacing_bottom'),
+      space: spacingOf('spacing_space'),
+      glyph: spacingOf('spacing_glyph'),
+    },
+    // Both resources keep the offset as a `float` (`font.h`).
+    baselineOffset: Math.fround((offsetText === undefined ? null : parseGodotFloat(offsetText)) ?? 0),
+  };
 }
 
 /**

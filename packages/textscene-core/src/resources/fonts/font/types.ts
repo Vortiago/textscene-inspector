@@ -5,14 +5,10 @@
  * and TileSet decodes.
  */
 
-/**
- * `FontFile`: most often an `ExtResource` naming a raw `.ttf`/`.otf`/`.woff`/`.woff2`.
- * A `.tres` wrapper has no bytes of its own and lists `fallbacks`, plus bake settings
- * (`msdf_*`, `cache/*`) this previewer does not read.
- */
+/** A `.tres` FontFile holds its font in `data`, or no bytes and only `fallbacks`. */
 export interface FontFileResource {
   kind: 'file';
-  /** Raw font bytes, ready for `new FontFace(name, bytes)`. Undefined for a bytes-less `.tres` wrapper. */
+  /** Ready for `new FontFace(name, bytes)`. Undefined for a `.tres` wrapper with no `data`. */
   bytes: ArrayBuffer | undefined;
   /** Undefined when `bytes` is undefined. */
   mimeType: string | undefined;

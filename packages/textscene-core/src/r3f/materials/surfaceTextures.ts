@@ -8,7 +8,6 @@
 import type * as THREE from 'three';
 import { useMemo } from 'react';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
-import { useAnisotropicFilteringLevel } from '../contexts/AnisotropicFilteringContext';
 import type { ScopedReference } from '../../resources/reading';
 import type { StandardMaterial } from '../../resources/materials/material/types';
 import { useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
@@ -51,11 +50,9 @@ export function useSurfaceTextures(
   const sources = useEachSlot(useSlotTexture, slots);
   // The per-material half of every binding: UV set and transform, sampler filter and
   // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `slotViewSampler`'s.
-  const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
   const states = useMemo(
-    (): MaterialTextureStates | null =>
-      scalars && surfaceTextureStates(scalars, surface, anisotropicFilteringLevel),
-    [scalars, surface, anisotropicFilteringLevel]
+    (): MaterialTextureStates | null => scalars && surfaceTextureStates(scalars, surface),
+    [scalars, surface]
   );
 
   const flowmap = useRepackedFlowmap(sources.anisotropy_flowmap, scalars !== null && isAnisotropic(scalars));
@@ -146,10 +143,9 @@ function useDrawnSlot(
  */
 function surfaceTextureStates(
   scalars: StandardMaterial3DScalars,
-  surface: TexturedSurface | undefined,
-  anisotropicFilteringLevel: number
+  surface: TexturedSurface | undefined
 ): MaterialTextureStates {
-  const states = materialTextureStates(scalars, anisotropicFilteringLevel);
+  const states = materialTextureStates(scalars);
   if (scalars.triplanar?.uv1) return states;
   return { ...states, uv1: surface === GLTF_SURFACE ? topDownV(states.uv1) : fromTopEdge(states.uv1) };
 }

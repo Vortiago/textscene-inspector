@@ -130,6 +130,13 @@ describe('releasePositionalShadowAtlas', () => {
     expect(frees()).toBe(1);
   });
 
+  it('shrinks to one texel when the last holder lets go, as the shadow pass allocates it for any program', () => {
+    const holder = {};
+    target.holdPositionalShadowAtlas(holder, 4096);
+    target.releasePositionalShadowAtlas(holder);
+    expect(target.positionalShadowAtlas().width).toBe(1);
+  });
+
   it('shrinks the atlas to the holders that remain', () => {
     const [small, large] = [{}, {}];
     target.holdPositionalShadowAtlas(small, 2048);
@@ -144,5 +151,30 @@ describe('releasePositionalShadowAtlas', () => {
     target.releasePositionalShadowAtlas({});
     expect(frees()).toBe(0);
     expect(target.positionalShadowAtlas().width).toBe(4096);
+  });
+});
+
+describe('positionalShadowAtlasBuild', () => {
+  it('moves each time the atlas is resized', () => {
+    const before = target.positionalShadowAtlasBuild();
+    target.holdPositionalShadowAtlas({}, 2048);
+    expect(target.positionalShadowAtlasBuild()).toBe(before + 1);
+  });
+
+  it('moves when the last holder frees the atlas', () => {
+    const holder = {};
+    target.holdPositionalShadowAtlas(holder, 2048);
+    target.releasePositionalShadowAtlas(holder);
+    const shrunk = target.positionalShadowAtlasBuild();
+    target.holdPositionalShadowAtlas(holder, 1);
+    target.releasePositionalShadowAtlas(holder);
+    expect(target.positionalShadowAtlasBuild()).toBe(shrunk + 1);
+  });
+
+  it('stays for a hold that keeps the size (edge case)', () => {
+    target.holdPositionalShadowAtlas({}, 2048);
+    const held = target.positionalShadowAtlasBuild();
+    target.holdPositionalShadowAtlas({}, 1024);
+    expect(target.positionalShadowAtlasBuild()).toBe(held);
   });
 });

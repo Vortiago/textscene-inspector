@@ -11,7 +11,7 @@
  */
 
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
-import { isSubViewport } from '../../../viewport/subviewport/viewportBoundary';
+import { isSubViewport } from '../../../../r3f/viewportRender/viewportBoundary';
 import type { SubViewportProperties } from '../../../viewport/subviewport/types';
 import { viewportSize } from '../../../viewport/subviewport/targetSize';
 import type { SubViewportContainerProperties } from './types';

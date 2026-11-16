@@ -7,15 +7,13 @@
 import { useLayoutEffect } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
-import { projectTransparentBackground } from '../parser/projectSettingsParser.js';
-import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
 import { useProjectClearColor } from './useProjectClearColor.js';
+import { useRootViewportDescription } from './viewportRender/useRootViewportDescription.js';
 
 export function ProjectClearColor() {
   const gl = useThree((state) => state.gl);
   const color = useProjectClearColor();
-  const { settings } = useProjectSettings();
-  const isTransparent = projectTransparentBackground(settings);
+  const isTransparent = useRootViewportDescription().transparentBackground;
 
   useLayoutEffect(() => {
     const previousColor = gl.getClearColor(new THREE.Color());

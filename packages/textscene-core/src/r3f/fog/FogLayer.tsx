@@ -16,7 +16,7 @@ import { followSceneExposure } from '../exposure/sceneExposure.js';
 import { readShadowMaps } from '../shadowPass.js';
 import { TrackedObjects } from '../trackedObjects.js';
 import { isLight } from '../isLight.js';
-import { probeCaptureOf } from '../reflectionProbe/captureCameras.js';
+import { renderUnderWay } from '../viewportRender/worldRender.js';
 import { captureFog, finishFog, prepareFog, type FogSettings } from './fogFrame.js';
 import { acquireVolumetricFogPass } from './sharedVolumetricFogPass.js';
 import { perObject } from '../../utils/perObject.js';
@@ -68,7 +68,7 @@ export function FogLayer({ depth, volumetric }: FogLayerProps) {
     // Written by each render before the fog prepares for it.
     let exposure = 1;
     const prepare = (camera: THREE.Camera) => {
-      const capture = probeCaptureOf(camera);
+      const capture = renderUnderWay()?.probeCapture;
       const fog = capture ? captureFog(settings.current, capture.isInterior) : settings.current;
       const isVolumetric = fog.volumetric !== null;
       const objects = {

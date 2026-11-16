@@ -5,7 +5,7 @@
  * text, else nothing.
  */
 import * as THREE from 'three';
-import { maxEmboldenGrowthPx } from './canvasVariation';
+import { maxBaselineShiftPx, maxEmboldenGrowthPx } from './canvasVariation';
 import type { ByteColour } from './glyphCoverage';
 import { canvasGlyphPenXPx, faceStrikeSize, subpixelHalfStepPx, type FontMetrics } from './fontMetrics';
 import type { TextLayoutResult } from './textLayout';
@@ -28,6 +28,7 @@ import { fposmodp } from '../../../../godot/math/math';
 import { VECTOR2_ZERO, type Vector2 } from '../../../../godot/math/vector';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { channelToByte } from '../../../../utils/colorSpace';
+import { glyphOriginsPx, type PenSum } from './glyphPen';
 import { WHITE_MODULATE } from '../../../canvasItemModulate';
 
 /** Fixed vertical pad, CSS px, on every raster edge: anti-aliased ink can overshoot a glyph's ascent/descent box. The quad is this much taller than `layout.heightPx` on both edges. */
@@ -73,7 +74,9 @@ export function computeCanvasTextCanvasLayout(
   const strokePadPx = strokeWidthPx / 2;
   // An embolden reaches its full growth right and up. The pad is symmetric, so the quad stays centred.
   const emboldenPadPx = maxEmboldenGrowthPx(layout);
-  const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + Math.ceil(strokePadPx + emboldenPadPx);
+  // A glyph's ink reaches its own descent below its shifted baseline, past the line's box.
+  const offsetYPx =
+    CANVAS_TEXT_VERTICAL_PAD_PX + Math.ceil(strokePadPx + emboldenPadPx + maxBaselineShiftPx(layout));
   // The worst-case shear offset over a line's rows, `dx(y) = -skew * (y - baselinePx)`: every row
   // of the raster above the baseline. A font's
   // descent is shorter than its ascent, so the rows below shear less.
@@ -161,11 +164,7 @@ function scaledPenShiftPx(
   return subpixelHalfStepPx(fontSizePx);
 }
 
-/**
- * How far a run's place in its canvas item sits past the whole pixel at or before it. A run that places
- * its glyphs as a canvas item does starts its quad on that pixel, as Godot draws a glyph texel-aligned
- * (`text_server_adv.cpp:4082-4084`). The phase alone sets the paint, so a whole-pixel move repaints nothing.
- */
+/** Where a run's quad starts and its baseline floors: past the whole pixel (`text_server_adv.cpp:4082`). */
 export function originPhase(placePx: Readonly<Vector2>): Vector2 {
   return { x: fposmodp(placePx.x, 1), y: fposmodp(placePx.y, 1) };
 }
@@ -187,8 +186,10 @@ export interface CanvasTextPaintOptions {
    * subpixel step (`canvasGlyphPenXPx`) and floors the baseline. A Label3D mesh keeps both (`glyphDrawer.ts`).
    */
   glyphDrawer?: GlyphDrawer;
-  /** The `originPhase` of the run's place in its canvas item, which the pen and the baseline include. Zero by default. */
-  originPhasePx?: Readonly<Vector2>;
+  /** The run's place in its canvas item, which the pen and the baseline include. Zero by default. */
+  itemOriginPx?: Readonly<Vector2>;
+  /** Where the holder starts its pen sum, `'alongLine'` by default as `TextServer::shaped_text_draw` does. */
+  penSum?: PenSum;
   /**
    * The colour that tints a colour glyph's texels in place of the tint's colour. Godot keeps only the
    * alpha of the font colour for one (`text_server_adv.cpp:4044-4046`), so a canvas item's modulate
@@ -231,12 +232,13 @@ export function paintSceneFontCanvas(
   {
     strokeWidthPx = 0,
     glyphDrawer = 'canvasItem',
-    originPhasePx = VECTOR2_ZERO,
+    itemOriginPx = VECTOR2_ZERO,
+    penSum = 'alongLine',
     colourGlyphTint = WHITE_MODULATE,
   }: CanvasTextPaintOptions = {}
 ): ImageData | null {
   const frame = rasterFrame(layout, fontSizePx, skew, canvasLayout, glyphDrawer, strokeWidthPx);
-  const glyphs = placeGlyphs(layout, frame, glyphDrawer, originPhasePx);
+  const glyphs = placeGlyphs(layout, frame, glyphDrawer, { itemOriginPx, penSum });
   const colours = {
     text: opaqueByteColour(tint),
     colourGlyphs: [colourGlyphTint.r, colourGlyphTint.g, colourGlyphTint.b] as const,
@@ -265,32 +267,36 @@ function rasterFrame(
   };
 }
 
-/**
- * Each glyph of `layout` that draws, at its pen and baseline in the raster. `originPhasePx` is the
- * phase of the run's place in its canvas item, which a snapped pen and baseline include.
- */
+type ItemPen = Required<Pick<CanvasTextPaintOptions, 'itemOriginPx' | 'penSum'>>;
+
+/** Each glyph of `layout` that draws, at its pen and baseline in the raster. */
 function placeGlyphs(
   layout: TextLayoutResult,
   { metrics, fontSizePx, canvasLayout, snapsGlyphs }: RasterFrame,
   glyphDrawer: GlyphDrawer,
-  originPhasePx: Readonly<Vector2>
+  { itemOriginPx, penSum }: ItemPen
 ): PlacedGlyph[] {
   const unsnappedPenShiftPx = scaledPenShiftPx(glyphDrawer, fontSizePx, metrics);
   // The raster starts at the whole item pixel at or before the run origin, where its quad sits.
+  const phase = originPhase(itemOriginPx);
+  const wholeOriginXPx = itemOriginPx.x - phase.x;
   const baselinesPx = lineBaselinesPx(layout);
   return layout.lines.flatMap((line, lineIndex) => {
     const lineBaselinePx = baselinesPx[lineIndex]!;
-    const baselineY =
-      canvasLayout.offsetYPx + (snapsGlyphs ? Math.floor(originPhasePx.y + lineBaselinePx) : lineBaselinePx);
-    return line.glyphs.filter(hasOwnGlyph).map((placement) => {
-      // Godot snaps the glyph's origin, the pen plus its offset (`shaped_text_draw`).
-      const originX = placement.x + (placement.xOffset ?? 0);
+    // Godot floors the pen after it adds the glyph's `y_off` (`text_server_adv.cpp:4083`).
+    const baselineYOf = (yOffsetPx: number): number =>
+      canvasLayout.offsetYPx +
+      (snapsGlyphs ? Math.floor(phase.y + lineBaselinePx + yOffsetPx) : lineBaselinePx + yOffsetPx);
+    const itemOriginsPx = snapsGlyphs ? glyphOriginsPx(line, itemOriginPx.x, penSum) : [];
+    return line.glyphs.flatMap((placement, index) => {
+      // A glyph at an infinite `baseline_offset` lands nowhere on Godot's canvas.
+      if (!hasOwnGlyph(placement) || !Number.isFinite(placement.yOffset ?? 0)) return [];
       const penX =
         canvasLayout.offsetXPx +
         (snapsGlyphs
-          ? canvasGlyphPenXPx(originPhasePx.x + originX, fontSizePx, metrics)
-          : originX + unsnappedPenShiftPx);
-      return { placement, penX, baselineY: baselineY + (placement.yOffset ?? 0) };
+          ? canvasGlyphPenXPx(itemOriginsPx[index]!, fontSizePx, metrics) - wholeOriginXPx
+          : placement.x + (placement.xOffset ?? 0) + unsnappedPenShiftPx);
+      return [{ placement, penX, baselineY: baselineYOf(placement.yOffset ?? 0) }];
     });
   });
 }
@@ -304,11 +310,16 @@ export function canvasGlyphRects(
   fontSizePx: number,
   skew: number,
   canvasLayout: CanvasTextCanvasLayout,
-  { strokeWidthPx = 0, glyphDrawer = 'canvasItem', originPhasePx = VECTOR2_ZERO }: CanvasTextPaintOptions = {}
+  {
+    strokeWidthPx = 0,
+    glyphDrawer = 'canvasItem',
+    itemOriginPx = VECTOR2_ZERO,
+    penSum = 'alongLine',
+  }: CanvasTextPaintOptions = {}
 ): Rect2[] {
   const frame = rasterFrame(layout, fontSizePx, skew, canvasLayout, glyphDrawer, strokeWidthPx);
   const rectOf = painterOf(frame.metrics).rectReader(frame);
-  return placeGlyphs(layout, frame, glyphDrawer, originPhasePx).flatMap((glyph) => {
+  return placeGlyphs(layout, frame, glyphDrawer, { itemOriginPx, penSum }).flatMap((glyph) => {
     const rect = rectOf(glyph);
     return rect && drawsGlyphRect(glyphDrawer, rect.w, rect.h) ? [rect] : [];
   });

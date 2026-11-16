@@ -4,6 +4,7 @@
  * (ADR-0069).
  */
 import { useCallback } from 'react';
+import { faceSpacingOf, withHeightSpacing, withSpacing } from './fontSpacing';
 import { withVariation, type FontMetrics } from './fontMetrics';
 import { OPEN_SANS_CANVAS_FONT_METRICS } from './openSansCanvasFontMetrics';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
@@ -43,10 +44,11 @@ function peekBundledCanvasFace(
 ): CanvasFontMetrics | null | undefined {
   const outlines = peekOutlines(fonts, BUNDLED_FACE, { hinting, isAutohinterForced: false });
   if (!outlines) return outlines;
-  return withVariation(OPEN_SANS_CANVAS_FONT_METRICS, {
+  const varied = withVariation(OPEN_SANS_CANVAS_FONT_METRICS, {
     embolden: bundledFace.embolden,
     skew: bundledFace.skew,
     opentype: bundledFace.opentype,
     outlines,
   });
+  return withHeightSpacing(withSpacing(varied, faceSpacingOf(bundledFace)), bundledFace.heightSpacingPx ?? 0);
 }

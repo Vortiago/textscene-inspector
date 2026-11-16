@@ -4,9 +4,10 @@
  * canvas's scene into the world buffer, then tonemaps that buffer onto the canvas.
  */
 
+import { useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { projectTransparentBackground, projectUsesDebanding } from '../../parser/projectSettingsParser';
-import { useProjectSettings } from '../contexts/ProjectSettingsContext';
+import { useRootViewportDescription } from '../viewportRender/useRootViewportDescription';
+import { drawWorld, type WorldRender } from '../viewportRender/worldRender';
 import { SubscriberStep } from '../frameProfile/FrameProfiler';
 import { useToneMapPass } from './toneMapPass';
 
@@ -16,18 +17,22 @@ const COMPOSITOR_PRIORITY = 1;
 /** Tonemaps the root world onto the canvas, which is the root window's surface. */
 export function Compositor() {
   const { width, height } = useDrawingBufferSize();
-  const project = useProjectSettings();
+  const root = useRootViewportDescription();
   const toneMap = useToneMapPass({
     target: null,
-    msaaMode: project.msaaModes.msaa3D,
+    msaaMode: root.msaa3D,
     width,
     height,
-    transparentBackground: projectTransparentBackground(project.settings),
-    usesDebanding: projectUsesDebanding(project.settings),
+    transparentBackground: root.transparentBackground,
+    usesDebanding: root.usesDebanding,
     name: 'Canvas',
   });
+  const render = useMemo<WorldRender>(
+    () => ({ viewport: root, shadowAtlas: null, hasCanvasTransform: false }),
+    [root]
+  );
   useFrame(({ scene, camera }) => {
-    toneMap.drawWorld(scene, camera);
+    drawWorld(render, () => toneMap.drawWorld(scene, camera));
     toneMap.toneMap();
   }, COMPOSITOR_PRIORITY);
   return <SubscriberStep step="Compositor" priority={COMPOSITOR_PRIORITY} />;

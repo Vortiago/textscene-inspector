@@ -119,6 +119,18 @@ describe('decodeFont', () => {
     });
   });
 
+  it("reads a FontFile's embedded font from its data", async () => {
+    const properties = { data: 'PackedByteArray("AAEAAA==")', 'cache/0/spacing_glyph': '3' };
+    const resource = await decodeFont('res://x.tres', 'FontFile', properties, [], [], NO_OP_LOADER);
+    expect(resource).toMatchObject({ kind: 'file', properties: { 'cache/0/spacing_glyph': '3' } });
+    expect(new Uint8Array((resource as { bytes: ArrayBuffer }).bytes)).toEqual(new Uint8Array([0, 1, 0, 0]));
+  });
+
+  it('keeps a FontFile bytes-less when its data is not a byte array Godot reads', async () => {
+    const resource = await decodeFont('res://x.tres', 'FontFile', { data: '7' }, [], [], NO_OP_LOADER);
+    expect(resource).toMatchObject({ kind: 'file', bytes: undefined });
+  });
+
   it('resolves every fallback in a FontFile fallbacks list, in order, dropping ones that fail to load', async () => {
     const good: FontResource = {
       kind: 'file',

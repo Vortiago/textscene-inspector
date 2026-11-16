@@ -28,6 +28,7 @@ import {
   type VolumetricFogProjectSettings,
 } from '../godot/rendering/environment/volumetricFog.js';
 import { canvasShadowAtlasSize } from '../godot/rendering/canvasShadowAtlas.js';
+import type { PositionalShadowAtlasSettings } from '../godot/rendering/lights/positionalShadowAtlas.js';
 import { MSAA_DISABLED } from '../godot/rendering/msaa.js';
 import {
   SSAO_PROJECT_DEFAULTS,
@@ -45,6 +46,8 @@ import {
   VIEWPORT_TEXTURE_FILTERS,
   VIEWPORT_TEXTURE_REPEATS,
   viewportCanvasItemTextureDefaults,
+  ROOT_POSITIONAL_SHADOW_ATLAS,
+  viewportPositionalShadowAtlas,
   type CanvasItemTextureDefaults,
 } from '../godot/scene/viewport.js';
 
@@ -207,6 +210,20 @@ export function projectCanvasTextureDefaults(settings: ProjectSettings | null): 
  */
 export function projectShadowAtlasSize(settings: ProjectSettings | null): number {
   return canvasShadowAtlasSize(parseOptionalInt(settings?.['rendering/2d/shadow_atlas/size']));
+}
+
+const POSITIONAL_SHADOW_SETTING = 'rendering/lights_and_shadows/positional_shadow/';
+
+/** The root viewport's positional shadow atlas (`scene_tree.cpp:2130-2141`). */
+export function projectPositionalShadowAtlas(
+  settings: ProjectSettings | null
+): PositionalShadowAtlasSettings {
+  const setting = (name: string) => parseOptionalInt(settings?.[POSITIONAL_SHADOW_SETTING + name]);
+  return viewportPositionalShadowAtlas(
+    setting('atlas_size'),
+    [0, 1, 2, 3].map((quadrant) => setting(`atlas_quadrant_${quadrant}_subdiv`)),
+    ROOT_POSITIONAL_SHADOW_ATLAS
+  );
 }
 
 /** `rendering/lightmapping/primitive_meshes/texel_size`, the world size of a texel in a PrimitiveMesh's UV2. */

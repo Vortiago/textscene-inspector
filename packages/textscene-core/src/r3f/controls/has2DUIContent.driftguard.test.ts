@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 import './index'; // The barrel registers every slice.
 import { controlComponentRegistry } from './ControlComponentRegistry';
 import { TWO_D_UI_TYPES } from './has2DUIContent';
-import { isEmbeddedWindow } from '../../nodes/viewport/subviewport/viewportBoundary';
+import { isEmbeddedWindow } from '../viewportRender/viewportBoundary';
 import { CLASS_BASE_TYPES, descendsFromClass } from '../../godot/classdb/classBaseTypes';
 
 /**

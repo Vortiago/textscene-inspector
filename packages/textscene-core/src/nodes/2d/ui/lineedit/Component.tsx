@@ -18,7 +18,7 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { getFontChainHeightPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
@@ -73,7 +73,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // and a spacing of 3 lifts the text 1.5px, past the top of its clip rect. Read in the render body, not
   // the `useMemo` below, for the reason Label's Component.tsx gives.
   const fontMetrics = resolveNodeFontMetrics(solveNode, LINE_EDIT_THEME_FONT_KEY);
-  const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
+  const fontHeightPx = getFontChainHeightPx(fontMetrics, fontSizePx);
   const bidi = useControlBidiOptions(props, solveNode);
   const { drawControlChars } = props;
   const layout: TextLayoutResult | null = useMemo(
@@ -250,6 +250,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
             outline={textOutline}
             clippingPlanes={clippingPlanes}
             renderOrder={renderOrder}
+            penSum="fromItemPosition"
           />
           {selection && (
             <OutlinedTextRun
@@ -259,6 +260,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
               outline={textOutline}
               clippingPlanes={clippingPlanes}
               renderOrder={renderOrder}
+              penSum="fromItemPosition"
             />
           )}
         </CanvasItemGroup>

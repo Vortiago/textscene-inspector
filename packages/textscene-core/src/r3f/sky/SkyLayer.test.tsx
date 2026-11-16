@@ -24,7 +24,7 @@ import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 import { installSkyDebanding } from './skyDebanding';
 import { WorldExposureScope, usePublishCameraAttributes } from '../environment/worldExposure';
 import { drawAtExposure, useSceneExposure } from '../exposure/sceneExposure';
-import { captureCameras } from '../reflectionProbe/captureCameras';
+import { drawAsProbeCapture } from '../testing/worldRenders';
 import { stageCapture } from '../reflectionProbe/captureStage';
 import { noteRealTimeProbes } from '../reflectionProbe/realTimeCaptures';
 import { SkyBackground } from './skyBackground';
@@ -717,11 +717,6 @@ describe('SkyLayer under an exposure', () => {
     const skyLight = (
       <directionalLight userData={skyLightUserData({ drawsInSky: true, energy: 2, size: 0 })} />
     );
-    const captureCamera = (isInterior = false) =>
-      captureCameras(new THREE.Matrix4(), NO_ROTATION, [10, 10, 10, 10, 10, 10], {
-        isInterior,
-        hasShadows: true,
-      })[0]!;
     /** Holds a camera's exposure of 4 over a world at 1, as a Camera3D with its own attributes. */
     function CameraAtFour() {
       useSceneExposure(4, 1);
@@ -740,10 +735,12 @@ describe('SkyLayer under an exposure', () => {
       for (let render = 0; render < 10; render += 1) fireSceneRender(mounted.scene, view);
       return mounted;
     }
-    /** The ambient energy a capture through `camera` at the world's exposure of 1 reads. */
-    const capturedAmbient = (scene: THREE.Scene, camera = captureCamera()) =>
+    /** The ambient energy a capture at the world's exposure of 1 reads. */
+    const capturedAmbient = (scene: THREE.Scene, isInterior = false) =>
       drawAtExposure(scene, 1, () => {
-        fireSceneRender(scene, camera);
+        drawAsProbeCapture({ isInterior, hasShadows: true }, () =>
+          fireSceneRender(scene, new THREE.PerspectiveCamera())
+        );
         return scene.environmentIntensity;
       });
     /** The ambient energy the view reads in the frame after `scene` notes one ALWAYS probe. */
@@ -798,7 +795,7 @@ describe('SkyLayer under an exposure', () => {
     it('shows no sky to an interior capture, which draws without the environment', async () => {
       const { scene } = await viewedAtFour();
       const restore = stageCapture(scene, { cullMask: 0xfffff, interior: true }, CLEAR_COLOR);
-      capturedAmbient(scene, captureCamera(true));
+      capturedAmbient(scene, true);
       const shown = [scene.environmentIntensity, scene.background];
       restore();
 

@@ -16,6 +16,10 @@ Each render shows the capture at its own exposure over the capture's (`light_sto
 Over a sky, a ONCE probe reflects the bake of the view, as Godot captures it while that bake holds.
 An ALWAYS probe draws its faces at the world's exposure before the view in each frame. Those
 renders bake the sky for the view too (`renderer_scene_cull.cpp:3755-3762`).
+A capture draws its positional shadows in the scene's own probe atlas, size 1024 with quadrants
+[4, 4, 4, 8], not in the viewport's (`renderer_scene_cull.cpp:430-435`, `:3691`). It samples each
+texture at mipmap bias 0 and 4 anisotropic taps, with Godot's default samplers
+(`render_forward_clustered.cpp:1824`, `material_storage.h:370`).
 
 ## Two overlapping probes
 <!-- compare: image=unit-reflection-probe-always status=unreviewed fixture=unit-reflection-probe-always.tscn -->

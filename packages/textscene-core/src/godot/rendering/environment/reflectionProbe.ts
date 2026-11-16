@@ -11,6 +11,7 @@ import {
 } from './skyReflection.js';
 import { type Vector3, vector3Length } from '../../math/vector.js';
 import { sortArray } from '../../templates/sortArray.js';
+import type { PositionalShadowAtlasSettings } from '../lights/positionalShadowAtlas.js';
 
 /** `ReflectionProbe::UpdateMode` (`scene/3d/reflection_probe.h:39-42`). */
 export const ReflectionProbeUpdateMode = {
@@ -28,6 +29,12 @@ export const ReflectionProbeAmbientMode = {
   /** `ambient_color` times `ambient_color_energy`. */
   COLOR: 2,
 } as const;
+
+/** The atlas each scenario's captures draw their shadows in (`renderer_scene_cull.cpp:430-435`). */
+export const REFLECTION_PROBE_SHADOW_ATLAS: PositionalShadowAtlasSettings = {
+  size: 1024,
+  quadrantShadows: [4, 4, 4, 8],
+};
 
 /** The near plane of each capture face (`servers/rendering/renderer_scene_cull.cpp:3694`). */
 export const CAPTURE_NEAR = 0.01;

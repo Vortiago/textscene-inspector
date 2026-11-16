@@ -3,7 +3,7 @@
 import { degToRad } from '../../../godot/math/math';
 import { normalizedVector3 } from '../../../godot/math/vector';
 import { Camera3DKeepAspect, Camera3DProjectionType } from '../../../godot/scene/camera3d';
-import type { CameraLens } from './projectionFit';
+import type { CameraLens } from '../../../r3f/viewportRender/projectionFit';
 
 export interface CameraGizmoInput {
   lens: CameraLens;

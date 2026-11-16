@@ -121,9 +121,9 @@ The offset a viewport adds to the mip level that each of its 3D material sampler
 It changes only a texture that has levels to choose between.
 _Avoid_: "LOD bias", which suggests mesh level of detail.
 
-**Anisotropic filtering level** (`r3f/contexts/AnisotropicFilteringContext.tsx`):
-The `Viewport.AnisotropicFiltering` value, 0 to 4, that sets `1 << level` taps for a texture on an anisotropic `texture_filter`: the project's `anisotropic_filtering_level`, or a SubViewport's own for the textures that only its pass draws.
-Unlike the **Mipmap bias**, the texture carries it, so it cannot change between passes.
+**Anisotropic filtering level** (`r3f/viewportAnisotropy.ts`):
+The `Viewport.AnisotropicFiltering` value, 0 to 4, that sets `1 << level` taps for a texture on an anisotropic `texture_filter`: the project's `anisotropic_filtering_level`, or a SubViewport's own.
+Like the **Mipmap bias**, each 3D draw applies the level of its viewport, so one texture samples at a different level in each viewport. A canvas draw keeps Godot's default of 4 taps.
 
 **Unwrap cache**:
 The `.unwrap_cache` file Godot's importer writes beside a source asset it unwraps for lightmaps: each mesh's UV2 layout, keyed by the MD5 of the mesh as the unwrap received it.
@@ -616,6 +616,10 @@ _Avoid_: "background canvas".
 What displays a **sub-viewport**'s render target (a `SubViewportContainer` or a `ViewportTexture` consumer), and the one place its canvas subtree is dispatched.
 _Avoid_: "viewport container" for the concept. "render target" for the surface.
 
+**Viewport description** (`ViewportDescription` in `r3f/viewportRender/viewportDescription.ts`, ADR-0078):
+What a viewport gives each render it draws: its MSAA, debanding, transparent background, mipmap bias, positional shadow atlas and anisotropic level, and its rules for the camera, the editor chrome and the preview environment. An adapter builds it from a source: `rootViewportDescription` from the project settings.
+_Avoid_: "viewport config", "viewport settings" for the value. A `project*` read beside a render.
+
 **Embedded window** (`nodes/windows/window/`):
 A visible Window, Popup or PopupPanel that a viewport draws on its own canvas instead of the system's. The window's Controls draw into its target as a **sub-viewport**'s do, rooted at the window itself (ADR-0033).
 _Avoid_: "dialog" for the base case. "native window", which Godot draws through the system.
@@ -632,7 +636,7 @@ _Avoid_: "dialog content", which is the rect that authored children fill.
 The viewport that draws an **Embedded window**: the nearest viewport above it with `gui_embed_subwindows`, the root through `display/window/subwindows/embed_subwindows`. A window below an embedding root embeds only when `force_native` (`window.cpp:1534-1537`), whatever it authors. The embedder draws each window's frame, title, close icon and target on its subwindow canvas, layer 1024, in stack order (`viewport.cpp:342-401`). The **Live scene tree** holds the root's answer (`LiveTreeContext.project`), and `windowEmbedder.ts` answers each reader from the tree.
 _Avoid_: "parent viewport", which may not embed.
 
-**Pass gate** (`PassGate` in `r3f/contexts/ViewportPassRegistryContext.tsx`, `nodes/viewport/renderGate.ts`):
+**Pass gate** (`PassGate` in `r3f/contexts/ViewportPassRegistryContext.tsx`, `r3f/viewportRender/renderGate.ts`):
 What decides whether a **sub-viewport**'s pass renders in a frame: its effective `render_target_update_mode` (a `SubViewportContainer` parent replaces the authored mode), the viewport it sits in, and whether a mounted consumer sampled its target. The same gate decides what a render clears, from `render_target_clear_mode` and the renders the viewport has had.
 _Avoid_: "visibility cull". "throttle".
 

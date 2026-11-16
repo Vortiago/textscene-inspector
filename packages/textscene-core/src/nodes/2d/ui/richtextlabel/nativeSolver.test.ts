@@ -32,10 +32,11 @@ import {
   shapeRichText,
   richTextContentHeightPx,
   richTextLabelUnderlineAlpha,
+  runsReadBoxWidth,
 } from './nativeSolver';
 import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment, type ParsedImgTag } from './bbcode';
 import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
-import { resolveRichTextFaces } from './styleFaces';
+import { resolveRichTextFaces, richTextStylesInUse } from './styleFaces';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { RichTextReveal } from './visibleCharacters';
 import { AutowrapMode, VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
@@ -907,7 +908,7 @@ describe('richTextLabelTextureSlots (rich_text_label.cpp:4120-4155 _get_image_si
 
 /** The paragraph at `FONT_SIZE`, wrapped at `boxWidthPx` (0 is unwrapped), as the solve and the painter shape it. */
 const FONT_SIZE = 16;
-const ALL_FACES = resolveRichTextFaces(node({}), ALL_STYLES);
+const ALL_FACES = resolveRichTextFaces(node({}), richTextStylesInUse(ALL_STYLES));
 
 function shapeRuns(
   runs: Parameters<typeof shapeRichText>[0],
@@ -2251,7 +2252,7 @@ describe('RichTextLabel lists and indents', () => {
   ) {
     const label = { text, bbcodeEnabled: true, ...props } as RichTextLabelProperties;
     const runs = styledTextRuns(node(label), label, WHITE, FONT_SIZE, BOX_WIDTH_PX);
-    const layout = shapeRichText(runs, resolveRichTextFaces(node(label), runs), {
+    const layout = shapeRichText(runs, resolveRichTextFaces(node(label), richTextStylesInUse(runs)), {
       fontSizePx: FONT_SIZE,
       boxWidthPx: BOX_WIDTH_PX,
       autowrapMode: AutowrapMode.AUTOWRAP_WORD_SMART,
@@ -2511,10 +2512,20 @@ describe('RichTextLabel lists and indents', () => {
   it('draws the marker at the line end under right-to-left, and the text after the inset', () => {
     const placements = listPlacements('[ul]a[/ul]', { textDirection: 2 });
     const [marker, text] = placements;
-    expect(text!.lineOffsetXPx).toBe(
-      BOX_WIDTH_PX - MARGIN_PX - BULLET_MARKER_PX - Math.ceil(text!.layout.widthPx)
+    const textWidthPx = Math.ceil(
+      text!.layout.lines[0]!.glyphs.reduce((sum, glyph) => sum + glyph.advance, 0)
     );
-    expect(marker!.lineOffsetXPx).toBe(text!.lineOffsetXPx + Math.ceil(text!.layout.widthPx));
+    expect(text!.lineOffsetXPx).toBe(BOX_WIDTH_PX - MARGIN_PX - BULLET_MARKER_PX - textWidthPx);
+    expect(marker!.lineOffsetXPx).toBe(text!.lineOffsetXPx + textWidthPx);
+  });
+
+  it('sums each pen from the line offset across its style runs (`rich_text_label.cpp:1155,1508`)', () => {
+    const [first, second] = listPlacements('[center]ab[color=red]cd[/color][/center]');
+    const [a, b] = first!.layout.lines[0]!.glyphs;
+    expect(a!.linePenPx).toBe(Math.fround(first!.lineOffsetXPx));
+    expect(second!.layout.lines[0]!.glyphs[0]!.linePenPx).toBe(
+      Math.fround(Math.fround(a!.linePenPx! + Math.fround(a!.advance)) + Math.fround(b!.advance))
+    );
   });
 });
 
@@ -2565,5 +2576,26 @@ describe('richTextLabelUnderlineAlpha', () => {
     expect(
       richTextLabelUnderlineAlpha({ ...base, constants: { ...base.constants, underline_alpha: 0 } })
     ).toBe(0);
+  });
+});
+
+describe('runsReadBoxWidth', () => {
+  const runsOf = (text: string) =>
+    styledTextRuns(node({}), parsedProps({ text, bbcodeEnabled: true }), WHITE, 18, 200);
+
+  it('is true for an [img] sized in percent of the box', () => {
+    expect(runsReadBoxWidth(runsOf('[img=50%x25%]a.png[/img]'))).toBe(true);
+  });
+
+  it('is true for an [hr], whose default width is a percent of the box', () => {
+    expect(runsReadBoxWidth(runsOf('[hr]'))).toBe(true);
+  });
+
+  it('is false for an [img] sized in pixels', () => {
+    expect(runsReadBoxWidth(runsOf('[img=32]a.png[/img]'))).toBe(false);
+  });
+
+  it('is false for plain text', () => {
+    expect(runsReadBoxWidth(runsOf('plain text'))).toBe(false);
   });
 });

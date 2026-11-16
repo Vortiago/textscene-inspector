@@ -13,7 +13,8 @@ import { canvasLayerOf } from './canvasPaintOrder.js';
 import { useCanvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
 import { CHAIN_START_PARENT, CanvasParentProvider } from './canvasItemPass/inheritedCanvasState.js';
 import { CanvasLayerIndexProvider } from './lighting2d/canvasItemPlacement.js';
-import { isViewportPass, observeSceneCamera } from './sceneRenderCamera.js';
+import { observeSceneCamera } from './sceneRenderCamera.js';
+import { renderUnderWay } from './viewportRender/worldRender.js';
 import { viewportLayerMatrix, type ViewportLayerFollow } from './viewportLayerAnchor.js';
 import { CanvasFrameContext, markCanvasFrame } from './canvasFrame.js';
 
@@ -27,7 +28,9 @@ function useViewportLayerAnchor(layer: RefObject<THREE.Object3D | null>, follow:
     return observeSceneCamera(scene, (camera, target) => {
       const object = layer.current;
       if (!object) return;
-      if (!target || !isViewportPass(camera)) next.identity();
+      const isViewportCanvasDraw =
+        target && renderUnderWay()?.hasCanvasTransform && camera instanceof THREE.OrthographicCamera;
+      if (!isViewportCanvasDraw) next.identity();
       else viewportLayerMatrix({ enabled, scale }, camera, size.set(target.width, target.height), next);
       if (next.equals(object.matrix)) return;
       object.matrix.copy(next);

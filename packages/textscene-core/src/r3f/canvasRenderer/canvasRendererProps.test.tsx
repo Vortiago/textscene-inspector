@@ -1,12 +1,34 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import type { ReactElement } from 'react';
+import { describe, expect, it, vi } from 'vitest';
+import { render } from '@testing-library/react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { useThree } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
+import { World2DCanvas } from '../components/Canvas2DStage/World2DCanvas';
+import { TscnCanvas } from '../TscnCanvas';
 import { CANVAS_RENDERER_GL, CANVAS_RENDERER_PROPS } from './canvasRendererProps';
 
-const CANVAS_FILES = ['../TscnCanvas.tsx', '../components/Canvas2DStage/World2DCanvas.tsx'];
+// happy-dom creates no WebGL context, so each canvas test reads the props its `<Canvas>` receives.
+vi.mock('@react-three/fiber', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@react-three/fiber')>()),
+  Canvas: vi.fn(() => null),
+}));
+
+const CANVASES: [string, () => ReactElement][] = [
+  ['TscnCanvas', () => <TscnCanvas />],
+  [
+    'World2DCanvas',
+    () => (
+      <World2DCanvas nodes={[]} internalResources={[]} externalResources={[]} pan={{ x: 0, y: 0 }} zoom={1} />
+    ),
+  ],
+];
+
+function canvasPropsOf(canvas: () => ReactElement) {
+  vi.mocked(Canvas).mockClear();
+  render(canvas());
+  return vi.mocked(Canvas).mock.calls.at(-1)![0];
+}
 
 describe('CANVAS_RENDERER_PROPS', () => {
   it('asks for the percentage shadow preset', () => {
@@ -31,11 +53,12 @@ describe('CANVAS_RENDERER_GL', () => {
 });
 
 describe('each canvas', () => {
-  it.each(CANVAS_FILES)('%s spreads the shared props and gl flags', (file) => {
-    const source = readFileSync(join(import.meta.dirname, file), 'utf8');
+  it.each(CANVASES)('%s mounts its <Canvas> with the shared props', (_name, canvas) => {
+    expect(canvasPropsOf(canvas)).toMatchObject(CANVAS_RENDERER_PROPS);
+  });
 
-    expect(source).toContain('{...CANVAS_RENDERER_PROPS}');
-    expect(source).toMatch(/gl=\{(CANVAS_RENDERER_GL|\{ \.\.\.CANVAS_RENDERER_GL)/);
+  it.each(CANVASES)('%s keeps every shared gl flag', (_name, canvas) => {
+    expect(canvasPropsOf(canvas).gl).toMatchObject(CANVAS_RENDERER_GL);
   });
 });
 

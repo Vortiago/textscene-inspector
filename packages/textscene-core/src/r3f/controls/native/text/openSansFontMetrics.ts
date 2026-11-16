@@ -84,7 +84,10 @@ export const OPEN_SANS_FONT_METRICS: FontMetrics = {
     return OPEN_SANS_METRICS.averageAdvanceUnits;
   },
   get underlinePosition() {
-    return freeTypeUnderlinePosition(OPEN_SANS_METRICS.underlinePosition, OPEN_SANS_METRICS.underlineThickness);
+    return freeTypeUnderlinePosition(
+      OPEN_SANS_METRICS.underlinePosition,
+      OPEN_SANS_METRICS.underlineThickness
+    );
   },
   get underlineThickness() {
     return OPEN_SANS_METRICS.underlineThickness;

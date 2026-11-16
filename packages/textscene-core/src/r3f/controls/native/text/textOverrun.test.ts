@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { shapeText, type TextLineLayout } from './textLayout';
 import { getFontEmboldenedAdvancePx, withVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
+import { withSpacing } from './fontSpacing';
 import { OPEN_SANS_CANVAS_FONT_METRICS } from './openSansCanvasFontMetrics';
 import {
   isTextWidthClipped,
@@ -151,6 +152,27 @@ describe('trimLine', () => {
     expect(ellipsis.char).toBe('…');
     expect(ellipsis.advance).toBeCloseTo(getFontEmboldenedAdvancePx(fontMetrics, '…', FONT_SIZE_PX), 10);
     expect(ellipsis.emboldenGrowthPx).toBeCloseTo(1.2, 10);
+  });
+
+  it("counts the dot face's glyph spacing once in the ellipsis width, and draws the dot without it", () => {
+    const fontMetrics = withSpacing(OPEN_SANS_FONT_METRICS, {
+      spacing: { top: 0, bottom: 0, space: 0, glyph: 5 },
+      baselineOffset: 0,
+    });
+    const shaped = shapeText('AAAAAAAAAAAA', {
+      fontSizePx: FONT_SIZE_PX,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      fontMetrics,
+    }).lines[0]!;
+    const flags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+    const result = trimLine(shaped, 130, flags, { fontMetrics, fontSizePx: FONT_SIZE_PX }, inferredPlacement);
+    const ellipsis = result.glyphs.at(-1)!;
+    expect(ellipsis.char).toBe('…');
+    const keptPx = result.glyphs.slice(0, -1).reduce((sum, glyph) => sum + glyph.advance, 0);
+    expect(ellipsis.advance).toBeCloseTo(getFontEmboldenedAdvancePx(fontMetrics, '…', FONT_SIZE_PX), 10);
+    expect(result.widthPx).toBeCloseTo(keptPx + Math.trunc(ellipsis.advance + 5), 9);
   });
 
   // A canvas raster scales the measured ink of a glyph by its own size (`canvasTextPainter.ts`).

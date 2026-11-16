@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { ROOT_POSITIONAL_SHADOW_ATLAS, viewportPositionalShadowAtlas } from '../../godot/scene/viewport';
-import { activeShadowAtlas, renderWithShadowAtlas, ViewportShadowAtlas } from './viewportShadowAtlas';
+import { ROOT_POSITIONAL_SHADOW_ATLAS, VIEWPORT_POSITIONAL_SHADOW_ATLAS } from '../../godot/scene/viewport';
+import { ViewportShadowAtlas } from './viewportShadowAtlas';
 
 const rootAtlas = () => new ViewportShadowAtlas(ROOT_POSITIONAL_SHADOW_ATLAS);
-const subViewportAtlas = () => new ViewportShadowAtlas(viewportPositionalShadowAtlas(undefined, []));
+const subViewportAtlas = () => new ViewportShadowAtlas(VIEWPORT_POSITIONAL_SHADOW_ATLAS);
 
 /** An omni light whose shadow holds a cube of `size`, as a fit leaves it. */
 function omniWithCube(size: number): { light: THREE.PointLight; map: THREE.WebGLCubeRenderTarget } {
@@ -134,18 +134,35 @@ describe('ViewportShadowAtlas.dispose', () => {
 });
 
 describe('ViewportShadowAtlas and the shared atlas texture', () => {
-  it('sizes the shared atlas to the largest viewport atlas that holds it', async () => {
-    // Fresh modules, so no atlas an earlier test left holding the texture counts.
+  /** Fresh modules, so no atlas an earlier test left holding the texture counts. */
+  async function freshModules() {
     vi.resetModules();
     const target = await import('./shadowAtlasTarget');
     const { ViewportShadowAtlas: FreshAtlas } = await import('./viewportShadowAtlas');
-    const sub = new FreshAtlas(viewportPositionalShadowAtlas(undefined, []));
+    return { target, FreshAtlas };
+  }
+
+  const aSpotRequest = () => [{ owner: new THREE.SpotLight(), isOmni: false, coverage: 1 }];
+
+  it('sizes the shared atlas to the largest viewport atlas that holds a slot', async () => {
+    const { target, FreshAtlas } = await freshModules();
+    const sub = new FreshAtlas(VIEWPORT_POSITIONAL_SHADOW_ATLAS);
+    sub.allocate(aSpotRequest(), 0);
     expect(target.positionalShadowAtlas().width).toBe(2048);
     const root = new FreshAtlas(ROOT_POSITIONAL_SHADOW_ATLAS);
+    root.allocate(aSpotRequest(), 0);
     expect(target.positionalShadowAtlas().width).toBe(4096);
     root.dispose();
     expect(target.positionalShadowAtlas().width).toBe(2048);
     sub.dispose();
+  });
+
+  it('keeps the shared atlas at one texel until a light takes a slot (edge case)', async () => {
+    const { target, FreshAtlas } = await freshModules();
+    const root = new FreshAtlas(ROOT_POSITIONAL_SHADOW_ATLAS);
+    root.allocate([], 0);
+    expect(target.positionalShadowAtlas().width).toBe(1);
+    root.dispose();
   });
 
   it('places a slot in texels of its own viewport’s atlas', () => {
@@ -155,37 +172,5 @@ describe('ViewportShadowAtlas and the shared atlas texture', () => {
     // A SubViewport's 2048 atlas puts its second quadrant at x = 1024.
     expect(sub.slot(light)).toEqual({ x: 1024, y: 0, size: 512, paraboloidStep: null });
     sub.dispose();
-  });
-});
-
-describe('renderWithShadowAtlas', () => {
-  it('makes the atlas active for the render, and only for it', () => {
-    const sub = subViewportAtlas();
-    let during: ViewportShadowAtlas | null = null;
-    renderWithShadowAtlas(sub, () => {
-      during = activeShadowAtlas();
-    });
-    expect(during).toBe(sub);
-    expect(activeShadowAtlas()).toBeNull();
-  });
-
-  it('restores the outer atlas after a nested pass (edge case)', () => {
-    const outer = subViewportAtlas();
-    const inner = subViewportAtlas();
-    let afterInner: ViewportShadowAtlas | null = null;
-    renderWithShadowAtlas(outer, () => {
-      renderWithShadowAtlas(inner, () => {});
-      afterInner = activeShadowAtlas();
-    });
-    expect(afterInner).toBe(outer);
-  });
-
-  it('clears the atlas when the render throws (error case)', () => {
-    expect(() =>
-      renderWithShadowAtlas(subViewportAtlas(), () => {
-        throw new Error('lost context');
-      })
-    ).toThrow('lost context');
-    expect(activeShadowAtlas()).toBeNull();
   });
 });

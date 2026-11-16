@@ -31,15 +31,19 @@ export class ViewportShadowAtlas {
   private readonly parkedMaps = new Map<THREE.LightShadow, ShadowMap>();
   /** The shadows whose cube is this viewport's now. */
   private readonly boundShadows = new Set<THREE.LightShadow>();
+  private isHoldingTexture = false;
 
   constructor(settings: PositionalShadowAtlasSettings) {
     this.slots = new PositionalShadowAtlas(settings);
-    holdPositionalShadowAtlas(this, this.slots.size);
   }
 
   /** One render's allocation, in Godot's order (`PositionalShadowAtlas.allocate`). */
   allocate(requests: readonly PositionalShadowRequest<PositionalLight>[], tickMsec: number): void {
     this.slots.allocate(requests, tickMsec);
+    // Godot allocates an atlas only in a shadow pass (`render_forward_clustered.cpp:2650`).
+    if (this.isHoldingTexture || this.slots.ownersHoldingSlots().next().done) return;
+    holdPositionalShadowAtlas(this, this.slots.size);
+    this.isHoldingTexture = true;
   }
 
   /** The slot the light holds, or null when it holds none. */
@@ -90,6 +94,7 @@ export class ViewportShadowAtlas {
     this.parkedMaps.clear();
     for (const shadow of this.boundShadows) this.unbind(shadow);
     releasePositionalShadowAtlas(this);
+    this.isHoldingTexture = false;
   }
 
   private park(shadow: THREE.LightShadow): void {
@@ -107,22 +112,4 @@ export class ViewportShadowAtlas {
 function isShadowOfAny(lights: ReadonlySet<PositionalLight>, shadow: THREE.LightShadow): boolean {
   for (const light of lights) if (light.shadow === shadow) return true;
   return false;
-}
-
-/** Pushed only by `renderWithShadowAtlas` around one render, and popped when that render returns. */
-const activeAtlases: ViewportShadowAtlas[] = [];
-
-/** Runs `render` with `atlas` as the atlas of every scene it renders: a SubViewport's pass. */
-export function renderWithShadowAtlas(atlas: ViewportShadowAtlas, render: () => void): void {
-  activeAtlases.push(atlas);
-  try {
-    render();
-  } finally {
-    activeAtlases.pop();
-  }
-}
-
-/** The atlas of the SubViewport rendering now, or null for a render of the main view. */
-export function activeShadowAtlas(): ViewportShadowAtlas | null {
-  return activeAtlases[activeAtlases.length - 1] ?? null;
 }

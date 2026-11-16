@@ -15,7 +15,7 @@ import { TextDirection } from '../../../godot/text/textServerEnums';
 import { fitIconSize } from '../../../r3f/controls/native/buttonBase';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { SolveContext, TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry';
-import { getFontLinePitchPx } from '../../../r3f/controls/native/text/fontMetrics';
+import { getFontChainHeightPx } from '../../../r3f/controls/native/text/fontMetrics';
 import { controlBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
 import { shapeTextLine } from '../../../r3f/controls/native/text/textLine';
 import { shapedTextSizeWidthPx, type TextLayoutResult } from '../../../r3f/controls/native/text/textLayout';
@@ -114,7 +114,7 @@ function itemHeight(
   }
   let text = Math.trunc(textHeight);
   if (text === 0 && !item.separator) {
-    text = getFontLinePitchPx(theme.font.metrics, theme.font.sizePx, 0);
+    text = Math.trunc(getFontChainHeightPx(theme.font.metrics, theme.font.sizePx));
   }
   const separator = item.separator
     ? Math.trunc(

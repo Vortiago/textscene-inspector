@@ -117,12 +117,30 @@ export interface FontMetrics {
    * variation.
    */
   readonly drawnOpentype?: OpentypeCoordinates;
+  /** The `spacing_*` of the `FontVariation` this face draws for (`fontSpacing.ts`). Absent is none. */
+  readonly spacing?: FontSpacing;
+  /** `FontVariation.baseline_offset`: a glyph moves down this share of ascent plus descent. Absent is 0. */
+  readonly baselineOffset?: number;
+  /** The top plus bottom spacing `Font::get_height` adds, from the named font (`font.cpp:219`). */
+  readonly heightSpacingPx?: number;
   /**
    * The glyph outlines that the text of an emboldened, sheared or varied canvas face follows. Absent
    * for a face that needs none. Null for a font whose outlines this previewer cannot read: its text
    * stays on `fillText` and `strokeText`.
    */
   readonly outlines?: SfntOutlines | null;
+}
+
+/** The extra px a face adds, by `TextServer::SpacingType`: Godot stores each as an int. */
+export interface FontSpacing {
+  /** Added to the ascent of each line the face draws in. */
+  readonly top: number;
+  /** Added to the descent of each line the face draws in. */
+  readonly bottom: number;
+  /** Added to the advance of each whitespace glyph, in place of `glyph` when not 0. */
+  readonly space: number;
+  /** Added to the advance of each glyph. */
+  readonly glyph: number;
 }
 
 /** The kerning of a pair of glyphs. Null, not no kerning, where the kerning of their characters stands. */
@@ -205,14 +223,15 @@ export function getFontLinePitchPx(
   return ascentPx + descentPx + lineSpacingPx;
 }
 
-/**
- * Descent at `fontSizePx`: pitch less ascent at zero spacing, so `getFontLinePitchPx` keeps the one
- * reading of the ceiling rule (`text_server_adv.cpp:1515-1516`).
- */
+/** Descent px: the pitch less the ascent, so the ceiling rule reads once (`text_server_adv.cpp:1515`). */
 export function getFontDescentPx(
   metrics: Pick<FontMetrics, 'ascent' | 'descent' | 'unitsPerEm' | 'pxPerUnit' | 'outlines'>,
   fontSizePx: number
 ): number {
+  // A fixed-size font returns its cached descent scaled, with no FreeType round (`:2941-2943`).
+  if (metrics.pxPerUnit && !faceStrikeSize(metrics, fontSizePx)) {
+    return unitsToPx(metrics.descent, metrics, fontSizePx);
+  }
   return getFontLinePitchPx(metrics, fontSizePx, 0) - getFontAscentPx(metrics, fontSizePx);
 }
 
@@ -659,12 +678,14 @@ export const fallbackChainOf = perObject((face: FontMetrics): readonly FontMetri
   ...(face.fallbacks ?? []),
 ]);
 
-/**
- * `Font::get_height` (`font.cpp:210-220`): the largest ascent plus descent over the **Fallback chain**
- * of `face`, so a taller fallback makes the font taller though no glyph draws in it.
- */
+/** `font.cpp:210-220`: the tallest face of the chain sets the height, whether or not a glyph draws in it. */
 export function getFontChainHeightPx(face: FontMetrics, fontSizePx: number): number {
-  return Math.max(...fallbackChainOf(face).map((entry) => getFontLinePitchPx(entry, fontSizePx, 0)));
+  const tallestPx = Math.max(
+    ...fallbackChainOf(face).map(
+      (entry) => getFontAscentPx(entry, fontSizePx) + getFontDescentPx(entry, fontSizePx)
+    )
+  );
+  return tallestPx + (face.heightSpacingPx ?? 0);
 }
 
 /** The first face of the **Fallback chain** of `face` that has a glyph for `ch`, or null for none. */

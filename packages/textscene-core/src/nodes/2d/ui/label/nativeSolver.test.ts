@@ -463,6 +463,21 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
     expect(placements.map((p) => p.y)).toEqual([0, PITCH - 3 + 10]);
   });
 
+  it('sums the baselines down in 32-bit float from the top margin, as `Vector2 ofs` does (label.cpp:823,887)', () => {
+    const layout = shapeText(Array(11).fill('A').join('\n'), {
+      fontSizePx: FONT_SIZE,
+      boxWidthPx: 0,
+      autowrapMode: 0,
+      lineSpacingPx: 3,
+    });
+    const placements = layoutLabelLines(layout, 200, 400, undefined, undefined, undefined, {
+      contentMargin: { ...ZERO_SIDES, top: 0.99999 },
+    });
+    const last = placements[10]!;
+    // 0.99999 + 18 + 10 * 26 is 278.99999 in 64-bit float, and rounds to 279 in 32-bit float.
+    expect(last.y + last.line.ascentPx).toBe(279);
+  });
+
   it('left alignment (default/undefined): every line starts at x=0', () => {
     const layout = layoutFor('A\nAB'); // two lines, different widths
     const placements = layoutLabelLines(layout, 200, 200, undefined, undefined);

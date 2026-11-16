@@ -17,6 +17,7 @@ import { ViewportModeProvider } from './contexts/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
 import { degToRad } from '../godot/math/math.js';
+import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../godot/scene/viewport';
 
 import './nodes/index';
 
@@ -256,7 +257,7 @@ describe('<SceneShadowFitter> directional fit on its own', () => {
 
 describe('useSceneShadowFit', () => {
   function FitScene({ scene }: { scene: THREE.Scene | null }) {
-    useSceneShadowFit(scene);
+    useSceneShadowFit(scene, ROOT_POSITIONAL_SHADOW_ATLAS);
     return null;
   }
 

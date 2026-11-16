@@ -10,7 +10,7 @@ import { useThree } from '@react-three/fiber';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 
-import type { Camera2DTag } from '../camera2d/cameraView';
+import type { Camera2DTag } from '../../../r3f/viewportRender/camera2DView';
 import { parseParallaxLayer } from '../parallaxlayer/parser';
 import { ParallaxLayer } from '../parallaxlayer/Component';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
@@ -18,7 +18,8 @@ import { parseParallaxBackground } from './parser';
 import { ParallaxBackground } from './Component';
 import { CanvasLayerScope } from '../../../r3f/canvasLayerScope';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
-import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera';
+import { World2DCamera } from '../../../r3f/components/Canvas2DStage/world2DCamera';
+import { drawAsCanvasPass } from '../../../r3f/testing/worldRenders';
 import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 
 function backgroundNode(properties: Record<string, string> = {}): TscnNode {
@@ -61,7 +62,7 @@ const CAMERA_TAG: Camera2DTag = {
  * produces it and the Godot probe measured it: top-left (24, 76) in canvas pixels.
  */
 function viewportPassCamera(): THREE.OrthographicCamera {
-  const camera = createViewportCanvasCamera();
+  const camera = new World2DCamera();
   Object.assign(camera, { left: -576, right: 576, top: 324, bottom: -324, near: 0.1, far: 4000 });
   camera.position.set(600, -400, 1000);
   camera.updateProjectionMatrix();
@@ -123,7 +124,9 @@ describe('<ParallaxBackground>', () => {
     );
     const scene = renderer.scene.instance;
     scene.updateMatrixWorld();
-    fireSceneRender(scene, viewportPassCamera(), new THREE.WebGLRenderTarget(1152, 648));
+    drawAsCanvasPass(() =>
+      fireSceneRender(scene, viewportPassCamera(), new THREE.WebGLRenderTarget(1152, 648))
+    );
 
     const world = new THREE.Vector3().setFromMatrixPosition(scene.getObjectByName('Probe')!.matrixWorld);
     expect(world.x).toBe(24);
@@ -170,7 +173,7 @@ describe('<ParallaxBackground>', () => {
       </>
     );
     const scene = renderer.scene.instance;
-    fireSceneRender(scene, viewportPassCamera());
+    drawAsCanvasPass(() => fireSceneRender(scene, viewportPassCamera()));
 
     const wrappers = scene.getObjectByName('BG')!.children.filter((child) => child.type === 'Group');
     expect(wrappers[0]!.position.x).toBe(-24);
@@ -198,7 +201,7 @@ describe('<ParallaxBackground>', () => {
       </>
     );
     const scene = renderer.scene.instance;
-    fireSceneRender(scene, viewportPassCamera());
+    drawAsCanvasPass(() => fireSceneRender(scene, viewportPassCamera()));
 
     const wrapper = scene.getObjectByName('BG')!.children.find((child) => child.type === 'Group')!;
     expect(wrapper.position.x).toBe(-24);
@@ -250,7 +253,7 @@ describe('<ParallaxBackground>', () => {
       </NodePathProvider>
     );
     const scene = renderer.scene.instance;
-    fireSceneRender(scene, viewportPassCamera());
+    drawAsCanvasPass(() => fireSceneRender(scene, viewportPassCamera()));
 
     const wrapper = scene.getObjectByName('BG')!.children.find((c) => c.type === 'Group')!;
     expect(wrapper.position.x).toBe(0);

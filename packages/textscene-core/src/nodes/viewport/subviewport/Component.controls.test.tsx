@@ -75,7 +75,9 @@ polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
 
 describe('a SubViewport with 2D content and Controls', () => {
   // The Control painters load lazily; a loaded module lets one settled tick mount them.
-  beforeAll(() => Promise.all([import('./ViewportControls'), import('./CanvasOverWorld')]));
+  beforeAll(() =>
+    Promise.all([import('./ViewportControls'), import('../../../r3f/viewportRender/CanvasOverWorld')])
+  );
 
   it('draws a Control into its own pass', async () => {
     const portal = await portalSceneOf(CONTROL_FIRST, PORTAL_SCENE);
@@ -188,7 +190,7 @@ function sceneOf(object: THREE.Object3D): THREE.Object3D {
 }
 
 describe('a SubViewport with 3D content and a 2D item', () => {
-  beforeAll(() => import('./CanvasOverWorld'));
+  beforeAll(() => import('../../../r3f/viewportRender/CanvasOverWorld'));
 
   it('draws the item in a pass of its own, after the world', async () => {
     const draws = await drawsOf(SCENE_3D_WITH_ITEM);
@@ -232,7 +234,9 @@ describe('a SubViewport with 3D content and a 2D item', () => {
 });
 
 describe('a SubViewport with 3D content and Controls', () => {
-  beforeAll(() => Promise.all([import('./ViewportControls'), import('./CanvasOverWorld')]));
+  beforeAll(() =>
+    Promise.all([import('./ViewportControls'), import('../../../r3f/viewportRender/CanvasOverWorld')])
+  );
 
   it('draws its Controls in a pass of their own, after the world', async () => {
     const draws = await drawsOf(SCENE_3D);

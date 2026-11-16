@@ -5,9 +5,13 @@ import { heading } from '../../parser/testing/parserKit';
 import { parseReflectionProbe } from '../../nodes/3d/reflectionprobe/parser';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
-import { captureCameras } from './captureCameras';
+import { drawAsProbeCapture } from '../testing/worldRenders';
+import { renderUnderWay } from '../viewportRender/worldRender';
+import { mipmapBiasUniform } from '../testing/mipmapBiasUniform';
+import type { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas';
 import { ReflectionProbeObject } from './reflectionProbeObject';
 import { SceneProbes } from './sceneProbes';
+import { rootViewportDescription } from '../viewportRender/viewportDescription';
 import { shownProbes } from './probeSlots';
 import { SCENE_ROW_TEXELS } from '../sceneRows/sceneRowTexels';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -95,7 +99,7 @@ async function probesIn(scene: THREE.Scene, ...probes: ReflectionProbeObject[]) 
   /** The capture faces one `update` drew. */
   const facesDrawn = (pending = 0) => {
     const before = sceneRenders();
-    sceneProbes.update(pending, CLEAR);
+    sceneProbes.update(pending, CLEAR, rootViewportDescription(null));
     return sceneRenders() - before;
   };
   const settle = () => {
@@ -284,12 +288,9 @@ describe('SceneProbes rendering', () => {
     const { scene, facesDrawn, settle } = await sceneWith(probeObject());
     settle();
     facesDrawn();
-    const [captureCamera] = captureCameras(new THREE.Matrix4(), { x: 0, y: 0, z: 0 }, [1, 1, 1, 1, 1, 1], {
-      isInterior: false,
-      hasShadows: true,
-    });
-
-    fireSceneRender(scene, captureCamera!);
+    drawAsProbeCapture({ isInterior: false, hasShadows: true }, () =>
+      fireSceneRender(scene, new THREE.PerspectiveCamera())
+    );
 
     expect(shownProbes[0]).toBe(0);
   });
@@ -306,19 +307,47 @@ describe('SceneProbes rendering', () => {
     expect(shownProbes[0]).toBe(0);
   });
 
+  it("captures in the scene's own probe shadow atlas, not the viewport's (renderer_scene_cull.cpp:3691)", async () => {
+    const { renderer, scene, facesDrawn, settle } = await sceneWith(probeObject());
+    const atlases = new Set<ViewportShadowAtlas | null | undefined>();
+    vi.spyOn(renderer, 'render').mockImplementation((rendered) => {
+      if (rendered === scene) atlases.add(renderUnderWay()?.shadowAtlas);
+    });
+    settle();
+    facesDrawn();
+    const [atlas] = atlases;
+    const light = new THREE.SpotLight();
+    atlas?.allocate([{ owner: light, isOmni: false, coverage: 1 }], 0);
+
+    expect([atlases.size, atlas?.slot(light)?.size]).toEqual([1, 256]);
+  });
+
+  it("captures at no mipmap bias, whatever the root's (render_forward_clustered.cpp:1824)", async () => {
+    const { renderer, scene, sceneProbes, settle } = await sceneWith(probeObject());
+    const biases = new Set<number>();
+    vi.spyOn(renderer, 'render').mockImplementation((rendered) => {
+      if (rendered === scene) biases.add(mipmapBiasUniform().value);
+    });
+    settle();
+
+    sceneProbes.update(0, CLEAR, { ...rootViewportDescription(null), mipmapBias: -0.5 });
+
+    expect([...biases]).toEqual([0]);
+  });
+
   it('hides the shadows from a capture without enable_shadows, until its render ends', async () => {
     const { scene } = await sceneWith();
     const light = new THREE.DirectionalLight();
     light.shadow.intensity = 0.8;
     scene.add(light);
-    const [captureCamera] = captureCameras(new THREE.Matrix4(), { x: 0, y: 0, z: 0 }, [1, 1, 1, 1, 1, 1], {
-      isInterior: false,
-      hasShadows: false,
-    });
+    const camera = new THREE.PerspectiveCamera();
+    let during: number | null = null;
 
-    fireSceneRender(scene, captureCamera!);
-    const during = light.shadow.intensity;
-    fireSceneRenderEnd(scene, captureCamera!);
+    drawAsProbeCapture({ isInterior: false, hasShadows: false }, () => {
+      fireSceneRender(scene, camera);
+      during = light.shadow.intensity;
+      fireSceneRenderEnd(scene, camera);
+    });
 
     expect([during, light.shadow.intensity]).toEqual([0, 0.8]);
   });

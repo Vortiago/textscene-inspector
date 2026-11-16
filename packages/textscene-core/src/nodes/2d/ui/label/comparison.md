@@ -23,6 +23,9 @@ variation's font size and colour. The header variations set the size, `GraphFram
 
 A FILL Label fits the lines of each paragraph on its own (`label.cpp:272-319`). The last line of each
 paragraph stays unfitted under the default flags, and a single-line paragraph is fitted.
+The pen of a line sums its advances in 32-bit float from the item origin, as Godot's `Vector2` does (`label.h:197-240`).
+A glyph a grown space puts near a quarter pixel picks the same raster as Godot's (`text_server_adv.cpp:4024`).
+The baseline of each line sums down in 32-bit float from the top of the style box (`label.cpp:616,823,887-889`).
 
 A Label draws its layers in Godot's order (`label.cpp:828-883`). The shadow ring and the shadow come first. Then
 each stacked shadow and each stacked outline draw from the last index to the first. The outline comes next, and the fill
@@ -68,6 +71,8 @@ glyph, not with `outline_size`.
 
 The import sidecar's `scaling_mode` sets how a size off the fixed size scales the glyphs
 (`text_server_adv.cpp:4093-4104`). Integer rounds the ratio, and Disabled keeps the fixed size.
+A fixed-size font scales its ascent, descent and height with no round (`text_server_adv.cpp:2907-2912,2941-2943`,
+`font.cpp:217`).
 
 ## Font fallbacks
 
@@ -78,6 +83,18 @@ font's advance and kerning (`text_server_adv.cpp:7111-7170`). The chain is the f
 import's `fallbacks` (`resource_importer_dynamic_font.cpp:192`, `resource_importer_bmfont.cpp:98`), or
 the base's for a `FontVariation` with none (`font.cpp:2926-2945`). A BMFont keeps its import's `fallbacks`
 as the re-imported state holds them (ADR-0064). The `label-font-fallbacks` golden pins this.
+
+## Font spacing
+
+<!-- compare: image=unit-label-font-variation-spacing status=done fixture=unit-label-font-variation-spacing.tscn -->
+
+A `FontVariation` hands its `spacing_glyph`, `spacing_space`, `spacing_top`, `spacing_bottom` and
+`baseline_offset` to the face it draws (`font.cpp:2422-2437`). A FontFile's `cache/0` values do the same
+for its own face (`font.cpp:1195-1207`). Each glyph but the last advances by `spacing_glyph`, or by
+`spacing_space` on a space when that is not 0 (`text_server_adv.cpp:6985-6999`). Each glyph moves down by
+`baseline_offset` times the ascent plus descent (`:7092-7101`). The top and bottom spacing grow the line
+(`:5161-5162`), and the height of a variation adds its own (`font.cpp:210-220`). Button, RichTextLabel,
+LineEdit and TextEdit shape with the same faces. The `label-font-variation-spacing` golden pins this.
 
 ## Decomposed marks
 

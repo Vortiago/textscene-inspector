@@ -23,7 +23,7 @@ import {
   WHOLE_CANVAS_RANGE,
   type PaintRange,
 } from '../canvasPaintOrder';
-import { isViewportBoundary } from '../../nodes/viewport/subviewport/viewportBoundary';
+import { isViewportBoundary } from '../viewportRender/viewportBoundary';
 
 /** Where a node and its subtree draw in its canvas's sequence. */
 export interface CanvasItemPaint {

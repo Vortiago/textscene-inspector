@@ -1,7 +1,3 @@
-/**
- * A SubViewport renders its 3D pass at its own `texture_mipmap_bias`, which defaults to the project
- * setting (`viewport.cpp:5383`), and a render of the main view takes the root viewport's.
- */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -13,7 +9,7 @@ import {
   ViewportPassProvider,
 } from '../../../r3f/contexts/ViewportPassRegistryContext';
 import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureContext';
-import { SceneMipmapBias } from '../../../r3f/materials/SceneMipmapBias';
+import { useRootViewportDescription } from '../../../r3f/viewportRender/useRootViewportDescription';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 import { withProject } from '../../../r3f/testing/ProjectFixture';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
@@ -38,11 +34,15 @@ ${viewportProps}
 [node name="Camera3D" type="Camera3D" parent="Viewport"]
 `;
 
-/**
- * A scene mounted under `project`: what bias each pass samples at, and what the main view does
- * once the project has loaded.
- */
+/** Holds the bias the root viewport takes, which is the project's once it has loaded. */
+function RootBias({ into }: { into: { current: number | null } }) {
+  into.current = useRootViewportDescription().mipmapBias;
+  return null;
+}
+
+/** A scene mounted under `project`: what bias each pass samples at, and the project's bias. */
 async function sceneUnder(source: string, project: string | null) {
+  const rootBias: { current: number | null } = { current: null };
   const parsed = new TscnParser().parse(source);
   const ProjectFixture = withProject(project);
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
@@ -54,7 +54,7 @@ async function sceneUnder(source: string, project: string | null) {
             <NodeDispatcher nodes={parsed.nodes} />
             <CaptureRenderer captured={captured} />
             <ViewportPassOrchestrator />
-            <SceneMipmapBias />
+            <RootBias into={rootBias} />
           </ViewportPassProvider>
         </ViewportTextureProvider>
       </ProjectFixture>
@@ -78,11 +78,8 @@ async function sceneUnder(source: string, project: string | null) {
       );
       return seen[0]!;
     },
-    /** The bias a render of the canvas scene samples at. */
-    mainViewBias(): number {
-      fireSceneRender(renderer.scene.instance as unknown as THREE.Scene, new THREE.PerspectiveCamera());
-      return uniform.value;
-    },
+    /** The project's bias, as the root viewport takes it. */
+    projectBias: () => rootBias.current,
   };
 }
 
@@ -100,9 +97,9 @@ describe('<SubViewport> texture_mipmap_bias', () => {
   });
 
   it('renders its pass at an authored 0 over a project bias, as 0 is a value', async () => {
-    const { passBias, mainViewBias } = await sceneUnder(scene('texture_mipmap_bias = 0.0'), PROJECT_BIAS);
+    const { passBias, projectBias } = await sceneUnder(scene('texture_mipmap_bias = 0.0'), PROJECT_BIAS);
 
-    await waitFor(() => expect(mainViewBias()).toBe(-0.5));
+    await waitFor(() => expect(projectBias()).toBe(-0.5));
     expect(await passBias()).toBe(0);
   });
 
@@ -112,11 +109,10 @@ describe('<SubViewport> texture_mipmap_bias', () => {
     expect(await passBias()).toBe(-3.5);
   });
 
-  it('samples the main view at the project bias after the pass', async () => {
-    const { passBias, mainViewBias } = await sceneUnder(scene('texture_mipmap_bias = 2.0'), PROJECT_BIAS);
+  it('samples outside the pass at 0 again, whatever the pass bias', async () => {
+    const { passBias } = await sceneUnder(scene('texture_mipmap_bias = 2.0'), null);
 
-    await waitFor(() => expect(mainViewBias()).toBe(-0.5));
     expect(await passBias()).toBe(2);
-    expect(mainViewBias()).toBe(-0.5);
+    expect(mipmapBiasUniform().value).toBe(0);
   });
 });

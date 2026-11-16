@@ -4,7 +4,7 @@
  */
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { SubViewport } from '../../viewport/subviewport/Component';
-import type { EmbeddedWindowType } from '../../viewport/subviewport/viewportBoundary';
+import type { EmbeddedWindowType } from '../../../r3f/viewportRender/viewportBoundary';
 
 export function registerWindowComponent(typeName: EmbeddedWindowType): void {
   nodeComponentRegistry.register({ typeName, Component: SubViewport });

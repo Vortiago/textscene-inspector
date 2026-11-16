@@ -36,7 +36,7 @@ import {
   type ViewportPass,
 } from './ViewportPassRegistryContext';
 import { TreeOrderProvider, type TreeOrder } from './TreeOrderContext';
-import { passGate, TargetRenderState } from '../../nodes/viewport/renderGate';
+import { passGate, TargetRenderState } from '../viewportRender/renderGate';
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../godot/scene/viewport';
 import { HierarchyProvider } from './HierarchyContext';
 import type { SceneGraph } from '../../core/SceneGraph';

@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { useOwnerCanvas2DTexture } from '../../canvas2DTextureDecode';
 import { applyViewSampler } from '../../../resources/textures/textureView';
 import { useCanvasItemViewSampler, useResolvedTextureSampler } from '../../canvasItemTextureSampler';
-import { useNearestAnisotropy } from '../../nearestAnisotropy';
+import { useViewportAnisotropy } from '../../viewportAnisotropy';
 import { useDisposeOnRelease } from '../../useDisposeOnRelease';
 import { referenceHeldBy } from '../../../resources/reading';
 import { useTexture2D } from '../../../resources/useTexture2D';
@@ -33,7 +33,7 @@ export function useOptionalIconTexture(dataUrl: string | null): THREE.Texture | 
     );
   }, [dataUrl, themeScale, viewSampler]);
   useDisposeOnRelease(texture);
-  useNearestAnisotropy(texture);
+  useViewportAnisotropy(texture);
   return texture;
 }
 
