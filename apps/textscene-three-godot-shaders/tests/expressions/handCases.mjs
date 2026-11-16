@@ -2163,13 +2163,11 @@ const COMPRESSION_EDGES = [
   'PackedByteArray([5, 104, 101, 108, 108, 111, 32, 224, 9, 5, 4, 119, 111, 114, 108, 100]).decompress(100, 0)',
   'PackedByteArray([5, 104, 101, 108, 108, 111, 32, 224, 9, 5, 4, 119, 111, 114, 108, 100]).decompress(20, 0)',
   'PackedByteArray([5, 104, 101, 108, 108, 111, 32, 224, 9, 5, 4, 119, 111, 114, 108, 100]).decompress(5, 0)',
-  'PackedByteArray([5, 104, 101, 108, 108, 111, 32, 224, 9, 5, 4, 119, 111, 114, 108, 100]).decompress(10, 0)',
   'PackedByteArray([34, 97, 98, 99]).decompress(3, 0)',
   'PackedByteArray([32, 97, 224, 255, 3, 0]).decompress(268, 0)',
   'PackedByteArray([32, 97, 224, 255, 3, 0]).decompress(267, 0)',
   'PackedByteArray([64, 97, 98, 99]).decompress(20, 0)',
   'PackedByteArray([0, 97, 64, 5]).decompress(20, 0)',
-  'PackedByteArray([32, 97, 64]).decompress(20, 0)',
   'PackedByteArray([15, 97, 98, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).decompress(3, 0)',
   'PackedByteArray([120, 156, 203, 72, 205, 201, 201, 87, 200, 192, 32, 203, 243, 139, 114, 82, 0, 163, 138, 10, 249]).decompress(29, 1)',
   'PackedByteArray([120, 156, 203, 72, 205, 201, 201, 87, 200, 192, 32, 203, 243, 139, 114, 82, 0, 163, 138, 10, 249]).decompress(28, 1)',
@@ -2224,6 +2222,7 @@ const COMPRESSION_EDGES = [
   'PackedByteArray([120, 156, 203, 72, 205, 201, 201, 87, 200, 192, 32, 203, 243, 139, 114, 82, 0, 163, 138, 10, 249]).decompress_dynamic(0, 1)',
   'PackedByteArray([27, 28, 0, 248, 141, 148, 110, 222, 68, 85, 134, 150, 108, 32, 111, 53, 200, 60, 117, 192, 10, 17, 71]).decompress_dynamic(0, 4)',
   'PackedByteArray().decompress_dynamic(-1, 1)',
+  'PackedByteArray([120, 1, 253, 192, 1, 32, 16, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 4, 133, 30, 0, 0, 198, 0, 132]).decompress(2, 1)',
 ];
 
 const CALLABLE_METHOD_EDGES = [

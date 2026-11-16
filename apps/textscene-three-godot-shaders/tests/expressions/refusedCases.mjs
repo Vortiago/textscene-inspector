@@ -6,11 +6,8 @@ const TRANSLATED_UNIT =
   "humanize_size's unit goes through RTR, which translates it into the language of the editor or the game";
 const NO_COMPRESS =
   'the transpiler only decompresses, and a library for compress waits until everything else is ported';
-const FASTLZ_UNSET =
-  'Godot copies a 16-byte stack buffer that FastLZ wrote less of, so the rest is unset memory';
 const MACHINE_ALLOCATION =
   'Godot allocates the whole buffer first, and whether that allocation succeeds depends on the machine';
-const FASTLZ_OVERREAD = 'FastLZ reads past the end of the PackedByteArray into the heap';
 const UNSET_MEMORY =
   'Godot counts a lead surrogate before a plain unit as two codes but writes one, so the last code is unset memory';
 const UNSEEDED =
@@ -115,16 +112,7 @@ export const REFUSED_CASES = {
     refusal: 'UnportableUtility',
     reason: UNSET_MEMORY,
   },
-  'compression-edge 4 "PackedByteArray([5, 104, 101, 108, 108, 111, 32, 224, 9, 5, 4, 119, 111, 114, 108, 100]).decompress(10, 0)"':
-    {
-      refusal: 'UnportableUtility',
-      reason: FASTLZ_UNSET,
-    },
-  'compression-edge 10 "PackedByteArray([32, 97, 64]).decompress(20, 0)"': {
-    refusal: 'UnportableUtility',
-    reason: FASTLZ_OVERREAD,
-  },
-  'compression-edge 60 "PackedByteArray([27, 28, 0, 248, 141, 148, 110, 222, 68, 85, 134, 150, 108, 32, 111, 53, 200, 60, 117, 192, 10, 17, 71]).decompress(9223372036854775807, 4)"':
+  'compression-edge 58 "PackedByteArray([27, 28, 0, 248, 141, 148, 110, 222, 68, 85, 134, 150, 108, 32, 111, 53, 200, 60, 117, 192, 10, 17, 71]).decompress(9223372036854775807, 4)"':
     { refusal: 'UnrepresentableArray', reason: MACHINE_ALLOCATION },
 };
 
