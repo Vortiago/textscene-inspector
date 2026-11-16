@@ -1,3 +1,4 @@
+import { EMPTY_NODE_PATH } from '../../string/nodePathParts.js';
 import { variant, type Variant, type VariantTypeName, type VariantValues } from './variant.js';
 
 const ZERO2 = { x: 0, y: 0 };
@@ -38,7 +39,7 @@ const DEFAULTS: { readonly [T in VariantTypeName]: VariantValues[T] } = {
   ],
   COLOR: { r: 0, g: 0, b: 0, a: 1 },
   STRING_NAME: '',
-  NODE_PATH: '',
+  NODE_PATH: EMPTY_NODE_PATH,
   RID: 0n,
   OBJECT: null,
   CALLABLE: '',

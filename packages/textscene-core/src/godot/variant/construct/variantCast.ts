@@ -2,7 +2,7 @@ import { basisFromQuaternion, basisGetQuaternion, type BasisComponents } from '.
 import { htmlColor, namedColor } from '../../math/color.js';
 import { storedReal as f } from '../../math/real.js';
 import { basisOfTransform3D, transform3DOf, type Transform3D } from '../../math/transform3d.js';
-import { nodePathText } from '../../string/nodePath.js';
+import { EMPTY_NODE_PATH, nodePathParts } from '../../string/nodePathParts.js';
 import { stringToInt64 } from '../../string/string.js';
 import { stringToFloat } from '../../string/strtod.js';
 import { doubleToInt32, doubleToInt64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
@@ -166,7 +166,7 @@ function convertedValue(value: Variant, type: VariantTypeName): unknown {
     case 'STRING_NAME':
       return value.type === 'STRING' ? value.value : undefined;
     case 'NODE_PATH':
-      return value.type === 'STRING' ? nodePathText(value.value) : undefined;
+      return value.type === 'STRING' ? (nodePathParts(value.value) ?? EMPTY_NODE_PATH) : undefined;
     case 'VECTOR2':
     case 'VECTOR3':
     case 'VECTOR4':
