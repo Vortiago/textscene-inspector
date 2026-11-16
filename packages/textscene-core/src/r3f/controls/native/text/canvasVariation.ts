@@ -9,6 +9,7 @@ import type { SfntOutlines } from './sfntOutlines';
 import type { TextLayoutResult } from './textLayout';
 import { recentlyRead } from '../../../../utils/recentlyRead';
 import { perObject } from '../../../../utils/perObject';
+import { getFontBaselineShiftPx } from './fontSpacing';
 
 /** The largest outline growth over the glyphs of `layout`, px. 0 for a layout with no embolden. */
 export function maxEmboldenGrowthPx(layout: TextLayoutResult): number {
@@ -17,6 +18,16 @@ export function maxEmboldenGrowthPx(layout: TextLayoutResult): number {
     for (const gp of line.glyphs) growthPx = Math.max(growthPx, gp.emboldenGrowthPx ?? 0);
   }
   return growthPx;
+}
+
+/** The largest distance a baseline offset moves a glyph of `layout` off its line, px. */
+export function maxBaselineShiftPx(layout: TextLayoutResult): number {
+  let shiftPx = 0;
+  for (const line of layout.lines) {
+    for (const gp of line.glyphs)
+      shiftPx = Math.max(shiftPx, Math.abs(getFontBaselineShiftPx(gp.fontMetrics, gp.fontSizePx)));
+  }
+  return shiftPx;
 }
 
 /** A font size animation adds a face for each size it passes, so the least recently read face goes at this count. */

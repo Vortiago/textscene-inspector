@@ -15,7 +15,7 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode, ThemedIconRef } from '../../../../r3f/controls/native/solveTree';
-import { getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
+import { getFontChainHeightPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
   controlBidiOptions,
   type TextBidiOptions,
@@ -242,9 +242,8 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const fontMetrics = resolveNodeFontMetrics(n, LINE_EDIT_THEME_FONT_KEY);
   const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;
-  // The height `MAX` reduces to `font->get_height`: one vendored face at one size shapes every glyph.
-  // LineEdit sets no `line_spacing`, so a spacing of 0 gives ascent and descent, each ceiled, summed.
-  const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
+  // The height `MAX` (`line_edit.cpp:2459`) reduces to `font->get_height`, which no shaped line exceeds.
+  const fontHeightPx = getFontChainHeightPx(fontMetrics, fontSizePx);
 
   let width = lineEditTextMinimumWidth(field, emSpaceSize);
 

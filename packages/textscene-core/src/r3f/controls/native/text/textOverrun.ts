@@ -276,7 +276,11 @@ function findOverrunTrim(
   const emboldenGrowthPx = getFontEmboldenGrowthPx(dotFace.embolden ?? 0, fontSizePx) || undefined;
   // :6044-6046 -- `int ellipsis_width` truncates.
   const ellipsisWidthPx = flags.addEllipsis
-    ? Math.trunc(dotRepeat * dotAdvancePx + (flags.trimWordOnly ? whitespaceAdvancePx : 0))
+    ? Math.trunc(
+        dotRepeat * dotAdvancePx +
+          (dotFace.spacing?.glyph ?? 0) +
+          (flags.trimWordOnly ? whitespaceAdvancePx : 0)
+      )
     : 0;
 
   const budget: TrimBudget = { widthPx, flags, ellipsisWidthPx };

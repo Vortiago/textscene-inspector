@@ -11,6 +11,7 @@
 import { round as godotRound } from '../../../../godot/math/math';
 import { hexCodeBoxAdvanceSize } from './hexCodeBox';
 import { glyphsDescentPx, lineExtentPx, shapedBlockHeightPx } from './lineExtent';
+import { NO_SPACING, getFontBaselineShiftPx } from './fontSpacing';
 import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import {
   fontUsesSubpixelPositioning,
@@ -869,6 +870,7 @@ function toBreakGlyphs(
   kernGlyphs(glyphs, chars, style);
   placeMarks(glyphs, style);
   roundAdvancesToWholePixels(glyphs, chars, style);
+  applyFontSpacing(glyphs, chars, style);
   if (!hasEndGlyph) return glyphs;
   glyphs.push({
     start: chars.length,
@@ -880,6 +882,63 @@ function toBreakGlyphs(
     emboldenGrowthPx: 0,
   });
   return glyphs;
+}
+
+/**
+ * Adds each face's extra spacing to the advance of the glyphs it shapes, and moves them down by its
+ * baseline offset (`text_server_adv.cpp:7092-7110`). Mutates `glyphs`.
+ */
+function applyFontSpacing(glyphs: BreakGlyph[], chars: ArrayLike<string>, style: RunStyle): void {
+  const unspaced = lastAdvancingGlyph(glyphs, chars, style);
+  for (let i = 0; i < chars.length; i++) {
+    const glyph = glyphs[i]!;
+    if (chars[i] === '' || glyph.isClusterTail) continue;
+    const face = style.faces[i]!;
+    if (!face.spacing && !face.baselineOffset) continue;
+    const spacing = face.spacing ?? NO_SPACING;
+    const cp = chars[i]!.codePointAt(0)!;
+    const addedPx = spacing.space !== 0 && isWhitespace(cp) ? spacing.space : spacing.glyph;
+    if (!glyph.glyphs) {
+      // A break is a glyph HarfBuzz shapes too, and it has no ink to move.
+      if (isLinebreak(cp) && glyph.advance !== 0 && glyph !== unspaced) glyph.advance += addedPx;
+      continue;
+    }
+    const shiftPx = getFontBaselineShiftPx(face, style.sizes[i]!);
+    for (const clusterGlyph of glyph.glyphs) {
+      if (shiftPx !== 0) clusterGlyph.yOffset = Math.fround(clusterGlyph.yOffset + shiftPx);
+      if (clusterGlyph.advance === 0 || clusterGlyph === unspaced) continue;
+      clusterGlyph.advance += addedPx;
+      glyph.advance += addedPx;
+    }
+  }
+}
+
+/**
+ * The glyph of the text's last run that is last in HarfBuzz's buffer order, visual, with an advance:
+ * Godot adds no spacing to it (`text_server_adv.cpp:6985-6999`, `:7103`).
+ */
+function lastAdvancingGlyph(
+  glyphs: readonly BreakGlyph[],
+  chars: ArrayLike<string>,
+  style: RunStyle
+): BreakGlyph | ClusterGlyph | undefined {
+  const lastRun = runRanges(style, chars.length).at(-1);
+  if (!lastRun) return undefined;
+  const [start, end] = lastRun;
+  const isRtl = isRtlRun(style, start);
+  for (let k = 0; k < end - start; k++) {
+    const i = isRtl ? start + k : end - 1 - k;
+    const glyph = glyphs[i]!;
+    if (chars[i] === '' || glyph.isClusterTail) continue;
+    if (!glyph.glyphs) {
+      if (isLinebreak(chars[i]!.codePointAt(0)!) && glyph.advance !== 0) return glyph;
+      continue;
+    }
+    const inBufferOrder = isRtl ? glyph.glyphs : [...glyph.glyphs].reverse();
+    const advancing = inBufferOrder.find((g) => !g.isMark && g.advance !== 0);
+    if (advancing) return advancing;
+  }
+  return undefined;
 }
 
 /** The last glyph of a cluster that is no mark: a kerning lookup skips marks, so it pairs with the next cluster. */

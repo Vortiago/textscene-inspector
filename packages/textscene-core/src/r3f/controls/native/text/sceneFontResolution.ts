@@ -16,6 +16,7 @@ import { fontHintingOf, type FontHinting } from '../../../../godot/text/textServ
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import { dictNumberEntries } from '../../../../godot/variant/variantParser';
 import type { OpentypeCoordinates } from './fontMetrics';
+import { NO_FACE_SPACING, type FaceSpacing } from './fontSpacing';
 import { perObject } from '../../../../utils/perObject';
 
 export type FileWithBytes = FontFileResource & { bytes: ArrayBuffer };
@@ -133,6 +134,25 @@ export function fontVariationSkew(font: FontResource | null | undefined): number
     drawnVariation(font)?.properties['variation_transform']?.trim() ?? ''
   );
   return match ? matchedFloat(match[2]!) : 0;
+}
+
+/** The `spacing_*` and `baseline_offset` of `font` (`drawnVariation`), none for any other font. */
+export function fontVariationSpacing(font: FontResource | null | undefined): FaceSpacing {
+  const variation = drawnVariation(font);
+  if (!variation) return NO_FACE_SPACING;
+  const { properties } = variation;
+  const spacingOf = (key: string): number => parseOptionalInt(properties[key]) ?? 0;
+  const offsetText = properties['baseline_offset'];
+  return {
+    spacing: {
+      top: spacingOf('spacing_top'),
+      bottom: spacingOf('spacing_bottom'),
+      space: spacingOf('spacing_space'),
+      glyph: spacingOf('spacing_glyph'),
+    },
+    // `FontVariation` keeps the offset as a `float` (`font.h`).
+    baselineOffset: Math.fround((offsetText === undefined ? null : parseGodotFloat(offsetText)) ?? 0),
+  };
 }
 
 /**

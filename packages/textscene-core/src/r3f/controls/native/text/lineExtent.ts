@@ -3,7 +3,8 @@
  * (`text_server_adv.cpp:5124-5175`), and the place of each line of a layout that steps by them
  * (`text_paragraph.cpp:701,759`).
  */
-import { getFontAscentPx, getFontDescentPx, type FontMetrics } from './fontMetrics';
+import type { FontMetrics } from './fontMetrics';
+import { getFontSpacedAscentPx, getFontSpacedDescentPx } from './fontSpacing';
 import { HEX_CODE_BOX_ASCENT, HEX_CODE_BOX_DESCENT, hexCodeBoxAdvanceSize } from './hexCodeBox';
 import type { GlyphPlacement, TextLayoutResult, TextLineLayout } from './textLayout';
 
@@ -24,7 +25,10 @@ export function lineExtentPx(
   fontSizePx: number
 ): LineExtentPx {
   if (glyphs.length === 0) {
-    return { ascentPx: getFontAscentPx(face, fontSizePx), descentPx: getFontDescentPx(face, fontSizePx) };
+    return {
+      ascentPx: getFontSpacedAscentPx(face, fontSizePx),
+      descentPx: getFontSpacedDescentPx(face, fontSizePx),
+    };
   }
   let ascentPx = 0;
   let descentPx = 0;
@@ -58,8 +62,8 @@ function glyphExtentPx(glyph: GlyphPlacement): LineExtentPx {
     return { ascentPx: boxHeightPx * HEX_CODE_BOX_ASCENT, descentPx: boxHeightPx * HEX_CODE_BOX_DESCENT };
   }
   return {
-    ascentPx: Math.max(getFontAscentPx(face, fontSizePx), -yOffset),
-    descentPx: Math.max(getFontDescentPx(face, fontSizePx), yOffset),
+    ascentPx: Math.max(getFontSpacedAscentPx(face, fontSizePx), -yOffset),
+    descentPx: Math.max(getFontSpacedDescentPx(face, fontSizePx), yOffset),
   };
 }
 

@@ -12,6 +12,7 @@ import {
 import { getFontAscentPx, withVariation, type OpentypeCoordinates } from './fontMetrics';
 import type { RunShaping } from './glyphRun';
 import { shapeText } from './textLayout';
+import { NO_SPACING, withSpacing } from './fontSpacing';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { patchedFragment } from '../../../testing/patchedFragment';
 import { mipmappedTexture } from '../../../testing/mipmapBiasUniform';
@@ -303,6 +304,22 @@ describe('computeCanvasTextCanvasLayout', () => {
     const canvasLayout = computeCanvasTextCanvasLayout(emboldened, 0.3, 1.5);
     expect(Number.isInteger(canvasLayout.offsetXPx)).toBe(true);
     expect(Number.isInteger(canvasLayout.offsetYPx)).toBe(true);
+  });
+
+  it('pads each edge by the whole pixels a baseline offset moves the glyphs off their line', () => {
+    const shapedAt = (baselineOffset: number) =>
+      shapeText('AB', {
+        fontSizePx: 32,
+        boxWidthPx: 0,
+        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+        fontMetrics: withSpacing(CANVAS_METRICS, { spacing: NO_SPACING, baselineOffset }),
+        lineSpacingPx: 0,
+      });
+    const shiftPx = Math.abs(shapedAt(-0.35).lines[0]!.glyphs[0]!.yOffset!);
+    const plain = computeCanvasTextCanvasLayout(shapedAt(0), 0);
+    expect(computeCanvasTextCanvasLayout(shapedAt(-0.35), 0).offsetYPx - plain.offsetYPx).toBe(
+      Math.ceil(shiftPx)
+    );
   });
 
   it('canvas height always exceeds the layout height by the same fixed vertical pad, independent of skew', () => {
@@ -983,6 +1000,22 @@ describe('canvasGlyphRects', () => {
     expect(firstRectX(withGlyphs([...spaces, { ...a, x }]))).toBe(
       firstRectX(withGlyphs([{ ...a, x: 53.75 }]))
     );
+  });
+
+  it("floors a canvas item glyph's pen after its own y offset is added", () => {
+    const base = carrying(layoutFor('A', 0), 0, TRIANGLE_OUTLINES);
+    const lowered = (yOffset: number) => ({
+      ...base,
+      lines: base.lines.map((line) => ({
+        ...line,
+        glyphs: line.glyphs.map((glyph) => ({ ...glyph, yOffset })),
+      })),
+    });
+    const rectsAt = (yOffset: number) => {
+      const layout = lowered(yOffset);
+      return canvasGlyphRects(layout, 16, 0, computeCanvasTextCanvasLayout(layout, 0));
+    };
+    expect(rectsAt(2.6)).toEqual(rectsAt(2));
   });
 
   it('gives a canvas item glyph the grid of the bitmap at its pen', () => {

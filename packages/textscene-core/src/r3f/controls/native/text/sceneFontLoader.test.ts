@@ -6,7 +6,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { windowLoaded } from './fakeFontFace.testkit';
 import { fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
-import { peekSceneFontMetrics, peekSettledSceneFontMetrics } from './sceneFontLoader';
+import { peekSceneFontMetrics, peekSettledChainFaces, peekSettledSceneFontMetrics } from './sceneFontLoader';
 import { fontWork } from './settledChannel';
 import { createSettledFonts, type SettledFonts } from './settledFonts';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
@@ -242,6 +242,50 @@ describe('peekSceneFontMetrics — FontVariation embolden', () => {
       'Root/L'
     );
     expect(metrics.embolden).toBeUndefined();
+  });
+});
+
+describe('peekSceneFontMetrics — FontVariation spacing and baseline offset', () => {
+  const SPACED = {
+    spacing_top: '10',
+    spacing_bottom: '6',
+    spacing_space: '12',
+    spacing_glyph: '4',
+    baseline_offset: '0.2',
+  };
+
+  function variation(baseFont: FontResource | null, properties: Record<string, string>): FontResource {
+    return { kind: 'variation', baseFont, fallbacks: [], properties };
+  }
+
+  it("carries the variation's spacing and baseline offset on its settled face", async () => {
+    const font = variation(fontFile(fontBytes()), SPACED);
+    peekSceneFontMetrics(fonts, font, 'Root/Label');
+    await settleLoads();
+    const metrics = peekSceneFontMetrics(fonts, font, 'Root/Label');
+    expect(metrics.spacing).toEqual({ top: 10, bottom: 6, space: 12, glyph: 4 });
+    expect(metrics.baselineOffset).toBe(Math.fround(0.2));
+  });
+
+  it('carries them on the bundled face a variation with no base_font draws', () => {
+    expect(peekSceneFontMetrics(fonts, variation(null, SPACED), 'Root/Bare').spacing?.glyph).toBe(4);
+  });
+
+  it("leaves a fallback of the base font on its own face's spacing", () => {
+    const base: FontResource = { ...systemFont(), fallbacks: [variation(null, {})] };
+    const font = variation(base, SPACED);
+    const chain = peekSettledChainFaces(fonts, font, 'Root/Label');
+    expect(chain?.map(({ metrics }) => metrics.spacing?.glyph)).toEqual([4, undefined]);
+  });
+
+  it("takes the outer variation's spacing over the inner one's", () => {
+    const inner = variation(null, { spacing_glyph: '9', baseline_offset: '0.5' });
+    const metrics = peekSceneFontMetrics(fonts, variation(inner, { spacing_glyph: '4' }), 'Root/Over');
+    expect([metrics.spacing?.glyph, metrics.baselineOffset]).toEqual([4, undefined]);
+  });
+
+  it('leaves the face untouched for a variation that sets none', () => {
+    expect(peekSceneFontMetrics(fonts, variation(null, {}), 'Root/Plain')).toBe(OPEN_SANS_FONT_METRICS);
   });
 });
 
