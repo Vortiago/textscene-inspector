@@ -1196,6 +1196,11 @@ const OBJECT_EDGES = [
   'str_to_var("Resource(\\"nope.tres\\")")',
   'str_to_var("ExtResource(\\"res://nope.tres\\", \\"uid://abc\\")")',
   'str_to_var("Resource(\\"res://main.tscn\\", \\"res://nope.tres\\")")',
+  'str_to_var("Resource(\\"res://main.tscn\\" 5)")',
+  'str_to_var("Resource(\\"res://main.tscn\\", \\"uid://b\\" x)")',
+  'str_to_var("Resource(\\"\\", 1)")',
+  'str_to_var("Object(EditorDock,)")',
+  'bytes_to_var_with_objects(PackedByteArray([24, 0, 0, 0, 10, 0, 0, 0, 69, 100, 105, 116, 111, 114, 68, 111, 99, 107, 0, 0]))',
 ];
 
 const cases = (group, texts) =>

@@ -70,9 +70,12 @@ export function classBaseChain(className: string): readonly string[] {
 /** `ClassDB::class_exists` (class_db.cpp:463), editor classes included. */
 export const classExists = (className: string): boolean => Object.hasOwn(CLASSDB_CLASSES, className);
 
-/** `ClassDB::can_instantiate` (class_db.cpp:576) as the 4.6.3 capture read it, outside the editor. */
-export const canInstantiate = (className: string): boolean =>
-  classExists(className) && CLASSDB_CLASSES[className]![1];
+/** `ClassDB::can_instantiate` as a game run answers it: an editor class is refused (class_db.cpp:816). */
+export function canInstantiate(className: string): boolean {
+  if (!classExists(className)) return false;
+  const [, instantiable, editor] = CLASSDB_CLASSES[className]!;
+  return instantiable && !editor;
+}
 
 // A node class newer than the 4.6.3 capture, such as AreaLight3D, takes its base from the node tables.
 const directBase = (className: string): string =>

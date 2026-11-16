@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CLASS_BASE_TYPES,
   MAX_BASE_CHAIN_HOPS,
+  canInstantiate,
   classBaseChain,
   descendsFromClass,
   classExists,
@@ -125,6 +126,17 @@ describe('classExists', () => {
 
   it('reads no key off Object.prototype (edge case)', () => {
     expect(['constructor', 'Nope'].map(classExists)).toEqual([false, false]);
+  });
+});
+
+describe('canInstantiate', () => {
+  it('answers as a game run: an instantiable class only, never an editor class', () => {
+    expect(['Node', 'CanvasItem', 'Nope', 'EditorDock'].map(canInstantiate)).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ]);
   });
 });
 

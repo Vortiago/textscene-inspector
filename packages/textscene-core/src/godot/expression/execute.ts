@@ -132,7 +132,7 @@ class Execution {
   }
 }
 
-/** Throws GodotCrash, UnportedExpression for an unported node, UnportableUtility for editor state. */
+/** Throws GodotCrash, UnportedExpression, UnportableUtility or UnsupportedObject where the port stops. */
 export function runExpression(text: string, host = utilityHost()): ExpressionResult {
   const parsed = parseExpression(text);
   if ('error' in parsed) return { parseError: parsed.error };

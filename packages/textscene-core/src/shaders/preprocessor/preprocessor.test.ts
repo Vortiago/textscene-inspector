@@ -98,9 +98,7 @@ describe('directives', () => {
   it('refuses an object in a condition as not supported, with the owner of objects', () => {
     const error = errorOf(() => preprocess('#if weakref(null)\n#endif'));
     expect(error).toMatchObject({
-      reason:
-        "'#if weakref(null): weakref(...) makes a Godot object, which the transpiler does not support yet' " +
-        'is not transpiled yet (#1953)',
+      reason: "'#if weakref(null): weakref(...) makes a Godot object' is not transpiled yet (#1953)",
       owner: '#1953',
     });
   });

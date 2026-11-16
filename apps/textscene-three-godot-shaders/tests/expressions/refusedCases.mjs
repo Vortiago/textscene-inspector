@@ -1,5 +1,5 @@
 const OBJECTS = 'the case makes a Godot object, which waits on #1953';
-const UID = "the project's uid cache decides a uid, and the transpiler cannot read that cache (#1953)";
+const UID = "the project's uid cache decides a uid, and the transpiler cannot read that cache (#1815)";
 const EDITOR_STATE = 'the answer is a counter or an object id of the running editor';
 const MEMBERS = 'the methods and members slice ports the index';
 const INTERNED_ADDRESS =

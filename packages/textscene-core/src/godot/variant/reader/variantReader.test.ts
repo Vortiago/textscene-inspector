@@ -36,7 +36,25 @@ describe('textToVariant', () => {
   });
 
   it('stops on a Resource of a uid, which the project uid cache decides', () => {
-    expect(() => textToVariant('Resource("uid://abc")')).toThrow(UnsupportedObject);
+    expect(() => textToVariant('Resource("uid://abc")')).toThrow(
+      expect.objectContaining({ owner: '#1815' }) as Error
+    );
+  });
+
+  it('stops as an object on a uid beside a path the project holds, as the path loads either way', () => {
+    expect(() =>
+      textToVariant('Resource("uid://abc", "res://a.tres")', (path) => path === 'res://a.tres')
+    ).toThrow(expect.objectContaining({ owner: '#1953' }) as Error);
+  });
+
+  it('takes a second argument with no string value as the path, by the token text', () => {
+    expect(() => textToVariant('Resource("", 1)', (path) => path === 'res://1')).toThrow(UnsupportedObject);
+  });
+
+  it('gives null for a Resource the project holds with no closing parenthesis', () => {
+    expect(
+      variantToText(textToVariant('Resource("res://a.tres" 5)', (path) => path === 'res://a.tres'))
+    ).toBe('null');
   });
 
   it('reads a constructor with float32 components', () => {

@@ -1,4162 +1,5202 @@
 {
   "AcceptDialog": [
     "Window",
-    true
+    true,
+    false
   ],
   "AESContext": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "AimModifier3D": [
     "BoneConstraint3D",
-    true
+    true,
+    false
   ],
   "AnimatableBody2D": [
     "StaticBody2D",
-    true
+    true,
+    false
   ],
   "AnimatableBody3D": [
     "StaticBody3D",
-    true
+    true,
+    false
   ],
   "AnimatedSprite2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "AnimatedSprite3D": [
     "SpriteBase3D",
-    true
+    true,
+    false
   ],
   "AnimatedTexture": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "Animation": [
     "Resource",
-    true
+    true,
+    false
   ],
   "AnimationLibrary": [
     "Resource",
-    true
+    true,
+    false
   ],
   "AnimationMixer": [
     "Node",
+    false,
     false
   ],
   "AnimationNode": [
     "Resource",
-    true
+    true,
+    false
   ],
   "AnimationNodeAdd2": [
     "AnimationNodeSync",
-    true
+    true,
+    false
   ],
   "AnimationNodeAdd3": [
     "AnimationNodeSync",
-    true
+    true,
+    false
   ],
   "AnimationNodeAnimation": [
     "AnimationRootNode",
-    true
+    true,
+    false
   ],
   "AnimationNodeBlend2": [
     "AnimationNodeSync",
-    true
+    true,
+    false
   ],
   "AnimationNodeBlend3": [
     "AnimationNodeSync",
-    true
+    true,
+    false
   ],
   "AnimationNodeBlendSpace1D": [
     "AnimationRootNode",
-    true
+    true,
+    false
   ],
   "AnimationNodeBlendSpace2D": [
     "AnimationRootNode",
-    true
+    true,
+    false
   ],
   "AnimationNodeBlendTree": [
     "AnimationRootNode",
-    true
+    true,
+    false
   ],
   "AnimationNodeExtension": [
     "AnimationNode",
-    true
+    true,
+    false
   ],
   "AnimationNodeOneShot": [
     "AnimationNodeSync",
-    true
+    true,
+    false
   ],
   "AnimationNodeOutput": [
     "AnimationNode",
-    true
+    true,
+    false
   ],
   "AnimationNodeStateMachine": [
     "AnimationRootNode",
-    true
+    true,
+    false
   ],
   "AnimationNodeStateMachinePlayback": [
     "Resource",
-    true
+    true,
+    false
   ],
   "AnimationNodeStateMachineTransition": [
     "Resource",
-    true
+    true,
+    false
   ],
   "AnimationNodeSub2": [
     "AnimationNodeSync",
-    true
+    true,
+    false
   ],
   "AnimationNodeSync": [
     "AnimationNode",
-    true
+    true,
+    false
   ],
   "AnimationNodeTimeScale": [
     "AnimationNode",
-    true
+    true,
+    false
   ],
   "AnimationNodeTimeSeek": [
     "AnimationNode",
-    true
+    true,
+    false
   ],
   "AnimationNodeTransition": [
     "AnimationNodeSync",
-    true
+    true,
+    false
   ],
   "AnimationPlayer": [
     "AnimationMixer",
-    true
+    true,
+    false
   ],
   "AnimationRootNode": [
     "AnimationNode",
-    true
+    true,
+    false
   ],
   "AnimationTree": [
     "AnimationMixer",
-    true
+    true,
+    false
   ],
   "Area2D": [
     "CollisionObject2D",
-    true
+    true,
+    false
   ],
   "Area3D": [
     "CollisionObject3D",
-    true
+    true,
+    false
   ],
   "ArrayMesh": [
     "Mesh",
-    true
+    true,
+    false
   ],
   "ArrayOccluder3D": [
     "Occluder3D",
-    true
+    true,
+    false
   ],
   "AspectRatioContainer": [
     "Container",
-    true
+    true,
+    false
   ],
   "AStar2D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "AStar3D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "AStarGrid2D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "AtlasTexture": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "AudioBusLayout": [
     "Resource",
-    true
+    true,
+    false
   ],
   "AudioEffect": [
     "Resource",
-    true
+    true,
+    false
   ],
   "AudioEffectAmplify": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectBandLimitFilter": [
     "AudioEffectFilter",
-    true
+    true,
+    false
   ],
   "AudioEffectBandPassFilter": [
     "AudioEffectFilter",
-    true
+    true,
+    false
   ],
   "AudioEffectCapture": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectChorus": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectCompressor": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectDelay": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectDistortion": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectEQ": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectEQ10": [
     "AudioEffectEQ",
-    true
+    true,
+    false
   ],
   "AudioEffectEQ21": [
     "AudioEffectEQ",
-    true
+    true,
+    false
   ],
   "AudioEffectEQ6": [
     "AudioEffectEQ",
-    true
+    true,
+    false
   ],
   "AudioEffectFilter": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectHardLimiter": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectHighPassFilter": [
     "AudioEffectFilter",
-    true
+    true,
+    false
   ],
   "AudioEffectHighShelfFilter": [
     "AudioEffectFilter",
-    true
+    true,
+    false
   ],
   "AudioEffectInstance": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "AudioEffectLimiter": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectLowPassFilter": [
     "AudioEffectFilter",
-    true
+    true,
+    false
   ],
   "AudioEffectLowShelfFilter": [
     "AudioEffectFilter",
-    true
+    true,
+    false
   ],
   "AudioEffectNotchFilter": [
     "AudioEffectFilter",
-    true
+    true,
+    false
   ],
   "AudioEffectPanner": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectPhaser": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectPitchShift": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectRecord": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectReverb": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectSpectrumAnalyzer": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioEffectSpectrumAnalyzerInstance": [
     "AudioEffectInstance",
+    false,
     false
   ],
   "AudioEffectStereoEnhance": [
     "AudioEffect",
-    true
+    true,
+    false
   ],
   "AudioListener2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "AudioListener3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "AudioSample": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "AudioSamplePlayback": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "AudioServer": [
     "Object",
-    true
+    true,
+    false
   ],
   "AudioStream": [
     "Resource",
-    true
+    true,
+    false
   ],
   "AudioStreamGenerator": [
     "AudioStream",
-    true
+    true,
+    false
   ],
   "AudioStreamGeneratorPlayback": [
     "AudioStreamPlaybackResampled",
+    false,
     false
   ],
   "AudioStreamInteractive": [
     "AudioStream",
-    true
+    true,
+    false
   ],
   "AudioStreamMicrophone": [
     "AudioStream",
-    true
+    true,
+    false
   ],
   "AudioStreamMP3": [
     "AudioStream",
-    true
+    true,
+    false
   ],
   "AudioStreamOggVorbis": [
     "AudioStream",
-    true
+    true,
+    false
   ],
   "AudioStreamPlayback": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "AudioStreamPlaybackInteractive": [
     "AudioStreamPlayback",
+    false,
     false
   ],
   "AudioStreamPlaybackOggVorbis": [
     "AudioStreamPlaybackResampled",
-    true
+    true,
+    false
   ],
   "AudioStreamPlaybackPlaylist": [
     "AudioStreamPlayback",
+    false,
     false
   ],
   "AudioStreamPlaybackPolyphonic": [
     "AudioStreamPlayback",
+    false,
     false
   ],
   "AudioStreamPlaybackResampled": [
     "AudioStreamPlayback",
-    true
+    true,
+    false
   ],
   "AudioStreamPlaybackSynchronized": [
     "AudioStreamPlayback",
+    false,
     false
   ],
   "AudioStreamPlayer": [
     "Node",
-    true
+    true,
+    false
   ],
   "AudioStreamPlayer2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "AudioStreamPlayer3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "AudioStreamPlaylist": [
     "AudioStream",
-    true
+    true,
+    false
   ],
   "AudioStreamPolyphonic": [
     "AudioStream",
-    true
+    true,
+    false
   ],
   "AudioStreamRandomizer": [
     "AudioStream",
-    true
+    true,
+    false
   ],
   "AudioStreamSynchronized": [
     "AudioStream",
-    true
+    true,
+    false
   ],
   "AudioStreamWAV": [
     "AudioStream",
-    true
+    true,
+    false
   ],
   "BackBufferCopy": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "BaseButton": [
     "Control",
-    true
+    true,
+    false
   ],
   "BaseMaterial3D": [
     "Material",
+    false,
     false
   ],
   "BitMap": [
     "Resource",
-    true
+    true,
+    false
   ],
   "Bone2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "BoneAttachment3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "BoneConstraint3D": [
     "SkeletonModifier3D",
-    true
+    true,
+    false
   ],
   "BoneMap": [
     "Resource",
-    true
+    true,
+    false
   ],
   "BoneTwistDisperser3D": [
     "SkeletonModifier3D",
-    true
+    true,
+    false
   ],
   "BoxContainer": [
     "Container",
-    true
+    true,
+    false
   ],
   "BoxMesh": [
     "PrimitiveMesh",
-    true
+    true,
+    false
   ],
   "BoxOccluder3D": [
     "Occluder3D",
-    true
+    true,
+    false
   ],
   "BoxShape3D": [
     "Shape3D",
-    true
+    true,
+    false
   ],
   "Button": [
     "BaseButton",
-    true
+    true,
+    false
   ],
   "ButtonGroup": [
     "Resource",
-    true
+    true,
+    false
   ],
   "CallbackTweener": [
     "Tweener",
-    true
+    true,
+    false
   ],
   "Camera2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "Camera3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "CameraAttributes": [
     "Resource",
-    true
+    true,
+    false
   ],
   "CameraAttributesPhysical": [
     "CameraAttributes",
-    true
+    true,
+    false
   ],
   "CameraAttributesPractical": [
     "CameraAttributes",
-    true
+    true,
+    false
   ],
   "CameraFeed": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "CameraServer": [
     "Object",
-    true
+    true,
+    false
   ],
   "CameraTexture": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "CanvasGroup": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "CanvasItem": [
     "Node",
+    false,
     false
   ],
   "CanvasItemMaterial": [
     "Material",
-    true
+    true,
+    false
   ],
   "CanvasLayer": [
     "Node",
-    true
+    true,
+    false
   ],
   "CanvasModulate": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "CanvasTexture": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "CapsuleMesh": [
     "PrimitiveMesh",
-    true
+    true,
+    false
   ],
   "CapsuleShape2D": [
     "Shape2D",
-    true
+    true,
+    false
   ],
   "CapsuleShape3D": [
     "Shape3D",
-    true
+    true,
+    false
   ],
   "CCDIK3D": [
     "IterateIK3D",
-    true
+    true,
+    false
   ],
   "CenterContainer": [
     "Container",
-    true
+    true,
+    false
   ],
   "ChainIK3D": [
     "IKModifier3D",
+    false,
     false
   ],
   "CharacterBody2D": [
     "PhysicsBody2D",
-    true
+    true,
+    false
   ],
   "CharacterBody3D": [
     "PhysicsBody3D",
-    true
+    true,
+    false
   ],
   "CharFXTransform": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "CheckBox": [
     "Button",
-    true
+    true,
+    false
   ],
   "CheckButton": [
     "Button",
-    true
+    true,
+    false
   ],
   "CircleShape2D": [
     "Shape2D",
-    true
+    true,
+    false
   ],
   "ClassDB": [
     "Object",
-    true
+    true,
+    false
   ],
   "CodeEdit": [
     "TextEdit",
-    true
+    true,
+    false
   ],
   "CodeHighlighter": [
     "SyntaxHighlighter",
-    true
+    true,
+    false
   ],
   "CollisionObject2D": [
     "Node2D",
+    false,
     false
   ],
   "CollisionObject3D": [
     "Node3D",
+    false,
     false
   ],
   "CollisionPolygon2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "CollisionPolygon3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "CollisionShape2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "CollisionShape3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "ColorPalette": [
     "Resource",
-    true
+    true,
+    false
   ],
   "ColorPicker": [
     "VBoxContainer",
-    true
+    true,
+    false
   ],
   "ColorPickerButton": [
     "Button",
-    true
+    true,
+    false
   ],
   "ColorRect": [
     "Control",
-    true
+    true,
+    false
   ],
   "Compositor": [
     "Resource",
-    true
+    true,
+    false
   ],
   "CompositorEffect": [
     "Resource",
-    true
+    true,
+    false
   ],
   "CompressedCubemap": [
     "CompressedTextureLayered",
-    true
+    true,
+    false
   ],
   "CompressedCubemapArray": [
     "CompressedTextureLayered",
-    true
+    true,
+    false
   ],
   "CompressedTexture2D": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "CompressedTexture2DArray": [
     "CompressedTextureLayered",
-    true
+    true,
+    false
   ],
   "CompressedTexture3D": [
     "Texture3D",
-    true
+    true,
+    false
   ],
   "CompressedTextureLayered": [
     "TextureLayered",
+    false,
     false
   ],
   "ConcavePolygonShape2D": [
     "Shape2D",
-    true
+    true,
+    false
   ],
   "ConcavePolygonShape3D": [
     "Shape3D",
-    true
+    true,
+    false
   ],
   "ConeTwistJoint3D": [
     "Joint3D",
-    true
+    true,
+    false
   ],
   "ConfigFile": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "ConfirmationDialog": [
     "AcceptDialog",
-    true
+    true,
+    false
   ],
   "Container": [
     "Control",
-    true
+    true,
+    false
   ],
   "Control": [
     "CanvasItem",
-    true
+    true,
+    false
   ],
   "ConvertTransformModifier3D": [
     "BoneConstraint3D",
-    true
+    true,
+    false
   ],
   "ConvexPolygonShape2D": [
     "Shape2D",
-    true
+    true,
+    false
   ],
   "ConvexPolygonShape3D": [
     "Shape3D",
-    true
+    true,
+    false
   ],
   "CopyTransformModifier3D": [
     "BoneConstraint3D",
-    true
+    true,
+    false
   ],
   "CPUParticles2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "CPUParticles3D": [
     "GeometryInstance3D",
-    true
+    true,
+    false
   ],
   "Crypto": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "CryptoKey": [
     "Resource",
-    true
+    true,
+    false
   ],
   "CSGBox3D": [
     "CSGPrimitive3D",
-    true
+    true,
+    false
   ],
   "CSGCombiner3D": [
     "CSGShape3D",
-    true
+    true,
+    false
   ],
   "CSGCylinder3D": [
     "CSGPrimitive3D",
-    true
+    true,
+    false
   ],
   "CSGMesh3D": [
     "CSGPrimitive3D",
-    true
+    true,
+    false
   ],
   "CSGPolygon3D": [
     "CSGPrimitive3D",
-    true
+    true,
+    false
   ],
   "CSGPrimitive3D": [
     "CSGShape3D",
+    false,
     false
   ],
   "CSGShape3D": [
     "GeometryInstance3D",
+    false,
     false
   ],
   "CSGSphere3D": [
     "CSGPrimitive3D",
-    true
+    true,
+    false
   ],
   "CSGTorus3D": [
     "CSGPrimitive3D",
-    true
+    true,
+    false
   ],
   "Cubemap": [
     "ImageTextureLayered",
-    true
+    true,
+    false
   ],
   "CubemapArray": [
     "ImageTextureLayered",
-    true
+    true,
+    false
   ],
   "Curve": [
     "Resource",
-    true
+    true,
+    false
   ],
   "Curve2D": [
     "Resource",
-    true
+    true,
+    false
   ],
   "Curve3D": [
     "Resource",
-    true
+    true,
+    false
   ],
   "CurveTexture": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "CurveXYZTexture": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "CylinderMesh": [
     "PrimitiveMesh",
-    true
+    true,
+    false
   ],
   "CylinderShape3D": [
     "Shape3D",
-    true
+    true,
+    false
   ],
   "DampedSpringJoint2D": [
     "Joint2D",
-    true
+    true,
+    false
   ],
   "Decal": [
     "VisualInstance3D",
-    true
+    true,
+    false
   ],
   "DirAccess": [
     "RefCounted",
+    false,
     false
   ],
   "DirectionalLight2D": [
     "Light2D",
-    true
+    true,
+    false
   ],
   "DirectionalLight3D": [
     "Light3D",
-    true
+    true,
+    false
   ],
   "DisplayServer": [
     "Object",
+    false,
     false
   ],
   "DPITexture": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "DTLSServer": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "EditorCommandPalette": [
     "ConfirmationDialog",
+    true,
     true
   ],
   "EditorContextMenuPlugin": [
     "RefCounted",
+    true,
     true
   ],
   "EditorDebuggerPlugin": [
     "RefCounted",
+    true,
     true
   ],
   "EditorDebuggerSession": [
     "RefCounted",
-    false
+    false,
+    true
   ],
   "EditorDock": [
     "MarginContainer",
+    true,
     true
   ],
   "EditorExportPlatform": [
     "RefCounted",
-    false
+    false,
+    true
   ],
   "EditorExportPlatformAndroid": [
     "EditorExportPlatform",
+    true,
     true
   ],
   "EditorExportPlatformAppleEmbedded": [
     "EditorExportPlatform",
-    false
+    false,
+    true
   ],
   "EditorExportPlatformExtension": [
     "EditorExportPlatform",
+    true,
     true
   ],
   "EditorExportPlatformIOS": [
     "EditorExportPlatformAppleEmbedded",
+    true,
     true
   ],
   "EditorExportPlatformLinuxBSD": [
     "EditorExportPlatformPC",
+    true,
     true
   ],
   "EditorExportPlatformMacOS": [
     "EditorExportPlatform",
+    true,
     true
   ],
   "EditorExportPlatformPC": [
     "EditorExportPlatform",
-    false
+    false,
+    true
   ],
   "EditorExportPlatformVisionOS": [
     "EditorExportPlatformAppleEmbedded",
+    true,
     true
   ],
   "EditorExportPlatformWeb": [
     "EditorExportPlatform",
+    true,
     true
   ],
   "EditorExportPlatformWindows": [
     "EditorExportPlatformPC",
+    true,
     true
   ],
   "EditorExportPlugin": [
     "RefCounted",
+    true,
     true
   ],
   "EditorExportPreset": [
     "RefCounted",
-    false
+    false,
+    true
   ],
   "EditorFeatureProfile": [
     "RefCounted",
+    true,
     true
   ],
   "EditorFileDialog": [
     "FileDialog",
+    true,
     true
   ],
   "EditorFileSystem": [
     "Node",
-    false
+    false,
+    true
   ],
   "EditorFileSystemDirectory": [
     "Object",
+    true,
     true
   ],
   "EditorFileSystemImportFormatSupportQuery": [
     "RefCounted",
+    true,
     true
   ],
   "EditorImportPlugin": [
     "ResourceImporter",
+    true,
     true
   ],
   "EditorInspector": [
     "ScrollContainer",
+    true,
     true
   ],
   "EditorInspectorPlugin": [
     "RefCounted",
+    true,
     true
   ],
   "EditorInterface": [
     "Object",
-    false
+    false,
+    true
   ],
   "EditorNode3DGizmo": [
     "Node3DGizmo",
+    true,
     true
   ],
   "EditorNode3DGizmoPlugin": [
     "Resource",
+    true,
     true
   ],
   "EditorPaths": [
     "Object",
+    true,
     true
   ],
   "EditorPlugin": [
     "Node",
+    true,
     true
   ],
   "EditorProperty": [
     "Container",
+    true,
     true
   ],
   "EditorResourceConversionPlugin": [
     "RefCounted",
+    true,
     true
   ],
   "EditorResourcePicker": [
     "HBoxContainer",
+    true,
     true
   ],
   "EditorResourcePreview": [
     "Node",
-    false
+    false,
+    true
   ],
   "EditorResourcePreviewGenerator": [
     "RefCounted",
+    true,
     true
   ],
   "EditorResourceTooltipPlugin": [
     "RefCounted",
+    true,
     true
   ],
   "EditorSceneFormatImporter": [
     "RefCounted",
+    true,
     true
   ],
   "EditorSceneFormatImporterBlend": [
     "EditorSceneFormatImporter",
+    true,
     true
   ],
   "EditorSceneFormatImporterFBX2GLTF": [
     "EditorSceneFormatImporter",
+    true,
     true
   ],
   "EditorSceneFormatImporterGLTF": [
     "EditorSceneFormatImporter",
+    true,
     true
   ],
   "EditorSceneFormatImporterUFBX": [
     "EditorSceneFormatImporter",
+    true,
     true
   ],
   "EditorScenePostImport": [
     "RefCounted",
+    true,
     true
   ],
   "EditorScenePostImportPlugin": [
     "RefCounted",
+    true,
     true
   ],
   "EditorScript": [
     "RefCounted",
+    true,
     true
   ],
   "EditorScriptPicker": [
     "EditorResourcePicker",
+    true,
     true
   ],
   "EditorSelection": [
     "Object",
+    true,
     true
   ],
   "EditorSettings": [
     "Resource",
+    true,
     true
   ],
   "EditorSpinSlider": [
     "Range",
+    true,
     true
   ],
   "EditorSyntaxHighlighter": [
     "SyntaxHighlighter",
+    true,
     true
   ],
   "EditorToaster": [
     "HBoxContainer",
-    false
+    false,
+    true
   ],
   "EditorTranslationParserPlugin": [
     "RefCounted",
+    true,
     true
   ],
   "EditorUndoRedoManager": [
     "Object",
-    false
+    false,
+    true
   ],
   "EditorVCSInterface": [
     "Object",
+    true,
     true
   ],
   "EncodedObjectAsID": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "ENetConnection": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "ENetMultiplayerPeer": [
     "MultiplayerPeer",
-    true
+    true,
+    false
   ],
   "ENetPacketPeer": [
     "PacketPeer",
+    false,
     false
   ],
   "Engine": [
     "Object",
-    true
+    true,
+    false
   ],
   "EngineDebugger": [
     "Object",
-    true
+    true,
+    false
   ],
   "EngineProfiler": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "Environment": [
     "Resource",
-    true
+    true,
+    false
   ],
   "Expression": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "ExternalTexture": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "FABRIK3D": [
     "IterateIK3D",
-    true
+    true,
+    false
   ],
   "FastNoiseLite": [
     "Noise",
-    true
+    true,
+    false
   ],
   "FBXDocument": [
     "GLTFDocument",
-    true
+    true,
+    false
   ],
   "FBXState": [
     "GLTFState",
-    true
+    true,
+    false
   ],
   "FileAccess": [
     "RefCounted",
+    false,
     false
   ],
   "FileDialog": [
     "ConfirmationDialog",
-    true
+    true,
+    false
   ],
   "FileSystemDock": [
     "EditorDock",
-    false
+    false,
+    true
   ],
   "FlowContainer": [
     "Container",
-    true
+    true,
+    false
   ],
   "FogMaterial": [
     "Material",
-    true
+    true,
+    false
   ],
   "FogVolume": [
     "VisualInstance3D",
-    true
+    true,
+    false
   ],
   "FoldableContainer": [
     "Container",
-    true
+    true,
+    false
   ],
   "FoldableGroup": [
     "Resource",
-    true
+    true,
+    false
   ],
   "Font": [
     "Resource",
+    false,
     false
   ],
   "FontFile": [
     "Font",
-    true
+    true,
+    false
   ],
   "FontVariation": [
     "Font",
-    true
+    true,
+    false
   ],
   "FramebufferCacheRD": [
     "Object",
-    true
+    true,
+    false
   ],
   "GDExtension": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GDExtensionManager": [
     "Object",
+    false,
     false
   ],
   "GDScript": [
     "Script",
-    true
+    true,
+    false
   ],
   "GDScriptEditorTranslationParserPlugin": [
     "EditorTranslationParserPlugin",
+    false,
     false
   ],
   "GDScriptNativeClass": [
     "RefCounted",
+    false,
     false
   ],
   "GDScriptSyntaxHighlighter": [
     "EditorSyntaxHighlighter",
+    true,
     true
   ],
   "Generic6DOFJoint3D": [
     "Joint3D",
-    true
+    true,
+    false
   ],
   "Geometry2D": [
     "Object",
-    true
+    true,
+    false
   ],
   "Geometry3D": [
     "Object",
-    true
+    true,
+    false
   ],
   "GeometryInstance3D": [
     "VisualInstance3D",
-    true
+    true,
+    false
   ],
   "GLTFAccessor": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFAnimation": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFBufferView": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFCamera": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFDocument": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFDocumentExtension": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFDocumentExtensionConvertImporterMesh": [
     "GLTFDocumentExtension",
-    true
+    true,
+    false
   ],
   "GLTFDocumentExtensionPhysics": [
     "GLTFDocumentExtension",
+    false,
     false
   ],
   "GLTFDocumentExtensionTextureKTX": [
     "GLTFDocumentExtension",
+    false,
     false
   ],
   "GLTFDocumentExtensionTextureWebP": [
     "GLTFDocumentExtension",
+    false,
     false
   ],
   "GLTFLight": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFMesh": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFNode": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFObjectModelProperty": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "GLTFPhysicsBody": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFPhysicsShape": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFSkeleton": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFSkin": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFSpecGloss": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFState": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFTexture": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GLTFTextureSampler": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GodotInstance": [
     "Object",
+    false,
     false
   ],
   "GodotNavigationServer2D": [
     "NavigationServer2D",
+    false,
     false
   ],
   "GodotPhysicsServer2D": [
     "PhysicsServer2D",
+    false,
     false
   ],
   "GodotPhysicsServer3D": [
     "PhysicsServer3D",
+    false,
     false
   ],
   "GPUParticles2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "GPUParticles3D": [
     "GeometryInstance3D",
-    true
+    true,
+    false
   ],
   "GPUParticlesAttractor3D": [
     "VisualInstance3D",
+    false,
     false
   ],
   "GPUParticlesAttractorBox3D": [
     "GPUParticlesAttractor3D",
-    true
+    true,
+    false
   ],
   "GPUParticlesAttractorSphere3D": [
     "GPUParticlesAttractor3D",
-    true
+    true,
+    false
   ],
   "GPUParticlesAttractorVectorField3D": [
     "GPUParticlesAttractor3D",
-    true
+    true,
+    false
   ],
   "GPUParticlesCollision3D": [
     "VisualInstance3D",
+    false,
     false
   ],
   "GPUParticlesCollisionBox3D": [
     "GPUParticlesCollision3D",
-    true
+    true,
+    false
   ],
   "GPUParticlesCollisionHeightField3D": [
     "GPUParticlesCollision3D",
-    true
+    true,
+    false
   ],
   "GPUParticlesCollisionSDF3D": [
     "GPUParticlesCollision3D",
-    true
+    true,
+    false
   ],
   "GPUParticlesCollisionSphere3D": [
     "GPUParticlesCollision3D",
-    true
+    true,
+    false
   ],
   "Gradient": [
     "Resource",
-    true
+    true,
+    false
   ],
   "GradientTexture1D": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "GradientTexture2D": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "GraphEdit": [
     "Control",
-    true
+    true,
+    false
   ],
   "GraphElement": [
     "Container",
-    true
+    true,
+    false
   ],
   "GraphFrame": [
     "GraphElement",
-    true
+    true,
+    false
   ],
   "GraphNode": [
     "GraphElement",
-    true
+    true,
+    false
   ],
   "GridContainer": [
     "Container",
-    true
+    true,
+    false
   ],
   "GridMap": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "GridMapEditorPlugin": [
     "EditorPlugin",
+    true,
     true
   ],
   "GrooveJoint2D": [
     "Joint2D",
-    true
+    true,
+    false
   ],
   "HashingContext": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "HBoxContainer": [
     "BoxContainer",
-    true
+    true,
+    false
   ],
   "HeightMapShape3D": [
     "Shape3D",
-    true
+    true,
+    false
   ],
   "HFlowContainer": [
     "FlowContainer",
-    true
+    true,
+    false
   ],
   "HingeJoint3D": [
     "Joint3D",
-    true
+    true,
+    false
   ],
   "HMACContext": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "HScrollBar": [
     "ScrollBar",
-    true
+    true,
+    false
   ],
   "HSeparator": [
     "Separator",
-    true
+    true,
+    false
   ],
   "HSlider": [
     "Slider",
-    true
+    true,
+    false
   ],
   "HSplitContainer": [
     "SplitContainer",
-    true
+    true,
+    false
   ],
   "HTTPClient": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "HTTPRequest": [
     "Node",
-    true
+    true,
+    false
   ],
   "IKModifier3D": [
     "SkeletonModifier3D",
+    false,
     false
   ],
   "Image": [
     "Resource",
-    true
+    true,
+    false
   ],
   "ImageFormatLoader": [
     "RefCounted",
+    false,
     false
   ],
   "ImageFormatLoaderExtension": [
     "ImageFormatLoader",
-    true
+    true,
+    false
   ],
   "ImageTexture": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "ImageTexture3D": [
     "Texture3D",
-    true
+    true,
+    false
   ],
   "ImageTextureLayered": [
     "TextureLayered",
+    false,
     false
   ],
   "ImmediateMesh": [
     "Mesh",
-    true
+    true,
+    false
   ],
   "ImporterMesh": [
     "Resource",
-    true
+    true,
+    false
   ],
   "ImporterMeshInstance3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "Input": [
     "Object",
+    false,
     false
   ],
   "InputEvent": [
     "Resource",
+    false,
     false
   ],
   "InputEventAction": [
     "InputEvent",
-    true
+    true,
+    false
   ],
   "InputEventFromWindow": [
     "InputEvent",
+    false,
     false
   ],
   "InputEventGesture": [
     "InputEventWithModifiers",
+    false,
     false
   ],
   "InputEventJoypadButton": [
     "InputEvent",
-    true
+    true,
+    false
   ],
   "InputEventJoypadMotion": [
     "InputEvent",
-    true
+    true,
+    false
   ],
   "InputEventKey": [
     "InputEventWithModifiers",
-    true
+    true,
+    false
   ],
   "InputEventMagnifyGesture": [
     "InputEventGesture",
-    true
+    true,
+    false
   ],
   "InputEventMIDI": [
     "InputEvent",
-    true
+    true,
+    false
   ],
   "InputEventMouse": [
     "InputEventWithModifiers",
+    false,
     false
   ],
   "InputEventMouseButton": [
     "InputEventMouse",
-    true
+    true,
+    false
   ],
   "InputEventMouseMotion": [
     "InputEventMouse",
-    true
+    true,
+    false
   ],
   "InputEventPanGesture": [
     "InputEventGesture",
-    true
+    true,
+    false
   ],
   "InputEventScreenDrag": [
     "InputEventFromWindow",
-    true
+    true,
+    false
   ],
   "InputEventScreenTouch": [
     "InputEventFromWindow",
-    true
+    true,
+    false
   ],
   "InputEventShortcut": [
     "InputEvent",
-    true
+    true,
+    false
   ],
   "InputEventWithModifiers": [
     "InputEventFromWindow",
+    false,
     false
   ],
   "InputMap": [
     "Object",
-    true
+    true,
+    false
   ],
   "InstancePlaceholder": [
     "Node",
+    false,
     false
   ],
   "IntervalTweener": [
     "Tweener",
-    true
+    true,
+    false
   ],
   "IP": [
     "Object",
+    false,
     false
   ],
   "IPUnix": [
     "IP",
+    false,
     false
   ],
   "ItemList": [
     "Control",
-    true
+    true,
+    false
   ],
   "IterateIK3D": [
     "ChainIK3D",
+    false,
     false
   ],
   "JacobianIK3D": [
     "IterateIK3D",
-    true
+    true,
+    false
   ],
   "JavaClass": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "JavaClassWrapper": [
     "Object",
-    true
+    true,
+    false
   ],
   "JavaObject": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "JavaScriptBridge": [
     "Object",
+    false,
     false
   ],
   "JavaScriptObject": [
     "RefCounted",
+    false,
     false
   ],
   "JNISingleton": [
     "Object",
-    true
+    true,
+    false
   ],
   "Joint2D": [
     "Node2D",
+    false,
     false
   ],
   "Joint3D": [
     "Node3D",
+    false,
     false
   ],
   "JointLimitation3D": [
     "Resource",
-    true
+    true,
+    false
   ],
   "JointLimitationCone3D": [
     "JointLimitation3D",
-    true
+    true,
+    false
   ],
   "JSON": [
     "Resource",
-    true
+    true,
+    false
   ],
   "JSONRPC": [
     "Object",
-    true
+    true,
+    false
   ],
   "KinematicCollision2D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "KinematicCollision3D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "Label": [
     "Control",
-    true
+    true,
+    false
   ],
   "Label3D": [
     "GeometryInstance3D",
-    true
+    true,
+    false
   ],
   "LabelSettings": [
     "Resource",
-    true
+    true,
+    false
   ],
   "Light2D": [
     "Node2D",
+    false,
     false
   ],
   "Light3D": [
     "VisualInstance3D",
+    false,
     false
   ],
   "LightmapGI": [
     "VisualInstance3D",
-    true
+    true,
+    false
   ],
   "LightmapGIData": [
     "Resource",
-    true
+    true,
+    false
   ],
   "Lightmapper": [
     "RefCounted",
+    false,
     false
   ],
   "LightmapperRD": [
     "Lightmapper",
-    true
+    true,
+    false
   ],
   "LightmapProbe": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "LightOccluder2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "LimitAngularVelocityModifier3D": [
     "SkeletonModifier3D",
-    true
+    true,
+    false
   ],
   "Line2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "LineEdit": [
     "Control",
-    true
+    true,
+    false
   ],
   "LinkButton": [
     "BaseButton",
-    true
+    true,
+    false
   ],
   "Logger": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "LookAtModifier3D": [
     "SkeletonModifier3D",
-    true
+    true,
+    false
   ],
   "MainLoop": [
     "Object",
-    true
+    true,
+    false
   ],
   "MarginContainer": [
     "Container",
-    true
+    true,
+    false
   ],
   "Marker2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "Marker3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "Marshalls": [
     "Object",
-    true
+    true,
+    false
   ],
   "Material": [
     "Resource",
-    true
+    true,
+    false
   ],
   "MenuBar": [
     "Control",
-    true
+    true,
+    false
   ],
   "MenuButton": [
     "Button",
-    true
+    true,
+    false
   ],
   "Mesh": [
     "Resource",
-    true
+    true,
+    false
   ],
   "MeshConvexDecompositionSettings": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "MeshDataTool": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "MeshInstance2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "MeshInstance3D": [
     "GeometryInstance3D",
-    true
+    true,
+    false
   ],
   "MeshLibrary": [
     "Resource",
-    true
+    true,
+    false
   ],
   "MeshTexture": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "MethodTweener": [
     "Tweener",
-    true
+    true,
+    false
   ],
   "MissingNode": [
     "Node",
-    true
+    true,
+    false
   ],
   "MissingResource": [
     "Resource",
-    true
+    true,
+    false
   ],
   "MobileVRInterface": [
     "XRInterface",
-    true
+    true,
+    false
   ],
   "ModifierBoneTarget3D": [
     "SkeletonModifier3D",
-    true
+    true,
+    false
   ],
   "MovieWriter": [
     "Object",
-    true
+    true,
+    false
   ],
   "MovieWriterMJPEG": [
     "MovieWriter",
+    false,
     false
   ],
   "MovieWriterOGV": [
     "MovieWriter",
+    false,
     false
   ],
   "MovieWriterPNGWAV": [
     "MovieWriter",
+    false,
     false
   ],
   "MultiMesh": [
     "Resource",
-    true
+    true,
+    false
   ],
   "MultiMeshInstance2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "MultiMeshInstance3D": [
     "GeometryInstance3D",
-    true
+    true,
+    false
   ],
   "MultiplayerAPI": [
     "RefCounted",
+    false,
     false
   ],
   "MultiplayerAPIExtension": [
     "MultiplayerAPI",
-    true
+    true,
+    false
   ],
   "MultiplayerPeer": [
     "PacketPeer",
+    false,
     false
   ],
   "MultiplayerPeerExtension": [
     "MultiplayerPeer",
-    true
+    true,
+    false
   ],
   "MultiplayerSpawner": [
     "Node",
-    true
+    true,
+    false
   ],
   "MultiplayerSynchronizer": [
     "Node",
-    true
+    true,
+    false
   ],
   "Mutex": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "NativeMenu": [
     "Object",
-    true
+    true,
+    false
   ],
   "NavigationAgent2D": [
     "Node",
-    true
+    true,
+    false
   ],
   "NavigationAgent3D": [
     "Node",
-    true
+    true,
+    false
   ],
   "NavigationLink2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "NavigationLink3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "NavigationMesh": [
     "Resource",
-    true
+    true,
+    false
   ],
   "NavigationMeshGenerator": [
     "Object",
-    true
+    true,
+    false
   ],
   "NavigationMeshSourceGeometryData2D": [
     "Resource",
-    true
+    true,
+    false
   ],
   "NavigationMeshSourceGeometryData3D": [
     "Resource",
-    true
+    true,
+    false
   ],
   "NavigationObstacle2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "NavigationObstacle3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "NavigationPathQueryParameters2D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "NavigationPathQueryParameters3D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "NavigationPathQueryResult2D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "NavigationPathQueryResult3D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "NavigationPolygon": [
     "Resource",
-    true
+    true,
+    false
   ],
   "NavigationRegion2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "NavigationRegion3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "NavigationServer2D": [
     "Object",
+    false,
     false
   ],
   "NavigationServer2DManager": [
     "Object",
-    true
+    true,
+    false
   ],
   "NavigationServer3D": [
     "Object",
+    false,
     false
   ],
   "NavigationServer3DManager": [
     "Object",
-    true
+    true,
+    false
   ],
   "NinePatchRect": [
     "Control",
-    true
+    true,
+    false
   ],
   "Node": [
     "Object",
-    true
+    true,
+    false
   ],
   "Node2D": [
     "CanvasItem",
-    true
+    true,
+    false
   ],
   "Node3D": [
     "Node",
-    true
+    true,
+    false
   ],
   "Node3DGizmo": [
     "RefCounted",
+    false,
     false
   ],
   "Noise": [
     "Resource",
+    false,
     false
   ],
   "NoiseTexture2D": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "NoiseTexture3D": [
     "Texture3D",
-    true
+    true,
+    false
   ],
   "Object": [
     "",
-    true
+    true,
+    false
   ],
   "Occluder3D": [
     "Resource",
+    false,
     false
   ],
   "OccluderInstance3D": [
     "VisualInstance3D",
-    true
+    true,
+    false
   ],
   "OccluderPolygon2D": [
     "Resource",
-    true
+    true,
+    false
   ],
   "OfflineMultiplayerPeer": [
     "MultiplayerPeer",
-    true
+    true,
+    false
   ],
   "OggPacketSequence": [
     "Resource",
-    true
+    true,
+    false
   ],
   "OggPacketSequencePlayback": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "OmniLight3D": [
     "Light3D",
-    true
+    true,
+    false
   ],
   "OpenXRAction": [
     "Resource",
-    true
+    true,
+    false
   ],
   "OpenXRActionBindingModifier": [
     "OpenXRBindingModifier",
-    true
+    true,
+    false
   ],
   "OpenXRActionMap": [
     "Resource",
-    true
+    true,
+    false
   ],
   "OpenXRActionSet": [
     "Resource",
-    true
+    true,
+    false
   ],
   "OpenXRAnalogThresholdModifier": [
     "OpenXRActionBindingModifier",
-    true
+    true,
+    false
   ],
   "OpenXRAnchorTracker": [
     "OpenXRSpatialEntityTracker",
-    true
+    true,
+    false
   ],
   "OpenXRAndroidThreadSettingsExtension": [
     "OpenXRExtensionWrapper",
-    true
+    true,
+    false
   ],
   "OpenXRAPIExtension": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "OpenXRBindingModifier": [
     "Resource",
+    false,
     false
   ],
   "OpenXRBindingModifierEditor": [
     "PanelContainer",
+    true,
     true
   ],
   "OpenXRCompositionLayer": [
     "Node3D",
+    false,
     false
   ],
   "OpenXRCompositionLayerCylinder": [
     "OpenXRCompositionLayer",
-    true
+    true,
+    false
   ],
   "OpenXRCompositionLayerEquirect": [
     "OpenXRCompositionLayer",
-    true
+    true,
+    false
   ],
   "OpenXRCompositionLayerQuad": [
     "OpenXRCompositionLayer",
-    true
+    true,
+    false
   ],
   "OpenXRDpadBindingModifier": [
     "OpenXRIPBindingModifier",
-    true
+    true,
+    false
   ],
   "OpenXRExtensionWrapper": [
     "Object",
-    true
+    true,
+    false
   ],
   "OpenXRExtensionWrapperExtension": [
     "OpenXRExtensionWrapper",
-    true
+    true,
+    false
   ],
   "OpenXRFrameSynthesisExtension": [
     "OpenXRExtensionWrapper",
-    true
+    true,
+    false
   ],
   "OpenXRFutureExtension": [
     "OpenXRExtensionWrapper",
-    true
+    true,
+    false
   ],
   "OpenXRFutureResult": [
     "RefCounted",
+    false,
     false
   ],
   "OpenXRHand": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "OpenXRHapticBase": [
     "Resource",
+    false,
     false
   ],
   "OpenXRHapticVibration": [
     "OpenXRHapticBase",
-    true
+    true,
+    false
   ],
   "OpenXRInteractionProfile": [
     "Resource",
-    true
+    true,
+    false
   ],
   "OpenXRInteractionProfileEditor": [
     "OpenXRInteractionProfileEditorBase",
+    true,
     true
   ],
   "OpenXRInteractionProfileEditorBase": [
     "HBoxContainer",
-    false
+    false,
+    true
   ],
   "OpenXRInteractionProfileMetadata": [
     "Object",
-    true
+    true,
+    false
   ],
   "OpenXRInterface": [
     "XRInterface",
-    true
+    true,
+    false
   ],
   "OpenXRIPBinding": [
     "Resource",
-    true
+    true,
+    false
   ],
   "OpenXRIPBindingModifier": [
     "OpenXRBindingModifier",
-    true
+    true,
+    false
   ],
   "OpenXRMarkerTracker": [
     "OpenXRSpatialEntityTracker",
-    true
+    true,
+    false
   ],
   "OpenXRPlaneTracker": [
     "OpenXRSpatialEntityTracker",
-    true
+    true,
+    false
   ],
   "OpenXRRenderModel": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "OpenXRRenderModelExtension": [
     "OpenXRExtensionWrapper",
-    true
+    true,
+    false
   ],
   "OpenXRRenderModelManager": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialAnchorCapability": [
     "OpenXRExtensionWrapper",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialCapabilityConfigurationAnchor": [
     "OpenXRSpatialCapabilityConfigurationBaseHeader",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialCapabilityConfigurationAprilTag": [
     "OpenXRSpatialCapabilityConfigurationBaseHeader",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialCapabilityConfigurationAruco": [
     "OpenXRSpatialCapabilityConfigurationBaseHeader",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialCapabilityConfigurationBaseHeader": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialCapabilityConfigurationMicroQrCode": [
     "OpenXRSpatialCapabilityConfigurationBaseHeader",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialCapabilityConfigurationPlaneTracking": [
     "OpenXRSpatialCapabilityConfigurationBaseHeader",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialCapabilityConfigurationQrCode": [
     "OpenXRSpatialCapabilityConfigurationBaseHeader",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialComponentAnchorList": [
     "OpenXRSpatialComponentData",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialComponentBounded2DList": [
     "OpenXRSpatialComponentData",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialComponentBounded3DList": [
     "OpenXRSpatialComponentData",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialComponentData": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialComponentMarkerList": [
     "OpenXRSpatialComponentData",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialComponentMesh2DList": [
     "OpenXRSpatialComponentData",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialComponentMesh3DList": [
     "OpenXRSpatialComponentData",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialComponentParentList": [
     "OpenXRSpatialComponentData",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialComponentPersistenceList": [
     "OpenXRSpatialComponentData",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialComponentPlaneAlignmentList": [
     "OpenXRSpatialComponentData",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialComponentPlaneSemanticLabelList": [
     "OpenXRSpatialComponentData",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialComponentPolygon2DList": [
     "OpenXRSpatialComponentData",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialContextPersistenceConfig": [
     "OpenXRStructureBase",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialEntityExtension": [
     "OpenXRExtensionWrapper",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialEntityTracker": [
     "XRPositionalTracker",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialMarkerTrackingCapability": [
     "OpenXRExtensionWrapper",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialPlaneTrackingCapability": [
     "OpenXRExtensionWrapper",
-    true
+    true,
+    false
   ],
   "OpenXRSpatialQueryResultData": [
     "OpenXRSpatialComponentData",
-    true
+    true,
+    false
   ],
   "OpenXRStructureBase": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "OpenXRVisibilityMask": [
     "VisualInstance3D",
-    true
+    true,
+    false
   ],
   "OptimizedTranslation": [
     "Translation",
-    true
+    true,
+    false
   ],
   "OptionButton": [
     "Button",
-    true
+    true,
+    false
   ],
   "ORMMaterial3D": [
     "BaseMaterial3D",
-    true
+    true,
+    false
   ],
   "OS": [
     "Object",
-    true
+    true,
+    false
   ],
   "PackedDataContainer": [
     "Resource",
-    true
+    true,
+    false
   ],
   "PackedDataContainerRef": [
     "RefCounted",
+    false,
     false
   ],
   "PackedScene": [
     "Resource",
-    true
+    true,
+    false
   ],
   "PacketPeer": [
     "RefCounted",
+    false,
     false
   ],
   "PacketPeerDTLS": [
     "PacketPeer",
-    true
+    true,
+    false
   ],
   "PacketPeerExtension": [
     "PacketPeer",
-    true
+    true,
+    false
   ],
   "PacketPeerStream": [
     "PacketPeer",
-    true
+    true,
+    false
   ],
   "PacketPeerUDP": [
     "PacketPeer",
-    true
+    true,
+    false
   ],
   "Panel": [
     "Control",
-    true
+    true,
+    false
   ],
   "PanelContainer": [
     "Container",
-    true
+    true,
+    false
   ],
   "PanoramaSkyMaterial": [
     "Material",
-    true
+    true,
+    false
   ],
   "Parallax2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "ParallaxBackground": [
     "CanvasLayer",
-    true
+    true,
+    false
   ],
   "ParallaxLayer": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "ParticleProcessMaterial": [
     "Material",
-    true
+    true,
+    false
   ],
   "Path2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "Path3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "PathFollow2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "PathFollow3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "PCKPacker": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "Performance": [
     "Object",
-    true
+    true,
+    false
   ],
   "PhysicalBone2D": [
     "RigidBody2D",
-    true
+    true,
+    false
   ],
   "PhysicalBone3D": [
     "PhysicsBody3D",
-    true
+    true,
+    false
   ],
   "PhysicalBoneSimulator3D": [
     "SkeletonModifier3D",
-    true
+    true,
+    false
   ],
   "PhysicalSkyMaterial": [
     "Material",
-    true
+    true,
+    false
   ],
   "PhysicsBody2D": [
     "CollisionObject2D",
+    false,
     false
   ],
   "PhysicsBody3D": [
     "CollisionObject3D",
+    false,
     false
   ],
   "PhysicsDirectBodyState2D": [
     "Object",
+    false,
     false
   ],
   "PhysicsDirectBodyState2DExtension": [
     "PhysicsDirectBodyState2D",
-    true
+    true,
+    false
   ],
   "PhysicsDirectBodyState3D": [
     "Object",
+    false,
     false
   ],
   "PhysicsDirectBodyState3DExtension": [
     "PhysicsDirectBodyState3D",
-    true
+    true,
+    false
   ],
   "PhysicsDirectSpaceState2D": [
     "Object",
+    false,
     false
   ],
   "PhysicsDirectSpaceState2DExtension": [
     "PhysicsDirectSpaceState2D",
-    true
+    true,
+    false
   ],
   "PhysicsDirectSpaceState3D": [
     "Object",
+    false,
     false
   ],
   "PhysicsDirectSpaceState3DExtension": [
     "PhysicsDirectSpaceState3D",
-    true
+    true,
+    false
   ],
   "PhysicsMaterial": [
     "Resource",
-    true
+    true,
+    false
   ],
   "PhysicsPointQueryParameters2D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "PhysicsPointQueryParameters3D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "PhysicsRayQueryParameters2D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "PhysicsRayQueryParameters3D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "PhysicsServer2D": [
     "Object",
+    false,
     false
   ],
   "PhysicsServer2DExtension": [
     "PhysicsServer2D",
-    true
+    true,
+    false
   ],
   "PhysicsServer2DManager": [
     "Object",
-    true
+    true,
+    false
   ],
   "PhysicsServer3D": [
     "Object",
+    false,
     false
   ],
   "PhysicsServer3DExtension": [
     "PhysicsServer3D",
-    true
+    true,
+    false
   ],
   "PhysicsServer3DManager": [
     "Object",
-    true
+    true,
+    false
   ],
   "PhysicsServer3DRenderingServerHandler": [
     "Object",
-    true
+    true,
+    false
   ],
   "PhysicsShapeQueryParameters2D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "PhysicsShapeQueryParameters3D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "PhysicsTestMotionParameters2D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "PhysicsTestMotionParameters3D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "PhysicsTestMotionResult2D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "PhysicsTestMotionResult3D": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "PinJoint2D": [
     "Joint2D",
-    true
+    true,
+    false
   ],
   "PinJoint3D": [
     "Joint3D",
-    true
+    true,
+    false
   ],
   "PlaceholderCubemap": [
     "PlaceholderTextureLayered",
-    true
+    true,
+    false
   ],
   "PlaceholderCubemapArray": [
     "PlaceholderTextureLayered",
-    true
+    true,
+    false
   ],
   "PlaceholderMaterial": [
     "Material",
-    true
+    true,
+    false
   ],
   "PlaceholderMesh": [
     "Mesh",
-    true
+    true,
+    false
   ],
   "PlaceholderTexture2D": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "PlaceholderTexture2DArray": [
     "PlaceholderTextureLayered",
-    true
+    true,
+    false
   ],
   "PlaceholderTexture3D": [
     "Texture3D",
-    true
+    true,
+    false
   ],
   "PlaceholderTextureLayered": [
     "TextureLayered",
+    false,
     false
   ],
   "PlaneMesh": [
     "PrimitiveMesh",
-    true
+    true,
+    false
   ],
   "PointLight2D": [
     "Light2D",
-    true
+    true,
+    false
   ],
   "PointMesh": [
     "PrimitiveMesh",
-    true
+    true,
+    false
   ],
   "Polygon2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "PolygonOccluder3D": [
     "Occluder3D",
-    true
+    true,
+    false
   ],
   "PolygonPathFinder": [
     "Resource",
-    true
+    true,
+    false
   ],
   "Popup": [
     "Window",
-    true
+    true,
+    false
   ],
   "PopupMenu": [
     "Popup",
-    true
+    true,
+    false
   ],
   "PopupPanel": [
     "Popup",
-    true
+    true,
+    false
   ],
   "PortableCompressedTexture2D": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "PrimitiveMesh": [
     "Mesh",
-    true
+    true,
+    false
   ],
   "PrismMesh": [
     "PrimitiveMesh",
-    true
+    true,
+    false
   ],
   "ProceduralSkyMaterial": [
     "Material",
-    true
+    true,
+    false
   ],
   "ProgressBar": [
     "Range",
-    true
+    true,
+    false
   ],
   "ProjectSettings": [
     "Object",
-    true
+    true,
+    false
   ],
   "PropertyTweener": [
     "Tweener",
-    true
+    true,
+    false
   ],
   "QuadMesh": [
     "PlaneMesh",
-    true
+    true,
+    false
   ],
   "QuadOccluder3D": [
     "Occluder3D",
-    true
+    true,
+    false
   ],
   "RandomNumberGenerator": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "Range": [
     "Control",
-    true
+    true,
+    false
   ],
   "RayCast2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "RayCast3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "RDAttachmentFormat": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RDFramebufferPass": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RDPipelineColorBlendState": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RDPipelineColorBlendStateAttachment": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RDPipelineDepthStencilState": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RDPipelineMultisampleState": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RDPipelineRasterizationState": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RDPipelineSpecializationConstant": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RDSamplerState": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RDShaderFile": [
     "Resource",
-    true
+    true,
+    false
   ],
   "RDShaderSource": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RDShaderSPIRV": [
     "Resource",
-    true
+    true,
+    false
   ],
   "RDTextureFormat": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RDTextureView": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RDUniform": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RDVertexAttribute": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RectangleShape2D": [
     "Shape2D",
-    true
+    true,
+    false
   ],
   "RefCounted": [
     "Object",
-    true
+    true,
+    false
   ],
   "ReferenceRect": [
     "Control",
-    true
+    true,
+    false
   ],
   "ReflectionProbe": [
     "VisualInstance3D",
-    true
+    true,
+    false
   ],
   "RegEx": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RegExMatch": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RemoteTransform2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "RemoteTransform3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "RenderData": [
     "Object",
+    false,
     false
   ],
   "RenderDataExtension": [
     "RenderData",
-    true
+    true,
+    false
   ],
   "RenderDataRD": [
     "RenderData",
-    true
+    true,
+    false
   ],
   "RenderingDevice": [
     "Object",
+    false,
     false
   ],
   "RenderingServer": [
     "Object",
+    false,
     false
   ],
   "RenderSceneBuffers": [
     "RefCounted",
+    false,
     false
   ],
   "RenderSceneBuffersConfiguration": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "RenderSceneBuffersExtension": [
     "RenderSceneBuffers",
-    true
+    true,
+    false
   ],
   "RenderSceneBuffersRD": [
     "RenderSceneBuffers",
-    true
+    true,
+    false
   ],
   "RenderSceneData": [
     "Object",
+    false,
     false
   ],
   "RenderSceneDataExtension": [
     "RenderSceneData",
-    true
+    true,
+    false
   ],
   "RenderSceneDataRD": [
     "RenderSceneData",
-    true
+    true,
+    false
   ],
   "Resource": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "ResourceFormatImporterSaver": [
     "ResourceFormatSaver",
+    false,
     false
   ],
   "ResourceFormatLoader": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "ResourceFormatSaver": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "ResourceImporter": [
     "RefCounted",
+    false,
     false
   ],
   "ResourceImporterBitMap": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceImporterBMFont": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceImporterCSVTranslation": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceImporterDynamicFont": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceImporterImage": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceImporterImageFont": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceImporterLayeredTexture": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceImporterMP3": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceImporterOBJ": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceImporterOggVorbis": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceImporterScene": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceImporterShaderFile": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceImporterSVG": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceImporterTexture": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceImporterTextureAtlas": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceImporterWAV": [
     "ResourceImporter",
+    true,
     true
   ],
   "ResourceLoader": [
     "Object",
-    true
+    true,
+    false
   ],
   "ResourcePreloader": [
     "Node",
-    true
+    true,
+    false
   ],
   "ResourceSaver": [
     "Object",
-    true
+    true,
+    false
   ],
   "ResourceUID": [
     "Object",
+    false,
     false
   ],
   "RetargetModifier3D": [
     "SkeletonModifier3D",
-    true
+    true,
+    false
   ],
   "RibbonTrailMesh": [
     "PrimitiveMesh",
-    true
+    true,
+    false
   ],
   "RichTextEffect": [
     "Resource",
-    true
+    true,
+    false
   ],
   "RichTextLabel": [
     "Control",
-    true
+    true,
+    false
   ],
   "RigidBody2D": [
     "PhysicsBody2D",
-    true
+    true,
+    false
   ],
   "RigidBody3D": [
     "PhysicsBody3D",
-    true
+    true,
+    false
   ],
   "RootMotionView": [
     "VisualInstance3D",
-    true
+    true,
+    false
   ],
   "SceneCacheInterface": [
     "RefCounted",
+    false,
     false
   ],
   "SceneMultiplayer": [
     "MultiplayerAPI",
-    true
+    true,
+    false
   ],
   "SceneReplicationConfig": [
     "Resource",
-    true
+    true,
+    false
   ],
   "SceneReplicationInterface": [
     "RefCounted",
+    false,
     false
   ],
   "SceneRPCInterface": [
     "RefCounted",
+    false,
     false
   ],
   "SceneState": [
     "RefCounted",
+    false,
     false
   ],
   "SceneTree": [
     "MainLoop",
-    true
+    true,
+    false
   ],
   "SceneTreeTimer": [
     "RefCounted",
+    false,
     false
   ],
   "Script": [
     "Resource",
+    false,
     false
   ],
   "ScriptBacktrace": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "ScriptCreateDialog": [
     "ConfirmationDialog",
+    true,
     true
   ],
   "ScriptEditor": [
     "PanelContainer",
-    false
+    false,
+    true
   ],
   "ScriptEditorBase": [
     "VBoxContainer",
-    false
+    false,
+    true
   ],
   "ScriptExtension": [
     "Script",
-    true
+    true,
+    false
   ],
   "ScriptLanguage": [
     "Object",
+    false,
     false
   ],
   "ScriptLanguageExtension": [
     "ScriptLanguage",
-    true
+    true,
+    false
   ],
   "ScrollBar": [
     "Range",
+    false,
     false
   ],
   "ScrollContainer": [
     "Container",
-    true
+    true,
+    false
   ],
   "SegmentShape2D": [
     "Shape2D",
-    true
+    true,
+    false
   ],
   "Semaphore": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "SeparationRayShape2D": [
     "Shape2D",
-    true
+    true,
+    false
   ],
   "SeparationRayShape3D": [
     "Shape3D",
-    true
+    true,
+    false
   ],
   "Separator": [
     "Control",
+    false,
     false
   ],
   "Shader": [
     "Resource",
-    true
+    true,
+    false
   ],
   "ShaderGlobalsOverride": [
     "Node",
-    true
+    true,
+    false
   ],
   "ShaderInclude": [
     "Resource",
-    true
+    true,
+    false
   ],
   "ShaderIncludeDB": [
     "Object",
-    true
+    true,
+    false
   ],
   "ShaderMaterial": [
     "Material",
-    true
+    true,
+    false
   ],
   "Shape2D": [
     "Resource",
+    false,
     false
   ],
   "Shape3D": [
     "Resource",
+    false,
     false
   ],
   "ShapeCast2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "ShapeCast3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "Shortcut": [
     "Resource",
-    true
+    true,
+    false
   ],
   "Skeleton2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "Skeleton3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "SkeletonIK3D": [
     "SkeletonModifier3D",
-    true
+    true,
+    false
   ],
   "SkeletonModification2D": [
     "Resource",
-    true
+    true,
+    false
   ],
   "SkeletonModification2DCCDIK": [
     "SkeletonModification2D",
-    true
+    true,
+    false
   ],
   "SkeletonModification2DFABRIK": [
     "SkeletonModification2D",
-    true
+    true,
+    false
   ],
   "SkeletonModification2DJiggle": [
     "SkeletonModification2D",
-    true
+    true,
+    false
   ],
   "SkeletonModification2DLookAt": [
     "SkeletonModification2D",
-    true
+    true,
+    false
   ],
   "SkeletonModification2DPhysicalBones": [
     "SkeletonModification2D",
-    true
+    true,
+    false
   ],
   "SkeletonModification2DStackHolder": [
     "SkeletonModification2D",
-    true
+    true,
+    false
   ],
   "SkeletonModification2DTwoBoneIK": [
     "SkeletonModification2D",
-    true
+    true,
+    false
   ],
   "SkeletonModificationStack2D": [
     "Resource",
-    true
+    true,
+    false
   ],
   "SkeletonModifier3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "SkeletonProfile": [
     "Resource",
-    true
+    true,
+    false
   ],
   "SkeletonProfileHumanoid": [
     "SkeletonProfile",
-    true
+    true,
+    false
   ],
   "Skin": [
     "Resource",
-    true
+    true,
+    false
   ],
   "SkinReference": [
     "RefCounted",
+    false,
     false
   ],
   "Sky": [
     "Resource",
-    true
+    true,
+    false
   ],
   "Slider": [
     "Range",
+    false,
     false
   ],
   "SliderJoint3D": [
     "Joint3D",
-    true
+    true,
+    false
   ],
   "SocketServer": [
     "RefCounted",
+    false,
     false
   ],
   "SoftBody3D": [
     "MeshInstance3D",
-    true
+    true,
+    false
   ],
   "SphereMesh": [
     "PrimitiveMesh",
-    true
+    true,
+    false
   ],
   "SphereOccluder3D": [
     "Occluder3D",
-    true
+    true,
+    false
   ],
   "SphereShape3D": [
     "Shape3D",
-    true
+    true,
+    false
   ],
   "SpinBox": [
     "Range",
-    true
+    true,
+    false
   ],
   "SplineIK3D": [
     "ChainIK3D",
-    true
+    true,
+    false
   ],
   "SplitContainer": [
     "Container",
-    true
+    true,
+    false
   ],
   "SpotLight3D": [
     "Light3D",
-    true
+    true,
+    false
   ],
   "SpringArm3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "SpringBoneCollision3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "SpringBoneCollisionCapsule3D": [
     "SpringBoneCollision3D",
-    true
+    true,
+    false
   ],
   "SpringBoneCollisionPlane3D": [
     "SpringBoneCollision3D",
-    true
+    true,
+    false
   ],
   "SpringBoneCollisionSphere3D": [
     "SpringBoneCollision3D",
-    true
+    true,
+    false
   ],
   "SpringBoneSimulator3D": [
     "SkeletonModifier3D",
-    true
+    true,
+    false
   ],
   "Sprite2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "Sprite3D": [
     "SpriteBase3D",
-    true
+    true,
+    false
   ],
   "SpriteBase3D": [
     "GeometryInstance3D",
+    false,
     false
   ],
   "SpriteFrames": [
     "Resource",
-    true
+    true,
+    false
   ],
   "StandardMaterial3D": [
     "BaseMaterial3D",
-    true
+    true,
+    false
   ],
   "StaticBody2D": [
     "PhysicsBody2D",
-    true
+    true,
+    false
   ],
   "StaticBody3D": [
     "PhysicsBody3D",
-    true
+    true,
+    false
   ],
   "StatusIndicator": [
     "Node",
-    true
+    true,
+    false
   ],
   "StreamPeer": [
     "RefCounted",
+    false,
     false
   ],
   "StreamPeerBuffer": [
     "StreamPeer",
-    true
+    true,
+    false
   ],
   "StreamPeerExtension": [
     "StreamPeer",
-    true
+    true,
+    false
   ],
   "StreamPeerGZIP": [
     "StreamPeer",
-    true
+    true,
+    false
   ],
   "StreamPeerSocket": [
     "StreamPeer",
+    false,
     false
   ],
   "StreamPeerTCP": [
     "StreamPeerSocket",
-    true
+    true,
+    false
   ],
   "StreamPeerTLS": [
     "StreamPeer",
-    true
+    true,
+    false
   ],
   "StreamPeerUDS": [
     "StreamPeerSocket",
-    true
+    true,
+    false
   ],
   "StyleBox": [
     "Resource",
-    true
+    true,
+    false
   ],
   "StyleBoxEmpty": [
     "StyleBox",
-    true
+    true,
+    false
   ],
   "StyleBoxFlat": [
     "StyleBox",
-    true
+    true,
+    false
   ],
   "StyleBoxLine": [
     "StyleBox",
-    true
+    true,
+    false
   ],
   "StyleBoxTexture": [
     "StyleBox",
-    true
+    true,
+    false
   ],
   "SubtweenTweener": [
     "Tweener",
-    true
+    true,
+    false
   ],
   "SubViewport": [
     "Viewport",
-    true
+    true,
+    false
   ],
   "SubViewportContainer": [
     "Container",
-    true
+    true,
+    false
   ],
   "SurfaceTool": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "SyntaxHighlighter": [
     "Resource",
-    true
+    true,
+    false
   ],
   "SystemFont": [
     "Font",
-    true
+    true,
+    false
   ],
   "TabBar": [
     "Control",
-    true
+    true,
+    false
   ],
   "TabContainer": [
     "Container",
-    true
+    true,
+    false
   ],
   "TCPServer": [
     "SocketServer",
-    true
+    true,
+    false
   ],
   "TextEdit": [
     "Control",
-    true
+    true,
+    false
   ],
   "TextLine": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "TextMesh": [
     "PrimitiveMesh",
-    true
+    true,
+    false
   ],
   "TextParagraph": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "TextServer": [
     "RefCounted",
+    false,
     false
   ],
   "TextServerAdvanced": [
     "TextServerExtension",
-    true
+    true,
+    false
   ],
   "TextServerDummy": [
     "TextServerExtension",
-    true
+    true,
+    false
   ],
   "TextServerExtension": [
     "TextServer",
-    true
+    true,
+    false
   ],
   "TextServerManager": [
     "Object",
-    true
+    true,
+    false
   ],
   "Texture": [
     "Resource",
-    true
+    true,
+    false
   ],
   "Texture2D": [
     "Texture",
-    true
+    true,
+    false
   ],
   "Texture2DArray": [
     "ImageTextureLayered",
-    true
+    true,
+    false
   ],
   "Texture2DArrayRD": [
     "TextureLayeredRD",
-    true
+    true,
+    false
   ],
   "Texture2DRD": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "Texture3D": [
     "Texture",
-    true
+    true,
+    false
   ],
   "Texture3DRD": [
     "Texture3D",
-    true
+    true,
+    false
   ],
   "TextureButton": [
     "BaseButton",
-    true
+    true,
+    false
   ],
   "TextureCubemapArrayRD": [
     "TextureLayeredRD",
-    true
+    true,
+    false
   ],
   "TextureCubemapRD": [
     "TextureLayeredRD",
-    true
+    true,
+    false
   ],
   "TextureLayered": [
     "Texture",
-    true
+    true,
+    false
   ],
   "TextureLayeredRD": [
     "TextureLayered",
+    false,
     false
   ],
   "TextureProgressBar": [
     "Range",
-    true
+    true,
+    false
   ],
   "TextureRect": [
     "Control",
-    true
+    true,
+    false
   ],
   "Theme": [
     "Resource",
-    true
+    true,
+    false
   ],
   "ThemeContext": [
     "Object",
+    false,
     false
   ],
   "ThemeDB": [
     "Object",
-    true
+    true,
+    false
   ],
   "Thread": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "TileData": [
     "Object",
-    true
+    true,
+    false
   ],
   "TileMap": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "TileMapLayer": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "TileMapPattern": [
     "Resource",
-    true
+    true,
+    false
   ],
   "TileSet": [
     "Resource",
-    true
+    true,
+    false
   ],
   "TileSetAtlasSource": [
     "TileSetSource",
-    true
+    true,
+    false
   ],
   "TileSetScenesCollectionSource": [
     "TileSetSource",
-    true
+    true,
+    false
   ],
   "TileSetSource": [
     "Resource",
+    false,
     false
   ],
   "Time": [
     "Object",
-    true
+    true,
+    false
   ],
   "Timer": [
     "Node",
-    true
+    true,
+    false
   ],
   "TLSOptions": [
     "RefCounted",
+    false,
     false
   ],
   "TorusMesh": [
     "PrimitiveMesh",
-    true
+    true,
+    false
   ],
   "TouchScreenButton": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "Translation": [
     "Resource",
-    true
+    true,
+    false
   ],
   "TranslationDomain": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "TranslationServer": [
     "Object",
-    true
+    true,
+    false
   ],
   "Tree": [
     "Control",
-    true
+    true,
+    false
   ],
   "TreeItem": [
     "Object",
+    false,
     false
   ],
   "TriangleMesh": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "TubeTrailMesh": [
     "PrimitiveMesh",
-    true
+    true,
+    false
   ],
   "Tween": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "Tweener": [
     "RefCounted",
+    false,
     false
   ],
   "TwoBoneIK3D": [
     "IKModifier3D",
-    true
+    true,
+    false
   ],
   "UDPServer": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "UDSServer": [
     "SocketServer",
-    true
+    true,
+    false
   ],
   "UndoRedo": [
     "Object",
-    true
+    true,
+    false
   ],
   "UniformSetCacheRD": [
     "Object",
-    true
+    true,
+    false
   ],
   "UPNP": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "UPNPDevice": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "VBoxContainer": [
     "BoxContainer",
-    true
+    true,
+    false
   ],
   "VehicleBody3D": [
     "RigidBody3D",
-    true
+    true,
+    false
   ],
   "VehicleWheel3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "VFlowContainer": [
     "FlowContainer",
-    true
+    true,
+    false
   ],
   "VideoStream": [
     "Resource",
-    true
+    true,
+    false
   ],
   "VideoStreamPlayback": [
     "Resource",
-    true
+    true,
+    false
   ],
   "VideoStreamPlayer": [
     "Control",
-    true
+    true,
+    false
   ],
   "VideoStreamTheora": [
     "VideoStream",
-    true
+    true,
+    false
   ],
   "Viewport": [
     "Node",
+    false,
     false
   ],
   "ViewportTexture": [
     "Texture2D",
-    true
+    true,
+    false
   ],
   "VisibleOnScreenEnabler2D": [
     "VisibleOnScreenNotifier2D",
-    true
+    true,
+    false
   ],
   "VisibleOnScreenEnabler3D": [
     "VisibleOnScreenNotifier3D",
-    true
+    true,
+    false
   ],
   "VisibleOnScreenNotifier2D": [
     "Node2D",
-    true
+    true,
+    false
   ],
   "VisibleOnScreenNotifier3D": [
     "VisualInstance3D",
-    true
+    true,
+    false
   ],
   "VisualInstance3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "VisualShader": [
     "Shader",
-    true
+    true,
+    false
   ],
   "VisualShaderNode": [
     "Resource",
+    false,
     false
   ],
   "VisualShaderNodeBillboard": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeBooleanConstant": [
     "VisualShaderNodeConstant",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeBooleanParameter": [
     "VisualShaderNodeParameter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeClamp": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeColorConstant": [
     "VisualShaderNodeConstant",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeColorFunc": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeColorOp": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeColorParameter": [
     "VisualShaderNodeParameter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeComment": [
     "VisualShaderNodeFrame",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeCompare": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeConstant": [
     "VisualShaderNode",
+    false,
     false
   ],
   "VisualShaderNodeCubemap": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeCubemapParameter": [
     "VisualShaderNodeTextureParameter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeCurveTexture": [
     "VisualShaderNodeResizableBase",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeCurveXYZTexture": [
     "VisualShaderNodeResizableBase",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeCustom": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeDerivativeFunc": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeDeterminant": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeDistanceFade": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeDotProduct": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeExpression": [
     "VisualShaderNodeGroupBase",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeFaceForward": [
     "VisualShaderNodeVectorBase",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeFloatConstant": [
     "VisualShaderNodeConstant",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeFloatFunc": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeFloatOp": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeFloatParameter": [
     "VisualShaderNodeParameter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeFrame": [
     "VisualShaderNodeResizableBase",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeFresnel": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeGlobalExpression": [
     "VisualShaderNodeExpression",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeGroupBase": [
     "VisualShaderNodeResizableBase",
+    false,
     false
   ],
   "VisualShaderNodeIf": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeInput": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeIntConstant": [
     "VisualShaderNodeConstant",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeIntFunc": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeIntOp": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeIntParameter": [
     "VisualShaderNodeParameter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeIs": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeLinearSceneDepth": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeMix": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeMultiplyAdd": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeOuterProduct": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeOutput": [
     "VisualShaderNode",
+    false,
     false
   ],
   "VisualShaderNodeParameter": [
     "VisualShaderNode",
+    false,
     false
   ],
   "VisualShaderNodeParameterRef": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeParticleAccelerator": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeParticleBoxEmitter": [
     "VisualShaderNodeParticleEmitter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeParticleConeVelocity": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeParticleEmit": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeParticleEmitter": [
     "VisualShaderNode",
+    false,
     false
   ],
   "VisualShaderNodeParticleMeshEmitter": [
     "VisualShaderNodeParticleEmitter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeParticleMultiplyByAxisAngle": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeParticleOutput": [
     "VisualShaderNodeOutput",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeParticleRandomness": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeParticleRingEmitter": [
     "VisualShaderNodeParticleEmitter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeParticleSphereEmitter": [
     "VisualShaderNodeParticleEmitter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeProximityFade": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeRandomRange": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeRemap": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeReroute": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeResizableBase": [
     "VisualShaderNode",
+    false,
     false
   ],
   "VisualShaderNodeRotationByAxis": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeSample3D": [
     "VisualShaderNode",
+    false,
     false
   ],
   "VisualShaderNodeScreenNormalWorldSpace": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeScreenUVToSDF": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeSDFRaymarch": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeSDFToScreenUV": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeSmoothStep": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeStep": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeSwitch": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTexture": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTexture2DArray": [
     "VisualShaderNodeSample3D",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTexture2DArrayParameter": [
     "VisualShaderNodeTextureParameter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTexture2DParameter": [
     "VisualShaderNodeTextureParameter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTexture3D": [
     "VisualShaderNodeSample3D",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTexture3DParameter": [
     "VisualShaderNodeTextureParameter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTextureParameter": [
     "VisualShaderNodeParameter",
+    false,
     false
   ],
   "VisualShaderNodeTextureParameterTriplanar": [
     "VisualShaderNodeTextureParameter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTextureSDF": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTextureSDFNormal": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTransformCompose": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTransformConstant": [
     "VisualShaderNodeConstant",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTransformDecompose": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTransformFunc": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTransformOp": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTransformParameter": [
     "VisualShaderNodeParameter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeTransformVecMult": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeUIntConstant": [
     "VisualShaderNodeConstant",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeUIntFunc": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeUIntOp": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeUIntParameter": [
     "VisualShaderNodeParameter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeUVFunc": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeUVPolarCoord": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeVarying": [
     "VisualShaderNode",
+    false,
     false
   ],
   "VisualShaderNodeVaryingGetter": [
     "VisualShaderNodeVarying",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeVaryingSetter": [
     "VisualShaderNodeVarying",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeVec2Constant": [
     "VisualShaderNodeConstant",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeVec2Parameter": [
     "VisualShaderNodeParameter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeVec3Constant": [
     "VisualShaderNodeConstant",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeVec3Parameter": [
     "VisualShaderNodeParameter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeVec4Constant": [
     "VisualShaderNodeConstant",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeVec4Parameter": [
     "VisualShaderNodeParameter",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeVectorBase": [
     "VisualShaderNode",
+    false,
     false
   ],
   "VisualShaderNodeVectorCompose": [
     "VisualShaderNodeVectorBase",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeVectorDecompose": [
     "VisualShaderNodeVectorBase",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeVectorDistance": [
     "VisualShaderNodeVectorBase",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeVectorFunc": [
     "VisualShaderNodeVectorBase",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeVectorLen": [
     "VisualShaderNodeVectorBase",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeVectorOp": [
     "VisualShaderNodeVectorBase",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeVectorRefract": [
     "VisualShaderNodeVectorBase",
-    true
+    true,
+    false
   ],
   "VisualShaderNodeWorldPositionFromDepth": [
     "VisualShaderNode",
-    true
+    true,
+    false
   ],
   "VoxelGI": [
     "VisualInstance3D",
-    true
+    true,
+    false
   ],
   "VoxelGIData": [
     "Resource",
-    true
+    true,
+    false
   ],
   "VScrollBar": [
     "ScrollBar",
-    true
+    true,
+    false
   ],
   "VSeparator": [
     "Separator",
-    true
+    true,
+    false
   ],
   "VSlider": [
     "Slider",
-    true
+    true,
+    false
   ],
   "VSplitContainer": [
     "SplitContainer",
-    true
+    true,
+    false
   ],
   "WeakRef": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "WebRTCDataChannel": [
     "PacketPeer",
+    false,
     false
   ],
   "WebRTCDataChannelExtension": [
     "WebRTCDataChannel",
-    true
+    true,
+    false
   ],
   "WebRTCMultiplayerPeer": [
     "MultiplayerPeer",
-    true
+    true,
+    false
   ],
   "WebRTCPeerConnection": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "WebRTCPeerConnectionExtension": [
     "WebRTCPeerConnection",
-    true
+    true,
+    false
   ],
   "WebSocketMultiplayerPeer": [
     "MultiplayerPeer",
-    true
+    true,
+    false
   ],
   "WebSocketPeer": [
     "PacketPeer",
-    true
+    true,
+    false
   ],
   "WebXRInterface": [
     "XRInterface",
+    false,
     false
   ],
   "Window": [
     "Viewport",
-    true
+    true,
+    false
   ],
   "WorkerThreadPool": [
     "Object",
+    false,
     false
   ],
   "World2D": [
     "Resource",
-    true
+    true,
+    false
   ],
   "World3D": [
     "Resource",
-    true
+    true,
+    false
   ],
   "WorldBoundaryShape2D": [
     "Shape2D",
-    true
+    true,
+    false
   ],
   "WorldBoundaryShape3D": [
     "Shape3D",
-    true
+    true,
+    false
   ],
   "WorldEnvironment": [
     "Node",
-    true
+    true,
+    false
   ],
   "X509Certificate": [
     "Resource",
-    true
+    true,
+    false
   ],
   "XMLParser": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "XRAnchor3D": [
     "XRNode3D",
-    true
+    true,
+    false
   ],
   "XRBodyModifier3D": [
     "SkeletonModifier3D",
-    true
+    true,
+    false
   ],
   "XRBodyTracker": [
     "XRPositionalTracker",
-    true
+    true,
+    false
   ],
   "XRCamera3D": [
     "Camera3D",
-    true
+    true,
+    false
   ],
   "XRController3D": [
     "XRNode3D",
-    true
+    true,
+    false
   ],
   "XRControllerTracker": [
     "XRPositionalTracker",
-    true
+    true,
+    false
   ],
   "XRFaceModifier3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "XRFaceTracker": [
     "XRTracker",
-    true
+    true,
+    false
   ],
   "XRHandModifier3D": [
     "SkeletonModifier3D",
-    true
+    true,
+    false
   ],
   "XRHandTracker": [
     "XRPositionalTracker",
-    true
+    true,
+    false
   ],
   "XRInterface": [
     "RefCounted",
+    false,
     false
   ],
   "XRInterfaceExtension": [
     "XRInterface",
-    true
+    true,
+    false
   ],
   "XRNode3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "XROrigin3D": [
     "Node3D",
-    true
+    true,
+    false
   ],
   "XRPose": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "XRPositionalTracker": [
     "XRTracker",
-    true
+    true,
+    false
   ],
   "XRServer": [
     "Object",
-    true
+    true,
+    false
   ],
   "XRTracker": [
     "RefCounted",
+    false,
     false
   ],
   "XRVRS": [
     "Object",
-    true
+    true,
+    false
   ],
   "ZIPPacker": [
     "RefCounted",
-    true
+    true,
+    false
   ],
   "ZIPReader": [
     "RefCounted",
-    true
+    true,
+    false
   ]
 }
