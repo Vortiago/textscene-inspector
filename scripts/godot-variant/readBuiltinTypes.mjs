@@ -15,6 +15,8 @@ export function dumpExtensionApi() {
       cwd: directory,
       encoding: 'utf8',
     });
+    if (run.error)
+      throw new Error(`run godot --dump-extension-api: ${run.error.message}. Godot must be on the path`);
     if (run.status !== 0)
       throw new Error(`godot --dump-extension-api exited with ${run.status}:\n${run.stderr}`);
     return readFileSync(join(directory, 'extension_api.json'), 'utf8');

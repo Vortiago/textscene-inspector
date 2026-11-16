@@ -46,30 +46,38 @@ function fixedElements(value: Variant): readonly Variant[] | undefined {
   }
 }
 
-/** The elements of a String, an Array or a packed array, which count a negative index from the end. */
-function sequenceElements(value: Variant): readonly Variant[] | undefined {
+/** The items of a sequence and how one item reads as a Variant, so an index wraps only the item it reads. */
+interface Sequence {
+  readonly items: readonly unknown[];
+  readonly wrap: (item: never) => Variant;
+}
+
+const sequence = <T>(items: readonly T[], wrap: (item: T) => Variant): Sequence => ({ items, wrap });
+
+/** A String, an Array or a packed array, which counts a negative index from the end. */
+function sequenceOf(value: Variant): Sequence | undefined {
   switch (value.type) {
     case 'STRING':
-      return Array.from(value.value, (character) => variant('STRING', character));
+      return sequence(Array.from(value.value), (character) => variant('STRING', character));
     case 'ARRAY':
-      return value.value;
+      return sequence(value.value, (element) => element);
     case 'PACKED_BYTE_ARRAY':
     case 'PACKED_INT32_ARRAY':
     case 'PACKED_INT64_ARRAY':
-      return (value.value as readonly (number | bigint)[]).map(int);
+      return sequence(value.value as readonly (number | bigint)[], int);
     case 'PACKED_FLOAT32_ARRAY':
     case 'PACKED_FLOAT64_ARRAY':
-      return value.value.map(real);
+      return sequence(value.value, real);
     case 'PACKED_STRING_ARRAY':
-      return value.value.map((text) => variant('STRING', text));
+      return sequence(value.value, (text) => variant('STRING', text));
     case 'PACKED_VECTOR2_ARRAY':
-      return value.value.map((element) => variant('VECTOR2', element));
+      return sequence(value.value, (element) => variant('VECTOR2', element));
     case 'PACKED_VECTOR3_ARRAY':
-      return value.value.map((element) => variant('VECTOR3', element));
+      return sequence(value.value, (element) => variant('VECTOR3', element));
     case 'PACKED_COLOR_ARRAY':
-      return value.value.map((element) => variant('COLOR', element));
+      return sequence(value.value, (element) => variant('COLOR', element));
     case 'PACKED_VECTOR4_ARRAY':
-      return value.value.map((element) => variant('VECTOR4', element));
+      return sequence(value.value, (element) => variant('VECTOR4', element));
     default:
       return undefined;
   }
@@ -79,7 +87,10 @@ function sequenceElements(value: Variant): readonly Variant[] | undefined {
 export function indexedElement(value: Variant, index: bigint): Variant | undefined {
   const fixed = fixedElements(value);
   if (fixed) return index >= 0n && index < BigInt(fixed.length) ? fixed[Number(index)] : undefined;
-  const elements = sequenceElements(value) ?? [];
-  const at = index < 0n ? index + BigInt(elements.length) : index;
-  return at >= 0n && at < BigInt(elements.length) ? elements[Number(at)] : undefined;
+  const elements = sequenceOf(value);
+  if (!elements) return undefined;
+  const length = BigInt(elements.items.length);
+  const at = index < 0n ? index + length : index;
+  if (at < 0n || at >= length) return undefined;
+  return elements.wrap(elements.items[Number(at)] as never);
 }

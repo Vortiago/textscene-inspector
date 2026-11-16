@@ -1,5 +1,5 @@
 // Portions ported from `thirdparty/misc/ok_color.h` (MIT, Copyright (c) 2021 Björn Ottosson). See THIRD-PARTY-NOTICES.md.
-import { linearSrgbToOklab, oklabToLinearSrgb, type LinearRgb } from './okLab.js';
+import { linearSrgbToOklab, oklabToLinearSrgb } from './okLab.js';
 
 const f = Math.fround;
 const PI = f(Math.PI);
@@ -8,6 +8,13 @@ const FLT_MAX = f(3.4028234663852886e38);
 interface LC {
   readonly L: number;
   readonly C: number;
+}
+
+/** Gamma-encoded sRGB channels, as a Godot `Color` holds them. */
+export interface SrgbColor {
+  readonly r: number;
+  readonly g: number;
+  readonly b: number;
 }
 
 export interface Okhsl {
@@ -181,7 +188,7 @@ function getCs(L: number, a: number, b: number): { C0: number; Cmid: number; Cma
 }
 
 /** `srgb_to_okhsl` (ok_color.h:542) in float, with `powf`, `cbrtf` and `atan2f` from V8. */
-export function srgbToOkhsl({ r, g, b }: LinearRgb): Okhsl {
+export function srgbToOkhsl({ r, g, b }: SrgbColor): Okhsl {
   if (r === 0 && g === 0 && b === 0) return { h: 0, s: 0, l: 0 };
   const lab = linearSrgbToOklab({
     r: srgbTransferFunctionInv(r),

@@ -6,6 +6,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+  cMax,
+  cMin,
   cubicInterpolatef,
   isUnitWithinEpsilon,
   degToRad,
@@ -356,5 +358,25 @@ describe('isUnitWithinEpsilon', () => {
   it('compares the float difference with the float UNIT_EPSILON (edge case)', () => {
     expect(isUnitWithinEpsilon(1 + Math.fround(0.001))).toBe(false);
     expect(isUnitWithinEpsilon(1)).toBe(true);
+  });
+});
+
+describe('cMin', () => {
+  it('gives the smaller operand', () => {
+    expect(cMin(1, 2)).toBe(1);
+  });
+
+  it('gives the second operand where either is NaN, as Godot MIN does', () => {
+    expect([cMin(NaN, 1), cMin(1, NaN)]).toEqual([1, NaN]);
+  });
+});
+
+describe('cMax', () => {
+  it('gives the larger operand', () => {
+    expect(cMax(1, 2)).toBe(2);
+  });
+
+  it('gives the second operand where either is NaN, as Godot MAX does', () => {
+    expect([cMax(NaN, 1), cMax(1, NaN)]).toEqual([1, NaN]);
   });
 });

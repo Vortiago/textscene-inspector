@@ -1,5 +1,5 @@
 import { basisColumn } from '../../math/basis.js';
-import { colorHue, colorSaturation, colorValue } from '../../math/color.js';
+import { colorHuef, colorSaturationf, colorValue } from '../../math/color.js';
 import { round } from '../../math/math.js';
 import { srgbToOkhsl, type Okhsl } from '../../math/okHsl.js';
 import { basisOfTransform3D } from '../../math/transform3d.js';
@@ -88,8 +88,8 @@ const MEMBERS: MemberTable = {
     g8: (c) => channel8(c.g),
     b8: (c) => channel8(c.b),
     a8: (c) => channel8(c.a),
-    h: (c) => real(colorHue(c)),
-    s: (c) => real(colorSaturation(c)),
+    h: (c) => real(colorHuef(c)),
+    s: (c) => real(colorSaturationf(c)),
     v: (c) => real(colorValue(c)),
     ok_hsl_h: (c) => okhslPart(c, 'h'),
     ok_hsl_s: (c) => okhslPart(c, 's'),
@@ -97,10 +97,12 @@ const MEMBERS: MemberTable = {
   },
 };
 
+/** The names of the members `type` has, in the order `register_named_setters_getters` gives them. */
+export const memberNames = (type: VariantTypeName): readonly string[] => Object.keys(MEMBERS[type] ?? {});
+
 /** The member `name` of `value` (variant_setget.cpp:267), or nothing where its type has no such member. */
 export function memberOf(value: Variant, name: string): Variant | undefined {
-  const getter = (MEMBERS[value.type] as Readonly<Record<string, Getter<VariantTypeName>>> | undefined)?.[
-    name
-  ];
-  return getter && Object.hasOwn(MEMBERS[value.type]!, name) ? getter(value.value as never) : undefined;
+  const table = MEMBERS[value.type] as Readonly<Record<string, Getter<VariantTypeName>>> | undefined;
+  if (!table || !Object.hasOwn(table, name)) return undefined;
+  return table[name]!(value.value as never);
 }

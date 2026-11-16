@@ -16,8 +16,11 @@ describe('variantGet', () => {
     expect(variantGet(array, variant('FLOAT', 1.9))).toEqual({ value: int(2), isValid: true });
   });
 
-  it('counts a negative index from the end of a String, but refuses it on a Vector2', () => {
+  it('counts a negative index from the end of a String', () => {
     expect(variantGet(text('abc'), int(-1)).value).toEqual(text('c'));
+  });
+
+  it('refuses a negative index on a Vector2, which has a fixed size', () => {
     expect(variantGet(variant('VECTOR2', { x: 1, y: 2 }), int(-1)).isValid).toBe(false);
   });
 });
