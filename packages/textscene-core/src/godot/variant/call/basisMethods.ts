@@ -48,7 +48,7 @@ const columnDot = (n: BasisComponents, column: number, v: Vector3) =>
   vector3DotComponents(n[column]!, n[column + 3]!, n[column + 6]!, v.x, v.y, v.z);
 
 /** `Basis::slerp` (basis.cpp:910): the rotations slerped, then each row scaled by its lerped length. */
-export function basisSlerp(n: BasisComponents, to: BasisComponents, weight: number): BasisComponents {
+function basisSlerp(n: BasisComponents, to: BasisComponents, weight: number): BasisComponents {
   const turned = basisFromQuaternion(quaternionSlerp(basisGetQuaternion(n), basisGetQuaternion(to), weight));
   const [x, y, z] = [0, 1, 2].map((row) => lerpf(rowLength(n, row), rowLength(to, row), weight));
   return basisScale([...turned] as MutableBasis, x!, y!, z!);

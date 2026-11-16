@@ -38,7 +38,7 @@ export function canConvertStrict(from: VariantTypeName, to: VariantTypeName): bo
 }
 
 /** Each named component of a vector, rectangle or colour, through `map`. */
-export const mapComponents = (value: unknown, map: (component: number) => number): Components =>
+const mapComponents = (value: unknown, map: (component: number) => number): Components =>
   Object.fromEntries(Object.entries(value as Components).map(([key, component]) => [key, map(component)]));
 
 /** `Color(const String &)` (color.h:274): an HTML code, else a named colour, else `Color()`. */

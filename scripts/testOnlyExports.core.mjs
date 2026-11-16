@@ -24,6 +24,8 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'godot/variant/construct/construct.ts#constructorFor',
   // The preprocessor refuses any NotPortable, and the refusal tests name the class each case throws.
   'godot/variant/objects/makeObject.ts#UnsupportedObject',
+  // The test pins that a name only the object prototype has is no C++ parameter.
+  'godot/variant/utility/utilityArguments.ts#isCppParameter',
   // A registered hand row is module state nothing clears, so a test passes its own descriptor.
   'linter/descriptorValidator.ts#descriptorValidator',
   // `@react-three/test-renderer` cannot wrap a real `<Canvas>`, so a scene test mounts its contents.

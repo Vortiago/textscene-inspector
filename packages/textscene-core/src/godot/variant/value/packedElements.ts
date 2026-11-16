@@ -115,7 +115,3 @@ const elementOf = (type: PackedTypeName) => PACKED_ELEMENTS[type] as PackedEleme
 /** Each element of a packed array as a Variant: its ints as INT and its floats as FLOAT. */
 export const packedElements = (packed: Variant): Variant[] =>
   (packed.value as readonly unknown[]).map(elementOf(packed.type as PackedTypeName).read);
-
-/** The element of a packed array of `type` at `index` as a Variant. */
-export const packedElementAt = (type: PackedTypeName, elements: readonly unknown[], index: number): Variant =>
-  elementOf(type).read(elements[index]);
