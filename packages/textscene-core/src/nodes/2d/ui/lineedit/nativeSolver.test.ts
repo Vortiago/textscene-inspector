@@ -13,6 +13,7 @@ import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import * as logger from '../../../../logger';
 import type { LineEditProperties } from './types';
+import type { FontResource } from '../../../../resources/fonts/font/types';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import {
   shapeLineEditText,
@@ -53,6 +54,10 @@ function node(
     // fills unconditionally, not through props.
     colors: props.themeOverrideColors ?? {},
   });
+}
+
+function fontVariation(properties: Record<string, string>): FontResource {
+  return { kind: 'variation', baseFont: null, fallbacks: [], properties };
 }
 
 function ctx(withMeasurer = true): SolveContext {
@@ -122,6 +127,13 @@ describe('lineEditMinimumSize: StyleBox content margins + minimum_character_widt
     );
     const empty = lineEditMinimumSize(node({}), ctx());
     expect(withLongText).toEqual(empty);
+  });
+
+  it('takes the shaped height where a baseline offset moves the glyphs below the font height (`line_edit.cpp:2459`)', () => {
+    // The shift is 0.5 * (18 + 5) = 11.5 below the baseline, so the line is ceil(18 + 11.5) = 30 tall.
+    const lowered = fontVariation({ baseline_offset: '0.5' });
+    const n: SolveNode = { ...node({ text: 'ab' }), fontOverrides: { [LINE_EDIT_THEME_FONT_KEY]: lowered } };
+    expect(lineEditMinimumSize(n, ctx()).y).toBe(8 + 30);
   });
 
   it.each([

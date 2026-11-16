@@ -90,4 +90,9 @@ describe('shapeText — the baseline offset of a face', () => {
   it('grows the ascent where a glyph moves above it', () => {
     expect(lineOf('ab', spaced({}, -1)).ascentPx).toBe(20);
   });
+
+  it('keeps a glyph at an infinite offset out of the line, as it draws nothing', () => {
+    const line = lineOf('ab', spaced({}, Infinity));
+    expect([line.ascentPx, line.descentPx]).toEqual([16, 4]);
+  });
 });

@@ -52,6 +52,11 @@ export function glyphsDescentPx(glyphs: readonly GlyphPlacement[]): number {
 
 const NO_EXTENT: LineExtentPx = { ascentPx: 0, descentPx: 0 };
 
+// Godot grows the line to an infinite offset too, but a glyph there draws nothing, so it sizes nothing here.
+function finiteShiftPx(yOffsetPx: number): number {
+  return Number.isFinite(yOffsetPx) ? yOffsetPx : 0;
+}
+
 /** One glyph's share of its line's extent (`text_server_adv.cpp:5146-5172`). */
 function glyphExtentPx(glyph: GlyphPlacement): LineExtentPx {
   const { fontMetrics: face, fontSizePx, char, yOffset = 0, controlCodepoint } = glyph;
@@ -62,8 +67,8 @@ function glyphExtentPx(glyph: GlyphPlacement): LineExtentPx {
     return { ascentPx: boxHeightPx * HEX_CODE_BOX_ASCENT, descentPx: boxHeightPx * HEX_CODE_BOX_DESCENT };
   }
   return {
-    ascentPx: Math.max(getFontSpacedAscentPx(face, fontSizePx), -yOffset),
-    descentPx: Math.max(getFontSpacedDescentPx(face, fontSizePx), yOffset),
+    ascentPx: Math.max(getFontSpacedAscentPx(face, fontSizePx), -finiteShiftPx(yOffset)),
+    descentPx: Math.max(getFontSpacedDescentPx(face, fontSizePx), finiteShiftPx(yOffset)),
   };
 }
 

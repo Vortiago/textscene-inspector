@@ -24,8 +24,10 @@ export function maxEmboldenGrowthPx(layout: TextLayoutResult): number {
 export function maxBaselineShiftPx(layout: TextLayoutResult): number {
   let shiftPx = 0;
   for (const line of layout.lines) {
-    for (const gp of line.glyphs)
-      shiftPx = Math.max(shiftPx, Math.abs(getFontBaselineShiftPx(gp.fontMetrics, gp.fontSizePx)));
+    for (const gp of line.glyphs) {
+      const glyphShiftPx = Math.abs(getFontBaselineShiftPx(gp.fontMetrics, gp.fontSizePx));
+      if (Number.isFinite(glyphShiftPx)) shiftPx = Math.max(shiftPx, glyphShiftPx);
+    }
   }
   return shiftPx;
 }

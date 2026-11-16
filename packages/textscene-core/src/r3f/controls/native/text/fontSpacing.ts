@@ -32,7 +32,10 @@ export function faceSpacingOf(face: FontMetrics): FaceSpacing {
 /** One wrapper per face and spacing, so a layout memoised on the face keeps its hits. */
 const spacedFacesOf = perObject((_face: FontMetrics) => new Map<string, FontMetrics>());
 
-/** A variation over a variation takes its own spacing (`font.cpp:3128-3131`). */
+/**
+ * A variation over a variation takes its own spacing (`font.cpp:3128-3131`).
+ * @canonical put a font's extra spacing and baseline offset on a face
+ */
 export function withSpacing<Metrics extends FontMetrics>(
   metrics: Metrics,
   faceSpacing: FaceSpacing

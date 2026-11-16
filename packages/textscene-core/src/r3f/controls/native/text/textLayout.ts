@@ -865,12 +865,12 @@ function toBreakGlyphs(
   hasEndGlyph = true
 ): BreakGlyph[] {
   const glyphs: BreakGlyph[] = [];
-  for (const range of runRanges(style, chars.length))
-    pushRunGlyphs(glyphs, chars, range, style, preserveControl);
+  const ranges = runRanges(style, chars.length);
+  for (const range of ranges) pushRunGlyphs(glyphs, chars, range, style, preserveControl);
   kernGlyphs(glyphs, chars, style);
   placeMarks(glyphs, style);
   roundAdvancesToWholePixels(glyphs, chars, style);
-  applyFontSpacing(glyphs, chars, style);
+  if (style.faces.some(isSpaced)) applyFontSpacing(glyphs, chars, style, ranges.at(-1));
   if (!hasEndGlyph) return glyphs;
   glyphs.push({
     start: chars.length,
@@ -885,8 +885,13 @@ function toBreakGlyphs(
 }
 
 /** Ports `text_server_adv.cpp:7092-7110`. Mutates `glyphs`. */
-function applyFontSpacing(glyphs: BreakGlyph[], chars: ArrayLike<string>, style: RunStyle): void {
-  const unspaced = lastAdvancingGlyph(glyphs, chars, style);
+function applyFontSpacing(
+  glyphs: BreakGlyph[],
+  chars: ArrayLike<string>,
+  style: RunStyle,
+  lastRun: readonly [number, number] | undefined
+): void {
+  const unspaced = lastRun && lastAdvancingGlyph(glyphs, chars, style, lastRun);
   for (let i = 0; i < chars.length; i++) {
     const glyph = glyphs[i]!;
     if (chars[i] === '' || glyph.isClusterTail) continue;
@@ -914,11 +919,9 @@ function applyFontSpacing(glyphs: BreakGlyph[], chars: ArrayLike<string>, style:
 function lastAdvancingGlyph(
   glyphs: readonly BreakGlyph[],
   chars: ArrayLike<string>,
-  style: RunStyle
+  style: RunStyle,
+  [start, end]: readonly [number, number]
 ): BreakGlyph | ClusterGlyph | undefined {
-  const lastRun = runRanges(style, chars.length).at(-1);
-  if (!lastRun) return undefined;
-  const [start, end] = lastRun;
   const isRtl = isRtlRun(style, start);
   for (let k = 0; k < end - start; k++) {
     const i = isRtl ? start + k : end - 1 - k;
@@ -928,11 +931,23 @@ function lastAdvancingGlyph(
       if (isLinebreak(chars[i]!.codePointAt(0)!) && glyph.advance !== 0) return glyph;
       continue;
     }
-    const inBufferOrder = isRtl ? glyph.glyphs : [...glyph.glyphs].reverse();
-    const advancing = inBufferOrder.find((g) => !g.isMark && g.advance !== 0);
+    const advancing = isRtl ? glyph.glyphs.find(isAdvancing) : lastAdvancingOf(glyph.glyphs);
     if (advancing) return advancing;
   }
   return undefined;
+}
+
+function isAdvancing(glyph: ClusterGlyph): boolean {
+  return !glyph.isMark && glyph.advance !== 0;
+}
+
+function lastAdvancingOf(glyphs: readonly ClusterGlyph[]): ClusterGlyph | undefined {
+  for (let k = glyphs.length - 1; k >= 0; k--) if (isAdvancing(glyphs[k]!)) return glyphs[k];
+  return undefined;
+}
+
+function isSpaced(face: FontMetrics): boolean {
+  return face.spacing !== undefined || face.baselineOffset !== undefined;
 }
 
 /** The last glyph of a cluster that is no mark: a kerning lookup skips marks, so it pairs with the next cluster. */

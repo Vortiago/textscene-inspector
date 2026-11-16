@@ -322,6 +322,21 @@ describe('computeCanvasTextCanvasLayout', () => {
     );
   });
 
+  it('sizes the raster as an unshifted one and places no glyph at an infinite baseline offset', () => {
+    const shapedAt = (baselineOffset: number) =>
+      shapeText('AB', {
+        fontSizePx: 32,
+        boxWidthPx: 0,
+        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+        fontMetrics: withSpacing(CANVAS_METRICS, { spacing: NO_SPACING, baselineOffset }),
+        lineSpacingPx: 0,
+      });
+    const infinite = shapedAt(Infinity);
+    const canvasLayout = computeCanvasTextCanvasLayout(infinite, 0);
+    expect(canvasLayout).toEqual(computeCanvasTextCanvasLayout(shapedAt(0), 0));
+    expect(canvasGlyphRects(infinite, 32, 0, canvasLayout)).toEqual([]);
+  });
+
   it('canvas height always exceeds the layout height by the same fixed vertical pad, independent of skew', () => {
     const layout = layoutFor('AB');
     const straight = computeCanvasTextCanvasLayout(layout, 0);

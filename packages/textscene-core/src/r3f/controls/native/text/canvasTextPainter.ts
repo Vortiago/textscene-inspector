@@ -74,7 +74,7 @@ export function computeCanvasTextCanvasLayout(
   const strokePadPx = strokeWidthPx / 2;
   // An embolden reaches its full growth right and up. The pad is symmetric, so the quad stays centred.
   const emboldenPadPx = maxEmboldenGrowthPx(layout);
-  // A baseline offset moves the ink off the line's box, which its ascent and descent do not grow for.
+  // A glyph's ink reaches its own descent below its shifted baseline, past the line's box.
   const offsetYPx =
     CANVAS_TEXT_VERTICAL_PAD_PX + Math.ceil(strokePadPx + emboldenPadPx + maxBaselineShiftPx(layout));
   // The worst-case shear offset over a line's rows, `dx(y) = -skew * (y - baselinePx)`: every row
@@ -289,7 +289,8 @@ function placeGlyphs(
       (snapsGlyphs ? Math.floor(phase.y + lineBaselinePx + yOffsetPx) : lineBaselinePx + yOffsetPx);
     const itemOriginsPx = snapsGlyphs ? glyphOriginsPx(line, itemOriginPx.x, penSum) : [];
     return line.glyphs.flatMap((placement, index) => {
-      if (!hasOwnGlyph(placement)) return [];
+      // A glyph at an infinite `baseline_offset` lands nowhere on Godot's canvas.
+      if (!hasOwnGlyph(placement) || !Number.isFinite(placement.yOffset ?? 0)) return [];
       const penX =
         canvasLayout.offsetXPx +
         (snapsGlyphs

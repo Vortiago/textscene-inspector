@@ -242,21 +242,19 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const fontMetrics = resolveNodeFontMetrics(n, LINE_EDIT_THEME_FONT_KEY);
   const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;
-  // The height `MAX` (`line_edit.cpp:2459`) reduces to `font->get_height`, which no shaped line exceeds.
   const fontHeightPx = getFontChainHeightPx(fontMetrics, fontSizePx);
+  // `_shape()` shapes the text or else the placeholder (`line_edit.cpp:3104-3112`), as the painter does.
+  const { text: displayed } = lineEditDisplayText(props);
+  const shaped = shapeLineEditText(displayed, props, {
+    ...controlBidiOptions(props, n),
+    fontSizePx,
+    fontMetrics,
+  });
 
   let width = lineEditTextMinimumWidth(field, emSpaceSize);
 
   if (props.expandToTextLength && ctx.measureText) {
-    // `full_width` (`:2456`, set at the end of `_shape()`) is the ceiled width of the string
-    // `lineEditDisplayText` gives the painter, so an empty field sizes to its placeholder.
-    const { text: displayed } = lineEditDisplayText(props);
-    const fullWidthPx = displayed.length
-      ? shapedTextSizeWidthPx(
-          shapeLineEditText(displayed, props, { ...controlBidiOptions(props, n), fontSizePx, fontMetrics })
-            .widthPx
-        )
-      : 0;
+    const fullWidthPx = displayed.length ? shapedTextSizeWidthPx(shaped.widthPx) : 0;
     const caretWidthPx = requiredThemeItem(n.constants, 'caret_width');
     width = Math.max(width, fullWidthPx + caretWidthPx);
   }
@@ -268,7 +266,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const minimumIconSize = (naturalSize: Vector2) =>
     lineEditRightIconSize(naturalSize, iconExpandMode, fontHeightPx, null, rightIconScale);
 
-  let height = fontHeightPx;
+  let height = Math.max(shaped.heightPx, fontHeightPx);
   let iconMaxWidth = 0;
   const rightIconNaturalSize = n.textureSlots['right_icon'];
   if (rightIconNaturalSize) {
