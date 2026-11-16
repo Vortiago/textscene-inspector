@@ -105,6 +105,14 @@ export function variantTypeNameOf(type: keyof typeof VARIANT_TYPE): string {
   return VARIANT_TYPE_NAMES[VARIANT_TYPE[type]];
 }
 
+const TYPE_BY_NAME: ReadonlyMap<string, keyof typeof VARIANT_TYPE> = new Map(
+  (Object.keys(VARIANT_TYPE) as (keyof typeof VARIANT_TYPE)[]).map((key) => [variantTypeNameOf(key), key])
+);
+
+/** The `VARIANT_TYPE` key of an engine name, such as `VECTOR2` for `Vector2`, or nothing for another name. */
+export const variantTypeOfName = (name: string): keyof typeof VARIANT_TYPE | undefined =>
+  TYPE_BY_NAME.get(name);
+
 // A runtime handle: a `.tscn` holds only its default `RID()`, so a property of this type takes no check.
 export function isRuntimeHandle(type: number): boolean {
   return type === VARIANT_TYPE.RID;

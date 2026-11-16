@@ -12,7 +12,11 @@ function methodTables(): ReadonlyMap<string, ReadonlyMap<string, BuiltinMethodRo
   return methodTablesByType;
 }
 
-/** `Variant::get_builtin_method_hash` (variant_call.cpp:1644), or nothing where `type` has no such method. */
-export function builtinMethodHash(type: VariantTypeName, method: string): number | undefined {
-  return methodTables().get(variantTypeNameOf(type))?.get(method)?.[3];
+/** The extension API row of `method` on `type`, or nothing where `type` has no such method. */
+export function builtinMethodRow(type: VariantTypeName, method: string): BuiltinMethodRow | undefined {
+  return methodTables().get(variantTypeNameOf(type))?.get(method);
 }
+
+/** `Variant::get_builtin_method_hash` (variant_call.cpp:1644), or nothing where `type` has no such method. */
+export const builtinMethodHash = (type: VariantTypeName, method: string): number | undefined =>
+  builtinMethodRow(type, method)?.[3];

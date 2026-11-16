@@ -1,3 +1,4 @@
+import { callMethod } from '../variant/call/callMethod.js';
 import { setEntry } from '../variant/compare.js';
 import { construct } from '../variant/construct/construct.js';
 import { evaluateOperator } from '../variant/operators/evaluate.js';
@@ -85,9 +86,7 @@ class Execution {
       case 'builtinFunction':
         return this.called(node);
       case 'call':
-        this.execute(node.base);
-        node.arguments.forEach(this.execute);
-        throw new UnportedExpression(`the method ${node.method}`);
+        return this.calledMethod(node);
     }
   };
 
@@ -134,6 +133,16 @@ class Execution {
     const value = construct(node.type, node.arguments.map(this.execute));
     if (value) return value;
     throw new ExecuteError(`Invalid arguments to construct '${variantTypeNameOf(node.type)}'`, node);
+  }
+
+  // expression.cpp:1424: every call error has the one text, and a refused argument still leaves a value.
+  private calledMethod(node: Extract<ExpressionNode, { kind: 'call' }>): Variant {
+    const base = this.execute(node.base);
+    const args = node.arguments.map(this.execute);
+    const result = callMethod(base, node.method, args);
+    if (!result) throw new UnportedExpression(`the method ${node.method}`);
+    if (result.isValid) return result.value;
+    throw new ExecuteError(`On call to '${node.method}':`, node, result.value);
   }
 
   // expression.cpp:1397: a failed call still leaves the value it returned.
