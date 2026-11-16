@@ -5,6 +5,7 @@
 
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { parsePackedStringArray } from '../../../parser/utils';
+import { parsePackedByteArrayBody, readPackedByteArrayLiteral } from '../../../godot/variant/packedBytes';
 import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { FontLoaderFn, FontResource } from './types';
 
@@ -90,7 +91,24 @@ export function fontResourceOf(
       const { base_font: _baseFont, ...variationRest } = rest;
       return { kind: 'variation', baseFont, fallbacks, properties: variationRest };
     }
-    default:
-      return { kind: 'file', bytes: undefined, mimeType: undefined, fallbacks, properties: rest };
+    default: {
+      const { data, ...fileRest } = rest;
+      return {
+        kind: 'file',
+        bytes: embeddedFontBytes(data),
+        mimeType: undefined,
+        fallbacks,
+        properties: fileRest,
+      };
+    }
   }
+}
+
+/** The font a `FontFile` holds in its `data` (`font.cpp:1052`). Undefined for a wrapper with none. */
+function embeddedFontBytes(data: string | undefined): ArrayBuffer | undefined {
+  if (data === undefined) return undefined;
+  const literal = readPackedByteArrayLiteral(data);
+  if (literal.fault !== null) return undefined;
+  const bytes = parsePackedByteArrayBody(literal.body);
+  return bytes && bytes.byteLength > 0 ? (bytes.slice().buffer as ArrayBuffer) : undefined;
 }
