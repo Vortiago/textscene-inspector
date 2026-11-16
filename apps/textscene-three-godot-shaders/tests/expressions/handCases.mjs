@@ -652,6 +652,9 @@ const WRITER_EDGES = [
   `var_to_str(${'['.repeat(101)}1${']'.repeat(101)})`,
   `var_to_str(${'['.repeat(103)}${']'.repeat(103)})`,
   `var_to_str(${'{1: '.repeat(103)}2${'}'.repeat(103)})`,
+  // Floats halfway between two shortest spellings, where grisu2's round_weed keeps the lower digit.
+  'var_to_str(Vector2(5128.15625, -5373.03125))',
+  'var_to_str(Vector4(62643.1875, 36824.8125, 58860.9375, -48526.8125))',
 ];
 
 // Each text goes to str_to_var as an Expression string literal, which JSON's escapes spell.

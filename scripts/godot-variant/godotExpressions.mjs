@@ -64,7 +64,7 @@ async function runFrom(texts, first) {
   requireGodotVersion(godot);
   if (status === 0) return { godot, answers: parseExpressionOutput(stdout, rest.length) };
   if (!stdout.includes('handle_crash: Program crashed'))
-    throw new Error(`godot exited with ${status}:\n${stderr}`);
+    throw new Error(`godot exited with ${status} at ${JSON.stringify(rest[answered])}:\n${stderr}`);
   return { godot, answers: parseExpressionOutput(stdout, answered), crashed: first + answered };
 }
 
