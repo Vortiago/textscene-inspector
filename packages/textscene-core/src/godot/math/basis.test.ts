@@ -6,6 +6,7 @@ import {
   basisColumnsAlong,
   basisColumnInto,
   basisCopy,
+  basisDeterminantOf,
   basisDiagonal,
   basisGetScale,
   basisGetScaleAbs,
@@ -38,7 +39,7 @@ describe('basisGetScaleAbs', () => {
     // the shear on the x axis instead of the y.
     const [x, y, z] = basisGetScaleAbs(SHEARED);
     expect(x).toBe(1);
-    expect(y).toBeCloseTo(Math.hypot(0.5, 1), 10);
+    expect(y).toBe(Math.fround(Math.sqrt(1.25)));
     expect(z).toBe(1);
   });
 });
@@ -330,5 +331,18 @@ describe('basisGetQuaternion', () => {
 
   it('refuses a mirrored basis with Quaternion()', () => {
     expect(basisGetQuaternion([-1, 0, 0, 0, 1, 0, 0, 0, 1])).toEqual(QUATERNION_IDENTITY);
+  });
+});
+
+describe('basisDeterminantOf', () => {
+  it('rounds each product and difference to float, to the bits Godot 4.6.3 gives', () => {
+    const columns = new Float32Array(
+      new Uint8Array(
+        Buffer.from('ea8bfb3fc2dfb73f8c3a79bf52b6e13ff661ecbf8e5df53e8478ccbf1287dfbf41dbdc3f', 'hex')
+      ).buffer
+    );
+    const [xx, xy, xz, yx, yy, yz, zx, zy, zz] = columns;
+    const determinant = basisDeterminantOf([xx!, yx!, zx!, xy!, yy!, zy!, xz!, yz!, zz!]);
+    expect(Buffer.from(Float32Array.of(determinant).buffer).toString('hex')).toBe('bcf886c0');
   });
 });

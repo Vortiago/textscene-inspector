@@ -346,7 +346,11 @@ export function basisDeterminant(
   h: number,
   i: number
 ): number {
-  return a * (e * i - h * f) - d * (b * i - h * c) + g * (b * f - e * c);
+  const r = Math.fround;
+  const first = r(a * r(r(e * i) - r(h * f)));
+  const second = r(d * r(r(b * i) - r(h * c)));
+  const third = r(g * r(r(b * f) - r(e * c)));
+  return r(r(first - second) + third);
 }
 
 /**

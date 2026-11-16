@@ -129,7 +129,7 @@ export function basisDeterminantOf(n: BasisComponents): number {
 
 /** `Basis::get_scale_abs()` (basis.cpp:287-292): the three column magnitudes, unsigned. */
 export function basisGetScaleAbs(n: BasisComponents): [number, number, number] {
-  return [Math.hypot(n[0], n[3], n[6]), Math.hypot(n[1], n[4], n[7]), Math.hypot(n[2], n[5], n[8])];
+  return [vector3Length(n[0], n[3], n[6]), vector3Length(n[1], n[4], n[7]), vector3Length(n[2], n[5], n[8])];
 }
 
 /**
