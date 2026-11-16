@@ -884,10 +884,7 @@ function toBreakGlyphs(
   return glyphs;
 }
 
-/**
- * Adds each face's extra spacing to the advance of the glyphs it shapes, and moves them down by its
- * baseline offset (`text_server_adv.cpp:7092-7110`). Mutates `glyphs`.
- */
+/** Ports `text_server_adv.cpp:7092-7110`. Mutates `glyphs`. */
 function applyFontSpacing(glyphs: BreakGlyph[], chars: ArrayLike<string>, style: RunStyle): void {
   const unspaced = lastAdvancingGlyph(glyphs, chars, style);
   for (let i = 0; i < chars.length; i++) {
@@ -913,10 +910,7 @@ function applyFontSpacing(glyphs: BreakGlyph[], chars: ArrayLike<string>, style:
   }
 }
 
-/**
- * The glyph of the text's last run that is last in HarfBuzz's buffer order, visual, with an advance:
- * Godot adds no spacing to it (`text_server_adv.cpp:6985-6999`, `:7103`).
- */
+/** The last glyph with an advance in the text's last run, in buffer order (`text_server_adv.cpp:6985`). */
 function lastAdvancingGlyph(
   glyphs: readonly BreakGlyph[],
   chars: ArrayLike<string>,

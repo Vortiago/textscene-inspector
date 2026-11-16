@@ -32,7 +32,7 @@ export function faceSpacingOf(face: FontMetrics): FaceSpacing {
 /** One wrapper per face and spacing, so a layout memoised on the face keeps its hits. */
 const spacedFacesOf = perObject((_face: FontMetrics) => new Map<string, FontMetrics>());
 
-/** `metrics` with `faceSpacing` in place of its own, as a variation over a variation takes its own (`font.cpp:3128-3131`). */
+/** A variation over a variation takes its own spacing (`font.cpp:3128-3131`). */
 export function withSpacing<Metrics extends FontMetrics>(
   metrics: Metrics,
   faceSpacing: FaceSpacing
@@ -61,7 +61,7 @@ export function getFontSpacedDescentPx(face: FontMetrics, fontSizePx: number): n
   return getFontDescentPx(face, fontSizePx) + (face.spacing?.bottom ?? 0);
 }
 
-/** The px each glyph of `face` moves down, a `float` that nothing rounds (`text_server_adv.cpp:7092-7101`). */
+/** A `float` that nothing rounds (`text_server_adv.cpp:7092-7101`). */
 export function getFontBaselineShiftPx(face: FontMetrics, fontSizePx: number): number {
   const baselineOffset = face.baselineOffset ?? 0;
   if (baselineOffset === 0) return 0;

@@ -4,7 +4,7 @@ import { getFontChainHeightPx, type FontMetrics } from './fontMetrics';
 import { withSpacing, type FaceSpacing } from './fontSpacing';
 import { shapeText, type TextLineLayout } from './textLayout';
 
-/** A 1000-unit face whose every glyph advances 10 px at 20 px, with an ascent of 16 px and a descent of 4 px. */
+/** At 20 px every glyph advances 10 px, with an ascent of 16 px and a descent of 4 px. */
 const FACE: FontMetrics = {
   kind: 'canvas',
   unitsPerEm: 1000,
