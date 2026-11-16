@@ -34,6 +34,26 @@ describe('decompress', () => {
     );
   });
 
+  it('lends the decoder a buffer one byte past the buffer size, so a stream inflating far past it stops there', () => {
+    const outLengths: number[] = [];
+    const inflate: Decoders['inflate'] = (deflate, out) => {
+      outLengths.push(out?.length ?? Infinity);
+      return DECODERS.inflate(deflate, out);
+    };
+    const zeros = deflateSync(new Uint8Array(1_000_000));
+    expect(decompress(zeros, 10n, CompressionMode.Deflate, { ...DECODERS, inflate })).toEqual(
+      new Uint8Array(0)
+    );
+    expect(Math.max(...outLengths)).toBe(11);
+  });
+
+  it('gives empty for a stored block past the buffer size (edge case)', () => {
+    expect(decompress(deflateSync(TEXT, { level: 0 }), 5n, CompressionMode.Deflate, DECODERS)).toEqual(
+      new Uint8Array(0)
+    );
+    expect(decompress(gzipSync(TEXT, { level: 0 }), 29n, CompressionMode.Gzip, DECODERS)).toEqual(TEXT);
+  });
+
   it('decodes Deflate and GZIP that fit the buffer, and gives empty for one that does not', () => {
     expect(decompress(deflateSync(TEXT), 29n, CompressionMode.Deflate, DECODERS)).toEqual(TEXT);
     expect(decompress(gzipSync(TEXT), 29n, CompressionMode.Gzip, DECODERS)).toEqual(TEXT);

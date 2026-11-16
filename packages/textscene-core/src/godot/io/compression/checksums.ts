@@ -1,3 +1,7 @@
+const ADLER_BASE = 65521;
+/** `NMAX` (adler32.c:14): zlib's run of bytes between two modulos, short enough to keep both sums exact. */
+const ADLER_NMAX = 5552;
+
 /**
  * `adler32` (zlib adler32.c): the checksum after a zlib stream, as an unsigned 32-bit number.
  * @canonical The Adler-32 of a byte array
@@ -5,9 +9,13 @@
 export function adler32(bytes: Uint8Array): number {
   let a = 1;
   let b = 0;
-  for (const byte of bytes) {
-    a = (a + byte) % 65521;
-    b = (b + a) % 65521;
+  for (let start = 0; start < bytes.length; start += ADLER_NMAX) {
+    for (const byte of bytes.subarray(start, start + ADLER_NMAX)) {
+      a += byte;
+      b += a;
+    }
+    a %= ADLER_BASE;
+    b %= ADLER_BASE;
   }
   return ((b << 16) | a) >>> 0;
 }

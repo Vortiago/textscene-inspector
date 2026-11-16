@@ -2,13 +2,16 @@ import { adler32, crc32 } from './checksums.js';
 import { rethrowUnportable } from './decoderError.js';
 
 /** A raw deflate decoder: the bytes, or a throw for a stream it refuses or one that ends early. */
-export type RawInflate = (deflate: Uint8Array) => Uint8Array;
+export type RawInflate = (deflate: Uint8Array, out?: Uint8Array) => Uint8Array;
 
 /** What zlib's `inflate` takes from the input: the bytes, and where its trailer ends. */
 export interface InflatedStream {
   readonly output: Uint8Array;
   readonly end: number;
 }
+
+/** Deflate's most output for one input byte: four 258-byte matches, each two one-bit codes. */
+const MOST_BYTES_PER_INPUT_BYTE = 1032;
 
 const ZLIB_HEADER_LENGTH = 2;
 const GZIP_HEADER_LENGTH = 10;
@@ -28,13 +31,17 @@ const u32le = (bytes: Uint8Array, at: number) =>
   (bytes[at]! | (bytes[at + 1]! << 8) | (bytes[at + 2]! << 16) | (bytes[at + 3]! << 24)) >>> 0;
 
 /** `inflate` with windowBits 15 (inflate.c:506): nothing for a header, stream or Adler-32 zlib refuses. */
-export function inflateZlib(input: Uint8Array, inflate: RawInflate): InflatedStream | undefined {
+export function inflateZlib(
+  input: Uint8Array,
+  inflate: RawInflate,
+  limit = Infinity
+): InflatedStream | undefined {
   if (input.length < ZLIB_HEADER_LENGTH) return undefined;
   const [method, flags] = [input[0]!, input[1]!];
   if (((method << 8) | flags) % 31 !== 0) return undefined;
   if ((method & 0x0f) !== DEFLATE_METHOD || (method >> 4) + 8 > MAX_WINDOW_BITS) return undefined;
   if (flags & PRESET_DICTIONARY) return undefined;
-  const body = deflateStream(input.subarray(ZLIB_HEADER_LENGTH), TRAILER_LENGTH, inflate);
+  const body = deflateStream(input.subarray(ZLIB_HEADER_LENGTH), TRAILER_LENGTH, inflate, limit);
   if (!body) return undefined;
   const trailer = ZLIB_HEADER_LENGTH + body.end;
   if (input.length < trailer + TRAILER_LENGTH || u32be(input, trailer) !== adler32(body.output))
@@ -43,10 +50,14 @@ export function inflateZlib(input: Uint8Array, inflate: RawInflate): InflatedStr
 }
 
 /** `inflate` with windowBits 31 (inflate.c:553): one gzip member, with its header CRC, CRC-32 and length. */
-export function inflateGzip(input: Uint8Array, inflate: RawInflate): InflatedStream | undefined {
+export function inflateGzip(
+  input: Uint8Array,
+  inflate: RawInflate,
+  limit = Infinity
+): InflatedStream | undefined {
   const start = gzipBodyStart(input);
   if (start === undefined) return undefined;
-  const body = deflateStream(input.subarray(start), 2 * TRAILER_LENGTH, inflate);
+  const body = deflateStream(input.subarray(start), 2 * TRAILER_LENGTH, inflate, limit);
   if (!body) return undefined;
   const trailer = start + body.end;
   if (input.length < trailer + 2 * TRAILER_LENGTH) return undefined;
@@ -85,31 +96,37 @@ function afterZero(input: Uint8Array, at: number): number {
 function deflateStream(
   input: Uint8Array,
   trailerLength: number,
-  inflate: RawInflate
+  inflate: RawInflate,
+  limit: number
 ): InflatedStream | undefined {
-  const output = inflated(input, inflate);
-  if (!output) return undefined;
+  const decode = (prefix: Uint8Array) => inflated(prefix, inflate, limit);
   const expectedEnd = input.length - trailerLength;
-  if (endsAt(input, expectedEnd, inflate)) return { output, end: expectedEnd };
+  const atExpectedEnd = expectedEnd > 0 ? decode(input.subarray(0, expectedEnd)) : undefined;
+  if (atExpectedEnd && !decode(input.subarray(0, expectedEnd - 1)))
+    return fitted(atExpectedEnd, expectedEnd, limit);
+  const output = decode(input);
+  if (!output) return undefined;
   let [shortest, longest] = [0, input.length];
   while (longest - shortest > 1) {
     const middle = Math.floor((shortest + longest) / 2);
-    if (inflated(input.subarray(0, middle), inflate)) longest = middle;
+    if (decode(input.subarray(0, middle))) longest = middle;
     else shortest = middle;
   }
-  return { output, end: longest };
+  return fitted(output, longest, limit);
 }
 
-/** Two decodes, not a search, where the trailer ends the input, as in every stream Godot writes. */
-const endsAt = (input: Uint8Array, end: number, inflate: RawInflate): boolean =>
-  end > 0 &&
-  inflated(input.subarray(0, end), inflate) !== undefined &&
-  !inflated(input.subarray(0, end - 1), inflate);
+/** zlib's `inflate` fails where the output passes its buffer, as an output past `limit` shows. */
+const fitted = (output: Uint8Array, end: number, limit: number): InflatedStream | undefined =>
+  output.length > limit ? undefined : { output, end };
 
-function inflated(input: Uint8Array, inflate: RawInflate): Uint8Array | undefined {
+/** Output past `limit` stops one byte past it, so a stream inflating far past its buffer costs no more. */
+function inflated(input: Uint8Array, inflate: RawInflate, limit: number): Uint8Array | undefined {
+  const out = limit < input.length * MOST_BYTES_PER_INPUT_BYTE ? new Uint8Array(limit + 1) : undefined;
   try {
-    return inflate(input);
+    return inflate(input, out);
   } catch (error) {
+    // fflate copies a stored block with `set`, which throws where the block passes `out`.
+    if (out && error instanceof RangeError) return out;
     rethrowUnportable(error);
     // The decoder throws for an invalid stream and for one cut short, which zlib also refuses.
     return undefined;

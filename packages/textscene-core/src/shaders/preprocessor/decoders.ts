@@ -16,7 +16,7 @@ const BROTLI_END_OF_INPUT = /^Unexpected end of input/;
 /** fflate from three for Deflate and GZIP, and what the app lends for Zstandard and Brotli. */
 export function decodersOf(lent: ShaderDecoders = {}): Decoders {
   return {
-    inflate: (deflate) => inflateSync(deflate),
+    inflate: (deflate, out) => inflateSync(deflate, { out }),
     zstd: lent.zstd ?? missing('Zstandard', 'fzstd', 'fzstd', 'zstd'),
     brotli: lent.brotli ? brotliOf(lent.brotli) : missing('Brotli', 'brotli', 'brotli/decompress', 'brotli'),
   };
