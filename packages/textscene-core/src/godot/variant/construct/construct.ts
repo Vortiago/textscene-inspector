@@ -1,11 +1,11 @@
 import { stringToInt64 } from '../../string/string.js';
 import { stringToFloat } from '../../string/strtod.js';
-import { setEntry } from '../compare.js';
 import { defaultValue } from '../value/defaultValue.js';
-import { variant, type DictionaryEntry, type Variant, type VariantTypeName } from '../value/variant.js';
+import { variant, type ContainerType, type Variant, type VariantTypeName } from '../value/variant.js';
 import { VARIANT_TYPE } from '../variantType.js';
 import { buildFromCast } from './builders.js';
 import { CONSTRUCTORS_OF_TYPE, type ConstructorSignature } from './constructorSignature.js';
+import { assignArray, assignDictionary } from './typedContainer.js';
 import { canConvertStrict, castVariant, packedElements } from './variantCast.js';
 
 type Arguments = readonly Variant[];
@@ -80,49 +80,28 @@ function numberFromString(type: VariantTypeName, text: string): Variant {
   return type === 'INT' ? variant('INT', stringToInt64(text)) : variant('FLOAT', stringToFloat(text));
 }
 
-const TYPE_OF_NUMBER = new Map<number, VariantTypeName>(
-  Object.entries(VARIANT_TYPE).map(([name, number]) => [number, name as VariantTypeName])
-);
+// `operator uint32_t()` of the INT argument, stored as a `Variant::Type` (array.cpp:894).
+const containerType = (type: Variant, className: Variant): ContainerType => ({
+  type: Number(BigInt.asIntN(32, type.value as bigint)),
+  className: className.value as string,
+});
 
-// `operator uint32_t()` of the INT argument, as `Variant::Type`; a number past the last type stays unnamed.
-const containerType = (value: Variant) =>
-  TYPE_OF_NUMBER.get(Number(BigInt.asUintN(32, value.value as bigint)));
+// container_type_validate.h: set_typed refuses a class name on a type other than OBJECT (array.cpp:890).
+const refusesClassName = ({ type, className }: ContainerType) =>
+  className !== '' && type !== VARIANT_TYPE.OBJECT;
 
-/** The element converted as `Array::assign` and `Dictionary::assign` convert it from an untyped source. */
-function convertElement(element: Variant, type: VariantTypeName | undefined): Variant | undefined {
-  if (type === 'NIL') return element;
-  if (type === 'OBJECT') return element.type === 'NIL' || element.type === 'OBJECT' ? element : undefined;
-  if (type === undefined || !canConvertStrict(element.type, type)) return undefined;
-  return element.type === type ? element : construct(type, [element]);
-}
-
-// set_typed refuses a class name on a type other than OBJECT, and the container stays untyped.
-const refusesClassName = (type: VariantTypeName | undefined, className: Variant) =>
-  className.value !== '' && type !== 'OBJECT';
-
-// A failed conversion leaves the typed container empty (array.cpp:217, dictionary.cpp:430).
 function typedArray([base, typeNumber, className]: Arguments): Variant | undefined {
   if (base!.type !== 'ARRAY' || typeNumber!.type !== 'INT' || !isStringLike(className!)) return undefined;
-  const type = containerType(typeNumber!);
-  if (refusesClassName(type, className!)) return base;
-  const elements = base.value.map((element) => convertElement(element, type));
-  return variant('ARRAY', elements.every(Boolean) ? (elements as Variant[]) : []);
+  const elementType = containerType(typeNumber!, className!);
+  if (refusesClassName(elementType)) return variant('ARRAY', base.value);
+  return assignArray(base, elementType);
 }
 
 function typedDictionary([base, keyType, keyClass, , valueType, valueClass]: Arguments): Variant | undefined {
   const hasTypes = keyType!.type === 'INT' && valueType!.type === 'INT';
   const hasClassNames = keyClass!.type === 'STRING_NAME' && valueClass!.type === 'STRING_NAME';
   if (base!.type !== 'DICTIONARY' || !hasTypes || !hasClassNames) return undefined;
-  const [key, value] = [containerType(keyType!), containerType(valueType!)];
-  if (refusesClassName(key, keyClass!) || refusesClassName(value, valueClass!)) return base;
-  const entries: DictionaryEntry[] = [];
-  for (const entry of base.value) {
-    const [convertedKey, convertedValue] = [
-      convertElement(entry.key, key),
-      convertElement(entry.value, value),
-    ];
-    if (!convertedKey || !convertedValue) return variant('DICTIONARY', []);
-    setEntry(entries, convertedKey, convertedValue);
-  }
-  return variant('DICTIONARY', entries);
+  const [key, value] = [containerType(keyType!, keyClass!), containerType(valueType!, valueClass!)];
+  if (refusesClassName(key) || refusesClassName(value)) return variant('DICTIONARY', base.value);
+  return assignDictionary(base, key, value);
 }

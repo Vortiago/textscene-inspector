@@ -66,12 +66,27 @@ export interface VariantValues {
   PACKED_VECTOR4_ARRAY: readonly Vector4Value[];
 }
 
-export type VariantOf<T extends VariantTypeName> = { readonly type: T; readonly value: VariantValues[T] };
+/** A container's element type: a `Variant::Type` number, past the last type too, and a class for OBJECT. */
+export interface ContainerType {
+  readonly type: number;
+  readonly className: string;
+}
+
+// An absent type is NIL, an untyped container. An expression's scripts are always null, so none is held.
+interface ContainerTyping {
+  ARRAY: { readonly elementType?: ContainerType };
+  DICTIONARY: { readonly keyType?: ContainerType; readonly valueType?: ContainerType };
+}
+
+export type VariantOf<T extends VariantTypeName> = {
+  readonly type: T;
+  readonly value: VariantValues[T];
+} & (T extends keyof ContainerTyping ? ContainerTyping[T] : unknown);
 
 export type Variant = { [T in VariantTypeName]: VariantOf<T> }[VariantTypeName];
 
 export function variant<T extends VariantTypeName>(type: T, value: VariantValues[T]): VariantOf<T> {
-  return { type, value };
+  return { type, value } as VariantOf<T>;
 }
 
 export const NIL: VariantOf<'NIL'> = Object.freeze(variant('NIL', null));

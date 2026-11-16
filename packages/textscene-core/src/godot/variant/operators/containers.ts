@@ -1,12 +1,14 @@
 import { doubleToInt32, doubleToInt64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
 import { cppEqual, findEntry, isSameKey } from '../compare.js';
 import { stringFormat } from '../stringFormat.js';
-import { variant, type DictionaryEntry, type Variant } from '../value/variant.js';
+import { isSameContainerType, typedArray } from '../construct/typedContainer.js';
+import { variant, type DictionaryEntry, type Variant, type VariantOf } from '../value/variant.js';
 import { type InvalidOperands, invalidWithText } from './invalidOperands.js';
 
-/** `[] + []`: the elements of both. Only arrays typed alike keep the type, and no array here is typed. */
-export function addArrays(a: readonly Variant[], b: readonly Variant[]): Variant {
-  return variant('ARRAY', [...a, ...b]);
+/** `[] + []`: the elements of both, typed only when both are typed alike (variant_op.h:665). */
+export function addArrays(a: VariantOf<'ARRAY'>, b: VariantOf<'ARRAY'>): Variant {
+  const elementType = isSameContainerType(a.elementType, b.elementType) ? a.elementType : undefined;
+  return typedArray([...a.value, ...b.value], elementType);
 }
 
 /** AppendArray: a packed array with the other's elements after its own. */
