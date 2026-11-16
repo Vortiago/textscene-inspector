@@ -36,11 +36,7 @@ import {
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { justifyParagraphs } from '../../../../r3f/controls/native/text/textJustify';
-import {
-  lineHeightPx,
-  linesHeightPx,
-  type LineExtentPx,
-} from '../../../../r3f/controls/native/text/lineExtent';
+import { linesHeightPx, type LineExtentPx } from '../../../../r3f/controls/native/text/lineExtent';
 import {
   resolveTextOutline,
   resolveTextTheme,
@@ -759,9 +755,8 @@ export function layoutLabelLines(
       break;
   }
 
-  let lineTopPx = 0;
-  // `ofs.y += paragraph_spacing` after each paragraph's last shown line (`label.cpp:889`).
-  let paragraphGapsAbovePx = 0;
+  // `Vector2 ofs` sums down in 32-bit float from the style offset (`label.cpp:616,823,887-889`).
+  let penYPx = Math.fround(Math.fround(contentMargin.top) + vbeginPx);
   const isFill = (horizontalAlignment ?? H_LEFT) === H_FILL;
   const shapingWidthPx = labelShapingWidthPx(boxWidthPx, contentMargin);
   // `_shape` justifies at the truncated `int width` it broke the lines at (`label.cpp:297,331`),
@@ -783,10 +778,11 @@ export function layoutLabelLines(
 
   return lines.map((line, lineIndex) => {
     if (lineIndex > 0 && startsParagraph(lines, lineIndex)) {
-      paragraphGapsAbovePx += paragraphSpacingPx;
+      penYPx = Math.fround(penYPx + paragraphSpacingPx);
     }
-    const y = contentMargin.top + vbeginPx + lineTopPx + paragraphGapsAbovePx;
-    lineTopPx += lineHeightPx(line, layout.lineSpacingPx) + vsepPx;
+    const baselineYPx = Math.fround(penYPx + line.ascentPx);
+    penYPx = Math.fround(baselineYPx + (line.descentPx + layout.lineSpacingPx + vsepPx));
+    const y = baselineYPx - line.ascentPx;
     // `_get_line_rect` aligns against the ceiled `TS->shaped_text_get_size(rid)` (`label.cpp:478`),
     // not the raw pen advance the fit needs.
     const direction = { rtl, isRtlParagraph: line.isRtl === true, isAutowrapped };

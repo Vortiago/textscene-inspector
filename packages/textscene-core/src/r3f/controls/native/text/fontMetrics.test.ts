@@ -8,6 +8,7 @@
 // units), 10.578125 for 'A' (1354) and 14.75 for 'M' (1888): each `ceil(units / 2) / 64`.
 import { describe, expect, it } from 'vitest';
 import type { LookupGlyph } from './autofit/openTypeGdef';
+import { testBitmapMetrics } from './bitmapFontMetrics.testkit';
 import {
   ftDivFix,
   ftMulDiv,
@@ -16,6 +17,8 @@ import {
   getFontAscentPx,
   getFontRunGlyphAdvancePx,
   getFontKerningAdjustmentPx,
+  getFontChainHeightPx,
+  getFontDescentPx,
   getFontLinePitchPx,
   withFallbacks,
   withOutlines,
@@ -130,6 +133,15 @@ describe('getFontAscentPx / getFontLinePitchPx', () => {
     // The same at 28, the size the composition fixture's heading uses:
     // ceil(29.93) + ceil(8.20) = 30 + 9.
     expect(getFontLinePitchPx(METRICS, 28, 0)).toBe(39);
+  });
+
+  it('scales the descent of a fixed-size font with no round, as its ascent (`text_server_adv.cpp:2941-2943`)', () => {
+    // 4 px at the fixed size 16, drawn at 13.
+    expect(getFontDescentPx(testBitmapMetrics(), 13)).toBe(3.25);
+  });
+
+  it('sums the height of a fixed-size font with no ceiling, as `Font::get_height` does (`font.cpp:217`)', () => {
+    expect(getFontChainHeightPx(testBitmapMetrics(), 13)).toBe(16.25);
   });
 });
 

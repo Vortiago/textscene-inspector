@@ -28,6 +28,7 @@ import {
   type GlyphPlacement,
   type ShapeTextOptions,
   type TextLayoutResult,
+  type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { shapedLineHeightPx, type LineExtentPx } from '../../../../r3f/controls/native/text/lineExtent';
 import { justifyParagraphs } from '../../../../r3f/controls/native/text/textJustify';
@@ -745,8 +746,10 @@ export interface RichTextRunPlacement {
   outline: TextOutlineTheme;
   /** The run's font size, px, for its glyphs. The baseline is the line's: `layout.lines[0].ascentPx`. */
   fontSizePx: number;
-  /** A single-line layout of only this run's glyphs from the line, `glyph.x` already line-relative. */
+  /** A single-line layout of only this run's glyphs from the line. */
   layout: TextLayoutResult;
+  /** Where `layout`'s x 0 sits from the text origin: the marker's place, or 0 for a run of the line. */
+  layoutXPx: number;
   image?: RichTextImagePlacement;
 }
 
@@ -759,11 +762,16 @@ export interface RichTextRunPlacement {
 function soloRunLayout(
   segment: RunLineSegment,
   parentLayout: TextLayoutResult,
-  { ascentPx, descentPx }: LineExtentPx
+  { ascentPx, descentPx }: LineExtentPx,
+  linePen: LinePen
 ): TextLayoutResult {
-  const { text, glyphs } = segment;
-  // The right edge from the line origin, not the run's own span: the glyphs keep their line-relative
-  // `x`, and a canvas raster sized to the span alone would clip a run that starts mid-line.
+  const { text } = segment;
+  const glyphs = segment.glyphs.map((glyph) => ({
+    ...glyph,
+    x: glyph.x + linePen.offsetXPx,
+    linePenPx: linePen.pensPx.get(glyph)!,
+  }));
+  // The right edge from the text origin: a raster sized to the run's own span would clip it mid-line.
   const lastGlyph = glyphs.at(-1);
   const widthPx = lastGlyph ? lastGlyph.x + lastGlyph.advance : 0;
   return soloLineLayout(
@@ -772,6 +780,23 @@ function soloRunLayout(
     // A segment holds a glyph at least. `faceLayouts` splits off a glyph of another face.
     glyphs[0]!.fontMetrics
   );
+}
+
+/** A line's offset from the text origin, and the 32-bit pen Godot sums from it to each glyph. */
+interface LinePen {
+  offsetXPx: number;
+  pensPx: ReadonlyMap<GlyphPlacement, number>;
+}
+
+/** `off_step` starts at the line offset and adds each glyph's advance (`rich_text_label.cpp:1155,1508`). */
+function linePenOf(line: TextLineLayout, offsetXPx: number): LinePen {
+  const pensPx = new Map<GlyphPlacement, number>();
+  let pen = Math.fround(offsetXPx);
+  for (const glyph of line.glyphs) {
+    pensPx.set(glyph, pen);
+    pen = Math.fround(pen + Math.fround(glyph.advance));
+  }
+  return { offsetXPx, pensPx };
 }
 
 /** One wrapped line's vertical metrics, recomputed per line (`text_server_adv.cpp:5486-5487`), unlike the underline's. */
@@ -1120,22 +1145,25 @@ export function layoutRichTextRuns(
       (isRtl ? 0 : indentPx) +
       richTextHorizontalOffsetPx(lineWidthPx, boxWidthPx - indentPx, alignmentOfLine(lineIndex), isRtl);
     const line = layout.lines[lineIndex]!;
+    const linePen = linePenOf(line, lineOffsetXPx);
     const marker = startsParagraph(layout.lines, lineIndex)
       ? layout.listings?.get(line.paragraphStart!)?.marker
       : undefined;
     const isMarkerShown =
       !marker || !revealing || isPrefixShown(revealing.counted, revealing.reveal, line, revealing.glyphs);
     if (marker && isMarkerShown) {
+      // Beside the text, on the side it starts from (`:1021-1038`).
+      const markerXPx = isRtl ? lineOffsetXPx + lineWidthPx : lineOffsetXPx - marker.widthPx;
       placements.push({
         lineIndex,
         lineTopPx: Math.floor(exactTopPx),
-        // Beside the text, on the side it starts from (`:1021-1038`).
-        lineOffsetXPx: isRtl ? lineOffsetXPx + lineWidthPx : lineOffsetXPx - marker.widthPx,
+        lineOffsetXPx: markerXPx,
         underline: null,
         color: marker.color,
         outline: marker.outline,
         fontSizePx: marker.fontSizePx,
         layout: marker.layout,
+        layoutXPx: markerXPx,
       });
     }
     for (const shownSegment of segments) {
@@ -1151,7 +1179,8 @@ export function layoutRichTextRuns(
         color: run.color,
         outline: run.outline,
         fontSizePx: run.fontSizePx,
-        layout: soloRunLayout(segment, layout, { ascentPx, descentPx }),
+        layout: soloRunLayout(segment, layout, { ascentPx, descentPx }, linePen),
+        layoutXPx: 0,
         image: run.image
           ? {
               spec: run.image.spec,

@@ -2511,10 +2511,20 @@ describe('RichTextLabel lists and indents', () => {
   it('draws the marker at the line end under right-to-left, and the text after the inset', () => {
     const placements = listPlacements('[ul]a[/ul]', { textDirection: 2 });
     const [marker, text] = placements;
-    expect(text!.lineOffsetXPx).toBe(
-      BOX_WIDTH_PX - MARGIN_PX - BULLET_MARKER_PX - Math.ceil(text!.layout.widthPx)
+    const textWidthPx = Math.ceil(
+      text!.layout.lines[0]!.glyphs.reduce((sum, glyph) => sum + glyph.advance, 0)
     );
-    expect(marker!.lineOffsetXPx).toBe(text!.lineOffsetXPx + Math.ceil(text!.layout.widthPx));
+    expect(text!.lineOffsetXPx).toBe(BOX_WIDTH_PX - MARGIN_PX - BULLET_MARKER_PX - textWidthPx);
+    expect(marker!.lineOffsetXPx).toBe(text!.lineOffsetXPx + textWidthPx);
+  });
+
+  it('sums each pen from the line offset across its style runs (`rich_text_label.cpp:1155,1508`)', () => {
+    const [first, second] = listPlacements('[center]ab[color=red]cd[/color][/center]');
+    const [a, b] = first!.layout.lines[0]!.glyphs;
+    expect(a!.linePenPx).toBe(Math.fround(first!.lineOffsetXPx));
+    expect(second!.layout.lines[0]!.glyphs[0]!.linePenPx).toBe(
+      Math.fround(Math.fround(a!.linePenPx! + Math.fround(a!.advance)) + Math.fround(b!.advance))
+    );
   });
 });
 

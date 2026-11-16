@@ -23,6 +23,9 @@ variation's font size and colour. The header variations set the size, `GraphFram
 
 A FILL Label fits the lines of each paragraph on its own (`label.cpp:272-319`). The last line of each
 paragraph stays unfitted under the default flags, and a single-line paragraph is fitted.
+The pen of a line sums its advances in 32-bit float from the item origin, as Godot's `Vector2` does (`label.h:197-240`).
+A glyph a grown space puts near a quarter pixel picks the same raster as Godot's (`text_server_adv.cpp:4024`).
+The baseline of each line sums down in 32-bit float from the top of the style box (`label.cpp:616,823,887-889`).
 
 A Label draws its layers in Godot's order (`label.cpp:828-883`). The shadow ring and the shadow come first. Then
 each stacked shadow and each stacked outline draw from the last index to the first. The outline comes next, and the fill
@@ -68,6 +71,8 @@ glyph, not with `outline_size`.
 
 The import sidecar's `scaling_mode` sets how a size off the fixed size scales the glyphs
 (`text_server_adv.cpp:4093-4104`). Integer rounds the ratio, and Disabled keeps the fixed size.
+A fixed-size font scales its ascent, descent and height with no round (`text_server_adv.cpp:2907-2912,2941-2943`,
+`font.cpp:217`).
 
 ## Font fallbacks
 

@@ -73,9 +73,15 @@ function LayerRuns({ layer, placements, lineLayouts, ...run }: LayerRunsProps) {
       position={[placement.x + layer.offset.x, -(placement.y + layer.offset.y), 0]}
     >
       {layer.kind === 'ring' ? (
-        <OutlineRingRun {...run} layout={lineLayouts[index]!} tint={layer.color} sizePx={layer.ringSizePx} />
+        <OutlineRingRun
+          {...run}
+          layout={lineLayouts[index]!}
+          tint={layer.color}
+          sizePx={layer.ringSizePx}
+          penSum="fromItemPosition"
+        />
       ) : (
-        <TextRun {...run} layout={lineLayouts[index]!} tint={layer.color} />
+        <TextRun {...run} layout={lineLayouts[index]!} tint={layer.color} penSum="fromItemPosition" />
       )}
     </CanvasItemGroup>
   ));
