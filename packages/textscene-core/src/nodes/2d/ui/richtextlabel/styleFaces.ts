@@ -49,11 +49,7 @@ export interface RichTextFaces {
   readonly boldItalic: FontMetrics;
 }
 
-/**
- * The faces of `n` for the styles in use, the normal face for the rest. A style no run uses is never
- * resolved, so its font never loads. A settled scene font changes the faces, so a painter reads
- * them in its render body. A face can be the bundled one while its font loads.
- */
+/** A style no run uses keeps the normal face, so its font never loads. A painter reads these each render. */
 export function resolveRichTextFaces(n: SolveNode, inUse: RichTextStylesInUse): RichTextFaces {
   const normal = resolveNodeFontMetrics(n, NORMAL_FONT_KEY);
   const styled = (
