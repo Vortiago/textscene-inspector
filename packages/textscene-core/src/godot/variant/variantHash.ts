@@ -10,7 +10,6 @@ import {
   HASH_MURMUR3_SEED,
 } from '../math/hashFuncs.js';
 import type { NodePathParts } from '../string/nodePathParts.js';
-import { builtinMethodHash } from './call/builtinMethod.js';
 import { MAX_RECURSION, type CallableValue, type Variant, type VariantOf } from './value/variant.js';
 import { VARIANT_TYPE } from './variantType.js';
 
@@ -56,10 +55,16 @@ function nodePathHash({ absolute, names, subnames }: NodePathParts): number {
   return absolute ? pair : ~pair >>> 0;
 }
 
-// callable.cpp:322: a VariantCallable keeps the hash of its base and method (variant_callable.cpp:96).
-function callableHash({ method, base }: CallableValue): number {
-  if (!base) return fmix32(murmur3One64(0n, stringHash(method)));
-  return murmur3One64(BigInt(builtinMethodHash(base.type, method)!), variantHash(base));
+/** `Callable::hash` (callable.cpp:254): a bind or an unbind hashes as the Callable it wraps. */
+function callableHash(callable: CallableValue): number {
+  switch (callable.kind) {
+    case 'standard':
+      return fmix32(murmur3One64(0n, stringHash(callable.method)));
+    case 'variant':
+      return callable.hash;
+    default:
+      return callableHash(callable.callable);
+  }
 }
 
 /** `Array::recursive_hash` (array.cpp:195) and `Dictionary::recursive_hash` (dictionary.cpp:373). */

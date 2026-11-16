@@ -67,7 +67,9 @@ function constructWith(
       const hasObject = first!.type === 'NIL' || first!.type === 'OBJECT';
       if (!hasObject || !isStringLike(second!)) return undefined;
       const name = second!.value as string;
-      return type === 'CALLABLE' ? variant('CALLABLE', { method: name }) : variant('SIGNAL', name);
+      return type === 'CALLABLE'
+        ? variant('CALLABLE', { kind: 'standard', method: name })
+        : variant('SIGNAL', name);
     }
     case 'VariantConstructorTypedArray':
       return arrayFromTypedArguments(args);

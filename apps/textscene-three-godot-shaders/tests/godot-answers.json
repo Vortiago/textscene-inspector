@@ -6,7 +6,7 @@
   "random": "f496ba32f2398f1929355ce53edcc407498209e537eebdc0cc37ae5e4d373b56",
   "operators": "71961cc3c58f615ccb90c5777e87ec3bb1e7d85793a63db00e1ba0bcfe300064",
   "corpus": "cdd73866a614dcae16a6e20af61acb6b58bb0c78ad83ac65263a0dfea750fbe1",
-  "expressions": "3bd6fec07bb2ce511786d4254f9c5ef6a32369423a1513446b9a97e9c4b5cf2d"
+  "expressions": "af7248388b9679cf942438f8c7dc8e1b52f24e961eabed4315e9ad8a0ea329c2"
  },
  "smoke": {
   "probes": {
@@ -728,6 +728,7 @@
    "container-method-edge 10 \"[seed(1), [].pick_random(), [5].pick_random(), randi()]\"": {"verdict":"value","text":"[null, null, 5, 683407368]"},
    "container-method-edge 21 \"Array([1, 2], 2, \\\"\\\", null).bsearch(1.5)\"": {"verdict":"value","text":"0"},
    "container-method-edge 27 \"[1, 2, 3].slice(0, 3, 0)\"": {"verdict":"value","text":"[]"},
+   "callable-method-edge 3 \"[1, 2, 3].find.bind(2).call(3)\"": {"verdict":"value","text":"2"},
    "operator OP_ADD STRING STRING_NAME 2": {"verdict":"value","text":"s410000006200000063000000250000007300000020000000610000006e00000064000000200000002500000064000000"},
    "operator OP_ADD COLOR COLOR 2": {"verdict":"value","text":"Color(f0000000000000000, f00000000e887e43f, f000000000000f03f, f0000006066165940)"},
    "operator OP_ADD PACKED_VECTOR4_ARRAY PACKED_VECTOR4_ARRAY 3": {"verdict":"value","text":"PackedVector4Array[Vector4(f0000000000000080, f000000000000e03f, f000000a09999b93f, f0000000000000080), Vector4(f00000000000004c0, f00000000000004c0, f000000a09999b93f, f000000000000e03f), Vector4(f0000000000105940, f00000000000004c0, f000000a09999b93f, f00000000fa210940), Vector4(f00000000000004c0, f0000000000000000, f00000000fa210940, f000000000000e03f), Vector4(f0000000000105940, f0000000000105940, f0000000000000080, f00000000fa210940), Vector4(f00000000000004c0, f0000000000105940, f0000000000000080, f000000000000f0ff)]"},
@@ -1385,7 +1386,21 @@
    "method PackedVector4Array.fill 1 \"PackedVector4Array().fill(Vector4(0.5, -0.5, 0.5, -0.5))\"": {"verdict":"value","text":"null"},
    "method PackedVector4Array.clear 3 \"PackedVector4Array([Vector4(2, 1, 0, 0), Vector4(1, 2, 2, 2), Vector4(1, 2, 2, 1), Vector4(NAN, 0, 0, 0)]).clear()\"": {"verdict":"value","text":"null"},
    "method PackedVector4Array.find 9 \"PackedVector4Array([Vector4(1, 2, 3, 4), Vector4(0.5, -0.5, 0.5, -0.5), Vector4(1, 2, 3, -4), Vector4(0.5, -0.5, 0.5, -0.5)]).find(Vector4(NAN, 1, 2, 3), 3)\"": {"verdict":"value","text":"-1"},
-   "method PackedVector4Array.count 2 \"PackedVector4Array([Vector4(0.5, -0.5, 0.5, -0.5)]).count(Vector4(0.5, -0.5, 0.5, -0.5))\"": {"verdict":"value","text":"1"}
+   "method PackedVector4Array.count 2 \"PackedVector4Array([Vector4(0.5, -0.5, 0.5, -0.5)]).count(Vector4(0.5, -0.5, 0.5, -0.5))\"": {"verdict":"value","text":"1"},
+   "method Callable.callv 0 \"[3, \\\"x\\\", 7].has.callv([1, \\\"x\\\"])\"": {"verdict":"value","text":"null"},
+   "method Callable.is_custom 2 \"[1, 7].find.bind(7).is_custom()\"": {"verdict":"value","text":"true"},
+   "method Callable.get_method 7 \"Callable().bind(1).get_method()\"": {"verdict":"value","text":"n"},
+   "method Callable.get_bound_arguments_count 0 \"[3, \\\"x\\\", 7].has.get_bound_arguments_count()\"": {"verdict":"value","text":"0"},
+   "method Callable.get_bound_arguments 2 \"[1, 7].find.bind(7).get_bound_arguments()\"": {"verdict":"value","text":"[7]"},
+   "method Callable.get_bound_arguments 4 \"[3].has.bind(3).bind(4).get_bound_arguments()\"": {"verdict":"value","text":"[4, 3]"},
+   "method Callable.get_bound_arguments 9 \"{\\\"a\\\": 1}.get.get_bound_arguments()\"": {"verdict":"execute","text":"Invalid named index 'get' for base type Dictionary","left":"null"},
+   "method Callable.unbind 4 \"[3].has.bind(3).bind(4).unbind(3)\"": {"verdict":"value","text":"Callable(Array::has)"},
+   "method Callable.unbind 11 \"[3, \\\"x\\\", 7].has.unbind(-1)\"": {"verdict":"value","text":"Callable(Array::has)"},
+   "method Callable.unbind 16 \"[3, \\\"x\\\", 7].has.unbind(\\\"x\\\")\"": {"verdict":"execute","text":"On call to 'unbind':","left":"Callable(Array::has)"},
+   "method Callable.call_deferred 7 \"Callable().bind(1).call_deferred()\"": {"verdict":"value","text":"null"},
+   "method Callable.rpc_id 4 \"[3].has.bind(3).bind(4).rpc_id(3)\"": {"verdict":"execute","text":"On call to 'rpc_id':","left":"null"},
+   "method Signal.connect 19 \"Signal().connect([3, \\\"x\\\", 7].has, \\\"x\\\")\"": {"verdict":"execute","text":"On call to 'connect':","left":"3"},
+   "method Signal.disconnect 2 \"Signal().disconnect(Callable())\"": {"verdict":"value","text":"null"}
   }
  }
 }

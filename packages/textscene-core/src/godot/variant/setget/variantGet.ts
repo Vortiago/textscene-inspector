@@ -2,6 +2,7 @@ import { builtinMethodHash } from '../call/builtinMethod.js';
 import { doubleToInt64 } from '../cInteger.js';
 import { findEntry } from '../compare.js';
 import { NIL, variant, type Variant } from '../value/variant.js';
+import { variantCallable } from '../call/variantCallable.js';
 import { indexedElement } from './indexedElements.js';
 import { memberOf } from './namedMembers.js';
 
@@ -30,9 +31,7 @@ export function getNamed(base: Variant, name: string): GetResult {
       return entry ? valid(entry.value) : INVALID;
     }
     default:
-      return builtinMethodHash(base.type, name) === undefined
-        ? INVALID
-        : valid(variant('CALLABLE', { method: name, base }));
+      return builtinMethodHash(base.type, name) === undefined ? INVALID : valid(variantCallable(base, name));
   }
 }
 

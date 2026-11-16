@@ -18,10 +18,35 @@ export type Vector4Value = Readonly<Quaternion>;
 export type ColorValue = Readonly<Rgba>;
 export type ProjectionValue = readonly [Vector4Value, Vector4Value, Vector4Value, Vector4Value];
 
-/** A Callable's method, empty when null, and the base of a `VariantCallable` (variant_callable.cpp). */
-export interface CallableValue {
+/** A Callable: a standard one of object 0, a `VariantCallable`, or a bind or an unbind of another. */
+export type CallableValue = StandardCallable | VariantCallableValue | BoundCallable | UnboundCallable;
+
+/** A Callable of object 0, which every Object here is: null when its method is empty. */
+export interface StandardCallable {
+  readonly kind: 'standard';
   readonly method: string;
-  readonly base?: Variant;
+}
+
+/** `VariantCallable` (variant_callable.cpp:82): the hash is taken once, when it is made. */
+export interface VariantCallableValue {
+  readonly kind: 'variant';
+  readonly method: string;
+  readonly base: Variant;
+  readonly hash: number;
+}
+
+/** `CallableCustomBind` (callable_bind.cpp): `binds` go after the arguments of a call. */
+export interface BoundCallable {
+  readonly kind: 'bind';
+  readonly callable: CallableValue;
+  readonly binds: readonly Variant[];
+}
+
+/** `CallableCustomUnbind` (callable_bind.cpp): a call drops its last `count` arguments. */
+export interface UnboundCallable {
+  readonly kind: 'unbind';
+  readonly callable: CallableValue;
+  readonly count: number;
 }
 
 export interface DictionaryEntry {

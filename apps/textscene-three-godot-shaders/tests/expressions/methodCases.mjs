@@ -33,6 +33,9 @@ export const PORTED_METHOD_TYPES = [
   'PackedVector3Array',
   'PackedColorArray',
   'PackedVector4Array',
+  'Callable',
+  'Signal',
+  'RID',
 ];
 
 /** A typical value of each type, then its edges: zero, negative zero, the float limits, NaN and infinity. */
@@ -85,6 +88,7 @@ export const EDGE_VALUES = {
   PackedVector3Array: ['PackedVector3Array([Vector3(1, 2, 3)])', ['PackedVector3Array()']],
   PackedColorArray: ['PackedColorArray([Color(1, 0, 0)])', ['PackedColorArray()']],
   PackedVector4Array: ['PackedVector4Array([Vector4(1, 2, 3, 4)])', ['PackedVector4Array()']],
+  StringName: ['StringName("has")', ['StringName("")', 'StringName("size")', '"find"']],
   Variant: ['["x", 2]', ['{"a": 1, "b": 2.5}', '[["k", "v"], ["n", 3]]', '[["bad"]]', '7', 'null']],
   Array: [
     '[1, "x"]',
@@ -446,6 +450,22 @@ const BASE_VALUES = {
       'PackedVector4Array([Vector4(2, 1, 0, 0), Vector4(1, 2, 2, 2), Vector4(1, 2, 2, 1), Vector4(NAN, 0, 0, 0)])',
     ],
   ],
+  Callable: [
+    '[3, "x", 7].has',
+    [
+      'Callable()',
+      '[1, 7].find.bind(7)',
+      '"x".begins_with.unbind(2)',
+      '[3].has.bind(3).bind(4)',
+      '[3].has.bindv([3])',
+      '[3].has.unbind(1).bind(5, 6)',
+      'Callable().bind(1)',
+      'Vector2(1, 2).dot',
+      '{"a": 1}.get',
+    ],
+  ],
+  Signal: ['Signal()', ['Signal(null, "changed")']],
+  RID: ['RID()', ['RID(RID())']],
   NodePath: [
     'NodePath("Root/Child:position:x")',
     ['""', '"/"', '"/root/a/b"', '"a/b/c"', '":x:y"', '"."', '"../x:y"', '"a//b/"', '":"'].map(
