@@ -20,7 +20,7 @@ func answer(text: String) -> String:
 		return "parse " + JSON.stringify(expression.get_error_text())
 	var value = expression.execute([], null, false)
 	if expression.has_execute_failed():
-		return "execute " + JSON.stringify(expression.get_error_text())
+		return "execute " + JSON.stringify({"error": expression.get_error_text(), "left": dump(value)})
 	return "value " + JSON.stringify(dump(value))
 
 func _ready():
@@ -33,12 +33,16 @@ func _ready():
 	get_tree().quit()
 `;
 
+// A failed execute still returns its value (expression.cpp:1507), so the answer keeps what it leaves.
+const answerOf = (verdict, printed) =>
+  verdict === 'execute' ? { verdict, text: printed.error, left: printed.left } : { verdict, text: printed };
+
 /** Each answer of `stdout`, by the index of its text. Throws on a text Godot did not answer. */
 export function parseExpressionOutput(stdout, count) {
   const answers = new Array(count);
   for (const line of stdout.split('\n')) {
     const match = LINE.exec(line);
-    if (match) answers[Number(match[1])] = { verdict: match[2], text: JSON.parse(match[3]) };
+    if (match) answers[Number(match[1])] = answerOf(match[2], JSON.parse(match[3]));
   }
   const missing = [...answers.keys()].filter((index) => answers[index] === undefined);
   if (missing.length > 0)

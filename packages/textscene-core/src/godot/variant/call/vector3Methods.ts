@@ -1,16 +1,18 @@
-import type { BasisComponents } from '../../math/basis.js';
+import { IDENTITY_BASIS, type BasisComponents } from '../../math/basis.js';
+import { basisSetAxisAngle, basisXform } from '../../math/basisFloat.js';
+import { vector3Cross } from '../../math/vector.js';
 import { clamp, lerpf } from '../../math/math.js';
 import { atan2Real } from '../../math/realAtan2.js';
-import { cosf, sinf, sqrtf } from '../../math/realMath.js';
+import { sqrtf } from '../../math/realMath.js';
 import { variant, type Variant } from '../value/variant.js';
 import {
   axis,
   dot,
   floatVectorMethods,
   geometricVectorMethods,
-  isNormalized,
   length,
   lengthSquared,
+  lerped,
   normalized,
   real,
   scaled,
@@ -22,59 +24,24 @@ const f = Math.fround;
 
 const { vector, unary, withVector, withArguments } = vectorPorts('VECTOR3', 'float');
 
-const IDENTITY_ROWS: readonly Components[] = [
-  [1, 0, 0],
-  [0, 1, 0],
-  [0, 0, 1],
-];
-
-function cross([x, y, z]: Components, [otherX, otherY, otherZ]: Components): Components {
-  return [
-    f(f(y! * otherZ!) - f(z! * otherY!)),
-    f(f(z! * otherX!) - f(x! * otherZ!)),
-    f(f(x! * otherY!) - f(y! * otherX!)),
-  ];
-}
+const cross = (a: Components, b: Components): Components =>
+  vector3Cross(a as [number, number, number], b as [number, number, number]);
 
 const angleTo = (v: Components, to: Components) => atan2Real(length(cross(v, to)), dot(v, to));
 
-// basis.cpp:840: an axis not normalised fails MATH_CHECKS and leaves the identity basis.
-function axisAngleRows(axisVector: Components, angle: number): readonly Components[] {
-  if (!isNormalized(axisVector)) return IDENTITY_ROWS;
-  const [x, y, z] = axisVector as [number, number, number];
-  const cosine = cosf(angle);
-  const diagonal = (component: number) => {
-    const squared = f(component * component);
-    return f(squared + f(cosine * f(1 - squared)));
-  };
-  const sine = sinf(angle);
-  const t = f(1 - cosine);
-  const pair = (a: number, b: number, c: number): [number, number] => {
-    const product = f(f(a * b) * t);
-    const turn = f(c * sine);
-    return [f(product - turn), f(product + turn)];
-  };
-  const [xyMinus, xyPlus] = pair(x, y, z);
-  const [xzMinus, xzPlus] = pair(x, z, y);
-  const [yzMinus, yzPlus] = pair(y, z, x);
-  return [
-    [diagonal(x), xyMinus, xzPlus],
-    [xyPlus, diagonal(y), yzMinus],
-    [xzMinus, yzPlus, diagonal(z)],
-  ];
+function rotated([x, y, z]: Components, [axisX, axisY, axisZ]: Components, angle: number): Components {
+  const basis = basisSetAxisAngle([...IDENTITY_BASIS], { x: axisX!, y: axisY!, z: axisZ! }, angle);
+  const turned = basisXform(basis, { x: x!, y: y!, z: z! });
+  return [turned.x, turned.y, turned.z];
 }
 
-const rotated = (v: Components, axisVector: Components, angle: number): Components =>
-  axisAngleRows(axisVector, angle).map((row) => dot(row, v));
-
 function slerp(from: Components, to: Components, weight: number): Components {
-  const lerped = () => from.map((c, i) => lerpf(c, to[i]!, weight));
   const startSquared = lengthSquared(from);
   const endSquared = lengthSquared(to);
-  if (startSquared === 0 || endSquared === 0) return lerped();
+  if (startSquared === 0 || endSquared === 0) return lerped(from, to, weight);
   const turnAxis = cross(from, to);
   const axisSquared = lengthSquared(turnAxis);
-  if (axisSquared === 0) return lerped();
+  if (axisSquared === 0) return lerped(from, to, weight);
   const axisLength = sqrtf(axisSquared);
   const unitAxis = turnAxis.map((c) => f(c / axisLength));
   const startLength = sqrtf(startSquared);

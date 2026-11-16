@@ -1,13 +1,11 @@
 import { canConvertStrict, castVariant } from '../construct/variantCast.js';
 import { textToVariant } from '../reader/variantReader.js';
 import { castArgument, isCppParameter, type CastArgument } from '../utility/utilityArguments.js';
-import { NIL, type Variant, type VariantTypeName } from '../value/variant.js';
+import { NIL, type Variant } from '../value/variant.js';
 import { variantTypeOfName } from '../variantType.js';
 import { builtinMethodRow } from './builtinMethod.js';
-import type { MethodParameter, MethodPort } from './methodPort.js';
-import { COLOR_METHODS } from './colorMethods.js';
-import { RECT2_METHODS, RECT2I_METHODS } from './rectMethods.js';
-import { VECTOR_METHODS } from './vectorMethods.js';
+import type { MethodParameter } from './methodPort.js';
+import { METHOD_PORTS } from './methodPorts.js';
 
 /** What a call leaves: the value, which a refused argument also leaves, and whether Godot calls it valid. */
 export interface MethodResult {
@@ -17,13 +15,6 @@ export interface MethodResult {
 
 const FAILED: MethodResult = { value: NIL, isValid: false };
 const IS_VARARG = 4;
-
-const PORTS: Readonly<Partial<Record<VariantTypeName, Readonly<Record<string, MethodPort>>>>> = {
-  ...VECTOR_METHODS,
-  RECT2: RECT2_METHODS,
-  RECT2I: RECT2I_METHODS,
-  COLOR: COLOR_METHODS,
-};
 
 /** `VariantCaster<T>::cast`: the value the method runs with, also for an argument the check refused. */
 const castMethodArgument = (argument: Variant, parameter: MethodParameter): CastArgument =>
@@ -53,7 +44,7 @@ export function callMethod(base: Variant, name: string, args: readonly Variant[]
   if (flags & IS_VARARG) return undefined;
   const required = declared.filter(([, defaultText]) => defaultText === undefined).length;
   if (args.length > declared.length || args.length < required) return FAILED;
-  const port = PORTS[base.type]?.[name];
+  const port = METHOD_PORTS[base.type]?.[name];
   if (!port) return undefined;
   const filled = declared.map(([, defaultText], index) => args[index] ?? defaultArgument(defaultText!));
   const value = port.run(

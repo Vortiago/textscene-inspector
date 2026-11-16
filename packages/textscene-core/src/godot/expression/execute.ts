@@ -1,6 +1,6 @@
 import { callMethod } from '../variant/call/callMethod.js';
 import { setEntry } from '../variant/compare.js';
-import { construct } from '../variant/construct/construct.js';
+import { construct, failedConstruction } from '../variant/construct/construct.js';
 import { evaluateOperator } from '../variant/operators/evaluate.js';
 import { getNamed, variantGet } from '../variant/setget/variantGet.js';
 import { callErrorText } from '../variant/utility/callError.js';
@@ -130,9 +130,11 @@ class Execution {
   }
 
   private constructed(node: Extract<ExpressionNode, { kind: 'constructor' }>): Variant {
-    const value = construct(node.type, node.arguments.map(this.execute));
+    const args = node.arguments.map(this.execute);
+    const value = construct(node.type, args);
     if (value) return value;
-    throw new ExecuteError(`Invalid arguments to construct '${variantTypeNameOf(node.type)}'`, node);
+    const message = `Invalid arguments to construct '${variantTypeNameOf(node.type)}'`;
+    throw new ExecuteError(message, node, failedConstruction(node.type, args));
   }
 
   // expression.cpp:1424: every call error has the one text, and a refused argument still leaves a value.

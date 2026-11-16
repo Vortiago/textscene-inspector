@@ -1,7 +1,7 @@
 import { stringToInt64 } from '../../string/string.js';
 import { stringToFloat } from '../../string/strtod.js';
 import { defaultValue } from '../value/defaultValue.js';
-import { variant, type ContainerType, type Variant, type VariantTypeName } from '../value/variant.js';
+import { NIL, variant, type ContainerType, type Variant, type VariantTypeName } from '../value/variant.js';
 import { VARIANT_TYPE } from '../variantType.js';
 import { buildFromCast } from './builders.js';
 import { CONSTRUCTORS_OF_TYPE, type ConstructorSignature } from './constructorSignature.js';
@@ -31,6 +31,16 @@ export function construct(type: VariantTypeName, args: Arguments): Variant | und
     args.map((arg) => arg.type)
   );
   return signature && constructWith(signature, args);
+}
+
+/** What `r_ret` holds after a failed construct: null, or the null Object a constructor writes anyway. */
+export function failedConstruction(type: VariantTypeName, args: Arguments): Variant {
+  const signature = constructorFor(
+    type,
+    args.map((arg) => arg.type)
+  );
+  // variant_construct.h:195: VariantConstructorNilObject reports its error and still writes the null Object.
+  return signature?.constructor === 'VariantConstructorNilObject' ? defaultValue(type) : NIL;
 }
 
 const isStringLike = (value: Variant) => value.type === 'STRING' || value.type === 'STRING_NAME';

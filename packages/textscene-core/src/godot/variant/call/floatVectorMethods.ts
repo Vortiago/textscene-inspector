@@ -1,40 +1,28 @@
 import {
+  bezierDerivativef,
   bezierInterpolatef,
-  clamp,
-  cMax,
-  cMin,
   CMP_EPSILON,
   cubicInterpolatef,
   cubicInterpolateInTimef,
+  isUnitWithinEpsilon,
   lerpf,
   round,
   sign,
   snapped,
 } from '../../math/math.js';
-import {
-  bezierDerivativef,
-  fposmodf,
-  isEqualApproxf,
-  isEqualWithinf,
-  isZeroApproxf,
-  sqrtf,
-  UNIT_EPSILON,
-} from '../../math/realMath.js';
+import { fposmodf, isEqualApproxf, isZeroApproxf, sqrtf } from '../../math/realMath.js';
 import { variant, type Variant } from '../value/variant.js';
 import type { MethodPort } from './methodPort.js';
-import { vectorPorts, type Components, type VectorArguments } from './vectorPorts.js';
+import { boundMethods, each2, vectorPorts, type Components, type VectorArguments } from './vectorPorts.js';
 
 const f = Math.fround;
 const CMP_EPSILON_FLOAT = f(CMP_EPSILON);
 
-export type FloatVectorType = 'VECTOR2' | 'VECTOR3' | 'VECTOR4';
+type FloatVectorType = 'VECTOR2' | 'VECTOR3' | 'VECTOR4';
 
 export const real = (value: number): Variant => variant('FLOAT', value);
 const bool = (value: boolean): Variant => variant('BOOL', value);
 export const axis = (index: number): Variant => variant('INT', BigInt(index));
-
-const each2 = (a: Components, b: Components, map: (p: number, q: number) => number) =>
-  a.map((component, index) => map(component, b[index]!));
 
 export const dot = (a: Components, b: Components): number =>
   a.reduce(
@@ -45,15 +33,22 @@ export const lengthSquared = (v: Components): number => dot(v, v);
 export const length = (v: Components): number => sqrtf(lengthSquared(v));
 export const minus = (a: Components, b: Components): Components => each2(a, b, (p, q) => f(p - q));
 export const scaled = (v: Components, by: number): Components => v.map((component) => f(component * by));
-export const isNormalized = (v: Components): boolean => isEqualWithinf(lengthSquared(v), 1, UNIT_EPSILON);
+const isNormalized = (v: Components): boolean => isUnitWithinEpsilon(lengthSquared(v));
+
+/** Each component over the length whose square is `squared`, the step every `normalize` shares. */
+export function unitScaled(v: Components, squared: number): Components {
+  const l = sqrtf(squared);
+  return v.map((component) => f(component / l));
+}
 
 /** `Vector3::normalize` and `Vector4::normalize`: a zero vector becomes positive zeros. */
 export function normalized(v: Components): Components {
   const squared = lengthSquared(v);
-  if (squared === 0) return v.map(() => 0);
-  const l = sqrtf(squared);
-  return v.map((component) => f(component / l));
+  return squared === 0 ? v.map(() => 0) : unitScaled(v, squared);
 }
+
+export const lerped = (from: Components, to: Components, weight: number): Components =>
+  each2(from, to, (a, b) => lerpf(a, b, weight));
 
 // vector2.cpp:186, vector3.h:591: a normal not normalised fails MATH_CHECKS, on in an editor build.
 function reflect(v: Components, normal: Components): Components {
@@ -97,6 +92,7 @@ const CUBIC_IN_TIME = ['vector', 'vector', 'vector', 'scalar', 'scalar', 'scalar
 export function floatVectorMethods(type: FloatVectorType): Readonly<Record<string, MethodPort>> {
   const { vector, unary, withVector, withScalar, withArguments } = vectorPorts(type, 'float');
   return {
+    ...boundMethods(type, 'float', 'f'),
     abs: unary((v) => vector(v.map(Math.abs))),
     sign: unary((v) => vector(v.map(sign))),
     floor: unary((v) => vector(v.map(Math.floor))),
@@ -117,20 +113,7 @@ export function floatVectorMethods(type: FloatVectorType): Readonly<Record<strin
     posmodv: withVector((v, mod) => vector(each2(v, mod, fposmodf))),
     snapped: withVector((v, step) => vector(each2(v, step, (c, s) => f(snapped(c, s))))),
     snappedf: withScalar((v, step) => vector(v.map((c) => f(snapped(c, step))))),
-    min: withVector((v, other) => vector(each2(v, other, cMin))),
-    minf: withScalar((v, scalar) => vector(v.map((c) => cMin(c, scalar)))),
-    max: withVector((v, other) => vector(each2(v, other, cMax))),
-    maxf: withScalar((v, scalar) => vector(v.map((c) => cMax(c, scalar)))),
-    clamp: withArguments(['vector', 'vector'], (v, args) => {
-      const [min, max] = [args.vector(0), args.vector(1)];
-      return vector(v.map((c, index) => clamp(c, min[index]!, max[index]!)));
-    }),
-    clampf: withArguments(['scalar', 'scalar'], (v, args) =>
-      vector(v.map((c) => clamp(c, args.scalar(0), args.scalar(1))))
-    ),
-    lerp: withArguments(['vector', 'scalar'], (v, args) =>
-      vector(each2(v, args.vector(0), (a, b) => lerpf(a, b, args.scalar(1))))
-    ),
+    lerp: withArguments(['vector', 'scalar'], (v, args) => vector(lerped(v, args.vector(0), args.scalar(1)))),
     cubic_interpolate: withArguments(CUBIC, (v, args) =>
       vector(eachOfFour(v, args, (a, b, pre, post) => cubicInterpolatef(a, b, pre, post, args.scalar(3))))
     ),

@@ -9,6 +9,7 @@ import {
 } from '../../../../packages/textscene-core/src/godot/variant/variantType.ts';
 import { seededRandom } from '../random/seededRandom.mjs';
 import { HAND_CASES } from './handCases.mjs';
+import { methodCases } from './methodCases.mjs';
 import { utilityCases } from './utilityCases.mjs';
 import { containerHolding, formatText, VALUE_TYPES, valueText } from './values.mjs';
 
@@ -144,6 +145,7 @@ export function expressionSet() {
     ...unregisteredCases(random),
     ...constructorCases(random),
     ...utilityCases(random),
+    ...methodCases(),
   ];
 }
 
