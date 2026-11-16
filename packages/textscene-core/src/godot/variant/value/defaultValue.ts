@@ -58,6 +58,10 @@ const DEFAULTS: { readonly [T in VariantTypeName]: VariantValues[T] } = {
   PACKED_VECTOR4_ARRAY: [],
 };
 
+// A fresh container each time: a container method changes its base in place, as Godot's does.
+const isShared = (type: VariantTypeName) =>
+  type === 'ARRAY' || type === 'DICTIONARY' || type.startsWith('PACKED_');
+
 export function defaultValue<T extends VariantTypeName>(type: T): Variant {
-  return variant(type, DEFAULTS[type]) as Variant;
+  return variant(type, isShared(type) ? ([] as never) : DEFAULTS[type]) as Variant;
 }

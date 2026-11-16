@@ -52,9 +52,14 @@ describe('the NaN rule of hash_compare', () => {
     expect(isSameKey(vector2(Number.NaN, 1), vector2(Number.NaN, 1))).toBe(true);
   });
 
-  it('never equals arrays that hold NaN, as recursive_equal is not semantic', () => {
+  it('never equals two arrays that hold NaN, as recursive_equal is not semantic', () => {
+    const nanArray = () => variant('ARRAY', [float(Number.NaN)]);
+    expect(cppEqual(nanArray(), nanArray())).toBe(false);
+  });
+
+  it('equals an array to itself before it compares elements (array.cpp:139)', () => {
     const array = variant('ARRAY', [float(Number.NaN)]);
-    expect(cppEqual(array, array)).toBe(false);
+    expect(cppEqual(array, array)).toBe(true);
   });
 });
 

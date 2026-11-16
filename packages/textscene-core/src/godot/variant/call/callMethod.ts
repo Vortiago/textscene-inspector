@@ -1,10 +1,11 @@
 import { canConvertStrict, castVariant } from '../construct/variantCast.js';
 import { textToVariant } from '../reader/variantReader.js';
 import { castArgument, isCppParameter, type CastArgument } from '../utility/utilityArguments.js';
-import { NIL, type Variant } from '../value/variant.js';
+import type { UtilityHost } from '../utility/utilityHost.js';
+import { NIL, type CallableValue, type Variant } from '../value/variant.js';
 import { variantTypeOfName } from '../variantType.js';
 import { builtinMethodRow } from './builtinMethod.js';
-import type { MethodParameter } from './methodPort.js';
+import type { MethodContext, MethodParameter } from './methodPort.js';
 import { METHOD_PORTS } from './methodPorts.js';
 
 /** What a call leaves: the value, which a refused argument also leaves, and whether Godot calls it valid. */
@@ -35,8 +36,16 @@ function isAccepted(argument: Variant, declared: string): boolean {
   return type === undefined || canConvertStrict(argument.type, type);
 }
 
+/** A method a Callable calls that has no port yet. */
+export class UnportedMethod extends Error {}
+
 /** Nothing for a method with no port yet. A refused argument still runs the method on its cast value. */
-export function callMethod(base: Variant, name: string, args: readonly Variant[]): MethodResult | undefined {
+export function callMethod(
+  base: Variant,
+  name: string,
+  args: readonly Variant[],
+  host: UtilityHost
+): MethodResult | undefined {
   if (base.type === 'OBJECT') return FAILED;
   const row = builtinMethodRow(base.type, name);
   if (!row) return FAILED;
@@ -49,7 +58,25 @@ export function callMethod(base: Variant, name: string, args: readonly Variant[]
   const filled = declared.map(([, defaultText], index) => args[index] ?? defaultArgument(defaultText!));
   const value = port.run(
     base,
-    filled.map((argument, index) => castMethodArgument(argument, port.parameters[index]!))
+    filled.map((argument, index) => castMethodArgument(argument, port.parameters[index]!)),
+    methodContext(host)
   );
   return { value, isValid: filled.every((argument, index) => isAccepted(argument, declared[index]![0])) };
+}
+
+const methodContext = (host: UtilityHost): MethodContext => ({
+  random: host.random,
+  callCallable: (callable, args) => callCallable(callable, args, host),
+});
+
+// callable.cpp:43: a Callable of no builtin base has a null object here, which is a call error.
+function callCallable(
+  callable: CallableValue,
+  args: readonly Variant[],
+  host: UtilityHost
+): Variant | undefined {
+  if (!callable.base) return undefined;
+  const result = callMethod(callable.base, callable.method, args, host);
+  if (!result) throw new UnportedMethod(`the method ${callable.method}`);
+  return result.isValid ? result.value : undefined;
 }

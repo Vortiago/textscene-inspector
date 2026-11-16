@@ -11,6 +11,7 @@ export type CppParameter =
   | 'float'
   | 'int32_t'
   | 'int64_t'
+  | 'uint8_t'
   | 'uint32_t'
   | 'uint64_t'
   | 'Error'
@@ -32,6 +33,7 @@ const CHECKED_TYPE: Readonly<Record<CppParameter, VariantTypeName>> = {
   float: 'FLOAT',
   int32_t: 'INT',
   int64_t: 'INT',
+  uint8_t: 'INT',
   uint32_t: 'INT',
   uint64_t: 'INT',
   Error: 'INT',
@@ -66,6 +68,12 @@ function toInt32(argument: Variant): number {
   return wrapInt32(castVariant(argument, 'INT').value as bigint);
 }
 
+// `_to_int<uint8_t>`: the low byte of the int32 a double truncates to, as cvttsd2si gives.
+function toUint8(argument: Variant): number {
+  if (argument.type === 'FLOAT') return doubleToInt32(argument.value) & 0xff;
+  return Number(BigInt.asUintN(8, castVariant(argument, 'INT').value as bigint));
+}
+
 // `_to_int<uint32_t>`: the low 32 bits of the int64 a double truncates to, as cvttsd2si gives.
 function toUint32(argument: Variant): number {
   const value =
@@ -94,6 +102,8 @@ export function castArgument(argument: Variant, parameter: CppParameter): CastAr
       return toInt32(argument);
     case 'int64_t':
       return castVariant(argument, 'INT').value as bigint;
+    case 'uint8_t':
+      return toUint8(argument);
     case 'uint32_t':
       return toUint32(argument);
     case 'uint64_t':

@@ -4,6 +4,12 @@ const EDITOR_STATE = 'the answer is a counter or an object id of the running edi
 const MACHINE_ICONV = 'the answer converts with the iconv and locale of the machine Godot runs on';
 const TRANSLATED_UNIT =
   "humanize_size's unit goes through RTR, which translates it into the language of the editor or the game";
+const COMPRESSION_CARD =
+  'the port of compress and decompress waits on the choice of codecs that Atle has open';
+const UNSET_MEMORY =
+  'Godot counts a lead surrogate before a plain unit as two codes but writes one, so the last code is unset memory';
+const UNSEEDED =
+  'the case draws from the global random generator before a seed, and Godot seeds it from the clock';
 const PAST_UNICODE =
   'the String holds a code past U+10FFFF, which a JavaScript string cannot hold, so the port refuses it';
 const INTERNED_ADDRESS =
@@ -100,12 +106,22 @@ export const REFUSED_CASES = {
     { refusal: 'UnrepresentableText', reason: PAST_UNICODE },
   'method StringName.replace_chars 34 "StringName(\\"a_red.b/#F80 a 😀İ\\").replace_chars(\\"#ff8000\\", -2147483648)"':
     { refusal: 'UnrepresentableText', reason: PAST_UNICODE },
+  'packed-method-edge 12 "PackedByteArray([0, 216, 65, 0]).get_string_from_utf16()"': {
+    refusal: 'UnportableUtility',
+    reason: UNSET_MEMORY,
+  },
 };
 
 /** The methods the port refuses wherever the set calls them, with the reason. */
 export const REFUSED_METHODS = {
   to_multibyte_char_buffer: { refusal: 'UnportableUtility', reason: MACHINE_ICONV },
+  get_string_from_multibyte_char: { refusal: 'UnportableUtility', reason: MACHINE_ICONV },
+  compress: { refusal: 'UnportedExpression', reason: COMPRESSION_CARD },
+  decompress: { refusal: 'UnportedExpression', reason: COMPRESSION_CARD },
+  decompress_dynamic: { refusal: 'UnportedExpression', reason: COMPRESSION_CARD },
   humanize_size: { refusal: 'UnportableUtility', reason: TRANSLATED_UNIT },
+  pick_random: { refusal: 'UnportableUtility', reason: UNSEEDED },
+  shuffle: { refusal: 'UnportableUtility', reason: UNSEEDED },
 };
 
 /** The comparisons of two distinct non-empty StringNames, which the port refuses wherever the set has one. */

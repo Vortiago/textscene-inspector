@@ -141,7 +141,7 @@ class Execution {
   private calledMethod(node: Extract<ExpressionNode, { kind: 'call' }>): Variant {
     const base = this.execute(node.base);
     const args = node.arguments.map(this.execute);
-    const result = callMethod(base, node.method, args);
+    const result = callMethod(base, node.method, args, this.host);
     if (!result) throw new UnportedExpression(`the method ${node.method}`);
     if (result.isValid) return result.value;
     throw new ExecuteError(`On call to '${node.method}':`, node, result.value);

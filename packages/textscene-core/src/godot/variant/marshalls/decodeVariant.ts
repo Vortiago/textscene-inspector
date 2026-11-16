@@ -38,7 +38,7 @@ const fail = (message: string): never => {
   throw new DecodeFault(message);
 };
 
-interface Decoded {
+export interface Decoded {
   readonly value: Variant;
   readonly used: number;
 }
@@ -432,11 +432,19 @@ function decodeAt(
  *
  * @canonical The Variant bytes_to_var reads from bytes
  */
-export function bytesToVariant(bytes: readonly number[], allowObjects: boolean): Variant {
+export const bytesToVariant = (bytes: readonly number[], allowObjects: boolean): Variant =>
+  decodedAt(bytes, 0, allowObjects)?.value ?? NIL;
+
+/** `decode_variant` from `start` to the end: the value and the bytes it takes, or nothing where it fails. */
+export function decodedAt(
+  bytes: readonly number[],
+  start: number,
+  allowObjects: boolean
+): Decoded | undefined {
   try {
-    return decodeAt(Uint8Array.from(bytes), 0, bytes.length, allowObjects, 0).value;
+    return decodeAt(Uint8Array.from(bytes), start, bytes.length - start, allowObjects, 0);
   } catch (error) {
-    if (error instanceof DecodeFault) return NIL;
+    if (error instanceof DecodeFault) return undefined;
     throw error;
   }
 }
