@@ -97,7 +97,7 @@ export function typedArray(
 }
 
 /** A Dictionary of `entries` typed as `keyType` and `valueType`, each untyped for NIL. */
-export function typedDictionary(
+function typedDictionary(
   entries: readonly DictionaryEntry[],
   keyType: ContainerType | undefined,
   valueType: ContainerType | undefined

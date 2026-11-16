@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { variant, type Variant } from '../value/variant';
-import {
-  assignArray,
-  assignDictionary,
-  isSameContainerType,
-  typedArray,
-  typedDictionary,
-} from './typedContainer';
+import { variant } from '../value/variant';
+import { assignArray, assignDictionary, isSameContainerType, typedArray } from './typedContainer';
 
 const int = (value: bigint) => variant('INT', value);
 const INT_TYPE = { type: 2, className: '' };
@@ -48,6 +42,13 @@ describe('assignDictionary', () => {
     const typed = assignDictionary(base, INT_TYPE, { type: 0, className: '' });
     expect([typed.keyType, typed.valueType]).toEqual([INT_TYPE, undefined]);
   });
+
+  it('leaves both types out for NIL', () => {
+    const NIL_TYPE = { type: 0, className: '' };
+    expect(assignDictionary(variant('DICTIONARY', []), NIL_TYPE, NIL_TYPE)).toEqual(
+      variant('DICTIONARY', [])
+    );
+  });
 });
 
 describe('isSameContainerType', () => {
@@ -57,12 +58,5 @@ describe('isSameContainerType', () => {
 
   it('tells two class names apart', () => {
     expect(isSameContainerType(NODE_TYPE, { type: 24, className: 'Object' })).toBe(false);
-  });
-});
-
-describe('typedDictionary', () => {
-  it('leaves both types out for NIL', () => {
-    const untyped: Variant = typedDictionary([], undefined, { type: 0, className: '' });
-    expect(untyped).toEqual(variant('DICTIONARY', []));
   });
 });
