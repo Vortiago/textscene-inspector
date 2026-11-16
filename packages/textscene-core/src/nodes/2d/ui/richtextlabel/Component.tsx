@@ -40,8 +40,9 @@ import {
   type RichTextRunPlacement,
   type StyledTextRun,
 } from './nativeSolver';
-import { resolveRichTextFaces } from './styleFaces';
-import { besideScrollBarWidthPx, shapeBesideScrollBar } from './scrollBar';
+import { resolveRichTextFaces, richTextStylesInUse } from './styleFaces';
+import { shapeBesideScrollBar } from './scrollBar';
+import { scrollBarMinimumSize } from '../shared/scrollBarSolver';
 import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import { countedCharacters, richTextReveal, truncateRunsToCharacters } from './visibleCharacters';
 import type { RichTextLabelProperties } from './types';
@@ -188,8 +189,9 @@ function useShapedRichText(
     sameData
   );
   const verticalBarBoxes = useByValue(internalScrollBarBoxes(solveNode).vertical, sameData);
-  const besideBarWidthPx = besideScrollBarWidthPx(rect, verticalBarBoxes);
-  const readsBoxWidth = runsReadBoxWidth(runsAtRectWidth);
+  // The width `shapeBesideScrollBar` wraps at when the bar shows (`:3805`).
+  const besideBarWidthPx = rect.w - scrollBarMinimumSize(true, verticalBarBoxes).x;
+  const readsBoxWidth = props.scrollActive && runsReadBoxWidth(runsAtRectWidth);
   const runsBesideBar = useByValue(
     useMemo(
       () => (readsBoxWidth ? runsAt(besideBarWidthPx) : null),
@@ -199,7 +201,8 @@ function useShapedRichText(
   );
   // RichTextLabel's own default is WORD_SMART (`rich_text_label.h:557`), not Label's OFF.
   const autowrapMode = clampAutowrapMode(props.autowrapMode, RICH_TEXT_LABEL_DEFAULT_AUTOWRAP);
-  const faces = resolveRichTextFaces(solveNode, runsAtRectWidth);
+  const stylesInUse = useMemo(() => richTextStylesInUse(runsAtRectWidth), [runsAtRectWidth]);
+  const faces = resolveRichTextFaces(solveNode, stylesInUse);
   const { normal, bold, italic, boldItalic } = faces;
   const { rtl } = solveNode;
   const box = useMemo(
@@ -241,17 +244,26 @@ function useShapedRichText(
     ]
   );
 
+  const runsOfWidth = useCallback(
+    (wrapWidthPx: number) => {
+      // Runs that read no box width serve every width.
+      if (wrapWidthPx === rect.w || !runsBesideBar) return runsAtRectWidth;
+      if (wrapWidthPx === besideBarWidthPx) return runsBesideBar;
+      throw new Error(`expected a wrap width of ${rect.w} or ${besideBarWidthPx}, got ${wrapWidthPx}`);
+    },
+    [rect.w, runsAtRectWidth, besideBarWidthPx, runsBesideBar]
+  );
   const shaped = useMemo(
     () =>
       shapeBesideScrollBar(
         (wrapWidthPx) => {
-          const runs = wrapWidthPx === rect.w ? runsAtRectWidth : (runsBesideBar ?? runsAtRectWidth);
+          const runs = runsOfWidth(wrapWidthPx);
           return { runs, layout: shapeAtWidth(runs, wrapWidthPx) };
         },
         box,
         verticalBarBoxes
       ),
-    [runsAtRectWidth, runsBesideBar, rect.w, shapeAtWidth, box, verticalBarBoxes]
+    [runsOfWidth, shapeAtWidth, box, verticalBarBoxes]
   );
 
   const { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior } = props;

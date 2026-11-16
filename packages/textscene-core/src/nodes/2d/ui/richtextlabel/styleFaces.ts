@@ -6,7 +6,7 @@
  */
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { withVariation, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
-import { perObject } from '../../../../utils/perObject';
+import type { StyledTextRun } from './nativeSolver';
 import {
   resolveNodeFontMetrics,
   resolveNodeFontMetricsOr,
@@ -33,9 +33,13 @@ const ITALIC_SKEW = 0.2;
 /** `default_theme.cpp:1394`/`:1398`: `variation_embolden` 1.2. */
 const BOLD_EMBOLDEN = 1.2;
 
-interface TextStyle {
+type TextStyle = Pick<StyledTextRun, 'bold' | 'italic'>;
+
+/** Which styled faces a run list draws in. */
+export interface RichTextStylesInUse {
   bold: boolean;
   italic: boolean;
+  boldItalic: boolean;
 }
 
 export interface RichTextFaces {
@@ -46,13 +50,12 @@ export interface RichTextFaces {
 }
 
 /**
- * The faces of `n` that `styles` use, the normal face for the rest. A style no run uses is never
+ * The faces of `n` for the styles in use, the normal face for the rest. A style no run uses is never
  * resolved, so its font never loads. A settled scene font changes the faces, so a painter reads
  * them in its render body. A face can be the bundled one while its font loads.
  */
-export function resolveRichTextFaces(n: SolveNode, styles: readonly TextStyle[]): RichTextFaces {
+export function resolveRichTextFaces(n: SolveNode, inUse: RichTextStylesInUse): RichTextFaces {
   const normal = resolveNodeFontMetrics(n, NORMAL_FONT_KEY);
-  const inUse = stylesInUse(styles);
   const styled = (
     isUsed: boolean,
     key: string,
@@ -68,12 +71,11 @@ export function resolveRichTextFaces(n: SolveNode, styles: readonly TextStyle[])
   };
 }
 
-/** The styled faces a run list uses, read once for each list. */
-const stylesInUse = perObject((styles: readonly TextStyle[]) => {
+export function richTextStylesInUse(styles: readonly TextStyle[]): RichTextStylesInUse {
   const uses = (isBold: boolean, isItalic: boolean) =>
     styles.some((style) => style.bold === isBold && style.italic === isItalic);
   return { bold: uses(true, false), italic: uses(false, true), boldItalic: uses(true, true) };
-});
+}
 
 /** The face of a run with these `[b]` and `[i]` states (`_find_font`, `rich_text_label.cpp:3239-3296`). */
 export function faceOfStyle(faces: RichTextFaces, style: TextStyle): FontMetrics {

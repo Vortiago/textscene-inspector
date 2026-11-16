@@ -32,7 +32,7 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { shapedLineHeightPx, type LineExtentPx } from '../../../../r3f/controls/native/text/lineExtent';
 import { justifyParagraphs } from '../../../../r3f/controls/native/text/textJustify';
-import { faceOfStyle, resolveRichTextFaces, type RichTextFaces } from './styleFaces';
+import { faceOfStyle, resolveRichTextFaces, richTextStylesInUse, type RichTextFaces } from './styleFaces';
 import {
   resolveTextOutline,
   resolveTextTheme,
@@ -359,7 +359,7 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // `tentativeRect` is `undefined` on the first pass, as in Godot's pre-resize state.
   // The table's empty `RichTextLabel/normal` StyleBox makes the text rect the control's.
   const wrapWidthPx = wraps ? availableWidthPx : undefined;
-  const layout = shapeRichText(runs, resolveRichTextFaces(n, runs), {
+  const layout = shapeRichText(runs, resolveRichTextFaces(n, richTextStylesInUse(runs)), {
     fontSizePx,
     boxWidthPx: wrapWidthPx ?? 0,
     autowrapMode: wrapWidthPx === undefined ? AutowrapMode.AUTOWRAP_OFF : autowrapMode,
@@ -942,7 +942,7 @@ function withGlyphs(segment: RunLineSegment, revealed: ReadonlySet<GlyphPlacemen
   return { ...segment, glyphs, text: glyphs.map((glyph) => glyph.char).join('') };
 }
 
-/** Each layout's split into style runs, made once: the content height and the placements both read it. */
+/** Each layout's split into style runs: a label with no FILL paragraph reads one for height and placement. */
 const runsByLine = perObject((styledRuns: readonly StyledTextRun[]) =>
   perObject((layout: TextLayoutResult): readonly RunLineSegment[][] =>
     attributeRunsToLines(styledRuns, layout)

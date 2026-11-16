@@ -36,7 +36,7 @@ import {
 } from './nativeSolver';
 import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment, type ParsedImgTag } from './bbcode';
 import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
-import { resolveRichTextFaces } from './styleFaces';
+import { resolveRichTextFaces, richTextStylesInUse } from './styleFaces';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { RichTextReveal } from './visibleCharacters';
 import { AutowrapMode, VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
@@ -908,7 +908,7 @@ describe('richTextLabelTextureSlots (rich_text_label.cpp:4120-4155 _get_image_si
 
 /** The paragraph at `FONT_SIZE`, wrapped at `boxWidthPx` (0 is unwrapped), as the solve and the painter shape it. */
 const FONT_SIZE = 16;
-const ALL_FACES = resolveRichTextFaces(node({}), ALL_STYLES);
+const ALL_FACES = resolveRichTextFaces(node({}), richTextStylesInUse(ALL_STYLES));
 
 function shapeRuns(
   runs: Parameters<typeof shapeRichText>[0],
@@ -2252,7 +2252,7 @@ describe('RichTextLabel lists and indents', () => {
   ) {
     const label = { text, bbcodeEnabled: true, ...props } as RichTextLabelProperties;
     const runs = styledTextRuns(node(label), label, WHITE, FONT_SIZE, BOX_WIDTH_PX);
-    const layout = shapeRichText(runs, resolveRichTextFaces(node(label), runs), {
+    const layout = shapeRichText(runs, resolveRichTextFaces(node(label), richTextStylesInUse(runs)), {
       fontSizePx: FONT_SIZE,
       boxWidthPx: BOX_WIDTH_PX,
       autowrapMode: AutowrapMode.AUTOWRAP_WORD_SMART,

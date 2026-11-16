@@ -715,7 +715,9 @@ describe('<RichTextLabel> shaping across an edit that keeps the runs', () => {
     const shapes = vi.spyOn(nativeSolver, 'shapeRichText');
     const runs = vi.spyOn(nativeSolver, 'styledTextRuns');
     await renderer.update(second);
-    return { shapes: shapes.mock.calls.length, runs: runs.mock.calls.length };
+    const passes = { shapes: shapes.mock.calls.length, runs: runs.mock.calls.length };
+    await renderer.unmount();
+    return passes;
   }
 
   /** The calls of each pass on an edit: the second render gets a new property bag and a new solve node. */

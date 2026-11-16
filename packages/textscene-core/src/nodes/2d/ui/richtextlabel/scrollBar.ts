@@ -83,11 +83,6 @@ function scrollOffsetOf(box: RichTextBox, contentHeightPx: number): number {
   return box.scrollFollowingVisibleCharacters ? Math.min(RANGE_DEFAULT_MAX, footPx) : 0;
 }
 
-/** The width the text wraps at while the bar shows: the rect's less the bar's minimum width. */
-export function besideScrollBarWidthPx(box: Pick<RichTextBox, 'w'>, boxes: ScrollBarBoxes): number {
-  return box.w - scrollBarMinimumSize(true, boxes).x;
-}
-
 /**
  * Shapes the text at the rect's width, and again beside the bar when it is taller than the rect
  * (`:3805`). `shapeAt` takes the wrap width, since a `%` image reads it too (`_resize_line`,
@@ -114,8 +109,8 @@ export function shapeBesideScrollBar(
       scrollBar: null,
     };
   }
-  const wrapWidthPx = besideScrollBarWidthPx(box, boxes);
-  const barWidthPx = box.w - wrapWidthPx;
+  const { x: barWidthPx } = scrollBarMinimumSize(true, boxes);
+  const wrapWidthPx = box.w - barWidthPx;
   const beside = shapeAt(wrapWidthPx);
   const contentHeightPx = richTextContentHeightPx(beside.runs, beside.layout);
   // `set_value(total_height)` (`:3827-3828`). A `%` image narrows beside the bar, so the text there

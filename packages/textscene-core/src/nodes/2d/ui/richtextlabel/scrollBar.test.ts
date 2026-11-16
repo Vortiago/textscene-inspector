@@ -11,7 +11,7 @@ import { visualChars } from '../../../../r3f/controls/native/text/textLayout.tes
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
-import { resolveRichTextFaces } from './styleFaces';
+import { resolveRichTextFaces, richTextStylesInUse } from './styleFaces';
 import { richTextContentHeightPx, shapeRichText, styledTextRuns } from './nativeSolver';
 import { shapeBesideScrollBar } from './scrollBar';
 import type { RichTextLabelProperties } from './types';
@@ -31,7 +31,7 @@ function shapingOf(text: string) {
   return (wrapWidthPx: number) => {
     const props = label.node.properties as RichTextLabelProperties;
     const runs = styledTextRuns(label, props, WHITE, FONT_SIZE_PX, wrapWidthPx);
-    const layout = shapeRichText(runs, resolveRichTextFaces(label, runs), {
+    const layout = shapeRichText(runs, resolveRichTextFaces(label, richTextStylesInUse(runs)), {
       fontSizePx: FONT_SIZE_PX,
       boxWidthPx: wrapWidthPx,
       autowrapMode: AutowrapMode.AUTOWRAP_WORD_SMART,
