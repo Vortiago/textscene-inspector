@@ -6,7 +6,7 @@
   "random": "f496ba32f2398f1929355ce53edcc407498209e537eebdc0cc37ae5e4d373b56",
   "operators": "71961cc3c58f615ccb90c5777e87ec3bb1e7d85793a63db00e1ba0bcfe300064",
   "corpus": "cdd73866a614dcae16a6e20af61acb6b58bb0c78ad83ac65263a0dfea750fbe1",
-  "expressions": "ba83ef270e7ea1fe1ae4d4be8cc562b73672a602f88c4420f29ae4b313b79e6b"
+  "expressions": "c079631ae37d1a789f539e872828ce165d08686c0bc83c6bd9154ea14db15605"
  },
  "smoke": {
   "probes": {
@@ -716,6 +716,8 @@
    "method-edge 330 \"Color(0.5, 1.5, -0.5, 2).clamp()\"": {"verdict":"value","text":"Color(f000000000000e03f, f000000000000f03f, f0000000000000000, f000000000000f03f)"},
    "method-edge 378 \"Color().from_ok_hsl(0.7, 0.9, 0.3, 0.4)\"": {"verdict":"value","text":"Color(f0000002090e5a03f, f000000204fb2d13f, f000000c03bd6df3f, f000000a09999d93f)"},
    "method-edge 389 \"Plane(1, 0, 0, 1).intersect_3(Plane(2, 0, 0, 1), Plane(0, 0, 1, 3))\"": {"verdict":"value","text":"null"},
+   "method-edge 420 \"Quaternion(0.5, -0.5, 0.5, 0.5).get_euler(4)\"": {"verdict":"value","text":"Vector3(f0000000000000000, f00000060fb21f9bf, f00000060fb21f93f)"},
+   "method-edge 433 \"Quaternion(0.1, 0.2, 0.3, 0.927362).spherical_cubic_interpolate(Quaternion(-0.5, 0.5, 0.5, 0.5), Quaternion(0, 0, 0, 1), Quaternion(0.5, 0.5, -0.5, 0.5), 0.3)\"": {"verdict":"value","text":"Quaternion(f000000a0dc89a4bf, f000000808a4bd63f, f00000000065fd73f, f000000408a98eb3f)"},
    "operator OP_ADD STRING STRING_NAME 2": {"verdict":"value","text":"s416263257320616e64202564"},
    "operator OP_ADD COLOR COLOR 2": {"verdict":"value","text":"Color(f0000000000000000, f00000000e887e43f, f000000000000f03f, f0000006066165940)"},
    "operator OP_ADD PACKED_VECTOR4_ARRAY PACKED_VECTOR4_ARRAY 3": {"verdict":"value","text":"PackedVector4Array[Vector4(f0000000000000080, f000000000000e03f, f000000a09999b93f, f0000000000000080), Vector4(f00000000000004c0, f00000000000004c0, f000000a09999b93f, f000000000000e03f), Vector4(f0000000000105940, f00000000000004c0, f000000a09999b93f, f00000000fa210940), Vector4(f00000000000004c0, f0000000000000000, f00000000fa210940, f000000000000e03f), Vector4(f0000000000105940, f0000000000105940, f0000000000000080, f00000000fa210940), Vector4(f00000000000004c0, f0000000000105940, f0000000000000080, f000000000000f0ff)]"},
@@ -971,7 +973,20 @@
    "method AABB.get_support 14 \"AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).get_support(Vector3(INF, -INF, 0))\"": {"verdict":"value","text":"Vector3(f000000000000f03f, f00000000000000c0, f00000000000008c0)"},
    "method AABB.get_longest_axis 6 \"AABB(Vector3(NAN, 0, 0), Vector3(1, NAN, 1)).get_longest_axis()\"": {"verdict":"value","text":"Vector3(f000000000000f03f, f0000000000000000, f0000000000000000)"},
    "method AABB.intersects_ray 3 \"AABB(Vector3(1, 2, 3), Vector3(-1, -2, -3)).intersects_ray(Vector3(0.6, 0, -0.8), Vector3(0.6, 0, -0.8))\"": {"verdict":"value","text":"null"},
-   "method AABB.intersects_ray 11 \"AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).intersects_ray(Vector3(1e30, -1e30, 1e30), Vector3(0.6, 0, -0.8))\"": {"verdict":"value","text":"null"}
+   "method AABB.intersects_ray 11 \"AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).intersects_ray(Vector3(1e30, -1e30, 1e30), Vector3(0.6, 0, -0.8))\"": {"verdict":"value","text":"null"},
+   "method Quaternion.normalized 0 \"Quaternion(0.5, -0.5, 0.5, 0.5).normalized()\"": {"verdict":"value","text":"Quaternion(f000000000000e03f, f000000000000e0bf, f000000000000e03f, f000000000000e03f)"},
+   "method Quaternion.is_equal_approx 4 \"Quaternion(1, 2, 3, 4).is_equal_approx(Quaternion(0.5, -0.5, 0.5, 0.5))\"": {"verdict":"value","text":"false"},
+   "method Quaternion.exp 2 \"Quaternion(0, 0, 0, 0).exp()\"": {"verdict":"value","text":"Quaternion(f0000000000000000, f0000000000000000, f0000000000000000, f000000000000f03f)"},
+   "method Quaternion.slerpni 11 \"Quaternion(0.5, -0.5, 0.5, 0.5).slerpni(Quaternion(-0.0, 0, -0.0, -1), 0.3)\"": {"verdict":"value","text":"Quaternion(f00000060be5fe23f, f00000060be5fe2bf, f00000060be5fe23f, f0000000061c2babf)"},
+   "method Quaternion.slerpni 12 \"Quaternion(0.5, -0.5, 0.5, 0.5).slerpni(Quaternion(1, 2, 3, 4), 0.3)\"": {"verdict":"value","text":"Quaternion(f0000000000000000, f0000000000000000, f0000000000000000, f000000000000f03f)"},
+   "method Quaternion.spherical_cubic_interpolate 0 \"Quaternion(0.5, -0.5, 0.5, 0.5).spherical_cubic_interpolate(Quaternion(0.5, -0.5, 0.5, 0.5), Quaternion(0.5, -0.5, 0.5, 0.5), Quaternion(0.5, -0.5, 0.5, 0.5), 0.3)\"": {"verdict":"value","text":"Quaternion(f000000000000e03f, f000000000000e0bf, f000000000000e03f, f000000000000e03f)"},
+   "method Quaternion.spherical_cubic_interpolate 28 \"Quaternion(0.5, -0.5, 0.5, 0.5).spherical_cubic_interpolate(Quaternion(0.5, -0.5, 0.5, 0.5), Quaternion(0.5, -0.5, 0.5, 0.5), Quaternion(0, 0, 0, 0), 0.3)\"": {"verdict":"value","text":"Quaternion(f00000000c44be03f, f00000000c44be0bf, f00000000c44be03f, f000000e09427de3f)"},
+   "method Quaternion.spherical_cubic_interpolate 42 \"Quaternion(0.5, -0.5, 0.5, 0.5).spherical_cubic_interpolate(Quaternion(0.5, -0.5, 0.5, 0.5), Quaternion(0.5, -0.5, 0.5, 0.5), Quaternion(0.5, -0.5, 0.5, 0.5), INF)\"": {"verdict":"value","text":"Quaternion(nan, nan, nan, nan)"},
+   "method Quaternion.spherical_cubic_interpolate_in_time 17 \"Quaternion(0.5, -0.5, 0.5, 0.5).spherical_cubic_interpolate_in_time(\\\"x\\\", Quaternion(0.5, -0.5, 0.5, 0.5), Quaternion(0.5, -0.5, 0.5, 0.5), 0.3, 0.3, 0.3, 0.3)\"": {"verdict":"execute","text":"On call to 'spherical_cubic_interpolate_in_time':","left":"Quaternion(f000000c05fb6de3f, f000000c05fb6debf, f000000c05fb6de3f, f00000040cccae13f)"},
+   "method Quaternion.spherical_cubic_interpolate_in_time 29 \"Quaternion(0.5, -0.5, 0.5, 0.5).spherical_cubic_interpolate_in_time(Quaternion(0.5, -0.5, 0.5, 0.5), Quaternion(0.5, -0.5, 0.5, 0.5), Quaternion(-0.0, 0, -0.0, -1), 0.3, 0.3, 0.3, 0.3)\"": {"verdict":"value","text":"Quaternion(f000000408b1ede3f, f000000408b1edebf, f000000408b1ede3f, f000000a07889e23f)"},
+   "method Quaternion.spherical_cubic_interpolate_in_time 30 \"Quaternion(0.5, -0.5, 0.5, 0.5).spherical_cubic_interpolate_in_time(Quaternion(0.5, -0.5, 0.5, 0.5), Quaternion(0.5, -0.5, 0.5, 0.5), Quaternion(1, 2, 3, 4), 0.3, 0.3, 0.3, 0.3)\"": {"verdict":"value","text":"Quaternion(f000000c02c40df3f, f00000080a784dbbf, f0000004098dee03f, f00000000d97de13f)"},
+   "method Quaternion.get_axis 0 \"Quaternion(0.5, -0.5, 0.5, 0.5).get_axis()\"": {"verdict":"value","text":"Vector3(f00000040a779e23f, f00000040a779e2bf, f00000040a779e23f)"},
+   "method Quaternion.get_axis 5 \"Quaternion(0.1, 0.2, 0.3, 0.927362).get_axis()\"": {"verdict":"value","text":"Vector3(f00000020d01ad13f, f00000020d01ae13f, f0000004038a8e93f)"}
   }
  }
 }

@@ -4,6 +4,7 @@ import { COLOR_METHODS } from './colorMethods.js';
 import { VECTOR2I_METHODS, VECTOR3I_METHODS, VECTOR4I_METHODS } from './intVectorMethods.js';
 import type { MethodPort } from './methodPort.js';
 import { PLANE_METHODS } from './planeMethods.js';
+import { QUATERNION_METHODS } from './quaternionMethods.js';
 import { RECT2_METHODS, RECT2I_METHODS } from './rectMethods.js';
 import { VECTOR2_METHODS } from './vector2Methods.js';
 import { VECTOR3_METHODS } from './vector3Methods.js';
@@ -23,4 +24,5 @@ export const METHOD_PORTS: Readonly<Partial<Record<VariantTypeName, Readonly<Rec
     COLOR: COLOR_METHODS,
     PLANE: PLANE_METHODS,
     AABB: AABB_METHODS,
+    QUATERNION: QUATERNION_METHODS,
   };

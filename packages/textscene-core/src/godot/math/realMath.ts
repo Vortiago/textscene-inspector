@@ -1,4 +1,5 @@
 import { CMP_EPSILON } from './math.js';
+import { acosReal } from './realAcos.js';
 
 const f = Math.fround;
 
@@ -53,3 +54,18 @@ export function isEqualApproxf(a: number, b: number): boolean {
  * @canonical A float32 is_zero_approx
  */
 export const isZeroApproxf = (x: number): boolean => Math.abs(x) < CMP_EPSILON_FLOAT;
+
+/**
+ * `Math::asin` of a float: `asinf`, with an input past ±1 clamped to ±π/2 as `math_funcs.h` does.
+ *
+ * @canonical A float32 arc sine or arc cosine
+ */
+export const asinf = (x: number): number =>
+  x < -1 ? f(-Math.PI / 2) : x > 1 ? f(Math.PI / 2) : f(Math.asin(x));
+
+/**
+ * `Math::acos` of a float: glibc's `acosf`, with an input past ±1 clamped to π or 0 as `math_funcs.h` does.
+ *
+ * @canonical A float32 arc sine or arc cosine
+ */
+export const acosf = (x: number): number => (x < -1 ? f(Math.PI) : x > 1 ? 0 : acosReal(x));

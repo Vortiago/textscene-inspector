@@ -3,6 +3,7 @@
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { CMP_EPSILON, isUnitWithinEpsilon } from './math.js';
 import { storedReal as f } from './real.js';
+import { acosf } from './realMath.js';
 import type { Vector3 } from './vector.js';
 
 export interface Quaternion {
@@ -78,7 +79,7 @@ export function quaternionSlerp(from: Quaternion, to: Quaternion, weight: number
   let fromScale = f(1 - weight);
   let toScale = weight;
   if (f(1 - cosine) > CMP_EPSILON) {
-    const omega = f(Math.acos(cosine));
+    const omega = acosf(cosine);
     const sine = f(Math.sin(omega));
     // `(1.0 - p_weight) * omega` is a double, and `p_weight * omega` a float that `sinf` takes.
     fromScale = f(Math.sin((1 - weight) * omega) / sine);

@@ -14,6 +14,7 @@ export type CppParameter =
   | 'uint32_t'
   | 'uint64_t'
   | 'Error'
+  | 'EulerOrder'
   | 'Variant::Type'
   | 'String'
   | 'PackedByteArray'
@@ -32,6 +33,7 @@ const CHECKED_TYPE: Readonly<Record<CppParameter, VariantTypeName>> = {
   uint32_t: 'INT',
   uint64_t: 'INT',
   Error: 'INT',
+  EulerOrder: 'INT',
   'Variant::Type': 'INT',
   String: 'STRING',
   PackedByteArray: 'PACKED_BYTE_ARRAY',
@@ -93,6 +95,7 @@ export function castArgument(argument: Variant, parameter: CppParameter): CastAr
     case 'uint64_t':
       return toUint64(argument);
     case 'Error':
+    case 'EulerOrder':
     case 'Variant::Type':
       return wrapInt32(castVariant(argument, 'INT').value as bigint);
     case 'String':

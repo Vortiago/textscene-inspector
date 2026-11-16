@@ -740,15 +740,17 @@ limitations under the License.
 
 ---
 
-## GNU C Library atan2f
+## GNU C Library atan2f and acosf
 
 <https://sourceware.org/glibc/>
 
 `packages/textscene-core/src/godot/math/realAtan2.ts` ports `__ieee754_atan2f` and `__atanf`
 (`sysdeps/ieee754/flt-32/e_atan2f.c` and `s_atanf.c` of glibc 2.39), because Godot hands a
 `real_t` `atan2` to the C library, and a chain of bones that folds onto one line bends to the
-side the last bit of that angle picks. Both files carry the
-notice below, separately from Godot's own MIT licence above.
+side the last bit of that angle picks. `packages/textscene-core/src/godot/math/realAcos.ts` ports
+`__ieee754_acosf` (`sysdeps/ieee754/flt-32/e_acosf.c` of glibc 2.39) for the same reason: Godot
+hands a `real_t` `acos` to the C library. The three files carry the notice below, separately from
+Godot's own MIT licence above.
 
 ```
 Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
