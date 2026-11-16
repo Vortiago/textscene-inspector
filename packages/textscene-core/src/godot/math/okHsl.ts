@@ -216,3 +216,43 @@ export function srgbToOkhsl({ r, g, b }: SrgbColor): Okhsl {
   }
   return { h, s, l: toe(L) };
 }
+
+function srgbTransferFunction(a: number): number {
+  return f(0.0031308) >= a
+    ? mul(f(12.92), a)
+    : f(mul(f(1.055), f(Math.pow(a, f(0.4166666666666667)))) - f(0.055));
+}
+
+function toeInv(x: number): number {
+  const k1 = f(0.206);
+  const k2 = f(0.03);
+  const k3 = f(f(1 + k1) / f(1 + k2));
+  return f(sum(mul(x, x), mul(k1, x)) / mul(k3, sum(x, k2)));
+}
+
+/** `okhsl_to_srgb` (ok_color.h:484) in float, with `powf`, `cosf` and `sinf` from V8. */
+export function okhslToSrgb({ h, s, l }: Okhsl): SrgbColor {
+  if (l === 1) return { r: 1, g: 1, b: 1 };
+  if (l === 0) return { r: 0, g: 0, b: 0 };
+  const turn = mul(2, PI, h);
+  const a = f(Math.cos(turn));
+  const b = f(Math.sin(turn));
+  const L = toeInv(l);
+  const { C0, Cmid, Cmax } = getCs(L, a, b);
+  const mid = f(0.8);
+  const midInv = f(1.25);
+  let C: number;
+  if (s < mid) {
+    const t = mul(midInv, s);
+    const k1 = mul(mid, C0);
+    const k2 = f(1 - f(k1 / Cmid));
+    C = f(mul(t, k1) / f(1 - mul(k2, t)));
+  } else {
+    const t = f(f(s - mid) / f(1 - mid));
+    const k1 = f(mul(f(1 - mid), Cmid, Cmid, midInv, midInv) / C0);
+    const k2 = f(1 - f(k1 / f(Cmax - Cmid)));
+    C = sum(Cmid, f(mul(t, k1) / f(1 - mul(k2, t))));
+  }
+  const rgb = oklabToLinearSrgb({ L, a: mul(C, a), b: mul(C, b) });
+  return { r: srgbTransferFunction(rgb.r), g: srgbTransferFunction(rgb.g), b: srgbTransferFunction(rgb.b) };
+}

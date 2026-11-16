@@ -5,6 +5,7 @@ import { NIL, type Variant, type VariantTypeName } from '../value/variant.js';
 import { variantTypeOfName } from '../variantType.js';
 import { builtinMethodRow } from './builtinMethod.js';
 import type { MethodParameter, MethodPort } from './methodPort.js';
+import { COLOR_METHODS } from './colorMethods.js';
 import { RECT2_METHODS, RECT2I_METHODS } from './rectMethods.js';
 import { VECTOR_METHODS } from './vectorMethods.js';
 
@@ -21,6 +22,7 @@ const PORTS: Readonly<Partial<Record<VariantTypeName, Readonly<Record<string, Me
   ...VECTOR_METHODS,
   RECT2: RECT2_METHODS,
   RECT2I: RECT2I_METHODS,
+  COLOR: COLOR_METHODS,
 };
 
 /** `VariantCaster<T>::cast`: the value the method runs with, also for an argument the check refused. */
