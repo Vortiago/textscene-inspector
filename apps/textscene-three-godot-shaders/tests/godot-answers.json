@@ -6,7 +6,7 @@
   "random": "f496ba32f2398f1929355ce53edcc407498209e537eebdc0cc37ae5e4d373b56",
   "operators": "71961cc3c58f615ccb90c5777e87ec3bb1e7d85793a63db00e1ba0bcfe300064",
   "corpus": "cdd73866a614dcae16a6e20af61acb6b58bb0c78ad83ac65263a0dfea750fbe1",
-  "expressions": "fd5d52a593261c5dd7f999aab35e344fc8c22bdf11b6dfd5f1df218a3885b6d0"
+  "expressions": "8c006ad95d46412fbfc37fb824fb5c022a236e5d77409c6e05fe99fffc1eba2e"
  },
  "smoke": {
   "probes": {
@@ -717,9 +717,9 @@
    "method-edge 330 \"Color(0.5, 1.5, -0.5, 2).clamp()\"": {"verdict":"value","text":"Color(f000000000000e03f, f000000000000f03f, f0000000000000000, f000000000000f03f)"},
    "method-edge 398 \"Plane(0, 1, 0, 2).intersects_segment(Vector3(0.3, 2, -1), Vector3(0.7, 2.00001, 1.1))\"": {"verdict":"value","text":"Vector3(f000000403333d33f, f0000000000000040, f000000000000f0bf)"},
    "method-edge 477 \"Projection().create_fit_aabb(AABB(Vector3(-1, -2, -3), Vector3(4, 5, 6)))\"": {"verdict":"value","text":"Projection(f000000000000e03f, f0000000000000000, f0000000000000000, f0000000000000000, f0000000000000000, f000000a09999d93f, f0000000000000000, f0000000000000000, f0000000000000000, f0000000000000000, f000000605555d53f, f0000000000000000, f000000000000e0bf, f000000a09999c9bf, f0000000000000080, f000000000000f03f)"},
-   "method-edge 483 \"Projection().create_perspective(75, 1.6, 0.05, 4000).get_fov()\"": {"verdict":"value","text":"f00000000176b5940"},
-   "method-edge 493 \"Projection().create_perspective(75, 1.6, 0.05, 4000).determinant()\"": {"verdict":"value","text":"f000000c0b72cbbbf"},
-   "string-method-edge 17 \"String.num_int64(255, 1)\"": {"verdict":"parse","text":"Expected '('"},
+   "method-edge 495 \"Projection().create_orthogonal(-4, 3, -2, 5, 0.5, 70).inverse()\"": {"verdict":"value","text":"Projection(f000000e0ffff0b40, f0000000000000000, f0000000000000080, f0000000000000000, f0000000000000000, f000000e0ffff0b40, f0000000000000080, f0000000000000000, f0000000000000000, f0000000000000000, f00000000006041c0, f0000000000000000, f000000000000e0bf, f000000e0fffff73f, f0000000000a041c0, f000000000000f03f)"},
+   "method-edge 502 \"Projection().create_perspective(75, 1.6, 0.05, 4000).get_projection_plane(2)\"": {"verdict":"value","text":"Plane(f000000e08535e4bf, f0000000000000080, f000000a0a7cfe83f, f0000000000000000)"},
+   "method-edge 506 \"Projection().create_perspective(75, 1.6, 0.05, 4000).get_projection_plane(6)\"": {"verdict":"value","text":"Plane(f0000000000000000, f0000000000000000, f0000000000000000, f0000000000000000)"},
    "string-method-edge 38 \"\\\"%4\\\".uri_decode()\"": {"verdict":"value","text":"s2500000034000000"},
    "string-method-edge 42 \"\\\"::ffff:1.2.3.4\\\".is_valid_ip_address()\"": {"verdict":"value","text":"true"},
    "string-method-edge 50 \"\\\"12345::\\\".is_valid_ip_address()\"": {"verdict":"value","text":"false"},

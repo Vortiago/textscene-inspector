@@ -206,23 +206,6 @@ function numberInBase(value: bigint, base: number, isCapital: boolean): string {
 /** `String::chr` (ustring.h:445): NUL, a surrogate or a code past U+10FFFF becomes U+FFFD. */
 const isScalar = (code: number) => code !== 0 && (code < 0xd800 || code > 0xdfff) && code <= 0x10ffff;
 
-const HUMANIZED_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB'];
-
-/** `String::humanize_size` (ustring.cpp:4248): `RTR` keeps each unit as it is in an English editor. */
-function humanizedSize(size: bigint): string {
-  let magnitude = 0;
-  let divisor = 1n;
-  while (size > divisor * 1024n && magnitude < 6) {
-    divisor *= 1024n;
-    magnitude++;
-  }
-  if (magnitude === 0) return `${size} B`;
-  const whole = Number(BigInt.asIntN(32, size / divisor));
-  const digits = whole < 100 ? 2 : whole < 1024 ? 1 : 0;
-  const amount = padDecimals(codesOf(stringNum(Number(size) / Number(divisor))), digits);
-  return `${textOf(amount)} ${HUMANIZED_UNITS[magnitude]}`;
-}
-
 /** `String::num_scientific(double)` (ustring.cpp:1618): `num(p_num, 0)` spells the values grisu2 cannot. */
 const numScientific = (value: number) => (Number.isFinite(value) ? doubleChars(value) : stringNum(value, 0));
 
@@ -422,5 +405,9 @@ export const STRING_METHODS: Readonly<Record<string, MethodPort>> = {
   chr: staticPort(['uint32_t'], (args) =>
     textOfCodes([isScalar(numberAt(args, 0)) ? numberAt(args, 0) : REPLACEMENT])
   ),
-  humanize_size: staticPort(['uint64_t'], (args) => text(humanizedSize(args[0] as bigint))),
+  humanize_size: staticPort(['uint64_t'], () => {
+    throw new UnportableUtility(
+      "humanize_size, whose unit Godot's RTR translates into the language of the editor or the game"
+    );
+  }),
 };
