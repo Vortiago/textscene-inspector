@@ -39,7 +39,6 @@ const PACKED_NAMES = {
   PACKED_VECTOR4_ARRAY: ['PackedVector4Array', (v) => call('Vector4', vector4(v))],
 };
 
-/** The text of the port's Variant `{ type, value }`. */
 /** `Callable::operator String`: a bind or an unbind reads as the Callable it wraps. */
 function callableText(callable) {
   if (callable.kind === 'bind' || callable.kind === 'unbind') return callableText(callable.callable);
@@ -47,6 +46,7 @@ function callableText(callable) {
   return callable.method === '' ? 'null::null' : `null::${callable.method}`;
 }
 
+/** The text of the port's Variant `{ type, value }`. */
 export function dumpVariant({ type, value }) {
   switch (type) {
     case 'NIL':

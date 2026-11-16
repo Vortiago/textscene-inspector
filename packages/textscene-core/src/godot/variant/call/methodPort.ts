@@ -1,6 +1,6 @@
 import type { GlobalRandom } from '../utility/globalRandom.js';
 import type { CastArgument, CppParameter } from '../utility/utilityArguments.js';
-import type { CallableValue, Variant, VariantTypeName } from '../value/variant.js';
+import { NIL, type CallableValue, type Variant, type VariantTypeName } from '../value/variant.js';
 
 /** A C++ parameter of a builtin method: a scalar as the utility casters read it, or a Variant type. */
 export type MethodParameter = CppParameter | VariantTypeName;
@@ -10,6 +10,9 @@ export interface MethodResult {
   readonly value: Variant;
   readonly isValid: boolean;
 }
+
+export const FAILED: MethodResult = { value: NIL, isValid: false };
+export const NIL_RESULT: MethodResult = { value: NIL, isValid: true };
 
 /** What a method reads beyond its base and arguments. */
 export interface MethodContext {

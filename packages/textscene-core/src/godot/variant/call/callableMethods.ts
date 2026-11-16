@@ -1,19 +1,27 @@
 import { defaultValue } from '../value/defaultValue.js';
-import { NIL, variant, type CallableValue, type Variant, type VariantOf } from '../value/variant.js';
-import { variantCallable, variantHash } from '../variantHash.js';
+import { variant, type CallableValue, type Variant, type VariantOf } from '../value/variant.js';
+import { variantHash } from '../variantHash.js';
+import { variantCallable } from './variantCallable.js';
 import { builtinMethodRow } from './builtinMethod.js';
-import { methodPort, type MethodParameter, type MethodPort, type VarargPort } from './methodPort.js';
+import {
+  FAILED,
+  methodPort,
+  NIL_RESULT,
+  type MethodParameter,
+  type MethodPort,
+  type VarargPort,
+} from './methodPort.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
 
 const int = (value: number): Variant => variant('INT', BigInt(value));
 const bool = (value: boolean): Variant => variant('BOOL', value);
 const callable = (value: CallableValue): Variant => variant('CALLABLE', value);
-const FAILED = { value: NIL, isValid: false };
+const callableOf = (base: Variant) => (base as VariantOf<'CALLABLE'>).value;
 
 const port = (
   parameters: readonly MethodParameter[],
   body: (base: CallableValue, args: readonly CastArgument[]) => Variant
-): MethodPort => methodPort(parameters, (base, args) => body((base as VariantOf<'CALLABLE'>).value, args));
+): MethodPort => methodPort(parameters, (base, args) => body(callableOf(base), args));
 
 const elementsOf = (argument: CastArgument) => (argument as VariantOf<'ARRAY'>).value;
 
@@ -91,7 +99,7 @@ export const CALLABLE_METHODS: Readonly<Record<string, MethodPort>> = {
   // `Callable::callv` (callable.cpp:73) drops the call error.
   callv: methodPort(
     ['ARRAY'],
-    (base, args, context) => context.callp((base as VariantOf<'CALLABLE'>).value, elementsOf(args[0]!)).value
+    (base, args, context) => context.callp(callableOf(base), elementsOf(args[0]!)).value
   ),
   is_null: port([], (value) => bool(value.kind === 'standard' && value.method === '')),
   is_custom: port([], (value) => bool(value.kind !== 'standard')),
@@ -109,15 +117,13 @@ export const CALLABLE_METHODS: Readonly<Record<string, MethodPort>> = {
   unbind: port(['int32_t'], (value, args) => unbind(value, args[0] as number)),
 };
 
-const callableOf = (base: Variant) => (base as VariantOf<'CALLABLE'>).value;
-
 // Each rpc reaches an Object, a VariantCallable's `CallableCustom::rpc`, or too few arguments: a call error.
 const rpc: VarargPort = () => FAILED;
 
 export const CALLABLE_VARARG_METHODS: Readonly<Record<string, VarargPort>> = {
   call: (base, args, context) => context.callp(callableOf(base), args),
   // `call_deferred` queues the call for the next idle frame, after the condition has its value.
-  call_deferred: () => ({ value: NIL, isValid: true }),
+  call_deferred: () => NIL_RESULT,
   rpc,
   rpc_id: rpc,
   bind: (base, args) => ({

@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { NIL, variant, type Variant } from '../value/variant';
-import { variantCallable } from '../variantHash';
+import { variantCallable } from './variantCallable';
 import { utilityHost } from '../utility/utilityHost';
+import { isVarargRow } from './builtinMethod';
+import { BUILTIN_TYPES } from './builtinTypes.generated';
 import { callMethod } from './callMethod';
+import { VARARG_PORTS } from './methodPorts';
+import { variantTypeOfName } from '../variantType';
 
 const vector2 = (x: number, y: number) => variant('VECTOR2', { x, y });
 
@@ -90,5 +94,16 @@ describe('a Callable call', () => {
       value: NIL,
       isValid: false,
     });
+  });
+});
+
+describe('VARARG_PORTS', () => {
+  it('has a port for every vararg method of the extension API, so callMethod refuses none', () => {
+    const unported = Object.entries(BUILTIN_TYPES).flatMap(([name, { methods }]) =>
+      methods
+        .filter((row) => isVarargRow(row) && !VARARG_PORTS[variantTypeOfName(name)!]?.[row[0]])
+        .map(([method]) => `${name}.${method}`)
+    );
+    expect(unported).toEqual([]);
   });
 });

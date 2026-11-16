@@ -20,3 +20,6 @@ export function builtinMethodRow(type: VariantTypeName, method: string): Builtin
 /** `Variant::get_builtin_method_hash` (variant_call.cpp:1644), or nothing where `type` has no such method. */
 export const builtinMethodHash = (type: VariantTypeName, method: string): number | undefined =>
   builtinMethodRow(type, method)?.[3];
+
+/** Whether the method checks its own arguments (variant_call.cpp:1985): flag 4 of the generated row. */
+export const isVarargRow = (row: BuiltinMethodRow): boolean => (row[2] & 4) !== 0;

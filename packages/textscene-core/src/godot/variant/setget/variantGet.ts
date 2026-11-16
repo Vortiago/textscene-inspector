@@ -2,7 +2,7 @@ import { builtinMethodHash } from '../call/builtinMethod.js';
 import { doubleToInt64 } from '../cInteger.js';
 import { findEntry } from '../compare.js';
 import { NIL, variant, type Variant } from '../value/variant.js';
-import { variantCallable } from '../variantHash.js';
+import { variantCallable } from '../call/variantCallable.js';
 import { indexedElement } from './indexedElements.js';
 import { memberOf } from './namedMembers.js';
 

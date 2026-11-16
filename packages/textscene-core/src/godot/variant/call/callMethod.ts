@@ -2,15 +2,12 @@ import { canConvertStrict, castVariant } from '../construct/variantCast.js';
 import { textToVariant } from '../reader/variantReader.js';
 import { castArgument, isCppParameter, type CastArgument } from '../utility/utilityArguments.js';
 import type { UtilityHost } from '../utility/utilityHost.js';
-import { NIL, type CallableValue, type Variant } from '../value/variant.js';
+import type { CallableValue, Variant } from '../value/variant.js';
 import { variantTypeOfName } from '../variantType.js';
-import { builtinMethodRow } from './builtinMethod.js';
+import { builtinMethodRow, isVarargRow } from './builtinMethod.js';
 import { isValidCallable } from './callableMethods.js';
-import type { MethodContext, MethodParameter, MethodResult } from './methodPort.js';
+import { FAILED, type MethodContext, type MethodParameter, type MethodResult } from './methodPort.js';
 import { METHOD_PORTS, VARARG_PORTS } from './methodPorts.js';
-
-const FAILED: MethodResult = { value: NIL, isValid: false };
-const IS_VARARG = 4;
 
 /** `VariantCaster<T>::cast`: the value the method runs with, also for an argument the check refused. */
 const castMethodArgument = (argument: Variant, parameter: MethodParameter): CastArgument =>
@@ -44,9 +41,8 @@ export function callMethod(
   if (base.type === 'OBJECT') return FAILED;
   const row = builtinMethodRow(base.type, name);
   if (!row) return FAILED;
-  const [, , flags, , declared] = row;
-  // variant_call.cpp:1985: a vararg method checks its own arguments.
-  if (flags & IS_VARARG) return VARARG_PORTS[base.type]?.[name]?.(base, args, methodContext(host));
+  if (isVarargRow(row)) return VARARG_PORTS[base.type]?.[name]?.(base, args, methodContext(host));
+  const declared = row[4];
   const required = declared.filter(([, defaultText]) => defaultText === undefined).length;
   if (args.length > declared.length || args.length < required) return FAILED;
   const port = METHOD_PORTS[base.type]?.[name];
@@ -87,7 +83,7 @@ function callp(callable: CallableValue, args: readonly Variant[], host: UtilityH
     case 'unbind':
       if (args.length < callable.count) return FAILED;
       return callp(callable.callable, args.slice(0, args.length - callable.count), host);
-    default:
+    case 'standard':
       return FAILED;
   }
 }

@@ -10,8 +10,7 @@ import {
   HASH_MURMUR3_SEED,
 } from '../math/hashFuncs.js';
 import type { NodePathParts } from '../string/nodePathParts.js';
-import { builtinMethodHash } from './call/builtinMethod.js';
-import { MAX_RECURSION, variant, type CallableValue, type Variant, type VariantOf } from './value/variant.js';
+import { MAX_RECURSION, type CallableValue, type Variant, type VariantOf } from './value/variant.js';
 import { VARIANT_TYPE } from './variantType.js';
 
 type HashOne = (word: number, seed: number) => number;
@@ -66,12 +65,6 @@ function callableHash(callable: CallableValue): number {
     default:
       return callableHash(callable.callable);
   }
-}
-
-/** `VariantCallable` (variant_callable.cpp:82): the hash of `base` now, which a later change leaves. */
-export function variantCallable(base: Variant, method: string): VariantOf<'CALLABLE'> {
-  const hash = murmur3One64(BigInt(builtinMethodHash(base.type, method) ?? 0), variantHash(base));
-  return variant('CALLABLE', { kind: 'variant', method, base, hash });
 }
 
 /** `Array::recursive_hash` (array.cpp:195) and `Dictionary::recursive_hash` (dictionary.cpp:373). */
