@@ -24,3 +24,16 @@ export function lineAt(text, index) {
   for (let i = 0; i < index; i += 1) if (text.charCodeAt(i) === 10) line += 1;
   return line;
 }
+
+/** The statements of `void Variant::<name>()` in `cpp`, the text of `file`, with blanks and comments left out. */
+export function registerStatements(cpp, name, file) {
+  const start = cpp.indexOf(`void Variant::${name}() {`);
+  if (start === -1) throw new Error(`expected ${name} in ${file}, found none`);
+  const firstLine = lineAt(cpp, start);
+  return cpp
+    .slice(start, cpp.indexOf('\n}', start))
+    .split('\n')
+    .slice(1)
+    .map((raw, index) => ({ statement: raw.trim(), line: firstLine + 1 + index }))
+    .filter(({ statement }) => statement !== '' && !statement.startsWith('//'));
+}
