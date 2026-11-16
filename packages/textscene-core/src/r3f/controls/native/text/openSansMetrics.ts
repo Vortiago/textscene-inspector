@@ -56,16 +56,7 @@ interface OpenSansMetrics {
   averageAdvanceUnits: number;
 }
 
-export const OPEN_SANS_METRICS: OpenSansMetrics = {
-  unitsPerEm: 2048,
-  ascent: 2189,
-  descent: 600,
-  lineGap: 0,
-  kerning: {},
-  underlinePosition: -100,
-  underlineThickness: 50,
-  averageAdvanceUnits: 1214,
-};
+export const OPEN_SANS_METRICS: OpenSansMetrics = {"unitsPerEm":2048,"ascent":2189,"descent":600,"lineGap":0,"kerning":{},"underlinePosition":-100,"underlineThickness":50,"averageAdvanceUnits":1214};
 
 /** `OPEN_SANS_METRICS.kerning[a + b] ?? 0` — design-unit advance adjustment for a glyph pair. */
 export function getKerningAdjustmentUnits(a: string, b: string): number {
