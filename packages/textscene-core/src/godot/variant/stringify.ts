@@ -1,4 +1,5 @@
 import { cEscape } from '../string/cEscape.js';
+import { nodePathFromParts } from '../string/nodePathParts.js';
 import { numReal, numRealFloat, stringNum } from '../string/stringNumber.js';
 import type { Variant } from './value/variant.js';
 
@@ -49,8 +50,9 @@ export function stringify(value: Variant): string {
       return numReal(value.value, true);
     case 'STRING':
     case 'STRING_NAME':
-    case 'NODE_PATH':
       return value.value;
+    case 'NODE_PATH':
+      return nodePathFromParts(value.value);
     case 'VECTOR2':
       return vector2(value.value);
     case 'VECTOR3':

@@ -15,6 +15,12 @@ const vector2 = (v) => floats(v.x, v.y);
 const vector3 = (v) => floats(v.x, v.y, v.z);
 const vector4 = (v) => floats(v.x, v.y, v.z, v.w);
 const color = (c) => floats(c.r, c.g, c.b, c.a);
+const nodePath = ({ absolute, names, subnames }) =>
+  call('NodePath', [
+    absolute ? '/' : '.',
+    ...names.map((name) => `n${dumpText(name)}`),
+    ...subnames.map((subname) => `s${dumpText(subname)}`),
+  ]);
 
 const PACKED_NAMES = {
   PACKED_BYTE_ARRAY: ['PackedByteArray', String],
@@ -44,7 +50,7 @@ export function dumpVariant({ type, value }) {
     case 'STRING_NAME':
       return `n${dumpText(value)}`;
     case 'NODE_PATH':
-      return `p${dumpText(value)}`;
+      return nodePath(value);
     case 'VECTOR2':
       return call('Vector2', vector2(value));
     case 'VECTOR2I':
@@ -134,6 +140,14 @@ func v4(v) -> Array:
 func color(c) -> Array:
 	return floats([c.r, c.g, c.b, c.a])
 
+func node_path(v: NodePath) -> String:
+	var parts := ["/" if v.is_absolute() else "."]
+	for index in v.get_name_count():
+		parts.append("n" + dump_text(String(v.get_name(index))))
+	for index in v.get_subname_count():
+		parts.append("s" + dump_text(String(v.get_subname(index))))
+	return call_text("NodePath", parts)
+
 func packed(name: String, values) -> String:
 	var parts := []
 	for value in values:
@@ -148,7 +162,7 @@ func dump(v) -> String:
 		TYPE_FLOAT: return dump_float(v)
 		TYPE_STRING: return "s" + dump_text(v)
 		TYPE_STRING_NAME: return "n" + dump_text(String(v))
-		TYPE_NODE_PATH: return "p" + dump_text(String(v))
+		TYPE_NODE_PATH: return node_path(v)
 		TYPE_VECTOR2: return call_text("Vector2", v2(v))
 		TYPE_VECTOR2I: return call_text("Vector2i", ints([v.x, v.y]))
 		TYPE_RECT2: return call_text("Rect2", v2(v.position) + v2(v.size))

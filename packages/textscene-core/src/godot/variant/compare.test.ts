@@ -35,6 +35,12 @@ describe('cppEqual', () => {
     ];
     expect(cppEqual(variant('DICTIONARY', a), variant('DICTIONARY', [...a].reverse()))).toBe(true);
   });
+
+  it('tells one NodePath name that holds a slash from the two names of its text', () => {
+    const oneName = variant('NODE_PATH', { absolute: false, names: ['a/b'], subnames: [] });
+    const twoNames = variant('NODE_PATH', { absolute: false, names: ['a', 'b'], subnames: [] });
+    expect(cppEqual(oneName, twoNames)).toBe(false);
+  });
 });
 
 describe('the NaN rule of hash_compare', () => {

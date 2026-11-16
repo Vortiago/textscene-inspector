@@ -1119,6 +1119,31 @@ const MARSHALL_EDGES = [
   'var_to_bytes([[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]])',
 ];
 
+const NODE_PATH_EDGES = [
+  'bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 47, 98, 0])) == NodePath("a/b")',
+  'bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 47, 98, 0])) != NodePath("a/b")',
+  'bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 47, 98, 0])) == bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 47, 98, 0]))',
+  'str(bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 47, 98, 0])))',
+  'var_to_str(bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 47, 98, 0])))',
+  'var_to_bytes(bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 47, 98, 0])))',
+  'hash(bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 47, 98, 0]))) == hash(NodePath("a/b"))',
+  '[bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 47, 98, 0]))] == [NodePath("a/b")]',
+  'NodePath("a/b") in [bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 47, 98, 0]))]',
+  'NodePath("a/b") in {bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 47, 98, 0])): 1}',
+  'bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 97, 0, 0, 0, 3, 0, 0, 0, 98, 58, 99, 0])) == NodePath("a:b:c")',
+  'str(bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 97, 0, 0, 0, 3, 0, 0, 0, 98, 58, 99, 0])))',
+  'var_to_bytes(bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 97, 0, 0, 0, 3, 0, 0, 0, 98, 58, 99, 0])))',
+  'bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])) == NodePath("")',
+  'not bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]))',
+  'str(bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])))',
+  'var_to_bytes(bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])))',
+  'NodePath("a//b") == NodePath("a/b")',
+  'NodePath("/a/b/") == NodePath("/a/b")',
+  'NodePath("a:b:") == NodePath("a:b")',
+  'NodePath("/") == NodePath("")',
+  'NodePath(":x::y") == NodePath("")',
+];
+
 const cases = (group, texts) =>
   texts.map((text, index) => ({ id: `${group} ${index} ${JSON.stringify(text)}`, text }));
 
@@ -1134,4 +1159,5 @@ export const HAND_CASES = [
   ...cases('writer-edge', WRITER_EDGES),
   ...cases('reader-edge', READER_EDGES),
   ...cases('marshall-edge', MARSHALL_EDGES),
+  ...cases('node-path-edge', NODE_PATH_EDGES),
 ];

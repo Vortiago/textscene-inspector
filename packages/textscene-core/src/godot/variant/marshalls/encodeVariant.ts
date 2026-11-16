@@ -1,4 +1,4 @@
-import { nodePathParts } from '../../string/nodePath.js';
+import type { NodePathParts } from '../../string/nodePathParts.js';
 import type { ContainerType, Variant } from '../value/variant.js';
 import { VARIANT_TYPE } from '../variantType.js';
 import {
@@ -157,8 +157,7 @@ class VariantEncoder {
     }
   }
 
-  #nodePath(text: string): void {
-    const { absolute, names, subnames } = nodePathParts(text)!;
+  #nodePath({ absolute, names, subnames }: NodePathParts): void {
     this.#out.uint32((names.length | 0x80000000) >>> 0);
     this.#out.uint32(subnames.length);
     this.#out.uint32(absolute ? 1 : 0);

@@ -6,7 +6,7 @@
   "random": "f496ba32f2398f1929355ce53edcc407498209e537eebdc0cc37ae5e4d373b56",
   "operators": "71961cc3c58f615ccb90c5777e87ec3bb1e7d85793a63db00e1ba0bcfe300064",
   "corpus": "cdd73866a614dcae16a6e20af61acb6b58bb0c78ad83ac65263a0dfea750fbe1",
-  "expressions": "e3d12b1ac175d5d6ebce8c5b965b59253c8625bbf724fef4d14451aac9a225d3"
+  "expressions": "95c3f9562fcd544a22ed074d7a7a21c62051b9a236cad69f20e66aa39a653ad5"
  },
  "smoke": {
   "probes": {
@@ -806,7 +806,7 @@
    "constructor 44 VariantConstructor<Vector3i, Vector3> 1": {"verdict":"value","text":"Vector3i(0, 1, 1)"},
    "constructor 48 VariantConstructor<Vector4, Vector4i> 0": {"verdict":"value","text":"Vector4(f0000000000000000, f000000000000e041, f0000000000001c40, f000000000000f03f)"},
    "constructor 72 VariantConstructNoArgs<::AABB> 0": {"verdict":"value","text":"AABB(f0000000000000000, f0000000000000000, f0000000000000000, f0000000000000000, f0000000000000000, f0000000000000000)"},
-   "constructor 99 VariantConstructNoArgs<NodePath> 0": {"verdict":"value","text":"p"},
+   "constructor 99 VariantConstructNoArgs<NodePath> 0": {"verdict":"value","text":"NodePath(.)"},
    "constructor 110 VariantConstructNoArgs<Signal> 0": {"verdict":"value","text":"Signal()"},
    "constructor 122 VariantConstructorToArray<PackedFloat32Array> 0": {"verdict":"value","text":"[]"},
    "constructor 122 VariantConstructorToArray<PackedFloat32Array> 3": {"verdict":"value","text":"[f000000000000f03f, f0000000000000080, f0000000000000080]"},
