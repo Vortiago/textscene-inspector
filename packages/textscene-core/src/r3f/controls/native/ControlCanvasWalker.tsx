@@ -330,7 +330,7 @@ function ControlItemGroup({
   // context, so they must be its React children. The registration declares it,
   // so a second such type adds no branch here.
   const children = placeChildren(solveNode.node.type, childElements, internalElements);
-  // The live path, not the solve path: a ViewportTexture's `viewport_path` counts from the local scene.
+  // The live path, not the solve path: a nested walk's solve paths start at its viewport.
   const painter = (
     <NodePathProvider path={live}>
       <OwnModulateProvider value={tint.own}>

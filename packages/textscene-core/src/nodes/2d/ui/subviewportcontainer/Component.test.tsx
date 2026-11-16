@@ -3,6 +3,7 @@
  * `../../viewport/subviewport/comparison.md`). It samples `ViewportTextureEntry.texture` directly:
  * every sub-viewport kind publishes a WebGL texture, so there is one consumption path.
  */
+import { NodePathProvider } from '../../../../r3f/contexts/NodePathContext';
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useEffect, type ReactNode } from 'react';
@@ -90,12 +91,14 @@ describe('<SubViewportContainer>', () => {
     const renderer = await mount(
       <>
         <ViewportTexturePublisher path="Booth/View" entry={entry} />
-        <SubViewportContainer
-          {...painterEnv()}
-          solveNode={containerSolveNode({})}
-          rect={RECT}
-          renderOrder={0}
-        />
+        <NodePathProvider path="Booth">
+          <SubViewportContainer
+            {...painterEnv()}
+            solveNode={containerSolveNode({})}
+            rect={RECT}
+            renderOrder={0}
+          />
+        </NodePathProvider>
       </>
     );
     const mesh = quadsSampling(renderer.scene, entry.plain.texture)[0];
@@ -104,12 +107,14 @@ describe('<SubViewportContainer>', () => {
 
   it('renders nothing extra for a nested SubViewport with no published entry yet', async () => {
     const renderer = await mount(
-      <SubViewportContainer
-        {...painterEnv()}
-        solveNode={containerSolveNode({})}
-        rect={RECT}
-        renderOrder={0}
-      />
+      <NodePathProvider path="Booth">
+        <SubViewportContainer
+          {...painterEnv()}
+          solveNode={containerSolveNode({})}
+          rect={RECT}
+          renderOrder={0}
+        />
+      </NodePathProvider>
     );
     const textured = renderer.scene
       .findAll(() => true)
@@ -140,12 +145,14 @@ describe('<SubViewportContainer>', () => {
           <ViewportPassProvider>
             <CyclicRegistration />
             <ViewportTexturePublisher path="Booth/View" entry={entry} />
-            <SubViewportContainer
-              {...painterEnv()}
-              solveNode={containerSolveNode({})}
-              rect={RECT}
-              renderOrder={0}
-            />
+            <NodePathProvider path="Booth">
+              <SubViewportContainer
+                {...painterEnv()}
+                solveNode={containerSolveNode({})}
+                rect={RECT}
+                renderOrder={0}
+              />
+            </NodePathProvider>
           </ViewportPassProvider>
         </ViewportTextureProvider>
       );
@@ -161,12 +168,14 @@ describe('<SubViewportContainer>', () => {
         <ViewportTextureProvider>
           <ViewportPassProvider>
             <CyclicRegistration />
-            <SubViewportContainer
-              {...painterEnv()}
-              solveNode={containerSolveNode({})}
-              rect={RECT}
-              renderOrder={0}
-            />
+            <NodePathProvider path="Booth">
+              <SubViewportContainer
+                {...painterEnv()}
+                solveNode={containerSolveNode({})}
+                rect={RECT}
+                renderOrder={0}
+              />
+            </NodePathProvider>
           </ViewportPassProvider>
         </ViewportTextureProvider>
       );
@@ -193,12 +202,14 @@ describe('<SubViewportContainer> — the surface draws the target only', () => {
     const renderer = await mount(
       <>
         <ViewportTexturePublisher path="Booth/View" entry={fakeEntry()} />
-        <SubViewportContainer
-          {...painterEnv()}
-          solveNode={containerSolveNode({}, {}, [node(name, type, {}), node('Backdrop', 'ColorRect', {})])}
-          rect={RECT}
-          renderOrder={0}
-        />
+        <NodePathProvider path="Booth">
+          <SubViewportContainer
+            {...painterEnv()}
+            solveNode={containerSolveNode({}, {}, [node(name, type, {}), node('Backdrop', 'ColorRect', {})])}
+            rect={RECT}
+            renderOrder={0}
+          />
+        </NodePathProvider>
       </>
     );
     const names = renderer.scene.findAll(() => true).map((n) => (n.instance as THREE.Object3D).name);
@@ -222,12 +233,14 @@ describe('<SubViewportContainer> — the forced sub-viewport size truncates', ()
     let seen: ViewportRect | null = null;
     await mount(
       <ViewportRectProvider>
-        <SubViewportContainer
-          {...painterEnv()}
-          solveNode={containerSolveNode({ stretch: true, stretch_shrink: 3 })}
-          rect={{ x: 0, y: 0, w: 200, h: 150 }}
-          renderOrder={0}
-        />
+        <NodePathProvider path="Booth">
+          <SubViewportContainer
+            {...painterEnv()}
+            solveNode={containerSolveNode({ stretch: true, stretch_shrink: 3 })}
+            rect={{ x: 0, y: 0, w: 200, h: 150 }}
+            renderOrder={0}
+          />
+        </NodePathProvider>
         <RectProbe
           path="Booth/View"
           onRect={(r) => {
@@ -264,12 +277,14 @@ describe('<SubViewportContainer> — the drawn rect', () => {
     return mount(
       <ViewportRectProvider>
         <ViewportTexturePublisher path="Booth/View" entry={entry} />
-        <SubViewportContainer
-          {...painterEnv()}
-          solveNode={containerSolveNode(containerProps, viewportProps)}
-          rect={rect}
-          renderOrder={0}
-        />
+        <NodePathProvider path="Booth">
+          <SubViewportContainer
+            {...painterEnv()}
+            solveNode={containerSolveNode(containerProps, viewportProps)}
+            rect={rect}
+            renderOrder={0}
+          />
+        </NodePathProvider>
       </ViewportRectProvider>
     );
   }
@@ -319,12 +334,14 @@ describe('<SubViewportContainer> — the colour of the surface', () => {
     const renderer = await mount(
       <>
         <ViewportTexturePublisher path="Booth/View" entry={viewportEntry(texture, { x: 200, y: 150 })} />
-        <SubViewportContainer
-          {...painterEnv()}
-          solveNode={containerSolveNode({})}
-          rect={RECT}
-          renderOrder={0}
-        />
+        <NodePathProvider path="Booth">
+          <SubViewportContainer
+            {...painterEnv()}
+            solveNode={containerSolveNode({})}
+            rect={RECT}
+            renderOrder={0}
+          />
+        </NodePathProvider>
       </>
     );
     return quadsSampling(renderer.scene, texture)[0]!.material as THREE.MeshBasicMaterial;

@@ -30,26 +30,25 @@ const IN_SUBVIEWPORT = `[gd_scene format=3]
 offset_right = 500.0
 offset_bottom = 400.0
 
-[node name="SubViewport" type="SubViewport" parent="Outer"]
+[node name="OuterViewport" type="SubViewport" parent="Outer"]
 size = Vector2i(500, 400)
 
-[node name="Inner" type="SubViewportContainer" parent="Outer/SubViewport"]
+[node name="Inner" type="SubViewportContainer" parent="Outer/OuterViewport"]
 offset_right = 400.0
 offset_bottom = 300.0
 
-[node name="SubViewport" type="SubViewport" parent="Outer/SubViewport/Inner"]
+[node name="InnerViewport" type="SubViewport" parent="Outer/OuterViewport/Inner"]
 size = Vector2i(400, 300)
 
-[node name="Square" type="ColorRect" parent="Outer/SubViewport/Inner/SubViewport"]
+[node name="Square" type="ColorRect" parent="Outer/OuterViewport/Inner/InnerViewport"]
 offset_right = 100.0
 offset_bottom = 100.0
 `;
 
 /** The names above each mesh the pass that draws `passScene` reaches in the second frame. */
-async function reachedBy(tscn: string, passScene: string, enclosingPassIndex = 0): Promise<string[]> {
+async function reachedBy(tscn: string, passScene: string): Promise<string[]> {
   const frames = await framesOf(tscn, 2);
-  const draws = frames[1]!.filter((draw) => draw.scene.name === passScene);
-  return draws[enclosingPassIndex]?.reached ?? [];
+  return frames[1]!.find((draw) => draw.scene.name === passScene)?.reached ?? [];
 }
 
 describe('a SubViewportContainer inside another viewport', () => {
@@ -58,8 +57,7 @@ describe('a SubViewportContainer inside another viewport', () => {
   });
 
   it('draws its viewport in a SubViewport', async () => {
-    // Both viewports are named SubViewport, and the inner pass draws first.
-    expect(await reachedBy(IN_SUBVIEWPORT, 'SubViewport::control-raster', 1)).toContain(
+    expect(await reachedBy(IN_SUBVIEWPORT, 'OuterViewport::control-raster')).toContain(
       'SubViewportContainer:Inner'
     );
   });

@@ -219,8 +219,8 @@ export function SubViewportContainer({
   // Raw live children: `solveNode.children` is the Control-only solve forest, and `buildSolveTree`
   // skips a viewport boundary.
   const viewports = solveNode.node.children.filter((child) => isSubViewport(child.type));
-  // The live path, not the solve path: a container in a Window or a SubViewport solves below it.
-  const livePath = useNodePath() ?? solveNode.path;
+  const livePath = useNodePath();
+  if (livePath === null) throw new Error(`expected a NodePathProvider around ${solveNode.path}, got none`);
 
   return (
     <>
