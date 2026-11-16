@@ -1,21 +1,17 @@
-/**
- * `brotli` is imported from exactly one source file, and only dynamically: a static import puts the
- * decoder and its dictionary on the webview's initial-paint path for every scene, and the bundle budget
- * has enough headroom to miss it. A test file reaches no bundle, so it may import the package.
- */
-
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 
 const SRC = resolve(import.meta.dirname, '../../../..');
 const SOURCE_EXT = /\.(ts|tsx)$/;
+/** A test file reaches no bundle, so it may import the package. */
 const TEST_FILE = /\.test\.tsx?$/;
 const SKIP_DIRS = new Set(['node_modules', 'dist']);
 
 /** Any form that pulls the package into a module graph; prose that names it does not match. */
 const IMPORTS_LIBRARY = /(?:from\s*|import\s*\(\s*|require\s*\(\s*)['"]brotli(?:\/[^'"]*)?['"]/;
 
+/** The one file that imports brotli, dynamically, so the decoder stays off the webview's first chunk. */
 const SITE = 'r3f/controls/native/text/brotliDecoder.ts';
 const ALLOWED = new Set([SITE]);
 
