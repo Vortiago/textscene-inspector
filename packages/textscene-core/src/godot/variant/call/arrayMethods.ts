@@ -27,17 +27,14 @@ import { variantHash } from '../variantHash.js';
 import { VARIANT_TYPE, variantTypeOf } from '../variantType.js';
 import { representableLength } from './arrayLength.js';
 import { ERROR_CODE } from './errorCode.js';
-import { methodPort, type MethodContext, type MethodParameter, type MethodPort } from './methodPort.js';
+import { type MethodContext, type MethodParameter, type MethodPort, portOn } from './methodPort.js';
 import { isReadOnly, makeReadOnly, unlessReadOnly } from './readOnlyContainers.js';
 
 type ArrayVariant = VariantOf<'ARRAY'>;
 
 const elementsOf = (array: ArrayVariant) => array.value as Variant[];
 
-const port = (
-  parameters: readonly MethodParameter[],
-  body: (array: ArrayVariant, args: readonly CastArgument[], context: MethodContext) => Variant
-) => methodPort(parameters, (base, args, context) => body(base as ArrayVariant, args, context));
+const port = portOn((base) => base as ArrayVariant);
 
 const changing = (
   parameters: readonly MethodParameter[],

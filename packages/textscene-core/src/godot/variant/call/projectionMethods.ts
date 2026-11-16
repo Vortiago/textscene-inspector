@@ -10,7 +10,7 @@ import { doubleToInt32 } from '../cInteger.js';
 import { multiplyProjection } from '../operators/matrices.js';
 import { numberAt, valueAt, type CastArgument } from '../utility/utilityArguments.js';
 import { real, variant, type ProjectionValue, type Variant } from '../value/variant.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import { methodPort, type MethodParameter, type MethodPort, portOn } from './methodPort.js';
 
 const f = Math.fround;
 
@@ -30,10 +30,7 @@ const valueOf = (m: readonly number[]): ProjectionValue =>
 
 const projectionOf = (m: readonly number[]): Variant => variant('PROJECTION', valueOf(m));
 
-const port = (
-  parameters: readonly MethodParameter[],
-  body: (m: Matrix, args: readonly CastArgument[]) => Variant
-) => methodPort(parameters, (base, args) => body(matrixOf(base.value as ProjectionValue), args));
+const port = portOn((base) => matrixOf(base.value as ProjectionValue));
 
 const create = (parameters: readonly MethodParameter[], body: (args: readonly CastArgument[]) => Matrix) =>
   methodPort(parameters, (_base, args) => projectionOf(body(args)));

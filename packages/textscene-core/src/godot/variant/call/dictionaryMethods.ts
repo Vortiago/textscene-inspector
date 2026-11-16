@@ -22,17 +22,14 @@ import {
   type VariantOf,
 } from '../value/variant.js';
 import { variantHash } from '../variantHash.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import { type MethodParameter, type MethodPort, portOn } from './methodPort.js';
 import { isReadOnly, makeReadOnly, unlessReadOnly } from './readOnlyContainers.js';
 
 type DictionaryVariant = VariantOf<'DICTIONARY'>;
 
 const entriesOf = (dictionary: DictionaryVariant) => dictionary.value as DictionaryEntry[];
 
-const port = (
-  parameters: readonly MethodParameter[],
-  body: (dictionary: DictionaryVariant, args: readonly CastArgument[]) => Variant
-) => methodPort(parameters, (base, args) => body(base as DictionaryVariant, args));
+const port = portOn((base) => base as DictionaryVariant);
 
 const validKey = (dictionary: DictionaryVariant, key: CastArgument) =>
   validatedElement(key as Variant, dictionary.keyType);

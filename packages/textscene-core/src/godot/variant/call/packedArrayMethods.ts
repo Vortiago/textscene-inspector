@@ -6,7 +6,7 @@ import { NIL, bool, int, variant, type Variant, type VariantTypeName } from '../
 import { PACKED_ELEMENTS, type PackedElement } from '../value/packedElements.js';
 import { representableLength } from './arrayLength.js';
 import { ERROR_CODE } from './errorCode.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import { type MethodPort, portOn } from './methodPort.js';
 
 const errorCode = (code: bigint): Variant => variant('INT', code);
 
@@ -20,10 +20,7 @@ function packedArrayMethods<T>(
 ): Readonly<Record<string, MethodPort>> {
   const elementsOf = (base: Variant) => base.value as unknown as T[];
   const packed = (elements: readonly T[]) => variant(type, [...elements] as never) as Variant;
-  const port = (
-    parameters: readonly MethodParameter[],
-    body: (elements: T[], args: readonly CastArgument[]) => Variant
-  ) => methodPort(parameters, (base, args) => body(elementsOf(base), args));
+  const port = portOn(elementsOf);
   const at = (args: readonly CastArgument[], index: number) => Number(args[index] as bigint);
   const value = (args: readonly CastArgument[], index: number) => element.stored(args[index]!);
   const isIndex = (index: number, elements: readonly T[]) => index >= 0 && index < elements.length;

@@ -25,7 +25,7 @@ export function lineAt(text, index) {
   return line;
 }
 
-/** The statements of `void Variant::<name>()` in `cpp`, the text of `file`, with blanks and comments left out. */
+/** The statements of `void Variant::<name>()` in `cpp`, the text of `file`, without blanks and comments. */
 export function registerStatements(cpp, name, file) {
   const start = cpp.indexOf(`void Variant::${name}() {`);
   if (start === -1) throw new Error(`expected ${name} in ${file}, found none`);

@@ -9,7 +9,7 @@ import { variantToBytes } from '../marshalls/encodeVariant.js';
 import { UnportableUtility } from '../utility/unportableUtility.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
 import { NIL, int, variant, type Variant, type VariantTypeName } from '../value/variant.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import { methodPort, type MethodParameter, type MethodPort, portOn } from './methodPort.js';
 import { PACKED_BYTE_ARRAY_SHARED_METHODS } from './packedArrayMethods.js';
 
 const text = (codes: readonly number[]): Variant => variant('STRING', textOf(codes));
@@ -17,10 +17,7 @@ const text = (codes: readonly number[]): Variant => variant('STRING', textOf(cod
 const bytesOf = (base: Variant) => base.value as number[];
 const viewOf = (bytes: readonly number[]) => new DataView(Uint8Array.from(bytes).buffer);
 
-const port = (
-  parameters: readonly MethodParameter[],
-  body: (bytes: number[], args: readonly CastArgument[]) => Variant
-) => methodPort(parameters, (base, args) => body(bytesOf(base), args));
+const port = portOn(bytesOf);
 
 const offsetAt = (args: readonly CastArgument[]) => Number(args[0] as bigint);
 const fits = (bytes: readonly number[], offset: number, width: number) =>
