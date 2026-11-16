@@ -70,12 +70,13 @@ export function classBaseChain(className: string): readonly string[] {
 /** `ClassDB::class_exists` (class_db.cpp:463), editor classes included. */
 export const classExists = (className: string): boolean => Object.hasOwn(CLASSDB_CLASSES, className);
 
-/** `ClassDB::get_inheritance_chain_nocheck` (class_db.cpp:333): a class ClassDB does not know is alone. */
+// A node class newer than the 4.6.3 capture, such as AreaLight3D, takes its base from the node tables.
+const directBase = (className: string): string =>
+  classExists(className) ? CLASSDB_CLASSES[className]![0] : (classAndBaseChain(className)[1] ?? '');
+
+/** `ClassDB::get_inheritance_chain_nocheck` (class_db.cpp:333): a class no table knows is alone. */
 export function classInheritanceChain(className: string): readonly string[] {
   const chain = [className];
-  for (let base = classExists(className) ? CLASSDB_CLASSES[className]![0] : ''; base !== '';) {
-    chain.push(base);
-    base = CLASSDB_CLASSES[base]?.[0] ?? '';
-  }
+  for (let base = directBase(className); base !== ''; base = directBase(base)) chain.push(base);
   return chain;
 }
