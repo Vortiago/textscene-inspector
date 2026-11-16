@@ -19,7 +19,7 @@ export type CppParameter =
   | 'PackedByteArray'
   | 'Variant';
 
-/** The value a caster gives: a flag, a number, an int64 or uint64 as a bigint, a text, or the Variant itself. */
+/** The value a caster gives: a flag, a number, an int64 or uint64 as a bigint, a text, or the Variant. */
 export type CastArgument = boolean | number | bigint | string | Variant;
 
 // GetTypeInfo<T>::VARIANT_TYPE: an enum is an INT, and a Variant parameter takes any type as NIL.
