@@ -495,15 +495,20 @@ function callTexts(type, [name, , , , parameters]) {
   return [...baseCalls, ...argumentCalls];
 }
 
+// Godot's answer changes by run, as the editor seeds this draw from the clock; seeded hand cases cover it.
+const CLOCK_SEEDED_METHODS = ['pick_random'];
+
 /** Every generated method call of the ported types, in a fixed order. */
 export function methodCases() {
   return PORTED_METHOD_TYPES.flatMap((type) =>
-    BUILTIN_TYPES[type].methods.flatMap((row) =>
-      callTexts(type, row).map((text, index) => ({
-        id: `method ${type}.${row[0]} ${index} ${JSON.stringify(text)}`,
-        text,
-        method: row[0],
-      }))
-    )
+    BUILTIN_TYPES[type].methods
+      .filter(([name]) => !CLOCK_SEEDED_METHODS.includes(name))
+      .flatMap((row) =>
+        callTexts(type, row).map((text, index) => ({
+          id: `method ${type}.${row[0]} ${index} ${JSON.stringify(text)}`,
+          text,
+          method: row[0],
+        }))
+      )
   );
 }
