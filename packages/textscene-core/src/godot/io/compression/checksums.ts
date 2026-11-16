@@ -1,4 +1,7 @@
-/** `adler32` (zlib adler32.c): the checksum after a zlib stream, as an unsigned 32-bit number. */
+/**
+ * `adler32` (zlib adler32.c): the checksum after a zlib stream, as an unsigned 32-bit number.
+ * @canonical The Adler-32 of a byte array
+ */
 export function adler32(bytes: Uint8Array): number {
   let a = 1;
   let b = 0;
@@ -23,7 +26,10 @@ function crcTable(): Uint32Array {
   return table;
 }
 
-/** `crc32` (zlib crc32.c): the checksum of a gzip header and member, as an unsigned 32-bit number. */
+/**
+ * `crc32` (zlib crc32.c): the CRC-32 of gzip and PNG, as an unsigned 32-bit number.
+ * @canonical The CRC-32 of a byte array
+ */
 export function crc32(bytes: Uint8Array): number {
   const lookup = crcTable();
   let crc = 0xffffffff;

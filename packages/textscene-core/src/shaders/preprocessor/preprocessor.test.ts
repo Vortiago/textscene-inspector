@@ -225,7 +225,9 @@ describe('decompress in a condition', () => {
 
   it('refuses Zstandard with no decoder lent, naming the package to install (error case)', () => {
     expect(errorOf(() => preprocess(isHello(ZSTD, 2)))).toMatchObject({
-      reason: expect.stringContaining("install it, `import { decompress } from 'fzstd'`"),
+      reason: expect.stringContaining(
+        'install it and pass the `decompress` of `fzstd` as `decoders: { zstd }`'
+      ),
     });
   });
 });

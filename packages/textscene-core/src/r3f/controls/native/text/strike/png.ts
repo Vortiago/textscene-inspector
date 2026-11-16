@@ -6,6 +6,7 @@
  * Portions ported from FreeType (FreeType License).
  * Copyright (c) 1996-2024 David Turner, Robert Wilhelm and Werner Lemberg.
  */
+import { crc32 } from '../../../../../godot/io/compression/checksums';
 import { bytesView } from '../../../../../utils/bytesView';
 import type { EnumValue } from '../../../../../godot/classdb/enumNames';
 
@@ -395,18 +396,4 @@ function joined(parts: readonly Uint8Array[]): Uint8Array {
     at += part.length;
   }
   return whole;
-}
-
-/** The CRC-32 of the PNG specification (annex D), of each byte value. Built on the first chunk. */
-let crcTable: Uint32Array | null = null;
-
-function crc32(bytes: Uint8Array): number {
-  crcTable ??= Uint32Array.from({ length: 256 }, (_, n) => {
-    let c = n;
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    return c >>> 0;
-  });
-  let crc = 0xffffffff;
-  for (const byte of bytes) crc = crcTable[(crc ^ byte) & 0xff]! ^ (crc >>> 8);
-  return (crc ^ 0xffffffff) >>> 0;
 }

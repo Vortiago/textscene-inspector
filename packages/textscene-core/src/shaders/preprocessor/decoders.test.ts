@@ -18,10 +18,10 @@ describe('decodersOf', () => {
 
   it('names the package to install for a Zstandard decoder no app lent (error case)', () => {
     expect(() => decodersOf().zstd(GODOT_ZSTD)).toThrow(UnportedMethod);
-    expect(() => decodersOf().zstd(GODOT_ZSTD)).toThrow(/install it, `import \{ decompress \} from 'fzstd'`/);
+    expect(() => decodersOf().zstd(GODOT_ZSTD)).toThrow(/install it and pass the `decompress` of `fzstd`/);
   });
 
   it('names the package to install for a Brotli decoder no app lent (error case)', () => {
-    expect(() => decodersOf().brotli(Uint8Array.from([1]))).toThrow(/brotli\/decompress/);
+    expect(() => decodersOf().brotli(Uint8Array.from([1]))).toThrow(/`decompress` of `brotli\/decompress`/);
   });
 });

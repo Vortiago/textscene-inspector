@@ -2,6 +2,7 @@ import { CompressionMode } from '../../project/compressedFile.js';
 import { representableLength } from '../../variant/call/arrayLength.js';
 import { UnportedMethod } from '../../variant/call/unportedMethod.js';
 import { UnportableUtility } from '../../variant/utility/unportableUtility.js';
+import { rethrowUnportable } from './decoderError.js';
 import { fastLzDecompress } from './fastlz.js';
 import { inflateGzip, inflateZlib, type InflatedStream, type RawInflate } from './zlibStream.js';
 
@@ -19,6 +20,9 @@ export class StreamEndsEarly extends Error {}
 
 const EMPTY = new Uint8Array(0);
 const INT32_MAX = 2 ** 31 - 1;
+
+/** `gzip_chunk` (compression.h:45): the bytes `decompress_dynamic` adds to its output each round. */
+const GZIP_CHUNK = 16384;
 
 /** `fastlz_decompress` writes into at least this many bytes (compression.cpp:165). */
 const FASTLZ_MIN_DESTINATION = 16;
@@ -70,12 +74,19 @@ export function decompressDynamic(
   if (mode !== CompressionMode.Deflate && mode !== CompressionMode.Gzip) return EMPTY;
   const stream = inflateWrapped(source, mode, lent(decoders).inflate);
   if (!stream) return EMPTY;
-  // After the stream end `inflate` returns `Z_STREAM_END` and takes nothing, so Godot's loop may not end.
-  if (stream.end < source.length)
-    throw new UnportableUtility(
-      'decompress_dynamic of a stream with bytes after its end, where Godot may never return'
-    );
-  return withinMax(stream.output, maxSize);
+  return stream.end < source.length
+    ? withTrailingBytes(stream.output, maxSize)
+    : withinMax(stream.output, maxSize);
+}
+
+/** The loop ends only on a full chunk: `inflate` takes nothing after `Z_STREAM_END` (compression.cpp:350). */
+function withTrailingBytes(output: Uint8Array, maxSize: bigint): Uint8Array {
+  const fullChunksEnd = output.length - (output.length % GZIP_CHUNK);
+  if (maxSize >= 0n && fullChunksEnd > maxSize) return EMPTY;
+  if (output.length > 0 && output.length === fullChunksEnd) return withinMax(output, maxSize);
+  throw new UnportableUtility(
+    'decompress_dynamic of a stream with bytes after its end, where Godot never returns'
+  );
 }
 
 const withinMax = (output: Uint8Array, maxSize: bigint): Uint8Array =>
@@ -90,7 +101,7 @@ function brotliDynamic(source: Uint8Array, decoders: Decoders): Uint8Array {
       throw new UnportableUtility(
         'decompress_dynamic of a Brotli stream that ends early, where Godot never returns'
       );
-    rethrowUnlent(error);
+    rethrowUnportable(error);
     return EMPTY;
   }
 }
@@ -119,15 +130,10 @@ function decoded(source: Uint8Array, decode: (source: Uint8Array) => Uint8Array)
   try {
     return { output: decode(source), end: source.length };
   } catch (error) {
-    rethrowUnlent(error);
+    rethrowUnportable(error);
     // Godot reads a stream that `ZSTD_decompressDCtx` or `BrotliDecoderDecompress` refuses as no bytes.
     return undefined;
   }
-}
-
-/** A decoder the host did not lend throws UnportedMethod, which is no refused stream. */
-function rethrowUnlent(error: unknown): void {
-  if (error instanceof UnportedMethod) throw error;
 }
 
 /** `inflate`, `ZSTD_decompressDCtx` and `BrotliDecoderDecompress` fail where the output passes the buffer. */

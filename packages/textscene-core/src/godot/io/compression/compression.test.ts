@@ -92,12 +92,28 @@ describe('decompressDynamic', () => {
     );
   });
 
+  // Godot 4.6.3 gives 16384 and 32768 bytes for these two, and an empty array past a maximum of 100.
+  it('returns bytes after a stream that fills its last chunk exactly, as Godot does', () => {
+    const chunks = (count: number) => Uint8Array.from({ length: 16384 * count }, (_, i) => (i * 7) % 251);
+    for (const count of [1, 2])
+      expect(
+        decompressDynamic(join(deflateSync(chunks(count)), [1, 2, 3]), -1n, CompressionMode.Deflate, DECODERS)
+      ).toEqual(chunks(count));
+  });
+
+  it('gives empty for bytes after a stream whose full chunk passes the maximum, as Godot does', () => {
+    const output = Uint8Array.from({ length: 40000 }, (_, i) => (i * 7) % 251);
+    expect(
+      decompressDynamic(join(deflateSync(output), [1, 2, 3]), 100n, CompressionMode.Deflate, DECODERS)
+    ).toEqual(new Uint8Array(0));
+  });
+
   it('refuses bytes after the stream, where Godot loops on Z_STREAM_END (error case)', () => {
     expect(() =>
       decompressDynamic(join(deflateSync(TEXT), [1, 2, 3]), -1n, CompressionMode.Deflate, DECODERS)
     ).toThrow(
       new UnportableUtility(
-        'decompress_dynamic of a stream with bytes after its end, where Godot may never return'
+        'decompress_dynamic of a stream with bytes after its end, where Godot never returns'
       )
     );
   });

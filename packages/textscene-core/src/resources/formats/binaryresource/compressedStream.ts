@@ -5,7 +5,7 @@
  * (`core/io/file_access_compressed.cpp:41-75`, `core/io/compression.cpp:146-230`).
  */
 
-import { decompress } from '../../../godot/io/compression/compression';
+import { decompress, type Decoders } from '../../../godot/io/compression/compression';
 import { CompressionMode } from '../../../godot/project/compressedFile';
 import { enumNamesByValue } from '../../../godot/classdb/enumNames';
 import { ByteReader } from './byteReader';
@@ -46,26 +46,32 @@ export async function inflateCompressedStream(reader: ByteReader): Promise<Uint8
 }
 
 async function blockInflater(mode: number): Promise<BlockInflater> {
-  switch (mode) {
-    case CompressionMode.FastLz:
-      return (block, size) => exactly(size, decompress(block, BigInt(size), mode));
-    case CompressionMode.Deflate:
-      return zlibBlockInflater();
-    case CompressionMode.Gzip: {
-      const { gunzipSync } = await import('three/addons/libs/fflate.module.js');
-      return (block, size) => exactly(size, gunzipSync(block, { out: new Uint8Array(size) }));
-    }
-    case CompressionMode.Zstd: {
-      const { decompress } = await import('fzstd');
-      return (block, size) => exactly(size, decompress(block, new Uint8Array(size)));
-    }
-    case CompressionMode.Brotli:
-      // Godot cannot compress with brotli (`compression.cpp:52-53`), so no file it saves holds it.
-      throw new Error('expected a compression mode Godot writes, got brotli');
-    default:
-      throw new Error(`expected a compression mode from 0 to ${CompressionMode.Brotli}, got ${mode}`);
-  }
+  // Godot cannot compress with brotli (`compression.cpp:52-53`), so no file it saves holds it.
+  if (mode === CompressionMode.Brotli)
+    throw new Error('expected a compression mode Godot writes, got brotli');
+  if (!(mode in COMPRESSION_MODE_NAMES))
+    throw new Error(`expected a compression mode from 0 to ${CompressionMode.Brotli}, got ${mode}`);
+  const decoders = await blockDecoders(mode);
+  return (block, size) => exactly(size, decompress(block, BigInt(size), mode, decoders));
 }
+
+/** Only the decoder the file's mode needs, imported when a file first needs it. */
+async function blockDecoders(mode: number): Promise<Decoders | undefined> {
+  if (mode === CompressionMode.Deflate || mode === CompressionMode.Gzip) {
+    const { inflateSync } = await import('three/addons/libs/fflate.module.js');
+    return { ...UNUSED_DECODERS, inflate: (deflate) => inflateSync(deflate) };
+  }
+  if (mode === CompressionMode.Zstd) {
+    const { decompress: zstd } = await import('fzstd');
+    return { ...UNUSED_DECODERS, zstd: (frames) => zstd(frames) };
+  }
+  return undefined;
+}
+
+const unused = (): never => {
+  throw new Error("expected the decoder of the file's own compression mode");
+};
+const UNUSED_DECODERS: Decoders = { inflate: unused, zstd: unused, brotli: unused };
 
 /** The one lazy `fflate` import for zlib streams, shared with the WOFF reader of `r3f/controls/native/text`. */
 export async function zlibBlockInflater(): Promise<BlockInflater> {

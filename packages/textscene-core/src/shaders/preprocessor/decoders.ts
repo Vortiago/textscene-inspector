@@ -17,18 +17,16 @@ const BROTLI_END_OF_INPUT = /^Unexpected end of input/;
 export function decodersOf(lent: ShaderDecoders = {}): Decoders {
   return {
     inflate: (deflate) => inflateSync(deflate),
-    zstd: lent.zstd ?? missing('Zstandard', 'fzstd', "import { decompress } from 'fzstd'", 'zstd'),
-    brotli: lent.brotli
-      ? brotliOf(lent.brotli)
-      : missing('Brotli', 'brotli', "import { decompress } from 'brotli/decompress'", 'brotli'),
+    zstd: lent.zstd ?? missing('Zstandard', 'fzstd', 'fzstd', 'zstd'),
+    brotli: lent.brotli ? brotliOf(lent.brotli) : missing('Brotli', 'brotli', 'brotli/decompress', 'brotli'),
   };
 }
 
-function missing(codec: string, packageName: string, importLine: string, option: string) {
+function missing(codec: string, packageName: string, module: string, option: string) {
   return (): never => {
     throw new UnportedMethod(
-      `decompress in ${codec} mode, which needs the ${packageName} package: install it, \`${importLine}\`` +
-        ` and pass \`decoders: { ${option}: decompress }\``
+      `decompress in ${codec} mode, which needs the ${packageName} package: install it and pass the` +
+        ` \`decompress\` of \`${module}\` as \`decoders: { ${option} }\``
     );
   };
 }

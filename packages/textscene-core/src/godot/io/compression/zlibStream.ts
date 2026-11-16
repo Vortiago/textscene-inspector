@@ -1,4 +1,5 @@
 import { adler32, crc32 } from './checksums.js';
+import { rethrowUnportable } from './decoderError.js';
 
 /** A raw deflate decoder: the bytes, or a throw for a stream it refuses or one that ends early. */
 export type RawInflate = (deflate: Uint8Array) => Uint8Array;
@@ -33,7 +34,7 @@ export function inflateZlib(input: Uint8Array, inflate: RawInflate): InflatedStr
   if (((method << 8) | flags) % 31 !== 0) return undefined;
   if ((method & 0x0f) !== DEFLATE_METHOD || (method >> 4) + 8 > MAX_WINDOW_BITS) return undefined;
   if (flags & PRESET_DICTIONARY) return undefined;
-  const body = deflateStream(input.subarray(ZLIB_HEADER_LENGTH), inflate);
+  const body = deflateStream(input.subarray(ZLIB_HEADER_LENGTH), TRAILER_LENGTH, inflate);
   if (!body) return undefined;
   const trailer = ZLIB_HEADER_LENGTH + body.end;
   if (input.length < trailer + TRAILER_LENGTH || u32be(input, trailer) !== adler32(body.output))
@@ -45,7 +46,7 @@ export function inflateZlib(input: Uint8Array, inflate: RawInflate): InflatedStr
 export function inflateGzip(input: Uint8Array, inflate: RawInflate): InflatedStream | undefined {
   const start = gzipBodyStart(input);
   if (start === undefined) return undefined;
-  const body = deflateStream(input.subarray(start), inflate);
+  const body = deflateStream(input.subarray(start), 2 * TRAILER_LENGTH, inflate);
   if (!body) return undefined;
   const trailer = start + body.end;
   if (input.length < trailer + 2 * TRAILER_LENGTH) return undefined;
@@ -81,9 +82,15 @@ function afterZero(input: Uint8Array, at: number): number {
 }
 
 /** The deflate stream at the start of `input`, which ends at the shortest prefix the decoder takes. */
-function deflateStream(input: Uint8Array, inflate: RawInflate): InflatedStream | undefined {
+function deflateStream(
+  input: Uint8Array,
+  trailerLength: number,
+  inflate: RawInflate
+): InflatedStream | undefined {
   const output = inflated(input, inflate);
   if (!output) return undefined;
+  const expectedEnd = input.length - trailerLength;
+  if (endsAt(input, expectedEnd, inflate)) return { output, end: expectedEnd };
   let [shortest, longest] = [0, input.length];
   while (longest - shortest > 1) {
     const middle = Math.floor((shortest + longest) / 2);
@@ -93,10 +100,17 @@ function deflateStream(input: Uint8Array, inflate: RawInflate): InflatedStream |
   return { output, end: longest };
 }
 
+/** Two decodes, not a search, where the trailer ends the input, as in every stream Godot writes. */
+const endsAt = (input: Uint8Array, end: number, inflate: RawInflate): boolean =>
+  end > 0 &&
+  inflated(input.subarray(0, end), inflate) !== undefined &&
+  !inflated(input.subarray(0, end - 1), inflate);
+
 function inflated(input: Uint8Array, inflate: RawInflate): Uint8Array | undefined {
   try {
     return inflate(input);
-  } catch {
+  } catch (error) {
+    rethrowUnportable(error);
     // The decoder throws for an invalid stream and for one cut short, which zlib also refuses.
     return undefined;
   }
