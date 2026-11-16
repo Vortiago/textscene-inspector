@@ -156,14 +156,13 @@ export function isSameKey(a: Variant, b: Variant): boolean {
   return isStringLike(a) && isStringLike(b) && a.type !== b.type && a.value === b.value;
 }
 
-// An Expression has no variables, so two of its containers are never one allocation.
 const SHARED_BY_REFERENCE = /^(ARRAY|DICTIONARY|PACKED_.*)$/;
 
 /** `Variant::identity_compare` (variant.cpp:3355): a container by its allocation, an OBJECT by its id. */
 export function identityCompare(a: Variant, b: Variant): boolean {
   if (a.type !== b.type) return false;
   if (a.type === 'OBJECT') return true;
-  return !SHARED_BY_REFERENCE.test(a.type) && hashCompare(a, b);
+  return SHARED_BY_REFERENCE.test(a.type) ? a.value === b.value : hashCompare(a, b);
 }
 
 export function findEntry(entries: readonly DictionaryEntry[], key: Variant): DictionaryEntry | undefined {

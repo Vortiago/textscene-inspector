@@ -68,6 +68,16 @@ export function isVariantLess(a: Variant, b: Variant): boolean {
   return isValid && booleanize(value);
 }
 
+/**
+ * `_ArrayVariantSort` (array.cpp:688) and `_DictionaryVariantSort` (dictionary.cpp:259): OP_LESS alone.
+ *
+ * @canonical OP_LESS with an invalid result as false
+ */
+export function isOperatorLess(a: Variant, b: Variant): boolean {
+  const { value, isValid } = evaluateOperator('OP_LESS', a, b);
+  return isValid && booleanize(value);
+}
+
 const LOGIC_CLASS = /^(Nil|Bool|Int|Float|Object)X(Nil|Bool|Int|Float|Object)(Or|And|Xor)$/;
 
 // _operate_get_* (variant_op.h): a Nil or null Object is false, a number is true when not zero.

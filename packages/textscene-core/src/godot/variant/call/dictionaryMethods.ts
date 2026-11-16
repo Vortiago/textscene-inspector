@@ -1,13 +1,15 @@
+import { replaceAll } from '../../templates/arrayWrite.js';
 import { sortList } from '../../templates/sortList.js';
-import { booleanize, dictionariesEqual, findEntry, hashCompare, isSameKey, setEntry } from '../compare.js';
+import { dictionariesEqual, findEntry, hashCompare, isSameKey, setEntry } from '../compare.js';
 import {
   assignedEntries,
   isSameContainerType,
+  NULL_SCRIPT,
   typedArray,
   validatedElement,
 } from '../construct/typedContainer.js';
 import { duplicateVariant } from '../duplicate.js';
-import { evaluateOperator } from '../operators/evaluate.js';
+import { isOperatorLess } from '../operators/evaluate.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
 import {
   NIL,
@@ -19,14 +21,13 @@ import {
 } from '../value/variant.js';
 import { variantHash } from '../variantHash.js';
 import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
-import { isReadOnly, makeReadOnly } from './readOnlyContainers.js';
+import { isReadOnly, makeReadOnly, unlessReadOnly } from './readOnlyContainers.js';
 
 type DictionaryVariant = VariantOf<'DICTIONARY'>;
 
 const int = (value: bigint | number): Variant => variant('INT', BigInt(value));
 const bool = (value: boolean): Variant => variant('BOOL', value);
 
-// A method changes its base in place, which a Callable bound to it keeps (variant_callable.cpp:81).
 const entriesOf = (dictionary: DictionaryVariant) => dictionary.value as DictionaryEntry[];
 
 const port = (
@@ -115,30 +116,23 @@ function merged(dictionary: DictionaryVariant, other: DictionaryVariant, isOverw
 /** `Dictionary::assign` (dictionary.cpp:351): the entries stay where a key or value cannot convert. */
 function assign(dictionary: DictionaryVariant, source: DictionaryVariant): Variant {
   const entries = assignedEntries(source, dictionary.keyType, dictionary.valueType);
-  if (entries) entriesOf(dictionary).splice(0, dictionary.value.length, ...entries);
+  if (entries) replaceAll(entriesOf(dictionary), entries);
   return NIL;
 }
 
 /** `_DictionaryVariantSort` (dictionary.cpp:259): by key, an invalid `<` sorting as false. */
 function sort(dictionary: DictionaryVariant): Variant {
-  sortList(entriesOf(dictionary), (a, b) => {
-    const { value, isValid } = evaluateOperator('OP_LESS', a.key, b.key);
-    return isValid && booleanize(value);
-  });
+  sortList(entriesOf(dictionary), (a, b) => isOperatorLess(a.key, b.key));
   return NIL;
 }
 
 const typedBuiltin = (type: ContainerType | undefined) => int(type?.type ?? 0);
 const typedClassName = (type: ContainerType | undefined) => variant('STRING_NAME', type?.className ?? '');
 
-/** A method that changes the dictionary: nothing on a read-only one (dictionary.cpp:246). */
 const changing = (
   parameters: readonly MethodParameter[],
   body: (dictionary: DictionaryVariant, args: readonly CastArgument[]) => Variant
-) => port(parameters, (dictionary, args) => (isReadOnly(dictionary.value) ? NIL : body(dictionary, args)));
-
-// `Ref<Script>()` as a Variant: an expression's containers hold no script, so each answers a null Object.
-const NULL_SCRIPT = variant('OBJECT', null);
+) => port(parameters, unlessReadOnly(body));
 
 export const DICTIONARY_METHODS: Readonly<Record<string, MethodPort>> = {
   size: port([], (dictionary) => int(dictionary.value.length)),

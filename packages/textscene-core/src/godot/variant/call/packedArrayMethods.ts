@@ -1,3 +1,4 @@
+import { appendAll } from '../../templates/arrayWrite.js';
 import type { Quaternion } from '../../math/quaternion.js';
 import type { Rgba } from '../../math/math.js';
 import type { Vector2, Vector3 } from '../../math/vector.js';
@@ -94,12 +95,6 @@ const STRING_ELEMENT: PackedElement<string> = {
   bytes: (elements) => elements.flatMap((text) => [...utf8Bytes(codesOf(text)), 0]),
 };
 
-// `operator<` of the vectors and Color (vector3.h:484, color.h:387): the first part that differs decides.
-function isPartsLess(a: readonly number[], b: readonly number[]): boolean {
-  const at = a.findIndex((part, index) => part !== b[index]);
-  return at !== -1 && a[at]! < b[at]!;
-}
-
 /** A Packed*Array of a math type, whose parts are each a `real_t` float. */
 function partsElement<T extends object>(
   type: VariantTypeName,
@@ -112,7 +107,11 @@ function partsElement<T extends object>(
     stored: (argument) => (argument as Variant).value as T,
     read: (element) => variant(type, element as never) as Variant,
     isEqual: (a, b) => parts.every((part) => a[part] === b[part]),
-    isLess: (a, b) => isPartsLess(partsOf(a), partsOf(b)),
+    // `operator<` of the vectors and Color (vector3.h:484, color.h:387): the first part that differs decides.
+    isLess: (a, b) => {
+      for (const part of parts) if (a[part] !== b[part]) return (a[part] as number) < (b[part] as number);
+      return false;
+    },
     zero,
     bytes: (elements) => bytesOf(Float32Array.from(elements.flatMap(partsOf))),
   };
@@ -133,7 +132,6 @@ function packedArrayMethods<T>(
   type: VariantTypeName,
   element: PackedElement<T>
 ): Readonly<Record<string, MethodPort>> {
-  // A method changes its base in place, which a Callable bound to it keeps (variant_callable.cpp:81).
   const elementsOf = (base: Variant) => base.value as unknown as T[];
   const packed = (elements: readonly T[]) => variant(type, [...elements] as never) as Variant;
   const port = (
@@ -206,7 +204,7 @@ function packedArrayMethods<T>(
     push_back: pushBack,
     append: pushBack,
     append_array: port([type], (elements, args) => {
-      elements.push(...elementsOf(args[0] as Variant));
+      appendAll(elements, elementsOf(args[0] as Variant));
       return NIL;
     }),
     remove_at: port(['int64_t'], (elements, args) => {
