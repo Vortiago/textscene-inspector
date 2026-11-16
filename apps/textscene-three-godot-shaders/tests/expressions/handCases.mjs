@@ -1838,6 +1838,20 @@ const METHOD_EDGES = [
   'Color().from_rgba8(10, 128, 255)',
   'Color().from_rgba8(10, 128, 255, 64)',
   'Color().from_rgba8(-10, 512, 2.7, "x")',
+  'Plane(1, 0, 0, 1).intersect_3(Plane(0, 1, 0, 2), Plane(0, 0, 1, 3))',
+  'Plane(0.6, 0, -0.8, 0.5).intersect_3(Plane(0.3, 0.9, 0.1, -2), Plane(-0.2, 0.1, 0.97, 7))',
+  'Plane(1, 0, 0, 1).intersect_3(Plane(2, 0, 0, 1), Plane(0, 0, 1, 3))',
+  'Plane(0, 1, 0, 2).intersects_ray(Vector3(0.3, 5, -1), Vector3(0.1, -1, 0.2))',
+  'Plane(0, 1, 0, 2).intersects_ray(Vector3(0.3, 5, -1), Vector3(0.1, 1, 0.2))',
+  'Plane(0, 1, 0, 2).intersects_ray(Vector3(0.3, 2, -1), Vector3(0.1, 1, 0.2))',
+  'Plane(0, 1, 0, 2).intersects_segment(Vector3(0.3, 5, -1), Vector3(0.7, -3, 1.1))',
+  'Plane(0, 1, 0, 2).intersects_segment(Vector3(0.3, 5, -1), Vector3(0.7, 3, 1.1))',
+  'Plane(0, 1, 0, 2).intersects_segment(Vector3(0.3, 2, -1), Vector3(0.7, 2.00001, 1.1))',
+  'Plane(3, 4, 0, 10).normalized()',
+  'Plane(0, 0, 0, 5).normalized()',
+  'Plane(0, 1, 0, 2).has_point(Vector3(0, 2.000001, 0))',
+  'Plane(0, 1, 0, 2).has_point(Vector3(0, 2.5, 0), 0.5)',
+  'Plane(0, 1, 0, 2).is_equal_approx(Plane(0, 1.000001, 0, 2))',
 ];
 
 const cases = (group, texts) =>

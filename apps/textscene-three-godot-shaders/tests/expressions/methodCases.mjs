@@ -11,6 +11,7 @@ export const PORTED_METHOD_TYPES = [
   'Rect2',
   'Rect2i',
   'Color',
+  'Plane',
 ];
 
 /** A typical value of each type, then its edges: zero, negative zero, the float limits, NaN and infinity. */
@@ -96,6 +97,18 @@ export const EDGE_VALUES = {
       'Rect2i(1, 2, -3, -4)',
       'Rect2i(2147483647, -2147483648, 1, 1)',
       'Rect2i(-1, -1, 2147483647, 2147483647)',
+    ],
+  ],
+  Plane: [
+    'Plane(0.6, 0, -0.8, 0.5)',
+    [
+      'Plane(0, 0, 0, 0)',
+      'Plane(-0.0, 1, 0, -0.0)',
+      'Plane(3, 4, 0, 5)',
+      'Plane(1e30, -1e30, 1e30, 1e30)',
+      'Plane(1e-30, 3e-30, -2e-30, 1e-30)',
+      'Plane(NAN, 1, 0, 2)',
+      'Plane(INF, -INF, 0, 1)',
     ],
   ],
   Color: [
