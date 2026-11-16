@@ -1,6 +1,6 @@
-import type { BasisComponents } from './basis.js';
+import { basisMultiply, IDENTITY_BASIS, type BasisComponents } from './basis.js';
 import { atan2Real } from './realAtan2.js';
-import { asinf } from './realMath.js';
+import { asinf, cosf, sinf } from './realMath.js';
 import type { Vector3 } from './vector.js';
 
 const f = Math.fround;
@@ -84,5 +84,34 @@ export function basisGetEuler(n: BasisComponents, order: number): Vector3 {
       );
     default:
       return ZERO;
+  }
+}
+
+/**
+ * `Basis::from_euler` (basis.h:85) in float, and the identity for an order outside the enum.
+ *
+ * @canonical Euler angles as a Basis in float32
+ */
+export function basisFromEuler({ x, y, z }: Vector3, order: number): BasisComponents {
+  const [cx, sx, cy, sy, cz, sz] = [cosf(x), sinf(x), cosf(y), sinf(y), cosf(z), sinf(z)];
+  const xTurn: BasisComponents = [1, 0, 0, 0, cx, -sx, 0, sx, cx];
+  const yTurn: BasisComponents = [cy, 0, sy, 0, 1, 0, -sy, 0, cy];
+  const zTurn: BasisComponents = [cz, -sz, 0, sz, cz, 0, 0, 0, 1];
+  const times = basisMultiply;
+  switch (order) {
+    case EulerOrder.XYZ:
+      return times(xTurn, times(yTurn, zTurn));
+    case EulerOrder.XZY:
+      return times(times(xTurn, zTurn), yTurn);
+    case EulerOrder.YXZ:
+      return times(times(yTurn, xTurn), zTurn);
+    case EulerOrder.YZX:
+      return times(times(yTurn, zTurn), xTurn);
+    case EulerOrder.ZXY:
+      return times(times(zTurn, xTurn), yTurn);
+    case EulerOrder.ZYX:
+      return times(times(zTurn, yTurn), xTurn);
+    default:
+      return IDENTITY_BASIS;
   }
 }

@@ -64,7 +64,7 @@ const ALMOST_ONE = f(0.99999975);
 const isZeroApprox3 = (v: V3) => isZeroApprox(v.x) && isZeroApprox(v.y) && isZeroApprox(v.z);
 
 // Vector3::get_any_perpendicular (vector3.h:375): the cross with RIGHT or UP, whichever is less parallel.
-function anyPerpendicular(v: V3): Vector3 {
+export function anyPerpendicular(v: V3): Vector3 {
   if (isZeroApprox3(v)) return { x: 0, y: 0, z: 0 };
   const isRight = Math.abs(v.x) <= Math.abs(v.y) && Math.abs(v.x) <= Math.abs(v.z);
   return normalized(cross(v, isRight ? { x: 1, y: 0, z: 0 } : { x: 0, y: 1, z: 0 }));

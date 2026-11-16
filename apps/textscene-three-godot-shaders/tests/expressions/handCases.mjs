@@ -1890,6 +1890,23 @@ const METHOD_EDGES = [
   'Quaternion(0.1, 0.2, 0.3, 0.927362).log()',
   'Quaternion(0.1, 0.2, 0.3, 0).exp()',
   'Quaternion(0.1, 0.2, 0.3, 0.927362).angle_to(Quaternion(-0.5, 0.5, 0.5, 0.5))',
+  'Basis(Vector3(0, 0.6, -0.8), Vector3(1, 0, 0), Vector3(0, -0.8, -0.6)).get_euler(0)',
+  'Basis(Vector3(0, 0.6, -0.8), Vector3(1, 0, 0), Vector3(0, -0.8, -0.6)).get_euler(4)',
+  'Basis(Vector3(1, 0, 0), Vector3(0, 0, 1), Vector3(0, -1, 0)).get_euler(0)',
+  'Basis(Vector3(1, 0, 0), Vector3(0, 0, -1), Vector3(0, 1, 0)).get_euler(2)',
+  'Basis(Vector3(0, 0, -1), Vector3(0, 1, 0), Vector3(1, 0, 0)).get_euler(5)',
+  'Basis.from_euler(Vector3(0.3, -0.4, 0.5), 0)',
+  'Basis.from_euler(Vector3(0.3, -0.4, 0.5), 1)',
+  'Basis.from_euler(Vector3(0.3, -0.4, 0.5), 3)',
+  'Basis.from_euler(Vector3(0.3, -0.4, 0.5), 4)',
+  'Basis.from_euler(Vector3(0.3, -0.4, 0.5), 5)',
+  'Basis.from_euler(Vector3(0.3, -0.4, 0.5), 9)',
+  'Basis.looking_at(Vector3(0, 5, 0))',
+  'Basis.looking_at(Vector3(1, 2, -3), Vector3(0, 1, 0), true)',
+  'Basis.looking_at(Vector3(0, 0, 0))',
+  'Basis(Vector3(2, 0, 0), Vector3(0, 3, 0), Vector3(0, 0, 4)).slerp(Basis(Vector3(0, 0.6, -0.8), Vector3(1, 0, 0), Vector3(0, -0.8, -0.6)), 0.3)',
+  'Basis(Vector3(0, 0.6, -0.8), Vector3(1, 0, 0), Vector3(0, -0.8, -0.6)).rotated(Vector3(0, 0.6, 0.8), 1.1)',
+  'Basis(Vector3(1, 2, 3), Vector3(2, 4, 6), Vector3(0, 0, 1)).inverse()',
 ];
 
 const cases = (group, texts) =>

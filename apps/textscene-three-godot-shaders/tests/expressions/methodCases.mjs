@@ -14,6 +14,7 @@ export const PORTED_METHOD_TYPES = [
   'Plane',
   'AABB',
   'Quaternion',
+  'Basis',
 ];
 
 /** A typical value of each type, then its edges: zero, negative zero, the float limits, NaN and infinity. */
@@ -136,6 +137,19 @@ export const EDGE_VALUES = {
       'Quaternion(1e30, -1e30, 1e30, 1e30)',
       'Quaternion(NAN, 0, 0, 1)',
       'Quaternion(INF, -INF, 0, 1)',
+    ],
+  ],
+  Basis: [
+    'Basis(Vector3(0, 0.6, -0.8), Vector3(1, 0, 0), Vector3(0, -0.8, -0.6))',
+    [
+      'Basis()',
+      'Basis(Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0))',
+      'Basis(Vector3(-0.0, 1, 0), Vector3(-1, -0.0, 0), Vector3(0, 0, 1))',
+      'Basis(Vector3(2, 0, 0), Vector3(0.5, 3, 0), Vector3(0, 0, -4))',
+      'Basis(Vector3(1, 2, 3), Vector3(2, 4, 6), Vector3(0, 0, 1))',
+      'Basis(Vector3(1e30, 0, 0), Vector3(0, -1e30, 0), Vector3(0, 0, 1e-30))',
+      'Basis(Vector3(NAN, 0, 0), Vector3(0, 1, 0), Vector3(0, 0, 1))',
+      'Basis(Vector3(INF, 0, 0), Vector3(0, -INF, 0), Vector3(0, 0, 1))',
     ],
   ],
   Color: [
