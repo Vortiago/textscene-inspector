@@ -16,6 +16,8 @@ import type { Rect2 } from '../../../../godot/math/rect2.js';
 import { useViewportTargetSlot } from '../../../../resources/textures/viewporttexture/useViewportTextureSlot.js';
 import { useRegisterViewportRect } from '../../../../r3f/contexts/ViewportRectContext.js';
 import { joinPath } from '../../../../utils/nodePath.js';
+import { useNodePath } from '../../../../r3f/contexts/NodePathContext.js';
+import * as logger from '../../../../logger.js';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../../parser/types.js';
 import { isSubViewport } from '../../../../r3f/viewportRender/viewportBoundary.js';
 import type { SubViewportProperties } from '../../../viewport/subviewport/types.js';
@@ -218,6 +220,15 @@ export function SubViewportContainer({
   // Raw live children: `solveNode.children` is the Control-only solve forest, and `buildSolveTree`
   // skips a viewport boundary.
   const viewports = solveNode.node.children.filter((child) => isSubViewport(child.type));
+  const livePath = useNodePath();
+  useEffect(() => {
+    if (livePath !== null) return;
+    logger.warn(
+      `[SubViewportContainer] ${solveNode.path}: no NodePathProvider above it, so it draws no viewport`
+    );
+  }, [livePath, solveNode.path]);
+  // The solve path is no fallback: in a Window's or a SubViewport's walk it names no published target.
+  if (livePath === null) return null;
 
   return (
     <>
@@ -225,7 +236,7 @@ export function SubViewportContainer({
         <ViewportSurfaceNative
           key={viewport.name}
           viewport={viewport}
-          path={joinPath(solveNode.path, viewport.name)}
+          path={joinPath(livePath, viewport.name)}
           containerRect={rect}
           stretch={stretch}
           shrink={shrink}

@@ -152,6 +152,18 @@ export const CANVAS_2D_SCENES = [
     name: 'sub-viewport-container-shrink-2d-content',
     file: 'unit-sub-viewport-container-shrink-2d-content.tscn',
   },
+  // A container inside an embedded Window, which the Window's Control pass draws. Godot 4.6.3
+  // `--mode 2d`: within 1/255 over the whole frame.
+  {
+    name: 'sub-viewport-container-in-window',
+    file: 'unit-sub-viewport-container-in-window.tscn',
+  },
+  // A container inside a SubViewport, which the outer viewport's Control pass draws. Godot 4.6.3
+  // `--mode 2d`: within 1/255 over the whole frame.
+  {
+    name: 'sub-viewport-container-in-sub-viewport',
+    file: 'unit-sub-viewport-container-in-sub-viewport.tscn',
+  },
   // Translucent content blends over the clear colour in the target's sRGB numbers, through the
   // 2D-world pass and the Control pass. Godot 4.6.3 `--mode 2d`: (150,130) rgb(165,89,38).
   {

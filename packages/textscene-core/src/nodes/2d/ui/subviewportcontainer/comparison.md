@@ -17,6 +17,8 @@ inside its sub-viewport and by none on the canvas around it. The surface is a ca
 canvas around the container, so that canvas's lights and CanvasModulate reach it once. It draws
 the target only (`subviewport_container.cpp:134-144`): the Controls of a sub-viewport are in that
 target. A sub-viewport with no content shows its clear colour over the container's rect.
+A container inside an embedded Window or a SubViewport draws in that viewport's own pass, as one at
+the scene root draws on screen (`sub-viewport-container-in-window`, `sub-viewport-container-in-sub-viewport`).
 
 ## Linting
 
