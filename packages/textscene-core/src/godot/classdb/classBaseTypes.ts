@@ -72,11 +72,16 @@ export const classExists = (className: string): boolean => Object.hasOwn(CLASSDB
 
 // A node class newer than the 4.6.3 capture, such as AreaLight3D, takes its base from the node tables.
 const directBase = (className: string): string =>
-  classExists(className) ? CLASSDB_CLASSES[className]![0] : (classAndBaseChain(className)[1] ?? '');
+  classExists(className) ? CLASSDB_CLASSES[className]![0] : (classBaseOf(className) ?? '');
 
 /** `ClassDB::get_inheritance_chain_nocheck` (class_db.cpp:333): a class no table knows is alone. */
 export function classInheritanceChain(className: string): readonly string[] {
   const chain = [className];
-  for (let base = directBase(className); base !== ''; base = directBase(base)) chain.push(base);
+  for (
+    let base = directBase(className);
+    base !== '' && !chain.includes(base) && chain.length <= MAX_BASE_CHAIN_HOPS;
+    base = directBase(base)
+  )
+    chain.push(base);
   return chain;
 }

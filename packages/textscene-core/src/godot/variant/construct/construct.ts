@@ -60,9 +60,9 @@ function constructWith(
       return type === 'CALLABLE' ? variant('CALLABLE', { method: name }) : variant('SIGNAL', name);
     }
     case 'VariantConstructorTypedArray':
-      return typedArray(args);
+      return arrayFromTypedArguments(args);
     case 'VariantConstructorTypedDictionary':
-      return typedDictionary(args);
+      return dictionaryFromTypedArguments(args);
     case 'VariantConstructorToArray':
       return first!.type === argumentTypes[0] ? variant('ARRAY', packedElements(first!)) : undefined;
     case 'VariantConstructorFromArray':
@@ -90,14 +90,15 @@ const containerType = (type: Variant, className: Variant): ContainerType => ({
 const refusesClassName = ({ type, className }: ContainerType) =>
   className !== '' && type !== VARIANT_TYPE.OBJECT;
 
-function typedArray([base, typeNumber, className]: Arguments): Variant | undefined {
+function arrayFromTypedArguments([base, typeNumber, className]: Arguments): Variant | undefined {
   if (base!.type !== 'ARRAY' || typeNumber!.type !== 'INT' || !isStringLike(className!)) return undefined;
   const elementType = containerType(typeNumber!, className!);
   if (refusesClassName(elementType)) return variant('ARRAY', base.value);
   return assignArray(base, elementType);
 }
 
-function typedDictionary([base, keyType, keyClass, , valueType, valueClass]: Arguments): Variant | undefined {
+function dictionaryFromTypedArguments([base, keyType, keyClass, , valueType, valueClass]: Arguments):
+  Variant | undefined {
   const hasTypes = keyType!.type === 'INT' && valueType!.type === 'INT';
   const hasClassNames = keyClass!.type === 'STRING_NAME' && valueClass!.type === 'STRING_NAME';
   if (base!.type !== 'DICTIONARY' || !hasTypes || !hasClassNames) return undefined;
