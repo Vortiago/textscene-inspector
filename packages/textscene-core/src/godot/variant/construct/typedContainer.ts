@@ -84,6 +84,14 @@ function convertEach(
   return converted;
 }
 
+/** `ContainerTypeValidate::validate` (container_type_validate.h:49): the stored element, or none. */
+export function validatedElement(element: Variant, type: ContainerType | undefined): Variant | undefined {
+  const target = typeNumber(type);
+  if (target === VARIANT_TYPE.NIL || TYPE_OF_NUMBER.get(target) === element.type) return element;
+  if (element.type === 'NIL' && target === OBJECT) return element;
+  return canConvertStrictTo(element.type, target) ? convertedTo(element, target) : undefined;
+}
+
 const typing = (type: ContainerType | undefined) =>
   type && type.type !== VARIANT_TYPE.NIL ? type : undefined;
 
@@ -97,7 +105,7 @@ export function typedArray(
 }
 
 /** A Dictionary of `entries` typed as `keyType` and `valueType`, each untyped for NIL. */
-function typedDictionary(
+export function typedDictionary(
   entries: readonly DictionaryEntry[],
   keyType: ContainerType | undefined,
   valueType: ContainerType | undefined

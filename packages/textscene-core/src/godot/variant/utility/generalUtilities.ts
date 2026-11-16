@@ -3,9 +3,11 @@ import { castVariant } from '../construct/variantCast.js';
 import { ERROR_NAMES } from '../registrations.generated.js';
 import { stringify } from '../stringify.js';
 import { variantHash } from '../variantHash.js';
+import { bytesToVariant } from '../marshalls/decodeVariant.js';
+import { variantToBytes } from '../marshalls/encodeVariant.js';
 import { textToVariant } from '../reader/variantReader.js';
 import { variantToText } from '../variantWriter.js';
-import { NIL, variant, type Variant, type VariantTypeName } from '../value/variant.js';
+import { NIL, variant, type Variant, type VariantOf, type VariantTypeName } from '../value/variant.js';
 import { VARIANT_TYPE, variantTypeName } from '../variantType.js';
 import { UnportableUtility } from './unportableUtility.js';
 import type { TypedFunction, VariantFunction } from './utilityFunction.js';
@@ -20,6 +22,7 @@ function typeConvert(value: Variant, type: number): Variant {
 }
 
 const text = (value: string) => variant('STRING', value);
+const byteValues = (bytes: unknown) => (bytes as VariantOf<'PACKED_BYTE_ARRAY'>).value;
 
 // An object id is the editor's own: only 0, the null object, means the same in every run.
 function nullObjectId(id: bigint, call: string): void {
@@ -48,6 +51,11 @@ export const GENERAL_TYPED: Readonly<Record<string, TypedFunction>> = {
   rid_from_int64: ([id]) => variant('RID', id as bigint),
   var_to_str: ([value]) => text(variantToText(value as Variant)),
   str_to_var: ([value]) => textToVariant(value as string),
+  var_to_bytes: ([value]) => variant('PACKED_BYTE_ARRAY', variantToBytes(value as Variant, false)),
+  var_to_bytes_with_objects: ([value]) =>
+    variant('PACKED_BYTE_ARRAY', variantToBytes(value as Variant, true)),
+  bytes_to_var: ([bytes]) => bytesToVariant(byteValues(bytes), false),
+  bytes_to_var_with_objects: ([bytes]) => bytesToVariant(byteValues(bytes), true),
   hash: ([value]) => variant('INT', BigInt(variantHash(value as Variant))),
 };
 
