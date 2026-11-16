@@ -18,6 +18,8 @@ The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so thei
 
 Each script run shapes apart, as Godot's `ScriptIterator` splits the text (`text_server_adv.cpp:7346-7352`), so kerning and the
 rounding remainder stop where the script changes. An unassigned code point that no font has takes no advance.
+The pen sums its advances in 32-bit float from the text's place in the control (`line_edit.cpp:1487,1534`). So a glyph near
+a quarter pixel picks the same raster as in Godot (`text_server_adv.cpp:4024`).
 
 ## Linting
 

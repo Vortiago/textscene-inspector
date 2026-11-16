@@ -384,28 +384,19 @@ export function layoutTextEditDrawBand(
   return { xMarginBeginPx, xMarginEndPx, rowHeightPx };
 }
 
-/**
- * One drawn row's band top, `ofs_y = style->get_margin(SIDE_TOP) + i * row_height + line_spacing / 2`
- * (`text_edit.cpp:1376-1378`), with the scroll terms (`:1379-1380`) at 0. Caret line 0 resets a positive
- * `first_visible_line` (`:6639-6659`), and a wrap mode or caret column 0 resets `first_visible_col` (`:8820-8884`).
- * The per-line background and `highlight_current_line`, always on line 0, fill this band, and the text centres in it.
- */
+/** A row's band top in whole pixels: Godot's `int ofs_y`, scroll at 0 (`text_edit.cpp:1376-1380`). */
 export function textEditRowBandTopPx(
   row: number,
   rowHeightPx: number,
   styleMarginTopPx: number,
   lineSpacingPx: number
 ): number {
-  return styleMarginTopPx + row * rowHeightPx + lineSpacingPx / 2;
+  return Math.trunc(styleMarginTopPx) + row * rowHeightPx + Math.trunc(lineSpacingPx / 2);
 }
 
-/**
- * The row's text top inside the band: `ofs_y += (row_height - text_height) / 2`
- * (`text_edit.cpp:1626`). The glyph baseline is one ascent lower, and `<TextRun>`
- * anchors a line by this top edge.
- */
+/** The row's text top, centred in its band and truncated into the `int` (`text_edit.cpp:1626`). */
 export function textEditRowTextTopPx(bandTopPx: number, rowHeightPx: number, textHeightPx: number): number {
-  return bandTopPx + (rowHeightPx - textHeightPx) / 2;
+  return Math.trunc(bandTopPx + (rowHeightPx - textHeightPx) / 2);
 }
 
 /**

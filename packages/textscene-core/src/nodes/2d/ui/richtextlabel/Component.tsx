@@ -366,7 +366,7 @@ function RichTextBody({
               )
             : null;
           return (
-            <CanvasItemGroup key={index} position={[placement.lineOffsetXPx, -y, 0]}>
+            <CanvasItemGroup key={index} position={[placement.layoutXPx, -y, 0]}>
               <OutlinedTextRun
                 layout={placement.layout}
                 outline={outline}

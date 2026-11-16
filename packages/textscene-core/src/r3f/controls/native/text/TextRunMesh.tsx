@@ -37,6 +37,7 @@ import { buildBitmapQuads, createSheetTexture } from './bitmapTextPainter';
 import type { FillSheet } from '../../../../resources/fonts/font/types';
 import { perObject } from '../../../../utils/perObject';
 import { GLYPH_DRAWER_RULES, snapsPen, type GlyphDrawer } from './glyphDrawer';
+import type { PenSum } from './glyphPen';
 import type { TextLayoutResult } from './textLayout';
 import { lineBaselinesPx } from './lineExtent';
 import { hexCodeBoxRects } from './hexCodeBox';
@@ -121,6 +122,8 @@ export interface TextRunProps {
    * whose mesh keeps both, skips small glyphs and draws no hex-code box.
    */
   glyphDrawer?: GlyphDrawer;
+  /** Where the holder starts the pen sum of a line, `'alongLine'` by default (`glyphPen.ts`). */
+  penSum?: PenSum;
   /**
    * The raster texture's sampler: Label3D's `texture_filter` (`label_3d.h:140`). The default is
    * Godot's default filter. A mipmapped row samples a mip chain only where `mipmapped` built one.
@@ -328,12 +331,12 @@ function buildBitmapRun(
   fontSizePx: number,
   look: TextRunLook,
   sampling: RasterSampling,
-  { strokeWidthPx = 0, glyphDrawer = 'canvasItem', originPhasePx }: CanvasTextPaintOptions
+  { strokeWidthPx = 0, glyphDrawer = 'canvasItem', itemOriginPx, penSum }: CanvasTextPaintOptions
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial, linearTint } = look;
   const isOutlinePass = strokeWidthPx > 0;
   const sheet = isOutlinePass ? metrics.bitmap.outlineSheet : metrics.bitmap.sheet;
-  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, { glyphDrawer, originPhasePx });
+  const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, { glyphDrawer, itemOriginPx, penSum });
   const geometry = quadGeometry(quads);
   const { multipliesInLinear } = GLYPH_DRAWER_RULES[glyphDrawer];
   const texture = sheetTexture(sheet, sampling, multipliesInLinear);
@@ -371,7 +374,8 @@ function buildCanvasRun(
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
   const skew = layout.fontMetrics.skew ?? 0;
-  const { strokeWidthPx, originPhasePx } = canvasPaint;
+  const { strokeWidthPx, itemOriginPx = VECTOR2_ZERO } = canvasPaint;
+  const originPhasePx = originPhase(itemOriginPx);
   const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx, originPhasePx);
   const geometry = quadGeometry(buildCanvasTextQuadArrays(canvasLayout, originPhasePx));
 
@@ -459,6 +463,7 @@ export function TextRunMesh({
   side,
   strokeWidthPx = 0,
   glyphDrawer = 'canvasItem',
+  penSum = 'alongLine',
   textureFilter = godotTextureFilterState(undefined),
   mipmapped = false,
   blends,
@@ -472,12 +477,12 @@ export function TextRunMesh({
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
-  // The run memo keys by the phase, so a run that moves by whole pixels keeps its raster. A run
-  // that keeps its pen reads no phase, so a move never rebuilds it.
+  // A snapped pen sums from the item x, so an x move rebuilds the run. The baseline reads only y's phase.
   const itemOrigin = useCanvasItemOrigin();
   const { fontMetrics } = layout;
-  const readsPhase = snapsPen(glyphDrawer, fontSizePx, fontMetrics);
-  const { x: phaseX, y: phaseY } = readsPhase ? originPhase(itemOrigin) : VECTOR2_ZERO;
+  const readsOrigin = snapsPen(glyphDrawer, fontSizePx, fontMetrics);
+  const originX = readsOrigin ? itemOrigin.x : 0;
+  const phaseY = readsOrigin ? originPhase(itemOrigin).y : 0;
   const linearTint = useItemLinearColor(tint);
   const isLinearCanvas = useCanvasColorSpace().isLinear;
   // Godot's glyph is a white coverage mask that the rect modulate tints (`text_server_adv.cpp`
@@ -502,7 +507,7 @@ export function TextRunMesh({
         layout,
         fontSizePx,
         { tint: builtTint, clippingPlanes, depthTest, side, pixelMaterial, linearTint },
-        { strokeWidthPx, glyphDrawer, originPhasePx: { x: phaseX, y: phaseY }, colourGlyphTint },
+        { strokeWidthPx, glyphDrawer, itemOriginPx: { x: originX, y: phaseY }, penSum, colourGlyphTint },
         { textureFilter, mipmapped }
       ),
     // `tint` is compared by its fields, not by identity: a caller that re-creates an equal
@@ -525,7 +530,8 @@ export function TextRunMesh({
       pixelMaterial,
       strokeWidthPx,
       glyphDrawer,
-      phaseX,
+      penSum,
+      originX,
       phaseY,
       textureFilter,
       mipmapped,

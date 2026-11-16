@@ -127,6 +127,9 @@ a 2 px high bar per character on a 3 px pitch. A space leaves one column blank a
 A `highlight_current_line` row gets its band, and a highlighted colour draws at 0.6 alpha. Under a right-to-left
 layout the strip sits at the left edge.
 
+Each row top is a whole pixel. Godot truncates the style margin, half the line spacing and the centring of
+the text into its `int ofs_y` (`text_edit.cpp:1376-1378,1626`).
+
 A row wider than the text band drops each glyph whose advance box crosses `xmargin_beg` or
 `xmargin_end`. The glyph goes whole, not clipped. The walk stops at the end margin
 (`text_edit.cpp:1724-1738`), so a `draw_tabs` icon past that glyph is not drawn.
