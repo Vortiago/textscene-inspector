@@ -136,14 +136,14 @@ export function fontVariationSkew(font: FontResource | null | undefined): number
   return match ? matchedFloat(match[2]!) : 0;
 }
 
-/** The spacing of the RID `font` draws its own face with: a variation's, else a FontFile's `cache/0` (`font.cpp:1195-1207`). */
+/** The spacing of the face `font` draws: a variation's, else a FontFile's `cache/0` (`font.cpp:1195`). */
 export function fontFaceSpacing(font: FontResource | null | undefined): FaceSpacing {
   const variation = drawnVariation(font);
   if (variation) return spacingIn(variation.properties, '');
   return font?.kind === 'file' ? spacingIn(font.properties, 'cache/0/') : NO_FACE_SPACING;
 }
 
-/** What `Font::get_height` adds for `font` (`font.cpp:219`): a variation's top and bottom spacing, 0 for a FontFile. */
+/** What `Font::get_height` adds (`font.cpp:219`): a variation's top and bottom spacing, 0 for a FontFile. */
 export function fontHeightSpacingPx(font: FontResource | null | undefined): number {
   const variation = drawnVariation(font);
   if (!variation) return 0;

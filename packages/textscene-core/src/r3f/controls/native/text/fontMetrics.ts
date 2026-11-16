@@ -121,7 +121,7 @@ export interface FontMetrics {
   readonly spacing?: FontSpacing;
   /** `FontVariation.baseline_offset`: a glyph moves down this share of ascent plus descent. Absent is 0. */
   readonly baselineOffset?: number;
-  /** The top plus bottom spacing `Font::get_height` adds: the named font's, not this face's (`font.cpp:219`). */
+  /** The top plus bottom spacing `Font::get_height` adds, from the named font (`font.cpp:219`). */
   readonly heightSpacingPx?: number;
   /**
    * The glyph outlines that the text of an emboldened, sheared or varied canvas face follows. Absent
@@ -678,7 +678,7 @@ export const fallbackChainOf = perObject((face: FontMetrics): readonly FontMetri
   ...(face.fallbacks ?? []),
 ]);
 
-/** `font.cpp:210-220`: a taller fallback makes the font taller, though no glyph draws in it. */
+/** `font.cpp:210-220`: the tallest face of the chain sets the height, whether or not a glyph draws in it. */
 export function getFontChainHeightPx(face: FontMetrics, fontSizePx: number): number {
   const tallestPx = Math.max(
     ...fallbackChainOf(face).map(

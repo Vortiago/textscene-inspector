@@ -43,6 +43,9 @@ export const CONTROL_TEXT_SCENES = [
   // The one variable: a character the font lacks, drawn from the first font of its fallback chain
   // that has it, on a raw font's import, a FontVariation, a BMFont's import and a RichTextLabel.
   { name: 'label-font-fallbacks', file: 'unit-label-font-fallbacks.tscn' },
+  // The one variable: a FontVariation's extra spacing and baseline offset, on a Label, a Button, a
+  // RichTextLabel, a LineEdit and a TextEdit.
+  { name: 'label-font-variation-spacing', file: 'unit-label-font-variation-spacing.tscn' },
   // The one variable: a precomposed character the font lacks, drawn as its base and the marks the font has,
   // in a Label at 16 px and 32 px and in a RichTextLabel whose fallback holds a character the marks cannot make,
   // and in Labels over fonts with no GPOS script and with a GPOS that has no mark lookup.
