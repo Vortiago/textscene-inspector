@@ -1,7 +1,7 @@
 import { sign, snapped } from '../../math/math.js';
 import { doubleToInt32 } from '../cInteger.js';
-import { variant } from '../value/variant.js';
-import { axis, real } from './floatVectorMethods.js';
+import { real, variant } from '../value/variant.js';
+import { axis } from './floatVectorMethods.js';
 import type { MethodPort } from './methodPort.js';
 import {
   boundMethods,

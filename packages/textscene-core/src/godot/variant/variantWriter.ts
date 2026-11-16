@@ -18,6 +18,13 @@ import {
   type VariantOf,
 } from './value/variant.js';
 import { variantTypeName, variantTypeNameOf } from './variantType.js';
+import {
+  componentsOf,
+  isStructVariant,
+  MATH_LAYOUT,
+  packedComponents,
+  type StructVariant,
+} from './value/mathLayout.js';
 
 /** `rtos_fix` (variant_parser.cpp:1985): zero without its sign, and a float's spelling where it fits. */
 export function componentLiteral(value: number): string {
@@ -81,10 +88,8 @@ function isStringLikeLess(a: Variant, b: Variant): boolean {
   return isVariantLess(a, b);
 }
 
-const vector = ({ x, y, z, w }: { x: number; y: number; z?: number; w?: number }) =>
-  [x, y, z, w].filter((component) => component !== undefined) as number[];
-
 function written(value: Variant, depth: number): string {
+  if (isStructVariant(value)) return call(variantTypeNameOf(value.type), structBody(value));
   switch (value.type) {
     case 'NIL':
     case 'OBJECT':
@@ -97,37 +102,6 @@ function written(value: Variant, depth: number): string {
       return withFloatPoint(compatComponent(value.value));
     case 'STRING':
       return `"${cEscapeMultiline(value.value)}"`;
-    case 'VECTOR2':
-    case 'VECTOR3':
-    case 'VECTOR4':
-    case 'QUATERNION':
-      return call(variantTypeNameOf(value.type), components(vector(value.value)));
-    case 'VECTOR2I':
-    case 'VECTOR3I':
-    case 'VECTOR4I':
-      return call(variantTypeNameOf(value.type), ints(vector(value.value)));
-    case 'RECT2':
-      return call('Rect2', components([value.value.x, value.value.y, value.value.w, value.value.h]));
-    case 'RECT2I':
-      return call('Rect2i', ints([value.value.x, value.value.y, value.value.w, value.value.h]));
-    case 'PLANE':
-      return call('Plane', components([...vector(value.value.normal), value.value.d]));
-    case 'AABB':
-      return call('AABB', components([...vector(value.value.position), ...vector(value.value.size)]));
-    case 'TRANSFORM2D': {
-      const { a, b, c, d, tx, ty } = value.value;
-      return call('Transform2D', components([a, b, c, d, tx, ty]));
-    }
-    case 'BASIS':
-      return call('Basis', components(value.value));
-    case 'TRANSFORM3D': {
-      const { basis_x, basis_y, basis_z, origin } = value.value;
-      return call('Transform3D', components([basis_x, basis_y, basis_z, origin].flatMap(vector)));
-    }
-    case 'PROJECTION':
-      return call('Projection', components(value.value.flatMap(vector)));
-    case 'COLOR':
-      return call('Color', components([value.value.r, value.value.g, value.value.b, value.value.a]));
     case 'STRING_NAME':
       return `&"${cEscape(value.value)}"`;
     case 'NODE_PATH':
@@ -160,12 +134,13 @@ function packedBody(value: PackedVariant): string {
       return components(value.value);
     case 'PACKED_STRING_ARRAY':
       return value.value.map((text) => `"${cEscape(text)}"`).join(', ');
-    case 'PACKED_COLOR_ARRAY':
-      return components(value.value.flatMap(({ r, g, b, a }) => [r, g, b, a]));
     default:
-      return components(value.value.flatMap(vector));
+      return components(packedComponents(value.type, value.value));
   }
 }
+
+const structBody = (value: StructVariant): string =>
+  (MATH_LAYOUT[value.type].component === 'int32' ? ints : components)(componentsOf(value));
 
 /**
  * `VariantWriter::write_to_string` (variant_parser.cpp:2570), as `var_to_str` calls it.

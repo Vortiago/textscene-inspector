@@ -2,32 +2,19 @@ import { clamp, cMax, cMin } from '../../math/math.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
 import type { Variant } from '../value/variant.js';
 import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import {
+  componentsOf as structComponents,
+  structOf,
+  type StructVariant,
+  type VectorTypeName,
+} from '../value/mathLayout.js';
 
-const XY = ['x', 'y'] as const;
-const XYZ = ['x', 'y', 'z'] as const;
-const XYZW = ['x', 'y', 'z', 'w'] as const;
-
-const AXES = {
-  VECTOR2: XY,
-  VECTOR2I: XY,
-  VECTOR3: XYZ,
-  VECTOR3I: XYZ,
-  VECTOR4: XYZW,
-  VECTOR4I: XYZW,
-} as const;
-
-export type VectorType = keyof typeof AXES;
+export type VectorType = VectorTypeName;
 export type Components = readonly number[];
 
-export function componentsOf(vector: Variant): Components {
-  const value = vector.value as Readonly<Record<string, number>>;
-  return AXES[vector.type as VectorType].map((axis) => value[axis]!);
-}
+export const componentsOf = (vector: Variant): Components => structComponents(vector as StructVariant);
 
-export function vectorOf(type: VectorType, components: Components): Variant {
-  const value = Object.fromEntries(AXES[type].map((axis, index) => [axis, components[index]!]));
-  return { type, value } as Variant;
-}
+export const vectorOf = (type: VectorType, components: Components): Variant => structOf(type, components);
 
 export const each2 = (a: Components, b: Components, map: (p: number, q: number) => number): Components =>
   a.map((component, index) => map(component, b[index]!));

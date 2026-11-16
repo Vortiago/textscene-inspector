@@ -2,17 +2,22 @@ import { hasSurface, type Aabb } from '../../math/aabb.js';
 import { cMin } from '../../math/math.js';
 import { planeDistanceTo, type Plane } from '../../math/plane.js';
 import { isEqualApproxf } from '../../math/realMath.js';
-import { vector3Add, vector3Scaled, vector3Sub, type Vector3 } from '../../math/vector.js';
-import type { CastArgument } from '../utility/utilityArguments.js';
-import { NIL, variant, type Variant } from '../value/variant.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import {
+  VECTOR3_AXES,
+  VECTOR3_ZERO,
+  vector3Add,
+  vector3Scaled,
+  vector3Sub,
+  type Vector3,
+} from '../../math/vector.js';
+import { valueAt } from '../utility/utilityArguments.js';
+import { bool, real, variant, vector3, vector3OrNil, type Variant } from '../value/variant.js';
+import { portOn, valueOf, type MethodPort } from './methodPort.js';
 import { firstMaximumIndex } from './vectorPorts.js';
 
 const f = Math.fround;
-const AXES = ['x', 'y', 'z'] as const;
-type Axis = (typeof AXES)[number];
+type Axis = (typeof VECTOR3_AXES)[number];
 
-const ZERO: Vector3 = { x: 0, y: 0, z: 0 };
 const UNIT_AXES: readonly Vector3[] = [
   { x: 1, y: 0, z: 0 },
   { x: 0, y: 1, z: 0 },
@@ -21,26 +26,20 @@ const UNIT_AXES: readonly Vector3[] = [
 const RAY_FAR = f(1e20);
 
 const aabbOf = (aabb: Aabb): Variant => variant('AABB', aabb);
-const point = (v: Vector3): Variant => variant('VECTOR3', v);
-const bool = (value: boolean): Variant => variant('BOOL', value);
-const real = (value: number): Variant => variant('FLOAT', value);
-const aabbAt = (args: readonly CastArgument[], index: number) => (args[index] as Variant).value as Aabb;
-const pointAt = (args: readonly CastArgument[], index: number) => (args[index] as Variant).value as Vector3;
+const aabbAt = valueAt<Aabb>;
+const pointAt = valueAt<Vector3>;
 const vectorOf = (components: readonly number[]): Vector3 => ({
   x: components[0]!,
   y: components[1]!,
   z: components[2]!,
 });
-const componentsOf = (v: Vector3) => AXES.map((axis) => v[axis]);
+const componentsOf = (v: Vector3) => VECTOR3_AXES.map((axis) => v[axis]);
 
-const port = (
-  parameters: readonly MethodParameter[],
-  body: (box: Aabb, args: readonly CastArgument[]) => Variant
-) => methodPort(parameters, (base, args) => body(base.value as Aabb, args));
+const port = portOn(valueOf<Aabb>);
 
 const endOf = ({ position, size }: Aabb) => vector3Add(position, size);
 const between = (begin: Vector3, end: Vector3): Aabb => ({ position: begin, size: vector3Sub(end, begin) });
-const eachAxis = (map: (axis: Axis) => number): Vector3 => vectorOf(AXES.map(map));
+const eachAxis = (map: (axis: Axis) => number): Vector3 => vectorOf(VECTOR3_AXES.map(map));
 
 function merge(box: Aabb, other: Aabb): Aabb {
   const [begin1, begin2] = [box.position, other.position];
@@ -54,10 +53,10 @@ function merge(box: Aabb, other: Aabb): Aabb {
 // aabb.cpp:85: an axis that misses gives the all-zero box.
 function intersection(box: Aabb, other: Aabb): Aabb {
   const [sourceEnd, otherEnd] = [endOf(box), endOf(other)];
-  const isMiss = AXES.some(
+  const isMiss = VECTOR3_AXES.some(
     (axis) => box.position[axis] > otherEnd[axis] || sourceEnd[axis] < other.position[axis]
   );
-  if (isMiss) return { position: ZERO, size: ZERO };
+  if (isMiss) return { position: VECTOR3_ZERO, size: VECTOR3_ZERO };
   return between(
     eachAxis((axis) =>
       box.position[axis] > other.position[axis] ? box.position[axis] : other.position[axis]
@@ -68,20 +67,23 @@ function intersection(box: Aabb, other: Aabb): Aabb {
 
 function intersects(box: Aabb, other: Aabb): boolean {
   const [end, otherEnd] = [endOf(box), endOf(other)];
-  return AXES.every(
+  return VECTOR3_AXES.every(
     (axis) => !(box.position[axis] >= otherEnd[axis]) && !(end[axis] <= other.position[axis])
   );
 }
 
 function encloses(box: Aabb, other: Aabb): boolean {
   const [end, otherEnd] = [endOf(box), endOf(other)];
-  return AXES.every((axis) => box.position[axis] <= other.position[axis] && end[axis] >= otherEnd[axis]);
+  return VECTOR3_AXES.every(
+    (axis) => box.position[axis] <= other.position[axis] && end[axis] >= otherEnd[axis]
+  );
 }
 
 function hasPoint(box: Aabb, to: Vector3): boolean {
   const end = endOf(box);
   return (
-    AXES.every((axis) => !(to[axis] < box.position[axis])) && AXES.every((axis) => !(to[axis] > end[axis]))
+    VECTOR3_AXES.every((axis) => !(to[axis] < box.position[axis])) &&
+    VECTOR3_AXES.every((axis) => !(to[axis] > end[axis]))
   );
 }
 
@@ -94,7 +96,7 @@ function expand(box: Aabb, to: Vector3): Aabb {
 }
 
 function endpoint({ position, size }: Aabb, index: number): Vector3 {
-  if (index < 0 || index > 7) return ZERO;
+  if (index < 0 || index > 7) return VECTOR3_ZERO;
   return {
     x: index & 4 ? f(position.x + size.x) : position.x,
     y: index & 2 ? f(position.y + size.y) : position.y,
@@ -119,7 +121,7 @@ const shortestIndex = ([x, y, z]: readonly number[]) => {
 function intersectsRay(box: Aabb, from: Vector3, direction: Vector3): Vector3 | undefined {
   const end = endOf(box);
   let [nearest, farthest, axis] = [-RAY_FAR, RAY_FAR, 0];
-  for (const [index, name] of AXES.entries()) {
+  for (const [index, name] of VECTOR3_AXES.entries()) {
     if (direction[name] === 0) {
       if (from[name] < box.position[name] || from[name] > end[name]) return undefined;
       continue;
@@ -137,13 +139,13 @@ function intersectsRay(box: Aabb, from: Vector3, direction: Vector3): Vector3 | 
   // aabb.cpp:446: a ray that starts inside gives its origin.
   if (nearest < 0) return from;
   const hit = vector3Add(from, vector3Scaled(direction, nearest));
-  const name = AXES[axis]!;
+  const name = VECTOR3_AXES[axis]!;
   return { ...hit, [name]: direction[name] >= 0 ? box.position[name] : end[name] };
 }
 
 function intersectsSegment(box: Aabb, from: Vector3, to: Vector3): Vector3 | undefined {
   let [nearest, farthest] = [0, 1];
-  for (const name of AXES) {
+  for (const name of VECTOR3_AXES) {
     const [start, stop] = [from[name], to[name]];
     const begin = box.position[name];
     const end = f(begin + box.size[name]);
@@ -165,7 +167,6 @@ function intersectsSegment(box: Aabb, from: Vector3, to: Vector3): Vector3 | und
   return vector3Add(from, vector3Scaled(vector3Sub(to, from), nearest));
 }
 
-const pointOrNil = (found: Vector3 | undefined) => (found ? point(found) : NIL);
 const sizes = (box: Aabb) => componentsOf(box.size);
 
 export const AABB_METHODS: Readonly<Record<string, MethodPort>> = {
@@ -178,9 +179,9 @@ export const AABB_METHODS: Readonly<Record<string, MethodPort>> = {
       size: eachAxis((axis) => Math.abs(size[axis])),
     })
   ),
-  get_center: port([], ({ position, size }) => point(vector3Add(position, vector3Scaled(size, 0.5)))),
+  get_center: port([], ({ position, size }) => vector3(vector3Add(position, vector3Scaled(size, 0.5)))),
   get_volume: port([], ({ size }) => real(f(f(size.x * size.y) * size.z))),
-  has_volume: port([], ({ size }) => bool(AXES.every((axis) => size[axis] > 0))),
+  has_volume: port([], ({ size }) => bool(VECTOR3_AXES.every((axis) => size[axis] > 0))),
   has_surface: port([], ({ size }) => bool(hasSurface(size))),
   has_point: port(['VECTOR3'], (box, args) => bool(hasPoint(box, pointAt(args, 0)))),
   is_equal_approx: port(['AABB'], (box, args) => {
@@ -208,19 +209,21 @@ export const AABB_METHODS: Readonly<Record<string, MethodPort>> = {
   }),
   get_support: port(['VECTOR3'], ({ position, size }, args) => {
     const direction = pointAt(args, 0);
-    return point(eachAxis((axis) => (direction[axis] > 0 ? f(position[axis] + size[axis]) : position[axis])));
+    return vector3(
+      eachAxis((axis) => (direction[axis] > 0 ? f(position[axis] + size[axis]) : position[axis]))
+    );
   }),
-  get_longest_axis: port([], (box) => point(UNIT_AXES[firstMaximumIndex(sizes(box))]!)),
+  get_longest_axis: port([], (box) => vector3(UNIT_AXES[firstMaximumIndex(sizes(box))]!)),
   get_longest_axis_index: port([], (box) => variant('INT', BigInt(firstMaximumIndex(sizes(box))))),
   get_longest_axis_size: port([], (box) => real(sizes(box)[firstMaximumIndex(sizes(box))]!)),
-  get_shortest_axis: port([], (box) => point(UNIT_AXES[shortestIndex(sizes(box))]!)),
+  get_shortest_axis: port([], (box) => vector3(UNIT_AXES[shortestIndex(sizes(box))]!)),
   get_shortest_axis_index: port([], (box) => variant('INT', BigInt(shortestIndex(sizes(box))))),
   get_shortest_axis_size: port([], (box) => real(sizes(box)[shortestIndex(sizes(box))]!)),
-  get_endpoint: port(['int32_t'], (box, args) => point(endpoint(box, args[0] as number))),
+  get_endpoint: port(['int32_t'], (box, args) => vector3(endpoint(box, args[0] as number))),
   intersects_segment: port(['VECTOR3', 'VECTOR3'], (box, args) =>
-    pointOrNil(intersectsSegment(box, pointAt(args, 0), pointAt(args, 1)))
+    vector3OrNil(intersectsSegment(box, pointAt(args, 0), pointAt(args, 1)))
   ),
   intersects_ray: port(['VECTOR3', 'VECTOR3'], (box, args) =>
-    pointOrNil(intersectsRay(box, pointAt(args, 0), pointAt(args, 1)))
+    vector3OrNil(intersectsRay(box, pointAt(args, 0), pointAt(args, 1)))
   ),
 };

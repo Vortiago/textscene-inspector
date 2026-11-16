@@ -1,27 +1,15 @@
 import { defaultValue } from '../value/defaultValue.js';
-import { variant, type CallableValue, type Variant, type VariantOf } from '../value/variant.js';
+import { bool, int, variant, type CallableValue, type Variant, type VariantOf } from '../value/variant.js';
 import { variantHash } from '../variantHash.js';
 import { variantCallable } from './variantCallable.js';
 import { builtinMethodRow } from './builtinMethod.js';
-import {
-  FAILED,
-  methodPort,
-  NIL_RESULT,
-  type MethodParameter,
-  type MethodPort,
-  type VarargPort,
-} from './methodPort.js';
+import { FAILED, methodPort, NIL_RESULT, type MethodPort, type VarargPort, portOn } from './methodPort.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
 
-const int = (value: number): Variant => variant('INT', BigInt(value));
-const bool = (value: boolean): Variant => variant('BOOL', value);
 const callable = (value: CallableValue): Variant => variant('CALLABLE', value);
 const callableOf = (base: Variant) => (base as VariantOf<'CALLABLE'>).value;
 
-const port = (
-  parameters: readonly MethodParameter[],
-  body: (base: CallableValue, args: readonly CastArgument[]) => Variant
-): MethodPort => methodPort(parameters, (base, args) => body(callableOf(base), args));
+const port = portOn(callableOf);
 
 const elementsOf = (argument: CastArgument) => (argument as VariantOf<'ARRAY'>).value;
 

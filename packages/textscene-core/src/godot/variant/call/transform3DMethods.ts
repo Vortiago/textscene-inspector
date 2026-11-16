@@ -15,26 +15,20 @@ import {
   transform3DOf,
   type Transform3D,
 } from '../../math/transform3d.js';
-import { vector3Add, vector3Sub, type Vector3 } from '../../math/vector.js';
+import { VECTOR3_AXES, vector3Add, vector3Sub, type Vector3 } from '../../math/vector.js';
 import { transposeBasis } from '../operators/matrices.js';
-import type { CastArgument } from '../utility/utilityArguments.js';
-import { variant, type Variant } from '../value/variant.js';
+import { valueAt } from '../utility/utilityArguments.js';
+import { bool, variant, type Variant } from '../value/variant.js';
 import { basisLookingAt, basisRotated, basisScaledLocal } from './basisMethods.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import { portOn, valueOf, type MethodPort } from './methodPort.js';
 
 const f = Math.fround;
-const LANES = ['x', 'y', 'z'] as const;
 
 const transformOf = (t: Transform3D): Variant => variant('TRANSFORM3D', t);
-const bool = (value: boolean): Variant => variant('BOOL', value);
-const transformAt = (args: readonly CastArgument[], index: number) =>
-  (args[index] as Variant).value as Transform3D;
-const vectorAt = (args: readonly CastArgument[], index: number) => (args[index] as Variant).value as Vector3;
+const transformAt = valueAt<Transform3D>;
+const vectorAt = valueAt<Vector3>;
 
-const port = (
-  parameters: readonly MethodParameter[],
-  body: (t: Transform3D, args: readonly CastArgument[]) => Variant
-) => methodPort(parameters, (base, args) => body(base.value as Transform3D, args));
+const port = portOn(valueOf<Transform3D>);
 
 const negated = ({ x, y, z }: Vector3): Vector3 => ({ x: -x, y: -y, z: -z });
 
@@ -67,7 +61,7 @@ const translatedLocal = (t: Transform3D, offset: Vector3) =>
   transform3DOf(basisOfTransform3D(t), vector3Add(t.origin, basisXform(basisOfTransform3D(t), offset)));
 
 const isEqualApproxVector = (a: Vector3, b: Vector3) =>
-  LANES.every((lane) => isEqualApproxf(a[lane], b[lane]));
+  VECTOR3_AXES.every((lane) => isEqualApproxf(a[lane], b[lane]));
 
 // transform_3d.cpp:80: MATH_CHECKS gives `Transform3D()` for a target at the origin.
 function lookingAt(t: Transform3D, target: Vector3, up: Vector3, isModelFront: boolean): Transform3D {
@@ -106,6 +100,6 @@ export const TRANSFORM3D_METHODS: Readonly<Record<string, MethodPort>> = {
     return bool(rowsOf(t).every((row, index) => isEqualApproxVector(row, other[index]!)));
   }),
   is_finite: port([], (t) =>
-    bool(rowsOf(t).every((row) => LANES.every((lane) => Number.isFinite(row[lane]))))
+    bool(rowsOf(t).every((row) => VECTOR3_AXES.every((lane) => Number.isFinite(row[lane]))))
   ),
 };

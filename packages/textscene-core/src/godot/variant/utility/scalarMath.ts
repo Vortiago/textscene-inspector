@@ -14,7 +14,7 @@ import {
   smoothstep,
   snapped,
 } from '../../math/math.js';
-import { doubleToInt64, remainderInt64 } from '../cInteger.js';
+import { doubleToInt64, remainderInt64, wrapInt64 } from '../cInteger.js';
 import { variant } from '../value/variant.js';
 import type { TypedFunction } from './utilityFunction.js';
 
@@ -40,20 +40,18 @@ const test =
   (args) =>
     variant('BOOL', predicate(...(args as number[])));
 
-const int64 = (value: bigint) => BigInt.asIntN(64, value);
-
 // `Math::posmod` returns 0 for a zero divisor and prints an error.
 function posmod(x: bigint, y: bigint): bigint {
   if (y === 0n) return 0n;
   const value = remainderInt64(x, y);
-  return (value < 0n && y > 0n) || (value > 0n && y < 0n) ? int64(value + y) : value;
+  return (value < 0n && y > 0n) || (value > 0n && y < 0n) ? wrapInt64(value + y) : value;
 }
 
 // `nearest_power_of_2_templated` on the uint64 bits, returned as int64.
 function nearestPowerOfTwo(x: bigint): bigint {
   let bits = BigInt.asUintN(64, x - 1n);
   for (let shift = 1n; shift < 64n; shift <<= 1n) bits |= bits >> shift;
-  return int64(bits + 1n);
+  return wrapInt64(bits + 1n);
 }
 
 const maxOf = <T extends number | bigint>(x: T, y: T): T => (x > y ? x : y);
@@ -85,7 +83,7 @@ export const SCALAR_MATH: Readonly<Record<string, TypedFunction>> = {
   roundf: real(round),
   roundi: toInteger(round),
   absf: real(Math.abs),
-  absi: integer((x) => int64(x < 0n ? -x : x)),
+  absi: integer((x) => wrapInt64(x < 0n ? -x : x)),
   signf: real(sign),
   signi: integer((x) => (x > 0n ? 1n : x < 0n ? -1n : 0n)),
   snappedf: real(snapped),

@@ -27,6 +27,7 @@ import {
   quaternionArc,
 } from './rotations.js';
 import { canConvertStrict, castVariant, colorFromString } from './variantCast.js';
+import { MATH_LAYOUT, structOf, type MathTypeName } from '../value/mathLayout.js';
 
 type Arguments = readonly Variant[];
 type Build = (args: Arguments) => unknown;
@@ -38,11 +39,16 @@ const v2 = (args: Arguments, index: number) => args[index]!.value as Vector2Valu
 const v3 = (args: Arguments, index: number) => args[index]!.value as Vector3Value;
 const v4 = (args: Arguments, index: number) => args[index]!.value as Vector4Value;
 
-const AXES = ['x', 'y', 'z', 'w'] as const;
-const components =
-  (count: number, component: (args: Arguments, index: number) => number): Build =>
-  (args) =>
-    Object.fromEntries(AXES.slice(0, count).map((axis, index) => [axis, component(args, index)]));
+/** A math value built from one scalar argument for each component, in its struct's order. */
+const fromScalars =
+  (type: MathTypeName): Build =>
+  (args) => {
+    const component = MATH_LAYOUT[type].component === 'int32' ? int32 : real;
+    return structOf(
+      type,
+      args.map((_, index) => component(args, index))
+    ).value;
+  };
 
 function basisAxisAngle(args: Arguments): BasisComponents {
   return basisSetAxisAngle([...IDENTITY_BASIS] as MutableBasis, v3(args, 0), real(args, 1));
@@ -50,24 +56,14 @@ function basisAxisAngle(args: Arguments): BasisComponents {
 
 /** Keyed `TYPE(ARG, ...)` by Variant type names. A one-argument row of a strict conversion is its cast. */
 const BUILDERS: Readonly<Record<string, Build>> = {
-  'VECTOR2(FLOAT,FLOAT)': components(2, real),
-  'VECTOR2I(INT,INT)': components(2, int32),
-  'VECTOR3(FLOAT,FLOAT,FLOAT)': components(3, real),
-  'VECTOR3I(INT,INT,INT)': components(3, int32),
-  'VECTOR4(FLOAT,FLOAT,FLOAT,FLOAT)': components(4, real),
-  'VECTOR4I(INT,INT,INT,INT)': components(4, int32),
-  'RECT2(FLOAT,FLOAT,FLOAT,FLOAT)': (args) => ({
-    x: real(args, 0),
-    y: real(args, 1),
-    w: real(args, 2),
-    h: real(args, 3),
-  }),
-  'RECT2I(INT,INT,INT,INT)': (args) => ({
-    x: int32(args, 0),
-    y: int32(args, 1),
-    w: int32(args, 2),
-    h: int32(args, 3),
-  }),
+  'VECTOR2(FLOAT,FLOAT)': fromScalars('VECTOR2'),
+  'VECTOR2I(INT,INT)': fromScalars('VECTOR2I'),
+  'VECTOR3(FLOAT,FLOAT,FLOAT)': fromScalars('VECTOR3'),
+  'VECTOR3I(INT,INT,INT)': fromScalars('VECTOR3I'),
+  'VECTOR4(FLOAT,FLOAT,FLOAT,FLOAT)': fromScalars('VECTOR4'),
+  'VECTOR4I(INT,INT,INT,INT)': fromScalars('VECTOR4I'),
+  'RECT2(FLOAT,FLOAT,FLOAT,FLOAT)': fromScalars('RECT2'),
+  'RECT2I(INT,INT,INT,INT)': fromScalars('RECT2I'),
   'RECT2(VECTOR2,VECTOR2)': rectOf,
   'RECT2I(VECTOR2I,VECTOR2I)': rectOf,
   'TRANSFORM2D(FLOAT,VECTOR2)': (args) => transform2DFromRotation(real(args, 0), v2(args, 1)),
@@ -81,8 +77,8 @@ const BUILDERS: Readonly<Record<string, Build>> = {
   'PLANE(VECTOR3,FLOAT)': (args) => ({ normal: v3(args, 0), d: real(args, 1) }),
   'PLANE(VECTOR3,VECTOR3)': (args) => planeFromNormalPoint(v3(args, 0), v3(args, 1)),
   'PLANE(VECTOR3,VECTOR3,VECTOR3)': (args) => planeFromPoints(v3(args, 0), v3(args, 1), v3(args, 2)),
-  'PLANE(FLOAT,FLOAT,FLOAT,FLOAT)': (args) => ({ normal: components(3, real)(args), d: real(args, 3) }),
-  'QUATERNION(FLOAT,FLOAT,FLOAT,FLOAT)': components(4, real),
+  'PLANE(FLOAT,FLOAT,FLOAT,FLOAT)': fromScalars('PLANE'),
+  'QUATERNION(FLOAT,FLOAT,FLOAT,FLOAT)': fromScalars('QUATERNION'),
   'QUATERNION(VECTOR3,FLOAT)': (args) => checkedQuaternionFromAxisAngle(v3(args, 0), real(args, 1)),
   'QUATERNION(VECTOR3,VECTOR3)': (args) => quaternionArc(v3(args, 0), v3(args, 1)),
   'AABB(VECTOR3,VECTOR3)': (args): Aabb => ({ position: { ...v3(args, 0) }, size: { ...v3(args, 1) } }),
@@ -100,12 +96,7 @@ const BUILDERS: Readonly<Record<string, Build>> = {
   'COLOR(COLOR,FLOAT)': (args) => ({ ...(args[0]!.value as ColorValue), a: real(args, 1) }),
   'COLOR(STRING,FLOAT)': (args) => ({ ...colorFromString(args[0]!.value as string), a: real(args, 1) }),
   'COLOR(FLOAT,FLOAT,FLOAT)': (args) => ({ r: real(args, 0), g: real(args, 1), b: real(args, 2), a: 1 }),
-  'COLOR(FLOAT,FLOAT,FLOAT,FLOAT)': (args) => ({
-    r: real(args, 0),
-    g: real(args, 1),
-    b: real(args, 2),
-    a: real(args, 3),
-  }),
+  'COLOR(FLOAT,FLOAT,FLOAT,FLOAT)': fromScalars('COLOR'),
 };
 
 function rectOf(args: Arguments) {

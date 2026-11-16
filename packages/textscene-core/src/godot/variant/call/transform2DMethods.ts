@@ -22,25 +22,18 @@ import {
   vector2Sub,
   type Vector2,
 } from '../../math/vector.js';
-import type { CastArgument } from '../utility/utilityArguments.js';
-import { variant, type Variant } from '../value/variant.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import { valueAt } from '../utility/utilityArguments.js';
+import { bool, real, variant, vector2, type Variant } from '../value/variant.js';
+import { portOn, valueOf, type MethodPort } from './methodPort.js';
 
 const f = Math.fround;
 const ORIGIN: Vector2 = { x: 0, y: 0 };
 
 const transformOf = (t: Transform2DColumns): Variant => variant('TRANSFORM2D', t);
-const vectorOf = (v: Vector2): Variant => variant('VECTOR2', v);
-const real = (value: number): Variant => variant('FLOAT', value);
-const bool = (value: boolean): Variant => variant('BOOL', value);
-const transformAt = (args: readonly CastArgument[], index: number) =>
-  (args[index] as Variant).value as Transform2DColumns;
-const vectorAt = (args: readonly CastArgument[], index: number) => (args[index] as Variant).value as Vector2;
+const transformAt = valueAt<Transform2DColumns>;
+const vectorAt = valueAt<Vector2>;
 
-const port = (
-  parameters: readonly MethodParameter[],
-  body: (t: Transform2DColumns, args: readonly CastArgument[]) => Variant
-) => methodPort(parameters, (base, args) => body(base.value as Transform2DColumns, args));
+const port = portOn(valueOf<Transform2DColumns>);
 
 const xAxis = ({ a, b }: Transform2DColumns): Vector2 => ({ x: a, y: b });
 const yAxis = ({ c, d }: Transform2DColumns): Vector2 => ({ x: c, y: d });
@@ -103,8 +96,8 @@ export const TRANSFORM2D_METHODS: Readonly<Record<string, MethodPort>> = {
   inverse: port([], (t) => transformOf(inverse(t))),
   affine_inverse: port([], (t) => transformOf(transform2DAffineInverse(t))),
   get_rotation: port([], (t) => real(transform2DGetRotation(t))),
-  get_origin: port([], (t) => vectorOf(transform2DOrigin(t))),
-  get_scale: port([], (t) => vectorOf(transform2DGetScale(t))),
+  get_origin: port([], (t) => vector2(transform2DOrigin(t))),
+  get_scale: port([], (t) => vector2(transform2DGetScale(t))),
   get_skew: port([], (t) => real(transform2DGetSkew(t))),
   orthonormalized: port([], (t) => transformOf(orthonormalized(t))),
   rotated: port(['float'], (t, args) => transformOf(multiplyTransform2D(rotation(args[0] as number), t))),
@@ -116,8 +109,8 @@ export const TRANSFORM2D_METHODS: Readonly<Record<string, MethodPort>> = {
   translated: port(['VECTOR2'], (t, args) => transformOf(translated(t, vectorAt(args, 0)))),
   translated_local: port(['VECTOR2'], (t, args) => transformOf(translatedLocal(t, vectorAt(args, 0)))),
   determinant: port([], (t) => real(transform2DDeterminant(t))),
-  basis_xform: port(['VECTOR2'], (t, args) => vectorOf(transform2DBasisXform(t, vectorAt(args, 0)))),
-  basis_xform_inv: port(['VECTOR2'], (t, args) => vectorOf(basisXformInverse(t, vectorAt(args, 0)))),
+  basis_xform: port(['VECTOR2'], (t, args) => vector2(transform2DBasisXform(t, vectorAt(args, 0)))),
+  basis_xform_inv: port(['VECTOR2'], (t, args) => vector2(basisXformInverse(t, vectorAt(args, 0)))),
   interpolate_with: port(['TRANSFORM2D', 'float'], (t, args) =>
     transformOf(transform2DInterpolateWith(t, transformAt(args, 0), args[1] as number))
   ),

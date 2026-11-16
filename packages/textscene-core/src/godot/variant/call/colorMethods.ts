@@ -4,29 +4,19 @@ import { okhslToSrgb } from '../../math/okHsl.js';
 import { isEqualApproxf } from '../../math/realMath.js';
 import { doubleToInt32, int64ToFloat32 } from '../cInteger.js';
 import { hexDigitValue } from '../../string/charUtils.js';
-import type { CastArgument } from '../utility/utilityArguments.js';
-import { variant, type ColorValue, type Variant } from '../value/variant.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import { numberAt, valueAt } from '../utility/utilityArguments.js';
+import { int, variant, type ColorValue, type Variant } from '../value/variant.js';
+import { staticPort, type MethodPort, portOn } from './methodPort.js';
 
 const f = Math.fround;
 const CHANNELS = ['r', 'g', 'b', 'a'] as const;
 
 const color = (r: number, g: number, b: number, a: number): Variant => variant('COLOR', { r, g, b, a });
 const colorOf = (value: ColorValue): Variant => variant('COLOR', value);
-const int = (value: bigint | number): Variant => variant('INT', BigInt(value));
 const self = (base: Variant) => base.value as ColorValue;
-const colorAt = (args: readonly CastArgument[], index: number) =>
-  (args[index] as Variant).value as ColorValue;
-const numberAt = (args: readonly CastArgument[], index: number) => args[index] as number;
+const colorAt = valueAt<ColorValue>;
 
-const port = (
-  parameters: readonly MethodParameter[],
-  body: (c: ColorValue, args: readonly CastArgument[]) => Variant
-) => methodPort(parameters, (base, args) => body(self(base), args));
-const staticPort = (
-  parameters: readonly MethodParameter[],
-  body: (args: readonly CastArgument[]) => Variant
-) => methodPort(parameters, (_base, args) => body(args));
+const port = portOn(self);
 
 // `(uint8_t)` and `(uint16_t)` of a float: cvttss2si to int32, then the low bits.
 const quantised = (channel: number, scale: number, mask: number) =>

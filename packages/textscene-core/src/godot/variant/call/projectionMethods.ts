@@ -8,9 +8,10 @@ import type { Rect2 } from '../../math/rect2.js';
 import type { Vector2 } from '../../math/vector.js';
 import { doubleToInt32 } from '../cInteger.js';
 import { multiplyProjection } from '../operators/matrices.js';
-import type { CastArgument } from '../utility/utilityArguments.js';
-import { variant, type ProjectionValue, type Variant } from '../value/variant.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import { numberAt, valueAt, type CastArgument } from '../utility/utilityArguments.js';
+import { MATH_LAYOUT } from '../value/mathLayout.js';
+import { real, variant, type ProjectionValue, type Variant } from '../value/variant.js';
+import { methodPort, type MethodParameter, type MethodPort, portOn } from './methodPort.js';
 
 const f = Math.fround;
 
@@ -19,24 +20,11 @@ type Matrix = number[];
 
 const IDENTITY: readonly number[] = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
-const matrixOf = (p: ProjectionValue): Matrix => p.flatMap(({ x, y, z, w }) => [x, y, z, w]);
-const valueOf = (m: readonly number[]): ProjectionValue =>
-  [0, 4, 8, 12].map((at) => ({
-    x: m[at]!,
-    y: m[at + 1]!,
-    z: m[at + 2]!,
-    w: m[at + 3]!,
-  })) as unknown as ProjectionValue;
+const { flat: matrixOf, fromFlat: projectionValue } = MATH_LAYOUT.PROJECTION;
 
-const projectionOf = (m: readonly number[]): Variant => variant('PROJECTION', valueOf(m));
-const real = (value: number): Variant => variant('FLOAT', value);
-const numberAt = (args: readonly CastArgument[], index: number) => args[index] as number;
-const valueAt = <T>(args: readonly CastArgument[], index: number) => (args[index] as Variant).value as T;
+const projectionOf = (m: readonly number[]): Variant => variant('PROJECTION', projectionValue(m));
 
-const port = (
-  parameters: readonly MethodParameter[],
-  body: (m: Matrix, args: readonly CastArgument[]) => Variant
-) => methodPort(parameters, (base, args) => body(matrixOf(base.value as ProjectionValue), args));
+const port = portOn((base) => matrixOf(base.value as ProjectionValue));
 
 const create = (parameters: readonly MethodParameter[], body: (args: readonly CastArgument[]) => Matrix) =>
   methodPort(parameters, (_base, args) => projectionOf(body(args)));
@@ -304,7 +292,9 @@ function perspectiveForEye(args: readonly CastArgument[]): Matrix {
   const translation = side === 0 ? 0 : f((side * intraocular) / 2);
   const moved = [...IDENTITY];
   moved[12] = translation;
-  return matrixOf(multiplyProjection(valueOf(frustum(left, right, -ymax, ymax, near, far)), valueOf(moved)));
+  return matrixOf(
+    multiplyProjection(projectionValue(frustum(left, right, -ymax, ymax, near, far)), projectionValue(moved))
+  );
 }
 
 // projection.cpp:314

@@ -1,15 +1,18 @@
 import { COMPONENT_VECTORS, componentsEqual } from './operators/componentVectors.js';
 import { defaultValue } from './value/defaultValue.js';
+import {
+  componentsOf,
+  isStructVariant,
+  MATH_LAYOUT,
+  PACKED_STRUCT,
+  packedComponents,
+  type StructVariant,
+} from './value/mathLayout.js';
 import { MAX_RECURSION, type CallableValue, type DictionaryEntry, type Variant } from './value/variant.js';
 
 type Components = Readonly<Record<string, number>>;
 
 const isSameNumber = (a: number, b: number) => a === b || (Number.isNaN(a) && Number.isNaN(b));
-const sameComponents = (a: object, b: object) => {
-  const left = a as Components;
-  const right = b as Components;
-  return Object.keys(left).every((key) => isSameNumber(left[key]!, right[key]!));
-};
 
 /** The C++ `==` of two Variants of one type, or of INT and FLOAT, or of String and StringName. */
 export function cppEqual(a: Variant, b: Variant): boolean {
@@ -93,6 +96,9 @@ export function dictionariesEqual(
 /** `Variant::hash_compare` (variant.cpp:3172): NaN equals NaN in a float, a vector or a packed array. */
 export function hashCompare(a: Variant, b: Variant, semantic = true, depth = 0): boolean {
   if (a.type !== b.type) return false;
+  if (isStructVariant(a) && MATH_LAYOUT[a.type].component !== 'int32')
+    return sameNumbers(componentsOf(a), componentsOf(b as StructVariant));
+  if (PACKED_STRUCT[a.type]) return samePackedStructs(a.type, a.value as [], b.value as []);
   switch (a.type) {
     case 'ARRAY':
       return arraysEqual(a.value, b.value as readonly Variant[], depth + 1);
@@ -100,56 +106,20 @@ export function hashCompare(a: Variant, b: Variant, semantic = true, depth = 0):
       return dictionariesEqual(a.value, b.value as readonly DictionaryEntry[], depth + 1);
     case 'FLOAT':
       return a.value === b.value || (semantic && isSameNumber(a.value, b.value as number));
-    case 'VECTOR2':
-    case 'VECTOR3':
-    case 'VECTOR4':
-    case 'QUATERNION':
-    case 'COLOR':
-    case 'RECT2':
-    case 'TRANSFORM2D':
-      return sameComponents(a.value, b.value as object);
-    case 'PLANE':
-      return (
-        sameComponents(a.value.normal, (b.value as typeof a.value).normal) &&
-        isSameNumber(a.value.d, (b.value as typeof a.value).d)
-      );
-    case 'AABB':
-      return (
-        sameComponents(a.value.position, (b.value as typeof a.value).position) &&
-        sameComponents(a.value.size, (b.value as typeof a.value).size)
-      );
-    case 'BASIS':
-      return a.value.every((component, index) =>
-        isSameNumber(component, (b.value as typeof a.value)[index]!)
-      );
-    case 'TRANSFORM3D':
-      return Object.entries(a.value).every(([key, row]) =>
-        sameComponents(row, (b.value as Record<string, object>)[key]!)
-      );
-    case 'PROJECTION':
-      return a.value.every((column, index) => sameComponents(column, (b.value as typeof a.value)[index]!));
     case 'PACKED_FLOAT32_ARRAY':
-    case 'PACKED_FLOAT64_ARRAY': {
-      const right = b.value as readonly number[];
-      return (
-        a.value.length === right.length &&
-        a.value.every((element, index) => isSameNumber(element, right[index]!))
-      );
-    }
-    case 'PACKED_VECTOR2_ARRAY':
-    case 'PACKED_VECTOR3_ARRAY':
-    case 'PACKED_COLOR_ARRAY':
-    case 'PACKED_VECTOR4_ARRAY': {
-      const right = b.value as readonly object[];
-      return (
-        a.value.length === right.length &&
-        a.value.every((element, index) => sameComponents(element, right[index]!))
-      );
-    }
+    case 'PACKED_FLOAT64_ARRAY':
+      return sameNumbers(a.value, b.value as readonly number[]);
     default:
       return cppEqual(a, b);
   }
 }
+
+// Lengths first: two packed arrays of different lengths are unequal before any element is flattened.
+const samePackedStructs = (type: string, left: readonly unknown[], right: readonly unknown[]) =>
+  left.length === right.length && sameNumbers(packedComponents(type, left), packedComponents(type, right));
+
+const sameNumbers = (left: readonly number[], right: readonly number[]) =>
+  left.length === right.length && left.every((element, index) => isSameNumber(element, right[index]!));
 
 /** StringLikeVariantComparator::compare (variant.cpp:3396): a String matches the StringName of its text. */
 export function isSameKey(a: Variant, b: Variant): boolean {

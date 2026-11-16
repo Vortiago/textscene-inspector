@@ -35,5 +35,22 @@ export const methodPort = (
   run: (base: Variant, args: readonly CastArgument[], context: MethodContext) => Variant
 ): MethodPort => ({ parameters, run });
 
+/** A factory of ports whose body takes the base as `read` gives it. */
+export const portOn =
+  <T>(read: (base: Variant) => T) =>
+  (
+    parameters: readonly MethodParameter[],
+    body: (base: T, args: readonly CastArgument[], context: MethodContext) => Variant
+  ): MethodPort =>
+    methodPort(parameters, (base, args, context) => body(read(base), args, context));
+
+export const valueOf = <T>(base: Variant) => base.value as T;
+
+/** A static method: its body reads only the arguments. */
+export const staticPort = (
+  parameters: readonly MethodParameter[],
+  body: (args: readonly CastArgument[]) => Variant
+): MethodPort => methodPort(parameters, (_base, args) => body(args));
+
 /** A vararg builtin of `bind_custom` (variant_call.cpp:1985): it reads the arguments as given. */
 export type VarargPort = (base: Variant, args: readonly Variant[], context: MethodContext) => MethodResult;

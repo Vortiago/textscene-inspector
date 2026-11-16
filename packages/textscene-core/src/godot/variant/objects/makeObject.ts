@@ -1,11 +1,8 @@
+import { NotPortable } from '../../notPortable.js';
 /** Thrown where Godot makes an object or reads the project's uid cache, which the port does not model. */
-export class UnsupportedObject extends Error {
-  /** `owner` is the issue that owns the port of this stop. */
-  constructor(
-    message: string,
-    readonly owner: string
-  ) {
-    super(message);
+export class UnsupportedObject extends NotPortable {
+  constructor(message: string, owner: string) {
+    super(message, owner);
   }
 }
 

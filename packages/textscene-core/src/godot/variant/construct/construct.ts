@@ -6,7 +6,8 @@ import { VARIANT_TYPE } from '../variantType.js';
 import { buildFromCast } from './builders.js';
 import { CONSTRUCTORS_OF_TYPE, type ConstructorSignature } from './constructorSignature.js';
 import { assignArray, assignDictionary } from './typedContainer.js';
-import { canConvertStrict, castVariant, packedElements } from './variantCast.js';
+import { canConvertStrict, castVariant } from './variantCast.js';
+import { packedElements } from '../value/packedElements.js';
 
 type Arguments = readonly Variant[];
 

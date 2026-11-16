@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { codesOf, substr, textOf, UnrepresentableText } from './codes';
+import { append, codesOf, substr, textOf, UnrepresentableText } from './codes';
 
 describe('textOf', () => {
   it('spells the codes of a text back', () => {
@@ -20,5 +20,21 @@ describe('substr', () => {
     expect(substr([1, 2, 3], 1)).toEqual([2, 3]);
     expect(substr([1, 2, 3], 3)).toEqual([]);
     expect(substr([1, 2, 3], -1, 2)).toEqual([]);
+  });
+});
+
+describe('append', () => {
+  it('adds the codes of each part to the end of the target, and returns the target', () => {
+    const target = [1];
+    expect(append(target, [2, 3], [4])).toBe(target);
+    expect(target).toEqual([1, 2, 3, 4]);
+  });
+
+  it('leaves the target as it is for no parts or empty parts (edge case)', () => {
+    expect(append([1], [], [])).toEqual([1]);
+  });
+
+  it('appends a part of a million codes, which a spread into one push cannot (edge case)', () => {
+    expect(append([], new Array<number>(1_000_000).fill(65))).toHaveLength(1_000_000);
   });
 });

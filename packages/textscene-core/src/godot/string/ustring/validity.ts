@@ -1,9 +1,8 @@
-import { hexDigitCodeValue, isDigitCode } from '../charUtils.js';
+import { isDigitCode, isHexDigitCode } from '../charUtils.js';
 
 const PLUS = 0x2b;
 const MINUS = 0x2d;
 
-const isHexDigit = (code: number) => hexDigitCodeValue(code) !== undefined;
 const isSign = (code: number | undefined) => code === PLUS || code === MINUS;
 
 /** Where the digits start: past a sign, unless the sign is the whole text. */
@@ -22,7 +21,7 @@ export function isValidHexNumber(codes: readonly number[], withPrefix: boolean):
     if (codes.length < 3 || codes[from] !== 0x30 || codes[from + 1] !== 0x78) return false;
     from += 2;
   }
-  return from !== codes.length && codes.slice(from).every(isHexDigit);
+  return from !== codes.length && codes.slice(from).every(isHexDigitCode);
 }
 
 /** `String::is_valid_float` (ustring.cpp:4802): digits, one dot before an exponent, and a signed exponent. */

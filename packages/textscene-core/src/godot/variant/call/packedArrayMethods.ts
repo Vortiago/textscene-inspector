@@ -1,131 +1,17 @@
 import { appendAll } from '../../templates/arrayWrite.js';
-import type { Quaternion } from '../../math/quaternion.js';
-import type { Rgba } from '../../math/math.js';
-import type { Vector2, Vector3 } from '../../math/vector.js';
-import { isStringLess } from '../../string/stringOrder.js';
-import { codesOf } from '../../string/ustring/codes.js';
-import { utf8Bytes } from '../../string/ustring/encodings.js';
 import { bisect } from '../../templates/bisect.js';
-import { sortArray, type Less } from '../../templates/sortArray.js';
+import { sortArray } from '../../templates/sortArray.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
-import { NIL, variant, type Variant, type VariantTypeName } from '../value/variant.js';
+import { NIL, bool, int, variant, type Variant, type VariantTypeName } from '../value/variant.js';
+import { PACKED_ELEMENTS, type PackedElement, type PackedTypeName } from '../value/packedElements.js';
 import { representableLength } from './arrayLength.js';
 import { ERROR_CODE } from './errorCode.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import { type MethodPort, portOn } from './methodPort.js';
 
-/** How a Packed*Array holds, compares and writes the `T` of its `Vector<T>`. */
-interface PackedElement<T> {
-  /** The C++ parameter `T`, which the method's caster reads an argument as. */
-  readonly parameter: MethodParameter;
-  readonly stored: (argument: CastArgument) => T;
-  readonly read: (element: T) => Variant;
-  /** `T::operator==`, which `find`, `count`, `has` and `erase` compare by. */
-  readonly isEqual: (a: T, b: T) => boolean;
-  /** `Comparator<T>`, which `sort` and `bsearch` order by. */
-  readonly isLess: Less<T>;
-  /** `T()`, which `get` gives past the end and `resize` fills with. */
-  readonly zero: T;
-  /** `to_byte_array`: the bytes of the elements as memory holds them, little-endian. */
-  readonly bytes?: (elements: readonly T[]) => number[];
-}
-
-const int = (value: bigint | number): Variant => variant('INT', BigInt(value));
-const bool = (value: boolean): Variant => variant('BOOL', value);
 const errorCode = (code: bigint): Variant => variant('INT', code);
-
-const bytesOf = (view: ArrayBufferView) => [...new Uint8Array(view.buffer, view.byteOffset, view.byteLength)];
 
 /** A packed array of `bytes`. */
 const byteArray = (bytes: readonly number[]): Variant => variant('PACKED_BYTE_ARRAY', [...bytes]);
-
-const isSameNumber = <T extends number | bigint | string>(a: T, b: T) => a === b;
-const isNumberLess = <T extends number | bigint>(a: T, b: T) => a < b;
-
-const BYTE_ELEMENT: PackedElement<number> = {
-  parameter: 'uint8_t',
-  stored: (argument) => argument as number,
-  read: int,
-  isEqual: isSameNumber,
-  isLess: isNumberLess,
-  zero: 0,
-};
-
-const INT32_ELEMENT: PackedElement<number> = {
-  ...BYTE_ELEMENT,
-  parameter: 'int32_t',
-  bytes: (elements) => bytesOf(Int32Array.from(elements)),
-};
-
-const INT64_ELEMENT: PackedElement<bigint> = {
-  parameter: 'int64_t',
-  stored: (argument) => argument as bigint,
-  read: int,
-  isEqual: isSameNumber,
-  isLess: isNumberLess,
-  zero: 0n,
-  bytes: (elements) => bytesOf(BigInt64Array.from(elements)),
-};
-
-const float = (value: number): Variant => variant('FLOAT', value);
-
-const FLOAT32_ELEMENT: PackedElement<number> = {
-  parameter: 'float',
-  stored: (argument) => argument as number,
-  read: float,
-  isEqual: isSameNumber,
-  isLess: isNumberLess,
-  zero: 0,
-  bytes: (elements) => bytesOf(Float32Array.from(elements)),
-};
-
-const FLOAT64_ELEMENT: PackedElement<number> = {
-  ...FLOAT32_ELEMENT,
-  parameter: 'double',
-  bytes: (elements) => bytesOf(Float64Array.from(elements)),
-};
-
-const STRING_ELEMENT: PackedElement<string> = {
-  parameter: 'String',
-  stored: (argument) => argument as string,
-  read: (element) => variant('STRING', element),
-  isEqual: isSameNumber,
-  isLess: isStringLess,
-  zero: '',
-  // `func_PackedStringArray_to_byte_array` (variant_call.cpp:1158): each text's UTF-8 and a NUL.
-  bytes: (elements) => elements.flatMap((text) => [...utf8Bytes(codesOf(text)), 0]),
-};
-
-/** A Packed*Array of a math type, whose parts are each a `real_t` float. */
-function partsElement<T extends object>(
-  type: VariantTypeName,
-  parts: readonly (keyof T)[],
-  zero: T
-): PackedElement<T> {
-  const partsOf = (value: T) => parts.map((part) => value[part] as number);
-  return {
-    parameter: type,
-    stored: (argument) => (argument as Variant).value as T,
-    read: (element) => variant(type, element as never) as Variant,
-    isEqual: (a, b) => parts.every((part) => a[part] === b[part]),
-    // `operator<` of the vectors and Color (vector3.h:484, color.h:387): the first part that differs decides.
-    isLess: (a, b) => {
-      for (const part of parts) if (a[part] !== b[part]) return (a[part] as number) < (b[part] as number);
-      return false;
-    },
-    zero,
-    bytes: (elements) => bytesOf(Float32Array.from(elements.flatMap(partsOf))),
-  };
-}
-
-const VECTOR2_ELEMENT = partsElement<Vector2>('VECTOR2', ['x', 'y'], { x: 0, y: 0 });
-const VECTOR3_ELEMENT = partsElement<Vector3>('VECTOR3', ['x', 'y', 'z'], { x: 0, y: 0, z: 0 });
-const VECTOR4_ELEMENT = partsElement<Quaternion>('VECTOR4', ['x', 'y', 'z', 'w'], {
-  x: 0,
-  y: 0,
-  z: 0,
-  w: 0,
-});
-const COLOR_ELEMENT = partsElement<Rgba>('COLOR', ['r', 'g', 'b', 'a'], { r: 0, g: 0, b: 0, a: 1 });
 
 /** The methods every Packed*Array binds on its `Vector<T>` (variant_call.cpp:2831). */
 function packedArrayMethods<T>(
@@ -134,10 +20,7 @@ function packedArrayMethods<T>(
 ): Readonly<Record<string, MethodPort>> {
   const elementsOf = (base: Variant) => base.value as unknown as T[];
   const packed = (elements: readonly T[]) => variant(type, [...elements] as never) as Variant;
-  const port = (
-    parameters: readonly MethodParameter[],
-    body: (elements: T[], args: readonly CastArgument[]) => Variant
-  ) => methodPort(parameters, (base, args) => body(elementsOf(base), args));
+  const port = portOn(elementsOf);
   const at = (args: readonly CastArgument[], index: number) => Number(args[index] as bigint);
   const value = (args: readonly CastArgument[], index: number) => element.stored(args[index]!);
   const isIndex = (index: number, elements: readonly T[]) => index >= 0 && index < elements.length;
@@ -253,13 +136,10 @@ function packedArrayMethods<T>(
   };
 }
 
-export const PACKED_BYTE_ARRAY_SHARED_METHODS = packedArrayMethods('PACKED_BYTE_ARRAY', BYTE_ELEMENT);
-export const PACKED_INT32_ARRAY_METHODS = packedArrayMethods('PACKED_INT32_ARRAY', INT32_ELEMENT);
-export const PACKED_INT64_ARRAY_METHODS = packedArrayMethods('PACKED_INT64_ARRAY', INT64_ELEMENT);
-export const PACKED_FLOAT32_ARRAY_METHODS = packedArrayMethods('PACKED_FLOAT32_ARRAY', FLOAT32_ELEMENT);
-export const PACKED_FLOAT64_ARRAY_METHODS = packedArrayMethods('PACKED_FLOAT64_ARRAY', FLOAT64_ELEMENT);
-export const PACKED_STRING_ARRAY_METHODS = packedArrayMethods('PACKED_STRING_ARRAY', STRING_ELEMENT);
-export const PACKED_VECTOR2_ARRAY_METHODS = packedArrayMethods('PACKED_VECTOR2_ARRAY', VECTOR2_ELEMENT);
-export const PACKED_VECTOR3_ARRAY_METHODS = packedArrayMethods('PACKED_VECTOR3_ARRAY', VECTOR3_ELEMENT);
-export const PACKED_COLOR_ARRAY_METHODS = packedArrayMethods('PACKED_COLOR_ARRAY', COLOR_ELEMENT);
-export const PACKED_VECTOR4_ARRAY_METHODS = packedArrayMethods('PACKED_VECTOR4_ARRAY', VECTOR4_ELEMENT);
+/** The methods every packed array has, by type. PackedByteArray adds its own in packedByteArrayMethods. */
+export const PACKED_ARRAY_METHODS = Object.fromEntries(
+  Object.entries(PACKED_ELEMENTS).map(([type, element]) => [
+    type,
+    packedArrayMethods(type as PackedTypeName, element as PackedElement<unknown>),
+  ])
+) as Readonly<Record<PackedTypeName, Readonly<Record<string, MethodPort>>>>;

@@ -18,28 +18,25 @@ import {
   type Quaternion,
 } from '../../math/quaternion.js';
 import { acosf, cosf, isEqualApproxf, sinf, sqrtf } from '../../math/realMath.js';
-import { normalizedVector3, vector3Length, vector3LengthSquared, type Vector3 } from '../../math/vector.js';
-import type { CastArgument } from '../utility/utilityArguments.js';
-import { variant, type Variant } from '../value/variant.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import {
+  normalizedVector3,
+  VECTOR3_ZERO,
+  vector3Length,
+  vector3LengthSquared,
+  type Vector3,
+} from '../../math/vector.js';
+import { numberAt, valueAt, type CastArgument } from '../utility/utilityArguments.js';
+import { bool, real, variant, vector3, type Variant } from '../value/variant.js';
+import { methodPort, portOn, valueOf, type MethodPort } from './methodPort.js';
 
 const f = Math.fround;
 const LANES = ['x', 'y', 'z', 'w'] as const;
 const ZERO_QUATERNION: Quaternion = { x: 0, y: 0, z: 0, w: 0 };
-const ZERO_VECTOR: Vector3 = { x: 0, y: 0, z: 0 };
 
 const quaternionOf = (q: Quaternion): Variant => variant('QUATERNION', q);
-const vectorOf = (v: Vector3): Variant => variant('VECTOR3', v);
-const real = (value: number): Variant => variant('FLOAT', value);
-const bool = (value: boolean): Variant => variant('BOOL', value);
-const quaternionAt = (args: readonly CastArgument[], index: number) =>
-  (args[index] as Variant).value as Quaternion;
-const numberAt = (args: readonly CastArgument[], index: number) => args[index] as number;
+const quaternionAt = valueAt<Quaternion>;
 
-const port = (
-  parameters: readonly MethodParameter[],
-  body: (q: Quaternion, args: readonly CastArgument[]) => Variant
-) => methodPort(parameters, (base, args) => body(base.value as Quaternion, args));
+const port = portOn(valueOf<Quaternion>);
 
 const negated = (q: Quaternion): Quaternion => ({ x: -q.x, y: -q.y, z: -q.z, w: -q.w });
 
@@ -197,13 +194,13 @@ export const QUATERNION_METHODS: Readonly<Record<string, MethodPort>> = {
     }
   ),
   get_euler: port(['EulerOrder'], (q, args) =>
-    vectorOf(
-      quaternionIsNormalized(q) ? basisGetEuler(basisFromQuaternion(q), numberAt(args, 0)) : ZERO_VECTOR
+    vector3(
+      quaternionIsNormalized(q) ? basisGetEuler(basisFromQuaternion(q), numberAt(args, 0)) : VECTOR3_ZERO
     )
   ),
   from_euler: methodPort(['VECTOR3'], (_base, [euler]) =>
     quaternionOf(fromEuler((euler as Variant).value as Vector3))
   ),
-  get_axis: port([], (q) => vectorOf(axisOf(q))),
+  get_axis: port([], (q) => vector3(axisOf(q))),
   get_angle: port([], (q) => real(angleOf(q))),
 };

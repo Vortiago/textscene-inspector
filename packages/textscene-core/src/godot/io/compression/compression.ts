@@ -51,7 +51,7 @@ export function decompress(
     case CompressionMode.Gzip:
       return bufferSize > INT32_MAX
         ? EMPTY
-        : fitting(inflateWrapped(source, mode, lent(decoders).inflate), bufferSize);
+        : fitting(inflateWrapped(source, mode, lent(decoders).inflate, Number(bufferSize)), bufferSize);
     case CompressionMode.Zstd:
     case CompressionMode.Brotli:
       // Godot allocates `bufferSize` first, and an allocation this port cannot hold depends on the machine.
@@ -72,7 +72,7 @@ export function decompressDynamic(
   if (source.length === 0) return EMPTY;
   if (mode === CompressionMode.Brotli) return withinMax(brotliDynamic(source, lent(decoders)), maxSize);
   if (mode !== CompressionMode.Deflate && mode !== CompressionMode.Gzip) return EMPTY;
-  const stream = inflateWrapped(source, mode, lent(decoders).inflate);
+  const stream = inflateWrapped(source, mode, lent(decoders).inflate, dynamicLimit(maxSize));
   if (!stream) return EMPTY;
   return stream.end < source.length
     ? withTrailingBytes(stream.output, maxSize)
@@ -88,6 +88,10 @@ function withTrailingBytes(output: Uint8Array, maxSize: bigint): Uint8Array {
     'decompress_dynamic of a stream with bytes after its end, where Godot never returns'
   );
 }
+
+/** The end of the first chunk past `maxSize`: an output that reaches it is empty, trailing bytes or not. */
+const dynamicLimit = (maxSize: bigint): number =>
+  maxSize < 0n ? Infinity : Number((maxSize / BigInt(GZIP_CHUNK) + 1n) * BigInt(GZIP_CHUNK));
 
 const withinMax = (output: Uint8Array, maxSize: bigint): Uint8Array =>
   maxSize >= 0n && output.length > maxSize ? EMPTY : output;
@@ -120,8 +124,10 @@ function decompressFastLz(source: Uint8Array, bufferSize: number): Uint8Array {
   return written.subarray(0, bufferSize);
 }
 
-const inflateWrapped = (source: Uint8Array, mode: number, inflate: RawInflate): InflatedStream | undefined =>
-  mode === CompressionMode.Deflate ? inflateZlib(source, inflate) : inflateGzip(source, inflate);
+const inflateWrapped = (source: Uint8Array, mode: number, inflate: RawInflate, limit: number) =>
+  mode === CompressionMode.Deflate
+    ? inflateZlib(source, inflate, limit)
+    : inflateGzip(source, inflate, limit);
 
 const codec = (decoders: Decoders, mode: number) =>
   mode === CompressionMode.Zstd ? decoders.zstd : decoders.brotli;

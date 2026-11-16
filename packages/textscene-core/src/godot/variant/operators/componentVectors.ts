@@ -1,6 +1,8 @@
 import { storedReal as f } from '../../math/real.js';
-import { divideInt32, int64ToFloat32, remainderInt32, wrapInt32 } from '../cInteger.js';
+import { VECTOR3_AXES } from '../../math/vector.js';
+import { divideInt32, remainderInt32, wrapInt32 } from '../cInteger.js';
 import type { Variant, VariantTypeName } from '../value/variant.js';
+import { castArgument } from '../utility/utilityArguments.js';
 
 type Components = Readonly<Record<string, number>>;
 
@@ -21,7 +23,7 @@ const FLOAT_ELEMENTS: ElementArithmetic = {
   multiply: (a, b) => f(a * b),
   divide: (a, b) => f(a / b),
   negate: (a) => -a,
-  scalar: (scalar) => (scalar.type === 'INT' ? int64ToFloat32(scalar.value) : f(Number(scalar.value))),
+  scalar: (scalar) => castArgument(scalar, 'float') as number,
 };
 
 const INT32_ELEMENTS: ElementArithmetic = {
@@ -41,17 +43,16 @@ export interface ComponentVector {
 }
 
 const XY = ['x', 'y'];
-const XYZ = ['x', 'y', 'z'];
 const XYZW = ['x', 'y', 'z', 'w'];
 
 export const COMPONENT_VECTORS: Readonly<Partial<Record<VariantTypeName, ComponentVector>>> = {
   VECTOR2: { keys: XY, elements: FLOAT_ELEMENTS },
-  VECTOR3: { keys: XYZ, elements: FLOAT_ELEMENTS },
+  VECTOR3: { keys: VECTOR3_AXES, elements: FLOAT_ELEMENTS },
   VECTOR4: { keys: XYZW, elements: FLOAT_ELEMENTS },
   QUATERNION: { keys: XYZW, elements: FLOAT_ELEMENTS },
   COLOR: { keys: ['r', 'g', 'b', 'a'], elements: FLOAT_ELEMENTS },
   VECTOR2I: { keys: XY, elements: INT32_ELEMENTS, realType: 'VECTOR2' },
-  VECTOR3I: { keys: XYZ, elements: INT32_ELEMENTS, realType: 'VECTOR3' },
+  VECTOR3I: { keys: VECTOR3_AXES, elements: INT32_ELEMENTS, realType: 'VECTOR3' },
   VECTOR4I: { keys: XYZW, elements: INT32_ELEMENTS, realType: 'VECTOR4' },
 };
 

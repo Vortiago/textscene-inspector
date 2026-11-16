@@ -7,8 +7,10 @@ import { storedReal as f } from '../../math/real.js';
 import type { Rect2 } from '../../math/rect2.js';
 import { multiplyTransform2D, transform2DXform, type Transform2DColumns } from '../../math/transform2d.js';
 import { multiplyTransform3D, transform3DXform, type Transform3D } from '../../math/transform3d.js';
-import { divideInt64, doubleToInt64, int64ToFloat32, remainderInt64, wrapInt64 } from '../cInteger.js';
+import { divideInt64, doubleToInt64, remainderInt64, wrapInt64 } from '../cInteger.js';
+import { castArgument } from '../utility/utilityArguments.js';
 import {
+  isNumber,
   variant,
   type Variant,
   type VariantTypeName,
@@ -31,11 +33,8 @@ import * as m from './matrices.js';
 type Components = Readonly<Record<string, number>>;
 type Binary = 'add' | 'subtract' | 'multiply' | 'divide';
 
-const isScalar = (value: Variant) => value.type === 'INT' || value.type === 'FLOAT';
-
 /** A scalar operand as the `real_t` parameter of a member operator takes it. */
-const realOf = (scalar: Variant) =>
-  scalar.type === 'INT' ? int64ToFloat32(scalar.value) : f(scalar.value as number);
+const realOf = (scalar: Variant) => castArgument(scalar, 'float') as number;
 
 const make = (type: VariantTypeName, value: unknown) => variant(type, value as never) as Variant;
 
@@ -132,9 +131,9 @@ function matrixProduct(a: Variant, b: Variant): Variant | undefined {
 
 /** `a op b` with the C++ operator of the two operand types. A free `scalar * x` is `x * scalar`. */
 export function binaryArithmetic(operation: Binary, a: Variant, b: Variant): Variant {
-  if (isScalar(a) && isScalar(b)) return scalarBinary(operation, a, b);
-  if (isScalar(a) && operation === 'multiply') return binaryArithmetic(operation, b, a);
-  if (isScalar(b)) {
+  if (isNumber(a) && isNumber(b)) return scalarBinary(operation, a, b);
+  if (isNumber(a) && operation === 'multiply') return binaryArithmetic(operation, b, a);
+  if (isNumber(b)) {
     if (COMPONENT_VECTORS[a.type]) return vectorByScalar(operation, a, b);
     const result = matrixByScalar(operation as 'multiply' | 'divide', a, realOf(b));
     if (result) return result;

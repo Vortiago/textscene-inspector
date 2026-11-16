@@ -47,6 +47,8 @@ export function hexDigitCodeValue(code: number): number | undefined {
   return undefined;
 }
 
+export const isHexDigitCode = (code: number): boolean => hexDigitCodeValue(code) !== undefined;
+
 /** `hexDigitCodeValue` of a one-character text, or undefined for any other text. */
 export const hexDigitValue = (char: string): number | undefined =>
   [...char].length === 1 ? hexDigitCodeValue(char.codePointAt(0)!) : undefined;

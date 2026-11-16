@@ -22,8 +22,8 @@
  *   THE SOFTWARE.
  */
 
-import { representableLength } from '../../variant/call/arrayLength.js';
 import { UnportableUtility } from '../../variant/utility/unportableUtility.js';
+import { rethrowUnportable } from './decoderError.js';
 
 /** `MAX_L2_DISTANCE` (fastlz.c:60). */
 const MAX_L2_DISTANCE = 8191;
@@ -36,7 +36,8 @@ export interface FastLzOutput {
 
 class Decoder {
   private at = 0;
-  private readonly output: number[] = [];
+  private output = new Uint8Array(0);
+  private length = 0;
 
   constructor(
     private readonly input: Uint8Array,
@@ -55,23 +56,33 @@ class Decoder {
   }
 
   result(isComplete: boolean): FastLzOutput {
-    return { written: Uint8Array.from(this.output), isComplete };
+    return { written: this.output.slice(0, this.length), isComplete };
+  }
+
+  /** Room for `count` more bytes, doubling, so a buffer of any size costs only what is written. */
+  private reserve(count: number): void {
+    const needed = this.length + count;
+    if (needed <= this.output.length) return;
+    const grown = allocated(Math.min(this.maxout, Math.max(needed, 2 * this.output.length)));
+    grown.set(this.output.subarray(0, this.length));
+    this.output = grown;
   }
 
   /** `fastlz_memcpy`: false where the run passes the input or the output. */
   copyLiteral(count: number): boolean {
-    if (this.output.length + count > this.maxout || this.at + count > this.input.length) return false;
-    representableLength(this.output.length + count);
-    for (let i = 0; i < count; i++) this.output.push(this.input[this.at++]!);
+    if (this.length + count > this.maxout || this.at + count > this.input.length) return false;
+    this.reserve(count);
+    this.output.set(this.input.subarray(this.at, this.at + count), this.length);
+    [this.at, this.length] = [this.at + count, this.length + count];
     return true;
   }
 
   /** `fastlz_memmove` copies byte by byte, so a match may repeat the bytes it writes. */
   copyMatch(back: number, count: number): boolean {
-    const from = this.output.length - back;
-    if (this.output.length + count > this.maxout || from < 0) return false;
-    representableLength(this.output.length + count);
-    for (let i = 0; i < count; i++) this.output.push(this.output[from + i]!);
+    const from = this.length - back;
+    if (this.length + count > this.maxout || from < 0) return false;
+    this.reserve(count);
+    for (let i = 0; i < count; i++) this.output[this.length++] = this.output[from + i]!;
     return true;
   }
 }
@@ -134,5 +145,15 @@ function fastLz2Decompress(input: Uint8Array, maxout: number): FastLzOutput {
     } else if (!decoder.copyLiteral(control + 1)) return decoder.result(false);
     if (decoder.position >= input.length) return decoder.result(true);
     control = decoder.next();
+  }
+}
+
+/** A typed array of `length` bytes, or the refusal of a length V8 cannot allocate. */
+function allocated(length: number): Uint8Array<ArrayBuffer> {
+  try {
+    return new Uint8Array(length);
+  } catch (error) {
+    rethrowUnportable(error);
+    throw error;
   }
 }

@@ -5,12 +5,28 @@ import { basisOfTransform3D, transform3DOf, type Transform3D } from '../../math/
 import { EMPTY_NODE_PATH, nodePathParts } from '../../string/nodePathParts.js';
 import { stringToInt64 } from '../../string/string.js';
 import { stringToFloat } from '../../string/strtod.js';
-import { doubleToInt32, doubleToInt64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
+import { doubleToInt32, doubleToInt64, wrapInt32 } from '../cInteger.js';
 import { booleanize } from '../compare.js';
 import { STRICT_CONVERSIONS } from '../registrations.generated.js';
 import { stringify } from '../stringify.js';
 import { defaultValue } from '../value/defaultValue.js';
 import { variant, type ColorValue, type Variant, type VariantTypeName } from '../value/variant.js';
+import {
+  isPackedType,
+  PACKED_ELEMENTS,
+  packedElements,
+  type PackedElement,
+  type PackedTypeName,
+} from '../value/packedElements.js';
+import { castTo } from '../utility/utilityArguments.js';
+import {
+  componentsOf as structComponents,
+  isVectorType,
+  MATH_LAYOUT,
+  structOf,
+  type StructVariant,
+  type VectorTypeName,
+} from '../value/mathLayout.js';
 
 export type Components = Readonly<Record<string, number>>;
 
@@ -22,7 +38,7 @@ export function canConvertStrict(from: VariantTypeName, to: VariantTypeName): bo
 }
 
 /** Each named component of a vector, rectangle or colour, through `map`. */
-export const mapComponents = (value: unknown, map: (component: number) => number): Components =>
+const mapComponents = (value: unknown, map: (component: number) => number): Components =>
   Object.fromEntries(Object.entries(value as Components).map(([key, component]) => [key, map(component)]));
 
 /** `Color(const String &)` (color.h:274): an HTML code, else a named colour, else `Color()`. */
@@ -36,29 +52,6 @@ export function colorFromString(text: string): ColorValue {
 function colorFromHex(value: number): ColorValue {
   const byte = (shift: number) => f(((value >>> shift) & 0xff) / 255);
   return { r: byte(24), g: byte(16), b: byte(8), a: byte(0) };
-}
-
-const PACKED_ELEMENT_TYPE: Readonly<Partial<Record<VariantTypeName, VariantTypeName>>> = {
-  PACKED_BYTE_ARRAY: 'INT',
-  PACKED_INT32_ARRAY: 'INT',
-  PACKED_INT64_ARRAY: 'INT',
-  PACKED_FLOAT32_ARRAY: 'FLOAT',
-  PACKED_FLOAT64_ARRAY: 'FLOAT',
-  PACKED_STRING_ARRAY: 'STRING',
-  PACKED_VECTOR2_ARRAY: 'VECTOR2',
-  PACKED_VECTOR3_ARRAY: 'VECTOR3',
-  PACKED_COLOR_ARRAY: 'COLOR',
-  PACKED_VECTOR4_ARRAY: 'VECTOR4',
-};
-
-/** The element a packed array holds as a Variant: its ints as INT and its floats as FLOAT. */
-export function packedElements(packed: Variant): Variant[] {
-  const type = PACKED_ELEMENT_TYPE[packed.type]!;
-  return (packed.value as readonly unknown[]).map((element) =>
-    type === 'INT' && typeof element === 'number'
-      ? variant('INT', BigInt(element))
-      : (variant(type, element as never) as Variant)
-  );
 }
 
 // _to_int<T> and _to_float<T> (variant.h:361): Nil is 0, a String reads its text, and other types 0.
@@ -77,7 +70,8 @@ function toInt64(value: Variant): bigint {
   }
 }
 
-function toInt32(value: Variant): number {
+/** `_to_int<int32_t>`: a double through the int32 cast, every other source through its int64 bits. */
+export function toInt32(value: Variant): number {
   return value.type === 'FLOAT' ? doubleToInt32(value.value) : wrapInt32(toInt64(value));
 }
 
@@ -97,52 +91,27 @@ export function toDouble(value: Variant): number {
   }
 }
 
-/** Each element converted as `Packed*Array(Array)` converts it (variant.cpp:2240). */
-function packedFromArray(type: VariantTypeName, elements: readonly Variant[]): unknown[] {
-  switch (type) {
-    case 'PACKED_BYTE_ARRAY':
-      return elements.map((element) => toInt32(element) & 0xff);
-    case 'PACKED_INT32_ARRAY':
-      return elements.map(toInt32);
-    case 'PACKED_INT64_ARRAY':
-      return elements.map(toInt64);
-    case 'PACKED_FLOAT32_ARRAY':
-      return elements.map((element) =>
-        element.type === 'INT' ? int64ToFloat32(element.value) : f(toDouble(element))
-      );
-    case 'PACKED_FLOAT64_ARRAY':
-      return elements.map(toDouble);
-    case 'PACKED_STRING_ARRAY':
-      return elements.map(stringify);
-    default: {
-      const elementType = PACKED_ELEMENT_TYPE[type]!;
-      return elements.map((element) => castVariant(element, elementType).value);
-    }
-  }
+/** Each element converted as `Packed*Array(Array)` converts it (variant.cpp:2240), through its `T`. */
+function packedFromArray(type: PackedTypeName, elements: readonly Variant[]): unknown[] {
+  const element = PACKED_ELEMENTS[type] as PackedElement<unknown>;
+  return elements.map((value) => element.stored(castTo(value, element.parameter)));
 }
 
-const VECTOR_AXES = ['x', 'y', 'z', 'w'] as const;
-const VECTOR_SIZE: Readonly<Partial<Record<VariantTypeName, number>>> = {
-  VECTOR2: 2,
-  VECTOR2I: 2,
-  VECTOR3: 3,
-  VECTOR3I: 3,
-  VECTOR4: 4,
-  VECTOR4I: 4,
-};
-
 // `Variant::operator Vector3()` and its kin (variant.cpp:1751): the leading components, then zeros.
-function castVector(value: Variant, type: VariantTypeName): Components {
-  const source = value.value as Components;
-  const toComponent = type.endsWith('I') ? doubleToInt32 : f;
-  const axes = VECTOR_AXES.slice(0, VECTOR_SIZE[type]);
-  return Object.fromEntries(axes.map((axis) => [axis, toComponent(source[axis] ?? 0)]));
+function castVector(value: StructVariant, type: VectorTypeName): unknown {
+  const source = structComponents(value);
+  const { component, count } = MATH_LAYOUT[type];
+  const toComponent = component === 'int32' ? doubleToInt32 : f;
+  return structOf(
+    type,
+    Array.from({ length: count }, (_, index) => toComponent(source[index] ?? 0))
+  ).value;
 }
 
 // `_convert_array_from_variant` (variant.cpp:2094): the elements of an Array or a packed array, else none.
 function elementsOf(value: Variant): readonly Variant[] {
   if (value.type === 'ARRAY') return value.value;
-  return PACKED_ELEMENT_TYPE[value.type] ? packedElements(value) : [];
+  return isPackedType(value.type) ? packedElements(value) : [];
 }
 
 /** `Variant::operator T()`: a source type the operator does not take gives the default of `type`. */
@@ -173,7 +142,7 @@ function convertedValue(value: Variant, type: VariantTypeName): unknown {
     case 'VECTOR2I':
     case 'VECTOR3I':
     case 'VECTOR4I':
-      return VECTOR_SIZE[value.type] ? castVector(value, type) : undefined;
+      return isVectorType(value.type) ? castVector(value as StructVariant, type) : undefined;
     case 'RECT2':
       return value.type === 'RECT2I' ? mapComponents(value.value, f) : undefined;
     case 'RECT2I':
@@ -198,7 +167,7 @@ function convertedValue(value: Variant, type: VariantTypeName): unknown {
     case 'ARRAY':
       return elementsOf(value);
     default:
-      return PACKED_ELEMENT_TYPE[type] ? packedFromArray(type, elementsOf(value)) : undefined;
+      return isPackedType(type) ? packedFromArray(type, elementsOf(value)) : undefined;
   }
 }
 

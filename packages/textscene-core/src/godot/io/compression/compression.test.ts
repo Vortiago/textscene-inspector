@@ -14,6 +14,16 @@ const TEXT = new TextEncoder().encode('hello hello hello hello world');
 const FASTLZ = Uint8Array.from([5, 104, 101, 108, 108, 111, 32, 224, 9, 5, 4, 119, 111, 114, 108, 100]);
 const join = (...parts: ArrayLike<number>[]) => Uint8Array.from(parts.flatMap((part) => Array.from(part)));
 
+/** The decoders with an inflate that records each buffer it is lent. */
+function recordingLends(): { decoders: Decoders; lent: (Uint8Array | undefined)[] } {
+  const lent: (Uint8Array | undefined)[] = [];
+  const inflate: Decoders['inflate'] = (deflate, out) => {
+    lent.push(out);
+    return DECODERS.inflate(deflate, out);
+  };
+  return { decoders: { ...DECODERS, inflate }, lent };
+}
+
 describe('decompress', () => {
   it('gives empty for a buffer size of 0 or a mode past Brotli', () => {
     expect(decompress(FASTLZ, 0n, CompressionMode.FastLz)).toEqual(new Uint8Array(0));
@@ -32,6 +42,33 @@ describe('decompress', () => {
     expect(() => decompress(Uint8Array.from([0x02, 1, 2, 3]), 8n, CompressionMode.FastLz)).toThrow(
       new UnportableUtility('decompress of a FastLZ stream shorter than its buffer, which reads unset memory')
     );
+  });
+
+  it('lends the decoder a buffer one byte past the buffer size, so a stream inflating far past it stops there', () => {
+    const outLengths: number[] = [];
+    const inflate: Decoders['inflate'] = (deflate, out) => {
+      outLengths.push(out?.length ?? Infinity);
+      return DECODERS.inflate(deflate, out);
+    };
+    const zeros = deflateSync(new Uint8Array(1_000_000));
+    expect(decompress(zeros, 10n, CompressionMode.Deflate, { ...DECODERS, inflate })).toEqual(
+      new Uint8Array(0)
+    );
+    expect(Math.max(...outLengths)).toBe(11);
+  });
+
+  it('lends one buffer for every decode of a stream, and keeps the output it returns', () => {
+    const { decoders, lent } = recordingLends();
+    expect(decompress(deflateSync(TEXT), 29n, CompressionMode.Deflate, decoders)).toEqual(TEXT);
+    expect(lent.length).toBeGreaterThan(1);
+    expect(new Set(lent).size).toBe(1);
+  });
+
+  it('gives empty for a stored block past the buffer size (edge case)', () => {
+    expect(decompress(deflateSync(TEXT, { level: 0 }), 5n, CompressionMode.Deflate, DECODERS)).toEqual(
+      new Uint8Array(0)
+    );
+    expect(decompress(gzipSync(TEXT, { level: 0 }), 29n, CompressionMode.Gzip, DECODERS)).toEqual(TEXT);
   });
 
   it('decodes Deflate and GZIP that fit the buffer, and gives empty for one that does not', () => {
@@ -76,6 +113,25 @@ describe('decompressDynamic', () => {
     expect(decompressDynamic(deflateSync(TEXT), 28n, CompressionMode.Deflate, DECODERS)).toEqual(
       new Uint8Array(0)
     );
+  });
+
+  it('lends a buffer one byte past the first 16384-byte chunk past the maximum', () => {
+    const { decoders, lent } = recordingLends();
+    const zeros = deflateSync(new Uint8Array(1_000_000));
+    expect(decompressDynamic(zeros, 100n, CompressionMode.Deflate, decoders)).toEqual(new Uint8Array(0));
+    expect(lent[0]?.length).toBe(16385);
+  });
+
+  it('lends the next chunk for a maximum that is a whole number of chunks (edge case)', () => {
+    const { decoders, lent } = recordingLends();
+    decompressDynamic(deflateSync(new Uint8Array(1_000_000)), 16384n, CompressionMode.Deflate, decoders);
+    expect(lent[0]?.length).toBe(32769);
+  });
+
+  it('lends no buffer for a negative maximum, which has no limit (edge case)', () => {
+    const { decoders, lent } = recordingLends();
+    expect(decompressDynamic(deflateSync(TEXT), -1n, CompressionMode.Deflate, decoders)).toEqual(TEXT);
+    expect(lent.every((out) => out === undefined)).toBe(true);
   });
 
   it('gives empty for FastLZ, which it does not read', () => {

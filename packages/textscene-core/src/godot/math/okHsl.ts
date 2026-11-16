@@ -116,59 +116,25 @@ function toe(x: number): number {
   return mul(0.5, sum(shifted, f(Math.sqrt(sum(mul(shifted, shifted), mul(4, k2, k3, x))))));
 }
 
-function getStMid(a: number, b: number): { S: number; T: number } {
-  const S = sum(
-    f(0.11516993),
-    f(
-      1 /
-        sum(
-          f(7.4477897),
-          mul(f(4.1590124), b),
-          mul(
-            a,
-            sum(
-              f(-2.19557347),
-              mul(f(1.75198401), b),
-              mul(
-                a,
-                sum(
-                  f(-2.13704948),
-                  -mul(f(10.02301043), b),
-                  mul(a, sum(f(-4.24894561), mul(f(5.38770819), b), mul(f(4.69891013), a)))
-                )
-              )
-            )
-          )
-        )
-    )
-  );
-  const T = sum(
-    f(0.11239642),
-    f(
-      1 /
-        sum(
-          f(1.6132032),
-          -mul(f(0.68124379), b),
-          mul(
-            a,
-            sum(
-              f(0.40370612),
-              mul(f(0.90148123), b),
-              mul(
-                a,
-                sum(
-                  f(-0.27087943),
-                  mul(f(0.6122399), b),
-                  mul(a, sum(f(0.00299215), -mul(f(0.45399568), b), -mul(f(0.14661872), a)))
-                )
-              )
-            )
-          )
-        )
-    )
-  );
-  return { S, T };
+// `get_ST_mid` (ok_color.h:425): S and T are one rational fit in a and b, each with its own coefficients.
+const ST_MID_S = [
+  0.11516993, 7.4477897, 4.1590124, -2.19557347, 1.75198401, -2.13704948, -10.02301043, -4.24894561,
+  5.38770819, 4.69891013,
+].map(f);
+const ST_MID_T = [
+  0.11239642, 1.6132032, -0.68124379, 0.40370612, 0.90148123, -0.27087943, 0.6122399, 0.00299215, -0.45399568,
+  -0.14661872,
+].map(f);
+
+function stMidFit(coefficients: readonly number[], a: number, b: number): number {
+  const [c, k0, kb0, k1, kb1, k2, kb2, k3, kb3, ka] = coefficients as [number, ...number[]];
+  const cubic = sum(k3!, mul(kb3!, b), mul(ka!, a));
+  const quadratic = sum(k2!, mul(kb2!, b), mul(a, cubic));
+  const linear = sum(k1!, mul(kb1!, b), mul(a, quadratic));
+  return sum(c, f(1 / sum(k0!, mul(kb0!, b), mul(a, linear))));
 }
+
+const getStMid = (a: number, b: number) => ({ S: stMidFit(ST_MID_S, a, b), T: stMidFit(ST_MID_T, a, b) });
 
 /** `get_Cs` (ok_color.h:451). */
 function getCs(L: number, a: number, b: number): { C0: number; Cmid: number; Cmax: number } {

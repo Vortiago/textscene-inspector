@@ -1,17 +1,10 @@
 import { defaultValue } from '../value/defaultValue.js';
-import { NIL, variant, type Variant, type VariantOf } from '../value/variant.js';
+import { NIL, variant, type VariantOf } from '../value/variant.js';
 import { ERROR_CODE } from './errorCode.js';
-import {
-  methodPort,
-  NIL_RESULT,
-  type MethodParameter,
-  type MethodPort,
-  type VarargPort,
-} from './methodPort.js';
+import { NIL_RESULT, type MethodPort, type VarargPort, portOn } from './methodPort.js';
 
 // Every Signal here has object 0, so each method takes its branch for a null Object.
-const port = (parameters: readonly MethodParameter[], body: (name: string) => Variant): MethodPort =>
-  methodPort(parameters, (base) => body((base as VariantOf<'SIGNAL'>).value));
+const port = portOn((base) => (base as VariantOf<'SIGNAL'>).value);
 
 export const SIGNAL_METHODS: Readonly<Record<string, MethodPort>> = {
   is_null: port([], (name) => variant('BOOL', name === '')),

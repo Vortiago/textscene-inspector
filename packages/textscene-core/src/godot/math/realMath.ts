@@ -4,7 +4,7 @@ import { cosReal, sinReal } from './realSin.js';
 
 const f = Math.fround;
 
-const CMP_EPSILON_FLOAT = f(CMP_EPSILON);
+export const CMP_EPSILON_FLOAT = f(CMP_EPSILON);
 
 /**
  * `Math::sqrt` of a float: the square root rounded to float.

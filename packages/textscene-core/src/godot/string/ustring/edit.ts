@@ -1,5 +1,5 @@
 import { GodotCrash } from '../../variant/cInteger.js';
-import { MAX_TEXT_LENGTH, substr, UnrepresentableText } from './codes.js';
+import { append, MAX_TEXT_LENGTH, substr, UnrepresentableText } from './codes.js';
 import { find, type Fold } from './search.js';
 
 /** `_replace_common` (ustring.cpp:3601): each match that does not overlap, left to right. */
@@ -13,10 +13,10 @@ export function replace(
   const result: number[] = [];
   let last = 0;
   for (let at = find(codes, key, 0, fold); at >= 0; at = find(codes, key, at + key.length, fold)) {
-    result.push(...codes.slice(last, at), ...replacement);
+    append(result, codes.slice(last, at), replacement);
     last = at + key.length;
   }
-  return [...result, ...codes.slice(last)];
+  return append(result, codes.slice(last));
 }
 
 /** `String::replace_first` (ustring.cpp:3728). */
@@ -91,10 +91,10 @@ export function indent(codes: readonly number[], prefix: readonly number[]): num
   codes.forEach((code, at) => {
     if (code !== NEWLINE) return;
     if (at === lineStart) result.push(code);
-    else result.push(...prefix, ...substr(codes, lineStart, at - lineStart + 1));
+    else append(result, prefix, substr(codes, lineStart, at - lineStart + 1));
     lineStart = at + 1;
   });
-  if (lineStart !== codes.length) result.push(...prefix, ...substr(codes, lineStart));
+  if (lineStart !== codes.length) append(result, prefix, substr(codes, lineStart));
   return result;
 }
 
@@ -109,7 +109,7 @@ export function dedent(codes: readonly number[]): number[] {
   let indentStop = -1;
   codes.forEach((code, at) => {
     if (code === NEWLINE) {
-      if (hasText) result.push(...substr(codes, indentStop, at - indentStop));
+      if (hasText) append(result, substr(codes, indentStop, at - indentStop));
       result.push(NEWLINE);
       hasText = false;
       lineStart = at + 1;
@@ -129,7 +129,7 @@ export function dedent(codes: readonly number[]): number[] {
       if (column >= firstIndent.length || code !== firstIndent[column]) indentStop = at;
     }
   });
-  if (hasText) result.push(...substr(codes, indentStop, codes.length - indentStop));
+  if (hasText) append(result, substr(codes, indentStop, codes.length - indentStop));
   return result;
 }
 

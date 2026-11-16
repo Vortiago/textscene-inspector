@@ -1,4 +1,4 @@
-import { lineAt } from '../godot-shader-language/cppText.mjs';
+import { registerStatements } from '../godot-shader-language/cppText.mjs';
 import { splitArguments } from './cppArguments.mjs';
 
 const REGISTER_OP = /^register_op<(\w+)(?:<(.*)>)?>\(Variant::(\w+), Variant::(\w+), Variant::(\w+)\);$/;
@@ -34,19 +34,10 @@ function registration(statement, line) {
 
 /** The rows of `_register_variant_operators` in `cpp`, the text of variant_op.cpp. */
 export function operatorRegistrations(cpp) {
-  const start = cpp.indexOf('void Variant::_register_variant_operators() {');
-  if (start === -1) throw new Error('expected _register_variant_operators in variant_op.cpp, found none');
-  const end = cpp.indexOf('\n}', start);
   const macros = registerMacros(cpp);
-  const firstLine = lineAt(cpp, start);
-  return cpp
-    .slice(start, end)
-    .split('\n')
-    .slice(1)
-    .flatMap((raw, index) => {
-      const statement = raw.trim();
-      const line = firstLine + 1 + index;
-      if (statement === '' || statement.startsWith('//') || statement.startsWith('memset(')) return [];
+  return registerStatements(cpp, '_register_variant_operators', 'variant_op.cpp').flatMap(
+    ({ statement, line }) => {
+      if (statement.startsWith('memset(')) return [];
       if (statement.startsWith('register_op<')) return [registration(statement, line)];
       const call = MACRO_CALL.exec(statement);
       const macro = call && macros.get(call[1]);
@@ -56,5 +47,6 @@ export function operatorRegistrations(cpp) {
         );
       const values = splitArguments(call[2]);
       return macro.statements.map((body) => registration(substitute(body, macro.parameters, values), line));
-    });
+    }
+  );
 }

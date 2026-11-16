@@ -59,7 +59,7 @@ async function blockInflater(mode: number): Promise<BlockInflater> {
 async function blockDecoders(mode: number): Promise<Decoders | undefined> {
   if (mode === CompressionMode.Deflate || mode === CompressionMode.Gzip) {
     const { inflateSync } = await import('three/addons/libs/fflate.module.js');
-    return { ...UNUSED_DECODERS, inflate: (deflate) => inflateSync(deflate) };
+    return { ...UNUSED_DECODERS, inflate: (deflate, out) => inflateSync(deflate, { out }) };
   }
   if (mode === CompressionMode.Zstd) {
     const { decompress: zstd } = await import('fzstd');

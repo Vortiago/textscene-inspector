@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { variant, type Variant } from '../value/variant.js';
-import { canConvertStrict, castVariant, colorFromString, packedElements } from './variantCast.js';
+import { canConvertStrict, castVariant, colorFromString } from './variantCast.js';
 
 const int = (value: bigint) => variant('INT', value);
 const float = (value: number) => variant('FLOAT', value);
@@ -36,20 +36,6 @@ describe('colorFromString', () => {
 
   it('gives Color() for a text that is neither', () => {
     expect(colorFromString('not a colour')).toEqual({ r: 0, g: 0, b: 0, a: 1 });
-  });
-});
-
-describe('packedElements', () => {
-  it('gives the ints of a packed array as INT', () => {
-    expect(packedElements(variant('PACKED_INT32_ARRAY', [1, -2]))).toEqual([int(1n), int(-2n)]);
-  });
-
-  it('gives the floats of a packed array as FLOAT', () => {
-    expect(packedElements(variant('PACKED_FLOAT64_ARRAY', [0.5]))).toEqual([float(0.5)]);
-  });
-
-  it('gives no element for an empty packed array', () => {
-    expect(packedElements(variant('PACKED_STRING_ARRAY', []))).toEqual([]);
   });
 });
 

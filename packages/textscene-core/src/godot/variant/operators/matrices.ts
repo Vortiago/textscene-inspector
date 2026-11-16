@@ -13,7 +13,7 @@ import {
   transform3DXform,
   type Transform3D,
 } from '../../math/transform3d.js';
-import type { Vector2, Vector3 } from '../../math/vector.js';
+import { VECTOR3_AXES, type Vector2, type Vector3 } from '../../math/vector.js';
 import type { ProjectionValue, Vector4Value } from '../value/variant.js';
 
 type V2 = Readonly<Vector2>;
@@ -139,16 +139,14 @@ export function transform3DXformInvPlane(t: Readonly<Transform3D>, plane: Plane)
   return planeThrough(point, basisXform(transposeBasis(basisOfTransform3D(t)), plane.normal));
 }
 
-const AXES = ['x', 'y', 'z'] as const;
-
 export function transform3DXformAabb(t: Readonly<Transform3D>, box: Readonly<Aabb>): Aabb {
   const n = basisOfTransform3D(t);
   const min = box.position;
   const max = add3(box.position, box.size);
   const low = { ...t.origin };
   const high = { ...t.origin };
-  AXES.forEach((axis, i) => {
-    AXES.forEach((source, j) => {
+  VECTOR3_AXES.forEach((axis, i) => {
+    VECTOR3_AXES.forEach((source, j) => {
       const e = f(n[i * 3 + j]! * min[source]);
       const g = f(n[i * 3 + j]! * max[source]);
       low[axis] = f(low[axis] + (e < g ? e : g));
@@ -163,7 +161,7 @@ function expandAabb(box: Aabb, point: V3): Aabb {
   const end = add3(box.position, box.size);
   const begin = { ...box.position };
   const last = { ...end };
-  for (const axis of AXES) {
+  for (const axis of VECTOR3_AXES) {
     if (point[axis] < begin[axis]) begin[axis] = point[axis];
     if (point[axis] > last[axis]) last[axis] = point[axis];
   }

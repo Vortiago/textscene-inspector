@@ -1,7 +1,7 @@
 import { booleanize, cppEqual, isZero } from '../compare.js';
 import { variantTypeOfCpp } from '../cppType.js';
 import { OPERATOR_REGISTRATIONS } from '../registrations.generated.js';
-import { NIL, variant, type Variant, type VariantOf, type VariantTypeName } from '../value/variant.js';
+import { NIL, bool, variant, type Variant, type VariantOf, type VariantTypeName } from '../value/variant.js';
 import { VARIANT_TYPE } from '../variantType.js';
 import {
   binaryArithmetic,
@@ -32,16 +32,23 @@ export type VariantOperator = (typeof OPERATOR_REGISTRATIONS)[number][0];
 interface Registration {
   readonly evaluator: string;
   readonly types: readonly string[];
+  /** The logic of an `OperatorEvaluator<A>X<B><Or|And|Xor>`, read once. */
+  readonly logic?: keyof typeof LOGIC;
 }
 
-const REGISTRY = new Map<string, Registration>(
-  OPERATOR_REGISTRATIONS.map(([operator, left, right, evaluator, types]) => [
-    `${operator} ${left} ${right}`,
-    { evaluator: evaluator.replace(/^OperatorEvaluator/, ''), types },
-  ])
-);
+/** Written only by `registrationOf`, on the first operator: most imports never evaluate one. */
+let registry: Map<string, Registration> | undefined;
 
-const bool = (value: boolean) => variant('BOOL', value);
+function registrationOf(operator: VariantOperator, a: Variant, b: Variant): Registration | undefined {
+  registry ??= new Map(
+    OPERATOR_REGISTRATIONS.map(([name, left, right, evaluator, types]) => {
+      const stripped = evaluator.replace(/^OperatorEvaluator/, '');
+      const logic = LOGIC_CLASS.exec(stripped)?.[3] as keyof typeof LOGIC | undefined;
+      return [`${name} ${left} ${right}`, { evaluator: stripped, types, ...(logic && { logic }) }];
+    })
+  );
+  return registry.get(`${operator} ${a.type} ${b.type}`);
+}
 
 /** `r_ret` and `r_valid`. A pair with no evaluator leaves Nil. */
 export interface Evaluation {
@@ -50,7 +57,7 @@ export interface Evaluation {
 }
 
 export function evaluateOperator(operator: VariantOperator, a: Variant, b: Variant): Evaluation {
-  const registration = REGISTRY.get(`${operator} ${a.type} ${b.type}`);
+  const registration = registrationOf(operator, a, b);
   if (!registration) return { value: NIL, isValid: false };
   const result = runEvaluator(registration, a, b);
   if (result instanceof InvalidOperands) return { value: result.value, isValid: false };
@@ -98,9 +105,12 @@ const DIVISION_BY_ZERO = 'Division by zero error';
 const MODULO_BY_ZERO = 'Modulo by zero error';
 const NEGATIVE_SHIFT = 'Invalid operands for bit shifting. Only positive operands are supported.';
 
-function runEvaluator({ evaluator, types }: Registration, a: Variant, b: Variant): Variant | InvalidOperands {
-  const logic = LOGIC_CLASS.exec(evaluator);
-  if (logic) return bool(LOGIC[logic[3] as keyof typeof LOGIC](truthOf(a), truthOf(b)));
+function runEvaluator(
+  { evaluator, types, logic }: Registration,
+  a: Variant,
+  b: Variant
+): Variant | InvalidOperands {
+  if (logic) return bool(LOGIC[logic](truthOf(a), truthOf(b)));
   const resultType = (): VariantTypeName => variantTypeOfCpp(types[0]!);
   switch (evaluator) {
     case 'Add':

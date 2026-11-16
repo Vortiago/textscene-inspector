@@ -1,7 +1,6 @@
 import {
   bezierDerivativef,
   bezierInterpolatef,
-  CMP_EPSILON,
   cubicInterpolatef,
   cubicInterpolateInTimef,
   isUnitWithinEpsilon,
@@ -10,18 +9,15 @@ import {
   sign,
   snapped,
 } from '../../math/math.js';
-import { fposmodf, isEqualApproxf, isZeroApproxf, sqrtf } from '../../math/realMath.js';
-import { variant, type Variant } from '../value/variant.js';
+import { CMP_EPSILON_FLOAT, fposmodf, isEqualApproxf, isZeroApproxf, sqrtf } from '../../math/realMath.js';
+import { bool, real, variant, type Variant } from '../value/variant.js';
 import type { MethodPort } from './methodPort.js';
 import { boundMethods, each2, vectorPorts, type Components, type VectorArguments } from './vectorPorts.js';
 
 const f = Math.fround;
-const CMP_EPSILON_FLOAT = f(CMP_EPSILON);
 
 type FloatVectorType = 'VECTOR2' | 'VECTOR3' | 'VECTOR4';
 
-export const real = (value: number): Variant => variant('FLOAT', value);
-const bool = (value: boolean): Variant => variant('BOOL', value);
 export const axis = (index: number): Variant => variant('INT', BigInt(index));
 
 export const dot = (a: Components, b: Components): number =>

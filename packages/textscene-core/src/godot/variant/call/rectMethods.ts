@@ -2,9 +2,9 @@ import type { Rect2 } from '../../math/rect2.js';
 import { cMax, cMin } from '../../math/math.js';
 import { isEqualApproxf } from '../../math/realMath.js';
 import { Side } from '../../math/side.js';
-import type { CastArgument } from '../utility/utilityArguments.js';
-import { variant, type Variant } from '../value/variant.js';
-import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
+import { numberAt, valueAt, type CastArgument } from '../utility/utilityArguments.js';
+import { bool, variant, type Variant } from '../value/variant.js';
+import { methodPort, type MethodParameter, type MethodPort, portOn, valueOf } from './methodPort.js';
 import { componentsOf, vectorOf, type Components } from './vectorPorts.js';
 
 /** The component arithmetic of one rect type: float for `Rect2`, wrapping int32 for `Rect2i`. */
@@ -14,7 +14,6 @@ interface RectArithmetic {
   readonly scalar: MethodParameter;
   readonly add: (a: number, b: number) => number;
   readonly subtract: (a: number, b: number) => number;
-  readonly twice: (a: number) => number;
   readonly absolute: (a: number) => number;
 }
 
@@ -24,7 +23,6 @@ const FLOAT_RECT: RectArithmetic = {
   scalar: 'float',
   add: (a, b) => Math.fround(a + b),
   subtract: (a, b) => Math.fround(a - b),
-  twice: (a) => Math.fround(a * 2),
   absolute: Math.abs,
 };
 
@@ -34,15 +32,12 @@ const INT_RECT: RectArithmetic = {
   scalar: 'int32_t',
   add: (a, b) => (a + b) | 0,
   subtract: (a, b) => (a - b) | 0,
-  twice: (a) => Math.imul(a, 2),
   // Math::abs of an int32 wraps the lowest value back to itself, as std::abs does on x86-64.
   absolute: (a) => (a > 0 ? a : -a | 0),
 };
 
-const bool = (value: boolean): Variant => variant('BOOL', value);
-
 function rectMethods(arithmetic: RectArithmetic): Readonly<Record<string, MethodPort>> {
-  const { type, point, scalar, add, subtract, twice, absolute } = arithmetic;
+  const { type, point, scalar, add, subtract, absolute } = arithmetic;
   const rectOf = (rect: Rect2): Variant => variant(type, rect);
   const endX = (r: Rect2) => add(r.x, r.w);
   const endY = (r: Rect2) => add(r.y, r.h);
@@ -97,13 +92,8 @@ function rectMethods(arithmetic: RectArithmetic): Readonly<Record<string, Method
   const encloses = (r: Rect2, other: Rect2) =>
     other.x >= r.x && other.y >= r.y && endX(other) <= endX(r) && endY(other) <= endY(r);
 
-  const port = (
-    parameters: readonly MethodParameter[],
-    body: (r: Rect2, args: readonly CastArgument[]) => Variant
-  ) => methodPort(parameters, (base, args) => body(base.value as Rect2, args));
-  const rectAt = (args: readonly CastArgument[], index: number) => (args[index] as Variant).value as Rect2;
+  const port = portOn(valueOf<Rect2>);
   const pointAt = (args: readonly CastArgument[], index: number) => componentsOf(args[index] as Variant);
-  const scalarAt = (args: readonly CastArgument[], index: number) => args[index] as number;
 
   return {
     get_center: port([], (r) =>
@@ -121,22 +111,17 @@ function rectMethods(arithmetic: RectArithmetic): Readonly<Record<string, Method
     ),
     has_area: port([], (r) => bool(r.w > 0 && r.h > 0)),
     has_point: port([point], (r, args) => bool(hasPoint(r, pointAt(args, 0)))),
-    encloses: port([type], (r, args) => bool(encloses(r, rectAt(args, 0)))),
-    intersection: port([type], (r, args) => rectOf(intersection(r, rectAt(args, 0)))),
-    merge: port([type], (r, args) => rectOf(merge(r, rectAt(args, 0)))),
+    encloses: port([type], (r, args) => bool(encloses(r, valueAt<Rect2>(args, 0)))),
+    intersection: port([type], (r, args) => rectOf(intersection(r, valueAt<Rect2>(args, 0)))),
+    merge: port([type], (r, args) => rectOf(merge(r, valueAt<Rect2>(args, 0)))),
     expand: port([point], (r, args) => rectOf(expand(r, pointAt(args, 0)))),
     grow: port([scalar], (r, args) => {
-      const amount = scalarAt(args, 0);
-      return rectOf({
-        x: subtract(r.x, amount),
-        y: subtract(r.y, amount),
-        w: add(r.w, twice(amount)),
-        h: add(r.h, twice(amount)),
-      });
+      const amount = numberAt(args, 0);
+      return rectOf(growIndividual(r, amount, amount, amount, amount));
     }),
-    grow_side: port(['Side', scalar], (r, args) => rectOf(growSide(r, scalarAt(args, 0), scalarAt(args, 1)))),
+    grow_side: port(['Side', scalar], (r, args) => rectOf(growSide(r, numberAt(args, 0), numberAt(args, 1)))),
     grow_individual: port([scalar, scalar, scalar, scalar], (r, args) => {
-      const [left, top, right, bottom] = [0, 1, 2, 3].map((index) => scalarAt(args, index));
+      const [left, top, right, bottom] = [0, 1, 2, 3].map((index) => numberAt(args, index));
       return rectOf(growIndividual(r, left!, top!, right!, bottom!));
     }),
     abs: port([], (r) =>
@@ -144,8 +129,8 @@ function rectMethods(arithmetic: RectArithmetic): Readonly<Record<string, Method
     ),
     intersects:
       type === 'RECT2'
-        ? port([type, 'bool'], (r, args) => bool(intersects(r, rectAt(args, 0), args[1] as boolean)))
-        : port([type], (r, args) => bool(intersects(r, rectAt(args, 0), false))),
+        ? port([type, 'bool'], (r, args) => bool(intersects(r, valueAt<Rect2>(args, 0), args[1] as boolean)))
+        : port([type], (r, args) => bool(intersects(r, valueAt<Rect2>(args, 0), false))),
   };
 }
 
