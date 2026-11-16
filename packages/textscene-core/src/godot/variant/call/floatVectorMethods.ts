@@ -38,7 +38,7 @@ export const lengthSquared = (v: Components): number => dot(v, v);
 export const length = (v: Components): number => sqrtf(lengthSquared(v));
 export const minus = (a: Components, b: Components): Components => each2(a, b, (p, q) => f(p - q));
 export const scaled = (v: Components, by: number): Components => v.map((component) => f(component * by));
-export const isNormalized = (v: Components): boolean => isUnitWithinEpsilon(lengthSquared(v));
+const isNormalized = (v: Components): boolean => isUnitWithinEpsilon(lengthSquared(v));
 
 /** `Vector3::normalize` and `Vector4::normalize`: a zero vector becomes positive zeros. */
 export function normalized(v: Components): Components {
