@@ -9,7 +9,11 @@ import { useRef } from 'react';
  * @canonical Keep the previous value while it is equal by value
  */
 export function useByValue<T>(value: T, isSame: (a: T, b: T) => boolean): T {
-  const previous = useRef(value);
-  if (value !== previous.current && !isSame(previous.current, value)) previous.current = value;
-  return previous.current;
+  const kept = useRef({ input: value, output: value });
+  // An input seen last render is not compared again, so a costly `isSame` runs once for each new value.
+  if (value !== kept.current.input) {
+    const output = isSame(kept.current.output, value) ? kept.current.output : value;
+    kept.current = { input: value, output };
+  }
+  return kept.current.output;
 }

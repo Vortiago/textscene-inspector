@@ -13,7 +13,7 @@ import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/ope
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import * as logger from '../../../../logger';
-import { faceOfStyle, resolveRichTextFaces } from './styleFaces';
+import { faceOfStyle, resolveRichTextFaces, richTextStylesInUse } from './styleFaces';
 import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts';
 
 /** `default_theme.cpp:1399`/`:1403`: the second number of the italics `Transform2D`. */
@@ -55,7 +55,7 @@ const ALL_STYLES = [
 
 /** The faces of `n` for text that uses every style. */
 function facesOf(n: SolveNode) {
-  return resolveRichTextFaces(n, ALL_STYLES);
+  return resolveRichTextFaces(n, richTextStylesInUse(ALL_STYLES));
 }
 
 /** The embolden and skew a face carries: 0 for none. */
@@ -154,9 +154,10 @@ describe('resolveRichTextFaces — only the styles a run uses', () => {
     const unusedFont = fontFile(undefined);
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     try {
-      const faces = resolveRichTextFaces(richTextNode({ fontOverrides: { italics_font: unusedFont } }), [
-        { bold: true, italic: false },
-      ]);
+      const faces = resolveRichTextFaces(
+        richTextNode({ fontOverrides: { italics_font: unusedFont } }),
+        richTextStylesInUse([{ bold: true, italic: false }])
+      );
       expect(variationOf(faces.bold).embolden).toBe(1.2);
       expect([faces.italic, faces.boldItalic]).toEqual([faces.normal, faces.normal]);
       expect(warnSpy).not.toHaveBeenCalled();

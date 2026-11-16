@@ -6,6 +6,7 @@
  */
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { withVariation, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
+import type { StyledTextRun } from './nativeSolver';
 import {
   resolveNodeFontMetrics,
   resolveNodeFontMetricsOr,
@@ -32,6 +33,15 @@ const ITALIC_SKEW = 0.2;
 /** `default_theme.cpp:1394`/`:1398`: `variation_embolden` 1.2. */
 const BOLD_EMBOLDEN = 1.2;
 
+type TextStyle = Pick<StyledTextRun, 'bold' | 'italic'>;
+
+/** Which styled faces a run list draws in. */
+export interface RichTextStylesInUse {
+  bold: boolean;
+  italic: boolean;
+  boldItalic: boolean;
+}
+
 export interface RichTextFaces {
   readonly normal: FontMetrics;
   readonly bold: FontMetrics;
@@ -39,37 +49,32 @@ export interface RichTextFaces {
   readonly boldItalic: FontMetrics;
 }
 
-/**
- * The faces of `n` that `styles` use, the normal face for the rest. A style no run uses is never
- * resolved, so its font never loads. A settled scene font changes the faces, so a painter reads
- * them in its render body. A face can be the bundled one while its font loads.
- */
-export function resolveRichTextFaces(
-  n: SolveNode,
-  styles: readonly { bold: boolean; italic: boolean }[]
-): RichTextFaces {
+/** A style no run uses keeps the normal face, so its font never loads. A painter reads these each render. */
+export function resolveRichTextFaces(n: SolveNode, inUse: RichTextStylesInUse): RichTextFaces {
   const normal = resolveNodeFontMetrics(n, NORMAL_FONT_KEY);
   const styled = (
-    isBold: boolean,
-    isItalic: boolean,
+    isUsed: boolean,
     key: string,
     synthesise: (defaultFace: FontMetrics) => FontMetrics
-  ): FontMetrics =>
-    styles.some((style) => style.bold === isBold && style.italic === isItalic)
-      ? resolveNodeFontMetricsOr(n, key, synthesise)
-      : normal;
+  ): FontMetrics => (isUsed ? resolveNodeFontMetricsOr(n, key, synthesise) : normal);
   return {
     normal,
-    bold: styled(true, false, BOLD_FONT_KEY, (base) => withVariation(base, { embolden: BOLD_EMBOLDEN })),
-    italic: styled(false, true, ITALICS_FONT_KEY, (base) => withVariation(base, { skew: ITALIC_SKEW })),
-    boldItalic: styled(true, true, BOLD_ITALICS_FONT_KEY, (base) =>
+    bold: styled(inUse.bold, BOLD_FONT_KEY, (base) => withVariation(base, { embolden: BOLD_EMBOLDEN })),
+    italic: styled(inUse.italic, ITALICS_FONT_KEY, (base) => withVariation(base, { skew: ITALIC_SKEW })),
+    boldItalic: styled(inUse.boldItalic, BOLD_ITALICS_FONT_KEY, (base) =>
       withVariation(base, { embolden: BOLD_EMBOLDEN, skew: ITALIC_SKEW })
     ),
   };
 }
 
+export function richTextStylesInUse(styles: readonly TextStyle[]): RichTextStylesInUse {
+  const uses = (isBold: boolean, isItalic: boolean) =>
+    styles.some((style) => style.bold === isBold && style.italic === isItalic);
+  return { bold: uses(true, false), italic: uses(false, true), boldItalic: uses(true, true) };
+}
+
 /** The face of a run with these `[b]` and `[i]` states (`_find_font`, `rich_text_label.cpp:3239-3296`). */
-export function faceOfStyle(faces: RichTextFaces, style: { bold: boolean; italic: boolean }): FontMetrics {
+export function faceOfStyle(faces: RichTextFaces, style: TextStyle): FontMetrics {
   if (style.bold) return style.italic ? faces.boldItalic : faces.bold;
   return style.italic ? faces.italic : faces.normal;
 }

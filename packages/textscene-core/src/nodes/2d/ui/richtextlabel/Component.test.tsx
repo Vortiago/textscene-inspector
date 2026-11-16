@@ -19,6 +19,7 @@ import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFont
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
+import * as nativeSolver from './nativeSolver';
 import { richTextLabelMinimumSize } from './nativeSolver';
 import { RichTextLabel } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
@@ -683,5 +684,148 @@ describe('<RichTextLabel> — self_modulate', () => {
     expect(split.own).toBeGreaterThan(0);
     // The track and the grabber.
     expect(split.child).toBe(2);
+  });
+});
+
+describe('<RichTextLabel> shaping across an edit that keeps the runs', () => {
+  const TEXT = 'Wave rift over quiet stone and amber light';
+  const RECT: Rect2 = { x: 0, y: 0, w: 160, h: 200 };
+  const AFTER_SHAPING = 1;
+  const BEFORE_SHAPING = 0;
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function painter(properties: Record<string, unknown>, rect: Rect2, overrides: Partial<SolveNode> = {}) {
+    return (
+      <RichTextLabel
+        {...painterEnv()}
+        solveNode={solveNode('RTL', { text: TEXT, ...properties }, overrides)}
+        rect={rect}
+        renderOrder={5}
+        slot={NODE_SLOT}
+      />
+    );
+  }
+
+  /** The calls of each pass on the second render. */
+  async function passesOnUpdate(first: React.JSX.Element, second: React.JSX.Element) {
+    const renderer = await ReactThreeTestRenderer.create(first);
+    const shapes = vi.spyOn(nativeSolver, 'shapeRichText');
+    const runs = vi.spyOn(nativeSolver, 'styledTextRuns');
+    await renderer.update(second);
+    const passes = { shapes: shapes.mock.calls.length, runs: runs.mock.calls.length };
+    await renderer.unmount();
+    return passes;
+  }
+
+  /** The calls of each pass on an edit: the second render gets a new property bag and a new solve node. */
+  function passesOnEdit(
+    before: Record<string, unknown>,
+    after: Record<string, unknown>,
+    { rect = RECT, rectAfter = rect }: { rect?: Rect2; rectAfter?: Rect2 } = {}
+  ) {
+    return passesOnUpdate(painter(before, rect), painter(after, rectAfter));
+  }
+
+  it('builds no runs on a parent re-render that passes the same solve node', async () => {
+    const node = solveNode('RTL', { text: TEXT });
+    const rerendered = (renderOrder: number) => (
+      <RichTextLabel
+        {...painterEnv()}
+        solveNode={node}
+        rect={RECT}
+        renderOrder={renderOrder}
+        slot={NODE_SLOT}
+      />
+    );
+    expect(await passesOnUpdate(rerendered(5), rerendered(6))).toEqual({ shapes: 0, runs: 0 });
+  });
+
+  it('shapes nothing on a visible_characters edit under a reveal after shaping', async () => {
+    const reveal = { visibleCharactersBehavior: AFTER_SHAPING };
+    const { shapes } = await passesOnEdit(
+      { ...reveal, visibleCharacters: 5 },
+      { ...reveal, visibleCharacters: 6 }
+    );
+    expect(shapes).toBe(0);
+  });
+
+  it('shapes nothing on a visible_ratio edit under a reveal after shaping', async () => {
+    const reveal = { visibleCharactersBehavior: AFTER_SHAPING, visibleRatioDrives: true };
+    const { shapes } = await passesOnEdit({ ...reveal, visibleRatio: 0.3 }, { ...reveal, visibleRatio: 0.6 });
+    expect(shapes).toBe(0);
+  });
+
+  it('shapes only the shown prefix on a visible_characters edit before shaping, as Godot does', async () => {
+    const reveal = { visibleCharactersBehavior: BEFORE_SHAPING };
+    const { shapes } = await passesOnEdit(
+      { ...reveal, visibleCharacters: 5 },
+      { ...reveal, visibleCharacters: 6 }
+    );
+    expect(shapes).toBe(1);
+  });
+
+  it('shapes nothing before shaping when the count keeps the whole text', async () => {
+    const reveal = { visibleCharactersBehavior: BEFORE_SHAPING };
+    const { shapes } = await passesOnEdit(
+      { ...reveal, visibleCharacters: 100 },
+      { ...reveal, visibleCharacters: 200 }
+    );
+    expect(shapes).toBe(0);
+  });
+
+  it('shapes nothing and builds the runs once beside a scroll bar', async () => {
+    const reveal = { visibleCharactersBehavior: AFTER_SHAPING };
+    const tall = { rect: { x: 0, y: 0, w: 160, h: 40 } };
+    const passes = await passesOnEdit(
+      { ...reveal, visibleCharacters: 5 },
+      { ...reveal, visibleCharacters: 6 },
+      tall
+    );
+    expect(passes).toEqual({ shapes: 0, runs: 1 });
+  });
+
+  describe('shapes again when an input of the shape changes', () => {
+    it('the text', async () => {
+      expect((await passesOnEdit({}, { text: `${TEXT} too` })).shapes).toBeGreaterThan(0);
+    });
+
+    it('a [color] tag', async () => {
+      const bbcode = (color: string) => ({ bbcodeEnabled: true, text: `[color=${color}]${TEXT}[/color]` });
+      expect((await passesOnEdit(bbcode('red'), bbcode('blue'))).shapes).toBeGreaterThan(0);
+    });
+
+    it('theme_override_font_sizes/normal_font_size', async () => {
+      const size = (px: number) => ({ themeOverrideFontSizes: { normal_font_size: px } });
+      expect((await passesOnEdit(size(16), size(20))).shapes).toBeGreaterThan(0);
+    });
+
+    it('text_direction', async () => {
+      expect((await passesOnEdit({}, { textDirection: 2 })).shapes).toBeGreaterThan(0);
+    });
+
+    it('the rect width', async () => {
+      const wider = { rectAfter: { ...RECT, w: 200 } };
+      expect((await passesOnEdit({}, {}, wider)).shapes).toBeGreaterThan(0);
+    });
+
+    it('the texture size of a %-form [img]', async () => {
+      const image = 'res://logo.png';
+      const loader = createFakeResourceLoader();
+      loader.textures.seed(image, new THREE.Texture());
+      const withTexture = (size: { x: number; y: number }) => (
+        <ResourceLoaderProvider loader={loader.loader}>
+          <SceneResourcesProvider internalResources={[]} externalResources={[]}>
+            {painter({ bbcodeEnabled: true, text: `[img=50%]${image}[/img]` }, RECT, {
+              textureSlots: { [image]: size },
+            })}
+          </SceneResourcesProvider>
+        </ResourceLoaderProvider>
+      );
+      const { shapes } = await passesOnUpdate(withTexture({ x: 64, y: 64 }), withTexture({ x: 64, y: 32 }));
+      expect(shapes).toBeGreaterThan(0);
+    });
   });
 });
