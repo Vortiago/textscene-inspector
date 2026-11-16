@@ -99,12 +99,18 @@ function deflateStream(
   inflate: RawInflate,
   limit: number
 ): InflatedStream | undefined {
-  const decode = (prefix: Uint8Array) => inflated(prefix, inflate, limit);
+  const out = lentBuffer(input.length, limit);
+  const decode = (prefix: Uint8Array) => inflated(prefix, inflate, out);
+  // Each decode writes into the one lent buffer, so an output that fits and is kept is copied out of it.
+  const kept = (prefix: Uint8Array) => {
+    const output = decode(prefix);
+    return output && output.buffer === out?.buffer && output.length <= limit ? output.slice() : output;
+  };
   const expectedEnd = input.length - trailerLength;
-  const atExpectedEnd = expectedEnd > 0 ? decode(input.subarray(0, expectedEnd)) : undefined;
+  const atExpectedEnd = expectedEnd > 0 ? kept(input.subarray(0, expectedEnd)) : undefined;
   if (atExpectedEnd && !decode(input.subarray(0, expectedEnd - 1)))
     return fitted(atExpectedEnd, expectedEnd, limit);
-  const output = decode(input);
+  const output = kept(input);
   if (!output) return undefined;
   let [shortest, longest] = [0, input.length];
   while (longest - shortest > 1) {
@@ -119,9 +125,23 @@ function deflateStream(
 const fitted = (output: Uint8Array, end: number, limit: number): InflatedStream | undefined =>
   output.length > limit ? undefined : { output, end };
 
-/** Output past `limit` stops one byte past it, so a stream inflating far past its buffer costs no more. */
-function inflated(input: Uint8Array, inflate: RawInflate, limit: number): Uint8Array | undefined {
-  const out = limit < input.length * MOST_BYTES_PER_INPUT_BYTE ? new Uint8Array(limit + 1) : undefined;
+/** A buffer one byte past `limit`, or none where no input of `inputLength` bytes can inflate past it. */
+function lentBuffer(inputLength: number, limit: number): Uint8Array | undefined {
+  if (limit >= inputLength * MOST_BYTES_PER_INPUT_BYTE) return undefined;
+  try {
+    return new Uint8Array(limit + 1);
+  } catch (error) {
+    rethrowUnportable(error);
+    throw error;
+  }
+}
+
+/** Output past the lent buffer stops one byte past `limit`, so a stream far past it costs no more. */
+function inflated(
+  input: Uint8Array,
+  inflate: RawInflate,
+  out: Uint8Array | undefined
+): Uint8Array | undefined {
   try {
     return inflate(input, out);
   } catch (error) {

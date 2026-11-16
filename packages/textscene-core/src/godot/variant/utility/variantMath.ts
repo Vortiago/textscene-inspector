@@ -6,13 +6,12 @@ import { booleanize } from '../compare.js';
 import { toDouble } from '../construct/variantCast.js';
 import { evaluateOperator } from '../operators/evaluate.js';
 import { isVectorType } from '../value/mathLayout.js';
-import { NIL, variant, type Variant, type VariantTypeName } from '../value/variant.js';
+import { isNumber, NIL, variant, type Variant, type VariantTypeName } from '../value/variant.js';
 import { invalidArgument, type UtilityResult } from './callError.js';
 import type { VariantFunction } from './utilityFunction.js';
 import type { UtilityHost } from './utilityHost.js';
 
-const isScalar = (type: VariantTypeName) => type === 'INT' || type === 'FLOAT';
-const isNumeric = (type: VariantTypeName) => isScalar(type) || isVectorType(type);
+const isNumeric = (value: Variant) => isNumber(value) || isVectorType(value.type);
 
 const NUMERIC_EXPECTED =
   'Argument "x" must be "int", "float", "Vector2", "Vector2i", "Vector3", "Vector3i", "Vector4", or "Vector4i".';
@@ -62,10 +61,10 @@ function numeric({ method, int, float }: NumericRule): VariantFunction {
 const unchanged = <T>(x: T) => x;
 
 const snapVariant: VariantFunction = ([x, step], host) => {
-  if (!isNumeric(x!.type)) return refused(0, 'NIL', variant('STRING', NUMERIC_EXPECTED));
+  if (!isNumeric(x!)) return refused(0, 'NIL', variant('STRING', NUMERIC_EXPECTED));
   if (x!.type !== step!.type) {
-    if (!isScalar(x!.type)) return refused(1, x!.type);
-    if (!isScalar(step!.type)) return refused(1, 'NIL', variant('STRING', STEP_EXPECTED));
+    if (!isNumber(x!)) return refused(1, x!.type);
+    if (!isNumber(step!)) return refused(1, 'NIL', variant('STRING', STEP_EXPECTED));
   }
   if (step!.type === 'INT')
     return done(variant('INT', doubleToInt64(snapped(toDouble(x!), Number(step!.value)))));
@@ -75,7 +74,7 @@ const snapVariant: VariantFunction = ([x, step], host) => {
 
 const lerpVariant: VariantFunction = ([from, to, weight], host) => {
   const method = LERP_METHOD[from!.type];
-  if (!method && !isScalar(from!.type)) return refused(0, 'NIL', variant('STRING', LERP_EXPECTED));
+  if (!method && !isNumber(from!)) return refused(0, 'NIL', variant('STRING', LERP_EXPECTED));
   if (from!.type !== to!.type) return refused(1, from!.type);
   const weightValue = toDouble(weight!);
   if (!method) return done(variant('FLOAT', lerp(toDouble(from!), toDouble(to!), weightValue)));
@@ -84,9 +83,9 @@ const lerpVariant: VariantFunction = ([from, to, weight], host) => {
 
 // An int x with int bounds wraps through `(int)`, the int32 cast, and any float makes all three doubles.
 const wrapVariant: VariantFunction = ([x, min, max]) => {
-  if (!isScalar(x!.type)) return refused(0, 'FLOAT');
-  if (!isScalar(min!.type)) return refused(1, x!.type);
-  if (!isScalar(max!.type)) return refused(2, x!.type);
+  if (!isNumber(x!)) return refused(0, 'FLOAT');
+  if (!isNumber(min!)) return refused(1, x!.type);
+  if (!isNumber(max!)) return refused(2, x!.type);
   if (x!.type === 'INT' && min!.type === 'INT' && max!.type === 'INT') {
     const [value, low, high] = [x!.value, min!.value, max!.value].map((bound) => BigInt(wrapInt32(bound)));
     return done(variant('INT', wrapi(value!, low!, high!)));
@@ -100,7 +99,7 @@ function extreme(operator: 'OP_LESS' | 'OP_GREATER'): VariantFunction {
     if (args.length < 2) return { value: NIL, error: { error: 'TOO_FEW_ARGUMENTS', expected: 2 } };
     let base = args[0]!;
     for (const [index, argument] of args.entries()) {
-      if (!isScalar(argument.type)) return refused(index, 'FLOAT');
+      if (!isNumber(argument)) return refused(index, 'FLOAT');
       if (index > 0 && booleanize(evaluateOperator(operator, base, argument).value)) base = argument;
     }
     return done(base);

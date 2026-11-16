@@ -11,13 +11,7 @@ import {
 } from '../math/hashFuncs.js';
 import type { NodePathParts } from '../string/nodePathParts.js';
 import { MAX_RECURSION, type CallableValue, type Variant, type VariantOf } from './value/variant.js';
-import {
-  componentsOf,
-  isStructVariant,
-  MATH_LAYOUT,
-  PACKED_STRUCT,
-  packedComponents,
-} from './value/mathLayout.js';
+import { componentsOf, isStructVariant, MATH_LAYOUT, packedComponents } from './value/mathLayout.js';
 import { VARIANT_TYPE } from './variantType.js';
 
 type HashOne = (word: number, seed: number) => number;
@@ -148,8 +142,6 @@ function mathHash(value: MathVariant): number {
 type PackedVariant = Extract<MathVariant, { type: `PACKED_${string}` }>;
 
 function packedHash(value: PackedVariant): number {
-  if (PACKED_STRUCT[value.type])
-    return elementsHash(packedComponents(value.type, value.value), murmur3OneFloat);
   switch (value.type) {
     case 'PACKED_BYTE_ARRAY':
       return packedIntsHash(Uint8Array.from(value.value));
@@ -174,25 +166,10 @@ function packedHash(value: PackedVariant): number {
     case 'PACKED_STRING_ARRAY':
       return elementsHash(value.value.map(stringHash), murmur3One32);
     case 'PACKED_VECTOR2_ARRAY':
-      return elementsHash(
-        value.value.flatMap(({ x, y }) => [x, y]),
-        murmur3OneFloat
-      );
     case 'PACKED_VECTOR3_ARRAY':
-      return elementsHash(
-        value.value.flatMap(({ x, y, z }) => [x, y, z]),
-        murmur3OneFloat
-      );
     case 'PACKED_COLOR_ARRAY':
-      return elementsHash(
-        value.value.flatMap(({ r, g, b, a }) => [r, g, b, a]),
-        murmur3OneFloat
-      );
     case 'PACKED_VECTOR4_ARRAY':
-      return elementsHash(
-        value.value.flatMap(({ x, y, z, w }) => [x, y, z, w]),
-        murmur3OneFloat
-      );
+      return elementsHash(packedComponents(value.type, value.value), murmur3OneFloat);
   }
 }
 

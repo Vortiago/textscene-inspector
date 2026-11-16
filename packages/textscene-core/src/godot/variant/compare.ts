@@ -98,8 +98,7 @@ export function hashCompare(a: Variant, b: Variant, semantic = true, depth = 0):
   if (a.type !== b.type) return false;
   if (isStructVariant(a) && MATH_LAYOUT[a.type].component !== 'int32')
     return sameNumbers(componentsOf(a), componentsOf(b as StructVariant));
-  if (PACKED_STRUCT[a.type])
-    return sameNumbers(packedComponents(a.type, a.value as []), packedComponents(b.type, b.value as []));
+  if (PACKED_STRUCT[a.type]) return samePackedStructs(a.type, a.value as [], b.value as []);
   switch (a.type) {
     case 'ARRAY':
       return arraysEqual(a.value, b.value as readonly Variant[], depth + 1);
@@ -114,6 +113,10 @@ export function hashCompare(a: Variant, b: Variant, semantic = true, depth = 0):
       return cppEqual(a, b);
   }
 }
+
+// Lengths first: two packed arrays of different lengths are unequal before any element is flattened.
+const samePackedStructs = (type: string, left: readonly unknown[], right: readonly unknown[]) =>
+  left.length === right.length && sameNumbers(packedComponents(type, left), packedComponents(type, right));
 
 const sameNumbers = (left: readonly number[], right: readonly number[]) =>
   left.length === right.length && left.every((element, index) => isSameNumber(element, right[index]!));

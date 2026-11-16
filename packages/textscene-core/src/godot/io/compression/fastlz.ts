@@ -22,8 +22,8 @@
  *   THE SOFTWARE.
  */
 
-import { representableLength } from '../../variant/call/arrayLength.js';
 import { UnportableUtility } from '../../variant/utility/unportableUtility.js';
+import { rethrowUnportable } from './decoderError.js';
 
 /** `MAX_L2_DISTANCE` (fastlz.c:60). */
 const MAX_L2_DISTANCE = 8191;
@@ -61,9 +61,9 @@ class Decoder {
 
   /** Room for `count` more bytes, doubling, so a buffer of any size costs only what is written. */
   private reserve(count: number): void {
-    const needed = representableLength(this.length + count);
+    const needed = this.length + count;
     if (needed <= this.output.length) return;
-    const grown = new Uint8Array(Math.min(this.maxout, Math.max(needed, 2 * this.output.length)));
+    const grown = allocated(Math.min(this.maxout, Math.max(needed, 2 * this.output.length)));
     grown.set(this.output.subarray(0, this.length));
     this.output = grown;
   }
@@ -145,5 +145,15 @@ function fastLz2Decompress(input: Uint8Array, maxout: number): FastLzOutput {
     } else if (!decoder.copyLiteral(control + 1)) return decoder.result(false);
     if (decoder.position >= input.length) return decoder.result(true);
     control = decoder.next();
+  }
+}
+
+/** A typed array of `length` bytes, or the refusal of a length V8 cannot allocate. */
+function allocated(length: number): Uint8Array<ArrayBuffer> {
+  try {
+    return new Uint8Array(length);
+  } catch (error) {
+    rethrowUnportable(error);
+    throw error;
   }
 }

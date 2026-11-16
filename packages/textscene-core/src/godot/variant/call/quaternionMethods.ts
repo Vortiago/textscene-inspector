@@ -18,7 +18,13 @@ import {
   type Quaternion,
 } from '../../math/quaternion.js';
 import { acosf, cosf, isEqualApproxf, sinf, sqrtf } from '../../math/realMath.js';
-import { normalizedVector3, vector3Length, vector3LengthSquared, type Vector3 } from '../../math/vector.js';
+import {
+  normalizedVector3,
+  VECTOR3_ZERO,
+  vector3Length,
+  vector3LengthSquared,
+  type Vector3,
+} from '../../math/vector.js';
 import { numberAt, valueAt, type CastArgument } from '../utility/utilityArguments.js';
 import { bool, real, variant, vector3, type Variant } from '../value/variant.js';
 import { methodPort, portOn, valueOf, type MethodPort } from './methodPort.js';
@@ -26,7 +32,6 @@ import { methodPort, portOn, valueOf, type MethodPort } from './methodPort.js';
 const f = Math.fround;
 const LANES = ['x', 'y', 'z', 'w'] as const;
 const ZERO_QUATERNION: Quaternion = { x: 0, y: 0, z: 0, w: 0 };
-const ZERO_VECTOR: Vector3 = { x: 0, y: 0, z: 0 };
 
 const quaternionOf = (q: Quaternion): Variant => variant('QUATERNION', q);
 const quaternionAt = valueAt<Quaternion>;
@@ -190,7 +195,7 @@ export const QUATERNION_METHODS: Readonly<Record<string, MethodPort>> = {
   ),
   get_euler: port(['EulerOrder'], (q, args) =>
     vector3(
-      quaternionIsNormalized(q) ? basisGetEuler(basisFromQuaternion(q), numberAt(args, 0)) : ZERO_VECTOR
+      quaternionIsNormalized(q) ? basisGetEuler(basisFromQuaternion(q), numberAt(args, 0)) : VECTOR3_ZERO
     )
   ),
   from_euler: methodPort(['VECTOR3'], (_base, [euler]) =>
