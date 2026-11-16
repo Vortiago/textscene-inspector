@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { basisFromQuaternion } from '../../math/basis.js';
 import { QUATERNION_IDENTITY } from '../../math/quaternion.js';
 import {
-  basisQuaternion,
   checkedQuaternionFromAxisAngle,
   planeFromNormalPoint,
   planeFromPoints,
@@ -84,30 +82,6 @@ describe('quaternionArc', () => {
 
   it('refuses a zero vector with Quaternion()', () => {
     expect(quaternionArc({ x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 })).toEqual(QUATERNION_IDENTITY);
-  });
-});
-
-describe('basisQuaternion', () => {
-  it('reads the rotation of a rotation basis', () => {
-    const q = basisQuaternion(basisFromQuaternion({ x: 0, y: 0, z: HALF_SQRT2, w: HALF_SQRT2 }));
-    expect([q.x, q.y, q.z, q.w]).toEqual([
-      0,
-      0,
-      expect.closeTo(HALF_SQRT2, 6),
-      expect.closeTo(HALF_SQRT2, 6),
-    ]);
-  });
-
-  it('gives Quaternion() for the identity basis', () => {
-    expect(basisQuaternion([1, 0, 0, 0, 1, 0, 0, 0, 1])).toEqual(QUATERNION_IDENTITY);
-  });
-
-  it('refuses a scaled basis with Quaternion()', () => {
-    expect(basisQuaternion([2, 0, 0, 0, 2, 0, 0, 0, 2])).toEqual(QUATERNION_IDENTITY);
-  });
-
-  it('refuses a mirrored basis with Quaternion()', () => {
-    expect(basisQuaternion([-1, 0, 0, 0, 1, 0, 0, 0, 1])).toEqual(QUATERNION_IDENTITY);
   });
 });
 

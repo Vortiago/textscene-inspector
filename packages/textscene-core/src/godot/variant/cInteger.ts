@@ -30,6 +30,16 @@ export function doubleToInt64(value: number): bigint {
 }
 
 /**
+ * `(uint64_t)` of a double on x86-64 GCC: from 2^63 up, `value - 2^63` with bit 63 set. NaN gives 2^63.
+ *
+ * @canonical The C cast of a double to uint64_t
+ */
+export function doubleToUint64(value: number): bigint {
+  if (!(value >= INT64_RANGE)) return BigInt.asUintN(64, doubleToInt64(value));
+  return BigInt.asUintN(64, doubleToInt64(value - INT64_RANGE)) ^ (1n << 63n);
+}
+
+/**
  * `(int32_t)` of a double, with the same lowest integer for NaN or a value out of range.
  *
  * @canonical The C cast of a double to int32_t

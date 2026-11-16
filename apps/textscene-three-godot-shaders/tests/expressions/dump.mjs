@@ -81,7 +81,8 @@ export function dumpVariant({ type, value }) {
     case 'COLOR':
       return call('Color', color(value));
     case 'RID':
-      return call('RID', [String(value)]);
+      // `RID::get_id` returns the uint64 id as a GDScript int, an int64.
+      return call('RID', [String(BigInt.asIntN(64, value))]);
     case 'OBJECT':
       return 'Object(null)';
     case 'CALLABLE':

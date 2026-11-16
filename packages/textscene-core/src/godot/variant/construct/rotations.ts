@@ -1,10 +1,4 @@
-import {
-  basisColumn,
-  basisDeterminantOf,
-  basisGetQuaternion,
-  type BasisComponents,
-} from '../../math/basis.js';
-import { isEqualApprox, isZeroApprox, UNIT_EPSILON } from '../../math/math.js';
+import { isZeroApprox, UNIT_EPSILON } from '../../math/math.js';
 import type { Plane } from '../../math/plane.js';
 import {
   normalizedQuaternion,
@@ -94,24 +88,6 @@ function arcOf(from: V3, to: V3): Quaternion {
   const s = f(Math.sqrt(f(f(1 + d) * 2)));
   const rs = f(1 / s);
   return { x: f(c.x * rs), y: f(c.y * rs), z: f(c.z * rs), w: f(s * 0.5) };
-}
-
-// Basis::is_conformal and is_rotation (basis.cpp:112, basis.cpp:129).
-function isRotation(n: BasisComponents): boolean {
-  const [x, y, z] = [0, 1, 2].map((index) => vector(basisColumn(n, index))) as [Vector3, Vector3, Vector3];
-  const xLengthSquared = dot(x, x);
-  const isConformal =
-    isEqualApprox(xLengthSquared, dot(y, y)) &&
-    isEqualApprox(xLengthSquared, dot(z, z)) &&
-    isZeroApprox(dot(x, y)) &&
-    isZeroApprox(dot(x, z)) &&
-    isZeroApprox(dot(y, z));
-  return isConformal && isEqualWithin(basisDeterminantOf(n), 1, UNIT_EPSILON);
-}
-
-/** `Basis::get_quaternion`: MATH_CHECKS refuses a basis that is not a rotation and gives Quaternion(). */
-export function basisQuaternion(n: BasisComponents): Quaternion {
-  return isRotation(n) ? basisGetQuaternion(n) : QUATERNION_IDENTITY;
 }
 
 export function planeFromNormalPoint(normal: V3, point: V3): Plane {

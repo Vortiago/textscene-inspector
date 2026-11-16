@@ -59,8 +59,9 @@ export function stringify(value: Variant): string {
     case 'BOOL':
       return value.value ? 'true' : 'false';
     case 'INT':
+      return `${value.value}`;
     case 'RID':
-      return value.type === 'RID' ? `RID(${value.value})` : `${value.value}`;
+      return `RID(${BigInt.asIntN(64, value.value)})`;
     case 'FLOAT':
       return numReal(value.value, true);
     case 'STRING':

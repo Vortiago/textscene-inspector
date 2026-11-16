@@ -7,6 +7,7 @@ import { godotSourceDir } from '../godotSource.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { constructorRegistrations } from './readConstructors.mjs';
 import { strictConversions } from './readConversions.mjs';
+import { errorNames } from './readErrorNames.mjs';
 import { operatorRegistrations } from './readOperators.mjs';
 import { utilityFunctions } from './readUtilities.mjs';
 
@@ -14,8 +15,8 @@ const TABLE_MODULE = join(REPO_ROOT, 'packages/textscene-core/src/godot/variant/
 
 const json = (value) => JSON.stringify(value);
 
-/** The module text of the four tables. */
-export function renderTables({ operators, constructors, conversions, utilities }) {
+/** The module text of the five tables. */
+export function renderTables({ operators, constructors, conversions, utilities, errors }) {
   const operatorRows = operators.map(
     ({ operator, left, right, evaluator, types }) =>
       `  [${json(operator)}, ${json(left)}, ${json(right)}, ${json(evaluator)}, ${json(types)}],`
@@ -27,7 +28,8 @@ export function renderTables({ operators, constructors, conversions, utilities }
     ([target, sources]) => `  ${target}: ${json(sources)},`
   );
   const utilityRows = utilities.map(
-    ({ name, argumentCount, isVararg }) => `  [${json(name)}, ${argumentCount}, ${isVararg}],`
+    ({ name, argumentCount, isVararg, kind, parameters }) =>
+      `  [${json(name)}, ${argumentCount}, ${isVararg}, ${json(kind)}, ${json(parameters)}],`
   );
   return `/**
  * Godot 4.6.3's Variant registrations, read from its source.
@@ -49,21 +51,27 @@ export const STRICT_CONVERSIONS: Readonly<Record<string, readonly string[]>> = {
 ${conversionRows.join('\n')}
 };
 
-/** variant_utility.cpp:1630: name, argument count, whether it takes any count. */
-export const UTILITY_FUNCTIONS: readonly (readonly [string, number, boolean])[] = [
+/** variant_utility.cpp:1630: name, argument count, any count, call kind, typed C++ parameters. */
+export const UTILITY_FUNCTIONS: readonly (readonly [string, number, boolean, string, readonly string[]])[] = [
 ${utilityRows.join('\n')}
+];
+
+/** error_list.cpp:35: the name of each Error code, by its value. */
+export const ERROR_NAMES: readonly string[] = [
+${errors.map((name) => `  ${json(name)},`).join('\n')}
 ];
 `;
 }
 
 function main() {
-  const variantDir = join(godotSourceDir(process.argv), 'core/variant');
-  const read = (file) => readFileSync(join(variantDir, file), 'utf8');
+  const coreDir = join(godotSourceDir(process.argv), 'core');
+  const read = (file) => readFileSync(join(coreDir, 'variant', file), 'utf8');
   const tables = {
     operators: operatorRegistrations(read('variant_op.cpp')),
     constructors: constructorRegistrations(read('variant_construct.cpp')),
     conversions: strictConversions(read('variant.cpp')),
-    utilities: utilityFunctions(read('variant_utility.cpp')),
+    utilities: utilityFunctions(read('variant_utility.cpp'), read('variant_utility.h')),
+    errors: errorNames(readFileSync(join(coreDir, 'error/error_list.cpp'), 'utf8')),
   };
   const summary = `${tables.operators.length} operators, ${tables.constructors.length} constructors, ${tables.utilities.length} utility functions`;
   const outputs = [[TABLE_MODULE, renderTables(tables)]];

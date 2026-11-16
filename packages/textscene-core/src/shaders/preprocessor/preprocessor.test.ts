@@ -61,24 +61,34 @@ describe('directives', () => {
   });
 
   it('points the refusal of an indented #if with a utility function at its #', () => {
-    const error = errorOf(() => preprocess('\t  #if abs(1)\n#endif'));
+    const error = errorOf(() => preprocess('\t  #if hash(1)\n#endif'));
     expect((error as ShadingLanguageError).position).toEqual({ file: '', line: 1, column: 4 });
   });
 
   it('refuses a utility function in a condition as not transpiled yet, with its row', () => {
-    const error = errorOf(() => preprocess('#if abs(1)\n#endif'));
+    const error = errorOf(() => preprocess('#if hash(1)\n#endif'));
     expect(error).toMatchObject({
-      reason: "'#if abs(1): the utility function abs' is not transpiled yet (#1828)",
+      reason: "'#if hash(1): the utility function hash' is not transpiled yet (#1828)",
       owner: '#1828',
     });
   });
 
   it('refuses a utility function in an #elif as not transpiled yet, with its row', () => {
-    const error = errorOf(() => preprocess('#if 0\n#elif abs(1)\n#endif'));
+    const error = errorOf(() => preprocess('#if 0\n#elif hash(1)\n#endif'));
     expect(error).toMatchObject({
-      reason: "'#elif abs(1): the utility function abs' is not transpiled yet (#1828)",
+      reason: "'#elif hash(1): the utility function hash' is not transpiled yet (#1828)",
       owner: '#1828',
     });
+  });
+
+  it('keeps the seed of one condition for the draws of the next', () => {
+    const code = '#if str(seed(5))\n#endif\n#if randi() == 3066015881\nseeded\n#endif\n';
+    expect(preprocess(code)).toContain('seeded');
+  });
+
+  it('refuses a random draw before any seed, as the editor seeds from the clock', () => {
+    const error = errorOf(() => preprocess('#if randi()\n#endif'));
+    expect(error).toMatchObject({ reason: expect.stringContaining('has no seed yet'), owner: '#1828' });
   });
 
   it('refuses a condition that crashes Godot', () => {

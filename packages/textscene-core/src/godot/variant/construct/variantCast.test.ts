@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { variant, type Variant } from '../value/variant.js';
-import {
-  canConvertStrict,
-  castVariant,
-  colorFromString,
-  packedElements,
-  UnportedConversion,
-} from './variantCast.js';
+import { canConvertStrict, castVariant, colorFromString, packedElements } from './variantCast.js';
 
 const int = (value: bigint) => variant('INT', value);
 const float = (value: number) => variant('FLOAT', value);
@@ -165,8 +159,13 @@ describe('castVariant of other types', () => {
     expect(castVariant(int(4n), 'RID')).toEqual(variant('RID', 0n));
   });
 
-  it('throws on a conversion it does not port', () => {
-    expect(() => castVariant(int(1n), 'DICTIONARY')).toThrow(UnportedConversion);
+  it('gives the default for a source the operator does not take', () => {
+    expect(castVariant(int(1n), 'DICTIONARY')).toEqual(variant('DICTIONARY', []));
+    expect(castVariant(variant('QUATERNION', { x: 1, y: 2, z: 3, w: 4 }), 'VECTOR3')).toEqual(
+      variant('VECTOR3', { x: 0, y: 0, z: 0 })
+    );
+    expect(castVariant(variant('FLOAT', 255), 'COLOR')).toEqual(variant('COLOR', { r: 0, g: 0, b: 0, a: 1 }));
+    expect(castVariant(int(1n), 'STRING_NAME')).toEqual(variant('STRING_NAME', ''));
   });
 });
 

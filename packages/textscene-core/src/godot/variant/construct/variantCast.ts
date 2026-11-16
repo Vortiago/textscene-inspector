@@ -1,6 +1,7 @@
-import { basisFromQuaternion } from '../../math/basis.js';
+import { basisFromQuaternion, basisGetQuaternion, type BasisComponents } from '../../math/basis.js';
 import { htmlColor, namedColor } from '../../math/color.js';
 import { storedReal as f } from '../../math/real.js';
+import { basisOfTransform3D, transform3DOf, type Transform3D } from '../../math/transform3d.js';
 import { nodePathText } from '../../string/nodePath.js';
 import { stringToInt64 } from '../../string/string.js';
 import { stringToFloat } from '../../string/strtod.js';
@@ -10,7 +11,6 @@ import { STRICT_CONVERSIONS } from '../registrations.generated.js';
 import { stringify } from '../stringify.js';
 import { defaultValue } from '../value/defaultValue.js';
 import { variant, type ColorValue, type Variant, type VariantTypeName } from '../value/variant.js';
-import { basisQuaternion } from './rotations.js';
 
 type Components = Readonly<Record<string, number>>;
 
@@ -21,7 +21,8 @@ export function canConvertStrict(from: VariantTypeName, to: VariantTypeName): bo
   return STRICT_CONVERSIONS[to]?.includes(from) ?? false;
 }
 
-const mapComponents = (value: unknown, map: (component: number) => number) =>
+/** Each named component of a vector, rectangle or colour, through `map`. */
+export const mapComponents = (value: unknown, map: (component: number) => number): Components =>
   Object.fromEntries(Object.entries(value as Components).map(([key, component]) => [key, map(component)]));
 
 /** `Color(const String &)` (color.h:274): an HTML code, else a named colour, else `Color()`. */
@@ -95,9 +96,6 @@ function toDouble(value: Variant): number {
   }
 }
 
-/** A conversion this slice has not ported yet. */
-export class UnportedConversion extends Error {}
-
 /** Each element converted as `Packed*Array(Array)` converts it (variant.cpp:2240). */
 function packedFromArray(type: VariantTypeName, elements: readonly Variant[]): unknown[] {
   switch (type) {
@@ -117,7 +115,7 @@ function packedFromArray(type: VariantTypeName, elements: readonly Variant[]): u
       return elements.map(stringify);
     default: {
       const elementType = PACKED_ELEMENT_TYPE[type]!;
-      return elements.map((element) => castOrDefault(element, elementType).value);
+      return elements.map((element) => castVariant(element, elementType).value);
     }
   }
 }
@@ -140,80 +138,83 @@ function castVector(value: Variant, type: VariantTypeName): Components {
   return Object.fromEntries(axes.map((axis) => [axis, toComponent(source[axis] ?? 0)]));
 }
 
-// A packed element: another vector, a Color from a String or an int, else the default.
-function castOrDefault(value: Variant, type: VariantTypeName): Variant {
-  if (value.type === type) return value;
-  const isColorSource = type === 'COLOR' && (value.type === 'STRING' || value.type === 'INT');
-  if (isColorSource || (VECTOR_SIZE[type] && VECTOR_SIZE[value.type])) return castVariant(value, type);
-  return defaultValue(type);
+// `_convert_array_from_variant` (variant.cpp:2094): the elements of an Array or a packed array, else none.
+function elementsOf(value: Variant): readonly Variant[] {
+  if (value.type === 'ARRAY') return value.value;
+  return PACKED_ELEMENT_TYPE[value.type] ? packedElements(value) : [];
 }
 
-/** `value` converted to `type`, which `Variant::can_convert_strict` allows from its own type. */
+/** `Variant::operator T()`: a source type the operator does not take gives the default of `type`. */
 export function castVariant(value: Variant, type: VariantTypeName): Variant {
   if (value.type === type) return value;
-  const make = (result: unknown) => variant(type, result as never) as Variant;
+  const converted = convertedValue(value, type);
+  return converted === undefined ? defaultValue(type) : (variant(type, converted as never) as Variant);
+}
+
+// Nothing for a source the operator does not take (variant.cpp:1658 onwards).
+function convertedValue(value: Variant, type: VariantTypeName): unknown {
   switch (type) {
     case 'BOOL':
-      return make(booleanize(value));
+      return booleanize(value);
     case 'INT':
-      return make(toInt64(value));
+      return toInt64(value);
     case 'FLOAT':
-      return make(toDouble(value));
+      return toDouble(value);
     case 'STRING':
-      return make(stringify(value));
+      return stringify(value);
     case 'STRING_NAME':
-      return make(value.value as string);
+      return value.type === 'STRING' ? value.value : undefined;
     case 'NODE_PATH':
-      return make(nodePathText(value.value as string));
+      return value.type === 'STRING' ? nodePathText(value.value) : undefined;
     case 'VECTOR2':
     case 'VECTOR3':
     case 'VECTOR4':
     case 'VECTOR2I':
     case 'VECTOR3I':
     case 'VECTOR4I':
-      return make(castVector(value, type));
+      return VECTOR_SIZE[value.type] ? castVector(value, type) : undefined;
     case 'RECT2':
-      return make(mapComponents(value.value, f));
+      return value.type === 'RECT2I' ? mapComponents(value.value, f) : undefined;
     case 'RECT2I':
-      return make(mapComponents(value.value, doubleToInt32));
+      return value.type === 'RECT2' ? mapComponents(value.value, doubleToInt32) : undefined;
     case 'TRANSFORM2D':
-      return make(transform2DOf(value));
+      return value.type === 'TRANSFORM3D' ? transform2DOf(value.value) : undefined;
     case 'TRANSFORM3D':
-      return make(transform3DOf(value));
+      return transform3DFrom(value);
     case 'BASIS':
-      return make(basisFromQuaternion(value.value as never));
-    case 'QUATERNION':
-      return make(basisQuaternion(value.value as never));
-    case 'PROJECTION':
-      return make(projectionOf(value.value as never));
+      return basisFrom(value);
+    case 'QUATERNION': {
+      const basis = basisFrom(value);
+      return basis && basisGetQuaternion(basis);
+    }
+    case 'PROJECTION': {
+      const transform = transform3DFrom(value);
+      return transform && projectionOf(transform);
+    }
     case 'COLOR':
-      return make(value.type === 'STRING' ? colorFromString(value.value) : colorFromHex(toInt32(value)));
-    case 'RID':
-    case 'OBJECT':
-      return defaultValue(type);
+      if (value.type === 'STRING') return colorFromString(value.value);
+      return value.type === 'INT' ? colorFromHex(toInt32(value)) : undefined;
     case 'ARRAY':
-      return make(packedElements(value));
+      return elementsOf(value);
     default:
-      if (value.type === 'ARRAY') return make(packedFromArray(type, value.value));
-      throw new UnportedConversion(`${value.type} to ${type}`);
+      return PACKED_ELEMENT_TYPE[type] ? packedFromArray(type, elementsOf(value)) : undefined;
   }
 }
 
-function transform2DOf(value: Variant) {
-  const {
-    basis_x: x,
-    basis_y: y,
-    origin,
-  } = value.value as unknown as {
-    basis_x: Components;
-    basis_y: Components;
-    origin: Components;
-  };
-  return { a: x.x!, b: y.x!, c: x.y!, d: y.y!, tx: origin.x!, ty: origin.y! };
+function transform2DOf({ basis_x: x, basis_y: y, origin }: Transform3D) {
+  return { a: x.x, b: y.x, c: x.y, d: y.y, tx: origin.x, ty: origin.y };
 }
 
-function transform3DOf(value: Variant) {
+function basisFrom(value: Variant): BasisComponents | undefined {
+  if (value.type === 'BASIS') return value.value;
+  if (value.type === 'QUATERNION') return basisFromQuaternion(value.value);
+  return value.type === 'TRANSFORM3D' ? basisOfTransform3D(value.value) : undefined;
+}
+
+function transform3DFrom(value: Variant): Transform3D | undefined {
   switch (value.type) {
+    case 'TRANSFORM3D':
+      return value.value;
     case 'TRANSFORM2D': {
       const { a, b, c, d, tx, ty } = value.value;
       return {
@@ -224,15 +225,8 @@ function transform3DOf(value: Variant) {
       };
     }
     case 'BASIS':
-    case 'QUATERNION': {
-      const n = value.type === 'BASIS' ? value.value : basisFromQuaternion(value.value);
-      return {
-        basis_x: { x: n[0], y: n[1], z: n[2] },
-        basis_y: { x: n[3], y: n[4], z: n[5] },
-        basis_z: { x: n[6], y: n[7], z: n[8] },
-        origin: { x: 0, y: 0, z: 0 },
-      };
-    }
+    case 'QUATERNION':
+      return transform3DOf(basisFrom(value)!, { x: 0, y: 0, z: 0 });
     case 'PROJECTION': {
       const [x, y, z, w] = value.value;
       return {
@@ -243,18 +237,12 @@ function transform3DOf(value: Variant) {
       };
     }
     default:
-      throw new UnportedConversion(`${value.type} to TRANSFORM3D`);
+      return undefined;
   }
 }
 
 // Projection(const Transform3D &) (projection.cpp:960): the basis columns, then the origin.
-function projectionOf(t: {
-  basis_x: Components;
-  basis_y: Components;
-  basis_z: Components;
-  origin: Components;
-}) {
-  const { basis_x: x, basis_y: y, basis_z: z, origin } = t;
+function projectionOf({ basis_x: x, basis_y: y, basis_z: z, origin }: Transform3D) {
   return [
     { x: x.x, y: y.x, z: z.x, w: 0 },
     { x: x.y, y: y.y, z: z.y, w: 0 },

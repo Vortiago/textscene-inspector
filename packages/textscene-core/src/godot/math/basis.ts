@@ -7,8 +7,8 @@
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { storedReal as f } from './real.js';
-import { basisDeterminant, isEqualApprox, isZeroApprox, sign } from './math.js';
-import type { Quaternion } from './quaternion.js';
+import { basisDeterminant, isEqualApprox, isZeroApprox, sign, UNIT_EPSILON } from './math.js';
+import { QUATERNION_IDENTITY, type Quaternion } from './quaternion.js';
 import {
   normalizedVector3,
   vector3Dot,
@@ -290,11 +290,28 @@ export function basisFromQuaternionScale(rotation: Quaternion, scale: Vector3): 
   return basisMultiply(basisFromQuaternion(rotation), basisDiagonal(scale.x, scale.y, scale.z));
 }
 
-/**
- * `Basis::get_quaternion` (`basis.cpp:714-748`): the quaternion of a basis that is a rotation, by
- * the largest of the trace and the diagonal.
- */
+const UNIT_EPSILON_FLOAT = f(UNIT_EPSILON);
+
+/** `Basis::is_rotation` (basis.cpp:129): conformal, with a determinant within `UNIT_EPSILON` of 1. */
+export function basisIsRotation(n: BasisComponents): boolean {
+  const [x, y, z] = [0, 1, 2].map((index) => basisColumn(n, index));
+  const xLengthSquared = vector3Dot(x!, x!);
+  const isConformal =
+    isEqualApprox(xLengthSquared, vector3Dot(y!, y!)) &&
+    isEqualApprox(xLengthSquared, vector3Dot(z!, z!)) &&
+    isZeroApprox(vector3Dot(x!, y!)) &&
+    isZeroApprox(vector3Dot(x!, z!)) &&
+    isZeroApprox(vector3Dot(y!, z!));
+  const determinant = basisDeterminantOf(n);
+  return isConformal && (determinant === 1 || Math.abs(f(determinant - 1)) < UNIT_EPSILON_FLOAT);
+}
+
+/** `Basis::get_quaternion` (basis.cpp:714): MATH_CHECKS in the editor gives `Quaternion()` off rotations. */
 export function basisGetQuaternion(n: BasisComponents): Quaternion {
+  return basisIsRotation(n) ? rotationQuaternion(n) : QUATERNION_IDENTITY;
+}
+
+function rotationQuaternion(n: BasisComponents): Quaternion {
   const at = (row: number, col: number): number => n[row * 3 + col]!;
   const trace = f(f(at(0, 0) + at(1, 1)) + at(2, 2));
   if (trace > 0) {

@@ -12,6 +12,7 @@ import {
   basisHasUnitScale,
   basisFromQuaternion,
   basisFromQuaternionScale,
+  basisGetQuaternion,
   basisGetRotationQuaternion,
   basisInvert,
   basisIsOrthonormal,
@@ -22,6 +23,7 @@ import {
   IDENTITY_BASIS,
   type MutableBasis,
 } from './basis.js';
+import { QUATERNION_IDENTITY } from './quaternion.js';
 
 const IDENTITY: BasisComponents = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 /** Rows `(1, 0.5, 0)`, `(0, 1, 0)`, `(0, 0, 1)`: a shear in the second column. */
@@ -304,5 +306,29 @@ describe('basisCopy', () => {
 
     expect(basisCopy(out, IDENTITY_BASIS)).toBe(out);
     expect(out).toEqual([...IDENTITY_BASIS]);
+  });
+});
+
+describe('basisGetQuaternion', () => {
+  it('reads the rotation of a rotation basis', () => {
+    const q = basisGetQuaternion(basisFromQuaternion({ x: 0, y: 0, z: Math.SQRT1_2, w: Math.SQRT1_2 }));
+    expect([q.x, q.y, q.z, q.w]).toEqual([
+      0,
+      0,
+      expect.closeTo(Math.SQRT1_2, 6),
+      expect.closeTo(Math.SQRT1_2, 6),
+    ]);
+  });
+
+  it('gives Quaternion() for the identity basis', () => {
+    expect(basisGetQuaternion([1, 0, 0, 0, 1, 0, 0, 0, 1])).toEqual(QUATERNION_IDENTITY);
+  });
+
+  it('refuses a scaled basis with Quaternion()', () => {
+    expect(basisGetQuaternion([2, 0, 0, 0, 2, 0, 0, 0, 2])).toEqual(QUATERNION_IDENTITY);
+  });
+
+  it('refuses a mirrored basis with Quaternion()', () => {
+    expect(basisGetQuaternion([-1, 0, 0, 0, 1, 0, 0, 0, 1])).toEqual(QUATERNION_IDENTITY);
   });
 });

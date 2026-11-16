@@ -1,6 +1,7 @@
 import { stripComments, type StrippedCode } from './commentRemover.js';
 import { conditionRefusal, isConditionTrue } from './conditions.js';
 import { DirectiveTokenizer } from './directiveTokenizer.js';
+import { GlobalRandom } from '../../godot/variant/utility/globalRandom.js';
 import { getBaseDir, isAbsolutePath, pathJoin, simplifyPath, stripEdges } from '../../godot/string/string.js';
 import { PreprocessedOutput } from './preprocessedOutput.js';
 import { END, isCharEnd, isCharSpace } from './preprocessorChars.js';
@@ -42,6 +43,7 @@ interface Branch {
 /** Shared by the shader and every file it includes. */
 interface State {
   readonly defines: Defines;
+  readonly random: GlobalRandom;
   currentBranch: Branch | undefined;
   conditionDepth: number;
   readonly includes: Set<string>;
@@ -64,6 +66,7 @@ export function preprocess(code: string, options: PreprocessOptions = {}): strin
       ['RENDERER_MOBILE', builtIn(RENDERERS.mobile)],
       ['RENDERER_FORWARD_PLUS', builtIn(RENDERERS.forward_plus)],
     ]),
+    random: new GlobalRandom(),
     currentBranch: undefined,
     conditionDepth: 0,
     includes: new Set(),
@@ -236,7 +239,7 @@ class FilePreprocessor {
     const line = this.tokenizer.line;
     const condition = stripEdges(this.tokenizer.advance('\n'));
     try {
-      return isConditionTrue(condition, this.state.defines, line);
+      return isConditionTrue(condition, this.state, line);
     } catch (error) {
       const position = { file: this.state.currentFile, line: line + 1, column };
       throw conditionRefusal(error, directive, `#${directive} ${condition}`, position);

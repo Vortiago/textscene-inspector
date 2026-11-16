@@ -1,6 +1,9 @@
 import { setEntry } from '../variant/compare.js';
 import { construct } from '../variant/construct/construct.js';
 import { evaluateOperator } from '../variant/operators/evaluate.js';
+import { callErrorText } from '../variant/utility/callError.js';
+import { callUtility } from '../variant/utility/callUtility.js';
+import { GlobalRandom } from '../variant/utility/globalRandom.js';
 import {
   NIL,
   variant,
@@ -62,73 +65,87 @@ const OPERATOR_NAME: Readonly<Record<Operator, string>> = {
 
 const typeName = (type: VariantTypeName) => variantTypeName(VARIANT_TYPE[type])!;
 
-function evaluate(node: Extract<ExpressionNode, { kind: 'operator' }>): Variant {
-  const a = execute(node.left);
-  const b = node.right ? execute(node.right) : NIL;
-  const { value, isValid } = evaluateOperator(node.operator, a, b);
-  if (isValid) return value;
-  const operands = `${typeName(a.type)} and ${typeName(b.type)}`;
-  throw new ExecuteError(
-    `Invalid operands to operator ${OPERATOR_NAME[node.operator]}, ${operands}.`,
-    node,
-    value
-  );
-}
+/** One run of `Expression::execute`, with the global random generator its utility calls draw from. */
+class Execution {
+  constructor(private readonly random: GlobalRandom) {}
 
-function dictionaryOf(nodes: readonly ExpressionNode[]): Variant {
-  const entries: DictionaryEntry[] = [];
-  for (let index = 0; index < nodes.length; index += 2) {
-    const key = execute(nodes[index]!);
-    setEntry(entries, key, execute(nodes[index + 1]!));
+  execute = (node: ExpressionNode): Variant => {
+    switch (node.kind) {
+      case 'input':
+        throw new ExecuteError(`Invalid input ${node.index} (not passed) in expression`, node);
+      case 'constant':
+        return node.value;
+      case 'self':
+        throw new ExecuteError("self can't be used because instance is null (not passed)", node);
+      case 'operator':
+        return this.evaluate(node);
+      case 'array':
+        return variant('ARRAY', node.elements.map(this.execute));
+      case 'dictionary':
+        return this.dictionaryOf(node.entries);
+      case 'constructor':
+        return this.constructed(node);
+      case 'index':
+        this.execute(node.base);
+        this.execute(node.index);
+        throw new UnportedExpression('Variant::get of an index');
+      case 'namedIndex':
+        this.execute(node.base);
+        throw new UnportedExpression(`Variant::get_named of '${node.name}'`);
+      case 'builtinFunction':
+        return this.called(node);
+      case 'call':
+        this.execute(node.base);
+        node.arguments.forEach(this.execute);
+        throw new UnportedExpression(`the method ${node.method}`);
+    }
+  };
+
+  private evaluate(node: Extract<ExpressionNode, { kind: 'operator' }>): Variant {
+    const a = this.execute(node.left);
+    const b = node.right ? this.execute(node.right) : NIL;
+    const { value, isValid } = evaluateOperator(node.operator, a, b);
+    if (isValid) return value;
+    const operands = `${typeName(a.type)} and ${typeName(b.type)}`;
+    throw new ExecuteError(
+      `Invalid operands to operator ${OPERATOR_NAME[node.operator]}, ${operands}.`,
+      node,
+      value
+    );
   }
-  return variant('DICTIONARY', entries);
-}
 
-function constructed(node: Extract<ExpressionNode, { kind: 'constructor' }>): Variant {
-  const value = construct(node.type, node.arguments.map(execute));
-  if (value) return value;
-  throw new ExecuteError(`Invalid arguments to construct '${typeName(node.type)}'`, node);
-}
+  private dictionaryOf(nodes: readonly ExpressionNode[]): Variant {
+    const entries: DictionaryEntry[] = [];
+    for (let index = 0; index < nodes.length; index += 2) {
+      const key = this.execute(nodes[index]!);
+      setEntry(entries, key, this.execute(nodes[index + 1]!));
+    }
+    return variant('DICTIONARY', entries);
+  }
 
-function execute(node: ExpressionNode): Variant {
-  switch (node.kind) {
-    case 'input':
-      throw new ExecuteError(`Invalid input ${node.index} (not passed) in expression`, node);
-    case 'constant':
-      return node.value;
-    case 'self':
-      throw new ExecuteError("self can't be used because instance is null (not passed)", node);
-    case 'operator':
-      return evaluate(node);
-    case 'array':
-      return variant('ARRAY', node.elements.map(execute));
-    case 'dictionary':
-      return dictionaryOf(node.entries);
-    case 'constructor':
-      return constructed(node);
-    case 'index':
-      execute(node.base);
-      execute(node.index);
-      throw new UnportedExpression('Variant::get of an index');
-    case 'namedIndex':
-      execute(node.base);
-      throw new UnportedExpression(`Variant::get_named of '${node.name}'`);
-    case 'builtinFunction':
-      node.arguments.forEach(execute);
-      throw new UnportedExpression(`the utility function ${node.name}`);
-    case 'call':
-      execute(node.base);
-      node.arguments.forEach(execute);
-      throw new UnportedExpression(`the method ${node.method}`);
+  private constructed(node: Extract<ExpressionNode, { kind: 'constructor' }>): Variant {
+    const value = construct(node.type, node.arguments.map(this.execute));
+    if (value) return value;
+    throw new ExecuteError(`Invalid arguments to construct '${typeName(node.type)}'`, node);
+  }
+
+  // expression.cpp:1397: a failed call still leaves the value it returned.
+  private called(node: Extract<ExpressionNode, { kind: 'builtinFunction' }>): Variant {
+    const args = node.arguments.map(this.execute);
+    const result = callUtility(node.name, args, this.random);
+    if (!result) throw new UnportedExpression(`the utility function ${node.name}`);
+    if (!result.error) return result.value;
+    const message = `Builtin call failed: ${callErrorText(node.name, args, result.error)}`;
+    throw new ExecuteError(message, node, result.value);
   }
 }
 
-/** Throws GodotCrash for a text that crashes Godot, and UnportedExpression for a node not ported. */
-export function runExpression(text: string): ExpressionResult {
+/** Throws GodotCrash, UnportedExpression for an unported node, UnportableUtility for editor state. */
+export function runExpression(text: string, random = new GlobalRandom()): ExpressionResult {
   const parsed = parseExpression(text);
   if ('error' in parsed) return { parseError: parsed.error };
   try {
-    return { value: execute(parsed.root) };
+    return { value: new Execution(random).execute(parsed.root) };
   } catch (error) {
     if (error instanceof ExecuteError)
       return { executeError: error.message, value: error.node === parsed.root ? error.value : NIL };

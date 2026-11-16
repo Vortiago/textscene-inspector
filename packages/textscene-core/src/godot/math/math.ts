@@ -242,13 +242,21 @@ export function pingpongf(value: number, length: number): number {
  */
 export function ease(x: number, c: number): number {
   const clamped = clamp(x, 0, 1);
-  if (c > 0) return c < 1 ? 1 - Math.pow(1 - clamped, 1 / c) : Math.pow(clamped, c);
+  if (c > 0) return c < 1 ? 1 - cPow(1 - clamped, 1 / c) : cPow(clamped, c);
   if (c < 0) {
-    return clamped < 0.5
-      ? Math.pow(clamped * 2, -c) * 0.5
-      : (1 - Math.pow(1 - (clamped - 0.5) * 2, -c)) * 0.5 + 0.5;
+    return clamped < 0.5 ? cPow(clamped * 2, -c) * 0.5 : (1 - cPow(1 - (clamped - 0.5) * 2, -c)) * 0.5 + 0.5;
   }
   return 0;
+}
+
+/**
+ * C's `pow`: a base of 1, and a base of -1 to an infinite power, give 1, where `Math.pow` gives NaN.
+ *
+ * @canonical C's pow
+ */
+export function cPow(base: number, exponent: number): number {
+  if (base === 1 || (base === -1 && !Number.isFinite(exponent) && !Number.isNaN(exponent))) return 1;
+  return Math.pow(base, exponent);
 }
 
 /**

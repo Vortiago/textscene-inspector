@@ -1,7 +1,8 @@
 import { runExpression, UnportedExpression } from '../../godot/expression/execute.js';
 import { GodotCrash } from '../../godot/variant/cInteger.js';
 import { booleanize } from '../../godot/variant/compare.js';
-import { UnportedConversion } from '../../godot/variant/construct/variantCast.js';
+import type { GlobalRandom } from '../../godot/variant/utility/globalRandom.js';
+import { UnportableUtility } from '../../godot/variant/utility/unportableUtility.js';
 import { UnportableComparison } from '../../godot/variant/operators/ordering.js';
 import { instruction, notTranspiled } from '../language/instructions.js';
 import { ShadingLanguageError, type SourcePosition } from '../language/shadingLanguageError.js';
@@ -15,11 +16,21 @@ const expected = (what: string, line: number) => new PreprocessorError(`Expected
 const unexpected = (text: string, at: number, line: number) =>
   new PreprocessorError(`Unexpected token: '${String.fromCodePoint(text.codePointAt(at)!)}'.`, line);
 
+/** What a condition reads: the macros, and the random generator that `seed` sets for the rest of the run. */
+export interface ConditionScope {
+  readonly defines: Defines;
+  readonly random: GlobalRandom;
+}
+
 /** The truth of an `#if` or `#elif` condition (shader_preprocessor.cpp:596). */
-export function isConditionTrue(condition: string, defines: Defines, line: number): boolean {
+export function isConditionTrue(
+  condition: string,
+  { defines, random }: ConditionScope,
+  line: number
+): boolean {
   if (condition === '') throw new PreprocessorError('Missing condition.', line);
   const expanded = expandMacros(expandDefined(condition, defines, line), defines, line);
-  const result = runExpression(expanded);
+  const result = runExpression(expanded, random);
   if ('parseError' in result) throw new PreprocessorError(result.parseError, line);
   // A failed execution counts as true when it leaves a value, as `1 / 0` leaves an error text.
   if (result.value.type === 'NIL') throw new PreprocessorError('Condition evaluation error.', line);
@@ -33,7 +44,7 @@ export function conditionRefusal(
   directive: string,
   position: SourcePosition
 ): unknown {
-  if (error instanceof UnportedExpression || error instanceof UnportedConversion)
+  if (error instanceof UnportedExpression || error instanceof UnportableUtility)
     return notTranspiled(instruction(`#${name}`)!, position, `${directive}: ${error.message}`);
   if (error instanceof UnportableComparison) return new ShadingLanguageError(error.message, position);
   if (error instanceof GodotCrash)

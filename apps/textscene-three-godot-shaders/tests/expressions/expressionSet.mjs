@@ -9,6 +9,7 @@ import {
 } from '../../../../packages/textscene-core/src/godot/variant/variantType.ts';
 import { seededRandom } from '../random/seededRandom.mjs';
 import { HAND_CASES } from './handCases.mjs';
+import { utilityCases } from './utilityCases.mjs';
 import { containerHolding, formatText, VALUE_TYPES, valueText } from './values.mjs';
 
 const SEED = 0x7e57;
@@ -137,7 +138,13 @@ function constructorCases(random) {
 /** Every case, in a fixed order: one seed gives the same texts on every platform. */
 export function expressionSet() {
   const random = seededRandom(SEED);
-  return [...HAND_CASES, ...operatorCases(random), ...unregisteredCases(random), ...constructorCases(random)];
+  return [
+    ...HAND_CASES,
+    ...operatorCases(random),
+    ...unregisteredCases(random),
+    ...constructorCases(random),
+    ...utilityCases(random),
+  ];
 }
 
 export const EXPRESSIONS = expressionSet();
