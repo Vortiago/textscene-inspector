@@ -123,6 +123,24 @@ describe('<SubViewportContainer>', () => {
     expect(textured).toHaveLength(0);
   });
 
+  it('draws no viewport and warns once when no NodePathProvider names its live path', async () => {
+    warnCalls.length = 0;
+    const entry = fakeEntry();
+    const renderer = await mount(
+      <>
+        <ViewportTexturePublisher path="Booth/View" entry={entry} />
+        <SubViewportContainer
+          {...painterEnv()}
+          solveNode={containerSolveNode({})}
+          rect={RECT}
+          renderOrder={0}
+        />
+      </>
+    );
+    expect(quadsSampling(renderer.scene, entry.plain.texture)).toHaveLength(0);
+    expect(warnCalls.filter((args) => String(args[0]).includes('no NodePathProvider'))).toHaveLength(1);
+  });
+
   describe('a cyclic pass', () => {
     /**
      * A registry where "Booth/View" and "Other" depend on each other. "Other" registers first, so

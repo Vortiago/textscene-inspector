@@ -17,6 +17,7 @@ import { useViewportTargetSlot } from '../../../../resources/textures/viewportte
 import { useRegisterViewportRect } from '../../../../r3f/contexts/ViewportRectContext.js';
 import { joinPath } from '../../../../utils/nodePath.js';
 import { useNodePath } from '../../../../r3f/contexts/NodePathContext.js';
+import * as logger from '../../../../logger.js';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../../parser/types.js';
 import { isSubViewport } from '../../../../r3f/viewportRender/viewportBoundary.js';
 import type { SubViewportProperties } from '../../../viewport/subviewport/types.js';
@@ -220,7 +221,14 @@ export function SubViewportContainer({
   // skips a viewport boundary.
   const viewports = solveNode.node.children.filter((child) => isSubViewport(child.type));
   const livePath = useNodePath();
-  if (livePath === null) throw new Error(`expected a NodePathProvider around ${solveNode.path}, got none`);
+  useEffect(() => {
+    if (livePath !== null) return;
+    logger.warn(
+      `[SubViewportContainer] ${solveNode.path}: no NodePathProvider above it, so it draws no viewport`
+    );
+  }, [livePath, solveNode.path]);
+  // The solve path is no fallback: in a Window's or a SubViewport's walk it names no published target.
+  if (livePath === null) return null;
 
   return (
     <>
