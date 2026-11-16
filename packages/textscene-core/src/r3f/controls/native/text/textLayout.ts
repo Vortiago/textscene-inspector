@@ -11,6 +11,7 @@
 import { round as godotRound } from '../../../../godot/math/math';
 import { hexCodeBoxAdvanceSize } from './hexCodeBox';
 import { glyphsDescentPx, lineExtentPx, shapedBlockHeightPx } from './lineExtent';
+import { NO_SPACING, getFontBaselineShiftPx } from './fontSpacing';
 import { isBitmapFontMetrics } from './bitmapFontMetrics';
 import {
   fontUsesSubpixelPositioning,
@@ -864,11 +865,12 @@ function toBreakGlyphs(
   hasEndGlyph = true
 ): BreakGlyph[] {
   const glyphs: BreakGlyph[] = [];
-  for (const range of runRanges(style, chars.length))
-    pushRunGlyphs(glyphs, chars, range, style, preserveControl);
+  const ranges = runRanges(style, chars.length);
+  for (const range of ranges) pushRunGlyphs(glyphs, chars, range, style, preserveControl);
   kernGlyphs(glyphs, chars, style);
   placeMarks(glyphs, style);
   roundAdvancesToWholePixels(glyphs, chars, style);
+  if (style.faces.some(isSpaced)) applyFontSpacing(glyphs, chars, style, ranges.at(-1));
   if (!hasEndGlyph) return glyphs;
   glyphs.push({
     start: chars.length,
@@ -880,6 +882,72 @@ function toBreakGlyphs(
     emboldenGrowthPx: 0,
   });
   return glyphs;
+}
+
+/** Ports `text_server_adv.cpp:7092-7110`. Mutates `glyphs`. */
+function applyFontSpacing(
+  glyphs: BreakGlyph[],
+  chars: ArrayLike<string>,
+  style: RunStyle,
+  lastRun: readonly [number, number] | undefined
+): void {
+  const unspaced = lastRun && lastAdvancingGlyph(glyphs, chars, style, lastRun);
+  for (let i = 0; i < chars.length; i++) {
+    const glyph = glyphs[i]!;
+    if (chars[i] === '' || glyph.isClusterTail) continue;
+    const face = style.faces[i]!;
+    if (!face.spacing && !face.baselineOffset) continue;
+    const spacing = face.spacing ?? NO_SPACING;
+    const cp = chars[i]!.codePointAt(0)!;
+    const addedPx = spacing.space !== 0 && isWhitespace(cp) ? spacing.space : spacing.glyph;
+    if (!glyph.glyphs) {
+      // A break is a glyph HarfBuzz shapes too, and it has no ink to move.
+      if (isLinebreak(cp) && glyph.advance !== 0 && glyph !== unspaced) glyph.advance += addedPx;
+      continue;
+    }
+    const shiftPx = getFontBaselineShiftPx(face, style.sizes[i]!);
+    for (const clusterGlyph of glyph.glyphs) {
+      if (shiftPx !== 0) clusterGlyph.yOffset = Math.fround(clusterGlyph.yOffset + shiftPx);
+      if (clusterGlyph.advance === 0 || clusterGlyph === unspaced) continue;
+      clusterGlyph.advance += addedPx;
+      glyph.advance += addedPx;
+    }
+  }
+}
+
+/** The last glyph with an advance in the text's last run, in buffer order (`text_server_adv.cpp:6985`). */
+function lastAdvancingGlyph(
+  glyphs: readonly BreakGlyph[],
+  chars: ArrayLike<string>,
+  style: RunStyle,
+  [start, end]: readonly [number, number]
+): BreakGlyph | ClusterGlyph | undefined {
+  const isRtl = isRtlRun(style, start);
+  for (let k = 0; k < end - start; k++) {
+    const i = isRtl ? start + k : end - 1 - k;
+    const glyph = glyphs[i]!;
+    if (chars[i] === '' || glyph.isClusterTail) continue;
+    if (!glyph.glyphs) {
+      if (isLinebreak(chars[i]!.codePointAt(0)!) && glyph.advance !== 0) return glyph;
+      continue;
+    }
+    const advancing = isRtl ? glyph.glyphs.find(isAdvancing) : lastAdvancingOf(glyph.glyphs);
+    if (advancing) return advancing;
+  }
+  return undefined;
+}
+
+function isAdvancing(glyph: ClusterGlyph): boolean {
+  return !glyph.isMark && glyph.advance !== 0;
+}
+
+function lastAdvancingOf(glyphs: readonly ClusterGlyph[]): ClusterGlyph | undefined {
+  for (let k = glyphs.length - 1; k >= 0; k--) if (isAdvancing(glyphs[k]!)) return glyphs[k];
+  return undefined;
+}
+
+function isSpaced(face: FontMetrics): boolean {
+  return face.spacing !== undefined || face.baselineOffset !== undefined;
 }
 
 /** The last glyph of a cluster that is no mark: a kerning lookup skips marks, so it pairs with the next cluster. */

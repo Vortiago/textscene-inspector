@@ -5,7 +5,7 @@
  * text, else nothing.
  */
 import * as THREE from 'three';
-import { maxEmboldenGrowthPx } from './canvasVariation';
+import { maxBaselineShiftPx, maxEmboldenGrowthPx } from './canvasVariation';
 import type { ByteColour } from './glyphCoverage';
 import { canvasGlyphPenXPx, faceStrikeSize, subpixelHalfStepPx, type FontMetrics } from './fontMetrics';
 import type { TextLayoutResult } from './textLayout';
@@ -74,7 +74,9 @@ export function computeCanvasTextCanvasLayout(
   const strokePadPx = strokeWidthPx / 2;
   // An embolden reaches its full growth right and up. The pad is symmetric, so the quad stays centred.
   const emboldenPadPx = maxEmboldenGrowthPx(layout);
-  const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + Math.ceil(strokePadPx + emboldenPadPx);
+  // A glyph's ink reaches its own descent below its shifted baseline, past the line's box.
+  const offsetYPx =
+    CANVAS_TEXT_VERTICAL_PAD_PX + Math.ceil(strokePadPx + emboldenPadPx + maxBaselineShiftPx(layout));
   // The worst-case shear offset over a line's rows, `dx(y) = -skew * (y - baselinePx)`: every row
   // of the raster above the baseline. A font's
   // descent is shorter than its ascent, so the rows below shear less.
@@ -281,17 +283,20 @@ function placeGlyphs(
   const baselinesPx = lineBaselinesPx(layout);
   return layout.lines.flatMap((line, lineIndex) => {
     const lineBaselinePx = baselinesPx[lineIndex]!;
-    const baselineY =
-      canvasLayout.offsetYPx + (snapsGlyphs ? Math.floor(phase.y + lineBaselinePx) : lineBaselinePx);
+    // Godot floors the pen after it adds the glyph's `y_off` (`text_server_adv.cpp:4083`).
+    const baselineYOf = (yOffsetPx: number): number =>
+      canvasLayout.offsetYPx +
+      (snapsGlyphs ? Math.floor(phase.y + lineBaselinePx + yOffsetPx) : lineBaselinePx + yOffsetPx);
     const itemOriginsPx = snapsGlyphs ? glyphOriginsPx(line, itemOriginPx.x, penSum) : [];
     return line.glyphs.flatMap((placement, index) => {
-      if (!hasOwnGlyph(placement)) return [];
+      // A glyph at an infinite `baseline_offset` lands nowhere on Godot's canvas.
+      if (!hasOwnGlyph(placement) || !Number.isFinite(placement.yOffset ?? 0)) return [];
       const penX =
         canvasLayout.offsetXPx +
         (snapsGlyphs
           ? canvasGlyphPenXPx(itemOriginsPx[index]!, fontSizePx, metrics) - wholeOriginXPx
           : placement.x + (placement.xOffset ?? 0) + unsnappedPenShiftPx);
-      return [{ placement, penX, baselineY: baselineY + (placement.yOffset ?? 0) }];
+      return [{ placement, penX, baselineY: baselineYOf(placement.yOffset ?? 0) }];
     });
   });
 }

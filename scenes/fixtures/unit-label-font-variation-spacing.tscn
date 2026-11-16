@@ -1,0 +1,83 @@
+[gd_scene load_steps=3 format=3]
+
+; The one variable: a FontVariation's extra spacing and baseline offset (spacing_glyph 2,
+; spacing_space 6, spacing_top 4, spacing_bottom 2, baseline_offset 0.1) on a Label, a Button, a
+; RichTextLabel, a LineEdit and a TextEdit. No other scene sets them, so every other scene shapes
+; with none. Godot 4.6.3 draws this scene within 2/255 of the previewer.
+
+[ext_resource type="FontFile" path="res://fonts/montserrat-semibold-subset.ttf" id="1_plain"]
+
+[sub_resource type="FontVariation" id="FontVariation_s"]
+base_font = ExtResource("1_plain")
+spacing_glyph = 2
+spacing_space = 6
+spacing_top = 4
+spacing_bottom = 2
+baseline_offset = 0.1
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.09, 0.1, 0.13, 1)
+
+[node name="Plate" type="ColorRect" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 420.0
+offset_bottom = 120.0
+color = Color(0.2, 0.22, 0.3, 1)
+
+[node name="Text" type="Label" parent="Plate"]
+layout_mode = 0
+offset_right = 400.0
+offset_bottom = 100.0
+theme_override_fonts/font = SubResource("FontVariation_s")
+theme_override_font_sizes/font_size = 24
+text = "Spacing AVo here
+Second line"
+
+[node name="Button" type="Button" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 160.0
+theme_override_fonts/font = SubResource("FontVariation_s")
+theme_override_font_sizes/font_size = 24
+text = "Button AVo here"
+
+[node name="Rich" type="RichTextLabel" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 240.0
+offset_right = 520.0
+offset_bottom = 340.0
+theme_override_fonts/normal_font = SubResource("FontVariation_s")
+theme_override_font_sizes/normal_font_size = 24
+text = "Rich AVo here
+Next line"
+
+[node name="Line" type="LineEdit" parent="."]
+layout_mode = 0
+offset_left = 560.0
+offset_top = 20.0
+offset_right = 900.0
+theme_override_fonts/font = SubResource("FontVariation_s")
+theme_override_font_sizes/font_size = 24
+text = "Line AVo edit"
+
+[node name="Edit" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 560.0
+offset_top = 120.0
+offset_right = 900.0
+offset_bottom = 260.0
+theme_override_fonts/font = SubResource("FontVariation_s")
+theme_override_font_sizes/font_size = 24
+text = "Text AVo edit
+Two lines"
