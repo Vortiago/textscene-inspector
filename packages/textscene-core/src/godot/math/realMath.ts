@@ -4,9 +4,6 @@ const f = Math.fround;
 
 const CMP_EPSILON_FLOAT = f(CMP_EPSILON);
 
-/** `(real_t)UNIT_EPSILON` (math_defs.h:65), the tolerance of `is_normalized`. */
-export const UNIT_EPSILON = f(0.001);
-
 export const sqrtf = (x: number): number => f(Math.sqrt(x));
 export const sinf = (x: number): number => f(Math.sin(x));
 export const cosf = (x: number): number => f(Math.cos(x));
@@ -24,10 +21,6 @@ export function isEqualApproxf(a: number, b: number): boolean {
   const tolerance = Math.max(f(CMP_EPSILON_FLOAT * Math.abs(a)), CMP_EPSILON_FLOAT);
   return Math.abs(f(a - b)) < tolerance;
 }
-
-/** `Math::is_equal_approx` for a float with a given tolerance. */
-export const isEqualWithinf = (a: number, b: number, tolerance: number): boolean =>
-  a === b || Math.abs(f(a - b)) < tolerance;
 
 export const isZeroApproxf = (x: number): boolean => Math.abs(x) < CMP_EPSILON_FLOAT;
 

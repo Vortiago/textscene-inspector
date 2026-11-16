@@ -6,20 +6,13 @@ import {
   CMP_EPSILON,
   cubicInterpolatef,
   cubicInterpolateInTimef,
+  isUnitWithinEpsilon,
   lerpf,
   round,
   sign,
   snapped,
 } from '../../math/math.js';
-import {
-  bezierDerivativef,
-  fposmodf,
-  isEqualApproxf,
-  isEqualWithinf,
-  isZeroApproxf,
-  sqrtf,
-  UNIT_EPSILON,
-} from '../../math/realMath.js';
+import { bezierDerivativef, fposmodf, isEqualApproxf, isZeroApproxf, sqrtf } from '../../math/realMath.js';
 import { variant, type Variant } from '../value/variant.js';
 import type { MethodPort } from './methodPort.js';
 import { vectorPorts, type Components, type VectorArguments } from './vectorPorts.js';
@@ -45,7 +38,7 @@ export const lengthSquared = (v: Components): number => dot(v, v);
 export const length = (v: Components): number => sqrtf(lengthSquared(v));
 export const minus = (a: Components, b: Components): Components => each2(a, b, (p, q) => f(p - q));
 export const scaled = (v: Components, by: number): Components => v.map((component) => f(component * by));
-export const isNormalized = (v: Components): boolean => isEqualWithinf(lengthSquared(v), 1, UNIT_EPSILON);
+export const isNormalized = (v: Components): boolean => isUnitWithinEpsilon(lengthSquared(v));
 
 /** `Vector3::normalize` and `Vector4::normalize`: a zero vector becomes positive zeros. */
 export function normalized(v: Components): Components {
