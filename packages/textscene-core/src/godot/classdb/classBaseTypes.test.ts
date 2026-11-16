@@ -129,6 +129,15 @@ describe('classExists', () => {
 });
 
 describe('classInheritanceChain', () => {
+  it('walks a node class newer than the 4.6.3 capture through the node tables', () => {
+    expect(classInheritanceChain('AreaLight3D').slice(0, 3)).toEqual([
+      'AreaLight3D',
+      'Light3D',
+      'VisualInstance3D',
+    ]);
+    expect(classInheritanceChain('AreaLight3D').at(-1)).toBe('Object');
+  });
+
   it('leads with the class, then its ancestry nearest first through Object', () => {
     expect(classInheritanceChain('Button')).toEqual([
       'Button',
