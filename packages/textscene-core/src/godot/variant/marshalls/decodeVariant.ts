@@ -1,3 +1,4 @@
+import { defaultValue } from '../value/defaultValue.js';
 import type { NodePathParts } from '../../string/nodePathParts.js';
 import { storedReal } from '../../math/real.js';
 import { setEntry } from '../compare.js';
@@ -151,7 +152,7 @@ class VariantDecoder {
       case 'OBJECT':
         return this.#object(header);
       case 'CALLABLE':
-        return variant('CALLABLE', '');
+        return defaultValue('CALLABLE');
       case 'SIGNAL':
         return this.#signal();
       case 'DICTIONARY':

@@ -25,7 +25,7 @@ describe('lightIconModulate', () => {
   it('keeps the hue of a saturated colour', () => {
     // Saturation 0.75, so the dimmest channel becomes 0.25. Green sits a third of the way up.
     const tint = lightIconModulate(light('Color(0.2, 0.4, 0.8, 1)'));
-    expect([tint.r, tint.g, tint.b]).toEqual([0.25, 0.5, 1].map((channel) => expect.closeTo(channel, 10)));
+    expect([tint.r, tint.g, tint.b]).toEqual([0.25, 0.5, 1].map((channel) => expect.closeTo(channel, 6)));
   });
 
   it('gives white for a grey, which has no saturation', () => {

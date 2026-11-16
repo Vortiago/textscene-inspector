@@ -1,6 +1,7 @@
 import { COMPONENT_VECTORS, componentsEqual } from './operators/componentVectors.js';
 import { defaultValue } from './value/defaultValue.js';
-import type { DictionaryEntry, Variant } from './value/variant.js';
+import { variant, type CallableValue, type DictionaryEntry, type Variant } from './value/variant.js';
+import { variantHash } from './variantHash.js';
 
 type Components = Readonly<Record<string, number>>;
 
@@ -23,6 +24,8 @@ function sameTypeEqual(a: Variant, b: Variant): boolean {
   const vector = COMPONENT_VECTORS[a.type];
   if (vector) return componentsEqual(vector, a.value as Components, b.value as Components);
   switch (a.type) {
+    case 'CALLABLE':
+      return callablesEqual(a.value, b.value as CallableValue);
     case 'ARRAY':
       return arraysEqual(a.value, b.value as readonly Variant[]);
     case 'DICTIONARY':
@@ -39,6 +42,12 @@ function sameTypeEqual(a: Variant, b: Variant): boolean {
     default:
       return deepEqual(a.value, b.value);
   }
+}
+
+// callable.cpp:256: two VariantCallables compare their hashes (variant_callable.cpp:34).
+function callablesEqual(a: CallableValue, b: CallableValue): boolean {
+  if (a.base && b.base) return variantHash(variant('CALLABLE', a)) === variantHash(variant('CALLABLE', b));
+  return !a.base && !b.base && a.method === b.method;
 }
 
 // The C++ `==` of a struct of numbers is the `==` of every field, so NaN is never equal.

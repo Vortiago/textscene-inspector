@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { godotSourceDir } from '../godotSource.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
+import { builtinTypes, dumpExtensionApi } from './readBuiltinTypes.mjs';
 import { constructorRegistrations } from './readConstructors.mjs';
 import { strictConversions } from './readConversions.mjs';
 import { errorNames } from './readErrorNames.mjs';
@@ -12,6 +13,12 @@ import { operatorRegistrations } from './readOperators.mjs';
 import { utilityFunctions } from './readUtilities.mjs';
 
 const TABLE_MODULE = join(REPO_ROOT, 'packages/textscene-core/src/godot/variant/registrations.generated.ts');
+
+const BUILTIN_MODULE = join(
+  REPO_ROOT,
+  'packages/textscene-core/src/godot/variant/call/builtinTypes.generated.ts'
+);
+const GODOT_RELEASE = 'Godot Engine v4.6.3.stable';
 
 const json = (value) => JSON.stringify(value);
 
@@ -63,6 +70,50 @@ ${errors.map((name) => `  ${json(name)},`).join('\n')}
 `;
 }
 
+const methodList = (methods) =>
+  methods.length === 0 ? '[]' : `[\n${methods.map((method) => `      ${json(method)},`).join('\n')}\n    ]`;
+
+/** The module text of the builtin types, keyed by their Godot names. */
+export function renderBuiltinTypes(types) {
+  const typeRows = types.map(
+    ({ name, members, indexing, isKeyed, methods }) => `  ${name}: {
+    members: ${json(members)},
+    indexing: ${json(indexing)},
+    isKeyed: ${isKeyed},
+    methods: ${methodList(methods)},
+  },`
+  );
+  return `/**
+ * Godot 4.6.3's builtin types, read from its extension API.
+ * AUTO-GENERATED - Do not edit manually. Run: pnpm godot:variant
+ */
+
+/** Name, return type or "", flags (1 const, 2 static, 4 vararg), hash, each argument's type and default. */
+export type BuiltinMethodRow = readonly [string, string, number, number, readonly (readonly [string, string?])[]];
+
+export interface BuiltinTypeRow {
+  /** Each named member and its type. */
+  readonly members: readonly (readonly [string, string])[];
+  /** The type an integer index reads, or "" where the type has no indexing. */
+  readonly indexing: string;
+  readonly isKeyed: boolean;
+  readonly methods: readonly BuiltinMethodRow[];
+}
+
+export const BUILTIN_TYPES: Readonly<Record<string, BuiltinTypeRow>> = {
+${typeRows.join('\n')}
+};
+`;
+}
+
+/** The builtin types of the running Godot, which must be the pinned release. */
+function readBuiltinTypes() {
+  const api = JSON.parse(dumpExtensionApi());
+  if (!api.header.version_full_name.startsWith(GODOT_RELEASE))
+    throw new Error(`expected ${GODOT_RELEASE}, got ${api.header.version_full_name}`);
+  return builtinTypes(api);
+}
+
 function main() {
   const coreDir = join(godotSourceDir(process.argv), 'core');
   const read = (file) => readFileSync(join(coreDir, 'variant', file), 'utf8');
@@ -74,7 +125,10 @@ function main() {
     errors: errorNames(readFileSync(join(coreDir, 'error/error_list.cpp'), 'utf8')),
   };
   const summary = `${tables.operators.length} operators, ${tables.constructors.length} constructors, ${tables.utilities.length} utility functions`;
-  const outputs = [[TABLE_MODULE, renderTables(tables)]];
+  const outputs = [
+    [TABLE_MODULE, renderTables(tables)],
+    [BUILTIN_MODULE, renderBuiltinTypes(readBuiltinTypes())],
+  ];
   const options = { tool: 'godot-variant', summary };
   if (process.argv.includes('--check'))
     checkGenerated(outputs, { ...options, command: 'pnpm godot:variant' });

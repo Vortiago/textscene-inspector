@@ -10,7 +10,8 @@ import {
   HASH_MURMUR3_SEED,
 } from '../math/hashFuncs.js';
 import type { NodePathParts } from '../string/nodePathParts.js';
-import type { Variant, VariantOf } from './value/variant.js';
+import { builtinMethodHash } from './call/builtinMethod.js';
+import type { CallableValue, Variant, VariantOf } from './value/variant.js';
 import { VARIANT_TYPE } from './variantType.js';
 
 // typedefs.h:380: a container deeper than this hashes to 0, after an error Godot only prints.
@@ -58,6 +59,12 @@ function nodePathHash({ absolute, names, subnames }: NodePathParts): number {
   return absolute ? pair : ~pair >>> 0;
 }
 
+// callable.cpp:322: a VariantCallable keeps the hash of its base and method (variant_callable.cpp:96).
+function callableHash({ method, base }: CallableValue): number {
+  if (!base) return fmix32(murmur3One64(0n, stringHash(method)));
+  return murmur3One64(BigInt(builtinMethodHash(base.type, method)!), variantHash(base));
+}
+
 /** `Array::recursive_hash` (array.cpp:195) and `Dictionary::recursive_hash` (dictionary.cpp:373). */
 function containerHash(type: number, elements: readonly Variant[], depth: number): number {
   if (depth > MAX_RECURSION) return 0;
@@ -85,7 +92,7 @@ function recursiveHash(value: Variant, depth: number): number {
     case 'OBJECT':
       return hashOneUint64(0n);
     case 'CALLABLE':
-      return fmix32(murmur3One64(0n, stringHash(value.value)));
+      return callableHash(value.value);
     case 'SIGNAL':
       return murmur3One64(0n, stringHash(value.value));
     case 'ARRAY':

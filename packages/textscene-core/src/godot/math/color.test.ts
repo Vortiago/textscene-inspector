@@ -119,7 +119,7 @@ describe('colorHue', () => {
     ['a magenta-leaning red', { r: 1, g: 0, b: 0.5 }, 11 / 12],
     ['a grey, which has no hue', { r: 0.4, g: 0.4, b: 0.4 }, 0],
   ])('reads the hue of %s', (_name, color, hue) => {
-    expect(colorHue(color)).toBeCloseTo(hue, 10);
+    expect(colorHue(color)).toBe(Math.fround(hue));
   });
 });
 

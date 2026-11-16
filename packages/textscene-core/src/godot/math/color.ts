@@ -10,7 +10,7 @@
  */
 
 import { hexDigitValue } from '../string/charUtils.js';
-import type { Rgba } from './math.js';
+import { cMax, cMin, type Rgba } from './math.js';
 
 /**
  * `named_colors[]` (`color_names.inc:49-196`): normalised name to `0xRRGGBBAA`. Keys drop the
@@ -238,17 +238,18 @@ export function inverted<C extends ColorChannels>(color: C): C {
  * @canonical A colour's hue, saturation and conversion from HSV
  */
 export function colorHue({ r, g, b }: ColorChannels): number {
-  const max = Math.max(r, g, b);
-  const delta = max - Math.min(r, g, b);
+  const max = cMax(cMax(r, g), b);
+  const delta = Math.fround(max - cMin(cMin(r, g), b));
   if (delta === 0) return 0;
 
+  const f = Math.fround;
   let hue: number;
-  if (r === max) hue = (g - b) / delta;
-  else if (g === max) hue = 2 + (b - r) / delta;
-  else hue = 4 + (r - g) / delta;
+  if (r === max) hue = f(f(g - b) / delta);
+  else if (g === max) hue = f(2 + f(f(b - r) / delta));
+  else hue = f(4 + f(f(r - g) / delta));
 
-  hue /= 6;
-  return hue < 0 ? hue + 1 : hue;
+  hue = f(hue / 6);
+  return hue < 0 ? f(hue + 1) : hue;
 }
 
 /**
@@ -257,7 +258,7 @@ export function colorHue({ r, g, b }: ColorChannels): number {
  * @canonical A colour's hue, saturation and conversion from HSV
  */
 export function colorValue({ r, g, b }: ColorChannels): number {
-  return Math.max(r, g, b);
+  return cMax(cMax(r, g), b);
 }
 
 /**
@@ -266,8 +267,8 @@ export function colorValue({ r, g, b }: ColorChannels): number {
  * @canonical A colour's hue, saturation and conversion from HSV
  */
 export function colorSaturation({ r, g, b }: ColorChannels): number {
-  const max = Math.max(r, g, b);
-  return max !== 0 ? (max - Math.min(r, g, b)) / max : 0;
+  const max = cMax(cMax(r, g), b);
+  return max !== 0 ? Math.fround(Math.fround(max - cMin(cMin(r, g), b)) / max) : 0;
 }
 
 /**
