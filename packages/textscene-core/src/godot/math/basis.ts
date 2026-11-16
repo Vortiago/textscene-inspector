@@ -7,7 +7,7 @@
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { storedReal as f } from './real.js';
-import { basisDeterminant, isEqualApprox, isZeroApprox, sign, UNIT_EPSILON } from './math.js';
+import { basisDeterminant, isEqualApprox, isUnitWithinEpsilon, isZeroApprox, sign } from './math.js';
 import { QUATERNION_IDENTITY, type Quaternion } from './quaternion.js';
 import {
   normalizedVector3,
@@ -290,8 +290,6 @@ export function basisFromQuaternionScale(rotation: Quaternion, scale: Vector3): 
   return basisMultiply(basisFromQuaternion(rotation), basisDiagonal(scale.x, scale.y, scale.z));
 }
 
-const UNIT_EPSILON_FLOAT = f(UNIT_EPSILON);
-
 /** `Basis::is_rotation` (basis.cpp:129): conformal, with a determinant within `UNIT_EPSILON` of 1. */
 function basisIsRotation(n: BasisComponents): boolean {
   const [x, y, z] = [0, 1, 2].map((index) => basisColumn(n, index));
@@ -303,7 +301,7 @@ function basisIsRotation(n: BasisComponents): boolean {
     isZeroApprox(vector3Dot(x!, z!)) &&
     isZeroApprox(vector3Dot(y!, z!));
   const determinant = basisDeterminantOf(n);
-  return isConformal && (determinant === 1 || Math.abs(f(determinant - 1)) < UNIT_EPSILON_FLOAT);
+  return isConformal && isUnitWithinEpsilon(determinant);
 }
 
 /** `Basis::get_quaternion` (basis.cpp:714): MATH_CHECKS in the editor gives `Quaternion()` off rotations. */

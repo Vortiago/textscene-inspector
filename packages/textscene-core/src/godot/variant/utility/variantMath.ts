@@ -1,6 +1,6 @@
 import { basisFromQuaternion, basisGetQuaternion, type BasisComponents } from '../../math/basis.js';
-import { lerp, wrapf, wrapi } from '../../math/doubleMath.js';
-import { lerpf, round, sign, snapped } from '../../math/math.js';
+import { wrapf, wrapi } from '../../math/doubleMath.js';
+import { lerp, lerpf, round, sign, snapped } from '../../math/math.js';
 import { quaternionSlerp, type Quaternion } from '../../math/quaternion.js';
 import { storedReal as f } from '../../math/real.js';
 import { transform2DInterpolateWith } from '../../math/transform2d.js';
@@ -8,13 +8,11 @@ import { interpolateTransform3D } from '../../math/transform3d.js';
 import { vector3Length } from '../../math/vector.js';
 import { doubleToInt32, doubleToInt64, wrapInt32 } from '../cInteger.js';
 import { booleanize } from '../compare.js';
-import { castVariant, mapComponents } from '../construct/variantCast.js';
+import { mapComponents, toDouble, type Components } from '../construct/variantCast.js';
 import { evaluateOperator } from '../operators/evaluate.js';
 import { NIL, variant, type Variant, type VariantTypeName } from '../value/variant.js';
 import { invalidArgument, type UtilityResult } from './callError.js';
 import type { VariantFunction } from './utilityFunction.js';
-
-type Components = Readonly<Record<string, number>>;
 
 const FLOAT_VECTORS: ReadonlySet<VariantTypeName> = new Set(['VECTOR2', 'VECTOR3', 'VECTOR4']);
 const INT_VECTORS: ReadonlySet<VariantTypeName> = new Set(['VECTOR2I', 'VECTOR3I', 'VECTOR4I']);
@@ -46,8 +44,6 @@ const refused = (argument: number, expected: VariantTypeName, value: Variant = N
   value,
   error: invalidArgument(argument, expected),
 });
-
-const toDouble = (value: Variant) => castVariant(value, 'FLOAT').value as number;
 
 const pairComponents = (a: unknown, b: unknown, map: (x: number, y: number) => number): Components =>
   Object.fromEntries(

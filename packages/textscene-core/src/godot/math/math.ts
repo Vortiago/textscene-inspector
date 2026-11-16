@@ -16,7 +16,18 @@ export const TAU = Math.PI * 2;
 export const CMP_EPSILON = 0.00001;
 
 /** `UNIT_EPSILON` (`math_defs.h:65`), the tolerance of `Vector3::is_normalized` in an official build. */
-export const UNIT_EPSILON = 0.001;
+const UNIT_EPSILON = 0.001;
+
+const UNIT_EPSILON_FLOAT = f(UNIT_EPSILON);
+
+/**
+ * `Math::is_equal_approx(value, 1, (real_t)UNIT_EPSILON)` (math_funcs.h:520) in float.
+ *
+ * @canonical A float value within UNIT_EPSILON of 1
+ */
+export function isUnitWithinEpsilon(value: number): boolean {
+  return value === 1 || Math.abs(f(value - 1)) < UNIT_EPSILON_FLOAT;
+}
 
 /** `Math::PI` (`math_defs.h:44`): the double the engine's gizmo loops multiply by, narrowing at the rotated() call. */
 export const REAL_PI = Math.PI;
@@ -68,12 +79,11 @@ export function round(value: number): number {
 }
 
 /**
- * `Math::lerp` (`core/math/math_funcs.h`): `p_from + (p_to - p_from) * p_weight`.
+ * `Math::lerp` (math_funcs.h): `from + (to - from) * weight`, not `from * (1 - t) + to * t`.
  *
- * Spelled this way rather than as `from * (1 - t) + to * t`: the two differ in
- * the last bits, and every port here is compared against numbers Godot printed.
+ * @canonical A double Math::lerp
  */
-function lerp(from: number, to: number, weight: number): number {
+export function lerp(from: number, to: number, weight: number): number {
   return from + (to - from) * weight;
 }
 

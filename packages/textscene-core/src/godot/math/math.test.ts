@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   cubicInterpolatef,
+  isUnitWithinEpsilon,
   degToRad,
   degToRadf,
   multiplyColor,
@@ -338,5 +339,22 @@ describe('lerpAngle', () => {
 
   it('crosses the half turn where that is shorter', () => {
     expect(lerpAngle(3, -3, 0.5)).toBeCloseTo(Math.PI, 6);
+  });
+});
+
+describe('isUnitWithinEpsilon', () => {
+  it('takes a value within UNIT_EPSILON of 1', () => {
+    expect(isUnitWithinEpsilon(1.0009)).toBe(true);
+    expect(isUnitWithinEpsilon(0.9991)).toBe(true);
+  });
+
+  it('refuses a value UNIT_EPSILON or more away from 1', () => {
+    expect(isUnitWithinEpsilon(1.0011)).toBe(false);
+    expect(isUnitWithinEpsilon(4)).toBe(false);
+  });
+
+  it('compares the float difference with the float UNIT_EPSILON (edge case)', () => {
+    expect(isUnitWithinEpsilon(1 + Math.fround(0.001))).toBe(false);
+    expect(isUnitWithinEpsilon(1)).toBe(true);
   });
 });

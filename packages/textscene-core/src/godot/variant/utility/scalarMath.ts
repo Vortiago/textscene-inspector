@@ -1,10 +1,13 @@
 import * as double from '../../math/doubleMath.js';
 import {
+  acosClamped,
+  clamp,
   cPow,
   degToRad,
   ease,
   isEqualApprox,
   isZeroApprox,
+  lerp,
   radToDeg,
   round,
   sign,
@@ -55,7 +58,7 @@ function nearestPowerOfTwo(x: bigint): bigint {
 
 const maxOf = <T extends number | bigint>(x: T, y: T): T => (x > y ? x : y);
 const minOf = <T extends number | bigint>(x: T, y: T): T => (x < y ? x : y);
-const clampOf = <T extends number | bigint>(x: T, min: T, max: T): T => (x < min ? min : x > max ? max : x);
+const clampInteger = (x: bigint, min: bigint, max: bigint) => (x < min ? min : x > max ? max : x);
 
 export const SCALAR_MATH: Readonly<Record<string, TypedFunction>> = {
   sin: real(Math.sin),
@@ -65,7 +68,7 @@ export const SCALAR_MATH: Readonly<Record<string, TypedFunction>> = {
   cosh: real(Math.cosh),
   tanh: real(Math.tanh),
   asin: real(double.asin),
-  acos: real(double.acos),
+  acos: real(acosClamped),
   atan: real(Math.atan),
   atan2: real(Math.atan2),
   asinh: real(Math.asinh),
@@ -97,7 +100,7 @@ export const SCALAR_MATH: Readonly<Record<string, TypedFunction>> = {
   is_finite: test(Number.isFinite),
   ease: real(ease),
   step_decimals: ([step]) => variant('INT', BigInt(double.stepDecimals(step as number))),
-  lerpf: real(double.lerp),
+  lerpf: real(lerp),
   cubic_interpolate: real(double.cubicInterpolate),
   cubic_interpolate_angle: real(double.cubicInterpolateAngle),
   cubic_interpolate_in_time: real(double.cubicInterpolateInTime),
@@ -121,8 +124,8 @@ export const SCALAR_MATH: Readonly<Record<string, TypedFunction>> = {
   maxf: real(maxOf),
   mini: integer(minOf),
   minf: real(minOf),
-  clampi: integer(clampOf),
-  clampf: real(clampOf),
+  clampi: integer(clampInteger),
+  clampf: real(clamp),
   nearest_po2: integer(nearestPowerOfTwo),
   pingpong: real(double.pingpong),
 };

@@ -1,4 +1,4 @@
-import { VARIANT_TYPE, variantTypeName } from '../variantType.js';
+import { variantTypeNameOf } from '../variantType.js';
 import type { Variant, VariantTypeName } from '../value/variant.js';
 
 /** `Callable::CallError` as the utility functions set it. */
@@ -12,8 +12,6 @@ export interface UtilityResult {
   readonly error?: CallError;
 }
 
-const typeName = (type: VariantTypeName) => variantTypeName(VARIANT_TYPE[type])!;
-
 export const invalidArgument = (argument: number, expected: VariantTypeName): CallError => ({
   error: 'INVALID_ARGUMENT',
   argument,
@@ -23,8 +21,8 @@ export const invalidArgument = (argument: number, expected: VariantTypeName): Ca
 /** `Variant::get_call_error_text` (variant.cpp:3496) for a call of `name` with no base object. */
 export function callErrorText(name: string, args: readonly Variant[], error: CallError): string {
   if (error.error === 'INVALID_ARGUMENT') {
-    const found = typeName(args[error.argument]!.type);
-    return `'${name}': Cannot convert argument ${error.argument + 1} from ${found} to ${typeName(error.expected)}`;
+    const found = variantTypeNameOf(args[error.argument]!.type);
+    return `'${name}': Cannot convert argument ${error.argument + 1} from ${found} to ${variantTypeNameOf(error.expected)}`;
   }
   return `'${name}': Method expected ${error.expected} argument(s), but called with ${args.length}`;
 }

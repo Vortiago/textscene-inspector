@@ -1,9 +1,8 @@
 import { doubleToInt32, remainderInt64 } from '../variant/cInteger.js';
-import { clamp, isEqualApprox, isZeroApprox, sign, TAU } from './math.js';
+import { clamp, isEqualApprox, isZeroApprox, lerp, sign, TAU } from './math.js';
 
 // Each "always does clamping" overload (math_funcs.h:97) answers outside its domain instead of NaN.
 export const asin = (x: number): number => (x < -1 ? -Math.PI / 2 : x > 1 ? Math.PI / 2 : Math.asin(x));
-export const acos = (x: number): number => (x < -1 ? Math.PI : x > 1 ? 0 : Math.acos(x));
 export const acosh = (x: number): number => (x < 1 ? 0 : Math.acosh(x));
 export const atanh = (x: number): number => (x <= -1 ? -Infinity : x >= 1 ? Infinity : Math.atanh(x));
 
@@ -12,8 +11,6 @@ export function fposmod(x: number, y: number): number {
   const value = x % y;
   return ((value < 0 && y > 0) || (value > 0 && y < 0) ? value + y : value) + 0;
 }
-
-export const lerp = (from: number, to: number, weight: number): number => from + (to - from) * weight;
 
 export function cubicInterpolate(
   from: number,

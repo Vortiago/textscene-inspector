@@ -1,7 +1,7 @@
 /** Godot's `Quaternion` (`core/math/quaternion.h`) as plain components, and the operations a pose edit reads. */
 
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
-import { CMP_EPSILON, UNIT_EPSILON } from './math.js';
+import { CMP_EPSILON, isUnitWithinEpsilon } from './math.js';
 import { storedReal as f } from './real.js';
 import type { Vector3 } from './vector.js';
 
@@ -63,12 +63,10 @@ export function normalizedQuaternion(q: Quaternion): Quaternion {
   };
 }
 
-const UNIT_EPSILON_FLOAT = f(UNIT_EPSILON);
-
 /** `Quaternion::is_normalized` (quaternion.cpp:73): the squared length within float `UNIT_EPSILON` of 1. */
 export function quaternionIsNormalized(q: Quaternion): boolean {
   const lengthSquared = quaternionDot(q, q);
-  return lengthSquared === 1 || Math.abs(f(lengthSquared - 1)) < UNIT_EPSILON_FLOAT;
+  return isUnitWithinEpsilon(lengthSquared);
 }
 
 /** `Quaternion::slerp` (quaternion.cpp:101): MATH_CHECKS, on in the editor, gives `Quaternion()` off unit. */

@@ -1,4 +1,4 @@
-import { isZeroApprox, UNIT_EPSILON } from '../../math/math.js';
+import { isUnitWithinEpsilon, isZeroApprox } from '../../math/math.js';
 import type { Plane } from '../../math/plane.js';
 import {
   normalizedQuaternion,
@@ -28,10 +28,7 @@ const normalized = (v: V3) => vector(normalizedVector3(v.x, v.y, v.z));
 const cross = (a: V3, b: V3) => vector(vector3Cross(tuple(a), tuple(b)));
 const dot = (a: V3, b: V3) => vector3Dot(tuple(a), tuple(b));
 
-// Math::is_equal_approx(a, b, tolerance) (math_funcs.h:520).
-const isEqualWithin = (a: number, b: number, tolerance: number) => a === b || Math.abs(f(a - b)) < tolerance;
-
-const isNormalized3 = (v: V3) => isEqualWithin(vector3LengthSquared(v.x, v.y, v.z), 1, UNIT_EPSILON);
+const isNormalized3 = (v: V3) => isUnitWithinEpsilon(vector3LengthSquared(v.x, v.y, v.z));
 
 export function transform2DFromRotation(rotation: number, position: Readonly<Vector2>): Transform2DColumns {
   const cr = cosf(rotation);

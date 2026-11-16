@@ -4,14 +4,8 @@ import { evaluateOperator } from '../variant/operators/evaluate.js';
 import { callErrorText } from '../variant/utility/callError.js';
 import { callUtility } from '../variant/utility/callUtility.js';
 import { GlobalRandom } from '../variant/utility/globalRandom.js';
-import {
-  NIL,
-  variant,
-  type DictionaryEntry,
-  type Variant,
-  type VariantTypeName,
-} from '../variant/value/variant.js';
-import { VARIANT_TYPE, variantTypeName } from '../variant/variantType.js';
+import { NIL, variant, type DictionaryEntry, type Variant } from '../variant/value/variant.js';
+import { variantTypeNameOf } from '../variant/variantType.js';
 import { parseExpression, type ExpressionNode, type Operator } from './parser.js';
 
 /** An expression node whose Godot behaviour this port does not have yet. */
@@ -63,8 +57,6 @@ const OPERATOR_NAME: Readonly<Record<Operator, string>> = {
   OP_IN: 'in',
 };
 
-const typeName = (type: VariantTypeName) => variantTypeName(VARIANT_TYPE[type])!;
-
 /** One run of `Expression::execute`, with the global random generator its utility calls draw from. */
 class Execution {
   constructor(private readonly random: GlobalRandom) {}
@@ -106,7 +98,7 @@ class Execution {
     const b = node.right ? this.execute(node.right) : NIL;
     const { value, isValid } = evaluateOperator(node.operator, a, b);
     if (isValid) return value;
-    const operands = `${typeName(a.type)} and ${typeName(b.type)}`;
+    const operands = `${variantTypeNameOf(a.type)} and ${variantTypeNameOf(b.type)}`;
     throw new ExecuteError(
       `Invalid operands to operator ${OPERATOR_NAME[node.operator]}, ${operands}.`,
       node,
@@ -126,7 +118,7 @@ class Execution {
   private constructed(node: Extract<ExpressionNode, { kind: 'constructor' }>): Variant {
     const value = construct(node.type, node.arguments.map(this.execute));
     if (value) return value;
-    throw new ExecuteError(`Invalid arguments to construct '${typeName(node.type)}'`, node);
+    throw new ExecuteError(`Invalid arguments to construct '${variantTypeNameOf(node.type)}'`, node);
   }
 
   // expression.cpp:1397: a failed call still leaves the value it returned.

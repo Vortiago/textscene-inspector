@@ -12,7 +12,7 @@ import { stringify } from '../stringify.js';
 import { defaultValue } from '../value/defaultValue.js';
 import { variant, type ColorValue, type Variant, type VariantTypeName } from '../value/variant.js';
 
-type Components = Readonly<Record<string, number>>;
+export type Components = Readonly<Record<string, number>>;
 
 /** `Variant::can_convert_strict` (variant.cpp:535). */
 export function canConvertStrict(from: VariantTypeName, to: VariantTypeName): boolean {
@@ -81,7 +81,8 @@ function toInt32(value: Variant): number {
   return value.type === 'FLOAT' ? doubleToInt32(value.value) : wrapInt32(toInt64(value));
 }
 
-function toDouble(value: Variant): number {
+/** `Variant::operator double()`: a source type it does not take gives 0. */
+export function toDouble(value: Variant): number {
   switch (value.type) {
     case 'BOOL':
       return value.value ? 1 : 0;

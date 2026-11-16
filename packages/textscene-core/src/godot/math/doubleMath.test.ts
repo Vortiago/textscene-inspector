@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { GodotCrash } from '../variant/cInteger.js';
-import { acos, atanh, fposmod, stepDecimals, wrapi } from './doubleMath.js';
+import { asin, atanh, fposmod, stepDecimals, wrapi } from './doubleMath.js';
 
 describe('the clamping overloads', () => {
   it('answer outside the domain instead of NaN', () => {
-    expect(acos(-2)).toBe(Math.PI);
+    expect(asin(-2)).toBe(-Math.PI / 2);
     expect(atanh(1)).toBe(Infinity);
   });
 });
