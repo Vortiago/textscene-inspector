@@ -1,15 +1,11 @@
 const OBJECTS = 'the case makes a Godot object, which waits on #1953';
 const UID = "the project's uid cache decides a uid, and the transpiler cannot read that cache (#1815)";
 const EDITOR_STATE = 'the answer is a counter or an object id of the running editor';
-const MEMBERS = 'the methods and members slice ports the index';
 const INTERNED_ADDRESS =
   'StringName::operator< compares the addresses of two interned texts (string_name.h:97), which differ by run';
 
 /** Each refused case's id and the class of what it throws. */
 export const REFUSED_CASES = {
-  'parser 53 "[1][0]"': { refusal: 'UnportedExpression', reason: MEMBERS },
-  'parser 55 "\\"a\\".b"': { refusal: 'UnportedExpression', reason: MEMBERS },
-  'parser 59 "(1).x"': { refusal: 'UnportedExpression', reason: MEMBERS },
   'object-edge 0 "weakref(null)"': { refusal: 'UnsupportedObject', reason: OBJECTS },
   'object-edge 1 "weakref(Object())"': { refusal: 'UnsupportedObject', reason: OBJECTS },
   'object-edge 4 "str_to_var(\\"Object(Node,)\\")"': { refusal: 'UnsupportedObject', reason: OBJECTS },

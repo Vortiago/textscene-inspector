@@ -1,3 +1,5 @@
+import { variantTypeNameOf } from '../../../../packages/textscene-core/src/godot/variant/variantType.ts';
+
 const hex = (bytes) => [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 
 function dumpFloat(value) {
@@ -92,7 +94,8 @@ export function dumpVariant({ type, value }) {
     case 'OBJECT':
       return 'Object(null)';
     case 'CALLABLE':
-      return value === '' ? 'Callable()' : `Callable(null::${value})`;
+      if (value.base) return `Callable(${variantTypeNameOf(value.base.type)}::${value.method})`;
+      return value.method === '' ? 'Callable()' : `Callable(null::${value.method})`;
     case 'SIGNAL':
       return value === '' ? 'Signal()' : `Signal(null::[signal]${value})`;
     case 'ARRAY':

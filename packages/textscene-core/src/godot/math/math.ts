@@ -59,6 +59,12 @@ export function isEqualApprox(a: number, b: number): boolean {
   return Math.abs(a - b) < tolerance;
 }
 
+/** Godot's `MIN` (typedefs.h): the second operand where either is NaN, unlike `Math.min`. */
+export const cMin = (a: number, b: number): number => (a < b ? a : b);
+
+/** Godot's `MAX` (typedefs.h): the second operand where either is NaN, unlike `Math.max`. */
+export const cMax = (a: number, b: number): number => (a > b ? a : b);
+
 /**
  * `CLAMP` (typedefs.h:138-141): `m_a < m_min ? m_min : (m_a > m_max ? m_max : m_a)`.
  *

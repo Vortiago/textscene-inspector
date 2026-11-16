@@ -1,3 +1,4 @@
+import { defaultValue } from '../value/defaultValue.js';
 import { storedReal } from '../../math/real.js';
 import { isAbsolutePath, simplifyPath } from '../../string/string.js';
 import { transform3DOf } from '../../math/transform3d.js';
@@ -251,7 +252,7 @@ class VariantReader {
       case 'Signal':
         return this.#emptyCall(variant('SIGNAL', ''));
       case 'Callable':
-        return this.#emptyCall(variant('CALLABLE', ''));
+        return this.#emptyCall(defaultValue('CALLABLE'));
       case 'Dictionary':
         return this.#typedDictionary();
       case 'Array':

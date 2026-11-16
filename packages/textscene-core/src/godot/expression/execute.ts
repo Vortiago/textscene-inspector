@@ -1,6 +1,7 @@
 import { setEntry } from '../variant/compare.js';
 import { construct } from '../variant/construct/construct.js';
 import { evaluateOperator } from '../variant/operators/evaluate.js';
+import { getNamed, variantGet } from '../variant/setget/variantGet.js';
 import { callErrorText } from '../variant/utility/callError.js';
 import { callUtility } from '../variant/utility/callUtility.js';
 import { utilityHost, type UtilityHost } from '../variant/utility/utilityHost.js';
@@ -78,12 +79,9 @@ class Execution {
       case 'constructor':
         return this.constructed(node);
       case 'index':
-        this.execute(node.base);
-        this.execute(node.index);
-        throw new UnportedExpression('Variant::get of an index');
+        return this.indexed(node);
       case 'namedIndex':
-        this.execute(node.base);
-        throw new UnportedExpression(`Variant::get_named of '${node.name}'`);
+        return this.named(node);
       case 'builtinFunction':
         return this.called(node);
       case 'call':
@@ -104,6 +102,23 @@ class Execution {
       node,
       value
     );
+  }
+
+  private indexed(node: Extract<ExpressionNode, { kind: 'index' }>): Variant {
+    const base = this.execute(node.base);
+    const index = this.execute(node.index);
+    const { value, isValid } = variantGet(base, index);
+    if (isValid) return value;
+    const types = `${variantTypeNameOf(index.type)} for base type ${variantTypeNameOf(base.type)}`;
+    throw new ExecuteError(`Invalid index of type ${types}`, node, value);
+  }
+
+  private named(node: Extract<ExpressionNode, { kind: 'namedIndex' }>): Variant {
+    const base = this.execute(node.base);
+    const { value, isValid } = getNamed(base, node.name);
+    if (isValid) return value;
+    const message = `Invalid named index '${node.name}' for base type ${variantTypeNameOf(base.type)}`;
+    throw new ExecuteError(message, node, value);
   }
 
   private dictionaryOf(nodes: readonly ExpressionNode[]): Variant {

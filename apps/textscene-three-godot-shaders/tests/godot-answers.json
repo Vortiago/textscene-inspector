@@ -6,7 +6,7 @@
   "random": "f496ba32f2398f1929355ce53edcc407498209e537eebdc0cc37ae5e4d373b56",
   "operators": "71961cc3c58f615ccb90c5777e87ec3bb1e7d85793a63db00e1ba0bcfe300064",
   "corpus": "cdd73866a614dcae16a6e20af61acb6b58bb0c78ad83ac65263a0dfea750fbe1",
-  "expressions": "1e7ae31538ac341193d3df8d3529b265da221b027baab9c59745e97466a4dbed"
+  "expressions": "0fcbd6eaf2a702ffe90dcfa1ec805796367dd9ba741234c9867cc656203f09c0"
  },
  "smoke": {
   "probes": {
@@ -695,6 +695,13 @@
    "marshall-edge 194 \"bytes_to_var(PackedByteArray([25, 0, 0, 0]))\"": {"verdict":"value","text":"Callable()"},
    "marshall-edge 211 \"bytes_to_var(PackedByteArray([30, 0, 0, 0, 1, 0, 0, 0, 255, 255, 255, 255]))\"": {"verdict":"value","text":"PackedInt32Array[-1]"},
    "marshall-edge 217 \"bytes_to_var_with_objects(PackedByteArray([28, 0, 2, 0, 4, 0, 0, 0, 78, 111, 112, 101, 0, 0, 0, 0]))\"": {"verdict":"value","text":"[]"},
+   "member-edge 17 \"AABB(Vector3(1, 2, 3), Vector3(4, 5, 6)).position\"": {"verdict":"value","text":"Vector3(f000000000000f03f, f0000000000000040, f0000000000000840)"},
+   "member-edge 22 \"Transform2D(1, Vector2(2, 3)).origin\"": {"verdict":"value","text":"Vector2(f0000000000000040, f0000000000000840)"},
+   "member-edge 86 \"Color(NAN, 0.5, 0.5).ok_hsl_h\"": {"verdict":"value","text":"f0000000000000000"},
+   "member-edge 128 \"Color().R\"": {"verdict":"execute","text":"Invalid named index 'R' for base type Color"},
+   "index-edge 0 \"\\\"abc\\\"[0]\"": {"verdict":"value","text":"s61"},
+   "index-edge 9 \"\\\"abc\\\"[1.9]\"": {"verdict":"value","text":"s62"},
+   "index-edge 48 \"Transform2D(1, Vector2(2, 3))[2]\"": {"verdict":"value","text":"Vector2(f0000000000000040, f0000000000000840)"},
    "object-edge 14 \"str_to_var(\\\"Resource(1)\\\")\"": {"verdict":"value","text":"null"},
    "object-edge 33 \"str_to_var(\\\"Resource(\\\\\\\"nope.tres\\\\\\\")\\\")\"": {"verdict":"value","text":"null"},
    "object-edge 36 \"str_to_var(\\\"Resource(\\\\\\\"res://main.tscn\\\\\\\" 5)\\\")\"": {"verdict":"value","text":"null"},

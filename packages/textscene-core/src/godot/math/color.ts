@@ -10,7 +10,7 @@
  */
 
 import { hexDigitValue } from '../string/charUtils.js';
-import type { Rgba } from './math.js';
+import { cMax, cMin, type Rgba } from './math.js';
 
 /**
  * `named_colors[]` (`color_names.inc:49-196`): normalised name to `0xRRGGBBAA`. Keys drop the
@@ -205,6 +205,15 @@ interface ColorChannels {
   b: number;
 }
 
+const float32 = Math.fround;
+
+// `Color` holds float channels, so a double channel from a caller rounds first.
+const floatChannels = ({ r, g, b }: ColorChannels): ColorChannels => ({
+  r: float32(r),
+  g: float32(g),
+  b: float32(b),
+});
+
 /**
  * `Color::darkened` (`core/math/color.h:119-125`): each colour channel shrinks by `amount`.
  * Double, not float, as the callers' colours are.
@@ -232,24 +241,38 @@ export function inverted<C extends ColorChannels>(color: C): C {
   return { ...color, r: 1 - color.r, g: 1 - color.g, b: 1 - color.b };
 }
 
-/**
- * `Color::get_h` (`core/math/color.cpp:136-163`): the hue as a fraction of the circle, 0 for a grey.
- *
- * @canonical A colour's hue, saturation and conversion from HSV
- */
-export function colorHue({ r, g, b }: ColorChannels): number {
-  const max = Math.max(r, g, b);
-  const delta = max - Math.min(r, g, b);
+/** `Color::get_h` (`core/math/color.cpp:136-163`) in the precision `round` gives, 0 for a grey. */
+function hueIn({ r, g, b }: ColorChannels, round: (value: number) => number): number {
+  const max = cMax(cMax(r, g), b);
+  const delta = round(max - cMin(cMin(r, g), b));
   if (delta === 0) return 0;
 
   let hue: number;
-  if (r === max) hue = (g - b) / delta;
-  else if (g === max) hue = 2 + (b - r) / delta;
-  else hue = 4 + (r - g) / delta;
+  if (r === max) hue = round(round(g - b) / delta);
+  else if (g === max) hue = round(2 + round(round(b - r) / delta));
+  else hue = round(4 + round(round(r - g) / delta));
 
-  hue /= 6;
-  return hue < 0 ? hue + 1 : hue;
+  hue = round(hue / 6);
+  return hue < 0 ? round(hue + 1) : hue;
 }
+
+/** `Color::get_s` (`core/math/color.cpp:165-174`) in the precision `round` gives, 0 for black. */
+function saturationIn({ r, g, b }: ColorChannels, round: (value: number) => number): number {
+  const max = cMax(cMax(r, g), b);
+  return max !== 0 ? round(round(max - cMin(cMin(r, g), b)) / max) : 0;
+}
+
+const inDouble = (value: number) => value;
+
+/**
+ * The hue as a fraction of the circle, in double as the renderer's colours are.
+ *
+ * @canonical A colour's hue, saturation and conversion from HSV
+ */
+export const colorHue = (color: ColorChannels): number => hueIn(color, inDouble);
+
+/** The hue as a float `Color` reads it, as `Color.h` gives it to a script. */
+export const colorHuef = (color: ColorChannels): number => hueIn(floatChannels(color), float32);
 
 /**
  * `Color::get_v` (`core/math/color.cpp:176-180`): the brightest channel.
@@ -257,18 +280,18 @@ export function colorHue({ r, g, b }: ColorChannels): number {
  * @canonical A colour's hue, saturation and conversion from HSV
  */
 export function colorValue({ r, g, b }: ColorChannels): number {
-  return Math.max(r, g, b);
+  return cMax(cMax(r, g), b);
 }
 
 /**
- * `Color::get_s` (`core/math/color.cpp:165-174`): 0 for black, where the brightest channel is 0.
+ * The span of the channels over the brightest, in double as the renderer's colours are.
  *
  * @canonical A colour's hue, saturation and conversion from HSV
  */
-export function colorSaturation({ r, g, b }: ColorChannels): number {
-  const max = Math.max(r, g, b);
-  return max !== 0 ? (max - Math.min(r, g, b)) / max : 0;
-}
+export const colorSaturation = (color: ColorChannels): number => saturationIn(color, inDouble);
+
+/** The saturation as a float `Color` reads it, as `Color.s` gives it to a script. */
+export const colorSaturationf = (color: ColorChannels): number => saturationIn(floatChannels(color), float32);
 
 /**
  * `Color::from_hsv` (`core/math/color.cpp:458-461`, delegating to `set_hsv`, `:182-227`). The alpha

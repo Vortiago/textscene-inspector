@@ -1,7 +1,8 @@
 import { cEscape } from '../string/cEscape.js';
 import { nodePathFromParts } from '../string/nodePathParts.js';
 import { numReal, numRealFloat, stringNum } from '../string/stringNumber.js';
-import type { Variant } from './value/variant.js';
+import type { CallableValue, Variant } from './value/variant.js';
+import { variantTypeNameOf } from './variantType.js';
 
 type Components = object;
 
@@ -18,6 +19,12 @@ const XYZW = ['x', 'y', 'z', 'w'];
 const vector2 = (v: Components) => realList(v, XY, true);
 const vector3 = (v: Components) => realList(v, XYZ, true);
 const vector4 = (v: Components) => realList(v, XYZW, true);
+
+// callable.cpp:384: a VariantCallable names its base type (variant_callable.cpp:46).
+function callableText({ method, base }: CallableValue): string {
+  if (base) return `${variantTypeNameOf(base.type)}::${method}`;
+  return method === '' ? 'null::null' : `null::${method}`;
+}
 
 // stringify_variant_clean (variant.cpp:1568): an element of a container quotes its strings.
 function elementText(value: Variant): string {
@@ -100,7 +107,7 @@ export function stringify(value: Variant): string {
     case 'OBJECT':
       return '<Object#null>';
     case 'CALLABLE':
-      return value.value === '' ? 'null::null' : `null::${value.value}`;
+      return callableText(value.value);
     case 'SIGNAL':
       return `null::[signal]${value.value}`;
     case 'ARRAY':

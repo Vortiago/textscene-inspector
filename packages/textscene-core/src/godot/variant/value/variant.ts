@@ -18,13 +18,19 @@ export type Vector4Value = Readonly<Quaternion>;
 export type ColorValue = Readonly<Rgba>;
 export type ProjectionValue = readonly [Vector4Value, Vector4Value, Vector4Value, Vector4Value];
 
+/** A Callable's method, empty when null, and the base of a `VariantCallable` (variant_callable.cpp). */
+export interface CallableValue {
+  readonly method: string;
+  readonly base?: Variant;
+}
+
 export interface DictionaryEntry {
   readonly key: Variant;
   readonly value: Variant;
 }
 
 // An INT holds int64 as a bigint, and a real_t component the float32 value it stores.
-/** An OBJECT is always null. A CALLABLE or SIGNAL holds its method or signal name, empty when null. */
+/** An OBJECT is always null. A SIGNAL holds its signal name, empty when null. */
 export interface VariantValues {
   NIL: null;
   BOOL: boolean;
@@ -51,7 +57,7 @@ export interface VariantValues {
   NODE_PATH: NodePathParts;
   RID: bigint;
   OBJECT: null;
-  CALLABLE: string;
+  CALLABLE: CallableValue;
   SIGNAL: string;
   DICTIONARY: readonly DictionaryEntry[];
   ARRAY: readonly Variant[];
