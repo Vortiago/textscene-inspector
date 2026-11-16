@@ -4,7 +4,7 @@
  * `resource_importer_scene.cpp:3257-3266`.
  */
 
-import { hexBytes } from './md5';
+import { hexBytes } from '../../../../godot/crypto/blockHash';
 
 /** One unwrapped mesh. Output vertex `v` is input vertex `sourceVertices[v]` at UV2 `uvs[2v], uvs[2v + 1]`. */
 export interface UnwrapCacheEntry {

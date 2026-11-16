@@ -1,11 +1,48 @@
 const OBJECTS = 'the case makes a Godot object, which waits on #1953';
 const UID = "the project's uid cache decides a uid, and the transpiler cannot read that cache (#1815)";
 const EDITOR_STATE = 'the answer is a counter or an object id of the running editor';
+const MACHINE_ICONV = 'the answer converts with the iconv and locale of the machine Godot runs on';
+const TRANSLATED_UNIT =
+  "humanize_size's unit goes through RTR, which translates it into the language of the editor or the game";
+const PAST_UNICODE =
+  'the String holds a code past U+10FFFF, which a JavaScript string cannot hold, so the port refuses it';
 const INTERNED_ADDRESS =
   'StringName::operator< compares the addresses of two interned texts (string_name.h:97), which differ by run';
 
 /** Each refused case's id and the class of what it throws. */
 export const REFUSED_CASES = {
+  'string-method-edge 25 "\\"\\".humanize_size(0)"': {
+    refusal: 'UnportableUtility',
+    reason: TRANSLATED_UNIT,
+  },
+  'string-method-edge 26 "\\"\\".humanize_size(1023)"': {
+    refusal: 'UnportableUtility',
+    reason: TRANSLATED_UNIT,
+  },
+  'string-method-edge 27 "\\"\\".humanize_size(1025)"': {
+    refusal: 'UnportableUtility',
+    reason: TRANSLATED_UNIT,
+  },
+  'string-method-edge 28 "\\"\\".humanize_size(1048576)"': {
+    refusal: 'UnportableUtility',
+    reason: TRANSLATED_UNIT,
+  },
+  'string-method-edge 29 "\\"\\".humanize_size(1536000)"': {
+    refusal: 'UnportableUtility',
+    reason: TRANSLATED_UNIT,
+  },
+  'string-method-edge 30 "\\"\\".humanize_size(123456789012)"': {
+    refusal: 'UnportableUtility',
+    reason: TRANSLATED_UNIT,
+  },
+  'string-method-edge 31 "\\"\\".humanize_size(9223372036854775807)"': {
+    refusal: 'UnportableUtility',
+    reason: TRANSLATED_UNIT,
+  },
+  'string-method-edge 32 "\\"\\".humanize_size(-1)"': {
+    refusal: 'UnportableUtility',
+    reason: TRANSLATED_UNIT,
+  },
   'object-edge 0 "weakref(null)"': { refusal: 'UnsupportedObject', reason: OBJECTS },
   'object-edge 1 "weakref(Object())"': { refusal: 'UnsupportedObject', reason: OBJECTS },
   'object-edge 4 "str_to_var(\\"Object(Node,)\\")"': { refusal: 'UnsupportedObject', reason: OBJECTS },
@@ -39,6 +76,36 @@ export const REFUSED_CASES = {
     refusal: 'UnsupportedObject',
     reason: OBJECTS,
   },
+  'method String.replace_chars 31 "\\"a_red.b/#F80 a 😀İ\\".replace_chars(\\"#ff8000\\", -1)"': {
+    refusal: 'UnrepresentableText',
+    reason: PAST_UNICODE,
+  },
+  'method String.replace_chars 32 "\\"a_red.b/#F80 a 😀İ\\".replace_chars(\\"#ff8000\\", -7)"': {
+    refusal: 'UnrepresentableText',
+    reason: PAST_UNICODE,
+  },
+  'method String.replace_chars 33 "\\"a_red.b/#F80 a 😀İ\\".replace_chars(\\"#ff8000\\", 2147483647)"': {
+    refusal: 'UnrepresentableText',
+    reason: PAST_UNICODE,
+  },
+  'method String.replace_chars 34 "\\"a_red.b/#F80 a 😀İ\\".replace_chars(\\"#ff8000\\", -2147483648)"': {
+    refusal: 'UnrepresentableText',
+    reason: PAST_UNICODE,
+  },
+  'method StringName.replace_chars 31 "StringName(\\"a_red.b/#F80 a 😀İ\\").replace_chars(\\"#ff8000\\", -1)"':
+    { refusal: 'UnrepresentableText', reason: PAST_UNICODE },
+  'method StringName.replace_chars 32 "StringName(\\"a_red.b/#F80 a 😀İ\\").replace_chars(\\"#ff8000\\", -7)"':
+    { refusal: 'UnrepresentableText', reason: PAST_UNICODE },
+  'method StringName.replace_chars 33 "StringName(\\"a_red.b/#F80 a 😀İ\\").replace_chars(\\"#ff8000\\", 2147483647)"':
+    { refusal: 'UnrepresentableText', reason: PAST_UNICODE },
+  'method StringName.replace_chars 34 "StringName(\\"a_red.b/#F80 a 😀İ\\").replace_chars(\\"#ff8000\\", -2147483648)"':
+    { refusal: 'UnrepresentableText', reason: PAST_UNICODE },
+};
+
+/** The methods the port refuses wherever the set calls them, with the reason. */
+export const REFUSED_METHODS = {
+  to_multibyte_char_buffer: { refusal: 'UnportableUtility', reason: MACHINE_ICONV },
+  humanize_size: { refusal: 'UnportableUtility', reason: TRANSLATED_UNIT },
 };
 
 /** The comparisons of two distinct non-empty StringNames, which the port refuses wherever the set has one. */

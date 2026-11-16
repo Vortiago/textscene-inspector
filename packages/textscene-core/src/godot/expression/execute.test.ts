@@ -62,7 +62,7 @@ describe('runExpression', () => {
   });
 
   it('refuses a method call it has not ported', () => {
-    expect(() => runExpression('"a".length()')).toThrow(UnportedExpression);
+    expect(() => runExpression('[1].size()')).toThrow(UnportedExpression);
   });
 
   it('refuses an expression that makes an object', () => {

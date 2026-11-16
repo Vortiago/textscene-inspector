@@ -7,7 +7,7 @@ import { godotAnswers } from '../godotAnswers.mjs';
 import { dumpVariant } from './dump.mjs';
 import { EXPRESSIONS } from './expressionSet.mjs';
 import { LIBM_DIFFERENCES } from './libmDifferences.mjs';
-import { INTERNED_COMPARISON, REFUSED_CASES, REFUSED_UTILITIES } from './refusedCases.mjs';
+import { INTERNED_COMPARISON, REFUSED_CASES, REFUSED_METHODS, REFUSED_UTILITIES } from './refusedCases.mjs';
 
 const RECORD = godotAnswers().expressions;
 const IS_LIVE = godotAnswers().live;
@@ -34,9 +34,10 @@ const ANSWERED = EXPRESSIONS.filter((test) => RECORD.cases[test.id] !== undefine
 const isInternedComparison = (id) => /^operator OP_(LESS|GREATER)\S* STRING_NAME STRING_NAME /.test(id);
 
 /** What the port may refuse a case with, or nothing for a case it must answer. */
-const allowedRefusal = ({ id, utility }) =>
+const allowedRefusal = ({ id, utility, method }) =>
   REFUSED_CASES[id] ??
   REFUSED_UTILITIES[utility] ??
+  REFUSED_METHODS[method] ??
   (isInternedComparison(id) ? INTERNED_COMPARISON : undefined);
 
 describe('the Expression port against Godot', () => {

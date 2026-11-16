@@ -18,6 +18,9 @@ export const PORTED_METHOD_TYPES = [
   'Transform2D',
   'Transform3D',
   'Projection',
+  'String',
+  'StringName',
+  'NodePath',
 ];
 
 /** A typical value of each type, then its edges: zero, negative zero, the float limits, NaN and infinity. */
@@ -25,7 +28,28 @@ export const EDGE_VALUES = {
   float: ['0.3', ['0', '-0.0', '-2.5', '1e30', '1e-30', 'NAN', 'INF']],
   int: ['3', ['0', '-1', '-7', '2147483647', '-2147483648', '4294967297']],
   bool: ['true', ['false']],
-  String: ['"#ff8000"', ['""', '"#F80"', '"ff800080"', '"#ff80zz"', '"red"', '"#1234567"']],
+  String: [
+    '"#ff8000"',
+    [
+      '""',
+      '"#F80"',
+      '"ff800080"',
+      '"#ff80zz"',
+      '"red"',
+      '"#1234567"',
+      '"a"',
+      '"İ"',
+      '"😀"',
+      '"/"',
+      '"."',
+      '"_"',
+    ],
+  ],
+  PackedStringArray: [
+    'PackedStringArray(["a", "b"])',
+    ['PackedStringArray()', 'PackedStringArray([""])', 'PackedStringArray(["x", "", "😀"])'],
+  ],
+  Variant: ['["x", 2]', ['{"a": 1, "b": 2.5}', '[["k", "v"], ["n", 3]]', '[["bad"]]', '7', 'null']],
   Vector2: [
     'Vector2(0.6, -0.8)',
     [
@@ -209,22 +233,68 @@ export const EDGE_VALUES = {
   ],
 };
 
+/** Words, case runs, paths, numbers, escapes, addresses and codes past the Basic Multilingual Plane. */
+const TEXT_BASES = [
+  '""',
+  '"  padded\\t "',
+  '"Godot Engine_4.6"',
+  '"camelCaseHTTPServer2D"',
+  '"ÄÖ straße İ ǅ"',
+  '"😀 smile 😀"',
+  '"-12.50e3"',
+  '"0x1F"',
+  '"C:\\\\dir/sub/file.tar.gz"',
+  '"res://a/../b/./c.tscn"',
+  '"192.168.0.1"',
+  '"::ffff:10.0.0.1"',
+  '"%41%e9+b%2"',
+  '"line1\\nline2\\tq\\"x"',
+  '"a,b,,c"',
+  '"<a href=\'x\'>&amp;</a>"',
+];
+
+/** The typical base holds each String argument edge, and a StringName holds the same texts. */
+const BASE_VALUES = {
+  String: ['"a_red.b/#F80 a 😀İ"', TEXT_BASES],
+  StringName: ['StringName("a_red.b/#F80 a 😀İ")', TEXT_BASES.map((text) => `StringName(${text})`)],
+  NodePath: [
+    'NodePath("Root/Child:position:x")',
+    ['""', '"/"', '"/root/a/b"', '"a/b/c"', '":x:y"', '"."', '"../x:y"', '"a//b/"', '":"'].map(
+      (text) => `NodePath(${text})`
+    ),
+  ],
+};
+
 /** A value the parameter does not take, so the binder's check fails and the method runs on the cast value. */
 const wrongType = (argumentType) => (argumentType === 'String' ? 'Vector2(1, 2)' : '"x"');
 
 const typical = (type) => EDGE_VALUES[type][0];
 const edges = (type) => EDGE_VALUES[type][1];
+const bases = (type) => {
+  const [typicalBase, edgeBases] = BASE_VALUES[type] ?? EDGE_VALUES[type];
+  return [typicalBase, ...edgeBases];
+};
+
+// Edges that build a String of two billion characters: Godot fills gigabytes and V8 holds no such string.
+const GIANT_TEXT_EDGES = {
+  repeat: ['2147483647'],
+  lpad: ['2147483647', '-2147483648'],
+  rpad: ['2147483647', '-2147483648'],
+  pad_decimals: ['2147483647'],
+  pad_zeros: ['2147483647'],
+};
+const isGiantText = (name, value) => GIANT_TEXT_EDGES[name]?.includes(value) ?? false;
 
 /** The calls of one method: each base edge with typical arguments, then each argument through its edges. */
 function callTexts(type, [name, , , , parameters]) {
   const argumentTypes = parameters.map(([argumentType]) => argumentType);
   const typicalArguments = argumentTypes.map(typical);
   const call = (base, args) => `${base}.${name}(${args.join(', ')})`;
-  const baseCalls = [typical(type), ...edges(type)].map((base) => call(base, typicalArguments));
+  const baseCalls = bases(type).map((base) => call(base, typicalArguments));
   const argumentCalls = argumentTypes.flatMap((argumentType, index) =>
-    [...edges(argumentType), wrongType(argumentType)].map((value) =>
-      call(typical(type), typicalArguments.with(index, value))
-    )
+    [...edges(argumentType), wrongType(argumentType)]
+      .filter((value) => !isGiantText(name, value))
+      .map((value) => call(bases(type)[0], typicalArguments.with(index, value)))
   );
   return [...baseCalls, ...argumentCalls];
 }
@@ -236,6 +306,7 @@ export function methodCases() {
       callTexts(type, row).map((text, index) => ({
         id: `method ${type}.${row[0]} ${index} ${JSON.stringify(text)}`,
         text,
+        method: row[0],
       }))
     )
   );

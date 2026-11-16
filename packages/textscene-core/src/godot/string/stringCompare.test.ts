@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fileNoCaseCompare } from './fileNameOrder';
+import { fileNoCaseCompare } from './stringCompare';
 
 const sorted = (names: string[]) => [...names].sort(fileNoCaseCompare);
 

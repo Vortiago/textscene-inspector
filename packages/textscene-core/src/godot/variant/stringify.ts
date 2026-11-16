@@ -1,4 +1,4 @@
-import { cEscape } from '../string/cEscape.js';
+import { cEscape } from '../string/escapes.js';
 import { nodePathFromParts } from '../string/nodePathParts.js';
 import { numReal, numRealFloat, stringNum } from '../string/stringNumber.js';
 import type { CallableValue, Variant } from './value/variant.js';

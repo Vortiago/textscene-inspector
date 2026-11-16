@@ -3,6 +3,7 @@ import { GodotCrash } from '../../godot/variant/cInteger.js';
 import { booleanize } from '../../godot/variant/compare.js';
 import type { UtilityHost } from '../../godot/variant/utility/utilityHost.js';
 import { UnsupportedObject } from '../../godot/variant/objects/makeObject.js';
+import { UnrepresentableText } from '../../godot/string/ustring/codes.js';
 import { UnportableUtility } from '../../godot/variant/utility/unportableUtility.js';
 import { UnportableComparison } from '../../godot/variant/operators/ordering.js';
 import { instruction, notTranspiled } from '../language/instructions.js';
@@ -42,7 +43,11 @@ export function conditionRefusal(
   position: SourcePosition
 ): unknown {
   const row = instruction(`#${name}`)!;
-  if (error instanceof UnportedExpression || error instanceof UnportableUtility)
+  if (
+    error instanceof UnportedExpression ||
+    error instanceof UnportableUtility ||
+    error instanceof UnrepresentableText
+  )
     return notTranspiled(row, position, `${directive}: ${error.message}`);
   if (error instanceof UnsupportedObject)
     return notTranspiled({ ...row, owner: error.owner }, position, `${directive}: ${error.message}`);

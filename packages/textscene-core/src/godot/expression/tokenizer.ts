@@ -2,7 +2,7 @@ import { hexDigitValue } from '../string/charUtils.js';
 import { binToInt64, hexToInt64 } from '../string/radixInteger.js';
 import { stringToInt64 } from '../string/string.js';
 import { stringToFloat } from '../string/strtod.js';
-import { isUnicodeIdentifierContinue, isUnicodeIdentifierStart } from '../string/unicodeIdentifier.js';
+import { isUnicodeIdentifierContinue, isUnicodeIdentifierStart } from '../string/characterClass.js';
 import { UTILITY_FUNCTIONS } from '../variant/registrations.generated.js';
 import { NIL, variant, type Variant, type VariantTypeName } from '../variant/value/variant.js';
 import { VARIANT_TYPE, variantTypeName } from '../variant/variantType.js';

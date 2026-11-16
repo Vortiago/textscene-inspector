@@ -158,7 +158,7 @@ class Execution {
   }
 }
 
-/** Throws GodotCrash, UnportedExpression, UnportableUtility or UnsupportedObject where the port stops. */
+/** Throws where the port stops: GodotCrash, UnportedExpression, UnportableUtility and the rest. */
 export function runExpression(text: string, host = utilityHost()): ExpressionResult {
   const parsed = parseExpression(text);
   if ('error' in parsed) return { parseError: parsed.error };

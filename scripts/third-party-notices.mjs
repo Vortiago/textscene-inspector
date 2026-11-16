@@ -27,6 +27,7 @@ export const NOTICE_SOURCES = [
   { section: 'Open Sans font', copyright: /OFL-1\.1/ },
   { section: 'Activision fast filter coefficients', copyright: /Copyright 2016 Activision\sPublishing/ },
   { section: 'PCG random number generator', copyright: /thirdparty\/misc\/pcg\.cpp/ },
+  { section: 'Grisu2', copyright: /Copyright \(c\) 2009 Florian Loitsch/ },
   { section: 'bcdec block decoder', copyright: /Copyright \(c\) 2022 Sergii Kudlai/ },
   { section: 'FastLZ', copyright: /Copyright \(C\) 2005-2020 Ariya Hidayat/ },
   { section: 'FastNoiseLite', copyright: /Copyright\(c\) 2023 Jordan Peck/, isInstalled: true },

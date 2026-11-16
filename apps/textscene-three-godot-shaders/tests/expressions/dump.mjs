@@ -1,5 +1,6 @@
 import { variantTypeNameOf } from '../../../../packages/textscene-core/src/godot/variant/variantType.ts';
 
+const codeOf = (character) => character.codePointAt(0);
 const hex = (bytes) => [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 
 function dumpFloat(value) {
@@ -9,7 +10,8 @@ function dumpFloat(value) {
   return `f${hex(new Uint8Array(view.buffer))}`;
 }
 
-const dumpText = (text) => hex(new TextEncoder().encode(text));
+// UTF-32, not UTF-8: Godot's to_utf8_buffer of a code past Unicode can hold Godot past its timeout.
+const dumpText = (text) => hex(new Uint8Array(new Uint32Array([...text].map(codeOf)).buffer));
 const call = (name, parts) => `${name}(${parts.join(', ')})`;
 const floats = (...values) => values.map(dumpFloat);
 const ints = (...values) => values.map(String);
@@ -120,7 +122,7 @@ func dump_float(value: float) -> String:
 	return "f" + hex(PackedFloat64Array([value]).to_byte_array())
 
 func dump_text(text: String) -> String:
-	return hex(text.to_utf8_buffer())
+	return hex(text.to_utf32_buffer())
 
 func call_text(name: String, parts: Array) -> String:
 	return name + "(" + ", ".join(PackedStringArray(parts)) + ")"
