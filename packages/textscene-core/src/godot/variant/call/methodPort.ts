@@ -1,3 +1,4 @@
+import type { Decoders } from '../../io/compression/compression.js';
 import type { GlobalRandom } from '../utility/globalRandom.js';
 import type { CastArgument, CppParameter } from '../utility/utilityArguments.js';
 import { NIL, type CallableValue, type Variant, type VariantTypeName } from '../value/variant.js';
@@ -17,6 +18,7 @@ export const NIL_RESULT: MethodResult = { value: NIL, isValid: true };
 /** What a method reads beyond its base and arguments. */
 export interface MethodContext {
   readonly random: GlobalRandom;
+  readonly decoders?: Decoders;
   /** `Callable::callp` (callable.cpp:43). */
   readonly callp: (callable: CallableValue, args: readonly Variant[]) => MethodResult;
 }

@@ -63,7 +63,11 @@ const contexts = new WeakMap<UtilityHost, MethodContext>();
 function methodContext(host: UtilityHost): MethodContext {
   let context = contexts.get(host);
   if (!context) {
-    context = { random: host.random, callp: (callable, args) => callp(callable, args, host) };
+    context = {
+      random: host.random,
+      decoders: host.decoders,
+      callp: (callable, args) => callp(callable, args, host),
+    };
     contexts.set(host, context);
   }
   return context;

@@ -1,3 +1,4 @@
+import { DECODERS } from './decoders.js';
 import { stripComments, type StrippedCode } from './commentRemover.js';
 import { conditionRefusal, isConditionTrue } from './conditions.js';
 import { DirectiveTokenizer } from './directiveTokenizer.js';
@@ -67,7 +68,7 @@ export function preprocess(code: string, options: PreprocessOptions = {}): strin
       ['RENDERER_MOBILE', builtIn(RENDERERS.mobile)],
       ['RENDERER_FORWARD_PLUS', builtIn(RENDERERS.forward_plus)],
     ]),
-    host: utilityHost((path) => readInclude(path) !== undefined),
+    host: utilityHost((path) => readInclude(path) !== undefined, DECODERS),
     currentBranch: undefined,
     conditionDepth: 0,
     includes: new Set(),

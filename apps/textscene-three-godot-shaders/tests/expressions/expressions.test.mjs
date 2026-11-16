@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { runExpression } from '../../../../packages/textscene-core/src/godot/expression/execute.ts';
 import { GodotCrash } from '../../../../packages/textscene-core/src/godot/variant/cInteger.ts';
 import { utilityHost } from '../../../../packages/textscene-core/src/godot/variant/utility/utilityHost.ts';
+import { DECODERS } from '../../../../packages/textscene-core/src/shaders/preprocessor/decoders.ts';
 import { PROJECT_FILES } from '../../../../scripts/godot-variant/godotExpressions.mjs';
 import { godotAnswers } from '../godotAnswers.mjs';
 import { dumpVariant } from './dump.mjs';
@@ -17,7 +18,7 @@ function portAnswer(text) {
   try {
     const result = runExpression(
       text,
-      utilityHost((path) => PROJECT_FILES.includes(path))
+      utilityHost((path) => PROJECT_FILES.includes(path), DECODERS)
     );
     if ('executeError' in result)
       return { verdict: 'execute', text: result.executeError, left: dumpVariant(result.value) };

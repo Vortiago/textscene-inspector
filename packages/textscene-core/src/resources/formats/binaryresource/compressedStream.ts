@@ -5,10 +5,10 @@
  * (`core/io/file_access_compressed.cpp:41-75`, `core/io/compression.cpp:146-230`).
  */
 
+import { decompress } from '../../../godot/io/compression/compression';
 import { CompressionMode } from '../../../godot/project/compressedFile';
 import { enumNamesByValue } from '../../../godot/classdb/enumNames';
 import { ByteReader } from './byteReader';
-import { decompressFastLz } from './fastlz';
 
 const COMPRESSION_MODE_NAMES = enumNamesByValue(CompressionMode);
 
@@ -48,7 +48,7 @@ export async function inflateCompressedStream(reader: ByteReader): Promise<Uint8
 async function blockInflater(mode: number): Promise<BlockInflater> {
   switch (mode) {
     case CompressionMode.FastLz:
-      return decompressFastLz;
+      return (block, size) => exactly(size, decompress(block, BigInt(size), mode));
     case CompressionMode.Deflate:
       return zlibBlockInflater();
     case CompressionMode.Gzip: {
