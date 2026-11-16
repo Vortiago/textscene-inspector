@@ -1,5 +1,5 @@
 import { stringToFloat } from '../../string/strtod.js';
-import { doubleToUint64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
+import { doubleToInt32, doubleToUint64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
 import { castVariant, canConvertStrict } from '../construct/variantCast.js';
 import type { Variant, VariantTypeName } from '../value/variant.js';
 
@@ -7,6 +7,7 @@ import type { Variant, VariantTypeName } from '../value/variant.js';
 export type CppParameter =
   | 'double'
   | 'float'
+  | 'int32_t'
   | 'int64_t'
   | 'uint64_t'
   | 'Error'
@@ -22,6 +23,7 @@ export type CastArgument = number | bigint | string | Variant;
 const CHECKED_TYPE: Readonly<Record<CppParameter, VariantTypeName>> = {
   double: 'FLOAT',
   float: 'FLOAT',
+  int32_t: 'INT',
   int64_t: 'INT',
   uint64_t: 'INT',
   Error: 'INT',
@@ -30,6 +32,8 @@ const CHECKED_TYPE: Readonly<Record<CppParameter, VariantTypeName>> = {
   PackedByteArray: 'PACKED_BYTE_ARRAY',
   Variant: 'NIL',
 };
+
+export const isCppParameter = (name: string): name is CppParameter => Object.hasOwn(CHECKED_TYPE, name);
 
 /** The type `VariantCasterAndValidate` checks a parameter of `parameter` against (binder_common.h:172). */
 export const checkedType = (parameter: CppParameter): VariantTypeName => CHECKED_TYPE[parameter];
@@ -45,6 +49,12 @@ function toFloat32(argument: Variant): number {
   return Math.fround(castVariant(argument, 'FLOAT').value as number);
 }
 
+// `_to_int<int32_t>`: a double through the int32 cast, every other source through its int64 bits.
+function toInt32(argument: Variant): number {
+  if (argument.type === 'FLOAT') return doubleToInt32(argument.value);
+  return wrapInt32(castVariant(argument, 'INT').value as bigint);
+}
+
 // `_to_int<uint64_t>`: a double through the unsigned cast, every other source through its int64 bits.
 function toUint64(argument: Variant): bigint {
   if (argument.type === 'FLOAT') return doubleToUint64(argument.value);
@@ -58,6 +68,8 @@ export function castArgument(argument: Variant, parameter: CppParameter): CastAr
       return castVariant(argument, 'FLOAT').value as number;
     case 'float':
       return toFloat32(argument);
+    case 'int32_t':
+      return toInt32(argument);
     case 'int64_t':
       return castVariant(argument, 'INT').value as bigint;
     case 'uint64_t':

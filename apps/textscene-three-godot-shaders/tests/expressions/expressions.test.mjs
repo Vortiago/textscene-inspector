@@ -19,7 +19,8 @@ function portAnswer(text) {
       text,
       utilityHost((path) => PROJECT_FILES.includes(path))
     );
-    if ('executeError' in result) return { verdict: 'execute', text: result.executeError };
+    if ('executeError' in result)
+      return { verdict: 'execute', text: result.executeError, left: dumpVariant(result.value) };
     if ('parseError' in result) return { verdict: 'parse', text: result.parseError };
     return { verdict: 'value', text: dumpVariant(result.value) };
   } catch (error) {
@@ -55,7 +56,7 @@ describe('the Expression port against Godot', () => {
       .filter((test) => LIBM_DIFFERENCES[test.id] === undefined)
       .filter((test) => {
         const [ours, godot] = [ANSWERS.get(test.id), RECORD.cases[test.id]];
-        return ours.verdict !== godot.verdict || ours.text !== godot.text;
+        return ours.verdict !== godot.verdict || ours.text !== godot.text || ours.left !== godot.left;
       })
       .map(
         (test) =>
