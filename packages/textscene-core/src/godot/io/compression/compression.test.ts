@@ -1,6 +1,7 @@
 import { brotliCompressSync, deflateSync, gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { CompressionMode } from '../../project/compressedFile';
+import { UnrepresentableArray } from '../../variant/call/arrayLength';
 import { UnportedMethod } from '../../variant/call/callMethod';
 import { UnportableUtility } from '../../variant/utility/unportableUtility';
 import { decompress, decompressDynamic, type Decoders } from './compression';
@@ -29,7 +30,7 @@ describe('decompress', () => {
 
   it('refuses a FastLZ buffer under 16 that FastLZ wrote less of, as Godot copies unset memory (error case)', () => {
     expect(() => decompress(Uint8Array.from([0x02, 1, 2, 3]), 8n, CompressionMode.FastLz)).toThrow(
-      UnportableUtility
+      new UnportableUtility('decompress of a FastLZ stream shorter than its buffer, which reads unset memory')
     );
   });
 
@@ -48,6 +49,12 @@ describe('decompress', () => {
     };
     expect(decompress(Uint8Array.from([1, 2]), 8n, CompressionMode.Zstd, refusing)).toEqual(
       new Uint8Array(0)
+    );
+  });
+
+  it('refuses a Zstandard or Brotli buffer longer than V8 holds, as Godot allocates it first (error case)', () => {
+    expect(() => decompress(brotliCompressSync(TEXT), 2n ** 62n, CompressionMode.Brotli, DECODERS)).toThrow(
+      UnrepresentableArray
     );
   });
 
@@ -78,12 +85,20 @@ describe('decompressDynamic', () => {
   it('refuses a Brotli stream cut short, where Godot asks for more input for ever (error case)', () => {
     expect(() =>
       decompressDynamic(brotliCompressSync(TEXT).subarray(0, 10), -1n, CompressionMode.Brotli, DECODERS)
-    ).toThrow(UnportableUtility);
+    ).toThrow(
+      new UnportableUtility(
+        'decompress_dynamic of a Brotli stream that ends early, where Godot never returns'
+      )
+    );
   });
 
   it('refuses bytes after the stream, where Godot loops on Z_STREAM_END (error case)', () => {
     expect(() =>
       decompressDynamic(join(deflateSync(TEXT), [1, 2, 3]), -1n, CompressionMode.Deflate, DECODERS)
-    ).toThrow(UnportableUtility);
+    ).toThrow(
+      new UnportableUtility(
+        'decompress_dynamic of a stream with bytes after its end, where Godot may never return'
+      )
+    );
   });
 });

@@ -47,7 +47,7 @@ describe('fastLzDecompress', () => {
 
   it('refuses a level 2 stream whose match reads past its end, as Godot reads the heap there (error case)', () => {
     expect(() => fastLzDecompress(Uint8Array.from([0x20, ...ascii('a'), 0x40]), 16)).toThrow(
-      UnportableUtility
+      new UnportableUtility('decompress of a FastLZ stream that reads past its end')
     );
   });
 });

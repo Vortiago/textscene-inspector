@@ -2221,6 +2221,9 @@ const COMPRESSION_EDGES = [
   'PackedByteArray([255, 255, 255, 255]).decompress_dynamic(-1, 4)',
   'PackedByteArray([27, 28, 0, 248, 141, 148, 110, 222, 68, 85, 134, 150, 108, 32, 111, 53, 200, 60, 117, 192, 10, 17, 71]).decompress(9223372036854775807, 4)',
   'PackedByteArray([120, 1, 1, 1, 0, 255, 255, 65, 0, 66, 0, 66]).decompress(1, 1)',
+  'PackedByteArray([120, 156, 203, 72, 205, 201, 201, 87, 200, 192, 32, 203, 243, 139, 114, 82, 0, 163, 138, 10, 249]).decompress_dynamic(0, 1)',
+  'PackedByteArray([27, 28, 0, 248, 141, 148, 110, 222, 68, 85, 134, 150, 108, 32, 111, 53, 200, 60, 117, 192, 10, 17, 71]).decompress_dynamic(0, 4)',
+  'PackedByteArray().decompress_dynamic(-1, 1)',
 ];
 
 const CALLABLE_METHOD_EDGES = [
