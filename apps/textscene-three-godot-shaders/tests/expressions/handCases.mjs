@@ -1142,6 +1142,21 @@ const NODE_PATH_EDGES = [
   'NodePath("a:b:") == NodePath("a:b")',
   'NodePath("/") == NodePath("")',
   'NodePath(":x::y") == NodePath("")',
+  'var_to_bytes(bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 97, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 98, 0, 0, 0])))',
+  'hash(bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 97, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 98, 0, 0, 0])))',
+  'var_to_str(bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 97, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 98, 0, 0, 0])))',
+  'bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 97, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 98, 0, 0, 0])) == NodePath("/a")',
+  'bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 97, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 98, 0, 0, 0])) == NodePath("a:b")',
+  'var_to_bytes(bytes_to_var(PackedByteArray([22, 0, 0, 0, 2, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 97, 0, 0, 0])))',
+  'hash(bytes_to_var(PackedByteArray([22, 0, 0, 0, 2, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 97, 0, 0, 0])))',
+  'var_to_str(bytes_to_var(PackedByteArray([22, 0, 0, 0, 2, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 97, 0, 0, 0])))',
+  'bytes_to_var(PackedByteArray([22, 0, 0, 0, 2, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 97, 0, 0, 0])) == NodePath("/a")',
+  'bytes_to_var(PackedByteArray([22, 0, 0, 0, 2, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 97, 0, 0, 0])) == NodePath("a:b")',
+  'var_to_bytes(bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 58, 98, 0])))',
+  'hash(bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 58, 98, 0])))',
+  'var_to_str(bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 58, 98, 0])))',
+  'bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 58, 98, 0])) == NodePath("/a")',
+  'bytes_to_var(PackedByteArray([22, 0, 0, 0, 1, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 97, 58, 98, 0])) == NodePath("a:b")',
 ];
 
 const cases = (group, texts) =>
