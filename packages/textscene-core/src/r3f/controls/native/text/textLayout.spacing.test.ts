@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { getFontChainHeightPx, type FontMetrics } from './fontMetrics';
-import { withSpacing, type FaceSpacing } from './fontSpacing';
+import { withHeightSpacing, withSpacing, type FaceSpacing } from './fontSpacing';
 import { shapeText, type TextLineLayout } from './textLayout';
 
 /** At 20 px every glyph advances 10 px, with an ascent of 16 px and a descent of 4 px. */
@@ -63,8 +63,12 @@ describe('shapeText — the extra spacing of a face', () => {
     expect([line.ascentPx, line.descentPx]).toEqual([26, 10]);
   });
 
-  it('adds the top and bottom spacing to the height of the font', () => {
-    expect(getFontChainHeightPx(spaced({ top: 10, bottom: 6 }), 20)).toBe(36);
+  it("adds the named font's height spacing to the height of the font", () => {
+    expect(getFontChainHeightPx(withHeightSpacing(FACE, 16), 20)).toBe(36);
+  });
+
+  it("leaves a face's own top and bottom spacing out of the height of the font", () => {
+    expect(getFontChainHeightPx(spaced({ top: 10, bottom: 6 }), 20)).toBe(20);
   });
 });
 

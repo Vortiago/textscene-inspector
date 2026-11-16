@@ -136,13 +136,24 @@ export function fontVariationSkew(font: FontResource | null | undefined): number
   return match ? matchedFloat(match[2]!) : 0;
 }
 
-/** The `spacing_*` and `baseline_offset` of `font` (`drawnVariation`), none for any other font. */
-export function fontVariationSpacing(font: FontResource | null | undefined): FaceSpacing {
+/** The spacing of the RID `font` draws its own face with: a variation's, else a FontFile's `cache/0` (`font.cpp:1195-1207`). */
+export function fontFaceSpacing(font: FontResource | null | undefined): FaceSpacing {
   const variation = drawnVariation(font);
-  if (!variation) return NO_FACE_SPACING;
-  const { properties } = variation;
-  const spacingOf = (key: string): number => parseOptionalInt(properties[key]) ?? 0;
-  const offsetText = properties['baseline_offset'];
+  if (variation) return spacingIn(variation.properties, '');
+  return font?.kind === 'file' ? spacingIn(font.properties, 'cache/0/') : NO_FACE_SPACING;
+}
+
+/** What `Font::get_height` adds for `font` (`font.cpp:219`): a variation's top and bottom spacing, 0 for a FontFile. */
+export function fontHeightSpacingPx(font: FontResource | null | undefined): number {
+  const variation = drawnVariation(font);
+  if (!variation) return 0;
+  const { spacing } = spacingIn(variation.properties, '');
+  return spacing.top + spacing.bottom;
+}
+
+function spacingIn(properties: Record<string, string>, prefix: string): FaceSpacing {
+  const spacingOf = (key: string): number => parseOptionalInt(properties[prefix + key]) ?? 0;
+  const offsetText = properties[prefix + 'baseline_offset'];
   return {
     spacing: {
       top: spacingOf('spacing_top'),
@@ -150,7 +161,7 @@ export function fontVariationSpacing(font: FontResource | null | undefined): Fac
       space: spacingOf('spacing_space'),
       glyph: spacingOf('spacing_glyph'),
     },
-    // `FontVariation` keeps the offset as a `float` (`font.h`).
+    // Both resources keep the offset as a `float` (`font.h`).
     baselineOffset: Math.fround((offsetText === undefined ? null : parseGodotFloat(offsetText)) ?? 0),
   };
 }

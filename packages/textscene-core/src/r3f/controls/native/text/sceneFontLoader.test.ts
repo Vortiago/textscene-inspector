@@ -10,7 +10,7 @@ import { peekSceneFontMetrics, peekSettledChainFaces, peekSettledSceneFontMetric
 import { fontWork } from './settledChannel';
 import { createSettledFonts, type SettledFonts } from './settledFonts';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
-import { FACELESS_FONT } from './sceneFontResolution';
+import { FACELESS_FONT, fontFaceSpacing, fontHeightSpacingPx } from './sceneFontResolution';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
 import { getFontAscentPx, getFontRunGlyphAdvancePx, getFontLinePitchPx } from './fontMetrics';
 import * as logger from '../../../../logger';
@@ -282,6 +282,36 @@ describe('peekSceneFontMetrics — FontVariation spacing and baseline offset', (
     const inner = variation(null, { spacing_glyph: '9', baseline_offset: '0.5' });
     const metrics = peekSceneFontMetrics(fonts, variation(inner, { spacing_glyph: '4' }), 'Root/Over');
     expect([metrics.spacing?.glyph, metrics.baselineOffset]).toEqual([4, undefined]);
+  });
+
+  it("adds the variation's top and bottom spacing to the height of the font", () => {
+    const metrics = peekSceneFontMetrics(fonts, variation(null, SPACED), 'Root/Bare');
+    expect(metrics.heightSpacingPx).toBe(16);
+  });
+
+  it('adds the height spacing of a variation whose base draws no face of its own', () => {
+    const wrapper: FontResource = { ...systemFont(), fallbacks: [variation(null, {})] };
+    const metrics = peekSceneFontMetrics(fonts, variation(wrapper, SPACED), 'Root/Wrapped');
+    expect(metrics.heightSpacingPx).toBe(16);
+  });
+
+  it('draws a FontFile face with its own cache/0 spacing, which the height of the font leaves out', () => {
+    const file = {
+      ...fontFile(fontBytes()),
+      properties: { 'cache/0/spacing_glyph': '3', 'cache/0/spacing_top': '5' },
+    };
+    expect(fontFaceSpacing(file).spacing).toEqual({ top: 5, bottom: 0, space: 0, glyph: 3 });
+    expect(fontHeightSpacingPx(file)).toBe(0);
+  });
+
+  it("takes a variation's values over the cache/0 spacing of the FontFile under it", () => {
+    const file = { ...fontFile(fontBytes()), properties: { 'cache/0/spacing_glyph': '3' } };
+    expect(fontFaceSpacing(variation(file, { spacing_top: '2' })).spacing).toEqual({
+      top: 2,
+      bottom: 0,
+      space: 0,
+      glyph: 0,
+    });
   });
 
   it('leaves the face untouched for a variation that sets none', () => {

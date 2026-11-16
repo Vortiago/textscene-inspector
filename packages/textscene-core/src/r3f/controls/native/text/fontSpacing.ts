@@ -69,3 +69,23 @@ export function getFontBaselineShiftPx(face: FontMetrics, fontSizePx: number): n
     baselineOffset * (getFontAscentPx(face, fontSizePx) + getFontDescentPx(face, fontSizePx))
   );
 }
+
+/** One wrapper per face and height spacing, so a layout memoised on the face keeps its hits. */
+const heightSpacedFacesOf = perObject((_face: FontMetrics) => new Map<number, FontMetrics>());
+
+/** `metrics` whose `Font::get_height` adds `heightSpacingPx`. */
+export function withHeightSpacing<Metrics extends FontMetrics>(
+  metrics: Metrics,
+  heightSpacingPx: number
+): Metrics {
+  if ((metrics.heightSpacingPx ?? 0) === heightSpacingPx) return metrics;
+  const byPx = heightSpacedFacesOf(metrics);
+  let spaced = byPx.get(heightSpacingPx);
+  if (!spaced) {
+    spaced = Object.create(metrics, {
+      heightSpacingPx: { value: heightSpacingPx || undefined },
+    }) as FontMetrics;
+    byPx.set(heightSpacingPx, spaced);
+  }
+  return spaced as Metrics;
+}

@@ -4,7 +4,7 @@
  * (ADR-0069).
  */
 import { useCallback } from 'react';
-import { faceSpacingOf, withSpacing } from './fontSpacing';
+import { faceSpacingOf, withHeightSpacing, withSpacing } from './fontSpacing';
 import { withVariation, type FontMetrics } from './fontMetrics';
 import { OPEN_SANS_CANVAS_FONT_METRICS } from './openSansCanvasFontMetrics';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
@@ -50,5 +50,5 @@ function peekBundledCanvasFace(
     opentype: bundledFace.opentype,
     outlines,
   });
-  return withSpacing(varied, faceSpacingOf(bundledFace));
+  return withHeightSpacing(withSpacing(varied, faceSpacingOf(bundledFace)), bundledFace.heightSpacingPx ?? 0);
 }

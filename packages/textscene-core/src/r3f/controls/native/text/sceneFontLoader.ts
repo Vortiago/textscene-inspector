@@ -13,7 +13,8 @@ import {
   fontVariationEmbolden,
   fontVariationOpentype,
   fontVariationSkew,
-  fontVariationSpacing,
+  fontFaceSpacing,
+  fontHeightSpacingPx,
   hasBitmap,
 } from './sceneFontResolution';
 import { createBitmapFontMetrics } from './bitmapFontMetrics';
@@ -29,7 +30,7 @@ import {
   type SettledFonts,
 } from './settledFonts';
 import { UNOPENED_FACE_METRICS } from './unopenedFaceMetrics';
-import { withSpacing } from './fontSpacing';
+import { withHeightSpacing, withSpacing } from './fontSpacing';
 import { drawLoad, peekOutlines } from './sceneFontOutlines';
 
 /** One `BitmapFontMetrics` for each decoded BMFont, so a layout memoised on its identity keeps its hits. */
@@ -73,7 +74,7 @@ export function readSettledFont(
   const composed = fonts.keep(font, () => {
     const read = fonts.pendingLoadsOf(() => settledChainFaces(fonts, font, nodePath));
     pending = read.pending;
-    return read.value && composedFont(read.value);
+    return read.value && composedFont(font, read.value);
   });
   if (composed) return composed;
   fonts.awaitFont(font, pending);
@@ -82,10 +83,11 @@ export function readSettledFont(
 
 const NO_LOADS: ReadonlySet<object> = new Set();
 
-/** The face `chain` draws: its first face, with the others as its fallbacks. */
-function composedFont(chain: readonly SettledChainFace[]): ComposedFont {
+/** The face `chain` of `font` draws: its first face, with the others as its fallbacks. */
+function composedFont(font: FontResource, chain: readonly SettledChainFace[]): ComposedFont {
   const [face, ...fallbacks] = chain.map(({ metrics }) => metrics);
-  return { status: 'settled', face: withFallbacks(face!, fallbacks), chain };
+  const composed = withFallbacks(face!, fallbacks);
+  return { status: 'settled', face: withHeightSpacing(composed, fontHeightSpacingPx(font)), chain };
 }
 
 /** What no font draws: the bundled font's face, alone in its chain. */
@@ -140,7 +142,7 @@ function settledChainFaces(
   return chain.flatMap((entry, i): SettledChainFace[] => {
     const metrics = faces[i]!;
     if (metrics !== MISSING_FACE)
-      return [{ font: entry, metrics: withSpacing(metrics, fontVariationSpacing(entry)) }];
+      return [{ font: entry, metrics: withSpacing(metrics, fontFaceSpacing(entry)) }];
     // The bundled font draws in its place, with the variation the font still names.
     return i === 0
       ? [
@@ -148,7 +150,7 @@ function settledChainFaces(
             font: entry,
             metrics: withSpacing(
               withVariation(OPEN_SANS_FONT_METRICS, fontVariation(entry)),
-              fontVariationSpacing(entry)
+              fontFaceSpacing(entry)
             ),
             isStandIn: true,
           },

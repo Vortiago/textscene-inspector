@@ -121,6 +121,8 @@ export interface FontMetrics {
   readonly spacing?: FontSpacing;
   /** `FontVariation.baseline_offset`: a glyph moves down this share of ascent plus descent. Absent is 0. */
   readonly baselineOffset?: number;
+  /** The top plus bottom spacing `Font::get_height` adds: the named font's, not this face's (`font.cpp:219`). */
+  readonly heightSpacingPx?: number;
   /**
    * The glyph outlines that the text of an emboldened, sheared or varied canvas face follows. Absent
    * for a face that needs none. Null for a font whose outlines this previewer cannot read: its text
@@ -683,7 +685,7 @@ export function getFontChainHeightPx(face: FontMetrics, fontSizePx: number): num
       (entry) => getFontAscentPx(entry, fontSizePx) + getFontDescentPx(entry, fontSizePx)
     )
   );
-  return tallestPx + (face.spacing?.top ?? 0) + (face.spacing?.bottom ?? 0);
+  return tallestPx + (face.heightSpacingPx ?? 0);
 }
 
 /** The first face of the **Fallback chain** of `face` that has a glyph for `ch`, or null for none. */
