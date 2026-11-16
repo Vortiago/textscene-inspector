@@ -12,6 +12,7 @@ import {
   geometricVectorMethods,
   length,
   lengthSquared,
+  lerped,
   normalized,
   real,
   scaled,
@@ -35,13 +36,12 @@ function rotated([x, y, z]: Components, [axisX, axisY, axisZ]: Components, angle
 }
 
 function slerp(from: Components, to: Components, weight: number): Components {
-  const lerped = () => from.map((c, i) => lerpf(c, to[i]!, weight));
   const startSquared = lengthSquared(from);
   const endSquared = lengthSquared(to);
-  if (startSquared === 0 || endSquared === 0) return lerped();
+  if (startSquared === 0 || endSquared === 0) return lerped(from, to, weight);
   const turnAxis = cross(from, to);
   const axisSquared = lengthSquared(turnAxis);
-  if (axisSquared === 0) return lerped();
+  if (axisSquared === 0) return lerped(from, to, weight);
   const axisLength = sqrtf(axisSquared);
   const unitAxis = turnAxis.map((c) => f(c / axisLength));
   const startLength = sqrtf(startSquared);

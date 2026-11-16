@@ -346,6 +346,27 @@ export function bezierInterpolatef(
 }
 
 /**
+ * `Math::bezier_derivative` for `real_t` (`core/math/math_funcs.h`), each operation rounded to float.
+ *
+ * @canonical A float32 Bezier derivative
+ */
+export function bezierDerivativef(
+  start: number,
+  control1: number,
+  control2: number,
+  end: number,
+  t: number
+): number {
+  const omt = f(1 - t);
+  const omt2 = f(omt * omt);
+  const t2 = f(t * t);
+  const first = f(f(f(control1 - start) * 3) * omt2);
+  const second = f(f(f(f(control2 - control1) * 6) * omt) * t);
+  const third = f(f(f(end - control2) * 3) * t2);
+  return f(f(first + second) + third);
+}
+
+/**
  * `Basis::determinant()` (`basis.h:350-354`) over the nine row-major components, expanded along the
  * first column as the engine writes it. The first row gives the same number except with `inf`:
  * `Transform3D(1, inf, 0, 0, 1, 1, 1, 0, 1, …)` is NaN (sign 0) one way and `1 + inf` the other. Here,

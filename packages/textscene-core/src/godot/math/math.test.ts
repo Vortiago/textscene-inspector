@@ -21,6 +21,7 @@ import {
   lerpf,
   remapf,
   CMP_EPSILON,
+  bezierDerivativef,
   bezierInterpolatef,
   isZeroApprox,
   isEqualApprox,
@@ -378,5 +379,22 @@ describe('cMax', () => {
 
   it('gives the second operand where either is NaN, as Godot MAX does', () => {
     expect([cMax(NaN, 1), cMax(1, NaN)]).toEqual([1, NaN]);
+  });
+});
+
+describe('bezierDerivativef', () => {
+  it('gives three times the first handle offset at t = 0 and the last at t = 1', () => {
+    expect(bezierDerivativef(1, 5, -3, 7, 0)).toBe(12);
+    expect(bezierDerivativef(1, 5, -3, 7, 1)).toBe(30);
+  });
+
+  it('is the span length on a straight span with handles at the thirds', () => {
+    expect(bezierDerivativef(0, 10, 20, 30, 0.4)).toBe(30);
+  });
+
+  it('rounds the result to single precision', () => {
+    const single = bezierDerivativef(0, 0.1, 0.2, 1, 0.3);
+
+    expect(single).toBe(Math.fround(single));
   });
 });

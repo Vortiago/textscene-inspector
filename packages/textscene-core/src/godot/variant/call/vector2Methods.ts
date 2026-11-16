@@ -1,5 +1,6 @@
 import { lerpf } from '../../math/math.js';
 import { atan2Real } from '../../math/realAtan2.js';
+import { vector2Cross } from '../../math/vector.js';
 import { cosf, sinf, sqrtf } from '../../math/realMath.js';
 import type { Variant } from '../value/variant.js';
 import {
@@ -8,8 +9,10 @@ import {
   floatVectorMethods,
   geometricVectorMethods,
   lengthSquared,
+  lerped,
   minus,
   real,
+  unitScaled,
 } from './floatVectorMethods.js';
 import type { MethodPort } from './methodPort.js';
 import { vectorPorts, type Components } from './vectorPorts.js';
@@ -18,15 +21,14 @@ const f = Math.fround;
 
 const { vector, unary, withVector, withScalar, withArguments } = vectorPorts('VECTOR2', 'float');
 
-const cross = ([x, y]: Components, [otherX, otherY]: Components) => f(f(x! * otherY!) - f(y! * otherX!));
+const cross = ([x, y]: Components, [otherX, otherY]: Components) =>
+  vector2Cross({ x: x!, y: y! }, { x: otherX!, y: otherY! });
 const angleTo = (a: Components, b: Components) => atan2Real(cross(a, b), dot(a, b));
 
 // vector2.cpp:52: a zero vector stays as it is, so a negative zero keeps its sign.
 function normalized(v: Components): Components {
   const squared = lengthSquared(v);
-  if (squared === 0) return v;
-  const l = sqrtf(squared);
-  return v.map((component) => f(component / l));
+  return squared === 0 ? v : unitScaled(v, squared);
 }
 
 function rotated([x, y]: Components, by: number): Components {
@@ -38,7 +40,7 @@ function rotated([x, y]: Components, by: number): Components {
 function slerp(from: Components, to: Components, weight: number): Variant {
   const startSquared = lengthSquared(from);
   const endSquared = lengthSquared(to);
-  if (startSquared === 0 || endSquared === 0) return vector(from.map((c, i) => lerpf(c, to[i]!, weight)));
+  if (startSquared === 0 || endSquared === 0) return vector(lerped(from, to, weight));
   const startLength = sqrtf(startSquared);
   const resultLength = lerpf(startLength, sqrtf(endSquared), weight);
   const scale = f(resultLength / startLength);
