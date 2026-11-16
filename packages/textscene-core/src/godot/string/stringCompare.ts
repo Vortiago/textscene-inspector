@@ -5,28 +5,24 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { findUpper } from './caseMapping';
+import { findUpper } from './caseMapping.js';
+import { isDigitCode } from './charUtils.js';
+import { codesOf } from './ustring/codes.js';
+import { unfolded, type Fold } from './ustring/search.js';
 
 const UNDERSCORE = 0x5f;
 const DOT = 0x2e;
 const ZERO = 0x30;
-
-type Fold = (code: number) => number;
-const unfolded: Fold = (code) => code;
-
-const isDigit = (code: number) => code >= ZERO && code <= 0x39;
-
-/** A read past the end is `undefined`, which the comparisons take as Godot's terminator. */
-const codePointsOf = (text: string): number[] => Array.from(text, (c) => c.codePointAt(0)!);
 
 const sign = (difference: number) => (difference < 0 ? -1 : 1);
 
 /** `casecmp_to` and `nocasecmp_to` (ustring.cpp:443-505): an empty text sorts first, then code by code. */
 function compareCodes(a: string, b: string, fold: Fold): number {
   if (a === '' || b === '') return a === b ? 0 : a === '' ? -1 : 1;
-  const left = codePointsOf(a);
-  const right = codePointsOf(b);
+  const left = codesOf(a);
+  const right = codesOf(b);
   for (let at = 0; ; at++) {
+    // A read past the end is `undefined`, which stands for Godot's terminator.
     if (left[at] === undefined || right[at] === undefined)
       return left[at] === right[at] ? 0 : left[at] === undefined ? -1 : 1;
     const difference = fold(left[at]!) - fold(right[at]!);
@@ -49,8 +45,8 @@ function compareDigitRuns(
 ): [result: number, i: number, j: number] {
   let aEnd = i;
   let bEnd = j;
-  while (isDigit(a[aEnd] ?? 0)) aEnd++;
-  while (isDigit(b[bEnd] ?? 0)) bEnd++;
+  while (isDigitCode(a[aEnd])) aEnd++;
+  while (isDigitCode(b[bEnd])) bEnd++;
   let aStart = i;
   let bStart = j;
   while (a[aStart] === ZERO) aStart++;
@@ -76,13 +72,13 @@ function naturalCompareFrom(a: number[], b: number[], start: number, fold: Fold)
   }
   while (a[i] !== undefined) {
     if (b[j] === undefined) return 1;
-    if (isDigit(a[i]!)) {
-      if (!isDigit(b[j]!)) return -1;
+    if (isDigitCode(a[i]!)) {
+      if (!isDigitCode(b[j]!)) return -1;
       const [result, nextI, nextJ] = compareDigitRuns(a, i, b, j);
       if (result !== 0) return result;
       i = nextI;
       j = nextJ;
-    } else if (isDigit(b[j]!)) {
+    } else if (isDigitCode(b[j]!)) {
       return 1;
     } else {
       const difference = fold(a[i]!) - fold(b[j]!);
@@ -96,16 +92,16 @@ function naturalCompareFrom(a: number[], b: number[], start: number, fold: Fold)
 
 /** `String::naturalcasecmp_to`: digit runs compare by value, other codes by code point. */
 export const naturalCaseCompare = (a: string, b: string): number =>
-  naturalCompareFrom(codePointsOf(a), codePointsOf(b), 0, unfolded);
+  naturalCompareFrom(codesOf(a), codesOf(b), 0, unfolded);
 
 /** `String::naturalnocasecmp_to`: digit runs compare by value, other codes by their upper case. */
 export const naturalNoCaseCompare = (a: string, b: string): number =>
-  naturalCompareFrom(codePointsOf(a), codePointsOf(b), 0, findUpper);
+  naturalCompareFrom(codesOf(a), codesOf(b), 0, findUpper);
 
 /** `file_cmp_common` (ustring.cpp:657): a leading `_` sorts below all but `.`, then the natural order. */
 function fileCompare(a: string, b: string, fold: Fold): number {
-  const left = codePointsOf(a);
-  const right = codePointsOf(b);
+  const left = codesOf(a);
+  const right = codesOf(b);
   let at = 0;
   while (
     (left[at] === UNDERSCORE && right[at] !== undefined) ||

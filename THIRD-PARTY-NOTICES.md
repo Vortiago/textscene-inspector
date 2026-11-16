@@ -139,7 +139,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/windows/filedialog/fileList.ts` | `scene/gui/file_dialog.cpp` (`FileDialog::update_file_list`: the folders then files, the hidden names, the first filter and the selected row) |
 | `packages/textscene-core/src/godot/string/stringCompare.ts` | `core/string/ustring.cpp` (`String::casecmp_to` and the other comparisons) |
 | `packages/textscene-core/src/godot/string/wildcard.ts` | `core/string/ustring.cpp` (`String::match`, `String::matchn`) |
-| `packages/textscene-core/src/godot/string/simpleUpper.ts` | `core/string/ustring.cpp` (`_find_upper`) |
+| `packages/textscene-core/src/godot/string/caseMapping.ts` | `core/string/ucaps.h` (`_find_upper`, `_find_lower`) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/fitChildInRect.ts` | `scene/gui/container.cpp` (`Container::fit_child_in_rect`) and `scene/gui/control.h` (the `SizeFlags` bitmask, `Container::as_sortable_control`'s visibility test) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/boxContainerResort.ts` | `scene/gui/box_container.cpp` (`BoxContainer::_resort`) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/boxContainerSolver.ts` | `scene/gui/box_container.cpp` (`BoxContainer::get_minimum_size`) |

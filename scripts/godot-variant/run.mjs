@@ -151,7 +151,7 @@ const CLASS_TABLES = [
   ['LOWER_CASE_LETTER', 'lowercase_letter', 'lowerCase'],
 ];
 
-/** The module text of the five character classes, each as flat start and end pairs. */
+/** The module text of the four character classes, each as flat start and end pairs. */
 export function renderCharacterClasses(classes) {
   const tables = CLASS_TABLES.map(
     ([

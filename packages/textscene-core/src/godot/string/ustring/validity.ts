@@ -1,9 +1,9 @@
+import { hexDigitCodeValue, isDigitCode } from '../charUtils.js';
+
 const PLUS = 0x2b;
 const MINUS = 0x2d;
 
-const isDigit = (code: number) => code >= 0x30 && code <= 0x39;
-const isHexDigit = (code: number) =>
-  isDigit(code) || (code >= 0x61 && code <= 0x66) || (code >= 0x41 && code <= 0x46);
+const isHexDigit = (code: number) => hexDigitCodeValue(code) !== undefined;
 const isSign = (code: number | undefined) => code === PLUS || code === MINUS;
 
 /** Where the digits start: past a sign, unless the sign is the whole text. */
@@ -11,7 +11,7 @@ const digitsStart = (codes: readonly number[]) => (codes.length !== 1 && isSign(
 
 /** `String::is_valid_int` (ustring.cpp:4744). */
 export function isValidInt(codes: readonly number[]): boolean {
-  return codes.length > 0 && codes.slice(digitsStart(codes)).every(isDigit);
+  return codes.length > 0 && codes.slice(digitsStart(codes)).every(isDigitCode);
 }
 
 /** `String::is_valid_hex_number` (ustring.cpp:4765): `0x`, lower case only, when `withPrefix`. */
@@ -34,7 +34,7 @@ export function isValidFloat(codes: readonly number[]): boolean {
   let hasExponentDigits = false;
   let hasDigits = false;
   for (const code of codes.slice(isSign(codes[0]) ? 1 : 0)) {
-    if (isDigit(code)) {
+    if (isDigitCode(code)) {
       if (hasExponent) hasExponentDigits = true;
       else hasDigits = true;
     } else if (hasDigits && !hasExponent && (code === 0x65 || code === 0x45)) hasExponent = true;

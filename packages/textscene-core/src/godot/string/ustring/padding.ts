@@ -1,10 +1,9 @@
 import { repeat } from './edit.js';
 import { substr } from './codes.js';
+import { isDigitCode } from '../charUtils.js';
 
 const DOT = 0x2e;
 const ZERO = 0x30;
-
-const isDigit = (code: number | undefined) => code !== undefined && code >= 0x30 && code <= 0x39;
 
 /** `String::pad_decimals` (ustring.cpp:4660): exactly `digits` decimals, cut or padded with zeros. */
 export function padDecimals(codes: readonly number[], digits: number): number[] {
@@ -25,7 +24,7 @@ export function padZeros(codes: readonly number[], digits: number): number[] {
   const end = dot === -1 ? codes.length : dot;
   if (end === 0) return [...codes];
   let begin = 0;
-  while (begin < end && !isDigit(codes[begin])) begin++;
+  while (begin < end && !isDigitCode(codes[begin])) begin++;
   const zeros = (digits - (end - begin)) | 0;
   if (zeros <= 0) return [...codes];
   return [...codes.slice(0, begin), ...repeat([ZERO], zeros), ...codes.slice(begin)];

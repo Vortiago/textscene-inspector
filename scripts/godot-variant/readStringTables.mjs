@@ -41,7 +41,7 @@ function charRanges(source, name) {
   );
 }
 
-/** The five character classes of char_range.inc that char_utils.h searches. */
+/** The four character classes of char_range.inc that char_utils.h searches. */
 export function characterClasses(source) {
   return {
     identifierStart: charRanges(source, 'xid_start'),

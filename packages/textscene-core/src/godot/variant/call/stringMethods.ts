@@ -6,7 +6,7 @@ import { isValidIpAddress } from '../../io/ipAddress.js';
 import { stringHash } from '../../math/hashFuncs.js';
 import { isUnicodeIdentifierContinue, isUnicodeIdentifierStart } from '../../string/characterClass.js';
 import { findLower, findUpper } from '../../string/caseMapping.js';
-import { isValidAsciiIdentifier } from '../../string/charUtils.js';
+import { hexDigitCodeValue, isValidAsciiIdentifier } from '../../string/charUtils.js';
 import { cEscape, cUnescape, jsonEscape, xmlEscape } from '../../string/escapes.js';
 import { doubleChars } from '../../string/grisu2.js';
 import { validateNodeName } from '../../string/nodeName.js';
@@ -136,13 +136,13 @@ function extensionDot(self: string): number {
 
 const utf8Of = (self: string) => Uint8Array.from(utf8Bytes(codesOf(self)));
 
-const isHexDigitCode = (code: number) => /^[0-9a-fA-F]$/.test(String.fromCodePoint(code));
-
 /** `String::hex_decode` (ustring.cpp:1657): empty for an odd length or a digit that is not hex. */
 function hexDecoded(self: readonly number[]): number[] {
-  if (self.length % 2 !== 0 || !self.every(isHexDigitCode)) return [];
-  return Array.from({ length: self.length / 2 }, (_, index) =>
-    Number.parseInt(String.fromCodePoint(self[2 * index]!, self[2 * index + 1]!), 16)
+  const digits = self.map(hexDigitCodeValue);
+  if (digits.length % 2 !== 0 || digits.includes(undefined)) return [];
+  return Array.from(
+    { length: digits.length / 2 },
+    (_, index) => digits[2 * index]! * 16 + digits[2 * index + 1]!
   );
 }
 

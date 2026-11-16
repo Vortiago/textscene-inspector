@@ -1,11 +1,10 @@
 import { findLower, findUpper } from '../caseMapping.js';
 import { isUnicodeLowerCase, isUnicodeUpperCase } from '../characterClass.js';
-import { isWhitespace } from '../charUtils.js';
+import { isDigitCode, isWhitespace } from '../charUtils.js';
 import { sliceAtCode, sliceCount } from './search.js';
 import { replaceCodes, stripEdges } from './edit.js';
 
 const SPACE = 0x20;
-const isDigit = (code: number) => code >= 0x30 && code <= 0x39;
 const isSeparator = (code: number) =>
   code === 0x5f || code === 0x2d || isWhitespace(String.fromCodePoint(code));
 
@@ -21,9 +20,9 @@ function separateCompoundWords(codes: readonly number[]): number[] {
     const isPreviousLower = isUnicodeLowerCase(previous);
     const isWordEdge =
       (isPreviousLower && isUnicodeUpperCase(current)) ||
-      ((isPreviousUpper || isDigit(previous)) && isUnicodeUpperCase(current) && isNextLower) ||
-      (isDigit(previous) && isUnicodeLowerCase(current) && isNextLower) ||
-      ((isPreviousUpper || isPreviousLower) && isDigit(current));
+      ((isPreviousUpper || isDigitCode(previous)) && isUnicodeUpperCase(current) && isNextLower) ||
+      (isDigitCode(previous) && isUnicodeLowerCase(current) && isNextLower) ||
+      ((isPreviousUpper || isPreviousLower) && isDigitCode(current));
     if (!isWordEdge) continue;
     words.push(...codes.slice(start, at), SPACE);
     start = at;

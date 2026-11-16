@@ -3,6 +3,7 @@ import { clamp, lerpf, round } from '../../math/math.js';
 import { okhslToSrgb } from '../../math/okHsl.js';
 import { isEqualApproxf } from '../../math/realMath.js';
 import { doubleToInt32, int64ToFloat32 } from '../cInteger.js';
+import { hexDigitValue } from '../../string/charUtils.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
 import { variant, type ColorValue, type Variant } from '../value/variant.js';
 import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
@@ -87,14 +88,12 @@ function html(text: string): ColorValue {
   return { r, g, b, a };
 }
 
-const HEX_DIGIT = /^[0-9a-fA-F]$/u;
-
 export function isHtmlValid(text: string): boolean {
   const characters = Array.from(text);
   if (characters.length === 0) return false;
   const start = characters[0] === '#' ? 1 : 0;
   if (![3, 4, 6, 8].includes(characters.length - start)) return false;
-  return characters.slice(start).every((character) => HEX_DIGIT.test(character));
+  return characters.slice(start).every((character) => hexDigitValue(character) !== undefined);
 }
 
 function fromString(text: string, fallback: ColorValue): ColorValue {

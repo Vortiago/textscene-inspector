@@ -1,16 +1,9 @@
+import { hexDigitCodeValue, isDigitCode } from '../string/charUtils.js';
+
 const IPV4_MAX_STRING_LENGTH = 16;
 const IPV6_MAX_STRING_LENGTH = 40;
 const COLON = 0x3a;
 const DOT = 0x2e;
-
-const isDecimalDigit = (code: number) => code >= 0x30 && code <= 0x39;
-
-function hexValue(code: number): number | undefined {
-  if (isDecimalDigit(code)) return code - 0x30;
-  if (code >= 0x61 && code <= 0x66) return code - 0x61 + 10;
-  if (code >= 0x41 && code <= 0x46) return code - 0x41 + 10;
-  return undefined;
-}
 
 /** `_parse_ipv4` (ip_address.cpp:154): four decimal bytes from `start`, each 255 at most. */
 function isIpv4(codes: readonly number[], start: number): boolean {
@@ -24,7 +17,7 @@ function isIpv4(codes: readonly number[], start: number): boolean {
       isParsed = false;
       next = 0;
       if (++dots > 3) return false;
-    } else if (isDecimalDigit(code)) {
+    } else if (isDigitCode(code)) {
       isParsed = true;
       next = next * 10 + code - 0x30;
       if (next > 255) return false;
@@ -53,7 +46,7 @@ function isIpv6(codes: readonly number[]): boolean {
         break;
       }
       if (j - i > 3) return false;
-      const digit = hexValue(code);
+      const digit = hexDigitCodeValue(code);
       if (digit !== undefined) groups[cur] = (groups[cur]! << 4) | digit;
       else if (code === DOT) return isMappedIpv4(codes, groups, cur, shift, i);
       else return false;
