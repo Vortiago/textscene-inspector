@@ -6,7 +6,7 @@
   "random": "f496ba32f2398f1929355ce53edcc407498209e537eebdc0cc37ae5e4d373b56",
   "operators": "71961cc3c58f615ccb90c5777e87ec3bb1e7d85793a63db00e1ba0bcfe300064",
   "corpus": "cdd73866a614dcae16a6e20af61acb6b58bb0c78ad83ac65263a0dfea750fbe1",
-  "expressions": "d3e34f9f58c6259b9361dc84c2c61f4c759c05a04dc7456ee198e66e7bdcfc5f"
+  "expressions": "b44a4076ae217da1eeb3464267aef445462fae025cb7a22293eef3168a8d394d"
  },
  "smoke": {
   "probes": {
@@ -714,10 +714,10 @@
    "method-edge 267 \"Rect2(1, 2, 3, 4).intersects(Rect2(4, 2, 1, 1))\"": {"verdict":"value","text":"false"},
    "method-edge 296 \"Rect2i(1, 2, -3, -5).get_center()\"": {"verdict":"value","text":"Vector2i(0, 0)"},
    "method-edge 330 \"Color(0.5, 1.5, -0.5, 2).clamp()\"": {"verdict":"value","text":"Color(f000000000000e03f, f000000000000f03f, f0000000000000000, f000000000000f03f)"},
-   "method-edge 378 \"Color().from_ok_hsl(0.7, 0.9, 0.3, 0.4)\"": {"verdict":"value","text":"Color(f0000002090e5a03f, f000000204fb2d13f, f000000c03bd6df3f, f000000a09999d93f)"},
-   "method-edge 389 \"Plane(1, 0, 0, 1).intersect_3(Plane(2, 0, 0, 1), Plane(0, 0, 1, 3))\"": {"verdict":"value","text":"null"},
-   "method-edge 420 \"Quaternion(0.5, -0.5, 0.5, 0.5).get_euler(4)\"": {"verdict":"value","text":"Vector3(f0000000000000000, f00000060fb21f9bf, f00000060fb21f93f)"},
-   "method-edge 444 \"Basis(Vector3(1, 0, 0), Vector3(0, 0, -1), Vector3(0, 1, 0)).get_euler(2)\"": {"verdict":"value","text":"Vector3(f00000060fb21f9bf, f0000000000000080, f0000000000000000)"},
+   "method-edge 398 \"Plane(0, 1, 0, 2).intersects_segment(Vector3(0.3, 2, -1), Vector3(0.7, 2.00001, 1.1))\"": {"verdict":"value","text":"Vector3(f000000403333d33f, f0000000000000040, f000000000000f0bf)"},
+   "method-edge 477 \"Projection().create_fit_aabb(AABB(Vector3(-1, -2, -3), Vector3(4, 5, 6)))\"": {"verdict":"value","text":"Projection(f000000000000e03f, f0000000000000000, f0000000000000000, f0000000000000000, f0000000000000000, f000000a09999d93f, f0000000000000000, f0000000000000000, f0000000000000000, f0000000000000000, f000000605555d53f, f0000000000000000, f000000000000e0bf, f000000a09999c9bf, f0000000000000080, f000000000000f03f)"},
+   "method-edge 483 \"Projection().create_perspective(75, 1.6, 0.05, 4000).get_fov()\"": {"verdict":"value","text":"f00000000176b5940"},
+   "method-edge 493 \"Projection().create_perspective(75, 1.6, 0.05, 4000).determinant()\"": {"verdict":"value","text":"f000000c0b72cbbbf"},
    "operator OP_ADD STRING STRING_NAME 2": {"verdict":"value","text":"s416263257320616e64202564"},
    "operator OP_ADD COLOR COLOR 2": {"verdict":"value","text":"Color(f0000000000000000, f00000000e887e43f, f000000000000f03f, f0000006066165940)"},
    "operator OP_ADD PACKED_VECTOR4_ARRAY PACKED_VECTOR4_ARRAY 3": {"verdict":"value","text":"PackedVector4Array[Vector4(f0000000000000080, f000000000000e03f, f000000a09999b93f, f0000000000000080), Vector4(f00000000000004c0, f00000000000004c0, f000000a09999b93f, f000000000000e03f), Vector4(f0000000000105940, f00000000000004c0, f000000a09999b93f, f00000000fa210940), Vector4(f00000000000004c0, f0000000000000000, f00000000fa210940, f000000000000e03f), Vector4(f0000000000105940, f0000000000105940, f0000000000000080, f00000000fa210940), Vector4(f00000000000004c0, f0000000000105940, f0000000000000080, f000000000000f0ff)]"},
