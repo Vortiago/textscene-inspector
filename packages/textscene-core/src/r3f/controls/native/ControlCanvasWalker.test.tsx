@@ -12,6 +12,7 @@ import type { SolveNode } from './solveTree';
 import { nativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type ContainerLayoutFn } from './solverRegistry';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
+import { useNodePath } from '../../contexts/NodePathContext';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../../canvasPaintOrder';
 import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
 import { controlNode, linkedTree, withPaintRanges } from './testing/solveNode';
@@ -111,6 +112,27 @@ describe('<ControlCanvasWalker>', () => {
     controlSolverRegistry.clear();
     controlComponentRegistry.clear();
     projectSettingsMock.settings = null;
+  });
+
+  it("gives each painter its live path, the walk's own path joined to the solve path", async () => {
+    const seen: (string | null)[] = [];
+    const PathProbe: NativeControlComponent = () => {
+      seen.push(useNodePath());
+      return null;
+    };
+    controlComponentRegistry.register({ typeName: 'PathProbe', Component: PathProbe });
+    await ReactThreeTestRenderer.create(
+      <ControlCanvasWalker
+        tree={[solveNode('Mark', 'PathProbe', {})]}
+        generation={0}
+        viewport={VIEWPORT}
+        theme={THEME}
+        measurer={null}
+        livePath="Root/Panel"
+      />
+    );
+    expect(seen).toContain('Root/Panel/Mark');
+    expect(seen).not.toContain('Mark');
   });
 
   it('emits one named group per Control, at its solved rect (Godot pixels, +Y down → three -y)', async () => {

@@ -4,6 +4,7 @@
  * under `self_modulate` 0.5, and 51 with an ancestor `modulate` 0.5 on top: a plain multiply in the
  * authored sRGB space (0.8 × 0.5 × 0.5 × 255 = 51), not a double gamma application.
  */
+import { NodePathProvider } from '../../../../r3f/contexts/NodePathContext';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
@@ -47,13 +48,15 @@ async function mountContainer(tint = painterTint()) {
   const renderer = await ReactThreeTestRenderer.create(
     <ViewportTextureProvider>
       <ViewportTexturePublisher path="Booth/View" entry={entry} />
-      <SubViewportContainer
-        {...painterEnv()}
-        tint={tint}
-        solveNode={containerSolveNode({})}
-        rect={RECT}
-        renderOrder={0}
-      />
+      <NodePathProvider path="Booth">
+        <SubViewportContainer
+          {...painterEnv()}
+          tint={tint}
+          solveNode={containerSolveNode({})}
+          rect={RECT}
+          renderOrder={0}
+        />
+      </NodePathProvider>
     </ViewportTextureProvider>
   );
   const quad = quadsSampling(renderer.scene, entry.plain.texture)[0];
