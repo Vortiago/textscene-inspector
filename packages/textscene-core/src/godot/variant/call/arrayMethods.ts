@@ -1,3 +1,4 @@
+import { appendAll, replaceAll } from '../../templates/arrayWrite.js';
 import { bisect } from '../../templates/bisect.js';
 import { sortArray } from '../../templates/sortArray.js';
 import { booleanize, hashCompare, isSameKey } from '../compare.js';
@@ -5,11 +6,12 @@ import {
   assignedElements,
   canReference,
   isSameContainerType,
+  NULL_SCRIPT,
   typedArray,
   validatedElement,
 } from '../construct/typedContainer.js';
 import { duplicateVariant } from '../duplicate.js';
-import { evaluateOperator } from '../operators/evaluate.js';
+import { evaluateOperator, isOperatorLess } from '../operators/evaluate.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
 import { defaultValue } from '../value/defaultValue.js';
 import { NIL, variant, type CallableValue, type Variant, type VariantOf } from '../value/variant.js';
@@ -18,14 +20,13 @@ import { VARIANT_TYPE, variantTypeOf } from '../variantType.js';
 import { representableLength } from './arrayLength.js';
 import { ERROR_CODE } from './errorCode.js';
 import { methodPort, type MethodContext, type MethodParameter, type MethodPort } from './methodPort.js';
-import { isReadOnly, makeReadOnly } from './readOnlyContainers.js';
+import { isReadOnly, makeReadOnly, unlessReadOnly } from './readOnlyContainers.js';
 
 type ArrayVariant = VariantOf<'ARRAY'>;
 
 const int = (value: bigint | number): Variant => variant('INT', BigInt(value));
 const bool = (value: boolean): Variant => variant('BOOL', value);
 
-// A method changes its base in place, which a Callable bound to it keeps (variant_callable.cpp:81).
 const elementsOf = (array: ArrayVariant) => array.value as Variant[];
 
 const port = (
@@ -33,25 +34,17 @@ const port = (
   body: (array: ArrayVariant, args: readonly CastArgument[], context: MethodContext) => Variant
 ) => methodPort(parameters, (base, args, context) => body(base as ArrayVariant, args, context));
 
-/** A method that changes the array: nothing and `failed` on a read-only array (array.cpp:110). */
 const changing = (
   parameters: readonly MethodParameter[],
   body: (array: ArrayVariant, args: readonly CastArgument[], context: MethodContext) => Variant,
-  failed: Variant = NIL
-) =>
-  port(parameters, (array, args, context) => (isReadOnly(array.value) ? failed : body(array, args, context)));
+  failed?: Variant
+) => port(parameters, unlessReadOnly(body, failed));
 
 /** `ContainerTypeValidate::validate`: the element as the array stores it, or nothing where it refuses. */
 const validated = (array: ArrayVariant, value: CastArgument) =>
   validatedElement(value as Variant, array.elementType);
 
 const fromEnd = (index: number, length: number) => (index < 0 ? index + length : index);
-
-/** `_ArrayVariantSort` (array.cpp:688): an invalid `<` sorts as false. */
-function isVariantLess(a: Variant, b: Variant): boolean {
-  const { value, isValid } = evaluateOperator('OP_LESS', a, b);
-  return isValid && booleanize(value);
-}
 
 /** The value a call returns, or nothing on a call error. */
 function called(
@@ -129,7 +122,7 @@ function count(array: ArrayVariant, what: CastArgument): Variant {
 /** `Array::assign` (array.cpp:217): the elements stay as they are where the source cannot convert. */
 function assign(array: ArrayVariant, source: ArrayVariant): Variant {
   const elements = assignedElements(source.value, source.elementType, array.elementType);
-  if (elements) elementsOf(array).splice(0, array.value.length, ...elements);
+  if (elements) replaceAll(elementsOf(array), elements);
   return NIL;
 }
 
@@ -137,7 +130,7 @@ function assign(array: ArrayVariant, source: ArrayVariant): Variant {
 function appendArray(array: ArrayVariant, other: ArrayVariant): Variant {
   const isReferenced = !array.elementType || canReference(array.elementType, other.elementType);
   const elements = isReferenced ? other.value : other.value.map((element) => validated(array, element));
-  if (elements.every((element) => element !== undefined)) elementsOf(array).push(...(elements as Variant[]));
+  if (elements.every((element) => element !== undefined)) appendAll(elementsOf(array), elements as Variant[]);
   return NIL;
 }
 
@@ -291,9 +284,6 @@ function set(array: ArrayVariant, index: bigint, what: CastArgument): Variant {
   return NIL;
 }
 
-// `Ref<Script>()` as a Variant: an expression's containers hold no script, so each answers a null Object.
-const NULL_SCRIPT = variant('OBJECT', null);
-
 export const ARRAY_METHODS: Readonly<Record<string, MethodPort>> = {
   size: port([], (array) => int(array.value.length)),
   is_empty: port([], (array) => bool(array.value.length === 0)),
@@ -340,14 +330,11 @@ export const ARRAY_METHODS: Readonly<Record<string, MethodPort>> = {
     return findCustom(array, callableOf(args[0]!), downFrom(from), context);
   }),
   count: port(['Variant'], (array, args) => count(array, args[0]!)),
-  has: port(['Variant'], (array, args) => {
-    const value = validated(array, args[0]!);
-    return bool(value !== undefined && (find(array, value, 0).value as bigint) !== -1n);
-  }),
+  has: port(['Variant'], (array, args) => bool((find(array, args[0]!, 0).value as bigint) !== -1n)),
   pop_back: changing([], (array) => elementsOf(array).pop() ?? NIL),
   pop_front: changing([], (array) => elementsOf(array).shift() ?? NIL),
   pop_at: changing(['int32_t'], (array, args) => removeAt(array, args[0] as number)),
-  sort: changing([], (array) => (sortArray(elementsOf(array), isVariantLess), NIL)),
+  sort: changing([], (array) => (sortArray(elementsOf(array), isOperatorLess), NIL)),
   sort_custom: changing(['CALLABLE'], (array, args, context) => {
     sortArray(elementsOf(array), callableLess(callableOf(args[0]!), context));
     return NIL;
@@ -355,7 +342,7 @@ export const ARRAY_METHODS: Readonly<Record<string, MethodPort>> = {
   shuffle: changing([], (array, _, context) => shuffle(array, context)),
   bsearch: port(['Variant', 'bool'], (array, args) => {
     const value = validated(array, args[0]!);
-    return value ? int(bisect(array.value, value, args[1] as boolean, isVariantLess)) : int(-1);
+    return value ? int(bisect(array.value, value, args[1] as boolean, isOperatorLess)) : int(-1);
   }),
   bsearch_custom: port(['Variant', 'CALLABLE', 'bool'], (array, args, context) => {
     const value = validated(array, args[0]!);

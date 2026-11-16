@@ -1,3 +1,4 @@
+import { replaceAll } from './arrayWrite.js';
 import type { Less } from './sortArray.js';
 
 /** Sorts `items` in place as `SortList::sort` (sort_list.h) does for `HashMap::sort_custom`. */
@@ -8,7 +9,7 @@ export function sortList<T>(items: T[], less: Less<T>): void {
   if (sortedUntil === items.length - 1) return;
   const head = items.slice(0, sortedUntil + 1);
   const rest = mergeSort(items.slice(sortedUntil + 1), less);
-  items.splice(0, items.length, ...merge(head, rest, less));
+  replaceAll(items, merge(head, rest, less));
 }
 
 /** `_merge_sort`: `_get_mid` puts the middle item at the end of the first half. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { booleanize, cppEqual, findEntry, isSameKey, isZero, setEntry } from './compare.js';
+import { booleanize, cppEqual, findEntry, identityCompare, isSameKey, isZero, setEntry } from './compare.js';
 import { variant, type DictionaryEntry } from './value/variant.js';
 
 const int = (value: bigint) => variant('INT', value);
@@ -112,5 +112,16 @@ describe('isZero and booleanize', () => {
 
   it('is false for -0.0', () => {
     expect(booleanize(float(-0))).toBe(false);
+  });
+});
+
+describe('identityCompare', () => {
+  it('is the same for two values of one allocation', () => {
+    const elements = [int(1n)];
+    expect(identityCompare(variant('ARRAY', elements), variant('ARRAY', elements))).toBe(true);
+  });
+
+  it('is not the same for two equal arrays of two allocations', () => {
+    expect(identityCompare(variant('ARRAY', [int(1n)]), variant('ARRAY', [int(1n)]))).toBe(false);
   });
 });

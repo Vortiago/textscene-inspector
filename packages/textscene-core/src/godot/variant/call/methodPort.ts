@@ -21,6 +21,7 @@ export interface MethodContext {
 /** A builtin method: its C++ parameters, and its body on the base value and the cast arguments. */
 export interface MethodPort {
   readonly parameters: readonly MethodParameter[];
+  /** It may change a container base in place, which a bound Callable keeps (variant_callable.cpp:81). */
   readonly run: (base: Variant, args: readonly CastArgument[], context: MethodContext) => Variant;
 }
 

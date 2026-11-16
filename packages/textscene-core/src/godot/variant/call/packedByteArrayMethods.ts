@@ -1,3 +1,4 @@
+import { writeAt } from '../../templates/arrayWrite.js';
 import { halfToFloat, makeHalfFloat } from '../../math/halfFloat.js';
 import { textOf } from '../../string/ustring/codes.js';
 import { REPLACEMENT, utf8Codes } from '../../string/ustring/encodings.js';
@@ -13,7 +14,6 @@ import { PACKED_BYTE_ARRAY_SHARED_METHODS } from './packedArrayMethods.js';
 const int = (value: bigint | number): Variant => variant('INT', BigInt(value));
 const text = (codes: readonly number[]): Variant => variant('STRING', textOf(codes));
 
-// A method changes its base in place, which a Callable bound to it keeps (variant_callable.cpp:81).
 const bytesOf = (base: Variant) => base.value as number[];
 const viewOf = (bytes: readonly number[]) => new DataView(Uint8Array.from(bytes).buffer);
 
@@ -87,7 +87,7 @@ type Reader = (view: DataView, offset: number) => Variant;
 function decoder(width: number, read: Reader, failed: Variant) {
   return port(['int64_t'], (bytes, args) => {
     const offset = offsetAt(args);
-    return fits(bytes, offset, width) ? read(viewOf(bytes), offset) : failed;
+    return fits(bytes, offset, width) ? read(viewOf(bytes.slice(offset, offset + width)), 0) : failed;
   });
 }
 
@@ -168,7 +168,7 @@ function encodeVar(bytes: number[], args: readonly CastArgument[]): Variant {
   if (offset < 0) return int(-1);
   const encoded = variantToBytes(args[1] as Variant, args[2] as boolean);
   if (offset + encoded.length > bytes.length) return int(-1);
-  bytes.splice(offset, encoded.length, ...encoded);
+  writeAt(bytes, offset, encoded);
   return int(encoded.length);
 }
 

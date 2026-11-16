@@ -152,3 +152,6 @@ export function assignDictionary(
 ): VariantOf<'DICTIONARY'> {
   return typedDictionary(assignedEntries(base, keyType, valueType) ?? [], keyType, valueType);
 }
+
+/** `Ref<Script>()` as a Variant: an expression's containers hold no script, so each answers a null Object. */
+export const NULL_SCRIPT = variant('OBJECT', null);

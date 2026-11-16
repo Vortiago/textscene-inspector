@@ -60,10 +60,18 @@ export function callMethod(
   return { value, isValid: filled.every((argument, index) => isAccepted(argument, declared[index]![0])) };
 }
 
-const methodContext = (host: UtilityHost): MethodContext => ({
-  random: host.random,
-  callp: (callable, args) => callp(callable, args, host),
-});
+/** Written only by `methodContext`: one context for each host, dropped with the host. */
+// eslint-disable-next-line no-restricted-syntax -- godot/ imports nothing outside its directory, perObject included.
+const contexts = new WeakMap<UtilityHost, MethodContext>();
+
+function methodContext(host: UtilityHost): MethodContext {
+  let context = contexts.get(host);
+  if (!context) {
+    context = { random: host.random, callp: (callable, args) => callp(callable, args, host) };
+    contexts.set(host, context);
+  }
+  return context;
+}
 
 /** `Callable::callp` (callable.cpp:43): a Callable with no valid target is a call error. */
 function callp(callable: CallableValue, args: readonly Variant[], host: UtilityHost): MethodResult {
