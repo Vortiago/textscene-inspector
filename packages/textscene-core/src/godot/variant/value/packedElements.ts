@@ -57,7 +57,7 @@ function structElement(type: MathTypeName, zero: readonly number[]): PackedEleme
       const [left, right] = [flat(a), flat(b)];
       return left.every((component, index) => component === right[index]);
     },
-    // `operator<` of the vectors and Color (vector3.h:484, color.h:387): the first component that differs decides.
+    // vector3.h:484, color.h:387: the first component that differs decides.
     isLess: (a, b) => {
       const [left, right] = [flat(a), flat(b)];
       const index = left.findIndex((component, at) => component !== right[at]);

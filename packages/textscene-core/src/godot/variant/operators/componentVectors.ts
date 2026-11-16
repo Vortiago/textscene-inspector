@@ -1,6 +1,7 @@
 import { storedReal as f } from '../../math/real.js';
-import { divideInt32, int64ToFloat32, remainderInt32, wrapInt32 } from '../cInteger.js';
+import { divideInt32, remainderInt32, wrapInt32 } from '../cInteger.js';
 import type { Variant, VariantTypeName } from '../value/variant.js';
+import { castArgument } from '../utility/utilityArguments.js';
 
 type Components = Readonly<Record<string, number>>;
 
@@ -21,7 +22,7 @@ const FLOAT_ELEMENTS: ElementArithmetic = {
   multiply: (a, b) => f(a * b),
   divide: (a, b) => f(a / b),
   negate: (a) => -a,
-  scalar: (scalar) => (scalar.type === 'INT' ? int64ToFloat32(scalar.value) : f(Number(scalar.value))),
+  scalar: (scalar) => castArgument(scalar, 'float') as number,
 };
 
 const INT32_ELEMENTS: ElementArithmetic = {

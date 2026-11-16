@@ -7,7 +7,8 @@ import { storedReal as f } from '../../math/real.js';
 import type { Rect2 } from '../../math/rect2.js';
 import { multiplyTransform2D, transform2DXform, type Transform2DColumns } from '../../math/transform2d.js';
 import { multiplyTransform3D, transform3DXform, type Transform3D } from '../../math/transform3d.js';
-import { divideInt64, doubleToInt64, int64ToFloat32, remainderInt64, wrapInt64 } from '../cInteger.js';
+import { divideInt64, doubleToInt64, remainderInt64, wrapInt64 } from '../cInteger.js';
+import { castArgument } from '../utility/utilityArguments.js';
 import {
   isNumber,
   variant,
@@ -33,8 +34,7 @@ type Components = Readonly<Record<string, number>>;
 type Binary = 'add' | 'subtract' | 'multiply' | 'divide';
 
 /** A scalar operand as the `real_t` parameter of a member operator takes it. */
-const realOf = (scalar: Variant) =>
-  scalar.type === 'INT' ? int64ToFloat32(scalar.value) : f(scalar.value as number);
+const realOf = (scalar: Variant) => castArgument(scalar, 'float') as number;
 
 const make = (type: VariantTypeName, value: unknown) => variant(type, value as never) as Variant;
 

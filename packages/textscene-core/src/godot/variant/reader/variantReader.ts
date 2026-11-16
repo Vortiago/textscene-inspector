@@ -1,11 +1,11 @@
 import { defaultValue } from '../value/defaultValue.js';
-import { storedReal } from '../../math/real.js';
 import { isAbsolutePath, simplifyPath } from '../../string/string.js';
 import { canInstantiate, classExists } from '../../classdb/classBaseTypes.js';
-import { doubleToInt32, doubleToInt64, doubleToUint64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
+import { doubleToUint64 } from '../cInteger.js';
 import { setEntry } from '../compare.js';
 import { assignArray, assignDictionary } from '../construct/typedContainer.js';
 import { castVariant } from '../construct/variantCast.js';
+import { castArgument } from '../utility/utilityArguments.js';
 import {
   NIL,
   variant,
@@ -49,12 +49,11 @@ const NUMBER_IDENTIFIERS: Readonly<Record<string, number>> = {
   nan: NaN,
 };
 
-// The C casts of `Variant::_to_int` and `_to_float` (variant.h:361) from a number token.
-const asReal = (n: NumberValue) => (n.type === 'INT' ? int64ToFloat32(n.value) : storedReal(n.value));
-const asDouble = (n: NumberValue) => (n.type === 'INT' ? Number(n.value) : n.value);
-const asInt32 = (n: NumberValue) => (n.type === 'INT' ? wrapInt32(n.value) : doubleToInt32(n.value));
-const asInt64 = (n: NumberValue) => (n.type === 'INT' ? n.value : doubleToInt64(n.value));
-const asUint8 = (n: NumberValue) => asInt32(n) & 0xff;
+const asReal = (n: NumberValue) => castArgument(n, 'float') as number;
+const asDouble = (n: NumberValue) => castArgument(n, 'double') as number;
+const asInt32 = (n: NumberValue) => castArgument(n, 'int32_t') as number;
+const asInt64 = (n: NumberValue) => castArgument(n, 'int64_t') as bigint;
+const asUint8 = (n: NumberValue) => castArgument(n, 'uint8_t') as number;
 
 function chunks<T>(items: readonly T[], size: number): T[][] {
   return Array.from({ length: Math.floor(items.length / size) }, (_, index) =>

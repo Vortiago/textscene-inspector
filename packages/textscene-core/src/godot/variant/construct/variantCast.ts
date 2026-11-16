@@ -70,7 +70,8 @@ function toInt64(value: Variant): bigint {
   }
 }
 
-function toInt32(value: Variant): number {
+/** `_to_int<int32_t>`: a double through the int32 cast, every other source through its int64 bits. */
+export function toInt32(value: Variant): number {
   return value.type === 'FLOAT' ? doubleToInt32(value.value) : wrapInt32(toInt64(value));
 }
 

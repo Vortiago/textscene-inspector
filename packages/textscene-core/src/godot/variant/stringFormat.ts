@@ -1,5 +1,5 @@
 import { stringNum } from '../string/stringNumber.js';
-import { doubleToInt32, doubleToInt64, wrapInt32 } from './cInteger.js';
+import { castArgument } from './utility/utilityArguments.js';
 import { stringify } from './stringify.js';
 import { isNumber, type Variant } from './value/variant.js';
 import { isVectorType, MATH_LAYOUT } from './value/mathLayout.js';
@@ -16,11 +16,9 @@ const fail = (message: string): never => {
   throw new FormatError(message);
 };
 
-const asInt64 = (value: Variant) =>
-  value.type === 'INT' ? value.value : doubleToInt64(value.value as number);
-const asDouble = (value: Variant) => Number(value.value);
-const asInt32 = (value: Variant) =>
-  value.type === 'INT' ? wrapInt32(value.value) : value.type === 'FLOAT' ? doubleToInt32(value.value) : 0;
+const asInt64 = (value: Variant) => castArgument(value, 'int64_t') as bigint;
+const asDouble = (value: Variant) => castArgument(value, 'double') as number;
+const asInt32 = (value: Variant) => castArgument(value, 'int32_t') as number;
 
 const lpad = (text: string, length: number, pad = ' ') =>
   length > [...text].length ? pad.repeat(length - [...text].length) + text : text;
