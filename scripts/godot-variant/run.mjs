@@ -6,6 +6,7 @@ import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { godotSourceDir } from '../godotSource.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { builtinTypes, dumpExtensionApi } from './readBuiltinTypes.mjs';
+import { caseTables } from './readCaseTables.mjs';
 import { constructorRegistrations } from './readConstructors.mjs';
 import { strictConversions } from './readConversions.mjs';
 import { errorNames } from './readErrorNames.mjs';
@@ -18,6 +19,8 @@ const BUILTIN_MODULE = join(
   REPO_ROOT,
   'packages/textscene-core/src/godot/variant/call/builtinTypes.generated.ts'
 );
+const CASE_MODULE = join(REPO_ROOT, 'packages/textscene-core/src/godot/string/caseTables.generated.ts');
+
 const GODOT_RELEASE = 'Godot Engine v4.6.3.stable';
 
 const json = (value) => JSON.stringify(value);
@@ -106,6 +109,30 @@ ${typeRows.join('\n')}
 `;
 }
 
+const runRows = (runs) => runs.map((run) => `  ${json(run)},`).join('\n');
+
+/** The module text of the two case tables. */
+export function renderCaseTables({ upper, lower }) {
+  return `/**
+ * Godot 4.6.3's simple case mappings, read from core/string/ucaps.h.
+ * AUTO-GENERATED - Do not edit manually. Run: pnpm godot:variant
+ */
+
+/** A run of \`[first, count, step, delta]\`: each code \`first + k * step\` maps to itself plus \`delta\`. */
+export type CaseRun = readonly [number, number, number, number];
+
+/** \`caps_table\` (ucaps.h:38), in code order. */
+export const UPPER_CASE_RUNS: readonly CaseRun[] = [
+${runRows(upper)}
+];
+
+/** \`reverse_caps_table\` (ucaps.h:1518), in code order. */
+export const LOWER_CASE_RUNS: readonly CaseRun[] = [
+${runRows(lower)}
+];
+`;
+}
+
 /** The builtin types of the running Godot, which must be the pinned release. */
 function readBuiltinTypes() {
   const api = JSON.parse(dumpExtensionApi());
@@ -128,6 +155,7 @@ function main() {
   const outputs = [
     [TABLE_MODULE, renderTables(tables)],
     [BUILTIN_MODULE, renderBuiltinTypes(readBuiltinTypes())],
+    [CASE_MODULE, renderCaseTables(caseTables(readFileSync(join(coreDir, 'string/ucaps.h'), 'utf8')))],
   ];
   const options = { tool: 'godot-variant', summary };
   if (process.argv.includes('--check'))

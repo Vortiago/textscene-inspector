@@ -8,9 +8,9 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { simpleUpper } from './simpleUpper';
+import { findUpper } from './caseMapping';
 
-const upper = (character: string): number => simpleUpper(character.codePointAt(0)!);
+const upper = (character: string): number => findUpper(character.codePointAt(0)!);
 
 function matchesFrom(pattern: string[], at: number, text: string[], from: number): boolean {
   if (at === pattern.length) return from === text.length;
