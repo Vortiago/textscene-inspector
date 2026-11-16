@@ -562,6 +562,11 @@ export function styledTextRuns(
   return styled;
 }
 
+/** Whether the runs change with the box width: an `[img]` or `[hr]` sized in percent of it (`_get_image_size`). */
+export function runsReadBoxWidth(runs: readonly StyledTextRun[]): boolean {
+  return runs.some((run) => run.image && (run.image.spec.widthInPercent || run.image.spec.heightInPercent));
+}
+
 /** The justification flags and tab stops of the paragraph the tags open on. */
 function paragraphShapeOptions(
   tags: readonly OpenBBCodeTag[],
@@ -823,7 +828,7 @@ function richTextLineMetrics(
   styledRuns: readonly StyledTextRun[],
   layout: TextLayoutResult
 ): RichTextLineMetrics[] {
-  return lineMetricsOf(attributeRunsToLines(styledRuns, layout), styledRuns, layout);
+  return lineMetricsOf(runsByLine(styledRuns)(layout), styledRuns, layout);
 }
 
 /** The height of the whole shaped text, px: what the scrollbar and `fit_content` compare against. */
@@ -936,6 +941,13 @@ function withGlyphs(segment: RunLineSegment, revealed: ReadonlySet<GlyphPlacemen
   if (glyphs.length === 0) return null;
   return { ...segment, glyphs, text: glyphs.map((glyph) => glyph.char).join('') };
 }
+
+/** Each layout's split into style runs, made once: the content height and the placements both read it. */
+const runsByLine = perObject((styledRuns: readonly StyledTextRun[]) =>
+  perObject((layout: TextLayoutResult): readonly RunLineSegment[][] =>
+    attributeRunsToLines(styledRuns, layout)
+  )
+);
 
 /**
  * Splits each shaped line back into its style runs by each glyph's `sourceIndex`. `shapeText`
@@ -1112,7 +1124,7 @@ export function layoutRichTextRuns(
   const layout = hasFilledParagraph
     ? fitFilledParagraphs(unfittedLayout, isFilled, flagsOf, boxWidthPx)
     : unfittedLayout;
-  const perLine = attributeRunsToLines(styledRuns, layout);
+  const perLine = runsByLine(styledRuns)(layout);
   const lineMetrics = lineMetricsOf(perLine, styledRuns, layout);
 
   const { vbeginPx, vsepPx } = richTextVerticalOffsets(

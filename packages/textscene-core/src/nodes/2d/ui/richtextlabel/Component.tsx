@@ -20,6 +20,8 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useWindowedCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useResolvedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useNodeReference } from '../../../../resources/reading';
+import { useByValue } from '../../../../r3f/hooks/useByValue';
+import { sameData } from '../../../../utils/sameData';
 import { WHOLE_FRAME, frameUvWindow } from '../../../../r3f/spriteFrame';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { clampAutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
@@ -30,6 +32,7 @@ import {
   RICH_TEXT_LABEL_DEFAULT_AUTOWRAP,
   layoutRichTextRuns,
   richTextLabelTextTheme,
+  runsReadBoxWidth,
   shapeRichText,
   styledTextRuns,
   underlineRectPx,
@@ -38,7 +41,7 @@ import {
   type StyledTextRun,
 } from './nativeSolver';
 import { resolveRichTextFaces } from './styleFaces';
-import { shapeBesideScrollBar } from './scrollBar';
+import { besideScrollBarWidthPx, shapeBesideScrollBar } from './scrollBar';
 import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import { countedCharacters, richTextReveal, truncateRunsToCharacters } from './visibleCharacters';
 import type { RichTextLabelProperties } from './types';
@@ -174,15 +177,19 @@ function useShapedRichText(
   rect: Rect2,
   textTheme: ResolvedTextTheme
 ) {
-  const runsAt = useCallback(
-    (wrapWidthPx: number) =>
-      styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, wrapWidthPx),
-    [solveNode, props, textTheme.color, textTheme.fontSizePx]
+  // Equal runs prove equal input: every value shaping reads from the node, the theme and the
+  // properties reaches it through the runs, the faces or a scalar option below.
+  const runsAt = (wrapWidthPx: number) =>
+    styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, wrapWidthPx);
+  const runsAtRectWidth = useByValue(runsAt(rect.w), sameData);
+  const verticalBarBoxes = useByValue(internalScrollBarBoxes(solveNode).vertical, sameData);
+  const besideBarWidthPx = besideScrollBarWidthPx(rect, verticalBarBoxes);
+  const runsBesideBar = useByValue(
+    runsReadBoxWidth(runsAtRectWidth) ? runsAt(besideBarWidthPx) : null,
+    sameData
   );
   // RichTextLabel's own default is WORD_SMART (`rich_text_label.h:557`), not Label's OFF.
   const autowrapMode = clampAutowrapMode(props.autowrapMode, RICH_TEXT_LABEL_DEFAULT_AUTOWRAP);
-  // The styles in use do not depend on the wrap width.
-  const runsAtRectWidth = useMemo(() => runsAt(rect.w), [runsAt, rect.w]);
   const faces = resolveRichTextFaces(solveNode, runsAtRectWidth);
   const { normal, bold, italic, boldItalic } = faces;
   const { rtl } = solveNode;
@@ -225,18 +232,17 @@ function useShapedRichText(
     ]
   );
 
-  const verticalBarBoxes = internalScrollBarBoxes(solveNode).vertical;
   const shaped = useMemo(
     () =>
       shapeBesideScrollBar(
         (wrapWidthPx) => {
-          const runs = wrapWidthPx === rect.w ? runsAtRectWidth : runsAt(wrapWidthPx);
+          const runs = wrapWidthPx === rect.w ? runsAtRectWidth : (runsBesideBar ?? runsAtRectWidth);
           return { runs, layout: shapeAtWidth(runs, wrapWidthPx) };
         },
         box,
         verticalBarBoxes
       ),
-    [runsAt, runsAtRectWidth, rect.w, shapeAtWidth, box, verticalBarBoxes]
+    [runsAtRectWidth, runsBesideBar, rect.w, shapeAtWidth, box, verticalBarBoxes]
   );
 
   const { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior } = props;

@@ -32,6 +32,7 @@ import {
   shapeRichText,
   richTextContentHeightPx,
   richTextLabelUnderlineAlpha,
+  runsReadBoxWidth,
 } from './nativeSolver';
 import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment, type ParsedImgTag } from './bbcode';
 import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
@@ -2575,5 +2576,26 @@ describe('richTextLabelUnderlineAlpha', () => {
     expect(
       richTextLabelUnderlineAlpha({ ...base, constants: { ...base.constants, underline_alpha: 0 } })
     ).toBe(0);
+  });
+});
+
+describe('runsReadBoxWidth', () => {
+  const runsOf = (text: string) =>
+    styledTextRuns(node({}), parsedProps({ text, bbcodeEnabled: true }), WHITE, 18, 200);
+
+  it('is true for an [img] sized in percent of the box', () => {
+    expect(runsReadBoxWidth(runsOf('[img=50%x25%]a.png[/img]'))).toBe(true);
+  });
+
+  it('is true for an [hr], whose default width is a percent of the box', () => {
+    expect(runsReadBoxWidth(runsOf('[hr]'))).toBe(true);
+  });
+
+  it('is false for an [img] sized in pixels', () => {
+    expect(runsReadBoxWidth(runsOf('[img=32]a.png[/img]'))).toBe(false);
+  });
+
+  it('is false for plain text', () => {
+    expect(runsReadBoxWidth(runsOf('plain text'))).toBe(false);
   });
 });
