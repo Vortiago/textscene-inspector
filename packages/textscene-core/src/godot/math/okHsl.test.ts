@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { srgbToOkhsl } from './okHsl';
+import { okhslToSrgb, srgbToOkhsl } from './okHsl';
 
 const f = Math.fround;
 
@@ -20,5 +20,24 @@ describe('srgbToOkhsl', () => {
 
   it('gives black as all zeros, the header guard against its precision errors', () => {
     expect(srgbToOkhsl({ r: 0, g: 0, b: 0 })).toEqual({ h: 0, s: 0, l: 0 });
+  });
+});
+
+describe('okhslToSrgb', () => {
+  it('turns the OKHSL Godot gives for a colour back into that colour', () => {
+    const { r, g, b } = okhslToSrgb({ h: f(0.6956475), s: f(0.6170649), l: f(0.42035818) });
+
+    expect([r, g, b].map((channel) => channel.toFixed(5))).toEqual(['0.20000', '0.40000', '0.60000']);
+  });
+
+  it('gives white and black at the lightness ends, whatever the hue', () => {
+    expect(okhslToSrgb({ h: 0.3, s: 1, l: 1 })).toEqual({ r: 1, g: 1, b: 1 });
+    expect(okhslToSrgb({ h: 0.3, s: 1, l: 0 })).toEqual({ r: 0, g: 0, b: 0 });
+  });
+
+  it('rounds each channel to single precision', () => {
+    const { r } = okhslToSrgb({ h: 0.1, s: 0.5, l: 0.5 });
+
+    expect(r).toBe(f(r));
   });
 });

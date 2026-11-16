@@ -1,13 +1,24 @@
 import { BUILTIN_TYPES } from '../../../../packages/textscene-core/src/godot/variant/call/builtinTypes.generated.ts';
 
 /** The types whose methods the port runs: each later part of the slice adds its types here. */
-export const PORTED_METHOD_TYPES = ['Vector2', 'Vector2i', 'Vector3', 'Vector3i', 'Vector4', 'Vector4i'];
+export const PORTED_METHOD_TYPES = [
+  'Vector2',
+  'Vector2i',
+  'Vector3',
+  'Vector3i',
+  'Vector4',
+  'Vector4i',
+  'Rect2',
+  'Rect2i',
+  'Color',
+];
 
 /** A typical value of each type, then its edges: zero, negative zero, the float limits, NaN and infinity. */
 export const EDGE_VALUES = {
   float: ['0.3', ['0', '-0.0', '-2.5', '1e30', '1e-30', 'NAN', 'INF']],
   int: ['3', ['0', '-1', '-7', '2147483647', '-2147483648', '4294967297']],
   bool: ['true', ['false']],
+  String: ['"#ff8000"', ['""', '"#F80"', '"ff800080"', '"#ff80zz"', '"red"', '"#1234567"']],
   Vector2: [
     'Vector2(0.6, -0.8)',
     [
@@ -66,10 +77,43 @@ export const EDGE_VALUES = {
       'Vector4i(-1, -1, -1, -1)',
     ],
   ],
+  Rect2: [
+    'Rect2(1, 2, 3, 4)',
+    [
+      'Rect2(0, 0, 0, 0)',
+      'Rect2(-0.0, 0, -0.0, 0)',
+      'Rect2(1, 2, -3, -4)',
+      'Rect2(1e30, -1e30, 1e30, 1e30)',
+      'Rect2(1e-30, 3e-30, 2e-30, 1e-30)',
+      'Rect2(NAN, 1, 2, 3)',
+      'Rect2(INF, -INF, 0, 1)',
+    ],
+  ],
+  Rect2i: [
+    'Rect2i(1, 2, 3, 4)',
+    [
+      'Rect2i(0, 0, 0, 0)',
+      'Rect2i(1, 2, -3, -4)',
+      'Rect2i(2147483647, -2147483648, 1, 1)',
+      'Rect2i(-1, -1, 2147483647, 2147483647)',
+    ],
+  ],
+  Color: [
+    'Color(0.2, 0.4, 0.6, 0.8)',
+    [
+      'Color(0, 0, 0, 0)',
+      'Color(-0.0, 0, -0.0, 1)',
+      'Color(2, -1, 0.5, 1)',
+      'Color(1e30, -1e30, 1e30, 1)',
+      'Color(1e-30, 3e-30, 2e-30, 1)',
+      'Color(NAN, 0.5, 0.5, 1)',
+      'Color(INF, -INF, 0, 1)',
+    ],
+  ],
 };
 
-// A text no method parameter takes, so the binder's check fails and the method runs on the cast value.
-const WRONG_TYPE = '"x"';
+/** A value the parameter does not take, so the binder's check fails and the method runs on the cast value. */
+const wrongType = (argumentType) => (argumentType === 'String' ? 'Vector2(1, 2)' : '"x"');
 
 const typical = (type) => EDGE_VALUES[type][0];
 const edges = (type) => EDGE_VALUES[type][1];
@@ -81,7 +125,7 @@ function callTexts(type, [name, , , , parameters]) {
   const call = (base, args) => `${base}.${name}(${args.join(', ')})`;
   const baseCalls = [typical(type), ...edges(type)].map((base) => call(base, typicalArguments));
   const argumentCalls = argumentTypes.flatMap((argumentType, index) =>
-    [...edges(argumentType), WRONG_TYPE].map((value) =>
+    [...edges(argumentType), wrongType(argumentType)].map((value) =>
       call(typical(type), typicalArguments.with(index, value))
     )
   );
