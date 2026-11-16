@@ -35,7 +35,9 @@ describe('getNamed', () => {
 
   it('reads a builtin method as a Callable bound to its base', () => {
     const base = variant('VECTOR2', { x: 1, y: 2 });
-    expect(getNamed(base, 'length').value).toEqual(variant('CALLABLE', { method: 'length', base }));
+    expect(getNamed(base, 'length').value).toMatchObject({
+      value: { kind: 'variant', method: 'length', base },
+    });
   });
 
   it('fails on a Dictionary method name, which only names an entry there', () => {

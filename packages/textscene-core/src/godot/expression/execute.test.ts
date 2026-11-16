@@ -62,7 +62,7 @@ describe('runExpression', () => {
   });
 
   it('refuses a method call it has not ported', () => {
-    expect(() => runExpression('Signal().is_null()')).toThrow(UnportedExpression);
+    expect(() => runExpression('PackedByteArray().compress()')).toThrow(UnportedExpression);
   });
 
   it('refuses an expression that makes an object', () => {

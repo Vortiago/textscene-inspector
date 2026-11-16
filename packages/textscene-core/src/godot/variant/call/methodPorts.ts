@@ -14,15 +14,18 @@ import type { VariantTypeName } from '../value/variant.js';
 import { AABB_METHODS } from './aabbMethods.js';
 import { ARRAY_METHODS } from './arrayMethods.js';
 import { BASIS_METHODS } from './basisMethods.js';
+import { CALLABLE_METHODS, CALLABLE_VARARG_METHODS } from './callableMethods.js';
 import { COLOR_METHODS } from './colorMethods.js';
 import { DICTIONARY_METHODS } from './dictionaryMethods.js';
 import { VECTOR2I_METHODS, VECTOR3I_METHODS, VECTOR4I_METHODS } from './intVectorMethods.js';
-import type { MethodPort } from './methodPort.js';
+import type { MethodPort, VarargPort } from './methodPort.js';
 import { NODE_PATH_METHODS } from './nodePathMethods.js';
 import { PLANE_METHODS } from './planeMethods.js';
 import { PROJECTION_METHODS } from './projectionMethods.js';
 import { QUATERNION_METHODS } from './quaternionMethods.js';
 import { RECT2_METHODS, RECT2I_METHODS } from './rectMethods.js';
+import { RID_METHODS } from './ridMethods.js';
+import { SIGNAL_METHODS, SIGNAL_VARARG_METHODS } from './signalMethods.js';
 import { STRING_METHODS, STRING_NAME_METHODS } from './stringMethods.js';
 import { TRANSFORM2D_METHODS } from './transform2DMethods.js';
 import { TRANSFORM3D_METHODS } from './transform3DMethods.js';
@@ -64,4 +67,14 @@ export const METHOD_PORTS: Readonly<Partial<Record<VariantTypeName, Readonly<Rec
     PACKED_VECTOR4_ARRAY: PACKED_VECTOR4_ARRAY_METHODS,
     DICTIONARY: DICTIONARY_METHODS,
     ARRAY: ARRAY_METHODS,
+    CALLABLE: CALLABLE_METHODS,
+    SIGNAL: SIGNAL_METHODS,
+    RID: RID_METHODS,
+  };
+
+/** The vararg method ports of each type, by type. */
+export const VARARG_PORTS: Readonly<Partial<Record<VariantTypeName, Readonly<Record<string, VarargPort>>>>> =
+  {
+    CALLABLE: CALLABLE_VARARG_METHODS,
+    SIGNAL: SIGNAL_VARARG_METHODS,
   };

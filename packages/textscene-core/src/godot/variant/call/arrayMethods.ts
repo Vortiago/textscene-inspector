@@ -53,9 +53,19 @@ function isVariantLess(a: Variant, b: Variant): boolean {
   return isValid && booleanize(value);
 }
 
+/** The value a call returns, or nothing on a call error. */
+function called(
+  context: MethodContext,
+  callable: CallableValue,
+  args: readonly Variant[]
+): Variant | undefined {
+  const result = context.callp(callable, args);
+  return result.isValid ? result.value : undefined;
+}
+
 /** `CallableComparator` (callable.cpp:597): a call error sorts as false. */
 const callableLess = (callable: CallableValue, context: MethodContext) => (a: Variant, b: Variant) => {
-  const result = context.callCallable(callable, [a, b]);
+  const result = called(context, callable, [a, b]);
   return result !== undefined && booleanize(result);
 };
 
@@ -94,7 +104,7 @@ function findCustom(
   context: MethodContext
 ) {
   for (const index of indexes) {
-    const result = context.callCallable(callable, [array.value[index]!]);
+    const result = called(context, callable, [array.value[index]!]);
     if (result === undefined || result.type !== 'BOOL') return int(-1);
     if (result.value) return int(index);
   }
@@ -192,7 +202,7 @@ function filter(array: ArrayVariant, callable: CallableValue, context: MethodCon
   const accepted: Variant[] = [];
   for (let index = 0; index < array.value.length; index++) {
     const element = array.value[index]!;
-    const result = context.callCallable(callable, [element]);
+    const result = called(context, callable, [element]);
     if (result === undefined) return variant('ARRAY', []);
     if (booleanize(result)) accepted.push(element);
   }
@@ -203,7 +213,7 @@ function filter(array: ArrayVariant, callable: CallableValue, context: MethodCon
 function map(array: ArrayVariant, callable: CallableValue, context: MethodContext): Variant {
   const mapped: Variant[] = [];
   for (let index = 0; index < array.value.length; index++) {
-    const result = context.callCallable(callable, [array.value[index]!]);
+    const result = called(context, callable, [array.value[index]!]);
     if (result === undefined) return variant('ARRAY', []);
     mapped.push(result);
   }
@@ -220,7 +230,7 @@ function reduce(
   const isFromFirst = start.type === 'NIL' && array.value.length > 0;
   let accumulated = isFromFirst ? array.value[0]! : start;
   for (let index = isFromFirst ? 1 : 0; index < array.value.length; index++) {
-    const result = context.callCallable(callable, [accumulated, array.value[index]!]);
+    const result = called(context, callable, [accumulated, array.value[index]!]);
     if (result === undefined) return NIL;
     accumulated = result;
   }
@@ -235,7 +245,7 @@ function isAnswered(
   context: MethodContext
 ): Variant {
   for (let index = 0; index < array.value.length; index++) {
-    const result = context.callCallable(callable, [array.value[index]!]);
+    const result = called(context, callable, [array.value[index]!]);
     if (result === undefined) return bool(false);
     if (booleanize(result) === wanted) return bool(wanted);
   }

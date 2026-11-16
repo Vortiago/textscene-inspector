@@ -20,10 +20,16 @@ const vector2 = (v: Components) => realList(v, XY, true);
 const vector3 = (v: Components) => realList(v, XYZ, true);
 const vector4 = (v: Components) => realList(v, XYZW, true);
 
-// callable.cpp:384: a VariantCallable names its base type (variant_callable.cpp:46).
-function callableText({ method, base }: CallableValue): string {
-  if (base) return `${variantTypeNameOf(base.type)}::${method}`;
-  return method === '' ? 'null::null' : `null::${method}`;
+/** `Callable::operator String`: a VariantCallable names its base type (variant_callable.cpp:46). */
+function callableText(callable: CallableValue): string {
+  switch (callable.kind) {
+    case 'standard':
+      return callable.method === '' ? 'null::null' : `null::${callable.method}`;
+    case 'variant':
+      return `${variantTypeNameOf(callable.base.type)}::${callable.method}`;
+    default:
+      return callableText(callable.callable);
+  }
 }
 
 // stringify_variant_clean (variant.cpp:1568): an element of a container quotes its strings.

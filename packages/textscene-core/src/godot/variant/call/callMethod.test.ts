@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { NIL, variant } from '../value/variant';
+import { NIL, variant, type Variant } from '../value/variant';
+import { variantCallable } from '../variantHash';
 import { utilityHost } from '../utility/utilityHost';
 import { callMethod } from './callMethod';
 
@@ -56,10 +57,38 @@ describe('callMethod', () => {
   });
 
   it('gives nothing for a method with no port yet, so the caller refuses it', () => {
-    expect(callMethod(variant('SIGNAL', ''), 'is_null', [], utilityHost())).toBeUndefined();
+    expect(callMethod(variant('PACKED_BYTE_ARRAY', []), 'compress', [], utilityHost())).toBeUndefined();
+  });
+});
+
+describe('a Callable call', () => {
+  const has = variantCallable(variant('ARRAY', [variant('INT', 3n)]), 'has');
+  const call = (callable: Variant, args: Variant[]) => callMethod(callable, 'call', args, utilityHost());
+  const bound = (callable: Variant, args: Variant[]) =>
+    callMethod(callable, 'bind', args, utilityHost())!.value;
+  const unbound = (callable: Variant, count: bigint) =>
+    callMethod(callable, 'unbind', [variant('INT', count)], utilityHost())!.value;
+
+  it('puts the bound values after the arguments', () => {
+    expect(call(bound(has, [variant('INT', 3n)]), [])).toEqual({
+      value: variant('BOOL', true),
+      isValid: true,
+    });
   });
 
-  it('gives nothing for a vararg method, which no port takes yet', () => {
-    expect(callMethod(variant('CALLABLE', { method: '' }), 'call', [], utilityHost())).toBeUndefined();
+  it('drops the last arguments of an unbind', () => {
+    const args = [variant('INT', 3n), variant('INT', 9n)];
+    expect(call(unbound(has, 1n), args)).toEqual({ value: variant('BOOL', true), isValid: true });
+  });
+
+  it('is a call error for an unbind given fewer arguments than it drops', () => {
+    expect(call(unbound(has, 2n), [variant('INT', 3n)])).toEqual({ value: NIL, isValid: false });
+  });
+
+  it('is a call error for the null Callable', () => {
+    expect(call(variant('CALLABLE', { kind: 'standard', method: '' }), [])).toEqual({
+      value: NIL,
+      isValid: false,
+    });
   });
 });

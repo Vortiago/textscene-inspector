@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { nodePathParts } from '../string/nodePathParts';
 import { variant, type Variant } from './value/variant';
-import { variantHash } from './variantHash';
+import { variantCallable, variantHash } from './variantHash';
 
 const int = (value: number) => variant('INT', BigInt(value));
 const nodePath = (text: string) => variant('NODE_PATH', nodePathParts(text)!);
@@ -34,5 +34,15 @@ describe('variantHash', () => {
 
   it('hashes an empty PackedInt32Array as one 64-bit zero', () => {
     expect(variantHash(variant('PACKED_INT32_ARRAY', []))).toBe(546098158);
+  });
+});
+
+describe('variantCallable', () => {
+  it('keeps the hash its base had when it was made, as Godot does', () => {
+    const elements: Variant[] = [variant('INT', 3n)];
+    const has = variantCallable(variant('ARRAY', elements), 'has');
+    const before = variantHash(has);
+    elements.push(variant('INT', 4n));
+    expect(variantHash(has)).toBe(before);
   });
 });

@@ -5,14 +5,9 @@ import type { UtilityHost } from '../utility/utilityHost.js';
 import { NIL, type CallableValue, type Variant } from '../value/variant.js';
 import { variantTypeOfName } from '../variantType.js';
 import { builtinMethodRow } from './builtinMethod.js';
-import type { MethodContext, MethodParameter } from './methodPort.js';
-import { METHOD_PORTS } from './methodPorts.js';
-
-/** What a call leaves: the value, which a refused argument also leaves, and whether Godot calls it valid. */
-export interface MethodResult {
-  readonly value: Variant;
-  readonly isValid: boolean;
-}
+import { isValidCallable } from './callableMethods.js';
+import type { MethodContext, MethodParameter, MethodResult } from './methodPort.js';
+import { METHOD_PORTS, VARARG_PORTS } from './methodPorts.js';
 
 const FAILED: MethodResult = { value: NIL, isValid: false };
 const IS_VARARG = 4;
@@ -50,7 +45,8 @@ export function callMethod(
   const row = builtinMethodRow(base.type, name);
   if (!row) return FAILED;
   const [, , flags, , declared] = row;
-  if (flags & IS_VARARG) return undefined;
+  // variant_call.cpp:1985: a vararg method checks its own arguments.
+  if (flags & IS_VARARG) return VARARG_PORTS[base.type]?.[name]?.(base, args, methodContext(host));
   const required = declared.filter(([, defaultText]) => defaultText === undefined).length;
   if (args.length > declared.length || args.length < required) return FAILED;
   const port = METHOD_PORTS[base.type]?.[name];
@@ -66,17 +62,24 @@ export function callMethod(
 
 const methodContext = (host: UtilityHost): MethodContext => ({
   random: host.random,
-  callCallable: (callable, args) => callCallable(callable, args, host),
+  callp: (callable, args) => callp(callable, args, host),
 });
 
-// callable.cpp:43: a Callable of no builtin base has a null object here, which is a call error.
-function callCallable(
-  callable: CallableValue,
-  args: readonly Variant[],
-  host: UtilityHost
-): Variant | undefined {
-  if (!callable.base) return undefined;
-  const result = callMethod(callable.base, callable.method, args, host);
-  if (!result) throw new UnportedMethod(`the method ${callable.method}`);
-  return result.isValid ? result.value : undefined;
+/** `Callable::callp` (callable.cpp:43): a Callable with no valid target is a call error. */
+function callp(callable: CallableValue, args: readonly Variant[], host: UtilityHost): MethodResult {
+  if (!isValidCallable(callable)) return FAILED;
+  switch (callable.kind) {
+    case 'variant': {
+      const result = callMethod(callable.base, callable.method, args, host);
+      if (!result) throw new UnportedMethod(`the method ${callable.method}`);
+      return result;
+    }
+    case 'bind':
+      return callp(callable.callable, [...args, ...callable.binds], host);
+    case 'unbind':
+      if (args.length < callable.count) return FAILED;
+      return callp(callable.callable, args.slice(0, args.length - callable.count), host);
+    default:
+      return FAILED;
+  }
 }

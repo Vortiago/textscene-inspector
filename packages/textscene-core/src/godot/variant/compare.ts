@@ -1,13 +1,6 @@
 import { COMPONENT_VECTORS, componentsEqual } from './operators/componentVectors.js';
 import { defaultValue } from './value/defaultValue.js';
-import {
-  MAX_RECURSION,
-  variant,
-  type CallableValue,
-  type DictionaryEntry,
-  type Variant,
-} from './value/variant.js';
-import { variantHash } from './variantHash.js';
+import { MAX_RECURSION, type CallableValue, type DictionaryEntry, type Variant } from './value/variant.js';
 
 type Components = Readonly<Record<string, number>>;
 
@@ -50,10 +43,19 @@ function sameTypeEqual(a: Variant, b: Variant): boolean {
   }
 }
 
-// callable.cpp:256: two VariantCallables compare their hashes (variant_callable.cpp:34).
+/** `Callable::operator==` (callable.cpp:264): two kinds never equal, and a bind compares no bound value. */
 function callablesEqual(a: CallableValue, b: CallableValue): boolean {
-  if (a.base && b.base) return variantHash(variant('CALLABLE', a)) === variantHash(variant('CALLABLE', b));
-  return !a.base && !b.base && a.method === b.method;
+  if (a === b) return true;
+  switch (a.kind) {
+    case 'standard':
+      return b.kind === 'standard' && a.method === b.method;
+    case 'variant':
+      return b.kind === 'variant' && a.hash === b.hash;
+    case 'bind':
+      return b.kind === 'bind' && callablesEqual(a.callable, b.callable) && a.binds.length === b.binds.length;
+    case 'unbind':
+      return b.kind === 'unbind' && callablesEqual(a.callable, b.callable) && a.count === b.count;
+  }
 }
 
 // The C++ `==` of a struct of numbers is the `==` of every field, so NaN is never equal.

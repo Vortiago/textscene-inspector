@@ -42,7 +42,7 @@ const DEFAULTS: { readonly [T in VariantTypeName]: VariantValues[T] } = {
   NODE_PATH: EMPTY_NODE_PATH,
   RID: 0n,
   OBJECT: null,
-  CALLABLE: { method: '' },
+  CALLABLE: { kind: 'standard', method: '' },
   SIGNAL: '',
   DICTIONARY: [],
   ARRAY: [],

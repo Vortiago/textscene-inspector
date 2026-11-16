@@ -11,7 +11,7 @@ import {
 } from '../math/hashFuncs.js';
 import type { NodePathParts } from '../string/nodePathParts.js';
 import { builtinMethodHash } from './call/builtinMethod.js';
-import { MAX_RECURSION, type CallableValue, type Variant, type VariantOf } from './value/variant.js';
+import { MAX_RECURSION, variant, type CallableValue, type Variant, type VariantOf } from './value/variant.js';
 import { VARIANT_TYPE } from './variantType.js';
 
 type HashOne = (word: number, seed: number) => number;
@@ -56,10 +56,22 @@ function nodePathHash({ absolute, names, subnames }: NodePathParts): number {
   return absolute ? pair : ~pair >>> 0;
 }
 
-// callable.cpp:322: a VariantCallable keeps the hash of its base and method (variant_callable.cpp:96).
-function callableHash({ method, base }: CallableValue): number {
-  if (!base) return fmix32(murmur3One64(0n, stringHash(method)));
-  return murmur3One64(BigInt(builtinMethodHash(base.type, method)!), variantHash(base));
+/** `Callable::hash` (callable.cpp:254): a bind or an unbind hashes as the Callable it wraps. */
+function callableHash(callable: CallableValue): number {
+  switch (callable.kind) {
+    case 'standard':
+      return fmix32(murmur3One64(0n, stringHash(callable.method)));
+    case 'variant':
+      return callable.hash;
+    default:
+      return callableHash(callable.callable);
+  }
+}
+
+/** `VariantCallable` (variant_callable.cpp:82): the hash of `base` now, which a later change leaves. */
+export function variantCallable(base: Variant, method: string): VariantOf<'CALLABLE'> {
+  const hash = murmur3One64(BigInt(builtinMethodHash(base.type, method) ?? 0), variantHash(base));
+  return variant('CALLABLE', { kind: 'variant', method, base, hash });
 }
 
 /** `Array::recursive_hash` (array.cpp:195) and `Dictionary::recursive_hash` (dictionary.cpp:373). */

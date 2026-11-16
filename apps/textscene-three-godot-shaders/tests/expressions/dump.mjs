@@ -40,6 +40,13 @@ const PACKED_NAMES = {
 };
 
 /** The text of the port's Variant `{ type, value }`. */
+/** `Callable::operator String`: a bind or an unbind reads as the Callable it wraps. */
+function callableText(callable) {
+  if (callable.kind === 'bind' || callable.kind === 'unbind') return callableText(callable.callable);
+  if (callable.kind === 'variant') return `${variantTypeNameOf(callable.base.type)}::${callable.method}`;
+  return callable.method === '' ? 'null::null' : `null::${callable.method}`;
+}
+
 export function dumpVariant({ type, value }) {
   switch (type) {
     case 'NIL':
@@ -96,8 +103,9 @@ export function dumpVariant({ type, value }) {
     case 'OBJECT':
       return 'Object(null)';
     case 'CALLABLE':
-      if (value.base) return `Callable(${variantTypeNameOf(value.base.type)}::${value.method})`;
-      return value.method === '' ? 'Callable()' : `Callable(null::${value.method})`;
+      return value.kind === 'standard' && value.method === ''
+        ? 'Callable()'
+        : `Callable(${callableText(value)})`;
     case 'SIGNAL':
       return value === '' ? 'Signal()' : `Signal(null::[signal]${value})`;
     case 'ARRAY':
