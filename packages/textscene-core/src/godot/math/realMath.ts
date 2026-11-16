@@ -1,5 +1,3 @@
-/** The float overloads of Godot's `Math` functions (`core/math/math_funcs.h`) that a `real_t` method calls. */
-
 import { CMP_EPSILON } from './math.js';
 
 const f = Math.fround;
