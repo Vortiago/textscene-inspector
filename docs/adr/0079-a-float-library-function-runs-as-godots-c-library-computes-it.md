@@ -33,8 +33,10 @@ rounded, and each case where Godot differs is listed with both answers.**
 
 - A value built from `acosf`, `atan2f`, `sinf` or `cosf` equals Godot's bit for bit.
 - A value built from `asinf`, or from a double function where V8 and glibc differ, can differ from
-  Godot by one bit. `tests/expressions/libmDifferences.mjs` in the shader package lists each such
+  Godot by one bit. `tests/expressions/libraryDifferences.mjs` in the shader package lists each such
   case with Godot's answer, the port's answer and the reason. The list test fails when either
   answer changes.
+- The same list holds a case where a decoder that `decompress` borrows, such as fflate, answers
+  otherwise than the library Godot links.
 - A new library function goes through the same choice: port it when its licence is the Sun notice
   or MIT, and ask Atle when it is not.

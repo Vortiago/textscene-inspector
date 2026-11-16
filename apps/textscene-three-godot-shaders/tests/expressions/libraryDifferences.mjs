@@ -1,5 +1,5 @@
-// Both answers kept: the list fails once V8 and Godot's glibc agree or differ otherwise.
-export const LIBM_DIFFERENCES = {
+// Both answers kept: the list fails once the port and Godot's library agree or differ otherwise.
+export const LIBRARY_DIFFERENCES = {
   'utility tan 1': {
     godot: 'f79ea3ee1e6e2eb3f',
     port: 'f78ea3ee1e6e2eb3f',
@@ -22,5 +22,10 @@ export const LIBM_DIFFERENCES = {
     port: 'Vector3(f00000060fb210940, f0000002067aced3f, f00000060fb21f93f)',
     reason:
       'asinf in get_euler: glibc gives the float 0.92729521, the correctly rounded arc sine the one above',
+  },
+  'compression-edge 61 "PackedByteArray([120, 1, 1, 1, 0, 255, 255, 65, 0, 66, 0, 66]).decompress(1, 1)"': {
+    godot: 'PackedByteArray[]',
+    port: 'PackedByteArray[65]',
+    reason: 'a stored Deflate block whose length check is wrong: zlib refuses it, fflate inflates it',
   },
 };

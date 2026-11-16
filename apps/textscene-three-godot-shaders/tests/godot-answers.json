@@ -6,7 +6,7 @@
   "random": "f496ba32f2398f1929355ce53edcc407498209e537eebdc0cc37ae5e4d373b56",
   "operators": "71961cc3c58f615ccb90c5777e87ec3bb1e7d85793a63db00e1ba0bcfe300064",
   "corpus": "cdd73866a614dcae16a6e20af61acb6b58bb0c78ad83ac65263a0dfea750fbe1",
-  "expressions": "5060164d8412ba7f22e1d4f9ba78e79674270577872b11779496f1e94c5f5c5e"
+  "expressions": "2b44ba1e199d705344fab1f4fbecc7d3b6b6e52803fd69e57360f91a0c45fa86"
  },
  "smoke": {
   "probes": {
@@ -729,8 +729,8 @@
    "container-method-edge 21 \"Array([1, 2], 2, \\\"\\\", null).bsearch(1.5)\"": {"verdict":"value","text":"0"},
    "container-method-edge 27 \"[1, 2, 3].slice(0, 3, 0)\"": {"verdict":"value","text":"[]"},
    "callable-method-edge 3 \"[1, 2, 3].find.bind(2).call(3)\"": {"verdict":"value","text":"2"},
-   "compression-edge 4 \"PackedByteArray([5, 104, 101, 108, 108, 111, 32, 224, 9, 5, 4, 119, 111, 114, 108, 100]).decompress(10, 0)\"": {"verdict":"value","text":"PackedByteArray[104, 101, 108, 108, 111, 32, 0, 0, 32, 130]"},
-   "compression-edge 10 \"PackedByteArray([32, 97, 64]).decompress(20, 0)\"": {"verdict":"value","text":"PackedByteArray[97, 97, 97, 97, 97]"},
+   "compression-edge 4 \"PackedByteArray([5, 104, 101, 108, 108, 111, 32, 224, 9, 5, 4, 119, 111, 114, 108, 100]).decompress(10, 0)\"": {"verdict":"value","text":"PackedByteArray[104, 101, 108, 108, 111, 32, 0, 0, 32, 28]"},
+   "compression-edge 10 \"PackedByteArray([32, 97, 64]).decompress(20, 0)\"": {"verdict":"value","text":"PackedByteArray[]"},
    "compression-edge 20 \"PackedByteArray([120, 156, 203, 72, 205, 201, 201, 87, 200, 192, 32, 203, 243, 139, 114, 82, 0, 163, 138, 10, 249]).decompress(3000000000, 1)\"": {"verdict":"value","text":"PackedByteArray[]"},
    "operator OP_ADD STRING STRING_NAME 2": {"verdict":"value","text":"s410000006200000063000000250000007300000020000000610000006e00000064000000200000002500000064000000"},
    "operator OP_ADD COLOR COLOR 2": {"verdict":"value","text":"Color(f0000000000000000, f00000000e887e43f, f000000000000f03f, f0000006066165940)"},
