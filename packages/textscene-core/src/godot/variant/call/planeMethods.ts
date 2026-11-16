@@ -1,5 +1,5 @@
 import { CMP_EPSILON } from '../../math/math.js';
-import type { Plane } from '../../math/plane.js';
+import { planeDistanceTo, type Plane } from '../../math/plane.js';
 import { isEqualApproxf, isZeroApproxf } from '../../math/realMath.js';
 import {
   vector3Add,
@@ -42,8 +42,6 @@ function normalized({ normal, d }: Plane): Plane {
   if (length === 0) return { normal: { x: 0, y: 0, z: 0 }, d: 0 };
   return { normal: divided(normal, length), d: f(d / length) };
 }
-
-const distanceTo = ({ normal, d }: Plane, to: Vector3) => f(dot(normal, to) - d);
 
 const isFiniteVector = ({ x, y, z }: Vector3) =>
   Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z);
@@ -96,13 +94,13 @@ export const PLANE_METHODS: Readonly<Record<string, MethodPort>> = {
   }),
   is_finite: port([], (p) => bool(isFiniteVector(p.normal) && Number.isFinite(p.d))),
   is_point_over: port(['VECTOR3'], (p, args) => bool(dot(p.normal, pointAt(args, 0)) > p.d)),
-  distance_to: port(['VECTOR3'], (p, args) => variant('FLOAT', distanceTo(p, pointAt(args, 0)))),
+  distance_to: port(['VECTOR3'], (p, args) => variant('FLOAT', planeDistanceTo(p, pointAt(args, 0)))),
   has_point: port(['VECTOR3', 'float'], (p, args) =>
-    bool(Math.abs(distanceTo(p, pointAt(args, 0))) <= (args[1] as number))
+    bool(Math.abs(planeDistanceTo(p, pointAt(args, 0))) <= (args[1] as number))
   ),
   project: port(['VECTOR3'], (p, args) => {
     const to = pointAt(args, 0);
-    return point(vector3Sub(to, vector3Scaled(p.normal, distanceTo(p, to))));
+    return point(vector3Sub(to, vector3Scaled(p.normal, planeDistanceTo(p, to))));
   }),
   intersect_3: port(['PLANE', 'PLANE'], (p, args) =>
     pointOrNil(intersect3(p, planeAt(args, 0), planeAt(args, 1)))

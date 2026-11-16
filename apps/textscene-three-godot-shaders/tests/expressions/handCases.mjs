@@ -1852,6 +1852,21 @@ const METHOD_EDGES = [
   'Plane(0, 1, 0, 2).has_point(Vector3(0, 2.000001, 0))',
   'Plane(0, 1, 0, 2).has_point(Vector3(0, 2.5, 0), 0.5)',
   'Plane(0, 1, 0, 2).is_equal_approx(Plane(0, 1.000001, 0, 2))',
+  'AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).intersects_ray(Vector3(-5, 0.3, 0.1), Vector3(1, 0.1, 0.05))',
+  'AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).intersects_ray(Vector3(5, 0.3, 0.1), Vector3(-1, 0.1, 0.05))',
+  'AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).intersects_ray(Vector3(-5, 0.3, 0.1), Vector3(-1, 0.1, 0.05))',
+  'AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).intersects_ray(Vector3(-5, 9, 0.1), Vector3(1, 0, 0))',
+  'AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).intersects_segment(Vector3(-5, 0.3, 0.1), Vector3(5, -0.7, 2.1))',
+  'AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).intersects_segment(Vector3(5, 0.3, 0.1), Vector3(-5, -0.7, 2.1))',
+  'AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).intersects_segment(Vector3(-5, 0.3, 0.1), Vector3(-3, -0.7, 2.1))',
+  'AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).intersects_plane(Plane(0.6, 0, -0.8, 0.5))',
+  'AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).intersects_plane(Plane(0, 1, 0, 9))',
+  'AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).intersection(AABB(Vector3(0, 0, 0), Vector3(5, 5, 5)))',
+  'AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).encloses(AABB(Vector3(0, 0, 0), Vector3(1, 1, 1)))',
+  'AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).get_endpoint(5)',
+  'AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).get_endpoint(8)',
+  'AABB(Vector3(0, 0, 0), Vector3(3, 3, 1)).get_longest_axis_index()',
+  'AABB(Vector3(0, 0, 0), Vector3(1, 3, 1)).get_shortest_axis_index()',
 ];
 
 const cases = (group, texts) =>

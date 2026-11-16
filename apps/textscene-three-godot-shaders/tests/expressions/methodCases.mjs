@@ -12,6 +12,7 @@ export const PORTED_METHOD_TYPES = [
   'Rect2i',
   'Color',
   'Plane',
+  'AABB',
 ];
 
 /** A typical value of each type, then its edges: zero, negative zero, the float limits, NaN and infinity. */
@@ -109,6 +110,18 @@ export const EDGE_VALUES = {
       'Plane(1e-30, 3e-30, -2e-30, 1e-30)',
       'Plane(NAN, 1, 0, 2)',
       'Plane(INF, -INF, 0, 1)',
+    ],
+  ],
+  AABB: [
+    'AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6))',
+    [
+      'AABB(Vector3(0, 0, 0), Vector3(0, 0, 0))',
+      'AABB(Vector3(-0.0, 0, -0.0), Vector3(-0.0, 1, 0))',
+      'AABB(Vector3(1, 2, 3), Vector3(-1, -2, -3))',
+      'AABB(Vector3(1e30, -1e30, 0), Vector3(1e30, 1e30, 1e30))',
+      'AABB(Vector3(1e-30, 3e-30, 0), Vector3(2e-30, 1e-30, 1e-30))',
+      'AABB(Vector3(NAN, 0, 0), Vector3(1, NAN, 1))',
+      'AABB(Vector3(INF, -INF, 0), Vector3(1, INF, 1))',
     ],
   ],
   Color: [

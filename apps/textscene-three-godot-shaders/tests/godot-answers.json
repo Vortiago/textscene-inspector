@@ -6,7 +6,7 @@
   "random": "f496ba32f2398f1929355ce53edcc407498209e537eebdc0cc37ae5e4d373b56",
   "operators": "71961cc3c58f615ccb90c5777e87ec3bb1e7d85793a63db00e1ba0bcfe300064",
   "corpus": "cdd73866a614dcae16a6e20af61acb6b58bb0c78ad83ac65263a0dfea750fbe1",
-  "expressions": "f7d6c4c6fb0c8dc4fcf43044fc33d4c6f17e3c90d1a1d50e28abae9bdc433316"
+  "expressions": "ba83ef270e7ea1fe1ae4d4be8cc562b73672a602f88c4420f29ae4b313b79e6b"
  },
  "smoke": {
   "probes": {
@@ -958,7 +958,20 @@
    "method Plane.has_point 2 \"Plane(-0.0, 1, 0, -0.0).has_point(Vector3(0.6, 0, -0.8), 0.3)\"": {"verdict":"value","text":"true"},
    "method Plane.intersect_3 10 \"Plane(0.6, 0, -0.8, 0.5).intersect_3(Plane(3, 4, 0, 5), Plane(0.6, 0, -0.8, 0.5))\"": {"verdict":"value","text":"null"},
    "method Plane.intersects_ray 13 \"Plane(0.6, 0, -0.8, 0.5).intersects_ray(Vector3(NAN, 1, 2), Vector3(0.6, 0, -0.8))\"": {"verdict":"value","text":"Vector3(nan, nan, nan)"},
-   "method Plane.intersects_segment 12 \"Plane(0.6, 0, -0.8, 0.5).intersects_segment(Vector3(1e-30, 3e-30, -2e-30), Vector3(0.6, 0, -0.8))\"": {"verdict":"value","text":"Vector3(f000000403333d33f, f00000000726cbe39, f000000a09999d9bf)"}
+   "method Plane.intersects_segment 12 \"Plane(0.6, 0, -0.8, 0.5).intersects_segment(Vector3(1e-30, 3e-30, -2e-30), Vector3(0.6, 0, -0.8))\"": {"verdict":"value","text":"Vector3(f000000403333d33f, f00000000726cbe39, f000000a09999d9bf)"},
+   "method AABB.get_center 0 \"AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).get_center()\"": {"verdict":"value","text":"Vector3(f0000000000000000, f0000000000000000, f0000000000000000)"},
+   "method AABB.is_equal_approx 3 \"AABB(Vector3(1, 2, 3), Vector3(-1, -2, -3)).is_equal_approx(AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)))\"": {"verdict":"value","text":"false"},
+   "method AABB.is_equal_approx 9 \"AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).is_equal_approx(AABB(Vector3(-0.0, 0, -0.0), Vector3(-0.0, 1, 0)))\"": {"verdict":"value","text":"false"},
+   "method AABB.intersects 0 \"AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).intersects(AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)))\"": {"verdict":"value","text":"true"},
+   "method AABB.intersects 14 \"AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).intersects(AABB(Vector3(INF, -INF, 0), Vector3(1, INF, 1)))\"": {"verdict":"value","text":"false"},
+   "method AABB.encloses 11 \"AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).encloses(AABB(Vector3(1e30, -1e30, 0), Vector3(1e30, 1e30, 1e30)))\"": {"verdict":"value","text":"false"},
+   "method AABB.expand 15 \"AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).expand(\\\"x\\\")\"": {"verdict":"execute","text":"On call to 'expand':","left":"AABB(f000000000000f0bf, f00000000000000c0, f00000000000008c0, f0000000000000040, f0000000000001040, f0000000000001840)"},
+   "method AABB.grow 6 \"AABB(Vector3(NAN, 0, 0), Vector3(1, NAN, 1)).grow(0.3)\"": {"verdict":"value","text":"AABB(nan, f000000403333d3bf, f000000403333d3bf, f000000a09999f93f, nan, f000000a09999f93f)"},
+   "method AABB.grow 13 \"AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).grow(NAN)\"": {"verdict":"value","text":"AABB(nan, nan, nan, nan, nan, nan)"},
+   "method AABB.get_support 14 \"AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).get_support(Vector3(INF, -INF, 0))\"": {"verdict":"value","text":"Vector3(f000000000000f03f, f00000000000000c0, f00000000000008c0)"},
+   "method AABB.get_longest_axis 6 \"AABB(Vector3(NAN, 0, 0), Vector3(1, NAN, 1)).get_longest_axis()\"": {"verdict":"value","text":"Vector3(f000000000000f03f, f0000000000000000, f0000000000000000)"},
+   "method AABB.intersects_ray 3 \"AABB(Vector3(1, 2, 3), Vector3(-1, -2, -3)).intersects_ray(Vector3(0.6, 0, -0.8), Vector3(0.6, 0, -0.8))\"": {"verdict":"value","text":"null"},
+   "method AABB.intersects_ray 11 \"AABB(Vector3(-1, -2, -3), Vector3(2, 4, 6)).intersects_ray(Vector3(1e30, -1e30, 1e30), Vector3(0.6, 0, -0.8))\"": {"verdict":"value","text":"null"}
   }
  }
 }

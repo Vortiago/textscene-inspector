@@ -1,4 +1,5 @@
 import type { VariantTypeName } from '../value/variant.js';
+import { AABB_METHODS } from './aabbMethods.js';
 import { COLOR_METHODS } from './colorMethods.js';
 import { VECTOR2I_METHODS, VECTOR3I_METHODS, VECTOR4I_METHODS } from './intVectorMethods.js';
 import type { MethodPort } from './methodPort.js';
@@ -21,4 +22,5 @@ export const METHOD_PORTS: Readonly<Partial<Record<VariantTypeName, Readonly<Rec
     RECT2I: RECT2I_METHODS,
     COLOR: COLOR_METHODS,
     PLANE: PLANE_METHODS,
+    AABB: AABB_METHODS,
   };
