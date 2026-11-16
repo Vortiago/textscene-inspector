@@ -1,7 +1,6 @@
 import { defaultValue } from '../value/defaultValue.js';
 import { storedReal } from '../../math/real.js';
 import { isAbsolutePath, simplifyPath } from '../../string/string.js';
-import { transform3DOf } from '../../math/transform3d.js';
 import { canInstantiate, classExists } from '../../classdb/classBaseTypes.js';
 import { doubleToInt32, doubleToInt64, doubleToUint64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
 import { setEntry } from '../compare.js';
@@ -14,9 +13,11 @@ import {
   type DictionaryEntry,
   type Variant,
   type VariantOf,
+  type VariantTypeName,
 } from '../value/variant.js';
 import { stringify } from '../stringify.js';
-import { VARIANT_TYPE, variantTypeName } from '../variantType.js';
+import { VARIANT_TYPE, variantTypeName, variantTypeNameOf } from '../variantType.js';
+import { MATH_LAYOUT, MATH_TYPES, PACKED_STRUCT, structOf } from '../value/mathLayout.js';
 import { makeObject, readUidCache } from '../objects/makeObject.js';
 import { decodeMbedtlsBase64 } from './base64.js';
 import { VariantTokenizer, type Token } from './variantTokenizer.js';
@@ -61,11 +62,6 @@ function chunks<T>(items: readonly T[], size: number): T[][] {
   );
 }
 
-const xyzw = ([x, y, z, w]: readonly number[]) => ({ x: x!, y: y!, z: z!, w: w! });
-const xyz = ([x, y, z]: readonly number[]) => ({ x: x!, y: y!, z: z! });
-const xy = ([x, y]: readonly number[]) => ({ x: x!, y: y! });
-const rgba = ([r, g, b, a]: readonly number[]) => ({ r: r!, g: g!, b: b!, a: a! });
-
 /** A constructor of a fixed count of components, as `parse_value` builds each (variant_parser.cpp:707). */
 interface Construct {
   readonly count: number;
@@ -73,36 +69,13 @@ interface Construct {
   readonly build: (components: readonly number[]) => Variant;
 }
 
-const real = (count: number, build: Construct['build']): Construct => ({ count, component: asReal, build });
-const int32 = (count: number, build: Construct['build']): Construct => ({ count, component: asInt32, build });
-
-const CONSTRUCTS: Readonly<Record<string, Construct>> = {
-  Vector2: real(2, (c) => variant('VECTOR2', xy(c))),
-  Vector2i: int32(2, (c) => variant('VECTOR2I', xy(c))),
-  Rect2: real(4, ([x, y, w, h]) => variant('RECT2', { x: x!, y: y!, w: w!, h: h! })),
-  Rect2i: int32(4, ([x, y, w, h]) => variant('RECT2I', { x: x!, y: y!, w: w!, h: h! })),
-  Vector3: real(3, (c) => variant('VECTOR3', xyz(c))),
-  Vector3i: int32(3, (c) => variant('VECTOR3I', xyz(c))),
-  Vector4: real(4, (c) => variant('VECTOR4', xyzw(c))),
-  Vector4i: int32(4, (c) => variant('VECTOR4I', xyzw(c))),
-  Transform2D: real(6, ([a, b, c, d, tx, ty]) =>
-    variant('TRANSFORM2D', { a: a!, b: b!, c: c!, d: d!, tx: tx!, ty: ty! })
-  ),
-  Plane: real(4, ([x, y, z, d]) => variant('PLANE', { normal: { x: x!, y: y!, z: z! }, d: d! })),
-  Quaternion: real(4, (c) => variant('QUATERNION', xyzw(c))),
-  AABB: real(6, (c) => variant('AABB', { position: xyz(c), size: xyz(c.slice(3)) })),
-  Basis: real(9, (c) => variant('BASIS', c.slice(0, 9) as unknown as VariantOf<'BASIS'>['value'])),
-  Transform3D: real(12, (c) =>
-    variant(
-      'TRANSFORM3D',
-      transform3DOf(c.slice(0, 9) as unknown as VariantOf<'BASIS'>['value'], xyz(c.slice(9)))
-    )
-  ),
-  Projection: real(16, (c) =>
-    variant('PROJECTION', [xyzw(c), xyzw(c.slice(4)), xyzw(c.slice(8)), xyzw(c.slice(12))])
-  ),
-  Color: real(4, (c) => variant('COLOR', rgba(c))),
-};
+const CONSTRUCTS: Readonly<Record<string, Construct>> = Object.fromEntries(
+  MATH_TYPES.map((type) => {
+    const { component, count } = MATH_LAYOUT[type];
+    const build = (components: readonly number[]) => structOf(type, components);
+    return [variantTypeNameOf(type), { count, component: component === 'int32' ? asInt32 : asReal, build }];
+  })
+);
 
 // The spellings older Godot versions wrote, read as the type of today.
 const CONSTRUCT_ALIASES: Readonly<Record<string, string>> = {
@@ -124,22 +97,18 @@ const PACKED_CONSTRUCTS: Readonly<Record<string, PackedConstruct>> = {
   PackedInt64Array: { component: asInt64, build: (c) => variant('PACKED_INT64_ARRAY', c as bigint[]) },
   PackedFloat32Array: { component: asReal, build: (c) => variant('PACKED_FLOAT32_ARRAY', c as number[]) },
   PackedFloat64Array: { component: asDouble, build: (c) => variant('PACKED_FLOAT64_ARRAY', c as number[]) },
-  PackedVector2Array: {
-    component: asReal,
-    build: (c) => variant('PACKED_VECTOR2_ARRAY', chunks(c as number[], 2).map(xy)),
-  },
-  PackedVector3Array: {
-    component: asReal,
-    build: (c) => variant('PACKED_VECTOR3_ARRAY', chunks(c as number[], 3).map(xyz)),
-  },
-  PackedVector4Array: {
-    component: asReal,
-    build: (c) => variant('PACKED_VECTOR4_ARRAY', chunks(c as number[], 4).map(xyzw)),
-  },
-  PackedColorArray: {
-    component: asReal,
-    build: (c) => variant('PACKED_COLOR_ARRAY', chunks(c as number[], 4).map(rgba)),
-  },
+  ...Object.fromEntries(
+    Object.entries(PACKED_STRUCT).map(([type, struct]) => {
+      const build = (c: readonly (number | bigint)[]) =>
+        variant(
+          type as 'PACKED_VECTOR2_ARRAY',
+          chunks(c as number[], MATH_LAYOUT[struct].count).map(
+            (element) => structOf(struct, element).value
+          ) as never
+        );
+      return [variantTypeNameOf(type as VariantTypeName), { component: asReal, build }];
+    })
+  ),
 };
 
 const PACKED_ALIASES: Readonly<Record<string, string>> = {

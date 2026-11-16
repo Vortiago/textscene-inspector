@@ -2,6 +2,13 @@ import type { NodePathParts } from '../../string/nodePathParts.js';
 import type { ContainerType, Variant } from '../value/variant.js';
 import { VARIANT_TYPE } from '../variantType.js';
 import {
+  componentsOf,
+  isStructVariant,
+  MATH_LAYOUT,
+  PACKED_STRUCT,
+  packedComponents,
+} from '../value/mathLayout.js';
+import {
   CONTAINER_KIND,
   DICTIONARY_KEY_SHIFT,
   DICTIONARY_VALUE_SHIFT,
@@ -72,9 +79,6 @@ function containerKind(type: ContainerType | undefined): number {
   if (!type || type.type === VARIANT_TYPE.NIL) return CONTAINER_KIND.NONE;
   return type.className === '' ? CONTAINER_KIND.BUILTIN : CONTAINER_KIND.CLASS_NAME;
 }
-
-const xyz = ({ x, y, z }: { x: number; y: number; z: number }) => [x, y, z];
-const xyzw = ({ x, y, z, w }: { x: number; y: number; z: number; w: number }) => [x, y, z, w];
 
 class VariantEncoder {
   readonly #out = new ByteWriter();
@@ -165,46 +169,10 @@ class VariantEncoder {
   }
 
   #plain(value: Variant): void {
-    const out = this.#out;
-    switch (value.type) {
-      case 'VECTOR2':
-        return out.floats([value.value.x, value.value.y]);
-      case 'VECTOR2I':
-        return [value.value.x, value.value.y].forEach((n) => out.uint32(n));
-      case 'RECT2':
-        return out.floats([value.value.x, value.value.y, value.value.w, value.value.h]);
-      case 'RECT2I':
-        return [value.value.x, value.value.y, value.value.w, value.value.h].forEach((n) => out.uint32(n));
-      case 'VECTOR3':
-        return out.floats(xyz(value.value));
-      case 'VECTOR3I':
-        return xyz(value.value).forEach((n) => out.uint32(n));
-      case 'TRANSFORM2D': {
-        const { a, b, c, d, tx, ty } = value.value;
-        return out.floats([a, b, c, d, tx, ty]);
-      }
-      case 'VECTOR4':
-      case 'QUATERNION':
-        return out.floats(xyzw(value.value));
-      case 'VECTOR4I':
-        return xyzw(value.value).forEach((n) => out.uint32(n));
-      case 'PLANE':
-        return out.floats([...xyz(value.value.normal), value.value.d]);
-      case 'AABB':
-        return out.floats([...xyz(value.value.position), ...xyz(value.value.size)]);
-      case 'BASIS':
-        return out.floats(value.value);
-      case 'TRANSFORM3D': {
-        const { basis_x, basis_y, basis_z, origin } = value.value;
-        return out.floats([basis_x, basis_y, basis_z, origin].flatMap(xyz));
-      }
-      case 'PROJECTION':
-        return out.floats(value.value.flatMap(xyzw));
-      case 'COLOR':
-        return out.floats([value.value.r, value.value.g, value.value.b, value.value.a]);
-      default:
-        return this.#packed(value);
-    }
+    if (!isStructVariant(value)) return this.#packed(value);
+    const components = componentsOf(value);
+    if (MATH_LAYOUT[value.type].component === 'int32') components.forEach((n) => this.#out.uint32(n));
+    else this.#out.floats(components);
   }
 
   #packed(value: Variant): void {
@@ -226,15 +194,8 @@ class VariantEncoder {
       case 'PACKED_STRING_ARRAY':
         // Each element keeps its NUL in the length (marshalls.cpp:1987).
         return value.value.forEach((text) => out.string(`${text}\0`));
-      case 'PACKED_VECTOR2_ARRAY':
-        return out.floats(value.value.flatMap(({ x, y }) => [x, y]));
-      case 'PACKED_VECTOR3_ARRAY':
-        return out.floats(value.value.flatMap(xyz));
-      case 'PACKED_COLOR_ARRAY':
-        return out.floats(value.value.flatMap(({ r, g, b, a }) => [r, g, b, a]));
-      case 'PACKED_VECTOR4_ARRAY':
-        return out.floats(value.value.flatMap(xyzw));
       default:
+        if (PACKED_STRUCT[value.type]) return out.floats(packedComponents(value.type, elements));
         throw new Error(`expected a packed array, got ${value.type}`);
     }
   }

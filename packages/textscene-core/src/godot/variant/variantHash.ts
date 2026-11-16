@@ -11,6 +11,13 @@ import {
 } from '../math/hashFuncs.js';
 import type { NodePathParts } from '../string/nodePathParts.js';
 import { MAX_RECURSION, type CallableValue, type Variant, type VariantOf } from './value/variant.js';
+import {
+  componentsOf,
+  isStructVariant,
+  MATH_LAYOUT,
+  PACKED_STRUCT,
+  packedComponents,
+} from './value/mathLayout.js';
 import { VARIANT_TYPE } from './variantType.js';
 
 type HashOne = (word: number, seed: number) => number;
@@ -131,54 +138,18 @@ type MathVariant = Exclude<
 
 // variant.cpp:2805, in its order of the components. A real_t component holds a float.
 function mathHash(value: MathVariant): number {
-  switch (value.type) {
-    case 'VECTOR2':
-      return floatsHash([value.value.x, value.value.y]);
-    case 'VECTOR2I':
-      return intsHash([value.value.x, value.value.y]);
-    case 'RECT2':
-      return floatsHash([value.value.x, value.value.y, value.value.w, value.value.h]);
-    case 'RECT2I':
-      return intsHash([value.value.x, value.value.y, value.value.w, value.value.h]);
-    case 'VECTOR3':
-      return floatsHash([value.value.x, value.value.y, value.value.z]);
-    case 'VECTOR3I':
-      return intsHash([value.value.x, value.value.y, value.value.z]);
-    case 'TRANSFORM2D': {
-      const { a, b, c, d, tx, ty } = value.value;
-      return floatsHash([a, b, c, d, tx, ty]);
-    }
-    case 'VECTOR4':
-    case 'QUATERNION':
-      return floatsHash([value.value.x, value.value.y, value.value.z, value.value.w]);
-    case 'VECTOR4I':
-      return intsHash([value.value.x, value.value.y, value.value.z, value.value.w]);
-    case 'PLANE': {
-      const { normal, d } = value.value;
-      return floatsHash([normal.x, normal.y, normal.z, d]);
-    }
-    case 'AABB': {
-      const { position, size } = value.value;
-      return floatsHash([position.x, position.y, position.z, size.x, size.y, size.z]);
-    }
-    case 'BASIS':
-      return floatsHash(value.value);
-    case 'TRANSFORM3D': {
-      const { basis_x, basis_y, basis_z, origin } = value.value;
-      return floatsHash([basis_x, basis_y, basis_z, origin].flatMap(({ x, y, z }) => [x, y, z]));
-    }
-    case 'PROJECTION':
-      return floatsHash(value.value.flatMap(({ x, y, z, w }) => [x, y, z, w]));
-    case 'COLOR':
-      return floatsHash([value.value.r, value.value.g, value.value.b, value.value.a]);
-    default:
-      return packedHash(value);
+  if (isStructVariant(value)) {
+    const components = componentsOf(value);
+    return MATH_LAYOUT[value.type].component === 'int32' ? intsHash(components) : floatsHash(components);
   }
+  return packedHash(value);
 }
 
 type PackedVariant = Extract<MathVariant, { type: `PACKED_${string}` }>;
 
 function packedHash(value: PackedVariant): number {
+  if (PACKED_STRUCT[value.type])
+    return elementsHash(packedComponents(value.type, value.value), murmur3OneFloat);
   switch (value.type) {
     case 'PACKED_BYTE_ARRAY':
       return packedIntsHash(Uint8Array.from(value.value));

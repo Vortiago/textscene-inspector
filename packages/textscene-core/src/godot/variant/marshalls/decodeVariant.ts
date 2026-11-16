@@ -1,5 +1,6 @@
 import { canInstantiate } from '../../classdb/classBaseTypes.js';
 import { defaultValue } from '../value/defaultValue.js';
+import { isMathType, MATH_LAYOUT, PACKED_STRUCT, structOf } from '../value/mathLayout.js';
 import type { NodePathParts } from '../../string/nodePathParts.js';
 import { storedReal } from '../../math/real.js';
 import { setEntry } from '../compare.js';
@@ -280,66 +281,12 @@ class VariantDecoder {
   }
 
   #plain(type: (typeof TYPE_NAMES)[number], isWide: boolean): Variant {
-    const xy = ([x, y]: number[]) => ({ x: x!, y: y! });
-    const xyz = ([x, y, z]: number[]) => ({ x: x!, y: y!, z: z! });
-    const xyzw = ([x, y, z, w]: number[]) => ({ x: x!, y: y!, z: z!, w: w! });
-    switch (type) {
-      case 'VECTOR2':
-        return variant('VECTOR2', xy(this.#reals(2, isWide)));
-      case 'VECTOR2I':
-        return variant('VECTOR2I', xy(this.#ints(2)));
-      case 'RECT2': {
-        const [x, y, w, h] = this.#reals(4, isWide);
-        return variant('RECT2', { x: x!, y: y!, w: w!, h: h! });
-      }
-      case 'RECT2I': {
-        const [x, y, w, h] = this.#ints(4);
-        return variant('RECT2I', { x: x!, y: y!, w: w!, h: h! });
-      }
-      case 'VECTOR3':
-        return variant('VECTOR3', xyz(this.#reals(3, isWide)));
-      case 'VECTOR3I':
-        return variant('VECTOR3I', xyz(this.#ints(3)));
-      case 'TRANSFORM2D': {
-        const [a, b, c, d, tx, ty] = this.#reals(6, isWide);
-        return variant('TRANSFORM2D', { a: a!, b: b!, c: c!, d: d!, tx: tx!, ty: ty! });
-      }
-      case 'VECTOR4':
-        return variant('VECTOR4', xyzw(this.#reals(4, isWide)));
-      case 'VECTOR4I':
-        return variant('VECTOR4I', xyzw(this.#ints(4)));
-      case 'PLANE': {
-        const [x, y, z, d] = this.#reals(4, isWide);
-        return variant('PLANE', { normal: { x: x!, y: y!, z: z! }, d: d! });
-      }
-      case 'QUATERNION':
-        return variant('QUATERNION', xyzw(this.#reals(4, isWide)));
-      case 'AABB': {
-        const c = this.#reals(6, isWide);
-        return variant('AABB', { position: xyz(c), size: xyz(c.slice(3)) });
-      }
-      case 'BASIS':
-        return variant('BASIS', this.#reals(9, isWide) as unknown as VariantOf<'BASIS'>['value']);
-      case 'TRANSFORM3D': {
-        const c = this.#reals(12, isWide);
-        return variant('TRANSFORM3D', {
-          basis_x: xyz(c),
-          basis_y: xyz(c.slice(3)),
-          basis_z: xyz(c.slice(6)),
-          origin: xyz(c.slice(9)),
-        });
-      }
-      case 'PROJECTION': {
-        const c = this.#reals(16, isWide);
-        return variant('PROJECTION', [xyzw(c), xyzw(c.slice(4)), xyzw(c.slice(8)), xyzw(c.slice(12))]);
-      }
-      case 'COLOR': {
-        const [r, g, b, a] = this.#reals(4, false);
-        return variant('COLOR', { r: r!, g: g!, b: b!, a: a! });
-      }
-      default:
-        return this.#packed(type, isWide);
-    }
+    if (!isMathType(type)) return this.#packed(type, isWide);
+    const { component, count } = MATH_LAYOUT[type];
+    return structOf(
+      type,
+      component === 'int32' ? this.#ints(count) : this.#reals(count, component === 'real' && isWide)
+    );
   }
 
   #ints(count: number): number[] {
@@ -355,7 +302,6 @@ class VariantDecoder {
   }
 
   #packed(type: (typeof TYPE_NAMES)[number], isWide: boolean): Variant {
-    const real = isWide ? 8 : 4;
     switch (type) {
       case 'PACKED_BYTE_ARRAY': {
         const count = this.#int32();
@@ -388,26 +334,16 @@ class VariantDecoder {
         for (let index = 0; index < count; index++) strings.push(this.#string());
         return variant('PACKED_STRING_ARRAY', strings);
       }
-      case 'PACKED_VECTOR2_ARRAY':
+      default: {
+        const struct = PACKED_STRUCT[type]!;
+        const { component, count } = MATH_LAYOUT[struct];
+        const isWideElement = component === 'real' && isWide;
+        const elements = this.#vectors(count, isWideElement ? 8 : 4, isWideElement);
         return variant(
-          'PACKED_VECTOR2_ARRAY',
-          this.#vectors(2, real, isWide).map(([x, y]) => ({ x: x!, y: y! }))
+          type as 'PACKED_VECTOR2_ARRAY',
+          elements.map((c) => structOf(struct, c).value) as never
         );
-      case 'PACKED_VECTOR3_ARRAY':
-        return variant(
-          'PACKED_VECTOR3_ARRAY',
-          this.#vectors(3, real, isWide).map(([x, y, z]) => ({ x: x!, y: y!, z: z! }))
-        );
-      case 'PACKED_COLOR_ARRAY':
-        return variant(
-          'PACKED_COLOR_ARRAY',
-          this.#vectors(4, 4, false).map(([r, g, b, a]) => ({ r: r!, g: g!, b: b!, a: a! }))
-        );
-      default:
-        return variant(
-          'PACKED_VECTOR4_ARRAY',
-          this.#vectors(4, real, isWide).map(([x, y, z, w]) => ({ x: x!, y: y!, z: z!, w: w! }))
-        );
+      }
     }
   }
 
