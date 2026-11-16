@@ -16,7 +16,18 @@ export const TAU = Math.PI * 2;
 export const CMP_EPSILON = 0.00001;
 
 /** `UNIT_EPSILON` (`math_defs.h:65`), the tolerance of `Vector3::is_normalized` in an official build. */
-export const UNIT_EPSILON = 0.001;
+const UNIT_EPSILON = 0.001;
+
+const UNIT_EPSILON_FLOAT = f(UNIT_EPSILON);
+
+/**
+ * `Math::is_equal_approx(value, 1, (real_t)UNIT_EPSILON)` (math_funcs.h:520) in float.
+ *
+ * @canonical A float value within UNIT_EPSILON of 1
+ */
+export function isUnitWithinEpsilon(value: number): boolean {
+  return value === 1 || Math.abs(f(value - 1)) < UNIT_EPSILON_FLOAT;
+}
 
 /** `Math::PI` (`math_defs.h:44`): the double the engine's gizmo loops multiply by, narrowing at the rotated() call. */
 export const REAL_PI = Math.PI;
@@ -68,12 +79,11 @@ export function round(value: number): number {
 }
 
 /**
- * `Math::lerp` (`core/math/math_funcs.h`): `p_from + (p_to - p_from) * p_weight`.
+ * `Math::lerp` (math_funcs.h): `from + (to - from) * weight`, not `from * (1 - t) + to * t`.
  *
- * Spelled this way rather than as `from * (1 - t) + to * t`: the two differ in
- * the last bits, and every port here is compared against numbers Godot printed.
+ * @canonical A double Math::lerp
  */
-function lerp(from: number, to: number, weight: number): number {
+export function lerp(from: number, to: number, weight: number): number {
   return from + (to - from) * weight;
 }
 
@@ -242,13 +252,21 @@ export function pingpongf(value: number, length: number): number {
  */
 export function ease(x: number, c: number): number {
   const clamped = clamp(x, 0, 1);
-  if (c > 0) return c < 1 ? 1 - Math.pow(1 - clamped, 1 / c) : Math.pow(clamped, c);
+  if (c > 0) return c < 1 ? 1 - cPow(1 - clamped, 1 / c) : cPow(clamped, c);
   if (c < 0) {
-    return clamped < 0.5
-      ? Math.pow(clamped * 2, -c) * 0.5
-      : (1 - Math.pow(1 - (clamped - 0.5) * 2, -c)) * 0.5 + 0.5;
+    return clamped < 0.5 ? cPow(clamped * 2, -c) * 0.5 : (1 - cPow(1 - (clamped - 0.5) * 2, -c)) * 0.5 + 0.5;
   }
   return 0;
+}
+
+/**
+ * C's `pow`: a base of 1, and a base of -1 to an infinite power, give 1, where `Math.pow` gives NaN.
+ *
+ * @canonical C's pow
+ */
+export function cPow(base: number, exponent: number): number {
+  if (base === 1 || (base === -1 && !Number.isFinite(exponent) && !Number.isNaN(exponent))) return 1;
+  return Math.pow(base, exponent);
 }
 
 /**
@@ -338,7 +356,11 @@ export function basisDeterminant(
   h: number,
   i: number
 ): number {
-  return a * (e * i - h * f) - d * (b * i - h * c) + g * (b * f - e * c);
+  const r = Math.fround;
+  const first = r(a * r(r(e * i) - r(h * f)));
+  const second = r(d * r(r(b * i) - r(h * c)));
+  const third = r(g * r(r(b * f) - r(e * c)));
+  return r(r(first - second) + third);
 }
 
 /**

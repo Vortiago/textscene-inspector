@@ -19,7 +19,9 @@ func _ready():
 	var texts: Array = JSON.parse_string(FileAccess.get_file_as_string("res://${TEXTS_FILE}"))
 	print("GODOT ", Engine.get_version_info().string)
 	for index in texts.size():
-		print("EXPRESSION %d %s" % [index, answer(texts[index])])
+		var answered := answer(texts[index])
+		# A newline first: printraw leaves the line it writes open.
+		print("\nEXPRESSION %d %s" % [index, answered])
 	get_tree().quit()
 `;
 

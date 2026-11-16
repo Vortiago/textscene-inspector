@@ -4,6 +4,7 @@ import { constructorSignature } from '../../../../packages/textscene-core/src/go
 import {
   CONSTRUCTOR_REGISTRATIONS,
   OPERATOR_REGISTRATIONS,
+  UTILITY_FUNCTIONS,
 } from '../../../../packages/textscene-core/src/godot/variant/registrations.generated.ts';
 import { godotAnswers } from '../godotAnswers.mjs';
 import { constructorKey, EXPRESSIONS, UNREACHABLE_OPERATORS } from './expressionSet.mjs';
@@ -58,5 +59,15 @@ describe('the Expression set', () => {
       constructorKey(CONSTRUCTOR_REGISTRATIONS[signature.index], signature.index)
     );
     expect(keys.filter((key) => !hasValue('constructor', key))).toEqual([]);
+  });
+
+  it('holds cases of every utility function', () => {
+    const names = UTILITY_FUNCTIONS.map(([name]) => name);
+    expect(names.filter((name) => casesOf('utility', name).length === 0)).toEqual([]);
+  });
+
+  it.runIf(ANSWERS.live)('has a value from Godot for every utility function', () => {
+    const names = UTILITY_FUNCTIONS.map(([name]) => name);
+    expect(names.filter((name) => !hasValue('utility', name))).toEqual([]);
   });
 });

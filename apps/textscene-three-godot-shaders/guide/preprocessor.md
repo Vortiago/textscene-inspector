@@ -550,7 +550,7 @@ float probe(float a) {
 
 ## `#if`, `#elif` and `defined`
 
-`#if` and `#elif` take their branch when the condition is true, and an `#elif` only when no branch before it was taken. Godot first replaces each `defined NAME` and `defined(NAME)` with `true` or `false`, then expands the macros, then runs the text with its Expression class, which the transpiler ports (`godot/expression/`). So a condition can use every Variant operator and constructor, such as `Vector2(1, 2) * 2 == Vector2(2, 4)`. A value is true when it is not its type's zero: `0.0`, `""` and `[]` are false. Godot evaluates an `#elif` after a taken branch too, so its errors still show. A failed operation still leaves a value: `1 / 0` leaves the text `Division by zero error`, so `#if 1 / 0` is true, and only a failure that leaves Nil, such as `"a" + 1`, is refused with `Condition evaluation error.`. Godot keeps the end of the last `defined` operand for a bare name at the end of the text, so `defined(A) || defined B` becomes `true || falsefined B`, which Godot refuses with `Condition evaluation error.`. A condition with a utility function, an index or a method call is refused with its row and #1828, and a condition that ends Godot with SIGFPE, such as `(-9223372036854775807 - 1) / -1`, is refused.
+`#if` and `#elif` take their branch when the condition is true, and an `#elif` only when no branch before it was taken. Godot first replaces each `defined NAME` and `defined(NAME)` with `true` or `false`, then expands the macros, then runs the text with its Expression class, which the transpiler ports (`godot/expression/`). So a condition can use every Variant operator and constructor, such as `Vector2(1, 2) * 2 == Vector2(2, 4)`. A value is true when it is not its type's zero: `0.0`, `""` and `[]` are false. Godot evaluates an `#elif` after a taken branch too, so its errors still show. A failed operation still leaves a value: `1 / 0` leaves the text `Division by zero error`, so `#if 1 / 0` is true, and only a failure that leaves Nil, such as `"a" + 1`, is refused with `Condition evaluation error.`. Godot keeps the end of the last `defined` operand for a bare name at the end of the text, so `defined(A) || defined B` becomes `true || falsefined B`, which Godot refuses with `Condition evaluation error.`. A condition can call the utility functions too, such as `abs`, `lerp`, `max` and `type_convert`, which the transpiler ports from `variant_utility.cpp` (`godot/variant/utility/`). A refused argument still leaves the value the function returns: `floor("x")` leaves a text, so `#if floor("x")` is true. A random draw is Godot's only after a `seed` earlier in the same shader, because the editor seeds its generator from the clock: `#if str(seed(5))` then `#if randi() == 3066015881` is true, and a draw before any seed is refused with its row and #1828. `var_to_str`, `str_to_var`, `var_to_bytes`, `bytes_to_var`, their `_with_objects` forms, `hash` and `weakref` are refused with their row and #1828 until the next part of this slice, and so is a condition with an index or a method call. `rid_allocate_id`, and `instance_from_id` of an id other than 0, answer from the running editor and are refused. A condition that ends Godot with SIGFPE, such as `(-9223372036854775807 - 1) / -1`, is refused.
 
 The transpiler emits `none: the preprocessor writes the taken branch`. Rows: `#if`, `#elif`, `defined`. Godot source: `servers/rendering/shader_preprocessor.cpp:384`.
 
@@ -1233,6 +1233,122 @@ float probe(float a) {
 ```
 
 Godot does not compile this shader: Godot refuses it at line 2, `Tokenizer: Unknown character #35: '#'`. The transpiler refuses it too.
+
+### Probe `if-utility`, 16 input rows
+
+```glsl
+float probe(float a) {
+#if abs(-2) == 2 && max(1, 2.5, 2) == 2.5
+	return a + 1.0;
+#endif
+	return a;
+}
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `1.0` |
+| `-0.0` | `1.0` |
+| `1.0` | `2.0` |
+| `-1.0` | `0.0` |
+| `1e-40` | `1.0` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
+
+### Probe `if-utility-vector`, 16 input rows
+
+```glsl
+float probe(float a) {
+#if lerp(Vector2(0, 0), Vector2(2, 4), 0.5) == Vector2(1, 2)
+	return a + 1.0;
+#endif
+	return a;
+}
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `1.0` |
+| `-0.0` | `1.0` |
+| `1.0` | `2.0` |
+| `-1.0` | `0.0` |
+| `1e-40` | `1.0` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
+
+### Probe `if-utility-refused-argument`, 16 input rows
+
+```glsl
+float probe(float a) {
+#if floor("x")
+	return a + 1.0;
+#endif
+	return a;
+}
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `1.0` |
+| `-0.0` | `1.0` |
+| `1.0` | `2.0` |
+| `-1.0` | `0.0` |
+| `1e-40` | `1.0` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
+
+### Probe `if-utility-argument-count`, 0 input rows
+
+```glsl
+float probe(float a) {
+#if abs()
+	return a + 1.0;
+#endif
+	return a;
+}
+```
+
+Godot does not compile this shader: Godot refuses it at line 2, `Tokenizer: Unknown character #35: '#'`. The transpiler refuses it too.
+
+### Probe `if-utility-void`, 0 input rows
+
+```glsl
+float probe(float a) {
+#if print(1)
+	return a + 1.0;
+#endif
+	return a;
+}
+```
+
+Godot does not compile this shader: Godot refuses it at line 2, `Tokenizer: Unknown character #35: '#'`. The transpiler refuses it too.
+
+### Probe `if-utility-seed`, 16 input rows
+
+```glsl
+float probe(float a) {
+#if str(seed(5))
+#endif
+#if randi() == 3066015881
+	return a + 1.0;
+#endif
+	return a;
+}
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `1.0` |
+| `-0.0` | `1.0` |
+| `1.0` | `2.0` |
+| `-1.0` | `0.0` |
+| `1e-40` | `1.0` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
 
 ### Probe `if-unterminated`, 0 input rows
 

@@ -4,7 +4,8 @@ import { GodotCrash } from '../../../../packages/textscene-core/src/godot/varian
 import { godotAnswers } from '../godotAnswers.mjs';
 import { dumpVariant } from './dump.mjs';
 import { EXPRESSIONS } from './expressionSet.mjs';
-import { INTERNED_COMPARISON, REFUSED_CASES } from './refusedCases.mjs';
+import { LIBM_DIFFERENCES } from './libmDifferences.mjs';
+import { INTERNED_COMPARISON, REFUSED_CASES, REFUSED_UTILITIES } from './refusedCases.mjs';
 
 const RECORD = godotAnswers().expressions;
 const IS_LIVE = godotAnswers().live;
@@ -27,8 +28,10 @@ const ANSWERED = EXPRESSIONS.filter((test) => RECORD.cases[test.id] !== undefine
 const isInternedComparison = (id) => /^operator OP_(LESS|GREATER)\S* STRING_NAME STRING_NAME /.test(id);
 
 /** What the port may refuse a case with, or nothing for a case it must answer. */
-const allowedRefusal = (id) =>
-  REFUSED_CASES[id] ?? (isInternedComparison(id) ? INTERNED_COMPARISON : undefined);
+const allowedRefusal = ({ id, utility }) =>
+  REFUSED_CASES[id] ??
+  REFUSED_UTILITIES[utility] ??
+  (isInternedComparison(id) ? INTERNED_COMPARISON : undefined);
 
 describe('the Expression port against Godot', () => {
   it.runIf(IS_LIVE)('has an answer from Godot for every case', () => {
@@ -44,6 +47,7 @@ describe('the Expression port against Godot', () => {
 
   it('answers each case as Godot does', () => {
     const mismatches = ANSWERED.filter((test) => ANSWERS.get(test.id).refusal === undefined)
+      .filter((test) => LIBM_DIFFERENCES[test.id] === undefined)
       .filter((test) => {
         const [ours, godot] = [ANSWERS.get(test.id), RECORD.cases[test.id]];
         return ours.verdict !== godot.verdict || ours.text !== godot.text;
@@ -55,11 +59,19 @@ describe('the Expression port against Godot', () => {
     expect(mismatches).toEqual([]);
   });
 
+  it('differs from Godot on each listed libm case exactly as listed', () => {
+    const changed = Object.entries(LIBM_DIFFERENCES)
+      .filter(([id]) => RECORD.cases[id] !== undefined)
+      .filter(([id, { godot, port }]) => RECORD.cases[id].text !== godot || ANSWERS.get(id)?.text !== port)
+      .map(([id]) => id);
+    expect(changed).toEqual([]);
+  });
+
   it('refuses only the listed cases, each with its listed refusal', () => {
     const refused = EXPRESSIONS.filter((test) => ANSWERS.get(test.id).refusal !== undefined).map((test) => [
       test.id,
       ANSWERS.get(test.id).refusal,
-      allowedRefusal(test.id)?.refusal,
+      allowedRefusal(test)?.refusal,
     ]);
     expect(refused.filter(([, refusal, allowed]) => refusal !== allowed)).toEqual([]);
   });

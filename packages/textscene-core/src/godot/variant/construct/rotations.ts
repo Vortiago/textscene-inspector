@@ -1,10 +1,4 @@
-import {
-  basisColumn,
-  basisDeterminantOf,
-  basisGetQuaternion,
-  type BasisComponents,
-} from '../../math/basis.js';
-import { isEqualApprox, isZeroApprox, UNIT_EPSILON } from '../../math/math.js';
+import { isUnitWithinEpsilon, isZeroApprox } from '../../math/math.js';
 import type { Plane } from '../../math/plane.js';
 import {
   normalizedQuaternion,
@@ -34,10 +28,7 @@ const normalized = (v: V3) => vector(normalizedVector3(v.x, v.y, v.z));
 const cross = (a: V3, b: V3) => vector(vector3Cross(tuple(a), tuple(b)));
 const dot = (a: V3, b: V3) => vector3Dot(tuple(a), tuple(b));
 
-// Math::is_equal_approx(a, b, tolerance) (math_funcs.h:520).
-const isEqualWithin = (a: number, b: number, tolerance: number) => a === b || Math.abs(f(a - b)) < tolerance;
-
-const isNormalized3 = (v: V3) => isEqualWithin(vector3LengthSquared(v.x, v.y, v.z), 1, UNIT_EPSILON);
+const isNormalized3 = (v: V3) => isUnitWithinEpsilon(vector3LengthSquared(v.x, v.y, v.z));
 
 export function transform2DFromRotation(rotation: number, position: Readonly<Vector2>): Transform2DColumns {
   const cr = cosf(rotation);
@@ -94,24 +85,6 @@ function arcOf(from: V3, to: V3): Quaternion {
   const s = f(Math.sqrt(f(f(1 + d) * 2)));
   const rs = f(1 / s);
   return { x: f(c.x * rs), y: f(c.y * rs), z: f(c.z * rs), w: f(s * 0.5) };
-}
-
-// Basis::is_conformal and is_rotation (basis.cpp:112, basis.cpp:129).
-function isRotation(n: BasisComponents): boolean {
-  const [x, y, z] = [0, 1, 2].map((index) => vector(basisColumn(n, index))) as [Vector3, Vector3, Vector3];
-  const xLengthSquared = dot(x, x);
-  const isConformal =
-    isEqualApprox(xLengthSquared, dot(y, y)) &&
-    isEqualApprox(xLengthSquared, dot(z, z)) &&
-    isZeroApprox(dot(x, y)) &&
-    isZeroApprox(dot(x, z)) &&
-    isZeroApprox(dot(y, z));
-  return isConformal && isEqualWithin(basisDeterminantOf(n), 1, UNIT_EPSILON);
-}
-
-/** `Basis::get_quaternion`: MATH_CHECKS refuses a basis that is not a rotation and gives Quaternion(). */
-export function basisQuaternion(n: BasisComponents): Quaternion {
-  return isRotation(n) ? basisGetQuaternion(n) : QUATERNION_IDENTITY;
 }
 
 export function planeFromNormalPoint(normal: V3, point: V3): Plane {

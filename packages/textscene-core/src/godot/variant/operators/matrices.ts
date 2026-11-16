@@ -2,7 +2,7 @@ import type { Aabb } from '../../math/aabb.js';
 import { basisInvert, type BasisComponents } from '../../math/basis.js';
 import { basisXform } from '../../math/basisFloat.js';
 import type { Plane } from '../../math/plane.js';
-import { quaternionDot, type Quaternion } from '../../math/quaternion.js';
+import { quaternionIsNormalized, type Quaternion } from '../../math/quaternion.js';
 import { storedReal as f } from '../../math/real.js';
 import type { Rect2 } from '../../math/rect2.js';
 import { transform2DXform, type Transform2DColumns } from '../../math/transform2d.js';
@@ -18,8 +18,6 @@ import type { ProjectionValue, Vector4Value } from '../value/variant.js';
 
 type V2 = Readonly<Vector2>;
 type V3 = Readonly<Vector3>;
-
-const UNIT_EPSILON = f(0.001);
 
 const dot2 = (a: V2, b: V2) => f(f(a.x * b.x) + f(a.y * b.y));
 const dot3 = (a: V3, b: V3) => f(f(f(a.x * b.x) + f(a.y * b.y)) + f(a.z * b.z));
@@ -217,11 +215,6 @@ export function projectionXform(p: ProjectionValue, v: Vector4Value): Vector4Val
 export function projectionXformInv(p: ProjectionValue, v: Vector4Value): Vector4Value {
   const lane = (column: number) => sumOfProducts(LANES.map((k) => [p[column]![k], v[k]] as const));
   return { x: lane(0), y: lane(1), z: lane(2), w: lane(3) };
-}
-
-export function quaternionIsNormalized(q: Quaternion): boolean {
-  const lengthSquared = quaternionDot(q, q);
-  return lengthSquared === 1 || Math.abs(f(lengthSquared - 1)) < UNIT_EPSILON;
 }
 
 // MATH_CHECKS refuses a quaternion that is not normalised and returns the vector unchanged.

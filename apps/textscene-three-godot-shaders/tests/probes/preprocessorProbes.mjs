@@ -140,6 +140,16 @@ function ifProbes() {
     ['error-below-root', IF, body('(1 / 0) + 1')],
     ['invalid-operands', IF, body('"a" + 1')],
     ['null', IF, body('null')],
+    ['utility', IF, body('abs(-2) == 2 && max(1, 2.5, 2) == 2.5')],
+    ['utility-vector', IF, body('lerp(Vector2(0, 0), Vector2(2, 4), 0.5) == Vector2(1, 2)')],
+    ['utility-refused-argument', IF, body('floor("x")')],
+    ['utility-argument-count', IF, body('abs()')],
+    ['utility-void', IF, body('print(1)')],
+    [
+      'utility-seed',
+      IF,
+      'float probe(float a) {\n#if str(seed(5))\n#endif\n#if randi() == 3066015881\n\treturn a + 1.0;\n#endif\n\treturn a;\n}',
+    ],
     ['unterminated', ['#if'], '#if 1\nfloat probe(float a) { return a; }'],
     [
       'nested-skipped',

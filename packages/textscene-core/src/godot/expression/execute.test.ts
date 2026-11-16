@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { variant } from '../variant/value/variant.js';
 import { runExpression, UnportedExpression } from './execute.js';
+import { UnportableUtility } from '../variant/utility/unportableUtility.js';
 
 // Each expected answer is Godot 4.6.3's Expression of the same text.
 describe('runExpression', () => {
@@ -60,6 +61,24 @@ describe('runExpression', () => {
   });
 
   it('refuses a utility function it has not ported', () => {
-    expect(() => runExpression('abs(1)')).toThrow(UnportedExpression);
+    expect(() => runExpression('hash(1)')).toThrow(UnportedExpression);
+  });
+
+  it('calls a utility function', () => {
+    expect(runExpression('abs(-2)')).toEqual({ value: variant('INT', 2n) });
+  });
+
+  it('keeps the value a refused utility call returns, with the call error', () => {
+    expect(runExpression('floor("x")')).toEqual({
+      executeError: "Builtin call failed: 'floor': Cannot convert argument 1 from String to Nil",
+      value: variant(
+        'STRING',
+        'Argument "x" must be "int", "float", "Vector2", "Vector2i", "Vector3", "Vector3i", "Vector4", or "Vector4i".'
+      ),
+    });
+  });
+
+  it('refuses a random draw before a seed', () => {
+    expect(() => runExpression('randi()')).toThrow(UnportableUtility);
   });
 });

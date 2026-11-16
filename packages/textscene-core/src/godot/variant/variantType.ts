@@ -100,6 +100,11 @@ export function variantTypeName(type: number): string | undefined {
   return VARIANT_TYPE_NAMES[type as VariantType];
 }
 
+/** The engine name of a `VARIANT_TYPE` key, such as `Vector2` for `VECTOR2`. */
+export function variantTypeNameOf(type: keyof typeof VARIANT_TYPE): string {
+  return VARIANT_TYPE_NAMES[VARIANT_TYPE[type]];
+}
+
 // A runtime handle: a `.tscn` holds only its default `RID()`, so a property of this type takes no check.
 export function isRuntimeHandle(type: number): boolean {
   return type === VARIANT_TYPE.RID;
