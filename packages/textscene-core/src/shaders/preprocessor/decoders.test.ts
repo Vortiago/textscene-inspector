@@ -1,6 +1,6 @@
 import { decompress as zstdDecompress } from 'fzstd';
 import { describe, expect, it } from 'vitest';
-import { UnportedMethod } from '../../godot/variant/call/callMethod';
+import { UnportedMethod } from '../../godot/variant/call/unportedMethod';
 import { decodersOf } from './decoders';
 
 /** "hello hello hello hello world" as Godot's `compress(2)` writes it. */

@@ -1,6 +1,6 @@
 import { CompressionMode } from '../../project/compressedFile.js';
 import { representableLength } from '../../variant/call/arrayLength.js';
-import { UnportedMethod } from '../../variant/call/callMethod.js';
+import { UnportedMethod } from '../../variant/call/unportedMethod.js';
 import { UnportableUtility } from '../../variant/utility/unportableUtility.js';
 import { fastLzDecompress } from './fastlz.js';
 import { inflateGzip, inflateZlib, type InflatedStream, type RawInflate } from './zlibStream.js';

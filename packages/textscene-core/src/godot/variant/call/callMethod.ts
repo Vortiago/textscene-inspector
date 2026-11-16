@@ -8,6 +8,7 @@ import { builtinMethodRow, isVarargRow } from './builtinMethod.js';
 import { isValidCallable } from './callableMethods.js';
 import { FAILED, type MethodContext, type MethodParameter, type MethodResult } from './methodPort.js';
 import { METHOD_PORTS, VARARG_PORTS } from './methodPorts.js';
+import { UnportedMethod } from './unportedMethod.js';
 
 /** `VariantCaster<T>::cast`: the value the method runs with, also for an argument the check refused. */
 const castMethodArgument = (argument: Variant, parameter: MethodParameter): CastArgument =>
@@ -27,9 +28,6 @@ function isAccepted(argument: Variant, declared: string): boolean {
   const type = variantTypeOfName(declared);
   return type === undefined || canConvertStrict(argument.type, type);
 }
-
-/** A method a Callable calls that has no port yet. */
-export class UnportedMethod extends Error {}
 
 /** Nothing for a method with no port yet. A refused argument still runs the method on its cast value. */
 export function callMethod(

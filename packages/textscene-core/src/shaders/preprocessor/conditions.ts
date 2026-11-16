@@ -1,6 +1,6 @@
 import { runExpression, UnportedExpression } from '../../godot/expression/execute.js';
 import { UnrepresentableArray } from '../../godot/variant/call/arrayLength.js';
-import { UnportedMethod } from '../../godot/variant/call/callMethod.js';
+import { UnportedMethod } from '../../godot/variant/call/unportedMethod.js';
 import { GodotCrash } from '../../godot/variant/cInteger.js';
 import { booleanize } from '../../godot/variant/compare.js';
 import type { UtilityHost } from '../../godot/variant/utility/utilityHost.js';

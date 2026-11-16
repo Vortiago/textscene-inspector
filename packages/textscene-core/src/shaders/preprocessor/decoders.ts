@@ -1,6 +1,6 @@
 import { inflateSync } from 'three/addons/libs/fflate.module.js';
 import { StreamEndsEarly, type Decoders } from '../../godot/io/compression/compression.js';
-import { UnportedMethod } from '../../godot/variant/call/callMethod.js';
+import { UnportedMethod } from '../../godot/variant/call/unportedMethod.js';
 
 /** The `decompress` of each package an app installs for `#if`: the module imports only three (ADR-0072). */
 export interface ShaderDecoders {

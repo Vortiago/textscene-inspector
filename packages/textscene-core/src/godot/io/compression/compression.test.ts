@@ -2,7 +2,7 @@ import { brotliCompressSync, deflateSync, gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { CompressionMode } from '../../project/compressedFile';
 import { UnrepresentableArray } from '../../variant/call/arrayLength';
-import { UnportedMethod } from '../../variant/call/callMethod';
+import { UnportedMethod } from '../../variant/call/unportedMethod';
 import { UnportableUtility } from '../../variant/utility/unportableUtility';
 import { decompress, decompressDynamic, type Decoders } from './compression';
 import { decompress as brotliDecompress } from 'brotli/decompress';
