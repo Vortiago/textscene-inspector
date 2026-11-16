@@ -2,6 +2,7 @@ import { stringNum } from '../string/stringNumber.js';
 import { doubleToInt32, doubleToInt64, wrapInt32 } from './cInteger.js';
 import { stringify } from './stringify.js';
 import { isNumber, type Variant } from './value/variant.js';
+import { isVectorType, MATH_LAYOUT } from './value/mathLayout.js';
 
 /** The formatted text, or Godot's error text when `isError`. */
 export interface Formatted {
@@ -13,15 +14,6 @@ class FormatError extends Error {}
 
 const fail = (message: string): never => {
   throw new FormatError(message);
-};
-
-const VECTOR_COUNTS: Readonly<Partial<Record<Variant['type'], number>>> = {
-  VECTOR2: 2,
-  VECTOR2I: 2,
-  VECTOR3: 3,
-  VECTOR3I: 3,
-  VECTOR4: 4,
-  VECTOR4I: 4,
 };
 
 const asInt64 = (value: Variant) =>
@@ -164,7 +156,7 @@ class Formatter {
 
   private width(placeholder: Placeholder): void {
     const value = this.next();
-    if (!isNumber(value) && VECTOR_COUNTS[value.type] === undefined) fail('* wants number or vector');
+    if (!isNumber(value) && !isVectorType(value.type)) fail('* wants number or vector');
     const size = asInt32(value);
     if (placeholder.inDecimals) placeholder.minDecimals = size;
     else placeholder.minChars = size;
@@ -198,7 +190,7 @@ class Formatter {
 
   private vector(placeholder: Placeholder): string {
     const value = this.next();
-    const count = VECTOR_COUNTS[value.type];
+    const count = isVectorType(value.type) ? MATH_LAYOUT[value.type].count : undefined;
     if (count === undefined) return fail('%v requires a vector type (Vector2/3/4/2i/3i/4i)');
     const components = value.value as Readonly<Record<string, number>>;
     const parts = ['x', 'y', 'z', 'w'].slice(0, count).map((key) => {

@@ -94,6 +94,10 @@ function toUint64(argument: Variant): bigint {
   return BigInt.asUintN(64, castVariant(argument, 'INT').value as bigint);
 }
 
+/** `VariantCaster<T>::cast` of a scalar parameter, or `Variant::operator T()` of a Variant type. */
+export const castTo = (argument: Variant, parameter: CppParameter | VariantTypeName): CastArgument =>
+  isCppParameter(parameter) ? castArgument(argument, parameter) : castVariant(argument, parameter);
+
 /** `VariantCaster<T>::cast`: the value the function runs with, also for an argument the check refused. */
 export function castArgument(argument: Variant, parameter: CppParameter): CastArgument {
   switch (parameter) {

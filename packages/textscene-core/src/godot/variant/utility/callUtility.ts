@@ -59,7 +59,7 @@ export function callUtility(
   if (!registration || (!typed && !selfChecked)) return undefined;
   const wrongCount = countError(registration, args.length);
   if (wrongCount) return { value: NIL, error: wrongCount };
-  if (selfChecked) return selfChecked(args);
+  if (selfChecked) return selfChecked(args, host);
   const { parameters } = registration;
   const value = typed!(
     parameters.map((parameter, index) => castArgument(args[index]!, parameter)),

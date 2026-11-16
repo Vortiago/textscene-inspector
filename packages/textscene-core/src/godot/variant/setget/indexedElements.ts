@@ -1,5 +1,6 @@
 import { basisColumn } from '../../math/basis.js';
 import { int, real, variant, type Variant, type Vector3Value, type Vector4Value } from '../value/variant.js';
+import { isPackedType, PACKED_ELEMENTS } from '../value/packedElements.js';
 
 const xyz = ({ x, y, z }: Vector3Value) => [x, y, z];
 const xyzw = ({ x, y, z, w }: Vector4Value) => [x, y, z, w];
@@ -54,28 +55,16 @@ const sequence = <T>(items: readonly T[], wrap: (item: T) => Variant): Sequence 
 
 /** A String, an Array or a packed array, which counts a negative index from the end. */
 function sequenceOf(value: Variant): Sequence | undefined {
+  if (isPackedType(value.type))
+    return sequence(
+      value.value as readonly unknown[],
+      PACKED_ELEMENTS[value.type].read as (item: unknown) => Variant
+    );
   switch (value.type) {
     case 'STRING':
       return sequence(Array.from(value.value), (character) => variant('STRING', character));
     case 'ARRAY':
       return sequence(value.value, (element) => element);
-    case 'PACKED_BYTE_ARRAY':
-    case 'PACKED_INT32_ARRAY':
-    case 'PACKED_INT64_ARRAY':
-      return sequence(value.value as readonly (number | bigint)[], int);
-    case 'PACKED_FLOAT32_ARRAY':
-    case 'PACKED_FLOAT64_ARRAY':
-      return sequence(value.value, real);
-    case 'PACKED_STRING_ARRAY':
-      return sequence(value.value, (text) => variant('STRING', text));
-    case 'PACKED_VECTOR2_ARRAY':
-      return sequence(value.value, (element) => variant('VECTOR2', element));
-    case 'PACKED_VECTOR3_ARRAY':
-      return sequence(value.value, (element) => variant('VECTOR3', element));
-    case 'PACKED_COLOR_ARRAY':
-      return sequence(value.value, (element) => variant('COLOR', element));
-    case 'PACKED_VECTOR4_ARRAY':
-      return sequence(value.value, (element) => variant('VECTOR4', element));
     default:
       return undefined;
   }

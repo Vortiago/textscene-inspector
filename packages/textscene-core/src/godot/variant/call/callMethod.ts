@@ -1,18 +1,14 @@
-import { canConvertStrict, castVariant } from '../construct/variantCast.js';
+import { canConvertStrict } from '../construct/variantCast.js';
 import { textToVariant } from '../reader/variantReader.js';
-import { castArgument, isCppParameter, type CastArgument } from '../utility/utilityArguments.js';
+import { castTo } from '../utility/utilityArguments.js';
 import type { UtilityHost } from '../utility/utilityHost.js';
 import type { CallableValue, Variant } from '../value/variant.js';
 import { variantTypeOfName } from '../variantType.js';
 import { builtinMethodRow, isVarargRow } from './builtinMethod.js';
 import { isValidCallable } from './callableMethods.js';
-import { FAILED, type MethodContext, type MethodParameter, type MethodResult } from './methodPort.js';
+import { FAILED, type MethodContext, type MethodResult } from './methodPort.js';
 import { METHOD_PORTS, VARARG_PORTS } from './methodPorts.js';
 import { UnportedMethod } from './unportedMethod.js';
-
-/** `VariantCaster<T>::cast`: the value the method runs with, also for an argument the check refused. */
-const castMethodArgument = (argument: Variant, parameter: MethodParameter): CastArgument =>
-  isCppParameter(parameter) ? castArgument(argument, parameter) : castVariant(argument, parameter);
 
 /** Written only by `defaultArgument`: each default text of the extension API, read once. */
 const defaults = new Map<string, Variant>();
@@ -48,7 +44,7 @@ export function callMethod(
   const filled = declared.map(([, defaultText], index) => args[index] ?? defaultArgument(defaultText!));
   const value = port.run(
     base,
-    filled.map((argument, index) => castMethodArgument(argument, port.parameters[index]!)),
+    filled.map((argument, index) => castTo(argument, port.parameters[index]!)),
     methodContext(host)
   );
   return { value, isValid: filled.every((argument, index) => isAccepted(argument, declared[index]![0])) };

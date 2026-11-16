@@ -7,4 +7,4 @@ import type { Variant } from '../value/variant.js';
 export type TypedFunction = (args: readonly CastArgument[], host: UtilityHost) => Variant;
 
 /** A FUNCBINDVR or vararg function: it reads the Variants and sets its own call error. */
-export type VariantFunction = (args: readonly Variant[]) => UtilityResult;
+export type VariantFunction = (args: readonly Variant[], host: UtilityHost) => UtilityResult;

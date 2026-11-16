@@ -111,6 +111,11 @@ export const MATH_LAYOUT: { readonly [T in MathTypeName]: MathLayout<T> } = {
   ),
 };
 
+export const VECTOR_TYPES = ['VECTOR2', 'VECTOR2I', 'VECTOR3', 'VECTOR3I', 'VECTOR4', 'VECTOR4I'] as const;
+export type VectorTypeName = (typeof VECTOR_TYPES)[number];
+export const isVectorType = (type: string): type is VectorTypeName =>
+  (VECTOR_TYPES as readonly string[]).includes(type);
+
 export const MATH_TYPES = Object.keys(MATH_LAYOUT) as MathTypeName[];
 
 export const isMathType = (type: string): type is MathTypeName => Object.hasOwn(MATH_LAYOUT, type);
