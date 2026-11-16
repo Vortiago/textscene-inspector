@@ -3,7 +3,7 @@
 // Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
 import { CMP_EPSILON, isUnitWithinEpsilon } from './math.js';
 import { storedReal as f } from './real.js';
-import { acosf } from './realMath.js';
+import { acosf, cosf, sinf } from './realMath.js';
 import type { Vector3 } from './vector.js';
 
 export interface Quaternion {
@@ -24,8 +24,8 @@ export function quaternionFromAxisAngle(axis: Vector3, angle: number): Quaternio
   const length = f(Math.sqrt(f(f(f(axis.x * axis.x) + f(axis.y * axis.y)) + f(axis.z * axis.z))));
   if (length === 0) return { x: 0, y: 0, z: 0, w: 0 };
   const halfAngle = f(angle * 0.5);
-  const s = f(f(Math.sin(halfAngle)) / length);
-  return { x: f(axis.x * s), y: f(axis.y * s), z: f(axis.z * s), w: f(Math.cos(halfAngle)) };
+  const s = f(sinf(halfAngle) / length);
+  return { x: f(axis.x * s), y: f(axis.y * s), z: f(axis.z * s), w: cosf(halfAngle) };
 }
 
 /**
@@ -80,10 +80,10 @@ export function quaternionSlerp(from: Quaternion, to: Quaternion, weight: number
   let toScale = weight;
   if (f(1 - cosine) > CMP_EPSILON) {
     const omega = acosf(cosine);
-    const sine = f(Math.sin(omega));
+    const sine = sinf(omega);
     // `(1.0 - p_weight) * omega` is a double, and `p_weight * omega` a float that `sinf` takes.
     fromScale = f(Math.sin((1 - weight) * omega) / sine);
-    toScale = f(f(Math.sin(f(weight * omega))) / sine);
+    toScale = f(sinf(f(weight * omega)) / sine);
   }
   return {
     x: f(f(fromScale * from.x) + f(toScale * sign * to.x)),

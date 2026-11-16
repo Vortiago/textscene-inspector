@@ -169,8 +169,8 @@ export function degToRadf(degrees: number): number {
   return f(degrees * DEG_TO_RAD_FLOAT);
 }
 
-/** `(float)(180.0 / PI)`, the constant of the float `Math::rad_to_deg`. */
-const RAD_TO_DEG_FLOAT = f(180 / Math.PI);
+/** `180.0f / (float)PI`, the constant of the float `Math::rad_to_deg`. */
+const RAD_TO_DEG_FLOAT = f(180 / f(Math.PI));
 
 /**
  * The float overload of `Math::rad_to_deg` (`core/math/math_funcs.h:332-334`).

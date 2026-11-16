@@ -763,6 +763,42 @@ is preserved.
 
 ---
 
+## Arm Optimized Routines sinf and cosf
+
+<https://github.com/ARM-software/optimized-routines>
+
+`packages/textscene-core/src/godot/math/realSin.ts` ports `sinf` and `cosf` (`math/sinf.c`,
+`math/cosf.c`, `math/sincosf.h` and `math/sincosf_data.c`), because Godot hands a `real_t` `sin`
+and `cos` to the C library, and glibc 2.39 runs these routines. They are by Arm Limited and are
+licensed MIT OR Apache-2.0 WITH LLVM-exception. This project takes them under the MIT licence
+below, separately from Godot's own MIT licence above.
+
+```
+MIT License
+
+Copyright (c) 1999-2022, Arm Limited.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+---
+
 ## bcdec block decoder
 
 <https://github.com/iOrange/bcdec>

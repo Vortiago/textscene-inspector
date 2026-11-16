@@ -1,5 +1,6 @@
 // Portions ported from `thirdparty/misc/ok_color.h` (MIT, Copyright (c) 2021 Björn Ottosson). See THIRD-PARTY-NOTICES.md.
 import { linearSrgbToOklab, oklabToLinearSrgb } from './okLab.js';
+import { cosf, sinf } from './realMath.js';
 
 const f = Math.fround;
 const PI = f(Math.PI);
@@ -230,13 +231,13 @@ function toeInv(x: number): number {
   return f(sum(mul(x, x), mul(k1, x)) / mul(k3, sum(x, k2)));
 }
 
-/** `okhsl_to_srgb` (ok_color.h:484) in float, with `powf`, `cosf` and `sinf` from V8. */
+/** `okhsl_to_srgb` (ok_color.h:484) in float, with `powf` from V8. */
 export function okhslToSrgb({ h, s, l }: Okhsl): SrgbColor {
   if (l === 1) return { r: 1, g: 1, b: 1 };
   if (l === 0) return { r: 0, g: 0, b: 0 };
   const turn = mul(2, PI, h);
-  const a = f(Math.cos(turn));
-  const b = f(Math.sin(turn));
+  const a = cosf(turn);
+  const b = sinf(turn);
   const L = toeInv(l);
   const { C0, Cmid, Cmax } = getCs(L, a, b);
   const mid = f(0.8);
