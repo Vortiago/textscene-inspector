@@ -1,7 +1,6 @@
 import {
   IDENTIFIER_CONTINUE,
   IDENTIFIER_START,
-  LETTER,
   LOWER_CASE_LETTER,
   UPPER_CASE_LETTER,
 } from './characterClasses.generated.js';
@@ -37,6 +36,3 @@ export const isUnicodeUpperCase = (code: number): boolean => inRanges(UPPER_CASE
 
 /** `is_unicode_lower_case` (char_utils.h:71). */
 export const isUnicodeLowerCase = (code: number): boolean => inRanges(LOWER_CASE_LETTER, code);
-
-/** `is_unicode_letter` (char_utils.h:75). */
-export const isUnicodeLetter = (code: number): boolean => inRanges(LETTER, code);

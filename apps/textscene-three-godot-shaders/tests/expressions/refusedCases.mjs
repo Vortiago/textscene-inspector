@@ -1,6 +1,9 @@
 const OBJECTS = 'the case makes a Godot object, which waits on #1953';
 const UID = "the project's uid cache decides a uid, and the transpiler cannot read that cache (#1815)";
 const EDITOR_STATE = 'the answer is a counter or an object id of the running editor';
+const MACHINE_ICONV = 'the answer converts with the iconv and locale of the machine Godot runs on';
+const PAST_UNICODE =
+  'the String holds a code past U+10FFFF, which a JavaScript string cannot hold, so the port refuses it';
 const INTERNED_ADDRESS =
   'StringName::operator< compares the addresses of two interned texts (string_name.h:97), which differ by run';
 
@@ -39,6 +42,35 @@ export const REFUSED_CASES = {
     refusal: 'UnsupportedObject',
     reason: OBJECTS,
   },
+  'method String.replace_chars 31 "\\"a_red.b/#F80 a 😀İ\\".replace_chars(\\"#ff8000\\", -1)"': {
+    refusal: 'UnrepresentableText',
+    reason: PAST_UNICODE,
+  },
+  'method String.replace_chars 32 "\\"a_red.b/#F80 a 😀İ\\".replace_chars(\\"#ff8000\\", -7)"': {
+    refusal: 'UnrepresentableText',
+    reason: PAST_UNICODE,
+  },
+  'method String.replace_chars 33 "\\"a_red.b/#F80 a 😀İ\\".replace_chars(\\"#ff8000\\", 2147483647)"': {
+    refusal: 'UnrepresentableText',
+    reason: PAST_UNICODE,
+  },
+  'method String.replace_chars 34 "\\"a_red.b/#F80 a 😀İ\\".replace_chars(\\"#ff8000\\", -2147483648)"': {
+    refusal: 'UnrepresentableText',
+    reason: PAST_UNICODE,
+  },
+  'method StringName.replace_chars 31 "StringName(\\"a_red.b/#F80 a 😀İ\\").replace_chars(\\"#ff8000\\", -1)"':
+    { refusal: 'UnrepresentableText', reason: PAST_UNICODE },
+  'method StringName.replace_chars 32 "StringName(\\"a_red.b/#F80 a 😀İ\\").replace_chars(\\"#ff8000\\", -7)"':
+    { refusal: 'UnrepresentableText', reason: PAST_UNICODE },
+  'method StringName.replace_chars 33 "StringName(\\"a_red.b/#F80 a 😀İ\\").replace_chars(\\"#ff8000\\", 2147483647)"':
+    { refusal: 'UnrepresentableText', reason: PAST_UNICODE },
+  'method StringName.replace_chars 34 "StringName(\\"a_red.b/#F80 a 😀İ\\").replace_chars(\\"#ff8000\\", -2147483648)"':
+    { refusal: 'UnrepresentableText', reason: PAST_UNICODE },
+};
+
+/** The methods the port refuses wherever the set calls them, with the reason. */
+export const REFUSED_METHODS = {
+  to_multibyte_char_buffer: { refusal: 'UnportableUtility', reason: MACHINE_ICONV },
 };
 
 /** The comparisons of two distinct non-empty StringNames, which the port refuses wherever the set has one. */

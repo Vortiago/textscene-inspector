@@ -89,7 +89,7 @@ function html(text: string): ColorValue {
 
 const HEX_DIGIT = /^[0-9a-fA-F]$/u;
 
-function isHtmlValid(text: string): boolean {
+export function isHtmlValid(text: string): boolean {
   const characters = Array.from(text);
   if (characters.length === 0) return false;
   const start = characters[0] === '#' ? 1 : 0;

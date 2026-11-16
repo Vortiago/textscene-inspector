@@ -137,8 +137,8 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/windows/acceptdialog/dialogParts.ts` | `scene/gui/dialogs.cpp` (`AcceptDialog::AcceptDialog`'s internal Label, Button row and panel, `_update_theme_item_cache`) |
 | `packages/textscene-core/src/nodes/windows/filedialog/body.ts` | `scene/gui/file_dialog.cpp` (`FileDialog::FileDialog`'s Control tree, `update_customization`, `_update_option_controls`) |
 | `packages/textscene-core/src/nodes/windows/filedialog/fileList.ts` | `scene/gui/file_dialog.cpp` (`FileDialog::update_file_list`: the folders then files, the hidden names, the first filter and the selected row) |
-| `packages/textscene-core/src/godot/string/fileNameOrder.ts` | `core/string/ustring.cpp` (`String::filenocasecmp_to`) |
-| `packages/textscene-core/src/godot/string/wildcard.ts` | `core/string/ustring.cpp` (`String::matchn`) |
+| `packages/textscene-core/src/godot/string/stringCompare.ts` | `core/string/ustring.cpp` (`String::casecmp_to` and the other comparisons) |
+| `packages/textscene-core/src/godot/string/wildcard.ts` | `core/string/ustring.cpp` (`String::match`, `String::matchn`) |
 | `packages/textscene-core/src/godot/string/simpleUpper.ts` | `core/string/ustring.cpp` (`_find_upper`) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/fitChildInRect.ts` | `scene/gui/container.cpp` (`Container::fit_child_in_rect`) and `scene/gui/control.h` (the `SizeFlags` bitmask, `Container::as_sortable_control`'s visibility test) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/boxContainerResort.ts` | `scene/gui/box_container.cpp` (`BoxContainer::_resort`) |
@@ -736,6 +736,39 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+```
+
+---
+
+## Grisu2
+
+<https://florian.loitsch.com/publications>
+
+`packages/textscene-core/src/godot/string/grisu2.ts` ports `grisu2::to_chars`, because Godot spells a
+float with it in `String::num_scientific` and `var_to_str`, and its digits are not always the shortest.
+Godot vendors it as `thirdparty/grisu2/grisu2.h`, adapted from JSON for Modern C++. It is by Florian
+Loitsch and is licensed MIT, separately from Godot's own MIT licence above.
+
+```
+Copyright (c) 2009 Florian Loitsch
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
 ---

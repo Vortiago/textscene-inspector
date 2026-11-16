@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   isUnicodeIdentifierContinue,
   isUnicodeIdentifierStart,
-  isUnicodeLetter,
   isUnicodeLowerCase,
   isUnicodeUpperCase,
 } from './characterClass.js';
@@ -21,11 +20,7 @@ describe('the character classes of char_range.inc', () => {
     expect([0x41, 0x61, 0xe9, 0x30].map(isUnicodeLowerCase)).toEqual([false, true, true, false]);
   });
 
-  it('counts a CJK ideograph as a letter of neither case', () => {
-    expect([isUnicodeLetter(0x65e5), isUnicodeUpperCase(0x65e5), isUnicodeLowerCase(0x65e5)]).toEqual([
-      true,
-      false,
-      false,
-    ]);
+  it('gives a CJK ideograph neither case', () => {
+    expect([isUnicodeUpperCase(0x65e5), isUnicodeLowerCase(0x65e5)]).toEqual([false, false]);
   });
 });

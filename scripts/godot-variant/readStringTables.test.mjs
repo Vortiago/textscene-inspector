@@ -57,9 +57,7 @@ describe('characterClasses', () => {
 	{ 0x41, 0x5a },
 	{ 0xaa, 0xaa },
 };`;
-  const source = ['xid_start', 'xid_continue', 'uppercase_letter', 'lowercase_letter', 'unicode_letter']
-    .map(table)
-    .join('\n');
+  const source = ['xid_start', 'xid_continue', 'uppercase_letter', 'lowercase_letter'].map(table).join('\n');
 
   it('reads each range of each table as a start and an end', () => {
     expect(characterClasses(source).upperCase).toEqual([0x41, 0x5a, 0xaa, 0xaa]);

@@ -1,4 +1,4 @@
-import { LOWER_CASE_RUNS, UPPER_CASE_RUNS, type CaseRun } from './caseTables.generated';
+import { LOWER_CASE_RUNS, UPPER_CASE_RUNS, type CaseRun } from './caseTables.generated.js';
 
 /** The mapped code of `code` in a table of runs, or `code` itself where no run holds it. */
 function mapped(runs: readonly CaseRun[], code: number): number {

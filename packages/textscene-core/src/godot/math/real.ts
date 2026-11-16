@@ -66,7 +66,7 @@ export function formatReal(value: number): string {
 }
 
 /** The number with the fewest significant digits that reads back as the same finite `real_t`. */
-export function shortestReal(value: number): number {
+function shortestReal(value: number): number {
   const firstDigits = Math.abs(value) >= NORMAL_REAL_MIN ? NORMAL_REAL_FIRST_DIGITS : 1;
   for (let digits = firstDigits; digits < MAX_REAL_DIGITS; digits++) {
     const shortest = Number(value.toPrecision(digits));

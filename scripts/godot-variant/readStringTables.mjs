@@ -48,6 +48,5 @@ export function characterClasses(source) {
     identifierContinue: charRanges(source, 'xid_continue'),
     upperCase: charRanges(source, 'uppercase_letter'),
     lowerCase: charRanges(source, 'lowercase_letter'),
-    letter: charRanges(source, 'unicode_letter'),
   };
 }

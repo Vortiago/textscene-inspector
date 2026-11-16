@@ -46,7 +46,7 @@ describe('callMethod', () => {
   });
 
   it('gives nothing for a method with no port yet, so the caller refuses it', () => {
-    expect(callMethod(variant('STRING', 'abc'), 'length', [])).toBeUndefined();
+    expect(callMethod(variant('ARRAY', []), 'size', [])).toBeUndefined();
   });
 
   it('gives nothing for a vararg method, which no port takes yet', () => {

@@ -5,7 +5,7 @@
  */
 
 import type * as THREE from 'three';
-import { md5Hex } from '../md5';
+import { md5Hex } from '../../../../../godot/crypto/md5';
 import { UV2_ATTRIBUTE } from '../../../../meshes/uv2';
 
 const CORNER_BYTES = 20;

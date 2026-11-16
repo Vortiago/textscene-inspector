@@ -16,7 +16,7 @@ const unfolded: Fold = (code) => code;
 
 const isDigit = (code: number) => code >= ZERO && code <= 0x39;
 
-/** A text as its code points. A read past the end is `undefined`, which the comparisons take as Godot's terminator. */
+/** A read past the end is `undefined`, which the comparisons take as Godot's terminator. */
 const codePointsOf = (text: string): number[] => Array.from(text, (c) => c.codePointAt(0)!);
 
 const sign = (difference: number) => (difference < 0 ? -1 : 1);
@@ -102,7 +102,7 @@ export const naturalCaseCompare = (a: string, b: string): number =>
 export const naturalNoCaseCompare = (a: string, b: string): number =>
   naturalCompareFrom(codePointsOf(a), codePointsOf(b), 0, findUpper);
 
-/** `file_cmp_common` (ustring.cpp:657): a leading `_` sorts below every code except `.`, then the natural order. */
+/** `file_cmp_common` (ustring.cpp:657): a leading `_` sorts below all but `.`, then the natural order. */
 function fileCompare(a: string, b: string, fold: Fold): number {
   const left = codePointsOf(a);
   const right = codePointsOf(b);

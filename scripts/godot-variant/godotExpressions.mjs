@@ -50,9 +50,12 @@ export function parseExpressionOutput(stdout, count) {
   return answers;
 }
 
-/** Godot's answers to the texts from `first` on, up to the first text that ends Godot. */
+// One Godot run answers at most this many texts, so it ends inside the engine's 300 s timeout.
+const TEXTS_PER_RUN = 3000;
+
+/** Godot's answers to a batch of texts from `first` on, up to the first text that ends Godot. */
 async function runFrom(texts, first) {
-  const rest = texts.slice(first);
+  const rest = texts.slice(first, first + TEXTS_PER_RUN);
   const { status, stdout, stderr } = await runGodotScriptToExit(MAIN_SCRIPT, {
     [TEXTS_FILE]: JSON.stringify(rest),
   });

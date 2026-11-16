@@ -4,10 +4,12 @@ import { BASIS_METHODS } from './basisMethods.js';
 import { COLOR_METHODS } from './colorMethods.js';
 import { VECTOR2I_METHODS, VECTOR3I_METHODS, VECTOR4I_METHODS } from './intVectorMethods.js';
 import type { MethodPort } from './methodPort.js';
+import { NODE_PATH_METHODS } from './nodePathMethods.js';
 import { PLANE_METHODS } from './planeMethods.js';
 import { PROJECTION_METHODS } from './projectionMethods.js';
 import { QUATERNION_METHODS } from './quaternionMethods.js';
 import { RECT2_METHODS, RECT2I_METHODS } from './rectMethods.js';
+import { STRING_METHODS, STRING_NAME_METHODS } from './stringMethods.js';
 import { TRANSFORM2D_METHODS } from './transform2DMethods.js';
 import { TRANSFORM3D_METHODS } from './transform3DMethods.js';
 import { VECTOR2_METHODS } from './vector2Methods.js';
@@ -17,6 +19,7 @@ import { VECTOR4_METHODS } from './vector4Methods.js';
 /** The method ports of each type, by type: a type with none yet is refused with its row. */
 export const METHOD_PORTS: Readonly<Partial<Record<VariantTypeName, Readonly<Record<string, MethodPort>>>>> =
   {
+    STRING: STRING_METHODS,
     VECTOR2: VECTOR2_METHODS,
     VECTOR2I: VECTOR2I_METHODS,
     VECTOR3: VECTOR3_METHODS,
@@ -33,4 +36,6 @@ export const METHOD_PORTS: Readonly<Partial<Record<VariantTypeName, Readonly<Rec
     TRANSFORM2D: TRANSFORM2D_METHODS,
     TRANSFORM3D: TRANSFORM3D_METHODS,
     PROJECTION: PROJECTION_METHODS,
+    STRING_NAME: STRING_NAME_METHODS,
+    NODE_PATH: NODE_PATH_METHODS,
   };

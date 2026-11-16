@@ -149,7 +149,6 @@ const CLASS_TABLES = [
   ['IDENTIFIER_CONTINUE', 'xid_continue', 'identifierContinue'],
   ['UPPER_CASE_LETTER', 'uppercase_letter', 'upperCase'],
   ['LOWER_CASE_LETTER', 'lowercase_letter', 'lowerCase'],
-  ['LETTER', 'unicode_letter', 'letter'],
 ];
 
 /** The module text of the five character classes, each as flat start and end pairs. */

@@ -3,8 +3,9 @@
  * for a reader that turns another serialisation into that text.
  */
 
-import { formatReal, shortestReal, storedReal } from '../math/real.js';
-import { cEscape, cEscapeMultiline } from '../string/cEscape.js';
+import { formatReal, storedReal } from '../math/real.js';
+import { cEscape, cEscapeMultiline } from '../string/escapes.js';
+import { doubleChars, floatChars } from '../string/grisu2.js';
 import { nodePathFromParts } from '../string/nodePathParts.js';
 import { isStringLess } from '../string/stringOrder.js';
 import { sortArray } from '../templates/sortArray.js';
@@ -12,37 +13,11 @@ import { isVariantLess } from './operators/evaluate.js';
 import type { ContainerType, DictionaryEntry, Variant, VariantOf } from './value/variant.js';
 import { variantTypeName, variantTypeNameOf } from './variantType.js';
 
-/**
- * `rtos_fix` (`variant_parser.cpp:1985-1999`): zero without its sign, and the shortest float32
- * spelling for a value a float32 holds exactly, so a stored float carries no garbage digits.
- * `String::num_scientific` writes `inf`, `-inf` and `nan` for the non-finite values. JavaScript
- * spells `-0` as `0` already.
- */
+/** `rtos_fix` (variant_parser.cpp:1985): zero without its sign, and a float's spelling where it fits. */
 export function componentLiteral(value: number): string {
+  if (value === 0) return '0';
   if (!Number.isFinite(value)) return formatReal(value);
-  return grisuLayout(storedReal(value) === value ? shortestReal(value) : value);
-}
-
-/**
- * The magnitudes `grisu2::to_chars` writes in decimal notation, decimal exponents -4 to 14. Outside
- * them it writes scientific notation with a signed exponent of at least two digits (measured with
- * Godot 4.6.3's `var_to_str`, as the local source holds no `thirdparty/grisu2`).
- */
-const DECIMAL_MAGNITUDE_MIN = 1e-4;
-const DECIMAL_MAGNITUDE_END = 1e15;
-
-/**
- * `shortest` holds the fewest digits that read back as the value, which JavaScript also prints. Its
- * `String` is decimal from 1e-6 to 1e21, so it covers the decimal range.
- */
-function grisuLayout(shortest: number): string {
-  const magnitude = Math.abs(shortest);
-  if (magnitude === 0 || (magnitude >= DECIMAL_MAGNITUDE_MIN && magnitude < DECIMAL_MAGNITUDE_END))
-    return String(shortest);
-  const [mantissa, exponentText] = shortest.toExponential().split('e') as [string, string];
-  const exponent = Number(exponentText);
-  const sign = exponent < 0 ? '-' : '+';
-  return `${mantissa}e${sign}${String(Math.abs(exponent)).padStart(2, '0')}`;
+  return storedReal(value) === value ? floatChars(value) : doubleChars(value);
 }
 
 // A FLOAT keeps a `.0` unless its text holds a point or an `e`, as `inf_neg` does (variant_parser.cpp:2027).
