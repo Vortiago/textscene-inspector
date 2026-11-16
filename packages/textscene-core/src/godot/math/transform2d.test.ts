@@ -15,6 +15,7 @@ import {
   mutableTransform2D,
   transform2DDecompose,
   transform2DFromParts,
+  transform2DFromRotation,
   transform2DGetRotation,
   transform2DGetScale,
   transform2DInterpolateWith,
@@ -29,6 +30,7 @@ import {
   type Transform2DColumns,
 } from './transform2d.js';
 import { storedReal, storedReal as f, storedTransform2D } from './real.js';
+import { cosf, sinf } from './realMath.js';
 import { allSourceFiles, srcLabel } from '../../linter/testing/ruleNameScrape.js';
 
 /** A point through `t`: `(a*x + c*y + tx, b*x + d*y + ty)`. */
@@ -44,10 +46,10 @@ function godotConstructor(
   pos: { x: number; y: number }
 ): number[] {
   return [
-    f(f(Math.cos(f(rot))) * f(scale.x)),
-    f(f(Math.sin(f(rot))) * f(scale.x)),
-    -f(f(Math.sin(f(f(rot) + f(skew)))) * f(scale.y)),
-    f(f(Math.cos(f(f(rot) + f(skew)))) * f(scale.y)),
+    f(cosf(rot) * f(scale.x)),
+    f(sinf(rot) * f(scale.x)),
+    f(-sinf(f(f(rot) + f(skew))) * f(scale.y)),
+    f(cosf(f(f(rot) + f(skew))) * f(scale.y)),
     f(pos.x),
     f(pos.y),
   ];
@@ -64,11 +66,27 @@ const SCALES = [
   { x: 0, y: 1 },
 ];
 
+describe('transform2DFromRotation', () => {
+  it('writes the rotation into the columns and keeps the origin', () => {
+    const { a, b, c, d, tx, ty } = transform2DFromRotation(Math.PI / 2, { x: 3, y: 4 });
+    expect([a, b, c, d, tx, ty].map((value) => Math.round(value))).toEqual([-0, 1, -1, -0, 3, 4]);
+  });
+
+  it('keeps the -0 of `-sin(0)`', () => {
+    expect(transform2DFromRotation(0, { x: 0, y: 0 }).c).toBe(-0);
+  });
+});
+
 describe('transform2DFromParts', () => {
-  it('builds the identity from the Node2D defaults, every zero a +0', () => {
-    const t = transform2DFromParts(0, { x: 1, y: 1 }, 0, { x: 0, y: 0 });
-    // `toEqual` tells -0 from +0, so this pins the `0 - v` spelling of `c`.
-    expect(t).toEqual(TRANSFORM2D_IDENTITY);
+  it('keeps the -0 of `-sin(0)` in an unrotated transform', () => {
+    expect(transform2DFromParts(0, { x: 2, y: 3 }, 0, { x: 5, y: 6 })).toEqual({
+      a: 2,
+      b: 0,
+      c: -0,
+      d: 3,
+      tx: 5,
+      ty: 6,
+    });
   });
 
   it('places the rotated, scaled axes and the origin', () => {
@@ -91,7 +109,6 @@ describe('transform2DFromParts', () => {
   });
 
   it('equals the engine constructor component for component, wherever it is evaluated', () => {
-    // `===`: the one difference from `-Math::sin` is the sign of a zero `c`.
     for (const rot of ROTATIONS) {
       for (const skew of SKEWS) {
         for (const scale of SCALES) {
@@ -349,7 +366,7 @@ describe('the Transform2D of Godot 4.6.3 in real_t float', () => {
 
 describe('the one spelling of the Transform2D construction, product and inverse', () => {
   /** `sin(rotation + skew)`, the constructor's y-axis term, in any variable naming. */
-  const CONSTRUCTION = /\b(?:sin|cos)\(\s*(?:[\w.]*\s*\+\s*)?[\w.]*skew\w*\s*\)/;
+  const CONSTRUCTION = /\b(?:sin|cos)f?\(\s*(?:[\w.]*\s*\+\s*)?[\w.]*skew\w*\s*\)/;
   /** `operator*`'s first row over the `{ a, b, c, d }` layout. */
   const PRODUCT = /\b(\w+)\.a \* (\w+)\.a\)? \+ (?:f\()?\1\.c \* \2\.b\b/;
   /** The product spelled column by column, or over the `{ ax, ay, bx, by, ox, oy }` layout. */
@@ -382,6 +399,7 @@ describe('the one spelling of the Transform2D construction, product and inverse'
     expect(PRODUCT.test('a: f(f(parent.a * local.a) + f(parent.c * local.b)),')).toBe(true);
     expect(INVERSE.test('const idet = f(1 / det);')).toBe(true);
     expect(CONSTRUCTION.test('Math.sin(skewed)')).toBe(true);
+    expect(CONSTRUCTION.test('sinf(skewed)')).toBe(true);
     expect(CONSTRUCTION.test('Math.sin(rotation)')).toBe(false);
     expect(OTHER_LAYOUT.test('{ ax: 1, ay: 0 }')).toBe(false);
   });

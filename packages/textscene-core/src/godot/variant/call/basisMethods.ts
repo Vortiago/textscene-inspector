@@ -79,7 +79,7 @@ const negated = ({ x, y, z }: Vector3): Vector3 => ({ x: -x, y: -y, z: -z });
 const normalized = (v: Vector3) => vector(normalizedVector3(v.x, v.y, v.z));
 
 // basis.cpp:1029: MATH_CHECKS gives `Basis()` for a zero target or up.
-function lookingAt(target: Vector3, up: Vector3, isModelFront: boolean): BasisComponents {
+export function basisLookingAt(target: Vector3, up: Vector3, isModelFront: boolean): BasisComponents {
   if (isZeroApproxVector(target) || isZeroApproxVector(up)) return IDENTITY_BASIS;
   const forward = isModelFront ? normalized(target) : negated(normalized(target));
   let side = vector(vector3Cross(tuple(up), tuple(forward)));
@@ -88,11 +88,11 @@ function lookingAt(target: Vector3, up: Vector3, isModelFront: boolean): BasisCo
   return basisFromColumns(side, vector(vector3Cross(tuple(forward), tuple(side))), forward);
 }
 
-function rotated(n: BasisComponents, axis: Vector3, angle: number): BasisComponents {
+export function basisRotated(n: BasisComponents, axis: Vector3, angle: number): BasisComponents {
   return basisMultiply(basisSetAxisAngle([...IDENTITY_BASIS], axis, angle), n);
 }
 
-const scaledLocal = (n: BasisComponents, { x, y, z }: Vector3): BasisComponents =>
+export const basisScaledLocal = (n: BasisComponents, { x, y, z }: Vector3): BasisComponents =>
   n.map((component, index) => f(component * [x, y, z][index % 3]!)) as unknown as BasisComponents;
 
 export const BASIS_METHODS: Readonly<Record<string, MethodPort>> = {
@@ -100,12 +100,14 @@ export const BASIS_METHODS: Readonly<Record<string, MethodPort>> = {
   transposed: port([], (n) => basisOf(transposeBasis(n))),
   orthonormalized: port([], (n) => basisOf(basisOrthonormalized(n))),
   determinant: port([], (n) => real(basisDeterminantOf(n))),
-  rotated: port(['VECTOR3', 'float'], (n, args) => basisOf(rotated(n, vectorAt(args, 0), args[1] as number))),
+  rotated: port(['VECTOR3', 'float'], (n, args) =>
+    basisOf(basisRotated(n, vectorAt(args, 0), args[1] as number))
+  ),
   scaled: port(['VECTOR3'], (n, args) => {
     const { x, y, z } = vectorAt(args, 0);
     return basisOf(basisScale([...n] as MutableBasis, x, y, z));
   }),
-  scaled_local: port(['VECTOR3'], (n, args) => basisOf(scaledLocal(n, vectorAt(args, 0)))),
+  scaled_local: port(['VECTOR3'], (n, args) => basisOf(basisScaledLocal(n, vectorAt(args, 0)))),
   get_scale: port([], (n) => vectorOf(vector(basisGetScale(n)))),
   get_euler: port(['EulerOrder'], (n, args) => vectorOf(basisGetEuler(n, args[0] as number))),
   tdotx: port(['VECTOR3'], (n, args) => real(columnDot(n, 0, vectorAt(args, 0)))),
@@ -120,7 +122,7 @@ export const BASIS_METHODS: Readonly<Record<string, MethodPort>> = {
   is_finite: port([], (n) => bool(n.every(Number.isFinite))),
   get_rotation_quaternion: port([], (n) => variant('QUATERNION', basisGetRotationQuaternion(n))),
   looking_at: methodPort(['VECTOR3', 'VECTOR3', 'bool'], (_base, args) =>
-    basisOf(lookingAt(vectorAt(args, 0), vectorAt(args, 1), args[2] as boolean))
+    basisOf(basisLookingAt(vectorAt(args, 0), vectorAt(args, 1), args[2] as boolean))
   ),
   from_scale: methodPort(['VECTOR3'], (_base, args) => {
     const { x, y, z } = vectorAt(args, 0);

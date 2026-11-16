@@ -7,6 +7,8 @@ import type { MethodPort } from './methodPort.js';
 import { PLANE_METHODS } from './planeMethods.js';
 import { QUATERNION_METHODS } from './quaternionMethods.js';
 import { RECT2_METHODS, RECT2I_METHODS } from './rectMethods.js';
+import { TRANSFORM2D_METHODS } from './transform2DMethods.js';
+import { TRANSFORM3D_METHODS } from './transform3DMethods.js';
 import { VECTOR2_METHODS } from './vector2Methods.js';
 import { VECTOR3_METHODS } from './vector3Methods.js';
 import { VECTOR4_METHODS } from './vector4Methods.js';
@@ -27,4 +29,6 @@ export const METHOD_PORTS: Readonly<Partial<Record<VariantTypeName, Readonly<Rec
     AABB: AABB_METHODS,
     QUATERNION: QUATERNION_METHODS,
     BASIS: BASIS_METHODS,
+    TRANSFORM2D: TRANSFORM2D_METHODS,
+    TRANSFORM3D: TRANSFORM3D_METHODS,
   };

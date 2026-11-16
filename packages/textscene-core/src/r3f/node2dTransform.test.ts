@@ -11,6 +11,9 @@ import {
 } from './node2dTransform';
 import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../godot/math/transform2d.js';
 
+/** The local transform of a Node2D at rotation 0: `-sin(0)` leaves -0 in `c`, as in Godot. */
+const UNROTATED = { ...TRANSFORM2D_IDENTITY, c: -0 };
+
 describe('node2dGroupProps', () => {
   it('conjugates by diag(1,-1,1): negates Y translation and rotation, preserves scale', () => {
     const r = node2dGroupProps(
@@ -110,12 +113,12 @@ describe('node2DLocalTransform', () => {
   });
 
   it('reads an empty bag as the identity, each part at its Node2D default', () => {
-    expect(node2DLocalTransform({})).toEqual(TRANSFORM2D_IDENTITY);
+    expect(node2DLocalTransform({})).toEqual(UNROTATED);
   });
 
   it('defaults only the absent parts', () => {
     expect(node2DLocalTransform({ position: { x: 7, y: -2 } })).toEqual({
-      ...TRANSFORM2D_IDENTITY,
+      ...UNROTATED,
       tx: 7,
       ty: -2,
     });

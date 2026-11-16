@@ -7,21 +7,17 @@ import {
   type Quaternion,
 } from '../../math/quaternion.js';
 import { storedReal as f } from '../../math/real.js';
-import type { Transform2DColumns } from '../../math/transform2d.js';
 import {
   normalizedVector3,
   vector3Cross,
   vector3Dot,
   vector3LengthSquared,
   vector3Sub,
-  type Vector2,
   type Vector3,
 } from '../../math/vector.js';
 
 type V3 = Readonly<Vector3>;
 
-const sinf = (x: number) => f(Math.sin(x));
-const cosf = (x: number) => f(Math.cos(x));
 const tuple = (v: V3) => [v.x, v.y, v.z] as const;
 const vector = ([x, y, z]: readonly number[]): Vector3 => ({ x: x!, y: y!, z: z! });
 const normalized = (v: V3) => vector(normalizedVector3(v.x, v.y, v.z));
@@ -29,30 +25,6 @@ const cross = (a: V3, b: V3) => vector(vector3Cross(tuple(a), tuple(b)));
 const dot = (a: V3, b: V3) => vector3Dot(tuple(a), tuple(b));
 
 const isNormalized3 = (v: V3) => isUnitWithinEpsilon(vector3LengthSquared(v.x, v.y, v.z));
-
-export function transform2DFromRotation(rotation: number, position: Readonly<Vector2>): Transform2DColumns {
-  const cr = cosf(rotation);
-  const sr = sinf(rotation);
-  return { a: cr, b: sr, c: -sr, d: cr, tx: position.x, ty: position.y };
-}
-
-// Not math's transform2DFromParts: Godot's `-sin * scale` keeps the -0 that one turns into +0.
-export function transform2DFromParts(
-  rotation: number,
-  scale: Readonly<Vector2>,
-  skew: number,
-  position: Readonly<Vector2>
-): Transform2DColumns {
-  const skewed = f(rotation + skew);
-  return {
-    a: f(cosf(rotation) * scale.x),
-    b: f(sinf(rotation) * scale.x),
-    c: f(-sinf(skewed) * scale.y),
-    d: f(cosf(skewed) * scale.y),
-    tx: position.x,
-    ty: position.y,
-  };
-}
 
 /** MATH_CHECKS refuses an axis that is not normalised and leaves Quaternion(). */
 export function checkedQuaternionFromAxisAngle(axis: V3, angle: number): Quaternion {

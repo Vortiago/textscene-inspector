@@ -90,16 +90,20 @@ export function parseNode2D(heading: ParsedHeading, properties: Record<string, s
 }
 
 /** Decompose `Transform2D(xx, xy, yx, yy, ox, oy)` into position/rotation/scale/skew. */
-export function decomposeTransform2D(
+function decomposeTransform2D(
   value: string,
   nodeName = ''
 ): { position: Vector2; rotation: number; scale: Vector2; skew: number } | null {
+  const columns = parseNodeTransform2D(value, nodeName);
+  return columns && transform2DDecompose(columns);
+}
+
+/** The columns of a node's `transform` text, or null with a warning for a value Godot would not store. */
+export function parseNodeTransform2D(value: string, nodeName = ''): Transform2DColumns | null {
   const columns = parseTransform2DColumns(value);
-  if (!columns) {
+  if (!columns)
     warn(`Node2D${nodeName ? ` "${nodeName}"` : ''}: invalid or non-finite Transform2D "${value}"`);
-    return null;
-  }
-  return transform2DDecompose(columns);
+  return columns;
 }
 
 /**

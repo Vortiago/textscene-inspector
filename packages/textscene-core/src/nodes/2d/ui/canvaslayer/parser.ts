@@ -12,10 +12,11 @@ import {
   parseHeadingIndex,
   vec2Or,
 } from '../../../../parser/valueParsers';
-import { decomposeTransform2D } from '../../../base/node2d/parser';
+import { parseNodeTransform2D } from '../../../base/node2d/parser';
 import type { CanvasLayerProperties } from './types';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { transform2DFromParts, type Transform2DColumns } from '../../../../godot/math/transform2d.js';
+import { storedTransform2D } from '../../../../godot/math/real.js';
 
 /**
  * The layer's canvas transform, shared with every CanvasLayer subclass. `_bind_methods` registers
@@ -26,8 +27,8 @@ export function parseCanvasLayerTransform(
   properties: Record<string, string>,
   name: string
 ): Transform2DColumns {
-  const parts = properties.transform ? decomposeTransform2D(properties.transform, name) : null;
-  if (parts) return transform2DFromParts(parts.rotation, parts.scale, parts.skew, parts.position);
+  const matrix = properties.transform ? parseNodeTransform2D(properties.transform, name) : null;
+  if (matrix) return storedTransform2D(matrix);
   const context = name || 'CanvasLayer';
   return transform2DFromParts(
     floatOr(properties.rotation, 0, context),

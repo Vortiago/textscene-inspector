@@ -141,13 +141,13 @@ export function vector2Lerp(from: Vector2, to: Vector2, weight: number): Vector2
 }
 
 /**
- * `Vector2::normalize` (`core/math/vector2.cpp:52-59`) in `real_t` float: a zero vector stays zero.
+ * `Vector2::normalize` (`vector2.cpp:52-59`) in `real_t` float: an underflowing length keeps the vector.
  *
  * @canonical A unit vector
  */
 export function normalizedVector2({ x, y }: Vector2): Vector2 {
   const lengthSquared = f(f(x * x) + f(y * y));
-  if (lengthSquared === 0) return { x: 0, y: 0 };
+  if (lengthSquared === 0) return { x, y };
   const length = f(Math.sqrt(lengthSquared));
   return { x: f(x / length), y: f(y / length) };
 }

@@ -15,6 +15,8 @@ export const PORTED_METHOD_TYPES = [
   'AABB',
   'Quaternion',
   'Basis',
+  'Transform2D',
+  'Transform3D',
 ];
 
 /** A typical value of each type, then its edges: zero, negative zero, the float limits, NaN and infinity. */
@@ -150,6 +152,32 @@ export const EDGE_VALUES = {
       'Basis(Vector3(1e30, 0, 0), Vector3(0, -1e30, 0), Vector3(0, 0, 1e-30))',
       'Basis(Vector3(NAN, 0, 0), Vector3(0, 1, 0), Vector3(0, 0, 1))',
       'Basis(Vector3(INF, 0, 0), Vector3(0, -INF, 0), Vector3(0, 0, 1))',
+    ],
+  ],
+  Transform2D: [
+    'Transform2D(Vector2(1.2, 0.5), Vector2(-0.4, 2), Vector2(3, -4))',
+    [
+      'Transform2D()',
+      'Transform2D(Vector2(0, 0), Vector2(0, 0), Vector2(0, 0))',
+      'Transform2D(Vector2(-0.0, 1), Vector2(-1, -0.0), Vector2(-0.0, 0))',
+      'Transform2D(Vector2(2, 0), Vector2(0, -2), Vector2(1, 1))',
+      'Transform2D(Vector2(1, 2), Vector2(2, 4), Vector2(5, 6))',
+      'Transform2D(Vector2(1e30, 0), Vector2(0, 1e-30), Vector2(1e30, -1e30))',
+      'Transform2D(Vector2(NAN, 0), Vector2(0, 1), Vector2(0, 0))',
+      'Transform2D(Vector2(INF, 0), Vector2(0, -INF), Vector2(0, 0))',
+    ],
+  ],
+  Transform3D: [
+    'Transform3D(Vector3(0, 1.2, -1.6), Vector3(1, 0, 0), Vector3(0, -0.8, -0.6), Vector3(3, -4, 5))',
+    [
+      'Transform3D()',
+      'Transform3D(Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0))',
+      'Transform3D(Vector3(-0.0, 1, 0), Vector3(-1, -0.0, 0), Vector3(0, 0, 1), Vector3(-0.0, 0, -0.0))',
+      'Transform3D(Vector3(2, 0, 0), Vector3(0.5, 3, 0), Vector3(0, 0, -4), Vector3(1, 2, 3))',
+      'Transform3D(Vector3(1, 2, 3), Vector3(2, 4, 6), Vector3(0, 0, 1), Vector3(1, 1, 1))',
+      'Transform3D(Vector3(1e30, 0, 0), Vector3(0, -1e30, 0), Vector3(0, 0, 1e-30), Vector3(1e30, 0, -1e30))',
+      'Transform3D(Vector3(NAN, 0, 0), Vector3(0, 1, 0), Vector3(0, 0, 1), Vector3(0, 0, 0))',
+      'Transform3D(Vector3(INF, 0, 0), Vector3(0, -INF, 0), Vector3(0, 0, 1), Vector3(0, INF, 0))',
     ],
   ],
   Color: [
