@@ -39,7 +39,7 @@ describe('parseCanvasLayer transform', () => {
     parseCanvasLayer(h({ name: 'HUD', type: 'CanvasLayer' }), properties).canvasTransform;
 
   it('is the identity while nothing places the layer', () => {
-    expect(layer({})).toEqual(TRANSFORM2D_IDENTITY);
+    expect(layer({})).toEqual({ ...TRANSFORM2D_IDENTITY, c: -0 });
   });
 
   it('builds from offset, rotation and scale', () => {
@@ -65,6 +65,7 @@ describe('parseCanvasLayer transform', () => {
   it('falls back to the parts on a malformed transform', () => {
     expect(layer({ offset: 'Vector2(7, 8)', transform: 'Transform2D(not, valid)' })).toEqual({
       ...TRANSFORM2D_IDENTITY,
+      c: -0,
       tx: 7,
       ty: 8,
     });

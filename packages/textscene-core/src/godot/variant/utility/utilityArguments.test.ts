@@ -22,3 +22,17 @@ describe('castArgument to int32_t', () => {
     expect(castArgument(variant('INT', 4294967297n), 'int32_t')).toBe(1);
   });
 });
+
+describe('castArgument to uint32_t', () => {
+  it('keeps the low 32 bits of the int64 a float truncates to', () => {
+    expect(castArgument(variant('FLOAT', -1.5), 'uint32_t')).toBe(4294967295);
+    expect(castArgument(variant('FLOAT', 4294967297.5), 'uint32_t')).toBe(1);
+  });
+});
+
+describe('castArgument to bool', () => {
+  it('gives the truth of the value, as booleanize does', () => {
+    expect(castArgument(variant('INT', 0n), 'bool')).toBe(false);
+    expect(castArgument(variant('STRING', 'x'), 'bool')).toBe(true);
+  });
+});

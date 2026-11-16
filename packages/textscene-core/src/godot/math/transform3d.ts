@@ -11,6 +11,7 @@ import {
   basisMultiply,
   type BasisComponents,
 } from './basis.js';
+import { basisXform } from './basisFloat.js';
 import { normalizedQuaternion, quaternionSlerp, type Quaternion } from './quaternion.js';
 import { vector3Lerp, type Vector3 } from './vector.js';
 
@@ -117,9 +118,9 @@ export function storedTransform3D({ basis_x, basis_y, basis_z, origin }: Transfo
  * origin taken through it. A singular basis stays as it is, as `Basis::invert` leaves it.
  */
 export function affineInverseTransform3D(transform: Transform3D): Transform3D {
-  const inverse = transform3DOf(basisInvert(basisOfTransform3D(transform)), { x: 0, y: 0, z: 0 });
+  const inverse = basisInvert(basisOfTransform3D(transform));
   const { x, y, z } = transform.origin;
-  return { ...inverse, origin: transform3DXform(inverse, { x: -x, y: -y, z: -z }) };
+  return transform3DOf(inverse, basisXform(inverse, { x: -x, y: -y, z: -z }));
 }
 
 /**

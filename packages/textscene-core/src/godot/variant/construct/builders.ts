@@ -8,6 +8,7 @@ import {
 import { basisSetAxisAngle } from '../../math/basisFloat.js';
 import { storedReal as f } from '../../math/real.js';
 import { transform3DOf } from '../../math/transform3d.js';
+import { transform2DFromParts, transform2DFromRotation } from '../../math/transform2d.js';
 import { wrapInt32 } from '../cInteger.js';
 import {
   variant,
@@ -23,8 +24,6 @@ import {
   planeFromNormalPoint,
   planeFromPoints,
   quaternionArc,
-  transform2DFromParts,
-  transform2DFromRotation,
 } from './rotations.js';
 import { canConvertStrict, castVariant, colorFromString } from './variantCast.js';
 

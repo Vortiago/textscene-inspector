@@ -740,15 +740,17 @@ limitations under the License.
 
 ---
 
-## GNU C Library atan2f
+## GNU C Library atan2f and acosf
 
 <https://sourceware.org/glibc/>
 
 `packages/textscene-core/src/godot/math/realAtan2.ts` ports `__ieee754_atan2f` and `__atanf`
 (`sysdeps/ieee754/flt-32/e_atan2f.c` and `s_atanf.c` of glibc 2.39), because Godot hands a
 `real_t` `atan2` to the C library, and a chain of bones that folds onto one line bends to the
-side the last bit of that angle picks. Both files carry the
-notice below, separately from Godot's own MIT licence above.
+side the last bit of that angle picks. `packages/textscene-core/src/godot/math/realAcos.ts` ports
+`__ieee754_acosf` (`sysdeps/ieee754/flt-32/e_acosf.c` of glibc 2.39) for the same reason: Godot
+hands a `real_t` `acos` to the C library. The three files carry the notice below, separately from
+Godot's own MIT licence above.
 
 ```
 Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
@@ -757,6 +759,42 @@ Developed at SunPro, a Sun Microsystems, Inc. business.
 Permission to use, copy, modify, and distribute this
 software is freely granted, provided that this notice
 is preserved.
+```
+
+---
+
+## Arm Optimized Routines sinf and cosf
+
+<https://github.com/ARM-software/optimized-routines>
+
+`packages/textscene-core/src/godot/math/realSin.ts` ports `sinf` and `cosf` (`math/sinf.c`,
+`math/cosf.c`, `math/sincosf.h` and `math/sincosf_data.c`), because Godot hands a `real_t` `sin`
+and `cos` to the C library, and glibc 2.39 runs these routines. They are by Arm Limited and are
+licensed MIT OR Apache-2.0 WITH LLVM-exception. This project takes them under the MIT licence
+below, separately from Godot's own MIT licence above.
+
+```
+MIT License
+
+Copyright (c) 1999-2022, Arm Limited.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
 ---

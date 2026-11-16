@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CMP_EPSILON } from './math.js';
-import { cosf, fposmodf, isEqualApproxf, isZeroApproxf, sinf, sqrtf } from './realMath.js';
+import { acosf, asinf, cosf, fposmodf, isEqualApproxf, isZeroApproxf, sinf, sqrtf } from './realMath.js';
 
 const f = Math.fround;
 
@@ -55,5 +55,24 @@ describe('isZeroApproxf', () => {
 
   it('refuses NaN', () => {
     expect(isZeroApproxf(NaN)).toBe(false);
+  });
+});
+
+describe('asinf and acosf', () => {
+  it('clamp an input past the ends as Godot does', () => {
+    expect(asinf(2)).toBe(f(Math.PI / 2));
+    expect(asinf(-2)).toBe(-f(Math.PI / 2));
+    expect(acosf(2)).toBe(0);
+    expect(acosf(-2)).toBe(f(Math.PI));
+  });
+
+  it('round the angle inside the range to single precision', () => {
+    expect(asinf(0.3)).toBe(f(Math.asin(0.3)));
+    expect(acosf(f(0.3))).toBe(f(1.26610363));
+  });
+
+  it('give NaN for NaN', () => {
+    expect(asinf(NaN)).toBeNaN();
+    expect(acosf(NaN)).toBeNaN();
   });
 });

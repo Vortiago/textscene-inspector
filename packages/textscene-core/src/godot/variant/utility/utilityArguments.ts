@@ -1,32 +1,43 @@
 import { stringToFloat } from '../../string/strtod.js';
-import { doubleToInt32, doubleToUint64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
+import { doubleToInt32, doubleToInt64, doubleToUint64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
+import { booleanize } from '../compare.js';
 import { castVariant, canConvertStrict } from '../construct/variantCast.js';
 import type { Variant, VariantTypeName } from '../value/variant.js';
 
 /** The C++ parameter types of the utility functions a FUNCBINDR binding checks and casts. */
 export type CppParameter =
+  | 'bool'
   | 'double'
   | 'float'
   | 'int32_t'
   | 'int64_t'
+  | 'uint32_t'
   | 'uint64_t'
   | 'Error'
+  | 'EulerOrder'
+  | 'Projection::Planes'
+  | 'Side'
   | 'Variant::Type'
   | 'String'
   | 'PackedByteArray'
   | 'Variant';
 
-/** The value a caster gives: a number, an int64 or uint64 as a bigint, a text, or the Variant itself. */
-export type CastArgument = number | bigint | string | Variant;
+/** The value a caster gives: a flag, a number, an int64 or uint64 as a bigint, a text, or the Variant. */
+export type CastArgument = boolean | number | bigint | string | Variant;
 
 // GetTypeInfo<T>::VARIANT_TYPE: an enum is an INT, and a Variant parameter takes any type as NIL.
 const CHECKED_TYPE: Readonly<Record<CppParameter, VariantTypeName>> = {
+  bool: 'BOOL',
   double: 'FLOAT',
   float: 'FLOAT',
   int32_t: 'INT',
   int64_t: 'INT',
+  uint32_t: 'INT',
   uint64_t: 'INT',
   Error: 'INT',
+  EulerOrder: 'INT',
+  'Projection::Planes': 'INT',
+  Side: 'INT',
   'Variant::Type': 'INT',
   String: 'STRING',
   PackedByteArray: 'PACKED_BYTE_ARRAY',
@@ -55,6 +66,15 @@ function toInt32(argument: Variant): number {
   return wrapInt32(castVariant(argument, 'INT').value as bigint);
 }
 
+// `_to_int<uint32_t>`: the low 32 bits of the int64 a double truncates to, as cvttsd2si gives.
+function toUint32(argument: Variant): number {
+  const value =
+    argument.type === 'FLOAT'
+      ? doubleToInt64(argument.value)
+      : (castVariant(argument, 'INT').value as bigint);
+  return Number(BigInt.asUintN(32, value));
+}
+
 // `_to_int<uint64_t>`: a double through the unsigned cast, every other source through its int64 bits.
 function toUint64(argument: Variant): bigint {
   if (argument.type === 'FLOAT') return doubleToUint64(argument.value);
@@ -64,6 +84,8 @@ function toUint64(argument: Variant): bigint {
 /** `VariantCaster<T>::cast`: the value the function runs with, also for an argument the check refused. */
 export function castArgument(argument: Variant, parameter: CppParameter): CastArgument {
   switch (parameter) {
+    case 'bool':
+      return booleanize(argument);
     case 'double':
       return castVariant(argument, 'FLOAT').value as number;
     case 'float':
@@ -72,9 +94,14 @@ export function castArgument(argument: Variant, parameter: CppParameter): CastAr
       return toInt32(argument);
     case 'int64_t':
       return castVariant(argument, 'INT').value as bigint;
+    case 'uint32_t':
+      return toUint32(argument);
     case 'uint64_t':
       return toUint64(argument);
     case 'Error':
+    case 'EulerOrder':
+    case 'Projection::Planes':
+    case 'Side':
     case 'Variant::Type':
       return wrapInt32(castVariant(argument, 'INT').value as bigint);
     case 'String':

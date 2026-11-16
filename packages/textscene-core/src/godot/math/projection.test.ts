@@ -6,8 +6,8 @@ describe('getFovy', () => {
     expect(getFovy(90, 9 / 16)).toBeCloseTo(58.7155, 3);
   });
 
-  it('rounds as Projection::get_fovy does, not as a divide-by-aspect form that multiplies by 180 last', () => {
-    expect(getFovy(31, 1 / (16 / 9))).toBe(17.732799010746273);
+  it('rounds as Projection::get_fovy does: float operands, double steps, a float answer', () => {
+    expect(getFovy(31, 1 / (16 / 9))).toBe(17.732797622680664);
   });
 
   it('returns the same fov for an aspect of 1 (edge case)', () => {

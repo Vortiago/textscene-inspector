@@ -5,40 +5,9 @@ import {
   planeFromNormalPoint,
   planeFromPoints,
   quaternionArc,
-  transform2DFromParts,
-  transform2DFromRotation,
 } from './rotations.js';
 
 const HALF_SQRT2 = Math.SQRT1_2;
-
-describe('transform2DFromRotation', () => {
-  it('writes the rotation into the columns and keeps the position', () => {
-    const { a, b, c, d, tx, ty } = transform2DFromRotation(Math.PI / 2, { x: 3, y: 4 });
-    expect([a, b, c, d, tx, ty].map((value) => Math.round(value))).toEqual([0, 1, -1, 0, 3, 4]);
-  });
-
-  it('keeps the -0 of `-sin(0)`', () => {
-    expect(transform2DFromRotation(0, { x: 0, y: 0 }).c).toBe(-0);
-  });
-});
-
-describe('transform2DFromParts', () => {
-  it('scales each column', () => {
-    expect(transform2DFromParts(0, { x: 2, y: 3 }, 0, { x: 5, y: 6 })).toEqual({
-      a: 2,
-      b: 0,
-      c: -0,
-      d: 3,
-      tx: 5,
-      ty: 6,
-    });
-  });
-
-  it('turns the y column by the skew', () => {
-    const { c, d } = transform2DFromParts(0, { x: 1, y: 1 }, Math.PI / 2, { x: 0, y: 0 });
-    expect([c, d]).toEqual([-1, expect.closeTo(0, 6)]);
-  });
-});
 
 describe('checkedQuaternionFromAxisAngle', () => {
   it('turns about a unit axis', () => {

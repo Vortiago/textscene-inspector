@@ -49,7 +49,7 @@ describe('canvasItemFieldsOf', () => {
       ySortEnabled: true,
       showsBehindParent: true,
     });
-    expect(node2D!.local).toEqual({ a: 1, b: 0, c: 0, d: 1, tx: 30, ty: 40 });
+    expect(node2D!.local).toEqual({ a: 1, b: 0, c: -0, d: 1, tx: 30, ty: 40 });
   });
 
   it("gives Godot's defaults for an item that sets nothing", () => {

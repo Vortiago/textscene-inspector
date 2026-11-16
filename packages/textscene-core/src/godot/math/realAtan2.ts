@@ -1,9 +1,4 @@
 /**
- * `Math::atan2` on `real_t` operands (`math_funcs.h:124-126`), which an official build hands to the
- * `atan2f` of the C library. This is the `atan2f` of glibc 2.39, the library the reference Godot
- * links: it misses the correctly rounded angle by one bit for about one input in nine, and a
- * chain that folds onto one line bends to the side that bit picks.
- *
  * Ported from the GNU C Library (`sysdeps/ieee754/flt-32/e_atan2f.c`, `s_atanf.c`), which carries:
  * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
  * Developed at SunPro, a Sun Microsystems, Inc. business.
@@ -11,16 +6,10 @@
  * this notice is preserved. See THIRD-PARTY-NOTICES.md.
  */
 
+import { floatWord } from './floatBits.js';
+
 // Bound once, not read from `Math` per call: see `real.ts`.
 const { fround: f, abs } = Math;
-
-const word = new DataView(new ArrayBuffer(4));
-
-/** The bits of a float as a signed 32-bit integer, which the C source calls its word. */
-function floatWord(value: number): number {
-  word.setFloat32(0, value);
-  return word.getInt32(0);
-}
 
 const SIGN_CLEARED = 0x7fffffff;
 const INFINITY_WORD = 0x7f800000;
