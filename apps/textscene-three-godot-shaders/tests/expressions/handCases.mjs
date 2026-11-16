@@ -1190,6 +1190,12 @@ const OBJECT_EDGES = [
   'bytes_to_var_with_objects(PackedByteArray([24, 0, 0, 0, 4, 0, 0, 0, 78, 111, 100, 101, 0, 0, 0, 0]))',
   'bytes_to_var_with_objects(PackedByteArray([24, 0, 0, 0, 4, 0, 0, 0, 78, 111, 100, 101, 1, 0, 0, 0, 6, 0, 0, 0, 115, 99, 114, 105, 112, 116, 0, 0, 2, 0, 0, 0, 5, 0, 0, 0]))',
   'bytes_to_var_with_objects(PackedByteArray([24, 0, 0, 0, 4, 0, 0, 0, 78, 111, 100, 101, 1, 0, 0, 0, 6, 0, 0, 0, 115, 99, 114, 105, 112, 116, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0, 97, 0, 0, 0]))',
+  'str_to_var("Resource(\\"res://main.tscn\\")")',
+  'str_to_var("Resource(\\"main.tscn\\")")',
+  'str_to_var("Resource(\\"res://./main.gd\\")")',
+  'str_to_var("Resource(\\"nope.tres\\")")',
+  'str_to_var("ExtResource(\\"res://nope.tres\\", \\"uid://abc\\")")',
+  'str_to_var("Resource(\\"res://main.tscn\\", \\"res://nope.tres\\")")',
 ];
 
 const cases = (group, texts) =>

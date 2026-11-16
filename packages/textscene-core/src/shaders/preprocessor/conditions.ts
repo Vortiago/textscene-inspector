@@ -1,7 +1,7 @@
 import { runExpression, UnportedExpression } from '../../godot/expression/execute.js';
 import { GodotCrash } from '../../godot/variant/cInteger.js';
 import { booleanize } from '../../godot/variant/compare.js';
-import type { GlobalRandom } from '../../godot/variant/utility/globalRandom.js';
+import type { UtilityHost } from '../../godot/variant/utility/utilityHost.js';
 import { UnsupportedObject } from '../../godot/variant/objects/makeObject.js';
 import { UnportableUtility } from '../../godot/variant/utility/unportableUtility.js';
 import { UnportableComparison } from '../../godot/variant/operators/ordering.js';
@@ -19,21 +19,17 @@ const expected = (what: string, line: number) => new PreprocessorError(`Expected
 const unexpected = (text: string, at: number, line: number) =>
   new PreprocessorError(`Unexpected token: '${String.fromCodePoint(text.codePointAt(at)!)}'.`, line);
 
-/** What a condition reads: the macros, and the random generator that `seed` sets for the rest of the run. */
+/** What a condition reads: the macros, and the host whose generator `seed` sets for the rest of the run. */
 export interface ConditionScope {
   readonly defines: Defines;
-  readonly random: GlobalRandom;
+  readonly host: UtilityHost;
 }
 
 /** The truth of an `#if` or `#elif` condition (shader_preprocessor.cpp:596). */
-export function isConditionTrue(
-  condition: string,
-  { defines, random }: ConditionScope,
-  line: number
-): boolean {
+export function isConditionTrue(condition: string, { defines, host }: ConditionScope, line: number): boolean {
   if (condition === '') throw new PreprocessorError('Missing condition.', line);
   const expanded = expandMacros(expandDefined(condition, defines, line), defines, line);
-  const result = runExpression(expanded, random);
+  const result = runExpression(expanded, host);
   if ('parseError' in result) throw new PreprocessorError(result.parseError, line);
   // A failed execution counts as true when it leaves a value, as `1 / 0` leaves an error text.
   if (result.value.type === 'NIL') throw new PreprocessorError('Condition evaluation error.', line);

@@ -23,6 +23,22 @@ describe('textToVariant', () => {
     expect(read('Resource("")')).toBe('null');
   });
 
+  it('gives null for a Resource whose file the project does not hold', () => {
+    expect(variantToText(textToVariant('Resource("res://a.tres")', (path) => path === 'res://b.tres'))).toBe(
+      'null'
+    );
+  });
+
+  it('stops on a Resource whose file the project holds, by its path relative to res://', () => {
+    expect(() => textToVariant('Resource("./a.tres")', (path) => path === 'res://a.tres')).toThrow(
+      UnsupportedObject
+    );
+  });
+
+  it('stops on a Resource of a uid, which the project uid cache decides', () => {
+    expect(() => textToVariant('Resource("uid://abc")')).toThrow(UnsupportedObject);
+  });
+
   it('reads a constructor with float32 components', () => {
     expect(read('Vector2(0.1, inf_neg)')).toBe('Vector2(0.1, inf_neg)');
   });

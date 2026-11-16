@@ -81,6 +81,20 @@ describe('directives', () => {
     });
   });
 
+  it('stops on a Resource in a condition whose file the include lookup finds', () => {
+    const readInclude = (path: string) => (path === 'res://a.tres' ? { path, code: '' } : undefined);
+    const error = errorOf(() =>
+      preprocess('#if str_to_var("Resource(\\"a.tres\\")")\n#endif', { readInclude })
+    );
+    expect(error).toMatchObject({ owner: '#1953' });
+  });
+
+  it('reads a Resource in a condition as null where the include lookup finds no file', () => {
+    expect(errorOf(() => preprocess('#if str_to_var("Resource(\\"a.tres\\")")\n#endif'))).toMatchObject({
+      reason: 'Condition evaluation error.',
+    });
+  });
+
   it('refuses an object in a condition as not supported, with the owner of objects', () => {
     const error = errorOf(() => preprocess('#if weakref(null)\n#endif'));
     expect(error).toMatchObject({

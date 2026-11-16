@@ -52,7 +52,7 @@ export const GENERAL_TYPED: Readonly<Record<string, TypedFunction>> = {
   },
   rid_from_int64: ([id]) => variant('RID', id as bigint),
   var_to_str: ([value]) => text(variantToText(value as Variant)),
-  str_to_var: ([value]) => textToVariant(value as string),
+  str_to_var: ([value], { hasFile }) => textToVariant(value as string, hasFile),
   var_to_bytes: ([value]) => variant('PACKED_BYTE_ARRAY', variantToBytes(value as Variant, false)),
   var_to_bytes_with_objects: ([value]) =>
     variant('PACKED_BYTE_ARRAY', variantToBytes(value as Variant, true)),

@@ -1,7 +1,7 @@
 import { stripComments, type StrippedCode } from './commentRemover.js';
 import { conditionRefusal, isConditionTrue } from './conditions.js';
 import { DirectiveTokenizer } from './directiveTokenizer.js';
-import { GlobalRandom } from '../../godot/variant/utility/globalRandom.js';
+import { utilityHost, type UtilityHost } from '../../godot/variant/utility/utilityHost.js';
 import { getBaseDir, isAbsolutePath, pathJoin, simplifyPath, stripEdges } from '../../godot/string/string.js';
 import { PreprocessedOutput } from './preprocessedOutput.js';
 import { END, isCharEnd, isCharSpace } from './preprocessorChars.js';
@@ -19,7 +19,7 @@ export type RenderingMethod = 'forward_plus' | 'mobile' | 'gl_compatibility';
 
 export interface PreprocessOptions {
   readonly file?: string;
-  /** Nothing when the file is missing. A path with no `res://` is relative to the project. */
+  /** Nothing when the file is missing, which `str_to_var` of a `Resource(...)` also asks. */
   readonly readInclude?: (path: string) => ShaderInclude | undefined;
   readonly renderingMethod?: RenderingMethod;
 }
@@ -43,7 +43,7 @@ interface Branch {
 /** Shared by the shader and every file it includes. */
 interface State {
   readonly defines: Defines;
-  readonly random: GlobalRandom;
+  readonly host: UtilityHost;
   currentBranch: Branch | undefined;
   conditionDepth: number;
   readonly includes: Set<string>;
@@ -59,6 +59,7 @@ interface State {
 export function preprocess(code: string, options: PreprocessOptions = {}): string {
   const renderer = RENDERERS[options.renderingMethod ?? 'forward_plus'];
   const builtIn = (body: string): Define => ({ body, arguments: [], isBuiltIn: true });
+  const readInclude = options.readInclude ?? (() => undefined);
   const state: State = {
     defines: new Defines([
       ['CURRENT_RENDERER', builtIn(renderer)],
@@ -66,7 +67,7 @@ export function preprocess(code: string, options: PreprocessOptions = {}): strin
       ['RENDERER_MOBILE', builtIn(RENDERERS.mobile)],
       ['RENDERER_FORWARD_PLUS', builtIn(RENDERERS.forward_plus)],
     ]),
-    random: new GlobalRandom(),
+    host: utilityHost((path) => readInclude(path) !== undefined),
     currentBranch: undefined,
     conditionDepth: 0,
     includes: new Set(),
@@ -74,7 +75,7 @@ export function preprocess(code: string, options: PreprocessOptions = {}): strin
     includeDepth: 0,
     currentFile: options.file ?? '',
     isDisabled: false,
-    readInclude: options.readInclude ?? (() => undefined),
+    readInclude,
   };
   return new FilePreprocessor(state, code).run();
 }

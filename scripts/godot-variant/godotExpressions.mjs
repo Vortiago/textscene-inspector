@@ -2,6 +2,14 @@ import { printedField, requireGodotVersion, runGodotScriptToExit } from '../godo
 import { DUMP_GDSCRIPT } from '../../apps/textscene-three-godot-shaders/tests/expressions/dump.mjs';
 
 const TEXTS_FILE = 'expressions.json';
+
+/** The files of the project the expressions run in, which a `Resource(...)` text can load. */
+export const PROJECT_FILES = [
+  'res://project.godot',
+  'res://main.tscn',
+  'res://main.gd',
+  `res://${TEXTS_FILE}`,
+];
 const LINE = /^EXPRESSION (\d+) (value|parse|execute) (.*)$/;
 
 const MAIN_SCRIPT = `extends Node

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { runExpression } from '../../../../packages/textscene-core/src/godot/expression/execute.ts';
 import { GodotCrash } from '../../../../packages/textscene-core/src/godot/variant/cInteger.ts';
+import { utilityHost } from '../../../../packages/textscene-core/src/godot/variant/utility/utilityHost.ts';
+import { PROJECT_FILES } from '../../../../scripts/godot-variant/godotExpressions.mjs';
 import { godotAnswers } from '../godotAnswers.mjs';
 import { dumpVariant } from './dump.mjs';
 import { EXPRESSIONS } from './expressionSet.mjs';
@@ -13,7 +15,10 @@ const IS_LIVE = godotAnswers().live;
 /** The port's answer in the shape Godot's run records, or the class of what it refuses with. */
 function portAnswer(text) {
   try {
-    const result = runExpression(text);
+    const result = runExpression(
+      text,
+      utilityHost((path) => PROJECT_FILES.includes(path))
+    );
     if ('executeError' in result) return { verdict: 'execute', text: result.executeError };
     if ('parseError' in result) return { verdict: 'parse', text: result.parseError };
     return { verdict: 'value', text: dumpVariant(result.value) };

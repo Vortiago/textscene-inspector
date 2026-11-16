@@ -1,4 +1,5 @@
 import { storedReal } from '../../math/real.js';
+import { isAbsolutePath, simplifyPath } from '../../string/string.js';
 import { transform3DOf } from '../../math/transform3d.js';
 import { canInstantiate, classExists } from '../../classdb/classBaseTypes.js';
 import { doubleToInt32, doubleToInt64, doubleToUint64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
@@ -171,11 +172,17 @@ const KEYWORDS: Readonly<Record<string, Variant>> = {
   nan: variant('FLOAT', NaN),
 };
 
+// `ResourceLoader::_validate_local_path` (resource_loader.cpp:505) for a path that is not a uid.
+const localPath = (path: string): string => simplifyPath(isAbsolutePath(path) ? path : `res://${path}`);
+
 /** `VariantParser::parse` (variant_parser.cpp:1918) with no resource parser, over one text. */
 class VariantReader {
   readonly #tokens: VariantTokenizer;
 
-  constructor(text: string) {
+  constructor(
+    text: string,
+    private readonly hasFile: (path: string) => boolean
+  ) {
     this.#tokens = new VariantTokenizer(text);
   }
 
@@ -388,7 +395,9 @@ class VariantReader {
         path = token.value;
       }
     }
-    if (uid !== '' || path !== '') makeObject(`str_to_var of ${id}("${uid || path}")`);
+    // The project's uid cache decides a uid, and the transpiler cannot read that cache.
+    if (uid !== '' || (path !== '' && this.hasFile(localPath(path))))
+      makeObject(`str_to_var of ${id}("${uid || path}")`);
     throw new ParseFault(`Can't load resource at path: ${path} with uid: ${uid}`);
   }
 
@@ -486,8 +495,8 @@ class VariantReader {
  *
  * @canonical The Variant str_to_var reads from a text
  */
-export function textToVariant(text: string): Variant {
-  const reader = new VariantReader(text);
+export function textToVariant(text: string, hasFile: (path: string) => boolean = () => false): Variant {
+  const reader = new VariantReader(text, hasFile);
   const first = reader.next();
   if (first.kind === 'error' || first.kind === 'eof') return NIL;
   try {
