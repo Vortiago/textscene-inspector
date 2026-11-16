@@ -1,12 +1,11 @@
 import { CMP_EPSILON } from '../../math/math.js';
-import { planeDistanceTo, type Plane } from '../../math/plane.js';
+import { normalizedPlane, planeDistanceTo, type Plane } from '../../math/plane.js';
 import { isEqualApproxf, isZeroApproxf } from '../../math/realMath.js';
 import {
   vector3Add,
   vector3Cross,
   vector3Div,
   vector3Dot,
-  vector3Length,
   vector3Scaled,
   vector3Sub,
   type Vector3,
@@ -36,12 +35,6 @@ const port = (
   parameters: readonly MethodParameter[],
   body: (p: Plane, args: readonly CastArgument[]) => Variant
 ) => methodPort(parameters, (base, args) => body(base.value as Plane, args));
-
-function normalized({ normal, d }: Plane): Plane {
-  const length = vector3Length(normal.x, normal.y, normal.z);
-  if (length === 0) return { normal: { x: 0, y: 0, z: 0 }, d: 0 };
-  return { normal: divided(normal, length), d: f(d / length) };
-}
 
 const isFiniteVector = ({ x, y, z }: Vector3) =>
   Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z);
@@ -80,7 +73,7 @@ function intersectsSegment({ normal, d }: Plane, begin: Vector3, end: Vector3): 
 const pointOrNil = (found: Vector3 | undefined) => (found ? point(found) : NIL);
 
 export const PLANE_METHODS: Readonly<Record<string, MethodPort>> = {
-  normalized: port([], (p) => planeOf(normalized(p))),
+  normalized: port([], (p) => planeOf(normalizedPlane(p))),
   get_center: port([], (p) => point(vector3Scaled(p.normal, p.d))),
   is_equal_approx: port(['PLANE'], (p, args) => {
     const other = planeAt(args, 0);

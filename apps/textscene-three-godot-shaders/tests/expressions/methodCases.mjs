@@ -17,6 +17,7 @@ export const PORTED_METHOD_TYPES = [
   'Basis',
   'Transform2D',
   'Transform3D',
+  'Projection',
 ];
 
 /** A typical value of each type, then its edges: zero, negative zero, the float limits, NaN and infinity. */
@@ -178,6 +179,20 @@ export const EDGE_VALUES = {
       'Transform3D(Vector3(1e30, 0, 0), Vector3(0, -1e30, 0), Vector3(0, 0, 1e-30), Vector3(1e30, 0, -1e30))',
       'Transform3D(Vector3(NAN, 0, 0), Vector3(0, 1, 0), Vector3(0, 0, 1), Vector3(0, 0, 0))',
       'Transform3D(Vector3(INF, 0, 0), Vector3(0, -INF, 0), Vector3(0, 0, 1), Vector3(0, INF, 0))',
+    ],
+  ],
+  Projection: [
+    'Projection(Vector4(1.5, 0, 0, 0), Vector4(0, 2, 0, 0), Vector4(0.1, -0.2, -1.2, -1), Vector4(0.3, 0, -2.2, 0))',
+    [
+      'Projection()',
+      'Projection(Vector4(0, 0, 0, 0), Vector4(0, 0, 0, 0), Vector4(0, 0, 0, 0), Vector4(0, 0, 0, 0))',
+      'Projection(Vector4(-0.0, 1, 0, 0), Vector4(-1, -0.0, 0, 0), Vector4(0, 0, 1, -0.0), Vector4(-0.0, 0, 0, 1))',
+      'Projection(Vector4(0.5, 0, 0, 0), Vector4(0, 0.25, 0, 0), Vector4(0, 0, -0.02, 0), Vector4(-0.1, 0.2, -1.01, 1))',
+      'Projection(Vector4(1, 2, 3, 4), Vector4(2, 4, 6, 8), Vector4(0, 1, 0, 1), Vector4(1, 0, 1, 0))',
+      'Projection(Vector4(0, 1, 0, 0), Vector4(1, 0, 0, 0), Vector4(0, 0, 0, 1), Vector4(0, 0, 1, 0))',
+      'Projection(Vector4(1e30, 0, 0, 0), Vector4(0, 1e-30, 0, 0), Vector4(0, 0, -1e30, -1), Vector4(0, 0, 1e30, 0))',
+      'Projection(Vector4(NAN, 0, 0, 0), Vector4(0, 1, 0, 0), Vector4(0, 0, 1, 0), Vector4(0, 0, 0, 1))',
+      'Projection(Vector4(INF, 0, 0, 0), Vector4(0, -INF, 0, 0), Vector4(0, 0, 1, -1), Vector4(0, 0, INF, 0))',
     ],
   ],
   Color: [

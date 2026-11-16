@@ -68,7 +68,7 @@ describe('fitToAspect', () => {
     const camera = perspective(90, Camera3DKeepAspect.KEEP_WIDTH);
     fitToAspect(camera, 2);
     // tan(fovy / 2) = tan(45°) / 2.
-    expect(camera.fov).toBeCloseTo(radToDeg(Math.atan(0.5) * 2), 6);
+    expect(camera.fov).toBe(Math.fround(radToDeg(Math.atan(0.5) * 2)));
   });
 
   it('frames `size` by `size × aspect` at the near plane under PROJECTION_FRUSTUM', () => {

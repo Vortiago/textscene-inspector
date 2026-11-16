@@ -43,12 +43,12 @@ describe('Camera3D projection parity', () => {
   });
 
   it('perspective fov with KEEP_WIDTH rounds as Projection::get_fovy does', async () => {
-    // Dividing by the aspect and multiplying by 180 last gives ...277; Godot's expression gives ...273.
+    // Godot's `get_fovy` returns a `real_t`, computed in C from float operands.
     const r = await ReactThreeTestRenderer.create(
       <Camera3DInWorld node={makeNode({ fov: 31, keep_aspect: Camera3DKeepAspect.KEEP_WIDTH })} />
     );
     const cam = instanceAs<THREE.PerspectiveCamera>(r.scene.findByType('PerspectiveCamera'));
-    expect(cam.fov).toBe(17.732799010746273);
+    expect(cam.fov).toBe(17.732797622680664);
   });
 
   it('perspective fov with KEEP_HEIGHT (default) is used verbatim', async () => {
