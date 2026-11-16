@@ -18,13 +18,13 @@ const text = (value: string) => variant('STRING', value);
 
 describe('addArrays', () => {
   it('gives the elements of both in order', () => {
-    expect(addArrays([int(1n)], [int(2n), text('a')])).toEqual(
+    expect(addArrays(variant('ARRAY', [int(1n)]), variant('ARRAY', [int(2n), text('a')]))).toEqual(
       variant('ARRAY', [int(1n), int(2n), text('a')])
     );
   });
 
   it('gives an empty array for two empty ones', () => {
-    expect(addArrays([], [])).toEqual(variant('ARRAY', []));
+    expect(addArrays(variant('ARRAY', []), variant('ARRAY', []))).toEqual(variant('ARRAY', []));
   });
 });
 

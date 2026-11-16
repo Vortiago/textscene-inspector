@@ -1,6 +1,6 @@
-# Dumps what only a running engine can answer, as five JSON blobs each after a
+# Dumps what only a running engine can answer, as six JSON blobs each after a
 # marker line. Driven by build-node-catalog/classdb.mjs. Re-run against a newer
-# Godot to refresh all five.
+# Godot to refresh all six.
 #
 # ###NODES_JSON### every INSTANTIABLE Node class, with its dimension (3D / 2D /
 #   Other) and full ancestor chain.
@@ -29,6 +29,10 @@
 #   "variant_properties" names, per instantiable class, each stored property
 #   declared as a Variant. The text saver keeps a Nil only on such a property
 #   and leaves out an empty Object (resource_format_text.cpp:1980).
+#
+# ###CLASSES_JSON### every ClassDB class: its immediate base ("" for Object),
+#   and whether ClassDB.can_instantiate answers yes. A Variant literal such as
+#   Array[WeakRef] names any of them.
 extends SceneTree
 
 # PROPERTY_USAGE_STORAGE. The one flag that decides whether a property can reach
@@ -118,8 +122,13 @@ func _init() -> void:
 	var resource_bases: Dictionary = {}
 	var collections: Dictionary = {}
 	var variant_property_names: Dictionary = {}
+	var all_classes: Dictionary = {}
 
 	for c in ClassDB.get_class_list():
+		all_classes[c] = [
+			ClassDB.get_parent_class(c),
+			ClassDB.can_instantiate(c),
+		]
 		if ClassDB.is_parent_class(c, "Resource"):
 			var res_own: Array = own_properties(c)
 			if res_own.size() > 0:
@@ -168,4 +177,6 @@ func _init() -> void:
 	print(JSON.stringify(resource_bases))
 	print("###RESOURCE_GETTERS_JSON###")
 	print(JSON.stringify({"collections": collections, "variant_properties": variant_property_names}))
+	print("###CLASSES_JSON###")
+	print(JSON.stringify(all_classes))
 	quit()

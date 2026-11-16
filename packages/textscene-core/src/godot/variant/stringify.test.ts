@@ -46,7 +46,7 @@ describe('stringify', () => {
       variant('INT', 1n),
       variant('STRING', 'a\n'),
       variant('STRING_NAME', 'n'),
-      variant('NODE_PATH', 'p'),
+      variant('NODE_PATH', { absolute: false, names: ['p'], subnames: [] }),
     ]);
     expect(stringify(array)).toBe('[1, "a\\n", &"n", ^"p"]');
   });

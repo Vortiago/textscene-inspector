@@ -7,6 +7,7 @@ import type { Rect2 } from '../../math/rect2.js';
 import type { Transform2DColumns } from '../../math/transform2d.js';
 import type { Transform3D } from '../../math/transform3d.js';
 import type { Vector2, Vector3 } from '../../math/vector.js';
+import type { NodePathParts } from '../../string/nodePathParts.js';
 import type { VARIANT_TYPE } from '../variantType.js';
 
 export type VariantTypeName = keyof typeof VARIANT_TYPE;
@@ -47,7 +48,7 @@ export interface VariantValues {
   PROJECTION: ProjectionValue;
   COLOR: ColorValue;
   STRING_NAME: string;
-  NODE_PATH: string;
+  NODE_PATH: NodePathParts;
   RID: bigint;
   OBJECT: null;
   CALLABLE: string;
@@ -66,12 +67,27 @@ export interface VariantValues {
   PACKED_VECTOR4_ARRAY: readonly Vector4Value[];
 }
 
-export type VariantOf<T extends VariantTypeName> = { readonly type: T; readonly value: VariantValues[T] };
+/** A container's element type: a `Variant::Type` number, past the last type too, and a class for OBJECT. */
+export interface ContainerType {
+  readonly type: number;
+  readonly className: string;
+}
+
+// An absent type is NIL, an untyped container. An expression's scripts are always null, so none is held.
+interface ContainerTyping {
+  ARRAY: { readonly elementType?: ContainerType };
+  DICTIONARY: { readonly keyType?: ContainerType; readonly valueType?: ContainerType };
+}
+
+export type VariantOf<T extends VariantTypeName> = {
+  readonly type: T;
+  readonly value: VariantValues[T];
+} & (T extends keyof ContainerTyping ? ContainerTyping[T] : unknown);
 
 export type Variant = { [T in VariantTypeName]: VariantOf<T> }[VariantTypeName];
 
 export function variant<T extends VariantTypeName>(type: T, value: VariantValues[T]): VariantOf<T> {
-  return { type, value };
+  return { type, value } as VariantOf<T>;
 }
 
 export const NIL: VariantOf<'NIL'> = Object.freeze(variant('NIL', null));

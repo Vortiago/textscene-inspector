@@ -61,7 +61,7 @@ describe('runExpression', () => {
   });
 
   it('refuses a utility function it has not ported', () => {
-    expect(() => runExpression('hash(1)')).toThrow(UnportedExpression);
+    expect(() => runExpression('weakref(null)')).toThrow(UnportedExpression);
   });
 
   it('calls a utility function', () => {

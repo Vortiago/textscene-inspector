@@ -36,4 +36,7 @@ export const RESOURCE_BASES_OUT = join(here, '../resource-bases.json');
  */
 export const RESOURCE_GETTERS_OUT = join(here, '../resource-getters.json');
 
+/** Every ClassDB class: its immediate base, whether it can be instantiated, and whether it is editor API. */
+export const CLASSES_OUT = join(here, '../classdb-classes.json');
+
 export const ENUM_GD = join(REPO_ROOT, 'scripts/godot-ref/enumerate-nodes.gd');

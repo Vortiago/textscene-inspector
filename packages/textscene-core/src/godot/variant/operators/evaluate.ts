@@ -1,7 +1,7 @@
 import { booleanize, cppEqual, isZero } from '../compare.js';
 import { variantTypeOfCpp } from '../cppType.js';
 import { OPERATOR_REGISTRATIONS } from '../registrations.generated.js';
-import { NIL, variant, type Variant, type VariantTypeName } from '../value/variant.js';
+import { NIL, variant, type Variant, type VariantOf, type VariantTypeName } from '../value/variant.js';
 import { VARIANT_TYPE } from '../variantType.js';
 import {
   binaryArithmetic,
@@ -57,8 +57,12 @@ export function evaluateOperator(operator: VariantOperator, a: Variant, b: Varia
   return { value: result, isValid: true };
 }
 
-/** `Variant::operator<` (variant.cpp:882): types order first, then OP_LESS, with no result as false. */
-function isVariantLess(a: Variant, b: Variant): boolean {
+/**
+ * `Variant::operator<` (variant.cpp:882): types order first, then OP_LESS, with no result as false.
+ *
+ * @canonical Variant::operator<
+ */
+export function isVariantLess(a: Variant, b: Variant): boolean {
   if (a.type !== b.type) return VARIANT_TYPE[a.type] < VARIANT_TYPE[b.type];
   const { value, isValid } = evaluateOperator('OP_LESS', a, b);
   return isValid && booleanize(value);
@@ -151,7 +155,7 @@ function runEvaluator({ evaluator, types }: Registration, a: Variant, b: Variant
     case 'NotObject':
       return bool(isZero(a));
     case 'AddArray':
-      return addArrays(a.value as readonly Variant[], b.value as readonly Variant[]);
+      return addArrays(a as VariantOf<'ARRAY'>, b as VariantOf<'ARRAY'>);
     case 'AppendArray':
       return appendPacked(a, b);
     case 'StringConcat':

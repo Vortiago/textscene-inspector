@@ -5,6 +5,7 @@
  * a spread keeps the last of a colliding pair.
  */
 
+import { CLASSDB_CLASSES } from './classList.generated.js';
 import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from './resourceBaseTypes.generated.js';
 
@@ -66,26 +67,21 @@ export function classBaseChain(className: string): readonly string[] {
   return classAndBaseChain(className).slice(1);
 }
 
-/**
- * The hops above the classes the tables end on (`node.h:51`, `resource.h:54`, `ref_counted.h:37`).
- * The tables stop at `Node` and `Resource`, so `RefCounted` and `Object` have no entry there.
- */
-const ROOT_BASE_TYPES: Readonly<Record<string, string>> = {
-  Node: 'Object',
-  Resource: 'RefCounted',
-  RefCounted: 'Object',
-};
+/** `ClassDB::class_exists` (class_db.cpp:463), editor classes included. */
+export const classExists = (className: string): boolean => Object.hasOwn(CLASSDB_CLASSES, className);
 
-function rootBaseOf(className: string): string | undefined {
-  return Object.hasOwn(ROOT_BASE_TYPES, className) ? ROOT_BASE_TYPES[className] : undefined;
-}
+// A node class newer than the 4.6.3 capture, such as AreaLight3D, takes its base from the node tables.
+const directBase = (className: string): string =>
+  classExists(className) ? CLASSDB_CLASSES[className]![0] : (classBaseOf(className) ?? '');
 
-/**
- * `ClassDB::get_inheritance_chain_nocheck` (`core/object/class_db.cpp:333-354`): `className`, then
- * each ancestor through `Object`, nearest first. A class neither table knows yields only its name.
- */
+/** `ClassDB::get_inheritance_chain_nocheck` (class_db.cpp:333): a class no table knows is alone. */
 export function classInheritanceChain(className: string): readonly string[] {
-  const chain = classAndBaseChain(className);
-  for (let base = rootBaseOf(chain.at(-1)!); base !== undefined; base = rootBaseOf(base)) chain.push(base);
+  const chain = [className];
+  for (
+    let base = directBase(className);
+    base !== '' && !chain.includes(base) && chain.length <= MAX_BASE_CHAIN_HOPS;
+    base = directBase(base)
+  )
+    chain.push(base);
   return chain;
 }

@@ -11,7 +11,7 @@ const call = (name: string, ...args: Parameters<typeof callUtility>[1]) =>
 
 describe('callUtility', () => {
   it('gives nothing for a name it does not port', () => {
-    expect(call('hash', int(1n))).toBeUndefined();
+    expect(call('weakref', int(1n))).toBeUndefined();
     expect(call('no_such_function')).toBeUndefined();
   });
 

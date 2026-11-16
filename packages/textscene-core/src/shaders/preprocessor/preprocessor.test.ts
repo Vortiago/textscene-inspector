@@ -61,22 +61,22 @@ describe('directives', () => {
   });
 
   it('points the refusal of an indented #if with a utility function at its #', () => {
-    const error = errorOf(() => preprocess('\t  #if hash(1)\n#endif'));
+    const error = errorOf(() => preprocess('\t  #if weakref(null)\n#endif'));
     expect((error as ShadingLanguageError).position).toEqual({ file: '', line: 1, column: 4 });
   });
 
   it('refuses a utility function in a condition as not transpiled yet, with its row', () => {
-    const error = errorOf(() => preprocess('#if hash(1)\n#endif'));
+    const error = errorOf(() => preprocess('#if weakref(null)\n#endif'));
     expect(error).toMatchObject({
-      reason: "'#if hash(1): the utility function hash' is not transpiled yet (#1828)",
+      reason: "'#if weakref(null): the utility function weakref' is not transpiled yet (#1828)",
       owner: '#1828',
     });
   });
 
   it('refuses a utility function in an #elif as not transpiled yet, with its row', () => {
-    const error = errorOf(() => preprocess('#if 0\n#elif hash(1)\n#endif'));
+    const error = errorOf(() => preprocess('#if 0\n#elif weakref(null)\n#endif'));
     expect(error).toMatchObject({
-      reason: "'#elif hash(1): the utility function hash' is not transpiled yet (#1828)",
+      reason: "'#elif weakref(null): the utility function weakref' is not transpiled yet (#1828)",
       owner: '#1828',
     });
   });
