@@ -439,20 +439,17 @@ export function renderFromResourceBases() {
   return renderResourceModule(readResourceBases(), godotVersionOf(catalog));
 }
 
-/** The module source for every ClassDB class, one `Name: ['Base', instantiable, editor]` row each. */
+/** The module source for every ClassDB class, one `Name: ['Base', instantiable]` row each. */
 function renderClassListModule(classes, version) {
   const rows = Object.entries(classes)
-    .map(
-      ([name, [base, instantiable, editor]]) =>
-        `  ${name}: [${JSON.stringify(base)}, ${instantiable}, ${editor}],`
-    )
+    .map(([name, [base, instantiable]]) => `  ${name}: [${JSON.stringify(base)}, ${instantiable}],`)
     .join('\n');
   return `/**
  * Every ClassDB class, derived from Godot ${version}'s ClassDB.
  * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
  */
 
-export type ClassRow = readonly [base: string, instantiable: boolean, editor: boolean];
+export type ClassRow = readonly [base: string, instantiable: boolean];
 
 export const CLASSDB_CLASSES: Readonly<Record<string, ClassRow>> = Object.freeze({
 ${rows}

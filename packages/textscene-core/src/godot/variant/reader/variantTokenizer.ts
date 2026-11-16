@@ -20,6 +20,9 @@ const ERROR: Token = { kind: 'error' };
 const EOF: Token = { kind: 'eof' };
 const REPLACEMENT_CHARACTER = 0xfffd;
 
+/** `\b \t \n \f \r`, by the code point after the backslash. */
+const SIMPLE_ESCAPES: Readonly<Record<number, number>> = { 0x62: 8, 0x74: 9, 0x6e: 10, 0x66: 12, 0x72: 13 };
+
 const isDigit = (code: number) => code >= 0x30 && code <= 0x39;
 const isHexDigit = (code: number) => hexDigitValue(String.fromCodePoint(code)) !== undefined;
 const isIdentifierStart = (code: number) =>
@@ -122,8 +125,7 @@ export class VariantTokenizer {
   #escaped(): number | undefined {
     const next = this.#nextCode();
     if (next === 0) return undefined;
-    const simple: Readonly<Record<number, number>> = { 0x62: 8, 0x74: 9, 0x6e: 10, 0x66: 12, 0x72: 13 };
-    if (simple[next] !== undefined) return simple[next];
+    if (SIMPLE_ESCAPES[next] !== undefined) return SIMPLE_ESCAPES[next];
     if (next !== 0x75 && next !== 0x55) return next;
     let value = 0;
     for (let digit = 0; digit < (next === 0x55 ? 6 : 4); digit++) {

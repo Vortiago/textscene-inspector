@@ -5,6 +5,7 @@
 
 import { formatReal, shortestReal, storedReal } from '../math/real.js';
 import { cEscape, cEscapeMultiline } from '../string/cEscape.js';
+import { nodePathFromParts } from '../string/nodePathParts.js';
 import { isStringLess } from '../string/stringOrder.js';
 import { sortArray } from '../templates/sortArray.js';
 import { isVariantLess } from './operators/evaluate.js';
@@ -152,7 +153,7 @@ function written(value: Variant, depth: number): string {
     case 'STRING_NAME':
       return `&"${cEscape(value.value)}"`;
     case 'NODE_PATH':
-      return call('NodePath', `"${cEscape(value.value)}"`);
+      return call('NodePath', `"${cEscape(nodePathFromParts(value.value))}"`);
     case 'RID':
       return value.value === 0n ? 'RID()' : call('RID', `${BigInt.asIntN(64, value.value)}`);
     case 'SIGNAL':

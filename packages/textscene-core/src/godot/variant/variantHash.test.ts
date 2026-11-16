@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { nodePathParts } from '../string/nodePathParts';
 import { variant, type Variant } from './value/variant';
 import { variantHash } from './variantHash';
 
 const int = (value: number) => variant('INT', BigInt(value));
+const nodePath = (text: string) => variant('NODE_PATH', nodePathParts(text)!);
 const nested = (depth: number): Variant => (depth === 0 ? int(1) : variant('ARRAY', [nested(depth - 1)]));
 
 describe('variantHash', () => {
@@ -21,8 +23,13 @@ describe('variantHash', () => {
   });
 
   it('hashes a relative NodePath as the inverse of the absolute one', () => {
-    const absolute = variantHash(variant('NODE_PATH', '/a:b'));
-    expect(variantHash(variant('NODE_PATH', 'a:b'))).toBe(~absolute >>> 0);
+    const absolute = variantHash(nodePath('/a:b'));
+    expect(variantHash(nodePath('a:b'))).toBe(~absolute >>> 0);
+  });
+
+  it('hashes one NodePath name that holds a slash as the two names of its text', () => {
+    const oneName = variant('NODE_PATH', { absolute: false, names: ['a/b'], subnames: [] });
+    expect(variantHash(oneName)).toBe(variantHash(nodePath('a/b')));
   });
 
   it('hashes an empty PackedInt32Array as one 64-bit zero', () => {

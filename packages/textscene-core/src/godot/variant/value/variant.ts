@@ -7,6 +7,7 @@ import type { Rect2 } from '../../math/rect2.js';
 import type { Transform2DColumns } from '../../math/transform2d.js';
 import type { Transform3D } from '../../math/transform3d.js';
 import type { Vector2, Vector3 } from '../../math/vector.js';
+import type { NodePathParts } from '../../string/nodePathParts.js';
 import type { VARIANT_TYPE } from '../variantType.js';
 
 export type VariantTypeName = keyof typeof VARIANT_TYPE;
@@ -47,7 +48,7 @@ export interface VariantValues {
   PROJECTION: ProjectionValue;
   COLOR: ColorValue;
   STRING_NAME: string;
-  NODE_PATH: string;
+  NODE_PATH: NodePathParts;
   RID: bigint;
   OBJECT: null;
   CALLABLE: string;

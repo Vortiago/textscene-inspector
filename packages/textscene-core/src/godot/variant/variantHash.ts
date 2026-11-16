@@ -9,6 +9,7 @@ import {
   stringHash,
   HASH_MURMUR3_SEED,
 } from '../math/hashFuncs.js';
+import type { NodePathParts } from '../string/nodePathParts.js';
 import type { Variant, VariantOf } from './value/variant.js';
 import { VARIANT_TYPE } from './variantType.js';
 
@@ -49,14 +50,12 @@ function packedIntsHash(bytes: Uint8Array): number {
 }
 
 // node_path.cpp:35: the hash of the pair of names and subnames, inverted for a relative path.
-function nodePathHash(text: string): number {
-  if (text === '') return 0;
-  const colon = text.indexOf(':');
-  const isAbsolute = text.startsWith('/');
-  const names = (colon < 0 ? text : text.slice(0, colon)).slice(isAbsolute ? 1 : 0);
-  const subnames = colon < 0 ? '' : text.slice(colon + 1);
-  const pair = hashOneUint64((BigInt(stringHash(names)) << 32n) | BigInt(stringHash(subnames)));
-  return isAbsolute ? pair : ~pair >>> 0;
+function nodePathHash({ absolute, names, subnames }: NodePathParts): number {
+  if (!absolute && names.length === 0 && subnames.length === 0) return 0;
+  const pair = hashOneUint64(
+    (BigInt(stringHash(names.join('/'))) << 32n) | BigInt(stringHash(subnames.join(':')))
+  );
+  return absolute ? pair : ~pair >>> 0;
 }
 
 /** `Array::recursive_hash` (array.cpp:195) and `Dictionary::recursive_hash` (dictionary.cpp:373). */

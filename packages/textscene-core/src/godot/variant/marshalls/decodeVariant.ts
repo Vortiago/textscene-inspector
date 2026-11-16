@@ -1,5 +1,5 @@
 import { canInstantiate } from '../../classdb/classBaseTypes.js';
-import { nodePathFromParts } from '../../string/nodePath.js';
+import type { NodePathParts } from '../../string/nodePathParts.js';
 import { storedReal } from '../../math/real.js';
 import { setEntry } from '../compare.js';
 import { typedArray, typedDictionary, validatedElement } from '../construct/typedContainer.js';
@@ -173,7 +173,7 @@ class VariantDecoder {
   }
 
   // marshalls.cpp:620: only the format with the high bit set is read, and flag 2 adds one subname.
-  #nodePath(): string {
+  #nodePath(): NodePathParts {
     this.#need(4);
     const nameCount = this.#view.getUint32(this.#at, true);
     if ((nameCount & 0x80000000) === 0) fail('old NodePath format');
@@ -185,11 +185,7 @@ class VariantDecoder {
     const total = (names + subnameCount + ((flags & 2) !== 0 ? 1 : 0)) >>> 0;
     const parts: string[] = [];
     for (let index = 0; index < total; index++) parts.push(this.#string());
-    return nodePathFromParts({
-      absolute: (flags & 1) !== 0,
-      names: parts.slice(0, names),
-      subnames: parts.slice(names),
-    });
+    return { absolute: (flags & 1) !== 0, names: parts.slice(0, names), subnames: parts.slice(names) };
   }
 
   #object(header: number): Variant {
