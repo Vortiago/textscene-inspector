@@ -10,7 +10,7 @@ import { drawOffscreen } from '../offscreen/draw';
 import { withScenePose } from '../sceneRenderCamera';
 import { perObject } from '../../utils/perObject';
 import { beginStep, endStep } from '../frameProfile/frameProfile';
-import { clipOfCamera } from '../../nodes/viewport/subviewport/viewportLightPassHost';
+import { clipOfCamera } from '../viewportRender/viewportLightPassHost';
 import type { CanvasClip } from '../lighting2d/lightPassHost';
 import {
   collects,

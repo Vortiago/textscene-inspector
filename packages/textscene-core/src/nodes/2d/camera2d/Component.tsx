@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node2dGroupProps, node2dGroupSpread } from '../../../r3f/node2dTransform';
 import { node2dZStep, useCanvasKeyOfNode } from '../../../r3f/canvasItemState';
-import type { Camera2DTag } from './cameraView';
+import type { Camera2DTag } from '../../../r3f/viewportRender/camera2DView';
 import type { Camera2DProperties } from './types';
 
 export function Camera2D({ node, children }: NodeComponentProps) {

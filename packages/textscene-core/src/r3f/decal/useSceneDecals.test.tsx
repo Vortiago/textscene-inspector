@@ -1,8 +1,3 @@
-/**
- * The decal holder tells its scene's decals how to sample the atlas: the project's decal filter,
- * and for an anisotropic one the taps of the viewport's level.
- */
-
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
@@ -50,12 +45,12 @@ describe('useSceneDecals', () => {
     });
   });
 
-  it("gives an anisotropic filter the taps of the project's level", async () => {
+  it('gives an anisotropic filter the default taps, which each 3D draw writes over with its level', async () => {
     const settings = {
       'rendering/textures/decals/filter': '5',
       'rendering/textures/default_filters/anisotropic_filtering_level': '3',
     };
 
-    expect(await filterGiven(settings)).toMatchObject({ anisotropy: 8 });
+    expect(await filterGiven(settings)).toMatchObject({ anisotropy: 4 });
   });
 });

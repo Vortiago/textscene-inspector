@@ -15,8 +15,8 @@ import {
   type LiveTreeSources,
 } from '../../../r3f/liveSceneTree.js';
 import { compositeCallPrefix } from '../../../godot/variant/variantParser.js';
-import { isViewportBoundary } from './viewportBoundary.js';
-import { embedsAWindow } from './windowEmbedder.js';
+import { isViewportBoundary } from '../../../r3f/viewportRender/viewportBoundary.js';
+import { embedsAWindow } from '../../../r3f/viewportRender/windowEmbedder.js';
 
 /**
  * The `i`-suffixed spellings are listed: `Vector2i` is as 2D as `Vector2`, and it

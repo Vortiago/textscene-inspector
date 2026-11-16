@@ -9,13 +9,17 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { fontWork } from '../controls/native/text/settledChannel';
 import { textureWork } from '../../resources/textures/textureWork';
 import { useSceneProbes } from './useSceneProbes';
+import { ViewportDescriptionProvider } from '../viewportRender/viewportDescriptionContext';
+import { rootViewportDescription } from '../viewportRender/viewportDescription';
 
 const updates = vi.hoisted(() => [] as number[]);
+const viewports = vi.hoisted(() => [] as unknown[]);
 
 vi.mock('./sceneProbes', () => ({
   SceneProbes: class {
-    update(pendingResources: number): boolean {
+    update(pendingResources: number, _clear: unknown, viewport: unknown): boolean {
       updates.push(pendingResources);
+      viewports.push(viewport);
       return false;
     }
     dispose(): void {}
@@ -56,5 +60,21 @@ describe('useSceneProbes', () => {
     ends.push(textureWork.begin());
 
     expect(await pendingSeenInOneFrame()).toBe(1);
+  });
+});
+
+describe('useSceneProbes in a SubViewport', () => {
+  it('captures with the description of the viewport that draws the scene', async () => {
+    const own = { ...rootViewportDescription(null), mipmapBias: 1.5 };
+    const renderer = await ReactThreeTestRenderer.create(
+      <ViewportDescriptionProvider description={own}>
+        <Holder />
+      </ViewportDescriptionProvider>
+    );
+    viewports.length = 0;
+    await renderer.advanceFrames(1, 16);
+    await renderer.unmount();
+
+    expect(viewports.at(-1)).toBe(own);
   });
 });

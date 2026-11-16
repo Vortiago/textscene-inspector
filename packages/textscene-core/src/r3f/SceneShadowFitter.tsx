@@ -16,7 +16,9 @@ import {
 } from './directionalShadow/fitSceneDirectionalShadows.js';
 import { sceneLights } from './directionalShadow/lightLists.js';
 import { fitScenePositionalShadows } from './positionalShadow/fitScenePositionalShadows.js';
-import { activeShadowAtlas, ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas.js';
+import { ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas.js';
+import type { PositionalShadowAtlasSettings } from '../godot/rendering/lights/positionalShadowAtlas.js';
+import { renderUnderWay } from './viewportRender/worldRender.js';
 import { observeSceneCamera } from './sceneRenderCamera.js';
 import { useByValue } from './hooks/useByValue.js';
 import { sameData } from '../utils/sameData.js';
@@ -66,26 +68,29 @@ function prepareSceneLights(
   });
 }
 
-/** Runs the light pass before each render of `scene` until unmount. Null runs nothing. */
-export function useSceneShadowFit(scene: THREE.Scene | null): void {
-  const settings = useByValue(useRootViewportDescription().positionalShadowAtlas, sameData);
+/** The light pass before each render of `scene`, in `atlas` outside a viewport pass. Null runs nothing. */
+export function useSceneShadowFit(scene: THREE.Scene | null, atlas: PositionalShadowAtlasSettings): void {
+  const settings = useByValue(atlas, sameData);
   useEffect(() => {
     if (!scene) return undefined;
-    const rootAtlas = new ViewportShadowAtlas(settings);
+    const ownAtlas = new ViewportShadowAtlas(settings);
     const stopObserving = observeSceneCamera(scene, (camera) =>
-      prepareSceneLights(scene, camera, activeShadowAtlas() ?? rootAtlas, performance.now())
+      prepareSceneLights(scene, camera, renderUnderWay()?.shadowAtlas ?? ownAtlas, performance.now())
     );
     return () => {
       stopObserving();
       releaseSceneLights(scene);
       releaseSoftShadowSearch(scene);
-      rootAtlas.dispose();
+      ownAtlas.dispose();
     };
   }, [scene, settings]);
 }
 
 /** Mounted once per 3D canvas, for the canvas's own scene. */
 export function SceneShadowFitter() {
-  useSceneShadowFit(useThree((state) => state.scene));
+  useSceneShadowFit(
+    useThree((state) => state.scene),
+    useRootViewportDescription().positionalShadowAtlas
+  );
   return null;
 }

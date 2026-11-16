@@ -60,7 +60,7 @@ import type { ShadowCastingEffects } from '../../../shadowCasting';
 import type { Rgba } from '../../../../godot/math/math';
 import { VECTOR2_ZERO } from '../../../../godot/math/vector';
 import { useDisposeOnRelease } from '../../../useDisposeOnRelease';
-import { useNearestAnisotropy } from '../../../nearestAnisotropy';
+import { useViewportAnisotropy } from '../../../viewportAnisotropy';
 import { vertexColourAttribute } from '../../../vertexColour';
 
 /** One rectangle of a hex-code box in local Godot px, +Y down, before the Y negation into three's space. */
@@ -556,7 +556,7 @@ export function TextRunMesh({
   useDisposeOnRelease(glyphGeometry);
   // A canvas raster is fresh per rebuild, and a BMFont sheet texture is shared by its runs.
   useDisposeOnRelease(run.heldTexture);
-  useNearestAnisotropy(run.heldTexture);
+  useViewportAnisotropy(run.heldTexture);
 
   // `draw_hex_code_box` (`text_server.cpp:771-812`) draws in its caller's colour, this run's `tint`.
   const hexBoxRects = useMemo(

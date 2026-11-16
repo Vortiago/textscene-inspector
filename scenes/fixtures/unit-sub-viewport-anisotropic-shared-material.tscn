@@ -1,0 +1,64 @@
+[gd_scene format=3]
+
+; One variable: `anisotropic_filtering_level` on two SubViewports that share one world and one
+; material. Each viewport draws both panels at its own level, as Godot gives each viewport its own
+; samplers (`render_scene_buffers_rd.cpp:120`). Left at 0 blurs the far stripes, right at 4 keeps them.
+; No other golden draws one material in two viewports at different levels.
+
+[ext_resource type="Texture2D" path="res://textures/aniso-stripes.png" id="1_stripes"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_panel"]
+size = Vector2(1.28, 1.28)
+
+[sub_resource type="StandardMaterial3D" id="Material_5"]
+shading_mode = 0
+cull_mode = 2
+albedo_texture = ExtResource("1_stripes")
+texture_filter = 5
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Off" type="SubViewportContainer" parent="."]
+offset_left = 40.0
+offset_top = 80.0
+offset_right = 440.0
+offset_bottom = 380.0
+
+[node name="SubViewport" type="SubViewport" parent="Off"]
+size = Vector2i(400, 300)
+render_target_update_mode = 4
+anisotropic_filtering_level = 0
+
+[node name="Camera3D" type="Camera3D" parent="Off/SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 0.9396926, 0.3420201, 0, -0.3420201, 0.9396926, 0, 1.5, 3)
+fov = 70.0
+current = true
+
+[node name="Panel" type="MeshInstance3D" parent="Off/SubViewport"]
+transform = Transform3D(3, 0, 0, 0, 0.207912, -0.978148, 0, 2.934444, 0.623736, 0, 0, -1)
+mesh = SubResource("QuadMesh_panel")
+surface_material_override/0 = SubResource("Material_5")
+
+[node name="Max" type="SubViewportContainer" parent="."]
+offset_left = 560.0
+offset_top = 80.0
+offset_right = 960.0
+offset_bottom = 380.0
+
+[node name="SubViewport" type="SubViewport" parent="Max"]
+size = Vector2i(400, 300)
+render_target_update_mode = 4
+anisotropic_filtering_level = 4
+
+[node name="Camera3D" type="Camera3D" parent="Max/SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 0.9396926, 0.3420201, 0, -0.3420201, 0.9396926, 0, 1.5, 3)
+fov = 70.0
+current = true
+
+[node name="Panel" type="MeshInstance3D" parent="Max/SubViewport"]
+transform = Transform3D(3, 0, 0, 0, 0.207912, -0.978148, 0, 2.934444, 0.623736, 0, 0, -1)
+mesh = SubResource("QuadMesh_panel")
+surface_material_override/0 = SubResource("Material_5")

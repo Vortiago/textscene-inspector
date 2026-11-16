@@ -28,7 +28,6 @@ import { mipmapBiasInjection } from '../../../r3f/materials/godotMipmapBias';
 import type { ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { materialTextureStates } from './textureBinding';
 import { bindSlotTexture } from './textureBinding.testkit';
-import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../../godot/scene/viewport.js';
 import { decodeStandardMaterial3D } from './decode';
 import { parseStandardMaterial3DScalars } from './scalars.testkit';
 import { mapSampledBy, programShader } from '../../../r3f/testing/patchedFragment';
@@ -405,7 +404,7 @@ function meshTresCarryingIt(testCase: ParityCase): string {
 function inlineTextures(testCase: ParityCase): ResolvedTextures {
   const scalars = parseStandardMaterial3DScalars(testCase.properties);
   const { textureSlots } = decodeStandardMaterial3D(testCase.properties);
-  const states = materialTextureStates(scalars, DEFAULT_ANISOTROPIC_FILTERING_LEVEL);
+  const states = materialTextureStates(scalars);
   const resolved: ResolvedTextures = {};
   for (const slot of TEXTURE_SLOTS) {
     const reference = textureSlots[slot];

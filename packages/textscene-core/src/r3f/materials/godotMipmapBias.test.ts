@@ -1,11 +1,6 @@
 import * as THREE from 'three';
 import { beforeAll, describe, expect, it } from 'vitest';
-import {
-  mipmapBiasInjection,
-  renderWithMipmapBias,
-  viewportSamplersUserData,
-  writeMainViewMipmapBias,
-} from './godotMipmapBias';
+import { mipmapBiasInjection, viewportSamplersUserData } from './godotMipmapBias';
 import { installGodotNormalMapRead } from './godotNormalMap';
 import type { ProgramShader } from '../materialProgramInputs';
 import { mipmappedTexture } from '../testing/mipmapBiasUniform';
@@ -97,49 +92,5 @@ describe('the bias on the tangent-space normal read', () => {
 
     expect(compiled).toContain('godotMapNormal(');
     expect(compiled).not.toMatch(/textureGrad\(\s*normalMap\s*,/);
-  });
-});
-
-describe('the bias a render samples with', () => {
-  const uniform = (): THREE.IUniform<number> => patched('basic').uniforms[BIAS_UNIFORM]!;
-
-  it('is the pass bias while the pass renders, and the root bias again after it', () => {
-    writeMainViewMipmapBias(-0.5);
-    const seen: number[] = [];
-
-    renderWithMipmapBias(1, () => seen.push(uniform().value));
-
-    expect(seen).toEqual([1]);
-    expect(uniform().value).toBe(-0.5);
-  });
-
-  it('is the pass bias for a main-view render inside the pass (an inline SubViewport)', () => {
-    writeMainViewMipmapBias(0);
-    const seen: number[] = [];
-
-    renderWithMipmapBias(-1, () => {
-      writeMainViewMipmapBias(0);
-      seen.push(uniform().value);
-    });
-
-    expect(seen).toEqual([-1]);
-  });
-
-  it('restores the root bias when the pass throws', () => {
-    writeMainViewMipmapBias(0.25);
-
-    expect(() =>
-      renderWithMipmapBias(2, () => {
-        throw new Error('pass failed');
-      })
-    ).toThrow('pass failed');
-
-    expect(uniform().value).toBe(0.25);
-  });
-
-  it('passes a bias beyond the -2..2 hint through unclamped (viewport.cpp:4904-4911)', () => {
-    writeMainViewMipmapBias(-7.5);
-
-    expect(uniform().value).toBe(-7.5);
   });
 });

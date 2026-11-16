@@ -14,7 +14,7 @@ import {
   type ContentScale,
 } from '../../windows/window/contentScale.js';
 import type { WindowProperties } from '../../windows/window/types.js';
-import { isEmbeddedWindow } from './viewportBoundary.js';
+import { isEmbeddedWindow } from '../../../r3f/viewportRender/viewportBoundary.js';
 import type { SubViewportProperties } from './types.js';
 
 /**

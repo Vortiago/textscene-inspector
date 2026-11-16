@@ -24,7 +24,7 @@ import { advanceFrameWithStubbedGl, withStubbedGl } from '../../../r3f/testing/s
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { liveTargetDrawCount } from '../../../r3f/liveTargets';
 import { instanceAs } from '../../3d/testing/reactThreeTestInstance';
-import { fittedAspect } from '../../3d/camera3d/projectionFit';
+import { fittedAspect } from '../../../r3f/viewportRender/projectionFit';
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 

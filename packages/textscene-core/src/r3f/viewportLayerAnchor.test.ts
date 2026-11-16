@@ -1,11 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import {
-  applyOrthoFrame,
-  orthoFrameForCamera2D,
-  orthoFrameForSize,
-} from '../nodes/viewport/subviewport/viewportFraming';
-import type { Camera2DTag } from '../nodes/2d/camera2d/cameraView';
+import { applyOrthoFrame, orthoFrameForCamera2D, orthoFrameForSize } from './viewportRender/viewportFraming';
+import type { Camera2DTag } from './viewportRender/camera2DView';
 
 import { viewportLayerMatrix } from './viewportLayerAnchor';
 import { Camera2DAnchorMode } from '../godot/scene/camera2d';

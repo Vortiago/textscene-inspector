@@ -105,15 +105,26 @@ describe('installShadowPass', () => {
     expect(renderer.setRenderTarget).toHaveBeenCalledTimes(1);
   });
 
-  it('builds the atlas again once it is resized (edge case)', () => {
+  it('builds the atlas again once it is resized (edge case)', async () => {
+    vi.resetModules();
+    const pass = await import('./shadowPass');
+    const atlasTarget = await import('./positionalShadow/shadowAtlasTarget');
     const { renderer } = fakeRenderer();
-    installShadowPass(renderer);
+    pass.installShadowPass(renderer);
     runPass(renderer, []);
-    const atlas = positionalShadowAtlas();
-    atlas.setSize(atlas.width * 2, atlas.height * 2);
-    atlas.setSize(atlas.width / 2, atlas.height / 2);
+    const holder = {};
+    atlasTarget.holdPositionalShadowAtlas(holder, atlasTarget.positionalShadowAtlas().width * 2);
     runPass(renderer, []);
+    atlasTarget.releasePositionalShadowAtlas(holder);
     expect(renderer.initRenderTarget).toHaveBeenCalledTimes(2);
+  });
+
+  it('adds no listener to the atlas when it loads again (edge case)', async () => {
+    const addListener = vi.spyOn(THREE.EventDispatcher.prototype, 'addEventListener');
+    vi.resetModules();
+    await import('./shadowPass');
+    expect(addListener.mock.calls.filter(([type]) => type === 'dispose')).toEqual([]);
+    addListener.mockRestore();
   });
 
   it('runs three’s pass, then copies each omni light that holds a slot', () => {

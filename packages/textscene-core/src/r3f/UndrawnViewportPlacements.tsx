@@ -7,7 +7,7 @@
 import { useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
-import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
+import { isViewportBoundary } from './viewportRender/viewportBoundary.js';
 import { usePlaceViewport } from './contexts/ViewportPassRegistryContext.js';
 import { childOrders, TreeOrderProvider, useTreeOrder } from './contexts/TreeOrderContext.js';
 

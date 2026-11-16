@@ -11,7 +11,7 @@ import { joinPath, parentPathOf } from '../../../utils/nodePath';
 import { subwindowStack, type StackedWindow } from './embedding';
 import { EmbeddedWindowFrame } from './EmbeddedWindowFrame';
 import { SubwindowCanvasScope } from './SubwindowCanvasScope';
-import { isRegisteredWindow } from '../../viewport/subviewport/viewportBoundary';
+import { isRegisteredWindow } from '../../../r3f/viewportRender/viewportBoundary';
 import type { WindowProperties } from './types';
 
 interface EmbeddedWindowsProps {

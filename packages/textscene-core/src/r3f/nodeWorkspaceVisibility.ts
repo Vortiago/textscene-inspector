@@ -6,7 +6,7 @@
 
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { is2DUIType } from './controls/has2DUIContent.js';
-import { isViewportBoundary, isViewportSurface } from '../nodes/viewport/subviewport/viewportBoundary.js';
+import { isViewportBoundary, isViewportSurface } from './viewportRender/viewportBoundary.js';
 import type { CanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 
 /** A type Godot's CanvasItemEditor would claim: 2D world content or Control and CanvasLayer UI. */

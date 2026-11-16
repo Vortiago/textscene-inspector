@@ -60,22 +60,16 @@ describe('godotTextureFilterState', () => {
     }
   );
 
-  it.each([
-    [0, 1],
-    [1, 2],
-    [3, 8],
-    [4, 16],
-  ])(
-    'lets anisotropic_filtering_level %i raise the anisotropic rows to %i (material_storage.cpp:2461)',
-    (level, anisotropy) => {
-      expect(godotTextureFilterState(5, level).anisotropy).toBe(anisotropy);
-      expect(godotTextureFilterState(4, level).anisotropy).toBe(anisotropy);
+  it.each([4, 5])(
+    'uploads anisotropic row %i at the default 4 taps, which each 3D draw writes over with its own level',
+    (filter) => {
+      expect(godotTextureFilterState(filter).anisotropy).toBe(GODOT_ANISOTROPY_MAX);
     }
   );
 
-  it('leaves the rows without anisotropy at 1 whatever the level', () => {
-    expect(godotTextureFilterState(3, 4).anisotropy).toBe(1);
-    expect(godotTextureFilterState(1, 4).anisotropy).toBe(1);
+  it('leaves the rows without anisotropy at 1', () => {
+    expect(godotTextureFilterState(3).anisotropy).toBe(1);
+    expect(godotTextureFilterState(1).anisotropy).toBe(1);
   });
 
   it("falls back to Godot's default for an absent or out-of-range value", () => {

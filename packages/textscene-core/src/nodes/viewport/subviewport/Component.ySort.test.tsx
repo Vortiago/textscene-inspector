@@ -94,7 +94,9 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
 `;
 
 describe('a y-sorted Control in a SubViewport that also holds 2D content', () => {
-  beforeAll(() => Promise.all([import('./ViewportControls'), import('./CanvasOverWorld')]));
+  beforeAll(() =>
+    Promise.all([import('./ViewportControls'), import('../../../r3f/viewportRender/CanvasOverWorld')])
+  );
 
   async function keys() {
     const portal = await portalSceneOf(SORTED_SCENE);
@@ -147,7 +149,9 @@ offset_bottom = 130.0
 `;
 
 describe('a y-sorted Control in a Control-only SubViewport', () => {
-  beforeAll(() => Promise.all([import('./ViewportControls'), import('./CanvasOverWorld')]));
+  beforeAll(() =>
+    Promise.all([import('./ViewportControls'), import('../../../r3f/viewportRender/CanvasOverWorld')])
+  );
 
   it('sorts a Control below a Node2D child at the Node2D child, not at its own y', async () => {
     const portal = await portalSceneOf(PROMOTED_SCENE);

@@ -12,12 +12,12 @@ import { solvedNodePatchesOf } from '../../liveNodePatches.js';
 import { liveTreeOf } from '../../liveSceneTree.js';
 import { liveFilesOf } from '../../liveFiles.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
-import { camera2DView } from '../../../nodes/2d/camera2d/cameraView.js';
+import { camera2DView } from '../../viewportRender/camera2DView.js';
 import type { Camera2DProperties } from '../../../nodes/2d/camera2d/types.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import { isCamera2DType, isCamera3DType } from '../../cameraNodeTypes.js';
-import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary.js';
+import { isViewportBoundary } from '../../viewportRender/viewportBoundary.js';
 import type { LiveTreeEntry } from '../../liveSceneTree.js';
 import styles from './TscnPreviewShell.module.css';
 

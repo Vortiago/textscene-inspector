@@ -10,7 +10,7 @@ import type { LiveTree } from '../../../r3f/liveSceneTree';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { parentPathOf } from '../../../utils/nodePath';
 import { perObject } from '../../../utils/perObject';
-import { isEmbeddedWindow } from '../../viewport/subviewport/viewportBoundary';
+import { isEmbeddedWindow } from '../../../r3f/viewportRender/viewportBoundary';
 
 /** A node that owns a theme, with the scope its `theme` ref resolves in. */
 export interface ThemeOwner {

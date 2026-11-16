@@ -9,6 +9,7 @@ import {
   captureFarPlanes,
   REFLECTION_ATLAS_COUNT,
   REFLECTION_ATLAS_SIZE,
+  REFLECTION_PROBE_SHADOW_ATLAS,
   reflectionAtlasLayout,
   reflectionProbeOrder,
   ReflectionProbeUpdateMode,
@@ -27,8 +28,11 @@ import { holdSceneRows, type SceneRows } from '../sceneRows/sceneRows.js';
 import { leaveSlot, showInSlot } from '../sharedTexture.js';
 import { TrackedObjects } from '../trackedObjects.js';
 import { visibleInTree } from '../visibleInTree.js';
-import { captureCameras, probeCaptureOf, probeFrame } from './captureCameras.js';
+import { captureCameras, probeFrame } from './captureCameras.js';
+import { drawWorld, renderUnderWay } from '../viewportRender/worldRender.js';
+import { probeCaptureDescription, type ViewportDescription } from '../viewportRender/viewportDescription.js';
 import { stageCapture } from './captureStage.js';
+import { ViewportShadowAtlas } from '../positionalShadow/viewportShadowAtlas.js';
 import { ProbeRows, type DrawnProbe } from './probeRows.js';
 import { atlasSlot, NO_RENDER_EXPOSURE, shownProbes } from './probeSlots.js';
 import { isReflectionProbe, type ReflectionProbeObject } from './reflectionProbeObject.js';
@@ -65,6 +69,7 @@ export class SceneProbes {
   private atlasHasRealTimeProbe = false;
   /** The capture each probe holds in the atlas, written by `capture` and cleared with the atlas. */
   private readonly captures = new Map<ReflectionProbeObject, Capture>();
+  private readonly shadowAtlas = new ViewportShadowAtlas(REFLECTION_PROBE_SHADOW_ATLAS);
   /** Advanced only by `markCapturesStale`, so each probe captures again. */
   private generation = 0;
   /** The rows of the drawn probes, rewritten in place by `pack`. */
@@ -103,21 +108,18 @@ export class SceneProbes {
     this.sceneRows = held.rows;
     this.releaseSceneRows = held.release;
     this.stopObserving = [
-      observeSceneCamera(scene, (camera) => this.show(camera)),
+      observeSceneCamera(scene, () => this.show()),
       followSceneExposure(scene, (exposure) => {
         shownProbes[3] = exposure ?? NO_RENDER_EXPOSURE;
       }),
       // After the observers that write each light's shadow for the render.
-      observeSceneCull(scene, (camera) => this.hideShadows(camera)),
+      observeSceneCull(scene, () => this.hideShadows()),
       observeSceneRenderEnd(scene, () => this.endRender()),
     ];
   }
 
-  /**
-   * Captures one probe that needs it, once the scene has had no resource on its way for a few
-   * frames, and packs the captured probes. Answers whether it drew, so the caller draws a frame.
-   */
-  update(pendingResources: number, clearColor: THREE.Color): boolean {
+  /** Captures one probe that needs it once the scene settles, for `viewport`. Answers whether it drew. */
+  update(pendingResources: number, clearColor: THREE.Color, viewport: ViewportDescription): boolean {
     this.settledFrames = pendingResources > 0 ? 0 : this.settledFrames + 1;
     if (pendingResources > 0) this.hasNewContent = true;
     const probes = this.probes
@@ -132,7 +134,7 @@ export class SceneProbes {
     const stale = probes.findIndex((probe, layer) => !this.isCaptured(probe, layer));
     if (stale !== -1) {
       beginStep(this.renderer, 'Reflection probes');
-      this.capture(probes[stale]!, stale, atlas, clearColor);
+      this.capture(probes[stale]!, stale, atlas, clearColor, viewport);
       endStep(this.renderer, 'Reflection probes');
     }
     const captured = probes.filter((probe) => this.captures.has(probe));
@@ -147,6 +149,7 @@ export class SceneProbes {
     this.leaveSlots();
     this.atlas?.target.dispose();
     this.cube.dispose();
+    this.shadowAtlas.dispose();
     this.releaseSceneRows();
   }
 
@@ -206,21 +209,30 @@ export class SceneProbes {
     object: ReflectionProbeObject,
     layer: number,
     atlas: ReflectionAtlas,
-    clearColor: THREE.Color
+    clearColor: THREE.Color,
+    viewport: ViewportDescription
   ): void {
     const { probe } = object;
     const capture = { isInterior: probe.interior, hasShadows: probe.enableShadows };
     const farPlanes = captureFarPlanes(probe.size, probe.originOffset, probe.maxDistance);
-    const cameras = captureCameras(object.matrixWorld, probe.originOffset, farPlanes, capture);
+    const cameras = captureCameras(object.matrixWorld, probe.originOffset, farPlanes);
+    const render = {
+      viewport: probeCaptureDescription(viewport),
+      shadowAtlas: this.shadowAtlas,
+      hasCanvasTransform: false,
+      probeCapture: capture,
+    };
     drawAsWorld(this.scene, () => {
       const restore = stageCapture(this.scene, probe, clearColor);
       try {
         drawOffscreen(this.renderer, () => {
           this.renderer.autoClear = true;
-          cameras.forEach((camera, face) => {
-            this.renderer.setRenderTarget(this.cube, face);
-            this.renderer.render(this.scene, camera);
-          });
+          drawWorld(render, () =>
+            cameras.forEach((camera, face) => {
+              this.renderer.setRenderTarget(this.cube, face);
+              this.renderer.render(this.scene, camera);
+            })
+          );
         });
       } finally {
         restore();
@@ -251,9 +263,9 @@ export class SceneProbes {
   }
 
   /** Points every lit material at this scene's probes for a render, or at none for a capture's. */
-  private show(camera: THREE.Camera): void {
+  private show(): void {
     const { atlas } = this;
-    if (!atlas || this.packed.length === 0 || probeCaptureOf(camera)) {
+    if (!atlas || this.packed.length === 0 || renderUnderWay()?.probeCapture) {
       shownProbes[0] = 0;
       return;
     }
@@ -265,8 +277,8 @@ export class SceneProbes {
   }
 
   /** Hides each light's shadow from a capture without shadows. */
-  private hideShadows(camera: THREE.Camera): void {
-    if (probeCaptureOf(camera)?.hasShadows !== false) return;
+  private hideShadows(): void {
+    if (renderUnderWay()?.probeCapture?.hasShadows !== false) return;
     this.scene.traverse((object) => {
       const { shadow } = object as THREE.Object3D & { shadow?: THREE.LightShadow };
       if (!shadow) return;
