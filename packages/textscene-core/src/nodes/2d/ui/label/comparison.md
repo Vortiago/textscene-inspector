@@ -84,6 +84,18 @@ import's `fallbacks` (`resource_importer_dynamic_font.cpp:192`, `resource_import
 the base's for a `FontVariation` with none (`font.cpp:2926-2945`). A BMFont keeps its import's `fallbacks`
 as the re-imported state holds them (ADR-0064). The `label-font-fallbacks` golden pins this.
 
+## Font spacing
+
+<!-- compare: image=unit-label-font-variation-spacing status=done fixture=unit-label-font-variation-spacing.tscn -->
+
+A `FontVariation` hands its `spacing_glyph`, `spacing_space`, `spacing_top`, `spacing_bottom` and
+`baseline_offset` to the face it draws (`font.cpp:2422-2437`). A FontFile's `cache/0` values do the same
+for its own face (`font.cpp:1195-1207`). Each glyph but the last advances by `spacing_glyph`, or by
+`spacing_space` on a space when that is not 0 (`text_server_adv.cpp:6985-6999`). Each glyph moves down by
+`baseline_offset` times the ascent plus descent (`:7092-7101`). The top and bottom spacing grow the line
+(`:5161-5162`), and the height of a variation adds its own (`font.cpp:210-220`). Button, RichTextLabel,
+LineEdit and TextEdit shape with the same faces. The `label-font-variation-spacing` golden pins this.
+
 ## Decomposed marks
 
 <!-- compare: image=unit-label-decomposed-marks status=done fixture=unit-label-decomposed-marks.tscn -->
