@@ -9,7 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { isUnicodeIdentifierContinue, isUnicodeIdentifierStart } from '../string/unicodeIdentifier.js';
+import { isUnicodeIdentifierContinue, isUnicodeIdentifierStart } from '../string/characterClass.js';
 import { StructuredTextParser, TextDirection } from './textServerEnums.js';
 
 /** `[start, end)` of the text and the `TextDirection` its bidi pass runs at: Godot's `Vector3i(start, end, direction)`. */

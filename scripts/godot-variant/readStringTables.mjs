@@ -31,3 +31,23 @@ export function caseTables(source) {
     lower: caseRuns(casePairs(source, 'reverse_caps_table')),
   };
 }
+
+/** The `{ start, end }` ranges of one `CharRange` table of char_range.inc, flat as start, end, start, end. */
+function charRanges(source, name) {
+  const table = new RegExp(`CharRange ${name}\\[\\]\\s*=\\s*\\{([\\s\\S]*?)\\};`).exec(source);
+  if (!table) throw new Error(`expected the ${name} table in char_range.inc, found none`);
+  return [...table[1].matchAll(/\{\s*(0x[0-9A-Fa-f]+),\s*(0x[0-9A-Fa-f]+)\s*\}/g)].flatMap(
+    ([, start, end]) => [Number(start), Number(end)]
+  );
+}
+
+/** The five character classes of char_range.inc that char_utils.h searches. */
+export function characterClasses(source) {
+  return {
+    identifierStart: charRanges(source, 'xid_start'),
+    identifierContinue: charRanges(source, 'xid_continue'),
+    upperCase: charRanges(source, 'uppercase_letter'),
+    lowerCase: charRanges(source, 'lowercase_letter'),
+    letter: charRanges(source, 'unicode_letter'),
+  };
+}
