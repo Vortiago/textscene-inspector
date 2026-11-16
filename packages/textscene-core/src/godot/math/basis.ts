@@ -293,7 +293,7 @@ export function basisFromQuaternionScale(rotation: Quaternion, scale: Vector3): 
 const UNIT_EPSILON_FLOAT = f(UNIT_EPSILON);
 
 /** `Basis::is_rotation` (basis.cpp:129): conformal, with a determinant within `UNIT_EPSILON` of 1. */
-export function basisIsRotation(n: BasisComponents): boolean {
+function basisIsRotation(n: BasisComponents): boolean {
   const [x, y, z] = [0, 1, 2].map((index) => basisColumn(n, index));
   const xLengthSquared = vector3Dot(x!, x!);
   const isConformal =
