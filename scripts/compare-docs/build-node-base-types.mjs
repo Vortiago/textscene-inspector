@@ -15,6 +15,7 @@ import { PROPERTY_HINT } from '../../packages/textscene-core/src/godot/classdb/p
 import { resourceTypeHint } from '../../packages/textscene-core/src/godot/classdb/resourceTypeHint.ts';
 import {
   CATALOG_OUT,
+  CLASSES_OUT,
   PROPS_OUT,
   RESOURCE_BASES_OUT,
   RESOURCE_GETTERS_OUT,
@@ -32,6 +33,7 @@ export const PROPERTIES_OUT = classdbModule('classProperties.generated.ts');
 export const EXCLUSIONS_OUT = classdbModule('resourceTypeExclusions.generated.ts');
 export const TYPED_COLLECTIONS_OUT = classdbModule('typedCollectionProperties.generated.ts');
 export const VARIANT_PROPERTIES_OUT = classdbModule('variantProperties.generated.ts');
+export const CLASS_LIST_OUT = classdbModule('classList.generated.ts');
 
 /**
  * Refuses to write a table a walk cannot leave. Every consumer (`descendsFromClass`, `classBaseChain`,
@@ -437,6 +439,43 @@ export function renderFromResourceBases() {
   return renderResourceModule(readResourceBases(), godotVersionOf(catalog));
 }
 
+/** The module source for every ClassDB class, one `Name: ['Base', instantiable, editor]` row each. */
+function renderClassListModule(classes, version) {
+  const rows = Object.entries(classes)
+    .map(
+      ([name, [base, instantiable, editor]]) =>
+        `  ${name}: [${JSON.stringify(base)}, ${instantiable}, ${editor}],`
+    )
+    .join('\n');
+  return `/**
+ * Every ClassDB class, derived from Godot ${version}'s ClassDB.
+ * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
+ */
+
+export type ClassRow = readonly [base: string, instantiable: boolean, editor: boolean];
+
+export const CLASSDB_CLASSES: Readonly<Record<string, ClassRow>> = Object.freeze({
+${rows}
+});
+`;
+}
+
+/** The class list module the committed artifact must equal. */
+export function renderFromClassList() {
+  const catalog = readJson(CATALOG_OUT);
+  return renderClassListModule(assertAcyclicClasses(readJson(CLASSES_OUT)), godotVersionOf(catalog));
+}
+
+function assertAcyclicClasses(classes) {
+  const bases = Object.fromEntries(
+    Object.entries(classes)
+      .filter(([, [base]]) => base !== '')
+      .map(([name, [base]]) => [name, base])
+  );
+  assertAcyclic(bases, 'classdb-classes.json');
+  return classes;
+}
+
 // Only write when run as a CLI, so the test can import the derivation.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const describeBaseTypes = (source) => `${source.match(/^ {2}\w+: '/gm)?.length ?? 0} base-type entries`;
@@ -449,6 +488,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     [EXCLUSIONS_OUT, renderFromExclusionCaptures(), describeNestedRows('excluding slots')],
     [TYPED_COLLECTIONS_OUT, renderFromTypedCollectionCaptures(), describeNestedRows('typed collections')],
     [VARIANT_PROPERTIES_OUT, renderFromVariantPropertyCaptures(), describeNestedRows('Variant properties')],
+    [
+      CLASS_LIST_OUT,
+      renderFromClassList(),
+      (source) => `${source.match(/^ {2}\w+: \[/gm)?.length ?? 0} classes`,
+    ],
   ];
   for (const [path, source, describe] of artifacts) {
     writeFileSync(path, source);
