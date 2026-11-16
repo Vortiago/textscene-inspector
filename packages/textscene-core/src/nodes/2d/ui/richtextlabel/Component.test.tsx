@@ -727,6 +727,20 @@ describe('<RichTextLabel> shaping across an edit that keeps the runs', () => {
     return passesOnUpdate(painter(before, rect), painter(after, rectAfter));
   }
 
+  it('builds no runs on a parent re-render that passes the same solve node', async () => {
+    const node = solveNode('RTL', { text: TEXT });
+    const rerendered = (renderOrder: number) => (
+      <RichTextLabel
+        {...painterEnv()}
+        solveNode={node}
+        rect={RECT}
+        renderOrder={renderOrder}
+        slot={NODE_SLOT}
+      />
+    );
+    expect(await passesOnUpdate(rerendered(5), rerendered(6))).toEqual({ shapes: 0, runs: 0 });
+  });
+
   it('shapes nothing on a visible_characters edit under a reveal after shaping', async () => {
     const reveal = { visibleCharactersBehavior: AFTER_SHAPING };
     const { shapes } = await passesOnEdit(

@@ -178,13 +178,23 @@ function useShapedRichText(
   textTheme: ResolvedTextTheme
 ) {
   // Equal runs prove equal input: shaping reads the node only through the runs, faces and options.
-  const runsAt = (wrapWidthPx: number) =>
-    styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, wrapWidthPx);
-  const runsAtRectWidth = useByValue(runsAt(rect.w), sameData);
+  const runsAt = useCallback(
+    (wrapWidthPx: number) =>
+      styledTextRuns(solveNode, props, textTheme.color, textTheme.fontSizePx, wrapWidthPx),
+    [solveNode, props, textTheme.color, textTheme.fontSizePx]
+  );
+  const runsAtRectWidth = useByValue(
+    useMemo(() => runsAt(rect.w), [runsAt, rect.w]),
+    sameData
+  );
   const verticalBarBoxes = useByValue(internalScrollBarBoxes(solveNode).vertical, sameData);
   const besideBarWidthPx = besideScrollBarWidthPx(rect, verticalBarBoxes);
+  const readsBoxWidth = runsReadBoxWidth(runsAtRectWidth);
   const runsBesideBar = useByValue(
-    runsReadBoxWidth(runsAtRectWidth) ? runsAt(besideBarWidthPx) : null,
+    useMemo(
+      () => (readsBoxWidth ? runsAt(besideBarWidthPx) : null),
+      [readsBoxWidth, runsAt, besideBarWidthPx]
+    ),
     sameData
   );
   // RichTextLabel's own default is WORD_SMART (`rich_text_label.h:557`), not Label's OFF.
