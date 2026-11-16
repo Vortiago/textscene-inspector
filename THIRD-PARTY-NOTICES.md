@@ -4,7 +4,7 @@ TextScene Inspector is MIT licensed (see `LICENSE`). It additionally contains, a
 distributes, material from the third parties below.
 
 Runtime npm dependencies are not enumerated here; each carries its own licence in its
-published package. FastNoiseLite, the Brotli decoder, fzstd and bidi-js are the exceptions, since
+published package. FastNoiseLite, the Brotli decoder and bidi-js are the exceptions, since
 their packages keep the licence in a source comment that a bundler strips, or beside the code.
 
 ---
@@ -1211,8 +1211,7 @@ PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 <https://github.com/google/brotli>
 
 The `brotli` npm package (2.1.0) is a JavaScript port of Google's Brotli decoder. The previewer
-uses it to decompress the tables of a `.woff2` scene font, and the shader transpiler for
-`PackedByteArray.decompress` in Brotli mode. The package ships Google's licence as
+uses it to decompress the tables of a `.woff2` scene font. The package ships Google's licence as
 a comment in its decoder files, which a bundler strips, so a bundle that holds the package carries
 the notice here. The decoder is by Google and is licensed Apache-2.0, and the package is licensed
 MIT, separately from Godot's own MIT licence above.
@@ -1231,40 +1230,6 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-```
-
----
-
-## fzstd
-
-<https://github.com/101arrowz/fzstd>
-
-The `fzstd` npm package (0.1.1) decodes Zstandard. The previewer uses it for a binary resource saved
-in Zstandard mode, and the shader transpiler for `PackedByteArray.decompress` in Zstandard mode. It is
-by Arjun Barrett and is licensed MIT, separately from Godot's own MIT licence above.
-
-```
-MIT License
-
-Copyright (c) 2020 Arjun Barrett
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 ```
 
 ---

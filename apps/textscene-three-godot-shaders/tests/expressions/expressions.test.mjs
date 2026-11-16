@@ -1,8 +1,10 @@
+import { decompress as brotliDecompress } from 'brotli/decompress';
+import { decompress as zstdDecompress } from 'fzstd';
 import { describe, expect, it } from 'vitest';
 import { runExpression } from '../../../../packages/textscene-core/src/godot/expression/execute.ts';
+import { decodersOf } from '../../../../packages/textscene-core/src/shaders/preprocessor/decoders.ts';
 import { GodotCrash } from '../../../../packages/textscene-core/src/godot/variant/cInteger.ts';
 import { utilityHost } from '../../../../packages/textscene-core/src/godot/variant/utility/utilityHost.ts';
-import { DECODERS } from '../../../../packages/textscene-core/src/shaders/preprocessor/decoders.ts';
 import { PROJECT_FILES } from '../../../../scripts/godot-variant/godotExpressions.mjs';
 import { godotAnswers } from '../godotAnswers.mjs';
 import { dumpVariant } from './dump.mjs';
@@ -10,6 +12,8 @@ import { EXPRESSIONS } from './expressionSet.mjs';
 import { LIBM_DIFFERENCES } from './libmDifferences.mjs';
 import { INTERNED_COMPARISON, REFUSED_CASES, REFUSED_METHODS, REFUSED_UTILITIES } from './refusedCases.mjs';
 
+/** The decoders an app lends for Zstandard and Brotli, so every case has Godot's answer. */
+const DECODERS = decodersOf({ zstd: zstdDecompress, brotli: brotliDecompress });
 const RECORD = godotAnswers().expressions;
 const IS_LIVE = godotAnswers().live;
 

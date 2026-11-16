@@ -5,7 +5,7 @@ import { UnportableUtility } from '../../variant/utility/unportableUtility.js';
 import { fastLzDecompress } from './fastlz.js';
 import { inflateGzip, inflateZlib, type InflatedStream, type RawInflate } from './zlibStream.js';
 
-/** The third-party decoders a host lends `Compression`: each throws for a stream it refuses. */
+/** The decoders a host lends: each throws for a stream it refuses, and UnportedMethod when not lent. */
 export interface Decoders {
   readonly inflate: RawInflate;
   /** Every Zstandard frame of the input, joined, as `ZSTD_decompressDCtx` reads them. */
@@ -90,6 +90,7 @@ function brotliDynamic(source: Uint8Array, decoders: Decoders): Uint8Array {
       throw new UnportableUtility(
         'decompress_dynamic of a Brotli stream that ends early, where Godot never returns'
       );
+    rethrowUnlent(error);
     return EMPTY;
   }
 }
@@ -117,10 +118,16 @@ const codec = (decoders: Decoders, mode: number) =>
 function decoded(source: Uint8Array, decode: (source: Uint8Array) => Uint8Array): InflatedStream | undefined {
   try {
     return { output: decode(source), end: source.length };
-  } catch {
+  } catch (error) {
+    rethrowUnlent(error);
     // Godot reads a stream that `ZSTD_decompressDCtx` or `BrotliDecoderDecompress` refuses as no bytes.
     return undefined;
   }
+}
+
+/** A decoder the host did not lend throws UnportedMethod, which is no refused stream. */
+function rethrowUnlent(error: unknown): void {
+  if (error instanceof UnportedMethod) throw error;
 }
 
 /** `inflate`, `ZSTD_decompressDCtx` and `BrotliDecoderDecompress` fail where the output passes the buffer. */

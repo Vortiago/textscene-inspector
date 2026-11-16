@@ -37,12 +37,6 @@ export const NOTICE_SOURCES = [
     isInstalled: true,
   },
   {
-    section: 'fzstd',
-    // The dist carries no copyright line, so its first error message finds it in a bundle's inputs.
-    copyright: /Copyright \(c\) 2020 Arjun Barrett|'invalid zstd data'/,
-    isInstalled: true,
-  },
-  {
     section: 'bidi-js',
     // The dist carries no copyright line, so its factory's name finds it in a bundle's inputs.
     copyright: /Copyright \(c\) 2021 Jason Johnston|function bidiFactory\(\)/,

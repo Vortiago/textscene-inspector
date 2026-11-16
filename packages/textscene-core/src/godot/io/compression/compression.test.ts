@@ -4,8 +4,11 @@ import { CompressionMode } from '../../project/compressedFile';
 import { UnportedMethod } from '../../variant/call/callMethod';
 import { UnportableUtility } from '../../variant/utility/unportableUtility';
 import { decompress, decompressDynamic, type Decoders } from './compression';
-import { DECODERS } from '../../../shaders/preprocessor/decoders';
+import { decompress as brotliDecompress } from 'brotli/decompress';
+import { decompress as zstdDecompress } from 'fzstd';
+import { decodersOf } from '../../../shaders/preprocessor/decoders';
 
+const DECODERS = decodersOf({ zstd: zstdDecompress, brotli: brotliDecompress });
 const TEXT = new TextEncoder().encode('hello hello hello hello world');
 const FASTLZ = Uint8Array.from([5, 104, 101, 108, 108, 111, 32, 224, 9, 5, 4, 119, 111, 114, 108, 100]);
 const join = (...parts: ArrayLike<number>[]) => Uint8Array.from(parts.flatMap((part) => Array.from(part)));
