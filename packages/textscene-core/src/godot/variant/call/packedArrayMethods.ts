@@ -3,7 +3,7 @@ import { bisect } from '../../templates/bisect.js';
 import { sortArray } from '../../templates/sortArray.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
 import { NIL, bool, int, variant, type Variant, type VariantTypeName } from '../value/variant.js';
-import { PACKED_ELEMENTS, type PackedElement } from '../value/packedElements.js';
+import { PACKED_ELEMENTS, type PackedElement, type PackedTypeName } from '../value/packedElements.js';
 import { representableLength } from './arrayLength.js';
 import { ERROR_CODE } from './errorCode.js';
 import { type MethodPort, portOn } from './methodPort.js';
@@ -136,43 +136,10 @@ function packedArrayMethods<T>(
   };
 }
 
-export const PACKED_BYTE_ARRAY_SHARED_METHODS = packedArrayMethods(
-  'PACKED_BYTE_ARRAY',
-  PACKED_ELEMENTS.PACKED_BYTE_ARRAY
-);
-export const PACKED_INT32_ARRAY_METHODS = packedArrayMethods(
-  'PACKED_INT32_ARRAY',
-  PACKED_ELEMENTS.PACKED_INT32_ARRAY
-);
-export const PACKED_INT64_ARRAY_METHODS = packedArrayMethods(
-  'PACKED_INT64_ARRAY',
-  PACKED_ELEMENTS.PACKED_INT64_ARRAY
-);
-export const PACKED_FLOAT32_ARRAY_METHODS = packedArrayMethods(
-  'PACKED_FLOAT32_ARRAY',
-  PACKED_ELEMENTS.PACKED_FLOAT32_ARRAY
-);
-export const PACKED_FLOAT64_ARRAY_METHODS = packedArrayMethods(
-  'PACKED_FLOAT64_ARRAY',
-  PACKED_ELEMENTS.PACKED_FLOAT64_ARRAY
-);
-export const PACKED_STRING_ARRAY_METHODS = packedArrayMethods(
-  'PACKED_STRING_ARRAY',
-  PACKED_ELEMENTS.PACKED_STRING_ARRAY
-);
-export const PACKED_VECTOR2_ARRAY_METHODS = packedArrayMethods(
-  'PACKED_VECTOR2_ARRAY',
-  PACKED_ELEMENTS.PACKED_VECTOR2_ARRAY
-);
-export const PACKED_VECTOR3_ARRAY_METHODS = packedArrayMethods(
-  'PACKED_VECTOR3_ARRAY',
-  PACKED_ELEMENTS.PACKED_VECTOR3_ARRAY
-);
-export const PACKED_COLOR_ARRAY_METHODS = packedArrayMethods(
-  'PACKED_COLOR_ARRAY',
-  PACKED_ELEMENTS.PACKED_COLOR_ARRAY
-);
-export const PACKED_VECTOR4_ARRAY_METHODS = packedArrayMethods(
-  'PACKED_VECTOR4_ARRAY',
-  PACKED_ELEMENTS.PACKED_VECTOR4_ARRAY
-);
+/** The methods every packed array has, by type. PackedByteArray adds its own in packedByteArrayMethods. */
+export const PACKED_ARRAY_METHODS = Object.fromEntries(
+  Object.entries(PACKED_ELEMENTS).map(([type, element]) => [
+    type,
+    packedArrayMethods(type as PackedTypeName, element as PackedElement<unknown>),
+  ])
+) as Readonly<Record<PackedTypeName, Readonly<Record<string, MethodPort>>>>;

@@ -10,7 +10,7 @@ import { UnportableUtility } from '../utility/unportableUtility.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
 import { NIL, int, variant, type Variant, type VariantTypeName } from '../value/variant.js';
 import { methodPort, type MethodParameter, type MethodPort, portOn } from './methodPort.js';
-import { PACKED_BYTE_ARRAY_SHARED_METHODS } from './packedArrayMethods.js';
+import { PACKED_ARRAY_METHODS } from './packedArrayMethods.js';
 
 const text = (codes: readonly number[]): Variant => variant('STRING', textOf(codes));
 
@@ -182,7 +182,7 @@ const compressionPort = (run: typeof decompress) =>
   );
 
 export const PACKED_BYTE_ARRAY_METHODS: Readonly<Record<string, MethodPort>> = {
-  ...PACKED_BYTE_ARRAY_SHARED_METHODS,
+  ...PACKED_ARRAY_METHODS.PACKED_BYTE_ARRAY,
   decompress: compressionPort(decompress),
   decompress_dynamic: compressionPort(decompressDynamic),
   get_string_from_ascii: port([], (bytes) => text(asciiCodes(bytes))),
