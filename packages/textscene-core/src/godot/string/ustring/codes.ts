@@ -34,3 +34,9 @@ export function substr(codes: readonly number[], from: number, count = -1): numb
   if (from + chars > length) chars = length - from;
   return codes.slice(from, from + chars);
 }
+
+/** `target` with each part added one by one, not spread: V8 caps the arguments of one call. */
+export function append(target: number[], ...parts: (readonly number[])[]): number[] {
+  for (const part of parts) for (const code of part) target.push(code);
+  return target;
+}

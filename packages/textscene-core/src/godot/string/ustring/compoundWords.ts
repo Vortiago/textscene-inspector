@@ -1,6 +1,7 @@
 import { findLower, findUpper } from '../caseMapping.js';
 import { isUnicodeLowerCase, isUnicodeUpperCase } from '../characterClass.js';
 import { isDigitCode, isWhitespace } from '../charUtils.js';
+import { append } from './codes.js';
 import { sliceAtCode, sliceCount } from './search.js';
 import { replaceCodes, stripEdges } from './edit.js';
 
@@ -24,10 +25,10 @@ function separateCompoundWords(codes: readonly number[]): number[] {
       (isDigitCode(previous) && isUnicodeLowerCase(current) && isNextLower) ||
       ((isPreviousUpper || isPreviousLower) && isDigitCode(current));
     if (!isWordEdge) continue;
-    words.push(...codes.slice(start, at), SPACE);
+    append(words, codes.slice(start, at), [SPACE]);
     start = at;
   }
-  words.push(...codes.slice(start));
+  append(words, codes.slice(start));
   return words.map((code) => findLower(isSeparator(code) ? SPACE : code));
 }
 
@@ -43,8 +44,8 @@ function joinWords(
   for (let index = 0; index < sliceCount(words, spaces); index++) {
     const word = sliceAtCode(words, SPACE, index);
     if (word.length === 0) continue;
-    if (index > 0) result.push(...glue);
-    result.push(firstCode(word[0]!, index), ...word.slice(1));
+    if (index > 0) append(result, glue);
+    append(result, [firstCode(word[0]!, index)], word.slice(1));
   }
   return result;
 }
