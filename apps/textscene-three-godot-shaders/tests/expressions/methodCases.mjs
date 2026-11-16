@@ -3,7 +3,7 @@ import { BUILTIN_TYPES } from '../../../../packages/textscene-core/src/godot/var
 /** The types whose methods the port runs: each later part of the slice adds its types here. */
 export const PORTED_METHOD_TYPES = ['Vector2', 'Vector2i', 'Vector3', 'Vector3i', 'Vector4', 'Vector4i'];
 
-/** A typical value of each type, then its edges: zero, a negative zero, the float limits, NaN and infinity. */
+/** A typical value of each type, then its edges: zero, negative zero, the float limits, NaN and infinity. */
 export const EDGE_VALUES = {
   float: ['0.3', ['0', '-0.0', '-2.5', '1e30', '1e-30', 'NAN', 'INF']],
   int: ['3', ['0', '-1', '-7', '2147483647', '-2147483648', '4294967297']],

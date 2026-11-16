@@ -33,7 +33,7 @@ export function construct(type: VariantTypeName, args: Arguments): Variant | und
   return signature && constructWith(signature, args);
 }
 
-/** What `r_ret` holds after a failed construct: null, but a null Object where the constructor writes one first. */
+/** What `r_ret` holds after a failed construct: null, or the null Object a constructor writes anyway. */
 export function failedConstruction(type: VariantTypeName, args: Arguments): Variant {
   const signature = constructorFor(
     type,
