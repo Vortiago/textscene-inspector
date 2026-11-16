@@ -97,9 +97,6 @@ const MEMBERS: MemberTable = {
   },
 };
 
-/** The names of the members `type` has, in the order `register_named_setters_getters` gives them. */
-export const memberNames = (type: VariantTypeName): readonly string[] => Object.keys(MEMBERS[type] ?? {});
-
 /** The member `name` of `value` (variant_setget.cpp:267), or nothing where its type has no such member. */
 export function memberOf(value: Variant, name: string): Variant | undefined {
   const table = MEMBERS[value.type] as Readonly<Record<string, Getter<VariantTypeName>>> | undefined;
