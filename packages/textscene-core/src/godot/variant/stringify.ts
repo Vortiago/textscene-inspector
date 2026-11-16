@@ -1,3 +1,4 @@
+import { cEscape } from '../string/cEscape.js';
 import { numReal, numRealFloat, stringNum } from '../string/stringNumber.js';
 import type { Variant } from './value/variant.js';
 
@@ -16,24 +17,6 @@ const XYZW = ['x', 'y', 'z', 'w'];
 const vector2 = (v: Components) => realList(v, XY, true);
 const vector3 = (v: Components) => realList(v, XYZ, true);
 const vector4 = (v: Components) => realList(v, XYZW, true);
-
-// String::c_escape (ustring.cpp:4477), in its order of replacements.
-const ESCAPES: readonly (readonly [string, string])[] = [
-  ['\\', '\\\\'],
-  ['\x07', '\\a'],
-  ['\b', '\\b'],
-  ['\f', '\\f'],
-  ['\n', '\\n'],
-  ['\r', '\\r'],
-  ['\t', '\\t'],
-  ['\v', '\\v'],
-  ["'", "\\'"],
-  ['"', '\\"'],
-];
-
-function cEscape(text: string): string {
-  return ESCAPES.reduce((escaped, [from, to]) => escaped.replaceAll(from, to), text);
-}
 
 // stringify_variant_clean (variant.cpp:1568): an element of a container quotes its strings.
 function elementText(value: Variant): string {

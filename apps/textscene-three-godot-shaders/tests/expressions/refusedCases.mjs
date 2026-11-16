@@ -1,4 +1,4 @@
-const SERIALISERS = 'the next utility slice ports VariantWriter, VariantParser and the marshalls';
+const SERIALISERS = 'the next utility slice ports VariantParser and the marshalls';
 const WEAK_REFERENCE = 'the next utility slice ports the WeakRef object weakref makes';
 const EDITOR_STATE = 'the answer is a counter or an object id of the running editor';
 const MEMBERS = 'the methods and members slice ports the index';
@@ -19,7 +19,6 @@ const unported = { refusal: 'UnportedExpression', reason: SERIALISERS };
 
 /** The utility functions the port refuses wherever the set calls them, with the reason. */
 export const REFUSED_UTILITIES = {
-  var_to_str: unported,
   str_to_var: unported,
   var_to_bytes: unported,
   bytes_to_var: unported,

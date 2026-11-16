@@ -3,6 +3,7 @@ import { castVariant } from '../construct/variantCast.js';
 import { ERROR_NAMES } from '../registrations.generated.js';
 import { stringify } from '../stringify.js';
 import { variantHash } from '../variantHash.js';
+import { variantToText } from '../variantWriter.js';
 import { NIL, variant, type Variant, type VariantTypeName } from '../value/variant.js';
 import { VARIANT_TYPE, variantTypeName } from '../variantType.js';
 import { UnportableUtility } from './unportableUtility.js';
@@ -44,6 +45,7 @@ export const GENERAL_TYPED: Readonly<Record<string, TypedFunction>> = {
     throw new UnportableUtility('rid_allocate_id() counts the RIDs the running editor has made');
   },
   rid_from_int64: ([id]) => variant('RID', id as bigint),
+  var_to_str: ([value]) => text(variantToText(value as Variant)),
   hash: ([value]) => variant('INT', BigInt(variantHash(value as Variant))),
 };
 
