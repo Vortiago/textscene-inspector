@@ -59,6 +59,9 @@ const DRAWS = new Set(['randi', 'randf', 'randi_range', 'randf_range', 'randfn']
 // Only the null object's id, 0, means one object in every editor.
 const OBJECT_IDS = new Set(['instance_from_id', 'is_instance_id_valid']);
 
+// A counter of the running editor answers otherwise on each run, so its case records only the type.
+const EDITOR_COUNTERS = new Set(['rid_allocate_id']);
+
 const VARARG_COUNTS = { max: [2, 3, 4], min: [2, 3, 4] };
 
 function fittingArgument(parameter, random) {
@@ -90,6 +93,7 @@ function refusingArguments([name, count, isVararg], random) {
 
 function caseText(name, args, random) {
   const call = `${name}(${args.join(', ')})`;
+  if (EDITOR_COUNTERS.has(name)) return `typeof(${call})`;
   if (!DRAWS.has(name)) return call;
   return `[seed(${valueText('INT', random)}), ${call}, ${call}]`;
 }
