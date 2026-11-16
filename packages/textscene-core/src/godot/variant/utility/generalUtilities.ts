@@ -3,6 +3,7 @@ import { castVariant } from '../construct/variantCast.js';
 import { ERROR_NAMES } from '../registrations.generated.js';
 import { stringify } from '../stringify.js';
 import { variantHash } from '../variantHash.js';
+import { textToVariant } from '../reader/variantReader.js';
 import { variantToText } from '../variantWriter.js';
 import { NIL, variant, type Variant, type VariantTypeName } from '../value/variant.js';
 import { VARIANT_TYPE, variantTypeName } from '../variantType.js';
@@ -46,6 +47,7 @@ export const GENERAL_TYPED: Readonly<Record<string, TypedFunction>> = {
   },
   rid_from_int64: ([id]) => variant('RID', id as bigint),
   var_to_str: ([value]) => text(variantToText(value as Variant)),
+  str_to_var: ([value]) => textToVariant(value as string),
   hash: ([value]) => variant('INT', BigInt(variantHash(value as Variant))),
 };
 
