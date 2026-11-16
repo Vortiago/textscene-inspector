@@ -251,6 +251,7 @@ jobs:
           name: godot-answers
           path: apps/textscene-three-godot-shaders/tests/.godot-answers/
           if-no-files-found: ignore
+          include-hidden-files: true
       - run: pnpm godot:shader-language --check
       - run: pnpm godot:variant --check
       - run: pnpm godot:templates --check
