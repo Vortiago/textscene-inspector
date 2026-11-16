@@ -1,0 +1,44 @@
+; One variable: the SubViewportContainer sits inside a SubViewport, whose Control pass draws it.
+; Every other container golden sits at the scene root. Regress the outer pass's lookup of the
+; inner viewport and the orange square inside the green rect vanishes.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Outer" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 60.0
+offset_right = 600.0
+offset_bottom = 460.0
+
+[node name="SubViewport" type="SubViewport" parent="Outer"]
+size = Vector2i(500, 400)
+render_target_update_mode = 4
+
+[node name="Back" type="ColorRect" parent="Outer/SubViewport"]
+offset_right = 500.0
+offset_bottom = 400.0
+color = Color(0.2, 0.5, 0.3, 1)
+
+[node name="Inner" type="SubViewportContainer" parent="Outer/SubViewport"]
+offset_left = 50.0
+offset_top = 50.0
+offset_right = 450.0
+offset_bottom = 350.0
+
+[node name="SubViewport" type="SubViewport" parent="Outer/SubViewport/Inner"]
+size = Vector2i(400, 300)
+transparent_bg = true
+msaa_3d = 2
+render_target_update_mode = 4
+
+[node name="Square" type="ColorRect" parent="Outer/SubViewport/Inner/SubViewport"]
+offset_left = 150.0
+offset_top = 100.0
+offset_right = 250.0
+offset_bottom = 200.0
+color = Color(0.9, 0.4, 0.2, 1)
