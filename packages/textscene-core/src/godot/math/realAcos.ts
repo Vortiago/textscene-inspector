@@ -1,8 +1,4 @@
 /**
- * `Math::acos` on a `real_t` operand (`math_funcs.h:110-112`), which an official build hands to the
- * `acosf` of the C library. This is the `acosf` of glibc 2.39, the library the reference Godot
- * links: it misses the correctly rounded angle by one bit for some inputs.
- *
  * Ported from the GNU C Library (`sysdeps/ieee754/flt-32/e_acosf.c`), which carries:
  * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
  * Developed at SunPro, a Sun Microsystems, Inc. business.
@@ -10,19 +6,9 @@
  * this notice is preserved. See THIRD-PARTY-NOTICES.md.
  */
 
+import { floatOfWord, floatWord } from './floatBits.js';
+
 const f = Math.fround;
-
-const word = new DataView(new ArrayBuffer(4));
-
-function floatWord(value: number): number {
-  word.setFloat32(0, value);
-  return word.getInt32(0);
-}
-
-function floatOfWord(bits: number): number {
-  word.setInt32(0, bits);
-  return word.getFloat32(0);
-}
 
 const PI = f(3.1415925026);
 const HALF_PI_HIGH = f(1.5707962513);

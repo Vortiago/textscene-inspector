@@ -1,9 +1,4 @@
 /**
- * `Math::sin` and `Math::cos` on a `real_t` operand (`math_funcs.h`), which an official build hands
- * to the `sinf` and `cosf` of the C library. glibc 2.39 on x86-64 runs Arm's single-precision
- * routines, built with fused multiply-adds on a CPU that has them: they miss the correctly rounded
- * value by one bit for some inputs.
- *
  * Ported from Arm Optimized Routines (`math/sinf.c`, `math/cosf.c`, `math/sincosf.h` and
  * `math/sincosf_data.c`), which carry:
  * Copyright (c) 2018-2024, Arm Limited.
@@ -11,14 +6,9 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { floatWord } from './floatBits.js';
+
 const f = Math.fround;
-
-const word = new DataView(new ArrayBuffer(4));
-
-function floatWord(value: number): number {
-  word.setFloat32(0, value);
-  return word.getUint32(0);
-}
 
 const absTop12 = (x: number) => (floatWord(x) >>> 20) & 0x7ff;
 

@@ -67,14 +67,16 @@ const DETERMINANT_TERMS = [
   '-0213',
   '-1023',
   '+0123',
-];
+].map((term) => ({
+  isSubtracted: term[0] === '-',
+  rows: [...term.slice(1)].map(Number) as [number, number, number, number],
+}));
 
 function determinant(m: Matrix): number {
-  return DETERMINANT_TERMS.reduce((sum, term, index) => {
-    const [a, b, c, d] = [...term.slice(1)].map(Number) as [number, number, number, number];
+  return DETERMINANT_TERMS.reduce((sum, { isSubtracted, rows: [a, b, c, d] }, index) => {
     const product = f(f(f(m[a]! * m[4 + b]!) * m[8 + c]!) * m[12 + d]!);
     if (index === 0) return product;
-    return term[0] === '-' ? f(sum - product) : f(sum + product);
+    return isSubtracted ? f(sum - product) : f(sum + product);
   }, 0);
 }
 

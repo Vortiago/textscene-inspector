@@ -107,7 +107,7 @@ function intersectsPlane(box: Aabb, plane: Plane): boolean {
   return distances.some((distance) => distance > 0) && distances.some((distance) => !(distance > 0));
 }
 
-// aabb.h:399: a later axis wins only when strictly larger, so a NaN size keeps the earlier axis.
+// aabb.h:399: a later axis wins only when strictly smaller, so a NaN size keeps the earlier axis.
 const shortestIndex = ([x, y, z]: readonly number[]) => {
   let index = 0;
   let shortest = x!;

@@ -1,6 +1,7 @@
 import type { Rect2 } from '../../math/rect2.js';
 import { cMax, cMin } from '../../math/math.js';
 import { isEqualApproxf } from '../../math/realMath.js';
+import { Side } from '../../math/side.js';
 import type { CastArgument } from '../utility/utilityArguments.js';
 import { variant, type Variant } from '../value/variant.js';
 import { methodPort, type MethodParameter, type MethodPort } from './methodPort.js';
@@ -37,11 +38,6 @@ const INT_RECT: RectArithmetic = {
   // Math::abs of an int32 wraps the lowest value back to itself, as std::abs does on x86-64.
   absolute: (a) => (a > 0 ? a : -a | 0),
 };
-
-const SIDE_LEFT = 0;
-const SIDE_TOP = 1;
-const SIDE_RIGHT = 2;
-const SIDE_BOTTOM = 3;
 
 const bool = (value: boolean): Variant => variant('BOOL', value);
 
@@ -89,10 +85,10 @@ function rectMethods(arithmetic: RectArithmetic): Readonly<Record<string, Method
   const growSide = (r: Rect2, side: number, amount: number) =>
     growIndividual(
       r,
-      side === SIDE_LEFT ? amount : 0,
-      side === SIDE_TOP ? amount : 0,
-      side === SIDE_RIGHT ? amount : 0,
-      side === SIDE_BOTTOM ? amount : 0
+      side === Side.LEFT ? amount : 0,
+      side === Side.TOP ? amount : 0,
+      side === Side.RIGHT ? amount : 0,
+      side === Side.BOTTOM ? amount : 0
     );
 
   const hasPoint = (r: Rect2, [px, py]: Components) =>
@@ -138,9 +134,7 @@ function rectMethods(arithmetic: RectArithmetic): Readonly<Record<string, Method
         h: add(r.h, twice(amount)),
       });
     }),
-    grow_side: port(['uint32_t', scalar], (r, args) =>
-      rectOf(growSide(r, scalarAt(args, 0), scalarAt(args, 1)))
-    ),
+    grow_side: port(['Side', scalar], (r, args) => rectOf(growSide(r, scalarAt(args, 0), scalarAt(args, 1)))),
     grow_individual: port([scalar, scalar, scalar, scalar], (r, args) => {
       const [left, top, right, bottom] = [0, 1, 2, 3].map((index) => scalarAt(args, index));
       return rectOf(growIndividual(r, left!, top!, right!, bottom!));
