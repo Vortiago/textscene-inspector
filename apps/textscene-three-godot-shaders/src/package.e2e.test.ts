@@ -19,8 +19,11 @@ const bundleKey = 'dist/index.js';
 
 /** What a three.js app needs from the shader module. Core's internals stay out. */
 const PUBLIC_VALUE_EXPORTS = [
+  'DEFAULT_TIME_ROLLOVER_SECONDS',
   'GODOT_VERSION',
+  'PlaybackShaderTime',
   'SKY_BINDINGS',
+  'ShaderClock',
   'ShadingLanguageError',
   'installNodesHandler',
   'textToVariant',
@@ -30,6 +33,7 @@ const PUBLIC_VALUE_EXPORTS = [
 ];
 const PUBLIC_TYPE_EXPORTS = [
   'NodeOutput',
+  'Playback',
   'RenderingMethod',
   'ShaderInclude',
   'ShaderOptions',

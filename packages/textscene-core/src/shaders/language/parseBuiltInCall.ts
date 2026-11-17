@@ -44,7 +44,10 @@ function outRefusal(name: string, index: number, arg: Expression): string | unde
     arg.kind !== 'array element'
   )
     return `Argument ${index + 1} of function '${name}' is not a variable, array, or member.`;
-  return isConstantPlace(arg) ? "A constant value cannot be passed for the 'out' parameter." : undefined;
+  if (isConstantPlace(arg)) return "A constant value cannot be passed for the 'out' parameter.";
+  return arg.kind === 'variable' && arg.isVarying
+    ? "Varyings cannot be passed for the 'out' parameter."
+    : undefined;
 }
 
 /** Whether the variable a place reads is a constant: Godot's `is_const` and `basetype_const`. */

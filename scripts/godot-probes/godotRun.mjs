@@ -23,7 +23,7 @@ const SERVER_SLOTS = 64;
 /** Frames a main script draws before it reads its viewports: the first frames compile the pipelines. */
 export const FRAMES_BEFORE_READ = 4;
 
-const PROJECT_GODOT = `config_version=5
+const PLAIN_PROJECT = `config_version=5
 
 [application]
 run/main_scene="res://main.tscn"
@@ -32,6 +32,9 @@ run/main_scene="res://main.tscn"
 window/size/viewport_width=64
 window/size/viewport_height=64
 `;
+
+/** The project file, with `settings` as sections of their own after the plain project's. */
+export const projectGodot = (settings = '') => (settings ? `${PLAIN_PROJECT}\n${settings}` : PLAIN_PROJECT);
 
 const MAIN_SCENE = `[gd_scene load_steps=2 format=3]
 
@@ -42,22 +45,30 @@ script = ExtResource("1")
 `;
 
 /**
+ * A run's command-line `arguments` after the project path, and its project `settings`.
+ * @typedef {{ arguments?: string[], settings?: string }} RunOptions
+ */
+
+/**
  * Godot's standard output for a project whose one scene runs `mainScript`. Throws on an error exit.
  *
  * @canonical A scratch Godot project run once, its standard output read
+ * @param {string} mainScript
+ * @param {Record<string, string>} files
+ * @param {RunOptions} [options]
  */
-export async function runGodotScript(mainScript, files) {
-  const { status, stdout, stderr } = await runGodotScriptToExit(mainScript, files);
+export async function runGodotScript(mainScript, files, options = {}) {
+  const { status, stdout, stderr } = await runGodotScriptToExit(mainScript, files, options);
   if (status !== 0) throw new Error(`godot exited with ${status}:\n${stderr}`);
   return stdout;
 }
 
 /** For a run that may end Godot, which prints its crash report and exits with 134. */
-export async function runGodotScriptToExit(mainScript, files) {
-  const directory = writeProject({ 'main.gd': mainScript, ...files });
+export async function runGodotScriptToExit(mainScript, files, { arguments: extra = [], settings } = {}) {
+  const directory = writeProject({ 'main.gd': mainScript, ...files }, settings);
   try {
-    const first = await spawnGodot(directory);
-    const result = failedToStart(first) ? await spawnGodot(directory) : first;
+    const first = await spawnGodot(directory, extra);
+    const result = failedToStart(first) ? await spawnGodot(directory, extra) : first;
     if (result.error?.code === 'ENOENT') {
       throw new Error(
         `run godot: ${result.error.message}. Godot ${GODOT_VERSION} and xvfb-run must be on the path, as in the CI image`
@@ -71,17 +82,17 @@ export async function runGodotScriptToExit(mainScript, files) {
 }
 
 /** A scratch project directory of one scene with `files` beside it. The caller removes it. */
-function writeProject(files) {
+function writeProject(files, settings) {
   const directory = mkdtempSync(join(tmpdir(), 'godot-project-'));
-  const project = { 'project.godot': PROJECT_GODOT, 'main.tscn': MAIN_SCENE, ...files };
+  const project = { 'project.godot': projectGodot(settings), 'main.tscn': MAIN_SCENE, ...files };
   for (const [name, text] of Object.entries(project)) writeFileSync(join(directory, name), text);
   return directory;
 }
 
 /** `error` for a run that did not start, did not exit in time, or printed more than a run may. */
-function spawnGodot(directory) {
+function spawnGodot(directory, extra) {
   const firstServer = FIRST_SERVER + (runsStarted++ % SERVER_SLOTS) * SERVERS_APART;
-  const plan = godotSpawnPlan(['--path', directory], { display: true, firstServer });
+  const plan = godotSpawnPlan(['--path', directory, ...extra], { display: true, firstServer });
   return new Promise((resolve) => {
     // Its own process group, so a stop reaches `xvfb-run`, Godot and Xvfb, not only `timeout`.
     const child = spawn(plan.command, plan.argv, { env: plan.env, detached: true });

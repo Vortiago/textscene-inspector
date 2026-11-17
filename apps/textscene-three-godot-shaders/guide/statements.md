@@ -2556,7 +2556,7 @@ vec4 probe() { return u[0] + u[1] * 4.0; }
 
 `struct Pair { float x; vec2 y; };` declares a struct before the functions. `Pair(a, b)` constructs one from a value of each member, in order, and `p.x` reads or writes a member.
 
-The transpiler emits one `Var` per member, and one array per member for an array of structs. Rows: `struct type`, `OP_STRUCT`, `NODE_TYPE_STRUCT`. Godot source: `servers/rendering/shader_language.h:242`.
+The transpiler emits one `Var` per member, and one array per member for an array of structs. Rows: `struct type`, `struct`, `OP_STRUCT`, `NODE_TYPE_STRUCT`. Godot source: `servers/rendering/shader_language.h:242`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

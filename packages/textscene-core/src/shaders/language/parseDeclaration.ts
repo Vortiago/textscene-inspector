@@ -1,12 +1,19 @@
-import { builtInInstruction, keywordInstruction } from './instructions.js';
+import { keywordInstruction } from './instructions.js';
 import type { ArraySize } from './parseArray.js';
 import type { ExpressionParser } from './parseExpression.js';
 import { arraySizeOf, typeName } from './treeWalk.js';
 import type { BlockScope } from './scope.js';
 import type { ArrayConstructNode, DeclarationNode, Declarator, Expression } from './shaderTree.js';
 import type { TokenCursor } from './tokenCursor.js';
-import type { Token } from './tokenizer.js';
+import { isPrecisionToken, type Token } from './tokenizer.js';
 import { shapeOf } from './types.js';
+
+/** The names a declaration asks about beyond its scope. */
+export interface DeclarationNames {
+  readonly isStruct: (name: string) => boolean;
+  /** Whether a name outside the scope, as a built-in's, refuses a declarator of that name. */
+  readonly isTaken: (name: string) => boolean;
+}
 
 /** The declaration that starts at `first`, its `;` read. */
 export function parseDeclaration(
@@ -14,9 +21,9 @@ export function parseDeclaration(
   tokens: TokenCursor,
   expressions: ExpressionParser,
   scope: BlockScope,
-  isStruct: (name: string) => boolean
+  names: DeclarationNames
 ): DeclarationNode {
-  return new DeclarationParser(tokens, expressions, scope, isStruct).declaration(first);
+  return new DeclarationParser(tokens, expressions, scope, names).declaration(first);
 }
 
 class DeclarationParser {
@@ -24,16 +31,16 @@ class DeclarationParser {
     private readonly tokens: TokenCursor,
     private readonly expressions: ExpressionParser,
     private readonly scope: BlockScope,
-    private readonly isStruct: (name: string) => boolean
+    private readonly names: DeclarationNames
   ) {}
 
   declaration(first: Token): DeclarationNode {
     let token = first;
     const isConst = token.type === 'TK_CONST';
     if (isConst) token = this.tokens.next();
-    const hasPrecision = token.type.startsWith('TK_PRECISION_');
-    if (hasPrecision) token = this.tokens.next();
-    const type = this.declaredType(token, hasPrecision);
+    const precision = precisionWord(token);
+    if (precision) token = this.tokens.next();
+    const type = this.declaredType(token, precision !== undefined);
     const declarators: Declarator[] = [];
     let typeSize: ArraySize | 'none' = 'none';
     for (;;) {
@@ -46,7 +53,7 @@ class DeclarationParser {
           token = this.tokens.next();
         }
       }
-      declarators.push(this.declarator(token, type, isConst, typeSize));
+      declarators.push(this.declarator(token, { type, precision }, isConst, typeSize));
       const end = this.tokens.next();
       if (end.type === 'TK_SEMICOLON') break;
       if (end.type !== 'TK_COMMA') this.tokens.fail("Expected a ',' or ';'.");
@@ -56,7 +63,7 @@ class DeclarationParser {
 
   /** The type after `const` and a precision: a value type or a struct, never a sampler. */
   private declaredType(token: Token, hasPrecision: boolean): string {
-    if (token.type === 'TK_IDENTIFIER' && this.isStruct(token.text!)) {
+    if (token.type === 'TK_IDENTIFIER' && this.names.isStruct(token.text!)) {
       if (hasPrecision) this.tokens.fail('Expected variable type after precision modifier.');
       return token.text!;
     }
@@ -71,22 +78,30 @@ class DeclarationParser {
   }
 
   /** `typeSize` is the size after the type, which every name of the declaration takes. */
-  private declarator(token: Token, type: string, isConst: boolean, typeSize: ArraySize | 'none'): Declarator {
+  private declarator(
+    token: Token,
+    { type, precision }: PreciseType,
+    isConst: boolean,
+    typeSize: ArraySize | 'none'
+  ): Declarator {
     if (token.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected an identifier.');
     const name = token.text!;
-    if (this.scope.find(name, true) || builtInInstruction(name))
+    if (this.scope.find(name, true) || this.names.isTaken(name))
       this.tokens.fail(`Redefinition of '${name}'.`);
-    let size = typeSize;
-    if (this.tokens.peek().type === 'TK_BRACKET_OPEN') {
-      this.tokens.next();
-      if (size !== 'none') this.tokens.fail('Array size is already defined.');
-      size = this.expressions.arrays.size(false);
-    }
     const outer = this.expressions.isConstDeclaration;
+    // Set before the size after the name, as `shader_language.cpp:8148` sets `is_const_decl`.
     this.expressions.isConstDeclaration = isConst;
     try {
+      let size = typeSize;
+      if (this.tokens.peek().type === 'TK_BRACKET_OPEN') {
+        this.tokens.next();
+        if (size !== 'none') this.tokens.fail('Array size is already defined.');
+        size = this.expressions.arrays.size(false);
+      }
       const { value, arraySize } =
-        size === 'none' ? this.singleValue(type, isConst) : this.arrayValue(type, isConst, size);
+        size === 'none'
+          ? this.singleValue(type, isConst)
+          : this.arrayValue({ type, precision }, isConst, size);
       const values = isConst && value?.kind === 'constant' ? value.values : undefined;
       this.scope.variables.set(name, {
         type,
@@ -118,10 +133,11 @@ class DeclarationParser {
 
   /** An array of unknown size takes the size of its value (`shader_language.cpp:8278`). */
   private arrayValue(
-    type: string,
+    declared: PreciseType,
     isConst: boolean,
     size: ArraySize
   ): { value?: Expression; arraySize?: number } {
+    const { type } = declared;
     if (!this.tokens.accept('TK_OP_ASSIGN')) {
       if (size === undefined) this.tokens.fail('Expected array initialization.');
       if (isConst) this.tokens.fail('Expected initialization of constant.');
@@ -139,21 +155,27 @@ class DeclarationParser {
     const isCurly = first.type === 'TK_CURLY_BRACKET_OPEN';
     if (!isCurly) {
       if (size === undefined) this.tokens.fail("Expected a '{'.");
-      this.constructorHead(first, type, size);
+      this.constructorHead(first, declared, size);
     }
     const value = this.list(first, type, size, isCurly);
     return { value, arraySize: value.arraySize };
   }
 
-  /** `float[3](` or `float[](` after `=`, which must name the declared type and size. */
-  private constructorHead(first: Token, type: string, size: number): void {
-    const elementType = this.expressions.arrays.elementType(first);
+  /** `lowp float[3](` or `float[](` after `=`, which must name the declared type and size (:8215). */
+  private constructorHead(first: Token, declared: PreciseType, size: number): void {
+    const precision = precisionWord(first);
+    const typeToken = precision ? this.tokens.next() : first;
+    if (precision && !isNonVoidType(typeToken))
+      this.tokens.fail('Expected data type after precision modifier.');
+    const elementType = this.expressions.arrays.elementType(typeToken);
     if (elementType === undefined) this.tokens.fail('Invalid data type for the array.');
+    if (precision && shapeOf(elementType)?.scalar === 'bool')
+      this.tokens.fail('The precision modifier cannot be used on boolean types.');
     if (this.tokens.next().type !== 'TK_BRACKET_OPEN') this.tokens.fail("Expected a '['.");
     const written = this.expressions.arrays.size(false) ?? size;
-    if (elementType !== type || written !== size)
+    if (precision !== declared.precision || elementType !== declared.type || written !== size)
       this.tokens.fail(
-        `Cannot convert from '${typeName(elementType, written)}'' to '${typeName(type, size)}''.`
+        `Cannot convert from '${preciseName(precision, elementType, written)}'' to '${preciseName(declared.precision, declared.type, size)}''.`
       );
     const open = this.tokens.next();
     if (open.type === 'TK_CURLY_BRACKET_OPEN') this.tokens.fail("Expected a '('.");
@@ -177,3 +199,21 @@ class DeclarationParser {
     return { kind: 'array construct', type, arraySize: elements.length, elements, position: first.position };
   }
 }
+
+/** A declared type with the precision word before it, which an array's constructor must repeat. */
+interface PreciseType {
+  readonly type: string;
+  readonly precision: string | undefined;
+}
+
+/** The precision word `token` is, `lowp`, or nothing. */
+function precisionWord(token: Token): string | undefined {
+  return isPrecisionToken(token) ? keywordInstruction(token.type)!.id : undefined;
+}
+
+const isNonVoidType = (token: Token) =>
+  keywordInstruction(token.type)?.family === 'data type' && token.type !== 'TK_TYPE_VOID';
+
+/** `lowp vec3[1]`, as Godot's message names an array type. */
+const preciseName = (precision: string | undefined, type: string, size: number) =>
+  `${precision ? `${precision} ` : ''}${typeName(type, size)}`;

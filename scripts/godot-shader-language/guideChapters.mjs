@@ -337,7 +337,7 @@ const STATEMENTS_CHAPTER = {
     },
     {
       heading: 'Structs',
-      rows: (row) => /^(struct type|OP_STRUCT|NODE_TYPE_STRUCT)$/.test(row.id),
+      rows: (row) => /^(struct|struct type|OP_STRUCT|NODE_TYPE_STRUCT)$/.test(row.id),
       what: '`struct Pair { float x; vec2 y; };` declares a struct before the functions. `Pair(a, b)` constructs one from a value of each member, in order, and `p.x` reads or writes a member.',
       tsl: 'one `Var` per member, and one array per member for an array of structs',
     },
@@ -668,16 +668,55 @@ const SKY_CHAPTER = {
     "A shader of `shader_type sky` draws a 3D view's background. Godot links it into its sky template, `environment/sky.glsl`: the shader's `sky()` fills the template's code slot, each built-in reads as the template's GLSL for it, and each name of the shader takes Godot's `m_` id. The transpiler links the shader the same way, then transpiles both stages of the template to TSL on a triangle that covers the view. `writeSkyBindings` writes the template's uniforms from the camera, the fog and the directional lights, and `SKY_BINDINGS` names the line of Godot's C++ behind each one.",
   sections: [
     {
-      heading: 'The shader head',
-      rows: (row) => /^shader_type( sky)?$|^NODE_TYPE_SHADER$/.test(row.id),
-      what: '`shader_type sky;` opens the shader and names its type. Godot refuses a type it does not have, with the valid ones, and a head with no `;`, at the line of the type. The shader node holds the type, the structs and the functions.',
-      tsl: 'the sky template, both stages, with the shader linked into its slots',
-    },
-    {
       heading: '`COLOR`',
       rows: (row) => row.id === 'sky.sky.COLOR',
       what: "`COLOR` is the colour `sky()` writes, linear. Godot's sky template holds it in its local `color`, and writes it to the frame after the environment's brightness and fog.",
       tsl: "the template's local `color`",
+    },
+    {
+      heading: '`TIME`',
+      rows: (row) => row.id === 'sky.global.TIME',
+      what: "`TIME` is the shader time in seconds. Godot adds each frame's step to it before the frame draws, in a double, and wraps it at the project setting `rendering/limits/time/time_rollover_secs`, 3600 by default. `ShaderClock` keeps the same sum and wrap: `advance(step)` before each frame, then `writeSkyBindings({ time })`. In the previewer, `PlaybackShaderTime` moves it with the playback controls instead: play advances it, pause holds it, a scrub sets it to the playhead, and stop sets it to 0. A scene with no AnimationPlayer advances it every frame, as Godot does.",
+      tsl: "the template's uniform `params.time`, which `writeSkyBindings` writes as a float",
+    },
+  ],
+};
+
+const HEAD_CHAPTER = {
+  file: 'head.md',
+  title: 'The shader head and the processor functions',
+  intro:
+    "A shader opens with `shader_type`, then holds render modes, stencil modes, uniforms, varyings, constants, structs and functions in any order. The processor functions are the functions Godot calls itself: `vertex()`, `fragment()` and `light()` of `spatial` and `canvas_item`, `start()` and `process()` of `particles`, `sky()` and `fog()`. Each one links into a slot of the type's template. A text with no head is read as Godot reads a `canvas_item`, which is how the probes run. The parser keeps Godot's rules and messages for every form below, and a set of whole shaders checks them against Godot's verdicts.",
+  sections: [
+    {
+      heading: 'The shader type',
+      rows: (row) => /^shader_type( \w+)?$|^NODE_TYPE_SHADER$/.test(row.id),
+      what: "`shader_type spatial;` names the type: `spatial`, `canvas_item`, `particles`, `sky` or `fog`. Godot refuses a second head and a head with no `;`, at the line of the type. The type decides which processor functions, built-ins, stage functions, render modes and stencil modes the shader has. Godot's rendering server compiles no shader of a type it does not know, so it shows no message for one. The transpiler refuses it with the message of Godot's shader editor.",
+      tsl: 'the functions of the shader, which the template of the type links: the sky template now, and the others with their own slices',
+    },
+    {
+      heading: 'Processor functions',
+      rows: (row) => row.id === 'NODE_TYPE_FUNCTION',
+      what: 'A processor function takes no arguments and returns `void`, and Godot refuses it once it is defined twice. No call reaches it, and its name is no value. Godot refuses `return` anywhere in it. `discard` stands only in `fragment()` and `light()` of `spatial` and `canvas_item`, and in the other functions of those two types. `vertex()` may not reach a derivative function, a stage function or `discard`, in its own body or in a function it calls. A varying that `vertex()` writes before such a use lets the use pass, as in Godot. `particles` and `fog` refuse the derivatives in every function. A stage function such as `texture_sdf` or `emit_subparticle` takes its exact argument types, with no conversion of a constant.',
+      tsl: 'a TSL `Fn` for each function, which the template calls in its stage',
+    },
+    {
+      heading: 'Render modes',
+      rows: (row) => row.id === 'render_mode',
+      what: '`render_mode unshaded, cull_disabled;` lists modes of the shader type, and a shader may have more than one `render_mode` line. Godot finds a mode by the start of its name, so `unshaded_extra` reads as `unshaded`. Godot refuses a mode of another type, a mode given twice, and two values of one mode such as `blend_mix` and `blend_add`. Each mode is a row of its own, with the template that reads it and the issue that binds it.',
+      tsl: 'nothing in the functions: the template of the type reads the modes',
+    },
+    {
+      heading: 'Stencil modes',
+      rows: (row) => row.id === 'stencil_mode',
+      what: '`stencil_mode read, compare_less, 5;` lists the stencil modes of a `spatial` shader and one reference value, from 0 to 255. Godot refuses a second reference value, a value past 255, and a stencil mode in another type.',
+      tsl: 'nothing in the functions: the template of the type reads the modes',
+    },
+    {
+      heading: 'Global constants',
+      rows: (row) => row.id === 'const',
+      what: '`const float A = 1.5, B = A * 2.0;` outside a function declares constants that every function reads. Each value must be a constant expression, and Godot refuses a sampler, a missing value, a write, and the name of a built-in of the type. A global variable without `const` is refused. GLSL folds a global constant as it folds a local one, so the emitter writes each constant at the start of every function.',
+      tsl: 'a TSL `Var` at the start of each function, which starts at its value',
     },
   ],
 };
@@ -856,5 +895,6 @@ export const GUIDE_CHAPTERS = [
   PREPROCESSOR_CHAPTER,
   UNIFORMS_CHAPTER,
   TEXTURES_CHAPTER,
+  HEAD_CHAPTER,
   SKY_CHAPTER,
 ];

@@ -2,6 +2,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/corpus.mjs';
+import { HEAD_CASES } from '../../apps/textscene-three-godot-shaders/tests/heads/headCases.mjs';
 import { OPERATOR_CASES } from '../../apps/textscene-three-godot-shaders/tests/operators/operatorCases.mjs';
 import { PROBES } from '../../apps/textscene-three-godot-shaders/tests/probes/probes.mjs';
 import {
@@ -87,9 +88,10 @@ async function main() {
   const probes = [...PROBES, ...randomProbes, ...printed];
   const output = await runProbesInGodot(probes.filter((probe) => !probe.endsGodot));
   const reasons = await rejections(probes, output);
-  const [operatorRecord, corpusRecord] = await verdictRecords(
+  const [operatorRecord, corpusRecord, headRecord] = await verdictRecords(
     OPERATOR_CASES.map(({ id, godotText }) => ({ id, text: godotText })),
-    CORPUS
+    CORPUS,
+    HEAD_CASES
   );
   const materials = await materialRecord();
   const records = {
@@ -98,12 +100,13 @@ async function main() {
     operators: operatorRecord,
     corpus: corpusRecord,
     expressions: await expressionRecord(expressions),
+    heads: headRecord,
     materials: materials.record,
   };
   writeLiveAnswers(records);
   writeFileSync(MATERIAL_TEXTS_FILE, `${JSON.stringify(materials.texts)}\n`);
   const answersFile = renderAnswersFile(records);
-  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${expressions.length} expressions, ${printed.length - lowered.length} printed texts as parsed and ${lowered.length} as lowered, ${Object.keys(records.materials.cases).length} materials`;
+  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${HEAD_CASES.length} head cases, ${expressions.length} expressions, ${printed.length - lowered.length} printed texts as parsed and ${lowered.length} as lowered, ${Object.keys(records.materials.cases).length} materials`;
   const options = { tool: 'godot-probes', summary };
   const outputs = [[ANSWERS_FILE, answersFile]];
   if (process.argv.includes('--check')) checkGenerated(outputs, { ...options, command: 'pnpm godot:probes' });

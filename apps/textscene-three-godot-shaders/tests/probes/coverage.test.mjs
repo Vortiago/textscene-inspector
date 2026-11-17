@@ -3,15 +3,17 @@ import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shade
 import { isStaleEntry, recordEntry } from '../../../../scripts/godot-probes/record.mjs';
 import { SENTINEL_BITS } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { godotAnswers } from '../godotAnswers.mjs';
+import { ROW_PROOFS } from '../rowProofs.mjs';
 import { PROBES } from './probes.mjs';
 
 const ANSWERS = godotAnswers();
 const RECORD = ANSWERS.probes;
 
 /** A slice that transpiles rows lowers this, and a row opened again fails here. */
-const OPEN_ROWS_AT_MOST = 566;
+const OPEN_ROWS_AT_MOST = 395;
 
-const transpiledRows = new Set(PROBES.flatMap((probe) => probe.rows));
+const transpiledRows = new Set(ROW_PROOFS.flatMap((proof) => proof.rows));
+const probedRows = new Set(PROBES.flatMap((probe) => probe.rows));
 
 describe('the instruction table coverage', () => {
   it('names each probe once, as the record keys its answers by name', () => {
@@ -43,14 +45,14 @@ describe('the instruction table coverage', () => {
   });
 
   // Godot's GLSL that its driver refuses is the row's whole answer: no Godot shader draws it.
-  it.runIf(ANSWERS.live)('has Godot values, not only a front-end rejection, for every transpiled row', () => {
+  it.runIf(ANSWERS.live)('has Godot values, not only a front-end rejection, for every probed row', () => {
     const answered = new Set(
       PROBES.filter((probe) => {
         const entry = RECORD.probes[probe.name];
         return entry.results !== undefined || entry.rejected?.stage === 'GLSL';
       }).flatMap((probe) => probe.rows)
     );
-    expect([...transpiledRows].filter((row) => !answered.has(row))).toEqual([]);
+    expect([...probedRows].filter((row) => !answered.has(row))).toEqual([]);
   });
 
   it('comes from Godot 4.6.3', () => {

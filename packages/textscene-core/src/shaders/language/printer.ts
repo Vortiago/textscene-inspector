@@ -8,21 +8,49 @@ import type {
   DeclarationNode,
   Expression,
   FunctionNode,
+  GlobalEntry,
+  ShaderModeNode,
   ShaderNode,
   Statement,
   StructNode,
   UniformNode,
+  VaryingNode,
 } from './shaderTree.js';
 import { shapeOf } from './types.js';
 import { isCall, isEmpty, typeName } from './treeWalk.js';
 
-/** The text of `shader`: its structs, its uniforms, then its functions, each in order. */
+/** The text of `shader`: its head and modes, then its globals in the order of the text. */
 export function printShader(shader: ShaderNode): string {
+  const uniforms = printUniforms(shader.uniforms);
+  const printers: Record<GlobalEntry['kind'], (index: number) => string> = {
+    struct: (index) => printStruct(shader.structs[index]!),
+    uniform: (index) => uniforms[index]!,
+    varying: (index) => printVarying(shader.varyings[index]!),
+    constant: (index) => printDeclaration(shader.constants[index]!),
+    function: (index) => printFunction(shader.functions[index]!),
+  };
+  const globals = shader.order.map(({ kind, index }) => printers[kind](index));
+  return [...printHead(shader), ...globals].join('\n\n');
+}
+
+/** `shader_type`, then one line for the render modes and one for the stencil modes. */
+function printHead(shader: ShaderNode): string[] {
+  const names = (modes: readonly ShaderModeNode[]) => modes.map((mode) => mode.name);
+  const stencil = [
+    ...names(shader.stencilModes),
+    ...(shader.stencilReference !== undefined ? [String(shader.stencilReference)] : []),
+  ];
   return [
-    ...shader.structs.map(printStruct),
-    ...printUniforms(shader.uniforms),
-    ...shader.functions.map(printFunction),
-  ].join('\n\n');
+    ...(shader.shaderType ? [`shader_type ${shader.shaderType};`] : []),
+    ...(shader.renderModes.length > 0 ? [`render_mode ${names(shader.renderModes).join(', ')};`] : []),
+    ...(stencil.length > 0 ? [`stencil_mode ${stencil.join(', ')};`] : []),
+  ];
+}
+
+/** `varying flat vec2 a[2];`. */
+function printVarying(varying: VaryingNode): string {
+  const interpolation = varying.interpolation ? `${varying.interpolation} ` : '';
+  return `varying ${interpolation}${varying.type} ${typeName(varying.name, varying.arraySize ?? 0)};`;
 }
 
 /** Each uniform, after the `group_uniforms` line that opens its group where the group changes. */

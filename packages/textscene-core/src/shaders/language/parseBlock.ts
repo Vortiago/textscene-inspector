@@ -1,13 +1,14 @@
 import { godotIntegerConstant } from './godotNumber.js';
-import { keywordInstruction } from './instructions.js';
+import { builtInInstruction, keywordInstruction } from './instructions.js';
 import type { ExpressionParser } from './parseExpression.js';
 import { arraySizeOf, typeName } from './treeWalk.js';
 import { parseDeclaration } from './parseDeclaration.js';
 import { type BlockKind, BlockScope, type GlobalNames } from './scope.js';
 import type { Argument, BlockNode, ControlFlowNode, Expression, Flow, Statement } from './shaderTree.js';
 import type { SourcePosition } from './shadingLanguageError.js';
+import type { StageRules } from './stageRules.js';
 import type { TokenCursor } from './tokenCursor.js';
-import type { Token } from './tokenizer.js';
+import { isPrecisionToken, type Token } from './tokenizer.js';
 import { isEmpty } from './treeWalk.js';
 
 /** What a block may hold: `break` and `continue` allowed or not, and one statement or many. */
@@ -33,7 +34,8 @@ export class StatementParser {
     private readonly expressions: ExpressionParser,
     private readonly holder: ScopeHolder,
     private readonly isStruct: (name: string) => boolean,
-    private readonly returnType: () => { readonly returnType: string; readonly returnArraySize: number }
+    private readonly returnType: () => { readonly returnType: string; readonly returnArraySize: number },
+    private readonly stages: StageRules
   ) {}
 
   /** A function's body after its `{`, in a scope that sees its arguments and the shader's globals. */
@@ -88,7 +90,10 @@ export class StatementParser {
   private statement(token: Token, mark: number, rules: BlockRules, statements: Statement[]): Outcome {
     if (this.startsDeclaration(token)) {
       statements.push(
-        parseDeclaration(token, this.tokens, this.expressions, this.holder.current, this.isStruct)
+        parseDeclaration(token, this.tokens, this.expressions, this.holder.current, {
+          isStruct: this.isStruct,
+          isTaken: (name) => builtInInstruction(name) !== undefined,
+        })
       );
       return 'goes on';
     }
@@ -116,6 +121,7 @@ export class StatementParser {
         statements.push(this.returnStatement(token));
         return this.endsCase();
       case 'TK_CF_DISCARD':
+        this.stages.discard();
         statements.push(this.simpleFlow(token, 'FLOW_OP_DISCARD', 'discard'));
         return this.refuseInForInit();
       case 'TK_CF_BREAK':
@@ -134,7 +140,7 @@ export class StatementParser {
 
   /** `const`, a precision, a value type or a struct's name starts a declaration. */
   private startsDeclaration(token: Token): boolean {
-    if (token.type === 'TK_CONST' || token.type.startsWith('TK_PRECISION_')) return true;
+    if (token.type === 'TK_CONST' || isPrecisionToken(token)) return true;
     if (token.type === 'TK_IDENTIFIER') return this.isStruct(token.text!);
     return keywordInstruction(token.type)?.family === 'data type' && token.type !== 'TK_TYPE_VOID';
   }
@@ -317,6 +323,7 @@ export class StatementParser {
 
   /** `return`, with an expression of the function's type (`shader_language.cpp:8852`). */
   private returnStatement(token: Token): ControlFlowNode {
+    this.stages.checkReturn();
     const { returnType, returnArraySize } = this.returnType();
     const returned = typeName(returnType, returnArraySize);
     const mark = this.tokens.mark();

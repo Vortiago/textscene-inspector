@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { returnedValue as resultOf } from './parsedTree.testkit.js';
 import { parse } from './parse.js';
+import { checkTranspiled } from './transpiledRows.js';
 import type { Expression, Statement } from './shaderTree.js';
 import { tokenize } from './tokenizer.js';
 
@@ -302,10 +303,10 @@ describe('parse: whole arrays', () => {
 });
 
 describe('parse: what the transpiler does not read yet', () => {
-  it.each([['float f() { return TIME; }', "'TIME' is not transpiled yet (#1794)"]])(
+  it.each([['float f() { return TIME; }', "'canvas_item.global.TIME' is not transpiled yet (#686)"]])(
     'names the issue that owns %s',
     (source, message) => {
-      expect(refusal(source)).toThrow(message);
+      expect(() => checkTranspiled(parse(tokenize(source)))).toThrow(message);
     }
   );
 });

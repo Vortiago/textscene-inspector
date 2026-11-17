@@ -21,6 +21,13 @@ export type Identifier =
       readonly isConst: boolean;
     }
   | { readonly kind: 'function' }
+  | ({ readonly kind: 'constant' } & LocalVariable)
+  | {
+      readonly kind: 'varying';
+      readonly type: ValueType;
+      readonly arraySize: number;
+      readonly isConst: false;
+    }
   | {
       readonly kind: 'uniform';
       readonly type: ValueType;

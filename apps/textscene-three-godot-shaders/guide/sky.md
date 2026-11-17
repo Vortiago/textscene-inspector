@@ -180,20 +180,86 @@ void sky() {
 | --- | --- |
 | <img src="showcase/sky-camera-wide-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-camera-wide-three.png" width="256" alt="Transpilation"> |
 
-## The shader head
+## Showcase `sky-time-zero`
 
-`shader_type sky;` opens the shader and names its type. Godot refuses a type it does not have, with the valid ones, and a head with no `;`, at the line of the type. The shader node holds the type, the structs and the functions.
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
 
-The transpiler emits `the sky template, both stages, with the shader linked into its slots`. Rows: `shader_type`, `NODE_TYPE_SHADER`, `shader_type sky`. Godot source: `servers/rendering/shader_language.cpp:340`.
+```glsl
+shader_type sky;
 
-Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+void sky() {
+	COLOR = vec3(TIME * 0.5, fract(TIME * 4.0), 0.25);
+}
+```
 
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-time-zero-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-time-zero-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-time-fraction`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(TIME * 0.5, fract(TIME * 4.0), 0.25);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-time-fraction-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-time-fraction-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-time-rolled-over`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(TIME * 0.5, fract(TIME * 4.0), 0.25);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-time-rolled-over-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-time-rolled-over-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-time-cycle`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	vec3 phase = vec3(0.0, 2.0, 4.0);
+	COLOR = 0.5 + 0.5 * cos(TIME * vec3(1.0, 1.3, 1.7) * 2.0 + phase);
+	COLOR *= 0.75 + 0.25 * step(0.5, fract(TIME));
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-time-cycle-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-time-cycle-three.png" width="256" alt="Transpilation"> |
 
 ## `COLOR`
 
 `COLOR` is the colour `sky()` writes, linear. Godot's sky template holds it in its local `color`, and writes it to the frame after the environment's brightness and fog.
 
 The transpiler emits the template's local `color`. Rows: `sky.sky.COLOR`. Godot source: `servers/rendering/shader_types.cpp:486`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `TIME`
+
+`TIME` is the shader time in seconds. Godot adds each frame's step to it before the frame draws, in a double, and wraps it at the project setting `rendering/limits/time/time_rollover_secs`, 3600 by default. `ShaderClock` keeps the same sum and wrap: `advance(step)` before each frame, then `writeSkyBindings({ time })`. In the previewer, `PlaybackShaderTime` moves it with the playback controls instead: play advances it, pause holds it, a scrub sets it to the playhead, and stop sets it to 0. A scene with no AnimationPlayer advances it every frame, as Godot does.
+
+The transpiler emits the template's uniform `params.time`, which `writeSkyBindings` writes as a float. Rows: `sky.global.TIME`. Godot source: `servers/rendering/shader_types.cpp:456`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

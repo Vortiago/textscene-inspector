@@ -44,12 +44,13 @@ export function canonicalAnswers({ probes, random, ...verdicts }) {
 }
 
 /** Each family's answers, `{ id: answer }`: probes and random by name, the other families by case id. */
-const familiesOf = ({ probes, random, operators, corpus, expressions, materials }) => ({
+const familiesOf = ({ probes, random, operators, corpus, expressions, heads, materials }) => ({
   probes: probes.probes,
   random: random.probes,
   operators: operators.cases,
   corpus: corpus.cases,
   expressions: expressions.cases,
+  heads: heads.cases,
   materials: materials.cases,
 });
 
