@@ -76,6 +76,7 @@ export function assignmentRefusal(target: Expression): string | undefined {
       if (target.hasDuplicates) return 'Swizzling assignment contains duplicates.';
       return assignmentRefusal(target.owner);
     case 'variable':
+      if (target.isUniform) return 'Assignment to uniform.';
       return target.isConst ? 'Constants cannot be modified.' : undefined;
     case 'array element':
       return assignmentRefusal(target.array);

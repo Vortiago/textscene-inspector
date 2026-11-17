@@ -99,7 +99,7 @@ export function owningIssue(row) {
     case 'uniform':
     case 'uniform hint':
     case 'sampler setting':
-      return '#1829';
+      return uniformOwner(row);
     case 'shader head':
       return /^(uniform|group_uniforms)$/.test(row.id) ? '#1829' : '#1794';
     case 'built-in':
@@ -113,6 +113,12 @@ export function owningIssue(row) {
     default:
       throw new Error(`expected a family with an owning issue, got ${row.family}`);
   }
+}
+
+/** Instance uniforms bind from a node's parameters, global ones from the project: each has an issue. */
+function uniformOwner(row) {
+  if (/^(instance|instance_index)$/.test(row.id)) return '#1792';
+  return row.id === 'global' ? '#1183' : '#1829';
 }
 
 /** Samplers to uniforms, structs to statements, `void` to functions, value types to this slice. */

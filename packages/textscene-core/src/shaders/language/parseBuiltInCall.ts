@@ -51,7 +51,7 @@ function outRefusal(name: string, index: number, arg: Expression): string | unde
 function isConstantPlace(place: Expression): boolean {
   switch (place.kind) {
     case 'variable':
-      return place.isConst ?? false;
+      return Boolean(place.isConst || place.isUniform);
     case 'member':
     case 'field':
       return isConstantPlace(place.owner);

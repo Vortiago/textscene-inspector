@@ -12,7 +12,8 @@ import type {
 import { isCall, withSubExpressions } from '../language/treeWalk.js';
 
 /** `m_` and the name, with each `__` as `_dus_`: GLSL reserves a double underscore. */
-const godotId = (name: string): string => `m_${name.replaceAll('__', '_dus_')}`.replaceAll('__', '_dus_');
+export const godotId = (name: string): string =>
+  `m_${name.replaceAll('__', '_dus_')}`.replaceAll('__', '_dus_');
 
 /** The trees of a material's structs and functions with Godot's ids. */
 export class GodotIds {

@@ -40,19 +40,25 @@ export function probeRecord({ godot, adapter, pixels, preprocessed }, probes, re
   return { godot, adapter, probes: entries };
 }
 
+/** The text of a probe and what its material sets: an include, a value or an HDR 2D viewport. */
 function probeText(probe) {
-  return probe.includes === undefined
-    ? { source: probe.source }
-    : { source: probe.source, includes: probe.includes };
+  return {
+    source: probe.source,
+    ...(probe.includes === undefined ? {} : { includes: probe.includes }),
+    ...(probe.materialValues === undefined ? {} : { materialValues: probe.materialValues }),
+    ...(probe.hdr2d ? { hdr2d: true } : {}),
+  };
 }
 
 /** Whether `entry` holds another source or other inputs than `probe` has now. */
 export function isStaleEntry(entry, probe) {
   const inputs = parameterBits(probe).map((bits) => bits.map(hex));
-  const { source, includes } = probeText(probe);
+  const { source, includes, materialValues, hdr2d } = probeText(probe);
   return (
     entry.source !== source ||
     JSON.stringify(entry.includes) !== JSON.stringify(includes) ||
+    JSON.stringify(entry.materialValues) !== JSON.stringify(materialValues) ||
+    entry.hdr2d !== hdr2d ||
     JSON.stringify(entry.inputs) !== JSON.stringify(inputs)
   );
 }

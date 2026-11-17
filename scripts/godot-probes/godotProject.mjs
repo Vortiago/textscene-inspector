@@ -21,6 +21,8 @@ function probeData(probes) {
     width: probeWidth(probe),
     shader: `res://probe_${index}.gdshader`,
     recordsPreprocessed: probe.recordsPreprocessed === true,
+    materialValues: probe.materialValues ?? {},
+    hdr2d: probe.hdr2d === true,
     // GDScript's PackedInt32Array holds the bits as signed integers.
     parameters: parameterBits(probe).map((bits) => bits.map((value) => value | 0)),
   }));
@@ -62,6 +64,7 @@ func _ready() -> void:
 		viewport.size = Vector2i(int(probe.width), 1)
 		viewport.transparent_bg = true
 		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		viewport.use_hdr_2d = probe.hdr2d
 		add_child(viewport)
 		var rect := ColorRect.new()
 		rect.size = Vector2(probe.width, 1)
@@ -69,6 +72,14 @@ func _ready() -> void:
 		material.shader = load(probe.shader)
 		for index in probe.parameters.size():
 			material.set_shader_parameter("p%d" % index, PackedInt32Array(probe.parameters[index]))
+		for name in probe.materialValues:
+			var value = str_to_var(probe.materialValues[name])
+			# str_to_var gives null for text it cannot read, and the shader would read a silent zero.
+			if value == null:
+				push_error("probe %s: str_to_var cannot read %s" % [probe.name, probe.materialValues[name]])
+				get_tree().quit(1)
+				return
+			material.set_shader_parameter(name, value)
 		rect.material = material
 		viewport.add_child(rect)
 		viewports.append(viewport)
@@ -82,9 +93,20 @@ func _ready() -> void:
 		print("${PREPROCESSED_PREFIX}", name, " ", JSON.stringify(preprocessed[name]))
 	for index in data.size():
 		var image: Image = viewports[index].get_texture().get_image()
-		image.convert(Image.FORMAT_RGBA8)
-		print("${LINE_PREFIX}", data[index].name, " ", image.get_data().hex_encode())
+		print("${LINE_PREFIX}", data[index].name, " ", bytes_of(image).hex_encode())
 	get_tree().quit()
+
+# An HDR 2D viewport holds half floats, which Image.convert truncates: k / 255 comes back as k - 1.
+func bytes_of(image: Image) -> PackedByteArray:
+	if image.get_format() == Image.FORMAT_RGBA8:
+		return image.get_data()
+	var bytes := PackedByteArray()
+	for y in image.get_height():
+		for x in image.get_width():
+			var pixel := image.get_pixel(x, y)
+			for channel in [pixel.r, pixel.g, pixel.b, pixel.a]:
+				bytes.append(roundi(channel * 255.0))
+	return bytes
 `;
 
 /** A pixel's four bytes are little-endian, as the shader wrote them. */

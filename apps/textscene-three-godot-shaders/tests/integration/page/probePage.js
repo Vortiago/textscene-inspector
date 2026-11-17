@@ -28,6 +28,7 @@ import {
 import {
   installNodesHandler,
   ShadingLanguageError,
+  textToVariant,
   transpileShadingLanguage,
 } from '@textscene/three-godot-shaders';
 import { probeShaderOptions } from './probeIncludes.mjs';
@@ -128,9 +129,12 @@ function colourOf(bits) {
 /** `isRefusal` holds only for the transpiler's refusal: a GL refusal is a fault of the transpilation. */
 function runProbe(spec) {
   try {
-    const probe = transpileShadingLanguage(spec.source, probeShaderOptions(spec.includes)).functions.get(
-      'probe'
-    );
+    // Godot's harness draws a canvas_item, which converts a source colour only in an HDR 2D viewport.
+    const options = { ...probeShaderOptions(spec.includes), useLinearColor: spec.hdr2d };
+    const shader = transpileShadingLanguage(spec.source, options);
+    for (const [name, text] of Object.entries(spec.materialValues))
+      shader.parameters.get(name).set(textToVariant(text));
+    const probe = shader.functions.get('probe');
     if (!probe) return { error: 'the transpilation has no function probe', isRefusal: false };
     return { bits: resultBits(probe, spec) };
   } catch (error) {

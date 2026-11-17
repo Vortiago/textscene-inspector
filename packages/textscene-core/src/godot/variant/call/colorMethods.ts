@@ -1,4 +1,4 @@
-import { namedColor } from '../../math/color.js';
+import { linearToSrgb, namedColor, srgbToLinear } from '../../math/color.js';
 import { clamp, lerpf, round } from '../../math/math.js';
 import { okhslToSrgb } from '../../math/okHsl.js';
 import { isEqualApproxf } from '../../math/realMath.js';
@@ -131,17 +131,6 @@ function blend(under: ColorValue, over: ColorValue): ColorValue {
   return { r: mix(under.r, over.r), g: mix(under.g, over.g), b: mix(under.b, over.b), a };
 }
 
-const SRGB_KNEE = f(0.04045);
-const LINEAR_SLOPE = f(1 / f(12.92));
-const LINEAR_KNEE = f(0.0031308);
-const SRGB_EXPONENT = f(1 / f(2.4));
-
-// color.h:194: the shifted channel is a double, narrowed to float before powf.
-const toLinear = (c: number) =>
-  c < SRGB_KNEE ? f(c * LINEAR_SLOPE) : f(Math.pow(f((c + 0.055) * (1 / 1.055)), f(2.4)));
-const toSrgb = (c: number) =>
-  c < LINEAR_KNEE ? f(f(12.92) * c) : f(1.055 * f(Math.pow(c, SRGB_EXPONENT)) - 0.055);
-
 const eachRgb = (c: ColorValue, map: (channel: number) => number): Variant =>
   color(map(c.r), map(c.g), map(c.b), c.a);
 
@@ -174,8 +163,8 @@ export const COLOR_METHODS: Readonly<Record<string, MethodPort>> = {
   get_luminance: port([], (c) =>
     variant('FLOAT', f(f(f(f(0.2126) * c.r) + f(f(0.7152) * c.g)) + f(f(0.0722) * c.b)))
   ),
-  srgb_to_linear: port([], (c) => eachRgb(c, toLinear)),
-  linear_to_srgb: port([], (c) => eachRgb(c, toSrgb)),
+  srgb_to_linear: port([], (c) => eachRgb(c, srgbToLinear)),
+  linear_to_srgb: port([], (c) => eachRgb(c, linearToSrgb)),
   is_equal_approx: port(['COLOR'], (c, args) => {
     const other = colorAt(args, 0);
     return variant(

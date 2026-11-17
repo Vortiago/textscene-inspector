@@ -26,6 +26,8 @@ export interface VariableNode {
   readonly isConst?: boolean;
   /** The row of a built-in of the shader type, `sky.sky.COLOR`, which the link step renames. */
   readonly builtIn?: string;
+  /** A uniform: Godot refuses a write to it, and the material gives its value. */
+  readonly isUniform?: boolean;
   readonly position: SourcePosition;
 }
 
@@ -230,6 +232,59 @@ export interface FunctionNode {
   readonly position: SourcePosition;
 }
 
+/** Godot's `ShaderNode::Uniform::Hint`, by the name `get_uniform_hint_name` gives it, or `none`. */
+export type UniformHint =
+  | 'none'
+  | 'hint_range'
+  | 'hint_enum'
+  | 'source_color'
+  | 'color_conversion_disabled'
+  | 'hint_normal'
+  | 'hint_roughness_normal'
+  | 'hint_roughness_r'
+  | 'hint_roughness_g'
+  | 'hint_roughness_b'
+  | 'hint_roughness_a'
+  | 'hint_roughness_gray'
+  | 'hint_default_black'
+  | 'hint_default_white'
+  | 'hint_default_transparent'
+  | 'hint_anisotropy'
+  | 'hint_screen_texture'
+  | 'hint_normal_roughness_texture'
+  | 'hint_depth_texture';
+
+/** Where a uniform's value lives: the material, each instance, or the project's global uniforms. */
+export type UniformScope = 'local' | 'instance' | 'global';
+
+/** `ShaderNode::Uniform` (`shader_language.h:660`), with the rows of the words that declare it. */
+export interface UniformNode {
+  readonly kind: 'uniform';
+  readonly name: string;
+  readonly type: ValueType;
+  readonly arraySize?: number;
+  readonly scope: UniformScope;
+  readonly hint: UniformHint;
+  /** `source_color` on a sampler, which keeps the hint free for a texture hint. */
+  readonly usesColor: boolean;
+  /** The sampler setting `filter_*`, or nothing for the default. */
+  readonly filter?: string;
+  /** The sampler setting `repeat_*`, or nothing for the default. */
+  readonly repeat?: string;
+  /** `hint_range(min, max, step)`, 32-bit floats as Godot keeps them. */
+  readonly range: readonly [number, number, number];
+  readonly enumNames: readonly string[];
+  /** `instance_index(n)`, or the next free index of an `instance` uniform. */
+  readonly instanceIndex?: number;
+  readonly group: string;
+  readonly subgroup: string;
+  /** The lanes of `= constant`, converted to the type, or nothing for no default. */
+  readonly defaultValue?: readonly Scalar[];
+  /** The rows of `global`, `instance`, `uniform` and each hint, filter and repeat word. */
+  readonly rows: readonly InstructionRow[];
+  readonly position: SourcePosition;
+}
+
 /** NODE_TYPE_SHADER: its structs and functions, each in the order of the text. */
 export interface ShaderNode {
   readonly kind: 'shader';
@@ -238,5 +293,8 @@ export interface ShaderNode {
   /** Where the `shader_type` head is, when the text has one. */
   readonly headPosition?: SourcePosition;
   readonly structs: readonly StructNode[];
+  readonly uniforms: readonly UniformNode[];
+  /** Each `group_uniforms` statement, which only names the inspector's group of the uniforms after it. */
+  readonly uniformGroups: readonly { readonly position: SourcePosition }[];
   readonly functions: readonly FunctionNode[];
 }

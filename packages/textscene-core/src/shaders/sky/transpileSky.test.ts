@@ -34,6 +34,16 @@ describe('transpileSky', () => {
     expect(transpileSky(DEFAULT_SKY).uniforms.has('params.orientation')).toBe(true);
   });
 
+  it('reads a uniform of the material from its slot of bits', () => {
+    const sky = transpileSky(
+      'shader_type sky;\nuniform vec3 tint : source_color;\nvoid sky() { COLOR = tint; }'
+    );
+    expect([...sky.parameters.keys()]).toEqual(['tint']);
+    expect(generatedFragmentShader((sky.mesh.material as NodeMaterial).fragmentNode!)).toMatch(
+      /uvec4 \w+\[1\];/
+    );
+  });
+
   it('gives equal GLSL for two runs of one text', () => {
     const fragmentOf = () =>
       generatedFragmentShader((transpileSky(DEFAULT_SKY).mesh.material as NodeMaterial).fragmentNode!);

@@ -75,16 +75,16 @@ smooth	qualifier	servers/rendering/shader_language.cpp:325	#1794	TK_INTERPOLATIO
 lowp	qualifier	servers/rendering/shader_language.cpp:329	#1823	TK_PRECISION_LOW			lowered: dropped: every float is 32-bit	lowered: dropped: every float is 32-bit
 mediump	qualifier	servers/rendering/shader_language.cpp:330	#1823	TK_PRECISION_MID			lowered: dropped: every float is 32-bit	lowered: dropped: every float is 32-bit
 highp	qualifier	servers/rendering/shader_language.cpp:331	#1823	TK_PRECISION_HIGH			lowered: dropped: every float is 32-bit	lowered: dropped: every float is 32-bit
-uniform	shader head	servers/rendering/shader_language.cpp:335	#1829	TK_UNIFORM				
-group_uniforms	shader head	servers/rendering/shader_language.cpp:336	#1829	TK_UNIFORM_GROUP				
+uniform	shader head	servers/rendering/shader_language.cpp:335	#1829	TK_UNIFORM			native	native
+group_uniforms	shader head	servers/rendering/shader_language.cpp:336	#1829	TK_UNIFORM_GROUP			native	native
 varying	shader head	servers/rendering/shader_language.cpp:337	#1794	TK_VARYING				
 const	shader head	servers/rendering/shader_language.cpp:338	#1794	TK_CONST				
 struct	shader head	servers/rendering/shader_language.cpp:339	#1794	TK_STRUCT				
 shader_type	shader head	servers/rendering/shader_language.cpp:340	#1794	TK_SHADER_TYPE			native	native
 render_mode	shader head	servers/rendering/shader_language.cpp:341	#1794	TK_RENDER_MODE				
 stencil_mode	shader head	servers/rendering/shader_language.cpp:342	#1794	TK_STENCIL_MODE				
-instance	uniform	servers/rendering/shader_language.cpp:346	#1829	TK_INSTANCE				
-global	uniform	servers/rendering/shader_language.cpp:347	#1829	TK_GLOBAL				
+instance	uniform	servers/rendering/shader_language.cpp:346	#1792	TK_INSTANCE				
+global	uniform	servers/rendering/shader_language.cpp:347	#1183	TK_GLOBAL				
 if	statement keyword	servers/rendering/shader_language.cpp:351	#1824	TK_CF_IF			native	native
 else	statement keyword	servers/rendering/shader_language.cpp:352	#1824	TK_CF_ELSE			native	native
 for	statement keyword	servers/rendering/shader_language.cpp:353	#1824	TK_CF_FOR			native	native
@@ -100,11 +100,11 @@ discard	statement keyword	servers/rendering/shader_language.cpp:362	#1824	TK_CF_
 in	qualifier	servers/rendering/shader_language.cpp:366	#1825	TK_ARG_IN			native	native
 out	qualifier	servers/rendering/shader_language.cpp:367	#1825	TK_ARG_OUT			native	native
 inout	qualifier	servers/rendering/shader_language.cpp:368	#1825	TK_ARG_INOUT			native	native
-source_color	uniform hint	servers/rendering/shader_language.cpp:372	#1829	TK_HINT_SOURCE_COLOR				
-color_conversion_disabled	uniform hint	servers/rendering/shader_language.cpp:373	#1829	TK_HINT_COLOR_CONVERSION_DISABLED				
-hint_range	uniform hint	servers/rendering/shader_language.cpp:374	#1829	TK_HINT_RANGE				
-hint_enum	uniform hint	servers/rendering/shader_language.cpp:375	#1829	TK_HINT_ENUM				
-instance_index	uniform hint	servers/rendering/shader_language.cpp:376	#1829	TK_HINT_INSTANCE_INDEX				
+source_color	uniform hint	servers/rendering/shader_language.cpp:372	#1829	TK_HINT_SOURCE_COLOR			native	native
+color_conversion_disabled	uniform hint	servers/rendering/shader_language.cpp:373	#1829	TK_HINT_COLOR_CONVERSION_DISABLED			native	native
+hint_range	uniform hint	servers/rendering/shader_language.cpp:374	#1829	TK_HINT_RANGE			native	native
+hint_enum	uniform hint	servers/rendering/shader_language.cpp:375	#1829	TK_HINT_ENUM			native	native
+instance_index	uniform hint	servers/rendering/shader_language.cpp:376	#1792	TK_HINT_INSTANCE_INDEX				
 hint_normal	uniform hint	servers/rendering/shader_language.cpp:380	#1829	TK_HINT_NORMAL_TEXTURE				
 hint_default_white	uniform hint	servers/rendering/shader_language.cpp:381	#1829	TK_HINT_DEFAULT_WHITE_TEXTURE				
 hint_default_black	uniform hint	servers/rendering/shader_language.cpp:382	#1829	TK_HINT_DEFAULT_BLACK_TEXTURE				

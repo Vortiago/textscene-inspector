@@ -20,7 +20,7 @@ import { arraySizeOf, isCall, isEmpty, PLACE_KINDS, typeName } from './treeWalk.
 /** The first fact `shader` breaks, or nothing when it holds them all. */
 export function treeFault(shader: ShaderNode): string | undefined {
   for (const [index, definition] of shader.functions.entries()) {
-    const fault = new FunctionCheck(shader.structs, shader.functions.slice(0, index), definition).fault();
+    const fault = new FunctionCheck(shader, index).fault();
     if (fault !== undefined) return `${definition.name}: ${fault}`;
   }
   return undefined;
@@ -57,14 +57,28 @@ class FunctionCheck {
   /** The blocks from the body in to the current one, each with the names it declares so far. */
   private readonly scopes: Map<string, Declared>[] = [];
 
+  private readonly structs: readonly StructNode[];
+  /** The functions declared before this one, which alone it may call. */
+  private readonly callable: readonly FunctionNode[];
+  private readonly definition: FunctionNode;
+
   constructor(
-    private readonly structs: readonly StructNode[],
-    /** The functions declared before this one, which alone it may call. */
-    private readonly callable: readonly FunctionNode[],
-    private readonly definition: FunctionNode
-  ) {}
+    private readonly shader: ShaderNode,
+    index: number
+  ) {
+    this.structs = shader.structs;
+    this.callable = shader.functions.slice(0, index);
+    this.definition = shader.functions[index]!;
+  }
 
   fault(): string | undefined {
+    const uniforms = new Map(
+      this.shader.uniforms.map((uniform) => [
+        uniform.name,
+        { type: uniform.type, arraySize: uniform.arraySize ?? 0 },
+      ])
+    );
+    this.scopes.push(uniforms);
     const args = new Map(
       this.definition.arguments.map((argument) => [
         argument.name,

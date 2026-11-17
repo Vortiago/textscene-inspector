@@ -160,7 +160,7 @@ function argumentRefusal(argument: Argument, arg: Expression): string | undefine
 function isConstantPlace(arg: Expression): boolean {
   switch (arg.kind) {
     case 'variable':
-      return arg.isConst ?? false;
+      return Boolean(arg.isConst || arg.isUniform);
     case 'array element':
       return isConstantPlace(arg.array);
     case 'member':

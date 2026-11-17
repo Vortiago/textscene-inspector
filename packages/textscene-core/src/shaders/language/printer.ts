@@ -11,13 +11,57 @@ import type {
   ShaderNode,
   Statement,
   StructNode,
+  UniformNode,
 } from './shaderTree.js';
 import { shapeOf } from './types.js';
 import { isCall, isEmpty, typeName } from './treeWalk.js';
 
-/** The text of `shader`: its structs, then its functions, in order. */
+/** The text of `shader`: its structs, its uniforms, then its functions, each in order. */
 export function printShader(shader: ShaderNode): string {
-  return [...shader.structs.map(printStruct), ...shader.functions.map(printFunction)].join('\n\n');
+  return [
+    ...shader.structs.map(printStruct),
+    ...printUniforms(shader.uniforms),
+    ...shader.functions.map(printFunction),
+  ].join('\n\n');
+}
+
+/** Each uniform, after the `group_uniforms` line that opens its group where the group changes. */
+function printUniforms(uniforms: readonly UniformNode[]): string[] {
+  let group = '';
+  return uniforms.map((uniform) => {
+    const name = uniform.subgroup === '' ? uniform.group : `${uniform.group}.${uniform.subgroup}`;
+    const opens = name === group ? '' : `group_uniforms${name === '' ? '' : ` ${name}`};\n`;
+    group = name;
+    return `${opens}${printUniform(uniform)}`;
+  });
+}
+
+/** `instance uniform int a : hint_range(0.0, 4.0, 1.0) = 2;`, its words in the order of the text. */
+function printUniform(uniform: UniformNode): string {
+  const words = uniform.rows
+    .slice(uniform.scope === 'local' ? 1 : 2)
+    .map((row) => printHint(row.id, uniform));
+  const hints = words.length === 0 ? '' : ` : ${words.join(', ')}`;
+  const { defaultValue } = uniform;
+  const value =
+    defaultValue === undefined
+      ? ''
+      : ` = ${printConstant({ kind: 'constant', type: uniform.type, values: defaultValue, position: uniform.position })}`;
+  const scope = uniform.scope === 'local' ? '' : `${uniform.scope} `;
+  return `${scope}uniform ${uniform.type} ${typeName(uniform.name, uniform.arraySize ?? 0)}${hints}${value};`;
+}
+
+function printHint(word: string, uniform: UniformNode): string {
+  switch (word) {
+    case 'hint_range':
+      return `hint_range(${uniform.range.map((bound) => printScalar('float', bound)).join(', ')})`;
+    case 'hint_enum':
+      return `hint_enum(${uniform.enumNames.map((name) => `"${name}"`).join(', ')})`;
+    case 'instance_index':
+      return `instance_index(${uniform.instanceIndex!})`;
+    default:
+      return word;
+  }
 }
 
 function printStruct(struct: StructNode): string {

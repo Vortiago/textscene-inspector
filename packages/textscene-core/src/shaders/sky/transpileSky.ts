@@ -11,6 +11,8 @@ import { MODE_TABLES } from '../template/modeTables.generated.js';
 import type { StageName } from '../template/stages.js';
 import type { TemplateStageNode } from '../template/templateTree.js';
 import { TemplateUniforms } from '../template/templateUniforms.js';
+import { godotId } from '../template/godotIds.js';
+import { bindParameters, type TranspiledUniform } from '../uniforms/transpiledUniform.js';
 import { TRANSPILER_VERSION, TreeMemo } from '../template/treeMemo.js';
 
 const SKY_TEMPLATE = 'environment/sky.glsl';
@@ -28,6 +30,8 @@ export interface TranspiledSky {
   readonly uniforms: ReadonlyMap<string, UniformNode<unknown>>;
   /** The template's textures, by name: `radiance`, `volumetric_fog_texture`. */
   readonly textures: ReadonlyMap<string, TextureNode>;
+  /** Each uniform of the material by name, which takes `set_shader_parameter`'s value. */
+  readonly parameters: ReadonlyMap<string, TranspiledUniform>;
 }
 
 /** The sky of `source`, a shader of `shader_type sky`, preprocessed with `options`. */
@@ -62,10 +66,14 @@ export function transpileParsedSky({ code, tree }: ParsedShader, file: string): 
       }
     );
   const uniforms = new TemplateUniforms();
+  // A sky converts a source colour to linear (`sky.cpp:193`).
+  const parameters = bindParameters(tree, true);
+  const parameterValues = [...parameters].map(([name, binding]) => [godotId(name), binding.value] as const);
   const uvInterp = varyingProperty('vec2', 'uv_interp') as unknown as Node;
   const vertex = emitTemplateStage(
     linked('vertex'),
     new Map([
+      ...parameterValues,
       ['gl_VertexIndex', int(vertexIndex) as unknown as Node],
       ['uv_interp', uvInterp],
     ]),
@@ -75,6 +83,7 @@ export function transpileParsedSky({ code, tree }: ParsedShader, file: string): 
   const fragment = emitTemplateStage(
     linked('fragment'),
     new Map([
+      ...parameterValues,
       ['uv_interp', uvInterp],
       ['gl_FragCoord', vec4(screenCoordinate, 0, 1) as unknown as Node],
     ]),
@@ -85,6 +94,7 @@ export function transpileParsedSky({ code, tree }: ParsedShader, file: string): 
     mesh: skyMesh(vertex.result, fragment.result),
     uniforms: uniforms.byName,
     textures: fragment.textures,
+    parameters,
   };
 }
 
