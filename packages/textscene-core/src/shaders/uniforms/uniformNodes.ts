@@ -65,13 +65,38 @@ class BitsArrayNode extends UniformArrayNode<'uvec4'> {
   }
 }
 
-/** One `uvec4` of bits per column, as std140 lays it out. A single value is an array of one. */
-export function bitsUniform(type: ValueType, arraySize: number): UniformValue {
+/** The `uvec4` slots a uniform takes: one per column of each element, as std140 lays it out. */
+export function slotsOf(type: ValueType, arraySize: number): number {
+  return Math.max(1, arraySize) * (shapeOf(type)!.columns ?? 1);
+}
+
+/** Every value uniform of a material in one buffer, as Godot's material block: WebGL 2 allows 12 blocks. */
+export class MaterialBits {
+  private readonly node: BitsArrayNode | undefined;
+  private next = 0;
+
+  constructor(slots: number) {
+    this.node = slots > 0 ? new BitsArrayNode(slots) : undefined;
+  }
+
+  /** The uniform at the next free slots of the buffer. */
+  uniform(type: ValueType, arraySize: number): UniformValue {
+    const first = this.next;
+    this.next += slotsOf(type, arraySize);
+    if (!this.node) throw new Error(`expected a buffer with slots for ${type}, got one of none`);
+    return bitsUniform(this.node, first, type, arraySize);
+  }
+}
+
+/** A uniform of `type` whose slots start at `first` in `node`. A single value is an array of one. */
+function bitsUniform(node: BitsArrayNode, first: number, type: ValueType, arraySize: number): UniformValue {
   const { scalar, lanes, columns = 1 } = shapeOf(type)!;
   const rows = lanes / columns;
-  const node = new BitsArrayNode(Math.max(1, arraySize) * columns);
+  const slots = slotsOf(type, arraySize);
   const column = (element: Node | number, index: number): Node => {
-    const bits = node.element(slotOf(element, columns, index) as Node) as unknown as Record<string, Node>;
+    const slot = slotOf(element, columns, index);
+    const at = typeof slot === 'number' ? slot + first : chained(slot).add(int(first) as unknown as Node);
+    const bits = node.element(at as Node) as unknown as Record<string, Node>;
     const parts = SLOT_LANES.slice(0, rows).map((lane) => LANE_OF_BITS[scalar](bits[lane]!));
     return rows === 1 ? parts[0]! : CONSTRUCTORS[columns === 1 ? type : `vec${rows}`]!(...parts);
   };
@@ -83,11 +108,13 @@ export function bitsUniform(type: ValueType, arraySize: number): UniformValue {
     arraySize > 0 ? ({ kind: 'array', count: arraySize, element } as ArrayValue) : element(0);
   return {
     value,
-    write: (values) =>
-      node.bits.forEach((_, index) => {
+    write: (values) => {
+      for (let index = 0; index < slots * SLOT_LANES.length; index++) {
         const lane = index % SLOT_LANES.length;
         const start = Math.floor(index / SLOT_LANES.length) * rows;
-        node.bits[index] = lane < rows ? laneBits(scalar, values[start + lane]!) : 0;
-      }),
+        node.bits[first * SLOT_LANES.length + index] =
+          lane < rows ? laneBits(scalar, values[start + lane]!) : 0;
+      }
+    },
   };
 }

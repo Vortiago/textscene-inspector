@@ -126,6 +126,17 @@ describe('transpileSky', () => {
     expect(isDisposed).toBe(true);
   });
 
+  it("holds the material's uniforms in one buffer, as Godot's material block, so 20 fit WebGL's 16", () => {
+    const blocksWith = (count: number) => {
+      const names = Array.from({ length: count }, (_, index) => `u${index}`);
+      const source = `shader_type sky;\n${names.map((name) => `uniform float ${name};`).join('\n')}
+void sky() { COLOR = vec3(${names.join(' + ')}); }`;
+      const fragment = (transpileSky(source).mesh.material as NodeMaterial).fragmentNode!;
+      return generatedFragmentShader(fragment).match(/uniform NodeBuffer_\w+ \{/g)?.length;
+    };
+    expect(blocksWith(20)).toBe(blocksWith(1));
+  });
+
   it('reads each LIGHTn_COLOR from a slot of its own', () => {
     const fragments = [0, 1, 2, 3].map((slot) =>
       generatedFragmentShader(

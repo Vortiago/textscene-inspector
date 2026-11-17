@@ -6,7 +6,7 @@ import { isSamplerValue, SamplerBinding, type SamplerValue } from './samplerUnif
 import type { ProjectSampling } from './samplerState.js';
 import { SAMPLER_DEFAULTS } from './samplerTextures.js';
 import { materialLanes } from './uniformLanes.js';
-import { bitsUniform } from './uniformNodes.js';
+import { MaterialBits, slotsOf } from './uniformNodes.js';
 
 /** A value as `set_shader_parameter` takes it: a Variant, or a texture or list of them for a sampler. */
 export type ParameterValue = Variant | SamplerValue | null;
@@ -34,9 +34,10 @@ class UniformBinding implements TranspiledUniform {
 
   constructor(
     readonly declaration: UniformNode,
+    bits: MaterialBits,
     private readonly useLinearColor: boolean
   ) {
-    this.node = bitsUniform(declaration.type, declaration.arraySize ?? 0);
+    this.node = bits.uniform(declaration.type, declaration.arraySize ?? 0);
     this.set(NIL);
   }
 
@@ -61,9 +62,13 @@ export function bindParameters(
   context: BindingContext
 ): ReadonlyMap<string, TranspiledUniform & { readonly value: Value }> {
   const samplerContext = { ...context, defaults: samplerDefaultsOf(shader.shaderType) };
+  const values = shader.uniforms.filter((uniform) => !isSamplerType(uniform.type));
+  const bits = new MaterialBits(
+    values.reduce((slots, uniform) => slots + slotsOf(uniform.type, uniform.arraySize ?? 0), 0)
+  );
   const bindingOf = (uniform: UniformNode) =>
     isSamplerType(uniform.type)
       ? new SamplerBinding(uniform, samplerContext)
-      : new UniformBinding(uniform, context.useLinearColor);
+      : new UniformBinding(uniform, bits, context.useLinearColor);
   return new Map(shader.uniforms.map((uniform) => [uniform.name, bindingOf(uniform)]));
 }
