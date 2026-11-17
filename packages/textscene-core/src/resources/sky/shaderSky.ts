@@ -12,7 +12,8 @@ import { ShaderSkyBackground, ShaderSkyCube } from '../../r3f/sky/shaderSkyBackg
 import { bakeRadiance } from './radianceBake';
 import { disposeSkyLayers, type SkyLayers } from './skyLayers';
 import type { SkyLight } from './skyUniforms';
-import type { ShaderSkyProperties, Sky } from './types';
+import { skyUsage } from '../../shaders/sky/skyUsage';
+import type { ShaderSkyProperties, ShaderSkyText, Sky } from './types';
 import type { SkyEnvironment, SkyEnvironmentInput } from './build';
 
 /** The sky Godot draws for a sky material whose shader does not compile (`sky.cpp:807-814`, `:1480-1488`). */
@@ -24,6 +25,11 @@ void sky() {
 \tCOLOR = vec3(0.0);
 }
 `;
+
+/** The sky shader with the built-ins it reads, which decide what draws and bakes it again. */
+export function readShaderSky(material: ShaderSkyText, decoders: ShaderDecoders): ShaderSkyProperties {
+  return { ...material, usage: skyUsage(material.code, { decoders }) };
+}
 
 /** Null when the sky cannot render, as `buildSkyEnvironment` answers. */
 export function buildShaderSkyEnvironment(
@@ -70,7 +76,7 @@ function bakeShaderRadiance(
 }
 
 /** One compile per material and decoders, which every bake and the node details read. */
-const skyCompileOf = perObject((material: ShaderSkyProperties) =>
+const skyCompileOf = perObject((material: ShaderSkyText) =>
   perObject((decoders: ShaderDecoders): SkyCompile => compileSky(material.code, decoders))
 );
 
@@ -106,7 +112,7 @@ function setParameters(
 }
 
 /** Why the previewer draws Godot's default sky for `material`, or null when it draws the shader. */
-export function shaderSkyRefusal(material: ShaderSkyProperties, decoders: ShaderDecoders): string | null {
+export function shaderSkyRefusal(material: ShaderSkyText, decoders: ShaderDecoders): string | null {
   const { refusal } = skyCompileOf(material)(decoders);
   return refusal && refusalMessage(refusal);
 }

@@ -1,14 +1,21 @@
 import { useMemo } from 'react';
-import { shaderSkyRefusal } from '../../resources/sky/shaderSky.js';
 import type { SkyProperties } from '../../resources/sky/types.js';
 import type { ShaderDecoders } from '../../shaders/preprocessor/decoders.js';
 import { useShaderErrorReport } from '../contexts/ShaderErrorsContext.js';
+import type { SkyTranspiler } from './skyTranspiler.js';
 
-/** Reports why a sky shader draws Godot's default sky, once the decoders its `#if` may need load. */
-export function useShaderSkyErrorReport(material: SkyProperties, decoders: ShaderDecoders | null): void {
+/** Reports why a sky shader draws Godot's default sky, once the transpiler and its decoders load. */
+export function useShaderSkyErrorReport(
+  material: SkyProperties | null,
+  transpiler: SkyTranspiler | null,
+  decoders: ShaderDecoders | null
+): void {
   const refusal = useMemo(
-    () => (material.kind !== 'shader' || decoders === null ? null : shaderSkyRefusal(material, decoders)),
-    [material, decoders]
+    () =>
+      material?.kind !== 'shader' || !transpiler || !decoders
+        ? null
+        : transpiler.shaderSkyRefusal(material, decoders),
+    [material, transpiler, decoders]
   );
   useShaderErrorReport(refusal);
 }

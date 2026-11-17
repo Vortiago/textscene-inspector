@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type * as THREE from 'three';
 import type { NodeMaterial } from 'three/webgpu';
 import * as logger from '../../logger';
 import * as parseShader from '../../shaders/language/parseShader';
@@ -6,7 +7,7 @@ import { generatedFragmentShader } from '../../shaders/generatedShader.testkit';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { installNodesHandler } from '../../shaders/nodesHandler';
 import { ShaderSkyBackground } from '../../r3f/sky/shaderSkyBackground';
-import { shaderSkyRefusal } from './shaderSky';
+import { buildShaderSkyEnvironment, readShaderSky, shaderSkyRefusal } from './shaderSky';
 import { buildSkyEnvironment } from './build';
 import { decodeSky } from './decode';
 import type { ShaderSkyProperties, Sky } from './types';
@@ -14,13 +15,18 @@ import type { ShaderSkyProperties, Sky } from './types';
 const TINTED_SKY = 'shader_type sky;\nuniform float tint = 0.5;\nvoid sky() {\n\tCOLOR = vec3(tint);\n}\n';
 
 function shaderMaterial(code: string): ShaderSkyProperties {
-  return {
-    kind: 'shader',
-    code,
-    parameters: {},
-    textures: {},
-    usage: { light: false, samplers: {} },
-  };
+  return readShaderSky({ kind: 'shader', code, parameters: {}, textures: {} }, {});
+}
+
+/** The environment of `sky` with the transpiler, as the previewer builds it once the transpiler loads. */
+function shaderSkyEnvironment(renderer: THREE.WebGLRenderer, sky: Sky) {
+  return buildSkyEnvironment(renderer, {
+    sky,
+    lights: [],
+    asBackground: true,
+    energy: 1,
+    buildShaderSky: buildShaderSkyEnvironment,
+  });
 }
 
 /** Godot's default sky, which it draws for a shader it does not compile (`sky.cpp:807-814`). */
@@ -30,7 +36,7 @@ async function backgroundFragmentOf(code: string): Promise<string> {
   const { renderer } = await testRenderer();
   installNodesHandler(renderer, 'linear');
   const sky: Sky = decodeSky({}, shaderMaterial(code));
-  const environment = buildSkyEnvironment(renderer, { sky, lights: [], asBackground: true, energy: 1 })!;
+  const environment = shaderSkyEnvironment(renderer, sky)!;
   const fragment = generatedFragmentShader((environment.background!.material as NodeMaterial).fragmentNode!);
   environment.dispose();
   return fragment;
@@ -67,10 +73,10 @@ describe('shaderSkyRefusal', () => {
   });
 
   it('gives nothing, and throws nothing, for a defect that is no Godot error (error case)', () => {
+    const material = shaderMaterial(TINTED_SKY);
     vi.spyOn(parseShader, 'parsedShader').mockImplementation(() => {
       throw new TypeError('a parser defect');
     });
-    const material = shaderMaterial(TINTED_SKY);
     expect(shaderSkyRefusal(material, {})).toBeNull();
   });
 });
@@ -80,8 +86,16 @@ describe('buildSkyEnvironment of a shader sky', () => {
     const { renderer } = await testRenderer();
     installNodesHandler(renderer, 'linear');
     const sky: Sky = decodeSky({}, shaderMaterial(TINTED_SKY));
-    const environment = buildSkyEnvironment(renderer, { sky, lights: [], asBackground: true, energy: 1 });
+    const environment = shaderSkyEnvironment(renderer, sky);
     expect(environment?.background).toBeInstanceOf(ShaderSkyBackground);
     environment?.dispose();
+  });
+
+  it('throws without the transpiler, which a shader sky needs (error case)', async () => {
+    const { renderer } = await testRenderer();
+    const sky: Sky = decodeSky({}, shaderMaterial(TINTED_SKY));
+    expect(() => buildSkyEnvironment(renderer, { sky, lights: [], asBackground: true, energy: 1 })).toThrow(
+      'expected the sky transpiler for a shader sky, got none'
+    );
   });
 });

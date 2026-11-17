@@ -7,16 +7,12 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { decodeSkyMaterial } from './decode';
 import { skyUniforms, type SkyLight } from './skyUniforms';
-import type { BuiltInSkyProperties, ProceduralSkyProperties } from './types';
+import type { ProceduralSkyProperties } from './types';
 
 const procedural = (overrides: Partial<ProceduralSkyProperties> = {}) => ({
   ...(decodeSkyMaterial('ProceduralSkyMaterial', {}) as ProceduralSkyProperties),
   ...overrides,
 });
-
-/** A built-in sky material of `type` with `data`, as the shader sky takes no uniforms here. */
-const builtInSky = (type: string, data: Record<string, string>) =>
-  decodeSkyMaterial(type, data) as BuiltInSkyProperties;
 
 const value = (uniforms: Record<string, { value: unknown }>, name: string) => uniforms[name]?.value;
 
@@ -130,12 +126,12 @@ describe('skyUniforms — directional lights', () => {
 
 describe('skyUniforms — other sky materials', () => {
   it('exposes the panorama sky’s exposure', () => {
-    const sky = builtInSky('PanoramaSkyMaterial', {});
+    const sky = decodeSkyMaterial('PanoramaSkyMaterial', {})!;
     expect(value(skyUniforms(sky, []), 'exposure')).toBe(1);
   });
 
   it('exposes the physical sky’s atmosphere scalars under the shader’s own names', () => {
-    const sky = builtInSky('PhysicalSkyMaterial', { turbidity: '4' });
+    const sky = decodeSkyMaterial('PhysicalSkyMaterial', { turbidity: '4' })!;
     const u = skyUniforms(sky, []);
     expect(value(u, 'turbidity')).toBe(4);
     expect(value(u, 'rayleigh')).toBe(2);

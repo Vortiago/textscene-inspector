@@ -17,7 +17,6 @@ import { resourceRef } from '../../../godot/variant/resourceRef';
 import { ShaderMode, shaderModeOf } from '../../../godot/rendering/shaderLanguage';
 import { decodeSkyMaterial } from '../../sky/decode';
 import { SHADER_CODE } from '../shadermaterial/shaderCode';
-import { skyUsage } from '../../../shaders/sky/skyUsage';
 import { decodeStandardMaterial3D } from '../standardmaterial3d/decode';
 import type { TextureSlot } from '../standardmaterial3d/types';
 import type { Material, SkyMaterial, StandardMaterial } from './types';
@@ -72,7 +71,7 @@ function shaderSkyMaterial(properties: Readonly<Record<string, string>>, follow:
   return {
     form: 'sky',
     type: 'ShaderMaterial',
-    properties: { kind: 'shader', code, parameters, textures, usage: skyUsage(code) },
+    properties: { kind: 'shader', code, parameters, textures },
     panorama: null,
   };
 }

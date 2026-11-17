@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { ShaderErrorsProvider, useShaderErrors } from '../contexts/ShaderErrorsContext';
+import * as transpiler from '../../resources/sky/shaderSky';
 import type { SkyProperties } from '../../resources/sky/types';
+import type { SkyTranspiler } from './skyTranspiler';
 import type { ShaderDecoders } from '../../shaders/preprocessor/decoders';
 import { useShaderSkyErrorReport } from './shaderSkyError';
 
@@ -18,8 +20,14 @@ function shaderSky(code: string): SkyProperties {
 
 const UNCOMPILED = shaderSky('shader_type sky;\nvoid sky() { COLOR = 1.0; }\n');
 
-function Sky({ material, decoders }: { material: SkyProperties; decoders: ShaderDecoders | null }) {
-  useShaderSkyErrorReport(material, decoders);
+interface SkyProps {
+  material: SkyProperties;
+  transpiler: SkyTranspiler | null;
+  decoders: ShaderDecoders | null;
+}
+
+function Sky({ material, transpiler, decoders }: SkyProps) {
+  useShaderSkyErrorReport(material, transpiler, decoders);
   return null;
 }
 
@@ -27,11 +35,17 @@ function Errors() {
   return <span data-testid="errors">{useShaderErrors('World/Environment').join('|')}</span>;
 }
 
-function renderSky(material: SkyProperties, decoders: ShaderDecoders | null = {}) {
+function renderSky(
+  material: SkyProperties,
+  {
+    loaded = transpiler,
+    decoders = {},
+  }: { loaded?: SkyTranspiler | null; decoders?: ShaderDecoders | null } = {}
+) {
   render(
     <ShaderErrorsProvider>
       <NodePathProvider path="World/Environment">
-        <Sky material={material} decoders={decoders} />
+        <Sky material={material} transpiler={loaded} decoders={decoders} />
       </NodePathProvider>
       <Errors />
     </ShaderErrorsProvider>
@@ -49,6 +63,10 @@ describe('useShaderSkyErrorReport', () => {
   });
 
   it('reports nothing while the decoders load', () => {
-    expect(renderSky(UNCOMPILED, null)).toBe('');
+    expect(renderSky(UNCOMPILED, { decoders: null })).toBe('');
+  });
+
+  it('reports nothing while the transpiler loads', () => {
+    expect(renderSky(UNCOMPILED, { loaded: null })).toBe('');
   });
 });

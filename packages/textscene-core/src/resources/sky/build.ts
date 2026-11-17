@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
 import type { ShaderDecoders } from '../../shaders/preprocessor/decoders';
-import type { BuiltInSkyProperties, Sky } from './types';
+import type { BuiltInSkyProperties, ShaderSkyProperties, Sky } from './types';
 import { warn } from '../../logger';
 import { skyFragmentShader, skyGlsl, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight, type SkyUniforms } from './skyUniforms';
@@ -17,7 +17,6 @@ import { releaseView, textureView } from '../textures/textureView';
 import { fillLiveCopy, isLiveTarget } from '../../r3f/liveTargets';
 import { disposeSkyLayers, type SkyLayers } from './skyLayers';
 import { bakeRadiance } from './radianceBake';
-import { buildShaderSkyEnvironment } from './shaderSky';
 import { isDebanded } from './debanding';
 import { godotTextureFilterState } from '../textures/godotTextureFilter';
 import { TextureFilter } from '../../godot/rendering/materials/textureFilter';
@@ -60,7 +59,16 @@ export interface SkyEnvironmentInput {
   decoders?: ShaderDecoders;
   /** The project's filter settings, which a shader sky's samplers read. */
   sampling?: ProjectSampling;
+  /** The sky transpiler's builder for a shader sky, imported on demand to keep it off the first paint. */
+  buildShaderSky?: ShaderSkyBuilder;
 }
+
+/** Builds a shader sky's environment, as `buildSkyEnvironment` answers. */
+export type ShaderSkyBuilder = (
+  gl: THREE.WebGLRenderer,
+  material: ShaderSkyProperties,
+  input: SkyEnvironmentInput
+) => SkyEnvironment | null;
 
 /**
  * The panorama as the sky shader samples it: `filter_linear` or `filter_nearest` with no mipmaps
@@ -94,8 +102,9 @@ export function buildSkyEnvironment(
   input: SkyEnvironmentInput
 ): SkyEnvironment | null {
   const { material } = input.sky;
-  if (material.kind === 'shader') return buildShaderSkyEnvironment(gl, material, input);
-  return buildBuiltInSkyEnvironment(gl, material, input);
+  if (material.kind !== 'shader') return buildBuiltInSkyEnvironment(gl, material, input);
+  if (!input.buildShaderSky) throw new Error('expected the sky transpiler for a shader sky, got none');
+  return input.buildShaderSky(gl, material, input);
 }
 
 /** The environment of a sky the previewer draws with its own GLSL. */

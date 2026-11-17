@@ -6,10 +6,10 @@
 import type { ResourceKind, ScopedReference } from '../reading';
 import { MATERIAL } from '../materials/material/kind';
 import { decodeSky } from './decode';
-import type { Sky } from './types';
+import type { AuthoredSky } from './types';
 
 export interface DecodedSky {
-  readonly sky: Sky;
+  readonly sky: AuthoredSky;
   /** A PanoramaSkyMaterial's `panorama`, in the material's own file. Null for any other sky. */
   readonly panorama: ScopedReference | null;
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { transpileSky } from '../shaders/sky/transpileSky';
-import { mayDecompress, useShaderDecoders } from './shaderDecoders';
+import { useShaderDecoders } from './shaderDecoders';
 
 /** "hello hello hello hello world" in Zstandard (mode 2) and in Brotli (mode 4), as Godot writes them. */
 const ZSTD =
@@ -31,14 +31,9 @@ describe('useShaderDecoders', () => {
     const decoders = await lentDecoders(code);
     expect(() => transpileSky(code, { decoders })).not.toThrow();
   });
-});
 
-describe('mayDecompress', () => {
-  it('waits for the decoders for a text that names decompress', () => {
-    expect(mayDecompress(skyDecoding(ZSTD, 2))).toBe(true);
-  });
-
-  it('waits for nothing for a text that never names it', () => {
-    expect(mayDecompress('shader_type sky;\nvoid sky() {}\n')).toBe(false);
+  it('lends nothing, at once, to a text that never names decompress (edge case)', () => {
+    const { result } = renderHook(() => useShaderDecoders('shader_type sky;\nvoid sky() {}\n'));
+    expect(result.current).toEqual({});
   });
 });

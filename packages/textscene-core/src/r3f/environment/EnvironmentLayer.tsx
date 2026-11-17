@@ -12,7 +12,7 @@ import { useThree } from '@react-three/fiber';
 import { BackgroundMode } from '../../godot/scene/environment';
 import { FOG_SUN_SCATTER_MIN } from '../../godot/rendering/environment/depthFog';
 import type { EnvironmentSettings } from '../../resources/environment/types';
-import type { Sky } from '../../resources/sky/types';
+import type { AuthoredSky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { useDraws3D } from './draws3D';
@@ -37,7 +37,7 @@ import {
 export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
   /** The resolved sky, or null when there is none to render. */
-  sky: Sky | null;
+  sky: AuthoredSky | null;
   /** The texture a PanoramaSkyMaterial samples, resolved by the node that holds the Environment. */
   panorama: THREE.Texture | null;
 }

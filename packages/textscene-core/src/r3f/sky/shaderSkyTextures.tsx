@@ -16,14 +16,14 @@ const NO_LOADED: ReadonlyMap<string, THREE.Texture> = new Map();
 
 /** The loaded texture parameters by uniform name, and the slots that load them, which the caller renders. */
 export function useShaderSkyTextures(
-  material: SkyProperties
+  material: SkyProperties | null
 ): [Readonly<Record<string, THREE.Texture>>, ReactNode] {
   const [loaded, setLoaded] = useState<ReadonlyMap<string, THREE.Texture>>(NO_LOADED);
   const report = useCallback<TextureReport>((name, texture) => {
     setLoaded((current) => withEntry(current, name, texture ?? undefined));
   }, []);
   const textures = useMemo(() => (loaded.size === 0 ? NO_TEXTURES : Object.fromEntries(loaded)), [loaded]);
-  if (material.kind !== 'shader') return [NO_TEXTURES, null];
+  if (material?.kind !== 'shader') return [NO_TEXTURES, null];
   const slots = Object.entries(material.textures).map(([name, reference]) => {
     // Godot ignores a value no sampler declares.
     const sampler = material.usage.samplers[name];

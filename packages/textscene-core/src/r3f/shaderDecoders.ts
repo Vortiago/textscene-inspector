@@ -13,7 +13,7 @@ const loadShaderDecoders = memoisedImport(async (): Promise<ShaderDecoders> => {
 });
 
 /** A text that never names `decompress` decodes nothing, so it waits for no import. */
-export function mayDecompress(code: string): boolean {
+function mayDecompress(code: string): boolean {
   return code.includes('decompress');
 }
 
