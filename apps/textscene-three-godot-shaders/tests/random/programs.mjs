@@ -1,6 +1,7 @@
 import { isFunctionRow } from '../../../../packages/textscene-core/src/shaders/language/instructionFamily.ts';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { OUT_ARGUMENTS } from '../../../../packages/textscene-core/src/shaders/language/outArguments.ts';
+import { isSamplerType } from '../../../../packages/textscene-core/src/shaders/language/types.ts';
 import { LANE_COUNT } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { WRITES_OPERAND, operatorOf } from '../operators/operatorText.mjs';
 import { FLOAT_VALUES } from '../probes/inputs.mjs';
@@ -93,7 +94,13 @@ function producersByType(rows) {
           inputs: [base],
         });
       }
-    } else if (familyOf(row) in PRODUCER_KINDS && row.args?.length && row.returns !== 'void') {
+    } else if (
+      familyOf(row) in PRODUCER_KINDS &&
+      row.args?.length &&
+      row.returns !== 'void' &&
+      // A random program holds no texture: the texture probes measure each row that reads one.
+      !row.args.some(isSamplerType)
+    ) {
       add(row.returns, { row, kind: PRODUCER_KINDS[familyOf(row)], args: row.args, inputs: row.args });
     }
   }

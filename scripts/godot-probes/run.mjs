@@ -67,7 +67,9 @@ async function rejections(probes, { pixels }) {
 
 /** Godot's reason for `probe`, which must be a crash exactly when the probe says it ends Godot. */
 async function endingRejection(probe) {
-  const rejection = await godotRejection(probe);
+  const rejection = await godotRejection(probe).catch((error) => {
+    throw new Error(`probe ${probe.name}: ${error.message}`);
+  });
   if ((rejection.stage === 'Godot') !== Boolean(probe.endsGodot))
     throw new Error(
       `expected ${probe.name} ${probe.endsGodot ? 'to end' : 'not to end'} Godot, got: ${rejection.message}`

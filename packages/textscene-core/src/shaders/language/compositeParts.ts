@@ -8,6 +8,9 @@ export type Composite = (operands: readonly Node[], args: readonly string[]) => 
 /** three's types narrow each function to a few node types. Each takes any node of a GLSL type. */
 export const tsl = (operation: unknown) => operation as (...operands: Node[]) => Node;
 
+/** A node passed where three's types want a narrower node type. */
+export const untyped = (node: unknown) => node as never;
+
 /** The chained operations of a TSL node, which three's types leave out of `Node`. */
 interface Chained {
   add(node: Node): Node;

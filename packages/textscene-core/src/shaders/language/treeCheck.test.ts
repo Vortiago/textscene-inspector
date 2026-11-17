@@ -37,6 +37,12 @@ describe('treeFault', () => {
     expect(treeFault(treeOf('ivec2 f(ivec2 a, int b) { a.y += b; return a << 1; }'))).toBeUndefined();
   });
 
+  it('finds no fault in a sampler read and a sampler argument', () => {
+    const source =
+      'uniform sampler2D s;\nvec4 read(sampler2D t) { return texture(t, vec2(0.5)); }\nvec4 probe() { return read(s); }';
+    expect(treeFault(treeOf(source))).toBeUndefined();
+  });
+
   it('finds an operator whose row does not fit its operand types', () => {
     const tree = withReturn(treeOf('vec2 f(vec2 a, vec2 b) { return a + b; }'), (value) => ({
       ...(value as OperatorNode),

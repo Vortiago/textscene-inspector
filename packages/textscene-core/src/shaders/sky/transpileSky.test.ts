@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import type { NodeMaterial } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { generatedFragmentShader } from '../generatedShader.testkit';
@@ -28,6 +29,18 @@ describe('transpileSky', () => {
   it('draws before the scene and writes no depth', () => {
     const material = transpileSky(DEFAULT_SKY).mesh.material as { depthWrite: boolean };
     expect(material.depthWrite).toBe(false);
+  });
+
+  it('draws no sky while a samplerExternalOES has no texture, as Godot draws none', () => {
+    const source =
+      'shader_type sky;\nuniform samplerExternalOES s;\nvoid sky() {\n\tCOLOR = texture(s, vec2(0.5)).rgb;\n}\n';
+    expect((transpileSky(source).mesh.material as THREE.Material).visible).toBe(false);
+  });
+
+  it('draws no clone of the sky mesh while a samplerExternalOES has no texture', () => {
+    const source =
+      'shader_type sky;\nuniform samplerExternalOES s;\nvoid sky() {\n\tCOLOR = texture(s, vec2(0.5)).rgb;\n}\n';
+    expect((transpileSky(source).mesh.clone().material as THREE.Material).visible).toBe(false);
   });
 
   it('gives one uniform for a member both stages read', () => {

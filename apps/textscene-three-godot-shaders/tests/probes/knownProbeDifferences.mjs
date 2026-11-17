@@ -39,7 +39,54 @@ const SPLIT_LDEXP = {
     "driver (Mesa lavapipe) gives 0 for ldexp(3e38, -253), on Godot's side: inferred, not read from Mesa, as a split into exponent halves that flushes 2^-127",
 };
 
+// Mesa 25.2.8 `lp_bld_sample.c:948` halves log2(0) of `lp_bld_arit.c:3396`: 0 - 127, with no zero case.
+const ZERO_DERIVATIVE_LOD = {
+  owner: '#1829',
+  cause:
+    "driver (Mesa lavapipe) gives -63.5 for the level of detail of a zero derivative, where log2(0) is -inf, on Godot's side",
+};
+
+// Mesa 25.2.8 `lp_bld_sample_soa.c:2314` reads each anisotropic tap linear, whatever the sampler's filter.
+const ANISOTROPIC_FOOTPRINT = {
+  owner: '#1829',
+  cause:
+    "driver (Mesa lavapipe) filters an anisotropic sampler with weighted linear taps, also for a nearest filter, on Godot's side",
+};
+
+/** The probes of `textureQueryLod`, each off in the same three lanes. */
+function zeroDerivativeLevels() {
+  const calls = [
+    'sampler2D-vec2',
+    'isampler2D-vec2',
+    'usampler2D-vec2',
+    'sampler2DArray-vec2',
+    'isampler2DArray-vec2',
+    'usampler2DArray-vec2',
+    'sampler3D-vec3',
+    'isampler3D-vec3',
+    'usampler3D-vec3',
+    'samplerCube-vec3',
+  ];
+  const difference = {
+    ...ZERO_DERIVATIVE_LOD,
+    lanesOff: 3,
+    first: 'lane 1: Godot c27e0000, transpilation ff800000',
+  };
+  return Object.fromEntries(calls.map((call) => [`texture-function-textureQueryLod-${call}`, difference]));
+}
+
 export const KNOWN_PROBE_DIFFERENCES = {
+  ...zeroDerivativeLevels(),
+  'texture-2d-filter_nearest_mipmap_anisotropic': {
+    ...ANISOTROPIC_FOOTPRINT,
+    lanesOff: 11,
+    first: 'lane 12: Godot 3d109091, transpilation 3d888889',
+  },
+  'texture-2d-filter_linear_mipmap_anisotropic': {
+    ...ANISOTROPIC_FOOTPRINT,
+    lanesOff: 5,
+    first: 'lane 14: Godot 3d20a0a2, transpilation 3d30b0b1',
+  },
   'call-dFdx-float': {
     ...ANGLE_DERIVATIVE,
     lanesOff: 3,

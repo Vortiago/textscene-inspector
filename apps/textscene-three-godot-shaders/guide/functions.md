@@ -9,7 +9,7 @@ Godot 4.6.3-stable (official), probed on llvmpipe (LLVM 20.1.2). Each table show
 
 `f(a, b)` calls a function declared before the call. Godot picks the function of the argument types and sizes, and converts a scalar constant to the parameter type only when the function has no overload. A second function of one name must differ in its argument types: Godot names it `f@2` in its tree. Godot refuses recursion, a call of a function declared later, and arguments of no overload, with the message that names each candidate.
 
-The transpiler emits `a call of the TSL `Fn` of the function, one GLSL function for each overload`. Rows: `OP_CALL`. Godot source: `servers/rendering/shader_language.cpp:1558`.
+The transpiler emits a call of the TSL `Fn` of the function, one GLSL function for each overload. Rows: `OP_CALL`. Godot source: `servers/rendering/shader_language.cpp:1558`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
@@ -1040,7 +1040,7 @@ Godot does not compile this shader: Godot refuses it at line 1, `'const' qualifi
 
 An `in` parameter, the default, is a copy of the caller's value, which the function may change. An `out` parameter starts undefined, and the caller's variable takes its last value when the function returns. An `inout` parameter does both. An `out` or `inout` argument must be a variable, an array element or a member that is not of a constant, and Godot refuses a constant or an expression there. A `const` parameter takes any value and refuses a write.
 
-The transpiler emits `the `out` and `inout` values in a struct the GLSL function returns, written back to the caller's places in order`. Rows: `in`, `out`, `inout`. Godot source: `servers/rendering/shader_language.cpp:366`.
+The transpiler emits the `out` and `inout` values in a struct the GLSL function returns, written back to the caller's places in order. Rows: `in`, `out`, `inout`. Godot source: `servers/rendering/shader_language.cpp:366`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
@@ -1378,7 +1378,7 @@ Godot does not compile this shader: Godot refuses it at line 1, `Expected a vali
 
 A `void` function returns no value: it acts through its `out` and `inout` parameters and `discard`. Its call stands as a statement, and Godot refuses it as a value.
 
-The transpiler emits `a GLSL function of type `void`, or of the struct of its `out` and `inout` values`. Rows: `void`. Godot source: `servers/rendering/shader_language.h:210`.
+The transpiler emits a GLSL function of type `void`, or of the struct of its `out` and `inout` values. Rows: `void`. Godot source: `servers/rendering/shader_language.h:210`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

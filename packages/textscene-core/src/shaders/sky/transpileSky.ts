@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { int, screenCoordinate, varyingProperty, vec4, vertexIndex } from 'three/tsl';
-import { NodeMaterial, type Node, type TextureNode, type UniformNode } from 'three/webgpu';
+import type { Node, TextureNode, UniformNode } from 'three/webgpu';
 import { parsedShader, type ParsedShader, type ShaderOptions } from '../language/parseShader.js';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import { checkTranspiled } from '../language/transpiledRows.js';
@@ -12,6 +12,8 @@ import type { StageName } from '../template/stages.js';
 import type { TemplateStageNode } from '../template/templateTree.js';
 import { TemplateUniforms } from '../template/templateUniforms.js';
 import { godotId } from '../template/godotIds.js';
+import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
+import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
 import { bindParameters, type TranspiledUniform } from '../uniforms/transpiledUniform.js';
 import { TRANSPILER_VERSION, TreeMemo } from '../template/treeMemo.js';
 
@@ -34,13 +36,22 @@ export interface TranspiledSky {
   readonly parameters: ReadonlyMap<string, TranspiledUniform>;
 }
 
+export interface SkyOptions extends ShaderOptions {
+  /** The project's texture filter settings, Godot's defaults when left out. */
+  readonly sampling?: ProjectSampling;
+}
+
 /** The sky of `source`, a shader of `shader_type sky`, preprocessed with `options`. */
-export function transpileSky(source: string, options: ShaderOptions = {}): TranspiledSky {
-  return transpileParsedSky(parsedShader(source, options), options.file ?? '');
+export function transpileSky(source: string, options: SkyOptions = {}): TranspiledSky {
+  return transpileParsedSky(parsedShader(source, options), options.file ?? '', options.sampling);
 }
 
 /** The sky of a parsed shader from `file`, for a caller that has read its tree already. */
-export function transpileParsedSky({ code, tree }: ParsedShader, file: string): TranspiledSky {
+export function transpileParsedSky(
+  { code, tree }: ParsedShader,
+  file: string,
+  sampling: ProjectSampling = GODOT_SAMPLING
+): TranspiledSky {
   if (tree.shaderType !== 'sky')
     throw new ShadingLanguageError(
       `expected a shader of 'shader_type sky', found ${tree.shaderType ?? 'none'}`,
@@ -67,7 +78,7 @@ export function transpileParsedSky({ code, tree }: ParsedShader, file: string): 
     );
   const uniforms = new TemplateUniforms();
   // A sky converts a source colour to linear (`sky.cpp:193`).
-  const parameters = bindParameters(tree, true);
+  const parameters = bindParameters(tree, { useLinearColor: true, sampling });
   const parameterValues = [...parameters].map(([name, binding]) => [godotId(name), binding.value] as const);
   const uvInterp = varyingProperty('vec2', 'uv_interp') as unknown as Node;
   const vertex = emitTemplateStage(
@@ -91,7 +102,7 @@ export function transpileParsedSky({ code, tree }: ParsedShader, file: string): 
     uniforms
   );
   return {
-    mesh: skyMesh(vertex.result, fragment.result),
+    mesh: skyMesh(vertex.result, fragment.result, [...parameters.values()]),
     uniforms: uniforms.byName,
     textures: fragment.textures,
     parameters,
@@ -99,10 +110,10 @@ export function transpileParsedSky({ code, tree }: ParsedShader, file: string): 
 }
 
 /** Three vertices, which the template's vertex stage places from their index alone. */
-function skyMesh(position: Node, colour: Node): THREE.Mesh {
+function skyMesh(position: Node, colour: Node, parameters: readonly TranspiledUniform[]): THREE.Mesh {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
-  const material = new NodeMaterial();
+  const material = new BoundNodeMaterial(parameters);
   material.vertexNode = position;
   material.fragmentNode = colour;
   // Godot's sky pipeline culls no face, and its triangle winds the other way in GL's y-up clip space.

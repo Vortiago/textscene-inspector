@@ -1,10 +1,12 @@
 import { Fn, int, property, struct } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import type { EmittedTree } from './emittedTree.js';
+import { isSamplerType } from './types.js';
 import { isArrayType, wholeArrays } from './wholeArray.js';
 import {
   copyInto,
   inVar,
+  isArrayValue,
   leafTypes,
   leavesOf,
   type StructOf,
@@ -14,6 +16,7 @@ import {
   variablesWithLeaves,
 } from './emitValue.js';
 import type { Argument } from './shaderTree.js';
+import { SamplerChoice } from './textureCalls.js';
 
 /** The value of a function's body, run with the values of its arguments by name. */
 export type BodyEmitter = (tree: EmittedTree, names: ReadonlyMap<string, Value>) => Value | undefined;
@@ -27,7 +30,7 @@ export interface CallResult {
 
 /** The GLSL functions of one shader, each built at its first call. */
 export class CalledFunctions {
-  /** Written only by `functionNamed`, at a function's first call. */
+  /** Written only by `functionNamed`, at a function's first call with each set of textures. */
   private readonly built = new Map<string, GlslFunction>();
 
   constructor(
@@ -38,23 +41,27 @@ export class CalledFunctions {
 
   /** With a value for each argument but an `out` one. */
   call(name: string, args: readonly (Value | undefined)[]): CallResult {
-    return this.functionNamed(name).call(args).called;
+    return this.functionNamed(name, args).call(args).called;
   }
 
   /** TSL drops a statement call and an unread variable, so an unread call gets a variable of its own. */
   callAsStatement(name: string, args: readonly (Value | undefined)[]): CallResult {
-    const { called, node, isHeld, type } = this.functionNamed(name).call(args);
+    const { called, node, isHeld, type } = this.functionNamed(name, args).call(args);
     if (!isHeld || called.written.length === 0) (property(type) as unknown as Node).assign(node);
     return called;
   }
 
-  private functionNamed(name: string): GlslFunction {
-    let built = this.built.get(name);
+  /** A GLSL function per set of textures its sampler arguments read: a TSL function takes no sampler. */
+  private functionNamed(name: string, args: readonly (Value | undefined)[]): GlslFunction {
+    const tree = this.trees.get(name);
+    if (tree === undefined) throw new Error(`expected a function ${name} in the shader`);
+    const samplers = samplerArguments(tree.lowered.arguments, args);
+    const key = [name, ...[...samplers.values()].map(samplerKey)].join(' ');
+    let built = this.built.get(key);
     if (built === undefined) {
-      const tree = this.trees.get(name);
-      if (tree === undefined) throw new Error(`expected a function ${name} in the shader`);
-      built = new GlslFunction(tree, `sl${this.built.size}_${tree.lowered.rname}`, this.structOf, this.body);
-      this.built.set(name, built);
+      const glslName = `sl${this.built.size}_${tree.lowered.rname}`;
+      built = new GlslFunction(tree, glslName, this.structOf, this.body, samplers);
+      this.built.set(key, built);
     }
     return built;
   }
@@ -82,10 +89,14 @@ class GlslFunction {
     private readonly tree: EmittedTree,
     name: string,
     private readonly structOf: StructOf,
-    body: BodyEmitter
+    body: BodyEmitter,
+    private readonly samplers: ReadonlyMap<string, Value>
   ) {
     const definition = tree.lowered;
-    const typesOf = (argument: Argument) => leafTypes(argument.type, argument.arraySize ?? 0, structOf);
+    const typesOf = (argument: Argument) =>
+      isSamplerType(argument.type)
+        ? samplerLeafTypes(samplers.get(argument.name)!)
+        : leafTypes(argument.type, argument.arraySize ?? 0, structOf);
     this.parameters = definition.arguments.map((argument) => ({
       argument,
       leafCount: typesOf(argument).length,
@@ -128,11 +139,11 @@ class GlslFunction {
     isHeld: boolean;
     type: string;
   } {
-    const leaves = this.parameters.flatMap(({ argument }, index) =>
-      argument.qualifier === 'out'
-        ? []
-        : this.leavesOfValue(args[index]!, argument.type, argument.arraySize ?? 0)
-    );
+    const leaves = this.parameters.flatMap(({ argument }, index) => {
+      if (argument.qualifier === 'out') return [];
+      if (isSamplerType(argument.type)) return samplerLeaves(args[index]!);
+      return this.leavesOfValue(args[index]!, argument.type, argument.arraySize ?? 0);
+    });
     const node = this.fn(...leaves);
     // Held where it stands, so it runs once and before any later read of the place.
     const isHeld = this.isStruct || this.outputCount > this.resultCount;
@@ -178,7 +189,12 @@ class GlslFunction {
         writtenLeaves.push(...variables.leaves);
         continue;
       }
-      const value = valueOfLeaves(argument.type, size, this.structOf, given[next++]!);
+      const leaves = given[next++]!;
+      if (isSamplerType(argument.type)) {
+        names.set(argument.name, samplerParameter(this.samplers.get(argument.name)!, leaves));
+        continue;
+      }
+      const value = valueOfLeaves(argument.type, size, this.structOf, leaves);
       names.set(argument.name, this.parameterValue(argument, value, writtenLeaves));
     }
     const result = body(this.tree, names);
@@ -217,6 +233,36 @@ export function parameterValue(
   return written.has(argument.name)
     ? variablesOf(given, argument.type, argument.arraySize ?? 0, structOf)
     : given;
+}
+
+/** The value each sampler argument is given, by name. */
+function samplerArguments(
+  parameters: readonly Argument[],
+  args: readonly (Value | undefined)[]
+): ReadonlyMap<string, Value> {
+  return new Map(
+    parameters.flatMap((argument, index) =>
+      isSamplerType(argument.type) ? [[argument.name, args[index]!] as const] : []
+    )
+  );
+}
+
+/** A choice's index reaches the function as an `int` parameter: the caller's index is out of its scope. */
+const samplerLeafTypes = (value: Value): string[] => (value instanceof SamplerChoice ? ['int'] : []);
+
+const samplerLeaves = (value: Value): Node[] => (value instanceof SamplerChoice ? [value.index] : []);
+
+/** The value a sampler parameter reads in the body: a choice picks by the index parameter. */
+function samplerParameter(given: Value, leaves: readonly Node[]): Value {
+  if (!(given instanceof SamplerChoice)) return given;
+  return new SamplerChoice(given.elements, leaves[0]!) as unknown as Value;
+}
+
+/** The ids of the texture nodes a sampler value holds: one, one per array element, or a choice of them. */
+function samplerKey(value: Value): string {
+  if (value instanceof SamplerChoice) return `${value.elements.map((element) => element.id).join('|')}@`;
+  if (!isArrayValue(value)) return String((value as Node).id);
+  return Array.from({ length: value.count }, (_, index) => samplerKey(value.element(index))).join(',');
 }
 
 /** `leaves` cut into the leaves of each of `parameters`, in order. */
