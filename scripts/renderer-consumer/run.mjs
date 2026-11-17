@@ -14,8 +14,10 @@ import { consumerManifest } from './consumerManifest.mjs';
 
 const APP_DIR = join(import.meta.dirname, 'app');
 
-/** The cube fills about a fifth of the 320 x 240 viewport, a twentieth at half scale, and a blank 0. */
+/** The drawn pixels that prove a view drew the cube: a blank canvas scores 0. */
 const INK_FLOOR = 2000;
+/** A cube at half scale draws about a quarter of the pixels, so its view proves less. */
+const WRITTEN_INK_FLOOR = INK_FLOOR / 4;
 /** Software GL draws the first frame slowly. */
 const RENDER_TIMEOUT_MS = 90_000;
 const POLL_INTERVAL_MS = 500;
@@ -59,9 +61,9 @@ function buildConsumer(directory) {
 
 /** The views the app draws, by the query that opens each. */
 const VIEWS = {
-  '3D': '',
-  'In-game': '?mode=in-game',
-  'In-game after a write': '?mode=in-game&write=scale',
+  '3D': { query: '', inkFloor: INK_FLOOR },
+  'In-game': { query: '?mode=in-game', inkFloor: INK_FLOOR },
+  'In-game after a write': { query: '?mode=in-game&write=scale', inkFloor: WRITTEN_INK_FLOOR },
 };
 
 /** A cube at half scale draws a quarter of its pixels, so its ink stays under half of the whole cube's. */
@@ -79,8 +81,9 @@ async function renderInBrowser(directory) {
   const browser = await launchSwiftShaderBrowser();
   try {
     const drawn = {};
-    for (const [view, query] of Object.entries(VIEWS)) {
-      drawn[view] = await renderView(await browser.newPage(), `http://localhost:${port}/${query}`);
+    for (const [view, { query, inkFloor }] of Object.entries(VIEWS)) {
+      const page = await browser.newPage();
+      drawn[view] = { ...(await renderView(page, `http://localhost:${port}/${query}`, inkFloor)), inkFloor };
     }
     return drawn;
   } finally {
@@ -89,10 +92,10 @@ async function renderInBrowser(directory) {
   }
 }
 
-async function renderView(page, url) {
+async function renderView(page, url, inkFloor) {
   const diagnostics = attachDiagnostics(page);
   await page.goto(url);
-  const ink = await pollInk(page);
+  const ink = await pollInk(page, inkFloor);
   const hasCanvasStyles = await page.evaluate(() => {
     for (let node = document.querySelector('canvas'); node; node = node.parentElement) {
       if (getComputedStyle(node).touchAction === 'none') return true;
@@ -102,21 +105,21 @@ async function renderView(page, url) {
   return { ink, hasCanvasStyles, errors: loggedErrors(diagnostics) };
 }
 
-async function pollInk(page) {
+async function pollInk(page, inkFloor) {
   const viewport = page.locator('#viewport');
   const deadline = Date.now() + RENDER_TIMEOUT_MS;
-  let ink = inkStats(await viewport.screenshot()).ink;
-  while (ink < INK_FLOOR && Date.now() < deadline) {
+  let ink = inkStats(await viewport.screenshot()).inkPixels;
+  while (ink < inkFloor && Date.now() < deadline) {
     await page.waitForTimeout(POLL_INTERVAL_MS);
-    ink = inkStats(await viewport.screenshot()).ink;
+    ink = inkStats(await viewport.screenshot()).inkPixels;
   }
   return ink;
 }
 
 /** One line per failed check of a view, or none when it rendered the fixture. */
-function failuresOf(view, { ink, hasCanvasStyles, errors }) {
+function failuresOf(view, { ink, inkFloor, hasCanvasStyles, errors }) {
   return [
-    ...(ink < INK_FLOOR ? [`expected at least ${INK_FLOOR} drawn pixels in the viewport, got ${ink}`] : []),
+    ...(ink < inkFloor ? [`expected at least ${inkFloor} drawn pixels in the viewport, got ${ink}`] : []),
     ...(hasCanvasStyles
       ? []
       : ['expected the canvas root to carry the bundle’s touch-action style, got none']),
