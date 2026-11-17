@@ -43,6 +43,7 @@ describe('the committed answers file', () => {
       'operators',
       'corpus',
       'expressions',
+      'heads',
     ]);
   });
 });
