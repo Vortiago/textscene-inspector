@@ -16,7 +16,7 @@ describe('the judge of the transpiler against Godot', () => {
 
   it('names the open row and its owner for a shader not transpiled yet', () => {
     const outcome = judge(ACCEPTED, transpilerVerdict('varying float v; float f() { return 1.0; }'));
-    expect(outcome).toMatchObject({ state: 'not transpiled yet', owner: '#1794' });
+    expect(outcome).toMatchObject({ state: 'not transpiled yet', owner: '#1831' });
   });
 
   it('fails a shader the transpiler accepts and Godot refuses', () => {

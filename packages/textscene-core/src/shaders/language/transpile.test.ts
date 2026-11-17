@@ -87,7 +87,7 @@ describe('transpileShadingLanguage', () => {
 
   it('refuses a row that is not transpiled before it reaches the emitter', () => {
     expect(() => transpileShadingLanguage('varying float v;')).toThrow(
-      "'varying' is not transpiled yet (#1794)"
+      "'varying' is not transpiled yet (#1831)"
     );
   });
 
