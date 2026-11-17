@@ -64,7 +64,7 @@ const PUBLIC_TYPE_EXPORTS = [
 const CONSUMER_SCRIPT = `
 import * as entry from '@textscene/three-godot-shaders';
 let handler = null;
-entry.installNodesHandler({ setNodesHandler: (given) => { handler = given; } });
+entry.installNodesHandler({ setNodesHandler: (given) => { handler = given; }, debug: {} });
 console.log(JSON.stringify({ exports: Object.keys(entry).sort(), handler: handler?.constructor.name }));
 `;
 
