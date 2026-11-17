@@ -12,6 +12,7 @@ import type { StageName } from '../template/stages.js';
 import type { TemplateStageNode } from '../template/templateTree.js';
 import { TemplateUniforms } from '../template/templateUniforms.js';
 import { godotId } from '../template/godotIds.js';
+import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
 import { bindParameters, type TranspiledUniform } from '../uniforms/transpiledUniform.js';
 import { TRANSPILER_VERSION, TreeMemo } from '../template/treeMemo.js';
 
@@ -34,13 +35,22 @@ export interface TranspiledSky {
   readonly parameters: ReadonlyMap<string, TranspiledUniform>;
 }
 
+export interface SkyOptions extends ShaderOptions {
+  /** The project's texture filter settings, Godot's defaults when left out. */
+  readonly sampling?: ProjectSampling;
+}
+
 /** The sky of `source`, a shader of `shader_type sky`, preprocessed with `options`. */
-export function transpileSky(source: string, options: ShaderOptions = {}): TranspiledSky {
-  return transpileParsedSky(parsedShader(source, options), options.file ?? '');
+export function transpileSky(source: string, options: SkyOptions = {}): TranspiledSky {
+  return transpileParsedSky(parsedShader(source, options), options.file ?? '', options.sampling);
 }
 
 /** The sky of a parsed shader from `file`, for a caller that has read its tree already. */
-export function transpileParsedSky({ code, tree }: ParsedShader, file: string): TranspiledSky {
+export function transpileParsedSky(
+  { code, tree }: ParsedShader,
+  file: string,
+  sampling: ProjectSampling = GODOT_SAMPLING
+): TranspiledSky {
   if (tree.shaderType !== 'sky')
     throw new ShadingLanguageError(
       `expected a shader of 'shader_type sky', found ${tree.shaderType ?? 'none'}`,
@@ -67,7 +77,7 @@ export function transpileParsedSky({ code, tree }: ParsedShader, file: string): 
     );
   const uniforms = new TemplateUniforms();
   // A sky converts a source colour to linear (`sky.cpp:193`).
-  const parameters = bindParameters(tree, true);
+  const parameters = bindParameters(tree, { useLinearColor: true, sampling });
   const parameterValues = [...parameters].map(([name, binding]) => [godotId(name), binding.value] as const);
   const uvInterp = varyingProperty('vec2', 'uv_interp') as unknown as Node;
   const vertex = emitTemplateStage(

@@ -1,3 +1,4 @@
+import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
 import { bindParameters, type TranspiledUniform } from '../uniforms/transpiledUniform.js';
 import { emitShader, type TranspiledFunction } from './emitter.js';
 import { parsedShader, type ParsedShader, type ShaderOptions } from './parseShader.js';
@@ -17,6 +18,8 @@ export interface TranspiledShader {
 export interface TranspileOptions extends ShaderOptions {
   /** Godot's `p_use_linear_color`: false only for a `canvas_item` outside an HDR 2D viewport. */
   readonly useLinearColor?: boolean;
+  /** The project's texture filter settings, Godot's defaults when left out. */
+  readonly sampling?: ProjectSampling;
 }
 
 /** The functions and uniforms of `source`, preprocessed with `options`. */
@@ -27,7 +30,7 @@ export function transpileShadingLanguage(source: string, options: TranspileOptio
 /** The functions and uniforms of a parsed shader, for a caller that has read its tree already. */
 export function transpileParsedShader(
   { tree }: ParsedShader,
-  { useLinearColor = isLinearByDefault(tree.shaderType) }: TranspileOptions = {}
+  { useLinearColor = isLinearByDefault(tree.shaderType), sampling = GODOT_SAMPLING }: TranspileOptions = {}
 ): TranspiledShader {
   checkTranspiled(tree);
   const entry = tree.shaderType && TEMPLATE_ENTRIES[tree.shaderType];
@@ -36,7 +39,7 @@ export function transpileParsedShader(
       `a shader of 'shader_type ${tree.shaderType}' links into Godot's ${tree.shaderType} template: draw it with ${entry}`,
       tree.headPosition!
     );
-  const parameters = bindParameters(tree, useLinearColor);
+  const parameters = bindParameters(tree, { useLinearColor, sampling });
   const values = new Map([...parameters].map(([name, binding]) => [name, binding.value]));
   return { functions: emitShader(tree, values), parameters };
 }
