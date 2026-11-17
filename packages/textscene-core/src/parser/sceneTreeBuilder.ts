@@ -89,12 +89,8 @@ interface SeatingEntry extends SeatedPaths<RawNode> {
   readonly origins?: readonly NodeOrigin<RawNode>[];
 }
 
-/**
- * Written only by {@link seatScene}, once per call, keyed by the roots array it returns. An entry
- * clears when nothing holds that array any more, and never goes stale, as nothing mutates a seated
- * tree. Only a scene with a root fallback keeps its heading nodes.
- */
-// eslint-disable-next-line no-restricted-syntax -- seatScene writes each entry from outside, and sceneSeating only reads it back
+/** Written by seatScene and shareSeating, keyed by roots. An entry clears with its roots, never stale. */
+// eslint-disable-next-line no-restricted-syntax -- seatScene and shareSeating write each entry, and sceneSeating reads it back
 const seatings = new WeakMap<readonly RawNode[], SeatingEntry>();
 
 /**
@@ -207,6 +203,13 @@ function seatHeadings<N extends SceneNode<N>>(
     headings: trailHeadingsOf(origins),
     rootFallbacks: tables.rootFallbacks,
   };
+}
+
+/** Gives `roots` the seating of `seated`, for roots that differ only in values: no owner or `%Name` moves. */
+export function shareSeating<N extends RawNode>(roots: readonly N[], seated: readonly N[]): readonly N[] {
+  const entry = seatings.get(seated);
+  if (entry) seatings.set(roots, entry);
+  return roots;
 }
 
 /** One shared array, so a lookup keyed on the headings' identity builds once for every unseated scene. */

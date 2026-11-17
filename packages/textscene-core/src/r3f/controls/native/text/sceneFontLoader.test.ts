@@ -376,10 +376,11 @@ describe('SettledFonts.subscribe', () => {
 });
 
 describe('fontWork', () => {
-  it('counts a font load from the peek that starts it until it settles, so a capture waits for it', async () => {
+  it('counts a font load from the microtask after the peek that starts it until it settles', async () => {
     const leaf = fontFile(fontBytes());
 
     peekSceneFontMetrics(fonts, leaf, 'Root/K');
+    await Promise.resolve();
     expect(fontWork.pending()).toBe(1);
     await settleLoads();
 
@@ -391,6 +392,7 @@ describe('fontWork', () => {
 
     peekSceneFontMetrics(fonts, leaf, 'Root/L');
     peekSettledSceneFontMetrics(fonts, leaf, 'Root/M');
+    await Promise.resolve();
     expect(fontWork.pending()).toBe(1);
     await settleLoads();
 
@@ -403,6 +405,7 @@ describe('fontWork', () => {
 
     peekSettledSceneFontMetrics(fonts, leaf, 'Root/N');
     peekSettledSceneFontMetrics(fonts, copy, 'Root/O');
+    await Promise.resolve();
     expect(fontWork.pending()).toBe(1);
     await settleLoads();
 

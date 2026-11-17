@@ -186,7 +186,8 @@ const UI_VIEWPORT: Rect2 = { x: 0, y: 0, w: 400, h: 300 };
 function layoutProbe(path: string, rects: (Rect2 | undefined)[]) {
   return function LayoutProbe() {
     const { sceneGraph } = useHierarchy();
-    const root = sceneGraph.scenes.get(sceneGraph.rootScene)!;
+    const root = sceneGraph?.scenes.get(sceneGraph.rootScene);
+    if (!root) throw new Error('expected the scene graph of the UI scene, got none');
     const { tree } = useBuildSolveTree(root.nodes, root.externalResources, root.internalResources);
     rects.push(solveControlTree(tree, UI_VIEWPORT, createSolveContext(nativeTheme(1))).get(path)?.rect);
     return null;

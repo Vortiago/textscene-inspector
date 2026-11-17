@@ -28,8 +28,11 @@ the resource loader, and the host's writes. It imports no React and no three.js.
 - **Layers**, lowest first: the file with its instance overrides, the host writes, the animated
   values (empty today), the Live scene passes. A pass result lies over a host write.
 - **Setters.** A stored property takes the value cast as `Object::set` casts it, and answers whether
-  the cast is strict (`class_db.cpp:1647-1690`). A property with no storage is ported per class family
-  (Node3D, Node2D), with the cache Godot keeps.
+  the cast is strict (`class_db.cpp:1647-1690`). A property with no storage is ported per class
+  family, with the cache Godot keeps. A class takes every family of its bases. A family answers first
+  for a stored property too, where Godot's setter writes more than the property, as a Control's anchor
+  does. A setter that reads up the tree, such as `global_position`, reads the parent through the
+  parent's own getter, so one port serves each level.
 - **Loading.** The class table and the defaults load on the first `get` or `set`, outside the first
   chunk of the webview (ADR-0055).
 - **Redraw.** The writes of one task make one notice, so every view draws one frame for them.

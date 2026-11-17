@@ -117,9 +117,11 @@ The limits of this release:
 - A write replaces a whole property. A write inside a resource, such as the colour of a material,
   is not possible: swap the whole resource.
 - A property that Godot computes from the layout, such as the `size` and `position` of a `Control`,
-  throws with the name of the property. So does any other property this release has no setter for.
-- A setter that changes other properties as it writes, such as `anchor_right` of a `Control`, writes
-  only its own property.
+  throws with the name of the property. So do a running property, such as `playing`, and the global
+  transform of a `Node2D` under a `Control` (#2003).
+- Most setters store the value as Godot casts it, and run none of their own checks. The global
+  transforms, the anchors of a `Control`, `frame_coords` and `volume_linear` run Godot's setter
+  (#2002).
 - `get` of a property that a scene pass drives, such as the target of a `RemoteTransform3D`, answers
   the value under the pass.
 - Scripts do not run, no signal reaches your code, and no input reaches the scene.

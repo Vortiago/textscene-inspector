@@ -4,12 +4,18 @@ interface Observer {
   readonly listener: () => void;
 }
 
-/** The writes of one task make one notice, so the views draw one frame for them. */
+/** Once per frame in a browser: a notice per write task chains renders until React stops the loop. */
+const nextFrame: (tell: () => void) => void =
+  typeof requestAnimationFrame === 'function' ? (tell) => void requestAnimationFrame(tell) : queueMicrotask;
+
+/** The writes of one task make one notice to the observers, and the writes of one frame one to the views. */
 export class SceneListeners {
   private readonly views = new Set<() => void>();
   private readonly observers = new Set<Observer>();
   /** Written only by `written` and `flushWrites`: the absolute paths written since the last notice. */
   private writtenPaths = new Set<string>();
+  /** Written only by `written` and `tellViews`: whether a frame will tell the views of a write. */
+  private isViewNoticePending = false;
 
   /** `resolve` gives the absolute path a host's path names now, or null where it names no node. */
   constructor(private readonly resolve: (path: string) => string | null) {}
@@ -29,6 +35,9 @@ export class SceneListeners {
   written(path: string): void {
     if (this.writtenPaths.size === 0) queueMicrotask(() => this.flushWrites());
     this.writtenPaths.add(path);
+    if (this.isViewNoticePending) return;
+    this.isViewNoticePending = true;
+    nextFrame(() => this.tellViews());
   }
 
   /** A new text: every node is new, so every view and every observer hears it now. */
@@ -53,10 +62,15 @@ export class SceneListeners {
     const paths = this.writtenPaths;
     if (paths.size === 0) return;
     this.writtenPaths = new Set();
-    for (const listener of [...this.views]) listener();
     for (const { path, listener } of [...this.observers]) {
       const resolved = path === null ? null : this.resolve(path);
       if (resolved !== null && paths.has(resolved)) listener();
     }
+  }
+
+  private tellViews(): void {
+    if (!this.isViewNoticePending) return;
+    this.isViewNoticePending = false;
+    for (const listener of [...this.views]) listener();
   }
 }

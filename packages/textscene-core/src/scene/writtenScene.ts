@@ -1,6 +1,7 @@
 import { buildSceneGraph, type ParsedScene, type SceneGraph } from '../core/SceneGraph.js';
 import type { TscnExternalResource, TscnNode } from '../parser/types.js';
 import { layerRawOverride } from '../resources/layerRawOverride.js';
+import { shareSeating } from '../parser/sceneTreeBuilder.js';
 import { nodePathNames } from '../godot/string/nodePath.js';
 import { joinPath } from '../utils/nodePath.js';
 import type { PropertyTexts, SceneWrites } from './sceneWrites.js';
@@ -165,7 +166,7 @@ export function writtenSceneGraph(
   for (const [livePath, texts] of writes) nodes = withWrite(nodes, livePath, texts);
   const scene: ParsedScene = {
     ...root,
-    nodes,
+    nodes: shareSeating(nodes, root.nodes),
     externalResources:
       resources.length === 0 ? root.externalResources : [...root.externalResources, ...resources],
   };

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import '../r3f/sceneLiveTree.js';
 import { openScene } from './openScene';
+import { cachedUniqueNameOwnership } from '../utils/uniqueNames';
 import type { ResourceProvider } from '../resources/ResourceProvider';
 
 const MAIN = 'res://main.tscn';
@@ -121,6 +122,15 @@ describe('getNode in a sub-scene', () => {
     scene.observe(null, listener);
     scene.getNodeOrNull('Enemy');
     await vi.waitFor(() => expect(listener).toHaveBeenCalled());
+  });
+});
+
+describe('the scene after a write', () => {
+  it('keeps the %Name claims of the parse, as a view reads them', async () => {
+    const scene = levelScene();
+    await scene.getNode('Player').set('visible', false);
+    const written = scene.written()?.scenes.get(MAIN)?.nodes ?? [];
+    expect(cachedUniqueNameOwnership(written).claims.has('%Score')).toBe(true);
   });
 });
 
