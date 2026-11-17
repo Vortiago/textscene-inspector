@@ -70,6 +70,26 @@ describe('the answers as every reader sees them', () => {
   });
 });
 
+describe('a run that skips the material sweep', () => {
+  const withoutMaterials = (answers) => ({ ...answers, materials: undefined });
+  const committed = fileOf(FLOAT, ['3f800000']);
+
+  it('keeps the committed material digests and smoke cases, so the file stays the same', () => {
+    const skipped = withoutMaterials(answersOf(FLOAT, ['3f800000']));
+    expect(renderAnswersFile(skipped, JSON.parse(committed))).toBe(committed);
+  });
+
+  it('fails when the committed file has no material digest either', () => {
+    const skipped = withoutMaterials(answersOf(FLOAT, ['3f800000']));
+    expect(() => renderAnswersFile(skipped, { digests: {}, smoke: {} })).toThrow(/family materials/);
+  });
+
+  it('checks only the families it recorded against the committed digests', () => {
+    const skipped = canonicalAnswers(withoutMaterials(answersOf(FLOAT, ['3f800000'])));
+    expect(staleFamilies(skipped, JSON.parse(committed))).toEqual([]);
+  });
+});
+
 describe('a live run against the committed digests', () => {
   const committed = JSON.parse(fileOf(FLOAT, ['3f800000']));
 

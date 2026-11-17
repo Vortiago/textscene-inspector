@@ -51,9 +51,20 @@ const familiesOf = ({ probes, random, operators, corpus, expressions, heads, mat
   corpus: corpus.cases,
   expressions: expressions.cases,
   heads: heads.cases,
-  materials: materials.cases,
-  materialVerdicts: materials.verdicts,
+  ...(materials && { materials: materials.cases, materialVerdicts: materials.verdicts }),
 });
+
+/** The families of the answers file, in its order. */
+const FAMILY_NAMES = [
+  'probes',
+  'random',
+  'operators',
+  'corpus',
+  'expressions',
+  'heads',
+  'materials',
+  'materialVerdicts',
+];
 
 /** The families of canonical `answers` whose digest is not the one `committed` holds. */
 export function staleFamilies(answers, committed) {
@@ -71,15 +82,23 @@ function renderEntries(answers) {
   return lines.length === 0 ? '{}' : `{\n${lines.join(',\n')}\n${indent}}`;
 }
 
-/** The committed answers file: `probes` and `random` keyed by probe name, the others by case id. */
-export function renderAnswersFile(records) {
+/** The committed answers file. A family the run skipped keeps its digest and smoke cases from `kept`. */
+export function renderAnswersFile(records, kept) {
   const answers = canonicalAnswers(records);
   const families = familiesOf(answers);
-  const digests = Object.fromEntries(
-    Object.entries(families).map(([family, entries]) => [family, familyDigest(entries)])
-  );
-  const smoke = Object.entries(families).map(
-    ([family, entries]) => `  ${JSON.stringify(family)}: ${renderEntries(smokeOf(entries))}`
+  const keptFamily = (family) => {
+    if (kept?.digests[family] === undefined)
+      throw new Error(`expected family ${family} recorded or in the committed answers file, found neither`);
+    return { digest: kept.digests[family], smoke: kept.smoke[family] };
+  };
+  const recorded = (family) =>
+    family in families
+      ? { digest: familyDigest(families[family]), smoke: smokeOf(families[family]) }
+      : keptFamily(family);
+  const byFamily = FAMILY_NAMES.map((family) => [family, recorded(family)]);
+  const digests = Object.fromEntries(byFamily.map(([family, { digest }]) => [family, digest]));
+  const smoke = byFamily.map(
+    ([family, entries]) => `  ${JSON.stringify(family)}: ${renderEntries(entries.smoke)}`
   );
   return [
     '{',

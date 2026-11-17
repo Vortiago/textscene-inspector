@@ -41,8 +41,9 @@ const PARSE_ALL_TIMEOUT_MS = 60_000;
 /** The states of a parse that agrees with Godot's compiler. */
 const AGREES = ['transpiled', 'refused as Godot refuses'];
 
-/** Godot's text of the case, which only the live run holds. */
-const godotText = ({ hash }) => (answers.live ? liveMaterialTexts()[hash] : `the text of hash ${hash}`);
+/** Godot's text of the case, which only a live run of the whole sweep holds. */
+const godotText = ({ hash }) =>
+  answers.materials.live ? liveMaterialTexts()[hash] : `the text of hash ${hash}`;
 
 describe("BaseMaterial3D's shader text", () => {
   it.each(MATERIAL_CLASSES)('equals Godot for every %s of the sweep', (materialClass) => {

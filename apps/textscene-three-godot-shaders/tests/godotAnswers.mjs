@@ -2,8 +2,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { canonicalAnswers, staleFamilies } from '../../../scripts/godot-probes/answerDigest.mjs';
 
-/** The families of answers, each a record file of the live run. */
-const FAMILIES = ['probes', 'random', 'operators', 'corpus', 'expressions', 'heads', 'materials'];
+/** The families every live run records, each a record file. */
+const FAMILIES = ['probes', 'random', 'operators', 'corpus', 'expressions', 'heads'];
+
+/** Recorded only when an input of the material sweep changed (scripts/ci/materialScope.mjs). */
+const MATERIALS = 'materials';
 
 /** Written only by `pnpm godot:probes`, and left out of the repository. */
 export const LIVE_DIR = join(import.meta.dirname, '.godot-answers');
@@ -31,18 +34,23 @@ export function godotAnswers() {
   return smokeAnswers(smoke, godot, adapter);
 }
 
-/** The live run's answers. Throws when a family's digest is not the committed one: the run is stale. */
+/** The live run's answers, with smoke materials when it skipped the sweep. Throws on a stale digest. */
 function currentLiveAnswers() {
+  const recorded = [...FAMILIES, MATERIALS].filter((family) => existsSync(livePath(family)));
   const answers = canonicalAnswers(
-    Object.fromEntries(FAMILIES.map((family) => [family, readJson(livePath(family))]))
+    Object.fromEntries(recorded.map((family) => [family, readJson(livePath(family))]))
   );
-  const stale = staleFamilies(answers, readJson(ANSWERS_FILE));
+  const committed = readJson(ANSWERS_FILE);
+  const stale = staleFamilies(answers, committed);
   if (stale.length > 0) {
     throw new Error(
       `expected the live answers in ${LIVE_DIR} to match the digests of ${ANSWERS_FILE}, found ${stale.join(', ')} differ: run \`pnpm godot:probes\` again`
     );
   }
-  return answers;
+  const materials = answers.materials
+    ? { live: true, ...answers.materials }
+    : smokeAnswers(committed.smoke, committed.godot, committed.adapter).materials;
+  return { ...answers, materials };
 }
 
 function smokeAnswers(smoke, godot, adapter) {
@@ -54,7 +62,7 @@ function smokeAnswers(smoke, godot, adapter) {
     corpus: { godot, cases: smoke.corpus },
     expressions: { godot, cases: smoke.expressions },
     heads: { godot, cases: smoke.heads },
-    materials: { godot, cases: smoke.materials, verdicts: smoke.materialVerdicts },
+    materials: { live: false, godot, cases: smoke.materials, verdicts: smoke.materialVerdicts },
   };
 }
 

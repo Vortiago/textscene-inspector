@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/corpus.mjs';
 import { HEAD_CASES } from '../../apps/textscene-three-godot-shaders/tests/heads/headCases.mjs';
@@ -93,7 +93,7 @@ async function main() {
     CORPUS,
     HEAD_CASES
   );
-  const materials = await materialRecord();
+  const materials = await sweptMaterials();
   const records = {
     probes: probeRecord(output, PROBES, reasons),
     random: probeRecord(output, randomProbes, reasons),
@@ -101,18 +101,29 @@ async function main() {
     corpus: corpusRecord,
     expressions: await expressionRecord(expressions),
     heads: headRecord,
-    materials: materials.record,
+    ...(materials && { materials: materials.record }),
   };
   writeLiveAnswers(records);
-  writeFileSync(MATERIAL_TEXTS_FILE, `${JSON.stringify(materials.texts)}\n`);
-  const answersFile = renderAnswersFile(records);
-  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${HEAD_CASES.length} head cases, ${expressions.length} expressions, ${printed.length - lowered.length} printed texts as parsed and ${lowered.length} as lowered, ${Object.keys(records.materials.cases).length} materials`;
+  if (materials) writeFileSync(MATERIAL_TEXTS_FILE, `${JSON.stringify(materials.texts)}\n`);
+  const answersFile = renderAnswersFile(records, materials ? undefined : committedAnswers());
+  const materialCount = materials ? Object.keys(materials.record.cases).length : 'the committed';
+  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${HEAD_CASES.length} head cases, ${expressions.length} expressions, ${printed.length - lowered.length} printed texts as parsed and ${lowered.length} as lowered, ${materialCount} materials`;
   const options = { tool: 'godot-probes', summary };
   const outputs = [[ANSWERS_FILE, answersFile]];
   if (process.argv.includes('--check')) checkGenerated(outputs, { ...options, command: 'pnpm godot:probes' });
   else writeGenerated(outputs, options);
   failOnPrintedText(printedTextFaults(printed, output, reasons));
 }
+
+/** The sweep's record and texts, or nothing when CI finds no input of it changed (materialScope.mjs). */
+async function sweptMaterials() {
+  if (process.env.MATERIAL_SWEEP !== 'false') return materialRecord();
+  rmSync(livePath('materials'), { force: true });
+  rmSync(MATERIAL_TEXTS_FILE, { force: true });
+  return undefined;
+}
+
+const committedAnswers = () => JSON.parse(readFileSync(ANSWERS_FILE, 'utf8'));
 
 /** Writes each family's record of this run to the ignored live directory. */
 function writeLiveAnswers(records) {
