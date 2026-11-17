@@ -15,8 +15,7 @@ export interface LayeredTextureSlot<Source extends { form: string }, Built exten
 }
 
 /**
- * The texture a slot of `slot`'s class reads: built from its resource, or an image its **Import sidecar** imports.
- * Null while it loads, for none, and for a form the previewer cannot build.
+ * The texture a layered slot reads, or null while it loads, for none, and for a form it cannot build.
  *
  * @canonical A layered texture slot's GPU texture
  */

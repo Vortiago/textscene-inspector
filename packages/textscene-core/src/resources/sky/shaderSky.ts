@@ -72,7 +72,7 @@ function bakeShaderRadiance(
 /** Sky texts kept compiled for each decoders: the Source pane makes a new text at each keystroke. */
 const KEPT_SKY_COMPILES = 8;
 
-/** Written only by `skyCompileOf`: one compile per text, which the usage, every bake and the node details read. */
+/** Written only by `skyCompileOf`: one compile per text, for the usage, every bake and the node details. */
 const skyCompiles = perObject((_decoders: ShaderDecoders) => new LRUCache<SkyCompile>(KEPT_SKY_COMPILES));
 
 function skyCompileOf(code: string, decoders: ShaderDecoders): SkyCompile {
