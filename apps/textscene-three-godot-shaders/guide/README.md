@@ -10,14 +10,18 @@ A row is one typed form of an instruction, so a name has many rows: 588 operator
 
 Godot draws the probes and showcases on Vulkan over lavapipe (`llvmpipe (LLVM 20.1.2)`). The transpilation draws in headless Chromium, WebGL 2 through ANGLE on Vulkan over the same lavapipe, and the run stops when the browser reports another renderer. "Bit-equal" is a claim about that pair. Every probe is bit-equal with Godot. The random programs are bit-equal with Godot except the listed driver and undefined-behaviour cases, each with its cause in [testing.md](testing.md).
 
+## Install
+
+`installGodotShading(renderer, { renderingMethod })` gives a `WebGLRenderer` three's nodes handler and answers the shading of the project. Pass the project's `rendering/renderer/rendering_method`: `forward_plus` when left out. `shading.spatial(text)` gives the material of a spatial shader, and `shading.sky(text)` the draws of a sky. Each parses the text with the rendering method, and on `gl_compatibility` with the varying slots of the renderer's GL context, so a text gets the verdict Godot gives it on that renderer. `output: 'linear'` writes the lit colour for an app that tone maps and encodes the frame itself.
+
 ## Errors
 
 The transpiler gives two errors, and each says who is at fault.
 
-- `ShadingLanguageError`: Godot refuses the text too. It holds Godot's message and the line of the text. `transpileSpatial`, `transpileSky` and `transpileShadingLanguage` throw it.
+- `ShadingLanguageError`: Godot refuses the text too. It holds Godot's message and the line of the text. The shading's `spatial` and `sky`, `transpileSpatial`, `transpileSky` and `transpileShadingLanguage` throw it.
 - `TranslatorFault`: the GPU refuses the program for a text Godot compiles, so the transpiler is at fault. It holds `source.text`, the preprocessed text, `source.file`, the shader's address, and `log`, the link log of the driver and the log of each stage that has one.
 
-three reports a refused program when it first uses it, in a draw or in `compile` and `compileAsync`. `installNodesHandler` gives the fault to `onTranslatorFault` of each transpiled material three built that program for, and to `console.error` when that hook is null. A hook in `renderer.debug.onShaderError`, set before or after `installNodesHandler`, still gets every refused program. With no such hook, a program of another material gets three's own report.
+three reports a refused program when it first uses it, in a draw or in `compile` and `compileAsync`. `installGodotShading` gives the fault to `onTranslatorFault` of each transpiled material three built that program for, and to `console.error` when that hook is null. A hook in `renderer.debug.onShaderError`, set before or after `installGodotShading`, still gets every refused program. With no such hook, a program of another material gets three's own report.
 
 ## Chapters
 

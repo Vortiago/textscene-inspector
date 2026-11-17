@@ -29,7 +29,7 @@ const PUBLIC_VALUE_EXPORTS = [
   'SkyResolutionPasses',
   'TranslatorFault',
   'glVaryingSlots',
-  'installNodesHandler',
+  'installGodotShading',
   'textToVariant',
   'transpileShadingLanguage',
   'transpileSky',
@@ -39,8 +39,11 @@ const PUBLIC_VALUE_EXPORTS = [
   'writeSpatialBindings',
 ];
 const PUBLIC_TYPE_EXPORTS = [
+  'GodotShading',
+  'GodotShadingOptions',
   'NodeOutput',
   'Playback',
+  'RendererShaderOptions',
   'RenderingMethod',
   'ShaderInclude',
   'ShaderOptions',
@@ -48,6 +51,7 @@ const PUBLIC_TYPE_EXPORTS = [
   'SkyDraw',
   'SkyFog',
   'SkyLight',
+  'SkyOptions',
   'SkyScene',
   'SpatialOptions',
   'SpatialScene',
@@ -67,15 +71,15 @@ const PUBLIC_TYPE_EXPORTS = [
 const CONSUMER_SCRIPT = `
 import * as entry from '@textscene/three-godot-shaders';
 let handler = null;
-entry.installNodesHandler({ setNodesHandler: (given) => { handler = given; }, debug: {} });
+entry.installGodotShading({ setNodesHandler: (given) => { handler = given; }, debug: {} });
 console.log(JSON.stringify({ exports: Object.keys(entry).sort(), handler: handler?.constructor.name }));
 `;
 
 const CONSUMER_TYPES = `
 import type { WebGLRenderer } from 'three';
-import { installNodesHandler, type NodeOutput } from '@textscene/three-godot-shaders';
-export function install(renderer: WebGLRenderer, output: NodeOutput): void {
-  installNodesHandler(renderer, output);
+import { installGodotShading, type GodotShading, type NodeOutput } from '@textscene/three-godot-shaders';
+export function install(renderer: WebGLRenderer, output: NodeOutput): GodotShading {
+  return installGodotShading(renderer, { output, renderingMethod: 'gl_compatibility' });
 }
 `;
 

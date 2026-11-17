@@ -36,7 +36,7 @@ import {
 import { debandSky } from './skyDebanding';
 import { showSkyBackground } from './skyBackground';
 import { useShaderSkyTextures } from './shaderSkyTextures';
-import { useShaderDecoders } from '../shaderDecoders';
+import { useProjectShaderOptions } from '../projectShaderOptions';
 import { useShaderSkyErrorReport } from './shaderSkyError';
 import { useReadSky } from './readSky';
 import { useSkyTranslator } from './skyTranspiler';
@@ -104,12 +104,12 @@ export function SkyLayer({
 
   const isPanoramaDrawn = useIsPanoramaDrawn(panorama);
   const shaderCode = authoredSky.material.kind === 'shader' ? authoredSky.material.code : null;
-  const decoders = useShaderDecoders(shaderCode);
+  const shaderOptions = useProjectShaderOptions(shaderCode);
   const { transpiler, isReady: isTranslatorReady, loadFailure } = useSkyTranslator(gl, shaderCode !== null);
   useShaderErrorReport(loadFailure);
-  const sky = useReadSky(authoredSky, transpiler, decoders);
+  const sky = useReadSky(authoredSky, transpiler, shaderOptions);
   const [textures, textureSlots] = useShaderSkyTextures(sky?.material ?? null);
-  useShaderSkyErrorReport(sky?.material ?? null, transpiler, decoders);
+  useShaderSkyErrorReport(sky?.material ?? null, transpiler, shaderOptions);
   const { settings } = useProjectSettings();
   const sampling = useMemo(() => projectSampling(settings), [settings]);
 
@@ -126,7 +126,7 @@ export function SkyLayer({
     // A bake samples the panorama once, so it waits for the pass to draw a live target.
     if (!isPanoramaDrawn) return undefined;
     // A shader sky waits for the transpiler, the nodes handler, and the decoders its text may need.
-    if (!sky || !decoders || !isTranslatorReady) return undefined;
+    if (!sky || !shaderOptions || !isTranslatorReady) return undefined;
 
     const lights = directionalLights(scene);
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
@@ -135,7 +135,7 @@ export function SkyLayer({
       lights,
       panorama,
       textures,
-      decoders,
+      shaderOptions,
       sampling,
       buildShaderSky: transpiler?.buildShaderSkyEnvironment,
       asBackground,
@@ -229,7 +229,7 @@ export function SkyLayer({
     exposure,
     panorama,
     textures,
-    decoders,
+    shaderOptions,
     sampling,
     transpiler,
     isTranslatorReady,

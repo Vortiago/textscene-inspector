@@ -1,5 +1,5 @@
 import type { AuthoredSky, BuiltInSkyProperties, ShaderSkyText, Sky } from '../../resources/sky/types';
-import type { ShaderDecoders } from '../../shaders/preprocessor/decoders';
+import type { ProjectShaderOptions } from '../../shaders/language/rendererShaderOptions';
 import { withAutomaticBake } from '../../resources/sky/decode';
 import { perObject } from '../../utils/perObject';
 import type { SkyTranspiler } from './skyTranspiler';
@@ -8,22 +8,22 @@ import type { SkyTranspiler } from './skyTranspiler';
 export function useReadSky(
   sky: AuthoredSky,
   transpiler: SkyTranspiler | null,
-  decoders: ShaderDecoders | null
+  options: ProjectShaderOptions | null
 ): Sky | null {
   if (!isShaderSky(sky)) return sky as Sky<BuiltInSkyProperties>;
-  if (!transpiler || !decoders) return null;
-  return readShaderSkyOf(transpiler)(sky)(decoders);
+  if (!transpiler || !options) return null;
+  return readShaderSkyOf(transpiler)(sky)(options);
 }
 
 function isShaderSky(sky: AuthoredSky): sky is Sky<ShaderSkyText> {
   return sky.material.kind === 'shader';
 }
 
-/** One read sky for each sky and decoders, as viewports that draw one sky share its bake. */
+/** One read sky for each sky and options, as viewports that draw one sky share its bake. */
 const readShaderSkyOf = perObject((transpiler: SkyTranspiler) =>
   perObject((sky: Sky<ShaderSkyText>) =>
-    perObject((decoders: ShaderDecoders): Sky =>
-      withAutomaticBake({ ...sky, material: transpiler.readShaderSky(sky.material, decoders) })
+    perObject((options: ProjectShaderOptions): Sky =>
+      withAutomaticBake({ ...sky, material: transpiler.readShaderSky(sky.material, options) })
     )
   )
 );

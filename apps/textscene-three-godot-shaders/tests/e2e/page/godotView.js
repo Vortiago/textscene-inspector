@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { installNodesHandler, PlaybackShaderTime, ShaderClock } from '@textscene/three-godot-shaders';
+import { installGodotShading, PlaybackShaderTime, ShaderClock } from '@textscene/three-godot-shaders';
 
 /** The renderer of a Godot viewport's display: sRGB output and no tone mapping. */
 export const displayRenderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas') });
-installNodesHandler(displayRenderer, 'display');
+installGodotShading(displayRenderer);
 displayRenderer.outputColorSpace = THREE.SRGBColorSpace;
 displayRenderer.toneMapping = THREE.NoToneMapping;
 

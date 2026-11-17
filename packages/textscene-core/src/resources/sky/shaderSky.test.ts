@@ -20,7 +20,10 @@ const SKY_FILE = 'res://tinted_sky.gdshader';
 const TINTED_SKY = 'shader_type sky;\nuniform float tint = 0.5;\nvoid sky() {\n\tCOLOR = vec3(tint);\n}\n';
 
 function shaderMaterial(code: string): ShaderSkyProperties {
-  return readShaderSky({ kind: 'shader', code, file: SKY_FILE, parameters: {}, textures: {} }, {});
+  return readShaderSky(
+    { kind: 'shader', code, file: SKY_FILE, parameters: {}, textures: {} },
+    { decoders: {} }
+  );
 }
 
 /** The environment of `sky` with the transpiler, as the previewer builds it once the transpiler loads. */
@@ -81,13 +84,28 @@ describe('buildSkyEnvironment of a shader Godot does not compile', () => {
 
 describe('shaderSkyRefusal', () => {
   it("gives Godot's error and its line for a shader Godot does not compile", () => {
-    expect(shaderSkyRefusal(shaderMaterial('shader_type sky;\n\nvoid sky() { COLOR = 1.0; }\n'), {})).toMatch(
-      /^Godot does not compile the sky shader, and draws its default sky: 3:\d+: /
-    );
+    expect(
+      shaderSkyRefusal(shaderMaterial('shader_type sky;\n\nvoid sky() { COLOR = 1.0; }\n'), { decoders: {} })
+    ).toMatch(/^Godot does not compile the sky shader, and draws its default sky: 3:\d+: /);
   });
 
   it('gives nothing for a shader the previewer draws', () => {
-    expect(shaderSkyRefusal(shaderMaterial(TINTED_SKY), {})).toBeNull();
+    expect(shaderSkyRefusal(shaderMaterial(TINTED_SKY), { decoders: {} })).toBeNull();
+  });
+
+  it("parses with the project's rendering method", () => {
+    const material = shaderMaterial(
+      'shader_type sky;\nuniform sampler2D t : hint_normal_roughness_texture;\nvoid sky() {}\n'
+    );
+    const refusals = (['forward_plus', 'mobile'] as const).map((renderingMethod) =>
+      shaderSkyRefusal(material, { decoders: {}, renderingMethod })
+    );
+    expect(refusals).toEqual([
+      expect.stringContaining("'hint_normal_roughness_texture' is not supported in 'sky' shaders."),
+      expect.stringContaining(
+        "'hint_normal_roughness_texture' is only available when using the Forward+ renderer."
+      ),
+    ]);
   });
 
   it('names a defect that is no Godot error, as the previewer draws the default sky for it (error case)', () => {
@@ -95,7 +113,7 @@ describe('shaderSkyRefusal', () => {
       throw new TypeError('a parser defect');
     });
     const material = shaderMaterial(TINTED_SKY.replace('0.5', '0.25'));
-    expect(shaderSkyRefusal(material, {})).toBe(
+    expect(shaderSkyRefusal(material, { decoders: {} })).toBe(
       "The previewer failed to translate this sky shader, and draws Godot's default sky: TypeError: a parser defect"
     );
   });

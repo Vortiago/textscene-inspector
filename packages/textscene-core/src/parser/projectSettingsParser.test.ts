@@ -30,6 +30,7 @@ import {
   projectUsesLightmapBicubicFilter,
   projectMsaaModes,
   projectAnisotropicFilteringLevel,
+  projectRenderingMethod,
   projectSampling,
   projectDecalFilter,
   projectDefaultFontGeneratesMipmaps,
@@ -780,6 +781,30 @@ describe('projectSampling', () => {
 
   it("takes Godot's defaults with no project", () => {
     expect(projectSampling(null)).toEqual({ anisotropicFilteringLevel: 2, useNearestMipmapFilter: false });
+  });
+});
+
+describe('projectRenderingMethod', () => {
+  it('reads each of the three methods from a project.godot line', () => {
+    const methods = ['forward_plus', 'mobile', 'gl_compatibility'].map((method) =>
+      projectRenderingMethod(parseProjectSettings(`[rendering]\n\nrenderer/rendering_method="${method}"\n`))
+    );
+    expect(methods).toEqual(['forward_plus', 'mobile', 'gl_compatibility']);
+  });
+
+  it('takes Forward+ with no project', () => {
+    expect(projectRenderingMethod(null)).toBe('forward_plus');
+  });
+
+  it('takes Forward+ for a method Godot does not name', () => {
+    expect(projectRenderingMethod({ 'rendering/renderer/rendering_method': 'vulkan' })).toBe('forward_plus');
+  });
+
+  it('reads no override of another feature, which the desktop editor does not take', () => {
+    const settings = parseProjectSettings(
+      '[rendering]\n\nrenderer/rendering_method="forward_plus"\nrenderer/rendering_method.mobile="gl_compatibility"\n'
+    );
+    expect(projectRenderingMethod(settings)).toBe('forward_plus');
   });
 });
 

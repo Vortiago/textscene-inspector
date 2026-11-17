@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
-import type { ShaderDecoders } from '../../shaders/preprocessor/decoders';
+import type { ProjectShaderOptions } from '../../shaders/language/rendererShaderOptions';
 import type { BuiltInSkyProperties, ShaderSkyProperties, Sky } from './types';
 import { warn } from '../../logger';
 import { skyFragmentShader, skyGlsl, SKY_VERTEX_SHADER } from './skyShaders';
@@ -56,8 +56,8 @@ export interface SkyEnvironmentInput {
   energy: number;
   /** A shader sky's loaded texture parameters, by uniform name. */
   textures?: Readonly<Record<string, SamplerValue>>;
-  /** The decoders a shader sky's `#if` may decompress with. */
-  decoders?: ShaderDecoders;
+  /** A shader sky's parse options: the project's rendering method, the varying slots, the decoders. */
+  shaderOptions?: ProjectShaderOptions;
   /** The project's filter settings, for a shader sky's samplers and each surface's read of the layers. */
   sampling?: ProjectSampling;
   /** The sky transpiler's builder for a shader sky, imported on demand to keep it off the first paint. */
