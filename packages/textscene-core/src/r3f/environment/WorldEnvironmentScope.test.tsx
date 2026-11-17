@@ -34,6 +34,16 @@ vi.mock('../preview/PreviewEnvironment', async (importOriginal) => ({
 vi.mock('./Compositor', () => ({
   Compositor: () => <group name="Compositor" />,
 }));
+vi.mock('./fallbackEnvironment', async () => {
+  const { useViewportDescription } = await import('../viewportRender/viewportDescriptionContext');
+  return {
+    // The fallback resolves to a settings object named after its path, and to none with no path.
+    useFallbackEnvironment: (): EnvironmentResolution => {
+      const path = useViewportDescription().fallbackEnvironment;
+      return path ? resolved(path) : NO_RESOLUTION;
+    },
+  };
+});
 vi.mock('../preview/PreviewSun', () => ({
   PreviewSun: () => <group name="PreviewSun" />,
 }));
@@ -318,6 +328,45 @@ describe('<WorldEnvironmentScope world="subViewport">', () => {
       inRoot(inSubViewport(<Publisher resolution={resolved('a')} />))
     );
     expect(mountedLayers(renderer).sort()).toEqual(['EnvironmentLayer', 'PreviewEnvironment']);
+  });
+});
+
+describe('<WorldEnvironmentScope world="subViewport"> of a viewport with a fallback Environment', () => {
+  const FALLBACK = 'res://default_env.tres';
+
+  function inGameRoot(children: ReactNode) {
+    return (
+      <ViewportDescriptionProvider
+        description={{ ...gameViewportDescription(null), fallbackEnvironment: FALLBACK }}
+      >
+        {inSubViewport(children)}
+      </ViewportDescriptionProvider>
+    );
+  }
+
+  it('draws the fallback for a world with no WorldEnvironment', async () => {
+    expect(appliedName(await ReactThreeTestRenderer.create(inGameRoot(null)))).toBe(FALLBACK);
+  });
+
+  it("draws a WorldEnvironment's Environment ahead of the fallback", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inGameRoot(<Publisher resolution={resolved('a')} />)
+    );
+    expect(appliedName(renderer)).toBe('a');
+  });
+
+  it('draws the fallback past a WorldEnvironment whose Environment is missing (edge case)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inGameRoot(<Publisher resolution={NO_RESOLUTION} />)
+    );
+    expect(appliedName(renderer)).toBe(FALLBACK);
+  });
+
+  it('draws nothing while the WorldEnvironment loads, which holds its place', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inGameRoot(<Publisher resolution={PENDING_RESOLUTION} />)
+    );
+    expect(mountedLayers(renderer)).toEqual([]);
   });
 });
 

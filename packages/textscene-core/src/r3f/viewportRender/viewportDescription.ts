@@ -7,6 +7,7 @@ import {
 import type { SubViewportProperties } from '../../nodes/viewport/subviewport/types.js';
 import {
   projectAnisotropicFilteringLevel,
+  projectDefaultEnvironmentPath,
   projectMsaaModes,
   projectPositionalShadowAtlas,
   projectTextureMipmapBias,
@@ -29,6 +30,11 @@ export interface ViewportDescription {
   drawsEditorChrome: boolean;
   /** Whether the editor's preview sun and preview Environment stand in (ADR-0025). */
   previewsEnvironment: boolean;
+  /**
+   * The `res://` Environment the viewport's own world draws with when no WorldEnvironment holds
+   * one. Godot sets it on the root's world only (`renderer_scene_cull.cpp:3608-3610`).
+   */
+  fallbackEnvironment: string | null;
 }
 
 /** The root viewport as the editor draws it: its facts from the project, and the editor's rules. */
@@ -45,6 +51,7 @@ export function rootViewportDescription(settings: ProjectSettings | null): Viewp
     camera: 'editor',
     drawsEditorChrome: true,
     previewsEnvironment: true,
+    fallbackEnvironment: projectDefaultEnvironmentPath(settings),
   };
 }
 
@@ -96,6 +103,7 @@ export function subViewportDescription(
       VIEWPORT_POSITIONAL_SHADOW_ATLAS
     ),
     anisotropicLevel: properties.anisotropic_filtering_level ?? root.anisotropicLevel,
+    fallbackEnvironment: null,
     ...GAME_RULES,
   };
 }

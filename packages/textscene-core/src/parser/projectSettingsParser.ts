@@ -324,6 +324,14 @@ function projectFilePath(settings: ProjectSettings | null, key: string): string 
   return settings?.[key]?.trim() || null;
 }
 
+/**
+ * `rendering/environment/defaults/default_environment`, the Environment the root's world falls
+ * back to when no WorldEnvironment holds one (`scene/main/scene_tree.cpp:2151-2179`).
+ */
+export function projectDefaultEnvironmentPath(settings: ProjectSettings | null): string | null {
+  return projectFilePath(settings, 'rendering/environment/defaults/default_environment');
+}
+
 /** `gui/theme/custom`, the project theme (`ThemeDB::initialize_theme`, `scene/theme/theme_db.cpp:52`). */
 export function projectThemePath(settings: ProjectSettings | null): string | null {
   return projectFilePath(settings, 'gui/theme/custom');
