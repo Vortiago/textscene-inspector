@@ -39,29 +39,44 @@ function placed(node, { position, rotation, scale }) {
   return node;
 }
 
-/** The pixels of `spec`'s mesh, or `{ error }` when the transpilation refuses it. */
+/** The transpiled shader of each source, one for each source, so objects of one source share it. */
+function transpiledBySource(spec) {
+  const sources = new Set([spec.source, ...(spec.others ?? []).map(({ source }) => source ?? spec.source)]);
+  return new Map([...sources].map((source) => [source, transpileSpatial(source)]));
+}
+
+/** The pixels of `spec`'s meshes in the order it lists them, or `{ error }` when one is refused. */
 function drawMesh(spec) {
-  let spatial;
+  let transpiled;
   try {
-    spatial = transpileSpatial(spec.source);
+    transpiled = transpiledBySource(spec);
   } catch (error) {
     return { error: String(error.message ?? error) };
   }
   const { width, height } = spec;
   const camera = godotCamera(spec);
-  const mesh = placed(new THREE.Mesh(geometryOf(spec.mesh), spatial.material), spec.object);
-  mesh.frustumCulled = false;
-  writeSpatialBindings(spatial, { camera, width, height, time: 0, clearColor: GODOT_CLEAR_COLOR });
+  for (const spatial of transpiled.values())
+    writeSpatialBindings(spatial, { camera, width, height, time: 0, clearColor: GODOT_CLEAR_COLOR });
+  const geometry = geometryOf(spec.mesh);
+  const objects = [{ object: spec.object, source: spec.source }, ...(spec.others ?? [])];
+  const meshes = objects.map(({ object, source = spec.source }, order) => {
+    const mesh = placed(new THREE.Mesh(geometry, transpiled.get(source).material), object);
+    mesh.frustumCulled = false;
+    mesh.renderOrder = order;
+    return mesh;
+  });
   const scene = new THREE.Scene();
-  scene.add(spec.parent ? placed(new THREE.Group(), spec.parent).add(mesh) : mesh);
+  scene.add(
+    spec.parent ? placed(new THREE.Group(), spec.parent).add(...meshes) : new THREE.Group().add(...meshes)
+  );
   displayRenderer.setClearColor(GODOT_CLEAR_COLOR, 1);
   const pixels = framePixels(displayRenderer, scene, camera, {
     width,
     height,
     colorSpace: THREE.SRGBColorSpace,
   });
-  spatial.material.dispose();
-  mesh.geometry.dispose();
+  for (const spatial of transpiled.values()) spatial.material.dispose();
+  geometry.dispose();
   return { pixels: Array.from(pixels) };
 }
 

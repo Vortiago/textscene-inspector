@@ -137,6 +137,12 @@ const attributeScene = (name, builtIn, value, mesh = SPHERE) => ({
 
 const TURNED_ROTATION = [20, 35, -10];
 
+/** A quad at half size, at `position` and turned by `rotation`. */
+const SMALL_AT = (position, rotation) => ({ position, rotation, scale: [0.5, 0.5, 0.5] });
+
+/** A second unshaded material, so the objects of two materials draw in turn. */
+const ORANGE = showing('vec3(0.9, 0.3, 0.1)');
+
 export const MESH_SCENES = [
   {
     name: 'spatial-default-unshaded',
@@ -175,6 +181,15 @@ export const MESH_SCENES = [
   {
     ...quadScene('spatial-parent', { position: [0.2, 0, 0], rotation: [0, 0, 30], scale: [1, 1.5, 1] }),
     parent: { position: [-0.3, 0.2, -0.4], rotation: [0, 40, 0], scale: [0.8, 0.8, 0.8] },
+  },
+  {
+    ...quadScene('spatial-shared-material', SMALL_AT([-0.8, 0.5, 0], [0, 0, 15])),
+    others: [
+      { object: SMALL_AT([0, 0.5, -0.3], [20, 0, 0]), source: ORANGE },
+      { object: SMALL_AT([0.8, 0.5, 0], [0, 30, 0]) },
+      { object: SMALL_AT([-0.4, -0.5, 0.2], [0, 0, -40]), source: ORANGE },
+      { object: SMALL_AT([0.4, -0.5, -0.1], [-25, 10, 5]) },
+    ],
   },
   quadScene('spatial-fov-narrow', MOVED, { ...TURNED, fov: 30 }),
   quadScene('spatial-fov-wide', MOVED, { ...TURNED, fov: 110 }),

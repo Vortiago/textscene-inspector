@@ -63,7 +63,7 @@ export function viewportProjectFiles({ dataFile, shaderPrefix }, scenes, fieldsO
     width: scene.width,
     height: scene.height,
     camera: scene.camera,
-    ...fieldsOf(scene),
+    ...fieldsOf(scene, index),
     shader: `res://${shaderPrefix}_${index}.gdshader`,
   }));
   return {

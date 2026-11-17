@@ -165,6 +165,29 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-parent-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-parent-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-shared-material`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+void vertex() {
+	ROUGHNESS = 0.8;
+}
+
+void fragment() {
+	ALBEDO = vec3(0.6);
+	ROUGHNESS = 0.8;
+	METALLIC = 0.2;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-shared-material-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-shared-material-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `spatial-fov-narrow`
 
 Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.

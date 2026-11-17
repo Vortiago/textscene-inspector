@@ -66,16 +66,43 @@ func mesh_of(scene: Dictionary) -> ArrayMesh:
 			parent.scale = vector(scene.parent.scale)
 			viewport.add_child(parent)
 			holder = parent
-		holder.add_child(instance)`,
+		holder.add_child(instance)
+		for other in scene.get("others", []):
+			var drawn := MeshInstance3D.new()
+			drawn.mesh = instance.mesh
+			drawn.material_override = material
+			if other.has("shader"):
+				drawn.material_override = ShaderMaterial.new()
+				drawn.material_override.shader = load(other.shader)
+			drawn.position = vector(other.object.position)
+			drawn.rotation = degrees(other.object.rotation)
+			drawn.scale = vector(other.object.scale)
+			holder.add_child(drawn)`,
 });
 
+/** The shader file of the other object `other` of scene `index`, which has a source of its own. */
+const otherShader = (index, other) => `mesh_${index}_${other}.gdshader`;
+
 /** The files beside the main script, keyed by their names in the project. */
-export const meshProjectFiles = (scenes) =>
-  viewportProjectFiles(FILES, scenes, (scene) => ({
+export function meshProjectFiles(scenes) {
+  const files = viewportProjectFiles(FILES, scenes, (scene, index) => ({
     mesh: scene.mesh,
     object: scene.object,
     ...(scene.parent ? { parent: scene.parent } : {}),
     ...(scene.compressed ? { compressed: true } : {}),
+    ...(scene.others
+      ? {
+          others: scene.others.map(({ object, source }, other) => ({
+            object,
+            ...(source ? { shader: `res://${otherShader(index, other)}` } : {}),
+          })),
+        }
+      : {}),
   }));
+  const ownShaders = scenes.flatMap((scene, index) =>
+    (scene.others ?? []).flatMap(({ source }, other) => (source ? [[otherShader(index, other), source]] : []))
+  );
+  return { ...files, ...Object.fromEntries(ownShaders) };
+}
 
 export const parseMeshOutput = (stdout) => parseViewportOutput(stdout, LINE_PREFIX);
