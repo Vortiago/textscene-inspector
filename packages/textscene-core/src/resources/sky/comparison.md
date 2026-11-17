@@ -42,9 +42,21 @@ An atmospheric-scattering sky. The grey-blue gradient, the horizon band, and the
 
 <!-- compare: image=unit-shader-sky-parameters status=limitation fixture=unit-shader-sky-parameters.tscn -->
 
-A user's sky shader reads a GradientTexture2D through a `source_color` sampler and a float the material sets. The transpiled sky template draws the background at each pixel. Its octmap pass draws straight into the radiance the metal sphere reflects, as Godot's does. Both match Godot. The sky's samplers read Godot's default samplers: 4x anisotropy whatever the project's level, and the project's nearest mipmap filter. A `samplerCube` reads a Cubemap saved with its faces or an image imported as a cubemap, in Godot's face order. The environment's depth fog, its sun scatter and its aerial perspective fog the sky as in Godot. `TIME` follows the playback controls. A shader Godot does not compile draws Godot's black default sky, and the node details show Godot's error.
+A user's sky shader reads a GradientTexture2D through a `source_color` sampler and a float the material sets. The transpiled sky template draws the background at each pixel. Its octmap pass draws straight into the radiance the metal sphere reflects, as Godot's does. Both match Godot. The sky's samplers read Godot's default samplers: 4x anisotropy whatever the project's level, and the project's nearest mipmap filter. A `samplerCube` reads a Cubemap saved with its faces or an image imported as a cubemap, in Godot's face order. The environment's depth fog, its sun scatter and its aerial perspective fog the sky as in Godot. `TIME` follows the playback controls. A shader Godot does not compile draws Godot's black default sky, and the node details show Godot's error. In Automatic process mode, a sky that reads `TIME` or `POSITION` at radiance size 256 bakes with the fast filter, as Real-Time does. A sky Godot runs as Incremental and one it runs as Quality draw alike in one instant.
 
-A sky shader that reads `TIME` or `POSITION` keeps the radiance of its first bake, where Godot bakes it again in each frame. Volumetric fog does not reach a sky shader. A texture array or cubemap array parameter is not loaded, so its sampler reads its default. A cubemap imported with `mipmaps/limit` keeps every mip level. A sky shader that reads the half or quarter resolution passes, or a light, draws the default sky.
+A sky shader that reads `TIME` or `POSITION` keeps the radiance of its first bake, where Godot bakes it again in each frame. Volumetric fog does not reach a sky shader. A texture array or cubemap array parameter is not loaded, so its sampler reads its default. A cubemap imported with `mipmaps/limit` keeps every mip level.
+
+## Sky shader lights
+
+<!-- compare: image=unit-shader-sky-light status=done fixture=unit-shader-sky-light.tscn -->
+
+The sky shader adds a glow toward the sun it reads through `LIGHT0_DIRECTION`, `LIGHT0_COLOR` and `LIGHT0_ENERGY`. The glow in the background and in the metal sphere's reflection matches Godot's. A sky shader reads `LIGHT0_*` to `LIGHT3_*` from the first four DirectionalLight3D nodes whose `sky_mode` is not Light Only, as Godot does. A slot past the last light defines only its `ENABLED`, as Godot leaves the rest of it from an earlier frame.
+
+## Half and quarter resolution passes
+
+<!-- compare: image=unit-shader-sky-half-res status=done fixture=unit-shader-sky-half-res.tscn -->
+
+The sky draws its gradient in the half resolution pass. The full pass reads it through `HALF_RES_COLOR`. The background and the metal sphere's reflection match Godot's. With `use_half_res_pass` or `use_quarter_res_pass`, the sky draws at a half or a quarter of the size first, the quarter pass before the half pass. A shader that reads `HALF_RES_COLOR` or `QUARTER_RES_COLOR` without its render mode reads white. In the radiance bake, Godot draws those passes into the smaller mips of the radiance. The previewer draws them into octmaps of their own at the same sizes.
 
 ## Sun disc size
 

@@ -716,6 +716,27 @@ const SKY_CHAPTER = {
       tsl: "the template's local `custom_fog`",
     },
     {
+      heading: '`LIGHT0_*` to `LIGHT3_*`',
+      rows: (row) => /^sky\.global\.LIGHT\d_/.test(row.id),
+      what: "Each `LIGHTn_*` reads slot n of the template's `directional_lights` buffer (`sky.cpp:761-780`). Godot fills the slots with the first four DirectionalLight3D nodes of the render's light list whose sky mode is not Light Only, and leaves `ENABLED` false in each slot past the last (`sky.cpp:1054-1112`). `DIRECTION` is the light's +Z axis, `ENERGY` its energy, `COLOR` its linear colour and `SIZE` its angular diameter in radians. A slot past the last light keeps what Godot wrote there last, so only its `ENABLED` is defined: `writeSkyBindings` writes zero there. It writes the slots from the `lights` of its scene.",
+      tsl: "the template's uniforms `directional_lights.data.*`",
+    },
+    {
+      heading: 'The half and quarter resolution passes',
+      rows: (row) =>
+        /^sky\.global\.AT_(HALF|QUARTER)_RES_PASS$|^sky\.sky\.(HALF|QUARTER)_RES_COLOR$|^sky render_mode use_(half|quarter)_res_pass$/.test(
+          row.id
+        ),
+      what: '`use_quarter_res_pass` and `use_half_res_pass` make Godot run `sky()` into a target of a quarter and a half of the screen first, with `AT_QUARTER_RES_PASS` or `AT_HALF_RES_PASS` true (`sky.cpp:1427-1457`). The full pass then reads them as `QUARTER_RES_COLOR` and `HALF_RES_COLOR` at its `uv` (`sky.glsl:251-265`), and the half pass reads the quarter target. A colour with no pass to read is white behind the scene and black in the radiance octmap. `transpileSky` gives each pass as `half` and `quarter` of the sky, and `SkyResolutionPasses` draws them before the full pass.',
+      tsl: 'the defines of the template variant, and a render target for each pass',
+    },
+    {
+      heading: '`AT_CUBEMAP_PASS`',
+      rows: (row) => row.id === 'sky.global.AT_CUBEMAP_PASS',
+      what: '`AT_CUBEMAP_PASS` is true while Godot draws the sky into the radiance octmap that reflections read, and false behind the scene (`sky.glsl:119-123`). `transpileSky` with the `octmap` pass gives that variant.',
+      tsl: 'the defines of the template variant',
+    },
+    {
       heading: 'Render modes',
       rows: (row) => row.id === 'sky render_mode disable_fog' || row.id === 'sky render_mode use_debanding',
       what: "`disable_fog` defines `DISABLE_FOG`, which skips the scene's fog and `FOG` (`sky.glsl:279-301`). `use_debanding` defines `USE_DEBANDING`, which adds Godot's interleaved gradient noise of the pixel's window coordinate to the colour (`sky.glsl:313-314`).",

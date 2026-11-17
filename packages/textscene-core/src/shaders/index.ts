@@ -12,7 +12,8 @@ export type { ShaderOptions } from './language/parseShader.js';
 export type { RenderingMethod, ShaderInclude } from './preprocessor/preprocessor.js';
 export type { ShaderDecoders } from './preprocessor/decoders.js';
 export type { TranspiledFunction } from './language/emitter.js';
-export { transpileSky, type TranspiledSky } from './sky/transpileSky.js';
+export { transpileSky, type SkyDraw, type TranspiledSky } from './sky/transpileSky.js';
+export { SkyResolutionPasses } from './sky/skyResolutionPasses.js';
 export {
   SKY_BINDINGS,
   writeSkyBindings,

@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  newSkyRadianceUpdate,
-  skyUpdateMode,
-  stepSkyRadiance,
-  type SkyUpdateMode,
-} from './skyRadianceUpdate';
+import { newSkyRadianceUpdate, stepSkyRadiance, type SkyUpdateMode } from './skyRadianceUpdate';
 import { SKY_ROUGHNESS_LAYERS_DEFAULT } from './skyReflection';
 
 const LAYERS = SKY_ROUGHNESS_LAYERS_DEFAULT;
@@ -24,16 +19,6 @@ function bakedAcross(
 
 /** Two drawers that take turns for `frames` frames, at exposures 4 and 1. */
 const turns = (frames: number) => Array.from({ length: frames * 2 }, (_, index) => (index % 2 === 0 ? 4 : 1));
-
-describe('skyUpdateMode', () => {
-  it('processes an automatic sky incrementally, since every built-in sky material holds uniforms', () => {
-    expect(skyUpdateMode('automatic')).toBe('incremental');
-  });
-
-  it('keeps the mode a sky names', () => {
-    expect(skyUpdateMode('quality')).toBe('quality');
-  });
-});
 
 describe('stepSkyRadiance', () => {
   it('bakes at the exposure of the first render', () => {

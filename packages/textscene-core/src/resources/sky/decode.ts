@@ -5,7 +5,12 @@
  */
 
 import type { AuthoredSkyProperties, BuiltInSkyProperties, Sky, SkyBake, SkyProcessing } from './types';
-import type { SkyProcessMode } from '../../godot/rendering/environment/skyRadianceUpdate';
+import {
+  automaticSkyMode,
+  type SkyProcessMode,
+  type SkyUpdateMode,
+} from '../../godot/rendering/environment/skyRadianceUpdate';
+import { materialReadsLights } from './readsLights';
 import { REAL_TIME_RADIANCE_SIZE } from '../../godot/rendering/environment/skyReflection';
 import { SKY_RADIANCE_SIZES, SKY_RADIANCE_SIZE_DEFAULT } from '../../godot/scene/sky';
 import { boolOr, floatOr, parseOptionalInt } from '../../parser/valueParsers';
@@ -47,15 +52,31 @@ export function decodeSky<Material extends AuthoredSkyProperties>(
   return { material, processMode: processing.processMode, ...skyBake(processing) };
 }
 
-/**
- * How Godot bakes the layers (`sky.cpp:1335-1344`). Automatic picks real-time only for a shader
- * that reads `TIME` or `POSITION` (`sky.cpp:1001-1004`), and no built-in sky material does
- * (`scene/resources/3d/sky_material.cpp`), so only Real-Time takes the fast filter.
- */
+/** How Godot bakes the layers (`sky.cpp:1335-1344`): only a real-time sky takes the fast filter. */
 function skyBake({ processMode, radianceSize }: SkyProcessing): SkyBake {
-  return processMode === 'real-time'
-    ? { radianceFilter: 'fast', radianceSize: REAL_TIME_RADIANCE_SIZE }
-    : { radianceFilter: 'importance-sample', radianceSize };
+  return processMode === 'real-time' ? REAL_TIME_BAKE : { radianceFilter: 'importance-sample', radianceSize };
+}
+
+const REAL_TIME_BAKE: SkyBake = { radianceFilter: 'fast', radianceSize: REAL_TIME_RADIANCE_SIZE };
+
+/** The mode Godot runs `sky` in: Automatic resolves from the material and the scene's fog. */
+export function skyUpdateMode(sky: Sky, fogScattersSun: boolean): SkyUpdateMode {
+  if (sky.processMode !== 'automatic') return sky.processMode;
+  const { material } = sky;
+  const usage = material.kind === 'shader' ? material.usage : builtInUsage(material);
+  return automaticSkyMode({ ...usage, radianceSize: sky.radianceSize, fogScattersSun });
+}
+
+/** Every built-in sky material holds uniforms and reads neither `TIME` nor `POSITION`. */
+function builtInUsage(material: BuiltInSkyProperties) {
+  return { light: materialReadsLights(material), timeOrPosition: false, hasBufferUniforms: true };
+}
+
+/** `sky` with the fast filter when Automatic runs it real-time, which the scene's fog never decides. */
+export function withAutomaticBake(sky: Sky): Sky {
+  return sky.processMode === 'automatic' && skyUpdateMode(sky, false) === 'real-time'
+    ? { ...sky, ...REAL_TIME_BAKE }
+    : sky;
 }
 
 export function decodeSkyMaterial(type: string, data: Record<string, string>): BuiltInSkyProperties | null {

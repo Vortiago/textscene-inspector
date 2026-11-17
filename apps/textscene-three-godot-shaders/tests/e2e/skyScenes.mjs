@@ -177,6 +177,116 @@ const BUILT_IN_SCENES = [
   },
 ].map((scene) => ({ ...SIZE, camera: TURNED, lights: [], ...scene }));
 
+/** Four suns of distinct colour, energy, size and direction, one for each slot a sky reads. */
+const FOUR_SUNS = [
+  { rotation: [-20, 150, 0], color: [1, 0.6, 0.3], energy: 1.5, size: 2 },
+  { rotation: [-45, -160, 0], color: [0.3, 1, 0.5], energy: 0.7, size: 5 },
+  { rotation: [-10, 120, 0], color: [0.4, 0.5, 1], energy: 2.5, size: 1 },
+  { rotation: [-70, 200, 0], color: [1, 0.2, 0.8], energy: 0.4, size: 9 },
+];
+
+/** Every light built-in of slot `n`, each in its own term of the colour. */
+const lightSky = (n) =>
+  builtInSky(
+    [
+      `\tfloat facing = max(dot(EYEDIR, LIGHT${n}_DIRECTION), 0.0);`,
+      `\tCOLOR = LIGHT${n}_COLOR * LIGHT${n}_ENERGY * 0.4 * facing + vec3(LIGHT${n}_SIZE * 0.25);`,
+      `\tCOLOR *= LIGHT${n}_ENABLED ? 1.0 : 0.25;`,
+    ].join('\n')
+  );
+
+const lightRows = (n) =>
+  ['ENABLED', 'DIRECTION', 'ENERGY', 'COLOR', 'SIZE'].map((name) => `sky.global.LIGHT${n}_${name}`);
+
+/** A camera that looks back along +Z, where the suns of `FOUR_SUNS` shine from. */
+const BACK = { fov: 90, rotation: [15, 180, 0] };
+
+/** One scene per light slot, then a slot past the lights and a fifth light the sky does not read. */
+const LIGHT_SCENES = [
+  ...[0, 1, 2, 3].map((n) => ({
+    name: `sky-light-${n}`,
+    source: lightSky(n),
+    lights: FOUR_SUNS,
+    rows: lightRows(n),
+  })),
+  // Godot leaves a slot past the last light as it was, so only its `ENABLED` is known (`sky.cpp:1107-1111`).
+  {
+    name: 'sky-light-unset',
+    source: builtInSky('\tCOLOR = LIGHT1_ENABLED ? vec3(0.1, 0.8, 0.2) : vec3(0.8, 0.1, 0.1);'),
+    lights: FOUR_SUNS.slice(0, 1),
+    rows: ['sky.global.LIGHT1_ENABLED'],
+  },
+  {
+    name: 'sky-light-fifth',
+    source: lightSky(3),
+    lights: [...FOUR_SUNS, { rotation: [-30, 170, 0], color: [1, 1, 1], energy: 8, size: 3 }],
+    rows: lightRows(3),
+  },
+].map((scene) => ({ ...SIZE, camera: BACK, ...scene }));
+
+/** Godot's resolution passes, each read by the next: the quarter, the half, then the full pass. */
+const PASS_SCENES = [
+  {
+    name: 'sky-half-res',
+    source: builtInSky(
+      [
+        '\tif (AT_HALF_RES_PASS) {',
+        '\t\tCOLOR = EYEDIR * 0.5 + 0.5;',
+        '\t} else {',
+        '\t\tCOLOR = HALF_RES_COLOR.rgb * vec3(1.0, 0.8, 0.6) + vec3(0.0, 0.0, 0.2);',
+        '\t}',
+      ].join('\n'),
+      'use_half_res_pass'
+    ),
+    rows: ['sky.global.AT_HALF_RES_PASS', 'sky.sky.HALF_RES_COLOR', 'sky render_mode use_half_res_pass'],
+  },
+  {
+    name: 'sky-quarter-res',
+    source: builtInSky(
+      [
+        '\tif (AT_QUARTER_RES_PASS) {',
+        '\t\tCOLOR = vec3(fract(FRAGCOORD.xy / 4.0), SCREEN_UV.x);',
+        '\t} else if (AT_HALF_RES_PASS) {',
+        '\t\tCOLOR = mix(QUARTER_RES_COLOR.rgb, EYEDIR * 0.5 + 0.5, 0.5);',
+        '\t} else {',
+        '\t\tCOLOR = HALF_RES_COLOR.rgb;',
+        '\t}',
+      ].join('\n'),
+      'use_half_res_pass, use_quarter_res_pass'
+    ),
+    rows: [
+      'sky.global.AT_QUARTER_RES_PASS',
+      'sky.sky.QUARTER_RES_COLOR',
+      'sky render_mode use_quarter_res_pass',
+      'sky.sky.FRAGCOORD',
+    ],
+  },
+  {
+    name: 'sky-quarter-res-alone',
+    source: builtInSky(
+      '\tCOLOR = AT_QUARTER_RES_PASS ? EYEDIR * 0.5 + 0.5 : QUARTER_RES_COLOR.rgb * HALF_RES_COLOR.rgb;',
+      'use_quarter_res_pass'
+    ),
+    rows: ['sky.global.AT_QUARTER_RES_PASS', 'sky.sky.QUARTER_RES_COLOR', 'sky.sky.HALF_RES_COLOR'],
+  },
+  {
+    name: 'sky-half-res-unset',
+    source: builtInSky('\tCOLOR = HALF_RES_COLOR.rgb * QUARTER_RES_COLOR.rgb * vec3(0.9, 0.6, 0.3);'),
+    rows: ['sky.sky.HALF_RES_COLOR', 'sky.sky.QUARTER_RES_COLOR'],
+  },
+  {
+    name: 'sky-cubemap-pass',
+    source: builtInSky('\tCOLOR = AT_CUBEMAP_PASS ? vec3(1.0, 0.0, 0.0) : vec3(0.1, 0.7, 0.3);'),
+    rows: ['sky.global.AT_CUBEMAP_PASS'],
+  },
+].map((scene) => ({ ...SIZE, camera: TURNED, lights: [], ...scene }));
+
+/** The quarter and half passes at an odd size, and under Godot's 4 px floor (`sky.cpp:996-997`). */
+const PASS_SIZE_SCENES = [
+  { name: 'sky-passes-odd-size', width: 37, height: 23 },
+  { name: 'sky-passes-under-4-px', width: 3, height: 9 },
+].map((scene) => ({ ...PASS_SCENES.find(({ name }) => name === 'sky-quarter-res'), ...scene }));
+
 export const SKY_SCENES = [
   { name: 'sky-default', ...SIZE, source: DEFAULT_SKY, camera: AHEAD, lights: [], rows: DEFAULT_SKY_ROWS },
   {
@@ -201,4 +311,7 @@ export const SKY_SCENES = [
   ...TIME_SCENES,
   ...SEEK_SCENES,
   ...BUILT_IN_SCENES,
+  ...LIGHT_SCENES,
+  ...PASS_SCENES,
+  ...PASS_SIZE_SCENES,
 ];

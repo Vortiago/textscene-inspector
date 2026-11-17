@@ -5,19 +5,32 @@
  * incremental sky is still filtering its other layers, one per render (`:1360-1368`).
  */
 
+import { REAL_TIME_RADIANCE_SIZE } from './skyReflection';
+
 /** `Sky.process_mode` (`scene/resources/sky.h:51-56`). */
 export type SkyProcessMode = 'automatic' | 'quality' | 'incremental' | 'real-time';
 
 /** The mode a sky's radiance updates in once Godot resolves `automatic`. */
 export type SkyUpdateMode = Exclude<SkyProcessMode, 'automatic'>;
 
-/**
- * The mode a sky of `processMode` updates in. Godot resolves `automatic` to incremental for a shader
- * that holds uniforms (`sky.cpp:1001-1012`), which every built-in sky material does, and none of
- * them reads `TIME` or `POSITION`.
- */
-export function skyUpdateMode(processMode: SkyProcessMode): SkyUpdateMode {
-  return processMode === 'automatic' ? 'incremental' : processMode;
+/** What Godot's Automatic mode reads of a sky, its shader and its scene (`sky.cpp:1001-1012`). */
+export interface AutomaticSkyInput {
+  /** The shader reads `TIME` or `POSITION`. */
+  readonly timeOrPosition: boolean;
+  /** The shader reads a `LIGHTn_*` built-in. */
+  readonly light: boolean;
+  /** The material has a uniform that is not a sampler: `ubo_size > 0`. */
+  readonly hasBufferUniforms: boolean;
+  readonly radianceSize: number;
+  /** The Environment's fog is on with a sun scatter above 0.001. */
+  readonly fogScattersSun: boolean;
+}
+
+/** The mode Godot runs a sky of `process_mode` Automatic in (`sky.cpp:1001-1012`). */
+export function automaticSkyMode(sky: AutomaticSkyInput): SkyUpdateMode {
+  if (sky.timeOrPosition && sky.radianceSize === REAL_TIME_RADIANCE_SIZE) return 'real-time';
+  if (sky.light || sky.fogScattersSun || sky.hasBufferUniforms) return 'incremental';
+  return 'quality';
 }
 
 /** How one sky's radiance updates: its mode, and the layers an incremental sky filters in turn. */

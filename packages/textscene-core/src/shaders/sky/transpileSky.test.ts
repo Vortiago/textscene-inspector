@@ -3,7 +3,7 @@ import type { NodeMaterial, TextureNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { generatedFragmentShader } from '../generatedShader.testkit';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
-import { transpileSky } from './transpileSky.js';
+import { disposeSky, transpileSky, type SkyDraw } from './transpileSky.js';
 import { DEFAULT_SKY } from './defaultSky.testkit';
 
 function errorOf(source: string): ShadingLanguageError {
@@ -96,5 +96,57 @@ describe('transpileSky', () => {
     const fragmentOf = () =>
       generatedFragmentShader((transpileSky(DEFAULT_SKY).mesh.material as NodeMaterial).fragmentNode!);
     expect(fragmentOf()).toBe(fragmentOf());
+  });
+
+  it('draws no half or quarter pass for a sky without their render modes', () => {
+    const sky = transpileSky(DEFAULT_SKY);
+    expect([sky.half, sky.quarter]).toEqual([undefined, undefined]);
+  });
+
+  it.each(['half', 'quarter'] as const)('draws a %s resolution pass for its render mode', (resolution) => {
+    const sky = transpileSky(`shader_type sky;\nrender_mode use_${resolution}_res_pass;\nvoid sky() {}`);
+    expect(sky[resolution]?.mesh.material).not.toBe(sky.mesh.material);
+  });
+
+  it.each([
+    ['background', 255],
+    ['octmap', 0],
+  ] as const)("reads HALF_RES_COLOR with no half pass from Godot's default in the %s", (pass, red) => {
+    const sky = transpileSky('shader_type sky;\nvoid sky() { COLOR = HALF_RES_COLOR.rgb; }', { pass });
+    const texture = sky.textures.get('half_res')!.value as THREE.DataTexture;
+    expect((texture.image.data as Uint8Array)[0]).toBe(red);
+  });
+
+  it("frees the sky's default pass texture with the sky", () => {
+    const sky = transpileSky('shader_type sky;\nvoid sky() { COLOR = HALF_RES_COLOR.rgb; }');
+    const texture = sky.textures.get('half_res')!.value as THREE.Texture;
+    let isDisposed = false;
+    texture.addEventListener('dispose', () => (isDisposed = true));
+    disposeSky(sky);
+    expect(isDisposed).toBe(true);
+  });
+
+  it('reads each LIGHTn_COLOR from a slot of its own', () => {
+    const fragments = [0, 1, 2, 3].map((slot) =>
+      generatedFragmentShader(
+        (
+          transpileSky(`shader_type sky;\nvoid sky() { COLOR = LIGHT${slot}_COLOR; }`).mesh
+            .material as NodeMaterial
+        ).fragmentNode!
+      )
+    );
+    expect(new Set(fragments).size).toBe(4);
+  });
+
+  it.each([
+    ['half', 'AT_HALF_RES_PASS'],
+    ['quarter', 'AT_QUARTER_RES_PASS'],
+  ] as const)('draws the %s pass with %s true, and the full pass with it false', (resolution, flag) => {
+    const sky = transpileSky(
+      `shader_type sky;\nrender_mode use_${resolution}_res_pass;\nvoid sky() { COLOR = ${flag} ? vec3(1.0) : vec3(0.0); }`
+    );
+    const fragmentOf = (draw = sky as SkyDraw) =>
+      generatedFragmentShader((draw.mesh.material as NodeMaterial).fragmentNode!);
+    expect(fragmentOf(sky[resolution])).not.toBe(fragmentOf(sky));
   });
 });

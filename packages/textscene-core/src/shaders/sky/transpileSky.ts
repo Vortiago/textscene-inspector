@@ -1,10 +1,11 @@
 import * as THREE from 'three';
-import { int, screenCoordinate, varyingProperty, vec4, vertexIndex } from 'three/tsl';
+import { int, screenCoordinate, screenSize, varyingProperty, vec4, vertexIndex } from 'three/tsl';
 import type { Node, TextureNode, UniformNode } from 'three/webgpu';
 import { parsedShader, type ParsedShader, type ShaderOptions } from '../language/parseShader.js';
 import { emitTemplateStage } from '../template/emitTemplate.js';
-import { linkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
+import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import { TreeMemo } from '../template/treeMemo.js';
+import { defaultTexture } from '../uniforms/defaultTextures.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
 import { SKY_RENDER_ORDER } from './skyRenderOrder.js';
 import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
@@ -13,25 +14,46 @@ import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
 /** Where a sky draws: behind the scene, or into the radiance octmap a bake filters. */
 export type SkyPass = 'background' | 'octmap';
 
-/** `SKY_VERSION_BACKGROUND` and `SKY_VERSION_OCTMAP` (`sky.cpp:719`, `:722`), with memos for the page. */
-const PASS_TEMPLATES: Readonly<Record<SkyPass, ProgramTemplate>> = {
-  background: skyTemplate(''),
-  octmap: skyTemplate('\n#define USE_CUBEMAP_PASS\n'),
+/** The size a pass draws at: the target's, or Godot's half or quarter resolution pass. */
+type SkyResolution = 'full' | 'half' | 'quarter';
+
+/** The defines of each sky version Godot builds (`sky.cpp:719-724`). Their memos live with the page. */
+const VERSION_TEMPLATES: Readonly<Record<SkyPass, Readonly<Record<SkyResolution, ProgramTemplate>>>> = {
+  background: {
+    full: skyTemplate(''),
+    half: skyTemplate('\n#define USE_HALF_RES_PASS\n'),
+    quarter: skyTemplate('\n#define USE_QUARTER_RES_PASS\n'),
+  },
+  octmap: {
+    full: skyTemplate('\n#define USE_CUBEMAP_PASS\n'),
+    half: skyTemplate('\n#define USE_CUBEMAP_PASS\n#define USE_HALF_RES_PASS\n'),
+    quarter: skyTemplate('\n#define USE_CUBEMAP_PASS\n#define USE_QUARTER_RES_PASS\n'),
+  },
 };
 
 function skyTemplate(defines: string): ProgramTemplate {
   return { shaderType: 'sky', template: 'environment/sky.glsl', defines, memo: new TreeMemo() };
 }
 
-export interface TranspiledSky {
+/** One draw of a sky: its triangle and the template's inputs it reads. */
+export interface SkyDraw {
   /** The triangle that draws the sky at the far plane, after every opaque surface, where none drew. */
   readonly mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material>;
   /** The template's uniforms of both stages, by `instance.member`: `params.time`. */
   readonly uniforms: ReadonlyMap<string, UniformNode<unknown>>;
-  /** The template's textures, by name: `radiance`, `volumetric_fog_texture`. */
+  /** The template's textures, by name: `radiance`, `half_res`, `volumetric_fog_texture`. */
   readonly textures: ReadonlyMap<string, TextureNode>;
-  /** Each uniform of the material by name, which takes `set_shader_parameter`'s value. */
+}
+
+export interface TranspiledSky extends SkyDraw {
+  /** Each uniform of the material by name, which takes `set_shader_parameter`'s value in every pass. */
   readonly parameters: ReadonlyMap<string, TranspiledUniform>;
+  /** The half resolution pass, for `use_half_res_pass` (`sky.cpp:76`). */
+  readonly half?: SkyDraw;
+  /** The quarter resolution pass, for `use_quarter_res_pass` (`sky.cpp:77`). */
+  readonly quarter?: SkyDraw;
+  /** Godot's default for a pass colour with no pass, which this sky owns and `disposeSky` frees. */
+  readonly unsetPassTexture: THREE.Texture;
 }
 
 export interface SkyOptions extends ShaderOptions {
@@ -58,12 +80,51 @@ export function transpileParsedSky(
   sampling: ProjectSampling = GODOT_SAMPLING,
   pass: SkyPass = 'background'
 ): TranspiledSky {
-  const { linked, resources, parameters, parameterValues } = linkedProgram(
-    parsed,
-    file,
-    PASS_TEMPLATES[pass],
-    defaultSamplers(sampling)
-  );
+  const program = (resolution: SkyResolution) =>
+    linkedProgram(parsed, file, VERSION_TEMPLATES[pass][resolution], defaultSamplers(sampling));
+  const full = program('full');
+  const { parameters, parameterValues } = full;
+  // Each pass reads the full pass's parameters, so one `set_shader_parameter` reaches all three.
+  const draw = (resolution: SkyResolution, linked = program(resolution)) =>
+    skyDraw(linked, parameterValues, [...parameters.values()], isFilterInput(pass, resolution));
+  const modes = new Set(parsed.tree.renderModes.map((mode) => mode.name));
+  const sky: TranspiledSky = {
+    ...draw('full', full),
+    parameters,
+    ...(modes.has('use_half_res_pass') && { half: draw('half') }),
+    ...(modes.has('use_quarter_res_pass') && { quarter: draw('quarter') }),
+    unsetPassTexture: unsetPassTexture(pass),
+  };
+  bindUnsetPassTexture(sky);
+  return sky;
+}
+
+/** A pass colour with no pass reads white behind the scene and black in the octmap (`sky.cpp:545-575`). */
+function unsetPassTexture(pass: SkyPass): THREE.Texture {
+  // Godot's octmap reads a mip of its last radiance there, which the previewer does not keep.
+  return defaultTexture('flat', pass === 'background' ? 'white' : 'black');
+}
+
+function bindUnsetPassTexture(sky: TranspiledSky): void {
+  for (const draw of skyDraws(sky))
+    for (const name of ['half_res', 'quarter_res']) {
+      const node = draw.textures.get(name);
+      if (node) node.value = sky.unsetPassTexture;
+    }
+}
+
+/** Whether the pass is the radiance the filter reads by rows: three reads any other target top row first. */
+function isFilterInput(pass: SkyPass, resolution: SkyResolution): boolean {
+  return pass === 'octmap' && resolution === 'full';
+}
+
+/** The two stages of `linked` emitted with the material's `parameterValues`, on one triangle. */
+function skyDraw(
+  { linked, resources }: LinkedProgram,
+  parameterValues: LinkedProgram['parameterValues'],
+  parameters: readonly TranspiledUniform[],
+  isRowsUp: boolean
+): SkyDraw {
   const uvInterp = varyingProperty('vec2', 'uv_interp') as unknown as Node;
   const vertex = emitTemplateStage(
     linked('vertex'),
@@ -77,19 +138,14 @@ export function transpileParsedSky(
   );
   const fragment = emitTemplateStage(
     linked('fragment'),
-    new Map([
-      ...parameterValues,
-      ['uv_interp', uvInterp],
-      ['gl_FragCoord', vec4(screenCoordinate, 0, 1) as unknown as Node],
-    ]),
+    new Map([...parameterValues, ['uv_interp', uvInterp], ['gl_FragCoord', fragCoord(isRowsUp)]]),
     { name: 'frag_color', type: 'vec4' },
     resources
   );
   return {
-    mesh: skyMesh(glClipPosition(vertex.result, pass), fragment.result, [...parameters.values()]),
+    mesh: skyMesh(glClipPosition(vertex.result, isRowsUp), fragment.result, parameters),
     uniforms: resources.uniforms.byName,
     textures: resources.textures,
-    parameters,
   };
 }
 
@@ -98,11 +154,33 @@ function defaultSamplers(sampling: ProjectSampling): ProjectSampling {
   return { ...sampling, anisotropicFilteringLevel: GODOT_SAMPLING.anisotropicFilteringLevel };
 }
 
-/** Godot's y points down and its far plane is depth 0; an octmap keeps y, as both APIs put y -1 on row 0. */
-function glClipPosition(position: Node, pass: SkyPass): Node {
+/** Godot's clip y points down and its far plane is depth 0. A target three reads top row first flips y. */
+function glClipPosition(position: Node, isRowsUp: boolean): Node {
   const godot = position as unknown as ReturnType<typeof vec4>;
-  const y = pass === 'octmap' ? godot.y : godot.y.negate();
+  const y = isRowsUp ? godot.y : godot.y.negate();
   return vec4(godot.x, y, godot.w.sub(godot.z.mul(2)), godot.w) as unknown as Node;
+}
+
+/** Godot's `gl_FragCoord`, row 0 at the top. three's `screenCoordinate` counts rows top first. */
+function fragCoord(isRowsUp: boolean): Node {
+  const row = isRowsUp ? screenSize.y.sub(screenCoordinate.y) : screenCoordinate.y;
+  return vec4(screenCoordinate.x, row, 0, 1) as unknown as Node;
+}
+
+/** Frees the triangle and the material of each pass of `sky`, and its texture for a pass with none. */
+export function disposeSky(sky: TranspiledSky): void {
+  for (const draw of skyDraws(sky)) disposeSkyDraw(draw);
+  sky.unsetPassTexture.dispose();
+}
+
+/** The full pass of `sky`, then each of its half and quarter passes. */
+export function skyDraws(sky: TranspiledSky): SkyDraw[] {
+  return [sky, sky.half, sky.quarter].filter((draw) => draw !== undefined);
+}
+
+function disposeSkyDraw({ mesh }: SkyDraw): void {
+  mesh.geometry.dispose();
+  mesh.material.dispose();
 }
 
 /** Three vertices, which the template's vertex stage places from their index alone. */
