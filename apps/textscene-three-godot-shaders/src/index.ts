@@ -7,6 +7,7 @@
 export {
   DEFAULT_TIME_ROLLOVER_SECONDS,
   GODOT_VERSION,
+  glVaryingSlots,
   installNodesHandler,
   PlaybackShaderTime,
   ShaderClock,

@@ -1,6 +1,7 @@
 export { installNodesHandler, type NodeOutput } from './nodesHandler.js';
 export { GODOT_VERSION } from './language/instructionTable.generated.js';
 export { ShadingLanguageError } from './language/shadingLanguageError.js';
+export { glVaryingSlots } from './language/glVaryingSlots.js';
 export { TranslatorFault, type ShaderSource } from './fault/translatorFault.js';
 export {
   transpileShadingLanguage,

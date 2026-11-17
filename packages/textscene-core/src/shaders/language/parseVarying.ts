@@ -100,12 +100,13 @@ function varyingNode(
 }
 
 /** Varying slots on desktop GPUs and lavapipe: 128 lanes / 4 (`rendering_device_driver_vulkan.cpp:6476`). */
-const DEVICE_VARYINGS = 32;
+export const VULKAN_VARYINGS = 32;
 
 /** Godot's checks of the varyings after the text, in declaration order (`shader_language.cpp:11028`). */
 export function varyingLimitRefusal(
   varyings: readonly VaryingNode[],
-  baseIndex: number
+  baseIndex: number,
+  maxVaryings: number
 ): { readonly message: string; readonly position: SourcePosition } | undefined {
   let index = baseIndex;
   for (const varying of varyings) {
@@ -120,9 +121,9 @@ export function varyingLimitRefusal(
         position: varying.position,
       };
     const used = index + slotsOf(varying);
-    if (used > DEVICE_VARYINGS)
+    if (used > maxVaryings)
       return {
-        message: `Too many varyings used in shader (${used} used, maximum supported is ${DEVICE_VARYINGS}).`,
+        message: `Too many varyings used in shader (${used} used, maximum supported is ${maxVaryings}).`,
         position: varying.position,
       };
     index = used;

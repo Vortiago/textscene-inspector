@@ -6,9 +6,17 @@ const TOO_MANY = /Too many varyings used in shader \(33 used, maximum supported 
 
 /** The parse of `varyings` in a shader of `shaderType`, which throws Godot's refusal. */
 const parseOf =
-  (varyings: string, shaderType = 'spatial', renderingMethod: RenderingMethod = 'forward_plus') =>
+  (
+    varyings: string,
+    shaderType = 'spatial',
+    renderingMethod: RenderingMethod = 'forward_plus',
+    glVaryings?: number
+  ) =>
   () =>
-    parsedShader(`shader_type ${shaderType};\n${varyings}\nvoid fragment() {}\n`, { renderingMethod });
+    parsedShader(`shader_type ${shaderType};\n${varyings}\nvoid fragment() {}\n`, {
+      renderingMethod,
+      glVaryings,
+    });
 
 describe('the varying limit of the parser', () => {
   it('accepts the 17 vec4 slots a spatial shader has after the 15 of the template', () => {
@@ -38,6 +46,22 @@ describe('the varying limit of the parser', () => {
 
   it('starts at slot 0 in the gl_compatibility renderer, whose template takes none', () => {
     expect(parseOf('varying vec4 v[32];', 'spatial', 'gl_compatibility')).not.toThrow();
+  });
+
+  it('takes the limit of the GL context on the compatibility renderer', () => {
+    const vec4s20 = (glVaryings: number) =>
+      parseOf('varying vec4 v[20];', 'spatial', 'gl_compatibility', glVaryings);
+    expect([vec4s20(20), vec4s20(19)].map(isRefused)).toEqual([false, true]);
+  });
+
+  it("gives the GL context's limit in Godot's message (error case)", () => {
+    expect(parseOf('varying vec4 v[16];', 'spatial', 'gl_compatibility', 15)).toThrow(
+      'Too many varyings used in shader (16 used, maximum supported is 15).'
+    );
+  });
+
+  it("keeps Vulkan's 32 on Forward+, which asks Vulkan, not the GL context (edge case)", () => {
+    expect(parseOf('varying vec4 v[17];', 'spatial', 'forward_plus', 15)).not.toThrow();
   });
 
   it('refuses a smooth integer varying (error case)', () => {

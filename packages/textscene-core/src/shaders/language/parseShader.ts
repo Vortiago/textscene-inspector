@@ -5,7 +5,10 @@ import type { ShaderSource } from '../fault/translatorFault.js';
 import type { ShaderNode } from './shaderTree.js';
 import { tokenize } from './tokenizer.js';
 
-export type ShaderOptions = PreprocessOptions;
+export interface ShaderOptions extends PreprocessOptions {
+  /** The varying slots of the GL context, which the compatibility renderer reads: see `glVaryingSlots`. */
+  readonly glVaryings?: number;
+}
 
 export interface ParsedShader {
   /** The preprocessed text, which the tree's positions count in. */
@@ -26,7 +29,10 @@ export function shaderCode(source: string, options: ShaderOptions = {}): string 
 /** The preprocessed text of `source` and its tree. */
 export function parsedShader(source: string, options: ShaderOptions = {}): ParsedShader {
   const code = shaderCode(source, options);
-  return { code, tree: parse(tokenize(code, options.file ?? ''), options.renderingMethod) };
+  return {
+    code,
+    tree: parse(tokenize(code, options.file ?? ''), options.renderingMethod, options.glVaryings),
+  };
 }
 
 /** The text a parse read, as a transpiled material names it in a translator fault. */

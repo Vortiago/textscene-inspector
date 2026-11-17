@@ -27,6 +27,7 @@ const PUBLIC_VALUE_EXPORTS = [
   'ShaderClock',
   'ShadingLanguageError',
   'TranslatorFault',
+  'glVaryingSlots',
   'installNodesHandler',
   'textToVariant',
   'transpileShadingLanguage',

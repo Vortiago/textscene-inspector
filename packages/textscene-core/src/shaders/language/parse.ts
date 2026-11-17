@@ -7,7 +7,7 @@ import type { RenderingMethod } from '../preprocessor/preprocessor.js';
 import { ModeParser } from './parseModes.js';
 import { parseDeclaration } from './parseDeclaration.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
-import { parseVarying, varyingLimitRefusal, VaryingStages } from './parseVarying.js';
+import { parseVarying, varyingLimitRefusal, VaryingStages, VULKAN_VARYINGS } from './parseVarying.js';
 import { MODE_TABLES } from '../template/modeTables.generated.js';
 import { BlockScope, type Identifier } from './scope.js';
 import { callTarget, type FunctionSignature } from './parseCall.js';
@@ -38,12 +38,13 @@ const SHADER_TYPES = INSTRUCTION_TABLE.filter((row) => row.id.startsWith('shader
   row.id.slice(12)
 );
 
-/** The tree of the tokens of a shader text, for the project's renderer. */
+/** The tree of a shader's tokens, with the GL context's varying slots for gl_compatibility. */
 export function parse(
   tokens: readonly Token[],
-  renderingMethod: RenderingMethod = 'forward_plus'
+  renderingMethod: RenderingMethod = 'forward_plus',
+  glVaryings = VULKAN_VARYINGS
 ): ShaderNode {
-  return new ShaderParser(new TokenCursor(tokens), renderingMethod).shader();
+  return new ShaderParser(new TokenCursor(tokens), renderingMethod, glVaryings).shader();
 }
 
 class ShaderParser implements ExpressionScope {
@@ -75,7 +76,8 @@ class ShaderParser implements ExpressionScope {
 
   constructor(
     private readonly tokens: TokenCursor,
-    private readonly renderingMethod: RenderingMethod
+    private readonly renderingMethod: RenderingMethod,
+    private readonly glVaryings: number
   ) {
     this.expressions = new ExpressionParser(tokens, this);
     this.uniforms = new UniformParser(tokens, this.expressions, {
@@ -322,9 +324,14 @@ class ShaderParser implements ExpressionScope {
     return MODE_TABLES[this.shaderTypeName()]?.base_varying_index ?? 0;
   }
 
+  /** The slots of the device: Godot asks the GL driver on the compatibility renderer (`config.cpp:121`). */
+  private maxVaryings(): number {
+    return this.renderingMethod === 'gl_compatibility' ? this.glVaryings : VULKAN_VARYINGS;
+  }
+
   private tree(head: Pick<ShaderNode, 'shaderType' | 'headPosition'>): ShaderNode {
     const varyings = [...this.varyings.values()].map((varying) => this.withStage(varying));
-    const refusal = varyingLimitRefusal(varyings, this.baseVaryingIndex());
+    const refusal = varyingLimitRefusal(varyings, this.baseVaryingIndex(), this.maxVaryings());
     if (refusal) throw new ShadingLanguageError(refusal.message, refusal.position);
     return {
       kind: 'shader',
