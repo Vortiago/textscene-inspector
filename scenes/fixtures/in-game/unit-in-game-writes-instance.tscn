@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://unit-in-game-writes-3d.tscn" id="1"]
+
+; A host's write to a node inside an instance lands as an override heading below the instance.
+; `pnpm ref:diff --mode in-game --set Level/Group/Box:position=...` measures it against Godot's.
+
+[node name="Main" type="Node3D"]
+
+[node name="Level" parent="." instance=ExtResource("1")]

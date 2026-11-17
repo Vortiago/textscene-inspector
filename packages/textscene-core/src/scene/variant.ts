@@ -11,7 +11,7 @@ export interface Variant {
   readonly text: string;
 }
 
-/** A value `set` takes and `get` answers: a boolean, a number and a string as they are, any other type as a Variant. */
+/** What `set` takes and `get` answers: a boolean, a number or a string, else a Variant. */
 export type SceneValue = boolean | number | string | Variant;
 
 /** Written only by {@link variantOf}: the value each Variant holds, so a write reads it once. */
@@ -25,10 +25,7 @@ export function variantOf(value: VariantValue): Variant {
   return made;
 }
 
-/**
- * `str_to_var`: the value `text` spells. It throws with the message Godot's parser stops with, so
- * a typing mistake is not a write of null.
- */
+/** `str_to_var`. It throws with Godot's parse error, so a typing mistake is not a write of null. */
 export function variant(text: string): Variant {
   const read = readVariant(text);
   if ('error' in read)

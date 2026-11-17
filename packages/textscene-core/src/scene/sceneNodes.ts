@@ -28,10 +28,7 @@ export interface SceneNodesSource {
   tree(): SceneTree | null;
 }
 
-/**
- * The nodes of one text of the scene, each named by its absolute path: the walk of a NodePath, the
- * handles, and the reads and writes of their properties.
- */
+/** The nodes of one text of the scene, each named by its absolute path. */
 export class SceneNodes implements HandleHost {
   /** Written only by `handleAt` and `clear`: one handle for each node, so two lookups give one. */
   private readonly handles = new Map<string, NodeHandle>();

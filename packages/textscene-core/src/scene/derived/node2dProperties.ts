@@ -21,7 +21,7 @@ const vector2Value = ({ x, y }: { x: number; y: number }): VariantValue => ({
 /** The stored properties `transform` is made of. */
 const TRANSFORM_PARTS: ReadonlySet<string> = new Set(['position', 'rotation', 'scale', 'skew']);
 
-/** Node2D's `rotation_degrees` and `transform`, over the stored `position`, `rotation`, `scale` and `skew`. */
+/** Node2D's `rotation_degrees` and `transform`, over the stored position, rotation, scale and skew. */
 export class Node2DProperties implements DerivedProperties {
   /** The transform `set_transform` keeps whole until a part is written (`node_2d.cpp:372-382`). */
   private transform: VariantValue | null = null;

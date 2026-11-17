@@ -1,11 +1,7 @@
 /** The gate between the pane buffer and the renderer: it forwards only a renderable buffer. */
 import { parseTscnContent } from '@textscene/core';
 
-/**
- * The gate runs `parseTscnContent`, as the preview shell does on the forwarded content, so
- * "valid" here and "renderable" there cannot drift. The path matters only for GLB detection
- * and scene identity, and the pane always holds .tscn text.
- */
+/** `parseTscnContent`, as the preview shell runs it, so "valid" here and "renderable" there agree. */
 const GATE_PROBE_PATH = 'res://source-gate-probe.tscn';
 
 export function resolveForwardedContent(buffer: string, lastGood: string): string {

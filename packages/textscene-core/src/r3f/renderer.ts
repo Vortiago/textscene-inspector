@@ -8,6 +8,8 @@
 import './nodes/index.js';
 
 export { openScene, type Scene } from '../scene/openScene.js';
+export type { NodeHandle } from '../scene/nodeHandle.js';
+export { variant, type SceneValue, type Variant } from '../scene/variant.js';
 export { TscnCanvas } from './TscnCanvas.js';
 export { TscnSceneProvider } from './TscnSceneProvider.js';
 export type { ResourceProvider } from '../resources/ResourceProvider.js';

@@ -1,7 +1,3 @@
-/**
- * A host's write through the scene draws in every view of it, as a file value of the node would.
- */
-
 import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { act, render } from '@testing-library/react';

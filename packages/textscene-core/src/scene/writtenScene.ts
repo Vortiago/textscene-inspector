@@ -40,11 +40,7 @@ function deepestSeated(node: TscnNode, rest: readonly string[]): { index: number
   return best;
 }
 
-/**
- * Where the write at `livePath` lands. A node of the file takes it on its own heading. A node an
- * instance holds takes it as an override heading, `[node name="X" parent="Instance/Sub"]`, below the
- * nearest instance. Null where nothing of the file reaches the node, as in a scene tile.
- */
+/** The file node's own heading, else an override heading below the nearest instance, else null. */
 function landingOf(roots: readonly TscnNode[], livePath: string): Landing | null {
   const names = nodePathNames(livePath);
   const rootIndex = roots.findIndex((root) => root.name === names[0]);
@@ -78,10 +74,7 @@ export function isWritable(graph: SceneGraph, livePath: string): boolean {
   return landingOf(rootNodesOf(graph), livePath) !== null;
 }
 
-/**
- * `node` with `texts` laid on, as an instance override lays its heading. An instance or an override
- * heading keeps the text alone, since the merge with the scene it instances parses it.
- */
+/** An instance or an override heading keeps the text alone, since the merge parses it. */
 function laid(node: TscnNode, texts: PropertyTexts): TscnNode {
   if (node.instance || node.overridesExistingNode) {
     return { ...node, rawProperties: { ...node.rawProperties, ...texts }, rawPropertiesOrderReliable: false };
@@ -110,7 +103,7 @@ function overrideHeading(
   };
 }
 
-/** `nodes` with the node at index chain `at` replaced by what `replace` gives, every node off the chain kept. */
+/** `nodes` with the node at index chain `at` replaced, every node off the chain kept. */
 function replacedAt(
   nodes: readonly TscnNode[],
   at: readonly number[],
@@ -126,7 +119,7 @@ function replacedAt(
   );
 }
 
-/** The root-relative path of the node at index chain `at`, `.` for the root, as a heading's `parent` spells it. */
+/** The node's path from the root, as a heading's `parent` spells it. */
 function rootRelativePath(roots: readonly TscnNode[], at: readonly number[]): string {
   const names: string[] = [];
   let nodes = roots;
@@ -160,10 +153,7 @@ function rootNodesOf(graph: SceneGraph): readonly TscnNode[] {
   return graph.scenes.get(graph.rootScene)?.nodes ?? [];
 }
 
-/**
- * The scene graph with every write laid over the file as an instance override, and the resources
- * the writes name added to the file's own. Each node off a written path keeps its identity.
- */
+/** Each node off a written path keeps its identity. */
 export function writtenSceneGraph(
   graph: SceneGraph,
   writes: SceneWrites,

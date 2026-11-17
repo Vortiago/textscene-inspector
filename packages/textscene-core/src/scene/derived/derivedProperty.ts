@@ -6,10 +6,7 @@ export type StoredValue = (property: string) => VariantValue;
 /** A stored property a derived setter writes, with the value it takes. */
 export type StoredWrite = readonly [property: string, value: VariantValue];
 
-/**
- * The setters and getters of the properties a class reaches that no file stores, ported for one
- * class family. A node of it keeps one instance for the life of its text, as Godot keeps the cache.
- */
+/** A class family's unstored properties. A node keeps one while its text lives, as Godot keeps the cache. */
 export interface DerivedProperties {
   /** Undefined for a name this family does not port. */
   get(property: string, stored: StoredValue): VariantValue | undefined;

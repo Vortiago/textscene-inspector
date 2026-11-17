@@ -402,6 +402,7 @@ export function parseArgs(argv) {
     // Null lets the engine pick, so the default reference is not pinned to one rasteriser.
     renderingDriver: null,
     debugCollisions: false,
+    sets: [],
   };
 
   const given = new Set();
@@ -483,6 +484,10 @@ export function parseArgs(argv) {
       case '--rendering-driver':
         args.renderingDriver = oneOf('--rendering-driver', DRIVER_NAMES, argv[++i]);
         break;
+      case '--set':
+        // A host's write through the scene: the same `set` before the capture.
+        args.sets.push(parseSet(argv[++i]));
+        break;
       default:
         if (arg.startsWith('--')) throw new Error(`Unknown flag ${arg}`);
         args.scene = arg;
@@ -491,6 +496,17 @@ export function parseArgs(argv) {
   if (args.mode === IN_GAME_MODE) refuseIgnoredByInGame(given);
 
   return args;
+}
+
+/** One `--set <path>:<property>=<variant text>`. The value is the text after the first `=`. */
+export function parseSet(text) {
+  const equals = String(text ?? '').indexOf('=');
+  const target = equals < 0 ? '' : text.slice(0, equals);
+  const colon = target.lastIndexOf(':');
+  if (colon <= 0 || colon === target.length - 1) {
+    throw new Error(`--set expects <path>:<property>=<variant text>, got "${text}"`);
+  }
+  return { path: target.slice(0, colon), property: target.slice(colon + 1), text: text.slice(equals + 1) };
 }
 
 /** Throws for the first flag of `given` that `in-game` would ignore, so no measurement is silently wrong. */
@@ -749,6 +765,7 @@ export function bootstrapScript({
   fovExplicit,
   canvas2DSize,
   particles = PARTICLES_PROCESS_DEFAULT,
+  sets = [],
 }) {
   if (simSeconds !== 0) {
     throw new Error(
@@ -794,6 +811,10 @@ const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}
 const RENDER_QUIET_FRAMES := ${RENDER_QUIET_FRAMES}
 const RENDER_QUIET_MSEC := ${RENDER_QUIET_MSEC}
 const NEVER_SETTLES_CAPTURE_FRAME := ${NEVER_SETTLES_CAPTURE_FRAME}
+# Each --set: the node path from the scene's root node, the property, and the str_to_var text.
+const SETS := [
+${sets.map(({ path, property, text }) => `\t[${gdString(path)}, ${gdString(property)}, ${gdString(text)}],`).join('\n')}
+]
 const CONVERGENCE_FRAMES := ${CONVERGENCE_FRAMES}
 
 # Set by a refusal inside the render, so the ONE quit() below carries a non-zero
@@ -847,6 +868,16 @@ func _ready() -> void:
 			await _render_3d(target)
 	get_tree().quit(1 if _refused else 0)
 
+# A host's writes, as the scene's set gives them: get_node(path).set(property, str_to_var(text)).
+func _apply_sets(target: Node) -> void:
+	for entry in SETS:
+		var node := target.get_node_or_null(NodePath(entry[0]))
+		if node == null:
+			printerr("--set names no node: ", entry[0])
+			_refused = true
+			continue
+		node.set(entry[1], str_to_var(entry[2]))
+
 func _render_kind(target: Node) -> String:
 	if IN_GAME:
 		return "in-game"
@@ -864,6 +895,7 @@ func _render_3d(target: Node) -> void:
 	# the paused tree runs no internal process to spend it later.
 	_advance_particles(target)
 	add_child(target)
+	_apply_sets(target)
 	if PREVIEWS:
 		_freeze_game_logic(target)
 		_hide_2d()
@@ -925,6 +957,7 @@ func _render_2d(target: Node) -> void:
 		_disable_2d_cameras(target)
 	vp.add_child(target)
 	_advance_particles(target)
+	_apply_sets(target)
 	if PREVIEWS:
 		_freeze_game_logic(target)
 	await _converge(vp)
@@ -956,6 +989,7 @@ func _render_2d_root(target: Node) -> void:
 	await get_tree().process_frame
 	get_tree().root.add_child(target)
 	_advance_particles(target)
+	_apply_sets(target)
 	if PREVIEWS:
 		_freeze_game_logic(target)
 	await _converge(get_tree().root)
@@ -1103,6 +1137,7 @@ func _render_in_game(target: Node) -> void:
 	await get_tree().process_frame
 	_advance_particles(target)
 	get_tree().root.add_child(target)
+	_apply_sets(target)
 	_run_skeleton_stacks(target)
 	await _converge(get_tree().root)
 	_save_capture(get_tree().root)
@@ -1611,6 +1646,7 @@ export async function renderReference({
   particles = PARTICLES_PROCESS_DEFAULT,
   renderingDriver = null,
   debugCollisions = false,
+  sets = [],
   keepWork = false,
 }) {
   const scenePath = resolve(scene);
@@ -1650,6 +1686,7 @@ export async function renderReference({
       particles,
       renderingDriver,
       debugCollisions,
+      sets,
     });
   } finally {
     // Each run copies the whole res:// root, which on a tmpfs /tmp stays in RAM.
@@ -1678,6 +1715,7 @@ async function renderInto(
     particles,
     renderingDriver,
     debugCollisions,
+    sets,
   }
 ) {
   // Inside the scratch project, not beside the image: the mode and the drift report are read once,
@@ -1731,6 +1769,7 @@ async function renderInto(
         fov,
         particles,
         canvas2DSize,
+        sets,
       })
     );
     await writeFile(join(work, '__ref_main.tscn'), MAIN_SCENE);
@@ -1824,6 +1863,10 @@ async function main() {
         "environment and clear colour, the scene's own cameras, every script and autoload removed; " +
         'takes none of --scene-camera, --no-previews, --camera, --look-at, --frame, --fov, ' +
         '--emit-bounds, --width, --height)'
+    );
+    console.error(
+      '       [--set path:property=text]  (before the capture, get_node(path).set(property, ' +
+        'str_to_var(text)) from the scene root; repeatable)'
     );
     console.error(
       '       [--particles seconds]  (advances every CPUParticles emitter that much ' +

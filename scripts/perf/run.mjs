@@ -11,7 +11,7 @@
  *   node scripts/perf/run.mjs --scene glow
  */
 
-/* global document */ // The evaluate callback runs in the browser.
+/* global document, window, requestAnimationFrame */
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -116,11 +116,37 @@ async function measureScene({ page, diagnostics }, baseUrl, scene) {
   if (!target) return { work: null, reason };
   const loading = await sceneStillLoading(page);
   if (loading) return { work: null, reason: loading };
+  if (scene.writesEachFrame) await startWritesEachFrame(page, scene.writesEachFrame);
   const { work, reason: unsteady } = await steadyWork(page);
   if (loggedErrors(diagnostics).length > 0) {
     return { work: null, reason: `console error(s): ${errorReport(diagnostics)}` };
   }
   return { work, reason: unsteady };
+}
+
+/** Writes the position of `count` children of `parent` on every frame, as a host's code would. */
+async function startWritesEachFrame(page, { parent, count }) {
+  await page.waitForFunction(() => window.textscene !== undefined);
+  await page.evaluate(
+    ({ parentPath, writes }) => {
+      const { scene, variant } = window.textscene;
+      const children = scene.getNode(parentPath).getChildren();
+      let frame = 0;
+      const writeFrame = () => {
+        frame += 1;
+        for (let i = 0; i < writes; i++) {
+          const node = children[i % children.length];
+          void node.set(
+            'position',
+            variant(`Vector3(${i % 10}, ${(frame % 60) / 30}, ${Math.floor(i / 10)})`)
+          );
+        }
+        requestAnimationFrame(writeFrame);
+      };
+      requestAnimationFrame(writeFrame);
+    },
+    { parentPath: parent, writes: count }
+  );
 }
 
 /** The scene's work once it is steady, or a reason it never was. */
@@ -137,7 +163,10 @@ async function steadyWork(page) {
     lastWindow = window;
     lastWindowAt = Date.now();
     const work = steady.observe(parseWorkCounts(snapshot), frames);
-    if (work) return { work, reason: null };
+    if (work) {
+      console.log(`[perf]   frame interval ${snapshot.frameMs}`);
+      return { work, reason: null };
+    }
   }
   return {
     work: null,

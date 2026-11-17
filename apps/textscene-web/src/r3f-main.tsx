@@ -15,6 +15,7 @@ import {
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { resourceFilePath, ResourceLoaderProvider, TscnPreviewShell } from '@textscene/core';
+import { exposeScene } from './sceneConsole';
 import { fixtures } from './fixturesAll';
 import { corpusRootFor, resToFixtureFile, fixtureFileToRes } from './corpusRoot';
 import { useCorpusRoot } from './useCorpusRoot';
@@ -311,6 +312,7 @@ export function R3FApp() {
             onResourceRemove={handleResourceRemove}
             onMissingPathsChange={handleMissingPathsChange}
             onCopyNodePath={copyToClipboard}
+            onSceneOpen={exposeScene}
             // Opening a sub-scene loads it from the mirror, so without one the ⤢ button goes.
             onOpenSubScene={HAS_FIXTURES_MIRROR ? handleOpenSubScene : undefined}
             initialPreviewedCameraPath={initialPreviewedCameraPath}

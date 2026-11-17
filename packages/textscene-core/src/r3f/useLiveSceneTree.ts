@@ -250,10 +250,7 @@ const sharedTreesOf = perObject((sceneGraph: SceneGraph) =>
   )
 );
 
-/**
- * The shared tree of `sceneGraph` over `loader` at its load tick now, for a reader outside React. It
- * moves with the loads only while that reader listens through {@link subscribeToLoadTicks}.
- */
+/** The shared tree at this load tick, for a reader outside React that hears {@link subscribeToLoadTicks}. */
 export function currentSharedTree(
   sceneGraph: SceneGraph,
   loader: ResourceLoader,

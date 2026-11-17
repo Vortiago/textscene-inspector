@@ -31,10 +31,7 @@ function vector3(value: VariantValue): EulerAngles {
 
 const vector3Value = (v: readonly number[]): VariantValue => ({ type: T.VECTOR3, value: v.map(f) });
 
-/**
- * Node3D's `position`, `rotation`, `rotation_degrees`, `scale`, `quaternion` and `basis`, over the
- * stored `transform`, with the Euler and scale cache Godot keeps between setters (`node_3d.cpp:86-97`).
- */
+/** Node3D's derived transform properties, with Godot's Euler and scale cache (`node_3d.cpp:86-97`). */
 export class Node3DProperties implements DerivedProperties {
   /** Written by the setters below. Read from the stored `transform` while `dirty` is not `local`. */
   private basis: BasisComponents | null = null;
@@ -128,7 +125,7 @@ export class Node3DProperties implements DerivedProperties {
     return this.origin ?? this.storedTransform(stored).slice(9);
   }
 
-  /** `Node3D::get_transform` (`node_3d.cpp:402-407`): the basis built again from the cache where it is newer. */
+  /** `node_3d.cpp:402-407`: the basis built again from the cache where the cache is newer. */
   private basisOf(stored: StoredValue): BasisComponents {
     if (this.dirty === 'local') {
       this.basis = basisFromEulerScale(this.euler, this.scale, orderOf(stored));

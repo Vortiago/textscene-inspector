@@ -15,9 +15,9 @@ export interface SceneTreeNode {
 
 /** The Live scene tree over one written graph and one snapshot of the loads. */
 export interface SceneTree {
-  /** Null where the loaded tree has no such node. It asks for each scene its walk enters and finds unloaded. */
+  /** Null where the loaded tree has no such node. It loads each scene the walk enters unloaded. */
   node(livePath: string): SceneTreeNode | null;
-  /** The `%Name` table a NodePath on the node at `livePath` reads, `%Name` to live path (`node.cpp:1930-1938`). */
+  /** The `%Name` table a NodePath on the node reads, to live paths (`node.cpp:1930-1938`). */
   uniquePaths(livePath: string): ReadonlyMap<string, string>;
 }
 

@@ -29,13 +29,7 @@ function blobAfter(out, marker, what) {
   );
 }
 
-/**
- * One engine run, six answers: the instantiable classes, the Node and Resource
- * property rows, the Resource hierarchy, what a fresh Resource answers, and the
- * Node property defaults. One
- * spawn, since Godot start-up dominates the cost and two runs could straddle a
- * version change.
- */
+/** One engine run for six answers: start-up dominates the cost, and two runs could straddle a version. */
 export function enumerateGodotNodes() {
   const proj = mkdtempSync(join(tmpdir(), 'godot-nodes-'));
   const res = spawnSync('xvfb-run', ['-a', 'godot', '--headless', '--path', proj, '-s', ENUM_GD], {

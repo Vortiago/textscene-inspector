@@ -123,7 +123,7 @@ export class SceneProperties {
     return this.resourceText(value.resource, value.className);
   }
 
-  /** A resource as the written heading names it: an id of the root scene, which a parser of the node reads. */
+  /** A resource as an id of the root scene, which the parser of the written heading reads. */
   private resourceText({ path }: ResourceReference, className: string | undefined): string {
     const [file, subId] = path.split(SUB_RESOURCE_SEPARATOR);
     if (subId !== undefined) {

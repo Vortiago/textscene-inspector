@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types.js';
 import type { ViewportMode } from '../../contexts/ViewportModeContext.js';
 import type { PreviewCaptureState } from './previewCaptureState.js';
+import type { Scene } from '../../../scene/openScene.js';
 
 export interface TscnPreviewShellProps {
   /** A stable panel identifier for logs and context coordination. */
@@ -54,6 +55,8 @@ export interface TscnPreviewShellProps {
    * callback, and a capture still returns the picture. Without it the preview shows.
    */
   isVisible?: boolean;
+  /** Fired with each scene the shell opens, so the host's code reads and writes its nodes. */
+  onSceneOpen?: (scene: Scene) => void;
   /** Fired with the node path the Inspector copies, for the host to put on the clipboard. Without it the row has no copy button. */
   onCopyNodePath?: (nodePath: string) => void;
 }

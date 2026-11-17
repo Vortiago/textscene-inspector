@@ -4,10 +4,7 @@ interface Observer {
   readonly listener: () => void;
 }
 
-/**
- * The listeners of one scene: each view, told of every change, and each host observer. The writes
- * of one task make one notice, so the views draw one frame for them.
- */
+/** The writes of one task make one notice, so the views draw one frame for them. */
 export class SceneListeners {
   private readonly views = new Set<() => void>();
   private readonly observers = new Set<Observer>();

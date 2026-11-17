@@ -6,7 +6,7 @@ export type WriteLayer = (typeof WRITE_LAYERS)[number];
 /** Property name to Variant text, in the order Godot runs the setters. */
 export type PropertyTexts = Readonly<Record<string, string>>;
 
-/** By live path, every layer's texts laid in order. A new map after each write, its untouched entries kept. */
+/** By live path, each layer's texts in order. A write gives a new map that keeps the other entries. */
 export type SceneWrites = ReadonlyMap<string, PropertyTexts>;
 
 export const NO_WRITES: SceneWrites = new Map();

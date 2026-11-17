@@ -296,11 +296,11 @@ const BUILTIN_TYPES: ReadonlyMap<string, number> = new Map(
     .map((type) => [variantTypeName(type)!, type])
 );
 
-/** What the reader asks of its caller: the classes `Object(…)` and a typed container may name, and the resources. */
+/** What the reader asks its caller: which classes exist, and the file a resource id names. */
 export interface VariantReading {
   /** Every class exists where it is absent. */
   readonly classExists?: (className: string) => boolean;
-  /** The file an `ExtResource` or a `SubResource` id names, as a resource parser loads it. Absent reads the id as a path. */
+  /** The file an `ExtResource` or a `SubResource` id names. Absent reads the id as a path. */
   readonly resourceOf?: (kind: 'ExtResource' | 'SubResource', id: string) => ResourceReference | null;
 }
 
@@ -519,7 +519,7 @@ class ValueReader {
     return { type: T.OBJECT, resource: uid ? { path, uid } : { path } };
   }
 
-  /** The parser's `ext_func` and `sub_func` (`variant_parser.cpp:1104-1124`): an id the file declares, or null. */
+  /** `ext_func` and `sub_func` (`variant_parser.cpp:1104-1124`): an id the file declares, or null. */
   private parsedResource(kind: 'ExtResource' | 'SubResource'): VariantValue {
     this.expect('parenOpen', "Expected '('");
     const id = this.tokens.next();

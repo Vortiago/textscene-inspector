@@ -30,11 +30,7 @@ function step(tree: WalkedTree, current: string | null, name: string): string | 
   return childOf(tree, current, name) ?? undefined;
 }
 
-/**
- * `Node::get_node_or_null` (`node.cpp:1892-1952`) from the node at absolute path `from`: the absolute
- * path of the node `path` names, or null. An absolute path starts above the root window, so a name
- * other than `root` there leaves the walk with no node, as Godot's does.
- */
+/** `node.cpp:1892-1952` from the node at absolute path `from`: the absolute path `path` names, or null. */
 export function getNodeOrNull(tree: WalkedTree, from: string, path: string): string | null {
   if (path === '') return null;
   let current: string | null = path.startsWith('/') ? null : from;

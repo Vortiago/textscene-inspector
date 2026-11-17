@@ -39,7 +39,7 @@ export interface StoredTexts {
   readonly writtenReading: VariantReading;
 }
 
-/** The node's stored property `property` as the setters read it: the last write, the file, else the class default. */
+/** A stored property as the setters read it: the last write, else the file, else the class default. */
 export function storedValueOf({ node, written, nodeReading, writtenReading }: StoredTexts): StoredValue {
   const raw = canonicalisePropertyBag(node.type, { ...node.rawProperties });
   return (property) => {
@@ -62,10 +62,7 @@ function isAcceptedResource(property: ClassProperty, className: string | undefin
   return resourceTypeHint(property.hintString).bases.some((base) => descendsFromClass(className, base));
 }
 
-/**
- * `Object::set` of a stored property (`class_db.cpp:1647-1690`): Godot calls the setter with the
- * value cast to its argument, and reports the call valid only where the cast is strict.
- */
+/** `class_db.cpp:1647-1690`: the setter takes the cast value. The call is valid only for a strict cast. */
 function setStored(property: ClassProperty, value: VariantValue): SetOutcome {
   if (property.isSetterless) return { kind: 'dropped' };
   const to = valueTypeOf(property);

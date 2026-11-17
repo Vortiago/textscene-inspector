@@ -1,13 +1,3 @@
-/**
- * Derives the Node and Resource class → base-type tables and the ClassDB property tables from
- * the committed engine captures (`pnpm nodes:base-types` writes
- * packages/textscene-core/src/godot/classdb/{node,resource}BaseTypes.generated.ts,
- * classProperties.generated.ts, resourceTypeExclusions.generated.ts,
- * typedCollectionProperties.generated.ts, variantProperties.generated.ts and
- * nodeDefaults.generated.ts). It never runs
- * Godot: CI has no engine, and the test beside it re-derives every output to prove it current.
- */
-
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';

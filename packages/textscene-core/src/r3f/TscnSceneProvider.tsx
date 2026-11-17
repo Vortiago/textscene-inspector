@@ -60,8 +60,7 @@ function SceneProviders({ scene, children }: OpenedSceneProps) {
     rootScenePath: scene.rootScenePath,
   });
 
-  // The resetter clears the selection when the parse changes, or the highlight draws a removed node.
-  // A write keeps every node, so it keeps the selection.
+  // A new parse clears the selection, or the highlight draws a removed node. A write keeps every node.
   return (
     <ResourceLoaderProvider loader={loader}>
       {withProviders(

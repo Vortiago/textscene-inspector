@@ -1,6 +1,3 @@
-/**
- * The shell opens its text with `openScene`, so its views and a host's code read one parse.
- */
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TscnParser } from '../../../parser/TscnParser';

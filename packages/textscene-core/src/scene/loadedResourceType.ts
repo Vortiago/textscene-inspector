@@ -29,10 +29,7 @@ async function importedResourceType(provider: ResourceProvider, path: string): P
   return (sidecar !== null && parseImportFile(sidecar)?.resourceType) || null;
 }
 
-/**
- * The class `load` gives the file at `path`, as Godot's loaders read it: null where the file or its
- * sidecar is missing, so the value names no class and the renderer reports the missing file.
- */
+/** The class `load` gives the file, or null for a missing file, which the renderer then reports. */
 export async function loadedResourceType(provider: ResourceProvider, path: string): Promise<string | null> {
   const lower = path.toLowerCase();
   if (lower.endsWith(TEXT_SCENE_EXTENSION)) return 'PackedScene';
