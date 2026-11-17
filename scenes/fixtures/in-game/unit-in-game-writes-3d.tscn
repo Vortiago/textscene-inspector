@@ -2,6 +2,8 @@
 
 ; A host's writes through the scene: `pnpm ref:diff` sets one property with `--set` on both sides
 ; and measures the frame against Godot's. Unwritten, it draws a lit orange box on a grey floor.
+; The golden in-game-writes-3d writes a rotation, a light energy and a loaded material, which no
+; other golden reaches: every other scene draws its file's values only.
 
 [sub_resource type="BoxMesh" id="BoxMesh_1"]
 

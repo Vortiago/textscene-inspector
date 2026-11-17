@@ -6,10 +6,16 @@ import type { ResourceProvider } from '../resources/ResourceProvider';
 import { TscnSceneProvider } from './TscnSceneProvider';
 import { TscnSceneContents } from './TscnCanvas';
 import { useHierarchy } from './contexts/HierarchyContext';
+import { useMissingResources } from './contexts/MissingResourcesContext';
 import { useLiveNode } from './useLiveSceneTree';
 import { openScene, type Scene } from '../scene/openScene';
 import { variant } from '../scene/variant';
+import { useBuildSolveTree } from './controls/native/buildSolveTree';
+import { createSolveContext, solveControlTree } from './controls/native/controlRectSolver';
+import { nativeTheme } from './controls/native/nativeTheme';
+import type { Rect2 } from '../godot/math/rect2';
 import './nodes/index';
+import './controls/index';
 
 const provider: ResourceProvider = { loadResource: async () => null };
 
@@ -159,6 +165,95 @@ describe('a write of the host', () => {
     await vi.waitFor(async () => {
       await renderer.advanceFrames(1, 16);
       expect(cubePosition(renderer)).toEqual([0, 3, 0]);
+    });
+  });
+});
+
+const UI_SCENE = `[gd_scene format=3]
+
+[node name="Ui" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+`;
+
+const UI_VIEWPORT: Rect2 = { x: 0, y: 0, w: 400, h: 300 };
+
+/** A probe that records the rect the Control layout solves for the node at `path`. */
+function layoutProbe(path: string, rects: (Rect2 | undefined)[]) {
+  return function LayoutProbe() {
+    const { sceneGraph } = useHierarchy();
+    const root = sceneGraph.scenes.get(sceneGraph.rootScene)!;
+    const { tree } = useBuildSolveTree(root.nodes, root.externalResources, root.internalResources);
+    rects.push(solveControlTree(tree, UI_VIEWPORT, createSolveContext(nativeTheme(1))).get(path)?.rect);
+    return null;
+  };
+}
+
+describe('a write of an anchor', () => {
+  it('solves the Control layout again', async () => {
+    const scene = openScene({ source: UI_SCENE, provider, rootScenePath: 'res://main.tscn' });
+    const rects: (Rect2 | undefined)[] = [];
+    const LayoutProbe = layoutProbe('Ui/Panel', rects);
+    render(
+      <TscnSceneProvider scene={scene}>
+        <LayoutProbe />
+      </TscnSceneProvider>
+    );
+    expect(rects.at(-1)).toEqual({ x: 0, y: 0, w: 400, h: 300 });
+    await act(async () => {
+      await scene.getNode('Panel').set('anchor_right', 0.5);
+    });
+    expect(rects.at(-1)).toEqual({ x: 0, y: 0, w: 200, h: 300 });
+  });
+});
+
+const SPRITE_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Icon" type="Sprite3D" parent="."]
+`;
+
+describe('a resource from scene.load', () => {
+  it('swaps the texture the node draws', async () => {
+    const loadResource = vi.fn<ResourceProvider['loadResource']>(async () => null);
+    const scene = openScene({
+      source: SPRITE_SCENE,
+      provider: { loadResource },
+      rootScenePath: 'res://main.tscn',
+    });
+    await drawn(scene);
+    await act(async () => {
+      await scene.getNode('Icon').set('texture', await scene.load('res://yellow.png'));
+    });
+    // `scene.load` reads only the `.import` sidecar, so a read of the file itself is the node's.
+    const requested = () => loadResource.mock.calls.map(([path]) => path);
+    await vi.waitFor(() => expect(requested()).toContain('res://yellow.png'));
+  });
+
+  it('reports a file that does not load as a Missing resource', async () => {
+    const scene = openScene({ source: SPRITE_SCENE, provider, rootScenePath: 'res://main.tscn' });
+    const missing: ReadonlySet<string>[] = [];
+    function MissingProbe() {
+      missing.push(useMissingResources().missingPaths);
+      return null;
+    }
+    const renderer = await ReactThreeTestRenderer.create(
+      <TscnSceneProvider scene={scene}>
+        <TscnSceneContents />
+        <MissingProbe />
+      </TscnSceneProvider>
+    );
+    await act(async () => {
+      await scene.getNode('Icon').set('texture', await scene.load('res://gone.png'));
+    });
+    await vi.waitFor(async () => {
+      await renderer.advanceFrames(1, 16);
+      expect(missing.at(-1)?.has('res://gone.png')).toBe(true);
     });
   });
 });

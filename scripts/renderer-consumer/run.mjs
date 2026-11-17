@@ -14,7 +14,7 @@ import { consumerManifest } from './consumerManifest.mjs';
 
 const APP_DIR = join(import.meta.dirname, 'app');
 
-/** The cube fills about a fifth of the 320 x 240 viewport in either view, and a blank canvas scores 0. */
+/** The cube fills about a fifth of the 320 x 240 viewport, a twentieth at half scale, and a blank 0. */
 const INK_FLOOR = 2000;
 /** Software GL draws the first frame slowly. */
 const RENDER_TIMEOUT_MS = 90_000;
@@ -58,7 +58,14 @@ function buildConsumer(directory) {
 }
 
 /** The views the app draws, by the query that opens each. */
-const VIEWS = { '3D': '', 'In-game': '?mode=in-game' };
+const VIEWS = {
+  '3D': '',
+  'In-game': '?mode=in-game',
+  'In-game after a write': '?mode=in-game&write=scale',
+};
+
+/** A cube at half scale draws a quarter of its pixels, so its ink stays under half of the whole cube's. */
+const WRITTEN_INK_SHARE = 0.5;
 
 /** What each view drew and threw. It polls, since software GL is slow. */
 async function renderInBrowser(directory) {
@@ -117,9 +124,20 @@ function failuresOf(view, { ink, hasCanvasStyles, errors }) {
   ].map((failure) => `${view}: ${failure}`);
 }
 
+/** A line when the host's write did not change the drawn frame as it should, or none. */
+function writeFailures(drawn) {
+  const whole = drawn['In-game'].ink;
+  const written = drawn['In-game after a write'].ink;
+  if (written < whole * WRITTEN_INK_SHARE) return [];
+  return [`In-game after a write: expected under ${whole * WRITTEN_INK_SHARE} drawn pixels, got ${written}`];
+}
+
 /** One line per failed check of every view. */
 function failures(drawn) {
-  return Object.entries(drawn).flatMap(([view, result]) => failuresOf(view, result));
+  return [
+    ...Object.entries(drawn).flatMap(([view, result]) => failuresOf(view, result)),
+    ...writeFailures(drawn),
+  ];
 }
 
 const work = mkdtempSync(join(tmpdir(), 'renderer-consumer-'));
@@ -131,7 +149,7 @@ try {
   const found = failures(await renderInBrowser(app));
   for (const failure of found) console.error(`[renderer-consumer] ${failure}`);
   console.log(
-    `[renderer-consumer] ${found.length === 0 ? 'the fixture scene rendered in both views' : 'failed'}`
+    `[renderer-consumer] ${found.length === 0 ? 'the fixture scene rendered in every view' : 'failed'}`
   );
   process.exitCode = found.length === 0 ? 0 : 1;
 } finally {

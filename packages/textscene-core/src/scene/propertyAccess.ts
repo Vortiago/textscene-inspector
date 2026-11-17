@@ -8,7 +8,7 @@ import { strToVar, type VariantReading } from '../godot/variant/strToVar.js';
 import { castVariant, canConvertStrict } from '../godot/variant/variantCast.js';
 import { VARIANT_TYPE as T, variantTypeName } from '../godot/variant/variantType.js';
 import { NIL_VALUE, type VariantValue } from '../godot/variant/variantValue.js';
-import type { DerivedProperties, StoredValue, StoredWrite } from './derived/derivedProperty.js';
+import type { DerivedProperties, NodeReads, StoredValue, StoredWrite } from './derived/derivedProperty.js';
 import { derivedPropertiesOf } from './derived/derivedFamily.js';
 import type { SceneTreeNode } from './sceneRuntime.js';
 import type { PropertyTexts } from './sceneWrites.js';
@@ -64,7 +64,6 @@ function isAcceptedResource(property: ClassProperty, className: string | undefin
 
 /** `class_db.cpp:1647-1690`: the setter takes the cast value. The call is valid only for a strict cast. */
 function setStored(property: ClassProperty, value: VariantValue): SetOutcome {
-  if (property.isSetterless) return { kind: 'dropped' };
   const to = valueTypeOf(property);
   const cast = castVariant(value, to);
   const isObject = value.type === T.OBJECT;
@@ -74,20 +73,26 @@ function setStored(property: ClassProperty, value: VariantValue): SetOutcome {
   return { kind: 'written', writes: [[property.name, cast]], isValid: canConvertStrict(value.type, to) };
 }
 
+/** A ported family answers first: a stored setter, as a Control's anchor, can write more than itself. */
 export function resolveSet(
   node: SceneTreeNode,
   property: string,
   value: VariantValue,
   derived: DerivedProperties | null,
-  stored: StoredValue
+  reads: NodeReads
 ): SetOutcome {
   const storedProperty = findClassProperty(node.type, property);
-  if (storedProperty) return setStored(storedProperty, value);
+  if (storedProperty) {
+    if (storedProperty.isSetterless) return { kind: 'dropped' };
+    const to = valueTypeOf(storedProperty);
+    const writes = derived?.set(property, castVariant(value, to), reads);
+    if (writes) return { kind: 'written', writes, isValid: canConvertStrict(value.type, to) };
+    return setStored(storedProperty, value);
+  }
   const derivedProperty = findDerivedProperty(node.type, property);
   if (!derivedProperty) return { kind: 'unknown' };
   if (!derivedProperty.hasSetter) return { kind: 'dropped' };
-  const cast = castVariant(value, derivedProperty.type);
-  const writes = derived?.set(property, cast, stored);
+  const writes = derived?.set(property, castVariant(value, derivedProperty.type), reads);
   if (!writes) return { kind: 'unported', declaredBy: derivedProperty.declaredBy };
   return { kind: 'written', writes, isValid: canConvertStrict(value.type, derivedProperty.type) };
 }
@@ -102,12 +107,12 @@ export function resolveGet(
   node: SceneTreeNode,
   property: string,
   derived: DerivedProperties | null,
-  stored: StoredValue
+  reads: NodeReads
 ): GetOutcome {
-  if (findClassProperty(node.type, property)) return { kind: 'value', value: stored(property) };
+  if (findClassProperty(node.type, property)) return { kind: 'value', value: reads.stored(property) };
   const derivedProperty = findDerivedProperty(node.type, property);
   if (!derivedProperty) return { kind: 'unknown' };
-  const value = derived?.get(property, stored);
+  const value = derived?.get(property, reads);
   return value ? { kind: 'value', value } : { kind: 'unported', declaredBy: derivedProperty.declaredBy };
 }
 

@@ -4,6 +4,8 @@
 
 ; A host's writes through the scene: `pnpm ref:diff --mode in-game` sets one property with `--set`
 ; on both sides and measures the frame against Godot's. Each node below is the target of one case.
+; The golden in-game-writes-2d writes a Node2D, a Label, a Control anchor and a loaded texture,
+; which no other golden reaches: every other scene draws its file's values only.
 
 [node name="Main" type="Node2D"]
 

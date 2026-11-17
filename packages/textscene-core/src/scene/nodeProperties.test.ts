@@ -107,6 +107,20 @@ describe('get of a property nobody wrote', () => {
   });
 });
 
+describe('a setter that writes more than its own property', () => {
+  it('moves the opposite anchor along with an anchor moved past it', async () => {
+    const hud = sceneOfNodes().getNode('Hud');
+    await hud.set('anchor_left', 0.75);
+    expect(await hud.get('anchor_right')).toBe(0.75);
+  });
+
+  it('leaves the opposite anchor where an anchor stays short of it', async () => {
+    const hud = sceneOfNodes().getNode('Hud');
+    await hud.set('anchor_right', 0.75);
+    expect(await hud.get('anchor_left')).toBe(0);
+  });
+});
+
 describe('the refusals', () => {
   afterEach(() => vi.restoreAllMocks());
 

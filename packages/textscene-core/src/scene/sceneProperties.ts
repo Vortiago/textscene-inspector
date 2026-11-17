@@ -4,7 +4,7 @@ import { varToStr } from '../godot/variant/varToStr.js';
 import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import type { ResourceReference, VariantValue } from '../godot/variant/variantValue.js';
 import * as logger from '../logger.js';
-import type { DerivedProperties } from './derived/derivedProperty.js';
+import type { DerivedProperties, NodeReader, NodeReads } from './derived/derivedProperty.js';
 import type { SceneTreeNode } from './sceneRuntime.js';
 import { WriteStore, type SceneWrites } from './sceneWrites.js';
 import { sceneValueOf, valueOfSceneValue, type SceneValue } from './variant.js';
@@ -36,7 +36,8 @@ export class SceneProperties {
 
   constructor(
     private readonly rootScenePath: string,
-    private readonly rootScene: () => ParsedScene | undefined
+    private readonly rootScene: () => ParsedScene | undefined,
+    private readonly treeNode: (livePath: string) => SceneTreeNode | null
   ) {}
 
   writes(): SceneWrites {
@@ -57,7 +58,7 @@ export class SceneProperties {
 
   get(access: PropertyAccess, livePath: string, node: SceneTreeNode, property: string): SceneValue | null {
     const derived = this.derivedAt(access, livePath, node);
-    const outcome = access.resolveGet(node, property, derived, this.stored(access, livePath, node));
+    const outcome = access.resolveGet(node, property, derived, this.readsAt(access, livePath, node));
     if (outcome.kind === 'unknown') return this.unknownProperty(node, property, null);
     if (outcome.kind === 'unported') throw unportedProperty(property, outcome.declaredBy);
     return sceneValueOf(outcome.value);
@@ -73,7 +74,7 @@ export class SceneProperties {
   ): boolean {
     const variant = valueOfSceneValue(value);
     const derived = this.derivedAt(access, livePath, node);
-    const outcome = access.resolveSet(node, property, variant, derived, this.stored(access, livePath, node));
+    const outcome = access.resolveSet(node, property, variant, derived, this.readsAt(access, livePath, node));
     if (outcome.kind === 'unknown') return this.unknownProperty(node, property, false);
     if (outcome.kind === 'unported') throw unportedProperty(property, outcome.declaredBy);
     if (outcome.kind === 'dropped') return false;
@@ -88,6 +89,35 @@ export class SceneProperties {
   private derivedAt(access: PropertyAccess, livePath: string, node: SceneTreeNode): DerivedProperties | null {
     if (!this.derived.has(livePath)) this.derived.set(livePath, access.derivedPropertiesOf(node.type));
     return this.derived.get(livePath)!;
+  }
+
+  private readsAt(access: PropertyAccess, livePath: string, node: SceneTreeNode): NodeReads {
+    return {
+      stored: this.stored(access, livePath, node),
+      parent: () => this.parentReader(access, livePath),
+    };
+  }
+
+  /** The node above `livePath`, or null above the scene's root node. */
+  private parentReader(access: PropertyAccess, livePath: string): NodeReader | null {
+    const slash = livePath.lastIndexOf('/');
+    if (slash < 0) return null;
+    const parentPath = livePath.slice(0, slash);
+    const parent = this.treeNode(parentPath);
+    return parent && this.readerAt(access, parentPath, parent);
+  }
+
+  /** A node's properties as `get` answers them, with undefined where `get` would refuse. */
+  private readerAt(access: PropertyAccess, livePath: string, node: SceneTreeNode): NodeReader {
+    return {
+      type: node.type,
+      get: (property) => {
+        const derived = this.derivedAt(access, livePath, node);
+        const outcome = access.resolveGet(node, property, derived, this.readsAt(access, livePath, node));
+        return outcome.kind === 'value' ? outcome.value : undefined;
+      },
+      parent: () => this.parentReader(access, livePath),
+    };
   }
 
   private stored(access: PropertyAccess, livePath: string, node: SceneTreeNode) {
@@ -144,6 +174,6 @@ export class SceneProperties {
 
 function unportedProperty(property: string, declaredBy: string): Error {
   return new Error(
-    `expected a ported property, got "${property}" of ${declaredBy}: this release has no port of its setter and getter`
+    `expected a ported property, got "${property}" of ${declaredBy}: this release has no port of its setter or getter, or of a value it reads up the tree`
   );
 }

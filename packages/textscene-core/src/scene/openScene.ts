@@ -68,7 +68,11 @@ export function openScene({
 
   const parse = (): ParseResult => (parsed ??= parseTscnContent(currentSource, rootScenePath));
   const graph = (): SceneGraph | null => parse().sceneGraph;
-  const properties = new SceneProperties(rootScenePath, () => graph()?.scenes.get(rootScenePath));
+  const properties = new SceneProperties(
+    rootScenePath,
+    () => graph()?.scenes.get(rootScenePath),
+    (livePath) => tree()?.node(livePath) ?? null
+  );
   const tree = (): SceneTree | null => {
     const current = graph();
     return current ? runtime().tree(current) : null;
