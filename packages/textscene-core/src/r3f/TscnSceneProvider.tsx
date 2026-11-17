@@ -1,20 +1,18 @@
-/**
- * `<TscnSceneProvider>` mounts the contexts `<TscnCanvas>` reads, from the text of a scene and a
- * `ResourceProvider`. It is the preview shell's provider stack with the shell's defaults, so a
- * canvas inside it behaves as the shell's canvas does, with none of the shell's UI around it.
- */
-import { useId, useMemo, type ReactNode } from 'react';
+import { useId, useLayoutEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
-import { createResourcePipeline } from '../resources/createResourcePipeline.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
-import { useParsedScene } from './hooks/useParsedScene.js';
+import { openScene, type Scene } from '../scene/openScene.js';
+import { resourcePipelineOf } from './sceneResourcePipeline.js';
 import { SceneChangeResetter } from './components/TscnPreviewShell/SceneChangeResetter.js';
-import {
-  DEFAULT_ROOT_SCENE_PATH,
-  previewShellProviders,
-} from './components/TscnPreviewShell/previewShellProviders.js';
+import { previewShellProviders } from './components/TscnPreviewShell/previewShellProviders.js';
 
-interface TscnSceneProviderProps {
+interface OpenedSceneProps {
+  /** The scene `openScene` gave. Every view of it shares its parse and its resource loader. */
+  scene: Scene;
+  children: ReactNode;
+}
+
+interface SceneTextProps {
   /**
    * The text of the `.tscn` scene to draw. The provider parses it itself, since drawing a scene
    * moves the targets of its RemoteTransform nodes.
@@ -27,21 +25,39 @@ interface TscnSceneProviderProps {
   children: ReactNode;
 }
 
-export function TscnSceneProvider({
-  source,
-  provider,
-  rootScenePath = DEFAULT_ROOT_SCENE_PATH,
-  children,
-}: TscnSceneProviderProps) {
+export type TscnSceneProviderProps = OpenedSceneProps | SceneTextProps;
+
+export function TscnSceneProvider(props: TscnSceneProviderProps) {
+  return 'scene' in props ? (
+    <SceneProviders scene={props.scene}>{props.children}</SceneProviders>
+  ) : (
+    <SceneTextProviders {...props} />
+  );
+}
+
+/** Opens the text as a scene of its own, which keeps its resource loader while `provider` holds. */
+function SceneTextProviders({ source, provider, rootScenePath, children }: SceneTextProps) {
+  // `source` is left out: a new text replaces the parse of the same scene, below.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const scene = useMemo(() => openScene({ source, provider, rootScenePath }), [provider, rootScenePath]);
+  useLayoutEffect(() => scene.setSource(source), [scene, source]);
+  useLayoutEffect(() => () => scene.dispose(), [scene]);
+  return <SceneProviders scene={scene}>{children}</SceneProviders>;
+}
+
+function SceneProviders({ scene, children }: OpenedSceneProps) {
   const panelId = useId();
-  const { sceneGraph, error } = useParsedScene(source, rootScenePath);
+  const { sceneGraph, error } = useSyncExternalStore(scene.subscribe, scene.parse);
   if (error) throw new Error(`expected the text of a .tscn scene, got: ${error}`);
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId }), [sceneGraph, panelId]);
-  const { loader } = useMemo(() => createResourcePipeline(provider), [provider]);
+  const { loader } = resourcePipelineOf(scene);
+  const withProviders = previewShellProviders({
+    hierarchyValue,
+    panelId,
+    rootScenePath: scene.rootScenePath,
+  });
 
-  const withProviders = previewShellProviders({ hierarchyValue, panelId, rootScenePath });
-
-  // The resetter clears the selection when `source` changes, or the highlight draws a removed node.
+  // The resetter clears the selection when the parse changes, or the highlight draws a removed node.
   return (
     <ResourceLoaderProvider loader={loader}>
       {withProviders(

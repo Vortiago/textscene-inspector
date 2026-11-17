@@ -14,6 +14,9 @@ import { ResourceLoaderContext } from '../resources/ResourceLoaderContext';
 import { TscnSceneProvider } from './TscnSceneProvider';
 import { TscnSceneContents } from './TscnCanvas';
 import { useSelection } from './contexts/SelectionContext';
+import { useHierarchy } from './contexts/HierarchyContext';
+import { openScene } from '../scene/openScene';
+import { resourcePipelineOf } from './sceneResourcePipeline';
 
 // Pull in all self-registering node components
 import './nodes/index';
@@ -189,5 +192,80 @@ describe('<TscnSceneProvider>', () => {
     rerender(withScene(NOISE_SCENE));
 
     expect(selection.selectedNodePath).toBeNull();
+  });
+
+  describe('given a scene', () => {
+    /** A child that records the scene graph and the resource loader it reads. */
+    function contextProbe(seen: { graphs: Set<unknown>; loaders: Set<unknown> }) {
+      return function ContextProbe() {
+        seen.graphs.add(useHierarchy().sceneGraph);
+        seen.loaders.add(useContext(ResourceLoaderContext));
+        return null;
+      };
+    }
+
+    it('draws the parse and the resource loader of that scene', () => {
+      const scene = openScene({ source: BOX_SCENE, provider: emptyProvider() });
+      const seen = { graphs: new Set<unknown>(), loaders: new Set<unknown>() };
+      const ContextProbe = contextProbe(seen);
+
+      render(
+        <TscnSceneProvider scene={scene}>
+          <ContextProbe />
+        </TscnSceneProvider>
+      );
+
+      expect([...seen.graphs]).toEqual([scene.parse().sceneGraph]);
+      expect([...seen.loaders]).toEqual([resourcePipelineOf(scene).loader]);
+    });
+
+    it('gives two providers of one scene one parse and one resource loader', () => {
+      const scene = openScene({ source: BOX_SCENE, provider: emptyProvider() });
+      const seen = { graphs: new Set<unknown>(), loaders: new Set<unknown>() };
+      const ContextProbe = contextProbe(seen);
+
+      render(
+        <>
+          <TscnSceneProvider scene={scene}>
+            <ContextProbe />
+          </TscnSceneProvider>
+          <TscnSceneProvider scene={scene}>
+            <ContextProbe />
+          </TscnSceneProvider>
+        </>
+      );
+
+      expect(seen.graphs.size).toBe(1);
+      expect(seen.loaders.size).toBe(1);
+    });
+
+    it('draws the new parse after setSource', () => {
+      const scene = openScene({ source: BOX_SCENE, provider: emptyProvider() });
+      const seen = { graphs: new Set<unknown>(), loaders: new Set<unknown>() };
+      const ContextProbe = contextProbe(seen);
+      render(
+        <TscnSceneProvider scene={scene}>
+          <ContextProbe />
+        </TscnSceneProvider>
+      );
+
+      act(() => scene.setSource(NOISE_SCENE));
+
+      expect([...seen.graphs].at(-1)).toBe(scene.parse().sceneGraph);
+      expect(seen.loaders.size).toBe(1);
+    });
+
+    it('mounts the contexts a text and a provider mount, with that text parsed', () => {
+      const seen = { graphs: new Set<unknown>(), loaders: new Set<unknown>() };
+      const ContextProbe = contextProbe(seen);
+      render(
+        <TscnSceneProvider source={BOX_SCENE} provider={emptyProvider()}>
+          <ContextProbe />
+        </TscnSceneProvider>
+      );
+      const [graph] = [...seen.graphs] as [ReturnType<typeof useHierarchy>['sceneGraph']];
+
+      expect(graph).toEqual(openScene({ source: BOX_SCENE, provider: emptyProvider() }).parse().sceneGraph);
+    });
   });
 });

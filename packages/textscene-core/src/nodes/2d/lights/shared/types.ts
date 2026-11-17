@@ -7,6 +7,8 @@ import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 
 export interface Light2DProperties extends Node2DProperties {
   enabled: boolean;
+  /** `editor_only`: the light gives light only in the editor. */
+  editor_only: boolean;
   color: Rgba;
   energy: number;
   blend_mode: EnumValue<typeof Light2DBlendMode>;

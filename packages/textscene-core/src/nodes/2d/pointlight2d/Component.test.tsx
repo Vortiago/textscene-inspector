@@ -27,6 +27,8 @@ import {
 } from '../../../r3f/lighting2d/testing/apartLightProbe';
 import { LIGHT_PASS_LAYER } from '../../../r3f/lighting2d/lightPassLayers';
 import { canvasColorSpaceOf } from '../../../r3f/canvasColorSpace';
+import type { ReactNode } from 'react';
+import { RunningGameScope } from '../../../r3f/contexts/EditorHintContext';
 
 // happy-dom never settles a real image load, so the decode hands back a bare
 // texture. Everything after it is the real `createTextureFromBuffer`.
@@ -58,7 +60,8 @@ async function render(
   rootNode: TscnNode,
   tex = new THREE.Texture(),
   apartLights?: ApartLightRecord,
-  internalResources: TscnInternalResource[] = []
+  internalResources: TscnInternalResource[] = [],
+  around: (light: ReactNode) => ReactNode = (light) => light
 ) {
   const fake = createFakeResourceLoader();
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
@@ -79,7 +82,7 @@ async function render(
             canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}
           >
             <RecordApartLights record={apartLights ?? apartLightRecord()}>
-              <PointLight2D node={rootNode} />
+              {around(<PointLight2D node={rootNode} />)}
             </RecordApartLights>
           </CanvasLighting2DProvider>
         </SceneResourcesProvider>
@@ -162,6 +165,16 @@ describe('PointLight2D Component', () => {
   it('draws no quad when enabled=false', async () => {
     const r = await render(node({ enabled: 'false' }));
     expect(r.scene.findAllByType('Mesh').length).toBe(0);
+  });
+
+  it('draws no quad when editor_only where the game runs', async () => {
+    const inGame = (light: ReactNode) => <RunningGameScope>{light}</RunningGameScope>;
+    const r = await render(node({ editor_only: 'true' }), undefined, undefined, [], inGame);
+    expect(lightMesh(r)).toBeUndefined();
+  });
+
+  it('draws its quad when editor_only in the editor', async () => {
+    expect(lightMesh(await render(node({ editor_only: 'true' })))).toBeDefined();
   });
 
   it('makes no cookie view when enabled=false, since nothing draws it', async () => {

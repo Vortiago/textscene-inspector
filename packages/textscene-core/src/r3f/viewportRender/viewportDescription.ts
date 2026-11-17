@@ -1,12 +1,14 @@
 import type { PositionalShadowAtlasSettings } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import {
   DEFAULT_ANISOTROPIC_FILTERING_LEVEL,
+  SubViewportClearMode,
   VIEWPORT_POSITIONAL_SHADOW_ATLAS,
   viewportPositionalShadowAtlas,
 } from '../../godot/scene/viewport.js';
 import type { SubViewportProperties } from '../../nodes/viewport/subviewport/types.js';
 import {
   projectAnisotropicFilteringLevel,
+  projectDefaultEnvironmentPath,
   projectMsaaModes,
   projectPositionalShadowAtlas,
   projectTextureMipmapBias,
@@ -21,6 +23,8 @@ export interface ViewportDescription {
   msaa3D: number;
   usesDebanding: boolean;
   transparentBackground: boolean;
+  /** False when the target never asks for a clear: its clear colour is black (`texture_storage.cpp:4033`). */
+  requestsClear: boolean;
   mipmapBias: number;
   positionalShadowAtlas: PositionalShadowAtlasSettings;
   anisotropicLevel: number;
@@ -29,6 +33,8 @@ export interface ViewportDescription {
   drawsEditorChrome: boolean;
   /** Whether the editor's preview sun and preview Environment stand in (ADR-0025). */
   previewsEnvironment: boolean;
+  /** Drawn when no WorldEnvironment holds one, set on the root only (`renderer_scene_cull.cpp:3608-3610`). */
+  fallbackEnvironment: string | null;
 }
 
 /** The root viewport as the editor draws it: its facts from the project, and the editor's rules. */
@@ -39,14 +45,24 @@ export function rootViewportDescription(settings: ProjectSettings | null): Viewp
     msaa3D,
     usesDebanding: projectUsesDebanding(settings),
     transparentBackground: projectTransparentBackground(settings),
+    requestsClear: true,
     mipmapBias: projectTextureMipmapBias(settings),
     positionalShadowAtlas: projectPositionalShadowAtlas(settings),
     anisotropicLevel: projectAnisotropicFilteringLevel(settings),
     camera: 'editor',
     drawsEditorChrome: true,
     previewsEnvironment: true,
+    fallbackEnvironment: projectDefaultEnvironmentPath(settings),
   };
 }
+
+/** The root viewport as a game draws it: its facts from the project, and the game's rules. */
+export function gameViewportDescription(settings: ProjectSettings | null): ViewportDescription {
+  return { ...rootViewportDescription(settings), ...GAME_RULES };
+}
+
+/** A game draws through the viewport's current camera, with no editor element and no preview. */
+const GAME_RULES = { camera: 'elected', drawsEditorChrome: false, previewsEnvironment: false } as const;
 
 /** The node's properties the SubViewport adapter reads. */
 type SubViewportFacts = Pick<
@@ -56,6 +72,7 @@ type SubViewportFacts = Pick<
   | 'use_debanding'
   | 'use_hdr_2d'
   | 'transparent_bg'
+  | 'render_target_clear_mode'
   | 'texture_mipmap_bias'
   | 'anisotropic_filtering_level'
   | 'positional_shadow_atlas_size'
@@ -76,6 +93,7 @@ export function subViewportDescription(
     // A half-float target holds no banding to dither (`renderer_scene_render_rd.cpp:941`).
     usesDebanding: properties.use_debanding && !properties.use_hdr_2d,
     transparentBackground: properties.transparent_bg,
+    requestsClear: properties.render_target_clear_mode !== SubViewportClearMode.NEVER,
     mipmapBias: properties.texture_mipmap_bias ?? root.mipmapBias,
     positionalShadowAtlas: viewportPositionalShadowAtlas(
       properties.positional_shadow_atlas_size,
@@ -88,10 +106,14 @@ export function subViewportDescription(
       VIEWPORT_POSITIONAL_SHADOW_ATLAS
     ),
     anisotropicLevel: properties.anisotropic_filtering_level ?? root.anisotropicLevel,
-    camera: 'elected',
-    drawsEditorChrome: false,
-    previewsEnvironment: false,
+    fallbackEnvironment: null,
+    ...GAME_RULES,
   };
+}
+
+/** A transparent target, or one that never asks, clears black (`renderer_viewport.cpp:371`). */
+export function clearsBlack(viewport: ViewportDescription): boolean {
+  return viewport.transparentBackground || !viewport.requestsClear;
 }
 
 /** Godot's default samplers (`render_forward_clustered.cpp:1824`, `material_storage.h:370`). */

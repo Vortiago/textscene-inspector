@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { ControlCanvasLayer } from '../../../../r3f/controls/native/ControlCanvasLayer';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
-import { parseTscnContent } from '../../../../r3f/hooks/useParsedScene';
+import { parseTscnContent } from '../../../../scene/parseScene';
 import { DispatchedScene } from '../../../../r3f/testing/DispatchedScene';
 import { settleLoads } from '../../../../r3f/testing/settleLoads';
 import { V_SCROLL } from '../scrollcontainer/internalBackPieces';

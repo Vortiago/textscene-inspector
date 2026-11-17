@@ -7,7 +7,6 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { EnvironmentLayer } from './EnvironmentLayer';
-import { WorldKindProvider } from './WorldKindContext';
 import { WorldExposureScope, usePublishCameraAttributes } from './worldExposure';
 import { drawAtExposure } from '../exposure/sceneExposure';
 import { fireSceneRender } from '../testing/fireSceneRender';
@@ -32,12 +31,10 @@ function Exposure({ multiplier }: { multiplier: number }) {
 function layer(properties: Record<string, string>, multiplier: number | null) {
   return (
     <ViewportModeProvider>
-      <WorldKindProvider world="subViewport">
-        <WorldExposureScope>
-          {multiplier !== null && <Exposure multiplier={multiplier} />}
-          <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} panorama={null} />
-        </WorldExposureScope>
-      </WorldKindProvider>
+      <WorldExposureScope>
+        {multiplier !== null && <Exposure multiplier={multiplier} />}
+        <EnvironmentLayer settings={environmentSettingsOf(properties)} sky={null} panorama={null} />
+      </WorldExposureScope>
     </ViewportModeProvider>
   );
 }

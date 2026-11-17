@@ -5,7 +5,7 @@ import { mipmapBiasUniform } from '../testing/mipmapBiasUniform';
 import { fakeCanvasRenderer } from '../testing/fakeCanvasRenderer';
 import { useViewportAnisotropy } from '../viewportAnisotropy';
 import { rootViewportDescription } from './viewportDescription';
-import { drawWorld, renderUnderWay, type WorldRender } from './worldRender';
+import { drawWorld, renderClearsBlack, renderUnderWay, type WorldRender } from './worldRender';
 
 function worldRender(mipmapBias: number): WorldRender {
   return {
@@ -133,5 +133,31 @@ describe('drawWorld and the anisotropic level', () => {
 describe('renderUnderWay', () => {
   it('is null outside any draw (edge case)', () => {
     expect(renderUnderWay()).toBeNull();
+  });
+});
+
+describe('renderClearsBlack', () => {
+  function clearsBlackWhileDrawing(facts: Partial<WorldRender['viewport']>): boolean {
+    let clearsBlack = false;
+    drawWorld({ ...worldRender(0), viewport: { ...worldRender(0).viewport, ...facts } }, () => {
+      clearsBlack = renderClearsBlack();
+    });
+    return clearsBlack;
+  }
+
+  it('is false for an opaque viewport that asks for a clear', () => {
+    expect(clearsBlackWhileDrawing({})).toBe(false);
+  });
+
+  it('is true for a transparent viewport', () => {
+    expect(clearsBlackWhileDrawing({ transparentBackground: true })).toBe(true);
+  });
+
+  it('is true for a viewport that never asks for a clear (edge case)', () => {
+    expect(clearsBlackWhileDrawing({ requestsClear: false })).toBe(true);
+  });
+
+  it('is false outside any render (error case)', () => {
+    expect(renderClearsBlack()).toBe(false);
   });
 });

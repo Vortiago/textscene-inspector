@@ -43,6 +43,11 @@ const FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[]; re
     reason:
       'the heading names a parent="Missing" that walks nowhere on purpose: Godot falls back to the parent_id_path trail (packed_scene.cpp:161-163), and the linter cannot open the instanced scene to follow it',
   },
+  'in-game/unit-in-game-camera3d.tscn': {
+    rules: ['camera3d-multiple-current'],
+    reason:
+      'two current cameras are the point: each claims the viewport in tree order and the last claim wins (viewport.cpp:4565-4581), which the In-game golden shows',
+  },
   'unit-collision-shapes-2d.tscn': {
     rules: ['collisionshape2d-polygon-shape-limited-editing'],
     reason:

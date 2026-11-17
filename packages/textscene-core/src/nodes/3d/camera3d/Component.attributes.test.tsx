@@ -5,7 +5,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import './index';
 import '../../base/node3d/index';
 import { Camera3D } from './Component';
-import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
+import { ViewportWorld } from '../../../r3f/testing/ViewportWorld';
 import { useExposureFactor } from '../../../r3f/environment/worldExposure';
 import { ViewportActionsProvider } from '../../../r3f/contexts/ViewportActionsContext';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
@@ -35,12 +35,12 @@ async function exposureOf(world: 'root' | 'subViewport', viewed: string | null, 
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={RESOURCES}>
       <ViewportActionsProvider initialPreviewedCameraPath={viewed}>
-        <WorldEnvironmentScope world={world}>
+        <ViewportWorld world={world}>
           {nodes.map((node) => (
             <Camera3D key={node.name} node={node} />
           ))}
           <ExposureReader />
-        </WorldEnvironmentScope>
+        </ViewportWorld>
       </ViewportActionsProvider>
     </SceneResourcesProvider>
   );

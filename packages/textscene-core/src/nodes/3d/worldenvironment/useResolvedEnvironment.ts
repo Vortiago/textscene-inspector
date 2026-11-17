@@ -8,7 +8,8 @@
 import { useMemo } from 'react';
 import { createEnvironmentSettings } from '../../../resources/environment/build';
 import { ENVIRONMENT } from '../../../resources/environment/kind';
-import { useNodeResource, useReferencedResource } from '../../../resources/reading';
+import { useNodeReference, useReferencedResource, type ScopedReference } from '../../../resources/reading';
+import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { SKY } from '../../../resources/sky/kind';
 import { useProjectClearColorSrgb } from '../../../r3f/useProjectClearColor';
 import type { EnvironmentResolution } from '../../../r3f/environment/WorldEnvironmentScope';
@@ -21,7 +22,12 @@ import { useGlowMap, usePanorama } from './environmentTextures';
  * (**Progressive fill-in**), and each level's references resolve in the file that holds them.
  */
 export function useResolvedEnvironment(environmentRef: string | undefined): EnvironmentResolution {
-  const read = useNodeResource(environmentRef, ENVIRONMENT);
+  return useEnvironmentOf(useNodeReference(environmentRef, useSceneResources()));
+}
+
+/** The Environment `reference` names, from any holder: a node's property or a project setting. */
+export function useEnvironmentOf(reference: ScopedReference | null): EnvironmentResolution {
+  const read = useReferencedResource(reference, ENVIRONMENT);
   const environment = read.value;
   const skyRead = useReferencedResource(environment?.sky ?? null, SKY);
   const sky = skyRead.value?.sky ?? null;

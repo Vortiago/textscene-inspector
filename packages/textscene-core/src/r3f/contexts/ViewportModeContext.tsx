@@ -1,13 +1,7 @@
-/**
- * How the centre viewport shows the scene (ADR-0006). `'3D'` mounts the R3F
- * canvas, `'2D'` the Control overlay. The default (3D, collisions off, labels
- * on, gizmos on, grid off, fog on, performance off) needs no provider, and the host layers
- * persistence on top.
- */
-
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { useIsEditorHint } from './EditorHintContext';
 
-export type ViewportMode = '2D' | '3D';
+export type ViewportMode = '2D' | '3D' | 'in-game';
 
 /**
  * The localStorage keys of the persisted viewport preferences. The shell
@@ -202,9 +196,27 @@ export function ViewportModeProvider({
   );
 }
 
-/** The viewport mode and the overlay toggles. Safe without a provider. */
+/** Safe without a provider. Where the game runs, the toggles read as the game draws. */
 export function useViewportMode(): ViewportModeValue {
-  return useContext(ViewportModeContext);
+  const value = useContext(ViewportModeContext);
+  const isEditorHint = useIsEditorHint();
+  return useMemo(() => (isEditorHint ? value : runningGameToggles(value)), [isEditorHint, value]);
+}
+
+/** The game draws no overlay or preview, and every Label3D and fog (`scene/main/scene_tree.h:142-144`). */
+function runningGameToggles(value: ViewportModeValue): ViewportModeValue {
+  return {
+    ...value,
+    showCollisions: false,
+    showLabels: true,
+    showNavigation: false,
+    showGizmos: false,
+    showGrid: false,
+    showPreviewSun: false,
+    showPreviewEnvironment: false,
+    frameOnOpen: false,
+    showFog: true,
+  };
 }
 
 /**
@@ -212,5 +224,7 @@ export function useViewportMode(): ViewportModeValue {
  * its own, so a gizmo re-renders for the Gizmos toggle alone.
  */
 export function useShowGizmos(): boolean {
-  return useContext(ShowGizmosContext);
+  const showGizmos = useContext(ShowGizmosContext);
+  const isEditorHint = useIsEditorHint();
+  return showGizmos && isEditorHint;
 }

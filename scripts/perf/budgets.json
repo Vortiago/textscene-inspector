@@ -194,5 +194,22 @@
         "runs": 1
       }
     }
+  },
+  "in-game-camera3d": {
+    "drawCalls": 5,
+    "steps": {
+      "SubViewports": {
+        "drawCalls": 4,
+        "runs": 1
+      },
+      "Depth prepass": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 1,
+        "runs": 1
+      }
+    }
   }
 }

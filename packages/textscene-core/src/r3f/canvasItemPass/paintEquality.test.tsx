@@ -12,7 +12,7 @@ import type { TscnNode } from '../../parser/types';
 import { TscnParser } from '../../parser/TscnParser';
 import { fixturesDir } from '../../parser/testing/parserKit';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import { parseTscnContent } from '../hooks/useParsedScene';
+import { parseTscnContent } from '../../scene/parseScene';
 import { DispatchedScene } from '../testing/DispatchedScene';
 import { settleLoads } from '../testing/settleLoads';
 import { liveTreeOf, type LiveTree } from '../liveSceneTree';

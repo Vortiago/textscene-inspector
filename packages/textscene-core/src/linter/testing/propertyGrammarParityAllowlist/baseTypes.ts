@@ -24,11 +24,7 @@ const LIGHT3D_LINTER_ONLY_KEYS = [
   'light_temperature',
 ] as const;
 
-/**
- * Light3D keys that change a frozen frame and that the shared parser helpers
- * do not read yet. `editor_only` sits here like its Light2D twin: the light is
- * disabled outside the editor, and this previewer always draws it.
- */
+/** Light3D keys that change a frozen frame and that the shared parser helpers do not read yet. */
 const LIGHT3D_RENDER_GAP_KEYS = [
   // Projects a texture through the light; nothing here samples it.
   'light_projector',
@@ -38,7 +34,6 @@ const LIGHT3D_RENDER_GAP_KEYS = [
   // Which render layers cast into this light's shadow, distinct from
   // light_cull_mask's "what this light illuminates".
   'shadow_caster_mask',
-  'editor_only',
 ] as const;
 
 export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
@@ -207,17 +202,6 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     renderGap: LIGHT3D_RENDER_GAP_KEYS,
     reason:
       'Light3D base validators live in 3d/lights/shared/linterParser.ts and reach every concrete light via the base-walk, so one entry here covers all four leaves. Bake/cull-mask, fine shadow tuning and the physical-light-units trio are runtime-only; the projector, the two soft-shadow sizes, the caster mask and the distance-fade group do change the frame and are simply unimplemented.',
-  },
-
-  Light2D: {
-    renderGap: [
-      // Godot disables the light outside the editor when this is set
-      // (`_update_light_visibility`, light_2d.cpp: the non-TOOLS branch sets
-      // editor_ok = false). This previewer always draws the light.
-      'editor_only',
-    ],
-    reason:
-      'Light2D base validators live in 2d/lights/shared/linterParser.ts and reach PointLight2D and DirectionalLight2D via the base-walk; editor_only gates the light at runtime and no parser here reads it.',
   },
 
   Node2D: {

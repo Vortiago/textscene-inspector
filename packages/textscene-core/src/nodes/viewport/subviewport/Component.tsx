@@ -6,12 +6,16 @@
  */
 
 import { lazy, useMemo, type ReactNode } from 'react';
-import { OffscreenViewportPass } from '../../../r3f/viewportRender/OffscreenViewportPass';
+import {
+  OffscreenViewportPass,
+  OwnCanvasWorldScope,
+} from '../../../r3f/viewportRender/OffscreenViewportPass';
+import { ViewportDescriptionProvider } from '../../../r3f/viewportRender/viewportDescriptionContext';
 
 import type { TscnNode } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
-import { useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
+import { CanvasWorkspaceProvider, useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { EnclosingViewportProvider } from '../../../r3f/contexts/EnclosingViewportContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { ViewportSizeProvider } from '../../../r3f/contexts/ViewportSizeContext';
@@ -33,6 +37,8 @@ import { useStableVector2 } from '../../../r3f/hooks/useStableVector2';
 import { useInCanvasOverWorld } from '../../../r3f/viewportRender/canvasOverWorldScope';
 import { ViewportCanvasScope } from '../../../r3f/viewportCanvasScope';
 import { viewportCanvasColorSpace } from '../../../r3f/viewportRender/viewportTargetOptions';
+import { useSubViewportDescription } from '../../../r3f/viewportRender/useSubViewportDescription';
+import type { ViewportDescription } from '../../../r3f/viewportRender/viewportDescription';
 
 // Lazy: the Control painters register on import, and a viewport with no Controls never needs them.
 const ViewportControls = lazy(() =>
@@ -74,6 +80,20 @@ export function SubViewport(props: NodeComponentProps) {
 }
 
 function SubViewportMount({ node, children }: NodeComponentProps) {
+  const description = useSubViewportDescription(node.properties as SubViewportProperties);
+  return (
+    <ViewportMount node={node} description={description}>
+      {children}
+    </ViewportMount>
+  );
+}
+
+/** A viewport and its subtree, drawn by its pass with what `description` gives each render. */
+export function ViewportMount({
+  node,
+  description,
+  children,
+}: NodeComponentProps & { description: ViewportDescription }) {
   const properties = node.properties as SubViewportProperties;
   const { own_world_3d: ownWorld3D } = properties;
   const workspace = useCanvasWorkspace();
@@ -90,11 +110,8 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
   // Control too.
   const rasterizes = kind === '3d' || kind === '2d';
 
-  // The subtree draws inline only for 3D content in a shared world in a 3D
-  // canvas. Otherwise the offscreen pass portals it. Without a pass, the children
-  // pass through on the `own_world_3d` rule, since a component renders what the
-  // dispatcher hands it (subtreeConformance).
-  const rendersInline = rasterizes ? kind === '3d' && !ownWorld3D && workspace === '3d' : !ownWorld3D;
+  // With a pass, only 3D content of a shared world in a 3D canvas draws inline. With none, all of it does.
+  const rendersInline = rasterizes ? kind === '3d' && !ownWorld3D && workspace === '3d' : true;
   // On either path the subtree's canvas items are in this viewport's World2D, never the parent's.
   // So are its CanvasModulate and its lights: the parent canvas's tint stops at this viewport.
   const sizes = viewportPassSizes(node, useViewportRect(path));
@@ -129,7 +146,19 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
       ) : null}
     </YSortProvider>
   );
-  const contents = kind === '2d' ? canvasContents : inViewport(children);
+  // A nested shared viewport draws the nearest own world, as `find_world_3d()` does (`viewport.cpp:4670`).
+  function controlOnlyContents() {
+    if (!ownWorld3D) return inViewport(children);
+    return (
+      <ViewportDescriptionProvider description={description}>
+        <OwnCanvasWorldScope>
+          <CanvasWorkspaceProvider workspace="2d">{inViewport(children)}</CanvasWorkspaceProvider>
+        </OwnCanvasWorldScope>
+      </ViewportDescriptionProvider>
+    );
+  }
+  const contents =
+    kind === '2d' ? canvasContents : kind === 'dom' ? controlOnlyContents() : inViewport(children);
   const drawsCanvasOverWorld = kind === '3d' && (holdsControls || holdsCanvasItems);
 
   return (
@@ -149,6 +178,7 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
             canvasModulate={canvasModulate}
             canvasOverWorld={drawsCanvasOverWorld ? canvasContents : null}
             holdsCanvasItems={holdsCanvasItems}
+            viewport={description}
           >
             {rendersInline ? null : contents}
           </OffscreenViewportPass>

@@ -10,6 +10,7 @@ import { LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 function parseBaseLightProperties(properties: Record<string, string>): BaseLightProperties {
   return {
     layers: parseVisualLayers(properties),
+    editor_only: boolSlotValue(properties.editor_only) === true,
     light_color: properties.light_color || LIGHT_3D_DEFAULTS.color,
     light_energy: floatOr(properties.light_energy, LIGHT_3D_DEFAULTS.energy, 'light_energy'),
     light_bake_mode: intOr(properties.light_bake_mode, LIGHT_3D_DEFAULTS.bakeMode, 'light_bake_mode'),

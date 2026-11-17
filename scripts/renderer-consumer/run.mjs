@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-/**
- * `pnpm test:renderer-consumer`: installs the packed `@textscene/renderer`
- * into a plain Vite React app with its own React and three.js, type-checks and builds the app,
- * and renders a fixture scene in headless Chromium. The app sets no `@textscene/source`
- * condition and no CSS-module support, so a bundle that needs either fails here.
- */
 import { cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -20,7 +14,7 @@ import { consumerManifest } from './consumerManifest.mjs';
 
 const APP_DIR = join(import.meta.dirname, 'app');
 
-/** The fixture's cube fills about a fifth of its 320 x 240 viewport. A blank canvas scores 0. */
+/** The cube fills about a fifth of the 320 x 240 viewport in either view, and a blank canvas scores 0. */
 const INK_FLOOR = 2000;
 /** Software GL draws the first frame slowly. */
 const RENDER_TIMEOUT_MS = 90_000;
@@ -63,7 +57,10 @@ function buildConsumer(directory) {
   run('node', ['node_modules/vite/bin/vite.js', 'build'], directory);
 }
 
-/** What the page drew in the viewport, and what it threw. Polls, since software GL is slow. */
+/** The views the app draws, by the query that opens each. */
+const VIEWS = { '3D': '', 'In-game': '?mode=in-game' };
+
+/** What each view drew and threw. It polls, since software GL is slow. */
 async function renderInBrowser(directory) {
   const { port } = previewPort('rendererConsumer');
   const server = await preview({
@@ -74,21 +71,28 @@ async function renderInBrowser(directory) {
   });
   const browser = await launchSwiftShaderBrowser();
   try {
-    const page = await browser.newPage();
-    const diagnostics = attachDiagnostics(page);
-    await page.goto(`http://localhost:${port}/`);
-    const ink = await pollInk(page);
-    const hasCanvasStyles = await page.evaluate(() => {
-      for (let node = document.querySelector('canvas'); node; node = node.parentElement) {
-        if (getComputedStyle(node).touchAction === 'none') return true;
-      }
-      return false;
-    });
-    return { ink, hasCanvasStyles, errors: loggedErrors(diagnostics) };
+    const drawn = {};
+    for (const [view, query] of Object.entries(VIEWS)) {
+      drawn[view] = await renderView(await browser.newPage(), `http://localhost:${port}/${query}`);
+    }
+    return drawn;
   } finally {
     await browser.close();
     await server.close();
   }
+}
+
+async function renderView(page, url) {
+  const diagnostics = attachDiagnostics(page);
+  await page.goto(url);
+  const ink = await pollInk(page);
+  const hasCanvasStyles = await page.evaluate(() => {
+    for (let node = document.querySelector('canvas'); node; node = node.parentElement) {
+      if (getComputedStyle(node).touchAction === 'none') return true;
+    }
+    return false;
+  });
+  return { ink, hasCanvasStyles, errors: loggedErrors(diagnostics) };
 }
 
 async function pollInk(page) {
@@ -102,15 +106,20 @@ async function pollInk(page) {
   return ink;
 }
 
-/** One line per failed check, or none when the consumer rendered the fixture. */
-function failures({ ink, hasCanvasStyles, errors }) {
+/** One line per failed check of a view, or none when it rendered the fixture. */
+function failuresOf(view, { ink, hasCanvasStyles, errors }) {
   return [
     ...(ink < INK_FLOOR ? [`expected at least ${INK_FLOOR} drawn pixels in the viewport, got ${ink}`] : []),
     ...(hasCanvasStyles
       ? []
       : ['expected the canvas root to carry the bundle’s touch-action style, got none']),
     ...errors.map((message) => `page error: ${message}`),
-  ];
+  ].map((failure) => `${view}: ${failure}`);
+}
+
+/** One line per failed check of every view. */
+function failures(drawn) {
+  return Object.entries(drawn).flatMap(([view, result]) => failuresOf(view, result));
 }
 
 const work = mkdtempSync(join(tmpdir(), 'renderer-consumer-'));
@@ -121,7 +130,9 @@ try {
   buildConsumer(app);
   const found = failures(await renderInBrowser(app));
   for (const failure of found) console.error(`[renderer-consumer] ${failure}`);
-  console.log(`[renderer-consumer] ${found.length === 0 ? 'the fixture scene rendered' : 'failed'}`);
+  console.log(
+    `[renderer-consumer] ${found.length === 0 ? 'the fixture scene rendered in both views' : 'failed'}`
+  );
   process.exitCode = found.length === 0 ? 0 : 1;
 } finally {
   rmSync(work, { recursive: true, force: true });

@@ -17,4 +17,4 @@ export { COMPACT_LAYOUT_QUERY, isCompactLayout } from './components/TscnPreviewS
 export { usePersistedState } from './hooks/usePersistedState.js';
 
 // The shell's parse pipeline, so a host makes the same renderability decision the shell makes.
-export { parseTscnContent } from './hooks/useParsedScene.js';
+export { parseTscnContent } from '../scene/parseScene.js';

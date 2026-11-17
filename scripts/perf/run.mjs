@@ -48,9 +48,9 @@ async function main() {
   const measured = {};
   const unmeasured = [];
   await withPreviewBrowser(previewPort('perf'), async (browser, baseUrl) => {
-    const profiled = await profiledPage(browser);
+    const pages = new ProfiledPages(browser);
     for (const scene of scenes) {
-      const { work, reason } = await measureScene(profiled, baseUrl, scene);
+      const { work, reason } = await measureScene(await pages.for(scene), baseUrl, scene);
       if (work) measured[scene.name] = work;
       else unmeasured.push(`${scene.name}: ${reason}`);
       console.log(`[perf] ${scene.name} ${work ? `${work.drawCalls} draw calls` : 'not measured'}`);
@@ -74,14 +74,33 @@ function parseArgs(argv) {
   return opts;
 }
 
-/**
- * A capture page with the Performance toggle on before the app reads it. The app opens a 2D-rooted
- * scene in its 2D workspace, so one page serves both.
- */
-async function profiledPage(browser) {
-  const context = await createCaptureContext(browser, { frameOnOpen: true, showPerformance: true });
-  const page = await context.newPage();
-  return { page, diagnostics: attachDiagnostics(page) };
+/** Profiled pages: the editor's serves 2D and 3D scenes, and an In-game scene needs one of its window. */
+class ProfiledPages {
+  constructor(browser) {
+    this.browser = browser;
+    this.pages = new Map();
+  }
+
+  for({ inGameFrame = null }) {
+    const key = inGameFrame ? `in-game:${inGameFrame.width}x${inGameFrame.height}` : 'editor';
+    if (!this.pages.has(key)) {
+      // A failed open is forgotten, so the next scene of this key tries again and shows its own cause.
+      const opened = this.open(inGameFrame);
+      opened.catch(() => this.pages.delete(key));
+      this.pages.set(key, opened);
+    }
+    return this.pages.get(key);
+  }
+
+  async open(inGameFrame) {
+    const context = await createCaptureContext(this.browser, {
+      frameOnOpen: !inGameFrame,
+      showPerformance: true,
+      inGameFrame,
+    });
+    const page = await context.newPage();
+    return { page, diagnostics: attachDiagnostics(page) };
+  }
 }
 
 /**

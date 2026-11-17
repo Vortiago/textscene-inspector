@@ -14,7 +14,7 @@ import { liveTreeOf, rootScope } from '../../liveSceneTree.js';
 
 export function WorkspaceAutoSelect() {
   const { sceneGraph } = useHierarchy();
-  const { setMode } = useViewportMode();
+  const { mode, setMode } = useViewportMode();
   const liveTree = useSharedLiveTree();
 
   const claimed = useMemo(() => {
@@ -24,15 +24,14 @@ export function WorkspaceAutoSelect() {
     return workspaceForRoot(liveTreeOf(roots, ctx).stepOf(root, rootScope(ctx)).node);
   }, [liveTree]);
 
-  // Once per scene, when the workspace becomes known. A manual toggle then
-  // holds until the next scene switch.
+  // Once per scene, so a manual toggle holds until a switch. No root claims In-game, so a switch keeps it.
   const appliedFor = useRef<SceneGraph | null>(null);
   useEffect(() => {
     if (claimed && appliedFor.current !== sceneGraph) {
       appliedFor.current = sceneGraph;
-      setMode(claimed);
+      if (mode !== 'in-game') setMode(claimed);
     }
-  }, [sceneGraph, claimed, setMode]);
+  }, [sceneGraph, claimed, mode, setMode]);
 
   return null;
 }

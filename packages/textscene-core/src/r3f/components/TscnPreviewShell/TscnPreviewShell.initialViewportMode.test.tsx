@@ -8,7 +8,7 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('../../TscnCanvas', () => ({
-  TscnCanvas: () => <div data-testid="canvas-stub" />,
+  TscnCanvas: ({ mode }: { mode?: string }) => <div data-testid="canvas-stub" data-mode={mode ?? '3D'} />,
   TscnSceneContents: () => null,
 }));
 vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
@@ -31,7 +31,7 @@ function shellEl(panelId: string): HTMLElement {
   return globalThis.document.querySelector(`[data-panel-id="${panelId}"]`) as HTMLElement;
 }
 
-function modeButton(shell: HTMLElement, label: '2D' | '3D'): HTMLButtonElement {
+function modeButton(shell: HTMLElement, label: '2D' | '3D' | 'In-game'): HTMLButtonElement {
   const segment = shell.querySelector('[role="group"][aria-label="Viewport dimension"]');
   const button = Array.from(segment?.querySelectorAll('button') ?? []).find((b) => b.textContent === label);
   expect(button).toBeTruthy();
@@ -78,5 +78,15 @@ describe('<TscnPreviewShell> initialViewportMode', () => {
 
     expect(modeButton(shell, '3D').getAttribute('aria-pressed')).toBe('true');
     expect(shell.querySelector('[data-testid="canvas-stub"]')).toBeTruthy();
+  });
+
+  it('forces the In-game mode, which draws the canvas in game', async () => {
+    render(<TscnPreviewShell panelId="forced-in-game" content={NODE2D_ROOT} initialViewportMode="in-game" />);
+    const shell = shellEl('forced-in-game');
+    await screen.findAllByText('Root');
+
+    expect(modeButton(shell, 'In-game').getAttribute('aria-pressed')).toBe('true');
+    expect(shell.querySelector('[data-testid="canvas-stub"]')?.getAttribute('data-mode')).toBe('in-game');
+    expect(shell.querySelector('[data-testid="stage-2d-stub"]')).toBeNull();
   });
 });

@@ -23,19 +23,69 @@ version outside that range can draw wrongly.
 
 ## Use
 
+`openScene` opens the text of a scene. `<TscnCanvas scene={scene} mode="in-game" />` draws it as
+the game draws it when it starts.
+
 ```tsx
-import { TscnCanvas, TscnSceneProvider, type ResourceProvider } from '@textscene/renderer';
+import { TscnCanvas, openScene, type ResourceProvider } from '@textscene/renderer';
 
 // Loads a scene's `res://` files: text for a text file, bytes for any other file, null for a miss.
 const provider: ResourceProvider = {
   async loadResource(path) {
     const response = await fetch(`/game/${path.slice('res://'.length)}`);
     if (!response.ok) return null;
-    return /\.(tscn|tres)$/.test(path) ? response.text() : response.arrayBuffer();
+    return /\.(tscn|tres|godot)$/.test(path) ? response.text() : response.arrayBuffer();
   },
 };
 
 // `source` is the text of a `.tscn` file.
+const scene = openScene({ source, provider });
+
+export function GameView() {
+  return (
+    <div style={{ width: 640, height: 360 }}>
+      <TscnCanvas scene={scene} mode="in-game" />
+    </div>
+  );
+}
+```
+
+`<TscnCanvas>` fills its parent, so give the parent a size.
+
+### The In-game mode
+
+The In-game mode draws the root viewport of the scene as the game starts it:
+
+- The scene's own cameras. Of two current Camera3D nodes, the last one in the tree wins, and with
+  none current the first one wins. A 3D scene with no Camera3D shows the clear colour. A 2D scene
+  draws through its Camera2D.
+- The 3D world first, then the canvas items, the Controls and each CanvasLayer over it.
+- The lighting of the game: the camera's Environment, else the scene's WorldEnvironment, else the
+  project's default Environment, else none. No preview sun and no preview sky.
+- No editor element: no gizmo, icon, grid, collision shape, path or navigation overlay. A light
+  with `editor_only` gives no light.
+- No camera navigation and no input: a click selects nothing.
+
+Scripts do not run. The view shows the scene as Godot loads it, before any script changes it.
+
+The provider serves `res://project.godot` when the project has one. The mode reads the window size,
+the clear colour, the transparent background and the default Environment from it. The window fits
+into the element at its aspect ratio, with bars around it.
+
+Draw one view per page. The Decal atlas and the area light atlas are shared by every view on a
+page, and #1005 gives each view its own.
+
+### The 3D mode
+
+With no `mode`, or `mode="3D"`, the view draws the scene as the Godot editor's 3D view does: an
+orbit camera, the preview sun and sky, and the gizmos. It draws 3D content. A scene of 2D nodes,
+such as `Control` or `Node2D`, draws nothing in it.
+
+`<TscnSceneProvider>` opens the scene from its text for a view and for `useSelection`:
+
+```tsx
+import { TscnCanvas, TscnSceneProvider } from '@textscene/renderer';
+
 export function SceneView({ source }: { source: string }) {
   return (
     <TscnSceneProvider source={source} provider={provider}>
@@ -47,18 +97,20 @@ export function SceneView({ source }: { source: string }) {
 }
 ```
 
-`<TscnCanvas>` fills its parent, so give the parent a size. It draws 3D content. A scene of 2D
-nodes, such as `Control` or `Node2D`, draws nothing in it.
-
 ## API
 
-The package exports four names.
+The package exports six names.
 
-- `TscnCanvas`: the canvas. It reads the scene, the resources and the selection from
-  `<TscnSceneProvider>`.
-- `TscnSceneProvider`: mounts what the canvas reads. Its props are `source` (the text of a `.tscn` scene),
-  `provider` (a `ResourceProvider`), `rootScenePath` (the `res://` path the scene opens under,
-  optional) and `children`. A new `provider` starts a new resource loader.
+- `openScene({ source, provider, rootScenePath? })`: opens the text of a scene and returns a
+  `Scene`. It parses the text once, the first time a view reads it.
+- `Scene` (a type): an open scene. `setSource(text)` replaces its text, and every view of it draws
+  the new text. `dispose()` closes it.
+- `TscnCanvas`: the view. Its props are `scene` (a `Scene`, optional inside
+  `<TscnSceneProvider>`), `mode` (`'in-game'` or `'3D'`, default `'3D'`) and `className`.
+- `TscnSceneProvider`: mounts what the view reads. Give it `scene` (a `Scene`), or `source` (the
+  text of a `.tscn` scene), `provider` (a `ResourceProvider`) and `rootScenePath` (the `res://` path
+  the scene opens under, optional). It takes `children`. A new `provider` starts a new resource
+  loader.
 - `ResourceProvider` (a type): `loadResource(path, type?)` returns the file as a string or an
   `ArrayBuffer`, or `null` when the file is missing.
 - `useSelection`: the selected node path and the functions that change it. Call it in a component

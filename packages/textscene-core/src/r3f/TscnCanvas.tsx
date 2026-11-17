@@ -1,10 +1,5 @@
-/**
- * `<TscnCanvas>` renders the parsed scene in `HierarchyContext` under
- * react-three-fiber, with its resources in scope and the camera the user picks.
- * With no scene loaded, it renders an empty canvas with default lighting.
- */
-import { lazy } from 'react';
 import { Canvas } from '@react-three/fiber';
+import { lazy, Suspense } from 'react';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useSeatedRoots } from './useLiveSceneTree.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
@@ -29,7 +24,9 @@ import { CameraFit } from './CameraFit.js';
 import { SceneCamerasProvider } from './sceneCameras.js';
 import { CANVAS_RENDERER_GL, CANVAS_RENDERER_PROPS } from './canvasRenderer/canvasRendererProps.js';
 import { CanvasRendererScope } from './canvasRenderer/CanvasRendererScope.js';
-import styles from './TscnCanvas.module.css';
+import { TscnSceneProvider } from './TscnSceneProvider.js';
+import type { Scene } from '../scene/openScene.js';
+import { rootClassName } from './stageClassName.js';
 
 // Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.
 const EmptyScenePrompt = lazy(() => import('./emptyScenePrompt.js'));
@@ -115,11 +112,39 @@ function EmptySceneIndicator() {
   );
 }
 
-/** Reads everything from context. A test mounts `<TscnSceneContents>` instead. */
-export function TscnCanvas() {
+const GameView = lazy(() => import('./gameView/GameView.js').then((m) => ({ default: m.GameView })));
+
+/** `in-game` draws the scene as the game starts it with no script run, `3D` as the editor's 3D view. */
+export type TscnCanvasMode = 'in-game' | '3D';
+
+export interface TscnCanvasProps {
+  /** The scene `openScene` gave. Without it, the view reads the `<TscnSceneProvider>` above it. */
+  scene?: Scene;
+  /** `3D` by default. A change replaces the stage, so one canvas is live. */
+  mode?: TscnCanvasMode;
+  /** The class of the element the view fills. */
+  className?: string;
+}
+
+export function TscnCanvas({ scene, mode = '3D', className }: TscnCanvasProps) {
+  const stage =
+    mode === 'in-game' ? <GameStage className={className} /> : <EditorCanvas className={className} />;
+  return scene ? <TscnSceneProvider scene={scene}>{stage}</TscnSceneProvider> : stage;
+}
+
+/** Loads on demand, so a host that never shows a game keeps it out of its first chunk. */
+function GameStage({ className }: { className?: string }) {
+  return (
+    <Suspense fallback={null}>
+      <GameView className={className} />
+    </Suspense>
+  );
+}
+
+function EditorCanvas({ className }: { className?: string }) {
   const frameloop = usePreviewFrameloop();
   return (
-    <div className={styles.root}>
+    <div className={rootClassName(className)}>
       {/* Godot's editor opens every scene at the same fixed orbit, 70-degree FOV and
           clip planes (godotEditorCamera.ts). Framing is F there and opt-in here. */}
       <Canvas

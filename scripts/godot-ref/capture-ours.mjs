@@ -97,6 +97,7 @@ export function captureOurs({
   lookAt = null,
   sceneCamera = null,
   showCollisions = false,
+  inGameFrame = null,
 }) {
   return withPreviewBrowser(
     { ...previewPort('parity'), launchBrowser: launchGodotComparisonBrowser },
@@ -104,7 +105,12 @@ export function captureOurs({
       // Godot's editor orbit (ADR-0025) on both sides, so a probe at (x, y)
       // addresses one surface point. `--frame` opts both into fit-the-bounds for
       // a scene too large to read at distance 4.
-      const context = await createCaptureContext(browser, { frameOnOpen: frame, canvas2D, canvas2DFrame });
+      const context = await createCaptureContext(browser, {
+        frameOnOpen: frame,
+        canvas2D,
+        canvas2DFrame,
+        inGameFrame,
+      });
       const page = await context.newPage();
       const cameraPath = await cameraPathOf(page, baseUrl, fixture, { camera, lookAt, sceneCamera });
       const { target, reason: targetReason } = await openScene(page, baseUrl, fixture, {
