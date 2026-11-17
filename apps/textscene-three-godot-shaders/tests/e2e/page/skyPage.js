@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {
   installNodesHandler,
+  PlaybackShaderTime,
   ShaderClock,
   transpileSky,
   writeSkyBindings,
@@ -24,12 +25,22 @@ function skyLight(light) {
   return { direction, energy: light.energy, color, size: THREE.MathUtils.degToRad(light.size) };
 }
 
-/** `TIME` after the frames of `clock`, or 0 for a scene of no clock. */
+/** `TIME` after the frames of `clock`, or after a seek to the time they reach, or 0 for no clock. */
 function shaderTime(clock) {
   if (!clock) return 0;
+  if (clock.fromSeek) return seekTime(clock);
   const shaderClock = new ShaderClock(clock.rolloverSeconds);
   for (let frame = 0; frame < clock.frames; frame++) shaderClock.advance(1 / clock.fixedFps);
   return shaderClock.time;
+}
+
+/** `TIME` as the previewer sets it when the playback controls seek to the time Godot's frames reach. */
+function seekTime(clock) {
+  const playbackTime = new PlaybackShaderTime(new ShaderClock(clock.rolloverSeconds));
+  const paused = { hasPlayer: true, playState: 'paused', seeks: 0, playhead: 0 };
+  playbackTime.frame(paused, 0);
+  const playhead = clock.frames / clock.fixedFps;
+  return playbackTime.frame({ ...paused, seeks: 1, playhead }, 0);
 }
 
 /** The pixels of `scene`'s sky, or `{ error }` when the transpilation refuses it. */

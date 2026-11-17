@@ -1754,7 +1754,7 @@ canvases draw on WebGPURenderer (#1788).
 | `particles.process.COLLISION_DEPTH` | open, #1726 | | | `servers/rendering/shader_types.cpp:429` |
 | `particles.process.ATTRACTOR_FORCE` | open, #1726 | | | `servers/rendering/shader_types.cpp:430` |
 | `particles.process.AMOUNT_RATIO` | open, #1726 | | | `servers/rendering/shader_types.cpp:431` |
-| `sky.global.TIME` | transpiled (`sky-time-zero`, `sky-time-fraction`, `sky-time-rolled-over`, `sky-time-cycle`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:456` |
+| `sky.global.TIME` | transpiled (`sky-time-zero`, `sky-time-fraction`, `sky-time-rolled-over`, `sky-time-cycle`, `sky-time-seek-half`, `sky-time-seek-third`, `sky-time-seek-four`, `sky-time-seek-rolled-over`, `sky-time-seek-third-rolled-over`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:456` |
 | `sky.constants.PI` | transpiled (`sky-constants`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:457` |
 | `sky.constants.TAU` | transpiled (`sky-constants`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:458` |
 | `sky.constants.E` | transpiled (`sky-constants`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:459` |

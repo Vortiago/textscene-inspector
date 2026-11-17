@@ -246,6 +246,86 @@ void sky() {
 | --- | --- |
 | <img src="showcase/sky-time-cycle-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-time-cycle-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `sky-time-seek-half`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(fract(TIME * 0.37), fract(TIME * 4.0), TIME / 8.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-time-seek-half-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-time-seek-half-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-time-seek-third`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(fract(TIME * 0.37), fract(TIME * 4.0), TIME / 8.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-time-seek-third-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-time-seek-third-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-time-seek-four`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(fract(TIME * 0.37), fract(TIME * 4.0), TIME / 8.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-time-seek-four-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-time-seek-four-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-time-seek-rolled-over`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(fract(TIME * 0.37), fract(TIME * 4.0), TIME / 8.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-time-seek-rolled-over-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-time-seek-rolled-over-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-time-seek-third-rolled-over`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(fract(TIME * 0.37), fract(TIME * 4.0), TIME / 8.0);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-time-seek-third-rolled-over-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-time-seek-third-rolled-over-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `sky-eyedir`
 
 Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
