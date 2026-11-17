@@ -1,4 +1,8 @@
-import { BILLBOARD, DETAIL_UV_2, SHADING_MODE, type MaterialKey } from './materialKey.js';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
+import { BillboardMode } from '../../godot/rendering/materials/billboardMode.js';
+import { DetailUV } from '../../godot/rendering/materials/detailUv.js';
+import { ShadingMode } from '../../godot/rendering/materials/shadingMode.js';
+import type { MaterialKey } from './materialKey.js';
 
 const KEEP_SCALE = `
 	// Billboard Keep Scale: Enabled
@@ -12,9 +16,9 @@ const KEEP_SCALE = `
 const NORMAL_MATRIX = '	MODELVIEW_NORMAL_MATRIX = mat3(MODELVIEW_MATRIX);\n';
 
 /** `MAIN_CAM_INV_VIEW_MATRIX` inverts the camera in a shadow pass too, so a shadow faces the camera. */
-const BILLBOARD_MATRICES = [
-  '',
-  `
+const BILLBOARD_MATRICES: Readonly<Record<EnumValue<typeof BillboardMode>, string>> = {
+  [BillboardMode.BILLBOARD_DISABLED]: '',
+  [BillboardMode.BILLBOARD_ENABLED]: `
 	// Billboard Mode: Enabled
 	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(
 			MAIN_CAM_INV_VIEW_MATRIX[0],
@@ -22,7 +26,7 @@ const BILLBOARD_MATRICES = [
 			MAIN_CAM_INV_VIEW_MATRIX[2],
 			MODEL_MATRIX[3]);
 `,
-  `
+  [BillboardMode.BILLBOARD_FIXED_Y]: `
 	// Billboard Mode: Y-Billboard
 	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(
 			vec4(normalize(cross(vec3(0.0, 1.0, 0.0), MAIN_CAM_INV_VIEW_MATRIX[2].xyz)), 0.0),
@@ -30,7 +34,7 @@ const BILLBOARD_MATRICES = [
 			vec4(normalize(cross(MAIN_CAM_INV_VIEW_MATRIX[0].xyz, vec3(0.0, 1.0, 0.0))), 0.0),
 			MODEL_MATRIX[3]);
 `,
-  `
+  [BillboardMode.BILLBOARD_PARTICLES]: `
 	// Billboard Mode: Particles
 	mat4 mat_world = mat4(
 			normalize(INV_VIEW_MATRIX[0]),
@@ -44,7 +48,7 @@ const BILLBOARD_MATRICES = [
 			vec4(0.0, 0.0, 0.0, 1.0));
 	MODELVIEW_MATRIX = VIEW_MATRIX * mat_world;
 `,
-];
+};
 
 const PARTICLE_ANIMATION = `
 	MODELVIEW_NORMAL_MATRIX = mat3(MODELVIEW_MATRIX);
@@ -119,7 +123,7 @@ void vertex() {`;
 	// Use Point Size: Enabled
 	POINT_SIZE = point_size;
 `;
-  if (key.shadingMode === SHADING_MODE.PER_VERTEX)
+  if (key.shadingMode === ShadingMode.PER_VERTEX)
     code += `
 	// Shading Mode: Per Vertex
 	ROUGHNESS = roughness;
@@ -149,7 +153,7 @@ function uvTransforms(key: MaterialKey): string {
     code += `
 	UV = UV * uv1_scale.xy + uv1_offset.xy;
 `;
-  if (key.detailUv === DETAIL_UV_2 && !flags.has('UV2_USE_TRIPLANAR')) {
+  if (key.detailUv === DetailUV.DETAIL_UV_2 && !flags.has('UV2_USE_TRIPLANAR')) {
     if (flags.has('UV1_USE_TRIPLANAR')) code += '\n';
     code += `	// Detail UV Layer: UV2
 	UV2 = UV2 * uv2_scale.xy + uv2_offset.xy;
@@ -159,9 +163,9 @@ function uvTransforms(key: MaterialKey): string {
 }
 
 function billboard(key: MaterialKey): string {
-  if (key.billboardMode === BILLBOARD.DISABLED) return '';
+  if (key.billboardMode === BillboardMode.BILLBOARD_DISABLED) return '';
   const keepScale = key.flags.has('BILLBOARD_KEEP_SCALE') ? KEEP_SCALE : '';
-  const after = key.billboardMode === BILLBOARD.PARTICLES ? PARTICLE_ANIMATION : NORMAL_MATRIX;
+  const after = key.billboardMode === BillboardMode.BILLBOARD_PARTICLES ? PARTICLE_ANIMATION : NORMAL_MATRIX;
   return BILLBOARD_MATRICES[key.billboardMode] + keepScale + after;
 }
 
@@ -195,37 +199,26 @@ function triplanar(key: MaterialKey): string {
       ? '	BINORMAL = inverse(MODEL_NORMAL_MATRIX) * normalize(BINORMAL);\n'
       : '	BINORMAL = normalize(BINORMAL);\n';
   }
-  if (flags.has('UV1_USE_TRIPLANAR')) {
-    code += isWorld
-      ? `
-	// UV1 Triplanar: Enabled (with World Triplanar)
-	uv1_power_normal = pow(abs(normal), vec3(uv1_blend_sharpness));
-	uv1_triplanar_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz * uv1_scale + uv1_offset;
-`
-      : `
-	// UV1 Triplanar: Enabled
-	uv1_power_normal = pow(abs(NORMAL), vec3(uv1_blend_sharpness));
-	uv1_triplanar_pos = VERTEX * uv1_scale + uv1_offset;
-`;
-    code += `	uv1_power_normal /= dot(uv1_power_normal, vec3(1.0));
-	uv1_triplanar_pos *= vec3(1.0, -1.0, 1.0);
-`;
-  }
-  if (flags.has('UV2_USE_TRIPLANAR')) {
-    code += flags.has('UV2_USE_WORLD_TRIPLANAR')
-      ? `
-	// UV2 Triplanar: Enabled (with World Triplanar)
-	uv2_power_normal = pow(abs(mat3(MODEL_MATRIX) * NORMAL), vec3(uv2_blend_sharpness));
-	uv2_triplanar_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz * uv2_scale + uv2_offset;
-`
-      : `
-	// UV2 Triplanar: Enabled
-	uv2_power_normal = pow(abs(NORMAL), vec3(uv2_blend_sharpness));
-	uv2_triplanar_pos = VERTEX * uv2_scale + uv2_offset;
-`;
-    code += `	uv2_power_normal /= dot(uv2_power_normal, vec3(1.0));
-	uv2_triplanar_pos *= vec3(1.0, -1.0, 1.0);
-`;
-  }
+  if (flags.has('UV1_USE_TRIPLANAR')) code += triplanarUv(1, isWorld, 'normal');
+  if (flags.has('UV2_USE_TRIPLANAR'))
+    code += triplanarUv(2, flags.has('UV2_USE_WORLD_TRIPLANAR'), 'mat3(MODEL_MATRIX) * NORMAL');
   return code;
+}
+
+/** One UV's triplanar weights and position, in world space when `isWorld`, from `worldNormal`. */
+function triplanarUv(uv: 1 | 2, isWorld: boolean, worldNormal: string): string {
+  const mapping = isWorld
+    ? `
+	// UV${uv} Triplanar: Enabled (with World Triplanar)
+	uv${uv}_power_normal = pow(abs(${worldNormal}), vec3(uv${uv}_blend_sharpness));
+	uv${uv}_triplanar_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz * uv${uv}_scale + uv${uv}_offset;
+`
+    : `
+	// UV${uv} Triplanar: Enabled
+	uv${uv}_power_normal = pow(abs(NORMAL), vec3(uv${uv}_blend_sharpness));
+	uv${uv}_triplanar_pos = VERTEX * uv${uv}_scale + uv${uv}_offset;
+`;
+  return `${mapping}	uv${uv}_power_normal /= dot(uv${uv}_power_normal, vec3(1.0));
+	uv${uv}_triplanar_pos *= vec3(1.0, -1.0, 1.0);
+`;
 }

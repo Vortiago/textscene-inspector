@@ -26,6 +26,17 @@ export const StencilFlag = {
   WRITE_DEPTH_FAIL: 4,
 } as const;
 
+const WRITE_FLAGS = StencilFlag.WRITE | StencilFlag.WRITE_DEPTH_FAIL;
+
+/** The flags `set_stencil_flags` (`material.cpp:3251`) stores for `requested` over `current`. */
+export function stencilFlagsAfterSet(current: number, requested: number): number {
+  let flags = requested;
+  if (flags & StencilFlag.READ && current & WRITE_FLAGS) flags &= StencilFlag.READ;
+  if (flags & WRITE_FLAGS && current & StencilFlag.READ) flags &= WRITE_FLAGS;
+  if (flags & StencilFlag.READ && flags & WRITE_FLAGS) flags &= StencilFlag.READ;
+  return flags;
+}
+
 /** Each flag's name by its bit, as the inspector hint lists them (`material.cpp:3776`). */
 export const STENCIL_FLAG_NAMES = enumNamesByValue(StencilFlag);
 

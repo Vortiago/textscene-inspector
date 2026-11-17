@@ -33,4 +33,29 @@ export const BASE_MATERIAL_3D_DEFAULTS = {
   heightmapMaxLayers: 32, // :3996
   /** `material.h:573`. */
   textureFilter: TextureFilter.LINEAR_WITH_MIPMAPS,
+  albedo: [1, 1, 1, 1], // :3940
+  emission: [0, 0, 0, 1], // :3944, `Color(0, 0, 0)`
+  emissionEnergyMultiplier: 1, // :3945
+  subsurfaceScatteringStrength: 0, // :3953
+  backlight: [0, 0, 0, 1], // :3954
+  transmittanceColor: [1, 1, 1, 1], // :3955
+  transmittanceDepth: 0.1, // :3956
+  transmittanceBoost: 0, // :3957
+  uvOffset: [0, 0, 0], // :3960, :3963
+  uvScale: [1, 1, 1], // :3961, :3964
+  particlesAnimFrames: 1, // :3967, :3968
+  particlesAnimLoop: false, // :3969
+  alphaAntialiasingEdge: 0.3, // :3977
+  proximityFadeDistance: 1, // :3979
+  distanceFadeMinDistance: 0, // :3980
+  distanceFadeMaxDistance: 10, // :3981
+  msdfPixelRange: 4, // :3992
+  msdfOutlineSize: 0, // :3993
+  heightmapFlip: false, // :3997, which sets the binormal flip too
+  zClipScale: 1, // :3999
+  fovOverride: 75, // :4000
+  /** `material.h:627`, `Color()`. */
+  stencilEffectColor: [0, 0, 0, 1],
+  /** `material.h:628`. */
+  stencilEffectOutlineThickness: 0.01,
 } as const;

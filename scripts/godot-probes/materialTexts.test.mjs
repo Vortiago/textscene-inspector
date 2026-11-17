@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseMaterialOutput } from './materialTexts.mjs';
+import { parseCaseId, parseMaterialOutput } from './materialTexts.mjs';
 
 const line = (id, text) => `MATERIAL ${id} ${Buffer.from(text, 'utf8').toString('base64')}`;
 
@@ -27,5 +27,27 @@ describe('parseMaterialOutput', () => {
     expect(() => parseMaterialOutput('MATERIAL StandardMaterial3D \nMATERIALS DONE')).toThrow(
       "expected Godot's shader text for material StandardMaterial3D, found none"
     );
+  });
+});
+
+describe('parseCaseId', () => {
+  it("reads a material's class and its settings, a bool as true and the rest as numbers", () => {
+    expect(parseCaseId('ORMMaterial3D|rim_enabled=true|stencil_flags=7')).toEqual({
+      materialClass: 'ORMMaterial3D',
+      settings: { rim_enabled: true, stencil_flags: 7 },
+      isNextPass: false,
+    });
+  });
+
+  it("reads the next pass of a material's stencil", () => {
+    expect(parseCaseId('StandardMaterial3D|stencil_mode=1|next_pass')).toEqual({
+      materialClass: 'StandardMaterial3D',
+      settings: { stencil_mode: 1 },
+      isNextPass: true,
+    });
+  });
+
+  it('reads the default material as no settings', () => {
+    expect(parseCaseId('StandardMaterial3D').settings).toEqual({});
   });
 });

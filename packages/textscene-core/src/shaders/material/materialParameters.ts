@@ -1,106 +1,116 @@
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
+import { clamp } from '../../godot/math/math.js';
+import { TextureChannel, textureChannelMask } from '../../godot/rendering/materials/textureChannel.js';
+import { BASE_MATERIAL_3D_DEFAULTS as D } from '../../godot/scene/baseMaterial3D.js';
 import type { MaterialState, MaterialTexture, MaterialValue } from './materialProperties.js';
 
 /** A shader parameter's value: a bool, a number, a vector's lanes, or a texture. */
-export type ParameterValue = boolean | number | readonly number[] | MaterialTexture;
+export type ParameterValue = MaterialValue;
 
 /** The value of each property the constructor sets (`material.cpp:3936`), under the property's name. */
 const DEFAULTS: Readonly<Record<string, ParameterValue>> = {
-  albedo_color: [1, 1, 1, 1],
-  metallic_specular: 0.5,
-  roughness: 1,
-  metallic: 0,
-  emission: [0, 0, 0, 1],
-  emission_energy_multiplier: 1,
-  normal_scale: 1,
-  rim: 1,
-  rim_tint: 0.5,
-  clearcoat: 1,
-  clearcoat_roughness: 0.5,
-  anisotropy: 0,
-  heightmap_scale: 5,
-  subsurf_scatter_strength: 0,
-  backlight: [0, 0, 0, 1],
-  subsurf_scatter_transmittance_color: [1, 1, 1, 1],
-  subsurf_scatter_transmittance_depth: 0.1,
-  subsurf_scatter_transmittance_boost: 0,
-  refraction_scale: 0.05,
-  point_size: 1,
-  uv1_offset: [0, 0, 0],
-  uv1_scale: [1, 1, 1],
-  uv1_triplanar_sharpness: 1,
-  uv2_offset: [0, 0, 0],
-  uv2_scale: [1, 1, 1],
-  uv2_triplanar_sharpness: 1,
-  particles_anim_h_frames: 1,
-  particles_anim_v_frames: 1,
-  particles_anim_loop: false,
-  alpha_scissor_threshold: 0.5,
-  alpha_hash_scale: 1,
-  alpha_antialiasing_edge: 0.3,
-  proximity_fade_distance: 1,
-  distance_fade_min_distance: 0,
-  distance_fade_max_distance: 10,
-  ao_light_affect: 0,
-  metallic_texture_channel: 0,
-  ao_texture_channel: 0,
-  refraction_texture_channel: 0,
-  grow_amount: 0,
-  msdf_pixel_range: 4,
-  msdf_outline_size: 0,
-  heightmap_min_layers: 8,
-  heightmap_max_layers: 32,
-  heightmap_flip_tangent: false,
-  heightmap_flip_binormal: false,
-  z_clip_scale: 1,
-  fov_override: 75,
+  albedo_color: D.albedo,
+  metallic_specular: D.specular,
+  roughness: D.roughness,
+  metallic: D.metallic,
+  emission: D.emission,
+  emission_energy_multiplier: D.emissionEnergyMultiplier,
+  normal_scale: D.normalScale,
+  rim: D.rim,
+  rim_tint: D.rimTint,
+  clearcoat: D.clearcoat,
+  clearcoat_roughness: D.clearcoatRoughness,
+  anisotropy: D.anisotropy,
+  heightmap_scale: D.heightmapScale,
+  subsurf_scatter_strength: D.subsurfaceScatteringStrength,
+  backlight: D.backlight,
+  subsurf_scatter_transmittance_color: D.transmittanceColor,
+  subsurf_scatter_transmittance_depth: D.transmittanceDepth,
+  subsurf_scatter_transmittance_boost: D.transmittanceBoost,
+  refraction_scale: D.refractionScale,
+  point_size: D.pointSize,
+  uv1_offset: D.uvOffset,
+  uv1_scale: D.uvScale,
+  uv1_triplanar_sharpness: D.triplanarSharpness,
+  uv2_offset: D.uvOffset,
+  uv2_scale: D.uvScale,
+  uv2_triplanar_sharpness: D.triplanarSharpness,
+  particles_anim_h_frames: D.particlesAnimFrames,
+  particles_anim_v_frames: D.particlesAnimFrames,
+  particles_anim_loop: D.particlesAnimLoop,
+  alpha_scissor_threshold: D.alphaScissorThreshold,
+  alpha_hash_scale: D.alphaHashScale,
+  alpha_antialiasing_edge: D.alphaAntialiasingEdge,
+  proximity_fade_distance: D.proximityFadeDistance,
+  distance_fade_min_distance: D.distanceFadeMinDistance,
+  distance_fade_max_distance: D.distanceFadeMaxDistance,
+  ao_light_affect: D.aoLightAffect,
+  metallic_texture_channel: TextureChannel.TEXTURE_CHANNEL_RED,
+  ao_texture_channel: TextureChannel.TEXTURE_CHANNEL_RED,
+  refraction_texture_channel: TextureChannel.TEXTURE_CHANNEL_RED,
+  grow_amount: D.growAmount,
+  msdf_pixel_range: D.msdfPixelRange,
+  msdf_outline_size: D.msdfOutlineSize,
+  heightmap_min_layers: D.heightmapMinLayers,
+  heightmap_max_layers: D.heightmapMaxLayers,
+  heightmap_flip_tangent: D.heightmapFlip,
+  heightmap_flip_binormal: D.heightmapFlip,
+  z_clip_scale: D.zClipScale,
+  fov_override: D.fovOverride,
 };
 
-/** The parameters whose value is the property's value, by parameter name. */
-const COPIED: Readonly<Record<string, string>> = {
+/** The parameters whose value is the property of the same name. */
+const SAME_NAME = [
+  'roughness',
+  'metallic',
+  'emission',
+  'normal_scale',
+  'rim',
+  'rim_tint',
+  'ao_light_affect',
+  'clearcoat',
+  'clearcoat_roughness',
+  'heightmap_scale',
+  'backlight',
+  'point_size',
+  'uv1_scale',
+  'uv1_offset',
+  'uv2_scale',
+  'uv2_offset',
+  'particles_anim_h_frames',
+  'particles_anim_v_frames',
+  'particles_anim_loop',
+  'alpha_scissor_threshold',
+  'alpha_hash_scale',
+  'alpha_antialiasing_edge',
+  'z_clip_scale',
+  'fov_override',
+  'msdf_pixel_range',
+  'msdf_outline_size',
+  'heightmap_min_layers',
+  'heightmap_max_layers',
+];
+
+/** The parameters whose value is a property of another name, by parameter name. */
+const RENAMED: readonly (readonly [string, string])[] = Object.entries({
   albedo: 'albedo_color',
   specular: 'metallic_specular',
-  roughness: 'roughness',
-  metallic: 'metallic',
-  emission: 'emission',
   emission_energy: 'emission_energy_multiplier',
-  normal_scale: 'normal_scale',
-  rim: 'rim',
-  rim_tint: 'rim_tint',
-  ao_light_affect: 'ao_light_affect',
-  clearcoat: 'clearcoat',
-  clearcoat_roughness: 'clearcoat_roughness',
   anisotropy_ratio: 'anisotropy',
-  heightmap_scale: 'heightmap_scale',
   subsurface_scattering_strength: 'subsurf_scatter_strength',
   transmittance_color: 'subsurf_scatter_transmittance_color',
   transmittance_depth: 'subsurf_scatter_transmittance_depth',
   transmittance_boost: 'subsurf_scatter_transmittance_boost',
-  backlight: 'backlight',
   refraction: 'refraction_scale',
-  point_size: 'point_size',
-  uv1_scale: 'uv1_scale',
-  uv1_offset: 'uv1_offset',
-  uv2_scale: 'uv2_scale',
-  uv2_offset: 'uv2_offset',
-  particles_anim_h_frames: 'particles_anim_h_frames',
-  particles_anim_v_frames: 'particles_anim_v_frames',
-  particles_anim_loop: 'particles_anim_loop',
-  alpha_scissor_threshold: 'alpha_scissor_threshold',
-  alpha_hash_scale: 'alpha_hash_scale',
-  alpha_antialiasing_edge: 'alpha_antialiasing_edge',
   grow: 'grow_amount',
-  z_clip_scale: 'z_clip_scale',
-  fov_override: 'fov_override',
-  msdf_pixel_range: 'msdf_pixel_range',
-  msdf_outline_size: 'msdf_outline_size',
   distance_fade_min: 'distance_fade_min_distance',
   distance_fade_max: 'distance_fade_max_distance',
-  heightmap_min_layers: 'heightmap_min_layers',
-  heightmap_max_layers: 'heightmap_max_layers',
-};
+});
+
+const COPIED = [...SAME_NAME.map((name) => [name, name] as const), ...RENAMED];
 
 /** The texture parameters (`material.cpp:645`), by the property that holds each texture. */
-const TEXTURES: Readonly<Record<string, string>> = {
+const TEXTURES: readonly (readonly [string, string])[] = Object.entries({
   albedo_texture: 'texture_albedo',
   metallic_texture: 'texture_metallic',
   roughness_texture: 'texture_roughness',
@@ -120,44 +130,38 @@ const TEXTURES: Readonly<Record<string, string>> = {
   detail_albedo: 'texture_detail_albedo',
   detail_normal: 'texture_detail_normal',
   orm_texture: 'texture_orm',
-};
+});
 
-/** `_get_texture_mask` (`material.cpp:2950`): the lanes a channel's `dot` keeps. */
-const CHANNEL_MASKS: readonly (readonly number[])[] = [
-  [1, 0, 0, 0],
-  [0, 1, 0, 0],
-  [0, 0, 1, 0],
-  [0, 0, 0, 1],
-  [0.3333333, 0.3333333, 0.3333333, 0],
-];
+/** The channel mask of the enum property `name`, as `_get_texture_mask` (`material.cpp:2950`) gives it. */
+const maskOf = (state: MaterialState, name: string) =>
+  textureChannelMask(Number(valueOf(state, name)) as EnumValue<typeof TextureChannel>);
 
-const clamp = (value: number, low: number, high: number) => Math.min(Math.max(value, low), high);
+const valueOf = (state: MaterialState, name: string): MaterialValue => state.values[name] ?? DEFAULTS[name]!;
 
 /**
  * The value of each shader parameter Godot's setters give a material in state `state`.
  * @canonical Fill a BaseMaterial3D shader's parameters from the material's properties.
  */
 export function materialParameters(state: MaterialState): Record<string, ParameterValue> {
-  const value = (name: string): MaterialValue => state.values[name] ?? DEFAULTS[name]!;
-  const number = (name: string) => Number(value(name));
+  const number = (name: string) => Number(valueOf(state, name));
   const parameters: Record<string, ParameterValue> = {};
-  for (const [parameter, property] of Object.entries(COPIED)) parameters[parameter] = value(property);
-  for (const [property, parameter] of Object.entries(TEXTURES)) {
+  for (const [parameter, property] of COPIED) parameters[parameter] = valueOf(state, property);
+  for (const [property, parameter] of TEXTURES) {
     const texture = state.values[property];
     if (texture !== undefined) parameters[parameter] = texture;
   }
   const albedo = state.values.albedo_texture as MaterialTexture | undefined;
   if (albedo) parameters.albedo_texture_size = [albedo.width, albedo.height];
-  parameters.metallic_texture_channel = CHANNEL_MASKS[number('metallic_texture_channel')]!;
-  parameters.ao_texture_channel = CHANNEL_MASKS[number('ao_texture_channel')]!;
-  parameters.refraction_texture_channel = CHANNEL_MASKS[number('refraction_texture_channel')]!;
+  parameters.metallic_texture_channel = maskOf(state, 'metallic_texture_channel');
+  parameters.ao_texture_channel = maskOf(state, 'ao_texture_channel');
+  parameters.refraction_texture_channel = maskOf(state, 'refraction_texture_channel');
   // A sharpness below 0 or above 150 gives NaN weights (`material.cpp:2785`).
   parameters.uv1_blend_sharpness = clamp(number('uv1_triplanar_sharpness'), 0, 150);
   parameters.uv2_blend_sharpness = clamp(number('uv2_triplanar_sharpness'), 0, 150);
   parameters.proximity_fade_distance = Math.max(number('proximity_fade_distance'), 0.01);
   parameters.heightmap_flip = [
-    value('heightmap_flip_tangent') ? -1 : 1,
-    value('heightmap_flip_binormal') ? -1 : 1,
+    valueOf(state, 'heightmap_flip_tangent') ? -1 : 1,
+    valueOf(state, 'heightmap_flip_binormal') ? -1 : 1,
   ];
   return parameters;
 }

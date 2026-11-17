@@ -38,16 +38,9 @@ const canonicalProbes = (record) => ({
 /** `llvmpipe (LLVM 20.1.2, 256 bits)` as `llvmpipe (LLVM 20.1.2)`: lavapipe names the CPU's vector width. */
 const adapterWithoutWidth = (adapter) => adapter.replace(/, \d+ bits\)$/, ')');
 
-/** The same on every CPU: one NaN form, the adapter without its width, and each material as its hash. */
-export function canonicalAnswers({ probes, random, operators, corpus, expressions, materials }) {
-  return {
-    probes: canonicalProbes(probes),
-    random: canonicalProbes(random),
-    operators,
-    corpus,
-    expressions,
-    materials: { godot: materials.godot, cases: materials.cases },
-  };
+/** The same on every CPU: one NaN form, and the adapter without its vector width. */
+export function canonicalAnswers({ probes, random, ...verdicts }) {
+  return { probes: canonicalProbes(probes), random: canonicalProbes(random), ...verdicts };
 }
 
 /** Each family's answers, `{ id: answer }`: probes and random by name, the other families by case id. */

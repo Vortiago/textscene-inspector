@@ -1,7 +1,5 @@
 import { createHash } from 'node:crypto';
-import { availableParallelism } from 'node:os';
-import { mapPool } from '../compare-docs/godotLinks/pool.mjs';
-import { oneGodot, printedField, runGodotScript } from './godotRun.mjs';
+import { eachAtOnce, oneGodot, printedField, RUNS_AT_ONCE, runGodotScript } from './godotRun.mjs';
 
 const MARKER = 'MATERIAL ';
 const DONE = 'MATERIALS DONE';
@@ -75,6 +73,7 @@ func made(cls: String, settings: Array) -> Material:
 		material.set(setting[0], setting[1])
 	return material
 
+## A frame inside the window lets the server free the shaders of the cases before, or memory runs out.
 func text_of(material: Material) -> String:
 	var before := RenderingServer.shader_create()
 	material.get_rid()
@@ -85,27 +84,23 @@ func text_of(material: Material) -> String:
 	RenderingServer.free_rid(after)
 	return code
 
-## The next pass an outline or x-ray stencil makes, with the material that made it freed.
-func next_pass_of(cls: String, settings: Array) -> Material:
-	var material := made(cls, settings)
-	var next := material.next_pass
-	material.next_pass = null
-	return next
-
 func record(id: String, material: Material) -> void:
 	printerr("${MARKER}", id, " ", Marshalls.utf8_to_base64(await text_of(material)))
 
-## Each material's shader is the only one made in its window: a next pass is measured alone, first.
+## Each window holds one shader: a stencil's next pass is measured alone, with its material freed.
 func record_case(cls: String, settings: Array) -> void:
-	var next := next_pass_of(cls, settings)
+	var material := made(cls, settings)
+	var next := material.next_pass
+	material.next_pass = null
 	if next != null:
+		material = null
 		await record(id_of(cls, settings) + "|${NEXT_PASS}", next)
 		next = null
-		await get_tree().process_frame
-	var material := made(cls, settings)
-	material.next_pass = null
+		material = made(cls, settings)
+		material.next_pass = null
 	await record(id_of(cls, settings), material)
 	material = null
+	# A material of the same key that is still alive would lend the next case its shader.
 	await get_tree().process_frame
 
 func _ready() -> void:
@@ -122,7 +117,8 @@ func _ready() -> void:
 	get_tree().quit()
 `;
 
-const sha256 = (text) => createHash('sha256').update(text).digest('hex');
+/** The hex SHA-256 of a text, as a material case holds it. */
+export const sha256 = (text) => createHash('sha256').update(text).digest('hex');
 
 /** Each case's text from `output`, by its id. Throws when the run did not end or a text is missing. */
 export function parseMaterialOutput(output) {
@@ -139,24 +135,32 @@ export function parseMaterialOutput(output) {
   });
 }
 
-/** One run for each core: the sweep is split by case index, as the script reads `run.json`. */
-const CHUNKS = availableParallelism();
+/** A case id as `id_of` writes it, `Class|property=value|...`, then `|next_pass` for a next pass. */
+export function parseCaseId(id) {
+  const [materialClass, ...parts] = id.split('|');
+  const isNextPass = parts.at(-1) === NEXT_PASS;
+  const settings = (isNextPass ? parts.slice(0, -1) : parts).map((setting) => {
+    const [name, value] = setting.split('=');
+    return [name, value === 'true' ? true : Number(value)];
+  });
+  return { materialClass, settings: Object.fromEntries(settings), isNextPass };
+}
 
-/** The record of Godot's text of each material of the sweep: each case's hash, and each text by hash. */
+/** Godot's text of each material of the sweep: the record holds each case's hash, `texts` each text. */
 export async function materialRecord() {
-  const runs = await mapPool(
-    Array.from({ length: CHUNKS }, (_, chunk) => chunk),
-    CHUNKS,
-    async (chunk) => {
-      const output = await runGodotScript(MATERIAL_SCRIPT, {
-        'run.json': JSON.stringify({ classes: MATERIAL_CLASSES, chunk, chunks: CHUNKS }),
-      });
-      return { godot: printedField(output, 'GODOT '), texts: parseMaterialOutput(output) };
-    }
-  );
+  const chunks = Array.from({ length: RUNS_AT_ONCE }, (_, chunk) => chunk);
+  const runs = await eachAtOnce(chunks, async (chunk) => {
+    const output = await runGodotScript(MATERIAL_SCRIPT, {
+      'run.json': JSON.stringify({ classes: MATERIAL_CLASSES, chunk, chunks: RUNS_AT_ONCE }),
+    });
+    return { godot: printedField(output, 'GODOT '), texts: parseMaterialOutput(output) };
+  });
   const { godot } = oneGodot(runs);
-  const entries = runs.flatMap((run) => run.texts).sort((a, b) => (a.id < b.id ? -1 : 1));
-  const cases = Object.fromEntries(entries.map(({ id, text }) => [id, sha256(text)]));
-  const texts = Object.fromEntries(entries.map(({ text }) => [sha256(text), text]));
-  return { godot, cases, texts };
+  const entries = runs
+    .flatMap((run) => run.texts)
+    .map(({ id, text }) => ({ id, text, hash: sha256(text) }))
+    .sort((a, b) => (a.id < b.id ? -1 : 1));
+  const cases = Object.fromEntries(entries.map(({ id, hash }) => [id, hash]));
+  const texts = Object.fromEntries(entries.map(({ text, hash }) => [hash, text]));
+  return { record: { godot, cases }, texts };
 }

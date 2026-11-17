@@ -14,9 +14,8 @@ import {
   STENCIL_FLAG_NAMES,
   STENCIL_MODE_NAMES,
   StencilFlag,
+  stencilFlagsAfterSet,
 } from '../../../godot/rendering/materials/stencil.js';
-
-const STENCIL_WRITE_FLAGS = StencilFlag.WRITE | StencilFlag.WRITE_DEPTH_FAIL;
 
 function stencilFlags(): PropertyValidator {
   const listed = hintedBitField('stencil_flags', {
@@ -34,7 +33,7 @@ function stencilFlags(): PropertyValidator {
     // 32 bits reads NaN and drops the warning `listed` produced.
     const bits = parseSlotInt(value, 'int64');
     if (bits === null || Number.isNaN(bits)) return null;
-    if ((bits & StencilFlag.READ) !== 0 && (bits & STENCIL_WRITE_FLAGS) !== 0) {
+    if (stencilFlagsAfterSet(0, bits) !== bits) {
       return propertyError(
         key,
         line,

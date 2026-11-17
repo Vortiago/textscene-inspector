@@ -1,26 +1,30 @@
-import { ALPHA_ANTIALIASING, DISTANCE_FADE, TRANSPARENCY, type MaterialKey } from './materialKey.js';
-import { isAlphaTested } from './renderModes.js';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
+import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
+import { DetailUV } from '../../godot/rendering/materials/detailUv.js';
+import { DistanceFadeMode } from '../../godot/rendering/materials/distanceFadeMode.js';
+import { Transparency } from '../../godot/rendering/materials/transparency.js';
+import { usesAlphaAntialiasing, type MaterialKey } from './materialKey.js';
 import { read, readOn } from './textureReads.js';
 
 /** Each detail blend's text. Godot writes none for premultiplied alpha, which leaves `detail` undeclared. */
-const DETAIL_BLENDS = [
-  `
+const DETAIL_BLENDS: Readonly<Partial<Record<EnumValue<typeof BlendMode>, string>>> = {
+  [BlendMode.MIX]: `
 	// Detail Blend Mode: Mix
 	vec3 detail = mix(ALBEDO.rgb, detail_tex.rgb, detail_tex.a);
 `,
-  `
+  [BlendMode.ADD]: `
 	// Detail Blend Mode: Add
 	vec3 detail = mix(ALBEDO.rgb, ALBEDO.rgb + detail_tex.rgb, detail_tex.a);
 `,
-  `
+  [BlendMode.SUB]: `
 	// Detail Blend Mode: Subtract
 	vec3 detail = mix(ALBEDO.rgb, ALBEDO.rgb - detail_tex.rgb, detail_tex.a);
 `,
-  `
+  [BlendMode.MUL]: `
 	// Detail Blend Mode: Multiply
 	vec3 detail = mix(ALBEDO.rgb, ALBEDO.rgb * detail_tex.rgb, detail_tex.a);
 `,
-];
+};
 
 const PROXIMITY_FADE = `
 	// Proximity Fade: Enabled
@@ -46,9 +50,9 @@ export function fragmentEffects(key: MaterialKey): string {
 function refractionOrAlpha(key: MaterialKey): string {
   if (key.features.has('REFRACTION')) return refraction(key);
   const isAlpha =
-    key.transparency !== TRANSPARENCY.DISABLED ||
+    key.transparency !== Transparency.DISABLED ||
     key.flags.has('USE_SHADOW_TO_OPACITY') ||
-    key.distanceFade === DISTANCE_FADE.PIXEL_ALPHA ||
+    key.distanceFade === DistanceFadeMode.PIXEL_ALPHA ||
     key.proximityFade;
   return isAlpha ? '	ALPHA *= albedo.a * albedo_tex.a;\n' : '';
 }
@@ -89,10 +93,10 @@ function refraction(key: MaterialKey): string {
 
 function alphaTest(key: MaterialKey): string {
   let code = '';
-  if (key.transparency === TRANSPARENCY.ALPHA_HASH) code += '	ALPHA_HASH_SCALE = alpha_hash_scale;\n';
-  else if (key.transparency === TRANSPARENCY.ALPHA_SCISSOR)
+  if (key.transparency === Transparency.ALPHA_HASH) code += '	ALPHA_HASH_SCALE = alpha_hash_scale;\n';
+  else if (key.transparency === Transparency.ALPHA_SCISSOR)
     code += '	ALPHA_SCISSOR_THRESHOLD = alpha_scissor_threshold;\n';
-  if (key.alphaAntialiasingMode !== ALPHA_ANTIALIASING.OFF && isAlphaTested(key)) {
+  if (usesAlphaAntialiasing(key)) {
     code += '	ALPHA_ANTIALIASING_EDGE = alpha_antialiasing_edge;\n';
     code += '	ALPHA_TEXTURE_COORDINATE = UV * vec2(albedo_texture_size);\n';
   }
@@ -101,14 +105,14 @@ function alphaTest(key: MaterialKey): string {
 
 /** A circular fade, by the distance to the object, looks the same at every camera angle. */
 function distanceFade(key: MaterialKey): string {
-  if (key.distanceFade === DISTANCE_FADE.DISABLED) return '';
-  if (key.distanceFade === DISTANCE_FADE.PIXEL_ALPHA)
+  if (key.distanceFade === DistanceFadeMode.DISABLED) return '';
+  if (key.distanceFade === DistanceFadeMode.PIXEL_ALPHA)
     return `
 	// Distance Fade: Pixel Alpha
 	ALPHA *= clamp(smoothstep(distance_fade_min, distance_fade_max, length(VERTEX)), 0.0, 1.0);
 `;
   const distance =
-    key.distanceFade === DISTANCE_FADE.OBJECT_DITHER
+    key.distanceFade === DistanceFadeMode.OBJECT_DITHER
       ? `
 		// Distance Fade: Object Dither
 		float fade_distance = length((VIEW_MATRIX * MODEL_MATRIX[3]));
@@ -199,7 +203,7 @@ function scattering(key: MaterialKey): string {
 /** The detail albedo and normal read on the detail UV layer, and its mask on UV1. */
 function detail(key: MaterialKey): string {
   if (!key.features.has('DETAIL')) return '';
-  const uv = key.detailUv === 0 ? 1 : 2;
+  const uv = key.detailUv === DetailUV.DETAIL_UV_2 ? 2 : 1;
   return `
 	// Detail: Enabled
 	vec4 detail_tex = ${readOn(key, uv, 'texture_detail_albedo')};

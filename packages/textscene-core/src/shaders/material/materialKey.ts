@@ -1,3 +1,22 @@
+import { AlphaAntiAliasing } from '../../godot/rendering/materials/alphaAntialiasing.js';
+import { BillboardMode } from '../../godot/rendering/materials/billboardMode.js';
+import { BlendMode } from '../../godot/rendering/materials/blendMode.js';
+import { CullMode } from '../../godot/rendering/materials/cullMode.js';
+import { DepthDrawMode } from '../../godot/rendering/materials/depthDrawMode.js';
+import { DepthTest } from '../../godot/rendering/materials/depthTest.js';
+import { DetailUV } from '../../godot/rendering/materials/detailUv.js';
+import { DiffuseMode } from '../../godot/rendering/materials/diffuseMode.js';
+import { DistanceFadeMode } from '../../godot/rendering/materials/distanceFadeMode.js';
+import { EmissionOperator } from '../../godot/rendering/materials/emissionOperator.js';
+import { ShadingMode } from '../../godot/rendering/materials/shadingMode.js';
+import { SpecularMode } from '../../godot/rendering/materials/specularMode.js';
+import { StencilCompare, StencilMode } from '../../godot/rendering/materials/stencil.js';
+import { TextureChannel } from '../../godot/rendering/materials/textureChannel.js';
+import { TextureFilter } from '../../godot/rendering/materials/textureFilter.js';
+import { Transparency } from '../../godot/rendering/materials/transparency.js';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
+import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D.js';
+
 /** The features of `BaseMaterial3D::Feature` (`material.h`), each a property that ends in `_enabled`. */
 export type Feature =
   | 'EMISSION'
@@ -42,28 +61,28 @@ export type Flag =
   | 'USE_Z_CLIP_SCALE'
   | 'USE_FOV_OVERRIDE';
 
-/** Godot's `MaterialKey` (`material.h:359`): every member the text reads, an enum as its value's index. */
+/** Godot's `MaterialKey` (`material.h:359`): every member the shader text reads, and nothing else. */
 export interface MaterialKey {
   orm: boolean;
-  textureFilter: number;
-  detailUv: number;
-  transparency: number;
-  alphaAntialiasingMode: number;
-  shadingMode: number;
-  blendMode: number;
-  depthDrawMode: number;
-  depthTest: number;
-  cullMode: number;
-  diffuseMode: number;
-  specularMode: number;
-  billboardMode: number;
-  detailBlendMode: number;
-  roughnessTextureChannel: number;
-  emissionOp: number;
-  distanceFade: number;
-  stencilMode: number;
+  textureFilter: EnumValue<typeof TextureFilter>;
+  detailUv: EnumValue<typeof DetailUV>;
+  transparency: EnumValue<typeof Transparency>;
+  alphaAntialiasingMode: EnumValue<typeof AlphaAntiAliasing>;
+  shadingMode: EnumValue<typeof ShadingMode>;
+  blendMode: EnumValue<typeof BlendMode>;
+  depthDrawMode: EnumValue<typeof DepthDrawMode>;
+  depthTest: EnumValue<typeof DepthTest>;
+  cullMode: EnumValue<typeof CullMode>;
+  diffuseMode: EnumValue<typeof DiffuseMode>;
+  specularMode: EnumValue<typeof SpecularMode>;
+  billboardMode: EnumValue<typeof BillboardMode>;
+  detailBlendMode: EnumValue<typeof BlendMode>;
+  roughnessTextureChannel: EnumValue<typeof TextureChannel>;
+  emissionOp: EnumValue<typeof EmissionOperator>;
+  distanceFade: EnumValue<typeof DistanceFadeMode>;
+  stencilMode: EnumValue<typeof StencilMode>;
   stencilFlags: number;
-  stencilCompare: number;
+  stencilCompare: EnumValue<typeof StencilCompare>;
   stencilReference: number;
   deepParallax: boolean;
   grow: boolean;
@@ -72,47 +91,29 @@ export interface MaterialKey {
   readonly flags: Set<Flag>;
 }
 
-export const TEXTURE_FILTER_LINEAR_WITH_MIPMAPS = 3;
-export const DETAIL_UV_2 = 1;
-export const TRANSPARENCY = {
-  DISABLED: 0,
-  ALPHA_SCISSOR: 2,
-  ALPHA_HASH: 3,
-  ALPHA_DEPTH_PRE_PASS: 4,
-} as const;
-export const ALPHA_ANTIALIASING = { OFF: 0, ALPHA_TO_COVERAGE: 1, ALPHA_TO_COVERAGE_AND_TO_ONE: 2 } as const;
-export const SHADING_MODE = { UNSHADED: 0, PER_PIXEL: 1, PER_VERTEX: 2 } as const;
-export const DEPTH_DRAW_ALWAYS = 1;
-export const BILLBOARD = { DISABLED: 0, ENABLED: 1, FIXED_Y: 2, PARTICLES: 3 } as const;
-export const EMISSION_OP_ADD = 0;
-export const DISTANCE_FADE = { DISABLED: 0, PIXEL_ALPHA: 1, PIXEL_DITHER: 2, OBJECT_DITHER: 3 } as const;
-export const STENCIL_MODE = { DISABLED: 0, OUTLINE: 1, XRAY: 2, CUSTOM: 3 } as const;
-export const STENCIL_FLAG = { READ: 1, WRITE: 2, WRITE_DEPTH_FAIL: 4 } as const;
-export const STENCIL_COMPARE_ALWAYS = 0;
-
 /** The key of a material Godot's constructor leaves as it is (`material.cpp:3936`). */
 export function defaultKey(orm: boolean): MaterialKey {
   return {
     orm,
-    textureFilter: TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
-    detailUv: 0,
-    transparency: TRANSPARENCY.DISABLED,
-    alphaAntialiasingMode: ALPHA_ANTIALIASING.OFF,
-    shadingMode: SHADING_MODE.PER_PIXEL,
-    blendMode: 0,
-    depthDrawMode: 0,
-    depthTest: 0,
-    cullMode: 0,
-    diffuseMode: 0,
-    specularMode: 0,
-    billboardMode: BILLBOARD.DISABLED,
-    detailBlendMode: 0,
-    roughnessTextureChannel: 0,
-    emissionOp: EMISSION_OP_ADD,
-    distanceFade: DISTANCE_FADE.DISABLED,
-    stencilMode: STENCIL_MODE.DISABLED,
+    textureFilter: BASE_MATERIAL_3D_DEFAULTS.textureFilter,
+    detailUv: DetailUV.DETAIL_UV_1,
+    transparency: Transparency.DISABLED,
+    alphaAntialiasingMode: AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
+    shadingMode: ShadingMode.PER_PIXEL,
+    blendMode: BlendMode.MIX,
+    depthDrawMode: DepthDrawMode.OPAQUE_ONLY,
+    depthTest: DepthTest.DEFAULT,
+    cullMode: CullMode.BACK,
+    diffuseMode: DiffuseMode.DIFFUSE_BURLEY,
+    specularMode: SpecularMode.SPECULAR_SCHLICK_GGX,
+    billboardMode: BillboardMode.BILLBOARD_DISABLED,
+    detailBlendMode: BlendMode.MIX,
+    roughnessTextureChannel: TextureChannel.TEXTURE_CHANNEL_RED,
+    emissionOp: EmissionOperator.ADD,
+    distanceFade: DistanceFadeMode.DISABLED,
+    stencilMode: StencilMode.DISABLED,
     stencilFlags: 0,
-    stencilCompare: STENCIL_COMPARE_ALWAYS,
+    stencilCompare: StencilCompare.ALWAYS,
     stencilReference: 1,
     deepParallax: false,
     grow: false,
@@ -127,3 +128,17 @@ export function keyText(key: MaterialKey): string {
   const { features, flags, ...members } = key;
   return JSON.stringify([members, [...features].sort(), [...flags].sort()]);
 }
+
+/** Alpha hash and alpha scissor are the transparencies that take alpha antialiasing. */
+export const isAlphaTested = (key: MaterialKey): boolean =>
+  key.transparency === Transparency.ALPHA_HASH || key.transparency === Transparency.ALPHA_SCISSOR;
+
+export const usesAlphaAntialiasing = (key: MaterialKey): boolean =>
+  key.alphaAntialiasingMode !== AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF && isAlphaTested(key);
+
+/** MSDF albedo takes effect only without UV1 triplanar, which Godot prefers with a warning. */
+export const isMsdf = (key: MaterialKey): boolean =>
+  key.flags.has('ALBEDO_TEXTURE_MSDF') && !key.flags.has('UV1_USE_TRIPLANAR');
+
+export const usesDetailUv2 = (key: MaterialKey): boolean =>
+  key.features.has('DETAIL') && key.detailUv === DetailUV.DETAIL_UV_2;

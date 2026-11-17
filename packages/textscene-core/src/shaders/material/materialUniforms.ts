@@ -1,46 +1,54 @@
-import {
-  ALPHA_ANTIALIASING,
-  BILLBOARD,
-  DISTANCE_FADE,
-  TRANSPARENCY,
-  type MaterialKey,
-} from './materialKey.js';
-import { isAlphaTested } from './renderModes.js';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
+import { BillboardMode } from '../../godot/rendering/materials/billboardMode.js';
+import { DistanceFadeMode } from '../../godot/rendering/materials/distanceFadeMode.js';
+import { TextureChannel } from '../../godot/rendering/materials/textureChannel.js';
+import { TextureFilter } from '../../godot/rendering/materials/textureFilter.js';
+import { Transparency } from '../../godot/rendering/materials/transparency.js';
+import { isMsdf, usesAlphaAntialiasing, type MaterialKey } from './materialKey.js';
 
 /** Each filter's hint, then the hint of the heightmap, which reads linear under a nearest filter. */
-const TEXTURE_FILTERS: readonly (readonly [string, string])[] = [
-  ['filter_nearest', 'filter_linear'],
-  ['filter_linear', 'filter_linear'],
-  ['filter_nearest_mipmap', 'filter_linear_mipmap'],
-  ['filter_linear_mipmap', 'filter_linear_mipmap'],
-  ['filter_nearest_mipmap_anisotropic', 'filter_linear_mipmap_anisotropic'],
-  ['filter_linear_mipmap_anisotropic', 'filter_linear_mipmap_anisotropic'],
-];
+const TEXTURE_FILTERS: Readonly<Record<EnumValue<typeof TextureFilter>, readonly [string, string]>> = {
+  [TextureFilter.NEAREST]: ['filter_nearest', 'filter_linear'],
+  [TextureFilter.LINEAR]: ['filter_linear', 'filter_linear'],
+  [TextureFilter.NEAREST_WITH_MIPMAPS]: ['filter_nearest_mipmap', 'filter_linear_mipmap'],
+  [TextureFilter.LINEAR_WITH_MIPMAPS]: ['filter_linear_mipmap', 'filter_linear_mipmap'],
+  [TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC]: [
+    'filter_nearest_mipmap_anisotropic',
+    'filter_linear_mipmap_anisotropic',
+  ],
+  [TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC]: [
+    'filter_linear_mipmap_anisotropic',
+    'filter_linear_mipmap_anisotropic',
+  ],
+};
 
-const ROUGHNESS_HINTS = ['hint_roughness_r', 'hint_roughness_g', 'hint_roughness_b', 'hint_roughness_a'];
+const ROUGHNESS_HINTS: Readonly<Record<EnumValue<typeof TextureChannel>, string>> = {
+  [TextureChannel.TEXTURE_CHANNEL_RED]: 'hint_roughness_r',
+  [TextureChannel.TEXTURE_CHANNEL_GREEN]: 'hint_roughness_g',
+  [TextureChannel.TEXTURE_CHANNEL_BLUE]: 'hint_roughness_b',
+  [TextureChannel.TEXTURE_CHANNEL_ALPHA]: 'hint_roughness_a',
+  [TextureChannel.TEXTURE_CHANNEL_GRAYSCALE]: 'hint_roughness_gray',
+};
 
 /** The sampler hints of a texture and of the heightmap: the filter, then the repeat. */
 function samplerHints(key: MaterialKey): { texture: string; height: string } {
-  const [texture, height] = TEXTURE_FILTERS[key.textureFilter]!;
+  const [texture, height] = TEXTURE_FILTERS[key.textureFilter];
   const repeat = key.flags.has('USE_TEXTURE_REPEAT') ? ', repeat_enable' : ', repeat_disable';
   return { texture: texture + repeat, height: height + repeat };
 }
 
-/** MSDF albedo takes effect only without UV1 triplanar, which Godot prefers with a warning. */
-export const isMsdf = (key: MaterialKey): boolean =>
-  key.flags.has('ALBEDO_TEXTURE_MSDF') && !key.flags.has('UV1_USE_TRIPLANAR');
-
 /** The uniforms and varyings Godot declares for the key (`material.cpp:968`). */
 export function materialUniforms(key: MaterialKey): string {
   const { flags } = key;
-  const filter = samplerHints(key).texture;
+  const hints = samplerHints(key);
+  const filter = hints.texture;
   let code = `
 uniform vec4 albedo : source_color;
 uniform sampler2D texture_albedo : source_color, ${filter};
 `;
   if (key.grow) code += 'uniform float grow : hint_range(-16.0, 16.0, 0.001);\n';
   if (key.proximityFade) code += 'uniform float proximity_fade_distance : hint_range(0.0, 4096.0, 0.01);\n';
-  if (key.distanceFade !== DISTANCE_FADE.DISABLED)
+  if (key.distanceFade !== DistanceFadeMode.DISABLED)
     code += `
 uniform float distance_fade_min : hint_range(0.0, 4096.0, 0.01);
 uniform float distance_fade_max : hint_range(0.0, 4096.0, 0.01);
@@ -56,13 +64,15 @@ uniform float msdf_outline_size : hint_range(0.0, 250.0, 1.0);
   code += key.orm
     ? `uniform sampler2D texture_orm : hint_roughness_g, ${filter};\n`
     : metallicUniforms(key, filter);
-  if (key.billboardMode === BILLBOARD.PARTICLES)
+  if (key.billboardMode === BillboardMode.BILLBOARD_PARTICLES)
     code += `
 uniform int particles_anim_h_frames : hint_range(1, 128);
 uniform int particles_anim_v_frames : hint_range(1, 128);
 uniform bool particles_anim_loop;
 `;
   code += featureUniforms(key, filter);
+  code += layerUniforms(key, filter);
+  code += heightmapUniforms(key, hints.height);
   if (flags.has('UV1_USE_TRIPLANAR')) code += 'varying vec3 uv1_triplanar_pos;\n';
   if (flags.has('UV2_USE_TRIPLANAR')) code += 'varying vec3 uv2_triplanar_pos;\n';
   if (flags.has('UV1_USE_TRIPLANAR'))
@@ -87,17 +97,17 @@ uniform vec3 uv2_offset;
 
 function alphaUniforms(key: MaterialKey): string {
   let code = '';
-  if (key.transparency === TRANSPARENCY.ALPHA_SCISSOR)
+  if (key.transparency === Transparency.ALPHA_SCISSOR)
     code += 'uniform float alpha_scissor_threshold : hint_range(0.0, 1.0, 0.001);\n';
-  else if (key.transparency === TRANSPARENCY.ALPHA_HASH)
+  else if (key.transparency === Transparency.ALPHA_HASH)
     code += 'uniform float alpha_hash_scale : hint_range(0.0, 2.0, 0.01);\n';
-  if (key.alphaAntialiasingMode !== ALPHA_ANTIALIASING.OFF && isAlphaTested(key))
+  if (usesAlphaAntialiasing(key))
     code += 'uniform float alpha_antialiasing_edge : hint_range(0.0, 1.0, 0.01);\n';
   return code;
 }
 
 function metallicUniforms(key: MaterialKey, filter: string): string {
-  const roughnessHint = ROUGHNESS_HINTS[key.roughnessTextureChannel] ?? 'hint_roughness_gray';
+  const roughnessHint = ROUGHNESS_HINTS[key.roughnessTextureChannel];
   return `
 uniform float roughness : hint_range(0.0, 1.0);
 uniform sampler2D texture_metallic : hint_default_white, ${filter};
@@ -124,9 +134,8 @@ uniform float emission_energy : hint_range(0.0, 100.0, 0.01);
 uniform sampler2D texture_refraction : ${filter};
 uniform float refraction : hint_range(-1.0, 1.0, 0.001);
 uniform vec4 refraction_texture_channel;
+uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_linear_mipmap;
 `;
-  if (features.has('REFRACTION'))
-    code += 'uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_linear_mipmap;\n';
   if (features.has('REFRACTION') || key.proximityFade)
     code += 'uniform sampler2D depth_texture : hint_depth_texture, repeat_disable, filter_nearest;\n';
   if (features.has('NORMAL_MAPPING'))
@@ -161,10 +170,11 @@ uniform sampler2D texture_ambient_occlusion : hint_default_white, ${filter};
 uniform vec4 ao_texture_channel;
 uniform float ao_light_affect : hint_range(0.0, 1.0, 0.01);
 `;
-  return code + scatteringUniforms(key, filter);
+  return code;
 }
 
-function scatteringUniforms(key: MaterialKey, filter: string): string {
+/** The detail layer, subsurface scattering, its transmittance and the backlight. */
+function layerUniforms(key: MaterialKey, filter: string): string {
   const { features } = key;
   let code = '';
   if (features.has('DETAIL'))
@@ -190,13 +200,16 @@ uniform float transmittance_boost : hint_range(0.0, 1.0, 0.01);
 uniform vec4 backlight : source_color;
 uniform sampler2D texture_backlight : hint_default_black, ${filter};
 `;
-  if (features.has('HEIGHT_MAPPING'))
-    code += `
-uniform sampler2D texture_heightmap : hint_default_black, ${samplerHints(key).height};
+  return code;
+}
+
+function heightmapUniforms(key: MaterialKey, heightFilter: string): string {
+  if (!key.features.has('HEIGHT_MAPPING')) return '';
+  return `
+uniform sampler2D texture_heightmap : hint_default_black, ${heightFilter};
 uniform float heightmap_scale : hint_range(-16.0, 16.0, 0.001);
 uniform int heightmap_min_layers : hint_range(1, 64);
 uniform int heightmap_max_layers : hint_range(1, 64);
 uniform vec2 heightmap_flip;
 `;
-  return code;
 }

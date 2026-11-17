@@ -8,6 +8,7 @@ import {
   ANSWERS_FILE,
   LIVE_DIR,
   livePath,
+  MATERIAL_TEXTS_FILE,
 } from '../../apps/textscene-three-godot-shaders/tests/godotAnswers.mjs';
 import {
   KNOWN_DIFFERENCE_CASES,
@@ -90,15 +91,17 @@ async function main() {
     OPERATOR_CASES.map(({ id, godotText }) => ({ id, text: godotText })),
     CORPUS
   );
+  const materials = await materialRecord();
   const records = {
     probes: probeRecord(output, PROBES, reasons),
     random: probeRecord(output, randomProbes, reasons),
     operators: operatorRecord,
     corpus: corpusRecord,
     expressions: await expressionRecord(expressions),
-    materials: await materialRecord(),
+    materials: materials.record,
   };
   writeLiveAnswers(records);
+  writeFileSync(MATERIAL_TEXTS_FILE, `${JSON.stringify(materials.texts)}\n`);
   const answersFile = renderAnswersFile(records);
   const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${expressions.length} expressions, ${printed.length - lowered.length} printed texts as parsed and ${lowered.length} as lowered, ${Object.keys(records.materials.cases).length} materials`;
   const options = { tool: 'godot-probes', summary };

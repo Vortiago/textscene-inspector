@@ -1,3 +1,5 @@
+import { NEXT_PASS } from '../godot-probes/materialTexts.mjs';
+
 export const TESTING_FILE = 'testing.md';
 
 const count = (items, test) => items.filter(test).length;
@@ -145,11 +147,10 @@ ${openLines.join('\n')}
 </details>`;
 }
 
-/** The text of the chapter. */
 /** The material family: each material's case count, and the distinct texts Godot wrote for them. */
 function materialSection(materialRecord) {
   const ids = Object.keys(materialRecord.cases);
-  const nextPasses = count(ids, (id) => id.endsWith('|next_pass'));
+  const nextPasses = count(ids, (id) => id.endsWith(`|${NEXT_PASS}`));
   const texts = new Set(Object.values(materialRecord.cases)).size;
   const number = (value) => value.toLocaleString('en-GB');
   return `## BaseMaterial3D against Godot
@@ -161,6 +162,7 @@ Godot writes the shader of a StandardMaterial3D or an ORMMaterial3D from the mat
 The sweep holds ${number(ids.length)} materials, ${number(nextPasses)} of them next passes, and Godot writes ${number(texts)} distinct texts for them. The test fails on the first material whose text differs, and shows both texts. The repository keeps only a digest of each text, for the smoke subset.`;
 }
 
+/** The text of the chapter. */
 export function renderTestingGuide({ operators, random, corpus, materials }) {
   return `# How the tests check the transpiler against Godot
 

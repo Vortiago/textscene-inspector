@@ -1,12 +1,10 @@
 import {
-  defaultKey,
-  STENCIL_COMPARE_ALWAYS,
-  STENCIL_FLAG,
-  STENCIL_MODE,
-  type Feature,
-  type Flag,
-  type MaterialKey,
-} from './materialKey.js';
+  StencilCompare,
+  StencilFlag,
+  stencilFlagsAfterSet,
+  StencilMode,
+} from '../../godot/rendering/materials/stencil.js';
+import { defaultKey, type Feature, type Flag, type MaterialKey } from './materialKey.js';
 
 /** A texture a material property holds: Godot sets `albedo_texture_size` from the albedo's size. */
 export interface MaterialTexture {
@@ -79,6 +77,10 @@ type NumberMember = {
   [Member in keyof MaterialKey]: MaterialKey[Member] extends number ? Member : never;
 }[keyof MaterialKey];
 
+type BooleanMember = {
+  [Member in keyof MaterialKey]: MaterialKey[Member] extends boolean ? Member : never;
+}[keyof MaterialKey];
+
 /** The enum properties whose setter only stores the value, by the key member each one sets. */
 const ENUMS: Readonly<Record<string, NumberMember>> = {
   transparency: 'transparency',
@@ -101,48 +103,47 @@ const ENUMS: Readonly<Record<string, NumberMember>> = {
   stencil_reference: 'stencilReference',
 };
 
-const BOOLEANS = {
+const BOOLEANS: Readonly<Record<string, BooleanMember>> = {
   grow: 'grow',
   heightmap_deep_parallax: 'deepParallax',
   proximity_fade_enabled: 'proximityFade',
-} as const satisfies Readonly<Record<string, keyof MaterialKey>>;
+};
 
-/** `set_stencil_flags` (`material.cpp:3251`): read and write exclude each other, and the old flags decide. */
+/** `set_stencil_flags` (`material.cpp:3251`) keeps equal flags as they are. */
 function setStencilFlags(key: MaterialKey, requested: number): void {
-  if (key.stencilFlags === requested) return;
-  const writes = STENCIL_FLAG.WRITE | STENCIL_FLAG.WRITE_DEPTH_FAIL;
-  let flags = requested;
-  if (flags & STENCIL_FLAG.READ && key.stencilFlags & writes) flags &= STENCIL_FLAG.READ;
-  if (flags & writes && key.stencilFlags & STENCIL_FLAG.READ) flags &= writes;
-  if (flags & STENCIL_FLAG.READ && flags & writes) flags &= STENCIL_FLAG.READ;
-  key.stencilFlags = flags;
+  if (key.stencilFlags !== requested) key.stencilFlags = stencilFlagsAfterSet(key.stencilFlags, requested);
 }
 
 /** `set_stencil_mode` (`material.cpp:3231`): an outline or x-ray writes the stencil, always. */
-function setStencilMode(key: MaterialKey, mode: number): void {
+function setStencilMode(key: MaterialKey, mode: MaterialKey['stencilMode']): void {
   if (key.stencilMode === mode) return;
   key.stencilMode = mode;
-  if (mode !== STENCIL_MODE.OUTLINE && mode !== STENCIL_MODE.XRAY) return;
-  setStencilFlags(key, STENCIL_FLAG.WRITE);
-  key.stencilCompare = STENCIL_COMPARE_ALWAYS;
+  if (mode !== StencilMode.OUTLINE && mode !== StencilMode.XRAY) return;
+  setStencilFlags(key, StencilFlag.WRITE);
+  key.stencilCompare = StencilCompare.ALWAYS;
 }
 
-/** The setter of property `name` that changes the key, or none for a property the text does not read. */
-function keySetterOf(name: string): KeySetter | undefined {
-  const feature = FEATURES[name];
-  if (feature) return (key, value) => void (value ? key.features.add(feature) : key.features.delete(feature));
-  const flag = FLAGS[name];
-  if (flag) return (key, value) => void (value ? key.flags.add(flag) : key.flags.delete(flag));
-  const member = ENUMS[name];
-  if (member) return (key, value) => void (key[member] = Number(value));
-  if (name in BOOLEANS) {
-    const booleanMember = BOOLEANS[name as keyof typeof BOOLEANS];
-    return (key, value) => void (key[booleanMember] = Boolean(value));
-  }
-  if (name === 'stencil_mode') return (key, value) => setStencilMode(key, Number(value));
-  if (name === 'stencil_flags') return (key, value) => setStencilFlags(key, Number(value));
-  return undefined;
-}
+/** Each property the shader text reads, by name, with the setter that writes it into the key. */
+const KEY_SETTERS = new Map<string, KeySetter>([
+  ...Object.entries(FEATURES).map(([name, feature]): [string, KeySetter] => [
+    name,
+    (key, value) => void (value ? key.features.add(feature) : key.features.delete(feature)),
+  ]),
+  ...Object.entries(FLAGS).map(([name, flag]): [string, KeySetter] => [
+    name,
+    (key, value) => void (value ? key.flags.add(flag) : key.flags.delete(flag)),
+  ]),
+  ...Object.entries(ENUMS).map(([name, member]): [string, KeySetter] => [
+    name,
+    (key, value) => void (key[member] = Number(value) as never),
+  ]),
+  ...Object.entries(BOOLEANS).map(([name, member]): [string, KeySetter] => [
+    name,
+    (key, value) => void (key[member] = Boolean(value)),
+  ]),
+  ['stencil_mode', (key, value) => setStencilMode(key, Number(value) as MaterialKey['stencilMode'])],
+  ['stencil_flags', (key, value) => setStencilFlags(key, Number(value))],
+]);
 
 /**
  * A material of class `materialClass` after Godot's setters ran on `settings`, in their order.
@@ -152,7 +153,7 @@ export function materialStateOf(materialClass: MaterialClass, settings: Material
   const key = defaultKey(materialClass === 'ORMMaterial3D');
   const values: Record<string, MaterialValue> = {};
   for (const [name, value] of Object.entries(settings)) {
-    const setter = keySetterOf(name);
+    const setter = KEY_SETTERS.get(name);
     if (setter) setter(key, value);
     else values[name] = value;
   }

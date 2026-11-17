@@ -1,16 +1,18 @@
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
+import { EmissionOperator } from '../../godot/rendering/materials/emissionOperator.js';
+import { TextureChannel } from '../../godot/rendering/materials/textureChannel.js';
 import { fragmentEffects } from './fragmentEffects.js';
-import { DETAIL_UV_2, EMISSION_OP_ADD, type MaterialKey } from './materialKey.js';
-import { isMsdf } from './materialUniforms.js';
+import { isMsdf, usesDetailUv2, type MaterialKey } from './materialKey.js';
 import { read, readOn } from './textureReads.js';
 
 /** Each roughness channel's mask, which Godot writes into the text rather than a uniform. */
-const ROUGHNESS_CHANNELS = [
-  'vec4(1.0, 0.0, 0.0, 0.0)',
-  'vec4(0.0, 1.0, 0.0, 0.0)',
-  'vec4(0.0, 0.0, 1.0, 0.0)',
-  'vec4(0.0, 0.0, 0.0, 1.0)',
-  'vec4(0.333333, 0.333333, 0.333333, 0.0)',
-];
+const ROUGHNESS_CHANNELS: Readonly<Record<EnumValue<typeof TextureChannel>, string>> = {
+  [TextureChannel.TEXTURE_CHANNEL_RED]: 'vec4(1.0, 0.0, 0.0, 0.0)',
+  [TextureChannel.TEXTURE_CHANNEL_GREEN]: 'vec4(0.0, 1.0, 0.0, 0.0)',
+  [TextureChannel.TEXTURE_CHANNEL_BLUE]: 'vec4(0.0, 0.0, 1.0, 0.0)',
+  [TextureChannel.TEXTURE_CHANNEL_ALPHA]: 'vec4(0.0, 0.0, 0.0, 1.0)',
+  [TextureChannel.TEXTURE_CHANNEL_GRAYSCALE]: 'vec4(0.333333, 0.333333, 0.333333, 0.0)',
+};
 
 const MSDF_MEDIAN = `
 float msdf_median(float r, float g, float b) {
@@ -51,7 +53,7 @@ void fragment() {`;
 }
 
 const usesUv2 = (key: MaterialKey): boolean =>
-  (key.features.has('DETAIL') && key.detailUv === DETAIL_UV_2) ||
+  usesDetailUv2(key) ||
   (key.features.has('AMBIENT_OCCLUSION') && key.flags.has('AO_ON_UV2')) ||
   (key.features.has('EMISSION') && key.flags.has('EMISSION_ON_UV2'));
 
@@ -118,7 +120,7 @@ function heightmap(key: MaterialKey): string {
     code += '		vec2 ofs = base_uv - view_dir.xy * depth * heightmap_scale * 0.01;\n';
   }
   code += '		base_uv = ofs;\n';
-  if (key.features.has('DETAIL') && key.detailUv === DETAIL_UV_2) code += '		base_uv2 -= ofs;\n';
+  if (usesDetailUv2(key)) code += '		base_uv2 -= ofs;\n';
   return `${code}	}\n`;
 }
 
@@ -228,7 +230,7 @@ function emission(key: MaterialKey): string {
 `;
   code += `	vec3 emission_tex = ${readOn(key, uv, 'texture_emission')}.rgb;\n`;
   code +=
-    key.emissionOp === EMISSION_OP_ADD
+    key.emissionOp === EmissionOperator.ADD
       ? `	// Emission Operator: Add
 	EMISSION = (emission.rgb + emission_tex) * emission_energy;
 `

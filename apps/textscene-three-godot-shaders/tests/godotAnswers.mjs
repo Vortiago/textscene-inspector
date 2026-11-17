@@ -68,7 +68,15 @@ export function liveGodotAnswers() {
   return answers;
 }
 
-/** Godot's text of each material by its hash, from the live run only: no Godot text is committed. */
+/** Written only by `pnpm godot:probes`: Godot's text of each material by its hash, which no digest reads. */
+export const MATERIAL_TEXTS_FILE = join(LIVE_DIR, 'material-texts.json');
+
+/** Godot's text of each material by its hash. The live run alone has them: no Godot text is committed. */
 export function liveMaterialTexts() {
-  return liveGodotAnswers() && readJson(livePath('materials')).texts;
+  if (!existsSync(MATERIAL_TEXTS_FILE)) {
+    throw new Error(
+      `expected Godot's material texts in ${MATERIAL_TEXTS_FILE}, found none: run \`pnpm godot:probes\``
+    );
+  }
+  return readJson(MATERIAL_TEXTS_FILE);
 }
