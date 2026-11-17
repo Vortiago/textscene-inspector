@@ -13,11 +13,13 @@ Viewports that draw one Sky share one radiance, as in Godot (`sky.h:251`). A ren
 The Environment's `background_energy_multiplier` scales the background once, and the ambient and the reflection twice. The radiance bakes it in, and each surface reads the radiance at it again (`render_scene_data_rd.cpp:169`, `scene_forward_clustered.glsl:1732`, `:1756`). A fog reads the radiance as baked.
 
 ## ProceduralSkyMaterial
+
 <!-- compare: image=unit-sky-procedural status=done fixture=unit-sky-procedural.tscn -->
 
 A gradient sky from top, horizon and ground colours. The warm-top, green-horizon gradient and the sphere and floor it lights match Godot. Godot multiplies each sRGB colour by its energy multiplier before the linear conversion, and so does the previewer. The sky carries Godot's debanding noise, and `use_debanding = false` turns it off.
 
 ## PanoramaSkyMaterial
+
 <!-- compare: image=unit-sky-panorama status=done fixture=unit-sky-panorama.tscn -->
 
 An equirectangular image wrapped onto the sky. The coloured calibration bands and the black grid confirm the U/V orientation matches Godot. The previewer maps each direction to the image with Godot's approximations of `acos` and `atan2` (`sky.glsl:179-201`). These place the texels near the horizon 6% closer together than the exact functions, so the black horizon band has Godot's width.
@@ -25,16 +27,19 @@ An equirectangular image wrapped onto the sky. The coloured calibration bands an
 A panorama that is a ViewportTexture counts its path from the local scene of the node that holds the Environment: a WorldEnvironment or a Camera3D. Godot sets it up only when the Environment, the Sky and the PanoramaSkyMaterial are all local to scene. Otherwise the sky samples the magenta and black placeholder, as in Godot. A set-up panorama samples the live target. The background follows each draw of the target. The radiance keeps the first draw, as in Godot, where a draw of the target leaves the sky clean.
 
 ## PanoramaSkyMaterial without filtering
+
 <!-- compare: image=unit-sky-panorama-nearest status=done fixture=unit-sky-panorama-nearest.tscn -->
 
 With `filter = false` the panorama samples the nearest texel, and each texel draws as a block with hard edges. With `filter = true`, the default, it samples linearly. Neither reads mipmaps, as Godot's `filter_linear` and `filter_nearest` read none (`sky_material.cpp:498-505`).
 
 ## PhysicalSkyMaterial
+
 <!-- compare: image=unit-sky-physical status=done fixture=unit-sky-physical.tscn -->
 
 An atmospheric-scattering sky. The grey-blue gradient, the horizon band, and the sphere and ground it lights match Godot's. It carries the same debanding noise as the procedural sky.
 
 ## ShaderMaterial
+
 <!-- compare: image=unit-shader-sky-parameters status=limitation fixture=unit-shader-sky-parameters.tscn -->
 
 A user's sky shader reads a GradientTexture2D through a `source_color` sampler and a float the material sets. The transpiled sky template draws the background at each pixel, and a cube render of it bakes the radiance the metal sphere reflects. Both match Godot within 2/255. A `samplerCube` reads a Cubemap saved with its faces or an image imported as a cubemap, in Godot's face order. The environment's depth fog, its sun scatter and its aerial perspective fog the sky as in Godot. `TIME` follows the playback controls. A shader Godot does not compile draws Godot's black default sky, and the node details show Godot's error.
@@ -42,16 +47,19 @@ A user's sky shader reads a GradientTexture2D through a `source_color` sampler a
 A sky shader that reads `TIME` or `POSITION` keeps the radiance of its first bake, where Godot bakes it again in each frame. Volumetric fog does not reach a sky shader. A texture array or cubemap array parameter is not loaded, so its sampler reads its default. A sky shader that reads the half or quarter resolution passes, or a light, draws the default sky.
 
 ## Sun disc size
+
 <!-- compare: image=unit-sky-sun-angular-distance status=done fixture=unit-sky-sun-angular-distance.tscn -->
 
 A DirectionalLight3D's `light_angular_distance` sets the size of its sun disc in the sky, as Godot passes it to the sky shader in radians. This 3 degree sun draws a solid disc with a glow around it, as in Godot. A light with no angular distance draws a point sun.
 
 ## Radiance size 32
+
 <!-- compare: image=unit-sky-radiance-size-32 status=done fixture=unit-sky-radiance-size-32.tscn -->
 
 A sky with `radiance_size = 0` bakes from a radiance 32 texels wide, the smallest Godot allows. The mirror sphere reflects a coarse sky, and the rough sphere reads layers filtered from a 32-wide octmap and its short downsample chain. Both spheres and the ground they light match Godot's.
 
 ## Real-Time process mode
+
 <!-- compare: image=unit-sky-realtime status=done fixture=unit-sky-realtime.tscn -->
 
 A sky with `process_mode = 3` bakes its layers with Godot's fast filter, at a radiance size of 256 whatever `radiance_size` says. Its ambient reads layer 6, its roughest. The metallic sphere's reflection, the default sphere and the ground it lights match Godot's.
@@ -59,18 +67,20 @@ A sky with `process_mode = 3` bakes its layers with Godot's fast filter, at a ra
 ## Linting
 
 <!-- lint:begin Sky -->
+
 Strict parsing format-checks these `Sky` properties, plus 2 inherited from Resource. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts | Out of range |
-| --- | --- | --- |
-| `process_mode` | enum 0-3 (PROCESS_MODE_AUTOMATIC/PROCESS_MODE_QUALITY/PROCESS_MODE_INCREMENTAL/PROCESS_MODE_REALTIME) | warning |
-| `radiance_size` | enum 0-6 (RADIANCE_SIZE_32/RADIANCE_SIZE_64/RADIANCE_SIZE_128/RADIANCE_SIZE_256/RADIANCE_SIZE_512/RADIANCE_SIZE_1024/RADIANCE_SIZE_2048) | error |
-| `sky_material` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| Property        | Accepts                                                                                                                                  | Out of range |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `process_mode`  | enum 0-3 (PROCESS_MODE_AUTOMATIC/PROCESS_MODE_QUALITY/PROCESS_MODE_INCREMENTAL/PROCESS_MODE_REALTIME)                                    | warning      |
+| `radiance_size` | enum 0-6 (RADIANCE_SIZE_32/RADIANCE_SIZE_64/RADIANCE_SIZE_128/RADIANCE_SIZE_256/RADIANCE_SIZE_512/RADIANCE_SIZE_1024/RADIANCE_SIZE_2048) | error        |
+| `sky_material`  | null, SubResource("id"), ExtResource("id") or Resource("path")                                                                           |              |
 
-| Rule | Reports | Severity |
-| --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
-| `valid-sky` | `real-time-sky-radiance-size` | warning |
+| Rule                                    | Reports                       | Severity |
+| --------------------------------------- | ----------------------------- | -------- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference`   | info     |
+| `valid-sky`                             | `real-time-sky-radiance-size` | warning  |
+
 <!-- lint:end -->
 
 The lenient parser never rejects. An unreadable Sky property falls back to Godot's default through the shared value decoders. An unresolvable material or panorama leaves the background at its fallback rather than failing the scene.

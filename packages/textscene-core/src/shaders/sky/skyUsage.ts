@@ -8,8 +8,6 @@ import { isSamplerType, textureKindOf, type TextureKind } from '../language/type
 export interface SkyUsage {
   /** Any `LIGHTn_*`: Godot then hands the sky the scene's directional lights (`sky.cpp:1055`). */
   readonly light: boolean;
-  readonly time: boolean;
-  readonly position: boolean;
   /** Each sampler uniform by name. */
   readonly samplers: Readonly<Record<string, SkySampler>>;
 }
@@ -21,7 +19,7 @@ export interface SkySampler {
   readonly isColor: boolean;
 }
 
-const NO_USAGE: SkyUsage = { light: false, time: false, position: false, samplers: {} };
+const NO_USAGE: SkyUsage = { light: false, samplers: {} };
 
 const LIGHT_BUILT_IN = /^LIGHT[0-3]_/;
 
@@ -37,8 +35,6 @@ export function skyUsage(source: string): SkyUsage {
   const names = builtInsRead(tree);
   return {
     light: [...names].some((name) => LIGHT_BUILT_IN.test(name)),
-    time: names.has('TIME'),
-    position: names.has('POSITION'),
     samplers: samplersOf(tree),
   };
 }

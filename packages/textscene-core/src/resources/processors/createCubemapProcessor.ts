@@ -7,7 +7,7 @@ import { decodeImagePixels, getMimeType, isTexturePath } from '../formats/image/
 import { sliceImage } from '../textures/layeredTexels';
 import { cubeTexture } from '../textures/cubemap/cubeTexture';
 import { importCubemap } from '../../parser/importParser';
-import { readImportSidecar } from './readImportSidecar';
+import { readLayeredSlices } from './readLayeredSlices';
 
 /** Cuts an image into the six faces its **Import sidecar** arranges, as Godot's layered importer does. */
 export function createCubemapProcessor(
@@ -22,14 +22,11 @@ export function createCubemapProcessor(
     readsFile: isTexturePath,
     shouldProcess: (_path, data) => data instanceof ArrayBuffer,
     process: async (path, data) => {
-      const read = {
-        assetPath: path,
-        dependent: { busType: 'cubemap' as const, key: path },
-        fileEventBus,
-        dependencies,
-      };
-      const cubemap = importCubemap(await readImportSidecar(read));
-      if (!cubemap) throw new Error(`${path} has no sidecar that imports it as a cubemap`);
+      const cubemap = await readLayeredSlices(
+        { assetPath: path, dependent: { busType: 'cubemap', key: path }, fileEventBus, dependencies },
+        importCubemap,
+        'a cubemap'
+      );
       const image = await decodeImagePixels(
         data as ArrayBuffer,
         getMimeType(path),

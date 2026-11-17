@@ -7,8 +7,6 @@ describe('skyUsage', () => {
   it('reads no built-in of a sky that writes only COLOR', () => {
     expect(skyUsage(skyOf('COLOR = vec3(1.0);'))).toEqual({
       light: false,
-      time: false,
-      position: false,
       samplers: {},
     });
   });
@@ -17,24 +15,15 @@ describe('skyUsage', () => {
     expect(skyUsage(skyOf('COLOR = LIGHT3_COLOR;')).light).toBe(true);
   });
 
-  it('reads TIME', () => {
-    expect(skyUsage(skyOf('COLOR = vec3(TIME);')).time).toBe(true);
-  });
-
-  it('reads POSITION', () => {
-    expect(skyUsage(skyOf('COLOR = POSITION;')).position).toBe(true);
-  });
-
   it('reads a built-in in a function nothing calls, as Godot compiles every function', () => {
-    const source = 'shader_type sky;\nfloat t() { return TIME; }\nvoid sky() {\n\tCOLOR = vec3(0.0);\n}\n';
-    expect(skyUsage(source).time).toBe(true);
+    const source =
+      'shader_type sky;\nvec3 l() { return LIGHT0_COLOR; }\nvoid sky() {\n\tCOLOR = vec3(0.0);\n}\n';
+    expect(skyUsage(source).light).toBe(true);
   });
 
   it('reads no built-in of a text Godot does not compile', () => {
     expect(skyUsage('shader_type sky;\nvoid sky() { COLOR = TIME; }\n')).toEqual({
       light: false,
-      time: false,
-      position: false,
       samplers: {},
     });
   });

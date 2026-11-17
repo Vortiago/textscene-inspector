@@ -3,7 +3,9 @@ import { warn } from '../../logger';
 import { warnOnce } from '../../utils/warnOnce';
 import { textToVariant } from '../../godot/variant/reader/variantReader';
 import { ShadingLanguageError } from '../../shaders/language/shadingLanguageError';
-import { transpileSky, type TranspiledSky } from '../../shaders/sky/transpileSky';
+import { transpileParsedSky, type TranspiledSky } from '../../shaders/sky/transpileSky';
+import { parsedShader, type ParsedShader } from '../../shaders/language/parseShader';
+import { perObject } from '../../utils/perObject';
 import type { TranspiledUniform } from '../../shaders/uniforms/transpiledUniform';
 import type { ShaderDecoders } from '../../shaders/preprocessor/decoders';
 import { ShaderSkyBackground, ShaderSkyCube } from '../../r3f/sky/shaderSkyBackground';
@@ -67,27 +69,43 @@ function bakeShaderRadiance(
   }
 }
 
-/** What a shader sky takes beside its material. */
-export interface ShaderSkyInputs {
-  /** The loaded texture parameters, by uniform name. */
-  readonly textures?: Readonly<Record<string, THREE.Texture>>;
-  /** The decoders the previewer lends an `#if` that decompresses. */
-  readonly decoders?: ShaderDecoders;
+/** The parse of a text the previewer draws, or why it draws Godot's default sky instead. */
+type SkyCompile = { readonly parsed: ParsedShader; readonly refusal: null } | { readonly refusal: string };
+
+/** One compile per material and decoders, which every bake and the node details read. */
+const skyCompileOf = perObject((material: ShaderSkyProperties) =>
+  perObject((decoders: ShaderDecoders) => compileSky(material.code, decoders))
+);
+
+/** The first transpile proves the text: a refusal can come from the parse, the checks or the link. */
+function compileSky(code: string, decoders: ShaderDecoders): SkyCompile {
+  try {
+    const parsed = parsedShader(code, { decoders });
+    const { mesh } = transpileParsedSky(parsed, '');
+    mesh.geometry.dispose();
+    mesh.material.dispose();
+    return { parsed, refusal: null };
+  } catch (error) {
+    if (!(error instanceof ShadingLanguageError)) throw error;
+    return { refusal: refusalMessage(error) };
+  }
 }
+
+/** Written once, by the first sky that draws the default. */
+let defaultSkyParse: ParsedShader | undefined;
 
 /** The sky of `material` with its parameters, or Godot's default sky for a shader it cannot draw. */
 export function transpiledShaderSky(
   material: ShaderSkyProperties,
-  { textures = {}, decoders = {} }: ShaderSkyInputs = {}
+  { textures, decoders }: Required<Pick<SkyEnvironmentInput, 'textures' | 'decoders'>>
 ): TranspiledSky {
-  let sky: TranspiledSky;
-  try {
-    sky = transpileSky(material.code, { decoders });
-  } catch (error) {
-    if (!(error instanceof ShadingLanguageError)) throw error;
-    warnOnce(material, 'refused', `[Sky] ${refusalMessage(error)}`);
-    return transpileSky(GODOT_DEFAULT_SKY);
+  const compile = skyCompileOf(material)(decoders);
+  if (compile.refusal !== null) {
+    warnOnce(material, 'refused', `[Sky] ${compile.refusal}`);
+    defaultSkyParse ??= parsedShader(GODOT_DEFAULT_SKY);
+    return transpileParsedSky(defaultSkyParse, '');
   }
+  const sky = transpileParsedSky(compile.parsed, '');
   setParameters(sky.parameters, material.parameters, textures);
   return sky;
 }
@@ -102,17 +120,9 @@ export function setParameters(
   for (const [name, texture] of Object.entries(textures)) uniforms.get(name)?.set(texture);
 }
 
-/** Why the previewer draws Godot's default sky for `code`, or null when it draws the shader. */
-export function shaderSkyRefusal(code: string, decoders: ShaderDecoders = {}): string | null {
-  try {
-    const { mesh } = transpileSky(code, { decoders });
-    mesh.geometry.dispose();
-    mesh.material.dispose();
-    return null;
-  } catch (error) {
-    // Another failure is the build's to warn: the sky then draws nothing, not the default sky.
-    return error instanceof ShadingLanguageError ? refusalMessage(error) : null;
-  }
+/** Why the previewer draws Godot's default sky for `material`, or null when it draws the shader. */
+export function shaderSkyRefusal(material: ShaderSkyProperties, decoders: ShaderDecoders): string | null {
+  return skyCompileOf(material)(decoders).refusal;
 }
 
 function refusalMessage(error: ShadingLanguageError): string {

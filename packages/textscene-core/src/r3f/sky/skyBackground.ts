@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { SKY_RENDER_ORDER } from '../../shaders/sky/skyRenderOrder.js';
 import { editedShader } from '../shaderPatch/chunkPatch.js';
 import { backgroundCube } from '../shaderPatch/backgroundPrograms.js';
 import { observeSceneRenderEnd } from '../sceneRenderCamera.js';
@@ -20,13 +21,6 @@ const THREE_CUBE_TEXEL = 'vec4 texColor = textureCube( envMap, backgroundRotatio
 /** The sky at the pixel's ray, turned by the sky's orientation as three turns its cube. */
 const GODOT_SKY_TEXEL =
   'vec4 texColor = vec4( godotSky( normalize( backgroundRotation * vWorldDirection ) ), 1.0 );';
-
-/**
- * After every opaque surface, as Godot draws the sky after its opaque pass
- * (`render_forward_clustered.cpp:2266`). It tests depth at the far plane as Godot's sky pipeline
- * does (`sky.cpp:142-144`), so it shows only where no surface drew.
- */
-const SKY_RENDER_ORDER = Number.MAX_SAFE_INTEGER;
 
 /** A sky drawn at each pixel behind a scene, and hidden outside the renders that draw it. */
 export abstract class SkyBackdrop<

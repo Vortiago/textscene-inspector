@@ -20,13 +20,15 @@ function shaderMaterial(code: string): ShaderSkyProperties {
     code,
     parameters: {},
     textures: {},
-    usage: { light: false, time: false, position: false, samplers: {} },
+    usage: { light: false, samplers: {} },
   };
 }
 
+const NO_INPUTS = { textures: {}, decoders: {} };
+
 const fragmentOf = (code: string) =>
   generatedFragmentShader(
-    (transpiledShaderSky(shaderMaterial(code)).mesh.material as NodeMaterial).fragmentNode!
+    (transpiledShaderSky(shaderMaterial(code), NO_INPUTS).mesh.material as NodeMaterial).fragmentNode!
   );
 
 describe('transpiledShaderSky', () => {
@@ -43,20 +45,20 @@ describe('transpiledShaderSky', () => {
 
   it("warns with Godot's error and its line for a shader Godot does not compile", () => {
     const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-    transpiledShaderSky(shaderMaterial('shader_type sky;\n\nvoid sky() { COLOR = 1.0; }\n'));
+    transpiledShaderSky(shaderMaterial('shader_type sky;\n\nvoid sky() { COLOR = 1.0; }\n'), NO_INPUTS);
     expect(warn).toHaveBeenCalledWith(expect.stringMatching(/^\[Sky\] Godot does not compile .* 3:\d+: /));
   });
 });
 
 describe('shaderSkyRefusal', () => {
   it("gives Godot's error and its line for a shader Godot does not compile", () => {
-    expect(shaderSkyRefusal('shader_type sky;\n\nvoid sky() { COLOR = 1.0; }\n')).toMatch(
+    expect(shaderSkyRefusal(shaderMaterial('shader_type sky;\n\nvoid sky() { COLOR = 1.0; }\n'), {})).toMatch(
       /^Godot does not compile the sky shader, and draws its default sky: 3:\d+: /
     );
   });
 
   it('gives nothing for a shader the previewer draws', () => {
-    expect(shaderSkyRefusal(TINTED_SKY)).toBeNull();
+    expect(shaderSkyRefusal(shaderMaterial(TINTED_SKY), {})).toBeNull();
   });
 });
 

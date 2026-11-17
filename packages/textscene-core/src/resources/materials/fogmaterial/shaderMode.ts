@@ -2,7 +2,8 @@
 
 import { ShaderMode, shaderModeOf } from '../../../godot/rendering/shaderLanguage';
 import { enumMember, type EnumValue } from '../../../godot/classdb/enumNames.js';
-import { literalText, stringToInt } from '../../../godot/string/string';
+import { stringToInt } from '../../../godot/string/string';
+import { shaderCodeOf } from '../shadermaterial/shaderCode';
 import type { ResourceKind } from '../../reading';
 
 export const SHADER_MODE: ResourceKind<EnumValue<typeof ShaderMode>> = {
@@ -13,6 +14,6 @@ export const SHADER_MODE: ResourceKind<EnumValue<typeof ShaderMode>> = {
     if (type === 'VisualShader') {
       return enumMember(ShaderMode, stringToInt(properties['mode'] ?? '0')) ?? ShaderMode.SPATIAL;
     }
-    return shaderModeOf(literalText(properties['code'] ?? ''));
+    return shaderModeOf(shaderCodeOf(properties));
   },
 };

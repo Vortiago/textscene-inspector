@@ -9,11 +9,11 @@ import type { ParsedImportFile } from '../../parser/importParser';
 import { readImportSidecar } from './readImportSidecar';
 
 /** `slicesOf` reads the grid from the parsed sidecar. `noun` names the import in the error. */
-export async function readLayeredSlices(
+export async function readLayeredSlices<Import = ImportSlices>(
   read: DependentRead,
-  slicesOf: (sidecar: ParsedImportFile | null) => ImportSlices | null,
+  slicesOf: (sidecar: ParsedImportFile | null) => Import | null,
   noun: string
-): Promise<ImportSlices> {
+): Promise<Import> {
   const slices = slicesOf(await readImportSidecar(read));
   if (!slices) throw new Error(`${read.assetPath} has no sidecar that imports it as ${noun}`);
   return slices;

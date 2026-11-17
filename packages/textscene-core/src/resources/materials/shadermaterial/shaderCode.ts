@@ -5,5 +5,9 @@ import type { ResourceKind } from '../../reading';
 export const SHADER_CODE: ResourceKind<string> = {
   name: 'ShaderCode',
   accepts: (type) => type === 'Shader',
-  decode: ({ properties }) => literalText(properties['code'] ?? ''),
+  decode: ({ properties }) => shaderCodeOf(properties),
 };
+
+export function shaderCodeOf(properties: Readonly<Record<string, string>>): string {
+  return literalText(properties['code'] ?? '');
+}

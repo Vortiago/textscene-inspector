@@ -55,7 +55,7 @@ describe('SKY of a Sky over a ShaderMaterial', () => {
       code: SKY_SHADER,
       parameters: { tint: '0.25' },
       textures: {},
-      usage: { light: false, time: false, position: false, samplers: {} },
+      usage: { light: false, samplers: {} },
     });
   });
 

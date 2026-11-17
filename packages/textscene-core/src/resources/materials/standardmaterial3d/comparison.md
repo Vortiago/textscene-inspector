@@ -29,16 +29,19 @@ An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the previe
 - **Approximated** `emission_intensity` is ignored. `emission_energy_multiplier` alone drives the strength.
 
 ## Emission texture
+
 <!-- compare: image=unit-material-emission-add status=done fixture=unit-material-emission-add.tscn -->
 
 ADD emission with both a dark red colour and a texture. Godot emits `(emission + texture) * energy` (`material.cpp:1788`). The previewer adds the texel to the colour too, so the blue texel reads magenta and the green one amber.
 
 ## ViewportTexture in another slot
+
 <!-- compare: image=unit-sub-viewport-texture-emission status=done fixture=unit-sub-viewport-texture-emission.tscn -->
 
 A SubViewport's target in the emission slot, over a black albedo. A material binds every slot by RID, so the target glows as it draws through the albedo in `unit-sub-viewport-texture`. A target in a pass cycle draws the missing-texture material from any slot.
 
 ## ViewportTexture sampler state
+
 <!-- compare: image=unit-sub-viewport-texture-sampler status=done fixture=unit-sub-viewport-texture-sampler.tscn -->
 
 A SubViewport's 8x8 target on three unshaded quads. The material's sampler applies to the target as it does to any texture (`material.cpp:760`). `texture_repeat` wraps at the edge, `uv1_scale` tiles the target, and `texture_filter = 0` keeps its texels as blocks. Both engines draw the same three quads.
@@ -165,11 +168,13 @@ At equal `render_priority`, the two engines can disagree, and the measured case 
 ## Linting
 
 <!-- lint:begin StandardMaterial3D -->
+
 Strict parsing format-checks the inherited set (131 inherited from BaseMaterial3D, 2 inherited from Material, 2 inherited from Resource); `StandardMaterial3D` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Rule | Reports | Severity |
-| --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| Rule                                    | Reports                     | Severity |
+| --------------------------------------- | --------------------------- | -------- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info     |
+
 <!-- lint:end -->
 
 The lenient parser never rejects. Each field falls back to Godot's default through the shared value decoders, so a malformed `roughness` renders with default roughness. A texture reference it cannot resolve leaves the slot empty, and the mesh renders untextured.

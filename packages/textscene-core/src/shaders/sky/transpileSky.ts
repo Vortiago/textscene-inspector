@@ -14,6 +14,7 @@ import type { TemplateStageNode } from '../template/templateTree.js';
 import { TemplateUniforms } from '../template/templateUniforms.js';
 import { godotId } from '../template/godotIds.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
+import { SKY_RENDER_ORDER } from './skyRenderOrder.js';
 import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
 import { bindParameters, type TranspiledUniform } from '../uniforms/transpiledUniform.js';
 import { TRANSPILER_VERSION, TreeMemo } from '../template/treeMemo.js';
@@ -115,9 +116,6 @@ function glClipPosition(position: Node): Node {
   const godot = position as unknown as ReturnType<typeof vec4>;
   return vec4(godot.x, godot.y.negate(), godot.w.sub(godot.z.mul(2)), godot.w) as unknown as Node;
 }
-
-/** After every opaque surface (`render_forward_clustered.cpp:2266`), with a depth test (`sky.cpp:142`). */
-const SKY_RENDER_ORDER = Number.MAX_SAFE_INTEGER;
 
 /** Three vertices, which the template's vertex stage places from their index alone. */
 function skyMesh(
