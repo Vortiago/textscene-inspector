@@ -15,6 +15,8 @@ export type ParameterValue = Variant | SamplerValue;
 /** A uniform of a transpiled shader, which takes the material's value. */
 export interface TranspiledUniform {
   readonly declaration: UniformNode;
+  /** False while Godot cannot build the material's uniform set, so it does not draw the material. */
+  readonly isDrawable: boolean;
   /** The material's value, or nothing for Godot's own value. */
   set(value: ParameterValue | undefined): void;
 }
@@ -32,6 +34,7 @@ const isSamplerValue = (value: ParameterValue): value is SamplerValue =>
 /** A uniform's node, holding Godot's value for a material that sets none. */
 class UniformBinding implements TranspiledUniform {
   private readonly node;
+  readonly isDrawable = true;
 
   constructor(
     readonly declaration: UniformNode,
@@ -67,6 +70,10 @@ class SamplerParameter implements TranspiledUniform {
 
   get value(): Value {
     return this.binding.value;
+  }
+
+  get isDrawable(): boolean {
+    return this.binding.isDrawable;
   }
 
   set(value: ParameterValue | undefined): void {

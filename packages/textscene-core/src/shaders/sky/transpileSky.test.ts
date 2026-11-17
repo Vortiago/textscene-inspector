@@ -30,6 +30,12 @@ describe('transpileSky', () => {
     expect(material.depthWrite).toBe(false);
   });
 
+  it('draws no sky while a samplerExternalOES has no texture, as Godot draws none', () => {
+    const source =
+      'shader_type sky;\nuniform samplerExternalOES s;\nvoid sky() {\n\tCOLOR = texture(s, vec2(0.5)).rgb;\n}\n';
+    expect(transpileSky(source).mesh.visible).toBe(false);
+  });
+
   it('gives one uniform for a member both stages read', () => {
     expect(transpileSky(DEFAULT_SKY).uniforms.has('params.orientation')).toBe(true);
   });

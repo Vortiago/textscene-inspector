@@ -40,4 +40,15 @@ describe('bindParameters', () => {
     const binding = parametersOf('uniform float u;').get('u')!;
     expect(() => binding.set(new DataTexture())).toThrow('expected a Variant for u, got a texture');
   });
+
+  it('cannot draw while a samplerExternalOES has no texture, where Godot builds no uniform set', () => {
+    const external = parametersOf('uniform samplerExternalOES s;').get('s')!;
+    const drawable = [external.isDrawable];
+    external.set(new DataTexture(new Uint8Array(4), 1, 1));
+    expect([...drawable, external.isDrawable]).toEqual([false, true]);
+  });
+
+  it('can draw with a sampler2D that has no texture, which reads its default', () => {
+    expect(parametersOf('uniform sampler2D s;').get('s')!.isDrawable).toBe(true);
+  });
 });

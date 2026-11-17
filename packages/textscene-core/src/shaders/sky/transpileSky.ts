@@ -101,11 +101,19 @@ export function transpileParsedSky(
     uniforms
   );
   return {
-    mesh: skyMesh(vertex.result, fragment.result),
+    mesh: drawnWhileBound(skyMesh(vertex.result, fragment.result), [...parameters.values()]),
     uniforms: uniforms.byName,
     textures: fragment.textures,
     parameters,
   };
+}
+
+/** A mesh three draws only while every uniform of the material can draw. */
+function drawnWhileBound(mesh: THREE.Mesh, parameters: readonly TranspiledUniform[]): THREE.Mesh {
+  Object.defineProperty(mesh, 'visible', {
+    get: () => parameters.every((parameter) => parameter.isDrawable),
+  });
+  return mesh;
 }
 
 /** Three vertices, which the template's vertex stage places from their index alone. */

@@ -90,6 +90,8 @@ export class SamplerBinding {
   private readonly kind: TextureKind;
   private readonly settings: SamplerSettings;
   private readonly isSrgb: boolean;
+  /** Written only by `set`: each element's texture, or the default it reads. */
+  private chosen: readonly (Texture | DefaultTexture)[] = [];
   /** Written only by `copyOf`: a material texture's copy, kept while the texture lives. */
   private readonly copies = new WeakMap<Texture, Texture>();
 
@@ -111,8 +113,14 @@ export class SamplerBinding {
     return { kind: 'array', count: this.nodes.length, element: (index) => this.element(index) } as ArrayValue;
   }
 
+  /** False while an element reads no texture at all: Godot then builds no uniform set and draws nothing. */
+  get isDrawable(): boolean {
+    return !this.chosen.includes('none');
+  }
+
   set(value: SamplerValue | undefined): void {
-    samplerTextures<Texture>(this.declaration, value).forEach((chosen, index) => {
+    this.chosen = samplerTextures<Texture>(this.declaration, value);
+    this.chosen.forEach((chosen, index) => {
       this.nodes[index]!.value = typeof chosen === 'string' ? this.defaultOf(chosen) : this.copyOf(chosen);
     });
   }
