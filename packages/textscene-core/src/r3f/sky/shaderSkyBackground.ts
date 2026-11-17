@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { writeSkyBindings, type SkyFog, type SkyLight } from '../../shaders/sky/skyBindings.js';
 import { fogUniforms } from '../fog/fogUniforms.js';
-import type { TranspiledSky } from '../../shaders/sky/transpileSky.js';
+import { disposeSky, type TranspiledSky } from '../../shaders/sky/transpileSky.js';
+import { SkyResolutionPasses } from '../../shaders/sky/skyResolutionPasses.js';
 import { SkyBackdrop } from './skyBackground.js';
+import { writeFramebufferHeight } from '../shadowFilter/framebufferRows.js';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
 
 /** Scratch for one conversion, overwritten by each. */
@@ -11,12 +13,16 @@ const rotationMatrix = new THREE.Matrix4();
 /** Scratch for one render's fog colour, which the fog's energy has scaled. */
 const renderedFogColor = new THREE.Color();
 
+/** Scratch for one render's target size. */
+const targetSize = new THREE.Vector2();
+
 /** A transpiled sky behind a scene, which owns the sky's mesh, and reads `lights` in each render. */
 export class ShaderSkyBackground extends SkyBackdrop {
   /** The background energy of the render now starting, written only by `paint`. */
   private brightness = 1;
   /** `sky_rotation` as Godot's basis, written only by `paint`. */
   private readonly skyOrientation = new THREE.Matrix3();
+  private readonly passes: SkyResolutionPasses;
 
   constructor(
     private readonly sky: TranspiledSky,
@@ -24,6 +30,7 @@ export class ShaderSkyBackground extends SkyBackdrop {
   ) {
     super(sky.mesh.geometry, sky.mesh.material);
     this.name = 'ShaderSkyBackground';
+    this.passes = new SkyResolutionPasses(sky);
   }
 
   protected paint(intensity: number, rotation: THREE.Euler): void {
@@ -41,6 +48,17 @@ export class ShaderSkyBackground extends SkyBackdrop {
       fog: this.fog(),
       lights: this.lights,
     });
+    // Godot draws the quarter and half passes before the scene, at the size of its buffers (`sky.cpp:1427`).
+    if (this.passes.isEmpty) return;
+    this.passes.draw(renderer, camera, renderSize(renderer, targetSize));
+    // A pass's render writes its target's height, which the lit surfaces after the sky must not read.
+    writeFramebufferHeight(renderer);
+  }
+
+  override dispose(): void {
+    super.dispose();
+    disposeSky(this.sky);
+    this.passes.dispose();
   }
 
   /** The depth fog of the render now drawing, which `prepareFog` wrote, or none while it is off. */
@@ -57,4 +75,10 @@ export class ShaderSkyBackground extends SkyBackdrop {
       density: depthShape[0]!,
     };
   }
+}
+
+/** The size of the target `renderer` draws into now. */
+function renderSize(renderer: THREE.WebGLRenderer, size: THREE.Vector2): THREE.Vector2 {
+  const target = renderer.getRenderTarget();
+  return target ? size.set(target.width, target.height) : renderer.getDrawingBufferSize(size);
 }

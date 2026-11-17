@@ -473,6 +473,251 @@ void sky() {
 | --- | --- |
 | <img src="showcase/sky-debanding-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-debanding-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `sky-light-0`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	float facing = max(dot(EYEDIR, LIGHT0_DIRECTION), 0.0);
+	COLOR = LIGHT0_COLOR * LIGHT0_ENERGY * 0.4 * facing + vec3(LIGHT0_SIZE * 0.25);
+	COLOR *= LIGHT0_ENABLED ? 1.0 : 0.25;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-light-0-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-light-0-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-light-1`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	float facing = max(dot(EYEDIR, LIGHT1_DIRECTION), 0.0);
+	COLOR = LIGHT1_COLOR * LIGHT1_ENERGY * 0.4 * facing + vec3(LIGHT1_SIZE * 0.25);
+	COLOR *= LIGHT1_ENABLED ? 1.0 : 0.25;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-light-1-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-light-1-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-light-2`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	float facing = max(dot(EYEDIR, LIGHT2_DIRECTION), 0.0);
+	COLOR = LIGHT2_COLOR * LIGHT2_ENERGY * 0.4 * facing + vec3(LIGHT2_SIZE * 0.25);
+	COLOR *= LIGHT2_ENABLED ? 1.0 : 0.25;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-light-2-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-light-2-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-light-3`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	float facing = max(dot(EYEDIR, LIGHT3_DIRECTION), 0.0);
+	COLOR = LIGHT3_COLOR * LIGHT3_ENERGY * 0.4 * facing + vec3(LIGHT3_SIZE * 0.25);
+	COLOR *= LIGHT3_ENABLED ? 1.0 : 0.25;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-light-3-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-light-3-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-light-unset`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = LIGHT1_ENABLED ? vec3(0.1, 0.8, 0.2) : vec3(0.8, 0.1, 0.1);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-light-unset-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-light-unset-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-light-fifth`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	float facing = max(dot(EYEDIR, LIGHT3_DIRECTION), 0.0);
+	COLOR = LIGHT3_COLOR * LIGHT3_ENERGY * 0.4 * facing + vec3(LIGHT3_SIZE * 0.25);
+	COLOR *= LIGHT3_ENABLED ? 1.0 : 0.25;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-light-fifth-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-light-fifth-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-half-res`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+render_mode use_half_res_pass;
+
+void sky() {
+	if (AT_HALF_RES_PASS) {
+		COLOR = EYEDIR * 0.5 + 0.5;
+	} else {
+		COLOR = HALF_RES_COLOR.rgb * vec3(1.0, 0.8, 0.6) + vec3(0.0, 0.0, 0.2);
+	}
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-half-res-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-half-res-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-quarter-res`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+render_mode use_half_res_pass, use_quarter_res_pass;
+
+void sky() {
+	if (AT_QUARTER_RES_PASS) {
+		COLOR = vec3(fract(FRAGCOORD.xy / 4.0), SCREEN_UV.x);
+	} else if (AT_HALF_RES_PASS) {
+		COLOR = mix(QUARTER_RES_COLOR.rgb, EYEDIR * 0.5 + 0.5, 0.5);
+	} else {
+		COLOR = HALF_RES_COLOR.rgb;
+	}
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-quarter-res-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-quarter-res-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-quarter-res-alone`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+render_mode use_quarter_res_pass;
+
+void sky() {
+	COLOR = AT_QUARTER_RES_PASS ? EYEDIR * 0.5 + 0.5 : QUARTER_RES_COLOR.rgb * HALF_RES_COLOR.rgb;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-quarter-res-alone-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-quarter-res-alone-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-half-res-unset`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = HALF_RES_COLOR.rgb * QUARTER_RES_COLOR.rgb * vec3(0.9, 0.6, 0.3);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-half-res-unset-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-half-res-unset-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-cubemap-pass`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = AT_CUBEMAP_PASS ? vec3(1.0, 0.0, 0.0) : vec3(0.1, 0.7, 0.3);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-cubemap-pass-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-cubemap-pass-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-passes-odd-size`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+render_mode use_half_res_pass, use_quarter_res_pass;
+
+void sky() {
+	if (AT_QUARTER_RES_PASS) {
+		COLOR = vec3(fract(FRAGCOORD.xy / 4.0), SCREEN_UV.x);
+	} else if (AT_HALF_RES_PASS) {
+		COLOR = mix(QUARTER_RES_COLOR.rgb, EYEDIR * 0.5 + 0.5, 0.5);
+	} else {
+		COLOR = HALF_RES_COLOR.rgb;
+	}
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-passes-odd-size-godot.png" width="148" alt="Godot"> | <img src="showcase/sky-passes-odd-size-three.png" width="148" alt="Transpilation"> |
+
+## Showcase `sky-passes-under-4-px`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+render_mode use_half_res_pass, use_quarter_res_pass;
+
+void sky() {
+	if (AT_QUARTER_RES_PASS) {
+		COLOR = vec3(fract(FRAGCOORD.xy / 4.0), SCREEN_UV.x);
+	} else if (AT_HALF_RES_PASS) {
+		COLOR = mix(QUARTER_RES_COLOR.rgb, EYEDIR * 0.5 + 0.5, 0.5);
+	} else {
+		COLOR = HALF_RES_COLOR.rgb;
+	}
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-passes-under-4-px-godot.png" width="12" alt="Godot"> | <img src="showcase/sky-passes-under-4-px-three.png" width="12" alt="Transpilation"> |
+
 ## `COLOR`
 
 `COLOR` is the colour `sky()` writes, linear. Godot's sky template holds it in its local `color`, and writes it to the frame after the environment's brightness and fog.
@@ -541,6 +786,33 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 `FOG` starts at `vec4(0.0)`. After the scene's fog, Godot mixes the sky's colour toward `FOG.rgb` by `FOG.a` when `FOG.a` is above 0 (`sky.glsl:238`, `:297-298`). `disable_fog` turns off both.
 
 The transpiler emits the template's local `custom_fog`. Rows: `sky.sky.FOG`. Godot source: `servers/rendering/shader_types.cpp:494`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `LIGHT0_*` to `LIGHT3_*`
+
+Each `LIGHTn_*` reads slot n of the template's `directional_lights` buffer (`sky.cpp:761-780`). Godot fills the slots with the first four DirectionalLight3D nodes of the render's light list whose sky mode is not Light Only, and leaves `ENABLED` false in each slot past the last (`sky.cpp:1054-1112`). `DIRECTION` is the light's +Z axis, `ENERGY` its energy, `COLOR` its linear colour and `SIZE` its angular diameter in radians. A slot past the last light keeps what Godot wrote there last, so only its `ENABLED` is defined: `writeSkyBindings` writes zero there. It writes the slots from the `lights` of its scene.
+
+The transpiler emits the template's uniforms `directional_lights.data.*`. Rows: `sky.global.LIGHT0_ENABLED`, `sky.global.LIGHT0_DIRECTION`, `sky.global.LIGHT0_ENERGY`, `sky.global.LIGHT0_COLOR`, `sky.global.LIGHT0_SIZE`, `sky.global.LIGHT1_ENABLED`, `sky.global.LIGHT1_DIRECTION`, `sky.global.LIGHT1_ENERGY`, `sky.global.LIGHT1_COLOR`, `sky.global.LIGHT1_SIZE`, `sky.global.LIGHT2_ENABLED`, `sky.global.LIGHT2_DIRECTION`, `sky.global.LIGHT2_ENERGY`, `sky.global.LIGHT2_COLOR`, `sky.global.LIGHT2_SIZE`, `sky.global.LIGHT3_ENABLED`, `sky.global.LIGHT3_DIRECTION`, `sky.global.LIGHT3_ENERGY`, `sky.global.LIGHT3_COLOR`, `sky.global.LIGHT3_SIZE`. Godot source: `servers/rendering/shader_types.cpp:465`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## The half and quarter resolution passes
+
+`use_quarter_res_pass` and `use_half_res_pass` make Godot run `sky()` into a target of a quarter and a half of the screen first, with `AT_QUARTER_RES_PASS` or `AT_HALF_RES_PASS` true (`sky.cpp:1427-1457`). The full pass then reads them as `QUARTER_RES_COLOR` and `HALF_RES_COLOR` at its `uv` (`sky.glsl:251-265`), and the half pass reads the quarter target. A colour with no pass to read is white behind the scene and black in the radiance octmap. `transpileSky` gives each pass as `half` and `quarter` of the sky, and `SkyResolutionPasses` draws them before the full pass.
+
+The transpiler emits `the defines of the template variant, and a render target for each pass`. Rows: `sky.global.AT_HALF_RES_PASS`, `sky.global.AT_QUARTER_RES_PASS`, `sky.sky.HALF_RES_COLOR`, `sky.sky.QUARTER_RES_COLOR`, `sky render_mode use_half_res_pass`, `sky render_mode use_quarter_res_pass`. Godot source: `servers/rendering/shader_types.cpp:462`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `AT_CUBEMAP_PASS`
+
+`AT_CUBEMAP_PASS` is true while Godot draws the sky into the radiance octmap that reflections read, and false behind the scene (`sky.glsl:119-123`). `transpileSky` with the `octmap` pass gives that variant.
+
+The transpiler emits `the defines of the template variant`. Rows: `sky.global.AT_CUBEMAP_PASS`. Godot source: `servers/rendering/shader_types.cpp:464`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

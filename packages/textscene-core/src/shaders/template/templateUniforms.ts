@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { uniform, uniformArray } from 'three/tsl';
+import { uint, uniform, uniformArray } from 'three/tsl';
 import type { Node, UniformNode } from 'three/webgpu';
 import type { ArrayValue, StructOf, StructValue, Value } from '../language/emitValue.js';
 import type { StructMember } from '../language/shaderTree.js';
@@ -56,14 +56,19 @@ export class TemplateUniforms {
   }
 
   private array(name: string, type: string, count: number): ArrayValue {
+    // A `uint` array, not `bool`: three pads a bool array to `vec4` and reads it with `all()`, a GLSL error.
+    const isBool = type === 'bool';
+    const stored = isBool ? 'uint' : type;
     const node =
       this.byName.get(name) ??
-      uniformArray(Array.from({ length: count }, () => initialValue(type)) as never[], type);
+      uniformArray(Array.from({ length: count }, () => initialValue(stored)) as never[], stored);
     this.byName.set(name, node as unknown as UniformNode<unknown>);
+    const element = (index: Node | number) =>
+      (node as unknown as { element(index: Node | number): ReturnType<typeof uint> }).element(index);
     return {
       kind: 'array',
       count,
-      element: (index) => (node as unknown as { element(index: Node | number): Node }).element(index),
+      element: (index) => (isBool ? element(index).notEqual(uint(0)) : element(index)) as unknown as Node,
     };
   }
 

@@ -82,6 +82,7 @@ A WorldEnvironment whose Sky has a ShaderMaterial draws the shader as Godot does
 - If Godot does not compile the shader, the previewer draws Godot's default black sky. The Inspector of the WorldEnvironment shows Godot's error and its line under **Shader Error**.
 - If the previewer does not translate a part of the shader yet, it also draws the default sky. The message under **Shader Error** names the part.
 - An `#if` can call `decompress` in Zstandard or Brotli mode. The previewer loads its decoders only for a shader that names `decompress`.
+- The shader reads the scene's suns through `LIGHT0_*` to `LIGHT3_*`, and draws its half and quarter resolution passes when it sets `use_half_res_pass` or `use_quarter_res_pass`.
 - The reflections and the ambient light show the sky at the first frame. A sky that moves with `TIME` or with the camera moves only in the background (#1779).
 
 `TIME` follows the **Timeline** while it shows an AnimationPlayer. Play advances `TIME`, pause holds it, a seek sets it to the playhead, and stop sets it to 0. With no AnimationPlayer, `TIME` advances every frame, as in a running game. `TIME` wraps at the project setting `rendering/limits/time/time_rollover_secs`, 3600 seconds by default. Drop `project.godot` with the scene to use another value.

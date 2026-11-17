@@ -253,4 +253,6 @@ export const LIGHTING_SCENES = [
   { name: 'shader-sky-parameters', file: 'unit-shader-sky-parameters.tscn' },
   { name: 'shader-sky-fog', file: 'unit-shader-sky-fog.tscn' },
   { name: 'shader-sky-cubemap', file: 'unit-shader-sky-cubemap.tscn' },
+  { name: 'shader-sky-light', file: 'unit-shader-sky-light.tscn' },
+  { name: 'shader-sky-half-res', file: 'unit-shader-sky-half-res.tscn' },
 ];

@@ -7,6 +7,10 @@ import { isSamplerType, textureKindOf, type TextureKind } from '../language/type
 export interface SkyUsage {
   /** Any `LIGHTn_*`: Godot then hands the sky the scene's directional lights (`sky.cpp:1055`). */
   readonly light: boolean;
+  /** `TIME` or `POSITION`, which make an Automatic sky of radiance size 256 real-time (`sky.cpp:1004`). */
+  readonly timeOrPosition: boolean;
+  /** A uniform that is not a sampler, which gives the material a buffer: Godot's `ubo_size > 0`. */
+  readonly hasBufferUniforms: boolean;
   /** Each sampler uniform by name. */
   readonly samplers: Readonly<Record<string, SkySampler>>;
 }
@@ -18,7 +22,7 @@ export interface SkySampler {
   readonly isColor: boolean;
 }
 
-const NO_USAGE: SkyUsage = { light: false, samplers: {} };
+const NO_USAGE: SkyUsage = { light: false, timeOrPosition: false, hasBufferUniforms: false, samplers: {} };
 
 /** What `tree` reads, as Godot's compiler flags it, or nothing for a sky that draws Godot's default sky. */
 export function skyUsage(tree: ShaderNode | null): SkyUsage {
@@ -26,6 +30,8 @@ export function skyUsage(tree: ShaderNode | null): SkyUsage {
   const names = builtInsRead(tree);
   return {
     light: [...names].some((name) => SKY_LIGHT_BUILT_IN.test(name)),
+    timeOrPosition: names.has('TIME') || names.has('POSITION'),
+    hasBufferUniforms: tree.uniforms.some((uniform) => !isSamplerType(uniform.type)),
     samplers: samplersOf(tree),
   };
 }

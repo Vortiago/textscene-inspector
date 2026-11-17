@@ -1,7 +1,7 @@
 import { parsedShader, type ParsedShader } from '../language/parseShader.js';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import type { ShaderDecoders } from '../preprocessor/decoders.js';
-import { transpileParsedSky } from './transpileSky.js';
+import { disposeSky, transpileParsedSky } from './transpileSky.js';
 
 /** Godot's refusal of a text, or the transpiler's for a construct it does not port yet. */
 export type SkyRefusal = Pick<ShadingLanguageError, 'message' | 'owner'>;
@@ -16,9 +16,7 @@ export type SkyCompile =
 export function compileSky(code: string, decoders: ShaderDecoders): SkyCompile {
   try {
     const parsed = parsedShader(code, { decoders });
-    const { mesh } = transpileParsedSky(parsed, '');
-    mesh.geometry.dispose();
-    mesh.material.dispose();
+    disposeSky(transpileParsedSky(parsed, ''));
     return { parsed, refusal: null };
   } catch (error) {
     if (!(error instanceof ShadingLanguageError)) return { failure: error, refusal: null };

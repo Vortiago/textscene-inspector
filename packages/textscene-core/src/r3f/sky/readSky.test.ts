@@ -45,4 +45,9 @@ describe('useReadSky', () => {
     const sky = decodeSky({}, decodeSkyMaterial('ProceduralSkyMaterial', {})!);
     expect(renderHook(() => useReadSky(sky, null, null)).result.current).toBe(sky);
   });
+
+  it('bakes an Automatic sky whose shader reads TIME with the fast filter, as Godot runs it in real time', () => {
+    const sky = shaderSky('shader_type sky;\nvoid sky() { COLOR = vec3(fract(TIME)); }\n');
+    expect(renderHook(() => useReadSky(sky, transpiler, {})).result.current?.radianceFilter).toBe('fast');
+  });
 });
