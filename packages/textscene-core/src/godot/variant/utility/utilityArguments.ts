@@ -1,7 +1,6 @@
-import { stringToFloat } from '../../string/strtod.js';
-import { doubleToInt64, doubleToUint64, int64ToFloat32, wrapInt32 } from '../cInteger.js';
+import { doubleToUint64, wrapInt32 } from '../cInteger.js';
 import { booleanize } from '../compare.js';
-import { castVariant, canConvertStrict, toInt32 } from '../construct/variantCast.js';
+import { castVariant, canConvertStrict, toFloat32, toInt32, toUint32 } from '../construct/variantCast.js';
 import type { Variant, VariantTypeName } from '../value/variant.js';
 
 /** The C++ parameter types of the utility functions a FUNCBINDR binding checks and casts. */
@@ -59,22 +58,6 @@ export const checkedType = (parameter: CppParameter): VariantTypeName => CHECKED
 /** Whether `Variant::can_convert_strict` lets `argument` through to a parameter of `parameter`. */
 export const isAccepted = (argument: Variant, parameter: CppParameter): boolean =>
   canConvertStrict(argument.type, checkedType(parameter));
-
-// `_to_float<float>` (variant.h:361): an int64 rounds once to a float, other sources through a double.
-function toFloat32(argument: Variant): number {
-  if (argument.type === 'INT') return int64ToFloat32(argument.value);
-  if (argument.type === 'STRING') return Math.fround(stringToFloat(argument.value));
-  return Math.fround(castVariant(argument, 'FLOAT').value as number);
-}
-
-// `_to_int<uint32_t>`: the low 32 bits of the int64 a double truncates to, as cvttsd2si gives.
-function toUint32(argument: Variant): number {
-  const value =
-    argument.type === 'FLOAT'
-      ? doubleToInt64(argument.value)
-      : (castVariant(argument, 'INT').value as bigint);
-  return Number(BigInt.asUintN(32, value));
-}
 
 // `_to_int<uint64_t>`: a double through the unsigned cast, every other source through its int64 bits.
 function toUint64(argument: Variant): bigint {

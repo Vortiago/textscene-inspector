@@ -3,7 +3,7 @@ import { instruction, keywordInstruction } from './instructions.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import type { ExpressionParser } from './parseExpression.js';
 import type { RenderingMethod } from '../preprocessor/preprocessor.js';
-import type { GlobalNames } from './scope.js';
+import type { GlobalNames, Identifier } from './scope.js';
 import type { SourcePosition } from './shadingLanguageError.js';
 import type { Scalar, UniformHint, UniformNode, UniformScope, ValueType } from './shaderTree.js';
 import type { TokenCursor } from './tokenCursor.js';
@@ -79,6 +79,8 @@ interface Draft {
 export class UniformParser {
   readonly uniforms: UniformNode[] = [];
   readonly groups: { readonly position: SourcePosition }[] = [];
+  /** Each uniform's name as a body reads it, written by `declaration` beside `uniforms`. */
+  private readonly identifiers = new Map<string, Identifier>();
   /** Written only by `groupStatement`. */
   private group = '';
   private subgroup = '';
@@ -93,12 +95,7 @@ export class UniformParser {
 
   /** Each uniform by its name, as a function body sees it. */
   names(): GlobalNames {
-    return new Map(
-      this.uniforms.map((uniform) => [
-        uniform.name,
-        { kind: 'uniform', type: uniform.type, arraySize: uniform.arraySize ?? 0, isConst: false },
-      ])
-    );
+    return this.identifiers;
   }
 
   uniform(name: string): UniformNode | undefined {
@@ -130,6 +127,7 @@ export class UniformParser {
     if (this.context.isTaken(name)) this.tokens.fail(`Redefinition of '${name}'.`);
     token = this.tokens.next();
     if (token.type === 'TK_BRACKET_OPEN') {
+      if (arraySize > 0) this.tokens.fail('Array size is already defined.');
       arraySize = this.expressions.arrays.size(true)!;
       token = this.tokens.next();
     }
@@ -142,11 +140,13 @@ export class UniformParser {
       rows,
     };
     if (token.type === 'TK_COLON') token = this.hints(draft, type, arraySize);
-    const instanceIndex = scope === 'instance' ? this.instanceIndexOf(draft) : undefined;
+    // Godot keeps `instance_index` on a uniform of any scope, and counts only an `instance` one.
+    const instanceIndex = scope === 'instance' ? this.instanceIndexOf(draft) : draft.instanceIndex;
     const defaultValue = token.type === 'TK_OP_ASSIGN' ? this.defaultValue(type, arraySize) : undefined;
     if (defaultValue) token = this.tokens.next();
     const header = { name, type, arraySize, scope, instanceIndex, defaultValue };
     this.uniforms.push(uniformNode(draft, header, this.group, this.subgroup, first.position));
+    this.identifiers.set(name, { kind: 'uniform', type, arraySize, isConst: false });
     if (token.type !== 'TK_SEMICOLON') this.tokens.fail("Expected a ';'.");
   }
 

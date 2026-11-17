@@ -17,9 +17,21 @@ describe('a uniform declaration', () => {
     });
   });
 
-  it('reads a size before the name, after it, or both, as Godot does', () => {
+  it('reads a size before the name or after it', () => {
     expect(uniformOf('uniform float[3] a;').arraySize).toBe(3);
     expect(uniformOf('uniform float a[4];').arraySize).toBe(4);
+  });
+
+  it('refuses a size both before and after the name, as Godot does', () => {
+    expect(() => treeOf('uniform float[2] a[3];')).toThrow('Array size is already defined.');
+  });
+
+  it('keeps instance_index on a uniform that is not instance, as Godot does', () => {
+    expect(uniformOf('uniform float a : instance_index(2);').instanceIndex).toBe(2);
+  });
+
+  it('lets a uniform take the name of a struct, as Godot does', () => {
+    expect(uniformOf('struct S { float x; };\nuniform float S;').name).toBe('S');
   });
 
   it('converts the default to the type of the uniform', () => {

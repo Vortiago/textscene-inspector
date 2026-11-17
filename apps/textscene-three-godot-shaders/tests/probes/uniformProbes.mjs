@@ -251,6 +251,11 @@ function hintProbes() {
       'uniform int u : hint_enum("Low", "High") = 1;\nint probe() { return u; }'
     ),
     uniformProbe(
+      'struct-name',
+      ['uniform'],
+      'struct S { float x; };\nuniform float S = 2.0;\nfloat probe() { return S; }'
+    ),
+    uniformProbe(
       'group-uniforms',
       ['uniform', 'group_uniforms'],
       'group_uniforms Look;\nuniform float a = 1.0;\ngroup_uniforms Look.Fine;\nuniform float b = 2.0;\ngroup_uniforms;\nuniform float c = 3.0;\nvec3 probe() { return vec3(a, b, c); }'
@@ -260,6 +265,7 @@ function hintProbes() {
 
 /** Godot's refusal of each uniform it does not take, with its message and line. */
 const REFUSALS = [
+  ['two-sizes', 'uniform float[2] u[3];\nfloat probe() { return 0.0; }'],
   ['assignment', 'uniform float u;\nfloat probe() { u = 1.0; return u; }'],
   [
     'out-argument',

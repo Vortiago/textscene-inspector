@@ -82,7 +82,6 @@ function checkExpression(expression: Expression): void {
   }
 }
 
-/** A value type's row, or the struct type's row for a struct's name. */
 /** A type's own row, `sampler2D` or `vec3`, or the struct row for the name of a struct. */
 function checkType(type: string, position: SourcePosition): void {
   const row = instruction(type);
