@@ -1,4 +1,4 @@
-import { parsedShader } from '../language/parseShader.js';
+import { parsedShader, type ShaderOptions } from '../language/parseShader.js';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import type { ShaderNode } from '../language/shaderTree.js';
 import { everyExpressionIn } from '../language/treeWalk.js';
@@ -24,10 +24,10 @@ const NO_USAGE: SkyUsage = { light: false, samplers: {} };
 const LIGHT_BUILT_IN = /^LIGHT[0-3]_/;
 
 /** What `source` reads, as Godot's compiler flags it, or nothing for a text Godot does not compile. */
-export function skyUsage(source: string): SkyUsage {
+export function skyUsage(source: string, options: ShaderOptions = {}): SkyUsage {
   let tree: ShaderNode;
   try {
-    tree = parsedShader(source).tree;
+    tree = parsedShader(source, options).tree;
   } catch (error) {
     if (error instanceof ShadingLanguageError) return NO_USAGE;
     throw error;

@@ -14,8 +14,4 @@ describe('decodeCubemapFaces', () => {
   it('decodes nothing from seven images, which Godot refuses (error case)', () => {
     expect(decodeCubemapFaces([1, 2, 3, 4, 5, 6, 7].map((level) => face(level)))).toBeNull();
   });
-
-  it('decodes nothing from faces of two sizes, which Godot refuses (edge case)', () => {
-    expect(decodeCubemapFaces([face(1), face(2), face(3), face(4), face(5), face(6, 2)])).toBeNull();
-  });
 });

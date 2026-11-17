@@ -182,6 +182,8 @@ const NO_OWN_PROPERTIES_RESOURCES: Readonly<Record<string, string>> = {
   Texture3D: '`scene/resources/texture.cpp:176` binds methods only',
   TextureLayered: '`scene/resources/texture.cpp:242-262` binds methods only',
   CompressedTexture2DArray: '`scene/resources/compressed_texture.h:189-194` declares no `_bind_methods`',
+  CompressedCubemap: '`scene/resources/compressed_texture.h:196-202` declares no `_bind_methods`',
+  Cubemap: '`scene/resources/image_texture.cpp:537-539` binds methods only',
   PointMesh: '`scene/resources/3d/primitive_meshes.h:406-414` declares no `_bind_methods`',
   SyntaxHighlighter:
     "`scene/resources/syntax_highlighter.cpp:105` binds methods only; :604-611 are CodeHighlighter's",

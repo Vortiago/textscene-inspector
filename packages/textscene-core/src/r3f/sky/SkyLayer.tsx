@@ -10,7 +10,7 @@
  * (`render_forward_clustered.cpp:1993`, `render_scene_data_rd.cpp:169`, `:241-246`, `sky.cpp:1086`).
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
@@ -39,6 +39,9 @@ import { useShaderTimeFrame } from '../shaderTime/canvasShaderTime';
 import { useShaderSkyTextures } from './shaderSkyTextures';
 import { useShaderDecoders } from '../shaderDecoders';
 import { useShaderSkyErrorReport } from './shaderSkyError';
+import { useDecompressedSky } from './decompressedSky';
+import { useProjectSettings } from '../contexts/ProjectSettingsContext';
+import { projectSampling } from '../../parser/projectSettingsParser';
 import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
 import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
@@ -75,7 +78,7 @@ interface SkyLayerProps {
 const LIGHT_SLOTS = 4;
 
 export function SkyLayer({
-  sky,
+  sky: authoredSky,
   energyMultiplier = 1,
   contribution = 1,
   reflects = true,
@@ -100,9 +103,14 @@ export function SkyLayer({
 
   const isPanoramaDrawn = useIsPanoramaDrawn(panorama);
   useShaderTimeFrame();
+  const decoders = useShaderDecoders(
+    authoredSky.material.kind === 'shader' ? authoredSky.material.code : null
+  );
+  const sky = useDecompressedSky(authoredSky, decoders);
   const [textures, textureSlots] = useShaderSkyTextures(sky.material);
-  const decoders = useShaderDecoders(sky.material.kind === 'shader' ? sky.material.code : null);
   useShaderSkyErrorReport(sky.material, decoders);
+  const { settings } = useProjectSettings();
+  const sampling = useMemo(() => projectSampling(settings), [settings]);
 
   // Written only by the effect below, while it holds bakes.
   const bakeWantedRef = useRef<(() => boolean) | null>(null);
@@ -127,6 +135,7 @@ export function SkyLayer({
       panorama,
       textures,
       decoders,
+      sampling,
       asBackground,
       energyMultiplier,
       rotation: skyRotation,
@@ -219,6 +228,7 @@ export function SkyLayer({
     panorama,
     textures,
     decoders,
+    sampling,
     isPanoramaDrawn,
     asBackground,
     lightsKey,

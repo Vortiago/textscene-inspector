@@ -79,13 +79,17 @@ export function holdSkyBakes(
 
 /** The input a bake reads besides the sky. Only a debanded sky reads the energy multiplier. */
 function inputKey(
-  { sky, panorama, textures = {}, asBackground, energyMultiplier, rotation }: SkyBakeInput,
+  { sky, panorama, textures = {}, sampling, asBackground, energyMultiplier, rotation }: SkyBakeInput,
   lightsKey: string
 ): string {
   const debandedEnergy = isDebanded(sky.material) ? energyMultiplier : '';
   return [
     panorama?.uuid ?? '',
-    Object.entries(textures).map(([name, texture]) => `${name}=${texture.uuid}`),
+    Object.entries(textures)
+      .map(([name, texture]) => `${name}=${texture.uuid}`)
+      .sort(),
+    sampling?.anisotropicFilteringLevel ?? '',
+    sampling?.useNearestMipmapFilter ?? '',
     asBackground,
     debandedEnergy,
     rotation.x,

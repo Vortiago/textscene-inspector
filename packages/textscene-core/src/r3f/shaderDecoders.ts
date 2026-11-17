@@ -7,7 +7,7 @@ import { loadBrotliDecoder } from './controls/native/text/brotliDecoder.js';
 const loadZstdDecoder = memoisedImport(() => import('fzstd').then((module) => module.decompress));
 
 /** The Zstandard and Brotli decoders the previewer lends a shader's `#if`, one import shared by all. */
-export const loadShaderDecoders = memoisedImport(async (): Promise<ShaderDecoders> => {
+const loadShaderDecoders = memoisedImport(async (): Promise<ShaderDecoders> => {
   const [zstd, brotli] = await Promise.all([loadZstdDecoder(), loadBrotliDecoder()]);
   return { zstd, brotli };
 });

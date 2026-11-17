@@ -170,6 +170,7 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
   const selectClip = useCallback((name: string) => {
     setSelectedClip(name);
     setTime(0);
+    setSeeks((count) => count + 1);
   }, []);
 
   // Called every frame while playing. The throttle keeps the other consumers,

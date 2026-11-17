@@ -7,7 +7,7 @@ import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
 import { projectTimeRolloverSeconds } from '../../parser/projectSettingsParser.js';
 
 /** One `TIME` for every shader a renderer draws, as Godot keeps one (`renderer_compositor_rd.cpp:111`). */
-export class CanvasShaderTime {
+class CanvasShaderTime {
   /** Written only by `advance`. */
   private playbackTime = new PlaybackShaderTime(new ShaderClock());
   private rolloverSeconds: number | undefined;

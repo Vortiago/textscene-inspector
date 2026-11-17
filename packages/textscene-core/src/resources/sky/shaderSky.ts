@@ -2,10 +2,10 @@ import * as THREE from 'three';
 import { warn } from '../../logger';
 import { warnOnce } from '../../utils/warnOnce';
 import { textToVariant } from '../../godot/variant/reader/variantReader';
-import { ShadingLanguageError } from '../../shaders/language/shadingLanguageError';
 import { transpileParsedSky, type TranspiledSky } from '../../shaders/sky/transpileSky';
-import { parsedShader, type ParsedShader } from '../../shaders/language/parseShader';
+import { compileSky, type SkyCompile, type SkyRefusal } from '../../shaders/sky/compileSky';
 import { perObject } from '../../utils/perObject';
+import { GODOT_SAMPLING } from '../../shaders/uniforms/samplerState';
 import type { TranspiledUniform } from '../../shaders/uniforms/transpiledUniform';
 import type { ShaderDecoders } from '../../shaders/preprocessor/decoders';
 import { ShaderSkyBackground, ShaderSkyCube } from '../../r3f/sky/shaderSkyBackground';
@@ -16,7 +16,7 @@ import type { ShaderSkyProperties, Sky } from './types';
 import type { SkyEnvironment, SkyEnvironmentInput } from './build';
 
 /** The sky Godot draws for a sky material whose shader does not compile (`sky.cpp:807-814`, `:1480-1488`). */
-export const GODOT_DEFAULT_SKY = `// Default sky shader.
+const GODOT_DEFAULT_SKY = `// Default sky shader.
 
 shader_type sky;
 
@@ -29,9 +29,9 @@ void sky() {
 export function buildShaderSkyEnvironment(
   gl: THREE.WebGLRenderer,
   material: ShaderSkyProperties,
-  { sky, lights, asBackground, textures = {}, decoders = {} }: SkyEnvironmentInput
+  { sky, lights, asBackground, textures = {}, decoders = {}, sampling = GODOT_SAMPLING }: SkyEnvironmentInput
 ): SkyEnvironment | null {
-  const transpiled = () => transpiledShaderSky(material, { textures, decoders });
+  const transpiled = () => transpiledShaderSky(material, { textures, decoders, sampling });
   let background: ShaderSkyBackground | null = null;
   let layers: SkyLayers;
   try {
@@ -69,49 +69,34 @@ function bakeShaderRadiance(
   }
 }
 
-/** The parse of a text the previewer draws, or why it draws Godot's default sky instead. */
-type SkyCompile = { readonly parsed: ParsedShader; readonly refusal: null } | { readonly refusal: string };
-
 /** One compile per material and decoders, which every bake and the node details read. */
 const skyCompileOf = perObject((material: ShaderSkyProperties) =>
-  perObject((decoders: ShaderDecoders) => compileSky(material.code, decoders))
+  perObject((decoders: ShaderDecoders): SkyCompile => compileSky(material.code, decoders))
 );
 
-/** The first transpile proves the text: a refusal can come from the parse, the checks or the link. */
-function compileSky(code: string, decoders: ShaderDecoders): SkyCompile {
-  try {
-    const parsed = parsedShader(code, { decoders });
-    const { mesh } = transpileParsedSky(parsed, '');
-    mesh.geometry.dispose();
-    mesh.material.dispose();
-    return { parsed, refusal: null };
-  } catch (error) {
-    if (!(error instanceof ShadingLanguageError)) throw error;
-    return { refusal: refusalMessage(error) };
-  }
-}
-
-/** Written once, by the first sky that draws the default. */
-let defaultSkyParse: ParsedShader | undefined;
+/** The default sky's compile, written once by the first sky that draws it. */
+let defaultSky: SkyCompile | undefined;
 
 /** The sky of `material` with its parameters, or Godot's default sky for a shader it cannot draw. */
-export function transpiledShaderSky(
+function transpiledShaderSky(
   material: ShaderSkyProperties,
-  { textures, decoders }: Required<Pick<SkyEnvironmentInput, 'textures' | 'decoders'>>
+  { textures, decoders, sampling }: Required<Pick<SkyEnvironmentInput, 'textures' | 'decoders' | 'sampling'>>
 ): TranspiledSky {
   const compile = skyCompileOf(material)(decoders);
   if (compile.refusal !== null) {
-    warnOnce(material, 'refused', `[Sky] ${compile.refusal}`);
-    defaultSkyParse ??= parsedShader(GODOT_DEFAULT_SKY);
-    return transpileParsedSky(defaultSkyParse, '');
+    warnOnce(material, 'refused', `[Sky] ${refusalMessage(compile.refusal)}`);
+    defaultSky ??= compileSky(GODOT_DEFAULT_SKY, {});
+    if (!('parsed' in defaultSky)) throw new Error("expected Godot's default sky to compile");
+    return transpileParsedSky(defaultSky.parsed, '');
   }
-  const sky = transpileParsedSky(compile.parsed, '');
+  if ('failure' in compile) throw compile.failure;
+  const sky = transpileParsedSky(compile.parsed, '', sampling);
   setParameters(sky.parameters, material.parameters, textures);
   return sky;
 }
 
 /** Writes each value its uniform takes. Godot ignores a value no uniform declares. */
-export function setParameters(
+function setParameters(
   uniforms: ReadonlyMap<string, Pick<TranspiledUniform, 'set'>>,
   texts: Readonly<Record<string, string>>,
   textures: Readonly<Record<string, THREE.Texture>>
@@ -122,10 +107,11 @@ export function setParameters(
 
 /** Why the previewer draws Godot's default sky for `material`, or null when it draws the shader. */
 export function shaderSkyRefusal(material: ShaderSkyProperties, decoders: ShaderDecoders): string | null {
-  return skyCompileOf(material)(decoders).refusal;
+  const { refusal } = skyCompileOf(material)(decoders);
+  return refusal && refusalMessage(refusal);
 }
 
-function refusalMessage(error: ShadingLanguageError): string {
+function refusalMessage(error: SkyRefusal): string {
   if (error.owner === undefined)
     return `Godot does not compile the sky shader, and draws its default sky: ${error.message}`;
   return `The previewer does not translate this sky shader yet (${error.owner}), and draws Godot's default sky: ${error.message}`;

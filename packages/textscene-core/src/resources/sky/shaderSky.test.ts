@@ -1,13 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import * as THREE from 'three';
 import type { NodeMaterial } from 'three/webgpu';
 import * as logger from '../../logger';
+import * as parseShader from '../../shaders/language/parseShader';
 import { generatedFragmentShader } from '../../shaders/generatedShader.testkit';
-import { transpileSky } from '../../shaders/sky/transpileSky';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { installNodesHandler } from '../../shaders/nodesHandler';
 import { ShaderSkyBackground } from '../../r3f/sky/shaderSkyBackground';
-import { GODOT_DEFAULT_SKY, setParameters, shaderSkyRefusal, transpiledShaderSky } from './shaderSky';
+import { shaderSkyRefusal } from './shaderSky';
 import { buildSkyEnvironment } from './build';
 import { decodeSky } from './decode';
 import type { ShaderSkyProperties, Sky } from './types';
@@ -24,28 +23,34 @@ function shaderMaterial(code: string): ShaderSkyProperties {
   };
 }
 
-const NO_INPUTS = { textures: {}, decoders: {} };
+/** Godot's default sky, which it draws for a shader it does not compile (`sky.cpp:807-814`). */
+const DEFAULT_SKY = 'shader_type sky;\n\nvoid sky() {\n\tCOLOR = vec3(0.0);\n}\n';
 
-const fragmentOf = (code: string) =>
-  generatedFragmentShader(
-    (transpiledShaderSky(shaderMaterial(code), NO_INPUTS).mesh.material as NodeMaterial).fragmentNode!
-  );
+async function backgroundFragmentOf(code: string): Promise<string> {
+  const { renderer } = await testRenderer();
+  installNodesHandler(renderer, 'linear');
+  const sky: Sky = decodeSky({}, shaderMaterial(code));
+  const environment = buildSkyEnvironment(renderer, { sky, lights: [], asBackground: true, energy: 1 })!;
+  const fragment = generatedFragmentShader((environment.background!.material as NodeMaterial).fragmentNode!);
+  environment.dispose();
+  return fragment;
+}
 
-describe('transpiledShaderSky', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
-  it("draws Godot's default sky for a shader Godot does not compile", () => {
+describe('buildSkyEnvironment of a shader Godot does not compile', () => {
+  it("draws Godot's default sky", async () => {
     vi.spyOn(logger, 'warn').mockImplementation(() => {});
-    expect(fragmentOf('shader_type sky;\nvoid sky() { COLOR = 1.0; }\n')).toBe(
-      generatedFragmentShader((transpileSky(GODOT_DEFAULT_SKY).mesh.material as NodeMaterial).fragmentNode!)
+    expect(await backgroundFragmentOf('shader_type sky;\nvoid sky() { COLOR = 1.0; }\n')).toBe(
+      await backgroundFragmentOf(DEFAULT_SKY)
     );
   });
 
-  it("warns with Godot's error and its line for a shader Godot does not compile", () => {
+  it("warns with Godot's error and its line", async () => {
     const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-    transpiledShaderSky(shaderMaterial('shader_type sky;\n\nvoid sky() { COLOR = 1.0; }\n'), NO_INPUTS);
+    await backgroundFragmentOf('shader_type sky;\n\nvoid sky() { COLOR = 1.0; }\n');
     expect(warn).toHaveBeenCalledWith(expect.stringMatching(/^\[Sky\] Godot does not compile .* 3:\d+: /));
   });
 });
@@ -60,24 +65,13 @@ describe('shaderSkyRefusal', () => {
   it('gives nothing for a shader the previewer draws', () => {
     expect(shaderSkyRefusal(shaderMaterial(TINTED_SKY), {})).toBeNull();
   });
-});
 
-describe('setParameters', () => {
-  it('writes the Variant of each text to its uniform', () => {
-    const tint = { set: vi.fn() };
-    setParameters(new Map([['tint', tint]]), { tint: '0.25' }, {});
-    expect(tint.set).toHaveBeenCalledWith({ type: 'FLOAT', value: 0.25 });
-  });
-
-  it('ignores a value no uniform declares', () => {
-    expect(() => setParameters(new Map(), { gone: '1.0' }, { alsoGone: new THREE.Texture() })).not.toThrow();
-  });
-
-  it('writes each loaded texture to its sampler', () => {
-    const stars = { set: vi.fn() };
-    const texture = new THREE.Texture();
-    setParameters(new Map([['stars', stars]]), {}, { stars: texture });
-    expect(stars.set).toHaveBeenCalledWith(texture);
+  it('gives nothing, and throws nothing, for a defect that is no Godot error (error case)', () => {
+    vi.spyOn(parseShader, 'parsedShader').mockImplementation(() => {
+      throw new TypeError('a parser defect');
+    });
+    const material = shaderMaterial(TINTED_SKY);
+    expect(shaderSkyRefusal(material, {})).toBeNull();
   });
 });
 

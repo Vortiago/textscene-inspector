@@ -11,6 +11,7 @@ import {
   splitTopLevel,
 } from '../godot/string/string.js';
 import { boolSlotValue } from '../godot/variant/variantBool.js';
+import type { ProjectSampling } from '../shaders/uniforms/samplerState.js';
 import { dataDirectoryPath, extensionListPath } from '../godot/project/project.js';
 import { standardizeLocale } from '../godot/text/standardizeLocale.js';
 import { isLocaleRightToLeft } from '../godot/text/textServer.js';
@@ -379,6 +380,15 @@ export function projectAnisotropicFilteringLevel(settings: ProjectSettings | nul
       settings?.['rendering/textures/default_filters/anisotropic_filtering_level']
     ) ?? DEFAULT_ANISOTROPIC_FILTERING_LEVEL
   );
+}
+
+/** The `default_filters` settings every material sampler reads (`material_storage.cpp:2455-2470`). */
+export function projectSampling(settings: ProjectSettings | null): ProjectSampling {
+  return {
+    anisotropicFilteringLevel: projectAnisotropicFilteringLevel(settings),
+    useNearestMipmapFilter:
+      boolSlotValue(settings?.['rendering/textures/default_filters/use_nearest_mipmap_filter']) === true,
+  };
 }
 
 /** `RS::DECAL_FILTER_LINEAR_MIPMAPS`, Godot's default `rendering/textures/decals/filter` (`rendering_server.cpp:3804`). */

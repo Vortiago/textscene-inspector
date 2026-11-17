@@ -7,6 +7,7 @@
  */
 
 import * as THREE from 'three';
+import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
 import type { ShaderDecoders } from '../../shaders/preprocessor/decoders';
 import type { BuiltInSkyProperties, Sky } from './types';
 import { warn } from '../../logger';
@@ -57,6 +58,8 @@ export interface SkyEnvironmentInput {
   textures?: Readonly<Record<string, THREE.Texture>>;
   /** The decoders a shader sky's `#if` may decompress with. */
   decoders?: ShaderDecoders;
+  /** The project's filter settings, which a shader sky's samplers read. */
+  sampling?: ProjectSampling;
 }
 
 /**

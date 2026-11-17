@@ -18,6 +18,11 @@ describe('imageCubemap', () => {
     expect(faces.map((texture) => (texture.image.data as Uint8Array)[0])).toEqual([10, 20, 30, 40, 50, 60]);
   });
 
+  it('builds nothing from faces of two sizes, which Godot refuses (edge case)', () => {
+    const wide = savedImage('Lum8', 2, 1, '6, 6');
+    expect(imageCubemap({ form: 'image', images: [1, 2, 3, 4, 5].map(face).concat(wide) })).toBeNull();
+  });
+
   it('builds nothing from five images, which Godot refuses (error case)', () => {
     expect(imageCubemap({ form: 'image', images: [1, 2, 3, 4, 5].map(face) })).toBeNull();
   });

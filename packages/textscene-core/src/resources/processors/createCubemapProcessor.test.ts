@@ -68,6 +68,13 @@ describe('createCubemapProcessor', () => {
     expect(decode).not.toHaveBeenCalled();
   });
 
+  it('names the arrangement Godot cannot cut, past 6x1, in its error (edge case)', async () => {
+    const sidecar = SIDECAR.replace('slices/arrangement=1', 'slices/arrangement=4');
+    await expect(harness({ [PNG_PATH]: bytes(), [SIDECAR_PATH]: sidecar }).load()).rejects.toThrow(
+      'with slices Godot can cut'
+    );
+  });
+
   it('fails an image too small for its faces (edge case)', async () => {
     const sidecar = SIDECAR.replace('slices/arrangement=1', 'slices/arrangement=3');
     await expect(harness({ [PNG_PATH]: bytes(), [SIDECAR_PATH]: sidecar }).load()).rejects.toThrow(

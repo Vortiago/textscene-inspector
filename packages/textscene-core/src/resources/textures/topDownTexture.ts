@@ -8,20 +8,31 @@ interface Pixels {
   height: number;
 }
 
-const topDownCopyOf = perObject(
-  (texture: THREE.Texture): THREE.Texture => {
-    const copy = texture.clone();
-    copy.source = new THREE.Source(topDownPixels(texture.image as Pixels));
-    copy.mipmaps = texture.mipmaps.map((level) => topDownPixels(level as Pixels));
-    return copy;
-  },
-  { stamp: (texture) => texture.version }
-);
+/** One copy for each source, refilled on each change, so an edit leaves no stale copy on the GPU. */
+interface TopDownCopy {
+  readonly copy: THREE.Texture;
+  version: number;
+}
+
+const topDownCopyOf = perObject((texture: THREE.Texture): TopDownCopy => {
+  const copy = texture.clone();
+  texture.addEventListener('dispose', () => copy.dispose());
+  return { copy, version: -1 };
+});
 
 /** A transpiled shader samples with Godot's top-left origin, so a bottom-up typed array reverses its rows. */
 export function topDownTexture(texture: THREE.Texture): THREE.Texture {
   if (!isBottomUp(texture) || texture.format !== THREE.RGBAFormat) return texture;
-  return topDownCopyOf(texture);
+  const held = topDownCopyOf(texture);
+  if (held.version !== texture.version) refill(held, texture);
+  return held.copy;
+}
+
+function refill(held: TopDownCopy, texture: THREE.Texture): void {
+  held.copy.source = new THREE.Source(topDownPixels(texture.image as Pixels));
+  held.copy.mipmaps = texture.mipmaps.map((level) => topDownPixels(level as Pixels));
+  held.copy.needsUpdate = true;
+  held.version = texture.version;
 }
 
 function topDownPixels({ data, width, height }: Pixels): Pixels {

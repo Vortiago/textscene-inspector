@@ -25,4 +25,19 @@ describe('topDownTexture', () => {
     texture.needsUpdate = true;
     expect(firstTexel(topDownTexture(texture))).toBe(4);
   });
+
+  it('refills one copy on each change, so no stale copy stays behind', () => {
+    const texture = bottomUp();
+    const first = topDownTexture(texture);
+    texture.needsUpdate = true;
+    expect(topDownTexture(texture)).toBe(first);
+  });
+
+  it('frees the copy with its source', () => {
+    const texture = bottomUp();
+    let isFreed = false;
+    topDownTexture(texture).addEventListener('dispose', () => (isFreed = true));
+    texture.dispose();
+    expect(isFreed).toBe(true);
+  });
 });

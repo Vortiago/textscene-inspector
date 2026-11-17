@@ -149,6 +149,12 @@ describe('AnimationTransportContext — controls (F2/F3)', () => {
     expect(result.current.seeks).toBe(1);
   });
 
+  it('counts a clip change, which moves the playhead to 0, as a seek', () => {
+    const { result } = setup();
+    act(() => result.current.selectClip('walk'));
+    expect(result.current.seeks).toBe(1);
+  });
+
   it('reportTime updates the playhead for the scrubber readout', () => {
     const { result } = setup();
     act(() => result.current.reportTime(0.25));

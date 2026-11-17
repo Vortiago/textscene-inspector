@@ -15,6 +15,7 @@ export async function readLayeredSlices<Import = ImportSlices>(
   noun: string
 ): Promise<Import> {
   const slices = slicesOf(await readImportSidecar(read));
-  if (!slices) throw new Error(`${read.assetPath} has no sidecar that imports it as ${noun}`);
+  if (!slices)
+    throw new Error(`${read.assetPath} has no sidecar that imports it as ${noun} with slices Godot can cut`);
   return slices;
 }

@@ -30,6 +30,7 @@ import {
   projectUsesLightmapBicubicFilter,
   projectMsaaModes,
   projectAnisotropicFilteringLevel,
+  projectSampling,
   projectDecalFilter,
   projectDefaultFontGeneratesMipmaps,
   projectDefaultFontHinting,
@@ -766,6 +767,19 @@ describe('projectCanvasTextureDefaults', () => {
       filter: 2,
       repeat: 1,
     });
+  });
+});
+
+describe('projectSampling', () => {
+  it('reads the nearest mipmap filter and the anisotropic level', () => {
+    const settings = parseProjectSettings(
+      '[rendering]\n\ntextures/default_filters/use_nearest_mipmap_filter=true\ntextures/default_filters/anisotropic_filtering_level=3\n'
+    );
+    expect(projectSampling(settings)).toEqual({ anisotropicFilteringLevel: 3, useNearestMipmapFilter: true });
+  });
+
+  it("takes Godot's defaults with no project", () => {
+    expect(projectSampling(null)).toEqual({ anisotropicFilteringLevel: 2, useNearestMipmapFilter: false });
   });
 });
 
