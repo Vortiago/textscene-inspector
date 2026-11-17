@@ -50,6 +50,8 @@ export interface AnimationTransport {
   pause(): void;
   stop(): void;
   seek(time: number): void;
+  /** How many seeks there have been, so a seek to the playhead it is at still reads as one. */
+  seeks: number;
   selectClip(name: string): void;
   /**
    * Reports the playhead for the scrubber, throttled to REPORT_THROTTLE_MS.
@@ -87,6 +89,7 @@ const NO_OP: AnimationTransport = {
   pause: () => {},
   stop: () => {},
   seek: () => {},
+  seeks: 0,
   selectClip: () => {},
   reportTime: () => {},
 };
@@ -105,6 +108,7 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
   const [time, setTime] = useState(0);
   const [playbackSpeed, setPlaybackSpeedState] = useState(1);
   const [loopOverride, setLoopOverride] = useState<LoopOverride>('auto');
+  const [seeks, setSeeks] = useState(0);
 
   const clips = useMemo(() => registration?.clips ?? [], [registration]);
   const hasPlayer = registration !== null;
@@ -155,11 +159,18 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
     [registration, selectedClip]
   );
 
-  const seek = useCallback((t: number) => setTime(clampTime(t)), [clampTime]);
+  const seek = useCallback(
+    (t: number) => {
+      setTime(clampTime(t));
+      setSeeks((count) => count + 1);
+    },
+    [clampTime]
+  );
 
   const selectClip = useCallback((name: string) => {
     setSelectedClip(name);
     setTime(0);
+    setSeeks((count) => count + 1);
   }, []);
 
   // Called every frame while playing. The throttle keeps the other consumers,
@@ -193,6 +204,7 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
       pause,
       stop,
       seek,
+      seeks,
       selectClip,
       reportTime,
     }),
@@ -213,6 +225,7 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
       pause,
       stop,
       seek,
+      seeks,
       selectClip,
       reportTime,
     ]

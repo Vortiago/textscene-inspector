@@ -30,21 +30,24 @@ export interface Playback {
   readonly playState: 'stopped' | 'playing' | 'paused';
   /** The playhead in seconds. */
   readonly playhead: number;
+  /** How many seeks the controls have made, so a seek to the playhead it is at still reads as one. */
+  readonly seeks: number;
 }
 
 /** `TIME` under the playback controls, where Godot's keeps running (ADR-0083). */
 export class PlaybackShaderTime {
-  /** The playhead of the last frame, so a change while not playing reads as a scrub. */
-  private lastPlayhead: number | undefined;
+  /** The seeks of the last frame, so a frame after a new seek sets `TIME` to the playhead. */
+  private lastSeeks: number | undefined;
 
   constructor(private readonly clock: ShaderClock) {}
 
   /** `TIME` for a frame of `step` seconds. */
   frame(playback: Playback, step: number): number {
-    const isScrub = this.lastPlayhead !== undefined && playback.playhead !== this.lastPlayhead;
-    this.lastPlayhead = playback.playhead;
-    if (!playback.hasPlayer || playback.playState === 'playing') return this.clock.advance(step);
+    const hasSought = this.lastSeeks !== undefined && playback.seeks !== this.lastSeeks;
+    this.lastSeeks = playback.seeks;
+    if (!playback.hasPlayer) return this.clock.advance(step);
     if (playback.playState === 'stopped') return this.clock.set(0);
-    return isScrub ? this.clock.set(playback.playhead) : this.clock.time;
+    if (hasSought) return this.clock.set(playback.playhead);
+    return playback.playState === 'playing' ? this.clock.advance(step) : this.clock.time;
   }
 }

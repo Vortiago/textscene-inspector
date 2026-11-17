@@ -24,6 +24,7 @@ import type { LayerFilter } from './layerFilter.js';
 import { DOWNSAMPLE_FRAGMENT_SHADER, RADIANCE_OCTMAP_FRAGMENT_SHADER } from './skyLayerShaders.js';
 import { skyPass } from './skyPass.js';
 import type { SkyBake } from './types.js';
+import { GODOT_SAMPLING, type ProjectSampling } from '../../shaders/uniforms/samplerState.js';
 
 /**
  * An octmap array with a mip chain, laid out as `layout`: a sky's radiance layers or the
@@ -70,12 +71,17 @@ function skyLayersLayout({ radianceFilter, radianceSize }: SkyBake): SkyRadiance
   return skyOctmapLayout(radianceSize, roughnessLayersOf(radianceFilter));
 }
 
-/** An array of `depth` layers laid out as `layout`. The caller owns its target. */
+/** `depth` layers of `layout`, read with the project's mip filter (`material_storage.cpp:2458`). */
 function createOctmapArray<Layout extends SkyOctmapLayout>(
   layout: Layout,
-  depth: number
+  depth: number,
+  sampling: ProjectSampling = GODOT_SAMPLING
 ): OctmapArray<Layout> {
-  const target = new THREE.WebGLArrayRenderTarget(layout.size, layout.size, depth, MIPMAPPED_TARGET_OPTIONS);
+  const minFilter = sampling.useNearestMipmapFilter
+    ? THREE.LinearMipmapNearestFilter
+    : THREE.LinearMipmapLinearFilter;
+  const options = { ...MIPMAPPED_TARGET_OPTIONS, minFilter };
+  const target = new THREE.WebGLArrayRenderTarget(layout.size, layout.size, depth, options);
   return { layout, target: withMipLevels(target, 1 + layout.downsampledSizes.length) };
 }
 
@@ -95,13 +101,24 @@ export function bakeSkyLayers(
   gl: THREE.WebGLRenderer,
   radiance: THREE.CubeTexture,
   bake: SkyBake,
-  debanding: number
+  debanding: number,
+  sampling?: ProjectSampling
+): SkyLayers {
+  return bakeSkyLayersDrawnBy(gl, cubeRadiance(gl, radiance, debanding), bake, sampling);
+}
+
+/** Godot's sky layers of what `drawRadiance` draws. The caller frees them with `disposeSkyLayers`. */
+export function bakeSkyLayersDrawnBy(
+  gl: THREE.WebGLRenderer,
+  drawRadiance: DrawRadiance,
+  bake: SkyBake,
+  sampling?: ProjectSampling
 ): SkyLayers {
   const layout = skyLayersLayout(bake);
   const filter = layerFilter(bake.radianceFilter, layout);
-  const layers = createOctmapArray(layout, layout.layerSizes.length);
+  const layers = createOctmapArray(layout, layout.layerSizes.length, sampling);
   try {
-    bakeFromChain(gl, { radiance, debanding }, layout, filter, ({ octmap, scratch }) => {
+    bakeFromChain(gl, drawRadiance, layout, filter, ({ octmap, scratch }) => {
       gl.initRenderTarget(layers.target);
       storeSkyLayer(gl, layers, 0, octmap, scratch);
       for (let layer = 1; layer < layout.layerSizes.length; layer += 1) {
@@ -142,7 +159,7 @@ export function bakeAtlasLayers(
   if (index < 0 || index >= target.depth)
     throw new Error(`expected an atlas layer from 0 to ${target.depth - 1}, got ${index}`);
   const filter = layerFilter(radianceFilter, layout);
-  bakeFromChain(gl, { radiance, debanding: 0 }, layout, filter, ({ octmap }) => {
+  bakeFromChain(gl, cubeRadiance(gl, radiance, 0), layout, filter, ({ octmap }) => {
     gl.initRenderTarget(target);
     gl.copyTextureToTexture(octmap.texture, target.texture, null, new THREE.Vector3(0, 0, index));
     for (let layer = 1; layer < layout.layerSizes.length; layer += 1)
@@ -150,11 +167,8 @@ export function bakeAtlasLayers(
   });
 }
 
-/** The radiance a bake reads, and the scale of the debanding noise its octmap adds. */
-interface RadianceSource {
-  radiance: THREE.CubeTexture;
-  debanding: number;
-}
+/** Draws a bake's radiance over `octmap`, laid out as `layout`. */
+export type DrawRadiance = (octmap: THREE.WebGLRenderTarget, layout: SkyOctmapLayout) => void;
 
 /**
  * What a bake draws its layers with: the radiance's octmap, which a layer may draw over once the
@@ -165,14 +179,10 @@ interface ChainBake {
   scratch: ScratchOctmaps;
 }
 
-/**
- * The bake both of Godot's layer sets share: the radiance of `source` drawn into its octmap as
- * `layout` lays it out, shrunk into the chain `filter` reads, then `drawLayers`. It leaves the
- * renderer as it found it.
- */
+/** Both layer sets' bake: `drawRadiance`, shrunk into the chain `filter` reads, then `drawLayers`. */
 function bakeFromChain(
   gl: THREE.WebGLRenderer,
-  source: RadianceSource,
+  drawRadiance: DrawRadiance,
   layout: SkyOctmapLayout,
   filter: LayerFilter,
   drawLayers: (bake: ChainBake) => void
@@ -183,7 +193,7 @@ function bakeFromChain(
   const octmap = new THREE.WebGLRenderTarget(layout.size, layout.size, TARGET_OPTIONS);
   try {
     drawOffscreen(gl, () => {
-      drawRadianceOctmap(gl, source, layout, octmap);
+      drawRadiance(octmap, layout);
       const chain = downsampleChain(gl, octmap, layout.borderSize, filter.chainSizes, scratch);
       try {
         setUniforms(filter.passFor(gl), {
@@ -223,16 +233,13 @@ function downsampleChain(
   }
 }
 
-/** Draws the radiance of `source` into Godot's octmap as `layout` lays it out, in `target`. */
-function drawRadianceOctmap(
-  gl: THREE.WebGLRenderer,
-  { radiance, debanding }: RadianceSource,
-  layout: SkyOctmapLayout,
-  target: THREE.WebGLRenderTarget
-): void {
-  const pass = radianceOctmapPassFor(gl);
-  setUniforms(pass, { radiance, size: layout.size, borderSize: layout.borderSize, debanding });
-  drawFullScreen(gl, pass, target);
+/** The radiance of the cube `radiance` drawn into Godot's octmap, with `debanding` scaling its noise. */
+function cubeRadiance(gl: THREE.WebGLRenderer, radiance: THREE.CubeTexture, debanding: number): DrawRadiance {
+  return (target, layout) => {
+    const pass = radianceOctmapPassFor(gl);
+    setUniforms(pass, { radiance, size: layout.size, borderSize: layout.borderSize, debanding });
+    drawFullScreen(gl, pass, target);
+  };
 }
 
 /**

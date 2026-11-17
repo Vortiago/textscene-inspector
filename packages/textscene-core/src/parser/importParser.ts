@@ -35,6 +35,10 @@ import {
 import { AnimationLoopMode } from '../godot/scene/animation.js';
 import type { ClipImportOptions } from '../godot/import/animationImport.js';
 import {
+  CUBEMAP_ARRANGEMENTS,
+  CUBEMAP_IMPORTER,
+  DEFAULT_CUBEMAP_ARRANGEMENT,
+  type CubemapImport,
   DEFAULT_SLICES,
   TEXTURE_2D_ARRAY_IMPORTER,
   TEXTURE_3D_IMPORTER,
@@ -210,6 +214,17 @@ export function importTexture3DSlices(parsed: ParsedImportFile | null): ImportSl
 /** The slices a texture array's sidecar names, as {@link importTexture3DSlices} reads a 3D texture's. */
 export function importTexture2DArraySlices(parsed: ParsedImportFile | null): ImportSlices | null {
   return layeredSlices(parsed, TEXTURE_2D_ARRAY_IMPORTER);
+}
+
+/** How a cubemap's sidecar cuts its image. Godot reads an unreadable arrangement as 0, which is 1x6. */
+export function importCubemap(parsed: ParsedImportFile | null): CubemapImport | null {
+  if (parsed?.importer !== CUBEMAP_IMPORTER) return null;
+  const value = parsed.params['slices/arrangement'];
+  const arrangement = value === undefined ? DEFAULT_CUBEMAP_ARRANGEMENT : (parseOptionalInt(value) ?? 0);
+  const slices = CUBEMAP_ARRANGEMENTS[arrangement];
+  // `resource_importer_layered_texture.cpp:154` generates mipmaps unless the sidecar says otherwise.
+  const hasMipmaps = boolSlotValue(parsed.params['mipmaps/generate']) ?? true;
+  return slices ? { slices, hasMipmaps } : null;
 }
 
 function layeredSlices(parsed: ParsedImportFile | null, importer: string): ImportSlices | null {

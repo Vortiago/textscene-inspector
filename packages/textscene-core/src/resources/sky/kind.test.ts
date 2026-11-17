@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { loadedValue } from '../reading/reading.testkit';
+import type { ScopedReference } from '../reading';
 import { SKY, type DecodedSky } from './kind';
 
 const MATERIAL = '[sub_resource type="ProceduralSkyMaterial" id="m"]\nsky_curve = 0.3';
@@ -37,5 +38,78 @@ describe('SKY of a Sky over a ProceduralSkyMaterial', () => {
     expect(summary(loadedValue(SKY, 'res://holder.tres::s', '', { 'res://holder.tres': holder }))).toEqual(
       inScene
     );
+  });
+});
+
+describe('SKY of a Sky over a ShaderMaterial', () => {
+  const SKY_SHADER = 'shader_type sky;\nuniform float tint = 0.5;\nvoid sky() {\n\tCOLOR = vec3(tint);\n}\n';
+  const scene = (shaderType = 'sky') =>
+    [
+      `[sub_resource type="Shader" id="code"]\ncode = "${SKY_SHADER.replace('sky;', `${shaderType};`)}"`,
+      '[sub_resource type="ShaderMaterial" id="m"]\nshader = SubResource("code")\nshader_parameter/tint = 0.25',
+      `[sub_resource type="Sky" id="s"]\n${SKY_BODY}\n`,
+    ].join('\n\n');
+
+  it("reads the shader's code and the material's parameters", () => {
+    expect(loadedValue(SKY, 'SubResource("s")', scene()).sky.material).toEqual({
+      kind: 'shader',
+      code: SKY_SHADER,
+      parameters: { tint: '0.25' },
+      textures: {},
+    });
+  });
+
+  it('hands on a parameter that names a resource as a reference, not as a value', () => {
+    const withTexture = scene().replace(
+      'shader_parameter/tint = 0.25',
+      'shader_parameter/tint = 0.25\nshader_parameter/stars = ExtResource("1_stars")'
+    );
+    const tables = '[ext_resource type="Texture2D" path="res://stars.png" id="1_stars"]';
+    const material = loadedValue(SKY, 'SubResource("s")', `${tables}\n\n${withTexture}`).sky.material;
+    const stars = material.kind === 'shader' ? material.textures.stars : undefined;
+    expect(stars && !Array.isArray(stars) && (stars as ScopedReference).ref).toBe('ExtResource("1_stars")');
+  });
+
+  it('hands on each element of a sampler array as a reference, and null for an empty one', () => {
+    const withArray = scene().replace(
+      'shader_parameter/tint = 0.25',
+      'shader_parameter/tint = 0.25\nshader_parameter/layers = [ExtResource("1_a"), null, ExtResource("2_b")]'
+    );
+    const tables = [
+      '[ext_resource type="Texture2D" path="res://a.png" id="1_a"]',
+      '[ext_resource type="Texture2D" path="res://b.png" id="2_b"]',
+    ].join('\n');
+    const material = loadedValue(SKY, 'SubResource("s")', `${tables}\n\n${withArray}`).sky.material;
+    const layers = material.kind === 'shader' ? material.textures.layers : undefined;
+    expect(Array.isArray(layers) && layers.map((element) => element?.ref ?? null)).toEqual([
+      'ExtResource("1_a")',
+      null,
+      'ExtResource("2_b")',
+    ]);
+  });
+
+  it('keeps an array of values that names no resource as a value (edge case)', () => {
+    const withValues = scene().replace(
+      'shader_parameter/tint = 0.25',
+      'shader_parameter/tint = [0.25, null]'
+    );
+    const material = loadedValue(SKY, 'SubResource("s")', withValues).sky.material;
+    expect(material.kind === 'shader' && material.parameters.tint).toBe('[0.25, null]');
+  });
+
+  it('decodes the same value from a .gdshader file', () => {
+    const files = { 'res://sky.gdshader': SKY_SHADER };
+    const fromFile = [
+      '[ext_resource type="Shader" path="res://sky.gdshader" id="1_code"]',
+      '[sub_resource type="ShaderMaterial" id="m"]\nshader = ExtResource("1_code")\nshader_parameter/tint = 0.25',
+      `[sub_resource type="Sky" id="s"]\n${SKY_BODY}\n`,
+    ].join('\n\n');
+    expect(loadedValue(SKY, 'SubResource("s")', fromFile, files).sky.material).toEqual(
+      loadedValue(SKY, 'SubResource("s")', scene()).sky.material
+    );
+  });
+
+  it('declines a ShaderMaterial whose shader is not a sky shader', () => {
+    expect(() => loadedValue(SKY, 'SubResource("s")', scene('spatial'))).toThrow('got unavailable');
   });
 });

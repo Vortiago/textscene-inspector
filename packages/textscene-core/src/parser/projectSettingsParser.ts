@@ -11,6 +11,7 @@ import {
   splitTopLevel,
 } from '../godot/string/string.js';
 import { boolSlotValue } from '../godot/variant/variantBool.js';
+import type { ProjectSampling } from '../shaders/uniforms/samplerState.js';
 import { dataDirectoryPath, extensionListPath } from '../godot/project/project.js';
 import { standardizeLocale } from '../godot/text/standardizeLocale.js';
 import { isLocaleRightToLeft } from '../godot/text/textServer.js';
@@ -22,6 +23,7 @@ import { unquoteLiteral } from './utils.js';
 import { colorOr } from '../utils/colorParser.js';
 import { perObject } from '../utils/perObject.js';
 import { enumOr, parseOptionalFloat, parseOptionalInt } from './valueParsers.js';
+import { DEFAULT_TIME_ROLLOVER_SECONDS } from '../shaders/time/shaderClock.js';
 import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE, primitiveMeshTexelSize } from '../godot/scene/primitiveMesh.js';
 import {
   VOLUMETRIC_FOG_DEFAULTS,
@@ -232,6 +234,14 @@ export function projectPrimitiveMeshTexelSize(settings: ProjectSettings | null):
   return primitiveMeshTexelSize(setting ?? DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
 }
 
+/** `rendering/limits/time/time_rollover_secs`, which wraps `TIME` (`renderer_compositor_rd.cpp:113`). */
+export function projectTimeRolloverSeconds(settings: ProjectSettings | null): number {
+  return (
+    parseOptionalFloat(settings?.['rendering/limits/time/time_rollover_secs']) ??
+    DEFAULT_TIME_ROLLOVER_SECONDS
+  );
+}
+
 /**
  * `rendering/lightmapping/lightmap_gi/use_bicubic_filter`, which every lightmap read takes
  * (`renderer_scene_render_rd.cpp:1732`), or Godot's default for an absent or malformed value.
@@ -370,6 +380,15 @@ export function projectAnisotropicFilteringLevel(settings: ProjectSettings | nul
       settings?.['rendering/textures/default_filters/anisotropic_filtering_level']
     ) ?? DEFAULT_ANISOTROPIC_FILTERING_LEVEL
   );
+}
+
+/** The `default_filters` settings every material sampler reads (`material_storage.cpp:2455-2470`). */
+export function projectSampling(settings: ProjectSettings | null): ProjectSampling {
+  return {
+    anisotropicFilteringLevel: projectAnisotropicFilteringLevel(settings),
+    useNearestMipmapFilter:
+      boolSlotValue(settings?.['rendering/textures/default_filters/use_nearest_mipmap_filter']) === true,
+  };
 }
 
 /** `RS::DECAL_FILTER_LINEAR_MIPMAPS`, Godot's default `rendering/textures/decals/filter` (`rendering_server.cpp:3804`). */

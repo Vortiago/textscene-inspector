@@ -96,6 +96,31 @@ const TIME_SCENES = [
   clock: { ...scene.clock, frames: FRAMES_BEFORE_READ },
 }));
 
+/** A sky whose three channels each wrap at another rate, so no `TIME` up to 8 s saturates it. */
+const SEEK_SKY = `shader_type sky;
+
+void sky() {
+	COLOR = vec3(fract(TIME * 0.37), fract(TIME * 4.0), TIME / 8.0);
+}
+`;
+
+/** The previewer's `TIME` after a seek to the time Godot's frames reach, also past a rollover. */
+const SEEK_SCENES = [
+  { name: 'sky-time-seek-half', clock: { fixedFps: 8, rolloverSeconds: 3600 } },
+  { name: 'sky-time-seek-third', clock: { fixedFps: 3, rolloverSeconds: 3600 } },
+  { name: 'sky-time-seek-four', clock: { fixedFps: 1, rolloverSeconds: 3600 } },
+  { name: 'sky-time-seek-rolled-over', clock: { fixedFps: 1, rolloverSeconds: 1.5 } },
+  { name: 'sky-time-seek-third-rolled-over', clock: { fixedFps: 3, rolloverSeconds: 1.2 } },
+].map((scene) => ({
+  ...SIZE,
+  source: SEEK_SKY,
+  camera: AHEAD,
+  lights: [],
+  rows: ['sky.global.TIME'],
+  ...scene,
+  clock: { ...scene.clock, frames: FRAMES_BEFORE_READ, fromSeek: true },
+}));
+
 /** A sky of one stage built-in, drawn with `body` as its `sky()` function. */
 const builtInSky = (body, renderModes = '') =>
   `shader_type sky;\n${renderModes ? `render_mode ${renderModes};\n` : ''}\nvoid sky() {\n${body}\n}\n`;
@@ -174,5 +199,6 @@ export const SKY_SCENES = [
   },
   ...VALUE_SCENES,
   ...TIME_SCENES,
+  ...SEEK_SCENES,
   ...BUILT_IN_SCENES,
 ];

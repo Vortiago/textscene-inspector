@@ -4,7 +4,7 @@
  * properties, so a wrong default looks like a wrong shader.
  */
 
-import type { Sky, SkyBake, SkyProcessing, SkyProperties } from './types';
+import type { AuthoredSkyProperties, BuiltInSkyProperties, Sky, SkyBake, SkyProcessing } from './types';
 import type { SkyProcessMode } from '../../godot/rendering/environment/skyRadianceUpdate';
 import { REAL_TIME_RADIANCE_SIZE } from '../../godot/rendering/environment/skyReflection';
 import { SKY_RADIANCE_SIZES, SKY_RADIANCE_SIZE_DEFAULT } from '../../godot/scene/sky';
@@ -39,7 +39,10 @@ function entryOr<T>(table: readonly T[], value: string | undefined, fallback: T)
  * The `Sky` whose properties are `data`, drawing `material`. An invalid value reads as
  * `decodeSkyProcessing` reads it.
  */
-export function decodeSky(data: Record<string, string>, material: SkyProperties): Sky {
+export function decodeSky<Material extends AuthoredSkyProperties>(
+  data: Record<string, string>,
+  material: Material
+): Sky<Material> {
   const processing = decodeSkyProcessing(data);
   return { material, processMode: processing.processMode, ...skyBake(processing) };
 }
@@ -55,7 +58,7 @@ function skyBake({ processMode, radianceSize }: SkyProcessing): SkyBake {
     : { radianceFilter: 'importance-sample', radianceSize };
 }
 
-export function decodeSkyMaterial(type: string, data: Record<string, string>): SkyProperties | null {
+export function decodeSkyMaterial(type: string, data: Record<string, string>): BuiltInSkyProperties | null {
   switch (type) {
     case 'ProceduralSkyMaterial':
       return {

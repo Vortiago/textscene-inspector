@@ -7,25 +7,23 @@
  */
 
 import * as THREE from 'three';
-import type { Sky, SkyBake } from './types';
+import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
+import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
+import type { ShaderDecoders } from '../../shaders/preprocessor/decoders';
+import type { BuiltInSkyProperties, ShaderSkyProperties, Sky } from './types';
 import { warn } from '../../logger';
 import { skyFragmentShader, skyGlsl, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight, type SkyUniforms } from './skyUniforms';
 import { releaseView, textureView } from '../textures/textureView';
 import { fillLiveCopy, isLiveTarget } from '../../r3f/liveTargets';
-import { bakeSkyLayers, disposeSkyLayers, type SkyLayers } from './skyLayers';
+import { disposeSkyLayers, type SkyLayers } from './skyLayers';
+import { bakeRadiance } from './radianceBake';
 import { isDebanded } from './debanding';
 import { godotTextureFilterState } from '../textures/godotTextureFilter';
 import { TextureFilter } from '../../godot/rendering/materials/textureFilter';
-import { SkyBackground } from '../../r3f/sky/skyBackground';
+import { SkyBackground, type SkyBackdrop } from '../../r3f/sky/skyBackground';
 
 export type { SkyLight } from './skyUniforms';
-
-/**
- * The largest radiance the previewer bakes, as each doubling costs four times the bake. Metal balls
- * from mirror to rough under a sky of radiance size 512 draw within 0.07/255 of Godot's at this cap.
- */
-const LARGEST_RADIANCE_SIZE = 256;
 
 /**
  * Godot's sky ambient is the sky's own radiance: it lights surfaces and is what
@@ -35,7 +33,7 @@ const LARGEST_RADIANCE_SIZE = 256;
  */
 export interface SkyEnvironment {
   /** The sky at each pixel behind the scene, or null for a sky that does not paint the background. */
-  background: SkyBackground | null;
+  background: SkyBackdrop | null;
   /** Godot's radiance layers, which its ambient, its reflections and the fogs read. */
   layers: SkyLayers;
   /**
@@ -56,7 +54,22 @@ export interface SkyEnvironmentInput {
   asBackground: boolean;
   /** The scale a surface reads the radiance at, `scene.environmentIntensity`. */
   energy: number;
+  /** A shader sky's loaded texture parameters, by uniform name. */
+  textures?: Readonly<Record<string, SamplerValue>>;
+  /** The decoders a shader sky's `#if` may decompress with. */
+  decoders?: ShaderDecoders;
+  /** The project's filter settings, for a shader sky's samplers and each surface's read of the layers. */
+  sampling?: ProjectSampling;
+  /** The sky transpiler's builder for a shader sky, imported on demand to keep it off the first paint. */
+  buildShaderSky?: ShaderSkyBuilder;
 }
+
+/** Builds a shader sky's environment, as `buildSkyEnvironment` answers. */
+export type ShaderSkyBuilder = (
+  gl: THREE.WebGLRenderer,
+  material: ShaderSkyProperties,
+  input: SkyEnvironmentInput
+) => SkyEnvironment | null;
 
 /**
  * The panorama as the sky shader samples it: `filter_linear` or `filter_nearest` with no mipmaps
@@ -67,14 +80,14 @@ export interface SkyEnvironmentInput {
  */
 function skyPanoramaTexture(
   gl: THREE.WebGLRenderer,
-  sky: Sky,
+  material: BuiltInSkyProperties,
   panorama?: THREE.Texture | null
 ): THREE.Texture | null {
-  if (!panorama || sky.material.kind !== 'panorama') return null;
+  if (!panorama || material.kind !== 'panorama') return null;
   const view = textureView(panorama, {
     colorSpace: panorama.colorSpace as THREE.ColorSpace,
     wrap: THREE.RepeatWrapping,
-    filter: godotTextureFilterState(sky.material.filter ? TextureFilter.LINEAR : TextureFilter.NEAREST),
+    filter: godotTextureFilterState(material.filter ? TextureFilter.LINEAR : TextureFilter.NEAREST),
   });
   fillLiveCopy(panorama, view, gl);
   return view;
@@ -87,16 +100,28 @@ function skyPanoramaTexture(
  */
 export function buildSkyEnvironment(
   gl: THREE.WebGLRenderer,
-  { sky, lights, panorama, asBackground, energy }: SkyEnvironmentInput
+  input: SkyEnvironmentInput
 ): SkyEnvironment | null {
-  const panoramaView = skyPanoramaTexture(gl, sky, panorama);
-  const uniforms = skyUniforms(sky.material, lights, panoramaView);
+  const { material } = input.sky;
+  if (material.kind !== 'shader') return buildBuiltInSkyEnvironment(gl, material, input);
+  if (!input.buildShaderSky) throw new Error('expected the sky transpiler for a shader sky, got none');
+  return input.buildShaderSky(gl, material, input);
+}
+
+/** The environment of a sky the previewer draws with its own GLSL. */
+function buildBuiltInSkyEnvironment(
+  gl: THREE.WebGLRenderer,
+  material: BuiltInSkyProperties,
+  { sky, lights, panorama, asBackground, energy, sampling }: SkyEnvironmentInput
+): SkyEnvironment | null {
+  const panoramaView = skyPanoramaTexture(gl, material, panorama);
+  const uniforms = skyUniforms(material, lights, panoramaView);
   let background: SkyBackground | null = null;
   let layers: SkyLayers;
   try {
     // Ahead of the bake, so a three whose background program moved frees no layers it baked.
-    background = asBackground ? new SkyBackground(skyGlsl(sky.material), uniforms) : null;
-    layers = bakeRadiance(gl, sky, uniforms, energy);
+    background = asBackground ? new SkyBackground(skyGlsl(material), uniforms) : null;
+    layers = bakeBuiltInRadiance(gl, { sky, material, uniforms, energy, sampling });
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
     background?.dispose();
@@ -124,31 +149,37 @@ export function buildSkyEnvironment(
   };
 }
 
-/** Renders `sky` into a cube at the radiance size and bakes Godot's layers from it. */
-function bakeRadiance(gl: THREE.WebGLRenderer, sky: Sky, uniforms: SkyUniforms, energy: number): SkyLayers {
+/** What a built-in sky's bake reads. */
+interface BuiltInRadiance {
+  sky: Sky;
+  material: BuiltInSkyProperties;
+  uniforms: SkyUniforms;
+  energy: number;
+  /** The project's filter settings, which the surfaces' read of the layers takes. */
+  sampling?: ProjectSampling;
+}
+
+/** Renders the built-in sky of `uniforms` into a cube and bakes Godot's layers from it. */
+function bakeBuiltInRadiance(
+  gl: THREE.WebGLRenderer,
+  { sky, material, uniforms, energy, sampling }: BuiltInRadiance
+): SkyLayers {
   const geometry = new THREE.BoxGeometry(2, 2, 2);
-  const material = new THREE.ShaderMaterial({
+  const shader = new THREE.ShaderMaterial({
     uniforms,
     vertexShader: SKY_VERTEX_SHADER,
-    fragmentShader: skyFragmentShader(sky.material),
+    fragmentShader: skyFragmentShader(material),
     side: THREE.BackSide,
     depthWrite: false,
     depthTest: false,
   });
   const skyScene = new THREE.Scene();
-  skyScene.add(new THREE.Mesh(geometry, material));
-  const bake = cappedBake(sky);
-  const radianceTarget = new THREE.WebGLCubeRenderTarget(bake.radianceSize, { type: THREE.HalfFloatType });
+  skyScene.add(new THREE.Mesh(geometry, shader));
   try {
-    // The cube camera sits at the origin inside the unit box, so each face
-    // samples the same directions Godot's `EYEDIR` covers.
-    new THREE.CubeCamera(0.1, 10, radianceTarget).update(gl, skyScene);
-    return bakeSkyLayers(gl, radianceTarget.texture, bake, radianceDebanding(sky, energy));
+    return bakeRadiance(gl, skyScene, sky, radianceDebanding(material, energy), sampling);
   } finally {
-    // The cube serves the layers once, so it and its sky mesh are freed here.
-    radianceTarget.dispose();
     geometry.dispose();
-    material.dispose();
+    shader.dispose();
   }
 }
 
@@ -158,15 +189,6 @@ function bakeRadiance(gl: THREE.WebGLRenderer, sky: Sky, uniforms: SkyUniforms, 
  * reads the radiance scaled by that energy, so the noise scales by its inverse. At energy 0 Godot's
  * surfaces still read the noise, which a read scaled by 0 cannot show.
  */
-function radianceDebanding(sky: Sky, energy: number): number {
-  return isDebanded(sky.material) && energy > 0 ? 1 / energy : 0;
-}
-
-/** The bake the previewer runs: an importance-sampled sky above `LARGEST_RADIANCE_SIZE` bakes at it. */
-function cappedBake(bake: SkyBake): SkyBake {
-  if (bake.radianceFilter === 'fast') return bake;
-  return {
-    radianceFilter: 'importance-sample',
-    radianceSize: Math.min(bake.radianceSize, LARGEST_RADIANCE_SIZE),
-  };
+function radianceDebanding(material: BuiltInSkyProperties, energy: number): number {
+  return isDebanded(material) && energy > 0 ? 1 / energy : 0;
 }

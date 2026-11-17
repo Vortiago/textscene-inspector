@@ -12,8 +12,8 @@ const SUN = {
   size: 0.1,
 };
 
-function boundSky(scene: Partial<SkyScene>) {
-  const sky = transpileSky(DEFAULT_SKY);
+function boundSky(scene: Partial<SkyScene>, pass: 'background' | 'octmap' = 'background') {
+  const sky = transpileSky(DEFAULT_SKY, { pass });
   writeSkyBindings(sky, {
     camera: new THREE.PerspectiveCamera(),
     time: 0,
@@ -25,6 +25,11 @@ function boundSky(scene: Partial<SkyScene>) {
 }
 
 describe('writeSkyBindings', () => {
+  it("writes the octmap's padding in UV and its border size, as `_render_sky` does", () => {
+    const borderSize = boundSky({ borderSize: 0.9 }, 'octmap')('params.border_size').value as THREE.Vector2;
+    expect(borderSize.toArray()).toEqual([expect.closeTo(0.05, 9), 0.9]);
+  });
+
   it('writes the fog as off when the scene has none', () => {
     expect(boundSky({})('sky_scene_data.fog_enabled').value).toBe(false);
   });

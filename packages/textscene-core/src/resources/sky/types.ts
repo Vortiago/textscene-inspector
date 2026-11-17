@@ -1,9 +1,5 @@
-/**
- * Sky resource types: how a Godot `Sky` bakes its radiance, and the three materials it can carry.
- * Names and units mirror Godot (`sun_angle_max` in degrees, `sky_curve` as authored). The
- * shader-uniform conversions happen on upload, in `build.ts`.
- */
-
+import type { ScopedReference } from '../reading';
+import type { SkyUsage } from '../../shaders/sky/skyUsage';
 import type { REAL_TIME_RADIANCE_SIZE } from '../../godot/rendering/environment/skyReflection';
 import type { SkyProcessMode } from '../../godot/rendering/environment/skyRadianceUpdate';
 import type { Rgba } from '../../godot/math/math';
@@ -51,7 +47,33 @@ export interface PhysicalSkyProperties {
   use_debanding: boolean;
 }
 
-export type SkyProperties = ProceduralSkyProperties | PanoramaSkyProperties | PhysicalSkyProperties;
+/** A ShaderMaterial whose shader is `shader_type sky`: its text and its `shader_parameter/*` values. */
+export interface ShaderSkyText {
+  kind: 'shader';
+  code: string;
+  /** Each `shader_parameter/<name>` the file writes as a Variant, by name, in the file's text. */
+  parameters: Readonly<Record<string, string>>;
+  /** Each `shader_parameter/<name>` the file writes as a resource or as an array of them, by name. */
+  textures: Readonly<Record<string, ShaderTextureReference>>;
+}
+
+/** A sampler's resource, or a sampler array's with null for an empty element. */
+export type ShaderTextureReference = ScopedReference | readonly (ScopedReference | null)[];
+
+/** A sky shader with what the transpiler, which the previewer loads on demand, reads of it. */
+export interface ShaderSkyProperties extends ShaderSkyText {
+  /** The built-ins the shader reads that decide when Godot draws or bakes it again. */
+  usage: SkyUsage;
+}
+
+export type SkyProperties =
+  ProceduralSkyProperties | PanoramaSkyProperties | PhysicalSkyProperties | ShaderSkyProperties;
+
+/** A sky material the previewer draws with its own GLSL, not through the transpiler. */
+export type BuiltInSkyProperties = Exclude<SkyProperties, ShaderSkyProperties>;
+
+/** A sky material as the file writes it, before the transpiler reads a shader. */
+export type AuthoredSkyProperties = BuiltInSkyProperties | ShaderSkyText;
 
 /** The `Sky` resource's own properties, which decide how Godot bakes its radiance layers. */
 export interface SkyProcessing {
@@ -70,4 +92,10 @@ export type SkyBake =
   | { radianceFilter: 'importance-sample'; radianceSize: number };
 
 /** A Godot `Sky` as the renderer draws it: its material, and how its radiance layers bake. */
-export type Sky = { material: SkyProperties; processMode: SkyProcessMode } & SkyBake;
+export type Sky<Material extends AuthoredSkyProperties = SkyProperties> = {
+  material: Material;
+  processMode: SkyProcessMode;
+} & SkyBake;
+
+/** A Sky as the file writes it, whose shader the transpiler has not read. */
+export type AuthoredSky = Sky<AuthoredSkyProperties>;
