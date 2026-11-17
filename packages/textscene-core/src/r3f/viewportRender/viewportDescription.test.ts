@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../godot/scene/viewport';
+import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL, SubViewportClearMode } from '../../godot/scene/viewport';
 import { parseProjectSettings } from '../../parser/projectSettingsParser';
 import {
   gameViewportDescription,
@@ -15,6 +15,7 @@ describe('rootViewportDescription', () => {
       msaa3D: 0,
       usesDebanding: false,
       transparentBackground: false,
+      requestsClear: true,
       mipmapBias: 0,
       positionalShadowAtlas: { size: 4096, quadrantShadows: [4, 4, 16, 64] },
       anisotropicLevel: 2,
@@ -95,6 +96,7 @@ describe('subViewportDescription', () => {
     use_debanding: true,
     use_hdr_2d: false,
     transparent_bg: true,
+    render_target_clear_mode: SubViewportClearMode.NEVER,
     texture_mipmap_bias: 0.25,
     anisotropic_filtering_level: 4,
     positional_shadow_atlas_size: 1024,
@@ -110,6 +112,7 @@ describe('subViewportDescription', () => {
       msaa3D: 3,
       usesDebanding: true,
       transparentBackground: true,
+      requestsClear: false,
       mipmapBias: 0.25,
       positionalShadowAtlas: { size: 1024, quadrantShadows: [64, 16, 4, 1] },
       anisotropicLevel: 4,

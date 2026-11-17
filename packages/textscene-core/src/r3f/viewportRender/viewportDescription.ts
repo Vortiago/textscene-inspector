@@ -1,6 +1,7 @@
 import type { PositionalShadowAtlasSettings } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import {
   DEFAULT_ANISOTROPIC_FILTERING_LEVEL,
+  SubViewportClearMode,
   VIEWPORT_POSITIONAL_SHADOW_ATLAS,
   viewportPositionalShadowAtlas,
 } from '../../godot/scene/viewport.js';
@@ -22,6 +23,8 @@ export interface ViewportDescription {
   msaa3D: number;
   usesDebanding: boolean;
   transparentBackground: boolean;
+  /** False when the target never asks for a clear: its clear colour is black (`texture_storage.cpp:4033`). */
+  requestsClear: boolean;
   mipmapBias: number;
   positionalShadowAtlas: PositionalShadowAtlasSettings;
   anisotropicLevel: number;
@@ -42,6 +45,7 @@ export function rootViewportDescription(settings: ProjectSettings | null): Viewp
     msaa3D,
     usesDebanding: projectUsesDebanding(settings),
     transparentBackground: projectTransparentBackground(settings),
+    requestsClear: true,
     mipmapBias: projectTextureMipmapBias(settings),
     positionalShadowAtlas: projectPositionalShadowAtlas(settings),
     anisotropicLevel: projectAnisotropicFilteringLevel(settings),
@@ -68,6 +72,7 @@ type SubViewportFacts = Pick<
   | 'use_debanding'
   | 'use_hdr_2d'
   | 'transparent_bg'
+  | 'render_target_clear_mode'
   | 'texture_mipmap_bias'
   | 'anisotropic_filtering_level'
   | 'positional_shadow_atlas_size'
@@ -88,6 +93,7 @@ export function subViewportDescription(
     // A half-float target holds no banding to dither (`renderer_scene_render_rd.cpp:941`).
     usesDebanding: properties.use_debanding && !properties.use_hdr_2d,
     transparentBackground: properties.transparent_bg,
+    requestsClear: properties.render_target_clear_mode !== SubViewportClearMode.NEVER,
     mipmapBias: properties.texture_mipmap_bias ?? root.mipmapBias,
     positionalShadowAtlas: viewportPositionalShadowAtlas(
       properties.positional_shadow_atlas_size,

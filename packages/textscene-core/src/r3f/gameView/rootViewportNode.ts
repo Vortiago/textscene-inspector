@@ -7,6 +7,8 @@ import { SubViewportUpdateMode } from '../../godot/scene/viewport.js';
 /** Empty, so `joinPath` gives each node below the path the dispatcher gives it. */
 export const ROOT_VIEWPORT_PATH = '';
 
+const ROOT_TYPE = 'SubViewport';
+
 /** The project settings the root takes as Viewport properties, by the property each sets. */
 const ROOT_PROPERTY_SETTINGS: Readonly<Record<string, string>> = {
   msaa_2d: 'rendering/anti_aliasing/quality/msaa_2d',
@@ -31,10 +33,10 @@ export function rootViewportNode(settings: ProjectSettings | null, sceneRoots: T
     const value = settings?.[setting];
     if (value !== undefined) raw[property] = value;
   }
-  const heading = { type: 'node', attributes: { name: ROOT_VIEWPORT_PATH, type: 'SubViewport' } };
+  const heading = { type: 'node', attributes: { name: ROOT_VIEWPORT_PATH, type: ROOT_TYPE } };
   return {
     name: ROOT_VIEWPORT_PATH,
-    type: 'SubViewport',
+    type: ROOT_TYPE,
     children: sceneRoots,
     rawProperties: raw,
     properties: parseSubViewport(heading, raw),

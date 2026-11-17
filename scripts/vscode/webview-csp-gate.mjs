@@ -15,6 +15,7 @@ import { assertExtensionBuilt, driveScene, REPO_ROOT, resolveVscodeBinary } from
 import { blankSceneText, hideSceneNode } from './sceneText.mjs';
 import { withSurfaceAlbedo } from './meshEdit.mjs';
 import { diffMask, meanColourUnderMask, missingPlaceholderPixels } from './pixels.mjs';
+import { checkInk } from '../e2e/canvasChecks.mjs';
 import { installTextureWorkProbe } from '../e2e/textureWorkProbe.mjs';
 import { TEXTURE_WORK_STATUS_TESTID } from '../visual/preview/appContract.mjs';
 import { describeFailedRequests } from '../visual/preview/pageDiagnostics.mjs';
@@ -375,12 +376,7 @@ function checkInGame(gate, report) {
     readout?.isPressed === true && readout?.showsStage === false,
     `[in-game] the preview did not open in the In-game mode: ${brief(readout)}`
   );
-  const ink = report.canvasReadback;
-  gate.check(
-    ink.inkPixels >= IN_GAME_INK_FLOOR,
-    `[in-game] only ${ink.inkPixels} ink pixels on a ${ink.width}x${ink.height} canvas, floor is ` +
-      `${IN_GAME_INK_FLOOR}: the game view painted nothing`
-  );
+  checkInk(gate, '[in-game]', report.canvasReadback, IN_GAME_INK_FLOOR);
 }
 
 async function main() {

@@ -59,8 +59,22 @@ const provider: ResourceProvider = {
   loadResource: async (path) => (path === 'res://project.godot' ? PROJECT : null),
 };
 
-async function mountGame() {
-  const scene = openScene({ source: SCENE, provider });
+const CONTROL_ROOT_SCENE = `[gd_scene format=3]
+
+[node name="Main" type="Control"]
+
+[node name="Box2" type="SubViewportContainer" parent="."]
+
+[node name="SubViewport" type="SubViewport" parent="Box2"]
+
+[node name="Camera3D" type="Camera3D" parent="Box2/SubViewport"]
+current = true
+
+[node name="Box" type="CSGBox3D" parent="Box2/SubViewport"]
+`;
+
+async function mountGame(source = SCENE) {
+  const scene = openScene({ source, provider });
   const renderer = await ReactThreeTestRenderer.create(
     <TscnSceneProvider scene={scene}>
       <GameViewContents />
@@ -103,10 +117,18 @@ describe('the In-game mode', () => {
     });
   });
 
+  it('draws a SubViewport below a Control root through its own pass', async () => {
+    await mountGame(CONTROL_ROOT_SCENE);
+    expect(descriptionsByPath().get('Main/Box2/SubViewport')).toMatchObject({ camera: 'elected' });
+  });
+
   it('takes no pointer input: no object holds a pointer handler, so a click selects nothing', async () => {
     const renderer = await mountGame();
     const handled = renderer.scene.findAll((node) =>
-      Object.keys(node.props).some((prop) => /^on(Pointer|Click|DoubleClick|ContextMenu|Wheel)/.test(prop))
+      Object.entries(node.props).some(
+        ([prop, value]) =>
+          /^on(Pointer|Click|DoubleClick|ContextMenu|Wheel)/.test(prop) && typeof value === 'function'
+      )
     );
     expect(handled.map((node) => node.props.name)).toEqual([]);
   });

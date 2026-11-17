@@ -19,17 +19,19 @@ import { NO_RESOLUTION, PENDING_RESOLUTION } from './worldGroup';
 import { ViewportDescriptionProvider } from '../viewportRender/viewportDescriptionContext';
 import { gameViewportDescription } from '../viewportRender/viewportDescription';
 
-vi.mock('./EnvironmentLayer', () => ({
-  EnvironmentLayer: ({ settings }: EnvironmentLayerProps) => (
-    <group name="EnvironmentLayer" userData={{ settings }} />
-  ),
-}));
+vi.mock('./EnvironmentLayer', async () => {
+  const { previewEnvironment } = await import('../preview/godotPreviewLighting');
+  return {
+    EnvironmentLayer: ({ settings }: EnvironmentLayerProps) => (
+      <group
+        name={settings === previewEnvironment().settings ? 'PreviewEnvironment' : 'EnvironmentLayer'}
+        userData={{ settings }}
+      />
+    ),
+  };
+});
 vi.mock('./NoEnvironmentLayer', () => ({
   NoEnvironmentLayer: () => <group name="NoEnvironmentLayer" />,
-}));
-vi.mock('../preview/PreviewEnvironment', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../preview/PreviewEnvironment')>()),
-  PreviewEnvironment: () => <group name="PreviewEnvironment" />,
 }));
 vi.mock('./Compositor', () => ({
   Compositor: () => <group name="Compositor" />,

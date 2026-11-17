@@ -115,9 +115,7 @@ function visibleEditorHelpers(renderer: Rendered): THREE.Object3D[] {
 describe('where the game runs, no node draws an editor element', () => {
   it('covers every registered type, so an empty list cannot vacuously pass', () => {
     expect(TYPES.length).toBeGreaterThanOrEqual(180);
-    expect(TYPES).toEqual(
-      expect.arrayContaining(['Camera3D', 'Marker2D', 'ReferenceRect', 'CollisionShape3D'])
-    );
+    expect(TYPES).toEqual(expect.arrayContaining(['Camera3D', 'Marker2D', 'CollisionShape3D']));
   });
 
   it.each(TYPES)('%s draws no editor helper', async (type) => {

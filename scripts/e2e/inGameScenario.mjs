@@ -1,14 +1,11 @@
 import { inkStats } from '../vscode/pixels.mjs';
 import { findCanvas, readViewportMode, settleCanvas } from '../visual/previewServer.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
-import { checkInk, checkSizedCanvas } from './canvasChecks.mjs';
+import { checkInk, checkSizedCanvas, checkStage, INK_FLOOR_2D } from './canvasChecks.mjs';
 import { openFixture } from './openFixture.mjs';
 
 export const IN_GAME_FIXTURE = 'in-game/unit-in-game-camera2d.tscn';
 const IN_GAME_BUTTON = 'In-game';
-
-// The shapes and the bar draw about 20k ink pixels on a 631x756 canvas, so the floor only clears noise.
-const INK_FLOOR_IN_GAME = 4000;
 
 export async function runInGameScenario(browser, baseUrl) {
   const { context, page, diagnostics } = await openFixture(browser, baseUrl, {
@@ -40,16 +37,13 @@ export async function runInGameScenario(browser, baseUrl) {
 
 /** Records the scenario's claims on `gate`. */
 export function checkInGame(gate, result) {
-  gate.check(
-    result.openedIn === '2d',
-    `[in-game] ${IN_GAME_FIXTURE} opened in "${result.openedIn}", expected "2d"`
-  );
+  checkStage(gate, `[in-game] ${IN_GAME_FIXTURE}`, result.openedIn, '2d');
   gate.check(result.isPressed, `[in-game] the ${IN_GAME_BUTTON} button is not pressed after a click`);
   gate.check(
     result.stageAfter === '3d',
     `[in-game] the 2D stage still shows after the ${IN_GAME_BUTTON} button, so the game view never mounted`
   );
   checkSizedCanvas(gate, '[in-game]', result.dims);
-  checkInk(gate, '[in-game]', result.ink, INK_FLOOR_IN_GAME);
+  checkInk(gate, '[in-game]', result.ink, INK_FLOOR_2D);
   checkDiagnostics(gate, '[in-game]', result.diagnostics);
 }

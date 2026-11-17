@@ -13,7 +13,6 @@ import { DrawnEnvironmentLayer, EnvironmentLayer, type EnvironmentLayerProps } f
 import { NoEnvironmentLayer } from './NoEnvironmentLayer';
 import { Compositor } from './Compositor';
 import { useDraws3D } from './draws3D';
-import { PreviewEnvironment } from '../preview/PreviewEnvironment';
 import { previewEnvironment } from '../preview/godotPreviewLighting';
 import { PreviewSun } from '../preview/PreviewSun';
 import { usePreviewYield } from '../preview/usePreviewYield';
@@ -144,27 +143,19 @@ export function SharedWorldEnvironmentScope({ children }: { children: ReactNode 
   return <SharedWorldExposureScope>{children}</SharedWorldExposureScope>;
 }
 
-/**
- * The root viewport's Environment, which falls back to the editor preview environment, and the
- * editor preview sun after the scene, so the scene's own nodes come first. One yield serves both,
- * since each walks the whole live tree. One compositor tonemaps every 3D frame of the canvas with
- * whichever Environment applies, so a switch or a load keeps its buffer (ADR-0061).
- */
+/** One compositor tonemaps every 3D frame with whichever Environment applies (ADR-0061). */
 function RootEnvironment({ children }: { children: ReactNode }) {
-  const chosen = environments.useChosen();
-  const authored = useViewEnvironment(chosen);
   const preview = usePreviewYield();
+  const world = useRootWorldEnvironment(preview.environment);
+  const authored = useViewEnvironment(world);
   const draws3D = useDraws3D();
-  // An authored Environment proves a WorldEnvironment node or a camera's, and takes the preview away.
-  const showsPreview = !authored && preview.environment;
-  const shown = showsPreview ? previewEnvironment() : resolvedEnvironment(authored);
-  // The preview stands in for a WorldEnvironment, so a pass through a camera with none draws it too.
-  const own = !chosen && preview.environment ? previewEnvironment() : resolvedEnvironment(chosen);
+  const shown = resolvedEnvironment(authored);
+  const own = resolvedEnvironment(world);
   return (
     <WorldOwnEnvironmentContext.Provider value={own}>
       <PassToneMapProvider settings={shown?.settings ?? null} glowMap={shown?.glowMap ?? null}>
         {draws3D && <Compositor />}
-        <RootEnvironmentLayer authored={authored} showsPreview={showsPreview} />
+        <RootEnvironmentLayer authored={authored} />
         <DrawnEnvironments shown={shown} own={own} />
         {children}
         {preview.sun && <PreviewSun />}
@@ -173,16 +164,25 @@ function RootEnvironment({ children }: { children: ReactNode }) {
   );
 }
 
-function RootEnvironmentLayer({
-  authored,
-  showsPreview,
-}: {
-  authored: EnvironmentResolution | null;
-  showsPreview: boolean;
-}) {
+/** The preview stands in while no WorldEnvironment node does, even one with no valid Environment. */
+function useRootWorldEnvironment(previewsEnvironment: boolean): EnvironmentResolution | null {
+  const chosen = environments.useChosen();
+  const fallback = useFallbackEnvironment();
+  if (!chosen) return previewsEnvironment ? previewResolution() : fallback;
+  return chosen.status === 'none' ? fallback : chosen;
+}
+
+/** Written only by `previewResolution`, on the first preview. Never cleared: the preview never changes. */
+let builtPreviewResolution: EnvironmentResolution | undefined;
+
+function previewResolution(): EnvironmentResolution {
+  return (builtPreviewResolution ??= { status: 'resolved', environment: previewEnvironment() });
+}
+
+function RootEnvironmentLayer({ authored }: { authored: EnvironmentResolution | null }) {
   if (authored?.status === 'resolved') return <EnvironmentLayer {...authored.environment} />;
   if (authored?.status === 'pending') return null;
-  return showsPreview ? <PreviewEnvironment /> : <NoEnvironmentLayer />;
+  return <NoEnvironmentLayer />;
 }
 
 /**

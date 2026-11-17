@@ -122,7 +122,12 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
     // paint-order-safe: the delegated pointer root, above every canvas item.
     // One root raycasts a mesh once per pointer move. A handler per node raycasts
     // it once per ancestor, since R3F makes each handler its own raycast root.
-    <group {...pointerHandlers}>
+    <group
+      onPointerDown={pointerHandlers?.onPointerDown}
+      onPointerUp={pointerHandlers?.onPointerUp}
+      onPointerMove={pointerHandlers?.onPointerMove}
+      onPointerOut={pointerHandlers?.onPointerOut}
+    >
       {/* A CanvasModulate tints the canvas, not its subtree, so it has its own
           context: each item multiplies it into its own pixels once, and an
           Unshaded item skips it, as Godot's base pass does. */}

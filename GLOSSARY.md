@@ -791,6 +791,10 @@ _Avoid_: "default light", "fill light".
 The stand-in **WorldEnvironment** from Godot's editor, a procedural sky for background and ambient light, added to a scene with no `WorldEnvironment` (ADR-0025).
 _Avoid_: "default environment", "skybox". Coupling it to the **Preview sun**.
 
+**Clear-colour ambient** (`useFallbackEnvironment` in `r3f/environment/fallbackEnvironment.ts`):
+The ambient light of a world with no Environment: the viewport's clear colour at energy 1, as Godot gives it (`render_scene_data_rd.cpp:225-235`). A transparent viewport's world takes none.
+_Avoid_: "default ambient", "fallback light".
+
 **Yield** (of preview lighting):
 What a preview element does when the scene has a node of its type anywhere in the **Live scene tree**: it does not mount.
 _Avoid_: "override", "fallback".

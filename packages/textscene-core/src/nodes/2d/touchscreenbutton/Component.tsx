@@ -11,12 +11,11 @@ import type { TouchScreenButtonProperties } from './types';
 function asUncentredSprite(
   node: TscnNode,
   props: TouchScreenButtonProperties,
-  drawsTexture: boolean
+  texture: Sprite2DProperties['texture']
 ): TscnNode {
   const sprite: Sprite2DProperties = {
     ...props,
-    // The texture unsets, not the node, so a live edit keeps the children mounted.
-    texture: drawsTexture ? props.texture_normal : undefined,
+    texture,
     centered: false,
     offset: { x: 0, y: 0 },
     flip_h: false,
@@ -42,8 +41,10 @@ export function TouchScreenButton({ node, children }: NodeComponentProps) {
     isEditorHint ||
     props.visibility_mode !== TouchScreenButtonVisibilityMode.TOUCHSCREEN_ONLY ||
     hasTouchScreen();
+  // The texture unsets, not the node, so a live edit keeps the children mounted.
+  const texture = drawsTexture ? props.texture_normal : undefined;
   // Memoised so the Sprite2D below sees one properties object per node, as it does for a parsed Sprite2D.
-  const spriteNode = useMemo(() => asUncentredSprite(node, props, drawsTexture), [node, props, drawsTexture]);
+  const spriteNode = useMemo(() => asUncentredSprite(node, props, texture), [node, props, texture]);
 
   return (
     <Sprite2D node={spriteNode}>

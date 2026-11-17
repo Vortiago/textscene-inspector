@@ -48,8 +48,6 @@ export const VIEWPORT = { width: 1280, height: 800 };
 export const CANVAS_2D_CAPTURE = {
   width: 1152,
   height: 648,
-  // Godot's `rendering/environment/defaults/default_clear_color` default.
-  clearColor: [0.3, 0.3, 0.3],
   // The frame fits inside the stage at zoom 1: the window minus the dock and the top bar.
   viewport: { width: 1600, height: 900 },
 };

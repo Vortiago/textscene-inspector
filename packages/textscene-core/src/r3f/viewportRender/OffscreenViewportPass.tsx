@@ -492,7 +492,7 @@ function OwnWorldEnvironmentScope({ children }: { children: ReactNode }) {
 }
 
 /** An own world drawn as a 2D canvas, whose shared viewports draw its World3D, not the parent's. */
-function OwnCanvasWorldScope({ children }: { children: ReactNode }) {
+export function OwnCanvasWorldScope({ children }: { children: ReactNode }) {
   return (
     <OwnWorldEnvironmentScope>
       <CanvasWorldScope>{children}</CanvasWorldScope>

@@ -42,27 +42,31 @@ export function GameViewContents() {
 function RootViewport() {
   const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
-  const nodes = useSeatedRoots() ?? null;
+  const nodes = useSeatedRoots();
   const { settings } = useProjectSettings();
   const root = useMemo(() => rootViewportNode(settings, nodes ? [...nodes] : []), [settings, nodes]);
+  const rasterRoots = useMemo(() => [root], [root]);
   const description = useMemo(() => gameViewportDescription(settings), [settings]);
-  if (!nodes || !rootScene) return <RootViewportPresenter root={root} />;
   return (
-    <SceneResourcesProvider
-      internalResources={rootScene.internalResources}
-      externalResources={rootScene.externalResources}
-    >
-      <EditedRootProvider editableInstances={rootScene.editableInstances}>
-        <ViewportMount node={root} description={description}>
-          <NodeDispatcher nodes={nodes} />
-        </ViewportMount>
-        <ControlRasterLayer
-          nodes={[root]}
+    <>
+      {nodes && rootScene && (
+        <SceneResourcesProvider
           internalResources={rootScene.internalResources}
           externalResources={rootScene.externalResources}
-        />
-      </EditedRootProvider>
+        >
+          <EditedRootProvider editableInstances={rootScene.editableInstances}>
+            <ViewportMount node={root} description={description}>
+              <NodeDispatcher nodes={nodes} />
+            </ViewportMount>
+            <ControlRasterLayer
+              nodes={rasterRoots}
+              internalResources={rootScene.internalResources}
+              externalResources={rootScene.externalResources}
+            />
+          </EditedRootProvider>
+        </SceneResourcesProvider>
+      )}
       <RootViewportPresenter root={root} />
-    </SceneResourcesProvider>
+    </>
   );
 }

@@ -38,7 +38,7 @@ const WORLD_BLUE = makeNode('World', 'WorldEnvironment', {
   rawProperties: { environment: 'SubResource("Blue")' },
 });
 
-/** The colour of the background the world's viewport renders, or null without an Environment. */
+/** The colour of the background the world's viewport renders: red, blue or the grey clear colour. */
 async function backgroundOf(
   world: 'root' | 'subViewport',
   viewed: string | null,
@@ -60,8 +60,8 @@ async function backgroundOf(
     </SceneResourcesProvider>
   );
   const background = (renderer.scene.instance as THREE.Scene).background as THREE.DataTexture | null;
-  if (!background) return null;
-  const [red, , blue] = textureTexel(background);
+  const [red, , blue] = textureTexel(background!);
+  if (red === blue) return 'clear colour';
   return red! > blue! ? 'red' : 'blue';
 }
 
@@ -70,8 +70,8 @@ describe('Camera3D environment', () => {
     expect(await backgroundOf('root', 'Main', [cameraNode('Main', 'SubResource("Red")')])).toBe('red');
   });
 
-  it('leaves the world alone with no camera preview', async () => {
-    expect(await backgroundOf('root', null, [cameraNode('Main', 'SubResource("Red")')])).toBeNull();
+  it("leaves the world's clear colour alone with no camera preview", async () => {
+    expect(await backgroundOf('root', null, [cameraNode('Main', 'SubResource("Red")')])).toBe('clear colour');
   });
 
   it("replaces the WorldEnvironment's Environment", async () => {

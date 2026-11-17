@@ -3,7 +3,8 @@
 ; The In-game mode draws the root viewport through the scene's current Camera3D, not the editor
 ; orbit. Each current camera claims the viewport in tree order, and the last claim wins
 ; (`viewport.cpp:4565-4581`), so the view is `Near`'s. With no WorldEnvironment, no project
-; environment and no light, Godot draws the clear colour and a box lit by no preview sun or sky.
+; environment and no light, Godot draws the clear colour, and the box takes it as ambient light
+; (`render_scene_data_rd.cpp:225-235`), with no preview sun or sky.
 
 [sub_resource type="BoxMesh" id="BoxMesh_1"]
 
