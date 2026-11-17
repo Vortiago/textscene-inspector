@@ -104,7 +104,7 @@ and prints exact pixels. It is a tool, not a gate.
   project's window size, stretch, default environment and clear colour, and the scene's own cameras. It adds
   no camera and no preview lighting, removes every script and autoload, and keeps the time at 0. It refuses
   `--scene-camera`, `--no-previews`, `--camera`, `--look-at`, `--frame`, `--fov`, `--emit-bounds`, `--width`
-  and `--height`. `pnpm ref:diff --mode in-game` waits for the game view of the package.
+  and `--height`. `pnpm ref:diff --mode in-game` waits for the game view of the package (#1974).
 - A 1/255 gap on a channel whose value × 255 is fractional is not a parity defect. The driver
   rounds it: Godot clears `Color(0.3)` (76.5) to 76 under vulkan and to 77 under opengl3
   (measured, `run.engine.test.mjs`). Compare `--rendering-driver opengl3` with the default vulkan before

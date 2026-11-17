@@ -38,8 +38,9 @@ describe('parseArgs', () => {
     expect(parseArgs(['a.tscn']).mode).toBeNull();
   });
 
-  it('refuses a mode that run.mjs picks from the scene, naming the one it takes', () => {
-    expect(() => parseArgs(['a.tscn', '--mode', '2d'])).toThrow(/--mode takes in-game.*got "2d"/);
+  it('refuses a mode that run.mjs picks from the scene, and reads the one it takes in any case', () => {
+    expect(() => parseArgs(['a.tscn', '--mode', '2d'])).toThrow(/--mode takes one of in-game, got "2d"/);
+    expect(parseArgs(['a.tscn', '--mode', 'In-Game']).mode).toBe('in-game');
   });
 
   it('names the issue that adds our side of --mode in-game', () => {

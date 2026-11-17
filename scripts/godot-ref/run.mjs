@@ -106,18 +106,18 @@ export const RENDER_MODES = ['auto', '2d', '3d', '2d-root', 'in-game'];
 /** The scene as the root window's own scene with no script run, as the game starts it. */
 export const IN_GAME_MODE = 'in-game';
 
-/** Why each flag has no meaning in `in-game`, where the game decides what it names. */
-const IN_GAME_IGNORED_FLAGS = {
-  '--scene-camera': 'the game looks through the camera the scene makes current',
-  '--no-previews': 'the mode never adds the editor preview lighting',
-  '--camera': 'the mode adds no camera',
-  '--look-at': 'the mode adds no camera',
-  '--frame': 'the mode adds no camera',
-  '--fov': 'the mode adds no camera',
-  '--emit-bounds': 'the mode places no camera from bounds',
-  '--width': 'the window is the size the project sets',
-  '--height': 'the window is the size the project sets',
-};
+/** Each flag `in-game` would ignore, why, and how a `renderReference` option sets it. */
+const IN_GAME_IGNORED = [
+  ['--scene-camera', 'the game looks through the camera the scene makes current', (o) => o.sceneCamera],
+  ['--no-previews', 'the mode never adds the editor preview lighting', (o) => o.previews === false],
+  ['--camera', 'the mode adds no camera', (o) => o.camera != null],
+  ['--look-at', 'the mode adds no camera', (o) => o.lookAt != null],
+  ['--frame', 'the mode adds no camera', (o) => o.frame],
+  ['--fov', 'the mode adds no camera', (o) => o.fovExplicit],
+  ['--emit-bounds', 'the mode places no camera from bounds', (o) => o.boundsOut != null],
+  ['--width', 'the window is the size the project sets', (o) => o.width !== DEFAULT_WIDTH],
+  ['--height', 'the window is the size the project sets', (o) => o.height !== DEFAULT_HEIGHT],
+];
 
 /**
  * Driver to the rendering method that offers it (main.cpp:2547-2565). A one-step gap on a
@@ -356,7 +356,7 @@ function vec2(flag, raw) {
 }
 
 /** Enum-flag validation, shared so a new flag does not invent a fourth wording. */
-function oneOf(flag, allowed, raw) {
+export function oneOf(flag, allowed, raw) {
   const value = String(raw).toLowerCase();
   if (!allowed.includes(value)) {
     throw new Error(`${flag} takes one of ${allowed.join('|')}, got "${value}"`);
@@ -488,13 +488,14 @@ export function parseArgs(argv) {
         args.scene = arg;
     }
   }
-  if (args.mode === IN_GAME_MODE) refuseFlagsInGameIgnores(given);
+  if (args.mode === IN_GAME_MODE) refuseIgnoredByInGame(given);
 
   return args;
 }
 
-function refuseFlagsInGameIgnores(given) {
-  for (const [flag, reason] of Object.entries(IN_GAME_IGNORED_FLAGS)) {
+/** Throws for the first flag of `given` that `in-game` would ignore, so no measurement is silently wrong. */
+function refuseIgnoredByInGame(given) {
+  for (const [flag, reason] of IN_GAME_IGNORED) {
     if (given.has(flag)) throw new Error(`--mode ${IN_GAME_MODE} cannot take ${flag}: ${reason}.`);
   }
 }
@@ -506,28 +507,24 @@ function refuseFlagsInGameIgnores(given) {
  * the keys of `projectViewportSize` (`parser/projectSettingsParser.ts`) without a build step.
  */
 export function projectViewportSizeFromIni(sourceIni) {
-  const axis = (key, fallback) => {
-    const match = new RegExp(`^\\s*window/size/${key}\\s*=\\s*(\\S+)`, 'm').exec(sourceIni ?? '');
-    if (!match) return fallback;
-    const value = Number(match[1]);
-    return Number.isFinite(value) && value > 0 ? Math.round(value) : fallback;
-  };
   return {
-    width: axis('viewport_width', CANVAS_2D_CAPTURE.width),
-    height: axis('viewport_height', CANVAS_2D_CAPTURE.height),
+    width: windowSizeSetting(sourceIni, 'viewport_width') ?? CANVAS_2D_CAPTURE.width,
+    height: windowSizeSetting(sourceIni, 'viewport_height') ?? CANVAS_2D_CAPTURE.height,
   };
+}
+
+/** A `display/window/size/<key>` pixel count, or null when it is unset, not a number or not above 0. */
+function windowSizeSetting(sourceIni, key) {
+  const match = new RegExp(`^\\s*window/size/${key}\\s*=\\s*(\\S+)`, 'm').exec(sourceIni ?? '');
+  const value = Number(match?.[1]);
+  return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
 }
 
 /** The window the project opens: the override when both axes set one, else the viewport (measured). */
 export function projectWindowSizeFromIni(sourceIni) {
-  const override = (key) => {
-    const match = new RegExp(`^\\s*window/size/window_${key}_override\\s*=\\s*(\\S+)`, 'm').exec(
-      sourceIni ?? ''
-    );
-    return match ? Math.round(Number(match[1])) || 0 : 0;
-  };
-  const [width, height] = [override('width'), override('height')];
-  return width > 0 && height > 0 ? { width, height } : projectViewportSizeFromIni(sourceIni);
+  const width = windowSizeSetting(sourceIni, 'window_width_override');
+  const height = windowSizeSetting(sourceIni, 'window_height_override');
+  return width && height ? { width, height } : projectViewportSizeFromIni(sourceIni);
 }
 
 /** Removes a whole `[name]` section of a Godot ConfigFile, whose keys no pattern can match. */
@@ -880,15 +877,6 @@ func _render_3d(target: Node) -> void:
 	_save_capture(get_viewport())
 	_write_bounds(target)
 
-# The root's own scene, so the project's clear colour, environment and window apply.
-# One frame passes first: the root rejects an add_child while it adds this node (node.cpp:1709).
-func _render_in_game(target: Node) -> void:
-	await get_tree().process_frame
-	get_tree().root.add_child(target)
-	_advance_particles(target)
-	await _converge(get_tree().root)
-	_save_capture(get_tree().root)
-
 func _save_capture(source: Viewport) -> void:
 	_viewport_image(source).save_png(OUT)
 
@@ -1111,6 +1099,23 @@ func _keep_stack_running(skeleton: Skeleton2D) -> void:
 		if child.process_mode == Node.PROCESS_MODE_INHERIT and not child.can_process():
 			child.process_mode = Node.PROCESS_MODE_PAUSABLE
 	skeleton.process_mode = Node.PROCESS_MODE_ALWAYS
+
+# The root's own scene, so the project's clear colour, environment and window apply.
+# One frame passes first: the root rejects an add_child while it adds this node (node.cpp:1709).
+func _render_in_game(target: Node) -> void:
+	await get_tree().process_frame
+	_advance_particles(target)
+	get_tree().root.add_child(target)
+	_run_skeleton_stacks(target)
+	await _converge(get_tree().root)
+	_save_capture(get_tree().root)
+
+# The pause would stop a modification stack, which the game runs (skeleton_2d.cpp:630-639).
+func _run_skeleton_stacks(node: Node) -> void:
+	if node is Skeleton2D:
+		_keep_stack_running(node as Skeleton2D)
+	for child in node.get_children():
+		_run_skeleton_stacks(child)
 
 # The editor keeps the edited scene under the 2D editor's viewport, which draws
 # no 3D (editor_node.cpp:8648-8652). Every CanvasItem and CanvasLayer draws on
@@ -1619,6 +1624,12 @@ export async function renderReference({
   if (renderingDriver !== null && !DRIVER_NAMES.includes(renderingDriver)) {
     throw new Error(`renderingDriver must be one of ${DRIVER_NAMES.join('|')}, got "${renderingDriver}"`);
   }
+  if (mode === IN_GAME_MODE) {
+    const options = { width, height, previews, camera, lookAt, frame, sceneCamera, boundsOut, fovExplicit };
+    refuseIgnoredByInGame(
+      new Set(IN_GAME_IGNORED.filter(([, , isSet]) => isSet(options)).map(([flag]) => flag))
+    );
+  }
 
   const root = resolveProjectRoot(scenePath);
   const work = await mkdtemp(join(tmpdir(), 'godot-ref-'));
@@ -1692,8 +1703,11 @@ async function renderInto(
     await writeFile(
       join(work, 'project.godot'),
       projectConfig(sourceIni, {
-        ...(rootWindow ? { ...canvas2DSize, pinWindowToViewport: true } : { width, height }),
-        ...(inGame ? { ...canvas2DSize, inGame: true } : {}),
+        ...(rootWindow
+          ? { ...canvas2DSize, pinWindowToViewport: true }
+          : inGame
+            ? { ...canvas2DSize, inGame: true }
+            : { width, height }),
         // Only a game runs an autoload (main.cpp:4397), with no `@tool` exception. The game view runs none.
         runScripts: !previews && !inGame,
       })

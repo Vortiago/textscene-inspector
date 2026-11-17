@@ -648,6 +648,32 @@ color = Color(1, 0, 0, 1)
       });
     });
 
+    it('advances a 3D emitter by the seconds `particles` names, before the paused tree can spend them', async () => {
+      const emitter = `[gd_scene format=3]
+
+[sub_resource type="SphereMesh" id="Dot"]
+radius = 0.1
+height = 0.2
+
+[node name="Root" type="Node3D"]
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6)
+
+[node name="Emitter" type="CPUParticles3D" parent="."]
+amount = 40
+lifetime = 1.25
+mesh = SubResource("Dot")
+direction = Vector3(0, 0, 1)
+gravity = Vector3(0, 0, 0)
+initial_velocity_min = 1.0
+initial_velocity_max = 1.0
+`;
+      const unadvanced = await renderProject({ 'main.tscn': emitter }, { particles: 0 });
+      const advanced = await renderProject({ 'main.tscn': emitter }, { particles: 1.25 });
+      expect(Buffer.from(advanced.png.data).equals(Buffer.from(unadvanced.png.data))).toBe(false);
+    });
+
     describe('renders the root window at the size the project sets', () => {
       const display = (lines) => `[display]\n${lines.join('\n')}\n`;
       const main = boxScene([unshadedBox('Box', 0, RED)], cameraAt('Camera', 0, true));

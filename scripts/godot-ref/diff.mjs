@@ -13,7 +13,7 @@ import { PNG } from 'pngjs';
 import { tableLines } from '../compare-docs/markdownTable.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { compareImages } from '../visual/imageDelta.mjs';
-import { IN_GAME_MODE, renderReference } from './run.mjs';
+import { IN_GAME_MODE, oneOf, renderReference } from './run.mjs';
 import { captureOurs } from './capture-ours.mjs';
 import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
 
@@ -38,7 +38,7 @@ function usage() {
       '  --frame          fit-the-bounds camera on BOTH sides instead of the editor orbit\n' +
       '  --keep           keep the per-side PNGs, not just the diff\n' +
       '  --collisions     show collision shapes on both sides (Visible Collision Shapes)\n' +
-      '  --mode in-game   measure the scene as the game starts it (our side has no game view yet)\n' +
+      '  --mode in-game   measure the scene as the game starts it (our side has no game view yet, see #1974)\n' +
       '  --table <file>   also write the results as a Markdown table, one row per scene'
   );
 }
@@ -66,10 +66,7 @@ export function parseArgs(argv) {
         throw new Error(`--table needs a file path, got "${argv[i]}"`);
       }
     } else if (arg === '--mode') {
-      args.mode = argv[++i];
-      if (args.mode !== IN_GAME_MODE) {
-        throw new Error(`--mode takes ${IN_GAME_MODE}, the only mode chosen by hand here, got "${argv[i]}"`);
-      }
+      args.mode = oneOf('--mode', [IN_GAME_MODE], argv[++i]);
     } else if (arg === '--frame') args.frame = true;
     else if (arg === '--keep') args.keep = true;
     else if (arg === '--collisions') args.collisions = true;

@@ -49,6 +49,7 @@ import {
   rootOnlyDriftMessage,
   harnessWarnings,
   projectWindowSizeFromIni,
+  renderReference,
 } from './run.mjs';
 import { resolveProjectRoot } from './projectRoot.mjs';
 
@@ -290,6 +291,27 @@ describe('parseArgs', () => {
     expect(() => parseArgs(['a.tscn', '--mode', 'in-game', ...given])).toThrow(expected);
     // Order must not matter: the flag may come first.
     expect(() => parseArgs(['a.tscn', ...given, '--mode', 'in-game'])).toThrow(expected);
+  });
+
+  it.each([
+    ['--scene-camera', { sceneCamera: true }],
+    ['--no-previews', { previews: false }],
+    ['--camera', { camera: [0, 1, 4] }],
+    ['--look-at', { lookAt: [0, 0, 0] }],
+    ['--frame', { frame: true }],
+    ['--fov', { fovExplicit: true }],
+    ['--emit-bounds', { boundsOut: '/tmp/bounds.json' }],
+    ['--width', { width: 800 }],
+    ['--height', { height: 600 }],
+  ])('refuses the renderReference option behind %s as the command line does', async (flag, option) => {
+    await expect(
+      renderReference({
+        scene: join(REPO_ROOT, 'scenes/fixtures/unit-plane-mesh.tscn'),
+        out: '/tmp/never.png',
+        mode: 'in-game',
+        ...option,
+      })
+    ).rejects.toThrow(new RegExp(`--mode in-game cannot take ${flag}: `));
   });
 
   it('takes the flags in-game ignores with every other mode', () => {
@@ -587,7 +609,10 @@ describe('--mode in-game renders the scene as the game starts it', () => {
   });
 
   it('adds no camera and no preview lighting, and hides no canvas', () => {
-    const body = script.slice(script.indexOf('func _render_in_game'), script.indexOf('func _save_capture'));
+    const body = script.slice(
+      script.indexOf('func _render_in_game'),
+      script.indexOf('func _run_skeleton_stacks')
+    );
     expect(body).not.toMatch(
       /_place_camera|_apply_preview_lighting|_hide_2d|_disable_2d_cameras|set_default_clear_color/
     );
@@ -602,6 +627,22 @@ describe('--mode in-game renders the scene as the game starts it', () => {
   it('stops no player after ready, which is the freeze the editor view runs', () => {
     expect(script).toContain('const PREVIEWS := false');
     expect(bootstrap({ mode: '3d' })).toContain('const PREVIEWS := true');
+  });
+
+  it('runs a Skeleton2D modification stack after the scene enters the tree, as the game does', () => {
+    const body = script.slice(
+      script.indexOf('func _render_in_game'),
+      script.indexOf('func _run_skeleton_stacks')
+    );
+    expect(body.indexOf('add_child(target)')).toBeLessThan(body.indexOf('_run_skeleton_stacks(target)'));
+  });
+
+  it('asks for the particle advance before the scene enters the tree, where a 3D emitter spends it', () => {
+    const body = script.slice(
+      script.indexOf('func _render_in_game'),
+      script.indexOf('func _run_skeleton_stacks')
+    );
+    expect(body.indexOf('_advance_particles(target)')).toBeLessThan(body.indexOf('add_child(target)'));
   });
 
   it('reports itself as in-game, since neither 2D nor 3D describes the image', () => {
