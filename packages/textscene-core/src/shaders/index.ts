@@ -20,14 +20,3 @@ export {
   type SkyLight,
   type SkyScene,
 } from './sky/skyBindings.js';
-export { baseMaterialShader, shaderTextOf } from './material/baseMaterialShader.js';
-export { materialParameters } from './material/materialParameters.js';
-export {
-  materialStateOf,
-  type MaterialClass,
-  type MaterialSettings,
-  type MaterialState,
-  type MaterialTexture,
-  type MaterialValue,
-} from './material/materialProperties.js';
-export { stencilPassOf, type StencilPass } from './material/stencilEffect.js';

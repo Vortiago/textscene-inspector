@@ -54,6 +54,11 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   'shaders/language/printer.ts#printShader',
   // The tree check proves each parsed tree has Godot's node types and positions, in tests only.
   'shaders/language/treeCheck.ts#treeFault',
+  // The BaseMaterial3D generator ships before its reader, the lit scene template.
+  'shaders/material/baseMaterialShader.ts#baseMaterialShader',
+  'shaders/material/baseMaterialShader.ts#shaderTextOf',
+  'shaders/material/materialParameters.ts#materialParameters',
+  'shaders/material/stencilEffect.ts#stencilPassOf',
   // The template check prints each parsed template stage back to text, which no draw needs.
   'shaders/template/printTemplate.ts#printTemplateStage',
 ];
