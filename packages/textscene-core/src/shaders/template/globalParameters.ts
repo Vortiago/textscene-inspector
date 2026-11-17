@@ -7,7 +7,7 @@ import type {
   Statement,
   StructMember,
 } from '../language/shaderTree.js';
-import { isCall, withSubExpressions } from '../language/treeWalk.js';
+import { everyExpressionIn, isCall, withSubExpressions } from '../language/treeWalk.js';
 import type { GlobalNode, TemplateDeclaration, TemplateStageNode } from './templateTree.js';
 
 /** The storage words of a global whose value a stage function cannot write, or the next stage gives. */
@@ -20,7 +20,9 @@ export function withGlobalParameters(stage: TemplateStageNode, result: StructMem
     (declaration): declaration is FunctionNode => declaration.kind === 'function'
   );
   const touched = touchedGlobals(functions, writable);
-  const passed = (name: string) => (name === 'main' ? [] : [...(touched.get(name) ?? [])]);
+  const parameterNames = new Map([...touched].map(([name, globals]) => [name, [...globals]]));
+  const passed = (name: string): readonly string[] =>
+    name === 'main' ? [] : (parameterNames.get(name) ?? []);
   const declaration = (part: TemplateDeclaration): TemplateDeclaration => {
     if (part.kind === 'prototype')
       return { ...part, function: withParameters(part.function, passed(part.function.name), writable) };
@@ -70,11 +72,7 @@ function touchedGlobals(
 
 /** The names of the functions `block` calls, built-ins included. */
 function calleesOf(block: BlockNode): Set<string> {
-  const names = new Set<string>();
-  walkScoped(block, new Set(), (expression) => {
-    if (isCall(expression)) names.add(expression.function);
-  });
-  return names;
+  return new Set([...everyExpressionIn(block)].filter(isCall).map((call) => call.function));
 }
 
 /** Each writable global `definition` names that no parameter or local of its scope hides. */

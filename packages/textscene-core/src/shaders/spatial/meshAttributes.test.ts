@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { AXIS_TANGENT_ATTRIBUTE, VERTEX_ANGLE_ATTRIBUTE, withGodotAttributes } from './meshAttributes.js';
+import { withGodotAttributes } from './meshAttributes.js';
+
+/** The names `scene_forward_clustered.glsl` gives its first two vertex inputs. */
+const VERTEX_ANGLE_ATTRIBUTE = 'vertex_angle_attrib';
+const AXIS_TANGENT_ATTRIBUTE = 'axis_tangent_attrib';
 
 function triangle(): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();

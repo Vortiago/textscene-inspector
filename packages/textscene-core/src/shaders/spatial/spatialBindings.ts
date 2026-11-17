@@ -1,7 +1,8 @@
 import * as THREE from 'three';
-import type { UniformNode } from 'three/webgpu';
+import { depthCorrection } from '../../godot/math/projection.js';
 import { instanceWords, transposed3x4 } from './instanceData.js';
 import type { TranspiledSpatial } from './transpileSpatial.js';
+import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 
 /** What the colour pass reads from a frame with no environment, no light and no camera attributes. */
 export interface SpatialScene {
@@ -13,13 +14,6 @@ export interface SpatialScene {
   readonly time: number;
   /** The viewport's clear colour, linear: with no environment it is the ambient light. */
   readonly clearColor: THREE.Color;
-}
-
-interface Binding {
-  readonly uniform: string;
-  /** Where Godot's C++ writes the value. */
-  readonly godot: string;
-  readonly value: (scene: SpatialScene) => unknown;
 }
 
 /** `SCENE_DATA_FLAGS_USE_AMBIENT_LIGHT` (`scene_data_inc.glsl:6`). */
@@ -34,7 +28,7 @@ const ROUGHNESS_LIMITER = { amount: 0.25, limit: 0.18 };
 const DATA = 'scene_data_block.data';
 
 /** Each member of `SceneData` the colour pass of an unlit scene reads (`render_scene_data_rd.cpp:72-290`). */
-export const SCENE_BINDINGS: readonly Binding[] = [
+export const SCENE_BINDINGS: readonly Binding<SpatialScene>[] = [
   { uniform: `${DATA}.projection_matrix`, godot: 'render_scene_data_rd.cpp:88', value: projectionOf },
   {
     uniform: `${DATA}.inv_projection_matrix`,
@@ -112,27 +106,19 @@ export const SCENE_BINDINGS: readonly Binding[] = [
 
 /** Writes each uniform of `spatial` the binding table names, from `scene`. */
 export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialScene): void {
-  scene.camera.updateMatrixWorld();
-  for (const binding of SCENE_BINDINGS) {
-    const node = spatial.uniforms.get(binding.uniform) as
-      (UniformNode<unknown> & { array?: unknown[] }) | undefined;
-    if (!node) continue;
-    const value = binding.value(scene);
-    if (Array.isArray(value)) node.array!.splice(0, value.length, ...value);
-    else node.value = value;
-  }
+  scene.camera.updateWorldMatrix(true, false);
+  writeBindings(SCENE_BINDINGS, spatial.uniforms, scene);
 }
 
 /** Writes the one instance of `spatial`'s draw, `object`, as Godot writes a mesh instance. */
 export function writeSpatialInstance(spatial: TranspiledSpatial, object: THREE.Object3D): void {
-  object.updateMatrixWorld();
+  object.updateWorldMatrix(true, false);
   spatial.buffers.get('instances')?.write(instanceWords(object.matrixWorld));
 }
 
-/** The camera's projection with y flipped and depth reversed into 0 to 1 (`projection.cpp:787-807`). */
+/** The camera's projection with y flipped and depth reversed into 0 to 1. */
 function projectionOf(scene: SpatialScene): THREE.Matrix4 {
-  const correction = new THREE.Matrix4().set(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -0.5, 0.5, 0, 0, 0, 1);
-  return correction.multiply(scene.camera.projectionMatrix);
+  return new THREE.Matrix4().fromArray(depthCorrection(true)).multiply(scene.camera.projectionMatrix);
 }
 
 /** A matrix whose first three columns are `values`, four at a time, and whose last column is zero. */

@@ -75,6 +75,11 @@ function valuePlacement(type: string, packing: BlockPacking, structOf: StructOf)
   return { alignment: column.alignment, stride: column.size, size: column.size };
 }
 
+/** The bytes between two columns of a matrix of `rows` rows: rule 5 packs it as an array of its columns. */
+export function columnStride(rows: number, packing: BlockPacking): number {
+  return placement({ name: '', type: `vec${rows}`, arraySize: 1 }, packing, () => undefined).stride;
+}
+
 /** Rules 1 to 3: a scalar takes 4 bytes, a vec2 aligns to 8, and a vec3 and a vec4 to 16. */
 function vectorPlacement(lanes: number): Placement {
   const size = lanes * 4;

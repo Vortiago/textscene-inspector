@@ -1,5 +1,4 @@
 import type {
-  Argument,
   BlockNode,
   ConstantNode,
   Expression,
@@ -68,7 +67,7 @@ function squareSignature<Signature extends Omit<FunctionNode, 'body' | 'kind'>>(
   return {
     ...signature,
     returnType: squareType(signature.returnType),
-    arguments: signature.arguments.map((argument: Argument) => squareMember(argument)),
+    arguments: signature.arguments.map(squareMember),
   };
 }
 

@@ -7,6 +7,7 @@ import { withConsumerPage, writeJobSummary } from '../consumer.mjs';
 import { compareImages, TOLERANCE_STEPS } from './compareImages.mjs';
 import { MAIN_SCRIPT, parseShowcaseOutput, showcaseProjectFiles } from './godotShowcases.mjs';
 import { SHOWCASES } from './showcases.mjs';
+import { ALL_SCENES, DRAWN_SCENES } from './drawnScenes.mjs';
 import { MESH_MAIN_SCRIPT, meshProjectFiles, parseMeshOutput } from './godotMeshScenes.mjs';
 import { MESH_SCENES } from './meshScenes.mjs';
 import { parseSkyOutput, SKY_MAIN_SCRIPT, skyProjectFiles, skyRuns } from './godotSkyScenes.mjs';
@@ -36,12 +37,7 @@ async function transpiledImages() {
     { pageDir: join(import.meta.dirname, 'page'), module: 'e2ePage.js', harness: 'shaderEndToEnd' },
     async (page) => {
       const images = new Map();
-      const draws = [
-        ...SHOWCASES.map((spec) => [spec, 'drawShowcase']),
-        ...SKY_SCENES.map((spec) => [spec, 'drawSky']),
-        ...MESH_SCENES.map((spec) => [spec, 'drawMesh']),
-      ];
-      for (const [spec, draw] of draws) {
+      for (const { spec, draw } of DRAWN_SCENES) {
         const drawn = await page.evaluate(([value, name]) => globalThis[name](value), [spec, draw]);
         if (drawn.error) throw new Error(`${spec.name}: ${drawn.error}`);
         images.set(spec.name, Uint8Array.from(drawn.pixels));
@@ -85,7 +81,7 @@ async function main() {
   const update = process.argv.includes('--update');
   if (update) mkdirSync(SHOWCASE_DIR, { recursive: true });
   const failures = [];
-  const results = [...SHOWCASES, ...SKY_SCENES, ...MESH_SCENES].map((showcase) => {
+  const results = ALL_SCENES.map((showcase) => {
     const ours = transpilation.get(showcase.name);
     const theirs = godot.get(showcase.name);
     if (!theirs) throw new Error(`expected Godot's image of showcase ${showcase.name}, found none`);

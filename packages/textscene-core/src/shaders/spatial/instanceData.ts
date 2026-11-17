@@ -25,7 +25,6 @@ export function instanceWords(world: THREE.Matrix4): Uint32Array {
   floats.set([1, 1, 1, 0], 16);
   words[24] = instanceFlags(world);
   words[25] = NO_INSTANCE_UNIFORMS;
-  words[26] = 0;
   words[27] = FIRST_LAYER;
   floats.set(transform, 28);
   return words;

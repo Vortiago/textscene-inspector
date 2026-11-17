@@ -7,6 +7,7 @@ import { GlslangFolding } from '../language/glslangFolding.js';
 import type { EmitContext } from '../language/emitExpression.js';
 import { EmitScope } from '../language/emitScope.js';
 import { StatementEmitter } from '../language/emitStatement.js';
+import { subgroupVariables } from '../language/subgroupComposites.js';
 import { emittedGlslTree, type EmittedTree } from '../language/emittedTree.js';
 import { copyInto, declareVariables, type StructOf, type Value } from '../language/emitValue.js';
 import type { FunctionNode, StructNode } from '../language/shaderTree.js';
@@ -16,7 +17,7 @@ import { withSquareMatrices } from './squareMatrices.js';
 import { StageVaryings } from './stageVaryings.js';
 import { TemplateBuffers } from './templateBuffers.js';
 import { TemplateUniforms } from './templateUniforms.js';
-import type { GlobalNode, TemplateStageNode } from './templateTree.js';
+import type { GlobalNode, InterfaceBlockNode, TemplateStageNode } from './templateTree.js';
 
 /** Each `in` global, built-in and material uniform a stage reads, and each varying the next stage reads. */
 export type StageInputs = ReadonlyMap<string, Value>;
@@ -56,30 +57,27 @@ export function emitTemplateStage(
 ): EmittedStage {
   const structs = new Map<string, StructNode>();
   const structOf: StructOf = (type) => structs.get(type);
-  const declared = declaredStructs(stage);
+  const declared = asDeclared(stage);
   const textures = new Map<string, TextureNode>();
   const globals = new Map<string, Value>();
   const trees = new Map<string, EmittedTree>();
   const plain: GlobalNode[] = [];
   const passed = withGlobalParameters(withSquareMatrices(stage), result).declarations;
-  passed.forEach((declaration, index) => {
+  for (const declaration of passed) {
     if (declaration.kind === 'struct') structs.set(declaration.name, declaration);
     else if (declaration.kind === 'function') trees.set(declaration.name, loweredOnce(declaration));
     else if (declaration.kind === 'interface block' && declaration.qualifiers.words.includes('uniform'))
       globals.set(declaration.instanceName!, resources.uniforms.block(declaration, structOf));
     else if (declaration.kind === 'interface block' && declaration.qualifiers.words.includes('buffer')) {
-      const original = stage.declarations[index] as typeof declaration;
-      globals.set(
-        declaration.instanceName!,
-        resources.buffers.block(original, (type) => declared.get(type))
-      );
+      const name = declaration.instanceName!;
+      globals.set(name, resources.buffers.block(declared.buffers.get(name)!, structLookup(declared.structs)));
     } else if (declaration.kind === 'global') {
       uniformGlobals(declaration, globals, textures);
       stageVaryings(stage.stage, declaration, result, resources.varyings, globals);
       if (isPlain(stage.stage, declaration)) plain.push(declaration);
     }
-  });
-  for (const [name, value] of inputs) globals.set(name, value);
+  }
+  for (const [name, value] of [...subgroupVariables(), ...inputs]) globals.set(name, value);
   const body: BodyEmitter = (tree, names) =>
     new StatementEmitter(tree.folding, context).body(
       tree.lowered.body,
@@ -96,14 +94,29 @@ export function emitTemplateStage(
   return { result: run() as unknown as Node, uniforms: resources.uniforms.byName, textures };
 }
 
-/** The structs as the template declares them, before `withSquareMatrices`: a buffer reads their layout. */
-function declaredStructs(stage: TemplateStageNode): ReadonlyMap<string, StructNode> {
-  return new Map(
-    stage.declarations.flatMap((declaration) =>
-      declaration.kind === 'struct' ? [[declaration.name, declaration] as const] : []
-    )
-  );
+/** The structs and buffer blocks as the template declares them, before `withSquareMatrices`. */
+interface Declared {
+  readonly structs: ReadonlyMap<string, StructNode>;
+  readonly buffers: ReadonlyMap<string, InterfaceBlockNode>;
 }
+
+/** A buffer reads the declared layout, so its matrices keep the shape the template gives them. */
+function asDeclared(stage: TemplateStageNode): Declared {
+  const structs = new Map<string, StructNode>();
+  const buffers = new Map<string, InterfaceBlockNode>();
+  for (const declaration of stage.declarations) {
+    if (declaration.kind === 'struct') structs.set(declaration.name, declaration);
+    else if (declaration.kind === 'interface block' && declaration.instanceName)
+      buffers.set(declaration.instanceName, declaration);
+  }
+  return { structs, buffers };
+}
+
+/** Out of the stage's scope, so a buffer that lives with the material holds only the structs. */
+const structLookup =
+  (structs: ReadonlyMap<string, StructNode>): StructOf =>
+  (type) =>
+    structs.get(type);
 
 /** A global the stage holds itself: no storage word, or an `out` of the fragment stage, which none reads. */
 function isPlain(stage: TemplateStageNode['stage'], global: GlobalNode): boolean {

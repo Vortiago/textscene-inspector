@@ -1,44 +1,29 @@
 import * as THREE from 'three';
 import {
-  installNodesHandler,
   transpileSpatial,
   withGodotAttributes,
   writeSpatialBindings,
   writeSpatialInstance,
 } from '@textscene/three-godot-shaders';
 import { framePixels } from './framePixels.js';
+import { displayRenderer, euler, godotCamera, linear } from './godotView.js';
 
-const renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas') });
-installNodesHandler(renderer, 'display');
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.NoToneMapping;
+/** `rendering/environment/defaults/default_clear_color`. */
+const GODOT_CLEAR_COLOR = linear([0.3, 0.3, 0.3]);
 
-/** Godot's rotation in degrees, in Godot's order of axes: Y, then X, then Z. */
-const euler = ([x, y, z]) => new THREE.Euler(...[x, y, z].map(THREE.MathUtils.degToRad), 'YXZ');
+/** Each corner of each triangle in three's order: three's front face winds the other way. */
+const turnedCorner = (corner) => corner - (corner % 3) + [0, 2, 1][corner % 3];
 
-/** `rendering/environment/defaults/default_clear_color`, sRGB. */
-const GODOT_CLEAR_COLOR = new THREE.Color().setRGB(0.3, 0.3, 0.3, THREE.SRGBColorSpace);
-
-/** Godot's arrays as three's geometry: three's front face winds the other way, so each triangle turns. */
+/** Godot's arrays as three's geometry, each triangle turned. */
 function geometryOf({ positions, normals }) {
-  const order = positions.flatMap(
-    (_, corner) => [corner - (corner % 3), corner - (corner % 3) + 2, corner - (corner % 3) + 1][corner % 3]
-  );
+  const turned = (values) =>
+    new THREE.Float32BufferAttribute(
+      values.flatMap((_, corner) => values[turnedCorner(corner)]),
+      3
+    );
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute(
-    'position',
-    new THREE.Float32BufferAttribute(
-      order.flatMap((index) => positions[index]),
-      3
-    )
-  );
-  geometry.setAttribute(
-    'normal',
-    new THREE.Float32BufferAttribute(
-      order.flatMap((index) => normals[index]),
-      3
-    )
-  );
+  geometry.setAttribute('position', turned(positions));
+  geometry.setAttribute('normal', turned(normals));
   return withGodotAttributes(geometry);
 }
 
@@ -51,11 +36,7 @@ function drawMesh(spec) {
     return { error: String(error.message ?? error) };
   }
   const { width, height } = spec;
-  // Godot's defaults: the near and far planes of Camera3D.
-  const camera = new THREE.PerspectiveCamera(spec.camera.fov, width / height, 0.05, 4000);
-  camera.rotation.copy(euler(spec.camera.rotation));
-  camera.position.fromArray(spec.camera.position);
-  camera.updateMatrixWorld();
+  const camera = godotCamera(spec);
   const mesh = new THREE.Mesh(geometryOf(spec.mesh), spatial.material);
   mesh.position.fromArray(spec.object.position);
   mesh.rotation.copy(euler(spec.object.rotation));
@@ -65,8 +46,12 @@ function drawMesh(spec) {
   writeSpatialInstance(spatial, mesh);
   const scene = new THREE.Scene();
   scene.add(mesh);
-  renderer.setClearColor(GODOT_CLEAR_COLOR, 1);
-  const pixels = framePixels(renderer, scene, camera, { width, height, colorSpace: THREE.SRGBColorSpace });
+  displayRenderer.setClearColor(GODOT_CLEAR_COLOR, 1);
+  const pixels = framePixels(displayRenderer, scene, camera, {
+    width,
+    height,
+    colorSpace: THREE.SRGBColorSpace,
+  });
   spatial.material.dispose();
   return { pixels: Array.from(pixels) };
 }

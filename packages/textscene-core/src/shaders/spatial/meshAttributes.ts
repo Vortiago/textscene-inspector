@@ -2,10 +2,10 @@ import * as THREE from 'three';
 import { encodedNormalTangent } from '../../godot/rendering/meshNormalTangent.js';
 
 /** The attribute the scene template reads at location 0: the position, which GL widens with w = 1. */
-export const VERTEX_ANGLE_ATTRIBUTE = 'vertex_angle_attrib';
+const VERTEX_ANGLE_ATTRIBUTE = 'vertex_angle_attrib';
 
 /** The attribute at location 1: the normal and the tangent as four 16-bit unsigned normalised lanes. */
-export const AXIS_TANGENT_ATTRIBUTE = 'axis_tangent_attrib';
+const AXIS_TANGENT_ATTRIBUTE = 'axis_tangent_attrib';
 
 /** `geometry` with an uncompressed Godot surface's attributes (`rendering_server.cpp:425-700`). */
 export function withGodotAttributes(geometry: THREE.BufferGeometry): THREE.BufferGeometry {

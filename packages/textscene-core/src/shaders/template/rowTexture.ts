@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 import { add, bitAnd, int, ivec2, mul, shiftRight, texture } from 'three/tsl';
 import type { Node, TextureNode } from 'three/webgpu';
-import { tsl } from '../language/compositeParts.js';
+import { intNode, tsl } from '../language/compositeParts.js';
 import { CONSTRUCTORS, floatNode } from '../language/emitConstant.js';
 import { element } from '../language/emitOperation.js';
 import type { ArrayValue, StructValue, Value } from '../language/emitValue.js';
 import type { StructMember, StructNode } from '../language/shaderTree.js';
 import { vectorType, type ScalarKind } from '../language/types.js';
 import { LANE_OF_BITS } from '../uniforms/uniformNodes.js';
-import { blockLayout, type BlockPacking, type PlacedMember } from './blockLayout.js';
+import { blockLayout, columnStride, type BlockPacking, type PlacedMember } from './blockLayout.js';
 import { glslShapeOf } from './glslTypes.js';
 
 /** The texels of one row. WebGL 2 promises 2048 texels a side, so a row stays inside it. */
@@ -52,9 +52,13 @@ export class RowTexture {
   /** Writes the block's words from byte 0, and grows the texture to hold them. */
   write(words: Uint32Array): void {
     const rows = Math.max(1, Math.ceil(words.length / (ROW_TEXELS * TEXEL_WORDS)));
-    const data = new Uint32Array(rows * ROW_TEXELS * TEXEL_WORDS);
-    data.set(words);
-    this.texture.image = { data, width: ROW_TEXELS, height: rows } as never;
+    const image = this.texture.image as { data: Uint32Array; height: number };
+    if (image.height === rows) image.data.fill(0, words.length).set(words);
+    else {
+      const data = new Uint32Array(rows * ROW_TEXELS * TEXEL_WORDS);
+      data.set(words);
+      this.texture.image = { data, width: ROW_TEXELS, height: rows } as never;
+    }
     this.texture.needsUpdate = true;
   }
 
@@ -71,12 +75,11 @@ export class RowTexture {
   private member(placed: PlacedMember, member: RowMember, base: Index): Value {
     const start = plus(base, placed.offset / 4);
     if (placed.arraySize === undefined && !member.isRuntimeSized) return this.read(placed.type, start);
-    const array: ArrayValue = {
+    return {
       kind: 'array',
       count: placed.arraySize ?? Number.POSITIVE_INFINITY,
       element: (index) => this.read(placed.type, plus(start, times(index, placed.stride / 4))),
-    };
-    return array;
+    } satisfies ArrayValue;
   }
 
   /** One value of `type` whose first word is `word`. */
@@ -88,7 +91,7 @@ export class RowTexture {
       throw new Error(`expected a 32-bit value type in a block, got ${type}`);
     const scalar = shape.scalar;
     if (shape.columns === 1) return this.vector(scalar, shape.rows, word);
-    const columnWords = this.columnStride(shape.rows) / 4;
+    const columnWords = columnStride(shape.rows, this.packing) / 4;
     return squareMatrix(shape.columns, shape.rows, (column) =>
       this.vector(scalar, shape.rows, plus(word, column * columnWords))
     );
@@ -99,12 +102,6 @@ export class RowTexture {
       LANE_OF_BITS[scalar](this.word(plus(word, lane)))
     );
     return lanes === 1 ? parts[0]! : CONSTRUCTORS[vectorType(scalar, lanes)]!(...parts);
-  }
-
-  /** The bytes between two columns of a matrix, which rule 5 packs as an array of its columns. */
-  private columnStride(rows: number): number {
-    return blockLayout([{ name: 'column', type: `vec${rows}`, arraySize: 1 }], this.packing, this.structOf)
-      .members[0]!.stride;
   }
 
   /** The word at `index`: lane `index & 3` of texel `index >> 2`, in rows of `ROW_TEXELS` texels. */
@@ -124,8 +121,6 @@ export class RowTexture {
     return this.node.load(tsl(ivec2)(x, y) as never).level(intNode(0) as never) as unknown as Node;
   }
 }
-
-const intNode = (value: number) => int(value) as unknown as Node;
 
 /** `base + offset` in words, folded while both are constants. */
 function plus(base: Index, offset: Index): Index {

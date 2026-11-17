@@ -5,10 +5,8 @@ import { pathToFileURL } from 'node:url';
 import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { godotSourceDir } from '../godotSource.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
-import { SHOWCASES } from '../../apps/textscene-three-godot-shaders/tests/e2e/showcases.mjs';
+import { ALL_SCENES } from '../../apps/textscene-three-godot-shaders/tests/e2e/drawnScenes.mjs';
 import { ROW_PROOFS } from '../../apps/textscene-three-godot-shaders/tests/rowProofs.mjs';
-import { MESH_SCENES } from '../../apps/textscene-three-godot-shaders/tests/e2e/meshScenes.mjs';
-import { SKY_SCENES } from '../../apps/textscene-three-godot-shaders/tests/e2e/skyScenes.mjs';
 import { GUIDE_CHAPTERS } from './guideChapters.mjs';
 import {
   fragmentOnlyFunctions,
@@ -89,7 +87,7 @@ function main() {
     probes: ROW_PROOFS,
     record: answers.probes,
     version: sources.version,
-    showcases: [...SHOWCASES, ...SKY_SCENES, ...MESH_SCENES],
+    showcases: ALL_SCENES,
   });
   const outputs = [
     [

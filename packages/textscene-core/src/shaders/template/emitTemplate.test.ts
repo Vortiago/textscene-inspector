@@ -93,6 +93,9 @@ describe('emitTemplateStage on a subgroup of one lane', () => {
     ['subgroupMin(0.25)', 'vec4( 0.25'],
     ['subgroupAdd(0.25)', 'vec4( 0.25'],
     ['float(subgroupOr(3u))', '3u'],
+    ['subgroupShuffle(0.25, 0u)', 'vec4( 0.25'],
+    ['subgroupInclusiveMul(0.25)', 'vec4( 0.25'],
+    ['subgroupClusteredXor(3u, 1u).x', '3u'],
   ])('reads %s as its operand', (call, operand) => {
     const text = fragmentOf('', `color = vec4(${call});`);
     expect(text).toContain(operand);
@@ -104,6 +107,28 @@ describe('emitTemplateStage on a subgroup of one lane', () => {
     const text = fragmentOf('', body);
     expect(text).toMatch(/uvec4\( \w+, 0u, 0u, 0u \)/);
     expect(text).toMatch(/\.x & 1u/);
+    expect(text).not.toContain('subgroup');
+  });
+
+  it.each([
+    ['subgroupExclusiveAdd(0.25)', /vec4\( 0\.0/],
+    ['subgroupExclusiveMul(0.25)', /vec4\( 1\.0/],
+    ['float(subgroupExclusiveMin(3u))', /4294967295u/],
+    ['float(subgroupExclusiveMax(3))', /float\( \( -2147483647 - 1 \) \)/],
+  ])('reads %s as the identity of its operation', (call, identity) => {
+    const text = fragmentOf('', `color = vec4(${call});`);
+    expect(text).toMatch(identity);
+    expect(text).not.toContain('subgroup');
+  });
+
+  it('reads gl_SubgroupSize as one', () => {
+    expect(fragmentOf('', 'color = vec4(float(gl_SubgroupSize));')).toMatch(/vec4\( 1\.0|1u/);
+  });
+
+  it('extracts a bit of a ballot by its word and its bit', () => {
+    const body = 'color = vec4(subgroupBallotBitExtract(uvec4(2u), 33u) ? 1.0 : 0.0);';
+    const text = fragmentOf('', body);
+    expect(text).toMatch(/>> /);
     expect(text).not.toContain('subgroup');
   });
 

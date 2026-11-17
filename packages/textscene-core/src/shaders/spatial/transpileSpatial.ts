@@ -10,31 +10,23 @@ import {
   vertexIndex,
 } from 'three/tsl';
 import type { Node, TextureNode, UniformNode } from 'three/webgpu';
-import { GODOT_VERSION } from '../language/instructionTable.generated.js';
-import { withGlslTypes } from '../language/glslTypes.js';
-import { parsedShader, type ParsedShader, type ShaderOptions } from '../language/parseShader.js';
-import { ShadingLanguageError } from '../language/shadingLanguageError.js';
-import { checkTranspiled } from '../language/transpiledRows.js';
-import { emitTemplateStage, programResources } from '../template/emitTemplate.js';
-import { godotId } from '../template/godotIds.js';
-import { compileMaterial, linkTemplateStage, type CompiledMaterial } from '../template/link.js';
-import { MODE_TABLES } from '../template/modeTables.generated.js';
+import { parsedShader, type ShaderOptions } from '../language/parseShader.js';
+import { emitTemplateStage } from '../template/emitTemplate.js';
+import { linkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import type { RowTexture } from '../template/rowTexture.js';
-import type { StageName } from '../template/stages.js';
 import type { TemplateStageNode } from '../template/templateTree.js';
-import { TRANSPILER_VERSION, TreeMemo } from '../template/treeMemo.js';
+import { TreeMemo } from '../template/treeMemo.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
-import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
-import { bindParameters, type TranspiledUniform } from '../uniforms/transpiledUniform.js';
-import { AXIS_TANGENT_ATTRIBUTE, VERTEX_ANGLE_ATTRIBUTE } from './meshAttributes.js';
-
-const SCENE_TEMPLATE = 'forward_clustered/scene_forward_clustered.glsl';
+import type { ProjectSampling } from '../uniforms/samplerState.js';
+import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
 
 /** The colour pass with no pass flags (`scene_shader_forward_clustered.cpp:640-690`): no defines. */
-const COLOR_VARIANT = '';
-
-/** The linked scene stages of every spatial shader this page transpiles. It lives as long as the page. */
-const linkedStages = new TreeMemo();
+const SCENE: ProgramTemplate = {
+  shaderType: 'spatial',
+  template: 'forward_clustered/scene_forward_clustered.glsl',
+  defines: '',
+  memo: new TreeMemo(),
+};
 
 export interface TranspiledSpatial {
   /** The material of a mesh whose geometry holds Godot's attributes (`withGodotAttributes`). */
@@ -56,50 +48,20 @@ export interface SpatialOptions extends ShaderOptions {
 
 /** The material of `source`, a shader of `shader_type spatial`, preprocessed with `options`. */
 export function transpileSpatial(source: string, options: SpatialOptions = {}): TranspiledSpatial {
-  return transpileParsedSpatial(parsedShader(source, options), options.file ?? '', options.sampling);
-}
-
-/** The material of a parsed shader from `file`, for a caller that has read its tree already. */
-function transpileParsedSpatial(
-  { code, tree }: ParsedShader,
-  file: string,
-  sampling: ProjectSampling = GODOT_SAMPLING
-): TranspiledSpatial {
-  if (tree.shaderType !== 'spatial')
-    throw new ShadingLanguageError(
-      `expected a shader of 'shader_type spatial', found ${tree.shaderType ?? 'none'}`,
-      tree.headPosition ?? { file, line: 1, column: 1 }
-    );
-  checkTranspiled(tree);
-  let material: CompiledMaterial | undefined;
-  const linked = (stage: StageName): TemplateStageNode =>
-    linkedStages.tree(
-      {
-        source: code,
-        file,
-        shaderType: 'spatial',
-        template: SCENE_TEMPLATE,
-        stage,
-        defines: COLOR_VARIANT,
-        godotVersion: GODOT_VERSION,
-        transpilerVersion: TRANSPILER_VERSION,
-      },
-      () => {
-        material ??= compileMaterial(withGlslTypes(tree), MODE_TABLES.spatial!);
-        return linkTemplateStage(SCENE_TEMPLATE, stage, COLOR_VARIANT, material);
-      }
-    );
-  const resources = programResources();
+  const parsed = parsedShader(source, options);
+  const { linked, resources, parameters, parameterValues } = linkedProgram(
+    parsed,
+    options.file ?? '',
+    SCENE,
+    options.sampling
+  );
   const vulkanClip = varyingProperty('vec4', 'godot_clip_position') as unknown as Vec4;
-  // A 3D material converts a source colour to linear (`scene_shader_forward_clustered.cpp:595`).
-  const parameters = bindParameters(tree, { useLinearColor: true, sampling });
-  const parameterValues = [...parameters].map(([name, binding]) => [godotId(name), binding.value] as const);
+  const vertexStage = linked('vertex');
   const vertex = emitTemplateStage(
-    linked('vertex'),
+    vertexStage,
     new Map([
       ...parameterValues,
-      ['vertex_angle_attrib', attribute(VERTEX_ANGLE_ATTRIBUTE, 'vec4') as unknown as Node],
-      ['axis_tangent_attrib', attribute(AXIS_TANGENT_ATTRIBUTE, 'vec4') as unknown as Node],
+      ...vertexAttributes(vertexStage),
       ['gl_VertexIndex', int(vertexIndex) as unknown as Node],
       // One draw for each object, so the first instance of the draw is the object.
       ['gl_InstanceIndex', int(0) as unknown as Node],
@@ -126,6 +88,18 @@ function transpileParsedSpatial(
     buffers: resources.buffers.byName,
     parameters,
   };
+}
+
+/** Each `in` global of the vertex stage as the geometry attribute of its name (`withGodotAttributes`). */
+function vertexAttributes(stage: TemplateStageNode): [string, Node][] {
+  return stage.declarations.flatMap((declaration) =>
+    declaration.kind === 'global' && declaration.qualifiers.words.includes('in')
+      ? declaration.declarators.map(({ name }): [string, Node] => [
+          name,
+          attribute(name, declaration.type) as unknown as Node,
+        ])
+      : []
+  );
 }
 
 type Vec4 = ReturnType<typeof vec4>;

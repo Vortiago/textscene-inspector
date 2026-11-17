@@ -2,28 +2,20 @@ import * as THREE from 'three';
 import { int, screenCoordinate, varyingProperty, vec4, vertexIndex } from 'three/tsl';
 import type { Node, TextureNode, UniformNode } from 'three/webgpu';
 import { parsedShader, type ParsedShader, type ShaderOptions } from '../language/parseShader.js';
-import { ShadingLanguageError } from '../language/shadingLanguageError.js';
-import { checkTranspiled } from '../language/transpiledRows.js';
-import { withGlslTypes } from '../language/glslTypes.js';
-import { emitTemplateStage, programResources } from '../template/emitTemplate.js';
-import { compileMaterial, linkTemplateStage, type CompiledMaterial } from '../template/link.js';
-import { GODOT_VERSION } from '../language/instructionTable.generated.js';
-import { MODE_TABLES } from '../template/modeTables.generated.js';
-import type { StageName } from '../template/stages.js';
-import type { TemplateStageNode } from '../template/templateTree.js';
-import { godotId } from '../template/godotIds.js';
+import { emitTemplateStage } from '../template/emitTemplate.js';
+import { linkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
+import { TreeMemo } from '../template/treeMemo.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
-import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
-import { bindParameters, type TranspiledUniform } from '../uniforms/transpiledUniform.js';
-import { TRANSPILER_VERSION, TreeMemo } from '../template/treeMemo.js';
+import type { ProjectSampling } from '../uniforms/samplerState.js';
+import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
 
-const SKY_TEMPLATE = 'environment/sky.glsl';
-
-/** The variant of the sky background, `SKY_VERSION_BACKGROUND` (`sky.cpp:746`): no defines. */
-const BACKGROUND_VARIANT = '';
-
-/** The linked sky stages of every sky this page transpiles. It lives as long as the page. */
-const linkedStages = new TreeMemo();
+/** The sky background, `SKY_VERSION_BACKGROUND` (`sky.cpp:746`): no defines. The memo lives with the page. */
+const SKY: ProgramTemplate = {
+  shaderType: 'sky',
+  template: 'environment/sky.glsl',
+  defines: '',
+  memo: new TreeMemo(),
+};
 
 export interface TranspiledSky {
   /** The triangle that draws the sky. It writes no depth, and draws before the scene. */
@@ -48,38 +40,11 @@ export function transpileSky(source: string, options: SkyOptions = {}): Transpil
 
 /** The sky of a parsed shader from `file`, for a caller that has read its tree already. */
 export function transpileParsedSky(
-  { code, tree }: ParsedShader,
+  parsed: ParsedShader,
   file: string,
-  sampling: ProjectSampling = GODOT_SAMPLING
+  sampling?: ProjectSampling
 ): TranspiledSky {
-  if (tree.shaderType !== 'sky')
-    throw new ShadingLanguageError(
-      `expected a shader of 'shader_type sky', found ${tree.shaderType ?? 'none'}`,
-      tree.headPosition ?? { file, line: 1, column: 1 }
-    );
-  checkTranspiled(tree);
-  let material: CompiledMaterial | undefined;
-  const linked = (stage: StageName): TemplateStageNode =>
-    linkedStages.tree(
-      {
-        source: code,
-        file,
-        shaderType: 'sky',
-        template: SKY_TEMPLATE,
-        stage,
-        defines: BACKGROUND_VARIANT,
-        godotVersion: GODOT_VERSION,
-        transpilerVersion: TRANSPILER_VERSION,
-      },
-      () => {
-        material ??= compileMaterial(withGlslTypes(tree), MODE_TABLES.sky!);
-        return linkTemplateStage(SKY_TEMPLATE, stage, BACKGROUND_VARIANT, material);
-      }
-    );
-  const resources = programResources();
-  // A sky converts a source colour to linear (`sky.cpp:193`).
-  const parameters = bindParameters(tree, { useLinearColor: true, sampling });
-  const parameterValues = [...parameters].map(([name, binding]) => [godotId(name), binding.value] as const);
+  const { linked, resources, parameters, parameterValues } = linkedProgram(parsed, file, SKY, sampling);
   const uvInterp = varyingProperty('vec2', 'uv_interp') as unknown as Node;
   const vertex = emitTemplateStage(
     linked('vertex'),
