@@ -39,14 +39,14 @@ const SPLIT_LDEXP = {
     "driver (Mesa lavapipe) gives 0 for ldexp(3e38, -253), on Godot's side: inferred, not read from Mesa, as a split into exponent halves that flushes 2^-127",
 };
 
-/** A probe's derivatives are 0. Inferred, not read from Mesa: a fast log2 of the squared length, halved. */
+// Mesa 25.2.8 `lp_bld_sample.c:948` halves log2(0) of `lp_bld_arit.c:3396`: 0 - 127, with no zero case.
 const ZERO_DERIVATIVE_LOD = {
   owner: '#1829',
   cause:
     "driver (Mesa lavapipe) gives -63.5 for the level of detail of a zero derivative, where log2(0) is -inf, on Godot's side",
 };
 
-/** Vulkan leaves anisotropic filtering to the driver. Inferred, not read from Mesa: weighted linear taps. */
+// Mesa 25.2.8 `lp_bld_sample_soa.c:2314` reads each anisotropic tap linear, whatever the sampler's filter.
 const ANISOTROPIC_FOOTPRINT = {
   owner: '#1829',
   cause:
