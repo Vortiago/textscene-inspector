@@ -3,7 +3,7 @@ import type { NodeMaterial, TextureNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { generatedFragmentShader } from '../generatedShader.testkit';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
-import { transpileSky, type SkyDraw } from './transpileSky.js';
+import { disposeSky, transpileSky, type SkyDraw } from './transpileSky.js';
 import { DEFAULT_SKY } from './defaultSky.testkit';
 
 function errorOf(source: string): ShadingLanguageError {
@@ -115,6 +115,15 @@ describe('transpileSky', () => {
     const sky = transpileSky('shader_type sky;\nvoid sky() { COLOR = HALF_RES_COLOR.rgb; }', { pass });
     const texture = sky.textures.get('half_res')!.value as THREE.DataTexture;
     expect((texture.image.data as Uint8Array)[0]).toBe(red);
+  });
+
+  it("frees the sky's default pass texture with the sky", () => {
+    const sky = transpileSky('shader_type sky;\nvoid sky() { COLOR = HALF_RES_COLOR.rgb; }');
+    const texture = sky.textures.get('half_res')!.value as THREE.Texture;
+    let isDisposed = false;
+    texture.addEventListener('dispose', () => (isDisposed = true));
+    disposeSky(sky);
+    expect(isDisposed).toBe(true);
   });
 
   it('reads each LIGHTn_COLOR from a slot of its own', () => {

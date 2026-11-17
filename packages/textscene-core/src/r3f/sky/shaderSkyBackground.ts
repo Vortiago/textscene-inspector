@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { writeSkyBindings, type SkyFog, type SkyLight } from '../../shaders/sky/skyBindings.js';
 import { fogUniforms } from '../fog/fogUniforms.js';
-import { disposeSkyDraw, type TranspiledSky } from '../../shaders/sky/transpileSky.js';
+import { disposeSky, type TranspiledSky } from '../../shaders/sky/transpileSky.js';
 import { SkyResolutionPasses } from '../../shaders/sky/skyResolutionPasses.js';
 import { SkyBackdrop } from './skyBackground.js';
 import { writeFramebufferHeight } from '../shadowFilter/framebufferRows.js';
@@ -57,8 +57,7 @@ export class ShaderSkyBackground extends SkyBackdrop {
 
   override dispose(): void {
     super.dispose();
-    // The backdrop's own dispose frees the full pass, whose triangle it draws.
-    for (const draw of [this.sky.half, this.sky.quarter]) if (draw) disposeSkyDraw(draw);
+    disposeSky(this.sky);
     this.passes.dispose();
   }
 

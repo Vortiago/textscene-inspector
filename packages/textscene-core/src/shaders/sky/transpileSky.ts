@@ -5,6 +5,7 @@ import { parsedShader, type ParsedShader, type ShaderOptions } from '../language
 import { emitTemplateStage } from '../template/emitTemplate.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import { TreeMemo } from '../template/treeMemo.js';
+import { defaultTexture } from '../uniforms/defaultTextures.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
 import { SKY_RENDER_ORDER } from './skyRenderOrder.js';
 import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
@@ -51,6 +52,8 @@ export interface TranspiledSky extends SkyDraw {
   readonly half?: SkyDraw;
   /** The quarter resolution pass, for `use_quarter_res_pass` (`sky.cpp:77`). */
   readonly quarter?: SkyDraw;
+  /** Godot's default for a pass colour with no pass, which this sky owns and `disposeSky` frees. */
+  readonly unsetPassTexture: THREE.Texture;
 }
 
 export interface SkyOptions extends ShaderOptions {
@@ -85,34 +88,29 @@ export function transpileParsedSky(
   const draw = (resolution: SkyResolution, linked = program(resolution)) =>
     skyDraw(linked, parameterValues, [...parameters.values()], isFilterInput(pass, resolution));
   const modes = new Set(parsed.tree.renderModes.map((mode) => mode.name));
-  return withUnsetPassTextures(pass, {
+  const sky: TranspiledSky = {
     ...draw('full', full),
     parameters,
     ...(modes.has('use_half_res_pass') && { half: draw('half') }),
     ...(modes.has('use_quarter_res_pass') && { quarter: draw('quarter') }),
-  });
+    unsetPassTexture: unsetPassTexture(pass),
+  };
+  bindUnsetPassTexture(sky);
+  return sky;
 }
-
-/** A 1 by 1 texture of Godot's default `rgba`, one for each page (`texture_storage.cpp:95-121`). */
-function defaultTexture(rgba: readonly number[]): THREE.DataTexture {
-  const texture = new THREE.DataTexture(new Uint8Array(rgba), 1, 1);
-  texture.needsUpdate = true;
-  return texture;
-}
-
-const WHITE = defaultTexture([255, 255, 255, 255]);
-const BLACK = defaultTexture([0, 0, 0, 255]);
 
 /** A pass colour with no pass reads white behind the scene and black in the octmap (`sky.cpp:545-575`). */
-function withUnsetPassTextures(pass: SkyPass, sky: TranspiledSky): TranspiledSky {
+function unsetPassTexture(pass: SkyPass): THREE.Texture {
   // Godot's octmap reads a mip of its last radiance there, which the previewer does not keep.
-  const unset = pass === 'background' ? WHITE : BLACK;
+  return defaultTexture('flat', pass === 'background' ? 'white' : 'black');
+}
+
+function bindUnsetPassTexture(sky: TranspiledSky): void {
   for (const draw of skyDraws(sky))
     for (const name of ['half_res', 'quarter_res']) {
       const node = draw.textures.get(name);
-      if (node) node.value = unset;
+      if (node) node.value = sky.unsetPassTexture;
     }
-  return sky;
 }
 
 /** Whether the pass is the radiance the filter reads by rows: three reads any other target top row first. */
@@ -169,9 +167,10 @@ function fragCoord(isRowsUp: boolean): Node {
   return vec4(screenCoordinate.x, row, 0, 1) as unknown as Node;
 }
 
-/** Frees the triangle and the material of each pass of `sky`. */
+/** Frees the triangle and the material of each pass of `sky`, and its texture for a pass with none. */
 export function disposeSky(sky: TranspiledSky): void {
   for (const draw of skyDraws(sky)) disposeSkyDraw(draw);
+  sky.unsetPassTexture.dispose();
 }
 
 /** The full pass of `sky`, then each of its half and quarter passes. */

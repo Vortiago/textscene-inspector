@@ -281,6 +281,12 @@ const PASS_SCENES = [
   },
 ].map((scene) => ({ ...SIZE, camera: TURNED, lights: [], ...scene }));
 
+/** The quarter and half passes at an odd size, and under Godot's 4 px floor (`sky.cpp:996-997`). */
+const PASS_SIZE_SCENES = [
+  { name: 'sky-passes-odd-size', width: 37, height: 23 },
+  { name: 'sky-passes-under-4-px', width: 3, height: 9 },
+].map((scene) => ({ ...PASS_SCENES.find(({ name }) => name === 'sky-quarter-res'), ...scene }));
+
 export const SKY_SCENES = [
   { name: 'sky-default', ...SIZE, source: DEFAULT_SKY, camera: AHEAD, lights: [], rows: DEFAULT_SKY_ROWS },
   {
@@ -307,4 +313,5 @@ export const SKY_SCENES = [
   ...BUILT_IN_SCENES,
   ...LIGHT_SCENES,
   ...PASS_SCENES,
+  ...PASS_SIZE_SCENES,
 ];

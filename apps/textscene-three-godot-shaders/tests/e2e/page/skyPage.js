@@ -44,7 +44,10 @@ function drawSky(spec) {
     colorSpace: THREE.SRGBColorSpace,
   });
   passes.dispose();
-  for (const draw of [sky, sky.half, sky.quarter]) draw?.mesh.material.dispose();
+  for (const draw of [sky, sky.half, sky.quarter]) {
+    draw?.mesh.geometry.dispose();
+    draw?.mesh.material.dispose();
+  }
   return { pixels: Array.from(opaque(pixels)) };
 }
 
