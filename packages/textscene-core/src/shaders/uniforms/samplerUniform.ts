@@ -61,17 +61,11 @@ function nodeOf(kind: TextureKind, value: Texture): TextureNode {
   return node;
 }
 
-/** Written only by `levelledCopyOf`: one upload of a 2D array's levels, which every sampler copy shares. */
-// eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
-const LEVELLED_COPIES = new WeakMap<DataArrayTexture, CompressedArrayTexture>();
-
-/** A copy that shares the image of `source`, and so its upload, with every other copy. */
+/** A copy that shares the image of `source`, and so its upload, with every other copy of it. */
 function cloneOf(source: Texture): Texture {
   if (!(source instanceof DataArrayTexture) || source.format !== RGBAFormat || source.mipmaps.length < 2)
     return source.clone();
-  let levelled = LEVELLED_COPIES.get(source);
-  if (!levelled) LEVELLED_COPIES.set(source, (levelled = levelledCopyOf(source)));
-  return levelled.clone();
+  return levelledCopyOf(source);
 }
 
 /** three uploads level 0 of a `DataArrayTexture` only (`WebGLTextures.js:1229`), every level of this one. */
@@ -102,6 +96,8 @@ export class SamplerBinding implements TranspiledUniform {
   isDrawable: boolean;
   /** Written only by `copyOf`: a material texture's copy, kept while the texture lives. */
   private readonly copies = new WeakMap<Texture, Texture>();
+  /** Written only by `textureOf`: the binding's own default textures, collected with it. */
+  private readonly defaults = new Map<DefaultTexture, Texture>();
 
   constructor(
     readonly declaration: UniformNode,
@@ -132,7 +128,10 @@ export class SamplerBinding implements TranspiledUniform {
   }
 
   private textureOf(chosen: Texture | DefaultTexture): Texture {
-    return typeof chosen === 'string' ? defaultTexture(this.kind, chosen) : this.copyOf(chosen);
+    if (typeof chosen !== 'string') return this.copyOf(chosen);
+    const made = this.defaults.get(chosen) ?? defaultTexture(this.kind, chosen);
+    this.defaults.set(chosen, made);
+    return made;
   }
 
   private element(index: Node | number): Value {
