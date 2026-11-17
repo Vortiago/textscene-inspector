@@ -33,8 +33,8 @@ class CanvasShaderTime {
 /** The shader time of each renderer, which lives as long as the renderer. */
 export const canvasShaderTime = perObject((_gl: THREE.WebGLRenderer) => new CanvasShaderTime());
 
-/** Advances the renderer's `TIME` before each frame. Every shader that reads `TIME` mounts it. */
-export function useShaderTimeFrame(): void {
+/** Advances the renderer's `TIME` before each frame, mounted once by each canvas. */
+export function ShaderTimeFrame(): null {
   const transport = useAnimationTransport();
   const { settings } = useProjectSettings();
   const rolloverSeconds = projectTimeRolloverSeconds(settings);
@@ -47,4 +47,5 @@ export function useShaderTimeFrame(): void {
     };
     canvasShaderTime(gl).advance(clock.elapsedTime, playback, step, rolloverSeconds);
   });
+  return null;
 }

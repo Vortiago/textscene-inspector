@@ -35,7 +35,6 @@ import {
 } from '../environment/sceneEnvironment';
 import { debandSky } from './skyDebanding';
 import { showSkyBackground } from './skyBackground';
-import { useShaderTimeFrame } from '../shaderTime/canvasShaderTime';
 import { useShaderSkyTextures } from './shaderSkyTextures';
 import { useShaderDecoders } from '../shaderDecoders';
 import { useShaderSkyErrorReport } from './shaderSkyError';
@@ -104,7 +103,6 @@ export function SkyLayer({
   reflectsRef.current = reflects;
 
   const isPanoramaDrawn = useIsPanoramaDrawn(panorama);
-  useShaderTimeFrame();
   const shaderCode = authoredSky.material.kind === 'shader' ? authoredSky.material.code : null;
   const decoders = useShaderDecoders(shaderCode);
   const transpiler = useSkyTranspiler(shaderCode !== null);
