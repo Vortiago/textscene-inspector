@@ -87,6 +87,17 @@ const STAGE_CASES = [
     'shader_type spatial;\nvoid vertex() {}\nvoid fragment() {\n\tfloat a = vertex;\n}'
   ),
   headCase('stage/of-another-type', 'shader_type sky;\nvoid fragment(float a) {}\nvoid sky() {}'),
+  headCase('read-only/sky-time', 'shader_type sky;\nvoid sky() {\n\tTIME = 1.0;\n}'),
+  headCase('read-only/sky-eyedir', 'shader_type sky;\nvoid sky() {\n\tEYEDIR = vec3(1.0);\n}'),
+  headCase('read-only/canvas-time', 'shader_type canvas_item;\nvoid fragment() {\n\tTIME = 1.0;\n}'),
+  headCase(
+    'read-only/spatial-fragment-vertex',
+    'shader_type spatial;\nvoid fragment() {\n\tVERTEX = vec3(0.0);\n}'
+  ),
+  headCase('read-only/particles-index', 'shader_type particles;\nvoid process() {\n\tINDEX = 1u;\n}'),
+  headCase('writable/sky-color', 'shader_type sky;\nvoid sky() {\n\tCOLOR = vec3(1.0);\n}', [
+    'sky.sky.COLOR',
+  ]),
   headCase('discard/vertex', 'shader_type spatial;\nvoid vertex() {\n\tdiscard;\n}'),
   headCase('discard/fragment', 'shader_type spatial;\nvoid fragment() {\n\tdiscard;\n}'),
   headCase('discard/particles', 'shader_type particles;\nvoid process() {\n\tdiscard;\n}'),
