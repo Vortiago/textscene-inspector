@@ -20,6 +20,7 @@ import { gameViewportDescription } from '../viewportRender/viewportDescription.j
 import { rootViewportNode } from './rootViewportNode.js';
 import { RootViewportPresenter } from './RootViewportPresenter.js';
 import { rootClassName } from '../stageClassName.js';
+import { RunningGameScope } from '../contexts/EditorHintContext.js';
 
 export function GameView({ className }: { className?: string }) {
   const frameloop = usePreviewFrameloop();
@@ -36,6 +37,14 @@ export function GameView({ className }: { className?: string }) {
 
 /** The root viewport and its presenter, exported so the test renderer can mount it with no `<Canvas>`. */
 export function GameViewContents() {
+  return (
+    <RunningGameScope>
+      <RootViewport />
+    </RunningGameScope>
+  );
+}
+
+function RootViewport() {
   const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
   const nodes = useSeatedRoots() ?? null;

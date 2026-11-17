@@ -2,6 +2,9 @@
 
 /** Properties every light type has. */
 export interface BaseLightProperties {
+  /** `editor_only`: the light gives light only in the editor (`light_3d.cpp:287-288`). */
+  editor_only?: boolean;
+
   /** `layers`, the VisualInstance3D render mask a ReflectionProbe's `cull_mask` tests. */
   layers: number;
 

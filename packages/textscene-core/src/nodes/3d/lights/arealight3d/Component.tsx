@@ -27,6 +27,7 @@ import {
   releaseAreaTexture,
 } from '../../../../r3f/areaLight/areaLightAtlas';
 import { useLtcTexturesSettled } from '../../../../r3f/areaLight/useLtcTexturesSettled';
+import { useDrawsEditorOnly } from '../../../../r3f/contexts/EditorHintContext';
 
 /**
  * Godot's colour scale: `energy * PI`, negated for a negative light, divided by the rectangle's area
@@ -100,12 +101,13 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
   useLightDistanceFade(lightRef, properties, { intensity, shadowOpacity });
   const userData = useAreaLightUserData(properties);
   const isLtcLoadSettled = useLtcTexturesSettled();
+  const drawsLight = useDrawsEditorOnly(properties.editor_only === true);
 
   return (
     <group name={node.name} {...node3dGroupSpread(transform)}>
       <rectAreaLight
         ref={lightRef}
-        visible={isLtcLoadSettled}
+        visible={isLtcLoadSettled && drawsLight}
         color={parseColorToHex(properties.light_color)}
         intensity={intensity}
         width={properties.area_size.x}

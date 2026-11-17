@@ -16,6 +16,7 @@ export function parseLight2D(heading: ParsedHeading, properties: Record<string, 
   return {
     ...parseNode2D(heading, properties),
     enabled: boolOr(properties.enabled, true, context),
+    editor_only: boolOr(properties.editor_only, false, context),
     color: colorOr(properties.color, { r: 1, g: 1, b: 1, a: 1 }),
     energy: floatOr(properties.energy, 1.0, context),
     blend_mode: enumOr(properties.blend_mode, Light2DBlendMode.ADD, BLEND_MODES, context),

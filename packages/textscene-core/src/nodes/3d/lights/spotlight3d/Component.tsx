@@ -16,6 +16,7 @@ import { spotLight3DAabb } from '../../../../godot/scene/light';
 import { LightWithTarget } from '../shared/lightShared';
 import { SpotLightGizmo } from '../shared/lightHelpers';
 import { positionalLightRange, usePositionalLight } from '../shared/positionalLight';
+import { useDrawsEditorOnly } from '../../../../r3f/contexts/EditorHintContext';
 
 export function SpotLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as SpotLight3DProperties;
@@ -36,6 +37,7 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
     properties,
     properties.spot_angle_attenuation
   );
+  const drawsLight = useDrawsEditorOnly(properties.editor_only === true);
 
   return (
     <LightWithTarget
@@ -46,6 +48,7 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
         <>
           <spotLight
             ref={lightRef}
+            visible={drawsLight}
             position={[0, 0, 0]}
             color={color}
             intensity={intensity}

@@ -2,7 +2,8 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { holdsResource } from '../../../godot/scene/resourceLiteral';
-import { boolOr } from '../../../parser/valueParsers';
+import { boolOr, enumOr } from '../../../parser/valueParsers';
+import { TouchScreenButtonVisibilityMode } from '../../../godot/scene/canvasNodes';
 import { parseNode2D } from '../../base/node2d/parser';
 import type { TouchScreenButtonProperties } from './types';
 
@@ -15,6 +16,12 @@ export function parseTouchScreenButton(
     // `shape_centered` and `shape_visible` default to true (touch_screen_button.h:52-53).
     shape_centered: boolOr(properties.shape_centered, true),
     shape_visible: boolOr(properties.shape_visible, true),
+    visibility_mode: enumOr(
+      properties.visibility_mode,
+      TouchScreenButtonVisibilityMode.ALWAYS,
+      Object.values(TouchScreenButtonVisibilityMode),
+      'TouchScreenButton'
+    ),
   };
   if (holdsResource(properties.texture_normal)) result.texture_normal = properties.texture_normal;
   if (holdsResource(properties.shape)) result.shape = properties.shape;

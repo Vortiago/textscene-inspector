@@ -1,7 +1,7 @@
 /**
  * Draws a TouchScreenButton's `texture_normal` as a Sprite2D's uncentred quad at the node origin. The
- * editor draws it whatever `visibility_mode` says, and no finger is down, so `texture_pressed` never
- * shows (`touch_screen_button.cpp:136-155`). The Sprite2D root stays mounted with no texture set, so a
+ * editor draws it whatever `visibility_mode` says. The game draws a touch-screen-only button only on
+ * a touch screen. No finger is down, so `texture_pressed` never shows (`touch_screen_button.cpp:136-155`). The Sprite2D root stays mounted with no texture set, so a
  * live edit does not remount the children.
  */
 
@@ -11,12 +11,18 @@ import type { TscnNode } from '../../../parser/types';
 import { Sprite2D } from '../sprite2d/Component';
 import type { Sprite2DProperties } from '../sprite2d/types';
 import { ShapeOverlay } from './ShapeOverlay';
+import { useIsEditorHint } from '../../../r3f/contexts/EditorHintContext';
+import { TouchScreenButtonVisibilityMode } from '../../../godot/scene/canvasNodes';
 import type { TouchScreenButtonProperties } from './types';
 
-function asUncentredSprite(node: TscnNode, props: TouchScreenButtonProperties): TscnNode {
+function asUncentredSprite(
+  node: TscnNode,
+  props: TouchScreenButtonProperties,
+  drawsTexture: boolean
+): TscnNode {
   const sprite: Sprite2DProperties = {
     ...props,
-    texture: props.texture_normal,
+    texture: drawsTexture ? props.texture_normal : undefined,
     centered: false,
     offset: { x: 0, y: 0 },
     flip_h: false,
@@ -29,10 +35,20 @@ function asUncentredSprite(node: TscnNode, props: TouchScreenButtonProperties): 
   return { ...node, properties: sprite };
 }
 
+/** `DisplayServer::is_touchscreen_available()` in a browser: whether the page takes touch events. */
+function hasTouchScreen(): boolean {
+  return typeof window !== 'undefined' && 'ontouchstart' in window;
+}
+
 export function TouchScreenButton({ node, children }: NodeComponentProps) {
   const props = node.properties as TouchScreenButtonProperties;
+  const isEditorHint = useIsEditorHint();
+  const drawsTexture =
+    isEditorHint ||
+    props.visibility_mode !== TouchScreenButtonVisibilityMode.TOUCHSCREEN_ONLY ||
+    hasTouchScreen();
   // Memoised so the Sprite2D below sees one properties object per node, as it does for a parsed Sprite2D.
-  const spriteNode = useMemo(() => asUncentredSprite(node, props), [node, props]);
+  const spriteNode = useMemo(() => asUncentredSprite(node, props, drawsTexture), [node, props, drawsTexture]);
 
   return (
     <Sprite2D node={spriteNode}>
