@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { skyUsage } from './skyUsage.js';
+import { parsedShader } from '../language/parseShader.js';
+import { skyUsage as usageOfTree } from './skyUsage.js';
+
+const skyUsage = (source: string) => usageOfTree(parsedShader(source).tree);
 
 const skyOf = (body: string) => `shader_type sky;\nvoid sky() {\n\t${body}\n}\n`;
 
@@ -21,11 +24,8 @@ describe('skyUsage', () => {
     expect(skyUsage(source).light).toBe(true);
   });
 
-  it('reads no built-in of a text Godot does not compile', () => {
-    expect(skyUsage('shader_type sky;\nvoid sky() { COLOR = TIME; }\n')).toEqual({
-      light: false,
-      samplers: {},
-    });
+  it("reads no built-in of a sky that draws Godot's default sky (edge case)", () => {
+    expect(usageOfTree(null)).toEqual({ light: false, samplers: {} });
   });
 
   it('names the samplers marked source_color', () => {

@@ -1,7 +1,6 @@
-import { parsedShader, type ShaderOptions } from '../language/parseShader.js';
-import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import type { ShaderNode } from '../language/shaderTree.js';
 import { everyExpressionIn } from '../language/treeWalk.js';
+import { SKY_LIGHT_BUILT_IN } from '../../godot/rendering/environment/skyShader.js';
 import { isSamplerType, textureKindOf, type TextureKind } from '../language/types.js';
 
 /** What a sky shader reads that decides how Godot draws, bakes and samples it (`sky.cpp:70-103`). */
@@ -21,20 +20,12 @@ export interface SkySampler {
 
 const NO_USAGE: SkyUsage = { light: false, samplers: {} };
 
-const LIGHT_BUILT_IN = /^LIGHT[0-3]_/;
-
-/** What `source` reads, as Godot's compiler flags it, or nothing for a text Godot does not compile. */
-export function skyUsage(source: string, options: ShaderOptions = {}): SkyUsage {
-  let tree: ShaderNode;
-  try {
-    tree = parsedShader(source, options).tree;
-  } catch (error) {
-    if (error instanceof ShadingLanguageError) return NO_USAGE;
-    throw error;
-  }
+/** What `tree` reads, as Godot's compiler flags it, or nothing for a sky that draws Godot's default sky. */
+export function skyUsage(tree: ShaderNode | null): SkyUsage {
+  if (tree === null) return NO_USAGE;
   const names = builtInsRead(tree);
   return {
-    light: [...names].some((name) => LIGHT_BUILT_IN.test(name)),
+    light: [...names].some((name) => SKY_LIGHT_BUILT_IN.test(name)),
     samplers: samplersOf(tree),
   };
 }

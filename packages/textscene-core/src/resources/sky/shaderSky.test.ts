@@ -46,6 +46,19 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe('buildSkyEnvironment of a shader the previewer fails to translate', () => {
+  it("draws Godot's default sky", async () => {
+    vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const defectiveSky = TINTED_SKY.replace('0.5', '0.75');
+    const parse = parseShader.parsedShader;
+    vi.spyOn(parseShader, 'parsedShader').mockImplementation((code, options) => {
+      if (code === defectiveSky) throw new TypeError('a parser defect');
+      return parse(code, options);
+    });
+    expect(await backgroundFragmentOf(defectiveSky)).toBe(await backgroundFragmentOf(DEFAULT_SKY));
+  });
+});
+
 describe('buildSkyEnvironment of a shader Godot does not compile', () => {
   it("draws Godot's default sky", async () => {
     vi.spyOn(logger, 'warn').mockImplementation(() => {});
@@ -72,12 +85,14 @@ describe('shaderSkyRefusal', () => {
     expect(shaderSkyRefusal(shaderMaterial(TINTED_SKY), {})).toBeNull();
   });
 
-  it('gives nothing, and throws nothing, for a defect that is no Godot error (error case)', () => {
-    const material = shaderMaterial(TINTED_SKY);
+  it('names a defect that is no Godot error, as the previewer draws the default sky for it (error case)', () => {
     vi.spyOn(parseShader, 'parsedShader').mockImplementation(() => {
       throw new TypeError('a parser defect');
     });
-    expect(shaderSkyRefusal(material, {})).toBeNull();
+    const material = shaderMaterial(TINTED_SKY.replace('0.5', '0.25'));
+    expect(shaderSkyRefusal(material, {})).toBe(
+      "The previewer failed to translate this sky shader, and draws Godot's default sky: TypeError: a parser defect"
+    );
   });
 });
 
