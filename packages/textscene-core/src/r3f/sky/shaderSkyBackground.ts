@@ -4,6 +4,7 @@ import { fogUniforms } from '../fog/fogUniforms.js';
 import { disposeSkyDraw, type TranspiledSky } from '../../shaders/sky/transpileSky.js';
 import { SkyResolutionPasses } from '../../shaders/sky/skyResolutionPasses.js';
 import { SkyBackdrop } from './skyBackground.js';
+import { writeFramebufferHeight } from '../shadowFilter/framebufferRows.js';
 import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
 
 /** Scratch for one conversion, overwritten by each. */
@@ -48,7 +49,10 @@ export class ShaderSkyBackground extends SkyBackdrop {
       lights: this.lights,
     });
     // Godot draws the quarter and half passes before the scene, at the size of its buffers (`sky.cpp:1427`).
-    if (!this.passes.isEmpty) this.passes.draw(renderer, camera, renderSize(renderer, targetSize));
+    if (this.passes.isEmpty) return;
+    this.passes.draw(renderer, camera, renderSize(renderer, targetSize));
+    // A pass's render writes its target's height, which the lit surfaces after the sky must not read.
+    writeFramebufferHeight(renderer);
   }
 
   override dispose(): void {

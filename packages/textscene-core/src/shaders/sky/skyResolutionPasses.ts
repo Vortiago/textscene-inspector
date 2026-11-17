@@ -33,11 +33,7 @@ export class SkyResolutionPasses {
     const previous = renderer.getRenderTarget();
     const face = renderer.getActiveCubeFace();
     const level = renderer.getActiveMipmapLevel();
-    for (const { resolution, shift } of PASSES) {
-      const target = this.targets[resolution];
-      const pass = this.sky[resolution];
-      if (target && pass) this.drawPass(renderer, camera, pass, target, size, shift);
-    }
+    for (const pass of PASSES) this.drawPass(renderer, camera, size, pass);
     renderer.setRenderTarget(previous, face, level);
   }
 
@@ -45,14 +41,16 @@ export class SkyResolutionPasses {
     for (const target of Object.values(this.targets)) target.dispose();
   }
 
+  /** Draws the sky's pass of `resolution` into its target, when the sky has that pass. */
   private drawPass(
     renderer: THREE.WebGLRenderer,
     camera: THREE.Camera,
-    pass: SkyDraw,
-    target: THREE.WebGLRenderTarget,
     size: THREE.Vector2,
-    shift: number
+    { resolution, shift }: (typeof PASSES)[number]
   ): void {
+    const target = this.targets[resolution];
+    const pass = this.sky[resolution];
+    if (!target || !pass) return;
     target.setSize(Math.max(size.x, MIN_SCREEN) >> shift, Math.max(size.y, MIN_SCREEN) >> shift);
     this.scene.add(pass.mesh);
     renderer.setRenderTarget(target);
