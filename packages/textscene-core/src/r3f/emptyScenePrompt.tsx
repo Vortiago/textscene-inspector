@@ -34,6 +34,7 @@ const PromptGlyphs = withGeometryInstance(({ node }: NodeComponentProps) => (
 ));
 
 export default function EmptyScenePrompt() {
+  // paint-order-safe: a 3D group in the empty world, inside no canvas item.
   return (
     <group position={[0, PROMPT_HEIGHT, 0]} scale={PROMPT_PIXEL_SIZE}>
       <PromptGlyphs node={PROMPT_NODE} />
