@@ -43,6 +43,8 @@ func _ready() -> void:
 		var camera := Camera3D.new()
 		camera.fov = scene.camera.fov
 		camera.rotation = degrees(scene.camera.rotation)
+		if scene.camera.has("position"):
+			camera.position = Vector3(scene.camera.position[0], scene.camera.position[1], scene.camera.position[2])
 		viewport.add_child(camera)
 		var world := WorldEnvironment.new()
 		world.environment = environment(scene)

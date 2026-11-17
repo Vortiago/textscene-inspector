@@ -67,9 +67,9 @@ The instruction count says how much of the language is transpiled, not how many 
 | docs | 37 | 37 | spatial, canvas_item, sky |
 | scenes | 2 | 2 | spatial, sky |
 
-**7 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
+**10 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
 
-The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. It holds 7 files. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.
+The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. It holds 10 files. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.
 
 | State | Shaders |
 | --- | --- |
@@ -78,9 +78,8 @@ The printed tree of each shader the transpiler accepts is a checked-in file unde
 | not transpiled yet (#686) | 24 |
 | not transpiled yet (#1524) | 17 |
 | not transpiled yet (#1726) | 10 |
-| transpiled | 7 |
-| not transpiled yet (#1665) | 6 |
-| not transpiled yet (#1666) | 3 |
+| transpiled | 10 |
+| not transpiled yet (#1666) | 6 |
 | not transpiled yet (#1783) | 2 |
 | not transpiled yet (#1792) | 1 |
 
@@ -90,7 +89,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | --- | --- | --- |
 
 
-<details><summary>The 169 shaders not transpiled yet, with their owners</summary>
+<details><summary>The 166 shaders not transpiled yet, with their owners</summary>
 
 | Shader | Owner |
 | --- | --- |
@@ -182,11 +181,9 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `generator/ParticleProcessMaterial/collision_use_scale=true` | #1726 |
 | `generator/ParticleProcessMaterial/sub_emitter_mode=1` | #1726 |
 | `generator/ParticleProcessMaterial/sub_emitter_mode=3` | #1726 |
-| `generator/ProceduralSkyMaterial/defaults` | #1665 |
-| `generator/ProceduralSkyMaterial/use_debanding=false` | #1665 |
-| `generator/PanoramaSkyMaterial/defaults` | #1665 |
-| `generator/PanoramaSkyMaterial/filter=false` | #1665 |
-| `generator/PhysicalSkyMaterial/defaults` | #1665 |
+| `generator/ProceduralSkyMaterial/defaults` | #1666 |
+| `generator/ProceduralSkyMaterial/use_debanding=false` | #1666 |
+| `generator/PhysicalSkyMaterial/defaults` | #1666 |
 | `generator/PhysicalSkyMaterial/use_debanding=false` | #1666 |
 | `generator/FogMaterial/defaults` | #1783 |
 | `demos/2d/screen_space_shaders/shaders/BCS.gdshader` | #1524 |
@@ -210,7 +207,6 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `demos/2d/sprite_shaders/shaders/outline.gdshader` | #686 |
 | `demos/2d/sprite_shaders/shaders/silouette.gdshader` | #686 |
 | `demos/3d/labels_and_texts/curvature.gdshader` | #1831 |
-| `demos/3d/platformer/stage/skybox.gdshader` | #1665 |
 | `demos/3d/procedural_materials/shaders/plasma.gdshader` | #686 |
 | `demos/3d/sky_shaders/sky_volumetric_clouds.gdshader` | #1666 |
 | `demos/3d/sprites/shaders/negative.gdshader` | #1831 |

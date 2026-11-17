@@ -96,6 +96,62 @@ const TIME_SCENES = [
   clock: { ...scene.clock, frames: FRAMES_BEFORE_READ },
 }));
 
+/** A sky of one stage built-in, drawn with `body` as its `sky()` function. */
+const builtInSky = (body, renderModes = '') =>
+  `shader_type sky;\n${renderModes ? `render_mode ${renderModes};\n` : ''}\nvoid sky() {\n${body}\n}\n`;
+
+/** A camera turned and lifted off the origin, so that each built-in that reads it moves. */
+const TURNED = { fov: 75, rotation: [20, -35, 0], position: [1.3, 2.1, -0.7] };
+
+/** One scene per built-in of the sky stage, each read into the colour, against Godot's image. */
+const BUILT_IN_SCENES = [
+  { name: 'sky-eyedir', source: builtInSky('\tCOLOR = EYEDIR * 0.5 + 0.5;'), rows: ['sky.sky.EYEDIR'] },
+  {
+    name: 'sky-coords',
+    source: builtInSky('\tCOLOR = vec3(SKY_COORDS, 0.25);'),
+    rows: ['sky.sky.SKY_COORDS'],
+  },
+  {
+    name: 'sky-screen-uv',
+    source: builtInSky('\tCOLOR = vec3(SCREEN_UV, 0.25);'),
+    rows: ['sky.sky.SCREEN_UV'],
+  },
+  {
+    name: 'sky-fragcoord',
+    source: builtInSky('\tCOLOR = vec3(fract(FRAGCOORD.xy / 16.0), FRAGCOORD.z);'),
+    rows: ['sky.sky.FRAGCOORD'],
+  },
+  {
+    name: 'sky-position',
+    source: builtInSky('\tCOLOR = fract(POSITION * 0.37);'),
+    rows: ['sky.global.POSITION'],
+  },
+  {
+    name: 'sky-constants',
+    source: builtInSky('\tCOLOR = vec3(PI / 4.0, TAU / 8.0, E / 3.0) * (0.5 + 0.5 * EYEDIR.y);'),
+    rows: ['sky.constants.PI', 'sky.constants.TAU', 'sky.constants.E', 'sky.sky.EYEDIR'],
+  },
+  {
+    name: 'sky-fog-write',
+    source: builtInSky(
+      '\tCOLOR = vec3(0.1, 0.2, 0.8);\n\tFOG = vec4(1.0, 0.3, 0.1, 0.6 * max(EYEDIR.y, 0.0));'
+    ),
+    fog: FOG,
+    rows: ['sky.sky.FOG', 'sky.sky.EYEDIR'],
+  },
+  {
+    name: 'sky-disable-fog',
+    source: builtInSky('\tCOLOR = vec3(0.1, 0.2, 0.8);', 'disable_fog'),
+    fog: FOG,
+    rows: ['sky render_mode disable_fog'],
+  },
+  {
+    name: 'sky-debanding',
+    source: builtInSky('\tCOLOR = vec3(0.002);', 'use_debanding'),
+    rows: ['sky render_mode use_debanding'],
+  },
+].map((scene) => ({ ...SIZE, camera: TURNED, lights: [], ...scene }));
+
 export const SKY_SCENES = [
   { name: 'sky-default', ...SIZE, source: DEFAULT_SKY, camera: AHEAD, lights: [], rows: DEFAULT_SKY_ROWS },
   {
@@ -118,4 +174,5 @@ export const SKY_SCENES = [
   },
   ...VALUE_SCENES,
   ...TIME_SCENES,
+  ...BUILT_IN_SCENES,
 ];

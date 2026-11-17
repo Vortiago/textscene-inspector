@@ -246,6 +246,153 @@ void sky() {
 | --- | --- |
 | <img src="showcase/sky-time-cycle-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-time-cycle-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `sky-eyedir`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = EYEDIR * 0.5 + 0.5;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-eyedir-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-eyedir-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-coords`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(SKY_COORDS, 0.25);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-coords-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-coords-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-screen-uv`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(SCREEN_UV, 0.25);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-screen-uv-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-screen-uv-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-fragcoord`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(fract(FRAGCOORD.xy / 16.0), FRAGCOORD.z);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-fragcoord-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-fragcoord-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-position`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = fract(POSITION * 0.37);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-position-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-position-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-constants`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(PI / 4.0, TAU / 8.0, E / 3.0) * (0.5 + 0.5 * EYEDIR.y);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-constants-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-constants-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-fog-write`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	COLOR = vec3(0.1, 0.2, 0.8);
+	FOG = vec4(1.0, 0.3, 0.1, 0.6 * max(EYEDIR.y, 0.0));
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-fog-write-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-fog-write-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-disable-fog`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+render_mode disable_fog;
+
+void sky() {
+	COLOR = vec3(0.1, 0.2, 0.8);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-disable-fog-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-disable-fog-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `sky-debanding`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+render_mode use_debanding;
+
+void sky() {
+	COLOR = vec3(0.002);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-debanding-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-debanding-three.png" width="256" alt="Transpilation"> |
+
 ## `COLOR`
 
 `COLOR` is the colour `sky()` writes, linear. Godot's sky template holds it in its local `color`, and writes it to the frame after the environment's brightness and fog.
@@ -260,6 +407,69 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 `TIME` is the shader time in seconds. Godot adds each frame's step to it before the frame draws, in a double, and wraps it at the project setting `rendering/limits/time/time_rollover_secs`, 3600 by default. `ShaderClock` keeps the same sum and wrap: `advance(step)` before each frame, then `writeSkyBindings({ time })`. In the previewer, `PlaybackShaderTime` moves it with the playback controls instead: play advances it, pause holds it, a scrub sets it to the playhead, and stop sets it to 0. A scene with no AnimationPlayer advances it every frame, as Godot does.
 
 The transpiler emits the template's uniform `params.time`, which `writeSkyBindings` writes as a float. Rows: `sky.global.TIME`. Godot source: `servers/rendering/shader_types.cpp:456`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `EYEDIR`
+
+`EYEDIR` is the unit direction from the camera through the pixel, in world space. Godot's template unprojects the pixel at the far plane with the camera's inverse projection, turns it by the camera's orientation and normalises it (`sky.glsl:211-223`).
+
+The transpiler emits the template's local `cube_normal`. Rows: `sky.sky.EYEDIR`. Godot source: `servers/rendering/shader_types.cpp:488`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `SKY_COORDS`
+
+`SKY_COORDS` is the panorama's uv of `EYEDIR`: x from the angle about Y, y from the angle down from +Y, each from 0 to 1. Godot computes the angles with its own approximations of `atan2` and `acos` (`sky.glsl:178-232`), and the transpiler runs the same approximations.
+
+The transpiler emits the template's local `panorama_coords`. Rows: `sky.sky.SKY_COORDS`. Godot source: `servers/rendering/shader_types.cpp:491`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `SCREEN_UV` and `FRAGCOORD`
+
+`SCREEN_UV` is the pixel's place in the view, from 0 to 1, and `FRAGCOORD` is the pixel's window coordinate. Godot's `SCREEN_UV` is the template's `uv`, which it derives from the triangle's `uv_interp` (`sky.glsl:204`).
+
+The transpiler emits the template's local `uv`, and `screenCoordinate` for `gl_FragCoord`. Rows: `sky.sky.SCREEN_UV`, `sky.sky.FRAGCOORD`. Godot source: `servers/rendering/shader_types.cpp:489`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `POSITION`
+
+`POSITION` is the camera's position in world space. `writeSkyBindings` writes it from the camera's world matrix, as `sky.cpp` writes `params.position` from the camera transform.
+
+The transpiler emits the template's uniform `params.position`. Rows: `sky.global.POSITION`. Godot source: `servers/rendering/shader_types.cpp:460`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `PI`, `TAU` and `E`
+
+Godot writes each constant into the shader as the text of `String::num` of its C++ value (`sky.cpp:755-757`): 3.14159265358979, 6.28318530717959 and 2.71828182845905. The transpiler reads the same text as a float.
+
+The transpiler emits `a float constant`. Rows: `sky.constants.PI`, `sky.constants.TAU`, `sky.constants.E`. Godot source: `servers/rendering/shader_types.cpp:457`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## `FOG`
+
+`FOG` starts at `vec4(0.0)`. After the scene's fog, Godot mixes the sky's colour toward `FOG.rgb` by `FOG.a` when `FOG.a` is above 0 (`sky.glsl:238`, `:297-298`). `disable_fog` turns off both.
+
+The transpiler emits the template's local `custom_fog`. Rows: `sky.sky.FOG`. Godot source: `servers/rendering/shader_types.cpp:494`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## Render modes
+
+`disable_fog` defines `DISABLE_FOG`, which skips the scene's fog and `FOG` (`sky.glsl:279-301`). `use_debanding` defines `USE_DEBANDING`, which adds Godot's interleaved gradient noise of the pixel's window coordinate to the colour (`sky.glsl:313-314`).
+
+The transpiler emits `the defines of the template variant`. Rows: `sky render_mode disable_fog`, `sky render_mode use_debanding`. Godot source: `servers/rendering/shader_types.cpp:501`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

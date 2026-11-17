@@ -1785,10 +1785,10 @@ particles.process.COLLISION_DEPTH	built-in (read only)	servers/rendering/shader_
 particles.process.ATTRACTOR_FORCE	built-in (read only)	servers/rendering/shader_types.cpp:430	#1726	particles.glsl		vec3			
 particles.process.AMOUNT_RATIO	built-in (read only)	servers/rendering/shader_types.cpp:431	#1726	particles.glsl		float			
 sky.global.TIME	built-in (read only)	servers/rendering/shader_types.cpp:456	#1794	environment/sky.glsl		float		native	native
-sky.constants.PI	built-in (read only)	servers/rendering/shader_types.cpp:457	#1665	environment/sky.glsl		float			
-sky.constants.TAU	built-in (read only)	servers/rendering/shader_types.cpp:458	#1665	environment/sky.glsl		float			
-sky.constants.E	built-in (read only)	servers/rendering/shader_types.cpp:459	#1665	environment/sky.glsl		float			
-sky.global.POSITION	built-in (read only)	servers/rendering/shader_types.cpp:460	#1665	environment/sky.glsl		vec3			
+sky.constants.PI	built-in (read only)	servers/rendering/shader_types.cpp:457	#1665	environment/sky.glsl		float		native	native
+sky.constants.TAU	built-in (read only)	servers/rendering/shader_types.cpp:458	#1665	environment/sky.glsl		float		native	native
+sky.constants.E	built-in (read only)	servers/rendering/shader_types.cpp:459	#1665	environment/sky.glsl		float		native	native
+sky.global.POSITION	built-in (read only)	servers/rendering/shader_types.cpp:460	#1665	environment/sky.glsl		vec3		native	native
 sky.global.RADIANCE	built-in (read only)	servers/rendering/shader_types.cpp:461	#1665	environment/sky.glsl		samplerCube			
 sky.global.AT_HALF_RES_PASS	built-in (read only)	servers/rendering/shader_types.cpp:462	#1666	environment/sky.glsl		bool			
 sky.global.AT_QUARTER_RES_PASS	built-in (read only)	servers/rendering/shader_types.cpp:463	#1666	environment/sky.glsl		bool			
@@ -1815,13 +1815,13 @@ sky.global.LIGHT3_COLOR	built-in (read only)	servers/rendering/shader_types.cpp:
 sky.global.LIGHT3_SIZE	built-in (read only)	servers/rendering/shader_types.cpp:484	#1666	environment/sky.glsl		float			
 sky.sky.COLOR	built-in	servers/rendering/shader_types.cpp:486	#1665	environment/sky.glsl		vec3		native	native
 sky.sky.ALPHA	built-in	servers/rendering/shader_types.cpp:487	#1665	environment/sky.glsl		float			
-sky.sky.EYEDIR	built-in (read only)	servers/rendering/shader_types.cpp:488	#1665	environment/sky.glsl		vec3			
-sky.sky.SCREEN_UV	built-in (read only)	servers/rendering/shader_types.cpp:489	#1665	environment/sky.glsl		vec2			
-sky.sky.FRAGCOORD	built-in (read only)	servers/rendering/shader_types.cpp:490	#1665	environment/sky.glsl		vec4			
-sky.sky.SKY_COORDS	built-in (read only)	servers/rendering/shader_types.cpp:491	#1665	environment/sky.glsl		vec2			
+sky.sky.EYEDIR	built-in (read only)	servers/rendering/shader_types.cpp:488	#1665	environment/sky.glsl		vec3		native	native
+sky.sky.SCREEN_UV	built-in (read only)	servers/rendering/shader_types.cpp:489	#1665	environment/sky.glsl		vec2		native	native
+sky.sky.FRAGCOORD	built-in (read only)	servers/rendering/shader_types.cpp:490	#1665	environment/sky.glsl		vec4		native	native
+sky.sky.SKY_COORDS	built-in (read only)	servers/rendering/shader_types.cpp:491	#1665	environment/sky.glsl		vec2		native	native
 sky.sky.HALF_RES_COLOR	built-in (read only)	servers/rendering/shader_types.cpp:492	#1666	environment/sky.glsl		vec4			
 sky.sky.QUARTER_RES_COLOR	built-in (read only)	servers/rendering/shader_types.cpp:493	#1666	environment/sky.glsl		vec4			
-sky.sky.FOG	built-in	servers/rendering/shader_types.cpp:494	#1665	environment/sky.glsl		vec4			
+sky.sky.FOG	built-in	servers/rendering/shader_types.cpp:494	#1665	environment/sky.glsl		vec4		native	native
 fog.global.TIME	built-in (read only)	servers/rendering/shader_types.cpp:507	#1783	environment/volumetric_fog.glsl		float			
 fog.constants.PI	built-in (read only)	servers/rendering/shader_types.cpp:508	#1783	environment/volumetric_fog.glsl		float			
 fog.constants.TAU	built-in (read only)	servers/rendering/shader_types.cpp:509	#1783	environment/volumetric_fog.glsl		float			
@@ -1908,8 +1908,8 @@ particles render_mode disable_velocity	render mode	servers/rendering/shader_type
 particles render_mode keep_data	render mode	servers/rendering/shader_types.cpp:451	#1726	particles.glsl					
 sky render_mode use_half_res_pass	render mode	servers/rendering/shader_types.cpp:499	#1666	environment/sky.glsl					
 sky render_mode use_quarter_res_pass	render mode	servers/rendering/shader_types.cpp:500	#1666	environment/sky.glsl					
-sky render_mode disable_fog	render mode	servers/rendering/shader_types.cpp:501	#1665	environment/sky.glsl					
-sky render_mode use_debanding	render mode	servers/rendering/shader_types.cpp:502	#1665	environment/sky.glsl					
+sky render_mode disable_fog	render mode	servers/rendering/shader_types.cpp:501	#1665	environment/sky.glsl				native	native
+sky render_mode use_debanding	render mode	servers/rendering/shader_types.cpp:502	#1665	environment/sky.glsl				native	native
 #if	preprocessor	servers/rendering/shader_preprocessor.cpp:384	#1828					native	native
 #ifdef	preprocessor	servers/rendering/shader_preprocessor.cpp:386	#1828					native	native
 #ifndef	preprocessor	servers/rendering/shader_preprocessor.cpp:388	#1828					native	native

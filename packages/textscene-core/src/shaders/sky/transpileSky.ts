@@ -103,11 +103,16 @@ export function transpileParsedSky(
     uniforms
   );
   return {
-    mesh: skyMesh(vertex.result, fragment.result, [...parameters.values()]),
+    mesh: skyMesh(withVulkanY(vertex.result), fragment.result, [...parameters.values()]),
     uniforms: uniforms.byName,
     textures: fragment.textures,
     parameters,
   };
+}
+
+/** Godot's clip space has y down, as Vulkan's does, so the template's `uv_interp.y` of -1 is the top row. */
+function withVulkanY(position: Node): Node {
+  return (position as unknown as ReturnType<typeof vec4>).mul(vec4(1, -1, 1, 1)) as unknown as Node;
 }
 
 /** Three vertices, which the template's vertex stage places from their index alone. */
@@ -117,7 +122,7 @@ function skyMesh(position: Node, colour: Node, parameters: readonly TranspiledUn
   const material = new BoundNodeMaterial(parameters);
   material.vertexNode = position;
   material.fragmentNode = colour;
-  // Godot's sky pipeline culls no face, and its triangle winds the other way in GL's y-up clip space.
+  // Godot's sky pipeline culls no face.
   material.side = THREE.DoubleSide;
   material.depthWrite = false;
   material.depthTest = false;

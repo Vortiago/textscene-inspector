@@ -18,7 +18,7 @@ export interface CompiledMaterial {
   readonly code: ReadonlyMap<string, BlockNode>;
   /** The structs and the other functions, which the `#GLOBALS` slot takes. */
   readonly globals: readonly (StructNode | FunctionNode)[];
-  /** The usage defines of the built-ins the material reads, `custom_defines`. */
+  /** The defines of the material's render modes, then of the built-ins it reads: `custom_defines`. */
   readonly custom: readonly string[];
   /** The GLSL text of each built-in. */
   readonly renames: Readonly<Record<string, string>>;
@@ -39,7 +39,7 @@ export function compileMaterial(shader: ShaderNode, table: ModeTable): CompiledM
   return {
     code,
     globals: [...shader.structs.map((struct) => ids.struct(struct)), ...functions],
-    custom: usageDefines(shader, table),
+    custom: [...renderModeDefines(shader, table), ...usageDefines(shader, table)],
     renames: table.renames,
   };
 }
@@ -69,6 +69,12 @@ function stageFunctionsOf(shaderType: string): ReadonlySet<string> {
     (row) => row.id.split('.')[1]!
   );
   return new Set(scopes.filter((scope) => scope !== 'global' && scope !== 'constants'));
+}
+
+/** The define of each render mode, once per mode, in the text's order (`shader_compiler.cpp:457-461`). */
+function renderModeDefines(shader: ShaderNode, table: ModeTable): string[] {
+  const modes = new Set(shader.renderModes.map((mode) => mode.name));
+  return [...modes].flatMap((mode) => table.render_mode_defines[mode] ?? []);
 }
 
 /** Each usage define of the built-ins `shader` reads, once, in the order of the text. */

@@ -53,7 +53,7 @@ interface Binding {
 /** Each uniform the background pass reads. The others hold zero, as they do for this pass. */
 export const SKY_BINDINGS: readonly Binding[] = [
   { uniform: 'params.orientation', godot: 'sky.cpp:1501-1507, 237', value: orientationOf },
-  { uniform: 'params.projection', godot: 'sky.cpp:224-227', value: projectionOf },
+  { uniform: 'params.projection', godot: 'sky.cpp:224-227, 1174', value: projectionOf },
   {
     uniform: 'params.position',
     godot: 'sky.cpp:229-231',
@@ -132,10 +132,10 @@ function orientationOf(scene: SkyScene): THREE.Matrix3 {
   return sky.multiply(camera);
 }
 
-/** `columns[2][0]`, `[0][0]`, `[2][1]` and `[1][1]`: three's matrix is column-major, as Godot's is. */
+/** `columns[2][0]`, `[0][0]`, `[2][1]` and `[1][1]` of Godot's projection, which flips y (`sky.cpp:1174`). */
 function projectionOf(scene: SkyScene): THREE.Vector4 {
   const columns = scene.camera.projectionMatrix.elements;
-  return new THREE.Vector4(columns[8], columns[0], columns[9], columns[5]);
+  return new THREE.Vector4(columns[8], columns[0], -columns[9]!, -columns[5]!);
 }
 
 function fogLightOf(scene: SkyScene): THREE.Vector3 {
