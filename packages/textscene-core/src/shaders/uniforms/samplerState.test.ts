@@ -6,19 +6,18 @@ import {
   LinearMipmapNearestFilter,
   NearestFilter,
   NearestMipmapLinearFilter,
-  NearestMipmapNearestFilter,
   RepeatWrapping,
 } from 'three';
 import { GODOT_SAMPLING, samplerState } from './samplerState.js';
 
 const settings = (filter: string, repeat = 'repeat_disable') => ({ filter, repeat });
 
-// `samplers_rd_allocate` (`material_storage.cpp:2454`) builds each Vulkan sampler. A Vulkan sampler
-// reads every mip level, so a filter without mipmaps picks the nearest level, as GL's *_MIPMAP_NEAREST.
+// `samplers_rd_allocate` (`material_storage.cpp:2454`) builds each sampler. Godot 4.6.3 reads level 0
+// only through a filter without `_mipmap`, at any `textureLod` level (probe texture-2d-lod-linear-no-mipmap-filter).
 describe('samplerState', () => {
   it.each([
-    ['filter_nearest', NearestFilter, NearestMipmapNearestFilter],
-    ['filter_linear', LinearFilter, LinearMipmapNearestFilter],
+    ['filter_nearest', NearestFilter, NearestFilter],
+    ['filter_linear', LinearFilter, LinearFilter],
     ['filter_nearest_mipmap', NearestFilter, NearestMipmapLinearFilter],
     ['filter_linear_mipmap', LinearFilter, LinearMipmapLinearFilter],
     ['filter_nearest_mipmap_anisotropic', NearestFilter, NearestMipmapLinearFilter],

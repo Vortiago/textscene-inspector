@@ -37,8 +37,18 @@ describe('samplerTextures', () => {
     ]);
   });
 
-  it('reads white for an element the material array does not reach', () => {
-    expect(samplerTextures(uniformOf('uniform sampler2D s[3];'), ['a'])).toEqual(['a', 'white', 'white']);
+  // `update_textures` keeps the texture of the element before a null one (`material_storage.cpp:1060`).
+  it('reads the element before for an element the material array does not reach', () => {
+    expect(samplerTextures(uniformOf('uniform sampler2D s[3];'), ['a'])).toEqual(['a', 'a', 'a']);
+  });
+
+  it('reads the element before for a null element, and white for a null first one', () => {
+    expect(samplerTextures(uniformOf('uniform sampler2D s[4];'), [null, 'a', null, 'b'])).toEqual([
+      'white',
+      'a',
+      'a',
+      'b',
+    ]);
   });
 
   it('reads only as many elements as the uniform holds', () => {

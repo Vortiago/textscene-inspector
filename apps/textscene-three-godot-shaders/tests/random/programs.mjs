@@ -93,7 +93,12 @@ function producersByType(rows) {
           inputs: [base],
         });
       }
-    } else if (familyOf(row) in PRODUCER_KINDS && row.args?.length && row.returns !== 'void') {
+    } else if (
+      familyOf(row) in PRODUCER_KINDS &&
+      row.args?.length &&
+      row.returns !== 'void' &&
+      !row.args.some(isSampler)
+    ) {
       add(row.returns, { row, kind: PRODUCER_KINDS[familyOf(row)], args: row.args, inputs: row.args });
     }
   }
@@ -101,6 +106,9 @@ function producersByType(rows) {
 }
 
 const familyOf = (row) => (isFunctionRow(row) ? 'function' : row.family);
+
+/** A random program holds no texture: the texture probes measure each row that reads one. */
+const isSampler = (type) => /^[iu]?sampler/.test(type);
 
 /** How each family of rows with operands is written. */
 const PRODUCER_KINDS = { operator: 'operator', constructor: 'call', function: 'call' };

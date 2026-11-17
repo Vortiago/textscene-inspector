@@ -792,6 +792,54 @@ An array reaches the shader as the bits of one \`uvec4\` per column, as std140 l
   ],
 };
 
+const textureProbes = (pattern) => (probe) =>
+  probe.name.startsWith('texture-') && pattern.test(probe.name.slice(8));
+
+const TEXTURES_CHAPTER = {
+  file: 'textures.md',
+  title: 'Textures',
+  intro: `A sampler uniform reads a texture the material gives it. \`set\` takes a three.js \`Texture\` where Godot's \`set_shader_parameter\` takes a \`Texture2D\`, \`Texture3D\`, \`Texture2DArray\` or \`Cubemap\`, a list of them for a sampler array, or null:
+
+\`\`\`js
+const shader = transpileShadingLanguage('uniform sampler2D albedo : filter_nearest;\\nvec4 probe(vec2 uv) { return texture(albedo, uv); }');
+shader.parameters.get('albedo').set(texture);
+\`\`\`
+
+The transpiler picks each texture as Godot's \`update_textures\` does (\`material_storage.cpp:880\`). A sampler the material leaves unset reads Godot's 4 by 4 default texture of its hint and type. A null, a Variant, or an array element the material's list does not reach reads white.
+
+Godot keeps the filter and repeat on the sampler, and three keeps them on the texture. So each sampler reads its own copy of the material's texture, which shares the texture's image and holds the sampler's filter, repeat and origin. A copy reads the image with Godot's top-left origin. A \`source_color\` sampler reads the texture through its sRGB view where the material converts colours, as \`p_use_linear_color\` decides.`,
+  sections: [
+    {
+      heading: 'Sampler types',
+      rows: (row) => /^[iu]?sampler/.test(row.id),
+      what: 'A sampler reads a 2D texture, a 2D array, a 3D texture or a cube, of floats, ints (`isampler`) or uints (`usampler`). A sampler can be an argument of a function: the transpiler writes the function once for each set of textures its calls pass.',
+      tsl: 'a `texture`, `texture3D` or cube texture node per element',
+      probes: textureProbes(/^(layers|volume|cube|unsigned|argument|array)/),
+    },
+    {
+      heading: 'Default textures',
+      rows: (row) => /^hint_(default_|normal$|roughness_|anisotropy)/.test(row.id),
+      what: 'A hint names the texture a sampler reads while the material sets none: `hint_default_black` reads opaque black, `hint_default_transparent` transparent black, `hint_normal` and `hint_roughness_normal` the flat normal (128, 128, 255), and `hint_anisotropy` (255, 128, 255). Every other sampler reads white. A cube and a 3D texture have black, transparent and white only. The roughness hints change nothing the shader reads.',
+      tsl: "a 4 by 4 texture of Godot's texel",
+      probes: textureProbes(/^unset-/),
+    },
+    {
+      heading: 'Filter and repeat',
+      rows: (row) => /^(filter_|repeat_)/.test(row.id),
+      what: "A filter word and a repeat word set the sampler. A sampler without one takes its shader type's default: `filter_linear_mipmap` and `repeat_enable` for spatial, sky and particles, `filter_linear_mipmap` and `repeat_disable` for fog, and `filter_linear` and `repeat_disable` for canvas_item. A filter without `_mipmap` reads level 0 only, at any level `textureLod` asks for. An anisotropic filter reads up to 4 samples, from the project's `anisotropic_filtering_level`.",
+      tsl: "the texture's filters, wrap and anisotropy",
+      probes: textureProbes(/^2d-(filter|default|repeat|lod)/),
+    },
+    {
+      heading: 'Texture functions',
+      rows: (row) => /^(texture|texelFetch)\w*\(/.test(row.id),
+      what: '`texture` samples at a coordinate, with an optional bias. `textureLod` samples a level, `textureGrad` samples with gradients and `texelFetch` reads one texel of a level. `textureSize` gives the size of a level. A 2D array keeps the layer in the last lane of the coordinate.',
+      tsl: '`sample`, `bias`, `level`, `grad`, `load` and `textureSize` of the texture node',
+      probes: textureProbes(/^(2d-texel|2d-size|2d-lod|2d-source)/),
+    },
+  ],
+};
+
 export const GUIDE_CHAPTERS = [
   TYPES_AND_LITERALS,
   ARITHMETIC_CHAPTER,
@@ -807,5 +855,6 @@ export const GUIDE_CHAPTERS = [
   BIT_FUNCTIONS_CHAPTER,
   PREPROCESSOR_CHAPTER,
   UNIFORMS_CHAPTER,
+  TEXTURES_CHAPTER,
   SKY_CHAPTER,
 ];

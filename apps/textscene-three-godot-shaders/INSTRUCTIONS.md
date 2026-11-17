@@ -12,7 +12,7 @@ GLSL or WGSL operation itself, `lowered` with the name of the operations it writ
 probes run on WebGL 2. WebGPURenderer runs the same TSL nodes, and no probe runs there until the
 canvases draw on WebGPURenderer (#1788).
 
-1327 of 1889 instructions transpiled.
+1353 of 1889 instructions transpiled.
 
 ## data type
 
@@ -38,16 +38,16 @@ canvases draw on WebGPURenderer (#1788).
 | `mat2` | transpiled (`type-mat2`) | native | untested (#1788) | `servers/rendering/shader_language.h:227` |
 | `mat3` | transpiled (`type-mat3`) | native | untested (#1788) | `servers/rendering/shader_language.h:228` |
 | `mat4` | transpiled (`type-mat4`) | native | untested (#1788) | `servers/rendering/shader_language.h:229` |
-| `sampler2D` | open, #1829 | | | `servers/rendering/shader_language.h:230` |
+| `sampler2D` | transpiled (`texture-2d-filter_nearest`, `texture-2d-filter_linear`, `texture-2d-filter_nearest_mipmap`, `texture-2d-filter_linear_mipmap`, `texture-2d-default-filter`, `texture-2d-repeat-enable`, `texture-2d-repeat-disable`, `texture-unset-none`, `texture-unset-hint_default_white`, `texture-unset-hint_default_black`, `texture-unset-hint_default_transparent`, `texture-unset-hint_normal`, `texture-unset-hint_roughness_normal`, `texture-unset-hint_anisotropy`, `texture-unset-hint_roughness_r`, `texture-2d-lod`, `texture-2d-lod-linear-mipmap`, `texture-2d-lod-linear-no-mipmap-filter`, `texture-2d-texel-fetch`, `texture-2d-size`, `texture-2d-size-unset`, `texture-2d-source-color`, `texture-2d-source-color-hdr`, `texture-argument`, `texture-array-elements`) | native | untested (#1788) | `servers/rendering/shader_language.h:230` |
 | `isampler2D` | open, #1829 | | | `servers/rendering/shader_language.h:231` |
-| `usampler2D` | open, #1829 | | | `servers/rendering/shader_language.h:232` |
-| `sampler2DArray` | open, #1829 | | | `servers/rendering/shader_language.h:233` |
+| `usampler2D` | transpiled (`texture-unsigned`) | native | untested (#1788) | `servers/rendering/shader_language.h:232` |
+| `sampler2DArray` | transpiled (`texture-layers`) | native | untested (#1788) | `servers/rendering/shader_language.h:233` |
 | `isampler2DArray` | open, #1829 | | | `servers/rendering/shader_language.h:234` |
 | `usampler2DArray` | open, #1829 | | | `servers/rendering/shader_language.h:235` |
-| `sampler3D` | open, #1829 | | | `servers/rendering/shader_language.h:236` |
+| `sampler3D` | transpiled (`texture-volume`) | native | untested (#1788) | `servers/rendering/shader_language.h:236` |
 | `isampler3D` | open, #1829 | | | `servers/rendering/shader_language.h:237` |
 | `usampler3D` | open, #1829 | | | `servers/rendering/shader_language.h:238` |
-| `samplerCube` | open, #1829 | | | `servers/rendering/shader_language.h:239` |
+| `samplerCube` | transpiled (`texture-cube`) | native | untested (#1788) | `servers/rendering/shader_language.h:239` |
 | `samplerCubeArray` | open, #1829 | | | `servers/rendering/shader_language.h:240` |
 | `samplerExternalOES` | open, #1829 | | | `servers/rendering/shader_language.h:241` |
 | `struct type` | transpiled (`statement-struct`, `statement-struct-member-write`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-nested`, `statement-struct-assign`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`, `statement-struct-wrong-argument`, `statement-struct-unknown-member`) | native | untested (#1788) | `servers/rendering/shader_language.h:242` |
@@ -79,7 +79,7 @@ canvases draw on WebGPURenderer (#1788).
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `uniform` | transpiled (`uniform-default-float`, `uniform-default-int`, `uniform-default-uint`, `uniform-default-bool`, `uniform-default-vec2`, `uniform-default-vec3`, `uniform-default-vec4`, `uniform-default-ivec2`, `uniform-default-ivec3`, `uniform-default-ivec4`, `uniform-default-uvec2`, `uniform-default-uvec3`, `uniform-default-uvec4`, `uniform-default-bvec2`, `uniform-default-bvec3`, `uniform-default-bvec4`, `uniform-default-mat2`, `uniform-default-mat3`, `uniform-default-mat4`, `uniform-unset-float`, `uniform-unset-int`, `uniform-unset-uint`, `uniform-unset-bool`, `uniform-unset-vec2`, `uniform-unset-vec3`, `uniform-unset-vec4`, `uniform-unset-ivec2`, `uniform-unset-ivec3`, `uniform-unset-ivec4`, `uniform-unset-uvec2`, `uniform-unset-uvec3`, `uniform-unset-uvec4`, `uniform-unset-bvec2`, `uniform-unset-bvec3`, `uniform-unset-bvec4`, `uniform-unset-mat2`, `uniform-unset-mat3`, `uniform-unset-mat4`, `uniform-default-int-to-float`, `uniform-default-int-to-uint`, `uniform-default-uint-to-int`, `uniform-precision`, `uniform-material-float`, `uniform-material-float-of-int`, `uniform-material-float-of-string`, `uniform-material-int`, `uniform-material-int-of-float`, `uniform-material-uint`, `uniform-material-uint-of-negative`, `uniform-material-uint-of-large-float`, `uniform-material-bool`, `uniform-material-bool-of-int`, `uniform-material-vec2`, `uniform-material-vec2-of-vector3`, `uniform-material-vec2-of-array`, `uniform-material-vec3`, `uniform-material-vec3-of-vector2i`, `uniform-material-vec3-of-color`, `uniform-material-vec4`, `uniform-material-vec4-of-quaternion`, `uniform-material-vec4-of-plane`, `uniform-material-vec4-of-rect2`, `uniform-material-vec4-of-color`, `uniform-material-vec4-of-packed`, `uniform-material-ivec2`, `uniform-material-ivec3-of-vector3`, `uniform-material-ivec4-of-rect2i`, `uniform-material-uvec2`, `uniform-material-uvec3-of-array`, `uniform-material-bvec3-of-int`, `uniform-material-bvec4-of-int`, `uniform-material-mat2`, `uniform-material-mat3`, `uniform-material-mat3-of-quaternion`, `uniform-material-mat4`, `uniform-material-mat4-of-transform3d`, `uniform-material-float-nan`, `uniform-array-float-unset`, `uniform-array-float-nan-first`, `uniform-array-float-short`, `uniform-array-int`, `uniform-array-uint`, `uniform-array-bool`, `uniform-array-vec2-of-array`, `uniform-array-vec2-of-numbers`, `uniform-array-vec3-of-colors`, `uniform-array-vec4-of-colors`, `uniform-array-vec4-unset`, `uniform-array-ivec2`, `uniform-array-bvec2`, `uniform-array-mat2-unset`, `uniform-array-mat2-short`, `uniform-array-mat3-of-bases`, `uniform-array-mat4-of-floats`, `uniform-computed-index`, `uniform-in-called-function`, `uniform-as-argument`, `uniform-color-default-ldr`, `uniform-color-unset-ldr`, `uniform-color-value-ldr`, `uniform-color-disabled-default-ldr`, `uniform-color-disabled-unset-ldr`, `uniform-color-disabled-value-ldr`, `uniform-color-plain-value-ldr`, `uniform-color-vec3-default-ldr`, `uniform-color-vec3-unset-ldr`, `uniform-color-array-ldr`, `uniform-color-default-hdr`, `uniform-color-unset-hdr`, `uniform-color-value-hdr`, `uniform-color-disabled-default-hdr`, `uniform-color-disabled-unset-hdr`, `uniform-color-disabled-value-hdr`, `uniform-color-plain-value-hdr`, `uniform-color-vec3-default-hdr`, `uniform-color-vec3-unset-hdr`, `uniform-color-array-hdr`, `uniform-hint-range-float`, `uniform-hint-range-int`, `uniform-hint-enum`, `uniform-struct-name`, `uniform-group-uniforms`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:335` |
+| `uniform` | transpiled (`uniform-default-float`, `uniform-default-int`, `uniform-default-uint`, `uniform-default-bool`, `uniform-default-vec2`, `uniform-default-vec3`, `uniform-default-vec4`, `uniform-default-ivec2`, `uniform-default-ivec3`, `uniform-default-ivec4`, `uniform-default-uvec2`, `uniform-default-uvec3`, `uniform-default-uvec4`, `uniform-default-bvec2`, `uniform-default-bvec3`, `uniform-default-bvec4`, `uniform-default-mat2`, `uniform-default-mat3`, `uniform-default-mat4`, `uniform-unset-float`, `uniform-unset-int`, `uniform-unset-uint`, `uniform-unset-bool`, `uniform-unset-vec2`, `uniform-unset-vec3`, `uniform-unset-vec4`, `uniform-unset-ivec2`, `uniform-unset-ivec3`, `uniform-unset-ivec4`, `uniform-unset-uvec2`, `uniform-unset-uvec3`, `uniform-unset-uvec4`, `uniform-unset-bvec2`, `uniform-unset-bvec3`, `uniform-unset-bvec4`, `uniform-unset-mat2`, `uniform-unset-mat3`, `uniform-unset-mat4`, `uniform-default-int-to-float`, `uniform-default-int-to-uint`, `uniform-default-uint-to-int`, `uniform-precision`, `uniform-material-float`, `uniform-material-float-of-int`, `uniform-material-float-of-string`, `uniform-material-int`, `uniform-material-int-of-float`, `uniform-material-uint`, `uniform-material-uint-of-negative`, `uniform-material-uint-of-large-float`, `uniform-material-bool`, `uniform-material-bool-of-int`, `uniform-material-vec2`, `uniform-material-vec2-of-vector3`, `uniform-material-vec2-of-array`, `uniform-material-vec3`, `uniform-material-vec3-of-vector2i`, `uniform-material-vec3-of-color`, `uniform-material-vec4`, `uniform-material-vec4-of-quaternion`, `uniform-material-vec4-of-plane`, `uniform-material-vec4-of-rect2`, `uniform-material-vec4-of-color`, `uniform-material-vec4-of-packed`, `uniform-material-ivec2`, `uniform-material-ivec3-of-vector3`, `uniform-material-ivec4-of-rect2i`, `uniform-material-uvec2`, `uniform-material-uvec3-of-array`, `uniform-material-bvec3-of-int`, `uniform-material-bvec4-of-int`, `uniform-material-mat2`, `uniform-material-mat3`, `uniform-material-mat3-of-quaternion`, `uniform-material-mat4`, `uniform-material-mat4-of-transform3d`, `uniform-material-float-nan`, `uniform-array-float-unset`, `uniform-array-float-nan-first`, `uniform-array-float-short`, `uniform-array-int`, `uniform-array-uint`, `uniform-array-bool`, `uniform-array-vec2-of-array`, `uniform-array-vec2-of-numbers`, `uniform-array-vec3-of-colors`, `uniform-array-vec4-of-colors`, `uniform-array-vec4-unset`, `uniform-array-ivec2`, `uniform-array-bvec2`, `uniform-array-mat2-unset`, `uniform-array-mat2-short`, `uniform-array-mat3-of-bases`, `uniform-array-mat4-of-floats`, `uniform-computed-index`, `uniform-in-called-function`, `uniform-as-argument`, `uniform-color-default-ldr`, `uniform-color-unset-ldr`, `uniform-color-value-ldr`, `uniform-color-disabled-default-ldr`, `uniform-color-disabled-unset-ldr`, `uniform-color-disabled-value-ldr`, `uniform-color-plain-value-ldr`, `uniform-color-vec3-default-ldr`, `uniform-color-vec3-unset-ldr`, `uniform-color-array-ldr`, `uniform-color-default-hdr`, `uniform-color-unset-hdr`, `uniform-color-value-hdr`, `uniform-color-disabled-default-hdr`, `uniform-color-disabled-unset-hdr`, `uniform-color-disabled-value-hdr`, `uniform-color-plain-value-hdr`, `uniform-color-vec3-default-hdr`, `uniform-color-vec3-unset-hdr`, `uniform-color-array-hdr`, `uniform-hint-range-float`, `uniform-hint-range-int`, `uniform-hint-enum`, `uniform-struct-name`, `uniform-group-uniforms`, `texture-2d-filter_nearest`, `texture-2d-filter_linear`, `texture-2d-filter_nearest_mipmap`, `texture-2d-filter_linear_mipmap`, `texture-2d-default-filter`, `texture-2d-repeat-enable`, `texture-2d-repeat-disable`, `texture-unset-none`, `texture-unset-hint_default_white`, `texture-unset-hint_default_black`, `texture-unset-hint_default_transparent`, `texture-unset-hint_normal`, `texture-unset-hint_roughness_normal`, `texture-unset-hint_anisotropy`, `texture-unset-hint_roughness_r`, `texture-2d-lod`, `texture-2d-lod-linear-mipmap`, `texture-2d-lod-linear-no-mipmap-filter`, `texture-2d-texel-fetch`, `texture-2d-size`, `texture-2d-size-unset`, `texture-2d-source-color`, `texture-2d-source-color-hdr`, `texture-argument`, `texture-array-elements`, `texture-layers`, `texture-volume`, `texture-cube`, `texture-unsigned`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:335` |
 | `group_uniforms` | transpiled (`uniform-group-uniforms`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:336` |
 | `varying` | open, #1794 | | | `servers/rendering/shader_language.cpp:337` |
 | `const` | open, #1794 | | | `servers/rendering/shader_language.cpp:338` |
@@ -121,21 +121,21 @@ canvases draw on WebGPURenderer (#1788).
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `source_color` | transpiled (`uniform-color-default-ldr`, `uniform-color-unset-ldr`, `uniform-color-value-ldr`, `uniform-color-disabled-default-ldr`, `uniform-color-disabled-unset-ldr`, `uniform-color-disabled-value-ldr`, `uniform-color-vec3-default-ldr`, `uniform-color-vec3-unset-ldr`, `uniform-color-array-ldr`, `uniform-color-default-hdr`, `uniform-color-unset-hdr`, `uniform-color-value-hdr`, `uniform-color-disabled-default-hdr`, `uniform-color-disabled-unset-hdr`, `uniform-color-disabled-value-hdr`, `uniform-color-vec3-default-hdr`, `uniform-color-vec3-unset-hdr`, `uniform-color-array-hdr`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:372` |
+| `source_color` | transpiled (`uniform-color-default-ldr`, `uniform-color-unset-ldr`, `uniform-color-value-ldr`, `uniform-color-disabled-default-ldr`, `uniform-color-disabled-unset-ldr`, `uniform-color-disabled-value-ldr`, `uniform-color-vec3-default-ldr`, `uniform-color-vec3-unset-ldr`, `uniform-color-array-ldr`, `uniform-color-default-hdr`, `uniform-color-unset-hdr`, `uniform-color-value-hdr`, `uniform-color-disabled-default-hdr`, `uniform-color-disabled-unset-hdr`, `uniform-color-disabled-value-hdr`, `uniform-color-vec3-default-hdr`, `uniform-color-vec3-unset-hdr`, `uniform-color-array-hdr`, `texture-2d-source-color`, `texture-2d-source-color-hdr`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:372` |
 | `color_conversion_disabled` | transpiled (`uniform-color-disabled-default-ldr`, `uniform-color-disabled-unset-ldr`, `uniform-color-disabled-value-ldr`, `uniform-color-disabled-default-hdr`, `uniform-color-disabled-unset-hdr`, `uniform-color-disabled-value-hdr`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:373` |
 | `hint_range` | transpiled (`uniform-hint-range-float`, `uniform-hint-range-int`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:374` |
 | `hint_enum` | transpiled (`uniform-hint-enum`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:375` |
 | `instance_index` | open, #1792 | | | `servers/rendering/shader_language.cpp:376` |
-| `hint_normal` | open, #1829 | | | `servers/rendering/shader_language.cpp:380` |
-| `hint_default_white` | open, #1829 | | | `servers/rendering/shader_language.cpp:381` |
-| `hint_default_black` | open, #1829 | | | `servers/rendering/shader_language.cpp:382` |
-| `hint_default_transparent` | open, #1829 | | | `servers/rendering/shader_language.cpp:383` |
-| `hint_anisotropy` | open, #1829 | | | `servers/rendering/shader_language.cpp:384` |
-| `hint_roughness_r` | open, #1829 | | | `servers/rendering/shader_language.cpp:385` |
+| `hint_normal` | transpiled (`texture-unset-hint_normal`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:380` |
+| `hint_default_white` | transpiled (`texture-unset-hint_default_white`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:381` |
+| `hint_default_black` | transpiled (`texture-unset-hint_default_black`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:382` |
+| `hint_default_transparent` | transpiled (`texture-unset-hint_default_transparent`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:383` |
+| `hint_anisotropy` | transpiled (`texture-unset-hint_anisotropy`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:384` |
+| `hint_roughness_r` | transpiled (`texture-unset-hint_roughness_r`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:385` |
 | `hint_roughness_g` | open, #1829 | | | `servers/rendering/shader_language.cpp:386` |
 | `hint_roughness_b` | open, #1829 | | | `servers/rendering/shader_language.cpp:387` |
 | `hint_roughness_a` | open, #1829 | | | `servers/rendering/shader_language.cpp:388` |
-| `hint_roughness_normal` | open, #1829 | | | `servers/rendering/shader_language.cpp:389` |
+| `hint_roughness_normal` | transpiled (`texture-unset-hint_roughness_normal`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:389` |
 | `hint_roughness_gray` | open, #1829 | | | `servers/rendering/shader_language.cpp:390` |
 | `hint_screen_texture` | open, #1524 | | | `servers/rendering/shader_language.cpp:391` |
 | `hint_normal_roughness_texture` | open, #1610 | | | `servers/rendering/shader_language.cpp:392` |
@@ -145,14 +145,14 @@ canvases draw on WebGPURenderer (#1788).
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `filter_nearest` | open, #1829 | | | `servers/rendering/shader_language.cpp:395` |
-| `filter_linear` | open, #1829 | | | `servers/rendering/shader_language.cpp:396` |
-| `filter_nearest_mipmap` | open, #1829 | | | `servers/rendering/shader_language.cpp:397` |
-| `filter_linear_mipmap` | open, #1829 | | | `servers/rendering/shader_language.cpp:398` |
+| `filter_nearest` | transpiled (`texture-2d-filter_nearest`, `texture-2d-repeat-enable`, `texture-2d-repeat-disable`, `texture-2d-source-color`, `texture-2d-source-color-hdr`, `texture-argument`, `texture-array-elements`, `texture-layers`, `texture-volume`, `texture-cube`, `texture-unsigned`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:395` |
+| `filter_linear` | transpiled (`texture-2d-filter_linear`, `texture-2d-lod-linear-no-mipmap-filter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:396` |
+| `filter_nearest_mipmap` | transpiled (`texture-2d-filter_nearest_mipmap`, `texture-2d-lod`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:397` |
+| `filter_linear_mipmap` | transpiled (`texture-2d-filter_linear_mipmap`, `texture-2d-lod-linear-mipmap`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:398` |
 | `filter_nearest_mipmap_anisotropic` | open, #1829 | | | `servers/rendering/shader_language.cpp:399` |
 | `filter_linear_mipmap_anisotropic` | open, #1829 | | | `servers/rendering/shader_language.cpp:400` |
-| `repeat_enable` | open, #1829 | | | `servers/rendering/shader_language.cpp:401` |
-| `repeat_disable` | open, #1829 | | | `servers/rendering/shader_language.cpp:402` |
+| `repeat_enable` | transpiled (`texture-2d-repeat-enable`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:401` |
+| `repeat_disable` | transpiled (`texture-2d-repeat-disable`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:402` |
 
 ## operator
 
@@ -1281,7 +1281,7 @@ canvases draw on WebGPURenderer (#1788).
 | `not(bvec2)` | transpiled (`call-not-bvec2`, `fold-call-any-all-not`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3160` |
 | `not(bvec3)` | transpiled (`call-not-bvec3`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3161` |
 | `not(bvec4)` | transpiled (`call-not-bvec4`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3162` |
-| `textureSize(sampler2D,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3167` |
+| `textureSize(sampler2D,int)` | transpiled (`texture-2d-size`, `texture-2d-size-unset`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3167` |
 | `textureSize(isampler2D,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3168` |
 | `textureSize(usampler2D,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3169` |
 | `textureSize(sampler2DArray,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3170` |
@@ -1292,25 +1292,25 @@ canvases draw on WebGPURenderer (#1788).
 | `textureSize(usampler3D,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3175` |
 | `textureSize(samplerCube,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3176` |
 | `textureSize(samplerCubeArray,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3177` |
-| `texture(sampler2D,vec2)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3181` |
+| `texture(sampler2D,vec2)` | transpiled (`texture-2d-filter_nearest`, `texture-2d-filter_linear`, `texture-2d-filter_nearest_mipmap`, `texture-2d-filter_linear_mipmap`, `texture-2d-default-filter`, `texture-2d-repeat-enable`, `texture-2d-repeat-disable`, `texture-unset-none`, `texture-unset-hint_default_white`, `texture-unset-hint_default_black`, `texture-unset-hint_default_transparent`, `texture-unset-hint_normal`, `texture-unset-hint_roughness_normal`, `texture-unset-hint_anisotropy`, `texture-unset-hint_roughness_r`, `texture-2d-source-color`, `texture-2d-source-color-hdr`, `texture-argument`, `texture-array-elements`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3181` |
 | `texture(sampler2D,vec2,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3182` |
-| `texture(usampler2D,vec2)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3183` |
+| `texture(usampler2D,vec2)` | transpiled (`texture-unsigned`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3183` |
 | `texture(usampler2D,vec2,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3184` |
 | `texture(isampler2D,vec2)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3185` |
 | `texture(isampler2D,vec2,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3186` |
-| `texture(sampler2DArray,vec3)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3187` |
+| `texture(sampler2DArray,vec3)` | transpiled (`texture-layers`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3187` |
 | `texture(sampler2DArray,vec3,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3188` |
 | `texture(usampler2DArray,vec3)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3189` |
 | `texture(usampler2DArray,vec3,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3190` |
 | `texture(isampler2DArray,vec3)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3191` |
 | `texture(isampler2DArray,vec3,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3192` |
-| `texture(sampler3D,vec3)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3193` |
+| `texture(sampler3D,vec3)` | transpiled (`texture-volume`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3193` |
 | `texture(sampler3D,vec3,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3194` |
 | `texture(usampler3D,vec3)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3195` |
 | `texture(usampler3D,vec3,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3196` |
 | `texture(isampler3D,vec3)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3197` |
 | `texture(isampler3D,vec3,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3198` |
-| `texture(samplerCube,vec3)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3199` |
+| `texture(samplerCube,vec3)` | transpiled (`texture-cube`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3199` |
 | `texture(samplerCube,vec3,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3200` |
 | `texture(samplerCubeArray,vec4)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3201` |
 | `texture(samplerCubeArray,vec4,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3202` |
@@ -1334,7 +1334,7 @@ canvases draw on WebGPURenderer (#1788).
 | `textureProj(isampler3D,vec4,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3223` |
 | `textureProj(usampler3D,vec4)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3224` |
 | `textureProj(usampler3D,vec4,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3225` |
-| `textureLod(sampler2D,vec2,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3229` |
+| `textureLod(sampler2D,vec2,float)` | transpiled (`texture-2d-lod`, `texture-2d-lod-linear-mipmap`, `texture-2d-lod-linear-no-mipmap-filter`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3229` |
 | `textureLod(isampler2D,vec2,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3230` |
 | `textureLod(usampler2D,vec2,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3231` |
 | `textureLod(sampler2DArray,vec3,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3232` |
@@ -1345,7 +1345,7 @@ canvases draw on WebGPURenderer (#1788).
 | `textureLod(usampler3D,vec3,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3237` |
 | `textureLod(samplerCube,vec3,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3238` |
 | `textureLod(samplerCubeArray,vec4,float)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3239` |
-| `texelFetch(sampler2D,ivec2,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3243` |
+| `texelFetch(sampler2D,ivec2,int)` | transpiled (`texture-2d-texel-fetch`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:3243` |
 | `texelFetch(isampler2D,ivec2,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3244` |
 | `texelFetch(usampler2D,ivec2,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3245` |
 | `texelFetch(sampler2DArray,ivec3,int)` | open, #1829 | | | `servers/rendering/shader_language.cpp:3246` |

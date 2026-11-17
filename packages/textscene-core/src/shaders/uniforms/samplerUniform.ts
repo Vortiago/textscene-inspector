@@ -2,6 +2,7 @@ import { Data3DTexture, NoColorSpace, SRGBColorSpace, type Texture } from 'three
 import { texture, texture3D } from 'three/tsl';
 import { CubeTextureNode, type Node, type NodeBuilder, type TextureNode } from 'three/webgpu';
 import type { ArrayValue, Value } from '../language/emitValue.js';
+import { SamplerChoice } from '../language/textureCalls.js';
 import type { UniformNode, ValueType } from '../language/shaderTree.js';
 import { defaultTexture, type TextureKind } from './defaultTextures.js';
 import { samplerState, type ProjectSampling } from './samplerState.js';
@@ -46,6 +47,13 @@ const NODE_OF_KIND: Readonly<Record<TextureKind, (value: Texture) => TextureNode
   cube: (value) => new GodotCubeNode(value as never),
 };
 
+/** A Godot sampler reads its coordinate as given: three's texture matrix stays out of the program. */
+function nodeOf(kind: TextureKind, value: Texture): TextureNode {
+  const node = NODE_OF_KIND[kind](value);
+  node.updateMatrix = false;
+  return node;
+}
+
 /** The mip levels a texture holds: its own list, or the chain three generates for it. */
 function levelsOf(source: Texture): number {
   if (source.mipmaps && source.mipmaps.length > 0) return source.mipmaps.length;
@@ -71,9 +79,7 @@ export class SamplerBinding {
     this.settings = samplerSettings(declaration, context.defaults);
     this.isSrgb = context.useLinearColor && declaration.usesColor;
     const count = Math.max(1, declaration.arraySize ?? 0);
-    this.nodes = Array.from({ length: count }, () =>
-      NODE_OF_KIND[this.kind](defaultTexture(this.kind, 'white'))
-    );
+    this.nodes = Array.from({ length: count }, () => nodeOf(this.kind, defaultTexture(this.kind, 'white')));
     this.set(undefined);
   }
 
@@ -89,9 +95,9 @@ export class SamplerBinding {
     });
   }
 
-  private element(index: Node | number): TextureNode {
-    if (typeof index !== 'number') throw new Error(`expected a constant index into ${this.declaration.name}`);
-    return this.nodes[index]!;
+  private element(index: Node | number): Value {
+    if (typeof index === 'number') return this.nodes[index]!;
+    return new SamplerChoice(this.nodes, index) as unknown as Value;
   }
 
   private defaultOf(chosen: DefaultTexture): Texture {

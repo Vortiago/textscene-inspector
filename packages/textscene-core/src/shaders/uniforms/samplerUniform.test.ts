@@ -119,10 +119,6 @@ describe('SamplerBinding', () => {
     binding.set([texture]);
     const elements = binding.value as ArrayValue;
     const [first, second] = [0, 1].map((index) => (elements.element(index) as TextureNode).value);
-    expect([elements.count, first!.source, (second as DataTexture).image.data[0]]).toEqual([
-      2,
-      texture.source,
-      255,
-    ]);
+    expect([elements.count, first!.source, second!.source]).toEqual([2, texture.source, texture.source]);
   });
 });

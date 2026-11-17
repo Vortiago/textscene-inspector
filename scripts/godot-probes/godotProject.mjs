@@ -22,6 +22,7 @@ function probeData(probes) {
     shader: `res://probe_${index}.gdshader`,
     recordsPreprocessed: probe.recordsPreprocessed === true,
     materialValues: probe.materialValues ?? {},
+    textures: probe.textures ?? {},
     hdr2d: probe.hdr2d === true,
     // GDScript's PackedInt32Array holds the bits as signed integers.
     parameters: parameterBits(probe).map((bits) => bits.map((value) => value | 0)),
@@ -80,6 +81,8 @@ func _ready() -> void:
 				get_tree().quit(1)
 				return
 			material.set_shader_parameter(name, value)
+		for name in probe.textures:
+			material.set_shader_parameter(name, texture_value(probe.textures[name]))
 		rect.material = material
 		viewport.add_child(rect)
 		viewports.append(viewport)
@@ -95,6 +98,53 @@ func _ready() -> void:
 		var image: Image = viewports[index].get_texture().get_image()
 		print("${LINE_PREFIX}", data[index].name, " ", bytes_of(image).hex_encode())
 	get_tree().quit()
+
+# A texture spec, a list of them, or null, as the probe's textures hold it.
+func texture_value(spec):
+	if spec is Array:
+		return spec.map(func(each): return texture_of(each))
+	return texture_of(spec)
+
+func texture_of(spec):
+	if spec == null:
+		return null
+	var width := int(spec.width)
+	var height := int(spec.height)
+	var levels: Array = spec.levels
+	var count := 6 if spec.kind == "cube" else int(spec.get("depth", 1))
+	match spec.kind:
+		"flat":
+			return ImageTexture.create_from_image(image_of(width, height, levels, 0))
+		"layers", "cube":
+			var images: Array[Image] = []
+			for layer in count:
+				images.append(image_of(width, height, levels, layer))
+			var layered = Texture2DArray.new() if spec.kind == "layers" else Cubemap.new()
+			layered.create_from_images(images)
+			return layered
+		"volume":
+			var slices: Array[Image] = []
+			for level in levels.size():
+				var bytes: PackedByteArray = levels[level].hex_decode()
+				var size := level_size(width, level) * level_size(height, level) * 4
+				for slice in level_size(count, level):
+					slices.append(Image.create_from_data(level_size(width, level), level_size(height, level), false, Image.FORMAT_RGBA8, bytes.slice(slice * size, (slice + 1) * size)))
+			var volume := ImageTexture3D.new()
+			volume.create(Image.FORMAT_RGBA8, width, height, count, levels.size() > 1, slices)
+			return volume
+	push_error("unknown texture kind %s" % spec.kind)
+	get_tree().quit(1)
+
+func level_size(size: int, level: int) -> int:
+	return max(size >> level, 1)
+
+# One layer of each level, one after the other, as Image keeps a mip chain.
+func image_of(width: int, height: int, levels: Array, layer: int) -> Image:
+	var data := PackedByteArray()
+	for level in levels.size():
+		var size := level_size(width, level) * level_size(height, level) * 4
+		data.append_array(levels[level].hex_decode().slice(layer * size, (layer + 1) * size))
+	return Image.create_from_data(width, height, levels.size() > 1, Image.FORMAT_RGBA8, data)
 
 # An HDR 2D viewport holds half floats, which Image.convert truncates: k / 255 comes back as k - 1.
 func bytes_of(image: Image) -> PackedByteArray:

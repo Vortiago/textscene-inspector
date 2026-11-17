@@ -32,6 +32,7 @@ import {
   transpileShadingLanguage,
 } from '@textscene/three-godot-shaders';
 import { probeShaderOptions } from './probeIncludes.mjs';
+import { textureValue } from './probeTextures.mjs';
 
 const CONSTRUCT = {
   bvec2,
@@ -134,6 +135,8 @@ function runProbe(spec) {
     const shader = transpileShadingLanguage(spec.source, options);
     for (const [name, text] of Object.entries(spec.materialValues))
       shader.parameters.get(name).set(textToVariant(text));
+    for (const [name, texture] of Object.entries(spec.textures))
+      shader.parameters.get(name).set(textureValue(texture));
     const probe = shader.functions.get('probe');
     if (!probe) return { error: 'the transpilation has no function probe', isRefusal: false };
     return { bits: resultBits(probe, spec) };

@@ -60,7 +60,8 @@ function defaultTexture({ type, hint }: UniformNode): DefaultTexture {
 
 /**
  * `update_textures` (`material_storage.cpp:880`): each texture a sampler reads, the material's
- * value standing for nothing set. A null or an element the material array does not reach reads white.
+ * value standing for nothing set. A null, or an element the material array does not reach, reads
+ * the texture of the element before it, as Godot keeps `rd_texture` across the elements, or white.
  */
 export function samplerTextures<T>(
   uniform: UniformNode,
@@ -71,7 +72,8 @@ export function samplerTextures<T>(
   if (textures.length === 0)
     return new Array<DefaultTexture>(Math.max(1, arraySize)).fill(defaultTexture(uniform));
   const padded = [...textures, ...new Array<null>(Math.max(0, arraySize - textures.length)).fill(null)];
-  return padded.map((texture) => texture ?? 'white');
+  let held: T | DefaultTexture = 'white';
+  return padded.map((texture) => (held = texture ?? held));
 }
 
 function materialTextures<T>(

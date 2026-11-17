@@ -41,10 +41,7 @@ const MIPMAP_FILTERS = {
   [LinearFilter]: { nearest: LinearMipmapNearestFilter, blended: LinearMipmapLinearFilter },
 } as const;
 
-/**
- * `samplers_rd_allocate` (`material_storage.cpp:2454`) for a texture of `levels` mip levels. A Vulkan
- * sampler reads every level, so a filter without mipmaps picks the nearest level.
- */
+/** `samplers_rd_allocate` (`material_storage.cpp:2454`) for a texture of `levels` mip levels. */
 export function samplerState(
   settings: SamplerSettings,
   levels: number,
@@ -52,9 +49,9 @@ export function samplerState(
 ): SamplerState {
   const { filter, repeat } = settings;
   const magFilter = filter.startsWith('filter_nearest') ? NearestFilter : LinearFilter;
-  const usesMipmaps = filter.includes('_mipmap');
-  const blendsLevels = usesMipmaps && !sampling.useNearestMipmapFilter;
-  const minFilter = levels > 1 ? MIPMAP_FILTERS[magFilter][blendsLevels ? 'blended' : 'nearest'] : magFilter;
+  const usesMipmaps = filter.includes('_mipmap') && levels > 1;
+  const mipmapFilter = MIPMAP_FILTERS[magFilter][sampling.useNearestMipmapFilter ? 'nearest' : 'blended'];
+  const minFilter = usesMipmaps ? mipmapFilter : magFilter;
   const isAnisotropic = filter.endsWith('_anisotropic');
   return {
     magFilter,
