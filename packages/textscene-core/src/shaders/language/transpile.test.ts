@@ -97,6 +97,12 @@ describe('transpileShadingLanguage', () => {
     );
   });
 
+  it('refuses a screen texture hint with the issue that binds the screen', () => {
+    expect(() => transpileShadingLanguage('uniform sampler2D s : hint_screen_texture;')).toThrow(
+      "'hint_screen_texture' is not transpiled yet (#1524)"
+    );
+  });
+
   it('gives a parameter for each uniform by name, in the order of the text', () => {
     const { parameters } = transpileShadingLanguage('uniform float b;\nuniform vec4 a[2];');
     expect([...parameters.keys()]).toEqual(['b', 'a']);
