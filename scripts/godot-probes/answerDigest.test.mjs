@@ -13,6 +13,7 @@ const answersOf = (source, lanes, adapter = 'a') => {
     operators: { cases: {} },
     corpus: { cases: {} },
     expressions: { cases: {} },
+    heads: { cases: {} },
   };
 };
 
@@ -42,6 +43,7 @@ describe('the committed answers file', () => {
       'operators',
       'corpus',
       'expressions',
+      'heads',
     ]);
   });
 });

@@ -2,8 +2,8 @@ import { parse } from './parse.js';
 import type { Expression, ShaderNode } from './shaderTree.js';
 import { tokenize } from './tokenizer.js';
 
-/** The tree of `source`. */
-export const treeOf = (source: string): ShaderNode => parse(tokenize(source));
+/** The tree of `source`, read from `file`. */
+export const treeOf = (source: string, file = ''): ShaderNode => parse(tokenize(source, file));
 
 /** The value of the first `return` of the first function of `source`. */
 export function returnedValue(source: string): Expression {

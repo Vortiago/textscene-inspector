@@ -14,7 +14,7 @@ const SWITCH = ['switch', 'case', 'FLOW_OP_SWITCH', 'FLOW_OP_CASE', FLOW];
 const DEFAULT = ['default', 'FLOW_OP_DEFAULT'];
 const ARRAY = ['NODE_TYPE_ARRAY', DECLARATION];
 const ARRAY_CONSTRUCT = ['NODE_TYPE_ARRAY_CONSTRUCT', ...ARRAY];
-const STRUCT = ['struct type', 'OP_STRUCT', 'NODE_TYPE_STRUCT'];
+const STRUCT = ['struct', 'struct type', 'OP_STRUCT', 'NODE_TYPE_STRUCT'];
 
 /** Local variables, `const`, and blocks with their scopes. */
 function localProbes() {

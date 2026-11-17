@@ -2,11 +2,12 @@
  "godot": "4.6.3-stable (official)",
  "adapter": "llvmpipe (LLVM 20.1.2)",
  "digests": {
-  "probes": "6624c195f4b83c43552dcf33e1069237e25be7a62519654602cb3678cbc9d723",
+  "probes": "a6a555540f184617909415507fa5c4811e693ec204460b9a39c10f2b4c364ca4",
   "random": "f496ba32f2398f1929355ce53edcc407498209e537eebdc0cc37ae5e4d373b56",
   "operators": "71961cc3c58f615ccb90c5777e87ec3bb1e7d85793a63db00e1ba0bcfe300064",
   "corpus": "cdd73866a614dcae16a6e20af61acb6b58bb0c78ad83ac65263a0dfea750fbe1",
-  "expressions": "f1b63bf3d2fd55fd03e4ad985b69bb5dd4b637305757c18b8989396e009d48b1"
+  "expressions": "f1b63bf3d2fd55fd03e4ad985b69bb5dd4b637305757c18b8989396e009d48b1",
+  "heads": "b3040b0c1b99a27085c6bdccbe0242eb8ce62930ac93052eb56d8f0b42083eb2"
  },
  "smoke": {
   "probes": {
@@ -1418,6 +1419,17 @@
    "method Callable.rpc_id 4 \"[3].has.bind(3).bind(4).rpc_id(3)\"": {"verdict":"execute","text":"On call to 'rpc_id':","left":"null"},
    "method Signal.connect 19 \"Signal().connect([3, \\\"x\\\", 7].has, \\\"x\\\")\"": {"verdict":"execute","text":"On call to 'connect':","left":"3"},
    "method Signal.disconnect 2 \"Signal().disconnect(Callable())\"": {"verdict":"value","text":"null"}
+  },
+  "heads": {
+   "discard/called-by-fragment": "accepted",
+   "derivative/after-a-varying-read": "line 4: 'v' cannot be used within the 'vertex' processor function.",
+   "table/spatial/render_mode/depth_draw_never": "accepted",
+   "table/canvas_item/render_mode/depth_test_default": "line 2: Invalid render mode: 'depth_test_default'.",
+   "table/particles/render_mode/world_vertex_coords": "line 2: Invalid render mode: 'world_vertex_coords'.",
+   "table/spatial/render_mode/ambient_light_disabled": "accepted",
+   "table/canvas_item/render_mode/alpha_to_coverage": "line 2: Invalid render mode: 'alpha_to_coverage'.",
+   "table/canvas_item/stencil_mode/compare_equal": "line 2: Invalid stencil mode: 'compare_equal'.",
+   "table/fog/render_mode/use_quarter_res_pass": "line 2: Invalid render mode: 'use_quarter_res_pass'."
   }
  }
 }

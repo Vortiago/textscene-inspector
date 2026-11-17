@@ -16,6 +16,11 @@ function glslOf(source: string, args: Node[] = []): string {
 }
 
 describe('transpileShadingLanguage', () => {
+  it('gives a function only the global constants the text has above it', () => {
+    const source = 'float f() { float k = 1.0; return k; }\nconst float k = 2.0;\nfloat g() { return k; }';
+    expect(() => transpileShadingLanguage(source)).not.toThrow();
+  });
+
   it('names each function with its head', () => {
     const probe = transpileShadingLanguage('vec2 probe(vec2 a, float b) { return a; }').functions.get(
       'probe'
@@ -87,7 +92,7 @@ describe('transpileShadingLanguage', () => {
 
   it('refuses a row that is not transpiled before it reaches the emitter', () => {
     expect(() => transpileShadingLanguage('varying float v;')).toThrow(
-      "'varying' is not transpiled yet (#1794)"
+      "'varying' is not transpiled yet (#1831)"
     );
   });
 
@@ -141,11 +146,18 @@ describe('transpileShadingLanguage', () => {
     expect(glslOf(source).match(/uniform sampler2D \w+;/g)).toHaveLength(2);
   });
 
-  it('refuses a shader type that is not transpiled, at its head', () => {
-    expect(() => transpileShadingLanguage('\nshader_type canvas_item;')).toThrow(
+  it('gives the functions of a shader of a type whose template is not linked yet', () => {
+    const shader = transpileShadingLanguage('shader_type spatial;\nfloat half(float a) { return a * 0.5; }');
+    expect([...shader.functions.keys()]).toEqual(['half']);
+  });
+
+  it("refuses a built-in at the row of its type's template", () => {
+    expect(() =>
+      transpileShadingLanguage('shader_type spatial;\nvoid fragment() {\n\tALBEDO = vec3(1.0);\n}')
+    ).toThrow(
       expect.objectContaining({
-        message: expect.stringContaining('is not transpiled yet (#'),
-        position: expect.objectContaining({ line: 2, column: 1 }),
+        message: expect.stringContaining("'spatial.fragment.ALBEDO' is not transpiled yet (#1831)"),
+        position: expect.objectContaining({ line: 3 }),
       })
     );
   });

@@ -1,7 +1,14 @@
 import { instruction, keywordInstruction, notTranspiled } from './instructions.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import type { SourcePosition } from './shadingLanguageError.js';
-import type { Expression, FunctionNode, ShaderNode, Statement, UniformNode } from './shaderTree.js';
+import type {
+  Expression,
+  FunctionNode,
+  ShaderNode,
+  Statement,
+  UniformNode,
+  VaryingNode,
+} from './shaderTree.js';
 import { everyExpression, everyStatement, statementExpressions } from './treeWalk.js';
 import { shapeOf } from './types.js';
 
@@ -11,6 +18,12 @@ const isTranspiled = (row: InstructionRow) => row.webgl2 !== undefined;
 export function checkTranspiled(shader: ShaderNode): void {
   if (shader.shaderType && shader.headPosition)
     checkRow(instruction(`shader_type ${shader.shaderType}`)!, shader.headPosition);
+  checkModes(shader);
+  for (const varying of shader.varyings) checkVarying(varying);
+  for (const constant of shader.constants) {
+    checkRow(keywordInstruction('TK_CONST')!, constant.position);
+    checkStatementTree(constant);
+  }
   for (const struct of shader.structs) {
     checkRow(instruction('NODE_TYPE_STRUCT')!, struct.position);
     for (const member of struct.members) checkType(member.type, struct.position);
@@ -20,11 +33,39 @@ export function checkTranspiled(shader: ShaderNode): void {
   for (const definition of shader.functions) checkFunction(definition);
 }
 
+/** A mode of no row of the type, as `unshaded_x`, is one Godot keeps and no table reads. */
+function checkModes(shader: ShaderNode): void {
+  const shaderType = shader.shaderType ?? 'canvas_item';
+  for (const [kind, modes] of [
+    ['render_mode', shader.renderModes],
+    ['stencil_mode', shader.stencilModes],
+  ] as const)
+    for (const mode of modes) {
+      checkRow(instruction(kind)!, mode.position);
+      const row = instruction(`${shaderType} ${kind} ${mode.name}`);
+      if (row) checkRow(row, mode.position);
+    }
+}
+
+function checkVarying(varying: VaryingNode): void {
+  checkRow(instruction('varying')!, varying.position);
+  if (varying.interpolation) checkRow(instruction(varying.interpolation)!, varying.position);
+  checkType(varying.type, varying.position);
+  if (varying.arraySize) checkRow(instruction('NODE_TYPE_ARRAY')!, varying.position);
+}
+
 function checkUniform(uniform: UniformNode): void {
   for (const row of uniform.rows) checkRow(row, uniform.position);
   checkType(uniform.type, uniform.position);
   if (uniform.arraySize) checkRow(instruction('NODE_TYPE_ARRAY')!, uniform.position);
   if (uniform.defaultValue) checkRow(literalRow(uniform.type), uniform.position);
+}
+
+/** The statement's own rows and every row of its expressions. */
+function checkStatementTree(statement: Statement): void {
+  checkStatement(statement);
+  for (const expression of statementExpressions(statement))
+    for (const part of everyExpression(expression)) checkExpression(part);
 }
 
 function checkFunction(definition: FunctionNode): void {
@@ -35,11 +76,7 @@ function checkFunction(definition: FunctionNode): void {
     checkRow(instruction(argument.qualifier)!, argument.position);
     if (argument.arraySize) checkRow(instruction('NODE_TYPE_ARRAY')!, argument.position);
   }
-  for (const statement of everyStatement(definition.body)) {
-    checkStatement(statement);
-    for (const expression of statementExpressions(statement))
-      for (const part of everyExpression(expression)) checkExpression(part);
-  }
+  for (const statement of everyStatement(definition.body)) checkStatementTree(statement);
 }
 
 function checkStatement(statement: Statement): void {

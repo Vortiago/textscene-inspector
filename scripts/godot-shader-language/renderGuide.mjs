@@ -154,9 +154,13 @@ const emittedForm = (form) => (form.includes('`') ? form : `\`${form}\``);
 
 function renderSection(section, rows, probes, record) {
   const ids = new Set(rows.map((row) => row.id));
-  // A sky scene has a camera and proves its rows in a showcase of its own, with no table of inputs.
+  // A sky scene and a head case have no table of inputs: a showcase and a verdict prove their rows.
   const sectionProbes = probes.filter(
-    (probe) => !probe.camera && probe.rows.some((id) => ids.has(id)) && (section.probes?.(probe) ?? true)
+    (probe) =>
+      !probe.camera &&
+      !probe.isVerdictCase &&
+      probe.rows.some((id) => ids.has(id)) &&
+      (section.probes?.(probe) ?? true)
   );
   const rowList = rows.map((row) => `\`${row.id}\``).join(', ');
   return `## ${section.heading}

@@ -46,11 +46,11 @@ export class GodotIds {
     return { ...block, statements: block.statements.map((statement) => this.statement(statement)) };
   }
 
-  /** `expression` with Godot's ids. A built-in keeps its name, which the link step replaces. */
+  /** `expression` with Godot's ids. A built-in keeps its name (`shader_compiler.cpp:1185`). */
   expression(expression: Expression): Expression {
     const inner = withSubExpressions(expression, (part) => this.expression(part));
     const typed = { ...inner, type: this.type(inner.type) } as Expression;
-    if (isCall(typed)) {
+    if (isCall(typed) && typed.row.id === 'OP_CALL') {
       const call: CallNode = { ...typed, function: godotId(typed.function), rname: godotId(typed.rname) };
       return call;
     }

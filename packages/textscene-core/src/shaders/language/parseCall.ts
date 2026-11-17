@@ -1,7 +1,7 @@
 import { convertedScalar } from './constants.js';
 import { instruction } from './instructions.js';
 import { arraySizeOf, typeName } from './treeWalk.js';
-import type { Argument, CallNode, Expression, ValueType } from './shaderTree.js';
+import type { Argument, CallNode, Expression, Qualifier, ValueType } from './shaderTree.js';
 import type { SourcePosition } from './shadingLanguageError.js';
 import { shapeOf } from './types.js';
 
@@ -20,6 +20,18 @@ export interface CallScope {
   functionsNamed(rname: string): readonly FunctionSignature[];
   currentFunction(): string | undefined;
   isLocal(name: string): boolean;
+  /** Whether `name` is a processor function, which Godot keeps out of every call. */
+  isProcessor(name: string): boolean;
+  /** Godot's message for a varying passed for a parameter of `qualifier`, or nothing. */
+  varyingRefusal(arg: Expression, qualifier: Qualifier): string | undefined;
+}
+
+/** Godot's name of the function a call reaches: the fitting overload, or the closest one (:6243). */
+export function callTarget(scope: CallScope, rname: string, args: readonly Expression[]): string {
+  const candidates = scope.functionsNamed(rname);
+  const convertsConstants = candidates.length === 1;
+  const fitting = candidates.find((candidate) => fits(candidate, args, convertsConstants));
+  return fitting?.name ?? bestNamed(candidates, args, rname);
 }
 
 /** `fail` throws Godot's message at the token after the arguments, where Godot reports it. */
@@ -35,12 +47,15 @@ export function resolvedCall(
   const convertsConstants = candidates.length === 1;
   const fitting = candidates.find((candidate) => fits(candidate, args, convertsConstants));
   const current = scope.currentFunction();
-  if (current !== undefined && (fitting?.name ?? bestNamed(candidates, args, rname)) === current)
-    fail('Recursion is not allowed.');
+  const target = fitting?.name ?? bestNamed(candidates, args, rname);
+  if (current !== undefined && target === current) fail('Recursion is not allowed.');
+  if (scope.isProcessor(rname)) fail(`Function '${rname}' can't be called from source code.`);
   if (!fitting) fail(mismatch(rname, candidates, args, convertsConstants));
   const operands = args.map((arg, index) => converted(arg, fitting.arguments[index]!.type));
   for (const [index, argument] of fitting.arguments.entries()) {
-    const refusal = argumentRefusal(argument, operands[index]!);
+    const refusal =
+      scope.varyingRefusal(operands[index]!, argument.qualifier) ??
+      argumentRefusal(argument, operands[index]!);
     if (refusal !== undefined) fail(refusal);
   }
   return {

@@ -16,6 +16,16 @@ describe('printShader', () => {
     );
   });
 
+  it('writes the globals in the order the parser read them, as an include starts its lines again', () => {
+    const tree = treeOf('struct S { float a; };\nfloat f(S s) { return s.a; }');
+    const struct = tree.structs[0]!;
+    const included = {
+      ...tree,
+      structs: [{ ...struct, position: { file: 'inc.gdshaderinc', line: 10, column: 1 } }],
+    };
+    expect(printShader(included).indexOf('struct S')).toBeLessThan(printShader(included).indexOf('float f'));
+  });
+
   it('writes each operator in brackets', () => {
     expect(printShader(treeOf('float f(float a, float b) { return a + b * a; }'))).toBe(
       'float f(float a, float b) {\n\treturn (a + (b * a));\n}'

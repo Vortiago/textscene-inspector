@@ -60,6 +60,11 @@ const isDigit = (char: string) => char >= '0' && char <= '9';
 const isHexDigit = (char: string) => isDigit(char) || (char >= 'a' && char <= 'f');
 const isIdentifierChar = (char: string) => /^[A-Za-z0-9_]$/.test(char);
 
+export const isPrecisionToken = (token: Token) => token.type.startsWith('TK_PRECISION_');
+
+export const isIntegerConstant = (token: Token) =>
+  token.type === 'TK_INT_CONSTANT' || token.type === 'TK_UINT_CONSTANT';
+
 /** Every token of `source`, ending with `TK_EOF`. `file` names the shader in each position. */
 export function tokenize(source: string, file = ''): Token[] {
   const tokens: Token[] = [];

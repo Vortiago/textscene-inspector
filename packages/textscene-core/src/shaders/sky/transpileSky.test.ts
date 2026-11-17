@@ -57,6 +57,13 @@ describe('transpileSky', () => {
     );
   });
 
+  it("calls a built-in by its own name and a function of the shader by Godot's id", () => {
+    const source =
+      'shader_type sky;\nfloat half_of(float x) { return x * 0.5; }\nvoid sky() { COLOR = vec3(fract(half_of(TIME))); }';
+    const fragment = (transpileSky(source).mesh.material as NodeMaterial).fragmentNode!;
+    expect(generatedFragmentShader(fragment)).toMatch(/fract\(/);
+  });
+
   it('gives equal GLSL for two runs of one text', () => {
     const fragmentOf = () =>
       generatedFragmentShader((transpileSky(DEFAULT_SKY).mesh.material as NodeMaterial).fragmentNode!);

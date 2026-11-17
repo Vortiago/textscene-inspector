@@ -39,17 +39,25 @@ const canonicalProbes = (record) => ({
 const adapterWithoutWidth = (adapter) => adapter.replace(/, \d+ bits\)$/, ')');
 
 /** The same on every CPU: one NaN form, and the adapter without its vector width. */
-export function canonicalAnswers({ probes, random, operators, corpus, expressions }) {
-  return { probes: canonicalProbes(probes), random: canonicalProbes(random), operators, corpus, expressions };
+export function canonicalAnswers({ probes, random, operators, corpus, expressions, heads }) {
+  return {
+    probes: canonicalProbes(probes),
+    random: canonicalProbes(random),
+    operators,
+    corpus,
+    expressions,
+    heads,
+  };
 }
 
 /** Each family's answers, `{ id: answer }`: probes and random by name, the other families by case id. */
-const familiesOf = ({ probes, random, operators, corpus, expressions }) => ({
+const familiesOf = ({ probes, random, operators, corpus, expressions, heads }) => ({
   probes: probes.probes,
   random: random.probes,
   operators: operators.cases,
   corpus: corpus.cases,
   expressions: expressions.cases,
+  heads: heads.cases,
 });
 
 /** The families of canonical `answers` whose digest is not the one `committed` holds. */

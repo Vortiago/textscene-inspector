@@ -5,8 +5,11 @@
  */
 
 export {
+  DEFAULT_TIME_ROLLOVER_SECONDS,
   GODOT_VERSION,
   installNodesHandler,
+  PlaybackShaderTime,
+  ShaderClock,
   ShadingLanguageError,
   SKY_BINDINGS,
   transpileShadingLanguage,
@@ -15,6 +18,7 @@ export {
 } from '@textscene/core/shaders';
 export type {
   NodeOutput,
+  Playback,
   RenderingMethod,
   ShaderInclude,
   ShaderOptions,

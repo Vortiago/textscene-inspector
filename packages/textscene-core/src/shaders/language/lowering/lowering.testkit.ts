@@ -11,10 +11,15 @@ export function loweredText(lower: Lowering, source: string): string {
   const shader = treeOf(source);
   const definition = shader.functions.at(-1)!;
   const lowered = lower(definition, new FreshNames(definition));
-  const fault = treeFault({ ...shader, functions: [...shader.functions.slice(0, -1), lowered] });
+  const tree = { ...shader, functions: [...shader.functions.slice(0, -1), lowered] };
+  const fault = treeFault(tree);
   if (fault !== undefined)
     throw new Error(`expected a lowered tree that passes the tree check, got ${fault}`);
-  return printShader({ ...shader, functions: [lowered] });
+  const last = shader.functions.length - 1;
+  return printShader({
+    ...tree,
+    order: shader.order.filter((entry) => entry.kind !== 'function' || entry.index === last),
+  });
 }
 
 /** `lines` as a function's text: a tab per level of the array they nest in. */
