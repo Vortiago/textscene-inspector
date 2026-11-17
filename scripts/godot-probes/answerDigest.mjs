@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { isNaNBits, returnsFloat } from './laneAgreement.mjs';
+import { NEXT_PASS } from './materialTexts.mjs';
 
 /** About one case in 32, read from the id alone, so a new case leaves the others where they are. */
 const SMOKE_BYTE_BELOW = 8;
@@ -82,6 +83,24 @@ function renderEntries(answers) {
   return lines.length === 0 ? '{}' : `{\n${lines.join(',\n')}\n${indent}}`;
 }
 
+/** The counts the testing guide prints for a sweep: materials, next passes and distinct texts. */
+export function materialCounts(cases) {
+  const ids = Object.keys(cases);
+  return {
+    materials: ids.length,
+    nextPasses: ids.filter((id) => id.endsWith(`|${NEXT_PASS}`)).length,
+    texts: new Set(Object.values(cases)).size,
+  };
+}
+
+/** The sweep's counts, kept from `kept` when the run skipped the sweep, as the smoke cases hold too few. */
+function countsOf(answers, kept) {
+  if (answers.materials) return materialCounts(answers.materials.cases);
+  if (kept?.materialCounts === undefined)
+    throw new Error('expected the material counts recorded or in the committed answers file, found neither');
+  return kept.materialCounts;
+}
+
 /** The committed answers file. A family the run skipped keeps its digest and smoke cases from `kept`. */
 export function renderAnswersFile(records, kept) {
   const answers = canonicalAnswers(records);
@@ -105,6 +124,7 @@ export function renderAnswersFile(records, kept) {
     ` "godot": ${JSON.stringify(answers.probes.godot)},`,
     ` "adapter": ${JSON.stringify(answers.probes.adapter)},`,
     ` "digests": ${JSON.stringify(digests, null, 1).replace(/\n/g, '\n ')},`,
+    ` "materialCounts": ${JSON.stringify(countsOf(answers, kept))},`,
     ` "smoke": {\n${smoke.join(',\n')}\n }`,
     '}',
     '',

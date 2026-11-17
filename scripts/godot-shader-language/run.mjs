@@ -20,7 +20,11 @@ import {
 import { renderGuide } from './renderGuide.mjs';
 import { renderTestingGuide, TESTING_FILE } from './renderTestingGuide.mjs';
 import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/corpus.mjs';
-import { liveGodotAnswers } from '../../apps/textscene-three-godot-shaders/tests/godotAnswers.mjs';
+import {
+  ANSWERS_FILE,
+  liveGodotAnswers,
+} from '../../apps/textscene-three-godot-shaders/tests/godotAnswers.mjs';
+import { materialCounts } from '../godot-probes/answerDigest.mjs';
 import { KNOWN_MISMATCHES } from '../../apps/textscene-three-godot-shaders/tests/corpus/knownMismatches.mjs';
 import { OPERATOR_CASES } from '../../apps/textscene-three-godot-shaders/tests/operators/operatorCases.mjs';
 import {
@@ -62,7 +66,9 @@ function testingChapter(answers) {
       states: readJson('corpus/states.json'),
       knownMismatches: KNOWN_MISMATCHES,
     },
-    materials: answers.materials,
+    materials: answers.materials.live
+      ? materialCounts(answers.materials.cases)
+      : JSON.parse(readFileSync(ANSWERS_FILE, 'utf8')).materialCounts,
   });
 }
 

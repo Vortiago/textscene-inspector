@@ -1,4 +1,4 @@
-import { NEXT_PASS, RANDOM_CASES } from '../godot-probes/materialTexts.mjs';
+import { RANDOM_CASES } from '../godot-probes/materialTexts.mjs';
 
 export const TESTING_FILE = 'testing.md';
 
@@ -147,11 +147,8 @@ ${openLines.join('\n')}
 </details>`;
 }
 
-/** The material family: each material's case count, and the distinct texts Godot wrote for them. */
-function materialSection(materialRecord) {
-  const ids = Object.keys(materialRecord.cases);
-  const nextPasses = count(ids, (id) => id.endsWith(`|${NEXT_PASS}`));
-  const texts = new Set(Object.values(materialRecord.cases)).size;
+/** The material family from the sweep's counts (`materialCounts`), which a run that skips the sweep keeps. */
+function materialSection({ materials, nextPasses, texts }) {
   const number = (value) => value.toLocaleString('en-GB');
   return `## BaseMaterial3D against Godot
 
@@ -159,7 +156,7 @@ Godot writes the shader of a StandardMaterial3D or an ORMMaterial3D from the mat
 
 \`pnpm godot:probes\` sweeps the properties Godot's \`ClassDB\` lists for BaseMaterial3D. Each bool is set to the value its default is not, each enum to each value, each flag set to each bit and to all bits, and each integer range to its minimum, the minimum plus 1 and its maximum. The sweep holds the default material, each value alone, and each pair of values of two properties, for both classes. Pairs do not reach a condition on three or more properties, such as a heightmap with deep parallax and a flipped texture. So the sweep also holds ${number(RANDOM_CASES)} materials of each class with 3 to 12 properties set at once, drawn from a fixed seed. An outline or x-ray stencil makes a next pass, and the sweep records that pass too. Godot gives a script no material's shader, so the recorder reads the one shader Godot makes between two shaders of its own (\`scripts/godot-probes/materialTexts.mjs\`).
 
-The sweep holds ${number(ids.length)} materials, ${number(nextPasses)} of them next passes, and Godot writes ${number(texts)} distinct texts for them. The test fails on the first material whose text differs, and shows both texts. Godot's compiler also gives a verdict on each distinct text, and the parser must accept each text Godot accepts and refuse each other with Godot's message and line. The repository keeps only a digest of each text, for the smoke subset.`;
+The sweep holds ${number(materials)} materials, ${number(nextPasses)} of them next passes, and Godot writes ${number(texts)} distinct texts for them. The test fails on the first material whose text differs, and shows both texts. Godot's compiler also gives a verdict on each distinct text, and the parser must accept each text Godot accepts and refuse each other with Godot's message and line. The repository keeps only a digest of each text, for the smoke subset.`;
 }
 
 /** The text of the chapter. */
