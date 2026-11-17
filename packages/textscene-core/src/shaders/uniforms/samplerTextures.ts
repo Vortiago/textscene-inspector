@@ -4,12 +4,14 @@ import type { UniformHint, UniformNode } from '../language/shaderTree.js';
 export type DefaultTexture = 'white' | 'black' | 'transparent' | 'normal' | 'anisotropy' | 'none';
 
 /** The RGBA8 texel of each default, every texel of a 4 by 4 texture (`texture_storage.cpp:85`). */
-export const DEFAULT_TEXELS: Readonly<Record<Exclude<DefaultTexture, 'none'>, readonly number[]>> = {
+export const DEFAULT_TEXELS: Readonly<Record<DefaultTexture, readonly number[]>> = {
   white: [255, 255, 255, 255],
   black: [0, 0, 0, 255],
   transparent: [0, 0, 0, 0],
   normal: [128, 128, 255, 255],
   anisotropy: [255, 128, 255, 255],
+  // A sampler with no texture at all reads transparent black, as an empty descriptor does.
+  none: [0, 0, 0, 0],
 };
 
 /** A sampler's filter and repeat words, as `_get_sampler_name` resolves them. */

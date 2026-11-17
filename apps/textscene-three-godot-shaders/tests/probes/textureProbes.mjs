@@ -360,7 +360,7 @@ function argumentValues(kind, type, place) {
       [1, 2, 1],
     ];
   }
-  if (type === 'int') return [[0], [1], [0]].map(([value]) => value);
+  if (type === 'int') return [0, 1, 0];
   if (type === 'float') return place === 'bias' ? [0, 0.7, -1] : [0, 1, 1.5];
   if (type === 'vec2')
     return place === 'dx'
@@ -414,7 +414,7 @@ function functionProbe(row) {
   const passed = hasComponent ? types.slice(0, 1) : types;
   const places = PLACES[name];
   const parameters = passed.map((type, index) => `${type} a${index}`);
-  const call = [`s`, ...passed.map((_, index) => `a${index}`), ...(hasComponent ? ['2'] : [])].join(', ');
+  const call = ['s', ...passed.map((_, index) => `a${index}`), ...(hasComponent ? ['2'] : [])].join(', ');
   const columns = passed.map((type, index) => argumentValues(kind, type, places[index]));
   const inputs =
     passed.length === 0
@@ -423,7 +423,7 @@ function functionProbe(row) {
   return textureProbe(
     `function-${row.id.replace(/[(),]/g, '-').replace(/-+$/, '')}`,
     [sampler, filter, row.id],
-    `uniform ${sampler} s : ${filter};\n${row.returns} probe(${parameters.join(', ')}) { return ${name}(s${call.slice(1)}); }`,
+    `uniform ${sampler} s : ${filter};\n${row.returns} probe(${parameters.join(', ')}) { return ${name}(${call}); }`,
     { textures: { s: SPEC_OF_KIND[kind] }, inputs }
   );
 }

@@ -21,12 +21,14 @@ function tslFunction(name: string): (...operands: Node[]) => Node {
 export function builtInCall(name: string, row: InstructionRow, operands: readonly Node[]): Node {
   if (row.returns === undefined || row.args === undefined)
     throw new Error(`expected a built-in function row with types, got ${row.id}`);
-  const composite = compositeOf(name, row.args);
   const node = isTextureFunction(name)
     ? textureCall(name, row, operands)
-    : composite
-      ? composite(operands, row.args)
-      : tslFunction(name)(...operands);
+    : functionCall(name, row.args, operands);
   if (row.returns === 'void') return node; // Its last write, which the statement drops.
   return TSL.convert(node as never, row.returns) as unknown as Node;
+}
+
+function functionCall(name: string, args: readonly string[], operands: readonly Node[]): Node {
+  const composite = compositeOf(name, args);
+  return composite ? composite(operands, args) : tslFunction(name)(...operands);
 }

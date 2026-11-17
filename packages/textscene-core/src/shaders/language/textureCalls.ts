@@ -6,6 +6,7 @@ import type { InstructionRow } from './instructionTable.generated.js';
 import { gathered } from './textureGather.js';
 import { levelCountOf, levelOfDetail } from './textureQueries.js';
 import { SizeNode } from './textureSize.js';
+import { textureKindOf } from './types.js';
 
 /** The swizzle a node of a vector type takes, which three's types leave out. */
 type Lanes = Node & Record<'x' | 'y' | 'z' | 'w' | 'xy' | 'xyz', Node>;
@@ -33,11 +34,9 @@ interface Coordinate {
   readonly layer?: Node;
 }
 
-const isLayered = (sampler: string) => sampler.endsWith('sampler2DArray');
-
 /** A 2D array's coordinate keeps its layer in its last lane: `vec3(uv, layer)` or `ivec3(texel, layer)`. */
 function coordinateOf(sampler: string, coordinate: Node): Coordinate {
-  if (!isLayered(sampler)) return { uv: coordinate };
+  if (textureKindOf(sampler) !== 'layers') return { uv: coordinate };
   return { uv: lanes(coordinate).xy, layer: lanes(coordinate).z };
 }
 
@@ -45,7 +44,7 @@ function coordinateOf(sampler: string, coordinate: Node): Coordinate {
 function projected(sampler: string, coordinate: Node, type: string): Node {
   const lane = lanes(coordinate);
   const divisor = type === 'vec3' ? lane.z : lane.w;
-  const isVolume = sampler.endsWith('sampler3D');
+  const isVolume = textureKindOf(sampler) === 'volume';
   return TSL.div((isVolume ? lane.xyz : lane.xy) as never, divisor as never) as unknown as Node;
 }
 

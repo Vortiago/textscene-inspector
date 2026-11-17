@@ -112,6 +112,17 @@ describe('transpileShadingLanguage', () => {
     expect(glslOf('uniform int u;\nint probe() { return u; }')).toMatch(/uniform \w+ \{\s*uvec4 \w+\[1\];/);
   });
 
+  it('writes a function once for each sampler array element it is passed at a computed index', () => {
+    const source = [
+      'uniform sampler2D a[2];',
+      'uniform sampler2D b[2];',
+      'vec4 read(sampler2D s) { return texture(s, vec2(0.5)); }',
+      'vec4 probe(int i) { return read(a[i]) + read(b[i]); }',
+    ].join('\n');
+    const glsl = glslOf(source, [uniform(1, 'int') as unknown as Node]);
+    expect(glsl.match(/vec4 sl\d+_read \(/g)).toHaveLength(2);
+  });
+
   it('refuses a shader type that is not transpiled, at its head', () => {
     expect(() => transpileShadingLanguage('\nshader_type canvas_item;')).toThrow(
       expect.objectContaining({

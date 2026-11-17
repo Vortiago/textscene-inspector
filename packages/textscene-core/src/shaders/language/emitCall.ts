@@ -16,6 +16,7 @@ import {
   variablesWithLeaves,
 } from './emitValue.js';
 import type { Argument } from './shaderTree.js';
+import { SamplerChoice } from './textureCalls.js';
 
 /** The value of a function's body, run with the values of its arguments by name. */
 export type BodyEmitter = (tree: EmittedTree, names: ReadonlyMap<string, Value>) => Value | undefined;
@@ -244,8 +245,10 @@ function samplerArguments(
   );
 }
 
-/** The ids of the texture nodes a sampler value holds: one, or one per array element. */
+/** The ids of the texture nodes a sampler value holds: one, one per array element, or a choice by index. */
 function samplerKey(value: Value): string {
+  if (value instanceof SamplerChoice)
+    return `${value.elements.map((element) => element.id).join('|')}@${value.index.id}`;
   if (!isArrayValue(value)) return String((value as Node).id);
   return Array.from({ length: value.count }, (_, index) => samplerKey(value.element(index))).join(',');
 }

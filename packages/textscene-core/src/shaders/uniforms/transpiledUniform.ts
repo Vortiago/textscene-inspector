@@ -1,9 +1,8 @@
-import type { Texture } from 'three';
 import type { Variant } from '../../godot/variant/value/variant.js';
 import type { Value } from '../language/emitValue.js';
 import type { ShaderNode, UniformNode } from '../language/shaderTree.js';
 import { shapeOf } from '../language/types.js';
-import { SamplerBinding, type SamplerValue } from './samplerUniform.js';
+import { isSamplerValue, SamplerBinding, type SamplerValue } from './samplerUniform.js';
 import type { ProjectSampling } from './samplerState.js';
 import { SAMPLER_DEFAULTS } from './samplerTextures.js';
 import { defaultLanes, materialLanes } from './uniformLanes.js';
@@ -27,9 +26,6 @@ export interface BindingContext {
   readonly useLinearColor: boolean;
   readonly sampling: ProjectSampling;
 }
-
-const isSamplerValue = (value: ParameterValue): value is SamplerValue =>
-  value === null || Array.isArray(value) || (value as Texture).isTexture === true;
 
 /** A uniform's node, holding Godot's value for a material that sets none. */
 class UniformBinding implements TranspiledUniform {
@@ -60,27 +56,6 @@ class UniformBinding implements TranspiledUniform {
   }
 }
 
-/** A Variant names no texture, so a sampler reads it as the null texture (`material_storage.cpp:937`). */
-class SamplerParameter implements TranspiledUniform {
-  constructor(private readonly binding: SamplerBinding) {}
-
-  get declaration(): UniformNode {
-    return this.binding.declaration;
-  }
-
-  get value(): Value {
-    return this.binding.value;
-  }
-
-  get isDrawable(): boolean {
-    return this.binding.isDrawable;
-  }
-
-  set(value: ParameterValue | undefined): void {
-    this.binding.set(value === undefined || isSamplerValue(value) ? value : null);
-  }
-}
-
 /** A text with no head is a probe's, which Godot's harness draws as a `canvas_item`. */
 const samplerDefaultsOf = (shaderType: string | undefined) => SAMPLER_DEFAULTS[shaderType ?? 'canvas_item']!;
 
@@ -92,7 +67,7 @@ export function bindParameters(
   const samplerContext = { ...context, defaults: samplerDefaultsOf(shader.shaderType) };
   const bindingOf = (uniform: UniformNode) =>
     shapeOf(uniform.type) === undefined
-      ? new SamplerParameter(new SamplerBinding(uniform, samplerContext))
+      ? new SamplerBinding(uniform, samplerContext)
       : new UniformBinding(uniform, context.useLinearColor);
   return new Map(shader.uniforms.map((uniform) => [uniform.name, bindingOf(uniform)]));
 }

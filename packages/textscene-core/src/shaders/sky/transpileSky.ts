@@ -108,10 +108,14 @@ export function transpileParsedSky(
   };
 }
 
-/** A mesh three draws only while every uniform of the material can draw. */
+/** A mesh three draws only while the caller shows it and every uniform of the material can draw. */
 function drawnWhileBound(mesh: THREE.Mesh, parameters: readonly TranspiledUniform[]): THREE.Mesh {
+  let isShown = mesh.visible;
   Object.defineProperty(mesh, 'visible', {
-    get: () => parameters.every((parameter) => parameter.isDrawable),
+    get: () => isShown && parameters.every((parameter) => parameter.isDrawable),
+    set: (shown: boolean) => {
+      isShown = shown;
+    },
   });
   return mesh;
 }

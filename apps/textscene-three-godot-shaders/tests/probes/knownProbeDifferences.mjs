@@ -53,7 +53,30 @@ const ANISOTROPIC_FOOTPRINT = {
     "driver (Mesa lavapipe) filters an anisotropic sampler with weighted linear taps, also for a nearest filter, on Godot's side",
 };
 
+/** The probes of `textureQueryLod`, each off in the same three lanes. */
+function zeroDerivativeLevels() {
+  const calls = [
+    'sampler2D-vec2',
+    'isampler2D-vec2',
+    'usampler2D-vec2',
+    'sampler2DArray-vec2',
+    'isampler2DArray-vec2',
+    'usampler2DArray-vec2',
+    'sampler3D-vec3',
+    'isampler3D-vec3',
+    'usampler3D-vec3',
+    'samplerCube-vec3',
+  ];
+  const difference = {
+    ...ZERO_DERIVATIVE_LOD,
+    lanesOff: 3,
+    first: 'lane 1: Godot c27e0000, transpilation ff800000',
+  };
+  return Object.fromEntries(calls.map((call) => [`texture-function-textureQueryLod-${call}`, difference]));
+}
+
 export const KNOWN_PROBE_DIFFERENCES = {
+  ...zeroDerivativeLevels(),
   'texture-2d-filter_nearest_mipmap_anisotropic': {
     ...ANISOTROPIC_FOOTPRINT,
     lanesOff: 11,
@@ -63,56 +86,6 @@ export const KNOWN_PROBE_DIFFERENCES = {
     ...ANISOTROPIC_FOOTPRINT,
     lanesOff: 5,
     first: 'lane 14: Godot 3d20a0a2, transpilation 3d30b0b1',
-  },
-  'texture-function-textureQueryLod-sampler2D-vec2': {
-    ...ZERO_DERIVATIVE_LOD,
-    lanesOff: 3,
-    first: 'lane 1: Godot c27e0000, transpilation ff800000',
-  },
-  'texture-function-textureQueryLod-isampler2D-vec2': {
-    ...ZERO_DERIVATIVE_LOD,
-    lanesOff: 3,
-    first: 'lane 1: Godot c27e0000, transpilation ff800000',
-  },
-  'texture-function-textureQueryLod-usampler2D-vec2': {
-    ...ZERO_DERIVATIVE_LOD,
-    lanesOff: 3,
-    first: 'lane 1: Godot c27e0000, transpilation ff800000',
-  },
-  'texture-function-textureQueryLod-sampler2DArray-vec2': {
-    ...ZERO_DERIVATIVE_LOD,
-    lanesOff: 3,
-    first: 'lane 1: Godot c27e0000, transpilation ff800000',
-  },
-  'texture-function-textureQueryLod-isampler2DArray-vec2': {
-    ...ZERO_DERIVATIVE_LOD,
-    lanesOff: 3,
-    first: 'lane 1: Godot c27e0000, transpilation ff800000',
-  },
-  'texture-function-textureQueryLod-usampler2DArray-vec2': {
-    ...ZERO_DERIVATIVE_LOD,
-    lanesOff: 3,
-    first: 'lane 1: Godot c27e0000, transpilation ff800000',
-  },
-  'texture-function-textureQueryLod-sampler3D-vec3': {
-    ...ZERO_DERIVATIVE_LOD,
-    lanesOff: 3,
-    first: 'lane 1: Godot c27e0000, transpilation ff800000',
-  },
-  'texture-function-textureQueryLod-isampler3D-vec3': {
-    ...ZERO_DERIVATIVE_LOD,
-    lanesOff: 3,
-    first: 'lane 1: Godot c27e0000, transpilation ff800000',
-  },
-  'texture-function-textureQueryLod-usampler3D-vec3': {
-    ...ZERO_DERIVATIVE_LOD,
-    lanesOff: 3,
-    first: 'lane 1: Godot c27e0000, transpilation ff800000',
-  },
-  'texture-function-textureQueryLod-samplerCube-vec3': {
-    ...ZERO_DERIVATIVE_LOD,
-    lanesOff: 3,
-    first: 'lane 1: Godot c27e0000, transpilation ff800000',
   },
   'call-dFdx-float': {
     ...ANGLE_DERIVATIVE,

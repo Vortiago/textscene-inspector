@@ -1,8 +1,6 @@
 import { CubeTexture, Data3DTexture, DataArrayTexture, DataTexture, LinearFilter, type Texture } from 'three';
+import type { TextureKind } from '../language/types.js';
 import { DEFAULT_TEXELS, type DefaultTexture } from './samplerTextures.js';
-
-/** The texture kind a sampler type reads: a 2D texture, a cube, a 3D texture or 2D layers. */
-export type TextureKind = 'flat' | 'cube' | 'volume' | 'layers';
 
 /** Godot's defaults are 4 by 4 texels of one level, 4 deep for a 3D texture (`texture_storage.cpp:85`). */
 const SIZE = 4;
@@ -11,16 +9,12 @@ const SIZE = 4;
 const DEFAULTS = new Map<string, Texture>();
 
 /** The texels of `count` faces or slices of 4 by 4, each texel `texel`. */
-function texels(texture: Exclude<DefaultTexture, 'none'>, count: number): Uint8Array {
+function texels(texture: DefaultTexture, count: number): Uint8Array {
   const texel = DEFAULT_TEXELS[texture];
   return Uint8Array.from({ length: SIZE * SIZE * count * 4 }, (_, index) => texel[index % 4]!);
 }
 
-/** A sampler with no texture at all reads transparent black, as an empty descriptor does. */
-const texelsOf = (texture: DefaultTexture) => (texture === 'none' ? 'transparent' : texture);
-
-function created(kind: TextureKind, texture: DefaultTexture): Texture {
-  const fill = texelsOf(texture);
+function created(kind: TextureKind, fill: DefaultTexture): Texture {
   switch (kind) {
     case 'flat':
       return new DataTexture(texels(fill, 1), SIZE, SIZE);
