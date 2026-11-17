@@ -143,6 +143,12 @@ describe('AnimationTransportContext — controls (F2/F3)', () => {
     expect(result.current.time).toBe(0);
   });
 
+  it('counts a seek to the playhead it is at, so shader TIME still follows it', () => {
+    const { result } = setup();
+    act(() => result.current.seek(0));
+    expect(result.current.seeks).toBe(1);
+  });
+
   it('reportTime updates the playhead for the scrubber readout', () => {
     const { result } = setup();
     act(() => result.current.reportTime(0.25));

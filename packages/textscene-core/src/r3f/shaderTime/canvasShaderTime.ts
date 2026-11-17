@@ -43,6 +43,7 @@ export function useShaderTimeFrame(): void {
       hasPlayer: transport.hasPlayer,
       playState: transport.playState,
       playhead: transport.time,
+      seeks: transport.seeks,
     };
     canvasShaderTime(gl).advance(clock.elapsedTime, playback, step, rolloverSeconds);
   });

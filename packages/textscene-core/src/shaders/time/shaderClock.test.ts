@@ -27,16 +27,17 @@ describe('ShaderClock', () => {
   });
 });
 
-const playback = (playState: 'stopped' | 'playing' | 'paused', playhead = 0) => ({
+const playback = (playState: 'stopped' | 'playing' | 'paused', playhead = 0, seeks = 0) => ({
   hasPlayer: true,
   playState,
   playhead,
+  seeks,
 });
 
 describe('PlaybackShaderTime', () => {
   it('advances every frame in a scene with no AnimationPlayer', () => {
     const time = new PlaybackShaderTime(new ShaderClock());
-    const none = { hasPlayer: false, playState: 'stopped', playhead: 0 } as const;
+    const none = { hasPlayer: false, playState: 'stopped', playhead: 0, seeks: 0 } as const;
     time.frame(none, 0.5);
     expect(time.frame(none, 0.5)).toBe(1);
   });
@@ -55,16 +56,35 @@ describe('PlaybackShaderTime', () => {
     expect(time.frame(playback('paused', 1), 0.5)).toBe(1);
   });
 
-  it('sets TIME to the playhead on a scrub', () => {
+  it('sets TIME to the playhead on a seek', () => {
     const time = new PlaybackShaderTime(new ShaderClock());
     time.frame(playback('paused', 1), 0.5);
-    expect(time.frame(playback('paused', 4.25), 0.5)).toBe(4.25);
+    expect(time.frame(playback('paused', 4.25, 1), 0.5)).toBe(4.25);
   });
 
-  it('advances from the scrubbed time when play starts again', () => {
+  it('sets TIME to the playhead on a seek to the playhead it is at', () => {
+    const time = new PlaybackShaderTime(new ShaderClock());
+    time.frame(playback('playing', 1), 0.5);
+    time.frame(playback('paused', 1), 0.5);
+    expect(time.frame(playback('paused', 1, 1), 0.5)).toBe(1);
+  });
+
+  it('sets TIME to the playhead on a seek while playing', () => {
+    const time = new PlaybackShaderTime(new ShaderClock());
+    time.frame(playback('playing', 0), 0.5);
+    expect(time.frame(playback('playing', 3, 1), 0.5)).toBe(3);
+  });
+
+  it('holds TIME when the playhead moves with no seek while paused', () => {
+    const time = new PlaybackShaderTime(new ShaderClock());
+    time.frame(playback('paused', 1), 0.5);
+    expect(time.frame(playback('paused', 2), 0.5)).toBe(0);
+  });
+
+  it('advances from the sought time when play starts again', () => {
     const time = new PlaybackShaderTime(new ShaderClock());
     time.frame(playback('paused', 0), 0.5);
-    time.frame(playback('paused', 4.25), 0.5);
-    expect(time.frame(playback('playing', 4.75), 0.5)).toBe(4.75);
+    time.frame(playback('paused', 4.25, 1), 0.5);
+    expect(time.frame(playback('playing', 4.75, 1), 0.5)).toBe(4.75);
   });
 });

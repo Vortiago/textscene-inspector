@@ -404,7 +404,7 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 ## `TIME`
 
-`TIME` is the shader time in seconds. Godot adds each frame's step to it before the frame draws, in a double, and wraps it at the project setting `rendering/limits/time/time_rollover_secs`, 3600 by default. `ShaderClock` keeps the same sum and wrap: `advance(step)` before each frame, then `writeSkyBindings({ time })`. In the previewer, `PlaybackShaderTime` moves it with the playback controls instead: play advances it, pause holds it, a scrub sets it to the playhead, and stop sets it to 0. A scene with no AnimationPlayer advances it every frame, as Godot does.
+`TIME` is the shader time in seconds. Godot adds each frame's step to it before the frame draws, in a double, and wraps it at the project setting `rendering/limits/time/time_rollover_secs`, 3600 by default. `ShaderClock` keeps the same sum and wrap: `advance(step)` before each frame, then `writeSkyBindings({ time })`. In the previewer, `PlaybackShaderTime` moves it with the playback controls instead: play advances it, pause holds it, a seek sets it to the playhead, and stop sets it to 0. A seek counts in `Playback.seeks`, so a seek to the playhead it is at sets it too. A scene with no AnimationPlayer advances it every frame, as Godot does.
 
 The transpiler emits the template's uniform `params.time`, which `writeSkyBindings` writes as a float. Rows: `sky.global.TIME`. Godot source: `servers/rendering/shader_types.cpp:456`.
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CanvasShaderTime } from './canvasShaderTime';
 import type { Playback } from '../../shaders/time/shaderClock';
 
-const NO_PLAYER: Playback = { hasPlayer: false, playState: 'stopped', playhead: 0 };
+const NO_PLAYER: Playback = { hasPlayer: false, playState: 'stopped', playhead: 0, seeks: 0 };
 
 describe('CanvasShaderTime', () => {
   it('advances by the step of each frame', () => {
@@ -35,7 +35,7 @@ describe('CanvasShaderTime', () => {
   it('holds while the animation is paused', () => {
     const time = new CanvasShaderTime();
     time.advance(1, NO_PLAYER, 0.5, 3600);
-    time.advance(2, { hasPlayer: true, playState: 'paused', playhead: 0 }, 0.5, 3600);
+    time.advance(2, { hasPlayer: true, playState: 'paused', playhead: 0, seeks: 0 }, 0.5, 3600);
     expect(time.time).toBe(0.5);
   });
 });
