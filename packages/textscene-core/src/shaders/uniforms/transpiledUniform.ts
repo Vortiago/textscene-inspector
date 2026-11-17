@@ -6,7 +6,7 @@ import { isSamplerValue, SamplerBinding, type SamplerValue } from './samplerUnif
 import type { ProjectSampling } from './samplerState.js';
 import { SAMPLER_DEFAULTS } from './samplerTextures.js';
 import { materialLanes } from './uniformLanes.js';
-import { MaterialBits } from './uniformNodes.js';
+import { materialBits, type UniformValue } from './uniformNodes.js';
 
 /** A value as `set_shader_parameter` takes it: a Variant, or a texture or list of them for a sampler. */
 export type ParameterValue = Variant | SamplerValue | null;
@@ -27,19 +27,15 @@ export interface BindingContext {
   readonly sampling: ProjectSampling;
 }
 
-const shapeOfUniform = ({ type, arraySize }: UniformNode) => ({ type, arraySize: arraySize ?? 0 });
-
 /** A uniform's node, holding Godot's value for a material that sets none. */
 class UniformBinding implements TranspiledUniform {
-  private readonly node;
   readonly isDrawable = true;
 
   constructor(
     readonly declaration: UniformNode,
-    bits: MaterialBits,
+    private readonly node: UniformValue,
     private readonly useLinearColor: boolean
   ) {
-    this.node = bits.uniform(shapeOfUniform(declaration));
     this.set(NIL);
   }
 
@@ -65,10 +61,11 @@ export function bindParameters(
 ): ReadonlyMap<string, TranspiledUniform & { readonly value: Value }> {
   const samplerContext = { ...context, defaults: samplerDefaultsOf(shader.shaderType) };
   const values = shader.uniforms.filter((uniform) => !isSamplerType(uniform.type));
-  const bits = new MaterialBits(values.map(shapeOfUniform));
+  const nodes = materialBits(values.map(({ type, arraySize }) => ({ type, arraySize: arraySize ?? 0 })));
+  const nodeOf = new Map(values.map((uniform, index) => [uniform, nodes[index]!]));
   const bindingOf = (uniform: UniformNode) =>
     isSamplerType(uniform.type)
       ? new SamplerBinding(uniform, samplerContext)
-      : new UniformBinding(uniform, bits, context.useLinearColor);
+      : new UniformBinding(uniform, nodeOf.get(uniform)!, context.useLinearColor);
   return new Map(shader.uniforms.map((uniform) => [uniform.name, bindingOf(uniform)]));
 }

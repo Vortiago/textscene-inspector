@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ArrayValue, Value } from '../language/emitValue.js';
 import type { ValueType } from '../language/types.js';
-import { MaterialBits, type UniformShape } from './uniformNodes.js';
+import { materialBits, type UniformShape } from './uniformNodes.js';
 
 const shapes = (...uniforms: [ValueType, number?][]): UniformShape[] =>
   uniforms.map(([type, arraySize = 0]) => ({ type, arraySize }));
@@ -25,8 +25,7 @@ function wordsOf(value: Value): Uint32Array {
 
 /** The byte where each uniform's first lane lands, and the buffer's bytes, read back from its words. */
 function layoutOf(uniforms: UniformShape[]): { offsets: number[]; bytes: number } {
-  const bits = new MaterialBits(uniforms);
-  const nodes = uniforms.map((uniform) => bits.uniform(uniform));
+  const nodes = materialBits(uniforms);
   const words = wordsOf(nodes[0]!.value);
   const offsets = nodes.map((node, index) => {
     const before = words.slice();
@@ -36,7 +35,7 @@ function layoutOf(uniforms: UniformShape[]): { offsets: number[]; bytes: number 
   return { offsets, bytes: words.length * 4 };
 }
 
-describe('MaterialBits layout', () => {
+describe('materialBits layout', () => {
   it.each([
     ['a float after a vec3 fills its fourth lane', shapes(['vec3'], ['float']), [0, 12], 16],
     ['a vec3 after a float starts the next slot', shapes(['float'], ['vec3']), [0, 16], 32],
@@ -52,15 +51,9 @@ describe('MaterialBits layout', () => {
   });
 });
 
-describe('MaterialBits', () => {
+describe('materialBits', () => {
   const material = () => {
-    const bits = new MaterialBits(shapes(['vec3'], ['float'], ['float', 3], ['mat2']));
-    const [vector, scalar, array, matrix] = [
-      bits.uniform({ type: 'vec3', arraySize: 0 }),
-      bits.uniform({ type: 'float', arraySize: 0 }),
-      bits.uniform({ type: 'float', arraySize: 3 }),
-      bits.uniform({ type: 'mat2', arraySize: 0 }),
-    ];
+    const [vector, scalar, array, matrix] = materialBits(shapes(['vec3'], ['float'], ['float', 3], ['mat2']));
     vector!.write([1, 2, 3]);
     scalar!.write([4]);
     array!.write([5, 6, 7]);
@@ -85,11 +78,7 @@ describe('MaterialBits', () => {
     expect(changedWords(before, words)).toEqual([8]);
   });
 
-  it('refuses a uniform past the list it was laid out for', () => {
-    const bits = new MaterialBits(shapes(['float']));
-    bits.uniform({ type: 'float', arraySize: 0 });
-    expect(() => bits.uniform({ type: 'float', arraySize: 0 })).toThrow(
-      'expected a laid out uniform for float, got uniform 2 of 1'
-    );
+  it('makes no buffer for a material with no value uniform', () => {
+    expect(materialBits([])).toEqual([]);
   });
 });

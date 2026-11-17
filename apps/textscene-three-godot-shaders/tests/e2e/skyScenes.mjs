@@ -128,8 +128,43 @@ const builtInSky = (body, renderModes = '') =>
 /** A camera turned and lifted off the origin, so that each built-in that reads it moves. */
 const TURNED = { fov: 75, rotation: [20, -35, 0], position: [1.3, 2.1, -0.7] };
 
+/** Twenty value uniforms of mixed types in Godot's one block: more than WebGL's 12 blocks a stage. */
+const TWENTY_UNIFORMS_SKY = `shader_type sky;
+
+uniform float f0 = 0.05;
+uniform vec3 v0 = vec3(0.1, 0.2, 0.3);
+uniform float f1 = 0.15;
+uniform mat3 m0 = mat3(vec3(0.9, 0.1, 0.0), vec3(0.2, 0.7, 0.1), vec3(0.0, 0.3, 0.8));
+uniform vec2 w0 = vec2(0.25, -0.5);
+uniform float f2 = 0.35;
+uniform int i0 = -3;
+uniform uint u0 = 3000000000u;
+uniform bool b0 = true;
+uniform vec4 c0 : source_color = vec4(0.8, 0.4, 0.1, 1.0);
+uniform vec3 c1 : source_color = vec3(0.1, 0.5, 0.9);
+uniform float a0[3];
+uniform vec3 a1[2];
+uniform mat2 m1 = mat2(vec2(1.0, 0.5), vec2(-0.25, 1.0));
+uniform ivec2 i1 = ivec2(2, -1);
+uniform bvec3 b1 = bvec3(false, true, false);
+uniform float f3 = 0.45;
+uniform mat4 m2 = mat4(vec4(1.0, 0.0, 0.0, 0.1), vec4(0.0, 1.0, 0.2, 0.0), vec4(0.3, 0.0, 1.0, 0.0), vec4(0.0, 0.0, 0.0, 1.0));
+uniform uvec2 u1 = uvec2(1u, 2u);
+uniform float f4 = 0.55;
+
+void sky() {
+\tvec3 d = m0 * (EYEDIR * 0.5 + 0.5) + v0 * f0;
+\td.xy = m1 * d.xy + w0 * f1 + float(i0 + i1.x - i1.y) * 0.01;
+\td += (m2 * vec4(d, 1.0)).xyz * f2 + c0.rgb * f3 + c1 * f4;
+\td += vec3(a0[0], a0[1], a0[2]) + a1[0] * (b0 ? 1.0 : -1.0) + (b1.y ? a1[1] : vec3(0.0));
+\td *= float(u0 / 1000000000u + u1.x + u1.y) * 0.1;
+\tCOLOR = fract(d);
+}
+`;
+
 /** One scene per built-in of the sky stage, each read into the colour, against Godot's image. */
 const BUILT_IN_SCENES = [
+  { name: 'sky-twenty-uniforms', source: TWENTY_UNIFORMS_SKY, rows: ['uniform'] },
   { name: 'sky-eyedir', source: builtInSky('\tCOLOR = EYEDIR * 0.5 + 0.5;'), rows: ['sky.sky.EYEDIR'] },
   {
     name: 'sky-coords',
@@ -176,45 +211,6 @@ const BUILT_IN_SCENES = [
     rows: ['sky render_mode use_debanding'],
   },
 ].map((scene) => ({ ...SIZE, camera: TURNED, lights: [], ...scene }));
-
-/** Twenty value uniforms of mixed types, which Godot packs into one block: more than WebGL's 16 blocks. */
-const TWENTY_UNIFORMS_SKY = `shader_type sky;
-
-uniform float f0 = 0.05;
-uniform vec3 v0 = vec3(0.1, 0.2, 0.3);
-uniform float f1 = 0.15;
-uniform mat3 m0 = mat3(vec3(0.9, 0.1, 0.0), vec3(0.2, 0.7, 0.1), vec3(0.0, 0.3, 0.8));
-uniform vec2 w0 = vec2(0.25, -0.5);
-uniform float f2 = 0.35;
-uniform int i0 = -3;
-uniform uint u0 = 3000000000u;
-uniform bool b0 = true;
-uniform vec4 c0 : source_color = vec4(0.8, 0.4, 0.1, 1.0);
-uniform vec3 c1 : source_color = vec3(0.1, 0.5, 0.9);
-uniform float a0[3];
-uniform vec3 a1[2];
-uniform mat2 m1 = mat2(vec2(1.0, 0.5), vec2(-0.25, 1.0));
-uniform ivec2 i1 = ivec2(2, -1);
-uniform bvec3 b1 = bvec3(false, true, false);
-uniform float f3 = 0.45;
-uniform mat4 m2 = mat4(vec4(1.0, 0.0, 0.0, 0.1), vec4(0.0, 1.0, 0.2, 0.0), vec4(0.3, 0.0, 1.0, 0.0), vec4(0.0, 0.0, 0.0, 1.0));
-uniform uvec2 u1 = uvec2(1u, 2u);
-uniform float f4 = 0.55;
-
-void sky() {
-\tvec3 d = m0 * (EYEDIR * 0.5 + 0.5) + v0 * f0;
-\td.xy = m1 * d.xy + w0 * f1 + float(i0 + i1.x - i1.y) * 0.01;
-\td += (m2 * vec4(d, 1.0)).xyz * f2 + c0.rgb * f3 + c1 * f4;
-\td += vec3(a0[0], a0[1], a0[2]) + a1[0] * (b0 ? 1.0 : -1.0) + (b1.y ? a1[1] : vec3(0.0));
-\td *= float(u0 / 1000000000u + u1.x + u1.y) * 0.1;
-\tCOLOR = fract(d);
-}
-`;
-
-/** A sky whose uniforms do not fit WebGL's blocks one a uniform, against Godot's image. */
-const UNIFORM_SCENES = [{ name: 'sky-twenty-uniforms', source: TWENTY_UNIFORMS_SKY, rows: ['uniform'] }].map(
-  (scene) => ({ ...SIZE, camera: TURNED, lights: [], ...scene })
-);
 
 /** Four suns of distinct colour, energy, size and direction, one for each slot a sky reads. */
 const FOUR_SUNS = [
@@ -350,7 +346,6 @@ export const SKY_SCENES = [
   ...TIME_SCENES,
   ...SEEK_SCENES,
   ...BUILT_IN_SCENES,
-  ...UNIFORM_SCENES,
   ...LIGHT_SCENES,
   ...PASS_SCENES,
   ...PASS_SIZE_SCENES,

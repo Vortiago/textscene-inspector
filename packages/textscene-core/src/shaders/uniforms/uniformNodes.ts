@@ -4,6 +4,7 @@ import { UniformArrayNode, type Node, type NodeBuilder } from 'three/webgpu';
 import { CONSTRUCTORS } from '../language/emitConstant.js';
 import type { ArrayValue, Value } from '../language/emitValue.js';
 import { shapeOf, type ScalarKind, type ValueType } from '../language/types.js';
+import { blockLayout } from '../template/blockLayout.js';
 import type { Lanes } from './uniformLanes.js';
 
 /** A uniform node of the emitted shader, which takes the lanes of `uniformLanes`. */
@@ -33,17 +34,19 @@ export const LANE_OF_BITS: Readonly<Record<ScalarKind, (bits: Node) => Node>> = 
 
 const SLOT_LANES = ['x', 'y', 'z', 'w'] as const;
 
-/** The slot of column `column` of element `element`: an element has one slot per column. */
-function slotOf(element: Node | number, columns: number, column: number): Node | number {
-  if (typeof element === 'number') return element * columns + column;
-  return columns === 1
-    ? element
-    : chained(chained(element).mul(int(columns) as unknown as Node)).add(int(column) as unknown as Node);
+/** The slot of column `column` of element `element`, past `base`: an element has one slot per column. */
+function slotOf(element: Node | number, columns: number, column: number, base: number): Node | number {
+  if (typeof element === 'number') return base + element * columns + column;
+  const start = columns === 1 ? element : chained(element).mul(int(columns) as unknown as Node);
+  const offset = base + column;
+  return offset === 0 ? start : chained(start).add(int(offset) as unknown as Node);
 }
 
 /** Bits in a `Float32Array`: three copies a `Uint32Array` as floats (r187 `WebGLUniformsGroups.js:307`). */
 class BitsArrayNode extends UniformArrayNode<'uvec4'> {
   readonly bits: Uint32Array;
+  /** Written only by `setup`: the words three uploads, over the buffer of its `Float32Array`. */
+  private uploaded: Uint32Array | undefined;
 
   constructor(slots: number) {
     super(
@@ -55,13 +58,14 @@ class BitsArrayNode extends UniformArrayNode<'uvec4'> {
 
   override setup(builder: NodeBuilder): Node | null | undefined {
     const output = super.setup(builder);
-    const value = (this as unknown as { value: Uint32Array }).value;
-    (this as unknown as { value: Float32Array }).value = new Float32Array(value.buffer);
+    const { buffer } = (this as unknown as { value: Uint32Array }).value;
+    (this as unknown as { value: Float32Array }).value = new Float32Array(buffer);
+    this.uploaded = new Uint32Array(buffer);
     return output;
   }
 
   override updateBuffer(): void {
-    new Uint32Array((this as unknown as { value: ArrayBufferView }).value.buffer).set(this.bits);
+    this.uploaded?.set(this.bits);
   }
 }
 
@@ -74,54 +78,19 @@ export interface UniformShape {
   readonly arraySize: number;
 }
 
-/** Godot's alignment of a single value (`shader_compiler.cpp:50`): a lane, two, or a whole slot. */
-function alignmentOf(type: ValueType): number {
-  const { lanes, columns } = shapeOf(type)!;
-  if (columns !== undefined || lanes > 2) return SLOT_BYTES;
-  return lanes * LANE_BYTES;
-}
-
-/** Godot's bytes of a uniform: its lanes, or a slot per column of each element of an array (`:633`). */
-function bytesOf({ type, arraySize }: UniformShape): number {
-  const { lanes, columns } = shapeOf(type)!;
-  if (arraySize > 0 || columns !== undefined) return Math.max(1, arraySize) * (columns ?? 1) * SLOT_BYTES;
-  return lanes * LANE_BYTES;
-}
-
-const alignedTo = (offset: number, alignment: number) => Math.ceil(offset / alignment) * alignment;
-
-/** Each uniform's byte offset in Godot's material block, in text order (`shader_compiler.cpp:656`). */
-function blockOffsets(uniforms: readonly UniformShape[]): { offsets: number[]; bytes: number } {
-  let end = 0;
-  const offsets = uniforms.map((uniform) => {
-    const offset = alignedTo(end, uniform.arraySize > 0 ? SLOT_BYTES : alignmentOf(uniform.type));
-    end = offset + bytesOf(uniform);
-    return offset;
-  });
-  return { offsets, bytes: alignedTo(end, SLOT_BYTES) };
-}
-
-/** Every value uniform of a material in one buffer, as Godot's material block: WebGL 2 allows 12 blocks. */
-export class MaterialBits {
-  private readonly node: BitsArrayNode | undefined;
-  private readonly offsets: readonly number[];
-  private next = 0;
-
-  constructor(uniforms: readonly UniformShape[]) {
-    const { offsets, bytes } = blockOffsets(uniforms);
-    this.offsets = offsets;
-    this.node = bytes > 0 ? new BitsArrayNode(bytes / SLOT_BYTES) : undefined;
-  }
-
-  /** The node of the next uniform of the list the buffer was laid out for. */
-  uniform({ type, arraySize }: UniformShape): UniformValue {
-    const offset = this.offsets[this.next++];
-    if (!this.node || offset === undefined)
-      throw new Error(
-        `expected a laid out uniform for ${type}, got uniform ${this.next} of ${this.offsets.length}`
-      );
-    return bitsUniform(this.node, offset, type, arraySize);
-  }
+/** A node per uniform in one buffer at Godot's offsets (`shader_compiler.cpp:656`): WebGL 2 has 12 blocks. */
+export function materialBits(uniforms: readonly UniformShape[]): UniformValue[] {
+  const members = uniforms.map(({ type, arraySize }, index) => ({
+    name: String(index),
+    type,
+    ...(arraySize > 0 ? { arraySize } : {}),
+  }));
+  const { members: placed, size } = blockLayout(members, 'std140', () => undefined);
+  if (size === 0) return [];
+  const node = new BitsArrayNode(size / SLOT_BYTES);
+  return uniforms.map(({ type, arraySize }, index) =>
+    bitsUniform(node, placed[index]!.offset, type, arraySize)
+  );
 }
 
 /** A uniform of `type` at byte `offset` of `node`. A matrix column and an array element start a slot. */
@@ -130,13 +99,11 @@ function bitsUniform(node: BitsArrayNode, offset: number, type: ValueType, array
   const rows = lanes / columns;
   const first = Math.floor(offset / SLOT_BYTES);
   const firstLane = (offset % SLOT_BYTES) / LANE_BYTES;
-  const shifted = (slot: Node | number): Node | number => {
-    if (typeof slot === 'number') return slot + first;
-    return first === 0 ? slot : chained(slot).add(int(first) as unknown as Node);
-  };
   const column = (element: Node | number, index: number): Node => {
-    const at = shifted(slotOf(element, columns, index));
-    const bits = node.element(at as Node) as unknown as Record<string, Node>;
+    const bits = node.element(slotOf(element, columns, index, first) as Node) as unknown as Record<
+      string,
+      Node
+    >;
     const parts = SLOT_LANES.slice(firstLane, firstLane + rows).map((lane) =>
       LANE_OF_BITS[scalar](bits[lane]!)
     );
