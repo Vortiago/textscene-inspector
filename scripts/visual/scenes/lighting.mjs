@@ -250,4 +250,5 @@ export const LIGHTING_SCENES = [
   // collapse it: AgX and flat ambient still apply, the background falls back to
   // mid-blue, and the metallic sphere, with no sky to reflect, reads near-black.
   { name: 'shader-sky-env', file: 'unit-shader-sky-env.tscn' },
+  { name: 'shader-sky-parameters', file: 'unit-shader-sky-parameters.tscn' },
 ];

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import * as THREE from 'three';
 import type { NodeMaterial } from 'three/webgpu';
 import * as logger from '../../logger';
 import { generatedFragmentShader } from '../../shaders/generatedShader.testkit';
@@ -19,7 +20,7 @@ function shaderMaterial(code: string): ShaderSkyProperties {
     code,
     parameters: {},
     textures: {},
-    usage: { light: false, time: false, position: false },
+    usage: { light: false, time: false, position: false, colorSamplers: [] },
   };
 }
 
@@ -50,12 +51,19 @@ describe('transpiledShaderSky', () => {
 describe('setParameters', () => {
   it('writes the Variant of each text to its uniform', () => {
     const tint = { set: vi.fn() };
-    setParameters(new Map([['tint', tint]]), { tint: '0.25' });
+    setParameters(new Map([['tint', tint]]), { tint: '0.25' }, {});
     expect(tint.set).toHaveBeenCalledWith({ type: 'FLOAT', value: 0.25 });
   });
 
   it('ignores a value no uniform declares', () => {
-    expect(() => setParameters(new Map(), { gone: '1.0' })).not.toThrow();
+    expect(() => setParameters(new Map(), { gone: '1.0' }, { alsoGone: new THREE.Texture() })).not.toThrow();
+  });
+
+  it('writes each loaded texture to its sampler', () => {
+    const stars = { set: vi.fn() };
+    const texture = new THREE.Texture();
+    setParameters(new Map([['stars', stars]]), {}, { stars: texture });
+    expect(stars.set).toHaveBeenCalledWith(texture);
   });
 });
 

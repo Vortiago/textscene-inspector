@@ -26,13 +26,14 @@ void sky() {
 export function buildShaderSkyEnvironment(
   gl: THREE.WebGLRenderer,
   material: ShaderSkyProperties,
-  { sky, lights, asBackground }: SkyEnvironmentInput
+  { sky, lights, asBackground, textures = {} }: SkyEnvironmentInput
 ): SkyEnvironment | null {
+  const transpiled = () => transpiledShaderSky(material, textures);
   let background: ShaderSkyBackground | null = null;
   let layers: SkyLayers;
   try {
-    background = asBackground ? new ShaderSkyBackground(transpiledShaderSky(material), lights) : null;
-    layers = bakeShaderRadiance(gl, sky, material, lights);
+    background = asBackground ? new ShaderSkyBackground(transpiled(), lights) : null;
+    layers = bakeShaderRadiance(gl, sky, transpiled(), lights);
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
     background?.dispose();
@@ -52,11 +53,11 @@ export function buildShaderSkyEnvironment(
 function bakeShaderRadiance(
   gl: THREE.WebGLRenderer,
   sky: Sky,
-  material: ShaderSkyProperties,
+  transpiled: TranspiledSky,
   lights: readonly SkyLight[]
 ): SkyLayers {
   const skyScene = new THREE.Scene();
-  const cubeSky = new ShaderSkyBackground(transpiledShaderSky(material), lights);
+  const cubeSky = new ShaderSkyBackground(transpiled, lights);
   cubeSky.drawIn(skyScene, 1, new THREE.Euler());
   try {
     return bakeRadiance(gl, skyScene, sky, 0);
@@ -66,7 +67,10 @@ function bakeShaderRadiance(
 }
 
 /** The sky of `material` with its parameters, or Godot's default sky for a shader it cannot draw. */
-export function transpiledShaderSky(material: ShaderSkyProperties): TranspiledSky {
+export function transpiledShaderSky(
+  material: ShaderSkyProperties,
+  textures: Readonly<Record<string, THREE.Texture>> = {}
+): TranspiledSky {
   let sky: TranspiledSky;
   try {
     sky = transpileSky(material.code);
@@ -75,16 +79,18 @@ export function transpiledShaderSky(material: ShaderSkyProperties): TranspiledSk
     warnOnce(material, 'refused', refusalMessage(error));
     return transpileSky(GODOT_DEFAULT_SKY);
   }
-  setParameters(sky.parameters, material.parameters);
+  setParameters(sky.parameters, material.parameters, textures);
   return sky;
 }
 
-/** Writes each value of `texts` its uniform takes. Godot ignores a value no uniform declares. */
+/** Writes each value its uniform takes. Godot ignores a value no uniform declares. */
 export function setParameters(
   uniforms: ReadonlyMap<string, Pick<TranspiledUniform, 'set'>>,
-  texts: Readonly<Record<string, string>>
+  texts: Readonly<Record<string, string>>,
+  textures: Readonly<Record<string, THREE.Texture>>
 ): void {
   for (const [name, text] of Object.entries(texts)) uniforms.get(name)?.set(textToVariant(text));
+  for (const [name, texture] of Object.entries(textures)) uniforms.get(name)?.set(texture);
 }
 
 function refusalMessage(error: ShadingLanguageError): string {

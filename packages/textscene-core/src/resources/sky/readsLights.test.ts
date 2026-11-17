@@ -7,7 +7,7 @@ const shaderSky = (light: boolean): ShaderSkyProperties => ({
   code: '',
   parameters: {},
   textures: {},
-  usage: { light, time: false, position: false },
+  usage: { light, time: false, position: false, colorSamplers: [] },
 });
 
 describe('materialReadsLights', () => {

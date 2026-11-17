@@ -52,6 +52,8 @@ export interface SkyEnvironmentInput {
   asBackground: boolean;
   /** The scale a surface reads the radiance at, `scene.environmentIntensity`. */
   energy: number;
+  /** A shader sky's loaded texture parameters, by uniform name. */
+  textures?: Readonly<Record<string, THREE.Texture>>;
 }
 
 /**

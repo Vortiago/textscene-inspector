@@ -36,6 +36,7 @@ import {
 import { debandSky } from './skyDebanding';
 import { showSkyBackground } from './skyBackground';
 import { useShaderTimeFrame } from '../shaderTime/canvasShaderTime';
+import { useShaderSkyTextures } from './shaderSkyTextures';
 import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
 import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
@@ -97,6 +98,7 @@ export function SkyLayer({
 
   const isPanoramaDrawn = useIsPanoramaDrawn(panorama);
   useShaderTimeFrame();
+  const [textures, textureSlots] = useShaderSkyTextures(sky.material);
 
   // Written only by the effect below, while it holds bakes.
   const bakeWantedRef = useRef<(() => boolean) | null>(null);
@@ -113,7 +115,7 @@ export function SkyLayer({
 
     const lights = directionalLights(scene);
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
-    const input = { sky, lights, panorama, asBackground, energyMultiplier, rotation: skyRotation };
+    const input = { sky, lights, panorama, textures, asBackground, energyMultiplier, rotation: skyRotation };
     const { bakes, release } = holdSkyBakes(gl, input, lightsKey, contextRestores);
     const update = radianceUpdateOf(sky);
     const plan = skyUpdatePlan(sky);
@@ -200,6 +202,7 @@ export function SkyLayer({
     energyMultiplier,
     exposure,
     panorama,
+    textures,
     isPanoramaDrawn,
     asBackground,
     lightsKey,
@@ -209,7 +212,7 @@ export function SkyLayer({
     rotationZ,
   ]);
 
-  return null;
+  return <>{textureSlots}</>;
 }
 
 /**

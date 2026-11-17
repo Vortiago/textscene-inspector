@@ -5,7 +5,12 @@ const skyOf = (body: string) => `shader_type sky;\nvoid sky() {\n\t${body}\n}\n`
 
 describe('skyUsage', () => {
   it('reads no built-in of a sky that writes only COLOR', () => {
-    expect(skyUsage(skyOf('COLOR = vec3(1.0);'))).toEqual({ light: false, time: false, position: false });
+    expect(skyUsage(skyOf('COLOR = vec3(1.0);'))).toEqual({
+      light: false,
+      time: false,
+      position: false,
+      colorSamplers: [],
+    });
   });
 
   it('reads the lights of a sky that reads any LIGHTn built-in', () => {
@@ -30,6 +35,13 @@ describe('skyUsage', () => {
       light: false,
       time: false,
       position: false,
+      colorSamplers: [],
     });
+  });
+
+  it('names the samplers marked source_color', () => {
+    const source =
+      'shader_type sky;\nuniform sampler2D stars : source_color;\nuniform sampler2D noise;\nvoid sky() {}\n';
+    expect(skyUsage(source).colorSamplers).toEqual(['stars']);
   });
 });
