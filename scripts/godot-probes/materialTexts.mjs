@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { eachAtOnce, oneGodot, printedField, RUNS_AT_ONCE, runGodotScript } from './godotRun.mjs';
+import { eachAtOnce, oneGodot, printedField, runGodotScript } from './godotRun.mjs';
 import { SHADER_BETWEEN } from './shaderBetween.mjs';
 import { godotVerdicts, verdictText } from './shaderVerdicts.mjs';
 
@@ -14,6 +14,9 @@ export const MATERIAL_CLASSES = ['StandardMaterial3D', 'ORMMaterial3D'];
 
 /** Each class gets this many materials with many properties set at once, which pairs do not reach. */
 export const RANDOM_CASES = 3000;
+
+/** A run records about 45 materials a second, so 16 runs of about 1,800 stay well inside its 300 s limit. */
+const MATERIAL_RUNS = 16;
 
 /** A sweep of BaseMaterial3D's properties: each case is recorded alone, with Godot's text. */
 const MATERIAL_SCRIPT = `extends Node
@@ -168,10 +171,10 @@ export function parseCaseId(id) {
 
 /** Each case's hash and each hash's compiler verdict, from Godot, and `texts`, each text by its hash. */
 export async function materialRecord() {
-  const chunks = Array.from({ length: RUNS_AT_ONCE }, (_, chunk) => chunk);
+  const chunks = Array.from({ length: MATERIAL_RUNS }, (_, chunk) => chunk);
   const runs = await eachAtOnce(chunks, async (chunk) => {
     const output = await runGodotScript(MATERIAL_SCRIPT, {
-      'run.json': JSON.stringify({ classes: MATERIAL_CLASSES, chunk, chunks: RUNS_AT_ONCE }),
+      'run.json': JSON.stringify({ classes: MATERIAL_CLASSES, chunk, chunks: MATERIAL_RUNS }),
     });
     return { godot: printedField(output, 'GODOT '), texts: parseMaterialOutput(output) };
   });
