@@ -55,9 +55,12 @@ describe('writeSkyBindings', () => {
     ]);
   });
 
-  it("writes the camera's projection terms Godot unprojects with", () => {
+  it("writes the camera's projection terms Godot unprojects with, after Godot's flip of y", () => {
     const camera = new THREE.PerspectiveCamera(90, 2, 1, 10);
+    camera.setViewOffset(4, 2, 1, 0.5, 4, 2);
     const projection = boundSky({ camera })('params.projection').value as THREE.Vector4;
-    expect([projection.y, projection.w]).toEqual([0.5, 1].map((value) => expect.closeTo(value, 6)));
+    const columns = camera.projectionMatrix.elements;
+    expect(projection.toArray()).toEqual([columns[8], columns[0], -columns[9]!, -columns[5]!]);
+    expect([projection.y, projection.w]).toEqual([0.5, -1].map((value) => expect.closeTo(value, 6)));
   });
 });

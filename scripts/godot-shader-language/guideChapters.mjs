@@ -679,6 +679,54 @@ const SKY_CHAPTER = {
       what: "`TIME` is the shader time in seconds. Godot adds each frame's step to it before the frame draws, in a double, and wraps it at the project setting `rendering/limits/time/time_rollover_secs`, 3600 by default. `ShaderClock` keeps the same sum and wrap: `advance(step)` before each frame, then `writeSkyBindings({ time })`. In the previewer, `PlaybackShaderTime` moves it with the playback controls instead: play advances it, pause holds it, a scrub sets it to the playhead, and stop sets it to 0. A scene with no AnimationPlayer advances it every frame, as Godot does.",
       tsl: "the template's uniform `params.time`, which `writeSkyBindings` writes as a float",
     },
+    {
+      heading: '`EYEDIR`',
+      rows: (row) => row.id === 'sky.sky.EYEDIR',
+      what: "`EYEDIR` is the unit direction from the camera through the pixel, in world space. Godot's template unprojects the pixel at the far plane with the camera's inverse projection, turns it by the camera's orientation and normalises it (`sky.glsl:211-223`).",
+      tsl: "the template's local `cube_normal`",
+    },
+    {
+      heading: '`SKY_COORDS`',
+      rows: (row) => row.id === 'sky.sky.SKY_COORDS',
+      what: "`SKY_COORDS` is the panorama's uv of `EYEDIR`: x from the angle about Y, y from the angle down from +Y, each from 0 to 1. Godot computes the angles with its own approximations of `atan2` and `acos` (`sky.glsl:178-232`), and the transpiler runs the same approximations.",
+      tsl: "the template's local `panorama_coords`",
+    },
+    {
+      heading: '`SCREEN_UV` and `FRAGCOORD`',
+      rows: (row) => row.id === 'sky.sky.SCREEN_UV' || row.id === 'sky.sky.FRAGCOORD',
+      what: "`SCREEN_UV` is the pixel's place in the view, from 0 to 1, and `FRAGCOORD` is the pixel's window coordinate. Godot's `SCREEN_UV` is the template's `uv`, which it derives from the triangle's `uv_interp` (`sky.glsl:204`).",
+      tsl: "the template's local `uv`, and `screenCoordinate` for `gl_FragCoord`",
+    },
+    {
+      heading: '`POSITION`',
+      rows: (row) => row.id === 'sky.global.POSITION',
+      what: "`POSITION` is the camera's position in world space. `writeSkyBindings` writes it from the camera's world matrix, as `sky.cpp` writes `params.position` from the camera transform.",
+      tsl: "the template's uniform `params.position`",
+    },
+    {
+      heading: '`PI`, `TAU` and `E`',
+      rows: (row) => /^sky\.constants\./.test(row.id),
+      what: 'Godot writes each constant into the shader as the text of `String::num` of its C++ value (`sky.cpp:755-757`): 3.14159265358979, 6.28318530717959 and 2.71828182845905. The transpiler reads the same text as a float.',
+      tsl: 'a float constant',
+    },
+    {
+      heading: '`ALPHA`',
+      rows: (row) => row.id === 'sky.sky.ALPHA',
+      what: "`ALPHA` starts at 1 and goes to the frame's alpha (`sky.glsl:235`, `:274`). Godot draws the sky with no blending, so `ALPHA` changes no colour of an opaque view.",
+      tsl: "the template's local `alpha`",
+    },
+    {
+      heading: '`FOG`',
+      rows: (row) => row.id === 'sky.sky.FOG',
+      what: "`FOG` starts at `vec4(0.0)`. After the scene's fog, Godot mixes the sky's colour toward `FOG.rgb` by `FOG.a` when `FOG.a` is above 0 (`sky.glsl:238`, `:297-298`). `disable_fog` turns off both.",
+      tsl: "the template's local `custom_fog`",
+    },
+    {
+      heading: 'Render modes',
+      rows: (row) => row.id === 'sky render_mode disable_fog' || row.id === 'sky render_mode use_debanding',
+      what: "`disable_fog` defines `DISABLE_FOG`, which skips the scene's fog and `FOG` (`sky.glsl:279-301`). `use_debanding` defines `USE_DEBANDING`, which adds Godot's interleaved gradient noise of the pixel's window coordinate to the colour (`sky.glsl:313-314`).",
+      tsl: 'the defines of the template variant',
+    },
   ],
 };
 

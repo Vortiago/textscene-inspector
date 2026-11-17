@@ -25,6 +25,22 @@ describe('compileMaterial', () => {
     ]);
   });
 
+  it('adds the define of each render mode before the usage defines, as Godot does', () => {
+    const source =
+      'shader_type sky;\nrender_mode use_debanding, disable_fog;\nvoid sky() {\n\tCOLOR = HALF_RES_COLOR.rgb;\n}\n';
+    expect(compileMaterial(materialOf(source), MODE_TABLES.sky!).custom).toEqual([
+      '#define USE_DEBANDING\n',
+      '#define DISABLE_FOG\n',
+      '\n#define USES_HALF_RES_COLOR\n',
+    ]);
+  });
+
+  it('keeps the define of a render mode once when the mode repeats', () => {
+    const table = { ...MODE_TABLES.sky!, render_mode_defines: { a: '#define A\n', b: '#define A\n' } };
+    const shader = { ...materialOf(DEFAULT_SKY), renderModes: [{ name: 'a' }, { name: 'a' }, { name: 'b' }] };
+    expect(compileMaterial(shader as never, table).custom).toEqual(['#define A\n', '#define A\n']);
+  });
+
   it("adds the define a usage define names with '@', as Godot's compiler does", () => {
     const usage = {
       HALF_RES_COLOR: '@QUARTER_RES_COLOR',

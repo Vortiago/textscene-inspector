@@ -44,6 +44,7 @@ function drawSky(spec) {
   // Godot's defaults: the near and far planes of Camera3D.
   const camera = new THREE.PerspectiveCamera(spec.camera.fov, width / height, 0.05, 4000);
   camera.rotation.copy(euler(spec.camera.rotation));
+  if (spec.camera.position) camera.position.fromArray(spec.camera.position);
   camera.updateMatrixWorld();
   const fog = spec.fog && {
     lightColor: linear(spec.fog.color),
