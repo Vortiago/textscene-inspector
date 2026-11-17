@@ -5,7 +5,7 @@
  * A narrow panel turns the dock into a bottom sheet that shows one half at a time
  * (ADR-0048).
  */
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import {
   DEFAULT_VIEWPORT,
   FRAME_ON_OPEN_STORAGE_KEY,
@@ -18,7 +18,7 @@ import {
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
 import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.js';
-import { useParsedScene } from '../../hooks/useParsedScene.js';
+import { useOpenedScene } from '../../hooks/useOpenedScene.js';
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import { Splitter } from '../Splitter/Splitter.js';
 import { ViewportArea } from './ViewportArea.js';
@@ -78,7 +78,10 @@ export function TscnPreviewShell({
   isVisible,
   onCopyNodePath,
 }: TscnPreviewShellProps) {
-  const { sceneGraph, error } = useParsedScene(content, rootScenePath);
+  const scene = useOpenedScene(content, rootScenePath);
+  const { sceneGraph: parsedGraph, error } = useSyncExternalStore(scene.subscribe, scene.parse);
+  // The views draw the parse with the host's writes laid on.
+  const sceneGraph = useSyncExternalStore(scene.subscribe, scene.written);
 
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId }), [sceneGraph, panelId]);
   const [viewportError, setViewportError] = useState<Error | null>(null);
@@ -129,7 +132,7 @@ export function TscnPreviewShell({
     <>
       {/* A host-forced mode turns auto-select off, or the root's claim overrides it. */}
       {initialViewportMode === undefined && <WorkspaceAutoSelect />}
-      <SceneChangeResetter sceneGraph={sceneGraph} />
+      <SceneChangeResetter sceneGraph={parsedGraph} />
       <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
       <CaptureStateReporter onCaptureStateChange={onCaptureStateChange} viewportError={viewportError} />
       <EscapeDeselect />

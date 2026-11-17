@@ -2,7 +2,7 @@
 import { parseTscnContent } from '@textscene/core';
 
 /**
- * The gate runs `parseTscnContent`, as `useParsedScene` does on the forwarded content, so
+ * The gate runs `parseTscnContent`, as the preview shell does on the forwarded content, so
  * "valid" here and "renderable" there cannot drift. The path matters only for GLB detection
  * and scene identity, and the pane always holds .tscn text.
  */
