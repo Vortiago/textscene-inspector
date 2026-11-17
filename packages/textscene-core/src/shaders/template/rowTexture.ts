@@ -55,6 +55,8 @@ export class RowTexture {
     const image = this.texture.image as { data: Uint32Array; height: number };
     if (image.height === rows) image.data.fill(0, words.length).set(words);
     else {
+      // three allocates a texture's storage once, so a new height takes a new texture.
+      this.texture.dispose();
       const data = new Uint32Array(rows * ROW_TEXELS * TEXEL_WORDS);
       data.set(words);
       this.texture.image = { data, width: ROW_TEXELS, height: rows } as never;
@@ -63,7 +65,9 @@ export class RowTexture {
   }
 
   private struct(members: readonly RowMember[], word: Index): StructValue {
-    const layout = blockLayout(members, this.packing, this.structOf);
+    // An array of no size ends the block, so one element places it with an array's alignment and stride.
+    const sized = members.map((member) => (member.isRuntimeSized ? { ...member, arraySize: 1 } : member));
+    const layout = blockLayout(sized, this.packing, this.structOf);
     return {
       kind: 'struct',
       members: new Map(
@@ -74,10 +78,10 @@ export class RowTexture {
 
   private member(placed: PlacedMember, member: RowMember, base: Index): Value {
     const start = plus(base, placed.offset / 4);
-    if (placed.arraySize === undefined && !member.isRuntimeSized) return this.read(placed.type, start);
+    if (placed.arraySize === undefined) return this.read(placed.type, start);
     return {
       kind: 'array',
-      count: placed.arraySize ?? Number.POSITIVE_INFINITY,
+      count: member.isRuntimeSized ? Number.POSITIVE_INFINITY : placed.arraySize,
       element: (index) => this.read(placed.type, plus(start, times(index, placed.stride / 4))),
     } satisfies ArrayValue;
   }

@@ -35,15 +35,17 @@ export interface EmittedStage {
   readonly textures: ReadonlyMap<string, TextureNode>;
 }
 
-/** The uniforms, the buffers and the varyings of a program, which its stages share. */
+/** The uniforms, the textures, the buffers and the varyings of a program, which its stages share. */
 export interface ProgramResources {
   readonly uniforms: TemplateUniforms;
+  readonly textures: Map<string, TextureNode>;
   readonly buffers: TemplateBuffers;
   readonly varyings: StageVaryings;
 }
 
 export const programResources = (): ProgramResources => ({
   uniforms: new TemplateUniforms(),
+  textures: new Map(),
   buffers: new TemplateBuffers(),
   varyings: new StageVaryings(),
 });
@@ -58,12 +60,11 @@ export function emitTemplateStage(
   const structs = new Map<string, StructNode>();
   const structOf: StructOf = (type) => structs.get(type);
   const declared = asDeclared(stage);
-  const textures = new Map<string, TextureNode>();
+  const { textures } = resources;
   const globals = new Map<string, Value>();
   const trees = new Map<string, EmittedTree>();
   const plain: GlobalNode[] = [];
-  const passed = withGlobalParameters(withSquareMatrices(stage), result).declarations;
-  for (const declaration of passed) {
+  for (const declaration of passedOnce(stage, result).declarations) {
     if (declaration.kind === 'struct') structs.set(declaration.name, declaration);
     else if (declaration.kind === 'function') trees.set(declaration.name, loweredOnce(declaration));
     else if (declaration.kind === 'interface block' && declaration.qualifiers.words.includes('uniform'))
@@ -157,6 +158,18 @@ function stageVaryings(
   if (!passes) return;
   for (const { name } of global.declarators)
     if (name !== result.name) values.set(name, varyings.of(global.type, name, words.includes('flat')));
+}
+
+/** Filled by `passedOnce`, an entry cleared with its stage, so `loweredOnce` finds the same functions. */
+// eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
+const PASSED = new WeakMap<TemplateStageNode, Map<string, TemplateStageNode>>();
+
+function passedOnce(stage: TemplateStageNode, result: StageResult): TemplateStageNode {
+  let byResult = PASSED.get(stage);
+  if (!byResult) PASSED.set(stage, (byResult = new Map()));
+  let passed = byResult.get(result.name);
+  if (!passed) byResult.set(result.name, (passed = withGlobalParameters(withSquareMatrices(stage), result)));
+  return passed;
 }
 
 /** Filled by `loweredOnce`, an entry cleared with its function: a stage lowers once. */

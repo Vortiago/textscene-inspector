@@ -129,7 +129,26 @@ function squareProduct(original: OperatorNode, parts: OperatorNode): Expression 
     return squareVectorProduct(parts, 1, Math.max(leftShape.columns, leftShape.rows), leftShape.rows);
   if (rightShape && isVector(left.type))
     return squareVectorProduct(parts, 0, Math.max(rightShape.columns, rightShape.rows), rightShape.columns);
+  if (leftShape && rightShape) return squareMatrixProduct(original, parts);
   return squareOperator(original, parts);
+}
+
+/** Two padded squares multiply to a square of their size, whose upper-left corner is a smaller result. */
+function squareMatrixProduct(original: OperatorNode, parts: OperatorNode): Expression {
+  const square = parts.operands[0]!.type;
+  const types = parts.operands.map((operand) => operand.type);
+  const product: OperatorNode = { ...parts, type: square, row: operatorRow('OP_MUL', types, square) };
+  const type = squareType(original.type);
+  if (type === square) return product;
+  const row = constructorRow(type, [square]);
+  return {
+    kind: 'operator',
+    type,
+    op: 'OP_CONSTRUCT',
+    row,
+    operands: [product],
+    position: original.position,
+  };
 }
 
 /** The product with its vector operand padded to `size` lanes, read back as `lanes` lanes. */

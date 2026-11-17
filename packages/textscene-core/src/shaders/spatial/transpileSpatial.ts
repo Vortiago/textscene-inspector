@@ -84,7 +84,7 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
       ...parameters.values(),
     ]),
     uniforms: resources.uniforms.byName,
-    textures: fragment.textures,
+    textures: resources.textures,
     buffers: resources.buffers.byName,
     parameters,
   };

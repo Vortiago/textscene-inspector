@@ -51,6 +51,14 @@ describe('RowTexture', () => {
     expect(generatedFragmentShader(shown(flags))).toMatch(/ivec2\(\s*7,\s*0\s*\)/);
   });
 
+  it('steps through an array of no size at the stride std430 gives its element, 16 bytes for a vec3', () => {
+    const rows = new RowTexture([{ name: 'points', type: 'vec3', isRuntimeSized: true }], 'std430', structOf);
+    const points = (rows.value as StructValue).members.get('points') as { element(i: number): Value };
+    const text = generatedFragmentShader(shown(points.element(1) as Node));
+    expect(text).toMatch(/ivec2\(\s*1,\s*0\s*\)/);
+    expect(text).not.toMatch(/ivec2\(\s*0,\s*0\s*\)/);
+  });
+
   it('reads a float member as the float of its bits', () => {
     const { data } = instancesBlock();
     const scale = (data.element(0) as StructValue).members.get('scale') as Node;

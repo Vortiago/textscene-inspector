@@ -26,7 +26,7 @@ export interface ProgramTemplate {
 export interface LinkedProgram {
   /** The template stage with the material's code linked in, linked once for each source and stage. */
   readonly linked: (stage: StageName) => TemplateStageNode;
-  /** The uniforms, textures and buffers that both stages share. */
+  /** The uniforms, textures, buffers and varyings that both stages share. */
   readonly resources: ProgramResources;
   /** Each uniform of the material by name, which takes `set_shader_parameter`'s value. */
   readonly parameters: ReadonlyMap<string, TranspiledUniform>;

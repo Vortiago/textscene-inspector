@@ -13,9 +13,16 @@ export function withGodotAttributes(geometry: THREE.BufferGeometry): THREE.Buffe
   if (!position) throw new Error('expected a geometry with a position attribute, found none');
   geometry.setAttribute(VERTEX_ANGLE_ATTRIBUTE, position);
   const normal = geometry.getAttribute('normal');
-  if (normal)
-    geometry.setAttribute(AXIS_TANGENT_ATTRIBUTE, axisTangent(normal, geometry.getAttribute('tangent')));
+  if (normal) geometry.setAttribute(AXIS_TANGENT_ATTRIBUTE, axisTangent(normal, signedTangent(geometry)));
   return geometry;
+}
+
+/** The tangent attribute, whose fourth lane holds the binormal's sign. */
+function signedTangent(geometry: THREE.BufferGeometry): Attribute | undefined {
+  const tangent = geometry.getAttribute('tangent');
+  if (tangent && tangent.itemSize !== 4)
+    throw new Error(`expected a tangent of 4 lanes with the binormal's sign last, got ${tangent.itemSize}`);
+  return tangent;
 }
 
 type Attribute = THREE.BufferAttribute | THREE.InterleavedBufferAttribute;

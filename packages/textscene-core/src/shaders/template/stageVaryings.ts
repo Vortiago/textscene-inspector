@@ -31,7 +31,7 @@ export class StageVaryings {
   /** Written only by `of`, at a varying's first stage. */
   private readonly byName = new Map<string, Node>();
 
-  /** The varying `name` of `type`, `flat` when either stage declares it so. */
+  /** The varying `name` of `type`, `flat` as its first stage declares it: the stages of a template agree. */
   of(type: string, name: string, isFlat: boolean): Node {
     let varying = this.byName.get(name);
     if (!varying) {

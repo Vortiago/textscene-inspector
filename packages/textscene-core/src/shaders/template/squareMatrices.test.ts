@@ -42,6 +42,10 @@ describe('withSquareMatrices', () => {
     expect(inMain('mat3x4 m;\nvec4 v;\nvec3 r = v * m;')).toContain('vec3 r = (v * m).xyz;');
   });
 
+  it('gives a mat4x3 times a mat3x4 the upper-left mat3 of the product of their squares', () => {
+    expect(inMain('mat4x3 a;\nmat3x4 b;\nmat3 r = a * b;')).toContain('mat3 r = mat3((a * b));');
+  });
+
   it('reads a column of a mat4x3 as its three rows', () => {
     expect(inMain('mat4x3 m;\nvec3 c = m[1];')).toContain('vec3 c = (m[1]).xyz;');
   });

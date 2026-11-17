@@ -69,7 +69,7 @@ export function transpileParsedSky(
   return {
     mesh: skyMesh(withVulkanY(vertex.result), fragment.result, [...parameters.values()]),
     uniforms: resources.uniforms.byName,
-    textures: fragment.textures,
+    textures: resources.textures,
     parameters,
   };
 }

@@ -53,6 +53,7 @@ function drawMesh(spec) {
     colorSpace: THREE.SRGBColorSpace,
   });
   spatial.material.dispose();
+  mesh.geometry.dispose();
   return { pixels: Array.from(pixels) };
 }
 

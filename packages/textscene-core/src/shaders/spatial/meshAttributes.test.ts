@@ -36,4 +36,10 @@ describe('withGodotAttributes', () => {
     const axisTangent = withGodotAttributes(geometry).getAttribute(AXIS_TANGENT_ATTRIBUTE);
     expect([...(axisTangent.array as Uint16Array).slice(0, 4)]).toEqual([0x7fff, 0x7fff, 0xffff, 0xbfff]);
   });
+
+  it('refuses a tangent with no lane for the sign, by its lane count', () => {
+    const geometry = triangle();
+    geometry.setAttribute('tangent', new THREE.Float32BufferAttribute([1, 0, 0, 1, 0, 0, 1, 0, 0], 3));
+    expect(() => withGodotAttributes(geometry)).toThrow('got 3');
+  });
 });
