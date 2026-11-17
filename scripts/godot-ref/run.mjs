@@ -100,16 +100,10 @@ export const EDITOR_CAMERA_DISTANCE = 4;
 /** `frameSceneBounds.ts`'s margin, for the opt-in framed mode. */
 export const FRAME_MARGIN = 1.6;
 
-/**
- * The values `--mode` accepts. The two arms that render the root window come last, so the
- * rejection message keeps its `auto|2d|3d|…` prefix.
- */
+/** The values `--mode` accepts. The root-window arms come last, so the rejection message keeps its `auto|2d|3d|…` prefix. */
 export const RENDER_MODES = ['auto', '2d', '3d', '2d-root', 'in-game'];
 
-/**
- * Renders the scene as the root window's own scene with every script removed: the game at its
- * start, through the cameras and the environment the project and the scene set.
- */
+/** The scene as the root window's own scene with no script run, as the game starts it. */
 export const IN_GAME_MODE = 'in-game';
 
 /** Why each flag has no meaning in `in-game`, where the game decides what it names. */
@@ -524,10 +518,7 @@ export function projectViewportSizeFromIni(sourceIni) {
   };
 }
 
-/**
- * The larger of the viewport and the window override on each axis. An X screen this size holds the
- * window whichever way the engine reads a half-set override.
- */
+/** The larger of viewport and override per axis, so an X screen this size holds the window either way. */
 export function projectWindowBoundsFromIni(sourceIni) {
   const viewport = projectViewportSizeFromIni(sourceIni);
   const override = (key) => {
@@ -558,9 +549,8 @@ function dropSection(ini, name) {
 const WINDOW_MODE_SETTING = /^window\/size\/mode\s*=/;
 
 /**
- * The generated `project.godot`. It carries the source project's settings forward (msaa and
- * shadow quality change the picture) minus the default environment and the 3D frame size. `inGame`
- * keeps the environment and the window settings of the project.
+ * The generated `project.godot`: the source settings minus the default environment and the 3D frame
+ * size. `inGame` keeps the environment and the window settings.
  */
 export function projectConfig(
   sourceIni,
@@ -579,8 +569,7 @@ export function projectConfig(
     /^import\/use_multiple_threads\s*=/,
   ];
 
-  // A project default environment would light the scene through a channel the previewer does not
-  // have, and bias every comparison. The game starts with it.
+  // The previewer has no default-environment channel, so keeping one biases a comparison. The game has it.
   if (!inGame) {
     drop.push(
       /^environment\/defaults\/default_environment\s*=/,
@@ -897,9 +886,8 @@ func _render_3d(target: Node) -> void:
 	_save_capture(get_viewport())
 	_write_bounds(target)
 
-# The root window's own scene, as SceneTree adds a main scene, so the project's clear colour, default
-# environment, window size and stretch apply and the scene's cameras decide the view. The root
-# rejects an add_child while it adds this node (node.cpp:1709), so one frame passes first.
+# The root's own scene, so the project's clear colour, environment and window apply.
+# One frame passes first: the root rejects an add_child while it adds this node (node.cpp:1709).
 func _render_in_game(target: Node) -> void:
 	await get_tree().process_frame
 	get_tree().root.add_child(target)
@@ -1526,8 +1514,7 @@ export const SPAWN_BACKSTOP_MS = (ENGINE_TIMEOUT_S + ENGINE_KILL_AFTER_S + 30) *
  * driver contracts without an engine, an X server or a 300-second wait.
  */
 export function godotSpawnPlan(args, { display, screen = null, groupTimeout = true }) {
-  // Only the root-window arm and the game size the X screen: their capture is the window, which a
-  // smaller default screen would clip. Every other render keeps xvfb-run's default screen.
+  // Only the root-window arm and the game size the X screen, as a smaller one clips the window they capture.
   const screenArgs = screen ? ['-s', `-screen 0 ${screen.width}x${screen.height}x24`] : [];
   const engine = display ? ['xvfb-run', '-a', ...screenArgs, 'godot', ...args] : ['godot', ...args];
   // `spawnSync` signals only the `xvfb-run` wrapper, and the orphaned `godot` and `Xvfb` render
@@ -1707,16 +1694,13 @@ async function renderInto(
   const stage = async () => {
     await rm(work, { recursive: true, force: true });
     await cp(root, work, { recursive: true, dereference: true });
-    // The root-window arm captures the window, so the window is the project-viewport rect. The game
-    // keeps the project's own window. Every other arm keeps the 3D frame override.
+    // Root-window arm: window pinned to the viewport. Game: the project's window. Others: width x height.
     await writeFile(
       join(work, 'project.godot'),
       projectConfig(sourceIni, {
         ...(rootWindow ? { ...canvas2DSize, pinWindowToViewport: true } : { width, height }),
         ...(inGame ? { ...canvas2DSize, inGame: true } : {}),
-        // Only a game instantiates an autoload (`main/main.cpp:4397`'s
-        // `if (!project_manager && !editor)`), so unlike a node script it has no `@tool` exception.
-        // The game view runs none.
+        // Only a game runs an autoload (main.cpp:4397), with no `@tool` exception. The game view runs none.
         runScripts: !previews && !inGame,
       })
     );

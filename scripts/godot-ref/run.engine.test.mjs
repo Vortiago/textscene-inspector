@@ -461,10 +461,7 @@ describe('renderReference (real Godot)', { timeout: ENGINE_TEST_TIMEOUT_MS }, ()
     expect(Math.max(...lit.ground)).toBeGreaterThan(3 * Math.max(...unlit.ground));
     expect(Math.max(...unlit.ground)).toBeLessThan(80);
   });
-  /**
-   * `--mode in-game` renders the scene as the root window's own scene, as the game starts it. Each
-   * case writes a project of its own, so the project settings are the ones under test.
-   */
+  /** Each case writes a project of its own, so the project settings are the ones under test. */
   describe('--mode in-game', () => {
     const RED = [255, 0, 0];
     const GREEN = [0, 255, 0];
@@ -548,8 +545,7 @@ mesh = SubResource("1")
       const game = await renderProject(files);
       const runtime = await renderProject(files, { mode: '3d', previews: false });
 
-      // A white box lit only by a red ambient colour comes back red. Without the environment the
-      // engine's own grey ambient lights it, with no hue.
+      // With the project environment, red ambient lights a white box red. Without it, the engine's grey ambient gives no hue.
       expect(game.reported).toBe('in-game');
       expect(game.at(CENTRE)[0]).toBeGreaterThan(100);
       expect(game.at(CENTRE)[1]).toBeLessThan(10);
