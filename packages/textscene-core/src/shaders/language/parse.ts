@@ -3,7 +3,7 @@ import { INSTRUCTION_TABLE } from './instructionTable.generated.js';
 import { StatementParser, type ScopeHolder } from './parseBlock.js';
 import { ExpressionParser, type ExpressionScope } from './parseExpression.js';
 import { UniformParser } from './parseUniform.js';
-import { rendererOf, type RenderingMethod } from '../preprocessor/preprocessor.js';
+import { rendererOf, type RenderingMethod } from '../preprocessor/renderingMethod.js';
 import { ModeParser } from './parseModes.js';
 import { parseDeclaration } from './parseDeclaration.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';

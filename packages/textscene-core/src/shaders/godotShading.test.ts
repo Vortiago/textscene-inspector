@@ -21,7 +21,7 @@ function rendererWithSlots(varyingSlots: number) {
   return { renderer: renderer as unknown as THREE.WebGLRenderer, getParameter, setNodesHandler };
 }
 
-/** Seventeen slots, the most Forward+ gives past the 15 its template takes. Unshaded links today. */
+/** Seventeen slots, the most Forward+ gives past the 15 its template takes. It is unshaded. */
 const SEVENTEEN_VARYINGS =
   'shader_type spatial;\nrender_mode unshaded;\nvarying vec4 v[17];\nvoid fragment() {}\n';
 

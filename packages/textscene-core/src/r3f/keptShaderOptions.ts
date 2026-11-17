@@ -11,7 +11,7 @@ export function projectShaderOptionsOf(
   renderer: RendererShaderOptions
 ): ProjectShaderOptions {
   const kept = optionsOf(decoders);
-  const key = `${renderer.renderingMethod}:${renderer.glVaryings}`;
+  const key = `${renderer.renderingMethod ?? 'forward_plus'}:${renderer.glVaryings}`;
   const options = kept.get(key) ?? { decoders, ...renderer };
   kept.set(key, options);
   return options;

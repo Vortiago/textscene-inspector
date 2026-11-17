@@ -19,6 +19,13 @@ describe('projectShaderOptionsOf', () => {
     expect(options.map(({ glVaryings }) => glVaryings)).toEqual([31, 15]);
   });
 
+  it('gives one object for a method left out and Forward+, which Godot draws alike', () => {
+    const decoders = {};
+    expect(projectShaderOptionsOf(decoders, {})).toBe(
+      projectShaderOptionsOf(decoders, { renderingMethod: 'forward_plus' })
+    );
+  });
+
   it('gives a new object for other decoders', () => {
     const renderer = { renderingMethod: 'forward_plus' } as const;
     expect(projectShaderOptionsOf({}, renderer)).not.toBe(projectShaderOptionsOf({}, renderer));

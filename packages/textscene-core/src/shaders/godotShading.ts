@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 import { rendererShaderOptions, type RendererShaderOptions } from './rendererShaderOptions.js';
 import { installNodesHandler, type NodeOutput } from './nodesHandler.js';
-import type { RenderingMethod } from './preprocessor/preprocessor.js';
+import type { RenderingMethod } from './preprocessor/renderingMethod.js';
 import { transpileSky, type SkyOptions, type TranspiledSky } from './sky/transpileSky.js';
 import { transpileSpatial, type SpatialOptions, type TranspiledSpatial } from './spatial/transpileSpatial.js';
 
@@ -16,7 +16,6 @@ export interface GodotShadingOptions {
 type OwnOptions<Options> = Omit<Options, keyof RendererShaderOptions>;
 
 export interface GodotShading {
-  readonly shaderOptions: RendererShaderOptions;
   /** The material of a shader of `shader_type spatial`. */
   spatial(source: string, options?: OwnOptions<SpatialOptions>): TranspiledSpatial;
   /** The draws of a shader of `shader_type sky`. */
@@ -31,7 +30,6 @@ export function installGodotShading(
   installNodesHandler(renderer, output);
   const shaderOptions = rendererShaderOptions(renderer, renderingMethod);
   return {
-    shaderOptions,
     spatial: (source, options) => transpileSpatial(source, { ...options, ...shaderOptions }),
     sky: (source, options) => transpileSky(source, { ...options, ...shaderOptions }),
   };

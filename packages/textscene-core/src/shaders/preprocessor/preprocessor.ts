@@ -8,18 +8,13 @@ import { PreprocessedOutput } from './preprocessedOutput.js';
 import { END, isCharEnd, isCharSpace } from './preprocessorChars.js';
 import { type Define, Defines, expandMacros } from './macros.js';
 import { PreprocessorError } from './preprocessorError.js';
+import type { Renderer, RenderingMethod } from './renderingMethod.js';
 
 /** `path` is the loaded resource's path, which marks the include and keeps it from loading twice. */
 export interface ShaderInclude {
   readonly path: string;
   readonly code: string;
 }
-
-/** The renderers Godot draws with. */
-export type Renderer = 'forward_plus' | 'mobile' | 'gl_compatibility';
-
-/** The project's `rendering/renderer/rendering_method` as written, which Godot's OS reports unchanged. */
-export type RenderingMethod = Renderer | (string & {});
 
 export interface PreprocessOptions {
   readonly file?: string;
@@ -40,12 +35,6 @@ const RENDERERS: Readonly<Record<Renderer, string>> = {
 function currentRenderer(method: RenderingMethod): string {
   if (method === 'forward_plus') return RENDERERS.forward_plus;
   return method === 'mobile' ? RENDERERS.mobile : RENDERERS.gl_compatibility;
-}
-
-/** The renderer that draws `method`: Forward+ for a name of no renderer, as Godot logs and draws it. */
-export function rendererOf(method: RenderingMethod): Renderer {
-  if (method === 'mobile') return 'mobile';
-  return method === 'gl_compatibility' ? 'gl_compatibility' : 'forward_plus';
 }
 
 // shader_preprocessor.cpp:752
@@ -359,3 +348,5 @@ class FilePreprocessor {
     return text;
   }
 }
+
+export type { RenderingMethod } from './renderingMethod.js';

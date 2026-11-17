@@ -125,7 +125,7 @@ export function SkyLayer({
     if (lightsKey === null) return undefined;
     // A bake samples the panorama once, so it waits for the pass to draw a live target.
     if (!isPanoramaDrawn) return undefined;
-    // A shader sky waits for the transpiler, the nodes handler, and the decoders its text may need.
+    // A shader sky waits for the transpiler, the nodes handler, and its parse options with their decoders.
     if (!sky || !shaderOptions || !isTranslatorReady) return undefined;
 
     const lights = directionalLights(scene);

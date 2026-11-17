@@ -13,7 +13,8 @@ export {
 export type { TranspiledUniform } from './uniforms/transpiledUniform.js';
 export type { UniformHint, UniformNode, UniformScope } from './language/shaderTree.js';
 export type { ShaderOptions } from './language/parseShader.js';
-export type { RenderingMethod, ShaderInclude } from './preprocessor/preprocessor.js';
+export type { ShaderInclude } from './preprocessor/preprocessor.js';
+export type { RenderingMethod } from './preprocessor/renderingMethod.js';
 export type { ShaderDecoders } from './preprocessor/decoders.js';
 export type { TranspiledFunction } from './language/emitter.js';
 export { transpileSky, type SkyDraw, type SkyOptions, type TranspiledSky } from './sky/transpileSky.js';
