@@ -4,6 +4,7 @@ import type { Node, TextureNode, UniformNode } from 'three/webgpu';
 import { parsedShader, type ParsedShader, type ShaderOptions } from '../language/parseShader.js';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import { checkTranspiled } from '../language/transpiledRows.js';
+import { withGlslTypes } from '../language/glslTypes.js';
 import { emitTemplateStage } from '../template/emitTemplate.js';
 import { compileMaterial, linkTemplateStage, type CompiledMaterial } from '../template/link.js';
 import { GODOT_VERSION } from '../language/instructionTable.generated.js';
@@ -72,7 +73,7 @@ export function transpileParsedSky(
         transpilerVersion: TRANSPILER_VERSION,
       },
       () => {
-        material ??= compileMaterial(tree, MODE_TABLES.sky!);
+        material ??= compileMaterial(withGlslTypes(tree), MODE_TABLES.sky!);
         return linkTemplateStage(SKY_TEMPLATE, stage, BACKGROUND_VARIANT, material);
       }
     );

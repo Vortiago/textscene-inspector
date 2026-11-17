@@ -538,6 +538,38 @@ const functionProbes = () =>
     (row) => row.owner === '#1829' && /^(texture|texel)\w*\(/.test(row.id) && !/ExternalOES/.test(row.id)
   ).map(functionProbe);
 
+/** Each use of a cube array's size: Godot declares an `ivec2`, and its GLSL gives an `ivec3`. */
+function cubeArraySizeProbes() {
+  const uses = [
+    ['lane', 'int probe(int lod) { return textureSize(s, lod).x; }'],
+    ['swizzle', 'ivec2 probe(int lod) { return textureSize(s, lod).yx; }'],
+    ['float-constructor', 'vec2 probe(int lod) { return vec2(textureSize(s, lod)); }'],
+    ['int-constructor', 'ivec2 probe(int lod) { return ivec2(textureSize(s, lod)); }'],
+    ['first-of-two', 'ivec4 probe(int lod) { return ivec4(textureSize(s, lod), ivec2(5, 6)); }'],
+    ['last-of-three', 'ivec4 probe(int lod) { return ivec4(1, 2, textureSize(s, lod)); }'],
+    ['before-scalar', 'ivec3 probe(int lod) { return ivec3(textureSize(s, lod), 7); }'],
+    ['scaled-lane', 'int probe(int lod) { return (textureSize(s, lod) * 2).y; }'],
+    ['vector-sum', 'int probe(int lod) { return (textureSize(s, lod) + ivec2(1)).x; }'],
+    ['component-wise-call', 'int probe(int lod) { return max(textureSize(s, lod), 1).x; }'],
+    ['equal-sizes', 'bool probe(int lod) { return textureSize(s, lod) == textureSize(s, 0); }'],
+    ['equal-vector', 'bool probe(int lod) { return textureSize(s, lod) == ivec2(4); }'],
+    ['choice', 'int probe(int lod) { return (lod > 0 ? textureSize(s, lod) : textureSize(s, 0)).x; }'],
+    ['returned', 'ivec2 probe(int lod) { return textureSize(s, lod); }'],
+    ['declared', 'ivec2 probe(int lod) { ivec2 size = textureSize(s, lod); return size; }'],
+  ];
+  return uses.map(([use, body]) =>
+    textureProbe(
+      `cubes-size-${use}`,
+      ['samplerCubeArray', 'textureSize(samplerCubeArray,int)'],
+      `uniform samplerCubeArray s;\n${body}`,
+      {
+        textures: { s: textureSpec('cubes', 4, 4, { depth: 3, isMipmapped: true }) },
+        inputs: [[0], [1], [2]],
+      }
+    )
+  );
+}
+
 /** The screen textures Godot 4 removed: it refuses each name with its own message. */
 function removedTextureProbes() {
   return ['SCREEN_TEXTURE', 'DEPTH_TEXTURE', 'NORMAL_ROUGHNESS_TEXTURE'].map((name) =>
@@ -551,6 +583,7 @@ function removedTextureProbes() {
 
 export const TEXTURE_PROBES = [
   ...removedTextureProbes(),
+  ...cubeArraySizeProbes(),
   ...filterProbes(),
   ...defaultProbes(),
   ...levelProbes(),

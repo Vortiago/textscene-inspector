@@ -15,8 +15,8 @@ Godot's `samplerCubeArray` reads a `CubemapArray`. WebGL 2 has no cube array tex
 - The level comes from the call, or from the derivatives of the direction in texels of the face, with the bias. A filter without `_mipmap` reads level 0. A filter with it blends two levels, or reads the nearest level where the sampler's mipmap filter is nearest.
 - A linear filter reads four texels. A texel past a face edge is read on the next face. At a cube corner, the three other texels share the corner texel's weight.
 - The node reads the filter of the texture bound when three builds the program, as `IntegerReadNode` does.
-- `textureSize(samplerCubeArray, int)` is refused. Godot declares an `ivec2`, its GLSL gives an `ivec3`, and the shader does not compile in Godot.
-- The port lives in `shaders/language/cubeArray.ts`, `cubeFaces.ts` and `textureQueries.ts`.
+- `textureSize(samplerCubeArray, int)` gives GLSL's `ivec3(width, height, cubes)`, though Godot declares an `ivec2`. Godot writes the call through, so GLSL's type rules decide each use. `glslTypes.ts` follows the `ivec3` through swizzles, constructors, operators and calls, and refuses each use that GLSL refuses.
+- The port lives in `shaders/language/cubeArray.ts`, `cubeFaces.ts`, `textureQueries.ts`, `textureSize.ts` and `glslTypes.ts`.
 
 ## Consequences
 

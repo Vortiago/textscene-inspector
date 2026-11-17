@@ -5,10 +5,10 @@ import { CubeArrayReadNode, type CubeArrayLevel } from './cubeArray.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import { gathered } from './textureGather.js';
 import { levelCountOf, levelOfDetail } from './textureQueries.js';
-import { SizeNode } from './textureSize.js';
+import { cubeArraySize, SizeNode } from './textureSize.js';
 import { TextureBuiltNode } from './textureBuiltNode.js';
 import { roundedLayer } from './textureLayer.js';
-import { swizzles as lanes } from './compositeParts.js';
+import { swizzles } from './compositeParts.js';
 import { textureKindOf } from './types.js';
 
 /** A gradient of its own type: three builds every `textureGrad` gradient as `vec2` (`TextureNode.js:699`). */
@@ -35,12 +35,12 @@ interface Coordinate {
 /** A 2D array's coordinate keeps its layer in its last lane: `vec3(uv, layer)` or `ivec3(texel, layer)`. */
 function coordinateOf(sampler: string, coordinate: Node): Coordinate {
   if (textureKindOf(sampler) !== 'layers') return { uv: coordinate };
-  return { uv: lanes(coordinate).xy, layer: lanes(coordinate).z };
+  return { uv: swizzles(coordinate).xy, layer: swizzles(coordinate).z };
 }
 
 /** `textureProj`'s coordinate: the lanes before the last, divided by the last (`vec3` or `vec4`). */
 function projected(sampler: string, coordinate: Node, type: string): Node {
-  const lane = lanes(coordinate);
+  const lane = swizzles(coordinate);
   const divisor = type === 'vec3' ? lane.z : lane.w;
   const isVolume = textureKindOf(sampler) === 'volume';
   return TSL.div((isVolume ? lane.xyz : lane.xy) as never, divisor as never) as unknown as Node;
@@ -84,7 +84,10 @@ const CALLS: Readonly<Record<string, TextureCall>> = {
 /** The calls that read no texel, over the texture and the operand after it. */
 const QUERIES: Readonly<Record<string, (texture: TextureNode, operand: Node, row: InstructionRow) => Node>> =
   {
-    textureSize: (texture, level, row) => new SizeNode(texture, level, row.returns!) as unknown as Node,
+    textureSize: (texture, level, row) =>
+      textureKindOf(row.args![0]!) === 'cubes'
+        ? cubeArraySize(texture, level)
+        : (new SizeNode(texture, level, row.returns!) as unknown as Node),
     textureQueryLevels: (texture) => levelCountOf(texture) as unknown as Node,
     textureQueryLod: (texture, coordinate, row) => levelOfDetail(row.args![0]!, texture, coordinate),
   };
@@ -110,10 +113,11 @@ export class SamplerChoice {
 /** The node of texture function `name` of `row`: its first operand is the sampler's texture node. */
 export function textureCall(name: string, row: InstructionRow, operands: readonly Node[]): Node {
   const [sampler, ...rest] = operands;
-  if (!(sampler instanceof SamplerChoice)) return elementCall(name, row, operands);
+  const read = readerOf(name, row, rest);
+  if (!(sampler instanceof SamplerChoice)) return read(sampler as TextureNode);
   // Each element's call, picked by the index: GLSL ES 3.0 indexes a sampler array by a constant only.
   const { elements, index } = sampler;
-  const calls = elements.map((element) => elementCall(name, row, [element, ...rest]));
+  const calls = elements.map(read);
   return calls
     .slice(0, -1)
     .reduceRight<Node>(
@@ -127,12 +131,12 @@ export function textureCall(name: string, row: InstructionRow, operands: readonl
     );
 }
 
-function elementCall(name: string, row: InstructionRow, operands: readonly Node[]): Node {
-  const [texture, operand] = operands as [TextureNode, Node];
+/** The call over one texture, with the arguments after the sampler, which every element shares. */
+function readerOf(name: string, row: InstructionRow, rest: readonly Node[]): (texture: TextureNode) => Node {
   const query = QUERIES[name];
-  if (query) return query(texture, operand, row);
-  if (textureKindOf(row.args![0]!) === 'cubes') return cubeArrayCall(name, operands);
-  return asSamplerReads(sampledCall(name, row, operands), row.returns!, texture);
+  if (query) return (texture) => query(texture, rest[0]!, row);
+  if (textureKindOf(row.args![0]!) === 'cubes') return cubeArrayReader(name, rest);
+  return (texture) => asSamplerReads(sampledCall(name, row, [texture, ...rest]), row.returns!, texture);
 }
 
 /** A value held in a variable where the call stands: the composite reads it inside branches. */
@@ -143,20 +147,23 @@ const CUBE_ARRAY_LEVELS: Readonly<
   Record<string, (direction: Node, rest: readonly Node[]) => CubeArrayLevel>
 > = {
   texture: (direction, [bias]) => ({
-    kind: 'gradients',
+    kind: 'implicit',
     dx: heldHere(TSL.dFdx(direction as never) as unknown as Node),
     dy: heldHere(TSL.dFdy(direction as never) as unknown as Node),
     bias,
-    isImplicit: true,
   }),
   textureLod: (_, [level]) => ({ kind: 'explicit', level: level! }),
   textureGrad: (_, [dx, dy]) => ({ kind: 'gradients', dx: heldHere(dx!), dy: heldHere(dy!) }),
 };
 
-function cubeArrayCall(name: string, [texture, coordinate, ...rest]: readonly Node[]): Node {
+/** One coordinate and level for every element of a sampler array. */
+function cubeArrayReader(
+  name: string,
+  [coordinate, ...rest]: readonly Node[]
+): (texture: TextureNode) => Node {
   const held = heldHere(coordinate!);
-  const level = CUBE_ARRAY_LEVELS[name]!(lanes(held).xyz, rest);
-  return new CubeArrayReadNode(texture as TextureNode, held, level) as unknown as Node;
+  const level = CUBE_ARRAY_LEVELS[name]!(swizzles(held).xyz, rest);
+  return (texture) => new CubeArrayReadNode(texture, held, level) as unknown as Node;
 }
 
 function sampledCall(name: string, row: InstructionRow, operands: readonly Node[]): Node {
@@ -184,7 +191,7 @@ class IntegerReadNode extends TextureBuiltNode<boolean> {
     super(returns);
   }
 
-  protected override factsOf(): boolean {
+  protected override keyOf(): boolean {
     return isInteger(this.texture);
   }
 

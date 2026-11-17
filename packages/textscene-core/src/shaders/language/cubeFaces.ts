@@ -2,6 +2,9 @@ import * as TSL from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { swizzles, untyped } from './compositeParts.js';
 
+/** A cube array holds each cube as six layers of a 2D array, in Godot's face order. */
+export const FACES_PER_CUBE = 6;
+
 /** The face a cube direction picks, in the axes of Vulkan's cube face table. */
 export interface CubeFace {
   /** The unit direction of the face's centre. */

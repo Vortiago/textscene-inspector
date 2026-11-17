@@ -9,7 +9,11 @@ import {
 } from 'three';
 import { float, int, ivec2, ivec3, texture, texture3D, vec2, vec3, vec4 } from 'three/tsl';
 import { NodeMaterial, type Node, type NodeFrame, type TextureNode } from 'three/webgpu';
-import { generatedFragmentShader, generatedVertexShader } from '../generatedShader.testkit.js';
+import {
+  generatedFragmentShader,
+  generatedProgram,
+  generatedVertexShader,
+} from '../generatedShader.testkit.js';
 import { builtInCall } from './emitBuiltIn.js';
 import { instruction } from './instructions.js';
 import { SamplerChoice } from './textureCalls.js';
@@ -67,6 +71,30 @@ describe('builtInCall of a texture function', () => {
     const glsl = generatedVertexShader((read as unknown as { xyz: Node }).xyz);
     expect(glsl).toContain('texelFetch(');
     expect(glsl).not.toMatch(/dFd[xy]/);
+  });
+
+  it('reads the implicit level of one cube array read in each stage that reaches it', () => {
+    const cubes = texture(new DataArrayTexture(new Uint8Array(4 * 6), 1, 1, 6)) as unknown as Node;
+    const operands = [cubes, vec4(1, 0.2, -0.3, 0) as unknown as Node];
+    const read = builtInCall('texture', instruction('texture(samplerCubeArray,vec4)')!, operands);
+    const { vertex, fragment } = generatedProgram({
+      positionNode: (read as unknown as { xyz: Node }).xyz,
+      fragmentNode: read,
+    });
+    expect(vertex).not.toMatch(/dFd[xy]/);
+    expect(fragment).toMatch(/dFd[xy]/);
+  });
+
+  it('holds the derivatives of the direction in one variable for every cube array of a sampler array', () => {
+    const cubes = () =>
+      texture(new DataArrayTexture(new Uint8Array(4 * 6), 1, 1, 6)) as unknown as TextureNode;
+    const choice = new SamplerChoice(
+      [cubes(), cubes()],
+      int(1).toVar() as unknown as Node
+    ) as unknown as Node;
+    const glsl = glslOf('texture(samplerCubeArray,vec4)', [choice, vec4(1, 0.2, -0.3, 0) as unknown as Node]);
+    const variables = new Set([...glsl.matchAll(/(\w+) = dFdx\(/g)].map(([, name]) => name));
+    expect(variables.size).toBe(1);
   });
 
   it('samples a 3D texture with texture', () => {

@@ -53,7 +53,16 @@ export function generatedFragmentShader(fragmentNode: Node): string {
 
 /** The vertex shader of a material whose vertex position is `positionNode`. */
 export function generatedVertexShader(positionNode: Node): string {
+  return generatedProgram({ positionNode }).vertex;
+}
+
+/** Both stages of a material whose vertex position and output are the nodes given. */
+export function generatedProgram(nodes: { positionNode?: Node; fragmentNode?: Node }): {
+  vertex: string;
+  fragment: string;
+} {
   const material = new NodeMaterial();
-  material.positionNode = positionNode;
-  return builtProgram(material).vertexShader ?? '';
+  Object.assign(material, nodes);
+  const builder = builtProgram(material);
+  return { vertex: builder.vertexShader ?? '', fragment: builder.fragmentShader ?? '' };
 }

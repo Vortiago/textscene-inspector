@@ -16,7 +16,7 @@ Godot 4.6.3-stable (official), probed on llvmpipe (LLVM 20.1.2). Each table show
 
 ## Sampler types
 
-A sampler reads a 2D texture, a 2D array, a 3D texture, a cube or a cube array, of floats, ints (`isampler`) or uints (`usampler`). WebGL 2 has no cube array, so a `samplerCubeArray` reads a three.js `DataArrayTexture` with six layers to a cube, in Godot's face order +x, -x, +y, -y, +z, -z. Its read follows Vulkan's cube sampling: a filter footprint past a face edge reads the next face, and at a cube corner the three other texels share the corner's weight. The node of a 2D array, a cube array or a 3D texture uploads every level of the texture, which three uploads at level 0 only. Godot refuses `SCREEN_TEXTURE`, `DEPTH_TEXTURE` and `NORMAL_ROUGHNESS_TEXTURE` with its own message. A sampler can be an argument of a function: the transpiler writes the function once for each set of textures its calls pass.
+A sampler reads a 2D texture, a 2D array, a 3D texture, a cube or a cube array, of floats, ints (`isampler`) or uints (`usampler`). WebGL 2 has no cube array, so a `samplerCubeArray` reads a three.js `DataArrayTexture` with six layers to a cube, in Godot's face order +x, -x, +y, -y, +z, -z. Its read follows Vulkan's cube sampling: a filter footprint past a face edge reads the next face, and at a cube corner the three other texels share the corner's weight. On WebGLRenderer, the node of a 2D array, a cube array or a 3D texture uploads every level of the texture, which three uploads at level 0 only. WebGPURenderer is untested (#1788). Godot refuses `SCREEN_TEXTURE`, `DEPTH_TEXTURE` and `NORMAL_ROUGHNESS_TEXTURE` with its own message. A sampler can be an argument of a function: the transpiler writes the function once for each set of textures its calls pass.
 
 The transpiler emits a `texture`, `texture3D` or cube texture node per element, and a composite of texel loads for a cube array. Rows: `sampler2D`, `isampler2D`, `usampler2D`, `sampler2DArray`, `isampler2DArray`, `usampler2DArray`, `sampler3D`, `isampler3D`, `usampler3D`, `samplerCube`, `samplerCubeArray`, `samplerExternalOES`. Godot source: `servers/rendering/shader_language.h:230`.
 
@@ -48,6 +48,171 @@ vec4 probe() { return texture(NORMAL_ROUGHNESS_TEXTURE, vec2(0.5)); }
 
 Godot does not compile this shader: Godot refuses it at line 1, `NORMAL_ROUGHNESS_TEXTURE has been removed in favor of using hint_normal_roughness_texture with a uniform.
 To continue with minimal code changes add 'uniform sampler2D NORMAL_ROUGHNESS_TEXTURE : hint_normal_roughness_texture, filter_linear_mipmap;' near the top of your shader.`. The transpiler refuses it too.
+
+### Probe `texture-cubes-size-lane`, 3 input rows
+
+```glsl
+uniform samplerCubeArray s;
+int probe(int lod) { return textureSize(s, lod).x; }
+```
+
+| `lod` | Godot gives |
+| --- | --- |
+| `0` | `4` |
+| `1` | `4` |
+
+### Probe `texture-cubes-size-swizzle`, 3 input rows
+
+```glsl
+uniform samplerCubeArray s;
+ivec2 probe(int lod) { return textureSize(s, lod).yx; }
+```
+
+| `lod` | Godot gives |
+| --- | --- |
+| `0` | `(4, 4)` |
+| `1` | `(4, 4)` |
+
+### Probe `texture-cubes-size-float-constructor`, 3 input rows
+
+```glsl
+uniform samplerCubeArray s;
+vec2 probe(int lod) { return vec2(textureSize(s, lod)); }
+```
+
+| `lod` | Godot gives |
+| --- | --- |
+| `0` | `(4.0, 4.0)` |
+| `1` | `(4.0, 4.0)` |
+
+### Probe `texture-cubes-size-int-constructor`, 3 input rows
+
+```glsl
+uniform samplerCubeArray s;
+ivec2 probe(int lod) { return ivec2(textureSize(s, lod)); }
+```
+
+| `lod` | Godot gives |
+| --- | --- |
+| `0` | `(4, 4)` |
+| `1` | `(4, 4)` |
+
+### Probe `texture-cubes-size-first-of-two`, 3 input rows
+
+```glsl
+uniform samplerCubeArray s;
+ivec4 probe(int lod) { return ivec4(textureSize(s, lod), ivec2(5, 6)); }
+```
+
+| `lod` | Godot gives |
+| --- | --- |
+| `0` | `(4, 4, 3, 5)` |
+| `1` | `(2, 2, 3, 5)` |
+
+### Probe `texture-cubes-size-last-of-three`, 3 input rows
+
+```glsl
+uniform samplerCubeArray s;
+ivec4 probe(int lod) { return ivec4(1, 2, textureSize(s, lod)); }
+```
+
+| `lod` | Godot gives |
+| --- | --- |
+| `0` | `(1, 2, 4, 4)` |
+| `1` | `(1, 2, 2, 2)` |
+
+### Probe `texture-cubes-size-before-scalar`, 0 input rows
+
+```glsl
+uniform samplerCubeArray s;
+ivec3 probe(int lod) { return ivec3(textureSize(s, lod), 7); }
+```
+
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'constructor' : too many arguments`. The transpiler refuses it too.
+
+### Probe `texture-cubes-size-scaled-lane`, 3 input rows
+
+```glsl
+uniform samplerCubeArray s;
+int probe(int lod) { return (textureSize(s, lod) * 2).y; }
+```
+
+| `lod` | Godot gives |
+| --- | --- |
+| `0` | `8` |
+| `1` | `8` |
+
+### Probe `texture-cubes-size-vector-sum`, 0 input rows
+
+```glsl
+uniform samplerCubeArray s;
+int probe(int lod) { return (textureSize(s, lod) + ivec2(1)).x; }
+```
+
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'+' :  wrong operand types: no operation '+' exists that takes a left-hand operand of type ' global highp 3-component vector of int' and a right operand of type ' const 2-component vector of int' (or there is no acceptable conversion)`. The transpiler refuses it too.
+
+### Probe `texture-cubes-size-component-wise-call`, 3 input rows
+
+```glsl
+uniform samplerCubeArray s;
+int probe(int lod) { return max(textureSize(s, lod), 1).x; }
+```
+
+| `lod` | Godot gives |
+| --- | --- |
+| `0` | `4` |
+| `1` | `4` |
+
+### Probe `texture-cubes-size-equal-sizes`, 3 input rows
+
+```glsl
+uniform samplerCubeArray s;
+bool probe(int lod) { return textureSize(s, lod) == textureSize(s, 0); }
+```
+
+| `lod` | Godot gives |
+| --- | --- |
+| `0` | `true` |
+| `1` | `true` |
+
+### Probe `texture-cubes-size-equal-vector`, 0 input rows
+
+```glsl
+uniform samplerCubeArray s;
+bool probe(int lod) { return textureSize(s, lod) == ivec2(4); }
+```
+
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'==' :  wrong operand types: no operation '==' exists that takes a left-hand operand of type ' global highp 3-component vector of int' and a right operand of type ' const 2-component vector of int' (or there is no acceptable conversion)`. The transpiler refuses it too.
+
+### Probe `texture-cubes-size-choice`, 3 input rows
+
+```glsl
+uniform samplerCubeArray s;
+int probe(int lod) { return (lod > 0 ? textureSize(s, lod) : textureSize(s, 0)).x; }
+```
+
+| `lod` | Godot gives |
+| --- | --- |
+| `0` | `4` |
+| `1` | `4` |
+
+### Probe `texture-cubes-size-returned`, 0 input rows
+
+```glsl
+uniform samplerCubeArray s;
+ivec2 probe(int lod) { return textureSize(s, lod); }
+```
+
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'return' : cannot convert return value to function return type`. The transpiler refuses it too.
+
+### Probe `texture-cubes-size-declared`, 0 input rows
+
+```glsl
+uniform samplerCubeArray s;
+ivec2 probe(int lod) { ivec2 size = textureSize(s, lod); return size; }
+```
+
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'=' :  cannot convert from ' global highp 3-component vector of int' to ' temp highp 2-component vector of int'`. The transpiler refuses it too.
 
 ### Probe `texture-layers-lod-rg8`, 3 input rows
 
@@ -523,7 +688,7 @@ vec4 probe(vec2 uv, float lod) { return textureLod(s, uv, lod); }
 
 ## Texture functions
 
-`texture` samples at a coordinate, with an optional bias. `textureLod` samples a level, `textureGrad` samples with gradients and `texelFetch` reads one texel of a level. `textureSize` gives the size of a level, and `textureQueryLevels` the level count of the texture. `textureQueryLod` gives the level of detail from the derivatives of the coordinate in texels, as Vulkan defines it. `textureGather` reads one channel of the four texels around the coordinate. A cube gathers on the face the direction picks, and a texel past the edge of the face comes from the next face. A 2D array and a cube array keep the layer in the last lane of the coordinate. `textureSize` of a cube array is refused: Godot declares an `ivec2`, its GLSL gives an `ivec3`, and the shader does not compile in Godot.
+`texture` samples at a coordinate, with an optional bias. `textureLod` samples a level, `textureGrad` samples with gradients and `texelFetch` reads one texel of a level. `textureSize` gives the size of a level, and `textureQueryLevels` the level count of the texture. `textureQueryLod` gives the level of detail from the derivatives of the coordinate in texels, as Vulkan defines it. `textureGather` reads one channel of the four texels around the coordinate. A cube gathers on the face the direction picks, and a texel past the edge of the face comes from the next face. A 2D array and a cube array keep the layer in the last lane of the coordinate. `textureSize` of a cube array gives `ivec3(width, height, cubes)`, as the GLSL of Godot does, though Godot declares an `ivec2`. A swizzle, a constructor that uses every argument, a component-wise operator or call, and a choice take it. A return, a declaration, or an operator with an `ivec2` is refused, as GLSL refuses it in Godot.
 
 The transpiler emits the `sample`, `bias`, `level`, `grad`, `load` and `gather` nodes and `textureSize` of a texture node, a uniform for the level count, and a composite for the level of detail and a cube gather. Rows: `textureSize(sampler2D,int)`, `textureSize(isampler2D,int)`, `textureSize(usampler2D,int)`, `textureSize(sampler2DArray,int)`, `textureSize(isampler2DArray,int)`, `textureSize(usampler2DArray,int)`, `textureSize(sampler3D,int)`, `textureSize(isampler3D,int)`, `textureSize(usampler3D,int)`, `textureSize(samplerCube,int)`, `textureSize(samplerCubeArray,int)`, `texture(sampler2D,vec2)`, `texture(sampler2D,vec2,float)`, `texture(usampler2D,vec2)`, `texture(usampler2D,vec2,float)`, `texture(isampler2D,vec2)`, `texture(isampler2D,vec2,float)`, `texture(sampler2DArray,vec3)`, `texture(sampler2DArray,vec3,float)`, `texture(usampler2DArray,vec3)`, `texture(usampler2DArray,vec3,float)`, `texture(isampler2DArray,vec3)`, `texture(isampler2DArray,vec3,float)`, `texture(sampler3D,vec3)`, `texture(sampler3D,vec3,float)`, `texture(usampler3D,vec3)`, `texture(usampler3D,vec3,float)`, `texture(isampler3D,vec3)`, `texture(isampler3D,vec3,float)`, `texture(samplerCube,vec3)`, `texture(samplerCube,vec3,float)`, `texture(samplerCubeArray,vec4)`, `texture(samplerCubeArray,vec4,float)`, `texture(samplerExternalOES,vec2)`, `texture(samplerExternalOES,vec2,float)`, `textureProj(sampler2D,vec3)`, `textureProj(sampler2D,vec4)`, `textureProj(sampler2D,vec3,float)`, `textureProj(sampler2D,vec4,float)`, `textureProj(isampler2D,vec3)`, `textureProj(isampler2D,vec4)`, `textureProj(isampler2D,vec3,float)`, `textureProj(isampler2D,vec4,float)`, `textureProj(usampler2D,vec3)`, `textureProj(usampler2D,vec4)`, `textureProj(usampler2D,vec3,float)`, `textureProj(usampler2D,vec4,float)`, `textureProj(sampler3D,vec4)`, `textureProj(sampler3D,vec4,float)`, `textureProj(isampler3D,vec4)`, `textureProj(isampler3D,vec4,float)`, `textureProj(usampler3D,vec4)`, `textureProj(usampler3D,vec4,float)`, `textureLod(sampler2D,vec2,float)`, `textureLod(isampler2D,vec2,float)`, `textureLod(usampler2D,vec2,float)`, `textureLod(sampler2DArray,vec3,float)`, `textureLod(isampler2DArray,vec3,float)`, `textureLod(usampler2DArray,vec3,float)`, `textureLod(sampler3D,vec3,float)`, `textureLod(isampler3D,vec3,float)`, `textureLod(usampler3D,vec3,float)`, `textureLod(samplerCube,vec3,float)`, `textureLod(samplerCubeArray,vec4,float)`, `texelFetch(sampler2D,ivec2,int)`, `texelFetch(isampler2D,ivec2,int)`, `texelFetch(usampler2D,ivec2,int)`, `texelFetch(sampler2DArray,ivec3,int)`, `texelFetch(isampler2DArray,ivec3,int)`, `texelFetch(usampler2DArray,ivec3,int)`, `texelFetch(sampler3D,ivec3,int)`, `texelFetch(isampler3D,ivec3,int)`, `texelFetch(usampler3D,ivec3,int)`, `textureProjLod(sampler2D,vec3,float)`, `textureProjLod(sampler2D,vec4,float)`, `textureProjLod(isampler2D,vec3,float)`, `textureProjLod(isampler2D,vec4,float)`, `textureProjLod(usampler2D,vec3,float)`, `textureProjLod(usampler2D,vec4,float)`, `textureProjLod(sampler3D,vec4,float)`, `textureProjLod(isampler3D,vec4,float)`, `textureProjLod(usampler3D,vec4,float)`, `textureGrad(sampler2D,vec2,vec2,vec2)`, `textureGrad(isampler2D,vec2,vec2,vec2)`, `textureGrad(usampler2D,vec2,vec2,vec2)`, `textureGrad(sampler2DArray,vec3,vec2,vec2)`, `textureGrad(isampler2DArray,vec3,vec2,vec2)`, `textureGrad(usampler2DArray,vec3,vec2,vec2)`, `textureGrad(sampler3D,vec3,vec3,vec3)`, `textureGrad(isampler3D,vec3,vec3,vec3)`, `textureGrad(usampler3D,vec3,vec3,vec3)`, `textureGrad(samplerCube,vec3,vec3,vec3)`, `textureGrad(samplerCubeArray,vec4,vec3,vec3)`, `textureProjGrad(sampler2D,vec3,vec2,vec2)`, `textureProjGrad(sampler2D,vec4,vec2,vec2)`, `textureProjGrad(isampler2D,vec3,vec2,vec2)`, `textureProjGrad(isampler2D,vec4,vec2,vec2)`, `textureProjGrad(usampler2D,vec3,vec2,vec2)`, `textureProjGrad(usampler2D,vec4,vec2,vec2)`, `textureProjGrad(sampler3D,vec4,vec3,vec3)`, `textureProjGrad(isampler3D,vec4,vec3,vec3)`, `textureProjGrad(usampler3D,vec4,vec3,vec3)`, `textureGather(sampler2D,vec2)`, `textureGather(isampler2D,vec2)`, `textureGather(usampler2D,vec2)`, `textureGather(sampler2D,vec2,int)`, `textureGather(isampler2D,vec2,int)`, `textureGather(usampler2D,vec2,int)`, `textureGather(sampler2DArray,vec3)`, `textureGather(isampler2DArray,vec3)`, `textureGather(usampler2DArray,vec3)`, `textureGather(sampler2DArray,vec3,int)`, `textureGather(isampler2DArray,vec3,int)`, `textureGather(usampler2DArray,vec3,int)`, `textureGather(samplerCube,vec3)`, `textureGather(samplerCube,vec3,int)`, `textureQueryLod(sampler2D,vec2)`, `textureQueryLod(isampler2D,vec2)`, `textureQueryLod(usampler2D,vec2)`, `textureQueryLod(sampler2DArray,vec2)`, `textureQueryLod(isampler2DArray,vec2)`, `textureQueryLod(usampler2DArray,vec2)`, `textureQueryLod(sampler3D,vec3)`, `textureQueryLod(isampler3D,vec3)`, `textureQueryLod(usampler3D,vec3)`, `textureQueryLod(samplerCube,vec3)`, `textureQueryLevels(sampler2D)`, `textureQueryLevels(isampler2D)`, `textureQueryLevels(usampler2D)`, `textureQueryLevels(sampler2DArray)`, `textureQueryLevels(isampler2DArray)`, `textureQueryLevels(usampler2DArray)`, `textureQueryLevels(sampler3D)`, `textureQueryLevels(isampler3D)`, `textureQueryLevels(usampler3D)`, `textureQueryLevels(samplerCube)`. Godot source: `servers/rendering/shader_language.cpp:3167`.
 

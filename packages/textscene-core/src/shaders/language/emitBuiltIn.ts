@@ -1,6 +1,7 @@
 import * as TSL from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { compositeOf } from './builtInComposites.js';
+import { glslReturnOf } from './glslTypes.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import { isTextureFunction, textureCall } from './textureCalls.js';
 
@@ -25,7 +26,7 @@ export function builtInCall(name: string, row: InstructionRow, operands: readonl
     ? textureCall(name, row, operands)
     : functionCall(name, row.args, operands);
   if (row.returns === 'void') return node; // Its last write, which the statement drops.
-  return TSL.convert(node as never, row.returns) as unknown as Node;
+  return TSL.convert(node as never, glslReturnOf(row)!) as unknown as Node;
 }
 
 function functionCall(name: string, args: readonly string[], operands: readonly Node[]): Node {
