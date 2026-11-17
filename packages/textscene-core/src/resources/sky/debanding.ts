@@ -7,5 +7,7 @@
 import type { SkyProperties } from './types';
 
 export function isDebanded(material: SkyProperties): boolean {
-  return material.kind !== 'panorama' && material.use_debanding;
+  // A shader sky's own `use_debanding` runs inside the transpiled sky template.
+  if (material.kind === 'panorama' || material.kind === 'shader') return false;
+  return material.use_debanding;
 }

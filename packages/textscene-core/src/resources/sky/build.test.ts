@@ -180,7 +180,7 @@ describe('buildSkyEnvironment panorama wiring', () => {
 
   it('draws the background from the panorama the radiance bakes from', async () => {
     const { env, sampled } = await build(new THREE.Texture());
-    expect(env!.background!.material.uniforms.source_panorama!.value).toBe(sampled);
+    expect((env!.background!.material as THREE.ShaderMaterial).uniforms.source_panorama!.value).toBe(sampled);
   });
 
   it('frees its clone with the environment, as the background samples it each frame', async () => {

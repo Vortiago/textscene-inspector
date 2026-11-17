@@ -159,6 +159,7 @@ export function createFakeResourceLoader({ loadFace }: { loadFace?: FaceLoader }
   const textures = makeFakeProcessor<THREE.Texture>(eventBus, 'texture');
   const textures3D = makeFakeProcessor<THREE.Data3DTexture>(eventBus, 'texture3d');
   const textureArrays = makeFakeProcessor<THREE.DataArrayTexture>(eventBus, 'texture2darray');
+  const cubemaps = makeFakeProcessor<THREE.CubeTexture>(eventBus, 'cubemap');
   const glbMeshes = taggingLoadedGlbs(makeFakeProcessor<THREE.Object3D>(eventBus, 'glb'));
   const scenes = makeFakeProcessor<TscnScene>(eventBus, 'scene');
   const resources = makeFakeProcessor<ParsedResource>(eventBus, 'resource');
@@ -173,6 +174,7 @@ export function createFakeResourceLoader({ loadFace }: { loadFace?: FaceLoader }
     texture: textures,
     texture3d: textures3D,
     texture2darray: textureArrays,
+    cubemap: cubemaps,
     glb: glbMeshes,
     scene: scenes,
     resource: resources,

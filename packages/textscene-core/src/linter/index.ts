@@ -181,6 +181,7 @@ import '../resources/formats/image3d/linterValidators.js';
 import '../resources/formats/image2darray/linterValidators.js';
 import '../resources/lightmapgidata/linterValidators.js';
 import '../resources/textures/imagetexture3d/linterValidators.js';
+import '../resources/textures/cubemap/linterValidators.js';
 import '../resources/resource/linterValidators.js';
 import '../resources/styles/stylebox/linterValidators.js';
 import '../resources/shapes/shape2d/linterValidators.js';

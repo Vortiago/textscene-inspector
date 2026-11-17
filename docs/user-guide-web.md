@@ -75,6 +75,17 @@ Click **Show Source** in the toolbar to open the Source pane. The scene renders 
 
 If the file cannot be parsed, a red banner shows the error. The app keeps working.
 
+## Sky shaders
+
+A WorldEnvironment whose Sky has a ShaderMaterial draws the shader as Godot does. The shader draws the background, and the previewer bakes it into the sky's radiance for the ambient light and the reflections. The previewer loads its shader translator only for a scene with a sky shader.
+
+- If Godot does not compile the shader, the previewer draws Godot's default black sky. The Inspector of the WorldEnvironment shows Godot's error and its line under **Shader Error**.
+- If the previewer does not translate a part of the shader yet, it also draws the default sky. The message under **Shader Error** names the part.
+- An `#if` can call `decompress` in Zstandard or Brotli mode. The previewer loads its decoders only for a shader that names `decompress`.
+- The reflections and the ambient light show the sky at the first frame. A sky that moves with `TIME` or with the camera moves only in the background (#1779).
+
+`TIME` follows the **Timeline** while it shows an AnimationPlayer. Play advances `TIME`, pause holds it, a seek sets it to the playhead, and stop sets it to 0. With no AnimationPlayer, `TIME` advances every frame, as in a running game. `TIME` wraps at the project setting `rendering/limits/time/time_rollover_secs`, 3600 seconds by default. Drop `project.godot` with the scene to use another value.
+
 ## On a phone
 
 The page fits a phone screen. The layout also applies to a narrow VS Code preview tab.

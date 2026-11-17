@@ -10,6 +10,7 @@ import {
   importLightmapUnwrap,
   importNodeLayers,
   importRootScale,
+  importCubemap,
   importTexture2DArraySlices,
   importTexture3DSlices,
   importTextureOptions,
@@ -496,6 +497,38 @@ describe('importTexture2DArraySlices', () => {
 
   it("takes the importer's 8 for a count the sidecar omits (edge case)", () => {
     expect(importTexture2DArraySlices(sidecar('2d_array_texture'))).toEqual({ horizontal: 8, vertical: 8 });
+  });
+});
+
+describe('importCubemap', () => {
+  const sidecar = (importer: string, ...params: string[]) =>
+    parseImportFile([`[remap]`, '', `importer="${importer}"`, '', '[params]', '', ...params].join('\n'));
+
+  it('reads the slices of the arrangement a cubemap sidecar names', () => {
+    expect(importCubemap(sidecar('cubemap_texture', 'slices/arrangement=3'))?.slices).toEqual({
+      horizontal: 6,
+      vertical: 1,
+    });
+  });
+
+  it("takes the importer's 2x3 for an arrangement the sidecar omits", () => {
+    expect(importCubemap(sidecar('cubemap_texture'))?.slices).toEqual({ horizontal: 2, vertical: 3 });
+  });
+
+  it('reads whether the import generates mipmaps', () => {
+    expect(importCubemap(sidecar('cubemap_texture', 'mipmaps/generate=false'))?.hasMipmaps).toBe(false);
+  });
+
+  it("takes the importer's mipmaps for a sidecar that omits them", () => {
+    expect(importCubemap(sidecar('cubemap_texture'))?.hasMipmaps).toBe(true);
+  });
+
+  it('imports no cubemap under another importer (error case)', () => {
+    expect(importCubemap(sidecar('3d_texture', 'slices/arrangement=1'))).toBeNull();
+  });
+
+  it('imports nothing for an arrangement past 6x1, which leaves Godot no slices (edge case)', () => {
+    expect(importCubemap(sidecar('cubemap_texture', 'slices/arrangement=4'))).toBeNull();
   });
 });
 

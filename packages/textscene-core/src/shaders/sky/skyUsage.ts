@@ -1,0 +1,50 @@
+import type { ShaderNode } from '../language/shaderTree.js';
+import { everyExpressionIn } from '../language/treeWalk.js';
+import { SKY_LIGHT_BUILT_IN } from '../../godot/rendering/environment/skyShader.js';
+import { isSamplerType, textureKindOf, type TextureKind } from '../language/types.js';
+
+/** What a sky shader reads that decides how Godot draws, bakes and samples it (`sky.cpp:70-103`). */
+export interface SkyUsage {
+  /** Any `LIGHTn_*`: Godot then hands the sky the scene's directional lights (`sky.cpp:1055`). */
+  readonly light: boolean;
+  /** Each sampler uniform by name. */
+  readonly samplers: Readonly<Record<string, SkySampler>>;
+}
+
+export interface SkySampler {
+  /** The texture the sampler reads: a Cubemap for `samplerCube`. */
+  readonly kind: TextureKind;
+  /** `source_color`, which decodes an sRGB texture. */
+  readonly isColor: boolean;
+}
+
+const NO_USAGE: SkyUsage = { light: false, samplers: {} };
+
+/** What `tree` reads, as Godot's compiler flags it, or nothing for a sky that draws Godot's default sky. */
+export function skyUsage(tree: ShaderNode | null): SkyUsage {
+  if (tree === null) return NO_USAGE;
+  const names = builtInsRead(tree);
+  return {
+    light: [...names].some((name) => SKY_LIGHT_BUILT_IN.test(name)),
+    samplers: samplersOf(tree),
+  };
+}
+
+function samplersOf(tree: ShaderNode): Record<string, SkySampler> {
+  const samplers = tree.uniforms.filter((uniform) => isSamplerType(uniform.type));
+  return Object.fromEntries(
+    samplers.map((uniform) => [
+      uniform.name,
+      { kind: textureKindOf(uniform.type), isColor: uniform.usesColor },
+    ])
+  );
+}
+
+/** Every function's, as Godot's compiler writes the code of each (`shader_compiler.cpp:768-774`). */
+function builtInsRead(tree: ShaderNode): Set<string> {
+  const names = new Set<string>();
+  for (const definition of tree.functions)
+    for (const expression of everyExpressionIn(definition.body))
+      if (expression.kind === 'variable' && expression.builtIn) names.add(expression.name);
+  return names;
+}

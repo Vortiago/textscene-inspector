@@ -18,6 +18,7 @@ export type ResourceBusType =
   | 'texture'
   | 'texture3d'
   | 'texture2darray'
+  | 'cubemap'
   | 'scene'
   | 'glb'
   | 'resource'

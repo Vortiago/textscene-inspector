@@ -3,6 +3,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CanvasRendererScope } from './CanvasRendererScope';
 import { r3fStateProbe } from '../testing/R3FStateProbe';
 import { hasShadowPass } from '../testing/shadowPassMark';
+import { canvasShaderTime } from '../shaderTime/canvasShaderTime';
 
 describe('CanvasRendererScope', () => {
   it('installs the shadow pass on its renderer', async () => {
@@ -43,5 +44,18 @@ describe('CanvasRendererScope', () => {
     );
 
     expect(rendered.scene.findAllByProps({ name: 'drawn' })).toHaveLength(1);
+  });
+
+  it('advances the shader TIME of its renderer each frame, with no sky in the scene', async () => {
+    const { Probe, state } = r3fStateProbe();
+    const rendered = await ReactThreeTestRenderer.create(
+      <CanvasRendererScope>
+        <Probe />
+      </CanvasRendererScope>
+    );
+
+    await rendered.advanceFrames(3, 0.5);
+
+    expect(canvasShaderTime(state().gl).time).toBeGreaterThan(0);
   });
 });

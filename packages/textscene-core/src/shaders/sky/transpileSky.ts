@@ -6,20 +6,26 @@ import { emitTemplateStage } from '../template/emitTemplate.js';
 import { linkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import { TreeMemo } from '../template/treeMemo.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
-import type { ProjectSampling } from '../uniforms/samplerState.js';
+import { SKY_RENDER_ORDER } from './skyRenderOrder.js';
+import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
 import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
 
-/** The sky background, `SKY_VERSION_BACKGROUND` (`sky.cpp:746`): no defines. The memo lives with the page. */
-const SKY: ProgramTemplate = {
-  shaderType: 'sky',
-  template: 'environment/sky.glsl',
-  defines: '',
-  memo: new TreeMemo(),
+/** Where a sky draws: behind the scene, or into the radiance octmap a bake filters. */
+export type SkyPass = 'background' | 'octmap';
+
+/** `SKY_VERSION_BACKGROUND` and `SKY_VERSION_OCTMAP` (`sky.cpp:719`, `:722`), with memos for the page. */
+const PASS_TEMPLATES: Readonly<Record<SkyPass, ProgramTemplate>> = {
+  background: skyTemplate(''),
+  octmap: skyTemplate('\n#define USE_CUBEMAP_PASS\n'),
 };
 
+function skyTemplate(defines: string): ProgramTemplate {
+  return { shaderType: 'sky', template: 'environment/sky.glsl', defines, memo: new TreeMemo() };
+}
+
 export interface TranspiledSky {
-  /** The triangle that draws the sky. It writes no depth, and draws before the scene. */
-  readonly mesh: THREE.Mesh;
+  /** The triangle that draws the sky at the far plane, after every opaque surface, where none drew. */
+  readonly mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material>;
   /** The template's uniforms of both stages, by `instance.member`: `params.time`. */
   readonly uniforms: ReadonlyMap<string, UniformNode<unknown>>;
   /** The template's textures, by name: `radiance`, `volumetric_fog_texture`. */
@@ -31,20 +37,33 @@ export interface TranspiledSky {
 export interface SkyOptions extends ShaderOptions {
   /** The project's texture filter settings, Godot's defaults when left out. */
   readonly sampling?: ProjectSampling;
+  /** The pass the sky draws in, the background when left out. */
+  readonly pass?: SkyPass;
 }
 
 /** The sky of `source`, a shader of `shader_type sky`, preprocessed with `options`. */
 export function transpileSky(source: string, options: SkyOptions = {}): TranspiledSky {
-  return transpileParsedSky(parsedShader(source, options), options.file ?? '', options.sampling);
+  return transpileParsedSky(
+    parsedShader(source, options),
+    options.file ?? '',
+    options.sampling,
+    options.pass
+  );
 }
 
-/** The sky of a parsed shader from `file`, for a caller that has read its tree already. */
+/** The sky of a parsed shader from `file` for `pass`, for a caller that has read its tree already. */
 export function transpileParsedSky(
   parsed: ParsedShader,
   file: string,
-  sampling?: ProjectSampling
+  sampling: ProjectSampling = GODOT_SAMPLING,
+  pass: SkyPass = 'background'
 ): TranspiledSky {
-  const { linked, resources, parameters, parameterValues } = linkedProgram(parsed, file, SKY, sampling);
+  const { linked, resources, parameters, parameterValues } = linkedProgram(
+    parsed,
+    file,
+    PASS_TEMPLATES[pass],
+    defaultSamplers(sampling)
+  );
   const uvInterp = varyingProperty('vec2', 'uv_interp') as unknown as Node;
   const vertex = emitTemplateStage(
     linked('vertex'),
@@ -67,20 +86,31 @@ export function transpileParsedSky(
     resources
   );
   return {
-    mesh: skyMesh(withVulkanY(vertex.result), fragment.result, [...parameters.values()]),
+    mesh: skyMesh(glClipPosition(vertex.result, pass), fragment.result, [...parameters.values()]),
     uniforms: resources.uniforms.byName,
     textures: resources.textures,
     parameters,
   };
 }
 
-/** Godot's clip space has y down, as Vulkan's does, so the template's `uv_interp.y` of -1 is the top row. */
-function withVulkanY(position: Node): Node {
-  return (position as unknown as ReturnType<typeof vec4>).mul(vec4(1, -1, 1, 1)) as unknown as Node;
+/** Godot's default samplers, which a sky reads (`sky.cpp:853`): 4x anisotropy at any project level. */
+function defaultSamplers(sampling: ProjectSampling): ProjectSampling {
+  return { ...sampling, anisotropicFilteringLevel: GODOT_SAMPLING.anisotropicFilteringLevel };
+}
+
+/** Godot's y points down and its far plane is depth 0; an octmap keeps y, as both APIs put y -1 on row 0. */
+function glClipPosition(position: Node, pass: SkyPass): Node {
+  const godot = position as unknown as ReturnType<typeof vec4>;
+  const y = pass === 'octmap' ? godot.y : godot.y.negate();
+  return vec4(godot.x, y, godot.w.sub(godot.z.mul(2)), godot.w) as unknown as Node;
 }
 
 /** Three vertices, which the template's vertex stage places from their index alone. */
-function skyMesh(position: Node, colour: Node, parameters: readonly TranspiledUniform[]): THREE.Mesh {
+function skyMesh(
+  position: Node,
+  colour: Node,
+  parameters: readonly TranspiledUniform[]
+): THREE.Mesh<THREE.BufferGeometry, THREE.Material> {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
   const material = new BoundNodeMaterial(parameters);
@@ -89,9 +119,8 @@ function skyMesh(position: Node, colour: Node, parameters: readonly TranspiledUn
   // Godot's sky pipeline culls no face.
   material.side = THREE.DoubleSide;
   material.depthWrite = false;
-  material.depthTest = false;
   const mesh = new THREE.Mesh(geometry, material as unknown as THREE.Material);
   mesh.frustumCulled = false;
-  mesh.renderOrder = -Infinity;
+  mesh.renderOrder = SKY_RENDER_ORDER;
   return mesh;
 }

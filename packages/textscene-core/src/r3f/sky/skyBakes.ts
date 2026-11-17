@@ -9,6 +9,7 @@
 import type * as THREE from 'three';
 import { buildSkyEnvironment, type SkyEnvironmentInput, type SkyLight } from '../../resources/sky/build';
 import type { Sky } from '../../resources/sky/types';
+import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 import { roughnessLayersOf } from '../../resources/sky/skyLayers';
 import { materialReadsLights } from '../../resources/sky/readsLights';
 import { isDebanded } from '../../resources/sky/debanding';
@@ -20,12 +21,12 @@ import {
 import { perObject } from '../../utils/perObject';
 import { holdUntilReleased } from '../useDisposeOnRelease';
 import { SkyRadiance } from './skyRadiance';
-import type { SkyBackground } from './skyBackground';
+import type { SkyBackdrop } from './skyBackground';
 import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
 
 /** A sky baked at one exposure: its background and the radiance its readers sample. */
 interface BakedSky {
-  background: SkyBackground | null;
+  background: SkyBackdrop | null;
   radiance: SkyRadiance;
   /** Draws the background again from a live panorama, absent for any other. */
   redrawBackground?: () => void;
@@ -79,12 +80,17 @@ export function holdSkyBakes(
 
 /** The input a bake reads besides the sky. Only a debanded sky reads the energy multiplier. */
 function inputKey(
-  { sky, panorama, asBackground, energyMultiplier, rotation }: SkyBakeInput,
+  { sky, panorama, textures = {}, sampling, asBackground, energyMultiplier, rotation }: SkyBakeInput,
   lightsKey: string
 ): string {
   const debandedEnergy = isDebanded(sky.material) ? energyMultiplier : '';
   return [
     panorama?.uuid ?? '',
+    Object.entries(textures)
+      .map(([name, texture]) => `${name}=${samplerKey(texture)}`)
+      .sort(),
+    sampling?.anisotropicFilteringLevel ?? '',
+    sampling?.useNearestMipmapFilter ?? '',
     asBackground,
     debandedEnergy,
     rotation.x,
@@ -228,4 +234,10 @@ function bakeSky(gl: THREE.WebGLRenderer, input: SkyBakeInput, exposure: number)
 
 function exposed(lights: readonly SkyLight[], exposure: number): SkyLight[] {
   return lights.map((light) => ({ ...light, energy: light.energy * exposure }));
+}
+
+function samplerKey(value: SamplerValue): string {
+  return Array.isArray(value)
+    ? value.map((texture) => texture?.uuid ?? '').join(',')
+    : (value as THREE.Texture).uuid;
 }

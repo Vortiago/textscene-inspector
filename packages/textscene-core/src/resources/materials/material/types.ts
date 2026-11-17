@@ -5,7 +5,7 @@
  */
 
 import type { ScopedReference } from '../../reading';
-import type { SkyProperties } from '../../sky/types';
+import type { AuthoredSkyProperties } from '../../sky/types';
 import type { StandardMaterial3DData, TextureSlot } from '../standardmaterial3d/types';
 
 export interface StandardMaterial {
@@ -21,7 +21,7 @@ export interface StandardMaterial {
 export interface SkyMaterial {
   readonly form: 'sky';
   readonly type: string;
-  readonly properties: SkyProperties;
+  readonly properties: AuthoredSkyProperties;
   /** A PanoramaSkyMaterial's `panorama`, resolved in the material's own file. Null for none or for any other sky. */
   readonly panorama: ScopedReference | null;
 }

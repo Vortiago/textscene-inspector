@@ -1,7 +1,7 @@
 /** A dynamic import loaded once and shared by every caller, which also reports how far it has got. */
 
 /** The module once its import lands, or why a reader has none: still loading, or failed for good. */
-type LazyState<T> = { module: T } | 'loading' | 'failed';
+export type LazyState<T> = { module: T } | 'loading' | 'failed';
 
 /** A dynamic import loaded once, which also reports how far it has got. */
 export interface LazyImport<T> {

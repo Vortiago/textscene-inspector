@@ -10,11 +10,11 @@
  * (`render_forward_clustered.cpp:1993`, `render_scene_data_rd.cpp:169`, `:241-246`, `sky.cpp:1086`).
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
-import type { Sky } from '../../resources/sky/types';
+import type { AuthoredSky } from '../../resources/sky/types';
 import type { SkyLight } from '../../resources/sky/build';
 import { NO_SKY_LIGHTS, noteSkyLights, skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
@@ -35,12 +35,20 @@ import {
 } from '../environment/sceneEnvironment';
 import { debandSky } from './skyDebanding';
 import { showSkyBackground } from './skyBackground';
+import { useShaderSkyTextures } from './shaderSkyTextures';
+import { useShaderDecoders } from '../shaderDecoders';
+import { useShaderSkyErrorReport } from './shaderSkyError';
+import { useReadSky } from './readSky';
+import { useSkyTranslator } from './skyTranspiler';
+import { useShaderErrorReport } from '../contexts/ShaderErrorsContext';
+import { useProjectSettings } from '../contexts/ProjectSettingsContext';
+import { projectSampling } from '../../parser/projectSettingsParser';
 import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
 import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
 
 interface SkyLayerProps {
-  sky: Sky;
+  sky: AuthoredSky;
   /**
    * `background_energy_multiplier`, which scales the drawn background once and the radiance twice:
    * the bake holds it, and each surface reads the radiance at it again, whatever the ambient source.
@@ -71,7 +79,7 @@ interface SkyLayerProps {
 const LIGHT_SLOTS = 4;
 
 export function SkyLayer({
-  sky,
+  sky: authoredSky,
   energyMultiplier = 1,
   contribution = 1,
   reflects = true,
@@ -95,6 +103,15 @@ export function SkyLayer({
   reflectsRef.current = reflects;
 
   const isPanoramaDrawn = useIsPanoramaDrawn(panorama);
+  const shaderCode = authoredSky.material.kind === 'shader' ? authoredSky.material.code : null;
+  const decoders = useShaderDecoders(shaderCode);
+  const { transpiler, isReady: isTranslatorReady, loadFailure } = useSkyTranslator(gl, shaderCode !== null);
+  useShaderErrorReport(loadFailure);
+  const sky = useReadSky(authoredSky, transpiler, decoders);
+  const [textures, textureSlots] = useShaderSkyTextures(sky?.material ?? null);
+  useShaderSkyErrorReport(sky?.material ?? null, transpiler, decoders);
+  const { settings } = useProjectSettings();
+  const sampling = useMemo(() => projectSampling(settings), [settings]);
 
   // Written only by the effect below, while it holds bakes.
   const bakeWantedRef = useRef<(() => boolean) | null>(null);
@@ -108,10 +125,23 @@ export function SkyLayer({
     if (lightsKey === null) return undefined;
     // A bake samples the panorama once, so it waits for the pass to draw a live target.
     if (!isPanoramaDrawn) return undefined;
+    // A shader sky waits for the transpiler, the nodes handler, and the decoders its text may need.
+    if (!sky || !decoders || !isTranslatorReady) return undefined;
 
     const lights = directionalLights(scene);
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
-    const input = { sky, lights, panorama, asBackground, energyMultiplier, rotation: skyRotation };
+    const input = {
+      sky,
+      lights,
+      panorama,
+      textures,
+      decoders,
+      sampling,
+      buildShaderSky: transpiler?.buildShaderSkyEnvironment,
+      asBackground,
+      energyMultiplier,
+      rotation: skyRotation,
+    };
     const { bakes, release } = holdSkyBakes(gl, input, lightsKey, contextRestores);
     const update = radianceUpdateOf(sky);
     const plan = skyUpdatePlan(sky);
@@ -198,6 +228,11 @@ export function SkyLayer({
     energyMultiplier,
     exposure,
     panorama,
+    textures,
+    decoders,
+    sampling,
+    transpiler,
+    isTranslatorReady,
     isPanoramaDrawn,
     asBackground,
     lightsKey,
@@ -207,7 +242,7 @@ export function SkyLayer({
     rotationZ,
   ]);
 
-  return null;
+  return <>{textureSlots}</>;
 }
 
 /**
