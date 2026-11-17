@@ -6,6 +6,8 @@
 import type * as THREE from 'three';
 import { WebGLNodesHandler } from 'three/addons/tsl/WebGLNodesHandler.js';
 import type { Node } from 'three/webgpu';
+import { driverLog, TranslatorFault } from './fault/translatorFault.js';
+import { BoundNodeMaterial } from './uniforms/boundMaterial.js';
 
 /**
  * What a node material writes. `display` is the handler's own form: the renderer's tone mapping,
@@ -14,9 +16,10 @@ import type { Node } from 'three/webgpu';
  */
 export type NodeOutput = 'linear' | 'display';
 
-/** The hook the handler encodes an output through, which three's types leave out. */
-interface OutputEncoding {
+/** What the handler holds that three's types leave out: its output hook, and the material it draws now. */
+interface HandlerInternals {
   getOutputCallback: (outputNode: Node) => Node;
+  nodeFrame: { material: unknown };
 }
 
 /**
@@ -32,8 +35,37 @@ const withHandler = new WeakSet<THREE.WebGLRenderer>();
 export function installNodesHandler(renderer: THREE.WebGLRenderer, output: NodeOutput = 'display'): void {
   if (withHandler.has(renderer)) return;
   const handler = new WebGLNodesHandler();
-  if (output === 'linear')
-    (handler as unknown as OutputEncoding).getOutputCallback = (outputNode) => outputNode;
+  const internals = handler as unknown as HandlerInternals;
+  if (output === 'linear') internals.getOutputCallback = (outputNode) => outputNode;
   renderer.setNodesHandler(handler);
+  reportTranslatorFaults(renderer, internals);
   withHandler.add(renderer);
+}
+
+type ShaderErrorHook = (
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram,
+  vertexShader: WebGLShader,
+  fragmentShader: WebGLShader
+) => void;
+
+/** A refused program as a fault of its transpiled material, or to the earlier hook or the console. */
+function reportTranslatorFaults(renderer: THREE.WebGLRenderer, handler: HandlerInternals): void {
+  const debug = renderer.debug as { onShaderError: ShaderErrorHook | null };
+  const previous = debug.onShaderError;
+  debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
+    const log = driverLog(gl, program, vertexShader, fragmentShader);
+    // The handler sets the material before three builds its program (`WebGLNodesHandler.js:318`).
+    const { material } = handler.nodeFrame;
+    if (material instanceof BoundNodeMaterial && drawsWith(renderer, material, program))
+      material.reportFault(new TranslatorFault(material.source, log));
+    else if (previous) previous(gl, program, vertexShader, fragmentShader);
+    else console.error(`THREE.WebGLProgram: the GPU refused a program.\n${log}`);
+  };
+}
+
+/** Whether `program` is the one three just built for `material`, not a program of another draw. */
+function drawsWith(renderer: THREE.WebGLRenderer, material: THREE.Material, program: WebGLProgram): boolean {
+  const properties = renderer.properties.get(material) as { currentProgram?: { program: WebGLProgram } };
+  return properties.currentProgram?.program === program;
 }

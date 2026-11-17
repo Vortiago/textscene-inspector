@@ -1,11 +1,16 @@
 import * as THREE from 'three';
 import { int, screenCoordinate, varyingProperty, vec4, vertexIndex } from 'three/tsl';
 import type { Node, TextureNode, UniformNode } from 'three/webgpu';
-import { parsedShader, type ParsedShader, type ShaderOptions } from '../language/parseShader.js';
+import {
+  parsedShader,
+  shaderSource,
+  type ParsedShader,
+  type ShaderOptions,
+} from '../language/parseShader.js';
 import { emitTemplateStage } from '../template/emitTemplate.js';
 import { linkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import { TreeMemo } from '../template/treeMemo.js';
-import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
+import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
 import { SKY_RENDER_ORDER } from './skyRenderOrder.js';
 import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
 import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
@@ -86,7 +91,10 @@ export function transpileParsedSky(
     resources
   );
   return {
-    mesh: skyMesh(glClipPosition(vertex.result, pass), fragment.result, [...parameters.values()]),
+    mesh: skyMesh(glClipPosition(vertex.result, pass), fragment.result, {
+      parameters: [...parameters.values()],
+      source: shaderSource(parsed, file),
+    }),
     uniforms: resources.uniforms.byName,
     textures: resources.textures,
     parameters,
@@ -109,11 +117,11 @@ function glClipPosition(position: Node, pass: SkyPass): Node {
 function skyMesh(
   position: Node,
   colour: Node,
-  parameters: readonly TranspiledUniform[]
+  shader: MaterialShader
 ): THREE.Mesh<THREE.BufferGeometry, THREE.Material> {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
-  const material = new BoundNodeMaterial(parameters);
+  const material = new BoundNodeMaterial(shader);
   material.vertexNode = position;
   material.fragmentNode = colour;
   // Godot's sky pipeline culls no face.

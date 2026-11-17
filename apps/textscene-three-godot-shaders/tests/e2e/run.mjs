@@ -10,7 +10,7 @@ import { SHOWCASES } from './showcases.mjs';
 import { ALL_SCENES, DRAWN_SCENES } from './drawnScenes.mjs';
 import { MESH_MAIN_SCRIPT, meshProjectFiles, parseMeshOutput } from './godotMeshScenes.mjs';
 import { clockRuns } from './godotViewports.mjs';
-import { MESH_SCENES } from './meshScenes.mjs';
+import { FAULT_SCENES, MESH_SCENES } from './meshScenes.mjs';
 import { parseSkyOutput, SKY_MAIN_SCRIPT, skyProjectFiles } from './godotSkyScenes.mjs';
 import { SKY_SCENES } from './skyScenes.mjs';
 
@@ -43,9 +43,30 @@ async function transpiledImages() {
       for (const { spec, draw } of DRAWN_SCENES) {
         const drawn = await page.evaluate(([value, name]) => globalThis[name](value), [spec, draw]);
         if (drawn.error) throw new Error(`${spec.name}: ${drawn.error}`);
+        if (drawn.faults) throw new Error(`${spec.name}: ${drawn.faults[0].message}`);
         images.set(spec.name, Uint8Array.from(drawn.pixels));
       }
       return images;
+    }
+  );
+}
+
+/** A failure for each fault scene that does not reach its material as a translator fault with its log. */
+async function unreportedFaults() {
+  return withConsumerPage(
+    { pageDir: join(import.meta.dirname, 'page'), module: 'e2ePage.js', harness: 'shaderEndToEnd' },
+    async (page) => {
+      const failures = [];
+      for (const { log, ...spec } of FAULT_SCENES) {
+        const drawn = await page.evaluate((value) => globalThis.drawMesh(value), spec);
+        const fault = drawn.faults?.[0];
+        if (fault?.name !== 'TranslatorFault' || !log.test(fault.log))
+          failures.push(
+            `${spec.name}: expected a translator fault with ${log}, got ${JSON.stringify(drawn.faults ?? drawn.error ?? 'pixels')}`
+          );
+        else console.log(`${spec.name}: translator fault, ${fault.log.split('\n')[0]}`);
+      }
+      return failures;
     }
   );
 }
@@ -103,6 +124,7 @@ async function main() {
     }
     return result;
   });
+  failures.push(...(await unreportedFaults()));
   const table = resultTable(results);
   console.log(table);
   writeJobSummary(`## Shader showcases against Godot\n\n${table}\n`);

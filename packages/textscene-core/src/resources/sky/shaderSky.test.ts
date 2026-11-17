@@ -6,6 +6,8 @@ import * as parseShader from '../../shaders/language/parseShader';
 import { generatedFragmentShader } from '../../shaders/generatedShader.testkit';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { installNodesHandler } from '../../shaders/nodesHandler';
+import { TranslatorFault } from '../../shaders/fault/translatorFault';
+import type { BoundNodeMaterial } from '../../shaders/uniforms/boundMaterial';
 import { ShaderSkyBackground } from '../../r3f/sky/shaderSkyBackground';
 import { buildShaderSkyEnvironment, readShaderSky, shaderSkyRefusal } from './shaderSky';
 import { buildSkyEnvironment } from './build';
@@ -104,6 +106,19 @@ describe('buildSkyEnvironment of a shader sky', () => {
     const environment = shaderSkyEnvironment(renderer, sky);
     expect(environment?.background).toBeInstanceOf(ShaderSkyBackground);
     environment?.dispose();
+  });
+
+  it('warns that the previewer failed when the GPU refuses the transpiled program', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const { renderer } = await testRenderer();
+    installNodesHandler(renderer, 'linear');
+    const environment = shaderSkyEnvironment(renderer, decodeSky({}, shaderMaterial(TINTED_SKY)))!;
+    const material = environment.background!.material as BoundNodeMaterial;
+    material.reportFault(new TranslatorFault(material.source, 'fragment: ERROR: 0:1'));
+    expect(warn.mock.calls.map(([message]) => message)).toContainEqual(
+      expect.stringMatching(/^\[Sky\] The previewer failed to draw this sky shader: .*ERROR: 0:1/)
+    );
+    environment.dispose();
   });
 
   it('throws without the transpiler, which a shader sky needs (error case)', async () => {

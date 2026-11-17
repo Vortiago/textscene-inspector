@@ -1,7 +1,11 @@
 import * as THREE from 'three';
+import { glslFn } from 'three/tsl';
 import { transpileSpatial, withGodotAttributes, writeSpatialBindings } from '@textscene/three-godot-shaders';
 import { framePixels } from './framePixels.js';
 import { displayRenderer, euler, godotCamera, linear, shaderTime } from './godotView.js';
+
+/** A fragment whose GLSL reads a name it never declares, which every driver refuses. */
+const BROKEN_FRAGMENT = glslFn('vec4 brokenFragment() { return undeclared_in_glsl; }');
 
 /** `rendering/environment/defaults/default_clear_color`. */
 const GODOT_CLEAR_COLOR = linear([0.3, 0.3, 0.3]);
@@ -50,7 +54,7 @@ function transpiledBySource(spec) {
   return new Map([...sources].map((source) => [source, transpileSpatial(source)]));
 }
 
-/** The pixels of `spec`'s meshes in the order it lists them, or `{ error }` when one is refused. */
+/** The pixels of the meshes, `{ error }` for a refused text, or `{ faults }` for a refused program. */
 function drawMesh(spec) {
   let transpiled;
   try {
@@ -81,6 +85,11 @@ function drawMesh(spec) {
     spec.parent ? placed(new THREE.Group(), spec.parent).add(...meshes) : new THREE.Group().add(...meshes)
   );
   displayRenderer.setClearColor(GODOT_CLEAR_COLOR, 1);
+  const faults = [];
+  for (const spatial of transpiled.values())
+    spatial.material.onTranslatorFault = (fault) => faults.push(fault);
+  if (spec.breaksFragment)
+    for (const spatial of transpiled.values()) spatial.material.fragmentNode = BROKEN_FRAGMENT();
   const pixels = framePixels(displayRenderer, scene, camera, {
     width,
     height,
@@ -88,6 +97,7 @@ function drawMesh(spec) {
   });
   for (const spatial of transpiled.values()) spatial.material.dispose();
   geometry.dispose();
+  if (faults.length > 0) return { faults: faults.map(({ name, message, log }) => ({ name, message, log })) };
   return { pixels: Array.from(pixels) };
 }
 

@@ -6,7 +6,9 @@ import { UniformParser } from './parseUniform.js';
 import type { RenderingMethod } from '../preprocessor/preprocessor.js';
 import { ModeParser } from './parseModes.js';
 import { parseDeclaration } from './parseDeclaration.js';
-import { parseVarying, VaryingStages } from './parseVarying.js';
+import { ShadingLanguageError } from './shadingLanguageError.js';
+import { parseVarying, varyingLimitRefusal, VaryingStages } from './parseVarying.js';
+import { MODE_TABLES } from '../template/modeTables.generated.js';
 import { BlockScope, type Identifier } from './scope.js';
 import { callTarget, type FunctionSignature } from './parseCall.js';
 import { StageRules } from './stageRules.js';
@@ -73,7 +75,7 @@ class ShaderParser implements ExpressionScope {
 
   constructor(
     private readonly tokens: TokenCursor,
-    renderingMethod: RenderingMethod
+    private readonly renderingMethod: RenderingMethod
   ) {
     this.expressions = new ExpressionParser(tokens, this);
     this.uniforms = new UniformParser(tokens, this.expressions, {
@@ -314,14 +316,23 @@ class ShaderParser implements ExpressionScope {
     return stage ? { ...varying, stage } : varying;
   }
 
+  /** The varying slots the renderer's own template takes first: none on the compatibility renderer's GL. */
+  private baseVaryingIndex(): number {
+    if (this.renderingMethod === 'gl_compatibility') return 0;
+    return MODE_TABLES[this.shaderTypeName()]?.base_varying_index ?? 0;
+  }
+
   private tree(head: Pick<ShaderNode, 'shaderType' | 'headPosition'>): ShaderNode {
+    const varyings = [...this.varyings.values()].map((varying) => this.withStage(varying));
+    const refusal = varyingLimitRefusal(varyings, this.baseVaryingIndex());
+    if (refusal) throw new ShadingLanguageError(refusal.message, refusal.position);
     return {
       kind: 'shader',
       ...head,
       renderModes: this.modes.modes.render_mode,
       stencilModes: this.modes.modes.stencil_mode,
       ...(this.modes.stencilReference !== undefined ? { stencilReference: this.modes.stencilReference } : {}),
-      varyings: [...this.varyings.values()].map((varying) => this.withStage(varying)),
+      varyings,
       constants: this.constants,
       structs: this.structs,
       order: this.order,

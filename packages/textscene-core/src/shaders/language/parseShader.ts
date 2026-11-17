@@ -1,6 +1,7 @@
 import { preprocess, type PreprocessOptions } from '../preprocessor/preprocessor.js';
 import { PreprocessorError } from '../preprocessor/preprocessorError.js';
 import { parse } from './parse.js';
+import type { ShaderSource } from '../fault/translatorFault.js';
 import type { ShaderNode } from './shaderTree.js';
 import { tokenize } from './tokenizer.js';
 
@@ -27,3 +28,6 @@ export function parsedShader(source: string, options: ShaderOptions = {}): Parse
   const code = shaderCode(source, options);
   return { code, tree: parse(tokenize(code, options.file ?? ''), options.renderingMethod) };
 }
+
+/** The text a parse read, as a transpiled material names it in a translator fault. */
+export const shaderSource = ({ code }: ParsedShader, file: string): ShaderSource => ({ text: code, file });

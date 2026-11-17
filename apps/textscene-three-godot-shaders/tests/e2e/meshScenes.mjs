@@ -531,3 +531,13 @@ export const MESH_SCENES = [
   ...FRAGMENT_SCENES,
   ...GLOBAL_SCENES,
 ];
+
+/** Scenes whose program the GPU refuses: each must reach the material as a fault with this log. */
+export const FAULT_SCENES = [
+  {
+    ...stageScene('spatial-fault-broken-fragment', { fragment: 'ALBEDO = vec3(0.5);' }, []),
+    // Every shader Godot accepts links in the test Chromium, so the page breaks the GLSL itself.
+    breaksFragment: true,
+    log: /undeclared_in_glsl/,
+  },
+];

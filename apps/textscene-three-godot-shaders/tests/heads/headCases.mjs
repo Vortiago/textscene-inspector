@@ -196,6 +196,30 @@ const VARYING_ARGUMENT_CASES = [
   ),
 ];
 
+/** Godot's checks of the varyings once the text is read: an integer one is `flat`, and they fit. */
+const VARYING_LIMIT_CASES = [
+  headCase('varying-limit/int-smooth', 'shader_type spatial;\nvarying int v;\nvoid vertex() {\n\tv = 1;\n}'),
+  headCase(
+    'varying-limit/int-flat',
+    'shader_type spatial;\nvarying flat int v;\nvoid vertex() {\n\tv = 1;\n}'
+  ),
+  headCase('varying-limit/uvec2-unwritten', 'shader_type spatial;\nvarying uvec2 v;\nvoid fragment() {}'),
+  headCase(
+    'varying-limit/int-fragment-only',
+    'shader_type spatial;\nvarying int v;\nvoid fragment() {\n\tv = 1;\n}'
+  ),
+  headCase('varying-limit/vec4-17', 'shader_type spatial;\nvarying vec4 v[17];\nvoid fragment() {}'),
+  headCase('varying-limit/vec4-18', 'shader_type spatial;\nvarying vec4 v[18];\nvoid fragment() {}'),
+  headCase('varying-limit/mat4-4', 'shader_type spatial;\nvarying mat4 m[4];\nvoid fragment() {}'),
+  headCase('varying-limit/mat3-6', 'shader_type spatial;\nvarying mat3 m[6];\nvoid fragment() {}'),
+  headCase(
+    'varying-limit/two-over',
+    'shader_type spatial;\nvarying vec4 a[10];\nvarying vec2 b[8];\nvoid fragment() {}'
+  ),
+  headCase('varying-limit/canvas-23', 'shader_type canvas_item;\nvarying vec4 v[23];\nvoid fragment() {}'),
+  headCase('varying-limit/canvas-24', 'shader_type canvas_item;\nvarying vec4 v[24];\nvoid fragment() {}'),
+];
+
 /** A global name that Godot finds before or after a function, and a varying outside a function. */
 const GLOBAL_NAME_CASES = [
   headCase(
@@ -274,5 +298,6 @@ export const HEAD_CASES = [
   ...STAGE_CASES,
   ...VARYING_ARGUMENT_CASES,
   ...GLOBAL_NAME_CASES,
+  ...VARYING_LIMIT_CASES,
   ...tableModeCases(),
 ];

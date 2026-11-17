@@ -4,12 +4,38 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { float } from 'three/tsl';
 import type { Node } from 'three/webgpu';
+import { TranslatorFault } from './fault/translatorFault';
 import { installNodesHandler } from './nodesHandler';
+import { BoundNodeMaterial } from './uniforms/boundMaterial';
 
 /** A renderer that records each handler it is given: the install needs no GL context. */
-function recordingRenderer() {
+function recordingRenderer(onShaderError: unknown = null) {
   const setNodesHandler = vi.fn();
-  return { renderer: { setNodesHandler } as unknown as THREE.WebGLRenderer, setNodesHandler };
+  const programs = new Map<object, { currentProgram: { program: object } }>();
+  const renderer = {
+    setNodesHandler,
+    debug: { onShaderError },
+    properties: { get: (material: object) => programs.get(material) ?? {} },
+  };
+  return { renderer: renderer as unknown as THREE.WebGLRenderer, setNodesHandler, programs };
+}
+
+/** A context whose program gives a link log and whose shaders give none. */
+const LINKING_CONTEXT = {
+  getProgramInfoLog: () => 'Could not pack varying',
+  getShaderInfoLog: () => '',
+} as unknown as WebGL2RenderingContext;
+
+/** `renderer` drawing `material` with a program the GPU refuses, as three reports it. */
+function refuseProgram(
+  { renderer, setNodesHandler, programs }: ReturnType<typeof recordingRenderer>,
+  material: THREE.Material
+): void {
+  const program = {} as WebGLProgram;
+  programs.set(material, { currentProgram: { program } });
+  setNodesHandler.mock.calls[0]![0].nodeFrame.material = material;
+  const { onShaderError } = renderer.debug as unknown as { onShaderError: (...args: unknown[]) => void };
+  onShaderError(LINKING_CONTEXT, program, {}, {});
 }
 
 /** The hook three's types leave out of the handler. */
@@ -62,5 +88,32 @@ describe('installNodesHandler', () => {
     const output = float(0.5);
 
     expect(handler.getOutputCallback(output)).not.toBe(output);
+  });
+
+  it("hands a refused program of a transpiled material to the material's hook", () => {
+    const recording = recordingRenderer();
+    installNodesHandler(recording.renderer);
+    const material = new BoundNodeMaterial({
+      parameters: [],
+      source: { text: '', file: 'res://bands.gdshader' },
+    });
+    const faults: TranslatorFault[] = [];
+    material.onTranslatorFault = (fault) => faults.push(fault);
+
+    refuseProgram(recording, material);
+
+    expect(faults.map((fault) => [fault.source.file, fault.log])).toEqual([
+      ['res://bands.gdshader', 'program: Could not pack varying'],
+    ]);
+  });
+
+  it('hands a refused program of another material to the hook the caller set before', () => {
+    const previous = vi.fn();
+    const recording = recordingRenderer(previous);
+    installNodesHandler(recording.renderer);
+
+    refuseProgram(recording, new THREE.MeshBasicMaterial());
+
+    expect(previous).toHaveBeenCalledTimes(1);
   });
 });

@@ -10,14 +10,14 @@ import {
   vertexIndex,
 } from 'three/tsl';
 import type { Node, TextureNode, UniformNode } from 'three/webgpu';
-import { parsedShader, type ShaderOptions } from '../language/parseShader.js';
+import { parsedShader, shaderSource, type ShaderOptions } from '../language/parseShader.js';
 import { emitTemplateStage } from '../template/emitTemplate.js';
 import { linkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import type { RowTexture } from '../template/rowTexture.js';
 import { instanceWords } from './instanceData.js';
 import type { TemplateStageNode } from '../template/templateTree.js';
 import { TreeMemo } from '../template/treeMemo.js';
-import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
+import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
 import type { ProjectSampling } from '../uniforms/samplerState.js';
 import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
 
@@ -80,9 +80,10 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
     { name: 'frag_color', type: 'vec4' },
     resources
   );
-  const material = sceneMaterial(glClipPosition(vertex.result, vulkanClip), fragment.result, [
-    ...parameters.values(),
-  ]);
+  const material = sceneMaterial(glClipPosition(vertex.result, vulkanClip), fragment.result, {
+    parameters: [...parameters.values()],
+    source: shaderSource(parsed, options.file ?? ''),
+  });
   resources.buffers.byName.get('instances')?.writeEachDraw(instanceWordsOf);
   return {
     material,
@@ -135,12 +136,8 @@ function vulkanFragCoord(clip: Vec4): Node {
   return vec4(screenCoordinate, clip.z.div(clip.w), clip.w.reciprocal()) as unknown as Node;
 }
 
-function sceneMaterial(
-  position: Node,
-  colour: Node,
-  parameters: readonly TranspiledUniform[]
-): BoundNodeMaterial {
-  const material = new BoundNodeMaterial(parameters);
+function sceneMaterial(position: Node, colour: Node, shader: MaterialShader): BoundNodeMaterial {
+  const material = new BoundNodeMaterial(shader);
   material.vertexNode = position;
   material.fragmentNode = colour;
   // `cull_back`, Godot's default cull mode.

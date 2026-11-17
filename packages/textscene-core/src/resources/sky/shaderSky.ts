@@ -8,6 +8,7 @@ import { perObject } from '../../utils/perObject';
 import { LRUCache } from '../LRUCache';
 import { GODOT_SAMPLING, type ProjectSampling } from '../../shaders/uniforms/samplerState';
 import type { TranspiledUniform } from '../../shaders/uniforms/transpiledUniform';
+import type { BoundNodeMaterial } from '../../shaders/uniforms/boundMaterial';
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 import type { ShaderDecoders } from '../../shaders/preprocessor/decoders';
 import { ShaderSkyBackground } from '../../r3f/sky/shaderSkyBackground';
@@ -110,6 +111,12 @@ function transpiledShaderSky(
   }
   const sky = transpileParsedSky(compile.parsed, '', sampling, pass);
   setParameters(sky.parameters, material.parameters, textures);
+  (sky.mesh.material as BoundNodeMaterial).onTranslatorFault = (fault) =>
+    warnOnce(
+      material,
+      'translator fault',
+      `[Sky] The previewer failed to draw this sky shader: ${fault.message}`
+    );
   return sky;
 }
 
