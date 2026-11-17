@@ -27,7 +27,7 @@ function stripTrailingZeros(text: string): string {
 }
 
 /** `String::num` (`ustring.cpp:1405-1498`). */
-export function num(value: number, decimals = -1): string {
+function num(value: number, decimals = -1): string {
   if (Number.isNaN(value)) return 'nan';
   if (!Number.isFinite(value)) return value < 0 ? '-inf' : 'inf';
   let places = decimals;

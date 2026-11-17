@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { strToVar } from './strToVar';
-import { num, stringify } from './variantStringify';
+import { stringify } from './variantStringify';
 
 // Each expected text is what Godot 4.6.3 prints for `str(str_to_var(input))`.
 const str = (input: string) => stringify(strToVar(input));
@@ -35,12 +35,12 @@ describe('stringify', () => {
   });
 });
 
-describe('num', () => {
+describe('stringify of a Color, whose components print with four decimals', () => {
   it('rounds an exact tie to even, as printf does', () => {
-    expect([num(0.125, 2), num(0.375, 2), num(2.5, 0), num(3.5, 0)]).toEqual(['0.12', '0.38', '2', '4']);
+    expect(str('Color(0.03125, 0.09375, 2.5, 1)')).toBe('(0.0312, 0.0938, 2.5, 1.0)');
   });
 
   it('writes the named numbers by name', () => {
-    expect([num(NaN), num(Infinity), num(-Infinity)]).toEqual(['nan', 'inf', '-inf']);
+    expect(str('Color(nan, inf, -inf, 1)')).toBe('(nan, inf, -inf, 1.0)');
   });
 });

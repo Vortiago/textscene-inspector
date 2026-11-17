@@ -1,5 +1,5 @@
 /** The writers whose values lie over the file, lowest first: the host's `set`, then a playing animation. */
-export const WRITE_LAYERS = ['host', 'animated'] as const;
+const WRITE_LAYERS = ['host', 'animated'] as const;
 
 export type WriteLayer = (typeof WRITE_LAYERS)[number];
 
@@ -9,7 +9,7 @@ export type PropertyTexts = Readonly<Record<string, string>>;
 /** By live path, each layer's texts in order. A write gives a new map that keeps the other entries. */
 export type SceneWrites = ReadonlyMap<string, PropertyTexts>;
 
-export const NO_WRITES: SceneWrites = new Map();
+const NO_WRITES: SceneWrites = new Map();
 
 /** The writes of every layer, kept as Variant text by live path. */
 export class WriteStore {

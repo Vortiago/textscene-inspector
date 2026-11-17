@@ -25,7 +25,7 @@ export const COMPONENT_COUNTS = {
 export type ComponentType = keyof typeof COMPONENT_COUNTS;
 
 /** The packed arrays of numbers, with how many numbers make one element. */
-export const PACKED_NUMBER_STRIDES = {
+const PACKED_NUMBER_STRIDES = {
   [T.PACKED_BYTE_ARRAY]: 1,
   [T.PACKED_INT32_ARRAY]: 1,
   [T.PACKED_INT64_ARRAY]: 1,

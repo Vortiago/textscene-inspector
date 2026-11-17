@@ -81,7 +81,7 @@ function poleOf(value: number): 'inside' | 'plus' | 'minus' {
 }
 
 /** `Basis::get_euler` (`basis.cpp:455-654`), with `r(row, column)` the component it reads. */
-export function basisGetEuler(n: BasisComponents, order: EnumValue<typeof EulerOrder>): EulerAngles {
+function basisGetEuler(n: BasisComponents, order: EnumValue<typeof EulerOrder>): EulerAngles {
   const r = (row: number, column: number): number => n[row * 3 + column]!;
   switch (order) {
     case EulerOrder.XYZ: {
