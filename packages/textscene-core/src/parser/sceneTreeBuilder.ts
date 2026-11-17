@@ -4,7 +4,7 @@
  * nodes stay untouched: the tree holds a copy of each seated node, so a seating is repeatable.
  */
 
-import type { NodeOrigin, NodePathResolution, OwnerRecovery, RawNode, SceneNode } from './types';
+import type { NodeOrigin, NodePathResolution, OwnerRecovery, RawNode, SceneNode, TscnNode } from './types';
 import {
   SCENE_ROOT_PATH,
   joinPath,
@@ -87,6 +87,8 @@ interface SeatingEntry extends SeatedPaths<RawNode> {
   readonly rootFallbacks: readonly RootFallback[];
   /** The headings to seat again from, kept only where a {@link RootFallback} may need it. */
   readonly origins?: readonly NodeOrigin<RawNode>[];
+  /** What {@link shareSeating} laid over the seated roots, laid again over a seating of `origins`. */
+  readonly relay?: (roots: readonly TscnNode[]) => readonly TscnNode[];
 }
 
 /** Written by seatScene and shareSeating, keyed by roots. An entry clears with its roots, never stale. */
@@ -123,9 +125,12 @@ export function reseatedRoots<N extends SceneNode<N>>(
   roots: readonly N[],
   ownersFound: ReadonlySet<RawNode>
 ): readonly N[] {
-  const { origins } = seatings.get(roots) ?? {};
+  const { origins, relay } = seatings.get(roots) ?? {};
   if (!origins) throw new Error(`expected roots with a root fallback, got ${roots.length} other root(s)`);
-  return seatScene(origins as readonly NodeOrigin<N>[], ownersFound).roots;
+  const reseated = seatScene(origins as readonly NodeOrigin<N>[], ownersFound).roots;
+  if (!relay) return reseated;
+  // Only shareSeating sets a relay, on roots a parse seated from TscnNode headings.
+  return relay(reseated as unknown as readonly TscnNode[]) as unknown as readonly N[];
 }
 
 /** A seating with the root fallbacks {@link seatScene} keeps beside it. */
@@ -205,10 +210,14 @@ function seatHeadings<N extends SceneNode<N>>(
   };
 }
 
-/** Gives `roots` the seating of `seated`, for roots that differ only in values: no owner or `%Name` moves. */
-export function shareSeating<N extends RawNode>(roots: readonly N[], seated: readonly N[]): readonly N[] {
+/** Seats `roots`, which `relay` laid over `seated`, as `seated`: `relay` moves values, never a `%Name`. */
+export function shareSeating(
+  roots: readonly TscnNode[],
+  seated: readonly TscnNode[],
+  relay: (roots: readonly TscnNode[]) => readonly TscnNode[]
+): readonly TscnNode[] {
   const entry = seatings.get(seated);
-  if (entry) seatings.set(roots, entry);
+  if (entry) seatings.set(roots, { ...entry, relay });
   return roots;
 }
 

@@ -83,7 +83,10 @@ export function TscnPreviewShell({
   const { sceneGraph: parsedGraph, error } = useSyncExternalStore(scene.subscribe, scene.parse);
   // The views draw the parse with the host's writes laid on.
   const sceneGraph = useSyncExternalStore(scene.subscribe, scene.written);
-  useEffect(() => onSceneOpen?.(scene), [scene, onSceneOpen]);
+  // A block body: an arrow body would hand the host's return value to React as the cleanup.
+  useEffect(() => {
+    onSceneOpen?.(scene);
+  }, [scene, onSceneOpen]);
 
   const hierarchyValue = useMemo(() => ({ sceneGraph, panelId }), [sceneGraph, panelId]);
   const [viewportError, setViewportError] = useState<Error | null>(null);

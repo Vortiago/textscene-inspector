@@ -25,6 +25,11 @@ describe('strToVar', () => {
     );
   });
 
+  it('stores an infinity or a NaN in an integer component as 0, as the int64 cast does on x86', () => {
+    expect(roundTrip('Vector2i(inf, nan)')).toBe('Vector2i(0, 0)');
+    expect(roundTrip('PackedByteArray(inf)')).toBe('PackedByteArray(0)');
+  });
+
   it('reads strings, string names and node paths with their escapes', () => {
     expect(roundTrip('"tab\\there \\"q\\" é"')).toBe('"tab\there \\"q\\" é"');
     expect(roundTrip('&"name"')).toBe('&"name"');

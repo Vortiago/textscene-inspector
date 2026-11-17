@@ -319,8 +319,3 @@ export function castVariant(value: VariantValue, to: number): VariantValue {
   }
   return packedOf(to, elementsOf(value) ?? []);
 }
-
-/** {@link castVariant}, and whether Godot reports the call valid. */
-export function settableValue(value: VariantValue, to: number): { value: VariantValue; isValid: boolean } {
-  return { value: castVariant(value, to), isValid: canConvertStrict(value.type, to) };
-}

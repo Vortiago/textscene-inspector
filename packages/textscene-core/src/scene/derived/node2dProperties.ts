@@ -16,7 +16,7 @@ import {
 } from '../../godot/math/transform2d.js';
 import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 import { degToRadf, radToDegf } from '../../godot/math/math.js';
-import { numberOf, pairOf, realValue } from './valueOf.js';
+import { isTrue, numberOf, pairOf, realValue } from './valueOf.js';
 import type { DerivedProperties, NodeReads, StoredWrite } from './derivedProperty.js';
 
 const vector2Value = ({ x, y }: { x: number; y: number }): VariantValue => ({
@@ -152,7 +152,7 @@ export class Node2DProperties implements DerivedProperties {
 
   /** `get_parent_item`'s global transform (`canvas_item.cpp:565-572`). A Control's needs the layout. */
   private parentGlobalOf(reads: NodeReads): Transform2DColumns | null | undefined {
-    if ((reads.stored('top_level') as { value: unknown }).value === true) return null;
+    if (isTrue(reads.stored('top_level'))) return null;
     const parent = reads.parent();
     if (!parent || !isCanvasItem(parent.type)) return null;
     const global = parent.get('global_transform');

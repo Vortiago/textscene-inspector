@@ -25,8 +25,8 @@ const SUB_RESOURCE_SEPARATOR = '::';
 /** The host's reads and writes of the properties of the scene's nodes, by live path. */
 export class SceneProperties {
   private readonly store = new WriteStore();
-  /** Written only by `derivedAt`. Cleared with the writes, since a new text frees each node. */
-  private readonly derived = new Map<string, DerivedProperties | null>();
+  /** Written only by `derivedAt`, keyed by live path with its class, since a load can seat another class. */
+  private readonly derived = new Map<string, { type: string; properties: DerivedProperties | null }>();
   /** Written only by `unknownProperty`: each name warned of, once for the scene's life. */
   private readonly warned = new Set<string>();
   /** Written only by `resourceText`: the files a write names, by path. */
@@ -78,17 +78,21 @@ export class SceneProperties {
     if (outcome.kind === 'unknown') return this.unknownProperty(node, property, false);
     if (outcome.kind === 'unported') throw unportedProperty(property, outcome.declaredBy);
     if (outcome.kind === 'dropped') return false;
-    for (const [stored, written] of outcome.writes) {
-      this.store.write('host', livePath, stored, this.textOf(written));
-      // A derived setter keeps its own cache: only a write of the stored property itself resets it.
-      if (stored === property) derived?.storedWritten?.(stored);
-    }
+    // A setter that refuses the value writes nothing, so the writes and their views stay as they were.
+    if (outcome.writes.length === 0) return outcome.isValid;
+    const texts = outcome.writes.map(([stored, written]) => [stored, this.textOf(written)] as const);
+    this.store.write('host', livePath, texts);
+    // A derived setter keeps its own cache: only a write of the stored property itself resets it.
+    if (outcome.writes.some(([stored]) => stored === property)) derived?.storedWritten?.(property);
     return outcome.isValid;
   }
 
   private derivedAt(access: PropertyAccess, livePath: string, node: SceneTreeNode): DerivedProperties | null {
-    if (!this.derived.has(livePath)) this.derived.set(livePath, access.derivedPropertiesOf(node.type));
-    return this.derived.get(livePath)!;
+    const cached = this.derived.get(livePath);
+    if (cached?.type === node.type) return cached.properties;
+    const properties = access.derivedPropertiesOf(node.type);
+    this.derived.set(livePath, { type: node.type, properties });
+    return properties;
   }
 
   private readsAt(access: PropertyAccess, livePath: string, node: SceneTreeNode): NodeReads {

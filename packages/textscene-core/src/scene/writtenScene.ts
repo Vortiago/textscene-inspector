@@ -154,6 +154,13 @@ function rootNodesOf(graph: SceneGraph): readonly TscnNode[] {
   return graph.scenes.get(graph.rootScene)?.nodes ?? [];
 }
 
+/** The roots with every write laid, seated as `roots` are, and seated so again after a reseat. */
+function writtenRoots(roots: readonly TscnNode[], writes: SceneWrites): readonly TscnNode[] {
+  let nodes = roots;
+  for (const [livePath, texts] of writes) nodes = withWrite(nodes, livePath, texts);
+  return shareSeating(nodes, roots, (reseated) => writtenRoots(reseated, writes));
+}
+
 /** Each node off a written path keeps its identity. */
 export function writtenSceneGraph(
   graph: SceneGraph,
@@ -162,11 +169,9 @@ export function writtenSceneGraph(
 ): SceneGraph {
   const root = graph.scenes.get(graph.rootScene);
   if (!root || (writes.size === 0 && resources.length === 0)) return graph;
-  let nodes: readonly TscnNode[] = root.nodes;
-  for (const [livePath, texts] of writes) nodes = withWrite(nodes, livePath, texts);
   const scene: ParsedScene = {
     ...root,
-    nodes: shareSeating(nodes, root.nodes),
+    nodes: writtenRoots(root.nodes, writes),
     externalResources:
       resources.length === 0 ? root.externalResources : [...root.externalResources, ...resources],
   };

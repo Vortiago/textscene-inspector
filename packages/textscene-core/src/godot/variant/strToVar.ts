@@ -202,6 +202,11 @@ function namedNumber(text: string): number | undefined {
 /** How a constructor argument is stored: `real_t` and `float` are single precision. */
 type Store = 'real' | 'int32' | 'int64' | 'uint8' | 'double';
 
+/** `(int64_t)` of an infinity or a NaN is INT64_MIN on x86, whose low 32 and 8 bits are 0. */
+function truncated(value: number): bigint {
+  return Number.isFinite(value) ? BigInt(Math.trunc(value)) : 0n;
+}
+
 function stored(value: number, isFloat: boolean, store: Store): number {
   switch (store) {
     case 'real':
@@ -211,9 +216,9 @@ function stored(value: number, isFloat: boolean, store: Store): number {
     case 'int64':
       return isFloat ? Math.trunc(value) : value;
     case 'int32':
-      return Number(BigInt.asIntN(32, BigInt(Math.trunc(value))));
+      return Number(BigInt.asIntN(32, truncated(value)));
     case 'uint8':
-      return Number(BigInt.asUintN(8, BigInt(Math.trunc(value))));
+      return Number(BigInt.asUintN(8, truncated(value)));
   }
 }
 
@@ -584,7 +589,7 @@ class ValueReader {
     }
   }
 
-  /** The entries in source order. A later equal key replaces an earlier one, as `object[key] = v` does. */
+  /** The entries in source order, a repeated key kept as written: the reader of the entries settles it. */
   private dictionaryBody(): [VariantValue, VariantValue][] {
     const entries: [VariantValue, VariantValue][] = [];
     for (let needsComma = false; ;) {

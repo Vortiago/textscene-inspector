@@ -18,22 +18,23 @@ export class WriteStore {
   /** Written only by `write` and `clear`: the laid texts, replaced as a whole on each change. */
   private laid: SceneWrites = NO_WRITES;
 
-  /** A rewrite of a property moves it last, so the later setter runs after the others, as in Godot. */
-  write(layer: WriteLayer, path: string, property: string, text: string): void {
+  /** One setter call's texts, in one new map. A rewritten property moves last, as its setter runs last. */
+  write(
+    layer: WriteLayer,
+    path: string,
+    written: readonly (readonly [property: string, text: string])[]
+  ): void {
     let byPath = this.layers.get(layer);
     if (!byPath) this.layers.set(layer, (byPath = new Map()));
     let texts = byPath.get(path);
     if (!texts) byPath.set(path, (texts = new Map()));
-    texts.delete(property);
-    texts.set(property, text);
+    for (const [property, text] of written) {
+      texts.delete(property);
+      texts.set(property, text);
+    }
     const next = new Map(this.laid);
     next.set(path, this.layEach(path));
     this.laid = next;
-  }
-
-  /** The text `layer` wrote last for `property` at `path`. */
-  written(layer: WriteLayer, path: string, property: string): string | undefined {
-    return this.layers.get(layer)?.get(path)?.get(property);
   }
 
   current(): SceneWrites {

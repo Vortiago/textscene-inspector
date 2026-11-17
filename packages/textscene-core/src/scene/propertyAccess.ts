@@ -6,7 +6,7 @@ import { PROPERTY_HINT } from '../godot/classdb/propertyHint.js';
 import { resourceTypeHint } from '../godot/classdb/resourceTypeHint.js';
 import { strToVar, type VariantReading } from '../godot/variant/strToVar.js';
 import { castVariant, canConvertStrict } from '../godot/variant/variantCast.js';
-import { VARIANT_TYPE as T, variantTypeName } from '../godot/variant/variantType.js';
+import { VARIANT_TYPE as T } from '../godot/variant/variantType.js';
 import { NIL_VALUE, type VariantValue } from '../godot/variant/variantValue.js';
 import type { DerivedProperties, NodeReads, StoredValue, StoredWrite } from './derived/derivedProperty.js';
 import { derivedPropertiesOf } from './derived/derivedFamily.js';
@@ -114,9 +114,4 @@ export function resolveGet(
   if (!derivedProperty) return { kind: 'unknown' };
   const value = derived?.get(property, reads);
   return value ? { kind: 'value', value } : { kind: 'unported', declaredBy: derivedProperty.declaredBy };
-}
-
-/** The Godot name of a value's type, as `type_string` spells it. */
-export function typeNameOf(value: VariantValue): string {
-  return variantTypeName(value.type) ?? 'Nil';
 }

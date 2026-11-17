@@ -1,9 +1,7 @@
+import { AutoTranslateMode } from '../../godot/scene/node.js';
 import type { VariantValue } from '../../godot/variant/variantValue.js';
 import type { DerivedProperties, NodeReads, StoredWrite } from './derivedProperty.js';
 import { boolValue, intValue, isTrue, numberOf } from './valueOf.js';
-
-/** `Node::AutoTranslateMode` (`node.h:126-130`). */
-const AutoTranslateMode = { INHERIT: 0, ALWAYS: 1, DISABLED: 2 } as const;
 
 /** The `auto_translate` of a Control and a Window, over the stored `auto_translate_mode`. */
 export class AutoTranslateProperties implements DerivedProperties {

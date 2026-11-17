@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { strToVar } from './strToVar';
 import { varToStr } from './varToStr';
-import { canConvertStrict, settableValue } from './variantCast';
+import { canConvertStrict, castVariant } from './variantCast';
 import { VARIANT_TYPE as T } from './variantType';
 
 // Each expected value is what a Godot 4.6.3 setter of that type received, read back after `Object.set`.
-const castText = (input: string, to: number) => varToStr(settableValue(strToVar(input), to).value);
+const castText = (input: string, to: number) => varToStr(castVariant(strToVar(input), to));
 
-describe('settableValue', () => {
+describe('castVariant', () => {
   it('gives the default of the setter type for a value it cannot convert', () => {
     expect(castText('"text"', T.VECTOR3)).toBe('Vector3(0, 0, 0)');
     expect(castText('12', T.VECTOR3)).toBe('Vector3(0, 0, 0)');
