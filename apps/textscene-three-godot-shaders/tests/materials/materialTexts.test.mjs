@@ -3,7 +3,9 @@ import { shaderTextOf } from '../../../../packages/textscene-core/src/shaders/ma
 import { materialStateOf } from '../../../../packages/textscene-core/src/shaders/material/materialProperties.ts';
 import { stencilPassOf } from '../../../../packages/textscene-core/src/shaders/material/stencilEffect.ts';
 import { MATERIAL_CLASSES, parseCaseId, sha256 } from '../../../../scripts/godot-probes/materialTexts.mjs';
+import { verdictOfText } from '../../../../scripts/godot-probes/shaderVerdicts.mjs';
 import { godotAnswers, liveMaterialTexts } from '../godotAnswers.mjs';
+import { judge, parserVerdict } from '../verdicts/judge.mjs';
 
 /** The state of the material a parsed case names, or of the next pass its stencil makes. */
 function stateOf({ id, materialClass, settings, isNextPass }) {
@@ -21,12 +23,23 @@ const cases = Object.entries(answers.materials.cases).map(([id, hash]) => ({ id,
 const hashes = new Map();
 const hashOf = (text) => hashes.get(text) ?? hashes.set(text, sha256(text)).get(text);
 
+/** Each case's generated text, with Godot's hash. */
+const generated = cases.map((parsed) => ({ ...parsed, text: shaderTextOf(stateOf(parsed).key) }));
+
 /** Each case of `materialClass` whose text is not Godot's. */
 const mismatches = (materialClass) =>
-  cases
-    .filter((parsed) => parsed.materialClass === materialClass)
-    .map((parsed) => ({ id: parsed.id, hash: parsed.hash, text: shaderTextOf(stateOf(parsed).key) }))
-    .filter(({ hash, text }) => hashOf(text) !== hash);
+  generated.filter((made) => made.materialClass === materialClass && hashOf(made.text) !== made.hash);
+
+/** Each generated text that equals Godot's, by its hash. */
+const textsByHash = new Map(
+  generated.filter((made) => hashOf(made.text) === made.hash).map((made) => [made.hash, made.text])
+);
+
+/** A parse of each of the 9,493 distinct texts takes about 6 s alone, more beside the other test files. */
+const PARSE_ALL_TIMEOUT_MS = 60_000;
+
+/** The states of a parse that agrees with Godot's compiler. */
+const AGREES = ['transpiled', 'refused as Godot refuses'];
 
 /** Godot's text of the case, which only the live run holds. */
 const godotText = ({ hash }) => (answers.live ? liveMaterialTexts()[hash] : `the text of hash ${hash}`);
@@ -40,4 +53,20 @@ describe("BaseMaterial3D's shader text", () => {
       first: first && { id: first.id, text: godotText(first) },
     });
   });
+
+  it(
+    "parses each distinct text Godot accepts, and refuses each other with Godot's message and line",
+    () => {
+      const disagreements = Object.entries(answers.materials.verdicts)
+        .filter(([hash]) => textsByHash.has(hash))
+        .map(([hash, verdict]) => ({
+          hash,
+          outcome: judge(verdictOfText(verdict), parserVerdict(textsByHash.get(hash))),
+        }))
+        .filter(({ outcome }) => !AGREES.includes(outcome.state))
+        .map(({ hash, outcome }) => `${hash}: ${outcome.detail}`);
+      expect(disagreements).toEqual([]);
+    },
+    PARSE_ALL_TIMEOUT_MS
+  );
 });

@@ -54,7 +54,7 @@ function smokeAnswers(smoke, godot, adapter) {
     corpus: { godot, cases: smoke.corpus },
     expressions: { godot, cases: smoke.expressions },
     heads: { godot, cases: smoke.heads },
-    materials: { godot, cases: smoke.materials },
+    materials: { godot, cases: smoke.materials, verdicts: smoke.materialVerdicts },
   };
 }
 

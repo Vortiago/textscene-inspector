@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
 import { eachAtOnce, oneGodot, printedField, RUNS_AT_ONCE, runGodotScript } from './godotRun.mjs';
+import { SHADER_BETWEEN } from './shaderBetween.mjs';
+import { godotVerdicts, verdictText } from './shaderVerdicts.mjs';
 
 const MARKER = 'MATERIAL ';
 const DONE = 'MATERIALS DONE';
@@ -13,12 +15,10 @@ export const MATERIAL_CLASSES = ['StandardMaterial3D', 'ORMMaterial3D'];
 /** Each class gets this many materials with many properties set at once, which pairs do not reach. */
 export const RANDOM_CASES = 3000;
 
-/** Godot gives a script no material's shader RID, so it reads the one shader between two of its own. */
+/** A sweep of BaseMaterial3D's properties: each case is recorded alone, with Godot's text. */
 const MATERIAL_SCRIPT = `extends Node
+${SHADER_BETWEEN}
 
-const SLOT_BITS := 4294967296
-## Every shader of the sweep sits in one of the first 64 slots of its counter.
-const SLOTS := 64
 const RANDOM_CASES := ${RANDOM_CASES}
 const RANDOM_SEED := 1456
 const MOST_SETTINGS := 12
@@ -31,16 +31,24 @@ func values_of(p: Dictionary, defaults: Material) -> Array:
 		return []
 	var names: PackedStringArray = p.hint_string.split(",")
 	if p.hint == PROPERTY_HINT_ENUM:
-		return range(names.size())
+		return hinted(names, func(index): return index)
 	if p.hint == PROPERTY_HINT_FLAGS:
-		var bits := []
-		for bit in names.size():
-			bits.append(1 << bit)
-		bits.append((1 << names.size()) - 1)
-		return bits
+		var bits := hinted(names, func(index): return 1 << index)
+		var all := 0
+		for bit in bits:
+			all |= bit
+		return bits + [all]
 	if p.hint == PROPERTY_HINT_RANGE:
 		return [int(names[0]), int(names[0]) + 1, int(names[1])]
 	return []
+
+## A hint's value for each name: the one after its colon, or the one its place implies.
+func hinted(names: PackedStringArray, implied: Callable) -> Array:
+	var values := []
+	for index in names.size():
+		var parts := names[index].split(":")
+		values.append(int(parts[1]) if parts.size() > 1 else implied.call(index))
+	return values
 
 func values_by_name() -> Dictionary:
 	var defaults := StandardMaterial3D.new()
@@ -84,39 +92,14 @@ func id_of(cls: String, settings: Array) -> String:
 		parts.append("%s=%s" % [setting[0], setting[1]])
 	return "|".join(parts)
 
-func shader_in(before: RID, after: RID, slots: Array) -> String:
-	for counter in range(before.get_id() / SLOT_BITS + 1, after.get_id() / SLOT_BITS):
-		for slot in slots:
-			var code := RenderingServer.shader_get_code(rid_from_int64(counter * SLOT_BITS + slot))
-			if code != "":
-				return code
-	return ""
-
-func shader_between(before: RID, after: RID) -> String:
-	var first_slot: int = mini(before.get_id() % SLOT_BITS, after.get_id() % SLOT_BITS)
-	var last_slot: int = maxi(before.get_id() % SLOT_BITS, after.get_id() % SLOT_BITS)
-	var code := shader_in(before, after, range(maxi(first_slot - 1, 0), last_slot + 2))
-	return code if code != "" else shader_in(before, after, range(SLOTS))
-
 func made(cls: String, settings: Array) -> Material:
 	var material: Material = ClassDB.instantiate(cls)
 	for setting in settings:
 		material.set(setting[0], setting[1])
 	return material
 
-## A frame inside the window lets the server free the shaders of the cases before, or memory runs out.
-func text_of(material: Material) -> String:
-	var before := RenderingServer.shader_create()
-	material.get_rid()
-	await get_tree().process_frame
-	var after := RenderingServer.shader_create()
-	var code := shader_between(before, after)
-	RenderingServer.free_rid(before)
-	RenderingServer.free_rid(after)
-	return code
-
 func record(id: String, material: Material) -> void:
-	printerr("${MARKER}", id, " ", Marshalls.utf8_to_base64(await text_of(material)))
+	printerr("${MARKER}", id, " ", Marshalls.utf8_to_base64(await shader_of(material)))
 
 ## Each window holds one shader: a stencil's next pass is measured alone, with its material freed.
 func record_case(cls: String, settings: Array) -> void:
@@ -183,7 +166,7 @@ export function parseCaseId(id) {
   return { materialClass, settings: Object.fromEntries(settings), isNextPass };
 }
 
-/** Godot's text of each material of the sweep: the record holds each case's hash, `texts` each text. */
+/** Each case's hash and each hash's compiler verdict, from Godot, and `texts`, each text by its hash. */
 export async function materialRecord() {
   const chunks = Array.from({ length: RUNS_AT_ONCE }, (_, chunk) => chunk);
   const runs = await eachAtOnce(chunks, async (chunk) => {
@@ -199,5 +182,11 @@ export async function materialRecord() {
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const cases = Object.fromEntries(entries.map(({ id, hash }) => [id, hash]));
   const texts = Object.fromEntries(entries.map(({ text, hash }) => [hash, text]));
-  return { record: { godot, cases }, texts };
+  const hashes = Object.keys(texts).sort();
+  const compiled = await godotVerdicts(hashes.map((hash) => texts[hash]));
+  oneGodot([{ godot }, compiled]);
+  const verdicts = Object.fromEntries(
+    hashes.map((hash, index) => [hash, verdictText(compiled.verdicts[index])])
+  );
+  return { record: { godot, cases, verdicts }, texts };
 }

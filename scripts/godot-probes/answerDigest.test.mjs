@@ -14,7 +14,7 @@ const answersOf = (source, lanes, adapter = 'a') => {
     corpus: { cases: {} },
     expressions: { cases: {} },
     heads: { cases: {} },
-    materials: { godot: 'g', cases: {} },
+    materials: { godot: 'g', cases: {}, verdicts: {} },
   };
 };
 
@@ -46,6 +46,7 @@ describe('the committed answers file', () => {
       'expressions',
       'heads',
       'materials',
+      'materialVerdicts',
     ]);
   });
 });

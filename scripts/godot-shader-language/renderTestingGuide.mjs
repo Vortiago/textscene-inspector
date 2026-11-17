@@ -155,11 +155,11 @@ function materialSection(materialRecord) {
   const number = (value) => value.toLocaleString('en-GB');
   return `## BaseMaterial3D against Godot
 
-Godot writes the shader of a StandardMaterial3D or an ORMMaterial3D from the material's properties (\`BaseMaterial3D::_update_shader\`, \`material.cpp:685\`). \`baseMaterialShader\` in core writes the same text, character for character, for the translator to draw as it draws a user's shader.
+Godot writes the shader of a StandardMaterial3D or an ORMMaterial3D from the material's properties (\`BaseMaterial3D::_update_shader\`, \`material.cpp:685\`). \`baseMaterialShader\` in core writes the same text, character for character.
 
 \`pnpm godot:probes\` sweeps the properties Godot's \`ClassDB\` lists for BaseMaterial3D. Each bool is set to the value its default is not, each enum to each value, each flag set to each bit and to all bits, and each integer range to its minimum, the minimum plus 1 and its maximum. The sweep holds the default material, each value alone, and each pair of values of two properties, for both classes. Pairs do not reach a condition on three or more properties, such as a heightmap with deep parallax and a flipped texture. So the sweep also holds ${number(RANDOM_CASES)} materials of each class with 3 to 12 properties set at once, drawn from a fixed seed. An outline or x-ray stencil makes a next pass, and the sweep records that pass too. Godot gives a script no material's shader, so the recorder reads the one shader Godot makes between two shaders of its own (\`scripts/godot-probes/materialTexts.mjs\`).
 
-The sweep holds ${number(ids.length)} materials, ${number(nextPasses)} of them next passes, and Godot writes ${number(texts)} distinct texts for them. The test fails on the first material whose text differs, and shows both texts. The repository keeps only a digest of each text, for the smoke subset.`;
+The sweep holds ${number(ids.length)} materials, ${number(nextPasses)} of them next passes, and Godot writes ${number(texts)} distinct texts for them. The test fails on the first material whose text differs, and shows both texts. Godot's compiler also gives a verdict on each distinct text, and the parser must accept each text Godot accepts and refuse each other with Godot's message and line. The repository keeps only a digest of each text, for the smoke subset.`;
 }
 
 /** The text of the chapter. */

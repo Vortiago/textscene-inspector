@@ -43,7 +43,7 @@ export function canonicalAnswers({ probes, random, ...verdicts }) {
   return { probes: canonicalProbes(probes), random: canonicalProbes(random), ...verdicts };
 }
 
-/** Each family's answers, `{ id: answer }`: probes and random by name, the other families by case id. */
+/** Each family's answers, `{ id: answer }`: by probe name, by text hash for verdicts, else by case id. */
 const familiesOf = ({ probes, random, operators, corpus, expressions, heads, materials }) => ({
   probes: probes.probes,
   random: random.probes,
@@ -52,6 +52,7 @@ const familiesOf = ({ probes, random, operators, corpus, expressions, heads, mat
   expressions: expressions.cases,
   heads: heads.cases,
   materials: materials.cases,
+  materialVerdicts: materials.verdicts,
 });
 
 /** The families of canonical `answers` whose digest is not the one `committed` holds. */
