@@ -3,6 +3,7 @@ import { tokenize } from '../../../../packages/textscene-core/src/shaders/langua
 import {
   compileMaterial,
   templateVariant,
+  usageDefineOf,
 } from '../../../../packages/textscene-core/src/shaders/template/link.ts';
 import { MODE_TABLES } from '../../../../packages/textscene-core/src/shaders/template/modeTables.generated.ts';
 import { preprocess } from '../../../../packages/textscene-core/src/shaders/template/preprocess.ts';
@@ -40,10 +41,10 @@ function rowsByDefine() {
   const add = (define, row) => rows.set(define, [...(rows.get(define) ?? []), row]);
   for (const [mode, define] of Object.entries(table.render_mode_defines))
     add(define, `spatial render_mode ${mode}`);
-  for (const [name, define] of Object.entries(table.usage_defines)) {
-    const resolved = define.startsWith('@') ? table.usage_defines[define.slice(1)] : define;
+  for (const name of Object.keys(table.usage_defines)) {
+    const define = usageDefineOf(table, name);
     for (const row of INSTRUCTION_TABLE)
-      if (/^spatial\.(vertex|fragment)\./.test(row.id) && row.id.endsWith(`.${name}`)) add(resolved, row.id);
+      if (/^spatial\.(vertex|fragment)\./.test(row.id) && row.id.endsWith(`.${name}`)) add(define, row.id);
   }
   return rows;
 }
@@ -61,10 +62,10 @@ const sceneMaterials = (sources) =>
     compileMaterial(parse(tokenize(source, 'scene.gdshader')), MODE_TABLES.spatial)
   );
 
-/** The branches of `stage` that the variant of each scene source takes. */
-function drawnBranches(stage, sources) {
+/** The branches of `stage` that the variant of each scene material takes. */
+function drawnBranches(stage, materials) {
   return new Set(
-    sceneMaterials(sources).flatMap((material) =>
+    materials.flatMap((material) =>
       decidedBranches(stage, material)
         .filter((branch) => branch.isTaken)
         .map((branch) => branch.key)
@@ -73,11 +74,11 @@ function drawnBranches(stage, sources) {
 }
 
 /** The rows of each branch some unshaded material takes, and every branch an unshaded material decides. */
-function materialBranches(stage) {
+function materialBranches(stage, rowsOfDefines) {
   const unshaded = MODE_TABLES.spatial.render_mode_defines.unshaded;
   const takenBy = new Map();
   const decided = new Set();
-  for (const [define, rows] of rowsByDefine()) {
+  for (const [define, rows] of rowsOfDefines) {
     const custom = define === unshaded ? [unshaded] : [unshaded, define];
     for (const { key, isTaken } of decidedBranches(stage, definesOnly(custom))) {
       decided.add(key);
@@ -96,10 +97,12 @@ const openState = (rows) =>
 
 /** The state of each `#if` branch of the unshaded colour pass, by stage, then by `file:line`. */
 export function sceneBranchStates(sources) {
+  const materials = sceneMaterials(sources);
+  const rowsOfDefines = rowsByDefine();
   return Object.fromEntries(
     STAGES.map((stage) => {
-      const drawn = drawnBranches(stage, sources);
-      const { takenBy, decided } = materialBranches(stage);
+      const drawn = drawnBranches(stage, materials);
+      const { takenBy, decided } = materialBranches(stage, rowsOfDefines);
       const states = [...decided].map((key) => {
         if (drawn.has(key)) return [key, DRAWN];
         return [key, takenBy.has(key) ? openState(takenBy.get(key)) : NOT_A_MATERIAL_BRANCH];

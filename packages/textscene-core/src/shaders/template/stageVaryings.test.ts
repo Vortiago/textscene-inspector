@@ -9,7 +9,13 @@ describe('StageVaryings', () => {
 
   it('gives each element of an array varying the varying of its index', () => {
     const varyings = new StageVaryings();
-    const pair = varyings.ofArray('vec2', 'pair', 2, false);
-    expect(pair.element(1)).toBe(varyings.of('vec2', 'pair_1', false));
+    const pair = varyings.ofArray('vec2', 'm_pair', 2, false);
+    expect(pair.element(1)).toBe(varyings.of('vec2', 'element1_m_pair', false));
+  });
+
+  it('keeps an element apart from a varying named as the array with its index', () => {
+    const varyings = new StageVaryings();
+    const pair = varyings.ofArray('vec2', 'm_pair', 2, false);
+    expect(pair.element(1)).not.toBe(varyings.of('vec2', 'm_pair_1', false));
   });
 });

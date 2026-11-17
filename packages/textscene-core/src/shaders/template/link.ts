@@ -128,10 +128,14 @@ function usageDefines(shader: ShaderNode, table: ModeTable): string[] {
   for (const definition of shader.functions)
     for (const expression of everyExpressionIn(definition.body)) {
       if (expression.kind !== 'variable' || !expression.builtIn) continue;
-      const define = table.usage_defines[expression.name];
-      // `@NAME` reads the define of NAME (`shader_compiler.cpp:908-910`).
-      const resolved = define?.startsWith('@') ? table.usage_defines[define.slice(1)] : define;
-      if (resolved) defines.add(resolved);
+      const define = usageDefineOf(table, expression.name);
+      if (define) defines.add(define);
     }
   return [...defines];
+}
+
+/** The define a read of `name` adds, or nothing: `@NAME` reads NAME's (`shader_compiler.cpp:908-910`). */
+export function usageDefineOf(table: ModeTable, name: string): string | undefined {
+  const define = table.usage_defines[name];
+  return define?.startsWith('@') ? table.usage_defines[define.slice(1)] : define;
 }

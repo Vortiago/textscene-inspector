@@ -52,6 +52,11 @@ describe('withGodotAttributes', () => {
     expect([...withGodotAttributes(geometry).getIndex()!.array]).toEqual([1, 2, 0]);
   });
 
+  it('turns no triangle of a clone of a prepared geometry again', () => {
+    const clone = withGodotAttributes(triangle()).clone();
+    expect([...withGodotAttributes(clone).getIndex()!.array]).toEqual([1, 2, 0]);
+  });
+
   it('keeps the vertex order of a geometry with no index, so each vertex keeps its index', () => {
     const geometry = triangle();
     const positions = [...geometry.getAttribute('position').array];

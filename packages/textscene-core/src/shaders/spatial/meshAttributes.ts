@@ -7,15 +7,14 @@ const VERTEX_ANGLE_ATTRIBUTE = 'vertex_angle_attrib';
 /** The attribute at location 1: the normal and the tangent as four 16-bit unsigned normalised lanes. */
 const AXIS_TANGENT_ATTRIBUTE = 'axis_tangent_attrib';
 
-/** Written only by `withGodotAttributes`, so a second call turns no triangle again. */
-const preparedGeometries = new WeakSet<THREE.BufferGeometry>();
+/** The `userData` key that marks turned corners: `clone` and `copy` carry it with the turned index. */
+const FIRST_CORNER_LAST = 'godotFirstCornerLast';
 
 /** `geometry` as an uncompressed Godot surface (`rendering_server.cpp:425-700`), first corners as Godot's. */
 export function withGodotAttributes(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
   const position = geometry.getAttribute('position');
   if (!position) throw new Error('expected a geometry with a position attribute, found none');
-  if (!preparedGeometries.has(geometry)) withFirstCornerLast(geometry, position.count);
-  preparedGeometries.add(geometry);
+  if (!geometry.userData[FIRST_CORNER_LAST]) withFirstCornerLast(geometry, position.count);
   geometry.setAttribute(VERTEX_ANGLE_ATTRIBUTE, position);
   const normal = geometry.getAttribute('normal');
   if (normal) geometry.setAttribute(AXIS_TANGENT_ATTRIBUTE, axisTangent(normal, signedTangent(geometry)));
@@ -78,13 +77,17 @@ function boneIndices(bones: Attribute): THREE.BufferAttribute {
 
 /** Each triangle turned to draw its first corner last: `flat` reads Vulkan's first vertex, WebGL's last. */
 function withFirstCornerLast(geometry: THREE.BufferGeometry, vertexCount: number): void {
-  const corners = geometry.getIndex()?.array ?? Array.from({ length: vertexCount }, (_, vertex) => vertex);
-  if (corners.length % 3 !== 0)
-    throw new Error(`expected a triangle list of a multiple of 3 corners, got ${corners.length} corners`);
-  const turned = vertexCount > 0xffff ? new Uint32Array(corners.length) : new Uint16Array(corners.length);
-  for (let corner = 0; corner < corners.length; corner++)
-    turned[corner] = corners[corner - (corner % 3) + (((corner % 3) + 1) % 3)]!;
+  const index = geometry.getIndex()?.array;
+  const cornerCount = index?.length ?? vertexCount;
+  if (cornerCount % 3 !== 0)
+    throw new Error(`expected a triangle list of a multiple of 3 corners, got ${cornerCount} corners`);
+  const turned = vertexCount > 0xffff ? new Uint32Array(cornerCount) : new Uint16Array(cornerCount);
+  for (let corner = 0; corner < cornerCount; corner++) {
+    const source = corner - (corner % 3) + (((corner % 3) + 1) % 3);
+    turned[corner] = index ? index[source]! : source;
+  }
   geometry.setIndex(new THREE.BufferAttribute(turned, 1));
+  geometry.userData[FIRST_CORNER_LAST] = true;
 }
 
 /** A colour as Godot stores it, four bytes cut down from 255 times each lane (`rendering_server.cpp:712`). */

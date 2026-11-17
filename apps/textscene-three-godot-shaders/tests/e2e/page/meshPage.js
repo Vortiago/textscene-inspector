@@ -7,7 +7,7 @@ import { displayRenderer, euler, godotCamera, linear, shaderTime } from './godot
 const GODOT_CLEAR_COLOR = linear([0.3, 0.3, 0.3]);
 
 /** Each corner of each triangle in three's order: three's front face winds the other way. */
-const turnedCorner = (corner) => corner - (corner % 3) + [0, 2, 1][corner % 3];
+const counterClockwiseCorner = (corner) => corner - (corner % 3) + [0, 2, 1][corner % 3];
 
 /** Each of Godot's arrays a mesh may hold, by its three attribute and its lanes. */
 const ARRAYS = [
@@ -25,14 +25,14 @@ const ARRAYS = [
   ['weights', 'skinWeight', 4],
 ];
 
-/** Godot's arrays as three's geometry, in Godot's vertex order, each triangle turned by its index. */
+/** Godot's arrays as three's geometry in Godot's vertex order, its index counter-clockwise. */
 function geometryOf(mesh) {
   const geometry = new THREE.BufferGeometry();
   for (const [array, attribute, lanes] of ARRAYS) {
     const values = mesh[array];
     if (values) geometry.setAttribute(attribute, new THREE.Float32BufferAttribute(values.flat(), lanes));
   }
-  geometry.setIndex(mesh.positions.map((_, corner) => turnedCorner(corner)));
+  geometry.setIndex(mesh.positions.map((_, corner) => counterClockwiseCorner(corner)));
   return withGodotAttributes(geometry);
 }
 

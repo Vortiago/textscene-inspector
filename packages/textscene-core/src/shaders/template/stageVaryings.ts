@@ -47,7 +47,9 @@ export class StageVaryings {
 
   /** An array varying as one varying for each element, as three declares no array varying. */
   ofArray(type: string, name: string, count: number, isFlat: boolean): ArrayValue {
-    const elements = Array.from({ length: count }, (_, index) => this.of(type, `${name}_${index}`, isFlat));
+    const elements = Array.from({ length: count }, (_, index) =>
+      this.of(type, elementName(name, index), isFlat)
+    );
     return {
       kind: 'array',
       count,
@@ -55,6 +57,9 @@ export class StageVaryings {
     };
   }
 }
+
+/** No material varying starts with `element`, as Godot's ids start with `m_`: `pair_1` stays its own. */
+const elementName = (name: string, index: number) => `element${index}_${name}`;
 
 /** The element at a computed index, read by comparing the index with each one. */
 function selected(elements: readonly Node[], index: Node): Node {
