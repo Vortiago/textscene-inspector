@@ -27,8 +27,7 @@ export function findHostBundleViolations(content) {
  * `node_modules/.pnpm/.../node_modules/react/` included, so no source file or string can match.
  */
 export function findForbiddenHostInputs(metafile) {
-  // The trailing slash anchors `three`, so it does not match `three-bvh-csg/` or
-  // `three-mesh-bvh/`. Both are listed by name.
+  // The trailing slash keeps `three` from matching `three-bvh-csg/`, so each is listed by name.
   const forbidden =
     /node_modules\/(react|react-dom|scheduler|three|three-bvh-csg|three-mesh-bvh|@react-three)\//;
   return Object.keys(metafile.inputs ?? {}).filter((input) => forbidden.test(input));

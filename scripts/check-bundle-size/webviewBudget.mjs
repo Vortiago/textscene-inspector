@@ -117,10 +117,7 @@ function staticClosure(dir, entry) {
 }
 
 /**
- * Measures the initial-paint closure and prints the report. Every finding is
- * printed here, but the exit code is the caller's: the webview budget only
- * hard-fails under `--enforce`, while the host guard hard-fails always, so
- * only `main()` sees both halves.
+ * The exit code is the caller's: only `main()` sees both the budget and the host guard.
  *
  * @param {boolean} enforce whether an over-budget closure is an error or a warning
  * @returns {'ok' | 'over-budget' | 'missing-entry' | 'unresolved-imports' | 'eager-lazy-only'}

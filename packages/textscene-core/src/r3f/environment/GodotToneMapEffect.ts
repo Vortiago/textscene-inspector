@@ -1,10 +1,3 @@
-/**
- * Godot's tonemap pass as one full-screen pass: the tone curve, plus the glow gather and blend under
- * `FLAG_USE_GLOW` and the colour adjustments under `FLAG_USE_BCS`, as in `tonemap.glsl`. One shader
- * lets SOFTLIGHT composite after the curve, with the glow buffer tonemapped, and every other mode
- * before it, which a fixed pass order cannot express.
- */
-
 import * as THREE from 'three';
 import { glowLevelCap, glowLevelSize, type GlowParams } from '../../resources/environment/godotGlow';
 import {
@@ -38,6 +31,8 @@ export class GodotToneMapEffect {
   private readonly pyramid: GlowPyramid | null;
   /** Null when the camera attributes hold no auto exposure. */
   private readonly luminance: LuminanceReduction | null;
+  /** Null without debanding, the only reader of the frame size. */
+  private readonly resolution: THREE.Vector2 | null;
 
   constructor(options: CompositeOptions) {
     const { fragmentShader, uniforms } = compositeProgram(options);
@@ -52,8 +47,8 @@ export class GodotToneMapEffect {
     this.pyramid = options.glow
       ? new GlowPyramid(options.glow, this.uniforms, this.luminance?.gainUniforms ?? null)
       : null;
-    const resolution = this.uniforms[RESOLUTION_UNIFORM];
-    if (resolution) resolution.value = new THREE.Vector2();
+    this.resolution = options.usesDebanding ? new THREE.Vector2() : null;
+    if (this.resolution) this.uniforms[RESOLUTION_UNIFORM]!.value = this.resolution;
   }
 
   /** The composite's uniforms, by the names `compositeProgram` declares. */
@@ -73,14 +68,11 @@ export class GodotToneMapEffect {
   }
 
   setSize(width: number, height: number): void {
-    (this.uniforms[RESOLUTION_UNIFORM]?.value as THREE.Vector2 | undefined)?.set(width, height);
+    this.resolution?.set(width, height);
     this.pyramid?.setSize(width, height);
   }
 
-  /**
-   * Reduces `frame` to its luminance, builds the glow pyramid, which reads the luminance
-   * (`renderer_scene_render_rd.cpp:551-607`), then composites into `target`, null for the canvas.
-   */
+  /** `renderer_scene_render_rd.cpp:551-607`. A null `target` is the canvas. */
   render(
     renderer: THREE.WebGLRenderer,
     frame: THREE.WebGLRenderTarget,
@@ -108,10 +100,7 @@ export const GLOW_MAP_SAMPLER: ViewSampler = {
   wrap: THREE.ClampToEdgeWrapping,
 };
 
-/**
- * The glow levels and the passes that build them. Godot weights its seven levels apart
- * (`[0, 0.8, 0.4, 0.1, 0, 0, 0]` by default), each blurred from the one above.
- */
+/** Each level blurs the one above it (`renderer_scene_render_rd.cpp:603-613`). */
 class GlowPyramid {
   private readonly levelTargets: THREE.WebGLRenderTarget[] = [];
   /** Each level's horizontal blur, which its vertical pass reads. */

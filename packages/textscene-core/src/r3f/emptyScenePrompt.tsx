@@ -1,19 +1,13 @@
-/**
- * The prompt an empty canvas shows, drawn as a Label3D in the bundled font. `LabelGlyphs` is
- * `React.lazy`, so the shaping engine stays out of the first paint.
- */
-
-import { lazy } from 'react';
+import type { RefObject } from 'react';
+import type * as THREE from 'three';
 import type { TscnNode } from '../parser/types';
 import { parseLabel3D } from '../nodes/3d/label3d/parser';
 import type { Label3DProperties } from '../nodes/3d/label3d/types';
+import LabelGlyphs from '../nodes/3d/label3d/LabelGlyphs';
 import { withGeometryInstance } from './visibilityRange/geometryInstance';
 import type { NodeComponentProps } from './NodeComponentRegistry';
-import { PendingSuspense } from '../resources/PendingSuspense';
 
-const LabelGlyphs = lazy(() => import('../nodes/3d/label3d/LabelGlyphs'));
-
-/** 0.35 world units high above the grid's centre, grey with a thin black outline. */
+// Parsed, not written out: the parser holds Label3D's defaults for every property not named here.
 const PROMPT_NODE: TscnNode = {
   name: 'EmptyScenePrompt',
   type: 'Label3D',
@@ -31,19 +25,18 @@ const PROMPT_NODE: TscnNode = {
   ),
 };
 
+const PROMPT_PIXEL_SIZE = (PROMPT_NODE.properties as Label3DProperties).pixel_size;
 const PROMPT_HEIGHT = 0.4;
+const NO_NODE_GROUP: RefObject<THREE.Object3D | null> = { current: null };
 
 const PromptGlyphs = withGeometryInstance(({ node }: NodeComponentProps) => (
-  <LabelGlyphs nodeRef={{ current: null }} properties={node.properties as Label3DProperties} />
+  <LabelGlyphs nodeRef={NO_NODE_GROUP} properties={node.properties as Label3DProperties} />
 ));
 
-export function EmptyScenePrompt() {
-  const { pixel_size } = PROMPT_NODE.properties as Label3DProperties;
+export default function EmptyScenePrompt() {
   return (
-    <group position={[0, PROMPT_HEIGHT, 0]} scale={pixel_size}>
-      <PendingSuspense>
-        <PromptGlyphs node={PROMPT_NODE} />
-      </PendingSuspense>
+    <group position={[0, PROMPT_HEIGHT, 0]} scale={PROMPT_PIXEL_SIZE}>
+      <PromptGlyphs node={PROMPT_NODE} />
     </group>
   );
 }

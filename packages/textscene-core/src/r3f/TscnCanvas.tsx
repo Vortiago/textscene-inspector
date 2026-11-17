@@ -3,6 +3,7 @@
  * react-three-fiber, with its resources in scope and the camera the user picks.
  * With no scene loaded, it renders an empty canvas with default lighting.
  */
+import { lazy } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useSeatedRoots } from './useLiveSceneTree.js';
@@ -12,7 +13,7 @@ import { EditedRootProvider } from './contexts/InstanceOwnersContext.js';
 import { NodeDispatcher } from './NodeDispatcher.js';
 import { SelectionHighlight } from './components/SelectionHighlight.js';
 import { HoverHighlight } from './components/HoverHighlight.js';
-import { EmptyScenePrompt } from './emptyScenePrompt.js';
+import { PendingSuspense } from '../resources/PendingSuspense.js';
 import { editorHelperUserData } from './editorHelpers.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
 import { EditorControlsBridge } from './EditorControlsBridge.js';
@@ -29,6 +30,9 @@ import { SceneCamerasProvider } from './sceneCameras.js';
 import { CANVAS_RENDERER_GL, CANVAS_RENDERER_PROPS } from './canvasRenderer/canvasRendererProps.js';
 import { CanvasRendererScope } from './canvasRenderer/CanvasRendererScope.js';
 import styles from './TscnCanvas.module.css';
+
+// Lazy, so the glyph engine and the parse of the prompt load only for an empty canvas.
+const EmptyScenePrompt = lazy(() => import('./emptyScenePrompt.js'));
 
 /**
  * The contents of the `<Canvas>`, exported so `@react-three/test-renderer`,
@@ -104,7 +108,9 @@ function EmptySceneIndicator() {
   return (
     <group userData={{ tscnEmptyState: true }}>
       <GroundGrid />
-      <EmptyScenePrompt />
+      <PendingSuspense>
+        <EmptyScenePrompt />
+      </PendingSuspense>
     </group>
   );
 }

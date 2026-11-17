@@ -194,20 +194,11 @@ vec3 godotDither3(vec2 fragCoord) {
 }
 `;
 
-/**
- * `tonemap.glsl:950-957`: the dither lands on the sRGB value just before the 8-bit store. The
- * fragment counts from the top-left corner, as in Godot. The colour goes back to linear for the
- * pass's output encode, clamped at 0 as the 8-bit store clamps, since three's encode takes `pow`.
- */
+/** `tonemap.glsl:950-957`. Back to linear for the output encode, clamped at 0 as the 8-bit store clamps. */
 const DEBANDING_GLSL = /* glsl */ `  vec2 godotFragCoord = vec2(gl_FragCoord.x, ${RESOLUTION_UNIFORM}.y - gl_FragCoord.y);
   color = godotToLinear(max(godotToSrgb(color) + godotDither3(godotFragCoord), vec3(0.0)));`;
 
-/**
- * `tonemap.glsl:916-946`: brightness on linear values, contrast and an equal-weight saturation on
- * sRGB values, then back to linear, because the pass encodes the output as Godot's sRGB
- * framebuffer does. The decode clamps at 0, as Godot's 8-bit store does: three's encode takes
- * `pow` of the value, and GLSL leaves `pow` of a negative undefined.
- */
+/** `tonemap.glsl:916-946`. Back to linear for the output encode: the clamp keeps its `pow` defined. */
 function adjustmentsGlsl({ brightness, contrast, saturation }: EnvironmentAdjustments): string {
   return /* glsl */ `  color *= ${glslFloat(brightness)};
   color = godotToSrgb(color);

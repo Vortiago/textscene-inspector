@@ -71,8 +71,7 @@ function body(
 
 describe('compositeProgram — the shader it emits', () => {
   it('is self-contained: the curve and the blend are defined above main', () => {
-    // The pass compiles this one string. A function it only calls would be a
-    // link error at shader-compile time: a black frame.
+    // A function the shader calls but does not define fails to link, which draws a black frame.
     const glsl = composite(glowOn());
     expect(glsl).toContain('vec3 godotToneMap(vec3 color)');
     expect(glsl).toContain('vec3 godotGlowBlend(vec3 color, vec3 glow)');
