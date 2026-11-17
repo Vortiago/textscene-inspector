@@ -27,8 +27,8 @@ const BACKGROUND_VARIANT = '';
 const linkedStages = new TreeMemo();
 
 export interface TranspiledSky {
-  /** The triangle that draws the sky. It writes no depth, and draws before the scene. */
-  readonly mesh: THREE.Mesh;
+  /** The triangle that draws the sky at the far plane, after every opaque surface, where none drew. */
+  readonly mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material>;
   /** The template's uniforms of both stages, by `instance.member`: `params.time`. */
   readonly uniforms: ReadonlyMap<string, UniformNode<unknown>>;
   /** The template's textures, by name: `radiance`, `volumetric_fog_texture`. */
@@ -103,20 +103,28 @@ export function transpileParsedSky(
     uniforms
   );
   return {
-    mesh: skyMesh(withVulkanY(vertex.result), fragment.result, [...parameters.values()]),
+    mesh: skyMesh(glClipPosition(vertex.result), fragment.result, [...parameters.values()]),
     uniforms: uniforms.byName,
     textures: fragment.textures,
     parameters,
   };
 }
 
-/** Godot's clip space has y down, as Vulkan's does, so the template's `uv_interp.y` of -1 is the top row. */
-function withVulkanY(position: Node): Node {
-  return (position as unknown as ReturnType<typeof vec4>).mul(vec4(1, -1, 1, 1)) as unknown as Node;
+/** Godot's clip space has y down and a reversed depth of 0 at the far plane. GL's far plane is at `w`. */
+function glClipPosition(position: Node): Node {
+  const godot = position as unknown as ReturnType<typeof vec4>;
+  return vec4(godot.x, godot.y.negate(), godot.w.sub(godot.z.mul(2)), godot.w) as unknown as Node;
 }
 
+/** After every opaque surface (`render_forward_clustered.cpp:2266`), with a depth test (`sky.cpp:142`). */
+const SKY_RENDER_ORDER = Number.MAX_SAFE_INTEGER;
+
 /** Three vertices, which the template's vertex stage places from their index alone. */
-function skyMesh(position: Node, colour: Node, parameters: readonly TranspiledUniform[]): THREE.Mesh {
+function skyMesh(
+  position: Node,
+  colour: Node,
+  parameters: readonly TranspiledUniform[]
+): THREE.Mesh<THREE.BufferGeometry, THREE.Material> {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
   const material = new BoundNodeMaterial(parameters);
@@ -125,9 +133,8 @@ function skyMesh(position: Node, colour: Node, parameters: readonly TranspiledUn
   // Godot's sky pipeline culls no face.
   material.side = THREE.DoubleSide;
   material.depthWrite = false;
-  material.depthTest = false;
   const mesh = new THREE.Mesh(geometry, material as unknown as THREE.Material);
   mesh.frustumCulled = false;
-  mesh.renderOrder = -Infinity;
+  mesh.renderOrder = SKY_RENDER_ORDER;
   return mesh;
 }

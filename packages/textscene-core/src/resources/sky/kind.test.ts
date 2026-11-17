@@ -39,3 +39,49 @@ describe('SKY of a Sky over a ProceduralSkyMaterial', () => {
     );
   });
 });
+
+describe('SKY of a Sky over a ShaderMaterial', () => {
+  const SKY_SHADER = 'shader_type sky;\nuniform float tint = 0.5;\nvoid sky() {\n\tCOLOR = vec3(tint);\n}\n';
+  const scene = (shaderType = 'sky') =>
+    [
+      `[sub_resource type="Shader" id="code"]\ncode = "${SKY_SHADER.replace('sky;', `${shaderType};`)}"`,
+      '[sub_resource type="ShaderMaterial" id="m"]\nshader = SubResource("code")\nshader_parameter/tint = 0.25',
+      `[sub_resource type="Sky" id="s"]\n${SKY_BODY}\n`,
+    ].join('\n\n');
+
+  it("reads the shader's code and the material's parameters", () => {
+    expect(loadedValue(SKY, 'SubResource("s")', scene()).sky.material).toEqual({
+      kind: 'shader',
+      code: SKY_SHADER,
+      parameters: { tint: '0.25' },
+      textures: {},
+      usage: { light: false, time: false, position: false },
+    });
+  });
+
+  it('hands on a parameter that names a resource as a reference, not as a value', () => {
+    const withTexture = scene().replace(
+      'shader_parameter/tint = 0.25',
+      'shader_parameter/tint = 0.25\nshader_parameter/stars = ExtResource("1_stars")'
+    );
+    const tables = '[ext_resource type="Texture2D" path="res://stars.png" id="1_stars"]';
+    const material = loadedValue(SKY, 'SubResource("s")', `${tables}\n\n${withTexture}`).sky.material;
+    expect(material.kind === 'shader' && material.textures.stars?.ref).toBe('ExtResource("1_stars")');
+  });
+
+  it('decodes the same value from a .gdshader file', () => {
+    const files = { 'res://sky.gdshader': SKY_SHADER };
+    const fromFile = [
+      '[ext_resource type="Shader" path="res://sky.gdshader" id="1_code"]',
+      '[sub_resource type="ShaderMaterial" id="m"]\nshader = ExtResource("1_code")\nshader_parameter/tint = 0.25',
+      `[sub_resource type="Sky" id="s"]\n${SKY_BODY}\n`,
+    ].join('\n\n');
+    expect(loadedValue(SKY, 'SubResource("s")', fromFile, files).sky.material).toEqual(
+      loadedValue(SKY, 'SubResource("s")', scene()).sky.material
+    );
+  });
+
+  it('declines a ShaderMaterial whose shader is not a sky shader', () => {
+    expect(() => loadedValue(SKY, 'SubResource("s")', scene('spatial'))).toThrow('got unavailable');
+  });
+});

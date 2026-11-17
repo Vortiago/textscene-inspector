@@ -26,9 +26,16 @@ describe('transpileSky', () => {
     expect(errorOf(source).position).toMatchObject({ file: 'user.gdshader', line: 4 });
   });
 
-  it('draws before the scene and writes no depth', () => {
-    const material = transpileSky(DEFAULT_SKY).mesh.material as { depthWrite: boolean };
-    expect(material.depthWrite).toBe(false);
+  it('writes no depth', () => {
+    expect(transpileSky(DEFAULT_SKY).mesh.material.depthWrite).toBe(false);
+  });
+
+  it('tests depth, so it draws only where no surface drew', () => {
+    expect(transpileSky(DEFAULT_SKY).mesh.material.depthTest).toBe(true);
+  });
+
+  it('draws after every opaque surface, as Godot draws the sky after its opaque pass', () => {
+    expect(transpileSky(DEFAULT_SKY).mesh.renderOrder).toBe(Number.MAX_SAFE_INTEGER);
   });
 
   it('draws no sky while a samplerExternalOES has no texture, as Godot draws none', () => {

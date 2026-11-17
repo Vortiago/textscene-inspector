@@ -27,7 +27,8 @@ export interface SkyFog {
 
 /** What the sky background pass reads from a frame. */
 export interface SkyScene {
-  readonly camera: THREE.PerspectiveCamera;
+  /** The camera of the render: the sky reads its projection and its world matrix. */
+  readonly camera: THREE.Camera;
   /** The environment's sky rotation, `environment_get_sky_orientation`, or none. */
   readonly skyOrientation?: THREE.Matrix3;
   /** The shader time in seconds, `TIME`. */

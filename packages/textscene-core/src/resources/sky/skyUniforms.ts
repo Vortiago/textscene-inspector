@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import type { SkyProperties } from './types';
+import type { BuiltInSkyProperties } from './types';
 import { materialReadsLights } from './readsLights';
 import { scaledRgb } from '../../utils/colorParser';
 import { godotColorToLinear } from '../../r3f/godotColor';
@@ -37,7 +37,7 @@ function scaledColor(color: Rgba, energy: number): THREE.Color {
 }
 
 export function skyUniforms(
-  sky: SkyProperties,
+  sky: BuiltInSkyProperties,
   lights: readonly SkyLight[],
   panorama?: THREE.Texture | null
 ): SkyUniforms {

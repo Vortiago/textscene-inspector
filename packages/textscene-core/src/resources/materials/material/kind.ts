@@ -6,8 +6,18 @@
  */
 
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
-import { optionalReference, type Follow, type HeldResource, type ResourceKind } from '../../reading';
+import {
+  optionalReference,
+  type Follow,
+  type HeldResource,
+  type ResourceKind,
+  type ScopedReference,
+} from '../../reading';
+import { resourceRef } from '../../../godot/variant/resourceRef';
+import { ShaderMode, shaderModeOf } from '../../../godot/rendering/shaderLanguage';
 import { decodeSkyMaterial } from '../../sky/decode';
+import { SHADER_CODE } from '../shadermaterial/shaderCode';
+import { skyUsage } from '../../../shaders/sky/skyUsage';
 import { decodeStandardMaterial3D } from '../standardmaterial3d/decode';
 import type { TextureSlot } from '../standardmaterial3d/types';
 import type { Material, SkyMaterial, StandardMaterial } from './types';
@@ -36,8 +46,33 @@ function standardMaterial({ properties }: HeldResource, follow: Follow): Standar
 
 /** The sky material `held` is, or null for any other class. */
 function skyMaterial({ type, properties }: HeldResource, follow: Follow): SkyMaterial | null {
+  if (type === 'ShaderMaterial') return shaderSkyMaterial(properties, follow);
   const decoded = decodeSkyMaterial(type, properties);
   if (!decoded) return null;
   const panorama = decoded.kind === 'panorama' ? optionalReference(follow, decoded.panorama) : null;
   return { form: 'sky', type, properties: decoded, panorama };
+}
+
+const SHADER_PARAMETER = 'shader_parameter/';
+
+/** A ShaderMaterial whose shader is a sky shader, or null for any other shader or none. */
+function shaderSkyMaterial(properties: Readonly<Record<string, string>>, follow: Follow): SkyMaterial | null {
+  const { shader } = properties;
+  if (shader === undefined) return null;
+  const code = follow.read(SHADER_CODE, shader).value;
+  if (code === undefined || code === null || shaderModeOf(code) !== ShaderMode.SKY) return null;
+  const parameters: Record<string, string> = {};
+  const textures: Record<string, ScopedReference> = {};
+  for (const [key, value] of Object.entries(properties)) {
+    if (!key.startsWith(SHADER_PARAMETER)) continue;
+    const name = key.slice(SHADER_PARAMETER.length);
+    if (resourceRef(value)) textures[name] = follow.reference(value);
+    else parameters[name] = value;
+  }
+  return {
+    form: 'sky',
+    type: 'ShaderMaterial',
+    properties: { kind: 'shader', code, parameters, textures, usage: skyUsage(code) },
+    panorama: null,
+  };
 }

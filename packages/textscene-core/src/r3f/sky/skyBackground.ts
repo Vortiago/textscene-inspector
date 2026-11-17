@@ -28,12 +28,44 @@ const GODOT_SKY_TEXEL =
  */
 const SKY_RENDER_ORDER = Number.MAX_SAFE_INTEGER;
 
-/**
- * A sky drawn at each pixel behind a scene. `skyGlsl` declares the sky's uniforms and defines
- * `vec3 godotSky(vec3 eyedir)`, and `skyUniforms` holds their values, which the caller owns. It
- * reads three's cube background program as `installShaderPatches` left it.
- */
-export class SkyBackground extends THREE.Mesh<THREE.BoxGeometry, THREE.ShaderMaterial> {
+/** A sky drawn at each pixel behind a scene, and hidden outside the renders that draw it. */
+export abstract class SkyBackdrop<
+  TGeometry extends THREE.BufferGeometry = THREE.BufferGeometry,
+  TMaterial extends THREE.Material = THREE.Material,
+> extends THREE.Mesh<TGeometry, TMaterial> {
+  protected constructor(geometry: TGeometry, material: TMaterial) {
+    super(geometry, material);
+    this.renderOrder = SKY_RENDER_ORDER;
+    this.frustumCulled = false;
+    this.matrixAutoUpdate = false;
+    this.matrixWorldAutoUpdate = false;
+    this.layers.enableAll();
+    this.raycast = () => {};
+    this.userData = { tscnFrameExcluded: true };
+    this.visible = false;
+  }
+
+  /** Draws in this render unless the scene has a background. It stays a child, so trackers see it once. */
+  drawIn(scene: THREE.Scene, intensity: number, rotation: THREE.Euler): void {
+    if (scene.background !== null) return;
+    this.paint(intensity, rotation);
+    if (this.parent !== scene) scene.add(this);
+    this.visible = true;
+  }
+
+  /** Writes the intensity and the rotation of the render now starting. */
+  protected abstract paint(intensity: number, rotation: THREE.Euler): void;
+
+  override dispose(): void {
+    this.removeFromParent();
+    this.geometry.dispose();
+    this.material.dispose();
+    super.dispose();
+  }
+}
+
+/** `skyGlsl` defines `vec3 godotSky(vec3 eyedir)` in three's patched cube background program. */
+export class SkyBackground extends SkyBackdrop<THREE.BoxGeometry, THREE.ShaderMaterial> {
   constructor(skyGlsl: string, skyUniforms: Record<string, THREE.IUniform>) {
     const program = backgroundCube();
     super(
@@ -54,49 +86,21 @@ export class SkyBackground extends THREE.Mesh<THREE.BoxGeometry, THREE.ShaderMat
       })
     );
     this.name = 'SkyBackground';
-    this.renderOrder = SKY_RENDER_ORDER;
-    this.frustumCulled = false;
-    this.matrixAutoUpdate = false;
-    this.matrixWorldAutoUpdate = false;
-    this.layers.enableAll();
-    this.raycast = () => {};
-    this.userData = { tscnFrameExcluded: true };
-    this.visible = false;
   }
 
-  /**
-   * Draws behind `scene` in the render now starting, at `intensity` and turned by `rotation`, unless
-   * the scene shows a background of its own, as an interior probe's capture does (`captureStage.ts`).
-   * `showSkyBackground` hides it once the render ends. It stays a child of the scene it drew in, so
-   * the trackers of the scene's children see it arrive once and not in every render.
-   */
-  drawIn(scene: THREE.Scene, intensity: number, rotation: THREE.Euler): void {
-    if (scene.background !== null) return;
+  protected paint(intensity: number, rotation: THREE.Euler): void {
     const { uniforms } = this.material;
     uniforms.backgroundIntensity!.value = intensity;
     worldToSky(rotation, uniforms.backgroundRotation!.value as THREE.Matrix3);
-    if (this.parent !== scene) scene.add(this);
-    this.visible = true;
   }
 
   /** The box follows the camera, as three's cube background does (`WebGLBackground.js`). */
   override onBeforeRender(_renderer: THREE.WebGLRenderer, _scene: THREE.Scene, camera: THREE.Camera): void {
     this.matrixWorld.copyPosition(camera.matrixWorld);
   }
-
-  override dispose(): void {
-    this.removeFromParent();
-    this.geometry.dispose();
-    this.material.dispose();
-    super.dispose();
-  }
 }
 
-/**
- * Clears `scene`'s own background so a `SkyBackground` draws, and hides the one each render drew
- * when the render ends, so no pass outside a render draws it. The returned disposer takes every
- * sky out of the scene and puts the background back.
- */
+/** Lets a `SkyBackdrop` draw in each render. The disposer removes every sky and restores the background. */
 export function showSkyBackground(scene: THREE.Scene): () => void {
   const previousBackground = scene.background;
   scene.background = null;
@@ -110,7 +114,7 @@ export function showSkyBackground(scene: THREE.Scene): () => void {
 
 function hideSkyBackgrounds(scene: THREE.Scene): void {
   for (const child of scene.children) {
-    if (child instanceof SkyBackground) child.visible = false;
+    if (child instanceof SkyBackdrop) child.visible = false;
   }
 }
 
@@ -118,6 +122,6 @@ function removeSkyBackgrounds(scene: THREE.Scene): void {
   // Backwards, as each removal shifts the children after it.
   for (let i = scene.children.length - 1; i >= 0; i--) {
     const child = scene.children[i]!;
-    if (child instanceof SkyBackground) scene.remove(child);
+    if (child instanceof SkyBackdrop) scene.remove(child);
   }
 }

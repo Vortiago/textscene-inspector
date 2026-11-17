@@ -31,7 +31,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { SkyProperties } from './types';
+import type { BuiltInSkyProperties } from './types';
 import { HENYEY_GREENSTEIN_GLSL } from '../../r3f/henyeyGreenstein';
 import { GODOT_SKY_COORDS_GLSL } from '../../godot/rendering/environment/skyCoords';
 
@@ -185,7 +185,7 @@ vec3 godotSky(vec3 eyedir) {
 `;
 
 /** GLSL that declares the uniforms of `sky` and defines `vec3 godotSky(vec3 eyedir)`, its `sky()`. */
-export function skyGlsl(sky: SkyProperties): string {
+export function skyGlsl(sky: BuiltInSkyProperties): string {
   switch (sky.kind) {
     case 'procedural':
       return PROCEDURAL_SKY;
@@ -197,7 +197,7 @@ export function skyGlsl(sky: SkyProperties): string {
 }
 
 /** The radiance bake's fragment shader: `sky` at the eye direction of each texel. */
-export function skyFragmentShader(sky: SkyProperties): string {
+export function skyFragmentShader(sky: BuiltInSkyProperties): string {
   return /* glsl */ `varying vec3 vEyeDirection;
 ${skyGlsl(sky)}
 void main() {
