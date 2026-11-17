@@ -164,6 +164,20 @@ function levelProbes() {
       }
     ),
     textureProbe(
+      '3d-lod',
+      ['sampler3D', 'filter_nearest_mipmap', 'textureLod(sampler3D,vec3,float)'],
+      'uniform sampler3D s : filter_nearest_mipmap;\nvec4 probe(vec3 uvw, float lod) { return textureLod(s, uvw, lod); }',
+      {
+        textures: { s: textureSpec('volume', 4, 4, { depth: 4, isMipmapped: true }) },
+        inputs: [
+          [[0.375, 0.625, 0.875], 0],
+          [[0.375, 0.625, 0.875], 1],
+          [[0.375, 0.625, 0.875], 2],
+          [[0.375, 0.625, 0.875], 1.6],
+        ],
+      }
+    ),
+    textureProbe(
       '2d-texel-fetch',
       ['sampler2D', 'texelFetch(sampler2D,ivec2,int)'],
       'uniform sampler2D s;\nvec4 probe(ivec2 texel, int lod) { return texelFetch(s, texel, lod); }',

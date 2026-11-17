@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CompressedArrayTexture,
   CubeTexture,
   Data3DTexture,
   DataArrayTexture,
@@ -17,6 +16,7 @@ import { treeOf } from '../language/parsedTree.testkit.js';
 import type { ArrayValue } from '../language/emitValue.js';
 import { GODOT_SAMPLING } from './samplerState.js';
 import { SAMPLER_DEFAULTS } from './samplerTextures.js';
+import { LevelledTexture3DNode, LevelledTextureNode } from './levelUpload.js';
 import { SamplerBinding } from './samplerUniform.js';
 
 const bindingOf = (declaration: string, useLinearColor = false) =>
@@ -72,20 +72,9 @@ describe('SamplerBinding', () => {
     expect(textureOf(binding).minFilter).toBe(LinearMipmapLinearFilter);
   });
 
-  it('uploads every mip level of a 2D-array texture, which three uploads only level 0 of', () => {
-    const binding = bindingOf('uniform sampler2DArray s;');
-    const layers = new DataArrayTexture(new Uint8Array(4 * 4 * 2 * 4), 4, 4, 2);
-    const levels = [4, 2, 1].map((size) => ({
-      data: new Uint8Array(size * size * 2 * 4),
-      width: size,
-      height: size,
-    }));
-    layers.mipmaps = levels as never;
-    binding.set(layers);
-    const copy = textureOf(binding) as CompressedArrayTexture;
-    expect(copy.isCompressedArrayTexture).toBe(true);
-    expect([copy.format, copy.type, copy.image.depth]).toEqual([layers.format, layers.type, 2]);
-    expect(copy.mipmaps.map((level) => level.data)).toEqual(levels.map((level) => level.data));
+  it('reads a 2D array and a 3D texture through nodes that upload every level', () => {
+    expect(bindingOf('uniform sampler2DArray s;').value).toBeInstanceOf(LevelledTextureNode);
+    expect(bindingOf('uniform sampler3D s;').value).toBeInstanceOf(LevelledTexture3DNode);
   });
 
   it('keeps one copy while the material texture stays the same', () => {

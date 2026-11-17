@@ -1,13 +1,5 @@
-import {
-  CompressedArrayTexture,
-  Data3DTexture,
-  DataArrayTexture,
-  NoColorSpace,
-  RGBAFormat,
-  SRGBColorSpace,
-  type Texture,
-} from 'three';
-import { texture, texture3D } from 'three/tsl';
+import { Data3DTexture, NoColorSpace, SRGBColorSpace, type Texture } from 'three';
+import { nodeObject, texture } from 'three/tsl';
 import { CubeTextureNode, type Node, type NodeBuilder, type TextureNode } from 'three/webgpu';
 import type { ArrayValue, Value } from '../language/emitValue.js';
 import { SamplerChoice } from '../language/textureCalls.js';
@@ -17,6 +9,7 @@ import type { ParameterValue, TranspiledUniform } from './transpiledUniform.js';
 import { defaultTexture } from './defaultTextures.js';
 import { samplerState, type ProjectSampling } from './samplerState.js';
 import { levelsOf } from './textureLevels.js';
+import { LevelledTexture3DNode, LevelledTextureNode } from './levelUpload.js';
 import {
   samplerSettings,
   samplerTextures,
@@ -49,8 +42,8 @@ class GodotCubeNode extends CubeTextureNode {
 
 const NODE_OF_KIND: Readonly<Record<TextureKind, (value: Texture) => TextureNode>> = {
   flat: (value) => texture(value),
-  layers: (value) => texture(value),
-  volume: (value) => texture3D(value) as unknown as TextureNode,
+  layers: (value) => nodeObject(new LevelledTextureNode(value)) as unknown as TextureNode,
+  volume: (value) => nodeObject(new LevelledTexture3DNode(value)) as unknown as TextureNode,
   cube: (value) => new GodotCubeNode(value as never),
 };
 
@@ -59,35 +52,6 @@ function nodeOf(kind: TextureKind, value: Texture): TextureNode {
   const node = NODE_OF_KIND[kind](value);
   node.mergeable = false;
   return node;
-}
-
-/** Written only by `levelledCopyOf`: one upload of a 2D array's levels, which every sampler copy shares. */
-// eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
-const LEVELLED_COPIES = new WeakMap<DataArrayTexture, CompressedArrayTexture>();
-
-/** A copy that shares the image of `source`, and so its upload, with every other copy. */
-function cloneOf(source: Texture): Texture {
-  if (!(source instanceof DataArrayTexture) || source.format !== RGBAFormat || source.mipmaps.length < 2)
-    return source.clone();
-  let levelled = LEVELLED_COPIES.get(source);
-  if (!levelled) LEVELLED_COPIES.set(source, (levelled = levelledCopyOf(source)));
-  return levelled.clone();
-}
-
-/** three uploads level 0 of a `DataArrayTexture` only (`WebGLTextures.js:1229`), every level of this one. */
-function levelledCopyOf(source: DataArrayTexture): CompressedArrayTexture {
-  const { width, height, depth } = source.image;
-  const copy = new CompressedArrayTexture(
-    source.mipmaps as never,
-    width,
-    height,
-    depth,
-    RGBAFormat as never,
-    source.type
-  );
-  copy.internalFormat = source.internalFormat;
-  copy.unpackAlignment = source.unpackAlignment;
-  return copy;
 }
 
 const isDrawableWith = (chosen: readonly (Texture | DefaultTexture)[]) => !chosen.includes('none');
@@ -143,7 +107,7 @@ export class SamplerBinding implements TranspiledUniform {
   private copyOf(source: Texture): Texture {
     let copy = this.copies.get(source);
     if (copy) return copy;
-    copy = cloneOf(source);
+    copy = source.clone();
     const state = samplerState(this.settings, levelsOf(source), this.context.sampling);
     copy.flipY = false;
     copy.magFilter = state.magFilter;

@@ -30,8 +30,17 @@ function created(spec) {
       if (spec.levels.length > 1) texture.mipmaps = mipmapsOf(spec, (level) => bytesOf(spec.levels[level]));
       return texture;
     }
-    case 'volume':
-      return new THREE.Data3DTexture(bytesOf(spec.levels[0]), width, height, depth);
+    case 'volume': {
+      const texture = new THREE.Data3DTexture(bytesOf(spec.levels[0]), width, height, depth);
+      if (spec.levels.length > 1)
+        texture.mipmaps = spec.levels.map((level, index) => ({
+          data: bytesOf(level),
+          width: levelSize(width, index),
+          height: levelSize(height, index),
+          depth: levelSize(depth, index),
+        }));
+      return texture;
+    }
     case 'cube':
       return new THREE.CubeTexture(
         Array.from({ length: 6 }, (_, face) => new THREE.DataTexture(layerOf(spec, 0, face), width, height))
