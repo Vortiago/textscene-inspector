@@ -14,6 +14,9 @@ vi.mock('./controls/native/text/sceneFontOutlines', async (importOriginal) => ({
   peekOutlines: () => TRIANGLE_OUTLINES,
 }));
 
+// The first lazy import transforms the glyph engine, which outlasts the default 1 s under a loaded run.
+const PROMPT_LOAD_TIMEOUT = { timeout: 10_000 };
+
 describe('<TscnSceneContents> empty-scene indicator (WI-UX-4 / Gap 8)', () => {
   it('mounts a gridHelper as a visual baseline when sceneGraph is null', async () => {
     const renderer = await ReactThreeTestRenderer.create(<TscnSceneContents />);
@@ -40,6 +43,6 @@ describe('<TscnSceneContents> empty-scene indicator (WI-UX-4 / Gap 8)', () => {
       await ReactThreeTestRenderer.act(async () => {});
       const glyphMeshes = renderer.scene.findAll((node) => node.instance instanceof THREE.Mesh);
       expect(glyphMeshes.length).toBeGreaterThan(0);
-    });
+    }, PROMPT_LOAD_TIMEOUT);
   });
 });

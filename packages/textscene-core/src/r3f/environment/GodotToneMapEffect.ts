@@ -72,7 +72,7 @@ export class GodotToneMapEffect {
     this.pyramid?.setSize(width, height);
   }
 
-  /** `renderer_scene_render_rd.cpp:551-607`. A null `target` is the canvas. */
+  /** The bright pass reads the luminance (`renderer_scene_render_rd.cpp:551-607`). Null is the canvas. */
   render(
     renderer: THREE.WebGLRenderer,
     frame: THREE.WebGLRenderTarget,
@@ -80,8 +80,11 @@ export class GodotToneMapEffect {
   ): void {
     this.luminance?.reduce(renderer, frame);
     this.pyramid?.build(renderer, frame);
-    this.uniforms[FRAME_UNIFORM]!.value = frame.texture;
+    const frameUniform = this.uniforms[FRAME_UNIFORM]!;
+    frameUniform.value = frame.texture;
     drawFullScreen(renderer, this.composite, target);
+    // The world buffer can be replaced and disposed between frames.
+    frameUniform.value = null;
   }
 
   dispose(): void {
