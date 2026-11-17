@@ -197,6 +197,36 @@ export function namedColor(name: string): Rgba | undefined {
   };
 }
 
+/** A hex digit of `Color::html`, 0 to 15. */
+function hexDigit(text: string, at: number): number {
+  return Number.parseInt(text[at]!, 16);
+}
+
+/** Two hex digits of `Color::html`, 0 to 255. */
+function hexByte(text: string, at: number): number {
+  return hexDigit(text, at) * 16 + hexDigit(text, at + 1);
+}
+
+/** `Color::html` (`color.cpp:331-368`), undefined where `Color::html_is_valid` (`:372-390`) fails. */
+export function htmlColor(text: string): Rgba | undefined {
+  if (!HTML_COLOR_RE.test(text)) return undefined;
+  const body = text.startsWith('#') ? text.slice(1) : text;
+  if (body.length <= 4) {
+    const alpha = body.length === 4 ? hexDigit(body, 3) / 15 : 1;
+    return { r: hexDigit(body, 0) / 15, g: hexDigit(body, 1) / 15, b: hexDigit(body, 2) / 15, a: alpha };
+  }
+  const alpha = body.length === 8 ? hexByte(body, 6) / 255 : 1;
+  return { r: hexByte(body, 0) / 255, g: hexByte(body, 2) / 255, b: hexByte(body, 4) / 255, a: alpha };
+}
+
+/** `Color()`: opaque black, what Godot answers for a colour it cannot read. */
+export const DEFAULT_COLOR: Rgba = Object.freeze({ r: 0, g: 0, b: 0, a: 1 });
+
+/** `Color(const String &)` (`color.h:274-280`): hex, else a colour name, else `Color()`. */
+export function colorFromString(text: string): Rgba {
+  return htmlColor(text) ?? namedColor(text) ?? DEFAULT_COLOR;
+}
+
 /** The colour channels `darkened` and `lightened` change. Alpha, when present, stays. */
 interface ColorChannels {
   r: number;
