@@ -7,7 +7,7 @@
   "operators": "71961cc3c58f615ccb90c5777e87ec3bb1e7d85793a63db00e1ba0bcfe300064",
   "corpus": "cdd73866a614dcae16a6e20af61acb6b58bb0c78ad83ac65263a0dfea750fbe1",
   "expressions": "3fb6d95ae31ad27c8252fd72863f8986a6319b5528ab28ddf62ceda84537fd48",
-  "heads": "06f8519d45880a5e0e0e90e8321ffb5b9b7672f09e3e18a6be69d7ae90084fbd",
+  "heads": "0d200de23ab595c646690dcadd33071e70b3bda12bf10eb6abf4d3c132dfda25",
   "materials": "86cead59f76eba94aeadcbd0d9a686f923d391e0813dbd1ce71d28ef5c4bbad2",
   "materialVerdicts": "cad8477a24e4608e6bf77dd2451b57f3953d017cd9cd75a97c9bf40124a818e0"
  },
@@ -1427,6 +1427,7 @@
    "discard/called-by-fragment": "accepted",
    "derivative/after-a-varying-read": "line 4: 'v' cannot be used within the 'vertex' processor function.",
    "varying-limit/int-smooth": "line 2: Varying with integer data type must be declared with `flat` interpolation qualifier.",
+   "varying-limit/uvec4-flat": "accepted",
    "table/spatial/render_mode/depth_draw_never": "accepted",
    "table/canvas_item/render_mode/depth_test_default": "line 2: Invalid render mode: 'depth_test_default'.",
    "table/particles/render_mode/world_vertex_coords": "line 2: Invalid render mode: 'world_vertex_coords'.",
