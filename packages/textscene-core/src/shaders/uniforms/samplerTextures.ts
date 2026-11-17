@@ -53,22 +53,21 @@ const VOLUME_DEFAULTS: Readonly<Partial<Record<UniformHint, DefaultTexture>>> = 
 /** The texture a sampler of `uniform`'s type and hint reads when the material gives none (:964-1050). */
 function hintedDefault({ type, hint }: UniformNode): DefaultTexture {
   if (type === 'samplerExternalOES') return 'none';
-  // Godot keeps black as the cube array default, which had no other texture before.
+  // A cube array reads black for every hint but hint_default_white (`material_storage.cpp:1005`).
   if (type === 'samplerCubeArray')
     return hint === 'hint_default_white' ? 'white' : (VOLUME_DEFAULTS[hint] ?? 'black');
   const isFlat = type.endsWith('sampler2D');
   return (isFlat ? FLAT_DEFAULTS : VOLUME_DEFAULTS)[hint] ?? 'white';
 }
 
-/** `update_textures` (`material_storage.cpp:880`): a missing element reads the one before it, or white. */
+/** `update_textures` (`material_storage.cpp:880`): null erases, a missing element reads the one before. */
 export function samplerTextures<T>(
   uniform: UniformNode,
   value: T | readonly (T | null)[] | null | undefined
 ): (T | DefaultTexture)[] {
   const arraySize = uniform.arraySize ?? 0;
   const textures = materialTextures(value, arraySize);
-  if (textures.length === 0)
-    return new Array<DefaultTexture>(Math.max(1, arraySize)).fill(hintedDefault(uniform));
+  if (textures.length === 0 && arraySize === 0) return [hintedDefault(uniform)];
   const padded = [...textures, ...new Array<null>(Math.max(0, arraySize - textures.length)).fill(null)];
   let held: T | DefaultTexture = 'white';
   return padded.map((texture) => (held = texture ?? held));
@@ -78,8 +77,8 @@ function materialTextures<T>(
   value: T | readonly (T | null)[] | null | undefined,
   arraySize: number
 ): (T | null)[] {
-  if (value === undefined) return [];
-  if (!Array.isArray(value)) return [value as T | null];
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) return [value as T];
   const textures = value as readonly (T | null)[];
   return textures.slice(0, arraySize > 0 ? arraySize : 1);
 }

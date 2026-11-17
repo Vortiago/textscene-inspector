@@ -73,9 +73,8 @@ The printed tree of each shader the transpiler accepts is a checked-in file unde
 
 | State | Shaders |
 | --- | --- |
-| not transpiled yet (#1794) | 309 |
+| not transpiled yet (#1794) | 313 |
 | refused as Godot refuses | 54 |
-| not transpiled yet (#1829) | 4 |
 | transpiled | 1 |
 
 The mismatches below are known, each with its owner. The list only shrinks, as for the random programs.
@@ -177,9 +176,9 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `generator/ParticleProcessMaterial/sub_emitter_mode=1` | #1794 |
 | `generator/ParticleProcessMaterial/sub_emitter_mode=3` | #1794 |
 | `generator/ProceduralSkyMaterial/defaults` | #1794 |
-| `generator/ProceduralSkyMaterial/use_debanding=false` | #1829 |
-| `generator/PanoramaSkyMaterial/defaults` | #1829 |
-| `generator/PanoramaSkyMaterial/filter=false` | #1829 |
+| `generator/ProceduralSkyMaterial/use_debanding=false` | #1794 |
+| `generator/PanoramaSkyMaterial/defaults` | #1794 |
+| `generator/PanoramaSkyMaterial/filter=false` | #1794 |
 | `generator/PhysicalSkyMaterial/defaults` | #1794 |
 | `generator/PhysicalSkyMaterial/use_debanding=false` | #1794 |
 | `generator/FogMaterial/defaults` | #1794 |
@@ -204,7 +203,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `demos/2d/sprite_shaders/shaders/outline.gdshader` | #1794 |
 | `demos/2d/sprite_shaders/shaders/silouette.gdshader` | #1794 |
 | `demos/3d/labels_and_texts/curvature.gdshader` | #1794 |
-| `demos/3d/platformer/stage/skybox.gdshader` | #1829 |
+| `demos/3d/platformer/stage/skybox.gdshader` | #1794 |
 | `demos/3d/procedural_materials/shaders/plasma.gdshader` | #1794 |
 | `demos/3d/sky_shaders/sky_volumetric_clouds.gdshader` | #1794 |
 | `demos/3d/sprites/shaders/negative.gdshader` | #1794 |

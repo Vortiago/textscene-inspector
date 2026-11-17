@@ -13,15 +13,18 @@ three r187 keeps the filter, the wrap, the anisotropy, the origin and the colour
 
 **Each sampler element reads a copy of the material's texture. The copy shares the texture's image, and holds the sampler's filter, wrap and anisotropy, Godot's top-left origin, and the sRGB view of a `source_color` sampler.**
 
-- `set` takes a three `Texture`, a list of them or null, as `set_shader_parameter` takes a texture. The binding keeps one copy per texture while the texture lives.
+- `set` takes a three `Texture`, a list of them, or null, as `set_shader_parameter` takes a texture. Null erases the value, as in Godot. The binding keeps one copy per texture while an element reads it, and disposes the copy when no element reads it or when the texture is disposed.
+- A copy has its own `Source` over the same image, because three keeps one upload version per `Source` (`WebGLTextures.js:976`). A shared `Source` skips the copy's upload after the texture uploads with another state. Before each render, a sampler node updates its copy after an update of the texture, and then uploads the copy's levels.
 - The node of a 2D array or a 3D texture copies each level after the first into its GL texture with `copyTextureToTexture`, before each draw that follows a new version of the texture. This holds for every format. A WebGL renderer only does this, and WebGPU is untested (#1788).
+- An integer sampler reads the texture bound when three builds the program. GL declares an integer texture with another sampler type, and three's program key leaves out the body of a function. So when `set` binds a texture of the other kind, integer or not, the read disposes the material before the next render, and three builds a new program.
+- A material that cannot draw, because a `samplerExternalOES` has no texture, is a `BoundNodeMaterial`: three skips it while it is not `visible`.
 - An integer sampler over a texture of normalised or float texels reads each texel's float bits, as Godot's Vulkan driver (Mesa lavapipe) returns them. The texture call reads them back with `floatBitsToInt` or `floatBitsToUint`.
 - A sampler array element at a computed index is a call on each element, picked by the index: GLSL ES 3.0 indexes a sampler array by a constant only.
-- The port lives in `shaders/uniforms/samplerUniform.ts` and `shaders/language/textureCalls.ts`.
+- The port lives in `shaders/uniforms/samplerUniform.ts`, `textureCopies.ts`, `samplerNodes.ts`, `boundMaterial.ts` and `shaders/language/textureCalls.ts`.
 
 ## Consequences
 
 - A material texture can be read by two samplers with two filters, as in Godot.
-- three keys a GL texture by the image and its sampler state (`WebGLTextures.js:588`). Two samplers with the same state share one GL texture, and each other state uploads the image once more.
+- three keys a GL texture by the image and its sampler state (`WebGLTextures.js:588`). Each copy uploads the image once more, also when two samplers have the same state.
 - An integer read of a normalised texture is undefined in Vulkan. The port follows the driver Godot is measured on, and another Vulkan driver can return other values.
 - The decision depends on three keeping sampler state on the texture. The texture probes of `pnpm test:shaders:gpu` fail if three moves it, and WebGPU is untested (#1788).

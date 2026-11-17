@@ -1,7 +1,4 @@
-/** Every level of a 2D array or a 3D texture, which three uploads at level 0 only (`WebGLTextures.js:1229`, `:1272`). */
-
 import { Data3DTexture, DataArrayTexture, type Texture, type WebGLRenderer } from 'three';
-import { NodeUpdateType, Texture3DNode, TextureNode, type NodeFrame } from 'three/webgpu';
 
 interface Level {
   readonly data: ArrayBufferView;
@@ -26,7 +23,7 @@ function levelSource(texture: DataArrayTexture | Data3DTexture, level: Level): D
   return source;
 }
 
-/** Copies each level after the first into the texture's GL texture, once for each version of it. */
+/** three uploads level 0 only of these (`WebGLTextures.js:1229`, `:1272`), so this copies every later level. */
 export function uploadLevels(renderer: WebGLRenderer, texture: Texture): void {
   if (!(renderer as { isWebGLRenderer?: boolean }).isWebGLRenderer || !hasLevelsThreeSkips(texture)) return;
   if (UPLOADED_VERSIONS.get(texture) === texture.version) return;
@@ -34,22 +31,4 @@ export function uploadLevels(renderer: WebGLRenderer, texture: Texture): void {
     renderer.copyTextureToTexture(levelSource(texture, level), texture, null, null, 0, index + 1);
   });
   UPLOADED_VERSIONS.set(texture, texture.version);
-}
-
-/** A 2D array node that uploads its levels before each draw: a clone keeps the class, and so the upload. */
-export class LevelledTextureNode extends TextureNode {
-  override updateType = NodeUpdateType.RENDER;
-
-  override update(frame: NodeFrame): undefined {
-    uploadLevels(frame.renderer as unknown as WebGLRenderer, this.value);
-  }
-}
-
-/** A 3D texture node that uploads its levels before each draw. */
-export class LevelledTexture3DNode extends Texture3DNode {
-  override updateType = NodeUpdateType.RENDER;
-
-  override update(frame: NodeFrame): undefined {
-    uploadLevels(frame.renderer as unknown as WebGLRenderer, this.value);
-  }
 }

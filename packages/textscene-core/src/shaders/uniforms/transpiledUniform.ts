@@ -1,22 +1,22 @@
-import type { Variant } from '../../godot/variant/value/variant.js';
+import { NIL, type Variant } from '../../godot/variant/value/variant.js';
 import type { Value } from '../language/emitValue.js';
 import type { ShaderNode, UniformNode } from '../language/shaderTree.js';
 import { isSamplerType } from '../language/types.js';
 import { isSamplerValue, SamplerBinding, type SamplerValue } from './samplerUniform.js';
 import type { ProjectSampling } from './samplerState.js';
 import { SAMPLER_DEFAULTS } from './samplerTextures.js';
-import { defaultLanes, materialLanes } from './uniformLanes.js';
+import { materialLanes } from './uniformLanes.js';
 import { bitsUniform } from './uniformNodes.js';
 
 /** A value as `set_shader_parameter` takes it: a Variant, or a texture or list of them for a sampler. */
-export type ParameterValue = Variant | SamplerValue;
+export type ParameterValue = Variant | SamplerValue | null;
 
 /** A uniform of a transpiled shader, which takes the material's value. */
 export interface TranspiledUniform {
   readonly declaration: UniformNode;
   /** False while Godot cannot build the material's uniform set, so it does not draw the material. */
   readonly isDrawable: boolean;
-  /** The material's value, or nothing for Godot's own value. */
+  /** The material's value. Nothing, null or NIL erases it (`material.cpp:450`). */
   set(value: ParameterValue | undefined): void;
 }
 
@@ -37,7 +37,7 @@ class UniformBinding implements TranspiledUniform {
     private readonly useLinearColor: boolean
   ) {
     this.node = bitsUniform(declaration.type, declaration.arraySize ?? 0);
-    this.set(undefined);
+    this.set(NIL);
   }
 
   /** What a function of the shader reads. */
@@ -46,13 +46,9 @@ class UniformBinding implements TranspiledUniform {
   }
 
   set(value: ParameterValue | undefined): void {
-    if (value !== undefined && isSamplerValue(value))
+    if (isSamplerValue(value))
       throw new Error(`expected a Variant for ${this.declaration.name}, got a texture`);
-    this.node.write(
-      value === undefined
-        ? defaultLanes(this.declaration, this.useLinearColor)
-        : materialLanes(this.declaration, value, this.useLinearColor)
-    );
+    this.node.write(materialLanes(this.declaration, value ?? NIL, this.useLinearColor));
   }
 }
 

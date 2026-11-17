@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ClampToEdgeWrapping, DataTexture, LinearMipmapLinearFilter, RepeatWrapping } from 'three';
 import type { TextureNode } from 'three/webgpu';
 import { textToVariant } from '../../godot/variant/reader/variantReader.js';
+import { NIL } from '../../godot/variant/value/variant.js';
 import { treeOf } from '../language/parsedTree.testkit.js';
 import { GODOT_SAMPLING } from './samplerState.js';
 import { bindParameters } from './transpiledUniform.js';
@@ -41,6 +42,17 @@ describe('bindParameters', () => {
   it('refuses a texture on a uniform of a value type', () => {
     const binding = parametersOf('uniform float u;').get('u')!;
     expect(() => binding.set(new DataTexture())).toThrow('expected a Variant for u, got a texture');
+  });
+
+  it.each([
+    ['null', null],
+    ['NIL', NIL],
+  ])('takes %s on a uniform of a value type as an erased value', (_, value) => {
+    expect(() => parametersOf('uniform float u;').get('u')!.set(value)).not.toThrow();
+  });
+
+  it('can draw with an unset samplerExternalOES array, whose elements read white', () => {
+    expect(parametersOf('uniform samplerExternalOES s[2];').get('s')!.isDrawable).toBe(true);
   });
 
   it('cannot draw while a samplerExternalOES has no texture, where Godot builds no uniform set', () => {

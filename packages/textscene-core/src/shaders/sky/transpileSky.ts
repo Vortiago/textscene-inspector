@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { int, screenCoordinate, varyingProperty, vec4, vertexIndex } from 'three/tsl';
-import { NodeMaterial, type Node, type TextureNode, type UniformNode } from 'three/webgpu';
+import type { Node, TextureNode, UniformNode } from 'three/webgpu';
 import { parsedShader, type ParsedShader, type ShaderOptions } from '../language/parseShader.js';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import { checkTranspiled } from '../language/transpiledRows.js';
@@ -12,6 +12,7 @@ import type { StageName } from '../template/stages.js';
 import type { TemplateStageNode } from '../template/templateTree.js';
 import { TemplateUniforms } from '../template/templateUniforms.js';
 import { godotId } from '../template/godotIds.js';
+import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
 import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
 import { bindParameters, type TranspiledUniform } from '../uniforms/transpiledUniform.js';
 import { TRANSPILER_VERSION, TreeMemo } from '../template/treeMemo.js';
@@ -101,30 +102,18 @@ export function transpileParsedSky(
     uniforms
   );
   return {
-    mesh: drawnWhileBound(skyMesh(vertex.result, fragment.result), [...parameters.values()]),
+    mesh: skyMesh(vertex.result, fragment.result, [...parameters.values()]),
     uniforms: uniforms.byName,
     textures: fragment.textures,
     parameters,
   };
 }
 
-/** A mesh three draws only while the caller shows it and every uniform of the material can draw. */
-function drawnWhileBound(mesh: THREE.Mesh, parameters: readonly TranspiledUniform[]): THREE.Mesh {
-  let isShown = mesh.visible;
-  Object.defineProperty(mesh, 'visible', {
-    get: () => isShown && parameters.every((parameter) => parameter.isDrawable),
-    set: (shown: boolean) => {
-      isShown = shown;
-    },
-  });
-  return mesh;
-}
-
 /** Three vertices, which the template's vertex stage places from their index alone. */
-function skyMesh(position: Node, colour: Node): THREE.Mesh {
+function skyMesh(position: Node, colour: Node, parameters: readonly TranspiledUniform[]): THREE.Mesh {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
-  const material = new NodeMaterial();
+  const material = new BoundNodeMaterial(parameters);
   material.vertexNode = position;
   material.fragmentNode = colour;
   // Godot's sky pipeline culls no face, and its triangle winds the other way in GL's y-up clip space.

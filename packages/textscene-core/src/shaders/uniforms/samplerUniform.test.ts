@@ -12,11 +12,11 @@ import {
   type Texture,
 } from 'three';
 import type { TextureNode } from 'three/webgpu';
+import { NIL } from '../../godot/variant/value/variant.js';
 import { treeOf } from '../language/parsedTree.testkit.js';
 import type { ArrayValue } from '../language/emitValue.js';
 import { GODOT_SAMPLING } from './samplerState.js';
 import { SAMPLER_DEFAULTS } from './samplerTextures.js';
-import { LevelledTexture3DNode, LevelledTextureNode } from './levelUpload.js';
 import { SamplerBinding } from './samplerUniform.js';
 
 const bindingOf = (declaration: string, useLinearColor = false) =>
@@ -40,7 +40,7 @@ describe('SamplerBinding', () => {
     const texture = imageTexture();
     binding.set(texture);
     expect(textureOf(binding)).not.toBe(texture);
-    expect(textureOf(binding).source).toBe(texture.source);
+    expect(textureOf(binding).image).toBe(texture.image);
   });
 
   it("reads the image with Godot's top-left origin", () => {
@@ -72,11 +72,6 @@ describe('SamplerBinding', () => {
     expect(textureOf(binding).minFilter).toBe(LinearMipmapLinearFilter);
   });
 
-  it('reads a 2D array and a 3D texture through nodes that upload every level', () => {
-    expect(bindingOf('uniform sampler2DArray s;').value).toBeInstanceOf(LevelledTextureNode);
-    expect(bindingOf('uniform sampler3D s;').value).toBeInstanceOf(LevelledTexture3DNode);
-  });
-
   it('keeps one copy while the material texture stays the same', () => {
     const binding = bindingOf('uniform sampler2D s;');
     const texture = imageTexture();
@@ -84,6 +79,15 @@ describe('SamplerBinding', () => {
     const first = textureOf(binding);
     binding.set(texture);
     expect(textureOf(binding)).toBe(first);
+  });
+
+  it('frees the copy of a texture the material replaces', () => {
+    const binding = bindingOf('uniform sampler2D s;');
+    binding.set(imageTexture());
+    let disposals = 0;
+    textureOf(binding).addEventListener('dispose', () => disposals++);
+    binding.set(imageTexture());
+    expect(disposals).toBe(1);
   });
 
   it('decodes a source colour texture from sRGB only where the material is linear', () => {
@@ -105,10 +109,14 @@ describe('SamplerBinding', () => {
     ]);
   });
 
-  it('reads white for a value that is no texture', () => {
+  it.each([
+    ['null', null],
+    ['NIL', NIL],
+  ])('reads the default of the hint for %s, which erases the value', (_, value) => {
     const binding = bindingOf('uniform sampler2D s : hint_default_black;');
-    binding.set(null);
-    expect([...(textureOf(binding) as DataTexture).image.data!.slice(0, 4)]).toEqual([255, 255, 255, 255]);
+    binding.set(imageTexture());
+    binding.set(value);
+    expect([...(textureOf(binding) as DataTexture).image.data!.slice(0, 4)]).toEqual([0, 0, 0, 255]);
   });
 
   it.each([
@@ -125,6 +133,6 @@ describe('SamplerBinding', () => {
     binding.set([texture]);
     const elements = binding.value as ArrayValue;
     const [first, second] = [0, 1].map((index) => (elements.element(index) as TextureNode).value);
-    expect([elements.count, first!.source, second!.source]).toEqual([2, texture.source, texture.source]);
+    expect([elements.count, first!.image, second!.image]).toEqual([2, texture.image, texture.image]);
   });
 });

@@ -1,6 +1,13 @@
 import { IntType, UnsignedIntType } from 'three';
 import * as TSL from 'three/tsl';
-import { Node as TslNode, type Node, type NodeBuilder, type TextureNode } from 'three/webgpu';
+import {
+  Node as TslNode,
+  NodeUpdateType,
+  type Node,
+  type NodeBuilder,
+  type NodeFrame,
+  type TextureNode,
+} from 'three/webgpu';
 import { compositeOf } from './builtInComposites.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import { gathered } from './textureGather.js';
@@ -151,8 +158,14 @@ function sampledCall(name: string, row: InstructionRow, operands: readonly Node[
 
 const INTEGER_TYPES: ReadonlySet<number> = new Set([IntType, UnsignedIntType]);
 
+const isInteger = (texture: TextureNode) => INTEGER_TYPES.has(texture.value.type);
+
 /** An integer sampler over normalised or float texels reads their float bits, as Godot's driver does. */
 class IntegerReadNode extends TslNode {
+  override updateType = NodeUpdateType.RENDER;
+  /** Written only by `setup`: whether the program three built reads an integer texture. */
+  private isBuiltInteger: boolean | undefined;
+
   constructor(
     private readonly read: Node,
     private readonly returns: string,
@@ -163,9 +176,17 @@ class IntegerReadNode extends TslNode {
 
   // The texture bound when three builds the shader decides, since a `set` can bind another one.
   override setup(): Node {
-    if (INTEGER_TYPES.has(this.texture.value.type)) return this.read;
+    this.isBuiltInteger = isInteger(this.texture);
+    if (this.isBuiltInteger) return this.read;
     const bits = this.returns.startsWith('u') ? TSL.floatBitsToUint : TSL.floatBitsToInt;
     return bits(this.read as never) as unknown as Node;
+  }
+
+  // GL types an integer sampler apart. three's program key leaves out a function body: dispose rebuilds.
+  override update(frame: NodeFrame): undefined {
+    if (this.isBuiltInteger !== undefined && this.isBuiltInteger !== isInteger(this.texture))
+      frame.material!.dispose();
+    return undefined;
   }
 }
 
