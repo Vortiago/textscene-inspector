@@ -15,11 +15,13 @@ function layerOf(spec, level, layer) {
   return bytesOf(spec.levels[level]).slice(layer * size, (layer + 1) * size);
 }
 
+/** Each level of the spec. A 3D texture's levels halve its depth, and a 2D array's keep every layer. */
 const mipmapsOf = (spec, data) =>
   spec.levels.map((_, level) => ({
     data: data(level),
     width: levelSize(spec.width, level),
     height: levelSize(spec.height, level),
+    ...(spec.kind === 'volume' && { depth: levelSize(spec.depth, level) }),
   }));
 
 function created(spec) {
@@ -40,13 +42,7 @@ function created(spec) {
     }
     case 'volume': {
       const texture = new THREE.Data3DTexture(bytesOf(spec.levels[0]), width, height, depth);
-      if (spec.levels.length > 1)
-        texture.mipmaps = spec.levels.map((level, index) => ({
-          data: bytesOf(level),
-          width: levelSize(width, index),
-          height: levelSize(height, index),
-          depth: levelSize(depth, index),
-        }));
+      if (spec.levels.length > 1) texture.mipmaps = mipmapsOf(spec, (level) => bytesOf(spec.levels[level]));
       return texture;
     }
     case 'cube':

@@ -59,22 +59,25 @@ function faceDerivatives(face: CubeFace, direction: Node, changes: readonly Node
 const screenDerivatives = (node: Node): readonly Node[] =>
   [TSL.dFdx(untyped(node)), TSL.dFdy(untyped(node))] as unknown as Node[];
 
-/** The derivatives of a cube direction in texels of the face it picks, from its own derivatives. */
+/** The derivatives of a cube direction in texels of `face` with `size` texels, from its own derivatives. */
 function cubeTexelDerivatives(
-  textureNode: TextureNode,
+  face: CubeFace,
+  size: Node,
   direction: Node,
   changes: readonly Node[]
 ): readonly Node[] {
-  const size = TSL.vec2(untyped(sizeOf(textureNode, 'ivec2')));
-  return faceDerivatives(cubeFaceOf(direction), direction, changes).map(
-    (derivative) => TSL.mul(untyped(derivative), size) as unknown as Node
+  return faceDerivatives(face, direction, changes).map(
+    (derivative) => TSL.mul(untyped(derivative), untyped(size)) as unknown as Node
   );
 }
 
 /** The two derivatives of the coordinate in texels, by the sampler's kind. */
 function texelDerivatives(sampler: string, textureNode: TextureNode, coordinate: Node): readonly Node[] {
   const kind = textureKindOf(sampler);
-  if (kind === 'cube') return cubeTexelDerivatives(textureNode, coordinate, screenDerivatives(coordinate));
+  if (kind === 'cube') {
+    const size = TSL.vec2(untyped(sizeOf(textureNode, 'ivec2'))) as unknown as Node;
+    return cubeTexelDerivatives(cubeFaceOf(coordinate), size, coordinate, screenDerivatives(coordinate));
+  }
   const isVolume = kind === 'volume';
   const size = (isVolume ? TSL.vec3 : TSL.vec2)(untyped(sizeOf(textureNode, isVolume ? 'ivec3' : 'ivec2')));
   return screenDerivatives(TSL.mul(untyped(coordinate), size) as unknown as Node);
@@ -91,9 +94,9 @@ const levelOfTexelDerivatives = ([dx, dy]: readonly Node[]): Node => {
 export const lastLevelNodeOf = (textureNode: TextureNode): Node =>
   TSL.float(untyped(factNodeOf(textureNode, lastLevelOf))) as unknown as Node;
 
-/** The unclamped level of detail of a cube direction, from the derivatives of the direction. */
-export const cubeLevelOf = (textureNode: TextureNode, direction: Node, changes: readonly Node[]) =>
-  levelOfTexelDerivatives(cubeTexelDerivatives(textureNode, direction, changes));
+/** The unclamped level of detail on `face` of `size` texels, from the derivatives of the direction. */
+export const cubeLevelOf = (face: CubeFace, size: Node, direction: Node, changes: readonly Node[]) =>
+  levelOfTexelDerivatives(cubeTexelDerivatives(face, size, direction, changes));
 
 /** `textureQueryLod`: Vulkan's level of detail, clamped to the levels read, then unclamped. */
 export function levelOfDetail(sampler: string, textureNode: TextureNode, coordinate: Node): Node {

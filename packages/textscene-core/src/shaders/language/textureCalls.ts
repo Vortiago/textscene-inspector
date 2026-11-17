@@ -1,19 +1,15 @@
 import { IntType, UnsignedIntType } from 'three';
 import * as TSL from 'three/tsl';
 import { Node as TslNode, type Node, type NodeBuilder, type TextureNode } from 'three/webgpu';
-import { compositeOf } from './builtInComposites.js';
 import { CubeArrayReadNode, type CubeArrayLevel } from './cubeArray.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import { gathered } from './textureGather.js';
 import { levelCountOf, levelOfDetail } from './textureQueries.js';
 import { SizeNode } from './textureSize.js';
 import { TextureBuiltNode } from './textureBuiltNode.js';
+import { roundedLayer } from './textureLayer.js';
+import { swizzles as lanes } from './compositeParts.js';
 import { textureKindOf } from './types.js';
-
-/** The swizzle a node of a vector type takes, which three's types leave out. */
-type Lanes = Node & Record<'x' | 'y' | 'z' | 'w' | 'xy' | 'xyz', Node>;
-
-const lanes = (node: Node) => node as Lanes;
 
 /** A gradient of its own type: three builds every `textureGrad` gradient as `vec2` (`TextureNode.js:699`). */
 class GradientNode extends TslNode {
@@ -50,12 +46,9 @@ function projected(sampler: string, coordinate: Node, type: string): Node {
   return TSL.div((isVolume ? lane.xyz : lane.xy) as never, divisor as never) as unknown as Node;
 }
 
-/** A sampled layer rounds half to even, as Godot's Vulkan driver does: three would truncate it. */
 function sampled(texture: TextureNode, { uv, layer }: Coordinate): TextureNode {
   const node = texture.sample(uv);
-  if (layer === undefined) return node;
-  const rounded = compositeOf('roundEven', ['float'])!([layer], ['float']);
-  return node.depth(TSL.int(rounded as never) as never) as unknown as TextureNode;
+  return layer === undefined ? node : (node.depth(roundedLayer(layer) as never) as unknown as TextureNode);
 }
 
 function loaded(texture: TextureNode, { uv, layer }: Coordinate): TextureNode {

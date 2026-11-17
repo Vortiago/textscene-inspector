@@ -3,6 +3,7 @@ import { CubeTexture, Data3DTexture, DataArrayTexture, DataTexture, type Texture
 import { int } from 'three/tsl';
 import { NodeUpdateType, type NodeFrame } from 'three/webgpu';
 import type { TextureKind } from '../language/types.js';
+import { recordingRenderer } from './levelUpload.testkit.js';
 import { samplerNodeOf } from './samplerNodes.js';
 import { TextureCopies } from './textureCopies.js';
 
@@ -39,12 +40,8 @@ describe('samplerNodeOf', () => {
     const source = TEXTURES[kind]() as DataArrayTexture | Data3DTexture;
     source.mipmaps = [1, 1].map(() => ({ data: new Uint8Array(4), width: 1, height: 1, depth: 1 })) as never;
     const copy = new TextureCopies(() => undefined).copyOf(source);
-    const levels: number[] = [];
-    const renderer = {
-      isWebGLRenderer: true,
-      copyTextureToTexture: (...args: unknown[]) => levels.push(args[5] as number),
-    };
+    const { copies, renderer } = recordingRenderer();
     samplerNodeOf(kind, copy).update({ renderer } as unknown as NodeFrame);
-    expect(levels).toEqual([1]);
+    expect(copies.map(({ level }) => level)).toEqual([1]);
   });
 });

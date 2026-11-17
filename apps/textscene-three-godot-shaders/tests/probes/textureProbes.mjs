@@ -1,4 +1,5 @@
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
+import { textureKindOf } from '../../../../packages/textscene-core/src/shaders/language/types.ts';
 import { probeOf } from './languageProbes.mjs';
 
 const hex = (bytes) => bytes.map((byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -395,14 +396,6 @@ const SPEC_OF_KIND = {
   cubes: textureSpec('cubes', 4, 4, { depth: 2, isMipmapped: true }),
 };
 
-function kindOf(sampler) {
-  if (sampler.endsWith('2DArray')) return 'layers';
-  if (sampler.endsWith('3D')) return 'volume';
-  if (sampler === 'samplerCube') return 'cube';
-  if (sampler === 'samplerCubeArray') return 'cubes';
-  return 'flat';
-}
-
 /** Three rows of each argument, by the argument's place in the call and its type. */
 function argumentValues(kind, type, place) {
   if (place === 'coordinate') {
@@ -500,7 +493,7 @@ const PLACES = {
 function functionProbe(row) {
   const name = row.id.slice(0, row.id.indexOf('('));
   const [sampler, ...types] = row.args;
-  const kind = kindOf(sampler);
+  const kind = textureKindOf(sampler);
   const isFloat = !/^[iu]/.test(sampler);
   const filter = isFloat ? 'filter_linear_mipmap' : 'filter_nearest_mipmap';
   // textureGather's component is a constant expression, so it stands in the source.

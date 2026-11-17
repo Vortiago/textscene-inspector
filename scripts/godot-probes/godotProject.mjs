@@ -111,6 +111,7 @@ func texture_of(spec):
 	var width := int(spec.width)
 	var height := int(spec.height)
 	var levels: Array = spec.levels
+	var format: String = spec.get("format", "rgba8")
 	var count := int(spec.get("depth", 1))
 	if spec.kind == "cube":
 		count = 6
@@ -118,11 +119,11 @@ func texture_of(spec):
 		count = 6 * count
 	match spec.kind:
 		"flat":
-			return ImageTexture.create_from_image(image_of(width, height, levels, 0, spec.get("format", "rgba8")))
+			return ImageTexture.create_from_image(image_of(width, height, levels, 0, format))
 		"layers", "cube", "cubes":
 			var images: Array[Image] = []
 			for layer in count:
-				images.append(image_of(width, height, levels, layer, spec.get("format", "rgba8")))
+				images.append(image_of(width, height, levels, layer, format))
 			var layered = { "layers": Texture2DArray, "cube": Cubemap, "cubes": CubemapArray }[spec.kind].new()
 			layered.create_from_images(images)
 			return layered

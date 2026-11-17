@@ -84,21 +84,25 @@ function zeroDerivativeLevels() {
 
 const fusedBlend = (lanesOff, first) => ({ ...FUSED_TEXEL_BLEND, lanesOff, first });
 
+/** The cube array calls whose one blended lane rounds once in Godot and twice here. */
+function cubeArrayCallBlends() {
+  const calls = [
+    'texture-samplerCubeArray-vec4',
+    'texture-samplerCubeArray-vec4-float',
+    'textureGrad-samplerCubeArray-vec4-vec3-vec3',
+  ];
+  return Object.fromEntries(
+    calls.map((call) => [
+      `texture-function-${call}`,
+      fusedBlend(1, 'lane 5: Godot 3daa43dd, transpilation 3daa43dc'),
+    ])
+  );
+}
+
 export const KNOWN_PROBE_DIFFERENCES = {
   ...zeroDerivativeLevels(),
   'texture-cubes-linear-edges': fusedBlend(4, 'lane 2: Godot 3db24be7, transpilation 3db24be6'),
-  'texture-function-texture-samplerCubeArray-vec4': fusedBlend(
-    1,
-    'lane 5: Godot 3daa43dd, transpilation 3daa43dc'
-  ),
-  'texture-function-texture-samplerCubeArray-vec4-float': fusedBlend(
-    1,
-    'lane 5: Godot 3daa43dd, transpilation 3daa43dc'
-  ),
-  'texture-function-textureGrad-samplerCubeArray-vec4-vec3-vec3': fusedBlend(
-    1,
-    'lane 5: Godot 3daa43dd, transpilation 3daa43dc'
-  ),
+  ...cubeArrayCallBlends(),
   'texture-2d-filter_nearest_mipmap_anisotropic': {
     ...ANISOTROPIC_FOOTPRINT,
     lanesOff: 11,

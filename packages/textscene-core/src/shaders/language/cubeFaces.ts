@@ -43,6 +43,19 @@ export function cubeFaceOf(direction: Node): CubeFace {
   return { axis: axis as unknown as Node, sAxis, tAxis, st, index };
 }
 
+/** The bilinear footprint of `st` on `face` of `size` texels: its corner texel, its weights, its centres. */
+export function footprintOf(face: CubeFace, size: Node) {
+  const at = TSL.sub(TSL.mul(untyped(face.st), untyped(size)), 0.5);
+  const corner = TSL.floor(at);
+  return {
+    corner: corner as unknown as Node,
+    weight: TSL.fract(at) as unknown as Node,
+    /** The centre of the texel `s`, `t` from the corner, in face coordinates. */
+    centre: (s: number, t: number) =>
+      TSL.div(TSL.add(corner, TSL.vec2(s + 0.5, t + 0.5)), untyped(size)) as unknown as Node,
+  };
+}
+
 /** The direction of `st` on `face`: past an edge it folds onto the next face, as Vulkan reads it. */
 export function directionOf(face: CubeFace, st: Node): Node {
   const lanes = st as unknown as Node & Record<'x' | 'y', Node>;

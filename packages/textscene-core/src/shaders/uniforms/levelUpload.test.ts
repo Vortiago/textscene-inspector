@@ -1,29 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { Data3DTexture, DataArrayTexture, DataTexture, RGFormat, type Texture } from 'three';
+import { Data3DTexture, DataArrayTexture, DataTexture, RGFormat } from 'three';
 import { uploadLevels } from './levelUpload.js';
-
-interface Copy {
-  readonly source: Texture;
-  readonly target: Texture;
-  readonly level: number;
-}
-
-/** A renderer that records each `copyTextureToTexture` it is asked for. */
-function recordingRenderer(): { copies: Copy[]; renderer: Parameters<typeof uploadLevels>[0] } {
-  const copies: Copy[] = [];
-  const renderer = {
-    isWebGLRenderer: true,
-    copyTextureToTexture: (
-      source: Texture,
-      target: Texture,
-      _region: null,
-      _at: null,
-      _from: number,
-      level = 0
-    ) => copies.push({ source, target, level }),
-  };
-  return { copies, renderer: renderer as unknown as Parameters<typeof uploadLevels>[0] };
-}
+import { recordingRenderer } from './levelUpload.testkit.js';
 
 function volumeWithLevels(): Data3DTexture {
   const volume = new Data3DTexture(new Uint8Array(4 * 64), 4, 4, 4);
