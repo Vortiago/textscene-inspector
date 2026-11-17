@@ -111,11 +111,11 @@ hint_default_black	uniform hint	servers/rendering/shader_language.cpp:382	#1829	
 hint_default_transparent	uniform hint	servers/rendering/shader_language.cpp:383	#1829	TK_HINT_DEFAULT_TRANSPARENT_TEXTURE			native	native
 hint_anisotropy	uniform hint	servers/rendering/shader_language.cpp:384	#1829	TK_HINT_ANISOTROPY_TEXTURE			native	native
 hint_roughness_r	uniform hint	servers/rendering/shader_language.cpp:385	#1829	TK_HINT_ROUGHNESS_R			native	native
-hint_roughness_g	uniform hint	servers/rendering/shader_language.cpp:386	#1829	TK_HINT_ROUGHNESS_G				
-hint_roughness_b	uniform hint	servers/rendering/shader_language.cpp:387	#1829	TK_HINT_ROUGHNESS_B				
-hint_roughness_a	uniform hint	servers/rendering/shader_language.cpp:388	#1829	TK_HINT_ROUGHNESS_A				
+hint_roughness_g	uniform hint	servers/rendering/shader_language.cpp:386	#1829	TK_HINT_ROUGHNESS_G			native	native
+hint_roughness_b	uniform hint	servers/rendering/shader_language.cpp:387	#1829	TK_HINT_ROUGHNESS_B			native	native
+hint_roughness_a	uniform hint	servers/rendering/shader_language.cpp:388	#1829	TK_HINT_ROUGHNESS_A			native	native
 hint_roughness_normal	uniform hint	servers/rendering/shader_language.cpp:389	#1829	TK_HINT_ROUGHNESS_NORMAL_TEXTURE			native	native
-hint_roughness_gray	uniform hint	servers/rendering/shader_language.cpp:390	#1829	TK_HINT_ROUGHNESS_GRAY				
+hint_roughness_gray	uniform hint	servers/rendering/shader_language.cpp:390	#1829	TK_HINT_ROUGHNESS_GRAY			native	native
 hint_screen_texture	uniform hint	servers/rendering/shader_language.cpp:391	#1524	TK_HINT_SCREEN_TEXTURE				
 hint_normal_roughness_texture	uniform hint	servers/rendering/shader_language.cpp:392	#1610	TK_HINT_NORMAL_ROUGHNESS_TEXTURE				
 hint_depth_texture	uniform hint	servers/rendering/shader_language.cpp:393	#1610	TK_HINT_DEPTH_TEXTURE				

@@ -121,6 +121,10 @@ function defaultProbes() {
     ' : hint_roughness_normal',
     ' : hint_anisotropy',
     ' : hint_roughness_r',
+    ' : hint_roughness_g',
+    ' : hint_roughness_b',
+    ' : hint_roughness_a',
+    ' : hint_roughness_gray',
   ];
   const unset = hints.map((hint) =>
     textureProbe(
