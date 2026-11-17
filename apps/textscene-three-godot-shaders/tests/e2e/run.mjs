@@ -7,7 +7,7 @@ import { withConsumerPage, writeJobSummary } from '../consumer.mjs';
 import { compareImages, TOLERANCE_STEPS } from './compareImages.mjs';
 import { MAIN_SCRIPT, parseShowcaseOutput, showcaseProjectFiles } from './godotShowcases.mjs';
 import { SHOWCASES } from './showcases.mjs';
-import { parseSkyOutput, SKY_MAIN_SCRIPT, skyProjectFiles } from './godotSkyScenes.mjs';
+import { parseSkyOutput, SKY_MAIN_SCRIPT, skyProjectFiles, skyRuns } from './godotSkyScenes.mjs';
 import { SKY_SCENES } from './skyScenes.mjs';
 
 /** Where the guide shows each showcase's two images. */
@@ -17,13 +17,14 @@ const showcaseImage = (name, side) => join(SHOWCASE_DIR, `${name}-${side}.png`);
 
 /** Godot's image of each showcase and each sky scene, by name. */
 async function godotImages() {
-  const [showcases, skies] = await Promise.all([
+  const [showcases, ...skies] = await Promise.all([
     runGodotScript(MAIN_SCRIPT, showcaseProjectFiles(SHOWCASES)).then(parseShowcaseOutput),
-    runGodotScript(SKY_MAIN_SCRIPT, skyProjectFiles(SKY_SCENES)).then(parseSkyOutput),
+    ...skyRuns(SKY_SCENES).map(({ scenes, options }) =>
+      runGodotScript(SKY_MAIN_SCRIPT, skyProjectFiles(scenes), options).then(parseSkyOutput)
+    ),
   ]);
-  requireGodotVersion(showcases.godot);
-  requireGodotVersion(skies.godot);
-  return new Map([...showcases.images, ...skies.images]);
+  for (const run of [showcases, ...skies]) requireGodotVersion(run.godot);
+  return new Map([...showcases.images, ...skies.flatMap((run) => [...run.images])]);
 }
 
 /** The page's image of each showcase and each sky scene, by name. */

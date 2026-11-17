@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inChunksAtOnce, inChunksOfAtMost } from './godotRun.mjs';
+import { inChunksAtOnce, inChunksOfAtMost, projectGodot } from './godotRun.mjs';
 
 describe('inChunksAtOnce', () => {
   it.each(Array.from({ length: 40 }, (_, length) => length + 1))(
@@ -27,5 +27,17 @@ describe('inChunksOfAtMost', () => {
 
   it('runs one empty chunk for no items, so the caller still reads Godot', async () => {
     expect(await inChunksOfAtMost([], 64, async (chunk) => chunk)).toEqual([[]]);
+  });
+});
+
+describe('projectGodot', () => {
+  it('ends with the settings a run gives, as sections Godot reads after its own', () => {
+    const text = projectGodot('[rendering]\nlimits/time/time_rollover_secs=1.2\n');
+    expect(text.endsWith('\n[rendering]\nlimits/time/time_rollover_secs=1.2\n')).toBe(true);
+    expect(text).toContain('run/main_scene="res://main.tscn"');
+  });
+
+  it('is the plain project for no settings', () => {
+    expect(projectGodot()).not.toContain('[rendering]');
   });
 });

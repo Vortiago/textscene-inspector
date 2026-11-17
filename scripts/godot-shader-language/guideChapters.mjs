@@ -673,6 +673,12 @@ const SKY_CHAPTER = {
       what: "`COLOR` is the colour `sky()` writes, linear. Godot's sky template holds it in its local `color`, and writes it to the frame after the environment's brightness and fog.",
       tsl: "the template's local `color`",
     },
+    {
+      heading: '`TIME`',
+      rows: (row) => row.id === 'sky.global.TIME',
+      what: "`TIME` is the shader time in seconds. Godot adds each frame's step to it before the frame draws, in a double, and wraps it at the project setting `rendering/limits/time/time_rollover_secs`, 3600 by default. `ShaderClock` keeps the same sum and wrap: `advance(step)` before each frame, then `writeSkyBindings({ time })`. In the previewer, `PlaybackShaderTime` moves it with the playback controls instead: play advances it, pause holds it, a scrub sets it to the playhead, and stop sets it to 0. A scene with no AnimationPlayer advances it every frame, as Godot does.",
+      tsl: "the template's uniform `params.time`, which `writeSkyBindings` writes as a float",
+    },
   ],
 };
 

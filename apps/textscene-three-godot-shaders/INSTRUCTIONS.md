@@ -12,7 +12,7 @@ GLSL or WGSL operation itself, `lowered` with the name of the operations it writ
 probes run on WebGL 2. WebGPURenderer runs the same TSL nodes, and no probe runs there until the
 canvases draw on WebGPURenderer (#1788).
 
-1493 of 1889 instructions transpiled.
+1494 of 1889 instructions transpiled.
 
 ## data type
 
@@ -1754,7 +1754,7 @@ canvases draw on WebGPURenderer (#1788).
 | `particles.process.COLLISION_DEPTH` | open, #1726 | | | `servers/rendering/shader_types.cpp:429` |
 | `particles.process.ATTRACTOR_FORCE` | open, #1726 | | | `servers/rendering/shader_types.cpp:430` |
 | `particles.process.AMOUNT_RATIO` | open, #1726 | | | `servers/rendering/shader_types.cpp:431` |
-| `sky.global.TIME` | open, #1794 | | | `servers/rendering/shader_types.cpp:456` |
+| `sky.global.TIME` | transpiled (`sky-time-zero`, `sky-time-fraction`, `sky-time-rolled-over`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:456` |
 | `sky.constants.PI` | open, #1665 | | | `servers/rendering/shader_types.cpp:457` |
 | `sky.constants.TAU` | open, #1665 | | | `servers/rendering/shader_types.cpp:458` |
 | `sky.constants.E` | open, #1665 | | | `servers/rendering/shader_types.cpp:459` |

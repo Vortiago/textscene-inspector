@@ -20,3 +20,9 @@ export {
   type SkyLight,
   type SkyScene,
 } from './sky/skyBindings.js';
+export {
+  DEFAULT_TIME_ROLLOVER_SECONDS,
+  PlaybackShaderTime,
+  ShaderClock,
+  type Playback,
+} from './time/shaderClock.js';

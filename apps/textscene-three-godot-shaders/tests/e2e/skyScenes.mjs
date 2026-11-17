@@ -1,3 +1,5 @@
+import { FRAMES_BEFORE_READ } from '../../../../scripts/godot-probes/godotRun.mjs';
+
 /** Godot's default sky shader (`sky.cpp:807`). */
 export const DEFAULT_SKY = `shader_type sky;
 
@@ -60,6 +62,29 @@ const VALUE_SCENES = [
   ...scene,
 }));
 
+/** A sky that shows `TIME` in red and green, a step of 1/8 s apart in green. */
+const TIME_SKY = `shader_type sky;
+
+void sky() {
+	COLOR = vec3(TIME * 0.5, fract(TIME * 4.0), 0.25);
+}
+`;
+
+/** `TIME` after the frames a run draws before it reads: at 0, at a fraction, and past the rollover. */
+const TIME_SCENES = [
+  { name: 'sky-time-zero', clock: { fixedFps: 8, rolloverSeconds: 0.125 } },
+  { name: 'sky-time-fraction', clock: { fixedFps: 3, rolloverSeconds: 3600 } },
+  { name: 'sky-time-rolled-over', clock: { fixedFps: 3, rolloverSeconds: 1.2 } },
+].map((scene) => ({
+  ...SIZE,
+  source: TIME_SKY,
+  camera: AHEAD,
+  lights: [],
+  rows: ['sky.global.TIME'],
+  ...scene,
+  clock: { ...scene.clock, frames: FRAMES_BEFORE_READ },
+}));
+
 export const SKY_SCENES = [
   { name: 'sky-default', ...SIZE, source: DEFAULT_SKY, camera: AHEAD, lights: [], rows: DEFAULT_SKY_ROWS },
   {
@@ -81,4 +106,5 @@ export const SKY_SCENES = [
     rows: DEFAULT_SKY_ROWS,
   },
   ...VALUE_SCENES,
+  ...TIME_SCENES,
 ];

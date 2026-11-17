@@ -1784,7 +1784,7 @@ particles.process.COLLISION_NORMAL	built-in (read only)	servers/rendering/shader
 particles.process.COLLISION_DEPTH	built-in (read only)	servers/rendering/shader_types.cpp:429	#1726	particles.glsl		float			
 particles.process.ATTRACTOR_FORCE	built-in (read only)	servers/rendering/shader_types.cpp:430	#1726	particles.glsl		vec3			
 particles.process.AMOUNT_RATIO	built-in (read only)	servers/rendering/shader_types.cpp:431	#1726	particles.glsl		float			
-sky.global.TIME	built-in (read only)	servers/rendering/shader_types.cpp:456	#1794	environment/sky.glsl		float			
+sky.global.TIME	built-in (read only)	servers/rendering/shader_types.cpp:456	#1794	environment/sky.glsl		float		native	native
 sky.constants.PI	built-in (read only)	servers/rendering/shader_types.cpp:457	#1665	environment/sky.glsl		float			
 sky.constants.TAU	built-in (read only)	servers/rendering/shader_types.cpp:458	#1665	environment/sky.glsl		float			
 sky.constants.E	built-in (read only)	servers/rendering/shader_types.cpp:459	#1665	environment/sky.glsl		float			

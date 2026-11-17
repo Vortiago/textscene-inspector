@@ -1,5 +1,10 @@
 import * as THREE from 'three';
-import { installNodesHandler, transpileSky, writeSkyBindings } from '@textscene/three-godot-shaders';
+import {
+  installNodesHandler,
+  ShaderClock,
+  transpileSky,
+  writeSkyBindings,
+} from '@textscene/three-godot-shaders';
 import { framePixels } from './framePixels.js';
 
 const renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas') });
@@ -17,6 +22,14 @@ function skyLight(light) {
   const direction = new THREE.Vector3(0, 0, 1).applyEuler(euler(light.rotation)).normalize();
   const color = linear(light.color);
   return { direction, energy: light.energy, color, size: THREE.MathUtils.degToRad(light.size) };
+}
+
+/** `TIME` after the frames of `clock`, or 0 for a scene of no clock. */
+function shaderTime(clock) {
+  if (!clock) return 0;
+  const shaderClock = new ShaderClock(clock.rolloverSeconds);
+  for (let frame = 0; frame < clock.frames; frame++) shaderClock.advance(1 / clock.fixedFps);
+  return shaderClock.time;
 }
 
 /** The pixels of `scene`'s sky, or `{ error }` when the transpilation refuses it. */
@@ -40,7 +53,13 @@ function drawSky(spec) {
     aerialPerspective: spec.fog.aerialPerspective,
     density: 0.01,
   };
-  writeSkyBindings(sky, { camera, time: 0, brightness: 1, fog, lights: spec.lights.map(skyLight) });
+  writeSkyBindings(sky, {
+    camera,
+    time: shaderTime(spec.clock),
+    brightness: 1,
+    fog,
+    lights: spec.lights.map(skyLight),
+  });
   const scene = new THREE.Scene();
   scene.add(sky.mesh);
   const pixels = framePixels(renderer, scene, camera, { width, height, colorSpace: THREE.SRGBColorSpace });
