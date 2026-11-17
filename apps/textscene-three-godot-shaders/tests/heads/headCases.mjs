@@ -1,3 +1,5 @@
+import { SHADER_MODES } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
+
 /** The processor functions of each shader type, empty, so a head alone decides the verdict. */
 const EMPTY_STAGES = {
   spatial: 'void vertex() {}\nvoid fragment() {}\nvoid light() {}',
@@ -227,6 +229,32 @@ const GLOBAL_NAME_CASES = [
   ),
 ];
 
+/** Each word of a mode, as a shader writes it: `blend_mix` for the option `mix` of `blend`. */
+const modeWords = (mode) =>
+  mode.options.length === 0 ? [mode.name] : mode.options.map((option) => `${mode.name}_${option}`);
+
+const SHADER_TYPES = Object.keys(EMPTY_STAGES);
+
+/** Every mode of Godot's tables in its own type, and in the next type that lacks the word. */
+function tableModeCases() {
+  const cases = SHADER_MODES.flatMap((mode) =>
+    modeWords(mode).flatMap((word) => {
+      const lacks = (type) =>
+        !SHADER_MODES.some(
+          (each) => each.shaderType === type && each.kind === mode.kind && modeWords(each).includes(word)
+        );
+      const start = SHADER_TYPES.indexOf(mode.shaderType);
+      const other = [...SHADER_TYPES.slice(start + 1), ...SHADER_TYPES.slice(0, start)].find(lacks);
+      const text = (type) => `shader_type ${type};\n${mode.kind} ${word};\n${EMPTY_STAGES[type]}`;
+      return [
+        headCase(`table/${mode.shaderType}/${mode.kind}/${word}`, text(mode.shaderType)),
+        ...(other ? [headCase(`table/${other}/${mode.kind}/${word}`, text(other))] : []),
+      ];
+    })
+  );
+  return [...new Map(cases.map((each) => [each.id, each])).values()];
+}
+
 export const HEAD_CASES = [
   ...typeCases(),
   ...TYPE_REFUSALS.map(([id, text]) => headCase(id, text)),
@@ -235,4 +263,5 @@ export const HEAD_CASES = [
   ...STAGE_CASES,
   ...VARYING_ARGUMENT_CASES,
   ...GLOBAL_NAME_CASES,
+  ...tableModeCases(),
 ];

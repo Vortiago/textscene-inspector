@@ -228,6 +228,24 @@ void sky() {
 | --- | --- |
 | <img src="showcase/sky-time-rolled-over-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-time-rolled-over-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `sky-time-cycle`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+void sky() {
+	vec3 phase = vec3(0.0, 2.0, 4.0);
+	COLOR = 0.5 + 0.5 * cos(TIME * vec3(1.0, 1.3, 1.7) * 2.0 + phase);
+	COLOR *= 0.75 + 0.25 * step(0.5, fract(TIME));
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-time-cycle-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-time-cycle-three.png" width="256" alt="Transpilation"> |
+
 ## `COLOR`
 
 `COLOR` is the colour `sky()` writes, linear. Godot's sky template holds it in its local `color`, and writes it to the frame after the environment's brightness and fog.

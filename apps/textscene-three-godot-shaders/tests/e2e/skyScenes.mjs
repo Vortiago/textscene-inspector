@@ -70,11 +70,22 @@ void sky() {
 }
 `;
 
+/** The showcase's animated sky, which the slice's video records frame by frame beside Godot. */
+const TIME_CYCLE_SKY = `shader_type sky;
+
+void sky() {
+	vec3 phase = vec3(0.0, 2.0, 4.0);
+	COLOR = 0.5 + 0.5 * cos(TIME * vec3(1.0, 1.3, 1.7) * 2.0 + phase);
+	COLOR *= 0.75 + 0.25 * step(0.5, fract(TIME));
+}
+`;
+
 /** `TIME` after the frames a run draws before it reads: at 0, at a fraction, and past the rollover. */
 const TIME_SCENES = [
   { name: 'sky-time-zero', clock: { fixedFps: 8, rolloverSeconds: 0.125 } },
   { name: 'sky-time-fraction', clock: { fixedFps: 3, rolloverSeconds: 3600 } },
   { name: 'sky-time-rolled-over', clock: { fixedFps: 3, rolloverSeconds: 1.2 } },
+  { name: 'sky-time-cycle', source: TIME_CYCLE_SKY, clock: { fixedFps: 3, rolloverSeconds: 3600 } },
 ].map((scene) => ({
   ...SIZE,
   source: TIME_SKY,
