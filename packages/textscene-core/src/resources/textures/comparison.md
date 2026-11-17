@@ -93,13 +93,11 @@ A minified NoiseTexture2D samples the mip chain Godot builds on the CPU when `ge
 ## Linting
 
 <!-- lint:begin Texture2D -->
-
 Strict parsing format-checks the inherited set (2 inherited from Resource); `Texture2D` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Rule                                    | Reports                     | Severity |
-| --------------------------------------- | --------------------------- | -------- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info     |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
 The lenient parser never rejects a texture property. An unreadable value falls back to Godot's default through the shared value decoders. A reference it cannot resolve leaves the slot empty, so the consumer renders untextured.

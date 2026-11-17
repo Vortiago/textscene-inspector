@@ -168,13 +168,11 @@ At equal `render_priority`, the two engines can disagree, and the measured case 
 ## Linting
 
 <!-- lint:begin StandardMaterial3D -->
-
 Strict parsing format-checks the inherited set (131 inherited from BaseMaterial3D, 2 inherited from Material, 2 inherited from Resource); `StandardMaterial3D` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Rule                                    | Reports                     | Severity |
-| --------------------------------------- | --------------------------- | -------- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info     |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
 The lenient parser never rejects. Each field falls back to Godot's default through the shared value decoders, so a malformed `roughness` renders with default roughness. A texture reference it cannot resolve leaves the slot empty, and the mesh renders untextured.

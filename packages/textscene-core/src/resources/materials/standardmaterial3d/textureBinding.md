@@ -28,14 +28,14 @@ rendering device makes that view only for a format with an sRGB variant
 Each producer records the format Godot holds its image in
 (`recordGodotFormat`), and `sourceColorSpace` reads it:
 
-| Producer          | Format                                                           |
-| ----------------- | ---------------------------------------------------------------- |
-| ImageTexture      | the saved `Image` format                                         |
-| NoiseTexture2D    | L8, or RGBA8 with a `color_ramp` or `as_normal_map`              |
-| GradientTexture2D | RGBA8, or RGBAFloat with `use_hdr`                               |
-| AtlasTexture      | its atlas's format                                               |
-| an image file     | its import format, from the source format and the import sidecar |
-| a glTF image      | the import format of the file Godot imports it as                |
+| Producer | Format |
+| --- | --- |
+| ImageTexture | the saved `Image` format |
+| NoiseTexture2D | L8, or RGBA8 with a `color_ramp` or `as_normal_map` |
+| GradientTexture2D | RGBA8, or RGBAFloat with `use_hdr` |
+| AtlasTexture | its atlas's format |
+| an image file | its import format, from the source format and the import sidecar |
+| a glTF image | the import format of the file Godot imports it as |
 
 ## How Godot imports an image file
 
@@ -88,11 +88,11 @@ never reads the imported chain.
 
 `compress/mode` then gives the import format (`godot/import/textureImport.ts`):
 
-| `compress/mode`                          | Import format                                                                                         |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| 0 Lossless, 1 Lossy, 3 VRAM Uncompressed | the source format                                                                                     |
-| 2 VRAM Compressed                        | DXT5 RGBA8 when a texel has alpha below 0.999, else DXT1 RGB8. BPTC_RGBA with `compress/high_quality` |
-| 4 Basis Universal                        | BPTC_RGBA                                                                                             |
+| `compress/mode` | Import format |
+| --- | --- |
+| 0 Lossless, 1 Lossy, 3 VRAM Uncompressed | the source format |
+| 2 VRAM Compressed | DXT5 RGBA8 when a texel has alpha below 0.999, else DXT1 RGB8. BPTC_RGBA with `compress/high_quality` |
+| 4 Basis Universal | BPTC_RGBA |
 
 A normal map (`compress/normal_map` Enable) uses only RG (`core/io/image.cpp:3732-3734`). So mode 4,
 and mode 2 without `compress/high_quality`, give RGTC RedGreen8 instead. A shader samples it as
@@ -112,33 +112,33 @@ and its import format as it does for any image file (`godot/import/gltfImageFile
 
 Three samplers carry `source_color` and read sRGB:
 
-| Line in `scene/resources/material.cpp` | Sampler                 | Hints                                |
-| -------------------------------------- | ----------------------- | ------------------------------------ |
-| :969                                   | `texture_albedo`        | `source_color`                       |
-| :1066                                  | `texture_emission`      | `source_color`, `hint_default_black` |
-| :1137                                  | `texture_detail_albedo` | `source_color`                       |
+| Line in `scene/resources/material.cpp` | Sampler | Hints |
+| --- | --- | --- |
+| :969 | `texture_albedo` | `source_color` |
+| :1066 | `texture_emission` | `source_color`, `hint_default_black` |
+| :1137 | `texture_detail_albedo` | `source_color` |
 
 Every other sampler carries `hint_default_white`, `hint_default_black`,
 `hint_roughness_*`, `hint_normal`, `hint_anisotropy` or no hint, and reads raw:
 
-| Line  | Sampler                            | Hint                    |
-| ----- | ---------------------------------- | ----------------------- |
-| :1024 | `texture_metallic`                 | `hint_default_white`    |
-| :1030 | `texture_roughness`                | `hint_roughness_r`      |
-| :1053 | `texture_orm`                      |                         |
-| :1075 | `texture_refraction`               |                         |
-| :1092 | `texture_normal`                   | `hint_roughness_normal` |
-| :1099 | `texture_bent_normal`              |                         |
-| :1107 | `texture_rim`                      |                         |
-| :1115 | `texture_clearcoat`                |                         |
-| :1122 | `texture_flowmap`                  | `hint_anisotropy`       |
-| :1128 | `texture_ambient_occlusion`        | `hint_default_white`    |
-| :1138 | `texture_detail_normal`            |                         |
-| :1139 | `texture_detail_mask`              |                         |
-| :1147 | `texture_subsurface_scattering`    |                         |
-| :1156 | `texture_subsurface_transmittance` |                         |
-| :1165 | `texture_backlight`                |                         |
-| :1172 | `texture_heightmap`                | `hint_default_black`    |
+| Line | Sampler | Hint |
+| --- | --- | --- |
+| :1024 | `texture_metallic` | `hint_default_white` |
+| :1030 | `texture_roughness` | `hint_roughness_r` |
+| :1053 | `texture_orm` | |
+| :1075 | `texture_refraction` | |
+| :1092 | `texture_normal` | `hint_roughness_normal` |
+| :1099 | `texture_bent_normal` | |
+| :1107 | `texture_rim` | |
+| :1115 | `texture_clearcoat` | |
+| :1122 | `texture_flowmap` | `hint_anisotropy` |
+| :1128 | `texture_ambient_occlusion` | `hint_default_white` |
+| :1138 | `texture_detail_normal` | |
+| :1139 | `texture_detail_mask` | |
+| :1147 | `texture_subsurface_scattering` | |
+| :1156 | `texture_subsurface_transmittance` | |
+| :1165 | `texture_backlight` | |
+| :1172 | `texture_heightmap` | `hint_default_black` |
 
 `SLOT_READS_SOURCE_COLOR` is exhaustive over `TextureSlot`, so a new slot fails
 to compile until someone reads Godot's shader for it.
