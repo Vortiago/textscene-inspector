@@ -7,8 +7,6 @@ const AutoTranslateMode = { INHERIT: 0, ALWAYS: 1, DISABLED: 2 } as const;
 
 /** The `auto_translate` of a Control and a Window, over the stored `auto_translate_mode`. */
 export class AutoTranslateProperties implements DerivedProperties {
-  storedWritten(): void {}
-
   get(property: string, reads: NodeReads): VariantValue | undefined {
     return property === 'auto_translate' ? boolValue(canAutoTranslate(reads)) : undefined;
   }

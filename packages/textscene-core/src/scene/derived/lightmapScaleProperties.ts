@@ -7,8 +7,6 @@ const TEXEL_SCALES = [1, 2, 4, 8] as const;
 
 /** GeometryInstance3D's deprecated `gi_lightmap_scale`, over the stored `gi_lightmap_texel_scale`. */
 export class LightmapScaleProperties implements DerivedProperties {
-  storedWritten(): void {}
-
   /** The closest step, as `get_lightmap_scale` rounds it (`visual_instance_3d.cpp:458-469`). */
   get(property: string, { stored }: NodeReads): VariantValue | undefined {
     if (property !== 'gi_lightmap_scale') return undefined;

@@ -5,8 +5,6 @@ import { intValue, numberOf, pairOf } from './valueOf.js';
 
 /** The `frame_coords` of a Sprite2D and a Sprite3D, over the stored `frame` (`sprite_2d.cpp:311-320`). */
 export class FrameCoordsProperties implements DerivedProperties {
-  storedWritten(): void {}
-
   get(property: string, { stored }: NodeReads): VariantValue | undefined {
     if (property !== 'frame_coords') return undefined;
     const frame = numberOf(stored('frame'));

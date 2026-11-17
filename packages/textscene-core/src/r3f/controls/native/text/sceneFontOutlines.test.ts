@@ -88,7 +88,6 @@ describe('peekSceneFontOutlines', () => {
     const font = woffOfOpenSans();
 
     peekSceneFontOutlines(fonts, font);
-    await Promise.resolve();
     expect(fontWork.pending()).toBe(1);
 
     await settledOutlines(font);

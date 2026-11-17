@@ -5,8 +5,6 @@ import { numberOf, realValue } from './valueOf.js';
 
 /** The capsule's `mid_height` over `height` and `radius` (`spring_bone_collision_capsule_3d.cpp:63-73`). */
 export class CapsuleMidHeightProperties implements DerivedProperties {
-  storedWritten(): void {}
-
   get(property: string, { stored }: NodeReads): VariantValue | undefined {
     if (property !== 'mid_height') return undefined;
     return realValue(numberOf(stored('height')) - f(numberOf(stored('radius')) * 2));

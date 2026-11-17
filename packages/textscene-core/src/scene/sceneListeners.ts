@@ -14,7 +14,7 @@ export class SceneListeners {
   private readonly observers = new Set<Observer>();
   /** Written only by `written` and `flushWrites`: the absolute paths written since the last notice. */
   private writtenPaths = new Set<string>();
-  /** Written only by `written` and `tellViews`: whether a frame will tell the views of a write. */
+  /** Written only by `written`, `tellViews` and `textChanged`: whether a frame tells the views. */
   private isViewNoticePending = false;
 
   /** `resolve` gives the absolute path a host's path names now, or null where it names no node. */
@@ -43,6 +43,7 @@ export class SceneListeners {
   /** A new text: every node is new, so every view and every observer hears it now. */
   textChanged(): void {
     this.writtenPaths = new Set();
+    this.isViewNoticePending = false;
     for (const listener of [...this.views]) listener();
     for (const { listener } of [...this.observers]) listener();
   }

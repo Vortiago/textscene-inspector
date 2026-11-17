@@ -1,6 +1,5 @@
 import { VARIANT_TYPE as T } from '../../godot/variant/variantType.js';
 import type { VariantValue } from '../../godot/variant/variantValue.js';
-import { storedReal as f } from '../../godot/math/real.js';
 import {
   affineInverseTransform2D,
   multiplyTransform2D,
@@ -16,18 +15,10 @@ import {
   type Transform2DColumns,
 } from '../../godot/math/transform2d.js';
 import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
+import { degToRadf, radToDegf } from '../../godot/math/math.js';
+import { numberOf, pairOf, realValue } from './valueOf.js';
 import type { DerivedProperties, NodeReads, StoredWrite } from './derivedProperty.js';
 
-/** `Math::deg_to_rad(float)` and `Math::rad_to_deg(float)` multiply by a float constant (`math_funcs.h`). */
-const DEG_TO_RAD = f(f(Math.PI) / 180);
-const RAD_TO_DEG = f(180 / f(Math.PI));
-
-const real = (value: VariantValue) => (value as { value: number }).value;
-const pair = (value: VariantValue) => {
-  const [x, y] = (value as { value: readonly number[] }).value;
-  return { x: x!, y: y! };
-};
-const floatValue = (value: number): VariantValue => ({ type: T.FLOAT, value: f(value) });
 const vector2Value = ({ x, y }: { x: number; y: number }): VariantValue => ({
   type: T.VECTOR2,
   value: [x, y],
@@ -68,7 +59,7 @@ export class Node2DProperties implements DerivedProperties {
   get(property: string, reads: NodeReads): VariantValue | undefined {
     switch (property) {
       case 'rotation_degrees':
-        return floatValue(real(reads.stored('rotation')) * RAD_TO_DEG);
+        return realValue(radToDegf(numberOf(reads.stored('rotation'))));
       case 'transform':
         return transformValue(this.localOf(reads));
     }
@@ -81,7 +72,7 @@ export class Node2DProperties implements DerivedProperties {
     switch (property) {
       case 'rotation_degrees':
         this.transform = null;
-        return [['rotation', floatValue(real(value) * DEG_TO_RAD)]];
+        return [['rotation', realValue(degToRadf(numberOf(value)))]];
       case 'transform':
         return this.setTransform(transformOf(value));
     }
@@ -97,9 +88,9 @@ export class Node2DProperties implements DerivedProperties {
     const parts = transform2DDecompose(transform);
     return [
       ['position', vector2Value(parts.position)],
-      ['rotation', floatValue(parts.rotation)],
+      ['rotation', realValue(parts.rotation)],
       ['scale', vector2Value(parts.scale)],
-      ['skew', floatValue(parts.skew)],
+      ['skew', realValue(parts.skew)],
     ];
   }
 
@@ -107,7 +98,7 @@ export class Node2DProperties implements DerivedProperties {
   private setAtRoot(property: string, value: VariantValue): readonly StoredWrite[] {
     if (property === 'global_transform') return this.setTransform(transformOf(value));
     this.transform = null;
-    if (property === 'global_rotation_degrees') return [['rotation', floatValue(real(value) * DEG_TO_RAD)]];
+    if (property === 'global_rotation_degrees') return [['rotation', realValue(degToRadf(numberOf(value)))]];
     return [[property.slice('global_'.length), value]];
   }
 
@@ -123,20 +114,20 @@ export class Node2DProperties implements DerivedProperties {
       return this.setTransform(multiplyTransform2D(inverse, transformOf(value)));
     this.transform = null;
     if (property === 'global_position')
-      return [['position', vector2Value(transform2DXform(inverse, pair(value)))]];
+      return [['position', vector2Value(transform2DXform(inverse, pairOf(value)))]];
     const global = multiplyTransform2D(parent, this.localOf(reads));
     const local = (changed: Transform2DColumns) => multiplyTransform2D(inverse, changed);
     switch (property) {
       case 'global_scale':
         return [
-          ['scale', vector2Value(transform2DGetScale(local(transform2DSetScale(global, pair(value)))))],
+          ['scale', vector2Value(transform2DGetScale(local(transform2DSetScale(global, pairOf(value)))))],
         ];
       case 'global_skew':
-        return [['skew', floatValue(transform2DGetSkew(local(transform2DSetSkew(global, real(value)))))]];
+        return [['skew', realValue(transform2DGetSkew(local(transform2DSetSkew(global, numberOf(value)))))]];
       default: {
-        const radians = property === 'global_rotation' ? real(value) : f(real(value) * DEG_TO_RAD);
+        const radians = property === 'global_rotation' ? numberOf(value) : degToRadf(numberOf(value));
         return [
-          ['rotation', floatValue(transform2DGetRotation(local(transform2DSetRotation(global, radians))))],
+          ['rotation', realValue(transform2DGetRotation(local(transform2DSetRotation(global, radians))))],
         ];
       }
     }
@@ -145,10 +136,10 @@ export class Node2DProperties implements DerivedProperties {
   private localOf({ stored }: NodeReads): Transform2DColumns {
     if (this.transform) return transformOf(this.transform);
     return transform2DFromParts(
-      real(stored('rotation')),
-      pair(stored('scale')),
-      real(stored('skew')),
-      pair(stored('position'))
+      numberOf(stored('rotation')),
+      pairOf(stored('scale')),
+      numberOf(stored('skew')),
+      pairOf(stored('position'))
     );
   }
 
@@ -178,11 +169,11 @@ function globalPropertyOf(property: string, global: Transform2DColumns): Variant
     case 'global_position':
       return vector2Value({ x: global.tx, y: global.ty });
     case 'global_rotation':
-      return floatValue(transform2DGetRotation(global));
+      return realValue(transform2DGetRotation(global));
     case 'global_rotation_degrees':
-      return floatValue(transform2DGetRotation(global) * RAD_TO_DEG);
+      return realValue(radToDegf(transform2DGetRotation(global)));
     case 'global_skew':
-      return floatValue(transform2DGetSkew(global));
+      return realValue(transform2DGetSkew(global));
     default:
       return vector2Value(transform2DGetScale(global));
   }

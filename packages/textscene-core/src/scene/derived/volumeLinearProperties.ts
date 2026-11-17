@@ -5,8 +5,6 @@ import { numberOf, realValue } from './valueOf.js';
 
 /** An AudioStreamPlayer's `volume_linear` over `volume_db` (`audio_stream_player.cpp:83-89`). */
 export class VolumeLinearProperties implements DerivedProperties {
-  storedWritten(): void {}
-
   get(property: string, { stored }: NodeReads): VariantValue | undefined {
     if (property !== 'volume_linear') return undefined;
     return realValue(dbToLinear(numberOf(stored('volume_db'))));

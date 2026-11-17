@@ -5,8 +5,6 @@ import type { DerivedProperties, NodeReads, StoredWrite } from './derivedPropert
 export class RenamedProperties implements DerivedProperties {
   constructor(private readonly renamed: ReadonlyMap<string, string>) {}
 
-  storedWritten(): void {}
-
   get(property: string, { stored }: NodeReads): VariantValue | undefined {
     const target = this.renamed.get(property);
     return target === undefined ? undefined : stored(target);

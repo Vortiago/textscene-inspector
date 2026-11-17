@@ -83,7 +83,7 @@ async function renderInBrowser(directory) {
     const drawn = {};
     for (const [view, { query, inkFloor }] of Object.entries(VIEWS)) {
       const page = await browser.newPage();
-      drawn[view] = { ...(await renderView(page, `http://localhost:${port}/${query}`, inkFloor)), inkFloor };
+      drawn[view] = await renderView(page, `http://localhost:${port}/${query}`, inkFloor);
     }
     return drawn;
   } finally {
@@ -117,7 +117,8 @@ async function pollInk(page, inkFloor) {
 }
 
 /** One line per failed check of a view, or none when it rendered the fixture. */
-function failuresOf(view, { ink, inkFloor, hasCanvasStyles, errors }) {
+function failuresOf(view, { ink, hasCanvasStyles, errors }) {
+  const { inkFloor } = VIEWS[view];
   return [
     ...(ink < inkFloor ? [`expected at least ${inkFloor} drawn pixels in the viewport, got ${ink}`] : []),
     ...(hasCanvasStyles

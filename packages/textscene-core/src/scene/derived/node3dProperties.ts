@@ -25,16 +25,14 @@ import {
 } from '../../godot/math/transform3d.js';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
 import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
+import { degToRadf, radToDegf } from '../../godot/math/math.js';
+import { isTrue } from './valueOf.js';
 import type { DerivedProperties, NodeReads, StoredValue, StoredWrite } from './derivedProperty.js';
 
 type Order = EnumValue<typeof EulerOrder>;
 
 /** `Node3D::DirtyFlags` (`node_3d.h:83-89`): which of the transform and the Euler cache is stale. */
 type Dirty = 'none' | 'local' | 'euler';
-
-/** `Math::deg_to_rad(float)` and `Math::rad_to_deg(float)` multiply by a float constant (`math_funcs.h`). */
-const DEG_TO_RAD = f(f(Math.PI) / 180);
-const RAD_TO_DEG = f(180 / f(Math.PI));
 
 function vector3(value: VariantValue): EulerAngles {
   const [x, y, z] = (value as { value: readonly number[] }).value;
@@ -80,7 +78,7 @@ export class Node3DProperties implements DerivedProperties {
       case 'rotation':
         return vector3Value(this.rotationOf(stored));
       case 'rotation_degrees':
-        return vector3Value(this.rotationOf(stored).map((angle) => f(angle * RAD_TO_DEG)));
+        return vector3Value(this.rotationOf(stored).map(radToDegf));
       case 'scale':
         return vector3Value(this.scaleOf(stored));
       case 'quaternion': {
@@ -109,9 +107,7 @@ export class Node3DProperties implements DerivedProperties {
       case 'global_rotation':
         return vector3Value(basisGetEulerNormalized(basis, DEFAULT_ORDER));
       default:
-        return vector3Value(
-          basisGetEulerNormalized(basis, DEFAULT_ORDER).map((angle) => f(angle * RAD_TO_DEG))
-        );
+        return vector3Value(basisGetEulerNormalized(basis, DEFAULT_ORDER).map(radToDegf));
     }
   }
 
@@ -262,7 +258,7 @@ export class Node3DProperties implements DerivedProperties {
 }
 
 function toRadians([x, y, z]: EulerAngles): EulerAngles {
-  return [f(x * DEG_TO_RAD), f(y * DEG_TO_RAD), f(z * DEG_TO_RAD)];
+  return [degToRadf(x), degToRadf(y), degToRadf(z)];
 }
 
 /** Every global property this family ports, read through the parent's global transform. */
@@ -273,8 +269,6 @@ const GLOBAL_PROPERTIES: ReadonlySet<string> = new Set([
   'global_rotation',
   'global_rotation_degrees',
 ]);
-
-const isTrue = (value: VariantValue): boolean => (value as { value: unknown }).value === true;
 
 const vectorOf = ([x, y, z]: readonly number[]) => ({ x: x!, y: y!, z: z! });
 

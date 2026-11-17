@@ -1,6 +1,4 @@
 import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
-import { VARIANT_TYPE as T } from '../../godot/variant/variantType.js';
-import { storedReal as f } from '../../godot/math/real.js';
 import type { VariantValue } from '../../godot/variant/variantValue.js';
 import type { DerivedProperties, NodeReads, StoredWrite } from './derivedProperty.js';
 import { AutoTranslateProperties } from './autoTranslateProperties.js';
@@ -14,9 +12,7 @@ import { Node3DProperties } from './node3dProperties.js';
 import { RenamedProperties } from './renamedProperties.js';
 import { VideoVolumeProperties } from './videoVolumeProperties.js';
 import { VolumeLinearProperties } from './volumeLinearProperties.js';
-
-const real = (value: number): VariantValue => ({ type: T.FLOAT, value: f(value) });
-const bool = (value: boolean): VariantValue => ({ type: T.BOOL, value });
+import { boolValue, realValue } from './valueOf.js';
 
 /** Each ported family, with the class whose descendants take it. A class may take several. */
 const FAMILIES: readonly (readonly [baseClass: string, create: () => DerivedProperties])[] = [
@@ -40,13 +36,13 @@ const FAMILIES: readonly (readonly [baseClass: string, create: () => DerivedProp
     () =>
       new MemberProperties(
         new Map([
-          ['sorting_offset', real(0)],
-          ['sorting_use_aabb_center', bool(true)],
+          ['sorting_offset', realValue(0)],
+          ['sorting_use_aabb_center', boolValue(true)],
         ])
       ),
   ],
-  ['CSGShape3D', () => new MemberProperties(new Map([['snap', real(0.001)]]))],
-  ['Timer', () => new MemberProperties(new Map([['paused', bool(false)]]))],
+  ['CSGShape3D', () => new MemberProperties(new Map([['snap', realValue(0.001)]]))],
+  ['Timer', () => new MemberProperties(new Map([['paused', boolValue(false)]]))],
 ];
 
 /** The ported families of a class, as one, or null where none is ported yet. */
@@ -79,6 +75,6 @@ class DerivedFamilies implements DerivedProperties {
   }
 
   storedWritten(property: string): void {
-    for (const family of this.families) family.storedWritten(property);
+    for (const family of this.families) family.storedWritten?.(property);
   }
 }

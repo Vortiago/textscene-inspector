@@ -13,7 +13,10 @@ export const fontWork = createWorkCount();
 type PeekEntry<T> = { status: 'pending' } | { status: 'settled'; value: T };
 
 /**
- * A peek over loads keyed by object: undefined until the key's load settles, then its value.
+ * A peek over loads keyed by object. The first peek of a key starts its load and answers
+ * undefined, and a peek after the load settles answers its value. A peek of a load in flight calls
+ * `onPending` with its key, and each settle calls `onSettle` with it. A load never rejects: it
+ * settles on a fallback value. A `WeakMap` frees the entry of an evicted key.
  *
  * @canonical A peek over async loads keyed by object, counted as font work
  */
@@ -24,11 +27,9 @@ export function createSettledPeek<K extends object, T>(
   const entries = new WeakMap<K, PeekEntry<T>>();
 
   async function settle(key: K, load: () => Promise<T>): Promise<void> {
-    const loaded = load();
-    // A peek runs while React renders, and a count told now updates another component mid-render.
-    await Promise.resolve();
     const endWork = fontWork.begin();
-    const value = await loaded;
+    entries.set(key, { status: 'pending' });
+    const value = await load();
     entries.set(key, { status: 'settled', value });
     try {
       onSettle(key);
@@ -41,10 +42,7 @@ export function createSettledPeek<K extends object, T>(
   return (key, load) => {
     const entry = entries.get(key);
     if (entry?.status === 'settled') return entry.value;
-    if (!entry) {
-      entries.set(key, { status: 'pending' });
-      void settle(key, load);
-    }
+    if (!entry) void settle(key, load);
     onPending(key);
     return undefined;
   };

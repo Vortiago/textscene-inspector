@@ -29,5 +29,5 @@ export interface DerivedProperties {
   /** The stored writes `set` makes, or undefined for a name this family does not port. */
   set(property: string, value: VariantValue, reads: NodeReads): readonly StoredWrite[] | undefined;
   /** Tells the cache that `property` was written as it is stored. */
-  storedWritten(property: string): void;
+  storedWritten?(property: string): void;
 }

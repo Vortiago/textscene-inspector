@@ -1,11 +1,8 @@
 import type { VariantValue } from '../../godot/variant/variantValue.js';
 import { storedReal as f } from '../../godot/math/real.js';
+import { degToRadf, radToDegf } from '../../godot/math/math.js';
 import type { DerivedProperties, NodeReads, StoredWrite } from './derivedProperty.js';
 import { numberOf, realValue } from './valueOf.js';
-
-/** `Math::deg_to_rad(float)` and `Math::rad_to_deg(float)` multiply by a float constant (`math_funcs.h`). */
-const DEG_TO_RAD = f(f(Math.PI) / 180);
-const RAD_TO_DEG = f(180 / f(Math.PI));
 
 /** `Side` (`math_defs.h:84-89`), in the order `data.anchor` and `data.offset` index them. */
 const SIDES = ['left', 'top', 'right', 'bottom'] as const;
@@ -16,15 +13,13 @@ const ANCHOR_SIDES: ReadonlyMap<string, number> = new Map(
 
 /** Control's `rotation_degrees` and the anchor setter, which can move the opposite anchor too. */
 export class ControlProperties implements DerivedProperties {
-  storedWritten(): void {}
-
   get(property: string, { stored }: NodeReads): VariantValue | undefined {
     if (property !== 'rotation_degrees') return undefined;
-    return realValue(numberOf(stored('rotation')) * RAD_TO_DEG);
+    return realValue(radToDegf(numberOf(stored('rotation'))));
   }
 
   set(property: string, value: VariantValue, reads: NodeReads): readonly StoredWrite[] | undefined {
-    if (property === 'rotation_degrees') return [['rotation', realValue(numberOf(value) * DEG_TO_RAD)]];
+    if (property === 'rotation_degrees') return [['rotation', realValue(degToRadf(numberOf(value)))]];
     const side = ANCHOR_SIDES.get(property);
     return side === undefined ? undefined : setAnchor(side, numberOf(value), reads);
   }

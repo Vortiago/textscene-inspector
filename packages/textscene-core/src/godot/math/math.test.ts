@@ -53,9 +53,9 @@ describe('degToRad', () => {
 });
 
 describe('radToDegf', () => {
-  it('turns radians into degrees with the float constant 180 / PI', () => {
+  it('turns radians into degrees with the float constant 180.0f / (float)PI (math_funcs.h:332-334)', () => {
     expect(radToDegf(Math.PI)).toBe(180);
-    expect(radToDegf(13)).toBe(744.8451538085938);
+    expect(radToDegf(13)).toBe(744.8450927734375);
   });
 });
 

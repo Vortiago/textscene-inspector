@@ -7,8 +7,6 @@ export class MemberProperties implements DerivedProperties {
   /** `defaults` holds each field's initial value, from the class header. */
   constructor(private readonly defaults: ReadonlyMap<string, VariantValue>) {}
 
-  storedWritten(): void {}
-
   get(property: string, { stored }: NodeReads): VariantValue | undefined {
     const initial = this.defaults.get(property);
     if (initial === undefined) return undefined;
