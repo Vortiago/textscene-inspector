@@ -22,9 +22,7 @@ export function checkTranspiled(shader: ShaderNode): void {
   for (const varying of shader.varyings) checkVarying(varying);
   for (const constant of shader.constants) {
     checkRow(keywordInstruction('TK_CONST')!, constant.position);
-    checkStatement(constant);
-    for (const declarator of constant.declarators)
-      if (declarator.value) for (const part of everyExpression(declarator.value)) checkExpression(part);
+    checkStatementTree(constant);
   }
   for (const struct of shader.structs) {
     checkRow(instruction('NODE_TYPE_STRUCT')!, struct.position);
@@ -63,6 +61,13 @@ function checkUniform(uniform: UniformNode): void {
   if (uniform.defaultValue) checkRow(literalRow(uniform.type), uniform.position);
 }
 
+/** The statement's own rows and every row of its expressions. */
+function checkStatementTree(statement: Statement): void {
+  checkStatement(statement);
+  for (const expression of statementExpressions(statement))
+    for (const part of everyExpression(expression)) checkExpression(part);
+}
+
 function checkFunction(definition: FunctionNode): void {
   checkType(definition.returnType, definition.position);
   if (definition.returnArraySize) checkRow(instruction('NODE_TYPE_ARRAY')!, definition.position);
@@ -71,11 +76,7 @@ function checkFunction(definition: FunctionNode): void {
     checkRow(instruction(argument.qualifier)!, argument.position);
     if (argument.arraySize) checkRow(instruction('NODE_TYPE_ARRAY')!, argument.position);
   }
-  for (const statement of everyStatement(definition.body)) {
-    checkStatement(statement);
-    for (const expression of statementExpressions(statement))
-      for (const part of everyExpression(expression)) checkExpression(part);
-  }
+  for (const statement of everyStatement(definition.body)) checkStatementTree(statement);
 }
 
 function checkStatement(statement: Statement): void {

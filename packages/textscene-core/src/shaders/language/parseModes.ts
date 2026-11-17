@@ -4,7 +4,7 @@ import { SHADER_MODES, type ShaderMode } from './instructionTable.generated.js';
 import { tokenText } from './parseExpression.js';
 import type { ShaderModeNode } from './shaderTree.js';
 import type { TokenCursor } from './tokenCursor.js';
-import type { Token } from './tokenizer.js';
+import { isIntegerConstant, type Token } from './tokenizer.js';
 
 type ModeKind = ShaderMode['kind'];
 
@@ -27,7 +27,7 @@ export class ModeParser {
 
   constructor(
     private readonly tokens: TokenCursor,
-    private readonly shaderType: () => string | undefined
+    private readonly shaderType: () => string
   ) {}
 
   /** The names after `render_mode`, up to its `;`. */
@@ -98,12 +98,8 @@ export class ModeParser {
     return false;
   }
 
-  /** The modes of the shader's type, or of a `canvas_item` for a probe's text with no head. */
   private candidates(kind: ModeKind): readonly ShaderMode[] {
-    const shaderType = this.shaderType() ?? 'canvas_item';
+    const shaderType = this.shaderType();
     return SHADER_MODES.filter((mode) => mode.kind === kind && mode.shaderType === shaderType);
   }
 }
-
-const isIntegerConstant = (token: Token) =>
-  token.type === 'TK_INT_CONSTANT' || token.type === 'TK_UINT_CONSTANT';

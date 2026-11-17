@@ -3,7 +3,7 @@ import type { ExpressionParser } from './parseExpression.js';
 import type { SourcePosition } from './shadingLanguageError.js';
 import type { VaryingNode } from './shaderTree.js';
 import type { TokenCursor } from './tokenCursor.js';
-import type { Token } from './tokenizer.js';
+import { isPrecisionToken, type Token } from './tokenizer.js';
 import { shapeOf } from './types.js';
 
 /** The shader types with no varyings: each has one stage function (`shader_language.cpp:9538`). */
@@ -29,7 +29,7 @@ export function parseVarying(
   let token = tokens.next();
   const interpolation = interpolationOf(token);
   if (interpolation) token = tokens.next();
-  const hasPrecision = token.type.startsWith('TK_PRECISION_');
+  const hasPrecision = isPrecisionToken(token);
   if (hasPrecision) token = tokens.next();
   const type = varyingType(token, hasPrecision, interpolation, tokens, context);
   token = tokens.next();
@@ -47,6 +47,7 @@ export function parseVarying(
   if (token.type !== 'TK_SEMICOLON' && token.type !== 'TK_BRACKET_OPEN')
     tokens.fail(arraySize === 0 ? "Expected a ';' or '['." : "Expected a ';'.");
   if (token.type === 'TK_BRACKET_OPEN') {
+    if (arraySize > 0) tokens.fail('Array size is already defined.');
     arraySize = expressions.arrays.size(true)!;
     // Godot reads the token after the size as the end of the statement, whatever it is.
     tokens.next();
@@ -141,17 +142,7 @@ export class VaryingStages {
 
   /** Godot's message for `varying` passed for a parameter of `qualifier` in `current`, or nothing (:6380). */
   argumentRefusal(varying: VaryingNode, qualifier: string, current: string): string | undefined {
-    const isOut = qualifier !== 'in';
-    const stage = this.stages.get(varying.name);
-    const isRefused =
-      stage === undefined
-        ? isOut
-        : stage === 'vertex'
-          ? isOut && current !== 'vertex'
-          : isOut
-            ? current !== 'fragment'
-            : current !== 'fragment' && current !== 'light';
-    return isRefused
+    return isPassRefused(this.stages.get(varying.name), qualifier !== 'in', current)
       ? `Varying '${varying.name}' cannot be passed for the '${qualifier}' parameter in that context.`
       : undefined;
   }
@@ -188,3 +179,15 @@ export class VaryingStages {
 }
 
 const isBoolean = (type: string) => shapeOf(type)?.scalar === 'bool';
+
+/** The stage switch of `shader_language.cpp:6379`, by the stage the varying is assigned in. */
+function isPassRefused(stage: string | undefined, isOut: boolean, current: string): boolean {
+  switch (stage) {
+    case undefined:
+      return isOut;
+    case 'vertex':
+      return isOut && current !== 'vertex';
+    default:
+      return isOut ? current !== 'fragment' : current !== 'fragment' && current !== 'light';
+  }
+}

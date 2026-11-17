@@ -25,7 +25,8 @@ interface CallInfo {
 
 /** What the rules read from the shader parser. */
 export interface StageContext {
-  shaderType(): string | undefined;
+  /** `canvas_item` for a text with no head, which is how Godot draws a probe. */
+  shaderType(): string;
   /** Godot's name of the function whose body is read, `f@2` for the second `f`. */
   currentFunction(): string | undefined;
   /** The stage a varying is assigned in so far: `vertex`, `fragment`, or nothing. */
@@ -44,8 +45,7 @@ export class StageRules {
 
   /** The key `name` is in the shader type's functions: a stage, `global` or `constants`. */
   stage(name: string): ShaderStage | undefined {
-    const shaderType = this.shaderTypeName();
-    return SHADER_STAGES.find((stage) => stage.shaderType === shaderType && stage.stage === name);
+    return STAGES.get(`${this.context.shaderType()}.${name}`);
   }
 
   /** `void name()` for a processor function (`shader_language.cpp:10981`). */
@@ -70,10 +70,11 @@ export class StageRules {
   /** `discard` after its token, before its `;` (`shader_language.cpp:8936`). */
   discard(): void {
     if (!this.isDiscardSupported())
-      this.tokens.fail(`Use of 'discard' is not supported for the '${this.shaderTypeName()}' shader type.`);
+      this.tokens.fail(
+        `Use of 'discard' is not supported for the '${this.context.shaderType()}' shader type.`
+      );
     const current = this.current();
-    const stage = this.stage(current.name);
-    if (!(stage ? stage.canDiscard : this.isDiscardSupported()))
+    if (this.stage(current.name)?.canDiscard === false)
       this.tokens.fail(`'discard' cannot be used within the '${current.name}' processor function.`);
     this.use('discard', false);
   }
@@ -90,19 +91,13 @@ export class StageRules {
     const callee = this.calls.get(target);
     if (callee) current.calls.push(callee);
     const supportsFragmentOnly = this.supportsFragmentOnly();
-    let isBuiltIn = false;
-    if (supportsFragmentOnly && this.stageFunctionRow(target)) {
-      this.use(target, false);
-      isBuiltIn = true;
-    }
-    if (!isBuiltIn && FRAGMENT_ONLY_FUNCTIONS.includes(target)) {
-      if (!supportsFragmentOnly)
-        this.tokens.fail(
-          `Built-in function '${target}' is not supported for the '${this.shaderTypeName()}' shader type.`
-        );
-      this.use(target, false);
-      isBuiltIn = true;
-    }
+    const isStageFunction = supportsFragmentOnly && this.stageFunctionRow(target) !== undefined;
+    const isBuiltIn = isStageFunction || FRAGMENT_ONLY_FUNCTIONS.includes(target);
+    if (isBuiltIn && !supportsFragmentOnly)
+      this.tokens.fail(
+        `Built-in function '${target}' is not supported for the '${this.context.shaderType()}' shader type.`
+      );
+    if (isBuiltIn) this.use(target, false);
     if (supportsFragmentOnly && current.name === 'vertex' && this.stage('vertex'))
       this.checkRestricted(target, current, isBuiltIn);
   }
@@ -137,7 +132,9 @@ export class StageRules {
   /** Whether `name` is a stage function of the function whose body is read (`shader_language.cpp:1413`). */
   isStageFunctionHere(name: string): boolean {
     const current = this.context.currentFunction();
-    return current !== undefined && stageFunctionRows(this.shaderTypeName(), current, name).length > 0;
+    return (
+      current !== undefined && STAGE_FUNCTION_KEYS.has(`${this.context.shaderType()}.${current}.${name}`)
+    );
   }
 
   /** `_validate_restricted_func` (`shader_language.cpp:5490`): the first restricted use `vertex` reaches. */
@@ -159,12 +156,7 @@ export class StageRules {
 
   /** The first row of a stage function of that name, in the order of the type's stages. */
   private stageFunctionRow(name: string): InstructionRow | undefined {
-    const shaderType = this.shaderTypeName();
-    for (const { stage } of SHADER_STAGES.filter((each) => each.shaderType === shaderType)) {
-      const [row] = stageFunctionRows(shaderType, stage, name);
-      if (row) return row;
-    }
-    return undefined;
+    return FIRST_STAGE_FUNCTION_ROWS.get(`${this.context.shaderType()}.${name}`);
   }
 
   private use(name: string, isVarying: boolean): void {
@@ -178,23 +170,35 @@ export class StageRules {
     return this.calls.get(name)!;
   }
 
-  /** A text with no head is a probe's, which Godot draws as a `canvas_item`. */
-  private shaderTypeName(): string {
-    return this.context.shaderType() ?? 'canvas_item';
-  }
-
   /** `is_discard_supported` (`shader_language.cpp:9228`). */
   private isDiscardSupported(): boolean {
-    return /^(canvas_item|spatial)$/.test(this.shaderTypeName());
+    return DISCARD_TYPES.has(this.context.shaderType());
   }
 
   /** `is_supported_frag_only_funcs` (`shader_language.cpp:9229`). */
   private supportsFragmentOnly(): boolean {
-    return this.isDiscardSupported() || this.shaderTypeName() === 'sky';
+    return FRAGMENT_ONLY_TYPES.has(this.context.shaderType());
   }
 }
 
+const DISCARD_TYPES: ReadonlySet<string> = new Set(['canvas_item', 'spatial']);
+const FRAGMENT_ONLY_TYPES: ReadonlySet<string> = new Set([...DISCARD_TYPES, 'sky']);
+
+const STAGES = new Map(SHADER_STAGES.map((stage) => [`${stage.shaderType}.${stage.stage}`, stage]));
+
+/** The id of a stage function row up to its `(`: `canvas_item.fragment.texture_sdf`. */
+const stageFunctionKey = (row: InstructionRow) => row.id.slice(0, row.id.indexOf('('));
+
 const STAGE_FUNCTION_ROWS = INSTRUCTION_TABLE.filter((row) => row.family === 'stage function');
 
-const stageFunctionRows = (shaderType: string, stage: string, name: string) =>
-  STAGE_FUNCTION_ROWS.filter((row) => row.id.startsWith(`${shaderType}.${stage}.${name}(`));
+const STAGE_FUNCTION_KEYS: ReadonlySet<string> = new Set(STAGE_FUNCTION_ROWS.map(stageFunctionKey));
+
+/** The first row of each stage function name of a shader type, in the order of the type's stages. */
+const FIRST_STAGE_FUNCTION_ROWS = new Map<string, InstructionRow>();
+for (const { shaderType, stage } of SHADER_STAGES)
+  for (const row of STAGE_FUNCTION_ROWS.filter((each) =>
+    stageFunctionKey(each).startsWith(`${shaderType}.${stage}.`)
+  )) {
+    const key = `${shaderType}.${row.id.slice(`${shaderType}.${stage}.`.length, row.id.indexOf('('))}`;
+    if (!FIRST_STAGE_FUNCTION_ROWS.has(key)) FIRST_STAGE_FUNCTION_ROWS.set(key, row);
+  }

@@ -287,7 +287,6 @@ export interface UniformNode {
   readonly position: SourcePosition;
 }
 
-/** NODE_TYPE_SHADER: its structs and functions, each in the order of the text. */
 /** A name of a `render_mode` or `stencil_mode` statement, as the text writes it. */
 export interface ShaderModeNode {
   readonly name: string;
@@ -304,6 +303,7 @@ export interface VaryingNode {
   readonly position: SourcePosition;
 }
 
+/** NODE_TYPE_SHADER: the head, the modes and each global, in the order of the text within its kind. */
 export interface ShaderNode {
   readonly kind: 'shader';
   /** The type `shader_type` names: `sky`, `spatial`. Nothing for a text with no head, as a probe's. */

@@ -7,7 +7,7 @@ import type { Identifier } from './scope.js';
 import type { SourcePosition } from './shadingLanguageError.js';
 import type { Scalar, UniformHint, UniformNode, UniformScope, ValueType } from './shaderTree.js';
 import type { TokenCursor } from './tokenCursor.js';
-import type { Token } from './tokenizer.js';
+import { isIntegerConstant, isPrecisionToken, type Token } from './tokenizer.js';
 import { shapeOf } from './types.js';
 
 /** `MAX_INSTANCE_UNIFORM_INDICES` (`shader_language.h:348`). */
@@ -188,7 +188,7 @@ export class UniformParser {
     let token = this.tokens.next();
     if (token.type === 'TK_INTERPOLATION_FLAT' || token.type === 'TK_INTERPOLATION_SMOOTH')
       this.tokens.fail('Interpolation qualifiers are not supported for uniforms.');
-    const hasPrecision = token.type.startsWith('TK_PRECISION_');
+    const hasPrecision = isPrecisionToken(token);
     if (hasPrecision) token = this.tokens.next();
     if (token.type === 'TK_IDENTIFIER' && this.context.isStruct(token.text!))
       this.tokens.fail("The 'struct' data type is not supported for uniforms.");
@@ -337,8 +337,7 @@ export class UniformParser {
       this.tokens.fail("Expected a '(' after 'instance_index'.");
     const token = this.tokens.next();
     if (token.type === 'TK_OP_SUB') this.tokens.fail("The instance index can't be negative.");
-    if (token.type !== 'TK_INT_CONSTANT' && token.type !== 'TK_UINT_CONSTANT')
-      this.tokens.fail('Expected an integer constant.');
+    if (!isIntegerConstant(token)) this.tokens.fail('Expected an integer constant.');
     const index = Number(token.text);
     draft.instanceIndex = index;
     if (index >= INSTANCE_INDICES)

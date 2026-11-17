@@ -183,6 +183,30 @@ const VARYING_ARGUMENT_CASES = [
   ),
 ];
 
+/** A global name that Godot finds before or after a function, and a varying outside a function. */
+const GLOBAL_NAME_CASES = [
+  headCase(
+    'global/uniform-default-reads-varying',
+    'shader_type spatial;\nvarying float v;\nuniform float u = v;'
+  ),
+  headCase(
+    'global/uniform-default-calls-with-varying',
+    'shader_type spatial;\nvarying float v;\nuniform float u = abs(v);'
+  ),
+  headCase('global/const-size-varying', 'shader_type spatial;\nvarying float v;\nconst float c[v] = {1.0};'),
+  headCase('global/function-named-as-varying', 'shader_type spatial;\nvarying vec2 f;\nvoid f() {}'),
+  headCase('global/function-named-as-const', 'shader_type spatial;\nconst float f = 1.0;\nvoid f() {}'),
+  headCase(
+    'global/const-named-as-function',
+    'shader_type spatial;\nfloat f() {\n\treturn 1.0;\n}\nconst float f = 1.0;'
+  ),
+  headCase('global/varying-two-sizes', 'shader_type spatial;\nvarying float[2] a[3];'),
+  headCase(
+    'global/varying-named-as-other-type-built-in',
+    'shader_type spatial;\nvarying vec3 EYEDIR;\nvoid fragment() {}'
+  ),
+];
+
 export const HEAD_CASES = [
   ...typeCases(),
   ...TYPE_REFUSALS.map(([id, text]) => headCase(id, text)),
@@ -190,4 +214,5 @@ export const HEAD_CASES = [
   ...CONSTANT_CASES,
   ...STAGE_CASES,
   ...VARYING_ARGUMENT_CASES,
+  ...GLOBAL_NAME_CASES,
 ];

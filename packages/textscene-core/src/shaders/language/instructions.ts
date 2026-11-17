@@ -27,11 +27,18 @@ export function builtInInstruction(name: string): InstructionRow | undefined {
   return BUILT_INS_BY_NAME.get(name);
 }
 
-/** The built-in variable rows of a shader type, `sky.global.TIME` among them. */
-export function builtInRowsOf(shaderType: string): readonly InstructionRow[] {
-  return INSTRUCTION_TABLE.filter(
-    (row) => row.family.startsWith('built-in') && row.id.startsWith(`${shaderType}.`)
-  );
+/** The built-in names of each shader type, from every stage: `TIME` and `EYEDIR` under `sky`. */
+const BUILT_IN_NAMES_BY_TYPE = new Map<string, Set<string>>();
+for (const row of INSTRUCTION_TABLE.filter((each) => each.family.startsWith('built-in'))) {
+  const shaderType = row.id.slice(0, row.id.indexOf('.'));
+  const names = BUILT_IN_NAMES_BY_TYPE.get(shaderType) ?? new Set<string>();
+  names.add(row.id.slice(row.id.lastIndexOf('.') + 1));
+  BUILT_IN_NAMES_BY_TYPE.set(shaderType, names);
+}
+
+/** `has_builtin` (`shader_language.cpp:11056`): a built-in of any stage of the shader type has the name. */
+export function isBuiltInNameOf(shaderType: string, name: string): boolean {
+  return BUILT_IN_NAMES_BY_TYPE.get(shaderType)?.has(name) ?? false;
 }
 
 /** The rows with arguments of each name, `vec2(float,float)` under `vec2`. Written once, here. */

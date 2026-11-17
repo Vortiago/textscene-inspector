@@ -8,7 +8,7 @@ import type { Argument, BlockNode, ControlFlowNode, Expression, Flow, Statement 
 import type { SourcePosition } from './shadingLanguageError.js';
 import type { StageRules } from './stageRules.js';
 import type { TokenCursor } from './tokenCursor.js';
-import type { Token } from './tokenizer.js';
+import { isPrecisionToken, type Token } from './tokenizer.js';
 import { isEmpty } from './treeWalk.js';
 
 /** What a block may hold: `break` and `continue` allowed or not, and one statement or many. */
@@ -137,7 +137,7 @@ export class StatementParser {
 
   /** `const`, a precision, a value type or a struct's name starts a declaration. */
   private startsDeclaration(token: Token): boolean {
-    if (token.type === 'TK_CONST' || token.type.startsWith('TK_PRECISION_')) return true;
+    if (token.type === 'TK_CONST' || isPrecisionToken(token)) return true;
     if (token.type === 'TK_IDENTIFIER') return this.isStruct(token.text!);
     return keywordInstruction(token.type)?.family === 'data type' && token.type !== 'TK_TYPE_VOID';
   }

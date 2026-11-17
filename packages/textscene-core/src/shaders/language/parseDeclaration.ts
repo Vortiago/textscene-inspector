@@ -5,7 +5,7 @@ import { arraySizeOf, typeName } from './treeWalk.js';
 import type { BlockScope } from './scope.js';
 import type { ArrayConstructNode, DeclarationNode, Declarator, Expression } from './shaderTree.js';
 import type { TokenCursor } from './tokenCursor.js';
-import type { Token } from './tokenizer.js';
+import { isPrecisionToken, type Token } from './tokenizer.js';
 import { shapeOf } from './types.js';
 
 /** The declaration that starts at `first`, its `;` read. */
@@ -81,15 +81,16 @@ class DeclarationParser {
     const name = token.text!;
     if (this.scope.find(name, true) || builtInInstruction(name))
       this.tokens.fail(`Redefinition of '${name}'.`);
-    let size = typeSize;
-    if (this.tokens.peek().type === 'TK_BRACKET_OPEN') {
-      this.tokens.next();
-      if (size !== 'none') this.tokens.fail('Array size is already defined.');
-      size = this.expressions.arrays.size(false);
-    }
     const outer = this.expressions.isConstDeclaration;
+    // Set before the size after the name, as `shader_language.cpp:8148` sets `is_const_decl`.
     this.expressions.isConstDeclaration = isConst;
     try {
+      let size = typeSize;
+      if (this.tokens.peek().type === 'TK_BRACKET_OPEN') {
+        this.tokens.next();
+        if (size !== 'none') this.tokens.fail('Array size is already defined.');
+        size = this.expressions.arrays.size(false);
+      }
       const { value, arraySize } =
         size === 'none'
           ? this.singleValue(type, isConst)
@@ -200,7 +201,7 @@ interface PreciseType {
 
 /** The precision word `token` is, `lowp`, or nothing. */
 function precisionWord(token: Token): string | undefined {
-  return token.type.startsWith('TK_PRECISION_') ? keywordInstruction(token.type)!.id : undefined;
+  return isPrecisionToken(token) ? keywordInstruction(token.type)!.id : undefined;
 }
 
 const isNonVoidType = (token: Token) =>

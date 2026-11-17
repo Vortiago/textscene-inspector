@@ -61,6 +61,11 @@ const isHexDigit = (char: string) => isDigit(char) || (char >= 'a' && char <= 'f
 const isIdentifierChar = (char: string) => /^[A-Za-z0-9_]$/.test(char);
 
 /** Every token of `source`, ending with `TK_EOF`. `file` names the shader in each position. */
+export const isPrecisionToken = (token: Token) => token.type.startsWith('TK_PRECISION_');
+
+export const isIntegerConstant = (token: Token) =>
+  token.type === 'TK_INT_CONSTANT' || token.type === 'TK_UINT_CONSTANT';
+
 export function tokenize(source: string, file = ''): Token[] {
   const tokens: Token[] = [];
   const cursor = { file, index: 0, line: 1, lineStart: 0, includes: [] };

@@ -1,4 +1,4 @@
-import { builtInInstruction, builtInRowsOf, instruction, keywordInstruction } from './instructions.js';
+import { instruction, isBuiltInNameOf, keywordInstruction } from './instructions.js';
 import { INSTRUCTION_TABLE } from './instructionTable.generated.js';
 import { StatementParser, type ScopeHolder } from './parseBlock.js';
 import { ExpressionParser, type ExpressionScope } from './parseExpression.js';
@@ -26,7 +26,7 @@ import type {
 } from './shaderTree.js';
 import type { SourcePosition } from './shadingLanguageError.js';
 import { TokenCursor } from './tokenCursor.js';
-import type { Token } from './tokenizer.js';
+import { isPrecisionToken, type Token } from './tokenizer.js';
 import { shapeOf } from './types.js';
 import { everyStatement, isReturn } from './treeWalk.js';
 
@@ -58,7 +58,7 @@ class ShaderParser implements ExpressionScope {
   private readonly holder: ScopeHolder = {
     current: new BlockScope(undefined, 'plain', [], this.globals),
   };
-  private readonly varyings: VaryingNode[] = [];
+  private readonly varyings = new Map<string, VaryingNode>();
   private readonly constants: DeclarationNode[] = [];
   private readonly expressions: ExpressionParser;
   private readonly statements: StatementParser;
@@ -66,7 +66,7 @@ class ShaderParser implements ExpressionScope {
   private readonly modes: ModeParser;
   private readonly varyingStages: VaryingStages;
   private readonly stageRules: StageRules;
-  /** The processor functions declared so far, which no call reaches (\`callable\`, :10673). */
+  /** The processor functions declared so far, which no call reaches (`callable`, :10673). */
   private readonly processors = new Set<string>();
 
   constructor(
@@ -78,13 +78,13 @@ class ShaderParser implements ExpressionScope {
       shaderType: () => this.shaderType,
       renderingMethod,
       isStruct: (name) => this.struct(name) !== undefined,
-      isTaken: (name) => this.isGlobalName(name) || builtInInstruction(name) !== undefined,
+      isTaken: (name) => this.isGlobalName(name) || this.isBuiltInName(name),
       globals: this.globals,
     });
-    this.modes = new ModeParser(tokens, () => this.shaderType);
+    this.modes = new ModeParser(tokens, () => this.shaderTypeName());
     this.varyingStages = new VaryingStages(tokens);
     this.stageRules = new StageRules(tokens, {
-      shaderType: () => this.shaderType,
+      shaderType: () => this.shaderTypeName(),
       currentFunction: () => this.current?.name,
       varyingStage: (name) => this.varyingStages.stageOf(name),
     });
@@ -113,12 +113,13 @@ class ShaderParser implements ExpressionScope {
 
   /** Godot's checks of a read or a write of a varying, which only a function body has. */
   useVarying(name: string): void {
+    if (!this.current) return;
     this.stageRules.useVarying(name);
     this.varyingStages.use(this.varying(name)!, this.current!.rname);
   }
 
   private varying(name: string): VaryingNode | undefined {
-    return this.varyings.find((candidate) => candidate.name === name);
+    return this.varyings.get(name);
   }
 
   checkCall(rname: string, args: readonly Expression[]): void {
@@ -133,18 +134,19 @@ class ShaderParser implements ExpressionScope {
     return this.processors.has(name);
   }
 
-  /** A varying, or an element of one, passed for a parameter (\`shader_language.cpp:6368\`). */
+  /** A varying, or an element of one, passed for a parameter (`shader_language.cpp:6368`). */
   varyingRefusal(arg: Expression, qualifier: Qualifier): string | undefined {
     const variable = arg.kind === 'array element' ? arg.array : arg;
     const varying =
       variable.kind === 'variable' && variable.isVarying ? this.varying(variable.name) : undefined;
-    return varying && this.varyingStages.argumentRefusal(varying, qualifier, this.current!.rname);
+    return (
+      varying && this.current && this.varyingStages.argumentRefusal(varying, qualifier, this.current.rname)
+    );
   }
 
   /** From the stage function, `global` or the constants; outside a function, the constants only. */
   private builtIn(name: string): Identifier | undefined {
-    // A text with no head is a probe's, which Godot draws as a `canvas_item`.
-    const shaderType = this.shaderType ?? 'canvas_item';
+    const shaderType = this.shaderTypeName();
     const scopes = this.current ? [this.current.rname, 'global', 'constants'] : ['constants'];
     const row = scopes.map((scope) => instruction(`${shaderType}.${scope}.${name}`)).find(Boolean);
     if (!row?.returns) return undefined;
@@ -210,9 +212,9 @@ class ShaderParser implements ExpressionScope {
     const varying = parseVarying(this.tokens, this.expressions, {
       shaderType: () => this.shaderType,
       isStruct: (name) => this.struct(name) !== undefined,
-      isTaken: (name) => this.isGlobalName(name) || builtInInstruction(name) !== undefined,
+      isTaken: (name) => this.isGlobalName(name) || this.isBuiltInName(name),
     });
-    this.varyings.push(varying);
+    this.varyings.set(varying.name, varying);
     this.globals.set(varying.name, {
       kind: 'varying',
       type: varying.type,
@@ -242,7 +244,7 @@ class ShaderParser implements ExpressionScope {
   /** The type after `const` and a precision: a value type, `void` or a struct's name. */
   private constantType(): ValueType {
     let token = this.tokens.next();
-    const hasPrecision = isPrecisionToken(token.type);
+    const hasPrecision = isPrecisionToken(token);
     if (hasPrecision) token = this.tokens.next();
     if (token.type === 'TK_IDENTIFIER' && this.struct(token.text!)) {
       if (hasPrecision) this.tokens.fail('The precision modifier cannot be used on structs.');
@@ -258,11 +260,18 @@ class ShaderParser implements ExpressionScope {
     return row.id;
   }
 
-  /** A struct, a global or a built-in of the shader type, but not a function, has the name (:10336). */
+  /** A struct, a global or a built-in of the shader type, but not a function, has the name (:10347). */
   private isConstantNameTaken(name: string): boolean {
-    if (this.struct(name) || this.globals.has(name)) return true;
-    const type = this.shaderType;
-    return type !== undefined && builtInRowsOf(type).some((row) => row.id.endsWith(`.${name}`));
+    return this.struct(name) !== undefined || this.globals.has(name) || this.isBuiltInName(name);
+  }
+
+  private isBuiltInName(name: string): boolean {
+    return isBuiltInNameOf(this.shaderTypeName(), name);
+  }
+
+  /** A text with no head is a probe's, which Godot draws as a `canvas_item`. */
+  private shaderTypeName(): string {
+    return this.shaderType ?? 'canvas_item';
   }
 
   /** `const float a = 1.0, b[2] = {a, a};` outside a function (`shader_language.cpp:10364`). */
@@ -288,7 +297,7 @@ class ShaderParser implements ExpressionScope {
       renderModes: this.modes.modes.render_mode,
       stencilModes: this.modes.modes.stencil_mode,
       ...(this.modes.stencilReference !== undefined ? { stencilReference: this.modes.stencilReference } : {}),
-      varyings: this.varyings,
+      varyings: [...this.varyings.values()],
       constants: this.constants,
       structs: this.structs,
       uniforms: this.uniforms.uniforms,
@@ -381,7 +390,7 @@ class ShaderParser implements ExpressionScope {
     const nameToken = this.tokens.next();
     if (nameToken.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected a function name after type.');
     const rname = nameToken.text!;
-    if (this.struct(rname) || this.uniforms.uniform(rname) || builtInInstruction(rname))
+    if (this.struct(rname) || this.globals.has(rname) || this.isBuiltInName(rname))
       this.tokens.fail(`Redefinition of '${rname}'.`);
     if (this.tokens.peek().type !== 'TK_PARENTHESIS_OPEN')
       this.refuseGlobalVariable(returnType, returnArraySize);
@@ -448,7 +457,7 @@ class ShaderParser implements ExpressionScope {
   /** `_validate_precision` (`shader_language.cpp:9117`). `refuse` handles a `const` first. */
   private precededType(first: Token, refuse: () => never): Token {
     if (first.type === 'TK_CONST') refuse();
-    if (!isPrecisionToken(first.type)) return first;
+    if (!isPrecisionToken(first)) return first;
     const typeToken = this.tokens.next();
     const shape = shapeOf(keywordInstruction(typeToken.type)?.id ?? '');
     if (shape?.scalar === 'bool') this.tokens.fail('The precision modifier cannot be used on boolean types.');
@@ -497,7 +506,7 @@ class ShaderParser implements ExpressionScope {
     if (nameToken.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected an identifier for argument name.');
     const name = nameToken.text!;
     const isTaken = declared.some((argument) => argument.name === name) || this.uniforms.uniform(name);
-    if (isTaken || builtInInstruction(name)) {
+    if (isTaken || this.isBuiltInName(name)) {
       this.tokens.fail(`Redefinition of '${name}'.`);
     }
     if (this.tokens.peek().type === 'TK_BRACKET_OPEN') arraySize = this.arraySize();
@@ -551,8 +560,6 @@ const isSameArguments = (a: readonly Argument[], b: readonly Argument[]) =>
   a.every(
     (argument, index) => argument.type === b[index]!.type && argument.arraySize === b[index]!.arraySize
   );
-
-const isPrecisionToken = (type: string) => type.startsWith('TK_PRECISION_');
 
 const isUniformWord = (type: string) =>
   type === 'TK_UNIFORM' || type === 'TK_GLOBAL' || type === 'TK_INSTANCE';

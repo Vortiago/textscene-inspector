@@ -1,8 +1,7 @@
+import { treeOf as parsedTree } from './parsedTree.testkit';
 import { describe, expect, it } from 'vitest';
-import { parse } from './parse.js';
-import { tokenize } from './tokenizer.js';
 
-const treeOf = (source: string) => parse(tokenize(source, 'user.gdshader'));
+const treeOf = (source: string) => parsedTree(source, 'user.gdshader');
 
 const refusalOf = (source: string) => {
   try {
