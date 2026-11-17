@@ -263,6 +263,132 @@ function hintProbes() {
   ];
 }
 
+/** Several value uniforms in one material, packed by std140 (`shader_compiler.cpp:656`). */
+const LAYOUTS = [
+  [
+    'vec3-then-float',
+    'uniform vec3 a;\nuniform float b;\nvec4 probe() { return vec4(a, b); }',
+    { a: 'Vector3(1.5, -2, 3)', b: '-0.25' },
+  ],
+  [
+    'float-then-vec3',
+    'uniform float b;\nuniform vec3 a;\nvec4 probe() { return vec4(a, b); }',
+    { a: 'Vector3(1.5, -2, 3)', b: '-0.25' },
+  ],
+  [
+    'float-vec2-float',
+    'uniform float a;\nuniform vec2 b;\nuniform float c;\nvec4 probe() { return vec4(a, b, c); }',
+    { a: '1e30', b: 'Vector2(1e-30, 0)', c: '-3.5' },
+  ],
+  [
+    'mat3-then-float',
+    'uniform mat3 m;\nuniform float f;\nmat3 probe() { return m + mat3(f); }',
+    { m: 'Basis(1, 2, 3, 4, 5, 6, 7, 8, 9)', f: '100' },
+  ],
+  [
+    'float-then-mat3',
+    'uniform float f;\nuniform mat3 m;\nmat3 probe() { return m + mat3(f); }',
+    { m: 'Basis(1, 2, 3, 4, 5, 6, 7, 8, 9)', f: '100' },
+  ],
+  [
+    'mat2-then-vec2',
+    'uniform mat2 m;\nuniform vec2 v;\nmat2 probe() { return m + mat2(v, v.yx); }',
+    { m: 'Transform2D(1, 2, 3, 4, 5, 6)', v: 'Vector2(100, 1000)' },
+  ],
+  [
+    'float-then-mat4',
+    'uniform float f;\nuniform mat4 m;\nmat4 probe() { return m + mat4(f); }',
+    { f: '100', m: 'Projection(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)' },
+  ],
+  [
+    'int-uint-uvec2',
+    'uniform int a;\nuniform uint b;\nuniform uvec2 d;\nuvec4 probe() { return uvec4(uint(a), b, d); }',
+    { a: '-2147483648', b: '4294967295', d: 'Vector2i(0, 2147483647)' },
+  ],
+  [
+    'bool-ivec3-int',
+    'uniform bool p;\nuniform ivec3 c;\nuniform int e;\nivec4 probe() { return ivec4(c, p ? e : -e); }',
+    { p: 'true', c: 'Vector3i(-1, 2147483647, 0)', e: '-2147483647' },
+  ],
+  [
+    'ivec2-then-ivec4',
+    'uniform ivec2 a;\nuniform ivec4 b;\nivec4 probe() { return b + ivec4(a, a * 10); }',
+    { a: 'Vector2i(-3, 7)', b: 'Vector4i(100, -200, 300, 2147483000)' },
+  ],
+  [
+    'uvec3-then-uint',
+    'uniform uvec3 a;\nuniform uint b;\nuvec4 probe() { return uvec4(a, b); }',
+    { a: 'Vector3i(1, 3000000000, 0)', b: '2147483649' },
+  ],
+  [
+    'bools',
+    'uniform bool a;\nuniform bvec3 b;\nuniform bvec2 c;\nuniform bvec4 d;\nbvec4 probe() { return bvec4(a, b.y, c.x, d.w); }',
+    { a: 'true', b: 'Vector3i(0, 1, 0)', c: 'Vector2i(1, 0)', d: 'Vector4i(0, 0, 0, 1)' },
+  ],
+  [
+    'float-then-vec4',
+    'uniform float f;\nuniform vec4 v;\nvec4 probe() { return v + f; }',
+    { f: '0.5', v: 'Vector4(1, -2, 3, -4)' },
+  ],
+  [
+    'arrays-float-vec3',
+    'uniform float a[2];\nuniform vec3 b[2];\nuniform float c;\nmat3 probe() { return mat3(vec3(a[0], a[1], c), b[0], b[1]); }',
+    { a: 'PackedFloat32Array(1, -2)', b: 'PackedVector3Array(3, 4, 5, 6, -7, 8)', c: '9' },
+  ],
+  [
+    'arrays-mat3',
+    'uniform float f;\nuniform mat3 m[2];\nmat3 probe() { return m[0] + m[1] * 100.0 + mat3(f); }',
+    { f: '10000', m: '[Basis(1, 2, 3, 4, 5, 6, 7, 8, 9), Basis(-1, 0, 2, 0, 3, 0, 4, 0, -5)]' },
+  ],
+  [
+    'arrays-bool',
+    'uniform bool p[3];\nuniform bvec2 q;\nbvec4 probe() { return bvec4(p[0], p[2], q); }',
+    { p: '[true, false, true]', q: 'Vector2i(0, 1)' },
+  ],
+  [
+    'twenty-floats',
+    `${Array.from({ length: 20 }, (_, index) => `uniform float u${index};`).join('\n')}\nvec4 probe() { return vec4(u0 + u4 + u8, u1 + u12 + u16, u2 + u18, u3 + u19 * 1000.0); }`,
+    Object.fromEntries(Array.from({ length: 20 }, (_, index) => [`u${index}`, String(index + 1)])),
+  ],
+];
+
+function layoutProbes() {
+  return [
+    ...LAYOUTS.map(([name, source, materialValues]) =>
+      uniformProbe(`layout-${name}`, ['uniform'], source, { materialValues })
+    ),
+    uniformProbe(
+      'layout-computed-index-after-float',
+      ['uniform', 'NODE_TYPE_ARRAY'],
+      'uniform float a;\nuniform mat3 m[2];\nvec3 probe(int i) { return m[i & 1][1] + a; }',
+      {
+        materialValues: {
+          a: '1000',
+          m: '[Basis(1, 2, 3, 4, 5, 6, 7, 8, 9), Basis(-1, 0, 2, 0, 3, 0, 4, 0, -5)]',
+        },
+      }
+    ),
+  ];
+}
+
+/** `source_color` beside other uniforms, in an HDR 2D viewport where it goes to linear. */
+function colorLayoutProbes() {
+  return [
+    uniformProbe(
+      'layout-color-vec3-then-float',
+      ['uniform', 'source_color'],
+      'uniform vec3 c : source_color;\nuniform float f;\nvec4 probe() { return vec4(c, f); }',
+      { materialValues: { c: 'Color(0.5, 2, 0.02, 1)', f: '0.75' }, hdr2d: true }
+    ),
+    uniformProbe(
+      'layout-float-then-color-vec4',
+      ['uniform', 'source_color'],
+      'uniform float f;\nuniform vec4 d : source_color;\nvec4 probe() { return d + f; }',
+      { materialValues: { f: '0.125', d: 'Color(0.5, 2, 0.02, 0.25)' }, hdr2d: true }
+    ),
+  ];
+}
+
 /** Godot's refusal of each uniform it does not take, with its message and line. */
 const REFUSALS = [
   ['two-sizes', 'uniform float[2] u[3];\nfloat probe() { return 0.0; }'],
@@ -340,5 +466,7 @@ export const UNIFORM_PROBES = [
   ...readProbes(),
   ...colorProbes(),
   ...hintProbes(),
+  ...layoutProbes(),
+  ...colorLayoutProbes(),
   ...refusalProbes(),
 ];

@@ -473,6 +473,48 @@ void sky() {
 | --- | --- |
 | <img src="showcase/sky-debanding-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-debanding-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `sky-twenty-uniforms`
+
+Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type sky;
+
+uniform float f0 = 0.05;
+uniform vec3 v0 = vec3(0.1, 0.2, 0.3);
+uniform float f1 = 0.15;
+uniform mat3 m0 = mat3(vec3(0.9, 0.1, 0.0), vec3(0.2, 0.7, 0.1), vec3(0.0, 0.3, 0.8));
+uniform vec2 w0 = vec2(0.25, -0.5);
+uniform float f2 = 0.35;
+uniform int i0 = -3;
+uniform uint u0 = 3000000000u;
+uniform bool b0 = true;
+uniform vec4 c0 : source_color = vec4(0.8, 0.4, 0.1, 1.0);
+uniform vec3 c1 : source_color = vec3(0.1, 0.5, 0.9);
+uniform float a0[3] = float[3](0.1, 0.2, 0.3);
+uniform vec3 a1[2] = vec3[2](vec3(0.3, 0.0, 0.1), vec3(0.0, 0.2, 0.4));
+uniform mat2 m1 = mat2(vec2(1.0, 0.5), vec2(-0.25, 1.0));
+uniform ivec2 i1 = ivec2(2, -1);
+uniform bvec3 b1 = bvec3(false, true, false);
+uniform float f3 = 0.45;
+uniform mat4 m2 = mat4(vec4(1.0, 0.0, 0.0, 0.1), vec4(0.0, 1.0, 0.2, 0.0), vec4(0.3, 0.0, 1.0, 0.0), vec4(0.0, 0.0, 0.0, 1.0));
+uniform uvec2 u1 = uvec2(1u, 2u);
+uniform float f4 = 0.55;
+
+void sky() {
+	vec3 d = m0 * (EYEDIR * 0.5 + 0.5) + v0 * f0;
+	d.xy = m1 * d.xy + w0 * f1 + float(i0 + i1.x - i1.y) * 0.01;
+	d += (m2 * vec4(d, 1.0)).xyz * f2 + c0.rgb * f3 + c1 * f4;
+	d += vec3(a0[0], a0[1], a0[2]) + a1[0] * (b0 ? 1.0 : -1.0) + (b1.y ? a1[1] : vec3(0.0));
+	d *= float(u0 / 1000000000u + u1.x + u1.y) * 0.1;
+	COLOR = fract(d);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/sky-twenty-uniforms-godot.png" width="256" alt="Godot"> | <img src="showcase/sky-twenty-uniforms-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `sky-light-0`
 
 Godot draws this sky shader as a 3D view's background, with the scene's camera, fog and directional lights (`tests/e2e/skyScenes.mjs`). A plain three.js page draws the transpiled sky with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
