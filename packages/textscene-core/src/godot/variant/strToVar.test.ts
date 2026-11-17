@@ -69,6 +69,6 @@ describe('strToVar', () => {
   });
 
   it('refuses an object of a class that does not exist', () => {
-    expect(readVariant('Object(NoSuchClass,"a":1)', () => false)).toHaveProperty('error');
+    expect(readVariant('Object(NoSuchClass,"a":1)', { classExists: () => false })).toHaveProperty('error');
   });
 });

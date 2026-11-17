@@ -5,6 +5,7 @@ import {
   type ComponentType,
   type ContainerType,
   type PackedNumberType,
+  type ResourceReference,
   type VariantValue,
 } from './variantValue.js';
 import { DEFAULT_COLOR, htmlColor } from '../math/color.js';
@@ -295,14 +296,23 @@ const BUILTIN_TYPES: ReadonlyMap<string, number> = new Map(
     .map((type) => [variantTypeName(type)!, type])
 );
 
-/** What the reader asks of the classes: whether `Object(…)` and a typed container may name one. */
-export type ClassExists = (className: string) => boolean;
+/** What the reader asks of its caller: the classes `Object(…)` and a typed container may name, and the resources. */
+export interface VariantReading {
+  /** Every class exists where it is absent. */
+  readonly classExists?: (className: string) => boolean;
+  /** The file an `ExtResource` or a `SubResource` id names, as a resource parser loads it. Absent reads the id as a path. */
+  readonly resourceOf?: (kind: 'ExtResource' | 'SubResource', id: string) => ResourceReference | null;
+}
 
 class ValueReader {
+  private readonly classExists: (className: string) => boolean;
+
   constructor(
     private readonly tokens: Tokens,
-    private readonly classExists: ClassExists
-  ) {}
+    private readonly reading: VariantReading
+  ) {
+    this.classExists = reading.classExists ?? (() => true);
+  }
 
   private expect(kind: Token['kind'], message: string): Token {
     const token = this.tokens.next();
@@ -355,9 +365,10 @@ class ValueReader {
         return { type: id === 'Signal' ? T.SIGNAL : T.CALLABLE };
       case 'Object':
         return this.object();
-      case 'Resource':
       case 'SubResource':
       case 'ExtResource':
+        return this.reading.resourceOf ? this.parsedResource(id) : this.resource();
+      case 'Resource':
         return this.resource();
       case 'Dictionary':
         return this.typedDictionary();
@@ -508,6 +519,17 @@ class ValueReader {
     return { type: T.OBJECT, resource: uid ? { path, uid } : { path } };
   }
 
+  /** The parser's `ext_func` and `sub_func` (`variant_parser.cpp:1104-1124`): an id the file declares, or null. */
+  private parsedResource(kind: 'ExtResource' | 'SubResource'): VariantValue {
+    this.expect('parenOpen', "Expected '('");
+    const id = this.tokens.next();
+    const text = id.kind === 'string' ? id.text : id.kind === 'number' ? String(id.value) : null;
+    if (text === null) throw new ParseError(`Expected string or number as ${kind} id`);
+    this.expect('parenClose', "Expected ')'");
+    const resource = this.reading.resourceOf!(kind, text);
+    return resource ? { type: T.OBJECT, resource } : NIL_VALUE;
+  }
+
   /** `variant_parser.cpp:1252-1287`. */
   private containerType(): ContainerType | undefined {
     const token = this.tokens.next();
@@ -593,11 +615,11 @@ function base64Bytes(text: string): number[] {
 /** A value read from `text`, or the message Godot's parser stops with. */
 export type VariantRead = { readonly value: VariantValue } | { readonly error: string };
 
-/** `VariantParser::parse`: the first value, the rest unread. Every class exists without `classExists`. */
-export function readVariant(text: string, classExists: ClassExists = () => true): VariantRead {
+/** `VariantParser::parse`: the first value, the rest unread. */
+export function readVariant(text: string, reading: VariantReading = {}): VariantRead {
   const tokens = new Tokens(text);
   try {
-    return { value: new ValueReader(tokens, classExists).value(tokens.next()) };
+    return { value: new ValueReader(tokens, reading).value(tokens.next()) };
   } catch (error) {
     if (error instanceof ParseError) return { error: error.message };
     throw error;
@@ -605,7 +627,7 @@ export function readVariant(text: string, classExists: ClassExists = () => true)
 }
 
 /** `str_to_var`: the value, or null (Nil) where the text does not parse. */
-export function strToVar(text: string, classExists?: ClassExists): VariantValue {
-  const read = readVariant(text, classExists);
+export function strToVar(text: string, reading?: VariantReading): VariantValue {
+  const read = readVariant(text, reading);
   return 'value' in read ? read.value : NIL_VALUE;
 }

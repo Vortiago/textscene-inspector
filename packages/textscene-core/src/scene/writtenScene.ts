@@ -1,0 +1,183 @@
+import { buildSceneGraph, type ParsedScene, type SceneGraph } from '../core/SceneGraph.js';
+import type { TscnExternalResource, TscnNode } from '../parser/types.js';
+import { layerRawOverride } from '../resources/layerRawOverride.js';
+import { nodePathNames } from '../godot/string/nodePath.js';
+import { joinPath } from '../utils/nodePath.js';
+import type { PropertyTexts, SceneWrites } from './sceneWrites.js';
+
+/** Where a write lands in the root file: on a node of it, or as an override heading below an instance. */
+type Landing =
+  | { readonly kind: 'node'; readonly at: readonly number[] }
+  | {
+      readonly kind: 'override';
+      readonly at: readonly number[];
+      readonly subPath: string;
+      readonly name: string;
+    };
+
+/** A file node, with the index chain from the roots that reaches it. */
+interface Reached {
+  readonly node: TscnNode;
+  readonly at: readonly number[];
+}
+
+/** The path below `node`'s parent that a child of the file sits at: its `instanceSubPath`, then its name. */
+function seatOf(child: TscnNode): string[] {
+  return nodePathNames(joinPath(child.instanceSubPath ?? '', child.name));
+}
+
+function startsWith(names: readonly string[], prefix: readonly string[]): boolean {
+  return prefix.length <= names.length && prefix.every((name, i) => names[i] === name);
+}
+
+/** The child of `node` whose seat the most names of `rest` reach, as the file's own heading names it. */
+function deepestSeated(node: TscnNode, rest: readonly string[]): { index: number; length: number } | null {
+  let best: { index: number; length: number } | null = null;
+  node.children.forEach((child, index) => {
+    const seat = seatOf(child);
+    if (startsWith(rest, seat) && seat.length > (best?.length ?? 0)) best = { index, length: seat.length };
+  });
+  return best;
+}
+
+/**
+ * Where the write at `livePath` lands. A node of the file takes it on its own heading. A node an
+ * instance holds takes it as an override heading, `[node name="X" parent="Instance/Sub"]`, below the
+ * nearest instance. Null where nothing of the file reaches the node, as in a scene tile.
+ */
+function landingOf(roots: readonly TscnNode[], livePath: string): Landing | null {
+  const names = nodePathNames(livePath);
+  const rootIndex = roots.findIndex((root) => root.name === names[0]);
+  if (rootIndex < 0) return null;
+  let reached: Reached = { node: roots[rootIndex]!, at: [rootIndex] };
+  let instance: { reached: Reached; below: string[] } | null = null;
+  let rest = names.slice(1);
+  while (rest.length > 0) {
+    if (reached.node.instance) instance = { reached, below: [] };
+    const seated = deepestSeated(reached.node, rest);
+    if (!seated) break;
+    const consumed = rest.slice(0, seated.length);
+    if (instance) instance.below.push(...consumed);
+    reached = { node: reached.node.children[seated.index]!, at: [...reached.at, seated.index] };
+    rest = rest.slice(seated.length);
+  }
+  if (rest.length === 0) return { kind: 'node', at: reached.at };
+  if (reached.node.instance) instance = { reached, below: [] };
+  if (!instance) return null;
+  const inside = [...instance.below, ...rest];
+  return {
+    kind: 'override',
+    at: instance.reached.at,
+    subPath: inside.slice(0, -1).join('/'),
+    name: inside.at(-1)!,
+  };
+}
+
+/** Whether a write can land at `livePath`: a node of the file, or one an instance of it holds. */
+export function isWritable(graph: SceneGraph, livePath: string): boolean {
+  return landingOf(rootNodesOf(graph), livePath) !== null;
+}
+
+/**
+ * `node` with `texts` laid on, as an instance override lays its heading. An instance or an override
+ * heading keeps the text alone, since the merge with the scene it instances parses it.
+ */
+function laid(node: TscnNode, texts: PropertyTexts): TscnNode {
+  if (node.instance || node.overridesExistingNode) {
+    return { ...node, rawProperties: { ...node.rawProperties, ...texts }, rawPropertiesOrderReliable: false };
+  }
+  return { ...node, ...layerRawOverride(node, node, texts) };
+}
+
+/** The override heading of a write to a node an instance holds, `parent` spelt from the root. */
+function overrideHeading(
+  instancePath: string,
+  subPath: string,
+  name: string,
+  texts: PropertyTexts
+): TscnNode {
+  const parent = joinPath(instancePath, subPath) || '.';
+  return {
+    name,
+    type: 'Node',
+    parent,
+    children: [],
+    rawProperties: { ...texts },
+    rawPropertiesOrderReliable: false,
+    properties: {},
+    overridesExistingNode: true,
+    ...(subPath ? { instanceSubPath: subPath } : {}),
+  };
+}
+
+/** `nodes` with the node at index chain `at` replaced by what `replace` gives, every node off the chain kept. */
+function replacedAt(
+  nodes: readonly TscnNode[],
+  at: readonly number[],
+  replace: (node: TscnNode) => TscnNode
+): TscnNode[] {
+  const [index, ...below] = at;
+  return nodes.map((node, i) =>
+    i !== index
+      ? node
+      : below.length === 0
+        ? replace(node)
+        : { ...node, children: replacedAt(node.children, below, replace) }
+  );
+}
+
+/** The root-relative path of the node at index chain `at`, `.` for the root, as a heading's `parent` spells it. */
+function rootRelativePath(roots: readonly TscnNode[], at: readonly number[]): string {
+  const names: string[] = [];
+  let nodes = roots;
+  at.forEach((index, depth) => {
+    const node = nodes[index]!;
+    if (depth > 0) names.push(...seatOf(node));
+    nodes = node.children;
+  });
+  return names.join('/');
+}
+
+/** `roots` with the writes at `livePath` laid where they land. */
+function withWrite(roots: readonly TscnNode[], livePath: string, texts: PropertyTexts): readonly TscnNode[] {
+  const landing = landingOf(roots, livePath);
+  if (!landing) return roots;
+  if (landing.kind === 'node') return replacedAt(roots, landing.at, (node) => laid(node, texts));
+  const instancePath = rootRelativePath(roots, landing.at);
+  return replacedAt(roots, landing.at, (instance) => {
+    const existing = instance.children.findIndex(
+      (child) => child.name === landing.name && (child.instanceSubPath ?? '') === landing.subPath
+    );
+    const children =
+      existing >= 0
+        ? instance.children.map((child, i) => (i === existing ? laid(child, texts) : child))
+        : [...instance.children, overrideHeading(instancePath, landing.subPath, landing.name, texts)];
+    return { ...instance, children };
+  });
+}
+
+function rootNodesOf(graph: SceneGraph): readonly TscnNode[] {
+  return graph.scenes.get(graph.rootScene)?.nodes ?? [];
+}
+
+/**
+ * The scene graph with every write laid over the file as an instance override, and the resources
+ * the writes name added to the file's own. Each node off a written path keeps its identity.
+ */
+export function writtenSceneGraph(
+  graph: SceneGraph,
+  writes: SceneWrites,
+  resources: readonly TscnExternalResource[]
+): SceneGraph {
+  const root = graph.scenes.get(graph.rootScene);
+  if (!root || (writes.size === 0 && resources.length === 0)) return graph;
+  let nodes: readonly TscnNode[] = root.nodes;
+  for (const [livePath, texts] of writes) nodes = withWrite(nodes, livePath, texts);
+  const scene: ParsedScene = {
+    ...root,
+    nodes,
+    externalResources:
+      resources.length === 0 ? root.externalResources : [...root.externalResources, ...resources],
+  };
+  return buildSceneGraph(scene);
+}

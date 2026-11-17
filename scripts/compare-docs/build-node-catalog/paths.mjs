@@ -36,4 +36,10 @@ export const RESOURCE_BASES_OUT = join(here, '../resource-bases.json');
  */
 export const RESOURCE_GETTERS_OUT = join(here, '../resource-getters.json');
 
+/**
+ * What `class_get_property_default_value` answers for each stored Node property, the values that
+ * differ on an instantiable class, and the properties a script reaches that no file stores.
+ */
+export const NODE_DEFAULTS_OUT = join(here, '../node-defaults.json');
+
 export const ENUM_GD = join(REPO_ROOT, 'scripts/godot-ref/enumerate-nodes.gd');

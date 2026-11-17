@@ -250,6 +250,23 @@ const sharedTreesOf = perObject((sceneGraph: SceneGraph) =>
   )
 );
 
+/**
+ * The shared tree of `sceneGraph` over `loader` at its load tick now, for a reader outside React. It
+ * moves with the loads only while that reader listens through {@link subscribeToLoadTicks}.
+ */
+export function currentSharedTree(
+  sceneGraph: SceneGraph,
+  loader: ResourceLoader,
+  project: ProjectTreeSettings
+): SharedLiveTree | null {
+  return sharedTreesOf(sceneGraph)(project)(loader, loadTicksOfLoader(loader).getVersion());
+}
+
+/** Calls `onChange` when a load changes the tree over `loader`. Returns the removal. */
+export function subscribeToLoadTicks(loader: ResourceLoader, onChange: () => void): () => void {
+  return loadTicksOfLoader(loader).subscribe(onChange);
+}
+
 /** The node types whose pass composes through a Control: a relay and a Skeleton2D. */
 const CONTROL_TRANSFORM_READERS: ReadonlySet<string> = new Set(['RemoteTransform2D', 'Skeleton2D']);
 

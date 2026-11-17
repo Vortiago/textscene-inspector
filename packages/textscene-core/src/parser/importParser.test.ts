@@ -128,6 +128,10 @@ describe('parseImportFile', () => {
     expect(parsed.params['scale_mesh']).toBe('Vector3(1, 1, 1)');
   });
 
+  it('reads the class load gives from the [remap] type', () => {
+    expect(parseImportFile(TREE_IMPORT)!.resourceType).toBe('PackedScene');
+  });
+
   it('returns empty params rather than throwing on a sidecar with no [params]', () => {
     expect(parseImportFile('[remap]\n\nimporter="scene"\n')!.params).toEqual({});
   });
