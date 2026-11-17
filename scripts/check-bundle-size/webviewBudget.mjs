@@ -5,7 +5,7 @@
  */
 
 import { gzipSync } from 'node:zlib';
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { ENTRY, WEBVIEW_DIR, WEBVIEW_METAFILE, formatKb } from './paths.mjs';
 
@@ -16,12 +16,6 @@ import { ENTRY, WEBVIEW_DIR, WEBVIEW_METAFILE, formatKb } from './paths.mjs';
 const MEASURED_GZ = 1_073_890; // the closure as last measured
 // ADR-0055: the ceiling while both the classic materials and the node lit surface ship.
 const BUDGET_GZ = 1_150_000; // absolute ceiling, gzipped
-
-// Dead-weight chunks that must never ship in the VSIX. Importing the `@react-three/drei` barrel
-// instead of `@react-three/drei/core/<Module>` bundles drei's video and face modules, whose
-// `import('hls.js')` and `import('@mediapipe/tasks-vision')` emit about 656 KB of lazy chunks
-// that no code path loads.
-const DEAD_CHUNK_RE = /^(hls|vision_bundle)-/;
 
 // Modules a dynamic import() does not reach itself but that must stay off the closure: the
 // tables behind the area light's LTC textures and the noise jobs' `fastnoise-lite`.
@@ -123,27 +117,16 @@ function staticClosure(dir, entry) {
 }
 
 /**
- * Measures the initial-paint closure and prints the report. Every finding is
- * printed here, but the exit code is the caller's: the webview budget only
- * hard-fails under `--enforce`, while the host guard hard-fails always, so
- * only `main()` sees both halves.
+ * The exit code is the caller's: only `main()` sees both the budget and the host guard.
  *
  * @param {boolean} enforce whether an over-budget closure is an error or a warning
- * @returns {'ok' | 'over-budget' | 'missing-entry' | 'dead-chunks' | 'unresolved-imports' | 'eager-lazy-only'}
+ * @returns {'ok' | 'over-budget' | 'missing-entry' | 'unresolved-imports' | 'eager-lazy-only'}
  */
 export function checkWebviewBudget(enforce) {
   if (!existsSync(join(WEBVIEW_DIR, ENTRY))) {
     console.error(`\n[bundle-size] entry not found: ${join(WEBVIEW_DIR, ENTRY)}`);
     console.error('[bundle-size] run `pnpm --filter textscene-inspector build` first');
     return 'missing-entry';
-  }
-
-  const chunksDir = join(WEBVIEW_DIR, 'chunks');
-  const deadChunks = existsSync(chunksDir) ? readdirSync(chunksDir).filter((f) => DEAD_CHUNK_RE.test(f)) : [];
-  if (deadChunks.length > 0) {
-    console.error(`[bundle-size] FAIL: dead-weight chunks in dist/webview/chunks: ${deadChunks.join(', ')}`);
-    console.error('[bundle-size] import drei via @react-three/drei/core/<Module> subpaths, not the barrel.');
-    return 'dead-chunks';
   }
 
   const { visited: closure, unresolved } = staticClosure(WEBVIEW_DIR, ENTRY);

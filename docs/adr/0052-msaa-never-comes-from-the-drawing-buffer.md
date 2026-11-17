@@ -24,7 +24,7 @@ counts that the colour and the depth attachments both support, for the format ea
 own texture, as three allocates it. The MSAA paths are these:
 
 - The root viewport's `msaa_3d` multisamples the compositor's scene buffer, so it resolves in linear
-  HDR before `GodotToneMapEffect` applies the curve. Every 3D frame draws through that buffer (ADR-0061).
+  HDR before `GodotToneMapper` applies the curve. Every 3D frame draws through that buffer (ADR-0061).
 - The root viewport's `msaa_2d` draws the 2D canvas through a multisampled RGBA8 target that stores
   sRGB-encoded values, so items blend as they blend on the drawing buffer
   (`Canvas2DStage/canvasFrame.ts`). The same target draws the canvas with `msaa_2d` off, with one

@@ -21,7 +21,6 @@ const NOT_A_BOOL_SLOT: Record<string, string> = {
   'r3f/components/SceneTreeViewer/SceneTreeViewer.tsx': 'aria-expanded, a DOM attribute',
   'nodes/animation/animationplayer/keyframeValues.ts': 'an untyped Variant keyframe value',
   'godot/variant/variantBool.ts': 'the definition itself',
-  'utils/isVitest.ts': 'the VITEST environment variable',
   'godot/variant/strToVar.ts':
     'the tokens of an untyped Variant, read before any slot (variant_parser.cpp:695)',
   'nodes/2d/ui/richtextlabel/bbcode.ts':
