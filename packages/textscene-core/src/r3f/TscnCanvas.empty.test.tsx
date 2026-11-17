@@ -16,6 +16,8 @@ vi.mock('./controls/native/text/sceneFontOutlines', async (importOriginal) => ({
 
 // The first lazy import transforms the glyph engine, which outlasts the default 1 s under a loaded run.
 const PROMPT_LOAD_TIMEOUT = { timeout: 10_000 };
+// Longer than the wait, so the wait's own failure message reports a slow load.
+const PROMPT_TEST_TIMEOUT = { timeout: 15_000 };
 
 describe('<TscnSceneContents> empty-scene indicator (WI-UX-4 / Gap 8)', () => {
   it('mounts a gridHelper as a visual baseline when sceneGraph is null', async () => {
@@ -37,7 +39,7 @@ describe('<TscnSceneContents> empty-scene indicator (WI-UX-4 / Gap 8)', () => {
     expect(tagged).not.toBeNull();
   });
 
-  it('draws the prompt as glyphs of the bundled font', async () => {
+  it('draws the prompt as glyphs of the bundled font', PROMPT_TEST_TIMEOUT, async () => {
     const renderer = await ReactThreeTestRenderer.create(<TscnSceneContents />);
     await vi.waitFor(async () => {
       await ReactThreeTestRenderer.act(async () => {});
