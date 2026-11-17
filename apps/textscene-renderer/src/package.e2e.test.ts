@@ -20,9 +20,12 @@ const distDir = join(packageDir, 'dist');
 const bundlePath = join(distDir, 'index.js');
 const bundleKey = 'dist/index.js';
 
-/** What a consumer needs to draw a parsed scene. Core's internals stay out. */
-const PUBLIC_VALUE_EXPORTS = ['TscnCanvas', 'TscnSceneProvider', 'useSelection'];
-const PUBLIC_TYPE_EXPORTS = ['ResourceProvider'];
+/**
+ * What a consumer needs to open a scene and draw it, in the In-game mode or the editor's 3D view.
+ * One view draws both, so no second view component is public. Core's internals stay out.
+ */
+const PUBLIC_VALUE_EXPORTS = ['TscnCanvas', 'TscnSceneProvider', 'openScene', 'useSelection'];
+const PUBLIC_TYPE_EXPORTS = ['ResourceProvider', 'Scene'];
 
 /** The packages the bundle imports from the consumer, so it has one React and one three.js. */
 const IMPORTED_PEERS = ['@react-three/drei', '@react-three/fiber', 'postprocessing', 'react', 'three'];
