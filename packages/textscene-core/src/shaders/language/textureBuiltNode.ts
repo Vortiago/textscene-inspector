@@ -2,7 +2,7 @@ import { Node as TslNode, NodeUpdateType, type Node, type NodeFrame } from 'thre
 
 /**
  * A read whose program depends on the bound texture: three's program key misses it, so dispose rebuilds.
- * @canonical
+ * @canonical Rebuild the program when the bound texture needs another one.
  */
 export abstract class TextureBuiltNode extends TslNode {
   override updateType = NodeUpdateType.RENDER;
