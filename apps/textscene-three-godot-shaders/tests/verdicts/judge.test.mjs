@@ -17,7 +17,7 @@ describe('the judge of the transpiler against Godot', () => {
   it('names the open row and its owner for a shader not transpiled yet', () => {
     const outcome = judge(
       ACCEPTED,
-      transpilerVerdict('uniform sampler2D t; ivec2 f() { return textureSize(t, 0); }')
+      transpilerVerdict('uniform samplerCubeArray t; ivec2 f() { return textureSize(t, 0); }')
     );
     expect(outcome).toMatchObject({ state: 'not transpiled yet', owner: '#1829' });
   });

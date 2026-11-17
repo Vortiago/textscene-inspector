@@ -7,10 +7,7 @@ const tsl = (node: unknown) => node as never;
 
 type Quad = Node & Record<'xy' | 'zy' | 'xw' | 'zw', Node>;
 
-/**
- * A cube's `textureGather`: three gathers a 2D texture or 2D array only. The four texel centres around
- * the face coordinate, in Vulkan's order, each read at level 0 in the direction of its face point.
- */
+/** A cube gather, which three lacks: the four texel centres around the face point, in Vulkan's order. */
 function cubeGathered(textureNode: TextureNode, direction: Node, channel: Node): Node {
   const face = cubeFaceOf(direction);
   const size = TSL.vec2(tsl(new SizeNode(textureNode, TSL.int(0) as never, 'ivec2')));

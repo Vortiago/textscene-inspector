@@ -63,10 +63,7 @@ function nodeOf(kind: TextureKind, value: Texture): TextureNode {
   return node;
 }
 
-/**
- * three r187 uploads only level 0 of a `DataArrayTexture` (`WebGLTextures.js:1229`), and every level of an
- * RGBA `CompressedArrayTexture` (`:1108`), so an RGBA 2D array with levels reads through one.
- */
+/** three uploads level 0 of a `DataArrayTexture` only (`WebGLTextures.js:1229`), every level of this one. */
 function cloneOf(source: Texture): Texture {
   if (!(source instanceof DataArrayTexture) || source.format !== RGBAFormat || source.mipmaps.length < 2)
     return source.clone();

@@ -58,11 +58,7 @@ function defaultTexture({ type, hint }: UniformNode): DefaultTexture {
   return (isFlat ? FLAT_DEFAULTS : VOLUME_DEFAULTS)[hint] ?? 'white';
 }
 
-/**
- * `update_textures` (`material_storage.cpp:880`): each texture a sampler reads, the material's
- * value standing for nothing set. A null, or an element the material array does not reach, reads
- * the texture of the element before it, as Godot keeps `rd_texture` across the elements, or white.
- */
+/** `update_textures` (`material_storage.cpp:880`): a missing element reads the one before it, or white. */
 export function samplerTextures<T>(
   uniform: UniformNode,
   value: T | readonly (T | null)[] | null | undefined

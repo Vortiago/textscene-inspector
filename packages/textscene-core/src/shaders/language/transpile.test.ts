@@ -86,8 +86,8 @@ describe('transpileShadingLanguage', () => {
   });
 
   it('refuses a row that is not transpiled before it reaches the emitter', () => {
-    expect(() => transpileShadingLanguage('uniform sampler2D s;')).toThrow(
-      "'sampler2D' is not transpiled yet (#1829)"
+    expect(() => transpileShadingLanguage('uniform samplerCubeArray s;')).toThrow(
+      "'samplerCubeArray' is not transpiled yet (#1829)"
     );
   });
 

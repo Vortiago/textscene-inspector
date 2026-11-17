@@ -12,8 +12,7 @@ import { GODOT_SAMPLING, samplerState } from './samplerState.js';
 
 const settings = (filter: string, repeat = 'repeat_disable') => ({ filter, repeat });
 
-// `samplers_rd_allocate` (`material_storage.cpp:2454`) builds each sampler. Godot 4.6.3 reads level 0
-// only through a filter without `_mipmap`, at any `textureLod` level (probe texture-2d-lod-linear-no-mipmap-filter).
+// `samplers_rd_allocate` (`material_storage.cpp:2454`): a filter without `_mipmap` reads level 0 only.
 describe('samplerState', () => {
   it.each([
     ['filter_nearest', NearestFilter, NearestFilter],

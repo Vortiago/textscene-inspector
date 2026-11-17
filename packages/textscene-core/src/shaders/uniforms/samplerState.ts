@@ -35,7 +35,7 @@ export interface SamplerState {
   readonly anisotropy: number;
 }
 
-/** The minification filter of a level picked as the nearest, and of two levels blended, by magnification filter. */
+/** The minification filter of the nearest level and of two levels blended, by magnification filter. */
 const MIPMAP_FILTERS = {
   [NearestFilter]: { nearest: NearestMipmapNearestFilter, blended: NearestMipmapLinearFilter },
   [LinearFilter]: { nearest: LinearMipmapNearestFilter, blended: LinearMipmapLinearFilter },

@@ -13,10 +13,7 @@ const texelOf = (x, y, layer, level) => [
   (255 - 20 * x - 9 * level) & 255,
 ];
 
-/**
- * A texture spec both harnesses build: `levels` holds each mip level's RGBA8 bytes, every layer,
- * face or slice of the level one after the other. A mip chain runs down to one texel.
- */
+/** A texture both harnesses build: each level's RGBA8 bytes, its layers in a row, down to 1 texel. */
 export function textureSpec(kind, width, height, { depth = 1, isMipmapped = false } = {}) {
   const count = kind === 'cube' ? 6 : depth;
   const levelCount = isMipmapped ? Math.floor(Math.log2(Math.max(width, height))) + 1 : 1;
@@ -431,7 +428,7 @@ function functionProbe(row) {
   );
 }
 
-/** Every texture function row but a cube array's, which WebGL 2 has no texture for (#1788). */
+/** Every texture function row but a cube array's and an external sampler's. */
 const functionProbes = () =>
   INSTRUCTION_TABLE.filter(
     (row) =>

@@ -12,7 +12,7 @@ type Lanes = Node & Record<'x' | 'y' | 'z' | 'w' | 'xy' | 'xyz', Node>;
 
 const lanes = (node: Node) => node as Lanes;
 
-/** A gradient of its own type: three builds each `textureGrad` gradient as a `vec2` (`TextureNode.js:699`). */
+/** A gradient of its own type: three builds every `textureGrad` gradient as `vec2` (`TextureNode.js:699`). */
 class GradientNode extends TslNode {
   constructor(private readonly gradient: Node) {
     super();
@@ -152,10 +152,7 @@ function sampledCall(name: string, row: InstructionRow, operands: readonly Node[
 
 const INTEGER_TYPES: ReadonlySet<number> = new Set([IntType, UnsignedIntType]);
 
-/**
- * An `isampler` or `usampler` over a texture of normalised or float texels reads each texel's float
- * bits on Godot's Vulkan driver. three declares the sampler by the texture, so the bits are read here.
- */
+/** An integer sampler over normalised or float texels reads their float bits, as Godot's driver does. */
 function asSamplerReads(node: Node, returns: string, texture: TextureNode): Node {
   if (!/^[iu]vec/.test(returns) || INTEGER_TYPES.has(texture.value.type)) return node;
   const bits = returns.startsWith('u') ? TSL.floatBitsToUint : TSL.floatBitsToInt;

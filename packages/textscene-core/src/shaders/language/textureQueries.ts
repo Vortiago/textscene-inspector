@@ -27,7 +27,7 @@ export const levelCountOf = (textureNode: TextureNode): UniformNode<'int', numbe
 const sizeOf = (textureNode: TextureNode, type: string): Node =>
   new SizeNode(textureNode, TSL.int(0) as never, type) as unknown as Node;
 
-/** The derivatives of a cube's face coordinate by the quotient rule, as Vulkan's cube transform defines them. */
+/** The derivatives of a cube's face coordinate by the quotient rule of Vulkan's cube transform. */
 function faceDerivatives(face: CubeFace, direction: Node): readonly Node[] {
   const reach = TSL.dot(tsl(direction), tsl(face.axis));
   return [TSL.dFdx, TSL.dFdy].map((derivative) => {
@@ -56,10 +56,7 @@ function texelDerivatives(sampler: string, textureNode: TextureNode, coordinate:
   return [TSL.dFdx(texels), TSL.dFdy(texels)] as unknown as Node[];
 }
 
-/**
- * `textureQueryLod` as Vulkan defines the level of detail: the log2 of the longer texel derivative, and
- * that level clamped to the levels the sampler reads.
- */
+/** Vulkan's level of detail: log2 of the longer texel derivative, then clamped to the levels read. */
 export function levelOfDetail(sampler: string, textureNode: TextureNode, coordinate: Node): Node {
   const [dx, dy] = texelDerivatives(sampler, textureNode, coordinate);
   const longest = TSL.max(TSL.length(tsl(dx)), TSL.length(tsl(dy)));

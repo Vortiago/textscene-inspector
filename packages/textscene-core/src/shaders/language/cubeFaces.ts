@@ -34,10 +34,7 @@ export function cubeFaceOf(direction: Node): CubeFace {
   return { axis: axis as unknown as Node, sAxis, tAxis, st };
 }
 
-/**
- * The direction of face coordinate `st` on `face`. Past an edge the point folds onto the next face, as
- * Vulkan's cube edge rule reads the texel there: the excess goes along the face's axis.
- */
+/** The direction of `st` on `face`: past an edge it folds onto the next face, as Vulkan reads it. */
 export function directionOf(face: CubeFace, st: Node): Node {
   const lanes = st as unknown as Node & Record<'x' | 'y', Node>;
   const [s, t] = [lanes.x, lanes.y].map((lane) => TSL.sub(TSL.mul(tsl(lane), 2), 1));
