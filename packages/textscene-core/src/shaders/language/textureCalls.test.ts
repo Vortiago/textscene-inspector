@@ -112,6 +112,16 @@ describe('builtInCall of a texture function', () => {
     expect(glsl).not.toContain('floatBitsToUint(');
   });
 
+  it('reads an integer texture bound after the call is built as it is', () => {
+    const sampler = texture(new DataTexture(new Uint8Array(4), 1, 1)) as unknown as TextureNode;
+    const node = builtInCall('texture', instruction('texture(usampler2D,vec2)')!, [
+      sampler as unknown as Node,
+      uv(),
+    ]);
+    sampler.value = new DataTexture(new Uint32Array(4), 1, 1, RGBAIntegerFormat, UnsignedIntType);
+    expect(generatedFragmentShader(vec4(node as never) as unknown as Node)).not.toContain('floatBitsToUint(');
+  });
+
   it('samples each element of a sampler array at a computed index and picks one', () => {
     const elements = [flat(), flat()] as unknown as TextureNode[];
     const choice = new SamplerChoice(elements, int(1).toVar() as unknown as Node) as unknown as Node;

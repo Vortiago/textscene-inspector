@@ -51,7 +51,7 @@ const VOLUME_DEFAULTS: Readonly<Partial<Record<UniformHint, DefaultTexture>>> = 
 };
 
 /** The texture a sampler of `uniform`'s type and hint reads when the material gives none (:964-1050). */
-function defaultTexture({ type, hint }: UniformNode): DefaultTexture {
+function hintedDefault({ type, hint }: UniformNode): DefaultTexture {
   if (type === 'samplerExternalOES') return 'none';
   // Godot keeps black as the cube array default, which had no other texture before.
   if (type === 'samplerCubeArray')
@@ -68,7 +68,7 @@ export function samplerTextures<T>(
   const arraySize = uniform.arraySize ?? 0;
   const textures = materialTextures(value, arraySize);
   if (textures.length === 0)
-    return new Array<DefaultTexture>(Math.max(1, arraySize)).fill(defaultTexture(uniform));
+    return new Array<DefaultTexture>(Math.max(1, arraySize)).fill(hintedDefault(uniform));
   const padded = [...textures, ...new Array<null>(Math.max(0, arraySize - textures.length)).fill(null)];
   let held: T | DefaultTexture = 'white';
   return padded.map((texture) => (held = texture ?? held));

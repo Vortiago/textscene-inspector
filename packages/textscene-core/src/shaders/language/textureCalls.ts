@@ -152,8 +152,24 @@ function sampledCall(name: string, row: InstructionRow, operands: readonly Node[
 const INTEGER_TYPES: ReadonlySet<number> = new Set([IntType, UnsignedIntType]);
 
 /** An integer sampler over normalised or float texels reads their float bits, as Godot's driver does. */
+class IntegerReadNode extends TslNode {
+  constructor(
+    private readonly read: Node,
+    private readonly returns: string,
+    private readonly texture: TextureNode
+  ) {
+    super(returns);
+  }
+
+  // The texture bound when three builds the shader decides, since a `set` can bind another one.
+  override setup(): Node {
+    if (INTEGER_TYPES.has(this.texture.value.type)) return this.read;
+    const bits = this.returns.startsWith('u') ? TSL.floatBitsToUint : TSL.floatBitsToInt;
+    return bits(this.read as never) as unknown as Node;
+  }
+}
+
 function asSamplerReads(node: Node, returns: string, texture: TextureNode): Node {
-  if (!/^[iu]vec/.test(returns) || INTEGER_TYPES.has(texture.value.type)) return node;
-  const bits = returns.startsWith('u') ? TSL.floatBitsToUint : TSL.floatBitsToInt;
-  return bits(node as never) as unknown as Node;
+  if (!/^[iu]vec/.test(returns)) return node;
+  return new IntegerReadNode(node, returns, texture) as unknown as Node;
 }

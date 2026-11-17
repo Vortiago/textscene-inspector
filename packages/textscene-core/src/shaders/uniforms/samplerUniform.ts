@@ -54,10 +54,10 @@ const NODE_OF_KIND: Readonly<Record<TextureKind, (value: Texture) => TextureNode
   cube: (value) => new GodotCubeNode(value as never),
 };
 
-/** A Godot sampler reads its coordinate as given: three's texture matrix stays out of the program. */
+/** Unmergeable: three gives one sampler to nodes of one texture, so two unset samplers would stay one. */
 function nodeOf(kind: TextureKind, value: Texture): TextureNode {
   const node = NODE_OF_KIND[kind](value);
-  node.updateMatrix = false;
+  node.mergeable = false;
   return node;
 }
 
@@ -90,6 +90,8 @@ function levelledCopyOf(source: DataArrayTexture): CompressedArrayTexture {
   return copy;
 }
 
+const isDrawableWith = (chosen: readonly (Texture | DefaultTexture)[]) => !chosen.includes('none');
+
 /** A sampler uniform: one texture node per element, each reading a copy with the shader's sampler. */
 export class SamplerBinding implements TranspiledUniform {
   private readonly nodes: TextureNode[];
@@ -97,7 +99,7 @@ export class SamplerBinding implements TranspiledUniform {
   private readonly settings: SamplerSettings;
   private readonly isSrgb: boolean;
   /** False while an element reads no texture at all: Godot then builds no uniform set and draws nothing. */
-  isDrawable = true;
+  isDrawable: boolean;
   /** Written only by `copyOf`: a material texture's copy, kept while the texture lives. */
   private readonly copies = new WeakMap<Texture, Texture>();
 
@@ -108,10 +110,9 @@ export class SamplerBinding implements TranspiledUniform {
     this.kind = textureKindOf(declaration.type);
     this.settings = samplerSettings(declaration, context.defaults);
     this.isSrgb = context.useLinearColor && declaration.usesColor;
-    this.nodes = samplerTextures<Texture>(declaration, undefined).map((chosen) =>
-      nodeOf(this.kind, this.textureOf(chosen))
-    );
-    this.set(undefined);
+    const chosen = samplerTextures<Texture>(declaration, undefined);
+    this.nodes = chosen.map((texture) => nodeOf(this.kind, this.textureOf(texture)));
+    this.isDrawable = isDrawableWith(chosen);
   }
 
   /** What a function of the shader reads: a texture node, or an array of them. */
@@ -127,7 +128,7 @@ export class SamplerBinding implements TranspiledUniform {
       value === undefined || isSamplerValue(value) ? value : null
     );
     chosen.forEach((texture, index) => (this.nodes[index]!.value = this.textureOf(texture)));
-    this.isDrawable = !chosen.includes('none');
+    this.isDrawable = isDrawableWith(chosen);
   }
 
   private textureOf(chosen: Texture | DefaultTexture): Texture {

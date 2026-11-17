@@ -123,6 +123,24 @@ describe('transpileShadingLanguage', () => {
     expect(glsl.match(/vec4 sl\d+_read \(/g)).toHaveLength(2);
   });
 
+  it('passes the computed index of a sampler array element to the function as a parameter', () => {
+    const source = [
+      'uniform sampler2D a[2];',
+      'vec4 read(sampler2D s) { return texture(s, vec2(0.5)); }',
+      'vec4 probe() { vec4 c = vec4(0.0); for (int k = 0; k < 2; k++) { c += read(a[k]); } return c; }',
+    ].join('\n');
+    expect(glslOf(source)).toMatch(/vec4 sl\d+_read \( int p0 \)/);
+  });
+
+  it('declares a sampler for each uniform while two read one default texture', () => {
+    const source = [
+      'uniform sampler2D a;',
+      'uniform sampler2D b;',
+      'vec4 probe() { return texture(a, vec2(0.5)) + texture(b, vec2(0.5)); }',
+    ].join('\n');
+    expect(glslOf(source).match(/uniform sampler2D \w+;/g)).toHaveLength(2);
+  });
+
   it('refuses a shader type that is not transpiled, at its head', () => {
     expect(() => transpileShadingLanguage('\nshader_type canvas_item;')).toThrow(
       expect.objectContaining({

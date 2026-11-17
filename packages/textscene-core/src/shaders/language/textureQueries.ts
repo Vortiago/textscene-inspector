@@ -22,15 +22,15 @@ class TextureFactNode extends UniformNode<'int', number> {
   }
 }
 
-/** One uniform per texture node and fact, so each call on a sampler reads the same uniform. */
+/** Written only by `factNodeOf`: one uniform per texture node and fact, kept while the node lives. */
 // eslint-disable-next-line no-restricted-syntax -- perObject is outside the shader module, which imports only its own files (ADR-0072).
 const FACT_NODES = new WeakMap<TextureNode, Map<TextureFact, TextureFactNode>>();
 
 function factNodeOf(textureNode: TextureNode, fact: TextureFact): TextureFactNode {
-  const facts = FACT_NODES.get(textureNode) ?? new Map<TextureFact, TextureFactNode>();
-  FACT_NODES.set(textureNode, facts);
-  const node = facts.get(fact) ?? new TextureFactNode(textureNode, fact);
-  facts.set(fact, node);
+  let facts = FACT_NODES.get(textureNode);
+  if (!facts) FACT_NODES.set(textureNode, (facts = new Map()));
+  let node = facts.get(fact);
+  if (!node) facts.set(fact, (node = new TextureFactNode(textureNode, fact)));
   return node;
 }
 

@@ -1,7 +1,7 @@
 import type { Variant } from '../../godot/variant/value/variant.js';
 import type { Value } from '../language/emitValue.js';
 import type { ShaderNode, UniformNode } from '../language/shaderTree.js';
-import { shapeOf } from '../language/types.js';
+import { isSamplerType } from '../language/types.js';
 import { isSamplerValue, SamplerBinding, type SamplerValue } from './samplerUniform.js';
 import type { ProjectSampling } from './samplerState.js';
 import { SAMPLER_DEFAULTS } from './samplerTextures.js';
@@ -66,7 +66,7 @@ export function bindParameters(
 ): ReadonlyMap<string, TranspiledUniform & { readonly value: Value }> {
   const samplerContext = { ...context, defaults: samplerDefaultsOf(shader.shaderType) };
   const bindingOf = (uniform: UniformNode) =>
-    shapeOf(uniform.type) === undefined
+    isSamplerType(uniform.type)
       ? new SamplerBinding(uniform, samplerContext)
       : new UniformBinding(uniform, context.useLinearColor);
   return new Map(shader.uniforms.map((uniform) => [uniform.name, bindingOf(uniform)]));

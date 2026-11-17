@@ -94,7 +94,9 @@ class GlslFunction {
   ) {
     const definition = tree.lowered;
     const typesOf = (argument: Argument) =>
-      isSamplerType(argument.type) ? [] : leafTypes(argument.type, argument.arraySize ?? 0, structOf);
+      isSamplerType(argument.type)
+        ? samplerLeafTypes(samplers.get(argument.name)!)
+        : leafTypes(argument.type, argument.arraySize ?? 0, structOf);
     this.parameters = definition.arguments.map((argument) => ({
       argument,
       leafCount: typesOf(argument).length,
@@ -137,11 +139,11 @@ class GlslFunction {
     isHeld: boolean;
     type: string;
   } {
-    const leaves = this.parameters.flatMap(({ argument }, index) =>
-      argument.qualifier === 'out' || isSamplerType(argument.type)
-        ? []
-        : this.leavesOfValue(args[index]!, argument.type, argument.arraySize ?? 0)
-    );
+    const leaves = this.parameters.flatMap(({ argument }, index) => {
+      if (argument.qualifier === 'out') return [];
+      if (isSamplerType(argument.type)) return samplerLeaves(args[index]!);
+      return this.leavesOfValue(args[index]!, argument.type, argument.arraySize ?? 0);
+    });
     const node = this.fn(...leaves);
     // Held where it stands, so it runs once and before any later read of the place.
     const isHeld = this.isStruct || this.outputCount > this.resultCount;
@@ -189,7 +191,7 @@ class GlslFunction {
       }
       const leaves = given[next++]!;
       if (isSamplerType(argument.type)) {
-        names.set(argument.name, this.samplers.get(argument.name)!);
+        names.set(argument.name, samplerParameter(this.samplers.get(argument.name)!, leaves));
         continue;
       }
       const value = valueOfLeaves(argument.type, size, this.structOf, leaves);
@@ -245,10 +247,20 @@ function samplerArguments(
   );
 }
 
-/** The ids of the texture nodes a sampler value holds: one, one per array element, or a choice by index. */
+/** A choice's index reaches the function as an `int` parameter: the caller's index is out of its scope. */
+const samplerLeafTypes = (value: Value): string[] => (value instanceof SamplerChoice ? ['int'] : []);
+
+const samplerLeaves = (value: Value): Node[] => (value instanceof SamplerChoice ? [value.index] : []);
+
+/** The value a sampler parameter reads in the body: a choice picks by the index parameter. */
+function samplerParameter(given: Value, leaves: readonly Node[]): Value {
+  if (!(given instanceof SamplerChoice)) return given;
+  return new SamplerChoice(given.elements, leaves[0]!) as unknown as Value;
+}
+
+/** The ids of the texture nodes a sampler value holds: one, one per array element, or a choice of them. */
 function samplerKey(value: Value): string {
-  if (value instanceof SamplerChoice)
-    return `${value.elements.map((element) => element.id).join('|')}@${value.index.id}`;
+  if (value instanceof SamplerChoice) return `${value.elements.map((element) => element.id).join('|')}@`;
   if (!isArrayValue(value)) return String((value as Node).id);
   return Array.from({ length: value.count }, (_, index) => samplerKey(value.element(index))).join(',');
 }
