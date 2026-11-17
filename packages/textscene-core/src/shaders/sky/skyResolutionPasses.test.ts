@@ -13,6 +13,8 @@ function recordingRenderer(initial: THREE.WebGLRenderTarget | null = null) {
   let current = initial;
   const renderer = {
     getRenderTarget: () => current,
+    getActiveCubeFace: () => 0,
+    getActiveMipmapLevel: () => 0,
     setRenderTarget: (target: THREE.WebGLRenderTarget | null) => (current = target),
     render: () => draws.push(`${current!.width}x${current!.height}`),
   } as unknown as THREE.WebGLRenderer;

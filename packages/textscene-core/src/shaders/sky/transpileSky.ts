@@ -79,13 +79,14 @@ export function transpileParsedSky(
 ): TranspiledSky {
   const program = (resolution: SkyResolution) =>
     linkedProgram(parsed, file, VERSION_TEMPLATES[pass][resolution], defaultSamplers(sampling));
-  const { parameters, parameterValues } = program('full');
+  const full = program('full');
+  const { parameters, parameterValues } = full;
   // Each pass reads the full pass's parameters, so one `set_shader_parameter` reaches all three.
-  const draw = (resolution: SkyResolution) =>
-    skyDraw(program(resolution), parameterValues, [...parameters.values()], isFilterInput(pass, resolution));
+  const draw = (resolution: SkyResolution, linked = program(resolution)) =>
+    skyDraw(linked, parameterValues, [...parameters.values()], isFilterInput(pass, resolution));
   const modes = new Set(parsed.tree.renderModes.map((mode) => mode.name));
   return withUnsetPassTextures(pass, {
-    ...draw('full'),
+    ...draw('full', full),
     parameters,
     ...(modes.has('use_half_res_pass') && { half: draw('half') }),
     ...(modes.has('use_quarter_res_pass') && { quarter: draw('quarter') }),
@@ -106,9 +107,9 @@ const BLACK = defaultTexture([0, 0, 0, 255]);
 function withUnsetPassTextures(pass: SkyPass, sky: TranspiledSky): TranspiledSky {
   // Godot's octmap reads a mip of its last radiance there, which the previewer does not keep.
   const unset = pass === 'background' ? WHITE : BLACK;
-  for (const draw of [sky, sky.half, sky.quarter])
+  for (const draw of skyDraws(sky))
     for (const name of ['half_res', 'quarter_res']) {
-      const node = draw?.textures.get(name);
+      const node = draw.textures.get(name);
       if (node) node.value = unset;
     }
   return sky;
@@ -170,7 +171,12 @@ function fragCoord(isRowsUp: boolean): Node {
 
 /** Frees the triangle and the material of each pass of `sky`. */
 export function disposeSky(sky: TranspiledSky): void {
-  for (const draw of [sky, sky.half, sky.quarter]) if (draw) disposeSkyDraw(draw);
+  for (const draw of skyDraws(sky)) disposeSkyDraw(draw);
+}
+
+/** The full pass of `sky`, then each of its half and quarter passes. */
+export function skyDraws(sky: TranspiledSky): SkyDraw[] {
+  return [sky, sky.half, sky.quarter].filter((draw) => draw !== undefined);
 }
 
 export function disposeSkyDraw({ mesh }: SkyDraw): void {

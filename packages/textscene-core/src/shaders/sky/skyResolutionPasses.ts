@@ -1,13 +1,16 @@
 import * as THREE from 'three';
-import type { SkyDraw, TranspiledSky } from './transpileSky.js';
+import { skyDraws, type SkyDraw, type TranspiledSky } from './transpileSky.js';
 
 type Resolution = 'half' | 'quarter';
 
 /** Godot sizes the passes from a screen of at least 4 by 4 (`sky.cpp:996-997`). */
 const MIN_SCREEN = 4;
 
-/** Each pass's size as a power of two under the target's (`sky.cpp:1433`, `:1449`). */
-const SHIFTS: Readonly<Record<Resolution, number>> = { half: 1, quarter: 2 };
+/** Each pass in draw order, its size as a power of two under the target's (`sky.cpp:1433`, `:1449`). */
+const PASSES = [
+  { resolution: 'quarter', shift: 2, texture: 'quarter_res' },
+  { resolution: 'half', shift: 1, texture: 'half_res' },
+] as const satisfies readonly { resolution: Resolution; shift: number; texture: string }[];
 
 /** Godot's half and quarter resolution passes of a sky: targets, order and reads (`sky.cpp:525-578`). */
 export class SkyResolutionPasses {
@@ -16,8 +19,7 @@ export class SkyResolutionPasses {
   private readonly scene = new THREE.Scene();
 
   constructor(private readonly sky: TranspiledSky) {
-    for (const resolution of ['half', 'quarter'] as const)
-      if (sky[resolution]) this.targets[resolution] = passTarget();
+    for (const { resolution } of PASSES) if (sky[resolution]) this.targets[resolution] = passTarget();
     this.bindTargets();
   }
 
@@ -29,12 +31,14 @@ export class SkyResolutionPasses {
   /** Draws the quarter pass, then the half pass (`sky.cpp:1427-1457`), and keeps the render target. */
   draw(renderer: THREE.WebGLRenderer, camera: THREE.Camera, size: THREE.Vector2): void {
     const previous = renderer.getRenderTarget();
-    for (const resolution of ['quarter', 'half'] as const) {
+    const face = renderer.getActiveCubeFace();
+    const level = renderer.getActiveMipmapLevel();
+    for (const { resolution, shift } of PASSES) {
       const target = this.targets[resolution];
       const pass = this.sky[resolution];
-      if (target && pass) this.drawPass(renderer, camera, pass, target, size, SHIFTS[resolution]);
+      if (target && pass) this.drawPass(renderer, camera, pass, target, size, shift);
     }
-    renderer.setRenderTarget(previous);
+    renderer.setRenderTarget(previous, face, level);
   }
 
   dispose(): void {
@@ -58,16 +62,11 @@ export class SkyResolutionPasses {
 
   /** A pass reads no target of its own resolution, as Godot binds a default there (`sky.cpp:552`, `:572`). */
   private bindTargets(): void {
-    const { half, quarter } = this.targets;
-    for (const [pass, ownTarget] of [
-      [this.sky, undefined],
-      [this.sky.half, 'half_res'],
-      [this.sky.quarter, 'quarter_res'],
-    ] as const) {
-      if (!pass) continue;
-      if (half && ownTarget !== 'half_res') bind(pass, 'half_res', half.texture);
-      if (quarter && ownTarget !== 'quarter_res') bind(pass, 'quarter_res', quarter.texture);
-    }
+    for (const draw of skyDraws(this.sky))
+      for (const { resolution, texture } of PASSES) {
+        const target = this.targets[resolution];
+        if (target && draw !== this.sky[resolution]) bind(draw, texture, target.texture);
+      }
   }
 }
 
