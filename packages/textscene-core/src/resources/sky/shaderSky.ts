@@ -109,7 +109,7 @@ function transpiledShaderSky(
     warnOnce(material, 'refused', `[Sky] ${unDrawnMessage(compile)}`);
     return transpiledDefaultSky(pass);
   }
-  const sky = transpileParsedSky(compile.parsed, '', sampling, pass);
+  const sky = transpileParsedSky(compile.parsed, material.file, sampling, pass);
   setParameters(sky.parameters, material.parameters, textures);
   (sky.mesh.material as BoundNodeMaterial).onTranslatorFault = (fault) =>
     warnOnce(

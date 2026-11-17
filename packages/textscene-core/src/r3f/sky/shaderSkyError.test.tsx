@@ -12,6 +12,7 @@ function shaderSky(code: string): SkyProperties {
   return {
     kind: 'shader',
     code,
+    file: 'res://sky.gdshader',
     parameters: {},
     textures: {},
     usage: { light: false, samplers: {} },

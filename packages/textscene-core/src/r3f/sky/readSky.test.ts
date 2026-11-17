@@ -14,7 +14,7 @@ const ZSTD =
 const CODE = `shader_type sky;\n#if PackedByteArray(${ZSTD}).decompress(29, 2).get_string_from_ascii() == "hello hello hello hello world"\nuniform samplerCube faces;\n#endif\nvoid sky() {}\n`;
 
 function shaderSky(code: string): AuthoredSky {
-  return decodeSky({}, { kind: 'shader', code, parameters: {}, textures: {} });
+  return decodeSky({}, { kind: 'shader', code, file: 'res://sky.gdshader', parameters: {}, textures: {} });
 }
 
 describe('useReadSky', () => {

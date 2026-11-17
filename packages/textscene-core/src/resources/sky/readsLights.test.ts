@@ -5,6 +5,7 @@ import type { ShaderSkyProperties } from './types';
 const shaderSky = (light: boolean): ShaderSkyProperties => ({
   kind: 'shader',
   code: '',
+  file: 'res://sky.gdshader',
   parameters: {},
   textures: {},
   usage: { light, samplers: {} },

@@ -54,6 +54,7 @@ describe('SKY of a Sky over a ShaderMaterial', () => {
     expect(loadedValue(SKY, 'SubResource("s")', scene()).sky.material).toEqual({
       kind: 'shader',
       code: SKY_SHADER,
+      file: 'SubResource("code")',
       parameters: { tint: '0.25' },
       textures: {},
     });
@@ -97,16 +98,17 @@ describe('SKY of a Sky over a ShaderMaterial', () => {
     expect(material.kind === 'shader' && material.parameters.tint).toBe('[0.25, null]');
   });
 
-  it('decodes the same value from a .gdshader file', () => {
+  it("decodes the same value from a .gdshader file, with the file's path", () => {
     const files = { 'res://sky.gdshader': SKY_SHADER };
     const fromFile = [
       '[ext_resource type="Shader" path="res://sky.gdshader" id="1_code"]',
       '[sub_resource type="ShaderMaterial" id="m"]\nshader = ExtResource("1_code")\nshader_parameter/tint = 0.25',
       `[sub_resource type="Sky" id="s"]\n${SKY_BODY}\n`,
     ].join('\n\n');
-    expect(loadedValue(SKY, 'SubResource("s")', fromFile, files).sky.material).toEqual(
-      loadedValue(SKY, 'SubResource("s")', scene()).sky.material
-    );
+    expect(loadedValue(SKY, 'SubResource("s")', fromFile, files).sky.material).toEqual({
+      ...loadedValue(SKY, 'SubResource("s")', scene()).sky.material,
+      file: 'res://sky.gdshader',
+    });
   });
 
   it('declines a ShaderMaterial whose shader is not a sky shader', () => {

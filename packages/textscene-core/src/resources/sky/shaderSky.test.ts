@@ -14,10 +14,12 @@ import { buildSkyEnvironment } from './build';
 import { decodeSky } from './decode';
 import type { ShaderSkyProperties, Sky } from './types';
 
+const SKY_FILE = 'res://tinted_sky.gdshader';
+
 const TINTED_SKY = 'shader_type sky;\nuniform float tint = 0.5;\nvoid sky() {\n\tCOLOR = vec3(tint);\n}\n';
 
 function shaderMaterial(code: string): ShaderSkyProperties {
-  return readShaderSky({ kind: 'shader', code, parameters: {}, textures: {} }, {});
+  return readShaderSky({ kind: 'shader', code, file: SKY_FILE, parameters: {}, textures: {} }, {});
 }
 
 /** The environment of `sky` with the transpiler, as the previewer builds it once the transpiler loads. */
@@ -116,7 +118,9 @@ describe('buildSkyEnvironment of a shader sky', () => {
     const material = environment.background!.material as BoundNodeMaterial;
     material.reportFault(new TranslatorFault(material.source, 'fragment: ERROR: 0:1'));
     expect(warn.mock.calls.map(([message]) => message)).toContainEqual(
-      expect.stringMatching(/^\[Sky\] The previewer failed to draw this sky shader: .*ERROR: 0:1/)
+      expect.stringMatching(
+        /^\[Sky\] The previewer failed to draw this sky shader: .*res:\/\/tinted_sky\.gdshader.*ERROR: 0:1/
+      )
     );
     environment.dispose();
   });
