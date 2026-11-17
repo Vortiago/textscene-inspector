@@ -7,7 +7,7 @@ const VERTEX_ANGLE_ATTRIBUTE = 'vertex_angle_attrib';
 /** The attribute at location 1: the normal and the tangent as four 16-bit unsigned normalised lanes. */
 const AXIS_TANGENT_ATTRIBUTE = 'axis_tangent_attrib';
 
-/** The `userData` key that marks turned corners: `clone` and `copy` carry it with the turned index. */
+/** The `userData` key of turned corners, which `clone` carries. A caller that sets a new index deletes it. */
 const FIRST_CORNER_LAST = 'godotFirstCornerLast';
 
 /** `geometry` as an uncompressed Godot surface (`rendering_server.cpp:425-700`), first corners as Godot's. */
