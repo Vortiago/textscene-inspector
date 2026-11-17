@@ -7,7 +7,8 @@ import type * as THREE from 'three';
 import { WebGLNodesHandler } from 'three/addons/tsl/WebGLNodesHandler.js';
 import type { Node } from 'three/webgpu';
 import { driverLog, TranslatorFault } from './fault/translatorFault.js';
-import { BoundNodeMaterial } from './uniforms/boundMaterial.js';
+import { shaderErrorReport, type ProgramNames } from './fault/shaderErrorReport.js';
+import { boundMaterials } from './uniforms/boundMaterial.js';
 
 /**
  * What a node material writes. `display` is the handler's own form: the renderer's tone mapping,
@@ -16,10 +17,9 @@ import { BoundNodeMaterial } from './uniforms/boundMaterial.js';
  */
 export type NodeOutput = 'linear' | 'display';
 
-/** What the handler holds that three's types leave out: its output hook, and the material it draws now. */
-interface HandlerInternals {
+/** The hook three's types leave out of the handler. */
+interface OutputHook {
   getOutputCallback: (outputNode: Node) => Node;
-  nodeFrame: { material: unknown };
 }
 
 /**
@@ -35,10 +35,9 @@ const withHandler = new WeakSet<THREE.WebGLRenderer>();
 export function installNodesHandler(renderer: THREE.WebGLRenderer, output: NodeOutput = 'display'): void {
   if (withHandler.has(renderer)) return;
   const handler = new WebGLNodesHandler();
-  const internals = handler as unknown as HandlerInternals;
-  if (output === 'linear') internals.getOutputCallback = (outputNode) => outputNode;
+  if (output === 'linear') (handler as unknown as OutputHook).getOutputCallback = (outputNode) => outputNode;
   renderer.setNodesHandler(handler);
-  reportTranslatorFaults(renderer, internals);
+  reportTranslatorFaults(renderer);
   withHandler.add(renderer);
 }
 
@@ -49,23 +48,48 @@ type ShaderErrorHook = (
   fragmentShader: WebGLShader
 ) => void;
 
-/** A refused program as a fault of its transpiled material, or to the earlier hook or the console. */
-function reportTranslatorFaults(renderer: THREE.WebGLRenderer, handler: HandlerInternals): void {
-  const debug = renderer.debug as { onShaderError: ShaderErrorHook | null };
-  const previous = debug.onShaderError;
-  debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
-    const log = driverLog(gl, program, vertexShader, fragmentShader);
-    // The handler sets the material before three builds its program (`WebGLNodesHandler.js:318`).
-    const { material } = handler.nodeFrame;
-    if (material instanceof BoundNodeMaterial && drawsWith(renderer, material, program))
-      material.reportFault(new TranslatorFault(material.source, log));
-    else if (previous) previous(gl, program, vertexShader, fragmentShader);
-    else console.error(`THREE.WebGLProgram: the GPU refused a program.\n${log}`);
+/** Hands a refused program to its transpiled materials, then to the caller's hook or three's report. */
+function reportTranslatorFaults(renderer: THREE.WebGLRenderer): void {
+  const { debug } = renderer as unknown as { debug: { onShaderError: ShaderErrorHook | null } };
+  let callerHook = debug.onShaderError;
+  /** True while the caller's hook runs, so a hook that calls the one it replaced does not loop. */
+  let isReporting = false;
+  const report: ShaderErrorHook = (gl, program, vertexShader, fragmentShader) => {
+    if (isReporting) return;
+    isReporting = true;
+    try {
+      const faulty = [...boundMaterials()].filter((material) => drawsWith(renderer, material, program));
+      const log = driverLog(gl, program, vertexShader, fragmentShader);
+      for (const material of faulty) material.reportFault(new TranslatorFault(material.source, log));
+      if (callerHook) callerHook(gl, program, vertexShader, fragmentShader);
+      else if (faulty.length === 0)
+        console.error(
+          shaderErrorReport(gl, program, [vertexShader, fragmentShader], namesOf(renderer, program))
+        );
+    } finally {
+      isReporting = false;
+    }
   };
+  // A hook the caller sets after the install runs behind this one, so a fault still reaches its material.
+  Object.defineProperty(debug, 'onShaderError', {
+    configurable: true,
+    enumerable: true,
+    get: () => report,
+    set: (hook: ShaderErrorHook | null) => {
+      callerHook = hook;
+    },
+  });
 }
 
-/** Whether `program` is the one three just built for `material`, not a program of another draw. */
+/** Whether three built `program` for `material` on `renderer`, by `compile` or by a draw. */
 function drawsWith(renderer: THREE.WebGLRenderer, material: THREE.Material, program: WebGLProgram): boolean {
+  if (!renderer.properties.has(material)) return false;
   const properties = renderer.properties.get(material) as { currentProgram?: { program: WebGLProgram } };
   return properties.currentProgram?.program === program;
+}
+
+/** The names three's report gives for `program`, from the renderer's list of programs. */
+function namesOf(renderer: THREE.WebGLRenderer, program: WebGLProgram): ProgramNames | undefined {
+  const programs = renderer.info.programs as unknown as readonly (ProgramNames & { program: WebGLProgram })[];
+  return programs?.find((entry) => entry.program === program);
 }

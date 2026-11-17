@@ -10,6 +10,18 @@ export interface MaterialShader {
 
 const NO_SHADER: MaterialShader = { parameters: [], source: { text: '', file: '' } };
 
+/** Written by the constructor and `dispose`: each transpiled material a refused program is matched to. */
+const liveMaterials = new Set<WeakRef<BoundNodeMaterial>>();
+
+/** Each transpiled material not yet disposed or collected. */
+export function* boundMaterials(): Generator<BoundNodeMaterial> {
+  for (const ref of liveMaterials) {
+    const material = ref.deref();
+    if (material) yield material;
+    else liveMaterials.delete(ref);
+  }
+}
+
 /**
  * A node material three draws only while the caller shows it and every uniform of its shader can draw.
  * @canonical Draw a transpiled material only while Godot can build its uniform set
@@ -18,11 +30,14 @@ export class BoundNodeMaterial extends NodeMaterial {
   /** Written only by the `visible` setter and `copy`: whether the caller shows the material. */
   private isShown = true;
 
+  private readonly ref = new WeakRef(this);
+
   /** Takes each program the GPU refuses for this material. Null logs the fault to the console. */
   onTranslatorFault: ((fault: TranslatorFault) => void) | null = null;
 
   constructor(private shader: MaterialShader = NO_SHADER) {
     super();
+    liveMaterials.add(this.ref);
     // three reads `visible` before it draws (`WebGLRenderer.js:1969`), so the gate holds for each mesh.
     Object.defineProperty(this, 'visible', {
       get: () => this.isShown && this.shader.parameters.every((parameter) => parameter.isDrawable),
@@ -40,6 +55,11 @@ export class BoundNodeMaterial extends NodeMaterial {
   reportFault(fault: TranslatorFault): void {
     if (this.onTranslatorFault) this.onTranslatorFault(fault);
     else console.error(fault);
+  }
+
+  override dispose(): void {
+    liveMaterials.delete(this.ref);
+    super.dispose();
   }
 
   override copy(source: BoundNodeMaterial): this {
