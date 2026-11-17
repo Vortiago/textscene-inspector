@@ -5,7 +5,7 @@ import { ShaderErrorsProvider, useShaderErrors } from '../contexts/ShaderErrorsC
 import * as transpiler from '../../resources/sky/shaderSky';
 import type { SkyProperties } from '../../resources/sky/types';
 import type { SkyTranspiler } from './skyTranspiler';
-import type { ProjectShaderOptions } from '../../shaders/language/rendererShaderOptions';
+import type { ProjectShaderOptions } from '../../shaders/rendererShaderOptions';
 import { useShaderSkyErrorReport } from './shaderSkyError';
 
 function shaderSky(code: string): SkyProperties {

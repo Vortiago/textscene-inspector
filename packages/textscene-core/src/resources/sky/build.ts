@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
-import type { ProjectShaderOptions } from '../../shaders/language/rendererShaderOptions';
+import type { ProjectShaderOptions } from '../../shaders/rendererShaderOptions';
 import type { BuiltInSkyProperties, ShaderSkyProperties, Sky } from './types';
 import { warn } from '../../logger';
 import { skyFragmentShader, skyGlsl, SKY_VERTEX_SHADER } from './skyShaders';

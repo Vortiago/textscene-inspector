@@ -1,9 +1,9 @@
-export { installNodesHandler, type NodeOutput } from './nodesHandler.js';
+export type { NodeOutput } from './nodesHandler.js';
 export { installGodotShading, type GodotShading, type GodotShadingOptions } from './godotShading.js';
-export type { RendererShaderOptions } from './language/rendererShaderOptions.js';
+export type { RendererShaderOptions } from './rendererShaderOptions.js';
 export { GODOT_VERSION } from './language/instructionTable.generated.js';
 export { ShadingLanguageError } from './language/shadingLanguageError.js';
-export { glVaryingSlots } from './language/glVaryingSlots.js';
+export { glVaryingSlots } from './glVaryingSlots.js';
 export { TranslatorFault, type ShaderSource } from './fault/translatorFault.js';
 export {
   transpileShadingLanguage,

@@ -1,5 +1,5 @@
 import type { AuthoredSky, BuiltInSkyProperties, ShaderSkyText, Sky } from '../../resources/sky/types';
-import type { ProjectShaderOptions } from '../../shaders/language/rendererShaderOptions';
+import type { ProjectShaderOptions } from '../../shaders/rendererShaderOptions';
 import { withAutomaticBake } from '../../resources/sky/decode';
 import { perObject } from '../../utils/perObject';
 import type { SkyTranspiler } from './skyTranspiler';

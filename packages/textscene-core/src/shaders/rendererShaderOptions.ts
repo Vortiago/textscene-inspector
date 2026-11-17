@@ -1,11 +1,14 @@
 import type * as THREE from 'three';
-import type { ShaderDecoders } from '../preprocessor/decoders.js';
-import type { RenderingMethod } from '../preprocessor/preprocessor.js';
 import { glVaryingSlots } from './glVaryingSlots.js';
-import type { ShaderOptions } from './parseShader.js';
+import type { ShaderDecoders } from './preprocessor/decoders.js';
+import type { RenderingMethod } from './preprocessor/preprocessor.js';
 
 /** The options of the renderer that every shader of its project parses with. */
-export type RendererShaderOptions = Pick<ShaderOptions, 'renderingMethod' | 'glVaryings'>;
+export interface RendererShaderOptions {
+  readonly renderingMethod?: RenderingMethod;
+  /** The varying slots of the GL context, which only `gl_compatibility` reads. */
+  readonly glVaryings?: number;
+}
 
 /** The renderer's options and the decoders a shader's `#if` may decompress with. */
 export interface ProjectShaderOptions extends RendererShaderOptions {

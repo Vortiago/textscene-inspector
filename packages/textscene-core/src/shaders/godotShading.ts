@@ -1,5 +1,5 @@
 import type * as THREE from 'three';
-import { rendererShaderOptions, type RendererShaderOptions } from './language/rendererShaderOptions.js';
+import { rendererShaderOptions, type RendererShaderOptions } from './rendererShaderOptions.js';
 import { installNodesHandler, type NodeOutput } from './nodesHandler.js';
 import type { RenderingMethod } from './preprocessor/preprocessor.js';
 import { transpileSky, type SkyOptions, type TranspiledSky } from './sky/transpileSky.js';

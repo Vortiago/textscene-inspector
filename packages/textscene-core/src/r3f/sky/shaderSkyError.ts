@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { SkyProperties } from '../../resources/sky/types.js';
-import type { ProjectShaderOptions } from '../../shaders/language/rendererShaderOptions.js';
+import type { ProjectShaderOptions } from '../../shaders/rendererShaderOptions.js';
 import { useShaderErrorReport } from '../contexts/ShaderErrorsContext.js';
 import type { SkyTranspiler } from './skyTranspiler.js';
 

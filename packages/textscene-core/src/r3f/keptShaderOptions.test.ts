@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { projectShaderOptionsOf } from './projectShaderOptions';
+import { projectShaderOptionsOf } from './keptShaderOptions';
 
 describe('projectShaderOptionsOf', () => {
   it('gives one object for equal options, so viewports that draw one sky share its bake', () => {

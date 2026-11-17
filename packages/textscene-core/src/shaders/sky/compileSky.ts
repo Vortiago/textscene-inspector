@@ -1,6 +1,6 @@
 import { parsedShader, type ParsedShader } from '../language/parseShader.js';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
-import type { ProjectShaderOptions } from '../language/rendererShaderOptions.js';
+import type { ProjectShaderOptions } from '../rendererShaderOptions.js';
 import { disposeSky, transpileParsedSky } from './transpileSky.js';
 
 /** Godot's refusal of a text, or the transpiler's for a construct it does not port yet. */

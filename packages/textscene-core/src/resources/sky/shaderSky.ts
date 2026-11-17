@@ -15,7 +15,7 @@ import { GODOT_SAMPLING, type ProjectSampling } from '../../shaders/uniforms/sam
 import type { TranspiledUniform } from '../../shaders/uniforms/transpiledUniform';
 import type { BoundNodeMaterial } from '../../shaders/uniforms/boundMaterial';
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
-import type { ProjectShaderOptions } from '../../shaders/language/rendererShaderOptions';
+import type { ProjectShaderOptions } from '../../shaders/rendererShaderOptions';
 import { ShaderSkyBackground } from '../../r3f/sky/shaderSkyBackground';
 import { ShaderSkyOctmap } from '../../r3f/sky/shaderSkyOctmap';
 import { cappedBake } from './radianceBake';
