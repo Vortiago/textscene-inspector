@@ -26,6 +26,12 @@ func floats(values: Array) -> PackedFloat32Array:
 		packed.append_array(PackedFloat32Array(value))
 	return packed
 
+func ints(values: Array) -> PackedInt32Array:
+	var packed := PackedInt32Array()
+	for value in values:
+		packed.append_array(PackedInt32Array(value))
+	return packed
+
 func colors(values: Array) -> PackedColorArray:
 	var packed := PackedColorArray()
 	for value in values:
@@ -46,6 +52,14 @@ func mesh_of(scene: Dictionary) -> ArrayMesh:
 	if scene.mesh.has("colors"):
 		arrays[Mesh.ARRAY_COLOR] = colors(scene.mesh.colors)
 	var flags := Mesh.ARRAY_FLAG_COMPRESS_ATTRIBUTES if scene.get("compressed", false) else 0
+	for custom in 4:
+		var key := "custom%ds" % custom
+		if scene.mesh.has(key):
+			arrays[Mesh.ARRAY_CUSTOM0 + custom] = floats(scene.mesh[key])
+			flags |= Mesh.ARRAY_CUSTOM_RGBA_FLOAT << (Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT + custom * Mesh.ARRAY_FORMAT_CUSTOM_BITS)
+	if scene.mesh.has("bones"):
+		arrays[Mesh.ARRAY_BONES] = ints(scene.mesh.bones)
+		arrays[Mesh.ARRAY_WEIGHTS] = floats(scene.mesh.weights)
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, flags)
 	return mesh

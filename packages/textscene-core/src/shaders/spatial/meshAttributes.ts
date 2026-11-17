@@ -29,7 +29,51 @@ export function withGodotAttributes(geometry: THREE.BufferGeometry): THREE.Buffe
     const uv = geometry.getAttribute(three);
     if (uv) geometry.setAttribute(godot, uv);
   }
+  for (let custom = 0; custom < CUSTOM_ARRAYS; custom++) {
+    const values = geometry.getAttribute(`custom${custom}`);
+    if (values) geometry.setAttribute(`custom${custom}_attrib`, values);
+  }
+  const bones = geometry.getAttribute('skinIndex');
+  if (bones) geometry.setAttribute('bone_attrib', boneIndices(bones));
+  const weights = geometry.getAttribute('skinWeight');
+  if (weights) geometry.setAttribute('weight_attrib', weights);
+  for (const [name, value] of Object.entries(MISSING_ARRAY_VALUES))
+    if (!geometry.getAttribute(name)) geometry.setAttribute(name, constantAttribute(value));
   return geometry;
+}
+
+/** The value of each array a surface lacks: Godot's default vertex buffers (`mesh_storage.cpp:61-157`). */
+const MISSING_ARRAY_VALUES: Readonly<Record<string, Float32Array | Uint32Array>> = {
+  // A normal of three floats, read with GL's last lane of 1.
+  [AXIS_TANGENT_ATTRIBUTE]: Float32Array.of(1, 0, 0, 1),
+  color_attrib: Float32Array.of(1, 1, 1, 1),
+  uv_attrib: Float32Array.of(0, 0, 0, 0),
+  uv2_attrib: Float32Array.of(0, 0, 0, 0),
+  custom0_attrib: Float32Array.of(0, 0, 0, 0),
+  custom1_attrib: Float32Array.of(0, 0, 0, 0),
+  custom2_attrib: Float32Array.of(0, 0, 0, 0),
+  custom3_attrib: Float32Array.of(0, 0, 0, 0),
+  bone_attrib: Uint32Array.of(0, 0, 0, 0),
+  weight_attrib: Float32Array.of(0, 0, 0, 0),
+};
+
+/** One value for all vertices like Godot's stride-0 buffer: GL reads instance 0 when nothing is instanced. */
+function constantAttribute(value: Float32Array | Uint32Array): THREE.InstancedBufferAttribute {
+  return new THREE.InstancedBufferAttribute(value, 4);
+}
+
+/** `Mesh::ARRAY_CUSTOM0` to `ARRAY_CUSTOM3`, which this reads from the attributes `custom0` to `custom3`. */
+const CUSTOM_ARRAYS = 4;
+
+/** The bone indices as Godot stores them, four 16-bit unsigned integers that GL reads as integers. */
+function boneIndices(bones: Attribute): THREE.BufferAttribute {
+  if (bones.itemSize !== 4) throw new Error(`expected 4 bone indices a vertex, got ${bones.itemSize}`);
+  const lanes = new Uint16Array(bones.count * 4);
+  for (let vertex = 0; vertex < bones.count; vertex++)
+    lanes.set([bones.getX(vertex), bones.getY(vertex), bones.getZ(vertex), bones.getW(vertex)], vertex * 4);
+  const attribute = new THREE.BufferAttribute(lanes, 4);
+  attribute.gpuType = THREE.IntType;
+  return attribute;
 }
 
 /** Each triangle turned to draw its first corner last: `flat` reads Vulkan's first vertex, WebGL's last. */

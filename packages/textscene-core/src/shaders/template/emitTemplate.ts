@@ -64,6 +64,7 @@ export function emitTemplateStage(
   const globals = new Map<string, Value>();
   const trees = new Map<string, EmittedTree>();
   const plain: GlobalNode[] = [];
+  const written: WrittenArrayVarying[] = [];
   for (const declaration of passedOnce(stage, result).declarations) {
     if (declaration.kind === 'struct') structs.set(declaration.name, declaration);
     else if (declaration.kind === 'function') trees.set(declaration.name, loweredOnce(declaration));
@@ -74,7 +75,7 @@ export function emitTemplateStage(
       globals.set(name, resources.buffers.block(declared.buffers.get(name)!, structLookup(declared.structs)));
     } else if (declaration.kind === 'global') {
       uniformGlobals(declaration, globals, textures);
-      stageVaryings(stage.stage, declaration, result, resources.varyings, globals);
+      stageVaryings(stage.stage, declaration, result, resources.varyings, globals, written);
       if (isPlain(stage.stage, declaration)) plain.push(declaration);
     }
   }
@@ -89,7 +90,11 @@ export function emitTemplateStage(
   if (!main) throw new Error('expected a main function in the template stage');
   const run = Fn(() => {
     const variable = declareVariables(result.type, 0, structOf) as Node;
-    body(main, new Map([[result.name, variable], ...plainVariables(plain, result, structOf)]));
+    const arrays = written.map(
+      ({ name, type, count }) => [name, declareVariables(type, count, structOf)] as const
+    );
+    body(main, new Map([[result.name, variable], ...plainVariables(plain, result, structOf), ...arrays]));
+    written.forEach(({ varying }, index) => copyInto(varying, arrays[index]![1]));
     return variable;
   });
   return { result: run() as unknown as Node, uniforms: resources.uniforms.byName, textures };
@@ -145,13 +150,22 @@ function plainVariables(
   );
 }
 
-/** The varying of each `out` of the vertex stage and each `in` of the fragment stage, but the result. */
+/** An array the vertex stage writes into a local array, which main copies into its varyings at its end. */
+interface WrittenArrayVarying {
+  readonly name: string;
+  readonly type: ValueType;
+  readonly count: number;
+  readonly varying: Value;
+}
+
+/** Each `out` and `in` varying but the result. An array `out` is a local array a computed index writes. */
 function stageVaryings(
   stage: TemplateStageNode['stage'],
   global: GlobalNode,
   result: StageResult,
   varyings: StageVaryings,
-  values: Map<string, Value>
+  values: Map<string, Value>,
+  written: WrittenArrayVarying[]
 ): void {
   const { words } = global.qualifiers;
   const passes = stage === 'vertex' ? words.includes('out') : stage === 'fragment' && words.includes('in');
@@ -159,12 +173,15 @@ function stageVaryings(
   const isFlat = words.includes('flat');
   for (const { name, arraySize } of global.declarators) {
     if (name === result.name) continue;
-    values.set(
-      name,
-      arraySize
-        ? varyings.ofArray(global.type, name, arraySize, isFlat)
-        : varyings.of(global.type, name, isFlat)
-    );
+    if (!arraySize) values.set(name, varyings.of(global.type, name, isFlat));
+    else if (stage === 'fragment') values.set(name, varyings.ofArray(global.type, name, arraySize, isFlat));
+    else
+      written.push({
+        name,
+        type: global.type,
+        count: arraySize,
+        varying: varyings.ofArray(global.type, name, arraySize, isFlat),
+      });
   }
 }
 

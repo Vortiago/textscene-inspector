@@ -6,6 +6,7 @@ import {
 } from '../../../../packages/textscene-core/src/shaders/template/link.ts';
 import { MODE_TABLES } from '../../../../packages/textscene-core/src/shaders/template/modeTables.generated.ts';
 import { preprocess } from '../../../../packages/textscene-core/src/shaders/template/preprocess.ts';
+import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 
 /** Godot's colour pass with no pass flags, which `transpileSpatial` links. */
 const SCENE_FILE = 'forward_clustered/scene_forward_clustered.glsl';
@@ -13,7 +14,7 @@ const SCENE_FILE = 'forward_clustered/scene_forward_clustered.glsl';
 /** The state of a branch a scene against Godot takes. */
 export const DRAWN = 'drawn against Godot';
 
-/** The state of a branch a material's define takes and no scene against Godot takes yet. */
+/** The state of a branch a material's define takes and no scene takes yet, with the rows of that define. */
 export const OPEN = 'open';
 
 /** The state of a branch no unshaded material takes: a lit branch, a pass flag or a build option. */
@@ -32,25 +33,26 @@ function decidedBranches(stage, material) {
 /** A material of no code with `custom` defines: what a shader of those built-ins and modes makes. */
 const definesOnly = (custom) => ({ custom, code: new Map() });
 
-/** Every define a spatial material can make, unshaded first, as `compileMaterial` writes each. */
-function materialDefines() {
+/** Each define a spatial material can make, with the rows that make it, as `compileMaterial` writes each. */
+function rowsByDefine() {
   const table = MODE_TABLES.spatial;
-  const resolved = Object.values(table.usage_defines).map((define) =>
-    define.startsWith('@') ? table.usage_defines[define.slice(1)] : define
-  );
-  return [
-    ...new Set([
-      table.render_mode_defines.unshaded,
-      ...Object.values(table.render_mode_defines),
-      ...resolved,
-    ]),
-  ];
+  const rows = new Map();
+  const add = (define, row) => rows.set(define, [...(rows.get(define) ?? []), row]);
+  for (const [mode, define] of Object.entries(table.render_mode_defines))
+    add(define, `spatial render_mode ${mode}`);
+  for (const [name, define] of Object.entries(table.usage_defines)) {
+    const resolved = define.startsWith('@') ? table.usage_defines[define.slice(1)] : define;
+    for (const row of INSTRUCTION_TABLE)
+      if (/^spatial\.(vertex|fragment)\./.test(row.id) && row.id.endsWith(`.${name}`)) add(resolved, row.id);
+  }
+  return rows;
 }
 
-/** The unshaded path: the unshaded define alone, and with each other define a material can make. */
-function unshadedMaterials() {
-  const [unshaded, ...others] = materialDefines();
-  return [definesOnly([unshaded]), ...others.map((define) => definesOnly([unshaded, define]))];
+/** The owner of `id` in the instruction table, or `transpiled`. */
+function ownerOf(id) {
+  const row = INSTRUCTION_TABLE.find((each) => each.id === id);
+  if (!row) throw new Error(`expected a row ${id} in the instruction table, found none`);
+  return row.owner || 'transpiled';
 }
 
 /** The material of each scene source, as the transpiler compiles it. */
@@ -59,24 +61,50 @@ const sceneMaterials = (sources) =>
     compileMaterial(parse(tokenize(source, 'scene.gdshader')), MODE_TABLES.spatial)
   );
 
+/** The branches of `stage` that the variant of each scene source takes. */
+function drawnBranches(stage, sources) {
+  return new Set(
+    sceneMaterials(sources).flatMap((material) =>
+      decidedBranches(stage, material)
+        .filter((branch) => branch.isTaken)
+        .map((branch) => branch.key)
+    )
+  );
+}
+
+/** The rows of each branch some unshaded material takes, and every branch an unshaded material decides. */
+function materialBranches(stage) {
+  const unshaded = MODE_TABLES.spatial.render_mode_defines.unshaded;
+  const takenBy = new Map();
+  const decided = new Set();
+  for (const [define, rows] of rowsByDefine()) {
+    const custom = define === unshaded ? [unshaded] : [unshaded, define];
+    for (const { key, isTaken } of decidedBranches(stage, definesOnly(custom))) {
+      decided.add(key);
+      if (isTaken) takenBy.set(key, [...(takenBy.get(key) ?? []), ...rows]);
+    }
+  }
+  return { takenBy, decided };
+}
+
+/** An open branch's state: each row whose define takes it, with the row's owner. */
+const openState = (rows) =>
+  `${OPEN}: ${[...new Set(rows)]
+    .sort()
+    .map((row) => `${row} (${ownerOf(row)})`)
+    .join(', ')}`;
+
 /** The state of each `#if` branch of the unshaded colour pass, by stage, then by `file:line`. */
 export function sceneBranchStates(sources) {
   return Object.fromEntries(
     STAGES.map((stage) => {
-      const drawn = new Set(
-        sceneMaterials(sources).flatMap((material) =>
-          decidedBranches(stage, material)
-            .filter((branch) => branch.isTaken)
-            .map((branch) => branch.key)
-        )
-      );
-      const decided = unshadedMaterials().flatMap((material) => decidedBranches(stage, material));
-      const states = new Map();
-      for (const { key, isTaken } of decided) {
-        const state = drawn.has(key) ? DRAWN : isTaken ? OPEN : NOT_A_MATERIAL_BRANCH;
-        if (states.get(key) !== DRAWN && states.get(key) !== OPEN) states.set(key, state);
-      }
-      return [stage, Object.fromEntries([...states].sort(([a], [b]) => byFileLine(a, b)))];
+      const drawn = drawnBranches(stage, sources);
+      const { takenBy, decided } = materialBranches(stage);
+      const states = [...decided].map((key) => {
+        if (drawn.has(key)) return [key, DRAWN];
+        return [key, takenBy.has(key) ? openState(takenBy.get(key)) : NOT_A_MATERIAL_BRANCH];
+      });
+      return [stage, Object.fromEntries(states.sort(([a], [b]) => byFileLine(a, b)))];
     })
   );
 }

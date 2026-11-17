@@ -102,7 +102,7 @@ function instanceWordsOf(object: THREE.Object3D): Uint32Array {
     );
   if (!(object as THREE.Mesh).isMesh)
     throw new Error(
-      `expected a Mesh for a transpiled spatial shader, got the ${object.type} ${name}: Godot's lines and points are not ported yet`
+      `expected a Mesh for a transpiled spatial shader, got the ${object.type} ${name}: Godot's lines and points are not ported yet (#2001)`
     );
   return instanceWords(object.matrixWorld);
 }

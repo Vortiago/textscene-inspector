@@ -776,6 +776,15 @@ const SPATIAL_CHAPTER = {
       tsl: "the template's locals `vertex`, `position`, `color_interp` and `instance_custom`, three's `vertexIndex`, and an instance index of 0",
     },
     {
+      heading: 'Custom arrays, bones and `Z_CLIP_SCALE` in `vertex()`',
+      rows: (row) =>
+        ['CUSTOM0', 'CUSTOM1', 'CUSTOM2', 'CUSTOM3', 'BONE_INDICES', 'BONE_WEIGHTS', 'Z_CLIP_SCALE']
+          .map((name) => `spatial.vertex.${name}`)
+          .includes(row.id),
+      what: "`CUSTOM0` to `CUSTOM3` are a mesh's custom arrays, each a `vec4` with the missing lanes read as 0 and the last as 1. `BONE_INDICES` and `BONE_WEIGHTS` are the four bones of a vertex and their weights, read with no skeleton as the arrays hold them. `withGodotAttributes` reads the custom arrays from the attributes `custom0` to `custom3`, and the bones from three's `skinIndex` and `skinWeight`. A write to `Z_CLIP_SCALE` pulls the depth towards the camera: the template mixes the clip position's z with its w.",
+      tsl: "the attributes `custom0_attrib` to `custom3_attrib`, `bone_attrib` as 16-bit integers and `weight_attrib`, and the template's local `z_clip_scale`",
+    },
+    {
       heading: 'Matrices',
       rows: (row) =>
         /^spatial\.(vertex|fragment)\.(MODEL_MATRIX|MODEL_NORMAL_MATRIX|VIEW_MATRIX|INV_VIEW_MATRIX|PROJECTION_MATRIX|INV_PROJECTION_MATRIX|MODELVIEW_MATRIX|MODELVIEW_NORMAL_MATRIX|MAIN_CAM_INV_VIEW_MATRIX)$/.test(

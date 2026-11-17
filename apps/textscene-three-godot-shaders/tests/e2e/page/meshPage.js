@@ -17,6 +17,12 @@ const ARRAYS = [
   ['uvs', 'uv', 2],
   ['uv2s', 'uv1', 2],
   ['colors', 'color', 4],
+  ['custom0s', 'custom0', 4],
+  ['custom1s', 'custom1', 4],
+  ['custom2s', 'custom2', 4],
+  ['custom3s', 'custom3', 4],
+  ['bones', 'skinIndex', 4],
+  ['weights', 'skinWeight', 4],
 ];
 
 /** Godot's arrays as three's geometry, in Godot's vertex order, each triangle turned by its index. */

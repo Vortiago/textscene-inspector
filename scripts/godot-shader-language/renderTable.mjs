@@ -190,6 +190,9 @@ export function templateOf(row) {
 const LIT_MODES =
   /^(diffuse_|specular_|shadows_disabled|ambient_light_disabled|shadow_to_opacity|vertex_lighting|debug_shadow_splits)/;
 
+/** A shader that uses these draws its surface as points (`scene_shader_forward_clustered.cpp:417-418`). */
+const POINT_ROWS = /^POINT_(SIZE|COORD)$/;
+
 /** The sky's light, pass and resolution built-ins and modes, which a sky with its lights binds. */
 const SKY_PASS_ROWS = /\.LIGHT\d_|HALF_RES|QUARTER_RES|AT_\w+_PASS|use_(half|quarter)_res_pass/;
 
@@ -201,6 +204,7 @@ function templateOwner(row) {
   switch (shaderType) {
     case 'spatial':
       if (row.id.startsWith('spatial.light.') || LIT_MODES.test(name)) return '#1453';
+      if (POINT_ROWS.test(name)) return '#2001';
       return name === 'sss_mode_skin' ? '#1782' : '#1831';
     case 'canvas_item':
       return /sdf/i.test(name) ? '#1785' : '#686';

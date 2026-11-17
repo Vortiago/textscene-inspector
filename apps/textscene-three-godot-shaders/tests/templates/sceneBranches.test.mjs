@@ -15,7 +15,17 @@ describe('the branches of the unshaded colour pass', () => {
 
   it('gives each branch one of the three states', () => {
     const all = Object.values(states).flatMap((stage) => Object.values(stage));
-    expect(new Set(all)).toEqual(new Set([DRAWN, OPEN, NOT_A_MATERIAL_BRANCH]));
+    const kinds = new Set(all.map((state) => (state.startsWith(`${OPEN}: `) ? OPEN : state)));
+    expect(kinds).toEqual(new Set([DRAWN, OPEN, NOT_A_MATERIAL_BRANCH]));
+  });
+
+  it('names an open issue for each row of an open branch', () => {
+    const open = Object.values(states)
+      .flatMap((stage) => Object.values(stage))
+      .filter((state) => state.startsWith(OPEN));
+    expect(
+      open.filter((state) => !/^open: .*\(#\d+\)$/.test(state) || state.includes('(transpiled)'))
+    ).toEqual([]);
   });
 
   it('marks a branch of no scene open, and the same branch drawn once a scene takes it', () => {
@@ -23,7 +33,7 @@ describe('the branches of the unshaded colour pass', () => {
     const withUv = sceneBranchStates([
       'shader_type spatial;\nrender_mode unshaded;\nvoid fragment() { ALBEDO = vec3(UV, 0.0); }\n',
     ]).vertex;
-    const moved = Object.keys(withUv).filter((key) => plain[key] === OPEN && withUv[key] === DRAWN);
+    const moved = Object.keys(withUv).filter((key) => plain[key].startsWith(OPEN) && withUv[key] === DRAWN);
     expect(moved.length).toBeGreaterThan(0);
   });
 });

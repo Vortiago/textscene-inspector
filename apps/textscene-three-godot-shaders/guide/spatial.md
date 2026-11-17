@@ -589,6 +589,28 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-varying-array-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-varying-array-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-varying-array-computed`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+varying float bands[12];
+
+void vertex() {
+	for (int i = 0; i < 12; i++) { bands[i] = fract(UV.x * float(i + 1)); }
+}
+
+void fragment() {
+	ALBEDO = vec3(bands[int(UV.y * 11.99)], bands[11], bands[int(UV.x * 5.0)]);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-varying-array-computed-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-varying-array-computed-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `spatial-varying-fragment`
 
 Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
@@ -797,7 +819,7 @@ render_mode unshaded;
 varying vec3 shown;
 
 void vertex() {
-	shown = vec3((INV_PROJECTION_MATRIX * vec4(0.3, -0.2, 0.5, 1.0)).x + (INV_PROJECTION_MATRIX * vec4(0.3, -0.2, 0.5, 1.0)).y, (INV_PROJECTION_MATRIX * vec4(0.3, -0.2, 0.5, 1.0)).z, (INV_PROJECTION_MATRIX * vec4(0.3, -0.2, 0.5, 1.0)).w) * 0.3 + 0.5;
+	shown = (INV_PROJECTION_MATRIX * vec4(0.3, -0.2, 0.5, 1.0)).xyw * vec3(0.3, 0.3, 0.03) + vec3(0.5, 0.5, 0.5);
 }
 
 void fragment() {
@@ -823,7 +845,7 @@ void vertex() {
 }
 
 void fragment() {
-	ALBEDO = vec3((INV_PROJECTION_MATRIX * vec4(0.3, -0.2, 0.5, 1.0)).x + (INV_PROJECTION_MATRIX * vec4(0.3, -0.2, 0.5, 1.0)).y, (INV_PROJECTION_MATRIX * vec4(0.3, -0.2, 0.5, 1.0)).z, (INV_PROJECTION_MATRIX * vec4(0.3, -0.2, 0.5, 1.0)).w) * 0.3 + 0.5;
+	ALBEDO = (INV_PROJECTION_MATRIX * vec4(0.3, -0.2, 0.5, 1.0)).xyw * vec3(0.3, 0.3, 0.03) + vec3(0.5, 0.5, 0.5);
 }
 ```
 
@@ -851,7 +873,7 @@ void fragment() {
 
 | Godot | Transpilation on three.js |
 | --- | --- |
-| <img src="showcase/spatial-vertex-viewport-size-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-vertex-viewport-size-three.png" width="256" alt="Transpilation"> |
+| <img src="showcase/spatial-vertex-viewport-size-godot.png" width="384" alt="Godot"> | <img src="showcase/spatial-vertex-viewport-size-three.png" width="384" alt="Transpilation"> |
 
 ## Showcase `spatial-fragment-viewport-size`
 
@@ -873,7 +895,7 @@ void fragment() {
 
 | Godot | Transpilation on three.js |
 | --- | --- |
-| <img src="showcase/spatial-fragment-viewport-size-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-fragment-viewport-size-three.png" width="256" alt="Transpilation"> |
+| <img src="showcase/spatial-fragment-viewport-size-godot.png" width="384" alt="Godot"> | <img src="showcase/spatial-fragment-viewport-size-three.png" width="384" alt="Transpilation"> |
 
 ## Showcase `spatial-vertex-node-position-world`
 
@@ -1061,7 +1083,7 @@ render_mode unshaded;
 varying vec3 shown;
 
 void vertex() {
-	shown = vec3(float(CAMERA_VISIBLE_LAYERS & 0xffu) / 255.0, float(CAMERA_VISIBLE_LAYERS >> 16u) / 15.0, 0.2);
+	shown = vec3(float(CAMERA_VISIBLE_LAYERS & 0xffu) / 510.0, float(CAMERA_VISIBLE_LAYERS >> 16u) / 30.0, 0.2);
 }
 
 void fragment() {
@@ -1087,7 +1109,7 @@ void vertex() {
 }
 
 void fragment() {
-	ALBEDO = vec3(float(CAMERA_VISIBLE_LAYERS & 0xffu) / 255.0, float(CAMERA_VISIBLE_LAYERS >> 16u) / 15.0, 0.2);
+	ALBEDO = vec3(float(CAMERA_VISIBLE_LAYERS & 0xffu) / 510.0, float(CAMERA_VISIBLE_LAYERS >> 16u) / 30.0, 0.2);
 }
 ```
 
@@ -1337,6 +1359,204 @@ void fragment() {
 | --- | --- |
 | <img src="showcase/spatial-vertex-instance-custom-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-vertex-instance-custom-three.png" width="256" alt="Transpilation"> |
 
+## Showcase `spatial-vertex-custom0`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+varying vec3 shown;
+
+void vertex() {
+	shown = CUSTOM0.rgb * CUSTOM0.a;
+}
+
+void fragment() {
+	ALBEDO = shown;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-vertex-custom0-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-vertex-custom0-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-vertex-custom1`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+varying vec3 shown;
+
+void vertex() {
+	shown = CUSTOM1.rgb * CUSTOM1.a;
+}
+
+void fragment() {
+	ALBEDO = shown;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-vertex-custom1-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-vertex-custom1-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-vertex-custom2`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+varying vec3 shown;
+
+void vertex() {
+	shown = CUSTOM2.rgb * CUSTOM2.a;
+}
+
+void fragment() {
+	ALBEDO = shown;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-vertex-custom2-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-vertex-custom2-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-vertex-custom3`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+varying vec3 shown;
+
+void vertex() {
+	shown = CUSTOM3.rgb * CUSTOM3.a;
+}
+
+void fragment() {
+	ALBEDO = shown;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-vertex-custom3-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-vertex-custom3-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-color-missing`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	
+}
+
+void fragment() {
+	ALBEDO = COLOR.rgb * 0.7 + vec3(UV, 0.0) * 0.2;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-color-missing-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-color-missing-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-vertex-custom-missing`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+varying vec3 shown;
+
+void vertex() {
+	shown = CUSTOM0.rgb * 0.5 + CUSTOM0.a * 0.25;
+}
+
+void fragment() {
+	ALBEDO = shown;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-vertex-custom-missing-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-vertex-custom-missing-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-vertex-bone-indices`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+varying vec3 shown;
+
+void vertex() {
+	shown = vec3(BONE_INDICES.xyz % uvec3(8u)) / 8.0 + float(BONE_INDICES.w) * 0.02;
+}
+
+void fragment() {
+	ALBEDO = shown;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-vertex-bone-indices-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-vertex-bone-indices-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-vertex-bone-weights`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+varying vec3 shown;
+
+void vertex() {
+	shown = BONE_WEIGHTS.rgb + BONE_WEIGHTS.a * 0.4;
+}
+
+void fragment() {
+	ALBEDO = shown;
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-vertex-bone-weights-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-vertex-bone-weights-three.png" width="256" alt="Transpilation"> |
+
+## Showcase `spatial-vertex-z-clip-scale`
+
+Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
+
+```glsl
+shader_type spatial;
+render_mode unshaded;
+
+
+void vertex() {
+	Z_CLIP_SCALE = 0.05;
+}
+
+void fragment() {
+	ALBEDO = vec3(0.9, 0.3, 0.1);
+}
+```
+
+| Godot | Transpilation on three.js |
+| --- | --- |
+| <img src="showcase/spatial-vertex-z-clip-scale-godot.png" width="256" alt="Godot"> | <img src="showcase/spatial-vertex-z-clip-scale-three.png" width="256" alt="Transpilation"> |
+
 ## Showcase `spatial-fragment-vertex`
 
 Godot draws this spatial shader on a mesh of a 3D view, with the scene's camera (`tests/e2e/meshScenes.mjs`). A plain three.js page draws the transpiled material on the same mesh with the same values. `pnpm test:shaders:e2e` draws both again and fails on any pixel over 2/255 apart.
@@ -1351,7 +1571,7 @@ void vertex() {
 }
 
 void fragment() {
-	ALBEDO = VERTEX * 0.3 + 0.5;
+	ALBEDO = VERTEX * 0.15 + 0.6;
 }
 ```
 
@@ -1374,7 +1594,7 @@ void vertex() {
 
 void fragment() {
 	LIGHT_VERTEX = VERTEX * 0.5;
-	ALBEDO = LIGHT_VERTEX * 0.6 + 0.5;
+	ALBEDO = LIGHT_VERTEX * 0.3 + 0.6;
 }
 ```
 
@@ -1621,6 +1841,15 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 `VERTEX` is the vertex in model space, which the template turns to view space after `vertex()` returns. A write to `POSITION` replaces the template's clip position. `COLOR` is the vertex colour that `fragment()` reads. `VERTEX_ID` and `INSTANCE_ID` are GL's vertex and instance index. A mesh outside a MultiMesh has an `INSTANCE_CUSTOM` of zero.
 
 The transpiler emits the template's locals `vertex`, `position`, `color_interp` and `instance_custom`, three's `vertexIndex`, and an instance index of 0. Rows: `spatial.vertex.VERTEX`, `spatial.vertex.POSITION`, `spatial.vertex.COLOR`, `spatial.vertex.INSTANCE_ID`, `spatial.vertex.INSTANCE_CUSTOM`, `spatial.vertex.VERTEX_ID`. Godot source: `servers/rendering/shader_types.cpp:89`.
+
+Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
+
+
+## Custom arrays, bones and `Z_CLIP_SCALE` in `vertex()`
+
+`CUSTOM0` to `CUSTOM3` are a mesh's custom arrays, each a `vec4` with the missing lanes read as 0 and the last as 1. `BONE_INDICES` and `BONE_WEIGHTS` are the four bones of a vertex and their weights, read with no skeleton as the arrays hold them. `withGodotAttributes` reads the custom arrays from the attributes `custom0` to `custom3`, and the bones from three's `skinIndex` and `skinWeight`. A write to `Z_CLIP_SCALE` pulls the depth towards the camera: the template mixes the clip position's z with its w.
+
+The transpiler emits the attributes `custom0_attrib` to `custom3_attrib`, `bone_attrib` as 16-bit integers and `weight_attrib`, and the template's local `z_clip_scale`. Rows: `spatial.vertex.Z_CLIP_SCALE`, `spatial.vertex.BONE_INDICES`, `spatial.vertex.BONE_WEIGHTS`, `spatial.vertex.CUSTOM0`, `spatial.vertex.CUSTOM1`, `spatial.vertex.CUSTOM2`, `spatial.vertex.CUSTOM3`. Godot source: `servers/rendering/shader_types.cpp:98`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

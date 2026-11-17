@@ -83,11 +83,17 @@ function spherePoint(ring, segment) {
     uv: [u, v],
     uv2: [v * 0.5, u * 0.75 + 0.1],
     color: [u, v, 1 - u, 1],
+    custom0: [u, v, 1 - v, 0.8],
+    custom1: [v, u * 0.5, 0.3, 0.6],
+    custom2: [0.2, u, v, 0.9],
+    custom3: [1 - u, 0.4, v, 0.7],
+    bones: [ring, segment, ring * segment, 7],
+    weights: [u, v, 1 - u, 0.25],
   };
 }
 
 /** A unit sphere in Godot's arrays, clockwise from outside. Without tangents, Godot makes them up. */
-function sphere(hasTangents) {
+function sphere(hasTangents, hasCustomArrays = false) {
   const corners = [];
   for (let ring = 0; ring < RINGS; ring++)
     for (let segment = 0; segment < SEGMENTS; segment++) {
@@ -106,11 +112,22 @@ function sphere(hasTangents) {
     uvs: each('uv'),
     uv2s: each('uv2'),
     colors: each('color'),
+    ...(hasCustomArrays
+      ? {
+          custom0s: each('custom0'),
+          custom1s: each('custom1'),
+          custom2s: each('custom2'),
+          custom3s: each('custom3'),
+          bones: each('bones'),
+          weights: each('weights'),
+        }
+      : {}),
   };
 }
 
 const SPHERE = sphere(true);
 const SPHERE_NO_TANGENTS = sphere(false);
+const SPHERE_CUSTOM = sphere(true, true);
 
 /** A camera that sees the unit sphere whole, turned so the normals of each side show. */
 const SPHERE_VIEW = { fov: 60, rotation: [-20, 25, 0], position: [1.2, 1.1, 2.4] };
@@ -165,7 +182,7 @@ const TURNED_ROTATION = [20, 35, -10];
 const SPHERE_MOVED = { position: [0.3, -0.2, -0.5], rotation: TURNED_ROTATION, scale: [1.1, 0.8, 1] };
 
 /** An unshaded shader on the moved sphere: `vertex()` and `fragment()` as given, with its rows. */
-const stageScene = (name, { declaration = '', vertex = '', fragment }, rows) => ({
+const stageScene = (name, { declaration = '', vertex = '', fragment }, rows, mesh = SPHERE) => ({
   name,
   ...SIZE,
   source: `shader_type spatial;
@@ -181,17 +198,18 @@ void fragment() {
 }
 `,
   camera: SPHERE_VIEW,
-  mesh: SPHERE,
+  mesh,
   object: SPHERE_MOVED,
   rows: ['spatial render_mode unshaded', 'spatial.fragment.ALBEDO', ...rows],
 });
 
 /** A scene of `value`, a `vec3` that `vertex()` works out and `fragment()` shows through a varying. */
-const vertexValueScene = (name, value, builtIns) =>
+const vertexValueScene = (name, value, builtIns, mesh = SPHERE) =>
   stageScene(
     name,
     { declaration: 'varying vec3 shown;', vertex: `shown = ${value};`, fragment: 'ALBEDO = shown;' },
-    ['varying', ...builtIns.map((builtIn) => `spatial.vertex.${builtIn}`)]
+    ['varying', ...builtIns.map((builtIn) => `spatial.vertex.${builtIn}`)],
+    mesh
   );
 
 /** A scene of `value`, a `vec3` that `fragment()` works out and shows. */
@@ -201,6 +219,9 @@ const fragmentValueScene = (name, value, builtIns) =>
     { fragment: `ALBEDO = ${value};` },
     builtIns.map((builtIn) => `spatial.fragment.${builtIn}`)
   );
+
+/** A viewport wider than high, so a swap of the size's lanes shows. */
+const WIDE = { width: 96, height: 48 };
 
 /** A point off every axis, so each column of a matrix weighs into each lane of a product. */
 const PROBE = 'vec4(0.3, -0.2, 0.5, 1.0)';
@@ -214,7 +235,11 @@ const STAGE_VALUES = [
   ['model-normal-matrix', ['MODEL_NORMAL_MATRIX'], `(MODEL_NORMAL_MATRIX * ${PROBE}.xyz) * 0.5 + 0.5`],
   ['view-matrix', ['VIEW_MATRIX'], `(VIEW_MATRIX * ${PROBE}).xyz * 0.15 + 0.5`],
   ['inv-view-matrix', ['INV_VIEW_MATRIX'], `(INV_VIEW_MATRIX * ${PROBE}).xyz * 0.2 + 0.4`],
-  ['inv-projection-matrix', ['INV_PROJECTION_MATRIX'], clipLanes(`(INV_PROJECTION_MATRIX * ${PROBE})`)],
+  [
+    'inv-projection-matrix',
+    ['INV_PROJECTION_MATRIX'],
+    `(INV_PROJECTION_MATRIX * ${PROBE}).xyw * vec3(0.3, 0.3, 0.03) + vec3(0.5, 0.5, 0.5)`,
+  ],
   ['viewport-size', ['VIEWPORT_SIZE'], 'vec3(VIEWPORT_SIZE / vec2(128.0, 96.0), 0.5)'],
   ['node-position-world', ['NODE_POSITION_WORLD'], 'NODE_POSITION_WORLD * 0.5 + 0.5'],
   ['camera-position-world', ['CAMERA_POSITION_WORLD'], 'CAMERA_POSITION_WORLD * 0.2 + 0.5'],
@@ -223,7 +248,7 @@ const STAGE_VALUES = [
   [
     'camera-visible-layers',
     ['CAMERA_VISIBLE_LAYERS'],
-    'vec3(float(CAMERA_VISIBLE_LAYERS & 0xffu) / 255.0, float(CAMERA_VISIBLE_LAYERS >> 16u) / 15.0, 0.2)',
+    'vec3(float(CAMERA_VISIBLE_LAYERS & 0xffu) / 510.0, float(CAMERA_VISIBLE_LAYERS >> 16u) / 30.0, 0.2)',
   ],
   [
     'views',
@@ -233,10 +258,12 @@ const STAGE_VALUES = [
 ];
 
 /** Each value of `STAGE_VALUES` once in `vertex()` and once in `fragment()`. */
-const STAGE_VALUE_SCENES = STAGE_VALUES.flatMap(([name, builtIns, value]) => [
-  vertexValueScene(`spatial-vertex-${name}`, value, builtIns),
-  fragmentValueScene(`spatial-fragment-${name}`, value, builtIns),
-]);
+const STAGE_VALUE_SCENES = STAGE_VALUES.flatMap(([name, builtIns, value]) =>
+  [
+    vertexValueScene(`spatial-vertex-${name}`, value, builtIns),
+    fragmentValueScene(`spatial-fragment-${name}`, value, builtIns),
+  ].map((scene) => (name === 'viewport-size' ? { ...scene, ...WIDE } : scene))
+);
 
 /** The built-ins only `vertex()` has, and the vertex-stage writes. */
 const VERTEX_SCENES = [
@@ -284,14 +311,54 @@ const VERTEX_SCENES = [
     ['varying', 'spatial.vertex.VERTEX_ID', 'spatial.vertex.INSTANCE_ID']
   ),
   vertexValueScene('spatial-vertex-instance-custom', 'INSTANCE_CUSTOM.rgb + 0.25', ['INSTANCE_CUSTOM']),
+  ...[0, 1, 2, 3].map((custom) =>
+    vertexValueScene(
+      `spatial-vertex-custom${custom}`,
+      `CUSTOM${custom}.rgb * CUSTOM${custom}.a`,
+      [`CUSTOM${custom}`],
+      SPHERE_CUSTOM
+    )
+  ),
+  stageScene(
+    'spatial-color-missing',
+    { fragment: 'ALBEDO = COLOR.rgb * 0.7 + vec3(UV, 0.0) * 0.2;' },
+    ['spatial.fragment.COLOR', 'spatial.fragment.UV'],
+    { positions: SPHERE.positions, normals: SPHERE.normals }
+  ),
+  vertexValueScene('spatial-vertex-custom-missing', 'CUSTOM0.rgb * 0.5 + CUSTOM0.a * 0.25', ['CUSTOM0']),
+  vertexValueScene(
+    'spatial-vertex-bone-indices',
+    'vec3(BONE_INDICES.xyz % uvec3(8u)) / 8.0 + float(BONE_INDICES.w) * 0.02',
+    ['BONE_INDICES'],
+    SPHERE_CUSTOM
+  ),
+  vertexValueScene(
+    'spatial-vertex-bone-weights',
+    'BONE_WEIGHTS.rgb + BONE_WEIGHTS.a * 0.4',
+    ['BONE_WEIGHTS'],
+    SPHERE_CUSTOM
+  ),
+  {
+    ...stageScene(
+      'spatial-vertex-z-clip-scale',
+      { vertex: 'Z_CLIP_SCALE = 0.05;', fragment: 'ALBEDO = vec3(0.9, 0.3, 0.1);' },
+      ['spatial.vertex.Z_CLIP_SCALE']
+    ),
+    others: [
+      {
+        object: { position: [0.1, 0, 0.6], rotation: [0, 0, 0], scale: [0.6, 0.6, 0.6] },
+        source: showing('vec3(0.2, 0.4, 0.8)'),
+      },
+    ],
+  },
 ];
 
 /** The built-ins only `fragment()` has. */
 const FRAGMENT_SCENES = [
-  fragmentValueScene('spatial-fragment-vertex', 'VERTEX * 0.3 + 0.5', ['VERTEX']),
+  fragmentValueScene('spatial-fragment-vertex', 'VERTEX * 0.15 + 0.6', ['VERTEX']),
   stageScene(
     'spatial-fragment-light-vertex',
-    { fragment: 'LIGHT_VERTEX = VERTEX * 0.5;\n\tALBEDO = LIGHT_VERTEX * 0.6 + 0.5;' },
+    { fragment: 'LIGHT_VERTEX = VERTEX * 0.5;\n\tALBEDO = LIGHT_VERTEX * 0.3 + 0.6;' },
     ['spatial.fragment.LIGHT_VERTEX']
   ),
   fragmentValueScene('spatial-fragment-fragcoord', 'vec3(FRAGCOORD.xy / 64.0, FRAGCOORD.z)', ['FRAGCOORD']),
@@ -444,6 +511,13 @@ export const MESH_SCENES = [
     'pair[0] = UV; pair[1] = UV2;',
     'ALBEDO = vec3(pair[0], pair[1].x);',
     ['NODE_TYPE_ARRAY', 'spatial.vertex.UV', 'spatial.vertex.UV2']
+  ),
+  varyingScene(
+    'spatial-varying-array-computed',
+    'varying float bands[12];',
+    'for (int i = 0; i < 12; i++) { bands[i] = fract(UV.x * float(i + 1)); }',
+    'ALBEDO = vec3(bands[int(UV.y * 11.99)], bands[11], bands[int(UV.x * 5.0)]);',
+    ['NODE_TYPE_ARRAY', 'spatial.vertex.UV', 'spatial.fragment.UV']
   ),
   varyingScene(
     'spatial-varying-fragment',
