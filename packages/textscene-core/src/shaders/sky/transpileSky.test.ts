@@ -3,7 +3,7 @@ import type { NodeMaterial, TextureNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { generatedFragmentShader } from '../generatedShader.testkit';
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
-import { transpileSky } from './transpileSky.js';
+import { transpileSky, type SkyDraw } from './transpileSky.js';
 import { DEFAULT_SKY } from './defaultSky.testkit';
 
 function errorOf(source: string): ShadingLanguageError {
@@ -115,5 +115,29 @@ describe('transpileSky', () => {
     const sky = transpileSky('shader_type sky;\nvoid sky() { COLOR = HALF_RES_COLOR.rgb; }', { pass });
     const texture = sky.textures.get('half_res')!.value as THREE.DataTexture;
     expect((texture.image.data as Uint8Array)[0]).toBe(red);
+  });
+
+  it('reads each LIGHTn_COLOR from a slot of its own', () => {
+    const fragments = [0, 1, 2, 3].map((slot) =>
+      generatedFragmentShader(
+        (
+          transpileSky(`shader_type sky;\nvoid sky() { COLOR = LIGHT${slot}_COLOR; }`).mesh
+            .material as NodeMaterial
+        ).fragmentNode!
+      )
+    );
+    expect(new Set(fragments).size).toBe(4);
+  });
+
+  it.each([
+    ['half', 'AT_HALF_RES_PASS'],
+    ['quarter', 'AT_QUARTER_RES_PASS'],
+  ] as const)('draws the %s pass with %s true, and the full pass with it false', (resolution, flag) => {
+    const sky = transpileSky(
+      `shader_type sky;\nrender_mode use_${resolution}_res_pass;\nvoid sky() { COLOR = ${flag} ? vec3(1.0) : vec3(0.0); }`
+    );
+    const fragmentOf = (draw = sky as SkyDraw) =>
+      generatedFragmentShader((draw.mesh.material as NodeMaterial).fragmentNode!);
+    expect(fragmentOf(sky[resolution])).not.toBe(fragmentOf(sky));
   });
 });
