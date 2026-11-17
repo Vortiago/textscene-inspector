@@ -461,4 +461,233 @@ describe('renderReference (real Godot)', { timeout: ENGINE_TEST_TIMEOUT_MS }, ()
     expect(Math.max(...lit.ground)).toBeGreaterThan(3 * Math.max(...unlit.ground));
     expect(Math.max(...unlit.ground)).toBeLessThan(80);
   });
+  /**
+   * `--mode in-game` renders the scene as the root window's own scene, as the game starts it. Each
+   * case writes a project of its own, so the project settings are the ones under test.
+   */
+  describe('--mode in-game', () => {
+    const RED = [255, 0, 0];
+    const GREEN = [0, 255, 0];
+    const BLUE = [0, 0, 255];
+    const CLEAR = [76, 76, 76];
+    const PROJECT_WINDOW = [CANVAS_2D_CAPTURE.width, CANVAS_2D_CAPTURE.height];
+    const CENTRE = PROJECT_WINDOW.map((side) => side / 2);
+
+    /** The sub-resources of a text scene come first, then its root node and the children. */
+    const sceneOf = ({ header = '', resources = '', root = 'Node3D', nodes = '' }) =>
+      `[gd_scene format=3]\n${header}\n${resources}\n[node name="Root" type="${root}"]\n${nodes}\n`;
+
+    /** A 2-unit box that no light or environment moves the colour of. */
+    const unshadedBox = (name, x, [r, g, b]) => ({
+      resources: `[sub_resource type="StandardMaterial3D" id="${name}Material"]
+shading_mode = 0
+albedo_color = Color(${r / 255}, ${g / 255}, ${b / 255}, 1)
+
+[sub_resource type="BoxMesh" id="${name}Mesh"]
+material = SubResource("${name}Material")
+size = Vector3(2, 2, 2)
+`,
+      nodes: `[node name="${name}" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${x}, 0, 0)
+mesh = SubResource("${name}Mesh")
+`,
+    });
+
+    /** A camera 6 units in front of the box at the same x, looking down -Z. */
+    const cameraAt = (name, x, isCurrent) => `[node name="${name}" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${x}, 0, 6)
+current = ${isCurrent}
+`;
+
+    const boxScene = (boxes, nodes = '') =>
+      sceneOf({
+        resources: boxes.map((box) => box.resources).join('\n'),
+        nodes: boxes.map((box) => box.nodes).join('\n') + nodes,
+      });
+
+    /** Renders `main.tscn` of a project that holds `files`, and reads pixels of the image. */
+    async function renderProject(files, { mode = 'in-game', ...options } = {}) {
+      const dir = await scratchDir();
+      for (const [name, text] of Object.entries(files)) await writeFile(join(dir, name), text);
+      const out = join(dir, 'shot.png');
+      const { mode: reported } = await renderReference({
+        scene: join(dir, 'main.tscn'),
+        out,
+        mode,
+        ...options,
+      });
+      const buffer = await readFile(out);
+      const png = PNG.sync.read(buffer);
+      const at = (point) => probePixels(buffer, [point])[0].rgb;
+      return { png, at, reported };
+    }
+
+    const ambientRedEnvironment = `[gd_resource type="Environment" format=3]
+
+[resource]
+background_mode = 1
+background_color = Color(0, 0, 0, 1)
+ambient_light_source = 2
+ambient_light_color = Color(1, 0, 0, 1)
+`;
+
+    it('keeps the default environment of the project, which --no-previews drops', async () => {
+      const files = {
+        'project.godot': `[rendering]
+environment/defaults/default_environment="res://environment.tres"
+`,
+        'environment.tres': ambientRedEnvironment,
+        'main.tscn': sceneOf({
+          resources: '[sub_resource type="BoxMesh" id="1"]\nsize = Vector3(2, 2, 2)\n',
+          nodes: `${cameraAt('Camera', 0, true)}
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("1")
+`,
+        }),
+      };
+      const game = await renderProject(files);
+      const runtime = await renderProject(files, { mode: '3d', previews: false });
+
+      // A white box lit only by a red ambient colour comes back red. Without the environment the
+      // engine's own grey ambient lights it, with no hue.
+      expect(game.reported).toBe('in-game');
+      expect(game.at(CENTRE)[0]).toBeGreaterThan(100);
+      expect(game.at(CENTRE)[1]).toBeLessThan(10);
+      const [r, g, b] = runtime.at(CENTRE);
+      expect(r === g && g === b).toBe(true);
+    });
+
+    describe('looks through the camera the scene makes current', () => {
+      const boxes = [unshadedBox('Left', 0, RED), unshadedBox('Right', 10, GREEN)];
+      const rendered = async (firstIsCurrent, secondIsCurrent) =>
+        (
+          await renderProject({
+            'main.tscn': boxScene(
+              boxes,
+              `${cameraAt('First', 0, firstIsCurrent)}\n${cameraAt('Second', 10, secondIsCurrent)}`
+            ),
+          })
+        ).at(CENTRE);
+
+      it('picks the first Camera3D when none is current', async () => {
+        expect(await rendered(false, false)).toEqual(RED);
+      });
+
+      it('picks the last current Camera3D when two are', async () => {
+        expect(await rendered(true, true)).toEqual(GREEN);
+      });
+    });
+
+    it('draws only the clear colour of the project when the scene has no Camera3D', async () => {
+      const { png } = await renderProject({ 'main.tscn': boxScene([unshadedBox('Box', 0, RED)]) });
+      const stray = [];
+      for (let i = 0; i < png.data.length; i += 4) {
+        if (png.data[i] !== CLEAR[0] || png.data[i + 1] !== CLEAR[1] || png.data[i + 2] !== CLEAR[2]) {
+          stray.push(i / 4);
+        }
+      }
+      expect(stray).toEqual([]);
+    });
+
+    it('draws the 3D world and the canvas in one image', async () => {
+      const canvas = `
+[node name="Hud" type="CanvasLayer" parent="."]
+
+[node name="Panel" type="ColorRect" parent="Hud"]
+offset_right = 100.0
+offset_bottom = 100.0
+color = Color(0, 0, 1, 1)
+`;
+      const { at } = await renderProject({
+        'main.tscn': boxScene([unshadedBox('Box', 0, RED)], `${cameraAt('Camera', 0, true)}${canvas}`),
+      });
+      expect(at(CENTRE)).toEqual(RED);
+      expect(at([50, 50])).toEqual(BLUE);
+      expect(at([PROJECT_WINDOW[0] - 8, PROJECT_WINDOW[1] - 8])).toEqual(CLEAR);
+    });
+
+    describe('runs no script', () => {
+      const files = {
+        'project.godot': '[autoload]\nBlue="*res://autoload.gd"\n',
+        // An autoload adds a blue square, and a scene script turns a red panel green.
+        'autoload.gd': `extends Node
+
+func _ready() -> void:
+	var square := ColorRect.new()
+	square.color = Color(0, 0, 1)
+	square.position = Vector2(200, 200)
+	square.size = Vector2(100, 100)
+	get_tree().root.add_child.call_deferred(square)
+`,
+        'scene.gd': `extends Control
+
+func _ready() -> void:
+	$Panel.color = Color(0, 1, 0)
+`,
+        'main.tscn': sceneOf({
+          header: '[ext_resource type="Script" path="res://scene.gd" id="1"]',
+          root: 'Control',
+          nodes: `script = ExtResource("1")
+
+[node name="Panel" type="ColorRect" parent="."]
+offset_right = 100.0
+offset_bottom = 100.0
+color = Color(1, 0, 0, 1)
+`,
+        }),
+      };
+      const PANEL = [50, 50];
+      const SQUARE = [250, 250];
+
+      it('draws the authored colour and instances no autoload', async () => {
+        const { at } = await renderProject(files);
+        expect(at(PANEL)).toEqual(RED);
+        expect(at(SQUARE)).toEqual(CLEAR);
+      });
+
+      it('differs from a run that keeps the scripts, which proves the scene would change them', async () => {
+        const { at } = await renderProject(files, { mode: '2d-root', previews: false });
+        expect(at(PANEL)).toEqual(GREEN);
+        expect(at(SQUARE)).toEqual(BLUE);
+      });
+    });
+
+    describe('renders the root window at the size the project sets', () => {
+      const display = (lines) => `[display]\n${lines.join('\n')}\n`;
+      const main = boxScene([unshadedBox('Box', 0, RED)], cameraAt('Camera', 0, true));
+
+      it('is 1152 x 648 for a scene with no project.godot', async () => {
+        const { png } = await renderProject({ 'main.tscn': main });
+        expect([png.width, png.height]).toEqual(PROJECT_WINDOW);
+      });
+
+      it('is the window override, with the stretch mode of the project in effect', async () => {
+        const { png } = await renderProject({
+          'project.godot': display([
+            'window/size/viewport_width=400',
+            'window/size/viewport_height=300',
+            'window/size/window_width_override=800',
+            'window/size/window_height_override=600',
+            'window/stretch/mode="canvas_items"',
+          ]),
+          'main.tscn': main,
+        });
+        expect([png.width, png.height]).toEqual([800, 600]);
+      });
+
+      it('is the viewport size under the viewport stretch mode, which scales it at the blit', async () => {
+        const { png } = await renderProject({
+          'project.godot': display([
+            'window/size/viewport_width=400',
+            'window/size/viewport_height=300',
+            'window/size/window_width_override=800',
+            'window/size/window_height_override=600',
+            'window/stretch/mode="viewport"',
+          ]),
+          'main.tscn': main,
+        });
+        expect([png.width, png.height]).toEqual([400, 300]);
+      });
+    });
+  });
 });

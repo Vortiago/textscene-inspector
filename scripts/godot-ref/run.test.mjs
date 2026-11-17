@@ -48,6 +48,7 @@ import {
   ROOT_ONLY_VIEWPORT_PROPERTIES,
   rootOnlyDriftMessage,
   harnessWarnings,
+  projectWindowBoundsFromIni,
 } from './run.mjs';
 import { resolveProjectRoot } from './projectRoot.mjs';
 
@@ -209,7 +210,8 @@ describe('bootstrapScript — a non-tool script never runs under previews', () =
 
   it('leaves scripts alone under --no-previews, which asks for runtime semantics', () => {
     const gd = bootstrap({ previews: false });
-    expect(gd).toMatch(/if PREVIEWS:\n\t\t_strip_runtime_scripts\(target\)/);
+    expect(gd).toMatch(/if PREVIEWS or IN_GAME:\n\t\t_strip_runtime_scripts\(target\)/);
+    expect(gd).toMatch(/const IN_GAME := false/);
     expect(gd).toMatch(/const PREVIEWS := false/);
   });
 });
@@ -265,6 +267,33 @@ describe('parseArgs', () => {
   it('takes 2d-root, the mode that renders the scene as the root window', () => {
     expect(parseArgs(['a.tscn', '--mode', '2d-root']).mode).toBe('2d-root');
     expect(parseArgs(['a.tscn', '--mode', '2D-ROOT']).mode).toBe('2d-root');
+  });
+
+  it('takes in-game, the mode that renders the scene as the game starts it', () => {
+    expect(parseArgs(['a.tscn', '--mode', 'in-game']).mode).toBe('in-game');
+    expect(parseArgs(['a.tscn', '--mode', 'In-Game', '--debug-collisions']).debugCollisions).toBe(true);
+  });
+
+  it.each([
+    ['--scene-camera', ['--scene-camera']],
+    ['--scene-camera', ['--scene-camera', 'Level/Camera']],
+    ['--no-previews', ['--no-previews']],
+    ['--camera', ['--camera', '0,1,4']],
+    ['--look-at', ['--look-at', '0,0,0']],
+    ['--frame', ['--frame']],
+    ['--fov', ['--fov', '60']],
+    ['--emit-bounds', ['--emit-bounds']],
+    ['--width', ['--width', '800']],
+    ['--height', ['--height', '600']],
+  ])('refuses --mode in-game with %s, which the mode would ignore', (flag, given) => {
+    const expected = new RegExp(`--mode in-game cannot take ${flag}: `);
+    expect(() => parseArgs(['a.tscn', '--mode', 'in-game', ...given])).toThrow(expected);
+    // Order must not matter: the flag may come first.
+    expect(() => parseArgs(['a.tscn', ...given, '--mode', 'in-game'])).toThrow(expected);
+  });
+
+  it('takes the flags in-game ignores with every other mode', () => {
+    expect(() => parseArgs(['a.tscn', '--mode', '3d', '--scene-camera', '--no-previews'])).not.toThrow();
   });
 });
 
@@ -369,6 +398,43 @@ describe('projectConfig', () => {
     const ini = projectConfig(windowOverrides, { width: 400, height: 300 });
     expect(ini).toMatch(/window_width_override=1920/);
     expect(ini).toMatch(/window\/size\/mode=3/);
+  });
+
+  describe('for the game', () => {
+    const gameIni = projectConfig(`${withDefaultEnv}\n${windowOverrides}`, {
+      width: 1152,
+      height: 648,
+      inGame: true,
+    });
+
+    it('keeps the default environment, which the game starts with', () => {
+      expect(gameIni).toMatch(/default_environment="res:\/\/default_env.tres"/);
+    });
+
+    it('keeps the window size, and drops only the window mode, whose screen is unknown', () => {
+      expect(gameIni).toMatch(/window_width_override=1920/);
+      expect(gameIni).toMatch(/window_height_override=1080/);
+      expect(gameIni).not.toMatch(/window\/size\/mode=/);
+    });
+  });
+});
+
+describe('projectWindowBoundsFromIni', () => {
+  it('is the viewport size when the project sets no override', () => {
+    expect(projectWindowBoundsFromIni(null)).toEqual({ width: 1152, height: 648 });
+    expect(
+      projectWindowBoundsFromIni('window/size/viewport_width=400\nwindow/size/viewport_height=300')
+    ).toEqual({
+      width: 400,
+      height: 300,
+    });
+  });
+
+  it('is the larger of the viewport and the override on each axis, so a screen this size holds the window', () => {
+    const ini = ['window/size/window_width_override=1920', 'window/size/window_height_override=200'].join(
+      '\n'
+    );
+    expect(projectWindowBoundsFromIni(ini)).toEqual({ width: 1920, height: 648 });
   });
 });
 
@@ -505,6 +571,37 @@ describe('--mode 2d-root renders the scene as the root window', () => {
   });
 });
 
+describe('--mode in-game renders the scene as the game starts it', () => {
+  const script = bootstrap({ mode: 'in-game' });
+
+  it('adds the scene to the root window, which the game does, and saves the root capture', () => {
+    expect(script).toContain('get_tree().root.add_child(target)');
+    expect(script).toContain('_save_capture(get_tree().root)');
+  });
+
+  it('adds no camera and no preview lighting, and hides no canvas', () => {
+    const body = script.slice(script.indexOf('func _render_in_game'), script.indexOf('func _save_capture'));
+    expect(body).not.toMatch(
+      /_place_camera|_apply_preview_lighting|_hide_2d|_disable_2d_cameras|set_default_clear_color/
+    );
+  });
+
+  it('removes every script, a tool script too, and pauses the tree so the time stays 0', () => {
+    expect(script).toContain('const IN_GAME := true');
+    expect(script).toContain('script != null and (IN_GAME or not script.is_tool())');
+    expect(script).toContain('if PREVIEWS or IN_GAME:\n\t\tget_tree().paused = true');
+  });
+
+  it('stops no player after ready, which is the freeze the editor view runs', () => {
+    expect(script).toContain('const PREVIEWS := false');
+    expect(bootstrap({ mode: '3d' })).toContain('const PREVIEWS := true');
+  });
+
+  it('reports itself as in-game, since neither 2D nor 3D describes the image', () => {
+    expect(script).toContain('return "in-game"');
+  });
+});
+
 describe('bootstrapScript — the capture of an HDR viewport', () => {
   it('converts the float image to sRGB before it saves, and the settle comparison reads the raw texels', () => {
     const script = bootstrap();
@@ -574,12 +671,12 @@ describe('physics pause follows the previews flag', () => {
     expect(script(true)).toContain('child.process_mode = Node.PROCESS_MODE_PAUSABLE');
   });
 
-  it('still emits the pause behind the PREVIEWS gate rather than hard-coding it', () => {
+  it('still emits the pause behind the PREVIEWS and IN_GAME gate rather than hard-coding it', () => {
     // A copy of the line outside the `if` would pause a --no-previews render too.
     const lines = script(false).split('\n');
     const pauseLine = lines.findIndex((l) => l.includes('get_tree().paused = true'));
     expect(pauseLine).toBeGreaterThan(-1);
-    expect(lines[pauseLine - 1].trim()).toBe('if PREVIEWS:');
+    expect(lines[pauseLine - 1].trim()).toBe('if PREVIEWS or IN_GAME:');
     expect(script(false)).toContain('const PREVIEWS := false');
   });
 });

@@ -101,10 +101,29 @@ export const EDITOR_CAMERA_DISTANCE = 4;
 export const FRAME_MARGIN = 1.6;
 
 /**
- * The values `--mode` accepts. `2d-root` comes last, so the rejection message keeps its
- * `auto|2d|3d|…` prefix.
+ * The values `--mode` accepts. The two arms that render the root window come last, so the
+ * rejection message keeps its `auto|2d|3d|…` prefix.
  */
-export const RENDER_MODES = ['auto', '2d', '3d', '2d-root'];
+export const RENDER_MODES = ['auto', '2d', '3d', '2d-root', 'in-game'];
+
+/**
+ * Renders the scene as the root window's own scene with every script removed: the game at its
+ * start, through the cameras and the environment the project and the scene set.
+ */
+export const IN_GAME_MODE = 'in-game';
+
+/** Why each flag has no meaning in `in-game`, where the game decides what it names. */
+const IN_GAME_IGNORED_FLAGS = {
+  '--scene-camera': 'the game looks through the camera the scene makes current',
+  '--no-previews': 'the mode never adds the editor preview lighting',
+  '--camera': 'the mode adds no camera',
+  '--look-at': 'the mode adds no camera',
+  '--frame': 'the mode adds no camera',
+  '--fov': 'the mode adds no camera',
+  '--emit-bounds': 'the mode places no camera from bounds',
+  '--width': 'the window is the size the project sets',
+  '--height': 'the window is the size the project sets',
+};
 
 /**
  * Driver to the rendering method that offers it (main.cpp:2547-2565). A one-step gap on a
@@ -391,8 +410,10 @@ export function parseArgs(argv) {
     debugCollisions: false,
   };
 
+  const given = new Set();
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
+    given.add(arg);
     switch (arg) {
       case '--out':
         args.out = argv[++i];
@@ -473,8 +494,15 @@ export function parseArgs(argv) {
         args.scene = arg;
     }
   }
+  if (args.mode === IN_GAME_MODE) refuseFlagsInGameIgnores(given);
 
   return args;
+}
+
+function refuseFlagsInGameIgnores(given) {
+  for (const [flag, reason] of Object.entries(IN_GAME_IGNORED_FLAGS)) {
+    if (given.has(flag)) throw new Error(`--mode ${IN_GAME_MODE} cannot take ${flag}: ${reason}.`);
+  }
 }
 
 /**
@@ -496,6 +524,24 @@ export function projectViewportSizeFromIni(sourceIni) {
   };
 }
 
+/**
+ * The larger of the viewport and the window override on each axis. An X screen this size holds the
+ * window whichever way the engine reads a half-set override.
+ */
+export function projectWindowBoundsFromIni(sourceIni) {
+  const viewport = projectViewportSizeFromIni(sourceIni);
+  const override = (key) => {
+    const match = new RegExp(`^\\s*window/size/window_${key}_override\\s*=\\s*(\\S+)`, 'm').exec(
+      sourceIni ?? ''
+    );
+    return match ? Math.round(Number(match[1])) || 0 : 0;
+  };
+  return {
+    width: Math.max(viewport.width, override('width')),
+    height: Math.max(viewport.height, override('height')),
+  };
+}
+
 /** Removes a whole `[name]` section of a Godot ConfigFile, whose keys no pattern can match. */
 function dropSection(ini, name) {
   const lines = ini.split('\n');
@@ -509,16 +555,18 @@ function dropSection(ini, name) {
   return out.join('\n');
 }
 
+const WINDOW_MODE_SETTING = /^window\/size\/mode\s*=/;
+
 /**
  * The generated `project.godot`. It carries the source project's settings forward (msaa and
- * shadow quality change the picture) minus the default environment and the 3D frame size.
+ * shadow quality change the picture) minus the default environment and the 3D frame size. `inGame`
+ * keeps the environment and the window settings of the project.
  */
-export function projectConfig(sourceIni, { width, height, pinWindowToViewport = false, runScripts = true }) {
+export function projectConfig(
+  sourceIni,
+  { width, height, pinWindowToViewport = false, runScripts = true, inGame = false }
+) {
   const drop = [
-    // A project default environment would light the scene through a channel the previewer does
-    // not have, and bias every comparison.
-    /^environment\/defaults\/default_environment\s*=/,
-    /^rendering\/environment\/defaults\/default_environment\s*=/,
     /^window\/size\/viewport_width\s*=/,
     /^window\/size\/viewport_height\s*=/,
     /^run\/main_scene\s*=/,
@@ -531,6 +579,18 @@ export function projectConfig(sourceIni, { width, height, pinWindowToViewport = 
     /^import\/use_multiple_threads\s*=/,
   ];
 
+  // A project default environment would light the scene through a channel the previewer does not
+  // have, and bias every comparison. The game starts with it.
+  if (!inGame) {
+    drop.push(
+      /^environment\/defaults\/default_environment\s*=/,
+      /^rendering\/environment\/defaults\/default_environment\s*=/
+    );
+  }
+
+  // The monitor a fullscreen or maximised window fills is unknown here, so only the sizes stay.
+  if (inGame) drop.push(WINDOW_MODE_SETTING);
+
   // A window override or a fullscreen `window/size/mode` makes the stretch transform scale the
   // picture, so the root-window arm would draw a rectangle the previewer never draws. Only that
   // arm drops them: a blanket drop would move every existing 3D reference.
@@ -538,7 +598,7 @@ export function projectConfig(sourceIni, { width, height, pinWindowToViewport = 
     drop.push(
       /^window\/size\/window_width_override\s*=/,
       /^window\/size\/window_height_override\s*=/,
-      /^window\/size\/mode\s*=/
+      WINDOW_MODE_SETTING
     );
   }
 
@@ -725,10 +785,13 @@ export function bootstrapScript({
     );
   }
   const rootWindow = mode === ROOT_WINDOW_MODE;
+  const inGame = mode === IN_GAME_MODE;
   return `extends Node3D
 
 const SCENE_PATH := ${gdString(scenePath)}
-const PREVIEWS := ${previews ? 'true' : 'false'}
+# The editor's semantics: preview lighting, frozen logic, no 2D over 3D. The game has none of them.
+const PREVIEWS := ${previews && !inGame ? 'true' : 'false'}
+const IN_GAME := ${inGame ? 'true' : 'false'}
 const OUT := ${gdString(out)}
 const BOUNDS_OUT := ${gdString(boundsOut ?? '')}
 const MODE_OUT := ${gdString(modeOut)}
@@ -779,27 +842,37 @@ func _ready() -> void:
 	# authored pose is the whole point. --no-previews asks for true RUNTIME
 	# semantics, and a runtime that never steps physics is not a runtime — a
 	# body is supposed to fall there.
-	if PREVIEWS:
+	# The game is paused too: time stays 0, so a player that starts on ready shows its first frame.
+	if PREVIEWS or IN_GAME:
 		get_tree().paused = true
 	_write_renderer()
 	var target: Node = load(SCENE_PATH).instantiate()
 	# Before ANY add_child: entering the tree is what fires _ready.
-	if PREVIEWS:
+	if PREVIEWS or IN_GAME:
 		_strip_runtime_scripts(target)
-	var two_d := MODE == "2d" or MODE == "${ROOT_WINDOW_MODE}" or (MODE == "auto" and _is_canvas_scene(target))
+	var kind := _render_kind(target)
 	# Written before the render, so a run that dies mid-frame still says which
 	# path it took — the caller pairs our image with the previewer's on it. Both
 	# 2D arms draw the SAME rectangle and so report the same "2d": which viewport
 	# composed it is the harness's business, not the pairing's.
-	_write_mode(two_d)
-	if two_d:
-		if ROOT_WINDOW:
-			await _render_2d_root(target)
-		else:
-			await _render_2d(target)
-	else:
-		await _render_3d(target)
+	_write_mode(kind)
+	match kind:
+		"in-game":
+			await _render_in_game(target)
+		"2d":
+			if ROOT_WINDOW:
+				await _render_2d_root(target)
+			else:
+				await _render_2d(target)
+		_:
+			await _render_3d(target)
 	get_tree().quit(1 if _refused else 0)
+
+func _render_kind(target: Node) -> String:
+	if IN_GAME:
+		return "in-game"
+	var two_d := MODE == "2d" or MODE == "${ROOT_WINDOW_MODE}" or (MODE == "auto" and _is_canvas_scene(target))
+	return "2d" if two_d else "3d"
 
 # Godot's CanvasItemEditor claims a CanvasItem root, which is the rule
 # workspaceForScene.ts mirrors — plus CanvasLayer, which is a plain Node that
@@ -823,6 +896,16 @@ func _render_3d(target: Node) -> void:
 	await _converge(get_viewport())
 	_save_capture(get_viewport())
 	_write_bounds(target)
+
+# The root window's own scene, as SceneTree adds a main scene, so the project's clear colour, default
+# environment, window size and stretch apply and the scene's cameras decide the view. The root
+# rejects an add_child while it adds this node (node.cpp:1709), so one frame passes first.
+func _render_in_game(target: Node) -> void:
+	await get_tree().process_frame
+	get_tree().root.add_child(target)
+	_advance_particles(target)
+	await _converge(get_tree().root)
+	_save_capture(get_tree().root)
 
 func _save_capture(source: Viewport) -> void:
 	_viewport_image(source).save_png(OUT)
@@ -1014,9 +1097,10 @@ func _disable_2d_cameras(node: Node) -> void:
 #
 # Gated on PREVIEWS with the rest of the editor-vs-runtime axis: --no-previews
 # asks for a running game, and a game runs its scripts.
+# The game view runs no script, so IN_GAME removes a @tool script too.
 func _strip_runtime_scripts(node: Node) -> void:
 	var script: Script = node.get_script()
-	if script != null and not script.is_tool():
+	if script != null and (IN_GAME or not script.is_tool()):
 		node.set_script(null)
 	for child in node.get_children():
 		_strip_runtime_scripts(child)
@@ -1133,7 +1217,7 @@ func _await_reflection_probe_captures(source: Viewport) -> void:
 # pending work is in render-wait.md.
 func _await_rendered(source: Viewport) -> void:
 	var period := FOG_JITTER_CYCLE_FRAMES if _has_fog_history(source) else 1
-	if not PREVIEWS and period == 1:
+	if not (PREVIEWS or IN_GAME) and period == 1:
 		return
 	Engine.time_scale = 0.0
 	var pictures: Array[PackedByteArray] = []
@@ -1222,13 +1306,13 @@ func _write_renderer() -> void:
 	}))
 	file.close()
 
-func _write_mode(two_d: bool) -> void:
+func _write_mode(kind: String) -> void:
 	if MODE_OUT == "":
 		return
 	var file := FileAccess.open(MODE_OUT, FileAccess.WRITE)
 	if file == null:
 		return
-	file.store_string("2d" if two_d else "3d")
+	file.store_string(kind)
 	file.close()
 
 # The scene's world-space AABB — a true read of the FINAL scene bounds, but
@@ -1442,8 +1526,8 @@ export const SPAWN_BACKSTOP_MS = (ENGINE_TIMEOUT_S + ENGINE_KILL_AFTER_S + 30) *
  * driver contracts without an engine, an X server or a 300-second wait.
  */
 export function godotSpawnPlan(args, { display, screen = null, groupTimeout = true }) {
-  // Only the root-window arm sizes the X screen: its capture is the window, which a smaller
-  // default screen would clip. Every other render keeps xvfb-run's default screen.
+  // Only the root-window arm and the game size the X screen: their capture is the window, which a
+  // smaller default screen would clip. Every other render keeps xvfb-run's default screen.
   const screenArgs = screen ? ['-s', `-screen 0 ${screen.width}x${screen.height}x24`] : [];
   const engine = display ? ['xvfb-run', '-a', ...screenArgs, 'godot', ...args] : ['godot', ...args];
   // `spawnSync` signals only the `xvfb-run` wrapper, and the orphaned `godot` and `Xvfb` render
@@ -1613,23 +1697,27 @@ async function renderInto(
   const driftOut = join(work, '__ref_root_only.json');
   const rendererOut = join(work, '__ref_renderer.json');
   const rootWindow = mode === ROOT_WINDOW_MODE;
+  const inGame = mode === IN_GAME_MODE;
 
   const sourceIni = existsSync(join(root, 'project.godot'))
     ? await readFile(join(root, 'project.godot'), 'utf8')
     : null;
   const canvas2DSize = projectViewportSizeFromIni(sourceIni);
+  const windowBounds = projectWindowBoundsFromIni(sourceIni);
   const stage = async () => {
     await rm(work, { recursive: true, force: true });
     await cp(root, work, { recursive: true, dereference: true });
-    // The root-window arm captures the window, so the window is the project-viewport rect. Every
-    // other arm keeps the 3D frame override.
+    // The root-window arm captures the window, so the window is the project-viewport rect. The game
+    // keeps the project's own window. Every other arm keeps the 3D frame override.
     await writeFile(
       join(work, 'project.godot'),
       projectConfig(sourceIni, {
         ...(rootWindow ? { ...canvas2DSize, pinWindowToViewport: true } : { width, height }),
+        ...(inGame ? { ...canvas2DSize, inGame: true } : {}),
         // Only a game instantiates an autoload (`main/main.cpp:4397`'s
         // `if (!project_manager && !editor)`), so unlike a node script it has no `@tool` exception.
-        runScripts: !previews,
+        // The game view runs none.
+        runScripts: !previews && !inGame,
       })
     );
 
@@ -1672,7 +1760,7 @@ async function renderInto(
 
   const render = runGodot(renderArgv(work, { renderingDriver, debugCollisions }), {
     display: true,
-    screen: rootWindow ? canvas2DSize : null,
+    screen: rootWindow ? canvas2DSize : inGame ? windowBounds : null,
   });
   if (!existsSync(resolve(out))) {
     // A bare "produced no image" with an empty stderr would hide the spawn error, and an expiry's
@@ -1741,6 +1829,12 @@ async function main() {
     console.error(
       `       [--mode ${ROOT_WINDOW_MODE}]  (same rectangle, rendered AS the root window, for the ` +
         'viewport settings Godot applies to the root and to nothing else)'
+    );
+    console.error(
+      `       [--mode ${IN_GAME_MODE}]  (the scene as the game starts it: the project's window, ` +
+        "environment and clear colour, the scene's own cameras, every script and autoload removed; " +
+        'takes none of --scene-camera, --no-previews, --camera, --look-at, --frame, --fov, ' +
+        '--emit-bounds, --width, --height)'
     );
     console.error(
       '       [--particles seconds]  (advances every CPUParticles emitter that much ' +

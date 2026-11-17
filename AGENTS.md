@@ -100,6 +100,11 @@ and prints exact pixels. It is a tool, not a gate.
   `pnpm ref:diff <scenes> --collisions` and `pnpm ref:ours <scene> --collisions` show them on both sides.
 - `--mode 2d-root` measures a root-only setting. Add a new one to
   `ROOT_ONLY_VIEWPORT_PROPERTIES` in `scripts/godot-ref/run.mjs`.
+- `--mode in-game` renders the scene as the game starts it: the scene is the root window's own scene, with the
+  project's window size, stretch, default environment and clear colour, and the scene's own cameras. It adds
+  no camera and no preview lighting, removes every script and autoload, and keeps the time at 0. It refuses
+  `--scene-camera`, `--no-previews`, `--camera`, `--look-at`, `--frame`, `--fov`, `--emit-bounds`, `--width`
+  and `--height`. `pnpm ref:diff --mode in-game` waits for the game view of the package.
 - A 1/255 gap on a channel whose value × 255 is fractional is not a parity defect. The driver
   rounds it: Godot clears `Color(0.3)` (76.5) to 76 under vulkan and to 77 under opengl3
   (measured, `run.engine.test.mjs`). Compare `--rendering-driver opengl3` with the default vulkan before

@@ -13,7 +13,7 @@ import { PNG } from 'pngjs';
 import { tableLines } from '../compare-docs/markdownTable.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { compareImages } from '../visual/imageDelta.mjs';
-import { renderReference } from './run.mjs';
+import { IN_GAME_MODE, renderReference } from './run.mjs';
 import { captureOurs } from './capture-ours.mjs';
 import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
 
@@ -29,7 +29,7 @@ const FLATTENED_ROOTS = ['fixtures', ...FLATTENED_CORPUS_ROOTS].map((root) => `$
 
 function usage() {
   console.error(
-    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--collisions] [--table <file.md>]\n' +
+    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--collisions] [--mode in-game] [--table <file.md>]\n' +
       '\n' +
       '  <fixture.tscn>   fixture filename as listed in apps/textscene-web/src/fixtures.ts,\n' +
       '                   or a path to a .tscn under scenes/\n' +
@@ -38,12 +38,21 @@ function usage() {
       '  --frame          fit-the-bounds camera on BOTH sides instead of the editor orbit\n' +
       '  --keep           keep the per-side PNGs, not just the diff\n' +
       '  --collisions     show collision shapes on both sides (Visible Collision Shapes)\n' +
+      '  --mode in-game   measure the scene as the game starts it (our side has no game view yet)\n' +
       '  --table <file>   also write the results as a Markdown table, one row per scene'
   );
 }
 
 export function parseArgs(argv) {
-  const args = { fixtures: [], maxMean: null, frame: false, keep: false, collisions: false, table: null };
+  const args = {
+    fixtures: [],
+    maxMean: null,
+    frame: false,
+    keep: false,
+    collisions: false,
+    mode: null,
+    table: null,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--max-mean') {
@@ -55,6 +64,11 @@ export function parseArgs(argv) {
       args.table = argv[++i];
       if (!args.table || args.table.startsWith('--')) {
         throw new Error(`--table needs a file path, got "${argv[i]}"`);
+      }
+    } else if (arg === '--mode') {
+      args.mode = argv[++i];
+      if (args.mode !== IN_GAME_MODE) {
+        throw new Error(`--mode takes ${IN_GAME_MODE}, the only mode chosen by hand here, got "${argv[i]}"`);
       }
     } else if (arg === '--frame') args.frame = true;
     else if (arg === '--keep') args.keep = true;
@@ -245,12 +259,21 @@ function residueCells(result) {
   return [changedPixels, maxChannelDelta, meanChannelError.toFixed(3), over.pixels, place];
 }
 
+/** The refusal for `--mode in-game`: the reference side renders it and our side cannot yet. */
+export function inGameUnavailableMessage() {
+  return (
+    `--mode ${IN_GAME_MODE} pairs the Godot game start with our game view, and the package has no ` +
+    'game view yet. Issue #1974 adds it. `pnpm ref:godot --mode in-game` renders the Godot side now.'
+  );
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.fixtures.length === 0) {
     usage();
     process.exit(2);
   }
+  if (args.mode === IN_GAME_MODE) throw new Error(inGameUnavailableMessage());
   await mkdir(OUT_DIR, { recursive: true });
   // Before the sweep: a table that cannot be written must not cost the renders of every scene.
   if (args.table) await mkdir(dirname(resolve(args.table)), { recursive: true });
