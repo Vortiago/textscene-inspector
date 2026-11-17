@@ -110,13 +110,27 @@ function defaultProbes() {
     ' : hint_anisotropy',
     ' : hint_roughness_r',
   ];
-  return hints.map((hint) =>
+  const unset = hints.map((hint) =>
     textureProbe(
       `unset${hint.replace(' : ', '-') || '-none'}`,
       ['sampler2D', 'texture(sampler2D,vec2)', ...(hint ? [hint.slice(3)] : [])],
       `uniform sampler2D s${hint};\nvec4 probe() { return texture(s, vec2(0.5)); }`
     )
   );
+  return [
+    ...unset,
+    textureProbe(
+      'set-null-default-black',
+      ['sampler2D', 'texture(sampler2D,vec2)', 'hint_default_black'],
+      'uniform sampler2D s : hint_default_black;\nvec4 probe() { return texture(s, vec2(0.5)); }',
+      { textures: { s: null } }
+    ),
+    textureProbe(
+      'unset-external-array',
+      ['samplerExternalOES', 'texture(samplerExternalOES,vec2)'],
+      'uniform samplerExternalOES s[2];\nvec4 probe() { return texture(s[0], vec2(0.5)) + texture(s[1], vec2(0.5)) * 2.0; }'
+    ),
+  ];
 }
 
 /** Reads of a mipmapped 4 by 4 texture: a level, a texel, a size. */

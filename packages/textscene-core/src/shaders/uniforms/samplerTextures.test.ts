@@ -11,8 +11,9 @@ describe('samplerTextures', () => {
     expect(samplerTextures(uniformOf('uniform sampler2D s;'), 'a')).toEqual(['a']);
   });
 
-  it('reads white for a sampler the material sets to null', () => {
-    expect(samplerTextures(uniformOf('uniform sampler2D s : hint_default_black;'), null)).toEqual(['white']);
+  // `set_shader_parameter` erases a parameter set to null (`material.cpp:450`).
+  it('reads the default of the hint for a sampler the material sets to null', () => {
+    expect(samplerTextures(uniformOf('uniform sampler2D s : hint_default_black;'), null)).toEqual(['black']);
   });
 
   it('reads the first texture of an array on a single sampler', () => {
@@ -71,6 +72,14 @@ describe('samplerTextures defaults by type', () => {
     ['samplerCubeArray', 'hint_normal', 'black'],
   ])('gives a %s with %s the %s texture', (type, hint, texture) => {
     expect(samplerTextures(uniformOf(`uniform ${type} s : ${hint};`), undefined)).toEqual([texture]);
+  });
+
+  // `update_textures` fills an unset array with null textures, which read white (`material_storage.cpp:941`).
+  it('gives each element of an unset samplerExternalOES array white', () => {
+    expect(samplerTextures(uniformOf('uniform samplerExternalOES s[2];'), undefined)).toEqual([
+      'white',
+      'white',
+    ]);
   });
 
   it('gives an unset samplerExternalOES no texture', () => {

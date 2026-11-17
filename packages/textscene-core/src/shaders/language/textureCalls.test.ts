@@ -8,7 +8,7 @@ import {
   UnsignedIntType,
 } from 'three';
 import { float, int, ivec2, ivec3, texture, texture3D, vec2, vec3, vec4 } from 'three/tsl';
-import type { Node, TextureNode } from 'three/webgpu';
+import { NodeMaterial, type Node, type NodeFrame, type TextureNode } from 'three/webgpu';
 import { generatedFragmentShader } from '../generatedShader.testkit.js';
 import { builtInCall } from './emitBuiltIn.js';
 import { instruction } from './instructions.js';
@@ -121,6 +121,29 @@ describe('builtInCall of a texture function', () => {
     sampler.value = new DataTexture(new Uint32Array(4), 1, 1, RGBAIntegerFormat, UnsignedIntType);
     expect(generatedFragmentShader(vec4(node as never) as unknown as Node)).not.toContain('floatBitsToUint(');
   });
+
+  it.each([
+    ['an integer', new DataTexture(new Uint32Array(4), 1, 1, RGBAIntegerFormat, UnsignedIntType), 1],
+    ['another normalised', new DataTexture(new Uint8Array(4), 1, 1), 0],
+  ])(
+    'disposes the material for %s texture bound after the build only if its kind changes',
+    (_, bound, disposals) => {
+      const sampler = texture(new DataTexture(new Uint8Array(4), 1, 1)) as unknown as TextureNode;
+      const call = builtInCall('texture', instruction('texture(usampler2D,vec2)')!, [
+        sampler as unknown as Node,
+        uv(),
+      ]);
+      generatedFragmentShader(vec4(call as never) as unknown as Node);
+      sampler.value = bound;
+      const material = new NodeMaterial();
+      let disposed = 0;
+      material.addEventListener('dispose', () => disposed++);
+      // `builtInCall` converts the read to the row's type.
+      const read = (call as unknown as { node: Node }).node;
+      read.update({ material } as unknown as NodeFrame);
+      expect(disposed).toBe(disposals);
+    }
+  );
 
   it('samples each element of a sampler array at a computed index and picks one', () => {
     const elements = [flat(), flat()] as unknown as TextureNode[];

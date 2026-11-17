@@ -24,7 +24,7 @@ const IDENTITY: Readonly<Record<string, Variant>> = {
 };
 
 /** The lanes of a uniform the material gives no value (`material_storage.cpp:804`). */
-export function defaultLanes(uniform: UniformNode, useLinearColor: boolean): Lanes {
+function defaultLanes(uniform: UniformNode, useLinearColor: boolean): Lanes {
   if (uniform.defaultValue) return constantLanes(uniform, uniform.defaultValue, useLinearColor);
   const arraySize = uniform.arraySize ?? 0;
   const isColor = uniform.type === 'vec3' || uniform.type === 'vec4';
@@ -37,8 +37,9 @@ export function defaultLanes(uniform: UniformNode, useLinearColor: boolean): Lan
   return new Array<number>(laneCount(uniform.type) * Math.max(1, arraySize)).fill(0);
 }
 
-/** The lanes of the material's value of a uniform (`material_storage.cpp:799`). */
+/** The lanes of the material's value of a uniform (`material_storage.cpp:799`). NIL erases the value. */
 export function materialLanes(uniform: UniformNode, value: Variant, useLinearColor: boolean): Lanes {
+  if (value.type === 'NIL') return defaultLanes(uniform, useLinearColor);
   const isLinear = useLinearColor && uniform.hint !== 'color_conversion_disabled';
   return valueLanes(uniform.type, uniform.arraySize ?? 0, value, isLinear);
 }
