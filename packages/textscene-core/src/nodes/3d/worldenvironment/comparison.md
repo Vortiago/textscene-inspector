@@ -9,7 +9,7 @@ renders_as: the scene's background and environment lighting
 
 # WorldEnvironment
 
-Applies the scene's Environment resource to the whole view and draws no geometry of its own. Here the Environment sets a flat dark-navy background and bluish volumetric fog, which hazes the background and washes out the boxes with distance. The previewer draws both and renders the node's children. The first WorldEnvironment with a valid Environment applies. One that names none, or a `.tres` that fails to load, leaves the view with no Environment: the project's clear colour under the LINEAR curve, and the clear colour as ambient light at energy 1 (`render_scene_data_rd.cpp:225-235`). A transparent viewport, or one that never clears, has a black clear colour, so it gets no ambient light.
+Applies the scene's Environment resource to the whole view and draws no geometry of its own. Here the Environment sets a flat dark-navy background and bluish volumetric fog, which hazes the background and washes out the boxes with distance. The previewer draws both and renders the node's children. The first WorldEnvironment with a valid Environment applies. One that names none, or a `.tres` that fails to load, leaves the view with no Environment: the project's clear colour under the LINEAR curve. That clear colour is then the ambient light, at energy 1 (`render_scene_data_rd.cpp:225-235`). A transparent viewport, or one that never clears, has a black clear colour, so it gets no ambient light.
 
 ## Linting
 
