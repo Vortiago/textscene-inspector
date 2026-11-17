@@ -35,6 +35,7 @@ import {
 } from '../environment/sceneEnvironment';
 import { debandSky } from './skyDebanding';
 import { showSkyBackground } from './skyBackground';
+import { useShaderTimeFrame } from '../shaderTime/canvasShaderTime';
 import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
 import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
@@ -95,6 +96,7 @@ export function SkyLayer({
   reflectsRef.current = reflects;
 
   const isPanoramaDrawn = useIsPanoramaDrawn(panorama);
+  useShaderTimeFrame();
 
   // Written only by the effect below, while it holds bakes.
   const bakeWantedRef = useRef<(() => boolean) | null>(null);

@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { PositionalShadowAtlas } from '../godot/rendering/lights/positionalShadowAtlas';
 import {
   projectPrimitiveMeshTexelSize,
+  projectTimeRolloverSeconds,
   projectShadowAtlasSize,
   DEFAULT_THEME_SCALE,
   DEFAULT_VIEWPORT_HEIGHT,
@@ -939,5 +940,18 @@ describe('projectPositionalShadowAtlas', () => {
 
   it('keeps the default for a subdivision outside 0 to 6, which the setter refuses (viewport.cpp:1412-1413)', () => {
     expect(projectPositionalShadowAtlas({ [quadrantKey(0)]: '7' }).quadrantShadows[0]).toBe(4);
+  });
+});
+
+describe('projectTimeRolloverSeconds', () => {
+  const KEY = 'rendering/limits/time/time_rollover_secs';
+
+  it('reads the rollover the project sets', () => {
+    expect(projectTimeRolloverSeconds({ [KEY]: '10.0' })).toBe(10);
+  });
+
+  it("is Godot's 3600 with no project or a malformed value", () => {
+    expect(projectTimeRolloverSeconds(null)).toBe(3600);
+    expect(projectTimeRolloverSeconds({ [KEY]: 'soon' })).toBe(3600);
   });
 });

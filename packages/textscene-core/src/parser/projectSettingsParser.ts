@@ -22,6 +22,7 @@ import { unquoteLiteral } from './utils.js';
 import { colorOr } from '../utils/colorParser.js';
 import { perObject } from '../utils/perObject.js';
 import { enumOr, parseOptionalFloat, parseOptionalInt } from './valueParsers.js';
+import { DEFAULT_TIME_ROLLOVER_SECONDS } from '../shaders/time/shaderClock.js';
 import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE, primitiveMeshTexelSize } from '../godot/scene/primitiveMesh.js';
 import {
   VOLUMETRIC_FOG_DEFAULTS,
@@ -230,6 +231,14 @@ export function projectPositionalShadowAtlas(
 export function projectPrimitiveMeshTexelSize(settings: ProjectSettings | null): number {
   const setting = parseOptionalFloat(settings?.['rendering/lightmapping/primitive_meshes/texel_size']);
   return primitiveMeshTexelSize(setting ?? DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
+}
+
+/** `rendering/limits/time/time_rollover_secs`, which wraps `TIME` (`renderer_compositor_rd.cpp:113`). */
+export function projectTimeRolloverSeconds(settings: ProjectSettings | null): number {
+  return (
+    parseOptionalFloat(settings?.['rendering/limits/time/time_rollover_secs']) ??
+    DEFAULT_TIME_ROLLOVER_SECONDS
+  );
 }
 
 /**

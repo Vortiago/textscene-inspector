@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { writeSkyBindings, type SkyLight } from '../../shaders/sky/skyBindings.js';
 import type { TranspiledSky } from '../../shaders/sky/transpileSky.js';
 import { SkyBackdrop } from './skyBackground.js';
+import { canvasShaderTime } from '../shaderTime/canvasShaderTime.js';
 
 /** Scratch for one conversion, overwritten by each. */
 const rotationMatrix = new THREE.Matrix4();
@@ -27,11 +28,11 @@ export class ShaderSkyBackground extends SkyBackdrop {
   }
 
   /** The bindings of the camera of each render, as one scene can render through several cameras. */
-  override onBeforeRender(_renderer: THREE.WebGLRenderer, _scene: THREE.Scene, camera: THREE.Camera): void {
+  override onBeforeRender(renderer: THREE.WebGLRenderer, _scene: THREE.Scene, camera: THREE.Camera): void {
     writeSkyBindings(this.sky, {
       camera,
       skyOrientation: this.skyOrientation,
-      time: 0,
+      time: canvasShaderTime(renderer).time,
       brightness: this.brightness,
       lights: this.lights,
     });
