@@ -2,11 +2,16 @@ import * as THREE from 'three';
 
 const levelSize = (size, level) => Math.max(size >> level, 1);
 
+/** The bytes of a texel and three's format, for each format a spec names. */
+const FORMATS = { rgba8: { bytes: 4, format: THREE.RGBAFormat }, rg8: { bytes: 2, format: THREE.RGFormat } };
+
+const formatOf = (spec) => FORMATS[spec.format ?? 'rgba8'];
+
 const bytesOf = (hex) => Uint8Array.from(hex.match(/../g) ?? [], (pair) => Number.parseInt(pair, 16));
 
 /** Layer `layer` of level `level`, of a level that holds `count` layers one after the other. */
 function layerOf(spec, level, layer) {
-  const size = levelSize(spec.width, level) * levelSize(spec.height, level) * 4;
+  const size = levelSize(spec.width, level) * levelSize(spec.height, level) * formatOf(spec).bytes;
   return bytesOf(spec.levels[level]).slice(layer * size, (layer + 1) * size);
 }
 
@@ -27,6 +32,7 @@ function created(spec) {
     }
     case 'layers': {
       const texture = new THREE.DataArrayTexture(bytesOf(spec.levels[0]), width, height, depth);
+      texture.format = formatOf(spec).format;
       if (spec.levels.length > 1) texture.mipmaps = mipmapsOf(spec, (level) => bytesOf(spec.levels[level]));
       return texture;
     }

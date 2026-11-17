@@ -114,11 +114,11 @@ func texture_of(spec):
 	var count := 6 if spec.kind == "cube" else int(spec.get("depth", 1))
 	match spec.kind:
 		"flat":
-			return ImageTexture.create_from_image(image_of(width, height, levels, 0))
+			return ImageTexture.create_from_image(image_of(width, height, levels, 0, spec.get("format", "rgba8")))
 		"layers", "cube":
 			var images: Array[Image] = []
 			for layer in count:
-				images.append(image_of(width, height, levels, layer))
+				images.append(image_of(width, height, levels, layer, spec.get("format", "rgba8")))
 			var layered = Texture2DArray.new() if spec.kind == "layers" else Cubemap.new()
 			layered.create_from_images(images)
 			return layered
@@ -139,12 +139,15 @@ func level_size(size: int, level: int) -> int:
 	return max(size >> level, 1)
 
 # One layer of each level, one after the other, as Image keeps a mip chain.
-func image_of(width: int, height: int, levels: Array, layer: int) -> Image:
+const IMAGE_FORMATS := { "rgba8": [Image.FORMAT_RGBA8, 4], "rg8": [Image.FORMAT_RG8, 2] }
+
+func image_of(width: int, height: int, levels: Array, layer: int, format: String) -> Image:
 	var data := PackedByteArray()
+	var texel_bytes: int = IMAGE_FORMATS[format][1]
 	for level in levels.size():
-		var size := level_size(width, level) * level_size(height, level) * 4
+		var size := level_size(width, level) * level_size(height, level) * texel_bytes
 		data.append_array(levels[level].hex_decode().slice(layer * size, (layer + 1) * size))
-	return Image.create_from_data(width, height, levels.size() > 1, Image.FORMAT_RGBA8, data)
+	return Image.create_from_data(width, height, levels.size() > 1, IMAGE_FORMATS[format][0], data)
 
 # An HDR 2D viewport holds half floats, which Image.convert truncates: k / 255 comes back as k - 1.
 func bytes_of(image: Image) -> PackedByteArray:

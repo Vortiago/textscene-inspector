@@ -13,8 +13,11 @@ const texelOf = (x, y, layer, level) => [
   (255 - 20 * x - 9 * level) & 255,
 ];
 
-/** A texture both harnesses build: each level's RGBA8 bytes, its layers in a row, down to 1 texel. */
-export function textureSpec(kind, width, height, { depth = 1, isMipmapped = false } = {}) {
+/** The bytes of a texel in each format both harnesses build. */
+const TEXEL_BYTES = { rgba8: 4, rg8: 2 };
+
+/** A texture both harnesses build: each level's bytes, its layers in a row, down to 1 texel. */
+export function textureSpec(kind, width, height, { depth = 1, isMipmapped = false, format = 'rgba8' } = {}) {
   const count = kind === 'cube' ? 6 : depth;
   const levelCount = isMipmapped ? Math.floor(Math.log2(Math.max(width, height))) + 1 : 1;
   const levels = Array.from({ length: levelCount }, (_, level) => {
@@ -22,10 +25,18 @@ export function textureSpec(kind, width, height, { depth = 1, isMipmapped = fals
     const bytes = [];
     for (let layer = 0; layer < layers; layer++)
       for (let y = 0; y < levelSize(height, level); y++)
-        for (let x = 0; x < levelSize(width, level); x++) bytes.push(...texelOf(x, y, layer, level));
+        for (let x = 0; x < levelSize(width, level); x++)
+          bytes.push(...texelOf(x, y, layer, level).slice(0, TEXEL_BYTES[format]));
     return hex(bytes);
   });
-  return { kind, width, height, ...(kind === 'flat' || kind === 'cube' ? {} : { depth }), levels };
+  return {
+    kind,
+    width,
+    height,
+    ...(kind === 'flat' || kind === 'cube' ? {} : { depth }),
+    ...(format === 'rgba8' ? {} : { format }),
+    levels,
+  };
 }
 
 /** A probe whose material sets `textures`, a spec or a list of them per sampler, with `inputs` rows. */
@@ -160,6 +171,19 @@ function levelProbes() {
           [[0.375, 0.625], 0.25],
           [[0.375, 0.625], 1.0],
           [[0.375, 0.625], 1.75],
+        ],
+      }
+    ),
+    textureProbe(
+      'layers-lod-rg8',
+      ['sampler2DArray', 'filter_nearest_mipmap', 'textureLod(sampler2DArray,vec3,float)'],
+      'uniform sampler2DArray s : filter_nearest_mipmap;\nvec4 probe(vec3 uv, float lod) { return textureLod(s, uv, lod); }',
+      {
+        textures: { s: textureSpec('layers', 4, 4, { depth: 2, isMipmapped: true, format: 'rg8' }) },
+        inputs: [
+          [[0.375, 0.625, 1], 0],
+          [[0.375, 0.625, 1], 1],
+          [[0.375, 0.625, 0], 2],
         ],
       }
     ),
