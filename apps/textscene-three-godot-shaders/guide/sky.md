@@ -193,7 +193,7 @@ Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untest
 
 `COLOR` is the colour `sky()` writes, linear. Godot's sky template holds it in its local `color`, and writes it to the frame after the environment's brightness and fog.
 
-The transpiler emits `the template's local `color``. Rows: `sky.sky.COLOR`. Godot source: `servers/rendering/shader_types.cpp:486`.
+The transpiler emits the template's local `color`. Rows: `sky.sky.COLOR`. Godot source: `servers/rendering/shader_types.cpp:486`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

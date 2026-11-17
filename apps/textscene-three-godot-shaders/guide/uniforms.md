@@ -20,7 +20,7 @@ Godot 4.6.3-stable (official), probed on llvmpipe (LLVM 20.1.2). Each table show
 
 `uniform type name;` declares a uniform of any value type, with an array size before the name, after it or both, and an optional `= constant` default, which Godot converts to the uniform's type. A precision word is allowed, but not on a bool. Godot refuses an interpolation qualifier, a struct, `void`, a default on an array, a name another uniform, function or built-in has, an assignment to a uniform and a uniform passed as an `out` argument. `global uniform` and `instance uniform` parse, and the transpiler refuses them at their row until they are bound.
 
-The transpiler emits `a `uniform` node of the type, or a `uniformArray` of `uvec4``. Rows: `uniform`. Godot source: `servers/rendering/shader_language.cpp:335`.
+The transpiler emits a `uniform` node of the type, or a `uniformArray` of `uvec4`. Rows: `uniform`. Godot source: `servers/rendering/shader_language.cpp:335`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 

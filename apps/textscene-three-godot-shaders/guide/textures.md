@@ -7,7 +7,7 @@ const shader = transpileShadingLanguage('uniform sampler2D albedo : filter_neare
 shader.parameters.get('albedo').set(texture);
 ```
 
-The transpiler picks each texture as Godot's `update_textures` does (`material_storage.cpp:880`). A sampler the material leaves unset reads Godot's 4 by 4 default texture of its hint and type. A null, a Variant, or an array element the material's list does not reach reads white.
+The transpiler picks each texture as Godot's `update_textures` does (`material_storage.cpp:880`). A sampler the material leaves unset reads Godot's 4 by 4 default texture of its hint and type. A null, a Variant, or an array element the material's list does not reach reads the element before it, or white for the first. A `samplerExternalOES` has no default: while it has no texture, Godot builds no uniform set and does not draw the material, and `isDrawable` of its parameter is false.
 
 Godot keeps the filter and repeat on the sampler, and three keeps them on the texture. So each sampler reads its own copy of the material's texture, which shares the texture's image and holds the sampler's filter, repeat and origin. A copy reads the image with Godot's top-left origin. A `source_color` sampler reads the texture through its sRGB view where the material converts colours, as `p_use_linear_color` decides.
 
@@ -18,7 +18,7 @@ Godot 4.6.3-stable (official), probed on llvmpipe (LLVM 20.1.2). Each table show
 
 A sampler reads a 2D texture, a 2D array, a 3D texture or a cube, of floats, ints (`isampler`) or uints (`usampler`). A sampler can be an argument of a function: the transpiler writes the function once for each set of textures its calls pass.
 
-The transpiler emits `a `texture`, `texture3D` or cube texture node per element`. Rows: `sampler2D`, `isampler2D`, `usampler2D`, `sampler2DArray`, `isampler2DArray`, `usampler2DArray`, `sampler3D`, `isampler3D`, `usampler3D`, `samplerCube`, `samplerExternalOES`. Godot source: `servers/rendering/shader_language.h:230`.
+The transpiler emits a `texture`, `texture3D` or cube texture node per element. Rows: `sampler2D`, `isampler2D`, `usampler2D`, `sampler2DArray`, `isampler2DArray`, `usampler2DArray`, `sampler3D`, `isampler3D`, `usampler3D`, `samplerCube`, `samplerExternalOES`. Godot source: `servers/rendering/shader_language.h:230`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
@@ -223,7 +223,7 @@ vec4 probe() { return texture(s, vec2(0.5)); }
 
 ## Filter and repeat
 
-A filter word and a repeat word set the sampler. A sampler without one takes its shader type's default: `filter_linear_mipmap` and `repeat_enable` for spatial, sky and particles, `filter_linear_mipmap` and `repeat_disable` for fog, and `filter_linear` and `repeat_disable` for canvas_item. A filter without `_mipmap` reads level 0 only, at any level `textureLod` asks for. An anisotropic filter reads up to 4 samples, from the project's `anisotropic_filtering_level`.
+A filter word and a repeat word set the sampler. A sampler without one takes its shader type's default: `filter_linear_mipmap` and `repeat_enable` for spatial, sky and particles, `filter_linear_mipmap` and `repeat_disable` for fog, and `filter_linear` and `repeat_disable` for canvas_item. A filter without `_mipmap` reads level 0 only, at any level `textureLod` asks for. An anisotropic filter sets an anisotropy of 4, from the project's `anisotropic_filtering_level`. Vulkan and WebGL leave the anisotropic filter to the driver, so its texels can differ from Godot's.
 
 The transpiler emits `the texture's filters, wrap and anisotropy`. Rows: `filter_nearest`, `filter_linear`, `filter_nearest_mipmap`, `filter_linear_mipmap`, `filter_nearest_mipmap_anisotropic`, `filter_linear_mipmap_anisotropic`, `repeat_enable`, `repeat_disable`. Godot source: `servers/rendering/shader_language.cpp:395`.
 
@@ -361,9 +361,9 @@ vec4 probe(vec2 uv, float lod) { return textureLod(s, uv, lod); }
 
 ## Texture functions
 
-`texture` samples at a coordinate, with an optional bias. `textureLod` samples a level, `textureGrad` samples with gradients and `texelFetch` reads one texel of a level. `textureSize` gives the size of a level. A 2D array keeps the layer in the last lane of the coordinate.
+`texture` samples at a coordinate, with an optional bias. `textureLod` samples a level, `textureGrad` samples with gradients and `texelFetch` reads one texel of a level. `textureSize` gives the size of a level, and `textureQueryLevels` the level count of the texture. `textureQueryLod` gives the level of detail from the derivatives of the coordinate in texels, as Vulkan defines it. `textureGather` reads one channel of the four texels around the coordinate. A cube gathers on the face the direction picks, and a texel past the edge of the face comes from the next face. A 2D array keeps the layer in the last lane of the coordinate.
 
-The transpiler emits ``sample`, `bias`, `level`, `grad`, `load` and `textureSize` of the texture node`. Rows: `textureSize(sampler2D,int)`, `textureSize(isampler2D,int)`, `textureSize(usampler2D,int)`, `textureSize(sampler2DArray,int)`, `textureSize(isampler2DArray,int)`, `textureSize(usampler2DArray,int)`, `textureSize(sampler3D,int)`, `textureSize(isampler3D,int)`, `textureSize(usampler3D,int)`, `textureSize(samplerCube,int)`, `texture(sampler2D,vec2)`, `texture(sampler2D,vec2,float)`, `texture(usampler2D,vec2)`, `texture(usampler2D,vec2,float)`, `texture(isampler2D,vec2)`, `texture(isampler2D,vec2,float)`, `texture(sampler2DArray,vec3)`, `texture(sampler2DArray,vec3,float)`, `texture(usampler2DArray,vec3)`, `texture(usampler2DArray,vec3,float)`, `texture(isampler2DArray,vec3)`, `texture(isampler2DArray,vec3,float)`, `texture(sampler3D,vec3)`, `texture(sampler3D,vec3,float)`, `texture(usampler3D,vec3)`, `texture(usampler3D,vec3,float)`, `texture(isampler3D,vec3)`, `texture(isampler3D,vec3,float)`, `texture(samplerCube,vec3)`, `texture(samplerCube,vec3,float)`, `texture(samplerExternalOES,vec2)`, `texture(samplerExternalOES,vec2,float)`, `textureProj(sampler2D,vec3)`, `textureProj(sampler2D,vec4)`, `textureProj(sampler2D,vec3,float)`, `textureProj(sampler2D,vec4,float)`, `textureProj(isampler2D,vec3)`, `textureProj(isampler2D,vec4)`, `textureProj(isampler2D,vec3,float)`, `textureProj(isampler2D,vec4,float)`, `textureProj(usampler2D,vec3)`, `textureProj(usampler2D,vec4)`, `textureProj(usampler2D,vec3,float)`, `textureProj(usampler2D,vec4,float)`, `textureProj(sampler3D,vec4)`, `textureProj(sampler3D,vec4,float)`, `textureProj(isampler3D,vec4)`, `textureProj(isampler3D,vec4,float)`, `textureProj(usampler3D,vec4)`, `textureProj(usampler3D,vec4,float)`, `textureLod(sampler2D,vec2,float)`, `textureLod(isampler2D,vec2,float)`, `textureLod(usampler2D,vec2,float)`, `textureLod(sampler2DArray,vec3,float)`, `textureLod(isampler2DArray,vec3,float)`, `textureLod(usampler2DArray,vec3,float)`, `textureLod(sampler3D,vec3,float)`, `textureLod(isampler3D,vec3,float)`, `textureLod(usampler3D,vec3,float)`, `textureLod(samplerCube,vec3,float)`, `texelFetch(sampler2D,ivec2,int)`, `texelFetch(isampler2D,ivec2,int)`, `texelFetch(usampler2D,ivec2,int)`, `texelFetch(sampler2DArray,ivec3,int)`, `texelFetch(isampler2DArray,ivec3,int)`, `texelFetch(usampler2DArray,ivec3,int)`, `texelFetch(sampler3D,ivec3,int)`, `texelFetch(isampler3D,ivec3,int)`, `texelFetch(usampler3D,ivec3,int)`, `textureProjLod(sampler2D,vec3,float)`, `textureProjLod(sampler2D,vec4,float)`, `textureProjLod(isampler2D,vec3,float)`, `textureProjLod(isampler2D,vec4,float)`, `textureProjLod(usampler2D,vec3,float)`, `textureProjLod(usampler2D,vec4,float)`, `textureProjLod(sampler3D,vec4,float)`, `textureProjLod(isampler3D,vec4,float)`, `textureProjLod(usampler3D,vec4,float)`, `textureGrad(sampler2D,vec2,vec2,vec2)`, `textureGrad(isampler2D,vec2,vec2,vec2)`, `textureGrad(usampler2D,vec2,vec2,vec2)`, `textureGrad(sampler2DArray,vec3,vec2,vec2)`, `textureGrad(isampler2DArray,vec3,vec2,vec2)`, `textureGrad(usampler2DArray,vec3,vec2,vec2)`, `textureGrad(sampler3D,vec3,vec3,vec3)`, `textureGrad(isampler3D,vec3,vec3,vec3)`, `textureGrad(usampler3D,vec3,vec3,vec3)`, `textureGrad(samplerCube,vec3,vec3,vec3)`, `textureProjGrad(sampler2D,vec3,vec2,vec2)`, `textureProjGrad(sampler2D,vec4,vec2,vec2)`, `textureProjGrad(isampler2D,vec3,vec2,vec2)`, `textureProjGrad(isampler2D,vec4,vec2,vec2)`, `textureProjGrad(usampler2D,vec3,vec2,vec2)`, `textureProjGrad(usampler2D,vec4,vec2,vec2)`, `textureProjGrad(sampler3D,vec4,vec3,vec3)`, `textureProjGrad(isampler3D,vec4,vec3,vec3)`, `textureProjGrad(usampler3D,vec4,vec3,vec3)`, `textureGather(sampler2D,vec2)`, `textureGather(isampler2D,vec2)`, `textureGather(usampler2D,vec2)`, `textureGather(sampler2D,vec2,int)`, `textureGather(isampler2D,vec2,int)`, `textureGather(usampler2D,vec2,int)`, `textureGather(sampler2DArray,vec3)`, `textureGather(isampler2DArray,vec3)`, `textureGather(usampler2DArray,vec3)`, `textureGather(sampler2DArray,vec3,int)`, `textureGather(isampler2DArray,vec3,int)`, `textureGather(usampler2DArray,vec3,int)`, `textureGather(samplerCube,vec3)`, `textureGather(samplerCube,vec3,int)`, `textureQueryLod(sampler2D,vec2)`, `textureQueryLod(isampler2D,vec2)`, `textureQueryLod(usampler2D,vec2)`, `textureQueryLod(sampler2DArray,vec2)`, `textureQueryLod(isampler2DArray,vec2)`, `textureQueryLod(usampler2DArray,vec2)`, `textureQueryLod(sampler3D,vec3)`, `textureQueryLod(isampler3D,vec3)`, `textureQueryLod(usampler3D,vec3)`, `textureQueryLod(samplerCube,vec3)`, `textureQueryLevels(sampler2D)`, `textureQueryLevels(isampler2D)`, `textureQueryLevels(usampler2D)`, `textureQueryLevels(sampler2DArray)`, `textureQueryLevels(isampler2DArray)`, `textureQueryLevels(usampler2DArray)`, `textureQueryLevels(sampler3D)`, `textureQueryLevels(isampler3D)`, `textureQueryLevels(usampler3D)`, `textureQueryLevels(samplerCube)`. Godot source: `servers/rendering/shader_language.cpp:3167`.
+The transpiler emits the `sample`, `bias`, `level`, `grad`, `load` and `gather` nodes and `textureSize` of a texture node, a uniform for the level count, and a composite for the level of detail and a cube gather. Rows: `textureSize(sampler2D,int)`, `textureSize(isampler2D,int)`, `textureSize(usampler2D,int)`, `textureSize(sampler2DArray,int)`, `textureSize(isampler2DArray,int)`, `textureSize(usampler2DArray,int)`, `textureSize(sampler3D,int)`, `textureSize(isampler3D,int)`, `textureSize(usampler3D,int)`, `textureSize(samplerCube,int)`, `texture(sampler2D,vec2)`, `texture(sampler2D,vec2,float)`, `texture(usampler2D,vec2)`, `texture(usampler2D,vec2,float)`, `texture(isampler2D,vec2)`, `texture(isampler2D,vec2,float)`, `texture(sampler2DArray,vec3)`, `texture(sampler2DArray,vec3,float)`, `texture(usampler2DArray,vec3)`, `texture(usampler2DArray,vec3,float)`, `texture(isampler2DArray,vec3)`, `texture(isampler2DArray,vec3,float)`, `texture(sampler3D,vec3)`, `texture(sampler3D,vec3,float)`, `texture(usampler3D,vec3)`, `texture(usampler3D,vec3,float)`, `texture(isampler3D,vec3)`, `texture(isampler3D,vec3,float)`, `texture(samplerCube,vec3)`, `texture(samplerCube,vec3,float)`, `texture(samplerExternalOES,vec2)`, `texture(samplerExternalOES,vec2,float)`, `textureProj(sampler2D,vec3)`, `textureProj(sampler2D,vec4)`, `textureProj(sampler2D,vec3,float)`, `textureProj(sampler2D,vec4,float)`, `textureProj(isampler2D,vec3)`, `textureProj(isampler2D,vec4)`, `textureProj(isampler2D,vec3,float)`, `textureProj(isampler2D,vec4,float)`, `textureProj(usampler2D,vec3)`, `textureProj(usampler2D,vec4)`, `textureProj(usampler2D,vec3,float)`, `textureProj(usampler2D,vec4,float)`, `textureProj(sampler3D,vec4)`, `textureProj(sampler3D,vec4,float)`, `textureProj(isampler3D,vec4)`, `textureProj(isampler3D,vec4,float)`, `textureProj(usampler3D,vec4)`, `textureProj(usampler3D,vec4,float)`, `textureLod(sampler2D,vec2,float)`, `textureLod(isampler2D,vec2,float)`, `textureLod(usampler2D,vec2,float)`, `textureLod(sampler2DArray,vec3,float)`, `textureLod(isampler2DArray,vec3,float)`, `textureLod(usampler2DArray,vec3,float)`, `textureLod(sampler3D,vec3,float)`, `textureLod(isampler3D,vec3,float)`, `textureLod(usampler3D,vec3,float)`, `textureLod(samplerCube,vec3,float)`, `texelFetch(sampler2D,ivec2,int)`, `texelFetch(isampler2D,ivec2,int)`, `texelFetch(usampler2D,ivec2,int)`, `texelFetch(sampler2DArray,ivec3,int)`, `texelFetch(isampler2DArray,ivec3,int)`, `texelFetch(usampler2DArray,ivec3,int)`, `texelFetch(sampler3D,ivec3,int)`, `texelFetch(isampler3D,ivec3,int)`, `texelFetch(usampler3D,ivec3,int)`, `textureProjLod(sampler2D,vec3,float)`, `textureProjLod(sampler2D,vec4,float)`, `textureProjLod(isampler2D,vec3,float)`, `textureProjLod(isampler2D,vec4,float)`, `textureProjLod(usampler2D,vec3,float)`, `textureProjLod(usampler2D,vec4,float)`, `textureProjLod(sampler3D,vec4,float)`, `textureProjLod(isampler3D,vec4,float)`, `textureProjLod(usampler3D,vec4,float)`, `textureGrad(sampler2D,vec2,vec2,vec2)`, `textureGrad(isampler2D,vec2,vec2,vec2)`, `textureGrad(usampler2D,vec2,vec2,vec2)`, `textureGrad(sampler2DArray,vec3,vec2,vec2)`, `textureGrad(isampler2DArray,vec3,vec2,vec2)`, `textureGrad(usampler2DArray,vec3,vec2,vec2)`, `textureGrad(sampler3D,vec3,vec3,vec3)`, `textureGrad(isampler3D,vec3,vec3,vec3)`, `textureGrad(usampler3D,vec3,vec3,vec3)`, `textureGrad(samplerCube,vec3,vec3,vec3)`, `textureProjGrad(sampler2D,vec3,vec2,vec2)`, `textureProjGrad(sampler2D,vec4,vec2,vec2)`, `textureProjGrad(isampler2D,vec3,vec2,vec2)`, `textureProjGrad(isampler2D,vec4,vec2,vec2)`, `textureProjGrad(usampler2D,vec3,vec2,vec2)`, `textureProjGrad(usampler2D,vec4,vec2,vec2)`, `textureProjGrad(sampler3D,vec4,vec3,vec3)`, `textureProjGrad(isampler3D,vec4,vec3,vec3)`, `textureProjGrad(usampler3D,vec4,vec3,vec3)`, `textureGather(sampler2D,vec2)`, `textureGather(isampler2D,vec2)`, `textureGather(usampler2D,vec2)`, `textureGather(sampler2D,vec2,int)`, `textureGather(isampler2D,vec2,int)`, `textureGather(usampler2D,vec2,int)`, `textureGather(sampler2DArray,vec3)`, `textureGather(isampler2DArray,vec3)`, `textureGather(usampler2DArray,vec3)`, `textureGather(sampler2DArray,vec3,int)`, `textureGather(isampler2DArray,vec3,int)`, `textureGather(usampler2DArray,vec3,int)`, `textureGather(samplerCube,vec3)`, `textureGather(samplerCube,vec3,int)`, `textureQueryLod(sampler2D,vec2)`, `textureQueryLod(isampler2D,vec2)`, `textureQueryLod(usampler2D,vec2)`, `textureQueryLod(sampler2DArray,vec2)`, `textureQueryLod(isampler2DArray,vec2)`, `textureQueryLod(usampler2DArray,vec2)`, `textureQueryLod(sampler3D,vec3)`, `textureQueryLod(isampler3D,vec3)`, `textureQueryLod(usampler3D,vec3)`, `textureQueryLod(samplerCube,vec3)`, `textureQueryLevels(sampler2D)`, `textureQueryLevels(isampler2D)`, `textureQueryLevels(usampler2D)`, `textureQueryLevels(sampler2DArray)`, `textureQueryLevels(isampler2DArray)`, `textureQueryLevels(usampler2DArray)`, `textureQueryLevels(sampler3D)`, `textureQueryLevels(isampler3D)`, `textureQueryLevels(usampler3D)`, `textureQueryLevels(samplerCube)`. Godot source: `servers/rendering/shader_language.cpp:3167`.
 
 Every row is native on WebGL 2. WebGPURenderer runs the same nodes and is untested (#1788).
 
@@ -458,3 +458,1517 @@ vec4 probe(vec2 uv) { return texture(s, uv); }
 | `uv` | Godot gives |
 | --- | --- |
 | `(0.125, 0.25)` | `(0.0003112356, 0.0006224712, 0.0015561781, 1.0)` |
+
+### Probe `texture-function-textureSize-sampler2D-int`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+ivec2 probe(int a0) { return textureSize(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `0` | `(4, 4)` |
+| `1` | `(4, 4)` |
+
+### Probe `texture-function-textureSize-isampler2D-int`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec2 probe(int a0) { return textureSize(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `0` | `(4, 4)` |
+| `1` | `(4, 4)` |
+
+### Probe `texture-function-textureSize-usampler2D-int`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+ivec2 probe(int a0) { return textureSize(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `0` | `(4, 4)` |
+| `1` | `(4, 4)` |
+
+### Probe `texture-function-textureSize-sampler2DArray-int`, 3 input rows
+
+```glsl
+uniform sampler2DArray s : filter_linear_mipmap;
+ivec3 probe(int a0) { return textureSize(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `0` | `(4, 4, 3)` |
+| `1` | `(4, 2, 3)` |
+
+### Probe `texture-function-textureSize-isampler2DArray-int`, 3 input rows
+
+```glsl
+uniform isampler2DArray s : filter_nearest_mipmap;
+ivec3 probe(int a0) { return textureSize(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `0` | `(4, 4, 3)` |
+| `1` | `(4, 2, 3)` |
+
+### Probe `texture-function-textureSize-usampler2DArray-int`, 3 input rows
+
+```glsl
+uniform usampler2DArray s : filter_nearest_mipmap;
+ivec3 probe(int a0) { return textureSize(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `0` | `(4, 4, 3)` |
+| `1` | `(4, 2, 3)` |
+
+### Probe `texture-function-textureSize-sampler3D-int`, 3 input rows
+
+```glsl
+uniform sampler3D s : filter_linear_mipmap;
+ivec3 probe(int a0) { return textureSize(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `0` | `(4, 4, 4)` |
+| `1` | `(4, 0, 0)` |
+| `0` | `(0, 0, 4)` |
+
+### Probe `texture-function-textureSize-isampler3D-int`, 3 input rows
+
+```glsl
+uniform isampler3D s : filter_nearest_mipmap;
+ivec3 probe(int a0) { return textureSize(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `0` | `(4, 4, 4)` |
+| `1` | `(4, 0, 0)` |
+| `0` | `(0, 0, 4)` |
+
+### Probe `texture-function-textureSize-usampler3D-int`, 3 input rows
+
+```glsl
+uniform usampler3D s : filter_nearest_mipmap;
+ivec3 probe(int a0) { return textureSize(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `0` | `(4, 4, 4)` |
+| `1` | `(4, 0, 0)` |
+| `0` | `(0, 0, 4)` |
+
+### Probe `texture-function-textureSize-samplerCube-int`, 3 input rows
+
+```glsl
+uniform samplerCube s : filter_linear_mipmap;
+ivec2 probe(int a0) { return textureSize(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `0` | `(2, 2)` |
+| `1` | `(2, 2)` |
+
+### Probe `texture-function-texture-sampler2D-vec2`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(vec2 a0) { return texture(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6)` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+
+### Probe `texture-function-texture-sampler2D-vec2-float`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(vec2 a0, float a1) { return texture(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6)` | `0.0` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(0.875, 0.125)` | `0.7` | `(0.19215688, 0.007843138, 0.10196079, 0.76470596)` |
+
+### Probe `texture-function-texture-usampler2D-vec2`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+uvec4 probe(vec2 a0) { return texture(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6)` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+
+### Probe `texture-function-texture-usampler2D-vec2-float`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+uvec4 probe(vec2 a0, float a1) { return texture(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6)` | `0.0` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(0.875, 0.125)` | `0.7` | `(1044694214u, 1006665857u, 1037095122u, 1061405637u)` |
+
+### Probe `texture-function-texture-isampler2D-vec2`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec4 probe(vec2 a0) { return texture(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6)` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+
+### Probe `texture-function-texture-isampler2D-vec2-float`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec4 probe(vec2 a0, float a1) { return texture(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6)` | `0.0` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(0.875, 0.125)` | `0.7` | `(1044694214, 1006665857, 1037095122, 1061405637)` |
+
+### Probe `texture-function-texture-sampler2DArray-vec3`, 3 input rows
+
+```glsl
+uniform sampler2DArray s : filter_linear_mipmap;
+vec4 probe(vec3 a0) { return texture(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.0)` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(0.875, 0.125, 1.5)` | `(0.21568629, 0.007843138, 0.49411768, 0.76470596)` |
+
+### Probe `texture-function-texture-sampler2DArray-vec3-float`, 3 input rows
+
+```glsl
+uniform sampler2DArray s : filter_linear_mipmap;
+vec4 probe(vec3 a0, float a1) { return texture(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.0)` | `0.0` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(0.875, 0.125, 1.5)` | `0.7` | `(0.21568629, 0.007843138, 0.49411768, 0.76470596)` |
+
+### Probe `texture-function-texture-usampler2DArray-vec3`, 3 input rows
+
+```glsl
+uniform usampler2DArray s : filter_nearest_mipmap;
+uvec4 probe(vec3 a0) { return texture(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.0)` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(0.875, 0.125, 1.5)` | `(1046273246u, 1006665857u, 1056767230u, 1061405637u)` |
+
+### Probe `texture-function-texture-usampler2DArray-vec3-float`, 3 input rows
+
+```glsl
+uniform usampler2DArray s : filter_nearest_mipmap;
+uvec4 probe(vec3 a0, float a1) { return texture(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.0)` | `0.0` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(0.875, 0.125, 1.5)` | `0.7` | `(1046273246u, 1006665857u, 1056767230u, 1061405637u)` |
+
+### Probe `texture-function-texture-isampler2DArray-vec3`, 3 input rows
+
+```glsl
+uniform isampler2DArray s : filter_nearest_mipmap;
+ivec4 probe(vec3 a0) { return texture(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.0)` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(0.875, 0.125, 1.5)` | `(1046273246, 1006665857, 1056767230, 1061405637)` |
+
+### Probe `texture-function-texture-isampler2DArray-vec3-float`, 3 input rows
+
+```glsl
+uniform isampler2DArray s : filter_nearest_mipmap;
+ivec4 probe(vec3 a0, float a1) { return texture(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.0)` | `0.0` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(0.875, 0.125, 1.5)` | `0.7` | `(1046273246, 1006665857, 1056767230, 1061405637)` |
+
+### Probe `texture-function-texture-sampler3D-vec3`, 3 input rows
+
+```glsl
+uniform sampler3D s : filter_linear_mipmap;
+vec4 probe(vec3 a0) { return texture(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.1)` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+
+### Probe `texture-function-texture-sampler3D-vec3-float`, 3 input rows
+
+```glsl
+uniform sampler3D s : filter_linear_mipmap;
+vec4 probe(vec3 a0, float a1) { return texture(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `0.0` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(0.875, 0.125, 0.6)` | `0.7` | `(0.21568629, 0.007843138, 0.47450984, 0.76470596)` |
+
+### Probe `texture-function-texture-usampler3D-vec3`, 3 input rows
+
+```glsl
+uniform usampler3D s : filter_nearest_mipmap;
+uvec4 probe(vec3 a0) { return texture(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.1)` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+
+### Probe `texture-function-texture-usampler3D-vec3-float`, 3 input rows
+
+```glsl
+uniform usampler3D s : filter_nearest_mipmap;
+uvec4 probe(vec3 a0, float a1) { return texture(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `0.0` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(0.875, 0.125, 0.6)` | `0.7` | `(1046273246u, 1006665857u, 1056767230u, 1061405637u)` |
+
+### Probe `texture-function-texture-isampler3D-vec3`, 3 input rows
+
+```glsl
+uniform isampler3D s : filter_nearest_mipmap;
+ivec4 probe(vec3 a0) { return texture(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.1)` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+
+### Probe `texture-function-texture-isampler3D-vec3-float`, 3 input rows
+
+```glsl
+uniform isampler3D s : filter_nearest_mipmap;
+ivec4 probe(vec3 a0, float a1) { return texture(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `0.0` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(0.875, 0.125, 0.6)` | `0.7` | `(1046273246, 1006665857, 1056767230, 1061405637)` |
+
+### Probe `texture-function-texture-samplerCube-vec3`, 3 input rows
+
+```glsl
+uniform samplerCube s : filter_linear_mipmap;
+vec4 probe(vec3 a0) { return texture(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(1.0, 0.2, -0.3)` | `(0.054117646, 0.08313727, 0.04509804, 0.93725497)` |
+
+### Probe `texture-function-texture-samplerCube-vec3-float`, 3 input rows
+
+```glsl
+uniform samplerCube s : filter_linear_mipmap;
+vec4 probe(vec3 a0, float a1) { return texture(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(1.0, 0.2, -0.3)` | `0.0` | `(0.054117646, 0.08313727, 0.04509804, 0.93725497)` |
+| `(0.2, -1.0, 0.6)` | `0.7` | `(0.084313735, 0.032941185, 0.6478432, 0.9450981)` |
+
+### Probe `texture-function-textureProj-sampler2D-vec3`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(vec3 a0) { return textureProj(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.1)` | `(0.19215688, 0.7607844, 0.13725491, 0.76470596)` |
+
+### Probe `texture-function-textureProj-sampler2D-vec4`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(vec4 a0) { return textureProj(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+
+### Probe `texture-function-textureProj-sampler2D-vec3-float`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(vec3 a0, float a1) { return textureProj(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `0.0` | `(0.19215688, 0.7607844, 0.13725491, 0.76470596)` |
+| `(0.875, 0.125, 0.6)` | `0.7` | `(0.19215688, 0.09019608, 0.10588236, 0.76470596)` |
+
+### Probe `texture-function-textureProj-sampler2D-vec4-float`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(vec4 a0, float a1) { return textureProj(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `0.0` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(0.875, 0.125, 0.6, 1.0)` | `0.7` | `(0.19215688, 0.007843138, 0.10196079, 0.76470596)` |
+
+### Probe `texture-function-textureProj-isampler2D-vec3`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec4 probe(vec3 a0) { return textureProj(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.1)` | `(1044694214, 1061339844, 1041009805, 1061405637)` |
+
+### Probe `texture-function-textureProj-isampler2D-vec4`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec4 probe(vec4 a0) { return textureProj(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+
+### Probe `texture-function-textureProj-isampler2D-vec3-float`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec4 probe(vec3 a0, float a1) { return textureProj(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `0.0` | `(1044694214, 1061339844, 1041009805, 1061405637)` |
+| `(0.875, 0.125, 0.6)` | `0.7` | `(1044694214, 1006665857, 1037095122, 1061405637)` |
+
+### Probe `texture-function-textureProj-isampler2D-vec4-float`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec4 probe(vec4 a0, float a1) { return textureProj(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `0.0` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(0.875, 0.125, 0.6, 1.0)` | `0.7` | `(1044694214, 1006665857, 1037095122, 1061405637)` |
+
+### Probe `texture-function-textureProj-usampler2D-vec3`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+uvec4 probe(vec3 a0) { return textureProj(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.1)` | `(1044694214u, 1061339844u, 1041009805u, 1061405637u)` |
+
+### Probe `texture-function-textureProj-usampler2D-vec4`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+uvec4 probe(vec4 a0) { return textureProj(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+
+### Probe `texture-function-textureProj-usampler2D-vec3-float`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+uvec4 probe(vec3 a0, float a1) { return textureProj(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `0.0` | `(1044694214u, 1061339844u, 1041009805u, 1061405637u)` |
+| `(0.875, 0.125, 0.6)` | `0.7` | `(1044694214u, 1006665857u, 1037095122u, 1061405637u)` |
+
+### Probe `texture-function-textureProj-usampler2D-vec4-float`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+uvec4 probe(vec4 a0, float a1) { return textureProj(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `0.0` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(0.875, 0.125, 0.6, 1.0)` | `0.7` | `(1044694214u, 1006665857u, 1037095122u, 1061405637u)` |
+
+### Probe `texture-function-textureProj-sampler3D-vec4`, 3 input rows
+
+```glsl
+uniform sampler3D s : filter_linear_mipmap;
+vec4 probe(vec4 a0) { return textureProj(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+
+### Probe `texture-function-textureProj-sampler3D-vec4-float`, 3 input rows
+
+```glsl
+uniform sampler3D s : filter_linear_mipmap;
+vec4 probe(vec4 a0, float a1) { return textureProj(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `0.0` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(0.875, 0.125, 0.6, 1.0)` | `0.7` | `(0.21568629, 0.007843138, 0.47450984, 0.76470596)` |
+
+### Probe `texture-function-textureProj-isampler3D-vec4`, 3 input rows
+
+```glsl
+uniform isampler3D s : filter_nearest_mipmap;
+ivec4 probe(vec4 a0) { return textureProj(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+
+### Probe `texture-function-textureProj-isampler3D-vec4-float`, 3 input rows
+
+```glsl
+uniform isampler3D s : filter_nearest_mipmap;
+ivec4 probe(vec4 a0, float a1) { return textureProj(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `0.0` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(0.875, 0.125, 0.6, 1.0)` | `0.7` | `(1046273246, 1006665857, 1056767230, 1061405637)` |
+
+### Probe `texture-function-textureProj-usampler3D-vec4`, 3 input rows
+
+```glsl
+uniform usampler3D s : filter_nearest_mipmap;
+uvec4 probe(vec4 a0) { return textureProj(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+
+### Probe `texture-function-textureProj-usampler3D-vec4-float`, 3 input rows
+
+```glsl
+uniform usampler3D s : filter_nearest_mipmap;
+uvec4 probe(vec4 a0, float a1) { return textureProj(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `0.0` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(0.875, 0.125, 0.6, 1.0)` | `0.7` | `(1046273246u, 1006665857u, 1056767230u, 1061405637u)` |
+
+### Probe `texture-function-textureLod-sampler2D-vec2-float`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(vec2 a0, float a1) { return textureLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6)` | `0.0` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(0.875, 0.125)` | `1.0` | `(0.06666667, 0.16470589, 0.04705883, 0.8862746)` |
+
+### Probe `texture-function-textureLod-isampler2D-vec2-float`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec4 probe(vec2 a0, float a1) { return textureLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6)` | `0.0` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(0.875, 0.125)` | `1.0` | `(1032358025, 1042852009, 1027653826, 1063445220)` |
+
+### Probe `texture-function-textureLod-usampler2D-vec2-float`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+uvec4 probe(vec2 a0, float a1) { return textureLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6)` | `0.0` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(0.875, 0.125)` | `1.0` | `(1032358025u, 1042852009u, 1027653826u, 1063445220u)` |
+
+### Probe `texture-function-textureLod-sampler2DArray-vec3-float`, 3 input rows
+
+```glsl
+uniform sampler2DArray s : filter_linear_mipmap;
+vec4 probe(vec3 a0, float a1) { return textureLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.0)` | `0.0` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(0.875, 0.125, 1.5)` | `1.0` | `(0.09019608, 0.16470589, 0.43921572, 0.8862746)` |
+
+### Probe `texture-function-textureLod-isampler2DArray-vec3-float`, 3 input rows
+
+```glsl
+uniform isampler2DArray s : filter_nearest_mipmap;
+ivec4 probe(vec3 a0, float a1) { return textureLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.0)` | `0.0` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(0.875, 0.125, 1.5)` | `1.0` | `(1035516089, 1042852009, 1054925026, 1063445220)` |
+
+### Probe `texture-function-textureLod-usampler2DArray-vec3-float`, 3 input rows
+
+```glsl
+uniform usampler2DArray s : filter_nearest_mipmap;
+uvec4 probe(vec3 a0, float a1) { return textureLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.0)` | `0.0` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(0.875, 0.125, 1.5)` | `1.0` | `(1035516089u, 1042852009u, 1054925026u, 1063445220u)` |
+
+### Probe `texture-function-textureLod-sampler3D-vec3-float`, 3 input rows
+
+```glsl
+uniform sampler3D s : filter_linear_mipmap;
+vec4 probe(vec3 a0, float a1) { return textureLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `0.0` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(0.875, 0.125, 0.6)` | `1.0` | `(0.21568629, 0.007843138, 0.47450984, 0.76470596)` |
+
+### Probe `texture-function-textureLod-isampler3D-vec3-float`, 3 input rows
+
+```glsl
+uniform isampler3D s : filter_nearest_mipmap;
+ivec4 probe(vec3 a0, float a1) { return textureLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `0.0` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(0.875, 0.125, 0.6)` | `1.0` | `(1046273246, 1006665857, 1056767230, 1061405637)` |
+
+### Probe `texture-function-textureLod-usampler3D-vec3-float`, 3 input rows
+
+```glsl
+uniform usampler3D s : filter_nearest_mipmap;
+uvec4 probe(vec3 a0, float a1) { return textureLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `0.0` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(0.875, 0.125, 0.6)` | `1.0` | `(1046273246u, 1006665857u, 1056767230u, 1061405637u)` |
+
+### Probe `texture-function-textureLod-samplerCube-vec3-float`, 3 input rows
+
+```glsl
+uniform samplerCube s : filter_linear_mipmap;
+vec4 probe(vec3 a0, float a1) { return textureLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(1.0, 0.2, -0.3)` | `0.0` | `(0.054117646, 0.08313727, 0.04509804, 0.93725497)` |
+| `(0.2, -1.0, 0.6)` | `1.0` | `(0.084313735, 0.032941185, 0.6478432, 0.9450981)` |
+
+### Probe `texture-function-texelFetch-sampler2D-ivec2-int`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(ivec2 a0, int a1) { return texelFetch(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0, 0)` | `0` | `(0.003921569, 0.007843138, 0.019607844, 1.0)` |
+| `(3, 1)` | `1` | `(0.0, 0.0, 0.0, 0.0)` |
+
+### Probe `texture-function-texelFetch-isampler2D-ivec2-int`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec4 probe(ivec2 a0, int a1) { return texelFetch(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0, 0)` | `0` | `(998277249, 1006665857, 1017159841, 1065353216)` |
+| `(3, 1)` | `1` | `(0, 0, 0, 0)` |
+
+### Probe `texture-function-texelFetch-usampler2D-ivec2-int`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+uvec4 probe(ivec2 a0, int a1) { return texelFetch(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0, 0)` | `0` | `(998277249u, 1006665857u, 1017159841u, 1065353216u)` |
+| `(3, 1)` | `1` | `(0u, 0u, 0u, 0u)` |
+
+### Probe `texture-function-texelFetch-sampler2DArray-ivec3-int`, 3 input rows
+
+```glsl
+uniform sampler2DArray s : filter_linear_mipmap;
+vec4 probe(ivec3 a0, int a1) { return texelFetch(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0, 0, 0)` | `0` | `(0.003921569, 0.007843138, 0.019607844, 1.0)` |
+| `(0, 0, 1)` | `1` | `(0.015686275, 0.16470589, 0.21568629, 0.96470594)` |
+
+### Probe `texture-function-texelFetch-isampler2DArray-ivec3-int`, 3 input rows
+
+```glsl
+uniform isampler2DArray s : filter_nearest_mipmap;
+ivec4 probe(ivec3 a0, int a1) { return texelFetch(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0, 0, 0)` | `0` | `(998277249, 1006665857, 1017159841, 1065353216)` |
+| `(0, 0, 1)` | `1` | `(1015054465, 1042852009, 1046273246, 1064761080)` |
+
+### Probe `texture-function-texelFetch-usampler2DArray-ivec3-int`, 3 input rows
+
+```glsl
+uniform usampler2DArray s : filter_nearest_mipmap;
+uvec4 probe(ivec3 a0, int a1) { return texelFetch(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0, 0, 0)` | `0` | `(998277249u, 1006665857u, 1017159841u, 1065353216u)` |
+| `(0, 0, 1)` | `1` | `(1015054465u, 1042852009u, 1046273246u, 1064761080u)` |
+
+### Probe `texture-function-texelFetch-sampler3D-ivec3-int`, 3 input rows
+
+```glsl
+uniform sampler3D s : filter_linear_mipmap;
+vec4 probe(ivec3 a0, int a1) { return texelFetch(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0, 0, 0)` | `0` | `(0.003921569, 0.007843138, 0.019607844, 1.0)` |
+| `(3, 1, 2)` | `1` | `(0.0, 0.0, 0.0, 0.0)` |
+
+### Probe `texture-function-texelFetch-isampler3D-ivec3-int`, 3 input rows
+
+```glsl
+uniform isampler3D s : filter_nearest_mipmap;
+ivec4 probe(ivec3 a0, int a1) { return texelFetch(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0, 0, 0)` | `0` | `(998277249, 1006665857, 1017159841, 1065353216)` |
+| `(3, 1, 2)` | `1` | `(0, 0, 0, 0)` |
+
+### Probe `texture-function-texelFetch-usampler3D-ivec3-int`, 3 input rows
+
+```glsl
+uniform usampler3D s : filter_nearest_mipmap;
+uvec4 probe(ivec3 a0, int a1) { return texelFetch(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0, 0, 0)` | `0` | `(998277249u, 1006665857u, 1017159841u, 1065353216u)` |
+| `(3, 1, 2)` | `1` | `(0u, 0u, 0u, 0u)` |
+
+### Probe `texture-function-textureProjLod-sampler2D-vec3-float`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(vec3 a0, float a1) { return textureProjLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `0.0` | `(0.19215688, 0.7607844, 0.13725491, 0.76470596)` |
+| `(0.875, 0.125, 0.6)` | `1.0` | `(0.06666667, 0.16470589, 0.04705883, 0.8862746)` |
+
+### Probe `texture-function-textureProjLod-sampler2D-vec4-float`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(vec4 a0, float a1) { return textureProjLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `0.0` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(0.875, 0.125, 0.6, 1.0)` | `1.0` | `(0.06666667, 0.16470589, 0.04705883, 0.8862746)` |
+
+### Probe `texture-function-textureProjLod-isampler2D-vec3-float`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec4 probe(vec3 a0, float a1) { return textureProjLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `0.0` | `(1044694214, 1061339844, 1041009805, 1061405637)` |
+| `(0.875, 0.125, 0.6)` | `1.0` | `(1032358025, 1042852009, 1027653826, 1063445220)` |
+
+### Probe `texture-function-textureProjLod-isampler2D-vec4-float`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec4 probe(vec4 a0, float a1) { return textureProjLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `0.0` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(0.875, 0.125, 0.6, 1.0)` | `1.0` | `(1032358025, 1042852009, 1027653826, 1063445220)` |
+
+### Probe `texture-function-textureProjLod-usampler2D-vec3-float`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+uvec4 probe(vec3 a0, float a1) { return textureProjLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `0.0` | `(1044694214u, 1061339844u, 1041009805u, 1061405637u)` |
+| `(0.875, 0.125, 0.6)` | `1.0` | `(1032358025u, 1042852009u, 1027653826u, 1063445220u)` |
+
+### Probe `texture-function-textureProjLod-usampler2D-vec4-float`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+uvec4 probe(vec4 a0, float a1) { return textureProjLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `0.0` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(0.875, 0.125, 0.6, 1.0)` | `1.0` | `(1032358025u, 1042852009u, 1027653826u, 1063445220u)` |
+
+### Probe `texture-function-textureProjLod-sampler3D-vec4-float`, 3 input rows
+
+```glsl
+uniform sampler3D s : filter_linear_mipmap;
+vec4 probe(vec4 a0, float a1) { return textureProjLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `0.0` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(0.875, 0.125, 0.6, 1.0)` | `1.0` | `(0.21568629, 0.007843138, 0.47450984, 0.76470596)` |
+
+### Probe `texture-function-textureProjLod-isampler3D-vec4-float`, 3 input rows
+
+```glsl
+uniform isampler3D s : filter_nearest_mipmap;
+ivec4 probe(vec4 a0, float a1) { return textureProjLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `0.0` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(0.875, 0.125, 0.6, 1.0)` | `1.0` | `(1046273246, 1006665857, 1056767230, 1061405637)` |
+
+### Probe `texture-function-textureProjLod-usampler3D-vec4-float`, 3 input rows
+
+```glsl
+uniform usampler3D s : filter_nearest_mipmap;
+uvec4 probe(vec4 a0, float a1) { return textureProjLod(s, a0, a1); }
+```
+
+| `a0` | `a1` | Godot gives |
+| --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `0.0` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(0.875, 0.125, 0.6, 1.0)` | `1.0` | `(1046273246u, 1006665857u, 1056767230u, 1061405637u)` |
+
+### Probe `texture-function-textureGrad-sampler2D-vec2-vec2-vec2`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(vec2 a0, vec2 a1, vec2 a2) { return textureGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.3, 0.6)` | `(0.1, 0.0)` | `(0.0, 0.1)` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(1.2, -0.3)` | `(0.0, 0.02)` | `(0.02, 0.0)` | `(0.19215688, 0.007843138, 0.10196079, 0.76470596)` |
+
+### Probe `texture-function-textureGrad-isampler2D-vec2-vec2-vec2`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec4 probe(vec2 a0, vec2 a1, vec2 a2) { return textureGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.3, 0.6)` | `(0.1, 0.0)` | `(0.0, 0.1)` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(1.2, -0.3)` | `(0.0, 0.02)` | `(0.02, 0.0)` | `(1044694214, 1006665857, 1037095122, 1061405637)` |
+
+### Probe `texture-function-textureGrad-usampler2D-vec2-vec2-vec2`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+uvec4 probe(vec2 a0, vec2 a1, vec2 a2) { return textureGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.3, 0.6)` | `(0.1, 0.0)` | `(0.0, 0.1)` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(1.2, -0.3)` | `(0.0, 0.02)` | `(0.02, 0.0)` | `(1044694214u, 1006665857u, 1037095122u, 1061405637u)` |
+
+### Probe `texture-function-textureGrad-sampler2DArray-vec3-vec2-vec2`, 3 input rows
+
+```glsl
+uniform sampler2DArray s : filter_linear_mipmap;
+vec4 probe(vec3 a0, vec2 a1, vec2 a2) { return textureGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.3, 0.6, 0.0)` | `(0.1, 0.0)` | `(0.0, 0.1)` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(0.4, 0.4, 2.2)` | `(0.0, 0.02)` | `(0.02, 0.0)` | `(0.098039225, 0.28627452, 0.454902, 0.91372555)` |
+
+### Probe `texture-function-textureGrad-isampler2DArray-vec3-vec2-vec2`, 3 input rows
+
+```glsl
+uniform isampler2DArray s : filter_nearest_mipmap;
+ivec4 probe(vec3 a0, vec2 a1, vec2 a2) { return textureGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.3, 0.6, 0.0)` | `(0.1, 0.0)` | `(0.0, 0.1)` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(0.4, 0.4, 2.2)` | `(0.0, 0.02)` | `(0.02, 0.0)` | `(1035516089, 1048872069, 1055319784, 1064037357)` |
+
+### Probe `texture-function-textureGrad-usampler2DArray-vec3-vec2-vec2`, 3 input rows
+
+```glsl
+uniform usampler2DArray s : filter_nearest_mipmap;
+uvec4 probe(vec3 a0, vec2 a1, vec2 a2) { return textureGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.3, 0.6, 0.0)` | `(0.1, 0.0)` | `(0.0, 0.1)` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(0.4, 0.4, 2.2)` | `(0.0, 0.02)` | `(0.02, 0.0)` | `(1035516089u, 1048872069u, 1055319784u, 1064037357u)` |
+
+### Probe `texture-function-textureGrad-sampler3D-vec3-vec3-vec3`, 3 input rows
+
+```glsl
+uniform sampler3D s : filter_linear_mipmap;
+vec4 probe(vec3 a0, vec3 a1, vec3 a2) { return textureGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `(0.1, 0.0, 0.0)` | `(0.0, 0.1, 0.0)` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(0.875, 0.125, 0.6)` | `(0.5, 0.0, 0.0)` | `(0.0, 0.3, 0.1)` | `(0.21568629, 0.007843138, 0.47450984, 0.76470596)` |
+| `(0.4, 0.4, 0.9)` | `(0.0, 0.02, 0.0)` | `(0.02, 0.0, 0.0)` | `(0.10980393, 0.28627452, 0.6509804, 0.91372555)` |
+
+### Probe `texture-function-textureGrad-isampler3D-vec3-vec3-vec3`, 3 input rows
+
+```glsl
+uniform isampler3D s : filter_nearest_mipmap;
+ivec4 probe(vec3 a0, vec3 a1, vec3 a2) { return textureGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `(0.1, 0.0, 0.0)` | `(0.0, 0.1, 0.0)` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(0.875, 0.125, 0.6)` | `(0.5, 0.0, 0.0)` | `(0.0, 0.3, 0.1)` | `(1046273246, 1006665857, 1056767230, 1061405637)` |
+| `(0.4, 0.4, 0.9)` | `(0.0, 0.02, 0.0)` | `(0.02, 0.0, 0.0)` | `(1037095122, 1048872069, 1059431846, 1064037357)` |
+
+### Probe `texture-function-textureGrad-usampler3D-vec3-vec3-vec3`, 3 input rows
+
+```glsl
+uniform usampler3D s : filter_nearest_mipmap;
+uvec4 probe(vec3 a0, vec3 a1, vec3 a2) { return textureGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `(0.1, 0.0, 0.0)` | `(0.0, 0.1, 0.0)` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(0.875, 0.125, 0.6)` | `(0.5, 0.0, 0.0)` | `(0.0, 0.3, 0.1)` | `(1046273246u, 1006665857u, 1056767230u, 1061405637u)` |
+| `(0.4, 0.4, 0.9)` | `(0.0, 0.02, 0.0)` | `(0.02, 0.0, 0.0)` | `(1037095122u, 1048872069u, 1059431846u, 1064037357u)` |
+
+### Probe `texture-function-textureGrad-samplerCube-vec3-vec3-vec3`, 3 input rows
+
+```glsl
+uniform samplerCube s : filter_linear_mipmap;
+vec4 probe(vec3 a0, vec3 a1, vec3 a2) { return textureGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(1.0, 0.2, -0.3)` | `(0.1, 0.0, 0.0)` | `(0.0, 0.1, 0.0)` | `(0.054117646, 0.08313727, 0.04509804, 0.93725497)` |
+| `(0.2, -1.0, 0.6)` | `(0.5, 0.0, 0.0)` | `(0.0, 0.3, 0.1)` | `(0.084313735, 0.032941185, 0.6478432, 0.9450981)` |
+| `(-0.3, 0.2, -1.0)` | `(0.0, 0.02, 0.0)` | `(0.02, 0.0, 0.0)` | `(0.11294118, 0.08313727, 0.16211767, 0.93725497)` |
+
+### Probe `texture-function-textureProjGrad-sampler2D-vec3-vec2-vec2`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(vec3 a0, vec2 a1, vec2 a2) { return textureProjGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `(0.1, 0.0)` | `(0.0, 0.1)` | `(0.19215688, 0.7607844, 0.13725491, 0.76470596)` |
+| `(0.4, 0.4, 0.9)` | `(0.0, 0.02)` | `(0.02, 0.0)` | `(0.08235294, 0.32941177, 0.07058824, 0.8980393)` |
+
+### Probe `texture-function-textureProjGrad-sampler2D-vec4-vec2-vec2`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(vec4 a0, vec2 a1, vec2 a2) { return textureProjGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `(0.1, 0.0)` | `(0.0, 0.1)` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(-0.2, 0.3, 0.45, -0.5)` | `(0.0, 0.02)` | `(0.02, 0.0)` | `(0.07450981, 0.007843138, 0.050980397, 0.91372555)` |
+
+### Probe `texture-function-textureProjGrad-isampler2D-vec3-vec2-vec2`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec4 probe(vec3 a0, vec2 a1, vec2 a2) { return textureProjGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `(0.1, 0.0)` | `(0.0, 0.1)` | `(1044694214, 1061339844, 1041009805, 1061405637)` |
+| `(0.4, 0.4, 0.9)` | `(0.0, 0.02)` | `(0.02, 0.0)` | `(1032358025, 1048872069, 1030811890, 1064037357)` |
+
+### Probe `texture-function-textureProjGrad-isampler2D-vec4-vec2-vec2`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec4 probe(vec4 a0, vec2 a1, vec2 a2) { return textureProjGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `(0.1, 0.0)` | `(0.0, 0.1)` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(-0.2, 0.3, 0.45, -0.5)` | `(0.0, 0.02)` | `(0.02, 0.0)` | `(1032358025, 1006665857, 1027653826, 1064037357)` |
+
+### Probe `texture-function-textureProjGrad-usampler2D-vec3-vec2-vec2`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+uvec4 probe(vec3 a0, vec2 a1, vec2 a2) { return textureProjGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.3, 0.6, 0.1)` | `(0.1, 0.0)` | `(0.0, 0.1)` | `(1044694214u, 1061339844u, 1041009805u, 1061405637u)` |
+| `(0.4, 0.4, 0.9)` | `(0.0, 0.02)` | `(0.02, 0.0)` | `(1032358025u, 1048872069u, 1030811890u, 1064037357u)` |
+
+### Probe `texture-function-textureProjGrad-usampler2D-vec4-vec2-vec2`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+uvec4 probe(vec4 a0, vec2 a1, vec2 a2) { return textureProjGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `(0.1, 0.0)` | `(0.0, 0.1)` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(-0.2, 0.3, 0.45, -0.5)` | `(0.0, 0.02)` | `(0.02, 0.0)` | `(1032358025u, 1006665857u, 1027653826u, 1064037357u)` |
+
+### Probe `texture-function-textureProjGrad-sampler3D-vec4-vec3-vec3`, 3 input rows
+
+```glsl
+uniform sampler3D s : filter_linear_mipmap;
+vec4 probe(vec4 a0, vec3 a1, vec3 a2) { return textureProjGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `(0.1, 0.0, 0.0)` | `(0.0, 0.1, 0.0)` | `(0.04705883, 0.48627454, 0.0627451, 0.9450981)` |
+| `(0.875, 0.125, 0.6, 1.0)` | `(0.5, 0.0, 0.0)` | `(0.0, 0.3, 0.1)` | `(0.21568629, 0.007843138, 0.47450984, 0.76470596)` |
+| `(-0.2, 0.3, 0.45, -0.5)` | `(0.0, 0.02, 0.0)` | `(0.02, 0.0, 0.0)` | `(0.07450981, 0.007843138, 0.050980397, 0.91372555)` |
+
+### Probe `texture-function-textureProjGrad-isampler3D-vec4-vec3-vec3`, 3 input rows
+
+```glsl
+uniform isampler3D s : filter_nearest_mipmap;
+ivec4 probe(vec4 a0, vec3 a1, vec3 a2) { return textureProjGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `(0.1, 0.0, 0.0)` | `(0.0, 0.1, 0.0)` | `(1032358025, 1057129091, 1032884369, 1064037357)` |
+| `(0.875, 0.125, 0.6, 1.0)` | `(0.5, 0.0, 0.0)` | `(0.0, 0.3, 0.1)` | `(1046273246, 1006665857, 1056767230, 1061405637)` |
+| `(-0.2, 0.3, 0.45, -0.5)` | `(0.0, 0.02, 0.0)` | `(0.02, 0.0, 0.0)` | `(1032358025, 1006665857, 1027653826, 1064037357)` |
+
+### Probe `texture-function-textureProjGrad-usampler3D-vec4-vec3-vec3`, 3 input rows
+
+```glsl
+uniform usampler3D s : filter_nearest_mipmap;
+uvec4 probe(vec4 a0, vec3 a1, vec3 a2) { return textureProjGrad(s, a0, a1, a2); }
+```
+
+| `a0` | `a1` | `a2` | Godot gives |
+| --- | --- | --- | --- |
+| `(0.6, 1.2, 0.2, 2.0)` | `(0.1, 0.0, 0.0)` | `(0.0, 0.1, 0.0)` | `(1032358025u, 1057129091u, 1032884369u, 1064037357u)` |
+| `(0.875, 0.125, 0.6, 1.0)` | `(0.5, 0.0, 0.0)` | `(0.0, 0.3, 0.1)` | `(1046273246u, 1006665857u, 1056767230u, 1061405637u)` |
+| `(-0.2, 0.3, 0.45, -0.5)` | `(0.0, 0.02, 0.0)` | `(0.02, 0.0, 0.0)` | `(1032358025u, 1006665857u, 1027653826u, 1064037357u)` |
+
+### Probe `texture-function-textureGather-sampler2D-vec2`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(vec2 a0) { return textureGather(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6)` | `(0.003921569, 0.06666667, 0.06666667, 0.003921569)` |
+
+### Probe `texture-function-textureGather-isampler2D-vec2`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec4 probe(vec2 a0) { return textureGather(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6)` | `(998277249, 1032358025, 1032358025, 998277249)` |
+
+### Probe `texture-function-textureGather-usampler2D-vec2`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+uvec4 probe(vec2 a0) { return textureGather(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6)` | `(998277249u, 1032358025u, 1032358025u, 998277249u)` |
+
+### Probe `texture-function-textureGather-sampler2D-vec2-int`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec4 probe(vec2 a0) { return textureGather(s, a0, 2); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6)` | `(0.043137256, 0.07058824, 0.058823533, 0.03137255)` |
+
+### Probe `texture-function-textureGather-isampler2D-vec2-int`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+ivec4 probe(vec2 a0) { return textureGather(s, a0, 2); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6)` | `(1026601137, 1032884369, 1030811890, 1023443073)` |
+
+### Probe `texture-function-textureGather-usampler2D-vec2-int`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+uvec4 probe(vec2 a0) { return textureGather(s, a0, 2); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6)` | `(1026601137u, 1032884369u, 1030811890u, 1023443073u)` |
+
+### Probe `texture-function-textureGather-sampler2DArray-vec3`, 3 input rows
+
+```glsl
+uniform sampler2DArray s : filter_linear_mipmap;
+vec4 probe(vec3 a0) { return textureGather(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.0)` | `(0.003921569, 0.06666667, 0.06666667, 0.003921569)` |
+| `(0.875, 0.125, 1.5)` | `(0.21568629, 0.21568629, 0.21568629, 0.21568629)` |
+
+### Probe `texture-function-textureGather-isampler2DArray-vec3`, 3 input rows
+
+```glsl
+uniform isampler2DArray s : filter_nearest_mipmap;
+ivec4 probe(vec3 a0) { return textureGather(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.0)` | `(998277249, 1032358025, 1032358025, 998277249)` |
+| `(0.875, 0.125, 1.5)` | `(1046273246, 1046273246, 1046273246, 1046273246)` |
+
+### Probe `texture-function-textureGather-usampler2DArray-vec3`, 3 input rows
+
+```glsl
+uniform usampler2DArray s : filter_nearest_mipmap;
+uvec4 probe(vec3 a0) { return textureGather(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.0)` | `(998277249u, 1032358025u, 1032358025u, 998277249u)` |
+| `(0.875, 0.125, 1.5)` | `(1046273246u, 1046273246u, 1046273246u, 1046273246u)` |
+
+### Probe `texture-function-textureGather-sampler2DArray-vec3-int`, 3 input rows
+
+```glsl
+uniform sampler2DArray s : filter_linear_mipmap;
+vec4 probe(vec3 a0) { return textureGather(s, a0, 2); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.0)` | `(0.043137256, 0.07058824, 0.058823533, 0.03137255)` |
+| `(0.875, 0.125, 1.5)` | `(0.5058824, 0.5058824, 0.49411768, 0.49411768)` |
+
+### Probe `texture-function-textureGather-isampler2DArray-vec3-int`, 3 input rows
+
+```glsl
+uniform isampler2DArray s : filter_nearest_mipmap;
+ivec4 probe(vec3 a0) { return textureGather(s, a0, 2); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.0)` | `(1026601137, 1032884369, 1030811890, 1023443073)` |
+| `(0.875, 0.125, 1.5)` | `(1057063298, 1057063298, 1056767230, 1056767230)` |
+
+### Probe `texture-function-textureGather-usampler2DArray-vec3-int`, 3 input rows
+
+```glsl
+uniform usampler2DArray s : filter_nearest_mipmap;
+uvec4 probe(vec3 a0) { return textureGather(s, a0, 2); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.0)` | `(1026601137u, 1032884369u, 1030811890u, 1023443073u)` |
+| `(0.875, 0.125, 1.5)` | `(1057063298u, 1057063298u, 1056767230u, 1056767230u)` |
+
+### Probe `texture-function-textureGather-samplerCube-vec3`, 3 input rows
+
+```glsl
+uniform samplerCube s : filter_linear_mipmap;
+vec4 probe(vec3 a0) { return textureGather(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(1.0, 0.2, -0.3)` | `(0.003921569, 0.06666667, 0.06666667, 0.003921569)` |
+
+### Probe `texture-function-textureGather-samplerCube-vec3-int`, 3 input rows
+
+```glsl
+uniform samplerCube s : filter_linear_mipmap;
+vec4 probe(vec3 a0) { return textureGather(s, a0, 2); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(1.0, 0.2, -0.3)` | `(0.03137255, 0.058823533, 0.04705883, 0.019607844)` |
+
+### Probe `texture-function-textureQueryLod-sampler2D-vec2`, 3 input rows
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+vec2 probe(vec2 a0) { return textureQueryLod(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6)` | `(0.0, -63.5)` |
+
+### Probe `texture-function-textureQueryLod-isampler2D-vec2`, 3 input rows
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+vec2 probe(vec2 a0) { return textureQueryLod(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6)` | `(0.0, -63.5)` |
+
+### Probe `texture-function-textureQueryLod-usampler2D-vec2`, 3 input rows
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+vec2 probe(vec2 a0) { return textureQueryLod(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6)` | `(0.0, -63.5)` |
+
+### Probe `texture-function-textureQueryLod-sampler2DArray-vec2`, 3 input rows
+
+```glsl
+uniform sampler2DArray s : filter_linear_mipmap;
+vec2 probe(vec2 a0) { return textureQueryLod(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6)` | `(0.0, -63.5)` |
+
+### Probe `texture-function-textureQueryLod-isampler2DArray-vec2`, 3 input rows
+
+```glsl
+uniform isampler2DArray s : filter_nearest_mipmap;
+vec2 probe(vec2 a0) { return textureQueryLod(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6)` | `(0.0, -63.5)` |
+
+### Probe `texture-function-textureQueryLod-usampler2DArray-vec2`, 3 input rows
+
+```glsl
+uniform usampler2DArray s : filter_nearest_mipmap;
+vec2 probe(vec2 a0) { return textureQueryLod(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6)` | `(0.0, -63.5)` |
+
+### Probe `texture-function-textureQueryLod-sampler3D-vec3`, 3 input rows
+
+```glsl
+uniform sampler3D s : filter_linear_mipmap;
+vec2 probe(vec3 a0) { return textureQueryLod(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.1)` | `(0.0, -63.5)` |
+
+### Probe `texture-function-textureQueryLod-isampler3D-vec3`, 3 input rows
+
+```glsl
+uniform isampler3D s : filter_nearest_mipmap;
+vec2 probe(vec3 a0) { return textureQueryLod(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.1)` | `(0.0, -63.5)` |
+
+### Probe `texture-function-textureQueryLod-usampler3D-vec3`, 3 input rows
+
+```glsl
+uniform usampler3D s : filter_nearest_mipmap;
+vec2 probe(vec3 a0) { return textureQueryLod(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(0.3, 0.6, 0.1)` | `(0.0, -63.5)` |
+
+### Probe `texture-function-textureQueryLod-samplerCube-vec3`, 3 input rows
+
+```glsl
+uniform samplerCube s : filter_linear_mipmap;
+vec2 probe(vec3 a0) { return textureQueryLod(s, a0); }
+```
+
+| `a0` | Godot gives |
+| --- | --- |
+| `(1.0, 0.2, -0.3)` | `(0.0, -63.5)` |
+
+### Probe `texture-function-textureQueryLevels-sampler2D`, no input
+
+```glsl
+uniform sampler2D s : filter_linear_mipmap;
+int probe() { return textureQueryLevels(s); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `s` | `3` | `00000003` |
+
+### Probe `texture-function-textureQueryLevels-isampler2D`, no input
+
+```glsl
+uniform isampler2D s : filter_nearest_mipmap;
+int probe() { return textureQueryLevels(s); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `s` | `3` | `00000003` |
+
+### Probe `texture-function-textureQueryLevels-usampler2D`, no input
+
+```glsl
+uniform usampler2D s : filter_nearest_mipmap;
+int probe() { return textureQueryLevels(s); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `s` | `3` | `00000003` |
+
+### Probe `texture-function-textureQueryLevels-sampler2DArray`, no input
+
+```glsl
+uniform sampler2DArray s : filter_linear_mipmap;
+int probe() { return textureQueryLevels(s); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `s` | `3` | `00000003` |
+
+### Probe `texture-function-textureQueryLevels-isampler2DArray`, no input
+
+```glsl
+uniform isampler2DArray s : filter_nearest_mipmap;
+int probe() { return textureQueryLevels(s); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `s` | `3` | `00000003` |
+
+### Probe `texture-function-textureQueryLevels-usampler2DArray`, no input
+
+```glsl
+uniform usampler2DArray s : filter_nearest_mipmap;
+int probe() { return textureQueryLevels(s); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `s` | `3` | `00000003` |
+
+### Probe `texture-function-textureQueryLevels-sampler3D`, no input
+
+```glsl
+uniform sampler3D s : filter_linear_mipmap;
+int probe() { return textureQueryLevels(s); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `s` | `1` | `00000001` |
+
+### Probe `texture-function-textureQueryLevels-isampler3D`, no input
+
+```glsl
+uniform isampler3D s : filter_nearest_mipmap;
+int probe() { return textureQueryLevels(s); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `s` | `1` | `00000001` |
+
+### Probe `texture-function-textureQueryLevels-usampler3D`, no input
+
+```glsl
+uniform usampler3D s : filter_nearest_mipmap;
+int probe() { return textureQueryLevels(s); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `s` | `1` | `00000001` |
+
+### Probe `texture-function-textureQueryLevels-samplerCube`, no input
+
+```glsl
+uniform samplerCube s : filter_linear_mipmap;
+int probe() { return textureQueryLevels(s); }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `s` | `1` | `00000001` |

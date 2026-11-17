@@ -805,7 +805,7 @@ const shader = transpileShadingLanguage('uniform sampler2D albedo : filter_neare
 shader.parameters.get('albedo').set(texture);
 \`\`\`
 
-The transpiler picks each texture as Godot's \`update_textures\` does (\`material_storage.cpp:880\`). A sampler the material leaves unset reads Godot's 4 by 4 default texture of its hint and type. A null, a Variant, or an array element the material's list does not reach reads white.
+The transpiler picks each texture as Godot's \`update_textures\` does (\`material_storage.cpp:880\`). A sampler the material leaves unset reads Godot's 4 by 4 default texture of its hint and type. A null, a Variant, or an array element the material's list does not reach reads the element before it, or white for the first. A \`samplerExternalOES\` has no default: while it has no texture, Godot builds no uniform set and does not draw the material, and \`isDrawable\` of its parameter is false.
 
 Godot keeps the filter and repeat on the sampler, and three keeps them on the texture. So each sampler reads its own copy of the material's texture, which shares the texture's image and holds the sampler's filter, repeat and origin. A copy reads the image with Godot's top-left origin. A \`source_color\` sampler reads the texture through its sRGB view where the material converts colours, as \`p_use_linear_color\` decides.`,
   sections: [
@@ -826,16 +826,16 @@ Godot keeps the filter and repeat on the sampler, and three keeps them on the te
     {
       heading: 'Filter and repeat',
       rows: (row) => /^(filter_|repeat_)/.test(row.id),
-      what: "A filter word and a repeat word set the sampler. A sampler without one takes its shader type's default: `filter_linear_mipmap` and `repeat_enable` for spatial, sky and particles, `filter_linear_mipmap` and `repeat_disable` for fog, and `filter_linear` and `repeat_disable` for canvas_item. A filter without `_mipmap` reads level 0 only, at any level `textureLod` asks for. An anisotropic filter reads up to 4 samples, from the project's `anisotropic_filtering_level`.",
+      what: "A filter word and a repeat word set the sampler. A sampler without one takes its shader type's default: `filter_linear_mipmap` and `repeat_enable` for spatial, sky and particles, `filter_linear_mipmap` and `repeat_disable` for fog, and `filter_linear` and `repeat_disable` for canvas_item. A filter without `_mipmap` reads level 0 only, at any level `textureLod` asks for. An anisotropic filter sets an anisotropy of 4, from the project's `anisotropic_filtering_level`. Vulkan and WebGL leave the anisotropic filter to the driver, so its texels can differ from Godot's.",
       tsl: "the texture's filters, wrap and anisotropy",
       probes: textureProbes(/^2d-(filter|default|repeat|lod)/),
     },
     {
       heading: 'Texture functions',
       rows: (row) => /^(texture|texelFetch)\w*\(/.test(row.id),
-      what: '`texture` samples at a coordinate, with an optional bias. `textureLod` samples a level, `textureGrad` samples with gradients and `texelFetch` reads one texel of a level. `textureSize` gives the size of a level. A 2D array keeps the layer in the last lane of the coordinate.',
-      tsl: '`sample`, `bias`, `level`, `grad`, `load` and `textureSize` of the texture node',
-      probes: textureProbes(/^(2d-texel|2d-size|2d-lod|2d-source)/),
+      what: '`texture` samples at a coordinate, with an optional bias. `textureLod` samples a level, `textureGrad` samples with gradients and `texelFetch` reads one texel of a level. `textureSize` gives the size of a level, and `textureQueryLevels` the level count of the texture. `textureQueryLod` gives the level of detail from the derivatives of the coordinate in texels, as Vulkan defines it. `textureGather` reads one channel of the four texels around the coordinate. A cube gathers on the face the direction picks, and a texel past the edge of the face comes from the next face. A 2D array keeps the layer in the last lane of the coordinate.',
+      tsl: 'the `sample`, `bias`, `level`, `grad`, `load` and `gather` nodes and `textureSize` of a texture node, a uniform for the level count, and a composite for the level of detail and a cube gather',
+      probes: textureProbes(/^(2d-texel|2d-size|2d-lod|2d-source|function-)/),
     },
   ],
 };
