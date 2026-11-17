@@ -516,8 +516,11 @@ describe('importCubemap', () => {
   });
 
   it('reads whether the import generates mipmaps', () => {
-    expect(importCubemap(sidecar('cubemap_texture', 'mipmaps/generate=true'))?.hasMipmaps).toBe(true);
-    expect(importCubemap(sidecar('cubemap_texture'))?.hasMipmaps).toBe(false);
+    expect(importCubemap(sidecar('cubemap_texture', 'mipmaps/generate=false'))?.hasMipmaps).toBe(false);
+  });
+
+  it("takes the importer's mipmaps for a sidecar that omits them", () => {
+    expect(importCubemap(sidecar('cubemap_texture'))?.hasMipmaps).toBe(true);
   });
 
   it('imports no cubemap under another importer (error case)', () => {

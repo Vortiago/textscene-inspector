@@ -33,6 +33,13 @@ describe('topDownTexture', () => {
     expect(topDownTexture(texture)).toBe(first);
   });
 
+  it('raises the version of the copy on each refill, so a sampler that follows it reads the new rows', () => {
+    const texture = bottomUp();
+    const firstVersion = topDownTexture(texture).version;
+    texture.needsUpdate = true;
+    expect(topDownTexture(texture).version).toBeGreaterThan(firstVersion);
+  });
+
   it('frees the copy with its source', () => {
     const texture = bottomUp();
     let isFreed = false;

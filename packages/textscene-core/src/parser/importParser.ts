@@ -222,7 +222,9 @@ export function importCubemap(parsed: ParsedImportFile | null): CubemapImport | 
   const value = parsed.params['slices/arrangement'];
   const arrangement = value === undefined ? DEFAULT_CUBEMAP_ARRANGEMENT : (parseOptionalInt(value) ?? 0);
   const slices = CUBEMAP_ARRANGEMENTS[arrangement];
-  return slices ? { slices, hasMipmaps: boolSlotValue(parsed.params['mipmaps/generate']) === true } : null;
+  // `resource_importer_layered_texture.cpp:154` generates mipmaps unless the sidecar says otherwise.
+  const hasMipmaps = boolSlotValue(parsed.params['mipmaps/generate']) ?? true;
+  return slices ? { slices, hasMipmaps } : null;
 }
 
 function layeredSlices(parsed: ParsedImportFile | null, importer: string): ImportSlices | null {
