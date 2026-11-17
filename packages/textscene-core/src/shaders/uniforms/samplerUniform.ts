@@ -67,7 +67,7 @@ export class SamplerBinding implements TranspiledUniform {
   /** Written only by `copyOf`: a material texture's copy, kept while the texture lives. */
   private readonly copies = new WeakMap<Texture, Texture>();
   /** Written only by `textureOf`: the binding's own default textures, collected with it. */
-  private readonly defaults = new Map<DefaultTexture, Texture>();
+  private readonly defaultTextures = new Map<DefaultTexture, Texture>();
 
   constructor(
     readonly declaration: UniformNode,
@@ -99,8 +99,8 @@ export class SamplerBinding implements TranspiledUniform {
 
   private textureOf(chosen: Texture | DefaultTexture): Texture {
     if (typeof chosen !== 'string') return this.copyOf(chosen);
-    const made = this.defaults.get(chosen) ?? defaultTexture(this.kind, chosen);
-    this.defaults.set(chosen, made);
+    const made = this.defaultTextures.get(chosen) ?? defaultTexture(this.kind, chosen);
+    this.defaultTextures.set(chosen, made);
     return made;
   }
 
