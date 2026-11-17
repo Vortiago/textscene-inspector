@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { installNodesHandler } from '@textscene/three-godot-shaders';
+import { installNodesHandler, PlaybackShaderTime, ShaderClock } from '@textscene/three-godot-shaders';
 
 /** The renderer of a Godot viewport's display: sRGB output and no tone mapping. */
 export const displayRenderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas') });
@@ -49,4 +49,22 @@ export function godotCamera(spec) {
   if (spec.camera.position) camera.position.fromArray(spec.camera.position);
   camera.updateMatrixWorld();
   return camera;
+}
+
+/** `TIME` after the frames of `clock`, or after a seek to the time they reach, or 0 for no clock. */
+export function shaderTime(clock) {
+  if (!clock) return 0;
+  if (clock.fromSeek) return seekTime(clock);
+  const shaderClock = new ShaderClock(clock.rolloverSeconds);
+  for (let frame = 0; frame < clock.frames; frame++) shaderClock.advance(1 / clock.fixedFps);
+  return shaderClock.time;
+}
+
+/** `TIME` as the previewer sets it when the playback controls seek to the time Godot's frames reach. */
+function seekTime(clock) {
+  const playbackTime = new PlaybackShaderTime(new ShaderClock(clock.rolloverSeconds));
+  const paused = { hasPlayer: true, playState: 'paused', seeks: 0, playhead: 0 };
+  playbackTime.frame(paused, 0);
+  const playhead = clock.frames / clock.fixedFps;
+  return playbackTime.frame({ ...paused, seeks: 1, playhead }, 0);
 }

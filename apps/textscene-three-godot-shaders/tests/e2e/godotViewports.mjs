@@ -76,3 +76,26 @@ export function viewportProjectFiles({ dataFile, shaderPrefix }, scenes, fieldsO
 export function parseViewportOutput(stdout, linePrefix) {
   return { godot: printedField(stdout, 'GODOT '), images: printedImages(stdout, linePrefix) };
 }
+
+/** One Godot run per clock, the scenes of no clock first: Godot holds one step and one rollover per run. */
+export function clockRuns(scenes) {
+  const runs = new Map();
+  for (const scene of scenes) {
+    const key = scene.clock ? JSON.stringify(scene.clock) : '';
+    if (!runs.has(key)) runs.set(key, { scenes: [], options: runOptions(scene.clock) });
+    runs.get(key).scenes.push(scene);
+  }
+  return [...runs.entries()].sort(([a], [b]) => (a === '' ? -1 : b === '' ? 1 : 0)).map(([, run]) => run);
+}
+
+/** `--fixed-fps` steps `TIME` by 1/fps, with no jitter fix to shorten a step (`rasterizer_gles3.cpp:101`). */
+function runOptions(clock) {
+  if (!clock) return { arguments: [], settings: '' };
+  return {
+    arguments: ['--fixed-fps', String(clock.fixedFps)],
+    settings: `${ROLLOVER_SECTION}${clock.rolloverSeconds}\n${NO_JITTER_FIX}`,
+  };
+}
+
+const ROLLOVER_SECTION = '[rendering]\nlimits/time/time_rollover_secs=';
+const NO_JITTER_FIX = '\n[physics]\ncommon/physics_jitter_fix=0.0\n';

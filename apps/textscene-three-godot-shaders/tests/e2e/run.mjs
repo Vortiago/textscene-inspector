@@ -9,8 +9,9 @@ import { MAIN_SCRIPT, parseShowcaseOutput, showcaseProjectFiles } from './godotS
 import { SHOWCASES } from './showcases.mjs';
 import { ALL_SCENES, DRAWN_SCENES } from './drawnScenes.mjs';
 import { MESH_MAIN_SCRIPT, meshProjectFiles, parseMeshOutput } from './godotMeshScenes.mjs';
+import { clockRuns } from './godotViewports.mjs';
 import { MESH_SCENES } from './meshScenes.mjs';
-import { parseSkyOutput, SKY_MAIN_SCRIPT, skyProjectFiles, skyRuns } from './godotSkyScenes.mjs';
+import { parseSkyOutput, SKY_MAIN_SCRIPT, skyProjectFiles } from './godotSkyScenes.mjs';
 import { SKY_SCENES } from './skyScenes.mjs';
 
 /** Where the guide shows each showcase's two images. */
@@ -22,8 +23,10 @@ const showcaseImage = (name, side) => join(SHOWCASE_DIR, `${name}-${side}.png`);
 async function godotImages() {
   const [showcases, ...runs] = await Promise.all([
     runGodotScript(MAIN_SCRIPT, showcaseProjectFiles(SHOWCASES)).then(parseShowcaseOutput),
-    runGodotScript(MESH_MAIN_SCRIPT, meshProjectFiles(MESH_SCENES)).then(parseMeshOutput),
-    ...skyRuns(SKY_SCENES).map(({ scenes, options }) =>
+    ...clockRuns(MESH_SCENES).map(({ scenes, options }) =>
+      runGodotScript(MESH_MAIN_SCRIPT, meshProjectFiles(scenes), options).then(parseMeshOutput)
+    ),
+    ...clockRuns(SKY_SCENES).map(({ scenes, options }) =>
       runGodotScript(SKY_MAIN_SCRIPT, skyProjectFiles(scenes), options).then(parseSkyOutput)
     ),
   ]);
