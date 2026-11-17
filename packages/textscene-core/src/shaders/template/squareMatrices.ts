@@ -23,7 +23,7 @@ export function withSquareMatrices(stage: TemplateStageNode): TemplateStageNode 
 }
 
 /** The square type a non-square matrix type is held as, or `type` itself. */
-export function squareType(type: string): string {
+function squareType(type: string): string {
   const shape = nonSquareShape(type);
   if (!shape) return type;
   const size = Math.max(shape.columns, shape.rows);

@@ -60,7 +60,7 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
 }
 
 /** The material of a parsed shader from `file`, for a caller that has read its tree already. */
-export function transpileParsedSpatial(
+function transpileParsedSpatial(
   { code, tree }: ParsedShader,
   file: string,
   sampling: ProjectSampling = GODOT_SAMPLING

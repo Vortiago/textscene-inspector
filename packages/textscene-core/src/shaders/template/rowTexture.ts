@@ -12,7 +12,7 @@ import { blockLayout, type BlockPacking, type PlacedMember } from './blockLayout
 import { glslShapeOf } from './glslTypes.js';
 
 /** The texels of one row. WebGL 2 promises 2048 texels a side, so a row stays inside it. */
-export const ROW_TEXELS = 1024;
+const ROW_TEXELS = 1024;
 
 /** A texel holds 16 bytes: four 32-bit words. */
 const TEXEL_WORDS = 4;

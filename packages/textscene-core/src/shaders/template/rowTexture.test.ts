@@ -5,7 +5,7 @@ import { generatedFragmentShader } from '../generatedShader.testkit';
 import { columnOf } from '../language/emitOperation.js';
 import type { StructValue } from '../language/emitValue.js';
 import type { StructNode } from '../language/shaderTree.js';
-import { RowTexture, ROW_TEXELS } from './rowTexture.js';
+import { RowTexture } from './rowTexture.js';
 
 const POSITION = { file: 't.glsl', line: 1, column: 1 };
 
@@ -35,8 +35,9 @@ type Value = Node | StructValue;
 describe('RowTexture', () => {
   it('writes the words of a block into texels of four lanes each, a row of texels at a time', () => {
     const { rows } = instancesBlock();
-    rows.write(new Uint32Array(ROW_TEXELS * 4 + 4).fill(7));
-    expect([rows.texture.image.width, rows.texture.image.height]).toEqual([ROW_TEXELS, 2]);
+    const rowTexels = rows.texture.image.width;
+    rows.write(new Uint32Array(rowTexels * 4 + 4).fill(7));
+    expect([rows.texture.image.width, rows.texture.image.height]).toEqual([rowTexels, 2]);
   });
 
   it('uploads its zero words before the first write, so the integer sampler reads an integer texture', () => {
