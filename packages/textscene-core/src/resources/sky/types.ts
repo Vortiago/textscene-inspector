@@ -53,9 +53,12 @@ export interface ShaderSkyText {
   code: string;
   /** Each `shader_parameter/<name>` the file writes as a Variant, by name, in the file's text. */
   parameters: Readonly<Record<string, string>>;
-  /** Each `shader_parameter/<name>` the file writes as a resource, by name, resolved in the file. */
-  textures: Readonly<Record<string, ScopedReference>>;
+  /** Each `shader_parameter/<name>` the file writes as a resource or as an array of them, by name. */
+  textures: Readonly<Record<string, ShaderTextureReference>>;
 }
+
+/** A sampler's resource, or a sampler array's with null for an empty element. */
+export type ShaderTextureReference = ScopedReference | readonly (ScopedReference | null)[];
 
 /** A sky shader with what the transpiler, which the previewer loads on demand, reads of it. */
 export interface ShaderSkyProperties extends ShaderSkyText {

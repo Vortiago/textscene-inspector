@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { loadedValue } from '../reading/reading.testkit';
+import type { ScopedReference } from '../reading';
 import { SKY, type DecodedSky } from './kind';
 
 const MATERIAL = '[sub_resource type="ProceduralSkyMaterial" id="m"]\nsky_curve = 0.3';
@@ -65,7 +66,35 @@ describe('SKY of a Sky over a ShaderMaterial', () => {
     );
     const tables = '[ext_resource type="Texture2D" path="res://stars.png" id="1_stars"]';
     const material = loadedValue(SKY, 'SubResource("s")', `${tables}\n\n${withTexture}`).sky.material;
-    expect(material.kind === 'shader' && material.textures.stars?.ref).toBe('ExtResource("1_stars")');
+    const stars = material.kind === 'shader' ? material.textures.stars : undefined;
+    expect(stars && !Array.isArray(stars) && (stars as ScopedReference).ref).toBe('ExtResource("1_stars")');
+  });
+
+  it('hands on each element of a sampler array as a reference, and null for an empty one', () => {
+    const withArray = scene().replace(
+      'shader_parameter/tint = 0.25',
+      'shader_parameter/tint = 0.25\nshader_parameter/layers = [ExtResource("1_a"), null, ExtResource("2_b")]'
+    );
+    const tables = [
+      '[ext_resource type="Texture2D" path="res://a.png" id="1_a"]',
+      '[ext_resource type="Texture2D" path="res://b.png" id="2_b"]',
+    ].join('\n');
+    const material = loadedValue(SKY, 'SubResource("s")', `${tables}\n\n${withArray}`).sky.material;
+    const layers = material.kind === 'shader' ? material.textures.layers : undefined;
+    expect(Array.isArray(layers) && layers.map((element) => element?.ref ?? null)).toEqual([
+      'ExtResource("1_a")',
+      null,
+      'ExtResource("2_b")',
+    ]);
+  });
+
+  it('keeps an array of values that names no resource as a value (edge case)', () => {
+    const withValues = scene().replace(
+      'shader_parameter/tint = 0.25',
+      'shader_parameter/tint = [0.25, null]'
+    );
+    const material = loadedValue(SKY, 'SubResource("s")', withValues).sky.material;
+    expect(material.kind === 'shader' && material.parameters.tint).toBe('[0.25, null]');
   });
 
   it('decodes the same value from a .gdshader file', () => {

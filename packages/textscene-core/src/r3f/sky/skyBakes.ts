@@ -9,6 +9,7 @@
 import type * as THREE from 'three';
 import { buildSkyEnvironment, type SkyEnvironmentInput, type SkyLight } from '../../resources/sky/build';
 import type { Sky } from '../../resources/sky/types';
+import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 import { roughnessLayersOf } from '../../resources/sky/skyLayers';
 import { materialReadsLights } from '../../resources/sky/readsLights';
 import { isDebanded } from '../../resources/sky/debanding';
@@ -86,7 +87,7 @@ function inputKey(
   return [
     panorama?.uuid ?? '',
     Object.entries(textures)
-      .map(([name, texture]) => `${name}=${texture.uuid}`)
+      .map(([name, texture]) => `${name}=${samplerKey(texture)}`)
       .sort(),
     sampling?.anisotropicFilteringLevel ?? '',
     sampling?.useNearestMipmapFilter ?? '',
@@ -233,4 +234,10 @@ function bakeSky(gl: THREE.WebGLRenderer, input: SkyBakeInput, exposure: number)
 
 function exposed(lights: readonly SkyLight[], exposure: number): SkyLight[] {
   return lights.map((light) => ({ ...light, energy: light.energy * exposure }));
+}
+
+function samplerKey(value: SamplerValue): string {
+  return Array.isArray(value)
+    ? value.map((texture) => texture?.uuid ?? '').join(',')
+    : (value as THREE.Texture).uuid;
 }

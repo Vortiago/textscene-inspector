@@ -6,16 +6,13 @@
  */
 
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
-import {
-  optionalReference,
-  type Follow,
-  type HeldResource,
-  type ResourceKind,
-  type ScopedReference,
-} from '../../reading';
+import { optionalReference, type Follow, type HeldResource, type ResourceKind } from '../../reading';
 import { resourceRef } from '../../../godot/variant/resourceRef';
+import { arrayLiteralBody } from '../../../godot/variant/variantParser';
+import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string';
 import { ShaderMode, shaderModeOf } from '../../../godot/rendering/shaderLanguage';
 import { decodeSkyMaterial } from '../../sky/decode';
+import type { ShaderTextureReference } from '../../sky/types';
 import { SHADER_CODE } from '../shadermaterial/shaderCode';
 import { decodeStandardMaterial3D } from '../standardmaterial3d/decode';
 import type { TextureSlot } from '../standardmaterial3d/types';
@@ -61,11 +58,12 @@ function shaderSkyMaterial(properties: Readonly<Record<string, string>>, follow:
   const code = follow.read(SHADER_CODE, shader).value;
   if (code === undefined || code === null || shaderModeOf(code) !== ShaderMode.SKY) return null;
   const parameters: Record<string, string> = {};
-  const textures: Record<string, ScopedReference> = {};
+  const textures: Record<string, ShaderTextureReference> = {};
   for (const [key, value] of Object.entries(properties)) {
     if (!key.startsWith(SHADER_PARAMETER)) continue;
     const name = key.slice(SHADER_PARAMETER.length);
-    if (resourceRef(value)) textures[name] = follow.reference(value);
+    const texture = shaderTextureReference(value, follow);
+    if (texture) textures[name] = texture;
     else parameters[name] = value;
   }
   return {
@@ -74,4 +72,17 @@ function shaderSkyMaterial(properties: Readonly<Record<string, string>>, follow:
     properties: { kind: 'shader', code, parameters, textures },
     panorama: null,
   };
+}
+
+/** A resource, or an array of resources and nulls that holds one resource at least, as a sampler takes. */
+function shaderTextureReference(value: string, follow: Follow): ShaderTextureReference | null {
+  if (resourceRef(value)) return follow.reference(value);
+  const body = arrayLiteralBody(value);
+  if (body === null) return null;
+  const elements = dropTrailingComma(splitTopLevel(body));
+  const isTextureArray =
+    elements.some((element) => resourceRef(element)) &&
+    elements.every((element) => element === 'null' || resourceRef(element));
+  if (!isTextureArray) return null;
+  return elements.map((element) => (element === 'null' ? null : follow.reference(element)));
 }

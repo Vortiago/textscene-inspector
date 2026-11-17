@@ -8,6 +8,7 @@
 
 import * as THREE from 'three';
 import type { ProjectSampling } from '../../shaders/uniforms/samplerState';
+import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 import type { ShaderDecoders } from '../../shaders/preprocessor/decoders';
 import type { BuiltInSkyProperties, ShaderSkyProperties, Sky } from './types';
 import { warn } from '../../logger';
@@ -54,7 +55,7 @@ export interface SkyEnvironmentInput {
   /** The scale a surface reads the radiance at, `scene.environmentIntensity`. */
   energy: number;
   /** A shader sky's loaded texture parameters, by uniform name. */
-  textures?: Readonly<Record<string, THREE.Texture>>;
+  textures?: Readonly<Record<string, SamplerValue>>;
   /** The decoders a shader sky's `#if` may decompress with. */
   decoders?: ShaderDecoders;
   /** The project's filter settings, which a shader sky's samplers read. */
