@@ -303,6 +303,12 @@ export interface VaryingNode {
   readonly position: SourcePosition;
 }
 
+/** A global of the shader: its kind and its index in the list of that kind. */
+export interface GlobalEntry {
+  readonly kind: 'struct' | 'uniform' | 'varying' | 'constant' | 'function';
+  readonly index: number;
+}
+
 /** NODE_TYPE_SHADER: the head, the modes and each global, in the order of the text within its kind. */
 export interface ShaderNode {
   readonly kind: 'shader';
@@ -318,6 +324,8 @@ export interface ShaderNode {
   /** Each `const` outside a function, in the order of the text. */
   readonly constants: readonly DeclarationNode[];
   readonly structs: readonly StructNode[];
+  /** Each global in the order the parser reads it, an include's in place, which no position gives. */
+  readonly order: readonly GlobalEntry[];
   readonly uniforms: readonly UniformNode[];
   /** Each `group_uniforms` statement, which only names the inspector's group of the uniforms after it. */
   readonly uniformGroups: readonly { readonly position: SourcePosition }[];

@@ -29,7 +29,7 @@ export function emitShader(
   const trees = new Map(
     shader.functions.map((definition) => [
       definition.name,
-      emittedTree({ ...definition, body: withConstantsFirst(definition.body, shader.constants) }),
+      emittedTree({ ...definition, body: withConstantsFirst(shader, definition) }),
     ])
   );
   const body: BodyEmitter = (tree, names) =>

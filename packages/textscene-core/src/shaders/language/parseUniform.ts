@@ -93,10 +93,6 @@ export class UniformParser {
     private readonly context: UniformContext
   ) {}
 
-  uniform(name: string): UniformNode | undefined {
-    return this.uniforms.find((uniform) => uniform.name === name);
-  }
-
   /** `global uniform`, `instance uniform` or `uniform`, read from its first word. */
   declaration(first: Token): void {
     const scope = this.scopeOf(first);

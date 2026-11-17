@@ -20,6 +20,7 @@ import type {
   Qualifier,
   ShaderNode,
   StructMember,
+  GlobalEntry,
   StructNode,
   ValueType,
   VaryingNode,
@@ -45,6 +46,7 @@ export function parse(
 
 class ShaderParser implements ExpressionScope {
   private readonly structs: StructNode[] = [];
+  private readonly order: GlobalEntry[] = [];
   private readonly functions: FunctionNode[] = [];
   /** Each function declared so far by its name in the text, its own included while its body is read. */
   private readonly signatures = new Map<string, FunctionSignature[]>();
@@ -99,7 +101,7 @@ class ShaderParser implements ExpressionScope {
   }
 
   identifier(name: string): Identifier | undefined {
-    // Outside a body, the uniforms declared so far: a default that reads one is not a constant.
+    // Outside a body, the globals declared so far: a default that reads a uniform is not a constant.
     const found = this.holder.current.find(name, false);
     if (found) return found;
     if (this.signatures.has(name) || this.stageRules.isStageFunctionHere(name)) return { kind: 'function' };
@@ -115,7 +117,7 @@ class ShaderParser implements ExpressionScope {
   useVarying(name: string): void {
     if (!this.current) return;
     this.stageRules.useVarying(name);
-    this.varyingStages.use(this.varying(name)!, this.current!.rname);
+    this.varyingStages.use(this.varying(name)!, this.current.rname);
   }
 
   private varying(name: string): VaryingNode | undefined {
@@ -182,8 +184,27 @@ class ShaderParser implements ExpressionScope {
     for (;;) {
       const token = this.tokens.next();
       if (token.type === 'TK_EOF') return this.tree(head);
+      const before = this.globalCounts();
       this.globalStatement(token);
+      this.recordOrder(before);
     }
+  }
+
+  private globalCounts(): Record<GlobalEntry['kind'], number> {
+    return {
+      struct: this.structs.length,
+      uniform: this.uniforms.uniforms.length,
+      varying: this.varyings.size,
+      constant: this.constants.length,
+      function: this.functions.length,
+    };
+  }
+
+  /** An entry for each global the statement added, after `before`. */
+  private recordOrder(before: Record<GlobalEntry['kind'], number>): void {
+    const after = this.globalCounts();
+    for (const kind of Object.keys(after) as GlobalEntry['kind'][])
+      for (let index = before[kind]; index < after[kind]; index++) this.order.push({ kind, index });
   }
 
   /** One statement outside a function (`shader_language.cpp:9237`). */
@@ -238,7 +259,7 @@ class ShaderParser implements ExpressionScope {
       this.tokens.fail("'const' qualifier cannot be used with a function return type.");
     if (type === 'void') this.tokens.fail("Expected '(' after function identifier.");
     this.tokens.reset(mark);
-    this.constantDeclaration(first);
+    this.constantDeclaration(first, nameToken.text!);
   }
 
   /** The type after `const` and a precision: a value type, `void` or a struct's name. */
@@ -275,14 +296,12 @@ class ShaderParser implements ExpressionScope {
   }
 
   /** `const float a = 1.0, b[2] = {a, a};` outside a function (`shader_language.cpp:10364`). */
-  private constantDeclaration(first: Token): void {
-    const declaration = parseDeclaration(
-      first,
-      this.tokens,
-      this.expressions,
-      this.holder.current,
-      (name) => this.struct(name) !== undefined
-    );
+  private constantDeclaration(first: Token, firstName: string): void {
+    const declaration = parseDeclaration(first, this.tokens, this.expressions, this.holder.current, {
+      isStruct: (name) => this.struct(name) !== undefined,
+      // A function's name refuses each name after the first, which `isConstantNameTaken` read (:10617).
+      isTaken: (name) => this.isBuiltInName(name) || (name !== firstName && this.signatures.has(name)),
+    });
     this.constants.push(declaration);
     for (const { name } of declaration.declarators) {
       const variable = this.holder.current.variables.get(name)!;
@@ -300,6 +319,7 @@ class ShaderParser implements ExpressionScope {
       varyings: [...this.varyings.values()],
       constants: this.constants,
       structs: this.structs,
+      order: this.order,
       uniforms: this.uniforms.uniforms,
       uniformGroups: this.uniforms.groups,
       functions: this.functions,
@@ -505,7 +525,7 @@ class ShaderParser implements ExpressionScope {
     const nameToken = this.tokens.next();
     if (nameToken.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected an identifier for argument name.');
     const name = nameToken.text!;
-    const isTaken = declared.some((argument) => argument.name === name) || this.uniforms.uniform(name);
+    const isTaken = declared.some((argument) => argument.name === name) || this.globals.has(name);
     if (isTaken || this.isBuiltInName(name)) {
       this.tokens.fail(`Redefinition of '${name}'.`);
     }

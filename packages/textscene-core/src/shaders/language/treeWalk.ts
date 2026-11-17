@@ -2,8 +2,9 @@ import type {
   BlockNode,
   CallNode,
   ControlFlowNode,
-  DeclarationNode,
   Expression,
+  FunctionNode,
+  ShaderNode,
   Statement,
 } from './shaderTree.js';
 
@@ -157,8 +158,15 @@ export function withExpressionsMapped(
   return { ...block, statements: block.statements.map(statement) };
 }
 
-/** GLSL folds a global `const` as it folds a local one, so a body may declare the constants first. */
-export function withConstantsFirst(body: BlockNode, constants: readonly DeclarationNode[]): BlockNode {
-  if (constants.length === 0) return body;
-  return { ...body, statements: [...constants, ...body.statements] };
+/** GLSL folds a global `const` as it folds a local one, so a body declares the constants above it first. */
+export function withConstantsFirst(shader: ShaderNode, definition: FunctionNode): BlockNode {
+  const at = shader.order.findIndex(
+    (entry) => entry.kind === 'function' && shader.functions[entry.index] === definition
+  );
+  const constants = shader.order
+    .slice(0, at)
+    .filter((entry) => entry.kind === 'constant')
+    .map((entry) => shader.constants[entry.index]!);
+  if (constants.length === 0) return definition.body;
+  return { ...definition.body, statements: [...constants, ...definition.body.statements] };
 }

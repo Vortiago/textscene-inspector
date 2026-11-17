@@ -47,7 +47,8 @@ export function resolvedCall(
   const convertsConstants = candidates.length === 1;
   const fitting = candidates.find((candidate) => fits(candidate, args, convertsConstants));
   const current = scope.currentFunction();
-  if (current !== undefined && callTarget(scope, rname, args) === current) fail('Recursion is not allowed.');
+  const target = fitting?.name ?? bestNamed(candidates, args, rname);
+  if (current !== undefined && target === current) fail('Recursion is not allowed.');
   if (scope.isProcessor(rname)) fail(`Function '${rname}' can't be called from source code.`);
   if (!fitting) fail(mismatch(rname, candidates, args, convertsConstants));
   const operands = args.map((arg, index) => converted(arg, fitting.arguments[index]!.type));

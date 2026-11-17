@@ -205,6 +205,26 @@ const GLOBAL_NAME_CASES = [
     'global/varying-named-as-other-type-built-in',
     'shader_type spatial;\nvarying vec3 EYEDIR;\nvoid fragment() {}'
   ),
+  headCase(
+    'global/argument-named-as-const',
+    'shader_type spatial;\nconst float K = 1.0;\nfloat f(float K) {\n\treturn K;\n}'
+  ),
+  headCase(
+    'global/argument-named-as-varying',
+    'shader_type spatial;\nvarying float v;\nfloat f(float v) {\n\treturn v;\n}'
+  ),
+  headCase('global/const-named-as-other-type-built-in', 'shader_type spatial;\nconst float EYEDIR = 1.0;', [
+    'const',
+  ]),
+  headCase(
+    'global/second-const-named-as-function',
+    'shader_type spatial;\nfloat f() {\n\treturn 1.0;\n}\nconst float a = 1.0, f = 2.0;'
+  ),
+  headCase(
+    'global/local-named-as-later-const',
+    'shader_type spatial;\nfloat f() {\n\tfloat k = 1.0;\n\treturn k;\n}\nconst float k = 2.0;',
+    ['const']
+  ),
 ];
 
 export const HEAD_CASES = [

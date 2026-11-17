@@ -32,7 +32,7 @@ export function compileMaterial(shader: ShaderNode, table: ModeTable): CompiledM
   const functions: FunctionNode[] = [];
   for (const parsed of shader.functions) {
     // GLSL reads the material as the text Godot writes for it, so its tree is the one GLSL reads.
-    const definition = { ...parsed, body: glslBlock(withConstantsFirst(parsed.body, shader.constants)) };
+    const definition = { ...parsed, body: glslBlock(withConstantsFirst(shader, parsed)) };
     if (stages.has(definition.rname)) code.set(definition.rname.toUpperCase(), ids.block(definition.body));
     else functions.push(ids.function(definition));
   }

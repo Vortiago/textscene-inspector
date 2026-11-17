@@ -16,6 +16,11 @@ function glslOf(source: string, args: Node[] = []): string {
 }
 
 describe('transpileShadingLanguage', () => {
+  it('gives a function only the global constants the text has above it', () => {
+    const source = 'float f() { float k = 1.0; return k; }\nconst float k = 2.0;\nfloat g() { return k; }';
+    expect(() => transpileShadingLanguage(source)).not.toThrow();
+  });
+
   it('names each function with its head', () => {
     const probe = transpileShadingLanguage('vec2 probe(vec2 a, float b) { return a; }').functions.get(
       'probe'

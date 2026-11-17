@@ -149,6 +149,12 @@ describe('varyings', () => {
     ]);
   });
 
+  it('refuses an argument that hides a varying', () => {
+    expect(refusal('shader_type spatial;\nvarying float v;\nfloat f(float v) { return v; }')).toMatch(
+      "Redefinition of 'v'."
+    );
+  });
+
   it('refuses a varying in a sky shader', () => {
     expect(refusal('shader_type sky;\nvarying float v;')).toMatch(
       "Varyings cannot be used in 'sky' shaders."
@@ -235,5 +241,20 @@ describe('global constants', () => {
 
   it('refuses a local that hides a constant', () => {
     expect(refusal('const float K = 1.0;\nvoid f() { float K = 2.0; }')).toMatch("Redefinition of 'K'.");
+  });
+
+  it('refuses an argument that hides a constant', () => {
+    expect(refusal('const float K = 1.0;\nfloat f(float K) { return K; }')).toMatch("Redefinition of 'K'.");
+  });
+
+  it('takes the name of a built-in of another shader type', () => {
+    expect(() => treeOf('shader_type spatial;\nconst float EYEDIR = 1.0;')).not.toThrow();
+  });
+
+  it("takes a function's name for the first constant only, as Godot does", () => {
+    expect(() => treeOf('float f() { return 1.0; }\nconst float f = 2.0;')).not.toThrow();
+    expect(refusal('float f() { return 1.0; }\nconst float a = 1.0, f = 2.0;')).toMatch(
+      "Redefinition of 'f'."
+    );
   });
 });

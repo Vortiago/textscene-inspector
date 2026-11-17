@@ -8,6 +8,7 @@ import type {
   DeclarationNode,
   Expression,
   FunctionNode,
+  GlobalEntry,
   ShaderModeNode,
   ShaderNode,
   Statement,
@@ -15,28 +16,21 @@ import type {
   UniformNode,
   VaryingNode,
 } from './shaderTree.js';
-import type { SourcePosition } from './shadingLanguageError.js';
 import { shapeOf } from './types.js';
 import { isCall, isEmpty, typeName } from './treeWalk.js';
 
 /** The text of `shader`: its head and modes, then its globals in the order of the text. */
 export function printShader(shader: ShaderNode): string {
   const uniforms = printUniforms(shader.uniforms);
-  const globals: [SourcePosition, string][] = [
-    ...shader.structs.map((struct): [SourcePosition, string] => [struct.position, printStruct(struct)]),
-    ...shader.uniforms.map((uniform, index): [SourcePosition, string] => [
-      uniform.position,
-      uniforms[index]!,
-    ]),
-    ...shader.varyings.map((varying): [SourcePosition, string] => [varying.position, printVarying(varying)]),
-    ...shader.constants.map((constant): [SourcePosition, string] => [
-      constant.position,
-      printDeclaration(constant),
-    ]),
-    ...shader.functions.map((fn): [SourcePosition, string] => [fn.position, printFunction(fn)]),
-  ];
-  globals.sort(([a], [b]) => a.line - b.line || a.column - b.column);
-  return [...printHead(shader), ...globals.map(([, text]) => text)].join('\n\n');
+  const printers: Record<GlobalEntry['kind'], (index: number) => string> = {
+    struct: (index) => printStruct(shader.structs[index]!),
+    uniform: (index) => uniforms[index]!,
+    varying: (index) => printVarying(shader.varyings[index]!),
+    constant: (index) => printDeclaration(shader.constants[index]!),
+    function: (index) => printFunction(shader.functions[index]!),
+  };
+  const globals = shader.order.map(({ kind, index }) => printers[kind](index));
+  return [...printHead(shader), ...globals].join('\n\n');
 }
 
 /** `shader_type`, then one line for the render modes and one for the stencil modes. */

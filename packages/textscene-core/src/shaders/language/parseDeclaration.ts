@@ -1,4 +1,4 @@
-import { builtInInstruction, keywordInstruction } from './instructions.js';
+import { keywordInstruction } from './instructions.js';
 import type { ArraySize } from './parseArray.js';
 import type { ExpressionParser } from './parseExpression.js';
 import { arraySizeOf, typeName } from './treeWalk.js';
@@ -8,15 +8,22 @@ import type { TokenCursor } from './tokenCursor.js';
 import { isPrecisionToken, type Token } from './tokenizer.js';
 import { shapeOf } from './types.js';
 
+/** The names a declaration asks about beyond its scope. */
+export interface DeclarationNames {
+  readonly isStruct: (name: string) => boolean;
+  /** Whether a name outside the scope, as a built-in's, refuses a declarator of that name. */
+  readonly isTaken: (name: string) => boolean;
+}
+
 /** The declaration that starts at `first`, its `;` read. */
 export function parseDeclaration(
   first: Token,
   tokens: TokenCursor,
   expressions: ExpressionParser,
   scope: BlockScope,
-  isStruct: (name: string) => boolean
+  names: DeclarationNames
 ): DeclarationNode {
-  return new DeclarationParser(tokens, expressions, scope, isStruct).declaration(first);
+  return new DeclarationParser(tokens, expressions, scope, names).declaration(first);
 }
 
 class DeclarationParser {
@@ -24,7 +31,7 @@ class DeclarationParser {
     private readonly tokens: TokenCursor,
     private readonly expressions: ExpressionParser,
     private readonly scope: BlockScope,
-    private readonly isStruct: (name: string) => boolean
+    private readonly names: DeclarationNames
   ) {}
 
   declaration(first: Token): DeclarationNode {
@@ -56,7 +63,7 @@ class DeclarationParser {
 
   /** The type after `const` and a precision: a value type or a struct, never a sampler. */
   private declaredType(token: Token, hasPrecision: boolean): string {
-    if (token.type === 'TK_IDENTIFIER' && this.isStruct(token.text!)) {
+    if (token.type === 'TK_IDENTIFIER' && this.names.isStruct(token.text!)) {
       if (hasPrecision) this.tokens.fail('Expected variable type after precision modifier.');
       return token.text!;
     }
@@ -79,7 +86,7 @@ class DeclarationParser {
   ): Declarator {
     if (token.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected an identifier.');
     const name = token.text!;
-    if (this.scope.find(name, true) || builtInInstruction(name))
+    if (this.scope.find(name, true) || this.names.isTaken(name))
       this.tokens.fail(`Redefinition of '${name}'.`);
     const outer = this.expressions.isConstDeclaration;
     // Set before the size after the name, as `shader_language.cpp:8148` sets `is_const_decl`.

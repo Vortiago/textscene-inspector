@@ -1,5 +1,5 @@
 import { godotIntegerConstant } from './godotNumber.js';
-import { keywordInstruction } from './instructions.js';
+import { builtInInstruction, keywordInstruction } from './instructions.js';
 import type { ExpressionParser } from './parseExpression.js';
 import { arraySizeOf, typeName } from './treeWalk.js';
 import { parseDeclaration } from './parseDeclaration.js';
@@ -90,7 +90,10 @@ export class StatementParser {
   private statement(token: Token, mark: number, rules: BlockRules, statements: Statement[]): Outcome {
     if (this.startsDeclaration(token)) {
       statements.push(
-        parseDeclaration(token, this.tokens, this.expressions, this.holder.current, this.isStruct)
+        parseDeclaration(token, this.tokens, this.expressions, this.holder.current, {
+          isStruct: this.isStruct,
+          isTaken: (name) => builtInInstruction(name) !== undefined,
+        })
       );
       return 'goes on';
     }
