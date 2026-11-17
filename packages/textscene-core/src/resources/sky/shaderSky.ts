@@ -85,7 +85,7 @@ export function transpiledShaderSky(
     sky = transpileSky(material.code, { decoders });
   } catch (error) {
     if (!(error instanceof ShadingLanguageError)) throw error;
-    warnOnce(material, 'refused', refusalMessage(error));
+    warnOnce(material, 'refused', `[Sky] ${refusalMessage(error)}`);
     return transpileSky(GODOT_DEFAULT_SKY);
   }
   setParameters(sky.parameters, material.parameters, textures);
@@ -102,8 +102,21 @@ export function setParameters(
   for (const [name, texture] of Object.entries(textures)) uniforms.get(name)?.set(texture);
 }
 
+/** Why the previewer draws Godot's default sky for `code`, or null when it draws the shader. */
+export function shaderSkyRefusal(code: string, decoders: ShaderDecoders = {}): string | null {
+  try {
+    const { mesh } = transpileSky(code, { decoders });
+    mesh.geometry.dispose();
+    mesh.material.dispose();
+    return null;
+  } catch (error) {
+    // Another failure is the build's to warn: the sky then draws nothing, not the default sky.
+    return error instanceof ShadingLanguageError ? refusalMessage(error) : null;
+  }
+}
+
 function refusalMessage(error: ShadingLanguageError): string {
   if (error.owner === undefined)
-    return `[Sky] Godot does not compile the sky shader, and draws its default sky: ${error.message}`;
-  return `[Sky] the previewer does not translate this sky shader yet (${error.owner}), and draws Godot's default sky: ${error.message}`;
+    return `Godot does not compile the sky shader, and draws its default sky: ${error.message}`;
+  return `The previewer does not translate this sky shader yet (${error.owner}), and draws Godot's default sky: ${error.message}`;
 }

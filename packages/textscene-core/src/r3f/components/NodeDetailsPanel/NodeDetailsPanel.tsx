@@ -13,6 +13,7 @@ import { useLiveNode } from '../../useLiveSceneTree.js';
 import { useLivePatchedNode } from '../../liveNodePatches.js';
 import { useUndrawnMeshTypes } from '../../contexts/UndrawnMeshesContext.js';
 import { useIsEmptyShape } from '../../contexts/EmptyShapesContext.js';
+import { useShaderErrors } from '../../contexts/ShaderErrorsContext.js';
 import { spelledLiveNodePath } from '../../../utils/nodePath.js';
 import { PropertySection } from './PropertySection.js';
 import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
@@ -74,6 +75,7 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
 
       <UndrawnMeshNotice nodePath={path} />
       <EmptyShapeNotice nodePath={path} />
+      <ShaderErrorNotice nodePath={path} />
 
       <div className={styles.section}>
         <div className={styles.row}>
@@ -185,6 +187,21 @@ function EmptyShapeNotice({ nodePath }: { nodePath: string }) {
       {EMPTY_SHAPE_WARNING.map((line) => (
         <p key={line} className={styles.warningText}>
           {line}
+        </p>
+      ))}
+    </WarningSection>
+  );
+}
+
+/** The error text of each shader of the node that the previewer does not draw. */
+function ShaderErrorNotice({ nodePath }: { nodePath: string }) {
+  const errors = useShaderErrors(nodePath);
+  if (errors.length === 0) return null;
+  return (
+    <WarningSection title="Shader Error">
+      {errors.map((error) => (
+        <p key={error} className={styles.warningText}>
+          {error}
         </p>
       ))}
     </WarningSection>

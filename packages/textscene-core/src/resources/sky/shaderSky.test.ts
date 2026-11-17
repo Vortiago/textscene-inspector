@@ -7,7 +7,7 @@ import { transpileSky } from '../../shaders/sky/transpileSky';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { installNodesHandler } from '../../shaders/nodesHandler';
 import { ShaderSkyBackground } from '../../r3f/sky/shaderSkyBackground';
-import { GODOT_DEFAULT_SKY, setParameters, transpiledShaderSky } from './shaderSky';
+import { GODOT_DEFAULT_SKY, setParameters, shaderSkyRefusal, transpiledShaderSky } from './shaderSky';
 import { buildSkyEnvironment } from './build';
 import { decodeSky } from './decode';
 import type { ShaderSkyProperties, Sky } from './types';
@@ -45,6 +45,18 @@ describe('transpiledShaderSky', () => {
     const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     transpiledShaderSky(shaderMaterial('shader_type sky;\n\nvoid sky() { COLOR = 1.0; }\n'));
     expect(warn).toHaveBeenCalledWith(expect.stringMatching(/^\[Sky\] Godot does not compile .* 3:\d+: /));
+  });
+});
+
+describe('shaderSkyRefusal', () => {
+  it("gives Godot's error and its line for a shader Godot does not compile", () => {
+    expect(shaderSkyRefusal('shader_type sky;\n\nvoid sky() { COLOR = 1.0; }\n')).toMatch(
+      /^Godot does not compile the sky shader, and draws its default sky: 3:\d+: /
+    );
+  });
+
+  it('gives nothing for a shader the previewer draws', () => {
+    expect(shaderSkyRefusal(TINTED_SKY)).toBeNull();
   });
 });
 

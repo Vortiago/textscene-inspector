@@ -38,6 +38,7 @@ import { showSkyBackground } from './skyBackground';
 import { useShaderTimeFrame } from '../shaderTime/canvasShaderTime';
 import { useShaderSkyTextures } from './shaderSkyTextures';
 import { useShaderDecoders } from '../shaderDecoders';
+import { useShaderSkyErrorReport } from './shaderSkyError';
 import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
 import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
@@ -101,6 +102,7 @@ export function SkyLayer({
   useShaderTimeFrame();
   const [textures, textureSlots] = useShaderSkyTextures(sky.material);
   const decoders = useShaderDecoders(sky.material.kind === 'shader' ? sky.material.code : null);
+  useShaderSkyErrorReport(sky.material, decoders);
 
   // Written only by the effect below, while it holds bakes.
   const bakeWantedRef = useRef<(() => boolean) | null>(null);

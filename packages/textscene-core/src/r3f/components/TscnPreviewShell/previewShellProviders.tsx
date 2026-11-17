@@ -10,6 +10,7 @@ import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext.j
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
 import { LiveFilesHost } from '../../LiveFilesHost.js';
 import { UndrawnMeshesProvider } from '../../contexts/UndrawnMeshesContext.js';
+import { ShaderErrorsProvider } from '../../contexts/ShaderErrorsContext.js';
 import { EmptyShapesProvider } from '../../contexts/EmptyShapesContext.js';
 import {
   DEFAULT_VIEWPORT,
@@ -77,6 +78,7 @@ export function previewShellProviders({
     ),
     (children) => <UndrawnMeshesProvider>{children}</UndrawnMeshesProvider>,
     (children) => <EmptyShapesProvider>{children}</EmptyShapesProvider>,
+    (children) => <ShaderErrorsProvider>{children}</ShaderErrorsProvider>,
     (children) => (
       // A host-forced `initialViewportMode` wins over the persisted mode.
       <ViewportModeProvider
