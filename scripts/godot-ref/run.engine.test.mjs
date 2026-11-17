@@ -545,7 +545,7 @@ mesh = SubResource("1")
       const game = await renderProject(files);
       const runtime = await renderProject(files, { mode: '3d', previews: false });
 
-      // With the project environment, red ambient lights a white box red. Without it, the engine's grey ambient gives no hue.
+      // The project's red ambient lights a white box red. Without it the engine's grey ambient gives no hue.
       expect(game.reported).toBe('in-game');
       expect(game.at(CENTRE)[0]).toBeGreaterThan(100);
       expect(game.at(CENTRE)[1]).toBeLessThan(10);

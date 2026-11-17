@@ -100,7 +100,7 @@ export const EDITOR_CAMERA_DISTANCE = 4;
 /** `frameSceneBounds.ts`'s margin, for the opt-in framed mode. */
 export const FRAME_MARGIN = 1.6;
 
-/** The values `--mode` accepts. The root-window arms come last, so the rejection message keeps its `auto|2d|3d|…` prefix. */
+/** The `--mode` values. The root-window arms come last, so a rejection keeps its `auto|2d|3d|…` prefix. */
 export const RENDER_MODES = ['auto', '2d', '3d', '2d-root', 'in-game'];
 
 /** The scene as the root window's own scene with no script run, as the game starts it. */
@@ -548,10 +548,7 @@ function dropSection(ini, name) {
 
 const WINDOW_MODE_SETTING = /^window\/size\/mode\s*=/;
 
-/**
- * The generated `project.godot`: the source settings minus the default environment and the 3D frame
- * size. `inGame` keeps the environment and the window settings.
- */
+/** The generated `project.godot`. `inGame` keeps the default environment and the window settings. */
 export function projectConfig(
   sourceIni,
   { width, height, pinWindowToViewport = false, runScripts = true, inGame = false }
