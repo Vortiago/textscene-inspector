@@ -54,6 +54,14 @@ describe('withSquareMatrices', () => {
     expect(inMain('vec4 a;\nmat3x4 m = mat3x4(a, a, a);')).toContain('mat4 m = mat4(a, a, a, vec4(0.0));');
   });
 
+  it('fills a mat4 of a mat3x4 from the identity where the mat3x4 has no column', () => {
+    expect(inMain('mat3x4 t;\nmat4 m = mat4(t);')).toContain('vec4(0.0, 0.0, 0.0, 1.0))');
+  });
+
+  it('fills a mat3x4 of a mat3 from the identity where the mat3 has no row', () => {
+    expect(inMain('mat3 t;\nmat3x4 m = mat3x4(t);')).toContain('vec4((t[0]).x, (t[0]).y, (t[0]).z, 0.0)');
+  });
+
   it('builds a mat4x3 of columns, each with a zero row', () => {
     expect(inMain('vec3 a;\nmat4x3 m = mat4x3(a, a, a, a);')).toContain(
       'mat4 m = mat4(vec4(a, 0.0), vec4(a, 0.0), vec4(a, 0.0), vec4(a, 0.0));'

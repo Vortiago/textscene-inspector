@@ -65,12 +65,12 @@ function staleImage(path, pixels) {
 
 function resultTable(results) {
   const lines = results.map(
-    ({ showcase, overTolerance, pixels, maxSteps }) =>
-      `| \`${showcase.name}\` | ${pixels} | ${overTolerance} | ${maxSteps}/255 |`
+    ({ showcase, overTolerance, pixels, maxSteps, meanSteps }) =>
+      `| \`${showcase.name}\` | ${pixels} | ${overTolerance} | ${maxSteps}/255 | ${meanSteps.toFixed(3)}/255 |`
   );
   return [
-    `| Showcase | Pixels | Over ${TOLERANCE_STEPS}/255 | Max |`,
-    '| --- | --- | --- | --- |',
+    `| Showcase | Pixels | Over ${TOLERANCE_STEPS}/255 | Max | Mean |`,
+    '| --- | --- | --- | --- | --- |',
     ...lines,
   ].join('\n');
 }

@@ -42,4 +42,21 @@ describe('withGodotAttributes', () => {
     geometry.setAttribute('tangent', new THREE.Float32BufferAttribute([1, 0, 0, 1, 0, 0, 1, 0, 0], 3));
     expect(() => withGodotAttributes(geometry)).toThrow('got 3');
   });
+
+  it('writes a colour as four bytes, each cut down from 255 times its lane, with alpha 1 for three lanes', () => {
+    const geometry = triangle();
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute([0.5, 1, 0.999, 0, 0, 0, 0, 0, 0], 3));
+    const color = withGodotAttributes(geometry).getAttribute('color_attrib') as THREE.BufferAttribute;
+    expect([color.normalized, ...color.array.slice(0, 4)]).toEqual([true, 127, 255, 254, 255]);
+  });
+
+  it("reads three's first and second UV sets as Godot's UV and UV2", () => {
+    const geometry = triangle();
+    const uv = new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1], 2);
+    const uv1 = new THREE.Float32BufferAttribute([1, 1, 0, 1, 1, 0], 2);
+    geometry.setAttribute('uv', uv);
+    geometry.setAttribute('uv1', uv1);
+    const godot = withGodotAttributes(geometry);
+    expect([godot.getAttribute('uv_attrib'), godot.getAttribute('uv2_attrib')]).toEqual([uv, uv1]);
+  });
 });

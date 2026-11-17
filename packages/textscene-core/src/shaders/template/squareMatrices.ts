@@ -10,7 +10,7 @@ import type {
 import { ShadingLanguageError } from '../language/shadingLanguageError.js';
 import { swizzled } from '../language/swizzle.js';
 import { withSubExpressions } from '../language/treeWalk.js';
-import { constructorRow, operatorRow } from './glslRows.js';
+import { constructorRow, namedRow, operatorRow } from './glslRows.js';
 import { glslShapeOf, shapeName, type GlslShape } from './glslTypes.js';
 import type { TemplateDeclaration, TemplateStageNode } from './templateTree.js';
 
@@ -169,6 +169,7 @@ function squareVectorProduct(parts: OperatorNode, vector: number, size: number, 
 
 /** A non-square matrix of columns: each column padded to the square's rows, then zero columns. */
 function squareConstruction(original: OperatorNode, parts: OperatorNode): Expression {
+  if (isMatrixCast(original)) return squareMatrixCast(original, parts);
   const shape = nonSquareShape(original.type);
   if (!shape) return squareOperator(original, parts);
   const size = Math.max(shape.columns, shape.rows);
@@ -199,6 +200,67 @@ function squareConstruction(original: OperatorNode, parts: OperatorNode): Expres
     ),
   };
 }
+
+/** A matrix built from one matrix, where either is non-square. */
+function isMatrixCast(original: OperatorNode): boolean {
+  const [source, ...rest] = original.operands;
+  if (!source || rest.length > 0 || (glslShapeOf(source.type)?.columns ?? 1) === 1) return false;
+  return nonSquareShape(original.type) !== undefined || nonSquareShape(source.type) !== undefined;
+}
+
+/** GLSL 4.50, section 5.4.2: each element the source lacks comes from the identity. */
+function squareMatrixCast(original: OperatorNode, parts: OperatorNode): Expression {
+  const target = glslShapeOf(original.type)!;
+  const source = glslShapeOf(original.operands[0]!.type)!;
+  const size = Math.max(target.columns, target.rows);
+  const squared = parts.operands[0]!;
+  const element = (column: number, row: number): Expression =>
+    column < source.columns && row < source.rows
+      ? laneOf(columnOf(squared, column), row)
+      : constant(original, column === row ? 1 : 0);
+  const columns = Array.from({ length: size }, (_, column) =>
+    vectorOf(
+      size,
+      Array.from({ length: size }, (_, row) =>
+        column < target.columns && row < target.rows ? element(column, row) : constant(original, 0)
+      )
+    )
+  );
+  const type = `mat${size}`;
+  return {
+    kind: 'operator',
+    type,
+    op: 'OP_CONSTRUCT',
+    row: constructorRow(
+      type,
+      columns.map((column) => column.type)
+    ),
+    operands: columns,
+    position: original.position,
+  };
+}
+
+function columnOf(matrix: Expression, column: number): Expression {
+  const size = glslShapeOf(matrix.type)!.rows;
+  const index: ConstantNode = { kind: 'constant', type: 'int', values: [column], position: matrix.position };
+  return {
+    kind: 'operator',
+    type: `vec${size}`,
+    op: 'OP_INDEX',
+    row: namedRow('OP_INDEX'),
+    operands: [matrix, index],
+    position: matrix.position,
+  };
+}
+
+const laneOf = (vector: Expression, lane: number) => swizzle(vector, LANES[lane]!);
+
+const constant = (at: Expression, value: number): ConstantNode => ({
+  kind: 'constant',
+  type: 'float',
+  values: [value],
+  position: at.position,
+});
 
 /** An operator whose row names a non-square type gets the row of the square types. */
 function squareOperator(original: OperatorNode, parts: OperatorNode): Expression {
@@ -234,17 +296,16 @@ function vectorOf(size: number, operands: readonly Expression[]): Expression {
   return { kind: 'operator', type, op: 'OP_CONSTRUCT', row, operands, position: operands[0]!.position };
 }
 
-const zero = (at: Expression): ConstantNode => ({
-  kind: 'constant',
-  type: 'float',
-  values: [0],
-  position: at.position,
-});
+const zero = (at: Expression) => constant(at, 0);
 
 /** The first `lanes` lanes of `vector`, or `vector` itself when it has no more. */
 function lanesOf(vector: Expression, lanes: number): Expression {
   if (glslShapeOf(vector.type)!.rows <= lanes) return vector;
-  const swizzle = swizzled(vector, LANES.slice(0, lanes));
-  if (typeof swizzle === 'string') throw new Error(`expected a swizzle of ${vector.type}, got: ${swizzle}`);
-  return swizzle;
+  return swizzle(vector, LANES.slice(0, lanes));
+}
+
+function swizzle(vector: Expression, letters: string): Expression {
+  const member = swizzled(vector, letters);
+  if (typeof member === 'string') throw new Error(`expected a swizzle of ${vector.type}, got: ${member}`);
+  return member;
 }

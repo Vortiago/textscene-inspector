@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { add, bitAnd, int, ivec2, mul, shiftRight, texture } from 'three/tsl';
-import type { Node, TextureNode } from 'three/webgpu';
-import { intNode, tsl } from '../language/compositeParts.js';
+import { add, bitAnd, int, ivec2, mul, nodeObject, shiftRight } from 'three/tsl';
+import { NodeUpdateType, TextureNode, type Node, type NodeFrame } from 'three/webgpu';
+import { intNode, swizzles, tsl } from '../language/compositeParts.js';
 import { CONSTRUCTORS, floatNode } from '../language/emitConstant.js';
 import { element } from '../language/emitOperation.js';
 import type { ArrayValue, StructValue, Value } from '../language/emitValue.js';
@@ -17,18 +17,43 @@ const ROW_TEXELS = 1024;
 /** A texel holds 16 bytes: four 32-bit words. */
 const TEXEL_WORDS = 4;
 
-/** An index or a word offset: a constant, or an `int` node of the stage. */
-type Index = Node | number;
+/** A word: `4 * texels + words` while each step is whole texels, so one texel takes one fetch. */
+type Index = { readonly texels?: Node; readonly words: number } | { readonly dynamicWords: Node };
+
+/** An array index: a constant, or an integer node of the stage. */
+type Element = Node | number;
 
 /** A member of a block, which may be the array of no size that ends a `buffer` block. */
 export type RowMember = StructMember & { readonly isRuntimeSized?: boolean };
+
+/** The write before a draw that every fetch of one block shares. Set only by `RowTexture.writeEachDraw`. */
+interface DrawWrite {
+  write?: (frame: NodeFrame) => void;
+}
+
+/** Each fetch is a clone, which keeps the class and the shared write. */
+class RowsNode extends TextureNode {
+  override updateType = NodeUpdateType.OBJECT;
+  drawWrite: DrawWrite = {};
+
+  override update(frame: NodeFrame): undefined {
+    this.drawWrite.write?.(frame);
+    return undefined;
+  }
+
+  override clone(): this {
+    const node = super.clone();
+    node.drawWrite = this.drawWrite;
+    return node;
+  }
+}
 
 /** A storage buffer block as an `RGBA32UI` texture, read at its packing's offsets: WebGL 2 has no buffers. */
 export class RowTexture {
   readonly texture: THREE.DataTexture;
   /** The block's instance as the stage reads it: each member by name. */
   readonly value: StructValue;
-  private readonly node: TextureNode;
+  private readonly node: RowsNode;
 
   constructor(
     members: readonly RowMember[],
@@ -45,8 +70,8 @@ export class RowTexture {
     this.texture.internalFormat = 'RGBA32UI';
     // three binds a float texture for one never uploaded, and an integer sampler of it fails the draw.
     this.texture.needsUpdate = true;
-    this.node = texture(this.texture) as unknown as TextureNode;
-    this.value = this.struct(members, 0);
+    this.node = nodeObject(new RowsNode(this.texture)) as unknown as RowsNode;
+    this.value = this.struct(members, { words: 0 });
   }
 
   /** Writes the block's words from byte 0, and grows the texture to hold them. */
@@ -62,6 +87,16 @@ export class RowTexture {
       this.texture.image = { data, width: ROW_TEXELS, height: rows } as never;
     }
     this.texture.needsUpdate = true;
+  }
+
+  /** Writes each drawn object's words: the node handler owns onBeforeRender (`WebGLNodesHandler.js:455`). */
+  writeEachDraw(wordsOf: (object: THREE.Object3D) => Uint32Array): void {
+    let writtenFor: number | undefined;
+    this.node.drawWrite.write = (frame) => {
+      if (frame.renderId === writtenFor) return;
+      writtenFor = frame.renderId;
+      this.write(wordsOf(frame.object!));
+    };
   }
 
   private struct(members: readonly RowMember[], word: Index): StructValue {
@@ -82,7 +117,7 @@ export class RowTexture {
     return {
       kind: 'array',
       count: member.isRuntimeSized ? Number.POSITIVE_INFINITY : placed.arraySize,
-      element: (index) => this.read(placed.type, plus(start, times(index, placed.stride / 4))),
+      element: (index) => this.read(placed.type, stepped(start, index, placed.stride / 4)),
     } satisfies ArrayValue;
   }
 
@@ -102,23 +137,32 @@ export class RowTexture {
   }
 
   private vector(scalar: ScalarKind, lanes: number, word: Index): Node {
-    const parts = Array.from({ length: lanes }, (_, lane) =>
-      LANE_OF_BITS[scalar](this.word(plus(word, lane)))
-    );
+    const texel = 'words' in word ? oneTexel(word, lanes) : undefined;
+    const lane = (index: number) =>
+      texel
+        ? swizzles(texel.fetched(this))['xyzw'[texel.lane + index]! as 'x']
+        : this.word(plus(word, index));
+    const parts = Array.from({ length: lanes }, (_, index) => LANE_OF_BITS[scalar](lane(index)));
     return lanes === 1 ? parts[0]! : CONSTRUCTORS[vectorType(scalar, lanes)]!(...parts);
   }
 
   /** The word at `index`: lane `index & 3` of texel `index >> 2`, in rows of `ROW_TEXELS` texels. */
   private word(index: Index): Node {
-    if (typeof index === 'number') {
-      const texel = Math.floor(index / TEXEL_WORDS);
-      const fetched = this.fetch(intNode(texel % ROW_TEXELS), intNode(Math.floor(texel / ROW_TEXELS)));
-      return (fetched as unknown as Record<string, Node>)['xyzw'[index % TEXEL_WORDS]!]!;
+    if ('words' in index) {
+      const lane = index.words % TEXEL_WORDS;
+      return swizzles(this.texel(texelOf(index)))['xyzw'[lane]! as 'x'];
     }
-    const texel = tsl(shiftRight)(index, intNode(Math.log2(TEXEL_WORDS)));
-    const x = tsl(bitAnd)(texel, intNode(ROW_TEXELS - 1));
-    const y = tsl(shiftRight)(texel, intNode(Math.log2(ROW_TEXELS)));
-    return element(this.fetch(x, y), tsl(bitAnd)(index, intNode(TEXEL_WORDS - 1)));
+    const texel = tsl(shiftRight)(index.dynamicWords, intNode(Math.log2(TEXEL_WORDS)));
+    return element(this.texel(texel), tsl(bitAnd)(index.dynamicWords, intNode(TEXEL_WORDS - 1)));
+  }
+
+  /** The texel at `index`, a constant or an `int` node, in rows of `ROW_TEXELS` texels. */
+  texel(index: Element): Node {
+    if (typeof index === 'number')
+      return this.fetch(intNode(index % ROW_TEXELS), intNode(Math.floor(index / ROW_TEXELS)));
+    const x = tsl(bitAnd)(index, intNode(ROW_TEXELS - 1));
+    const y = tsl(shiftRight)(index, intNode(Math.log2(ROW_TEXELS)));
+    return this.fetch(x, y);
   }
 
   private fetch(x: Node, y: Node): Node {
@@ -126,18 +170,43 @@ export class RowTexture {
   }
 }
 
-/** `base + offset` in words, folded while both are constants. */
-function plus(base: Index, offset: Index): Index {
-  if (typeof base === 'number' && typeof offset === 'number') return base + offset;
-  if (offset === 0) return base;
-  const asNode = (index: Index) => (typeof index === 'number' ? intNode(index) : index);
-  return tsl(add)(asNode(base), asNode(offset));
+/** `base + words`. */
+function plus(base: Index, words: number): Index {
+  if (words === 0) return base;
+  if ('words' in base) return { ...base, words: base.words + words };
+  return { dynamicWords: tsl(add)(base.dynamicWords, intNode(words)) };
 }
 
-/** `index * words`, with an index of any integer type read as an `int`. */
-function times(index: Index, words: number): Index {
-  if (typeof index === 'number') return index * words;
-  return tsl(mul)(tsl(int)(index), intNode(words));
+/** `base + index * stride` in words, whole texels while the stride is. */
+function stepped(base: Index, index: Element, stride: number): Index {
+  if (typeof index === 'number') return plus(base, index * stride);
+  const steps = tsl(int)(index);
+  if ('words' in base && stride % TEXEL_WORDS === 0) {
+    const texels = tsl(mul)(steps, intNode(stride / TEXEL_WORDS));
+    return { words: base.words, texels: base.texels ? tsl(add)(base.texels, texels) : texels };
+  }
+  return { dynamicWords: tsl(add)(wordsOf(base), tsl(mul)(steps, intNode(stride))) };
+}
+
+function wordsOf(index: Index): Node {
+  if (!('words' in index)) return index.dynamicWords;
+  const words = intNode(index.words);
+  return index.texels ? tsl(add)(tsl(mul)(index.texels, intNode(TEXEL_WORDS)), words) : words;
+}
+
+/** The texel of a word of the first form: a constant, or an `int` node. */
+function texelOf(index: { readonly texels?: Node; readonly words: number }): Element {
+  const constant = Math.floor(index.words / TEXEL_WORDS);
+  if (!index.texels) return constant;
+  return constant === 0 ? index.texels : tsl(add)(index.texels, intNode(constant));
+}
+
+/** The one texel `lanes` words from `word` lie in, fetched once, or nothing when they cross a texel. */
+function oneTexel(word: { readonly texels?: Node; readonly words: number }, lanes: number) {
+  const lane = word.words % TEXEL_WORDS;
+  if (lane + lanes > TEXEL_WORDS) return undefined;
+  let fetched: Node | undefined;
+  return { lane, fetched: (rows: RowTexture) => (fetched ??= rows.texel(texelOf(word))) };
 }
 
 /** A non-square matrix as `withSquareMatrices` holds it: the square of its larger side, zero outside it. */

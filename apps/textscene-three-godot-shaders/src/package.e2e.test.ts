@@ -34,7 +34,6 @@ const PUBLIC_VALUE_EXPORTS = [
   'withGodotAttributes',
   'writeSkyBindings',
   'writeSpatialBindings',
-  'writeSpatialInstance',
 ];
 const PUBLIC_TYPE_EXPORTS = [
   'NodeOutput',

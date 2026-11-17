@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import type { UniformNode } from 'three/webgpu';
+import type { NodeFrame, UniformNode } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
-import { writeSpatialBindings, writeSpatialInstance } from './spatialBindings.js';
+import { writeSpatialBindings } from './spatialBindings.js';
 import { transpileSpatial } from './transpileSpatial.js';
 
 const UNSHADED = 'shader_type spatial;\nrender_mode unshaded;\nvoid fragment() {\n\tALBEDO = vec3(0.6);\n}\n';
@@ -43,15 +43,29 @@ describe('writeSpatialBindings', () => {
   });
 });
 
-describe('writeSpatialInstance', () => {
-  it("writes the object's transform into the instance buffer", () => {
+describe('the instance buffer of a transpiled spatial shader', () => {
+  /** The object update three's node handler runs on each fetch of the buffer before a draw. */
+  const drawn = (object: THREE.Object3D) => {
     const { spatial } = written();
-    const object = new THREE.Object3D();
+    object.updateMatrixWorld();
+    const rows = spatial.buffers.get('instances')!;
+    const fetch = (rows as unknown as { node: { update: (frame: NodeFrame) => void } }).node;
+    fetch.update({ renderId: 1, object } as NodeFrame);
+    return spatial;
+  };
+
+  it('writes the transform of the object it is about to draw into the instance buffer', () => {
+    const object = new THREE.Mesh();
     object.position.set(4, 5, 6);
-    writeSpatialInstance(spatial, object);
-    const image = spatial.buffers.get('instances')!.texture.image as { data: Uint32Array };
+    const image = drawn(object).buffers.get('instances')!.texture.image as { data: Uint32Array };
     expect([...new Float32Array(image.data.buffer).slice(0, 12)]).toEqual([
       1, 0, 0, 4, 0, 1, 0, 5, 0, 0, 1, 6,
     ]);
+  });
+
+  it('refuses an InstancedMesh by name, as no MultiMesh row is ported', () => {
+    const instanced = new THREE.InstancedMesh(new THREE.BufferGeometry(), undefined, 2);
+    instanced.name = 'crowd';
+    expect(() => drawn(instanced)).toThrow('InstancedMesh crowd');
   });
 });

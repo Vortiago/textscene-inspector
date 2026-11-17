@@ -31,6 +31,17 @@ func _ready() -> void:
 		camera.rotation = degrees(scene.camera.rotation)
 		if scene.camera.has("position"):
 			camera.position = vector(scene.camera.position)
+		if scene.camera.has("near"):
+			camera.near = scene.camera.near
+		if scene.camera.has("far"):
+			camera.far = scene.camera.far
+		if scene.camera.get("projection", "") == "orthogonal":
+			camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+			camera.size = scene.camera.size
+		if scene.camera.get("projection", "") == "frustum":
+			camera.projection = Camera3D.PROJECTION_FRUSTUM
+			camera.size = scene.camera.size
+			camera.frustum_offset = Vector2(scene.camera.offset[0], scene.camera.offset[1])
 		viewport.add_child(camera)
 ${fill}
 		viewports.append(viewport)

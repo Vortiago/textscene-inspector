@@ -1,4 +1,4 @@
-import { vec4 } from 'three/tsl';
+import { int, uniform, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { generatedFragmentShader } from '../generatedShader.testkit';
@@ -8,6 +8,9 @@ import type { StructNode } from '../language/shaderTree.js';
 import { RowTexture } from './rowTexture.js';
 
 const POSITION = { file: 't.glsl', line: 1, column: 1 };
+
+/** An element index the stage computes, so the read cannot fold to a constant texel. */
+const intIndex = int(uniform(1)) as unknown as Node;
 
 const INSTANCE: StructNode = {
   kind: 'struct',
@@ -27,7 +30,10 @@ const structOf = (type: string) => (type === 'Instance' ? INSTANCE : undefined);
 
 function instancesBlock() {
   const rows = new RowTexture([{ name: 'data', type: 'Instance', isRuntimeSized: true }], 'std430', structOf);
-  return { rows, data: (rows.value as StructValue).members.get('data') as { element(i: number): Value } };
+  return {
+    rows,
+    data: (rows.value as StructValue).members.get('data') as { element(i: Node | number): Value },
+  };
 }
 
 type Value = Node | StructValue;
@@ -57,6 +63,13 @@ describe('RowTexture', () => {
     const text = generatedFragmentShader(shown(points.element(1) as Node));
     expect(text).toMatch(/ivec2\(\s*1,\s*0\s*\)/);
     expect(text).not.toMatch(/ivec2\(\s*0,\s*0\s*\)/);
+  });
+
+  it('reads the four words of a column that stays in one texel with one fetch', () => {
+    const { data } = instancesBlock();
+    const transform = (data.element(intIndex) as StructValue).members.get('transform') as Node;
+    const text = generatedFragmentShader(shown(columnOf(transform, 0)));
+    expect(text.match(/texelFetch/g)).toHaveLength(3);
   });
 
   it('reads a float member as the float of its bits', () => {

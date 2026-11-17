@@ -13,9 +13,38 @@ export const euler = ([x, y, z]) => new THREE.Euler(...[x, y, z].map(THREE.MathU
 /** A colour Godot holds in sRGB, linear, as Godot's C++ converts it. */
 export const linear = ([r, g, b]) => new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace);
 
-/** The Camera3D of `spec`, with Camera3D's default near and far planes. */
+/** Camera3D's default near and far planes. */
+const NEAR = 0.05;
+const FAR = 4000;
+
+/** The Camera3D of `spec` with Godot's projection of its kind (`projection.cpp:356-402`), height kept. */
 export function godotCamera(spec) {
-  const camera = new THREE.PerspectiveCamera(spec.camera.fov, spec.width / spec.height, 0.05, 4000);
+  const { fov, size, offset = [0, 0], projection = 'perspective', near = NEAR, far = FAR } = spec.camera;
+  const aspect = spec.width / spec.height;
+  const camera =
+    projection === 'orthogonal'
+      ? new THREE.OrthographicCamera(
+          -(size * aspect) / 2,
+          (size * aspect) / 2,
+          size / 2,
+          -size / 2,
+          near,
+          far
+        )
+      : new THREE.PerspectiveCamera(fov, aspect, near, far);
+  if (projection === 'frustum') {
+    const [x, y] = offset;
+    const halfWidth = (size * aspect) / 2;
+    camera.projectionMatrix.makePerspective(
+      x - halfWidth,
+      x + halfWidth,
+      y + size / 2,
+      y - size / 2,
+      near,
+      far
+    );
+    camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+  }
   camera.rotation.copy(euler(spec.camera.rotation));
   if (spec.camera.position) camera.position.fromArray(spec.camera.position);
   camera.updateMatrixWorld();

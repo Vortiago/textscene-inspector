@@ -14,7 +14,29 @@ export function withGodotAttributes(geometry: THREE.BufferGeometry): THREE.Buffe
   geometry.setAttribute(VERTEX_ANGLE_ATTRIBUTE, position);
   const normal = geometry.getAttribute('normal');
   if (normal) geometry.setAttribute(AXIS_TANGENT_ATTRIBUTE, axisTangent(normal, signedTangent(geometry)));
+  const color = geometry.getAttribute('color');
+  if (color) geometry.setAttribute('color_attrib', rgba8(color));
+  // three names the second UV set `uv1`.
+  for (const [three, godot] of [
+    ['uv', 'uv_attrib'],
+    ['uv1', 'uv2_attrib'],
+  ] as const) {
+    const uv = geometry.getAttribute(three);
+    if (uv) geometry.setAttribute(godot, uv);
+  }
   return geometry;
+}
+
+/** A colour as Godot stores it, four bytes cut down from 255 times each lane (`rendering_server.cpp:712`). */
+function rgba8(color: Attribute): THREE.BufferAttribute {
+  const lanes = new Uint8Array(color.count * 4);
+  const byte = (value: number) => Math.trunc(Math.min(Math.max(Math.fround(value) * 255, 0), 255));
+  for (let vertex = 0; vertex < color.count; vertex++) {
+    // Alpha 1 where three's colour has three lanes.
+    const alpha = color.itemSize === 4 ? color.getW(vertex) : 1;
+    lanes.set([color.getX(vertex), color.getY(vertex), color.getZ(vertex), alpha].map(byte), vertex * 4);
+  }
+  return new THREE.BufferAttribute(lanes, 4, true);
 }
 
 /** The tangent attribute, whose fourth lane holds the binormal's sign. */

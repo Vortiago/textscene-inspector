@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { depthCorrection } from '../../godot/math/projection.js';
-import { instanceWords, transposed3x4 } from './instanceData.js';
+import { transposed3x4 } from './instanceData.js';
 import type { TranspiledSpatial } from './transpileSpatial.js';
 import { type Binding, writeBindings } from '../uniforms/bindingTable.js';
 
 /** What the colour pass reads from a frame with no environment, no light and no camera attributes. */
 export interface SpatialScene {
-  readonly camera: THREE.PerspectiveCamera;
+  readonly camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
   /** The size of the viewport in pixels. */
   readonly width: number;
   readonly height: number;
@@ -14,6 +14,12 @@ export interface SpatialScene {
   readonly time: number;
   /** The viewport's clear colour, linear: with no environment it is the ambient light. */
   readonly clearColor: THREE.Color;
+}
+
+/** A scene with its Godot projection and the inverse, which four bindings read. */
+export interface SpatialFrame extends SpatialScene {
+  readonly projection: THREE.Matrix4;
+  readonly inverseProjection: THREE.Matrix4;
 }
 
 /** `SCENE_DATA_FLAGS_USE_AMBIENT_LIGHT` (`scene_data_inc.glsl:6`). */
@@ -28,12 +34,16 @@ const ROUGHNESS_LIMITER = { amount: 0.25, limit: 0.18 };
 const DATA = 'scene_data_block.data';
 
 /** Each member of `SceneData` the colour pass of an unlit scene reads (`render_scene_data_rd.cpp:72-290`). */
-export const SCENE_BINDINGS: readonly Binding<SpatialScene>[] = [
-  { uniform: `${DATA}.projection_matrix`, godot: 'render_scene_data_rd.cpp:88', value: projectionOf },
+export const SCENE_BINDINGS: readonly Binding<SpatialFrame>[] = [
+  {
+    uniform: `${DATA}.projection_matrix`,
+    godot: 'render_scene_data_rd.cpp:88',
+    value: (frame) => frame.projection,
+  },
   {
     uniform: `${DATA}.inv_projection_matrix`,
     godot: 'render_scene_data_rd.cpp:89',
-    value: (scene) => projectionOf(scene).invert(),
+    value: (frame) => frame.inverseProjection,
   },
   {
     uniform: `${DATA}.inv_view_matrix`,
@@ -48,12 +58,12 @@ export const SCENE_BINDINGS: readonly Binding<SpatialScene>[] = [
   {
     uniform: `${DATA}.projection_matrix_view`,
     godot: 'render_scene_data_rd.cpp:100-101',
-    value: (scene) => [projectionOf(scene)],
+    value: (frame) => [frame.projection],
   },
   {
     uniform: `${DATA}.inv_projection_matrix_view`,
     godot: 'render_scene_data_rd.cpp:102',
-    value: (scene) => [projectionOf(scene).invert()],
+    value: (frame) => [frame.inverseProjection],
   },
   {
     uniform: `${DATA}.main_cam_inv_view_matrix`,
@@ -107,13 +117,9 @@ export const SCENE_BINDINGS: readonly Binding<SpatialScene>[] = [
 /** Writes each uniform of `spatial` the binding table names, from `scene`. */
 export function writeSpatialBindings(spatial: TranspiledSpatial, scene: SpatialScene): void {
   scene.camera.updateWorldMatrix(true, false);
-  writeBindings(SCENE_BINDINGS, spatial.uniforms, scene);
-}
-
-/** Writes the one instance of `spatial`'s draw, `object`, as Godot writes a mesh instance. */
-export function writeSpatialInstance(spatial: TranspiledSpatial, object: THREE.Object3D): void {
-  object.updateWorldMatrix(true, false);
-  spatial.buffers.get('instances')?.write(instanceWords(object.matrixWorld));
+  const projection = projectionOf(scene);
+  const frame = { ...scene, projection, inverseProjection: projection.clone().invert() };
+  writeBindings(SCENE_BINDINGS, spatial.uniforms, frame);
 }
 
 /** The camera's projection with y flipped and depth reversed into 0 to 1. */

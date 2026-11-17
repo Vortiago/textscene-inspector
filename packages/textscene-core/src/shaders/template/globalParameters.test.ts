@@ -94,4 +94,23 @@ describe('withGlobalParameters', () => {
     );
     expect(parametersOf(functionNamed(withGlobalParameters(local, COLOR), 'f'))).toEqual([]);
   });
+
+  it('gives each overload the globals of its own body', () => {
+    const overloads = [
+      'layout(location = 0) out vec4 color;',
+      'float level;',
+      'void f(vec2 v) { level = v.x; }',
+      'void f(vec3 v) { }',
+      'void main() { f(vec2(1.0)); f(vec3(1.0)); color = vec4(level); }',
+    ].join('\n');
+    const stage = withGlobalParameters(stageOf(overloads), COLOR);
+    const [first, second] = stage.declarations.filter(
+      (declaration): declaration is FunctionNode =>
+        declaration.kind === 'function' && declaration.rname === 'f'
+    );
+    expect([parametersOf(first!), parametersOf(second!)]).toEqual([
+      ['in vec2 v', 'inout float level'],
+      ['in vec3 v'],
+    ]);
+  });
 });

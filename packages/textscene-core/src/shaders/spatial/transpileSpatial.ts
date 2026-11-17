@@ -14,6 +14,7 @@ import { parsedShader, type ShaderOptions } from '../language/parseShader.js';
 import { emitTemplateStage } from '../template/emitTemplate.js';
 import { linkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import type { RowTexture } from '../template/rowTexture.js';
+import { instanceWords } from './instanceData.js';
 import type { TemplateStageNode } from '../template/templateTree.js';
 import { TreeMemo } from '../template/treeMemo.js';
 import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
@@ -79,15 +80,26 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
     { name: 'frag_color', type: 'vec4' },
     resources
   );
+  const material = sceneMaterial(glClipPosition(vertex.result, vulkanClip), fragment.result, [
+    ...parameters.values(),
+  ]);
+  resources.buffers.byName.get('instances')?.writeEachDraw(instanceWordsOf);
   return {
-    material: sceneMaterial(glClipPosition(vertex.result, vulkanClip), fragment.result, [
-      ...parameters.values(),
-    ]),
+    material,
     uniforms: resources.uniforms.byName,
     textures: resources.textures,
     buffers: resources.buffers.byName,
     parameters,
   };
+}
+
+/** The instance of a draw's object, as Godot writes one for each draw. */
+function instanceWordsOf(object: THREE.Object3D): Uint32Array {
+  if ((object as THREE.InstancedMesh).isInstancedMesh)
+    throw new Error(
+      `expected a Mesh for a transpiled spatial shader, got the InstancedMesh ${object.name || object.uuid}: Godot's MultiMesh rows are not ported yet`
+    );
+  return instanceWords(object.matrixWorld);
 }
 
 /** Each `in` global of the vertex stage as the geometry attribute of its name (`withGodotAttributes`). */

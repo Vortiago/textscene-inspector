@@ -19,7 +19,6 @@ export {
   withGodotAttributes,
   writeSkyBindings,
   writeSpatialBindings,
-  writeSpatialInstance,
 } from '@textscene/core/shaders';
 export type {
   NodeOutput,
