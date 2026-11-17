@@ -1,4 +1,4 @@
-import type { Texture } from 'three';
+import type { Texture, WebGLRenderer } from 'three';
 import {
   CubeTextureNode,
   NodeUpdateType,
@@ -6,16 +6,25 @@ import {
   TextureNode,
   type Node,
   type NodeBuilder,
+  type NodeFrame,
 } from 'three/webgpu';
 import { nodeObject } from 'three/tsl';
 import type { TextureKind } from '../language/types.js';
+import { uploadLevels } from './levelUpload.js';
 import { followSource } from './textureCopies.js';
 
+/** Brings the copy that `texture` reads up to date before a draw. */
+function prepare(frame: NodeFrame, texture: Texture): void {
+  followSource(texture);
+  uploadLevels(frame.renderer as unknown as WebGLRenderer, texture);
+}
+
+/** A clone keeps the class, and so the update: three derives a node for each level or offset. */
 class FollowingTextureNode extends TextureNode {
   override updateType = NodeUpdateType.RENDER;
 
-  override update(): undefined {
-    followSource(this.value);
+  override update(frame: NodeFrame): undefined {
+    prepare(frame, this.value);
     return undefined;
   }
 }
@@ -23,8 +32,8 @@ class FollowingTextureNode extends TextureNode {
 class FollowingTexture3DNode extends Texture3DNode {
   override updateType = NodeUpdateType.RENDER;
 
-  override update(): undefined {
-    followSource(this.value);
+  override update(frame: NodeFrame): undefined {
+    prepare(frame, this.value);
     return undefined;
   }
 }
@@ -33,8 +42,8 @@ class FollowingTexture3DNode extends Texture3DNode {
 class GodotCubeNode extends CubeTextureNode {
   override updateType = NodeUpdateType.RENDER;
 
-  override update(): undefined {
-    followSource(this.value);
+  override update(frame: NodeFrame): undefined {
+    prepare(frame, this.value);
     return undefined;
   }
 
@@ -47,6 +56,7 @@ class GodotCubeNode extends CubeTextureNode {
 const NODE_OF_KIND: Readonly<Record<TextureKind, (value: Texture) => TextureNode>> = {
   flat: (value) => new FollowingTextureNode(value),
   layers: (value) => new FollowingTextureNode(value),
+  cubes: (value) => new FollowingTextureNode(value),
   volume: (value) => new FollowingTexture3DNode(value) as unknown as TextureNode,
   cube: (value) => new GodotCubeNode(value as never),
 };

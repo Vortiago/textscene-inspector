@@ -111,26 +111,31 @@ func texture_of(spec):
 	var width := int(spec.width)
 	var height := int(spec.height)
 	var levels: Array = spec.levels
-	var count := 6 if spec.kind == "cube" else int(spec.get("depth", 1))
+	var format: String = spec.get("format", "rgba8")
+	var count := int(spec.get("depth", 1))
+	if spec.kind == "cube":
+		count = 6
+	elif spec.kind == "cubes":
+		count = 6 * count
 	match spec.kind:
 		"flat":
-			return ImageTexture.create_from_image(image_of(width, height, levels, 0))
-		"layers", "cube":
+			return ImageTexture.create_from_image(image_of(width, height, levels, 0, format))
+		"layers", "cube", "cubes":
 			var images: Array[Image] = []
 			for layer in count:
-				images.append(image_of(width, height, levels, layer))
-			var layered = Texture2DArray.new() if spec.kind == "layers" else Cubemap.new()
+				images.append(image_of(width, height, levels, layer, format))
+			var layered = { "layers": Texture2DArray, "cube": Cubemap, "cubes": CubemapArray }[spec.kind].new()
 			layered.create_from_images(images)
 			return layered
 		"volume":
 			var slices: Array[Image] = []
 			for level in levels.size():
 				var bytes: PackedByteArray = levels[level].hex_decode()
-				var size := level_size(width, level) * level_size(height, level) * 4
+				var size := level_size(width, level) * level_size(height, level) * int(IMAGE_FORMATS[format][1])
 				for slice in level_size(count, level):
-					slices.append(Image.create_from_data(level_size(width, level), level_size(height, level), false, Image.FORMAT_RGBA8, bytes.slice(slice * size, (slice + 1) * size)))
+					slices.append(Image.create_from_data(level_size(width, level), level_size(height, level), false, IMAGE_FORMATS[format][0], bytes.slice(slice * size, (slice + 1) * size)))
 			var volume := ImageTexture3D.new()
-			volume.create(Image.FORMAT_RGBA8, width, height, count, levels.size() > 1, slices)
+			volume.create(IMAGE_FORMATS[format][0], width, height, count, levels.size() > 1, slices)
 			return volume
 	push_error("unknown texture kind %s" % spec.kind)
 	get_tree().quit(1)
@@ -139,12 +144,15 @@ func level_size(size: int, level: int) -> int:
 	return max(size >> level, 1)
 
 # One layer of each level, one after the other, as Image keeps a mip chain.
-func image_of(width: int, height: int, levels: Array, layer: int) -> Image:
+const IMAGE_FORMATS := { "rgba8": [Image.FORMAT_RGBA8, 4], "rg8": [Image.FORMAT_RG8, 2] }
+
+func image_of(width: int, height: int, levels: Array, layer: int, format: String) -> Image:
 	var data := PackedByteArray()
+	var texel_bytes: int = IMAGE_FORMATS[format][1]
 	for level in levels.size():
-		var size := level_size(width, level) * level_size(height, level) * 4
+		var size := level_size(width, level) * level_size(height, level) * texel_bytes
 		data.append_array(levels[level].hex_decode().slice(layer * size, (layer + 1) * size))
-	return Image.create_from_data(width, height, levels.size() > 1, Image.FORMAT_RGBA8, data)
+	return Image.create_from_data(width, height, levels.size() > 1, IMAGE_FORMATS[format][0], data)
 
 # An HDR 2D viewport holds half floats, which Image.convert truncates: k / 255 comes back as k - 1.
 func bytes_of(image: Image) -> PackedByteArray:

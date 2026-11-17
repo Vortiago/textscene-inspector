@@ -28,6 +28,11 @@ export const intNode = (value: number) => scalarNode('int', value);
 
 export const chained = (node: Node) => node as unknown as Chained;
 
+/** The swizzles of a vector node, which three's types leave out of `Node`. */
+export type Swizzles = Node & Record<'x' | 'y' | 'z' | 'w' | 'xy' | 'xyz', Node>;
+
+export const swizzles = (node: unknown) => node as Swizzles;
+
 export const lanesOf = (type: string) => shapeOf(type)?.lanes ?? 1;
 
 /** The type of `type`'s shape with `scalar` lanes: `uvec3` for `vec3` and `uint`. */

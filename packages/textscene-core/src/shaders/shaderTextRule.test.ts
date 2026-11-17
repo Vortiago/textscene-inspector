@@ -27,6 +27,7 @@ const TEXT_ESCAPES = new Set([
 /** A subclass that writes text into the builder's code would go around three's TSL nodes. */
 const NODE_SUBCLASSES_ALLOWED: Readonly<Record<string, string>> = {
   WholeArray: 'generate() returns the build of the TSL node it wraps and changes only its type',
+  FragmentOnlyNode: 'generate() returns the build of one of two TSL nodes, picked by the stage',
 };
 
 /** A `gl_` name is left out: the template stages read `gl_FragCoord` and the rest as input names. */

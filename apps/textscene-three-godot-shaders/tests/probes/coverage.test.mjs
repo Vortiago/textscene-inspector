@@ -44,11 +44,15 @@ describe('the instruction table coverage', () => {
     expect(stale.map((probe) => probe.name)).toEqual([]);
   });
 
-  it.runIf(ANSWERS.live)('has Godot values, not only a rejection, for every probed row', () => {
-    const withValues = new Set(
-      PROBES.filter((probe) => RECORD.probes[probe.name].results !== undefined).flatMap((probe) => probe.rows)
+  // Godot's GLSL that its driver refuses is the row's whole answer: no Godot shader draws it.
+  it.runIf(ANSWERS.live)('has Godot values, not only a front-end rejection, for every probed row', () => {
+    const answered = new Set(
+      PROBES.filter((probe) => {
+        const entry = RECORD.probes[probe.name];
+        return entry.results !== undefined || entry.rejected?.stage === 'GLSL';
+      }).flatMap((probe) => probe.rows)
     );
-    expect([...probedRows].filter((row) => !withValues.has(row))).toEqual([]);
+    expect([...probedRows].filter((row) => !answered.has(row))).toEqual([]);
   });
 
   it('comes from Godot 4.6.3', () => {

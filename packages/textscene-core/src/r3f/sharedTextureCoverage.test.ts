@@ -33,8 +33,6 @@ const FREED_OTHERWISE: Record<string, string> = {
     "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
   'r3f/sky/environmentSwitch.ts':
     'The switch only turns on a program define. Its version stays 0, so no renderer uploads it.',
-  'shaders/uniforms/textureCopies.ts':
-    'A copy is a weak key of the module, and its binding disposes it when no element reads it.',
 };
 
 /** Every non-test `.ts` and `.tsx` file under `dir`, relative to `srcDir`. */

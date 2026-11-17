@@ -24,6 +24,7 @@ import {
   sub,
 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
+import { swizzles } from './compositeParts.js';
 import { CONSTRUCTORS, floatNode } from './emitConstant.js';
 import { shapeOf, type ValueType } from './types.js';
 
@@ -134,7 +135,8 @@ export function constructed(
   if (type.startsWith('sampler')) return operands[0]!;
   const columns = shapeOf(type)!.columns;
   const [only] = operandTypes;
-  if (columns === undefined || operandTypes.length !== 1) return CONSTRUCTORS[type]!(...operands);
+  if (columns === undefined || operandTypes.length !== 1)
+    return CONSTRUCTORS[type]!(...withLastTrimmed(type, operands, operandTypes));
   if (only === 'float')
     return matrixOfColumns(type, columns, (column, row) => (row === column ? operands[0]! : floatNode(0)));
   const sourceColumns = shapeOf(only!)?.columns;
@@ -144,6 +146,21 @@ export function constructed(
       return element(columnOf(operands[0]!, column), int(row) as unknown as Node);
     return floatNode(row === column ? 1 : 0);
   });
+}
+
+const LANE_NAMES = 'xyzw';
+
+/** GLSL takes only the lanes the last argument needs, where one has a lane more than Godot declares. */
+function withLastTrimmed(
+  type: ValueType,
+  operands: readonly Node[],
+  operandTypes: readonly ValueType[]
+): Node[] {
+  const lanes = operandTypes.map((operandType) => shapeOf(operandType)!.lanes);
+  const needed = shapeOf(type)!.lanes - lanes.slice(0, -1).reduce((sum, count) => sum + count, 0);
+  if (operands.length === 1 || needed >= lanes.at(-1)!) return [...operands];
+  const last = swizzles(operands.at(-1)) as unknown as Record<string, Node>;
+  return [...operands.slice(0, -1), last[LANE_NAMES.slice(0, needed)]!];
 }
 
 /** The matrix `type` of `columns` columns whose element at `column`, `row` is `at(column, row)`. */
