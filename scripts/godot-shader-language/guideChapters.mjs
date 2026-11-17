@@ -767,6 +767,55 @@ const SPATIAL_CHAPTER = {
       tsl: "the template's locals `normal`, `tangent`, `binormal`, `uv_interp` and `uv2_interp` of the vertex stage",
     },
     {
+      heading: 'The vertex and its ids in `vertex()`',
+      rows: (row) =>
+        ['VERTEX', 'POSITION', 'COLOR', 'VERTEX_ID', 'INSTANCE_ID', 'INSTANCE_CUSTOM']
+          .map((name) => `spatial.vertex.${name}`)
+          .includes(row.id),
+      what: "`VERTEX` is the vertex in model space, which the template turns to view space after `vertex()` returns. A write to `POSITION` replaces the template's clip position. `COLOR` is the vertex colour that `fragment()` reads. `VERTEX_ID` and `INSTANCE_ID` are GL's vertex and instance index. A mesh outside a MultiMesh has an `INSTANCE_CUSTOM` of zero.",
+      tsl: "the template's locals `vertex`, `position`, `color_interp` and `instance_custom`, three's `vertexIndex`, and an instance index of 0",
+    },
+    {
+      heading: 'Matrices',
+      rows: (row) =>
+        /^spatial\.(vertex|fragment)\.(MODEL_MATRIX|MODEL_NORMAL_MATRIX|VIEW_MATRIX|INV_VIEW_MATRIX|PROJECTION_MATRIX|INV_PROJECTION_MATRIX|MODELVIEW_MATRIX|MODELVIEW_NORMAL_MATRIX|MAIN_CAM_INV_VIEW_MATRIX)$/.test(
+          row.id
+        ),
+      what: "The object's, camera's and projection's matrices as both stages read them. The template reads the object's matrix from the instance data and the others from its scene data. The projection is Vulkan's: y flipped and depth reversed into 0 to 1. `MODELVIEW_MATRIX` and `MODELVIEW_NORMAL_MATRIX` are products the vertex stage works out.",
+      tsl: "the template's uniforms `scene_data_block.data.*` and its instance rows",
+    },
+    {
+      heading: 'Positions, layers and the viewport',
+      rows: (row) =>
+        /^spatial\.(vertex|fragment)\.(NODE_POSITION_WORLD|CAMERA_POSITION_WORLD|CAMERA_DIRECTION_WORLD|NODE_POSITION_VIEW|CAMERA_VISIBLE_LAYERS|VIEWPORT_SIZE)$/.test(
+          row.id
+        ),
+      what: "The object's origin in world and view space, the camera's position and backward axis in world space, the camera's 20 visual layers as bits, and the viewport's size in pixels. Godot's template reads each from a column of a matrix or a field of its scene data.",
+      tsl: "the template's text for each built-in, read from its uniforms",
+    },
+    {
+      heading: 'Views',
+      rows: (row) =>
+        /^spatial\.(vertex|fragment)\.(VIEW_INDEX|VIEW_MONO_LEFT|VIEW_RIGHT|EYE_OFFSET)$/.test(row.id),
+      what: 'A view with one eye has a `VIEW_INDEX` of 0 and an `EYE_OFFSET` of zero. `VIEW_MONO_LEFT` is 0 and `VIEW_RIGHT` is 1.',
+      tsl: "the template's text with no multiview define",
+    },
+    {
+      heading: 'The fragment and the view in `fragment()`',
+      rows: (row) =>
+        ['VERTEX', 'LIGHT_VERTEX', 'FRAGCOORD', 'FRONT_FACING', 'VIEW', 'SCREEN_UV']
+          .map((name) => `spatial.fragment.${name}`)
+          .includes(row.id),
+      what: "`VERTEX` is the fragment's position in view space and `VIEW` the unit vector from it to the camera. `LIGHT_VERTEX` starts as `VERTEX`, and only the light reads a write to it. `FRAGCOORD` is the pixel's centre and its depth, with y down as Vulkan has it. `SCREEN_UV` is `FRAGCOORD.xy` over the viewport's size. `FRONT_FACING` is true for a face Godot sees from the front.",
+      tsl: "the template's locals, `gl_FragCoord` as Vulkan's and three's `frontFacing`",
+    },
+    {
+      heading: 'Constants and the global built-ins',
+      rows: (row) => /^spatial\.(constants|global)\./.test(row.id),
+      what: "`PI`, `TAU` and `E` are numbers. Godot's colour pass writes linear colour with Vulkan's depth, so `OUTPUT_IS_SRGB` is false, `CLIP_SPACE_FAR` is 0 and `IS_MULTIVIEW` is false. `EXPOSURE` is 1 over the camera's exposure normalisation, which is 1 with no camera attributes. `IN_SHADOW_PASS` is false in the colour pass. `TIME` is the scene's time in seconds, which rolls over as the sky's does.",
+      tsl: "the template's text for each built-in, and the scene data's time, exposure and flags",
+    },
+    {
       heading: 'Varyings',
       rows: (row) => ['varying', 'flat', 'smooth'].includes(row.id),
       what: '`varying flat int band;` declares a value that `vertex()` writes and `fragment()` reads. Godot declares a varying that the vertex stage writes, or that no stage writes, as an `out` of the vertex stage and an `in` of the fragment stage, `flat` when the shader says so (`shader_compiler.cpp:688-737`). A `smooth` varying interpolates, as one with no qualifier does. A varying that `fragment()` writes is a global of the fragment stage only. Godot refuses a `bool` varying in `vertex()`, and declares none that no stage writes.',

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { installNodesHandler } from '@textscene/three-godot-shaders';
+import { installNodesHandler, ShaderClock } from '@textscene/three-godot-shaders';
 
 /** The renderer of a Godot viewport's display: sRGB output and no tone mapping. */
 export const displayRenderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas') });
@@ -49,4 +49,12 @@ export function godotCamera(spec) {
   if (spec.camera.position) camera.position.fromArray(spec.camera.position);
   camera.updateMatrixWorld();
   return camera;
+}
+
+/** `TIME` after the frames of `clock`, or 0 for a scene of no clock. */
+export function shaderTime(clock) {
+  if (!clock) return 0;
+  const shaderClock = new ShaderClock(clock.rolloverSeconds);
+  for (let frame = 0; frame < clock.frames; frame++) shaderClock.advance(1 / clock.fixedFps);
+  return shaderClock.time;
 }

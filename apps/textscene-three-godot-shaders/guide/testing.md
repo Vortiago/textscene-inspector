@@ -67,20 +67,21 @@ The instruction count says how much of the language is transpiled, not how many 
 | docs | 37 | 37 | spatial, canvas_item, sky |
 | scenes | 2 | 2 | spatial, sky |
 
-**17 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
+**20 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
 
-The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. It holds 17 files. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.
+The printed tree of each shader the transpiler accepts is a checked-in file under `tests/corpus/trees/`, so a review shows how a change moves a real shader's tree. It holds 20 files. `vitest -u` writes a moved tree, and a tree file whose shader the transpiler no longer accepts fails the test. The generated GLSL gets no file: three.js writes that text, and each upgrade of three.js would change every file.
 
 | State | Shaders |
 | --- | --- |
 | refused as Godot refuses | 192 |
-| not transpiled yet (#1831) | 99 |
+| not transpiled yet (#1831) | 95 |
 | not transpiled yet (#686) | 24 |
-| transpiled | 17 |
+| transpiled | 20 |
 | not transpiled yet (#1524) | 17 |
 | not transpiled yet (#1726) | 10 |
 | not transpiled yet (#1666) | 6 |
 | not transpiled yet (#1783) | 2 |
+| not transpiled yet (#1453) | 1 |
 | not transpiled yet (#1792) | 1 |
 
 The mismatches below are known, each with its owner. The list only shrinks, as for the random programs.
@@ -89,7 +90,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | --- | --- | --- |
 
 
-<details><summary>The 159 shaders not transpiled yet, with their owners</summary>
+<details><summary>The 156 shaders not transpiled yet, with their owners</summary>
 
 | Shader | Owner |
 | --- | --- |
@@ -206,7 +207,6 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `demos/2d/sprite_shaders/shaders/offsetshadow.gdshader` | #686 |
 | `demos/2d/sprite_shaders/shaders/outline.gdshader` | #686 |
 | `demos/2d/sprite_shaders/shaders/silouette.gdshader` | #686 |
-| `demos/3d/labels_and_texts/curvature.gdshader` | #1831 |
 | `demos/3d/procedural_materials/shaders/plasma.gdshader` | #686 |
 | `demos/3d/sky_shaders/sky_volumetric_clouds.gdshader` | #1666 |
 | `demos/3d/sprites/shaders/negative.gdshader` | #1831 |
@@ -243,9 +243,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `docs/tutorials/shaders/screen-reading_shaders.rst#0` | #1524 |
 | `docs/tutorials/shaders/screen-reading_shaders.rst#1` | #1524 |
 | `docs/tutorials/shaders/shader_reference/canvas_item_shader.rst#0` | #686 |
-| `docs/tutorials/shaders/shader_reference/shading_language.rst#33` | #1831 |
-| `docs/tutorials/shaders/shader_reference/shading_language.rst#34` | #1831 |
-| `docs/tutorials/shaders/shader_reference/shading_language.rst#36` | #1831 |
+| `docs/tutorials/shaders/shader_reference/shading_language.rst#34` | #1453 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#44` | #1792 |
 | `docs/tutorials/shaders/shader_reference/sky_shader.rst#1` | #1666 |
 | `docs/tutorials/shaders/shader_reference/spatial_shader.rst#0` | #1831 |

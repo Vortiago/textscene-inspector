@@ -1,20 +1,12 @@
 import * as THREE from 'three';
-import { ShaderClock, transpileSky, writeSkyBindings } from '@textscene/three-godot-shaders';
+import { transpileSky, writeSkyBindings } from '@textscene/three-godot-shaders';
 import { framePixels } from './framePixels.js';
-import { displayRenderer, euler, godotCamera, linear } from './godotView.js';
+import { displayRenderer, euler, godotCamera, linear, shaderTime } from './godotView.js';
 
 function skyLight(light) {
   const direction = new THREE.Vector3(0, 0, 1).applyEuler(euler(light.rotation)).normalize();
   const color = linear(light.color);
   return { direction, energy: light.energy, color, size: THREE.MathUtils.degToRad(light.size) };
-}
-
-/** `TIME` after the frames of `clock`, or 0 for a scene of no clock. */
-function shaderTime(clock) {
-  if (!clock) return 0;
-  const shaderClock = new ShaderClock(clock.rolloverSeconds);
-  for (let frame = 0; frame < clock.frames; frame++) shaderClock.advance(1 / clock.fixedFps);
-  return shaderClock.time;
 }
 
 /** The pixels of `scene`'s sky, or `{ error }` when the transpilation refuses it. */

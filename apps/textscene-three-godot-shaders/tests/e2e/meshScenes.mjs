@@ -1,3 +1,5 @@
+import { FRAMES_BEFORE_READ } from '../../../../scripts/godot-probes/godotRun.mjs';
+
 /** Godot's default spatial shader (`scene_shader_forward_clustered.cpp:910`), drawn unshaded. */
 export const DEFAULT_SPATIAL_UNSHADED = `shader_type spatial;
 render_mode unshaded;
@@ -159,6 +161,186 @@ void fragment() {
 
 const TURNED_ROTATION = [20, 35, -10];
 
+/** The sphere moved, turned and scaled apart, so each lane of the object's matrices shows. */
+const SPHERE_MOVED = { position: [0.3, -0.2, -0.5], rotation: TURNED_ROTATION, scale: [1.1, 0.8, 1] };
+
+/** An unshaded shader on the moved sphere: `vertex()` and `fragment()` as given, with its rows. */
+const stageScene = (name, { declaration = '', vertex = '', fragment }, rows) => ({
+  name,
+  ...SIZE,
+  source: `shader_type spatial;
+render_mode unshaded;
+${declaration}
+
+void vertex() {
+	${vertex}
+}
+
+void fragment() {
+	${fragment}
+}
+`,
+  camera: SPHERE_VIEW,
+  mesh: SPHERE,
+  object: SPHERE_MOVED,
+  rows: ['spatial render_mode unshaded', 'spatial.fragment.ALBEDO', ...rows],
+});
+
+/** A scene of `value`, a `vec3` that `vertex()` works out and `fragment()` shows through a varying. */
+const vertexValueScene = (name, value, builtIns) =>
+  stageScene(
+    name,
+    { declaration: 'varying vec3 shown;', vertex: `shown = ${value};`, fragment: 'ALBEDO = shown;' },
+    ['varying', ...builtIns.map((builtIn) => `spatial.vertex.${builtIn}`)]
+  );
+
+/** A scene of `value`, a `vec3` that `fragment()` works out and shows. */
+const fragmentValueScene = (name, value, builtIns) =>
+  stageScene(
+    name,
+    { fragment: `ALBEDO = ${value};` },
+    builtIns.map((builtIn) => `spatial.fragment.${builtIn}`)
+  );
+
+/** A point off every axis, so each column of a matrix weighs into each lane of a product. */
+const PROBE = 'vec4(0.3, -0.2, 0.5, 1.0)';
+
+/** Each lane of a clip-space product, x and y summed so all four fit a colour. */
+const clipLanes = (product) => `vec3(${product}.x + ${product}.y, ${product}.z, ${product}.w) * 0.3 + 0.5`;
+
+/** The built-ins both stages read: the name of their scenes, the rows, and a `vec3` that shows them. */
+const STAGE_VALUES = [
+  ['model-matrix', ['MODEL_MATRIX'], `(MODEL_MATRIX * ${PROBE}).xyz * 0.3 + 0.5`],
+  ['model-normal-matrix', ['MODEL_NORMAL_MATRIX'], `(MODEL_NORMAL_MATRIX * ${PROBE}.xyz) * 0.5 + 0.5`],
+  ['view-matrix', ['VIEW_MATRIX'], `(VIEW_MATRIX * ${PROBE}).xyz * 0.15 + 0.5`],
+  ['inv-view-matrix', ['INV_VIEW_MATRIX'], `(INV_VIEW_MATRIX * ${PROBE}).xyz * 0.2 + 0.4`],
+  ['inv-projection-matrix', ['INV_PROJECTION_MATRIX'], clipLanes(`(INV_PROJECTION_MATRIX * ${PROBE})`)],
+  ['viewport-size', ['VIEWPORT_SIZE'], 'vec3(VIEWPORT_SIZE / vec2(128.0, 96.0), 0.5)'],
+  ['node-position-world', ['NODE_POSITION_WORLD'], 'NODE_POSITION_WORLD * 0.5 + 0.5'],
+  ['camera-position-world', ['CAMERA_POSITION_WORLD'], 'CAMERA_POSITION_WORLD * 0.2 + 0.5'],
+  ['camera-direction-world', ['CAMERA_DIRECTION_WORLD'], 'CAMERA_DIRECTION_WORLD * 0.5 + 0.5'],
+  ['node-position-view', ['NODE_POSITION_VIEW'], 'NODE_POSITION_VIEW * 0.12 + 0.5'],
+  [
+    'camera-visible-layers',
+    ['CAMERA_VISIBLE_LAYERS'],
+    'vec3(float(CAMERA_VISIBLE_LAYERS & 0xffu) / 255.0, float(CAMERA_VISIBLE_LAYERS >> 16u) / 15.0, 0.2)',
+  ],
+  [
+    'views',
+    ['VIEW_INDEX', 'VIEW_MONO_LEFT', 'VIEW_RIGHT', 'EYE_OFFSET'],
+    'vec3(float(VIEW_INDEX) + 0.25, float(VIEW_MONO_LEFT) + 0.5, float(VIEW_RIGHT) * 0.75) + EYE_OFFSET',
+  ],
+];
+
+/** Each value of `STAGE_VALUES` once in `vertex()` and once in `fragment()`. */
+const STAGE_VALUE_SCENES = STAGE_VALUES.flatMap(([name, builtIns, value]) => [
+  vertexValueScene(`spatial-vertex-${name}`, value, builtIns),
+  fragmentValueScene(`spatial-fragment-${name}`, value, builtIns),
+]);
+
+/** The built-ins only `vertex()` has, and the vertex-stage writes. */
+const VERTEX_SCENES = [
+  vertexValueScene('spatial-vertex-vertex', 'VERTEX * 0.5 + 0.5', ['VERTEX']),
+  stageScene(
+    'spatial-vertex-vertex-write',
+    { vertex: 'VERTEX *= vec3(0.6, 1.0, 1.2);', fragment: 'ALBEDO = NORMAL * 0.5 + 0.5;' },
+    ['spatial.vertex.VERTEX', 'spatial.fragment.NORMAL']
+  ),
+  stageScene(
+    'spatial-vertex-position',
+    {
+      vertex: 'POSITION = PROJECTION_MATRIX * MODELVIEW_MATRIX * vec4(VERTEX * 0.8, 1.0);',
+      fragment: 'ALBEDO = vec3(UV, 0.5);',
+    },
+    [
+      'spatial.vertex.POSITION',
+      'spatial.vertex.PROJECTION_MATRIX',
+      'spatial.vertex.MODELVIEW_MATRIX',
+      'spatial.fragment.UV',
+    ]
+  ),
+  vertexValueScene('spatial-vertex-modelview-normal', 'MODELVIEW_NORMAL_MATRIX * NORMAL * 0.5 + 0.5', [
+    'MODELVIEW_NORMAL_MATRIX',
+    'NORMAL',
+  ]),
+  vertexValueScene('spatial-vertex-projection-matrix', clipLanes(`(PROJECTION_MATRIX * ${PROBE})`), [
+    'PROJECTION_MATRIX',
+  ]),
+  vertexValueScene('spatial-vertex-main-camera', `(MAIN_CAM_INV_VIEW_MATRIX * ${PROBE}).xyz * 0.2 + 0.4`, [
+    'MAIN_CAM_INV_VIEW_MATRIX',
+  ]),
+  stageScene(
+    'spatial-vertex-color',
+    { vertex: 'COLOR.rgb = COLOR.bgr * 0.8;', fragment: 'ALBEDO = COLOR.rgb;' },
+    ['spatial.vertex.COLOR', 'spatial.fragment.COLOR']
+  ),
+  stageScene(
+    'spatial-vertex-ids',
+    {
+      declaration: 'varying vec3 shown;',
+      vertex: 'shown = vec3(fract(float(VERTEX_ID) / 7.0), float(INSTANCE_ID) + 0.25, 0.5);',
+      fragment: 'ALBEDO = shown;',
+    },
+    ['varying', 'spatial.vertex.VERTEX_ID', 'spatial.vertex.INSTANCE_ID']
+  ),
+  vertexValueScene('spatial-vertex-instance-custom', 'INSTANCE_CUSTOM.rgb + 0.25', ['INSTANCE_CUSTOM']),
+];
+
+/** The built-ins only `fragment()` has. */
+const FRAGMENT_SCENES = [
+  fragmentValueScene('spatial-fragment-vertex', 'VERTEX * 0.3 + 0.5', ['VERTEX']),
+  stageScene(
+    'spatial-fragment-light-vertex',
+    { fragment: 'LIGHT_VERTEX = VERTEX * 0.5;\n\tALBEDO = LIGHT_VERTEX * 0.6 + 0.5;' },
+    ['spatial.fragment.LIGHT_VERTEX']
+  ),
+  fragmentValueScene('spatial-fragment-fragcoord', 'vec3(FRAGCOORD.xy / 64.0, FRAGCOORD.z)', ['FRAGCOORD']),
+  fragmentValueScene(
+    'spatial-fragment-front-facing',
+    'FRONT_FACING ? vec3(0.2, 0.7, 0.3) : vec3(0.8, 0.1, 0.1)',
+    ['FRONT_FACING']
+  ),
+  fragmentValueScene('spatial-fragment-view', 'VIEW * 0.5 + 0.5', ['VIEW']),
+  fragmentValueScene('spatial-fragment-screen-uv', 'vec3(SCREEN_UV, 0.5)', ['SCREEN_UV']),
+  fragmentValueScene('spatial-fragment-projection-matrix', clipLanes(`(PROJECTION_MATRIX * ${PROBE})`), [
+    'PROJECTION_MATRIX',
+  ]),
+];
+
+/** The global built-ins and the constants, which every stage reads. */
+const GLOBAL_SCENES = [
+  stageScene(
+    'spatial-constants',
+    {
+      fragment:
+        'ALBEDO = vec3(PI / 4.0, TAU / 8.0 - 0.3, E / 3.0) * 0.8 + vec3(OUTPUT_IS_SRGB ? 0.1 : 0.0, CLIP_SPACE_FAR * 0.5 + 0.1, IS_MULTIVIEW ? 0.1 : 0.0);',
+    },
+    ['PI', 'TAU', 'E', 'OUTPUT_IS_SRGB', 'CLIP_SPACE_FAR', 'IS_MULTIVIEW'].map(
+      (name) => `spatial.constants.${name}`
+    )
+  ),
+  ...[
+    ['spatial-time-fraction', { fixedFps: 3, rolloverSeconds: 3600 }],
+    ['spatial-time-rolled-over', { fixedFps: 3, rolloverSeconds: 1.2 }],
+  ].map(([name, clock]) => ({
+    ...stageScene(
+      name,
+      {
+        declaration: 'varying float early;',
+        vertex: 'early = TIME;',
+        fragment: 'ALBEDO = vec3(fract(early), TIME * 0.2, 0.5);',
+      },
+      ['varying', 'spatial.global.TIME']
+    ),
+    clock: { ...clock, frames: FRAMES_BEFORE_READ },
+  })),
+  stageScene(
+    'spatial-exposure',
+    { fragment: 'ALBEDO = vec3(EXPOSURE * 0.5, IN_SHADOW_PASS ? 0.9 : 0.1, 0.4);' },
+    ['spatial.global.EXPOSURE', 'spatial.global.IN_SHADOW_PASS']
+  ),
+];
+
 /** A quad at half size, at `position` and turned by `rotation`. */
 const SMALL_AT = (position, rotation) => ({ position, rotation, scale: [0.5, 0.5, 0.5] });
 
@@ -270,4 +452,8 @@ export const MESH_SCENES = [
     'tint = vec3(0.8, 0.4, 0.2); ALBEDO = tint * UV.x;',
     []
   ),
+  ...STAGE_VALUE_SCENES,
+  ...VERTEX_SCENES,
+  ...FRAGMENT_SCENES,
+  ...GLOBAL_SCENES,
 ];

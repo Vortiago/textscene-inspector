@@ -95,9 +95,14 @@ export function transpileSpatial(source: string, options: SpatialOptions = {}): 
 
 /** The instance of a draw's object, as Godot writes one for each draw. */
 function instanceWordsOf(object: THREE.Object3D): Uint32Array {
+  const name = object.name || object.uuid;
   if ((object as THREE.InstancedMesh).isInstancedMesh)
     throw new Error(
-      `expected a Mesh for a transpiled spatial shader, got the InstancedMesh ${object.name || object.uuid}: Godot's MultiMesh rows are not ported yet`
+      `expected a Mesh for a transpiled spatial shader, got the InstancedMesh ${name}: Godot's MultiMesh rows are not ported yet`
+    );
+  if (!(object as THREE.Mesh).isMesh)
+    throw new Error(
+      `expected a Mesh for a transpiled spatial shader, got the ${object.type} ${name}: Godot's lines and points are not ported yet`
     );
   return instanceWords(object.matrixWorld);
 }
