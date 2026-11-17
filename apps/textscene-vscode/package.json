@@ -271,7 +271,7 @@
             "Always open new previews in the In-game mode: the scene as the game draws it when it starts."
           ],
           "default": "auto",
-          "description": "The viewport a new preview opens in. \"auto\" follows the Godot editor: a CanvasItem root opens in 2D, and a Node3D root in 3D. \"2D\" and \"3D\" force that viewport. The 2D/3D toggle in each preview still works, and open previews keep their viewport until you reopen them."
+          "description": "The viewport a new preview opens in. \"auto\" follows the Godot editor: a CanvasItem root opens in 2D, and a Node3D root in 3D. \"2D\", \"3D\" and \"in-game\" force that mode. The mode toggle in each preview still works, and open previews keep their mode until you reopen them."
         },
         "textscene.diagnostics.enabled": {
           "type": "boolean",

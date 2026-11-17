@@ -185,10 +185,7 @@ function RootEnvironmentLayer({ authored }: { authored: EnvironmentResolution | 
   return <NoEnvironmentLayer />;
 }
 
-/**
- * A sub-viewport's portal world. Its pass sets its own clear colour, so only a resolved Environment
- * adds a layer here, and a missing one leaves the root's clear colour alone.
- */
+/** A sub-viewport's portal world: its WorldEnvironment's layer, else the clear colour's. */
 function SubViewportEnvironment({ children }: { children: ReactNode }) {
   const world = useWorldEnvironment();
   const shown = resolvedEnvironment(useViewEnvironment(world));

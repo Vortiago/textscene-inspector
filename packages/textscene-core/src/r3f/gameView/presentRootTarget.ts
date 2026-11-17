@@ -28,7 +28,8 @@ function presentMaterial(transparent: boolean): THREE.MeshBasicMaterial {
   return new THREE.MeshBasicMaterial({
     name: 'GameViewPresent',
     transparent,
-    blending: THREE.NoBlending,
+    // Normal, not none, when opaque: only then three defines OPAQUE and writes alpha 1, still unblended.
+    blending: transparent ? THREE.NoBlending : THREE.NormalBlending,
     depthTest: false,
     depthWrite: false,
     toneMapped: false,
