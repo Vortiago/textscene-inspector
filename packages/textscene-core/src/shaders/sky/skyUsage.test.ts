@@ -10,6 +10,8 @@ describe('skyUsage', () => {
   it('reads no built-in of a sky that writes only COLOR', () => {
     expect(skyUsage(skyOf('COLOR = vec3(1.0);'))).toEqual({
       light: false,
+      timeOrPosition: false,
+      hasBufferUniforms: false,
       samplers: {},
     });
   });
@@ -25,7 +27,26 @@ describe('skyUsage', () => {
   });
 
   it("reads no built-in of a sky that draws Godot's default sky (edge case)", () => {
-    expect(usageOfTree(null)).toEqual({ light: false, samplers: {} });
+    expect(usageOfTree(null)).toEqual({
+      light: false,
+      timeOrPosition: false,
+      hasBufferUniforms: false,
+      samplers: {},
+    });
+  });
+
+  it.each(['TIME', 'POSITION.x'])('reads TIME or POSITION of a sky that reads %s', (read) => {
+    expect(skyUsage(skyOf(`COLOR = vec3(${read});`)).timeOrPosition).toBe(true);
+  });
+
+  it('holds a buffer for a uniform that is not a sampler', () => {
+    const source = 'shader_type sky;\nuniform float tint;\nvoid sky() {}\n';
+    expect(skyUsage(source).hasBufferUniforms).toBe(true);
+  });
+
+  it('holds no buffer for samplers alone, as Godot binds them apart (edge case)', () => {
+    const source = 'shader_type sky;\nuniform sampler2D stars;\nvoid sky() {}\n';
+    expect(skyUsage(source).hasBufferUniforms).toBe(false);
   });
 
   it('names the samplers marked source_color', () => {

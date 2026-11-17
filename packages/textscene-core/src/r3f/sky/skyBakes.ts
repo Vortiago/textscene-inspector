@@ -15,9 +15,9 @@ import { materialReadsLights } from '../../resources/sky/readsLights';
 import { isDebanded } from '../../resources/sky/debanding';
 import {
   newSkyRadianceUpdate,
-  skyUpdateMode,
   type SkyUpdatePlan,
 } from '../../godot/rendering/environment/skyRadianceUpdate';
+import { skyUpdateMode } from '../../resources/sky/decode';
 import { perObject } from '../../utils/perObject';
 import { holdUntilReleased } from '../useDisposeOnRelease';
 import { SkyRadiance } from './skyRadiance';
@@ -41,9 +41,9 @@ interface SkyBakeInput extends Omit<SkyEnvironmentInput, 'energy'> {
   rotation: THREE.Euler;
 }
 
-/** How `sky`'s radiance updates. */
-export function skyUpdatePlan(sky: Sky): SkyUpdatePlan {
-  return { mode: skyUpdateMode(sky.processMode), layers: roughnessLayersOf(sky.radianceFilter) };
+/** How `sky`'s radiance updates in a scene whose fog does or does not scatter the sun. */
+export function skyUpdatePlan(sky: Sky, fogScattersSun: boolean): SkyUpdatePlan {
+  return { mode: skyUpdateMode(sky, fogScattersSun), layers: roughnessLayersOf(sky.radianceFilter) };
 }
 
 /**

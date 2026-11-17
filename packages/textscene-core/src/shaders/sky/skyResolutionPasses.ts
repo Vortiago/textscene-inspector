@@ -6,13 +6,10 @@ type Resolution = 'half' | 'quarter';
 /** Godot sizes the passes from a screen of at least 4 by 4 (`sky.cpp:996-997`). */
 const MIN_SCREEN = 4;
 
-/** Each pass's size as a power of two under the target's: Godot's `/ 2` and `/ 4` (`sky.cpp:1433`, `:1449`). */
+/** Each pass's size as a power of two under the target's (`sky.cpp:1433`, `:1449`). */
 const SHIFTS: Readonly<Record<Resolution, number>> = { half: 1, quarter: 2 };
 
-/**
- * Godot's half and quarter resolution passes of one sky: their targets, their order, and the target each
- * pass reads (`sky.cpp:525-578`). A sky without `use_half_res_pass` or `use_quarter_res_pass` has none.
- */
+/** Godot's half and quarter resolution passes of a sky: targets, order and reads (`sky.cpp:525-578`). */
 export class SkyResolutionPasses {
   /** Written only by the constructor, and resized by `draw`. Freed by `dispose`. */
   private readonly targets: Partial<Record<Resolution, THREE.WebGLRenderTarget>> = {};
@@ -29,10 +26,7 @@ export class SkyResolutionPasses {
     return !this.targets.half && !this.targets.quarter;
   }
 
-  /**
-   * Draws the quarter pass, then the half pass, at `size` shifted down (`sky.cpp:1427-1457`), with the
-   * bindings already written. Leaves `renderer` on the render target it had.
-   */
+  /** Draws the quarter pass, then the half pass (`sky.cpp:1427-1457`), and keeps the render target. */
   draw(renderer: THREE.WebGLRenderer, camera: THREE.Camera, size: THREE.Vector2): void {
     const previous = renderer.getRenderTarget();
     for (const resolution of ['quarter', 'half'] as const) {

@@ -144,7 +144,7 @@ export function SkyLayer({
     };
     const { bakes, release } = holdSkyBakes(gl, input, lightsKey, contextRestores);
     const update = radianceUpdateOf(sky);
-    const plan = skyUpdatePlan(sky);
+    const plan = skyUpdatePlan(sky, fogScattersSun);
     const readsLights = (materialReadsLights(sky.material) || fogScattersSun) && lights.length > 0;
     const lightData = readsLights ? lightsKey : NO_SKY_LIGHTS;
     // The exposure scales the light data, and so dirties the sky, unless every energy is 0.

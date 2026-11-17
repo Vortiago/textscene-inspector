@@ -102,11 +102,9 @@ function defaultTexture(rgba: readonly number[]): THREE.DataTexture {
 const WHITE = defaultTexture([255, 255, 255, 255]);
 const BLACK = defaultTexture([0, 0, 0, 255]);
 
-/**
- * `HALF_RES_COLOR` and `QUARTER_RES_COLOR` with no pass to read: white behind the scene, black in the
- * octmap (`sky.cpp:545-575`). Godot's octmap reads the radiance's own mips there, which the bake fills.
- */
+/** A pass colour with no pass reads white behind the scene and black in the octmap (`sky.cpp:545-575`). */
 function withUnsetPassTextures(pass: SkyPass, sky: TranspiledSky): TranspiledSky {
+  // Godot's octmap reads a mip of its last radiance there, which the previewer does not keep.
   const unset = pass === 'background' ? WHITE : BLACK;
   for (const draw of [sky, sky.half, sky.quarter])
     for (const name of ['half_res', 'quarter_res']) {
@@ -116,10 +114,7 @@ function withUnsetPassTextures(pass: SkyPass, sky: TranspiledSky): TranspiledSky
   return sky;
 }
 
-/**
- * The octmap pass writes the radiance the filter reads by its rows. Every other pass is read by three,
- * which samples a render target top row first (`TextureNode.setupUV`), so it draws top row first.
- */
+/** Whether the pass is the radiance the filter reads by rows: three reads any other target top row first. */
 function isFilterInput(pass: SkyPass, resolution: SkyResolution): boolean {
   return pass === 'octmap' && resolution === 'full';
 }
@@ -160,10 +155,7 @@ function defaultSamplers(sampling: ProjectSampling): ProjectSampling {
   return { ...sampling, anisotropicFilteringLevel: GODOT_SAMPLING.anisotropicFilteringLevel };
 }
 
-/**
- * Godot's y points down and its far plane is depth 0. Both APIs put clip y -1 on row 0, so a target
- * read by its rows keeps y, and one that three reads top row first flips it.
- */
+/** Godot's clip y points down and its far plane is depth 0. A target three reads top row first flips y. */
 function glClipPosition(position: Node, isRowsUp: boolean): Node {
   const godot = position as unknown as ReturnType<typeof vec4>;
   const y = isRowsUp ? godot.y : godot.y.negate();

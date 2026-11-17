@@ -97,4 +97,23 @@ describe('transpileSky', () => {
       generatedFragmentShader((transpileSky(DEFAULT_SKY).mesh.material as NodeMaterial).fragmentNode!);
     expect(fragmentOf()).toBe(fragmentOf());
   });
+
+  it('draws no half or quarter pass for a sky without their render modes', () => {
+    const sky = transpileSky(DEFAULT_SKY);
+    expect([sky.half, sky.quarter]).toEqual([undefined, undefined]);
+  });
+
+  it.each(['half', 'quarter'] as const)('draws a %s resolution pass for its render mode', (resolution) => {
+    const sky = transpileSky(`shader_type sky;\nrender_mode use_${resolution}_res_pass;\nvoid sky() {}`);
+    expect(sky[resolution]?.mesh.material).not.toBe(sky.mesh.material);
+  });
+
+  it.each([
+    ['background', 255],
+    ['octmap', 0],
+  ] as const)("reads HALF_RES_COLOR with no half pass from Godot's default in the %s", (pass, red) => {
+    const sky = transpileSky('shader_type sky;\nvoid sky() { COLOR = HALF_RES_COLOR.rgb; }', { pass });
+    const texture = sky.textures.get('half_res')!.value as THREE.DataTexture;
+    expect((texture.image.data as Uint8Array)[0]).toBe(red);
+  });
 });

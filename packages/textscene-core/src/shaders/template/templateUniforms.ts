@@ -56,8 +56,7 @@ export class TemplateUniforms {
   }
 
   private array(name: string, type: string, count: number): ArrayValue {
-    // three pads a bool array as `vec4` and reads an element with `all()`, which GLSL refuses for a
-    // `vec4`. A `uint` array holds each bool as std140 does, and a written `true` stores 1.
+    // A `uint` array, not `bool`: three pads a bool array to `vec4` and reads it with `all()`, a GLSL error.
     const isBool = type === 'bool';
     const stored = isBool ? 'uint' : type;
     const node =

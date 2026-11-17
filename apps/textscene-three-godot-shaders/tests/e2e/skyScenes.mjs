@@ -209,7 +209,7 @@ const LIGHT_SCENES = [
     lights: FOUR_SUNS,
     rows: lightRows(n),
   })),
-  // Godot leaves a slot past the last light as it was, so only its `ENABLED` is defined (`sky.cpp:1107-1111`).
+  // Godot leaves a slot past the last light as it was, so only its `ENABLED` is known (`sky.cpp:1107-1111`).
   {
     name: 'sky-light-unset',
     source: builtInSky('\tCOLOR = LIGHT1_ENABLED ? vec3(0.1, 0.8, 0.2) : vec3(0.8, 0.1, 0.1);'),
