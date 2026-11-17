@@ -518,19 +518,16 @@ export function projectViewportSizeFromIni(sourceIni) {
   };
 }
 
-/** The larger of viewport and override per axis, so an X screen this size holds the window either way. */
-export function projectWindowBoundsFromIni(sourceIni) {
-  const viewport = projectViewportSizeFromIni(sourceIni);
+/** The window the project opens: the override when both axes set one, else the viewport (measured). */
+export function projectWindowSizeFromIni(sourceIni) {
   const override = (key) => {
     const match = new RegExp(`^\\s*window/size/window_${key}_override\\s*=\\s*(\\S+)`, 'm').exec(
       sourceIni ?? ''
     );
     return match ? Math.round(Number(match[1])) || 0 : 0;
   };
-  return {
-    width: Math.max(viewport.width, override('width')),
-    height: Math.max(viewport.height, override('height')),
-  };
+  const [width, height] = [override('width'), override('height')];
+  return width > 0 && height > 0 ? { width, height } : projectViewportSizeFromIni(sourceIni);
 }
 
 /** Removes a whole `[name]` section of a Godot ConfigFile, whose keys no pattern can match. */
@@ -1687,7 +1684,7 @@ async function renderInto(
     ? await readFile(join(root, 'project.godot'), 'utf8')
     : null;
   const canvas2DSize = projectViewportSizeFromIni(sourceIni);
-  const windowBounds = projectWindowBoundsFromIni(sourceIni);
+  const windowSize = projectWindowSizeFromIni(sourceIni);
   const stage = async () => {
     await rm(work, { recursive: true, force: true });
     await cp(root, work, { recursive: true, dereference: true });
@@ -1741,7 +1738,7 @@ async function renderInto(
 
   const render = runGodot(renderArgv(work, { renderingDriver, debugCollisions }), {
     display: true,
-    screen: rootWindow ? canvas2DSize : inGame ? windowBounds : null,
+    screen: rootWindow ? canvas2DSize : inGame ? windowSize : null,
   });
   if (!existsSync(resolve(out))) {
     // A bare "produced no image" with an empty stderr would hide the spawn error, and an expiry's

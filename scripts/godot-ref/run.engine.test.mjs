@@ -671,6 +671,19 @@ color = Color(1, 0, 0, 1)
         expect([png.width, png.height]).toEqual([800, 600]);
       });
 
+      it('ignores an override that sets only one axis', async () => {
+        const { png } = await renderProject({
+          'project.godot': display([
+            'window/size/viewport_width=400',
+            'window/size/viewport_height=300',
+            'window/size/window_width_override=800',
+            'window/stretch/mode="canvas_items"',
+          ]),
+          'main.tscn': main,
+        });
+        expect([png.width, png.height]).toEqual([400, 300]);
+      });
+
       it('is the viewport size under the viewport stretch mode, which scales it at the blit', async () => {
         const { png } = await renderProject({
           'project.godot': display([

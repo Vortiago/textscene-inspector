@@ -48,7 +48,7 @@ import {
   ROOT_ONLY_VIEWPORT_PROPERTIES,
   rootOnlyDriftMessage,
   harnessWarnings,
-  projectWindowBoundsFromIni,
+  projectWindowSizeFromIni,
 } from './run.mjs';
 import { resolveProjectRoot } from './projectRoot.mjs';
 
@@ -419,22 +419,29 @@ describe('projectConfig', () => {
   });
 });
 
-describe('projectWindowBoundsFromIni', () => {
+describe('projectWindowSizeFromIni', () => {
   it('is the viewport size when the project sets no override', () => {
-    expect(projectWindowBoundsFromIni(null)).toEqual({ width: 1152, height: 648 });
+    expect(projectWindowSizeFromIni(null)).toEqual({ width: 1152, height: 648 });
     expect(
-      projectWindowBoundsFromIni('window/size/viewport_width=400\nwindow/size/viewport_height=300')
+      projectWindowSizeFromIni('window/size/viewport_width=400\nwindow/size/viewport_height=300')
     ).toEqual({
       width: 400,
       height: 300,
     });
   });
 
-  it('is the larger of the viewport and the override on each axis, so a screen this size holds the window', () => {
-    const ini = ['window/size/window_width_override=1920', 'window/size/window_height_override=200'].join(
+  it('is the override when both axes set one, even a smaller one', () => {
+    const ini = ['window/size/window_width_override=320', 'window/size/window_height_override=200'].join(
       '\n'
     );
-    expect(projectWindowBoundsFromIni(ini)).toEqual({ width: 1920, height: 648 });
+    expect(projectWindowSizeFromIni(ini)).toEqual({ width: 320, height: 200 });
+  });
+
+  it('ignores an override that sets one axis, as the engine does', () => {
+    expect(projectWindowSizeFromIni('window/size/window_width_override=1920')).toEqual({
+      width: 1152,
+      height: 648,
+    });
   });
 });
 
