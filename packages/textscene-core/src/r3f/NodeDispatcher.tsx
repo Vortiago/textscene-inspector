@@ -75,6 +75,7 @@ import { usePlaceViewport } from './contexts/ViewportPassRegistryContext.js';
 import { UndrawnViewportPlacements } from './UndrawnViewportPlacements.js';
 import { isViewportBoundary } from './viewportRender/viewportBoundary.js';
 import { spaceFamilyOf } from '../godot/scene/parentSpace.js';
+import { useIsEditorHint } from './contexts/EditorHintContext.js';
 
 /** Does this subtree contain anything that needs boolean evaluation? */
 function containsCsgShape(node: TscnNode): boolean {
@@ -101,6 +102,8 @@ function hidesSubtree(node: TscnNode, animatedVisible: boolean | null): boolean 
 
 export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
   const { handlers } = useViewportSelection();
+  // The running game picks no node: a click selects nothing and a hover marks nothing.
+  const pointerHandlers = useIsEditorHint() ? handlers : undefined;
 
   // Fetch the CSG library early, so a boolean result reaches the opening frame
   // sooner: CameraFit re-frames it only once the loader has settled.
@@ -119,12 +122,7 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
     // paint-order-safe: the delegated pointer root, above every canvas item.
     // One root raycasts a mesh once per pointer move. A handler per node raycasts
     // it once per ancestor, since R3F makes each handler its own raycast root.
-    <group
-      onPointerDown={handlers.onPointerDown}
-      onPointerUp={handlers.onPointerUp}
-      onPointerMove={handlers.onPointerMove}
-      onPointerOut={handlers.onPointerOut}
-    >
+    <group {...pointerHandlers}>
       {/* A CanvasModulate tints the canvas, not its subtree, so it has its own
           context: each item multiplies it into its own pixels once, and an
           Unshaded item skips it, as Godot's base pass does. */}

@@ -441,6 +441,27 @@ describe('the exposure of a world seen through a Camera3D', () => {
     expect(read(renderer).factor).toBe(4);
   });
 
+  it('elects the first camera of a root whose viewport draws through its elected camera when none is current', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <ViewportDescriptionProvider description={gameViewportDescription(null)}>
+        {inRoot(
+          <>
+            <CameraAt order={[0]} path="Root/A" cameraAttributes={attributes(2)} />
+            <CameraAt order={[1]} path="Root/B" cameraAttributes={attributes(3)} />
+          </>
+        )}
+      </ViewportDescriptionProvider>
+    );
+    expect(read(renderer).factor).toBe(2);
+  });
+
+  it('elects no camera of a root that the editor draws through its own camera', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(<CameraAt order={[0]} path="Root/A" current cameraAttributes={attributes(2)} />)
+    );
+    expect(read(renderer).factor).toBe(1);
+  });
+
   it("holds the world's exposure while a camera's attributes still load", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       inRoot(
