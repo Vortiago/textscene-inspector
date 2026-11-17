@@ -1,4 +1,6 @@
+import { int, select } from 'three/tsl';
 import { PropertyNode, type Node, type NodeBuilder } from 'three/webgpu';
+import type { ArrayValue } from '../language/emitValue.js';
 
 /** What a flat varying uses of three's `PropertyNode`, which three's types leave out. */
 interface Property {
@@ -42,4 +44,31 @@ export class StageVaryings {
     }
     return varying;
   }
+
+  /** An array varying as one varying for each element, as three declares no array varying. */
+  ofArray(type: string, name: string, count: number, isFlat: boolean): ArrayValue {
+    const elements = Array.from({ length: count }, (_, index) =>
+      this.of(type, elementName(name, index), isFlat)
+    );
+    return {
+      kind: 'array',
+      count,
+      element: (index) => (typeof index === 'number' ? elements[index]! : selected(elements, index)),
+    };
+  }
+}
+
+/** No material varying starts with `element`, as Godot's ids start with `m_`: `pair_1` stays its own. */
+const elementName = (name: string, index: number) => `element${index}_${name}`;
+
+/** The element at a computed index, read by comparing the index with each one. */
+function selected(elements: readonly Node[], index: Node): Node {
+  const at = int(index as never);
+  return elements
+    .slice(0, -1)
+    .reduceRight<Node>(
+      (rest, element, position) =>
+        select(at.equal(position), element as never, rest as never) as unknown as Node,
+      elements.at(-1)!
+    );
 }

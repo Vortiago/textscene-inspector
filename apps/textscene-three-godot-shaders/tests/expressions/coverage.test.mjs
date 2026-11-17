@@ -8,6 +8,7 @@ import {
 } from '../../../../packages/textscene-core/src/godot/variant/registrations.generated.ts';
 import { godotAnswers } from '../godotAnswers.mjs';
 import { constructorKey, EXPRESSIONS, UNREACHABLE_OPERATORS } from './expressionSet.mjs';
+import { RUN_DEPENDENT_ANSWER } from './refusedCases.mjs';
 
 const ANSWERS = godotAnswers();
 const RECORD = ANSWERS.expressions;
@@ -25,8 +26,10 @@ const SIGNATURES = CONSTRUCTOR_REGISTRATIONS.map(constructorSignature);
 const reachedBy = (signature) => constructorFor(signature.type, signature.arguments);
 
 const casesOf = (field, key) => EXPRESSIONS.filter((test) => test[field] === key);
+// Godot answers a run-dependent case too, but the record keeps no value because the value changes.
+const ANSWERED = new Set(['value', RUN_DEPENDENT_ANSWER.verdict]);
 const hasValue = (field, key) =>
-  casesOf(field, key).some((test) => RECORD.cases[test.id]?.verdict === 'value');
+  casesOf(field, key).some((test) => ANSWERED.has(RECORD.cases[test.id]?.verdict));
 
 describe('the Expression set', () => {
   it('holds cases of every operator registration a text can spell', () => {

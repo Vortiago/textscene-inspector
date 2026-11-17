@@ -149,6 +149,18 @@ describe('varyings', () => {
     ]);
   });
 
+  it('records the stage that first writes each varying, and none for one never written', () => {
+    const tree = treeOf(
+      'shader_type spatial;\nvarying float a;\nvarying float b;\nvarying float c;\n' +
+        'void vertex() {\n\ta = 1.0;\n}\nvoid fragment() {\n\tb = a;\n}'
+    );
+    expect(tree.varyings.map(({ name, stage }) => [name, stage])).toEqual([
+      ['a', 'vertex'],
+      ['b', 'fragment'],
+      ['c', undefined],
+    ]);
+  });
+
   it('refuses an argument that hides a varying', () => {
     expect(refusal('shader_type spatial;\nvarying float v;\nfloat f(float v) { return v; }')).toMatch(
       "Redefinition of 'v'."

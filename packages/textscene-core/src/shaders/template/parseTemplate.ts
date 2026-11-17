@@ -41,6 +41,7 @@ import { TemplateCursor } from './templateCursor.js';
 import type {
   BlockMember,
   GlobalDeclarator,
+  GlobalNode,
   GlobalQualifiers,
   InterfaceBlockNode,
   LayoutEntry,
@@ -116,7 +117,7 @@ class TemplateParser implements TemplateScope {
   private readonly expressions: GlslExpressionParser;
 
   constructor(
-    stage: StageName,
+    private readonly stage: StageName,
     private readonly tokens: TemplateCursor,
     private readonly material?: CompiledMaterial
   ) {
@@ -148,6 +149,7 @@ class TemplateParser implements TemplateScope {
         this.tokens.next();
         if (this.material && token.slot!.kind === 'GLOBALS')
           declarations.push(
+            ...this.linkedVaryings(),
             ...this.material.globals.map((global) => this.linkedGlobal(global, token.macros))
           );
         else declarations.push({ kind: 'slot', slot: token.slot!, position: token.position });
@@ -512,6 +514,16 @@ class TemplateParser implements TemplateScope {
       while (!this.tokens.accept('}')) statements.push(this.statement());
       return { kind: 'block', statements, position };
     });
+  }
+
+  /** The material's varyings this stage declares, each one in the scope of the stage. */
+  private linkedVaryings(): GlobalNode[] {
+    const stage = this.stage === 'vertex' || this.stage === 'fragment' ? this.stage : undefined;
+    const varyings = stage ? this.material!.varyings[stage] : [];
+    for (const varying of varyings)
+      for (const { name, arraySize } of varying.declarators)
+        this.globals.variables.set(name, { type: varying.type, ...(arraySize ? { arraySize } : {}) });
+    return [...varyings];
   }
 
   /** A section the material does not fill is empty, as Godot's text is. */

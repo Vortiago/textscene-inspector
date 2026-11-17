@@ -72,14 +72,14 @@ int literal	literal	servers/rendering/shader_language.h:60	#1823					native	nati
 uint literal	literal	servers/rendering/shader_language.h:61	#1823					native	native
 true	literal	servers/rendering/shader_language.cpp:284	#1823		TK_TRUE			native	native
 false	literal	servers/rendering/shader_language.cpp:285	#1823		TK_FALSE			native	native
-flat	qualifier	servers/rendering/shader_language.cpp:324	#1831		TK_INTERPOLATION_FLAT				
-smooth	qualifier	servers/rendering/shader_language.cpp:325	#1831		TK_INTERPOLATION_SMOOTH				
+flat	qualifier	servers/rendering/shader_language.cpp:324	#1831		TK_INTERPOLATION_FLAT			native	native
+smooth	qualifier	servers/rendering/shader_language.cpp:325	#1831		TK_INTERPOLATION_SMOOTH			native	native
 lowp	qualifier	servers/rendering/shader_language.cpp:329	#1823		TK_PRECISION_LOW			lowered: dropped: every float is 32-bit	lowered: dropped: every float is 32-bit
 mediump	qualifier	servers/rendering/shader_language.cpp:330	#1823		TK_PRECISION_MID			lowered: dropped: every float is 32-bit	lowered: dropped: every float is 32-bit
 highp	qualifier	servers/rendering/shader_language.cpp:331	#1823		TK_PRECISION_HIGH			lowered: dropped: every float is 32-bit	lowered: dropped: every float is 32-bit
 uniform	shader head	servers/rendering/shader_language.cpp:335	#1829		TK_UNIFORM			native	native
 group_uniforms	shader head	servers/rendering/shader_language.cpp:336	#1829		TK_UNIFORM_GROUP			native	native
-varying	shader head	servers/rendering/shader_language.cpp:337	#1831		TK_VARYING				
+varying	shader head	servers/rendering/shader_language.cpp:337	#1831		TK_VARYING			native	native
 const	shader head	servers/rendering/shader_language.cpp:338	#1794		TK_CONST			native	native
 struct	shader head	servers/rendering/shader_language.cpp:339	#1794		TK_STRUCT			native	native
 shader_type	shader head	servers/rendering/shader_language.cpp:340	#1794		TK_SHADER_TYPE			native	native
@@ -1532,62 +1532,62 @@ shader_type canvas_item	shader head	servers/rendering/shader_types.cpp:524	#1794
 shader_type particles	shader head	servers/rendering/shader_types.cpp:525	#1794					native	native
 shader_type sky	shader head	servers/rendering/shader_types.cpp:526	#1794					native	native
 shader_type fog	shader head	servers/rendering/shader_types.cpp:527	#1794					native	native
-spatial.global.TIME	built-in (read only)	servers/rendering/shader_types.cpp:79	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.global.EXPOSURE	built-in (read only)	servers/rendering/shader_types.cpp:80	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.global.IN_SHADOW_PASS	built-in (read only)	servers/rendering/shader_types.cpp:81	#1831	forward_clustered/scene_forward_clustered.glsl		bool			
-spatial.constants.PI	built-in (read only)	servers/rendering/shader_types.cpp:82	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.constants.TAU	built-in (read only)	servers/rendering/shader_types.cpp:83	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.constants.E	built-in (read only)	servers/rendering/shader_types.cpp:84	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.constants.OUTPUT_IS_SRGB	built-in (read only)	servers/rendering/shader_types.cpp:85	#1831	forward_clustered/scene_forward_clustered.glsl		bool			
-spatial.constants.CLIP_SPACE_FAR	built-in (read only)	servers/rendering/shader_types.cpp:86	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.constants.IS_MULTIVIEW	built-in (read only)	servers/rendering/shader_types.cpp:87	#1831	forward_clustered/scene_forward_clustered.glsl		bool			
-spatial.vertex.VERTEX	built-in	servers/rendering/shader_types.cpp:89	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.vertex.NORMAL	built-in	servers/rendering/shader_types.cpp:90	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.vertex.TANGENT	built-in	servers/rendering/shader_types.cpp:91	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.vertex.BINORMAL	built-in	servers/rendering/shader_types.cpp:92	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.vertex.POSITION	built-in	servers/rendering/shader_types.cpp:93	#1831	forward_clustered/scene_forward_clustered.glsl		vec4			
-spatial.vertex.UV	built-in	servers/rendering/shader_types.cpp:94	#1831	forward_clustered/scene_forward_clustered.glsl		vec2			
-spatial.vertex.UV2	built-in	servers/rendering/shader_types.cpp:95	#1831	forward_clustered/scene_forward_clustered.glsl		vec2			
-spatial.vertex.COLOR	built-in	servers/rendering/shader_types.cpp:96	#1831	forward_clustered/scene_forward_clustered.glsl		vec4			
-spatial.vertex.POINT_SIZE	built-in	servers/rendering/shader_types.cpp:97	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.vertex.Z_CLIP_SCALE	built-in	servers/rendering/shader_types.cpp:98	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.vertex.INSTANCE_ID	built-in (read only)	servers/rendering/shader_types.cpp:99	#1831	forward_clustered/scene_forward_clustered.glsl		int			
-spatial.vertex.INSTANCE_CUSTOM	built-in (read only)	servers/rendering/shader_types.cpp:100	#1831	forward_clustered/scene_forward_clustered.glsl		vec4			
-spatial.vertex.VERTEX_ID	built-in (read only)	servers/rendering/shader_types.cpp:101	#1831	forward_clustered/scene_forward_clustered.glsl		int			
+spatial.global.TIME	built-in (read only)	servers/rendering/shader_types.cpp:79	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.global.EXPOSURE	built-in (read only)	servers/rendering/shader_types.cpp:80	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.global.IN_SHADOW_PASS	built-in (read only)	servers/rendering/shader_types.cpp:81	#1831	forward_clustered/scene_forward_clustered.glsl		bool		native	native
+spatial.constants.PI	built-in (read only)	servers/rendering/shader_types.cpp:82	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.constants.TAU	built-in (read only)	servers/rendering/shader_types.cpp:83	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.constants.E	built-in (read only)	servers/rendering/shader_types.cpp:84	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.constants.OUTPUT_IS_SRGB	built-in (read only)	servers/rendering/shader_types.cpp:85	#1831	forward_clustered/scene_forward_clustered.glsl		bool		native	native
+spatial.constants.CLIP_SPACE_FAR	built-in (read only)	servers/rendering/shader_types.cpp:86	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.constants.IS_MULTIVIEW	built-in (read only)	servers/rendering/shader_types.cpp:87	#1831	forward_clustered/scene_forward_clustered.glsl		bool		native	native
+spatial.vertex.VERTEX	built-in	servers/rendering/shader_types.cpp:89	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.vertex.NORMAL	built-in	servers/rendering/shader_types.cpp:90	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.vertex.TANGENT	built-in	servers/rendering/shader_types.cpp:91	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.vertex.BINORMAL	built-in	servers/rendering/shader_types.cpp:92	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.vertex.POSITION	built-in	servers/rendering/shader_types.cpp:93	#1831	forward_clustered/scene_forward_clustered.glsl		vec4		native	native
+spatial.vertex.UV	built-in	servers/rendering/shader_types.cpp:94	#1831	forward_clustered/scene_forward_clustered.glsl		vec2		native	native
+spatial.vertex.UV2	built-in	servers/rendering/shader_types.cpp:95	#1831	forward_clustered/scene_forward_clustered.glsl		vec2		native	native
+spatial.vertex.COLOR	built-in	servers/rendering/shader_types.cpp:96	#1831	forward_clustered/scene_forward_clustered.glsl		vec4		native	native
+spatial.vertex.POINT_SIZE	built-in	servers/rendering/shader_types.cpp:97	#2001	forward_clustered/scene_forward_clustered.glsl		float			
+spatial.vertex.Z_CLIP_SCALE	built-in	servers/rendering/shader_types.cpp:98	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
+spatial.vertex.INSTANCE_ID	built-in (read only)	servers/rendering/shader_types.cpp:99	#1831	forward_clustered/scene_forward_clustered.glsl		int		native	native
+spatial.vertex.INSTANCE_CUSTOM	built-in (read only)	servers/rendering/shader_types.cpp:100	#1831	forward_clustered/scene_forward_clustered.glsl		vec4		native	native
+spatial.vertex.VERTEX_ID	built-in (read only)	servers/rendering/shader_types.cpp:101	#1831	forward_clustered/scene_forward_clustered.glsl		int		native	native
 spatial.vertex.ROUGHNESS	built-in	servers/rendering/shader_types.cpp:102	#1831	forward_clustered/scene_forward_clustered.glsl		float		native	native
-spatial.vertex.BONE_INDICES	built-in (read only)	servers/rendering/shader_types.cpp:103	#1831	forward_clustered/scene_forward_clustered.glsl		uvec4			
-spatial.vertex.BONE_WEIGHTS	built-in (read only)	servers/rendering/shader_types.cpp:104	#1831	forward_clustered/scene_forward_clustered.glsl		vec4			
-spatial.vertex.CUSTOM0	built-in (read only)	servers/rendering/shader_types.cpp:105	#1831	forward_clustered/scene_forward_clustered.glsl		vec4			
-spatial.vertex.CUSTOM1	built-in (read only)	servers/rendering/shader_types.cpp:106	#1831	forward_clustered/scene_forward_clustered.glsl		vec4			
-spatial.vertex.CUSTOM2	built-in (read only)	servers/rendering/shader_types.cpp:107	#1831	forward_clustered/scene_forward_clustered.glsl		vec4			
-spatial.vertex.CUSTOM3	built-in (read only)	servers/rendering/shader_types.cpp:108	#1831	forward_clustered/scene_forward_clustered.glsl		vec4			
-spatial.vertex.MODEL_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:113	#1831	forward_clustered/scene_forward_clustered.glsl		mat4			
-spatial.vertex.MODEL_NORMAL_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:114	#1831	forward_clustered/scene_forward_clustered.glsl		mat3			
-spatial.vertex.VIEW_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:115	#1831	forward_clustered/scene_forward_clustered.glsl		mat4			
-spatial.vertex.INV_VIEW_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:116	#1831	forward_clustered/scene_forward_clustered.glsl		mat4			
-spatial.vertex.PROJECTION_MATRIX	built-in	servers/rendering/shader_types.cpp:117	#1831	forward_clustered/scene_forward_clustered.glsl		mat4			
-spatial.vertex.INV_PROJECTION_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:118	#1831	forward_clustered/scene_forward_clustered.glsl		mat4			
-spatial.vertex.MODELVIEW_MATRIX	built-in	servers/rendering/shader_types.cpp:119	#1831	forward_clustered/scene_forward_clustered.glsl		mat4			
-spatial.vertex.MODELVIEW_NORMAL_MATRIX	built-in	servers/rendering/shader_types.cpp:120	#1831	forward_clustered/scene_forward_clustered.glsl		mat3			
-spatial.vertex.VIEWPORT_SIZE	built-in (read only)	servers/rendering/shader_types.cpp:121	#1831	forward_clustered/scene_forward_clustered.glsl		vec2			
-spatial.vertex.MAIN_CAM_INV_VIEW_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:122	#1831	forward_clustered/scene_forward_clustered.glsl		mat4			
-spatial.vertex.NODE_POSITION_WORLD	built-in (read only)	servers/rendering/shader_types.cpp:124	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.vertex.CAMERA_POSITION_WORLD	built-in (read only)	servers/rendering/shader_types.cpp:125	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.vertex.CAMERA_DIRECTION_WORLD	built-in (read only)	servers/rendering/shader_types.cpp:126	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.vertex.CAMERA_VISIBLE_LAYERS	built-in (read only)	servers/rendering/shader_types.cpp:127	#1831	forward_clustered/scene_forward_clustered.glsl		uint			
-spatial.vertex.NODE_POSITION_VIEW	built-in (read only)	servers/rendering/shader_types.cpp:128	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.vertex.VIEW_INDEX	built-in (read only)	servers/rendering/shader_types.cpp:130	#1831	forward_clustered/scene_forward_clustered.glsl		int			
-spatial.vertex.VIEW_MONO_LEFT	built-in (read only)	servers/rendering/shader_types.cpp:131	#1831	forward_clustered/scene_forward_clustered.glsl		int			
-spatial.vertex.VIEW_RIGHT	built-in (read only)	servers/rendering/shader_types.cpp:132	#1831	forward_clustered/scene_forward_clustered.glsl		int			
-spatial.vertex.EYE_OFFSET	built-in (read only)	servers/rendering/shader_types.cpp:133	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.fragment.VERTEX	built-in (read only)	servers/rendering/shader_types.cpp:135	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.fragment.LIGHT_VERTEX	built-in	servers/rendering/shader_types.cpp:136	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.fragment.FRAGCOORD	built-in (read only)	servers/rendering/shader_types.cpp:137	#1831	forward_clustered/scene_forward_clustered.glsl		vec4			
-spatial.fragment.FRONT_FACING	built-in (read only)	servers/rendering/shader_types.cpp:138	#1831	forward_clustered/scene_forward_clustered.glsl		bool			
+spatial.vertex.BONE_INDICES	built-in (read only)	servers/rendering/shader_types.cpp:103	#1831	forward_clustered/scene_forward_clustered.glsl		uvec4		native	native
+spatial.vertex.BONE_WEIGHTS	built-in (read only)	servers/rendering/shader_types.cpp:104	#1831	forward_clustered/scene_forward_clustered.glsl		vec4		native	native
+spatial.vertex.CUSTOM0	built-in (read only)	servers/rendering/shader_types.cpp:105	#1831	forward_clustered/scene_forward_clustered.glsl		vec4		native	native
+spatial.vertex.CUSTOM1	built-in (read only)	servers/rendering/shader_types.cpp:106	#1831	forward_clustered/scene_forward_clustered.glsl		vec4		native	native
+spatial.vertex.CUSTOM2	built-in (read only)	servers/rendering/shader_types.cpp:107	#1831	forward_clustered/scene_forward_clustered.glsl		vec4		native	native
+spatial.vertex.CUSTOM3	built-in (read only)	servers/rendering/shader_types.cpp:108	#1831	forward_clustered/scene_forward_clustered.glsl		vec4		native	native
+spatial.vertex.MODEL_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:113	#1831	forward_clustered/scene_forward_clustered.glsl		mat4		native	native
+spatial.vertex.MODEL_NORMAL_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:114	#1831	forward_clustered/scene_forward_clustered.glsl		mat3		native	native
+spatial.vertex.VIEW_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:115	#1831	forward_clustered/scene_forward_clustered.glsl		mat4		native	native
+spatial.vertex.INV_VIEW_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:116	#1831	forward_clustered/scene_forward_clustered.glsl		mat4		native	native
+spatial.vertex.PROJECTION_MATRIX	built-in	servers/rendering/shader_types.cpp:117	#1831	forward_clustered/scene_forward_clustered.glsl		mat4		native	native
+spatial.vertex.INV_PROJECTION_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:118	#1831	forward_clustered/scene_forward_clustered.glsl		mat4		native	native
+spatial.vertex.MODELVIEW_MATRIX	built-in	servers/rendering/shader_types.cpp:119	#1831	forward_clustered/scene_forward_clustered.glsl		mat4		native	native
+spatial.vertex.MODELVIEW_NORMAL_MATRIX	built-in	servers/rendering/shader_types.cpp:120	#1831	forward_clustered/scene_forward_clustered.glsl		mat3		native	native
+spatial.vertex.VIEWPORT_SIZE	built-in (read only)	servers/rendering/shader_types.cpp:121	#1831	forward_clustered/scene_forward_clustered.glsl		vec2		native	native
+spatial.vertex.MAIN_CAM_INV_VIEW_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:122	#1831	forward_clustered/scene_forward_clustered.glsl		mat4		native	native
+spatial.vertex.NODE_POSITION_WORLD	built-in (read only)	servers/rendering/shader_types.cpp:124	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.vertex.CAMERA_POSITION_WORLD	built-in (read only)	servers/rendering/shader_types.cpp:125	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.vertex.CAMERA_DIRECTION_WORLD	built-in (read only)	servers/rendering/shader_types.cpp:126	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.vertex.CAMERA_VISIBLE_LAYERS	built-in (read only)	servers/rendering/shader_types.cpp:127	#1831	forward_clustered/scene_forward_clustered.glsl		uint		native	native
+spatial.vertex.NODE_POSITION_VIEW	built-in (read only)	servers/rendering/shader_types.cpp:128	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.vertex.VIEW_INDEX	built-in (read only)	servers/rendering/shader_types.cpp:130	#1831	forward_clustered/scene_forward_clustered.glsl		int		native	native
+spatial.vertex.VIEW_MONO_LEFT	built-in (read only)	servers/rendering/shader_types.cpp:131	#1831	forward_clustered/scene_forward_clustered.glsl		int		native	native
+spatial.vertex.VIEW_RIGHT	built-in (read only)	servers/rendering/shader_types.cpp:132	#1831	forward_clustered/scene_forward_clustered.glsl		int		native	native
+spatial.vertex.EYE_OFFSET	built-in (read only)	servers/rendering/shader_types.cpp:133	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.fragment.VERTEX	built-in (read only)	servers/rendering/shader_types.cpp:135	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.fragment.LIGHT_VERTEX	built-in	servers/rendering/shader_types.cpp:136	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.fragment.FRAGCOORD	built-in (read only)	servers/rendering/shader_types.cpp:137	#1831	forward_clustered/scene_forward_clustered.glsl		vec4		native	native
+spatial.fragment.FRONT_FACING	built-in (read only)	servers/rendering/shader_types.cpp:138	#1831	forward_clustered/scene_forward_clustered.glsl		bool		native	native
 spatial.fragment.NORMAL	built-in	servers/rendering/shader_types.cpp:139	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
 spatial.fragment.TANGENT	built-in	servers/rendering/shader_types.cpp:140	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
 spatial.fragment.BINORMAL	built-in	servers/rendering/shader_types.cpp:141	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
-spatial.fragment.VIEW	built-in (read only)	servers/rendering/shader_types.cpp:142	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
+spatial.fragment.VIEW	built-in (read only)	servers/rendering/shader_types.cpp:142	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
 spatial.fragment.NORMAL_MAP	built-in	servers/rendering/shader_types.cpp:143	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
 spatial.fragment.NORMAL_MAP_DEPTH	built-in	servers/rendering/shader_types.cpp:144	#1831	forward_clustered/scene_forward_clustered.glsl		float			
 spatial.fragment.BENT_NORMAL_MAP	built-in	servers/rendering/shader_types.cpp:145	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
@@ -1615,24 +1615,24 @@ spatial.fragment.AO	built-in	servers/rendering/shader_types.cpp:166	#1831	forwar
 spatial.fragment.AO_LIGHT_AFFECT	built-in	servers/rendering/shader_types.cpp:167	#1831	forward_clustered/scene_forward_clustered.glsl		float			
 spatial.fragment.EMISSION	built-in	servers/rendering/shader_types.cpp:168	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
 spatial.fragment.DEPTH	built-in	servers/rendering/shader_types.cpp:169	#1831	forward_clustered/scene_forward_clustered.glsl		float			
-spatial.fragment.SCREEN_UV	built-in (read only)	servers/rendering/shader_types.cpp:170	#1831	forward_clustered/scene_forward_clustered.glsl		vec2			
-spatial.fragment.POINT_COORD	built-in (read only)	servers/rendering/shader_types.cpp:171	#1831	forward_clustered/scene_forward_clustered.glsl		vec2			
-spatial.fragment.NODE_POSITION_WORLD	built-in (read only)	servers/rendering/shader_types.cpp:173	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.fragment.CAMERA_POSITION_WORLD	built-in (read only)	servers/rendering/shader_types.cpp:174	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.fragment.CAMERA_DIRECTION_WORLD	built-in (read only)	servers/rendering/shader_types.cpp:175	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.fragment.CAMERA_VISIBLE_LAYERS	built-in (read only)	servers/rendering/shader_types.cpp:176	#1831	forward_clustered/scene_forward_clustered.glsl		uint			
-spatial.fragment.NODE_POSITION_VIEW	built-in (read only)	servers/rendering/shader_types.cpp:177	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.fragment.VIEW_INDEX	built-in (read only)	servers/rendering/shader_types.cpp:179	#1831	forward_clustered/scene_forward_clustered.glsl		int			
-spatial.fragment.VIEW_MONO_LEFT	built-in (read only)	servers/rendering/shader_types.cpp:180	#1831	forward_clustered/scene_forward_clustered.glsl		int			
-spatial.fragment.VIEW_RIGHT	built-in (read only)	servers/rendering/shader_types.cpp:181	#1831	forward_clustered/scene_forward_clustered.glsl		int			
-spatial.fragment.EYE_OFFSET	built-in (read only)	servers/rendering/shader_types.cpp:182	#1831	forward_clustered/scene_forward_clustered.glsl		vec3			
-spatial.fragment.MODEL_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:184	#1831	forward_clustered/scene_forward_clustered.glsl		mat4			
-spatial.fragment.MODEL_NORMAL_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:185	#1831	forward_clustered/scene_forward_clustered.glsl		mat3			
-spatial.fragment.VIEW_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:186	#1831	forward_clustered/scene_forward_clustered.glsl		mat4			
-spatial.fragment.INV_VIEW_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:187	#1831	forward_clustered/scene_forward_clustered.glsl		mat4			
-spatial.fragment.PROJECTION_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:188	#1831	forward_clustered/scene_forward_clustered.glsl		mat4			
-spatial.fragment.INV_PROJECTION_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:189	#1831	forward_clustered/scene_forward_clustered.glsl		mat4			
-spatial.fragment.VIEWPORT_SIZE	built-in (read only)	servers/rendering/shader_types.cpp:190	#1831	forward_clustered/scene_forward_clustered.glsl		vec2			
+spatial.fragment.SCREEN_UV	built-in (read only)	servers/rendering/shader_types.cpp:170	#1831	forward_clustered/scene_forward_clustered.glsl		vec2		native	native
+spatial.fragment.POINT_COORD	built-in (read only)	servers/rendering/shader_types.cpp:171	#2001	forward_clustered/scene_forward_clustered.glsl		vec2			
+spatial.fragment.NODE_POSITION_WORLD	built-in (read only)	servers/rendering/shader_types.cpp:173	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.fragment.CAMERA_POSITION_WORLD	built-in (read only)	servers/rendering/shader_types.cpp:174	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.fragment.CAMERA_DIRECTION_WORLD	built-in (read only)	servers/rendering/shader_types.cpp:175	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.fragment.CAMERA_VISIBLE_LAYERS	built-in (read only)	servers/rendering/shader_types.cpp:176	#1831	forward_clustered/scene_forward_clustered.glsl		uint		native	native
+spatial.fragment.NODE_POSITION_VIEW	built-in (read only)	servers/rendering/shader_types.cpp:177	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.fragment.VIEW_INDEX	built-in (read only)	servers/rendering/shader_types.cpp:179	#1831	forward_clustered/scene_forward_clustered.glsl		int		native	native
+spatial.fragment.VIEW_MONO_LEFT	built-in (read only)	servers/rendering/shader_types.cpp:180	#1831	forward_clustered/scene_forward_clustered.glsl		int		native	native
+spatial.fragment.VIEW_RIGHT	built-in (read only)	servers/rendering/shader_types.cpp:181	#1831	forward_clustered/scene_forward_clustered.glsl		int		native	native
+spatial.fragment.EYE_OFFSET	built-in (read only)	servers/rendering/shader_types.cpp:182	#1831	forward_clustered/scene_forward_clustered.glsl		vec3		native	native
+spatial.fragment.MODEL_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:184	#1831	forward_clustered/scene_forward_clustered.glsl		mat4		native	native
+spatial.fragment.MODEL_NORMAL_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:185	#1831	forward_clustered/scene_forward_clustered.glsl		mat3		native	native
+spatial.fragment.VIEW_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:186	#1831	forward_clustered/scene_forward_clustered.glsl		mat4		native	native
+spatial.fragment.INV_VIEW_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:187	#1831	forward_clustered/scene_forward_clustered.glsl		mat4		native	native
+spatial.fragment.PROJECTION_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:188	#1831	forward_clustered/scene_forward_clustered.glsl		mat4		native	native
+spatial.fragment.INV_PROJECTION_MATRIX	built-in (read only)	servers/rendering/shader_types.cpp:189	#1831	forward_clustered/scene_forward_clustered.glsl		mat4		native	native
+spatial.fragment.VIEWPORT_SIZE	built-in (read only)	servers/rendering/shader_types.cpp:190	#1831	forward_clustered/scene_forward_clustered.glsl		vec2		native	native
 spatial.fragment.FOG	built-in	servers/rendering/shader_types.cpp:191	#1831	forward_clustered/scene_forward_clustered.glsl		vec4			
 spatial.fragment.RADIANCE	built-in	servers/rendering/shader_types.cpp:192	#1831	forward_clustered/scene_forward_clustered.glsl		vec4			
 spatial.fragment.IRRADIANCE	built-in	servers/rendering/shader_types.cpp:193	#1831	forward_clustered/scene_forward_clustered.glsl		vec4			

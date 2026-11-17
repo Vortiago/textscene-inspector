@@ -134,3 +134,28 @@ export const REFUSED_UTILITIES = {
   weakref: { refusal: 'UnsupportedObject', reason: OBJECTS },
   rid_allocate_id: { refusal: 'UnportableUtility', reason: EDITOR_STATE },
 };
+
+/** The reasons whose Godot answer changes from run to run or machine to machine, so no record holds it. */
+const RUN_DEPENDENT_REASONS = new Set([
+  EDITOR_STATE,
+  MACHINE_ICONV,
+  MACHINE_ALLOCATION,
+  UNSET_MEMORY,
+  UNSEEDED,
+  INTERNED_ADDRESS,
+]);
+
+const isInternedComparison = (id) => /^operator OP_(LESS|GREATER)\S* STRING_NAME STRING_NAME /.test(id);
+
+/** What the port may refuse a case with, or nothing for a case it must answer. */
+export const allowedRefusal = ({ id, utility, method }) =>
+  REFUSED_CASES[id] ??
+  REFUSED_UTILITIES[utility] ??
+  REFUSED_METHODS[method] ??
+  (isInternedComparison(id) ? INTERNED_COMPARISON : undefined);
+
+/** The answer a record holds for a case whose Godot answer depends on the run, in place of that answer. */
+export const RUN_DEPENDENT_ANSWER = { verdict: 'depends on the run' };
+
+/** Whether Godot's answer to `test` changes between runs, so it is no reference. */
+export const isRunDependent = (test) => RUN_DEPENDENT_REASONS.has(allowedRefusal(test)?.reason);

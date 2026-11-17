@@ -52,6 +52,48 @@ describe('compileMaterial', () => {
   });
 });
 
+describe('compileMaterial varyings', () => {
+  const varyingsOf = (declarations: string, vertex: string, fragment = '') => {
+    const source = `shader_type spatial;\n${declarations}\nvoid vertex() {\n${vertex}\n}\nvoid fragment() {\n${fragment}\n}\n`;
+    const { vertex: vertexGlobals, fragment: fragmentGlobals } = compileMaterial(
+      materialOf(source),
+      MODE_TABLES.spatial!
+    ).varyings;
+    const text = (globals: typeof vertexGlobals) =>
+      globals.map(
+        (global) => `${global.qualifiers.words.join(' ')} ${global.type} ${global.declarators[0]!.name}`
+      );
+    return { vertex: text(vertexGlobals), fragment: text(fragmentGlobals) };
+  };
+
+  it('declares a varying the vertex stage writes as an out of the vertex stage and an in of the fragment stage', () => {
+    expect(varyingsOf('varying vec3 tint;', '\ttint = VERTEX;')).toEqual({
+      vertex: ['out vec3 m_tint'],
+      fragment: ['in vec3 m_tint'],
+    });
+  });
+
+  it('keeps flat on both stages, and writes nothing for smooth', () => {
+    expect(
+      varyingsOf('varying flat int band;\nvarying smooth float fade;', '\tband = 1;\n\tfade = 0.5;')
+    ).toEqual({
+      vertex: ['flat out int m_band', 'out float m_fade'],
+      fragment: ['flat in int m_band', 'in float m_fade'],
+    });
+  });
+
+  it('declares a varying the fragment stage writes as a global of the fragment stage only', () => {
+    expect(varyingsOf('varying float fade;', '', '\tfade = 0.5;')).toEqual({
+      vertex: [],
+      fragment: [' float m_fade'],
+    });
+  });
+
+  it('declares no boolean varying that no stage writes, as Godot does', () => {
+    expect(varyingsOf('varying bool seen;', '')).toEqual({ vertex: [], fragment: [] });
+  });
+});
+
 describe('linkTemplateStage', () => {
   it("puts the material's stage function in the template's code slot", () => {
     expect(skyFragment(DEFAULT_SKY)).toMatch(/\{\n\t*\{\n\t*\(color = vec3\(0\.0[^\n]*\);\n\t*\}\n\t*\}/);

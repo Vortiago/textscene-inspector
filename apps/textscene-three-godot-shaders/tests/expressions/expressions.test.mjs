@@ -10,7 +10,7 @@ import { godotAnswers } from '../godotAnswers.mjs';
 import { dumpVariant } from './dump.mjs';
 import { EXPRESSIONS } from './expressionSet.mjs';
 import { LIBRARY_DIFFERENCES } from './libraryDifferences.mjs';
-import { INTERNED_COMPARISON, REFUSED_CASES, REFUSED_METHODS, REFUSED_UTILITIES } from './refusedCases.mjs';
+import { allowedRefusal, isRunDependent, REFUSED_CASES, RUN_DEPENDENT_ANSWER } from './refusedCases.mjs';
 
 /** The decoders an app lends for Zstandard and Brotli, so every case has Godot's answer. */
 const DECODERS = decodersOf({ zstd: zstdDecompress, brotli: brotliDecompress });
@@ -36,15 +36,6 @@ function portAnswer(text) {
 
 const ANSWERS = new Map(EXPRESSIONS.map((test) => [test.id, portAnswer(test.text)]));
 const ANSWERED = EXPRESSIONS.filter((test) => RECORD.cases[test.id] !== undefined);
-const isInternedComparison = (id) => /^operator OP_(LESS|GREATER)\S* STRING_NAME STRING_NAME /.test(id);
-
-/** What the port may refuse a case with, or nothing for a case it must answer. */
-const allowedRefusal = ({ id, utility, method }) =>
-  REFUSED_CASES[id] ??
-  REFUSED_UTILITIES[utility] ??
-  REFUSED_METHODS[method] ??
-  (isInternedComparison(id) ? INTERNED_COMPARISON : undefined);
-
 describe('the Expression port against Godot', () => {
   it.runIf(IS_LIVE)('has an answer from Godot for every case', () => {
     expect(EXPRESSIONS.filter((test) => RECORD.cases[test.id] === undefined).map((test) => test.id)).toEqual(
@@ -57,8 +48,16 @@ describe('the Expression port against Godot', () => {
     expect(Object.keys(RECORD.cases).filter((id) => !ids.has(id))).toEqual([]);
   });
 
+  it('records no answer of Godot that depends on the run', () => {
+    const recorded = ANSWERED.filter(isRunDependent).filter(
+      (test) => RECORD.cases[test.id].verdict !== RUN_DEPENDENT_ANSWER.verdict
+    );
+    expect(recorded.map((test) => test.id)).toEqual([]);
+  });
+
   it('answers each case as Godot does', () => {
     const mismatches = ANSWERED.filter((test) => ANSWERS.get(test.id).refusal === undefined)
+      .filter((test) => !isRunDependent(test))
       .filter((test) => LIBRARY_DIFFERENCES[test.id] === undefined)
       .filter((test) => {
         const [ours, godot] = [ANSWERS.get(test.id), RECORD.cases[test.id]];

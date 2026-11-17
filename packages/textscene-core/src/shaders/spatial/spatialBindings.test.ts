@@ -68,4 +68,10 @@ describe('the instance buffer of a transpiled spatial shader', () => {
     instanced.name = 'crowd';
     expect(() => drawn(instanced)).toThrow('InstancedMesh crowd');
   });
+
+  it('refuses points by name, as no line or point draw is ported', () => {
+    const points = new THREE.Points(new THREE.BufferGeometry());
+    points.name = 'stars';
+    expect(() => drawn(points)).toThrow('Points stars');
+  });
 });
