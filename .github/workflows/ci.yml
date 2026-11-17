@@ -230,7 +230,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: image
     container: *ci-image
-    timeout-minutes: 25
+    # Godot compiles each of the 28,318 materials of the material sweep: about 17 minutes of the run.
+    timeout-minutes: 40
     env:
       SHADER_ANSWERS: live
     steps:
