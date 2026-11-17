@@ -115,6 +115,12 @@ describe('a uniform scope', () => {
   });
 });
 
+describe('a uniform scope word', () => {
+  it('refuses global before a word that is not a keyword, with Godot words', () => {
+    expect(() => treeOf('shader_type spatial;\nglobal foo;')).toThrow("Expected a 'uniform' after 'global'.");
+  });
+});
+
 describe('group_uniforms', () => {
   it('puts each uniform in the group and subgroup open before it', () => {
     const { uniforms } = treeOf('group_uniforms g.s;\nuniform float a;\ngroup_uniforms;\nuniform float b;');

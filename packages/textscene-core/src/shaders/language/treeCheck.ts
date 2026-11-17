@@ -61,24 +61,22 @@ class FunctionCheck {
   /** The functions declared before this one, which alone it may call. */
   private readonly callable: readonly FunctionNode[];
   private readonly definition: FunctionNode;
+  /** The shader's uniforms, which a read reaches after every block. */
+  private readonly uniforms: ReadonlyMap<string, Declared>;
 
-  constructor(
-    private readonly shader: ShaderNode,
-    index: number
-  ) {
+  constructor(shader: ShaderNode, index: number) {
     this.structs = shader.structs;
     this.callable = shader.functions.slice(0, index);
     this.definition = shader.functions[index]!;
-  }
-
-  fault(): string | undefined {
-    const uniforms = new Map(
-      this.shader.uniforms.map((uniform) => [
+    this.uniforms = new Map(
+      shader.uniforms.map((uniform) => [
         uniform.name,
         { type: uniform.type, arraySize: uniform.arraySize ?? 0 },
       ])
     );
-    this.scopes.push(uniforms);
+  }
+
+  fault(): string | undefined {
     const args = new Map(
       this.definition.arguments.map((argument) => [
         argument.name,
@@ -119,11 +117,11 @@ class FunctionCheck {
   private declaration(declaration: DeclarationNode): string | undefined {
     if (!this.isType(declaration.type)) return `a declaration of type ${declaration.type}`;
     const scope = this.scopes.at(-1)!;
-    // The body's names and the arguments share one scope, as Godot looks them up.
+    // The body's names share one scope with the arguments and the uniforms, as Godot looks them up.
     const isBody = this.scopes.length === 2;
     return firstFault(declaration.declarators, (declarator) => {
-      if (scope.has(declarator.name) || (isBody && this.scopes[0]!.has(declarator.name)))
-        return `a second ${declarator.name} in one block`;
+      const isTaken = isBody && (this.scopes[0]!.has(declarator.name) || this.uniforms.has(declarator.name));
+      if (scope.has(declarator.name) || isTaken) return `a second ${declarator.name} in one block`;
       const arraySize = declarator.arraySize ?? 0;
       if (declarator.value) {
         const fault = this.expression(declarator.value);
@@ -243,14 +241,12 @@ class FunctionCheck {
   }
 
   private variable(name: string, type: string, arraySize: number): string | undefined {
-    for (let index = this.scopes.length - 1; index >= 0; index--) {
-      const declared = this.scopes[index]!.get(name);
-      if (!declared) continue;
-      if (declared.type !== type || declared.arraySize !== arraySize)
-        return `the name ${name} read as ${type}[${arraySize}], declared ${declared.type}[${declared.arraySize}]`;
-      return undefined;
-    }
-    return `the name ${name}, which no block around the read declares`;
+    const block = [...this.scopes].reverse().find((scope) => scope.has(name));
+    const declared = block?.get(name) ?? this.uniforms.get(name);
+    if (!declared) return `the name ${name}, which no block around the read declares`;
+    if (declared.type !== type || declared.arraySize !== arraySize)
+      return `the name ${name} read as ${type}[${arraySize}], declared ${declared.type}[${declared.arraySize}]`;
+    return undefined;
   }
 
   private field(field: Extract<Expression, { kind: 'field' }>): string | undefined {

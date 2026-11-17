@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { instruction } from './instructions.js';
 import { treeOf } from './parsedTree.testkit.js';
-import type { CallNode, Expression, FunctionNode, OperatorNode, ShaderNode } from './shaderTree.js';
+import type {
+  CallNode,
+  DeclarationNode,
+  Expression,
+  FunctionNode,
+  OperatorNode,
+  ShaderNode,
+} from './shaderTree.js';
 import { treeFault } from './treeCheck.js';
 
 /** `shader` with the value of its first function's return replaced by `change(value)`. */
@@ -13,6 +20,16 @@ function withReturn(shader: ShaderNode, change: (value: Expression) => Expressio
       : statement
   );
   return { ...shader, functions: [{ ...definition, body: { ...definition.body, statements } }] };
+}
+
+/** `shader` with the first declarator of its first function's first statement named `name`. */
+function withDeclared(shader: ShaderNode, name: string): ShaderNode {
+  const definition = shader.functions[0]!;
+  const [first, ...rest] = definition.body.statements;
+  const declaration = first as DeclarationNode;
+  const renamed = { ...declaration, declarators: [{ ...declaration.declarators[0]!, name }] };
+  const body = { ...definition.body, statements: [renamed, ...rest] };
+  return { ...shader, functions: [{ ...definition, body }] };
 }
 
 describe('treeFault', () => {
@@ -50,6 +67,16 @@ describe('treeFault', () => {
       (value) => ({ ...value, name: 'b' }) as Expression
     );
     expect(treeFault(tree)).toMatch(/the name b, which no block around the read declares/);
+  });
+
+  it('finds a body local with the name of an argument', () => {
+    const tree = withDeclared(treeOf('float f(float x) { float y; return x; }'), 'x');
+    expect(treeFault(tree)).toMatch(/a second x in one block/);
+  });
+
+  it('finds a body local with the name of a uniform', () => {
+    const tree = withDeclared(treeOf('uniform float u;\nfloat f() { float y; return u; }'), 'u');
+    expect(treeFault(tree)).toMatch(/a second u in one block/);
   });
 
   it('finds a constant lane outside its type', () => {

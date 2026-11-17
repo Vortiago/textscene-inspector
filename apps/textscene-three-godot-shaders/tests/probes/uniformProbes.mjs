@@ -64,6 +64,7 @@ const MATERIAL_VALUES = [
   ['int-of-float', 'int', '-7.9'],
   ['uint', 'uint', '3000000000'],
   ['uint-of-negative', 'uint', '-1'],
+  ['uint-of-large-float', 'uint', '3000000000.0'],
   ['bool', 'bool', 'true'],
   ['bool-of-int', 'bool', '2'],
   ['vec2', 'vec2', 'Vector2(1.5, -2)'],

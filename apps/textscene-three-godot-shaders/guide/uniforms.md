@@ -665,6 +665,17 @@ uint probe() { return u; }
 | --- | --- | --- |
 | `0` | `4294967295u` | `ffffffff` |
 
+### Probe `uniform-material-uint-of-large-float`, no input
+
+```glsl
+uniform uint u;
+uint probe() { return u; }
+```
+
+| Literal | Godot draws | Bits |
+| --- | --- | --- |
+| `0` | `2147483648u` | `80000000` |
+
 ### Probe `uniform-material-bool`, no input
 
 ```glsl

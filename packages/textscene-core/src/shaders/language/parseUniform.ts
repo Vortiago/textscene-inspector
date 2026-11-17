@@ -1,5 +1,5 @@
 import { convertedScalar } from './constants.js';
-import { keywordInstruction } from './instructions.js';
+import { instruction, keywordInstruction } from './instructions.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import type { ExpressionParser } from './parseExpression.js';
 import type { RenderingMethod } from '../preprocessor/preprocessor.js';
@@ -108,11 +108,13 @@ export class UniformParser {
   /** `global uniform`, `instance uniform` or `uniform`, read from its first word. */
   declaration(first: Token): void {
     const scope = this.scopeOf(first);
-    const rows = [first, ...(scope === 'local' ? [] : [this.tokens.next()])].map((token) =>
-      keywordInstruction(token.type)!
-    );
-    if (rows.length === 2 && rows[1]!.id !== 'uniform')
-      this.tokens.fail(`Expected a 'uniform' after '${rows[0]!.id}'.`);
+    const firstRow = keywordInstruction(first.type)!;
+    const rows = [firstRow];
+    if (scope !== 'local') {
+      if (this.tokens.next().type !== 'TK_UNIFORM')
+        this.tokens.fail(`Expected a 'uniform' after '${firstRow.id}'.`);
+      rows.push(instruction('uniform')!);
+    }
     const typeToken = this.uniformType();
     const type = keywordInstruction(typeToken.type)!.id;
     let token = this.tokens.next();
