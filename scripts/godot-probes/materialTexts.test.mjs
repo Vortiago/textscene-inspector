@@ -39,6 +39,12 @@ describe('parseCaseId', () => {
     });
   });
 
+  it('reads a bool set to false as false', () => {
+    expect(parseCaseId('StandardMaterial3D|texture_repeat=false').settings).toEqual({
+      texture_repeat: false,
+    });
+  });
+
   it("reads the next pass of a material's stencil", () => {
     expect(parseCaseId('StandardMaterial3D|stencil_mode=1|next_pass')).toEqual({
       materialClass: 'StandardMaterial3D',

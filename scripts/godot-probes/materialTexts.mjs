@@ -10,16 +10,23 @@ export const NEXT_PASS = 'next_pass';
 /** The material classes whose text BaseMaterial3D writes: ORMMaterial3D sets the key's `orm` bit. */
 export const MATERIAL_CLASSES = ['StandardMaterial3D', 'ORMMaterial3D'];
 
+/** Each class gets this many materials with many properties set at once, which pairs do not reach. */
+export const RANDOM_CASES = 3000;
+
 /** Godot gives a script no material's shader RID, so it reads the one shader between two of its own. */
 const MATERIAL_SCRIPT = `extends Node
 
 const SLOT_BITS := 4294967296
 ## Every shader of the sweep sits in one of the first 64 slots of its counter.
 const SLOTS := 64
+const RANDOM_CASES := ${RANDOM_CASES}
+const RANDOM_SEED := 1456
+const MOST_SETTINGS := 12
 
-func values_of(p: Dictionary) -> Array:
+## A bool takes the value its default is not: texture_repeat defaults to true.
+func values_of(p: Dictionary, defaults: Material) -> Array:
 	if p.type == TYPE_BOOL:
-		return [true]
+		return [not defaults.get(p.name)]
 	if p.type != TYPE_INT:
 		return []
 	var names: PackedStringArray = p.hint_string.split(",")
@@ -35,11 +42,19 @@ func values_of(p: Dictionary) -> Array:
 		return [int(names[0]), int(names[0]) + 1, int(names[1])]
 	return []
 
-func sweep() -> Array:
-	var singles := []
+func values_by_name() -> Dictionary:
+	var defaults := StandardMaterial3D.new()
+	var values := {}
 	for p in ClassDB.class_get_property_list("BaseMaterial3D", true):
-		for value in values_of(p):
-			singles.append([p.name, value])
+		if not values_of(p, defaults).is_empty():
+			values[p.name] = values_of(p, defaults)
+	return values
+
+func sweep(values: Dictionary) -> Array:
+	var singles := []
+	for name in values:
+		for value in values[name]:
+			singles.append([name, value])
 	var cases := [[]]
 	for single in singles:
 		cases.append([single])
@@ -47,6 +62,20 @@ func sweep() -> Array:
 		for second in range(first + 1, singles.size()):
 			if singles[first][0] != singles[second][0]:
 				cases.append([singles[first], singles[second]])
+	return cases
+
+## Seeded, so every run and every chunk draws the same cases.
+func random_cases(values: Dictionary) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = RANDOM_SEED
+	var cases := []
+	for index in RANDOM_CASES:
+		var names: Array = values.keys()
+		var settings := []
+		for count in rng.randi_range(3, MOST_SETTINGS):
+			var name: String = names.pop_at(rng.randi_range(0, names.size() - 1))
+			settings.append([name, values[name][rng.randi_range(0, values[name].size() - 1)]])
+		cases.append(settings)
 	return cases
 
 func id_of(cls: String, settings: Array) -> String:
@@ -108,7 +137,8 @@ func record_case(cls: String, settings: Array) -> void:
 func _ready() -> void:
 	var run: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://run.json"))
 	printerr("GODOT ", Engine.get_version_info().string)
-	var cases := sweep()
+	var values := values_by_name()
+	var cases := sweep(values) + random_cases(values)
 	var index := 0
 	for cls in run.classes:
 		for settings in cases:
@@ -137,13 +167,18 @@ export function parseMaterialOutput(output) {
   });
 }
 
+const BOOLEANS = { true: true, false: false };
+
+/** A setting's value as `id_of` prints it: a bool, or an enum, flag or integer. */
+const valueOf = (printed) => BOOLEANS[printed] ?? Number(printed);
+
 /** A case id as `id_of` writes it, `Class|property=value|...`, then `|next_pass` for a next pass. */
 export function parseCaseId(id) {
   const [materialClass, ...parts] = id.split('|');
   const isNextPass = parts.at(-1) === NEXT_PASS;
   const settings = (isNextPass ? parts.slice(0, -1) : parts).map((setting) => {
     const [name, value] = setting.split('=');
-    return [name, value === 'true' ? true : Number(value)];
+    return [name, valueOf(value)];
   });
   return { materialClass, settings: Object.fromEntries(settings), isNextPass };
 }
