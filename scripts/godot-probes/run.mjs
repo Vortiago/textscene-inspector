@@ -20,6 +20,7 @@ import { sourceServer } from '../sourceServer.mjs';
 import { runProbesInGodot } from './godotProject.mjs';
 import { eachAtOnce, requireGodotVersion } from './godotRun.mjs';
 import { renderAnswersFile } from './answerDigest.mjs';
+import { materialRecord } from './materialTexts.mjs';
 import { isDrawn, probeRecord } from './record.mjs';
 import { loadPrinter, printedProbes, printedRejection, printedTextFaults } from './printedText.mjs';
 import { frontEndRejections, godotRejection } from './rejection.mjs';
@@ -95,10 +96,11 @@ async function main() {
     operators: operatorRecord,
     corpus: corpusRecord,
     expressions: await expressionRecord(expressions),
+    materials: await materialRecord(),
   };
   writeLiveAnswers(records);
   const answersFile = renderAnswersFile(records);
-  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${expressions.length} expressions, ${printed.length - lowered.length} printed texts as parsed and ${lowered.length} as lowered`;
+  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${expressions.length} expressions, ${printed.length - lowered.length} printed texts as parsed and ${lowered.length} as lowered, ${Object.keys(records.materials.cases).length} materials`;
   const options = { tool: 'godot-probes', summary };
   const outputs = [[ANSWERS_FILE, answersFile]];
   if (process.argv.includes('--check')) checkGenerated(outputs, { ...options, command: 'pnpm godot:probes' });

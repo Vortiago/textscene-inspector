@@ -13,6 +13,7 @@ const answersOf = (source, lanes, adapter = 'a') => {
     operators: { cases: {} },
     corpus: { cases: {} },
     expressions: { cases: {} },
+    materials: { godot: 'g', cases: {}, texts: {} },
   };
 };
 
@@ -42,7 +43,15 @@ describe('the committed answers file', () => {
       'operators',
       'corpus',
       'expressions',
+      'materials',
     ]);
+  });
+
+  // Godot's material texts stay out of the repository: the file holds each case's hash.
+  it('holds no material text', () => {
+    const answers = answersOf(FLOAT, ['3f800000']);
+    const materials = { godot: 'g', cases: { m: 'hash' }, texts: { hash: 'shader_type spatial;' } };
+    expect(renderAnswersFile({ ...answers, materials })).not.toContain('shader_type');
   });
 });
 

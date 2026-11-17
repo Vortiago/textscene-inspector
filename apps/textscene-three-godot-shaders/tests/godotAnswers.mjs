@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { canonicalAnswers, staleFamilies } from '../../../scripts/godot-probes/answerDigest.mjs';
 
 /** The families of answers, each a record file of the live run. */
-const FAMILIES = ['probes', 'random', 'operators', 'corpus', 'expressions'];
+const FAMILIES = ['probes', 'random', 'operators', 'corpus', 'expressions', 'materials'];
 
 /** Written only by `pnpm godot:probes`, and left out of the repository. */
 export const LIVE_DIR = join(import.meta.dirname, '.godot-answers');
@@ -53,6 +53,7 @@ function smokeAnswers(smoke, godot, adapter) {
     operators: { godot, cases: smoke.operators },
     corpus: { godot, cases: smoke.corpus },
     expressions: { godot, cases: smoke.expressions },
+    materials: { godot, cases: smoke.materials },
   };
 }
 
@@ -65,4 +66,9 @@ export function liveGodotAnswers() {
     );
   }
   return answers;
+}
+
+/** Godot's text of each material by its hash, from the live run only: no Godot text is committed. */
+export function liveMaterialTexts() {
+  return liveGodotAnswers() && readJson(livePath('materials')).texts;
 }
