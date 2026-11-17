@@ -38,7 +38,7 @@ function usage() {
       '  --frame          fit-the-bounds camera on BOTH sides instead of the editor orbit\n' +
       '  --keep           keep the per-side PNGs, not just the diff\n' +
       '  --collisions     show collision shapes on both sides (Visible Collision Shapes)\n' +
-      '  --mode in-game   measure the scene as the game starts it (our side has no game view yet, see #1974)\n' +
+      '  --mode in-game   measure the scene as the game starts it, against our In-game mode\n' +
       '  --table <file>   also write the results as a Markdown table, one row per scene'
   );
 }
@@ -141,7 +141,7 @@ export function comparePngs(godotBuffer, oursBuffer) {
  */
 export async function diffOne(
   { scenePath, fixtureName, label },
-  { frame, keep, collisions = false },
+  { frame, keep, collisions = false, mode: pickedMode = null },
   { render = renderReference, capture = captureOurs, outDir = OUT_DIR } = {}
 ) {
   const renderAs = async (renderMode) =>
@@ -154,21 +154,23 @@ export async function diffOne(
     });
   // `run.mjs` refuses a root-window-only viewport setting in the nested arm and
   // names the arm that can answer it, so the scene is retried there.
-  const { out: godotOut, mode } = await renderAs('auto').catch((error) => {
+  const { out: godotOut, mode } = await renderAs(pickedMode ?? 'auto').catch((error) => {
     if (!error?.rootOnlyDrift) throw error;
     return renderAs('2d-root');
   });
   const godotBuffer = await readFile(godotOut);
 
-  // The reference is the project-viewport rect our 2D stage lays out at 1:1,
-  // so it sizes the capture window, with nothing re-derived on this side.
+  // The reference is the project-viewport rect our 2D stage lays out at 1:1, and the game window
+  // our In-game mode fills, so it sizes the capture, with nothing re-derived on this side.
   const canvas2D = mode === '2d';
   const reference = PNG.sync.read(godotBuffer);
+  const referenceFrame = { width: reference.width, height: reference.height };
   const oursBuffer = await capture({
     fixture: fixtureName,
     frame,
     canvas2D,
-    canvas2DFrame: canvas2D ? { width: reference.width, height: reference.height } : null,
+    canvas2DFrame: canvas2D ? referenceFrame : null,
+    inGameFrame: pickedMode === IN_GAME_MODE ? referenceFrame : null,
     showCollisions: collisions,
   });
   if (keep) await writeFile(join(outDir, `${label}.ours.png`), oursBuffer);
@@ -256,21 +258,12 @@ function residueCells(result) {
   return [changedPixels, maxChannelDelta, meanChannelError.toFixed(3), over.pixels, place];
 }
 
-/** The refusal for `--mode in-game`: the reference side renders it and our side cannot yet. */
-export function inGameUnavailableMessage() {
-  return (
-    `--mode ${IN_GAME_MODE} pairs the Godot game start with our game view, and the package has no ` +
-    'game view yet. Issue #1974 adds it. `pnpm ref:godot --mode in-game` renders the Godot side now.'
-  );
-}
-
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.fixtures.length === 0) {
     usage();
     process.exit(2);
   }
-  if (args.mode === IN_GAME_MODE) throw new Error(inGameUnavailableMessage());
   await mkdir(OUT_DIR, { recursive: true });
   // Before the sweep: a table that cannot be written must not cost the renders of every scene.
   if (args.table) await mkdir(dirname(resolve(args.table)), { recursive: true });

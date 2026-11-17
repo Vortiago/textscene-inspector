@@ -1,16 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { CANVAS_2D_TESTIDS, PERFORMANCE_TESTIDS, SHOW_GIZMOS_STORAGE_KEY } from './appContract.mjs';
+import {
+  CANVAS_2D_TESTIDS,
+  PERFORMANCE_TESTIDS,
+  SHOW_GIZMOS_STORAGE_KEY,
+  VIEWPORT_MODE_STORAGE_KEY,
+  windowForCanvas,
+} from './appContract.mjs';
 import { createCaptureContext, paintedOutChromeCss } from './captureContext.mjs';
 
 /** A browser that records the localStorage entries a context seeds, as `[key, value]` pairs. */
 function recordingBrowser() {
   const seeded = new Map();
+  const opened = {};
   const context = {
     addInitScript: async (_script, argument) => {
       if (Array.isArray(argument)) seeded.set(argument[0], argument[1]);
     },
   };
-  return { browser: { newContext: async () => context }, seeded };
+  const newContext = async (options) => {
+    opened.viewport = options.viewport;
+    return context;
+  };
+  return { browser: { newContext }, seeded, opened };
 }
 
 describe('createCaptureContext', () => {
@@ -24,6 +35,28 @@ describe('createCaptureContext', () => {
     const { browser, seeded } = recordingBrowser();
     await createCaptureContext(browser, { frameOnOpen: true, showGizmos: true });
     expect(seeded.get(SHOW_GIZMOS_STORAGE_KEY)).toBe('true');
+  });
+});
+
+describe('createCaptureContext with a game window', () => {
+  const GAME_WINDOW = { width: 640, height: 360 };
+
+  it('opens the In-game mode', async () => {
+    const { browser, seeded } = recordingBrowser();
+    await createCaptureContext(browser, { frameOnOpen: false, inGameFrame: GAME_WINDOW });
+    expect(seeded.get(VIEWPORT_MODE_STORAGE_KEY)).toBe('"in-game"');
+  });
+
+  it('sizes the window so the canvas is the game window', async () => {
+    const { browser, opened } = recordingBrowser();
+    await createCaptureContext(browser, { frameOnOpen: false, inGameFrame: GAME_WINDOW });
+    expect(opened.viewport).toEqual(windowForCanvas(GAME_WINDOW));
+  });
+
+  it('leaves the mode to the shell without a game window', async () => {
+    const { browser, seeded } = recordingBrowser();
+    await createCaptureContext(browser, { frameOnOpen: false });
+    expect(seeded.has(VIEWPORT_MODE_STORAGE_KEY)).toBe(false);
   });
 });
 
