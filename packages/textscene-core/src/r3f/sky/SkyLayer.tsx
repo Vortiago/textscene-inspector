@@ -37,6 +37,7 @@ import { debandSky } from './skyDebanding';
 import { showSkyBackground } from './skyBackground';
 import { useShaderTimeFrame } from '../shaderTime/canvasShaderTime';
 import { useShaderSkyTextures } from './shaderSkyTextures';
+import { useShaderDecoders } from '../shaderDecoders';
 import { isLiveTarget, liveTargetDrawCount } from '../liveTargets';
 import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
@@ -99,6 +100,7 @@ export function SkyLayer({
   const isPanoramaDrawn = useIsPanoramaDrawn(panorama);
   useShaderTimeFrame();
   const [textures, textureSlots] = useShaderSkyTextures(sky.material);
+  const decoders = useShaderDecoders(sky.material.kind === 'shader' ? sky.material.code : null);
 
   // Written only by the effect below, while it holds bakes.
   const bakeWantedRef = useRef<(() => boolean) | null>(null);
@@ -112,10 +114,21 @@ export function SkyLayer({
     if (lightsKey === null) return undefined;
     // A bake samples the panorama once, so it waits for the pass to draw a live target.
     if (!isPanoramaDrawn) return undefined;
+    // A bake caches its sky, so a text that may decompress waits for the decoders.
+    if (!decoders) return undefined;
 
     const lights = directionalLights(scene);
     const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
-    const input = { sky, lights, panorama, textures, asBackground, energyMultiplier, rotation: skyRotation };
+    const input = {
+      sky,
+      lights,
+      panorama,
+      textures,
+      decoders,
+      asBackground,
+      energyMultiplier,
+      rotation: skyRotation,
+    };
     const { bakes, release } = holdSkyBakes(gl, input, lightsKey, contextRestores);
     const update = radianceUpdateOf(sky);
     const plan = skyUpdatePlan(sky);
@@ -203,6 +216,7 @@ export function SkyLayer({
     exposure,
     panorama,
     textures,
+    decoders,
     isPanoramaDrawn,
     asBackground,
     lightsKey,

@@ -5,6 +5,7 @@ import { textToVariant } from '../../godot/variant/reader/variantReader';
 import { ShadingLanguageError } from '../../shaders/language/shadingLanguageError';
 import { transpileSky, type TranspiledSky } from '../../shaders/sky/transpileSky';
 import type { TranspiledUniform } from '../../shaders/uniforms/transpiledUniform';
+import type { ShaderDecoders } from '../../shaders/preprocessor/decoders';
 import { ShaderSkyBackground, ShaderSkyCube } from '../../r3f/sky/shaderSkyBackground';
 import { bakeRadiance } from './radianceBake';
 import { disposeSkyLayers, type SkyLayers } from './skyLayers';
@@ -26,9 +27,9 @@ void sky() {
 export function buildShaderSkyEnvironment(
   gl: THREE.WebGLRenderer,
   material: ShaderSkyProperties,
-  { sky, lights, asBackground, textures = {} }: SkyEnvironmentInput
+  { sky, lights, asBackground, textures = {}, decoders = {} }: SkyEnvironmentInput
 ): SkyEnvironment | null {
-  const transpiled = () => transpiledShaderSky(material, textures);
+  const transpiled = () => transpiledShaderSky(material, { textures, decoders });
   let background: ShaderSkyBackground | null = null;
   let layers: SkyLayers;
   try {
@@ -66,14 +67,22 @@ function bakeShaderRadiance(
   }
 }
 
+/** What a shader sky takes beside its material. */
+export interface ShaderSkyInputs {
+  /** The loaded texture parameters, by uniform name. */
+  readonly textures?: Readonly<Record<string, THREE.Texture>>;
+  /** The decoders the previewer lends an `#if` that decompresses. */
+  readonly decoders?: ShaderDecoders;
+}
+
 /** The sky of `material` with its parameters, or Godot's default sky for a shader it cannot draw. */
 export function transpiledShaderSky(
   material: ShaderSkyProperties,
-  textures: Readonly<Record<string, THREE.Texture>> = {}
+  { textures = {}, decoders = {} }: ShaderSkyInputs = {}
 ): TranspiledSky {
   let sky: TranspiledSky;
   try {
-    sky = transpileSky(material.code);
+    sky = transpileSky(material.code, { decoders });
   } catch (error) {
     if (!(error instanceof ShadingLanguageError)) throw error;
     warnOnce(material, 'refused', refusalMessage(error));

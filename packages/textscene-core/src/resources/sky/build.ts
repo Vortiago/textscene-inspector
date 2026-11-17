@@ -7,6 +7,7 @@
  */
 
 import * as THREE from 'three';
+import type { ShaderDecoders } from '../../shaders/preprocessor/decoders';
 import type { BuiltInSkyProperties, Sky } from './types';
 import { warn } from '../../logger';
 import { skyFragmentShader, skyGlsl, SKY_VERTEX_SHADER } from './skyShaders';
@@ -54,6 +55,8 @@ export interface SkyEnvironmentInput {
   energy: number;
   /** A shader sky's loaded texture parameters, by uniform name. */
   textures?: Readonly<Record<string, THREE.Texture>>;
+  /** The decoders a shader sky's `#if` may decompress with. */
+  decoders?: ShaderDecoders;
 }
 
 /**

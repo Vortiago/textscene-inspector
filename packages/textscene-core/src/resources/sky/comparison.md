@@ -6,7 +6,7 @@ renders_as: Godot's radiance layers as an octmap array + background
 
 # Sky
 
-A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. The background runs the sky shader at each pixel on the ray the pixel casts, as Godot's does, so no texture softens its edges. Godot's radiance layers, an octmap array with a mip chain per layer, give every reflection, the ambient light and the sky light in both fogs. Each read picks its mip from the screen derivatives of its direction, as Godot does. A small, strongly curved mirror reads a coarser mip than a large one. The radiance renders at the sky's `radiance_size`, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.
+A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three sky material types and a ShaderMaterial of `shader_type sky` renders here as a background and two light sources. The background runs the sky shader at each pixel on the ray the pixel casts, as Godot's does, so no texture softens its edges. Godot's radiance layers, an octmap array with a mip chain per layer, give every reflection, the ambient light and the sky light in both fogs. Each read picks its mip from the screen derivatives of its direction, as Godot does. A small, strongly curved mirror reads a coarser mip than a large one. The radiance renders at the sky's `radiance_size`, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.
 
 Viewports that draw one Sky share one radiance, as in Godot (`sky.h:251`). A render that finds the sky changed bakes it at its own exposure, and the children of a viewport render first (`renderer_viewport.cpp:91-127`). A sky that reads the lights changes at each new exposure, so two viewports of one world read the bake of the first. An incremental sky bakes again only after it filters every layer (`sky.cpp:1263-1369`). The faces an ALWAYS ReflectionProbe draws before the view in each frame are renders at the world's exposure too. Each viewport draws the background at its own exposure.
 
@@ -33,6 +33,13 @@ With `filter = false` the panorama samples the nearest texel, and each texel dra
 <!-- compare: image=unit-sky-physical status=done fixture=unit-sky-physical.tscn -->
 
 An atmospheric-scattering sky. The grey-blue gradient, the horizon band, and the sphere and ground it lights match Godot's. It carries the same debanding noise as the procedural sky.
+
+## ShaderMaterial
+<!-- compare: image=unit-shader-sky-parameters status=limitation fixture=unit-shader-sky-parameters.tscn -->
+
+A user's sky shader reads a GradientTexture2D through a `source_color` sampler and a float the material sets. The transpiled sky template draws the background at each pixel, and a cube render of it bakes the radiance the metal sphere reflects. Both match Godot within 2/255. The environment's depth fog, its sun scatter and its aerial perspective fog the sky as in Godot. `TIME` follows the playback controls. A shader Godot does not compile draws Godot's black default sky, and the previewer logs the error.
+
+A sky shader that reads `TIME` or `POSITION` keeps the radiance of its first bake, where Godot bakes it again in each frame. Volumetric fog does not reach a sky shader. A Cubemap, Texture3D or texture array parameter is not loaded, so its sampler reads its default. A sky shader that reads the half or quarter resolution passes, or a light, draws the default sky.
 
 ## Sun disc size
 <!-- compare: image=unit-sky-sun-angular-distance status=done fixture=unit-sky-sun-angular-distance.tscn -->
@@ -70,4 +77,4 @@ The lenient parser never rejects. An unreadable Sky property falls back to Godot
 
 ## Known limitations
 
-- **Resource gap** A `ShaderMaterial` sky or a `CompressedCubemap` panorama is not resolved, so the background falls back to a mid-blue solid and metals reflect near-black.
+- **Resource gap** A `CompressedCubemap` panorama is not resolved, so the background falls back to a mid-blue solid and metals reflect near-black.
