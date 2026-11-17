@@ -3,7 +3,7 @@ import { instruction, keywordInstruction } from './instructions.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import type { ExpressionParser } from './parseExpression.js';
 import type { RenderingMethod } from '../preprocessor/preprocessor.js';
-import type { GlobalNames, Identifier } from './scope.js';
+import type { Identifier } from './scope.js';
 import type { SourcePosition } from './shadingLanguageError.js';
 import type { Scalar, UniformHint, UniformNode, UniformScope, ValueType } from './shaderTree.js';
 import type { TokenCursor } from './tokenCursor.js';
@@ -61,6 +61,8 @@ export interface UniformContext {
   readonly isStruct: (name: string) => boolean;
   /** Whether a function, a uniform or a built-in has the name already. */
   readonly isTaken: (name: string) => boolean;
+  /** The shader's names outside every function, where each uniform's name goes. */
+  readonly globals: Map<string, Identifier>;
 }
 
 /** A uniform as the hint loop fills it. */
@@ -79,8 +81,6 @@ interface Draft {
 export class UniformParser {
   readonly uniforms: UniformNode[] = [];
   readonly groups: { readonly position: SourcePosition }[] = [];
-  /** Each uniform's name as a body reads it, written by `declaration` beside `uniforms`. */
-  private readonly identifiers = new Map<string, Identifier>();
   /** Written only by `groupStatement`. */
   private group = '';
   private subgroup = '';
@@ -92,11 +92,6 @@ export class UniformParser {
     private readonly expressions: ExpressionParser,
     private readonly context: UniformContext
   ) {}
-
-  /** Each uniform by its name, as a function body sees it. */
-  names(): GlobalNames {
-    return this.identifiers;
-  }
 
   uniform(name: string): UniformNode | undefined {
     return this.uniforms.find((uniform) => uniform.name === name);
@@ -146,7 +141,7 @@ export class UniformParser {
     if (defaultValue) token = this.tokens.next();
     const header = { name, type, arraySize, scope, instanceIndex, defaultValue };
     this.uniforms.push(uniformNode(draft, header, this.group, this.subgroup, first.position));
-    this.identifiers.set(name, { kind: 'uniform', type, arraySize, isConst: false });
+    this.context.globals.set(name, { kind: 'uniform', type, arraySize, isConst: false });
     if (token.type !== 'TK_SEMICOLON') this.tokens.fail("Expected a ';'.");
   }
 

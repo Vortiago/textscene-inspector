@@ -1,7 +1,14 @@
 import { instruction, keywordInstruction, notTranspiled } from './instructions.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import type { SourcePosition } from './shadingLanguageError.js';
-import type { Expression, FunctionNode, ShaderNode, Statement, UniformNode } from './shaderTree.js';
+import type {
+  Expression,
+  FunctionNode,
+  ShaderNode,
+  Statement,
+  UniformNode,
+  VaryingNode,
+} from './shaderTree.js';
 import { everyExpression, everyStatement, statementExpressions } from './treeWalk.js';
 import { shapeOf } from './types.js';
 
@@ -11,6 +18,14 @@ const isTranspiled = (row: InstructionRow) => row.webgl2 !== undefined;
 export function checkTranspiled(shader: ShaderNode): void {
   if (shader.shaderType && shader.headPosition)
     checkRow(instruction(`shader_type ${shader.shaderType}`)!, shader.headPosition);
+  checkModes(shader);
+  for (const varying of shader.varyings) checkVarying(varying);
+  for (const constant of shader.constants) {
+    checkRow(keywordInstruction('TK_CONST')!, constant.position);
+    checkStatement(constant);
+    for (const declarator of constant.declarators)
+      if (declarator.value) for (const part of everyExpression(declarator.value)) checkExpression(part);
+  }
   for (const struct of shader.structs) {
     checkRow(instruction('NODE_TYPE_STRUCT')!, struct.position);
     for (const member of struct.members) checkType(member.type, struct.position);
@@ -18,6 +33,27 @@ export function checkTranspiled(shader: ShaderNode): void {
   for (const { position } of shader.uniformGroups) checkRow(instruction('group_uniforms')!, position);
   for (const uniform of shader.uniforms) checkUniform(uniform);
   for (const definition of shader.functions) checkFunction(definition);
+}
+
+/** A mode of no row of the type, as `unshaded_x`, is one Godot keeps and no table reads. */
+function checkModes(shader: ShaderNode): void {
+  const shaderType = shader.shaderType ?? 'canvas_item';
+  for (const [kind, modes] of [
+    ['render_mode', shader.renderModes],
+    ['stencil_mode', shader.stencilModes],
+  ] as const)
+    for (const mode of modes) {
+      checkRow(instruction(kind)!, mode.position);
+      const row = instruction(`${shaderType} ${kind} ${mode.name}`);
+      if (row) checkRow(row, mode.position);
+    }
+}
+
+function checkVarying(varying: VaryingNode): void {
+  checkRow(instruction('varying')!, varying.position);
+  if (varying.interpolation) checkRow(instruction(varying.interpolation)!, varying.position);
+  checkType(varying.type, varying.position);
+  if (varying.arraySize) checkRow(instruction('NODE_TYPE_ARRAY')!, varying.position);
 }
 
 function checkUniform(uniform: UniformNode): void {

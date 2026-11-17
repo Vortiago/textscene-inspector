@@ -20,6 +20,7 @@ import { ArrayParser } from './parseArray.js';
 import { resolvedBuiltInCall } from './parseBuiltInCall.js';
 import { type CallScope, resolvedCall } from './parseCall.js';
 import { arraySizeOf, typeName } from './treeWalk.js';
+import { TOKEN_NAMES } from './instructionTable.generated.js';
 import { swizzled } from './swizzle.js';
 import type { TokenCursor } from './tokenCursor.js';
 import type { Token } from './tokenizer.js';
@@ -36,6 +37,8 @@ import {
 export interface ExpressionScope extends CallScope {
   identifier(name: string): Identifier | undefined;
   struct(name: string): StructNode | undefined;
+  /** Godot's checks of a read or a write of a varying, with the cursor after its name. */
+  useVarying(name: string): void;
 }
 
 /** `ExpressionInfo`: the list a ternary part joins when it ends, and whether a `:` ends it. */
@@ -223,8 +226,10 @@ export class ExpressionParser {
       if (builtIn) throw notTranspiled(builtIn, token.position, name);
       this.tokens.fail(`Unknown identifier in expression: '${name}'.`);
     }
+    const isConst = found.kind !== 'function' && found.isConst;
+    if (this.isConstDeclaration && !isConst) this.tokens.fail('Expected constant expression.');
     if (found.kind === 'function') this.tokens.fail(`Can't use function as identifier: '${name}'.`);
-    if (this.isConstDeclaration && !found.isConst) this.tokens.fail('Expected constant expression.');
+    if (found.kind === 'varying') this.scope.useVarying(name);
     const variable = {
       kind: 'variable',
       type: found.type,
@@ -234,6 +239,7 @@ export class ExpressionParser {
       ...(found.isConst ? { isConst: true } : {}),
       ...(found.kind === 'built-in' ? { builtIn: found.row } : {}),
       ...(found.kind === 'uniform' ? { isUniform: true } : {}),
+      ...(found.kind === 'varying' ? { isVarying: true } : {}),
     } as const;
     return found.arraySize > 0 ? this.arrayAccess(variable) : variable;
   }
@@ -454,8 +460,8 @@ const emptyExpression = (token: Token): OperatorNode => ({
 });
 
 /** `get_token_text` (`shader_language.cpp:237`): the token's name, and a number's value or an identifier. */
-function tokenText(token: Token): string {
-  const name = token.type.replace(/^TK_/, '');
+export function tokenText(token: Token): string {
+  const name = TOKEN_NAMES[token.type] ?? token.type;
   switch (token.type) {
     case 'TK_FLOAT_CONSTANT':
       return `${name}(${stringNum(stringToFloat(token.text!))})`;
@@ -463,6 +469,7 @@ function tokenText(token: Token): string {
     case 'TK_UINT_CONSTANT':
       return `${name}(${stringNum(godotIntegerConstant(token.text!))})`;
     case 'TK_IDENTIFIER':
+    case 'TK_ERROR':
       return `${name}(${token.text})`;
     default:
       return name;

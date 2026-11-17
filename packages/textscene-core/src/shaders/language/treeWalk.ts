@@ -1,4 +1,11 @@
-import type { BlockNode, CallNode, ControlFlowNode, Expression, Statement } from './shaderTree.js';
+import type {
+  BlockNode,
+  CallNode,
+  ControlFlowNode,
+  DeclarationNode,
+  Expression,
+  Statement,
+} from './shaderTree.js';
 
 /** Whether `statement` is the empty statement `;`. */
 export const isEmpty = (statement: Statement): boolean =>
@@ -148,4 +155,10 @@ export function withExpressionsMapped(
     }
   };
   return { ...block, statements: block.statements.map(statement) };
+}
+
+/** GLSL folds a global `const` as it folds a local one, so a body may declare the constants first. */
+export function withConstantsFirst(body: BlockNode, constants: readonly DeclarationNode[]): BlockNode {
+  if (constants.length === 0) return body;
+  return { ...body, statements: [...constants, ...body.statements] };
 }

@@ -7,7 +7,7 @@ import { StatementEmitter } from './emitStatement.js';
 import { emittedTree, type EmittedTree } from './emittedTree.js';
 import type { StructOf, Value } from './emitValue.js';
 import type { Argument, FunctionNode, ShaderNode, ValueType } from './shaderTree.js';
-import { typeName } from './treeWalk.js';
+import { typeName, withConstantsFirst } from './treeWalk.js';
 import { shapeOf } from './types.js';
 
 /** Throws for a struct, an array, or an `out` or `inout` argument, which is no one node. */
@@ -26,7 +26,12 @@ export function emitShader(
 ): ReadonlyMap<string, TranspiledFunction> {
   const structs = new Map(shader.structs.map((struct) => [struct.name, struct]));
   const structOf: StructOf = (type) => structs.get(type);
-  const trees = new Map(shader.functions.map((definition) => [definition.name, emittedTree(definition)]));
+  const trees = new Map(
+    shader.functions.map((definition) => [
+      definition.name,
+      emittedTree({ ...definition, body: withConstantsFirst(definition.body, shader.constants) }),
+    ])
+  );
   const body: BodyEmitter = (tree, names) =>
     new StatementEmitter(tree.folding, context).body(
       tree.lowered.body,

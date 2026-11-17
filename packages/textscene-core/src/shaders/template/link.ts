@@ -1,7 +1,7 @@
 import { glslBlock } from '../language/godotText.js';
 import { INSTRUCTION_TABLE } from '../language/instructionTable.generated.js';
 import type { BlockNode, FunctionNode, ShaderNode, StructNode } from '../language/shaderTree.js';
-import { everyExpressionIn } from '../language/treeWalk.js';
+import { everyExpressionIn, withConstantsFirst } from '../language/treeWalk.js';
 import { GENERAL_DEFINES } from './generalDefines.js';
 import { GodotIds } from './godotIds.js';
 import type { ModeTable } from './modeTable.js';
@@ -32,7 +32,7 @@ export function compileMaterial(shader: ShaderNode, table: ModeTable): CompiledM
   const functions: FunctionNode[] = [];
   for (const parsed of shader.functions) {
     // GLSL reads the material as the text Godot writes for it, so its tree is the one GLSL reads.
-    const definition = { ...parsed, body: glslBlock(parsed.body) };
+    const definition = { ...parsed, body: glslBlock(withConstantsFirst(parsed.body, shader.constants)) };
     if (stages.has(definition.rname)) code.set(definition.rname.toUpperCase(), ids.block(definition.body));
     else functions.push(ids.function(definition));
   }

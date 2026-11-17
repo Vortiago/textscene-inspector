@@ -1,16 +1,21 @@
 import { TARGETS, targetStates, WEBGPU_STATE } from './targetStates.mjs';
 
 /** The fields of a row, in the order each line of the module holds them, tab-separated. */
-const ROW_FIELDS = ['id', 'family', 'source', 'owner', 'token', 'returns', 'args', ...TARGETS];
+const ROW_FIELDS = ['id', 'family', 'source', 'owner', 'template', 'token', 'returns', 'args', ...TARGETS];
 
 /** The ids of the rows a probe names: the transpiled rows. */
 export const transpiledIds = (probes) => new Set(probes.flatMap((probe) => probe.rows));
 
 /** Rows as text split once: a literal of near 1,900 objects is past what TypeScript types (TS2590). */
-export function renderTableModule(rows, probes, version) {
+export function renderTableModule(rows, probes, { version, modes, stages, tokens }) {
   const transpiled = transpiledIds(probes);
   const lines = rows.map((row) => {
-    const fields = { ...row, owner: owningIssue(row), ...(transpiled.has(row.id) ? targetStates(row) : {}) };
+    const fields = {
+      ...row,
+      owner: owningIssue(row),
+      template: templateOf(row),
+      ...(transpiled.has(row.id) ? targetStates(row) : {}),
+    };
     return ROW_FIELDS.map((field) => fieldText(fields[field])).join('\t');
   });
   return `/**
@@ -32,6 +37,8 @@ export interface InstructionRow {
   readonly source: string;
   /** The issue that transpiles it, which an error for an open row names. */
   readonly owner: string;
+  /** The template a built-in, a stage function or a mode of a shader type links into. */
+  readonly template?: string;
   /** Godot's token for a keyword. */
   readonly token?: string;
   readonly returns?: string;
@@ -51,13 +58,14 @@ ${lines.join('\n')}
 \`;
 
 function readRow(line: string): InstructionRow {
-  const [id = '', family = '', source = '', owner = '', token, returns, args, webgl2, webgpu] =
+  const [id = '', family = '', source = '', owner = '', template, token, returns, args, webgl2, webgpu] =
     line.split('\\t');
   return {
     id,
     family,
     source,
     owner,
+    ...(template ? { template } : {}),
     ...(token ? { token } : {}),
     ...(returns ? { returns } : {}),
     ...(args ? { args: args === '()' ? [] : args.slice(1, -1).split(',') } : {}),
@@ -67,7 +75,43 @@ function readRow(line: string): InstructionRow {
 }
 
 export const INSTRUCTION_TABLE: readonly InstructionRow[] = ROWS.trim().split('\\n').map(readRow);
+
+/** A render or stencil mode as Godot's \`ModeInfo\` holds it: a name, and the values it takes after \`_\`. */
+export interface ShaderMode {
+  readonly shaderType: string;
+  readonly kind: 'render_mode' | 'stencil_mode';
+  readonly name: string;
+  readonly options: readonly string[];
+}
+
+/** Each shader type's modes in Godot's order, which \`_parse_shader_mode\` searches (\`shader_types.cpp:233\`). */
+export const SHADER_MODES: readonly ShaderMode[] = ${modesText(modes)};
+
+/** A key of a shader type's \`functions\`: a stage, \`global\` or \`constants\` (\`shader_types.cpp\`). */
+export interface ShaderStage {
+  readonly shaderType: string;
+  readonly stage: string;
+  /** Whether \`discard\` may stand in its body (\`shader_language.cpp:8952\`). */
+  readonly canDiscard: boolean;
+  /** Whether it is a processor function, where \`return\` is refused (\`shader_language.cpp:8865\`). */
+  readonly isMain: boolean;
+}
+
+/** Each shader type's function keys in Godot's order, which \`_parse_shader\` takes as \`p_functions\`. */
+export const SHADER_STAGES: readonly ShaderStage[] = ${listText(stages)};
+
+/** The name Godot's messages print for each token, \`get_token_text\` (\`shader_language.cpp:237\`). */
+export const TOKEN_NAMES: Readonly<Record<string, string>> = ${JSON.stringify(tokens, null, 2)};
 `;
+}
+
+function modesText(modes) {
+  return listText(modes.map(({ shaderType, kind, name, options }) => ({ shaderType, kind, name, options })));
+}
+
+/** One object per line, as Prettier leaves a long array of short objects. */
+function listText(objects) {
+  return `[\n  ${objects.map((object) => JSON.stringify(object)).join(',\n  ')},\n]`;
 }
 
 function fieldText(value) {
@@ -101,17 +145,70 @@ export function owningIssue(row) {
     case 'sampler setting':
       return uniformOwner(row);
     case 'shader head':
-      return /^(uniform|group_uniforms)$/.test(row.id) ? '#1829' : '#1794';
+      return headOwner(row);
     case 'built-in':
     case 'built-in (read only)':
     case 'stage function':
     case 'render mode':
     case 'stencil mode':
-      return '#1794';
+      return templateOwner(row);
     case 'preprocessor':
       return '#1828';
     default:
       throw new Error(`expected a family with an owning issue, got ${row.family}`);
+  }
+}
+
+/** A varying moves a value between two stages, which the first template with two binds. */
+function headOwner(row) {
+  if (/^(uniform|group_uniforms)$/.test(row.id)) return '#1829';
+  return row.id === 'varying' ? VARYING_OWNER : '#1794';
+}
+
+/** The scene template's unshaded variant is the first template with a vertex and a fragment stage. */
+const VARYING_OWNER = '#1831';
+
+/** The template each shader type links into, under `servers/rendering/renderer_rd/shaders/`. */
+const TEMPLATES = {
+  spatial: 'forward_clustered/scene_forward_clustered.glsl',
+  canvas_item: 'canvas.glsl',
+  particles: 'particles.glsl',
+  sky: 'environment/sky.glsl',
+  fog: 'environment/volumetric_fog.glsl',
+};
+
+/** The template of a row of a shader type, `sky.global.TIME` or `spatial render_mode unshaded`. */
+export function templateOf(row) {
+  if (!/^(built-in|stage function|render mode|stencil mode)/.test(row.family)) return undefined;
+  return TEMPLATES[row.id.split(/[. ]/)[0]];
+}
+
+/** The spatial render modes of the lit variant, which `light_compute` and the light loops read. */
+const LIT_MODES =
+  /^(diffuse_|specular_|shadows_disabled|ambient_light_disabled|shadow_to_opacity|vertex_lighting|debug_shadow_splits)/;
+
+/** The sky's light, pass and resolution built-ins and modes, which a sky with its lights binds. */
+const SKY_PASS_ROWS = /\.LIGHT\d_|HALF_RES|QUARTER_RES|AT_\w+_PASS|use_(half|quarter)_res_pass/;
+
+/** The slice that binds a row of a shader type: the slice of its template, or this one for `TIME`. */
+function templateOwner(row) {
+  const [shaderType] = row.id.split(/[. ]/);
+  const name = row.id.slice(row.id.lastIndexOf(row.family.endsWith('mode') ? ' ' : '.') + 1);
+  if (shaderType === 'sky' && name === 'TIME') return '#1794';
+  switch (shaderType) {
+    case 'spatial':
+      if (row.id.startsWith('spatial.light.') || LIT_MODES.test(name)) return '#1453';
+      return name === 'sss_mode_skin' ? '#1782' : '#1831';
+    case 'canvas_item':
+      return /sdf/i.test(name) ? '#1785' : '#686';
+    case 'particles':
+      return '#1726';
+    case 'sky':
+      return SKY_PASS_ROWS.test(row.id) ? '#1666' : '#1665';
+    case 'fog':
+      return '#1783';
+    default:
+      throw new Error(`expected a row of a shader type, got ${row.id}`);
   }
 }
 
@@ -131,11 +228,11 @@ function dataTypeOwner(row) {
   return '#1823';
 }
 
-/** `in`, `out` and `inout` to the functions slice, precision to this slice, the rest to the head. */
+/** `in`, `out` and `inout` to the functions slice, precision to the types, interpolation to the varyings. */
 function qualifierOwner(row) {
   if (/^(in|out|inout)$/.test(row.id)) return '#1825';
   if (/^(lowp|mediump|highp)$/.test(row.id)) return '#1823';
-  return '#1794';
+  return /^(flat|smooth)$/.test(row.id) ? VARYING_OWNER : '#1794';
 }
 
 /** `OP_CALL` to the built-in's row or the functions slice, `OP_STRUCT` to statements, the rest here. */

@@ -8,11 +8,23 @@ import { REPO_ROOT } from '../repoRoot.mjs';
 import { SHOWCASES } from '../../apps/textscene-three-godot-shaders/tests/e2e/showcases.mjs';
 import { PROBES } from '../../apps/textscene-three-godot-shaders/tests/probes/probes.mjs';
 import { SKY_SCENES } from '../../apps/textscene-three-godot-shaders/tests/e2e/skyScenes.mjs';
+import { HEAD_CASES } from '../../apps/textscene-three-godot-shaders/tests/heads/headCases.mjs';
 
-/** A sky scene proves its rows too, as no probe runs a sky shader. */
-const ROW_PROOFS = [...PROBES, ...SKY_SCENES];
+/** A sky scene and a head case prove their rows too: no probe runs a sky shader or has a head. */
+const ROW_PROOFS = [
+  ...PROBES,
+  ...SKY_SCENES,
+  ...HEAD_CASES.filter(({ rows }) => rows.length > 0).map(({ id, rows }) => ({ name: `head-${id}`, rows })),
+];
 import { GUIDE_CHAPTERS } from './guideChapters.mjs';
-import { godotVersion, instructionRows, SOURCE_FILES } from './readSource.mjs';
+import {
+  godotVersion,
+  instructionRows,
+  shaderModes,
+  shaderStages,
+  SOURCE_FILES,
+  tokenNames,
+} from './readSource.mjs';
 import { renderGuide } from './renderGuide.mjs';
 import { renderTestingGuide, TESTING_FILE } from './renderTestingGuide.mjs';
 import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/corpus.mjs';
@@ -85,7 +97,15 @@ function main() {
     showcases: [...SHOWCASES, ...SKY_SCENES],
   });
   const outputs = [
-    [TABLE_MODULE, renderTableModule(rows, ROW_PROOFS, sources.version)],
+    [
+      TABLE_MODULE,
+      renderTableModule(rows, ROW_PROOFS, {
+        version: sources.version,
+        modes: shaderModes(sources.types),
+        stages: shaderStages(sources.types),
+        tokens: tokenNames(sources.header, sources.language),
+      }),
+    ],
     [READABLE_TABLE, renderReadableTable(rows, ROW_PROOFS, sources.version)],
     ...guide.map(([file, text]) => [join(GUIDE_DIR, file), text]),
     [join(GUIDE_DIR, TESTING_FILE), testingChapter(answers)],

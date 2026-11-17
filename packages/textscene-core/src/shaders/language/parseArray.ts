@@ -42,7 +42,7 @@ export class ArrayParser {
   private constantValues(size: Expression): readonly unknown[] | undefined {
     if (size.kind !== 'variable') return undefined;
     const found = this.scope.identifier(size.name);
-    return found?.kind === 'local' ? found.values : undefined;
+    return found?.kind === 'local' || found?.kind === 'constant' ? found.values : undefined;
   }
 
   /** `{a, b}` or `float[2](a, b)` where any array may stand, typed by itself. */

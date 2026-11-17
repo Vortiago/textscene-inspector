@@ -28,6 +28,8 @@ export interface VariableNode {
   readonly builtIn?: string;
   /** A uniform: Godot refuses a write to it, and the material gives its value. */
   readonly isUniform?: boolean;
+  /** A varying, which carries a value from one stage function to the next. */
+  readonly isVarying?: boolean;
   readonly position: SourcePosition;
 }
 
@@ -286,12 +288,35 @@ export interface UniformNode {
 }
 
 /** NODE_TYPE_SHADER: its structs and functions, each in the order of the text. */
+/** A name of a `render_mode` or `stencil_mode` statement, as the text writes it. */
+export interface ShaderModeNode {
+  readonly name: string;
+  readonly position: SourcePosition;
+}
+
+/** `varying flat vec2 cell[3];` (`shader_language.cpp:9531`). */
+export interface VaryingNode {
+  readonly kind: 'varying';
+  readonly name: string;
+  readonly type: ValueType;
+  readonly interpolation?: 'flat' | 'smooth';
+  readonly arraySize?: number;
+  readonly position: SourcePosition;
+}
+
 export interface ShaderNode {
   readonly kind: 'shader';
   /** The type `shader_type` names: `sky`, `spatial`. Nothing for a text with no head, as a probe's. */
   readonly shaderType?: string;
   /** Where the `shader_type` head is, when the text has one. */
   readonly headPosition?: SourcePosition;
+  readonly renderModes: readonly ShaderModeNode[];
+  readonly stencilModes: readonly ShaderModeNode[];
+  /** The integer of a `stencil_mode` statement, 0 to 255. */
+  readonly stencilReference?: number;
+  readonly varyings: readonly VaryingNode[];
+  /** Each `const` outside a function, in the order of the text. */
+  readonly constants: readonly DeclarationNode[];
   readonly structs: readonly StructNode[];
   readonly uniforms: readonly UniformNode[];
   /** Each `group_uniforms` statement, which only names the inspector's group of the uniforms after it. */

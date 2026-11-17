@@ -1,20 +1,25 @@
-import { builtInInstruction, instruction, keywordInstruction, notTranspiled } from './instructions.js';
+import { builtInInstruction, builtInRowsOf, instruction, keywordInstruction } from './instructions.js';
 import { INSTRUCTION_TABLE } from './instructionTable.generated.js';
 import { StatementParser, type ScopeHolder } from './parseBlock.js';
 import { ExpressionParser, type ExpressionScope } from './parseExpression.js';
 import { UniformParser } from './parseUniform.js';
 import type { RenderingMethod } from '../preprocessor/preprocessor.js';
+import { ModeParser } from './parseModes.js';
+import { parseDeclaration } from './parseDeclaration.js';
+import { parseVarying, VaryingStages } from './parseVarying.js';
 import { BlockScope, type Identifier } from './scope.js';
 import type { FunctionSignature } from './parseCall.js';
 import type {
   Argument,
   BlockNode,
+  DeclarationNode,
   FunctionNode,
   Qualifier,
   ShaderNode,
   StructMember,
   StructNode,
   ValueType,
+  VaryingNode,
 } from './shaderTree.js';
 import { TokenCursor } from './tokenCursor.js';
 import type { Token } from './tokenizer.js';
@@ -43,11 +48,19 @@ class ShaderParser implements ExpressionScope {
   private shaderType: string | undefined;
   /** The function whose body is read: set at its `{` and cleared at its `}`. */
   private current: FunctionSignature | undefined;
-  /** The block a statement is read in. Outside a body, an empty one. */
-  private readonly holder: ScopeHolder = { current: new BlockScope(undefined, 'plain', []) };
+  /** The uniforms, varyings and constants by name, which every body sees. */
+  private readonly globals = new Map<string, Identifier>();
+  /** The block a statement is read in. Outside a body, the one that sees only the globals. */
+  private readonly holder: ScopeHolder = {
+    current: new BlockScope(undefined, 'plain', [], this.globals),
+  };
+  private readonly varyings: VaryingNode[] = [];
+  private readonly constants: DeclarationNode[] = [];
   private readonly expressions: ExpressionParser;
   private readonly statements: StatementParser;
   private readonly uniforms: UniformParser;
+  private readonly modes: ModeParser;
+  private readonly varyingStages: VaryingStages;
 
   constructor(
     private readonly tokens: TokenCursor,
@@ -59,7 +72,10 @@ class ShaderParser implements ExpressionScope {
       renderingMethod,
       isStruct: (name) => this.struct(name) !== undefined,
       isTaken: (name) => this.isGlobalName(name) || builtInInstruction(name) !== undefined,
+      globals: this.globals,
     });
+    this.modes = new ModeParser(tokens, () => this.shaderType);
+    this.varyingStages = new VaryingStages(tokens);
     this.statements = new StatementParser(
       tokens,
       this.expressions,
@@ -71,22 +87,29 @@ class ShaderParser implements ExpressionScope {
 
   identifier(name: string): Identifier | undefined {
     // Outside a body, the uniforms declared so far: a default that reads one is not a constant.
-    const found = this.holder.current.find(name, false) ?? this.uniforms.names().get(name);
+    const found = this.holder.current.find(name, false);
     if (found) return found;
     if (this.signatures.has(name)) return { kind: 'function' };
     return this.builtIn(name);
   }
 
-  /** A function or a uniform of the name, as `_find_identifier` finds one outside a function. */
+  /** A function or a global of the name, as `_find_identifier` finds one outside a function. */
   private isGlobalName(name: string): boolean {
-    return this.signatures.has(name) || this.uniforms.uniform(name) !== undefined;
+    return this.signatures.has(name) || this.globals.has(name);
   }
 
-  /** From the stage function, `global` or the constants (`servers/rendering/shader_types.cpp`). */
+  /** Godot's checks of a read or a write of a varying, which only a function body has. */
+  useVarying(name: string): void {
+    const varying = this.varyings.find((candidate) => candidate.name === name)!;
+    this.varyingStages.use(varying, this.current!.rname);
+  }
+
+  /** From the stage function, `global` or the constants; outside a function, the constants only. */
   private builtIn(name: string): Identifier | undefined {
-    if (!this.shaderType || !this.current) return undefined;
-    const scopes = [this.current.rname, 'global', 'constants'];
-    const row = scopes.map((scope) => instruction(`${this.shaderType}.${scope}.${name}`)).find(Boolean);
+    // A text with no head is a probe's, which Godot draws as a `canvas_item`.
+    const shaderType = this.shaderType ?? 'canvas_item';
+    const scopes = this.current ? [this.current.rname, 'global', 'constants'] : ['constants'];
+    const row = scopes.map((scope) => instruction(`${shaderType}.${scope}.${name}`)).find(Boolean);
     if (!row?.returns) return undefined;
     return {
       kind: 'built-in',
@@ -120,10 +143,104 @@ class ShaderParser implements ExpressionScope {
     for (;;) {
       const token = this.tokens.next();
       if (token.type === 'TK_EOF') return this.tree(head);
-      if (token.type === 'TK_STRUCT') this.structs.push(this.structDefinition(token));
-      else if (isUniformWord(token.type)) this.uniforms.declaration(token);
-      else if (token.type === 'TK_UNIFORM_GROUP') this.uniforms.groupStatement(token);
-      else this.functions.push(this.functionDefinition(token));
+      this.globalStatement(token);
+    }
+  }
+
+  /** One statement outside a function (`shader_language.cpp:9237`). */
+  private globalStatement(token: Token): void {
+    switch (token.type) {
+      case 'TK_RENDER_MODE':
+        return this.modes.renderModeStatement();
+      case 'TK_STENCIL_MODE':
+        return this.modes.stencilModeStatement();
+      case 'TK_STRUCT':
+        return void this.structs.push(this.structDefinition(token));
+      case 'TK_UNIFORM_GROUP':
+        return this.uniforms.groupStatement(token);
+      case 'TK_VARYING':
+        return this.varyingDeclaration();
+      case 'TK_SHADER_TYPE':
+        return this.tokens.fail('Shader type is already defined.');
+      default:
+        if (isUniformWord(token.type)) return this.uniforms.declaration(token);
+        if (token.type === 'TK_CONST') return this.constantOrFunction(token);
+        return void this.functions.push(this.functionDefinition(token));
+    }
+  }
+
+  private varyingDeclaration(): void {
+    const varying = parseVarying(this.tokens, this.expressions, {
+      shaderType: () => this.shaderType,
+      isStruct: (name) => this.struct(name) !== undefined,
+      isTaken: (name) => this.isGlobalName(name) || builtInInstruction(name) !== undefined,
+    });
+    this.varyings.push(varying);
+    this.globals.set(varying.name, {
+      kind: 'varying',
+      type: varying.type,
+      arraySize: varying.arraySize ?? 0,
+      isConst: false,
+    });
+  }
+
+  /** A global after `const`: a constant, or a function Godot refuses at its `(` (:10268). */
+  private constantOrFunction(first: Token): void {
+    const mark = this.tokens.mark();
+    const type = this.constantType();
+    if (this.tokens.peek().type === 'TK_BRACKET_OPEN') {
+      this.tokens.next();
+      this.expressions.arrays.size(false);
+    }
+    const nameToken = this.tokens.next();
+    if (nameToken.type !== 'TK_IDENTIFIER') this.tokens.fail("Expected an identifier or '[' after type.");
+    if (this.isConstantNameTaken(nameToken.text!)) this.tokens.fail(`Redefinition of '${nameToken.text}'.`);
+    if (this.tokens.next().type === 'TK_PARENTHESIS_OPEN')
+      this.tokens.fail("'const' qualifier cannot be used with a function return type.");
+    if (type === 'void') this.tokens.fail("Expected '(' after function identifier.");
+    this.tokens.reset(mark);
+    this.constantDeclaration(first);
+  }
+
+  /** The type after `const` and a precision: a value type, `void` or a struct's name. */
+  private constantType(): ValueType {
+    let token = this.tokens.next();
+    const hasPrecision = isPrecisionToken(token.type);
+    if (hasPrecision) token = this.tokens.next();
+    if (token.type === 'TK_IDENTIFIER' && this.struct(token.text!)) {
+      if (hasPrecision) this.tokens.fail('The precision modifier cannot be used on structs.');
+      return token.text!;
+    }
+    const row = keywordInstruction(token.type);
+    if (row?.family !== 'data type') this.tokens.fail('Expected constant, function, uniform or varying.');
+    const shape = shapeOf(row.id);
+    if (shape === undefined && row.id !== 'void')
+      this.tokens.fail('Invalid constant type (samplers are not allowed).');
+    if (hasPrecision && shape?.scalar === 'bool')
+      this.tokens.fail('The precision modifier cannot be used on boolean types.');
+    return row.id;
+  }
+
+  /** A struct, a global or a built-in of the shader type, but not a function, has the name (:10336). */
+  private isConstantNameTaken(name: string): boolean {
+    if (this.struct(name) || this.globals.has(name)) return true;
+    const type = this.shaderType;
+    return type !== undefined && builtInRowsOf(type).some((row) => row.id.endsWith(`.${name}`));
+  }
+
+  /** `const float a = 1.0, b[2] = {a, a};` outside a function (`shader_language.cpp:10364`). */
+  private constantDeclaration(first: Token): void {
+    const declaration = parseDeclaration(
+      first,
+      this.tokens,
+      this.expressions,
+      this.holder.current,
+      (name) => this.struct(name) !== undefined
+    );
+    this.constants.push(declaration);
+    for (const { name } of declaration.declarators) {
+      const variable = this.holder.current.variables.get(name)!;
+      this.globals.set(name, { kind: 'constant', ...variable });
     }
   }
 
@@ -131,6 +248,11 @@ class ShaderParser implements ExpressionScope {
     return {
       kind: 'shader',
       ...head,
+      renderModes: this.modes.modes.render_mode,
+      stencilModes: this.modes.modes.stencil_mode,
+      ...(this.modes.stencilReference !== undefined ? { stencilReference: this.modes.stencilReference } : {}),
+      varyings: this.varyings,
+      constants: this.constants,
       structs: this.structs,
       uniforms: this.uniforms.uniforms,
       uniformGroups: this.uniforms.groups,
@@ -216,25 +338,22 @@ class ShaderParser implements ExpressionScope {
 
   /** A function, from its return type (`shader_language.cpp:10258`). */
   private functionDefinition(first: Token): FunctionNode {
-    const isConst = first.type === 'TK_CONST';
-    const typeToken = this.precededType(isConst ? this.tokens.next() : first, () => this.refuseGlobal(first));
-    const returnType = this.returnTypeOf(typeToken, first);
+    const typeToken = this.precededType(first, () => this.refuseGlobal());
+    const returnType = this.returnTypeOf(typeToken);
     const returnArraySize = this.tokens.peek().type === 'TK_BRACKET_OPEN' ? this.arraySize() : 0;
     const nameToken = this.tokens.next();
     if (nameToken.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected a function name after type.');
     const rname = nameToken.text!;
     if (this.struct(rname) || this.uniforms.uniform(rname) || builtInInstruction(rname))
       this.tokens.fail(`Redefinition of '${rname}'.`);
-    if (this.tokens.next().type !== 'TK_PARENTHESIS_OPEN') {
-      if (returnType === 'void') this.tokens.fail("Expected '(' after function identifier.");
-      throw notTranspiled(keywordInstruction('TK_CONST')!, isConst ? first.position : nameToken.position);
-    }
-    if (isConst) this.tokens.fail("'const' qualifier cannot be used with a function return type.");
+    if (this.tokens.peek().type !== 'TK_PARENTHESIS_OPEN')
+      this.refuseGlobalVariable(returnType, returnArraySize);
+    this.tokens.next();
     const args = this.argumentList();
     const signature = this.declare({ rname, returnType, returnArraySize, arguments: args });
     this.tokens.expect('TK_CURLY_BRACKET_OPEN', "Expected a '{' to begin function.");
     this.current = signature;
-    const body = this.statements.body(args, this.uniforms.names(), this.tokens.lastPosition());
+    const body = this.statements.body(args, this.globals, this.tokens.lastPosition());
     this.current = undefined;
     if (returnType !== 'void' && !hasReturn(body)) {
       this.tokens.fail("Expected at least one 'return' statement in a non-void function.");
@@ -252,13 +371,27 @@ class ShaderParser implements ExpressionScope {
     };
   }
 
+  /** A global with no `const`: Godot reads it as a constant, then refuses it (`shader_language.cpp:10378`). */
+  private refuseGlobalVariable(type: ValueType, typeSize: number): never {
+    let token = this.tokens.next();
+    if (type === 'void') this.tokens.fail("Expected '(' after function identifier.");
+    const isArray = typeSize > 0 || token.type === 'TK_BRACKET_OPEN';
+    if (token.type === 'TK_BRACKET_OPEN') {
+      this.expressions.arrays.size(false);
+      token = this.tokens.next();
+    }
+    if (token.type === 'TK_OP_ASSIGN')
+      this.tokens.fail(
+        "Global non-constant variables are not supported. Expected 'const' keyword before constant definition."
+      );
+    this.tokens.fail(isArray ? 'Expected array initialization.' : 'Expected initialization of constant.');
+  }
+
   /** A return type: a value type, `void` or a struct's name. Godot refuses a sampler. */
-  private returnTypeOf(typeToken: Token, first: Token): ValueType {
+  private returnTypeOf(typeToken: Token): ValueType {
     if (typeToken.type === 'TK_IDENTIFIER' && this.struct(typeToken.text!)) return typeToken.text!;
-    if (keywordInstruction(typeToken.type)?.family !== 'data type') this.refuseGlobal(typeToken);
+    if (keywordInstruction(typeToken.type)?.family !== 'data type') this.refuseGlobal();
     const type = this.dataType(typeToken);
-    // A `const` global of any other type is a constant, which the transpiler refuses.
-    if (first.type === 'TK_CONST' && shapeOf(type) === undefined) this.refuseGlobal(first);
     if (shapeOf(type) === undefined && type !== 'void') {
       this.tokens.fail('Invalid function type (samplers are not allowed).');
     }
@@ -281,10 +414,7 @@ class ShaderParser implements ExpressionScope {
     return typeToken;
   }
 
-  /** A global that is not a function: the row of its keyword, or Godot's message. */
-  private refuseGlobal(token: Token): never {
-    const row = keywordInstruction(token.type);
-    if (row && row.family !== 'data type') throw notTranspiled(row, token.position);
+  private refuseGlobal(): never {
     this.tokens.fail('Expected constant, function, uniform or varying.');
   }
 

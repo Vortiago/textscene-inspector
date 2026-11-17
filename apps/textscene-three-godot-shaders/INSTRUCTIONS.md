@@ -66,8 +66,8 @@ canvases draw on WebGPURenderer (#1788).
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `flat` | open, #1794 | | | `servers/rendering/shader_language.cpp:324` |
-| `smooth` | open, #1794 | | | `servers/rendering/shader_language.cpp:325` |
+| `flat` | open, #1831 | | | `servers/rendering/shader_language.cpp:324` |
+| `smooth` | open, #1831 | | | `servers/rendering/shader_language.cpp:325` |
 | `lowp` | transpiled (`precision-lowp`) | lowered: dropped: every float is 32-bit | untested (#1788) | `servers/rendering/shader_language.cpp:329` |
 | `mediump` | transpiled (`precision-mediump`) | lowered: dropped: every float is 32-bit | untested (#1788) | `servers/rendering/shader_language.cpp:330` |
 | `highp` | transpiled (`precision-highp`) | lowered: dropped: every float is 32-bit | untested (#1788) | `servers/rendering/shader_language.cpp:331` |
@@ -81,7 +81,7 @@ canvases draw on WebGPURenderer (#1788).
 | --- | --- | --- | --- | --- |
 | `uniform` | transpiled (`uniform-default-float`, `uniform-default-int`, `uniform-default-uint`, `uniform-default-bool`, `uniform-default-vec2`, `uniform-default-vec3`, `uniform-default-vec4`, `uniform-default-ivec2`, `uniform-default-ivec3`, `uniform-default-ivec4`, `uniform-default-uvec2`, `uniform-default-uvec3`, `uniform-default-uvec4`, `uniform-default-bvec2`, `uniform-default-bvec3`, `uniform-default-bvec4`, `uniform-default-mat2`, `uniform-default-mat3`, `uniform-default-mat4`, `uniform-unset-float`, `uniform-unset-int`, `uniform-unset-uint`, `uniform-unset-bool`, `uniform-unset-vec2`, `uniform-unset-vec3`, `uniform-unset-vec4`, `uniform-unset-ivec2`, `uniform-unset-ivec3`, `uniform-unset-ivec4`, `uniform-unset-uvec2`, `uniform-unset-uvec3`, `uniform-unset-uvec4`, `uniform-unset-bvec2`, `uniform-unset-bvec3`, `uniform-unset-bvec4`, `uniform-unset-mat2`, `uniform-unset-mat3`, `uniform-unset-mat4`, `uniform-default-int-to-float`, `uniform-default-int-to-uint`, `uniform-default-uint-to-int`, `uniform-precision`, `uniform-material-float`, `uniform-material-float-of-int`, `uniform-material-float-of-string`, `uniform-material-int`, `uniform-material-int-of-float`, `uniform-material-uint`, `uniform-material-uint-of-negative`, `uniform-material-uint-of-large-float`, `uniform-material-bool`, `uniform-material-bool-of-int`, `uniform-material-vec2`, `uniform-material-vec2-of-vector3`, `uniform-material-vec2-of-array`, `uniform-material-vec3`, `uniform-material-vec3-of-vector2i`, `uniform-material-vec3-of-color`, `uniform-material-vec4`, `uniform-material-vec4-of-quaternion`, `uniform-material-vec4-of-plane`, `uniform-material-vec4-of-rect2`, `uniform-material-vec4-of-color`, `uniform-material-vec4-of-packed`, `uniform-material-ivec2`, `uniform-material-ivec3-of-vector3`, `uniform-material-ivec4-of-rect2i`, `uniform-material-uvec2`, `uniform-material-uvec3-of-array`, `uniform-material-bvec3-of-int`, `uniform-material-bvec4-of-int`, `uniform-material-mat2`, `uniform-material-mat3`, `uniform-material-mat3-of-quaternion`, `uniform-material-mat4`, `uniform-material-mat4-of-transform3d`, `uniform-material-float-nan`, `uniform-array-float-unset`, `uniform-array-float-nan-first`, `uniform-array-float-short`, `uniform-array-int`, `uniform-array-uint`, `uniform-array-bool`, `uniform-array-vec2-of-array`, `uniform-array-vec2-of-numbers`, `uniform-array-vec3-of-colors`, `uniform-array-vec4-of-colors`, `uniform-array-vec4-unset`, `uniform-array-ivec2`, `uniform-array-bvec2`, `uniform-array-mat2-unset`, `uniform-array-mat2-short`, `uniform-array-mat3-of-bases`, `uniform-array-mat4-of-floats`, `uniform-computed-index`, `uniform-in-called-function`, `uniform-as-argument`, `uniform-color-default-ldr`, `uniform-color-unset-ldr`, `uniform-color-value-ldr`, `uniform-color-disabled-default-ldr`, `uniform-color-disabled-unset-ldr`, `uniform-color-disabled-value-ldr`, `uniform-color-plain-value-ldr`, `uniform-color-vec3-default-ldr`, `uniform-color-vec3-unset-ldr`, `uniform-color-array-ldr`, `uniform-color-default-hdr`, `uniform-color-unset-hdr`, `uniform-color-value-hdr`, `uniform-color-disabled-default-hdr`, `uniform-color-disabled-unset-hdr`, `uniform-color-disabled-value-hdr`, `uniform-color-plain-value-hdr`, `uniform-color-vec3-default-hdr`, `uniform-color-vec3-unset-hdr`, `uniform-color-array-hdr`, `uniform-hint-range-float`, `uniform-hint-range-int`, `uniform-hint-enum`, `uniform-struct-name`, `uniform-group-uniforms`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:335` |
 | `group_uniforms` | transpiled (`uniform-group-uniforms`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:336` |
-| `varying` | open, #1794 | | | `servers/rendering/shader_language.cpp:337` |
+| `varying` | open, #1831 | | | `servers/rendering/shader_language.cpp:337` |
 | `const` | open, #1794 | | | `servers/rendering/shader_language.cpp:338` |
 | `struct` | open, #1794 | | | `servers/rendering/shader_language.cpp:339` |
 | `shader_type` | transpiled (`sky-default`, `sky-fog`, `sky-fog-sun`, `sky-fog-energy-0`, `sky-fog-energy-3`, `sky-fog-affect-0`, `sky-fog-affect-half`, `sky-sun-coloured`, `sky-sun-below`, `sky-sun-energy-0`, `sky-camera-wide`) | native | untested (#1788) | `servers/rendering/shader_language.cpp:340` |
@@ -1591,404 +1591,404 @@ canvases draw on WebGPURenderer (#1788).
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `spatial.global.TIME` | open, #1794 | | | `servers/rendering/shader_types.cpp:79` |
-| `spatial.global.EXPOSURE` | open, #1794 | | | `servers/rendering/shader_types.cpp:80` |
-| `spatial.global.IN_SHADOW_PASS` | open, #1794 | | | `servers/rendering/shader_types.cpp:81` |
-| `spatial.constants.PI` | open, #1794 | | | `servers/rendering/shader_types.cpp:82` |
-| `spatial.constants.TAU` | open, #1794 | | | `servers/rendering/shader_types.cpp:83` |
-| `spatial.constants.E` | open, #1794 | | | `servers/rendering/shader_types.cpp:84` |
-| `spatial.constants.OUTPUT_IS_SRGB` | open, #1794 | | | `servers/rendering/shader_types.cpp:85` |
-| `spatial.constants.CLIP_SPACE_FAR` | open, #1794 | | | `servers/rendering/shader_types.cpp:86` |
-| `spatial.constants.IS_MULTIVIEW` | open, #1794 | | | `servers/rendering/shader_types.cpp:87` |
-| `spatial.vertex.INSTANCE_ID` | open, #1794 | | | `servers/rendering/shader_types.cpp:99` |
-| `spatial.vertex.INSTANCE_CUSTOM` | open, #1794 | | | `servers/rendering/shader_types.cpp:100` |
-| `spatial.vertex.VERTEX_ID` | open, #1794 | | | `servers/rendering/shader_types.cpp:101` |
-| `spatial.vertex.BONE_INDICES` | open, #1794 | | | `servers/rendering/shader_types.cpp:103` |
-| `spatial.vertex.BONE_WEIGHTS` | open, #1794 | | | `servers/rendering/shader_types.cpp:104` |
-| `spatial.vertex.CUSTOM0` | open, #1794 | | | `servers/rendering/shader_types.cpp:105` |
-| `spatial.vertex.CUSTOM1` | open, #1794 | | | `servers/rendering/shader_types.cpp:106` |
-| `spatial.vertex.CUSTOM2` | open, #1794 | | | `servers/rendering/shader_types.cpp:107` |
-| `spatial.vertex.CUSTOM3` | open, #1794 | | | `servers/rendering/shader_types.cpp:108` |
-| `spatial.vertex.MODEL_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:113` |
-| `spatial.vertex.MODEL_NORMAL_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:114` |
-| `spatial.vertex.VIEW_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:115` |
-| `spatial.vertex.INV_VIEW_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:116` |
-| `spatial.vertex.INV_PROJECTION_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:118` |
-| `spatial.vertex.VIEWPORT_SIZE` | open, #1794 | | | `servers/rendering/shader_types.cpp:121` |
-| `spatial.vertex.MAIN_CAM_INV_VIEW_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:122` |
-| `spatial.vertex.NODE_POSITION_WORLD` | open, #1794 | | | `servers/rendering/shader_types.cpp:124` |
-| `spatial.vertex.CAMERA_POSITION_WORLD` | open, #1794 | | | `servers/rendering/shader_types.cpp:125` |
-| `spatial.vertex.CAMERA_DIRECTION_WORLD` | open, #1794 | | | `servers/rendering/shader_types.cpp:126` |
-| `spatial.vertex.CAMERA_VISIBLE_LAYERS` | open, #1794 | | | `servers/rendering/shader_types.cpp:127` |
-| `spatial.vertex.NODE_POSITION_VIEW` | open, #1794 | | | `servers/rendering/shader_types.cpp:128` |
-| `spatial.vertex.VIEW_INDEX` | open, #1794 | | | `servers/rendering/shader_types.cpp:130` |
-| `spatial.vertex.VIEW_MONO_LEFT` | open, #1794 | | | `servers/rendering/shader_types.cpp:131` |
-| `spatial.vertex.VIEW_RIGHT` | open, #1794 | | | `servers/rendering/shader_types.cpp:132` |
-| `spatial.vertex.EYE_OFFSET` | open, #1794 | | | `servers/rendering/shader_types.cpp:133` |
-| `spatial.fragment.VERTEX` | open, #1794 | | | `servers/rendering/shader_types.cpp:135` |
-| `spatial.fragment.FRAGCOORD` | open, #1794 | | | `servers/rendering/shader_types.cpp:137` |
-| `spatial.fragment.FRONT_FACING` | open, #1794 | | | `servers/rendering/shader_types.cpp:138` |
-| `spatial.fragment.VIEW` | open, #1794 | | | `servers/rendering/shader_types.cpp:142` |
-| `spatial.fragment.UV` | open, #1794 | | | `servers/rendering/shader_types.cpp:146` |
-| `spatial.fragment.UV2` | open, #1794 | | | `servers/rendering/shader_types.cpp:147` |
-| `spatial.fragment.COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:148` |
-| `spatial.fragment.SCREEN_UV` | open, #1794 | | | `servers/rendering/shader_types.cpp:170` |
-| `spatial.fragment.POINT_COORD` | open, #1794 | | | `servers/rendering/shader_types.cpp:171` |
-| `spatial.fragment.NODE_POSITION_WORLD` | open, #1794 | | | `servers/rendering/shader_types.cpp:173` |
-| `spatial.fragment.CAMERA_POSITION_WORLD` | open, #1794 | | | `servers/rendering/shader_types.cpp:174` |
-| `spatial.fragment.CAMERA_DIRECTION_WORLD` | open, #1794 | | | `servers/rendering/shader_types.cpp:175` |
-| `spatial.fragment.CAMERA_VISIBLE_LAYERS` | open, #1794 | | | `servers/rendering/shader_types.cpp:176` |
-| `spatial.fragment.NODE_POSITION_VIEW` | open, #1794 | | | `servers/rendering/shader_types.cpp:177` |
-| `spatial.fragment.VIEW_INDEX` | open, #1794 | | | `servers/rendering/shader_types.cpp:179` |
-| `spatial.fragment.VIEW_MONO_LEFT` | open, #1794 | | | `servers/rendering/shader_types.cpp:180` |
-| `spatial.fragment.VIEW_RIGHT` | open, #1794 | | | `servers/rendering/shader_types.cpp:181` |
-| `spatial.fragment.EYE_OFFSET` | open, #1794 | | | `servers/rendering/shader_types.cpp:182` |
-| `spatial.fragment.MODEL_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:184` |
-| `spatial.fragment.MODEL_NORMAL_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:185` |
-| `spatial.fragment.VIEW_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:186` |
-| `spatial.fragment.INV_VIEW_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:187` |
-| `spatial.fragment.PROJECTION_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:188` |
-| `spatial.fragment.INV_PROJECTION_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:189` |
-| `spatial.fragment.VIEWPORT_SIZE` | open, #1794 | | | `servers/rendering/shader_types.cpp:190` |
-| `spatial.light.MODEL_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:202` |
-| `spatial.light.VIEW_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:203` |
-| `spatial.light.INV_VIEW_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:204` |
-| `spatial.light.PROJECTION_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:205` |
-| `spatial.light.INV_PROJECTION_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:206` |
-| `spatial.light.VIEWPORT_SIZE` | open, #1794 | | | `servers/rendering/shader_types.cpp:207` |
-| `spatial.light.FRAGCOORD` | open, #1794 | | | `servers/rendering/shader_types.cpp:209` |
-| `spatial.light.NORMAL` | open, #1794 | | | `servers/rendering/shader_types.cpp:210` |
-| `spatial.light.UV` | open, #1794 | | | `servers/rendering/shader_types.cpp:211` |
-| `spatial.light.UV2` | open, #1794 | | | `servers/rendering/shader_types.cpp:212` |
-| `spatial.light.VIEW` | open, #1794 | | | `servers/rendering/shader_types.cpp:213` |
-| `spatial.light.SPECULAR_AMOUNT` | open, #1794 | | | `servers/rendering/shader_types.cpp:214` |
-| `spatial.light.LIGHT` | open, #1794 | | | `servers/rendering/shader_types.cpp:215` |
-| `spatial.light.LIGHT_COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:216` |
-| `spatial.light.LIGHT_IS_DIRECTIONAL` | open, #1794 | | | `servers/rendering/shader_types.cpp:217` |
-| `spatial.light.ATTENUATION` | open, #1794 | | | `servers/rendering/shader_types.cpp:218` |
-| `spatial.light.ALBEDO` | open, #1794 | | | `servers/rendering/shader_types.cpp:219` |
-| `spatial.light.BACKLIGHT` | open, #1794 | | | `servers/rendering/shader_types.cpp:220` |
-| `spatial.light.METALLIC` | open, #1794 | | | `servers/rendering/shader_types.cpp:221` |
-| `spatial.light.ROUGHNESS` | open, #1794 | | | `servers/rendering/shader_types.cpp:222` |
-| `spatial.light.SCREEN_UV` | open, #1794 | | | `servers/rendering/shader_types.cpp:226` |
-| `canvas_item.global.TIME` | open, #1794 | | | `servers/rendering/shader_types.cpp:264` |
-| `canvas_item.constants.PI` | open, #1794 | | | `servers/rendering/shader_types.cpp:265` |
-| `canvas_item.constants.TAU` | open, #1794 | | | `servers/rendering/shader_types.cpp:266` |
-| `canvas_item.constants.E` | open, #1794 | | | `servers/rendering/shader_types.cpp:267` |
-| `canvas_item.vertex.MODEL_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:274` |
-| `canvas_item.vertex.CANVAS_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:275` |
-| `canvas_item.vertex.SCREEN_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:276` |
-| `canvas_item.vertex.INSTANCE_CUSTOM` | open, #1794 | | | `servers/rendering/shader_types.cpp:277` |
-| `canvas_item.vertex.INSTANCE_ID` | open, #1794 | | | `servers/rendering/shader_types.cpp:278` |
-| `canvas_item.vertex.VERTEX_ID` | open, #1794 | | | `servers/rendering/shader_types.cpp:279` |
-| `canvas_item.vertex.AT_LIGHT_PASS` | open, #1794 | | | `servers/rendering/shader_types.cpp:280` |
-| `canvas_item.vertex.TEXTURE_PIXEL_SIZE` | open, #1794 | | | `servers/rendering/shader_types.cpp:281` |
-| `canvas_item.vertex.CUSTOM0` | open, #1794 | | | `servers/rendering/shader_types.cpp:282` |
-| `canvas_item.vertex.CUSTOM1` | open, #1794 | | | `servers/rendering/shader_types.cpp:283` |
-| `canvas_item.fragment.FRAGCOORD` | open, #1794 | | | `servers/rendering/shader_types.cpp:290` |
-| `canvas_item.fragment.UV` | open, #1794 | | | `servers/rendering/shader_types.cpp:294` |
-| `canvas_item.fragment.TEXTURE` | open, #1794 | | | `servers/rendering/shader_types.cpp:296` |
-| `canvas_item.fragment.TEXTURE_PIXEL_SIZE` | open, #1794 | | | `servers/rendering/shader_types.cpp:297` |
-| `canvas_item.fragment.NORMAL_TEXTURE` | open, #1794 | | | `servers/rendering/shader_types.cpp:298` |
-| `canvas_item.fragment.SPECULAR_SHININESS_TEXTURE` | open, #1794 | | | `servers/rendering/shader_types.cpp:299` |
-| `canvas_item.fragment.SPECULAR_SHININESS` | open, #1794 | | | `servers/rendering/shader_types.cpp:300` |
-| `canvas_item.fragment.SCREEN_UV` | open, #1794 | | | `servers/rendering/shader_types.cpp:301` |
-| `canvas_item.fragment.REGION_RECT` | open, #1794 | | | `servers/rendering/shader_types.cpp:302` |
-| `canvas_item.fragment.SCREEN_PIXEL_SIZE` | open, #1794 | | | `servers/rendering/shader_types.cpp:303` |
-| `canvas_item.fragment.POINT_COORD` | open, #1794 | | | `servers/rendering/shader_types.cpp:304` |
-| `canvas_item.fragment.AT_LIGHT_PASS` | open, #1794 | | | `servers/rendering/shader_types.cpp:305` |
-| `canvas_item.light.FRAGCOORD` | open, #1794 | | | `servers/rendering/shader_types.cpp:332` |
-| `canvas_item.light.NORMAL` | open, #1794 | | | `servers/rendering/shader_types.cpp:333` |
-| `canvas_item.light.COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:334` |
-| `canvas_item.light.UV` | open, #1794 | | | `servers/rendering/shader_types.cpp:335` |
-| `canvas_item.light.SPECULAR_SHININESS` | open, #1794 | | | `servers/rendering/shader_types.cpp:336` |
-| `canvas_item.light.LIGHT_COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:337` |
-| `canvas_item.light.LIGHT_POSITION` | open, #1794 | | | `servers/rendering/shader_types.cpp:338` |
-| `canvas_item.light.LIGHT_DIRECTION` | open, #1794 | | | `servers/rendering/shader_types.cpp:339` |
-| `canvas_item.light.LIGHT_ENERGY` | open, #1794 | | | `servers/rendering/shader_types.cpp:340` |
-| `canvas_item.light.LIGHT_IS_DIRECTIONAL` | open, #1794 | | | `servers/rendering/shader_types.cpp:341` |
-| `canvas_item.light.LIGHT_VERTEX` | open, #1794 | | | `servers/rendering/shader_types.cpp:342` |
-| `canvas_item.light.SCREEN_UV` | open, #1794 | | | `servers/rendering/shader_types.cpp:345` |
-| `canvas_item.light.TEXTURE` | open, #1794 | | | `servers/rendering/shader_types.cpp:346` |
-| `canvas_item.light.TEXTURE_PIXEL_SIZE` | open, #1794 | | | `servers/rendering/shader_types.cpp:347` |
-| `canvas_item.light.POINT_COORD` | open, #1794 | | | `servers/rendering/shader_types.cpp:348` |
-| `particles.global.TIME` | open, #1794 | | | `servers/rendering/shader_types.cpp:363` |
-| `particles.constants.PI` | open, #1794 | | | `servers/rendering/shader_types.cpp:364` |
-| `particles.constants.TAU` | open, #1794 | | | `servers/rendering/shader_types.cpp:365` |
-| `particles.constants.E` | open, #1794 | | | `servers/rendering/shader_types.cpp:366` |
-| `particles.start.LIFETIME` | open, #1794 | | | `servers/rendering/shader_types.cpp:380` |
-| `particles.start.DELTA` | open, #1794 | | | `servers/rendering/shader_types.cpp:381` |
-| `particles.start.NUMBER` | open, #1794 | | | `servers/rendering/shader_types.cpp:382` |
-| `particles.start.INDEX` | open, #1794 | | | `servers/rendering/shader_types.cpp:383` |
-| `particles.start.EMISSION_TRANSFORM` | open, #1794 | | | `servers/rendering/shader_types.cpp:384` |
-| `particles.start.EMITTER_VELOCITY` | open, #1794 | | | `servers/rendering/shader_types.cpp:385` |
-| `particles.start.INTERPOLATE_TO_END` | open, #1794 | | | `servers/rendering/shader_types.cpp:386` |
-| `particles.start.RANDOM_SEED` | open, #1794 | | | `servers/rendering/shader_types.cpp:387` |
-| `particles.start.FLAG_EMIT_POSITION` | open, #1794 | | | `servers/rendering/shader_types.cpp:388` |
-| `particles.start.FLAG_EMIT_ROT_SCALE` | open, #1794 | | | `servers/rendering/shader_types.cpp:389` |
-| `particles.start.FLAG_EMIT_VELOCITY` | open, #1794 | | | `servers/rendering/shader_types.cpp:390` |
-| `particles.start.FLAG_EMIT_COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:391` |
-| `particles.start.FLAG_EMIT_CUSTOM` | open, #1794 | | | `servers/rendering/shader_types.cpp:392` |
-| `particles.start.RESTART_POSITION` | open, #1794 | | | `servers/rendering/shader_types.cpp:393` |
-| `particles.start.RESTART_ROT_SCALE` | open, #1794 | | | `servers/rendering/shader_types.cpp:394` |
-| `particles.start.RESTART_VELOCITY` | open, #1794 | | | `servers/rendering/shader_types.cpp:395` |
-| `particles.start.RESTART_COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:396` |
-| `particles.start.RESTART_CUSTOM` | open, #1794 | | | `servers/rendering/shader_types.cpp:397` |
-| `particles.start.AMOUNT_RATIO` | open, #1794 | | | `servers/rendering/shader_types.cpp:398` |
-| `particles.process.RESTART` | open, #1794 | | | `servers/rendering/shader_types.cpp:405` |
-| `particles.process.LIFETIME` | open, #1794 | | | `servers/rendering/shader_types.cpp:414` |
-| `particles.process.DELTA` | open, #1794 | | | `servers/rendering/shader_types.cpp:415` |
-| `particles.process.NUMBER` | open, #1794 | | | `servers/rendering/shader_types.cpp:416` |
-| `particles.process.INDEX` | open, #1794 | | | `servers/rendering/shader_types.cpp:417` |
-| `particles.process.EMISSION_TRANSFORM` | open, #1794 | | | `servers/rendering/shader_types.cpp:418` |
-| `particles.process.EMITTER_VELOCITY` | open, #1794 | | | `servers/rendering/shader_types.cpp:419` |
-| `particles.process.INTERPOLATE_TO_END` | open, #1794 | | | `servers/rendering/shader_types.cpp:420` |
-| `particles.process.RANDOM_SEED` | open, #1794 | | | `servers/rendering/shader_types.cpp:421` |
-| `particles.process.FLAG_EMIT_POSITION` | open, #1794 | | | `servers/rendering/shader_types.cpp:422` |
-| `particles.process.FLAG_EMIT_ROT_SCALE` | open, #1794 | | | `servers/rendering/shader_types.cpp:423` |
-| `particles.process.FLAG_EMIT_VELOCITY` | open, #1794 | | | `servers/rendering/shader_types.cpp:424` |
-| `particles.process.FLAG_EMIT_COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:425` |
-| `particles.process.FLAG_EMIT_CUSTOM` | open, #1794 | | | `servers/rendering/shader_types.cpp:426` |
-| `particles.process.COLLIDED` | open, #1794 | | | `servers/rendering/shader_types.cpp:427` |
-| `particles.process.COLLISION_NORMAL` | open, #1794 | | | `servers/rendering/shader_types.cpp:428` |
-| `particles.process.COLLISION_DEPTH` | open, #1794 | | | `servers/rendering/shader_types.cpp:429` |
-| `particles.process.ATTRACTOR_FORCE` | open, #1794 | | | `servers/rendering/shader_types.cpp:430` |
-| `particles.process.AMOUNT_RATIO` | open, #1794 | | | `servers/rendering/shader_types.cpp:431` |
+| `spatial.global.TIME` | open, #1831 | | | `servers/rendering/shader_types.cpp:79` |
+| `spatial.global.EXPOSURE` | open, #1831 | | | `servers/rendering/shader_types.cpp:80` |
+| `spatial.global.IN_SHADOW_PASS` | open, #1831 | | | `servers/rendering/shader_types.cpp:81` |
+| `spatial.constants.PI` | open, #1831 | | | `servers/rendering/shader_types.cpp:82` |
+| `spatial.constants.TAU` | open, #1831 | | | `servers/rendering/shader_types.cpp:83` |
+| `spatial.constants.E` | open, #1831 | | | `servers/rendering/shader_types.cpp:84` |
+| `spatial.constants.OUTPUT_IS_SRGB` | open, #1831 | | | `servers/rendering/shader_types.cpp:85` |
+| `spatial.constants.CLIP_SPACE_FAR` | open, #1831 | | | `servers/rendering/shader_types.cpp:86` |
+| `spatial.constants.IS_MULTIVIEW` | open, #1831 | | | `servers/rendering/shader_types.cpp:87` |
+| `spatial.vertex.INSTANCE_ID` | open, #1831 | | | `servers/rendering/shader_types.cpp:99` |
+| `spatial.vertex.INSTANCE_CUSTOM` | open, #1831 | | | `servers/rendering/shader_types.cpp:100` |
+| `spatial.vertex.VERTEX_ID` | open, #1831 | | | `servers/rendering/shader_types.cpp:101` |
+| `spatial.vertex.BONE_INDICES` | open, #1831 | | | `servers/rendering/shader_types.cpp:103` |
+| `spatial.vertex.BONE_WEIGHTS` | open, #1831 | | | `servers/rendering/shader_types.cpp:104` |
+| `spatial.vertex.CUSTOM0` | open, #1831 | | | `servers/rendering/shader_types.cpp:105` |
+| `spatial.vertex.CUSTOM1` | open, #1831 | | | `servers/rendering/shader_types.cpp:106` |
+| `spatial.vertex.CUSTOM2` | open, #1831 | | | `servers/rendering/shader_types.cpp:107` |
+| `spatial.vertex.CUSTOM3` | open, #1831 | | | `servers/rendering/shader_types.cpp:108` |
+| `spatial.vertex.MODEL_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:113` |
+| `spatial.vertex.MODEL_NORMAL_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:114` |
+| `spatial.vertex.VIEW_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:115` |
+| `spatial.vertex.INV_VIEW_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:116` |
+| `spatial.vertex.INV_PROJECTION_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:118` |
+| `spatial.vertex.VIEWPORT_SIZE` | open, #1831 | | | `servers/rendering/shader_types.cpp:121` |
+| `spatial.vertex.MAIN_CAM_INV_VIEW_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:122` |
+| `spatial.vertex.NODE_POSITION_WORLD` | open, #1831 | | | `servers/rendering/shader_types.cpp:124` |
+| `spatial.vertex.CAMERA_POSITION_WORLD` | open, #1831 | | | `servers/rendering/shader_types.cpp:125` |
+| `spatial.vertex.CAMERA_DIRECTION_WORLD` | open, #1831 | | | `servers/rendering/shader_types.cpp:126` |
+| `spatial.vertex.CAMERA_VISIBLE_LAYERS` | open, #1831 | | | `servers/rendering/shader_types.cpp:127` |
+| `spatial.vertex.NODE_POSITION_VIEW` | open, #1831 | | | `servers/rendering/shader_types.cpp:128` |
+| `spatial.vertex.VIEW_INDEX` | open, #1831 | | | `servers/rendering/shader_types.cpp:130` |
+| `spatial.vertex.VIEW_MONO_LEFT` | open, #1831 | | | `servers/rendering/shader_types.cpp:131` |
+| `spatial.vertex.VIEW_RIGHT` | open, #1831 | | | `servers/rendering/shader_types.cpp:132` |
+| `spatial.vertex.EYE_OFFSET` | open, #1831 | | | `servers/rendering/shader_types.cpp:133` |
+| `spatial.fragment.VERTEX` | open, #1831 | | | `servers/rendering/shader_types.cpp:135` |
+| `spatial.fragment.FRAGCOORD` | open, #1831 | | | `servers/rendering/shader_types.cpp:137` |
+| `spatial.fragment.FRONT_FACING` | open, #1831 | | | `servers/rendering/shader_types.cpp:138` |
+| `spatial.fragment.VIEW` | open, #1831 | | | `servers/rendering/shader_types.cpp:142` |
+| `spatial.fragment.UV` | open, #1831 | | | `servers/rendering/shader_types.cpp:146` |
+| `spatial.fragment.UV2` | open, #1831 | | | `servers/rendering/shader_types.cpp:147` |
+| `spatial.fragment.COLOR` | open, #1831 | | | `servers/rendering/shader_types.cpp:148` |
+| `spatial.fragment.SCREEN_UV` | open, #1831 | | | `servers/rendering/shader_types.cpp:170` |
+| `spatial.fragment.POINT_COORD` | open, #1831 | | | `servers/rendering/shader_types.cpp:171` |
+| `spatial.fragment.NODE_POSITION_WORLD` | open, #1831 | | | `servers/rendering/shader_types.cpp:173` |
+| `spatial.fragment.CAMERA_POSITION_WORLD` | open, #1831 | | | `servers/rendering/shader_types.cpp:174` |
+| `spatial.fragment.CAMERA_DIRECTION_WORLD` | open, #1831 | | | `servers/rendering/shader_types.cpp:175` |
+| `spatial.fragment.CAMERA_VISIBLE_LAYERS` | open, #1831 | | | `servers/rendering/shader_types.cpp:176` |
+| `spatial.fragment.NODE_POSITION_VIEW` | open, #1831 | | | `servers/rendering/shader_types.cpp:177` |
+| `spatial.fragment.VIEW_INDEX` | open, #1831 | | | `servers/rendering/shader_types.cpp:179` |
+| `spatial.fragment.VIEW_MONO_LEFT` | open, #1831 | | | `servers/rendering/shader_types.cpp:180` |
+| `spatial.fragment.VIEW_RIGHT` | open, #1831 | | | `servers/rendering/shader_types.cpp:181` |
+| `spatial.fragment.EYE_OFFSET` | open, #1831 | | | `servers/rendering/shader_types.cpp:182` |
+| `spatial.fragment.MODEL_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:184` |
+| `spatial.fragment.MODEL_NORMAL_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:185` |
+| `spatial.fragment.VIEW_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:186` |
+| `spatial.fragment.INV_VIEW_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:187` |
+| `spatial.fragment.PROJECTION_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:188` |
+| `spatial.fragment.INV_PROJECTION_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:189` |
+| `spatial.fragment.VIEWPORT_SIZE` | open, #1831 | | | `servers/rendering/shader_types.cpp:190` |
+| `spatial.light.MODEL_MATRIX` | open, #1453 | | | `servers/rendering/shader_types.cpp:202` |
+| `spatial.light.VIEW_MATRIX` | open, #1453 | | | `servers/rendering/shader_types.cpp:203` |
+| `spatial.light.INV_VIEW_MATRIX` | open, #1453 | | | `servers/rendering/shader_types.cpp:204` |
+| `spatial.light.PROJECTION_MATRIX` | open, #1453 | | | `servers/rendering/shader_types.cpp:205` |
+| `spatial.light.INV_PROJECTION_MATRIX` | open, #1453 | | | `servers/rendering/shader_types.cpp:206` |
+| `spatial.light.VIEWPORT_SIZE` | open, #1453 | | | `servers/rendering/shader_types.cpp:207` |
+| `spatial.light.FRAGCOORD` | open, #1453 | | | `servers/rendering/shader_types.cpp:209` |
+| `spatial.light.NORMAL` | open, #1453 | | | `servers/rendering/shader_types.cpp:210` |
+| `spatial.light.UV` | open, #1453 | | | `servers/rendering/shader_types.cpp:211` |
+| `spatial.light.UV2` | open, #1453 | | | `servers/rendering/shader_types.cpp:212` |
+| `spatial.light.VIEW` | open, #1453 | | | `servers/rendering/shader_types.cpp:213` |
+| `spatial.light.SPECULAR_AMOUNT` | open, #1453 | | | `servers/rendering/shader_types.cpp:214` |
+| `spatial.light.LIGHT` | open, #1453 | | | `servers/rendering/shader_types.cpp:215` |
+| `spatial.light.LIGHT_COLOR` | open, #1453 | | | `servers/rendering/shader_types.cpp:216` |
+| `spatial.light.LIGHT_IS_DIRECTIONAL` | open, #1453 | | | `servers/rendering/shader_types.cpp:217` |
+| `spatial.light.ATTENUATION` | open, #1453 | | | `servers/rendering/shader_types.cpp:218` |
+| `spatial.light.ALBEDO` | open, #1453 | | | `servers/rendering/shader_types.cpp:219` |
+| `spatial.light.BACKLIGHT` | open, #1453 | | | `servers/rendering/shader_types.cpp:220` |
+| `spatial.light.METALLIC` | open, #1453 | | | `servers/rendering/shader_types.cpp:221` |
+| `spatial.light.ROUGHNESS` | open, #1453 | | | `servers/rendering/shader_types.cpp:222` |
+| `spatial.light.SCREEN_UV` | open, #1453 | | | `servers/rendering/shader_types.cpp:226` |
+| `canvas_item.global.TIME` | open, #686 | | | `servers/rendering/shader_types.cpp:264` |
+| `canvas_item.constants.PI` | open, #686 | | | `servers/rendering/shader_types.cpp:265` |
+| `canvas_item.constants.TAU` | open, #686 | | | `servers/rendering/shader_types.cpp:266` |
+| `canvas_item.constants.E` | open, #686 | | | `servers/rendering/shader_types.cpp:267` |
+| `canvas_item.vertex.MODEL_MATRIX` | open, #686 | | | `servers/rendering/shader_types.cpp:274` |
+| `canvas_item.vertex.CANVAS_MATRIX` | open, #686 | | | `servers/rendering/shader_types.cpp:275` |
+| `canvas_item.vertex.SCREEN_MATRIX` | open, #686 | | | `servers/rendering/shader_types.cpp:276` |
+| `canvas_item.vertex.INSTANCE_CUSTOM` | open, #686 | | | `servers/rendering/shader_types.cpp:277` |
+| `canvas_item.vertex.INSTANCE_ID` | open, #686 | | | `servers/rendering/shader_types.cpp:278` |
+| `canvas_item.vertex.VERTEX_ID` | open, #686 | | | `servers/rendering/shader_types.cpp:279` |
+| `canvas_item.vertex.AT_LIGHT_PASS` | open, #686 | | | `servers/rendering/shader_types.cpp:280` |
+| `canvas_item.vertex.TEXTURE_PIXEL_SIZE` | open, #686 | | | `servers/rendering/shader_types.cpp:281` |
+| `canvas_item.vertex.CUSTOM0` | open, #686 | | | `servers/rendering/shader_types.cpp:282` |
+| `canvas_item.vertex.CUSTOM1` | open, #686 | | | `servers/rendering/shader_types.cpp:283` |
+| `canvas_item.fragment.FRAGCOORD` | open, #686 | | | `servers/rendering/shader_types.cpp:290` |
+| `canvas_item.fragment.UV` | open, #686 | | | `servers/rendering/shader_types.cpp:294` |
+| `canvas_item.fragment.TEXTURE` | open, #686 | | | `servers/rendering/shader_types.cpp:296` |
+| `canvas_item.fragment.TEXTURE_PIXEL_SIZE` | open, #686 | | | `servers/rendering/shader_types.cpp:297` |
+| `canvas_item.fragment.NORMAL_TEXTURE` | open, #686 | | | `servers/rendering/shader_types.cpp:298` |
+| `canvas_item.fragment.SPECULAR_SHININESS_TEXTURE` | open, #686 | | | `servers/rendering/shader_types.cpp:299` |
+| `canvas_item.fragment.SPECULAR_SHININESS` | open, #686 | | | `servers/rendering/shader_types.cpp:300` |
+| `canvas_item.fragment.SCREEN_UV` | open, #686 | | | `servers/rendering/shader_types.cpp:301` |
+| `canvas_item.fragment.REGION_RECT` | open, #686 | | | `servers/rendering/shader_types.cpp:302` |
+| `canvas_item.fragment.SCREEN_PIXEL_SIZE` | open, #686 | | | `servers/rendering/shader_types.cpp:303` |
+| `canvas_item.fragment.POINT_COORD` | open, #686 | | | `servers/rendering/shader_types.cpp:304` |
+| `canvas_item.fragment.AT_LIGHT_PASS` | open, #686 | | | `servers/rendering/shader_types.cpp:305` |
+| `canvas_item.light.FRAGCOORD` | open, #686 | | | `servers/rendering/shader_types.cpp:332` |
+| `canvas_item.light.NORMAL` | open, #686 | | | `servers/rendering/shader_types.cpp:333` |
+| `canvas_item.light.COLOR` | open, #686 | | | `servers/rendering/shader_types.cpp:334` |
+| `canvas_item.light.UV` | open, #686 | | | `servers/rendering/shader_types.cpp:335` |
+| `canvas_item.light.SPECULAR_SHININESS` | open, #686 | | | `servers/rendering/shader_types.cpp:336` |
+| `canvas_item.light.LIGHT_COLOR` | open, #686 | | | `servers/rendering/shader_types.cpp:337` |
+| `canvas_item.light.LIGHT_POSITION` | open, #686 | | | `servers/rendering/shader_types.cpp:338` |
+| `canvas_item.light.LIGHT_DIRECTION` | open, #686 | | | `servers/rendering/shader_types.cpp:339` |
+| `canvas_item.light.LIGHT_ENERGY` | open, #686 | | | `servers/rendering/shader_types.cpp:340` |
+| `canvas_item.light.LIGHT_IS_DIRECTIONAL` | open, #686 | | | `servers/rendering/shader_types.cpp:341` |
+| `canvas_item.light.LIGHT_VERTEX` | open, #686 | | | `servers/rendering/shader_types.cpp:342` |
+| `canvas_item.light.SCREEN_UV` | open, #686 | | | `servers/rendering/shader_types.cpp:345` |
+| `canvas_item.light.TEXTURE` | open, #686 | | | `servers/rendering/shader_types.cpp:346` |
+| `canvas_item.light.TEXTURE_PIXEL_SIZE` | open, #686 | | | `servers/rendering/shader_types.cpp:347` |
+| `canvas_item.light.POINT_COORD` | open, #686 | | | `servers/rendering/shader_types.cpp:348` |
+| `particles.global.TIME` | open, #1726 | | | `servers/rendering/shader_types.cpp:363` |
+| `particles.constants.PI` | open, #1726 | | | `servers/rendering/shader_types.cpp:364` |
+| `particles.constants.TAU` | open, #1726 | | | `servers/rendering/shader_types.cpp:365` |
+| `particles.constants.E` | open, #1726 | | | `servers/rendering/shader_types.cpp:366` |
+| `particles.start.LIFETIME` | open, #1726 | | | `servers/rendering/shader_types.cpp:380` |
+| `particles.start.DELTA` | open, #1726 | | | `servers/rendering/shader_types.cpp:381` |
+| `particles.start.NUMBER` | open, #1726 | | | `servers/rendering/shader_types.cpp:382` |
+| `particles.start.INDEX` | open, #1726 | | | `servers/rendering/shader_types.cpp:383` |
+| `particles.start.EMISSION_TRANSFORM` | open, #1726 | | | `servers/rendering/shader_types.cpp:384` |
+| `particles.start.EMITTER_VELOCITY` | open, #1726 | | | `servers/rendering/shader_types.cpp:385` |
+| `particles.start.INTERPOLATE_TO_END` | open, #1726 | | | `servers/rendering/shader_types.cpp:386` |
+| `particles.start.RANDOM_SEED` | open, #1726 | | | `servers/rendering/shader_types.cpp:387` |
+| `particles.start.FLAG_EMIT_POSITION` | open, #1726 | | | `servers/rendering/shader_types.cpp:388` |
+| `particles.start.FLAG_EMIT_ROT_SCALE` | open, #1726 | | | `servers/rendering/shader_types.cpp:389` |
+| `particles.start.FLAG_EMIT_VELOCITY` | open, #1726 | | | `servers/rendering/shader_types.cpp:390` |
+| `particles.start.FLAG_EMIT_COLOR` | open, #1726 | | | `servers/rendering/shader_types.cpp:391` |
+| `particles.start.FLAG_EMIT_CUSTOM` | open, #1726 | | | `servers/rendering/shader_types.cpp:392` |
+| `particles.start.RESTART_POSITION` | open, #1726 | | | `servers/rendering/shader_types.cpp:393` |
+| `particles.start.RESTART_ROT_SCALE` | open, #1726 | | | `servers/rendering/shader_types.cpp:394` |
+| `particles.start.RESTART_VELOCITY` | open, #1726 | | | `servers/rendering/shader_types.cpp:395` |
+| `particles.start.RESTART_COLOR` | open, #1726 | | | `servers/rendering/shader_types.cpp:396` |
+| `particles.start.RESTART_CUSTOM` | open, #1726 | | | `servers/rendering/shader_types.cpp:397` |
+| `particles.start.AMOUNT_RATIO` | open, #1726 | | | `servers/rendering/shader_types.cpp:398` |
+| `particles.process.RESTART` | open, #1726 | | | `servers/rendering/shader_types.cpp:405` |
+| `particles.process.LIFETIME` | open, #1726 | | | `servers/rendering/shader_types.cpp:414` |
+| `particles.process.DELTA` | open, #1726 | | | `servers/rendering/shader_types.cpp:415` |
+| `particles.process.NUMBER` | open, #1726 | | | `servers/rendering/shader_types.cpp:416` |
+| `particles.process.INDEX` | open, #1726 | | | `servers/rendering/shader_types.cpp:417` |
+| `particles.process.EMISSION_TRANSFORM` | open, #1726 | | | `servers/rendering/shader_types.cpp:418` |
+| `particles.process.EMITTER_VELOCITY` | open, #1726 | | | `servers/rendering/shader_types.cpp:419` |
+| `particles.process.INTERPOLATE_TO_END` | open, #1726 | | | `servers/rendering/shader_types.cpp:420` |
+| `particles.process.RANDOM_SEED` | open, #1726 | | | `servers/rendering/shader_types.cpp:421` |
+| `particles.process.FLAG_EMIT_POSITION` | open, #1726 | | | `servers/rendering/shader_types.cpp:422` |
+| `particles.process.FLAG_EMIT_ROT_SCALE` | open, #1726 | | | `servers/rendering/shader_types.cpp:423` |
+| `particles.process.FLAG_EMIT_VELOCITY` | open, #1726 | | | `servers/rendering/shader_types.cpp:424` |
+| `particles.process.FLAG_EMIT_COLOR` | open, #1726 | | | `servers/rendering/shader_types.cpp:425` |
+| `particles.process.FLAG_EMIT_CUSTOM` | open, #1726 | | | `servers/rendering/shader_types.cpp:426` |
+| `particles.process.COLLIDED` | open, #1726 | | | `servers/rendering/shader_types.cpp:427` |
+| `particles.process.COLLISION_NORMAL` | open, #1726 | | | `servers/rendering/shader_types.cpp:428` |
+| `particles.process.COLLISION_DEPTH` | open, #1726 | | | `servers/rendering/shader_types.cpp:429` |
+| `particles.process.ATTRACTOR_FORCE` | open, #1726 | | | `servers/rendering/shader_types.cpp:430` |
+| `particles.process.AMOUNT_RATIO` | open, #1726 | | | `servers/rendering/shader_types.cpp:431` |
 | `sky.global.TIME` | open, #1794 | | | `servers/rendering/shader_types.cpp:456` |
-| `sky.constants.PI` | open, #1794 | | | `servers/rendering/shader_types.cpp:457` |
-| `sky.constants.TAU` | open, #1794 | | | `servers/rendering/shader_types.cpp:458` |
-| `sky.constants.E` | open, #1794 | | | `servers/rendering/shader_types.cpp:459` |
-| `sky.global.POSITION` | open, #1794 | | | `servers/rendering/shader_types.cpp:460` |
-| `sky.global.RADIANCE` | open, #1794 | | | `servers/rendering/shader_types.cpp:461` |
-| `sky.global.AT_HALF_RES_PASS` | open, #1794 | | | `servers/rendering/shader_types.cpp:462` |
-| `sky.global.AT_QUARTER_RES_PASS` | open, #1794 | | | `servers/rendering/shader_types.cpp:463` |
-| `sky.global.AT_CUBEMAP_PASS` | open, #1794 | | | `servers/rendering/shader_types.cpp:464` |
-| `sky.global.LIGHT0_ENABLED` | open, #1794 | | | `servers/rendering/shader_types.cpp:465` |
-| `sky.global.LIGHT0_DIRECTION` | open, #1794 | | | `servers/rendering/shader_types.cpp:466` |
-| `sky.global.LIGHT0_ENERGY` | open, #1794 | | | `servers/rendering/shader_types.cpp:467` |
-| `sky.global.LIGHT0_COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:468` |
-| `sky.global.LIGHT0_SIZE` | open, #1794 | | | `servers/rendering/shader_types.cpp:469` |
-| `sky.global.LIGHT1_ENABLED` | open, #1794 | | | `servers/rendering/shader_types.cpp:470` |
-| `sky.global.LIGHT1_DIRECTION` | open, #1794 | | | `servers/rendering/shader_types.cpp:471` |
-| `sky.global.LIGHT1_ENERGY` | open, #1794 | | | `servers/rendering/shader_types.cpp:472` |
-| `sky.global.LIGHT1_COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:473` |
-| `sky.global.LIGHT1_SIZE` | open, #1794 | | | `servers/rendering/shader_types.cpp:474` |
-| `sky.global.LIGHT2_ENABLED` | open, #1794 | | | `servers/rendering/shader_types.cpp:475` |
-| `sky.global.LIGHT2_DIRECTION` | open, #1794 | | | `servers/rendering/shader_types.cpp:476` |
-| `sky.global.LIGHT2_ENERGY` | open, #1794 | | | `servers/rendering/shader_types.cpp:477` |
-| `sky.global.LIGHT2_COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:478` |
-| `sky.global.LIGHT2_SIZE` | open, #1794 | | | `servers/rendering/shader_types.cpp:479` |
-| `sky.global.LIGHT3_ENABLED` | open, #1794 | | | `servers/rendering/shader_types.cpp:480` |
-| `sky.global.LIGHT3_DIRECTION` | open, #1794 | | | `servers/rendering/shader_types.cpp:481` |
-| `sky.global.LIGHT3_ENERGY` | open, #1794 | | | `servers/rendering/shader_types.cpp:482` |
-| `sky.global.LIGHT3_COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:483` |
-| `sky.global.LIGHT3_SIZE` | open, #1794 | | | `servers/rendering/shader_types.cpp:484` |
-| `sky.sky.EYEDIR` | open, #1794 | | | `servers/rendering/shader_types.cpp:488` |
-| `sky.sky.SCREEN_UV` | open, #1794 | | | `servers/rendering/shader_types.cpp:489` |
-| `sky.sky.FRAGCOORD` | open, #1794 | | | `servers/rendering/shader_types.cpp:490` |
-| `sky.sky.SKY_COORDS` | open, #1794 | | | `servers/rendering/shader_types.cpp:491` |
-| `sky.sky.HALF_RES_COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:492` |
-| `sky.sky.QUARTER_RES_COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:493` |
-| `fog.global.TIME` | open, #1794 | | | `servers/rendering/shader_types.cpp:507` |
-| `fog.constants.PI` | open, #1794 | | | `servers/rendering/shader_types.cpp:508` |
-| `fog.constants.TAU` | open, #1794 | | | `servers/rendering/shader_types.cpp:509` |
-| `fog.constants.E` | open, #1794 | | | `servers/rendering/shader_types.cpp:510` |
-| `fog.fog.WORLD_POSITION` | open, #1794 | | | `servers/rendering/shader_types.cpp:512` |
-| `fog.fog.OBJECT_POSITION` | open, #1794 | | | `servers/rendering/shader_types.cpp:513` |
-| `fog.fog.UVW` | open, #1794 | | | `servers/rendering/shader_types.cpp:514` |
-| `fog.fog.SIZE` | open, #1794 | | | `servers/rendering/shader_types.cpp:515` |
-| `fog.fog.SDF` | open, #1794 | | | `servers/rendering/shader_types.cpp:516` |
+| `sky.constants.PI` | open, #1665 | | | `servers/rendering/shader_types.cpp:457` |
+| `sky.constants.TAU` | open, #1665 | | | `servers/rendering/shader_types.cpp:458` |
+| `sky.constants.E` | open, #1665 | | | `servers/rendering/shader_types.cpp:459` |
+| `sky.global.POSITION` | open, #1665 | | | `servers/rendering/shader_types.cpp:460` |
+| `sky.global.RADIANCE` | open, #1665 | | | `servers/rendering/shader_types.cpp:461` |
+| `sky.global.AT_HALF_RES_PASS` | open, #1666 | | | `servers/rendering/shader_types.cpp:462` |
+| `sky.global.AT_QUARTER_RES_PASS` | open, #1666 | | | `servers/rendering/shader_types.cpp:463` |
+| `sky.global.AT_CUBEMAP_PASS` | open, #1666 | | | `servers/rendering/shader_types.cpp:464` |
+| `sky.global.LIGHT0_ENABLED` | open, #1666 | | | `servers/rendering/shader_types.cpp:465` |
+| `sky.global.LIGHT0_DIRECTION` | open, #1666 | | | `servers/rendering/shader_types.cpp:466` |
+| `sky.global.LIGHT0_ENERGY` | open, #1666 | | | `servers/rendering/shader_types.cpp:467` |
+| `sky.global.LIGHT0_COLOR` | open, #1666 | | | `servers/rendering/shader_types.cpp:468` |
+| `sky.global.LIGHT0_SIZE` | open, #1666 | | | `servers/rendering/shader_types.cpp:469` |
+| `sky.global.LIGHT1_ENABLED` | open, #1666 | | | `servers/rendering/shader_types.cpp:470` |
+| `sky.global.LIGHT1_DIRECTION` | open, #1666 | | | `servers/rendering/shader_types.cpp:471` |
+| `sky.global.LIGHT1_ENERGY` | open, #1666 | | | `servers/rendering/shader_types.cpp:472` |
+| `sky.global.LIGHT1_COLOR` | open, #1666 | | | `servers/rendering/shader_types.cpp:473` |
+| `sky.global.LIGHT1_SIZE` | open, #1666 | | | `servers/rendering/shader_types.cpp:474` |
+| `sky.global.LIGHT2_ENABLED` | open, #1666 | | | `servers/rendering/shader_types.cpp:475` |
+| `sky.global.LIGHT2_DIRECTION` | open, #1666 | | | `servers/rendering/shader_types.cpp:476` |
+| `sky.global.LIGHT2_ENERGY` | open, #1666 | | | `servers/rendering/shader_types.cpp:477` |
+| `sky.global.LIGHT2_COLOR` | open, #1666 | | | `servers/rendering/shader_types.cpp:478` |
+| `sky.global.LIGHT2_SIZE` | open, #1666 | | | `servers/rendering/shader_types.cpp:479` |
+| `sky.global.LIGHT3_ENABLED` | open, #1666 | | | `servers/rendering/shader_types.cpp:480` |
+| `sky.global.LIGHT3_DIRECTION` | open, #1666 | | | `servers/rendering/shader_types.cpp:481` |
+| `sky.global.LIGHT3_ENERGY` | open, #1666 | | | `servers/rendering/shader_types.cpp:482` |
+| `sky.global.LIGHT3_COLOR` | open, #1666 | | | `servers/rendering/shader_types.cpp:483` |
+| `sky.global.LIGHT3_SIZE` | open, #1666 | | | `servers/rendering/shader_types.cpp:484` |
+| `sky.sky.EYEDIR` | open, #1665 | | | `servers/rendering/shader_types.cpp:488` |
+| `sky.sky.SCREEN_UV` | open, #1665 | | | `servers/rendering/shader_types.cpp:489` |
+| `sky.sky.FRAGCOORD` | open, #1665 | | | `servers/rendering/shader_types.cpp:490` |
+| `sky.sky.SKY_COORDS` | open, #1665 | | | `servers/rendering/shader_types.cpp:491` |
+| `sky.sky.HALF_RES_COLOR` | open, #1666 | | | `servers/rendering/shader_types.cpp:492` |
+| `sky.sky.QUARTER_RES_COLOR` | open, #1666 | | | `servers/rendering/shader_types.cpp:493` |
+| `fog.global.TIME` | open, #1783 | | | `servers/rendering/shader_types.cpp:507` |
+| `fog.constants.PI` | open, #1783 | | | `servers/rendering/shader_types.cpp:508` |
+| `fog.constants.TAU` | open, #1783 | | | `servers/rendering/shader_types.cpp:509` |
+| `fog.constants.E` | open, #1783 | | | `servers/rendering/shader_types.cpp:510` |
+| `fog.fog.WORLD_POSITION` | open, #1783 | | | `servers/rendering/shader_types.cpp:512` |
+| `fog.fog.OBJECT_POSITION` | open, #1783 | | | `servers/rendering/shader_types.cpp:513` |
+| `fog.fog.UVW` | open, #1783 | | | `servers/rendering/shader_types.cpp:514` |
+| `fog.fog.SIZE` | open, #1783 | | | `servers/rendering/shader_types.cpp:515` |
+| `fog.fog.SDF` | open, #1783 | | | `servers/rendering/shader_types.cpp:516` |
 
 ## built-in
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `spatial.vertex.VERTEX` | open, #1794 | | | `servers/rendering/shader_types.cpp:89` |
-| `spatial.vertex.NORMAL` | open, #1794 | | | `servers/rendering/shader_types.cpp:90` |
-| `spatial.vertex.TANGENT` | open, #1794 | | | `servers/rendering/shader_types.cpp:91` |
-| `spatial.vertex.BINORMAL` | open, #1794 | | | `servers/rendering/shader_types.cpp:92` |
-| `spatial.vertex.POSITION` | open, #1794 | | | `servers/rendering/shader_types.cpp:93` |
-| `spatial.vertex.UV` | open, #1794 | | | `servers/rendering/shader_types.cpp:94` |
-| `spatial.vertex.UV2` | open, #1794 | | | `servers/rendering/shader_types.cpp:95` |
-| `spatial.vertex.COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:96` |
-| `spatial.vertex.POINT_SIZE` | open, #1794 | | | `servers/rendering/shader_types.cpp:97` |
-| `spatial.vertex.Z_CLIP_SCALE` | open, #1794 | | | `servers/rendering/shader_types.cpp:98` |
-| `spatial.vertex.ROUGHNESS` | open, #1794 | | | `servers/rendering/shader_types.cpp:102` |
-| `spatial.vertex.PROJECTION_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:117` |
-| `spatial.vertex.MODELVIEW_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:119` |
-| `spatial.vertex.MODELVIEW_NORMAL_MATRIX` | open, #1794 | | | `servers/rendering/shader_types.cpp:120` |
-| `spatial.fragment.LIGHT_VERTEX` | open, #1794 | | | `servers/rendering/shader_types.cpp:136` |
-| `spatial.fragment.NORMAL` | open, #1794 | | | `servers/rendering/shader_types.cpp:139` |
-| `spatial.fragment.TANGENT` | open, #1794 | | | `servers/rendering/shader_types.cpp:140` |
-| `spatial.fragment.BINORMAL` | open, #1794 | | | `servers/rendering/shader_types.cpp:141` |
-| `spatial.fragment.NORMAL_MAP` | open, #1794 | | | `servers/rendering/shader_types.cpp:143` |
-| `spatial.fragment.NORMAL_MAP_DEPTH` | open, #1794 | | | `servers/rendering/shader_types.cpp:144` |
-| `spatial.fragment.BENT_NORMAL_MAP` | open, #1794 | | | `servers/rendering/shader_types.cpp:145` |
-| `spatial.fragment.ALBEDO` | open, #1794 | | | `servers/rendering/shader_types.cpp:149` |
-| `spatial.fragment.PREMUL_ALPHA_FACTOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:150` |
-| `spatial.fragment.ALPHA` | open, #1794 | | | `servers/rendering/shader_types.cpp:151` |
-| `spatial.fragment.METALLIC` | open, #1794 | | | `servers/rendering/shader_types.cpp:152` |
-| `spatial.fragment.SPECULAR` | open, #1794 | | | `servers/rendering/shader_types.cpp:153` |
-| `spatial.fragment.ROUGHNESS` | open, #1794 | | | `servers/rendering/shader_types.cpp:154` |
-| `spatial.fragment.RIM` | open, #1794 | | | `servers/rendering/shader_types.cpp:155` |
-| `spatial.fragment.RIM_TINT` | open, #1794 | | | `servers/rendering/shader_types.cpp:156` |
-| `spatial.fragment.CLEARCOAT` | open, #1794 | | | `servers/rendering/shader_types.cpp:157` |
-| `spatial.fragment.CLEARCOAT_ROUGHNESS` | open, #1794 | | | `servers/rendering/shader_types.cpp:158` |
-| `spatial.fragment.ANISOTROPY` | open, #1794 | | | `servers/rendering/shader_types.cpp:159` |
-| `spatial.fragment.ANISOTROPY_FLOW` | open, #1794 | | | `servers/rendering/shader_types.cpp:160` |
-| `spatial.fragment.SSS_STRENGTH` | open, #1794 | | | `servers/rendering/shader_types.cpp:161` |
-| `spatial.fragment.SSS_TRANSMITTANCE_COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:162` |
-| `spatial.fragment.SSS_TRANSMITTANCE_DEPTH` | open, #1794 | | | `servers/rendering/shader_types.cpp:163` |
-| `spatial.fragment.SSS_TRANSMITTANCE_BOOST` | open, #1794 | | | `servers/rendering/shader_types.cpp:164` |
-| `spatial.fragment.BACKLIGHT` | open, #1794 | | | `servers/rendering/shader_types.cpp:165` |
-| `spatial.fragment.AO` | open, #1794 | | | `servers/rendering/shader_types.cpp:166` |
-| `spatial.fragment.AO_LIGHT_AFFECT` | open, #1794 | | | `servers/rendering/shader_types.cpp:167` |
-| `spatial.fragment.EMISSION` | open, #1794 | | | `servers/rendering/shader_types.cpp:168` |
-| `spatial.fragment.DEPTH` | open, #1794 | | | `servers/rendering/shader_types.cpp:169` |
-| `spatial.fragment.FOG` | open, #1794 | | | `servers/rendering/shader_types.cpp:191` |
-| `spatial.fragment.RADIANCE` | open, #1794 | | | `servers/rendering/shader_types.cpp:192` |
-| `spatial.fragment.IRRADIANCE` | open, #1794 | | | `servers/rendering/shader_types.cpp:193` |
-| `spatial.fragment.ALPHA_SCISSOR_THRESHOLD` | open, #1794 | | | `servers/rendering/shader_types.cpp:197` |
-| `spatial.fragment.ALPHA_HASH_SCALE` | open, #1794 | | | `servers/rendering/shader_types.cpp:198` |
-| `spatial.fragment.ALPHA_ANTIALIASING_EDGE` | open, #1794 | | | `servers/rendering/shader_types.cpp:199` |
-| `spatial.fragment.ALPHA_TEXTURE_COORDINATE` | open, #1794 | | | `servers/rendering/shader_types.cpp:200` |
-| `spatial.light.DIFFUSE_LIGHT` | open, #1794 | | | `servers/rendering/shader_types.cpp:223` |
-| `spatial.light.SPECULAR_LIGHT` | open, #1794 | | | `servers/rendering/shader_types.cpp:224` |
-| `spatial.light.ALPHA` | open, #1794 | | | `servers/rendering/shader_types.cpp:225` |
-| `canvas_item.vertex.VERTEX` | open, #1794 | | | `servers/rendering/shader_types.cpp:269` |
-| `canvas_item.vertex.UV` | open, #1794 | | | `servers/rendering/shader_types.cpp:270` |
-| `canvas_item.vertex.COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:271` |
-| `canvas_item.vertex.POINT_SIZE` | open, #1794 | | | `servers/rendering/shader_types.cpp:272` |
-| `canvas_item.fragment.VERTEX` | open, #1794 | | | `servers/rendering/shader_types.cpp:287` |
-| `canvas_item.fragment.SHADOW_VERTEX` | open, #1794 | | | `servers/rendering/shader_types.cpp:288` |
-| `canvas_item.fragment.LIGHT_VERTEX` | open, #1794 | | | `servers/rendering/shader_types.cpp:289` |
-| `canvas_item.fragment.NORMAL` | open, #1794 | | | `servers/rendering/shader_types.cpp:291` |
-| `canvas_item.fragment.NORMAL_MAP` | open, #1794 | | | `servers/rendering/shader_types.cpp:292` |
-| `canvas_item.fragment.NORMAL_MAP_DEPTH` | open, #1794 | | | `servers/rendering/shader_types.cpp:293` |
-| `canvas_item.fragment.COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:295` |
-| `canvas_item.light.LIGHT` | open, #1794 | | | `servers/rendering/shader_types.cpp:343` |
-| `canvas_item.light.SHADOW_MODULATE` | open, #1794 | | | `servers/rendering/shader_types.cpp:344` |
-| `particles.start.COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:368` |
-| `particles.start.VELOCITY` | open, #1794 | | | `servers/rendering/shader_types.cpp:369` |
-| `particles.start.MASS` | open, #1794 | | | `servers/rendering/shader_types.cpp:370` |
-| `particles.start.ACTIVE` | open, #1794 | | | `servers/rendering/shader_types.cpp:371` |
-| `particles.start.CUSTOM` | open, #1794 | | | `servers/rendering/shader_types.cpp:372` |
-| `particles.start.USERDATA1` | open, #1794 | | | `servers/rendering/shader_types.cpp:373` |
-| `particles.start.USERDATA2` | open, #1794 | | | `servers/rendering/shader_types.cpp:374` |
-| `particles.start.USERDATA3` | open, #1794 | | | `servers/rendering/shader_types.cpp:375` |
-| `particles.start.USERDATA4` | open, #1794 | | | `servers/rendering/shader_types.cpp:376` |
-| `particles.start.USERDATA5` | open, #1794 | | | `servers/rendering/shader_types.cpp:377` |
-| `particles.start.USERDATA6` | open, #1794 | | | `servers/rendering/shader_types.cpp:378` |
-| `particles.start.TRANSFORM` | open, #1794 | | | `servers/rendering/shader_types.cpp:379` |
-| `particles.process.COLOR` | open, #1794 | | | `servers/rendering/shader_types.cpp:401` |
-| `particles.process.VELOCITY` | open, #1794 | | | `servers/rendering/shader_types.cpp:402` |
-| `particles.process.MASS` | open, #1794 | | | `servers/rendering/shader_types.cpp:403` |
-| `particles.process.ACTIVE` | open, #1794 | | | `servers/rendering/shader_types.cpp:404` |
-| `particles.process.CUSTOM` | open, #1794 | | | `servers/rendering/shader_types.cpp:406` |
-| `particles.process.USERDATA1` | open, #1794 | | | `servers/rendering/shader_types.cpp:407` |
-| `particles.process.USERDATA2` | open, #1794 | | | `servers/rendering/shader_types.cpp:408` |
-| `particles.process.USERDATA3` | open, #1794 | | | `servers/rendering/shader_types.cpp:409` |
-| `particles.process.USERDATA4` | open, #1794 | | | `servers/rendering/shader_types.cpp:410` |
-| `particles.process.USERDATA5` | open, #1794 | | | `servers/rendering/shader_types.cpp:411` |
-| `particles.process.USERDATA6` | open, #1794 | | | `servers/rendering/shader_types.cpp:412` |
-| `particles.process.TRANSFORM` | open, #1794 | | | `servers/rendering/shader_types.cpp:413` |
+| `spatial.vertex.VERTEX` | open, #1831 | | | `servers/rendering/shader_types.cpp:89` |
+| `spatial.vertex.NORMAL` | open, #1831 | | | `servers/rendering/shader_types.cpp:90` |
+| `spatial.vertex.TANGENT` | open, #1831 | | | `servers/rendering/shader_types.cpp:91` |
+| `spatial.vertex.BINORMAL` | open, #1831 | | | `servers/rendering/shader_types.cpp:92` |
+| `spatial.vertex.POSITION` | open, #1831 | | | `servers/rendering/shader_types.cpp:93` |
+| `spatial.vertex.UV` | open, #1831 | | | `servers/rendering/shader_types.cpp:94` |
+| `spatial.vertex.UV2` | open, #1831 | | | `servers/rendering/shader_types.cpp:95` |
+| `spatial.vertex.COLOR` | open, #1831 | | | `servers/rendering/shader_types.cpp:96` |
+| `spatial.vertex.POINT_SIZE` | open, #1831 | | | `servers/rendering/shader_types.cpp:97` |
+| `spatial.vertex.Z_CLIP_SCALE` | open, #1831 | | | `servers/rendering/shader_types.cpp:98` |
+| `spatial.vertex.ROUGHNESS` | open, #1831 | | | `servers/rendering/shader_types.cpp:102` |
+| `spatial.vertex.PROJECTION_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:117` |
+| `spatial.vertex.MODELVIEW_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:119` |
+| `spatial.vertex.MODELVIEW_NORMAL_MATRIX` | open, #1831 | | | `servers/rendering/shader_types.cpp:120` |
+| `spatial.fragment.LIGHT_VERTEX` | open, #1831 | | | `servers/rendering/shader_types.cpp:136` |
+| `spatial.fragment.NORMAL` | open, #1831 | | | `servers/rendering/shader_types.cpp:139` |
+| `spatial.fragment.TANGENT` | open, #1831 | | | `servers/rendering/shader_types.cpp:140` |
+| `spatial.fragment.BINORMAL` | open, #1831 | | | `servers/rendering/shader_types.cpp:141` |
+| `spatial.fragment.NORMAL_MAP` | open, #1831 | | | `servers/rendering/shader_types.cpp:143` |
+| `spatial.fragment.NORMAL_MAP_DEPTH` | open, #1831 | | | `servers/rendering/shader_types.cpp:144` |
+| `spatial.fragment.BENT_NORMAL_MAP` | open, #1831 | | | `servers/rendering/shader_types.cpp:145` |
+| `spatial.fragment.ALBEDO` | open, #1831 | | | `servers/rendering/shader_types.cpp:149` |
+| `spatial.fragment.PREMUL_ALPHA_FACTOR` | open, #1831 | | | `servers/rendering/shader_types.cpp:150` |
+| `spatial.fragment.ALPHA` | open, #1831 | | | `servers/rendering/shader_types.cpp:151` |
+| `spatial.fragment.METALLIC` | open, #1831 | | | `servers/rendering/shader_types.cpp:152` |
+| `spatial.fragment.SPECULAR` | open, #1831 | | | `servers/rendering/shader_types.cpp:153` |
+| `spatial.fragment.ROUGHNESS` | open, #1831 | | | `servers/rendering/shader_types.cpp:154` |
+| `spatial.fragment.RIM` | open, #1831 | | | `servers/rendering/shader_types.cpp:155` |
+| `spatial.fragment.RIM_TINT` | open, #1831 | | | `servers/rendering/shader_types.cpp:156` |
+| `spatial.fragment.CLEARCOAT` | open, #1831 | | | `servers/rendering/shader_types.cpp:157` |
+| `spatial.fragment.CLEARCOAT_ROUGHNESS` | open, #1831 | | | `servers/rendering/shader_types.cpp:158` |
+| `spatial.fragment.ANISOTROPY` | open, #1831 | | | `servers/rendering/shader_types.cpp:159` |
+| `spatial.fragment.ANISOTROPY_FLOW` | open, #1831 | | | `servers/rendering/shader_types.cpp:160` |
+| `spatial.fragment.SSS_STRENGTH` | open, #1831 | | | `servers/rendering/shader_types.cpp:161` |
+| `spatial.fragment.SSS_TRANSMITTANCE_COLOR` | open, #1831 | | | `servers/rendering/shader_types.cpp:162` |
+| `spatial.fragment.SSS_TRANSMITTANCE_DEPTH` | open, #1831 | | | `servers/rendering/shader_types.cpp:163` |
+| `spatial.fragment.SSS_TRANSMITTANCE_BOOST` | open, #1831 | | | `servers/rendering/shader_types.cpp:164` |
+| `spatial.fragment.BACKLIGHT` | open, #1831 | | | `servers/rendering/shader_types.cpp:165` |
+| `spatial.fragment.AO` | open, #1831 | | | `servers/rendering/shader_types.cpp:166` |
+| `spatial.fragment.AO_LIGHT_AFFECT` | open, #1831 | | | `servers/rendering/shader_types.cpp:167` |
+| `spatial.fragment.EMISSION` | open, #1831 | | | `servers/rendering/shader_types.cpp:168` |
+| `spatial.fragment.DEPTH` | open, #1831 | | | `servers/rendering/shader_types.cpp:169` |
+| `spatial.fragment.FOG` | open, #1831 | | | `servers/rendering/shader_types.cpp:191` |
+| `spatial.fragment.RADIANCE` | open, #1831 | | | `servers/rendering/shader_types.cpp:192` |
+| `spatial.fragment.IRRADIANCE` | open, #1831 | | | `servers/rendering/shader_types.cpp:193` |
+| `spatial.fragment.ALPHA_SCISSOR_THRESHOLD` | open, #1831 | | | `servers/rendering/shader_types.cpp:197` |
+| `spatial.fragment.ALPHA_HASH_SCALE` | open, #1831 | | | `servers/rendering/shader_types.cpp:198` |
+| `spatial.fragment.ALPHA_ANTIALIASING_EDGE` | open, #1831 | | | `servers/rendering/shader_types.cpp:199` |
+| `spatial.fragment.ALPHA_TEXTURE_COORDINATE` | open, #1831 | | | `servers/rendering/shader_types.cpp:200` |
+| `spatial.light.DIFFUSE_LIGHT` | open, #1453 | | | `servers/rendering/shader_types.cpp:223` |
+| `spatial.light.SPECULAR_LIGHT` | open, #1453 | | | `servers/rendering/shader_types.cpp:224` |
+| `spatial.light.ALPHA` | open, #1453 | | | `servers/rendering/shader_types.cpp:225` |
+| `canvas_item.vertex.VERTEX` | open, #686 | | | `servers/rendering/shader_types.cpp:269` |
+| `canvas_item.vertex.UV` | open, #686 | | | `servers/rendering/shader_types.cpp:270` |
+| `canvas_item.vertex.COLOR` | open, #686 | | | `servers/rendering/shader_types.cpp:271` |
+| `canvas_item.vertex.POINT_SIZE` | open, #686 | | | `servers/rendering/shader_types.cpp:272` |
+| `canvas_item.fragment.VERTEX` | open, #686 | | | `servers/rendering/shader_types.cpp:287` |
+| `canvas_item.fragment.SHADOW_VERTEX` | open, #686 | | | `servers/rendering/shader_types.cpp:288` |
+| `canvas_item.fragment.LIGHT_VERTEX` | open, #686 | | | `servers/rendering/shader_types.cpp:289` |
+| `canvas_item.fragment.NORMAL` | open, #686 | | | `servers/rendering/shader_types.cpp:291` |
+| `canvas_item.fragment.NORMAL_MAP` | open, #686 | | | `servers/rendering/shader_types.cpp:292` |
+| `canvas_item.fragment.NORMAL_MAP_DEPTH` | open, #686 | | | `servers/rendering/shader_types.cpp:293` |
+| `canvas_item.fragment.COLOR` | open, #686 | | | `servers/rendering/shader_types.cpp:295` |
+| `canvas_item.light.LIGHT` | open, #686 | | | `servers/rendering/shader_types.cpp:343` |
+| `canvas_item.light.SHADOW_MODULATE` | open, #686 | | | `servers/rendering/shader_types.cpp:344` |
+| `particles.start.COLOR` | open, #1726 | | | `servers/rendering/shader_types.cpp:368` |
+| `particles.start.VELOCITY` | open, #1726 | | | `servers/rendering/shader_types.cpp:369` |
+| `particles.start.MASS` | open, #1726 | | | `servers/rendering/shader_types.cpp:370` |
+| `particles.start.ACTIVE` | open, #1726 | | | `servers/rendering/shader_types.cpp:371` |
+| `particles.start.CUSTOM` | open, #1726 | | | `servers/rendering/shader_types.cpp:372` |
+| `particles.start.USERDATA1` | open, #1726 | | | `servers/rendering/shader_types.cpp:373` |
+| `particles.start.USERDATA2` | open, #1726 | | | `servers/rendering/shader_types.cpp:374` |
+| `particles.start.USERDATA3` | open, #1726 | | | `servers/rendering/shader_types.cpp:375` |
+| `particles.start.USERDATA4` | open, #1726 | | | `servers/rendering/shader_types.cpp:376` |
+| `particles.start.USERDATA5` | open, #1726 | | | `servers/rendering/shader_types.cpp:377` |
+| `particles.start.USERDATA6` | open, #1726 | | | `servers/rendering/shader_types.cpp:378` |
+| `particles.start.TRANSFORM` | open, #1726 | | | `servers/rendering/shader_types.cpp:379` |
+| `particles.process.COLOR` | open, #1726 | | | `servers/rendering/shader_types.cpp:401` |
+| `particles.process.VELOCITY` | open, #1726 | | | `servers/rendering/shader_types.cpp:402` |
+| `particles.process.MASS` | open, #1726 | | | `servers/rendering/shader_types.cpp:403` |
+| `particles.process.ACTIVE` | open, #1726 | | | `servers/rendering/shader_types.cpp:404` |
+| `particles.process.CUSTOM` | open, #1726 | | | `servers/rendering/shader_types.cpp:406` |
+| `particles.process.USERDATA1` | open, #1726 | | | `servers/rendering/shader_types.cpp:407` |
+| `particles.process.USERDATA2` | open, #1726 | | | `servers/rendering/shader_types.cpp:408` |
+| `particles.process.USERDATA3` | open, #1726 | | | `servers/rendering/shader_types.cpp:409` |
+| `particles.process.USERDATA4` | open, #1726 | | | `servers/rendering/shader_types.cpp:410` |
+| `particles.process.USERDATA5` | open, #1726 | | | `servers/rendering/shader_types.cpp:411` |
+| `particles.process.USERDATA6` | open, #1726 | | | `servers/rendering/shader_types.cpp:412` |
+| `particles.process.TRANSFORM` | open, #1726 | | | `servers/rendering/shader_types.cpp:413` |
 | `sky.sky.COLOR` | transpiled (`sky-default`, `sky-fog`, `sky-fog-sun`, `sky-fog-energy-0`, `sky-fog-energy-3`, `sky-fog-affect-0`, `sky-fog-affect-half`, `sky-sun-coloured`, `sky-sun-below`, `sky-sun-energy-0`, `sky-camera-wide`) | native | untested (#1788) | `servers/rendering/shader_types.cpp:486` |
-| `sky.sky.ALPHA` | open, #1794 | | | `servers/rendering/shader_types.cpp:487` |
-| `sky.sky.FOG` | open, #1794 | | | `servers/rendering/shader_types.cpp:494` |
-| `fog.fog.ALBEDO` | open, #1794 | | | `servers/rendering/shader_types.cpp:517` |
-| `fog.fog.DENSITY` | open, #1794 | | | `servers/rendering/shader_types.cpp:518` |
-| `fog.fog.EMISSION` | open, #1794 | | | `servers/rendering/shader_types.cpp:519` |
+| `sky.sky.ALPHA` | open, #1665 | | | `servers/rendering/shader_types.cpp:487` |
+| `sky.sky.FOG` | open, #1665 | | | `servers/rendering/shader_types.cpp:494` |
+| `fog.fog.ALBEDO` | open, #1783 | | | `servers/rendering/shader_types.cpp:517` |
+| `fog.fog.DENSITY` | open, #1783 | | | `servers/rendering/shader_types.cpp:518` |
+| `fog.fog.EMISSION` | open, #1783 | | | `servers/rendering/shader_types.cpp:519` |
 
 ## stage function
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `canvas_item.fragment.texture_sdf(vec2)` | open, #1794 | | | `servers/rendering/shader_types.cpp:314` |
-| `canvas_item.light.texture_sdf(vec2)` | open, #1794 | | | `servers/rendering/shader_types.cpp:315` |
-| `canvas_item.fragment.sdf_to_screen_uv(vec2)` | open, #1794 | | | `servers/rendering/shader_types.cpp:317` |
-| `canvas_item.light.sdf_to_screen_uv(vec2)` | open, #1794 | | | `servers/rendering/shader_types.cpp:318` |
-| `canvas_item.fragment.texture_sdf_normal(vec2)` | open, #1794 | | | `servers/rendering/shader_types.cpp:319` |
-| `canvas_item.light.texture_sdf_normal(vec2)` | open, #1794 | | | `servers/rendering/shader_types.cpp:320` |
-| `canvas_item.fragment.screen_uv_to_sdf(vec2)` | open, #1794 | | | `servers/rendering/shader_types.cpp:328` |
-| `canvas_item.light.screen_uv_to_sdf(vec2)` | open, #1794 | | | `servers/rendering/shader_types.cpp:329` |
-| `particles.start.emit_subparticle(mat4,vec3,vec4,vec4,uint)` | open, #1794 | | | `servers/rendering/shader_types.cpp:442` |
-| `particles.process.emit_subparticle(mat4,vec3,vec4,vec4,uint)` | open, #1794 | | | `servers/rendering/shader_types.cpp:443` |
+| `canvas_item.fragment.texture_sdf(vec2)` | open, #1785 | | | `servers/rendering/shader_types.cpp:314` |
+| `canvas_item.light.texture_sdf(vec2)` | open, #1785 | | | `servers/rendering/shader_types.cpp:315` |
+| `canvas_item.fragment.sdf_to_screen_uv(vec2)` | open, #1785 | | | `servers/rendering/shader_types.cpp:317` |
+| `canvas_item.light.sdf_to_screen_uv(vec2)` | open, #1785 | | | `servers/rendering/shader_types.cpp:318` |
+| `canvas_item.fragment.texture_sdf_normal(vec2)` | open, #1785 | | | `servers/rendering/shader_types.cpp:319` |
+| `canvas_item.light.texture_sdf_normal(vec2)` | open, #1785 | | | `servers/rendering/shader_types.cpp:320` |
+| `canvas_item.fragment.screen_uv_to_sdf(vec2)` | open, #1785 | | | `servers/rendering/shader_types.cpp:328` |
+| `canvas_item.light.screen_uv_to_sdf(vec2)` | open, #1785 | | | `servers/rendering/shader_types.cpp:329` |
+| `particles.start.emit_subparticle(mat4,vec3,vec4,vec4,uint)` | open, #1726 | | | `servers/rendering/shader_types.cpp:442` |
+| `particles.process.emit_subparticle(mat4,vec3,vec4,vec4,uint)` | open, #1726 | | | `servers/rendering/shader_types.cpp:443` |
 
 ## render mode
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `spatial render_mode blend_mix` | open, #1794 | | | `servers/rendering/shader_types.cpp:233` |
-| `spatial render_mode blend_add` | open, #1794 | | | `servers/rendering/shader_types.cpp:233` |
-| `spatial render_mode blend_sub` | open, #1794 | | | `servers/rendering/shader_types.cpp:233` |
-| `spatial render_mode blend_mul` | open, #1794 | | | `servers/rendering/shader_types.cpp:233` |
-| `spatial render_mode blend_premul_alpha` | open, #1794 | | | `servers/rendering/shader_types.cpp:233` |
-| `spatial render_mode depth_draw_opaque` | open, #1794 | | | `servers/rendering/shader_types.cpp:234` |
-| `spatial render_mode depth_draw_always` | open, #1794 | | | `servers/rendering/shader_types.cpp:234` |
-| `spatial render_mode depth_draw_never` | open, #1794 | | | `servers/rendering/shader_types.cpp:234` |
-| `spatial render_mode depth_prepass_alpha` | open, #1794 | | | `servers/rendering/shader_types.cpp:235` |
-| `spatial render_mode depth_test_default` | open, #1794 | | | `servers/rendering/shader_types.cpp:236` |
-| `spatial render_mode depth_test_disabled` | open, #1794 | | | `servers/rendering/shader_types.cpp:236` |
-| `spatial render_mode depth_test_inverted` | open, #1794 | | | `servers/rendering/shader_types.cpp:236` |
-| `spatial render_mode sss_mode_skin` | open, #1794 | | | `servers/rendering/shader_types.cpp:237` |
-| `spatial render_mode cull_back` | open, #1794 | | | `servers/rendering/shader_types.cpp:238` |
-| `spatial render_mode cull_front` | open, #1794 | | | `servers/rendering/shader_types.cpp:238` |
-| `spatial render_mode cull_disabled` | open, #1794 | | | `servers/rendering/shader_types.cpp:238` |
-| `spatial render_mode unshaded` | open, #1794 | | | `servers/rendering/shader_types.cpp:239` |
-| `spatial render_mode wireframe` | open, #1794 | | | `servers/rendering/shader_types.cpp:240` |
-| `spatial render_mode diffuse_lambert` | open, #1794 | | | `servers/rendering/shader_types.cpp:241` |
-| `spatial render_mode diffuse_lambert_wrap` | open, #1794 | | | `servers/rendering/shader_types.cpp:241` |
-| `spatial render_mode diffuse_burley` | open, #1794 | | | `servers/rendering/shader_types.cpp:241` |
-| `spatial render_mode diffuse_toon` | open, #1794 | | | `servers/rendering/shader_types.cpp:241` |
-| `spatial render_mode specular_schlick_ggx` | open, #1794 | | | `servers/rendering/shader_types.cpp:242` |
-| `spatial render_mode specular_toon` | open, #1794 | | | `servers/rendering/shader_types.cpp:242` |
-| `spatial render_mode specular_disabled` | open, #1794 | | | `servers/rendering/shader_types.cpp:242` |
-| `spatial render_mode skip_vertex_transform` | open, #1794 | | | `servers/rendering/shader_types.cpp:243` |
-| `spatial render_mode world_vertex_coords` | open, #1794 | | | `servers/rendering/shader_types.cpp:244` |
-| `spatial render_mode ensure_correct_normals` | open, #1794 | | | `servers/rendering/shader_types.cpp:245` |
-| `spatial render_mode shadows_disabled` | open, #1794 | | | `servers/rendering/shader_types.cpp:246` |
-| `spatial render_mode ambient_light_disabled` | open, #1794 | | | `servers/rendering/shader_types.cpp:247` |
-| `spatial render_mode shadow_to_opacity` | open, #1794 | | | `servers/rendering/shader_types.cpp:248` |
-| `spatial render_mode vertex_lighting` | open, #1794 | | | `servers/rendering/shader_types.cpp:249` |
-| `spatial render_mode particle_trails` | open, #1794 | | | `servers/rendering/shader_types.cpp:250` |
-| `spatial render_mode alpha_to_coverage` | open, #1794 | | | `servers/rendering/shader_types.cpp:251` |
-| `spatial render_mode alpha_to_coverage_and_one` | open, #1794 | | | `servers/rendering/shader_types.cpp:252` |
-| `spatial render_mode debug_shadow_splits` | open, #1794 | | | `servers/rendering/shader_types.cpp:253` |
-| `spatial render_mode fog_disabled` | open, #1794 | | | `servers/rendering/shader_types.cpp:254` |
-| `spatial render_mode specular_occlusion_disabled` | open, #1794 | | | `servers/rendering/shader_types.cpp:255` |
-| `canvas_item render_mode skip_vertex_transform` | open, #1794 | | | `servers/rendering/shader_types.cpp:354` |
-| `canvas_item render_mode blend_mix` | open, #1794 | | | `servers/rendering/shader_types.cpp:355` |
-| `canvas_item render_mode blend_add` | open, #1794 | | | `servers/rendering/shader_types.cpp:355` |
-| `canvas_item render_mode blend_sub` | open, #1794 | | | `servers/rendering/shader_types.cpp:355` |
-| `canvas_item render_mode blend_mul` | open, #1794 | | | `servers/rendering/shader_types.cpp:355` |
-| `canvas_item render_mode blend_premul_alpha` | open, #1794 | | | `servers/rendering/shader_types.cpp:355` |
-| `canvas_item render_mode blend_disabled` | open, #1794 | | | `servers/rendering/shader_types.cpp:355` |
-| `canvas_item render_mode unshaded` | open, #1794 | | | `servers/rendering/shader_types.cpp:356` |
-| `canvas_item render_mode light_only` | open, #1794 | | | `servers/rendering/shader_types.cpp:357` |
-| `canvas_item render_mode world_vertex_coords` | open, #1794 | | | `servers/rendering/shader_types.cpp:358` |
-| `particles render_mode collision_use_scale` | open, #1794 | | | `servers/rendering/shader_types.cpp:448` |
-| `particles render_mode disable_force` | open, #1794 | | | `servers/rendering/shader_types.cpp:449` |
-| `particles render_mode disable_velocity` | open, #1794 | | | `servers/rendering/shader_types.cpp:450` |
-| `particles render_mode keep_data` | open, #1794 | | | `servers/rendering/shader_types.cpp:451` |
-| `sky render_mode use_half_res_pass` | open, #1794 | | | `servers/rendering/shader_types.cpp:499` |
-| `sky render_mode use_quarter_res_pass` | open, #1794 | | | `servers/rendering/shader_types.cpp:500` |
-| `sky render_mode disable_fog` | open, #1794 | | | `servers/rendering/shader_types.cpp:501` |
-| `sky render_mode use_debanding` | open, #1794 | | | `servers/rendering/shader_types.cpp:502` |
+| `spatial render_mode blend_mix` | open, #1831 | | | `servers/rendering/shader_types.cpp:233` |
+| `spatial render_mode blend_add` | open, #1831 | | | `servers/rendering/shader_types.cpp:233` |
+| `spatial render_mode blend_sub` | open, #1831 | | | `servers/rendering/shader_types.cpp:233` |
+| `spatial render_mode blend_mul` | open, #1831 | | | `servers/rendering/shader_types.cpp:233` |
+| `spatial render_mode blend_premul_alpha` | open, #1831 | | | `servers/rendering/shader_types.cpp:233` |
+| `spatial render_mode depth_draw_opaque` | open, #1831 | | | `servers/rendering/shader_types.cpp:234` |
+| `spatial render_mode depth_draw_always` | open, #1831 | | | `servers/rendering/shader_types.cpp:234` |
+| `spatial render_mode depth_draw_never` | open, #1831 | | | `servers/rendering/shader_types.cpp:234` |
+| `spatial render_mode depth_prepass_alpha` | open, #1831 | | | `servers/rendering/shader_types.cpp:235` |
+| `spatial render_mode depth_test_default` | open, #1831 | | | `servers/rendering/shader_types.cpp:236` |
+| `spatial render_mode depth_test_disabled` | open, #1831 | | | `servers/rendering/shader_types.cpp:236` |
+| `spatial render_mode depth_test_inverted` | open, #1831 | | | `servers/rendering/shader_types.cpp:236` |
+| `spatial render_mode sss_mode_skin` | open, #1782 | | | `servers/rendering/shader_types.cpp:237` |
+| `spatial render_mode cull_back` | open, #1831 | | | `servers/rendering/shader_types.cpp:238` |
+| `spatial render_mode cull_front` | open, #1831 | | | `servers/rendering/shader_types.cpp:238` |
+| `spatial render_mode cull_disabled` | open, #1831 | | | `servers/rendering/shader_types.cpp:238` |
+| `spatial render_mode unshaded` | open, #1831 | | | `servers/rendering/shader_types.cpp:239` |
+| `spatial render_mode wireframe` | open, #1831 | | | `servers/rendering/shader_types.cpp:240` |
+| `spatial render_mode diffuse_lambert` | open, #1453 | | | `servers/rendering/shader_types.cpp:241` |
+| `spatial render_mode diffuse_lambert_wrap` | open, #1453 | | | `servers/rendering/shader_types.cpp:241` |
+| `spatial render_mode diffuse_burley` | open, #1453 | | | `servers/rendering/shader_types.cpp:241` |
+| `spatial render_mode diffuse_toon` | open, #1453 | | | `servers/rendering/shader_types.cpp:241` |
+| `spatial render_mode specular_schlick_ggx` | open, #1453 | | | `servers/rendering/shader_types.cpp:242` |
+| `spatial render_mode specular_toon` | open, #1453 | | | `servers/rendering/shader_types.cpp:242` |
+| `spatial render_mode specular_disabled` | open, #1453 | | | `servers/rendering/shader_types.cpp:242` |
+| `spatial render_mode skip_vertex_transform` | open, #1831 | | | `servers/rendering/shader_types.cpp:243` |
+| `spatial render_mode world_vertex_coords` | open, #1831 | | | `servers/rendering/shader_types.cpp:244` |
+| `spatial render_mode ensure_correct_normals` | open, #1831 | | | `servers/rendering/shader_types.cpp:245` |
+| `spatial render_mode shadows_disabled` | open, #1453 | | | `servers/rendering/shader_types.cpp:246` |
+| `spatial render_mode ambient_light_disabled` | open, #1453 | | | `servers/rendering/shader_types.cpp:247` |
+| `spatial render_mode shadow_to_opacity` | open, #1453 | | | `servers/rendering/shader_types.cpp:248` |
+| `spatial render_mode vertex_lighting` | open, #1453 | | | `servers/rendering/shader_types.cpp:249` |
+| `spatial render_mode particle_trails` | open, #1831 | | | `servers/rendering/shader_types.cpp:250` |
+| `spatial render_mode alpha_to_coverage` | open, #1831 | | | `servers/rendering/shader_types.cpp:251` |
+| `spatial render_mode alpha_to_coverage_and_one` | open, #1831 | | | `servers/rendering/shader_types.cpp:252` |
+| `spatial render_mode debug_shadow_splits` | open, #1453 | | | `servers/rendering/shader_types.cpp:253` |
+| `spatial render_mode fog_disabled` | open, #1831 | | | `servers/rendering/shader_types.cpp:254` |
+| `spatial render_mode specular_occlusion_disabled` | open, #1453 | | | `servers/rendering/shader_types.cpp:255` |
+| `canvas_item render_mode skip_vertex_transform` | open, #686 | | | `servers/rendering/shader_types.cpp:354` |
+| `canvas_item render_mode blend_mix` | open, #686 | | | `servers/rendering/shader_types.cpp:355` |
+| `canvas_item render_mode blend_add` | open, #686 | | | `servers/rendering/shader_types.cpp:355` |
+| `canvas_item render_mode blend_sub` | open, #686 | | | `servers/rendering/shader_types.cpp:355` |
+| `canvas_item render_mode blend_mul` | open, #686 | | | `servers/rendering/shader_types.cpp:355` |
+| `canvas_item render_mode blend_premul_alpha` | open, #686 | | | `servers/rendering/shader_types.cpp:355` |
+| `canvas_item render_mode blend_disabled` | open, #686 | | | `servers/rendering/shader_types.cpp:355` |
+| `canvas_item render_mode unshaded` | open, #686 | | | `servers/rendering/shader_types.cpp:356` |
+| `canvas_item render_mode light_only` | open, #686 | | | `servers/rendering/shader_types.cpp:357` |
+| `canvas_item render_mode world_vertex_coords` | open, #686 | | | `servers/rendering/shader_types.cpp:358` |
+| `particles render_mode collision_use_scale` | open, #1726 | | | `servers/rendering/shader_types.cpp:448` |
+| `particles render_mode disable_force` | open, #1726 | | | `servers/rendering/shader_types.cpp:449` |
+| `particles render_mode disable_velocity` | open, #1726 | | | `servers/rendering/shader_types.cpp:450` |
+| `particles render_mode keep_data` | open, #1726 | | | `servers/rendering/shader_types.cpp:451` |
+| `sky render_mode use_half_res_pass` | open, #1666 | | | `servers/rendering/shader_types.cpp:499` |
+| `sky render_mode use_quarter_res_pass` | open, #1666 | | | `servers/rendering/shader_types.cpp:500` |
+| `sky render_mode disable_fog` | open, #1665 | | | `servers/rendering/shader_types.cpp:501` |
+| `sky render_mode use_debanding` | open, #1665 | | | `servers/rendering/shader_types.cpp:502` |
 
 ## stencil mode
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `spatial stencil_mode read` | open, #1794 | | | `servers/rendering/shader_types.cpp:256` |
-| `spatial stencil_mode write` | open, #1794 | | | `servers/rendering/shader_types.cpp:257` |
-| `spatial stencil_mode write_depth_fail` | open, #1794 | | | `servers/rendering/shader_types.cpp:258` |
-| `spatial stencil_mode compare_always` | open, #1794 | | | `servers/rendering/shader_types.cpp:259` |
-| `spatial stencil_mode compare_less` | open, #1794 | | | `servers/rendering/shader_types.cpp:259` |
-| `spatial stencil_mode compare_equal` | open, #1794 | | | `servers/rendering/shader_types.cpp:259` |
-| `spatial stencil_mode compare_less_or_equal` | open, #1794 | | | `servers/rendering/shader_types.cpp:259` |
-| `spatial stencil_mode compare_greater` | open, #1794 | | | `servers/rendering/shader_types.cpp:259` |
-| `spatial stencil_mode compare_not_equal` | open, #1794 | | | `servers/rendering/shader_types.cpp:259` |
-| `spatial stencil_mode compare_greater_or_equal` | open, #1794 | | | `servers/rendering/shader_types.cpp:259` |
+| `spatial stencil_mode read` | open, #1831 | | | `servers/rendering/shader_types.cpp:256` |
+| `spatial stencil_mode write` | open, #1831 | | | `servers/rendering/shader_types.cpp:257` |
+| `spatial stencil_mode write_depth_fail` | open, #1831 | | | `servers/rendering/shader_types.cpp:258` |
+| `spatial stencil_mode compare_always` | open, #1831 | | | `servers/rendering/shader_types.cpp:259` |
+| `spatial stencil_mode compare_less` | open, #1831 | | | `servers/rendering/shader_types.cpp:259` |
+| `spatial stencil_mode compare_equal` | open, #1831 | | | `servers/rendering/shader_types.cpp:259` |
+| `spatial stencil_mode compare_less_or_equal` | open, #1831 | | | `servers/rendering/shader_types.cpp:259` |
+| `spatial stencil_mode compare_greater` | open, #1831 | | | `servers/rendering/shader_types.cpp:259` |
+| `spatial stencil_mode compare_not_equal` | open, #1831 | | | `servers/rendering/shader_types.cpp:259` |
+| `spatial stencil_mode compare_greater_or_equal` | open, #1831 | | | `servers/rendering/shader_types.cpp:259` |
 
 ## preprocessor
 

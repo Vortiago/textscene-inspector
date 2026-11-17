@@ -27,6 +27,13 @@ export function builtInInstruction(name: string): InstructionRow | undefined {
   return BUILT_INS_BY_NAME.get(name);
 }
 
+/** The built-in variable rows of a shader type, `sky.global.TIME` among them. */
+export function builtInRowsOf(shaderType: string): readonly InstructionRow[] {
+  return INSTRUCTION_TABLE.filter(
+    (row) => row.family.startsWith('built-in') && row.id.startsWith(`${shaderType}.`)
+  );
+}
+
 /** The rows with arguments of each name, `vec2(float,float)` under `vec2`. Written once, here. */
 const OVERLOADS = new Map<string, InstructionRow[]>();
 for (const row of INSTRUCTION_TABLE) {

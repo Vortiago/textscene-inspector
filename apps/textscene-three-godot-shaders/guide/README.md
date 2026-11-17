@@ -35,8 +35,8 @@ Godot draws the probes and showcases on Vulkan over lavapipe (`llvmpipe (LLVM 20
 | --- | --- | --- |
 | data type | 21 of 33 | #1829 |
 | literal | 5 of 5 | none |
-| qualifier | 6 of 8 | #1794 |
-| shader head | 4 of 13 | #1794 |
+| qualifier | 6 of 8 | #1831 |
+| shader head | 4 of 13 | #1831, #1794 |
 | uniform | 0 of 2 | #1792, #1183 |
 | statement keyword | 12 of 12 | none |
 | uniform hint | 4 of 19 | #1792, #1829, #1524, #1610 |
@@ -48,9 +48,9 @@ Godot draws the probes and showcases on Vulkan over lavapipe (`llvmpipe (LLVM 20
 | function | 453 of 569 | #1829 |
 | function (high_end) | 100 of 120 | #1829 |
 | swizzle | 36 of 36 | none |
-| built-in (read only) | 0 of 207 | #1794 |
-| built-in | 1 of 95 | #1794 |
-| stage function | 0 of 10 | #1794 |
-| render mode | 0 of 56 | #1794 |
-| stencil mode | 0 of 10 | #1794 |
+| built-in (read only) | 0 of 207 | #1831, #1453, #686, #1726, #1794, #1665, #1666, #1783 |
+| built-in | 1 of 95 | #1831, #1453, #686, #1726, #1665, #1783 |
+| stage function | 0 of 10 | #1785, #1726 |
+| render mode | 0 of 56 | #1831, #1782, #1453, #686, #1726, #1666, #1665 |
+| stencil mode | 0 of 10 | #1831 |
 | preprocessor | 13 of 13 | none |

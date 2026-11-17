@@ -163,8 +163,8 @@ export function stageFunctions(typesCpp) {
   return rows;
 }
 
-/** `shader_types.cpp:233`. A mode with values gives one `<mode>_<value>` row per value. */
-export function renderModes(typesCpp) {
+/** `shader_types.cpp:233`: each mode as Godot's `ModeInfo` holds it, a name and its values. */
+export function shaderModes(typesCpp) {
   const pattern =
     /shader_modes\[(RS::SHADER_\w+)\]\.(modes|stencil_modes)\.push_back\(\{ PNAME\("(\w+)"\)(.*)\}\);/g;
   const lines = typesCpp.split('\n').filter((line) => /\.(modes|stencil_modes)\.push_back/.test(line));
@@ -172,15 +172,38 @@ export function renderModes(typesCpp) {
   if (lines.length !== matches.length) {
     throw new Error(`expected ${lines.length} render mode rows in shader_types.cpp, read ${matches.length}`);
   }
-  return matches.flatMap((match) => {
-    const values = [...match[4].matchAll(/"(\w+)"/g)].map((value) => value[1]);
-    const names = values.length === 0 ? [match[3]] : values.map((value) => `${match[3]}_${value}`);
-    return names.map((name) => ({
+  return matches.map((match) => ({
+    shaderType: shaderTypeOf(match[1]),
+    kind: match[2] === 'modes' ? 'render_mode' : 'stencil_mode',
+    name: match[3],
+    options: [...match[4].matchAll(/"(\w+)"/g)].map((value) => value[1]),
+    line: lineAt(typesCpp, match.index),
+  }));
+}
+
+/** Each key of a shader type's `functions`, a stage or `global` or `constants`, with its two flags. */
+export function shaderStages(typesCpp) {
+  const stages = new Map();
+  for (const match of typesCpp.matchAll(/shader_modes\[(RS::SHADER_\w+)\]\.functions\["(\w+)"\]/g)) {
+    const key = `${match[1]}.${match[2]}`;
+    if (stages.has(key)) continue;
+    const isSet = (flag) =>
+      typesCpp.includes(`shader_modes[${match[1]}].functions["${match[2]}"].${flag} = true;`);
+    stages.set(key, {
       shaderType: shaderTypeOf(match[1]),
-      kind: match[2] === 'modes' ? 'render_mode' : 'stencil_mode',
-      name,
-      line: lineAt(typesCpp, match.index),
-    }));
+      stage: match[2],
+      canDiscard: isSet('can_discard'),
+      isMain: isSet('main_function'),
+    });
+  }
+  return [...stages.values()];
+}
+
+/** A mode with values gives one `<mode>_<value>` row per value. */
+export function renderModes(typesCpp) {
+  return shaderModes(typesCpp).flatMap(({ shaderType, kind, name, options, line }) => {
+    const names = options.length === 0 ? [name] : options.map((value) => `${name}_${value}`);
+    return names.map((each) => ({ shaderType, kind, name: each, line }));
   });
 }
 
@@ -202,6 +225,19 @@ export function preprocessorDirectives(preprocessorCpp) {
     line: lineAt(preprocessorCpp, match.index),
   }));
   return [...directives, { name: 'defined', line: lineAt(preprocessorCpp, defined) }, ...pragmas];
+}
+
+/**
+ * The name `get_token_text` prints for each token: the entry of `token_names` at the token's index.
+ * Godot 4.6.3's list has no entry for `TK_STENCIL_MODE`, so each later token prints the next one's name.
+ */
+export function tokenNames(header, languageCpp) {
+  const start = languageCpp.indexOf('const char *ShaderLanguage::token_names[TK_MAX] = {');
+  if (start === -1) throw new Error('expected token_names in shader_language.cpp, found none');
+  const list = languageCpp.slice(start, languageCpp.indexOf('};', start));
+  const names = [...list.matchAll(/"(\w*)"/g)].map((match) => match[1]);
+  const tokens = enumMembers(header, 'TokenType').filter(({ name }) => name !== 'TK_MAX');
+  return Object.fromEntries(tokens.map(({ name }, index) => [name, names[index] ?? '']));
 }
 
 /** The files the table reads, as paths in Godot's tree, which a row's citation names too. */
