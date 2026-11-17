@@ -1,7 +1,7 @@
 import type { Aabb } from '../../math/aabb.js';
 import { degToRad, radToDegf } from '../../math/math.js';
 import { normalizedPlane, type Plane } from '../../math/plane.js';
-import { getFovy } from '../../math/projection.js';
+import { depthCorrection, getFovy } from '../../math/projection.js';
 import { atan2Real } from '../../math/realAtan2.js';
 import { cosf, sinf } from '../../math/realMath.js';
 import type { Rect2 } from '../../math/rect2.js';
@@ -367,25 +367,6 @@ function frustumAspect(args: readonly CastArgument[]): Matrix {
     numberAt(args, 4)
   );
 }
-
-const depthCorrection = (isFlipped: boolean): Matrix => [
-  1,
-  0,
-  0,
-  0,
-  0,
-  isFlipped ? -1 : 1,
-  0,
-  0,
-  0,
-  0,
-  -0.5,
-  0,
-  0,
-  0,
-  0.5,
-  1,
-];
 
 function lightAtlasRect({ x, y, w, h }: Rect2): Matrix {
   return [w, 0, 0, 0, 0, h, 0, 0, 0, 0, 1, 0, x, y, 0, 1];

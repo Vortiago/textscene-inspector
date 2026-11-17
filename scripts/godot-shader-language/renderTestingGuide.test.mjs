@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { materialCounts } from '../godot-probes/answerDigest.mjs';
 import { renderTestingGuide } from './renderTestingGuide.mjs';
 
 const KNOWN = {
@@ -36,16 +37,13 @@ const INPUT = {
     },
     knownMismatches: {},
   },
-  materials: {
-    godot: '4.6.3-stable',
-    cases: {
-      StandardMaterial3D: 'a',
-      'StandardMaterial3D|rim_enabled=true': 'b',
-      'StandardMaterial3D|stencil_mode=1': 'c',
-      'StandardMaterial3D|stencil_mode=1|next_pass': 'd',
-      'ORMMaterial3D|rim_enabled=true': 'b',
-    },
-  },
+  materials: materialCounts({
+    StandardMaterial3D: 'a',
+    'StandardMaterial3D|rim_enabled=true': 'b',
+    'StandardMaterial3D|stencil_mode=1': 'c',
+    'StandardMaterial3D|stencil_mode=1|next_pass': 'd',
+    'ORMMaterial3D|rim_enabled=true': 'b',
+  }),
 };
 
 const GUIDE = renderTestingGuide(INPUT);

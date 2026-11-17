@@ -1,7 +1,8 @@
 import { IDENTITY_BASIS, type BasisComponents } from '../../math/basis.js';
 import { basisSetAxisAngle, basisXform } from '../../math/basisFloat.js';
 import { vector3Cross } from '../../math/vector.js';
-import { clamp, lerpf } from '../../math/math.js';
+import { lerpf } from '../../math/math.js';
+import { octahedronDecode, octahedronEncode } from '../../math/octahedron.js';
 import { atan2Real } from '../../math/realAtan2.js';
 import { sqrtf } from '../../math/realMath.js';
 import { real, variant, type Variant } from '../value/variant.js';
@@ -13,7 +14,6 @@ import {
   length,
   lengthSquared,
   lerped,
-  normalized,
   scaled,
 } from './floatVectorMethods.js';
 import { methodPort, type MethodPort } from './methodPort.js';
@@ -47,25 +47,6 @@ function slerp(from: Components, to: Components, weight: number): Components {
   const resultLength = lerpf(startLength, sqrtf(endSquared), weight);
   const turned = rotated(from, unitAxis, f(angleTo(from, to) * weight));
   return scaled(turned, f(resultLength / startLength));
-}
-
-const signOf = (value: number) => (value >= 0 ? 1 : -1);
-
-function octahedronEncode(v: Components): Components {
-  const [x, y, z] = v.map(Math.abs) as [number, number, number];
-  const sum = f(f(x + y) + z);
-  const [nx, ny, nz] = v.map((c) => f(c / sum)) as [number, number, number];
-  const folded =
-    nz >= 0 ? [nx, ny] : [f(f(1 - Math.abs(ny)) * signOf(nx)), f(f(1 - Math.abs(nx)) * signOf(ny))];
-  return folded.map((c) => f(f(c * 0.5) + 0.5));
-}
-
-function octahedronDecode([octX, octY]: Components): Components {
-  const x = f(f(octX! * 2) - 1);
-  const y = f(f(octY! * 2) - 1);
-  const z = f(f(1 - Math.abs(x)) - Math.abs(y));
-  const t = clamp(-z, 0, 1);
-  return normalized([f(x + (x >= 0 ? -t : t)), f(y + (y >= 0 ? -t : t)), z]);
 }
 
 function outer(v: Components, other: Components): Variant {

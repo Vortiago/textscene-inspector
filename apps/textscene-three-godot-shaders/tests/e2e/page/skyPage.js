@@ -1,22 +1,7 @@
 import * as THREE from 'three';
-import {
-  installNodesHandler,
-  ShaderClock,
-  transpileSky,
-  writeSkyBindings,
-} from '@textscene/three-godot-shaders';
+import { ShaderClock, transpileSky, writeSkyBindings } from '@textscene/three-godot-shaders';
 import { framePixels } from './framePixels.js';
-
-const renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas') });
-installNodesHandler(renderer, 'display');
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.NoToneMapping;
-
-/** Godot's rotation in degrees, in Godot's order of axes: Y, then X, then Z. */
-const euler = ([x, y, z]) => new THREE.Euler(...[x, y, z].map(THREE.MathUtils.degToRad), 'YXZ');
-
-/** A colour Godot holds in sRGB, linear, as Godot's C++ converts it for the sky. */
-const linear = ([r, g, b]) => new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace);
+import { displayRenderer, euler, godotCamera, linear } from './godotView.js';
 
 function skyLight(light) {
   const direction = new THREE.Vector3(0, 0, 1).applyEuler(euler(light.rotation)).normalize();
@@ -41,11 +26,7 @@ function drawSky(spec) {
     return { error: String(error.message ?? error) };
   }
   const { width, height } = spec;
-  // Godot's defaults: the near and far planes of Camera3D.
-  const camera = new THREE.PerspectiveCamera(spec.camera.fov, width / height, 0.05, 4000);
-  camera.rotation.copy(euler(spec.camera.rotation));
-  if (spec.camera.position) camera.position.fromArray(spec.camera.position);
-  camera.updateMatrixWorld();
+  const camera = godotCamera(spec);
   const fog = spec.fog && {
     lightColor: linear(spec.fog.color),
     lightEnergy: spec.fog.energy,
@@ -63,7 +44,11 @@ function drawSky(spec) {
   });
   const scene = new THREE.Scene();
   scene.add(sky.mesh);
-  const pixels = framePixels(renderer, scene, camera, { width, height, colorSpace: THREE.SRGBColorSpace });
+  const pixels = framePixels(displayRenderer, scene, camera, {
+    width,
+    height,
+    colorSpace: THREE.SRGBColorSpace,
+  });
   sky.mesh.material.dispose();
   return { pixels: Array.from(opaque(pixels)) };
 }

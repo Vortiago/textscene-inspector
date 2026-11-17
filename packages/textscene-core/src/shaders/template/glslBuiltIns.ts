@@ -1,4 +1,9 @@
 import type { InstructionRow } from '../language/instructionTable.generated.js';
+import {
+  BITWISE_SUBGROUP_OPERATIONS,
+  OWN_VALUE_SUBGROUP_FUNCTIONS,
+  SUBGROUP_OPERATIONS,
+} from '../language/subgroupOperations.js';
 import type { StageName } from './stages.js';
 
 /** A built-in variable: its type, its array size, and whether a stage only reads it. */
@@ -61,6 +66,50 @@ export const STAGE_VARIABLES: Readonly<Record<StageName, Readonly<Record<string,
   },
 };
 
+const SUBGROUP_TYPES = ['genF', 'genI', 'genU', 'genB'];
+
+/** The arithmetic, vote, ballot, shuffle, clustered and quad functions of `GL_KHR_shader_subgroup`. */
+function subgroupDeclarations(): string[] {
+  const typesOf = (operation: string) =>
+    BITWISE_SUBGROUP_OPERATIONS.includes(operation) ? ['genI', 'genU', 'genB'] : ['genF', 'genI', 'genU'];
+  const ofAnyType = OWN_VALUE_SUBGROUP_FUNCTIONS.filter(
+    (name) => name !== 'subgroupAll' && name !== 'subgroupAny'
+  );
+  const withId = new Set([
+    'subgroupBroadcast',
+    'subgroupShuffle',
+    'subgroupShuffleXor',
+    'subgroupShuffleUp',
+    'subgroupShuffleDown',
+    'subgroupQuadBroadcast',
+  ]);
+  return [
+    'bool subgroupElect()',
+    'bool subgroupAll(bool)',
+    'bool subgroupAny(bool)',
+    ...SUBGROUP_TYPES.map((type) => `bool subgroupAllEqual(${type})`),
+    ...SUBGROUP_OPERATIONS.flatMap((operation) =>
+      typesOf(operation).flatMap((type) => [
+        `${type} subgroup${operation}(${type})`,
+        `${type} subgroupInclusive${operation}(${type})`,
+        `${type} subgroupExclusive${operation}(${type})`,
+        `${type} subgroupClustered${operation}(${type}, uint)`,
+      ])
+    ),
+    ...ofAnyType.flatMap((name) =>
+      SUBGROUP_TYPES.map((type) => `${type} ${name}(${type}${withId.has(name) ? ', uint' : ''})`)
+    ),
+    'uvec4 subgroupBallot(bool)',
+    'bool subgroupInverseBallot(uvec4)',
+    'bool subgroupBallotBitExtract(uvec4, uint)',
+    'uint subgroupBallotBitCount(uvec4)',
+    'uint subgroupBallotInclusiveBitCount(uvec4)',
+    'uint subgroupBallotExclusiveBitCount(uvec4)',
+    'uint subgroupBallotFindLSB(uvec4)',
+    'uint subgroupBallotFindMSB(uvec4)',
+  ];
+}
+
 /** `g` before a type is no prefix, `i` or `u`, and `gen` one to four lanes. Each expands to its rows. */
 const DECLARATIONS = [
   // Section 8.8 gives a signed count, which Godot types as the value's type through implicit conversion.
@@ -103,25 +152,7 @@ const DECLARATIONS = [
   'void memoryBarrierImage()',
   'void memoryBarrierBuffer()',
   'void groupMemoryBarrier()',
-  // GL_KHR_shader_subgroup_basic, _vote, _ballot and _arithmetic.
-  'uvec4 subgroupBallot(bool)',
-  'uint subgroupBallotExclusiveBitCount(uvec4)',
-  'uint subgroupBallotBitCount(uvec4)',
-  'bool subgroupElect()',
-  'bool subgroupAll(bool)',
-  'bool subgroupAny(bool)',
-  'genF subgroupBroadcastFirst(genF)',
-  'genI subgroupBroadcastFirst(genI)',
-  'genU subgroupBroadcastFirst(genU)',
-  'genF subgroupMax(genF)',
-  'genI subgroupMax(genI)',
-  'genU subgroupMax(genU)',
-  'genF subgroupMin(genF)',
-  'genI subgroupMin(genI)',
-  'genU subgroupMin(genU)',
-  'genU subgroupOr(genU)',
-  'genI subgroupOr(genI)',
-  'genF subgroupAdd(genF)',
+  ...subgroupDeclarations(),
   // GL_KHR_vulkan_glsl: subpass inputs.
   'vec4 subpassLoad(subpassInput)',
   // Section 8.9.2: the forms over shadow samplers and the offset forms the shading language has not.
@@ -143,7 +174,7 @@ const DECLARATIONS = [
   'ivec2 textureSize(gtexture2D, int)',
   'ivec3 textureSize(gtexture3D, int)',
   'gvec4 textureGather(gsampler2DArray, vec3, int)',
-] as const;
+];
 
 const PREFIXES = ['', 'i', 'u'] as const;
 const LANES = [1, 2, 3, 4];

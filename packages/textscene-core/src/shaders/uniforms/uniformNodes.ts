@@ -24,7 +24,7 @@ function laneBits(scalar: ScalarKind, lane: number): number {
 }
 
 /** The lane a shader reads back from its bits. */
-const LANE_OF_BITS: Readonly<Record<ScalarKind, (bits: Node) => Node>> = {
+export const LANE_OF_BITS: Readonly<Record<ScalarKind, (bits: Node) => Node>> = {
   float: (bits) => tsl(uintBitsToFloat)(bits),
   int: (bits) => tsl(int)(bits),
   uint: (bits) => bits,

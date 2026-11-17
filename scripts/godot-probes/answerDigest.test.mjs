@@ -79,6 +79,12 @@ describe('a run that skips the material sweep', () => {
     expect(renderAnswersFile(skipped, JSON.parse(committed))).toBe(committed);
   });
 
+  it('keeps the committed counts of the sweep, as the smoke cases hold too few to count', () => {
+    const skipped = withoutMaterials(answersOf(FLOAT, ['3f800000']));
+    const kept = { ...JSON.parse(committed), materialCounts: { materials: 9, nextPasses: 2, texts: 5 } };
+    expect(JSON.parse(renderAnswersFile(skipped, kept)).materialCounts).toEqual(kept.materialCounts);
+  });
+
   it('fails when the committed file has no material digest either', () => {
     const skipped = withoutMaterials(answersOf(FLOAT, ['3f800000']));
     expect(() => renderAnswersFile(skipped, { digests: {}, smoke: {} })).toThrow(/family materials/);

@@ -80,8 +80,8 @@ export function scalarNode(scalar: string, lane: Scalar): Node {
   if (scalar === 'bool') return bool(lane as boolean) as unknown as Node;
   if (scalar === 'uint') return uint(lane as number) as unknown as Node;
   if (scalar === 'int') {
-    // three writes an int constant as its decimal text, which has no literal for the least int.
-    if (lane === INT32_MIN) return int(uint(0x80000000)) as unknown as Node;
+    // GLSL has no literal for the least int, and three folds a conversion of a constant to its value.
+    if (lane === INT32_MIN) return int(INT32_MIN + 1).sub(1) as unknown as Node;
     return int(lane as number) as unknown as Node;
   }
   return floatNode(lane as number);
