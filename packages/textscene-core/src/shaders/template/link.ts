@@ -11,7 +11,7 @@ import { preprocess } from './preprocess.js';
 import { splitStages, type StageName } from './stages.js';
 import { TEMPLATE_FILES } from './templateFiles.generated.js';
 import type { GlobalNode, TemplateStageNode } from './templateTree.js';
-import { variantLines } from './variant.js';
+import { variantLines, type VariantLine } from './variant.js';
 
 /** What a material gives each variant of a template: Godot's `GeneratedCode` and its defines. */
 export interface CompiledMaterial {
@@ -86,6 +86,16 @@ export function linkTemplateStage(
   variant: string,
   material: CompiledMaterial
 ): TemplateStageNode {
+  return parseTemplateStage(stage, preprocess(templateVariant(file, stage, variant, material)), material);
+}
+
+/** The lines of one stage of a template variant, with the defines and the code sections of `material`. */
+export function templateVariant(
+  file: string,
+  stage: StageName,
+  variant: string,
+  material: Pick<CompiledMaterial, 'custom' | 'code'>
+): VariantLine[] {
   const lines = splitStages(file, (path) => TEMPLATE_FILES[path])[stage];
   if (!lines) throw new Error(`expected a ${stage} stage in ${file}, found none`);
   const defines = {
@@ -95,7 +105,7 @@ export function linkTemplateStage(
     hasUniforms: false,
     codeSections: [...material.code.keys()],
   };
-  return parseTemplateStage(stage, preprocess(variantLines(lines, defines)), material);
+  return variantLines(lines, defines);
 }
 
 /** The stage functions of a shader type, `sky`: each scope of its built-ins but the shared ones. */
