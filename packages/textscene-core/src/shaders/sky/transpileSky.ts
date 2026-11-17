@@ -1,12 +1,17 @@
 import * as THREE from 'three';
 import { int, screenCoordinate, screenSize, varyingProperty, vec4, vertexIndex } from 'three/tsl';
 import type { Node, TextureNode, UniformNode } from 'three/webgpu';
-import { parsedShader, type ParsedShader, type ShaderOptions } from '../language/parseShader.js';
+import {
+  parsedShader,
+  shaderSource,
+  type ParsedShader,
+  type ShaderOptions,
+} from '../language/parseShader.js';
 import { emitTemplateStage } from '../template/emitTemplate.js';
 import { linkedProgram, type LinkedProgram, type ProgramTemplate } from '../template/linkedProgram.js';
 import { TreeMemo } from '../template/treeMemo.js';
 import { defaultTexture } from '../uniforms/defaultTextures.js';
-import { BoundNodeMaterial } from '../uniforms/boundMaterial.js';
+import { BoundNodeMaterial, type MaterialShader } from '../uniforms/boundMaterial.js';
 import { SKY_RENDER_ORDER } from './skyRenderOrder.js';
 import { GODOT_SAMPLING, type ProjectSampling } from '../uniforms/samplerState.js';
 import type { TranspiledUniform } from '../uniforms/transpiledUniform.js';
@@ -85,8 +90,9 @@ export function transpileParsedSky(
   const full = program('full');
   const { parameters, parameterValues } = full;
   // Each pass reads the full pass's parameters, so one `set_shader_parameter` reaches all three.
+  const shader = { parameters: [...parameters.values()], source: shaderSource(parsed, file) };
   const draw = (resolution: SkyResolution, linked = program(resolution)) =>
-    skyDraw(linked, parameterValues, [...parameters.values()], isFilterInput(pass, resolution));
+    skyDraw(linked, parameterValues, shader, isFilterInput(pass, resolution));
   const modes = new Set(parsed.tree.renderModes.map((mode) => mode.name));
   const sky: TranspiledSky = {
     ...draw('full', full),
@@ -122,7 +128,7 @@ function isFilterInput(pass: SkyPass, resolution: SkyResolution): boolean {
 function skyDraw(
   { linked, resources }: LinkedProgram,
   parameterValues: LinkedProgram['parameterValues'],
-  parameters: readonly TranspiledUniform[],
+  shader: MaterialShader,
   isRowsUp: boolean
 ): SkyDraw {
   const uvInterp = varyingProperty('vec2', 'uv_interp') as unknown as Node;
@@ -143,7 +149,7 @@ function skyDraw(
     resources
   );
   return {
-    mesh: skyMesh(glClipPosition(vertex.result, isRowsUp), fragment.result, parameters),
+    mesh: skyMesh(glClipPosition(vertex.result, isRowsUp), fragment.result, shader),
     uniforms: resources.uniforms.byName,
     textures: resources.textures,
   };
@@ -187,11 +193,11 @@ function disposeSkyDraw({ mesh }: SkyDraw): void {
 function skyMesh(
   position: Node,
   colour: Node,
-  parameters: readonly TranspiledUniform[]
+  shader: MaterialShader
 ): THREE.Mesh<THREE.BufferGeometry, THREE.Material> {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
-  const material = new BoundNodeMaterial(parameters);
+  const material = new BoundNodeMaterial(shader);
   material.vertexNode = position;
   material.fragmentNode = colour;
   // Godot's sky pipeline culls no face.

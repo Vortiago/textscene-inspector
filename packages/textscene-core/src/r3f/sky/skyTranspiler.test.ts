@@ -5,7 +5,7 @@ import * as transpiler from '../../resources/sky/shaderSky';
 import * as nodesHandler from '../canvasRenderer/canvasNodesHandler';
 import { useSkyTranslator } from './skyTranspiler';
 
-const gl = { setNodesHandler: vi.fn() } as unknown as THREE.WebGLRenderer;
+const gl = { setNodesHandler: vi.fn(), debug: {} } as unknown as THREE.WebGLRenderer;
 
 afterEach(() => {
   vi.restoreAllMocks();

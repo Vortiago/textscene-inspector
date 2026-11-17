@@ -196,6 +196,68 @@ const VARYING_ARGUMENT_CASES = [
   ),
 ];
 
+/** Godot's checks of the varyings once the text is read: an integer one is `flat`, and they fit. */
+const VARYING_LIMIT_CASES = [
+  headCase(
+    'varying-limit/int-unqualified',
+    'shader_type spatial;\nvarying int v;\nvoid vertex() {\n\tv = 1;\n}'
+  ),
+  headCase('varying-limit/uvec2-unwritten', 'shader_type spatial;\nvarying uvec2 v;\nvoid fragment() {}'),
+  headCase(
+    'varying-limit/int-fragment-only',
+    'shader_type spatial;\nvarying int v;\nvoid fragment() {\n\tv = 1;\n}'
+  ),
+  headCase('varying-limit/vec4-17', 'shader_type spatial;\nvarying vec4 v[17];\nvoid fragment() {}'),
+  headCase('varying-limit/vec4-18', 'shader_type spatial;\nvarying vec4 v[18];\nvoid fragment() {}'),
+  headCase('varying-limit/mat4-4', 'shader_type spatial;\nvarying mat4 m[4];\nvoid fragment() {}'),
+  headCase('varying-limit/mat3-6', 'shader_type spatial;\nvarying mat3 m[6];\nvoid fragment() {}'),
+  headCase(
+    'varying-limit/two-over',
+    'shader_type spatial;\nvarying vec4 a[10];\nvarying vec2 b[8];\nvoid fragment() {}'
+  ),
+  headCase('varying-limit/canvas-23', 'shader_type canvas_item;\nvarying vec4 v[23];\nvoid fragment() {}'),
+  headCase('varying-limit/canvas-24', 'shader_type canvas_item;\nvarying vec4 v[24];\nvoid fragment() {}'),
+  ...varyingSlotEdges(),
+  ...integerVaryingCases(),
+];
+
+/** One case at the last size each limit accepts and one at the first it refuses, with mixed totals. */
+function varyingSlotEdges() {
+  const edge = (id, shaderType, declarations) =>
+    headCase(`varying-limit/${id}`, `shader_type ${shaderType};\n${declarations}\nvoid fragment() {}`);
+  return [
+    edge('mixed-17', 'spatial', 'varying vec4 a[10];\nvarying vec2 b[7];'),
+    edge('mat4-vec4-17', 'spatial', 'varying mat4 m[4];\nvarying vec4 v;'),
+    edge('mat4-vec4-18', 'spatial', 'varying mat4 m[4];\nvarying vec4 v[2];'),
+    edge('canvas-mixed-23', 'canvas_item', 'varying vec4 a[20];\nvarying vec3 b[3];'),
+    edge('canvas-mixed-24', 'canvas_item', 'varying vec4 a[20];\nvarying vec3 b[4];'),
+    edge('canvas-mat4-vec4-23', 'canvas_item', 'varying mat4 m[5];\nvarying vec4 v[3];'),
+    edge('canvas-mat4-24', 'canvas_item', 'varying mat4 m[6];'),
+  ];
+}
+
+/** Each integer type written in `vertex()`, under `smooth` and under `flat`. */
+function integerVaryingCases() {
+  const values = {
+    int: '1',
+    ivec2: 'ivec2(1)',
+    ivec3: 'ivec3(1)',
+    ivec4: 'ivec4(1)',
+    uint: '1u',
+    uvec2: 'uvec2(1u)',
+    uvec3: 'uvec3(1u)',
+    uvec4: 'uvec4(1u)',
+  };
+  return Object.entries(values).flatMap(([type, value]) =>
+    ['smooth', 'flat'].map((interpolation) =>
+      headCase(
+        `varying-limit/${type}-${interpolation}`,
+        `shader_type spatial;\nvarying ${interpolation} ${type} v;\nvoid vertex() {\n\tv = ${value};\n}`
+      )
+    )
+  );
+}
+
 /** A global name that Godot finds before or after a function, and a varying outside a function. */
 const GLOBAL_NAME_CASES = [
   headCase(
@@ -274,5 +336,6 @@ export const HEAD_CASES = [
   ...STAGE_CASES,
   ...VARYING_ARGUMENT_CASES,
   ...GLOBAL_NAME_CASES,
+  ...VARYING_LIMIT_CASES,
   ...tableModeCases(),
 ];

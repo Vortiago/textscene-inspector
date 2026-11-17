@@ -2,12 +2,18 @@ import * as THREE from 'three';
 import { warn } from '../../logger';
 import { warnOnce } from '../../utils/warnOnce';
 import { textToVariant } from '../../godot/variant/reader/variantReader';
-import { transpileParsedSky, type SkyPass, type TranspiledSky } from '../../shaders/sky/transpileSky';
+import {
+  skyDraws,
+  transpileParsedSky,
+  type SkyPass,
+  type TranspiledSky,
+} from '../../shaders/sky/transpileSky';
 import { compileSky, type SkyCompile } from '../../shaders/sky/compileSky';
 import { perObject } from '../../utils/perObject';
 import { LRUCache } from '../LRUCache';
 import { GODOT_SAMPLING, type ProjectSampling } from '../../shaders/uniforms/samplerState';
 import type { TranspiledUniform } from '../../shaders/uniforms/transpiledUniform';
+import type { BoundNodeMaterial } from '../../shaders/uniforms/boundMaterial';
 import type { SamplerValue } from '../../shaders/uniforms/samplerUniform';
 import type { ShaderDecoders } from '../../shaders/preprocessor/decoders';
 import { ShaderSkyBackground } from '../../r3f/sky/shaderSkyBackground';
@@ -108,8 +114,15 @@ function transpiledShaderSky(
     warnOnce(material, 'refused', `[Sky] ${unDrawnMessage(compile)}`);
     return transpiledDefaultSky(pass);
   }
-  const sky = transpileParsedSky(compile.parsed, '', sampling, pass);
+  const sky = transpileParsedSky(compile.parsed, material.file, sampling, pass);
   setParameters(sky.parameters, material.parameters, textures);
+  for (const draw of skyDraws(sky))
+    (draw.mesh.material as BoundNodeMaterial).onTranslatorFault = (fault) =>
+      warnOnce(
+        material,
+        'translator fault',
+        `[Sky] The previewer failed to draw this sky shader: ${fault.message}`
+      );
   return sky;
 }
 

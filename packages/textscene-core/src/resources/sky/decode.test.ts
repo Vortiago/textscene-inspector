@@ -218,6 +218,7 @@ describe('skyUpdateMode — the mode Godot picks for an Automatic sky', () => {
     decodeSky(data, {
       kind: 'shader',
       code: '',
+      file: 'res://sky.gdshader',
       parameters: {},
       textures: {},
       usage: { ...NO_USAGE, ...usage },
@@ -263,6 +264,7 @@ describe('withAutomaticBake — the filter of an Automatic shader sky', () => {
     decodeSky(data, {
       kind: 'shader',
       code: '',
+      file: 'res://sky.gdshader',
       parameters: {},
       textures: {},
       usage: { light: false, timeOrPosition, hasBufferUniforms: false, samplers: {} },

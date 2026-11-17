@@ -99,6 +99,44 @@ function varyingNode(
   };
 }
 
+/** Varying slots on desktop GPUs and lavapipe: 128 lanes / 4 (`rendering_device_driver_vulkan.cpp:6476`). */
+export const VULKAN_VARYINGS = 32;
+
+/** Godot's checks of the varyings after the text, in declaration order (`shader_language.cpp:11028`). */
+export function varyingLimitRefusal(
+  varyings: readonly VaryingNode[],
+  baseIndex: number,
+  maxVaryings: number
+): { readonly message: string; readonly position: SourcePosition } | undefined {
+  let index = baseIndex;
+  for (const varying of varyings) {
+    const scalar = shapeOf(varying.type)?.scalar;
+    if (
+      varying.stage !== 'fragment' &&
+      (scalar === 'int' || scalar === 'uint') &&
+      varying.interpolation !== 'flat'
+    )
+      return {
+        message: 'Varying with integer data type must be declared with `flat` interpolation qualifier.',
+        position: varying.position,
+      };
+    const used = index + slotsOf(varying);
+    if (used > maxVaryings)
+      return {
+        message: `Too many varyings used in shader (${used} used, maximum supported is ${maxVaryings}).`,
+        position: varying.position,
+      };
+    index = used;
+  }
+  return undefined;
+}
+
+/** Godot's `Varying::get_size`: one slot for each element, and one for each column of a matrix. */
+function slotsOf({ type, arraySize = 0 }: VaryingNode): number {
+  const columns = type === 'mat2' ? 2 : type === 'mat3' ? 3 : type === 'mat4' ? 4 : 1;
+  return Math.max(arraySize, 1) * columns;
+}
+
 /** The tokens of an assignment, `is_token_operator_assign` (`shader_language.cpp:4165`). */
 const ASSIGN_TOKENS: ReadonlySet<string> = new Set([
   'TK_OP_ASSIGN',

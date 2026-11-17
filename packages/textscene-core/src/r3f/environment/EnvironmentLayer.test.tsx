@@ -95,7 +95,13 @@ describe('<EnvironmentLayer> sky shader errors', () => {
 
   const UNCOMPILED: AuthoredSky = decodeSky(
     {},
-    { kind: 'shader', code: 'shader_type sky;\nvoid sky() { COLOR = 1.0; }\n', parameters: {}, textures: {} }
+    {
+      kind: 'shader',
+      code: 'shader_type sky;\nvoid sky() { COLOR = 1.0; }\n',
+      file: 'res://sky.gdshader',
+      parameters: {},
+      textures: {},
+    }
   );
 
   async function errorsAt(holderPath: string) {

@@ -3,19 +3,24 @@ import type * as THREE from 'three';
 import type { NodeMaterial } from 'three/webgpu';
 import * as logger from '../../logger';
 import * as parseShader from '../../shaders/language/parseShader';
+import * as transpileSky from '../../shaders/sky/transpileSky';
 import { generatedFragmentShader } from '../../shaders/generatedShader.testkit';
 import { testRenderer } from '../../testing/recordingWebGL';
 import { installNodesHandler } from '../../shaders/nodesHandler';
+import { TranslatorFault } from '../../shaders/fault/translatorFault';
+import type { BoundNodeMaterial } from '../../shaders/uniforms/boundMaterial';
 import { ShaderSkyBackground } from '../../r3f/sky/shaderSkyBackground';
 import { buildShaderSkyEnvironment, readShaderSky, shaderSkyRefusal } from './shaderSky';
 import { buildSkyEnvironment } from './build';
 import { decodeSky } from './decode';
 import type { ShaderSkyProperties, Sky } from './types';
 
+const SKY_FILE = 'res://tinted_sky.gdshader';
+
 const TINTED_SKY = 'shader_type sky;\nuniform float tint = 0.5;\nvoid sky() {\n\tCOLOR = vec3(tint);\n}\n';
 
 function shaderMaterial(code: string): ShaderSkyProperties {
-  return readShaderSky({ kind: 'shader', code, parameters: {}, textures: {} }, {});
+  return readShaderSky({ kind: 'shader', code, file: SKY_FILE, parameters: {}, textures: {} }, {});
 }
 
 /** The environment of `sky` with the transpiler, as the previewer builds it once the transpiler loads. */
@@ -104,6 +109,45 @@ describe('buildSkyEnvironment of a shader sky', () => {
     const environment = shaderSkyEnvironment(renderer, sky);
     expect(environment?.background).toBeInstanceOf(ShaderSkyBackground);
     environment?.dispose();
+  });
+
+  it('warns that the previewer failed when the GPU refuses the transpiled program', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const { renderer } = await testRenderer();
+    installNodesHandler(renderer, 'linear');
+    const environment = shaderSkyEnvironment(renderer, decodeSky({}, shaderMaterial(TINTED_SKY)))!;
+    const material = environment.background!.material as BoundNodeMaterial;
+    material.reportFault(new TranslatorFault(material.source, 'fragment: ERROR: 0:1'));
+    expect(warn.mock.calls.map(([message]) => message)).toContainEqual(
+      expect.stringMatching(
+        /^\[Sky\] The previewer failed to draw this sky shader: .*res:\/\/tinted_sky\.gdshader.*ERROR: 0:1/
+      )
+    );
+    environment.dispose();
+  });
+
+  it('warns with the shader named when the GPU refuses the program of a half resolution pass', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const transpile = vi.spyOn(transpileSky, 'transpileParsedSky');
+    const { renderer } = await testRenderer();
+    installNodesHandler(renderer, 'linear');
+    const halfResSky = TINTED_SKY.replace(
+      'shader_type sky;',
+      'shader_type sky;\nrender_mode use_half_res_pass;'
+    );
+    const environment = shaderSkyEnvironment(renderer, decodeSky({}, shaderMaterial(halfResSky)))!;
+    // The background draw of this shader, not the compile check, which has no file and is disposed.
+    const background = transpile.mock.calls.findIndex(
+      ([, file, , pass]) => file === SKY_FILE && pass === 'background'
+    );
+    const half = transpile.mock.results[background]!.value.half.mesh.material as BoundNodeMaterial;
+    half.reportFault(new TranslatorFault(half.source, 'fragment: ERROR: 0:7'));
+    expect(warn.mock.calls.map(([message]) => message)).toContainEqual(
+      expect.stringMatching(
+        /^\[Sky\] The previewer failed to draw .*res:\/\/tinted_sky\.gdshader.*ERROR: 0:7/
+      )
+    );
+    environment.dispose();
   });
 
   it('throws without the transpiler, which a shader sky needs (error case)', async () => {

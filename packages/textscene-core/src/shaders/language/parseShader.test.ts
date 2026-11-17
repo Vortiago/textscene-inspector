@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parsedShader, shaderCode } from './parseShader.js';
+import { parsedShader, shaderCode, shaderSource } from './parseShader.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
 
 const SPATIAL = 'shader_type spatial;\n';
@@ -42,5 +42,14 @@ describe('parsedShader', () => {
   it('parses an empty text to a tree with no shader type and no functions', () => {
     const { tree } = parsedShader('');
     expect([tree.shaderType, tree.functions]).toEqual([undefined, []]);
+  });
+});
+
+describe('shaderSource', () => {
+  it('gives the preprocessed text with its file, which a translator fault names', () => {
+    expect(shaderSource(parsedShader(`#define K 2.0\n${SPATIAL}`), 'res://tint.gdshader')).toEqual({
+      text: `\n${SPATIAL}`,
+      file: 'res://tint.gdshader',
+    });
   });
 });

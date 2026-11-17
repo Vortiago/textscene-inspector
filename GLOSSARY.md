@@ -1034,6 +1034,14 @@ _Avoid_: a node that imports the owner of a value. "host input": the caller of t
 The language of a `.gdshader` file: Godot's GLSL-like text with `shader_type`, render modes, uniforms and stage functions. The transpiler of the **Shader module** reads it.
 _Avoid_: "GDShader language", "Godot GLSL".
 
+**Shading language error** (`ShadingLanguageError`, `shaders/language/shadingLanguageError.ts`):
+A text Godot refuses, with Godot's message and its line. The user's shader is at fault: Godot does not compile it either.
+_Avoid_: "compile error" for a **Translator fault**.
+
+**Translator fault** (`TranslatorFault`, `shaders/fault/translatorFault.ts`):
+A program the GPU refuses for a text Godot compiles, with the shader's text, its address and the driver's log. The transpiler is at fault, not the user's shader.
+_Avoid_: "shader error", which does not say who is at fault.
+
 **Instruction** (`shaders/language/instructionTable.generated.ts`, ADR-0076):
 One row of the instruction table: a type, a keyword, an operator signature, a statement, a tree node, a built-in function overload, a built-in, a render mode, a hint or a preprocessor directive. `pnpm godot:shader-language` reads the rows from Godot's source. A row is transpiled when a **Probe** names it, and an open row names the issue that transpiles it.
 

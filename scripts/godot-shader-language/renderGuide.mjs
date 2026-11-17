@@ -298,6 +298,15 @@ ${rowCountNote(rows)}
 
 ${driversNote(record)}
 
+## Errors
+
+The transpiler gives two errors, and each says who is at fault.
+
+- \`ShadingLanguageError\`: Godot refuses the text too. It holds Godot's message and the line of the text. \`transpileSpatial\`, \`transpileSky\` and \`transpileShadingLanguage\` throw it.
+- \`TranslatorFault\`: the GPU refuses the program for a text Godot compiles, so the transpiler is at fault. It holds \`source.text\`, the preprocessed text, \`source.file\`, the shader's address, and \`log\`, the link log of the driver and the log of each stage that has one.
+
+three reports a refused program when it first uses it, in a draw or in \`compile\` and \`compileAsync\`. \`installNodesHandler\` gives the fault to \`onTranslatorFault\` of each transpiled material three built that program for, and to \`console.error\` when that hook is null. A hook in \`renderer.debug.onShaderError\`, set before or after \`installNodesHandler\`, still gets every refused program. With no such hook, a program of another material gets three's own report.
+
 ## Chapters
 
 ${chapterLines.join('\n')}

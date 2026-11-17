@@ -10,7 +10,7 @@ type OutputHook = { getOutputCallback: (outputNode: Node) => Node };
 
 function fakeRenderer() {
   const setNodesHandler = vi.fn();
-  return { gl: { setNodesHandler } as unknown as THREE.WebGLRenderer, setNodesHandler };
+  return { gl: { setNodesHandler, debug: {} } as unknown as THREE.WebGLRenderer, setNodesHandler };
 }
 
 describe('useNodesHandler', () => {

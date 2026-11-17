@@ -6,7 +6,13 @@
  */
 
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
-import { optionalReference, type Follow, type HeldResource, type ResourceKind } from '../../reading';
+import {
+  optionalReference,
+  referenceAddress,
+  type Follow,
+  type HeldResource,
+  type ResourceKind,
+} from '../../reading';
 import { resourceRef } from '../../../godot/variant/resourceRef';
 import { arrayLiteralBody } from '../../../godot/variant/variantParser';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string';
@@ -69,7 +75,13 @@ function shaderSkyMaterial(properties: Readonly<Record<string, string>>, follow:
   return {
     form: 'sky',
     type: 'ShaderMaterial',
-    properties: { kind: 'shader', code, parameters, textures },
+    properties: {
+      kind: 'shader',
+      code,
+      file: referenceAddress(follow.reference(shader)),
+      parameters,
+      textures,
+    },
     panorama: null,
   };
 }
